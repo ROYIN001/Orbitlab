@@ -606,7 +606,10 @@ export class Simulation {
         const gEff = MU_EARTH / (rm * rm) - (vh * vh) / rm;
         const aIns = (2 * R_EARTH + hIns + haIns) / 2;
         const vPer = Math.sqrt(MU_EARTH * (2 / (R_EARTH + hIns) - 1 / aIns));
-        nearApo = aNext < 0.9 * gEff || vPer - vh < 400;
+        // Coast + circularise only when the shortfall is small; a large shortfall is
+        // better flown with the closed-loop ascent law (which lofts as required).
+        const shortfall = vPer - vh;
+        nearApo = shortfall < (aNext < 0.9 * gEff ? 700 : 400);
       }
       if (isLast) {
         if (el.periapsisAlt > 100e3 && el.apoapsisAlt >= hIns - 3e3 && el.e < 1) {
