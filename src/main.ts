@@ -39,7 +39,8 @@ class App {
   playing = false;
   warp = 1;
   camMode: CameraMode = 'exterior';
-  fastForwardTo = -1;
+  /** mission time to fast-forward to, or null when not fast-forwarding */
+  fastForwardTo: number | null = null;
   lastFrame = performance.now();
   hudTimer = 0;
   telTimer = 0;
@@ -172,7 +173,7 @@ class App {
   preview(cfg: MissionConfig): void {
     this.playing = false;
     document.getElementById('btn-play')!.textContent = '▶';
-    this.fastForwardTo = -1;
+    this.fastForwardTo = null;
     try {
       this.sim = new Simulation(cfg);
     } catch (err) {
@@ -234,12 +235,17 @@ class App {
     this.lastFrame = now;
     const sim = this.sim;
     if (sim && this.playing) {
-      if (this.fastForwardTo > sim.state.t && sim.state.status !== 'failed') {
+      const target = this.fastForwardTo;
+      if (target !== null && target > sim.state.t + 1e-3 && !sim.isFailed()) {
         const budget = performance.now() + 30; // ms per frame for fast-forward
-        while (sim.state.t < this.fastForwardTo && performance.now() < budget && !sim.isFailed()) sim.advance(Math.min(600, this.fastForwardTo - sim.state.t), 3000);
-        if (sim.state.t >= this.fastForwardTo) this.fastForwardTo = -1;
+        while (sim.state.t < target - 1e-3 && performance.now() < budget && !sim.isFailed()) {
+          const before = sim.state.t;
+          sim.advance(Math.min(600, target - sim.state.t), 3000);
+          if (sim.state.t <= before) break; // no progress: give up rather than spin
+        }
+        if (sim.state.t >= target - 1e-3 || sim.isFailed()) this.fastForwardTo = null;
       } else {
-        this.fastForwardTo = -1;
+        this.fastForwardTo = null;
         sim.advance(dtReal * this.warp, 6000);
       }
     }
