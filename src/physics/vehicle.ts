@@ -471,7 +471,8 @@ export function liftoffMass(spec: VehicleSpec, payloadMass: number): number {
 /** Sea-level liftoff thrust (all ground-lit engines). */
 export function liftoffThrust(spec: VehicleSpec): number {
   const st = spec.stages[0];
-  let T = st.engine.count * st.engine.thrustSL;
+  // solid motors start at the top of their regressive profile (see solidProfile)
+  let T = st.engine.count * st.engine.thrustSL * (st.engine.solid ? 1.2 : 1);
   for (const b of st.boosters ?? []) {
     if ((b.igniteAt ?? 0) <= 0) T += b.count * b.engine.count * b.engine.thrustSL * (b.engine.solid ? 1.2 : 1);
   }

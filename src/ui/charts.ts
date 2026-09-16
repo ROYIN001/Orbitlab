@@ -45,7 +45,9 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   if (xMax - xMin < 1e-9) xMax = xMin + 1;
   if (yMax - yMin < 1e-9) yMax = yMin + 1;
   const pad = (yMax - yMin) * 0.06;
-  yMax += pad; yMin -= pad;
+  yMax += pad;
+  // keep a declared floor (e.g. 0 km) as the bottom of the axis instead of padding below it
+  if (opt.yMin === undefined || yMin < opt.yMin) yMin -= pad;
   const sx = (x: number) => padL + ((x - xMin) / (xMax - xMin)) * pw;
   const sy = (y: number) => padT + (1 - (y - yMin) / (yMax - yMin)) * ph;
   // grid

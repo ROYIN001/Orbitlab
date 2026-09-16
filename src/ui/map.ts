@@ -11,6 +11,9 @@ export class OrbitalMap {
   private canvas: HTMLCanvasElement;
   private img: HTMLImageElement | null = null;
   private targetPts: { lat: number; lon: number }[] = [];
+  private trackForSim: Simulation | null = null;
+  private trackPts: { lat: number; lon: number }[] = [];
+  private trackSeen = 0;
   private targetForSim: Simulation | null = null;
 
   constructor(canvas: HTMLCanvasElement, imageUrl: string) {
@@ -80,7 +83,9 @@ export class OrbitalMap {
       const lon = -180 + (360 * i) / cols;
       const dl = (lon - subLon) * DEG;
       // terminator: tan(lat) = -cos(dl) / tan(subLat)  (solve cos(zenith)=0)
-      const latT = Math.atan2(-Math.cos(dl), Math.tan(subLat)) * RAD;
+      // atan (not atan2): the terminator latitude must stay within ±90° for either sign of the declination
+      const tanDec = Math.abs(Math.tan(subLat)) < 1e-6 ? (subLat < 0 ? -1e-6 : 1e-6) : Math.tan(subLat);
+      const latT = Math.atan(-Math.cos(dl) / tanDec) * RAD;
       const [x, y] = this.xy(latT, lon, mw, mh);
       if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
     }
@@ -113,9 +118,18 @@ export class OrbitalMap {
         }
       }
       this.polyline(g, this.targetPts, mw, mh, 'rgba(242,177,52,0.75)', [6, 4], 1.5);
-      // ground track from telemetry
-      const track = sim.telemetry.filter((s) => s.t >= 0).map((s) => ({ lat: s.lat, lon: s.lon }));
-      this.polyline(g, track, mw, mh, '#4aa3ff', [], 2);
+      // ground track from telemetry, appended incrementally (the buffer may be thinned)
+      if (this.trackForSim !== sim || sim.telemetry.length < this.trackSeen) { this.trackForSim = sim; this.trackPts = []; this.trackSeen = 0; }
+      const tel = sim.telemetry;
+      for (let i = this.trackSeen; i < tel.length; i++) {
+        const smp = tel[i];
+        if (smp.t < 0) continue;
+        const last = this.trackPts[this.trackPts.length - 1];
+        if (!last || Math.abs(smp.lat - last.lat) > 0.05 || Math.abs(smp.lon - last.lon) > 0.05) this.trackPts.push({ lat: smp.lat, lon: smp.lon });
+      }
+      this.trackSeen = tel.length;
+      if (this.trackPts.length > 6000) this.trackPts = this.trackPts.filter((_, i) => i % 2 === 0 || i > this.trackPts.length - 1000);
+      this.polyline(g, this.trackPts, mw, mh, '#4aa3ff', [], 2);
       // predicted orbit (1 period ahead)
       const el = sim.state.elements;
       if (el.e < 1 && el.periapsisAlt > -R_EARTH * 0.5) {
@@ -135,9 +149,10 @@ export class OrbitalMap {
       // debris
       for (const d of sim.debris) {
         if (d.visual.kind === 'fairing') continue;
-        const ll = eciToLatLon(d.r, theta);
+        // a landed/impacted piece stays at its recorded ground position (it rotates with the Earth)
+        const ll = !d.alive && d.impact ? { lat: d.impact.lat * DEG, lon: d.impact.lon * DEG } : eciToLatLon(d.r, theta);
         const [x, y] = this.xy(ll.lat * RAD, ll.lon * RAD, mw, mh);
-        g.fillStyle = d.outcome === 'landed' ? '#4cd97b' : d.alive ? '#ff9f43' : '#ff5d5d';
+        g.fillStyle = d.outcome === 'landed' ? '#7fe0a0' : d.alive ? '#ff9f43' : '#ff5d5d';
         g.beginPath();
         g.rect(x - 3, y - 3, 6, 6);
         g.fill();
@@ -150,14 +165,17 @@ export class OrbitalMap {
     }
     // legend
     g.font = '11px system-ui, sans-serif';
-    const legend: [string, string][] = [['#4cd97b', t('map.site')], ['#4aa3ff', t('map.groundTrack')], ['rgba(255,255,255,0.8)', t('map.predicted')], ['#f2b134', t('map.target')], ['#ffd166', t('map.subsolar')], ['#ff5d5d', t('map.impact')]];
-    let ly = mh - 12;
+    const legend: [string, string][] = [['#fff', t('map.vehicle')], ['#4cd97b', t('map.site')], ['#4aa3ff', t('map.groundTrack')], ['rgba(255,255,255,0.8)', t('map.predicted')], ['#f2b134', t('map.target')], ['#ffd166', t('map.subsolar')], ['#ff5d5d', t('map.impact')], ['#7fe0a0', t('map.landing')]];
+    // legend in the top-right corner (the event ticker occupies the bottom-left)
+    const lw = Math.max(...legend.map(([, label]) => g.measureText(label).width)) + 26;
+    const lx0 = mw - lw - 6;
+    let ly = 16;
     for (const [c, label] of legend) {
       g.fillStyle = 'rgba(0,0,0,0.55)';
-      g.fillRect(6, ly - 10, g.measureText(label).width + 26, 15);
-      g.fillStyle = c; g.fillRect(10, ly - 7, 10, 8);
-      g.fillStyle = '#fff'; g.fillText(label, 26, ly + 1);
-      ly -= 17;
+      g.fillRect(lx0, ly - 10, lw, 15);
+      g.fillStyle = c; g.fillRect(lx0 + 4, ly - 7, 10, 8);
+      g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(label, lx0 + 20, ly + 1);
+      ly += 17;
     }
     g.restore();
   }

@@ -4,6 +4,7 @@
  */
 import type { MissionConfig, OrbitSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
+import { satelliteById } from '../data/satellites';
 import { DEG, R_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
@@ -48,6 +49,10 @@ export interface MissionPlan {
   descending: boolean;
   azimuthInertial: number;
   azimuthRotating: number;
+  /** the flown launch azimuth lies inside the site's range-safety corridor */
+  azimuthAllowed: boolean;
+  /** post-insertion burns are possible (restartable final stage or spacecraft propulsion) */
+  canRaise: boolean;
   insertionAltitude: number;
   /** apoapsis of the insertion orbit (== insertionAltitude for a circular parking orbit) */
   insertionApoapsis: number;
@@ -86,7 +91,8 @@ export function raanFromLtan(date: Date, ltanHours: number): number {
 export function resolveInclination(orbit: OrbitSpec, site: SiteExtra): number {
   const a = R_EARTH + (orbit.perigee + orbit.apogee) / 2;
   if (orbit.inclination === 'sso') return sunSyncInclination(a, Math.abs(orbit.apogee - orbit.perigee) / (2 * a));
-  if (orbit.inclination === 'site') return site.minInclination * DEG;
+  // 'site' = the lowest inclination reachable directly: never below the site latitude
+  if (orbit.inclination === 'site') return Math.max(site.minInclination, Math.abs(site.latitude) + 0.05) * DEG;
   return orbit.inclination * DEG;
 }
 
@@ -133,7 +139,7 @@ export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: numbe
   const rIns = R_EARTH + hIns;
   const rA = R_EARTH + target.apogee;
   const rP = R_EARTH + target.perigee;
-  const needPlane = Math.abs(target.inclination - ascentInc) > 0.05 * DEG;
+  const needPlane = Math.abs(target.inclination - ascentInc) > 0.3 * DEG;
   const circularTarget = Math.abs(target.apogee - target.perigee) < 1e3;
   const aIns = (rIns + R_EARTH + haIns) / 2;
   let vAtApo = visViva(R_EARTH + haIns, aIns);
@@ -162,23 +168,54 @@ export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: numbe
   return burns;
 }
 
+/**
+ * The orbital plane is established a few minutes into the flight, when most of the
+ * horizontal velocity is built up; by then the site has rotated east by Ω·T_PLANE.
+ * Launch windows and the expected RAAN account for this offset.
+ */
+export const T_PLANE = 200;
+
+/** True when a launch azimuth (rad) lies inside the site's corridor (±10° tolerance, wrap-around aware). */
+export function azimuthInCorridor(site: SiteExtra, azimuth: number): boolean {
+  const a = (((azimuth / DEG) % 360) + 360) % 360;
+  const lo = site.azimuthMin - 10, hi = site.azimuthMax + 10;
+  if (site.azimuthMin <= site.azimuthMax) return a >= lo && a <= hi;
+  return a >= lo || a <= hi; // corridor crosses north
+}
+
+/**
+ * Ascending or descending launch: fly whichever direction the site's corridor allows;
+ * when both (or neither) do, keep the site's preference for polar orbits and go
+ * ascending otherwise.
+ */
+export function chooseDirection(site: SiteExtra, inc: number, vOrb: number): { descending: boolean; allowed: boolean } {
+  const lat = site.latitude * DEG;
+  const az = (desc: boolean) => rotatingLaunchAzimuth(lat, inc, vOrb, desc) ?? inertialLaunchAzimuth(lat, inc, desc) ?? Math.PI / 2;
+  const ascOk = azimuthInCorridor(site, az(false));
+  const descOk = azimuthInCorridor(site, az(true));
+  const pref = inc > 75 * DEG ? site.descendingForPolar : false;
+  const descending = ascOk !== descOk ? descOk : pref;
+  return { descending, allowed: ascOk || descOk };
+}
+
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   const { inc: ascentInclination, reachable } = ascentInclinationFor(target, site);
-  const descending = ascentInclination > 75 * DEG ? site.descendingForPolar : false;
   const lat = site.latitude * DEG;
+  const sat = satelliteById(cfg.satelliteId);
+  const last = _vehicle.stages[_vehicle.stages.length - 1];
   const insertionAltitude = Math.max(cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0, insertionAltitudeFor(target));
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
+  const { descending, allowed: azimuthAllowed } = chooseDirection(site, ascentInclination, vOrb);
   const azimuthInertial = inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
   const azimuthRotating = rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
   const jd0 = julianDate(cfg.launchTime);
   const gmst0 = gmst(jd0);
-  const raanExpected = raanFromLaunch(lat, site.longitude * DEG + gmst0, ascentInclination, descending);
+  const raanExpected = raanFromLaunch(lat, site.longitude * DEG + gmst0 + OMEGA_EARTH * T_PLANE, ascentInclination, descending);
   // A final stage that cannot even hold altitude near orbital speed (Fregat, Briz-M,
   // Curie...) is treated as an orbital-manoeuvring stage: the strong stages insert
   // into an ellipse whose apogee is the target (capped) and the kick stage finishes.
-  const last = _vehicle.stages[_vehicle.stages.length - 1];
-  const payload = cfg.payloadMassOverride ?? 0;
+  const payload = cfg.payloadMassOverride ?? sat.mass;
   const lastMass = last.dryMass + last.propellantMass + payload + 1500;
   const aLast = (last.engine.count * last.engine.thrustVac) / lastMass;
   const weakFinalStage = _vehicle.stages.length > 1 && aLast < 1.6;
@@ -197,9 +234,12 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     const required = vPerigee + 1450 - vRot + 150;
     if (dvStrong >= required) insertionApoapsis = haCandidate;
   }
+  // Nothing can restart after the ascent (e.g. Soyuz Blok I with a passive payload): the
+  // mission ends in the insertion orbit. Reported so the setup panel can warn about it.
+  const canRaise = !!last.restartable || !!sat.propulsion || weakFinalStage;
   const burns = planBurns(target, ascentInclination, insertionAltitude, insertionApoapsis);
   return {
-    target, ascentInclination, descending, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
+    target, ascentInclination, descending, azimuthInertial, azimuthRotating, azimuthAllowed, canRaise, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
     launchTime: cfg.launchTime, jd0, gmst0, raanExpected,
     planeChangeDeg: Math.abs(target.inclination - ascentInclination) / DEG,
     inclinationReachable: reachable,
@@ -223,7 +263,7 @@ export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, cou
   const t0 = resolveTarget(orbit, site, from);
   if (t0.raan === null) return [];
   const { inc } = ascentInclinationFor(t0, site);
-  const descending = inc > 75 * DEG ? site.descendingForPolar : false;
+  const { descending } = chooseDirection(site, inc, circularSpeed(R_EARTH + insertionAltitudeFor(t0)));
   const out: LaunchWindow[] = [];
   // Δλ between ascending node and site along the orbit is fixed for given lat/inc.
   const dlam = wrapPi(lon + gmst(julianDate(from)) - raanFromLaunch(lat, lon + gmst(julianDate(from)), inc, descending));
@@ -237,7 +277,7 @@ export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, cou
       const lonINeeded = raanT + dlam;
       const g = gmst(julianDate(t)) + lon;
       const dtheta = wrap2pi(lonINeeded - g);
-      let dt = dtheta / OMEGA_EARTH;
+      let dt = dtheta / OMEGA_EARTH - T_PLANE; // the plane is set T_PLANE after liftoff
       if (dt < 60) dt += SIDEREAL_DAY;
       cand = new Date(t.getTime() + dt * 1000);
     }

@@ -61,6 +61,12 @@ export interface GuidanceInputs {
   stageDvLeft: number;
   /** thrust acceleration of the next launcher stage at its ignition, m/s^2 (-1 if none) */
   nextStageAccel: number;
+  /** index of the active stage */
+  stageIndex: number;
+  /** the active stage is the last strong one and a low-thrust kick stage completes the insertion */
+  lastStrongStage: boolean;
+  /** thrust acceleration of that kick stage at hand-off, m/s² */
+  weakStageAccel: number;
   isFirstStage: boolean;
   maxQThrottle?: { qStart: number; throttle: number };
   maxAccel: number;
@@ -70,6 +76,9 @@ export class AscentGuidance {
   phase: AscentPhase = 'vertical';
   private kickStart = -1;
   private kickEnd = -1;
+  /** kick-stage hand-off decision (frozen per stage) */
+  private handoffStage = -1;
+  private handoff: { hT: number; vzT: number } | null = null;
   private readonly params: GuidanceParams;
   private readonly azimuthRotating: number;
   private readonly ascentInclination: number;
@@ -142,9 +151,35 @@ export class AscentGuidance {
       // insertion altitude at its own burnout; the upper stage then descends while it
       // builds horizontal speed. The loft is a tunable (auto-tuned) parameter.
       let hT = this.insertionAltitude;
-      const vzT = 0;
+      let vzT = 0;
       let Tplan = T;
-      if (inp.nextStageAccel > 0 && inp.stageBurnTimeLeft > 3 && inp.stageBurnTimeLeft < T - 10) {
+      if (inp.lastStrongStage && this.handoffStage !== inp.stageIndex) {
+        // Decide once, when the last strong stage takes over: will it fall short of the
+        // insertion speed so that the kick stage (Briz-M, Fregat...) has to make it up with
+        // a long, low-thrust burn during which it cannot hold altitude? If so, hand over on
+        // a rising arc whose apex sits at the insertion altitude halfway through that burn,
+        // so the sag on the way down is recovered from the climb on the way up.
+        this.handoffStage = inp.stageIndex;
+        this.handoff = null;
+        const shortfall = vCirc - (vhMag + 0.95 * inp.stageDvLeft);
+        const vhHand = vCirc - shortfall;
+        const g2 = MU_EARTH / (rIns * rIns) - (vhHand * vhHand) / rIns;
+        // (only when the hand-off is clearly suborbital: near orbital speed the "arc" is an
+        // orbit and its apex lies far downrange, so the parabolic model does not apply)
+        if (shortfall > 60 && g2 > 0.6 && inp.weakStageAccel > 0) {
+          const tWeak = Math.min(900, shortfall / inp.weakStageAccel);
+          let vzH = (g2 * tWeak) * 0.25;
+          const hTop = this.insertionAltitude + 10e3;
+          const hMin = 130e3; // never hand over below this altitude: shrink the arc instead
+          if (hTop - (vzH * vzH) / (2 * g2) < hMin) vzH = Math.sqrt(Math.max(0, 2 * g2 * (hTop - hMin)));
+          this.handoff = { hT: hTop - (vzH * vzH) / (2 * g2), vzT: vzH };
+        }
+      }
+      if (inp.lastStrongStage && this.handoff && inp.stageBurnTimeLeft > 3) {
+        hT = this.handoff.hT + p.loftAltitude;
+        vzT = this.handoff.vzT;
+        Tplan = Math.max(12, inp.stageBurnTimeLeft);
+      } else if (inp.nextStageAccel > 0 && inp.stageBurnTimeLeft > 3 && inp.stageBurnTimeLeft < T - 10) {
         const vhMeco = vhMag + 0.9 * inp.stageDvLeft;
         const gEffMeco = Math.max(0, MU_EARTH / (rm * rm) - (vhMeco * vhMeco) / rm);
         if (inp.nextStageAccel < 0.6 * gEffMeco) {

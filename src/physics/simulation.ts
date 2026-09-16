@@ -8,12 +8,12 @@
  * atmosphere that co-rotates with the Earth. Integration: RK4 with adaptive
  * step size; exo-atmospheric coasts use the analytic Kepler solution.
  */
-import type { MissionConfig, FailureMode, SatelliteSpec, VehicleSpec, BoosterGroupSpec, StageSpec } from '../types';
+import type { MissionConfig, FailureMode, SatelliteSpec, VehicleSpec, BoosterGroupSpec, StageSpec, EngineSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
 import { vehicleById } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
-import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, slerpLimited, clone } from './vec3';
+import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, slerpLimited, clone, angleBetween } from './vec3';
 import { atmosphere } from './atmosphere';
 import { dragCoefficient } from './aero';
 import { gravity, gravityJ2 } from './gravity';
@@ -81,7 +81,7 @@ export interface Debris {
   visual: DebrisVisual;
   alive: boolean;
   createdAt: number;
-  recovery?: { propellant: number; thrustVac: number; thrustSL: number; mdot: number; burning: boolean; landed: boolean; entryBurnLeft: number; phase: 'coast' | 'entry' | 'landing' };
+  recovery?: { engine: EngineSpec; propellant: number; thrustVac: number; thrustSL: number; mdot: number; burning: boolean; landed: boolean; landingReserve: number; landingStarted?: boolean; phase: 'coast' | 'entry' | 'landing' };
   outcome?: 'impact' | 'landed' | 'orbit' | 'burnup';
   impact?: { lat: number; lon: number };
 }
@@ -154,13 +154,15 @@ export class Simulation {
   readonly guidance: AscentGuidance;
   readonly state: SimState;
   readonly events: SimEvent[] = [];
-  readonly telemetry: TelemetrySample[] = [];
+  telemetry: TelemetrySample[] = [];
   readonly debris: Debris[] = [];
   readonly payloadMass: number;
   readonly headless: boolean;
   private pending: PendingAction[] = [];
   private lastSampleT = -Infinity;
   private lastBurnDv = Infinity;
+  /** the current burn has started thrusting (attitude alignment gate passed) */
+  private burnIgnited = false;
   private failureApplied = false;
   private failureMode: FailureMode;
   private failureTime: number;
@@ -168,7 +170,6 @@ export class Simulation {
   private fairingStuck = false;
   private stagingInProgress = false;
   private circularizeInserted = false;
-  private readonly siteR0: Vec3;
   private readonly maxQAscent: number;
   private orbitStableSince = -1;
   /** Longest single orbital burn before splitting it across perigee/apogee passes, s. */
@@ -204,10 +205,10 @@ export class Simulation {
     const lat = this.site.latitude * DEG;
     const lon = this.site.longitude * DEG;
     const theta0 = this.plan.gmst0;
-    this.siteR0 = groundPositionEci(lat, lon, this.site.altitude, theta0);
-    const r = clone(this.siteR0);
-    const v = groundVelocityEci(r);
     const t0 = -10;
+    // the countdown state describes T-10 s: the pad has not yet rotated to its T+0 position
+    const r = groundPositionEci(lat, lon, this.site.altitude, theta0 + OMEGA_EARTH * t0);
+    const v = groundVelocityEci(r);
     this.state = {
       t: t0, r, v, dir: normalize(r), status: 'prelaunch', ascentPhase: 'vertical', throttle: 0, thrust: 0,
       mass: this.vehicle.totalMass(), q: 0, mach: 0, gLoad: 1, altitude: this.site.altitude, altitudeAGL: 0,
@@ -288,11 +289,13 @@ export class Simulation {
     return dt;
   }
 
-  /** Advance simulated time by `seconds`, bounded by `maxSteps`. */
-  advance(seconds: number, maxSteps = 5000): number {
+  /** Advance simulated time by `seconds`, bounded by `maxSteps` and an optional wall-clock deadline (performance.now() ms). */
+  advance(seconds: number, maxSteps = 5000, deadline = Infinity): number {
     let remaining = seconds;
     let steps = 0;
+    const hasClock = deadline !== Infinity && typeof performance !== 'undefined';
     while (remaining > 1e-6 && steps < maxSteps && this.state.status !== 'failed') {
+      if (hasClock && (steps & 31) === 31 && performance.now() > deadline) break;
       const dt = Math.min(this.suggestedDt(), remaining);
       const used = this.step(dt);
       remaining -= used > 0 ? used : dt;
@@ -351,6 +354,7 @@ export class Simulation {
         this.event('evt.liftoff', 'major', { twr: +(thr.thrust / weight).toFixed(2) });
       } else if (s.t > 3) {
         s.status = 'failed';
+        s.note = 'noLiftoff';
         this.event('evt.noLiftoff', 'fail', { twr: +(thr.thrust / Math.max(1, weight)).toFixed(2) });
       }
     }
@@ -411,6 +415,10 @@ export class Simulation {
         stageBurnTimeLeft: this.vehicle.stageBurnTimeLeft(),
         stageDvLeft: this.vehicle.stageDvLeft(),
         nextStageAccel: this.vehicle.nextStageAccel(this.plan.weakFinalStage),
+        stageIndex: active?.index ?? -1,
+        // a kick stage makes up a shortfall only when no ellipse insertion was affordable for the strong stages
+        lastStrongStage: this.plan.weakFinalStage && this.plan.insertionApoapsis <= this.plan.insertionAltitude + 1 && (active?.index ?? -1) === this.vehicle.lastLauncherIndex - 1,
+        weakStageAccel: this.plan.weakFinalStage ? this.vehicle.nextStageAccel(false) : -1,
         maxQThrottle: this.vehicleSpec.maxQThrottle, maxAccel,
       });
       dirCmd = cmd.dir;
@@ -432,15 +440,26 @@ export class Simulation {
       } else {
         dirCmd = dvMag > 0.01 ? scale(dvVec, 1 / dvMag) : s.dir;
       }
-      throttleCmd = 1;
-      if (fullThrust.thrustFullVac / mass > maxAccel && maxAccel > 0) throttleCmd = maxAccel / (fullThrust.thrustFullVac / mass);
+      // ignite only once the attitude is (nearly) aligned with the commanded direction —
+      // unless the vehicle is still suborbital, where every second of thrust counts. Once
+      // lit, the burn continues even if the command swings near its end.
+      if (!this.burnIgnited && s.elements.periapsisAlt > 120e3 && angleBetween(s.dir, dirCmd) >= 4 * DEG) throttleCmd = 0;
+      else { throttleCmd = 1; this.burnIgnited = true; }
+      if (throttleCmd > 0 && fullThrust.thrustFullVac / mass > maxAccel && maxAccel > 0) throttleCmd = maxAccel / (fullThrust.thrustFullVac / mass);
       s.ascentPhase = null;
       s.pitchCmd = Math.asin(Math.max(-1, Math.min(1, dot(dirCmd, up)))) * RAD;
     } else {
-      // coast: hold prograde attitude
+      // coast: hold prograde attitude, and turn to the burn attitude during the last two minutes
       dirCmd = norm(s.v) > 1 ? normalize(s.v) : s.dir;
+      const b = s.currentBurn;
+      if (b && b.kind !== 'raiseApoapsis' && s.nextBurnTime > s.t && s.nextBurnTime - s.t < 120) {
+        const vDes = desiredVelocity(s.r, s.v, b.kind, b.targetApoapsis, b.targetPeriapsis, b.targetInclination);
+        const dvVec = sub(vDes, s.v);
+        if (norm(dvVec) > 1) dirCmd = normalize(dvVec);
+      }
       throttleCmd = 0;
       s.ascentPhase = null;
+      s.pitchCmd = Math.asin(Math.max(-1, Math.min(1, dot(dirCmd, up)))) * RAD;
     }
     // slew-limited attitude
     const slew = this.cfg.guidance.slewRate * DEG * dt;
@@ -541,6 +560,7 @@ export class Simulation {
     s.elements = elementsFromState(s.r, s.v);
     const up = normalize(s.r);
     s.dir = norm(s.v) > 1 ? normalize(s.v) : up;
+    s.pitchCmd = Math.asin(Math.max(-1, Math.min(1, dot(s.dir, up)))) * RAD;
     const alt = norm(s.r) - R_EARTH;
     if (alt < 80e3) {
       this.event('evt.reentry', 'fail', { alt: Math.round(alt / 1000) });
@@ -595,7 +615,17 @@ export class Simulation {
       // hold altitude or the remaining delta-v is small.
       let nearApo = false;
       const haIns = this.plan.insertionApoapsis;
-      if (!isLast && el.apoapsisAlt >= haIns - 3e3 && el.periapsisAlt < hIns - 3e3 && s.altitude > 120e3 && el.e < 1) {
+      if (!isLast && this.plan.weakFinalStage && st.index + 1 === this.vehicle.lastLauncherIndex && el.e < 1 && el.apoapsisAlt >= 120e3 && el.periapsisAlt < hIns - 3e3) {
+        // a kick stage that cannot hold altitude never flies the closed-loop ascent: it
+        // always coasts to the apoapsis and circularises there (a low parking orbit beats a loss)
+        const next = this.vehicle.stages[st.index + 1];
+        const massAfter = this.vehicle.totalMass() - (st.spec.dryMass + st.propellant);
+        const aNext = (next.spec.engine.count * next.spec.engine.thrustVac) / Math.max(1, massAfter);
+        const rm = norm(rNext);
+        const vh = norm(sub(vNext, scale(normalize(rNext), dot(vNext, normalize(rNext)))));
+        if (aNext < 0.9 * (MU_EARTH / (rm * rm) - (vh * vh) / rm)) nearApo = true;
+      }
+      if (!nearApo && !isLast && el.apoapsisAlt >= haIns - 3e3 && el.periapsisAlt < hIns - 3e3 && s.altitude > 120e3 && el.e < 1) {
         const next = this.vehicle.stages[st.index + 1];
         const massAfter = this.vehicle.totalMass() - (st.spec.dryMass + st.propellant);
         const aNext = (next.spec.engine.count * next.spec.engine.thrustVac) / Math.max(1, massAfter);
@@ -738,7 +768,12 @@ export class Simulation {
     if (burn.kind === 'raiseApoapsis') {
       if (el.e > 0.01) tGo = timeToPeriapsis(el); // already elliptical: burn at the existing perigee
       else if (burn.atU === 'asap') tGo = 0;
-      else if (burn.atU === 'node') tGo = Math.min(timeToArgumentOfLatitude(el, 0), timeToArgumentOfLatitude(el, Math.PI));
+      else if (burn.atU === 'node') {
+        // an elliptical target needs its perigee at the node matching the argument of perigee
+        const tg = this.plan.target;
+        if (tg.e > 0.01) tGo = timeToArgumentOfLatitude(el, Math.cos(tg.argp) >= 0 ? 0 : Math.PI);
+        else tGo = Math.min(timeToArgumentOfLatitude(el, 0), timeToArgumentOfLatitude(el, Math.PI));
+      }
       else tGo = timeToArgumentOfLatitude(el, burn.atU);
     } else {
       tGo = timeToApoapsis(el);
@@ -761,9 +796,12 @@ export class Simulation {
       // suborbital: no second chance; burn now unless the apoapsis is clearly still ahead
       tStart = tGo < period / 2 ? Math.max(s.t + 1, s.t + tGo - tBurnThis / 2) : s.t + 1;
     } else if (tStart < s.t + 1) {
-      if (tGo < 60) tStart = s.t + 1;
+      // slightly late: start now unless a whole extra orbit is genuinely needed to centre a single pass
+      if (tGo < 60 || tBurn > maxDur) tStart = Math.max(s.t + 1, s.t + tGo - tBurnThis / 2);
       else tStart = s.t + tGo + period - tBurnThis / 2;
     }
+    // a small remainder of a paused apogee-raising burn is finished right away, still near perigee
+    if (burn.kind === 'raiseApoapsis' && dv < 100 && tGo > 0.9 * period) tStart = s.t + 1;
     s.nextBurnTime = tStart;
     s.currentBurn = burn;
     burn.dvEstimate = dv;
@@ -796,6 +834,7 @@ export class Simulation {
     s.currentBurn = burn;
     s.burnStartTime = s.t;
     this.lastBurnDv = Infinity;
+    this.burnIgnited = false;
     s.burnPlaneNormal = null;
     if (burn.kind === 'shapeAtApoapsis' && burn.targetInclination !== undefined) {
       const el = elementsFromState(s.r, s.v);
@@ -840,7 +879,7 @@ export class Simulation {
       const dv = s.burnDvRemaining;
       if (dv < 0.5) complete = true;
       else if (dv < 40 && dv > this.lastBurnDv + 0.02) complete = true; // passed the minimum
-      else if (dv > 40 && s.t - s.burnStartTime > (b.maxDuration ?? this.maxBurnDurationFor(b, el)) && el.e < 1 && el.periapsisAlt > 120e3) {
+      else if (s.t - s.burnStartTime > (b.maxDuration ?? this.maxBurnDurationFor(b, el)) + (dv > 40 ? 0 : 300) && el.e < 1 && el.periapsisAlt > 120e3) {
         // long low-thrust apogee burn: continue at the next apoapsis
         const st = this.vehicle.active;
         if (st) this.vehicle.cutoffStage(st, s.t);
@@ -893,6 +932,12 @@ export class Simulation {
 
   private reachTargetOrbit(el: OrbitalElements, onTarget = true): void {
     const s = this.state;
+    if (onTarget) {
+      // "achieved" only when the orbit actually matches the target within a few percent
+      const tg = this.plan.target;
+      const tol = (h: number) => Math.max(25e3, 0.03 * h);
+      if (Math.abs(el.apoapsisAlt - tg.apogee) > tol(tg.apogee) || Math.abs(el.periapsisAlt - tg.perigee) > tol(tg.perigee) || Math.abs(el.i - tg.inclination) > 1.5 * DEG) onTarget = false;
+    }
     s.status = 'orbit';
     s.note = onTarget ? 'orbit' : 'orbitOffTarget';
     s.currentBurn = null;
@@ -961,13 +1006,15 @@ export class Simulation {
         this.event('evt.thrustLoss', 'fail', { stage: target.spec.name });
         break;
       case 'prematureSep': {
-        this.event('evt.prematureSep', 'fail', { stage: target.spec.name });
-        if (target.index === this.vehicle.activeIndex) {
-          target.burnedOut = true;
-          target.cutoffTime = s.t;
-          for (const b of target.boosters) if (b.attached) { b.burnedOut = true; this.vehicle.jettisonBooster(b, s.t); this.spawnBoosterDebris(b); }
-          this.onCoreBurnout(target, s.r, s.v);
-        }
+        // a stage that is not burning yet cannot separate "prematurely": the break-up happens
+        // at the stage that is currently thrusting
+        const victim = target.index === this.vehicle.activeIndex ? target : this.vehicle.active;
+        if (!victim) break;
+        this.event('evt.prematureSep', 'fail', { stage: victim.spec.name });
+        victim.burnedOut = true;
+        victim.cutoffTime = s.t;
+        for (const b of victim.boosters) if (b.attached) { b.burnedOut = true; this.vehicle.jettisonBooster(b, s.t); this.spawnBoosterDebris(b); }
+        this.onCoreBurnout(victim, s.r, s.v);
         break;
       }
       case 'rangeSafety':
@@ -1009,13 +1056,7 @@ export class Simulation {
         visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', conicalTop: spec.conicalTop, kind: 'booster' },
         alive: true, createdAt: s.t,
       };
-      if (recoverable) {
-        const e = spec.engine;
-        d.recovery = {
-          propellant: Math.max(0, b.propellant), thrustVac: 3 * e.thrustVac, thrustSL: 3 * e.thrustSL,
-          mdot: (3 * e.thrustVac) / (G0 * e.ispVac), burning: false, landed: false, entryBurnLeft: 12, phase: 'coast',
-        };
-      }
+      if (recoverable) d.recovery = this.recoveryFor(spec.engine, spec.dryMass, Math.max(0, b.propellant));
       this.debris.push(d);
     }
   }
@@ -1030,15 +1071,32 @@ export class Simulation {
       visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', kind: 'stage' },
       alive: true, createdAt: s.t,
     };
-    if (recoverable) {
-      const e = spec.engine;
-      const n = Math.min(3, e.count);
-      d.recovery = {
-        propellant: st.propellant, thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL,
-        mdot: (n * e.thrustVac) / (G0 * e.ispVac), burning: false, landed: false, entryBurnLeft: 15, phase: 'coast',
-      };
-    }
+    if (recoverable) d.recovery = this.recoveryFor(spec.engine, spec.dryMass, Math.max(0, st.propellant));
     this.debris.push(d);
+  }
+
+  /**
+   * Recovery parameters for a returning stage: up to three engines, or more when three give
+   * less than 2.5 g on the dry stage, and a propellant reserve for a ~800 m/s landing burn
+   * (terminal velocity plus gravity losses); everything above the reserve may be spent on
+   * the entry burn.
+   */
+  private recoveryFor(e: EngineSpec, dryMass: number, propellant: number): NonNullable<Debris['recovery']> {
+    const landingReserve = dryMass * (Math.exp(800 / (G0 * e.ispSL)) - 1);
+    const rc: NonNullable<Debris['recovery']> = {
+      engine: e, propellant, thrustVac: 0, thrustSL: 0, mdot: 0, burning: false, landed: false, landingReserve, phase: 'coast',
+    };
+    this.setRecoveryEngines(rc, Math.max(3, Math.ceil((2.5 * G0 * (dryMass + landingReserve)) / e.thrustSL)));
+    return rc;
+  }
+
+  /** Select how many engines a returning stage burns (entry burn: up to three; landing: thrust/weight ≈ 3). */
+  private setRecoveryEngines(rc: NonNullable<Debris['recovery']>, n: number): void {
+    const e = rc.engine;
+    const k = Math.max(1, Math.min(e.count, n));
+    rc.thrustVac = k * e.thrustVac;
+    rc.thrustSL = k * e.thrustSL;
+    rc.mdot = (k * e.thrustVac) / (G0 * e.ispVac);
   }
 
   private spawnFairing(r: Vec3, v: Vec3): void {
@@ -1086,22 +1144,26 @@ export class Simulation {
           const T = rc.thrustVac - (rc.thrustVac - rc.thrustSL) * Math.min(1, atm.p / 101325);
           const gMag = MU_EARTH / (norm(d.r) ** 2);
           let burn = false;
-          // Entry burn: a short retrograde burn near 70 km to cut the re-entry speed.
+          // Entry burn: retrograde below 70 km until the airspeed is survivable (~1.4 km/s),
+          // spending everything above the landing reserve.
           if (rc.phase === 'coast' && altK < 70e3) rc.phase = 'entry';
           if (rc.phase === 'entry') {
-            if (rc.entryBurnLeft > 0 && altK > 30e3) {
-              burn = true;
-              rc.entryBurnLeft -= h;
-            } else {
+            const spare = rc.propellant - rc.landingReserve;
+            if (spare > 0 && altK > 25e3 && vAirMag > 1400) burn = true;
+            else {
               rc.phase = 'landing';
+              // landing engines: thrust/weight ≈ 3 on the actual mass at this point
+              this.setRecoveryEngines(rc, Math.ceil((3 * G0 * d.mass) / rc.engine.thrustSL));
             }
           }
           // Landing burn: follow a constant-deceleration descent profile (bang-bang thrust
           // stands in for engine throttling) so that the vertical speed reaches ~2 m/s at
           // touchdown.
-          if (rc.phase === 'landing' && altK < 15e3) {
+          if (rc.phase === 'landing' && altK < 20e3) {
             const hAgl = Math.max(0.5, altK - this.site.altitude);
-            const vRef = Math.sqrt(2 * 9 * hAgl) + 2;
+            // decelerate at ~60 % of the available net acceleration (a late, short "hoverslam")
+            const aRef = Math.max(6, Math.min(25, 0.6 * (T / d.mass - gMag)));
+            const vRef = Math.sqrt(2 * aRef * hAgl) + 2;
             if (vDown > vRef) burn = true;
             else if (vDown < vRef - 4) burn = false;
             else burn = rc.burning;
@@ -1109,11 +1171,13 @@ export class Simulation {
           }
           if (burn) {
             rc.burning = true;
+            if (rc.phase === 'landing') rc.landingStarted = true;
             thrustAccel = T / d.mass;
             thrustDir = scale(vAir, -1 / vAirMag);
             rc.propellant -= rc.mdot * h;
             d.mass -= rc.mdot * h;
-          } else if (rc.phase !== 'landing') {
+          } else if (!(rc.phase === 'landing' && rc.landingStarted)) {
+            // (the bang-bang landing burn keeps its plume once it has started)
             rc.burning = false;
           }
         }
@@ -1173,15 +1237,26 @@ export class Simulation {
 
   private sample(): void {
     const s = this.state;
-    const interval = s.status === 'ascent' || s.status === 'burn' ? 0.5 : s.status === 'prelaunch' ? 1 : 10;
+    // sampling: fine during powered flight, and in orbit no finer than 1/360 of a period so
+    // that a day of GEO coasting does not produce hundreds of thousands of samples
+    const period = isFinite(s.elements.period) && s.elements.period > 0 ? s.elements.period : 5400;
+    const interval = s.status === 'ascent' || s.status === 'burn' ? 0.5 : s.status === 'prelaunch' ? 1 : Math.max(10, period / 360);
     if (s.t - this.lastSampleT < interval - 1e-6) return;
     this.lastSampleT = s.t;
+    if (this.telemetry.length >= 20000) {
+      // bounded buffer: thin the older half 2:1 (keeps the recent flight at full resolution)
+      const half = this.telemetry.length >> 1;
+      const kept: typeof this.telemetry = [];
+      for (let i = 0; i < half; i += 2) kept.push(this.telemetry[i]);
+      for (let i = half; i < this.telemetry.length; i++) kept.push(this.telemetry[i]);
+      this.telemetry = kept;
+    }
     const act = this.vehicle.active;
     this.telemetry.push({
       t: s.t, alt: s.altitude, vInertial: s.speed, vAir: s.airspeed, q: s.q, mach: s.mach, gLoad: s.gLoad,
       mass: s.mass, thrust: s.thrust, throttle: s.throttle, pitch: s.pitchCmd,
       ap: isFinite(s.elements.apoapsisAlt) ? s.elements.apoapsisAlt : -1, pe: s.elements.periapsisAlt, inc: s.elements.i * RAD,
-      dvRemaining: this.vehicle.deltaVRemaining(), downrange: s.downrange, lat: s.lat, lon: s.lon,
+      dvRemaining: s.payloadSeparated ? this.vehicle.spacecraftDeltaV() : this.vehicle.deltaVRemaining(), downrange: s.downrange, lat: s.lat, lon: s.lon,
       stage: act ? act.index + 1 : 0, phase: s.status === 'ascent' ? s.ascentPhase ?? '' : s.status,
     });
   }

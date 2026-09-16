@@ -9,11 +9,11 @@ import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../physics/defaults';
-import { liftoffMass, liftoffThrust, idealDeltaV, VehicleModel } from '../physics/vehicle';
+import { liftoffMass, liftoffThrust, VehicleModel } from '../physics/vehicle';
 import { planMission, launchWindows, resolveTarget } from '../physics/mission';
-import { runAscent, DEFAULT_KICKS, DEFAULT_RATES, DEFAULT_LOFTS, needsLoftSearch, type TuneResult } from '../physics/autotune';
-import { G0, RAD } from '../physics/constants';
-import { t } from '../i18n';
+import { runAscent, pickBest, DEFAULT_KICKS, DEFAULT_RATES, DEFAULT_LOFTS, needsLoftSearch, type TuneResult } from '../physics/autotune';
+import { G0, RAD, R_EARTH } from '../physics/constants';
+import { t, tn } from '../i18n';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -45,7 +45,7 @@ function fromDatetimeLocalUTC(s: string): Date | null {
   if (!m) return null;
   return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0));
 }
-const fmtUTC = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+const fmtUTC = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 16) + ' ' + t('misc.utc');
 
 export class SetupPanel {
   readonly root: HTMLElement;
@@ -53,7 +53,13 @@ export class SetupPanel {
   state: SetupState;
   private running = false;
   private tuning = false;
+  /** the launch site was changed automatically because the vehicle does not fly from the chosen one */
+  private siteSwapped = false;
+  /** tuneKey() of the configuration the current guidance profile was tuned for */
+  private tunedKey: string | null = null;
   private tuneMessage = '';
+  /** open/closed state of the collapsible sections, preserved across re-renders */
+  private openSections: Record<string, boolean> = { guidance: false, failure: false };
 
   constructor(root: HTMLElement, cb: SetupCallbacks) {
     this.root = root;
@@ -79,6 +85,7 @@ export class SetupPanel {
   }
 
   setRunning(r: boolean): void {
+    if (this.running === r) return;
     this.running = r;
     this.render();
   }
@@ -100,7 +107,7 @@ export class SetupPanel {
       if (o.value === value) op.selected = true;
       sel.appendChild(op);
     }
-    sel.disabled = this.running;
+    sel.disabled = this.running || this.tuning;
     sel.addEventListener('change', () => onChange(sel.value));
     lab.appendChild(sel);
     return lab;
@@ -115,10 +122,17 @@ export class SetupPanel {
     inp.step = String(step);
     if (min !== undefined) inp.min = String(min);
     if (max !== undefined) inp.max = String(max);
-    inp.disabled = this.running;
+    inp.disabled = this.running || this.tuning;
     inp.addEventListener('change', () => {
-      const v = Number(inp.value);
-      if (isFinite(v)) onChange(v);
+      let v = Number(inp.value);
+      if (inp.value.trim() === '' || !isFinite(v)) {
+        inp.value = String(+value.toFixed(3)); // reject empty / invalid: restore the previous value
+        return;
+      }
+      if (min !== undefined) v = Math.max(min, v);
+      if (max !== undefined) v = Math.min(max, v);
+      inp.value = String(+v.toFixed(3)); // show the clamped value
+      onChange(v);
     });
     lab.appendChild(inp);
     return lab;
@@ -136,18 +150,19 @@ export class SetupPanel {
     root.innerHTML = '';
     root.appendChild(this.el('h2', 'section', t('setup.title')));
     const vehicle = vehicleById(s.vehicleId);
-    if (!vehicle.sites.includes(s.siteId)) s.siteId = vehicle.sites[0];
+    if (!vehicle.sites.includes(s.siteId)) { s.siteId = vehicle.sites[0]; this.siteSwapped = true; }
 
     // vehicle / payload / site
     root.appendChild(this.select('setup.vehicle', VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })), s.vehicleId, (v) => {
       s.vehicleId = v;
       const spec = vehicleById(v);
-      if (!spec.sites.includes(s.siteId)) s.siteId = spec.sites[0];
+      this.siteSwapped = !spec.sites.includes(s.siteId);
+      if (this.siteSwapped) s.siteId = spec.sites[0];
       if (!spec.recoverable) s.boosterRecovery = false;
       this.render();
       this.changed();
     }));
-    root.appendChild(this.select('setup.satellite', SATELLITES.map((x) => ({ value: x.id, label: x.name })), s.satelliteId, (v) => {
+    root.appendChild(this.select('setup.satellite', SATELLITES.map((x) => ({ value: x.id, label: tn(`sat.${x.id}.name`, x.name) })), s.satelliteId, (v) => {
       s.satelliteId = v;
       const sat = satelliteById(v);
       s.payloadMass = sat.mass;
@@ -158,64 +173,57 @@ export class SetupPanel {
       this.changed();
     }));
     root.appendChild(this.number('setup.payloadMass', s.payloadMass, (v) => { s.payloadMass = Math.max(1, v); this.changed(); }, 10, 1));
-    root.appendChild(this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: `${x.name} (${x.latitude.toFixed(1)}°)` })), s.siteId, (v) => { s.siteId = v; this.render(); this.changed(); }));
+    root.appendChild(this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: `${tn(`site.${x.id}.name`, x.name)} (${x.latitude.toFixed(1)}°)` })), s.siteId, (v) => { s.siteId = v; this.siteSwapped = false; this.render(); this.changed(); }));
 
     // orbit
     root.appendChild(this.el('h2', 'section', t('setup.orbit')));
-    root.appendChild(this.select('setup.orbit', ORBIT_PRESETS.map((o) => ({ value: o.id, label: o.name })), s.orbitId, (v) => {
+    const orbitSel = this.select('setup.orbit', ORBIT_PRESETS.map((o) => ({ value: o.id, label: tn(`orbit.${o.id}.name`, o.name) })), s.orbitId, (v) => {
       s.orbitId = v;
       s.orbit = { ...orbitById(v) };
       this.render();
       this.changed();
-    }));
-    const desc = this.el('div', 'small', s.orbit.description);
+    });
+    orbitSel.querySelector('select')!.id = 'orbit-select';
+    root.appendChild(orbitSel);
+    const desc = this.el('div', 'small', tn(`orbit.${s.orbit.id}.desc`, s.orbit.description));
+    desc.id = 'orbit-desc';
     root.appendChild(desc);
     const site = siteById(s.siteId);
     const target = resolveTarget(s.orbit, site, s.launchTime);
     const orbitRow = this.el('div', 'row');
-    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { this.customise(); s.orbit.perigee = Math.max(100, v) * 1000; this.render(); this.changed(); }, 10, 100));
-    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { this.customise(); s.orbit.apogee = Math.max(100, v) * 1000; this.render(); this.changed(); }, 10, 100));
+    const orbitChanged = () => { this.customise(); this.updateOrbitHeader(); this.changed(); };
+    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { s.orbit.perigee = v * 1000; if (s.orbit.apogee < s.orbit.perigee) s.orbit.apogee = s.orbit.perigee; orbitChanged(); }, 10, 100, 400000));
+    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { s.orbit.apogee = v * 1000; if (s.orbit.apogee < s.orbit.perigee) s.orbit.perigee = s.orbit.apogee; orbitChanged(); }, 10, 100, 400000));
     root.appendChild(orbitRow);
     const orbitRow2 = this.el('div', 'row');
-    orbitRow2.appendChild(this.number('setup.inclination', target.inclination * RAD, (v) => { this.customise(); s.orbit.inclination = Math.max(0, Math.min(180, v)); this.render(); this.changed(); }, 0.1, 0, 180));
-    orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = ((v % 360) + 360) % 360; this.changed(); }, 1, 0, 360));
+    orbitRow2.appendChild(this.number('setup.inclination', target.inclination * RAD, (v) => { s.orbit.inclination = v; orbitChanged(); }, 0.1, 0, 180));
+    orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { s.orbit.argPerigee = ((v % 360) + 360) % 360; orbitChanged(); }, 1, 0, 360));
     root.appendChild(orbitRow2);
     root.appendChild(this.select('setup.raanMode', [
       { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
       { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
     ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
-    if (s.orbit.raanMode === 'fixed') root.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = ((v % 360) + 360) % 360; this.render(); this.changed(); }, 1, 0, 360));
-    if (s.orbit.raanMode === 'ltan') root.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = Math.max(0, Math.min(24, v)); this.render(); this.changed(); }, 0.25, 0, 24));
+    if (s.orbit.raanMode === 'fixed') root.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = ((v % 360) + 360) % 360; this.updateWindows(); this.changed(); }, 1, 0, 360));
+    if (s.orbit.raanMode === 'ltan') root.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.updateWindows(); this.changed(); }, 0.25, 0, 24));
 
     // launch time
     const timeLab = this.el('label', 'field');
     timeLab.appendChild(this.el('span', undefined, t('setup.launchTime')));
     const timeInp = this.el('input');
     timeInp.type = 'datetime-local';
+    timeInp.id = 'launch-time';
     timeInp.value = toDatetimeLocalUTC(s.launchTime);
-    timeInp.disabled = this.running;
+    timeInp.disabled = this.running || this.tuning;
     timeInp.addEventListener('change', () => {
       const d = fromDatetimeLocalUTC(timeInp.value);
-      if (d) { s.launchTime = d; this.render(); this.changed(); }
+      if (d) { s.launchTime = d; this.updateWindows(); this.changed(); }
     });
     timeLab.appendChild(timeInp);
     root.appendChild(timeLab);
-    const wins = s.orbit.raanMode === 'free' ? [] : launchWindows(s.orbit, site, new Date(s.launchTime.getTime() - 60e3), 3);
     const winBox = this.el('div', 'windows');
-    if (s.orbit.raanMode === 'free') winBox.appendChild(this.el('div', undefined, t('setup.noWindow')));
-    else {
-      winBox.appendChild(this.el('div', 'k', t('setup.windowInfo') + ':'));
-      for (const w of wins) {
-        const row = this.el('div', undefined, `▸ ${fmtUTC(w.time)}  RAAN ${(w.raanTarget * RAD).toFixed(1)}°`);
-        row.addEventListener('click', () => { if (this.running) return; s.launchTime = w.time; this.render(); this.changed(); });
-        winBox.appendChild(row);
-      }
-      const btn = this.el('button', 'btn', t('setup.nextWindow'));
-      btn.disabled = this.running;
-      btn.addEventListener('click', () => { if (wins[0]) { s.launchTime = wins[0].time; this.render(); this.changed(); } });
-      winBox.appendChild(btn);
-    }
+    winBox.id = 'launch-windows';
     root.appendChild(winBox);
+    this.updateWindows();
 
     // info
     const info = this.el('div', 'info');
@@ -224,6 +232,8 @@ export class SetupPanel {
 
     // guidance
     const gd = this.el('details');
+    gd.open = this.openSections.guidance;
+    gd.addEventListener('toggle', () => { this.openSections.guidance = gd.open; });
     const gsum = this.el('summary', undefined, t('setup.guidance'));
     gd.appendChild(gsum);
     const g = s.guidance;
@@ -259,6 +269,8 @@ export class SetupPanel {
 
     // failure
     const fd = this.el('details');
+    fd.open = this.openSections.failure;
+    fd.addEventListener('toggle', () => { this.openSections.failure = fd.open; });
     fd.appendChild(this.el('summary', undefined, t('setup.failure')));
     fd.appendChild(this.select('setup.failureMode', FAILURE_MODES.map((m) => ({ value: m, label: t(`setup.fail.${m}`) })), s.failure.mode, (v) => { s.failure.mode = v as FailureMode; this.changed(); }));
     const fr = this.el('div', 'row');
@@ -273,7 +285,7 @@ export class SetupPanel {
     const cb = this.el('input');
     cb.type = 'checkbox';
     cb.checked = s.boosterRecovery;
-    cb.disabled = this.running || !vehicle.recoverable;
+    cb.disabled = this.running || this.tuning || !vehicle.recoverable;
     cb.addEventListener('change', () => { s.boosterRecovery = cb.checked; this.changed(); });
     chk.appendChild(cb);
     chk.appendChild(this.el('span', undefined, t('setup.boosterRecovery')));
@@ -283,13 +295,53 @@ export class SetupPanel {
     const actions = this.el('div', 'actions');
     const launch = this.el('button', 'btn primary', t('setup.launch'));
     launch.disabled = this.running || this.tuning;
-    launch.addEventListener('click', () => this.cb.onLaunch(this.getConfig()));
+    launch.addEventListener('click', () => void this.launchTuned());
     const reset = this.el('button', 'btn', t('setup.reset'));
+    reset.disabled = this.tuning;
     reset.addEventListener('click', () => { this.running = false; this.render(); this.cb.onReset(); });
     actions.appendChild(launch);
     actions.appendChild(reset);
     root.appendChild(actions);
     this.updateInfo();
+  }
+
+  /** Refresh the launch-window list (and the time input) without rebuilding the panel. */
+  private updateWindows(): void {
+    const s = this.state;
+    const winBox = this.root.querySelector<HTMLElement>('#launch-windows');
+    const timeInp = this.root.querySelector<HTMLInputElement>('#launch-time');
+    if (timeInp && document.activeElement !== timeInp) timeInp.value = toDatetimeLocalUTC(s.launchTime);
+    if (!winBox) return;
+    winBox.innerHTML = '';
+    const site = siteById(s.siteId);
+    if (s.orbit.raanMode === 'free') {
+      winBox.appendChild(this.el('div', undefined, t('setup.noWindow')));
+      return;
+    }
+    // windows strictly after the currently selected launch time
+    const wins = launchWindows(s.orbit, site, new Date(s.launchTime.getTime() + 60e3), 3);
+    winBox.appendChild(this.el('div', 'k', t('setup.windowInfo') + ':'));
+    for (const w of wins) {
+      const row = this.el('div', undefined, `▸ ${fmtUTC(w.time)}  ${t('hud.raan')} ${(w.raanTarget * RAD).toFixed(1)}°`);
+      row.setAttribute('role', 'button');
+      row.tabIndex = 0;
+      row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); } });
+      row.addEventListener('click', () => { if (this.running || this.tuning) return; s.launchTime = w.time; this.updateWindows(); this.changed(); });
+      winBox.appendChild(row);
+    }
+    const btn = this.el('button', 'btn', t('setup.nextWindow'));
+    btn.disabled = this.running || this.tuning;
+    btn.addEventListener('click', () => { if (wins[0]) { s.launchTime = wins[0].time; this.updateWindows(); this.changed(); } });
+    winBox.appendChild(btn);
+  }
+
+  /** Update the preset selector and description after the orbit became custom. */
+  private updateOrbitHeader(): void {
+    const sel = this.root.querySelector<HTMLSelectElement>('#orbit-select');
+    if (sel && sel.value !== this.state.orbitId) sel.value = this.state.orbitId;
+    const desc = this.root.querySelector<HTMLElement>('#orbit-desc');
+    if (desc) desc.textContent = tn(`orbit.${this.state.orbit.id}.desc`, this.state.orbit.description);
+    this.updateWindows();
   }
 
   private customise(): void {
@@ -309,36 +361,63 @@ export class SetupPanel {
     const cfg = this.getConfig();
     const m0 = liftoffMass(spec, s.payloadMass) + (sat.propulsion ? 0 : 0);
     const T0 = liftoffThrust(spec);
-    const dv = idealDeltaV(spec, s.payloadMass);
     const vm = new VehicleModel(spec, s.payloadMass, s.boosterRecovery, sat);
+    const dv = vm.deltaVRemaining();
     let plan;
     try { plan = planMission(cfg, site, spec); } catch { plan = null; }
     const lines: string[] = [];
     const row = (k: string, v: string, cls = '') => lines.push(`<span class="k">${k}</span> <span class="${cls}">${v}</span>`);
-    row(t('setup.info.height'), `${spec.height} m`);
-    row(t('setup.info.liftoffMass'), `${(m0 / 1000).toFixed(1)} t`);
-    row(t('setup.info.liftoffThrust'), `${(T0 / 1000).toFixed(0)} kN`);
+    const ms = t('u.ms');
+    row(t('setup.info.height'), `${spec.height} ${t('u.m')}`);
+    row(t('setup.info.liftoffMass'), `${(m0 / 1000).toFixed(1)} ${t('u.t')}`);
+    row(t('setup.info.liftoffThrust'), `${(T0 / 1000).toFixed(0)} ${t('u.kN')}`);
     row(t('setup.info.twr'), (T0 / (m0 * G0)).toFixed(2));
-    row(t('setup.info.stages'), `${spec.stages.length}${sat.propulsion ? ' + s/c' : ''}`);
-    row(t('setup.info.idealDv'), `${dv.toFixed(0)} m/s`);
-    if (sat.propulsion) row(t('setup.info.spacecraftDv'), `${vm.spacecraftDeltaV().toFixed(0)} m/s`);
-    row(t('setup.info.payloadLEO'), `${spec.payloadLEO} kg`);
-    if (spec.payloadGTO) row(t('setup.info.payloadGTO'), `${spec.payloadGTO} kg`);
+    row(t('setup.info.stages'), `${spec.stages.length}${sat.propulsion ? ' ' + t('setup.info.plusSpacecraft') : ''}`);
+    row(t('setup.info.idealDv'), `${dv.toFixed(0)} ${ms}`);
+    if (sat.propulsion) row(t('setup.info.spacecraftDv'), `${vm.spacecraftDeltaV().toFixed(0)} ${ms}`);
+    row(t('setup.info.payloadLEO'), `${spec.payloadLEO} ${t('u.kg')}`);
+    if (spec.payloadGTO) row(t('setup.info.payloadGTO'), `${spec.payloadGTO} ${t('u.kg')}`);
+    if (this.siteSwapped) lines.push(`<span class="warn">${t('setup.info.siteNotAllowed')}</span>`);
     if (plan) {
-      row(t('setup.info.azimuth'), `${(plan.azimuthRotating * RAD).toFixed(1)}° (${plan.descending ? 'S' : 'N'})`);
+      row(t('setup.info.azimuth'), `${((((plan.azimuthRotating * RAD) % 360) + 360) % 360).toFixed(1)}° (${t(plan.descending ? 'misc.south' : 'misc.north')})`);
       row(t('setup.info.ascentInclination'), `${(plan.ascentInclination * RAD).toFixed(2)}°`);
-      row(t('setup.info.insertion'), `${(plan.insertionAltitude / 1000).toFixed(0)} × ${(plan.insertionApoapsis / 1000).toFixed(0)} km`);
-      if (plan.planeChangeDeg > 0.05) row(t('setup.info.planeChange'), `${plan.planeChangeDeg.toFixed(1)}°`, 'warn');
-      row(t('setup.info.burnsDv'), `${plan.dvEstimateBurns.toFixed(0)} m/s (${plan.burns.length})`);
+      row(t('setup.info.insertion'), `${(plan.insertionAltitude / 1000).toFixed(0)} × ${(plan.insertionApoapsis / 1000).toFixed(0)} ${t('u.km')}`);
+      if (plan.planeChangeDeg > 0.3) row(t('setup.info.planeChange'), `${plan.planeChangeDeg.toFixed(1)}°`, 'warn');
+      row(t('setup.info.burnsDv'), `${plan.dvEstimateBurns.toFixed(0)} ${ms} (${plan.burns.length})`);
       if (!plan.inclinationReachable) lines.push(`<span class="warn">${t('setup.info.unreachable')}</span>`);
+      if (!plan.azimuthAllowed) lines.push(`<span class="warn">${t('setup.info.azimuthOutside')}</span>`);
+      if (!plan.canRaise && plan.burns.length > 0) lines.push(`<span class="warn">${t('setup.info.noRestart')}</span>`);
+      const apo = plan.target.a * (1 + plan.target.e) - R_EARTH;
+      const rated = apo > 2000e3 && spec.payloadGTO ? spec.payloadGTO : spec.payloadLEO;
+      if (s.payloadMass > rated) lines.push(`<span class="warn">${t('setup.info.overweight')}</span>`);
     }
     box.innerHTML = lines.join('<br>');
+  }
+
+  /** Key of everything the auto-tune result depends on. */
+  private tuneKey(): string {
+    const s = this.state;
+    return JSON.stringify([s.vehicleId, s.siteId, s.satelliteId, s.payloadMass, s.boosterRecovery, s.orbit, s.launchTime.getTime(), s.guidance]);
+  }
+
+  /**
+   * Launch: when the guidance has not been tuned for this configuration and the user has
+   * not set the profile by hand, run the auto-tune first so the default profile does not
+   * decide the mission's fate.
+   */
+  private async launchTuned(): Promise<void> {
+    if (this.running || this.tuning) return;
+    const g = this.state.guidance;
+    const untouched = g.kickAngle === DEFAULT_GUIDANCE.kickAngle && g.maxTurnRate === DEFAULT_GUIDANCE.maxTurnRate && g.loftAltitude === DEFAULT_GUIDANCE.loftAltitude;
+    if (this.tunedKey !== this.tuneKey() && (untouched || this.tunedKey !== null)) await this.autotune();
+    this.cb.onLaunch(this.getConfig());
   }
 
   /** Chunked auto-tune so the UI stays responsive. */
   private async autotune(): Promise<void> {
     if (this.tuning) return;
     this.tuning = true;
+    this.openSections.guidance = true;
     this.tuneMessage = t('setup.autotuning');
     this.render();
     const cfg = this.getConfig();
@@ -353,18 +432,18 @@ export class SetupPanel {
       if (msg) msg.textContent = `${t('setup.autotuning')} ${i + 1}/${combos.length}`;
       if (i % 3 === 2) await new Promise((r) => setTimeout(r, 0));
     }
-    const ok = results.filter((r) => r.success);
-    let best: TuneResult | null = null;
-    if (ok.length) best = ok.reduce((a, b) => (b.dvRemaining > a.dvRemaining ? b : a));
+    const best = pickBest(results.filter((r) => r.success));
     this.tuning = false;
     if (best) {
       this.state.guidance.kickAngle = best.kickAngle;
       this.state.guidance.maxTurnRate = best.maxTurnRate;
       this.state.guidance.loftAltitude = best.loftAltitude;
       this.tuneMessage = t('setup.autotuneResult', { kick: best.kickAngle, rate: best.maxTurnRate, loft: best.loftAltitude / 1000, dv: Math.round(best.dvRemaining) });
+      if (!best.insertionOk) this.tuneMessage += ' ' + t('setup.autotuneLofted', { ap: Math.round(best.insertionAp), pe: Math.round(best.insertionPe) });
     } else {
       this.tuneMessage = t('setup.autotuneFail');
     }
+    this.tunedKey = this.tuneKey();
     this.render();
     this.changed();
   }
