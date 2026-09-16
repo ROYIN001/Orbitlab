@@ -40,23 +40,51 @@ export class CameraController {
   private lastY = 0;
   private tmp = new THREE.Vector3();
   private shakeT = 0;
+  /** active pointers for touch pinch-zoom */
+  private pointers = new Map<number, { x: number; y: number }>();
+  private pinchDist = 0;
+  /** smoothed camera position for the exterior view */
+  private smoothPos = new THREE.Vector3();
+  private smoothInit = false;
+  private lastMode: CameraMode = 'exterior';
 
   attach(el: HTMLElement): void {
     const isControl = (t: EventTarget | null): boolean => {
       const n = t as HTMLElement | null;
       return !!n && !!n.closest && !!n.closest('button, select, input, label, a, #controls, #hud, #ticker');
     };
+    const zoomBy = (factor: number) => {
+      if (this.mode === 'exterior') this.dist = Math.max(1.2, Math.min(60, this.dist * factor));
+      else if (this.mode === 'space') this.spaceDist = Math.max(1.05, Math.min(12, this.spaceDist * factor));
+    };
+    el.style.touchAction = 'none';
     el.addEventListener('pointerdown', (e) => {
       // never capture the pointer when the user is pressing a control inside the viewport
       if (isControl(e.target)) return;
       if (this.mode === 'map' || this.mode === 'onboard') return;
       if (e.button !== 0 && e.pointerType === 'mouse') return;
-      this.dragging = true;
-      this.lastX = e.clientX;
-      this.lastY = e.clientY;
-      el.setPointerCapture(e.pointerId);
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.pointers.size === 2) {
+        const [a, b] = [...this.pointers.values()];
+        this.pinchDist = Math.hypot(a.x - b.x, a.y - b.y);
+        this.dragging = false;
+      } else {
+        this.dragging = true;
+        this.lastX = e.clientX;
+        this.lastY = e.clientY;
+      }
+      try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
     });
     el.addEventListener('pointermove', (e) => {
+      const p = this.pointers.get(e.pointerId);
+      if (p) { p.x = e.clientX; p.y = e.clientY; }
+      if (this.pointers.size === 2) {
+        const [a, b] = [...this.pointers.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (this.pinchDist > 0 && d > 0) zoomBy(this.pinchDist / d);
+        this.pinchDist = d;
+        return;
+      }
       if (!this.dragging) return;
       const dx = e.clientX - this.lastX;
       const dy = e.clientY - this.lastY;
@@ -71,15 +99,24 @@ export class CameraController {
       }
     });
     const stop = (e: PointerEvent) => {
-      this.dragging = false;
+      this.pointers.delete(e.pointerId);
+      if (this.pointers.size < 2) this.pinchDist = 0;
+      if (this.pointers.size === 1) {
+        const [a] = [...this.pointers.values()];
+        this.lastX = a.x; this.lastY = a.y;
+        this.dragging = true;
+      } else if (this.pointers.size === 0) {
+        this.dragging = false;
+      }
       try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     };
     el.addEventListener('pointerup', stop);
     el.addEventListener('pointercancel', stop);
+    el.addEventListener('lostpointercapture', stop);
     el.addEventListener('wheel', (e) => {
       if (isControl(e.target)) return;
-      if (this.mode === 'exterior') this.dist = Math.max(1.2, Math.min(60, this.dist * (e.deltaY > 0 ? 1.12 : 0.89)));
-      else if (this.mode === 'space') this.spaceDist = Math.max(1.05, Math.min(12, this.spaceDist * (e.deltaY > 0 ? 1.1 : 0.9)));
+      if (this.mode === 'map' || this.mode === 'onboard') return;
+      zoomBy(e.deltaY > 0 ? 1.12 : 0.89);
       e.preventDefault();
     }, { passive: false });
   }
@@ -94,11 +131,17 @@ export class CameraController {
     const sh = f.shake;
     const jitter = () => this.tmp.set(Math.sin(this.shakeT * 1.3) * sh, Math.sin(this.shakeT * 1.7 + 1) * sh, Math.cos(this.shakeT * 1.1) * sh);
 
+    if (this.mode !== this.lastMode) { this.smoothInit = false; this.lastMode = this.mode; }
     if (this.mode === 'exterior') {
       const d = f.height * this.dist;
       const horiz = east.clone().multiplyScalar(Math.cos(this.az)).add(north.clone().multiplyScalar(Math.sin(this.az)));
       const offset = horiz.multiplyScalar(Math.cos(this.el) * d).add(up.clone().multiplyScalar(Math.sin(this.el) * d + f.height * 0.45));
-      camera.position.copy(f.pos).add(offset).add(jitter().multiplyScalar(0.4));
+      const desired = f.pos.clone().add(offset);
+      // critically damped lag for a cinematic chase feel (position is relative to the vehicle)
+      if (!this.smoothInit) { this.smoothPos.copy(desired); this.smoothInit = true; }
+      const k = 1 - Math.exp(-dt * 6);
+      this.smoothPos.lerp(desired, k);
+      camera.position.copy(this.smoothPos).add(jitter().multiplyScalar(0.4));
       camera.up.copy(up);
       const target = f.pos.clone().add(dir.clone().multiplyScalar(f.height * 0.45));
       camera.lookAt(target);

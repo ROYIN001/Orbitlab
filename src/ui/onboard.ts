@@ -26,25 +26,44 @@ export class OnboardOverlay {
     const g = this.canvas.getContext('2d')!;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
-    // cabin frame with a porthole
+    // cabin wall with a porthole (shaded panels, cable ducts, bolted bezel)
     const cx = W * 0.5, cy = H * 0.40, r = Math.min(W, H * 0.8) * 0.36;
-    g.fillStyle = '#0f1218';
+    const wall = g.createRadialGradient(cx, cy, r, cx, cy, Math.max(W, H));
+    wall.addColorStop(0, '#1b2029');
+    wall.addColorStop(0.35, '#12161d');
+    wall.addColorStop(1, '#07090d');
+    g.fillStyle = wall;
     g.beginPath();
     g.rect(0, 0, W, H);
     g.arc(cx, cy, r, 0, Math.PI * 2, true);
     g.fill();
-    // porthole rim
-    g.lineWidth = 14;
-    g.strokeStyle = '#2a2f3a';
-    g.beginPath(); g.arc(cx, cy, r + 7, 0, Math.PI * 2); g.stroke();
-    g.lineWidth = 3;
-    g.strokeStyle = '#4a5160';
-    g.beginPath(); g.arc(cx, cy, r + 15, 0, Math.PI * 2); g.stroke();
+    // panel seams and ducts on the wall
+    g.strokeStyle = 'rgba(255,255,255,0.05)';
+    g.lineWidth = 2;
+    for (let x = 40; x < W; x += 160) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+    for (let y = 60; y < H; y += 140) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+    g.strokeStyle = 'rgba(120,140,170,0.18)';
+    g.lineWidth = 6;
+    g.beginPath(); g.moveTo(0, 30); g.lineTo(W, 30); g.stroke();
+    // bezel: metallic ring with highlight
+    const bezel = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    bezel.addColorStop(0, '#5c6474');
+    bezel.addColorStop(0.5, '#262b35');
+    bezel.addColorStop(1, '#4a5160');
+    g.lineWidth = 18;
+    g.strokeStyle = bezel;
+    g.beginPath(); g.arc(cx, cy, r + 9, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = 2;
+    g.strokeStyle = 'rgba(255,255,255,0.25)';
+    g.beginPath(); g.arc(cx, cy, r + 1, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = '#0a0c10';
+    g.beginPath(); g.arc(cx, cy, r + 19, 0, Math.PI * 2); g.stroke();
     // bolts
-    g.fillStyle = '#6a7080';
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      g.beginPath(); g.arc(cx + Math.cos(a) * (r + 15), cy + Math.sin(a) * (r + 15), 3, 0, Math.PI * 2); g.fill();
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const bx = cx + Math.cos(a) * (r + 9), by = cy + Math.sin(a) * (r + 9);
+      g.fillStyle = '#20242c'; g.beginPath(); g.arc(bx, by, 3.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#8b94a6'; g.beginPath(); g.arc(bx - 1, by - 1, 1.6, 0, Math.PI * 2); g.fill();
     }
     // window glare
     const grad = g.createRadialGradient(cx - r * 0.4, cy - r * 0.4, r * 0.1, cx, cy, r);
@@ -62,10 +81,15 @@ export class OnboardOverlay {
     const s = sim.state;
     // instruments panel (kept above the playback controls)
     const py = H - 176;
-    g.fillStyle = 'rgba(20,24,32,0.95)';
+    const panel = g.createLinearGradient(0, py - 10, 0, py + 96);
+    panel.addColorStop(0, 'rgba(34,39,50,0.97)');
+    panel.addColorStop(1, 'rgba(16,19,26,0.97)');
+    g.fillStyle = panel;
     g.fillRect(0, py - 10, W, 106);
     g.strokeStyle = '#3a4050'; g.lineWidth = 1;
     g.strokeRect(0.5, py - 9.5, W - 1, 105);
+    g.strokeStyle = 'rgba(255,255,255,0.08)';
+    g.beginPath(); g.moveTo(0, py - 9); g.lineTo(W, py - 9); g.stroke();
     // attitude indicator (pitch vs local horizon)
     const up = normalize(s.r);
     const pitch = Math.asin(Math.max(-1, Math.min(1, dot(s.dir, up))));
@@ -112,8 +136,10 @@ export class OnboardOverlay {
       g.strokeStyle = '#3a4050'; g.strokeRect(ix + 0.5, py + 6.5, 92, 58);
       g.fillStyle = '#8d9bb5'; g.font = '10px ui-monospace, monospace'; g.textAlign = 'left';
       g.fillText(k, ix + 6, py + 20);
+      g.shadowColor = 'rgba(127,224,255,0.8)'; g.shadowBlur = 10;
       g.fillStyle = '#7fe0ff'; g.font = 'bold 20px ui-monospace, monospace';
       g.fillText(v, ix + 6, py + 48);
+      g.shadowBlur = 0;
       ix += 100;
     }
     // caution/event lamp
