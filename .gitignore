@@ -3,3 +3,7 @@ dist/
 .vite/
 *.log
 .DS_Store
+
+# throwaway experiment files written by audit/implementation agents
+tests/probe/
+probe-out.txt
