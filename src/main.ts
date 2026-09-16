@@ -5,18 +5,44 @@ import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
 import { TrailLine, OrbitLine } from './render/lines';
 import { LaunchPadView } from './render/launchpad';
-import { CameraController, type CameraMode } from './render/cameras';
+import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
+import { hash11s } from './render/noise';
 import { SetupPanel } from './ui/panel';
 import { Hud } from './ui/hud';
 import { TelemetryPanel } from './ui/telemetry';
 import { OrbitalMap } from './ui/map';
 import { OnboardOverlay } from './ui/onboard';
 import { Simulation } from './physics/simulation';
-import { atmosphere } from './physics/atmosphere';
+import { captureFrame, type VisualFrame } from './physics/frame';
 import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { R_EARTH } from './physics/constants';
 import { normalize, cross, norm, v3 } from './physics/vec3';
 import type { MissionConfig } from './types';
+
+/** Pick the cinematic camera framing for this instant of the flight. */
+function camPhase(frame: VisualFrame): CamPhase {
+  if (!frame.liftoff) return 'pad';
+  // A stage/booster only has a meaningful separation time once it is detached;
+  // testing the time alone would report "staging" for the whole first seconds
+  // of every flight (every attached part reads 0 until it is jettisoned).
+  // plain loops: `some` with an arrow closure allocates twice per rendered frame
+  let recentSep = false;
+  for (const st of frame.stages) {
+    const sep = st.sepTime ?? -1;
+    if (!st.attached && sep >= 0 && frame.t - sep < 7) { recentSep = true; break; }
+  }
+  if (!recentSep) {
+    for (const b of frame.boosters) {
+      const bo = b.burnoutTime ?? -1;
+      if (!b.attached && bo >= 0 && frame.t - bo < 9) { recentSep = true; break; }
+    }
+  }
+  if (recentSep) return 'staging';
+  if (frame.t < 12) return 'liftoff';
+  if (frame.status === 'ascent') return 'ascent';
+  if (frame.status === 'coast') return 'coast';
+  return 'orbit';
+}
 
 const WARPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000];
 const base = import.meta.env.BASE_URL;
@@ -50,6 +76,13 @@ class App {
   glCanvas: HTMLCanvasElement;
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
+  private basis = new THREE.Matrix4();
+  private bx = new THREE.Vector3();
+  private by = new THREE.Vector3();
+  private bz = new THREE.Vector3();
+  private backDir = new THREE.Vector3(0, -1, 0);
+  private originV = new THREE.Vector3();
+  private earthC = new THREE.Vector3();
 
   constructor() {
     this.viewport = document.getElementById('viewport')!;
@@ -186,12 +219,20 @@ class App {
   private setupViews(): void {
     if (!this.sim) return;
     const sim = this.sim;
-    if (this.rocket) this.scene.scene.remove(this.rocket.group);
-    if (this.pad) this.scene.scene.remove(this.pad.group);
+    // release the previous mission's GPU resources before building the new one
+    if (this.rocket) {
+      this.scene.scene.remove(this.rocket.group, this.rocket.worldGroup);
+      this.rocket.dispose();
+    }
+    if (this.pad) {
+      this.scene.scene.remove(this.pad.group);
+      this.pad.dispose();
+    }
     this.rocket = new RocketView(sim.vehicleSpec, sim.satellite);
-    this.scene.scene.add(this.rocket.group);
-    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec.height);
+    this.scene.scene.add(this.rocket.group, this.rocket.worldGroup);
+    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec);
     this.scene.scene.add(this.pad.group);
+    this.cams.reset();
     this.debrisView.clear();
     this.trail.clear();
     this.predicted.setPoints([]);
@@ -203,6 +244,9 @@ class App {
     this.hud.reset();
     this.tel.reset();
     if (this.explosion) { this.scene.scene.remove(this.explosion); this.explosion = null; }
+    // Pay this mission's shader compiles now, while the vehicle is sitting on
+    // the pad, rather than as a multi-frame hitch part-way up the ascent.
+    this.scene.prewarm();
   }
 
   launch(cfg: MissionConfig): void {
@@ -217,12 +261,24 @@ class App {
     this.preview(this.panel.getConfig());
   }
 
-  private spawnExplosion(): void {
+  /**
+   * Loss-of-vehicle fireball. Shard placement and velocity are hashed from the
+   * shard index and the mission time of the break-up, never from Math.random,
+   * so a replayed failure renders exactly like the live one — the same rule the
+   * plume flicker, the debris tumble and the star field follow.
+   *
+   * The expansion is still driven by wall-clock `dt` in `updateVisuals`: the
+   * simulation stops at `status === 'failed'`, so mission time is frozen from
+   * this instant on and cannot drive the animation.
+   */
+  private spawnExplosion(tDestroyed: number): void {
     const g = new THREE.Group();
+    const seed = tDestroyed * 0.137;
     for (let i = 0; i < 14; i++) {
       const m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffa030 : 0xfff0b0, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
-      m.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
-      m.userData.v = new THREE.Vector3((Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60);
+      const s = seed + i * 1.61;
+      m.position.set(hash11s(s) * 3, hash11s(s + 0.31) * 3, hash11s(s + 0.62) * 3);
+      m.userData.v = new THREE.Vector3(hash11s(s + 1.13) * 30, hash11s(s + 1.47) * 30, hash11s(s + 1.79) * 30);
       g.add(m);
     }
     this.scene.scene.add(g);
@@ -264,28 +320,33 @@ class App {
       scene.render();
       return;
     }
-    const s = sim.state;
-    scene.origin = { x: s.r.x, y: s.r.y, z: s.r.z };
-    const theta = s.theta;
-    const sunDir = sunDirectionEci(sim.julianDate());
-    this.pad.update(scene, theta);
-    // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y × Z
-    const { east, north, up } = enuFrame(s.r);
-    let side = cross(s.dir, up);
+    // one frame snapshot drives every view this tick
+    const frame: VisualFrame = captureFrame(sim);
+    scene.origin = { x: frame.r.x, y: frame.r.y, z: frame.r.z };
+    // the sun (and therefore every sky/exposure/shading decision) comes from the
+    // frame's own epoch, so a replayed frame relights identically
+    const sunDir = sunDirectionEci(frame.jd);
+    this.pad.update(scene, frame);
+    // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y x Z
+    const { east, north, up } = enuFrame(frame.r);
+    let side = cross(frame.dir, up);
     if (norm(side) < 0.05) side = east;
     side = normalize(side);
-    const xAxis = normalize(cross(s.dir, side));
-    const m = new THREE.Matrix4().makeBasis(
-      new THREE.Vector3(xAxis.x, xAxis.y, xAxis.z),
-      new THREE.Vector3(s.dir.x, s.dir.y, s.dir.z),
-      new THREE.Vector3(side.x, side.y, side.z),
+    const xAxis = normalize(cross(frame.dir, side));
+    this.basis.makeBasis(
+      this.bx.set(xAxis.x, xAxis.y, xAxis.z),
+      this.by.set(frame.dir.x, frame.dir.y, frame.dir.z),
+      this.bz.set(side.x, side.y, side.z),
     );
-    this.rocket.group.quaternion.setFromRotationMatrix(m);
+    this.rocket.group.quaternion.setFromRotationMatrix(this.basis);
     this.rocket.group.position.set(0, 0, 0);
-    const pressure = atmosphere(Math.max(0, s.altitude)).p;
-    const boostersBurn = s.throttle > 0 ? 1 : 0;
-    this.rocket.update(sim.vehicle, s.throttle, boostersBurn, pressure, dt, s.payloadSeparated, s.destroyed);
-    if (s.destroyed && !this.explosion) this.spawnExplosion();
+    // the smoke column trails back towards the pad
+    const padVec = this.pad.group.position;
+    const padDist = padVec.length();
+    if (padDist > 1) this.backDir.copy(padVec).divideScalar(padDist);
+    else this.backDir.set(-frame.dir.x, -frame.dir.y, -frame.dir.z);
+    this.rocket.update(frame, { backDir: this.backDir, padDistance: padDist });
+    if (frame.destroyed && !this.explosion) this.spawnExplosion(frame.t);
     if (this.explosion) {
       this.explosionT += dt;
       for (const c of this.explosion.children) {
@@ -298,24 +359,33 @@ class App {
       if (this.explosionT > 2.5) { this.scene.scene.remove(this.explosion); this.explosion = null; }
     }
     // lines
-    if (s.status !== 'prelaunch') this.trail.add(s.r);
+    if (frame.status !== 'prelaunch') this.trail.add(frame.r);
     this.trail.update(scene);
-    if (s.status !== 'prelaunch' && s.elements.e < 1 && s.elements.apoapsisAlt > 0 && s.liftoff) this.predicted.setPoints(sampleOrbit(s.elements, 180));
+    const el = frame.elements;
+    if (frame.status !== 'prelaunch' && el.e < 1 && el.apoapsisAlt > 0 && frame.liftoff) this.predicted.setPoints(sampleOrbit(el, 180));
     else this.predicted.setPoints([]);
     this.predicted.update(scene);
     this.target.update(scene);
-    this.debrisView.update(sim.debris);
+    this.debrisView.update(frame.debris, frame.t);
     // camera
-    const height = s.payloadSeparated ? Math.max(3, (sim.satellite.size?.height ?? 3)) : this.rocket.currentHeight(sim.vehicle);
-    const radius = s.payloadSeparated ? Math.max(1, (sim.satellite.size?.width ?? 2)) : this.rocket.currentRadius(sim.vehicle);
-    const shake = s.status === 'ascent' ? Math.min(1, s.thrust / Math.max(1, s.mass) / 25 + s.q / 60e3) : s.thrust > 0 ? 0.15 : 0;
+    const height = frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
+    const radius = frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
+    const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
     this.cams.update(scene.camera, {
-      pos: new THREE.Vector3(0, 0, 0), up, east, north, dir: s.dir, side, height, radius,
-      earthCenter: scene.toScene(v3(0, 0, 0)), shake: shake * 0.6,
-      vDir: norm(s.v) > 1 ? normalize(s.v) : up,
+      pos: this.originV, up, east, north, dir: frame.dir, side, height, radius,
+      earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
+      vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
+      t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
     }, dt, R_EARTH);
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
-    scene.update(theta, sunDir, camAlt);
+    // shadows are only worth casting while we are looking at the pad
+    scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);
+    scene.update(frame, sunDir, camAlt);
+    // WAVE-2 HAND-OFF: everything above this line is frame-driven. The 2-D
+    // panels are not: `map.draw`, `onboard.draw` (and `hud.update` /
+    // `tel.update`, called from `frame()`) still take the live Simulation, so
+    // the recorder cannot scrub them yet. Converting them means changing four
+    // signatures in src/ui/, which wave 1 does not own.
     if (this.camMode === 'map') {
       this.map.draw(sim, sim.site.latitude, sim.site.longitude);
     } else {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
 import { autotune, runAscent } from '../src/physics/autotune';
-import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
+import { DEFAULT_GUIDANCE, DEFAULT_FAILURE, guidanceForVehicle } from '../src/physics/defaults';
 import { orbitById } from '../src/data/orbits';
 import { VEHICLES } from '../src/data/vehicles';
 import { liftoffMass, liftoffThrust, idealDeltaV } from '../src/physics/vehicle';
@@ -36,6 +36,37 @@ describe('vehicle sanity', () => {
   });
 });
 
+describe('guidance resolution', () => {
+  it('an untouched configuration flies the vehicle program, and it is the one guidanceForVehicle reports', () => {
+    for (const v of VEHICLES) {
+      const sim = new Simulation(mk({ vehicleId: v.id, satelliteId: 'cubesats', siteId: v.sites[0], payloadMassOverride: v.payloadLEO * 0.25 }), { headless: true });
+      expect(sim.cfg.guidance, v.id).toEqual(guidanceForVehicle(v));
+      expect(sim.cfg.guidanceResolved).toBe(true);
+    }
+  });
+
+  it('a resolved configuration is flown exactly as given', () => {
+    const g = { ...guidanceForVehicle(VEHICLES.find((v) => v.id === 'falcon9')!), kickAngle: 7.5 };
+    const sim = new Simulation(mk({ guidance: g, guidanceResolved: true }), { headless: true });
+    expect(sim.cfg.guidance.kickAngle).toBe(7.5);
+  });
+
+  it('a tuning result reports the guidance it flew, and re-flying it reproduces the trajectory', () => {
+    // 2.5 deg is exactly DEFAULT_GUIDANCE.kickAngle, so for a vehicle whose own
+    // default is 1.5 deg the merge replaces it. The tuner must report 1.5 (what
+    // it measured), not 2.5 (what it was asked for) — otherwise writing the
+    // result back into the panel changes the trajectory that was measured.
+    const cfg = mk({ payloadMassOverride: 5000 });
+    const r = runAscent(cfg, 2.5, 0.3, 0);
+    expect(r.kickAngle).toBe(guidanceForVehicle(VEHICLES.find((v) => v.id === 'falcon9')!).kickAngle);
+    const replay = new Simulation({ ...cfg, guidance: r.guidance, guidanceResolved: true }, { headless: true });
+    let guard = 0;
+    while (!replay.done && replay.state.t < 1200 && guard++ < 200000) replay.step(replay.suggestedDt());
+    const seco = replay.events.find((e) => e.key === 'evt.parkingOrbit');
+    expect(seco?.t).toBeCloseTo(r.tInsertion, 3);
+  }, 30000);
+});
+
 describe('ascent to parking orbit', () => {
   it('Falcon 9 reaches a 200 km parking orbit toward the ISS plane', () => {
     const cfg = mk({});
@@ -45,21 +76,23 @@ describe('ascent to parking orbit', () => {
     expect(r.success).toBe(true);
     expect(r.maxQ).toBeLessThan(40e3);
     expect(r.dvRemaining).toBeGreaterThan(300);
-  });
+  }, 30000);
 
   it('Soyuz-2.1a from Baikonur with a 7.15 t crew ship reaches orbit', () => {
     const cfg = mk({ vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur' });
     const tuned = autotune(cfg);
     expect(tuned.best, JSON.stringify(tuned.results)).not.toBeNull();
     expect(tuned.best!.success).toBe(true);
-  });
+  }, 30000);
 
   it('Electron from Mahia with 200 kg to SSO reaches orbit', () => {
     const cfg = mk({ vehicleId: 'electron', satelliteId: 'cubesats', siteId: 'mahia', orbit: orbitById('sso'), payloadMassOverride: 200 });
     const tuned = autotune(cfg);
     expect(tuned.best, JSON.stringify(tuned.results)).not.toBeNull();
     expect(tuned.best!.success).toBe(true);
-  });
+    // An autotune is 96 headless flights; with the whole suite running in
+    // parallel that does not fit vitest's default 5 s budget.
+  }, 30000);
 
   it('a hopeless payload does not reach orbit', () => {
     const cfg = mk({ vehicleId: 'electron', satelliteId: 'comsat', siteId: 'mahia', orbit: orbitById('leo'), payloadMassOverride: 5000 });
@@ -81,7 +114,7 @@ describe('full missions', () => {
     expect(el.periapsisAlt / 1000).toBeCloseTo(420, -1);
     expect(el.i * 180 / Math.PI).toBeCloseTo(51.64, 0);
     expect(sim.state.status).toBe('orbit');
-  });
+  }, 30000);
 
   it('Proton-M/Briz-M from Baikonur delivers a comsat into GEO (plane change at apogee)', () => {
     const cfg = mk({ vehicleId: 'protonm', satelliteId: 'comsat', siteId: 'baikonur', orbit: orbitById('geo'), payloadMassOverride: 2500 });
@@ -94,5 +127,7 @@ describe('full missions', () => {
     expect(el.i * 180 / Math.PI).toBeLessThan(1.5);
     expect(el.apoapsisAlt / 1000).toBeCloseTo(35786, -3);
     expect(el.periapsisAlt / 1000).toBeCloseTo(35786, -3);
-  });
+    // A Briz-M GEO mission is four days of simulated flight with several
+    // multi-pass burns, so it needs more than vitest's default 5 s budget.
+  }, 60000);
 });

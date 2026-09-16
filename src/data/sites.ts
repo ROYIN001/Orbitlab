@@ -17,6 +17,21 @@ export const SITES: SiteExtra[] = [
   { id: 'wenchang', name: 'Wenchang Space Launch Site', country: 'CN', latitude: 19.614, longitude: 110.951, altitude: 10, minInclination: 19.5, azimuthMin: 60, azimuthMax: 180, tz: 'UTC+8', descendingForPolar: true },
   { id: 'tanegashima', name: 'Tanegashima Space Center', country: 'JP', latitude: 30.4, longitude: 130.97, altitude: 10, minInclination: 30.4, azimuthMin: 90, azimuthMax: 190, tz: 'UTC+9', descendingForPolar: true },
   { id: 'sriharikota', name: 'Satish Dhawan Space Centre', country: 'IN', latitude: 13.72, longitude: 80.23, altitude: 10, minInclination: 13.7, azimuthMin: 90, azimuthMax: 180, tz: 'UTC+5:30', descendingForPolar: true },
+  // Chinese inland launch centres. Coordinates and elevations:
+  // https://en.wikipedia.org/wiki/Jiuquan_Satellite_Launch_Center ,
+  // https://en.wikipedia.org/wiki/Taiyuan_Satellite_Launch_Center ,
+  // https://en.wikipedia.org/wiki/Xichang_Satellite_Launch_Center
+  // Azimuth corridors: Jiuquan flies south-east to due south over China (the
+  // north-eastern sector is closed by Mongolia and Russia), which gives it
+  // everything from the 41° minimum of the crewed Shenzhou flights to the ~190°
+  // descending azimuth of a sun-synchronous launch. Taiyuan is the polar/SSO
+  // site and only flies the southern sector. Xichang's downrange safety window
+  // is quoted as 94-104° about a 97° nominal, i.e. a 28.5-31° band — which is
+  // why it is the geostationary site and never flies polar.
+  // http://www.satobs.org/faq/Chapter-09.txt , https://www.globalsecurity.org/space/world/china/xichang.htm
+  { id: 'jiuquan', name: 'Jiuquan Satellite Launch Center', country: 'CN', latitude: 40.958, longitude: 100.291, altitude: 1000, minInclination: 41, azimuthMin: 90, azimuthMax: 200, tz: 'UTC+8', descendingForPolar: true },
+  { id: 'taiyuan', name: 'Taiyuan Satellite Launch Center', country: 'CN', latitude: 38.849, longitude: 111.608, altitude: 1500, minInclination: 63, azimuthMin: 144, azimuthMax: 200, tz: 'UTC+8', descendingForPolar: true },
+  { id: 'xichang', name: 'Xichang Satellite Launch Center', country: 'CN', latitude: 28.246, longitude: 102.027, altitude: 1825, minInclination: 28.5, azimuthMin: 94, azimuthMax: 104, tz: 'UTC+8', descendingForPolar: false },
   { id: 'mahia', name: 'Rocket Lab LC-1 (Mahia)', country: 'NZ', latitude: -39.26, longitude: 177.865, altitude: 40, minInclination: 39, azimuthMin: 90, azimuthMax: 200, tz: 'UTC+12', descendingForPolar: true },
 ];
 

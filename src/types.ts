@@ -232,4 +232,12 @@ export interface MissionConfig {
   boosterRecovery: boolean;
   /** Extra payload mass added by the user, kg */
   payloadMassOverride?: number;
+  /**
+   * `guidance` has already been merged with the vehicle's `guidanceDefaults`.
+   * The simulation merges them itself when this is false/absent, so a caller
+   * that only knows `DEFAULT_GUIDANCE` still flies each vehicle's own pitch
+   * program; set it when a tuner deliberately sweeps parameters that happen to
+   * equal the library defaults.
+   */
+  guidanceResolved?: boolean;
 }

@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import type { Vec3 } from '../physics/vec3';
+import { damp, fbm1s } from './noise';
 
 export type CameraMode = 'exterior' | 'onboard' | 'space' | 'map';
+
+/** Cinematic phase: picks the default framing of the exterior camera. */
+export type CamPhase = 'pad' | 'liftoff' | 'ascent' | 'staging' | 'coast' | 'orbit';
 
 export interface CameraFocus {
   /** vehicle position in scene coordinates (normally the origin) */
@@ -23,23 +27,67 @@ export interface CameraFocus {
   shake: number;
   /** orbital speed direction (ECI unit) for the space view framing */
   vDir: Vec3;
+  /** mission time, s — drives the shake deterministically */
+  t: number;
+  /** vehicle altitude above the pad, m (keeps the camera out of the ground) */
+  agl: number;
+  phase: CamPhase;
 }
+
+interface Framing {
+  /** elevation above the vehicle's local horizontal, rad */
+  el: number;
+  /** distance in stack heights */
+  dist: number;
+  /** how far up the stack the camera aims, in stack heights */
+  aim: number;
+  /** vertical lift of the camera, in stack heights */
+  lift: number;
+}
+
+const FRAMING: Record<CamPhase, Framing> = {
+  // low angle looking up at the vehicle on the pad
+  pad: { el: 0.0, dist: 1.9, aim: 0.5, lift: 0.22 },
+  liftoff: { el: 0.02, dist: 2.4, aim: 0.5, lift: 0.3 },
+  ascent: { el: 0.14, dist: 2.9, aim: 0.45, lift: 0.45 },
+  staging: { el: 0.26, dist: 5.6, aim: 0.4, lift: 0.5 },
+  coast: { el: 0.24, dist: 4.4, aim: 0.45, lift: 0.5 },
+  orbit: { el: 0.3, dist: 3.6, aim: 0.4, lift: 0.4 },
+};
 
 export class CameraController {
   mode: CameraMode = 'exterior';
-  // exterior
+  /** user offsets, applied on top of the cinematic framing */
   az = 0.9;
-  el = 0.18;
-  dist = 3.2;
+  userEl = 0;
+  zoom = 1;
   // space
   spaceAz = 0.3;
   spaceEl = 0.35;
   spaceDist = 2.9;
+  private autoEl = FRAMING.pad.el;
+  private autoDist = FRAMING.pad.dist;
+  private autoAim = FRAMING.pad.aim;
+  private autoLift = FRAMING.pad.lift;
   private dragging = false;
   private lastX = 0;
   private lastY = 0;
+  private first = true;
+  private pos = new THREE.Vector3();
+  private target = new THREE.Vector3();
+  private desired = new THREE.Vector3();
+  private desiredTarget = new THREE.Vector3();
+  private up = new THREE.Vector3();
+  private east = new THREE.Vector3();
+  private north = new THREE.Vector3();
+  private dir = new THREE.Vector3();
+  private side = new THREE.Vector3();
+  private horiz = new THREE.Vector3();
   private tmp = new THREE.Vector3();
-  private shakeT = 0;
+  private e1 = new THREE.Vector3();
+  private e2 = new THREE.Vector3();
+  private rv = new THREE.Vector3();
+  private zUp = new THREE.Vector3(0, 0, 1);
 
   attach(el: HTMLElement): void {
     el.addEventListener('pointerdown', (e) => {
@@ -57,7 +105,7 @@ export class CameraController {
       this.lastY = e.clientY;
       if (this.mode === 'exterior') {
         this.az -= dx * 0.008;
-        this.el = Math.max(-0.6, Math.min(1.45, this.el + dy * 0.006));
+        this.userEl = Math.max(-0.8, Math.min(1.2, this.userEl + dy * 0.006));
       } else if (this.mode === 'space') {
         this.spaceAz -= dx * 0.006;
         this.spaceEl = Math.max(-1.45, Math.min(1.45, this.spaceEl + dy * 0.005));
@@ -70,56 +118,85 @@ export class CameraController {
     el.addEventListener('pointerup', stop);
     el.addEventListener('pointercancel', stop);
     el.addEventListener('wheel', (e) => {
-      if (this.mode === 'exterior') this.dist = Math.max(1.2, Math.min(60, this.dist * (e.deltaY > 0 ? 1.12 : 0.89)));
+      if (this.mode === 'exterior') this.zoom = Math.max(0.35, Math.min(14, this.zoom * (e.deltaY > 0 ? 1.12 : 0.89)));
       else if (this.mode === 'space') this.spaceDist = Math.max(1.05, Math.min(12, this.spaceDist * (e.deltaY > 0 ? 1.1 : 0.9)));
       e.preventDefault();
     }, { passive: false });
   }
 
+  /** Snap on the next frame (used when a new mission is previewed). */
+  reset(): void {
+    this.first = true;
+    const f = FRAMING.pad;
+    this.autoEl = f.el; this.autoDist = f.dist; this.autoAim = f.aim; this.autoLift = f.lift;
+  }
+
   update(camera: THREE.PerspectiveCamera, f: CameraFocus, dt: number, earthRadius: number): void {
-    const up = new THREE.Vector3(f.up.x, f.up.y, f.up.z);
-    const east = new THREE.Vector3(f.east.x, f.east.y, f.east.z);
-    const north = new THREE.Vector3(f.north.x, f.north.y, f.north.z);
-    const dir = new THREE.Vector3(f.dir.x, f.dir.y, f.dir.z);
-    const side = new THREE.Vector3(f.side.x, f.side.y, f.side.z);
-    this.shakeT += dt * 37;
-    const sh = f.shake;
-    const jitter = () => this.tmp.set(Math.sin(this.shakeT * 1.3) * sh, Math.sin(this.shakeT * 1.7 + 1) * sh, Math.cos(this.shakeT * 1.1) * sh);
+    const up = this.up.set(f.up.x, f.up.y, f.up.z);
+    const east = this.east.set(f.east.x, f.east.y, f.east.z);
+    const north = this.north.set(f.north.x, f.north.y, f.north.z);
+    const dir = this.dir.set(f.dir.x, f.dir.y, f.dir.z);
+    const side = this.side.set(f.side.x, f.side.y, f.side.z);
+    const shake = f.shake;
+    // deterministic turbulence from the mission time
+    const jx = fbm1s(f.t * 9.1 + 0.3, 2) * shake;
+    const jy = fbm1s(f.t * 7.7 + 11.9, 2) * shake;
+    const jz = fbm1s(f.t * 8.3 + 23.1, 2) * shake;
 
     if (this.mode === 'exterior') {
-      const d = f.height * this.dist;
-      const horiz = east.clone().multiplyScalar(Math.cos(this.az)).add(north.clone().multiplyScalar(Math.sin(this.az)));
-      const offset = horiz.multiplyScalar(Math.cos(this.el) * d).add(up.clone().multiplyScalar(Math.sin(this.el) * d + f.height * 0.45));
-      camera.position.copy(f.pos).add(offset).add(jitter().multiplyScalar(0.4));
+      const fr = FRAMING[f.phase];
+      // critically damped approach to the framing of the current phase
+      const k = this.first ? 1e9 : 1.4;
+      this.autoEl = damp(this.autoEl, fr.el, k, dt);
+      this.autoDist = damp(this.autoDist, fr.dist, k, dt);
+      this.autoAim = damp(this.autoAim, fr.aim, k, dt);
+      this.autoLift = damp(this.autoLift, fr.lift, k, dt);
+      const el = Math.max(-0.85, Math.min(1.45, this.autoEl + this.userEl));
+      const d = f.height * this.autoDist * this.zoom;
+      this.horiz.copy(east).multiplyScalar(Math.cos(this.az)).addScaledVector(north, Math.sin(this.az));
+      this.desired.copy(f.pos)
+        .addScaledVector(this.horiz, Math.cos(el) * d)
+        .addScaledVector(up, Math.sin(el) * d + f.height * this.autoLift);
+      // never dip below the ground near the pad
+      const hAboveGround = this.tmp.copy(this.desired).sub(f.pos).dot(up) + f.agl;
+      if (hAboveGround < 5) this.desired.addScaledVector(up, 5 - hAboveGround);
+      this.desiredTarget.copy(f.pos).addScaledVector(dir, f.height * this.autoAim);
+      const lambda = this.first ? 1e9 : 9;
+      this.pos.set(damp(this.pos.x, this.desired.x, lambda, dt), damp(this.pos.y, this.desired.y, lambda, dt), damp(this.pos.z, this.desired.z, lambda, dt));
+      this.target.set(damp(this.target.x, this.desiredTarget.x, lambda, dt), damp(this.target.y, this.desiredTarget.y, lambda, dt), damp(this.target.z, this.desiredTarget.z, lambda, dt));
+      camera.position.copy(this.pos).add(this.tmp.set(jx, jy, jz).multiplyScalar(f.height * 0.012));
       camera.up.copy(up);
-      const target = f.pos.clone().add(dir.clone().multiplyScalar(f.height * 0.45));
-      camera.lookAt(target);
-      camera.fov = 50;
+      camera.lookAt(this.target);
+      camera.fov = 48;
+      this.first = false;
     } else if (this.mode === 'onboard') {
-      // camera mounted near the nose looking out of a side window, slightly downward
-      const eye = f.pos.clone().add(dir.clone().multiplyScalar(f.height * 0.88)).add(side.clone().multiplyScalar(f.radius * 0.9));
-      camera.position.copy(eye).add(jitter().multiplyScalar(0.08));
-      const look = side.clone().multiplyScalar(1).add(dir.clone().multiplyScalar(-0.25)).normalize();
+      // side-mounted camera near the top of the stack, looking forward and out
+      this.desired.copy(f.pos).addScaledVector(dir, f.height * 0.86).addScaledVector(side, f.radius * 1.15);
+      camera.position.copy(this.desired).add(this.tmp.set(jx, jy, jz).multiplyScalar(f.radius * 0.02));
+      this.tmp.copy(side).multiplyScalar(0.86).addScaledVector(dir, 0.5).normalize();
       camera.up.copy(dir);
-      camera.lookAt(eye.clone().add(look));
-      camera.fov = 70;
+      camera.lookAt(this.tmp.add(camera.position));
+      camera.fov = 72;
+      this.first = true;
     } else {
-      // space view: orbit around Earth centre, framing the vehicle
+      // space view: orbit around Earth centre, framing the vehicle against Earth
       const R = earthRadius * this.spaceDist;
-      const z = new THREE.Vector3(0, 0, 1);
-      const rv = f.pos.clone().sub(f.earthCenter).normalize();
-      // basis around the vehicle's radial direction so the vehicle stays in view
-      const e1 = new THREE.Vector3().crossVectors(z, rv);
-      if (e1.length() < 1e-6) e1.set(1, 0, 0);
-      e1.normalize();
-      const e2 = new THREE.Vector3().crossVectors(rv, e1).normalize();
-      const off = rv.clone().multiplyScalar(Math.cos(this.spaceEl) * Math.cos(this.spaceAz))
-        .add(e1.clone().multiplyScalar(Math.cos(this.spaceEl) * Math.sin(this.spaceAz)))
-        .add(e2.clone().multiplyScalar(Math.sin(this.spaceEl)));
-      camera.position.copy(f.earthCenter).add(off.multiplyScalar(R));
-      camera.up.copy(z);
-      camera.lookAt(f.pos.clone().lerp(f.earthCenter, 0.35));
+      this.rv.copy(f.pos).sub(f.earthCenter).normalize();
+      this.e1.crossVectors(this.zUp, this.rv);
+      if (this.e1.lengthSq() < 1e-12) this.e1.set(1, 0, 0);
+      this.e1.normalize();
+      this.e2.crossVectors(this.rv, this.e1).normalize();
+      this.desired.copy(this.rv).multiplyScalar(Math.cos(this.spaceEl) * Math.cos(this.spaceAz))
+        .addScaledVector(this.e1, Math.cos(this.spaceEl) * Math.sin(this.spaceAz))
+        .addScaledVector(this.e2, Math.sin(this.spaceEl))
+        .multiplyScalar(R)
+        .add(f.earthCenter);
+      camera.position.copy(this.desired);
+      camera.up.copy(this.zUp);
+      this.tmp.copy(f.pos).lerp(f.earthCenter, 0.32);
+      camera.lookAt(this.tmp);
       camera.fov = 45;
+      this.first = true;
     }
     camera.updateProjectionMatrix();
   }

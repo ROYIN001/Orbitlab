@@ -10,6 +10,10 @@ import { rk4Step } from '../src/physics/integrator';
 import { gravity, gravityJ2 } from '../src/physics/gravity';
 import { MU_EARTH, R_EARTH, DEG, RAD } from '../src/physics/constants';
 import { v3, norm, dot } from '../src/physics/vec3';
+import { Simulation, mulberry32, FAIRING_HEAT_FLUX_LIMIT, FAIRING_Q_LIMIT } from '../src/physics/simulation';
+import { DEFAULT_GUIDANCE } from '../src/physics/defaults';
+import { orbitById } from '../src/data/orbits';
+import type { MissionConfig, FailureMode } from '../src/types';
 
 describe('atmosphere (USSA-76 + exponential)', () => {
   it('matches sea level standard values', () => {
@@ -151,5 +155,84 @@ describe('time & launch geometry', () => {
     const s = sunDirectionEci(julianDate(new Date(Date.UTC(2026, 5, 21))));
     expect(norm(s)).toBeCloseTo(1, 6);
     expect(Math.asin(s.z) * RAD).toBeCloseTo(23.4, 0); // June solstice: declination ~ +23.4
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Determinism and the fairing placard (wave 1 / physics)
+// ---------------------------------------------------------------------------
+
+describe('deterministic failure injection', () => {
+  const mk = (launchTime: Date, mode: FailureMode): MissionConfig => ({
+    vehicleId: 'falcon9', satelliteId: 'cubesats', siteId: 'cape', orbit: orbitById('leo'),
+    launchTime, guidance: { ...DEFAULT_GUIDANCE }, failure: { mode, time: 60, stage: 0 },
+    boosterRecovery: false, payloadMassOverride: 5000,
+  });
+  const failureEvents = (sim: Simulation): string[] =>
+    sim.events.filter((e) => e.severity === 'fail' || e.severity === 'warn').map((e) => `${e.t.toFixed(2)}:${e.key}`);
+
+  it('the same configuration always injects the same random failure', () => {
+    const t0 = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
+    const runs = [0, 1].map(() => {
+      const sim = new Simulation(mk(t0, 'random'), { headless: true });
+      let guard = 0;
+      while (!sim.done && sim.state.t < 1200 && guard++ < 200000) sim.step(sim.suggestedDt());
+      return failureEvents(sim);
+    });
+    expect(runs[0].length).toBeGreaterThan(0);
+    expect(runs[0]).toEqual(runs[1]);
+  });
+
+  it('a different launch epoch can select a different failure', () => {
+    const seen = new Set<string>();
+    for (let k = 0; k < 8; k++) {
+      const sim = new Simulation(mk(new Date(Date.UTC(2026, 8, 15, 12, k, 0)), 'random'), { headless: true });
+      let guard = 0;
+      while (!sim.done && sim.state.t < 200 && guard++ < 50000) sim.step(sim.suggestedDt());
+      seen.add(failureEvents(sim).join(','));
+    }
+    // the seed depends on the epoch, so the set of outcomes is not a single value
+    expect(seen.size).toBeGreaterThan(1);
+  });
+
+  it('mulberry32 is stable and uniform enough to pick a failure mode', () => {
+    const a = mulberry32(12345);
+    const b = mulberry32(12345);
+    const xs = Array.from({ length: 500 }, () => a());
+    expect(xs.slice(0, 5)).toEqual(Array.from({ length: 5 }, () => b()));
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...xs)).toBeLessThan(1);
+    expect(xs.reduce((s, x) => s + x, 0) / xs.length).toBeCloseTo(0.5, 1);
+  });
+});
+
+describe('fairing jettison placard', () => {
+  it('drops the fairing where the free-molecular heating falls below the limit', () => {
+    const cfg: MissionConfig = {
+      vehicleId: 'falcon9', satelliteId: 'starlink', siteId: 'cape', orbit: orbitById('iss'),
+      launchTime: new Date(Date.UTC(2026, 8, 15, 12, 0, 0)), guidance: { ...DEFAULT_GUIDANCE },
+      failure: { mode: 'none', time: 0, stage: 0 }, boosterRecovery: false, payloadMassOverride: 15600,
+    };
+    const sim = new Simulation(cfg, { headless: true });
+    let guard = 0;
+    let heatAtSep = Infinity;
+    let qAtSep = Infinity;
+    while (!sim.done && sim.state.t < 600 && guard++ < 200000) {
+      const attached = sim.vehicle.fairingAttached;
+      sim.step(sim.suggestedDt());
+      if (attached && !sim.vehicle.fairingAttached) {
+        const atm = atmosphere(Math.max(0, sim.state.altitude));
+        heatAtSep = 0.5 * atm.rho * sim.state.airspeed ** 3;
+        qAtSep = sim.state.q;
+      }
+    }
+    const sep = sim.events.find((e) => e.key === 'evt.fairingSep');
+    expect(sep, 'fairing never jettisoned').toBeDefined();
+    // 190–230 s on a real Falcon 9 ISS-class mission
+    expect(sep!.t).toBeGreaterThan(185);
+    expect(sep!.t).toBeLessThan(235);
+    expect(heatAtSep).toBeLessThanOrEqual(FAIRING_HEAT_FLUX_LIMIT);
+    expect(qAtSep).toBeLessThanOrEqual(FAIRING_Q_LIMIT);
+    expect(Number(sep!.params?.alt)).toBeGreaterThanOrEqual(80);
   });
 });

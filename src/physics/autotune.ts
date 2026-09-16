@@ -3,16 +3,26 @@
  * for a grid of candidates and keeping the one that reaches the parking orbit
  * with the largest remaining delta-v while respecting the max-Q limit.
  */
-import type { MissionConfig } from '../types';
+import type { GuidanceParams, MissionConfig } from '../types';
 import { Simulation } from './simulation';
 import { VehicleModel } from './vehicle';
 import { vehicleById } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 
 export interface TuneResult {
+  /**
+   * The three swept parameters *as they were flown*. When the caller's
+   * configuration is not `guidanceResolved`, the vehicle's own
+   * `guidanceDefaults` may replace a candidate that still sits at the library
+   * default, so these are the resolved values and not necessarily the ones the
+   * search asked for — writing them back into the caller's guidance therefore
+   * reproduces exactly the trajectory that was measured.
+   */
   kickAngle: number;
   maxTurnRate: number;
   loftAltitude: number;
+  /** every guidance parameter the measured flight used */
+  guidance: GuidanceParams;
   success: boolean;
   dvRemaining: number;
   maxQ: number;
@@ -27,8 +37,22 @@ export interface AutotuneOutcome {
 }
 
 export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = cfg.guidance.maxTurnRate, loftAltitude = cfg.guidance.loftAltitude, maxTime = 2400): TuneResult {
-  const c: MissionConfig = { ...cfg, guidance: { ...cfg.guidance, kickAngle, maxTurnRate, loftAltitude }, failure: { mode: 'none', time: 0, stage: 0 } };
+  // Build the configuration exactly the way the caller's own flight will be
+  // built — in particular, keep `guidanceResolved` as the caller has it — so
+  // that the tuner measures the trajectory that this candidate will actually
+  // fly. Forcing `guidanceResolved: true` here used to measure a candidate
+  // (say kick 2.5°) that the flown mission then replaced with the vehicle
+  // default, because the value-based merge in `applyVehicleGuidanceDefaults`
+  // cannot tell "the operator chose 2.5" from "nobody touched 2.5".
+  // `TuneResult` reports the resolved values, so writing them back into the
+  // caller's guidance reproduces the measured flight.
+  const c: MissionConfig = {
+    ...cfg,
+    guidance: { ...cfg.guidance, kickAngle, maxTurnRate, loftAltitude },
+    failure: { mode: 'none', time: 0, stage: 0 },
+  };
   const sim = new Simulation(c, { headless: true });
+  const flown = sim.cfg.guidance;
   let minAltCL = Infinity;
   let maxAlt = 0;
   let guard = 0;
@@ -51,15 +75,16 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
   if (success && s.maxQ.value > sim.vehicleSpec.maxQ) reason = 'maxQ';
   if (success && minAltCL < 80e3) reason = 'dip';
   return {
-    kickAngle, maxTurnRate, loftAltitude, success: success && reason === 'ok', dvRemaining: dv, maxQ: s.maxQ.value,
+    kickAngle: flown.kickAngle, maxTurnRate: flown.maxTurnRate, loftAltitude: flown.loftAltitude, guidance: flown,
+    success: success && reason === 'ok', dvRemaining: dv, maxQ: s.maxQ.value,
     minAltitudeClosedLoop: minAltCL, tInsertion: parking ? parking.t : -1, reason,
   };
 }
 
-export const DEFAULT_KICKS = [2, 3, 4, 6, 8, 11, 15];
+export const DEFAULT_KICKS = [1.5, 2.5, 4, 6, 9, 12];
 export const DEFAULT_RATES = [0.3, 0.45, 0.6, 0.8];
 
-export const DEFAULT_LOFTS = [0, 40e3, 80e3, 130e3];
+export const DEFAULT_LOFTS = [0, 80e3, 150e3, 250e3];
 
 /** Whether the vehicle hands off to an upper stage too weak to hold altitude (needs a loft search). */
 export function needsLoftSearch(cfg: MissionConfig): boolean {

@@ -2,8 +2,9 @@
  * Mission planning: resolves the target orbit, computes launch azimuth,
  * parking-orbit altitude, the post-ascent burn sequence and launch windows.
  */
-import type { MissionConfig, OrbitSpec, VehicleSpec } from '../types';
+import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
+import { satelliteById } from '../data/satellites';
 import { DEG, R_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
@@ -39,6 +40,8 @@ export interface BurnPlan {
   done: boolean;
   /** planned maximum duration of the current pass, s (set when scheduled) */
   maxDuration?: number;
+  /** apoapsis adjustment burns: true when the apoapsis has to come down (retrograde) */
+  lowering?: boolean;
 }
 
 export interface MissionPlan {
@@ -124,23 +127,58 @@ export function insertionAltitudeFor(target: ResolvedTarget): number {
   return target.perigee <= 300e3 ? target.perigee : 200e3;
 }
 
+/** Apsis error below which a correction burn is not worth flying, m. */
+export const APOAPSIS_TOLERANCE = 8e3;
+
 /**
- * Direction-independent estimate of the post-ascent burn sequence.
+ * Highest apoapsis a launcher will fly straight out of the ascent instead of
+ * reaching it with a separate transfer burn.
  */
-export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: number, haIns = hIns): BurnPlan[] {
+export const DIRECT_APOAPSIS_CAP = 2000e3;
+
+/**
+ * Highest circular orbit the ascent is aimed straight at when nothing can burn
+ * after cut-off, m. A stage that burns continuously into a circular orbit much
+ * above this arrives with its apoapsis already past the target (measured, see
+ * the note in `planMission`), so above it the launcher is aimed at a transfer
+ * orbit instead.
+ */
+export const DIRECT_INSERTION_CEILING = 300e3;
+
+/** Apoapsis of the insertion ellipse a kick stage is handed (capped). */
+export function insertionApoapsisFor(target: ResolvedTarget, hIns: number): number {
+  return Math.max(hIns, Math.min(target.apogee, DIRECT_APOAPSIS_CAP));
+}
+
+/**
+ * Direction-independent estimate of the post-ascent burn sequence to go from an
+ * insertion orbit hIns × haIns at inclination `ascentInc` to the target orbit.
+ *
+ * `haIns` may be above or below the target apoapsis: an overshoot (the ascent
+ * cut off late, or the apoapsis guard fired) is corrected by the same burn with
+ * a retrograde impulse, which is why the burn kind is `raiseApoapsis` in both
+ * cases.
+ */
+export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: number, haIns = hIns, incTol = 0.05 * DEG): BurnPlan[] {
   const burns: BurnPlan[] = [];
-  const tol = 2e3;
   const rIns = R_EARTH + hIns;
   const rA = R_EARTH + target.apogee;
   const rP = R_EARTH + target.perigee;
-  const needPlane = Math.abs(target.inclination - ascentInc) > 0.05 * DEG;
+  const needPlane = Math.abs(target.inclination - ascentInc) > incTol;
   const circularTarget = Math.abs(target.apogee - target.perigee) < 1e3;
   const aIns = (rIns + R_EARTH + haIns) / 2;
   let vAtApo = visViva(R_EARTH + haIns, aIns);
   let rApo = R_EARTH + haIns;
-  if (target.apogee > haIns + tol) {
+  // Apoapsis adjustment at periapsis. Needed when the target apoapsis is above
+  // the insertion apoapsis, and also when the insertion apoapsis overshot the
+  // target by more than the tolerance (then the burn is retrograde).
+  // The threshold matches the accuracy the mission is judged on (about 2 % or
+  // 10 km): chasing a smaller error costs more than it buys and, on a nearly
+  // circular orbit, there is no well-defined periapsis to burn at.
+  const apoMismatch = target.apogee - haIns;
+  if (Math.abs(apoMismatch) > Math.max(APOAPSIS_TOLERANCE, 0.018 * target.apogee)) {
     const aT = (rIns + rA) / 2;
-    const dv = visViva(rIns, aT) - visViva(rIns, aIns);
+    const dv = Math.abs(visViva(rIns, aT) - visViva(rIns, aIns));
     burns.push({
       id: 'raise', kind: 'raiseApoapsis',
       atU: needPlane ? 'node' : circularTarget ? 'asap' : target.argp,
@@ -149,7 +187,13 @@ export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: numbe
     vAtApo = visViva(rA, aT);
     rApo = rA;
   }
-  if (target.perigee > hIns + tol || needPlane) {
+  // The periapsis is judged on the same accuracy the mission is judged on as
+  // the apoapsis above. Chasing a 5 km shortfall costs a whole revolution —
+  // the burn is flown at the apoapsis — for a correction the target tolerance
+  // does not ask for, which is how a mission that inserted on target ended up
+  // deploying its payload 45 minutes later than it had to.
+  const peTol = Math.max(APOAPSIS_TOLERANCE, 0.018 * target.perigee);
+  if (target.perigee > hIns + peTol || needPlane) {
     const aF = (rApo + rP) / 2;
     const v2 = visViva(rApo, aF);
     const di = target.inclination - ascentInc;
@@ -159,7 +203,64 @@ export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: numbe
       targetPeriapsis: target.perigee, targetInclination: target.inclination, dvEstimate: dv, done: false,
     });
   }
+  // A trim that has to bring the apoapsis *down* is flown at the periapsis. If
+  // the periapsis still has to be raised as well, raising it first is half a
+  // revolution closer than waiting for the current, low periapsis to come round
+  // again — so the shape burn goes first in that case.
+  if (burns.length === 2 && apoMismatch < 0) burns.reverse();
   return burns;
+}
+
+/**
+ * Re-plan the remaining burns from an orbit that was actually achieved. Called
+ * after every cut-off so that a short, long or lofted ascent is corrected by
+ * the following burns instead of flying a plan that was made before liftoff.
+ */
+export function replanBurns(target: ResolvedTarget, el: { periapsisAlt: number; apoapsisAlt: number; i: number }): BurnPlan[] {
+  if (!isFinite(el.apoapsisAlt)) return [];
+  // A plane error smaller than the accuracy the mission is judged on is not
+  // worth a burn — and near the equator the closest reachable plane through the
+  // current position may not even be the target inclination, so such a burn
+  // would be a no-op that the re-planner then schedules again forever.
+  return planBurns(target, el.i, el.periapsisAlt, Math.max(el.periapsisAlt, el.apoapsisAlt), 0.25 * DEG);
+}
+
+/**
+ * Whether the launch azimuth needed for `inc` lies inside the site's
+ * range-safety window. `minInclination` only constrains prograde launches, so
+ * this is what decides whether a site can fly a retrograde (sun-synchronous)
+ * mission at all.
+ */
+export function azimuthAllowedFor(site: SiteExtra, inc: number): boolean {
+  const lat = site.latitude * DEG;
+  const descending = inc > 75 * DEG ? site.descendingForPolar : false;
+  const vOrb = circularSpeed(R_EARTH + 300e3);
+  const az = rotatingLaunchAzimuth(lat, inc, vOrb, descending);
+  if (az === null) return false;
+  const deg = ((az / DEG) % 360 + 360) % 360;
+  const lo = ((site.azimuthMin % 360) + 360) % 360;
+  const hi = ((site.azimuthMax % 360) + 360) % 360;
+  return lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
+}
+
+/**
+ * Whether anything at all can light an engine after the ascent cuts off: the
+ * stage that flies the ascent restarts, a kick stage sits above it, or the
+ * spacecraft carries its own propulsion.
+ *
+ * This is the plan-time counterpart of `Simulation.canReigniteAfterCutoff`, and
+ * it decides the shape of the insertion orbit: a stack that cannot burn again
+ * has to be aimed at the orbit the mission actually wants, because the orbit it
+ * is in at cut-off is final. Soyuz-2.1a with an inert payload is exactly that
+ * case — aiming it at a 200 km parking orbit leaves it sitting there with
+ * kilometres per second of Blok I propellant and no way to spend it.
+ */
+export function canBurnAfterAscent(vehicle: VehicleSpec, satellite: SatelliteSpec, weakFinalStage: boolean): boolean {
+  if (weakFinalStage) return true;
+  const last = vehicle.stages[vehicle.stages.length - 1];
+  if (last.restartable) return true;
+  const p = satellite.propulsion;
+  return !!p && p.propellantFraction > 0 && p.thrust > 0;
 }
 
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
@@ -167,10 +268,8 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const { inc: ascentInclination, reachable } = ascentInclinationFor(target, site);
   const descending = ascentInclination > 75 * DEG ? site.descendingForPolar : false;
   const lat = site.latitude * DEG;
-  const insertionAltitude = Math.max(cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0, insertionAltitudeFor(target));
-  const vOrb = circularSpeed(R_EARTH + insertionAltitude);
+  const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
   const azimuthInertial = inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
-  const azimuthRotating = rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
   const jd0 = julianDate(cfg.launchTime);
   const gmst0 = gmst(jd0);
   const raanExpected = raanFromLaunch(lat, site.longitude * DEG + gmst0, ascentInclination, descending);
@@ -182,21 +281,75 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const lastMass = last.dryMass + last.propellantMass + payload + 1500;
   const aLast = (last.engine.count * last.engine.thrustVac) / lastMass;
   const weakFinalStage = _vehicle.stages.length > 1 && aLast < 1.6;
+  const restartable = canBurnAfterAscent(_vehicle, satelliteById(cfg.satelliteId), weakFinalStage);
+  // Ideal delta-v of the stages that have to deliver the perigee speed of the
+  // insertion orbit: everything except a final stage too weak to fly the ascent
+  // (Fregat, Briz-M, Curie...), which is an orbital-manoeuvring stage instead.
+  const strongSpec = weakFinalStage ? { ..._vehicle, stages: _vehicle.stages.slice(0, -1) } : _vehicle;
+  const carried = weakFinalStage ? last.dryMass + last.propellantMass : 0;
+  const dvStrong = new VehicleModel(strongSpec, payload + carried, cfg.boosterRecovery).deltaVRemaining();
+  const vRot = OMEGA_EARTH * R_EARTH * Math.cos(lat) * Math.sin(azimuthInertial);
+  /**
+   * Whether those stages can fly an ascent straight into the orbit h × ha.
+   * Ideal delta-v needed = perigee speed + typical ascent losses (gravity, drag,
+   * steering: 1450 m/s) − the Earth-rotation credit + 150 m/s of margin.
+   */
+  const ascentReaches = (h: number, ha: number): boolean => {
+    const rIns = R_EARTH + h;
+    return dvStrong >= visViva(rIns, (rIns + R_EARTH + ha) / 2) + 1450 - vRot + 150;
+  };
+
+  let insertionAltitude = Math.max(parkingOverride, insertionAltitudeFor(target));
+  // The ascent flies straight into the transfer ellipse whose apogee is the
+  // target (capped): that is what most launchers do, it saves a restart, and —
+  // more importantly for the guidance — it gives the closed loop and the
+  // apoapsis guard a target apoapsis that is the one the mission actually
+  // needs, instead of a 200 km ceiling that a weak upper stage cannot respect.
+  //
+  // It is only flown when the stages that have to reach the perigee speed of
+  // that ellipse can actually do so. Aiming a stack at an ellipse it cannot
+  // reach is strictly worse than aiming it at the circular parking orbit it
+  // can: the ascent burns to depletion short of both and ends suborbital,
+  // where the parking orbit would have been reached and the remaining burns
+  // (or the spacecraft's own engine) would have raised it. Soyuz-2.1a with a
+  // crew ship to the ISS is exactly that case.
+  const haCandidate = insertionApoapsisFor(target, insertionAltitude);
   let insertionApoapsis = insertionAltitude;
-  if (weakFinalStage) {
-    // Only insert into an ellipse if the strong stages can actually reach its perigee
-    // speed (ideal delta-v minus typical losses plus the Earth-rotation credit).
-    const strongSpec = { ..._vehicle, stages: _vehicle.stages.slice(0, -1) };
-    const kickMass = last.dryMass + last.propellantMass;
-    const dvStrong = new VehicleModel(strongSpec, payload + kickMass, cfg.boosterRecovery).deltaVRemaining();
-    const rIns = R_EARTH + insertionAltitude;
-    const vRot = OMEGA_EARTH * R_EARTH * Math.cos(lat) * Math.sin(azimuthInertial);
-    const haCandidate = Math.max(insertionAltitude, Math.min(target.apogee, 2000e3));
-    const aEll = (rIns + R_EARTH + haCandidate) / 2;
-    const vPerigee = visViva(rIns, aEll);
-    const required = vPerigee + 1450 - vRot + 150;
-    if (dvStrong >= required) insertionApoapsis = haCandidate;
+  if (haCandidate > insertionAltitude + 1e3 && ascentReaches(insertionAltitude, haCandidate)) {
+    insertionApoapsis = haCandidate;
   }
+  // Single-shot stack: nothing can light an engine after the ascent cuts off,
+  // so a parking orbit is not a parking orbit — it is the final orbit. Aim the
+  // ascent at the mission's own orbit instead, exactly as a real launcher
+  // without a restartable upper stage does (direct insertion). The same
+  // delta-v test as above decides: if the stack cannot reach the target
+  // directly it is aimed at the parking orbit it can reach, which at least
+  // leaves the payload in a stable orbit rather than in the sea.
+  // Single-shot stack: nothing can light an engine after the ascent cuts off,
+  // so a "parking orbit" is not a parking orbit — it is the final orbit, and
+  // the apoapsis cap above (which exists so that a kick stage is handed a
+  // sensible transfer) would strand the payload at 2000 km. Aim the ascent at
+  // the target apoapsis instead, when the stack has the delta-v for it.
+  //
+  // The perigee is *not* raised to match a high target the same way: a stage
+  // that burns continuously into a circular orbit well above the natural
+  // insertion altitude arrives with its apoapsis already past the target.
+  // Measured with Soyuz-2.1a + an inert payload, which is the only stack in
+  // the fleet without a restart: aiming it straight at 500 × 500 km inserts at
+  // 497 × 2474 km, and at 420 × 420 km it inserts at 417 × 441 km. Above
+  // `DIRECT_INSERTION_CEILING` the launcher is therefore left aiming at the
+  // transfer orbit it can fly accurately, and the mission ends `off target`
+  // with the perigee low — which is what such a stack really does.
+  if (!restartable && parkingOverride <= 0 && target.perigee <= DIRECT_INSERTION_CEILING) {
+    const hFinal = target.perigee;
+    const haFinal = Math.max(hFinal, target.apogee);
+    if (haFinal > insertionApoapsis + 1e3 && ascentReaches(hFinal, haFinal)) {
+      insertionAltitude = hFinal;
+      insertionApoapsis = haFinal;
+    }
+  }
+  const vOrb = circularSpeed(R_EARTH + insertionAltitude);
+  const azimuthRotating = rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
   const burns = planBurns(target, ascentInclination, insertionAltitude, insertionApoapsis);
   return {
     target, ascentInclination, descending, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,

@@ -1,10 +1,37 @@
 /**
  * Ascent guidance: vertical rise → pitch-over kick → zero-angle-of-attack
- * gravity turn → closed-loop pitch/yaw steering into the parking orbit.
+ * gravity turn → closed-loop pitch/yaw steering into the insertion orbit.
+ *
+ * The closed-loop vertical channel is a linear-tangent law (the acceleration
+ * profile is linear in time) written as two separable terms so that it stays
+ * well behaved when the vehicle cannot fly the nominal profile:
+ *
+ *   a_z = (v_zT − v_z)/T            terminal vertical-speed nulling
+ *       + clamp(−B·T/2, ±a_corr)    bounded altitude correction
+ *
+ * The unbounded version (the textbook two-point boundary solution) demands
+ * arbitrarily large accelerations when the altitude error is large compared
+ * with what the remaining burn can fix; the bound turns that into a graceful
+ * "climb as fast as you usefully can" command instead of a command that
+ * saturates the pitch limit for minutes at a time.
+ *
+ * Three further limits keep the law physical:
+ *  - a dynamic-pressure angle-of-attack budget (q·α), so guidance has almost
+ *    no authority in dense air and full authority above ~60 km;
+ *  - a thrust-limited pitch cap: when the stage cannot hold altitude at any
+ *    attitude, pointing the thrust up only costs horizontal acceleration, so
+ *    the pitch is capped at the value that leaves the vehicle highest when the
+ *    horizontal speed reaches the insertion speed;
+ *  - an apoapsis ceiling: once the vehicle is near the insertion altitude with
+ *    the osculating apoapsis already at (or above) the insertion apoapsis there
+ *    is nothing to gain from climbing, so the pitch ceiling is squeezed toward
+ *    level flight (or below it, above the insertion altitude). Together with
+ *    the apoapsis cut-off in `Simulation.checkAscent` this is what stops the
+ *    "parking orbit at 198 × 21 500 km" runaway.
  */
 import type { GuidanceParams } from '../types';
 import { DEG, MU_EARTH, R_EARTH } from './constants';
-import { Vec3, v3, add, scale, dot, cross, norm, normalize } from './vec3';
+import { Vec3, v3, add, scale, dot, cross, norm, normalize, slerpLimited } from './vec3';
 import { enuFrame, elementsFromState } from './orbital';
 
 export type AscentPhase = 'vertical' | 'kick' | 'gravityTurn' | 'closedLoop';
@@ -14,7 +41,26 @@ export interface GuidanceCommand {
   throttle: number;
   pitchDeg: number;
   phase: AscentPhase;
+  /** apoapsis altitude the current plan expects at cut-off, m */
   predictedApoapsis: number;
+}
+
+/**
+ * Angle-of-attack budget: the product q·α a launcher may fly, Pa·rad.
+ * 2100 Pa·rad ≈ 3° at 40 kPa, 12° at 10 kPa, unlimited below ~1 kPa — the
+ * usual shape of a structural/aerodynamic q·α placard.
+ */
+export const Q_ALPHA_BUDGET = 2100;
+
+/** Highest altitude a stage aims for while another launcher stage is still to come, m. */
+export const BOOSTER_TARGET_CEILING = 200e3;
+const ALPHA_MIN = 1.5 * DEG;
+const ALPHA_MAX = 60 * DEG;
+
+/** Maximum angle of attack (rad) allowed at dynamic pressure q (Pa). */
+export function alphaBudget(q: number): number {
+  if (q < 150) return Math.PI;
+  return Math.max(ALPHA_MIN, Math.min(ALPHA_MAX, Q_ALPHA_BUDGET / q));
 }
 
 /**
@@ -61,6 +107,8 @@ export interface GuidanceInputs {
   stageDvLeft: number;
   /** thrust acceleration of the next launcher stage at its ignition, m/s^2 (-1 if none) */
   nextStageAccel: number;
+  /** osculating apoapsis altitude now, m (Infinity when unbound) */
+  apoapsisAlt: number;
   isFirstStage: boolean;
   maxQThrottle?: { qStart: number; throttle: number };
   maxAccel: number;
@@ -93,7 +141,7 @@ export class AscentGuidance {
     let pitchDeg = 90;
     let predictedApoapsis = 0;
 
-    // phase transitions
+    // ---------------------------------------------------------------- phases
     if (this.phase === 'vertical' && inp.altitudeAGL > p.pitchOverAltitude) {
       this.phase = 'kick';
       this.kickStart = inp.t;
@@ -106,16 +154,15 @@ export class AscentGuidance {
         this.kickEnd = inp.t;
       }
     }
-    // Hand over to closed-loop steering once dynamic pressure is low enough for an
-    // angle of attack to be harmless (or at the altitude ceiling as a fallback).
-    if (this.phase === 'gravityTurn' && ((inp.q < 1000 && inp.altitude > 30e3 && inp.t > 40) || inp.altitude >= p.gravityTurnEnd)) this.phase = 'closedLoop';
+    // Hand over to closed-loop steering once the angle-of-attack budget is wide
+    // enough for the command to be followed (q below ~4 kPa), or at the
+    // altitude ceiling as a fallback.
+    if (this.phase === 'gravityTurn' && ((inp.q < 4000 && inp.altitude > 25e3 && inp.t > 30) || inp.altitude >= p.gravityTurnEnd)) {
+      this.phase = 'closedLoop';
+    }
 
+    // --------------------------------------------------- closed-loop steering
     const closedLoopDir = (): Vec3 => {
-      // Explicit vertical-channel guidance: choose the vertical thrust component so
-      // that altitude reaches the insertion altitude with zero vertical speed at the
-      // moment the horizontal speed reaches orbital speed (time-to-go from the
-      // remaining propellant). The vertical acceleration profile is linear in time
-      // (a_z = A + B t), which is the linear-tangent form of optimal ascent steering.
       const rm = norm(inp.r);
       const rHat = up;
       const vz = dot(inp.v, up);
@@ -124,42 +171,92 @@ export class AscentGuidance {
       const curNormal = normalize(cross(inp.r, inp.v));
       const nDes = planeNormalThrough(rHat, this.ascentInclination, curNormal);
       const hDir = normalize(cross(nDes, rHat));
+      // effective gravity: gravity reduced by the centrifugal term of the horizontal speed
       const gEff = MU_EARTH / (rm * rm) - (vhMag * vhMag) / rm;
       const rIns = R_EARTH + this.insertionAltitude;
       const aIns = (rIns + R_EARTH + this.insertionApoapsis) / 2;
-      const vCirc = Math.sqrt(MU_EARTH * (2 / rIns - 1 / aIns)); // perigee speed of the insertion orbit
-      const dvRem = Math.max(30, vCirc - vhMag);
+      const vIns = Math.sqrt(MU_EARTH * (2 / rIns - 1 / aIns)); // perigee speed of the insertion orbit
+      const dvRem = Math.max(30, vIns - vhMag);
       // Planning horizon: burn time of the remaining stages, capped so that a weak
-      // final stage does not force an inefficient loft (a coast + circularisation
-      // handles that case instead).
+      // final stage does not force an inefficient loft.
       const T = Math.max(12, Math.min(p.maxTimeToGo, inp.timeToGo(dvRem)));
-      // Two-segment plan when the next stage is too weak to hold altitude at hand-off:
-      // the current stage targets a state (hT, vzT) from which a ballistic arc under the
-      // reduced effective gravity g2 peaks at the insertion altitude by the time the next
-      // stage has gained enough horizontal speed to sustain level flight.
-      // Lofted hand-off: when the next stage cannot hold altitude at hand-off speed
-      // (Centaur-class upper stages), the current stage aims for an apex above the
-      // insertion altitude at its own burnout; the upper stage then descends while it
-      // builds horizontal speed. The loft is a tunable (auto-tuned) parameter.
-      let hT = this.insertionAltitude;
-      const vzT = 0;
+      // Lofted hand-off: when the next stage cannot hold altitude at hand-off
+      // speed (Centaur-class upper stages) the current stage has to hand over
+      // *climbing*, so that the ballistic arc keeps the stack high while the
+      // weak stage builds horizontal speed. The loft is expressed as the apex
+      // the arc should reach, and turned into the vertical speed the booster
+      // must still have at its own cut-off:  v_zT = sqrt(2 g_eff Δh).
+      // While a launcher stage is still to come, the booster aims no higher than
+      // the staging ceiling: its job is to leave the atmosphere and build speed,
+      // not to reach the final altitude. Aiming the booster at a high direct
+      // insertion altitude makes it climb steeply and arrive slow and eccentric.
+      const hT = inp.nextStageAccel > 0
+        ? Math.min(this.insertionAltitude, BOOSTER_TARGET_CEILING)
+        : this.insertionAltitude;
+      let vzT = 0;
       let Tplan = T;
-      if (inp.nextStageAccel > 0 && inp.stageBurnTimeLeft > 3 && inp.stageBurnTimeLeft < T - 10) {
+      if (p.loftAltitude > 0 && inp.nextStageAccel > 0 && inp.stageBurnTimeLeft > 3 && inp.stageBurnTimeLeft < T - 10) {
         const vhMeco = vhMag + 0.9 * inp.stageDvLeft;
-        const gEffMeco = Math.max(0, MU_EARTH / (rm * rm) - (vhMeco * vhMeco) / rm);
-        if (inp.nextStageAccel < 0.6 * gEffMeco) {
-          hT = this.insertionAltitude + p.loftAltitude;
+        const gEffMeco = Math.max(0.5, MU_EARTH / (rm * rm) - (vhMeco * vhMeco) / rm);
+        if (inp.nextStageAccel < 0.8 * gEffMeco) {
+          vzT = Math.sqrt(2 * gEffMeco * p.loftAltitude);
           Tplan = Math.max(12, inp.stageBurnTimeLeft);
         }
       }
-      const B = (12 * (inp.altitude + 0.5 * Tplan * (vz + vzT) - hT)) / (Tplan * Tplan * Tplan);
-      const A = (vzT - vz) / Tplan - 0.5 * B * Tplan;
       const aT = Math.max(0.1, inp.thrustAccel);
-      let sinTheta = (A + gEff) / aT;
+      // linear-tangent profile a_z(t) = A + B t with h(Tplan) = hT, v_z(Tplan) = v_zT
+      const B = (12 * (inp.altitude + 0.5 * Tplan * (vz + vzT) - hT)) / (Tplan * Tplan * Tplan);
+      const aNull = (vzT - vz) / Tplan;
+      // Bounded altitude correction. Unbounded this term is −B·Tplan/2 and blows up
+      // whenever the altitude error cannot be flown out in the time available.
+      const aCorrMax = Math.max(1.5, 0.6 * aT);
+      const aCorr = Math.max(-aCorrMax, Math.min(aCorrMax, -B * Tplan * 0.5));
+      const aZ = aNull + aCorr;
+      let sinTheta = (aZ + gEff) / aT;
       sinTheta = Math.max(-1, Math.min(1, sinTheta));
       let theta = Math.asin(sinTheta) / DEG;
+      // Thrust-limited cap. Pointing the thrust `theta` off the velocity vector
+      // costs (1 − cos theta) of the horizontal acceleration; when the stage
+      // cannot hold altitude at any attitude (g_eff > a_T, every hydrogen upper
+      // stage with a heavy payload) that steering loss buys nothing, because
+      // what ends the deficit is horizontal speed, not vertical thrust. Pick
+      // the pitch that leaves the vehicle highest at the moment the horizontal
+      // speed reaches the insertion speed; when the stage is strong enough the
+      // optimum is pitchMax and this cap never binds.
+      const D = Math.max(50, vIns - vhMag);
+      let capTheta = p.pitchMax;
+      let bestH = -Infinity;
+      for (let k = 0; k <= 10; k++) {
+        const th = (p.pitchMin + ((p.pitchMax - p.pitchMin) * k) / 10) * DEG;
+        const u = aT * Math.cos(th);
+        if (u < 0.05) continue;
+        const tg = Math.min(D / u, 3000);
+        const hEnd = inp.altitude + vz * tg + 0.5 * (aT * Math.sin(th) - gEff) * tg * tg;
+        if (hEnd > bestH) {
+          bestH = hEnd;
+          capTheta = th / DEG;
+        }
+      }
+      theta = Math.min(theta, capTheta);
+      // Apoapsis ceiling: there is no point climbing once the osculating
+      // apoapsis already reaches the insertion apoapsis. The ceiling is squeezed
+      // from pitchMax down over one "excess apoapsis" band, which keeps the
+      // steering continuous instead of switching. It only applies to a stage
+      // that could hold altitude if it wanted to (g_eff < a_T); for a
+      // thrust-deficient stage the apoapsis is not the problem — the periapsis
+      // is — and the cap above already governs. The floor is level flight
+      // unless the vehicle is also above the insertion altitude, in which case
+      // it may descend toward it.
+      const band = Math.max(15e3, 0.08 * this.insertionApoapsis);
+      if (gEff < aT && inp.altitude > this.insertionAltitude - band) {
+        const excess = isFinite(inp.apoapsisAlt) ? (inp.apoapsisAlt - this.insertionApoapsis) / band : 4;
+        const f = Math.max(0, Math.min(1, excess));
+        const floorTheta = inp.altitude > this.insertionAltitude - 15e3 ? p.pitchMin : Math.min(0, p.pitchMax);
+        const pitchCeiling = p.pitchMax + f * (floorTheta - p.pitchMax);
+        theta = Math.min(pitchCeiling, theta);
+      }
       theta = Math.max(p.pitchMin, Math.min(p.pitchMax, theta));
-      predictedApoapsis = inp.altitude + vz * Tplan + 0.5 * A * Tplan * Tplan + (B * Tplan * Tplan * Tplan) / 6;
+      predictedApoapsis = inp.altitude + vz * Tplan + 0.5 * aZ * Tplan * Tplan;
       pitchDeg = theta;
       // yaw feedback: null the out-of-plane velocity component over ~min(T, 90 s)
       const vOut = dot(inp.v, nDes);
@@ -184,15 +281,17 @@ export class AscentGuidance {
       case 'gravityTurn': {
         const vAirMag = norm(inp.vAir);
         let vDir = vAirMag > 1 ? scale(inp.vAir, 1 / vAirMag) : up;
-        // Pitch-program limit: do not let the commanded pitch fall faster than maxTurnRate.
-        // A low-T/W vehicle would otherwise turn over too quickly while its airspeed is low.
+        // Pitch-program limit: do not let the commanded pitch fall faster than
+        // maxTurnRate. Flying the nose above the velocity vector costs angle of
+        // attack, so the deviation is charged against the q·α budget below.
         const pitchNow = Math.asin(Math.max(-1, Math.min(1, dot(vDir, up))));
         const pitchMinRad = (90 - p.kickAngle - p.maxTurnRate * Math.max(0, inp.t - this.kickEnd)) * DEG;
         if (pitchNow < pitchMinRad && pitchMinRad > 0) {
           const horiz = normalize(add(vDir, scale(up, -dot(vDir, up))));
           vDir = normalize(add(scale(horiz, Math.cos(pitchMinRad)), scale(up, Math.sin(pitchMinRad))));
         }
-        const wQ = inp.t > 40 && inp.altitude > 25e3 ? smoothstep((6000 - inp.q) / 5000) : 0;
+        // Blend toward the closed-loop command as the atmosphere thins out.
+        const wQ = inp.t > 30 && inp.altitude > 20e3 ? smoothstep((12000 - inp.q) / 8000) : 0;
         const blendWidth = 20e3;
         const w = Math.max(wQ, smoothstep((inp.altitude - (p.gravityTurnEnd - blendWidth)) / blendWidth));
         if (w > 0) {
@@ -209,7 +308,18 @@ export class AscentGuidance {
         break;
     }
 
-    // throttle
+    // Angle-of-attack placard: whatever the guidance asks for, the vehicle only
+    // flies the part of it that the q·α budget allows.
+    if (this.phase !== 'vertical' && inp.q > 150) {
+      const vAirMag = norm(inp.vAir);
+      if (vAirMag > 30) {
+        const vDir = scale(inp.vAir, 1 / vAirMag);
+        dir = slerpLimited(vDir, dir, alphaBudget(inp.q));
+        pitchDeg = Math.asin(Math.max(-1, Math.min(1, dot(dir, up)))) / DEG;
+      }
+    }
+
+    // ------------------------------------------------------------- throttle
     let throttle = 1;
     if (inp.isFirstStage && inp.maxQThrottle && inp.q > inp.maxQThrottle.qStart) throttle = inp.maxQThrottle.throttle;
     if (inp.thrustAccelFull > inp.maxAccel && inp.maxAccel > 0) throttle = Math.min(throttle, inp.maxAccel / inp.thrustAccelFull);
@@ -240,8 +350,11 @@ export function desiredVelocity(
   const rHat = scale(r, 1 / rm);
   const curNormal = normalize(cross(r, v));
   if (kind === 'raiseApoapsis') {
+    // Also used to lower an apoapsis that overshot: the desired speed is simply
+    // the speed of the transfer ellipse at this radius, above or below the
+    // current speed.
     const rA = R_EARTH + (targetApoapsis ?? 0);
-    const a = (rm + Math.max(rA, rm)) / 2;
+    const a = (rm + Math.max(rA, rm * 0.5)) / 2;
     const speed = Math.sqrt(MU_EARTH * (2 / rm - 1 / a));
     const hDir = normalize(cross(curNormal, rHat));
     return scale(hDir, speed);

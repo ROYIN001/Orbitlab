@@ -12,15 +12,18 @@ Built with Vite, TypeScript and Three.js. Interface in English, Russian and Thai
   (J2 oblateness in orbit), US Standard Atmosphere 1976 with an exponential upper
   atmosphere, Mach-dependent drag, pressure-dependent thrust and specific impulse,
   real staging tables, Earth-rotation velocity credit, RK4 integration.
-- **14 launch vehicles**: Soyuz-2.1a, Soyuz-2.1b/Fregat, Proton-M/Briz-M, Angara-A5/Briz-M,
-  Falcon 9 Block 5, Falcon Heavy, Atlas V 551, Vulcan Centaur, Ariane 64, Long March 5,
-  H3, PSLV-XL, Electron, Starship. Parallel boosters (including air-lit ones), hot staging,
+- **18 launch vehicles**: Soyuz-2.1a, Soyuz-2.1b/Fregat, Proton-M/Briz-M, Angara-A5/Briz-M,
+  Falcon 9 Block 5, Falcon Heavy, Atlas V 551, Vulcan Centaur VC4, Ariane 64, Vega-C,
+  Long March 2D, Long March 3B/E, Long March 5, H3-22, H-IIA 202 (historical), PSLV-XL,
+  Electron, Starship. Parallel boosters (including air-lit ones), hot staging,
   solid-motor thrust profiles, throttle buckets at max-Q, acceleration limits, first-stage
   recovery with entry and landing burns.
-- **12 launch sites** from Baikonur and Plesetsk to Kourou, the Cape, Vandenberg, Wenchang,
-  Tanegashima, Sriharikota, Mahia and Starbase.
-- **Orbit presets** (ISS, Starlink, sun-synchronous, polar, GPS/GLONASS MEO, GTO, GEO,
-  Molniya, Tundra) plus fully custom orbits. Launch-window computation for the ISS plane
+- **15 launch sites**: Baikonur, Plesetsk, Vostochny, Cape Canaveral/KSC, Vandenberg,
+  Wallops, Starbase, Kourou, Jiuquan, Taiyuan, Xichang, Wenchang, Tanegashima,
+  Sriharikota and Mahia — each with its own latitude, elevation, minimum inclination and
+  range-safety azimuth corridor.
+- **Orbit presets** (ISS, Starlink, sun-synchronous at 600 km, polar, GPS/GLONASS MEO,
+  GTO, GEO, Molniya, Tundra) plus fully custom orbits. Launch-window computation for the ISS plane
   and for sun-synchronous local-time constraints (RAAN targeting).
 - **Guidance and mission sequencing**: vertical rise, pitch-over kick, gravity turn with a
   pitch-program rate limit, explicit closed-loop steering into the parking orbit, coast and
