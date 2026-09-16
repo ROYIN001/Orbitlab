@@ -4,12 +4,18 @@
  */
 import type { Simulation } from '../physics/simulation';
 import { t } from '../i18n';
+import { eventText } from './hud';
 import { dot, normalize, cross, norm, sub, scale } from '../physics/vec3';
 
 export class OnboardOverlay {
   private canvas: HTMLCanvasElement;
   private lastEvent = '';
   private lastEventT = -1e9;
+
+  /** Forget the cached (translated) event text, e.g. after a language change. */
+  invalidate(): void {
+    this.lastEventT = -1e9;
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -27,7 +33,11 @@ export class OnboardOverlay {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
     // cabin wall with a porthole (shaded panels, cable ducts, bolted bezel)
-    const cx = W * 0.5, cy = H * 0.40, r = Math.min(W, H * 0.8) * 0.36;
+    // porthole sized so that it (and its label) stays above the instrument panel
+    const panelTop = H - 186;
+    const cx = W * 0.5;
+    const cy = Math.min(H * 0.40, (panelTop - 44) * 0.5);
+    const r = Math.max(40, Math.min(Math.min(W, H * 0.8) * 0.36, panelTop - 44 - cy));
     const wall = g.createRadialGradient(cx, cy, r, cx, cy, Math.max(W, H));
     wall.addColorStop(0, '#1b2029');
     wall.addColorStop(0.35, '#12161d');
@@ -127,30 +137,40 @@ export class OnboardOverlay {
     const items: [string, string][] = [
       [t('ob.alt'), (s.altitude / 1000).toFixed(1)],
       [t('ob.vel'), s.speed.toFixed(0)],
-      [t('ob.stage'), String((sim.vehicle.active?.index ?? 0) + 1)],
+      [t('ob.stage'), sim.vehicle.active ? String(sim.vehicle.active.index + 1) : '—'],
       [t('ob.throttle'), `${(s.throttle * 100).toFixed(0)}%`],
     ];
-    let ix = 260;
-    for (const [k, v] of items) {
-      g.fillStyle = '#0a0d12'; g.fillRect(ix, py + 6, 92, 58);
-      g.strokeStyle = '#3a4050'; g.strokeRect(ix + 0.5, py + 6.5, 92, 58);
-      g.fillStyle = '#8d9bb5'; g.font = '10px ui-monospace, monospace'; g.textAlign = 'left';
-      g.fillText(k, ix + 6, py + 20);
+    // readouts laid out from the available width: one row of four boxes, or a 2×2 grid when narrow
+    const x0 = 260;
+    const avail = W - x0 - 10;
+    const twoRows = avail < 4 * 66;
+    const cols = twoRows ? 2 : 4;
+    const bw = Math.max(54, Math.min(92, avail / cols - 8));
+    const bh = twoRows ? 27 : 58;
+    items.forEach(([k, v], i) => {
+      const bx = x0 + (i % cols) * (bw + 8);
+      const by = py + 6 + Math.floor(i / cols) * (bh + 4);
+      g.fillStyle = '#0a0d12'; g.fillRect(bx, by, bw, bh);
+      g.strokeStyle = '#3a4050'; g.strokeRect(bx + 0.5, by + 0.5, bw, bh);
+      g.fillStyle = '#8d9bb5'; g.font = `${twoRows ? 9 : 10}px ui-monospace, monospace`; g.textAlign = 'left';
+      g.fillText(k, bx + 5, by + (twoRows ? 10 : 14));
       g.shadowColor = 'rgba(127,224,255,0.8)'; g.shadowBlur = 10;
-      g.fillStyle = '#7fe0ff'; g.font = 'bold 20px ui-monospace, monospace';
-      g.fillText(v, ix + 6, py + 48);
+      g.fillStyle = '#7fe0ff'; g.font = `bold ${twoRows ? 14 : 20}px ui-monospace, monospace`;
+      g.fillText(v, bx + 5, by + (twoRows ? 23 : 42));
       g.shadowBlur = 0;
-      ix += 100;
-    }
-    // caution/event lamp
+    });
+    // caution/event lamp on its own line under the readouts
     const last = sim.events[sim.events.length - 1];
-    if (last && last.t !== this.lastEventT) { this.lastEvent = t(last.key, last.params); this.lastEventT = last.t; }
+    if (last && last.t !== this.lastEventT) { this.lastEvent = eventText(last); this.lastEventT = last.t; }
     if (last && s.t - last.t < 12) {
       const blink = Math.floor(s.t * 3) % 2 === 0 || last.severity !== 'fail';
       g.fillStyle = last.severity === 'fail' ? (blink ? '#ff5d5d' : '#5a1a1a') : last.severity === 'warn' ? '#ffb347' : '#4cd97b';
-      g.fillRect(ix + 10, py + 6, 10, 58);
+      g.fillRect(x0, py + 72, 8, 16);
       g.fillStyle = '#dbe3f0'; g.font = '11px system-ui, sans-serif'; g.textAlign = 'left';
-      g.fillText(this.lastEvent.slice(0, 60), ix + 28, py + 40);
+      let txt = this.lastEvent;
+      const maxW = W - x0 - 26;
+      while (txt.length > 4 && g.measureText(txt).width > maxW) txt = txt.slice(0, -2);
+      g.fillText(txt === this.lastEvent ? txt : txt + '…', x0 + 14, py + 84);
     }
     // vibration hint: velocity vector arrow in the porthole is provided by the 3D view
     void cross; void norm; void sub; void scale;

@@ -83,35 +83,99 @@ const EARTH_FRAG = /* glsl */ `
 const ATMO_VERT = /* glsl */ `
   #include <common>
   #include <logdepthbuf_pars_vertex>
-  varying vec3 vNormalW;
   varying vec3 vPosW;
   void main() {
-    vNormalW = normalize(mat3(modelMatrix) * normal);
     vec4 wp = modelMatrix * vec4(position, 1.0);
     vPosW = wp.xyz;
     gl_Position = projectionMatrix * viewMatrix * wp;
     #include <logdepthbuf_vertex>
   }
 `;
+/**
+ * Atmosphere shell rendered from both sides. The glow of a pixel is derived from the
+ * lowest altitude reached by its view ray (a cheap stand-in for the scattering integral):
+ * rays grazing the limb are bright, rays through the upper atmosphere fade exponentially,
+ * rays leaving the atmosphere upward are weighted by an approximate Chapman path factor.
+ * Works for a camera on the pad, inside the atmosphere and in orbit.
+ */
 const ATMO_FRAG = /* glsl */ `
   #include <common>
   #include <logdepthbuf_pars_fragment>
   uniform vec3 sunDir;
   uniform vec3 camPos;
-  varying vec3 vNormalW;
+  uniform vec3 earthCenter;
+  uniform float earthR;
+  uniform float shellR;
   varying vec3 vPosW;
   void main() {
     #include <logdepthbuf_fragment>
-    vec3 n = normalize(vNormalW);
-    vec3 viewDir = normalize(camPos - vPosW);
-    float d = max(dot(n, viewDir), 0.0);
-    float band = smoothstep(0.0, 0.30, d) * (1.0 - smoothstep(0.30, 0.95, d));
-    float sun = dot(n, sunDir);
-    float lit = 0.15 + 0.85 * smoothstep(-0.25, 0.35, sun);
+    bool inside = distance(camPos, earthCenter) < shellR;
+    // use the far side of the shell when inside it, the near side when outside
+    if (gl_FrontFacing == inside) discard;
+    vec3 u = normalize(vPosW - camPos);
+    vec3 c = camPos - earthCenter;
+    float tca = -dot(c, u);
+    float band;
+    vec3 pc;
+    if (tca > 0.0) {
+      pc = c + u * tca;
+      float hmin = length(pc) - earthR;
+      if (hmin >= 0.0) {
+        band = exp(-hmin / 24000.0) + 0.18 * exp(-hmin / 90000.0);
+      } else {
+        // ray hits the ground: haze grows toward the limb with the slant path
+        float cosT = sqrt(max(0.0, 1.0 - pow(max(0.0, 1.0 + hmin / earthR), 2.0)));
+        band = 0.04 / (cosT + 0.04);
+      }
+    } else {
+      // ray moving away from the Earth: short path, weighted by elevation above the horizon
+      pc = c;
+      float h0 = max(0.0, length(c) - earthR);
+      float sinE = clamp(dot(u, normalize(c)), 0.0, 1.0);
+      band = (exp(-h0 / 24000.0) + 0.18 * exp(-h0 / 90000.0)) * 0.03 / (sinE + 0.03);
+    }
+    if (inside) band *= 0.7;
+    vec3 nc = normalize(pc);
+    float sun = dot(nc, sunDir);
+    float lit = 0.05 + 0.95 * smoothstep(-0.2, 0.3, sun);
     // blue glow on the day side, orange near the terminator
     float twilight = smoothstep(-0.25, 0.0, sun) * (1.0 - smoothstep(0.0, 0.3, sun));
-    vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.55, 0.25), twilight * 0.8) * band * lit;
-    gl_FragColor = vec4(col, band * lit * 0.9);
+    vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.5, 0.22), twilight * 0.85) * band * lit * 0.9;
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+const CLOUD_VERT = /* glsl */ `
+  #include <common>
+  #include <logdepthbuf_pars_vertex>
+  varying vec2 vUv;
+  varying vec3 vNormalW;
+  void main() {
+    vUv = uv;
+    vNormalW = normalize(mat3(modelMatrix) * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    #include <logdepthbuf_vertex>
+  }
+`;
+const CLOUD_FRAG = /* glsl */ `
+  #include <common>
+  #include <logdepthbuf_pars_fragment>
+  uniform sampler2D map;
+  uniform vec3 sunDir;
+  varying vec2 vUv;
+  varying vec3 vNormalW;
+  void main() {
+    #include <logdepthbuf_fragment>
+    vec4 c = texture2D(map, vUv);
+    float a = c.a * c.g * 0.92;
+    if (a < 0.01) discard;
+    vec3 n = normalize(vNormalW);
+    float cosSun = dot(n, sunDir);
+    float dayF = smoothstep(-0.12, 0.25, cosSun);
+    float twilight = smoothstep(-0.15, 0.05, cosSun) * (1.0 - smoothstep(0.05, 0.35, cosSun));
+    vec3 lit = vec3(0.06 + 1.0 * max(cosSun, 0.0)) * mix(vec3(1.0), vec3(1.2, 0.82, 0.62), twilight * 0.7);
+    // night side: clouds are barely visible and only dim the city lights below
+    vec3 col = mix(vec3(0.03), lit, dayF);
+    gl_FragColor = vec4(col, a);
   }
 `;
 
@@ -158,6 +222,9 @@ export class SceneManager {
   private atmoMat: THREE.ShaderMaterial;
   private starsMat: THREE.PointsMaterial;
   private brightStarsMat: THREE.PointsMaterial;
+  private cloudMat: THREE.ShaderMaterial | null = null;
+  private textures: EarthTextures;
+  private dayPixels: { data: Uint8ClampedArray; w: number; h: number } | null = null;
   origin: Vec3 = { x: 0, y: 0, z: 0 };
   private cloudDrift = 0;
   /** reusable temporaries */
@@ -170,6 +237,7 @@ export class SceneManager {
   private dayColor = new THREE.Color(0.22, 0.45, 0.92);
 
   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
+    this.textures = tex;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -195,19 +263,28 @@ export class SceneManager {
     this.earthMesh = new THREE.Mesh(geo, this.earthMat);
     this.earthGroup.add(this.earthMesh);
     if (tex.clouds) {
-      const cm = new THREE.MeshLambertMaterial({ map: tex.clouds, transparent: true, opacity: 0.9, depthWrite: false });
-      cm.alphaMap = tex.clouds;
-      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 9000, 128, 96), cm);
+      // clouds share the Earth's day/night lighting so they never glow over the night side
+      this.cloudMat = new THREE.ShaderMaterial({
+        vertexShader: CLOUD_VERT, fragmentShader: CLOUD_FRAG, transparent: true, depthWrite: false,
+        uniforms: { map: { value: tex.clouds }, sunDir: { value: new THREE.Vector3(1, 0, 0) } },
+      });
+      this.cloudMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 9000, 128, 96), this.cloudMat);
+      this.cloudMesh.renderOrder = 1;
       this.earthGroup.add(this.cloudMesh);
     } else {
       this.cloudMesh = null;
     }
+    const shellR = R_EARTH + 220e3;
     this.atmoMat = new THREE.ShaderMaterial({
       vertexShader: ATMO_VERT, fragmentShader: ATMO_FRAG, transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, side: THREE.FrontSide,
-      uniforms: { sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() } },
+      blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      uniforms: {
+        sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() },
+        earthCenter: { value: new THREE.Vector3() }, earthR: { value: R_EARTH }, shellR: { value: shellR },
+      },
     });
-    this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 128, 96), this.atmoMat);
+    this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(shellR, 128, 96), this.atmoMat);
+    this.atmoMesh.renderOrder = 2;
     this.earthGroup.add(this.atmoMesh);
     this.scene.add(this.earthGroup);
 
@@ -274,6 +351,9 @@ export class SceneManager {
   }
 
   resize(w: number, h: number): void {
+    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    this.renderer.setPixelRatio(pr);
+    this.composer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.camera.aspect = w / Math.max(1, h);
@@ -300,8 +380,10 @@ export class SceneManager {
     const sd = this.tmpSun.set(sunDir.x, sunDir.y, sunDir.z).normalize();
     (this.earthMat.uniforms.sunDir.value as THREE.Vector3).copy(sd);
     (this.atmoMat.uniforms.sunDir.value as THREE.Vector3).copy(sd);
+    if (this.cloudMat) (this.cloudMat.uniforms.sunDir.value as THREE.Vector3).copy(sd);
     (this.earthMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
     (this.atmoMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
+    (this.atmoMat.uniforms.earthCenter.value as THREE.Vector3).copy(this.earthGroup.position);
     this.sun.position.copy(sd).multiplyScalar(1e7);
     this.sun.target.position.set(0, 0, 0);
     // shadows only matter near the ground (pad, tower, rocket)
@@ -313,7 +395,7 @@ export class SceneManager {
     const camPosEci = this.tmpV.set(this.camera.position.x + this.origin.x, this.camera.position.y + this.origin.y, this.camera.position.z + this.origin.z);
     const sunElev = camPosEci.normalize().dot(sd);
     const dayF = THREE.MathUtils.smoothstep(sunElev, -0.15, 0.2);
-    const f = 1 - THREE.MathUtils.smoothstep(cameraAltitude, 15e3, 90e3);
+    const f = 1 - THREE.MathUtils.smoothstep(cameraAltitude, 6e3, 70e3);
     this.skyColor.copy(this.dayColor).multiplyScalar(dayF * f).add(this.nightColor.clone().multiplyScalar(f));
     this.renderer.setClearColor(this.skyColor, 1);
     const starVis = 1 - f * (0.3 + 0.7 * dayF);
@@ -321,9 +403,47 @@ export class SceneManager {
     this.brightStarsMat.opacity = starVis;
     this.ambient.intensity = 0.35 + 0.6 * f * dayF;
     this.hemi.intensity = 0.85 + 0.5 * f * dayF;
-    this.hemi.position.copy(f > 0.5 ? camPosEci : sd);
+    // sky light comes from above near the ground and from the sun in space; blend smoothly
+    this.hemi.position.copy(camPosEci).multiplyScalar(f).addScaledVector(sd, 1 - f).normalize();
     // bloom is strongest in space (plumes, city lights, sun glare)
     this.bloom.strength = 0.35 + 0.35 * (1 - f);
+  }
+
+  /**
+   * Average land colour of the day map around a site (linear RGB), used to tint the local
+   * ground so the pad scenery blends into the globe when zooming out. Returns null when
+   * the texture is unavailable or the site is surrounded by ocean.
+   */
+  sampleGroundColor(latDeg: number, lonDeg: number): THREE.Color | null {
+    if (!this.dayPixels) {
+      const img = this.textures.day.image as HTMLImageElement | undefined;
+      if (!img || !img.width) return null;
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        const g = c.getContext('2d', { willReadFrequently: true })!;
+        g.drawImage(img, 0, 0);
+        this.dayPixels = { data: g.getImageData(0, 0, c.width, c.height).data, w: c.width, h: c.height };
+      } catch {
+        return null;
+      }
+    }
+    const { data, w, h } = this.dayPixels;
+    const cx = Math.round(((lonDeg + 180) / 360) * w);
+    const cy = Math.round(((90 - latDeg) / 180) * h);
+    let r = 0, gg = 0, b = 0, n = 0;
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        const x = ((cx + dx) % w + w) % w;
+        const y = Math.max(0, Math.min(h - 1, cy + dy));
+        const i = (y * w + x) * 4;
+        const pr = data[i], pg = data[i + 1], pb = data[i + 2];
+        if (pb > Math.max(pr, pg) * 1.05) continue; // ocean
+        r += pr; gg += pg; b += pb; n++;
+      }
+    }
+    if (n < 4) return null;
+    return new THREE.Color().setRGB(r / n / 255, gg / n / 255, b / n / 255, THREE.SRGBColorSpace);
   }
 
   render(): void {

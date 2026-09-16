@@ -40,7 +40,6 @@ export class DebrisView {
       }
       if (d.recovery) {
         const plume = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.3, r * 0.9, 20, 12, 1, true), this.plumeMat);
-        plume.rotation.x = Math.PI;
         plume.position.y = -10;
         plume.name = 'plume';
         plume.visible = false;

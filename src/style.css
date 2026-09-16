@@ -21,7 +21,7 @@ button, select, input { font: inherit; color: inherit; }
   grid-template-columns: 340px 1fr 360px;
   grid-template-rows: 44px 1fr;
   grid-template-areas: "top top top" "setup view tel";
-  height: 100vh;
+  height: 100vh; height: 100dvh;
   width: 100vw;
   overflow: hidden;
 }
@@ -42,7 +42,12 @@ button, select, input { font: inherit; color: inherit; }
 .panel { background: var(--panel); overflow-y: auto; border-right: 1px solid var(--border); padding: 12px; }
 #telemetry { border-right: none; border-left: 1px solid var(--border); grid-area: tel; }
 #setup { grid-area: setup; }
-#viewport { grid-area: view; position: relative; overflow: hidden; background: #000; }
+#viewport { grid-area: view; position: relative; overflow: hidden; background: #000; container-type: inline-size; }
+/* onboard view: the cabin panel carries the flight numbers, so the HUD shrinks to the clock/status */
+#viewport.onboard #hud .hud-box:nth-child(2) { display: none; }
+#viewport.onboard #hud .hud-box:first-child .hud-grid { display: none; }
+/* compact HUD rows shown only on narrow screens (the right box is hidden there) */
+.hud-grid.hud-compact { display: none; }
 #gl { width: 100%; height: 100%; display: block; }
 .overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hidden { display: none !important; }
@@ -79,15 +84,16 @@ details summary { cursor: pointer; color: var(--accent2); font-weight: 600; }
 .hud-grid { display: grid; grid-template-columns: auto auto; column-gap: 12px; row-gap: 1px; }
 .hud-grid .k { color: var(--muted); }
 .hud-grid .v { text-align: right; color: #fff; }
-#ticker { position: absolute; left: 10px; bottom: 64px; max-width: 60%; pointer-events: none; font-family: var(--mono); font-size: 12px; }
-#viewport.onboard #ticker { bottom: 190px; }
+/* --ctl-h is the measured height of the playback bar (set from main.ts) so the ticker never hides under it */
+#ticker { position: absolute; left: 10px; bottom: calc(var(--ctl-h, 46px) + 18px); max-width: 60%; pointer-events: none; font-family: var(--mono); font-size: 12px; }
+#viewport.onboard #ticker { bottom: max(calc(var(--ctl-h, 46px) + 18px), 190px); }
 #ticker div { background: rgba(8, 11, 18, 0.7); border-left: 3px solid var(--accent2); padding: 3px 8px; margin-top: 4px; border-radius: 0 6px 6px 0; opacity: 0.95; }
 #ticker div.major { border-left-color: var(--accent); }
 #ticker div.success { border-left-color: var(--ok); }
 #ticker div.warn { border-left-color: var(--warn); }
 #ticker div.fail { border-left-color: var(--fail); }
 #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); background: #000; z-index: 5; }
-#controls { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 10px; background: rgba(8, 11, 18, 0.72); border: 1px solid rgba(80, 100, 140, 0.5); border-radius: 8px; padding: 6px 10px; backdrop-filter: blur(4px); }
+#controls { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; background: rgba(8, 11, 18, 0.72); border: 1px solid rgba(80, 100, 140, 0.5); border-radius: 8px; padding: 6px 10px; backdrop-filter: blur(4px); }
 .ctl-group { display: flex; align-items: center; gap: 6px; }
 .ctl-btn { font-size: 16px; padding: 3px 10px; }
 .warp { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -129,16 +135,26 @@ details summary { cursor: pointer; color: var(--accent2); font-weight: 600; }
   .brand .subtitle { display: none; }
   .hud-box { min-width: 0; font-size: 11px; }
   #hud .hud-box:nth-child(2) { display: none; }
+  .hud-grid .lo { display: none; }
+  .hud-grid.hud-compact { display: grid; grid-template-columns: auto auto; column-gap: 12px; margin-top: 4px; }
   .hint { display: none; }
+  /* closed drawers are removed from the tab order and from the paint budget */
+  #setup:not(.open), #telemetry:not(.open) { visibility: hidden; transition: transform 0.2s, visibility 0s 0.2s; }
 }
 @media (max-width: 600px) {
-  #controls { padding: 5px 6px; gap: 6px; }
+  .hud-box .big { font-size: 18px; }
+  .hud-grid { column-gap: 8px; }
+}
+/* the playback bar adapts to the width of the 3D viewport itself, not only the window */
+@container (max-width: 760px) {
+  .hint { display: none; }
+}
+@container (max-width: 660px) {
+  #controls { padding: 5px 6px; gap: 6px; flex-wrap: wrap; }
   .ctl-group { gap: 4px; }
   .ctl-btn { font-size: 14px; padding: 3px 8px; }
   .cam-btn { padding: 4px 7px; font-size: 12px; }
   .warp span { display: none; }
-  #ticker { bottom: 108px; max-width: 80%; font-size: 11px; }
-  #viewport.onboard #ticker { bottom: 230px; }
-  .hud-box .big { font-size: 18px; }
-  .hud-grid { column-gap: 8px; }
+  #ticker { max-width: 80%; font-size: 11px; }
+  #viewport.onboard #ticker { bottom: max(calc(var(--ctl-h, 46px) + 18px), 230px); }
 }

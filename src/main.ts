@@ -15,7 +15,7 @@ import { Simulation } from './physics/simulation';
 import { atmosphere } from './physics/atmosphere';
 import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { R_EARTH } from './physics/constants';
-import { normalize, cross, norm, v3 } from './physics/vec3';
+import { normalize, cross, norm, dot, add, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import type { MissionConfig } from './types';
 
 const WARPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000];
@@ -46,6 +46,8 @@ class App {
   telTimer = 0;
   explosion: THREE.Group | null = null;
   explosionT = 0;
+  /** body roll reference ("window" side), carried smoothly from frame to frame */
+  sideRef: Vec3 | null = null;
   viewport: HTMLElement;
   glCanvas: HTMLCanvasElement;
   mapCanvas: HTMLCanvasElement;
@@ -76,6 +78,16 @@ class App {
     this.cams.attach(this.viewport);
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.viewport);
+    // keep the event ticker above the playback bar whatever its (wrapped) height
+    const controls = document.getElementById('controls')!;
+    const ctlRo = new ResizeObserver(() => this.viewport.style.setProperty('--ctl-h', `${controls.offsetHeight}px`));
+    ctlRo.observe(controls);
+    // re-apply the pixel ratio when the window moves to another display or the zoom changes
+    const watchDpr = () => {
+      const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      mq.addEventListener('change', () => { this.resize(); watchDpr(); }, { once: true });
+    };
+    watchDpr();
     this.resize();
     document.getElementById('loading')!.classList.add('hidden');
     this.preview(this.panel.getConfig());
@@ -108,18 +120,45 @@ class App {
       this.applyLanguage();
     });
     (document.getElementById('lang-select') as HTMLSelectElement).value = getLang();
-    document.getElementById('btn-about')!.addEventListener('click', () => document.getElementById('about')!.classList.remove('hidden'));
-    document.getElementById('btn-about-close')!.addEventListener('click', () => document.getElementById('about')!.classList.add('hidden'));
+    // About dialog: focus moves to its button and returns to the opener when closed
+    let aboutOpener: HTMLElement | null = null;
+    const openAbout = () => {
+      aboutOpener = document.activeElement as HTMLElement | null;
+      document.getElementById('about')!.classList.remove('hidden');
+      document.getElementById('btn-about-close')!.focus();
+    };
+    const closeAbout = () => {
+      const about = document.getElementById('about')!;
+      if (about.classList.contains('hidden')) return;
+      about.classList.add('hidden');
+      aboutOpener?.focus();
+    };
+    document.getElementById('btn-about')!.addEventListener('click', openAbout);
+    document.getElementById('btn-about-close')!.addEventListener('click', closeAbout);
+    document.getElementById('about')!.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeAbout(); });
+    // tapping the viewport dismisses the overlay panels on narrow screens
+    this.viewport.addEventListener('pointerdown', () => {
+      document.getElementById('setup')!.classList.remove('open');
+      document.getElementById('telemetry')!.classList.remove('open');
+      this.syncDrawers();
+    });
     document.getElementById('btn-toggle-setup')!.addEventListener('click', () => {
       document.getElementById('setup')!.classList.toggle('open');
       document.getElementById('telemetry')!.classList.remove('open');
+      this.syncDrawers();
     });
     document.getElementById('btn-toggle-tel')!.addEventListener('click', () => {
       document.getElementById('telemetry')!.classList.toggle('open');
       document.getElementById('setup')!.classList.remove('open');
+      this.syncDrawers();
     });
+    window.matchMedia('(max-width: 980px)').addEventListener('change', () => this.syncDrawers());
+    this.syncDrawers();
     window.addEventListener('keydown', (e) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON' || tag === 'SUMMARY' || tag === 'A') return;
+      if (e.key === 'Escape') { closeAbout(); return; }
+      if (!document.getElementById('about')!.classList.contains('hidden')) return;
       if (e.key === ' ') { e.preventDefault(); this.togglePlay(); }
       else if (e.key === '1') this.setCamera('exterior');
       else if (e.key === '2') this.setCamera('onboard');
@@ -135,7 +174,28 @@ class App {
     applyStatic();
     this.panel.render();
     this.tel.build();
+    this.hud.clearTicker();
+    this.onboard.invalidate();
+    this.updatePlayButton();
     this.updateHint();
+  }
+
+  private updatePlayButton(): void {
+    const b = document.getElementById('btn-play')!;
+    b.textContent = this.playing ? '❚❚' : '▶';
+    const label = t(this.playing ? 'ctl.pause' : 'ctl.play');
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.setAttribute('aria-pressed', String(this.playing));
+  }
+
+  /** Closed side drawers on narrow screens are inert (out of the tab order). */
+  private syncDrawers(): void {
+    const narrow = window.matchMedia('(max-width: 980px)').matches;
+    for (const id of ['setup', 'telemetry']) {
+      const el = document.getElementById(id)!;
+      el.toggleAttribute('inert', narrow && !el.classList.contains('open'));
+    }
   }
 
   private updateHint(): void {
@@ -155,8 +215,8 @@ class App {
   togglePlay(): void {
     if (!this.sim) return;
     this.playing = !this.playing;
-    if (this.playing) this.panel.setRunning(true);
-    document.getElementById('btn-play')!.textContent = this.playing ? '❚❚' : '▶';
+    if (this.playing && this.sim.state.t > -10) this.panel.setRunning(true);
+    this.updatePlayButton();
   }
 
   skip(): void {
@@ -172,8 +232,9 @@ class App {
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
     this.playing = false;
-    document.getElementById('btn-play')!.textContent = '▶';
+    this.updatePlayButton();
     this.fastForwardTo = null;
+    this.sideRef = null;
     try {
       this.sim = new Simulation(cfg);
     } catch (err) {
@@ -190,7 +251,7 @@ class App {
     if (this.pad) { this.scene.scene.remove(this.pad.group); this.pad.dispose(); }
     this.rocket = new RocketView(sim.vehicleSpec, sim.satellite);
     this.scene.scene.add(this.rocket.group);
-    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec.height);
+    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec.height, this.scene.sampleGroundColor(sim.site.latitude, sim.site.longitude));
     this.scene.scene.add(this.pad.group);
     this.debrisView.clear();
     this.trail.clear();
@@ -209,8 +270,9 @@ class App {
     this.preview(cfg);
     this.playing = true;
     this.panel.setRunning(true);
-    document.getElementById('btn-play')!.textContent = '❚❚';
-    if (window.innerWidth < 980) document.getElementById('setup')!.classList.remove('open');
+    this.updatePlayButton();
+    if (window.matchMedia('(max-width: 980px)').matches) document.getElementById('setup')!.classList.remove('open');
+    this.syncDrawers();
   }
 
   reset(): void {
@@ -246,14 +308,20 @@ class App {
         if (sim.state.t >= target - 1e-3 || sim.isFailed()) this.fastForwardTo = null;
       } else {
         this.fastForwardTo = null;
-        sim.advance(dtReal * this.warp, 6000);
+        // physics gets a wall-clock budget per frame so a high warp cannot stall the display
+        sim.advance(dtReal * this.warp, 20000, performance.now() + 8);
       }
     }
     this.updateVisuals(dtReal);
     this.hudTimer += dtReal;
     if (this.hudTimer > 0.1) { this.hudTimer = 0; this.hud.update(sim, this.warp); }
     this.telTimer += dtReal;
-    if (sim && this.telTimer > 0.5) { this.telTimer = 0; this.tel.update(sim); }
+    if (sim && this.telTimer > 0.5) {
+      this.telTimer = 0;
+      // the telemetry drawer is not redrawn while it is closed on a narrow screen
+      const telEl = document.getElementById('telemetry')!;
+      if (!(window.matchMedia('(max-width: 980px)').matches && !telEl.classList.contains('open'))) this.tel.update(sim);
+    }
     requestAnimationFrame((n) => this.frame(n));
   }
 
@@ -269,11 +337,20 @@ class App {
     const theta = s.theta;
     const sunDir = sunDirectionEci(sim.julianDate());
     this.pad.update(scene, theta);
-    // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y × Z
+    // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y × Z.
+    // The roll reference starts perpendicular to the launch-azimuth plane and is carried
+    // along (re-orthogonalised against the body axis) so the model never snaps in roll.
     const { east, north, up } = enuFrame(s.r);
-    let side = cross(s.dir, up);
+    if (!this.sideRef) {
+      const az = sim.plan.azimuthRotating;
+      const heading = add(scale(east, Math.sin(az)), scale(north, Math.cos(az)));
+      this.sideRef = normalize(cross(heading, up));
+    }
+    let side = addScaled(this.sideRef, s.dir, -dot(this.sideRef, s.dir));
+    if (norm(side) < 0.05) side = cross(s.dir, up);
     if (norm(side) < 0.05) side = east;
     side = normalize(side);
+    this.sideRef = side;
     const xAxis = normalize(cross(s.dir, side));
     const m = new THREE.Matrix4().makeBasis(
       new THREE.Vector3(xAxis.x, xAxis.y, xAxis.z),
@@ -313,7 +390,7 @@ class App {
     const radius = s.payloadSeparated ? Math.max(1, (sim.satellite.size?.width ?? 2)) : this.rocket.currentRadius(sim.vehicle);
     const shake = s.status === 'ascent' ? Math.min(1, s.thrust / Math.max(1, s.mass) / 25 + s.q / 60e3) : s.thrust > 0 ? 0.15 : 0;
     this.cams.update(scene.camera, {
-      pos: new THREE.Vector3(0, 0, 0), up, east, north, dir: s.dir, side, height, radius,
+      pos: new THREE.Vector3(0, 0, 0), up, east, north, dir: s.dir, side, height, radius, altitudeAGL: s.altitudeAGL,
       earthCenter: scene.toScene(v3(0, 0, 0)), shake: shake * 0.6,
       vDir: norm(s.v) > 1 ? normalize(s.v) : up,
     }, dt, R_EARTH);

@@ -19,6 +19,10 @@ export interface TuneResult {
   minAltitudeClosedLoop: number;
   tInsertion: number;
   reason: string;
+  /** the insertion orbit is close to the planned one (not lofted, perigee not sagging) */
+  insertionOk: boolean;
+  insertionAp: number;
+  insertionPe: number;
 }
 
 export interface AutotuneOutcome {
@@ -44,15 +48,21 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
   }
   const s = sim.state;
   const parking = sim.events.find((e) => e.key === 'evt.parkingOrbit');
-  const success = !!parking && s.status !== 'failed';
   const dv = parking ? Number(parking.params?.dv ?? 0) : 0;
+  // a "clean" insertion is close to the planned orbit (perigee not sagging, apoapsis not lofted away);
+  // a lofted/sagging one still counts as reaching orbit but is only chosen when nothing cleaner exists
+  const hIns = sim.plan.insertionAltitude / 1000, haIns = sim.plan.insertionApoapsis / 1000;
+  const pe = parking ? Number(parking.params?.pe ?? -1) : -1;
+  const ap = parking ? Number(parking.params?.ap ?? 0) : 0;
+  const insertionOk = pe >= hIns - 35 && ap <= haIns + Math.max(300, 0.6 * haIns) && dv > 0;
+  const success = !!parking && s.status !== 'failed';
   const lastFail = [...sim.events].reverse().find((e) => e.severity === 'fail' || e.severity === 'warn');
-  let reason = success ? 'ok' : `${s.note}:${lastFail?.key ?? ''}`;
+  let reason = success ? (insertionOk ? 'ok' : `lofted:${ap}x${pe}`) : `${s.note}:${lastFail?.key ?? ''}`;
   if (success && s.maxQ.value > sim.vehicleSpec.maxQ) reason = 'maxQ';
   if (success && minAltCL < 80e3) reason = 'dip';
   return {
-    kickAngle, maxTurnRate, loftAltitude, success: success && reason === 'ok', dvRemaining: dv, maxQ: s.maxQ.value,
-    minAltitudeClosedLoop: minAltCL, tInsertion: parking ? parking.t : -1, reason,
+    kickAngle, maxTurnRate, loftAltitude, success: success && (reason === 'ok' || reason.startsWith('lofted')), insertionOk, insertionAp: ap, insertionPe: pe,
+    dvRemaining: dv, maxQ: s.maxQ.value, minAltitudeClosedLoop: minAltCL, tInsertion: parking ? parking.t : -1, reason,
   };
 }
 
@@ -70,6 +80,13 @@ export function needsLoftSearch(cfg: MissionConfig): boolean {
   return a > 0 && a < 4.8;
 }
 
+/** Best candidate: the largest remaining Δv among clean insertions, else among all successful ones. */
+export function pickBest(ok: TuneResult[]): TuneResult | null {
+  if (ok.length === 0) return null;
+  const clean = ok.filter((r) => r.insertionOk);
+  return (clean.length ? clean : ok).reduce((a, b) => (b.dvRemaining > a.dvRemaining ? b : a));
+}
+
 export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICKS, rates: number[] = DEFAULT_RATES, lofts?: number[]): AutotuneOutcome {
   const results: TuneResult[] = [];
   const loftList = lofts ?? (needsLoftSearch(cfg) ? DEFAULT_LOFTS : [0]);
@@ -77,7 +94,7 @@ export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICK
   const ok = results.filter((r) => r.success);
   let best: TuneResult | null = null;
   if (ok.length > 0) {
-    best = ok.reduce((a, b) => (b.dvRemaining > a.dvRemaining ? b : a));
+    best = pickBest(ok);
   } else {
     // nothing succeeded: prefer the candidate that got closest (highest remaining dv, then lowest maxQ)
     const partial = results.filter((r) => r.reason === 'maxQ' || r.reason === 'dip');

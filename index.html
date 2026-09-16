@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Orbitlab — launch & orbital insertion simulator</title>
     <meta name="description" content="Physics-based rocket launch and orbital insertion simulator: real launch vehicles, satellites, orbit presets, four camera views and engineering telemetry." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='36' r='18' fill='%232a6fd6'/%3E%3Cellipse cx='32' cy='36' rx='28' ry='9' fill='none' stroke='%23f2b134' stroke-width='3'/%3E%3Cpath d='M42 10l4 4-10 12-4-4z' fill='%23e8e8e8'/%3E%3C/svg%3E" />
@@ -17,7 +17,7 @@
           <span class="subtitle" data-i18n="app.subtitle"></span>
         </div>
         <div class="topbar-right">
-          <button id="btn-toggle-setup" class="icon-btn" title="Mission setup">☰</button>
+          <button id="btn-toggle-setup" class="icon-btn" data-i18n-title="setup.title">☰</button>
           <label class="lang"><span data-i18n="app.language">Language</span>
             <select id="lang-select">
               <option value="en">English</option>
@@ -26,7 +26,7 @@
             </select>
           </label>
           <button id="btn-about" class="icon-btn" data-i18n-title="misc.about">?</button>
-          <button id="btn-toggle-tel" class="icon-btn" title="Telemetry">📈</button>
+          <button id="btn-toggle-tel" class="icon-btn" data-i18n-title="tel.title">📈</button>
         </div>
       </header>
       <aside id="setup" class="panel"></aside>
@@ -55,12 +55,12 @@
         </div>
       </main>
       <aside id="telemetry" class="panel"></aside>
-      <div id="about" class="modal hidden">
+      <div id="about" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="about-title">
         <div class="modal-box">
-          <h2 data-i18n="misc.about"></h2>
+          <h2 id="about-title" data-i18n="misc.about"></h2>
           <p data-i18n="misc.aboutText"></p>
-          <p class="small">Earth textures: three.js examples (NASA Blue Marble). Vehicle figures are public data rounded to ±10 %.</p>
-          <button id="btn-about-close" class="btn">OK</button>
+          <p class="small" data-i18n="misc.credits">Earth textures: three.js examples (NASA Blue Marble).</p>
+          <button id="btn-about-close" class="btn" data-i18n="misc.ok">OK</button>
         </div>
       </div>
     </div>

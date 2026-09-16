@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { SiteExtra } from '../data/sites';
 import { groundPositionEci, enuFrame } from '../physics/orbital';
-import { DEG } from '../physics/constants';
+import { DEG, R_EARTH } from '../physics/constants';
 import type { SceneManager } from './scene';
 import { ParticleSystem } from './particles';
 
@@ -13,15 +13,19 @@ export class LaunchPadView {
   private m = new THREE.Matrix4();
   private smoke: ParticleSystem;
   private emitAcc = 0;
+  private groundMat: THREE.MeshStandardMaterial;
+  private ground: THREE.Mesh;
 
-  constructor(site: SiteExtra, vehicleHeight: number) {
+  constructor(site: SiteExtra, vehicleHeight: number, groundColor: THREE.Color | null = null) {
     this.site = site;
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x4d5c3c, roughness: 1 });
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(80e3, 128), groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.6;
-    ground.receiveShadow = true;
-    this.group.add(ground);
+    // local terrain tinted from the globe texture so it blends in when zooming out
+    const base = groundColor ? groundColor.clone().lerp(new THREE.Color(0x4d5c3c), 0.35) : new THREE.Color(0x4d5c3c);
+    this.groundMat = new THREE.MeshStandardMaterial({ color: base, roughness: 1, transparent: true });
+    this.ground = new THREE.Mesh(new THREE.CircleGeometry(80e3, 128), this.groundMat);
+    this.ground.rotation.x = -Math.PI / 2;
+    this.ground.position.y = -0.6;
+    this.ground.receiveShadow = true;
+    this.group.add(this.ground);
     const apron = new THREE.Mesh(new THREE.CircleGeometry(1800, 64), new THREE.MeshStandardMaterial({ color: 0x8a8a80, roughness: 0.95 }));
     apron.rotation.x = -Math.PI / 2;
     apron.position.y = -0.5;
@@ -128,6 +132,12 @@ export class LaunchPadView {
     this.group.quaternion.setFromRotationMatrix(this.m);
     // hide the pad scenery once far away (it is flat)
     this.group.visible = this.tmp.length() < 400e3;
+    // the flat terrain disc fades into the globe as the camera climbs
+    const cam = scene.camera.position;
+    const camAlt = Math.hypot(cam.x + scene.origin.x, cam.y + scene.origin.y, cam.z + scene.origin.z) - R_EARTH;
+    const fade = 1 - THREE.MathUtils.smoothstep(camAlt, 4e3, 28e3);
+    this.groundMat.opacity = fade;
+    this.ground.visible = fade > 0.01;
   }
 
   dispose(): void {

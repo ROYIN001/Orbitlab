@@ -53,8 +53,11 @@ Stages are burned serially; strap-on boosters burn in parallel with the core (th
 throttle down while they are attached) and are jettisoned after a short delay. Hot staging
 (Soyuz Blok I, Proton stage 2, Starship) ignites the next stage at separation. Fairings are
 jettisoned at a vehicle-specific altitude. When first-stage recovery is selected, a fraction of
-first-stage propellant is reserved and the spent stage performs an entry burn near 70 km and
-a landing burn that follows a constant-deceleration profile.
+first-stage propellant is reserved and the spent stage performs an entry burn below 70 km
+(retrograde, on up to three engines, until the airspeed is down to ~1.4 km/s or only the
+landing reserve of ~800 m/s is left) and a late landing burn on as many engines as give a
+thrust/weight of about three, following a constant-deceleration profile at ~60 % of the
+available net deceleration (a "hoverslam").
 
 Ideal Δv per stage follows Tsiolkovsky, Δv = g₀ Isp ln(m₀/m₁). The telemetry panel reports the
 Δv actually delivered by thrust together with the losses:
@@ -89,8 +92,17 @@ Ideal Δv per stage follows Tsiolkovsky, Δv = g₀ Isp ln(m₀/m₁). The telem
    hand-off (Centaur-class stages) the booster instead targets an apex above the insertion
    altitude (the "loft" parameter), letting the upper stage descend while it builds speed.
 
+   When the vehicle's last strong stage will fall short of the insertion speed and a
+   low-thrust kick stage (Briz-M, Fregat) has to make it up with a burn of several minutes,
+   the strong stage hands over on a rising arc (v_z > 0 at a lower altitude) so that the
+   apex sits near the insertion altitude in the middle of the kick-stage burn; the sag of
+   the second half is recovered by the climb of the first.
+
 The **auto-tuner** flies the ascent headlessly over a grid of kick angles, pitch-program rates
-and lofts and keeps the combination with the largest remaining Δv that respects max-Q.
+and lofts and keeps the combination with the largest remaining Δv that respects max-Q,
+preferring candidates whose insertion orbit is close to the planned one (perigee not
+sagging, apoapsis not lofted away); the setup panel runs it automatically before a launch
+with the default profile.
 
 ## 6. Mission sequencing
 
@@ -99,7 +111,11 @@ and lofts and keeps the combination with the largest remaining Δv that respects
   Briz-M, Curie) insert into an ellipse whose apogee is the target when the strong stages
   can reach its perigee speed; the kick stage circularises at apogee.
 - If a strong stage burns out with the apoapsis already at the insertion altitude and only a
-  small shortfall, the vehicle coasts to apoapsis and circularises there.
+  small shortfall, the vehicle coasts to apoapsis and circularises there. A kick stage that
+  cannot hold altitude always takes this path (a low parking orbit beats a loss).
+- Burns ignite only once the attitude is aligned with the commanded direction (the vehicle
+  turns to the burn attitude during the last two minutes of the coast); a small remainder
+  of a paused apogee-raising burn is finished right away instead of one orbit later.
 - **Apogee raising** at perigee (or at the node when a plane change follows) thrusting
   prograde; long low-thrust burns are split across successive perigee passes
   (Briz-M/Fregat style).
@@ -108,8 +124,9 @@ and lofts and keeps the combination with the largest remaining Δv that respects
   plane change (GEO from Baikonur: 51.6° removed at apogee).
 - When the launcher is spent, the spacecraft separates and its own propulsion (apogee engine,
   crew-ship engine) completes the remaining burns, again split across passes when long.
-- The resulting orbit is compared with the target; a stable orbit off target is reported as
-  such, a suborbital trajectory as a failure.
+- The resulting orbit is compared with the target (apsides within 3 % or 25 km, inclination
+  within 1.5°); a stable orbit off target is reported as such, a suborbital trajectory as a
+  failure.
 
 ## 7. Launch geometry and windows
 
@@ -117,10 +134,13 @@ Inertial launch azimuth from spherical trigonometry: sin β = cos i / cos φ (no
 southbound solution); the rotating-frame azimuth corrects for the Earth's velocity. A site
 cannot reach inclinations below its latitude directly (nor below its range-safety minimum),
 so the ascent uses the lowest reachable inclination and a plane change is scheduled at
-apogee.
+apogee. The northbound or southbound solution is chosen so that the azimuth lies inside the
+site's range-safety corridor (with a 10° tolerance); if neither does, the panel warns.
 
 The ascent produces RAAN = λ_site + θ − Δλ with sin u = sin φ / sin i and
-tan Δλ = sin u cos i / cos u. Launch windows solve θ(t) for the time when this RAAN equals
+tan Δλ = sin u cos i / cos u, where the site longitude is taken about 200 s after liftoff
+(the plane is established while the horizontal speed builds up, by which time the site has
+rotated east by ~0.8°). Launch windows solve θ(t) for the time when this RAAN equals
 the target RAAN: the ISS plane (reference RAAN at an epoch plus J2 regression, about
 −5°/day, so windows come ~20 min earlier each day) or a sun-synchronous local time of the
 ascending node (RAAN = α_sun + 15°/h × (LTAN − 12 h)).

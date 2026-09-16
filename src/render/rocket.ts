@@ -80,19 +80,18 @@ function makePlume(nozzleR: number, count: number, kind: PlumeKind): PlumeView {
   const innerGeo = new THREE.CylinderGeometry(r * 0.35, r * 0.7, 1, 16, 1, true);
   const outerMat = new THREE.MeshBasicMaterial({ color: style.outer, transparent: true, opacity: style.outerOpacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   const innerMat = new THREE.MeshBasicMaterial({ color: style.core, transparent: true, opacity: style.coreOpacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  // narrow end at the nozzle exit (+y), opening downstream (-y)
   const outer = new THREE.Mesh(outerGeo, outerMat);
   const inner = new THREE.Mesh(innerGeo, innerMat);
-  outer.rotation.x = Math.PI;
-  inner.rotation.x = Math.PI;
   group.add(outer, inner);
   const glow = new THREE.Mesh(new THREE.CircleGeometry(r * 0.9, 20), glowMat.clone());
   (glow.material as THREE.MeshBasicMaterial).color.set(style.core);
   glow.rotation.x = Math.PI / 2;
   glow.position.y = 0.05;
   group.add(glow);
+  // the light is parented to the vehicle root (see RocketView) so that the number of
+  // visible lights never changes and three.js does not recompile materials mid-flight
   const light = new THREE.PointLight(style.light, 0, 400, 1.5);
-  light.position.y = -2;
-  group.add(light);
   const particles = new ParticleSystem(140, style.particle, true);
   group.add(particles.points);
   let smoke: ParticleSystem | null = null;
@@ -315,7 +314,7 @@ export class RocketView {
       const nozzleR = Math.min(st.diameter / 2 * 0.85, Math.max(0.25, (st.diameter / 2 * 1.6) / Math.sqrt(Math.max(1, Math.min(st.engine.count, 9))) * 0.5));
       const plume = makePlume(nozzleR, st.engine.count, plumeKind(st.engine));
       g.add(plume.group);
-      this.group.add(g);
+      this.group.add(g, plume.light);
       this.stages.push({ spec: st, group: g, plume, height: st.length + (topD !== null && Math.abs(topD - st.diameter) > 0.05 ? Math.abs(topD - st.diameter) * 1.2 + 0.5 : 0) });
       for (const b of st.boosters ?? []) {
         const groups: THREE.Group[] = [];
@@ -324,7 +323,7 @@ export class RocketView {
           const bg = boosterBody(b, spec.country);
           const p = makePlume(Math.max(0.2, (b.diameter / 2 * 0.9) / Math.sqrt(Math.min(b.engine.count, 4))), b.engine.count, plumeKind(b.engine));
           bg.add(p.group);
-          this.group.add(bg);
+          this.group.add(bg, p.light);
           groups.push(bg);
           plumes.push(p);
         }
@@ -358,10 +357,12 @@ export class RocketView {
       part.group.visible = attached && !part.spec.isSpacecraft;
       if (!attached || part.spec.isSpacecraft) {
         part.group.visible = false;
-        for (const bp of this.boosters) if (bp.stageId === part.spec.id) for (const bg of bp.groups) bg.visible = false;
+        part.plume.light.intensity = 0;
+        for (const bp of this.boosters) if (bp.stageId === part.spec.id) for (let k = 0; k < bp.groups.length; k++) { bp.groups[k].visible = false; bp.plumes[k].light.intensity = 0; }
         continue;
       }
       part.group.position.y = y;
+      part.plume.light.position.set(0, y - 2, 0);
       const running = !!st && st.ignited && !st.cutoff && !st.burnedOut && st.engineFraction > 0;
       updatePlume(part.plume, running ? coreThrottle : 0, pressure, dt, pointScale);
       for (const bp of this.boosters) {
@@ -371,10 +372,11 @@ export class RocketView {
           const bg = bp.groups[k];
           const attachedB = !!bs && bs.attached;
           bg.visible = attachedB;
-          if (!attachedB) continue;
+          if (!attachedB) { bp.plumes[k].light.intensity = 0; continue; }
           const ang = (k / bp.spec.count) * Math.PI * 2 + Math.PI / 4;
           const off = part.spec.diameter / 2 + bp.spec.diameter / 2;
           bg.position.set(Math.cos(ang) * off, y + (bp.spec.baseOffset ?? 0), Math.sin(ang) * off);
+          bp.plumes[k].light.position.set(bg.position.x, bg.position.y - 2, bg.position.z);
           const burning = !!bs && bs.ignited && !bs.burnedOut;
           updatePlume(bp.plumes[k], burning ? boosterThrottle : 0, pressure, dt, pointScale);
         }

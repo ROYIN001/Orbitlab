@@ -55,9 +55,13 @@ Requires Node.js 20 or newer and a browser with WebGL 2.
    time to the next opportunity when the ascent plane matches the target RAAN.
 3. Optionally open **Guidance parameters** and press **Auto-tune pitch program**; it flies
    the ascent headlessly for a grid of kick angles, pitch-program rates and lofts and keeps
-   the one with the largest Δv margin.
+   the one with the largest Δv margin (preferring a clean insertion orbit). Pressing
+   **Launch** with an untuned default profile runs the auto-tune first; a hand-edited
+   profile is flown as entered.
 4. Press **Launch**. Use the time-warp control (or `,` / `.` keys) during long coasts, and
-   **Skip to next event** to jump to the next planned burn.
+   **Skip to next event** to jump to the next planned burn. The setup panel warns when the
+   payload exceeds the vehicle's rated capacity, when the launch azimuth leaves the site's
+   corridor, or when nothing on board can restart to reach the target orbit.
 5. Switch cameras with the buttons or keys `1`–`4`. Drag to rotate the exterior and space
    cameras, scroll to zoom.
 6. Export the flight data as CSV from the telemetry panel.

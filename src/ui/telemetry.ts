@@ -1,7 +1,7 @@
 import type { Simulation } from '../physics/simulation';
 import { drawChart } from './charts';
 import { t } from '../i18n';
-import { fmtTime } from './hud';
+import { fmtTime, eventText } from './hud';
 import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
 
 export class TelemetryPanel {
@@ -29,6 +29,8 @@ export class TelemetryPanel {
     for (const id of ['altitude', 'velocity', 'q', 'g', 'apsides', 'dv', 'pitch', 'mass']) {
       const c = document.createElement('canvas');
       c.className = 'chart';
+      c.setAttribute('role', 'img');
+      c.setAttribute('aria-label', t(`tel.${id}`));
       r.appendChild(c);
       this.charts[id] = c;
     }
@@ -66,44 +68,45 @@ export class TelemetryPanel {
     this.sim = sim;
     const tel = sim.telemetry;
     if (tel.length < 2 && !force) return;
-    const x = tel.map((s) => s.t);
     const ascentEnd = sim.events.find((e) => e.key === 'evt.parkingOrbit')?.t;
-    const xMax = ascentEnd !== undefined && sim.state.t > ascentEnd + 60 ? undefined : undefined;
     const markers = sim.events.filter((e) => ['evt.maxQ', 'evt.meco', 'evt.stageSep', 'evt.seco', 'evt.fairingSep'].includes(e.key)).map((e) => ({ x: e.t, color: '#3a4a6a' }));
-    // limit charts to the ascent (first 1500 s) unless later data is dominant
-    const cut = tel.filter((s) => s.t <= Math.max(1500, ascentEnd ?? 0) + 120);
+    // charts show the ascent window; once a post-insertion burn has started (apogee raising,
+    // circularisation, plane change) they widen to the whole flight so those burns are visible
+    const ascentCut = Math.max(1500, ascentEnd ?? 0) + 120;
+    const burnStarted = sim.events.some((e) => e.key === 'evt.burnStart' && e.t > ascentCut);
+    const cut = burnStarted ? tel : tel.filter((s) => s.t <= ascentCut);
     const cx = cut.map((s) => s.t);
-    drawChart(this.charts.altitude, [{ x: cx, y: cut.map((s) => s.alt / 1000), color: '#4aa3ff' }], { title: t('tel.altitude'), markers, xMax });
+    drawChart(this.charts.altitude, [{ x: cx, y: cut.map((s) => s.alt / 1000), color: '#4aa3ff' }], { title: t('tel.altitude'), markers });
     drawChart(this.charts.velocity, [
-      { x: cx, y: cut.map((s) => s.vInertial), color: '#f2b134', label: 'v' },
-      { x: cx, y: cut.map((s) => s.vAir), color: '#8d9bb5', label: 'v_air' },
-    ], { title: t('tel.velocity'), markers, xMax });
+      { x: cx, y: cut.map((s) => s.vInertial), color: '#f2b134', label: t('tel.legend.v') },
+      { x: cx, y: cut.map((s) => s.vAir), color: '#8d9bb5', label: t('tel.legend.vAir') },
+    ], { title: t('tel.velocity'), markers });
     drawChart(this.charts.q, [{ x: cx, y: cut.map((s) => s.q / 1000), color: '#ff7a7a' }], { title: t('tel.q'), markers, yMin: 0 });
     drawChart(this.charts.g, [{ x: cx, y: cut.map((s) => s.gLoad), color: '#4cd97b' }], { title: t('tel.g'), markers, yMin: 0 });
     drawChart(this.charts.apsides, [
-      { x: cx, y: cut.map((s) => (s.ap > 0 && s.ap < 5e7 ? s.ap / 1000 : NaN)), color: '#4aa3ff', label: 'ap' },
-      { x: cx, y: cut.map((s) => (s.pe > -2000e3 ? s.pe / 1000 : NaN)), color: '#f2b134', label: 'pe' },
+      { x: cx, y: cut.map((s) => (s.ap > 0 && s.ap < 5e7 ? s.ap / 1000 : NaN)), color: '#4aa3ff', label: t('tel.legend.ap') },
+      { x: cx, y: cut.map((s) => Math.max(s.pe, -50e3) / 1000), color: '#f2b134', label: t('tel.legend.pe') },
     ], { title: t('tel.apsides'), markers, yMin: 0 });
     drawChart(this.charts.dv, [{ x: cx, y: cut.map((s) => s.dvRemaining), color: '#c39bff' }], { title: t('tel.dv'), markers, yMin: 0 });
     drawChart(this.charts.pitch, [{ x: cx, y: cut.map((s) => s.pitch), color: '#ffd166' }], { title: t('tel.pitch'), markers });
     drawChart(this.charts.mass, [{ x: cx, y: cut.map((s) => s.mass / 1000), color: '#9be7ff' }], { title: t('tel.mass'), markers, yMin: 0 });
-    void x;
     // dv budget
     const L = sim.state.losses;
     const site = sim.site;
     const vRot = OMEGA_EARTH * R_EARTH * Math.cos(site.latitude * DEG);
     const row = (k: string, v: string) => `<div><span class="k">${k}</span> ${v}</div>`;
+    const ms = t('u.ms'), km = t('u.km');
     this.losses.innerHTML =
-      row(t('tel.loss.thrust'), `${L.dvThrust.toFixed(0)} m/s`) +
-      row(t('tel.loss.gravity'), `${L.gravity.toFixed(0)} m/s`) +
-      row(t('tel.loss.drag'), `${L.drag.toFixed(0)} m/s`) +
-      row(t('tel.loss.steering'), `${L.steering.toFixed(0)} m/s`) +
-      row(t('tel.loss.rotation'), `${(vRot * Math.sin(sim.plan.azimuthInertial)).toFixed(0)} m/s`) +
-      row(t('tel.maxQ'), `${(sim.state.maxQ.value / 1000).toFixed(1)} kPa @ ${(sim.state.maxQ.alt / 1000).toFixed(1)} km, ${fmtTime(sim.state.maxQ.t)}`);
+      row(t('tel.loss.thrust'), `${L.dvThrust.toFixed(0)} ${ms}`) +
+      row(t('tel.loss.gravity'), `${L.gravity.toFixed(0)} ${ms}`) +
+      row(t('tel.loss.drag'), `${L.drag.toFixed(0)} ${ms}`) +
+      row(t('tel.loss.steering'), `${L.steering.toFixed(0)} ${ms}`) +
+      row(t('tel.loss.rotation'), `${(vRot * Math.sin(sim.plan.azimuthInertial)).toFixed(0)} ${ms}`) +
+      row(t('tel.maxQ'), `${(sim.state.maxQ.value / 1000).toFixed(1)} ${t('u.kPa')} @ ${(sim.state.maxQ.alt / 1000).toFixed(1)} ${km}, ${fmtTime(sim.state.maxQ.t)}`);
     // plan
-    let planHtml = `<div><span class="k">${t('setup.info.insertion')}</span><span>${(sim.plan.insertionAltitude / 1000).toFixed(0)} × ${(sim.plan.insertionApoapsis / 1000).toFixed(0)} km</span></div>`;
+    let planHtml = `<div><span class="k">${t('setup.info.insertion')}</span><span>${(sim.plan.insertionAltitude / 1000).toFixed(0)} × ${(sim.plan.insertionApoapsis / 1000).toFixed(0)} ${km}</span></div>`;
     for (const b of sim.plan.burns) {
-      planHtml += `<div class="${b.done ? 'done' : 'pending'}"><span>${t(`tel.burn.${b.kind}`)}</span><span>${b.dvEstimate.toFixed(0)} m/s · ${b.done ? t('tel.burn.done') : t('tel.burn.pending')}</span></div>`;
+      planHtml += `<div class="${b.done ? 'done' : 'pending'}"><span>${t(`tel.burn.${b.kind}`)}</span><span>${b.dvEstimate.toFixed(0)} ${ms} · ${b.done ? t('tel.burn.done') : t('tel.burn.pending')}</span></div>`;
     }
     this.plan.innerHTML = planHtml;
     // debris
@@ -116,18 +119,21 @@ export class TelemetryPanel {
       else if (d.outcome === 'orbit') st = t('tel.debris.orbit');
       else st = t('tel.debris.falling');
       const alt = Math.max(0, (Math.hypot(d.r.x, d.r.y, d.r.z) - R_EARTH) / 1000);
-      dHtml += `<div><span class="k">${d.name}</span> ${st}${d.alive ? ` · ${alt.toFixed(0)} km` : ''}${d.impact ? ` · ${d.impact.lat.toFixed(1)}°, ${d.impact.lon.toFixed(1)}°` : ''}</div>`;
+      dHtml += `<div><span class="k">${d.name}</span> ${st}${d.alive ? ` · ${alt.toFixed(0)} ${km}` : ''}${d.impact ? ` · ${d.impact.lat.toFixed(1)}°, ${d.impact.lon.toFixed(1)}°` : ''}</div>`;
     }
     this.debris.innerHTML = dHtml || `<div class="k">${t('misc.none')}</div>`;
-    // events
+    // events: auto-scroll only when something new arrived and the user was already at the bottom
+    const atBottom = this.events.scrollTop + this.events.clientHeight >= this.events.scrollHeight - 8;
+    let added = false;
     while (this.shownEvents < sim.events.length) {
       const e = sim.events[this.shownEvents++];
       const div = document.createElement('div');
       div.className = e.severity;
-      div.innerHTML = `<span class="t">${fmtTime(e.t)}</span>${t(e.key, e.params)}`;
+      div.innerHTML = `<span class="t">${fmtTime(e.t)}</span>${eventText(e)}`;
       this.events.appendChild(div);
+      added = true;
     }
-    this.events.scrollTop = this.events.scrollHeight;
+    if (added && (atBottom || force)) this.events.scrollTop = this.events.scrollHeight;
   }
 
   exportCsv(): void {
