@@ -1,0 +1,102 @@
+
+=== soyuz21a Soyuz-2.1a h=46.3 payloadLEO=7020 GTO=0 SSO=-
+  liftoffMass(with LEO payload)=300.4 t  T_SL=4150 kN  T/W=1.409  idealDv(LEO pl)=9046 m/s  fair 1000kg d3.7 L10.1 sep95km
+   S0 Blok A (core): dry=6545 prop=87000 pmf=0.930 d=2.95 L=27.8 eng=RD-108Ax1 Tvac=922kN ispVac=320.6 mdot=293.2 burn=296.7s
+     B Blok B/V/G/D boosters x4: dry=3784 prop=39600 pmf=0.913 d=2.68 L=19.6 eng=RD-107Ax1 mdot=324.8 burn=121.9s igniteAt=0 sepDelay=1
+   S1 Blok I (3rd stage, RD-0110): dry=2410 prop=22900 pmf=0.905 d=2.66 L=6.7 eng=RD-0110x1 Tvac=298kN ispVac=326 mdot=93.2 burn=245.7s
+  sum(stage lengths)+fairing=44.6 vs height=46.3
+
+=== soyuz21b Soyuz-2.1b / Fregat-M h=46.3 payloadLEO=8200 GTO=1900 SSO=4900
+  liftoffMass(with LEO payload)=308.5 t  T_SL=4150 kN  T/W=1.372  idealDv(LEO pl)=9152 m/s  fair 1500kg d4.11 L11.4 sep95km
+   S0 Blok A (core): dry=6545 prop=87000 pmf=0.930 d=2.95 L=27.8 eng=RD-108Ax1 Tvac=922kN ispVac=320.6 mdot=293.2 burn=296.7s
+     B Blok B/V/G/D boosters x4: dry=3784 prop=39600 pmf=0.913 d=2.68 L=19.6 eng=RD-107Ax1 mdot=324.8 burn=121.9s igniteAt=0 sepDelay=1
+   S1 Blok I (3rd stage): dry=2355 prop=23000 pmf=0.907 d=2.66 L=6.7 eng=RD-0124x1 Tvac=294kN ispVac=359 mdot=83.6 burn=275.1s
+   S2 Fregat-M: dry=1050 prop=5350 pmf=0.836 d=3.35 L=1.5 eng=S5.92x1 Tvac=20kN ispVac=333.2 mdot=6.1 burn=880.7s
+  sum(stage lengths)+fairing=47.4 vs height=46.3
+
+=== protonm Proton-M / Briz-M h=58.2 payloadLEO=23000 GTO=6920 SSO=-
+  liftoffMass(with LEO payload)=714.4 t  T_SL=10470 kN  T/W=1.495  idealDv(LEO pl)=9422 m/s  fair 2000kg d4.35 L15 sep120km
+   S0 First stage (6× RD-276): dry=30600 prop=419400 pmf=0.932 d=7.4 L=21.2 eng=RD-276x6 Tvac=11490kN ispVac=316 mdot=3707.8 burn=113.1s
+   S1 Second stage: dry=11000 prop=156100 pmf=0.934 d=4.1 L=17 eng=RD-0210/0211x4 Tvac=2328kN ispVac=327 mdot=726.0 burn=215.0s
+   S2 Third stage: dry=3500 prop=46600 pmf=0.930 d=4.1 L=6.5 eng=RD-0213 + RD-0214x1 Tvac=614kN ispVac=325 mdot=192.6 burn=242.0s
+   S3 Briz-M: dry=2370 prop=19800 pmf=0.893 d=4 L=2.6 eng=S5.98Mx1 Tvac=20kN ispVac=326 mdot=6.1 burn=3226.3s
+  sum(stage lengths)+fairing=62.3 vs height=58.2
+
+=== angaraa5 Angara-A5 / Briz-M h=55.4 payloadLEO=24500 GTO=5400 SSO=-
+  liftoffMass(with LEO payload)=777.5 t  T_SL=9600 kN  T/W=1.259  idealDv(LEO pl)=9328 m/s  fair 2000kg d4.35 L15 sep120km
+   S0 URM-1 core: dry=9000 prop=128800 pmf=0.935 d=2.9 L=25.7 eng=RD-191x1 Tvac=2090kN ispVac=337.5 mdot=631.5 burn=204.0s
+     B URM-1 boosters x4: dry=9000 prop=128800 pmf=0.935 d=2.9 L=25.7 eng=RD-191x1 mdot=631.5 burn=204.0s igniteAt=0 sepDelay=1
+   S1 URM-2: dry=4000 prop=35800 pmf=0.899 d=3.6 L=6.9 eng=RD-0124Ax1 Tvac=294kN ispVac=359 mdot=83.6 burn=428.3s
+   S2 Briz-M: dry=2370 prop=19800 pmf=0.893 d=4 L=2.6 eng=S5.98Mx1 Tvac=20kN ispVac=326 mdot=6.1 burn=3226.3s
+  sum(stage lengths)+fairing=50.2 vs height=55.4
+
+=== falcon9 Falcon 9 Block 5 h=70 payloadLEO=22800 GTO=8300 SSO=15000
+  liftoffMass(with LEO payload)=558.3 t  T_SL=7605 kN  T/W=1.389  idealDv(LEO pl)=9061 m/s  fair 1900kg d5.2 L13.1 sep110km
+   S0 First stage (9× Merlin 1D): dry=25600 prop=395700 pmf=0.939 d=3.66 L=42 eng=Merlin 1Dx9 Tvac=8226kN ispVac=311 mdot=2697.2 burn=146.7s
+   S1 Second stage (Merlin Vacuum): dry=4300 prop=108000 pmf=0.962 d=3.66 L=15 eng=Merlin Vacuumx1 Tvac=981kN ispVac=348 mdot=287.5 burn=375.7s
+  sum(stage lengths)+fairing=70.1 vs height=70
+
+=== falconheavy Falcon Heavy h=70 payloadLEO=63800 GTO=26700 SSO=-
+  liftoffMass(with LEO payload)=1444.3 t  T_SL=22815 kN  T/W=1.611  idealDv(LEO pl)=8448 m/s  fair 1900kg d5.2 L13.1 sep110km
+   S0 Center core: dry=28000 prop=395700 pmf=0.934 d=3.66 L=42 eng=Merlin 1Dx9 Tvac=8226kN ispVac=311 mdot=2697.2 burn=146.7s
+     B Side boosters x2: dry=25600 prop=395700 pmf=0.939 d=3.66 L=42 eng=Merlin 1Dx9 mdot=2697.2 burn=146.7s igniteAt=0 sepDelay=2
+   S1 Second stage (Merlin Vacuum): dry=4300 prop=108000 pmf=0.962 d=3.66 L=15 eng=Merlin Vacuumx1 Tvac=981kN ispVac=348 mdot=287.5 burn=375.7s
+  sum(stage lengths)+fairing=70.1 vs height=70
+
+=== atlasv551 Atlas V 551 h=62.2 payloadLEO=18850 GTO=8900 SSO=-
+  liftoffMass(with LEO payload)=596.6 t  T_SL=10907 kN  T/W=1.864  idealDv(LEO pl)=8207 m/s  fair 3524kg d5.4 L20.7 sep110km
+   S0 Common Core Booster (RD-180): dry=21054 prop=284089 pmf=0.931 d=3.81 L=32.5 eng=RD-180x1 Tvac=4152kN ispVac=337.8 mdot=1253.4 burn=226.7s
+     B GEM-63 solid boosters x5: dry=5000 prop=44200 pmf=0.898 d=1.6 L=20 eng=GEM-63x1 mdot=475.1 burn=93.0s igniteAt=0 sepDelay=2
+   S1 Centaur III (RL10C-1): dry=2243 prop=20830 pmf=0.903 d=3.05 L=12.7 eng=RL10C-1x1 Tvac=102kN ispVac=449.7 mdot=23.1 burn=902.4s
+  sum(stage lengths)+fairing=65.9 vs height=62.2
+
+=== vulcan Vulcan Centaur VC4 h=61.6 payloadLEO=24400 GTO=12100 SSO=-
+  liftoffMass(with LEO payload)=760.5 t  T_SL=11232 kN  T/W=1.506  idealDv(LEO pl)=9395 m/s  fair 3500kg d5.4 L15.5 sep110km
+   S0 First stage (2× BE-4): dry=30000 prop=430000 pmf=0.935 d=5.4 L=33.3 eng=BE-4x2 Tvac=5200kN ispVac=340 mdot=1559.6 burn=275.7s
+     B GEM-63XL solid boosters x4: dry=5600 prop=47800 pmf=0.895 d=1.6 L=22 eng=GEM-63XLx1 mdot=533.6 burn=89.6s igniteAt=0 sepDelay=2
+   S1 Centaur V (2× RL10C-1-1): dry=5000 prop=54000 pmf=0.915 d=5.4 L=11.7 eng=RL10C-1-1x2 Tvac=212kN ispVac=453.8 mdot=47.6 burn=1133.6s
+  sum(stage lengths)+fairing=60.5 vs height=61.6
+
+=== ariane64 Ariane 64 h=62 payloadLEO=21600 GTO=11500 SSO=15000
+  liftoffMass(with LEO payload)=841.5 t  T_SL=16320 kN  T/W=1.978  idealDv(LEO pl)=8500 m/s  fair 2900kg d5.4 L20 sep115km
+   S0 Core (Vulcain 2.1): dry=15700 prop=145000 pmf=0.902 d=5.4 L=29 eng=Vulcain 2.1x1 Tvac=1370kN ispVac=431 mdot=324.1 burn=447.3s
+     B P120C solid boosters x4: dry=13000 prop=142000 pmf=0.916 d=3.4 L=13.5 eng=P120Cx1 mdot=1244.9 burn=114.1s igniteAt=0 sepDelay=2
+   S1 Upper stage (Vinci): dry=5300 prop=31000 pmf=0.854 d=5.4 L=11.6 eng=Vincix1 Tvac=180kN ispVac=457 mdot=40.2 burn=771.8s
+  sum(stage lengths)+fairing=60.6 vs height=62
+
+=== longmarch5 Long March 5 h=57 payloadLEO=25000 GTO=14000 SSO=-
+  liftoffMass(with LEO payload)=841.5 t  T_SL=10620 kN  T/W=1.287  idealDv(LEO pl)=8886 m/s  fair 3000kg d5.2 L12.3 sep120km
+   S0 Core (2× YF-77): dry=17000 prop=158000 pmf=0.903 d=5 L=33 eng=YF-77x2 Tvac=1400kN ispVac=430 mdot=332.0 burn=475.9s
+     B Kerolox boosters (2× YF-100 each) x4: dry=12000 prop=140000 pmf=0.921 d=3.35 L=26.3 eng=YF-100x2 mdot=815.8 burn=171.6s igniteAt=0 sepDelay=2
+   S1 Second stage (2× YF-75D): dry=5500 prop=25000 pmf=0.820 d=5 L=12 eng=YF-75Dx2 Tvac=177kN ispVac=442 mdot=40.8 burn=613.2s
+  sum(stage lengths)+fairing=57.3 vs height=57
+
+=== h3 H3-22 h=63 payloadLEO=10000 GTO=4000 SSO=4000
+  liftoffMass(with LEO payload)=435.4 t  T_SL=6400 kN  T/W=1.499  idealDv(LEO pl)=9613 m/s  fair 2400kg d5.2 L12 sep120km
+   S0 First stage (2× LE-9): dry=20000 prop=225000 pmf=0.918 d=5.2 L=37 eng=LE-9x2 Tvac=2942kN ispVac=425 mdot=705.9 burn=318.7s
+     B SRB-3 solid boosters x2: dry=8700 prop=66800 pmf=0.885 d=2.5 L=14.6 eng=SRB-3x1 mdot=640.0 burn=104.4s igniteAt=0 sepDelay=2
+   S1 Second stage (LE-5B-3): dry=3700 prop=23300 pmf=0.863 d=5.2 L=12 eng=LE-5B-3x1 Tvac=137kN ispVac=448 mdot=31.2 burn=747.2s
+  sum(stage lengths)+fairing=61.0 vs height=63
+
+=== pslvxl PSLV-XL h=44 payloadLEO=3800 GTO=1425 SSO=1750
+  liftoffMass(with LEO payload)=317.0 t  T_SL=5016 kN  T/W=1.613  idealDv(LEO pl)=8633 m/s  fair 1150kg d3.2 L8.3 sep115km
+   S0 PS1 (S139 solid): dry=30200 prop=138200 pmf=0.821 d=2.8 L=20 eng=S139x1 Tvac=3400kN ispVac=269 mdot=1288.9 burn=107.2s
+     B PSOM-XL (ground-lit) x4: dry=2010 prop=12200 pmf=0.859 d=1 L=12 eng=PSOM-XLx1 mdot=179.0 burn=68.1s igniteAt=0 sepDelay=2
+     B PSOM-XL (air-lit) x2: dry=2010 prop=12200 pmf=0.859 d=1 L=12 eng=PSOM-XLx1 mdot=179.0 burn=68.1s igniteAt=25 sepDelay=2
+   S1 PS2 (Vikas): dry=5300 prop=41000 pmf=0.886 d=2.8 L=12.8 eng=Vikasx1 Tvac=803kN ispVac=293 mdot=279.5 burn=146.7s
+   S2 PS3 (HPS3 solid): dry=1100 prop=7600 pmf=0.874 d=2 L=3.6 eng=HPS3x1 Tvac=240kN ispVac=295 mdot=83.0 burn=91.6s
+   S3 PS4 (2× L-2-5): dry=920 prop=2500 pmf=0.731 d=1.3 L=2.6 eng=L-2-5x2 Tvac=15kN ispVac=308 mdot=4.8 burn=517.2s
+  sum(stage lengths)+fairing=47.3 vs height=44
+
+=== electron Electron h=18 payloadLEO=300 GTO=0 SSO=200
+  liftoffMass(with LEO payload)=13.6 t  T_SL=224 kN  T/W=1.680  idealDv(LEO pl)=9964 m/s  fair 50kg d1.2 L2.5 sep105km
+   S0 First stage (9× Rutherford): dry=850 prop=9700 pmf=0.919 d=1.2 L=12.1 eng=Rutherfordx9 Tvac=248kN ispVac=343 mdot=73.6 burn=131.8s
+   S1 Second stage (Rutherford Vacuum): dry=220 prop=2300 pmf=0.913 d=1.2 L=2.4 eng=Rutherford Vacuumx1 Tvac=26kN ispVac=343 mdot=7.7 burn=299.9s
+   S2 Curie kick stage: dry=30 prop=150 pmf=0.833 d=1.2 L=0.5 eng=Curiex1 Tvac=0kN ispVac=320 mdot=0.0 burn=3922.7s
+  sum(stage lengths)+fairing=17.5 vs height=18
+
+=== starship Starship (Super Heavy) h=123 payloadLEO=100000 GTO=27000 SSO=-
+  liftoffMass(with LEO payload)=5450.0 t  T_SL=75900 kN  T/W=1.420  idealDv(LEO pl)=10720 m/s  no fairing
+   S0 Super Heavy (33× Raptor): dry=220000 prop=3500000 pmf=0.941 d=9 L=71 eng=Raptor 2x33 Tvac=82500kN ispVac=347 mdot=24244.0 burn=144.4s
+   S1 Ship (3× Raptor + 3× RVac): dry=130000 prop=1500000 pmf=0.920 d=9 L=52 eng=Raptor 2 / RVacx6 Tvac=14400kN ispVac=365 mdot=4023.0 burn=372.9s
+  sum(stage lengths)+fairing=123.0 vs height=123
