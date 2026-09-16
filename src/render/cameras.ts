@@ -42,8 +42,15 @@ export class CameraController {
   private shakeT = 0;
 
   attach(el: HTMLElement): void {
+    const isControl = (t: EventTarget | null): boolean => {
+      const n = t as HTMLElement | null;
+      return !!n && !!n.closest && !!n.closest('button, select, input, label, a, #controls, #hud, #ticker');
+    };
     el.addEventListener('pointerdown', (e) => {
+      // never capture the pointer when the user is pressing a control inside the viewport
+      if (isControl(e.target)) return;
       if (this.mode === 'map' || this.mode === 'onboard') return;
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
       this.dragging = true;
       this.lastX = e.clientX;
       this.lastY = e.clientY;
@@ -70,6 +77,7 @@ export class CameraController {
     el.addEventListener('pointerup', stop);
     el.addEventListener('pointercancel', stop);
     el.addEventListener('wheel', (e) => {
+      if (isControl(e.target)) return;
       if (this.mode === 'exterior') this.dist = Math.max(1.2, Math.min(60, this.dist * (e.deltaY > 0 ? 1.12 : 0.89)));
       else if (this.mode === 'space') this.spaceDist = Math.max(1.05, Math.min(12, this.spaceDist * (e.deltaY > 0 ? 1.1 : 0.9)));
       e.preventDefault();
