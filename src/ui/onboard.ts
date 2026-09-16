@@ -48,7 +48,7 @@ export class OnboardOverlay {
     }
     // window glare
     const grad = g.createRadialGradient(cx - r * 0.4, cy - r * 0.4, r * 0.1, cx, cy, r);
-    grad.addColorStop(0, 'rgba(255,255,255,0.10)');
+    grad.addColorStop(0, 'rgba(255,255,255,0.05)');
     grad.addColorStop(0.5, 'rgba(255,255,255,0.02)');
     grad.addColorStop(1, 'rgba(0,0,0,0.25)');
     g.fillStyle = grad;

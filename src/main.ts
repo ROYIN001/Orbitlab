@@ -186,8 +186,8 @@ class App {
   private setupViews(): void {
     if (!this.sim) return;
     const sim = this.sim;
-    if (this.rocket) this.scene.scene.remove(this.rocket.group);
-    if (this.pad) this.scene.scene.remove(this.pad.group);
+    if (this.rocket) { this.scene.scene.remove(this.rocket.group); this.rocket.dispose(); }
+    if (this.pad) { this.scene.scene.remove(this.pad.group); this.pad.dispose(); }
     this.rocket = new RocketView(sim.vehicleSpec, sim.satellite);
     this.scene.scene.add(this.rocket.group);
     this.pad = new LaunchPadView(sim.site, sim.vehicleSpec.height);
@@ -284,7 +284,10 @@ class App {
     this.rocket.group.position.set(0, 0, 0);
     const pressure = atmosphere(Math.max(0, s.altitude)).p;
     const boostersBurn = s.throttle > 0 ? 1 : 0;
-    this.rocket.update(sim.vehicle, s.throttle, boostersBurn, pressure, dt, s.payloadSeparated, s.destroyed);
+    // point-sprite scale: world size → pixels at 1 m distance (perspective factor applied in the shader)
+    const pointScale = this.glCanvas.height * 0.5;
+    this.rocket.update(sim.vehicle, s.throttle, boostersBurn, pressure, dt, s.payloadSeparated, s.destroyed, pointScale);
+    this.pad.updateSmoke(dt, s.altitudeAGL, s.thrust > 0 ? s.throttle : 0, pointScale);
     if (s.destroyed && !this.explosion) this.spawnExplosion();
     if (this.explosion) {
       this.explosionT += dt;

@@ -96,5 +96,6 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       break;
     }
   }
+  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return { group: g, deployables: dep, height: h };
 }
