@@ -8,12 +8,12 @@
  * atmosphere that co-rotates with the Earth. Integration: RK4 with adaptive
  * step size; exo-atmospheric coasts use the analytic Kepler solution.
  */
-import type { MissionConfig, FailureMode, SatelliteSpec, VehicleSpec, BoosterGroupSpec, StageSpec, GuidanceParams } from '../types';
+import type { MissionConfig, FailureMode, SatelliteSpec, VehicleSpec, BoosterGroupSpec, StageSpec, GuidanceParams, EngineSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
 import { vehicleById } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
-import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, slerpLimited, clone } from './vec3';
+import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, slerpLimited, clone, angleBetween } from './vec3';
 import { atmosphere } from './atmosphere';
 import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { gravity, gravityJ2 } from './gravity';
@@ -82,7 +82,21 @@ export interface Debris {
   visual: DebrisVisual;
   alive: boolean;
   createdAt: number;
-  recovery?: { propellant: number; thrustVac: number; thrustSL: number; mdot: number; burning: boolean; landed: boolean; entryBurnLeft: number; phase: 'coast' | 'entry' | 'landing' };
+  recovery?: {
+    /**
+     * Engine of the returning stage, so the number of engines burning can be
+     * re-chosen for the landing. Optional: a frame-backed view of a recorded
+     * flight rebuilds the phase and the flags, not the propulsion.
+     */
+    engine?: EngineSpec;
+    propellant: number; thrustVac: number; thrustSL: number; mdot: number;
+    burning: boolean; landed: boolean;
+    /** propellant held back for the landing burn, kg */
+    landingReserve: number;
+    /** the landing burn has begun (its bang-bang throttling keeps the plume lit) */
+    landingStarted?: boolean;
+    phase: 'coast' | 'entry' | 'landing';
+  };
   outcome?: 'impact' | 'landed' | 'orbit' | 'burnup';
   impact?: { lat: number; lon: number };
 }
@@ -175,6 +189,52 @@ const MAX_REPLANS = 16;
 /** How long before a scheduled burn the stack points at the burn attitude, s. */
 const BURN_PREORIENT_TIME = 240;
 
+/** How close to the commanded direction the stack must be before a burn lights, rad. */
+const BURN_IGNITION_ALIGNMENT = 4 * DEG;
+
+/**
+ * Airspeed a returning stage's entry burn aims to reach, m/s. Above roughly
+ * this the peak heating and dynamic pressure of the descent are what a booster
+ * is flown to avoid; below it the stage rides the atmosphere down.
+ */
+const ENTRY_BURN_TARGET_SPEED = 1400;
+
+/** Δv reserved for the landing burn, m/s (terminal velocity plus gravity losses). */
+const LANDING_BURN_DV = 800;
+
+/** Select how many of a returning stage's engines burn, and the thrust that follows. */
+function setRecoveryEngines(rc: NonNullable<Debris['recovery']>, n: number): void {
+  const e = rc.engine;
+  if (!e) return;
+  const k = Math.max(1, Math.min(e.count, n));
+  rc.thrustVac = k * e.thrustVac;
+  rc.thrustSL = k * e.thrustSL;
+  rc.mdot = (k * e.thrustVac) / (G0 * e.ispVac);
+}
+
+/**
+ * Recovery parameters for a returning stage: a propellant reserve sized by the
+ * rocket equation for a `LANDING_BURN_DV` landing burn, and an entry burn on up
+ * to three engines — or more, when three cannot give the empty stage 2.5 g.
+ */
+function recoveryFor(e: EngineSpec, dryMass: number, propellant: number): NonNullable<Debris['recovery']> {
+  const landingReserve = dryMass * (Math.exp(LANDING_BURN_DV / (G0 * e.ispSL)) - 1);
+  const rc: NonNullable<Debris['recovery']> = {
+    engine: e, propellant, thrustVac: 0, thrustSL: 0, mdot: 0,
+    burning: false, landed: false, landingReserve, phase: 'coast',
+  };
+  setRecoveryEngines(rc, Math.max(3, Math.ceil((2.5 * G0 * (dryMass + landingReserve)) / e.thrustSL)));
+  return rc;
+}
+
+/**
+ * Most telemetry samples a flight keeps. Past this the older half is thinned
+ * 2:1 (see `sample`), which bounds the buffer without bounding the mission: a
+ * geostationary delivery warped through several days of coasting used to grow
+ * it without limit, and every chart redraw and CSV export walks all of it.
+ */
+const TELEMETRY_CAP = 20000;
+
 /** Lowest periapsis the ascent may cut off at when the apoapsis is already on target, m. */
 const ASCENT_MIN_PERIAPSIS = 140e3;
 
@@ -246,6 +306,8 @@ export class Simulation {
   private pending: PendingAction[] = [];
   private lastSampleT = -Infinity;
   private lastBurnDv = Infinity;
+  /** the current burn has lit (the attitude-alignment gate has been passed once) */
+  private burnIgnited = false;
   private failureApplied = false;
   private failureMode: FailureMode;
   private failureTime: number;
@@ -578,6 +640,9 @@ export class Simulation {
         this.event('evt.liftoff', 'major', { twr: +(thr.thrust / weight).toFixed(2) });
       } else if (s.t > 3) {
         s.status = 'failed';
+        // Without its own note the HUD looked up `hud.note.countdown`, which no
+        // dictionary declares, and printed the key.
+        s.note = 'noLiftoff';
         this.event('evt.noLiftoff', 'fail', { twr: +(thr.thrust / Math.max(1, weight)).toFixed(2) });
       }
     }
@@ -679,8 +744,24 @@ export class Simulation {
       } else {
         dirCmd = dvMag > 0.01 ? scale(dvVec, 1 / dvMag) : s.dir;
       }
-      throttleCmd = 1;
-      if (fullThrust.thrustFullVac / mass > maxAccel && maxAccel > 0) throttleCmd = maxAccel / (fullThrust.thrustFullVac / mass);
+      // Light the engine only once the stack is pointing where the burn wants
+      // to push. The pre-orient above covers a burn that was scheduled minutes
+      // ahead, but several paths arm one for `s.t + 1` — a re-planned trim, a
+      // remainder finished on the same pass — and a 3°/s slew cannot turn a
+      // prograde stack round for a retrograde trim in one second: the first
+      // seconds of thrust went in at ninety degrees to the commanded direction,
+      // moving the wrong element and ending the burn on the "passed the
+      // minimum" test. Suborbital is the exception, where every second of
+      // thrust is worth more than its direction. Once lit, the burn stays lit
+      // even if the command swings as the remaining Δv goes to zero.
+      const aligned = angleBetween(s.dir, dirCmd) < BURN_IGNITION_ALIGNMENT;
+      if (!this.burnIgnited && !aligned && s.elements.periapsisAlt > 120e3) {
+        throttleCmd = 0;
+      } else {
+        this.burnIgnited = true;
+        throttleCmd = 1;
+        if (fullThrust.thrustFullVac / mass > maxAccel && maxAccel > 0) throttleCmd = maxAccel / (fullThrust.thrustFullVac / mass);
+      }
       s.ascentPhase = null;
       s.pitchCmd = Math.asin(Math.max(-1, Math.min(1, dot(dirCmd, up)))) * RAD;
     } else {
@@ -1443,6 +1524,7 @@ export class Simulation {
     s.burnStartTime = s.t;
     s.burnDvRemaining = Math.max(0.05, burn.dvEstimate);
     this.lastBurnDv = Infinity;
+    this.burnIgnited = false;
     s.burnPlaneNormal = null;
     if (burn.kind === 'shapeAtApoapsis' && burn.targetInclination !== undefined) {
       const el = elementsFromState(s.r, s.v);
@@ -1725,13 +1807,20 @@ export class Simulation {
         this.event('evt.thrustLoss', 'fail', { stage: target.spec.name });
         break;
       case 'prematureSep': {
-        this.event('evt.prematureSep', 'fail', { stage: target.spec.name });
-        if (target.index === this.vehicle.activeIndex) {
-          target.burnedOut = true;
-          target.cutoffTime = s.t;
-          for (const b of target.boosters) if (b.attached) { b.burnedOut = true; this.vehicle.jettisonBooster(b, s.t); this.spawnBoosterDebris(b); }
-          this.onCoreBurnout(target, s.r, s.v);
-        }
+        // A stage that has not lit yet cannot separate prematurely — it is
+        // still bolted to the stack. Asking for one at T+60 on stage 3 used to
+        // announce the failure and then do nothing at all, because the guard
+        // below only fired for the active stage: the flight carried on
+        // nominally after a "PREMATURE SEPARATION" callout. The break-up
+        // happens where the thrust is, so the stage that is burning is the one
+        // that comes apart.
+        const victim = target.index === this.vehicle.activeIndex ? target : this.vehicle.active;
+        if (!victim) break;
+        this.event('evt.prematureSep', 'fail', { stage: victim.spec.name });
+        victim.burnedOut = true;
+        victim.cutoffTime = s.t;
+        for (const b of victim.boosters) if (b.attached) { b.burnedOut = true; this.vehicle.jettisonBooster(b, s.t); this.spawnBoosterDebris(b); }
+        this.onCoreBurnout(victim, s.r, s.v);
         break;
       }
       case 'rangeSafety':
@@ -1773,13 +1862,7 @@ export class Simulation {
         visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', conicalTop: spec.conicalTop, kind: 'booster' },
         alive: true, createdAt: s.t,
       };
-      if (recoverable) {
-        const e = spec.engine;
-        d.recovery = {
-          propellant: Math.max(0, b.propellant), thrustVac: 3 * e.thrustVac, thrustSL: 3 * e.thrustSL,
-          mdot: (3 * e.thrustVac) / (G0 * e.ispVac), burning: false, landed: false, entryBurnLeft: 12, phase: 'coast',
-        };
-      }
+      if (recoverable) d.recovery = recoveryFor(spec.engine, spec.dryMass, Math.max(0, b.propellant));
       this.debris.push(d);
     }
   }
@@ -1794,14 +1877,7 @@ export class Simulation {
       visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', kind: 'stage' },
       alive: true, createdAt: s.t,
     };
-    if (recoverable) {
-      const e = spec.engine;
-      const n = Math.min(3, e.count);
-      d.recovery = {
-        propellant: st.propellant, thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL,
-        mdot: (n * e.thrustVac) / (G0 * e.ispVac), burning: false, landed: false, entryBurnLeft: 15, phase: 'coast',
-      };
-    }
+    if (recoverable) d.recovery = recoveryFor(spec.engine, spec.dryMass, Math.max(0, st.propellant));
     this.debris.push(d);
   }
 
@@ -1854,40 +1930,57 @@ export class Simulation {
         if (d.recovery && d.recovery.propellant > 0 && vDown > 0) {
           const rc = d.recovery;
           const atm = atmosphere(Math.max(0, altK));
-          const T = rc.thrustVac - (rc.thrustVac - rc.thrustSL) * Math.min(1, atm.p / 101325);
+          const pressure = Math.min(1, atm.p / 101325);
           let burn = false;
-          // Entry burn: a short retrograde burn near 70 km to cut the re-entry speed.
+          // Entry burn: retrograde below 70 km until the airspeed is something
+          // the structure can take (~1.4 km/s), spending everything above the
+          // landing reserve. It replaces a fixed 12-15 s of burn, which was
+          // sized for one booster and was either wasteful or not nearly enough
+          // for anything else.
           if (rc.phase === 'coast' && altK < 70e3) rc.phase = 'entry';
           if (rc.phase === 'entry') {
-            if (rc.entryBurnLeft > 0 && altK > 30e3) {
+            if (rc.propellant > rc.landingReserve && altK > 25e3 && vAirMag > ENTRY_BURN_TARGET_SPEED) {
               burn = true;
-              rc.entryBurnLeft -= h;
             } else {
               rc.phase = 'landing';
+              // Re-select the engines for a thrust/weight of about three on the
+              // mass that is actually left: a hoverslam is flown with as few
+              // engines as will stop the stage, and three Merlins on an empty
+              // booster is 6 g of deceleration nobody flies.
+              setRecoveryEngines(rc, Math.ceil((3 * G0 * d.mass) / Math.max(1, rc.engine?.thrustSL ?? rc.thrustSL)));
             }
           }
-          // Landing burn: follow a constant-deceleration descent profile (bang-bang thrust
-          // stands in for engine throttling) so that the vertical speed reaches ~2 m/s at
+          const T = rc.thrustVac - (rc.thrustVac - rc.thrustSL) * pressure;
+          // Landing burn: a constant-deceleration descent profile (bang-bang
+          // thrust stands in for engine throttling) that reaches ~2 m/s at
           // touchdown.
-          if (rc.phase === 'landing' && altK < 15e3) {
+          if (rc.phase === 'landing' && altK < 20e3) {
             const hAgl = Math.max(0.5, altK - this.groundElevation(d.r));
             // Deceleration reference from the local gravity that is actually
             // acting, rather than a hardcoded 9 m/s² next to the computed value
-            // (audit item B39(2)).
+            // (audit item B39(2)), and from the thrust that is actually
+            // available: 60 % of the net acceleration the engines can produce,
+            // so a booster with margin falls further before it brakes — the
+            // late, hard "hoverslam" a returning stage really flies — while one
+            // with little thrust starts early and never asks for more than it has.
             const rmD = norm(d.r);
             const gMag = MU_EARTH / (rmD * rmD);
-            const vRef = Math.sqrt(2 * (gMag - 0.8) * hAgl) + 2;
+            const aRef = Math.max(6, Math.min(25, 0.6 * (T / d.mass - gMag)));
+            const vRef = Math.sqrt(2 * aRef * hAgl) + 2;
             if (vDown > vRef) burn = true;
             else if (vDown < vRef - 4) burn = false;
             else burn = rc.burning;
           }
           if (burn) {
             rc.burning = true;
+            if (rc.phase === 'landing') rc.landingStarted = true;
             thrustAccel = T / d.mass;
             thrustDir = scale(vAir, -1 / vAirMag);
             rc.propellant -= rc.mdot * h;
             d.mass -= rc.mdot * h;
-          } else if (rc.phase !== 'landing') {
+          } else if (!(rc.phase === 'landing' && rc.landingStarted)) {
+            // once the hoverslam has started, the gaps in its bang-bang cycle
+            // are throttling, not shutdown: the plume stays lit
             rc.burning = false;
           }
         }
@@ -1947,15 +2040,39 @@ export class Simulation {
 
   private sample(): void {
     const s = this.state;
-    const interval = s.status === 'ascent' || s.status === 'burn' ? 0.5 : s.status === 'prelaunch' ? 1 : 10;
+    // Fine during powered flight; in orbit, no finer than 1/360 of a period, so
+    // that a day of geostationary coasting is a few hundred samples rather than
+    // a hundred thousand. (A GEO period is 24 h: at the flat 10 s interval a
+    // single day of warped coast wrote 8 640 samples, and the charts, the CSV
+    // export and the map's ground track all walk that buffer.)
+    const period = isFinite(s.elements.period) && s.elements.period > 0 ? s.elements.period : 5400;
+    const interval = s.status === 'ascent' || s.status === 'burn' ? 0.5
+      : s.status === 'prelaunch' ? 1
+      : Math.max(10, period / 360);
     if (s.t - this.lastSampleT < interval - 1e-6) return;
     this.lastSampleT = s.t;
+    // Bounded buffer: past the cap, thin the older half 2:1 and keep the recent
+    // flight at full resolution. The buffer is mutated in place, never
+    // reassigned — the telemetry panel, the CSV export and the replay view all
+    // hold a reference to this very array.
+    if (this.telemetry.length >= TELEMETRY_CAP) {
+      const half = this.telemetry.length >> 1;
+      const kept: TelemetrySample[] = [];
+      for (let i = 0; i < half; i += 2) kept.push(this.telemetry[i]);
+      this.telemetry.splice(0, half, ...kept);
+    }
     const act = this.vehicle.active;
     this.telemetry.push({
       t: s.t, alt: s.altitude, vInertial: s.speed, vAir: s.airspeed, q: s.q, mach: s.mach, gLoad: s.gLoad,
       mass: s.mass, thrust: s.thrust, throttle: s.throttle, pitch: s.pitchCmd,
       ap: isFinite(s.elements.apoapsisAlt) ? s.elements.apoapsisAlt : -1, pe: s.elements.periapsisAlt, inc: s.elements.i * RAD,
-      dvRemaining: this.vehicle.deltaVRemaining(), downrange: s.downrange, lat: s.lat, lon: s.lon,
+      // After separation the launcher is not the thing being flown any more:
+      // report what the spacecraft has, exactly as `captureFrame` does for the
+      // HUD. The telemetry chart and the CSV export used to keep reporting the
+      // spent upper stage's Δv, which is not the number that matters and not
+      // the number on screen.
+      dvRemaining: s.payloadSeparated ? this.vehicle.spacecraftDeltaV() : this.vehicle.deltaVRemaining(),
+      downrange: s.downrange, lat: s.lat, lon: s.lon,
       stage: act ? act.index + 1 : 0, phase: s.status === 'ascent' ? s.ascentPhase ?? '' : s.status,
     });
   }

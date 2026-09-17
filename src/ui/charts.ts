@@ -65,7 +65,12 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   if (xMax - xMin < 1e-9) xMax = xMin + 1;
   if (yMax - yMin < 1e-9) yMax = yMin + 1;
   const pad = (yMax - yMin) * 0.06;
-  yMax += pad; yMin -= pad;
+  yMax += pad;
+  // A declared floor is a floor, not a hint: padding below `opt.yMin` drew 6 %
+  // of every altitude and dynamic-pressure chart under the zero line, so the
+  // trace started part-way up the frame and the axis labelled altitudes the
+  // vehicle can never have.
+  if (opt.yMin === undefined || yMin < opt.yMin) yMin -= pad;
   const sx = (x: number) => padL + ((x - xMin) / (xMax - xMin)) * pw;
   const sy = (y: number) => padT + (1 - (y - yMin) / (yMax - yMin)) * ph;
   const fmtX = opt.timeAxis ? fmtClock : fmt;

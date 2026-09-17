@@ -311,7 +311,7 @@ details[open] summary { margin-bottom: 4px; }
    shrinks the narration band to fit and its text overflows across the
    instruments, and --sb-h (measured from it) collapses with it. */
 .scene-top { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; pointer-events: none; }
-.scene-mid { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.scene-mid { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; pointer-events: none; }
 /* A size container, so the HUD can answer the only question that matters —
    how much viewport height is left between the camera tabs and the narration.
    The queries themselves live below the HUD rules they override. */
@@ -319,6 +319,13 @@ details[open] summary { margin-bottom: 4px; }
   flex: 1; min-height: 0;
   display: flex; align-items: stretch; justify-content: space-between; gap: 12px;
   container-type: size; container-name: scenefill;
+  /* The two full-width bands are spacers, not surfaces: `.scene-ui > *` turns
+     pointer events back on for every band, and `.scene-fill` stretches over the
+     middle of the viewport (`.scene-mid` over the camera tabs' row), so between
+     them they swallowed every press over about two thirds of the scene — drag
+     to orbit the camera only worked in the strip below them. Their children
+     keep `auto` through the `> *` rules above. */
+  pointer-events: none;
 }
 .mission-title .eyebrow { color: #a7bdcf; }
 .mission-title h2 {
@@ -353,6 +360,8 @@ details[open] summary { margin-bottom: 4px; }
   background: rgba(20, 33, 42, 0.68); color: #c0d1dd; font-size: 19px;
 }
 .tool-btn:hover { color: #fff; border-color: var(--accent-line); }
+.tool-btn[aria-pressed='true'] { color: var(--accent); border-color: var(--accent-line); }
+.tool-btn[aria-pressed='false'] { color: #7c8b99; }
 
 #ticker {
   align-self: flex-end;

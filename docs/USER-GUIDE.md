@@ -58,6 +58,10 @@ Four camera views, switchable from the tabs above the viewport or keys `1`–`4`
 - **Map** — a 2-D ground track with the predicted orbit, the target orbit, the day/night
   terminator, and where spent stages came down.
 
+The small buttons beside the camera tabs reset the view, toggle the **glow** (the bloom around
+the plume, the ignition flash and the city lights) and go full screen. The glow switches itself
+off if the frame rate cannot afford it, and stays wherever you put it once you press it.
+
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
 upper stage, coast, burn, deployment, orbit — in live flight and in replay alike. Picking a

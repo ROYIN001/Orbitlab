@@ -23,7 +23,7 @@ import { ExplosionEffect } from './replay/explosion';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { R_EARTH } from './physics/constants';
-import { normalize, cross, dot, norm, v3, type Vec3 } from './physics/vec3';
+import { normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
@@ -165,6 +165,13 @@ class App {
   private playGlyph!: HTMLElement;
   private liveBtn!: HTMLButtonElement;
   private warpSel!: HTMLSelectElement;
+  private glowBtn!: HTMLButtonElement;
+  /** the glow is still following the frame rate (nobody has pressed the button) */
+  private glowAuto = true;
+  /** smoothed frame time, s — drives the automatic glow cut-out */
+  private frameTime = 1 / 60;
+  /** frames drawn since start (the glow heuristic ignores the first few seconds) */
+  private frames = 0;
   /** kept alive for as long as the app is: it publishes `--sb-h` */
   private sbObserver: ResizeObserver | null = null;
   private sbHeight = -1;
@@ -209,7 +216,6 @@ class App {
     });
     this.bindControls();
     this.observeSceneBottom();
-    this.attachTouch();
   }
 
   /**
@@ -240,57 +246,25 @@ class App {
   }
 
   /**
-   * Touch input for the cameras (audit B30).
+   * Re-apply the device pixel ratio when it changes.
    *
-   * `touch-action: none` on #viewport stops the browser from turning a drag
-   * into a page zoom or a pull-to-refresh, which also means every gesture now
-   * reaches us — including taps on the camera tabs, which would otherwise
-   * start a camera drag. Both problems are handled in the capture phase on
-   * #viewport, before `CameraController`'s own bubble listener on the same
-   * element runs:
-   *
-   * - a pointerdown on the overlay UI is stopped, so a tap-and-slide on a
-   *   button never rotates the scene (the click still fires: `click` is a
-   *   separate event);
-   * - a second finger is stopped too, so it cannot overwrite the controller's
-   *   single drag baseline and make the view snap;
-   * - the distance between two fingers is turned into the `wheel` events the
-   *   controller already understands, which is how pinch zoom works without
-   *   reaching into `src/render`.
+   * `setPixelRatio` is called once, at construction, with whatever the ratio
+   * was then. Dragging the window to a display with a different scaling factor
+   * — or zooming the page, which moves the ratio too — left the drawing buffer
+   * at the old density: a blurry canvas on the way up, a needlessly expensive
+   * one on the way down. There is no event for it, but a `(resolution: Ndppx)`
+   * media query matching the *current* ratio stops matching the moment it
+   * changes, so each change re-arms a fresh one-shot query (audit follow-up
+   * ported from the parallel quality pass).
    */
-  private attachTouch(): void {
-    const vp = this.viewport;
-    const pts = new Map<number, { x: number; y: number }>();
-    let pinch = 0;
-    const spread = (): number => {
-      const it = pts.values();
-      const a = it.next().value;
-      const b = it.next().value;
-      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+  private watchPixelRatio(): void {
+    if (typeof window.matchMedia !== 'function') return;
+    const arm = (): void => {
+      const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      const once = (): void => { this.scene.setPixelRatio(); this.resize(); arm(); };
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', once, { once: true });
     };
-    vp.addEventListener('pointerdown', (e) => {
-      if ((e.target as HTMLElement).closest('.scene-ui')) { e.stopPropagation(); return; }
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pts.size >= 2) { pinch = spread(); e.stopPropagation(); }
-    }, true);
-    vp.addEventListener('pointermove', (e) => {
-      if (!pts.has(e.pointerId)) return;
-      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pts.size < 2) return;
-      e.stopPropagation();
-      const d = spread();
-      if (pinch > 0 && Math.abs(d - pinch) > 2) {
-        vp.dispatchEvent(new WheelEvent('wheel', { deltaY: d > pinch ? -120 : 120, cancelable: true }));
-        pinch = d;
-      }
-    }, true);
-    const drop = (e: PointerEvent): void => {
-      pts.delete(e.pointerId);
-      // Re-seed on every add *and* remove, or the view jumps when a finger lifts.
-      pinch = pts.size >= 2 ? spread() : 0;
-    };
-    vp.addEventListener('pointerup', drop, true);
-    vp.addEventListener('pointercancel', drop, true);
+    arm();
   }
 
   async init(): Promise<void> {
@@ -301,6 +275,7 @@ class App {
     this.cams.attach(this.viewport);
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.viewport);
+    this.watchPixelRatio();
     this.resize();
     document.getElementById('loading')!.classList.add('hidden');
     this.preview(this.panel.getConfig());
@@ -355,6 +330,16 @@ class App {
       b.addEventListener('click', () => this.setCamera(b.dataset.cam as CameraMode));
     });
     document.getElementById('btn-reset-cam')!.addEventListener('click', () => { this.cams.reset(); });
+    this.glowBtn = document.getElementById('btn-glow') as HTMLButtonElement;
+    this.glowBtn.addEventListener('click', () => {
+      // `bindControls` runs before `init` builds the scene, and the loading
+      // overlay is not a modal — a click that lands here first must not throw.
+      if (!this.scene) return;
+      // Touching the control also takes it off automatic: whoever has an
+      // opinion about the glow outranks the frame-rate heuristic.
+      this.glowAuto = false;
+      this.setGlow(!this.scene.bloomEnabled);
+    });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
       const l = (e.target as HTMLSelectElement).value as Lang;
@@ -657,9 +642,37 @@ class App {
     this.preview(this.panel.getConfig());
   }
 
+  /** Switch the bloom pass and keep the button's state in sync with it. */
+  private setGlow(on: boolean): void {
+    this.scene.setBloom(on);
+    this.glowBtn.setAttribute('aria-pressed', String(on));
+    this.glowBtn.classList.toggle('active', on);
+  }
+
+  /**
+   * Drop the glow when the machine cannot afford it.
+   *
+   * Bloom is eleven extra full-screen passes; on an integrated GPU at a high
+   * pixel ratio that is the difference between 60 fps and a slideshow, and a
+   * simulator that stutters is worse than one without a halo round the plume.
+   * The frame time is smoothed over about a second so that a single long frame
+   * — a shader compile, a tab coming back to the foreground — does not trip it,
+   * and the decision is only ever taken while nobody has touched the control.
+   */
+  private autoGlow(dtReal: number): void {
+    this.frameTime += (dtReal - this.frameTime) * 0.05;
+    // Warm-up: the first seconds are texture uploads, shader compiles and the
+    // first mission being built, none of which say anything about the steady
+    // frame rate.
+    if (this.frames++ < 240) return;
+    if (!this.glowAuto || !this.scene.bloomEnabled) return;
+    if (this.frameTime > 0.032) this.setGlow(false);
+  }
+
   private frame(now: number): void {
     const dtReal = Math.min(0.1, Math.max(0, (now - this.lastFrame) / 1000));
     this.lastFrame = now;
+    this.autoGlow(dtReal);
     const sim = this.sim;
     // The live flight runs whether or not the user is watching the head.
     if (sim && this.playing) {
@@ -674,7 +687,9 @@ class App {
         if (sim.state.t >= target - 1e-3 || sim.isFailed()) this.fastForwardTo = null;
       } else {
         this.fastForwardTo = null;
-        this.recorder.advance(dtReal * this.warp, 6000);
+        // a wall-clock budget as well as a step budget, so a high warp cannot
+        // spend the whole animation frame inside the integrator
+        this.recorder.advance(dtReal * this.warp, 20000, performance.now() + 8);
       }
     }
     // The replay cursor runs on its own clock; warp > 1 skips through frames.
@@ -832,8 +847,23 @@ class App {
     const night = 1 - dayFactorAt(dot(normalize(frame.r), sunDir));
     this.pad.update(scene, frame, night);
     // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y x Z
+    //
+    // The roll reference is the normal of the launch-azimuth plane, not
+    // `cross(dir, up)`. The cross product is degenerate exactly where the
+    // flight starts — on the pad the body axis IS the local vertical, so it
+    // collapsed to zero, fell back to east, and then swung round to the true
+    // normal as the vehicle pitched over: a roll snap through the pitch-over,
+    // seen head-on by the onboard camera, which looks out of that very side.
+    // The azimuth normal stays perpendicular to the body axis for the whole of
+    // a nominal ascent, and re-orthogonalising it against `dir` each frame
+    // keeps the basis square without carrying any state between frames — the
+    // azimuth is a mission constant, so a replayed frame rolls identically.
     const { east, north, up } = enuFrame(frame.r);
-    let side = cross(frame.dir, up);
+    const az = sim.plan.azimuthRotating;
+    const heading = addScaled(scale(east, Math.sin(az)), north, Math.cos(az));
+    let side = cross(heading, up);
+    side = addScaled(side, frame.dir, -dot(side, frame.dir));
+    if (norm(side) < 0.05) side = cross(frame.dir, up);
     if (norm(side) < 0.05) side = east;
     side = normalize(side);
     const xAxis = normalize(cross(frame.dir, side));

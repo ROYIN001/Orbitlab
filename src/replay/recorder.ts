@@ -256,12 +256,25 @@ export class FlightRecorder {
    * every event time is the timestamp of a stored frame, with no re-simulation
    * and no fabricated state in between.
    */
-  advance(seconds: number, maxSteps = 5000): number {
+  /**
+   * @param deadline optional `performance.now()` value to stop at. A step count
+   *        is not a time budget: the same 6000 steps are a millisecond of coast
+   *        and a tenth of a second of powered flight, so at a high warp the
+   *        animation frame could be spent entirely inside the integrator and
+   *        the display would freeze while the flight raced ahead. Stopping on
+   *        the clock instead costs nothing but a slower advance on a slow
+   *        machine, and the sequence of steps — hence the recorded flight — is
+   *        unchanged either way.
+   */
+  advance(seconds: number, maxSteps = 5000, deadline = Infinity): number {
     const sim = this.sim;
     if (!sim) return 0;
+    const clocked = deadline !== Infinity && typeof performance !== 'undefined';
     let remaining = seconds;
     let steps = 0;
     while (remaining > 1e-6 && steps < maxSteps && sim.state.status !== 'failed') {
+      // checked every 32 steps: `performance.now()` is not free either
+      if (clocked && (steps & 31) === 31 && performance.now() > deadline) break;
       const dt = Math.min(sim.suggestedDt(), remaining);
       const head = this.head;
       // The pre-step frame: reuse the head when it already sits on this instant

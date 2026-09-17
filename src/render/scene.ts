@@ -8,6 +8,10 @@
  * renders identically to the live run.
  */
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import type { Vec3 } from '../physics/vec3';
 import type { VisualFrame } from '../physics/frame';
 import { R_EARTH } from '../physics/constants';
@@ -55,17 +59,47 @@ const EARTH_FRAG = /* glsl */ `
   uniform sampler2D dayMap;
   uniform sampler2D nightMap;
   uniform sampler2D specMap;
+  uniform sampler2D normalMap;
+  uniform float normalScale;
   uniform vec3 sunDir;
   uniform vec3 camPos;
   uniform float rimGain;
   varying vec2 vUv;
   varying vec3 vNormalW;
   varying vec3 vPosW;
+  /**
+   * Tangent-space normal perturbation built from screen-space derivatives
+   * (Mikkelsen's method, the same one three's bump/normal chunks use). The
+   * sphere carries no tangent attribute and generating one for a 128x96 globe
+   * would double its vertex data for a term that is only ever a shading
+   * detail.
+   */
+  vec3 perturbNormal(vec3 N, vec3 p, vec2 uv, vec3 mapN) {
+    vec3 q0 = dFdx(p), q1 = dFdy(p);
+    vec2 st0 = dFdx(uv), st1 = dFdy(uv);
+    vec3 q1perp = cross(q1, N), q0perp = cross(N, q0);
+    vec3 T = q1perp * st0.x + q0perp * st1.x;
+    vec3 B = q1perp * st0.y + q0perp * st1.y;
+    float det = max(dot(T, T), dot(B, B));
+    float scale = (det == 0.0) ? 0.0 : inversesqrt(det);
+    return normalize(T * (mapN.x * scale) + B * (mapN.y * scale) + N * mapN.z);
+  }
   void main() {
     #include <logdepthbuf_fragment>
-    vec3 n = normalize(vNormalW);
+    vec3 nGeo = normalize(vNormalW);
+    // Relief. The normal map is a real elevation derivative, so it shades
+    // mountain ranges and ocean trenches by the sun's own direction — the
+    // Himalayas, the Andes and the Rockies pick up a terminator shadow instead
+    // of staying as flat as the photograph they are painted with.
+    vec3 mapN = texture2D(normalMap, vUv).xyz * 2.0 - 1.0;
+    mapN.xy *= normalScale;
+    vec3 n = normalScale > 0.001 ? perturbNormal(nGeo, vPosW, vUv, mapN) : nGeo;
+    // Day/night is a planet-scale quantity: taking it from the perturbed
+    // normal would let a hillside flip its own local time and scatter city
+    // lights across the sunlit side.
+    float cosSunGeo = dot(nGeo, sunDir);
     float cosSun = dot(n, sunDir);
-    float dayF = smoothstep(-0.12, 0.25, cosSun);
+    float dayF = smoothstep(-0.12, 0.25, cosSunGeo);
     vec3 day = texture2D(dayMap, vUv).rgb;
     vec3 night = texture2D(nightMap, vUv).rgb;
     vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
@@ -75,10 +109,12 @@ const EARTH_FRAG = /* glsl */ `
     vec3 h = normalize(sunDir + viewDir);
     // Sun glint off water. Tighter and weaker than it was: tone mapping lifts
     // it hard, and a broad pow-48 lobe at the old gain blew out into a haze
-    // blob over the ocean instead of reading as a glint.
-    float s = pow(max(dot(n, h), 0.0), 110.0) * spec * dayF * 0.30;
+    // blob over the ocean instead of reading as a glint. It uses the geometric
+    // normal: a 110-power lobe off a perturbed normal turns the relief into
+    // glitter wherever the specular map bleeds onto a coast.
+    float s = pow(max(dot(nGeo, h), 0.0), 110.0) * spec * dayF * 0.30;
     col += vec3(s * 0.9, s * 0.95, s);
-    float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 4.5);
+    float rim = pow(1.0 - max(dot(nGeo, viewDir), 0.0), 4.5);
     col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
@@ -144,6 +180,18 @@ const FOG_OFF_FAR = 2e9;
 const SUN_INTENSITY = 3.3;
 
 /**
+ * Bloom. The threshold is in LINEAR light, above the tone mapper: 1.0 is what
+ * an ACES-exposed frame renders as white, so only the plume core, the ignition
+ * flash, the sun and the brightest specular glints cross it. A daytime pad —
+ * concrete at 0.5, sky at 0.3 — stays entirely below and does not glow.
+ */
+const BLOOM_THRESHOLD = 1.0;
+const BLOOM_RADIUS = 0.5;
+/** …at the pad, where the haze already scatters, and in vacuum, where it does not. */
+const BLOOM_GROUND = 0.32;
+const BLOOM_SPACE = 0.62;
+
+/**
  * Galactic north pole in equatorial (≈ ECI) coordinates: α = 192.86°,
  * δ = +27.13°. The Milky Way is the great circle perpendicular to it, which is
  * where the extra faint stars are packed.
@@ -192,8 +240,13 @@ export interface EarthTextures {
   day: THREE.Texture;
   night: THREE.Texture;
   spec: THREE.Texture;
+  /** elevation-derived normal map; relief shading is skipped when it is missing */
+  normal: THREE.Texture | null;
   clouds: THREE.Texture | null;
 }
+
+/** Strength of the Earth's relief shading (0 disables the whole term). */
+const RELIEF_STRENGTH = 0.85;
 
 export class SceneManager {
   readonly renderer: THREE.WebGLRenderer;
@@ -263,9 +316,21 @@ export class SceneManager {
   private perp = new THREE.Vector3();
   private originV = new THREE.Vector3();
   origin: Vec3 = { x: 0, y: 0, z: 0 };
+  /** post-processing chain: MSAA scene target -> bloom -> tone map + sRGB */
+  private composer: EffectComposer;
+  private sceneTarget: THREE.WebGLRenderTarget;
+  private bloomPass: UnrealBloomPass;
+  /** clear colour pre-compensated for the output pass's tone mapping */
+  private clearColor = new THREE.Color();
+  private clearKey = '';
 
   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
+    // `antialias` is a request for a multisampled *default* framebuffer, and
+    // the scene is no longer drawn into one — every frame goes through the
+    // composer's own 4x target (see the end of this constructor). Asking for
+    // both would allocate a multisample buffer for the canvas that nothing ever
+    // draws into.
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -288,6 +353,11 @@ export class SceneManager {
       vertexShader: EARTH_VERT, fragmentShader: EARTH_FRAG,
       uniforms: {
         dayMap: { value: tex.day }, nightMap: { value: tex.night }, specMap: { value: tex.spec },
+        // A sampler uniform must be bound to something even when the feature is
+        // off: an unbound sampler2D reads as unit 0 and would sample the day map
+        // as if it were a normal map.
+        normalMap: { value: tex.normal ?? flatNormalTexture() },
+        normalScale: { value: tex.normal ? RELIEF_STRENGTH : 0 },
         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() },
         rimGain: { value: 1 },
       },
@@ -377,6 +447,41 @@ export class SceneManager {
     // actually drawn — measured as a 13-14 ms hitch on the booster-separation
     // frame, when the debris materials first reach the renderer.
     this.updateEnvironment(skyState(0.4, 0), 0.4);
+
+    // ------------------------------------------------- post-processing
+    //
+    // The scene is drawn into a half-float multisampled target, bloomed, and
+    // resolved to the canvas by an `OutputPass` that applies exactly the tone
+    // mapping and sRGB encoding the materials used to apply themselves: three
+    // compiles every material with `NoToneMapping` while a render target is
+    // bound (WebGLRenderer, `getParameters`), so the two never both run.
+    //
+    // The chain is ALWAYS in the path, even with bloom switched off, and the
+    // toggle only flips `bloomPass.enabled`. Rendering to the canvas one frame
+    // and to a target the next would flip the tone-mapping and colour-space
+    // defines on every material in the scene, and the recompile that follows is
+    // the same multi-frame hitch the fog and the shadow flags are carefully
+    // written to avoid. Switching bloom off then costs one full-screen blit,
+    // not a stall.
+    const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
+    this.sceneTarget = new THREE.WebGLRenderTarget(Math.max(1, size.x), Math.max(1, size.y), {
+      type: THREE.HalfFloatType, samples: 4, depthBuffer: true, stencilBuffer: false,
+    });
+    this.sceneTarget.texture.name = 'orbitlab.scene';
+    this.composer = new EffectComposer(this.renderer, this.sceneTarget);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, size.x), Math.max(1, size.y)), BLOOM_GROUND, BLOOM_RADIUS, BLOOM_THRESHOLD);
+    this.composer.addPass(this.bloomPass);
+    this.composer.addPass(new OutputPass());
+  }
+
+  /** Turn the bloom pass on or off (the rest of the chain always runs). */
+  setBloom(on: boolean): void {
+    this.bloomPass.enabled = on;
+  }
+
+  get bloomEnabled(): boolean {
+    return this.bloomPass.enabled;
   }
 
   /**
@@ -561,9 +666,21 @@ export class SceneManager {
 
   resize(w: number, h: number): void {
     this.renderer.setSize(w, h, false);
+    this.composer.setSize(w, h);
     this.viewH = Math.max(1, h);
     this.camera.aspect = w / Math.max(1, h);
     this.camera.updateProjectionMatrix();
+  }
+
+  /**
+   * Re-read `devicePixelRatio`. Called when the window moves to a display with
+   * different scaling, or when the page is zoomed; `main.ts` watches for it.
+   */
+  setPixelRatio(): void {
+    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    if (pr === this.renderer.getPixelRatio()) return;
+    this.renderer.setPixelRatio(pr);
+    this.composer.setPixelRatio(pr);
   }
 
   /** Convert an ECI position (m) into scene coordinates relative to the origin. */
@@ -620,8 +737,13 @@ export class SceneManager {
     const sky = skyState(sunElev, cameraAltitude);
     this.updateEnvironment(sky, sunElev);
     this.orientEnvironment(this.camUp, sd);
-    this.renderer.setClearColor(sky.color, 1);
     this.renderer.toneMappingExposure = sky.exposure;
+    this.setSkyClearColor(sky);
+    // Bloom is a scattering effect, and what scatters changes with altitude: at
+    // the pad the air already does it (and the haze in `sky.ts` is that term),
+    // in vacuum only the camera does, and that is where the plume, the city
+    // lights and the sun have nothing between them and the lens.
+    this.bloomPass.strength = BLOOM_GROUND + (BLOOM_SPACE - BLOOM_GROUND) * (1 - sky.groundFactor);
     this.starsMat.uniforms.uOpacity.value = sky.stars;
     this.stars.visible = sky.stars > 0.004;
     const rim = 0.25 + 0.75 * (1 - sky.groundFactor);
@@ -727,8 +849,34 @@ export class SceneManager {
     this.updateMarker(frame, vehicleSize);
   }
 
+  /**
+   * Set the clear colour so the sky still looks like `sky.color` after the
+   * output pass.
+   *
+   * The clear colour is the sky: the only thing behind the planet, the pad and
+   * the vehicle. Drawing straight to the canvas it was written out untouched,
+   * because a clear is not a fragment and no tone mapping runs on it — the
+   * colours in `sky.ts` are literally what reached the screen, and they were
+   * tuned that way. Once the frame goes through a render target the clear ends
+   * up in the linear buffer with everything else and the output pass ACES-maps
+   * it, which lifts the midtones hard: the noon sky came out pale and washed.
+   *
+   * So the colour handed to `setClearColor` is the one that ACES maps ONTO the
+   * authored sky, found by inverting the tone curve. Everything else in the
+   * scene is unaffected — it was always tone-mapped, and still is, once.
+   */
+  private setSkyClearColor(sky: SkyState): void {
+    const c = sky.color;
+    const key = `${c.r.toFixed(4)},${c.g.toFixed(4)},${c.b.toFixed(4)},${sky.exposure.toFixed(3)}`;
+    if (key !== this.clearKey) {
+      this.clearKey = key;
+      inverseACES(c, sky.exposure, this.clearColor);
+    }
+    this.renderer.setClearColor(this.clearColor, 1);
+  }
+
   render(): void {
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 
   /**
@@ -757,7 +905,14 @@ export class SceneManager {
    * `setupViews`, before the next animation frame paints).
    */
   prewarm(): void {
+    // Compile with the composer's target bound. `compile` builds each program
+    // for whatever render target is current, and the tone-mapping and
+    // colour-space defines differ between the canvas and a linear target — so
+    // compiling against the canvas would produce the one variant the app never
+    // draws, and every material would be compiled a second time on first use.
+    this.renderer.setRenderTarget(this.sceneTarget);
     this.renderer.compile(this.scene, this.camera);
+    this.renderer.setRenderTarget(null);
     const hidden: THREE.Object3D[] = [];
     this.scene.traverse((o) => { if (!o.visible) { o.visible = true; hidden.push(o); } });
     const scissorTest = this.renderer.getScissorTest();
@@ -770,7 +925,9 @@ export class SceneManager {
     // The focus region is still at its defaults here, which does not matter —
     // the first real `update` re-aims the shadow camera and re-renders it.
     this.renderer.shadowMap.needsUpdate = true;
-    this.renderer.render(this.scene, this.camera);
+    // through the composer, for the same reason `compile` is: this throwaway
+    // frame has to exercise the programs the real frames use
+    this.composer.render();
     this.shadowPrimed = true;
     this.renderer.setScissorTest(scissorTest);
     const s = this.prevScissor;
@@ -812,10 +969,12 @@ export class SceneManager {
       cm.map?.dispose();
       cm.dispose();
     }
-    for (const u of ['dayMap', 'nightMap', 'specMap'] as const) {
+    for (const u of ['dayMap', 'nightMap', 'specMap', 'normalMap'] as const) {
       const tex = this.earthMat.uniforms[u]?.value;
       if (tex instanceof THREE.Texture) tex.dispose();
     }
+    // the composer owns both swap targets and every pass's own buffers
+    this.composer.dispose();
     this.scene.clear();
   }
 }
@@ -895,14 +1054,84 @@ export function loadEarthTextures(base: string): Promise<EarthTextures> {
   const load = (name: string) => new Promise<THREE.Texture | null>((resolve) => {
     loader.load(`${base}textures/${name}`, (t) => { t.anisotropy = 4; resolve(t); }, undefined, () => resolve(null));
   });
-  return Promise.all([load('earth_atmos_2048.jpg'), load('earth_lights_2048.png'), load('earth_specular_2048.jpg'), load('earth_clouds_1024.png')]).then(
-    ([day, night, spec, clouds]) => ({
+  return Promise.all([
+    load('earth_atmos_2048.jpg'), load('earth_lights_2048.png'), load('earth_specular_2048.jpg'),
+    load('earth_normal_2048.jpg'), load('earth_clouds_1024.png'),
+  ]).then(
+    ([day, night, spec, normal, clouds]) => ({
       day: day ?? proceduralTexture('#2a5ea8', '#3f7a3a'),
       night: night ?? proceduralTexture('#000000', '#000000'),
       spec: spec ?? proceduralTexture('#ffffff', '#000000'),
+      // A normal map holds vectors, not colour: it must stay in the no-transfer
+      // colour space or every slope is decoded through the sRGB curve.
+      normal,
       clouds,
     }),
   );
+}
+
+/**
+ * three's ACES filmic curve, in JS, exactly as `tonemapping_pars_fragment`
+ * compiles it: the two colour-space matrices around the RRT+ODT rational fit.
+ */
+function acesForward(r: number, g: number, b: number, exposure: number, out: [number, number, number]): void {
+  const k = exposure / 0.6;
+  const x = r * k, y = g * k, z = b * k;
+  // ACESInputMat. The GLSL constructor takes COLUMNS, so these are its rows —
+  // each one sums to 1, which is the check that they have been transposed.
+  let ir = 0.59719 * x + 0.35458 * y + 0.04823 * z;
+  let ig = 0.07600 * x + 0.90834 * y + 0.01566 * z;
+  let ib = 0.02840 * x + 0.13383 * y + 0.83777 * z;
+  const fit = (v: number): number => (v * (v + 0.0245786) - 0.000090537) / (v * (0.983729 * v + 0.4329510) + 0.238081);
+  ir = fit(ir); ig = fit(ig); ib = fit(ib);
+  // ACESOutputMat
+  out[0] = clamp01(1.60475 * ir - 0.53108 * ig - 0.07367 * ib);
+  out[1] = clamp01(-0.10208 * ir + 1.10813 * ig - 0.00605 * ib);
+  out[2] = clamp01(-0.00327 * ir - 0.07276 * ig + 1.07602 * ib);
+}
+
+const acesTmp: [number, number, number] = [0, 0, 0];
+
+/**
+ * Invert `acesForward`: find the linear colour the curve maps onto `target`.
+ *
+ * The curve mixes the channels through two matrices, so there is no per-channel
+ * closed form, but it is monotone and close to a gain over this range — the
+ * ratio iteration below lands within a thousandth in a handful of steps, and it
+ * runs at most once per sky-colour change, not per frame. Targets at or above
+ * the curve's saturation point have no pre-image and are left at the largest
+ * value that does.
+ */
+function inverseACES(target: THREE.Color, exposure: number, out: THREE.Color): THREE.Color {
+  const t = [Math.min(target.r, 0.995), Math.min(target.g, 0.995), Math.min(target.b, 0.995)];
+  let r = t[0], g = t[1], b = t[2];
+  // 40 damped steps: the blue of a noon sky has to travel from 0.87 to about
+  // 2.0 (ACES compresses hard up there), and a dozen steps stopped 2 % short —
+  // visible as a slightly warm sky. It runs on a sky-colour change, not a frame.
+  for (let i = 0; i < 40; i++) {
+    acesForward(r, g, b, exposure, acesTmp);
+    const dr = acesTmp[0] > 1e-6 ? t[0] / acesTmp[0] : 1;
+    const dg = acesTmp[1] > 1e-6 ? t[1] / acesTmp[1] : 1;
+    const db = acesTmp[2] > 1e-6 ? t[2] / acesTmp[2] : 1;
+    if (Math.abs(dr - 1) < 1e-4 && Math.abs(dg - 1) < 1e-4 && Math.abs(db - 1) < 1e-4) break;
+    // damped, so a channel that overshoots on one step does not oscillate
+    r = Math.max(0, r * (1 + 0.75 * (dr - 1)));
+    g = Math.max(0, g * (1 + 0.75 * (dg - 1)));
+    b = Math.max(0, b * (1 + 0.75 * (db - 1)));
+  }
+  return out.setRGB(r, g, b, THREE.LinearSRGBColorSpace);
+}
+
+/** Flat tangent-space normal (0, 0, 1), for when the relief map is missing. */
+function flatNormalTexture(): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = c.height = 2;
+  const g = c.getContext('2d')!;
+  g.fillStyle = 'rgb(128,128,255)';
+  g.fillRect(0, 0, 2, 2);
+  const t = new THREE.CanvasTexture(c);
+  t.userData.shared = true;
+  return t;
 }
 
 /** Fallback texture when the image files are missing (stylised ocean/land noise). */

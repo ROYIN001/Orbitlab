@@ -12,6 +12,10 @@ export class OrbitalMap {
   private img: HTMLImageElement | null = null;
   private targetPts: { lat: number; lon: number }[] = [];
   private targetForSim: Simulation | null = null;
+  /** ground track accumulated from the telemetry buffer (see `draw`) */
+  private trackPts: { lat: number; lon: number }[] = [];
+  private trackForSim: Simulation | null = null;
+  private trackSeen = 0;
 
   constructor(canvas: HTMLCanvasElement, imageUrl: string) {
     this.canvas = canvas;
@@ -86,7 +90,15 @@ export class OrbitalMap {
       const lon = -180 + (360 * i) / cols;
       const dl = (lon - subLon) * DEG;
       // terminator: tan(lat) = -cos(dl) / tan(subLat)  (solve cos(zenith)=0)
-      const latT = Math.atan2(-Math.cos(dl), Math.tan(subLat)) * RAD;
+      //
+      // `atan`, not `atan2`: the quotient is one number and its arctangent is
+      // the latitude, in ±90° as a latitude must be. `atan2(-cos dl, tan δ)`
+      // returns the angle of the *vector*, which for a southern solar
+      // declination (tan δ < 0 — i.e. from the September equinox to the March
+      // one, half of every year) lands in the second or third quadrant: past
+      // ±90°, off the map, and the night polygon was drawn inside out.
+      const tanDec = Math.abs(Math.tan(subLat)) < 1e-6 ? (subLat < 0 ? -1e-6 : 1e-6) : Math.tan(subLat);
+      const latT = Math.atan(-Math.cos(dl) / tanDec) * RAD;
       const [x, y] = this.xy(latT, lon, mw, mh);
       if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
     }
@@ -119,9 +131,30 @@ export class OrbitalMap {
         }
       }
       this.polyline(g, this.targetPts, mw, mh, 'rgba(139,229,205,0.8)', [6, 4], 1.5);
-      // ground track from telemetry
-      const track = sim.telemetry.filter((s) => s.t >= 0).map((s) => ({ lat: s.lat, lon: s.lon }));
-      this.polyline(g, track, mw, mh, '#efa47e', [], 2);
+      // Ground track from telemetry, appended in place rather than rebuilt.
+      // `filter().map()` over the whole buffer allocated two arrays of up to
+      // twenty thousand objects on every animation frame the map was open; the
+      // track only ever grows at one end. It is rebuilt from scratch whenever
+      // the buffer shrinks — which is what scrubbing backwards (the view is
+      // truncated to the cursor) and thinning the buffer both look like.
+      const tel = sim.telemetry;
+      if (this.trackForSim !== sim || tel.length < this.trackSeen) {
+        this.trackForSim = sim;
+        this.trackPts = [];
+        this.trackSeen = 0;
+      }
+      for (let i = this.trackSeen; i < tel.length; i++) {
+        const smp = tel[i];
+        if (smp.t < 0) continue;
+        const last = this.trackPts[this.trackPts.length - 1];
+        // a quarter of a pixel on a 1440-wide map: below this the points are
+        // the same place and only cost stroke time
+        if (!last || Math.abs(smp.lat - last.lat) > 0.05 || Math.abs(smp.lon - last.lon) > 0.05) {
+          this.trackPts.push({ lat: smp.lat, lon: smp.lon });
+        }
+      }
+      this.trackSeen = tel.length;
+      this.polyline(g, this.trackPts, mw, mh, '#efa47e', [], 2);
       // predicted orbit (1 period ahead)
       const el = sim.state.elements;
       if (el.e < 1 && el.periapsisAlt > -R_EARTH * 0.5) {
@@ -141,7 +174,13 @@ export class OrbitalMap {
       // debris
       for (const d of sim.debris) {
         if (d.visual.kind === 'fairing') continue;
-        const ll = eciToLatLon(d.r, theta);
+        // A piece that has come down is on the ground, and the ground turns
+        // with the Earth: its frozen ECI position does not, so the marker for a
+        // landed booster used to crawl west at 15°/hour, away from the pad it
+        // had just landed on. The recorded impact point is the ground-fixed
+        // answer.
+        // (`impact` is recorded in degrees, `eciToLatLon` returns radians)
+        const ll = !d.alive && d.impact ? { lat: d.impact.lat * DEG, lon: d.impact.lon * DEG } : eciToLatLon(d.r, theta);
         const [x, y] = this.xy(ll.lat * RAD, ll.lon * RAD, mw, mh);
         g.fillStyle = d.outcome === 'landed' ? '#7ddba0' : d.alive ? '#efa47e' : '#ff6b6b';
         g.beginPath();

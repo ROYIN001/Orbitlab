@@ -140,7 +140,9 @@ Requires Node.js 20 or newer and a browser with WebGL 2.
 4. Press **Launch**. Use the time-warp control (or `,` / `.` keys) during long coasts, and
    **Skip to next event** to jump to the next planned burn.
 5. Switch cameras with the tabs above the viewport or with keys `1`–`4`. Drag to rotate the
-   exterior and space cameras; scroll or pinch to zoom. **Camera sequence** in the top bar
+   exterior and space cameras; scroll or pinch to zoom. The buttons beside the tabs reset the
+   view, toggle the glow around the plume and the city lights, and go full screen.
+   **Camera sequence** in the top bar
    assigns a view to each flight phase and switches automatically as the flight moves
    through them, in live playback and in replay alike; a manual choice lasts until the next
    phase begins.

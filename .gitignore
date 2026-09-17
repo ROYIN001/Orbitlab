@@ -7,3 +7,6 @@ dist/
 # throwaway experiment files written by audit/implementation agents
 tests/probe/
 probe-out.txt
+
+# per-machine agent settings, not part of the project
+.claude/

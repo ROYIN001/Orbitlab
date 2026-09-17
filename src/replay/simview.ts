@@ -194,7 +194,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
             // view.
             recovery: d.recovery
               ? {
-                propellant: 0, thrustVac: 0, thrustSL: 0, mdot: 0, entryBurnLeft: 0,
+                propellant: 0, thrustVac: 0, thrustSL: 0, mdot: 0, landingReserve: 0,
                 burning: d.burning, phase: d.recovery.phase, landed: d.recovery.landed,
               }
               : undefined,

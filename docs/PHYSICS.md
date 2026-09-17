@@ -146,9 +146,17 @@ is still 11.9 kW/m² — ten times any sensible placard — so the fairing was n
 on the physical criterion alone. As with the four vehicles above, that row now agrees by
 construction and is a regression guard rather than evidence.
 
-When first-stage recovery is selected, a fraction of
-first-stage propellant is reserved and the spent stage performs an entry burn near 70 km and
-a landing burn that follows a constant-deceleration profile.
+When first-stage recovery is selected, a fraction of first-stage propellant is reserved and the
+spent stage flies itself down. The reserve is sized by the rocket equation for an 800 m/s
+landing burn on the dry stage; everything above it may be spent on the entry burn, which fires
+retrograde below 70 km until the airspeed is down to about 1.4 km/s (or the reserve is all that
+is left). The landing burn then follows a constant-deceleration profile — bang-bang thrust
+standing in for throttling — aimed at about 2 m/s at touchdown, on as many engines as give a
+thrust/weight near three, decelerating at 60 % of the net acceleration available. That last
+number is what makes it a hoverslam: a stage with margin falls further before it brakes, and one
+with little thrust starts early and never asks for more than it has. Engine selection is
+per-vehicle (at least three, more when three cannot give the empty stage 2.5 g), so the profile
+is not tuned to one booster.
 
 Ideal Δv per stage follows Tsiolkovsky, Δv = g₀ Isp ln(m₀/m₁). **Strap-on boosters are a
 separate phase, not a bigger tank**: the remaining-Δv walk splits the active stage at booster
@@ -483,6 +491,12 @@ largest remaining Δv that respects max-Q. No mission requires it.
   four minutes ahead of ignition (the attitude slew rate is a few degrees per second, so a
   short trim would otherwise spend its whole burn pointing the wrong way). Long low-thrust
   burns are split across successive perigee passes (Briz-M/Fregat style).
+- **Burns light only once the attitude is aligned** with the commanded direction (within 4°).
+  The pre-orient above covers a burn scheduled minutes ahead, but several paths arm one for the
+  next second — a re-planned trim, a remainder finished on the same pass — and there the first
+  seconds of thrust used to go in at ninety degrees to the command. The gate is lifted below a
+  120 km periapsis, where every second of thrust is worth more than its direction, and once lit
+  a burn stays lit however the command swings as the remaining Δv goes to zero.
 - **Apogee burn**: velocity-to-be-gained steering toward the velocity of the target orbit in
   the target plane (same line of nodes, new inclination) combines circularisation and
   plane change (GEO from Baikonur: 51.6° removed at apogee).
@@ -1013,10 +1027,16 @@ so the ascent uses the lowest reachable inclination and a plane change is schedu
 apogee.
 
 The ascent produces RAAN = λ_site + θ − Δλ with sin u = sin φ / sin i and
-tan Δλ = sin u cos i / cos u. Launch windows solve θ(t) for the time when this RAAN equals
-the target RAAN: the ISS plane (reference RAAN at an epoch plus J2 regression, about
-−5°/day, so windows come ~20 min earlier each day) or a sun-synchronous local time of the
-ascending node (RAAN = α_sun + 15°/h × (LTAN − 12 h)).
+tan Δλ = sin u cos i / cos u, where λ_site is taken 200 s after liftoff rather than at liftoff:
+the plane of the orbit is fixed by the velocity vector, and for the first minutes that vector is
+mostly vertical, so the plane is only really set once the horizontal speed dominates — by which
+time the site has rotated 0.84° east. Measured against this model, the RAAN actually reached
+from Baikonur, the Cape, Vostochny and Mahia sat 0.63–0.94° east of the RAAN computed at the
+liftoff longitude; with the offset the residual is under 0.11°. Launch windows solve θ(t) for
+the time when this RAAN equals the target RAAN (and therefore open 200 s earlier): the ISS plane
+(reference RAAN at an epoch plus J2 regression, about −5°/day, so windows come ~20 min earlier
+each day) or a sun-synchronous local time of the ascending node
+(RAAN = α_sun + 15°/h × (LTAN − 12 h)).
 
 Sun-synchronous inclination for a given altitude follows from matching the J2 nodal rate to
 360°/year.

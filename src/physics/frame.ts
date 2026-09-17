@@ -147,7 +147,7 @@ export interface VisualFrame {
   t: number;
   status: SimStatus;
   ascentPhase: AscentPhase | null;
-  /** HUD note key (countdown, ascent, coast, burn, orbit, orbitOffTarget, suborbital, destroyed, reentry) */
+  /** HUD note key (countdown, ascent, coast, burn, orbit, orbitOffTarget, suborbital, destroyed, reentry, noLiftoff) */
   note: string;
   r: Vec3;
   v: Vec3;

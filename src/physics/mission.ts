@@ -344,6 +344,21 @@ export const INCLINATION_TOLERANCE = 0.3 * DEG;
 export const RAAN_TOLERANCE = 1.5 * DEG;
 
 /**
+ * How long after liftoff the orbital plane is actually established, s.
+ *
+ * The plane of the orbit is fixed by the position and velocity vectors, and for
+ * the first minutes of an ascent the velocity is mostly vertical — the plane is
+ * only really set once the horizontal speed dominates, by which time the site
+ * has rotated east underneath it. Measured on this model: the RAAN reached from
+ * Baikonur, the Cape, Vostochny and Mahia is 0.63-0.94° east of the RAAN
+ * computed from the liftoff longitude, against 0.84° for 200 s of Earth
+ * rotation. Both the expected RAAN and the launch-window search use the offset,
+ * so a window opened here puts the flown plane on the target plane rather than
+ * a degree behind it.
+ */
+export const T_PLANE = 200;
+
+/**
  * Plane error the burn planner will fly a correction for, rad.
  *
  * Derived from the acceptance band exactly the way `apsisPlanTolerance` is
@@ -637,16 +652,24 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const azimuthInertial = inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
   const jd0 = julianDate(cfg.launchTime);
   const gmst0 = gmst(jd0);
-  const raanExpected = raanFromLaunch(lat, site.longitude * DEG + gmst0, ascentInclination, descending);
+  const raanExpected = raanFromLaunch(lat, site.longitude * DEG + gmst0 + OMEGA_EARTH * T_PLANE, ascentInclination, descending);
   // A final stage that cannot even hold altitude near orbital speed (Fregat, Briz-M,
   // Curie...) is treated as an orbital-manoeuvring stage: the strong stages insert
   // into an ellipse whose apogee is the target (capped) and the kick stage finishes.
   const last = _vehicle.stages[_vehicle.stages.length - 1];
-  const payload = cfg.payloadMassOverride ?? 0;
+  const satellite = satelliteById(cfg.satelliteId);
+  // No override means "fly the spacecraft that was selected", exactly as
+  // `Simulation` and the auto-tuner already read it. Defaulting to zero here
+  // made the plan — the weak-final-stage test, the ideal Δv of the strong
+  // stages, and therefore the shape of the insertion orbit — describe a
+  // launcher carrying nothing, for any caller that does not fill the field in
+  // (the WebMCP tools and every direct `planMission` call; the setup panel
+  // always sets it, which is why this never showed up in the app).
+  const payload = cfg.payloadMassOverride ?? satellite.mass;
   const lastMass = last.dryMass + last.propellantMass + payload + 1500;
   const aLast = (last.engine.count * last.engine.thrustVac) / lastMass;
   const weakFinalStage = _vehicle.stages.length > 1 && aLast < 1.6;
-  const restartable = canBurnAfterAscent(_vehicle, satelliteById(cfg.satelliteId), weakFinalStage);
+  const restartable = canBurnAfterAscent(_vehicle, satellite, weakFinalStage);
   // Ideal delta-v of the stages that have to deliver the perigee speed of the
   // insertion orbit: everything except a final stage too weak to fly the ascent
   // (Fregat, Briz-M, Curie...), which is an orbital-manoeuvring stage instead.
@@ -704,7 +727,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // corrected delta-v accounting (audit item B13, which lifts every
   // booster-equipped launcher by 5–19 %) flips the R-7 onto a 200 × 417 km
   // ellipse — more efficient on paper, and not a crewed profile.
-  const crewed = satelliteById(cfg.satelliteId).crewed === true;
+  const crewed = satellite.crewed === true;
   const haCandidate = insertionApoapsisFor(target, insertionAltitude);
   let insertionApoapsis = insertionAltitude;
   if (!crewed && haCandidate > insertionAltitude + 1e3 && ascentReaches(insertionAltitude, haCandidate)) {
@@ -774,6 +797,9 @@ export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, cou
   const descending = inc > 75 * DEG ? site.descendingForPolar : false;
   const out: LaunchWindow[] = [];
   // Δλ between ascending node and site along the orbit is fixed for given lat/inc.
+  // Δλ is the offset between the site's inertial longitude and the node of the
+  // orbit it reaches from there, so it is built from the unshifted longitude;
+  // `T_PLANE` then enters exactly once, as the head start the liftoff needs.
   const dlam = wrapPi(lon + gmst(julianDate(from)) - raanFromLaunch(lat, lon + gmst(julianDate(from)), inc, descending));
   let t = new Date(from.getTime());
   for (let k = 0; k < count; k++) {
@@ -785,7 +811,8 @@ export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, cou
       const lonINeeded = raanT + dlam;
       const g = gmst(julianDate(t)) + lon;
       const dtheta = wrap2pi(lonINeeded - g);
-      let dt = dtheta / OMEGA_EARTH;
+      // liftoff is T_PLANE before the moment the site has to be under the plane
+      let dt = dtheta / OMEGA_EARTH - T_PLANE;
       if (dt < 60) dt += SIDEREAL_DAY;
       cand = new Date(t.getTime() + dt * 1000);
     }
