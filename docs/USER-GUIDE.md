@@ -67,6 +67,14 @@ switches automatically as the mission moves through them — pad, liftoff, ascen
 upper stage, coast, burn, deployment, orbit — in live flight and in replay alike. Picking a
 camera yourself overrides the sequence until the next phase begins.
 
+Top right of the picture is the **telemetry card**. It starts *compact*: status and flight
+phase, altitude, inertial speed, vertical speed, apoapsis × periapsis, active stage with its
+throttle, and Δv remaining — seven lines, docked clear of the vehicle. The chip in its top-right corner (or
+the `H` key) cycles it **compact → full → hidden**: *full* is the complete 21-readout grid,
+*hidden* leaves nothing but the chip and the picture. The choice is remembered between
+visits, on a narrow screen the card is suppressed entirely and the telemetry panel below the viewport carries the readouts. Nothing is lost in any of the
+three — the telemetry panel beside the viewport carries every readout at all times.
+
 The band under the viewport is the **phase narration**: a title (e.g. "Gravity turn") and
 one line of what is happening and why, next to the mission clock and the most recent
 callout. It is the fastest way to know what phase you are watching without reading the raw
