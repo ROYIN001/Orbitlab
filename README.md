@@ -2,7 +2,8 @@
 
 Physics-based rocket launch and orbital-insertion simulator that runs in the browser.
 Pick a real launch vehicle, a payload, a launch site and a target orbit, then fly the
-mission from the pad to orbit with four camera views and an engineering telemetry panel.
+mission from the pad to orbit with four camera views, a scrubbable flight recording and
+an engineering telemetry panel.
 
 Built with Vite, TypeScript and Three.js. Interface in English, Russian and Thai.
 
@@ -15,30 +16,30 @@ tablet, and a single stack on a phone with the viewport first.
   (J2 oblateness in orbit), US Standard Atmosphere 1976 with an exponential upper
   atmosphere, Mach-dependent drag, pressure-dependent thrust and specific impulse,
   real staging tables, Earth-rotation velocity credit, RK4 integration.
-- **18 launch vehicles**: Soyuz-2.1a, Soyuz-2.1b/Fregat, Proton-M/Briz-M, Angara-A5/Briz-M,
-  Falcon 9 Block 5, Falcon Heavy, Atlas V 551, Vulcan Centaur VC4, Ariane 64, Vega-C,
-  Long March 2D, Long March 3B/E, Long March 5, H3-22, H-IIA 202 (historical), PSLV-XL,
-  Electron, Starship. Parallel boosters (including air-lit ones), hot staging,
-  solid-motor thrust profiles, throttle buckets at max-Q, acceleration limits, first-stage
-  recovery with entry and landing burns.
-- **15 launch sites**: Baikonur, Plesetsk, Vostochny, Cape Canaveral/KSC, Vandenberg,
-  Wallops, Starbase, Kourou, Jiuquan, Taiyuan, Xichang, Wenchang, Tanegashima,
-  Sriharikota and Mahia — each with its own latitude, elevation, range-safety azimuth
-  corridor and the inclination band that corridor implies. The lowest and highest
-  inclination are measured from the corridor itself, so a site never offers a plane no
-  azimuth in its own window could fly: Vandenberg's 147–201° corridor reaches 61.6°–104.9°
-  and nothing below it, which is why the 53° Starlink launches from there need a dogleg
-  the model does not fly.
+- **18 launch vehicles** from 15 launch sites — see [Fleet](#fleet) below. Parallel
+  boosters (including air-lit ones), hot staging, per-motor solid thrust profiles,
+  throttle buckets at max-Q, acceleration limits, first-stage recovery with entry and
+  landing burns.
 - **Orbit presets** (ISS, Starlink, sun-synchronous at 600 km, polar, GPS/GLONASS MEO,
-  GTO, GEO, Molniya, Tundra) plus fully custom orbits. Launch-window computation for the ISS plane
-  and for sun-synchronous local-time constraints (RAAN targeting).
+  GTO, GEO, Molniya, Tundra) plus fully custom orbits. Launch-window computation for the ISS
+  plane and for sun-synchronous local-time constraints (RAAN targeting).
 - **Guidance and mission sequencing**: vertical rise, pitch-over kick, gravity turn with a
   pitch-program rate limit, explicit closed-loop steering into the parking orbit, coast and
   circularisation, apogee-raising burns split across perigee passes for low-thrust stages,
-  combined plane change and circularisation at apogee, and the spacecraft's own propulsion
-  for the final orbit raising. An auto-tuner searches the pitch program for the best margin.
+  combined plane change and circularisation at apogee, direct insertion for a single-shot
+  stack close to its target, and the spacecraft's own propulsion for the final orbit
+  raising. An auto-tuner searches the pitch program for the best margin.
 - **Failure scenarios**: engine-out, total thrust loss, premature separation, stuck fairing,
   range-safety destruct, or a random failure.
+- **A recorded, scrubbable flight**. A `FlightRecorder` stores a `VisualFrame` snapshot at
+  an adaptive cadence as the mission flies — dense through ascent and any burn, sparse
+  through a long coast, and always on both sides of an event — so the timeline scrubber
+  under the viewport rewinds the 3-D view, the HUD, the map, the onboard overlay and the
+  phase narration together, exactly to what was flown. The event bar marks staging, max Q,
+  fairing jettison, burns and failures on the same timeline; clicking a marker seeks to it.
+  Scrubbing never stops the live flight: it keeps recording behind the cursor, and **Live**
+  jumps back to the head. The live flight and the replay cursor keep separate time-warp
+  controls, so scrubbing fast through a recording never makes the live mission sprint.
 - **Four views**: exterior chase camera, illustrative onboard/crew view with attitude
   indicator and g-meter, space view around the Earth, and a 2D orbital map with ground
   track, predicted and target orbits, day/night terminator and stage impact points.
@@ -48,19 +49,81 @@ tablet, and a single stack on a phone with the viewport first.
   losses; event log; CSV export.
 - **Pre-flight feasibility verdict**: before launch the status note says whether the mission
   is flyable — whether the payload fits the vehicle's rated capability for the orbit class
-  (LEO, SSO/polar, GTO/GEO) and whether the target inclination is reachable from the site.
-- **Phase narration and a camera sequence**: the viewport names the phase and explains it in
-  one line, and the camera follows a per-phase programme you can set yourself.
+  (LEO, SSO/polar, GTO/GEO), whether the target inclination is inside the launch site's
+  range-safety corridor (both ends of it), and whether the stack can actually deliver the
+  orbit: the planner's own ascent-Δv margin, a direct insertion nothing can raise, and the Δv
+  the planned burns need against what is left to fly them.
+- **Phase narration and a camera sequence**: the viewport names the flight phase and
+  explains it in one line, next to the mission clock and the latest callout, and the camera
+  follows a per-phase programme you can set yourself — identically live and in replay.
 - **Physics & sources dialog**: a localized summary of the model with the data sources and
   the credits.
+- **WebMCP tools** (see [below](#webmcp-tools)) for a page-attached agent to read the flight
+  and drive the simulator programmatically.
+
+## Fleet
+
+Payload figures are rated kg to the orbit class from the vehicle's own reference orbit
+(see [Vehicle data](#vehicle-data) below) — treat every number as approximate (±10 %) and
+not directly comparable vehicle-to-vehicle, since the reference orbit differs.
+
+| Vehicle | Country | Stages | Launch sites | Payload → LEO | → GTO | → SSO |
+| --- | --- | ---: | --- | ---: | ---: | ---: |
+| Soyuz-2.1a | RU | 2 | Baikonur, Plesetsk, Vostochny | 7,430 kg | – | – |
+| Soyuz-2.1b / Fregat-M | RU | 3 | Baikonur, Plesetsk, Vostochny | 8,670 kg | 1,900 kg | 4,900 kg |
+| Proton-M / Briz-M | RU | 4 | Baikonur | 23,000 kg | 6,920 kg | – |
+| Angara-A5 / Briz-M | RU | 3 | Plesetsk, Vostochny | 24,500 kg | 5,400 kg | – |
+| Falcon 9 Block 5 | US | 2 | Cape Canaveral, Vandenberg | 22,800 kg | 8,300 kg | 15,000 kg |
+| Falcon Heavy | US | 2 | Cape Canaveral | 63,800 kg | 26,700 kg | – |
+| Atlas V 551 | US | 2 | Cape Canaveral, Vandenberg | 18,850 kg | 8,900 kg | – |
+| Vulcan Centaur VC4 | US | 2 | Cape Canaveral, Vandenberg | 21,400 kg | 11,600 kg | 18,500 kg |
+| Ariane 64 | EU | 2 | Kourou | 21,600 kg | 11,500 kg | 15,000 kg |
+| Vega-C | EU | 4 | Kourou | 3,300 kg | – | 2,300 kg |
+| Long March 2D | CN | 2 | Jiuquan, Taiyuan, Xichang | 3,500 kg | – | 1,300 kg |
+| Long March 3B/E | CN | 3 | Xichang | 11,500 kg | 5,500 kg | – |
+| H-IIA 202 (historical) | JP | 2 | Tanegashima | 10,000 kg | 4,100 kg | 3,600 kg |
+| Long March 5 | CN | 2 | Wenchang | 25,000 kg | 14,000 kg | 15,000 kg |
+| H3-22 | JP | 2 | Tanegashima | 10,000 kg | 4,000 kg | 4,000 kg |
+| PSLV-XL | IN | 4 | Sriharikota | 3,800 kg | 1,425 kg | 1,750 kg |
+| Electron | NZ/US | 3 | Mahia, Wallops | 300 kg | – | 200 kg |
+| Starship (Super Heavy) | US | 2 | Starbase, Cape Canaveral | 100,000 kg | 27,000 kg | – |
+
+Falcon 9, Falcon Heavy and Starship also support **first-stage recovery** (reserves
+propellant for an entry and landing burn); Soyuz-2.1a, Falcon 9 and Starship support
+**crewed** payloads.
+
+### Launch sites
+
+Each site carries its own latitude, elevation and a range-safety azimuth corridor, and the
+reachable inclination band is measured from that corridor rather than assumed — a site
+never offers a plane no azimuth in its own window could fly.
+
+| Site | Country | Reachable inclination |
+| --- | --- | --- |
+| Baikonur Cosmodrome | KZ | 51.6°–91.8° |
+| Plesetsk Cosmodrome | RU | 62.8°–102.6° |
+| Vostochny Cosmodrome | RU | 51.7°–100.9° |
+| Cape Canaveral / KSC | US | 28.5°–57.6° |
+| Vandenberg SFB | US | 61.6°–104.9° |
+| Wallops Flight Facility | US | 38.0°–72.3° |
+| Starbase (Boca Chica) | US | 26.0°–31.8° |
+| Guiana Space Centre (Kourou) | FR | 5.2°–96.5° |
+| Wenchang Space Launch Site | CN | 19.5°–86.9° |
+| Tanegashima Space Center | JP | 30.4°–96.0° |
+| Satish Dhawan Space Centre (Sriharikota) | IN | 13.7°–86.7° |
+| Jiuquan Satellite Launch Center | CN | 41.0°–103.1° |
+| Taiyuan Satellite Launch Center | CN | 63.0°–103.5° |
+| Xichang Satellite Launch Center | CN | 28.5°–31.0° |
+| Rocket Lab LC-1 (Mahia) | NZ | 39.0°–103.4° |
 
 ## Quick start
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # physics and mission tests (vitest)
-npm run build      # static site in dist/
+npm test           # physics, mission and tool tests (vitest)
+npm run typecheck  # tsc --noEmit
+npm run build      # typecheck, then a static site in dist/
 ```
 
 Requires Node.js 20 or newer and a browser with WebGL 2.
@@ -83,10 +146,15 @@ Requires Node.js 20 or newer and a browser with WebGL 2.
    phase begins.
 6. The band under the viewport narrates the phase — what is happening and one line of why —
    next to the mission clock and the latest callout.
-7. The telemetry charts cover the whole recorded flight; the **Ascent** button zooms them to
+7. **Scrub the flight.** The timeline under the controls covers the whole recording, with
+   markers for every event; drag it, click a marker, or use `←`/`→`/`Home`/`End` to rewind
+   the 3-D view, HUD, map, onboard overlay and narration together. The live flight keeps
+   recording behind the cursor — **Live** (or `Shift`+`Space` to pause the live flight
+   itself) brings you back to it.
+8. The telemetry charts cover the whole recorded flight; the **Ascent** button zooms them to
    liftoff → parking orbit. Max Q, MECO, fairing jettison, SECO and the orbital burns are
    marked, and a playhead follows the timeline cursor.
-8. Export the flight data as CSV from the telemetry panel.
+9. Export the flight data as CSV from the telemetry panel.
 
 ### Keyboard
 
@@ -104,6 +172,14 @@ On a phone the page becomes one column in reading order — viewport and playbac
 then mission setup with the Launch button, then the telemetry panel. There is no panel
 drawer: nothing is hidden behind a topbar toggle at any width.
 
+### Languages
+
+The interface, every data-derived label (vehicle notes, satellite and site names, stage
+names) and every event callout are available in English, Russian and Thai (`src/i18n`),
+selectable from the top bar. Vehicle model names, engine names and country codes are left
+untranslated on purpose — they are proper names, and the Russian and Thai press write them
+the same way.
+
 ### Typography
 
 The interface asks Google Fonts for DM Sans (text), Space Grotesk (figures and headings)
@@ -118,8 +194,12 @@ static-hosted demo.
 ## Physics
 
 The model is documented in [docs/PHYSICS.md](docs/PHYSICS.md): frames, forces, atmosphere,
-propulsion, guidance law derivation, mission sequencing, launch geometry and the orbit
-propagator, with the assumptions and limitations.
+propulsion, guidance law derivation, mission sequencing, launch geometry, the orbit
+propagator and the flight recorder, with the assumptions and limitations. A student-facing
+walkthrough of a mission — what each phase means, how to read the telemetry, and a glossary
+pointer — is in [docs/USER-GUIDE.md](docs/USER-GUIDE.md).
+
+### Vehicle data
 
 Vehicle data come from public sources (manufacturer user guides, press kits, encyclopedic
 summaries) and are rounded; treat every figure as approximate (about ±10 %). Structural
@@ -127,27 +207,67 @@ max-Q limits are estimates. For vehicles flown with a low-thrust orbital stage (
 Fregat), the published LEO payload refers to the configuration without that stage.
 
 A rated payload is a number **for a particular orbit from a particular site**, and the
-simulator does not pretend otherwise: Soyuz-2.1a is rated 7 430 kg to 240 km × 51.6° from
-Baikonur and 6 800 kg for the same orbit from Plesetsk, while the mission presets here are
+simulator does not pretend otherwise: Soyuz-2.1a is rated 7,430 kg to 240 km × 51.6° from
+Baikonur and 6,800 kg for the same orbit from Plesetsk, while the mission presets here are
 420–600 km circular, which costs another 150–300 m/s. Where the reference orbit is known it
-is recorded next to the rating in `RATING_ORBITS` (`src/data/vehicles.ts`). Vulcan Centaur
-is modelled in its **VC4** configuration — four GEM-63XL solids, 21 400 kg to the ISS orbit
-and 11 600 kg to GTO; the 24 400–25 600 kg figures often quoted belong to the six-booster
+is recorded next to the rating in `RATING_ORBITS` (`src/data/vehicles.ts`) and the mission
+setup panel prints it under the rated payload ("Rating measured to: LEO 240 km · 51.6° ·
+Baikonur Cosmodrome"). Vulcan Centaur
+is modelled in its **VC4** configuration — four GEM-63XL solids, 21,400 kg to the ISS orbit
+and 11,600 kg to GTO; the 24,400–25,600 kg figures often quoted belong to the six-booster
 VC6. Solid motors carry their published peak-to-mean thrust ratio (P120C 1.52, PSOM-XL
 1.53, GEM-63XL 1.41, S139 1.43, …) on top of a mean thrust chosen so that grain mass over
 mass flow reproduces the published burn time.
+
+## WebMCP tools
+
+When the page is opened in a browser (or an embedding surface) that exposes
+`navigator.modelContext` or `document.modelContext` — [WebMCP](https://github.com/webmachinelearning/webmcp)'s
+proposal for letting an on-page agent call back into the app it is looking at — Orbitlab
+registers nine tools (`src/mcp.ts`) so that agent can read the flight and fly a mission the
+same way a person at the keyboard would. This is entirely optional: registration is
+best-effort, wrapped so a single failing tool or a browser with no WebMCP support never
+breaks the app, and every tool that needs a mission returns `{ ok: false }` rather than
+throwing when none is configured yet.
+
+| Tool | What it does |
+| --- | --- |
+| `read_flight_state` | The current cursor time, live/replay mode and playback speed, and the frame on screen: altitude, speed, apsides, stage, flight phase, Δv remaining, the last and next event. |
+| `list_missions` | Every vehicle (with its sites and rated payloads), launch site, satellite/payload and orbit preset `configure_mission` accepts. |
+| `configure_mission` | Set vehicle, site, payload, orbit (a preset or custom perigee/apogee/inclination/RAAN), launch time and guidance overrides — validated the same way the setup panel validates them — and preview the mission paused on the pad. |
+| `launch_mission` | Configure (if arguments are given) and launch, exactly like the Launch button. |
+| `control_playback` | `play`, `pause`, `warp`, `live`, `skip_next`, `skip_previous` — the same controls as the playback bar, acting on the live flight while at the recording head and on the replay cursor while scrubbed behind it. |
+| `seek` | Move the cursor to a mission time, in seconds after liftoff. |
+| `set_camera` | Switch between the exterior, onboard, space and orbital-map views. |
+| `get_events` | The recorded event log, optionally filtered to events at or after a given time and capped to a limit. |
+| `export_csv` | The whole recorded flight — telemetry samples and events — as CSV text, in the same format the telemetry panel downloads. |
+
+Every tool declares a JSON Schema for its input, MCP annotations (`readOnlyHint`,
+`destructiveHint`, `idempotentHint`), and validates the way the setup panel does: an unknown
+vehicle id, a site the chosen vehicle does not fly from, a guidance override outside the
+panel's own range, or a malformed date raises a descriptive error rather than doing something
+unexpected. A mission that is well-formed but *infeasible* — an over-capacity payload, an
+unreachable inclination, and so on — is **not** rejected: `configure_mission` and
+`launch_mission` apply and preview (or fly) it exactly as they would if a person set the same
+numbers on the panel, and return `ok: true` with the verdict in the result's `feasibility`
+field, so check `feasibility.level` before treating `ok: true` as "this mission will fly."
+`createMcpTools` (the handlers) is pure and DOM-free, and is unit-tested against a minimal
+fake of the app shell in `tests/mcp.test.ts`; `registerMcpTools` (the `document`/`navigator`
+lookup) is the thin part that actually touches the browser.
 
 ## Project layout
 
 ```
 src/physics/    atmosphere, orbital mechanics, integrator, vehicle model, guidance,
-                mission planner, simulation loop, auto-tuner
+                mission planner, simulation loop, auto-tuner, flight recorder frames
 src/data/       launch vehicles, sites, orbit presets, satellites
 src/render/     Three.js scene (floating origin, Earth shaders), rocket, debris,
                 trails, launch pad, cameras
+src/replay/     flight recorder, replay player, frame-backed simulation view, explosions
 src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map,
-                onboard overlay, timeline, dialogs
+                onboard overlay, timeline/event bar, dialogs
 src/i18n/       English, Russian and Thai dictionaries
+src/mcp.ts      WebMCP tools
 tests/          vitest suites (unit tests and full missions to orbit)
 ```
 

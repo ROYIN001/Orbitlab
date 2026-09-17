@@ -1,7 +1,8 @@
 # Orbitlab physics model
 
 This document describes what the simulator computes. Symbols follow the usual astrodynamics
-conventions; SI units throughout.
+conventions; SI units throughout. For a student-facing walkthrough of flying and reading a
+mission instead, see [docs/USER-GUIDE.md](USER-GUIDE.md).
 
 ## 1. Reference frame and state
 
@@ -128,18 +129,22 @@ about 0.0012 BTU/ft²·s, which no operator flies a fairing to — and they had 
 from the jettison times they were supposed to predict. Bending a physical criterion by eighty
 times to reproduce a number is fitting, not modelling.
 
-So the mechanism is modelled instead. These four operators **publish a jettison time and fly
-it**, exactly as this document already conceded for Soyuz, and the field is now
-`FairingSpec.sepTime`: Ariane 64 200 s, Vega-C 220 s, Long March 2D 220 s, H-IIA 202 250 s
-(measured T+200.1, 220.0, 220.2, 250.2 s). The 80 km altitude floor still applies to a timeline
-release, so a trajectory that is still deep in the atmosphere at its published time does not
-shed the fairing there. Everything else in the fleet — Falcon 9, Soyuz-2.1a, H3, Electron,
-PSLV-XL, Long March 3B/E, Long March 5, Angara, Proton, Atlas V, Vulcan — keeps the unmodified
-physical placard.
+So the mechanism is modelled instead. Those four operators **publish a jettison time and fly
+it**, and the field is now `FairingSpec.sepTime`: Ariane 64 200 s, Vega-C 220 s, Long March 2D
+220 s, H-IIA 202 250 s (measured T+200.1, 220.0, 220.2, 250.2 s). Soyuz-2.1a, Soyuz-2.1b and Long
+March 3B/E carry the same field for the same reason — their operators publish a jettison time too
+— at 157 s, 157 s and 215 s (measured T+157.1 s and T+215.2 s). The 80 km altitude floor still
+applies to a timeline release, so a trajectory that is still deep in the atmosphere at its
+published time does not shed the fairing there. Everything else in the fleet — Falcon 9, H3,
+Electron, PSLV-XL, Long March 5, Angara, Proton, Atlas V, Vulcan — keeps the unmodified physical
+placard.
 
-Soyuz-2.1a stays on the placard and stays 19 s late (T+176 s against a published ~157 s): at the
-published time the vehicle is still at 90 km where the heating is 11.9 kW/m², so the R-7 is
-releasing on a schedule too, and no data for that schedule is claimed here.
+Soyuz-2.1a and Soyuz-2.1b now fly the published T+157 s callout directly instead of the heating
+placard, which used to leave Soyuz-2.1a 19 s late (T+176 s against that same ~157 s): at the
+published time the vehicle is at 90 km, above the 80 km floor, while the free-molecular heating
+is still 11.9 kW/m² — ten times any sensible placard — so the fairing was never coming off there
+on the physical criterion alone. As with the four vehicles above, that row now agrees by
+construction and is a regression guard rather than evidence.
 
 When first-stage recovery is selected, a fraction of
 first-stage propellant is reserved and the spent stage performs an entry burn near 70 km and
@@ -317,7 +322,9 @@ largest remaining Δv that respects max-Q. No mission requires it.
   1 684–2 633 m/s, median 1 970 (gravity 889–1 454, steering 658–1 363, drag 9–114). It was
   1 450 m/s until this wave — below the measured spread entirely — and was kept there because
   raising it was believed to cost accepted cases; re-measured after the guidance fixes below,
-  1 450, 1 750 and 1 850 all give the same 149 of 201 fleet rows, so the honest number is free. For a stack that carries a low-thrust kick stage (Fregat,
+  1 450, 1 750 and 1 850 all give the same 149 of the 201 fleet rows the matrix held at the
+  time (it is 195 since release review 2 corrected the `iss` gate, §6b), so the honest number
+  is free. For a stack that carries a low-thrust kick stage (Fregat,
   Briz-M, Curie) the test is applied to the stages below it, which is the case the ellipse was
   introduced for. Aiming a stack at an ellipse it cannot reach is strictly worse than aiming
   it at the circular parking orbit it can: the ascent burns to depletion short of both and
@@ -339,7 +346,7 @@ largest remaining Δv that respects max-Q. No mission requires it.
   own (`singleShotCutoff`), because everything else there assumes a later burn exists and is
   gated on `canReigniteAfterCutoff`: cut off when the orbit **already is** the mission's, or
   when the apsis residual has stopped improving and further thrust can only make it worse.
-  Soyuz-2.1a with an inert payload aimed at 200 km circular now cuts off at 198.2 × 200.7 km
+  Soyuz-2.1a with an inert payload aimed at 200 km circular now cuts off at 197.2 × 200.4 km
   with 2.7 km/s still in the Blok I; it used to burn on to 197 × 695 km.
 
   The first of those two conditions is asked at a **quarter** of the acceptance band, not at the
@@ -355,15 +362,19 @@ largest remaining Δv that respects max-Q. No mission requires it.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 198.2 × 200.7 ✓ | 197.9 × 200.4 ✓ | 197.6 × 200.1 ✓ | 151.1 × 354.1 |
-  | 250 km | 219.9 × 345.6 | 241.2 × 298.8 | 247.0 × 265.3 | 140.8 × 2 418.0 |
-  | 300 km | 143.9 × 896.5 | 144.1 × 874.2 | 110.7 × 745.3 | 140.9 × 2 423.7 |
+  | 200 km | 197.2 × 200.4 ✓ | 198.7 × 200.6 ✓ | 197.5 × 200.1 ✓ | 151.1 × 354.1 |
+  | 250 km | 219.5 × 346.4 | 241.2 × 299.2 | 247.1 × 265.5 | 140.8 × 2 418.0 |
+  | 300 km | 143.8 × 895.4 | 144.0 × 873.2 | 114.6 × 754.5 (tanks dry) | 140.9 × 2 423.7 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind
   DIRECT_INSERTION_CEILING` flies all eighteen cells (three payloads × three altitudes for each
   stack) and checks the closes/does-not-close verdict and both apsides to ±3 km. The copy above
-  is the only other one and is a documentation convenience.
+  is the only other one and is a documentation convenience, kept in step with the asserted values
+  rather than re-derived by hand — the Soyuz cells' perigees moved by under 1.5 km (the heaviest
+  300 km cell's by 3.9 km, from 110.7 to 114.6; its apoapsis moved further, 9.2 km, from 745.3 to
+  754.5) once the fairing started leaving on Soyuz's published T+157 s callout (§4) instead of
+  the heating placard, and both copies now read the post-change figures.
 
   That change is the second half of a fix the last wave only half made.
   `src/physics/mission.ts` used to carry its own copy in the `DIRECT_INSERTION_CEILING` doc
@@ -489,7 +500,7 @@ each one inside the window in brackets.
 
 **The "window" column is a regression band, not a fidelity claim.** It is drawn around the
 *measured* value (±8 or ±10 s by convention, or the published band where that is wider), so any
-change to the model shows up as a test failure. **Nine milestones in this section fall outside
+change to the model shows up as a test failure. **Seven milestones in this section fall outside
 their published callout**, and they are pinned by a test (`disagreements with the published
 callout`) that fails if the set changes. A green table is evidence of self-consistency; the
 `published` column is where fidelity is judged.
@@ -500,18 +511,19 @@ band instead of with the measured value, and a band drawn around the measurement
 10 s of real disagreement. Two rows whose own notes in this document said they were outside the
 published window — Electron's max Q and its MECO — were counted as agreeing. The comparison is
 now measured-value against published window, with a stated ±2 % (minimum ±5 s) allowance on a
-point callout such as "~157 s", because a single rounded press-kit number is not a window. The
-nine:
+point callout such as "~157 s", because a single rounded press-kit number is not a window. That
+gave nine; two have since closed — Soyuz-2.1a's and Long March 3B/E's fairing jettison, both
+still on the heating placard at the time — by flying their operators' published jettison time
+instead (§4), the same fix already given to Ariane 64, Vega-C, Long March 2D and H-IIA 202. The
+seven left:
 
 | mission | milestone | model | published |
 | --- | --- | --- | --- |
 | Falcon 9 | max Q | 50.3 s | 65–80 s |
 | Electron | max Q | 50.7 s | 60–70 s |
 | Electron | MECO | 138.0 s | 145–155 s |
-| Soyuz-2.1a | fairing jettison | 176.3 s | ~157 s |
 | Soyuz-2.1a | core cut-off | 294.1 s | ~287 s |
 | H3-22 | SRB-3 burnout | 104.3 s | 105–115 s |
-| Long March 3B/E | fairing jettison | 223.2 s | ~215 s |
 | PSLV-XL | PS3 cut-off | 386.1 s | 400–600 s |
 | Ariane 64 | core cut-off | 444.6 s | ~460 s |
 
@@ -549,19 +561,44 @@ at 22 kPa, which pins q there from T+45 s onwards, while the real vehicle peaks 
 T+72 s. The marker is now in the right place on the modelled q curve; the curve itself is early
 and low.
 
+**Raising `qStart` does not close it, and was measured rather than assumed.** A review proposed
+moving the bucket to the real ~33 kPa peak and expected the disagreement list to drop by one.
+Flown, the same mission with `qStart` at 26 / 30 / 33 / 36 kPa and with the bucket removed
+entirely gives:
+
+| `qStart` | max Q | MECO (150–165) | fairing (190–230) |
+| --- | --- | --- | --- |
+| 22 kPa (shipped) | 50.3 s, 22.6 kPa | 150.8 s | 210.9 s |
+| 26 kPa | 44.6 s, 26.1 kPa | 148.2 s | 200.3 s |
+| 30 kPa | 50.7 s, 30.1 kPa | 146.2 s | 192.9 s |
+| 33 kPa | 57.6 s, 33.0 kPa | 145.0 s | 188.8 s |
+| no bucket | 59.2 s, 33.1 kPa | 145.0 s | 188.6 s |
+
+The peak *value* is a data question and 33 kPa reproduces the real one exactly; the peak *time*
+is not. Even with no throttle-down at all the modelled q peaks at T+59 s, six seconds short of
+the published window, because when q peaks is set by the ascent profile — the speed the vehicle
+has at the altitude where density has fallen away — and not by the bucket. Meanwhile a vehicle
+that never throttles back climbs faster, so MECO moves to T+145 s and fairing jettison to
+T+188.8 s, both of which *leave* their published windows. The change therefore takes the
+disagreement list from seven entries to nine while still missing max Q. Closing it honestly
+means a lofter first-stage profile (`guidanceDefaults`), which moves every other row in this
+table, so the shipped data stay where they are and the disagreement stays disclosed.
+
 **Soyuz-2.1a, 7.15 t crew ship from Baikonur to the ISS** (the application's default mission)
 
 | milestone | published | model | window |
 | --- | --- | --- | --- |
 | booster separation | ~118 s | 120.4 s | 112–128 |
-| fairing jettison | ~157 s | 176.3 s | 148–185 |
+| fairing jettison | ~157 s | 157.1 s | 148–185 |
 | core cut-off | ~287 s | 294.1 s | 275–305 |
 | third-stage cut-off (SECO) | ~528 s | 535.9 s | 500–570 |
 
 Insertion is 197 × 200 km at T+536 s and the crew ship circularises itself at 417.9 × 418.0 km /
-51.64° at T+3397 s. The fairing is 12 % late: the R-7 drops it on a schedule rather than on a
-thermal placard, and at the published T+157 s this trajectory is still at 90 km where the
-free-molecular heating is 11.9 kW/m² — ten times any sensible placard.
+51.64° at T+3397 s. The fairing is now flown on Soyuz's **published jettison time**
+(`fairing.sepTime` = 157 s, see §4), so that row agrees by construction and is a regression guard
+rather than evidence: at the published time this trajectory is at 90 km, where the free-molecular
+heating is still 11.9 kW/m² — ten times any sensible placard — which is why the heating placard
+alone used to leave it 19 s late (T+176 s).
 
 **H3-22, 5 t to 500 km from Tanegashima**
 
@@ -645,8 +682,11 @@ is pinned by a test of its own rather than dressed up as a milestone.
 | --- | --- | --- | --- |
 | booster separation | ~140 s | 141.3 s | 135–147 |
 | first/second stage separation | ~158 s | 158.8 s | 153–165 |
-| fairing jettison | ~215 s | 223.2 s | 215–231 |
+| fairing jettison | ~215 s | 215.2 s | 215–231 |
 | second-stage cut-off | ~345 s | 343.4 s | 336–350 |
+
+Flown on the published timeline like Ariane 64 and Vega-C above (`fairing.sepTime` = 215 s, see
+§4): measured T+215.2 s, against T+223.2 s on the heating placard it used to fly.
 
 **H-IIA 202, 4.1 t to GTO from Tanegashima**
 
@@ -666,12 +706,20 @@ flown on the published jettison time instead (§4), which is what the operator d
 ## 6b. Fleet acceptance and reference payloads
 
 `tests/fleet-defaults.test.ts` flies every vehicle from its first site to `leo`, `iss` (where
-the site's range-safety minimum reaches 51.64°), `sso` and `gto` (where a GTO figure is
-published), at 25 %, 50 % and 90 % of the reference payload. That is **201 combinations**, of
-which 45 are not flyable from the site at all (range safety, below), leaving **156**; of those
-**117 are acceptance cases and all 117 pass**, and 39 are excluded by one of the three tables
+the site's range-safety **corridor contains** 51.64°), `sso` and `gto` (where a GTO figure is
+published), at 25 %, 50 % and 90 % of the reference payload. That is **195 combinations**, of
+which 45 are not flyable from the site at all (range safety, below), leaving **150**; of those
+**111 are acceptance cases and all 111 pass**, and 39 are excluded by one of the three tables
 below. Every excluded combination is re-flown by a separate test, so an entry cannot quietly
-stop being true.
+stop being true. The matrix and the tables live in `tests/fleet-harness.ts`, so that the
+acceptance test and the pre-flight verdict's own test can read the same lists.
+
+It was 201 combinations until release review 2: the `iss` gate tested only the LOWER end of the
+site's corridor (`site.minInclination <= 51.64`), which put Starship from Starbase and Long
+March 3B/E from Xichang — corridors that reach 31.8° and 31° — into the matrix at a 51.64°
+plane, three payload fractions each. All six flew and were accepted, and no range would have
+licensed any of them. The gate is now `inclinationCorridor`, the same function `planMission`
+and the setup panel's verdict use.
 
 The number that measures the guidance is the last of those three tables, not the total, and it
 is **four**. The history of that number is worth keeping straight, because two waves in a row
@@ -947,7 +995,7 @@ at the full band shuts the engine down the first instant the orbit is barely leg
 is still climbing at cut-off, so it stops at the low edge. Measured, that put Soyuz-2.1a's
 flagship 200 km direct insertion at 190.4 × 200.1 km — inside a 10 km band by 395 m, 4 % of the
 tolerance, while four places in the tree quoted it as "198 × 201". At a quarter of the band the
-same flight cuts off at 198.2 × 200.7 km, and the test asserts the *margin* rather than leaving
+same flight cuts off at 197.2 × 200.4 km, and the test asserts the *margin* rather than leaving
 it to be discovered.
 
 Narrowing the apoapsis-ceiling band (from 8 % of the insertion apoapsis to 8 % of the insertion
@@ -1053,15 +1101,146 @@ orbital map and in the RAAN/altitude readouts under high time warp.
 
 ## Glossary (EN / RU / TH)
 
+This table is the source of truth for `src/i18n/ru.ts` and `src/i18n/th.ts`, and
+`tests/i18n.test.ts` is the mechanical half of the same contract (parity, placeholders,
+script coverage, live call sites). When a term below and a dictionary value disagree, the
+dictionary is wrong. Three conventions hold across the whole Thai column: Arabic numerals
+only (the app never prints Thai digits), spaces at clause boundaries only — never between a
+preposition and the noun it governs, which is why the verdict strings read `สู่{class}` —
+and one Thai word per English term, never two spellings of the same idea in two panels.
+
+Proper names are **not** translated in any language: vehicle names (Soyuz-2.1a, Falcon 9),
+engine names (RD-0110, Merlin 1D), company names and orbit acronyms printed as chips
+(GTO, SSO, GLONASS). Unit symbols keep their SI spelling; only the Thai and Russian words
+around them change.
+
+### Vehicle and structure
+
 | English | Русский | ไทย |
 | --- | --- | --- |
 | launch vehicle | ракета-носитель | จรวดนำส่ง |
 | payload | полезная нагрузка | น้ำหนักบรรทุก |
-| perigee / apogee | перигей / апогей | จุดใกล้/ไกลโลกที่สุด |
+| spacecraft | космический аппарат | ยานอวกาศ |
+| stage | ступень | ท่อนขับ / ท่อน |
+| upper stage (restartable) | разгонный блок | ท่อนขับดัน |
+| kick stage | разгонный блок (малой тяги) | ท่อนเสริมแรงส่ง |
+| booster / strap-on | боковой блок, ускоритель | บูสเตอร์ |
+| core stage | центральный блок | ท่อนแกนกลาง |
+| solid rocket motor | твердотопливный двигатель | มอเตอร์เชื้อเพลิงแข็ง |
+| fairing (payload fairing) | головной обтекатель | ครอบจมูกจรวด |
+| fairing jettison | сброс головного обтекателя | สลัดครอบจมูกจรวด |
+| launch site / cosmodrome | космодром | ฐานปล่อยจรวด |
+| launch pad | стартовый стол | ฐานปล่อย |
+| spent stage / debris | отработавшая ступень | ท่อนที่ใช้แล้ว |
+
+### Propulsion
+
+| English | Русский | ไทย |
+| --- | --- | --- |
+| thrust | тяга | แรงขับ |
+| throttle (setting, %) | режим двигателя | ระดับแรงขับ |
+| specific impulse | удельный импульс | แรงดลจำเพาะ |
+| thrust-to-weight ratio | тяговооружённость | อัตราส่วนแรงขับต่อน้ำหนัก |
+| propellant | топливо, компоненты топлива | เชื้อเพลิง |
+| hypergolic | высококипящие компоненты | ไฮเปอร์โกลิก |
+| kerolox | кислородно-керосиновый | น้ำมันก๊าด-ออกซิเจนเหลว |
+| methalox | метан-кислородный | มีเทน-ออกซิเจนเหลว |
+| ignition | запуск двигателей | จุดเครื่องยนต์ |
+| cutoff (MECO / SECO) | выключение, отсечка тяги | ดับเครื่องยนต์ |
+| burnout | окончание работы (выгорание — для РДТТ) | เชื้อเพลิงหมด |
+| staging | разделение ступеней | การแยกท่อนขับ |
+| hot staging | горячее разделение | การแยกท่อนแบบร้อน |
+| air-lit booster | ускоритель с запуском в полёте | บูสเตอร์จุดกลางอากาศ |
+| expander bleed cycle | безгенераторная схема с отводом газа | วัฏจักรเอ็กซ์แพนเดอร์บลีด |
+
+### Flight and aerodynamics
+
+| English | Русский | ไทย |
+| --- | --- | --- |
+| liftoff | отрыв, старт | ทะยานขึ้น / ยกตัว |
+| ascent (powered) | выведение, активный участок | ช่วงไต่ขึ้นด้วยกำลังขับ |
+| vertical rise | вертикальный участок | ไต่ขึ้นแนวดิ่ง |
+| pitch-over / kick | начальный разворот | เอียงหัว |
+| pitch programme | программа тангажа | โปรแกรมพิตช์ |
+| pitch command | команда тангажа | คำสั่งมุมพิตช์ |
+| gravity turn | гравитационный разворот | การเลี้ยวด้วยแรงโน้มถ่วง |
+| angle of attack | угол атаки | มุมปะทะ |
+| attitude slew rate | угловая скорость разворота | อัตราหมุนท่าทาง |
+| closed-loop guidance | наведение по замкнутому контуру | การนำวิถีวงรอบปิด |
+| dynamic pressure | скоростной напор | ความดันพลวัต |
+| max-Q | максимальный скоростной напор | ความดันพลวัตสูงสุด |
+| drag | аэродинамическое сопротивление | แรงต้านอากาศ |
+| g-load | перегрузка | ความเร่ง (แรง g) |
+| downrange distance | дальность | ระยะตามแนวการบิน |
+| ballistic coast | пассивный участок | ช่วงเคลื่อนที่อิสระ |
+| re-entry | вход в атмосферу | กลับเข้าสู่ชั้นบรรยากาศ |
+
+### Orbits and geometry
+
+| English | Русский | ไทย |
+| --- | --- | --- |
+| perigee / apogee | перигей / апогей | จุดใกล้โลกที่สุด / จุดไกลโลกที่สุด |
+| periapsis / apoapsis | перицентр / апоцентр | จุดใกล้ที่สุด / จุดไกลที่สุด |
+| altitude | высота | ความสูง |
 | inclination | наклонение | ความเอียงของวงโคจร |
 | RAAN | долгота восходящего узла | ลองจิจูดของโหนดขึ้น |
-| dynamic pressure (max-Q) | скоростной напор | ความดันพลวัต |
-| gravity turn | гравитационный разворот | การเลี้ยวด้วยแรงโน้มถ่วง |
+| argument of perigee | аргумент перигея | อาร์กิวเมนต์ของจุดใกล้โลกที่สุด |
+| ascending node | восходящий узел | โหนดขึ้น |
+| LTAN | местное время восходящего узла | เวลาท้องถิ่นของโหนดขึ้น |
+| orbital period | период обращения | คาบการโคจร |
 | parking orbit | опорная орбита | วงโคจรจอด |
+| insertion orbit | орбита выведения | วงโคจรที่แทรกเข้า |
+| circularisation | скругление орбиты | การปรับวงโคจรให้เป็นวงกลม |
 | plane change | поворот плоскости орбиты | การเปลี่ยนระนาบวงโคจร |
+| orbital burn / manoeuvre | орбитальный манёвр | การจุดเครื่องยนต์ในวงโคจร |
+| delta-v (Δv) | характеристическая скорость | เดลตา-วี (Δv) |
 | delta-v budget | баланс характеристической скорости | งบประมาณ Δv |
+| gravity / drag / steering loss | гравитационные / аэродинамические потери, потери на управление | การสูญเสียจากแรงโน้มถ่วง / แรงต้าน / การบังคับทิศ |
+| LEO | низкая околоземная орбита (НОО) | วงโคจรต่ำของโลก |
+| sun-synchronous orbit | солнечно-синхронная орбита (ССО) | วงโคจรสัมพันธ์ดวงอาทิตย์ |
+| GTO / GEO | геопереходная / геостационарная орбита (ГПО / ГСО) | วงโคจรถ่ายโอน / วงโคจรค้างฟ้า |
+| geosynchronous | геосинхронная | สมวาระโลก |
+| Molniya orbit | орбита «Молния» | วงโคจรมอลนิยา |
+| critical inclination | критическое наклонение | ความเอียงวิกฤต |
+| ground track | трасса полёта | เส้นทางบนพื้นโลก |
+| launch azimuth | азимут пуска | มุมทิศการปล่อย |
+| launch window | стартовое окно | หน้าต่างการปล่อย |
+| nodal precession (J2) | прецессия узла | การส่ายของโหนด |
+
+### Operations, failures and the replay
+
+| English | Русский | ไทย |
+| --- | --- | --- |
+| telemetry | телеметрия | โทรมาตร |
+| mission elapsed time | полётное время | เวลาที่ผ่านไปของภารกิจ |
+| countdown | обратный отсчёт | นับถอยหลัง |
+| mission sequencing | циклограмма выведения | ลำดับขั้นของภารกิจ |
+| range safety | система безопасности полёта (СБП) | ระบบความปลอดภัยการบิน |
+| flight termination | прекращение полёта (АПР) | การยุติการบิน |
+| structural break-up | разрушение конструкции | โครงสร้างแตกสลาย |
+| engine out | отказ двигателя | เครื่องยนต์ดับ |
+| premature separation | преждевременное отделение | แยกท่อนก่อนกำหนด |
+| booster recovery / landing burn | возврат ступени, посадочный импульс | การกู้คืนบูสเตอร์ / จุดเครื่องยนต์ลงจอด |
+| replay / scrub | повтор / перемотка | ย้อนดูบันทึก / เลื่อนเวลา |
+| time warp | ускорение времени | เร่งเวลา |
+
+### Terms that are easy to get wrong
+
+* **throttle** is *режим двигателя* / *ระดับแรงขับ*, never *дроссель* (a valve) or
+  *คันเร่ง* (a car's accelerator pedal). The readout is a percentage of rated thrust.
+* **range safety** is the flight-safety system, so Thai takes *ระบบความปลอดภัยการบิน*;
+  *สนามยิง* is a ground firing range and is wrong here.
+* **flight termination** is *АПР / подрыв по команде СБП*, not *АВД*, which is an
+  emergency engine shutdown and a different event entirely.
+* **ballistic coast** is *เคลื่อนที่อิสระ* in Thai; *ร่อน* means gliding on air and
+  cannot happen above the atmosphere.
+* **fairing** has exactly one Thai form, *ครอบจมูกจรวด* — not *ฝาครอบ*, *ครอบดาวเทียม*
+  or *ครอบหัวจรวด*, which appeared in four different panels before wave 3.
+* **burnout** of a liquid strap-on is *окончание работы*; *выгорание* belongs to solid
+  motors and reads wrong on Angara or Long March 3B.
+* **semi-synchronous** (GPS) is *полусинхронная*, not *полусуточная 12-часовая*, which
+  says the same thing twice.
+* **telemetry** is *โทรมาตร* throughout; the transliteration *เทเลเมทรี* is not used in
+  the panel headings, so it must not be used in the title either.
+* **Δv** is *характеристическая скорость* in running Russian prose but stays as the
+  symbol Δv in labels and in both Thai columns, because the HUD prints the symbol.

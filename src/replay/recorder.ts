@@ -90,6 +90,9 @@ export class FlightRecorder {
   private decimations = 0;
   /** frames that must survive decimation (event boundaries, liftoff, failure) */
   private keep = new WeakSet<VisualFrame>();
+  /** the stored frame `copyCache` is a copy of, for `recordNow` */
+  private copySource: VisualFrame | null = null;
+  private copyCache: VisualFrame | null = null;
 
   constructor(maxFrames = DEFAULT_MAX_FRAMES) {
     this.maxFrames = maxFrames;
@@ -102,6 +105,8 @@ export class FlightRecorder {
     this.events.length = 0;
     this.decimations = 0;
     this.keep = new WeakSet<VisualFrame>();
+    this.copySource = null;
+    this.copyCache = null;
     const f = captureFrame(sim);
     this.frames.push(f);
     this.keep.add(f);
@@ -210,18 +215,33 @@ export class FlightRecorder {
    * has to be append-only in fact, not by convention. The copy is only paid on
    * the ticks that actually land on a stored frame — the common case in flight
    * is a capture that the cadence throws away, which is handed straight back.
+   *
+   * The copy of a stored frame is itself cached, keyed on the head's identity.
+   * While the clock is not advancing — the app paused on the pad, or the user
+   * studying one instant — this method was otherwise deep-copying three
+   * vectors, every stage, every booster and every debris item sixty times a
+   * second for a frame that cannot have changed. The cache is a copy, so the
+   * recording is still untouchable; it is simply the same copy each tick.
    */
   recordNow(): VisualFrame {
     const sim = this.sim;
     if (!sim) throw new Error('FlightRecorder.recordNow before start()');
     const head = this.head;
-    if (head && Math.abs(head.t - sim.state.t) < 1e-9) return cloneFrame(head);
+    if (head && Math.abs(head.t - sim.state.t) < 1e-9) return this.copyOf(head);
     const f = captureFrame(sim);
     if (!head || f.t - head.t >= this.intervalOf(f) - 1e-9) {
-      this.store(f, false);
-      return cloneFrame(f);
+      return this.copyOf(this.store(f, false));
     }
     return f;
+  }
+
+  /** A cached deep copy of a stored frame (see `recordNow`). */
+  private copyOf(f: VisualFrame): VisualFrame {
+    if (this.copySource !== f || !this.copyCache) {
+      this.copySource = f;
+      this.copyCache = cloneFrame(f);
+    }
+    return this.copyCache;
   }
 
   /**

@@ -1,0 +1,828 @@
+/**
+ * WebMCP tools: let a page-attached agent (a browser MCP client, e.g. an
+ * assistant reading `navigator.modelContext` / `document.modelContext`)
+ * drive the simulator through the same operations the mission-setup panel
+ * and the playback controls expose, plus read back what is on screen.
+ *
+ * Split in two on purpose:
+ *
+ * - `createMcpTools(host)` builds the nine tool definitions and is pure and
+ *   DOM-free: it only touches the `McpAppHost` surface (a structural subset
+ *   of `App`, see below), so `tests/mcp.test.ts` exercises every handler
+ *   — including the validation that mirrors `SetupPanel` — against a tiny
+ *   fake with no `document`.
+ * - `registerMcpTools(host)` is the thin, DOM-touching half: it looks for
+ *   `navigator.modelContext` / `document.modelContext`, registers each tool
+ *   and unregisters them on `pagehide`. Every step is wrapped so that a
+ *   browser with no WebMCP support, or a host that throws, never breaks the
+ *   app — this is the only thing `src/main.ts` calls at startup.
+ *
+ * `App` is never imported here (it would pull in every DOM-touching module
+ * transitively and defeat the point of the split); instead `registerMcpTools`
+ * is typed to accept anything with the same shape, which `App` already has.
+ */
+import type { FailureConfig, FailureMode, GuidanceParams, MissionConfig, OrbitSpec, VehicleSpec } from './types';
+import type { Simulation, SimEvent } from './physics/simulation';
+import type { VisualFrame, StageFrame } from './physics/frame';
+import type { CameraMode } from './render/cameras';
+import type { Feasibility } from './ui/panel';
+import { VEHICLES, vehicleById } from './data/vehicles';
+import { SITES, siteById } from './data/sites';
+import { SATELLITES, satelliteById } from './data/satellites';
+import { ORBIT_PRESETS } from './data/orbits';
+import { resolveTarget } from './physics/mission';
+import { RAD } from './physics/constants';
+
+// ─────────────────────────────────────────────────────────────── host shape
+
+/** The subset of `SetupPanel.state` the tools read and write. Structurally
+ *  identical to (but independent of) `SetupPanel`'s own private `SetupState`,
+ *  so this file never imports the panel class — only its `Feasibility` type. */
+interface McpPanelState {
+  vehicleId: string;
+  satelliteId: string;
+  siteId: string;
+  orbitId: string;
+  orbit: OrbitSpec;
+  launchTime: Date;
+  guidanceOverrides: Partial<GuidanceParams>;
+  failure: FailureConfig;
+  boosterRecovery: boolean;
+  payloadMass: number;
+}
+
+interface McpPanelHost {
+  state: McpPanelState;
+  /**
+   * Sync the auto-tune signature to the current `state` and repaint. The
+   * panel's own controls call `changed()` on every edit, which drops
+   * `state.guidanceOverrides` the moment `missionSignature()` no longer
+   * matches the signature the last auto-tune (or edit) was measured for
+   * (`SetupPanel#changed`); a caller that writes `state` directly, as
+   * `applyConfigureInput` below does, has to resync that signature itself or
+   * the very next human edit through the panel silently clears whatever this
+   * call just set. `render()` alone (the pre-fix behaviour) does not do this.
+   * `siteReassigned` mirrors the one-shot flag the panel's own vehicle
+   * dropdown sets when it forces a different launch site, so the verdict this
+   * call returns still carries the amber "site was reassigned" warning when
+   * this call performed the same reassignment. The flag is one-shot on the
+   * panel's side (assigned, then cleared once the verdict below is computed),
+   * so a later call that does not reassign the site never inherits it.
+   */
+  applyExternalEdit(opts?: { siteReassigned?: boolean }): Feasibility;
+  getConfig(): MissionConfig;
+  feasibility(): Feasibility;
+}
+
+interface McpRecorderHost {
+  readonly events: SimEvent[];
+  readonly startTime: number;
+  readonly headTime: number;
+  recordNow(): VisualFrame;
+}
+
+interface McpPlayerHost {
+  readonly live: boolean;
+  readonly playing: boolean;
+  readonly cursor: number;
+  frame(): VisualFrame | null;
+  lastEvent(t: number): SimEvent | null;
+  nextEvent(t: number): SimEvent | null;
+}
+
+/**
+ * Everything the WebMCP tools need from the app shell. `App` (`src/main.ts`)
+ * satisfies this structurally — every member here is one of its existing
+ * public fields or methods — so `registerMcpTools(app)` needs no change to
+ * the class and no `implements` clause.
+ */
+export interface McpAppHost {
+  readonly panel: McpPanelHost;
+  readonly recorder: McpRecorderHost;
+  readonly player: McpPlayerHost;
+  sim: Simulation | null;
+  camMode: CameraMode;
+  /** the live simulation is advancing (meaningful while `player.live`) */
+  playing: boolean;
+  readonly warp: number;
+  readonly replayWarp: number;
+  setCamera(mode: CameraMode): void;
+  togglePlay(): void;
+  /** Set the time warp of whichever clock (`warp` or `replayWarp`) is currently
+   *  active, keeping the on-screen warp selector and the `,`/`.` keyboard
+   *  stepping in sync (`App.setWarp`) — writing `warp`/`replayWarp` directly
+   *  leaves both stale. */
+  setWarp(v: number): void;
+  seek(time: number): void;
+  goLive(): void;
+  skip(): void;
+  previousEvent(): void;
+  preview(cfg: MissionConfig): void;
+  launch(cfg: MissionConfig): void;
+}
+
+// ───────────────────────────────────────────────────────────────── tool type
+
+interface WebMcpAnnotations {
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
+export interface WebMcpTool {
+  name: string;
+  title: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+  annotations: WebMcpAnnotations;
+  execute: (input: unknown) => unknown;
+}
+
+// ──────────────────────────────────────────────────────────────── constants
+
+const CAMERA_MODES: CameraMode[] = ['exterior', 'onboard', 'space', 'map'];
+const RAAN_MODES: OrbitSpec['raanMode'][] = ['free', 'fixed', 'iss', 'ltan'];
+/** Mirrors the union in `src/types.ts` (`FailureMode`); not re-exported there. */
+const FAILURE_MODES: FailureMode[] = ['none', 'engineOut', 'thrustLoss', 'prematureSep', 'fairingStuck', 'rangeSafety', 'random'];
+const PLAYBACK_ACTIONS = ['play', 'pause', 'warp', 'live', 'skip_next', 'skip_previous'] as const;
+type PlaybackAction = (typeof PLAYBACK_ACTIONS)[number];
+
+/**
+ * Guidance override fields, named and ranged exactly like the panel's own
+ * "Guidance parameters" section (`src/ui/panel.ts#guidanceSection`) so
+ * `configure_mission` rejects the same values the form would. `scale` turns
+ * the wire unit (km for altitudes) into the metre/degree/second unit
+ * `GuidanceParams` stores; `range` is expressed in the *stored* unit.
+ */
+const GUIDANCE_FIELDS: Record<string, { key: keyof GuidanceParams; scale: number; range: [number, number] }> = {
+  pitchOverAltitudeM: { key: 'pitchOverAltitude', scale: 1, range: [20, 5000] },
+  kickAngleDeg: { key: 'kickAngle', scale: 1, range: [0, 45] },
+  kickDurationS: { key: 'kickDuration', scale: 1, range: [1, 60] },
+  maxTurnRateDegS: { key: 'maxTurnRate', scale: 1, range: [0.1, 3] },
+  loftAltitudeKm: { key: 'loftAltitude', scale: 1000, range: [0, 400000] },
+  gravityTurnEndKm: { key: 'gravityTurnEnd', scale: 1000, range: [30000, 150000] },
+  parkingAltitudeKm: { key: 'parkingAltitude', scale: 1000, range: [0, 2000000] },
+  pitchMaxDeg: { key: 'pitchMax', scale: 1, range: [0, 80] },
+  pitchMinDeg: { key: 'pitchMin', scale: 1, range: [-60, 0] },
+  slewRateDegS: { key: 'slewRate', scale: 1, range: [0.5, 20] },
+  maxAccelMs2: { key: 'maxAccel', scale: 1, range: [0, 100] },
+  // Not shown by the panel (no UI control), so only sanity-checked rather
+  // than pinned to a form-measured band.
+  maxTimeToGoS: { key: 'maxTimeToGo', scale: 1, range: [60, 10000] },
+};
+
+// ───────────────────────────────────────────────────────────── input helpers
+
+function asRecord(input: unknown): Record<string, unknown> {
+  return input !== null && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+}
+function expectString(v: unknown, field: string): string {
+  if (typeof v !== 'string' || v.length === 0) throw new Error(`"${field}" must be a non-empty string`);
+  return v;
+}
+function expectNumber(v: unknown, field: string): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`"${field}" must be a finite number`);
+  return v;
+}
+
+function parseGuidanceInput(raw: unknown): Partial<GuidanceParams> {
+  if (raw === undefined || raw === null) return {};
+  if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error('"guidance" must be an object');
+  const out: Partial<GuidanceParams> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const def = GUIDANCE_FIELDS[k];
+    if (!def) throw new Error(`Unknown guidance field "${k}". Valid fields: ${Object.keys(GUIDANCE_FIELDS).join(', ')}`);
+    const num = expectNumber(v, `guidance.${k}`);
+    const stored = num * def.scale;
+    const [lo, hi] = def.range;
+    if (stored < lo || stored > hi) {
+      throw new Error(`guidance.${k} must be between ${lo / def.scale} and ${hi / def.scale} (got ${num})`);
+    }
+    out[def.key] = stored;
+  }
+  return out;
+}
+
+/** The inverse of `parseGuidanceInput`, for echoing a resolved config back. */
+function guidanceToOutput(g: GuidanceParams): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [name, def] of Object.entries(GUIDANCE_FIELDS)) out[name] = g[def.key] / def.scale;
+  return out;
+}
+
+/**
+ * Apply the orbit-shaped fields of a `configure_mission` / `launch_mission`
+ * input onto the panel state, exactly like the panel's own pill buttons and
+ * number fields: picking a preset id replaces the orbit outright, and
+ * touching any individual field (with or without a preset id first) turns it
+ * into a "custom" orbit, per `SetupPanel.customise()`.
+ */
+function applyOrbitInput(state: McpPanelState, input: Record<string, unknown>): void {
+  const customKeys = ['perigeeKm', 'apogeeKm', 'inclinationDeg', 'argPerigeeDeg', 'raanMode', 'raanDeg', 'ltanHours'];
+  const hasCustomFields = customKeys.some((k) => input[k] !== undefined);
+  let orbit: OrbitSpec;
+  let explicitCustom = false;
+  if (input.orbitId !== undefined) {
+    const id = expectString(input.orbitId, 'orbitId');
+    if (id === 'custom') {
+      // Matches the hasCustomFields branch below (and the panel's own
+      // `customise()`): carrying over the previous preset's name/description
+      // would paint "custom" with e.g. the ISS preset's description.
+      const custom = ORBIT_PRESETS.find((o) => o.id === 'custom')!;
+      orbit = { ...state.orbit, id: 'custom', name: custom.name, description: custom.description };
+      explicitCustom = true;
+    } else {
+      const preset = ORBIT_PRESETS.find((o) => o.id === id);
+      if (!preset) throw new Error(`Unknown orbitId "${id}". Valid ids: ${ORBIT_PRESETS.map((o) => o.id).join(', ')}`);
+      orbit = { ...preset };
+    }
+  } else {
+    orbit = { ...state.orbit };
+  }
+  if (hasCustomFields) {
+    if (input.perigeeKm !== undefined) orbit.perigee = Math.max(100, expectNumber(input.perigeeKm, 'perigeeKm')) * 1000;
+    if (input.apogeeKm !== undefined) orbit.apogee = Math.max(100, expectNumber(input.apogeeKm, 'apogeeKm')) * 1000;
+    if (input.inclinationDeg !== undefined) orbit.inclination = Math.max(0, Math.min(180, expectNumber(input.inclinationDeg, 'inclinationDeg')));
+    if (input.argPerigeeDeg !== undefined) {
+      const v = expectNumber(input.argPerigeeDeg, 'argPerigeeDeg');
+      orbit.argPerigee = ((v % 360) + 360) % 360;
+    }
+    if (input.raanMode !== undefined) {
+      const m = expectString(input.raanMode, 'raanMode');
+      if (!RAAN_MODES.includes(m as OrbitSpec['raanMode'])) throw new Error(`raanMode must be one of ${RAAN_MODES.join(', ')}`);
+      orbit.raanMode = m as OrbitSpec['raanMode'];
+    }
+    if (input.raanDeg !== undefined) {
+      const v = expectNumber(input.raanDeg, 'raanDeg');
+      orbit.raan = ((v % 360) + 360) % 360;
+    }
+    if (input.ltanHours !== undefined) orbit.ltan = Math.max(0, Math.min(24, expectNumber(input.ltanHours, 'ltanHours')));
+    if (orbit.perigee > orbit.apogee) {
+      throw new Error(`Custom orbit perigee (${(orbit.perigee / 1000).toFixed(1)} km) must not exceed apogee (${(orbit.apogee / 1000).toFixed(1)} km)`);
+    }
+    if (!explicitCustom) {
+      const custom = ORBIT_PRESETS.find((o) => o.id === 'custom')!;
+      orbit = { ...orbit, id: 'custom', name: custom.name, description: custom.description };
+    }
+    state.orbitId = 'custom';
+  } else if (input.orbitId !== undefined) {
+    state.orbitId = input.orbitId as string;
+  }
+  state.orbit = orbit;
+}
+
+/**
+ * Apply every recognised field of a configure/launch input onto the panel
+ * state (validating as it goes, exactly like the panel's own controls) and
+ * repaint it, so the mission-setup panel on screen reflects what the
+ * MCP-driven agent just set. Returns notices for soft corrections (a vehicle
+ * that does not fly from the previously selected site gets reassigned, the
+ * same thing `SetupPanel` does when the operator picks it from the dropdown)
+ * and the feasibility verdict for the edit that was just applied.
+ *
+ * Transactional: every field is validated and written onto a shallow copy of
+ * `state` first, and `host.panel.state` is only touched once nothing below
+ * has thrown. A field-by-field write straight onto the live state left a
+ * throw part-way through (e.g. an explicit `siteId` the vehicle does not fly
+ * from, rejected after the vehicle had already been written) with an
+ * impossible vehicle/site pair applied and never repainted — `launch_mission`
+ * would then fly it, since nothing else re-validates `host.panel.state`
+ * before `getConfig()` reads it.
+ */
+function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: string[]; feasibility: Feasibility } {
+  const input = asRecord(rawInput);
+  const live = host.panel.state;
+  const state: McpPanelState = {
+    ...live,
+    orbit: { ...live.orbit },
+    failure: { ...live.failure },
+    guidanceOverrides: { ...live.guidanceOverrides },
+  };
+  const notices: string[] = [];
+  // Mirrors `SetupPanel`'s own one-shot `siteReassigned` flag, so the
+  // feasibility verdict returned alongside `notices` carries the same amber
+  // "site was reassigned" warning the panel itself would show for this edit.
+  let siteReassigned = false;
+
+  if (input.vehicleId !== undefined) {
+    const id = expectString(input.vehicleId, 'vehicleId');
+    if (!VEHICLES.some((v) => v.id === id)) throw new Error(`Unknown vehicleId "${id}". Valid ids: ${VEHICLES.map((v) => v.id).join(', ')}`);
+    state.vehicleId = id;
+    const spec = vehicleById(id);
+    // Skip the auto-reassignment (and its notice) when this same call also
+    // gives an explicit siteId: the block below validates and applies that
+    // choice, and a transient reassignment to the old vehicle's first site
+    // would just be overwritten a few lines later.
+    if (input.siteId === undefined && !spec.sites.includes(state.siteId)) {
+      state.siteId = spec.sites[0];
+      siteReassigned = true;
+      notices.push(`Site reassigned to "${state.siteId}": ${spec.name} does not fly from the previously selected site.`);
+    }
+    if (!spec.recoverable) state.boosterRecovery = false;
+  }
+  if (input.siteId !== undefined) {
+    const id = expectString(input.siteId, 'siteId');
+    if (!SITES.some((s) => s.id === id)) throw new Error(`Unknown siteId "${id}". Valid ids: ${SITES.map((s) => s.id).join(', ')}`);
+    const spec = vehicleById(state.vehicleId);
+    if (!spec.sites.includes(id)) throw new Error(`${spec.name} does not fly from "${id}". Valid sites for this vehicle: ${spec.sites.join(', ')}`);
+    state.siteId = id;
+  }
+  if (input.satelliteId !== undefined) {
+    const id = expectString(input.satelliteId, 'satelliteId');
+    if (!SATELLITES.some((s) => s.id === id)) throw new Error(`Unknown satelliteId "${id}". Valid ids: ${SATELLITES.map((s) => s.id).join(', ')}`);
+    state.satelliteId = id;
+    // Mirrors the panel's satellite handler: a new payload sets its own mass
+    // unless this same call also gave an explicit payloadMassKg.
+    if (input.payloadMassKg === undefined) state.payloadMass = satelliteById(id).mass;
+  }
+  applyOrbitInput(state, input);
+  if (input.payloadMassKg !== undefined) {
+    const v = expectNumber(input.payloadMassKg, 'payloadMassKg');
+    if (v <= 0) throw new Error('"payloadMassKg" must be a positive number');
+    state.payloadMass = v;
+  }
+  if (input.launchTimeIso !== undefined) {
+    const s = expectString(input.launchTimeIso, 'launchTimeIso');
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) throw new Error(`"launchTimeIso" ("${s}") is not a valid ISO 8601 date-time`);
+    state.launchTime = d;
+  }
+  if (input.boosterRecovery !== undefined) {
+    if (typeof input.boosterRecovery !== 'boolean') throw new Error('"boosterRecovery" must be a boolean');
+    const spec = vehicleById(state.vehicleId);
+    if (input.boosterRecovery && !spec.recoverable) throw new Error(`${spec.name} has no first-stage recovery option`);
+    state.boosterRecovery = input.boosterRecovery;
+  }
+  if (input.failureMode !== undefined) {
+    const m = expectString(input.failureMode, 'failureMode');
+    if (!FAILURE_MODES.includes(m as FailureMode)) throw new Error(`"failureMode" must be one of ${FAILURE_MODES.join(', ')}`);
+    state.failure = { ...state.failure, mode: m as FailureMode };
+  }
+  if (input.failureTimeS !== undefined) {
+    const v = expectNumber(input.failureTimeS, 'failureTimeS');
+    // Same 0-2000 s band as the panel's own failure-time field (panel.ts's
+    // `number('setup.failureTime', ..., 0, 2000)`).
+    if (v < 0 || v > 2000) throw new Error('"failureTimeS" must be between 0 and 2000');
+    state.failure = { ...state.failure, time: v };
+  }
+  if (input.failureStageIndex !== undefined) {
+    const spec = vehicleById(state.vehicleId);
+    const v = expectNumber(input.failureStageIndex, 'failureStageIndex');
+    if (!Number.isInteger(v) || v < 0 || v >= spec.stages.length) {
+      throw new Error(`"failureStageIndex" must be an integer between 0 and ${spec.stages.length - 1} for ${spec.name}`);
+    }
+    state.failure = { ...state.failure, stage: v };
+  }
+  if (input.guidance !== undefined) {
+    state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance) };
+  }
+  // Every validator above has run without throwing: commit the whole edit at
+  // once, so a throw earlier in this function never leaves a partial write on
+  // the state the rest of the app treats as the current mission.
+  Object.assign(live, state);
+  const feasibility = host.panel.applyExternalEdit({ siteReassigned });
+  return { notices, feasibility };
+}
+
+function summarizeConfig(cfg: MissionConfig): Record<string, unknown> {
+  const site = siteById(cfg.siteId);
+  const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
+  return {
+    vehicleId: cfg.vehicleId,
+    satelliteId: cfg.satelliteId,
+    siteId: cfg.siteId,
+    payloadMassKg: cfg.payloadMassOverride ?? null,
+    launchTimeIso: cfg.launchTime.toISOString(),
+    orbit: {
+      id: cfg.orbit.id,
+      perigeeKm: cfg.orbit.perigee / 1000,
+      apogeeKm: cfg.orbit.apogee / 1000,
+      inclinationInput: cfg.orbit.inclination,
+      resolvedInclinationDeg: target.inclination * RAD,
+      argPerigeeDeg: cfg.orbit.argPerigee,
+      raanMode: cfg.orbit.raanMode,
+    },
+    boosterRecovery: cfg.boosterRecovery,
+    failure: { mode: cfg.failure.mode, timeS: cfg.failure.time, stageIndex: cfg.failure.stage },
+    guidance: guidanceToOutput(cfg.guidance),
+  };
+}
+
+/** A stage or booster group's display name, from the frame's own `id` — no
+ *  UI/i18n dependency, since these tools speak plain English identifiers. */
+function stageDisplayName(vehicleSpec: VehicleSpec, sf: StageFrame): string {
+  const spec = vehicleSpec.stages.find((s) => s.id === sf.id);
+  if (spec) return spec.name;
+  return sf.isSpacecraft ? 'Spacecraft propulsion' : sf.id;
+}
+
+function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<string, unknown> {
+  const sf = frame.stages[frame.activeStageIndex] as StageFrame | undefined;
+  return {
+    timeS: frame.t,
+    status: frame.status,
+    ascentPhase: frame.ascentPhase,
+    noteKey: frame.note,
+    liftoff: frame.liftoff,
+    destroyed: frame.destroyed,
+    fairingAttached: frame.fairingAttached,
+    payloadSeparated: frame.payloadSeparated,
+    altitudeKm: frame.altitude / 1000,
+    altitudeAglKm: frame.altitudeAGL / 1000,
+    speedMs: frame.speed,
+    airspeedMs: frame.airspeed,
+    verticalSpeedMs: frame.vz,
+    mach: frame.mach,
+    dynamicPressurePa: frame.q,
+    gLoad: frame.gLoad,
+    apoapsisKm: frame.elements.apoapsisAlt / 1000,
+    periapsisKm: frame.elements.periapsisAlt / 1000,
+    inclinationDeg: frame.elements.i * RAD,
+    periodS: Number.isFinite(frame.elements.period) ? frame.elements.period : null,
+    latitudeDeg: frame.lat,
+    longitudeDeg: frame.lon,
+    downrangeKm: frame.downrange / 1000,
+    dvRemainingMs: frame.dvRemaining,
+    nextScheduledBurnInS: frame.nextBurnTime > frame.t ? frame.nextBurnTime - frame.t : null,
+    dvBudgetMs: {
+      thrust: frame.losses.dvThrust, gravity: frame.losses.gravity, drag: frame.losses.drag, steering: frame.losses.steering,
+    },
+    stage: sf ? {
+      index: frame.activeStageIndex,
+      ofStages: frame.stages.length,
+      id: sf.id,
+      name: stageDisplayName(vehicleSpec, sf),
+      isSpacecraft: sf.isSpacecraft,
+      attached: sf.attached,
+      burning: sf.burning,
+      propellantFraction: sf.propellantFraction,
+    } : null,
+  };
+}
+
+function eventOut(e: SimEvent): Record<string, unknown> {
+  return { timeS: e.t, key: e.key, severity: e.severity, params: e.params ?? {} };
+}
+
+function playbackState(host: McpAppHost): Record<string, unknown> {
+  const live = host.player.live;
+  return {
+    mode: live ? 'live' : 'replay',
+    playing: live ? host.playing : host.player.playing,
+    warp: live ? host.warp : host.replayWarp,
+    cursorTimeS: host.player.cursor,
+    headTimeS: host.recorder.headTime,
+    startTimeS: host.recorder.startTime,
+  };
+}
+
+function buildCsv(sim: Simulation): string {
+  const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
+  const lines = [cols.join(',')];
+  for (const s of sim.telemetry) {
+    lines.push([s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase]
+      .map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v))).join(','));
+  }
+  lines.push('');
+  lines.push('# events');
+  lines.push('t_s,event,details');
+  for (const e of sim.events) lines.push(`${e.t.toFixed(1)},${e.key},"${JSON.stringify(e.params ?? {}).replace(/"/g, '""')}"`);
+  return lines.join('\n');
+}
+
+// ──────────────────────────────────────────────────────────── input schemas
+
+const CONFIG_PROPERTIES: Record<string, unknown> = {
+  vehicleId: { type: 'string', enum: VEHICLES.map((v) => v.id), description: 'Launch vehicle id.' },
+  siteId: { type: 'string', enum: SITES.map((s) => s.id), description: 'Launch site id; must be one the vehicle flies from (see list_missions).' },
+  satelliteId: { type: 'string', enum: SATELLITES.map((s) => s.id), description: 'Payload id. Sets payloadMassKg to its typical mass unless payloadMassKg is also given.' },
+  orbitId: { type: 'string', enum: [...ORBIT_PRESETS.map((o) => o.id)], description: 'Orbit preset id, or "custom" together with the fields below.' },
+  perigeeKm: { type: 'number', minimum: 100, description: 'Custom orbit perigee altitude, km. Setting this (or any other custom field) switches the orbit to "custom".' },
+  apogeeKm: { type: 'number', minimum: 100, description: 'Custom orbit apogee altitude, km.' },
+  inclinationDeg: { type: 'number', minimum: 0, maximum: 180, description: 'Custom orbit inclination, deg.' },
+  argPerigeeDeg: { type: 'number', minimum: 0, maximum: 360, description: 'Custom orbit argument of perigee, deg.' },
+  raanMode: { type: 'string', enum: RAAN_MODES, description: 'How the ascending node is targeted: free, a fixed RAAN, the ISS plane, or a local time of ascending node.' },
+  raanDeg: { type: 'number', minimum: 0, maximum: 360, description: 'Fixed RAAN, deg (raanMode "fixed").' },
+  ltanHours: { type: 'number', minimum: 0, maximum: 24, description: 'Local time of ascending node, hours (raanMode "ltan").' },
+  payloadMassKg: { type: 'number', exclusiveMinimum: 0, description: 'Payload mass, kg.' },
+  launchTimeIso: { type: 'string', description: 'Launch epoch, ISO 8601 UTC, e.g. "2026-09-20T12:00:00Z".' },
+  boosterRecovery: { type: 'boolean', description: 'Reserve first-stage propellant for recovery (only for vehicles that support it).' },
+  failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
+  failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
+  failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
+  guidance: {
+    type: 'object',
+    description: "Overrides on top of the vehicle's own guidance program.",
+    properties: Object.fromEntries(Object.entries(GUIDANCE_FIELDS).map(([name, def]) => [
+      name, { type: 'number', minimum: def.range[0] / def.scale, maximum: def.range[1] / def.scale },
+    ])),
+    additionalProperties: false,
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────── tools
+
+function toolReadFlightState(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'read_flight_state',
+    title: 'Read flight state',
+    description: 'Current playback cursor (live or replay), the mission and the telemetry of the frame on screen, plus the surrounding events. Safe with no mission configured.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    execute: () => {
+      if (!host.sim) return { hasMission: false, camera: host.camMode };
+      // `recordNow()`, not `recorder.head`: `head` is only the last *stored*
+      // frame, and the store cadence is as sparse as 30 s in coast/orbit
+      // (`FlightRecorder`'s `interval()`), so it can lag the live simulation
+      // by tens of seconds — an internally inconsistent result for a tool
+      // whose own description promises "the frame on screen" (review major
+      // #3: measured a 25 s cursorTimeS/frame.timeS split and ~190 km of
+      // along-track error). `recordNow()` is exactly what the render loop
+      // itself draws every tick (`App`'s render loop, `src/main.ts`): a fresh
+      // capture that only pays for a copy on the tick a store was due
+      // anyway, so this stays cheap despite `readOnlyHint: true`. It only
+      // ever *appends* to the recording when the cadence was already about to
+      // fire on its own — it does not create staleness or drift by being
+      // called from here.
+      const frame = host.player.live
+        ? host.recorder.recordNow()
+        : (host.player.frame() ?? host.recorder.recordNow());
+      const cursor = host.player.cursor;
+      const last = host.player.lastEvent(cursor);
+      const next = host.player.nextEvent(cursor);
+      return {
+        hasMission: true,
+        ...playbackState(host),
+        camera: host.camMode,
+        vehicle: { id: host.sim.vehicleSpec.id, name: host.sim.vehicleSpec.name },
+        site: { id: host.sim.site.id, name: host.sim.site.name },
+        satellite: { id: host.sim.satellite.id, name: host.sim.satellite.name },
+        frame: frameSummary(frame, host.sim.vehicleSpec),
+        lastEvent: last ? eventOut(last) : null,
+        nextEvent: next ? eventOut(next) : null,
+      };
+    },
+  };
+}
+
+function toolListMissions(): WebMcpTool {
+  return {
+    name: 'list_missions',
+    title: 'List available missions',
+    description: 'Every vehicle, launch site, payload and orbit preset configure_mission and launch_mission accept, with the numbers needed to pick a feasible combination.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    execute: () => ({
+      vehicles: VEHICLES.map((v) => ({
+        id: v.id, name: v.name, country: v.country, manufacturer: v.manufacturer,
+        sites: v.sites, stageCount: v.stages.length,
+        payloadLeoKg: v.payloadLEO, payloadGtoKg: v.payloadGTO, payloadSsoKg: v.payloadSSO ?? null,
+        recoverable: !!v.recoverable, crewCapable: !!v.crewCapable,
+      })),
+      sites: SITES.map((s) => ({
+        id: s.id, name: s.name, country: s.country, latitudeDeg: s.latitude, longitudeDeg: s.longitude,
+        minInclinationDeg: s.minInclination, maxInclinationDeg: s.maxInclination,
+      })),
+      satellites: SATELLITES.map((s) => ({
+        id: s.id, name: s.name, massKg: s.mass, typicalOrbit: s.typicalOrbit, crewed: !!s.crewed,
+      })),
+      orbitPresets: ORBIT_PRESETS.map((o) => ({
+        id: o.id, name: o.name, perigeeKm: o.perigee / 1000, apogeeKm: o.apogee / 1000,
+        inclination: o.inclination, raanMode: o.raanMode, description: o.description,
+      })),
+      failureModes: FAILURE_MODES,
+      cameraModes: CAMERA_MODES,
+    }),
+  };
+}
+
+function toolConfigureMission(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'configure_mission',
+    title: 'Configure mission',
+    description: 'Set up a mission (vehicle, site, payload, orbit, launch time, guidance overrides) the same way the setup panel does, and preview it paused on the pad. Every field is optional and defaults to what is already configured. Throws on an invalid input (unknown id, a site the vehicle does not fly from, out-of-range guidance, a malformed date). A mission that is valid but infeasible (over-capacity payload, an unreachable inclination, …) is not rejected: it is applied and previewed just as it would be if a person set the same values on the panel, and the result reports ok:true with the verdict in `feasibility` — check `feasibility.level` before assuming the mission will fly. Does not launch.',
+    inputSchema: { type: 'object', properties: CONFIG_PROPERTIES, additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    execute: (rawInput: unknown) => {
+      // `feasibility` is the verdict `applyExternalEdit` computed while its
+      // one-shot `siteReassigned` flag was still set for this edit; reading
+      // `host.panel.feasibility()` again here would see the flag already
+      // cleared (review major #1).
+      const { notices, feasibility } = applyConfigureInput(host, rawInput);
+      const cfg = host.panel.getConfig();
+      host.preview(cfg);
+      return { ok: true, notices, feasibility, config: summarizeConfig(cfg) };
+    },
+  };
+}
+
+function toolLaunchMission(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'launch_mission',
+    title: 'Launch mission',
+    description: 'Launch the mission: with no arguments, launches whatever is currently configured (identical to pressing Launch); with arguments, configures it first — same validation as configure_mission — then launches.',
+    inputSchema: { type: 'object', properties: CONFIG_PROPERTIES, additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    execute: (rawInput: unknown) => {
+      const input = asRecord(rawInput);
+      const { notices, feasibility } = Object.keys(input).length > 0
+        ? applyConfigureInput(host, rawInput)
+        : { notices: [] as string[], feasibility: host.panel.feasibility() };
+      const cfg = host.panel.getConfig();
+      host.launch(cfg);
+      return { ok: true, notices, feasibility, config: summarizeConfig(cfg), mode: 'live', playing: true };
+    },
+  };
+}
+
+function ensurePlaying(host: McpAppHost, want: boolean): void {
+  const current = host.player.live ? host.playing : host.player.playing;
+  if (current !== want) host.togglePlay();
+}
+
+function toolControlPlayback(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'control_playback',
+    title: 'Control playback',
+    description: 'Play, pause, change the time warp, jump back to the live flight, or skip to the next/previous event. "play"/"pause" act on the live flight while at the recording head and on the replay cursor while scrubbing, exactly like the space bar. No-op (ok: false) when no mission is configured.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: PLAYBACK_ACTIONS, description: 'The control to apply.' },
+        warp: { type: 'number', exclusiveMinimum: 0, description: 'Time warp factor; required (and only used) when action is "warp".' },
+      },
+      required: ['action'],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    execute: (rawInput: unknown) => {
+      const input = asRecord(rawInput);
+      const action = input.action;
+      if (typeof action !== 'string' || !(PLAYBACK_ACTIONS as readonly string[]).includes(action)) {
+        throw new Error(`"action" must be one of ${PLAYBACK_ACTIONS.join(', ')}`);
+      }
+      if (!host.sim) return { ok: false, reason: 'No active mission: configure or launch one first.' };
+      switch (action as PlaybackAction) {
+        case 'play': ensurePlaying(host, true); break;
+        case 'pause': ensurePlaying(host, false); break;
+        case 'live': host.goLive(); break;
+        case 'skip_next': host.skip(); break;
+        case 'skip_previous': host.previousEvent(); break;
+        case 'warp': {
+          const w = expectNumber(input.warp, 'warp');
+          if (w <= 0) throw new Error('"warp" must be a positive number for action "warp"');
+          // 50000x is the app's own top preset (`WARPS` in main.ts); clamping
+          // to it, not further, keeps this in the range the rest of the UI
+          // actually supports. `host.setWarp` (not a direct field write) is
+          // what keeps the on-screen warp selector and the `,`/`.` keyboard
+          // step in sync with whatever this sets.
+          host.setWarp(Math.min(50000, w));
+          break;
+        }
+      }
+      return { ok: true, ...playbackState(host) };
+    },
+  };
+}
+
+function toolSeek(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'seek',
+    title: 'Seek the timeline',
+    description: 'Move the playback cursor to a mission time, in seconds after liftoff (negative during the count-down). Seeking behind the recording head enters replay; seeking to or past the head returns to live. No-op (ok: false) when no mission is configured.',
+    inputSchema: {
+      type: 'object',
+      properties: { timeS: { type: 'number', description: 'Target mission time, s.' } },
+      required: ['timeS'],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    execute: (rawInput: unknown) => {
+      const input = asRecord(rawInput);
+      const timeS = expectNumber(input.timeS, 'timeS');
+      if (!host.sim) return { ok: false, reason: 'No active mission: configure or launch one first.' };
+      host.seek(timeS);
+      return { ok: true, ...playbackState(host) };
+    },
+  };
+}
+
+function toolSetCamera(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'set_camera',
+    title: 'Set camera view',
+    description: 'Switch the viewport between the exterior chase camera, the onboard/crew view, the space view, and the 2-D orbital map.',
+    inputSchema: {
+      type: 'object',
+      properties: { mode: { type: 'string', enum: CAMERA_MODES } },
+      required: ['mode'],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    execute: (rawInput: unknown) => {
+      const input = asRecord(rawInput);
+      const mode = input.mode;
+      if (typeof mode !== 'string' || !(CAMERA_MODES as readonly string[]).includes(mode)) {
+        throw new Error(`"mode" must be one of ${CAMERA_MODES.join(', ')}`);
+      }
+      host.setCamera(mode as CameraMode);
+      return { ok: true, camera: host.camMode };
+    },
+  };
+}
+
+function toolGetEvents(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'get_events',
+    title: 'Get flight events',
+    description: 'The recorded event log (staging, max Q, burns, failures, …) with their mission times, optionally filtered to those at or after sinceS and capped to limit entries.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sinceS: { type: 'number', description: 'Only events at or after this mission time, s.' },
+        limit: { type: 'integer', minimum: 1, description: 'Maximum number of events to return.' },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    execute: (rawInput: unknown) => {
+      if (!host.sim) return { hasMission: false, events: [] };
+      const input = asRecord(rawInput);
+      const sinceS = input.sinceS !== undefined ? expectNumber(input.sinceS, 'sinceS') : -Infinity;
+      let limit: number | undefined;
+      if (input.limit !== undefined) {
+        const v = expectNumber(input.limit, 'limit');
+        if (!Number.isInteger(v) || v < 1) throw new Error('"limit" must be a positive integer');
+        limit = v;
+      }
+      let events = host.recorder.events.filter((e) => e.t >= sinceS).map(eventOut);
+      const totalCount = events.length;
+      if (limit !== undefined) events = events.slice(0, limit);
+      return { hasMission: true, count: events.length, totalCount, events };
+    },
+  };
+}
+
+function toolExportCsv(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'export_csv',
+    title: 'Export flight data as CSV',
+    description: 'The whole recorded flight (telemetry samples and events) as CSV text, in the same format the telemetry panel downloads.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    execute: () => {
+      if (!host.sim) return { ok: false, reason: 'No active mission: nothing recorded yet.' };
+      const sim = host.sim;
+      return { ok: true, filename: `orbitlab_${sim.vehicleSpec.id}_${sim.cfg.orbit.id}.csv`, csv: buildCsv(sim) };
+    },
+  };
+}
+
+/** Build the nine tool definitions against `host`. Pure and DOM-free. */
+export function createMcpTools(host: McpAppHost): WebMcpTool[] {
+  return [
+    toolReadFlightState(host),
+    toolListMissions(),
+    toolConfigureMission(host),
+    toolLaunchMission(host),
+    toolControlPlayback(host),
+    toolSeek(host),
+    toolSetCamera(host),
+    toolGetEvents(host),
+    toolExportCsv(host),
+  ];
+}
+
+// ───────────────────────────────────────────────────────────── registration
+
+interface ModelContext {
+  registerTool: (tool: WebMcpTool, options?: { signal?: AbortSignal }) => unknown;
+}
+
+/**
+ * Register the WebMCP tools against `navigator.modelContext` or
+ * `document.modelContext`, whichever a browser-hosted MCP client provides
+ * (the Codex sibling used `document.modelContext`; the API has since moved
+ * toward `navigator.modelContext`, so both are tried). Entirely optional:
+ * every failure is swallowed, so a browser with no WebMCP support, a host
+ * whose `registerTool` throws, or a single tool that fails to register never
+ * breaks the app. Tools are unregistered on `pagehide`.
+ */
+export function registerMcpTools(host: McpAppHost): void {
+  try {
+    const nav = typeof navigator !== 'undefined' ? (navigator as unknown as { modelContext?: ModelContext }) : undefined;
+    const doc = typeof document !== 'undefined' ? (document as unknown as { modelContext?: ModelContext }) : undefined;
+    const modelContext = nav?.modelContext ?? doc?.modelContext;
+    if (!modelContext || typeof modelContext.registerTool !== 'function') return;
+    const lifecycle = new AbortController();
+    for (const tool of createMcpTools(host)) {
+      try {
+        Promise.resolve(modelContext.registerTool(tool, { signal: lifecycle.signal })).catch(() => { /* registration rejected: leave the app running without this tool */ });
+      } catch { /* registerTool threw synchronously: same */ }
+    }
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', () => lifecycle.abort(), { once: true });
+  } catch {
+    /* WebMCP is entirely optional; nothing here may break the app */
+  }
+}

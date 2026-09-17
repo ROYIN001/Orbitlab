@@ -127,30 +127,21 @@ export class LaunchPadView {
   }
 
   /**
-   * ECI position of the pad.
+   * ECI position of the pad, from the frame's own sidereal angle.
    *
-   * While the vehicle is still standing on the pad it *is* the pad, so the
-   * complex is derived from `frame.r`. That matters because `Simulation` seeds
-   * `state.r` from the site at `gmst0` but `state.theta` at
-   * `gmst0 + OMEGA_EARTH * t0` with t0 = -10 s: the two disagree by ten
-   * seconds of Earth rotation (4.6 km at the equator, 3.2 km at Baikonur)
-   * until the prelaunch integrator re-syncs them on the first step. Taking the
-   * site from `frame.theta` in that initial state pushes the whole complex
-   * off-screen in the default preview. Both expressions agree a few seconds
-   * into the countdown, so the hand-over at liftoff is continuous.
+   * There used to be a special case here for the prelaunch frames, because
+   * `Simulation` seeded `state.r` from the site at `gmst0` while `state.theta`
+   * was already `gmst0 + OMEGA_EARTH * t0` with t0 = -10 s — ten seconds of
+   * Earth rotation, 3-5 km of pad offset, until the integrator re-synced them
+   * on the first step. The physics wave fixed the seed (simulation.ts seeds
+   * `state.r` at `theta0 + OMEGA_EARTH * t0`, measured at a pad offset of
+   * 0.000 km), so the correction is dead code and is gone: the pad now comes
+   * from one expression for the whole flight, which is the only way the
+   * hand-over at liftoff can be continuous by construction rather than by
+   * agreement.
    */
   private siteEci(frame: VisualFrame): Vec3 {
     const out = this.siteVec;
-    if (frame.status === 'prelaunch' && !frame.liftoff) {
-      const n = Math.hypot(frame.r.x, frame.r.y, frame.r.z);
-      if (n > 1) {
-        const k = this.siteRadius / n;
-        out.x = frame.r.x * k;
-        out.y = frame.r.y * k;
-        out.z = frame.r.z * k;
-        return out;
-      }
-    }
     // groundPositionEci(lat, lon, alt, theta), inlined so the hot path does
     // not allocate a Vec3 per rendered frame
     const lam = this.lonRad + frame.theta;
@@ -174,8 +165,15 @@ export class LaunchPadView {
     }
   }
 
-  /** Position and orient the complex, then animate it from the frame. */
-  update(scene: SceneManager, frame: VisualFrame): void {
+  /**
+   * Position and orient the complex, then animate it from the frame.
+   *
+   * @param night 0 = full day, 1 = night at the pad. Drives the floodlights,
+   *        which are the only thing that makes a night launch visible at all
+   *        (see `padFloodlights` in pads.ts).
+   */
+  update(scene: SceneManager, frame: VisualFrame, night: number): void {
+    this.pad.setNight?.(night);
     const r = this.siteEci(frame);
     scene.toScene(r, this.tmp);
     this.group.position.copy(this.tmp);

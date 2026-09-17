@@ -13,7 +13,7 @@
  * self-consistent and consistent with what was published.
  */
 import { describe, it, expect } from 'vitest';
-import { VEHICLES } from '../src/data/vehicles';
+import { RATING_ORBITS, VEHICLES } from '../src/data/vehicles';
 import { SITES, type SiteExtra } from '../src/data/sites';
 import { SATELLITES } from '../src/data/satellites';
 import { ORBIT_PRESETS } from '../src/data/orbits';
@@ -390,6 +390,35 @@ describe('geometry and references', () => {
     for (const list of [VEHICLES, SITES, SATELLITES, ORBIT_PRESETS]) {
       const ids = list.map((x) => x.id);
       expect(new Set(ids).size, `duplicate id in ${ids.join(', ')}`).toBe(ids.length);
+    }
+  });
+
+  /**
+   * `RATING_ORBITS` is the table that says what a published payload rating was
+   * a rating FOR. It was exported with no consumer at all for two waves while
+   * README.md advertised it, so it could have rotted against the fleet without
+   * anything noticing. The setup panel reads it now (`updateStats`), which
+   * means a stale key or an unknown site id is a visible defect, and these are
+   * the invariants that catch one first.
+   */
+  it('every RATING_ORBITS entry points at a real vehicle, a real site and a rating the vehicle publishes', () => {
+    const vehicleIds = new Set(VEHICLES.map((v) => v.id));
+    for (const [id, refs] of Object.entries(RATING_ORBITS)) {
+      expect(vehicleIds.has(id), `RATING_ORBITS key ${id} is not a vehicle`).toBe(true);
+      const v = VEHICLES.find((x) => x.id === id)!;
+      expect(refs.length, `${id}: empty rating list`).toBeGreaterThan(0);
+      for (const o of refs) {
+        expect(siteIds.has(o.siteId), `${id}/${o.rating}: unknown site ${o.siteId}`).toBe(true);
+        const rated = o.rating === 'GTO' ? v.payloadGTO : o.rating === 'SSO' ? v.payloadSSO ?? 0 : v.payloadLEO;
+        expect(rated, `${id}: a ${o.rating} reference orbit with no published ${o.rating} rating`).toBeGreaterThan(0);
+        expect(o.apogeeKm, `${id}/${o.rating}: apogee below perigee`).toBeGreaterThanOrEqual(o.perigeeKm);
+        expect(o.perigeeKm, `${id}/${o.rating}`).toBeGreaterThan(100);
+        // A rating cannot be quoted for a plane the site cannot reach.
+        const site = SITES.find((s) => s.id === o.siteId)!;
+        expect(o.inclinationDeg, `${id}/${o.rating}: ${o.inclinationDeg}° is below ${o.siteId}'s minimum ${site.minInclination}°`)
+          .toBeGreaterThanOrEqual(site.minInclination - 0.3);
+        expect(o.source, `${id}/${o.rating}: no source`).toMatch(/^https?:\/\//);
+      }
     }
   });
 

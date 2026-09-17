@@ -63,7 +63,12 @@ export interface MissionPlan {
   raanExpected: number;
   /** plane change performed at apogee, deg */
   planeChangeDeg: number;
-  /** whether the target inclination is directly reachable from the site */
+  /**
+   * Whether the target inclination is directly reachable from the site —
+   * `inclinationCorridor(site, target.inclination) === 'ok'`, i.e. inside BOTH
+   * ends of the site's range-safety corridor, not merely above its declared
+   * minimum.
+   */
   inclinationReachable: boolean;
   dvEstimateBurns: number;
   /**
@@ -118,6 +123,63 @@ export function raanFromLtan(date: Date, ltanHours: number): number {
  */
 export function minInclinationFor(site: SiteExtra): number {
   return Math.max(site.minInclination * DEG, Math.abs(site.latitude) * DEG + 0.05 * DEG);
+}
+
+/**
+ * Highest inclination the site's range-safety corridor reaches, rad.
+ *
+ * `maxInclination` is the retrograde end of the pair whose prograde end is
+ * `minInclination`, measured from the site's own `azimuthMin`/`azimuthMax`
+ * window with this module's `rotatingLaunchAzimuth` and re-measured by
+ * `tests/data-consistency.test.ts`, so it cannot drift from the corridor it
+ * describes. Reading the pair is the "bracket with this pair" half of audit
+ * item B25 (see the field's doc comment in src/data/sites.ts) and is what lets
+ * the planner test an inclination without re-deriving an azimuth.
+ */
+export function maxInclinationFor(site: SiteExtra): number {
+  return site.maxInclination * DEG;
+}
+
+/**
+ * Slack on either end of the corridor, rad.
+ *
+ * A resolved sun-synchronous inclination can land a hair outside a bound that
+ * was quoted to one decimal, and the declared bounds are themselves quoted to
+ * 0.1°. A quarter of a degree is below the 0.3° the mission is graded on.
+ */
+export const CORRIDOR_SLACK = 0.25 * DEG;
+
+/** Why a target inclination is, or is not, flyable from a site. */
+export type CorridorVerdict = 'ok' | 'belowMinimum' | 'aboveCorridor';
+
+/**
+ * Whether a target inclination lies inside the site's range-safety corridor,
+ * and if not, which end it falls outside.
+ *
+ * The single definition of that question for the whole app: `planMission`
+ * reports it as `MissionPlan.inclinationReachable` and the setup panel's
+ * pre-flight verdict reads the same function, so the verdict and the planner
+ * cannot disagree about what a site can fly (review 2, major #2).
+ *
+ * Both ends are real. A site cannot fly below its own latitude, nor below the
+ * inclination its corridor allows — that is `minInclinationFor`. It equally
+ * cannot fly ABOVE the corridor: Starbase's 80–110° window reaches 31.8° and
+ * Xichang's 94–104° window reaches 31°, so an ISS or sun-synchronous plane
+ * from either is a heading range safety does not licence. Until this wave only
+ * the lower bound was tested anywhere in `src/`, and the app flew a 51.64°
+ * mission out of Starbase and called it nominal.
+ *
+ * A retrograde target is measured against the lower bound as 180° − i, which
+ * is the same geometric constraint seen from the south — a 97.8°
+ * sun-synchronous orbit is an 82.2° plane, reachable from every site below
+ * that latitude — while the upper bound is stated, like the data, as the
+ * inclination itself.
+ */
+export function inclinationCorridor(site: SiteExtra, inc: number): CorridorVerdict {
+  if (inc > maxInclinationFor(site) + CORRIDOR_SLACK) return 'aboveCorridor';
+  const effective = inc > Math.PI / 2 ? Math.PI - inc : inc;
+  if (effective < minInclinationFor(site) - CORRIDOR_SLACK) return 'belowMinimum';
+  return 'ok';
 }
 
 export function resolveInclination(orbit: OrbitSpec, site: SiteExtra): number {
@@ -568,7 +630,7 @@ export function canBurnAfterAscent(vehicle: VehicleSpec, satellite: SatelliteSpe
 
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
-  const { inc: ascentInclination, reachable } = ascentInclinationFor(target, site);
+  const { inc: ascentInclination } = ascentInclinationFor(target, site);
   const descending = ascentInclination > 75 * DEG ? site.descendingForPolar : false;
   const lat = site.latitude * DEG;
   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
@@ -679,7 +741,12 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     target, ascentInclination, descending, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
     launchTime: cfg.launchTime, jd0, gmst0, raanExpected,
     planeChangeDeg: Math.abs(target.inclination - ascentInclination) / DEG,
-    inclinationReachable: reachable,
+    // Both ends of the corridor, not just the declared minimum: the ascent
+    // itself is unchanged (an inclination above the corridor is still flyable
+    // geometrically, and the guidance flies it), but the plan now REPORTS that
+    // the site may not launch on that heading, which is what the pre-flight
+    // verdict reads.
+    inclinationReachable: inclinationCorridor(site, target.inclination) === 'ok',
     dvEstimateBurns: burns.reduce((s, b) => s + b.dvEstimate, 0),
     // The same arithmetic as `ascentReaches`, evaluated against the MISSION's
     // own orbit rather than against whatever the planner ended up aiming at:

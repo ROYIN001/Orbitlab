@@ -117,11 +117,30 @@ export class Hud {
     return g;
   }
 
+  /**
+   * Blank the verdict line, in the DOM as well as in the "what is on screen"
+   * cache.
+   *
+   * Clearing `shownNote` alone was a real defect twice over. `update` only
+   * writes the element when the computed note differs from `shownNote`, so
+   * after a reset both were `''` while the element still carried the previous
+   * mission's text: a green "Target orbit achieved" sat over the *next*
+   * vehicle from T-10 s onwards and survived the whole ascent, because the
+   * branch that would have rewritten it never fired again. The same applied to
+   * a language change: the note stayed in the language it was written in until
+   * the computed note happened to change.
+   */
+  private clearNote(): void {
+    this.note.textContent = '';
+    this.note.className = 'note hidden';
+    this.shownNote = '';
+  }
+
   /** Re-label after a language change (values are rewritten on the next frame). */
   applyLabels(): void {
     for (const k of Object.keys(this.rows)) this.rows[k].key.textContent = t(`hud.${k}`);
     this.shownStatus = '';
-    this.shownNote = '';
+    this.clearNote();
     this.tickFrom = -1;
     this.tickTo = -1;
   }
@@ -137,7 +156,7 @@ export class Hud {
     this.ticker.replaceChildren();
     for (const k of Object.keys(this.rows)) { this.rows[k].value.textContent = '—'; this.rows[k].shown = '—'; }
     this.shownStatus = '';
-    this.shownNote = '';
+    this.clearNote();
   }
 
   private set(key: string, value: string): void {

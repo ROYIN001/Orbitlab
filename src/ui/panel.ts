@@ -21,16 +21,19 @@
  *   at the parking orbit, so it reports success for missions that later fall
  *   short and failure for missions whose coast outlives its horizon).
  */
-import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, VehicleSpec } from '../types';
-import { VEHICLES, vehicleById } from '../data/vehicles';
+import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec } from '../types';
+import { RATING_ORBITS, VEHICLES, vehicleById } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
 import { liftoffMass, liftoffThrust, idealDeltaV, VehicleModel } from '../physics/vehicle';
-import { planMission, launchWindows, resolveTarget } from '../physics/mission';
+import {
+  planMission, launchWindows, resolveTarget, inclinationCorridor, canBurnAfterAscent,
+  apsisTolerance, perigeeTolerance, ASCENT_MARGIN_REQUIRED, type MissionPlan,
+} from '../physics/mission';
 import { runAscent, DEFAULT_KICKS, DEFAULT_RATES, DEFAULT_LOFTS, needsLoftSearch, type TuneResult } from '../physics/autotune';
-import { G0, RAD } from '../physics/constants';
+import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes } from './names';
 
@@ -107,16 +110,84 @@ export function ratedPayload(spec: VehicleSpec, cls: OrbitClass): { cap: number;
 }
 
 /**
- * A site cannot fly below its own latitude, nor below the inclination its
- * range-safety corridor allows. A retrograde target is measured against
- * 180° − i, which is the same geometric constraint seen from the south — a
- * 97.8° sun-synchronous orbit is an 82.2° plane, reachable from every site
- * below that latitude. The 0.25° of slack is for a resolved sun-synchronous
- * inclination landing a hair under a minimum that was quoted to one decimal.
+ * Whether the site's range-safety corridor contains this inclination — BOTH
+ * ends of it, which is `inclinationCorridor` in src/physics/mission.ts, the
+ * same function `planMission` reports `inclinationReachable` from.
+ *
+ * It used to test only the lower bound here, and `maxInclination` had no
+ * consumer in `src/` at all: the app flew a 51.64° ISS mission out of Starbase
+ * (corridor 80–110°, reaching 31.8°) and called it "Ready to simulate"
+ * (release review 2, major #2). The verdict now reads the planner's own
+ * function, so the two cannot disagree about what a site can fly.
  */
 export function reachableFromSite(site: SiteExtra, incDeg: number): boolean {
-  const effective = incDeg > 90 ? 180 - incDeg : incDeg;
-  return effective >= Math.max(Math.abs(site.latitude), site.minInclination) - 0.25;
+  return inclinationCorridor(site, incDeg * DEG) === 'ok';
+}
+
+/**
+ * What the mission plan says about this stack's ability to DELIVER the orbit,
+ * as opposed to its ability to lift the mass (release review 2, major #3).
+ *
+ * Every number here is the planner's own, evaluated with the planner's own
+ * thresholds, so the verdict and the flight cannot drift apart:
+ *
+ * - `ascentShortfall` is `MissionPlan.ascentMargin` against
+ *   `ASCENT_MARGIN_REQUIRED` — the ideal Δv of the stages that have to fly the
+ *   ascent, minus what the mission's own orbit costs them. It is the same test
+ *   `tests/fleet-defaults.test.ts` files a row under `BEYOND_CAPABILITY` with.
+ * - `stranded` is the `ARCHITECTURE` case: nothing in the stack can light an
+ *   engine after cut-off (`canBurnAfterAscent`), so the orbit the ascent cuts
+ *   off in is final — and the plan's own insertion orbit is not the mission's,
+ *   judged by the acceptance bands the simulation itself uses. Long March 2D
+ *   from Jiuquan to a 600 km sun-synchronous orbit is exactly this: two
+ *   hypergolic stages, no restart, an inert payload, and a direct insertion
+ *   that closes at 200 km.
+ * - `burnShortfall` is a BOUND, not an estimate: whatever is left when the
+ *   ascent cuts off, the stage that has to fly the post-ascent burns can never
+ *   deliver more than its own ideal Δv (plus the spacecraft's), and the plan
+ *   asks it for `dvEstimateBurns`. The fairing is gone by then, so it is not
+ *   carried.
+ *
+ * Deliberately still not a headless flight (see `missionVerdict`): what this
+ * cannot see is the ascent LOSSES, which is why a row like `pslvxl/gto/50` —
+ * short of nothing on paper and out of propellant in the air — is invisible
+ * here and is recorded as such in tests/panel-verdict.test.ts.
+ */
+export interface Capability {
+  /**
+   * m/s the ascent stages are short of this orbit, 0 when they are not short.
+   * Measured against the line the planner itself draws — the orbit's cost PLUS
+   * `ASCENT_MARGIN_REQUIRED` — so a stack that clears the cost with no margin
+   * to spare still reports the margin it is missing.
+   */
+  ascentShortfall: number;
+  /** nothing in the stack can light an engine after the ascent cuts off */
+  singleShot: boolean;
+  /** …and the orbit it cuts off in is not the mission's */
+  stranded: boolean;
+  /** m/s the post-ascent burns exceed what can possibly fly them, 0 when they do not */
+  burnShortfall: number;
+}
+
+export function missionCapability(
+  spec: VehicleSpec, satellite: SatelliteSpec, payloadMass: number, plan: MissionPlan,
+): Capability {
+  const singleShot = !canBurnAfterAscent(spec, satellite, plan.weakFinalStage);
+  const onTarget = Math.abs(plan.insertionApoapsis - plan.target.apogee) <= apsisTolerance(plan.target.apogee)
+    && Math.abs(plan.insertionAltitude - plan.target.perigee) <= perigeeTolerance(plan.target);
+  const last = spec.stages[spec.stages.length - 1];
+  // The kick stage never flies the ascent, and a restartable last stage can
+  // light again; anything else has nothing left to give the burns but the
+  // spacecraft's own engine.
+  const relights = plan.weakFinalStage || last.restartable === true;
+  const afterAscent = (relights ? new VehicleModel({ ...spec, stages: [last], fairing: null }, payloadMass).deltaVRemaining() : 0)
+    + new VehicleModel(spec, payloadMass, false, satellite).spacecraftDeltaV();
+  return {
+    ascentShortfall: Math.max(0, ASCENT_MARGIN_REQUIRED - plan.ascentMargin),
+    singleShot,
+    stranded: singleShot && !onTarget,
+    burnShortfall: Math.max(0, plan.dvEstimateBurns - afterAscent),
+  };
 }
 
 /** Everything the verdict is derived from. Pure data, so it can be tested without a DOM. */
@@ -124,11 +195,18 @@ export interface VerdictInput {
   spec: VehicleSpec;
   site: SiteExtra;
   orbit: OrbitSpec;
+  /** what is being flown, for its own propulsion and its rated mass */
+  satellite: SatelliteSpec;
   payloadMass: number;
   /** resolved target inclination, deg */
   inclinationDeg: number;
-  /** the planner's own reachability verdict; null falls back to the site geometry */
-  inclinationReachable: boolean | null;
+  /**
+   * The mission plan for this configuration, or null when the planner rejected
+   * it. Everything the verdict says about DELIVERING the orbit — the corridor,
+   * the ascent margin, the insertion orbit, the burn budget — comes from here,
+   * so the verdict cannot promise something the planner does not.
+   */
+  plan: MissionPlan | null;
   failureMode: FailureMode;
   /** the vehicle forced a different site and the change has not been reported yet */
   siteReassigned: boolean;
@@ -137,10 +215,20 @@ export interface VerdictInput {
 /**
  * Pre-flight feasibility verdict (audit B12), from data and the mission plan.
  *
- * Ordering is by how badly the mission is broken: no rating and over-capacity
- * are failures, an unreachable inclination costs a plane change, the site
- * reassignment is news about what the user just did, and the last three are
- * margins and caveats on a mission that will fly.
+ * Ordering is by how badly the mission is broken: no rating, over-capacity, a
+ * target outside the site's range-safety corridor and a stack that cannot
+ * deliver the orbit are failures; an unreachable inclination costs a plane
+ * change; the site reassignment is news about what the user just did; and the
+ * rest are margins and caveats on a mission that will fly.
+ *
+ * **An armed failure is reported whatever else is true.** It used to be the
+ * last branch of the chain, so the shipped default mission — permanently tight
+ * at 7 150 of 7 430 kg — never mentioned it: arming "Range-safety destruct"
+ * left the note reading "Tight margin…" and the flight then ended with
+ * `evt.ftsCommanded` at T+70 s (release review 2, minor #4). An armed
+ * loss-of-vehicle is more important news than a 96 % margin, so it is written
+ * FIRST and the rest of the verdict follows it, rather than being ordered
+ * against it.
  *
  * `siteReassigned` is deliberately a **one-shot** input, cleared by the panel
  * as soon as it has been shown. Left sticky it masked every later verdict:
@@ -158,26 +246,69 @@ export function missionVerdict(i: VerdictInput): Feasibility {
   const cls = orbitClassOf(i.orbit);
   const { cap, cls: capCls } = ratedPayload(i.spec, cls);
   const className = t(`orbit.class.${capCls}`);
+  // Written first and carried into whatever the rest of the verdict turns out
+  // to be, so no branch below can return without it.
+  const armed = i.failureMode !== 'none' ? t('setup.verdict.failureArmed', { mode: t(`setup.fail.${i.failureMode}`) }) : '';
+  const say = (level: Feasibility['level'], ...clauses: string[]): Feasibility =>
+    ({ level, text: [armed, ...clauses].filter((s) => s !== '').join(' ') });
+
   if (cap <= 0) {
-    return { level: 'fail', text: t('setup.verdict.noRating', { vehicle: i.spec.name, class: t(`orbit.class.${cls}`) }) };
+    return say('fail', t('setup.verdict.noRating', { vehicle: i.spec.name, class: t(`orbit.class.${cls}`) }));
   }
   if (i.payloadMass > cap) {
-    return { level: 'fail', text: t('setup.verdict.overCapacity', { mass: num(i.payloadMass), cap: num(cap), class: className, vehicle: i.spec.name }) };
+    return say('fail', t('setup.verdict.overCapacity', { mass: num(i.payloadMass), cap: num(cap), class: className, vehicle: i.spec.name }));
   }
-  const reachable = i.inclinationReachable ?? reachableFromSite(i.site, i.inclinationDeg);
+  // Range safety before performance: a heading the site may not fly is not a
+  // margin the operator can trade, and no amount of Δv buys it.
+  const corridor = inclinationCorridor(i.site, i.inclinationDeg * DEG);
+  if (corridor === 'aboveCorridor') {
+    return say('fail', t('setup.verdict.corridor', {
+      inc: i.inclinationDeg.toFixed(1), site: siteName(i.site),
+      min: i.site.minInclination.toFixed(1), max: i.site.maxInclination.toFixed(1),
+    }));
+  }
+  const capability = i.plan ? missionCapability(i.spec, i.satellite, i.payloadMass, i.plan) : null;
+  if (capability && i.plan) {
+    // Nothing can burn after cut-off, so the ascent has to BE the mission: the
+    // two ways that fails are not having the Δv for the orbit and not being
+    // able to arrive on it (direct insertion closes at DIRECT_INSERTION_CEILING).
+    if (capability.singleShot && capability.ascentShortfall > 0) {
+      return say('fail', t('setup.verdict.beyondCapability', { dv: num(Math.round(capability.ascentShortfall)), vehicle: i.spec.name }));
+    }
+    if (capability.stranded) {
+      return say('fail', t('setup.verdict.noRestart', {
+        alt: num(Math.round(i.plan.insertionAltitude / 1000)), ap: num(Math.round(i.plan.insertionApoapsis / 1000)),
+        pe: num(Math.round(i.plan.target.perigee / 1000)), target: num(Math.round(i.plan.target.apogee / 1000)),
+      }));
+    }
+    if (capability.burnShortfall > 0) {
+      return say('fail', t('setup.verdict.burnBudget', {
+        dv: num(Math.round(i.plan.dvEstimateBurns)), have: num(Math.round(i.plan.dvEstimateBurns - capability.burnShortfall)),
+      }));
+    }
+  }
+  const reachable = i.plan ? i.plan.inclinationReachable : corridor === 'ok';
   if (!reachable) {
-    return { level: 'warn', text: t('setup.verdict.inclination', { inc: i.inclinationDeg.toFixed(1), site: siteName(i.site), min: i.site.minInclination.toFixed(1) }) };
+    return say('warn', t('setup.verdict.inclination', { inc: i.inclinationDeg.toFixed(1), site: siteName(i.site), min: i.site.minInclination.toFixed(1) }));
   }
   if (i.siteReassigned) {
-    return { level: 'warn', text: t('setup.verdict.siteChanged', { site: siteName(i.site) }) };
+    return say('warn', t('setup.verdict.siteChanged', { site: siteName(i.site) }));
   }
-  if (i.payloadMass > cap * 0.9) {
-    return { level: 'warn', text: t('setup.verdict.tight', { mass: num(i.payloadMass), cap: num(cap), class: className }) };
+  const notes: string[] = [];
+  // Short on paper, but something above the ascent can make it up — which is
+  // how Proton-M and Angara-A5 fly every one of their missions in this model,
+  // their three or four core stages being short of a direct ascent and the
+  // Briz-M finishing the job. Reported rather than hidden, and not a failure.
+  if (capability && capability.ascentShortfall > 0) {
+    notes.push(t('setup.verdict.ascentShort', { dv: num(Math.round(capability.ascentShortfall)) }));
   }
-  if (i.failureMode !== 'none') {
-    return { level: 'warn', text: t('setup.verdict.failureArmed', { mode: t(`setup.fail.${i.failureMode}`) }) };
+  // At or above 90 % of the rating. Inclusive: the fleet matrix's own 90 % rows
+  // land exactly on this line, and several of them are `BEYOND_CAPABILITY`.
+  if (i.payloadMass >= cap * 0.9) {
+    notes.push(t('setup.verdict.tight', { mass: num(i.payloadMass), cap: num(cap), class: className }));
   }
-  return { level: 'ok', text: t('setup.verdict.readyMargin', { mass: num(i.payloadMass), cap: num(cap), class: className }) };
+  if (armed !== '' || notes.length > 0) return say('warn', ...notes);
+  return say('ok', t('setup.verdict.readyMargin', { mass: num(i.payloadMass), cap: num(cap), class: className }));
 }
 
 export class SetupPanel {
@@ -234,6 +365,47 @@ export class SetupPanel {
   setRunning(r: boolean): void {
     this.running = r;
     this.render();
+  }
+
+  /**
+   * Apply an edit made to `state` from outside the panel's own controls (the
+   * WebMCP tools in `src/mcp.ts`) and repaint.
+   *
+   * The panel's own fields all funnel through `changed()`, which resyncs
+   * `tunedFor` to `missionSignature()` on every edit; an external caller that
+   * writes `state` directly and just calls `render()` skips that resync, so
+   * the *next* edit made through the panel's own controls sees a stale
+   * `tunedFor`, decides the auto-tune (or the override an external caller
+   * just set) belongs to a different mission, and silently clears
+   * `guidanceOverrides`. Resyncing here is what makes an MCP-set guidance
+   * override survive a later, unrelated panel edit.
+   *
+   * `siteReassigned` mirrors the one-shot flag the vehicle dropdown sets
+   * when it forces a different launch site (see `render()` and
+   * `missionVerdict`'s doc comment): pass it when the caller performed that
+   * same reassignment itself, so the verdict this call returns — and the note
+   * `render()` paints — still carries the amber warning instead of silently
+   * dropping it.
+   *
+   * The flag is assigned, not OR'd, and cleared again before returning, the
+   * same way `changed()` clears it after `refresh()`: otherwise a later call
+   * with `siteReassigned: false` (any edit that does not itself reassign the
+   * site) would leave a `true` from an earlier call stuck, and every
+   * feasibility verdict after the first site reassignment would mask
+   * over-capacity, tight-margin and armed-failure warnings for the rest of
+   * the session — the exact bug the one-shot flag exists to prevent.
+   *
+   * Returns the verdict computed while the flag was still set, so a caller
+   * (`src/mcp.ts`) can report the reassignment warning for *this* edit without
+   * a second `feasibility()` call racing the clear below.
+   */
+  applyExternalEdit(opts?: { siteReassigned?: boolean }): Feasibility {
+    this.siteReassigned = !!opts?.siteReassigned;
+    this.tunedFor = this.missionSignature();
+    this.render();
+    const verdict = this.feasibility();
+    this.siteReassigned = false;
+    return verdict;
   }
 
   /** What an auto-tune result is valid for: change any of it and the tune is stale. */
@@ -649,6 +821,24 @@ export class SetupPanel {
     const cell = this.statCell(t('setup.stats.payloadCap'), caps.join(' · '), 'kg');
     cell.className = 'wide';
     box.appendChild(cell);
+    // The second half of audit item B26: a rating is a number to an orbit from
+    // a site, and without them it is not comparable with anything. Soyuz-2.1a's
+    // 7 430 kg is to 240 km × 51.6° FROM BAIKONUR and is 6 800 kg from
+    // Plesetsk; the fleet matrix's own presets are 420–600 km, which costs
+    // 150–300 m/s more than any of them. `RATING_ORBITS` has carried those
+    // references since wave 2 with nothing reading them.
+    const refs = RATING_ORBITS[spec.id];
+    if (refs && refs.length > 0) {
+      const lines = refs.map((o) => {
+        const shape = o.perigeeKm === o.apogeeKm
+          ? `${num(o.perigeeKm)} km`
+          : `${num(o.perigeeKm)} × ${num(o.apogeeKm)} km`;
+        return `${t(`orbit.class.${o.rating.toLowerCase()}`)} ${shape} · ${o.inclinationDeg.toFixed(1)}° · ${siteName(siteById(o.siteId))}`;
+      });
+      const ref = this.statCell(t('setup.stats.ratingOrbit'), lines.join(' — '));
+      ref.className = 'wide';
+      box.appendChild(ref);
+    }
   }
 
   private updateWindows(): void {
@@ -720,11 +910,13 @@ export class SetupPanel {
       spec: vehicleById(s.vehicleId),
       site,
       orbit: s.orbit,
+      satellite: satelliteById(s.satelliteId),
       payloadMass: s.payloadMass,
       inclinationDeg: resolveTarget(s.orbit, site, s.launchTime).inclination * RAD,
-      // The planner's own verdict when there is one: it knows about the
-      // range-safety corridor as well as the latitude.
-      inclinationReachable: this.planCache ? this.planCache.inclinationReachable : null,
+      // The plan made for this very configuration in `refresh()`: the corridor,
+      // the ascent margin, the insertion orbit and the burn budget all come
+      // from it, so the verdict says what the planner says.
+      plan: this.planCache,
       failureMode: s.failure.mode,
       siteReassigned: this.siteReassigned,
     });

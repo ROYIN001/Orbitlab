@@ -17,8 +17,10 @@
  */
 import type { VisualFrame } from '../physics/frame';
 import type { SimEvent } from '../physics/simulation';
+import type { VehicleSpec } from '../types';
 import { t } from '../i18n';
 import { fmtTime } from './hud';
+import { localizeEventParams } from './names';
 import { phaseInfo } from './phase';
 
 export interface NarrationState {
@@ -49,6 +51,8 @@ export class Narration {
   private missionEyebrow: HTMLElement | null;
   private vehicleName = '';
   private payloadName = '';
+  /** the flying vehicle, for the stage names the latest callout carries */
+  private vehicle: VehicleSpec | null = null;
   /** last rendered strings, so a 10 Hz update writes nothing when nothing moved */
   private shown = { label: '', title: '', detail: '', event: '', clock: '', ctx: '', state: '' };
 
@@ -69,6 +73,21 @@ export class Narration {
     this.missionName = document.getElementById('mission-name');
     this.missionEyebrow = document.getElementById('mission-eyebrow');
     this.applyLanguage();
+  }
+
+  /**
+   * The mission whose events the latest-callout line is rendering.
+   *
+   * The callout is `t(event.key, params)`, and those params carry stage and
+   * booster names written in English by the physics; without the spec they
+   * printed untranslated inside a Russian or Thai sentence, the same defect
+   * release review 2 raised for the spacecraft name (major #1). The spacecraft
+   * itself resolves from the event's own `satId` and needs no spec.
+   */
+  setVehicle(spec: VehicleSpec | null): void {
+    if (spec === this.vehicle) return;
+    this.vehicle = spec;
+    this.shown.event = ''; // force the callout to be written again
   }
 
   /** Proper names, which stay untranslated (audit B38: vehicles and sites are proper nouns). */
@@ -104,7 +123,7 @@ export class Narration {
     const title = t(info.titleKey);
     const detail = t(info.detailKey, info.params);
     const last = info.lastEvent;
-    const event = last ? `${fmtTime(last.t)} · ${t(last.key, last.params)}` : t('narr.standby');
+    const event = last ? `${fmtTime(last.t)} · ${t(last.key, localizeEventParams(this.vehicle, last.params))}` : t('narr.standby');
     // The title and the status can be the same word ("Countdown", "In orbit").
     // Printing it twice reads as a stutter, so the eyebrow yields to the title.
     const eyebrow = label === title ? t('narr.mission') : label;

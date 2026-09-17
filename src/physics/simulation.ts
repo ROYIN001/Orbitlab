@@ -103,6 +103,16 @@ export interface SimState {
   status: SimStatus;
   ascentPhase: AscentPhase | null;
   throttle: number;
+  /**
+   * What the engines are actually running at, as opposed to what guidance
+   * commanded (`throttle`): the minimum-throttle clamp, the
+   * `throttleWithBoosters` clamp and a solid motor's thrust profile are all
+   * already in these. Output only — nothing in the physics reads them back;
+   * they exist so the renderer's plumes can be driven from the frame instead of
+   * from a second copy of the clamping rules (`ThrustResult.coreThrottle`).
+   */
+  coreThrottle: number;
+  boosterThrottle: number;
   thrust: number;
   mass: number;
   q: number;
@@ -327,7 +337,7 @@ export class Simulation {
     const r = clone(this.siteR0);
     const v = groundVelocityEci(r);
     this.state = {
-      t: t0, r, v, dir: normalize(r), status: 'prelaunch', ascentPhase: 'vertical', throttle: 0, thrust: 0,
+      t: t0, r, v, dir: normalize(r), status: 'prelaunch', ascentPhase: 'vertical', throttle: 0, coreThrottle: 0, boosterThrottle: 0, thrust: 0,
       mass: this.vehicle.totalMass(), q: 0, mach: 0, gLoad: 1, altitude: this.site.altitude, altitudeAGL: 0,
       airspeed: 0, speed: norm(v), downrange: 0, lat: this.site.latitude, lon: this.site.longitude,
       elements: elementsFromState(r, v), maxQ: { value: 0, t: 0, alt: 0 },
@@ -377,6 +387,22 @@ export class Simulation {
    */
   private event(key: string, severity: EventSeverity, params?: Record<string, string | number>, at?: number): void {
     this.events.push({ t: at ?? this.state.t, key, params, severity });
+  }
+
+  /**
+   * The `{stage}` parameter for an event about `st`.
+   *
+   * A stage name is the English literal from `src/data`, and the presentation
+   * layer translates it by matching it against the vehicle's own stage list
+   * (`stageNameByLabel`, src/ui/names.ts). The SPACECRAFT stage is the one that
+   * list can never contain — `VehicleModel` synthesises it from the satellite
+   * record — so its events carry `satId` as well, exactly as `evt.payloadSep`
+   * does, and the UI resolves the localized name from the id. Without it a
+   * Russian or Thai event log read "จุดเครื่องยนต์: Crewed spacecraft"
+   * (release review 2, major #1, same family as the payload-separation event).
+   */
+  private stageParams(st: StageState): Record<string, string | number> {
+    return st.spec.isSpacecraft ? { stage: st.spec.name, satId: this.satellite.id } : { stage: st.spec.name };
   }
 
   /**
@@ -699,9 +725,18 @@ export class Simulation {
     s.dir = slerpLimited(s.dir, dirCmd, slew);
 
     // --- propulsion
-    const thr = throttleCmd > 0 ? this.vehicle.thrust(s.t, atm.p, throttleCmd) : { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, burning: false };
+    const thr = throttleCmd > 0
+      ? this.vehicle.thrust(s.t, atm.p, throttleCmd)
+      : { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
     s.thrust = thr.thrust;
     s.throttle = thr.burning ? throttleCmd : 0;
+    // What the engines are really doing, as opposed to what was commanded.
+    // `captureFrame` used to re-derive this from the spec — a second copy of
+    // the clamping rules in `VehicleModel.thrust`, which had already dropped
+    // the solid thrust profile. Recording the value the thrust model itself
+    // produced is one rule instead of two.
+    s.coreThrottle = thr.coreThrottle;
+    s.boosterThrottle = thr.boosterThrottle;
 
     // --- integrate
     const area = this.vehicle.frontalArea();
@@ -891,13 +926,13 @@ export class Simulation {
     if (st) this.vehicle.cutoffStage(st, s.t);
     if (this.secoReported) return;
     this.secoReported = true;
-    this.event('evt.seco', 'major', { stage: st?.spec.name ?? '' });
+    this.event('evt.seco', 'major', st ? this.stageParams(st) : { stage: '' });
   }
 
   private onCoreBurnout(st: StageState, rNext: Vec3, vNext: Vec3): void {
     const s = this.state;
     const isLast = st.index >= this.vehicle.lastLauncherIndex;
-    if (st.spec.isSpacecraft) this.event('evt.spacecraftPropellantOut', 'warn', { stage: st.spec.name });
+    if (st.spec.isSpacecraft) this.event('evt.spacecraftPropellantOut', 'warn', this.stageParams(st));
     else this.event(st.index === 0 ? 'evt.meco' : 'evt.stageCutoff', 'major', { stage: st.spec.name, n: st.index + 1 });
     if (s.status === 'burn' && s.currentBurn) {
       // stage exhausted mid-burn
@@ -1064,7 +1099,7 @@ export class Simulation {
    *     barely. There is nothing left to gain, and every further second of
    *     thrust takes it back off target. This is the whole of single-shot
    *     direct insertion: Soyuz-2.1a with an inert payload aimed at a 200 km
-   *     circular orbit now cuts off at 198.2 × 200.7 km (1.755 t) with 2.7 km/s
+   *     circular orbit now cuts off at 197.2 × 200.4 km (1.755 t) with 2.7 km/s
    *     still in the tanks, where it used to burn on to 197 × 695 km and be
    *     reported off target. The full grid is measured in exactly one place —
    *     the `single-shot direct insertion` section of
@@ -1400,7 +1435,7 @@ export class Simulation {
     }
     if (!st.ignited || st.cutoff) {
       this.vehicle.igniteStage(st, s.t);
-      this.event('evt.ignition', 'major', { stage: st.spec.name });
+      this.event('evt.ignition', 'major', this.stageParams(st));
     }
     s.status = 'burn';
     s.note = 'burn';
@@ -1422,7 +1457,7 @@ export class Simulation {
         s.burnPlaneNormal = planeNormalThrough(normalize(at.r), burn.targetInclination, curNormal);
       }
     }
-    this.event('evt.burnStart', 'major', { kind: burn.kind, stage: st.spec.name });
+    this.event('evt.burnStart', 'major', { kind: burn.kind, ...this.stageParams(st) });
   }
 
   private checkCoast(_el: OrbitalElements): void {
@@ -1653,13 +1688,18 @@ export class Simulation {
     }
     s.payloadSeparated = true;
     s.mass = this.vehicle.totalMass();
-    this.event('evt.payloadSep', 'success', { name: this.satellite.name });
+    // `satId` is what the presentation layer resolves the localized spacecraft
+    // name from (`localizeEventParams` in src/ui/names.ts). `name` stays on the
+    // event as the English literal from src/data: physics is not allowed to
+    // know about dictionaries, the CSV export is a data file, and a renderer
+    // that has no dictionary entry for this spacecraft falls back to it.
+    this.event('evt.payloadSep', 'success', { name: this.satellite.name, satId: this.satellite.id });
     if (igniteSpacecraft) {
       const sc = this.vehicle.active;
       if (sc && sc.spec.isSpacecraft) {
         this.schedule(s.t + (sc.spec.ignitionDelay ?? 5), 'ignition', () => {
           this.vehicle.igniteStage(sc, this.state.t);
-          this.event('evt.ignition', 'major', { stage: sc.spec.name });
+          this.event('evt.ignition', 'major', this.stageParams(sc));
         });
       }
     }

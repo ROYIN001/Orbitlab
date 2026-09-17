@@ -118,6 +118,30 @@ describe('flight recorder', () => {
     expect(p.frameAt(loss!.t - 1)!.destroyed).toBe(false);
   });
 
+  it('hands back the same copy while the clock is not advancing', () => {
+    // A paused app calls `recordNow` sixty times a second for a frame that
+    // cannot have changed. The copy is cached on the head's identity, so the
+    // recording is still never handed out, but the deep copy is paid once.
+    // On the pad: `start` captures the head at exactly `sim.state.t`, which is
+    // the state a paused app sits in for as long as the user leaves it there.
+    const sim = new Simulation(cfg(), { headless: true });
+    const rec = new FlightRecorder();
+    rec.start(sim);
+    const a = rec.recordNow();
+    const b = rec.recordNow();
+    expect(a).toBe(b);
+    expect(rec.frames).not.toContain(a);
+    // and it really is a copy: mutating it leaves the recording alone
+    const head = rec.head!;
+    const before = JSON.stringify(head);
+    a.elements.a = -1;
+    a.stages[0].attached = !a.stages[0].attached;
+    expect(JSON.stringify(head)).toBe(before);
+    // a new head invalidates it
+    rec.advance(5, 5000);
+    expect(rec.recordNow()).not.toBe(a);
+  });
+
   it('records frames in strictly increasing mission time', () => {
     const { rec } = recorded;
     for (let i = 1; i < rec.frames.length; i++) {
@@ -377,6 +401,56 @@ describe('frame-backed simulation view', () => {
     expect(view.sim.vehicle.deltaVRemaining()).toBeGreaterThan(sim.vehicle.deltaVRemaining());
     // and the live vehicle is untouched
     expect(sim.vehicle.activeIndex).toBeGreaterThan(0);
+  });
+});
+
+describe('frame-driven telemetry panel inputs', () => {
+  // Everything the telemetry panel reads has to come off the frame, or the
+  // panel cannot rewind with the cursor. These are the fields it takes that
+  // the 3-D views do not.
+  it('carries each spent stage\'s outcome, recovery and impact on the frame', () => {
+    const { rec } = recorded;
+    const impacted = rec.events.find((e) => e.key === 'evt.stageImpact');
+    expect(impacted, 'the reference mission drops a stage').toBeDefined();
+    const after = rec.frames[rec.indexAt(impacted!.t + 1)];
+    const dead = after.debris.find((d) => !d.alive);
+    expect(dead, 'a spent stage has come down by now').toBeDefined();
+    expect(dead!.outcome).toBeDefined();
+    expect(dead!.impact).toBeDefined();
+    expect(Math.abs(dead!.impact!.lat)).toBeLessThanOrEqual(90);
+    expect(Math.abs(dead!.impact!.lon)).toBeLessThanOrEqual(180);
+    // …and a frame from before the impact must not know where it landed
+    const before = rec.frames[rec.indexAt(impacted!.t - 30)];
+    const same = before.debris.find((d) => d.id === dead!.id);
+    expect(same).toBeDefined();
+    expect(same!.impact).toBeUndefined();
+    expect(same!.alive).toBe(true);
+  });
+
+  it('exposes the frame\'s debris through the simulation view', () => {
+    const { rec, sim } = recorded;
+    const view = createFrameSimView(sim);
+    const p = new ReplayPlayer(rec);
+    const impacted = rec.events.find((e) => e.key === 'evt.stageImpact')!;
+    view.setFrame(p.frameAt(impacted.t + 1)!);
+    const dead = view.sim.debris.find((d) => !d.alive);
+    expect(dead).toBeDefined();
+    expect(dead!.impact).toBeDefined();
+    // the Δv budget and max Q the panel prints are the frame's, not the live run's
+    const mid = p.frameAt(100)!;
+    view.setFrame(mid);
+    expect(view.sim.state.losses.gravity).toBeCloseTo(mid.losses.gravity, 6);
+    expect(view.sim.state.losses.gravity).toBeLessThan(sim.state.losses.gravity);
+    expect(view.sim.state.maxQ.t).toBeCloseTo(mid.maxQ.t, 6);
+    // the truncated logs are the same array object each time, grown in place
+    const first = view.sim.telemetry;
+    view.setFrame(p.frameAt(200)!);
+    expect(view.sim.telemetry).toBe(first);
+    expect(view.sim.telemetry.length).toBeGreaterThan(0);
+    for (const s of view.sim.telemetry) expect(s.t).toBeLessThanOrEqual(200 + 1e-6);
+    // and it shrinks again when the cursor goes back
+    view.setFrame(p.frameAt(50)!);
+    for (const s of view.sim.telemetry) expect(s.t).toBeLessThanOrEqual(50 + 1e-6);
   });
 });
 

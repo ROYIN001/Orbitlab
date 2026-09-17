@@ -110,6 +110,13 @@ export interface DebrisFrame {
   anchor?: number;
   /** first-stage recovery state, for the grid fins, legs and landing burn */
   recovery?: { phase: 'coast' | 'entry' | 'landing'; landed: boolean };
+  /**
+   * Where this object came down, once it has. Carried on the frame so the
+   * telemetry panel's spent-stage list can be driven from the displayed
+   * instant instead of from the live `Simulation` — scrubbing back to before
+   * the impact must not show the impact coordinates.
+   */
+  impact?: { lat: number; lon: number };
 }
 
 /**
@@ -225,6 +232,13 @@ export interface StackLayout {
   height: number[];
   /** height of each entry's base above the bottom of the stack, m */
   base: number[];
+  /**
+   * Diameter of whatever sits directly on top of each entry — the next
+   * non-spacecraft stage, else the fairing, else nothing. It is what decides
+   * the interstage adapter, and `RocketView` used to re-derive the same rule
+   * for the cone it draws, so the two could drift.
+   */
+  topDiameter: (number | null)[];
   /** total height of the launcher stack — the base of the fairing/payload, m */
   total: number;
 }
@@ -247,77 +261,74 @@ export function stackLayout(spec: VehicleSpec): StackLayout {
   if (hit) return hit;
   const height: number[] = [];
   const base: number[] = [];
+  const topDiameter: (number | null)[] = [];
   let total = 0;
   for (let i = 0; i < spec.stages.length; i++) {
     const st = spec.stages[i];
     base.push(total);
-    if (st.isSpacecraft) { height.push(0); continue; }
+    if (st.isSpacecraft) { height.push(0); topDiameter.push(null); continue; }
     const next = spec.stages.slice(i + 1).find((s) => !s.isSpacecraft);
     const topD = next ? next.diameter : spec.fairing ? spec.fairing.diameter : null;
+    topDiameter.push(topD);
     const h = st.length + interstageHeight(st.diameter, topD);
     height.push(h);
     total += h;
   }
-  const out: StackLayout = { height, base, total };
+  const out: StackLayout = { height, base, topDiameter, total };
   layoutCache.set(spec, out);
   return out;
 }
 
 /**
- * Where the *still attached* part of the stack starts, m above the bottom of
- * the full stack. The renderer draws that point at `s.r`, so it is also the
- * conversion between stack coordinates and the floating origin.
+ * Where the *still attached* part of the stack started at mission time `at`, m
+ * above the bottom of the full stack. The renderer draws that point at `s.r`,
+ * so it is also the conversion between stack coordinates and the floating
+ * origin.
+ *
+ * Evaluated at an arbitrary instant rather than "now" because that is what
+ * makes `debrisAnchor` a pure function of state. It reads only `attached` and
+ * `sepTime`, both of which the simulation writes once and never rewrites.
  */
-function attachedBase(sim: Simulation, layout: StackLayout): number {
+function attachedBaseAt(sim: Simulation, layout: StackLayout, at: number): number {
   let base = 0;
   const stages = sim.vehicle.stages;
   for (let i = 0; i < stages.length; i++) {
-    if (stages[i].spec.isSpacecraft) continue;
-    if (stages[i].attached) break;
+    const st = stages[i];
+    if (st.spec.isSpacecraft) continue;
+    // still attached now, or still attached *then*
+    if (st.attached || st.sepTime > at) break;
     base += layout.height[i] ?? 0;
   }
   return base;
 }
 
-/** Cached per-debris anchors, so the scan runs once per object, not per frame. */
-const debrisAnchors = new WeakMap<Simulation, Map<number, number>>();
-
+/**
+ * Offset from `d.r` to the base of the drawn body — see `DebrisFrame.anchor`.
+ *
+ * Deliberately **not** memoised. It used to be cached in a per-Simulation
+ * WeakMap, filled on the first `captureFrame` that saw the object, and the
+ * fairing branch read the LIVE attached state to fill it. That made
+ * `captureFrame(sim)` a function of how often it had been called rather than of
+ * the state alone, against this file's own contract — and `App.frame`
+ * fast-forwards with `recorder.advance(min(600, …), 3000)`, so one advance can
+ * swallow a fairing jettison and a later stage separation and latch the wrong
+ * anchor. Asking for the stack as it stood at `d.createdAt` gives the same
+ * answer from any call order, and the scan is four comparisons over a list that
+ * is never longer than four stages.
+ */
 function debrisAnchor(sim: Simulation, d: Debris, layout: StackLayout): number {
-  let cache = debrisAnchors.get(sim);
-  if (!cache) { cache = new Map(); debrisAnchors.set(sim, cache); }
-  const hit = cache.get(d.id);
-  if (hit !== undefined) return hit;
-  let anchor = 0;
   if (d.visual.kind === 'stage' || d.visual.kind === 'upperStage') {
     // the spent stage hangs below the separation plane, which is where the
     // remaining stack's base — and therefore the origin — now sits
     const idx = sim.vehicle.stages.findIndex((st) => st.spec.name === d.name);
-    anchor = -(idx >= 0 ? layout.height[idx] : d.visual.length);
-  } else if (d.visual.kind === 'fairing') {
-    // the halves come off the top of whatever is still attached. Evaluated on
-    // the first frame the debris is seen, which is the jettison instant: a
-    // later stage separation must not move the fairing that is already gone.
-    anchor = layout.total - attachedBase(sim, layout);
+    return -(idx >= 0 ? layout.height[idx] : d.visual.length);
   }
-  cache.set(d.id, anchor);
-  return anchor;
-}
-
-/**
- * Throttle the core engines of a stage are actually running at.
- * Mirrors the clamping in `VehicleModel.thrust`; see `StageFrame.effectiveThrottle`.
- */
-function coreThrottleOf(sim: Simulation, stageIndex: number, command: number): number {
-  const st = sim.vehicle.stages[stageIndex];
-  if (!st) return command;
-  const e = st.spec.engine;
-  let thr = command;
-  const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
-  if (boostersBurning && st.spec.throttleWithBoosters !== undefined && sim.state.t - st.ignitionTime > 20) {
-    thr = Math.min(thr, st.spec.throttleWithBoosters);
+  if (d.visual.kind === 'fairing') {
+    // the halves come off the top of whatever was still attached at jettison;
+    // a later stage separation must not move a fairing that is already gone
+    return layout.total - attachedBaseAt(sim, layout, d.createdAt);
   }
-  const minT = e.solid ? 1 : e.minThrottle ?? 1;
-  return Math.max(minT, Math.min(1, thr));
+  return 0;
 }
 
 /** Ambient pressure at a debris item's own altitude (a landing booster at 2 km
@@ -369,7 +380,10 @@ export function captureFrame(sim: Simulation): VisualFrame {
       // separateStage, so a still-attached stage must not report 0.
       sepTime: st.attached ? -1 : st.sepTime,
       engineFraction: st.engineFraction,
-      effectiveThrottle: burning ? coreThrottleOf(sim, st.index, s.throttle) : 0,
+      // `s.coreThrottle` is what `VehicleModel.thrust` actually applied on the
+      // last step, solid profile included — only the active stage can be
+      // `burning`, so one recorded number covers the whole list.
+      effectiveThrottle: burning ? s.coreThrottle : 0,
     });
     for (const b of st.boosters) {
       const bBurning = b.attached && b.ignited && !b.burnedOut && st.attached;
@@ -378,9 +392,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
         stageId: st.spec.id,
         attached: b.attached,
         burning: bBurning,
-        effectiveThrottle: bBurning
-          ? (b.spec.engine.solid ? 1 : Math.max(b.spec.engine.minThrottle ?? 1, Math.min(1, s.throttle)))
-          : 0,
+        effectiveThrottle: bBurning ? s.boosterThrottle : 0,
         propellantFraction: b.spec.propellantMass > 0 ? Math.max(0, Math.min(1, b.propellant / b.spec.propellantMass)) : 0,
         // burnoutTime is written by burnout and by jettisonBooster only; a
         // booster that is still burning must report -1, not 0.
@@ -402,6 +414,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     createdAt: d.createdAt,
     anchor: debrisAnchor(sim, d, layout),
     recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed } : undefined,
+    impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
   }));
   return {
     t: s.t,
@@ -532,6 +545,7 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
       v: clone(d.v),
       dir: clone(d.dir),
       recovery: d.recovery ? { ...d.recovery } : undefined,
+      impact: d.impact ? { ...d.impact } : undefined,
     })),
   };
 }
@@ -581,8 +595,9 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   const debris: DebrisFrame[] = a.debris.map((d) => {
     const other = b.debris.find((x) => x.id === d.id);
     const rec = d.recovery ? { ...d.recovery } : undefined;
+    const imp = d.impact ? { ...d.impact } : undefined;
     if (!other || !other.alive || !d.alive) {
-      return { ...d, r: clone(d.r), v: clone(d.v), dir: clone(d.dir), recovery: rec };
+      return { ...d, r: clone(d.r), v: clone(d.v), dir: clone(d.dir), recovery: rec, impact: imp };
     }
     return {
       ...d,
@@ -591,6 +606,7 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
       dir: slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
       recovery: rec,
+      impact: imp,
     };
   });
   return {

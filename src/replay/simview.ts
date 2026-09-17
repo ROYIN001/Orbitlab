@@ -29,7 +29,11 @@
  *   (reconstructed from the frame's propellant fraction), plus per-booster
  *   `attached`, `propellant` and `burnoutTime`. That is enough for
  *   `deltaVRemaining()` to be coherent with the frame.
- * - `debris`, `telemetry`, `events`: truncated to the displayed instant.
+ * - `debris`, `telemetry`, `events`: truncated to the displayed instant. A
+ *   debris record carries the frame's `outcome`, `recovery` (phase, landed and
+ *   burning) and `impact`, which is what the telemetry panel's spent-stage list
+ *   reads; the integrator-only fields (mass, area, cd, recovery propellant and
+ *   thrust) read 0 rather than the live object's values.
  *
  * Still **live**, because no frame field describes them: `state.currentBurn`,
  * `burnStartTime`, `burnDvRemaining`, `burnPlaneNormal`, `predictedApoapsis`,
@@ -77,9 +81,9 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
   let frame: VisualFrame | null = null;
   let debrisCache: Debris[] = [];
   let debrisFor = -1;
-  let telemetryCache: TelemetrySample[] = [];
+  const telemetryCache: TelemetrySample[] = [];
   let telemetryCut = -1;
-  let eventsCache: SimEvent[] = [];
+  const eventsCache: SimEvent[] = [];
   let eventsCut = -1;
 
   const apply = (f: VisualFrame): void => {
@@ -150,6 +154,12 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
     frame = f;
   };
 
+  /** Make `out` the first `n` entries of `src`, reusing the array it already has. */
+  const fit = <T>(out: T[], src: T[], n: number): void => {
+    if (out.length > n) out.length = n;
+    for (let i = out.length; i < n; i++) out.push(src[i]);
+  };
+
   /** Last index of `arr` whose `t` is at or before `time` (exclusive upper bound). */
   const cut = (arr: { t: number }[], time: number): number => {
     let lo = 0;
@@ -175,6 +185,20 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
             id: d.id, name: d.name, r: d.r, v: d.v, dir: d.dir,
             mass: 0, area: 0, cd: 0, visual: d.visual, alive: d.alive,
             createdAt: d.createdAt, outcome: d.outcome,
+            // The recovery record is the frame's two-field summary widened to
+            // the simulation's shape: only `phase`, `landed` and `burning` are
+            // recorded, and they are the only three the telemetry panel and
+            // the renderer read. The propellant/thrust fields are the
+            // integrator's own and have no frame equivalent, so they read 0
+            // rather than leaking the live booster's numbers into a rewound
+            // view.
+            recovery: d.recovery
+              ? {
+                propellant: 0, thrustVac: 0, thrustSL: 0, mdot: 0, entryBurnLeft: 0,
+                burning: d.burning, phase: d.recovery.phase, landed: d.recovery.landed,
+              }
+              : undefined,
+            impact: d.impact,
           }));
         }
         return debrisCache;
@@ -188,7 +212,12 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
         const n = cut(sim.telemetry, f.t);
         if (n !== telemetryCut) {
           telemetryCut = n;
-          telemetryCache = sim.telemetry.slice(0, n);
+          // Grown and shrunk in place rather than re-`slice`d. Both source
+          // arrays are append-only, so index i means the same sample for the
+          // whole flight and the copy costs the delta, not the whole array —
+          // `sim.telemetry` reaches tens of thousands of entries on a long
+          // mission and the map reads this getter on every animation frame.
+          fit(telemetryCache, sim.telemetry, n);
         }
         return telemetryCache;
       },
@@ -201,7 +230,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
         const n = cut(sim.events, f.t);
         if (n !== eventsCut) {
           eventsCut = n;
-          eventsCache = sim.events.slice(0, n);
+          fit(eventsCache, sim.events, n);
         }
         return eventsCache;
       },

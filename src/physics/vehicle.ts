@@ -45,8 +45,19 @@ export interface ThrustResult {
   mdot: number;
   /** vacuum-equivalent thrust of running engines at full throttle (for limits) */
   thrustFullVac: number;
-  /** effective throttle applied to the core stage */
+  /**
+   * Fraction of full thrust the core engines of the active stage are actually
+   * producing: the commanded throttle after the engine's minimum-throttle
+   * clamp and the `throttleWithBoosters` clamp, times a solid motor's thrust
+   * profile. 0 when the core is not burning.
+   *
+   * It is an *output*, recorded on `SimState` and read by the renderer for the
+   * plume (`StageFrame.effectiveThrottle`). Nothing in the physics reads it
+   * back — `thrust` itself is already the clamped number.
+   */
   coreThrottle: number;
+  /** the same for the strap-on boosters of the active stage (solid profile included) */
+  boosterThrottle: number;
   /** any engine currently producing thrust */
   burning: boolean;
 }
@@ -285,7 +296,7 @@ export class VehicleModel {
    */
   thrust(t: number, p: number, throttleCmd: number): ThrustResult {
     const st = this.active;
-    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, burning: false };
+    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
     if (!st) return out;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
     // core
@@ -304,7 +315,8 @@ export class VehicleModel {
       out.thrust += n * engineThrust(e, p) * thr * profile;
       out.mdot += n * engineMassFlow(e) * thr * profile;
       out.thrustFullVac += n * e.thrustVac * profile;
-      out.coreThrottle = thr;
+      // `* profile` so a solid core's plume follows its own thrust curve
+      out.coreThrottle = Math.min(1, thr * profile);
       out.burning = true;
     }
     // boosters
@@ -318,6 +330,11 @@ export class VehicleModel {
       out.thrust += n * engineThrust(e, p) * thr * profile;
       out.mdot += n * engineMassFlow(e) * thr * profile;
       out.thrustFullVac += n * e.thrustVac * profile;
+      // The strongest burning group wins: several groups on one stage (H3's
+      // SRB-3 pair, Angara's four URM-1s) light and burn out together, so a
+      // maximum and a per-group value differ only during the second in which
+      // one of them has burned out and is about to be jettisoned.
+      out.boosterThrottle = Math.max(out.boosterThrottle, Math.min(1, thr * profile));
       out.burning = true;
     }
     return out;

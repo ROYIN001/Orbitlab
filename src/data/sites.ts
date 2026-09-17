@@ -22,11 +22,24 @@ export interface SiteExtra extends LaunchSiteSpec {
    * descending one — and `tests/data-consistency.test.ts` re-measures the whole
    * table so the pair cannot drift from the corridor it describes.
    *
-   * NOTE for the planner wave: `minInclination` is still the only one of the two
-   * that `src/physics/mission.ts` reads. Nothing here forces a mission to stay
-   * inside the corridor yet; `planMission` has to call `azimuthAllowedFor` (or
-   * bracket with this pair) and expose the verdict, which is the half of B25
-   * that is not data.
+   * The other half of B25 is now closed too: `inclinationCorridor` in
+   * `src/physics/mission.ts` brackets a target inclination with this pair,
+   * `planMission` exposes the verdict as `MissionPlan.inclinationReachable`,
+   * and the setup panel's pre-flight verdict reads the same function — so a
+   * target outside the corridor is reported instead of being flown and called
+   * nominal (release review 2, major #2).
+   *
+   * Bracketing with the pair, rather than calling `azimuthAllowedFor` from the
+   * panel, is deliberate and was measured: the two agree on the retrograde end
+   * for all fifteen sites (which is where the fleet's own `SITE_GEOMETRY` table
+   * uses the azimuth test), but at the prograde end `azimuthAllowedFor` is the
+   * raw corridor edge while `minInclination` is the OPERATIONAL minimum a site
+   * declares, and the two differ wherever a site flies less than its geometry
+   * allows — Taiyuan (corridor 61.2°, declared 63°) and, in the other
+   * direction, every site whose declared minimum is a nearly due-east launch
+   * just outside a corridor that starts at 90° (Jiuquan, Wallops, Tanegashima,
+   * Mahia). Testing the azimuth there would flag ordinary missions those sites
+   * really fly.
    */
   maxInclination: number;
 }

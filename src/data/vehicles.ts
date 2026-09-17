@@ -369,6 +369,14 @@ export const VEHICLES: VehicleSpec[] = [
       f9Stage2(),
     ],
     sites: ['cape', 'vandenberg'], maxQ: 40e3, maxAccel: 45,
+    // 22 kPa, not the real ~33 kPa peak, and deliberately so. Raising it was
+    // measured across 26/30/33/36 kPa and with the bucket removed (table in
+    // docs/PHYSICS.md §6a): the max-Q marker only reaches T+59 s even with no
+    // throttle-down at all, still short of the published 65-80 s, because when
+    // q peaks is set by the ascent profile rather than by the bucket — while a
+    // vehicle that does not throttle back reaches MECO at T+145 s and drops the
+    // fairing at T+189 s, both OUTSIDE their published windows. The change
+    // trades one disclosed disagreement for three.
     maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.75 },
     recoverable: true, recoveryReserve: 0.12, crewCapable: true,
     // Shallow kick and a slow pitch program put MECO near 65 km, which is what the published timeline implies.

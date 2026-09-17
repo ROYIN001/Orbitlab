@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
 import { SceneManager, loadEarthTextures } from './render/scene';
+import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
 import { TrailLine, OrbitLine } from './render/lines';
@@ -22,11 +23,12 @@ import { ExplosionEffect } from './replay/explosion';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { R_EARTH } from './physics/constants';
-import { normalize, cross, norm, v3 } from './physics/vec3';
+import { normalize, cross, dot, norm, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
+import { registerMcpTools } from './mcp';
 
 /**
  * A stage or booster came off within the last few seconds.
@@ -76,7 +78,18 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
 }
 
 const WARPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000];
+/**
+ * When the predicted-orbit line is a trajectory rather than an artefact.
+ * See `App.syncPredicted` for the measurements behind both numbers.
+ */
+const PREDICTED_MIN_APOAPSIS = 100e3;
+/** as a fraction of the Earth's radius, below the surface */
+const PREDICTED_MIN_PERIAPSIS = 0.5;
+/** seconds the predicted line takes to fade in or out */
+const PREDICTED_FADE = 0.5;
 const base = import.meta.env.BASE_URL;
+/** Shared empty point list, so clearing a line allocates nothing. */
+const EMPTY_POINTS: Vec3[] = [];
 
 /**
  * Application shell.
@@ -143,6 +156,11 @@ class App {
   private lastPhase: FlightPhase | null = null;
   /** index of the last recorded frame fed to the trail line */
   private trailIdx = -1;
+  /** elements the predicted-orbit line was last sampled for (see syncPredicted) */
+  private predictedShape = { a: NaN, e: NaN, i: NaN, raan: NaN, argp: NaN };
+  private predictedOn = false;
+  /** 0..1 fade of the predicted-orbit line (see syncPredicted) */
+  private predictedFade = 0;
   private playBtn!: HTMLButtonElement;
   private playGlyph!: HTMLElement;
   private liveBtn!: HTMLButtonElement;
@@ -289,9 +307,21 @@ class App {
     requestAnimationFrame((now) => this.frame(now));
   }
 
+  /**
+   * The viewport changed size.
+   *
+   * The three polylines are `Line2`, whose width is a number of CSS pixels, so
+   * their material has to be told the viewport size — that is the conversion
+   * from clip space to pixels inside the shader. Without this call the lines
+   * are drawn against a 1x1 viewport and vanish.
+   */
   resize(): void {
     const w = this.viewport.clientWidth, h = this.viewport.clientHeight;
-    if (w > 0 && h > 0) this.scene.resize(w, h);
+    if (w <= 0 || h <= 0) return;
+    this.scene.resize(w, h);
+    this.trail.setResolution(w, h);
+    this.predicted.setResolution(w, h);
+    this.target.setResolution(w, h);
   }
 
   /** Warp that the on-screen selector is currently editing. */
@@ -369,8 +399,13 @@ class App {
     else if (e.key === '2') this.setCamera('onboard');
     else if (e.key === '3') this.setCamera('space');
     else if (e.key === '4') this.setCamera('map');
-    else if (e.key === '.') { const i = WARPS.indexOf(this.activeWarp); if (i < WARPS.length - 1) this.setWarp(WARPS[i + 1]); }
-    else if (e.key === ',') { const i = WARPS.indexOf(this.activeWarp); if (i > 0) this.setWarp(WARPS[i - 1]); }
+    // Search for the next/previous preset rather than `WARPS.indexOf` on the
+    // current warp: the warp can be a value WebMCP's `control_playback` set
+    // that is not itself one of the `WARPS` presets, and `indexOf` on that
+    // returns -1 — `.` then evaluated `WARPS[-1 + 1]` (`WARPS[0]`, the
+    // *slowest* preset) and `,` failed its `i > 0` guard outright.
+    else if (e.key === '.') { const next = WARPS.find((w) => w > this.activeWarp); if (next !== undefined) this.setWarp(next); }
+    else if (e.key === ',') { const prev = [...WARPS].reverse().find((w) => w < this.activeWarp); if (prev !== undefined) this.setWarp(prev); }
     // Arrows are not guarded by `onButton`: a button, a link and a summary have
     // no native arrow behaviour, and guarding them meant seeking stopped
     // working the moment the user clicked a camera tab, a timeline chip or
@@ -388,7 +423,14 @@ class App {
     }
   }
 
-  private setWarp(v: number): void {
+  /**
+   * Set the time warp of whichever clock is active and keep the on-screen
+   * warp selector in sync. Public so the WebMCP `control_playback` tool
+   * (`src/mcp.ts`) can drive it too, instead of writing `warp`/`replayWarp`
+   * directly — which used to leave the dropdown showing a stale value and
+   * `,`/`.` stepping from the wrong index (review, WAVE 3 WebMCP follow-up).
+   */
+  setWarp(v: number): void {
     if (this.player.live) this.warp = v; else this.replayWarp = v;
     this.warpSel.value = String(v);
   }
@@ -578,15 +620,26 @@ class App {
     this.cams.reset();
     this.debrisView.clear();
     this.trail.clear();
-    this.predicted.setPoints([]);
+    this.predicted.setPoints(EMPTY_POINTS);
+    this.predictedOn = false;
+    this.predictedFade = 0;
+    this.predicted.setOpacity(0);
+    this.predictedShape.a = NaN;
     // target orbit line
     const tg = sim.plan.target;
     const raan = tg.raan ?? sim.plan.raanExpected;
     const st = stateFromElements(tg.a, tg.e, tg.inclination, raan, tg.argp, 0);
     this.target.setPoints(sampleOrbit(elementsFromState(st.r, st.v), 240));
+    // Everything that renders an event carries the same vehicle spec: the
+    // stage and booster names on those events are English literals from
+    // src/data and are translated by `localizeEventParams` at the point of
+    // rendering (src/ui/names.ts).
     this.hud.setVehicle(sim.vehicleSpec);
+    this.timeline.setVehicle(sim.vehicleSpec);
+    this.narration.setVehicle(sim.vehicleSpec);
     this.hud.reset();
     this.tel.reset();
+    this.tel.setExportSource(sim);
     this.explosion.clear();
     // Pay this mission's shader compiles now, while the vehicle is sitting on
     // the pad, rather than as a multi-frame hitch part-way up the ascent.
@@ -638,8 +691,12 @@ class App {
         armed: !!sim,
       });
     }
+    // The telemetry panel is handed the frame-backed view, not the live
+    // simulation, so its charts, Δv budget, spent-stage list and event log stop
+    // at the timeline cursor like everything else on screen. The live object is
+    // given to it separately, for the CSV export of the whole flight.
     this.telTimer += dtReal;
-    if (sim && this.telTimer > 0.5) { this.telTimer = 0; this.tel.update(sim, this.player.cursor); }
+    if (this.simView && this.telTimer > 0.5) { this.telTimer = 0; this.tel.update(this.simView.sim, this.player.cursor); }
     requestAnimationFrame((n) => this.frame(n));
   }
 
@@ -658,6 +715,67 @@ class App {
     }
     this.trailIdx = target;
     if (live && liveFrame.status !== 'prelaunch') this.trail.add(liveFrame.r);
+  }
+
+  /**
+   * Re-sample the predicted orbit only when its *shape* has moved — and only
+   * draw it at all once there is an orbit to draw.
+   *
+   * The line used to switch on the moment `apoapsisAlt > 0 && e < 1`, which
+   * during early ascent is a degenerate ellipse through the Earth's centre:
+   * measured on Falcon 9 at T+20 s, apoapsis 1.4 km, periapsis -6 369.5 km,
+   * e = 0.997. `sampleOrbit` drew that faithfully — as a near-straight white
+   * streak clean across the viewport, through the vehicle, from about T+15 s
+   * on every mission. It reads as a rendering artefact, not as a trajectory.
+   *
+   * `PREDICTED_MIN_PERIAPSIS` is the gate that matters: while the periapsis is
+   * buried deep inside the planet the "orbit" is a needle on an axis through
+   * the Earth's centre, whatever its apoapsis is. Requiring the periapsis above
+   * -R/2 means the drawn ellipse has e <~ 0.35 at LEO apoapsis — measured, that
+   * is T+472 s on the default Soyuz-2.1a (SECO 536), T+476 s on Falcon 9 and
+   * T+415 s on Electron, i.e. the line appears as the upper stage shapes the
+   * real orbit and then tracks it through every later burn. The apoapsis gate
+   * is a second condition for the same reason, not an alternative to it.
+   *
+   * `sampleOrbit(el, 180)` solves Kepler 180 times and allocates 180 vectors.
+   * Doing that on every animation frame is pure waste during a coast or in
+   * orbit, where the ellipse is the same one it was a second ago — and it is
+   * the single most expensive thing in the per-frame path while scrubbing a
+   * long recording, because a scrub spends almost all of its time in exactly
+   * those phases. Under thrust the tolerances are crossed immediately, so the
+   * line still tracks a burn frame by frame.
+   */
+  private syncPredicted(frame: VisualFrame, dt: number): void {
+    const el = frame.elements;
+    const on = frame.status !== 'prelaunch' && frame.liftoff && el.e < 1
+      && el.apoapsisAlt > PREDICTED_MIN_APOAPSIS
+      && el.periapsisAlt > -R_EARTH * PREDICTED_MIN_PERIAPSIS;
+    // Fade in rather than switch on, so the line arrives over half a second
+    // instead of appearing between one frame and the next.
+    this.predictedFade = on
+      ? Math.min(1, this.predictedFade + dt / PREDICTED_FADE)
+      : Math.max(0, this.predictedFade - dt / PREDICTED_FADE);
+    this.predicted.setOpacity(this.predictedFade);
+    if (!on) {
+      // Hold the last sampled shape while it fades, then drop it.
+      if (this.predictedOn && this.predictedFade <= 0) {
+        this.predictedOn = false;
+        this.predictedShape.a = NaN;
+        this.predicted.setPoints(EMPTY_POINTS);
+      }
+      return;
+    }
+    const p = this.predictedShape;
+    const moved = !this.predictedOn
+      || Math.abs(el.a - p.a) > Math.abs(p.a) * 2e-4
+      || Math.abs(el.e - p.e) > 2e-4
+      || Math.abs(el.i - p.i) > 2e-4
+      || Math.abs(el.raan - p.raan) > 2e-4
+      || Math.abs(el.argp - p.argp) > 2e-4;
+    if (!moved) return;
+    p.a = el.a; p.e = el.e; p.i = el.i; p.raan = el.raan; p.argp = el.argp;
+    this.predictedOn = true;
+    this.predicted.setPoints(sampleOrbit(el, 180));
   }
 
   /**
@@ -704,7 +822,15 @@ class App {
     // the sun (and therefore every sky/exposure/shading decision) comes from the
     // frame's own epoch, so a replayed frame relights identically
     const sunDir = sunDirectionEci(frame.jd);
-    this.pad.update(scene, frame);
+    // How dark it is *at the vehicle*, on the same curve the sky uses. Computed
+    // here rather than read back off SceneManager because `scene.update` runs
+    // at the end of this method, after the camera has moved — taking its sky
+    // state would make the pad floodlights lag the sky by a frame and, worse,
+    // make them a function of where the camera is instead of a function of the
+    // frame. It drives the pad floodlights and the strength of the exhaust's
+    // own light on the stack; both are what a night launch is lit by.
+    const night = 1 - dayFactorAt(dot(normalize(frame.r), sunDir));
+    this.pad.update(scene, frame, night);
     // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y x Z
     const { east, north, up } = enuFrame(frame.r);
     let side = cross(frame.dir, up);
@@ -723,19 +849,20 @@ class App {
     const padDist = padVec.length();
     if (padDist > 1) this.backDir.copy(padVec).divideScalar(padDist);
     else this.backDir.set(-frame.dir.x, -frame.dir.y, -frame.dir.z);
-    this.rocket.update(frame, { backDir: this.backDir, padDistance: padDist });
-    this.explosion.update(scene, frame, this.recorder.events, dt);
+    this.rocket.update(frame, { backDir: this.backDir, padDistance: padDist, night });
+    // Size of the object actually being tracked: the stack now, the spacecraft
+    // after payload separation. It frames the camera, decides when the space
+    // view's marker takes over, and scales the break-up effect.
+    const height = frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
+    this.explosion.update(scene, frame, this.recorder.events, dt, height);
     // lines
     this.syncTrail(this.player.cursor, this.player.live, frame);
     this.trail.update(scene);
-    const el = frame.elements;
-    if (frame.status !== 'prelaunch' && el.e < 1 && el.apoapsisAlt > 0 && frame.liftoff) this.predicted.setPoints(sampleOrbit(el, 180));
-    else this.predicted.setPoints([]);
+    this.syncPredicted(frame, dt);
     this.predicted.update(scene);
     this.target.update(scene);
     this.debrisView.update(frame.debris, frame.t);
     // camera
-    const height = frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
     const radius = frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
     this.cams.update(scene.camera, {
@@ -747,7 +874,11 @@ class App {
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);
-    scene.update(frame, sunDir, camAlt);
+    // `height` is the size of the object actually being tracked — the stack
+    // now, the spacecraft after payload separation. Without it the space view's
+    // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
+    // a 3 m CubeSat carrier and by 2x for Starship (render hand-off).
+    scene.update(frame, sunDir, camAlt, height);
     // The map and the onboard overlay still take a `Simulation` (they belong to
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,
@@ -765,7 +896,13 @@ initLang();
 const app = new App();
 // exposed for automated testing / console experiments
 (window as unknown as { orbitlab: App }).orbitlab = app;
-app.init().catch((err) => {
+// WebMCP tools (src/mcp.ts): optional, never blocks startup on failure.
+// Registered only once `init()` resolves — `App.preview`/`launch` reach
+// `this.scene`/`this.debrisView`, which init() assigns and which do not
+// exist before it (review minor: a mission-mutating tool call during texture
+// load would otherwise throw a TypeError out of the tool and leave the app
+// half-initialised).
+app.init().then(() => registerMcpTools(app)).catch((err) => {
   console.error(err);
   const el = document.getElementById('loading-text');
   if (el) {

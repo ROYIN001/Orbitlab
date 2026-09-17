@@ -209,6 +209,25 @@ export class CameraController {
       camera.fov = 45;
       this.first = true;
     }
+    // A non-finite camera position is self-sustaining and fatal. The exterior
+    // rig is critically damped — `damp(prev, desired, …)` blends the previous
+    // position into the new one — and `exp(-lambda*dt) * NaN` is NaN however
+    // hard the rig snaps, so one bad frame poisons every later one. Downstream,
+    // `SceneManager.update` derives the sun elevation and the sky colour from
+    // the camera, and a NaN colour throws out of `addColorStop`, which kills
+    // the animation loop outright (observed once during a scrub in a viewport
+    // that was being resized under it). Re-seed instead of propagating: the
+    // frame after this one snaps to the real framing, because `first` is set.
+    const p = camera.position;
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
+      this.first = true;
+      this.pos.set(0, 0, 0);
+      this.target.set(0, 0, 0);
+      const back = Number.isFinite(f.height) && f.height > 0 ? f.height * 3 : 200;
+      p.set(f.pos.x + back, f.pos.y, f.pos.z + back);
+      camera.up.set(0, 0, 1);
+      camera.lookAt(f.pos);
+    }
     camera.updateProjectionMatrix();
   }
 }

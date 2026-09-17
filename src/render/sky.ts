@@ -37,6 +37,21 @@ const out: SkyState = {
 const lit = new THREE.Color();
 
 /**
+ * Daylight, 0..1, from the sine of the sun's elevation: 0 well after sunset,
+ * 1 once the sun is about 9° up.
+ *
+ * Exported because the *renderer* is not the only consumer. The pad
+ * floodlights and the strength of the exhaust's own light on the stack are
+ * driven by `1 - dayFactorAt(...)` evaluated at the VEHICLE (src/main.ts), a
+ * frame later than — and a few hundred kilometres from — the camera-derived
+ * `skyState` below. Sharing the curve is what keeps "the sky says it is night"
+ * and "the floodlights are on" the same statement.
+ */
+export function dayFactorAt(sunElev: number): number {
+  return smoothstep(-0.18, 0.15, sunElev);
+}
+
+/**
  * @param sunElev sine of the sun's elevation at the camera (up · sunDir)
  * @param camAltitude camera altitude above the ellipsoid, m
  * @param visibility horizontal visibility near the ground, m
@@ -44,7 +59,7 @@ const lit = new THREE.Color();
 export function skyState(sunElev: number, camAltitude: number, visibility = 45e3): SkyState {
   // how much atmosphere is between the camera and space
   const g = 1 - smoothstep(12e3, 72e3, camAltitude);
-  const day = smoothstep(-0.18, 0.15, sunElev);
+  const day = dayFactorAt(sunElev);
   const twilight = smoothstep(-0.28, -0.02, sunElev) * (1 - smoothstep(0.02, 0.22, sunElev));
   const c = out.color;
   c.copy(NIGHT);

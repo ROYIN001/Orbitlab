@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 import type { VehicleSpec, StageSpec, BoosterGroupSpec, SatelliteSpec } from '../types';
 import type { BoosterFrame, StageFrame, VisualFrame } from '../physics/frame';
-import { interstageHeight } from '../physics/frame';
+import { interstageHeight, stackLayout } from '../physics/frame';
 import { buildSatellite, type SatelliteView } from './satellite';
 import { Plume, type PlumeKind } from './plume';
 import { AscentTrail } from './smoke';
@@ -24,7 +24,15 @@ export interface RocketEnv {
   backDir: THREE.Vector3;
   /** distance from the vehicle to the pad, m */
   padDistance: number;
+  /** 0 = full day, 1 = night at the vehicle; scales the exhaust's own light */
+  night: number;
 }
+
+/** Irradiance the exhaust puts on the stack a third of the way up, in daylight. */
+const ENGINE_LIGHT_DAY = 0.3;
+/** …and at night, where it is the only light the vehicle has. */
+const ENGINE_LIGHT_NIGHT = 3.1;
+const ENGINE_LIGHT_DECAY = 1.8;
 
 interface BoosterUnit {
   group: THREE.Group;
@@ -113,13 +121,18 @@ export class RocketView {
   constructor(spec: VehicleSpec, sat: SatelliteSpec) {
     this.spec = spec;
     this.worldGroup.add(this.trail.mesh);
+    // One source of truth for the stacking geometry. `stackLayout` already
+    // computes both the per-stage height and the diameter of whatever sits on
+    // top of each stage; this view used to re-derive the "next non-spacecraft
+    // stage, else the fairing, else nothing" rule itself, so the numbers that
+    // place the drawn stack and the numbers that anchor the jettisoned
+    // hardware (`DebrisFrame.anchor`) came from two copies of the same rule.
+    const layout = stackLayout(spec);
     let total = 0;
     for (let i = 0; i < spec.stages.length; i++) {
       const st = spec.stages[i];
       if (st.isSpacecraft) continue;
-      const next = spec.stages.slice(i + 1).find((s) => !s.isSpacecraft);
-      const topD = next ? next.diameter : spec.fairing ? spec.fairing.diameter : null;
-      const part = this.buildStage(st, i, topD);
+      const part = this.buildStage(st, i, layout.topDiameter[i], layout.height[i]);
       this.group.add(part.group);
       this.stages.push(part);
       total += part.height;
@@ -183,7 +196,7 @@ export class RocketView {
     return { glow, bellLength: maxLen, bellMat };
   }
 
-  private buildStage(spec: StageSpec, index: number, topDiameter: number | null): StagePart {
+  private buildStage(spec: StageSpec, index: number, topDiameter: number | null, stackHeight: number): StagePart {
     const g = new THREE.Group();
     const r = spec.diameter / 2;
     const liv = stageLivery(this.spec, spec);
@@ -202,8 +215,9 @@ export class RocketView {
     body.receiveShadow = true;
     g.add(body);
 
-    // one source of truth for the stacking heights: `captureFrame` anchors the
-    // jettisoned hardware with the same numbers (see DebrisFrame.anchor)
+    // The adapter's own height comes from the same `interstageHeight` that
+    // produced `stackHeight` inside `stackLayout`, so the drawn cone and the
+    // stacking arithmetic cannot disagree.
     const interH = interstageHeight(spec.diameter, topDiameter);
     if (interH > 0 && topDiameter !== null) {
       const cone = new THREE.Mesh(new THREE.CylinderGeometry(topDiameter / 2, r, interH, 40, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
@@ -276,7 +290,7 @@ export class RocketView {
       boosters.push({ spec: b, units, frameIndex: -1 });
     }
 
-    return { spec, index, group: g, plume, vernier, glow, flash, height: spec.length + interH, bellLength, bellMat, frameIndex: -1, boosters };
+    return { spec, index, group: g, plume, vernier, glow, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters };
   }
 
   /**
@@ -525,8 +539,23 @@ export class RocketView {
     }
     if (lit > 0 && litLen > 0) {
       this.engineLight.position.set(0, litY - litLen * 0.25, 0);
-      this.engineLight.intensity = 55 * Math.max(0.2, frame.throttle) * (0.92 + 0.08 * Math.sin(t * 26));
-      this.engineLight.distance = Math.max(80, litLen * 3.5);
+      // Sized against a stated irradiance at a stated distance, instead of a
+      // bare "55".
+      //
+      // A point light in three is in candela: the contribution at distance d is
+      // `intensity / d^decay`, so 55 at decay 1.8 put 0.07 on a stage 40 m up —
+      // against a sun of 3.3. That is why a night launch showed nothing but the
+      // plume: under 4 150 kN of exhaust the vehicle itself was unlit. The
+      // reference point is a third of the way up the stack, and the target
+      // there runs from a warm hint in daylight to the dominant light source at
+      // night, which is what the exhaust really is once the sun is down.
+      const ref = Math.max(10, this.height * 0.33);
+      const target = ENGINE_LIGHT_DAY + (ENGINE_LIGHT_NIGHT - ENGINE_LIGHT_DAY) * clamp01(env.night);
+      this.engineLight.intensity = target * Math.pow(ref, ENGINE_LIGHT_DECAY)
+        * Math.max(0.2, frame.throttle) * (0.92 + 0.08 * Math.sin(t * 26));
+      // The cutoff window has to clear the whole stack, or three's own
+      // `pow2(1 - pow4(d/distance))` term dims the nose to nothing.
+      this.engineLight.distance = Math.max(this.height * 2.6, litLen * 3.5);
     } else {
       this.engineLight.intensity = 0;
     }

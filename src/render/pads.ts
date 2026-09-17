@@ -47,6 +47,12 @@ export interface PadBuild {
    * `LaunchPadView.update`).
    */
   structures?: THREE.Object3D;
+  /**
+   * Bring the pad floodlights up as the sun goes down.
+   *
+   * @param night 0 = full day, 1 = night (`1 - sky.dayFactor` at the pad)
+   */
+  setNight?(night: number): void;
 }
 
 type MatFn = (color: number, metal?: number, rough?: number) => THREE.MeshStandardMaterial;
@@ -487,6 +493,93 @@ function hingedArm(ctx: Ctx, len: number, thick: number, color: number, lattice_
   m.castShadow = true;
   pivot.add(m);
   return pivot;
+}
+
+// --------------------------------------------------------------- floodlights
+
+/** Floodlights per pad. Four is even coverage; the count is what a night
+ *  launch costs every lit fragment in the scene, so it stays small. */
+const FLOOD_COUNT = 4;
+/** Irradiance a floodlight puts on the vehicle at full night (three.js units). */
+const FLOOD_TARGET = 2.3;
+/** Falloff exponent. Below the inverse square so the top of a 70 m stack is
+ *  not four times darker than its base. */
+const FLOOD_DECAY = 1.35;
+
+/**
+ * Xenon-style pad floodlighting, built for every site by `buildPad`.
+ *
+ * Until this existed there was no light source at a launch complex except the
+ * sun, so a night launch rendered an essentially black frame — and the app's
+ * own launch-window picker chooses night for several default missions (Falcon 9
+ * / Starlink from the Cape picks 07:08 UTC, i.e. 03:08 local; Starship from
+ * Starbase likewise). At T-4 s the pad was a black rectangle with the gantry
+ * barely discernible, and after liftoff the only thing on screen was the plume.
+ * This is the open item from Review 8 in docs/HANDOFFS.md.
+ *
+ * Built once per mission and never added or removed afterwards: the light count
+ * is part of every lit material's program cache key, so switching lights on at
+ * dusk would recompile the whole scene mid-flight. What changes is the
+ * intensity, and at `night = 0` it is exactly zero.
+ *
+ * The lamp housings are drawn as small additive billboards at the same points,
+ * so the fixtures themselves read as lights rather than as unlit grey boxes —
+ * which is what a real pad looks like from a distance at night.
+ */
+function padFloodlights(ctx: Ctx, build: PadBuild): { group: THREE.Group; set(night: number): void } {
+  const g = new THREE.Group();
+  const H = ctx.H;
+  const radius = Math.max(46, build.mouthRadius * 3.0);
+  const mastH = Math.max(11, H * 0.30);
+  // aimed a little under half way up the stack: the interesting hardware (the
+  // engines, the launch mount, the lower tank) is at the bottom
+  const aimY = Math.max(6, H * 0.40);
+  const slant = Math.hypot(radius, mastH - aimY);
+  const peak = FLOOD_TARGET * Math.pow(slant, FLOOD_DECAY);
+
+  const lights: THREE.SpotLight[] = [];
+  const mastParts: THREE.BufferGeometry[] = [];
+  const lampParts: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < FLOOD_COUNT; i++) {
+    const a = (i / FLOOD_COUNT) * Math.PI * 2 + Math.PI / FLOOD_COUNT;
+    const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
+    mastParts.push(cyl(0.35, 0.75, mastH, x, mastH / 2, z, 6));
+    mastParts.push(box(2.6, 0.5, 1.4, x, mastH + 0.4, z, -a));
+    lampParts.push(box(2.2, 1.1, 1.0, x, mastH + 1.1, z, -a));
+    const l = new THREE.SpotLight(0xf2f6ff, 0, radius * 7, 0, 0.55, FLOOD_DECAY);
+    // A cone just wide enough to wash the stack and the mount. Wider than this
+    // and the floods light the 13 km terrain patch instead of the hardware.
+    l.angle = Math.min(0.72, Math.max(0.3, Math.atan2(Math.max(H * 0.5, 26), slant)));
+    l.castShadow = false;
+    l.position.set(x, mastH + 1.1, z);
+    l.target.position.set(0, aimY, 0);
+    g.add(l, l.target);
+    lights.push(l);
+  }
+  const mastMat = ctx.mat(0x8d9299, 0.35, 0.6);
+  g.add(new THREE.Mesh(ctx.geo(merged(mastParts)), mastMat));
+  // additive, so the housing reads as a lamp that is on rather than as a box
+  // that has been painted white
+  const lampMat = new THREE.MeshBasicMaterial({
+    color: 0xfff3d6, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+  });
+  const lamps = new THREE.Mesh(ctx.geo(merged(lampParts)), lampMat);
+  lamps.visible = false;
+  g.add(lamps);
+  g.traverse((o) => { o.frustumCulled = false; });
+
+  let shown = -1;
+  return {
+    group: g,
+    set(night: number): void {
+      const n = Math.max(0, Math.min(1, night));
+      if (Math.abs(n - shown) < 0.004) return;
+      shown = n;
+      for (const l of lights) l.intensity = peak * n;
+      lampMat.opacity = 0.85 * n;
+      lamps.visible = n > 0.01;
+    },
+  };
 }
 
 // ------------------------------------------------------------------ builders
@@ -972,9 +1065,14 @@ export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T exte
   // and every part is cheap, so per-object frustum culling (which needs an
   // accurate bounding sphere for each merged geometry) buys nothing.
   build.group.traverse((o) => { o.frustumCulled = false; });
+  // Inside `build.group` on purpose: the floodlights are metre-scale pad
+  // hardware and switch off with the rest of the structures past ~55 km, which
+  // is also where four spot lights stop being worth what they cost.
+  const flood = padFloodlights(ctx, build);
+  build.group.add(flood.group);
   const terrainParts = terrain(ctx, biome);
   for (const o of terrainParts) grade.add(o);
   grade.add(build.group);
   root.add(grade);
-  return { ...build, group: root, deck: grade, terrainParts, structures: build.group };
+  return { ...build, group: root, deck: grade, terrainParts, structures: build.group, setNight: flood.set };
 }

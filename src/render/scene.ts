@@ -553,10 +553,11 @@ export class SceneManager {
     this.marker.scale.set(s * (this.markerCanvas.width / this.markerCanvas.height), s, 1);
   }
 
-  /** Repaint the marker with an explicit label (falls back to the frame's). */
-  setVehicleLabel(name: string): void {
-    if (name !== this.markerLabel) this.drawMarker(name);
-  }
+  // `setVehicleLabel(name)` used to live here, to override the marker's label
+  // from outside. Nothing ever called it (`noUnusedLocals` does not catch a
+  // public method, so it sat here unnoticed through two waves) and the label
+  // is carried on the frame as `vehicleName`, which is the frame-driven answer.
+  // Deleted rather than wired up.
 
   resize(w: number, h: number): void {
     this.renderer.setSize(w, h, false);

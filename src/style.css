@@ -412,6 +412,34 @@ details[open] summary { margin-bottom: 4px; }
   pointer-events: none;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75);
 }
+
+/* Scrims behind the two bands of scene text.
+
+   Both bands are near-white type (#e7edf4) drawn straight onto the render with
+   nothing behind it but a text-shadow. Over a daytime scene that is near-white
+   on near-white: on the Baikonur pad frame the narration sits on pale tan
+   terrain, and at phone width the mission title and the whole narration
+   paragraph sit on pale blue sky. A shadow cannot fix that — it needs
+   something opaque under the glyphs.
+
+   The gradient is on a pseudo-element rather than on the band itself so it can
+   bleed out through `.scene-ui`'s own padding to the edges of the viewport;
+   `z-index: -1` keeps it behind the text inside `.scene-ui`'s stacking context
+   and therefore still above the canvas. Both fade to nothing towards the middle
+   of the frame, so they darken the type without putting a box on the scene. */
+.scene-top, .scene-bottom { position: relative; }
+.scene-top::before, .scene-bottom::before {
+  content: ''; position: absolute; left: -16px; right: -16px;
+  pointer-events: none; z-index: -1;
+}
+.scene-top::before {
+  top: -14px; bottom: -26px;
+  background: linear-gradient(to bottom, rgba(6, 10, 16, 0.66), rgba(6, 10, 16, 0.28) 55%, rgba(6, 10, 16, 0));
+}
+.scene-bottom::before {
+  top: -30px; bottom: -14px;
+  background: linear-gradient(to top, rgba(6, 10, 16, 0.76), rgba(6, 10, 16, 0.34) 55%, rgba(6, 10, 16, 0));
+}
 .narration { max-width: 620px; min-width: 0; }
 .narration .phase-label { color: var(--accent); letter-spacing: 1.6px; }
 .narration .phase-title { margin: 5px 0 4px; font: 500 22px/1.2 var(--display); letter-spacing: -0.5px; }
@@ -461,6 +489,20 @@ details[open] summary { margin-bottom: 4px; }
   background: var(--accent); box-shadow: 0 0 6px rgba(139, 229, 205, 0.9); pointer-events: none;
 }
 .timeline.replaying .tl-playhead { background: var(--warn); box-shadow: 0 0 6px rgba(239, 164, 126, 0.9); }
+/* Boundary between the two segments of the piecewise axis (src/ui/timeaxis.ts):
+   everything left of it is the ascent, T-10 to insertion. */
+.tl-break {
+  position: absolute; top: 0; bottom: 0; width: 0; margin-left: -1px;
+  border-left: 1px dashed var(--line2); pointer-events: none;
+}
+.tl-ticks {
+  position: relative; height: 13px; margin: 1px 2px 2px;
+  font: 9px/13px var(--mono); color: var(--dim);
+}
+.tl-tick { position: absolute; top: 0; white-space: nowrap; }
+/* The boundary's own label is the one that says where the ascent ends, so it
+   is brighter than the round-number ticks either side of it. */
+.tl-tick.boundary { color: var(--accent); }
 .tl-chip {
   position: absolute; bottom: 1px; transform: translateX(-2px);
   max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -505,14 +547,28 @@ details[open] summary { margin-bottom: 4px; }
 
 /* ── telemetry panel ─────────────────────────────────────────────────────── */
 
-#telemetry { padding: 0; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
+/* The panel's side gutter is the container's own PADDING, not a margin on each
+   child. Two children have to be sized explicitly — `.chart` because a canvas
+   would otherwise take its intrinsic (backing-store) width, and `.export-btn`
+   because an inline-flex button shrink-wraps — and a percentage width resolves
+   against the containing block, which does not subtract the child's own
+   margins. With the gutter as a 16 px margin those two came out a full gutter
+   too wide: measured at 375 x 812, eight `canvas.chart` and one `button.btn`
+   ran from x = 29 to right = 379 against a 375 px viewport and were clipped by
+   `overflow-x: hidden` (release review 2, minor #5). As padding it is part of
+   the containing block, so `width: 100%` is the right width at every viewport
+   size, for these children and for any added later.
+
+   The heading keeps the full panel width — its bottom border is the panel's
+   own divider — by pulling itself back out over the padding. */
+#telemetry { padding: 0 16px; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
 .telemetry-heading {
   flex: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+  margin: 0 -16px; /* back out over the panel's gutter, so the divider spans it */
   padding: 16px 16px 12px; border-bottom: 1px solid var(--line);
 }
 .telemetry-heading h2 { margin: 5px 0 0; font: 500 17px/1.2 var(--display); letter-spacing: -0.3px; }
-#telemetry > :not(.telemetry-heading) { margin-left: 16px; margin-right: 16px; }
 .range-toggle { display: flex; gap: 3px; padding: 3px; border: 1px solid var(--line2); border-radius: 7px; }
 .range-toggle button { padding: 4px 9px; border-radius: 5px; font-size: 11px; color: #a7b5c7; white-space: nowrap; }
 .range-toggle button.active { background: var(--accent-weak); color: var(--accent); }
@@ -632,6 +688,7 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .narration .phase-title { font-size: 19px; }
   .narration .latest-event { display: none; }
   .scene-ui { padding: 12px; gap: 8px; }
+  .scene-top::before, .scene-bottom::before { left: -12px; right: -12px; }
   .mission-title h2 { font-size: 14px; }
   .sim-state { font-size: 9px; height: 22px; padding: 0 7px; }
   .cam-btn { padding: 5px 7px; font-size: 12px; }
@@ -677,6 +734,37 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 @container scenefill (max-height: 168px) {
   .hud-sep, .hud-grid.hud-secondary { display: none; }
 }
+
+/* …and how it gives way when the scene is NARROW, which is the other half of
+   the same question and was missing.
+
+   The HUD is right-aligned in the scene, and four columns of 11 px mono
+   measure 394 px. The exterior camera keeps the stack on the scene's
+   horizontal centre line, so the box starts covering the vehicle as soon as
+   394 px reaches past half the frame — below about 820 px of scene width.
+   Measured at the brief's reference size, 1280x800: scene 638 px, HUD
+   543..937, vehicle projected at x = 635 and 237 px tall, of which 208 px sat
+   behind the opaque `.hud-box` and the rest behind the narration band. About
+   90 % of the rocket was hidden from the pad through the whole ascent, and the
+   pad frame with it.
+
+   Two columns is ~165 px at 10 px, which leaves the centre line clear at every
+   width down to the 860 px media query that drops the HUD for the phone
+   layout. It is twice as tall as four columns, so the secondary readouts go
+   with it unless the scene is tall enough to take all 21 rows — the same
+   shrink-then-delete ladder as the height queries above, applied to width. The
+   query is on the CONTAINER, not on the window: what matters is how much scene
+   there is, and the side panels decide that as much as the window does. */
+@container scenefill (max-width: 820px) {
+  .hud-box { font-size: 10px; line-height: 1.28; padding: 7px 9px; min-width: 0; }
+  .hud-grid { grid-template-columns: auto auto; column-gap: 9px; }
+  .hud-grid .v { padding-right: 0; }
+  .hud-sep { margin: 5px 0; }
+}
+@container scenefill (max-width: 820px) and (max-height: 310px) {
+  .hud-sep, .hud-grid.hud-secondary { display: none; }
+}
+
 @container scenefill (max-height: 86px) {
   #hud { display: none; }
 }
