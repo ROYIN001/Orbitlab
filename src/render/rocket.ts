@@ -1,443 +1,637 @@
 /**
- * Procedural stylised rocket built from the vehicle specification, with
- * propellant-specific exhaust plumes (cone core + particles) and the payload.
- * The rocket group is Y-up: +Y = nose.
+ * Procedural launch vehicle built from the vehicle specification and driven
+ * entirely by a `VisualFrame`.
+ *
+ * The stack is Y-up (+Y = nose) with the base of the first stage at y = 0, so
+ * the engine bells hang below the origin and sit inside the launch mount. Paint
+ * comes from `liveries.ts` (a canvas texture wrapped once around each stage),
+ * engine bells are placed in the real pattern, and every plume, flash and
+ * flicker is a function of the frame's mission time.
  */
 import * as THREE from 'three';
-import type { VehicleSpec, StageSpec, BoosterGroupSpec, SatelliteSpec, EngineSpec } from '../types';
-import type { VehicleModel } from '../physics/vehicle';
+import type { VehicleSpec, StageSpec, BoosterGroupSpec, SatelliteSpec } from '../types';
+import type { BoosterFrame, StageFrame, VisualFrame } from '../physics/frame';
+import { interstageHeight, stackLayout } from '../physics/frame';
 import { buildSatellite, type SatelliteView } from './satellite';
-import { ParticleSystem } from './particles';
-import { stageSkin } from './textures';
-import { P0 } from '../physics/constants';
+import { Plume, type PlumeKind } from './plume';
+import { AscentTrail } from './smoke';
+import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout } from './liveries';
+import { clamp01, seedFromString, smoothstep } from './noise';
+import { disposeObject } from './dispose';
 
-type PlumeKind = 'kerolox' | 'hydrolox' | 'methalox' | 'solid' | 'hypergolic';
-
-interface PlumeStyle {
-  core: number;
-  outer: number;
-  particle: number;
-  outerOpacity: number;
-  coreOpacity: number;
-  smoke: number; // 0..1 amount of dark smoke
-  light: number;
+export interface RocketEnv {
+  /** unit vector (scene axes) from the vehicle back down its flight path */
+  backDir: THREE.Vector3;
+  /** distance from the vehicle to the pad, m */
+  padDistance: number;
+  /** 0 = full day, 1 = night at the vehicle; scales the exhaust's own light */
+  night: number;
 }
 
-const PLUME_STYLES: Record<PlumeKind, PlumeStyle> = {
-  kerolox: { core: 0xfff3c4, outer: 0xff8a2a, particle: 0xffa040, outerOpacity: 0.55, coreOpacity: 0.9, smoke: 0.35, light: 0xffa040 },
-  hydrolox: { core: 0xeef6ff, outer: 0x8ab8ff, particle: 0xa8c8ff, outerOpacity: 0.28, coreOpacity: 0.55, smoke: 0.0, light: 0xbfd8ff },
-  methalox: { core: 0xe4f0ff, outer: 0x6f8cff, particle: 0x8aa4ff, outerOpacity: 0.45, coreOpacity: 0.8, smoke: 0.1, light: 0x9fb4ff },
-  solid: { core: 0xfff0c0, outer: 0xffb040, particle: 0xffc060, outerOpacity: 0.7, coreOpacity: 1.0, smoke: 0.8, light: 0xffc060 },
-  hypergolic: { core: 0xffe8d0, outer: 0xffb080, particle: 0xffc8a0, outerOpacity: 0.35, coreOpacity: 0.7, smoke: 0.05, light: 0xffc0a0 },
-};
+/** Irradiance the exhaust puts on the stack a third of the way up, in daylight. */
+const ENGINE_LIGHT_DAY = 0.3;
+/** …and at night, where it is the only light the vehicle has. */
+const ENGINE_LIGHT_NIGHT = 3.1;
+const ENGINE_LIGHT_DECAY = 1.8;
 
-/** Infer the propellant family from the engine name. */
-export function plumeKind(e: EngineSpec): PlumeKind {
-  const n = e.name.toLowerCase();
-  if (e.solid) return 'solid';
-  if (/rl10|vulcain|vinci|yf-77|yf-75|le-9|le-5/.test(n)) return 'hydrolox';
-  if (/be-4|raptor/.test(n)) return 'methalox';
-  if (/rd-0210|rd-0211|rd-0213|rd-0214|s5\.92|s5\.98|vikas|l-2-5|curie|spacecraft/.test(n)) return 'hypergolic';
-  return 'kerolox';
+interface BoosterUnit {
+  group: THREE.Group;
+  plume: Plume;
+  vernier: Plume | null;
+  glow: THREE.InstancedMesh;
+}
+
+interface BoosterSet {
+  spec: BoosterGroupSpec;
+  units: BoosterUnit[];
+  /** cached position in `frame.boosters` (see `boosterFrame`) */
+  frameIndex: number;
 }
 
 interface StagePart {
   spec: StageSpec;
+  index: number;
   group: THREE.Group;
-  plume: PlumeView;
+  plume: Plume;
+  vernier: Plume | null;
+  glow: THREE.InstancedMesh;
+  flash: THREE.Mesh;
+  /** stacking height including the interstage adapter, m */
   height: number;
-}
-interface BoosterPart {
-  spec: BoosterGroupSpec;
-  groups: THREE.Group[];
-  plumes: PlumeView[];
-  stageId: string;
-}
-interface PlumeView {
-  group: THREE.Group;
-  outer: THREE.Mesh;
-  inner: THREE.Mesh;
-  light: THREE.PointLight;
-  glow: THREE.Mesh;
-  particles: ParticleSystem;
-  smoke: ParticleSystem | null;
-  style: PlumeStyle;
-  nozzleR: number;
-  baseLength: number;
-  emitAcc: number;
+  bellLength: number;
+  /** engine-bell material, so the nozzle interior can glow with the throttle */
+  bellMat: THREE.MeshStandardMaterial;
+  /** cached position in `frame.stages` (see `stageFrame`) */
+  frameIndex: number;
+  boosters: BoosterSet[];
 }
 
-const nozzleMat = new THREE.MeshStandardMaterial({ color: 0x3c4046, metalness: 0.85, roughness: 0.45 });
-const nozzleInnerMat = new THREE.MeshStandardMaterial({ color: 0x1a1c20, metalness: 0.6, roughness: 0.7, side: THREE.BackSide });
-const glowMat = new THREE.MeshBasicMaterial({ color: 0xffb060, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+const GLOW_GEO = new THREE.CircleGeometry(1, 12);
+GLOW_GEO.rotateX(Math.PI / 2);
+GLOW_GEO.userData.shared = true;
 
-function makePlume(nozzleR: number, count: number, kind: PlumeKind): PlumeView {
-  const style = PLUME_STYLES[kind];
-  const group = new THREE.Group();
-  const r = nozzleR * Math.min(2.2, Math.sqrt(count));
-  const baseLength = Math.max(6, r * 14);
-  const outerGeo = new THREE.CylinderGeometry(r * 0.55, r * 1.6, 1, 20, 1, true);
-  const innerGeo = new THREE.CylinderGeometry(r * 0.35, r * 0.7, 1, 16, 1, true);
-  const outerMat = new THREE.MeshBasicMaterial({ color: style.outer, transparent: true, opacity: style.outerOpacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-  const innerMat = new THREE.MeshBasicMaterial({ color: style.core, transparent: true, opacity: style.coreOpacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-  // narrow end at the nozzle exit (+y), opening downstream (-y)
-  const outer = new THREE.Mesh(outerGeo, outerMat);
-  const inner = new THREE.Mesh(innerGeo, innerMat);
-  group.add(outer, inner);
-  const glow = new THREE.Mesh(new THREE.CircleGeometry(r * 0.9, 20), glowMat.clone());
-  (glow.material as THREE.MeshBasicMaterial).color.set(style.core);
-  glow.rotation.x = Math.PI / 2;
-  glow.position.y = 0.05;
-  group.add(glow);
-  // the light is parented to the vehicle root (see RocketView) so that the number of
-  // visible lights never changes and three.js does not recompile materials mid-flight
-  const light = new THREE.PointLight(style.light, 0, 400, 1.5);
-  const particles = new ParticleSystem(140, style.particle, true);
-  group.add(particles.points);
-  let smoke: ParticleSystem | null = null;
-  if (style.smoke > 0.2) {
-    smoke = new ParticleSystem(120, 0x777069, false);
-    group.add(smoke.points);
-  }
-  group.visible = false;
-  return { group, outer, inner, light, glow, particles, smoke, style, nozzleR: r, baseLength, emitAcc: 0 };
+function plumeKindFor(engine: { solid?: boolean; ispVac: number }, vehicleId: string): PlumeKind {
+  if (engine.solid) return 'solid';
+  if (engine.ispVac > 400) return 'hydrogen';
+  if (vehicleId === 'protonm' || vehicleId === 'angaraa5') return engine.ispVac < 340 ? 'hypergolic' : 'liquid';
+  return 'liquid';
 }
 
-function updatePlume(p: PlumeView, throttle: number, pressure: number, dt: number, pointScale: number): void {
-  p.particles.setPointScale(pointScale);
-  p.smoke?.setPointScale(pointScale);
-  const vac = 1 - Math.min(1, pressure / P0);
-  if (throttle <= 0.01) {
-    p.outer.visible = false; p.inner.visible = false; p.glow.visible = false;
-    p.light.intensity = 0;
-    // let remaining particles fade out
-    p.particles.update(dt, 0, -10, 0, 0.6);
-    p.smoke?.update(dt, 0, 2, 0, 0.4);
-    p.group.visible = true;
-    return;
+/** Grid-fin texture: an open lattice so the fin reads as a grid, not a plate. */
+let gridTex: THREE.Texture | null = null;
+function gridFinTexture(): THREE.Texture {
+  if (gridTex) return gridTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  g.clearRect(0, 0, 64, 64);
+  g.strokeStyle = '#2b2b2e';
+  g.lineWidth = 6;
+  for (let i = 0; i <= 5; i++) {
+    const p = (i / 5) * 64;
+    g.beginPath(); g.moveTo(p, 0); g.lineTo(p, 64); g.stroke();
+    g.beginPath(); g.moveTo(0, p); g.lineTo(64, p); g.stroke();
   }
-  p.group.visible = true;
-  p.outer.visible = true; p.inner.visible = true; p.glow.visible = true;
-  const expansion = 1 + 1.3 * vac;
-  const flicker = 0.9 + 0.2 * Math.random();
-  const L = p.baseLength * throttle * (0.7 + 1.6 * vac) * flicker;
-  p.outer.scale.set(expansion, L, expansion);
-  p.outer.position.y = -L / 2;
-  (p.outer.material as THREE.MeshBasicMaterial).opacity = p.style.outerOpacity * (1 - 0.5 * vac);
-  const Li = L * 0.55;
-  p.inner.scale.set(1 + 0.3 * (expansion - 1), Li, 1 + 0.3 * (expansion - 1));
-  p.inner.position.y = -Li / 2;
-  p.light.intensity = 7 * throttle * p.nozzleR * flicker;
-  p.light.distance = 80 + 50 * p.nozzleR;
-  (p.glow.material as THREE.MeshBasicMaterial).opacity = 0.6 + 0.3 * flicker;
-  // particles: emitted at the nozzle exit, streaming down the plume
-  const r = p.nozzleR;
-  const speed = 18 * r + 40;
-  const rate = 90 * throttle;
-  p.emitAcc += rate * dt;
-  while (p.emitAcc >= 1) {
-    p.emitAcc -= 1;
-    const ang = Math.random() * Math.PI * 2;
-    const rad = Math.random() * r * 0.6;
-    const spread = (0.15 + 0.8 * vac) * speed * (0.3 + Math.random());
-    p.particles.emit({
-      x: Math.cos(ang) * rad, y: -r * 0.5, z: Math.sin(ang) * rad,
-      vx: Math.cos(ang) * spread * 0.4, vy: -speed * (0.7 + 0.6 * Math.random()), vz: Math.sin(ang) * spread * 0.4,
-      life: (0.35 + 0.5 * Math.random()) * (1 + 0.8 * vac), size0: r * 0.7, size1: r * (2.2 + 4 * vac), alpha0: 0.55 * throttle,
-    });
-    if (p.smoke && vac < 0.85 && Math.random() < p.style.smoke) {
-      p.smoke.emit({
-        x: Math.cos(ang) * rad, y: -r * 3, z: Math.sin(ang) * rad,
-        vx: Math.cos(ang) * spread * 0.6, vy: -speed * 0.5, vz: Math.sin(ang) * spread * 0.6,
-        life: 1.2 + 1.5 * Math.random(), size0: r * 1.5, size1: r * 7, alpha0: 0.35 * (1 - vac),
-      });
-    }
-  }
-  p.particles.update(dt, 0, -2, 0, 0.35 + 0.6 * vac);
-  p.smoke?.update(dt, 0, 3, 0, 0.5);
-}
-
-function stageBody(spec: StageSpec, topDiameter: number | null, label: string, country: string): THREE.Group {
-  const g = new THREE.Group();
-  const r = spec.diameter / 2;
-  const steel = spec.id.includes('ship') || spec.id.includes('superheavy');
-  const skin = stageSkin({ color: spec.color ?? '#dddddd', accent: spec.accentColor ?? '#333', label, country, length: spec.length, diameter: spec.diameter, metallic: steel });
-  const bodyMat = new THREE.MeshStandardMaterial({ map: skin, metalness: steel ? 0.85 : 0.1, roughness: steel ? 0.35 : 0.62 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 48), bodyMat);
-  body.position.y = spec.length / 2;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  g.add(body);
-  // accent band at the top
-  const bandH = Math.min(3, spec.length * 0.08);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.006, r * 1.006, bandH, 48), new THREE.MeshStandardMaterial({ color: new THREE.Color(spec.accentColor ?? '#333333'), metalness: 0.15, roughness: 0.5 }));
-  band.position.y = spec.length - bandH / 2;
-  g.add(band);
-  // interstage adapter if the next component is narrower/wider
-  if (topDiameter !== null && Math.abs(topDiameter - spec.diameter) > 0.05) {
-    const h = Math.abs(topDiameter - spec.diameter) * 1.2 + 0.5;
-    const cone = new THREE.Mesh(new THREE.CylinderGeometry(topDiameter / 2, r, h, 48), bodyMat);
-    cone.position.y = spec.length + h / 2;
-    cone.castShadow = true;
-    g.add(cone);
-  }
-  // thrust structure / engine section ring
-  const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.01, r * 1.01, Math.min(2, spec.length * 0.06), 48), new THREE.MeshStandardMaterial({ color: 0x2b2d31, metalness: 0.4, roughness: 0.6 }));
-  skirt.position.y = Math.min(2, spec.length * 0.06) / 2;
-  g.add(skirt);
-  // engines
-  const e = spec.engine;
-  const n = Math.min(e.count, 9);
-  const nozzleR = Math.min(r * 0.85, Math.max(0.25, (r * 1.6) / Math.sqrt(Math.max(1, n)) * 0.5));
-  const nozzleL = spec.nozzleLength ?? Math.max(0.8, nozzleR * 2.2);
-  const ring = n > 1 ? r - nozzleR * 1.1 : 0;
-  for (let i = 0; i < n; i++) {
-    const nozzleGeo = new THREE.CylinderGeometry(nozzleR, nozzleR * 0.45, nozzleL, 24, 1, true);
-    const nozzle = new THREE.Mesh(nozzleGeo, nozzleMat);
-    const innerN = new THREE.Mesh(nozzleGeo, nozzleInnerMat);
-    const ang = (i / Math.max(1, n - (n > 4 ? 1 : 0))) * Math.PI * 2;
-    let px = 0, pz = 0;
-    if (!(n > 4 && i === n - 1) && n !== 1) { px = Math.cos(ang) * ring * 0.85; pz = Math.sin(ang) * ring * 0.85; }
-    nozzle.position.set(px, -nozzleL / 2, pz);
-    innerN.position.copy(nozzle.position);
-    nozzle.rotation.x = Math.PI;
-    innerN.rotation.x = Math.PI;
-    nozzle.castShadow = true;
-    g.add(nozzle, innerN);
-  }
-  const detailMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, metalness: 0.5, roughness: 0.6 });
-  if (spec.gridFins) {
-    for (let i = 0; i < 4; i++) {
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(r * 0.9, 0.15, r * 0.5), detailMat);
-      const ang = (i / 4) * Math.PI * 2 + Math.PI / 4;
-      fin.position.set(Math.cos(ang) * (r + r * 0.4), spec.length - 2, Math.sin(ang) * (r + r * 0.4));
-      fin.rotation.y = -ang;
-      fin.castShadow = true;
-      g.add(fin);
-    }
-  }
-  if (spec.legs) {
-    for (let i = 0; i < 4; i++) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.4, spec.length * 0.35, 0.9), detailMat);
-      const ang = (i / 4) * Math.PI * 2;
-      leg.position.set(Math.cos(ang) * (r + 0.35), spec.length * 0.18, Math.sin(ang) * (r + 0.35));
-      leg.rotation.y = -ang;
-      leg.castShadow = true;
-      g.add(leg);
-    }
-  }
-  if (spec.flaps) {
-    for (let i = 0; i < 4; i++) {
-      const big = i < 2;
-      const flap = new THREE.Mesh(new THREE.BoxGeometry(r * (big ? 0.9 : 0.6), big ? 12 : 8, 0.3), new THREE.MeshStandardMaterial({ color: 0x1c1c1c, metalness: 0.5, roughness: 0.6 }));
-      const ang = i < 2 ? (i ? Math.PI : 0) : (i === 2 ? Math.PI / 2 : -Math.PI / 2);
-      flap.position.set(Math.cos(ang) * (r + r * 0.35), big ? spec.length * 0.12 : spec.length * 0.85, Math.sin(ang) * (r + r * 0.35));
-      flap.rotation.y = -ang;
-      flap.castShadow = true;
-      g.add(flap);
-    }
-  }
-  return g;
-}
-
-function boosterBody(spec: BoosterGroupSpec, country: string): THREE.Group {
-  const g = new THREE.Group();
-  const r = spec.diameter / 2;
-  const skin = stageSkin({ color: spec.color ?? '#dddddd', accent: '#333', country, length: spec.length, diameter: spec.diameter });
-  const m = new THREE.MeshStandardMaterial({ map: skin, metalness: 0.1, roughness: 0.62 });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 32), m);
-  body.position.y = spec.length / 2;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  g.add(body);
-  const topH = spec.conicalTop ? spec.length * 0.35 : r * 1.6;
-  const top = new THREE.Mesh(new THREE.ConeGeometry(r, topH, 32), m);
-  top.position.y = spec.length + topH / 2;
-  top.castShadow = true;
-  g.add(top);
-  const n = Math.min(spec.engine.count, 4);
-  const nozzleR = Math.max(0.2, (r * 0.9) / Math.sqrt(n));
-  for (let i = 0; i < n; i++) {
-    const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(nozzleR, nozzleR * 0.45, nozzleR * 2, 16, 1, true), nozzleMat);
-    const ang = (i / n) * Math.PI * 2;
-    nozzle.position.set(n > 1 ? Math.cos(ang) * r * 0.45 : 0, -nozzleR, n > 1 ? Math.sin(ang) * r * 0.45 : 0);
-    nozzle.rotation.x = Math.PI;
-    g.add(nozzle);
-  }
-  return g;
-}
-
-function fairingBody(spec: VehicleSpec): THREE.Group {
-  const g = new THREE.Group();
-  const f = spec.fairing!;
-  const r = f.diameter / 2;
-  const cylH = f.length * 0.55;
-  const skin = stageSkin({ color: f.color ?? '#eeeeee', accent: '#333', label: spec.name, country: spec.country, length: f.length, diameter: f.diameter });
-  const m = new THREE.MeshStandardMaterial({ map: skin, metalness: 0.05, roughness: 0.5 });
-  const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH, 48), m);
-  cyl.position.y = cylH / 2;
-  cyl.castShadow = true;
-  g.add(cyl);
-  // ogive nose via lathe
-  const pts: THREE.Vector2[] = [];
-  const noseH = f.length - cylH;
-  for (let i = 0; i <= 16; i++) {
-    const s = i / 16;
-    pts.push(new THREE.Vector2(r * Math.sqrt(1 - s * s * 0.97), cylH + s * noseH));
-  }
-  const nose = new THREE.Mesh(new THREE.LatheGeometry(pts, 48), new THREE.MeshStandardMaterial({ color: new THREE.Color(f.color ?? '#eeeeee'), metalness: 0.05, roughness: 0.5 }));
-  nose.castShadow = true;
-  g.add(nose);
-  return g;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.userData.shared = true;
+  gridTex = t;
+  return t;
 }
 
 export class RocketView {
   readonly group = new THREE.Group();
+  /** unrotated group that lives in scene space (holds the ascent smoke trail) */
+  readonly worldGroup = new THREE.Group();
+  readonly spec: VehicleSpec;
+  readonly height: number;
   private stages: StagePart[] = [];
-  private boosters: BoosterPart[] = [];
   private fairing: THREE.Group | null = null;
   private fairingLength = 0;
   private satellite: SatelliteView;
-  private deployProgress = 0;
-  readonly spec: VehicleSpec;
-  /** total height of the stack when fully assembled */
-  readonly height: number;
+  private trail = new AscentTrail(140);
+  private materials: THREE.Material[] = [];
+  private textures: THREE.Texture[] = [];
+  private matCache = new Map<string, THREE.MeshStandardMaterial>();
+  /** a single warm light for the engines: keeping the light count constant
+   *  avoids shader recompiles mid-flight */
+  private engineLight = new THREE.PointLight(0xffa850, 0, 1, 1.8);
+  private tmpMat = new THREE.Matrix4();
 
   constructor(spec: VehicleSpec, sat: SatelliteSpec) {
     this.spec = spec;
-    let y = 0;
+    this.worldGroup.add(this.trail.mesh);
+    // One source of truth for the stacking geometry. `stackLayout` already
+    // computes both the per-stage height and the diameter of whatever sits on
+    // top of each stage; this view used to re-derive the "next non-spacecraft
+    // stage, else the fairing, else nothing" rule itself, so the numbers that
+    // place the drawn stack and the numbers that anchor the jettisoned
+    // hardware (`DebrisFrame.anchor`) came from two copies of the same rule.
+    const layout = stackLayout(spec);
+    let total = 0;
     for (let i = 0; i < spec.stages.length; i++) {
       const st = spec.stages[i];
-      const next = spec.stages[i + 1];
-      const topD = next ? next.diameter : spec.fairing ? spec.fairing.diameter : null;
-      const g = stageBody(st, topD, i === 0 ? spec.name : '', spec.country);
-      const nozzleR = Math.min(st.diameter / 2 * 0.85, Math.max(0.25, (st.diameter / 2 * 1.6) / Math.sqrt(Math.max(1, Math.min(st.engine.count, 9))) * 0.5));
-      const plume = makePlume(nozzleR, st.engine.count, plumeKind(st.engine));
-      g.add(plume.group);
-      this.group.add(g, plume.light);
-      this.stages.push({ spec: st, group: g, plume, height: st.length + (topD !== null && Math.abs(topD - st.diameter) > 0.05 ? Math.abs(topD - st.diameter) * 1.2 + 0.5 : 0) });
-      for (const b of st.boosters ?? []) {
-        const groups: THREE.Group[] = [];
-        const plumes: PlumeView[] = [];
-        for (let k = 0; k < b.count; k++) {
-          const bg = boosterBody(b, spec.country);
-          const p = makePlume(Math.max(0.2, (b.diameter / 2 * 0.9) / Math.sqrt(Math.min(b.engine.count, 4))), b.engine.count, plumeKind(b.engine));
-          bg.add(p.group);
-          this.group.add(bg, p.light);
-          groups.push(bg);
-          plumes.push(p);
-        }
-        this.boosters.push({ spec: b, groups, plumes, stageId: st.id });
-      }
-      y += st.length;
+      if (st.isSpacecraft) continue;
+      const part = this.buildStage(st, i, layout.topDiameter[i], layout.height[i]);
+      this.group.add(part.group);
+      this.stages.push(part);
+      total += part.height;
     }
     if (spec.fairing) {
-      this.fairing = fairingBody(spec);
+      this.fairing = this.buildFairing(spec);
       this.fairingLength = spec.fairing.length;
       this.group.add(this.fairing);
-      y += spec.fairing.length;
+      total += spec.fairing.length;
     }
     this.satellite = buildSatellite(sat);
     this.group.add(this.satellite.group);
-    this.height = y;
+    this.group.add(this.engineLight);
+    this.height = total;
   }
 
-  /** Layout attached parts and animate plumes from the vehicle state. */
-  update(vehicle: VehicleModel, coreThrottle: number, boosterThrottle: number, pressure: number, dt: number, payloadSeparated: boolean, destroyed: boolean, pointScale: number): void {
-    if (destroyed) {
+  private mat(color: string | number, metal = 0.1, rough = 0.6): THREE.MeshStandardMaterial {
+    const key = `${color}|${metal}|${rough}`;
+    let m = this.matCache.get(key);
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({ color: new THREE.Color(color), metalness: metal, roughness: rough });
+      this.matCache.set(key, m);
+      this.materials.push(m);
+    }
+    return m;
+  }
+
+  /** Instanced engine bells plus the matching additive nozzle-glow discs. */
+  private engines(parent: THREE.Group, layout: EngineLayout, steel: boolean): { glow: THREE.InstancedMesh; bellLength: number; bellMat: THREE.MeshStandardMaterial } {
+    const all = [...layout.nozzles, ...layout.verniers];
+    const geo = bellGeometry(1, 1, 12);
+    // metalness 0.85 with the sky/sun environment probe: a real bell is bare
+    // Inconel or niobium and reads as metal, not as grey plastic
+    const bellMat = new THREE.MeshStandardMaterial({ color: steel ? 0xa8aeb4 : 0x7d838a, metalness: 0.85, roughness: 0.36, side: THREE.DoubleSide, emissive: 0x000000 });
+    this.materials.push(bellMat);
+    const bells = new THREE.InstancedMesh(geo, bellMat, all.length);
+    bells.castShadow = true;
+    let maxLen = 0;
+    for (let i = 0; i < all.length; i++) {
+      const n = all[i];
+      this.tmpMat.makeScale(n.r, n.len, n.r);
+      this.tmpMat.setPosition(n.x, 0, n.z);
+      bells.setMatrixAt(i, this.tmpMat);
+      maxLen = Math.max(maxLen, n.len);
+    }
+    bells.instanceMatrix.needsUpdate = true;
+    parent.add(bells);
+
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xffc070, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    this.materials.push(glowMat);
+    const glow = new THREE.InstancedMesh(GLOW_GEO, glowMat, all.length);
+    for (let i = 0; i < all.length; i++) {
+      const n = all[i];
+      this.tmpMat.makeScale(n.r * 0.95, 1, n.r * 0.95);
+      this.tmpMat.setPosition(n.x, -n.len * 0.98, n.z);
+      glow.setMatrixAt(i, this.tmpMat);
+    }
+    glow.instanceMatrix.needsUpdate = true;
+    glow.visible = false;
+    parent.add(glow);
+    return { glow, bellLength: maxLen, bellMat };
+  }
+
+  private buildStage(spec: StageSpec, index: number, topDiameter: number | null, stackHeight: number): StagePart {
+    const g = new THREE.Group();
+    const r = spec.diameter / 2;
+    const liv = stageLivery(this.spec, spec);
+    const seed = seedFromString(this.spec.id + spec.id);
+    const tex = bodyTexture(liv, spec.diameter, spec.length, seed);
+    this.textures.push(tex);
+    // `SceneManager` provides a small procedural sky/ground PMREM probe, so a
+    // metallic surface now has something to reflect: bare stainless (Starship,
+    // Atlas-family tanks) can run genuinely metallic. Painted stages stay
+    // near-dielectric — a 0.12 metalness on white paint is already generous.
+    const bodyMat = new THREE.MeshStandardMaterial({ map: tex, metalness: liv.steel ? 0.72 : 0.12, roughness: liv.steel ? 0.34 : 0.62 });
+    this.materials.push(bodyMat);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 40, 1), bodyMat);
+    body.position.y = spec.length / 2;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    g.add(body);
+
+    // The adapter's own height comes from the same `interstageHeight` that
+    // produced `stackHeight` inside `stackLayout`, so the drawn cone and the
+    // stacking arithmetic cannot disagree.
+    const interH = interstageHeight(spec.diameter, topDiameter);
+    if (interH > 0 && topDiameter !== null) {
+      const cone = new THREE.Mesh(new THREE.CylinderGeometry(topDiameter / 2, r, interH, 40, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
+      cone.position.y = spec.length + interH / 2;
+      cone.castShadow = true;
+      g.add(cone);
+    } else if (topDiameter !== null) {
+      // flush interstage band
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.004, r * 1.004, Math.min(2.5, spec.length * 0.06), 40, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
+      band.position.y = spec.length - Math.min(2.5, spec.length * 0.06) / 2;
+      g.add(band);
+    }
+
+    const layout = engineLayout(spec.id, spec.engine, r, spec.nozzleLength);
+    const { glow, bellLength, bellMat } = this.engines(g, layout, !!liv.steel);
+
+    if (spec.gridFins) this.addGridFins(g, r, spec.length);
+    if (spec.legs) this.addLegs(g, r, spec.length);
+    if (spec.flaps) this.addFlaps(g, r, spec.length);
+    if (spec.fins) this.addFins(g, r);
+
+    const kind = plumeKindFor(spec.engine, this.spec.id);
+    const plume = new Plume({ radius: layout.clusterRadius, length: Math.max(8, layout.clusterRadius * 13), kind, seed });
+    plume.group.position.y = -bellLength;
+    g.add(plume.group);
+    let vernier: Plume | null = null;
+    if (layout.verniers.length) {
+      const vr = layout.verniers[0].r;
+      vernier = new Plume({ radius: Math.max(0.12, vr * 1.4), length: Math.max(2.5, vr * 16), kind: 'vernier', seed: seed + 0.37 });
+      vernier.group.position.y = -layout.verniers[0].len;
+      g.add(vernier.group);
+    }
+
+    const flashMat = new THREE.MeshBasicMaterial({ color: 0xfff0c8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+    this.materials.push(flashMat);
+    const flash = new THREE.Mesh(new THREE.SphereGeometry(Math.max(1, r), 12, 8), flashMat);
+    flash.position.y = -bellLength * 0.6;
+    flash.visible = false;
+    g.add(flash);
+
+    const boosters: StagePart['boosters'] = [];
+    const groups = spec.boosters ?? [];
+    for (let k = 0; k < groups.length; k++) {
+      const b = groups[k];
+      const units: BoosterUnit[] = [];
+      const phase = groups.length > 1 ? (Math.PI / (b.count * groups.length)) * (2 * k + 1) : 0;
+      // One paint job per booster *group*, shared by its units: baking a
+      // 1024×W canvas per strap-on cost Atlas V 551 five near-identical
+      // textures and PSLV-XL six, for no visible difference.
+      const bodyMat = this.boosterMaterial(b, seed + k * 3.1);
+      for (let u = 0; u < b.count; u++) {
+        const unit = this.buildBooster(b, seed + k * 3.1 + u * 0.7, bodyMat);
+        const ang = phase + (u / b.count) * Math.PI * 2;
+        const off = r + b.diameter / 2;
+        // B9: the local frame this group is drawn in has basis X = the physics
+        // `side2` axis and basis Z = the physics `side` axis (main.ts builds it
+        // as makeBasis(cross(dir, side), dir, side)), while
+        // Simulation.spawnBoosterDebris lays the same ring out as
+        // side·cos(ang) + side2·sin(ang). Mapping cos to X and sin to Z here
+        // therefore reflects the ring instead of rotating it — an exact 90°
+        // jump for the cardinal four-booster ring Soyuz uses, so the Korolev
+        // cross appeared to teleport. Placing cos on Z and sin on X puts the
+        // drawn booster exactly where its debris will spawn.
+        const local = Math.PI / 2 - ang;
+        unit.group.position.set(Math.cos(local) * off, b.baseOffset ?? 0, Math.sin(local) * off);
+        unit.group.rotation.y = -local;
+        g.add(unit.group);
+        units.push(unit);
+      }
+      boosters.push({ spec: b, units, frameIndex: -1 });
+    }
+
+    return { spec, index, group: g, plume, vernier, glow, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters };
+  }
+
+  /**
+   * Resolve this part's entry in `frame.stages`.
+   *
+   * `captureFrame` walks `sim.vehicle.stages` in construction order and emits
+   * every stage whether it is attached or not, so a part's slot is fixed for
+   * the whole mission. The index is cached and validated with a single string
+   * compare; the linear scan only ever runs on the first frame. Doing this with
+   * `Array.prototype.find` instead cost six fresh closures and six scans per
+   * rendered frame, and the booster lookup ran once per booster *unit*.
+   */
+  private stageFrame(frame: VisualFrame, part: StagePart): StageFrame | undefined {
+    const hit = frame.stages[part.frameIndex];
+    if (hit !== undefined && hit.id === part.spec.id) return hit;
+    part.frameIndex = frame.stages.findIndex((s) => s.id === part.spec.id);
+    return part.frameIndex >= 0 ? frame.stages[part.frameIndex] : undefined;
+  }
+
+  /** As `stageFrame`, for one booster group of one stage. */
+  private boosterFrame(frame: VisualFrame, part: StagePart, bg: BoosterSet): BoosterFrame | undefined {
+    const hit = frame.boosters[bg.frameIndex];
+    if (hit !== undefined && hit.id === bg.spec.id && hit.stageId === part.spec.id) return hit;
+    bg.frameIndex = frame.boosters.findIndex((b) => b.id === bg.spec.id && b.stageId === part.spec.id);
+    return bg.frameIndex >= 0 ? frame.boosters[bg.frameIndex] : undefined;
+  }
+
+  /** Body paint for one booster group, shared by every unit of the group. */
+  private boosterMaterial(spec: BoosterGroupSpec, seed: number): THREE.MeshStandardMaterial {
+    const tex = bodyTexture(boosterLivery(this.spec, spec), spec.diameter, spec.length, seed);
+    this.textures.push(tex);
+    const m = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.12, roughness: 0.6 });
+    this.materials.push(m);
+    return m;
+  }
+
+  private buildBooster(spec: BoosterGroupSpec, seed: number, m: THREE.MeshStandardMaterial): BoosterUnit {
+    const g = new THREE.Group();
+    const r = spec.diameter / 2;
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 28, 1), m);
+    body.position.y = spec.length / 2;
+    body.castShadow = true;
+    g.add(body);
+    if (spec.conicalTop) {
+      // Soyuz strap-on: a long tapered nose that hugs the core
+      const pts: THREE.Vector2[] = [];
+      const noseH = spec.length * 0.42;
+      for (let i = 0; i <= 12; i++) {
+        const s = i / 12;
+        // last point on the axis, so the conical top is closed rather than a tube
+        pts.push(new THREE.Vector2(i === 12 ? 0 : Math.max(0.02, r * (1 - Math.pow(s, 1.35) * 0.97)), spec.length + s * noseH));
+      }
+      const nose = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), m);
+      nose.castShadow = true;
+      g.add(nose);
+    } else {
+      const topH = r * 1.9;
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(r, topH, 24), m);
+      nose.position.y = spec.length + topH / 2;
+      nose.castShadow = true;
+      g.add(nose);
+      if (spec.engine.solid) {
+        const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.06, r * 1.06, r * 1.4, 24, 1, true), this.mat('#6d665c', 0.3, 0.7));
+        skirt.position.y = r * 0.7;
+        g.add(skirt);
+      }
+    }
+    const layout = engineLayout(spec.id, spec.engine, r);
+    const { glow, bellLength } = this.engines(g, layout, false);
+    const kind = plumeKindFor(spec.engine, this.spec.id);
+    const plume = new Plume({ radius: layout.clusterRadius, length: Math.max(6, layout.clusterRadius * 13), kind, seed: seed + 0.11 });
+    plume.group.position.y = -bellLength;
+    g.add(plume.group);
+    let vernier: Plume | null = null;
+    if (layout.verniers.length) {
+      const vr = layout.verniers[0].r;
+      vernier = new Plume({ radius: Math.max(0.1, vr * 1.4), length: Math.max(2, vr * 15), kind: 'vernier', seed: seed + 0.53 });
+      vernier.group.position.y = -layout.verniers[0].len;
+      g.add(vernier.group);
+    }
+    return { group: g, plume, vernier, glow };
+  }
+
+  private addGridFins(g: THREE.Group, r: number, len: number): void {
+    const mat = new THREE.MeshStandardMaterial({ map: gridFinTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5, color: 0x8b8d90 });
+    this.materials.push(mat);
+    const w = r * 0.95, h = r * 1.15;
+    const geo = new THREE.PlaneGeometry(w, h);
+    for (let i = 0; i < 4; i++) {
+      const fin = new THREE.Mesh(geo, mat);
+      const ang = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      // stowed flat against the body
+      fin.position.set(Math.cos(ang) * (r + 0.12), len - h * 0.75, Math.sin(ang) * (r + 0.12));
+      fin.rotation.y = -ang + Math.PI / 2;
+      g.add(fin);
+      const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.5, h * 0.25, 0.5), this.mat('#303337', 0.5, 0.6));
+      hinge.position.set(Math.cos(ang) * (r + 0.2), len - h * 0.12, Math.sin(ang) * (r + 0.2));
+      g.add(hinge);
+    }
+  }
+
+  private addLegs(g: THREE.Group, r: number, len: number): void {
+    const mat = this.mat('#1d1f22', 0.4, 0.7);
+    for (let i = 0; i < 4; i++) {
+      const ang = (i / 4) * Math.PI * 2;
+      const legLen = len * 0.28;
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.13, r * 0.09, legLen, 8), mat);
+      leg.position.set(Math.cos(ang) * (r + r * 0.14), legLen / 2 + r * 0.3, Math.sin(ang) * (r + r * 0.14));
+      leg.rotation.z = -Math.cos(ang) * 0.04;
+      leg.rotation.x = Math.sin(ang) * 0.04;
+      g.add(leg);
+      const foot = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.16, r * 0.16, r * 0.2, 8), mat);
+      foot.position.set(Math.cos(ang) * (r + r * 0.14), r * 0.22, Math.sin(ang) * (r + r * 0.14));
+      g.add(foot);
+    }
+  }
+
+  private addFlaps(g: THREE.Group, r: number, len: number): void {
+    const mat = this.mat('#24262a', 0.5, 0.55);
+    // two forward flaps near the nose, two larger aft flaps near the tank
+    for (let i = 0; i < 4; i++) {
+      const fwd = i < 2;
+      const ang = (i % 2 ? 1 : -1) * Math.PI * 0.32 + (fwd ? 0 : Math.PI * 0.06);
+      const span = r * (fwd ? 0.75 : 1.05);
+      const chord = fwd ? len * 0.1 : len * 0.16;
+      const flap = new THREE.Mesh(new THREE.BoxGeometry(span, chord, r * 0.22), mat);
+      flap.position.set(Math.cos(ang) * (r + span * 0.42), fwd ? len * 0.84 : len * 0.16, Math.sin(ang) * (r + span * 0.42));
+      flap.rotation.y = -ang;
+      flap.rotation.z = Math.cos(ang) * 0.12;
+      flap.castShadow = true;
+      g.add(flap);
+    }
+  }
+
+  private addFins(g: THREE.Group, r: number): void {
+    const mat = this.mat('#3a3d42', 0.3, 0.6);
+    for (let i = 0; i < 4; i++) {
+      const ang = (i / 4) * Math.PI * 2 + Math.PI / 4;
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(r * 0.9, r * 1.6, 0.25), mat);
+      fin.position.set(Math.cos(ang) * (r + r * 0.42), r * 1.0, Math.sin(ang) * (r + r * 0.42));
+      fin.rotation.y = -ang;
+      g.add(fin);
+    }
+  }
+
+  private buildFairing(spec: VehicleSpec): THREE.Group {
+    const g = new THREE.Group();
+    const f = spec.fairing!;
+    const r = f.diameter / 2;
+    const liv = stageLivery(spec, { id: 'fairing', name: 'fairing', dryMass: 0, propellantMass: 0, engine: spec.stages[0].engine, diameter: f.diameter, length: f.length, color: f.color ?? '#eeeeee' });
+    liv.base = f.color ?? '#eeeeee';
+    liv.bands = [];
+    liv.text = undefined;
+    const tex = bodyTexture(liv, f.diameter, f.length, seedFromString(spec.id + 'fairing'));
+    this.textures.push(tex);
+    const m = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.15, roughness: 0.5 });
+    this.materials.push(m);
+    const cylH = f.length * 0.52;
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH, 40, 1), m);
+    cyl.position.y = cylH / 2;
+    cyl.castShadow = true;
+    g.add(cyl);
+    const noseH = f.length - cylH;
+    const nose = new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, noseH, 24), 40), m);
+    nose.castShadow = true;
+    g.add(nose);
+    // split line
+    const split = new THREE.Mesh(new THREE.BoxGeometry(r * 2.02, f.length * 0.98, 0.06), this.mat('#9a9a9a', 0.2, 0.6));
+    split.position.y = f.length * 0.49;
+    g.add(split);
+    return g;
+  }
+
+  /** Lay out the attached parts and animate everything from the frame. */
+  update(frame: VisualFrame, env: RocketEnv): void {
+    if (frame.destroyed) {
       this.group.visible = false;
+      this.trail.mesh.visible = false;
       return;
     }
     this.group.visible = true;
+    const t = frame.t;
+    const pressure = frame.pressure;
     let y = 0;
-    let topOfStack = 0;
+    let top = 0;
     for (const part of this.stages) {
-      const st = vehicle.stages.find((s) => s.spec.id === part.spec.id);
-      const attached = st ? st.attached : false;
-      part.group.visible = attached && !part.spec.isSpacecraft;
-      if (!attached || part.spec.isSpacecraft) {
-        part.group.visible = false;
-        part.plume.light.intensity = 0;
-        for (const bp of this.boosters) if (bp.stageId === part.spec.id) for (let k = 0; k < bp.groups.length; k++) { bp.groups[k].visible = false; bp.plumes[k].light.intensity = 0; }
-        continue;
-      }
+      const sf = this.stageFrame(frame, part);
+      const attached = !!sf && sf.attached;
+      part.group.visible = attached;
+      if (!attached || !sf) continue;
       part.group.position.y = y;
-      part.plume.light.position.set(0, y - 2, 0);
-      const running = !!st && st.ignited && !st.cutoff && !st.burnedOut && st.engineFraction > 0;
-      updatePlume(part.plume, running ? coreThrottle : 0, pressure, dt, pointScale);
-      for (const bp of this.boosters) {
-        if (bp.stageId !== part.spec.id) continue;
-        const bs = st!.boosters.find((b) => b.spec.id === bp.spec.id);
-        for (let k = 0; k < bp.groups.length; k++) {
-          const bg = bp.groups[k];
-          const attachedB = !!bs && bs.attached;
-          bg.visible = attachedB;
-          if (!attachedB) { bp.plumes[k].light.intensity = 0; continue; }
-          const ang = (k / bp.spec.count) * Math.PI * 2 + Math.PI / 4;
-          const off = part.spec.diameter / 2 + bp.spec.diameter / 2;
-          bg.position.set(Math.cos(ang) * off, y + (bp.spec.baseOffset ?? 0), Math.sin(ang) * off);
-          bp.plumes[k].light.position.set(bg.position.x, bg.position.y - 2, bg.position.z);
-          const burning = !!bs && bs.ignited && !bs.burnedOut;
-          updatePlume(bp.plumes[k], burning ? boosterThrottle : 0, pressure, dt, pointScale);
+      const burning = sf.burning;
+      // The *effective* core throttle, not the guidance command: Angara's core
+      // is clamped to 30 % while the strap-ons burn, and a 100 % plume hanging
+      // off a 30 % engine is exactly the mismatch the reviewer flagged. Frames
+      // recorded before the field existed fall back to the command.
+      const cmd = sf.effectiveThrottle ?? frame.throttle;
+      const thr = burning ? Math.max(0.05, cmd) * (sf.engineFraction ?? 1) : 0;
+      part.plume.update(thr, pressure, t);
+      part.vernier?.update(burning ? Math.min(1, thr + 0.25) : 0, pressure, t);
+      part.glow.visible = thr > 0.02;
+      (part.glow.material as THREE.MeshBasicMaterial).opacity = thr > 0.02 ? 0.55 + 0.2 * Math.sin(t * 29 + part.index) : 0;
+      // hot nozzle: the bell interior brightens with the throttle
+      part.bellMat.emissive.setRGB(0.28 * thr, 0.085 * thr, 0.022 * thr);
+      // Brief ignition flash. `ignitionTime` is only meaningful once the stage
+      // has actually lit — an unlit stage reports 0, which at T+0 would flash
+      // the second stage and the spacecraft along with the core.
+      const age = sf.ignited ? t - (sf.ignitionTime ?? 0) : 1e9;
+      if (age >= 0 && age < 0.75) {
+        part.flash.visible = true;
+        const k = age / 0.75;
+        part.flash.scale.setScalar(1 + k * 4.5);
+        (part.flash.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.85;
+      } else {
+        part.flash.visible = false;
+      }
+      for (const bg of part.boosters) {
+        // one lookup per booster *group*: it does not depend on the unit index
+        const bf = this.boosterFrame(frame, part, bg);
+        const on = !!bf && bf.attached;
+        for (let u = 0; u < bg.units.length; u++) {
+          const unit = bg.units[u];
+          unit.group.visible = on;
+          if (!on || !bf) continue;
+          const bthr = bf.burning ? (bg.spec.engine.solid ? 1 : Math.max(0.05, bf.effectiveThrottle ?? frame.throttle)) : 0;
+          unit.plume.update(bthr, pressure, t + u * 0.13);
+          unit.vernier?.update(bf.burning ? Math.min(1, bthr + 0.25) : 0, pressure, t + u * 0.13);
+          unit.glow.visible = bthr > 0.02;
+          (unit.glow.material as THREE.MeshBasicMaterial).opacity = bthr > 0.02 ? 0.6 : 0;
         }
       }
       y += part.height;
-      topOfStack = y;
+      top = y;
+    }
+    // one warm light at the nozzles of whichever stage is burning
+    let lit = 0;
+    let litY = 0;
+    let litLen = 0;
+    let yy = 0;
+    for (const part of this.stages) {
+      const sf = this.stageFrame(frame, part);
+      if (!sf || !sf.attached) continue;
+      if (part.plume.length > litLen) { litLen = part.plume.length; litY = yy - part.bellLength; lit = 1; }
+      for (const bg of part.boosters) for (const u of bg.units) if (u.plume.length > litLen) { litLen = u.plume.length; litY = yy - part.bellLength; lit = 1; }
+      yy += part.height;
+    }
+    if (lit > 0 && litLen > 0) {
+      this.engineLight.position.set(0, litY - litLen * 0.25, 0);
+      // Sized against a stated irradiance at a stated distance, instead of a
+      // bare "55".
+      //
+      // A point light in three is in candela: the contribution at distance d is
+      // `intensity / d^decay`, so 55 at decay 1.8 put 0.07 on a stage 40 m up —
+      // against a sun of 3.3. That is why a night launch showed nothing but the
+      // plume: under 4 150 kN of exhaust the vehicle itself was unlit. The
+      // reference point is a third of the way up the stack, and the target
+      // there runs from a warm hint in daylight to the dominant light source at
+      // night, which is what the exhaust really is once the sun is down.
+      const ref = Math.max(10, this.height * 0.33);
+      const target = ENGINE_LIGHT_DAY + (ENGINE_LIGHT_NIGHT - ENGINE_LIGHT_DAY) * clamp01(env.night);
+      this.engineLight.intensity = target * Math.pow(ref, ENGINE_LIGHT_DECAY)
+        * Math.max(0.2, frame.throttle) * (0.92 + 0.08 * Math.sin(t * 26));
+      // The cutoff window has to clear the whole stack, or three's own
+      // `pow2(1 - pow4(d/distance))` term dims the nose to nothing.
+      this.engineLight.distance = Math.max(this.height * 2.6, litLen * 3.5);
+    } else {
+      this.engineLight.intensity = 0;
     }
     if (this.fairing) {
-      this.fairing.visible = vehicle.fairingAttached;
-      this.fairing.position.y = topOfStack;
+      this.fairing.visible = frame.fairingAttached;
+      this.fairing.position.y = top;
     }
-    // payload sits above the top stage (inside the fairing if attached)
+    // payload
     const satG = this.satellite.group;
-    satG.visible = true;
-    satG.position.y = topOfStack + this.satellite.height / 2 + 0.5;
-    if (payloadSeparated) {
+    const sepT = frame.payloadSepT ?? -1;
+    if (frame.payloadSeparated) {
+      // The spacecraft is now the tracked object, so its base sits on the
+      // origin; the stage it came off is drawn *below* the origin
+      // (DebrisFrame.anchor), so the two abut at the separation plane and then
+      // drift apart instead of occupying the same 15 m of space.
       satG.position.y = this.satellite.height / 2;
-      this.deployProgress = Math.min(1, this.deployProgress + dt / 12);
+      const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
+      this.satellite.setDeploy(p);
+      satG.visible = true;
+    } else {
+      satG.position.y = top + this.satellite.height / 2 + 0.5;
+      this.satellite.setDeploy(0);
+      satG.visible = !this.spec.fairing ? false : !frame.fairingAttached;
     }
-    const s = payloadSeparated ? 0.02 + 0.98 * this.deployProgress : 0.02;
-    for (const d of this.satellite.deployables) {
-      if ((d as THREE.Mesh).geometry && (d as THREE.Mesh).geometry.type === 'BoxGeometry' && d.scale.x < 1 && d.scale.z < 0.5) d.scale.setScalar(s);
-      else d.scale.set(s, 1, 1);
+
+    // ascent smoke trail: a column stretching back towards the pad
+    const denseAir = 1 - smoothstep(9e3, 34e3, frame.altitude);
+    const burningNow = frame.thrust > 0 && frame.liftoff;
+    const trailOpacity = burningNow ? denseAir * 0.55 * smoothstep(40, 500, frame.altitudeAGL) : 0;
+    if (trailOpacity > 0.01) {
+      const len = Math.min(env.padDistance, 5200);
+      this.trail.update(t, env.backDir, len, Math.max(6, this.currentRadius(frame) * 3.4), trailOpacity);
+    } else {
+      this.trail.update(t, env.backDir, 1, 1, 0);
     }
   }
 
   /** Approximate current stack height (for camera framing), m. */
-  currentHeight(vehicle: VehicleModel): number {
+  currentHeight(frame: VisualFrame): number {
     let h = 0;
     for (const part of this.stages) {
-      const st = vehicle.stages.find((s) => s.spec.id === part.spec.id);
-      if (st && st.attached && !part.spec.isSpacecraft) h += part.height;
+      const sf = this.stageFrame(frame, part);
+      if (sf && sf.attached) h += part.height;
     }
-    if (vehicle.fairingAttached) h += this.fairingLength;
+    if (frame.fairingAttached) h += this.fairingLength;
     else h += this.satellite.height;
     return Math.max(3, h);
   }
 
   /** Radius of the widest attached component, m. */
-  currentRadius(vehicle: VehicleModel): number {
+  currentRadius(frame: VisualFrame): number {
     let r = 1;
     for (const part of this.stages) {
-      const st = vehicle.stages.find((s) => s.spec.id === part.spec.id);
-      if (st && st.attached) {
-        r = Math.max(r, part.spec.diameter / 2);
-        for (const b of st.boosters) if (b.attached) r = Math.max(r, part.spec.diameter / 2 + b.spec.diameter);
+      const sf = this.stageFrame(frame, part);
+      if (!sf || !sf.attached) continue;
+      r = Math.max(r, part.spec.diameter / 2);
+      for (const bg of part.boosters) {
+        const bf = this.boosterFrame(frame, part, bg);
+        if (bf && bf.attached) r = Math.max(r, part.spec.diameter / 2 + bg.spec.diameter);
       }
     }
+    if (frame.fairingAttached && this.spec.fairing) r = Math.max(r, this.spec.fairing.diameter / 2);
     return r;
   }
 
-  /** Release GPU resources (geometries, materials, particle buffers). */
   dispose(): void {
-    this.group.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (m.geometry) m.geometry.dispose();
-      const mat = (m as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
-      if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
-      else if (mat && mat !== nozzleMat && mat !== nozzleInnerMat) mat.dispose();
-    });
-    for (const st of this.stages) { st.plume.particles.dispose(); st.plume.smoke?.dispose(); }
-    for (const bp of this.boosters) for (const p of bp.plumes) { p.particles.dispose(); p.smoke?.dispose(); }
+    for (const p of this.stages) {
+      p.plume.dispose();
+      p.vernier?.dispose();
+      for (const bg of p.boosters) for (const u of bg.units) { u.plume.dispose(); u.vernier?.dispose(); }
+    }
+    this.trail.dispose();
+    for (const t of this.textures) t.dispose();
+    for (const m of this.materials) m.dispose();
+    disposeObject(this.group);
+    disposeObject(this.worldGroup);
+    this.stages = [];
   }
 }

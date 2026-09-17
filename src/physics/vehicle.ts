@@ -45,29 +45,129 @@ export interface ThrustResult {
   mdot: number;
   /** vacuum-equivalent thrust of running engines at full throttle (for limits) */
   thrustFullVac: number;
-  /** effective throttle applied to the core stage */
+  /**
+   * Fraction of full thrust the core engines of the active stage are actually
+   * producing: the commanded throttle after the engine's minimum-throttle
+   * clamp and the `throttleWithBoosters` clamp, times a solid motor's thrust
+   * profile. 0 when the core is not burning.
+   *
+   * It is an *output*, recorded on `SimState` and read by the renderer for the
+   * plume (`StageFrame.effectiveThrottle`). Nothing in the physics reads it
+   * back — `thrust` itself is already the clamped number.
+   */
   coreThrottle: number;
+  /** the same for the strap-on boosters of the active stage (solid profile included) */
+  boosterThrottle: number;
   /** any engine currently producing thrust */
   burning: boolean;
+}
+
+/**
+ * Sea-level thrust actually used by the model.
+ *
+ * A `vacuumOnly` engine has no sea-level operating point; its `thrustSL` field
+ * is a placeholder kept only so that the type stays uniform. Using it would be
+ * using fiction, so the vacuum figure is returned instead and the pressure blend
+ * below becomes a no-op for those engines.
+ */
+export function engineThrustSL(e: EngineSpec): number {
+  return e.vacuumOnly ? e.thrustVac : e.thrustSL;
 }
 
 /** Thrust of one engine at ambient pressure p (Pa). */
 export function engineThrust(e: EngineSpec, p: number): number {
   const f = Math.min(1, Math.max(0, p / P0));
-  return e.thrustVac - (e.thrustVac - e.thrustSL) * f;
+  const tSL = engineThrustSL(e);
+  return e.thrustVac - (e.thrustVac - tSL) * f;
 }
-/** Isp of one engine at ambient pressure p (Pa). */
-export function engineIsp(e: EngineSpec, p: number): number {
-  const f = Math.min(1, Math.max(0, p / P0));
-  return e.ispVac - (e.ispVac - e.ispSL) * f;
-}
-/** Full-throttle mass flow of one engine, kg/s (independent of pressure). */
+
+/**
+ * Full-throttle mass flow of one engine, kg/s.
+ *
+ * Physically ṁ is a property of the turbopump and the injector, not of the
+ * ambient pressure: thrust is linear in ambient pressure because the nozzle exit
+ * term is, while the propellant flow is unchanged. So ṁ = F_vac/(g₀ Isp_vac) and
+ * F_SL/(g₀ Isp_SL) are the *same* number, and a data pair that says otherwise is
+ * inconsistent. The model takes the vacuum pair as authoritative (it is the one
+ * every source quotes for every engine, and the one a vacuum-only engine has at
+ * all) and back-solves the sea-level Isp from it — see `engineIsp`.
+ */
 export function engineMassFlow(e: EngineSpec): number {
   return e.thrustVac / (G0 * e.ispVac);
 }
-/** Regressive thrust profile factor for solid motors. */
-function solidProfile(fractionBurned: number): number {
-  return 1.2 - 0.4 * Math.min(1, Math.max(0, fractionBurned));
+
+/**
+ * Isp of one engine at ambient pressure p (Pa), s.
+ *
+ * Derived from the thrust the engine delivers at that pressure and the (fixed)
+ * mass flow, so that F = ṁ g₀ Isp(p) holds exactly at every altitude. At p = 0
+ * this is `ispVac` by construction; at sea level it is thrustSL/(ṁ g₀), which
+ * is the Isp the vehicle *delivers* and not necessarily the `ispSL` the data
+ * file quotes. `data-consistency` asserts the two agree to 1 % for every
+ * ground-lit engine, which is what stops that discrepancy coming back.
+ */
+export function engineIsp(e: EngineSpec, p: number): number {
+  const mdot = engineMassFlow(e);
+  if (mdot <= 0) return e.ispVac;
+  return engineThrust(e, p) / (G0 * mdot);
+}
+
+/** Delivered sea-level Isp, s: what `ispSL` in the data file has to agree with. */
+export function deliveredIspSL(e: EngineSpec): number {
+  return engineIsp(e, P0);
+}
+
+/**
+ * Tail fraction of the regressive ramp, cached per peak factor.
+ *
+ * The profile is a function of the fraction of grain BURNED, but the quantity
+ * that has to come out right is the burn TIME — `thrustVac` is defined as the
+ * mean thrust that reproduces the published burn time at constant flow, so the
+ * profile must not change it. Those are not the same normalisation, and the
+ * difference is not small: a ramp that is symmetric about 1 in burned fraction
+ * spends longer at low flow than at high flow, so
+ *
+ *   t_burn = (m/ṁ) ∫₀¹ df / p(f)
+ *
+ * and for a 1.52 → 0.48 ramp that integral is 1.108 — an 11 % longer burn,
+ * which on Ariane 6 moved P120C separation from T+140 s to T+153 s against a
+ * published 130–140 s. So the tail is solved for instead: with p(f) = P(1 − cf),
+ * c is the root of ln(1/(1−c)) = Pc, which makes ∫₀¹ df/p(f) exactly 1 and
+ * leaves the published burn time untouched whatever the peak is. For P = 1.2 it
+ * gives 1.2 → 0.82, which is why the file's original hand-picked 1.2 → 0.8 ramp
+ * was very nearly right; for P = 1.52 it gives 1.52 → 0.60.
+ */
+const solidTailCache = new Map<number, number>();
+function solidTail(peak: number): number {
+  const hit = solidTailCache.get(peak);
+  if (hit !== undefined) return hit;
+  // ln(1/(1-c))/(P c) rises monotonically from 1/P (< 1) to infinity on (0, 1).
+  let lo = 1e-9;
+  let hi = 1 - 1e-9;
+  for (let k = 0; k < 80; k++) {
+    const c = (lo + hi) / 2;
+    if (Math.log(1 / (1 - c)) / (peak * c) > 1) hi = c;
+    else lo = c;
+  }
+  const c = (lo + hi) / 2;
+  solidTailCache.set(peak, c);
+  return c;
+}
+
+/**
+ * Regressive thrust profile factor for solid motors.
+ *
+ * `thrustVac` is the *mean* thrust (grain mass / published burn time) and a real
+ * grain delivers a head-end peak and a long tail-off around it. `peakFactor` is
+ * the published peak/mean — P120C 1.52, SRB-A3 1.22, Zefiro 40 1.16 — and the
+ * fleet default of 1.2 is what every motor used before the field existed. The
+ * ramp is normalised so the burn time is unchanged; see `solidTail`.
+ */
+export function solidProfile(fractionBurned: number, peakFactor = 1.2): number {
+  const p = Math.max(1, peakFactor);
+  if (p <= 1) return 1;
+  const f = Math.min(1, Math.max(0, fractionBurned));
+  return p * (1 - solidTail(p) * f);
 }
 
 export class VehicleModel {
@@ -143,6 +243,21 @@ export class VehicleModel {
     return Math.max(0, bs.propellant - reserve);
   }
 
+  /**
+   * Fraction of the *usable* grain a solid motor has burned, which is what the
+   * regressive thrust profile is a function of. Keying it to the loaded mass
+   * instead would mean a motor with a recovery reserve never reaches the
+   * tail-off, because the reserve it may not touch still counts as unburned.
+   */
+  private solidProfileFor(st: StageState): number {
+    const usable = Math.max(1e-9, st.spec.propellantMass - (st.index === 0 ? this.recoveryReserve * st.spec.propellantMass : 0));
+    return solidProfile(1 - this.usablePropellant(st) / usable, st.spec.engine.peakFactor);
+  }
+  private solidProfileForBooster(b: BoosterState): number {
+    const usable = Math.max(1e-9, b.spec.propellantMass * (1 - this.recoveryReserve));
+    return solidProfile(1 - this.usableBoosterPropellant(b) / usable, b.spec.engine.peakFactor);
+  }
+
   totalMass(): number {
     let m = this.payloadAttached ? this.payloadMass : 0;
     if (this.fairingAttached && this.spec.fairing) m += this.spec.fairing.mass;
@@ -159,6 +274,9 @@ export class VehicleModel {
 
   /** Frontal (reference) area for drag, m^2. */
   frontalArea(): number {
+    // The override short-circuits before the sum, not after it: this runs on
+    // every integration sub-step of every flight (audit item B39(7)).
+    if (this.spec.dragArea !== undefined) return this.spec.dragArea;
     let maxD = 0;
     for (const st of this.stages) if (st.attached) maxD = Math.max(maxD, st.spec.diameter);
     if (this.fairingAttached && this.spec.fairing) maxD = Math.max(maxD, this.spec.fairing.diameter);
@@ -169,7 +287,7 @@ export class VehicleModel {
         if (b.attached) area += b.spec.count * Math.PI * (b.spec.diameter / 2) ** 2;
       }
     }
-    return this.spec.dragArea ?? area;
+    return area;
   }
 
   /**
@@ -178,7 +296,7 @@ export class VehicleModel {
    */
   thrust(t: number, p: number, throttleCmd: number): ThrustResult {
     const st = this.active;
-    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, burning: false };
+    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
     if (!st) return out;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
     // core
@@ -192,12 +310,13 @@ export class VehicleModel {
       const minT = e.solid ? 1 : e.minThrottle ?? 1;
       thr = Math.max(minT, Math.min(1, thr));
       let profile = 1;
-      if (e.solid) profile = solidProfile(1 - st.propellant / st.spec.propellantMass);
+      if (e.solid) profile = this.solidProfileFor(st);
       const n = e.count * st.engineFraction;
       out.thrust += n * engineThrust(e, p) * thr * profile;
       out.mdot += n * engineMassFlow(e) * thr * profile;
       out.thrustFullVac += n * e.thrustVac * profile;
-      out.coreThrottle = thr;
+      // `* profile` so a solid core's plume follows its own thrust curve
+      out.coreThrottle = Math.min(1, thr * profile);
       out.burning = true;
     }
     // boosters
@@ -205,12 +324,17 @@ export class VehicleModel {
       if (!b.attached || !b.ignited || b.burnedOut || this.usableBoosterPropellant(b) <= 0) continue;
       const e = b.spec.engine;
       let profile = 1;
-      if (e.solid) profile = solidProfile(1 - b.propellant / b.spec.propellantMass);
+      if (e.solid) profile = this.solidProfileForBooster(b);
       const thr = e.solid ? 1 : Math.max(e.minThrottle ?? 1, Math.min(1, throttleCmd));
       const n = e.count * b.spec.count;
       out.thrust += n * engineThrust(e, p) * thr * profile;
       out.mdot += n * engineMassFlow(e) * thr * profile;
       out.thrustFullVac += n * e.thrustVac * profile;
+      // The strongest burning group wins: several groups on one stage (H3's
+      // SRB-3 pair, Angara's four URM-1s) light and burn out together, so a
+      // maximum and a per-group value differ only during the second in which
+      // one of them has burned out and is about to be jettisoned.
+      out.boosterThrottle = Math.max(out.boosterThrottle, Math.min(1, thr * profile));
       out.burning = true;
     }
     return out;
@@ -231,7 +355,7 @@ export class VehicleModel {
       const minT = e.solid ? 1 : e.minThrottle ?? 1;
       thr = Math.max(minT, Math.min(1, thr));
       let profile = 1;
-      if (e.solid) profile = solidProfile(1 - st.propellant / st.spec.propellantMass);
+      if (e.solid) profile = this.solidProfileFor(st);
       const used = e.count * st.engineFraction * engineMassFlow(e) * thr * profile * dt;
       st.propellant -= used;
       if (this.usablePropellant(st) <= 0) {
@@ -245,7 +369,7 @@ export class VehicleModel {
       if (!b.attached || !b.ignited || b.burnedOut) continue;
       const e = b.spec.engine;
       let profile = 1;
-      if (e.solid) profile = solidProfile(1 - b.propellant / b.spec.propellantMass);
+      if (e.solid) profile = this.solidProfileForBooster(b);
       const thr = e.solid ? 1 : Math.max(e.minThrottle ?? 1, Math.min(1, throttleCmd));
       const used = e.count * engineMassFlow(e) * thr * profile * dt;
       b.propellant -= used;
@@ -298,42 +422,77 @@ export class VehicleModel {
   /**
    * Ideal remaining delta-v (vacuum Isp, no losses) from the current state,
    * summing the active stage and all stages above it.
+   *
+   * Two things this has to get right, because both are worth 5–19 % on a
+   * booster-equipped launcher (audit item B13):
+   *
+   * - **Strap-ons are a separate phase, not a bigger tank.** Lumping the booster
+   *   and core propellant into one burn at a flow-weighted Isp makes the core
+   *   carry the booster dry mass until the *combined* load is gone, which on
+   *   Ariane 64 is 52 t of empty P120C casings dragged through the whole Vulcain
+   *   burn — 2 272 m/s of pure fiction. The burn is split at booster burnout:
+   *   during the parallel phase the core consumes coreFlow/(coreFlow+boosterFlow)
+   *   of the flow, the booster casings are dropped, and the core finishes alone.
+   * - **The fairing comes off.** `totalMass()` includes it and the old walk never
+   *   subtracted it, so every launcher carried 1–3.5 t of jettisoned composite to
+   *   orbit. It is dropped where it really is: during the burn of the stage above
+   *   the first, i.e. at the first staging boundary this walk crosses.
    */
   deltaVRemaining(): number {
-    let dv = 0;
-    let mass = this.totalMass();
     const act = this.active;
     if (!act) return 0;
-    // boosters attached to the active stage: treat their propellant with the core's as a
-    // combined burn (approximation), then drop their dry mass.
+    let dv = 0;
+    let mass = this.totalMass();
+    let fairing = this.fairingAttached && this.spec.fairing ? this.spec.fairing.mass : 0;
     const stagesAbove = this.stages.filter((s) => s.attached && s.index >= act.index && !s.spec.isSpacecraft);
+    // The fairing is jettisoned a minute or so into the second stage's burn. If
+    // the walk starts above the first stage the jettison is already imminent, so
+    // it is dropped before the first stage of the walk rather than after it.
+    if (fairing > 0 && act.index > 0) {
+      mass -= fairing;
+      fairing = 0;
+    }
     for (const st of stagesAbove) {
       const e = st.spec.engine;
-      let prop = this.usablePropellant(st);
-      let isp = e.ispVac;
+      const coreProp = this.usablePropellant(st);
+      const veCore = G0 * e.ispVac;
+      let boosterProp = 0;
+      let boosterFlow = 0;
       let boosterDry = 0;
+      let boosterVe = veCore;
       if (st.index === act.index) {
-        let boosterProp = 0;
-        let boosterFlow = 0;
-        let coreFlow = e.count * engineMassFlow(e);
         for (const b of st.boosters) {
           if (!b.attached) continue;
           boosterProp += this.usableBoosterPropellant(b) * b.spec.count;
           boosterFlow += b.spec.count * b.spec.engine.count * engineMassFlow(b.spec.engine);
-          boosterDry += b.spec.dryMass * b.spec.count + (b.propellant - this.usableBoosterPropellant(b)) * b.spec.count;
+          boosterDry += (b.spec.dryMass + (b.propellant - this.usableBoosterPropellant(b))) * b.spec.count;
         }
-        if (boosterProp > 0) {
-          const bIsp = st.boosters[0].spec.engine.ispVac;
-          const totalFlow = coreFlow + boosterFlow;
-          isp = (coreFlow * e.ispVac + boosterFlow * bIsp) / totalFlow;
-          prop += boosterProp;
-        }
+        if (boosterProp > 0) boosterVe = G0 * st.boosters[0].spec.engine.ispVac;
       }
-      if (prop > 0 && mass > prop) {
-        dv += G0 * isp * Math.log(mass / (mass - prop));
+      const coreFlow = Math.max(1e-9, e.count * st.engineFraction * engineMassFlow(e));
+      if (boosterProp > 0 && boosterFlow > 0) {
+        // --- parallel phase: both burn until the strap-ons run dry
+        const tPar = boosterProp / boosterFlow;
+        const coreInPar = Math.min(coreProp, coreFlow * tPar);
+        const burned = boosterProp + coreInPar;
+        const ve = (coreFlow * veCore + boosterFlow * boosterVe) / (coreFlow + boosterFlow);
+        if (mass > burned) dv += ve * Math.log(mass / (mass - burned));
+        mass -= burned + boosterDry;
+        // --- core-only phase
+        const coreLeft = coreProp - coreInPar;
+        if (coreLeft > 0 && mass > coreLeft) dv += veCore * Math.log(mass / (mass - coreLeft));
+        mass -= coreLeft;
+      } else if (coreProp > 0 && mass > coreProp) {
+        dv += veCore * Math.log(mass / (mass - coreProp));
+        mass -= coreProp;
+      } else {
+        mass -= coreProp;
       }
-      mass -= prop + boosterDry;
-      mass -= st.spec.dryMass + (st.propellant - this.usablePropellant(st));
+      mass -= st.spec.dryMass + (st.propellant - coreProp);
+      if (fairing > 0) {
+        mass -= fairing;
+        fairing = 0;
+      }
     }
     return dv;
   }
@@ -468,13 +627,24 @@ export function liftoffMass(spec: VehicleSpec, payloadMass: number): number {
   return new VehicleModel(spec, payloadMass).totalMass();
 }
 
-/** Sea-level liftoff thrust (all ground-lit engines). */
+/**
+ * Sea-level liftoff thrust (all ground-lit engines), N.
+ *
+ * A solid motor's `thrustSL` is its *mean* thrust, so the thrust it actually
+ * makes at t = 0 is the head of the regressive profile — `solidProfile(0)`. That
+ * applies to a solid FIRST STAGE (Vega-C's P120C, PSLV's S139) exactly as it
+ * does to a strap-on; the earlier form of this function applied it only to
+ * boosters, so every solid-first-stage vehicle reported a liftoff thrust 20 %
+ * (now up to 52 %) below the one it lifts off with, and the fleet T/W check was
+ * measuring the wrong number for them.
+ */
 export function liftoffThrust(spec: VehicleSpec): number {
   const st = spec.stages[0];
-  // solid motors start at the top of their regressive profile (see solidProfile)
-  let T = st.engine.count * st.engine.thrustSL * (st.engine.solid ? 1.2 : 1);
+  const core = st.engine;
+  let T = core.count * engineThrustSL(core) * (core.solid ? solidProfile(0, core.peakFactor) : 1);
   for (const b of st.boosters ?? []) {
-    if ((b.igniteAt ?? 0) <= 0) T += b.count * b.engine.count * b.engine.thrustSL * (b.engine.solid ? 1.2 : 1);
+    if ((b.igniteAt ?? 0) > 0) continue;
+    T += b.count * b.engine.count * engineThrustSL(b.engine) * (b.engine.solid ? solidProfile(0, b.engine.peakFactor) : 1);
   }
   return T;
 }

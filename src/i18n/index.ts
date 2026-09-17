@@ -49,12 +49,5 @@ export function applyStatic(root: ParentNode = document): void {
   });
   root.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((el) => {
     el.title = t(el.dataset.i18nTitle!);
-    el.setAttribute('aria-label', el.title);
   });
-}
-
-/** Translation of a data-table string (orbit/satellite/site names) with an English fallback. */
-export function tn(key: string, fallback: string): string {
-  const v = t(key);
-  return v === key ? fallback : v;
 }

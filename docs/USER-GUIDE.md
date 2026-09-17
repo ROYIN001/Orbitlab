@@ -1,0 +1,162 @@
+# Orbitlab user guide
+
+A walkthrough for flying your first mission and making sense of what the simulator shows
+you while it flies — written for a student rather than for a contributor. If you want the
+equations and the sources behind them, that is [docs/PHYSICS.md](PHYSICS.md); this guide
+sticks to what you see on screen and what it means.
+
+## 1. Set up a mission
+
+The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.
+
+1. **Vehicle & site.** Pick a launch vehicle from the dropdown — the card underneath shows
+   its height, liftoff mass and thrust, thrust-to-weight ratio, stage count and rated
+   payload to LEO/GTO/SSO. The site list below it only offers sites that vehicle actually
+   flies from; picking a vehicle that cannot fly from your current site moves you to one
+   that can and says so.
+2. **Payload.** Choose a satellite/spacecraft (its mass fills in automatically) or type a
+   payload mass of your own.
+3. **Target orbit & launch time.** The pills (ISS, Starlink, sun-synchronous, polar, GPS,
+   GLONASS, GTO, GEO, Molniya, Tundra) are ready-made targets; editing any number below them
+   — perigee, apogee, inclination, argument of perigee, or the RAAN fields — turns the orbit
+   into **Custom** without losing the rest. For a plane-specific target (the ISS orbit, or a
+   sun-synchronous local time), **Next window** moves the launch time to the next moment the
+   ascent plane actually reaches that RAAN; launching off-window still works, it just costs a
+   plane-change burn at apogee (see [§5](#5-reading-the-telemetry-panel)).
+
+Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
+loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
+program**, which flies the ascent headlessly over a grid of values and keeps the one with
+the largest remaining Δv. **Failure scenario** arms an engine-out, a thrust loss, a
+premature separation, a stuck fairing, a range-safety destruct, or a random one of those, at
+a mission time and stage you choose.
+
+**The status line above the Launch button is a pre-flight verdict**, not decoration: it
+reads *fail* (red) when the payload is over the vehicle's rated capability, the target orbit
+is not published for it, the inclination lies outside the launch site's range-safety
+corridor, or the stack cannot deliver the orbit at all — no restartable upper stage above a
+direct insertion that closes lower down, or less Δv than the ascent and the planned burns
+need. It reads *warn* (amber) when the inclination needs a plane change, the site was just
+reassigned, the ascent stages are short on paper and an upper stage has to make the
+difference up, the margin is tight, or a failure is armed; an armed failure is always
+reported, alongside whatever else the verdict says. It reads *ok* (green) otherwise. It is
+computed from data and the mission plan, not by flying the mission first — so it can tell you
+a mission will not fly before you spend the time watching it try. The one thing it cannot see
+is the ascent *losses*, which only a flight measures.
+
+Press **Launch**. The mission starts on the pad, T‑10 s.
+
+## 2. What you're looking at
+
+Four camera views, switchable from the tabs above the viewport or keys `1`–`4`:
+
+- **Exterior** — a chase camera that follows the stack; drag to orbit it, scroll/pinch to
+  zoom.
+- **Onboard** — an illustrative crew/cargo view with an attitude indicator and a g-meter.
+- **Space** — pulls back to show the Earth and the vehicle's position around it; once the
+  vehicle is too small to see, a labelled marker takes its place.
+- **Map** — a 2-D ground track with the predicted orbit, the target orbit, the day/night
+  terminator, and where spent stages came down.
+
+The small buttons beside the camera tabs reset the view, toggle the **glow** (the bloom around
+the plume, the ignition flash and the city lights) and go full screen. The glow switches itself
+off if the frame rate cannot afford it, and stays wherever you put it once you press it.
+
+**Camera sequence** (top bar) assigns one of those four views to each flight phase and
+switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
+upper stage, coast, burn, deployment, orbit — in live flight and in replay alike. Picking a
+camera yourself overrides the sequence until the next phase begins.
+
+The band under the viewport is the **phase narration**: a title (e.g. "Gravity turn") and
+one line of what is happening and why, next to the mission clock and the most recent
+callout. It is the fastest way to know what phase you are watching without reading the raw
+telemetry.
+
+## 3. The flight, phase by phase
+
+| Phase | What's happening |
+| --- | --- |
+| **Countdown** | On the pad. Liquid first stages ignite a few seconds before T‑0; the clock shown is T‑minus. |
+| **Vertical rise** | Straight up, clearing the tower, before any commanded turn begins. |
+| **Pitch-over** | A small commanded tilt toward the launch azimuth starts the turn downrange. |
+| **Gravity turn** | Thrust stays along the body axis (zero angle of attack) and gravity alone bends the trajectory — this is what keeps aerodynamic loads low through max Q. |
+| **Closed-loop guidance** | Once dynamic pressure has dropped, the vehicle actively steers toward the cut-off altitude, speed and plane rather than just following the turn. |
+| **Coast** | Engines off, following a ballistic (or orbital) arc — either climbing to apoapsis before a planned burn, or already circling. |
+| **Orbital burn** | An engine is firing to raise/lower an apsis, change plane, or circularise, with a Δv figure counting down. |
+| **In orbit** | Stable orbit. If it matches the target, the note says so; if it's stable but off target, it says that too, with the shortfall. |
+| **Mission failed** | The vehicle was lost — see [§6](#6-failures). |
+
+Along the way you'll see events on the ticker and the timeline (more on that in
+[§4](#4-scrubbing-a-recorded-flight)): **max Q** (peak dynamic pressure), **booster
+separation**, **MECO** (main-engine cut-off) and **stage separation**, **fairing jettison**
+(released once the free-molecular heating rate and the dynamic pressure both drop low
+enough — see PHYSICS.md §4, not just a fixed altitude), **SECO** (second/upper-stage
+cut-off), **target orbit** or **off target**, and **payload separation**. A crewed or
+propelled spacecraft keeps flying and raising its own orbit after the launcher lets go — the
+ticket doesn't end at SECO.
+
+## 4. Scrubbing a recorded flight
+
+Orbitlab records the whole mission as it flies, so you are never stuck watching it happen
+once at real-time speed:
+
+- The **timeline** under the playback controls covers the recording from T‑10 s to now.
+  Drag it, click anywhere on it, or use `←`/`→` (±5 s, or ±30 s with Shift) and `Home`/`End`
+  to move the cursor. Every marker on the bar is a recorded event — hover for its time,
+  click to jump straight to it.
+- Moving the cursor behind the recording head drops you into **replay**: the 3-D view, HUD,
+  map, onboard overlay and phase narration all rewind together to that instant, because they
+  are all driven from the same recorded snapshot. Nothing is re-simulated — scrubbing back
+  to liftoff to look at max Q again shows you exactly what was flown.
+- The **live mission keeps flying and recording** behind the cursor while you look at the
+  past. **Live** (or pressing `End`) jumps the cursor back to the recording head. `Space`
+  plays or pauses whichever clock the cursor is currently on — the live flight at the head,
+  the replay cursor behind it — and `Shift`+`Space` always pauses or resumes the live flight
+  itself, which is the way to freeze the mission while you keep studying an earlier moment.
+- **Time warp** (`,`/`.` or the warp selector) speeds up whichever clock is active. The live
+  flight and the replay cursor keep separate warps on purpose, so scrubbing fast through a
+  recording never makes the live mission sprint ahead of you.
+- **Skip to next event** jumps to the next planned burn (live) or the next recorded event
+  (replay); the back-skip button goes to the previous one.
+
+## 5. Reading the telemetry panel
+
+The right-hand panel (bottom, on a phone) covers the whole recorded flight with a playhead
+that follows the timeline cursor; **Ascent** zooms every chart to liftoff → parking orbit.
+
+- **Charts**: altitude, inertial speed, dynamic pressure, g-load, apoapsis/periapsis, Δv
+  remaining, commanded pitch and mass, each with its event markers (max Q, MECO, fairing,
+  SECO, burns) so you can line up a spike or a kink with what caused it.
+- **Δv budget**: what the ascent actually delivered, split into thrust, gravity loss, drag
+  loss and steering loss (PHYSICS.md §4 derives each term). A loft-heavy ascent trades
+  altitude for a larger steering loss; a shallow one trades it for gravity loss instead —
+  comparing the two after a guidance change is the fastest way to see what a parameter
+  actually cost.
+- **Flight plan**: the burns the mission planner scheduled, and — for a mission flown
+  off-window or with an inclination the site can't reach directly — the plane-change burn
+  it added at apogee.
+- **Spent-stage list**: every jettisoned booster, stage and fairing half, with where it came
+  down (or that it reached orbit as debris).
+- **Event log**: every event in the recording, in the same language as the rest of the
+  interface.
+- **Export CSV** writes the whole recorded flight — the same telemetry samples and events —
+  to a file you can open in a spreadsheet.
+
+## 6. Failures
+
+Arming a failure scenario (or flying a payload the vehicle genuinely cannot lift) can end a
+mission before orbit. The vehicle-lost overlay and the "Mission failed" phase cover:
+**engine-out** (one engine's worth of thrust gone), **total thrust loss**, **premature
+separation**, a **stuck fairing** (carried as dead weight instead of released), **range
+safety** (a flight-termination destruct — armed automatically if the vehicle falls back
+through 100 km under no power), a **structural break-up** (dynamic pressure exceeded the
+vehicle's placard by 15%), or simply running the tanks dry short of orbital speed
+(**suborbital**). Every one of these is deterministic and replayable: the same mission
+configuration always fails the same way at the same instant, so a "why did that happen" is
+always answerable by scrubbing back to it.
+
+## Glossary
+
+Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and
+Thai, is collected in [docs/PHYSICS.md → Glossary](PHYSICS.md#glossary-en--ru--th) — the
+same table the interface's own translations are checked against.

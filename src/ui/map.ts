@@ -11,10 +11,11 @@ export class OrbitalMap {
   private canvas: HTMLCanvasElement;
   private img: HTMLImageElement | null = null;
   private targetPts: { lat: number; lon: number }[] = [];
-  private trackForSim: Simulation | null = null;
-  private trackPts: { lat: number; lon: number }[] = [];
-  private trackSeen = 0;
   private targetForSim: Simulation | null = null;
+  /** ground track accumulated from the telemetry buffer (see `draw`) */
+  private trackPts: { lat: number; lon: number }[] = [];
+  private trackForSim: Simulation | null = null;
+  private trackSeen = 0;
 
   constructor(canvas: HTMLCanvasElement, imageUrl: string) {
     this.canvas = canvas;
@@ -45,7 +46,13 @@ export class OrbitalMap {
     g.setLineDash([]);
   }
 
-  draw(sim: Simulation | null, siteLat: number, siteLon: number): void {
+  /**
+   * `bottomInset` is the measured height of the phase-narration band over the
+   * viewport (main.ts publishes it). The legend is lifted above it, so the two
+   * never sit on top of each other whatever the language does to the
+   * narration's height.
+   */
+  draw(sim: Simulation | null, siteLat: number, siteLon: number, bottomInset = 0): void {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
     if (W === 0 || H === 0) return;
@@ -55,7 +62,7 @@ export class OrbitalMap {
     }
     const g = this.canvas.getContext('2d')!;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.fillStyle = '#05070c';
+    g.fillStyle = '#070b11';
     g.fillRect(0, 0, W, H);
     // fit a 2:1 map into the canvas
     const mw = Math.min(W, H * 2), mh = mw / 2;
@@ -83,7 +90,13 @@ export class OrbitalMap {
       const lon = -180 + (360 * i) / cols;
       const dl = (lon - subLon) * DEG;
       // terminator: tan(lat) = -cos(dl) / tan(subLat)  (solve cos(zenith)=0)
-      // atan (not atan2): the terminator latitude must stay within ±90° for either sign of the declination
+      //
+      // `atan`, not `atan2`: the quotient is one number and its arctangent is
+      // the latitude, in ±90° as a latitude must be. `atan2(-cos dl, tan δ)`
+      // returns the angle of the *vector*, which for a southern solar
+      // declination (tan δ < 0 — i.e. from the September equinox to the March
+      // one, half of every year) lands in the second or third quadrant: past
+      // ±90°, off the map, and the night polygon was drawn inside out.
       const tanDec = Math.abs(Math.tan(subLat)) < 1e-6 ? (subLat < 0 ? -1e-6 : 1e-6) : Math.tan(subLat);
       const latT = Math.atan(-Math.cos(dl) / tanDec) * RAD;
       const [x, y] = this.xy(latT, lon, mw, mh);
@@ -96,9 +109,9 @@ export class OrbitalMap {
     g.closePath();
     g.fill();
     // sub-solar point
-    { const [x, y] = this.xy(subLat * RAD, subLon, mw, mh); g.fillStyle = '#ffd166'; g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); }
+    { const [x, y] = this.xy(subLat * RAD, subLon, mw, mh); g.fillStyle = '#ffd28a'; g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); }
     // launch site
-    { const [x, y] = this.xy(siteLat, siteLon, mw, mh); g.strokeStyle = '#4cd97b'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.stroke(); }
+    { const [x, y] = this.xy(siteLat, siteLon, mw, mh); g.strokeStyle = '#7ddba0'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.stroke(); }
     if (sim) {
       // target orbit ground track (computed once per mission)
       if (this.targetForSim !== sim) {
@@ -117,19 +130,31 @@ export class OrbitalMap {
           this.targetPts.push({ lat: ll.lat * RAD, lon: ll.lon * RAD });
         }
       }
-      this.polyline(g, this.targetPts, mw, mh, 'rgba(242,177,52,0.75)', [6, 4], 1.5);
-      // ground track from telemetry, appended incrementally (the buffer may be thinned)
-      if (this.trackForSim !== sim || sim.telemetry.length < this.trackSeen) { this.trackForSim = sim; this.trackPts = []; this.trackSeen = 0; }
+      this.polyline(g, this.targetPts, mw, mh, 'rgba(139,229,205,0.8)', [6, 4], 1.5);
+      // Ground track from telemetry, appended in place rather than rebuilt.
+      // `filter().map()` over the whole buffer allocated two arrays of up to
+      // twenty thousand objects on every animation frame the map was open; the
+      // track only ever grows at one end. It is rebuilt from scratch whenever
+      // the buffer shrinks — which is what scrubbing backwards (the view is
+      // truncated to the cursor) and thinning the buffer both look like.
       const tel = sim.telemetry;
+      if (this.trackForSim !== sim || tel.length < this.trackSeen) {
+        this.trackForSim = sim;
+        this.trackPts = [];
+        this.trackSeen = 0;
+      }
       for (let i = this.trackSeen; i < tel.length; i++) {
         const smp = tel[i];
         if (smp.t < 0) continue;
         const last = this.trackPts[this.trackPts.length - 1];
-        if (!last || Math.abs(smp.lat - last.lat) > 0.05 || Math.abs(smp.lon - last.lon) > 0.05) this.trackPts.push({ lat: smp.lat, lon: smp.lon });
+        // a quarter of a pixel on a 1440-wide map: below this the points are
+        // the same place and only cost stroke time
+        if (!last || Math.abs(smp.lat - last.lat) > 0.05 || Math.abs(smp.lon - last.lon) > 0.05) {
+          this.trackPts.push({ lat: smp.lat, lon: smp.lon });
+        }
       }
       this.trackSeen = tel.length;
-      if (this.trackPts.length > 6000) this.trackPts = this.trackPts.filter((_, i) => i % 2 === 0 || i > this.trackPts.length - 1000);
-      this.polyline(g, this.trackPts, mw, mh, '#4aa3ff', [], 2);
+      this.polyline(g, this.trackPts, mw, mh, '#efa47e', [], 2);
       // predicted orbit (1 period ahead)
       const el = sim.state.elements;
       if (el.e < 1 && el.periapsisAlt > -R_EARTH * 0.5) {
@@ -149,10 +174,15 @@ export class OrbitalMap {
       // debris
       for (const d of sim.debris) {
         if (d.visual.kind === 'fairing') continue;
-        // a landed/impacted piece stays at its recorded ground position (it rotates with the Earth)
+        // A piece that has come down is on the ground, and the ground turns
+        // with the Earth: its frozen ECI position does not, so the marker for a
+        // landed booster used to crawl west at 15°/hour, away from the pad it
+        // had just landed on. The recorded impact point is the ground-fixed
+        // answer.
+        // (`impact` is recorded in degrees, `eciToLatLon` returns radians)
         const ll = !d.alive && d.impact ? { lat: d.impact.lat * DEG, lon: d.impact.lon * DEG } : eciToLatLon(d.r, theta);
         const [x, y] = this.xy(ll.lat * RAD, ll.lon * RAD, mw, mh);
-        g.fillStyle = d.outcome === 'landed' ? '#7fe0a0' : d.alive ? '#ff9f43' : '#ff5d5d';
+        g.fillStyle = d.outcome === 'landed' ? '#7ddba0' : d.alive ? '#efa47e' : '#ff6b6b';
         g.beginPath();
         g.rect(x - 3, y - 3, 6, 6);
         g.fill();
@@ -161,21 +191,19 @@ export class OrbitalMap {
       const [x, y] = this.xy(sim.state.lat, sim.state.lon, mw, mh);
       g.fillStyle = '#fff';
       g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = '#4aa3ff'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = '#8be5cd'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 9, 0, Math.PI * 2); g.stroke();
     }
     // legend
-    g.font = '11px system-ui, sans-serif';
-    const legend: [string, string][] = [['#fff', t('map.vehicle')], ['#4cd97b', t('map.site')], ['#4aa3ff', t('map.groundTrack')], ['rgba(255,255,255,0.8)', t('map.predicted')], ['#f2b134', t('map.target')], ['#ffd166', t('map.subsolar')], ['#ff5d5d', t('map.impact')], ['#7fe0a0', t('map.landing')]];
-    // legend in the top-right corner (the event ticker occupies the bottom-left)
-    const lw = Math.max(...legend.map(([, label]) => g.measureText(label).width)) + 26;
-    const lx0 = mw - lw - 6;
-    let ly = 16;
+    g.font = '11px "DM Sans", system-ui, sans-serif';
+    const legend: [string, string][] = [['#7ddba0', t('map.site')], ['#efa47e', t('map.groundTrack')], ['rgba(255,255,255,0.8)', t('map.predicted')], ['#8be5cd', t('map.target')], ['#ffd28a', t('map.subsolar')], ['#ff6b6b', t('map.impact')]];
+    // keep the legend clear of the narration band below the canvas
+    let ly = Math.min(mh - 12, H - bottomInset - oy - 12);
     for (const [c, label] of legend) {
-      g.fillStyle = 'rgba(0,0,0,0.55)';
-      g.fillRect(lx0, ly - 10, lw, 15);
-      g.fillStyle = c; g.fillRect(lx0 + 4, ly - 7, 10, 8);
-      g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(label, lx0 + 20, ly + 1);
-      ly += 17;
+      g.fillStyle = 'rgba(8,12,18,0.72)';
+      g.fillRect(6, ly - 10, g.measureText(label).width + 26, 15);
+      g.fillStyle = c; g.fillRect(10, ly - 7, 10, 8);
+      g.fillStyle = '#fff'; g.fillText(label, 26, ly + 1);
+      ly -= 17;
     }
     g.restore();
   }

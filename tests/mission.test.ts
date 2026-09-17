@@ -4,8 +4,9 @@ import { autotune } from '../src/physics/autotune';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
-import { launchWindows, planMission, resolveTarget } from '../src/physics/mission';
+import { canBurnAfterAscent, DIRECT_APOAPSIS_CAP, launchWindows, planMission, resolveTarget } from '../src/physics/mission';
 import { vehicleById } from '../src/data/vehicles';
+import { satelliteById } from '../src/data/satellites';
 import { nodalPrecessionRate, wrapPi } from '../src/physics/orbital';
 import type { MissionConfig } from '../src/types';
 import { RAD } from '../src/physics/constants';
@@ -127,4 +128,49 @@ describe('autotune covers all vehicles', () => {
     }
     expect(failures, failures.join('\n')).toEqual([]);
   }, 120000);
+});
+
+describe('insertion orbit planning', () => {
+  const baikonur = siteById('baikonur');
+  const cape = siteById('cape');
+
+  it('asks whether anything can burn after ascent cut-off', () => {
+    // Soyuz-2.1a: the Blok I fires once. With an inert dispenser nothing can
+    // burn after cut-off; with the crew ship, the spacecraft can.
+    expect(canBurnAfterAscent(vehicleById('soyuz21a'), satelliteById('cubesats'), false)).toBe(false);
+    expect(canBurnAfterAscent(vehicleById('soyuz21a'), satelliteById('crew'), false)).toBe(true);
+    // Falcon 9's second stage restarts; a stack with a kick stage always can.
+    expect(canBurnAfterAscent(vehicleById('falcon9'), satelliteById('cubesats'), false)).toBe(true);
+    expect(canBurnAfterAscent(vehicleById('soyuz21b'), satelliteById('cubesats'), true)).toBe(true);
+  });
+
+  it('does not cap the insertion apoapsis of a stack that cannot burn again', () => {
+    // A restartable stack is handed the capped transfer (2000 km) and raises the
+    // apogee with a later burn; a single-shot stack has no later burn, so the
+    // ascent is aimed at the apogee the mission actually wants.
+    const gto = orbitById('gto');
+    const restartable = planMission(
+      mk({ vehicleId: 'falcon9', satelliteId: 'cubesats', siteId: 'cape', orbit: gto, payloadMassOverride: 2000 }),
+      cape, vehicleById('falcon9'),
+    );
+    expect(restartable.insertionApoapsis).toBe(DIRECT_APOAPSIS_CAP);
+    const singleShot = planMission(
+      mk({ vehicleId: 'soyuz21a', satelliteId: 'cubesats', siteId: 'baikonur', orbit: gto, payloadMassOverride: 500 }),
+      baikonur, vehicleById('soyuz21a'),
+    );
+    expect(singleShot.insertionApoapsis).toBeGreaterThan(DIRECT_APOAPSIS_CAP);
+  });
+
+  it('inserts a crewed R-7 into a circular parking orbit, not a decaying ellipse', () => {
+    // Regression guard: the ascent cut-off floor (140 km, so that a transfer
+    // orbit is not flown past its apoapsis while the perigee catches up) must
+    // not apply to a circular insertion plan, which has no later burn of its
+    // own to raise the perigee with.
+    const cfg = mk({ vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'), payloadMassOverride: 7150 });
+    const sim = fly(cfg, 1200, false);
+    const park = sim.events.find((e) => e.key === 'evt.parkingOrbit');
+    expect(park, sim.events.map((e) => e.key).join(' ')).toBeDefined();
+    expect(Number(park!.params!.pe)).toBeGreaterThanOrEqual(195);
+    expect(Number(park!.params!.ap)).toBeLessThanOrEqual(215);
+  });
 });

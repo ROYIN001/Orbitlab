@@ -1,0 +1,40 @@
+# Release review 2 (2026-09-17) — remaining issues
+
+Verdict: passes=True. Gates: typecheck pass, tests: pass — `npx vitest run`: 10 files, 319/319 passed (~40 s), run twice with identical results. No `.skip`/`.todo`/`.only`/`xit` anywhere in tests/. No `tests/probe` directory; `git status` shows only the branch's own modified files plus six legitimate new sources (docs/USER-GUIDE.md, src/mcp.ts, src/ui/timeaxis.ts, tests/i18n.test.ts, tests/mcp.test.ts, tests/timeaxis.test.ts) — no probe files, stray tests or generated artefacts., build pass.
+
+## [major] src/physics/simulation.ts
+
+The payload-separation event shows the satellite name in English in Russian and Thai, violating the i18n contract. simulation.ts:1675 emits `this.event('evt.payloadSep', 'success', { name: this.satellite.name })` — the English literal from src/data. localizeEventParams (src/ui/names.ts:56) routes `name` only through stageNameByLabel, which scans the vehicle's stages, finds no match for a satellite, and returns the English string unchanged. This is the only one of the ~20 `this.event(...)` call sites that passes a non-stage `{name}`; every other one passes a stage/booster spec name and is localized correctly. Translations already exist and are used in the mission title (sat.cubesats.name = 'Контейнер попутных кубсатов' / 'ชุดปล่อยคิวบ์แซตแบบร่วมเที่ยวบิน'). Verified in the rendered DOM after a full settle, not from a stale render: RU 'T+04:58 Отделение космического аппарата: CubeSat rideshare dispenser', TH 'T+04:58 แยกยานอวกาศ: CubeSat rideshare dispenser'. It surfaces on every mission in four places — HUD ticker, telemetry event log, narration latest-event line and the timeline chip tooltip. tests/i18n.test.ts cannot catch it: it checks dictionary/key/call-site parity, and the key does have a call site elsewhere.
+
+Fix: Carry the satellite id on the event (e.g. `{ name: this.satellite.name, satId: this.satellite.id }`) and have localizeEventParams resolve it with `satelliteName()` from src/ui/names.ts, the same way stage labels are resolved. Add an i18n test that renders evt.payloadSep in ru/th and asserts the result contains no ASCII run from the English satellite name.
+
+## [major] src/ui/panel.ts
+
+A site's maximum inclination is never enforced, so the app happily flies missions outside a site's declared range-safety corridor and calls them nominal. `reachableFromSite` (panel.ts:117-120) tests only the lower bound: `effective >= Math.max(Math.abs(site.latitude), site.minInclination) - 0.25`. `maxInclination` is populated for all 15 sites in src/data/sites.ts and has no consumer anywhere in src/ outside sites.ts itself and mcp.ts's read-back (grep confirms). Reachable through the normal UI with no state poking: select Starship (its site list is exactly Cape Canaveral and Starbase), select Starbase, select the ISS orbit preset. Starbase declares minInclination 26 / maxInclination 31.8 and an 80-110° azimuth corridor; the mission flies i=51.64°, the verdict reads green 'Ready to simulate · 7,150 kg of 100,000 kg rated to LEO', and it inserts at 420x410 km i=51.6 with no warning. Xichang (26-31°) is the same shape of hole. This undercuts the realism goal while the data needed to catch it is already in the file.
+
+Fix: Extend reachableFromSite to a two-sided test against `site.maxInclination` (mirroring the retrograde 180-i handling already there) and add a `setup.verdict.inclinationHigh` warn branch in missionVerdict alongside the existing `setup.verdict.inclination` one, with en/ru/th strings. Add a panel-verdict test covering starship/starbase/iss and longmarch3be/xichang.
+
+## [major] src/ui/panel.ts
+
+The pre-flight verdict shows a green 'Ready to simulate' for vehicle/orbit combinations the project's own test suite already classifies as unable to reach the target, so the user is promised success and handed a miss. Measured live: Long March 2D / Jiuquan / SSO 600 km / CubeSat dispenser 300 kg gives verdict level 'ok', text 'Ready to simulate · 300 kg of 1,300 kg rated to SSO / polar'; the flight then ends at 607 x 187 km with evt.noStagesLeft, evt.insufficientDv and evt.offTargetOrbit, note 'orbitOffTarget'. That exact case is the ARCHITECTURE exclusion class in tests/fleet-defaults.test.ts:222-225 ('inserts at 197-199 x 423-606 km with 0.4-1.0 km/s left in the second stage: two hypergolic stages, no restart, and an inert payload'), and soyuz21a/leo+iss is the same class. missionVerdict only compares payload mass with the published rating; its doc comment explains why it is deliberately not a headless flight, but the information needed is static data, not a flight: `restartable` is already a per-stage field in src/data/vehicles.ts and the direct-insertion ceiling is a known constant. LM-2D to a 600 km SSO is an everyday real-world profile, so this is hit by ordinary use rather than by an exotic setup.
+
+Fix: Add a verdict branch below the capacity checks: when no stage in the stack is `restartable` and the target apogee exceeds the direct-insertion ceiling, return level 'warn' with a new string explaining that the stack has no restartable upper stage and will insert near the ceiling rather than at the requested altitude. Drive it from the same constant the ARCHITECTURE table is reasoned about so the two cannot drift, and cover it in tests/panel-verdict.test.ts.
+
+## [minor] src/ui/panel.ts
+
+An armed failure is never reported on the shipped default mission, because missionVerdict returns the `tight` branch before the `failureArmed` branch. The default (Soyuz-2.1a, crewed spacecraft to ISS) is permanently tight at 7,150 of 7,430 kg = 96 %, so arming 'Range-safety destruct' leaves the verdict reading 'Tight margin: 7,150 kg against 7,430 kg rated to LEO' with no mention of the destruct. Verified live: failure config {mode:'rangeSafety',time:70} produced exactly that verdict, and the flight then ended with evt.ftsCommanded / evt.vehicleLost at T+70. An armed loss-of-vehicle is more important news than a 96 % margin.
+
+Fix: Move the `i.failureMode !== 'none'` branch above the `payloadMass > cap * 0.9` branch in missionVerdict, or merge the two so a tight margin with an armed failure reports both. Update the ordering rationale in the function's doc comment and add a case to tests/panel-verdict.test.ts.
+
+## [minor] docs/PHYSICS.md
+
+Carried over from the previous review and still present by design: Falcon 9's max-Q marker fires at T+50.3 s (22.6 kPa) against a published 65-80 s — measured live again on this branch, unchanged. It is a data-level consequence of `maxQThrottle` starting the throttle bucket at 22 kPa, which pins q there from T+45 s. This is honestly disclosed in PHYSICS.md §6a, is one of seven rows in the pinned 'disagreements with the published callout' table, and the doc carries a measured sweep (qStart at 26/30/33/36 kPa and bucket removed) showing that raising qStart moves MECO and fairing jettison out of their windows instead of closing it. Recording it as a known open item, not as a regression.
+
+Fix: No code change this wave. If a future wave wants it closed, the sweep in PHYSICS.md §6a says the fix is Falcon 9's q-curve data (bucket shape and entry pressure), not the marker timestamp, which is now correctly stamped at the peak.
+
+## [minor] src/style.css
+
+At phone width the telemetry chart canvases overflow their column by 4 px. Measured at 375x812: eight `canvas.chart` elements and one `button.btn` run from x=29 to right=379 against a 375 px viewport. There is no page-level horizontal scroll (documentElement.scrollWidth = 375 = innerWidth), so this is clipping at the right edge of the scrolling column rather than a broken layout, and the rest of the phone layout is sound (no offscreen chrome, HUD deliberately hidden below 860 px by the documented shrink-then-hide ladder, narration and timeline intact).
+
+Fix: Give the chart column the same box-sizing/padding budget the other phone rules use — subtract the 12 px `.scene-ui` gutter from the canvas width in the `@media (max-width: 520px)` block, or set `max-width: 100%` on `.chart` and size the canvas backing store from its measured client width.
+

@@ -1,8 +1,74 @@
+/**
+ * Engineering telemetry panel: eight charts, the Δv budget, the flight plan,
+ * spent stages, the event log and the CSV export.
+ *
+ * **Everything on the panel is the instant the rest of the app is showing.**
+ * `update` takes the frame-backed `Simulation` view (`src/replay/simview.ts`),
+ * not the live simulation, so the charts stop at the timeline cursor, the Δv
+ * budget and the max-Q line are the frame's `losses`/`maxQ`, the spent-stage
+ * list is the frame's debris, and the event log is truncated to the callouts
+ * that had happened by then. Scrubbing back to T+02:00 shows the panel as it
+ * stood at T+02:00 rather than the end of the flight over the top of a rewound
+ * 3-D view. The one thing that legitimately wants the whole flight is the CSV
+ * export, which is handed the live `Simulation` separately (`setExportSource`).
+ *
+ * Chart window (audit B11). The old panel cut the data at
+ * `max(1500, t(parkingOrbit)) + 120` and drew every chart from the cut, so the
+ * circularisation burn — where Δv-remaining drops and the periapsis rises to
+ * meet the apoapsis, the pedagogically central moment — was off-chart on 149 of
+ * 154 vehicle/orbit combinations, and the apsides chart ended mid-coast in an
+ * ellipse that looked like a failure. The window is now the whole recorded
+ * flight by default, with an **Ascent** zoom for the published-timeline view,
+ * and it follows the timeline cursor: seeking past the end of the zoom extends
+ * it rather than leaving the playhead off-screen.
+ *
+ * Cost. The panel updates twice a second and a six-hour recording holds tens of
+ * thousands of telemetry samples, so nothing here is rebuilt from scratch:
+ * every series is decimated into a reused array capped at `MAX_POINTS` (a chart
+ * is ~300 px wide, so more points than that are invisible by construction), the
+ * marker list and the `Series` objects are pooled, and the Δv/plan/debris rows
+ * are elements created once and rewritten with `textContent`. A scrub through a
+ * long recording therefore costs the same as a scrub through a short one.
+ */
 import type { Simulation } from '../physics/simulation';
-import { drawChart } from './charts';
+import { drawChart, type ChartMarker, type Series } from './charts';
 import { t } from '../i18n';
-import { fmtTime, eventText } from './hud';
+import { fmtTime } from './hud';
+import { eventLabel } from './phase';
+import { localizeEventParams, stageNameByLabel } from './names';
 import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
+import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
+
+type Range = 'mission' | 'ascent';
+
+/** Events worth a dashed line on every chart. */
+const ASCENT_MARKERS = ['evt.maxQ', 'evt.meco', 'evt.stageSep', 'evt.seco', 'evt.fairingSep'];
+const ORBIT_MARKERS = ['evt.parkingOrbit', 'evt.burnStart', 'evt.burnComplete', 'evt.targetOrbit'];
+
+const CHART_IDS = ['altitude', 'velocity', 'q', 'g', 'apsides', 'dv', 'pitch', 'mass'] as const;
+/** Dictionary key for each chart's title, so `reset()` can redraw them empty. */
+const CHART_TITLES: Record<(typeof CHART_IDS)[number], string> = {
+  altitude: 'tel.altitude', velocity: 'tel.velocity', q: 'tel.q', g: 'tel.g',
+  apsides: 'tel.apsides', dv: 'tel.dv', pitch: 'tel.pitch', mass: 'tel.mass',
+};
+/** How close to the bottom the log has to be before an update re-pins it there, px. */
+const LOG_STICK = 24;
+/**
+ * Most points handed to one chart. The canvases are 250-320 px wide, so two
+ * samples per pixel is already more than the rasteriser can show; the cap is
+ * what keeps a 30-minute recording as cheap to draw as a 3-minute one.
+ */
+const MAX_POINTS = 600;
+
+/** A reused x/y pair for one chart series. */
+interface Trace {
+  x: number[];
+  y: number[];
+}
+
+function trace(): Trace {
+  return { x: [], y: [] };
+}
 
 export class TelemetryPanel {
   private root: HTMLElement;
@@ -11,8 +77,25 @@ export class TelemetryPanel {
   private plan!: HTMLElement;
   private debris!: HTMLElement;
   private events!: HTMLElement;
+  private note!: HTMLElement;
+  private rangeBtns: HTMLButtonElement[] = [];
   private shownEvents = 0;
-  private sim: Simulation | null = null;
+  /** the frame-backed view the panel draws */
+  private view: Simulation | null = null;
+  /** the live simulation, for the CSV export only */
+  private live: Simulation | null = null;
+  private range: Range = 'mission';
+  /** mission time the rest of the app is showing */
+  private cursor = 0;
+  // ── reused buffers, so a 2 Hz update over a long recording allocates nothing
+  private traces: Trace[] = [trace(), trace(), trace(), trace(), trace(), trace(), trace(), trace(), trace()];
+  /** one- and two-series argument arrays, reused for every chart */
+  private one: Series[] = [{ x: [], y: [], color: '' }];
+  private two: Series[] = [{ x: [], y: [], color: '' }, { x: [], y: [], color: '' }];
+  /** marker pool (never shrinks) and the exact-length view handed to the chart */
+  private markerPool: ChartMarker[] = [];
+  private markers: ChartMarker[] = [];
+  private rowPools: Map<HTMLElement, { rows: HTMLElement[]; used: number }> = new Map();
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -21,137 +104,357 @@ export class TelemetryPanel {
 
   build(): void {
     const r = this.root;
-    r.innerHTML = '';
-    const h = document.createElement('h2');
-    h.className = 'section';
-    h.textContent = t('tel.title');
-    r.appendChild(h);
-    for (const id of ['altitude', 'velocity', 'q', 'g', 'apsides', 'dv', 'pitch', 'mass']) {
+    r.setAttribute('aria-label', t('a11y.telemetryPanel'));
+    r.replaceChildren();
+    this.rowPools.clear();
+    const head = el('div', 'telemetry-heading');
+    const headLeft = el('div');
+    headLeft.append(el('span', 'eyebrow', t('tel.eyebrow')), el('h2', undefined, t('tel.title')));
+    head.append(headLeft);
+    const toggle = el('div', 'range-toggle');
+    toggle.setAttribute('role', 'group');
+    toggle.setAttribute('aria-label', t('tel.range'));
+    this.rangeBtns = [];
+    for (const mode of ['mission', 'ascent'] as Range[]) {
+      const b = el('button', this.range === mode ? 'active' : undefined, t(`tel.range.${mode}`)) as HTMLButtonElement;
+      b.type = 'button';
+      b.dataset.range = mode;
+      b.setAttribute('aria-pressed', String(this.range === mode));
+      b.addEventListener('click', () => this.setRange(mode));
+      toggle.append(b);
+      this.rangeBtns.push(b);
+    }
+    head.append(toggle);
+    r.append(head);
+    this.note = el('p', 'chart-note hidden');
+    r.append(this.note);
+    for (const id of CHART_IDS) {
       const c = document.createElement('canvas');
       c.className = 'chart';
-      c.setAttribute('role', 'img');
-      c.setAttribute('aria-label', t(`tel.${id}`));
-      r.appendChild(c);
+      r.append(c);
       this.charts[id] = c;
     }
-    const mk = (titleKey: string, cls: string) => {
-      const hh = document.createElement('h2');
-      hh.className = 'section';
-      hh.textContent = t(titleKey);
-      r.appendChild(hh);
-      const box = document.createElement('div');
-      box.className = cls;
-      r.appendChild(box);
+    const mk = (titleKey: string, cls: string): HTMLElement => {
+      r.append(el('h3', 'section', t(titleKey)));
+      const box = el('div', cls);
+      r.append(box);
       return box;
     };
     this.losses = mk('tel.losses', 'list info');
     this.plan = mk('tel.plan', 'list info plan');
     this.debris = mk('tel.debris', 'list info');
     this.events = mk('tel.events', 'events');
-    const btn = document.createElement('button');
-    btn.className = 'btn';
-    btn.textContent = t('tel.export');
-    btn.style.marginTop = '8px';
+    const btn = el('button', 'btn export-btn', t('tel.export')) as HTMLButtonElement;
+    btn.type = 'button';
     btn.addEventListener('click', () => this.exportCsv());
-    r.appendChild(btn);
+    r.append(btn);
     this.shownEvents = 0;
-    if (this.sim) this.update(this.sim, true);
+    if (this.view) this.update(this.view, this.cursor);
   }
 
+  private setRange(mode: Range): void {
+    this.range = mode;
+    for (const b of this.rangeBtns) {
+      const on = b.dataset.range === mode;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
+    if (this.view) this.update(this.view, this.cursor);
+  }
+
+  /**
+   * The live simulation, kept only so the CSV export can write the whole
+   * flight. Nothing on screen reads it.
+   */
+  setExportSource(sim: Simulation | null): void {
+    this.live = sim;
+  }
+
+  /**
+   * Blank the panel for a new mission.
+   *
+   * Everything goes, not only the event log: between `reset()` and the first
+   * 0.5 s update tick the panel used to show the previous mission's Δv budget,
+   * flight plan, spent stages and rasterised charts under the new mission's
+   * heading, which reads as telemetry for a flight that has not happened.
+   */
   reset(): void {
     this.shownEvents = 0;
-    this.events.innerHTML = '';
-    this.sim = null;
+    this.events.replaceChildren();
+    this.clearRows(this.losses);
+    this.clearRows(this.plan);
+    this.clearRows(this.debris);
+    this.note.textContent = '';
+    this.note.classList.add('hidden');
+    this.cursor = 0;
+    for (const id of CHART_IDS) {
+      drawChart(this.charts[id], [], { title: t(CHART_TITLES[id]), xMin: -10, xMax: 60, timeAxis: true, xLabel: t('tel.xAxis') });
+    }
+    this.view = null;
+    this.live = null;
   }
 
-  update(sim: Simulation, force = false): void {
-    this.sim = sim;
-    const tel = sim.telemetry;
-    if (tel.length < 2 && !force) return;
-    const ascentEnd = sim.events.find((e) => e.key === 'evt.parkingOrbit')?.t;
-    const markers = sim.events.filter((e) => ['evt.maxQ', 'evt.meco', 'evt.stageSep', 'evt.seco', 'evt.fairingSep'].includes(e.key)).map((e) => ({ x: e.t, color: '#3a4a6a' }));
-    // charts show the ascent window; once a post-insertion burn has started (apogee raising,
-    // circularisation, plane change) they widen to the whole flight so those burns are visible
-    const ascentCut = Math.max(1500, ascentEnd ?? 0) + 120;
-    const burnStarted = sim.events.some((e) => e.key === 'evt.burnStart' && e.t > ascentCut);
-    const cut = burnStarted ? tel : tel.filter((s) => s.t <= ascentCut);
-    const cx = cut.map((s) => s.t);
-    drawChart(this.charts.altitude, [{ x: cx, y: cut.map((s) => s.alt / 1000), color: '#4aa3ff' }], { title: t('tel.altitude'), markers });
-    drawChart(this.charts.velocity, [
-      { x: cx, y: cut.map((s) => s.vInertial), color: '#f2b134', label: t('tel.legend.v') },
-      { x: cx, y: cut.map((s) => s.vAir), color: '#8d9bb5', label: t('tel.legend.vAir') },
-    ], { title: t('tel.velocity'), markers });
-    drawChart(this.charts.q, [{ x: cx, y: cut.map((s) => s.q / 1000), color: '#ff7a7a' }], { title: t('tel.q'), markers, yMin: 0 });
-    drawChart(this.charts.g, [{ x: cx, y: cut.map((s) => s.gLoad), color: '#4cd97b' }], { title: t('tel.g'), markers, yMin: 0 });
-    drawChart(this.charts.apsides, [
-      { x: cx, y: cut.map((s) => (s.ap > 0 && s.ap < 5e7 ? s.ap / 1000 : NaN)), color: '#4aa3ff', label: t('tel.legend.ap') },
-      { x: cx, y: cut.map((s) => Math.max(s.pe, -50e3) / 1000), color: '#f2b134', label: t('tel.legend.pe') },
-    ], { title: t('tel.apsides'), markers, yMin: 0 });
-    drawChart(this.charts.dv, [{ x: cx, y: cut.map((s) => s.dvRemaining), color: '#c39bff' }], { title: t('tel.dv'), markers, yMin: 0 });
-    drawChart(this.charts.pitch, [{ x: cx, y: cut.map((s) => s.pitch), color: '#ffd166' }], { title: t('tel.pitch'), markers });
-    drawChart(this.charts.mass, [{ x: cx, y: cut.map((s) => s.mass / 1000), color: '#9be7ff' }], { title: t('tel.mass'), markers, yMin: 0 });
-    // dv budget
-    const L = sim.state.losses;
-    const site = sim.site;
-    const vRot = OMEGA_EARTH * R_EARTH * Math.cos(site.latitude * DEG);
-    const row = (k: string, v: string) => `<div><span class="k">${k}</span> ${v}</div>`;
-    const ms = t('u.ms'), km = t('u.km');
-    this.losses.innerHTML =
-      row(t('tel.loss.thrust'), `${L.dvThrust.toFixed(0)} ${ms}`) +
-      row(t('tel.loss.gravity'), `${L.gravity.toFixed(0)} ${ms}`) +
-      row(t('tel.loss.drag'), `${L.drag.toFixed(0)} ${ms}`) +
-      row(t('tel.loss.steering'), `${L.steering.toFixed(0)} ${ms}`) +
-      row(t('tel.loss.rotation'), `${(vRot * Math.sin(sim.plan.azimuthInertial)).toFixed(0)} ${ms}`) +
-      row(t('tel.maxQ'), `${(sim.state.maxQ.value / 1000).toFixed(1)} ${t('u.kPa')} @ ${(sim.state.maxQ.alt / 1000).toFixed(1)} ${km}, ${fmtTime(sim.state.maxQ.t)}`);
-    // plan
-    let planHtml = `<div><span class="k">${t('setup.info.insertion')}</span><span>${(sim.plan.insertionAltitude / 1000).toFixed(0)} × ${(sim.plan.insertionApoapsis / 1000).toFixed(0)} ${km}</span></div>`;
-    for (const b of sim.plan.burns) {
-      planHtml += `<div class="${b.done ? 'done' : 'pending'}"><span>${t(`tel.burn.${b.kind}`)}</span><span>${b.dvEstimate.toFixed(0)} ${ms} · ${b.done ? t('tel.burn.done') : t('tel.burn.pending')}</span></div>`;
+  /**
+   * Draw the panel for one instant.
+   *
+   * @param view   the frame-backed simulation view for the displayed frame
+   * @param cursor mission time the rest of the app is showing
+   */
+  update(view: Simulation, cursor?: number): void {
+    this.view = view;
+    if (cursor !== undefined) this.cursor = cursor;
+    // Truncated to the cursor by the frame view, so `last` is the newest sample
+    // that had been taken by the displayed instant.
+    const tel = view.telemetry;
+    const events = view.events;
+    // Drawn even with no samples yet: eight empty framed charts with their
+    // titles read as "nothing has happened", eight blank canvases read as broken.
+    let ascentEnd: number | undefined;
+    for (const e of events) if (e.key === 'evt.parkingOrbit') { ascentEnd = e.t; break; }
+    const last = tel.length ? tel[tel.length - 1].t : 0;
+    const zoomEnd = Math.max(120, (ascentEnd ?? Math.min(last, 900)) + 120);
+    // 'Full mission' spans the recording up to the cursor. 'Ascent' keeps the
+    // ascent's *duration* and slides it to contain the cursor, so zooming in
+    // does not lose the playhead the moment the flight coasts past SECO.
+    let xMin = -10;
+    let xMax = Math.max(last, this.cursor, 60);
+    if (this.range === 'ascent') {
+      const span = zoomEnd + 10;
+      xMax = zoomEnd;
+      if (this.cursor > xMax) {
+        xMax = Math.min(Math.max(last, this.cursor), this.cursor + span * 0.15);
+        xMin = xMax - span;
+      }
     }
-    this.plan.innerHTML = planHtml;
-    // debris
-    let dHtml = '';
-    for (const d of sim.debris) {
+    const truncated = this.range === 'ascent' && (last > xMax + 1 || xMin > -10);
+    const noteText = truncated ? t('tel.truncated', { t: fmtTime(last) }) : '';
+    if (this.note.textContent !== noteText) {
+      this.note.textContent = noteText;
+      this.note.classList.toggle('hidden', !truncated);
+    }
+
+    const wantOrbit = this.range === 'mission';
+    let nMarkers = 0;
+    for (const e of events) {
+      const orbit = ORBIT_MARKERS.includes(e.key);
+      if (!(orbit ? wantOrbit : ASCENT_MARKERS.includes(e.key))) continue;
+      let m = this.markerPool[nMarkers];
+      if (!m) { m = { x: 0, color: '' }; this.markerPool.push(m); }
+      m.x = e.t;
+      m.color = orbit ? '#5c7d76' : '#3a4a5c';
+      m.label = eventLabel(e.key, localizeEventParams(view.vehicleSpec, e.params));
+      this.markers[nMarkers++] = m;
+    }
+    this.markers.length = nMarkers;
+
+    // Only the samples inside the window are handed to the renderer, decimated
+    // to at most MAX_POINTS: a GTO mission records tens of thousands of them
+    // and a 300 px canvas can show a few hundred.
+    let lo = 0;
+    while (lo < tel.length && tel[lo].t < xMin - 1) lo++;
+    let hi = tel.length;
+    while (hi > lo && tel[hi - 1].t > xMax + 1) hi--;
+    const n = hi - lo;
+    const stride = n > MAX_POINTS ? Math.ceil(n / MAX_POINTS) : 1;
+    const [cx, alt, vIn, vAir, q, gL, ap, pe, dv] = this.traces;
+    // `pitch` and `mass` reuse two of the traces above once their own chart has
+    // been drawn, so the buffer set stays at nine.
+    cx.x.length = 0;
+    for (const tr of this.traces) tr.y.length = 0;
+    for (let i = lo; i < hi; i += stride) {
+      const s = tel[i];
+      cx.x.push(s.t);
+      alt.y.push(s.alt / 1000);
+      vIn.y.push(s.vInertial);
+      vAir.y.push(s.vAir);
+      q.y.push(s.q / 1000);
+      gL.y.push(s.gLoad);
+      ap.y.push(s.ap > 0 && s.ap < 5e7 ? s.ap / 1000 : NaN);
+      pe.y.push(s.pe > -2000e3 ? s.pe / 1000 : NaN);
+      dv.y.push(s.dvRemaining);
+    }
+    // Always include the newest sample, or the trace stops up to `stride`
+    // samples short of the cursor and the charts lag the rest of the app.
+    if (n > 0 && (hi - 1 - lo) % stride !== 0) {
+      const s = tel[hi - 1];
+      cx.x.push(s.t);
+      alt.y.push(s.alt / 1000);
+      vIn.y.push(s.vInertial);
+      vAir.y.push(s.vAir);
+      q.y.push(s.q / 1000);
+      gL.y.push(s.gLoad);
+      ap.y.push(s.ap > 0 && s.ap < 5e7 ? s.ap / 1000 : NaN);
+      pe.y.push(s.pe > -2000e3 ? s.pe / 1000 : NaN);
+      dv.y.push(s.dvRemaining);
+    }
+    const xs = cx.x;
+    const xLabel = t('tel.xAxis');
+    const draw = (id: (typeof CHART_IDS)[number], list: Series[], yMin?: number): void => {
+      drawChart(this.charts[id], list, {
+        title: t(CHART_TITLES[id]),
+        markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin,
+      });
+    };
+    const set = (list: Series[], i: number, y: number[], color: string, label?: string): void => {
+      const s = list[i];
+      s.x = xs;
+      s.y = y;
+      s.color = color;
+      s.label = label;
+    };
+    set(this.one, 0, alt.y, '#6ec8ff');
+    draw('altitude', this.one);
+    set(this.two, 0, vIn.y, '#8be5cd', 'v');
+    set(this.two, 1, vAir.y, '#96a3b4', 'v_air');
+    draw('velocity', this.two);
+    set(this.one, 0, q.y, '#efa47e');
+    draw('q', this.one, 0);
+    set(this.one, 0, gL.y, '#7ddba0');
+    draw('g', this.one, 0);
+    set(this.two, 0, ap.y, '#6ec8ff', 'ap');
+    set(this.two, 1, pe.y, '#8be5cd', 'pe');
+    draw('apsides', this.two, 0);
+    set(this.one, 0, dv.y, '#c3a6ff');
+    draw('dv', this.one, 0);
+    // pitch and mass reuse two traces whose charts are already rasterised
+    alt.y.length = 0;
+    vIn.y.length = 0;
+    for (let i = lo; i < hi; i += stride) { alt.y.push(tel[i].pitch); vIn.y.push(tel[i].mass / 1000); }
+    if (n > 0 && (hi - 1 - lo) % stride !== 0) { alt.y.push(tel[hi - 1].pitch); vIn.y.push(tel[hi - 1].mass / 1000); }
+    set(this.one, 0, alt.y, '#ffd28a');
+    draw('pitch', this.one);
+    set(this.one, 0, vIn.y, '#9be7ff');
+    draw('mass', this.one, 0);
+
+    // Δv budget — the frame's own loss book-keeping, so it rewinds.
+    const L = view.state.losses;
+    const site = view.site;
+    const vRot = OMEGA_EARTH * R_EARTH * Math.cos(site.latitude * DEG);
+    this.beginRows(this.losses);
+    this.row(this.losses, t('tel.loss.thrust'), `${L.dvThrust.toFixed(0)} m/s`);
+    this.row(this.losses, t('tel.loss.gravity'), `${L.gravity.toFixed(0)} m/s`);
+    this.row(this.losses, t('tel.loss.drag'), `${L.drag.toFixed(0)} m/s`);
+    this.row(this.losses, t('tel.loss.steering'), `${L.steering.toFixed(0)} m/s`);
+    this.row(this.losses, t('tel.loss.rotation'), `${(vRot * Math.sin(view.plan.azimuthInertial)).toFixed(0)} m/s`);
+    const mq = view.state.maxQ;
+    this.row(this.losses, t('tel.maxQ'), mq.value > 0
+      ? `${(mq.value / 1000).toFixed(1)} kPa · ${(mq.alt / 1000).toFixed(1)} km · ${fmtTime(mq.t)}`
+      : '—');
+    this.endRows(this.losses);
+
+    // Flight plan. `BurnPlan.done` is live state with no frame equivalent, so
+    // the panel counts the `evt.burnComplete` callouts that had fired by the
+    // displayed instant instead — which is the same fact, taken from the log
+    // that does rewind.
+    let completed = 0;
+    for (const e of events) if (e.key === 'evt.burnComplete') completed++;
+    this.beginRows(this.plan);
+    this.row(this.plan, t('setup.info.insertion'), `${(view.plan.insertionAltitude / 1000).toFixed(0)} × ${(view.plan.insertionApoapsis / 1000).toFixed(0)} km`);
+    let bi = 0;
+    for (const b of view.plan.burns) {
+      const done = bi++ < completed;
+      this.row(this.plan, t(`tel.burn.${b.kind}`), `${b.dvEstimate.toFixed(0)} m/s · ${done ? t('tel.burn.done') : t('tel.burn.pending')}`, done ? 'done' : 'pending');
+    }
+    this.endRows(this.plan);
+
+    // Spent stages, from the frame's debris list.
+    this.beginRows(this.debris);
+    let any = false;
+    for (const d of view.debris) {
       if (d.visual.kind === 'fairing') continue;
+      any = true;
       let st: string;
       if (!d.alive) st = t(`tel.debris.${d.outcome ?? 'impact'}`);
       else if (d.recovery?.burning) st = d.recovery.phase === 'entry' ? t('tel.debris.entryBurn') : t('tel.debris.landingBurn');
       else if (d.outcome === 'orbit') st = t('tel.debris.orbit');
       else st = t('tel.debris.falling');
-      const alt = Math.max(0, (Math.hypot(d.r.x, d.r.y, d.r.z) - R_EARTH) / 1000);
-      dHtml += `<div><span class="k">${d.name}</span> ${st}${d.alive ? ` · ${alt.toFixed(0)} ${km}` : ''}${d.impact ? ` · ${d.impact.lat.toFixed(1)}°, ${d.impact.lon.toFixed(1)}°` : ''}</div>`;
+      const alt2 = Math.max(0, (Math.hypot(d.r.x, d.r.y, d.r.z) - R_EARTH) / 1000);
+      let v = st;
+      if (d.alive) v += ` · ${alt2.toFixed(0)} km`;
+      if (d.impact) v += ` · ${d.impact.lat.toFixed(1)}°, ${d.impact.lon.toFixed(1)}°`;
+      this.row(this.debris, stageNameByLabel(view.vehicleSpec, d.name), v);
     }
-    this.debris.innerHTML = dHtml || `<div class="k">${t('misc.none')}</div>`;
-    // events: auto-scroll only when something new arrived and the user was already at the bottom
-    const atBottom = this.events.scrollTop + this.events.clientHeight >= this.events.scrollHeight - 8;
-    let added = false;
-    while (this.shownEvents < sim.events.length) {
-      const e = sim.events[this.shownEvents++];
-      const div = document.createElement('div');
-      div.className = e.severity;
-      div.innerHTML = `<span class="t">${fmtTime(e.t)}</span>${eventText(e)}`;
-      this.events.appendChild(div);
-      added = true;
+    if (!any) this.row(this.debris, t('misc.none'), '');
+    this.endRows(this.debris);
+
+    // Event log. Appended while the cursor moves forwards and trimmed when it
+    // moves back, so the log always ends at the displayed instant. The box is
+    // only re-pinned to the bottom when it was already there: forcing the
+    // scroll on every tick made it impossible to read back through the log
+    // while a flight was running.
+    const log = this.events;
+    const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight <= LOG_STICK;
+    while (this.shownEvents > events.length) {
+      log.lastChild?.remove();
+      this.shownEvents--;
     }
-    if (added && (atBottom || force)) this.events.scrollTop = this.events.scrollHeight;
+    while (this.shownEvents < events.length) {
+      const e = events[this.shownEvents++];
+      const div = el('div', e.severity);
+      div.append(el('span', 't', fmtTime(e.t)), document.createTextNode(t(e.key, localizeEventParams(view.vehicleSpec, e.params))));
+      log.append(div);
+    }
+    if (atBottom) log.scrollTop = log.scrollHeight;
+  }
+
+  /**
+   * Key/value lists are written through a row pool: the elements are created
+   * once and then rewritten, so a 2 Hz update does not churn ~20 elements a
+   * second through the DOM (which also reset each list's scroll position and
+   * made the panel flicker under a scrub).
+   */
+  private beginRows(box: HTMLElement): void {
+    let pool = this.rowPools.get(box);
+    if (!pool) { pool = { rows: [], used: 0 }; this.rowPools.set(box, pool); }
+    pool.used = 0;
+  }
+
+  private row(box: HTMLElement, k: string, v: string, cls?: string): void {
+    const pool = this.rowPools.get(box)!;
+    let r = pool.rows[pool.used];
+    if (!r) {
+      r = el('div');
+      r.append(el('span', 'k'), el('span', 'v'));
+      pool.rows.push(r);
+      box.append(r);
+    }
+    const kEl = r.firstChild as HTMLElement;
+    const vEl = r.lastChild as HTMLElement;
+    if (kEl.textContent !== k) kEl.textContent = k;
+    if (vEl.textContent !== v) vEl.textContent = v;
+    const want = cls ?? '';
+    if (r.className !== want) r.className = want;
+    pool.used++;
+  }
+
+  /** Hide the rows of `box` that this pass did not write. */
+  private endRows(box: HTMLElement): void {
+    const pool = this.rowPools.get(box);
+    if (!pool) return;
+    for (let i = pool.used; i < pool.rows.length; i++) pool.rows[i].classList.add('hidden');
+  }
+
+  private clearRows(box: HTMLElement): void {
+    box.replaceChildren();
+    this.rowPools.delete(box);
   }
 
   exportCsv(): void {
-    if (!this.sim) return;
-    const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
-    const lines = [cols.join(',')];
-    for (const s of this.sim.telemetry) {
-      lines.push([s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase].map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v))).join(','));
-    }
-    lines.push('');
-    lines.push('# events');
-    lines.push('t_s,event,details');
-    for (const e of this.sim.events) lines.push(`${e.t.toFixed(1)},${e.key},"${JSON.stringify(e.params ?? {}).replace(/"/g, '""')}"`);
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const sim = this.live;
+    if (!sim) return;
+    const csv = buildTelemetryCsv(sim);
+    const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `orbitlab_${this.sim.vehicleSpec.id}_${this.sim.cfg.orbit.id}.csv`;
+    a.download = telemetryCsvFilename(sim);
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
+}
+
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
 }

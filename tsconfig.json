@@ -14,5 +14,9 @@
     "resolveJsonModule": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests"],
+  // tests/probe is gitignored scratch space for throwaway probes (audit B42).
+  // Without this line a probe someone forgets to delete breaks `npm run build`
+  // (tsc --noEmit) for everyone — it has already cost two review gates.
+  "exclude": ["tests/probe"]
 }
