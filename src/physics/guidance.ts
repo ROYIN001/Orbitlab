@@ -112,6 +112,34 @@ export interface GuidanceInputs {
   isFirstStage: boolean;
   maxQThrottle?: { qStart: number; throttle: number };
   maxAccel: number;
+  /** structural dynamic-pressure placard of the vehicle, Pa */
+  maxQPlacard: number;
+}
+
+/**
+ * Load relief. Every launcher protects its own structure: when the dynamic
+ * pressure approaches the placard the engines are throttled back until it stops
+ * rising. `maxQThrottle` in the vehicle data models the *planned* throttle
+ * bucket of the vehicles that publish one (Falcon 9, Atlas V, Vulcan, Starship);
+ * this is the closed-loop protection every vehicle has, and it only does
+ * anything when a trajectory is heading for the placard anyway.
+ *
+ * Without it an underpowered stack — the closed loop sags, the vehicle falls
+ * back into dense air at 5 km/s — simply explodes: nine of the fleet matrix's
+ * rows ended `evt.structuralFailure` with between 1.0 and 7.8 km/s of unused
+ * propellant. Under load relief the same flights throttle down, stop
+ * accelerating into the atmosphere and end out of propellant, which is what the
+ * vehicle is actually short of. The band starts at 95 % of the placard, so a
+ * healthy ascent (the fleet peaks at 25–40 kPa against 35–70 kPa placards)
+ * never touches it.
+ */
+export const LOAD_RELIEF_START = 0.95;
+export const LOAD_RELIEF_MIN_THROTTLE = 0.4;
+
+export function loadReliefThrottle(q: number, placard: number): number {
+  if (!(placard > 0) || q <= placard * LOAD_RELIEF_START) return 1;
+  const over = (q / placard - LOAD_RELIEF_START) / 0.15;
+  return Math.max(LOAD_RELIEF_MIN_THROTTLE, 1 - (1 - LOAD_RELIEF_MIN_THROTTLE) * Math.min(1, over));
 }
 
 export class AscentGuidance {
@@ -247,8 +275,17 @@ export class AscentGuidance {
       // is — and the cap above already governs. The floor is level flight
       // unless the vehicle is also above the insertion altitude, in which case
       // it may descend toward it.
+      // The ceiling engages as soon as the vehicle is out of the atmosphere, not
+      // only within a band of the insertion altitude. A stage climbing from a
+      // 200 km staging altitude to a 500 km circular target spends minutes
+      // between the two, and with the old altitude gate nothing limited the
+      // apoapsis over that whole stretch: it ran out to 2 474 km while the
+      // periapsis chased it, which is what made direct insertion into a circular
+      // orbit impossible for a stack with no restart. Above ~110 km there is no
+      // aerodynamic reason to keep climbing once the apoapsis is where the plan
+      // wants it, so the gate is the lower of the two.
       const band = Math.max(15e3, 0.08 * this.insertionApoapsis);
-      if (gEff < aT && inp.altitude > this.insertionAltitude - band) {
+      if (gEff < aT && inp.altitude > Math.min(this.insertionAltitude - band, 110e3)) {
         const excess = isFinite(inp.apoapsisAlt) ? (inp.apoapsisAlt - this.insertionApoapsis) / band : 4;
         const f = Math.max(0, Math.min(1, excess));
         const floorTheta = inp.altitude > this.insertionAltitude - 15e3 ? p.pitchMin : Math.min(0, p.pitchMax);
@@ -322,6 +359,7 @@ export class AscentGuidance {
     // ------------------------------------------------------------- throttle
     let throttle = 1;
     if (inp.isFirstStage && inp.maxQThrottle && inp.q > inp.maxQThrottle.qStart) throttle = inp.maxQThrottle.throttle;
+    throttle = Math.min(throttle, loadReliefThrottle(inp.q, inp.maxQPlacard));
     if (inp.thrustAccelFull > inp.maxAccel && inp.maxAccel > 0) throttle = Math.min(throttle, inp.maxAccel / inp.thrustAccelFull);
     this.lastPitch = pitchDeg;
     return { dir, throttle, pitchDeg, phase: this.phase, predictedApoapsis };

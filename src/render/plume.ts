@@ -77,7 +77,14 @@ const PLUME_FRAG = /* glsl */ `
     float flick = 0.92 + 0.08 * sin(uTime * 31.0 + uSeed * 53.0 + vAng);
     float a = uOpacity * (0.16 + uEdgeGain * fres * fres) * (1.0 - smoothstep(0.30, 1.0, k));
     a *= smoothstep(0.0, 0.04, k) * flick;
-    gl_FragColor = vec4(col * (1.0 + diamonds * 1.2), clamp(a, 0.0, 1.0));
+    // Tone-mapped like every other material in the scene (see the note in
+    // render/scene.ts): the core is deliberately driven past 1.0 so ACES
+    // blows it out to white and the orange survives only at the edges, which
+    // is exactly how an exposed camera sees a first-stage plume.
+    gl_FragColor = vec4(col * (1.0 + diamonds * 1.2), 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    gl_FragColor.a = clamp(a, 0.0, 1.0);
   }
 `;
 
@@ -109,6 +116,8 @@ const SMOKE_FRAG = /* glsl */ `
     #include <logdepthbuf_fragment>
     float a = uOpacity * smoothstep(0.05, 0.35, vK) * (1.0 - smoothstep(0.45, 1.0, vK));
     gl_FragColor = vec4(uColor, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
   }
 `;
 

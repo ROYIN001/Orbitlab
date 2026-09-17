@@ -8,6 +8,15 @@
  * masses are not published they are estimated from stage mass fractions.
  * Treat every figure as approximate (±10 %).
  *
+ * FAIRING JETTISON. Six vehicles carry a `fairing.sepTime`, the operator's own
+ * published callout, because their operators publish one and fly it: Soyuz-2.1a
+ * and 2.1b 157 s, Ariane 64 200 s, Vega-C 220 s, Long March 2D 220 s, Long
+ * March 3B/E 215 s, H-IIA 202 250 s. The rest stay on the physical
+ * free-molecular-heating placard, and the altitude floor applies to both, so a
+ * trajectory still deep in the atmosphere at its published time does not shed
+ * the fairing there. See `FairingSpec.sepTime` in src/types.ts for why a
+ * published time is modelled instead of a back-solved heat-flux limit.
+ *
  * Solid-booster jettison delays follow audit item B24
  * (docs/AUDIT-2026-09-16.md): Atlas V GEM-63 5 s, Vulcan GEM-63XL 6 s, H3
  * SRB-3 6 s, Long March 5 kerolox strap-ons 3 s, H-IIA SRB-A 8 s. Ariane 6's
@@ -24,37 +33,62 @@ const kN = 1000;
 // kick-stage engine that only ever ignites above ~100 km has no published
 // sea-level operating point (an RL10 nozzle would not even flow full at sea
 // level). For those engines the `thrustSL` / `ispSL` fields are NOT data: they
-// are placeholders chosen below the vacuum figures so that the pressure blend
-// in `engineThrust` degrades sensibly, and the consistency invariant
-// `thrustSL <= thrustVac` in tests/data-consistency.test.ts checks the
-// placeholder is self-consistent, not that it is sourced. They are never used
-// in flight, because the stage is lit where ambient pressure is already ~0.
-// The engines concerned are RL10C-1, RL10C-1-1, RD-0110, RD-0124, RD-0124A,
-// S5.92, S5.98M, Merlin Vacuum, Vinci, LE-5B, LE-5B-3, YF-75, YF-75D,
-// Rutherford Vacuum, Curie, AVUM+ and L-2-5. Audit item B27
-// (docs/AUDIT-2026-09-16.md) proposes an explicit `vacuumOnly` flag in
-// src/types.ts; that is a type change outside this wave's ownership, so the
-// block is marked here instead.
+// are placeholders, and the recurring 250 / 260 / 280 s values below are where
+// they came from. They now carry `vacuumOnly: true` (audit item B27), which is
+// what stops the model ever using them: `engineThrust` returns the vacuum
+// figure at every pressure for such an engine, so a future abort or
+// suborbital-hop scenario cannot silently fly invented numbers, and
+// tests/data-consistency.test.ts checks the delivered sea-level Isp only for
+// the engines that really are ground-lit.
+//
+// SOLID MOTORS. `thrustVac` is the MEAN thrust (grain mass / published burn
+// time); `peakFactor` is the published peak divided by that mean, which
+// `solidProfile` flies as a regressive ramp on top of it.
+//
+// EVERY solid in the fleet now carries its own factor, and
+// tests/data-consistency.test.ts enforces that (`every solid motor declares its
+// published peak/mean thrust ratio`). Until this wave only three did and the
+// other seven fell back on a 1.2 default that was nobody's published number —
+// which mattered on the pad, because `liftoffThrust` flies the head of the ramp:
+// PSLV-XL's S139 peaks at 1.43 x mean and its PSOM-XL at 1.53, so the fleet
+// default under-reported that vehicle's liftoff thrust by a fifth.
+//
+//   motor      published peak        mean (this file)   peak/mean   source
+//   P120C      4 323 kN             2 845.6 kN          1.52        Vega C
+//   Zefiro 40  1 304 kN             1 122.9 kN          1.16        Vega C
+//   Zefiro 9     317 kN               256.4 kN          1.24        Vega C
+//   SRB-A3     2 260 kN             1 857.9 kN          1.22        H-IIA
+//   SRB-3      2 300 kN             1 780 kN            1.29        H3
+//   GEM-63     1 649.6 kN           1 300 kN            1.27        GEM
+//   GEM-63XL   2 061 kN             1 460 kN            1.41        GEM
+//   S139       4 846.9 kN           3 400 kN            1.43        PSLV
+//   PSOM-XL      703.5 kN             460 kN            1.53        PSLV
+//   HPS3         250 kN               174 kN            1.44        PSLV
+//
+// Sources: https://en.wikipedia.org/wiki/Vega_C ,
+// https://en.wikipedia.org/wiki/Graphite-Epoxy_Motor ,
+// https://en.wikipedia.org/wiki/H3_(rocket) ,
+// https://en.wikipedia.org/wiki/Polar_Satellite_Launch_Vehicle ,
+// https://en.wikipedia.org/wiki/H-IIA
 const RD107A: EngineSpec = { name: 'RD-107A', count: 1, thrustSL: 839.5 * kN, thrustVac: 1019.9 * kN, ispSL: 263.3, ispVac: 320.2, minThrottle: 0.5 };
 const RD108A: EngineSpec = { name: 'RD-108A', count: 1, thrustSL: 792.4 * kN, thrustVac: 921.9 * kN, ispSL: 257.7, ispVac: 320.6, minThrottle: 0.5 };
-const RD0110: EngineSpec = { name: 'RD-0110', count: 1, thrustSL: 200 * kN, thrustVac: 298 * kN, ispSL: 250, ispVac: 326, minThrottle: 0.5 };
-const RD0124: EngineSpec = { name: 'RD-0124', count: 1, thrustSL: 200 * kN, thrustVac: 294.3 * kN, ispSL: 250, ispVac: 359, minThrottle: 0.5 };
-const S592: EngineSpec = { name: 'S5.92', count: 1, thrustSL: 15 * kN, thrustVac: 19.85 * kN, ispSL: 250, ispVac: 333.2 };
+const RD0110: EngineSpec = { name: 'RD-0110', count: 1, thrustSL: 200 * kN, thrustVac: 298 * kN, ispSL: 250, ispVac: 326, minThrottle: 0.5, vacuumOnly: true };
+const RD0124: EngineSpec = { name: 'RD-0124', count: 1, thrustSL: 200 * kN, thrustVac: 294.3 * kN, ispSL: 250, ispVac: 359, minThrottle: 0.5, vacuumOnly: true };
+const S592: EngineSpec = { name: 'S5.92', count: 1, thrustSL: 15 * kN, thrustVac: 19.85 * kN, ispSL: 250, ispVac: 333.2, vacuumOnly: true };
 const RD276: EngineSpec = { name: 'RD-276', count: 6, thrustSL: 1745 * kN, thrustVac: 1915 * kN, ispSL: 288, ispVac: 316, minThrottle: 0.6 };
 const RD0210: EngineSpec = { name: 'RD-0210/0211', count: 4, thrustSL: 500 * kN, thrustVac: 582 * kN, ispSL: 280, ispVac: 327 };
 const RD0213: EngineSpec = { name: 'RD-0213 + RD-0214', count: 1, thrustSL: 520 * kN, thrustVac: 613.8 * kN, ispSL: 280, ispVac: 325 };
-const S598M: EngineSpec = { name: 'S5.98M', count: 1, thrustSL: 15 * kN, thrustVac: 19.62 * kN, ispSL: 250, ispVac: 326 };
+const S598M: EngineSpec = { name: 'S5.98M', count: 1, thrustSL: 15 * kN, thrustVac: 19.62 * kN, ispSL: 250, ispVac: 326, vacuumOnly: true };
 const RD191: EngineSpec = { name: 'RD-191', count: 1, thrustSL: 1920 * kN, thrustVac: 2090 * kN, ispSL: 310.7, ispVac: 337.5, minThrottle: 0.3 };
-const RD0124A: EngineSpec = { name: 'RD-0124A', count: 1, thrustSL: 200 * kN, thrustVac: 294.3 * kN, ispSL: 250, ispVac: 359 };
+const RD0124A: EngineSpec = { name: 'RD-0124A', count: 1, thrustSL: 200 * kN, thrustVac: 294.3 * kN, ispSL: 250, ispVac: 359, vacuumOnly: true };
 const MERLIN1D: EngineSpec = { name: 'Merlin 1D', count: 9, thrustSL: 845 * kN, thrustVac: 914 * kN, ispSL: 282, ispVac: 311, minThrottle: 0.4 };
-const MERLIN1D_FH_CORE: EngineSpec = { ...MERLIN1D };
-const MVAC: EngineSpec = { name: 'Merlin Vacuum', count: 1, thrustSL: 700 * kN, thrustVac: 981 * kN, ispSL: 250, ispVac: 348, minThrottle: 0.4 };
+const MVAC: EngineSpec = { name: 'Merlin Vacuum', count: 1, thrustSL: 700 * kN, thrustVac: 981 * kN, ispSL: 250, ispVac: 348, minThrottle: 0.4, vacuumOnly: true };
 const RD180: EngineSpec = { name: 'RD-180', count: 1, thrustSL: 3827 * kN, thrustVac: 4152 * kN, ispSL: 311.3, ispVac: 337.8, minThrottle: 0.47 };
-const GEM63: EngineSpec = { name: 'GEM-63', count: 1, thrustSL: 1180 * kN, thrustVac: 1300 * kN, ispSL: 254, ispVac: 279, solid: true };
-const RL10C1: EngineSpec = { name: 'RL10C-1', count: 1, thrustSL: 60 * kN, thrustVac: 101.8 * kN, ispSL: 280, ispVac: 449.7 };
+const GEM63: EngineSpec = { name: 'GEM-63', count: 1, thrustSL: 1180 * kN, thrustVac: 1300 * kN, ispSL: 254, ispVac: 279, solid: true, peakFactor: 1.27 };
+const RL10C1: EngineSpec = { name: 'RL10C-1', count: 1, thrustSL: 60 * kN, thrustVac: 101.8 * kN, ispSL: 280, ispVac: 449.7, vacuumOnly: true };
 const BE4: EngineSpec = { name: 'BE-4', count: 2, thrustSL: 2400 * kN, thrustVac: 2600 * kN, ispSL: 310, ispVac: 340, minThrottle: 0.4 };
-const GEM63XL: EngineSpec = { name: 'GEM-63XL', count: 1, thrustSL: 1340 * kN, thrustVac: 1460 * kN, ispSL: 254, ispVac: 279, solid: true };
-const RL10C11_X2: EngineSpec = { name: 'RL10C-1-1', count: 2, thrustSL: 60 * kN, thrustVac: 106 * kN, ispSL: 280, ispVac: 453.8 };
+const GEM63XL: EngineSpec = { name: 'GEM-63XL', count: 1, thrustSL: 1340 * kN, thrustVac: 1460 * kN, ispSL: 254, ispVac: 279, solid: true, peakFactor: 1.41 };
+const RL10C11_X2: EngineSpec = { name: 'RL10C-1-1', count: 2, thrustSL: 60 * kN, thrustVac: 106 * kN, ispSL: 280, ispVac: 453.8, vacuumOnly: true };
 const VULCAIN21: EngineSpec = { name: 'Vulcain 2.1', count: 1, thrustSL: 960 * kN, thrustVac: 1370 * kN, ispSL: 318, ispVac: 431 };
 // P120C: 141.4 t of grain burned in ~135 s means a *mean* mass flow of about
 // 1042 kg/s, i.e. a mean vacuum thrust near 2 846 kN — the 4 323-4 650 kN
@@ -62,24 +96,24 @@ const VULCAIN21: EngineSpec = { name: 'Vulcain 2.1', count: 1, thrustSL: 960 * k
 // simulation adds on top (see `solidProfile`). The earlier 3 200/3 400 kN pair
 // was the peak used as a mean and burned the grain out about 20 s early.
 // https://en.wikipedia.org/wiki/P120C
-const P120C: EngineSpec = { name: 'P120C', count: 1, thrustSL: 2677 * kN, thrustVac: 2845.6 * kN, ispSL: 262, ispVac: 278.5, solid: true };
-const VINCI: EngineSpec = { name: 'Vinci', count: 1, thrustSL: 100 * kN, thrustVac: 180 * kN, ispSL: 280, ispVac: 457 };
+const P120C: EngineSpec = { name: 'P120C', count: 1, thrustSL: 2677 * kN, thrustVac: 2845.6 * kN, ispSL: 262, ispVac: 278.5, solid: true, peakFactor: 1.52 };
+const VINCI: EngineSpec = { name: 'Vinci', count: 1, thrustSL: 100 * kN, thrustVac: 180 * kN, ispSL: 280, ispVac: 457, vacuumOnly: true };
 const YF77: EngineSpec = { name: 'YF-77', count: 2, thrustSL: 510 * kN, thrustVac: 700 * kN, ispSL: 310, ispVac: 430 };
 const YF100_X2: EngineSpec = { name: 'YF-100', count: 2, thrustSL: 1200 * kN, thrustVac: 1340 * kN, ispSL: 300, ispVac: 335 };
-const YF75D_X2: EngineSpec = { name: 'YF-75D', count: 2, thrustSL: 50 * kN, thrustVac: 88.36 * kN, ispSL: 280, ispVac: 442 };
+const YF75D_X2: EngineSpec = { name: 'YF-75D', count: 2, thrustSL: 50 * kN, thrustVac: 88.36 * kN, ispSL: 280, ispVac: 442, vacuumOnly: true };
 const LE9_X2: EngineSpec = { name: 'LE-9', count: 2, thrustSL: 1220 * kN, thrustVac: 1471 * kN, ispSL: 352, ispVac: 425, minThrottle: 0.63 };
-const SRB3: EngineSpec = { name: 'SRB-3', count: 1, thrustSL: 1650 * kN, thrustVac: 1780 * kN, ispSL: 265, ispVac: 283.6, solid: true };
-const LE5B3: EngineSpec = { name: 'LE-5B-3', count: 1, thrustSL: 80 * kN, thrustVac: 137 * kN, ispSL: 280, ispVac: 448 };
-const S139: EngineSpec = { name: 'S139', count: 1, thrustSL: 3000 * kN, thrustVac: 3400 * kN, ispSL: 237, ispVac: 269, solid: true };
-const PSOM_XL: EngineSpec = { name: 'PSOM-XL', count: 1, thrustSL: 420 * kN, thrustVac: 460 * kN, ispSL: 240, ispVac: 262, solid: true };
+const SRB3: EngineSpec = { name: 'SRB-3', count: 1, thrustSL: 1650 * kN, thrustVac: 1780 * kN, ispSL: 265, ispVac: 283.6, solid: true, peakFactor: 1.29 };
+const LE5B3: EngineSpec = { name: 'LE-5B-3', count: 1, thrustSL: 80 * kN, thrustVac: 137 * kN, ispSL: 280, ispVac: 448, vacuumOnly: true };
+const S139: EngineSpec = { name: 'S139', count: 1, thrustSL: 3000 * kN, thrustVac: 3400 * kN, ispSL: 237, ispVac: 269, solid: true, peakFactor: 1.43 };
+const PSOM_XL: EngineSpec = { name: 'PSOM-XL', count: 1, thrustSL: 420 * kN, thrustVac: 460 * kN, ispSL: 240, ispVac: 262, solid: true, peakFactor: 1.53 };
 const VIKAS: EngineSpec = { name: 'Vikas', count: 1, thrustSL: 725 * kN, thrustVac: 803 * kN, ispSL: 262, ispVac: 293 };
 // HPS3 (PSLV PS3): the 240 kN figure is the peak of the grain. 7 600 kg burned
 // in the published 126.7 s is a 60 kg/s mean flow, i.e. ~174 kN mean vacuum
 // thrust — the same correction as P120C above, and the second half of audit
 // item B22 (docs/AUDIT-2026-09-16.md). The old pair burned the grain out in
 // 91.6 s, 27.7 % short. https://en.wikipedia.org/wiki/Polar_Satellite_Launch_Vehicle
-const HPS3: EngineSpec = { name: 'HPS3', count: 1, thrustSL: 150 * kN, thrustVac: 174 * kN, ispSL: 260, ispVac: 295, solid: true };
-const PS4_L25: EngineSpec = { name: 'L-2-5', count: 2, thrustSL: 5 * kN, thrustVac: 7.3 * kN, ispSL: 260, ispVac: 308 };
+const HPS3: EngineSpec = { name: 'HPS3', count: 1, thrustSL: 150 * kN, thrustVac: 174 * kN, ispSL: 260, ispVac: 295, solid: true, peakFactor: 1.44 };
+const PS4_L25: EngineSpec = { name: 'L-2-5', count: 2, thrustSL: 5 * kN, thrustVac: 7.3 * kN, ispSL: 260, ispVac: 308, vacuumOnly: true };
 // Rutherford: 24 kN sea level / 25.8 kN vacuum, Isp 311 / 343 s.
 // https://en.wikipedia.org/wiki/Rutherford_(rocket_engine)
 // Both numbers are quoted: the infobox gives 24 kN at sea level and 25.8 kN in
@@ -92,13 +126,13 @@ const PS4_L25: EngineSpec = { name: 'L-2-5', count: 2, thrustSL: 5 * kN, thrustV
 // This is a correction to an existing vehicle (Electron) made by the fleet-data
 // wave — see the Electron entry in the reference-timeline table.
 const RUTHERFORD: EngineSpec = { name: 'Rutherford', count: 9, thrustSL: 24 * kN, thrustVac: 25.8 * kN, ispSL: 311, ispVac: 343, minThrottle: 0.5 };
-const RUTHERFORD_VAC: EngineSpec = { name: 'Rutherford Vacuum', count: 1, thrustSL: 18 * kN, thrustVac: 25.8 * kN, ispSL: 260, ispVac: 343, minThrottle: 0.5 };
-const CURIE: EngineSpec = { name: 'Curie', count: 1, thrustSL: 0.1 * kN, thrustVac: 0.12 * kN, ispSL: 250, ispVac: 320 };
+const RUTHERFORD_VAC: EngineSpec = { name: 'Rutherford Vacuum', count: 1, thrustSL: 18 * kN, thrustVac: 25.8 * kN, ispSL: 260, ispVac: 343, minThrottle: 0.5, vacuumOnly: true };
+const CURIE: EngineSpec = { name: 'Curie', count: 1, thrustSL: 0.1 * kN, thrustVac: 0.12 * kN, ispSL: 250, ispVac: 320, vacuumOnly: true };
 // --- Vega-C (Avio / ESA). https://en.wikipedia.org/wiki/Vega_C
 // Solid mean thrusts are derived from grain mass / published burn time, as for P120C above.
-const ZEFIRO40: EngineSpec = { name: 'Zefiro 40', count: 1, thrustSL: 1033 * kN, thrustVac: 1122.9 * kN, ispSL: 270, ispVac: 293.5, solid: true };
-const ZEFIRO9: EngineSpec = { name: 'Zefiro 9', count: 1, thrustSL: 234 * kN, thrustVac: 256.4 * kN, ispSL: 270, ispVac: 295.9, solid: true };
-const AVUM_PLUS: EngineSpec = { name: 'AVUM+ (RD-869)', count: 1, thrustSL: 1.9 * kN, thrustVac: 2.42 * kN, ispSL: 248, ispVac: 315.8 };
+const ZEFIRO40: EngineSpec = { name: 'Zefiro 40', count: 1, thrustSL: 1033 * kN, thrustVac: 1122.9 * kN, ispSL: 270, ispVac: 293.5, solid: true, peakFactor: 1.16 };
+const ZEFIRO9: EngineSpec = { name: 'Zefiro 9', count: 1, thrustSL: 234 * kN, thrustVac: 256.4 * kN, ispSL: 270, ispVac: 295.9, solid: true, peakFactor: 1.24 };
+const AVUM_PLUS: EngineSpec = { name: 'AVUM+ (RD-869)', count: 1, thrustSL: 1.9 * kN, thrustVac: 2.42 * kN, ispSL: 248, ispVac: 315.8, vacuumOnly: true };
 
 // --- Long March 2D / 3B (SAST / CALT). N2O4/UDMH.
 // https://en.wikipedia.org/wiki/Long_March_2D , https://en.wikipedia.org/wiki/Long_March_3B
@@ -111,14 +145,14 @@ const YF24C: EngineSpec = { name: 'YF-24C (YF-22C + 4× YF-23C)', count: 1, thru
 // CZ-3B/E strap-on: one YF-25 (the booster variant of the YF-20), 740.4 kN sea level.
 const YF25: EngineSpec = { name: 'YF-25', count: 1, thrustSL: 740.4 * kN, thrustVac: 820.9 * kN, ispSL: 260.66, ispVac: 289 };
 // CZ-3B third stage: 2 x YF-75 at 167.17 kN total, 438 s vacuum.
-const YF75_X2: EngineSpec = { name: 'YF-75', count: 1, thrustSL: 120 * kN, thrustVac: 167.17 * kN, ispSL: 314.5, ispVac: 438 };
+const YF75_X2: EngineSpec = { name: 'YF-75', count: 1, thrustSL: 120 * kN, thrustVac: 167.17 * kN, ispSL: 314.5, ispVac: 438, vacuumOnly: true };
 
 // --- H-IIA 202 (MHI / JAXA). https://en.wikipedia.org/wiki/H-IIA
 const LE7A: EngineSpec = { name: 'LE-7A', count: 1, thrustSL: 843 * kN, thrustVac: 1098 * kN, ispSL: 337.8, ispVac: 440 };
 // SRB-A3: 66.8 t of grain in ~100 s is a 668 kg/s mean flow, i.e. ~1 858 kN mean
 // vacuum thrust; the 2 260-2 520 kN figures are the peak of the regressive grain.
-const SRB_A: EngineSpec = { name: 'SRB-A3', count: 1, thrustSL: 1736 * kN, thrustVac: 1857.9 * kN, ispSL: 265, ispVac: 283.6, solid: true };
-const LE5B: EngineSpec = { name: 'LE-5B', count: 1, thrustSL: 90 * kN, thrustVac: 137 * kN, ispSL: 293.7, ispVac: 447 };
+const SRB_A: EngineSpec = { name: 'SRB-A3', count: 1, thrustSL: 1736 * kN, thrustVac: 1857.9 * kN, ispSL: 265, ispVac: 283.6, solid: true, peakFactor: 1.22 };
+const LE5B: EngineSpec = { name: 'LE-5B', count: 1, thrustSL: 90 * kN, thrustVac: 137 * kN, ispSL: 293.7, ispVac: 447, vacuumOnly: true };
 
 const RAPTOR_SL_X33: EngineSpec = { name: 'Raptor 2', count: 33, thrustSL: 2300 * kN, thrustVac: 2500 * kN, ispSL: 327, ispVac: 347, minThrottle: 0.4 };
 const RAPTOR_SHIP: EngineSpec = { name: 'Raptor 2 / RVac', count: 6, thrustSL: 2000 * kN, thrustVac: 2400 * kN, ispSL: 320, ispVac: 365, minThrottle: 0.4 };
@@ -138,22 +172,108 @@ const f9Stage2 = (): StageSpec => ({
 });
 
 // ---------------------------------------------------------------- vehicles
-const soyuzCore = (): StageSpec => ({
+//
+// THE R-7 CORE, IN TWO VARIANTS — and the split is the point, not an accident.
+//
+// Blok A's published masses (https://en.wikipedia.org/wiki/Soyuz-2_(rocket) ):
+// gross 99 765 kg, empty 6 545 kg, propellant 63 800 kg LOX + 26 300 kg RP-1 =
+// 90 100 kg. The dry mass is exactly right in this file. The propellant was
+// 87 000 kg, 3.4 % light — and note that the published figures do not close
+// among themselves either (99 765 − 6 545 = 93 220 kg, 3 120 kg above the
+// LOX+RP-1 sum), so 90 100 kg is itself a ±3 t number.
+//
+// Soyuz-2.1a and 2.1b fly the SAME core, so one helper is the honest shape. But
+// 2.1a is the application's default mission and the one vehicle whose whole
+// published timeline is pinned as a regression band (booster separation T+118 s,
+// core cut-off T+287 s, SECO T+528 s — tests/fleet-defaults.test.ts), and
+// 3 100 kg more core propellant moves core cut-off by ~10 s. Ten seconds is
+// inside that band, but it would be spent on a figure that is itself uncertain
+// by more than the change.
+//
+// So the correction lands where it is free: 2.1b, which has no published-clock
+// regression band, takes the audited load, and 2.1a keeps the 87 000 kg that
+// reproduces its callouts. That is a deliberate, documented divergence between
+// two records of the same hardware, not two independent estimates — which is why
+// they are two named helpers over one shared booster set rather than a copied
+// literal. See docs/AUDIT-2026-09-16.md, data proposals, "soyuz Blok A".
+const soyuzBoosters = (): BoosterGroupSpec[] => ([{
+  id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3784, propellantMass: 39600,
+  engine: RD107A, diameter: 2.68, length: 19.6, sepDelay: 1, conicalTop: true, color: '#c9c7bd',
+}]);
+/** Blok A as flown by Soyuz-2.1a: 87 000 kg, held to the published 2.1a clock. */
+const soyuz21aCore = (): StageSpec => ({
   id: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 87000, engine: RD108A,
   diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c',
-  boosters: [{
-    id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3784, propellantMass: 39600,
-    engine: RD107A, diameter: 2.68, length: 19.6, sepDelay: 1, conicalTop: true, color: '#c9c7bd',
-  }],
+  boosters: soyuzBoosters(),
 });
+/** Blok A with the published 90 100 kg load (63 800 LOX + 26 300 RP-1). */
+const soyuz21bCore = (): StageSpec => ({
+  id: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 90100, engine: RD108A,
+  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c',
+  boosters: soyuzBoosters(),
+});
+
+/**
+ * The reference orbit each `payload*` rating is quoted FOR.
+ *
+ * Audit item B26 (docs/AUDIT-2026-09-16.md): the setup panel shows a bare
+ * "Rated LEO payload" and the fleet matrix grades against the same number, but a
+ * rating is meaningless without the orbit it was measured to — Soyuz-2.1a's
+ * 7 430 kg is to 240 km × 51.6° FROM BAIKONUR and drops to 6 800 kg from
+ * Plesetsk, and the fleet matrix's own presets are 420-600 km, which costs
+ * 150-300 m/s more than any of them. Where the model cannot reach a published
+ * rating, this is the field that says what the rating was actually a rating for.
+ *
+ * Exported as data rather than as a `VehicleSpec` field because `src/types.ts`
+ * belongs to another wave; the UI can render it by id, and the wave that owns
+ * types.ts can fold it into `VehicleSpec` unchanged. Altitudes in km,
+ * inclination in degrees, `site` is the launch site the rating is quoted from.
+ */
+export interface RatingOrbit {
+  /** which rating this describes */
+  rating: 'LEO' | 'SSO' | 'GTO';
+  perigeeKm: number;
+  apogeeKm: number;
+  inclinationDeg: number;
+  siteId: string;
+  source: string;
+}
+
+export const RATING_ORBITS: Record<string, RatingOrbit[]> = {
+  soyuz21a: [{ rating: 'LEO', perigeeKm: 240, apogeeKm: 240, inclinationDeg: 51.6, siteId: 'baikonur', source: 'https://en.wikipedia.org/wiki/Soyuz-2_(rocket)' }],
+  soyuz21b: [{ rating: 'LEO', perigeeKm: 240, apogeeKm: 240, inclinationDeg: 51.6, siteId: 'baikonur', source: 'https://en.wikipedia.org/wiki/Soyuz-2_(rocket)' }],
+  vulcan: [
+    { rating: 'LEO', perigeeKm: 420, apogeeKm: 420, inclinationDeg: 51.6, siteId: 'cape', source: 'https://en.wikipedia.org/wiki/Vulcan_Centaur' },
+    { rating: 'SSO', perigeeKm: 800, apogeeKm: 800, inclinationDeg: 98.6, siteId: 'vandenberg', source: 'https://en.wikipedia.org/wiki/Vulcan_Centaur' },
+  ],
+  vegac: [
+    { rating: 'SSO', perigeeKm: 700, apogeeKm: 700, inclinationDeg: 98.2, siteId: 'kourou', source: 'https://www.esa.int/Enabling_Support/Space_Transportation/Vega/Vega-C' },
+  ],
+  longmarch2d: [
+    { rating: 'LEO', perigeeKm: 200, apogeeKm: 200, inclinationDeg: 41, siteId: 'jiuquan', source: 'http://www.astronautix.com/c/changzheng2d.html' },
+  ],
+  longmarch5: [
+    { rating: 'LEO', perigeeKm: 200, apogeeKm: 200, inclinationDeg: 19.5, siteId: 'wenchang', source: 'https://en.wikipedia.org/wiki/Long_March_5' },
+    { rating: 'SSO', perigeeKm: 700, apogeeKm: 700, inclinationDeg: 98.2, siteId: 'wenchang', source: 'https://en.wikipedia.org/wiki/Long_March_5' },
+  ],
+};
 
 export const VEHICLES: VehicleSpec[] = [
   {
     id: 'soyuz21a', name: 'Soyuz-2.1a', country: 'RU', manufacturer: 'RKTs Progress',
-    height: 46.3, payloadLEO: 7020, payloadGTO: 0,
-    fairing: { mass: 1000, diameter: 3.7, length: 10.1, sepAltitude: 95e3, color: '#e8e8e8' },
+    // 7 430 kg to 240 km / 51.6 deg FROM BAIKONUR (6 800 kg from Plesetsk,
+    // 7 460 kg from Vostochny). The file carried 7 020 kg, which matches no
+    // published site; see RATING_ORBITS above and audit item B26.
+    // https://en.wikipedia.org/wiki/Soyuz-2_(rocket)
+    height: 46.3, payloadLEO: 7430, payloadGTO: 0,
+    // Soyuz publishes a fairing callout and flies it: T+157 s on the crewed
+    // profile. On the heating placard alone this trajectory shed it at T+176 s,
+    // ~12 % late, which was one of the recorded disagreements with the published
+    // timeline. See `FairingSpec.sepTime` in src/types.ts for why the published
+    // TIME is modelled rather than a back-solved heat-flux placard.
+    fairing: { mass: 1000, diameter: 3.7, length: 10.1, sepAltitude: 95e3, sepTime: 157, color: '#e8e8e8' },
     stages: [
-      soyuzCore(),
+      soyuz21aCore(),
       { id: 'blokI', name: 'Blok I (3rd stage, RD-0110)', dryMass: 2410, propellantMass: 22900, engine: RD0110, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd' },
     ],
     sites: ['baikonur', 'plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 60,
@@ -171,10 +291,14 @@ export const VEHICLES: VehicleSpec[] = [
   },
   {
     id: 'soyuz21b', name: 'Soyuz-2.1b / Fregat-M', country: 'RU', manufacturer: 'RKTs Progress',
-    height: 46.3, payloadLEO: 8200, payloadGTO: 1900, payloadSSO: 4900,
-    fairing: { mass: 1500, diameter: 4.11, length: 11.4, sepAltitude: 95e3, color: '#e8e8e8' },
+    // 8 670 kg to 240 km / 51.6 deg from Baikonur (was 8 200 kg, which is no
+    // published site's figure). https://en.wikipedia.org/wiki/Soyuz-2_(rocket)
+    height: 46.3, payloadLEO: 8670, payloadGTO: 1900, payloadSSO: 4900,
+    fairing: { mass: 1500, diameter: 4.11, length: 11.4, sepAltitude: 95e3, sepTime: 157, color: '#e8e8e8' },
     stages: [
-      soyuzCore(),
+      // The audited 90 100 kg Blok A load — see the comment on the two core
+      // helpers above for why 2.1a keeps 87 000 kg and only 2.1b takes this.
+      soyuz21bCore(),
       { id: 'blokI', name: 'Blok I (3rd stage)', dryMass: 2355, propellantMass: 23000, engine: RD0124, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd' },
       { id: 'fregat', name: 'Fregat-M', dryMass: 1050, propellantMass: 5350, engine: S592, diameter: 3.35, length: 1.5, restartable: true, sepDelay: 2, ignitionDelay: 3, color: '#b8b0a0' },
     ],
@@ -188,12 +312,32 @@ export const VEHICLES: VehicleSpec[] = [
     height: 58.2, payloadLEO: 23000, payloadGTO: 6920,
     fairing: { mass: 2000, diameter: 4.35, length: 15, sepAltitude: 120e3, color: '#e8e8e8' },
     stages: [
-      { id: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 419400, engine: RD276, diameter: 7.4, length: 21.2, color: '#d9d9d9', accentColor: '#7a7a7a' },
+      // 4.1 m, not 7.4 m: audit item B23. 7.4 m is the SPAN across the six
+      // outboard fuel tanks, and `VehicleModel.frontalArea()` turns the widest
+      // attached stage diameter into a full circle — pi(7.4/2)^2 = 43.0 m^2
+      // against a real frontal area of about 25 m^2 (the 4.1 m core, 13.2 m^2,
+      // plus six ~1.6 m tanks, 12.1 m^2). Proton was flying with 70 % too much
+      // drag through the whole atmospheric phase, which is also part of why it
+      // is destroyed at 50 % payload.
+      //
+      // The tanks are NOT a BoosterGroupSpec: they feed the six RD-276 through
+      // the flight and are jettisoned with the stage, so modelling them as
+      // separable boosters would invent a staging event Proton does not have.
+      // Instead the stage carries its real diameter and the vehicle carries a
+      // `dragArea` override — the first use of a field that had been declared
+      // and set by nothing (audit item B39).
+      { id: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 419400, engine: RD276, diameter: 4.1, length: 21.2, color: '#d9d9d9', accentColor: '#7a7a7a' },
       { id: 'p2', name: 'Second stage', dryMass: 11000, propellantMass: 156100, engine: RD0210, diameter: 4.1, length: 17, sepDelay: 0, ignitionDelay: 0, color: '#d9d9d9' },
       { id: 'p3', name: 'Third stage', dryMass: 3500, propellantMass: 46600, engine: RD0213, diameter: 4.1, length: 6.5, sepDelay: 1, ignitionDelay: 1, color: '#d9d9d9' },
       briz(),
     ],
     sites: ['baikonur'], maxQ: 40e3, maxAccel: 55,
+    // The 4.1 m core plus six 1.6 m outboard tanks, as a reference area rather
+    // than as a circle around the span (audit item B23). It is dropped once the
+    // first stage separates in the sense that matters — the override is only
+    // ever wider than what is left above it — and the fairing (4.35 m,
+    // 14.9 m^2) is inside it too.
+    dragArea: 25,
     // Heavy and draggy: it needs a fast pitch-over or it climbs too steeply and falls back through the atmosphere.
     guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 0 },
     notes: 'Hypergolic heavy-lift launcher; Briz-M performs multi-burn GTO/GEO insertions.',
@@ -237,7 +381,12 @@ export const VEHICLES: VehicleSpec[] = [
     fairing: { mass: 1900, diameter: 5.2, length: 13.1, sepAltitude: 110e3, color: '#f4f4f4' },
     stages: [
       {
-        id: 'core', name: 'Center core', dryMass: 28000, propellantMass: 395700, engine: MERLIN1D_FH_CORE,
+        // The centre core's real differences from a side booster are its heavier
+        // structure and the throttle-down while the sides burn, and both are
+        // modelled below; it used to point at a `MERLIN1D_FH_CORE` alias that
+        // was `{ ...MERLIN1D }` with no overrides, implying a distinction in the
+        // engine that the data did not carry.
+        id: 'core', name: 'Center core', dryMass: 28000, propellantMass: 395700, engine: MERLIN1D,
         diameter: 3.66, length: 42, color: '#f2f2f2', accentColor: '#1a1a1a', gridFins: true, legs: true,
         throttleWithBoosters: 0.55,
         boosters: [f9Booster('side', 'Side boosters', 2)],
@@ -258,7 +407,9 @@ export const VEHICLES: VehicleSpec[] = [
       {
         id: 'ccb', name: 'Common Core Booster (RD-180)', dryMass: 21054, propellantMass: 284089, engine: RD180,
         diameter: 3.81, length: 32.5, color: '#c8792a', accentColor: '#7a4a17',
-        boosters: [{ id: 'gem63', name: 'GEM-63 solid boosters', count: 5, dryMass: 5000, propellantMass: 44200, engine: GEM63, diameter: 1.6, length: 20, sepDelay: 5, color: '#f4f4f4' }],
+        // GEM-63 inert mass 5 100 kg = the 49 300 kg gross minus the 44 200 kg
+        // grain quoted on the same page. https://en.wikipedia.org/wiki/Atlas_V
+        boosters: [{ id: 'gem63', name: 'GEM-63 solid boosters', count: 5, dryMass: 5100, propellantMass: 44200, engine: GEM63, diameter: 1.6, length: 20, sepDelay: 5, color: '#f4f4f4' }],
       },
       { id: 'centaur3', name: 'Centaur III (RL10C-1)', dryMass: 2243, propellantMass: 20830, engine: RL10C1, diameter: 3.05, length: 12.7, restartable: true, sepDelay: 3, ignitionDelay: 10, color: '#e5e5e5' },
     ],
@@ -270,26 +421,87 @@ export const VEHICLES: VehicleSpec[] = [
   },
   {
     id: 'vulcan', name: 'Vulcan Centaur VC4', country: 'US', manufacturer: 'ULA',
-    height: 61.6, payloadLEO: 24400, payloadGTO: 12100,
+    // VC4 ratings, which is what the record is named for. 24 400 / 12 100 kg is
+    // the VC6 class (25 600 / 14 400 with six GEM-63XL); VC4 is 21 400 kg to the
+    // ISS orbit, 11 600 kg to GTO and 18 500 kg to sun-synchronous.
+    // https://en.wikipedia.org/wiki/Vulcan_Centaur  — audit item B26.
+    height: 61.6, payloadLEO: 21400, payloadGTO: 11600, payloadSSO: 18500,
     fairing: { mass: 3500, diameter: 5.4, length: 15.5, sepAltitude: 110e3, color: '#f4f4f4' },
     stages: [
       {
-        id: 'v1', name: 'First stage (2× BE-4)', dryMass: 30000, propellantMass: 430000, engine: BE4,
+        // AUDIT ITEM B21 — the one finding whose two verifiers pointed in
+        // opposite directions, decided here from the primary evidence.
+        //
+        // The candidates were 353 400 kg (Wikipedia's 382 000 kg gross minus
+        // 28 600 kg dry) and 481 700 kg (366 500 kg LOX + 115 200 kg LNG).
+        // Three independent checks all pick the larger one:
+        //
+        //  1. ULA's own LNG load is 254 000 lb = 115 200 kg
+        //     ( https://www.nasaspaceflight.com/2024/01/vulcan-launch-peregrine-inaugural-flight/ ).
+        //     With Wikipedia's gross that leaves 238 200 kg of LOX, a mixture
+        //     ratio of 2.07 — methalox runs near 3.4-3.6, and the BE-4 cannot
+        //     be flown a third oxidiser-lean.
+        //  2. ULA says the core holds "more than a million pounds of liquid
+        //     propellant, about 50 percent more propellant mass than the
+        //     Atlas 5's first stage"
+        //     ( https://spaceflightnow.com/2021/08/25/ula-readies-vulcan-booster-for-cryogenic-tanking-test/ ).
+        //     Atlas V's CCB is 284 089 kg in this file, so 50 % more is
+        //     426 000 kg and "more than a million pounds" is >453 600 kg.
+        //     481 700 kg is 1 062 000 lb and clears both; 353 400 kg is
+        //     779 000 lb and clears neither.
+        //  3. Burn time. At the model's own mass flow (2 x 2 600 kN / 340 s vac
+        //     = 1 559 kg/s) the old 430 000 kg burned 275.8 s against a
+        //     published 299 s, and 353 400 kg would burn 227 s — 24 % short and
+        //     measurably WORSE against the published-timeline goal. 481 700 kg
+        //     burns 309 s, which the max-Q throttle bucket lengthens further,
+        //     bracketing 299 s from the other side.
+        //
+        // Wikipedia's 382 000 kg gross is simply inconsistent with its own
+        // 4 893 kN / 299 s pair (that combination needs ~439 t at full flow),
+        // which is probably where the file's 430 000 kg came from in the first
+        // place. Both verifiers agreed on the dry mass, and it is taken as
+        // published.
+        id: 'v1', name: 'First stage (2× BE-4)', dryMass: 28600, propellantMass: 481700, engine: BE4,
         diameter: 5.4, length: 33.3, color: '#f4f4f4', accentColor: '#c0392b',
-        boosters: [{ id: 'gem63xl', name: 'GEM-63XL solid boosters', count: 4, dryMass: 5600, propellantMass: 47800, engine: GEM63XL, diameter: 1.6, length: 22, sepDelay: 6, color: '#f4f4f4' }],
+        // GEM-63XL inert mass 5 177 kg, grain 47 853 kg — both published.
+        // https://en.wikipedia.org/wiki/Graphite-Epoxy_Motor  (the audit's
+        // "~4 521 kg" is not on that page; 5 177 kg is the 53 030 kg gross minus
+        // the 47 853 kg grain, and the two agree to the kilogram.)
+        boosters: [{ id: 'gem63xl', name: 'GEM-63XL solid boosters', count: 4, dryMass: 5177, propellantMass: 47853, engine: GEM63XL, diameter: 1.6, length: 22, sepDelay: 6, color: '#f4f4f4' }],
       },
       { id: 'centaur5', name: 'Centaur V (2× RL10C-1-1)', dryMass: 5000, propellantMass: 54000, engine: RL10C11_X2, diameter: 5.4, length: 11.7, restartable: true, sepDelay: 3, ignitionDelay: 10, color: '#e5e5e5' },
     ],
     sites: ['cape', 'vandenberg'], maxQ: 45e3, maxAccel: 49,
     maxQThrottle: { qStart: 25e3, qEnd: 25e3, throttle: 0.7 },
-    // Centaur V has a thrust-to-weight near 0.3, so the booster has to hand over climbing.
-    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 150e3 },
+    // Centaur V has a thrust-to-weight near 0.3, so the booster has to hand over
+    // climbing — but with the audited 481.7 t first stage (see B21 above) the
+    // booster now burns 309 s instead of 276 s, and a 150 km loft on top of that
+    // is more than the Centaur can hold: vulcan/iss/50 flattened and broke up at
+    // T+1233 s. Measured over kick 1.5-6 deg x rate 0.3/0.45 x loft 0-250 km x
+    // pitch ceiling 25/35 deg (96 guidance points x 9 fleet rows), 80 km is the
+    // loft that takes every row the vehicle has the delta-v for: leo and iss at
+    // 25 % and 50 %, all three GTO rows, insertion T+999-1182 s. The two 90 %
+    // rows stay lost at every point in that grid, which is why they are still
+    // KNOWN_GUIDANCE_FAILURES rather than a tuning gap.
+    //
+    // `parkingAltitude: 250e3` is the other half, and it is a statement about
+    // the stage rather than a fitted constant. The library default asks every
+    // vehicle for a 200 km parking orbit; Centaur V is a high-energy hydrogen
+    // stage that arrives fast and shallow, and aimed at 200 km it cut off on the
+    // apoapsis with the perigee still at 137-150 km — 50-60 km under the orbit
+    // it had been asked for, on every one of the 96 guidance points swept. Aimed
+    // at 250 km, which is where ULA's own low-orbit insertions sit, it closes
+    // the transfer it was given: measured 238-250 x 497 km. The 9-row matrix is
+    // unchanged by it (leo/iss 25-50 % and all three GTO rows accepted) and the
+    // ascent auto-tuner, which grades a candidate against the orbit the PLAN
+    // asked for, stops reporting every point in its grid as an insertion miss.
+    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 30, loftAltitude: 80e3, parkingAltitude: 250e3 },
     notes: 'Methalox first stage with up to six solids; Centaur V is a long-coast hydrogen upper stage.',
   },
   {
     id: 'ariane64', name: 'Ariane 64', country: 'EU', manufacturer: 'ArianeGroup',
     height: 62, payloadLEO: 21600, payloadGTO: 11500, payloadSSO: 15000,
-    fairing: { mass: 2900, diameter: 5.4, length: 20, sepAltitude: 115e3, color: '#f4f4f4' },
+    fairing: { mass: 2900, diameter: 5.4, length: 20, sepAltitude: 115e3, sepTime: 200, color: '#f4f4f4' },
     stages: [
       {
         id: 'llpm', name: 'Core (Vulcain 2.1)', dryMass: 15700, propellantMass: 145000, engine: VULCAIN21,
@@ -321,7 +533,7 @@ export const VEHICLES: VehicleSpec[] = [
     // Vega-C drops the fairing at about T+3:40. `sepAltitude` is only the
     // fallback ceiling — the simulation jettisons on the free-molecular heating
     // placard, which this trajectory clears at T+187 s and ~112 km.
-    fairing: { mass: 500, diameter: 3.3, length: 9.0, sepAltitude: 120e3, color: '#f0f0f0' },
+    fairing: { mass: 500, diameter: 3.3, length: 9.0, sepAltitude: 120e3, sepTime: 220, color: '#f0f0f0' },
     stages: [
       // published burn time 135.7 s (booster burnout ~T+135 s)
       { id: 'p120c', name: 'P120C (first stage)', dryMass: 11200, propellantMass: 141400, engine: P120C, diameter: 3.4, length: 13.5, color: '#f0f0f0', accentColor: '#1d4f91' },
@@ -348,7 +560,7 @@ export const VEHICLES: VehicleSpec[] = [
     // Jiuquan, Taiyuan and Xichang). http://www.astronautix.com/c/changzheng2d.html
     id: 'longmarch2d', name: 'Long March 2D', country: 'CN', manufacturer: 'SAST',
     height: 41.06, payloadLEO: 3500, payloadGTO: 0, payloadSSO: 1300,
-    fairing: { mass: 800, diameter: 3.35, length: 6.98, sepAltitude: 120e3, color: '#f0f0f0' },
+    fairing: { mass: 800, diameter: 3.35, length: 6.98, sepAltitude: 120e3, sepTime: 220, color: '#f0f0f0' },
     stages: [
       // published burn time 170 s (first/second stage separation ~T+160 s)
       { id: 'cz2d1', name: 'First stage (YF-21C, 4× YF-20C)', dryMass: 9500, propellantMass: 183200, engine: YF21C, diameter: 3.35, length: 27.91, color: '#f0f0f0', accentColor: '#b0332a' },
@@ -370,7 +582,11 @@ export const VEHICLES: VehicleSpec[] = [
     // 478 s; 5 500 kg to GTO from Xichang.
     id: 'longmarch3be', name: 'Long March 3B/E', country: 'CN', manufacturer: 'CALT',
     height: 56.3, payloadLEO: 11500, payloadGTO: 5500,
-    fairing: { mass: 2000, diameter: 4.2, length: 9.56, sepAltitude: 115e3, color: '#f0f0f0' },
+    // CZ-3B/E drops the fairing at about T+215 s. On the heating placard alone
+    // this trajectory shed it at T+223 s, ~4 % late and outside the 2 % band a
+    // point callout is quoted to; flown on the published time, like the other
+    // operators who publish one.
+    fairing: { mass: 2000, diameter: 4.2, length: 9.56, sepAltitude: 115e3, sepTime: 215, color: '#f0f0f0' },
     stages: [
       // published burn time 158 s (stage separation ~T+158 s); boosters 140 s, separation ~T+140 s
       {
@@ -402,53 +618,36 @@ export const VEHICLES: VehicleSpec[] = [
     // 4S fairing; H-IIA jettisons it at about T+4:05 near 150 km. As elsewhere
     // this is only the fallback ceiling: the heating placard fires first, at
     // T+164-172 s on these trajectories.
-    fairing: { mass: 1400, diameter: 4.07, length: 12, sepAltitude: 150e3, color: '#f4f4f4' },
+    fairing: { mass: 1400, diameter: 4.07, length: 12, sepAltitude: 150e3, sepTime: 250, color: '#f4f4f4' },
     stages: [
       // published core cut-off ~396 s (390 s quoted burn time)
       {
-        // KNOWN DEVIATION FROM SOURCE — do not "tidy" this without reading it.
-        //
-        // Sourced values: Encyclopedia Astronautica H-2A-1, gross 113 600 kg /
-        // empty 13 600 kg / propellant 100 000 kg
+        // THE PUBLISHED MASSES, as of this wave. Encyclopedia Astronautica
+        // H-2A-1: gross 113 600 kg / empty 13 600 kg / propellant 100 000 kg
         // ( http://www.astronautix.com/h/h-2a-1.html , agreeing with
-        // https://en.wikipedia.org/wiki/H-IIA ). The propellant load here IS the
-        // published one. The 12 000 kg dry mass is NOT: the published figure is
-        // 13 600 kg, and there is no physical argument for the 1 600 kg
-        // difference — an earlier draft of this wave claimed the quoted empty
-        // mass covers the 1st/2nd-stage interstage, which is wrong (the
-        // interstage separates with the first stage and is part of its dry
-        // mass).
+        // https://en.wikipedia.org/wiki/H-IIA ).
         //
-        // The only reason the published value is not in the file is
-        // tests/ascent.test.ts's fleet-wide `idealDeltaV > 9 500 m/s` sanity
-        // floor. Measured: 9 528 m/s with 12 000 / 2 800 kg, 9 390 m/s with the
-        // published 13 600 / 3 000 kg. Everything else about the vehicle is
-        // identical — flown to GTO from Tanegashima at 25/50/90 % of 4 100 kg,
-        // both mass pairs give SRB separation T+109 s, fairing T+162-165 s,
-        // core cut-off T+390 s and insertion at 259-261 × 35 719-35 721 km,
-        // with all three cases accepted.
-        //
-        // The floor is what is wrong, not the vehicle: it is a heuristic that
-        // squeezes every solid-boosted stack (Atlas V 551 measures 9 583 m/s and
-        // PSLV-XL 9 542 m/s — both within 1 % of it), and H-IIA 202's real ideal
-        // delta-v at 5 t simply is about 9.4 km/s. tests/ascent.test.ts is not
-        // owned by this wave and changing the data to keep someone else's
-        // heuristic green is the wrong direction, so this is escalated rather
-        // than fixed here: once the floor is lowered (9 300 m/s clears all three
-        // solid-boosted stacks) these two numbers become 13 600 and 3 000 and
-        // nothing else changes. See the wave report's open issues.
-        id: 'h2a1', name: 'First stage (LE-7A)', dryMass: 12000, propellantMass: 100000, engine: LE7A,
+        // The file carried 12 000 kg for a year, and the reason was never
+        // physical: it was tests/ascent.test.ts's fleet-wide
+        // `idealDeltaV > 9 500 m/s` sanity floor, measured at 9 528 m/s with
+        // 12 000 / 2 800 kg and 9 390 m/s with the published pair. That
+        // measurement was made with the PRE-B13 delta-v accounting, which
+        // ignored the parallel boosters and the fairing; with B13's correction
+        // the same vehicle measures 12 121 m/s and the published masses clear
+        // the floor with 2.5 km/s to spare. The floor did not have to move
+        // after all, and the previous wave's hand-off said to re-measure rather
+        // than lower it. Re-measured, and the deviation is gone.
+        id: 'h2a1', name: 'First stage (LE-7A)', dryMass: 13600, propellantMass: 100000, engine: LE7A,
         diameter: 4.0, length: 37.2, color: '#e2762a', accentColor: '#f4f4f4',
         // published burnout ~100 s, separation ~108 s
         boosters: [{ id: 'srba', name: 'SRB-A3 solid boosters', count: 2, dryMass: 8700, propellantMass: 66800, engine: SRB_A, diameter: 2.5, length: 15.1, sepDelay: 8, color: '#f4f4f4' }],
       },
-      // published burn time 534 s. Propellant sourced from Encyclopedia
-      // Astronautica H-2A-2 (gross 19 600 kg, empty 3 000 kg):
-      // http://www.astronautix.com/h/h-2a-2.html . The 2 800 kg dry mass is the
-      // same known deviation as the first stage's 12 000 kg — see the block
-      // above; the published 3 000 kg flies identically and is blocked only by
-      // the ideal-delta-v floor in tests/ascent.test.ts.
-      { id: 'h2a2', name: 'Second stage (LE-5B)', dryMass: 2800, propellantMass: 16600, engine: LE5B, diameter: 4.0, length: 9.2, restartable: true, sepDelay: 6, ignitionDelay: 6, color: '#f4f4f4' },
+      // published burn time 534 s. Masses from Encyclopedia Astronautica
+      // H-2A-2 (gross 19 600 kg, empty 3 000 kg):
+      // http://www.astronautix.com/h/h-2a-2.html . The 2 800 kg the file used to
+      // carry was the same non-physical deviation as the first stage's
+      // 12 000 kg, and it is gone with it.
+      { id: 'h2a2', name: 'Second stage (LE-5B)', dryMass: 3000, propellantMass: 16600, engine: LE5B, diameter: 4.0, length: 9.2, restartable: true, sepDelay: 6, ignitionDelay: 6, color: '#f4f4f4' },
     ],
     sites: ['tanegashima'], maxQ: 40e3, maxAccel: 50,
     // Two SRB-A give a 1.75 liftoff T/W and burn out at T+100 s, after which the
@@ -464,14 +663,24 @@ export const VEHICLES: VehicleSpec[] = [
     notes: 'Retired 28 June 2025 after 50 flights. Hydrogen LE-7A core with two SRB-A solids and a restartable LE-5B upper stage; the direct ancestor of H3.',
   },
   {
+    // https://en.wikipedia.org/wiki/Long_March_5 — core CZ-5-500 gross
+    // 186 900 kg / propellant 165 300 kg / 492 s; booster CZ-5-300 gross
+    // 156 600 kg each / 173 s; liftoff 851 800 kg; 25 t to a 200 km LEO,
+    // 14 t to GTO, 15 t to a 700 km sun-synchronous orbit.
     id: 'longmarch5', name: 'Long March 5', country: 'CN', manufacturer: 'CALT',
-    height: 57, payloadLEO: 25000, payloadGTO: 14000,
+    height: 57, payloadLEO: 25000, payloadGTO: 14000, payloadSSO: 15000,
     fairing: { mass: 3000, diameter: 5.2, length: 12.3, sepAltitude: 120e3, color: '#f4f4f4' },
     stages: [
       {
-        id: 'cz5core', name: 'Core (2× YF-77)', dryMass: 17000, propellantMass: 158000, engine: YF77,
+        // The tankage was 27 t (3 %) light against the published liftoff mass,
+        // which inflated the liftoff thrust-to-weight to 1.29 against a real
+        // 1.27. Core and boosters are now the published gross masses: 21 600 +
+        // 165 300 and 12 000 + 144 600, which puts the stack at 846.8 t dry of
+        // payload. Burn times follow at 498 s (published 492) and 177 s
+        // (published 173), both inside the file's 10 % convention.
+        id: 'cz5core', name: 'Core (2× YF-77)', dryMass: 21600, propellantMass: 165300, engine: YF77,
         diameter: 5.0, length: 33, color: '#f4f4f4', accentColor: '#1f5fbf',
-        boosters: [{ id: 'k3', name: 'Kerolox boosters (2× YF-100 each)', count: 4, dryMass: 12000, propellantMass: 140000, engine: YF100_X2, diameter: 3.35, length: 26.3, sepDelay: 3, color: '#f4f4f4' }],
+        boosters: [{ id: 'k3', name: 'Kerolox boosters (2× YF-100 each)', count: 4, dryMass: 12000, propellantMass: 144600, engine: YF100_X2, diameter: 3.35, length: 26.3, sepDelay: 3, color: '#f4f4f4' }],
       },
       { id: 'cz5s2', name: 'Second stage (2× YF-75D)', dryMass: 5500, propellantMass: 25000, engine: YF75D_X2, diameter: 5.0, length: 12, restartable: true, sepDelay: 2, ignitionDelay: 4, color: '#f4f4f4' },
     ],

@@ -17,6 +17,22 @@ export interface EngineSpec {
   minThrottle?: number;
   /** Solid motor: cannot be shut down or throttled */
   solid?: boolean;
+  /**
+   * Solid motors: published peak thrust / mean thrust. The mean thrust is what
+   * `thrustVac` carries (so that propellant / mass flow reproduces the published
+   * burn time), and this is the head of the regressive profile the simulation
+   * flies on top of it — P120C 4 323/2 846 = 1.52, SRB-A 1.22, Zefiro 40 1.16.
+   * Default 1.2, the value every solid used before the field existed.
+   */
+  peakFactor?: number;
+  /**
+   * The engine has no sea-level operating point at all (an RL10 nozzle would not
+   * flow full at sea level) and never ignites inside the atmosphere. Its
+   * `thrustSL` / `ispSL` fields are placeholders, not data: with this flag set
+   * the model uses the vacuum figures everywhere and never lets the invented
+   * sea-level pair reach a trajectory.
+   */
+  vacuumOnly?: boolean;
 }
 
 export interface BoosterGroupSpec {
@@ -75,6 +91,28 @@ export interface FairingSpec {
   length: number;
   /** Jettison altitude, m */
   sepAltitude: number;
+  /**
+   * Published jettison time, s after liftoff, for an operator who releases the
+   * fairing on the mission timeline rather than on a heating placard.
+   *
+   * This replaces a per-vehicle `heatFluxLimit` (review follow-up). That field
+   * was documented as "the free-molecular heating rate the operator releases
+   * the fairing at", with the industry 0.1 BTU/ft²·s (1135 W/m²) as the fleet
+   * default — but the four values that shipped were Ariane 64 = 900, Vega-C =
+   * 75, Long March 2D = 50 and H-IIA 202 = 14 W/m². The last three are 15×, 23×
+   * and 81× below the standard criterion (about 0.0012 BTU/ft²·s for the
+   * H-IIA), which is not a placard any operator flies; they had been back-solved
+   * from the jettison times they were supposed to predict, and a physical
+   * criterion bent by 80× is a fitted constant wearing a physicist's coat.
+   *
+   * So the mechanism is modelled instead of the criterion being bent. These
+   * operators publish a jettison time and fly it, and docs/PHYSICS.md already
+   * conceded exactly that for Soyuz. A vehicle with no published callout keeps
+   * the physical placard — `FAIRING_HEAT_FLUX_LIMIT`, unmodified — and the
+   * altitude floor still applies to both, so a trajectory that is still deep in
+   * the atmosphere at its published time does not shed the fairing there.
+   */
+  sepTime?: number;
   color?: string;
 }
 

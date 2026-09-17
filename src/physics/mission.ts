@@ -66,6 +66,21 @@ export interface MissionPlan {
   /** whether the target inclination is directly reachable from the site */
   inclinationReachable: boolean;
   dvEstimateBurns: number;
+  /**
+   * Ideal delta-v the stages that have to fly the ascent have, minus what the
+   * MISSION's own orbit costs them, m/s — see `ascentReaches` in `planMission`
+   * for the formula and `ASCENT_LOSS_ALLOWANCE` for the loss term.
+   *
+   * Positive means the stack has the energy for the target on paper; the
+   * planner treats +150 m/s as the threshold at which it is willing to aim at
+   * it. It is reported on the plan so that a capability CLAIM — "this
+   * combination is beyond the vehicle, not beyond the guidance" — can be
+   * checked against the same arithmetic the planner used, instead of against a
+   * figure typed into a comment and never re-measured (review follow-up:
+   * tests/fleet-defaults.test.ts asserts every `BEYOND_CAPABILITY` row against
+   * this number).
+   */
+  ascentMargin: number;
 }
 
 /** ISS reference plane (approximate): RAAN at epoch and J2 regression. */
@@ -86,10 +101,29 @@ export function raanFromLtan(date: Date, ltanHours: number): number {
   return wrap2pi(alphaSun + (ltanHours - 12) * 15 * DEG);
 }
 
+/**
+ * Lowest inclination a site can fly directly, rad — the shared definition
+ * `resolveInclination` and `ascentInclinationFor` both use.
+ *
+ * They used to compute it separately, and differently: the `'site'` preset
+ * returned `site.minInclination` while the ascent forced
+ * `max(minInclination, |latitude| + 0.05°)`. Wherever a site's declared minimum
+ * is below its own latitude — nine of the twelve sites, by construction — the
+ * two disagreed permanently, so every `'site'` preset (which is what both the
+ * `leo` and `gto` presets use, i.e. the app's most common configurations)
+ * planned a spurious plane-change burn and showed a permanent "plane change
+ * required" warning (audit item B18). The epsilon is part of the definition:
+ * dropping it silences the burns but leaves `inclinationReachable` false,
+ * because `reachable` compares with a 1e-6 tolerance.
+ */
+export function minInclinationFor(site: SiteExtra): number {
+  return Math.max(site.minInclination * DEG, Math.abs(site.latitude) * DEG + 0.05 * DEG);
+}
+
 export function resolveInclination(orbit: OrbitSpec, site: SiteExtra): number {
   const a = R_EARTH + (orbit.perigee + orbit.apogee) / 2;
   if (orbit.inclination === 'sso') return sunSyncInclination(a, Math.abs(orbit.apogee - orbit.perigee) / (2 * a));
-  if (orbit.inclination === 'site') return site.minInclination * DEG;
+  if (orbit.inclination === 'site') return minInclinationFor(site);
   return orbit.inclination * DEG;
 }
 
@@ -116,19 +150,259 @@ export function ascentInclinationFor(target: ResolvedTarget, site: SiteExtra): {
   const lat = Math.abs(site.latitude) * DEG;
   const it = target.inclination;
   if (it <= Math.PI / 2) {
-    const minInc = Math.max(site.minInclination * DEG, lat + 0.05 * DEG);
+    const minInc = minInclinationFor(site);
     return { inc: Math.max(it, minInc), reachable: it >= minInc - 1e-6 };
   }
   const maxInc = Math.PI - lat - 0.05 * DEG;
   return { inc: Math.min(it, maxInc), reachable: it <= maxInc + 1e-6 };
 }
 
+/**
+ * Altitude the ascent aims its periapsis at, m.
+ *
+ * Audit item B17 asked for this to insert directly at `target.perigee` "when
+ * `target.perigee` ≲ 800 km AND a real delta-v / reachability check passes",
+ * taking the `VehicleSpec` so the check could be made, and for the `soyuz21a`
+ * exclusions to be deleted afterwards. That is **not** what is implemented and
+ * B17 is only partially closed (review follow-up): the ceiling is 300 km, the
+ * signature still takes only the target, and the 300–800 km band does not
+ * close — measured, a single continuous burn stops arriving on a circular orbit
+ * somewhere around 250 km, which is a property of the trajectory rather than of
+ * the delta-v. The reachability half of B17 *is* implemented, in `planMission`,
+ * where a single-shot stack is aimed at the mission's own orbit if `dvStrong`
+ * says it can get there. See `DIRECT_INSERTION_CEILING` for the measurement.
+ */
 export function insertionAltitudeFor(target: ResolvedTarget): number {
-  return target.perigee <= 300e3 ? target.perigee : 200e3;
+  return target.perigee <= DIRECT_INSERTION_CEILING ? target.perigee : 200e3;
 }
 
-/** Apsis error below which a correction burn is not worth flying, m. */
-export const APOAPSIS_TOLERANCE = 8e3;
+/**
+ * Ascent losses (gravity + drag + steering) a launcher spends getting to the
+ * perigee speed of its insertion orbit, m/s.
+ *
+ * Measured this wave across the sixteen 50 %-payload LEO rows that reach orbit
+ * (tests/probe, `state.losses` at insertion): 1 684 to 2 633 m/s, median
+ * 1 970 — gravity 889–1 454, steering 658–1 363, drag 9–114.
+ *
+ * The constant is 1 750: the low end of that spread, not the middle, and the
+ * asymmetry is deliberate. The decision it feeds is "aim at the transfer
+ * ellipse or at the parking orbit", and a stack that aims at the ellipse and
+ * falls a little short is picked up by the re-planner and the following burns,
+ * while one that aims low leaves performance on the table on every flight.
+ *
+ * It used to be 1 450, which was below the measured spread entirely — i.e.
+ * exactly the figure the doc comment around it called the bug. That was
+ * defensible only while moving it cost accepted cases; re-measured after this
+ * wave's guidance fixes, 1 450, 1 750 and 1 850 all give the same 149 of 201
+ * fleet rows, so the number that matches the measurement is free and is the one
+ * that ships. The fleet gate quotes the same constant so the two cannot drift.
+ */
+export const ASCENT_LOSS_ALLOWANCE = 1750;
+
+/**
+ * Margin on top of `ASCENT_LOSS_ALLOWANCE` the planner wants before it aims an
+ * ascent at an orbit, m/s.
+ *
+ * It is also the line the fleet gate draws between "beyond this vehicle" and
+ * "the guidance lost it": a stack whose `MissionPlan.ascentMargin` is below
+ * this had no business reaching the orbit in the first place, and one whose
+ * margin is above it and which still ends up destroyed or short is a defect.
+ * Exported so that the gate cannot quote a different number from the planner.
+ */
+export const ASCENT_MARGIN_REQUIRED = 150;
+
+/**
+ * Apsis error the burn planner will fly a correction for, m.
+ *
+ * Bounded on BOTH sides against the acceptance band (audit items B5/B6): it has
+ * to be tighter than `apsisTolerance`, or a residual the mission is judged on
+ * would never be corrected, and it must not be so tight that a trim which
+ * cannot deliver that accuracy is re-planned forever — the old
+ * max(8 km, 1.8 % of the target apogee) was 9 km at a 500 km target, tighter
+ * than an apsis trim can hold, and 644 km at GTO, looser than the mission is
+ * judged on. 80 % of the acceptance band, capped at 150 km.
+ */
+export const apsisPlanTolerance = (h: number): number => Math.min(0.8 * Math.max(10e3, 0.02 * h), 150e3);
+
+// ---------------------------------------------------------------------------
+// Acceptance: is the orbit that was achieved the orbit that was asked for?
+// ---------------------------------------------------------------------------
+
+/**
+ * Two-sided acceptance band on an apsis, m: 10 km or 2 % of the target
+ * altitude, whichever is larger.
+ *
+ * Deliberately a *single* band for both apsides and for both circular and
+ * transfer targets. An earlier revision gave an elliptical target's perigee its
+ * own max(40 km, 15 %) band, which is 40 km at a 250 km GTO perigee against the
+ * few kilometres a real geostationary transfer injection holds (Arianespace and
+ * ULA both publish perigee dispersions of a handful of kilometres), and it was
+ * sized to the model's error rather than to the mission's requirement. A band
+ * that is widened until the measurement fits inside it has stopped being a test.
+ */
+export const apsisTolerance = (h: number): number => Math.max(10e3, 0.02 * h);
+
+/**
+ * Two-sided acceptance band on the PERIGEE of a transfer orbit, m.
+ *
+ * A geostationary transfer is the one case where the apsis the mission is
+ * judged on is not the one the ascent controls. The apogee is flown to by a
+ * burn at perigee and lands within a few tens of kilometres of 35 786 km; the
+ * perigee is simply wherever the vehicle was when its apogee reached the
+ * target, and nothing after that touches it — a trim at apogee moves it by a
+ * kilometre per 0.1 m/s, so correcting 12 km costs a whole 10½-hour revolution
+ * for an error the mission does not care about.
+ *
+ * Measured spread over the fleet this wave, every GTO row: −13 km to +11 km
+ * about the 250 km reference, which is the model's own insertion accuracy. The
+ * band is max(15 km, 5 %) — TWO-SIDED, so over-performing into a high perigee
+ * is as much a miss as under-performing, and 2.7× tighter than the max(40 km,
+ * 15 %) it replaces, which had been widened until the measurement fitted inside
+ * it. It is still looser than a real injection: Arianespace and ULA both quote
+ * GTO perigee dispersions of a few kilometres, so this is a recorded limitation
+ * of the model, not a target.
+ */
+export const transferPerigeeTolerance = (h: number): number => Math.max(15e3, 0.05 * h);
+
+/** The band an achieved apsis is judged against, m. */
+export function perigeeTolerance(target: ResolvedTarget): number {
+  const elliptical = target.apogee - target.perigee > 50e3;
+  return elliptical ? transferPerigeeTolerance(target.perigee) : apsisTolerance(target.perigee);
+}
+
+/** Acceptance band on inclination, rad. */
+export const INCLINATION_TOLERANCE = 0.3 * DEG;
+
+/**
+ * Acceptance band on RAAN, rad — only meaningful when the target constrains it.
+ * A 420 km circular orbit in the wrong plane is a failed ISS mission, but the
+ * plane the launcher can reach is set by the launch time, so the band is the
+ * ~1.5° a real rendezvous plane-matching allows for.
+ */
+export const RAAN_TOLERANCE = 1.5 * DEG;
+
+/**
+ * Plane error the burn planner will fly a correction for, rad.
+ *
+ * Derived from the acceptance band exactly the way `apsisPlanTolerance` is
+ * derived from `apsisTolerance`, and for the same reason: a plane error the
+ * mission is GRADED on must be inside the band a correction is PLANNED for, or
+ * a flight can end up to the acceptance limit off plane with no burn in the
+ * plan to fix it. Expressed as a fraction of `INCLINATION_TOLERANCE` rather
+ * than as its own number so the two cannot drift apart — this was a bare
+ * `0.2 * DEG` literal sitting just under a 0.3° acceptance band, with nothing
+ * tying the two together (review follow-up).
+ *
+ * Two thirds of the acceptance band — 0.2° against 0.3° — is the same trade the
+ * 0.8 above makes: tight enough that the planner reacts well before the mission
+ * would be judged to have missed, loose enough that a plane change no node burn
+ * can deliver is not planned and re-planned forever. It was a sixth of the band
+ * (0.05°) before this wave, which planned a plane change for errors an ascent
+ * cannot steer out and a node burn cannot close.
+ */
+export const PLANE_PLAN_TOLERANCE = (2 / 3) * INCLINATION_TOLERANCE;
+
+/**
+ * As `PLANE_PLAN_TOLERANCE`, for `replanBurns`: five sixths of the acceptance
+ * band. The re-planner runs on the orbit the ascent actually achieved, so it
+ * only has to decide whether the residual is worth another revolution.
+ */
+export const PLANE_REPLAN_TOLERANCE = (5 / 6) * INCLINATION_TOLERANCE;
+
+/** The orbital parameters `orbitResiduals` grades. */
+export type OrbitMissParam = 'apogee' | 'perigee' | 'inclination' | 'raan';
+
+/**
+ * One parameter that is outside its acceptance band, as NUMBERS.
+ *
+ * This used to be a pre-joined English sentence (`apogee 480 vs 420 km`,
+ * `inclination 0.42° off`) built inside the physics module and shipped through
+ * the event stream as an `evt.offTargetOrbit` parameter (review follow-up).
+ * That broke the architecture contract twice over: physics is not allowed to
+ * produce user-visible strings, and the string was English in an application
+ * that renders its events in en, ru and th — no dictionary declared the
+ * placeholder, so the clause was dead payload that would have shown up as an
+ * English fragment inside a Russian or Thai sentence the moment one did.
+ *
+ * The presentation layer already has everything it needs to write that
+ * sentence: `evt.offTargetOrbit` carries the achieved `ap` / `pe` / `inc` /
+ * `raan`, and `sim.plan.target` carries what they were aimed at.
+ *
+ * `achieved` and `target` are metres for the two apsides and degrees for the
+ * two angles.
+ */
+export interface OrbitMiss {
+  param: OrbitMissParam;
+  achieved: number;
+  target: number;
+}
+
+export interface OrbitResiduals {
+  /** signed errors: achieved − target */
+  apogee: number;
+  perigee: number;
+  /** deg */
+  inclination: number;
+  /** deg, or null when the target does not constrain RAAN */
+  raan: number | null;
+  onTarget: boolean;
+  /** the parameters that are outside their band, as numbers — never as prose */
+  misses: OrbitMiss[];
+}
+
+/**
+ * Compare an achieved orbit with the mission's target.
+ *
+ * This is the acceptance test the simulation itself applies before it declares
+ * `evt.targetOrbit`. Before it existed the event was emitted unconditionally
+ * from four call sites (audit item B5) and the de-facto criterion was whatever
+ * `planBurns` happened to consider worth a correction burn — a one-sided,
+ * uncapped band that let a 345 × 35 737 km orbit and a 0.25° plane error be
+ * reported to the user as "target orbit achieved".
+ *
+ * `bandScale` narrows the apsis bands for a caller that has to decide something
+ * stricter than acceptance. The only one is `Simulation.singleShotCutoff`,
+ * which asks "is the orbit already the mission's?" of a stage it can never
+ * relight: answering that at the EDGE of the acceptance band stops the burn the
+ * first instant the orbit is barely legal, which is how Soyuz-2.1a's flagship
+ * direct insertion came out 9.6 km inside a 10 km band (review follow-up). It
+ * does not widen: `bandScale > 1` would loosen acceptance and no caller passes
+ * it.
+ */
+export function orbitResiduals(
+  target: ResolvedTarget,
+  el: { periapsisAlt: number; apoapsisAlt: number; i: number; raan: number; e: number },
+  checkRaan = false,
+  bandScale = 1,
+): OrbitResiduals {
+  const misses: OrbitMiss[] = [];
+  const dAp = (isFinite(el.apoapsisAlt) ? el.apoapsisAlt : Infinity) - target.apogee;
+  const dPe = el.periapsisAlt - target.perigee;
+  const dInc = (el.i - target.inclination) / DEG;
+  const apTol = bandScale * apsisTolerance(target.apogee);
+  const peTol = bandScale * perigeeTolerance(target);
+  if (!(Math.abs(dAp) <= apTol)) misses.push({ param: 'apogee', achieved: el.apoapsisAlt, target: target.apogee });
+  if (!(Math.abs(dPe) <= peTol)) misses.push({ param: 'perigee', achieved: el.periapsisAlt, target: target.perigee });
+  if (!(Math.abs(dInc) <= INCLINATION_TOLERANCE / DEG)) {
+    misses.push({ param: 'inclination', achieved: el.i / DEG, target: target.inclination / DEG });
+  }
+  // RAAN is a LAUNCH WINDOW property, not a guidance one: the plane an ascent
+  // reaches is fixed by the moment of liftoff, and nothing in the burn plan
+  // rotates it (a RAAN change at these altitudes costs kilometres per second).
+  // So it is reported always and *graded* only when the mission was launched
+  // into a window that could reach the target plane in the first place —
+  // `checkRaan`, which `Simulation` derives from `plan.raanExpected`. Grading it
+  // unconditionally would fail every flight launched off-window for something
+  // the vehicle was never asked to fix.
+  let dRaan: number | null = null;
+  if (target.raan !== null) {
+    dRaan = wrapPi(el.raan - target.raan) / DEG;
+    if (checkRaan && Math.abs(dRaan) > RAAN_TOLERANCE / DEG) {
+      misses.push({ param: 'raan', achieved: el.raan / DEG, target: target.raan / DEG });
+    }
+  }
+  return { apogee: dAp, perigee: dPe, inclination: dInc, raan: dRaan, onTarget: misses.length === 0, misses };
+}
 
 /**
  * Highest apoapsis a launcher will fly straight out of the ascent instead of
@@ -137,11 +411,32 @@ export const APOAPSIS_TOLERANCE = 8e3;
 export const DIRECT_APOAPSIS_CAP = 2000e3;
 
 /**
- * Highest circular orbit the ascent is aimed straight at when nothing can burn
- * after cut-off, m. A stage that burns continuously into a circular orbit much
- * above this arrives with its apoapsis already past the target (measured, see
- * the note in `planMission`), so above it the launcher is aimed at a transfer
- * orbit instead.
+ * Highest orbit the ascent is aimed straight at when nothing can burn after
+ * cut-off, m.
+ *
+ * Every launcher without a restart does exactly this in reality — one burn,
+ * cut-off on the mission orbit — but only up to the altitude a continuous burn
+ * can actually ARRIVE at. That is not a delta-v question and the delta-v test
+ * below cannot answer it: the stage has to reach the target altitude with its
+ * horizontal speed still short of orbital, and once it reaches orbital speed
+ * lower down, every further second of thrust raises the apoapsis instead of the
+ * vehicle.
+ *
+ * The grid behind the 300 km figure is measured, and it is measured in exactly
+ * ONE place: the `single-shot direct insertion` section of
+ * tests/fleet-defaults.test.ts. It used to be quoted here as well, and the two
+ * copies disagreed by 31 000 km of apoapsis on the 300 km row because this one
+ * was never re-measured after the guidance changed under it (review follow-up).
+ * A constant whose justification is a measurement should point at the
+ * measurement, not carry a snapshot of it, so that is what this does.
+ *
+ * The shape of the result is the part that belongs here: 200 km closes, 250 km
+ * is where the profile stops closing, 300 km is well past it. Above the
+ * ceiling the launcher is aimed at the transfer orbit it CAN fly accurately
+ * (200 × target), reaches it with propellant to spare and ends `off target`
+ * with the perigee low — which is what such a stack does in reality, and why
+ * the real vehicles fly a Fregat, a Briz-M or a vernier phase this model does
+ * not have.
  */
 export const DIRECT_INSERTION_CEILING = 300e3;
 
@@ -159,7 +454,7 @@ export function insertionApoapsisFor(target: ResolvedTarget, hIns: number): numb
  * a retrograde impulse, which is why the burn kind is `raiseApoapsis` in both
  * cases.
  */
-export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: number, haIns = hIns, incTol = 0.05 * DEG): BurnPlan[] {
+export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: number, haIns = hIns, incTol = PLANE_PLAN_TOLERANCE): BurnPlan[] {
   const burns: BurnPlan[] = [];
   const rIns = R_EARTH + hIns;
   const rA = R_EARTH + target.apogee;
@@ -176,7 +471,7 @@ export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: numbe
   // 10 km): chasing a smaller error costs more than it buys and, on a nearly
   // circular orbit, there is no well-defined periapsis to burn at.
   const apoMismatch = target.apogee - haIns;
-  if (Math.abs(apoMismatch) > Math.max(APOAPSIS_TOLERANCE, 0.018 * target.apogee)) {
+  if (Math.abs(apoMismatch) > apsisPlanTolerance(target.apogee)) {
     const aT = (rIns + rA) / 2;
     const dv = Math.abs(visViva(rIns, aT) - visViva(rIns, aIns));
     burns.push({
@@ -192,8 +487,16 @@ export function planBurns(target: ResolvedTarget, ascentInc: number, hIns: numbe
   // the burn is flown at the apoapsis — for a correction the target tolerance
   // does not ask for, which is how a mission that inserted on target ended up
   // deploying its payload 45 minutes later than it had to.
-  const peTol = Math.max(APOAPSIS_TOLERANCE, 0.018 * target.perigee);
-  if (target.perigee > hIns + peTol || needPlane) {
+  // TWO-SIDED (audit item B5): an insertion whose perigee overshot is as much a
+  // miss as one that fell short, and `desiredVelocity` has always been able to
+  // fly the correction — it is the same burn at the apoapsis with a retrograde
+  // impulse. The one-sided test was why every GTO mission in the fleet could
+  // come out with a perigee up to 95 km high and still be reported on target.
+  // The planner's band is 80 % of the band the mission is judged on, so a
+  // residual that matters is always corrected and one that does not is never
+  // chased round another revolution.
+  const peTol = 0.8 * perigeeTolerance(target);
+  if (Math.abs(target.perigee - hIns) > peTol || needPlane) {
     const aF = (rApo + rP) / 2;
     const v2 = visViva(rApo, aF);
     const di = target.inclination - ascentInc;
@@ -222,7 +525,7 @@ export function replanBurns(target: ResolvedTarget, el: { periapsisAlt: number; 
   // worth a burn — and near the equator the closest reachable plane through the
   // current position may not even be the target inclination, so such a burn
   // would be a no-op that the re-planner then schedules again forever.
-  return planBurns(target, el.i, el.periapsisAlt, Math.max(el.periapsisAlt, el.apoapsisAlt), 0.25 * DEG);
+  return planBurns(target, el.i, el.periapsisAlt, Math.max(el.periapsisAlt, el.apoapsisAlt), PLANE_REPLAN_TOLERANCE);
 }
 
 /**
@@ -290,14 +593,31 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const dvStrong = new VehicleModel(strongSpec, payload + carried, cfg.boosterRecovery).deltaVRemaining();
   const vRot = OMEGA_EARTH * R_EARTH * Math.cos(lat) * Math.sin(azimuthInertial);
   /**
-   * Whether those stages can fly an ascent straight into the orbit h × ha.
-   * Ideal delta-v needed = perigee speed + typical ascent losses (gravity, drag,
-   * steering: 1450 m/s) − the Earth-rotation credit + 150 m/s of margin.
+   * Ideal delta-v an ascent straight into the orbit h × ha costs these stages:
+   * the perigee speed of that orbit + typical ascent losses − the
+   * Earth-rotation credit.
+   *
+   * The loss allowance is `ASCENT_LOSS_ALLOWANCE`, the low end of the
+   * 1 684–2 633 m/s the fleet actually spends (see its own doc comment for the
+   * measurement, for the value, and for why the flat 1 450 m/s it replaces was
+   * wrong — the number is deliberately not repeated here, because a figure
+   * typed next to the constant it copies is a figure that will be left behind
+   * when the constant moves).
    */
-  const ascentReaches = (h: number, ha: number): boolean => {
+  const ascentCost = (h: number, ha: number): number => {
     const rIns = R_EARTH + h;
-    return dvStrong >= visViva(rIns, (rIns + R_EARTH + ha) / 2) + 1450 - vRot + 150;
+    return visViva(rIns, (rIns + R_EARTH + ha) / 2) + ASCENT_LOSS_ALLOWANCE - vRot;
   };
+  /**
+   * Whether those stages can fly that ascent, with `ASCENT_MARGIN_REQUIRED` of
+   * margin on top.
+   *
+   * Under-estimating the cost is not symmetric: aiming a stack at an ellipse it
+   * cannot reach ends the flight suborbital, where the circular parking orbit
+   * it could have reached would have been a mission.
+   */
+  const ascentReaches = (h: number, ha: number): boolean =>
+    dvStrong - ascentCost(h, ha) >= ASCENT_MARGIN_REQUIRED;
 
   let insertionAltitude = Math.max(parkingOverride, insertionAltitudeFor(target));
   // The ascent flies straight into the transfer ellipse whose apogee is the
@@ -313,9 +633,19 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // where the parking orbit would have been reached and the remaining burns
   // (or the spacecraft's own engine) would have raised it. Soyuz-2.1a with a
   // crew ship to the ISS is exactly that case.
+  //
+  // A CREWED launch is the exception: it is flown into a low circular parking
+  // orbit, not a transfer ellipse, because the crew's abort options depend on
+  // the orbit being one they can stay in. Soyuz MS inserts at 200 × 240 km and
+  // the spacecraft raises itself to the station over the following orbits; the
+  // launcher's own margin is not spent shaping a transfer. Without this the
+  // corrected delta-v accounting (audit item B13, which lifts every
+  // booster-equipped launcher by 5–19 %) flips the R-7 onto a 200 × 417 km
+  // ellipse — more efficient on paper, and not a crewed profile.
+  const crewed = satelliteById(cfg.satelliteId).crewed === true;
   const haCandidate = insertionApoapsisFor(target, insertionAltitude);
   let insertionApoapsis = insertionAltitude;
-  if (haCandidate > insertionAltitude + 1e3 && ascentReaches(insertionAltitude, haCandidate)) {
+  if (!crewed && haCandidate > insertionAltitude + 1e3 && ascentReaches(insertionAltitude, haCandidate)) {
     insertionApoapsis = haCandidate;
   }
   // Single-shot stack: nothing can light an engine after the ascent cuts off,
@@ -326,24 +656,18 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // directly it is aimed at the parking orbit it can reach, which at least
   // leaves the payload in a stable orbit rather than in the sea.
   // Single-shot stack: nothing can light an engine after the ascent cuts off,
-  // so a "parking orbit" is not a parking orbit — it is the final orbit, and
-  // the apoapsis cap above (which exists so that a kick stage is handed a
-  // sensible transfer) would strand the payload at 2000 km. Aim the ascent at
-  // the target apoapsis instead, when the stack has the delta-v for it.
-  //
-  // The perigee is *not* raised to match a high target the same way: a stage
-  // that burns continuously into a circular orbit well above the natural
-  // insertion altitude arrives with its apoapsis already past the target.
-  // Measured with Soyuz-2.1a + an inert payload, which is the only stack in
-  // the fleet without a restart: aiming it straight at 500 × 500 km inserts at
-  // 497 × 2474 km, and at 420 × 420 km it inserts at 417 × 441 km. Above
-  // `DIRECT_INSERTION_CEILING` the launcher is therefore left aiming at the
-  // transfer orbit it can fly accurately, and the mission ends `off target`
-  // with the perigee low — which is what such a stack really does.
+  // so a "parking orbit" is not a parking orbit — it is the final orbit. Both
+  // the 200 km insertion altitude and the 2000 km apoapsis cap exist to hand a
+  // restartable stage a sensible transfer; applied to a stack with no restart
+  // they strand the payload. So the ascent is aimed at the mission's own orbit,
+  // perigee AND apogee, exactly as a real single-burn direct insertion is
+  // (Soyuz-2.1a, Long March 2D). The same ideal-delta-v test as above decides:
+  // a stack that cannot reach the target directly is aimed at the parking orbit
+  // it can reach, which at least leaves the payload in a stable orbit.
   if (!restartable && parkingOverride <= 0 && target.perigee <= DIRECT_INSERTION_CEILING) {
     const hFinal = target.perigee;
     const haFinal = Math.max(hFinal, target.apogee);
-    if (haFinal > insertionApoapsis + 1e3 && ascentReaches(hFinal, haFinal)) {
+    if (ascentReaches(hFinal, haFinal)) {
       insertionAltitude = hFinal;
       insertionApoapsis = haFinal;
     }
@@ -357,6 +681,10 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     planeChangeDeg: Math.abs(target.inclination - ascentInclination) / DEG,
     inclinationReachable: reachable,
     dvEstimateBurns: burns.reduce((s, b) => s + b.dvEstimate, 0),
+    // The same arithmetic as `ascentReaches`, evaluated against the MISSION's
+    // own orbit rather than against whatever the planner ended up aiming at:
+    // that is the question a capability claim asks.
+    ascentMargin: dvStrong - ascentCost(target.perigee, target.apogee),
   };
 }
 

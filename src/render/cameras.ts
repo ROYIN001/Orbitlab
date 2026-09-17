@@ -179,9 +179,19 @@ export class CameraController {
       camera.fov = 72;
       this.first = true;
     } else {
-      // space view: orbit around Earth centre, framing the vehicle against Earth
-      const R = earthRadius * this.spaceDist;
-      this.rv.copy(f.pos).sub(f.earthCenter).normalize();
+      // Space view: orbit around the Earth's centre, framing the vehicle
+      // against the planet.
+      //
+      // The orbit radius is set by `spaceDist` but floored above the vehicle's
+      // own altitude shell: a fixed multiple of the Earth's radius put the
+      // camera *inside* the orbit at the zoomed-in end, so zooming in on a
+      // 400 km pass swung the viewpoint under the vehicle instead of towards
+      // it. `SceneManager`'s marker sprite is what makes the vehicle itself
+      // visible at any of these distances.
+      const rVeh = this.rv.copy(f.pos).sub(f.earthCenter).length();
+      const alt = Math.max(0, rVeh - earthRadius);
+      const R = Math.max(earthRadius * this.spaceDist, rVeh + Math.max(150e3, alt * 0.45));
+      this.rv.normalize();
       this.e1.crossVectors(this.zUp, this.rv);
       if (this.e1.lengthSq() < 1e-12) this.e1.set(1, 0, 0);
       this.e1.normalize();
@@ -193,8 +203,9 @@ export class CameraController {
         .add(f.earthCenter);
       camera.position.copy(this.desired);
       camera.up.copy(this.zUp);
-      this.tmp.copy(f.pos).lerp(f.earthCenter, 0.32);
-      camera.lookAt(this.tmp);
+      // Look at the vehicle, not at a point a third of the way to the Earth's
+      // centre: the tracked object was never even in the middle of the frame.
+      camera.lookAt(f.pos);
       camera.fov = 45;
       this.first = true;
     }

@@ -6,7 +6,7 @@
  */
 import * as THREE from 'three';
 import type { SatelliteSpec } from '../types';
-import { clamp01, hash11, smoothstep } from './noise';
+import { clamp01, smoothstep } from './noise';
 
 export interface SatelliteView {
   group: THREE.Group;
@@ -21,6 +21,19 @@ interface Hinge {
   from: number;
   to: number;
   /** progress window within the deployment */
+  t0: number;
+  t1: number;
+}
+
+/**
+ * A part that travels rather than rotates: a CubeSat leaving its deployer, a
+ * Starlink plate lifting off the stack. Expressed along the part's own +Y, the
+ * stack axis, so it works whatever azimuth the part is mounted at.
+ */
+interface Slide {
+  pivot: THREE.Object3D;
+  from: number;
+  to: number;
   t0: number;
   t1: number;
 }
@@ -51,6 +64,7 @@ function solarWing(parent: THREE.Group, hinges: Hinge[], mats: { panel: THREE.Ma
 export function buildSatellite(spec: SatelliteSpec): SatelliteView {
   const g = new THREE.Group();
   const hinges: Hinge[] = [];
+  const slides: Slide[] = [];
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4b048, metalness: 0.55, roughness: 0.35 });
   const foil = new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.8, roughness: 0.25 });
   const white = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.6, metalness: 0.05 });
@@ -114,35 +128,108 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       break;
     }
     case 'cubesats': {
-      g.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), dark));
+      // An ESPA-class rideshare dispenser, not a plain box: an octagonal
+      // carrier ring on the separation system, spring-loaded tube deployers
+      // bolted around it with their doors hinged open, and the CubeSats
+      // themselves sliding out of the tubes with their panels unfolding.
+      const ringH = h * 0.42;
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.5, w * 0.52, ringH, 8), foil);
+      ring.position.y = -h * 0.12;
+      g.add(ring);
+      // separation system: a narrower collar under the ring, on the stage side
+      const collar = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.3, w * 0.3, h * 0.12, 16), dark);
+      collar.position.y = -h * 0.12 - ringH / 2 - h * 0.06;
+      g.add(collar);
+      // avionics boxes and the harness raceway on the ring's flats
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + Math.PI / 8;
+        const boxM = new THREE.Mesh(new THREE.BoxGeometry(w * 0.22, ringH * 0.5, w * 0.12), dark);
+        boxM.position.set(Math.cos(a) * w * 0.52, -h * 0.12, Math.sin(a) * w * 0.52);
+        boxM.rotation.y = -a;
+        g.add(boxM);
+      }
+      const tubeL = h * 0.34;
       const cubes: THREE.Group[] = [];
-      for (let i = 0; i < 8; i++) {
+      const doors: THREE.Group[] = [];
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const cx = Math.cos(a) * w * 0.44, cz = Math.sin(a) * w * 0.44;
+        // the deployer tube: a 3U rail box lying along the ring's axis
+        const tube = new THREE.Mesh(new THREE.BoxGeometry(w * 0.2, tubeL, w * 0.2), dark);
+        tube.position.set(cx, h * 0.16, cz);
+        tube.rotation.y = -a;
+        g.add(tube);
+        // hinged door at the muzzle
+        const doorPivot = new THREE.Group();
+        doorPivot.position.set(cx, h * 0.16 + tubeL / 2, cz);
+        doorPivot.rotation.y = -a;
+        const door = new THREE.Mesh(new THREE.BoxGeometry(w * 0.21, 0.03, w * 0.21), gold);
+        door.position.set(w * 0.105, 0.015, 0);
+        doorPivot.add(door);
+        g.add(doorPivot);
+        doors.push(doorPivot);
+        // the satellite inside, on its rails
         const holder = new THREE.Group();
-        const cube = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 0.34), i % 2 ? gold : white);
-        cube.position.set(0, 0, 0.3 + hash11(i * 3.3) * 0.2);
-        holder.add(cube);
-        holder.position.set(((i % 4) - 1.5) * w * 0.4, ((i < 4 ? 1 : -1) * h) / 5, d * 0.45);
+        holder.position.set(cx, h * 0.16, cz);
+        holder.rotation.y = -a;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, tubeL * 0.78, w * 0.15), i % 2 ? white : foil);
+        holder.add(body);
+        // a deployable panel on each side, folded flat against the bus
+        for (const s of [1, -1] as const) {
+          const wing = new THREE.Group();
+          wing.position.set(s * w * 0.075, 0, 0);
+          const p = new THREE.Mesh(new THREE.BoxGeometry(w * 0.15, tubeL * 0.7, 0.02), panel);
+          p.position.set(s * w * 0.075, 0, 0);
+          wing.add(p);
+          holder.add(wing);
+          hinges.push({ pivot: wing, axis: 'y', from: -s * Math.PI * 0.5, to: 0, t0: 0.62 + i * 0.03, t1: 0.95 });
+        }
         g.add(holder);
         cubes.push(holder);
       }
+      for (let i = 0; i < doors.length; i++) {
+        // three applies an 'XYZ' Euler as Rx·Ry·Rz, so the Z hinge is taken in
+        // the tube's own frame and only then swung round to its azimuth
+        hinges.push({ pivot: doors[i], axis: 'z', from: 0, to: 1.9, t0: 0.05 + i * 0.03, t1: 0.3 + i * 0.03 });
+      }
+      // the springs push them out along the tube axis, one tube at a time
       for (let i = 0; i < cubes.length; i++) {
-        hinges.push({ pivot: cubes[i], axis: 'y', from: 0, to: (hash11(i * 7.1) - 0.5) * 1.2, t0: 0.2 + i * 0.05, t1: 0.7 + i * 0.03 });
+        slides.push({ pivot: cubes[i], from: h * 0.16, to: h * 0.16 + tubeL * (1.4 + 0.5 * i), t0: 0.3 + i * 0.05, t1: 0.78 + i * 0.035 });
       }
       break;
     }
     case 'starlink': {
-      for (let i = 0; i < 10; i++) {
-        const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.22, d), i % 2 ? white : dark);
-        plate.position.y = -h / 2 + 0.2 + i * (h / 10);
-        g.add(plate);
+      // A flat-pack stack that actually flies apart. The real separation has no
+      // dispenser at all: the stage rolls and the satellites drift off the
+      // tension rods in a line, each unfolding its own array a moment later.
+      const N = 10;
+      const pitch = h / N;
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, h * 1.02, 8), dark);
+      rod.position.set(w * 0.42, 0, 0);
+      g.add(rod);
+      for (let i = 0; i < N; i++) {
+        const sat = new THREE.Group();
+        const y0 = -h / 2 + 0.2 + i * pitch;
+        sat.position.y = y0;
+        const plate = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, d), i % 2 ? white : dark);
+        sat.add(plate);
+        // phased-array antennas on the underside of each satellite
+        const ant = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 0.05, d * 0.7), foil);
+        ant.position.y = -0.14;
+        sat.add(ant);
+        // its own solar array, stowed flat along the plate
+        const arrayG = new THREE.Group();
+        const arr = new THREE.Mesh(new THREE.BoxGeometry(w * 0.92, 0.03, d * 2.6), panel);
+        arr.position.z = d * 1.4;
+        arrayG.add(arr);
+        sat.add(arrayG);
+        g.add(sat);
+        hinges.push({ pivot: arrayG, axis: 'x', from: -Math.PI * 0.5, to: 0, t0: 0.45 + i * 0.045, t1: 0.9 + i * 0.008 });
+        // the stack fans out along its own axis: the top satellite leaves
+        // first and travels furthest, so the line opens rather than expanding
+        // symmetrically about the middle
+        slides.push({ pivot: sat, from: y0, to: y0 + pitch * 2.6 * (i / (N - 1)) * 1.6, t0: 0.12, t1: 0.75 });
       }
-      const arrayG = new THREE.Group();
-      arrayG.position.set(0, h / 2, 0);
-      const arr = new THREE.Mesh(new THREE.BoxGeometry(w * 0.95, 0.04, d * 3.2), panel);
-      arr.position.z = d * 1.6;
-      arrayG.add(arr);
-      g.add(arrayG);
-      hinges.push({ pivot: arrayG, axis: 'x', from: -Math.PI * 0.5, to: 0, t0: 0.25, t1: 0.9 });
       break;
     }
     case 'crew': {
@@ -170,6 +257,10 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       if (hg.axis === 'x') hg.pivot.rotation.x = a;
       else if (hg.axis === 'y') hg.pivot.rotation.y = a;
       else hg.pivot.rotation.z = a;
+    }
+    for (const sl of slides) {
+      const f = smoothstep(sl.t0, sl.t1, q);
+      sl.pivot.position.y = sl.from + (sl.to - sl.from) * f;
     }
   };
   setDeploy(0);

@@ -12,7 +12,7 @@ import type { Vec3 } from '../physics/vec3';
 import type { VisualFrame } from '../physics/frame';
 import { R_EARTH } from '../physics/constants';
 import { skyState, type SkyState } from './sky';
-import { hash11 } from './noise';
+import { clamp01, hash11, smoothstep } from './noise';
 
 const EARTH_VERT = /* glsl */ `
   #include <common>
@@ -29,6 +29,26 @@ const EARTH_VERT = /* glsl */ `
     #include <logdepthbuf_vertex>
   }
 `;
+/*
+ * Both custom shaders end with the two body chunks three.js appends to every
+ * built-in material:
+ *
+ *   #include <tonemapping_fragment>   ACES filmic at `toneMappingExposure`
+ *   #include <colorspace_fragment>    linear -> sRGB for the output buffer
+ *
+ * Only the *body* chunks. three already injects `tonemapping_pars_fragment`
+ * and `colorspace_pars_fragment` into the prefix of every non-raw
+ * ShaderMaterial (WebGLProgram, prefixFragment), and neither has an include
+ * guard, so adding the pars chunks here would redeclare `toneMappingExposure`
+ * and redefine ACESFilmicToneMapping — a GLSL redefinition error that makes
+ * the planet disappear. `tonemapping_fragment` compiles to nothing when
+ * TONE_MAPPING is undefined, so this is safe whatever the renderer is set to.
+ *
+ * Every constant below is tuned for the *tone-mapped* pipeline: the encoder
+ * lifts the midtones hard (linear 0.05 leaves as 0.20, 0.30 as 0.66), so the
+ * night lights, the limb rim and the specular term are all a fraction of what
+ * they were when the shader wrote raw linear values into an sRGB buffer.
+ */
 const EARTH_FRAG = /* glsl */ `
   #include <common>
   #include <logdepthbuf_pars_fragment>
@@ -48,16 +68,21 @@ const EARTH_FRAG = /* glsl */ `
     float dayF = smoothstep(-0.12, 0.25, cosSun);
     vec3 day = texture2D(dayMap, vUv).rgb;
     vec3 night = texture2D(nightMap, vUv).rgb;
-    vec3 col = day * (0.12 + 1.0 * max(cosSun, 0.0));
-    col = mix(night * 1.4 + day * 0.03, col, dayF);
+    vec3 col = day * (0.09 + 0.95 * max(cosSun, 0.0));
+    col = mix(night * 0.55 + day * 0.012, col, dayF);
     float spec = texture2D(specMap, vUv).r;
     vec3 viewDir = normalize(camPos - vPosW);
     vec3 h = normalize(sunDir + viewDir);
-    float s = pow(max(dot(n, h), 0.0), 48.0) * spec * dayF * 0.7;
+    // Sun glint off water. Tighter and weaker than it was: tone mapping lifts
+    // it hard, and a broad pow-48 lobe at the old gain blew out into a haze
+    // blob over the ocean instead of reading as a glint.
+    float s = pow(max(dot(n, h), 0.0), 110.0) * spec * dayF * 0.30;
     col += vec3(s * 0.9, s * 0.95, s);
     float rim = pow(1.0 - max(dot(n, viewDir), 0.0), 4.5);
-    col += vec3(0.30, 0.55, 1.0) * rim * (0.26 * dayF + 0.03) * rimGain;
+    col += vec3(0.30, 0.55, 1.0) * rim * (0.14 * dayF + 0.008) * rimGain;
     gl_FragColor = vec4(col, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
   }
 `;
 const ATMO_VERT = /* glsl */ `
@@ -86,12 +111,23 @@ const ATMO_FRAG = /* glsl */ `
     vec3 n = normalize(vNormalW);
     vec3 viewDir = normalize(camPos - vPosW);
     float d = max(dot(n, viewDir), 0.0);
-    float band = smoothstep(0.0, 0.32, d) * (1.0 - smoothstep(0.32, 0.95, d));
+    // Brightest exactly at the silhouette, where the line of sight runs the
+    // longest way through the shell, and falling away towards the sub-camera
+    // point. The previous band peaked at d = 0.32 — about 70° in from the limb
+    // — which put a broad additive lobe in the middle of the sunlit disc; once
+    // the shader was tone-mapped that lobe blew out into a white blob sitting
+    // on the planet.
+    float band = pow(1.0 - d, 3.0);
     float lit = 0.2 + 0.8 * smoothstep(-0.25, 0.35, dot(n, sunDir));
     // warm scattering right at the terminator, cool blue elsewhere
     float sunset = smoothstep(-0.25, 0.05, dot(n, sunDir)) * (1.0 - smoothstep(0.05, 0.4, dot(n, sunDir)));
     vec3 col = mix(vec3(0.35, 0.6, 1.0), vec3(1.0, 0.55, 0.25), sunset * 0.8) * band * lit;
-    gl_FragColor = vec4(col * rimGain, band * lit * 0.85 * rimGain);
+    // additive rim: the alpha term is the blend weight, so the colour is
+    // tone-mapped and encoded first and only then scaled into the buffer
+    gl_FragColor = vec4(col * rimGain, 1.0);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    gl_FragColor.a = band * lit * 0.62 * rimGain;
   }
 `;
 
@@ -103,6 +139,54 @@ const ATMO_FRAG = /* glsl */ `
  */
 const FOG_OFF_NEAR = 1e9;
 const FOG_OFF_FAR = 2e9;
+
+/** Full-sun intensity of the key light (outside the Earth's shadow). */
+const SUN_INTENSITY = 3.3;
+
+/**
+ * Galactic north pole in equatorial (≈ ECI) coordinates: α = 192.86°,
+ * δ = +27.13°. The Milky Way is the great circle perpendicular to it, which is
+ * where the extra faint stars are packed.
+ */
+const GAL_POLE = new THREE.Vector3(-0.8677, -0.1978, 0.4560).normalize();
+
+const WHITE = new THREE.Color(1, 1, 1);
+/** warm bounce off soil and concrete at the pad */
+const TERRAIN_BOUNCE = new THREE.Color(0x6a5a46);
+/** Earth-shine: sunlight bounced off ocean and cloud, seen from orbit */
+const EARTH_BOUNCE = new THREE.Color(0x5a86c0);
+/** sunlight above the haze */
+const SUN_WHITE = new THREE.Color(0xfff4e0);
+/** sunlight through a long slant path near the horizon */
+const SUN_LOW = new THREE.Color(0xff9d5c);
+
+const STAR_VERT = /* glsl */ `
+  #include <common>
+  attribute vec3 aColor;
+  attribute float aSize;
+  varying vec3 vCol;
+  void main() {
+    vCol = aColor;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_PointSize = aSize;
+  }
+`;
+const STAR_FRAG = /* glsl */ `
+  #include <common>
+  uniform float uOpacity;
+  varying vec3 vCol;
+  void main() {
+    vec2 d = gl_PointCoord - vec2(0.5);
+    // Gaussian point spread instead of a hard square: a 1-pixel square is what
+    // made the old field read as graph paper rather than sky
+    float g = exp(-dot(d, d) * 17.0);
+    float a = g * uOpacity;
+    if (a < 0.006) discard;
+    gl_FragColor = vec4(vCol, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
 
 export interface EarthTextures {
   day: THREE.Texture;
@@ -123,9 +207,19 @@ export class SceneManager {
   readonly sun: THREE.DirectionalLight;
   readonly ambient: THREE.AmbientLight;
   readonly hemi: THREE.HemisphereLight;
+  /** Earth-shine fill from nadir, the only fill light there is in vacuum */
+  readonly albedo: THREE.DirectionalLight;
+  /** screen-space marker for the tracked vehicle when it is too small to see */
+  readonly marker: THREE.Sprite;
   private earthMat: THREE.ShaderMaterial;
   private atmoMat: THREE.ShaderMaterial;
-  private starsMat: THREE.PointsMaterial;
+  private starsMat: THREE.ShaderMaterial;
+  private markerMat: THREE.SpriteMaterial;
+  private markerTex: THREE.CanvasTexture;
+  private markerCanvas: HTMLCanvasElement;
+  private markerLabel = '';
+  /** viewport size in CSS pixels, kept for the marker's angular-size test */
+  private viewH = 1;
   /**
    * One Fog instance that stays attached to the scene for the whole flight.
    *
@@ -159,6 +253,15 @@ export class SceneManager {
   private envSky = new THREE.Color();
   private envHorizon = new THREE.Color();
   private envGround = new THREE.Color();
+  /** scratch for the light rebalance and the eclipse test (no per-frame allocation) */
+  private envBasis = new THREE.Matrix4();
+  private envX = new THREE.Vector3();
+  private envZ = new THREE.Vector3();
+  private envQuat = new THREE.Quaternion();
+  private hemiSky = new THREE.Color();
+  private hemiGround = new THREE.Color();
+  private perp = new THREE.Vector3();
+  private originV = new THREE.Vector3();
   origin: Vec3 = { x: 0, y: 0, z: 0 };
 
   constructor(canvas: HTMLCanvasElement, tex: EarthTextures) {
@@ -208,35 +311,12 @@ export class SceneManager {
     this.earthGroup.add(this.atmoMesh);
     this.scene.add(this.earthGroup);
 
-    // stars: fixed pseudo-random field, generated once at construction
-    const N = 3500;
-    const pos = new Float32Array(N * 3);
-    const col = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) {
-      // deterministic spiral distribution (no Math.random, so the sky is stable)
-      const u = -1 + (2 * i + 1) / N;
-      const ph = i * 2.39996323;
-      const rr = Math.sqrt(Math.max(0, 1 - u * u));
-      const R = 4e8;
-      pos[i * 3] = R * rr * Math.cos(ph);
-      pos[i * 3 + 1] = R * rr * Math.sin(ph);
-      pos[i * 3 + 2] = R * u;
-      const b = 0.45 + 0.55 * hash11(i * 1.37);
-      const tint = hash11(i * 3.91 + 7);
-      col[i * 3] = b * (tint < 0.25 ? 1.0 : 0.88);
-      col[i * 3 + 1] = b * 0.92;
-      col[i * 3 + 2] = b * (tint > 0.75 ? 1.0 : 0.9);
-    }
-    const sg = new THREE.BufferGeometry();
-    sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    sg.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    this.starsMat = new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 1, depthWrite: false, fog: false });
-    this.stars = new THREE.Points(sg, this.starsMat);
-    this.stars.frustumCulled = false;
+    this.stars = buildStarField();
+    this.starsMat = this.stars.material as THREE.ShaderMaterial;
     this.scene.add(this.stars);
 
     // lights
-    this.sun = new THREE.DirectionalLight(0xfff4e0, 3.3);
+    this.sun = new THREE.DirectionalLight(0xfff4e0, SUN_INTENSITY);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(1024, 1024);
     this.sun.shadow.bias = -0.0008;
@@ -249,6 +329,34 @@ export class SceneManager {
     this.scene.add(this.ambient);
     this.hemi = new THREE.HemisphereLight(0xa8c0e0, 0x6a5a46, 0.35);
     this.scene.add(this.hemi);
+    // Earth-shine: in vacuum the only fill is sunlight bounced off the planet,
+    // arriving from nadir and distinctly blue. Created here and never removed —
+    // the light count is part of every lit material's program cache key, so
+    // adding one mid-flight would recompile the whole scene.
+    this.albedo = new THREE.DirectionalLight(0x7ea8d8, 0);
+    this.scene.add(this.albedo);
+    this.scene.add(this.albedo.target);
+
+    // Space-view marker: the vehicle is ~0.03 px across from the default space
+    // camera, so beyond a few hundred km it is represented by a fixed-size
+    // sprite instead (see `updateMarker`).
+    this.markerCanvas = document.createElement('canvas');
+    this.markerCanvas.width = 320;
+    this.markerCanvas.height = 128;
+    this.markerTex = new THREE.CanvasTexture(this.markerCanvas);
+    this.markerTex.colorSpace = THREE.SRGBColorSpace;
+    this.drawMarker('');
+    // `depthTest: false` on purpose. The sprite is a flat quad at the
+    // vehicle's own depth, and from a few thousand kilometres away the Earth's
+    // near surface is *closer* than that plane over part of the quad — so with
+    // depth testing the marker was sliced off by the planet's bulge mid-word.
+    // It is a screen-space annotation; it always draws on top.
+    this.markerMat = new THREE.SpriteMaterial({ map: this.markerTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0, sizeAttenuation: false, fog: false });
+    this.marker = new THREE.Sprite(this.markerMat);
+    this.marker.renderOrder = 10;
+    this.marker.visible = false;
+    this.marker.frustumCulled = false;
+    this.scene.add(this.marker);
 
     // A tiny procedural sky/ground environment probe. Without one, every
     // metallic material (lattice towers, engine bells, Starship's steel) has
@@ -268,7 +376,7 @@ export class SceneManager {
     // its no-env variant and then recompile each material the first time it is
     // actually drawn — measured as a 13-14 ms hitch on the booster-separation
     // frame, when the debris materials first reach the renderer.
-    this.updateEnvironment(skyState(0.4, 0));
+    this.updateEnvironment(skyState(0.4, 0), 0.4);
   }
 
   /**
@@ -276,8 +384,11 @@ export class SceneManager {
    * The key is coarse (5 × 5 buckets) so a whole launch triggers a handful of
    * PMREM passes over a 64 × 32 source rather than one per frame.
    */
-  private updateEnvironment(sky: SkyState): void {
-    const key = Math.round(sky.dayFactor * 4) * 8 + Math.round(sky.groundFactor * 4);
+  private updateEnvironment(sky: SkyState, sunElev: number): void {
+    // The sun's *elevation* is part of the key, the azimuth never is: the probe
+    // is oriented so the sun always sits at u = 0.5 (see `orientEnvironment`).
+    const elevBucket = Math.round((Math.max(-1, Math.min(1, sunElev)) + 1) * 6);
+    const key = (Math.round(sky.dayFactor * 4) * 8 + Math.round(sky.groundFactor * 4)) * 16 + elevBucket;
     if (key === this.envKey) return;
     this.envKey = key;
     const g = this.envCanvas.getContext('2d')!;
@@ -292,6 +403,31 @@ export class SceneManager {
     grad.addColorStop(1, `#${ground.getHexString()}`);
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
+
+    // The sun itself. Without a bright, small highlight in the probe there is
+    // nothing for a metal to reflect but a flat gradient, and every metallic
+    // surface — engine bells, lattice towers, Starship's steel — renders as a
+    // dull, near-black shape. `equirectUv` maps a direction to
+    // u = atan2(z, x)/2π + 0.5, v = asin(y)/π + 0.5, and the canvas is uploaded
+    // flipped (flipY), so v = 1 is the top row.
+    const v = 0.5 + Math.asin(Math.max(-1, Math.min(1, sunElev))) / Math.PI;
+    const cx = W * 0.5;
+    const cy = (1 - v) * H;
+    const rad = W * 0.085;
+    const halo = g.createRadialGradient(cx, cy, 0, cx, cy, rad * 3.4);
+    halo.addColorStop(0, 'rgba(255,248,230,0.95)');
+    halo.addColorStop(0.16, 'rgba(255,236,196,0.55)');
+    halo.addColorStop(0.5, 'rgba(255,224,180,0.16)');
+    halo.addColorStop(1, 'rgba(255,220,170,0)');
+    g.fillStyle = halo;
+    g.beginPath();
+    g.arc(cx, cy, rad * 3.4, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#fffdf6';
+    g.beginPath();
+    g.arc(cx, cy, rad, 0, Math.PI * 2);
+    g.fill();
+
     this.envTex.needsUpdate = true;
     const rt = this.pmrem.fromEquirectangular(this.envTex);
     this.envRT?.dispose();
@@ -299,8 +435,132 @@ export class SceneManager {
     this.scene.environment = rt.texture;
   }
 
+  /**
+   * Rotate the environment probe so its +Y is the camera's local up and its +X
+   * is the horizontal direction of the sun.
+   *
+   * Without this the probe's sky/ground split sits on the world Y axis, which
+   * near a launch site is some arbitrary direction through the planet — a pad
+   * at 45° latitude reflected half sky and half dirt on every horizontal
+   * surface. Pinning the sun to a fixed azimuth in probe space is also what
+   * lets the probe be cached: only its elevation can change the image.
+   */
+  private orientEnvironment(up: THREE.Vector3, sd: THREE.Vector3): void {
+    this.envX.copy(sd).addScaledVector(up, -sd.dot(up));
+    if (this.envX.lengthSq() < 1e-8) this.envX.set(up.z, up.x, up.y).cross(up);
+    this.envX.normalize();
+    this.envZ.crossVectors(this.envX, up).normalize();
+    this.envBasis.makeBasis(this.envX, up, this.envZ);
+    this.envQuat.setFromRotationMatrix(this.envBasis);
+    this.scene.environmentRotation.setFromQuaternion(this.envQuat);
+  }
+
+  /** Repaint the marker sprite's canvas (only when the vehicle name changes). */
+  private drawMarker(label: string): void {
+    const c = this.markerCanvas;
+    const g = c.getContext('2d')!;
+    const W = c.width, H = c.height;
+    g.clearRect(0, 0, W, H);
+    const cx = W / 2, cy = H * 0.38, r = 26;
+    // Everything is drawn twice, dark then light. The marker has to stay
+    // legible against a black sky and against sunlit cloud in the same pass,
+    // and a single light stroke disappears over the second.
+    const ring = (): void => {
+      for (const a0 of [0.35, Math.PI - 0.35, Math.PI + 0.35, -0.35]) {
+        g.beginPath();
+        g.arc(cx, cy, r, a0, a0 + 0.9);
+        g.stroke();
+      }
+      for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+        g.beginPath();
+        g.moveTo(cx + Math.cos(a) * (r + 3), cy + Math.sin(a) * (r + 3));
+        g.lineTo(cx + Math.cos(a) * (r + 9), cy + Math.sin(a) * (r + 9));
+        g.stroke();
+      }
+    };
+    g.strokeStyle = 'rgba(0,0,0,0.5)';
+    g.lineWidth = 5.5;
+    ring();
+    g.strokeStyle = 'rgba(168,220,255,0.98)';
+    g.lineWidth = 2.4;
+    ring();
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    g.beginPath();
+    g.arc(cx, cy, 4.4, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = 'rgba(214,240,255,0.95)';
+    g.beginPath();
+    g.arc(cx, cy, 2.6, 0, Math.PI * 2);
+    g.fill();
+    if (label) {
+      // shrink to fit rather than clip: "Falcon 9 Block 5" and
+      // "Союз-2.1а" are very different widths at the same point size
+      let px = 17;
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      for (; px > 9; px--) {
+        g.font = `600 ${px}px "Helvetica Neue", Arial, sans-serif`;
+        if (g.measureText(label).width <= W - 16) break;
+      }
+      const ty = H * 0.80;
+      const tw = g.measureText(label).width;
+      // a dark plate behind the caption, so the name reads over white cloud
+      g.fillStyle = 'rgba(8,12,18,0.52)';
+      const bw = tw + 16, bh = px + 10;
+      const bx = cx - bw / 2, by = ty - bh / 2;
+      const rr = bh / 2;
+      g.beginPath();
+      g.moveTo(bx + rr, by);
+      g.arcTo(bx + bw, by, bx + bw, by + bh, rr);
+      g.arcTo(bx + bw, by + bh, bx, by + bh, rr);
+      g.arcTo(bx, by + bh, bx, by, rr);
+      g.arcTo(bx, by, bx + bw, by, rr);
+      g.closePath();
+      g.fill();
+      g.fillStyle = 'rgba(224,242,255,0.96)';
+      g.fillText(label, cx, ty);
+    }
+    this.markerLabel = label;
+    this.markerTex.needsUpdate = true;
+  }
+
+  /**
+   * Show the marker only once the vehicle itself has stopped being visible.
+   *
+   * A 70 m stack seen from the default space camera (~12 000 km away, 45° fov)
+   * subtends about 0.03 px, so the space view is otherwise an empty planet with
+   * coloured lines on it. The sprite has `sizeAttenuation = false`, which in
+   * three means a constant *angular* size, so its scale is set from the fov and
+   * the viewport height to land on a fixed number of pixels at any distance.
+   *
+   * @param vehicleSize longest dimension of the tracked object, m
+   */
+  private updateMarker(frame: VisualFrame, vehicleSize: number): void {
+    if (frame.vehicleName && frame.vehicleName !== this.markerLabel) this.drawMarker(frame.vehicleName);
+    const d = this.camera.position.length();
+    const halfFov = Math.tan((this.camera.fov * Math.PI) / 360);
+    // projected height of the vehicle, in CSS pixels
+    const px = d > 1 ? (vehicleSize / d / (2 * halfFov)) * this.viewH : 1e9;
+    const fade = 1 - smoothstep(6, 22, px);
+    const on = fade > 0.01 && !frame.destroyed && d > 1;
+    this.marker.visible = on;
+    if (!on) return;
+    this.markerMat.opacity = fade * 0.92;
+    // 96 px tall on screen, whatever the distance and whatever the fov is.
+    // The caption is about an eighth of the sprite, so anything much smaller
+    // renders the vehicle name at under ten pixels and it stops being readable.
+    const s = (96 / this.viewH) * 2 * halfFov;
+    this.marker.scale.set(s * (this.markerCanvas.width / this.markerCanvas.height), s, 1);
+  }
+
+  /** Repaint the marker with an explicit label (falls back to the frame's). */
+  setVehicleLabel(name: string): void {
+    if (name !== this.markerLabel) this.drawMarker(name);
+  }
+
   resize(w: number, h: number): void {
     this.renderer.setSize(w, h, false);
+    this.viewH = Math.max(1, h);
     this.camera.aspect = w / Math.max(1, h);
     this.camera.updateProjectionMatrix();
   }
@@ -320,8 +580,14 @@ export class SceneManager {
     this.shadowOn = enabled;
   }
 
-  /** Per-frame update of Earth orientation, sun direction, sky and exposure. */
-  update(frame: VisualFrame, sunDir: Vec3, cameraAltitude: number): void {
+  /**
+   * Per-frame update of Earth orientation, sun direction, sky and exposure.
+   *
+   * @param vehicleSize longest dimension of the tracked object, m — only the
+   *        space-view marker uses it, and only to decide when the real geometry
+   *        has become too small to see. The default is a mid-size launcher.
+   */
+  update(frame: VisualFrame, sunDir: Vec3, cameraAltitude: number, vehicleSize = 55): void {
     // Earth orientation: geometry is Y-up with the texture seam handled by the
     // SphereGeometry convention (u=0.5 at +X); rotate X by 90° so the pole is +Z,
     // then spin about Z by the sidereal angle.
@@ -345,18 +611,76 @@ export class SceneManager {
       this.camera.position.z + this.origin.z,
     );
     this.camUp.copy(camEci);
-    const sunElev = this.camUp.lengthSq() > 1 ? this.camUp.normalize().dot(sd) : 1;
+    // `camUp` becomes the local vertical for the hemisphere light, the
+    // environment probe and the Earth-shine fill, so it must be a unit vector
+    // even in the degenerate frame where the camera sits on the Earth's centre
+    if (this.camUp.lengthSq() <= 1) this.camUp.copy(this.zAxis);
+    const sunElev = this.camUp.normalize().dot(sd);
     const sky = skyState(sunElev, cameraAltitude);
-    this.updateEnvironment(sky);
+    this.updateEnvironment(sky, sunElev);
+    this.orientEnvironment(this.camUp, sd);
     this.renderer.setClearColor(sky.color, 1);
     this.renderer.toneMappingExposure = sky.exposure;
-    this.starsMat.opacity = sky.stars;
-    this.ambient.intensity = sky.ambient;
-    this.hemi.intensity = sky.hemi;
-    this.hemi.position.copy(sky.groundFactor > 0.5 ? this.camUp : sd);
+    this.starsMat.uniforms.uOpacity.value = sky.stars;
+    this.stars.visible = sky.stars > 0.004;
     const rim = 0.25 + 0.75 * (1 - sky.groundFactor);
     this.earthMat.uniforms.rimGain.value = rim;
     this.atmoMat.uniforms.rimGain.value = rim;
+
+    // ---------------------------------------------------------- eclipse
+    // A cylindrical shadow behind the Earth with a soft edge: `shadow` is 1 in
+    // full sun, 0 deep in the umbra. Crossing the 4 %-of-a-radius penumbra band
+    // takes about half a minute of orbital motion, which is what makes umbra
+    // entry read as a sunset rather than as a switch — no wall-clock ramp, so a
+    // replay at any warp reproduces it exactly. The same test also keeps a
+    // night launch dark, which is why it is applied on the pad too.
+    const o = this.originV.set(this.origin.x, this.origin.y, this.origin.z);
+    const along = o.dot(sd);
+    this.perp.copy(o).addScaledVector(sd, -along);
+    // Two soft edges, not one hard one. The radial term is the penumbra at the
+    // limb; the along-track term is what a point ON the surface crosses, and
+    // testing `along < 0` alone would switch the sun off the instant it sets —
+    // a visible pop on the pad. 6 % of a radius is roughly 3.4° of solar
+    // elevation, i.e. the length of a real sunset.
+    const behind = smoothstep(0, -R_EARTH * 0.06, along);
+    const radial = smoothstep(R_EARTH * 0.985, R_EARTH * 1.03, this.perp.length());
+    const shadow = o.lengthSq() < 1 ? 1 : 1 - behind * (1 - radial);
+    // Atmospheric extinction, which only exists while there is atmosphere
+    // between the camera and the sun: a low sun is both weaker and redder, and
+    // without this the vehicle on the pad is lit like noon under an orange sky.
+    const low = sky.groundFactor * (1 - sky.dayFactor);
+    this.sun.intensity = SUN_INTENSITY * shadow * (1 - 0.45 * low);
+    this.sun.color.copy(SUN_WHITE).lerp(SUN_LOW, low);
+
+    // ------------------------------------------------- fill-light balance
+    // How much of the sky the Earth covers from here, and how much of the disc
+    // is lit. At the pad both are 1; at GEO the planet is a small, mostly
+    // irrelevant lamp.
+    const rMag = Math.max(R_EARTH, o.length());
+    const earthArc = Math.asin(Math.min(1, R_EARTH / rMag)) / (Math.PI / 2);
+    const litDisc = clamp01(0.5 + 0.5 * (rMag > 1 ? o.dot(sd) / rMag : 1));
+    const earthFill = earthArc * (0.12 + 0.88 * litDisc);
+    const g = sky.groundFactor;
+    this.ambient.intensity = sky.ambient;
+    // The hemisphere axis is pinned to local up at every altitude. It used to
+    // snap from up to the sun direction as the ground factor crossed 0.5, i.e.
+    // a visible lighting pop at ~47 km, half way through the ascent.
+    this.hemi.position.copy(this.camUp);
+    this.hemi.intensity = sky.hemi * (g + (1 - g) * earthFill) * (0.25 + 0.75 * shadow);
+    // Desaturate the sky fill towards white so it lifts the shadowed side
+    // without repainting it: at full strength the blue drowns the liveries.
+    this.hemiSky.copy(sky.color).lerp(WHITE, 0.55).multiplyScalar(1.1);
+    this.hemi.color.copy(this.hemiSky);
+    // ...and cross-fade the bounce from terrain brown to Earth albedo blue,
+    // because in vacuum there is no ground below, only the planet.
+    this.hemiGround.copy(TERRAIN_BOUNCE).lerp(EARTH_BOUNCE, 1 - g);
+    this.hemi.groundColor.copy(this.hemiGround);
+    // Earth-shine proper: a directional fill arriving from nadir. Only in
+    // space — near the pad the hemisphere light is already the ground bounce.
+    this.albedo.position.copy(this.shadowPos).addScaledVector(this.camUp, -Math.max(2000, this.shadowRadius * 6));
+    this.albedo.target.position.copy(this.shadowPos);
+    this.albedo.target.updateMatrixWorld();
+    this.albedo.intensity = 0.75 * (1 - g) * earthFill;
 
     // Horizon haze near the pad only. The Fog object is never detached (see
     // the field comment): above the haze layer its distances are pushed out of
@@ -399,6 +723,7 @@ export class SceneManager {
       this.renderer.shadowMap.needsUpdate = true;
     }
     this.sun.target.updateMatrixWorld();
+    this.updateMarker(frame, vehicleSize);
   }
 
   render(): void {
@@ -475,6 +800,8 @@ export class SceneManager {
     this.earthMat.dispose();
     this.atmoMat.dispose();
     this.starsMat.dispose();
+    this.markerMat.dispose();
+    this.markerTex.dispose();
     this.earthMesh.geometry.dispose();
     this.atmoMesh.geometry.dispose();
     this.stars.geometry.dispose();
@@ -490,6 +817,76 @@ export class SceneManager {
     }
     this.scene.clear();
   }
+}
+
+/**
+ * Deterministic star field: a magnitude power law, per-star colour temperature
+ * and size, and a band of faint stars packed around the galactic equator that
+ * reads as the Milky Way without shipping a catalogue or a texture.
+ *
+ * Star counts roughly triple per magnitude step, so brightness is drawn as a
+ * high power of a uniform hash: a handful of first-magnitude stars, a few
+ * hundred you can pick out, and thousands at the threshold of visibility.
+ * Nothing here uses `Math.random`, so the sky is identical on every run.
+ */
+function buildStarField(): THREE.Points {
+  const FIELD = 3600;
+  const BAND = 2400;
+  const N = FIELD + BAND;
+  const R = 4e8;
+  const pos = new Float32Array(N * 3);
+  const col = new Float32Array(N * 3);
+  const size = new Float32Array(N);
+  // an orthonormal frame with the galactic pole as its axis, so the band stars
+  // can be generated directly in galactic latitude
+  const gz = GAL_POLE.clone();
+  const gx = new THREE.Vector3(0, 0, 1).cross(gz).normalize();
+  const gy = new THREE.Vector3().crossVectors(gz, gx).normalize();
+  const dir = new THREE.Vector3();
+  for (let i = 0; i < N; i++) {
+    if (i < FIELD) {
+      // Fibonacci sphere: an even all-sky spread with no clumping
+      const u = -1 + (2 * i + 1) / FIELD;
+      const ph = i * 2.39996323;
+      const rr = Math.sqrt(Math.max(0, 1 - u * u));
+      dir.set(rr * Math.cos(ph), rr * Math.sin(ph), u);
+    } else {
+      // galactic band: latitude concentrated within a few degrees of b = 0
+      const j = i - FIELD;
+      const lon = (j * 2.39996323) % (Math.PI * 2);
+      const s = hash11(j * 1.93 + 0.7) - 0.5;
+      const b = Math.sign(s) * Math.pow(Math.abs(s) * 2, 2.4) * 0.28;
+      const cb = Math.cos(b), sb = Math.sin(b);
+      dir.copy(gx).multiplyScalar(cb * Math.cos(lon))
+        .addScaledVector(gy, cb * Math.sin(lon))
+        .addScaledVector(gz, sb);
+    }
+    pos[i * 3] = R * dir.x;
+    pos[i * 3 + 1] = R * dir.y;
+    pos[i * 3 + 2] = R * dir.z;
+    // magnitude: few bright, many faint (band stars are unresolved, so dimmer)
+    const mag = Math.pow(hash11(i * 1.37 + 3.1), i < FIELD ? 4.2 : 6.0);
+    const b = (i < FIELD ? 0.10 : 0.05) + (i < FIELD ? 0.95 : 0.40) * mag;
+    // colour temperature: most stars are white-ish, a few red or blue
+    const tint = hash11(i * 3.91 + 7) * 2 - 1;
+    const warm = Math.max(0, tint), cool = Math.max(0, -tint);
+    col[i * 3] = b * (1 - 0.16 * cool);
+    col[i * 3 + 1] = b * (1 - 0.07 * cool - 0.10 * warm);
+    col[i * 3 + 2] = b * (1 - 0.34 * warm);
+    size[i] = 1.1 + 3.4 * Math.pow(mag, 0.8) * (i < FIELD ? 1 : 0.55);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+  geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+  const mat = new THREE.ShaderMaterial({
+    vertexShader: STAR_VERT, fragmentShader: STAR_FRAG,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    uniforms: { uOpacity: { value: 1 } },
+  });
+  const points = new THREE.Points(geo, mat);
+  points.frustumCulled = false;
+  return points;
 }
 
 export function loadEarthTextures(base: string): Promise<EarthTextures> {

@@ -34,8 +34,19 @@ const LAYERS: Layer[] = [
 const H_MAX_USSA = 86000;
 
 // Vallado exponential model: [base altitude km, density kg/m^3, scale height km]
+//
+// The 86 km row is NOT the published one. Vallado's table quotes 6.958e-6 with a
+// 5.5 km scale height, which is discontinuous at both ends of its own interval:
+// it is 5.1 % below the USSA-76 value the branch above hands over (6.95793e-6 at
+// 86 km) and decays to 3.190e-6 at 90 km where the next row starts at 3.396e-6 —
+// a 6.4 % density *inversion* in the middle of the decay band, i.e. drag with a
+// discontinuous, wrong-signed derivative (audit item B29). The row is re-derived
+// here so that it is continuous with both: base density = the USSA-76 value at
+// 86 km, scale height H = 4 km / ln(6.958e-6 / 3.396e-6) = 5.575 km, which lands
+// exactly on the 90 km row. Every other node in the table is continuous to
+// better than 0.04 % and is left as published.
 const EXP_TABLE: [number, number, number][] = [
-  [86, 6.6e-6, 5.5],
+  [86, 6.95793e-6, 5.575],
   [90, 3.396e-6, 5.382],
   [100, 5.297e-7, 5.877],
   [110, 9.661e-8, 7.263],
@@ -106,9 +117,10 @@ export function atmosphere(h: number): AtmoState {
     }
   }
   const rho = row[1] * Math.exp(-(hk - row[0]) / row[2]);
-  // Thermosphere temperature rises toward ~1000 K; only matters for Mach
-  // number bookkeeping, where density is negligible anyway.
-  const T = Math.min(1000, 186.87 + (hk - 86) * 8);
+  // USSA-76 holds the mesopause temperature at 186.87 K from 86 to 91 km before
+  // the thermosphere starts; above that it rises toward ~1000 K. Only matters
+  // for Mach-number bookkeeping, where density is negligible anyway.
+  const T = Math.min(1000, 186.87 + Math.max(0, hk - 91) * 8);
   const p = rho * R_AIR * T;
   const a = Math.sqrt(GAMMA * R_AIR * T);
   return { T, p, rho, a };

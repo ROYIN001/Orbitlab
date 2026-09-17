@@ -17,15 +17,29 @@ import { GroundSmoke, PadGlow } from './smoke';
 import { disposeObject } from './dispose';
 import { clamp01, smoothstep } from './noise';
 
-/** slant range at which the local terrain patch starts to dissolve, m */
-const TERRAIN_NEAR = 22e3;
-/** slant range at which it has gone completely, m */
-const TERRAIN_FAR = 46e3;
+/**
+ * Slant range over which the local terrain patch dissolves into the globe.
+ *
+ * The patch is 13 km of shaded relief with a 90 km apron ring, drawn on top of
+ * a 2048-pixel Blue Marble sphere. Handing over inside a 20 km window put the
+ * swap right where the ascent camera lives: for the whole of the 50–140 km
+ * stretch the two representations of the same ground were visibly fighting,
+ * and then the local one blinked out. Both meshes already carry the Earth's
+ * curvature (`curveDrop`), so the honest fix is to make the hand-over long
+ * enough that no single frame shows a seam — by 140 km the patch subtends
+ * about 5° and there is nothing left in it the globe does not also have.
+ */
+const TERRAIN_NEAR = 25e3;
+const TERRAIN_FAR = 120e3;
+/** slant range past which the metre-scale pad structures stop being drawn, m */
+const STRUCTURES_FAR = 55e3;
 
 export class LaunchPadView {
   readonly group = new THREE.Group();
   private pad: PadBuild;
   private smoke: GroundSmoke;
+  /** slower, larger, fainter second layer of the pad cloud */
+  private smokeSlow: GroundSmoke;
   private glow: PadGlow;
   private materials: THREE.MeshStandardMaterial[] = [];
   private matCache = new Map<string, THREE.MeshStandardMaterial>();
@@ -78,14 +92,36 @@ export class LaunchPadView {
 
     const mouth = this.pad.mouthRadius;
     this.smoke = new GroundSmoke({
-      count: 220,
+      count: 300,
       trenchAzimuth: this.pad.trenchAzimuth,
       mouthRadius: mouth * 0.9,
-      puffSize: Math.max(6, mouth * 0.95),
+      puffSize: Math.max(7, mouth * 1.05),
       speed: Math.max(28, vehicle.height * 0.8),
+      emitDuration: 13,
+      opacity: 1,
     });
+    // Second, slower layer. One sheet of billboards, however many, reads as a
+    // set of discrete discs because every puff moves at the same rate and dies
+    // at the same age. A sparser layer of much larger, much slower, much
+    // fainter puffs living three times as long sits behind it, and the two
+    // together read as one volume with an inside and an outside.
+    this.smokeSlow = new GroundSmoke({
+      count: 150,
+      trenchAzimuth: this.pad.trenchAzimuth,
+      mouthRadius: mouth * 1.5,
+      puffSize: Math.max(16, mouth * 2.4),
+      speed: Math.max(11, vehicle.height * 0.3),
+      color: 0xc6cad2,
+      hot: 0xffc890,
+      emitDuration: 17,
+      life: 78,
+      rise: 0.42,
+      opacity: 0.34,
+    });
+    this.smokeSlow.mesh.renderOrder = 3;
     this.glow = new PadGlow(Math.max(30, mouth * 4));
     const deck = this.pad.deck ?? this.pad.group;
+    deck.add(this.smokeSlow.mesh);
     deck.add(this.smoke.mesh);
     deck.add(this.glow.mesh);
   }
@@ -151,11 +187,13 @@ export class LaunchPadView {
     );
     this.group.quaternion.setFromRotationMatrix(this.basis);
     const dist = this.group.position.distanceTo(scene.camera.position);
-    // structures are metre-scale: past the terrain fade there is nothing left
-    // worth drawing over the globe
-    this.group.visible = dist < TERRAIN_FAR * 1.1;
+    this.group.visible = dist < TERRAIN_FAR;
     if (!this.group.visible) return;
     this.setTerrainFade(clamp01(1 - smoothstep(TERRAIN_NEAR, TERRAIN_FAR, dist)));
+    // The structures are opaque and a few tens of metres across, so there is
+    // no fade to do: past ~55 km a 120 m mast is under two pixels and the only
+    // thing switching it off changes is the draw-call count.
+    if (this.pad.structures) this.pad.structures.visible = dist < STRUCTURES_FAR;
 
     this.pad.animate(frame.t, frame.altitudeAGL);
 
@@ -166,6 +204,7 @@ export class LaunchPadView {
     const st0 = frame.stages.length ? frame.stages[0] : null;
     if (!st0 || !st0.ignited) {
       this.smoke.update(-1, 0);
+      this.smokeSlow.update(-1, 0);
       this.glow.update(0, frame.t);
       return;
     }
@@ -173,12 +212,15 @@ export class LaunchPadView {
     // the cloud builds at ignition and dissipates over the following half minute
     const cloud = smoothstep(-0.15, 0.4, since) * (1 - smoothstep(20, 36, since));
     this.smoke.update(since, cloud);
+    // the slow layer lags the jet and hangs around long after it has stopped
+    this.smokeSlow.update(since, smoothstep(0.2, 2.5, since) * (1 - smoothstep(48, 95, since)));
     const near = 1 - smoothstep(25, 220, frame.altitudeAGL);
     this.glow.update(frame.thrust > 0 ? near * Math.max(0.25, frame.throttle) : 0, frame.t);
   }
 
   dispose(): void {
     this.smoke.dispose();
+    this.smokeSlow.dispose();
     this.glow.dispose();
     for (const m of this.materials) m.dispose();
     for (const g of this.geometries) g.dispose();

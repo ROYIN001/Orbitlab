@@ -11,10 +11,11 @@
 import * as THREE from 'three';
 import type { VehicleSpec, StageSpec, BoosterGroupSpec, SatelliteSpec } from '../types';
 import type { BoosterFrame, StageFrame, VisualFrame } from '../physics/frame';
+import { interstageHeight } from '../physics/frame';
 import { buildSatellite, type SatelliteView } from './satellite';
 import { Plume, type PlumeKind } from './plume';
 import { AscentTrail } from './smoke';
-import { bellGeometry, bodyTexture, boosterLivery, engineLayout, stageLivery, type EngineLayout } from './liveries';
+import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout } from './liveries';
 import { clamp01, seedFromString, smoothstep } from './noise';
 import { disposeObject } from './dispose';
 
@@ -50,6 +51,8 @@ interface StagePart {
   /** stacking height including the interstage adapter, m */
   height: number;
   bellLength: number;
+  /** engine-bell material, so the nozzle interior can glow with the throttle */
+  bellMat: THREE.MeshStandardMaterial;
   /** cached position in `frame.stages` (see `stageFrame`) */
   frameIndex: number;
   boosters: BoosterSet[];
@@ -145,10 +148,12 @@ export class RocketView {
   }
 
   /** Instanced engine bells plus the matching additive nozzle-glow discs. */
-  private engines(parent: THREE.Group, layout: EngineLayout, steel: boolean): { glow: THREE.InstancedMesh; bellLength: number } {
+  private engines(parent: THREE.Group, layout: EngineLayout, steel: boolean): { glow: THREE.InstancedMesh; bellLength: number; bellMat: THREE.MeshStandardMaterial } {
     const all = [...layout.nozzles, ...layout.verniers];
     const geo = bellGeometry(1, 1, 12);
-    const bellMat = new THREE.MeshStandardMaterial({ color: steel ? 0xa8aeb4 : 0x6a6f76, metalness: 0.5, roughness: 0.45, side: THREE.DoubleSide });
+    // metalness 0.85 with the sky/sun environment probe: a real bell is bare
+    // Inconel or niobium and reads as metal, not as grey plastic
+    const bellMat = new THREE.MeshStandardMaterial({ color: steel ? 0xa8aeb4 : 0x7d838a, metalness: 0.85, roughness: 0.36, side: THREE.DoubleSide, emissive: 0x000000 });
     this.materials.push(bellMat);
     const bells = new THREE.InstancedMesh(geo, bellMat, all.length);
     bells.castShadow = true;
@@ -175,7 +180,7 @@ export class RocketView {
     glow.instanceMatrix.needsUpdate = true;
     glow.visible = false;
     parent.add(glow);
-    return { glow, bellLength: maxLen };
+    return { glow, bellLength: maxLen, bellMat };
   }
 
   private buildStage(spec: StageSpec, index: number, topDiameter: number | null): StagePart {
@@ -197,9 +202,10 @@ export class RocketView {
     body.receiveShadow = true;
     g.add(body);
 
-    let interH = 0;
-    if (topDiameter !== null && Math.abs(topDiameter - spec.diameter) > 0.05) {
-      interH = Math.abs(topDiameter - spec.diameter) * 1.1 + 0.6;
+    // one source of truth for the stacking heights: `captureFrame` anchors the
+    // jettisoned hardware with the same numbers (see DebrisFrame.anchor)
+    const interH = interstageHeight(spec.diameter, topDiameter);
+    if (interH > 0 && topDiameter !== null) {
       const cone = new THREE.Mesh(new THREE.CylinderGeometry(topDiameter / 2, r, interH, 40, 1), this.mat(spec.accentColor ?? '#3a3d42', 0.3, 0.55));
       cone.position.y = spec.length + interH / 2;
       cone.castShadow = true;
@@ -212,7 +218,7 @@ export class RocketView {
     }
 
     const layout = engineLayout(spec.id, spec.engine, r, spec.nozzleLength);
-    const { glow, bellLength } = this.engines(g, layout, !!liv.steel);
+    const { glow, bellLength, bellMat } = this.engines(g, layout, !!liv.steel);
 
     if (spec.gridFins) this.addGridFins(g, r, spec.length);
     if (spec.legs) this.addLegs(g, r, spec.length);
@@ -252,15 +258,25 @@ export class RocketView {
         const unit = this.buildBooster(b, seed + k * 3.1 + u * 0.7, bodyMat);
         const ang = phase + (u / b.count) * Math.PI * 2;
         const off = r + b.diameter / 2;
-        unit.group.position.set(Math.cos(ang) * off, b.baseOffset ?? 0, Math.sin(ang) * off);
-        unit.group.rotation.y = -ang;
+        // B9: the local frame this group is drawn in has basis X = the physics
+        // `side2` axis and basis Z = the physics `side` axis (main.ts builds it
+        // as makeBasis(cross(dir, side), dir, side)), while
+        // Simulation.spawnBoosterDebris lays the same ring out as
+        // side·cos(ang) + side2·sin(ang). Mapping cos to X and sin to Z here
+        // therefore reflects the ring instead of rotating it — an exact 90°
+        // jump for the cardinal four-booster ring Soyuz uses, so the Korolev
+        // cross appeared to teleport. Placing cos on Z and sin on X puts the
+        // drawn booster exactly where its debris will spawn.
+        const local = Math.PI / 2 - ang;
+        unit.group.position.set(Math.cos(local) * off, b.baseOffset ?? 0, Math.sin(local) * off);
+        unit.group.rotation.y = -local;
         g.add(unit.group);
         units.push(unit);
       }
       boosters.push({ spec: b, units, frameIndex: -1 });
     }
 
-    return { spec, index, group: g, plume, vernier, glow, flash, height: spec.length + interH, bellLength, frameIndex: -1, boosters };
+    return { spec, index, group: g, plume, vernier, glow, flash, height: spec.length + interH, bellLength, bellMat, frameIndex: -1, boosters };
   }
 
   /**
@@ -308,9 +324,10 @@ export class RocketView {
       // Soyuz strap-on: a long tapered nose that hugs the core
       const pts: THREE.Vector2[] = [];
       const noseH = spec.length * 0.42;
-      for (let i = 0; i <= 10; i++) {
-        const s = i / 10;
-        pts.push(new THREE.Vector2(Math.max(0.05, r * (1 - Math.pow(s, 1.35) * 0.93)), spec.length + s * noseH));
+      for (let i = 0; i <= 12; i++) {
+        const s = i / 12;
+        // last point on the axis, so the conical top is closed rather than a tube
+        pts.push(new THREE.Vector2(i === 12 ? 0 : Math.max(0.02, r * (1 - Math.pow(s, 1.35) * 0.97)), spec.length + s * noseH));
       }
       const nose = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), m);
       nose.castShadow = true;
@@ -422,13 +439,8 @@ export class RocketView {
     cyl.position.y = cylH / 2;
     cyl.castShadow = true;
     g.add(cyl);
-    const pts: THREE.Vector2[] = [];
     const noseH = f.length - cylH;
-    for (let i = 0; i <= 16; i++) {
-      const s = i / 16;
-      pts.push(new THREE.Vector2(Math.max(0.03, r * Math.sqrt(Math.max(0, 1 - s * s * 0.985))), cylH + s * noseH));
-    }
-    const nose = new THREE.Mesh(new THREE.LatheGeometry(pts, 40), m);
+    const nose = new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, noseH, 24), 40), m);
     nose.castShadow = true;
     g.add(nose);
     // split line
@@ -457,11 +469,18 @@ export class RocketView {
       if (!attached || !sf) continue;
       part.group.position.y = y;
       const burning = sf.burning;
-      const thr = burning ? Math.max(0.05, frame.throttle) * (sf.engineFraction ?? 1) : 0;
+      // The *effective* core throttle, not the guidance command: Angara's core
+      // is clamped to 30 % while the strap-ons burn, and a 100 % plume hanging
+      // off a 30 % engine is exactly the mismatch the reviewer flagged. Frames
+      // recorded before the field existed fall back to the command.
+      const cmd = sf.effectiveThrottle ?? frame.throttle;
+      const thr = burning ? Math.max(0.05, cmd) * (sf.engineFraction ?? 1) : 0;
       part.plume.update(thr, pressure, t);
       part.vernier?.update(burning ? Math.min(1, thr + 0.25) : 0, pressure, t);
       part.glow.visible = thr > 0.02;
       (part.glow.material as THREE.MeshBasicMaterial).opacity = thr > 0.02 ? 0.55 + 0.2 * Math.sin(t * 29 + part.index) : 0;
+      // hot nozzle: the bell interior brightens with the throttle
+      part.bellMat.emissive.setRGB(0.28 * thr, 0.085 * thr, 0.022 * thr);
       // Brief ignition flash. `ignitionTime` is only meaningful once the stage
       // has actually lit — an unlit stage reports 0, which at T+0 would flash
       // the second stage and the spacecraft along with the core.
@@ -482,7 +501,7 @@ export class RocketView {
           const unit = bg.units[u];
           unit.group.visible = on;
           if (!on || !bf) continue;
-          const bthr = bf.burning ? (bg.spec.engine.solid ? 1 : Math.max(0.05, frame.throttle)) : 0;
+          const bthr = bf.burning ? (bg.spec.engine.solid ? 1 : Math.max(0.05, bf.effectiveThrottle ?? frame.throttle)) : 0;
           unit.plume.update(bthr, pressure, t + u * 0.13);
           unit.vernier?.update(bf.burning ? Math.min(1, bthr + 0.25) : 0, pressure, t + u * 0.13);
           unit.glow.visible = bthr > 0.02;
@@ -519,6 +538,10 @@ export class RocketView {
     const satG = this.satellite.group;
     const sepT = frame.payloadSepT ?? -1;
     if (frame.payloadSeparated) {
+      // The spacecraft is now the tracked object, so its base sits on the
+      // origin; the stage it came off is drawn *below* the origin
+      // (DebrisFrame.anchor), so the two abut at the separation plane and then
+      // drift apart instead of occupying the same 15 m of space.
       satG.position.y = this.satellite.height / 2;
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
       this.satellite.setDeploy(p);

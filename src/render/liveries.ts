@@ -118,9 +118,15 @@ export function engineLayout(id: string, engine: EngineSpec, R: number, nozzleLe
   }
 }
 
-/** Curved engine bell (lathe) rather than a plain cone. */
+/**
+ * Curved engine bell (lathe) rather than a plain cone.
+ *
+ * The profile starts on the axis, so the lathe closes the throat with a flat
+ * annulus: the classic low-angle beauty shot looks up into a dark bell instead
+ * of straight through the engine and out of the top of the stage.
+ */
 export function bellGeometry(rExit: number, length: number, segments = 14): THREE.LatheGeometry {
-  const pts: THREE.Vector2[] = [];
+  const pts: THREE.Vector2[] = [new THREE.Vector2(rExit * 0.004, 0)];
   const rThroat = rExit * 0.26;
   for (let i = 0; i <= segments; i++) {
     const s = i / segments;
@@ -129,6 +135,30 @@ export function bellGeometry(rExit: number, length: number, segments = 14): THRE
     pts.push(new THREE.Vector2(Math.max(0.01, r), -s * length));
   }
   return new THREE.LatheGeometry(pts, 16);
+}
+
+/**
+ * Von Kármán (LD-Haack) nose profile, for `LatheGeometry`.
+ *
+ * The last point is forced onto the axis, which is what closes the apex: the
+ * previous `r·√(1 − 0.985 s²)` ellipse bottomed out at 0.12 r and left an open
+ * hole a quarter of a metre across at the tip of every fairing — you could look
+ * down inside the payload bay from above. Shared by `RocketView` and
+ * `DebrisView` so a jettisoned half keeps the same silhouette.
+ *
+ * @param radius base radius, m
+ * @param y0 height of the base of the nose in the parent's frame, m
+ * @param noseHeight length of the nose cone, m
+ */
+export function ogiveProfile(radius: number, y0: number, noseHeight: number, segments = 24): THREE.Vector2[] {
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const s = i / segments;                       // 0 at the base, 1 at the apex
+    const th = Math.acos(Math.max(-1, Math.min(1, 2 * s - 1)));
+    const r = (radius / Math.sqrt(Math.PI)) * Math.sqrt(Math.max(0, th - Math.sin(2 * th) / 2));
+    pts.push(new THREE.Vector2(i === segments ? 0 : Math.max(1e-3, r), y0 + s * noseHeight));
+  }
+  return pts;
 }
 
 // ------------------------------------------------------------------ liveries

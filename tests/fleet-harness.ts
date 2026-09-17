@@ -13,22 +13,87 @@ import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { VEHICLES } from '../src/data/vehicles';
 import type { MissionConfig, VehicleSpec } from '../src/types';
-import { RAD, G0 } from '../src/physics/constants';
+import { G0, DEG } from '../src/physics/constants';
+import { elementsFromState, wrapPi } from '../src/physics/orbital';
 
 export const LAUNCH_TIME = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
 export const FRACTIONS = [0.25, 0.5, 0.9];
 
 /**
- * Accuracy the fleet is held to. Circular targets: the apsides must land within
- * 10 km or 2 %. Elliptical (transfer) targets: the apogee within the same band,
- * and the perigee within a wider but strictly two-sided one — the model inserts
- * a transfer orbit with a perigee up to about 36 km above the reference (see
- * `docs/PHYSICS.md`, "Insertion accuracy"), which a real GTO injection holds to
- * a few kilometres. The band is the measured accuracy, not an alibi: anything
- * outside it is listed in `KNOWN_GUIDANCE_FAILURES` with its measured error.
+ * Accuracy the fleet is held to — defined HERE, deliberately not imported from
+ * `src/physics/mission.ts`.
+ *
+ * An earlier revision of this harness re-exported `apsisTolerance` and
+ * `transferPerigeeTolerance` from the library and graded the achieved orbit by
+ * calling the library's own `orbitResiduals`. The reasoning was that a second
+ * copy of the bands would be a second opinion about what "on target" means —
+ * but a second opinion is exactly what an acceptance gate is for. The
+ * simulation emits `evt.targetOrbit` only when `orbitResiduals(...).onTarget`,
+ * so a harness that then re-checks with the same function verifies only that
+ * the simulation agrees with itself, and the fleet matrix stops measuring the
+ * orbit at all. Every number in this wave's before/after matrix is measured
+ * with this instrument, so the instrument is independent (review follow-up).
+ *
+ * The values are numerically the same as the library's today. That is the
+ * point: when they stop being the same, the fleet gate says so instead of
+ * following along.
+ *
+ * Circular targets: each apsis within 10 km or 2 %. Transfer targets: the apogee
+ * within the same band and the perigee within max(15 km, 5 %), two-sided — see
+ * `docs/PHYSICS.md`, "Insertion accuracy", for why that one is wider and what it
+ * costs to close.
  */
 export const APSIS_TOLERANCE = (h: number): number => Math.max(10e3, 0.02 * h);
-export const TRANSFER_PERIGEE_TOLERANCE = (h: number): number => Math.max(40e3, 0.15 * h);
+export const TRANSFER_PERIGEE_TOLERANCE = (h: number): number => Math.max(15e3, 0.05 * h);
+/** deg */
+export const INCLINATION_TOLERANCE_DEG = 0.3;
+/** deg */
+export const RAAN_TOLERANCE_DEG = 1.5;
+
+/**
+ * The orbit the vehicle is actually in, re-derived from the raw state vector.
+ *
+ * `sim.state.elements` is maintained by the simulation; this goes back to
+ * `sim.state.r` / `sim.state.v` so that a bug in the bookkeeping of the cached
+ * elements cannot pass the gate.
+ */
+export function achievedElements(sim: Simulation): ReturnType<typeof elementsFromState> {
+  return elementsFromState(sim.state.r, sim.state.v);
+}
+
+/**
+ * Independent comparison of the achieved orbit with the mission's target.
+ *
+ * Graded here, against this file's own bands, from this file's own re-derived
+ * elements. RAAN is graded whenever the target constrains it AND the launch was
+ * made into a window that could reach that plane — the plane an ascent reaches
+ * is fixed at liftoff and no burn in the plan rotates it, so grading it on an
+ * off-window launch would fail every flight for something the vehicle was never
+ * asked to do. The window test is written out here rather than taken from the
+ * simulation, for the same reason as the bands.
+ */
+export function orbitMisses(sim: Simulation): string[] {
+  const el = achievedElements(sim);
+  const target = sim.plan.target;
+  const misses: string[] = [];
+  const ap = isFinite(el.apoapsisAlt) ? el.apoapsisAlt : Infinity;
+  const elliptical = target.apogee - target.perigee > 50e3;
+  const peTol = elliptical ? TRANSFER_PERIGEE_TOLERANCE(target.perigee) : APSIS_TOLERANCE(target.perigee);
+  if (!(Math.abs(ap - target.apogee) <= APSIS_TOLERANCE(target.apogee))) {
+    misses.push(`apogee ${Math.round(ap / 1e3)} vs ${Math.round(target.apogee / 1e3)} km`);
+  }
+  if (!(Math.abs(el.periapsisAlt - target.perigee) <= peTol)) {
+    misses.push(`perigee ${Math.round(el.periapsisAlt / 1e3)} vs ${Math.round(target.perigee / 1e3)} km`);
+  }
+  const dInc = (el.i - target.inclination) / DEG;
+  if (!(Math.abs(dInc) <= INCLINATION_TOLERANCE_DEG)) misses.push(`inclination ${dInc.toFixed(2)}° off`);
+  if (target.raan !== null) {
+    const windowReachable = Math.abs(wrapPi(sim.plan.raanExpected - target.raan)) <= RAAN_TOLERANCE_DEG * DEG;
+    const dRaan = wrapPi(el.raan - target.raan) / DEG;
+    if (windowReachable && Math.abs(dRaan) > RAAN_TOLERANCE_DEG) misses.push(`RAAN ${dRaan.toFixed(1)}° off`);
+  }
+  return misses;
+}
 
 export interface FleetCase {
   vehicle: string;
@@ -159,22 +224,11 @@ export function acceptanceFailures(sim: Simulation, c: FleetCase): string[] {
   if (!keys.includes('evt.targetOrbit')) out.push('no evt.targetOrbit');
   if (out.length > 0) return out;
 
-  const t = sim.plan.target;
-  const el = sim.state.elements;
-  const elliptical = t.apogee - t.perigee > 50e3;
-  // On a transfer orbit the perigee band is wider than on a circular one (see
-  // TRANSFER_PERIGEE_TOLERANCE) but it is two-sided: over-performing into a
-  // 120 km high perigee is as much a miss as under-performing.
-  const peTol = elliptical ? TRANSFER_PERIGEE_TOLERANCE(t.perigee) : APSIS_TOLERANCE(t.perigee);
-  if (Math.abs(el.periapsisAlt - t.perigee) > peTol) {
-    out.push(`perigee ${Math.round(el.periapsisAlt / 1e3)} vs ${Math.round(t.perigee / 1e3)} km`);
-  }
-  if (Math.abs(el.apoapsisAlt - t.apogee) > APSIS_TOLERANCE(t.apogee)) {
-    out.push(`apogee ${Math.round(el.apoapsisAlt / 1e3)} vs ${Math.round(t.apogee / 1e3)} km`);
-  }
-  if (Math.abs(el.i - t.inclination) * RAD > 0.3) {
-    out.push(`inclination ${(el.i * RAD).toFixed(2)}° vs ${(t.inclination * RAD).toFixed(2)}°`);
-  }
+  // ...and then the orbit is judged AGAIN, here, independently: this file's own
+  // bands against elements re-derived from the raw state vector. The simulation
+  // having decided the mission is on target is one of the two things this gate
+  // checks, not the whole of it.
+  out.push(...orbitMisses(sim));
   const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
   const ti = insertionTime(sim);
   const limit = insertionLimit(spec, c.mass);

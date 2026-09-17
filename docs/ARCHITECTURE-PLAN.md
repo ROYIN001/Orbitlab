@@ -21,7 +21,10 @@ Rules for all contributors:
   `DebrisView.update(frame.debris)`, `LaunchPadView(site, vehicleSpec)`.
 - Every vehicle in `src/data/vehicles.ts` must reach its reference orbits with the default
   guidance parameters (no auto-tune) at 25 %, 50 % and 90 % of its rated payload;
-  `tests/fleet-defaults.test.ts` enforces this.
+  `tests/fleet-defaults.test.ts` enforces this. Exclusions must be measured capability
+  limits (out of propellant with the structural placard armed), never a vehicle destroyed
+  with delta-v left. Single-shot stacks with no restart (Soyuz-2.1a, Long March 2D) are
+  additionally pinned by a dedicated mission test flying their real profile.
 - User-visible strings go through `src/i18n` in all three languages.
 
 ## Waves

@@ -40,6 +40,13 @@ export interface PadBuild {
    * distance instead of leaving a 13 km disc stuck on the globe.
    */
   terrainParts?: THREE.Object3D[];
+  /**
+   * The pad structures only (tower, mount, masts, buildings). They are
+   * metre-scale and opaque, so they are switched off much closer in than the
+   * terrain patch, which has to dissolve gradually instead (see
+   * `LaunchPadView.update`).
+   */
+  structures?: THREE.Object3D;
 }
 
 type MatFn = (color: number, metal?: number, rough?: number) => THREE.MeshStandardMaterial;
@@ -212,7 +219,7 @@ function terrain(ctx: Ctx, b: Biome): THREE.Object3D[] {
     pos.setX(i, (px * rr) / r0);
     pos.setZ(i, (pz * rr) / r0);
   }
-  const colors = new Float32Array(pos.count * 3);
+  const colors = new Float32Array(pos.count * 4);
   const c = new THREE.Color();
   const g1 = new THREE.Color(b.ground), g2 = new THREE.Color(b.ground2), rock = new THREE.Color(b.rock);
   const sand = new THREE.Color(0xcdbd94);
@@ -231,9 +238,12 @@ function terrain(ctx: Ctx, b: Biome): THREE.Object3D[] {
     // concrete apron fades in near the pad
     const d = Math.hypot(x, z);
     if (d < APRON * 2.4) c.lerp(new THREE.Color(0x9c9a92), 1 - smoothstep(APRON * 0.7, APRON * 2.4, d));
-    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+    colors[i * 4] = c.r; colors[i * 4 + 1] = c.g; colors[i * 4 + 2] = c.b;
+    // dissolve the outer quarter into the far apron so the two do not meet
+    // along a visible 13 km circle
+    colors[i * 4 + 3] = 1 - 0.75 * smoothstep(SIZE * 0.68, SIZE, d);
   }
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
   geo.computeVertexNormals();
   // transparent so the whole patch can be faded out with slant range instead
   // of popping off at a fixed distance (see LaunchPadView.setTerrainFade)
@@ -243,27 +253,57 @@ function terrain(ctx: Ctx, b: Biome): THREE.Object3D[] {
   ground.position.y = -0.4;
   out.push(ground);
 
-  // coarse far ring so the horizon is not a cliff edge
-  const ring = ctx.geo(new THREE.RingGeometry(SIZE * 0.995, 90e3, 72, 10));
+  // Coarse far apron so the horizon is not a cliff edge.
+  //
+  // Its outer rim carries a per-vertex alpha ramp to zero. A flat 90 km plate
+  // of one biome colour has nothing in common with the Blue Marble texture it
+  // is composited over, and from 50 km up the join read as a hard tan arc
+  // drawn across the planet. With the ramp there is no edge to see: the apron
+  // is opaque where the eye is comparing it with ground it can resolve, and has
+  // dissolved into the globe long before its own boundary.
+  const RING_OUT = 90e3;
+  const ring = ctx.geo(new THREE.RingGeometry(SIZE * 0.995, RING_OUT, 72, 14));
   ring.rotateX(-Math.PI / 2);
+  const far = new THREE.Mesh(ring, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, transparent: true, depthWrite: false }));
   {
     const rp = ring.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < rp.count; i++) rp.setY(i, -curveDrop(rp.getX(i), rp.getZ(i)));
+    const rc = new Float32Array(rp.count * 4);
+    const base = new THREE.Color(b.coastal ? b.water : b.ground2);
+    for (let i = 0; i < rp.count; i++) {
+      const x = rp.getX(i), z = rp.getZ(i);
+      rp.setY(i, -curveDrop(x, z));
+      const tt = Math.max(0, Math.min(1, (Math.hypot(x, z) - SIZE) / (RING_OUT - SIZE)));
+      rc[i * 4] = base.r; rc[i * 4 + 1] = base.g; rc[i * 4 + 2] = base.b;
+      rc[i * 4 + 3] = Math.pow(1 - tt, 1.25);
+    }
+    // itemSize 4 switches three's USE_COLOR_ALPHA on, so the fourth channel
+    // multiplies the material's own opacity instead of being ignored
+    ring.setAttribute('color', new THREE.BufferAttribute(rc, 4));
     ring.computeVertexNormals();
   }
-  const far = new THREE.Mesh(ring, new THREE.MeshStandardMaterial({ color: b.coastal ? b.water : b.ground2, roughness: 1, transparent: true }));
   far.position.y = b.coastal ? -18 : -30;
+  far.renderOrder = -1;
   out.push(far);
 
   if (b.coastal) {
-    const w = ctx.geo(new THREE.CircleGeometry(88e3, 96, 0, Math.PI * 2));
+    const W_OUT = 88e3;
+    const w = ctx.geo(new THREE.CircleGeometry(W_OUT, 96, 0, Math.PI * 2));
     w.rotateX(-Math.PI / 2);
     {
       const wp = w.attributes.position as THREE.BufferAttribute;
-      for (let i = 0; i < wp.count; i++) wp.setY(i, -curveDrop(wp.getX(i), wp.getZ(i)));
+      const wc = new Float32Array(wp.count * 4);
+      const base = new THREE.Color(b.water);
+      for (let i = 0; i < wp.count; i++) {
+        const x = wp.getX(i), z = wp.getZ(i);
+        wp.setY(i, -curveDrop(x, z));
+        const tt = Math.max(0, Math.min(1, (Math.hypot(x, z) - b.shore) / (W_OUT - b.shore)));
+        wc[i * 4] = base.r; wc[i * 4 + 1] = base.g; wc[i * 4 + 2] = base.b;
+        wc[i * 4 + 3] = 0.94 * Math.pow(1 - tt, 1.1);
+      }
+      w.setAttribute('color', new THREE.BufferAttribute(wc, 4));
       w.computeVertexNormals();
     }
-    const water = new THREE.Mesh(w, new THREE.MeshStandardMaterial({ color: b.water, roughness: 0.18, metalness: 0.35, transparent: true, opacity: 0.94 }));
+    const water = new THREE.Mesh(w, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.18, metalness: 0.35, transparent: true, depthWrite: false }));
     water.position.y = b.cliffs ? -60 : -10;
     out.push(water);
   }
@@ -936,5 +976,5 @@ export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T exte
   for (const o of terrainParts) grade.add(o);
   grade.add(build.group);
   root.add(grade);
-  return { ...build, group: root, deck: grade, terrainParts };
+  return { ...build, group: root, deck: grade, terrainParts, structures: build.group };
 }

@@ -36,6 +36,7 @@ const GROUND_VERT = BILLBOARD_HEAD + /* glsl */ `
   uniform float uR0;       // radius of the trench mouth, m
   uniform float uSize;     // base puff radius, m
   uniform float uJetA;     // trench azimuth in the local frame, rad
+  uniform float uRise;     // vertical rise rate, relative to the fast layer
   uniform float uOpacity;
   uniform vec3 uColor;
   uniform vec3 uHot;
@@ -54,7 +55,7 @@ const GROUND_VERT = BILLBOARD_HEAD + /* glsl */ `
     float tau = 1.5;
     float a = max(age, 0.0);
     float rr = uR0 + spd * tau * (1.0 - exp(-a / tau));
-    float y = 1.5 + (1.1 + 4.2 * rnd) * pow(a, 1.15) + rr * 0.10;
+    float y = 1.5 + uRise * (1.1 + 4.2 * rnd) * pow(a, 1.15) + rr * 0.10;
     vec3 centre = vec3(cos(ang) * rr, y, sin(ang) * rr);
     float size = uSize * (0.55 + 0.9 * rnd) * (1.0 + a * 0.34) * alive;
     float fade = smoothstep(0.0, 0.35, a) * (1.0 - smoothstep(life * 0.4, life, a));
@@ -106,7 +107,12 @@ const PUFF_FRAG = /* glsl */ `
     vec4 t = texture2D(uMap, vUv);
     float a = t.a * vAlpha;
     if (a < 0.004) discard;
+    // tone mapping + sRGB output, exactly as three appends them to a built-in
+    // material (see the note in render/scene.ts) — without this the puffs are
+    // the only grey in the frame that is not tone-mapped and read as charcoal
     gl_FragColor = vec4(vTint * t.rgb, a);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
   }
 `;
 
@@ -119,13 +125,19 @@ export function puffTexture(): THREE.Texture {
   const g = c.getContext('2d')!;
   g.clearRect(0, 0, 128, 128);
   // a few overlapping soft lobes give the blob a cauliflower silhouette
+  // A soft, low-peak blob rather than an opaque disc. Billboard smoke gives
+  // itself away at the silhouette: with a hard edge every puff reads as a
+  // separate sprite, while a long alpha tail lets neighbouring puffs merge into
+  // one mass and only the accumulation of many of them becomes opaque.
   const lobes: Array<[number, number, number]> = [
-    [64, 64, 44], [46, 52, 26], [82, 50, 24], [54, 84, 25], [84, 80, 22], [64, 40, 22],
+    [64, 64, 50], [44, 50, 30], [84, 48, 28], [52, 86, 29], [86, 82, 26], [64, 38, 25],
+    [38, 72, 22], [90, 64, 20],
   ];
   for (const [x, y, r] of lobes) {
     const grad = g.createRadialGradient(x, y, 0, x, y, r);
-    grad.addColorStop(0, 'rgba(255,255,255,0.82)');
-    grad.addColorStop(0.55, 'rgba(255,255,255,0.34)');
+    grad.addColorStop(0, 'rgba(255,255,255,0.60)');
+    grad.addColorStop(0.42, 'rgba(255,255,255,0.30)');
+    grad.addColorStop(0.75, 'rgba(255,255,255,0.09)');
     grad.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = grad;
     g.beginPath();
@@ -160,13 +172,29 @@ export class GroundSmoke {
   private mat: THREE.ShaderMaterial;
   private geo: THREE.InstancedBufferGeometry;
 
-  constructor(opts: { count?: number; trenchAzimuth: number; mouthRadius: number; puffSize: number; speed: number; color?: number; hot?: number }) {
+  /** peak opacity of this layer (see `update`) */
+  private peak: number;
+
+  constructor(opts: {
+    count?: number; trenchAzimuth: number; mouthRadius: number; puffSize: number; speed: number;
+    color?: number; hot?: number;
+    /** length of the emission window, s */
+    emitDuration?: number;
+    /** puff lifetime, s */
+    life?: number;
+    /** vertical rise rate relative to the default */
+    rise?: number;
+    /** peak opacity 0..1 */
+    opacity?: number;
+  }) {
     this.geo = billboardGeometry(opts.count ?? 200);
+    this.peak = opts.opacity ?? 0.8;
     this.mat = new THREE.ShaderMaterial({
       vertexShader: GROUND_VERT, fragmentShader: PUFF_FRAG,
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
       uniforms: {
-        uT: { value: -1 }, uEmitDur: { value: 16 }, uLife: { value: 26 }, uSpeed: { value: opts.speed },
+        uT: { value: -1 }, uEmitDur: { value: opts.emitDuration ?? 16 }, uLife: { value: opts.life ?? 26 },
+        uSpeed: { value: opts.speed }, uRise: { value: opts.rise ?? 1 },
         uR0: { value: opts.mouthRadius }, uSize: { value: opts.puffSize }, uJetA: { value: opts.trenchAzimuth },
         uOpacity: { value: 0 }, uColor: { value: new THREE.Color(opts.color ?? 0xd8dbe0) },
         uHot: { value: new THREE.Color(opts.hot ?? 0xffd6a0) }, uMap: { value: puffTexture() },
@@ -184,7 +212,7 @@ export class GroundSmoke {
   update(tSinceIgnition: number, intensity: number): void {
     const u = this.mat.uniforms;
     u.uT.value = tSinceIgnition;
-    u.uOpacity.value = Math.max(0, Math.min(1, intensity)) * 0.8;
+    u.uOpacity.value = Math.max(0, Math.min(1, intensity)) * this.peak;
     this.mesh.visible = tSinceIgnition > -0.2 && (u.uOpacity.value as number) > 0.004;
   }
 

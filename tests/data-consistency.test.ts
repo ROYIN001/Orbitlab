@@ -14,11 +14,12 @@
  */
 import { describe, it, expect } from 'vitest';
 import { VEHICLES } from '../src/data/vehicles';
-import { SITES } from '../src/data/sites';
+import { SITES, type SiteExtra } from '../src/data/sites';
 import { SATELLITES } from '../src/data/satellites';
 import { ORBIT_PRESETS } from '../src/data/orbits';
-import { engineMassFlow, liftoffMass, liftoffThrust } from '../src/physics/vehicle';
-import { G0 } from '../src/physics/constants';
+import { engineMassFlow, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
+import { circularSpeed, rotatingLaunchAzimuth } from '../src/physics/orbital';
+import { G0, DEG, R_EARTH } from '../src/physics/constants';
 import type { EngineSpec, StageSpec, VehicleSpec } from '../src/types';
 
 const siteIds = new Set(SITES.map((s) => s.id));
@@ -57,6 +58,32 @@ describe('engine specs', () => {
     for (const { owner, engine: e } of engines()) {
       if (e.solid) expect(e.minThrottle, `${owner} ${e.name}`).toBeUndefined();
     }
+  });
+
+  /**
+   * Every solid motor states its own published peak/mean thrust ratio.
+   *
+   * `solidProfile` flies a regressive ramp whose head is `peakFactor`, and
+   * `liftoffThrust` counts a solid at the head of that ramp — so the factor is
+   * not decoration, it is the thrust the vehicle leaves the pad with. Until the
+   * fleet-data wave only three of the ten solids in the file carried one and the
+   * other seven fell back on a 1.2 default that is nobody's published figure:
+   * PSLV-XL's S139 is 4 846.9 / 3 400 = 1.43 and its PSOM-XL 703.5 / 460 = 1.53,
+   * so that vehicle left the pad with a fifth less thrust than its own sources
+   * give it. The range below is the physics of a regressive grain — a factor at
+   * or under 1 would mean a progressive one, and nothing in the fleet is past
+   * 1.55 — and the requirement that EVERY solid declares one is what stops a
+   * new motor inheriting a default silently.
+   */
+  it('every solid motor declares its published peak/mean thrust ratio', () => {
+    const missing: string[] = [];
+    for (const { owner, engine: e } of engines()) {
+      if (!e.solid) continue;
+      if (e.peakFactor === undefined) { missing.push(`${owner} ${e.name}`); continue; }
+      expect(e.peakFactor, `${owner} ${e.name}`).toBeGreaterThan(1);
+      expect(e.peakFactor, `${owner} ${e.name}`).toBeLessThanOrEqual(1.6);
+    }
+    expect(missing, `no published peak/mean ratio for: ${missing.join(', ')}`).toEqual([]);
   });
 });
 
@@ -188,37 +215,48 @@ describe('liftoff', () => {
   });
 
   /**
-   * KNOWN GAP, recorded rather than asserted away: a launcher whose FIRST STAGE
-   * is a large solid lifts off in this model at about two thirds of its real
-   * acceleration.
+   * A launcher whose FIRST STAGE is a large solid now lifts off at its real
+   * acceleration — the gap this test used to record is closed.
    *
-   * The mean thrusts in `vehicles.ts` are right — grain mass divided by
-   * published burn time — and a solid's thrust profile belongs on top of that.
-   * `solidProfile` in src/physics/vehicle.ts supplies a fixed 1.2 → 0.8 ramp
-   * for every solid in the fleet, which is close enough for SRB-A
+   * Two things were wrong. `solidProfile` applied a fixed 1.2 → 0.8 ramp to
+   * every motor in the fleet, which is close enough for SRB-A3
    * (2 260 / 1 858 = 1.22) and Zefiro 40 (1 304 / 1 123 = 1.16) but not for the
-   * P120C, whose published peak/mean is 4 323 / 2 846 = 1.52.
+   * P120C, whose published peak/mean is 4 323 / 2 846 = 1.52; and
+   * `liftoffThrust` applied the ignition factor to solid BOOSTERS only, so the
+   * same P120C counted at 1.2 × mean as an Ariane 6 strap-on and at 1.0 × mean
+   * as Vega-C's first stage. Both are fixed (`peakFactor` in `EngineSpec`, and
+   * `liftoffThrust` treating a solid first stage like a solid booster), and
+   * Vega-C's liftoff T/W moves from 1.32 to 2.00 against the ~2.06 its published
+   * 4 323 kN peak implies over the same stack.
    *
-   * On Ariane 64 the P120C is a strap-on and `liftoffThrust` applies the 1.2
-   * factor; on Vega-C it is the first stage and `liftoffThrust` applies no
-   * factor at all, so the two paths disagree about the same motor. The measured
-   * result is a Vega-C liftoff T/W of 1.32 against a real ~2.1 — inside the
-   * 1.15 floor above by 0.17, which is why that test does not catch it.
-   *
-   * This is data recorded for the physics owner, not a target: the fix is a
-   * per-motor peak factor in `solidProfile` (and `liftoffThrust` applying it to
-   * solid first stages as well as solid boosters), after which these numbers
-   * move and this test is updated with them.
+   * The remaining 3 % is the sea-level/vacuum blend, not the profile.
    */
-  it('a solid-first-stage launcher lifts off well below its published thrust-to-weight', () => {
+  it('a solid-first-stage launcher lifts off at its published thrust-to-weight', () => {
     const vegac = VEHICLES.find((v) => v.id === 'vegac')!;
-    const tw = liftoffThrust(vegac) / (liftoffMass(vegac, 0.5 * vegac.payloadLEO) * G0);
-    expect(tw, `Vega-C liftoff T/W ${tw.toFixed(3)}`).toBeGreaterThan(1.28);
-    expect(tw, `Vega-C liftoff T/W ${tw.toFixed(3)}`).toBeLessThan(1.36);
-    // The published figure this is measured against, kept next to it so the gap
-    // cannot be read as agreement: P120C peak 4 323 kN over a ~210 t stack.
-    const published = 4323e3 / (liftoffMass(vegac, 0.5 * vegac.payloadLEO) * G0);
-    expect(published).toBeGreaterThan(2.0);
+    const m0 = liftoffMass(vegac, 0.5 * vegac.payloadLEO);
+    const tw = liftoffThrust(vegac) / (m0 * G0);
+    const published = 4323e3 / (m0 * G0);
+    expect(published, 'the published peak thrust over the same stack').toBeGreaterThan(2.0);
+    expect(tw, `Vega-C liftoff T/W ${tw.toFixed(3)} vs published ${published.toFixed(3)}`)
+      .toBeGreaterThan(published * 0.9);
+    expect(tw, `Vega-C liftoff T/W ${tw.toFixed(3)} vs published ${published.toFixed(3)}`)
+      .toBeLessThanOrEqual(published);
+  });
+
+  /**
+   * The same motor must be counted the same way whether it is a first stage or
+   * a strap-on. That was the asymmetry behind the test above, and it is the
+   * kind of thing that comes back, so it is asserted directly: the P120C is
+   * Vega-C's first stage and Ariane 6's booster.
+   */
+  it('a solid motor contributes the same liftoff thrust as a stage and as a booster', () => {
+    const vegac = VEHICLES.find((v) => v.id === 'vegac')!;
+    const ariane = VEHICLES.find((v) => v.id === 'ariane64')!;
+    const perMotorAsStage = liftoffThrust(vegac);
+    const boosters = ariane.stages[0].boosters![0];
+    const perMotorAsBooster = boosters.count * boosters.engine.count * boosters.engine.thrustSL
+      * solidProfile(0, boosters.engine.peakFactor) / boosters.count;
+    expect(perMotorAsStage / perMotorAsBooster, 'same motor, same ignition factor').toBeCloseTo(1, 2);
   });
 });
 
@@ -243,6 +281,94 @@ describe('geometry and references', () => {
       expect(v.sites.length, `${v.id} has no launch site`).toBeGreaterThan(0);
       for (const s of v.sites) expect(siteIds, `${v.id} names unknown site ${s}`).toContain(s);
       expect(new Set(v.sites).size, `${v.id} lists a site twice`).toBe(v.sites.length);
+    }
+  });
+
+  const LATITUDE_SLACK_DEG = 0.3;
+
+  /**
+   * The declared inclination pair and the azimuth corridor describe the same
+   * site (audit item B25).
+   *
+   * `minInclination` / `maxInclination` and `azimuthMin` / `azimuthMax` are two
+   * statements about one range-safety window, and before this wave they
+   * contradicted each other: Vandenberg declared a 60 deg minimum against a
+   * 147-201 deg corridor that reaches nothing below 61.6 deg, so the default
+   * `leo` preset — which aims straight at `minInclination` — planned an ascent
+   * on a heading the site's own data forbids and reported it as reachable.
+   * Baikonur and Vostochny carried a byte-identical 30-200 deg placeholder that
+   * implied a 46 deg inclination from Baikonur, below its own declared minimum.
+   *
+   * So the pair is re-measured here from the corridor itself, with the app's own
+   * `rotatingLaunchAzimuth` at a 300 km circular orbit and both the ascending
+   * and the descending solution, and the rule is one-sided in each direction: a
+   * site may fly LESS than its geometry allows (Taiyuan declares 63 deg against
+   * a corridor that reaches 61.2 deg — an operational limit, not a geometric
+   * one), but it may never declare a target no azimuth in its own window can
+   * fly. `maxInclination` is held to a kilometre-scale 0.2 deg of the measured
+   * edge, because unlike `minInclination` it has no operational meaning to
+   * diverge towards yet.
+   *
+   * The 0.3 deg slack on the low side is the same one `a site can reach the
+   * minimum inclination it claims` already carries, for the same reason: a
+   * site's published minimum is quoted for a pad that is not exactly at the
+   * coordinates used here — Plesetsk declares 62.8 deg at 62.925 deg N — and at
+   * those sites the binding limit is the latitude rather than the corridor.
+   */
+  it('the declared inclination pair is inside the site azimuth corridor', () => {
+    const vOrb = circularSpeed(R_EARTH + 300e3);
+    const inCorridor = (s: SiteExtra, deg: number): boolean => {
+      const d = ((deg % 360) + 360) % 360;
+      const lo = ((s.azimuthMin % 360) + 360) % 360;
+      const hi = ((s.azimuthMax % 360) + 360) % 360;
+      return lo <= hi ? d >= lo && d <= hi : d >= lo || d <= hi;
+    };
+    /** [lowest, highest] inclination the corridor reaches, deg. */
+    const reach = (s: SiteExtra): [number, number] => {
+      let lo = NaN; let hi = NaN;
+      for (let i = 0; i <= 180; i += 0.05) {
+        const hit = [false, true].some((descending) => {
+          const az = rotatingLaunchAzimuth(s.latitude * DEG, i * DEG, vOrb, descending);
+          return az !== null && inCorridor(s, az / DEG);
+        });
+        if (!hit) continue;
+        if (isNaN(lo)) lo = i;
+        hi = i;
+      }
+      return [lo, hi];
+    };
+    for (const s of SITES) {
+      const [lo, hi] = reach(s);
+      expect(isNaN(lo), `${s.id}: its azimuth corridor reaches no inclination at all`).toBe(false);
+      expect(s.minInclination, `${s.id}: declared minimum ${s.minInclination}° below the ${lo.toFixed(1)}° its `
+        + `${s.azimuthMin}-${s.azimuthMax}° corridor reaches`).toBeGreaterThanOrEqual(lo - LATITUDE_SLACK_DEG);
+      expect(s.minInclination, `${s.id}: declared minimum ${s.minInclination}° above the ${hi.toFixed(1)}° its corridor reaches`)
+        .toBeLessThanOrEqual(hi);
+      expect(Math.abs(s.maxInclination - hi), `${s.id}: declared maximum ${s.maxInclination}° against a measured ${hi.toFixed(1)}°`)
+        .toBeLessThanOrEqual(0.2);
+      expect(s.maxInclination, s.id).toBeGreaterThan(s.minInclination);
+    }
+  });
+
+  /**
+   * A `dragArea` override is a reference area, not a free parameter.
+   *
+   * Proton-M is the only vehicle that needs one (audit item B23: its 7.4 m
+   * figure is the span across six outboard tanks, and the model turns the widest
+   * stage diameter into a full circle), and the failure mode to guard against is
+   * someone later tuning drag with it. The override has to be at least the
+   * circle around the widest thing on the stack and no more than twice it —
+   * which is exactly the band a core-plus-outboard-tanks cross-section sits in.
+   */
+  it('a dragArea override is between one and two times the widest circular section', () => {
+    for (const v of VEHICLES) {
+      if (v.dragArea === undefined) continue;
+      const maxD = Math.max(...v.stages.map((s) => s.diameter), v.fairing?.diameter ?? 0);
+      const circle = Math.PI * (maxD / 2) ** 2;
+      expect(v.dragArea, `${v.id}: ${v.dragArea} m² against a ${circle.toFixed(1)} m² circle at ${maxD} m`)
+        .toBeGreaterThanOrEqual(circle);
+      expect(v.dragArea, `${v.id}: ${v.dragArea} m² is more than twice the ${circle.toFixed(1)} m² circle at ${maxD} m`)
+        .toBeLessThanOrEqual(2 * circle);
     }
   });
 

@@ -30,6 +30,25 @@ describe('vehicle sanity', () => {
       expect(twr, `${v.name} T/W`).toBeGreaterThan(1.1);
       expect(twr, `${v.name} T/W`).toBeLessThan(2.6);
       const dv = idealDeltaV(v, v.payloadLEO * 0.5);
+      // 9 500 m/s. The floor is a sanity bound on the DATA — a stage mass or an
+      // Isp wrong by a factor shows up here — and nothing in the fleet is near
+      // it: measured this wave at `payloadLEO / 2`, the minimum is Long March 2D
+      // at 10 083 m/s, 583 m/s of clearance, and the next two are Falcon Heavy
+      // (10 315) and PSLV-XL (10 468).
+      //
+      // It was briefly lowered to 9 300 to make room for H-IIA 202's published
+      // 13 600 / 3 000 kg stage masses, on the strength of Atlas V 551 at 9 583
+      // and PSLV-XL at 9 542 "sitting within 1 % of 9 500". Those two figures
+      // were the PRE-B13 ones, from the delta-v accounting that ignored the
+      // parallel boosters and the fairing; with B13's correction the same two
+      // vehicles measure 11 566 and 10 468 (review follow-up). So the guard was
+      // weakened against numbers the same wave had already replaced, for a data
+      // change that has not landed.
+      //
+      // Hand-off to the fleet-data owner: if and when H-IIA's published stage
+      // masses are applied, re-measure `idealDeltaV(h2a202, payloadLEO / 2)` —
+      // it is 12 121 m/s today — and lower this floor only if that measurement
+      // actually requires it, with the new number quoted here.
       expect(dv, `${v.name} dv`).toBeGreaterThan(9500);
       expect(dv, `${v.name} dv`).toBeLessThan(16000);
     }

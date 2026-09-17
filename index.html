@@ -3,66 +3,114 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Orbitlab — launch & orbital insertion simulator</title>
-    <meta name="description" content="Physics-based rocket launch and orbital insertion simulator: real launch vehicles, satellites, orbit presets, four camera views and engineering telemetry." />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='36' r='18' fill='%232a6fd6'/%3E%3Cellipse cx='32' cy='36' rx='28' ry='9' fill='none' stroke='%23f2b134' stroke-width='3'/%3E%3Cpath d='M42 10l4 4-10 12-4-4z' fill='%23e8e8e8'/%3E%3C/svg%3E" />
+    <title>Orbitlab — launch &amp; orbital insertion simulator</title>
+    <meta id="meta-description" name="description" content="Physics-based rocket launch and orbital insertion simulator: real launch vehicles, satellites, orbit presets, four camera views and engineering telemetry." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1017'/%3E%3Cellipse cx='32' cy='32' rx='26' ry='12' transform='rotate(-32 32 32)' fill='none' stroke='%238be5cd' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%238be5cd'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
     <div id="app">
       <header id="topbar">
         <div class="brand">
-          <span class="logo">◉</span>
-          <span class="title" data-i18n="app.title">Orbitlab</span>
-          <span class="subtitle" data-i18n="app.subtitle"></span>
+          <span class="brand-mark" aria-hidden="true">◉</span>
+          <span class="brand-name">ORBIT<span>LAB</span></span>
+        </div>
+        <div class="top-context">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span data-i18n="app.tagline">FLIGHT SIMULATOR</span>
+          <span class="version" aria-hidden="true">02</span>
         </div>
         <div class="topbar-right">
-          <button id="btn-toggle-setup" class="icon-btn" title="Mission setup">☰</button>
-          <label class="lang"><span data-i18n="app.language">Language</span>
+          <button id="btn-physics" class="quiet-btn" type="button">
+            <span aria-hidden="true">ⓘ</span><span data-i18n="dlg.physics.button">Physics &amp; sources</span>
+          </button>
+          <button id="btn-camera-plan" class="quiet-btn" type="button">
+            <span aria-hidden="true">◈</span><span data-i18n="ctl.cameraSequence">Camera sequence</span>
+          </button>
+          <label class="lang">
+            <span data-i18n="app.language">Language</span>
             <select id="lang-select">
               <option value="en">English</option>
               <option value="ru">Русский</option>
               <option value="th">ไทย</option>
             </select>
           </label>
-          <button id="btn-about" class="icon-btn" data-i18n-title="misc.about">?</button>
-          <button id="btn-toggle-tel" class="icon-btn" title="Telemetry">📈</button>
         </div>
       </header>
-      <aside id="setup" class="panel"></aside>
-      <main id="viewport">
-        <canvas id="gl"></canvas>
-        <canvas id="map" class="overlay hidden"></canvas>
-        <canvas id="onboard" class="overlay hidden"></canvas>
-        <div id="hud"></div>
-        <div id="ticker"></div>
-        <div id="loading" data-i18n="misc.loading">Loading textures…</div>
-        <div id="controls">
-          <div class="ctl-group">
-            <button id="btn-play" class="ctl-btn" data-i18n-title="ctl.play">▶</button>
-            <label class="warp"><span data-i18n="ctl.warp">Warp</span>
-              <select id="warp-select"></select>
-            </label>
-            <button id="btn-skip" class="ctl-btn" data-i18n-title="ctl.skip">⏭</button>
+
+      <main class="workspace">
+        <aside id="setup" class="panel setup" tabindex="-1"></aside>
+
+        <section class="flight-column">
+          <div id="viewport" class="panel viewport">
+            <canvas id="gl"></canvas>
+            <canvas id="map" class="overlay hidden"></canvas>
+            <canvas id="onboard" class="overlay hidden"></canvas>
+            <div id="loading" class="scene-loading"><span id="loading-text" data-i18n="misc.loading">Loading textures…</span></div>
+            <div class="scene-ui">
+              <div class="scene-top">
+                <div class="mission-title">
+                  <span class="eyebrow" id="mission-eyebrow" data-i18n="narr.mission">MISSION</span>
+                  <h2 id="mission-name"></h2>
+                </div>
+                <div class="sim-state" id="sim-state" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="sim-state-text"></span></div>
+              </div>
+              <div class="scene-mid">
+              <div class="camera-tabs" role="group" id="camera-tabs">
+                <button class="cam-btn active" type="button" data-cam="exterior" aria-pressed="true"><span aria-hidden="true">◈</span><span data-i18n="ctl.camera.exterior"></span></button>
+                <button class="cam-btn" type="button" data-cam="onboard" aria-pressed="false"><span aria-hidden="true">▣</span><span data-i18n="ctl.camera.onboard"></span></button>
+                <button class="cam-btn" type="button" data-cam="space" aria-pressed="false"><span aria-hidden="true">✧</span><span data-i18n="ctl.camera.space"></span></button>
+                <button class="cam-btn" type="button" data-cam="map" aria-pressed="false"><span aria-hidden="true">◎</span><span data-i18n="ctl.camera.map"></span></button>
+              </div>
+              <div class="camera-tools">
+                <button id="btn-reset-cam" class="tool-btn" type="button" data-i18n-title="ctl.resetCamera"><span aria-hidden="true">⌖</span></button>
+                <button id="btn-fullscreen" class="tool-btn" type="button" data-i18n-title="ctl.fullscreen"><span aria-hidden="true">⛶</span></button>
+              </div>
+              </div>
+              <div class="scene-fill">
+                <div id="ticker" aria-live="polite"></div>
+                <div id="hud"></div>
+              </div>
+              <div class="scene-bottom" id="scene-bottom">
+                <div id="narration"></div>
+                <div class="scene-hint"><span id="cam-hint"></span></div>
+              </div>
+            </div>
           </div>
-          <div class="ctl-group cameras">
-            <button class="cam-btn active" data-cam="exterior" data-i18n="ctl.camera.exterior"></button>
-            <button class="cam-btn" data-cam="onboard" data-i18n="ctl.camera.onboard"></button>
-            <button class="cam-btn" data-cam="space" data-i18n="ctl.camera.space"></button>
-            <button class="cam-btn" data-cam="map" data-i18n="ctl.camera.map"></button>
-          </div>
-          <div id="cam-hint" class="hint"></div>
-        </div>
+
+          <section id="controls" class="panel playback">
+            <div id="timeline"></div>
+            <div class="ctl-row">
+              <div class="ctl-group">
+                <button id="btn-prev" class="ctl-btn" type="button" data-i18n-title="ctl.prev"><span aria-hidden="true">⏮</span></button>
+                <button id="btn-play" class="ctl-btn play-btn" type="button" data-i18n-title="ctl.play"><span aria-hidden="true">▶</span></button>
+                <button id="btn-skip" class="ctl-btn" type="button" data-i18n-title="ctl.skip"><span aria-hidden="true">⏭</span></button>
+                <button id="btn-live" class="ctl-btn live-btn" type="button" data-i18n="ctl.live" data-i18n-title="ctl.liveTitle">Live</button>
+              </div>
+              <div class="mission-clock">
+                <span id="clock">T-00:10</span>
+                <small id="clock-context"></small>
+              </div>
+              <label class="warp"><span data-i18n="ctl.warp">Warp</span>
+                <select id="warp-select"></select>
+              </label>
+            </div>
+          </section>
+        </section>
+
+        <aside id="telemetry" class="panel telemetry" tabindex="-1"></aside>
       </main>
-      <aside id="telemetry" class="panel"></aside>
-      <div id="about" class="modal hidden">
-        <div class="modal-box">
-          <h2 data-i18n="misc.about"></h2>
-          <p data-i18n="misc.aboutText"></p>
-          <p class="small">Earth textures: three.js examples (NASA Blue Marble). Vehicle figures are public data rounded to ±10 %.</p>
-          <button id="btn-about-close" class="btn">OK</button>
-        </div>
-      </div>
+
+      <footer id="footer">
+        <span data-i18n="app.footerModel">Earth · Newtonian flight model</span>
+        <span data-i18n="app.footerNote">Educational simulation · approximate vehicle data</span>
+      </footer>
+
+      <dialog id="physics-dialog" class="dialog"></dialog>
+      <dialog id="camera-dialog" class="dialog"></dialog>
     </div>
     <script type="module" src="./src/main.ts"></script>
   </body>

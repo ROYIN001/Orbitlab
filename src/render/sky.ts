@@ -62,8 +62,14 @@ export function skyState(sunElev: number, camAltitude: number, visibility = 45e3
   // the 2.6-intensity sun and every vehicle rendered slate blue regardless of
   // its paint. The sun must clearly dominate the lit side; the sky's job is
   // only to keep the shadowed side readable.
-  out.ambient = 0.14 + 0.20 * g * day + 0.08 * (1 - g);
-  out.hemi = 0.10 + 0.28 * g * day;
+  // In vacuum there is no sky to fill with. The ambient term has to fall to
+  // almost nothing there, otherwise the shadowed side of a satellite is as
+  // bright as the sunlit side and the eclipse test in SceneManager.update has
+  // nothing to darken — orbital night is about 35 % of every LEO orbit and it
+  // should look like night. `SceneManager` then adds Earth-shine from nadir,
+  // which is the fill that really exists up there.
+  out.ambient = 0.05 + 0.22 * g * day + 0.09 * g * (1 - day);
+  out.hemi = 0.08 + 0.26 * g * day;
   // Haze is a pad-level effect only. The Earth globe is drawn with its own
   // shader and takes no fog, so fogging distant terrain at altitude would put a
   // visible seam along the horizon.
