@@ -16,10 +16,20 @@
  * - **A pre-flight feasibility verdict** (audit B12) in the status note above
  *   the Launch button. It is derived from data — the vehicle's rated payload
  *   for the orbit class, the site's reachable inclinations, the mission plan —
- *   and never from a headless flight: a full mission takes tens of
- *   milliseconds per keystroke and `runAscent` is not a sound oracle (it stops
- *   at the parking orbit, so it reports success for missions that later fall
- *   short and failure for missions whose coast outlives its horizon).
+ *   because a full mission takes tens of milliseconds per keystroke and
+ *   `runAscent` is not a sound oracle for "will this succeed" (it stops at the
+ *   parking orbit, so it reports success for missions that later fall short and
+ *   failure for missions whose coast outlives its horizon).
+ *
+ *   The one exception is **`probeInsertion`**, and it is an exception because
+ *   stopping at the parking orbit is precisely the question it is asked: *is
+ *   there a parking orbit?* No static budget can answer that for a stack whose
+ *   orbit is made by a kick stage — it turns on the ascent losses, the one term
+ *   only a flight measures — and the budget's answer was wrong in both
+ *   directions when it was tried (see `probeInsertion`). The probe therefore
+ *   runs only for a configuration the static budget already calls marginal, is
+ *   cached per configuration, and can only make the verdict worse, never
+ *   better.
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec } from '../types';
 import { RATING_ORBITS, VEHICLES, vehicleById } from '../data/vehicles';
@@ -32,7 +42,10 @@ import {
   planMission, launchWindows, resolveTarget, inclinationCorridor, canBurnAfterAscent,
   apsisTolerance, perigeeTolerance, ASCENT_MARGIN_REQUIRED, type MissionPlan,
 } from '../physics/mission';
-import { runAscent, DEFAULT_KICKS, DEFAULT_RATES, DEFAULT_LOFTS, needsLoftSearch, type TuneResult } from '../physics/autotune';
+import {
+  runAscent, probeInsertion, DEFAULT_KICKS, DEFAULT_RATES, DEFAULT_LOFTS, needsLoftSearch,
+  type TuneResult, type InsertionProbe,
+} from '../physics/autotune';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes } from './names';
@@ -210,6 +223,22 @@ export interface VerdictInput {
   failureMode: FailureMode;
   /** the vehicle forced a different site and the change has not been reported yet */
   siteReassigned: boolean;
+  /**
+   * A headless flight of the ascent and the insertion, when one was run.
+   *
+   * The verdict is still a static budget everywhere else, and deliberately so.
+   * This is the single question the budget provably cannot answer — *does the
+   * stack get into orbit at all?* — because for a stack that carries a kick
+   * stage the answer turns on the ascent LOSSES, which is the one term only a
+   * flight measures (`probeInsertion` carries the measurement that rules out
+   * the static alternatives). Left null the verdict behaves exactly as it did.
+   *
+   * `SetupPanel` runs it only when the static budget already says the mission
+   * is marginal — the ascent stages short of the orbit, or the payload at 90 %
+   * of the rating or above — so a comfortable configuration still costs
+   * nothing, and a marginal one costs the 7-95 ms the probe measures at.
+   */
+  insertion?: InsertionProbe | null;
 }
 
 /**
@@ -237,10 +266,13 @@ export interface VerdictInput {
  * rest of the session and never reported a tight margin, an over-capacity
  * payload or an armed failure again.
  *
- * Deliberately not a headless flight: a full mission costs tens of
- * milliseconds per keystroke, and `runAscent` stops at the parking orbit, so
- * it reports success for missions that later run out of propellant and failure
- * for missions whose coast outlives its 2400 s horizon.
+ * Deliberately not a headless flight, with one exception: a full mission costs
+ * tens of milliseconds per keystroke, and `runAscent` stops at the parking
+ * orbit, so it reports success for missions that later run out of propellant
+ * and failure for missions whose coast outlives its 2400 s horizon. The
+ * exception is `VerdictInput.insertion`, which asks only whether the stack
+ * reaches an orbit at all — the question stopping at the parking orbit
+ * answers — and is supplied by the caller rather than run here.
  */
 export function missionVerdict(i: VerdictInput): Feasibility {
   const cls = orbitClassOf(i.orbit);
@@ -287,6 +319,16 @@ export function missionVerdict(i: VerdictInput): Feasibility {
       }));
     }
   }
+  // Last of the capability failures, because it is the least specific: the
+  // three above name what is missing, this one only reports that the flight was
+  // made and the stack did not get into orbit. It is also the only one that can
+  // see an ascent-loss shortfall, which is why the note it replaces was wrong —
+  // "the upper stage has to make up the difference" is true of Proton-M/Briz-M
+  // right up to the payload at which the upper stage cannot, and a 19.6 kN
+  // Briz-M under 29 t stops being able to somewhere between 5.75 t and 7.15 t.
+  if (i.insertion && !i.insertion.reachesOrbit) {
+    return say('fail', t('setup.verdict.noInsertion', { vehicle: i.spec.name }));
+  }
   const reachable = i.plan ? i.plan.inclinationReachable : corridor === 'ok';
   if (!reachable) {
     return say('warn', t('setup.verdict.inclination', { inc: i.inclinationDeg.toFixed(1), site: siteName(i.site), min: i.site.minInclination.toFixed(1) }));
@@ -330,6 +372,10 @@ export class SetupPanel {
   private launchBtn: HTMLButtonElement | null = null;
   /** the mission plan for the current state; null when the planner rejected it */
   private planCache: ReturnType<typeof planMission> | null = null;
+  /** the headless insertion flight for the current state; null when none was run */
+  private probeCache: InsertionProbe | null = null;
+  /** what `probeCache` was measured for, so a slider drag flies it once per value */
+  private probedFor = '';
 
   constructor(root: HTMLElement, cb: SetupCallbacks) {
     this.root = root;
@@ -790,6 +836,7 @@ export class SetupPanel {
     // One plan per refresh: both the info card and the feasibility verdict read
     // it, and planning twice per keystroke buys nothing.
     try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), vehicleById(this.state.vehicleId)); } catch { this.planCache = null; }
+    this.refreshInsertionProbe();
     this.updateStats();
     this.updateWindows();
     this.updateInfo();
@@ -902,6 +949,49 @@ export class SetupPanel {
     }
   }
 
+  /**
+   * Re-measure the headless insertion flight, if this configuration is one
+   * worth flying.
+   *
+   * Two gates, and both matter. The first is *whether to fly at all*: the
+   * static budget is right about the overwhelming majority of configurations
+   * and costs nothing, so the probe is only run when that budget already says
+   * the mission is marginal — the ascent stages short of the orbit they are
+   * aimed at, or the payload at 90 % of the rating or above. The second is the
+   * cache: a payload slider fires on every value, and the probe is 7-95 ms, so
+   * it is flown once per distinct configuration rather than once per event.
+   *
+   * The signature deliberately leaves out the launch time. Nothing in the
+   * ascent or the insertion depends on it — it sets the RAAN the plane is
+   * reached at, which the verdict judges from the plan — and including it would
+   * re-fly the mission on every tick of the clock control.
+   */
+  private refreshInsertionProbe(): void {
+    const plan = this.planCache;
+    const s = this.state;
+    if (!plan) {
+      this.probeCache = null;
+      this.probedFor = '';
+      return;
+    }
+    const spec = vehicleById(s.vehicleId);
+    const capability = missionCapability(spec, satelliteById(s.satelliteId), s.payloadMass, plan);
+    const { cap } = ratedPayload(spec, orbitClassOf(s.orbit));
+    const marginal = capability.ascentShortfall > 0 || (cap > 0 && s.payloadMass >= cap * 0.9);
+    if (!marginal) {
+      this.probeCache = null;
+      this.probedFor = '';
+      return;
+    }
+    const g = this.guidance;
+    const sig = `${this.missionSignature()}|${s.boosterRecovery}|${g.kickAngle}|${g.maxTurnRate}|${g.pitchMax}`
+      + `|${g.pitchMin}|${g.loftAltitude}|${g.parkingAltitude}|${g.maxAccel}|${g.slewRate}|${g.pitchOverAltitude}`
+      + `|${g.kickDuration}|${g.gravityTurnEnd}|${g.maxTimeToGo}`;
+    if (sig === this.probedFor && this.probeCache) return;
+    this.probedFor = sig;
+    try { this.probeCache = probeInsertion(this.getConfig()); } catch { this.probeCache = null; }
+  }
+
   /** The current mission's verdict; see `missionVerdict`. */
   feasibility(): Feasibility {
     const s = this.state;
@@ -917,6 +1007,10 @@ export class SetupPanel {
       // the ascent margin, the insertion orbit and the burn budget all come
       // from it, so the verdict says what the planner says.
       plan: this.planCache,
+      // Measured in `refresh()` for this same configuration, and null unless
+      // the static budget said the mission was marginal enough to be worth
+      // flying (see `refreshInsertionProbe`).
+      insertion: this.probeCache,
       failureMode: s.failure.mode,
       siteReassigned: this.siteReassigned,
     });

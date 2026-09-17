@@ -5,7 +5,7 @@
  */
 import type { GuidanceParams, MissionConfig } from '../types';
 import { Simulation } from './simulation';
-import { orbitResiduals } from './mission';
+import { orbitResiduals, ORBIT_INSERTION_FLOOR } from './mission';
 import type { OrbitMiss } from './mission';
 import { VehicleModel } from './vehicle';
 import { vehicleById } from '../data/vehicles';
@@ -185,4 +185,112 @@ export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICK
     if (partial.length > 0) best = partial.reduce((a, b) => (b.dvRemaining > a.dvRemaining ? b : a));
   }
   return { best, results };
+}
+
+// ---------------------------------------------------------------------------
+// The insertion probe
+// ---------------------------------------------------------------------------
+
+/**
+ * How long the insertion probe flies before giving up, s.
+ *
+ * The question it asks is answered by the insertion clock and nothing later:
+ * the slowest class in the fleet — a launcher whose orbit is made by a kick
+ * stage below 0.15 g — is held to T+1900 s by the fleet gate's own
+ * `insertionLimit`, and every accepted row in the matrix is in an orbit well
+ * inside that. The horizon is the same 2400 s `runAscent` uses, which leaves
+ * 500 s of headroom over the slowest accepted insertion and still bounds the
+ * cost at a few thousand integration steps.
+ */
+export const INSERTION_PROBE_HORIZON = 2400;
+
+export interface InsertionProbe {
+  /**
+   * The flight was still flying at the horizon: not destroyed, not suborbital,
+   * not out of propellant short of an orbit.
+   *
+   * This — rather than a threshold on the perigee — is what the probe answers,
+   * and the difference is deliberate. A perigee threshold asks a question with
+   * a knife edge in it (Proton-M/Briz-M's own accepted rows insert through
+   * 135 km on their way to 500 km, five kilometres under a 140 km line, and
+   * they are perfectly good missions), while "was the vehicle lost trying?" has
+   * no edge: every flight in the fleet matrix is either comfortably flying at
+   * T+2400 s or has already ended in `evt.vehicleLost`, `evt.outOfPropellant`
+   * or `evt.insertionAbandoned` by then.
+   */
+  reachesOrbit: boolean;
+  /** first moment the stack held a bound orbit above the insertion floor, s (−1 if never) */
+  tInsertion: number;
+  /** the best perigee it ever held on a bound orbit after the ascent, m */
+  bestPerigee: number;
+  /** apoapsis at that moment, m */
+  apoapsis: number;
+  /** the event the flight ended on, '' when it was still flying at the horizon */
+  endedWith: string;
+}
+
+/**
+ * Fly the ascent and the insertion headlessly and report whether the stack gets
+ * into orbit at all.
+ *
+ * The pre-flight verdict is otherwise derived from data and the mission plan,
+ * deliberately and for good reasons — a full mission costs tens of milliseconds
+ * and `runAscent` is not a sound oracle for "will this mission succeed",
+ * because it stops at the parking orbit. This is the one question where that
+ * objection does not apply, because stopping at the parking orbit is exactly
+ * what is being asked: *is there a parking orbit?*
+ *
+ * It exists because no static budget can answer it. The plan can say how much
+ * ideal Δv the ascent stages are short of the orbit they are aimed at
+ * (`MissionPlan.ascentMakeUp`) and how far a kick stage sinks making that up
+ * (`kickStageSink`), and for a stack that carries a kick stage those two
+ * numbers decide the mission — but the first is built on a fleet-wide loss
+ * allowance with a ±500 m/s spread and the second is CUBIC in it. Measured
+ * across the fleet, that arithmetic calls Proton-M/Briz-M with the 7.15 t crew
+ * ship beyond capability (correct: its losses run 240 m/s above the allowance)
+ * and Angara-A5/Briz-M to a 600 km sun-synchronous orbit beyond capability too
+ * (wrong: it inserts at 200 km and delivers 598 × 598 km, because its losses
+ * run well below it). A verdict cannot ship a rule that is wrong about a
+ * mission the project's own acceptance suite flies.
+ *
+ * So the probe flies it. The flight is headless, deterministic, capped at
+ * `INSERTION_PROBE_HORIZON`, stops the moment the answer is yes, and costs
+ * 7-95 ms across the fleet matrix (median 40).
+ *
+ * Failure injection is deliberately disarmed: the probe asks whether the STACK
+ * can reach orbit, and an armed failure is reported by the verdict separately
+ * and on purpose.
+ */
+export function probeInsertion(cfg: MissionConfig, horizon = INSERTION_PROBE_HORIZON): InsertionProbe {
+  const sim = new Simulation({ ...cfg, failure: { mode: 'none', time: 0, stage: 0 } }, { headless: true });
+  let best = -Infinity;
+  let apoapsis = 0;
+  let tInsertion = -1;
+  let guard = 0;
+  while (!sim.done && sim.state.t < horizon && guard++ < 200000) {
+    sim.step(sim.suggestedDt());
+    const el = sim.state.elements;
+    // Only once the powered ascent is over: an osculating perigee during the
+    // ascent means nothing (it is a thousand kilometres inside the Earth for
+    // the whole first stage) and a lofted trajectory crosses the floor on the
+    // way up without being in any orbit at all.
+    if (sim.state.status === 'ascent' || sim.state.status === 'prelaunch') continue;
+    if (!(el.e < 1)) continue;
+    if (el.periapsisAlt > best) {
+      best = el.periapsisAlt;
+      apoapsis = el.apoapsisAlt;
+    }
+    if (tInsertion < 0 && el.periapsisAlt >= ORBIT_INSERTION_FLOOR) {
+      tInsertion = sim.state.t;
+      break; // the answer is yes; nothing later can change it
+    }
+  }
+  const last = sim.events[sim.events.length - 1];
+  return {
+    reachesOrbit: sim.state.status !== 'failed',
+    tInsertion,
+    bestPerigee: isFinite(best) ? best : -Infinity,
+    apoapsis,
+    endedWith: sim.state.status === 'failed' && last ? last.key : '',
+  };
 }

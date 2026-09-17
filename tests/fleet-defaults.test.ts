@@ -74,9 +74,11 @@ import { Simulation } from '../src/physics/simulation';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import {
   azimuthAllowedFor, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
+  ORBIT_INSERTION_FLOOR, kickStageSink,
 } from '../src/physics/mission';
+import { probeInsertion } from '../src/physics/autotune';
 import type { MissionConfig } from '../src/types';
-import { RAD, DEG } from '../src/physics/constants';
+import { RAD, DEG, R_EARTH, MU_EARTH } from '../src/physics/constants';
 import {
   LAUNCH_TIME, allCases, caseKey, flyCase, acceptanceFailures, insertionTime, insertionLimit,
   achievedElements, fleetCases, TANKS_EMPTY_DV,
@@ -268,6 +270,63 @@ describe('excluded combinations', () => {
     }
   }, 120000);
 
+  /**
+   * The insertion floor, over the whole matrix.
+   *
+   * The defect this guards against is not a bad orbit, it is a *lie about the
+   * timeline*: Proton-M/Briz-M with the 7.15 t crew ship reported SECO at
+   * T+570 s, "coasting to apoapsis", and then broke up at 46 kPa at T+1238 s —
+   * 668 s of the user watching a flight that had already failed, ending in a
+   * structural failure the vehicle had no business reaching. A break-up during
+   * an ascent that is visibly sagging is an honest end for an underpowered
+   * stack and several `BEYOND_CAPABILITY` rows have one; a break-up AFTER the
+   * flight has announced that it is in an orbit is not, and no amount of
+   * capability shortfall makes it one.
+   *
+   * So the rule is ordering, not outcome, and it is asserted over every row in
+   * the matrix — accepted and excluded alike, because the excluded rows are
+   * where the break-ups live.
+   */
+  it('no flight breaks up after it has reported an insertion', () => {
+    const bad: string[] = [];
+    for (const c of allCases()) {
+      const key = caseKey(c);
+      if (SITE_GEOMETRY[key]) continue;
+      const sim = flyCase(c);
+      const first = (k: string): number => sim.events.find((e) => e.key === k)?.t ?? Infinity;
+      const insertion = Math.min(first('evt.seco'), first('evt.parkingOrbit'));
+      const breakUp = first('evt.structuralFailure');
+      // A break-up during an ascent that never announced an insertion is the
+      // honest end of an underpowered stack and several excluded rows have one.
+      if (!isFinite(breakUp) || !isFinite(insertion) || breakUp < insertion) continue;
+      bad.push(`${key}: ${sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ')}`);
+    }
+    expect(bad, `a structural failure after evt.seco / evt.parkingOrbit: ${bad.join(' | ')}`).toEqual([]);
+  }, 300000);
+
+  /**
+   * ...and nothing under the floor is reported as a parking orbit.
+   *
+   * The quieter half of the same defect. With 1.4 t less payload the Proton
+   * flight above did not break up — it announced "parking orbit 94 × 94 km" and
+   * flew a 43-minute transfer with a 94 km perigee to a perfectly good 498 km
+   * orbit. The mission succeeded and the report of it was false.
+   */
+  it('no flight reports a parking orbit below the insertion floor', () => {
+    const bad: string[] = [];
+    for (const c of allCases()) {
+      const key = caseKey(c);
+      if (SITE_GEOMETRY[key]) continue;
+      const sim = flyCase(c);
+      for (const e of sim.events) {
+        if (e.key !== 'evt.parkingOrbit') continue;
+        const pe = Number(e.params!.pe) * 1e3;
+        if (pe < ORBIT_INSERTION_FLOOR - 5e3) bad.push(`${key}: parking orbit at ${Math.round(pe / 1e3)} km (T+${Math.round(e.t)} s)`);
+      }
+    }
+    expect(bad, `reported as a parking orbit below ${ORBIT_INSERTION_FLOOR / 1e3} km: ${bad.join(' | ')}`).toEqual([]);
+  }, 300000);
+
   it('no more than a twentieth of the fleet matrix is a guidance defect', () => {
     // A ratchet, not a target: the wave that fixes these lowers the number.
     const total = allCases().length - Object.keys(SITE_GEOMETRY).length;
@@ -301,6 +360,122 @@ function flySoyuzDefaultMission(): Simulation {
   while (!sim.done && sim.state.t < 6 * 3600 && guard++ < 400000) sim.step(sim.suggestedDt());
   return sim;
 }
+
+/**
+ * Proton-M / Briz-M with the application's own default satellite.
+ *
+ * The reported defect this section exists for: Proton-M / Briz-M + the 7.15 t
+ * crew ship from Baikonur to the ISS, default guidance, no auto-tune. The
+ * pre-flight verdict was amber — "the ascent stages are 393 m/s short of this
+ * orbit: the upper stage has to make up the difference" — the flight reported
+ * SECO at T+570 s and a coast to apoapsis, and then broke up at T+1238 s on the
+ * max-Q placard at 46 kPa, 668 s later, with 3.6 km/s still in the Briz-M.
+ *
+ * MEASURED, and this is the whole reason the case is filed as a capability
+ * limit rather than a guidance defect. The three Proton stages have to carry a
+ * 22.17 t Briz-M as well as the payload, and at 7.15 t they cut off at
+ * 210 × −1 733 km with 7 094 m/s, 690 m/s short of the 7 784 m/s a 200 km
+ * circular orbit needs. The Briz-M has 3.6 km/s of ideal Δv and 19.6 kN of
+ * thrust — 0.64 m/s² under 29.3 t — so closing 690 m/s takes it ~1 080 s, and
+ * `kickStageSink` puts the drop over such a burn at ~250 km against the 60 km
+ * the ascent can give it. `MissionPlan.ascentMargin` is −243 m/s, i.e. 393 m/s
+ * below the margin the planner asks for, so the case satisfies the
+ * `BEYOND_CAPABILITY` rule as written.
+ *
+ * A 48-point sweep of the tuning grid (kick 1.5-8°, turn rate 0.25-0.5 °/s,
+ * pitch limit 20-35°, loft 0-150 km — 300 flights) is on the record: 24 of the
+ * 300 reach the target, all of them at kick angles of 6-8° with turn rates the
+ * fleet does not use, and none at or near the shipped programme. With the
+ * DEFAULT guidance this combination does not fly, which is what this test
+ * pins — together with the thing that had to change regardless: it now ends
+ * honestly instead of being destroyed.
+ */
+describe('Proton-M / Briz-M with the crew ship', () => {
+  const protonCrew = (mass: number): MissionConfig => ({
+    vehicleId: 'protonm', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'),
+    launchTime: LAUNCH_TIME,
+    guidance: { ...DEFAULT_GUIDANCE },
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass,
+  });
+
+  /** The flight, and the state the ascent handed the Briz-M. */
+  function fly(mass: number): { sim: Simulation; seco: { t: number; alt: number; vh: number } } {
+    const sim = new Simulation(protonCrew(mass), { headless: true });
+    const seco = { t: -1, alt: 0, vh: 0 };
+    let guard = 0;
+    while (!sim.done && sim.state.t < 6 * 3600 && guard++ < 400000) {
+      sim.step(sim.suggestedDt());
+      if (seco.t < 0 && sim.events.some((e) => e.key === 'evt.seco')) {
+        seco.t = sim.state.t;
+        seco.alt = sim.state.altitude;
+        seco.vh = Math.sqrt(Math.max(0, sim.state.speed ** 2 - sim.state.vz ** 2));
+      }
+    }
+    return { sim, seco };
+  }
+
+  it('is beyond the stack at 7.15 t, and ends saying so instead of breaking up', () => {
+    const { sim, seco } = fly(7150);
+    const log = sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
+    const keys = sim.events.map((e) => e.key);
+
+    // The measured reason it is excluded, read off the plan rather than quoted.
+    expect(sim.plan.ascentMargin, log).toBeLessThan(ASCENT_MARGIN_REQUIRED);
+    expect(sim.plan.weakFinalStage).toBe(true);
+    // ...and the term the delta-v budget alone cannot see: the Briz-M sinks
+    // further closing the shortfall than the ascent can give it.
+    expect(sim.plan.ascentMakeUp, log).toBeGreaterThan(300);
+    // ...and the term the delta-v budget alone cannot see, measured off the
+    // flight rather than off the plan. The plan's own `ascentMakeUp` is built
+    // on the fleet-wide loss allowance and under-states this stack by ~300 m/s
+    // (Proton spends 1 991 m/s against an allowance of 1 750), which is exactly
+    // why the pre-flight verdict flies the insertion instead of computing it.
+    const rSeco = R_EARTH + seco.alt;
+    const shortfall = Math.sqrt(MU_EARTH / rSeco) - seco.vh;
+    const sink = kickStageSink(shortfall, Math.sqrt(MU_EARTH / rSeco), sim.plan.kickStageAccel, MU_EARTH / (rSeco * rSeco));
+    expect(shortfall, log).toBeGreaterThan(600);
+    expect(sink, `sink ${Math.round(sink / 1e3)} km for ${Math.round(shortfall)} m/s at ${sim.plan.kickStageAccel.toFixed(2)} m/s² — ${log}`)
+      .toBeGreaterThan(sim.plan.insertionAltitude - ORBIT_INSERTION_FLOOR);
+
+    // The outcome is honest: no break-up, no impact, and the flight says what
+    // happened rather than stopping at a reported insertion.
+    expect(keys, log).not.toContain('evt.structuralFailure');
+    expect(keys, log).not.toContain('evt.vehicleLost');
+    expect(keys, log).toContain('evt.insertionAbandoned');
+    expect(sim.state.status, log).toBe('failed');
+    expect(sim.state.note, log).toBe('suborbital');
+    // It gave up where the floor says to — the first measurable air — and not
+    // at 45 km in 46 kPa against a 40 kPa placard, which is where it used to
+    // end. The dynamic pressure at the moment it stops is a fortieth of the
+    // placard and the stack is still above 70 km.
+    const gaveUp = sim.events.find((e) => e.key === 'evt.insertionAbandoned')!;
+    expect(Number(gaveUp.params!.alt), log).toBeGreaterThan(60);
+    expect(sim.state.q, log).toBeLessThan(0.2 * sim.vehicleSpec.maxQ);
+
+    // And the headless probe the pre-flight verdict uses agrees with the
+    // flight, which is what makes the verdict red instead of amber.
+    expect(probeInsertion(protonCrew(7150)).reachesOrbit, log).toBe(false);
+  }, 60000);
+
+  /**
+   * The payload either side of it, so the exclusion is a measured boundary and
+   * not a blanket statement about the vehicle. 5.75 t is the fleet matrix's own
+   * `protonm/iss/25` row with a live spacecraft instead of the dispenser.
+   */
+  it('still flies 5.75 t to the same orbit, and no longer through a 94 km perigee', () => {
+    const { sim } = fly(5750);
+    const log = sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
+    expect(sim.events.map((e) => e.key), log).toContain('evt.targetOrbit');
+    const el = achievedElements(sim);
+    expect(el.periapsisAlt / 1e3, log).toBeGreaterThan(410);
+    expect(el.apoapsisAlt / 1e3, log).toBeLessThan(430);
+    // The lofted hand-off to the Briz-M is what moved this: the insertion used
+    // to bottom out at 93.9 km and be announced as a parking orbit there.
+    expect(probeInsertion(protonCrew(5750)).reachesOrbit, log).toBe(true);
+    const park = sim.events.find((e) => e.key === 'evt.parkingOrbit');
+    if (park) expect(Number(park.params!.pe) * 1e3, log).toBeGreaterThanOrEqual(ORBIT_INSERTION_FLOOR - 5e3);
+  }, 60000);
+});
 
 describe('default mission', () => {
   it('soyuz21a + crew ship reaches the ISS orbit from baikonur', () => {

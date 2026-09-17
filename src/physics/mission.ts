@@ -5,7 +5,7 @@
 import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { satelliteById } from '../data/satellites';
-import { DEG, R_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
+import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
   circularSpeed, visViva, inertialLaunchAzimuth, rotatingLaunchAzimuth, sunSyncInclination,
@@ -86,6 +86,36 @@ export interface MissionPlan {
    * this number).
    */
   ascentMargin: number;
+  /**
+   * Ideal Δv the ascent stages are short of the INSERTION orbit — the orbit
+   * they are actually aimed at — and therefore what a kick stage above them has
+   * to make up, m/s. Zero when they are not short.
+   *
+   * `ascentMargin` is the same arithmetic against the MISSION's orbit, which is
+   * the question a capability claim asks; this is the question the flight asks,
+   * and the two differ by the cost of the transfer the kick stage exists to fly
+   * (a 200 km parking orbit's perigee speed is 126 m/s ABOVE a 420 km circular
+   * orbit's, so a stack aimed at a parking orbit owes more than its
+   * `ascentMargin` suggests).
+   */
+  ascentMakeUp: number;
+  /**
+   * Thrust acceleration of the kick stage at its ignition, m/s² — 0 when the
+   * stack has no kick stage (`weakFinalStage` false).
+   */
+  kickStageAccel: number;
+  /**
+   * How far the stack sinks while the kick stage makes up `ascentMakeUp`, m —
+   * see `kickStageSink`. 0 when there is nothing to make up or no kick stage.
+   *
+   * The budget it has to fit inside is `insertionAltitude −
+   * ORBIT_INSERTION_FLOOR`: the ascent hands the kick stage the insertion
+   * altitude, and below the floor the stack is in air and is no longer going to
+   * orbit. A sink larger than that is a stack that cannot be rescued by its own
+   * kick stage however much ideal Δv the kick stage has left, which is the one
+   * thing the Δv budget alone cannot see.
+   */
+  insertionSink: number;
 }
 
 /** ISS reference plane (approximate): RAAN at epoch and J2 regression. */
@@ -272,6 +302,91 @@ export const ASCENT_LOSS_ALLOWANCE = 1750;
  * Exported so that the gate cannot quote a different number from the planner.
  */
 export const ASCENT_MARGIN_REQUIRED = 150;
+
+/**
+ * Lowest perigee the sequencer will treat as an orbit, m.
+ *
+ * It is the one number behind three separate rules, and they are the same rule:
+ *
+ *  - the ascent may cut off on a transfer ellipse at this perigee, because a
+ *    perigee this high coasts a revolution without decaying and the burn at
+ *    apogee sets the real one (`Simulation.checkAscent`);
+ *  - a stack that is still meant to reach orbit is never flown BELOW it — no
+ *    burn is commanded and no coast accepted whose perigee is under it while
+ *    the vehicle is sinking back into measurable air. A stack in that state has
+ *    failed to insert, and the mission ends saying so
+ *    (`Simulation.abandonInsertion`);
+ *  - nothing under it is reported as a parking orbit. A "parking orbit
+ *    94 × 94 km" is not a parking orbit, and reporting one is how an insertion
+ *    that failed came to look like an insertion that worked.
+ *
+ * The defect that put it here: Proton-M/Briz-M with the 7.15 t crew ship cut
+ * its third stage off at 199 × −1 649 km, 664 m/s short of orbital, and the
+ * `nearApo` clause in `onCoreBurnout` accepted that as "at the insertion
+ * apoapsis, coast and circularise". The Briz-M then thrust for 666 s against a
+ * target that sank with the vehicle, from 199 km down to 45 km, where the
+ * structural placard broke the stack up at 46 kPa — 668 s after a reported
+ * SECO. With 1.4 t less payload the same path "succeeded" by declaring a
+ * 94 × 94 km parking orbit, which is the same defect with a quieter symptom.
+ */
+export const ORBIT_INSERTION_FLOOR = 140e3;
+
+/**
+ * How far a stack sinks while a low-thrust kick stage makes up an ascent
+ * shortfall, m.
+ *
+ * This is the question a Δv budget cannot answer, and it is the question that
+ * decides every Proton-M, Angara-A5 and Soyuz-2.1b/Fregat mission in this
+ * model: those stacks always carry their kick stage, so their ascent stages
+ * hand it a trajectory that is short of orbital, and whether the mission
+ * happens depends on whether the kick stage can close that gap before the
+ * trajectory does. A Briz-M has 3.6 km/s of ideal Δv aboard and 0.67 m/s² to
+ * spend it with.
+ *
+ * While the stack is short of the local circular speed by Δv the centrifugal
+ * term no longer balances gravity, so it falls at
+ *
+ *     g_eff = g − v_h²/r = g[1 − (1 − Δv/v_c)²] ≈ 2 g Δv / v_c      (Δv ≪ v_c)
+ *
+ * The kick stage closes the shortfall at a constant acceleration a, so
+ * Δv(t) = Δv₀ − a t over T = Δv₀/a, and the drop over the whole burn is
+ *
+ *     ∫₀ᵀ (T − t) g_eff(t) dt = (2g/v_c)(Δv₀T²/2 − aT³/6) = 2 g Δv₀³ / (3 v_c a²)
+ *
+ * The shape is the useful part: the sink is CUBIC in the shortfall and inverse
+ * square in the thrust, so a stack twice as short sinks eight times as far and
+ * a kick stage with half the thrust four times as far. That is why the boundary
+ * between a Proton mission that flies and one that is destroyed is a few
+ * hundred kilograms of payload rather than a broad band, and why "the upper
+ * stage has to make up the difference" is only true up to a difference.
+ *
+ * It is used by the LOFTED HAND-OFF (`AscentGuidance`), where it answers "how
+ * much apex does the stage below have to leave the kick stage?", and it is fed
+ * the LIVE shortfall the guidance can see rather than the plan's estimate of
+ * it. That distinction matters: the plan's `ascentMakeUp` is built on a
+ * fleet-wide loss allowance whose spread is ±500 m/s, and the sink is cubic in
+ * the shortfall, so the same arithmetic on the plan's number is out by an order
+ * of magnitude either way (Proton-M's real losses are 240 m/s above the
+ * allowance, Angara-A5's well below it). This is why the pre-flight verdict
+ * does not use it and flies the insertion instead.
+ *
+ * The closed form above is OPEN LOOP: it assumes the kick stage thrusts
+ * horizontally throughout and never re-plans. A flown insertion pitches the
+ * thrust up as the stack sinks — the velocity-to-be-gained command reaches 68°
+ * by the end of a Briz-M insertion — and that vertical component cancels a
+ * large part of g_eff, so the real sink is about half of it. Measured on the
+ * flight this was calibrated against (Proton-M/Briz-M, 5 750 kg, the
+ * hand-over state the guidance actually sees): 236 km open loop against 104 km
+ * flown, a factor of 0.44. `SINK_FLOWN_FRACTION` is that measurement, and the
+ * value returned here is the FLOWN estimate — the one a control law should
+ * plan against.
+ */
+export const SINK_FLOWN_FRACTION = 0.5;
+
+export function kickStageSink(makeUp: number, vCirc: number, aKick: number, g: number): number {
+  if (!(makeUp > 0) || !(aKick > 0) || !(vCirc > 0)) return 0;
+  return (SINK_FLOWN_FRACTION * 2 * g * makeUp * makeUp * makeUp) / (3 * vCirc * aKick * aKick);
+}
 
 /**
  * Apsis error the burn planner will fly a correction for, m.
@@ -760,6 +875,19 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
   const azimuthRotating = rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
   const burns = planBurns(target, ascentInclination, insertionAltitude, insertionApoapsis);
+  // What the kick stage is left holding, and whether it can hold it. The ascent
+  // stages' shortfall against the orbit they are AIMED at is what a kick stage
+  // has to make up; `kickStageSink` turns that into the altitude the stack
+  // loses making it up, which is the term the Δv budget cannot see.
+  const ascentMakeUp = Math.max(0, ascentCost(insertionAltitude, insertionApoapsis) - dvStrong);
+  const kickStageAccel = weakFinalStage ? aLast : 0;
+  const rIns = R_EARTH + insertionAltitude;
+  const insertionSink = kickStageSink(
+    ascentMakeUp,
+    visViva(rIns, (rIns + R_EARTH + insertionApoapsis) / 2),
+    kickStageAccel,
+    MU_EARTH / (rIns * rIns),
+  );
   return {
     target, ascentInclination, descending, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
     launchTime: cfg.launchTime, jd0, gmst0, raanExpected,
@@ -775,6 +903,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     // own orbit rather than against whatever the planner ended up aiming at:
     // that is the question a capability claim asks.
     ascentMargin: dvStrong - ascentCost(target.perigee, target.apogee),
+    ascentMakeUp, kickStageAccel, insertionSink,
   };
 }
 

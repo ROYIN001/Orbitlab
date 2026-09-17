@@ -52,7 +52,10 @@ tablet, and a single stack on a phone with the viewport first.
   (LEO, SSO/polar, GTO/GEO), whether the target inclination is inside the launch site's
   range-safety corridor (both ends of it), and whether the stack can actually deliver the
   orbit: the planner's own ascent-Δv margin, a direct insertion nothing can raise, and the Δv
-  the planned burns need against what is left to fly them.
+  the planned burns need against what is left to fly them. For a configuration the budget
+  already calls marginal it also flies the ascent and the insertion headlessly and asks
+  whether the stack reaches an orbit at all — the one question a static budget provably
+  cannot answer for a launcher whose orbit is made by a kick stage.
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.

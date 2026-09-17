@@ -41,8 +41,18 @@ reassigned, the ascent stages are short on paper and an upper stage has to make 
 difference up, the margin is tight, or a failure is armed; an armed failure is always
 reported, alongside whatever else the verdict says. It reads *ok* (green) otherwise. It is
 computed from data and the mission plan, not by flying the mission first — so it can tell you
-a mission will not fly before you spend the time watching it try. The one thing it cannot see
-is the ascent *losses*, which only a flight measures.
+a mission will not fly before you spend the time watching it try.
+
+There is one exception, and it exists because of the one thing a static budget cannot see:
+the ascent *losses*, which only a flight measures. When the plan already says the mission is
+marginal — the ascent stages short of the orbit they are aimed at, or the payload at 90 % of
+the rating or above — the panel flies the ascent and the insertion headlessly and asks a
+single question: does the stack get into an orbit at all? If it does not, the verdict is red
+whatever the budget says. That is what separates Proton-M / Briz-M carrying a 5.75 t
+spacecraft to the space station (which flies, with the Briz-M making up the difference) from
+the same rocket carrying the 7.15 t crew ship (which does not, because a 19.6 kN Briz-M
+cannot close a 690 m/s gap before the trajectory falls back into the atmosphere) — two
+missions the Δv budget alone reads as the same amber note.
 
 Press **Launch**. The mission starts on the pad, T‑10 s.
 
