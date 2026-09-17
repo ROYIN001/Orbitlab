@@ -260,6 +260,35 @@ runs into all the time, and each of the following limits fixes one observed fail
   into the vertical speed the booster must still have at its own cut-off,
   v_zT = √(2 g_eff Δh).
 
+  **The hand-over to a kick stage counts, and used not to.** `nextStageAccel` excludes a weak
+  final stage — the ascent is planned over the stages that actually fly it — and that
+  exclusion reached this test as well, so the last *strong* stage of a stack that carries a
+  Briz-M or a Fregat believed it was the final stage, aimed at a level cut-off at the
+  insertion altitude, and handed 0.065–0.09 g a trajectory with nowhere to go but down. It is
+  the weakest hand-over in the fleet and it was the only one that could not be lofted. The
+  amount of apex it asks for is not the vehicle's whole figure but only what the kick stage
+  cannot avoid losing — `kickStageSink` below, minus the band the ascent already gives it
+  between the insertion altitude and the insertion floor, capped at the vehicle's figure.
+  Flying the whole figure at every kick-stage hand-over was tried and measured: Proton-M needs
+  all of it (the cap binds), and it costs Angara-A5 to a 600 km sun-synchronous orbit 626 s of
+  insertion clock for a hand-over that only needs about a third of it.
+
+  **How far a kick stage sinks.** While the stack is short of the local circular speed by Δv
+  the centrifugal term no longer balances gravity, so it falls at
+  g_eff = g[1 − (1 − Δv/v_c)²] ≈ 2gΔv/v_c. A kick stage closing the shortfall at a constant
+  acceleration a takes T = Δv/a, and the drop over the burn is
+
+  ```
+  ∫₀ᵀ (T − t) g_eff(t) dt = 2 g Δv³ / (3 v_c a²)
+  ```
+
+  cubic in the shortfall and inverse square in the thrust: a stack twice as short sinks eight
+  times as far. The closed form is open loop — it assumes the stage thrusts horizontally
+  throughout — and a flown insertion pitches up as it sinks (the velocity-to-be-gained command
+  reaches 68° by the end of a Briz-M insertion), which cancels about half of it. The measured
+  correction is 236 km open loop against 104 km flown, and `SINK_FLOWN_FRACTION` is that
+  measurement.
+
 ### 5.2 Per-vehicle defaults
 
 Each vehicle carries its own `guidanceDefaults` in `src/data/vehicles.ts`. The simulation
@@ -285,7 +314,7 @@ know. Two consequences worth knowing about:
 | --- | --- | --- | --- | --- |
 | Soyuz-2.1a | 3.0 | 0.30 | 35 | 0 |
 | Soyuz-2.1b / Fregat | 1.5 | 0.30 | 35 | 0 |
-| Proton-M | 6.0 | 0.30 | 25 | 0 |
+| Proton-M | 6.0 | 0.30 | 25 | 150 |
 | Angara-A5 | 4.0 | 0.30 | 25 | 150 |
 | Falcon 9 | 1.5 | 0.30 | 35 | 0 |
 | Falcon Heavy | 1.5 | 0.30 | 25 | 150 |
@@ -307,7 +336,13 @@ that suits Soyuz-2.1b costs it about 450 m/s of gravity and steering loss and le
 7.15 t crew mission 30 km of perigee short. 3° / 0.30 °/s recovers that at 34 kPa of max Q,
 inside the 40 kPa placard, and keeps booster separation, core cut-off and SECO on their
 published times (120 / 294 / 535 s against 118 / 287 / 528 s). A loft is set exactly for the vehicles whose
-upper stage lights below 0.4 g (Centaur III and V, Vinci, URM-2 with a Briz-M above it).
+upper stage lights below 0.4 g (Centaur III and V, Vinci, URM-2 with a Briz-M above it, and —
+since the kick-stage hand-over started counting, §5.1 — Proton-M, whose Briz-M lights at
+0.065–0.09 g, the weakest hand-over in the fleet). Without it Proton-M's third stage cut off
+level at the insertion altitude and the Briz-M sank out of the orbit it was meant to close:
+with 5.75 t aboard the insertion bottomed out at 94 km and was announced as a parking orbit
+there, and with 7.15 t the stack was destroyed at 46 kPa. With it the same 5.75 t insertion
+bottoms out at 139 km.
 The library baseline itself was lowered from 6° / 0.7 °/s to 2.5° / 0.4 °/s: the old default
 flew several vehicles into the ground.
 
@@ -504,6 +539,30 @@ largest remaining Δv that respects max-Q. No mission requires it.
   crew-ship engine) completes the remaining burns, again split across passes when long.
 - The resulting orbit is compared with the target; a stable orbit off target is reported as
   such, a suborbital trajectory as a failure.
+- **The insertion floor.** `ORBIT_INSERTION_FLOOR` is 140 km, and it is the one number behind
+  three rules that are really one rule: the ascent may cut off on a transfer ellipse at that
+  perigee (above), nothing under it is reported as a parking orbit, and a stack that is still
+  meant to reach orbit is never flown below it — no burn is commanded and no coast accepted
+  whose perigee is under the floor while the vehicle is sinking back into measurable air. The
+  line for "measurable air" is the model's own fairing placard, 1.1 kPa, which is forty times
+  below the softest structural placard in the fleet: every insertion in the matrix that works
+  stays under 0.05 kPa, and the one that does not passes 1.1 kPa 86 s before it is destroyed.
+  Reaching it means the insertion has failed, and the mission ends saying so
+  (`evt.insertionAbandoned`, a suborbital trajectory) rather than flying on into a break-up.
+
+  The defect that put it there is worth keeping, because both of its symptoms were the same
+  bug. `onCoreBurnout`'s "coast to apoapsis and circularise" clause asks whether the apoapsis
+  is at the insertion apoapsis and the periapsis below it, and never asked whether the orbit
+  was one the vehicle could coast in. Proton-M/Briz-M with the 7.15 t crew ship cut its third
+  stage off at 210 × −1 733 km — 690 m/s short of orbital — and the clause accepted it: SECO
+  was announced, then a coast to apoapsis, then a `circularize` burn whose target is "make the
+  radius I am at now circular", which follows the vehicle down. The Briz-M thrust for 666 s
+  from 199 km to 45 km and the structural placard broke the stack up at 46 kPa, 668 s after
+  its own reported insertion. With 1.4 t less payload the same path did not break up: it
+  announced "parking orbit 94 × 94 km" and flew a 43-minute transfer with a 94 km perigee to a
+  perfectly good 498 km orbit — the mission succeeded and the report of it was false. Two
+  tests over the whole matrix pin both halves: `no flight breaks up after it has reported an
+  insertion` and `no flight reports a parking orbit below the insertion floor`.
 
 ## 6a. Reference timelines
 
@@ -818,6 +877,55 @@ here is a lower bound, not a ceiling):
 "The largest payload that passes the acceptance criteria" is not the same thing as "the largest
 payload delivered": a flight can reach a perfectly good orbit and still miss the criteria on
 apsis accuracy or on the mission clock.
+
+### The kick-stage fleet on its real missions
+
+The acceptance matrix flies percentages of a published rating with an inert dispenser, which
+is the right instrument for a regression gate and the wrong one for the question "does the app
+fly the mission a user would pick". This table is the second instrument: each launcher that
+carries a kick stage, with the spacecraft it really launches, on the mission it really flies,
+default guidance, no auto-tune. "verdict" is `missionVerdict`'s level for the same
+configuration, and the column that matters is whether it agrees with the outcome.
+
+| mission | outcome | final orbit | insertion | verdict |
+| --- | --- | --- | --- | --- |
+| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 292 s | — | T+570 s | **fail** ✓ |
+| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+21 519 s | 254 × 35 731 km | T+570 s | warn ✓ |
+| Angara-A5/Briz-M · crew 7.15 t → 500 km, Plesetsk | target orbit T+8 394 s | 498 × 498 km | T+1 051 s | warn ✓ |
+| Angara-A5/Briz-M · comsat 5 t → GTO, Plesetsk | target orbit T+57 235 s | 251 × 35 720 km | T+754 s | warn ✓ |
+| Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
+| Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Plesetsk | target orbit T+3 624 s | 597 × 597 km | T+825 s | ok ✓ |
+| Soyuz-2.1b/Fregat · crew 7.15 t → ISS, Baikonur | break-up T+962 s (no insertion reported) | — | — | **fail** ✓ |
+| Long March 3B/E · comsat 5.5 t → GTO, Xichang | target orbit T+25 798 s | 252 × 35 724 km | T+674 s | warn ✓ |
+| Ariane 64 · comsat 5.5 t → GTO, Kourou | target orbit T+7 210 s | 245 × 35 716 km | T+834 s | ok ✓ |
+| Vega-C · cubesats 300 kg → 500 km, Kourou | target orbit T+3 052 s | 498 × 498 km | T+319 s | ok ✓ |
+| PSLV-XL · earth-obs 1.75 t → 500 km, Sriharikota | target orbit T+3 451 s | 497 × 497 km | T+703 s | ok ✓ |
+
+Three rows that belong to the sweep are not in the table because the launch would not be
+licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur**,
+Vega-C to one from Kourou and PSLV-XL to one from Sriharikota all need an azimuth outside
+their site's range-safety window (§6b, range safety), and the verdict says so. The model will
+still fly the plane if asked — the geometry is reachable — which is why Soyuz-2.1b's
+sun-synchronous mission is flown here from the two sites that can licence it.
+
+Two rows are failures and both are capability limits with the shortfall measured on the plan:
+
+- **Proton-M/Briz-M with the 7.15 t crew ship** is the case this section was written for. Its
+  three stages carry a 22.17 t Briz-M as well as the payload and cut off at 210 × −1 733 km
+  with 7 094 m/s — 690 m/s short of the 7 784 m/s a 200 km circular orbit needs — and a
+  19.6 kN Briz-M under 29.3 t (0.64 m/s²) takes ~1 080 s to close that, over which
+  `kickStageSink` puts the drop at ~250 km against the 60 km the ascent can give it.
+  `ascentMargin` is −243 m/s. A 300-point sweep of the tuning grid (kick 1.5–8°, turn rate
+  0.25–0.5 °/s, pitch limit 20–35°, loft 0–150 km) finds 24 combinations that reach the
+  target, all at kick angles of 6–8° with turn rates the fleet does not use and none at or
+  near the shipped programme: with the DEFAULT guidance this combination does not fly. The
+  boundary is measured either side — 5.75 t delivers 412 × 412 km, 7.15 t does not — and it
+  is sharp because the sink is cubic in the shortfall.
+- **Soyuz-2.1b/Fregat with the same crew ship** is the same shape one step down: the Blok I
+  under a Fregat and 7.15 t is 470 m/s short (`ascentMargin` −470), the ascent sags and the
+  stack breaks up at T+962 s — *before* any insertion is announced, which is the honest end
+  of an underpowered ascent and is what `soyuz21b/leo/90` and `soyuz21b/iss/90` already do at
+  7.8 t. The 7.15 t crew ship is a Soyuz-2.1a mission, not a 2.1b one.
 
 ### Why a combination is excluded
 

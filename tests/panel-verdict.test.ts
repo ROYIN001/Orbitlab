@@ -26,9 +26,10 @@ import { vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import { orbitById } from '../src/data/orbits';
 import { planMission, resolveTarget } from '../src/physics/mission';
+import { probeInsertion } from '../src/physics/autotune';
 import { guidanceForVehicle, DEFAULT_FAILURE } from '../src/physics/defaults';
 import { RAD } from '../src/physics/constants';
-import { allCases, caseKey, BEYOND_CAPABILITY, ARCHITECTURE, LAUNCH_TIME } from './fleet-harness';
+import { allCases, caseKey, fleetCases, BEYOND_CAPABILITY, ARCHITECTURE, LAUNCH_TIME } from './fleet-harness';
 import type { MissionConfig, OrbitSpec, VehicleSpec } from '../src/types';
 
 const spec = { id: 'testbed', name: 'Testbed-1', payloadLEO: 10000, payloadGTO: 3000, payloadSSO: 8000 } as unknown as VehicleSpec;
@@ -142,7 +143,16 @@ describe('mission verdict', () => {
 // Against the real data: the range-safety corridor and the capability tables
 // ---------------------------------------------------------------------------
 
-/** The verdict for a real mission, planned by the real planner. */
+/**
+ * The verdict for a real mission, planned by the real planner — and, when the
+ * static budget calls it marginal, flown by the real simulation.
+ *
+ * The probe gate here is `SetupPanel.refreshInsertionProbe`'s gate, written out
+ * rather than imported so that this file keeps saying what the panel does
+ * instead of agreeing with it by construction: the insertion is flown when the
+ * ascent stages are short of the orbit they are aimed at, or when the payload
+ * is at 90 % of the rating or above.
+ */
 function verdictFor(vehicleId: string, siteId: string, orbitId: string, satelliteId: string, mass?: number, extra: Partial<VerdictInput> = {}) {
   const spec = vehicleById(vehicleId);
   const site = siteById(siteId);
@@ -155,12 +165,17 @@ function verdictFor(vehicleId: string, siteId: string, orbitId: string, satellit
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: payloadMass,
   };
   const plan = planMission(cfg, site, spec);
+  const capability = missionCapability(spec, satellite, payloadMass, plan);
+  const { cap } = ratedPayload(spec, orbitClassOf(orbit));
+  const marginal = capability.ascentShortfall > 0 || (cap > 0 && payloadMass >= cap * 0.9);
+  const insertion = marginal ? probeInsertion(cfg) : null;
   return {
     plan,
+    insertion,
     verdict: missionVerdict({
       spec, site, orbit, satellite, payloadMass,
       inclinationDeg: resolveTarget(orbit, site, LAUNCH_TIME).inclination * RAD,
-      plan, failureMode: 'none', siteReassigned: false, ...extra,
+      plan, insertion, failureMode: 'none', siteReassigned: false, ...extra,
     }),
   };
 }
@@ -287,6 +302,56 @@ describe('mission verdict · agrees with the fleet acceptance suite', () => {
     const real = verdictFor('longmarch2d', 'jiuquan', 'sso', 'earthObs', 650);
     expect(real.verdict.level, real.verdict.text).toBe('ok');
   });
+
+  /**
+   * The reported defect, on the verdict side.
+   *
+   * Proton-M / Briz-M + the 7.15 t crew ship from Baikonur to the ISS used to
+   * read amber — "the ascent stages are 393 m/s short of this orbit: the upper
+   * stage has to make up the difference" — and the flight then broke up at
+   * 46 kPa 668 s after its own SECO. The note was not merely optimistic, it was
+   * making a claim (that the Briz-M can make up the difference) that is true at
+   * 5.75 t and false at 7.15 t, and nothing in the static budget separates
+   * those two: the plan's `ascentMakeUp` is 247 and 370 m/s against a 3.6 km/s
+   * kick stage, and the term that decides it — how far 19.6 kN sinks closing
+   * the gap — is CUBIC in a shortfall the loss allowance only knows to ±500 m/s.
+   *
+   * So the verdict flies it. Both halves are asserted, because a red verdict
+   * that is red for everything would be no better than an amber one that is
+   * amber for everything.
+   */
+  it('reports Proton-M with the crew ship to the ISS as beyond the stack, and 5.75 t as a mission', () => {
+    const heavy = verdictFor('protonm', 'baikonur', 'iss', 'crew', 7150);
+    expect(heavy.insertion?.reachesOrbit, 'the probe should have been run and should fail').toBe(false);
+    expect(heavy.verdict.level, heavy.verdict.text).toBe('fail');
+    expect(heavy.verdict.text).toContain('does not reach orbit');
+    // …and it is the plan that says it is marginal enough to be worth flying.
+    expect(heavy.plan.ascentMargin).toBeLessThan(0);
+    expect(heavy.plan.weakFinalStage).toBe(true);
+
+    const light = verdictFor('protonm', 'baikonur', 'iss', 'crew', 5750);
+    expect(light.insertion?.reachesOrbit, 'the same stack 1.4 t lighter').toBe(true);
+    expect(light.verdict.level, light.verdict.text).toBe('warn');
+    // The amber note is now only said when it is true.
+    expect(light.verdict.text).toContain('upper stage has to make up the difference');
+  }, 60000);
+
+  /**
+   * The probe can only ever make a verdict worse, so the thing to guard is the
+   * other direction: every row the acceptance suite FLIES has to survive it.
+   * Two of them are the reason the verdict does not compute this statically —
+   * `angaraa5/leo/25` and `angaraa5/sso/25` are both called beyond capability
+   * by the static sink arithmetic and both deliver their orbit.
+   */
+  it('never fails a row the acceptance suite flies', () => {
+    const wrong: string[] = [];
+    for (const c of fleetCases()) {
+      const { verdict, insertion } = verdictFor(c.vehicle, c.site, c.orbit, 'cubesats', c.mass);
+      if (verdict.level === 'fail') wrong.push(`${caseKey(c)}: ${verdict.text}`);
+      if (insertion && !insertion.reachesOrbit) wrong.push(`${caseKey(c)}: the probe says it does not reach orbit`);
+    }
+    expect(wrong, `the suite flies these, the verdict refuses them:\n${wrong.join('\n')}`).toEqual([]);
+  }, 300000);
 
   it('leaves the app default and the accepted fleet rows alone', () => {
     // The default mission is tight (7 150 of 7 430 kg) and nothing else.

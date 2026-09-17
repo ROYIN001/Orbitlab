@@ -444,6 +444,17 @@ export class RocketView {
     liv.base = f.color ?? '#eeeeee';
     liv.bands = [];
     liv.text = undefined;
+    // The two half-shells are painted into the surface, not modelled.
+    //
+    // u = 0.25 and u = 0.75 are the +X and -X meridians (three parametrises both
+    // `CylinderGeometry` and `LatheGeometry` as x = r·sin φ, z = r·cos φ with
+    // u = φ/2π), which is exactly where `DebrisView` cuts the jettisoned halves:
+    // it builds each one over φ ∈ [-π/2, +π/2], so the shells part on the z = 0
+    // plane and their edges lie on ±X. The seam therefore ends up on the same
+    // two meridians the halves separate along, and — because it is texture, not
+    // geometry — it follows the ogive in to the apex instead of protruding
+    // through it the way the old flat `BoxGeometry` split line did.
+    liv.seams = [0.25, 0.75];
     const tex = bodyTexture(liv, f.diameter, f.length, seedFromString(spec.id + 'fairing'));
     this.textures.push(tex);
     const m = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.15, roughness: 0.5 });
@@ -457,10 +468,6 @@ export class RocketView {
     const nose = new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, noseH, 24), 40), m);
     nose.castShadow = true;
     g.add(nose);
-    // split line
-    const split = new THREE.Mesh(new THREE.BoxGeometry(r * 2.02, f.length * 0.98, 0.06), this.mat('#9a9a9a', 0.2, 0.6));
-    split.position.y = f.length * 0.49;
-    g.add(split);
     return g;
   }
 

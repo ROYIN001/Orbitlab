@@ -330,7 +330,7 @@ fill(BEYOND_CAPABILITY,
   'Blok I is 543-587 m/s short of the mission under a Fregat and 7.80 t: the ascent sags and breaks up at T+936 s with 1.0 km/s left in the Fregat, which cannot fly an ascent',
   'soyuz21b/leo/90', 'soyuz21b/iss/90');
 fill(BEYOND_CAPABILITY,
-  'the three Proton stages are 548-1206 m/s short under a Briz-M and 11.5-20.7 t: the ascent flattens and the 19.6 kN Briz-M cannot hold 30 t up, break-up at T+780-1020 s',
+  'the three Proton stages are 548-1206 m/s short under a Briz-M and 11.5-20.7 t: the ascent flattens and the 19.6 kN Briz-M cannot hold 30 t up, break-up at T+780-1038 s',
   'protonm/leo/50', 'protonm/leo/90', 'protonm/iss/50', 'protonm/iss/90');
 fill(BEYOND_CAPABILITY,
   'URM-1/URM-2 are 735-1533 m/s short under a Briz-M and 12.3-22 t: the gravity turn cannot be held at 0.3 deg/s (the q-alpha placard leaves 4 deg of authority at 27 kPa), the trajectory flattens at 32 km and the vehicle breaks up by T+146-202 s',

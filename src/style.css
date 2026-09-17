@@ -380,23 +380,60 @@ details[open] summary { margin-bottom: 4px; }
 #ticker div.warn { border-left-color: var(--warn); }
 #ticker div.fail { border-left-color: var(--fail); }
 
+/* The instrument card sits top-right of the scene, and how much of the scene it
+   is allowed to take is a mode (see ui/hudmode.ts): compact by default, full on
+   request, or gone. The chip is a sibling of the card so that `hidden` still
+   leaves a way back. */
 #hud {
-  align-self: flex-start; flex: none;
-  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
-  max-height: 100%; overflow: hidden; pointer-events: none;
+  align-self: flex-start; flex: none; position: relative;
+  display: flex; flex-direction: column; align-items: flex-end;
+  min-height: 22px; max-height: 100%; overflow: hidden; pointer-events: none;
 }
+/* The chip sits *over* the card's top-right corner rather than above it. Those
+   28 px matter: at 1280x800 the Russian narration band leaves 112 px between
+   the camera tabs and the narration, and a stacked chip would have cost a
+   quarter of it. `.status` carries the matching padding so the two never
+   collide, and in `hidden` mode the chip is all that is left of the HUD. */
+.hud-toggle {
+  pointer-events: auto; position: absolute; top: 0; right: 0; z-index: 1;
+  display: grid; place-items: center; width: 27px; height: 22px;
+  border: 1px solid rgba(80, 100, 130, 0.42); border-radius: 6px;
+  background: rgba(10, 16, 23, 0.6); backdrop-filter: blur(8px);
+  color: #aabecd; font-size: 12px; line-height: 1;
+}
+.hud-toggle:hover { color: #fff; border-color: var(--accent-line); }
+.hud-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hud-box {
-  background: rgba(10, 16, 23, 0.72);
+  /* ~60 % opacity over a blur: the scene stays legible *through* the card,
+     which is the point of an overlay instrument rather than a panel. */
+  background: rgba(10, 16, 23, 0.6);
   border: 1px solid rgba(80, 100, 130, 0.42);
   border-radius: 9px;
   padding: 8px 11px;
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.32;
-  backdrop-filter: blur(6px);
-  min-width: 186px;
+  backdrop-filter: blur(8px);
+  min-width: 0;
 }
-.hud-box .status { color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+/* Which half of the card is drawn. The ID keeps these above both the base
+   `.hud-*` rules and the container queries at the end of the file. */
+#hud[data-mode='compact'] .hud-primary,
+#hud[data-mode='compact'] .hud-secondary,
+#hud[data-mode='compact'] .hud-sep { display: none; }
+/* The cap the brief is measured against. The rows come out ~190 px wide; it is
+   the status line ("Выведение · Гравитационный разворот") that needs the limit,
+   and it wraps to a second line rather than pushing the card over the vehicle. */
+#hud[data-mode='compact'] .hud-box { max-width: 230px; }
+#hud[data-mode='full'] .hud-compact { display: none; }
+#hud[data-mode='hidden'] .hud-box { display: none; }
+/* Two columns, nothing wrapping: the compact card's width is decided by its
+   longest value ("12345 × 1234 km"), and a wrapped Russian label would make it
+   taller than the rows it is supposed to save. */
+.hud-grid.hud-compact { grid-template-columns: auto auto; column-gap: 12px; }
+.hud-compact .k, .hud-compact .v { white-space: nowrap; }
+.hud-compact .v { padding-right: 0; }
+.hud-box .status { color: var(--accent); font-weight: 700; margin-bottom: 4px; padding-right: 26px; }
 .hud-box .replay-tag:not(:empty) {
   display: inline-block; margin-left: 6px; padding: 0 5px;
   border: 1px solid var(--warn); border-radius: 3px;
@@ -703,7 +740,13 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .cam-btn { padding: 5px 7px; font-size: 12px; }
   .cam-btn span:last-child { font-size: 11px; }
   #ticker { max-width: 100%; font-size: 10.5px; }
-  #hud { display: none; }
+  /* The card used to be deleted outright here, which left a phone with no
+     flight instruments on the picture at all. It stays, as the compact card
+     only — `Hud` forces the mode at this same breakpoint — and is narrowed so
+     that it still clears the vehicle on the centre line of a 375 px screen. */
+  #hud { gap: 5px; }
+  #hud[data-mode='compact'] .hud-box { font-size: 9.5px; line-height: 1.26; padding: 6px 8px; max-width: 168px; }
+  .hud-grid.hud-compact { column-gap: 8px; }
   .mission-clock > span { font-size: 18px; }
   .ctl-row { gap: 10px; }
   .events { max-height: 200px; }
@@ -734,14 +777,19 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
    and vertical speed, q, apsides, inclination, Δv, stage, throttle — which is
    exactly the half the previous single 290 px breakpoint threw away on every
    mainstream laptop, leaving seven propulsion readouts in a launch simulator
-   with no altitude on screen. */
+   with no altitude on screen.
+
+   Since wave 5 the ladder is the FULL card's business only: the compact card is
+   seven rows and fits everything down to the shortest scene the app draws, and
+   applying "delete the secondary readouts" to a card that has none would only
+   have shrunk its type for nothing. */
 @container scenefill (max-height: 212px) {
-  .hud-box { font-size: 10px; line-height: 1.25; padding: 6px 9px; min-width: 0; }
-  .hud-sep { margin: 4px 0; }
-  .hud-grid { column-gap: 8px; }
+  #hud[data-mode='full'] .hud-box { font-size: 10px; line-height: 1.25; padding: 6px 9px; }
+  #hud[data-mode='full'] .hud-sep { margin: 4px 0; }
+  #hud[data-mode='full'] .hud-grid { column-gap: 8px; }
 }
 @container scenefill (max-height: 168px) {
-  .hud-sep, .hud-grid.hud-secondary { display: none; }
+  #hud[data-mode='full'] .hud-sep, #hud[data-mode='full'] .hud-secondary { display: none; }
 }
 
 /* …and how it gives way when the scene is NARROW, which is the other half of
@@ -765,16 +813,42 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
    query is on the CONTAINER, not on the window: what matters is how much scene
    there is, and the side panels decide that as much as the window does. */
 @container scenefill (max-width: 820px) {
-  .hud-box { font-size: 10px; line-height: 1.28; padding: 7px 9px; min-width: 0; }
-  .hud-grid { grid-template-columns: auto auto; column-gap: 9px; }
-  .hud-grid .v { padding-right: 0; }
-  .hud-sep { margin: 5px 0; }
+  #hud[data-mode='full'] .hud-box { font-size: 10px; line-height: 1.28; padding: 7px 9px; }
+  #hud[data-mode='full'] .hud-grid { grid-template-columns: auto auto; column-gap: 9px; }
+  #hud[data-mode='full'] .hud-grid .v { padding-right: 0; }
+  #hud[data-mode='full'] .hud-sep { margin: 5px 0; }
 }
 @container scenefill (max-width: 820px) and (max-height: 310px) {
-  .hud-sep, .hud-grid.hud-secondary { display: none; }
+  #hud[data-mode='full'] .hud-sep, #hud[data-mode='full'] .hud-secondary { display: none; }
 }
 
-@container scenefill (max-height: 86px) {
+/* The compact card has its own, much shorter ladder: there are no secondary
+   readouts to delete, so all it can do is shrink. The step is set by the
+   tightest real case — 1280x800 in Russian, where the taller narration band
+   leaves 112 px of scene-fill and the status line wraps to two rows. */
+@container scenefill (max-height: 150px) {
+  #hud[data-mode='compact'] .hud-box { font-size: 10px; line-height: 1.22; padding: 6px 9px; }
+  #hud[data-mode='compact'] .hud-grid.hud-compact { column-gap: 9px; }
+}
+@container scenefill (max-height: 120px) {
+  #hud[data-mode='compact'] .hud-box { font-size: 9.5px; line-height: 1.18; padding: 5px 8px; }
+}
+
+/* Full mode asked for, but no room for the ten primary rows (1280x800 in
+   Russian leaves 132 px of scene-fill against a 160 px card): fall back to the
+   compact grid rather than sever the card at the container edge. */
+@container scenefill (max-height: 150px) {
+  #hud[data-mode='full'] .hud-primary, #hud[data-mode='full'] .hud-secondary, #hud[data-mode='full'] .hud-sep { display: none; }
+  #hud[data-mode='full'] .hud-compact { display: grid; }
+  #hud[data-mode='full'] .hud-box { max-width: 230px; font-size: 10px; line-height: 1.22; padding: 6px 9px; }
+}
+
+/* Too short for even seven shrunk rows. The chip goes with the card: a control
+   that cannot bring anything back is worse than no control. This is the case at
+   1024x700, where the two-column layout leaves a 320 px viewport and the
+   narration band takes all of it — the card is not what runs out of room
+   there, the scene is. */
+@container scenefill (max-height: 92px) {
   #hud { display: none; }
 }
 

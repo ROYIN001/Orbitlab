@@ -186,6 +186,20 @@ export interface StageLivery {
   steel?: boolean;
   /** dark soot ring above the engines (flight-proven boosters) */
   soot?: boolean;
+  /**
+   * Longitudinal joints painted into the surface, as texture u coordinates
+   * (0..1 around the circumference).
+   *
+   * This is how the fairing's two half-shells are shown. `CylinderGeometry` and
+   * `LatheGeometry` share the same parametrisation — vertex x = r·sin φ,
+   * z = r·cos φ, u = φ / 2π — so one u is the *same meridian* on the fairing's
+   * cylinder and on its ogive nose, and a line drawn here follows the silhouette
+   * exactly, all the way to the apex where the meridians converge. It replaces a
+   * flat `BoxGeometry` plate that was as wide as the cylinder for the whole
+   * length of the fairing and therefore stuck out through the narrowing nose as
+   * a rectangular tab (user report, wave 5).
+   */
+  seams?: number[];
 }
 
 const FLAG_BY_COUNTRY: Record<string, FlagId> = {
@@ -370,6 +384,21 @@ export function bodyTexture(liv: StageLivery, diameter: number, length: number, 
     soot.addColorStop(1, 'rgba(60,54,48,0)');
     g.fillStyle = soot;
     g.fillRect(0, H * 0.72, W, H * 0.28);
+  }
+
+  // Half-shell joints. Drawn over the panel lines and the bands (a real joint
+  // interrupts both) but under the markings. The bright sliver on the +u side
+  // is the lip of the near shell catching the light, which is what stops the
+  // seam reading as a printed stripe; both are only a few pixels of a canvas
+  // whose width is already sized to the body's aspect ratio, so the joint is
+  // about a tenth of a metre wide on a 5 m fairing at every texture size.
+  for (const u of liv.seams ?? []) {
+    const w = Math.max(2, W * 0.008);
+    const x = ((u % 1) + 1) % 1 * W;
+    g.fillStyle = 'rgba(26,28,32,0.85)';
+    g.fillRect(x - w / 2, 0, w, H);
+    g.fillStyle = 'rgba(255,255,255,0.20)';
+    g.fillRect(x + w / 2, 0, Math.max(1, w * 0.45), H);
   }
 
   if (liv.text) {

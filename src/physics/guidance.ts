@@ -33,6 +33,7 @@ import type { GuidanceParams } from '../types';
 import { DEG, MU_EARTH, R_EARTH } from './constants';
 import { Vec3, v3, add, scale, dot, cross, norm, normalize, slerpLimited } from './vec3';
 import { enuFrame, elementsFromState } from './orbital';
+import { kickStageSink, ORBIT_INSERTION_FLOOR } from './mission';
 
 export type AscentPhase = 'vertical' | 'kick' | 'gravityTurn' | 'closedLoop';
 
@@ -107,6 +108,19 @@ export interface GuidanceInputs {
   stageDvLeft: number;
   /** thrust acceleration of the next launcher stage at its ignition, m/s^2 (-1 if none) */
   nextStageAccel: number;
+  /**
+   * Thrust acceleration of the stage that lights next when that stage is the
+   * KICK stage, m/s² (-1 otherwise).
+   *
+   * `nextStageAccel` deliberately excludes a weak final stage — the ascent is
+   * planned over the stages that actually fly it — and that exclusion used to
+   * reach the lofted hand-off as well, which is the one place it must not. A
+   * Proton-M third stage therefore believed it was the final stage, aimed at a
+   * level cut-off at the insertion altitude, and handed a 19.6 kN Briz-M
+   * (0.067 g under 29 t) a trajectory with nowhere to go but down. See the
+   * lofted hand-off below.
+   */
+  kickStageAccel: number;
   /** osculating apoapsis altitude now, m (Infinity when unbound) */
   apoapsisAlt: number;
   isFirstStage: boolean;
@@ -223,11 +237,49 @@ export class AscentGuidance {
         : this.insertionAltitude;
       let vzT = 0;
       let Tplan = T;
-      if (p.loftAltitude > 0 && inp.nextStageAccel > 0 && inp.stageBurnTimeLeft > 3 && inp.stageBurnTimeLeft < T - 10) {
+      // Whatever lights next is what has to be handed a flyable trajectory, and
+      // for a stack that carries a kick stage that is the KICK stage — which is
+      // exactly the hand-over this test used to skip, because `nextStageAccel`
+      // excludes a weak final stage. Measured on Proton-M/Briz-M with the 7.15 t
+      // crew ship: the third stage cut off level at 199 km, 664 m/s short of
+      // orbital, and the Briz-M spent 666 s sinking from there into 46 kPa. The
+      // stage that hands over to 0.067 g needs the lofted hand-off more than any
+      // other stage in the fleet, and it was the only one that could not have it.
+      const handoverAccel = inp.nextStageAccel > 0 ? inp.nextStageAccel : inp.kickStageAccel;
+      // "There is meaningfully more burning to come after this stage." For a
+      // launcher-stage hand-over that is the remaining stages' own horizon; for
+      // a kick-stage hand-over `T` excludes the kick stage by construction, so
+      // the question is asked of the kick stage directly — what it will still
+      // owe once this stage is spent, at its own acceleration.
+      const handsOver = inp.nextStageAccel > 0
+        ? inp.stageBurnTimeLeft < T - 10
+        : (dvRem - inp.stageDvLeft) / Math.max(0.01, inp.kickStageAccel) > 10;
+      if (p.loftAltitude > 0 && handoverAccel > 0 && inp.stageBurnTimeLeft > 3 && handsOver) {
         const vhMeco = vhMag + 0.9 * inp.stageDvLeft;
         const gEffMeco = Math.max(0.5, MU_EARTH / (rm * rm) - (vhMeco * vhMeco) / rm);
-        if (inp.nextStageAccel < 0.8 * gEffMeco) {
-          vzT = Math.sqrt(2 * gEffMeco * p.loftAltitude);
+        // How much apex the hand-over needs. For a launcher stage it is the
+        // vehicle's own figure, which is what that parameter has always meant.
+        // For a KICK stage it is only as much as the kick stage cannot avoid
+        // losing: `kickStageSink` says how far it sinks closing the shortfall
+        // it will be left with, the ascent already gives it the band between
+        // the insertion altitude and the insertion floor, and the loft covers
+        // the rest — capped at the vehicle's figure, because the apex is bought
+        // with vertical speed the stage has to find somewhere.
+        //
+        // Flying the full figure at every kick-stage hand-over was tried and
+        // measured: it is what Proton-M needs (its third stage owes the Briz-M
+        // ~880 m/s at the point the decision is made, i.e. more sink than any
+        // loft can cover, so the cap binds and it gets all 150 km), and it costs
+        // Angara-A5 to a 600 km sun-synchronous orbit 626 s of insertion clock
+        // for a hand-over that only needs ~57 km — the Briz-M is handed an arc
+        // so high that it spends the time climbing back down to the orbit.
+        const loft = inp.nextStageAccel > 0
+          ? p.loftAltitude
+          : Math.min(p.loftAltitude, Math.max(0, kickStageSink(
+            dvRem - 0.9 * inp.stageDvLeft, vIns, inp.kickStageAccel, MU_EARTH / (rm * rm),
+          ) - (this.insertionAltitude - ORBIT_INSERTION_FLOOR)));
+        if (handoverAccel < 0.8 * gEffMeco && loft > 0) {
+          vzT = Math.sqrt(2 * gEffMeco * loft);
           Tplan = Math.max(12, inp.stageBurnTimeLeft);
         }
       }

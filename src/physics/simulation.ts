@@ -24,7 +24,10 @@ import {
 } from './orbital';
 import { VehicleModel, StageState, BoosterState } from './vehicle';
 import { AscentGuidance, AscentPhase, desiredVelocity, planeNormalThrough } from './guidance';
-import { MissionPlan, BurnPlan, planMission, replanBurns, orbitResiduals, apsisTolerance, RAAN_TOLERANCE } from './mission';
+import {
+  MissionPlan, BurnPlan, planMission, replanBurns, orbitResiduals, apsisTolerance, RAAN_TOLERANCE,
+  ORBIT_INSERTION_FLOOR,
+} from './mission';
 import { DEFAULT_GUIDANCE } from './defaults';
 
 export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'failed';
@@ -235,8 +238,12 @@ function recoveryFor(e: EngineSpec, dryMass: number, propellant: number): NonNul
  */
 const TELEMETRY_CAP = 20000;
 
-/** Lowest periapsis the ascent may cut off at when the apoapsis is already on target, m. */
-const ASCENT_MIN_PERIAPSIS = 140e3;
+/**
+ * Lowest periapsis the ascent may cut off at when the apoapsis is already on
+ * target, m — the same floor `abandonInsertion` holds the post-ascent sequence
+ * to, and deliberately the same constant rather than a second copy of 140 km.
+ */
+const ASCENT_MIN_PERIAPSIS = ORBIT_INSERTION_FLOOR;
 
 /**
  * Fraction of the acceptance band a single-shot ascent has to be inside before
@@ -719,6 +726,10 @@ export class Simulation {
         stageBurnTimeLeft: this.vehicle.stageBurnTimeLeft(),
         stageDvLeft: this.vehicle.stageDvLeft(),
         nextStageAccel: this.vehicle.nextStageAccel(this.plan.weakFinalStage),
+        // The same figure without the weak-final exclusion. It differs from the
+        // line above only at the hand-over TO the kick stage, which is the one
+        // place the lofted hand-off has to see it (see `GuidanceInputs`).
+        kickStageAccel: this.vehicle.nextStageAccel(false),
         apoapsisAlt: el.e < 1 ? el.apoapsisAlt : Infinity,
         maxQThrottle: this.vehicleSpec.maxQThrottle, maxAccel, maxQPlacard: this.maxQAscent,
       });
@@ -897,6 +908,10 @@ export class Simulation {
       this.event('evt.maxQ', 'info',
         { q: Math.round(s.maxQ.value / 100) / 10, alt: Math.round(s.maxQ.alt / 100) / 10 }, s.maxQ.t);
     }
+    // --- insertion floor. Asked BEFORE the structural placard, because the
+    // whole point of it is that a stack still trying to reach orbit must be
+    // stopped before it is destroyed doing so (see `abandonInsertion`).
+    if (this.abandonInsertion(q, vz)) return;
     // --- structural placard. Armed continuously from liftoff until the payload
     // separates, and tested on *every* step of powered or coasting flight
     // against the vehicle's quoted max-Q limit (audit item B4). Testing it only
@@ -1351,6 +1366,59 @@ export class Simulation {
     s.note = 'suborbital';
   }
 
+  /**
+   * The insertion floor: the post-ascent sequence may not fly a stack that is
+   * still meant to reach orbit back into the atmosphere.
+   *
+   * `ORBIT_INSERTION_FLOOR` is the perigee below which the sequencer does not
+   * consider the vehicle to be in an orbit at all. Everything in `checkCoast` /
+   * `checkBurn` above it assumes there is an orbit to shape: the burn-pause
+   * clauses are gated on a periapsis above 120 km, `desiredVelocity` for a
+   * shaping burn aims at "make the radius I am at now an apsis", and neither
+   * has a stopping condition for a trajectory whose perigee is a thousand
+   * kilometres inside the Earth. So a kick stage handed one simply thrusts
+   * until something else ends the flight, and what ended it was the structural
+   * placard — Proton-M/Briz-M with the 7.15 t crew ship burned for 666 s from
+   * 199 km down to 45 km and broke up at 46 kPa, 668 s after its own SECO.
+   *
+   * The rule is therefore: while the payload is still aboard and the mission is
+   * still trying to reach orbit, a perigee below the floor is only survivable
+   * as long as the stack is not in air. The line is `FAIRING_Q_LIMIT` — the
+   * model's own "this is meaningful air" placard, 1.1 kPa, the pressure below
+   * which a fairing may be released — and it is forty times below the softest
+   * structural placard in the fleet, so a healthy flight can never reach it:
+   * measured, every insertion in the fleet that works stays under 0.05 kPa, and
+   * the one that does not passes 1.1 kPa 86 s before it is destroyed.
+   *
+   * Reaching it means the insertion has failed. The stack is shut down and the
+   * mission ends saying so, which is the honest outcome — a suborbital
+   * trajectory — rather than a break-up several minutes after a reported
+   * insertion. Nothing is rescued by continuing: the same flight with the
+   * engines left running is the one that broke up.
+   */
+  private abandonInsertion(q: number, vz: number): boolean {
+    const s = this.state;
+    if (s.payloadSeparated || !s.liftoff) return false;
+    if (s.status !== 'burn' && s.status !== 'coast') return false;
+    const el = s.elements;
+    if (!(el.e < 1) || el.periapsisAlt >= ORBIT_INSERTION_FLOOR) return false;
+    if (!(q >= FAIRING_Q_LIMIT && vz < 0)) return false;
+    const st = this.vehicle.active;
+    if (st) this.vehicle.cutoffStage(st, s.t);
+    s.currentBurn = null;
+    s.nextBurnTime = -1;
+    s.thrust = 0;
+    s.throttle = 0;
+    for (const b of this.plan.burns) b.done = true;
+    this.event('evt.insertionAbandoned', 'fail', {
+      alt: Math.round(s.altitude / 1000),
+      pe: Math.round(el.periapsisAlt / 1000),
+      dv: Math.round(this.vehicle.deltaVRemaining()),
+    });
+    this.failSuborbital();
+    return true;
+  }
+
   // ------------------------------------------------------------ orbital burns
   private scheduleNextBurn(el: OrbitalElements): void {
     const s = this.state;
@@ -1559,8 +1627,13 @@ export class Simulation {
       // figure is only meaningful exactly at the periapsis, so it must not be
       // allowed to end the burn.
       else if (b.lowering ? el.apoapsisAlt <= target + tolA : el.apoapsisAlt >= target - tolA) complete = true;
-      // safety: a retrograde apoapsis trim must never dig the periapsis out of the orbit
-      else if (b.lowering && el.periapsisAlt < this.plan.target.perigee - 20e3) complete = true;
+      // Safety: a retrograde apoapsis trim must never dig the periapsis out of
+      // the orbit — and never below the insertion floor whatever the target is.
+      // The floor half is the same rule as `abandonInsertion`, stated where the
+      // burn is commanded rather than where its consequences arrive; for every
+      // target in the fleet the 20 km band below the target perigee is already
+      // the binding one, so it is explicitness rather than a change.
+      else if (b.lowering && el.periapsisAlt < Math.max(ORBIT_INSERTION_FLOOR, this.plan.target.perigee - 20e3)) complete = true;
       else if (s.t - s.burnStartTime > (b.maxDuration ?? this.maxBurnDurationFor(b, el)) && el.e < 1 && el.periapsisAlt > 120e3) {
         // low-thrust stage: split the apogee-raising into several perigee burns
         const st = this.vehicle.active;
@@ -1624,10 +1697,22 @@ export class Simulation {
         kind: b.kind, ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
       });
       if (b.kind === 'circularize' && !this.events.some((e) => e.key === 'evt.parkingOrbit')) {
-        this.event('evt.parkingOrbit', 'success', {
-          ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
-          dv: Math.round(this.vehicle.deltaVRemaining()),
-        });
+        // Nothing under the insertion floor is a parking orbit. A circularise
+        // burn flown from a trajectory that is still sinking ends when the
+        // vehicle matches circular speed at whatever radius it has reached by
+        // then, and that radius follows the vehicle down: Proton-M/Briz-M with
+        // 5.75 t reported "parking orbit 94 × 94 km" and then flew a 43-minute
+        // transfer with a 94 km perigee. The burn is complete either way and
+        // the re-planner carries on from the orbit achieved, but calling that
+        // an insertion is how a failed one came to look like a good one.
+        if (el.periapsisAlt >= ORBIT_INSERTION_FLOOR) {
+          this.event('evt.parkingOrbit', 'success', {
+            ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
+            dv: Math.round(this.vehicle.deltaVRemaining()),
+          });
+        } else {
+          this.event('evt.lowPerigee', 'warn', { pe: Math.round(el.periapsisAlt / 1000) });
+        }
       }
       this.replanRemainingBurns(el, noOpBurn);
       if (this.plan.burns.some((x) => !x.done)) {

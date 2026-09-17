@@ -338,8 +338,21 @@ export const VEHICLES: VehicleSpec[] = [
     // ever wider than what is left above it — and the fairing (4.35 m,
     // 14.9 m^2) is inside it too.
     dragArea: 25,
-    // Heavy and draggy: it needs a fast pitch-over or it climbs too steeply and falls back through the atmosphere.
-    guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 0 },
+    // Heavy and draggy: it needs a fast pitch-over or it climbs too steeply and
+    // falls back through the atmosphere.
+    //
+    // The loft follows the fleet's own rule — set for a stack whose next stage
+    // lights below 0.4 g — applied to the stage that was exempt from it by
+    // accident. The Briz-M lights at 19.6 kN under 22-30 t, i.e. 0.065-0.09 g,
+    // by far the weakest hand-over in the fleet, and the lofted hand-off used to
+    // skip it because `nextStageAccel` excludes a weak final stage (see
+    // `GuidanceInputs.kickStageAccel`). Without it the third stage cut off level
+    // at the insertion altitude and the Briz-M sank out of the orbit it was
+    // meant to close: with 5.75 t aboard the insertion bottomed out at 94 km,
+    // with 7.15 t the stack was destroyed at 46 kPa. With it the same 5.75 t
+    // insertion bottoms out at 139 km. 150 km is the figure Angara-A5 already
+    // carries for the same hardware above the same kind of hand-over.
+    guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
     notes: 'Hypergolic heavy-lift launcher; Briz-M performs multi-burn GTO/GEO insertions.',
   },
   {

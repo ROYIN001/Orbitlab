@@ -380,6 +380,10 @@ class App {
       if (e.shiftKey) this.toggleLiveFlight(); else this.togglePlay();
       return;
     }
+    // H cycles the in-viewport instrument card: compact → full → hidden. It is
+    // deliberately not guarded by `onButton` — no button has a native H — so it
+    // keeps working after the user has clicked a camera tab or Launch.
+    if (e.key === 'h' || e.key === 'H') { this.hud.cycleMode(); return; }
     if (e.key === '1') this.setCamera('exterior');
     else if (e.key === '2') this.setCamera('onboard');
     else if (e.key === '3') this.setCamera('space');
