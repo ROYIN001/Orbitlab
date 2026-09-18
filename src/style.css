@@ -608,6 +608,13 @@ details[open] summary { margin-bottom: 4px; }
    The heading keeps the full panel width — its bottom border is the panel's
    own divider — by pulling itself back out over the padding. */
 #telemetry { padding: 0 16px; overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
+/* #telemetry is a column flexbox whose content is taller than the panel, so with
+   the default `flex-shrink: 1` every child was squeezed to fit instead of the
+   panel scrolling: the charts lost ~15 % of their height and the event log,
+   being a scroll container (min-height auto resolves to 0), collapsed to a
+   17 px strip with nothing visible in it. Children keep their own size and the
+   panel scrolls. */
+#telemetry > * { flex-shrink: 0; }
 .telemetry-heading {
   flex: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
@@ -634,7 +641,7 @@ h3.section {
 .plan .done .v { color: var(--ok); }
 .plan .pending .v { color: var(--muted); }
 .events {
-  max-height: 240px; overflow-y: auto;
+  min-height: 132px; max-height: 240px; overflow-y: auto;
   background: var(--panel2); border: 1px solid var(--line); border-radius: 9px;
   padding: 8px 10px; font-size: 11.5px; line-height: 1.6;
 }
