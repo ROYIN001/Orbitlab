@@ -188,8 +188,10 @@ class App {
     this.glCanvas = document.getElementById('gl') as HTMLCanvasElement;
     this.mapCanvas = document.getElementById('map') as HTMLCanvasElement;
     this.obCanvas = document.getElementById('onboard') as HTMLCanvasElement;
-    this.hud = new Hud(document.getElementById('hud')!, document.getElementById('ticker')!);
+    // The telemetry panel first: it owns the slot the instrument card docks
+    // into, and `Hud` reads its stored placement in its own constructor.
     this.tel = new TelemetryPanel(document.getElementById('telemetry')!);
+    this.hud = new Hud(document.getElementById('hud')!, document.getElementById('ticker')!, this.tel.dockHost);
     this.map = new OrbitalMap(this.mapCanvas, `${base}textures/earth_atmos_2048.jpg`);
     this.onboard = new OnboardOverlay(this.obCanvas);
     this.narration = new Narration(document.getElementById('narration')!);
@@ -384,6 +386,11 @@ class App {
     // deliberately not guarded by `onButton` — no button has a native H — so it
     // keeps working after the user has clicked a camera tab or Launch.
     if (e.key === 'h' || e.key === 'H') { this.hud.cycleMode(); return; }
+    // D moves that card between the picture and the telemetry panel. Same
+    // reasoning as H: no control has a native D, so it keeps working wherever
+    // the focus happens to be, and the card's own header stops the keys it
+    // claims (arrows, Escape) before they reach this handler.
+    if (e.key === 'd' || e.key === 'D') { this.hud.togglePlacement(); return; }
     if (e.key === '1') this.setCamera('exterior');
     else if (e.key === '2') this.setCamera('onboard');
     else if (e.key === '3') this.setCamera('space');

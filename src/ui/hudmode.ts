@@ -34,25 +34,27 @@ export function isHudMode(value: unknown): value is HudMode {
 /**
  * Force a mode the current viewport can actually offer.
  *
- * A phone-width viewport has no room for the 21-row grid — the card would be
- * most of the frame — so `full` degrades to `compact` rather than being drawn
- * badly. `hidden` is honoured everywhere: it is a request for the picture.
+ * `compactOnly` is true where the full grid cannot be drawn: at phone width,
+ * where the card would be most of the frame, and in a viewport too short to
+ * hold a window of `HUD_FULL_MIN_H` (`./hudlayout.ts`), where `full` would draw
+ * the compact grid anyway and the keystroke would do nothing anyone could see.
+ * `hidden` is honoured everywhere: it is a request for the picture.
  */
-export function coerceHudMode(mode: HudMode, phone: boolean): HudMode {
-  return phone && mode === 'full' ? 'compact' : mode;
+export function coerceHudMode(mode: HudMode, compactOnly: boolean): HudMode {
+  return compactOnly && mode === 'full' ? 'compact' : mode;
 }
 
 /**
  * Next mode in the cycle: compact → full → hidden → compact, with `full`
- * skipped on a phone (compact → hidden → compact).
+ * skipped where it cannot be drawn (compact → hidden → compact).
  *
  * A mode the viewport cannot offer is coerced *before* stepping, so pressing
  * the toggle after a resize continues from what is on screen rather than from
  * the stored preference.
  */
-export function nextHudMode(mode: HudMode, phone: boolean): HudMode {
-  const from = coerceHudMode(mode, phone);
-  if (from === 'compact') return phone ? 'hidden' : 'full';
+export function nextHudMode(mode: HudMode, compactOnly: boolean): HudMode {
+  const from = coerceHudMode(mode, compactOnly);
+  if (from === 'compact') return compactOnly ? 'hidden' : 'full';
   if (from === 'full') return 'hidden';
   return 'compact';
 }
@@ -64,14 +66,14 @@ export function nextHudMode(mode: HudMode, phone: boolean): HudMode {
  * configured to block site data, and a stored value can be anything at all —
  * a key left by an older build, or one edited by hand.
  */
-export function loadHudMode(store: ModeStore | null | undefined, phone: boolean): HudMode {
+export function loadHudMode(store: ModeStore | null | undefined, compactOnly: boolean): HudMode {
   let stored: string | null = null;
   try {
     stored = store ? store.getItem(HUD_MODE_STORAGE_KEY) : null;
   } catch {
     stored = null;
   }
-  return coerceHudMode(isHudMode(stored) ? stored : 'compact', phone);
+  return coerceHudMode(isHudMode(stored) ? stored : 'compact', compactOnly);
 }
 
 /** Remember the mode. A storage that refuses is not an error worth reporting. */

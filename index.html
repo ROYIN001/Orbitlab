@@ -73,12 +73,20 @@
               </div>
               <div class="scene-fill">
                 <div id="ticker" aria-live="polite"></div>
-                <div id="hud"></div>
               </div>
               <div class="scene-bottom" id="scene-bottom">
                 <div id="narration"></div>
                 <div class="scene-hint"><span id="cam-hint"></span></div>
               </div>
+              <!-- The instrument card is a floating window over the scene, not a
+                   cell of the overlay's grid: it is a direct child of .scene-ui so
+                   that its absolute position resolves against the whole viewport.
+                   Inside .scene-fill it could not — that band carries layout
+                   containment, which makes it the containing block. Last, so the
+                   window paints over the narration band it can be dragged across.
+                   src/ui/hud.ts moves this node into the telemetry panel when the
+                   card is docked. -->
+              <div id="hud"></div>
             </div>
           </div>
 

@@ -77,13 +77,28 @@ switches automatically as the mission moves through them — pad, liftoff, ascen
 upper stage, coast, burn, deployment, orbit — in live flight and in replay alike. Picking a
 camera yourself overrides the sequence until the next phase begins.
 
-Top right of the picture is the **telemetry card**. It starts *compact*: status and flight
-phase, altitude, inertial speed, vertical speed, apoapsis × periapsis, active stage with its
-throttle, and Δv remaining — seven lines, docked clear of the vehicle. The chip in its top-right corner (or
-the `H` key) cycles it **compact → full → hidden**: *full* is the complete 21-readout grid,
-*hidden* leaves nothing but the chip and the picture. The choice is remembered between
-visits, on a narrow screen the card is suppressed entirely and the telemetry panel below the viewport carries the readouts. Nothing is lost in any of the
-three — the telemetry panel beside the viewport carries every readout at all times.
+Top right of the picture is the **telemetry card**, and it is a window: drag it anywhere in
+the viewport by the header strip along its top, resize it from the grip in its bottom-right
+corner, and put it back with the ⌖ button (or a double-click on the header). Nothing ever
+hides it — where it is and how big it is are your decisions, and both are remembered between
+visits.
+
+It starts *compact*: status and flight phase, altitude, inertial speed, vertical speed,
+apoapsis × periapsis, active stage with its throttle, and Δv remaining — seven lines, clear
+of the vehicle. The ▤ button (or the `H` key) cycles it **compact → full → hidden**: *full*
+is the complete instrument grid, and the card opens itself out to the size that grid needs
+and returns to the size it was when you step off *full* (a size you set yourself is kept,
+and the grid fills as much of the window as you have opened); *hidden* leaves nothing but
+the small chip, which is the whole window in that mode and can be dragged into any corner.
+
+The ⇥ button (or the `D` key) **docks** the card into the telemetry panel beside the
+viewport, as the first block under *Flight telemetry*. Docked, it shows every readout and
+covers nothing at all; ⇤ (or `D` again) floats it back over the picture. On a phone the card
+starts docked, because a window is most of a 375 px screen — floating is still one tap away.
+
+The window is operable from the keyboard: tab to the header, then the arrow keys move it
+10 px (40 px with shift), alt+arrows resize it, and Escape hands the focus back. Nothing is
+lost in any placement or mode — the telemetry panel carries every readout at all times.
 
 The band under the viewport is the **phase narration**: a title (e.g. "Gravity turn") and
 one line of what is happening and why, next to the mission clock and the most recent
