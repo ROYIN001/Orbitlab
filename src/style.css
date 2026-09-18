@@ -312,13 +312,17 @@ details[open] summary { margin-bottom: 4px; }
    instruments, and --sb-h (measured from it) collapses with it. */
 .scene-top { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; pointer-events: none; }
 .scene-mid { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; pointer-events: none; }
-/* A size container, so the HUD can answer the only question that matters —
-   how much viewport height is left between the camera tabs and the narration.
-   The queries themselves live below the HUD rules they override. */
+/* The middle band: what is left of the scene between the camera tabs and the
+   narration. It used to be a size container (`scenefill`) that the HUD queried
+   to decide how much of itself to draw, and ultimately whether to exist at all;
+   the card is a window the user places now, so the queries and the container
+   are gone and the band carries the event ticker alone. Dropping
+   `container-type` also matters for the card: layout containment made this
+   element the containing block for anything absolutely positioned inside it,
+   which is why `#hud` is a child of `.scene-ui` in index.html. */
 .scene-fill {
   flex: 1; min-height: 0;
   display: flex; align-items: stretch; justify-content: space-between; gap: 12px;
-  container-type: size; container-name: scenefill;
   /* The two full-width bands are spacers, not surfaces: `.scene-ui > *` turns
      pointer events back on for every band, and `.scene-fill` stretches over the
      middle of the viewport (`.scene-mid` over the camera tabs' row), so between
@@ -380,69 +384,147 @@ details[open] summary { margin-bottom: 4px; }
 #ticker div.warn { border-left-color: var(--warn); }
 #ticker div.fail { border-left-color: var(--fail); }
 
-/* The instrument card sits top-right of the scene, and how much of the scene it
-   is allowed to take is a mode (see ui/hudmode.ts): compact by default, full on
-   request, or gone. The chip is a sibling of the card so that `hidden` still
-   leaves a way back. */
+/* ── the instrument card ─────────────────────────────────────────────────────
+
+   A window on the scene. Where it is, how big it is and whether it is over the
+   picture at all are the user's, not the layout's (ui/hud.ts, ui/hudlayout.ts):
+   `#hud` is absolutely positioned inside `.scene-ui` with its geometry written
+   as inline `left/top/width/height`, or reparented into the telemetry panel and
+   laid out in the flow when it is docked.
+
+   The one rule this section must never break again: NOTHING here hides the
+   card. Wave 5 ended its container-query ladder with `#hud { display: none }`
+   below 92 px of scene band, which is the normal state of a 1024x700 window and
+   of 1280x800 in Russian — the card deleted itself, chip and all, and that is
+   what was reported as "the HUD window has disappeared". How much room there is
+   now decides how much of the CONTENT is drawn (the `hudwin` queries at the end
+   of this file), never whether the window exists. */
 #hud {
-  align-self: flex-start; flex: none; position: relative;
-  display: flex; flex-direction: column; align-items: flex-end;
-  min-height: 22px; max-height: 100%; overflow: hidden; pointer-events: none;
-}
-/* The chip sits *over* the card's top-right corner rather than above it. Those
-   28 px matter: at 1280x800 the Russian narration band leaves 112 px between
-   the camera tabs and the narration, and a stacked chip would have cost a
-   quarter of it. `.status` carries the matching padding so the two never
-   collide, and in `hidden` mode the chip is all that is left of the HUD. */
-.hud-toggle {
-  pointer-events: auto; position: absolute; top: 0; right: 0; z-index: 1;
-  display: grid; place-items: center; width: 27px; height: 22px;
-  border: 1px solid rgba(80, 100, 130, 0.42); border-radius: 6px;
-  background: rgba(10, 16, 23, 0.6); backdrop-filter: blur(8px);
-  color: #aabecd; font-size: 12px; line-height: 1;
-}
-.hud-toggle:hover { color: #fff; border-color: var(--accent-line); }
-.hud-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.hud-box {
+  position: absolute; z-index: 4;
+  display: flex; flex-direction: column; overflow: hidden;
   /* ~60 % opacity over a blur: the scene stays legible *through* the card,
      which is the point of an overlay instrument rather than a panel. */
   background: rgba(10, 16, 23, 0.6);
   border: 1px solid rgba(80, 100, 130, 0.42);
   border-radius: 9px;
-  padding: 8px 11px;
   font-family: var(--mono);
   font-size: 11px;
   line-height: 1.32;
   backdrop-filter: blur(8px);
-  min-width: 0;
+  box-shadow: 0 10px 30px rgba(3, 7, 13, 0.45);
+  /* The readouts stay click-through, exactly as the old card was: a drag that
+     starts over the numbers still orbits the camera. Only the header, the grip
+     and the buttons take the pointer — and CameraController.attach ignores
+     those, because everything inside `.scene-ui` is a control to it. */
+  pointer-events: none;
+  /* A size container, so the CONTENT can ask how much room it has been given.
+     The window itself is never a subject of those queries. */
+  container-type: size; container-name: hudwin;
 }
+/* The header is the drag handle, the title and the three controls, and the
+   window's only tab stop (ui/hud.ts gives it role="group" and an accessible
+   name that names the arrow keys). `touch-action: none` keeps a touch-drag from
+   becoming a page gesture — the same reason #viewport carries it. */
+.hud-header {
+  pointer-events: auto; touch-action: none; cursor: move; user-select: none;
+  flex: none; display: flex; align-items: center; gap: 6px;
+  height: 22px; padding: 0 3px 0 8px;
+  background: rgba(19, 30, 43, 0.72);
+  border-bottom: 1px solid rgba(80, 100, 130, 0.3);
+}
+.hud-header:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.hud-title {
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 600 9px var(--sans); letter-spacing: 1.1px; text-transform: uppercase; color: #93a9bd;
+}
+.hud-btns { flex: none; display: flex; gap: 1px; }
+.hud-btn {
+  pointer-events: auto;
+  display: grid; place-items: center; width: 21px; height: 18px;
+  border-radius: 4px; color: #a5b9c9; font-size: 11px; line-height: 1;
+}
+.hud-btn:hover:not(:disabled) { color: #fff; background: rgba(120, 150, 180, 0.22); }
+.hud-btn:disabled { color: #5a6878; cursor: default; }
+.hud-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hud-body { flex: 1; min-height: 0; overflow: hidden; padding: 7px 10px 8px; }
+/* The resize grip: three corner rules, the convention every desktop window
+   manager uses. Mouse affordance only — the keyboard resizes with alt+arrows on
+   the header, and a second tab stop for the same job is noise to a screen
+   reader (hence aria-hidden in ui/hud.ts). */
+.hud-grip {
+  pointer-events: auto; touch-action: none; cursor: nwse-resize;
+  position: absolute; right: 0; bottom: 0; width: 15px; height: 15px;
+  background:
+    linear-gradient(135deg, transparent 46%, rgba(150, 178, 204, 0.5) 46%, rgba(150, 178, 204, 0.5) 56%, transparent 56%),
+    linear-gradient(135deg, transparent 66%, rgba(150, 178, 204, 0.5) 66%, rgba(150, 178, 204, 0.5) 76%, transparent 76%);
+}
+.hud-grip:hover { filter: brightness(1.6); }
 /* Which half of the card is drawn. The ID keeps these above both the base
    `.hud-*` rules and the container queries at the end of the file. */
 #hud[data-mode='compact'] .hud-primary,
 #hud[data-mode='compact'] .hud-secondary,
 #hud[data-mode='compact'] .hud-sep { display: none; }
-/* The cap the brief is measured against. The rows come out ~190 px wide; it is
-   the status line ("Выведение · Гравитационный разворот") that needs the limit,
-   and it wraps to a second line rather than pushing the card over the vehicle. */
-#hud[data-mode='compact'] .hud-box { max-width: 230px; }
 #hud[data-mode='full'] .hud-compact { display: none; }
-#hud[data-mode='hidden'] .hud-box { display: none; }
+/* `hidden` is the wave-5 chip, kept as a chip: everything but the header is
+   taken away and the header shrinks to its controls. The user's real size waits
+   in the stored layout and comes back with the mode.
+
+   `flex-start`, not `flex-end`: ui/hud.ts sizes the WINDOW to this chip while
+   hidden, and the two have to share a corner. They did not before — the window
+   kept its full 176x148 box behind a 73x22 chip, so the drag handle was an
+   invisible rectangle around the thing being dragged and the chip could not be
+   taken nearer than 103 px to the left edge or 126 px to the top or bottom. */
+#hud[data-mode='hidden'] { background: none; border-color: transparent; backdrop-filter: none; box-shadow: none; }
+#hud[data-mode='hidden'] .hud-body,
+#hud[data-mode='hidden'] .hud-grip,
+#hud[data-mode='hidden'] .hud-title { display: none; }
+#hud[data-mode='hidden'] .hud-header {
+  align-self: flex-start; width: max-content; padding: 0 3px;
+  border: 1px solid rgba(80, 100, 130, 0.42); border-radius: 7px;
+  background: rgba(10, 16, 23, 0.62); backdrop-filter: blur(8px);
+}
+/* Docked: the same nodes, in the telemetry panel, in the flow. It is a panel
+   card there, so it takes the panel's own surface and drops the blur, the
+   float-only controls and the size container (an auto height under
+   `container-type: size` would collapse to nothing). ui/hud.ts writes
+   data-mode="full" while docked — the panel has room for all 21 readouts, and
+   seeing them all at once without covering the picture is the reason to dock. */
+#hud[data-placement='docked'] {
+  /* `inline-size`, not `size`: the docked card's height is its content, and a
+     size container with an auto height contains itself to nothing. Width is the
+     only question the panel raises anyway — at 300 px the four-column grid
+     wraps its values onto a second line — and the `hudwin` width queries below
+     answer it for the docked card exactly as they do for the floating one. */
+  position: static; container-type: inline-size; pointer-events: auto;
+  margin: 14px 0 2px;
+  background: var(--panel2); border-color: var(--line);
+  backdrop-filter: none; box-shadow: none; font-size: 11.5px;
+}
+/* The float-only controls: the grip resizes a window, the toggle sizes its
+   content and ⌖ puts it back where it started. A docked card has no geometry
+   for any of them to act on — ⌖ was still drawn and still enabled, and pressing
+   it did nothing at all. ui/hud.ts guards the double-click for the same reason. */
+#hud[data-placement='docked'] .hud-grip,
+#hud[data-placement='docked'] .hud-reset,
+#hud[data-placement='docked'] .hud-toggle { display: none; }
+#hud[data-placement='docked'] .hud-header { cursor: default; background: transparent; border-bottom-color: var(--line); }
+#hud[data-placement='docked'] .hud-body { overflow: visible; }
 /* Two columns, nothing wrapping: the compact card's width is decided by its
    longest value ("12345 × 1234 km"), and a wrapped Russian label would make it
    taller than the rows it is supposed to save. */
 .hud-grid.hud-compact { grid-template-columns: auto auto; column-gap: 12px; }
 .hud-compact .k, .hud-compact .v { white-space: nowrap; }
 .hud-compact .v { padding-right: 0; }
-.hud-box .status { color: var(--accent); font-weight: 700; margin-bottom: 4px; padding-right: 26px; }
-.hud-box .replay-tag:not(:empty) {
+.hud-body .status { color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+.hud-body .replay-tag:not(:empty) {
   display: inline-block; margin-left: 6px; padding: 0 5px;
   border: 1px solid var(--warn); border-radius: 3px;
   font-size: 9px; letter-spacing: 1px; color: var(--warn); text-transform: uppercase;
 }
-.hud-box .note { margin-bottom: 4px; }
-.hud-box .note.ok { color: var(--ok); }
-.hud-box .note.warn { color: var(--warn); }
-.hud-box .note.fail { color: var(--fail); }
+.hud-body .note { margin-bottom: 4px; }
+.hud-body .note.ok { color: var(--ok); }
+.hud-body .note.warn { color: var(--warn); }
+.hud-body .note.fail { color: var(--fail); }
 /* Four columns, not two: twenty-one readouts in two stacked two-column grids
    needed about 370 px of viewport height, which a 1280x800 laptop has not got
    once the narration band has its share. */
@@ -502,9 +584,18 @@ details[open] summary { margin-bottom: 4px; }
 /* Onboard mode: the canvas covers the whole viewport (its porthole mask is
    what hides the 3-D scene outside the glass); the instrument strip is placed
    above the narration band from the measured `--sb-h`, in onboard.ts. */
-/* The HUD and the event ticker both restate what the instrument strip and the
-   narration already say, and the strip is drawn where the ticker sits. */
-#viewport.onboard #hud, #viewport.onboard #ticker, #viewport.map #ticker { display: none; }
+/* The event ticker restates what the narration already says and the instrument
+   strip is drawn exactly where it sits, so it gives way in onboard (and in map,
+   where the callouts are on the ground track).
+
+   `#hud` used to be in this list and is deliberately not any more. The default
+   camera plan switches itself to `onboard` for the whole upper-stage phase of
+   every flight, so that rule made the card — window, chip, dock button and all —
+   vanish by itself mid-ascent: the same thing the user reported, from a
+   different rule. The card is a window the user places now; if it is in the way
+   of the porthole they can move it, shrink it to the chip with `H`, or dock it
+   with `D`. Nothing in this stylesheet hides it. */
+#viewport.onboard #ticker, #viewport.map #ticker { display: none; }
 
 /* ── playback panel ──────────────────────────────────────────────────────── */
 
@@ -615,6 +706,10 @@ details[open] summary { margin-bottom: 4px; }
    17 px strip with nothing visible in it. Children keep their own size and the
    panel scrolls. */
 #telemetry > * { flex-shrink: 0; }
+/* The slot the instrument card docks into (ui/telemetry.ts builds it once and
+   re-appends it on every language change, so the card survives the rebuild).
+   Collapsed while the card is floating over the picture. */
+.telemetry-dock:empty { display: none; }
 .telemetry-heading {
   flex: none;
   display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
@@ -647,6 +742,11 @@ h3.section {
 }
 .events div { padding: 2px 0; border-bottom: 1px dashed #1f2838; }
 .events div:last-child { border-bottom: 0; }
+/* The log's empty state. `.events` has a 132 px floor, so without this the
+   EVENT LOG heading was followed by a blank rectangle before the first launch —
+   which is what the user photographed and called "I can't see anything at all".
+   No rule, and the muted colour of a caption rather than of a callout. */
+.events .events-empty { border-bottom: 0; color: var(--dim); font-style: italic; }
 .events .t { color: var(--muted); font-family: var(--mono); margin-right: 7px; }
 .events .major { color: var(--accent); }
 .events .success { color: var(--ok); }
@@ -705,12 +805,68 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .workspace { grid-template-columns: 270px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   #setup { grid-row: 1 / span 2; }
   .flight-column { grid-column: 2; grid-row: 1; }
-  #telemetry { grid-column: 2; grid-row: 2; max-height: 260px; }
+  #telemetry { grid-column: 2; grid-row: 2; max-height: 300px; }
   .scene-hint { display: none; }
-  .hud-box { min-width: 0; font-size: 10.5px; }
   .top-context { display: none; }
   .quiet-btn span:last-child { display: none; }
   .quiet-btn { padding: 7px; }
+}
+
+/* Two rows that have to share one screen.
+
+   Between 861 and 1180 px the telemetry panel is not a column beside the
+   picture any more, it is a strip *under* it, and the two rows of that grid are
+   the whole workspace height between them. Three things follow.
+
+   1. The flight column CONTAINS its children. It did not: `.viewport` carries a
+      320 px floor and `.playback` is 149 px of controls, so the column's
+      content was 481 px inside a grid row that is 269 px at 1024x700 — and the
+      overflow was `visible`, so the playback panel painted 84.7 px down over
+      the telemetry strip. Measured there: `.playback` y 404–553.3 over `.events`
+      y 465.8–597.8, which put the scrubber, the Live button, the mission clock
+      and the warp select on top of 64 % of the event log, and the Telemetry
+      heading and its range toggle under the panel as well. The picture is the
+      flexible child (`flex: 1 1 0`, no floor here), so it gives up height to the
+      controls rather than pushing them out of the column, and `overflow: hidden`
+      makes that structural instead of arithmetical.
+   2. The strip is capped as a FRACTION of the window, not at a flat 300 px.
+      Its 300 px was what left the column 269 px in the first place; at this
+      width the two rows are competing for the same short screen, and a strip
+      that scales leaves the picture a usable band at 700 px of window while
+      still growing to its 300 px maximum on a tall one.
+   3. The camera tools become a row. The scene band here is wide and short, and
+      a 112 px column of three buttons down the right-hand side left nothing
+      under it for the instrument card to be parked in (ui/hudlayout.ts measures
+      that band: `defaultTop` drops from 189 px to 109 px with the tools in a
+      row, which is the difference between a floating card with a home and one
+      pushed out beside the tools).
+
+   And the event log keeps its place at the top of the strip: flex `order` lifts
+   it and its own heading above the eight 118 px charts it used to sit 1 300 px
+   behind. Nothing moves in the three-column layout above 1180 px, where the
+   panel is tall enough to read straight through, and nothing moves on a phone
+   below 861 px, where the panel stops scrolling internally and the whole page
+   scrolls instead. */
+@media (max-width: 1180px) and (min-width: 861px) {
+  .flight-column { overflow: hidden; }
+  .flight-column > .viewport { flex: 1 1 0; min-height: 0; }
+  #telemetry { --strip-h: min(300px, 27vh); max-height: var(--strip-h); }
+  .camera-tools { flex-direction: row; }
+  #telemetry > * { order: 3; }
+  #telemetry > .telemetry-heading { order: 0; }
+  #telemetry > .telemetry-dock { order: 1; }
+  #telemetry > .events-head, #telemetry > .events { order: 2; }
+  /* The heading gives its generous desktop padding to the log: in a 189 px
+     strip its 69.5 px were a third of everything the user could see. */
+  .telemetry-heading { padding: 9px 16px 8px; }
+  .telemetry-heading h2 { font-size: 15px; }
+  #telemetry > .events-head { margin-top: 12px; }
+  /* …and the log takes exactly what the strip has left under the two headings
+     (56 px + 34 px + the 2 px it is offset by), so a flown mission's callouts
+     are WHOLE at the top of the strip instead of half of them being one scroll
+     down. The log keeps its own 240 px box in the three-column layout, where
+     the panel is a full-height column and there is room for it. */
+  .events { min-height: 88px; max-height: calc(var(--strip-h) - 95px); }
 }
 
 @media (max-width: 860px) {
@@ -725,7 +881,15 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   #app { height: auto; min-height: 100dvh; overflow: visible; }
   body { overflow-y: auto; }
   .workspace { display: flex; flex-direction: column; grid-template-columns: none; padding: 12px; }
-  .flight-column { order: 0; height: 66vh; min-height: 420px; flex: none; }
+  /* Two thirds of the screen for the picture and its controls — as a FLOOR,
+     not as a height. `height: 66vh` was a height, and 66vh is 487 px on a
+     375x812 phone once the browser chrome has its share while the column's own
+     content (a 320 px picture, 12 px of gap and a 188 px playback panel that
+     wraps onto three rows at this width) is 520: the playback panel hung 33 px
+     out of the bottom of the column and painted 21 px of itself over the
+     mission setup panel below it. The whole page scrolls at this width, so a
+     column that grows to fit its controls costs nothing. */
+  .flight-column { order: 0; height: auto; min-height: max(420px, 66vh); flex: none; }
   #setup { order: 1; }
   #telemetry { order: 2; max-height: none; }
   .setup-scroll { overflow: visible; }
@@ -747,13 +911,11 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .cam-btn { padding: 5px 7px; font-size: 12px; }
   .cam-btn span:last-child { font-size: 11px; }
   #ticker { max-width: 100%; font-size: 10.5px; }
-  /* The card used to be deleted outright here, which left a phone with no
-     flight instruments on the picture at all. It stays, as the compact card
-     only — `Hud` forces the mode at this same breakpoint — and is narrowed so
-     that it still clears the vehicle on the centre line of a 375 px screen. */
-  #hud { gap: 5px; }
-  #hud[data-mode='compact'] .hud-box { font-size: 9.5px; line-height: 1.26; padding: 6px 8px; max-width: 168px; }
-  .hud-grid.hud-compact { column-gap: 8px; }
+  /* Nothing about the card here any more. A phone gets it DOCKED by default
+     (ui/hudlayout.ts: the picture is 351 px wide, and a window over it is most
+     of the frame), which is a default rather than a rule — floating is one tap
+     away and the `hudwin` queries below size its content for a small window.
+     `Hud` still forces the compact mode at this same breakpoint. */
   .mission-clock > span { font-size: 18px; }
   .ctl-row { gap: 10px; }
   .events { max-height: 200px; }
@@ -763,100 +925,89 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 }
 
 @media (max-width: 520px) {
-  .flight-column { height: 60vh; min-height: 360px; }
+  .flight-column { height: auto; min-height: max(360px, 60vh); }
   .vehicle-stats { grid-template-columns: 1fr 1fr; gap: 12px; }
   .camera-tools { flex-direction: row; }
   .launch-button { font-size: 15px; padding: 14px 10px; }
 }
 
-/* ── HUD degradation (container queries) ─────────────────────────────────── */
+/* ── the card's content, sized to the card ───────────────────────────────── */
 
-/* How the HUD gives way when the viewport is short — measured, not guessed.
-   Last in the file on purpose: these have the same specificity as the `.hud-*`
-   rules and as the width media queries above, and "does it actually fit" is
-   the more specific answer than "how wide is the window", so it has to win.
+/* Last in the file on purpose: these have the same specificity as the `#hud[…]`
+   rules above and have to win.
 
-   The full HUD is 207 px tall at 11 px. A 1280x800 window leaves 231 px in the
-   `scenefill` container in English and Thai and 211 px in Russian; 1280x720
-   leaves 130-151 px. So there are three steps, and each one shrinks before it
-   deletes: compact type, then the secondary readouts, then the HUD itself.
-   Whatever survives is the primary flight instrument set — altitude, inertial
-   and vertical speed, q, apsides, inclination, Δv, stage, throttle — which is
-   exactly the half the previous single 290 px breakpoint threw away on every
-   mainstream laptop, leaving seven propulsion readouts in a launch simulator
-   with no altitude on screen.
+   What changed in wave 6 is what is being asked. The wave-5 ladder queried the
+   SCENE — "how much viewport is left between the camera tabs and the narration"
+   — and answered by deleting readouts and finally the whole card, so a window
+   that was perfectly legible vanished because the narration band in Russian was
+   two lines instead of one. These query the WINDOW, which is exactly as big as
+   the user made it, and they only ever decide how much of the content fits in
+   it. There is no step that hides `#hud`, and there must never be one again.
 
-   Since wave 5 the ladder is the FULL card's business only: the compact card is
-   seven rows and fits everything down to the shortest scene the app draws, and
-   applying "delete the secondary readouts" to a card that has none would only
-   have shrunk its type for nothing. */
-@container scenefill (max-height: 212px) {
-  #hud[data-mode='full'] .hud-box { font-size: 10px; line-height: 1.25; padding: 6px 9px; }
-  #hud[data-mode='full'] .hud-sep { margin: 4px 0; }
-  #hud[data-mode='full'] .hud-grid { column-gap: 8px; }
-}
-@container scenefill (max-height: 168px) {
-  #hud[data-mode='full'] .hud-sep, #hud[data-mode='full'] .hud-secondary { display: none; }
-}
-
-/* …and how it gives way when the scene is NARROW, which is the other half of
-   the same question and was missing.
-
-   The HUD is right-aligned in the scene, and four columns of 11 px mono
-   measure 394 px. The exterior camera keeps the stack on the scene's
-   horizontal centre line, so the box starts covering the vehicle as soon as
-   394 px reaches past half the frame — below about 820 px of scene width.
-   Measured at the brief's reference size, 1280x800: scene 638 px, HUD
-   543..937, vehicle projected at x = 635 and 237 px tall, of which 208 px sat
-   behind the opaque `.hud-box` and the rest behind the narration band. About
-   90 % of the rocket was hidden from the pad through the whole ascent, and the
-   pad frame with it.
-
-   Two columns is ~165 px at 10 px, which leaves the centre line clear at every
-   width down to the 860 px media query that drops the HUD for the phone
-   layout. It is twice as tall as four columns, so the secondary readouts go
-   with it unless the scene is tall enough to take all 21 rows — the same
-   shrink-then-delete ladder as the height queries above, applied to width. The
-   query is on the CONTAINER, not on the window: what matters is how much scene
-   there is, and the side panels decide that as much as the window does. */
-@container scenefill (max-width: 820px) {
-  #hud[data-mode='full'] .hud-box { font-size: 10px; line-height: 1.28; padding: 7px 9px; }
+   The numbers are measured on the card itself, not on the viewport: the full
+   21-readout grid is ~207 px tall and ~394 px wide in four columns at 11 px,
+   two columns is ~165 px wide and twice as tall, and the compact seven rows are
+   ~100 px tall. Hence 300 px for the column count, 210 px for the secondary
+   readouts and 130 px for the fall-back to the compact grid. A window smaller
+   than that shows the compact set in small type, which is still an altitude, a
+   speed and an apsis pair — and the telemetry panel beside the viewport carries
+   everything at all times, docked card or not. */
+@container hudwin (max-width: 300px) {
   #hud[data-mode='full'] .hud-grid { grid-template-columns: auto auto; column-gap: 9px; }
   #hud[data-mode='full'] .hud-grid .v { padding-right: 0; }
   #hud[data-mode='full'] .hud-sep { margin: 5px 0; }
 }
-@container scenefill (max-width: 820px) and (max-height: 310px) {
+@container hudwin (max-width: 215px) {
+  .hud-body { font-size: 10px; line-height: 1.24; padding: 6px 8px 7px; }
+  .hud-grid { column-gap: 8px; }
+  .hud-sep { margin: 4px 0; }
+}
+@container hudwin (max-width: 172px) {
+  .hud-body { font-size: 9.5px; line-height: 1.2; padding: 5px 7px 6px; }
+  .hud-grid.hud-compact { column-gap: 8px; }
+  .hud-title { font-size: 8.5px; letter-spacing: 0.8px; }
+}
+/* Too short for 21 rows: the detail half goes, and the primary flight
+   instruments — altitude, inertial and vertical speed, q, apsides, inclination,
+   Δv, stage, throttle — are what survives. That order was itself a fix: the old
+   split was propulsion / trajectory, and a short viewport kept throttle, thrust
+   and mass while throwing away every number a launch is flown on. */
+@container hudwin (max-height: 372px) {
   #hud[data-mode='full'] .hud-sep, #hud[data-mode='full'] .hud-secondary { display: none; }
 }
+/* Shorter still: fall back to the compact grid rather than sever the primary
+   grid at the window's edge. The step is where the ten primary rows stop
+   fitting — 22 px of header, 15 px of padding, a 15 px status line and ten
+   14.5 px rows is 197 — so a window dragged below this in `full` mode shows the
+   compact seven and grows back into the primary grid as it is dragged open.
 
-/* The compact card has its own, much shorter ladder: there are no secondary
-   readouts to delete, so all it can do is shrink. The step is set by the
-   tightest real case — 1280x800 in Russian, where the taller narration band
-   leaves 112 px of scene-fill and the status line wraps to two rows. */
-@container scenefill (max-height: 150px) {
-  #hud[data-mode='compact'] .hud-box { font-size: 10px; line-height: 1.22; padding: 6px 9px; }
-  #hud[data-mode='compact'] .hud-grid.hud-compact { column-gap: 9px; }
-}
-@container scenefill (max-height: 120px) {
-  #hud[data-mode='compact'] .hud-box { font-size: 9.5px; line-height: 1.18; padding: 5px 8px; }
-}
-
-/* Full mode asked for, but no room for the ten primary rows (1280x800 in
-   Russian leaves 132 px of scene-fill against a 160 px card): fall back to the
-   compact grid rather than sever the card at the container edge. */
-@container scenefill (max-height: 150px) {
-  #hud[data-mode='full'] .hud-primary, #hud[data-mode='full'] .hud-secondary, #hud[data-mode='full'] .hud-sep { display: none; }
+   This step used to be reached by the DEFAULT window, which is 176x148: `full`
+   drew the compact grid, and `H` on a first visit changed nothing anyone could
+   see. It is a floor for a window the user has shrunk by hand now — `H` grows
+   the card past it (HUD_FULL_H in ui/hudlayout.ts) and hands back the size
+   afterwards, and where the viewport itself is shorter than that the cycle
+   skips `full` rather than offering a keystroke with no effect. */
+@container hudwin (max-height: 200px) {
+  #hud[data-mode='full'] .hud-primary { display: none; }
   #hud[data-mode='full'] .hud-compact { display: grid; }
-  #hud[data-mode='full'] .hud-box { max-width: 230px; font-size: 10px; line-height: 1.22; padding: 6px 9px; }
 }
-
-/* Too short for even seven shrunk rows. The chip goes with the card: a control
-   that cannot bring anything back is worse than no control. This is the case at
-   1024x700, where the two-column layout leaves a 320 px viewport and the
-   narration band takes all of it — the card is not what runs out of room
-   there, the scene is. */
-@container scenefill (max-height: 92px) {
-  #hud { display: none; }
+/* `full` is the one mode whose content can be taller than the window the user
+   left it in — the secondary half returns at 372 px and the Russian labels wrap
+   at a narrow width — so it is the one mode whose body scrolls instead of
+   cutting a row in half. Floating only: a docked card has no height to overflow
+   and `overflow-y` would turn its `visible` horizontal overflow into a clip. */
+#hud[data-placement='floating'][data-mode='full'] .hud-body { overflow-x: hidden; overflow-y: auto; scrollbar-width: thin; }
+/* Short as well as narrow: shrink the type before anything is cut. */
+@container hudwin (max-height: 150px) {
+  .hud-body { font-size: 10px; line-height: 1.24; padding: 6px 8px 7px; }
+}
+@container hudwin (max-height: 118px) {
+  .hud-body { font-size: 9.5px; line-height: 1.2; padding: 5px 7px 6px; }
+}
+/* No room for the status line and a grid at all — the user has dragged the grip
+   almost shut. The readouts go; the header, and with it every way back, stays. */
+@container hudwin (max-height: 74px) {
+  .hud-body { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

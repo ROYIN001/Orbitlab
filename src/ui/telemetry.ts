@@ -77,6 +77,16 @@ export class TelemetryPanel {
   private plan!: HTMLElement;
   private debris!: HTMLElement;
   private events!: HTMLElement;
+  /**
+   * The line inside the event log that says the log is empty.
+   *
+   * Before a mission is flown the log has no children, and `.events` has a
+   * 132 px minimum height — so the EVENT LOG heading was followed by a blank
+   * rectangle, which is how the user reported it ("the event log shows nothing
+   * at all"). An empty box that says why it is empty is a state; one that says
+   * nothing is indistinguishable from a broken panel.
+   */
+  private eventsEmpty!: HTMLElement;
   private note!: HTMLElement;
   private rangeBtns: HTMLButtonElement[] = [];
   private shownEvents = 0;
@@ -96,6 +106,17 @@ export class TelemetryPanel {
   private markerPool: ChartMarker[] = [];
   private markers: ChartMarker[] = [];
   private rowPools: Map<HTMLElement, { rows: HTMLElement[]; used: number }> = new Map();
+  /**
+   * Where the instrument card goes when it is docked (`src/ui/hud.ts`).
+   *
+   * Created once and re-appended by `build`, never re-created: `build` runs
+   * again on every language change and starts with `replaceChildren`, so a slot
+   * built inside it would throw the docked card out of the DOM the first time
+   * the user switched to Russian. Appending the same node moves it and its
+   * children back into place instead, which is also why the card survives a
+   * rebuild without `Hud` having to be told one happened.
+   */
+  readonly dockHost: HTMLElement = el('div', 'telemetry-dock');
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -126,6 +147,10 @@ export class TelemetryPanel {
     }
     head.append(toggle);
     r.append(head);
+    // First block under the heading: the docked instrument card, when the user
+    // has put it there. Empty (and collapsed by `:empty` in style.css) when the
+    // card is floating over the picture.
+    r.append(this.dockHost);
     this.note = el('p', 'chart-note hidden');
     r.append(this.note);
     for (const id of CHART_IDS) {
@@ -134,8 +159,11 @@ export class TelemetryPanel {
       r.append(c);
       this.charts[id] = c;
     }
-    const mk = (titleKey: string, cls: string): HTMLElement => {
-      r.append(el('h3', 'section', t(titleKey)));
+    // `headCls` exists for the event log alone: at the two-column breakpoint the
+    // panel is a ~300 px scrolling strip, and the log needs a class its heading
+    // shares so flex `order` can lift the pair to the top of it (style.css).
+    const mk = (titleKey: string, cls: string, headCls?: string): HTMLElement => {
+      r.append(el('h3', headCls ? `section ${headCls}` : 'section', t(titleKey)));
       const box = el('div', cls);
       r.append(box);
       return box;
@@ -143,7 +171,9 @@ export class TelemetryPanel {
     this.losses = mk('tel.losses', 'list info');
     this.plan = mk('tel.plan', 'list info plan');
     this.debris = mk('tel.debris', 'list info');
-    this.events = mk('tel.events', 'events');
+    this.events = mk('tel.events', 'events', 'events-head');
+    this.eventsEmpty = el('div', 'events-empty', t('tel.noEvents'));
+    this.events.append(this.eventsEmpty);
     const btn = el('button', 'btn export-btn', t('tel.export')) as HTMLButtonElement;
     btn.type = 'button';
     btn.addEventListener('click', () => this.exportCsv());
@@ -180,7 +210,10 @@ export class TelemetryPanel {
    */
   reset(): void {
     this.shownEvents = 0;
-    this.events.replaceChildren();
+    // The empty-state line goes back in, not out: a reset log is exactly the
+    // case it exists for.
+    this.events.replaceChildren(this.eventsEmpty);
+    this.eventsEmpty.classList.remove('hidden');
     this.clearRows(this.losses);
     this.clearRows(this.plan);
     this.clearRows(this.debris);
@@ -394,6 +427,9 @@ export class TelemetryPanel {
       div.append(el('span', 't', fmtTime(e.t)), document.createTextNode(t(e.key, localizeEventParams(view.vehicleSpec, e.params))));
       log.append(div);
     }
+    // Scrubbing back to T-10 empties the log again, so this is not a first-run
+    // state: it is re-evaluated on every pass.
+    this.eventsEmpty.classList.toggle('hidden', events.length > 0);
     if (atBottom) log.scrollTop = log.scrollHeight;
   }
 

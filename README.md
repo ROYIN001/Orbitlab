@@ -171,7 +171,10 @@ Requires Node.js 20 or newer and a browser with WebGL 2.
 | `,` `.` | step the time warp down / up |
 | ← → | seek ±5 s on the timeline (±30 s with shift), including while a button has focus |
 | Home / End | start of the recording / back to the live head |
-| Escape | close a dialog |
+| `H` | cycle the telemetry card on the picture: compact → full → hidden |
+| `D` | dock that card into the telemetry panel, or float it over the picture again |
+| ← ↑ → ↓ *(header focused)* | move the floating card 10 px, 40 px with shift; alt+arrows resize it |
+| Escape | close a dialog, or hand the focus back from the card's header |
 
 On a phone the page becomes one column in reading order — viewport and playback first,
 then mission setup with the Launch button, then the telemetry panel. There is no panel
