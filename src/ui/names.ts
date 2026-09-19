@@ -22,6 +22,7 @@ import { t } from '../i18n';
 import type { SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { SATELLITES } from '../data/satellites';
+import { RAD } from '../physics/constants';
 
 /** A dictionary entry, or the English literal from the data file when there is none. */
 export function localized(key: string, fallback: string): string {
@@ -90,13 +91,27 @@ export function localizeEventParams(
   // flight-plan list). Without this the event log reads "Burn planned:
   // raiseApoapsis" in every language, English included.
   const kind = typeof params.kind === 'string' ? localized(`tel.burn.${params.kind}`, params.kind) : null;
+  const commandMode = params.mode === 'auto' || params.mode === 'manual' ? localized(`control.mode.${params.mode}`, params.mode) : null;
+  const envelopeScope = params.scope === 'vehicle' ? t('aero.scope.vehicle') : params.scope === 'debris' ? t('aero.scope.debris') : null;
   if ((stage === null || stage === params.stage)
     && (name === null || name === params.name)
-    && (kind === null || kind === params.kind)) return params;
+    && (kind === null || kind === params.kind) && commandMode === null && envelopeScope === null) return params;
   const out = { ...params };
   if (stage !== null) out.stage = stage;
   if (name !== null) out.name = name;
   if (kind !== null) out.kind = kind;
+  if (envelopeScope !== null) {
+    out.scope = envelopeScope;
+    if (typeof params.angleOfAttackRad === 'number') out.alphaDeg = (params.angleOfAttackRad * RAD).toFixed(1);
+    if (typeof params.sideslipRad === 'number') out.betaDeg = (params.sideslipRad * RAD).toFixed(1);
+  }
+  if (commandMode !== null) {
+    out.mode = commandMode;
+    for (const key of ['rollRateRadS', 'pitchRateRadS', 'yawRateRadS']) {
+      if (typeof params[key] === 'number') out[key] = Number(params[key]).toFixed(3);
+    }
+    if (typeof params.throttle === 'number') out.throttle = (params.throttle * 100).toFixed(1);
+  }
   return out;
 }
 

@@ -136,6 +136,7 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^setup\.fail\.[a-zA-Z]+$/, from: 'ui/panel.ts: t(`setup.fail.${m}`)' },
   { pattern: /^tel\.range\.[a-zA-Z]+$/, from: 'ui/telemetry.ts: t(`tel.range.${mode}`)' },
   { pattern: /^tel\.burn\.[a-zA-Z]+$/, from: 'ui/telemetry.ts: t(`tel.burn.${b.kind}`)' },
+  { pattern: /^control\.mode\.(auto|manual)$/, from: 'ui/names.ts: localized(`control.mode.${params.mode}`)' },
   { pattern: /^tel\.debris\.[a-zA-Z]+$/, from: 'ui/telemetry.ts: t(`tel.debris.${d.outcome}`)' },
   { pattern: /^evt\.[a-zA-Z]+$/, from: 'SimEvent.key, rendered by ui/narration.ts and ui/timeline.ts' },
   { pattern: /^tl\.evt\.[a-zA-Z]+$/, from: 'ui/phase.ts eventLabel: t(`tl.${key}`)' },
@@ -254,6 +255,34 @@ describe('translation coverage', () => {
 });
 
 describe('call sites', () => {
+  it('localizes recorded aerodynamic limits while preserving raw angles and scope', () => {
+    const params = { scope: 'debris', name: 'Falcon 9', angleOfAttackRad: Math.PI / 6, sideslipRad: -Math.PI / 60 };
+    for (const lang of ['en', 'ru', 'th'] as const) {
+      withLang(lang);
+      const display = localizeEventParams(null, params)!;
+      expect(display.scope).toBe(t('aero.scope.debris'));
+      expect(display.alphaDeg).toBe('30.0'); expect(display.betaDeg).toBe('-3.0');
+      expect(t('evt.aeroEnvelopeExceeded', display)).not.toMatch(/\{[a-zA-Z]+\}/);
+      expect(params.scope).toBe('debris'); expect(params.angleOfAttackRad).toBe(Math.PI / 6);
+    }
+    withLang('en');
+  });
+
+  it('localizes command events without changing their SI replay/export metadata', () => {
+    const params = { mode: 'manual', rollRateRadS: 0.01, pitchRateRadS: -0.02, yawRateRadS: 0.03, throttle: 0.6 };
+    for (const lang of ['en', 'ru', 'th'] as const) {
+      withLang(lang);
+      const display = localizeEventParams(null, params)!;
+      expect(display.mode).toBe(t('control.mode.manual'));
+      expect(display.rollRateRadS).toBe('0.010'); expect(display.pitchRateRadS).toBe('-0.020');
+      expect(display.throttle).toBe('60.0');
+      const text = t('evt.controlCommand', display);
+      expect(text).toContain('60.0%'); expect(text).not.toMatch(/\{[a-zA-Z]+\}/);
+      expect(params).toEqual({ mode: 'manual', rollRateRadS: 0.01, pitchRateRadS: -0.02, yawRateRadS: 0.03, throttle: 0.6 });
+    }
+    withLang('en');
+  });
+
   it('reads the source tree it is supposed to scan', () => {
     // A glob that silently matches nothing would make every check below pass.
     expect(SOURCES.length).toBeGreaterThan(20);

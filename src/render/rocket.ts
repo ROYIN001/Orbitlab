@@ -15,9 +15,10 @@ import { interstageHeight, stackLayout } from '../physics/frame';
 import { buildSatellite, type SatelliteView } from './satellite';
 import { Plume, type PlumeKind } from './plume';
 import { AscentTrail } from './smoke';
-import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout } from './liveries';
+import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout, type NozzlePos } from './liveries';
 import { clamp01, seedFromString, smoothstep } from './noise';
 import { disposeObject } from './dispose';
+import type { RigidTelemetry } from '../physics/rigid/telemetry';
 
 export interface RocketEnv {
   /** unit vector (scene axes) from the vehicle back down its flight path */
@@ -39,6 +40,7 @@ interface BoosterUnit {
   plume: Plume;
   vernier: Plume | null;
   glow: THREE.InstancedMesh;
+  engines: EngineVisual;
 }
 
 interface BoosterSet {
@@ -55,6 +57,7 @@ interface StagePart {
   plume: Plume;
   vernier: Plume | null;
   glow: THREE.InstancedMesh;
+  engines: EngineVisual;
   flash: THREE.Mesh;
   /** stacking height including the interstage adapter, m */
   height: number;
@@ -65,6 +68,23 @@ interface StagePart {
   frameIndex: number;
   boosters: BoosterSet[];
 }
+
+interface EngineVisual {
+  bells: THREE.InstancedMesh;
+  glow: THREE.InstancedMesh;
+  nozzles: NozzlePos[];
+  ids: string[];
+  rigidApplied: boolean;
+}
+
+/** Same chamber ordering as rigid/vehicle-data: mains followed by verniers. */
+export function rigidNozzleIds(ownerId: string, shapeId: string, layout: EngineLayout): string[] {
+  const soyuz = shapeId === 'blokA' || shapeId === 'blokI' || shapeId === 'blokBVGD';
+  return [...layout.nozzles.map((_nozzle, i) => `${ownerId}.${soyuz ? 'main' : 'engine'}.${i}`),
+    ...layout.verniers.map((_nozzle, i) => `${ownerId}.vernier.${i}`)];
+}
+
+const ENGINE_Y_AXIS = new THREE.Vector3(0, 1, 0);
 
 const GLOW_GEO = new THREE.CircleGeometry(1, 12);
 GLOW_GEO.rotateX(Math.PI / 2);
@@ -117,6 +137,11 @@ export class RocketView {
    *  avoids shader recompiles mid-flight */
   private engineLight = new THREE.PointLight(0xffa850, 0, 1, 1.8);
   private tmpMat = new THREE.Matrix4();
+  private engineDirection = new THREE.Vector3();
+  private enginePosition = new THREE.Vector3();
+  private engineScale = new THREE.Vector3();
+  private engineQuaternion = new THREE.Quaternion();
+  private engineParentInverse = new THREE.Quaternion();
 
   constructor(spec: VehicleSpec, sat: SatelliteSpec) {
     this.spec = spec;
@@ -161,7 +186,7 @@ export class RocketView {
   }
 
   /** Instanced engine bells plus the matching additive nozzle-glow discs. */
-  private engines(parent: THREE.Group, layout: EngineLayout, steel: boolean): { glow: THREE.InstancedMesh; bellLength: number; bellMat: THREE.MeshStandardMaterial } {
+  private engines(parent: THREE.Group, layout: EngineLayout, steel: boolean, ownerId: string, shapeId: string): { glow: THREE.InstancedMesh; bellLength: number; bellMat: THREE.MeshStandardMaterial; engines: EngineVisual } {
     const all = [...layout.nozzles, ...layout.verniers];
     const geo = bellGeometry(1, 1, 12);
     // metalness 0.85 with the sky/sun environment probe: a real bell is bare
@@ -193,7 +218,42 @@ export class RocketView {
     glow.instanceMatrix.needsUpdate = true;
     glow.visible = false;
     parent.add(glow);
-    return { glow, bellLength: maxLen, bellMat };
+    return { glow, bellLength: maxLen, bellMat,
+      engines: { bells, glow, nozzles: all, ids: rigidNozzleIds(ownerId, shapeId, layout), rigidApplied: false } };
+  }
+
+  /** Actual recorded chamber directions tilt existing instances at their mount.
+   * A stopped chamber loses its own glow, including an off-axis engine failure.
+   * Legacy frames never touch these matrices unless restoring a prior rigid view. */
+  private updateEngineVisual(visual: EngineVisual, rigid: RigidTelemetry | undefined, parentRotation?: THREE.Quaternion): void {
+    if (!rigid && !visual.rigidApplied) return;
+    if (parentRotation) this.engineParentInverse.copy(parentRotation).invert();
+    for (let i = 0; i < visual.nozzles.length; i++) {
+      const nozzle = visual.nozzles[i], id = visual.ids[i];
+      const direction = rigid?.engineDirectionsBody?.[id];
+      if (direction) {
+        // Inverse of render→body (y,-x,z); undo the booster ring's local yaw.
+        this.engineDirection.set(-direction.y, direction.x, direction.z);
+        if (parentRotation) this.engineDirection.applyQuaternion(this.engineParentInverse);
+        this.engineDirection.normalize();
+        this.engineQuaternion.setFromUnitVectors(ENGINE_Y_AXIS, this.engineDirection);
+      } else this.engineQuaternion.identity();
+      this.enginePosition.set(nozzle.x, 0, nozzle.z);
+      this.engineScale.set(nozzle.r, nozzle.len, nozzle.r);
+      this.tmpMat.compose(this.enginePosition, this.engineQuaternion, this.engineScale);
+      visual.bells.setMatrixAt(i, this.tmpMat);
+      this.enginePosition.set(0, -nozzle.len * 0.98, 0).applyQuaternion(this.engineQuaternion);
+      this.enginePosition.x += nozzle.x;
+      this.enginePosition.z += nozzle.z;
+      const throttle = rigid?.engineThrottles?.[id];
+      const glowScale = throttle === undefined ? 1 : Math.sqrt(Math.max(0, throttle));
+      this.engineScale.set(nozzle.r * 0.95 * glowScale, glowScale, nozzle.r * 0.95 * glowScale);
+      this.tmpMat.compose(this.enginePosition, this.engineQuaternion, this.engineScale);
+      visual.glow.setMatrixAt(i, this.tmpMat);
+    }
+    visual.bells.instanceMatrix.needsUpdate = true;
+    visual.glow.instanceMatrix.needsUpdate = true;
+    visual.rigidApplied = !!rigid;
   }
 
   private buildStage(spec: StageSpec, index: number, topDiameter: number | null, stackHeight: number): StagePart {
@@ -232,7 +292,7 @@ export class RocketView {
     }
 
     const layout = engineLayout(spec.id, spec.engine, r, spec.nozzleLength);
-    const { glow, bellLength, bellMat } = this.engines(g, layout, !!liv.steel);
+    const { glow, bellLength, bellMat, engines } = this.engines(g, layout, !!liv.steel, spec.id, spec.id);
 
     if (spec.gridFins) this.addGridFins(g, r, spec.length);
     if (spec.legs) this.addLegs(g, r, spec.length);
@@ -269,7 +329,7 @@ export class RocketView {
       // textures and PSLV-XL six, for no visible difference.
       const bodyMat = this.boosterMaterial(b, seed + k * 3.1);
       for (let u = 0; u < b.count; u++) {
-        const unit = this.buildBooster(b, seed + k * 3.1 + u * 0.7, bodyMat);
+        const unit = this.buildBooster(b, seed + k * 3.1 + u * 0.7, bodyMat, `${b.id}.${u}`);
         const ang = phase + (u / b.count) * Math.PI * 2;
         const off = r + b.diameter / 2;
         // B9: the local frame this group is drawn in has basis X = the physics
@@ -290,7 +350,7 @@ export class RocketView {
       boosters.push({ spec: b, units, frameIndex: -1 });
     }
 
-    return { spec, index, group: g, plume, vernier, glow, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters };
+    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters };
   }
 
   /**
@@ -327,7 +387,7 @@ export class RocketView {
     return m;
   }
 
-  private buildBooster(spec: BoosterGroupSpec, seed: number, m: THREE.MeshStandardMaterial): BoosterUnit {
+  private buildBooster(spec: BoosterGroupSpec, seed: number, m: THREE.MeshStandardMaterial, ownerId: string): BoosterUnit {
     const g = new THREE.Group();
     const r = spec.diameter / 2;
     const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 28, 1), m);
@@ -359,7 +419,7 @@ export class RocketView {
       }
     }
     const layout = engineLayout(spec.id, spec.engine, r);
-    const { glow, bellLength } = this.engines(g, layout, false);
+    const { glow, bellLength, engines } = this.engines(g, layout, false, ownerId, spec.id);
     const kind = plumeKindFor(spec.engine, this.spec.id);
     const plume = new Plume({ radius: layout.clusterRadius, length: Math.max(6, layout.clusterRadius * 13), kind, seed: seed + 0.11 });
     plume.group.position.y = -bellLength;
@@ -371,7 +431,7 @@ export class RocketView {
       vernier.group.position.y = -layout.verniers[0].len;
       g.add(vernier.group);
     }
-    return { group: g, plume, vernier, glow };
+    return { group: g, plume, vernier, glow, engines };
   }
 
   private addGridFins(g: THREE.Group, r: number, len: number): void {
@@ -488,6 +548,7 @@ export class RocketView {
       const attached = !!sf && sf.attached;
       part.group.visible = attached;
       if (!attached || !sf) continue;
+      this.updateEngineVisual(part.engines, frame.rigid);
       part.group.position.y = y;
       const burning = sf.burning;
       // The *effective* core throttle, not the guidance command: Angara's core
@@ -522,6 +583,7 @@ export class RocketView {
           const unit = bg.units[u];
           unit.group.visible = on;
           if (!on || !bf) continue;
+          this.updateEngineVisual(unit.engines, frame.rigid, unit.group.quaternion);
           const bthr = bf.burning ? (bg.spec.engine.solid ? 1 : Math.max(0.05, bf.effectiveThrottle ?? frame.throttle)) : 0;
           unit.plume.update(bthr, pressure, t + u * 0.13);
           unit.vernier?.update(bf.burning ? Math.min(1, bthr + 0.25) : 0, pressure, t + u * 0.13);

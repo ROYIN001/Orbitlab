@@ -47,6 +47,7 @@
 import type { Simulation, SimState, Debris, SimEvent, TelemetrySample } from '../physics/simulation';
 import type { VisualFrame } from '../physics/frame';
 import type { VehicleModel } from '../physics/vehicle';
+import { cloneRigidTelemetry } from '../physics/rigid/telemetry';
 
 export interface FrameSimView {
   /** Point the view at another frame of the same mission. */
@@ -62,6 +63,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
   // A private state object, mutated in place: no allocation per animation frame.
   const state: SimState = {
     ...live,
+    rigid: cloneRigidTelemetry(live.rigid),
     r: { ...live.r }, v: { ...live.v }, dir: { ...live.dir },
     elements: { ...live.elements },
     maxQ: { ...live.maxQ },
@@ -80,7 +82,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
   Object.defineProperty(vehicle, 'stages', { value: stages, enumerable: true });
   let frame: VisualFrame | null = null;
   let debrisCache: Debris[] = [];
-  let debrisFor = -1;
+  let debrisFor: VisualFrame | null = null;
   const telemetryCache: TelemetrySample[] = [];
   let telemetryCut = -1;
   let telemetryRevision = -1;
@@ -89,6 +91,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
   let eventsSource: readonly SimEvent[] | null = null;
 
   const apply = (f: VisualFrame): void => {
+    state.rigid = cloneRigidTelemetry(f.rigid);
     state.t = f.t;
     state.status = f.status;
     state.ascentPhase = f.ascentPhase;
@@ -181,10 +184,11 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
       get(): Debris[] {
         const f = frame;
         if (!f) return [];
-        if (debrisFor !== f.t || debrisCache.length !== f.debris.length) {
-          debrisFor = f.t;
+        if (debrisFor !== f || debrisCache.length !== f.debris.length) {
+          debrisFor = f;
           debrisCache = f.debris.map((d) => ({
-            id: d.id, name: d.name, r: d.r, v: d.v, dir: d.dir,
+            id: d.id, name: d.name, r: { ...d.r }, v: { ...d.v }, dir: { ...d.dir },
+            rigid: cloneRigidTelemetry(d.rigid),
             mass: 0, area: 0, cd: 0, visual: d.visual, alive: d.alive,
             createdAt: d.createdAt, outcome: d.outcome,
             // The recovery record is the frame's two-field summary widened to
@@ -200,7 +204,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
                 burning: d.burning, phase: d.recovery.phase, landed: d.recovery.landed,
               }
               : undefined,
-            impact: d.impact,
+            impact: d.impact ? { ...d.impact } : undefined,
           }));
         }
         return debrisCache;

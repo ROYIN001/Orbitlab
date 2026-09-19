@@ -96,9 +96,9 @@ export class ReplayPlayer {
     const i = this.rec.indexAt(t);
     const a = frames[i];
     const b = frames[i + 1];
-    if (!b || t <= a.t + 1e-9) return cloneFrame(a);
-    if (t >= b.t - 1e-9) return cloneFrame(b);
-    return interpolateFrames(a, b, t);
+    if (!b || t <= a.t + 1e-9) return this.rec.applyRecordedAttitudes(cloneFrame(a));
+    if (t >= b.t - 1e-9) return this.rec.applyRecordedAttitudes(cloneFrame(b));
+    return this.rec.applyRecordedAttitudes(interpolateFrames(a, b, t));
   }
 
   /** The frame the user is looking at. */

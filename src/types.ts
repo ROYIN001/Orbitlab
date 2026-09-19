@@ -258,6 +258,8 @@ export interface FailureConfig {
 }
 
 export interface MissionConfig {
+  /** Explicit model selection; absent means the legacy point-mass API. */
+  dynamics?: DynamicsConfig;
   vehicleId: string;
   satelliteId: string;
   siteId: string;
@@ -278,4 +280,10 @@ export interface MissionConfig {
    * equal the library defaults.
    */
   guidanceResolved?: boolean;
+}
+
+export interface DynamicsConfig {
+  model: 'pointMass' | 'sixDof';
+  wind: 'calm' | 'crosswind' | 'shear';
+  seed: number;
 }

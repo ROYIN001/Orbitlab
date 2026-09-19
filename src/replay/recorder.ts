@@ -24,8 +24,10 @@
  * minus heapUsed after it is released, over a Falcon 9 / ISS and an Ariane 64 /
  * GTO recording), which is the only number that means anything — the earlier
  * hand-counted "sum of the fields" estimate was 2.3x low. A three-stage,
- * one-booster, six-debris frame retains ~4.7 kB; `maxFrames` is set so the
- * recording cannot pass the ~150 MB budget even at several times that rate.
+ * one-booster, six-debris legacy frame retains ~4.7 kB. This calibration
+ * now adds the separately measured rigid telemetry maps. Packed rotation storage
+ * is counted separately. These estimates exclude browser/render/simulation heap;
+ * `maxFrames` bounds ordinary frames, not protected events.
  * On overflow the *coast* frames are thinned first and ascent frames only if
  * there is no coast left to give, because what a user scrubs back to is
  * liftoff, max Q and staging, not the 143rd minute of a parking orbit. Event
@@ -35,6 +37,9 @@
 import { captureFrame, cloneFrame, type VisualFrame } from '../physics/frame';
 import type { Simulation, SimEvent, SimStatus } from '../physics/simulation';
 import { chronologicalEvents } from '../physics/events';
+import { AttitudeTrack, type AttitudeWindow } from './attitude-track';
+import { quatRotate } from '../physics/rigid/math';
+import type { RigidTelemetry } from '../physics/rigid/telemetry';
 
 /** Altitude below which a coast is still an atmospheric one, m. */
 const ATMOSPHERIC_CEILING = 140e3;
@@ -53,12 +58,29 @@ const DENSE_INTERVAL = 0.1;
  * - Soyuz-2.1a → ISS, 3 916 frames, 3 / 1 / 6: 4 537 B/frame
  * - Ariane 64 → GTO (6 h), 5 413 frames, 3 / 1 / 6: 4 721 B/frame
  *
- * The constants below reproduce those to within ~9 % on the high side. They are
- * an *estimate of the real thing*, so `stats().bytes` can be compared against
- * the budget directly; `bytesPerFrame` is exposed so a test can assert the
- * bound without re-deriving it.
+ * The constants below reproduce those legacy measurements to within ~9 % on
+ * the high side. `stats().bytes` adds exact packed rotation allocation, but the
+ * rigid addition below comes from a separate clone/release measurement and
+ * remains an estimate rather than a bound on browser memory.
  */
 const FRAME_BYTES = { base: 1800, stage: 220, booster: 160, debris: 420 };
+/** Node 24.19, 3000 deep copies per actual captured configuration. Across six
+ * Falcon/Soyuz prelaunch/ascent/staged fixtures (4.7–16.2 kB/frame), the combined
+ * estimator is 1–11% above retained heap. Engine maps dominate the Soyuz stack;
+ * empty rigid debris still carries quaternion, inertia, vectors and metadata.
+ * See docs/SIXDOF-BROWSER-QA.md for method and limits. */
+const RIGID_BYTES = { body: 1250, engine: 170 };
+
+function rigidBytes(value: RigidTelemetry | undefined): number {
+  if (!value) return 0;
+  return RIGID_BYTES.body + Object.keys(value.engineDeflections).length * RIGID_BYTES.engine;
+}
+
+function frameBytes(frame: VisualFrame): number {
+  return FRAME_BYTES.base + frame.stages.length * FRAME_BYTES.stage
+    + frame.boosters.length * FRAME_BYTES.booster + frame.debris.length * FRAME_BYTES.debris
+    + rigidBytes(frame.rigid) + frame.debris.reduce((sum, body) => sum + rigidBytes(body.rigid), 0);
+}
 
 /**
  * Hard ceiling on stored frames. 12 000 × the measured ~4.7 kB is ≈57 MB, and
@@ -69,16 +91,23 @@ const FRAME_BYTES = { base: 1800, stage: 220, booster: 160, debris: 420 };
  * backstop is not normally reached at all.
  */
 const DEFAULT_MAX_FRAMES = 12000;
+/** About 101 MB at the largest measured reference shape, before rotation tracks
+ * and other application memory. Event boundaries survive compaction; dense
+ * rotation history is independent of this ordinary visual-frame ceiling. */
+const RIGID_MAX_FRAMES = 6000;
 
 export interface RecorderStats {
   frames: number;
   events: number;
-  /** measured-calibration heap cost of the recording, bytes (see `FRAME_BYTES`) */
+  /** Calibrated frame estimate including rigid maps, plus packed rotation bytes. */
   bytes: number;
   /** bytes attributed to one frame of this mission's shape */
   bytesPerFrame: number;
   /** how many times the oldest coast frames have been thinned */
   decimations: number;
+  /** Packed numeric rotation tracks, independently bounded per physical body. */
+  rotationBytes: number;
+  rotationWindows: Array<AttitudeWindow & { bodyId: string }>;
 }
 
 export class FlightRecorder {
@@ -96,20 +125,27 @@ export class FlightRecorder {
   /** the stored frame `copyCache` is a copy of, for `recordNow` */
   private copySource: VisualFrame | null = null;
   private copyCache: VisualFrame | null = null;
+  /** Render packets accumulate until one complete rigid physics step is due. */
+  private rigidRemainder = 0;
+  private attitudeTracks = new Map<string, AttitudeTrack>();
 
-  constructor(maxFrames = DEFAULT_MAX_FRAMES) {
-    this.maxFrames = maxFrames;
+  constructor(private readonly requestedMaxFrames?: number) {
+    this.maxFrames = requestedMaxFrames ?? DEFAULT_MAX_FRAMES;
   }
 
   /** Start (or restart) recording a mission; captures the frame on the pad. */
   start(sim: Simulation): void {
     this.sim = sim;
+    this.maxFrames = this.requestedMaxFrames ?? (sim.rigidRuntime ? RIGID_MAX_FRAMES : DEFAULT_MAX_FRAMES);
     this.frames.length = 0;
     this.detectedEvents = [];
     this.decimations = 0;
     this.keep = new WeakSet<VisualFrame>();
     this.copySource = null;
     this.copyCache = null;
+    this.rigidRemainder = 0;
+    this.attitudeTracks.clear();
+    this.recordAttitudes(true);
     const f = captureFrame(sim);
     this.frames.push(f);
     this.keep.add(f);
@@ -129,6 +165,39 @@ export class FlightRecorder {
   }
   get head(): VisualFrame | null {
     return this.frames.length > 0 ? this.frames[this.frames.length - 1] : null;
+  }
+
+  private recordAttitudes(force = false): void {
+    const sim = this.sim;
+    if (!sim) return;
+    const record = (fallbackId: string, telemetry: RigidTelemetry | undefined) => {
+      if (!telemetry) return;
+      const id = telemetry.bodyId ?? fallbackId;
+      let track = this.attitudeTracks.get(id);
+      if (!track) { track = new AttitudeTrack(); this.attitudeTracks.set(id, track); }
+      track.record(sim.state.t, telemetry, force);
+    };
+    record('vehicle', sim.state.rigid);
+    for (const debris of sim.debris) if (debris.alive) record(`debris-${debris.id}`, debris.rigid);
+  }
+
+  /** Decorate a fresh replay frame from compact rotation history, never physics.
+   * Outside a retained window the flag exposes the limitation to the UI. */
+  applyRecordedAttitudes(frame: VisualFrame): VisualFrame {
+    const apply = (fallbackId: string, telemetry: RigidTelemetry | undefined): boolean => {
+      if (!telemetry) return false;
+      const track = this.attitudeTracks.get(telemetry.bodyId ?? fallbackId);
+      const pose = track?.at(frame.t, telemetry);
+      telemetry.replayAttitudeAvailable = !!pose;
+      if (!pose) return false;
+      telemetry.attitudeQ = pose.attitudeQ; telemetry.omegaBody = pose.omegaBody;
+      return true;
+    };
+    if (apply('vehicle', frame.rigid)) frame.dir = quatRotate(frame.rigid!.attitudeQ, { x: 1, y: 0, z: 0 });
+    for (const debris of frame.debris) {
+      if (apply(`debris-${debris.id}`, debris.rigid)) debris.dir = quatRotate(debris.rigid!.attitudeQ, { x: 1, y: 0, z: 0 });
+    }
+    return frame;
   }
 
   /**
@@ -229,6 +298,7 @@ export class FlightRecorder {
   recordNow(): VisualFrame {
     const sim = this.sim;
     if (!sim) throw new Error('FlightRecorder.recordNow before start()');
+    if (sim.events.length !== this.detectedEvents.length) return this.captureChangedState();
     const head = this.head;
     if (head && Math.abs(head.t - sim.state.t) < 1e-9) return this.copyOf(head);
     const f = captureFrame(sim);
@@ -236,6 +306,18 @@ export class FlightRecorder {
       return this.copyOf(this.store(f, false));
     }
     return f;
+  }
+
+  /** Pin an accepted command/state change at the current live clock, even when
+   * paused or coasting. At an identical timestamp store replaces the head with
+   * the post-command state; all earlier times retain their earlier command. */
+  captureChangedState(): VisualFrame {
+    const sim = this.sim;
+    if (!sim) throw new Error('FlightRecorder.captureChangedState before start()');
+    const stored = this.store(captureFrame(sim), true);
+    this.recordAttitudes(true);
+    this.pullEvents();
+    return this.copyOf(stored);
   }
 
   /** A cached deep copy of a stored frame (see `recordNow`). */
@@ -272,13 +354,24 @@ export class FlightRecorder {
   advance(seconds: number, maxSteps = 5000, deadline = Infinity): number {
     const sim = this.sim;
     if (!sim) return 0;
+    if (sim.events.length !== this.detectedEvents.length) this.captureChangedState();
     const clocked = deadline !== Infinity && typeof performance !== 'undefined';
-    let remaining = seconds;
+    const rigid = !!sim.rigidRuntime;
+    const before = sim.state.t;
+    let remaining = rigid ? this.rigidRemainder + Math.max(0, seconds) : seconds;
     let steps = 0;
+    let limited = false;
+    let stalled = false;
     while (remaining > 1e-6 && steps < maxSteps && sim.state.status !== 'failed') {
-      // checked every 32 steps: `performance.now()` is not free either
-      if (clocked && (steps & 31) === 31 && performance.now() > deadline) break;
-      const dt = Math.min(sim.suggestedDt(), remaining);
+      // Rigid steps are substantially heavier: check every four so the wall
+      // budget still protects interaction latency. Legacy checks every 32.
+      const clockMask = rigid ? 3 : 31;
+      if (clocked && (steps & clockMask) === clockMask && performance.now() > deadline) { limited = true; break; }
+      const suggested = sim.suggestedDt();
+      if (rigid && remaining + 1e-10 < suggested) break;
+      // A rendering packet must not shorten a rigid step. suggestedDt still
+      // owns exact event boundaries; sim.step can re-clamp after a transition.
+      const dt = rigid ? suggested : Math.min(suggested, remaining);
       const head = this.head;
       // The pre-step frame: reuse the head when it already sits on this instant
       // (the common case in the dense phases, where the cadence matches the
@@ -290,6 +383,7 @@ export class FlightRecorder {
       const dueBefore = !head || pre.t - head.t >= this.intervalOf(pre) - 1e-9;
       const nEvents = sim.events.length;
       const used = sim.step(dt);
+      if (rigid) this.recordAttitudes();
       const fired = sim.events.length > nEvents;
       if (!preIsHead && (dueBefore || fired)) this.store(pre, fired);
       // The pre-step frame is already the head, so there is nothing to store —
@@ -303,8 +397,20 @@ export class FlightRecorder {
       const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime) - 1e-9;
       if (dueAfter || fired) this.store(captureFrame(sim), fired);
       if (fired) this.pullEvents();
+      if (rigid && !(used > 0)) { stalled = true; break; }
       remaining -= used > 0 ? used : dt;
       steps++;
+    }
+    if (rigid) {
+      remaining = Math.max(0, remaining);
+      if (stalled || sim.state.status === 'failed') this.rigidRemainder = 0;
+      else if (limited || steps >= maxSteps) {
+        // Keep only fractional time, never a queue of unserved warp work.
+        const next = sim.suggestedDt();
+        this.rigidRemainder = remaining % next;
+        if (next - this.rigidRemainder < 1e-10) this.rigidRemainder = 0;
+      } else this.rigidRemainder = remaining;
+      return sim.state.t - before;
     }
     return seconds - remaining;
   }
@@ -376,23 +482,21 @@ export class FlightRecorder {
   get bytesPerFrame(): number {
     const f = this.head ?? this.frames[0];
     if (!f) return FRAME_BYTES.base;
-    return FRAME_BYTES.base
-      + f.stages.length * FRAME_BYTES.stage
-      + f.boosters.length * FRAME_BYTES.booster
-      + f.debris.length * FRAME_BYTES.debris;
+    return frameBytes(f);
   }
 
   stats(): RecorderStats {
-    const f = this.frames[0];
-    const per = FRAME_BYTES.base + (f ? f.stages.length * FRAME_BYTES.stage + f.boosters.length * FRAME_BYTES.booster : 0);
     let bytes = 0;
-    for (const fr of this.frames) bytes += per + fr.debris.length * FRAME_BYTES.debris;
+    for (const fr of this.frames) bytes += frameBytes(fr);
+    const rotationWindows = [...this.attitudeTracks].map(([bodyId, track]) => ({ bodyId, ...track.window() }));
+    const rotationBytes = rotationWindows.reduce((sum, track) => sum + track.bytes, 0);
     return {
       frames: this.frames.length,
       events: this.events.length,
-      bytes,
+      bytes: bytes + rotationBytes,
       bytesPerFrame: this.bytesPerFrame,
       decimations: this.decimations,
+      rotationBytes, rotationWindows,
     };
   }
 

@@ -89,7 +89,62 @@ describe('buildTelemetryCsv', () => {
     expect(csv.indexOf('59.0,evt.maxQ')).toBeLessThan(csv.indexOf('60.0,evt.engineOut'));
     expect(sim.events.map((e) => e.t)).toEqual([60, 59]);
   });
+
+  it('retains the exact command clock and SI metadata for sub-tenth-second changes', () => {
+    const params = { mode: 'manual', rollRateRadS: 0.01, pitchRateRadS: -0.02, yawRateRadS: 0.03, throttle: 0.6 };
+    const sim = { ...makeSim(), events: [
+      { t: 5.01, key: 'evt.controlCommand', severity: 'info', params },
+      { t: 5.02, key: 'evt.controlCommand', severity: 'info', params: { ...params, throttle: 0.4 } },
+    ] satisfies SimEvent[] };
+    const rows = buildTelemetryCsv(sim).split('\n').filter(row => row.includes(',evt.controlCommand,'));
+    expect(rows.map(row => Number(csvRow(row)[0]))).toEqual([5.01, 5.02]);
+    expect(JSON.parse(csvRow(rows[0])[2])).toEqual(params);
+  });
+
+  it('exports recorded rigid SI quantities and applied actuators without filling legacy samples from the future', () => {
+    const sim = makeSim();
+    sim.telemetry[1].rigid = { modelVersion: 'education-6dof-v1', massFlowModel: 'reducedFlux', bodyId: 'stage, "upper"', configurationId: 's2+payload',
+      attitudeQ: { w: 0.5, x: 0.5, y: -0.5, z: 0.5 }, omegaBody: { x: 0.01, y: -0.02, z: 0.03 },
+      cgBody: { x: 20, y: 0, z: 0 }, renderOffsetBody: { x: -20, y: 0, z: 0 },
+      inertiaBody: [2, 0.1, 0, 0.1, 3, 0, 0, 0, 4], controlMode: 'manual', commandRatesBody: { x: 0.01, y: -0.02, z: 0.03 }, commandThrottle: 0.6,
+      engineDeflections: { 's2.engine.0': [0.02, -0.03] }, engineDirectionsBody: { 's2.engine.0': { x: 1, y: 0, z: 0 } },
+      engineThrottles: { 's2.engine.0': 0 }, rcsPropellantKg: 12.5, saturated: true,
+      angleOfAttack: 0.04, sideslip: -0.05, aeroWithinEnvelope: false, windECI: { x: 1, y: 2, z: 3 }, rawQuaternionNormError: 1e-13 };
+    const lines = buildTelemetryCsv(sim).split('\n');
+    const header = csvRow(lines[0]), legacy = csvRow(lines[1]), values = csvRow(lines[2]);
+    const value = (name: string) => values[header.indexOf(name)];
+    expect(legacy).toHaveLength(header.length); expect(values).toHaveLength(header.length);
+    expect(legacy.slice(20).every(cell => cell === '')).toBe(true);
+    expect(value('recording_schema_version')).toBe('2');
+    expect(value('rigid_model_version')).toBe('education-6dof-v1');
+    expect(value('rigid_mass_flow_model')).toBe('reducedFlux');
+    expect(Number(value('command_roll_rad_s'))).toBe(0.01); expect(Number(value('command_pitch_rad_s'))).toBe(-0.02);
+    expect(Number(value('command_yaw_rad_s'))).toBe(0.03); expect(Number(value('command_throttle'))).toBe(0.6);
+    expect(value('body_id')).toBe('stage, "upper"'); expect(value('configuration_id')).toBe('s2+payload');
+    expect(Number(value('attitude_qy'))).toBe(-0.5); expect(Number(value('omega_body_y_rad_s'))).toBe(-0.02);
+    expect(Number(value('angle_of_attack_rad'))).toBe(0.04); expect(value('actuator_saturated')).toBe('true');
+    expect(value('aero_within_envelope')).toBe('false');
+    expect(JSON.parse(value('inertia_body_kg_m2_json'))).toEqual(sim.telemetry[1].rigid.inertiaBody);
+    expect(JSON.parse(value('engine_deflections_rad_json'))).toEqual({ 's2.engine.0': [0.02, -0.03] });
+    expect(JSON.parse(value('engine_throttles_json'))).toEqual({ 's2.engine.0': 0 });
+    const exportTool = createMcpTools({ sim } as unknown as McpAppHost).find(tool => tool.name === 'export_csv')!;
+    expect((exportTool.execute({}) as { csv: string }).csv).toBe(lines.join('\n'));
+  });
 });
+
+/** Independent CSV field reader for quoted JSON/string round-trip checks. */
+function csvRow(row: string): string[] {
+  const fields: string[] = [];
+  let field = '', quoted = false;
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    if (char === '"') {
+      if (quoted && row[i + 1] === '"') { field += '"'; i++; } else quoted = !quoted;
+    } else if (char === ',' && !quoted) { fields.push(field); field = ''; } else field += char;
+  }
+  fields.push(field);
+  return fields;
+}
 
 describe('telemetryCsvFilename', () => {
   it('names the file after the vehicle and orbit ids', () => {

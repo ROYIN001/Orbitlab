@@ -90,6 +90,12 @@ export interface GuidanceInputs {
   r: Vec3;
   v: Vec3;
   vAir: Vec3;
+  /** Physical wind scenarios: a sideways/upwind tilt is not a completed kick
+   * toward the planned launch azimuth. Omitted for legacy calibration. */
+  requireDownrangeKick?: boolean;
+  /** Optional Earth-relative trajectory reference for physical wind flight.
+   * Air velocity still governs aerodynamic loads and the q·alpha placard. */
+  vGround?: Vec3;
   /** altitude above the pad, m */
   altitudeAGL: number;
   /** altitude above mean radius, m */
@@ -179,6 +185,7 @@ export class AscentGuidance {
     const p = this.params;
     const { east, north, up } = enuFrame(inp.r);
     const downrange = add(scale(north, Math.cos(this.azimuthRotating)), scale(east, Math.sin(this.azimuthRotating)));
+    const turnVelocity = inp.vGround ?? inp.vAir;
     let dir = up;
     let pitchDeg = 90;
     let predictedApoapsis = 0;
@@ -189,8 +196,12 @@ export class AscentGuidance {
       this.kickStart = inp.t;
     }
     if (this.phase === 'kick') {
-      const vAirMag = norm(inp.vAir);
-      const angFromVertical = vAirMag > 1 ? Math.acos(Math.max(-1, Math.min(1, dot(inp.vAir, up) / vAirMag))) : 0;
+      const kickVelocity = inp.requireDownrangeKick ? turnVelocity : inp.vAir;
+      const kickSpeed = norm(kickVelocity);
+      const upwardSpeed = dot(kickVelocity, up);
+      const angFromVertical = inp.requireDownrangeKick
+        ? kickSpeed > 1 && upwardSpeed > 0 ? Math.atan2(dot(kickVelocity, downrange), upwardSpeed) : 0
+        : kickSpeed > 1 ? Math.acos(Math.max(-1, Math.min(1, upwardSpeed / kickSpeed))) : 0;
       if (inp.t - this.kickStart >= p.kickDuration && angFromVertical >= p.kickAngle * DEG) {
         this.phase = 'gravityTurn';
         this.kickEnd = inp.t;
@@ -368,8 +379,8 @@ export class AscentGuidance {
         break;
       }
       case 'gravityTurn': {
-        const vAirMag = norm(inp.vAir);
-        let vDir = vAirMag > 1 ? scale(inp.vAir, 1 / vAirMag) : up;
+        const turnSpeed = norm(turnVelocity);
+        let vDir = turnSpeed > 1 ? scale(turnVelocity, 1 / turnSpeed) : up;
         // Pitch-program limit: do not let the commanded pitch fall faster than
         // maxTurnRate. Flying the nose above the velocity vector costs angle of
         // attack, so the deviation is charged against the q·α budget below.

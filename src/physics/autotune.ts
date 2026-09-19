@@ -71,7 +71,8 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
   let minAltCL = Infinity;
   let maxAlt = 0;
   let guard = 0;
-  while (sim.state.t < maxTime && guard++ < 200000) {
+  const stepBudget = cfg.dynamics?.model === 'sixDof' ? Math.ceil((maxTime + 10) / 0.01) + 1000 : 200000;
+  while (sim.state.t < maxTime && guard++ < stepBudget) {
     const dt = sim.suggestedDt();
     sim.step(dt);
     const s = sim.state;
@@ -126,7 +127,8 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
  * never reaches a terminal state, so "fly to completion" on its own hangs.
  */
 export function flyToTarget(
-  cfg: MissionConfig, guidance: GuidanceParams, maxTime = 6 * 3600, maxSteps = 300000,
+  cfg: MissionConfig, guidance: GuidanceParams, maxTime = 6 * 3600,
+  maxSteps = cfg.dynamics?.model === 'sixDof' ? Math.ceil((maxTime + 10) / 0.01) + 1000 : 300000,
 ): { onTarget: boolean; misses: OrbitMiss[]; endStatus: string | null; t: number } {
   const sim = new Simulation({ ...cfg, guidance, guidanceResolved: true, failure: { ...cfg.failure } }, { headless: true });
   let guard = 0;
@@ -161,10 +163,16 @@ export function needsLoftSearch(cfg: MissionConfig): boolean {
 
 export interface TuneProgress { phase: 'ascent' | 'mission'; completed: number; total: number }
 
-export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICKS, rates: number[] = DEFAULT_RATES, lofts?: number[], onProgress?: (progress: TuneProgress) => void): AutotuneOutcome {
+export function autotune(cfg: MissionConfig, candidates?: number[], rates?: number[], lofts?: number[], onProgress?: (progress: TuneProgress) => void): AutotuneOutcome {
   const results: TuneResult[] = [];
-  const loftList = lofts ?? (needsLoftSearch(cfg) ? DEFAULT_LOFTS : [0]);
+  const rigid = cfg.dynamics?.model === 'sixDof';
+  // A small local search is explicit for the expensive coupled model. Every
+  // candidate and final verification still flies the selected physics model.
+  candidates ??= rigid ? [...new Set([0.8, 1, 1.2].map(f => Math.max(0.1, Math.min(20, cfg.guidance.kickAngle * f))))] : DEFAULT_KICKS;
+  rates ??= rigid ? [cfg.guidance.maxTurnRate] : DEFAULT_RATES;
+  const loftList = lofts ?? (rigid ? [cfg.guidance.loftAltitude] : needsLoftSearch(cfg) ? DEFAULT_LOFTS : [0]);
   const total = loftList.length * rates.length * candidates.length;
+  onProgress?.({ phase: 'ascent', completed: 0, total });
   for (const loft of loftList) for (const rate of rates) for (const k of candidates) {
     results.push(runAscent(cfg, k, rate, loft));
     onProgress?.({ phase: 'ascent', completed: results.length, total });
@@ -177,13 +185,14 @@ export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICK
     // delta-v first so the pass is spent on the candidates most likely to win,
     // and capped at five flights so a tuning click stays affordable.
     const ranked = [...ok].sort((a, b) => b.dvRemaining - a.dvRemaining);
-    const finalists = ranked.slice(0, 5);
+    const finalists = ranked.slice(0, rigid ? 2 : 5);
     for (const [index, r] of finalists.entries()) {
       const m = flyToTarget(cfg, r.guidance);
       r.missionOnTarget = m.onTarget;
       r.missionMisses = m.misses;
       if (m.endStatus !== null) r.missionEndStatus = m.endStatus;
       onProgress?.({ phase: 'mission', completed: index + 1, total: finalists.length });
+      if (rigid && m.onTarget) break;
     }
     const complete = ranked.filter((r) => r.missionOnTarget);
     best = complete.length > 0 ? complete[0] : ranked[0];
@@ -275,7 +284,8 @@ export function probeInsertion(cfg: MissionConfig, horizon = INSERTION_PROBE_HOR
   let apoapsis = 0;
   let tInsertion = -1;
   let guard = 0;
-  while (!sim.done && sim.state.t < horizon && guard++ < 200000) {
+  const stepBudget = cfg.dynamics?.model === 'sixDof' ? Math.ceil((horizon + 10) / 0.01) + 1000 : 200000;
+  while (!sim.done && sim.state.t < horizon && guard++ < stepBudget) {
     sim.step(sim.suggestedDt());
     const el = sim.state.elements;
     // Only once the powered ascent is over: an osculating perigee during the

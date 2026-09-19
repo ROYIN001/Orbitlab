@@ -1,4 +1,5 @@
-import { getLang, onLangChange } from '../i18n';
+import { getLang, onLangChange, t } from '../i18n';
+import { RAD } from '../physics/constants';
 import { assessMissionResult, RESULT_COPY, type ResultInput, type ResultMetric } from './result-content';
 import './mission-result.css';
 
@@ -11,6 +12,7 @@ export class MissionResult {
   private readonly heading = document.createElement('h2');
   private readonly status = document.createElement('p');
   private readonly detail = document.createElement('p');
+  private readonly aeroWarnings = document.createElement('aside');
   private readonly times = document.createElement('p');
   private readonly caption = document.createElement('caption');
   private readonly headers: HTMLTableCellElement[] = [];
@@ -33,6 +35,8 @@ export class MissionResult {
     this.status.setAttribute('role', 'status');
     this.status.setAttribute('aria-live', 'polite');
     this.times.className = 'mission-result-note';
+    this.aeroWarnings.className = 'mission-result-warning';
+    this.aeroWarnings.setAttribute('role', 'note');
     this.deltaNote.className = 'mission-result-note';
     this.recoveryNote.className = 'mission-result-note';
     this.payload.className = 'mission-result-note';
@@ -66,7 +70,7 @@ export class MissionResult {
     this.review.className = 'btn mission-result-review';
     this.review.hidden = !options.onSeek;
     this.review.addEventListener('click', () => this.options.onSeek?.(this.reviewTime));
-    host.replaceChildren(this.heading, this.status, this.detail, this.times, wrap,
+    host.replaceChildren(this.heading, this.status, this.detail, this.aeroWarnings, this.times, wrap,
       this.deltaNote, this.payload, this.iss, this.recovery, this.recoveryNote, this.next, this.review);
     onLangChange(() => { if (this.last) this.update(this.last); });
   }
@@ -86,6 +90,14 @@ export class MissionResult {
     this.heading.textContent = copy.heading;
     if (this.status.textContent !== copy.outcome[model.outcome]) this.status.textContent = copy.outcome[model.outcome];
     this.detail.textContent = copy.cause[model.cause].detail;
+    this.aeroWarnings.hidden = model.aeroWarnings.length === 0;
+    this.aeroWarnings.replaceChildren(...model.aeroWarnings.map(warning => {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = t(warning.scope === 'vehicle' ? 'result.aeroWarning.vehicle' : 'result.aeroWarning.debris', {
+        time: warning.time.toFixed(1), alpha: (warning.angleOfAttackRad * RAD).toFixed(1), beta: (warning.sideslipRad * RAD).toFixed(1),
+      });
+      return paragraph;
+    }));
     this.times.textContent = `${copy.assessed} T+${model.outcomeTime.toFixed(1)} s · ${copy.displayed} T+${model.displayedTime.toFixed(1)} s`;
     this.caption.textContent = copy.orbitTable;
     [copy.parameter, copy.target, copy.actual, copy.delta].forEach((text, index) => { this.headers[index].textContent = text; });

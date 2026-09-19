@@ -1,4 +1,4 @@
-import type { GuidanceParams, FailureConfig, VehicleSpec } from '../types';
+import type { GuidanceParams, FailureConfig, VehicleSpec, DynamicsConfig } from '../types';
 
 /**
  * Library defaults. Each vehicle overrides the pitch program it needs through
@@ -38,6 +38,12 @@ export const DEFAULT_FAILURE: FailureConfig = { mode: 'none', time: 60, stage: 0
  * because every value now differs from the library default) flies exactly what
  * was displayed.
  */
-export function guidanceForVehicle(spec: VehicleSpec, base: GuidanceParams = DEFAULT_GUIDANCE): GuidanceParams {
-  return { ...base, ...(spec.guidanceDefaults ?? {}) };
+export function guidanceForVehicle(spec: VehicleSpec, base: GuidanceParams = DEFAULT_GUIDANCE,
+  model?: DynamicsConfig['model']): GuidanceParams {
+  // A physical attitude controller needs a flyable pitch programme rather
+  // than the legacy instantaneous-direction trajectory. This common Soyuz
+  // programme passed calm/crosswind/shear reference missions with fixed limits.
+  const rigid = model === 'sixDof' && spec.id === 'soyuz21a'
+    ? { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 } : {};
+  return { ...base, ...(spec.guidanceDefaults ?? {}), ...rigid };
 }

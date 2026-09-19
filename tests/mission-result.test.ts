@@ -35,6 +35,37 @@ function booster(name = 'First stage'): ResultInput['debris'][number] {
 }
 
 describe('displayed mission result', () => {
+  it('retains visible aerodynamic warnings without changing a successful orbit or revealing future debris limits', () => {
+    const input = fixture();
+    const warning = { t: 90, key: 'evt.aeroEnvelopeExceeded', severity: 'warn' as const,
+      params: { scope: 'vehicle', angleOfAttackRad: 35 * DEG, sideslipRad: -2 * DEG } };
+    input.events = [...input.events, warning,
+      { ...warning, t: 700, params: { ...warning.params, scope: 'debris', angleOfAttackRad: 160 * DEG } }];
+    const early = assessMissionResult(input)!;
+    expect(early.outcome).toBe('target');
+    expect(early.cause).toBe('target');
+    expect(early.aeroWarnings).toEqual([{ time: 90, scope: 'vehicle', angleOfAttackRad: 35 * DEG, sideslipRad: -2 * DEG }]);
+    input.state.t = 800;
+    expect(assessMissionResult(input)!.aeroWarnings.map(w => [w.time, w.scope])).toEqual([[90, 'vehicle'], [700, 'debris']]);
+    input.state.t = 500;
+    expect(assessMissionResult(input)!.aeroWarnings).toEqual(early.aeroWarnings);
+    expect(assessMissionResult(fixture())!.aeroWarnings).toEqual([]);
+  });
+
+  it('does not blame payload capacity when an unignited trim timed out acquiring orientation', () => {
+    const input = fixture();
+    input.state.elements.periapsisAlt = 385e3;
+    input.events = [
+      { t: 499, key: 'evt.burnAlignmentTimeout', severity: 'warn', params: { seconds: 240 } },
+      { t: 500, key: 'evt.offTargetOrbit', severity: 'warn' },
+    ];
+    expect(assessMissionResult(input)).toMatchObject({ outcome: 'offTarget', cause: 'pointing', reviewTime: 499 });
+    input.events = [input.events[1], { ...input.events[0], t: 600 }];
+    expect(assessMissionResult(input)!.cause).toBe('shape');
+    input.events = [{ t: 499, key: 'evt.burnPredictionUnavailable', severity: 'warn' }, input.events[0]];
+    expect(assessMissionResult(input)).toMatchObject({ cause: 'prediction', reviewTime: 499 });
+  });
+
   it('does not treat a parking orbit or a future success as a completed mission', () => {
     const input = fixture();
     input.state.status = 'coast';

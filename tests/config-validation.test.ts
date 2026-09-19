@@ -49,6 +49,38 @@ describe('UTC date-time validation', () => {
 });
 
 describe('configuration validity versus mission feasibility', () => {
+  it('attributes malformed dynamics to the actual model, wind, and seed fields', () => {
+    const state = mission();
+    state.dynamics = { model: 'sixDof', wind: 'crosswind', seed: 123 };
+    expect(validateConfigInput(state)).toEqual([]);
+    state.dynamics.wind = 'unsupported' as typeof state.dynamics.wind;
+    expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.wind', code: 'selection' }]);
+    state.dynamics.wind = 'calm'; state.dynamics.model = 'unsupported' as typeof state.dynamics.model;
+    expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.model', code: 'selection' }]);
+    state.vehicleId = 'electron'; state.siteId = vehicleById('electron').sites[0]; state.dynamics.model = 'sixDof';
+    expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.model', code: 'selection' }]);
+  });
+  it.each([
+    [-1, 'minimum', 0], [0x100000000, 'maximum', 0xffffffff], [1.5, 'integer', undefined],
+    [NaN, 'number', undefined], [Infinity, 'number', undefined],
+  ])('reports seed %s at its own field in either model', (seed, code, limit) => {
+    for (const model of ['pointMass', 'sixDof'] as const) {
+      const state = mission(); state.dynamics = { model, wind: 'calm', seed: seed as number };
+      expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.seed', code, ...(limit !== undefined ? { limit } : {}) }]);
+    }
+  });
+  it('accepts both uint32 seed endpoints and rejects malformed dynamics containers without throwing', () => {
+    const state = mission();
+    for (const seed of [0, 0xffffffff]) {
+      state.dynamics = { model: 'sixDof', wind: 'shear', seed };
+      expect(validateConfigInput(state)).toEqual([]);
+    }
+    for (const invalid of [null, [], 'sixDof']) {
+      state.dynamics = invalid as unknown as ConfigInput['dynamics'];
+      expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.model', code: 'selection' }]);
+    }
+  });
+
   it('keeps every shipped vehicle/orbit preset structurally valid', () => {
     for (const vehicle of VEHICLES) for (const orbit of ORBIT_PRESETS) {
       const state = { ...mission(), vehicleId: vehicle.id, siteId: vehicle.sites[0], orbit: { ...orbit } };

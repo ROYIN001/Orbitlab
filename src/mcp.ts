@@ -6,7 +6,7 @@
  *
  * Split in two on purpose:
  *
- * - `createMcpTools(host)` builds the nine tool definitions and is pure and
+ * - `createMcpTools(host)` builds the tool definitions and is pure and
  *   DOM-free: it only touches the `McpAppHost` surface (a structural subset
  *   of `App`, see below), so `tests/mcp.test.ts` exercises every handler
  *   — including the validation that mirrors `SetupPanel` — against a tiny
@@ -31,9 +31,11 @@ import { SITES, siteById } from './data/sites';
 import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
 import { resolveTarget } from './physics/mission';
-import { RAD } from './physics/constants';
+import { DEG, RAD } from './physics/constants';
 import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, numericIssue, issueText, parseUtcDateTime, assertConfigInput } from './config/validation';
 import { buildTelemetryCsv } from './ui/csv';
+import { defaultDynamics } from './physics/rigid/config';
+import { cloneRigidTelemetry } from './physics/rigid/telemetry';
 
 // ─────────────────────────────────────────────────────────────── host shape
 
@@ -41,6 +43,7 @@ import { buildTelemetryCsv } from './ui/csv';
  *  identical to (but independent of) `SetupPanel`'s own private `SetupState`,
  *  so this file never imports the panel class — only its `Feasibility` type. */
 interface McpPanelState {
+  dynamics?: import('./types').DynamicsConfig;
   vehicleId: string;
   satelliteId: string;
   siteId: string;
@@ -108,6 +111,7 @@ export interface McpAppHost {
   playing: boolean;
   readonly warp: number;
   readonly replayWarp: number;
+  getPerformance?(): Record<string, unknown>;
   setCamera(mode: CameraMode): void;
   togglePlay(): void;
   /** Set the time warp of whichever clock (`warp` or `replayWarp`) is currently
@@ -291,6 +295,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   if (input.vehicleId !== undefined) {
     const id = expectString(input.vehicleId, 'vehicleId');
     if (!VEHICLES.some((v) => v.id === id)) throw new Error(`Unknown vehicleId "${id}". Valid ids: ${VEHICLES.map((v) => v.id).join(', ')}`);
+    if (id !== state.vehicleId || !state.dynamics) state.dynamics = defaultDynamics(id);
     state.vehicleId = id;
     const spec = vehicleById(id);
     // Skip the auto-reassignment (and its notice) when this same call also
@@ -359,6 +364,14 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   if (input.guidance !== undefined) {
     state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, vehicleById(state.vehicleId)) };
   }
+  if (input.physicsModel !== undefined || input.windScenario !== undefined || input.windSeed !== undefined) {
+    const current = state.dynamics ?? { model:'pointMass', wind:'calm', seed:20260919 };
+    state.dynamics = {
+      model: (input.physicsModel ?? current.model) as import('./types').DynamicsConfig['model'],
+      wind: (input.windScenario ?? current.wind) as import('./types').DynamicsConfig['wind'],
+      seed: (input.windSeed ?? current.seed) as number,
+    };
+  }
   assertConfigInput(state);
   // Every validator above has run without throwing: commit the whole edit at
   // once, so a throw earlier in this function never leaves a partial write on
@@ -387,6 +400,7 @@ function summarizeConfig(cfg: MissionConfig): Record<string, unknown> {
       raanMode: cfg.orbit.raanMode,
     },
     boosterRecovery: cfg.boosterRecovery,
+    dynamics: cfg.dynamics ? { ...cfg.dynamics } : { model:'pointMass', wind:'calm', seed:20260919 },
     failure: { mode: cfg.failure.mode, timeS: cfg.failure.time, stageIndex: cfg.failure.stage },
     guidance: guidanceToOutput(cfg.guidance),
   };
@@ -411,6 +425,11 @@ function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<stri
     destroyed: frame.destroyed,
     fairingAttached: frame.fairingAttached,
     payloadSeparated: frame.payloadSeparated,
+    // Same immutable recording data the user sees, including replay cursor.
+    // Quaternion/rates use the documented SI/body-frame conventions.
+    rigid: cloneRigidTelemetry(frame.rigid) ?? null,
+    detachedBodies: frame.debris.map(body => ({ id: body.id, name: body.name, outcome: body.outcome ?? null,
+      rigid: cloneRigidTelemetry(body.rigid) ?? null })),
     altitudeKm: frame.altitude / 1000,
     altitudeAglKm: frame.altitudeAGL / 1000,
     speedMs: frame.speed,
@@ -477,6 +496,9 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   payloadMassKg: { type: 'number', minimum: 1, description: 'Payload mass, kg.' },
   launchTimeIso: { type: 'string', description: 'Launch epoch, ISO 8601 UTC, e.g. "2026-09-20T12:00:00Z".' },
   boosterRecovery: { type: 'boolean', description: 'Reserve first-stage propellant for recovery (only for vehicles that support it).' },
+  physicsModel: { type:'string', enum:['pointMass','sixDof'], description:'Six-DOF is supported by Falcon 9 and Soyuz-2.1a; other vehicles use pointMass.' },
+  windScenario: { type:'string', enum:['calm','crosswind','shear'], description:'Repeatable wind scenario for six-DOF.' },
+  windSeed: { type:'integer', minimum:0, maximum:4294967295, description:'Seed for repeatable six-DOF wind gusts.' },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
@@ -524,6 +546,7 @@ function toolReadFlightState(host: McpAppHost): WebMcpTool {
         hasMission: true,
         ...playbackState(host),
         camera: host.camMode,
+        performance: host.getPerformance?.() ?? null,
         vehicle: { id: host.sim.vehicleSpec.id, name: host.sim.vehicleSpec.name },
         site: { id: host.sim.site.id, name: host.sim.site.name },
         satellite: { id: host.sim.satellite.id, name: host.sim.satellite.name },
@@ -749,7 +772,38 @@ function toolExportCsv(host: McpAppHost): WebMcpTool {
   };
 }
 
-/** Build the nine tool definitions against `host`. Pure and DOM-free. */
+function toolSetFlightControl(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'set_flight_control', title: 'Set live flight controls',
+    description: 'Set automatic guidance or manual body roll/pitch/yaw rate commands and throttle for a live 6DOF mission. Rates are degrees per second; commands act through finite actuators and do not directly set attitude. Replay is read-only.',
+    inputSchema: { type: 'object', properties: {
+      mode: { type: 'string', enum: ['auto', 'manual'] },
+      rollRateDegS: { type: 'number', minimum: -5, maximum: 5 },
+      pitchRateDegS: { type: 'number', minimum: -5, maximum: 5 },
+      yawRateDegS: { type: 'number', minimum: -5, maximum: 5 },
+      throttle: { type: 'number', minimum: 0, maximum: 1 },
+    }, required: ['mode'], additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    execute: raw => {
+      const input = asRecord(raw), mode = input.mode;
+      if (mode !== 'auto' && mode !== 'manual') throw new Error('"mode" must be "auto" or "manual".');
+      const rate = (name: string) => {
+        const value = input[name] === undefined ? 0 : expectNumber(input[name], name);
+        if (value < -5 || value > 5) throw new Error(`"${name}" must be between -5 and 5 degrees per second.`);
+        return value * DEG;
+      };
+      const rates = { x: rate('rollRateDegS'), y: rate('pitchRateDegS'), z: rate('yawRateDegS') };
+      const throttle = input.throttle === undefined ? 1 : expectNumber(input.throttle, 'throttle');
+      if (throttle < 0 || throttle > 1) throw new Error('"throttle" must be between 0 and 1.');
+      if (!host.sim || host.sim.cfg.dynamics?.model !== 'sixDof') return { ok: false, reason: 'An active 6DOF mission is required.' };
+      if (!host.player.live) return { ok: false, reason: 'Replay cannot change live flight controls. Return to live first.' };
+      host.sim.setRigidCommand({ mode, rates, throttle });
+      return { ok: true, mode, ratesRadS: rates, throttle };
+    },
+  };
+}
+
+/** Build the tool definitions against `host`. Pure and DOM-free. */
 export function createMcpTools(host: McpAppHost): WebMcpTool[] {
   return [
     toolReadFlightState(host),
@@ -757,6 +811,7 @@ export function createMcpTools(host: McpAppHost): WebMcpTool[] {
     toolConfigureMission(host),
     toolLaunchMission(host),
     toolControlPlayback(host),
+    toolSetFlightControl(host),
     toolSeek(host),
     toolSetCamera(host),
     toolGetEvents(host),

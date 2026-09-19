@@ -51,6 +51,8 @@ import { localized, satelliteName, siteName, stageName, vehicleManufacturer, veh
 import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue } from '../config/validation';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
+import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
+import type { DynamicsConfig } from '../types';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -59,6 +61,7 @@ export interface SetupCallbacks {
 }
 
 interface SetupState {
+  dynamics?: DynamicsConfig;
   vehicleId: string;
   satelliteId: string;
   siteId: string;
@@ -397,6 +400,7 @@ export class SetupPanel {
       vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbitId: 'iss', orbit: { ...orbitById('iss') },
       launchTime: now, guidanceOverrides: {}, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
       payloadMass: satelliteById('crew').mass,
+      dynamics: defaultDynamics('soyuz21a'),
     };
     this.tunedFor = this.missionSignature();
     this.render();
@@ -404,7 +408,7 @@ export class SetupPanel {
 
   /** The guidance that will be flown: the vehicle's own programme plus operator edits. */
   get guidance(): GuidanceParams {
-    return { ...guidanceForVehicle(vehicleById(this.state.vehicleId)), ...this.state.guidanceOverrides };
+    return { ...guidanceForVehicle(vehicleById(this.state.vehicleId), undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
   }
 
   getConfig(): MissionConfig {
@@ -416,6 +420,7 @@ export class SetupPanel {
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       // the values above are already merged with the vehicle's own programme
       guidanceResolved: true,
+      dynamics: s.dynamics ? { ...s.dynamics } : undefined,
     };
   }
 
@@ -541,7 +546,7 @@ export class SetupPanel {
     const s = this.state;
     return JSON.stringify({ vehicle: s.vehicleId, site: s.siteId, orbit: s.orbit,
       payload: s.payloadMass, satellite: s.satelliteId, launchTime: s.launchTime,
-      failure: s.failure, recovery: s.boosterRecovery });
+      failure: s.failure, recovery: s.boosterRecovery, dynamics: s.dynamics });
   }
 
   // ─── element helpers ──────────────────────────────────────────────────────
@@ -643,6 +648,7 @@ export class SetupPanel {
         if (this.running) return;
         this.cancelTune();
         Object.assign(this.state, quickstartMission(option.id));
+        this.state.dynamics = defaultDynamics(this.state.vehicleId);
         this.tuneMessage = '';
         this.applyExternalEdit();
         this.cb.onChange?.(this.getConfig());
@@ -759,6 +765,7 @@ export class SetupPanel {
     s1.appendChild(this.sectionTitle('01', 'setup.step.vehicle'));
     s1.appendChild(this.select('setup.vehicle', VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })), s.vehicleId, (v) => {
       s.vehicleId = v;
+      s.dynamics = defaultDynamics(v);
       const spec = vehicleById(v);
       this.siteReassigned = false;
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
@@ -902,6 +909,7 @@ export class SetupPanel {
 
     // ── collapsible: guidance / failure / options ───────────────────────────
     const s4 = this.el('section', 'config-section');
+    s4.appendChild(this.dynamicsSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
     s4.appendChild(this.optionsSection(vehicle));
@@ -1047,6 +1055,7 @@ export class SetupPanel {
     chk.appendChild(cb);
     chk.appendChild(this.el('span', undefined, t('setup.boosterRecovery')));
     od.appendChild(chk);
+    if (vehicle.recoverable && s.dynamics?.model === 'sixDof') od.appendChild(this.el('p', 'field-note', t('setup.recoveryRigidNote')));
     return od;
   }
 
@@ -1209,6 +1218,9 @@ export class SetupPanel {
   private refreshInsertionProbe(): void {
     const plan = this.planCache;
     const s = this.state;
+    // A rigid flight is seconds of CPU work, not the cheap legacy probe.
+    // Keep editing responsive; only the cancellable worker may run it.
+    if (s.dynamics?.model === 'sixDof') { this.probeCache = null; this.probedFor = ''; return; }
     if (!plan) {
       this.probeCache = null;
       this.probedFor = '';
@@ -1278,6 +1290,36 @@ export class SetupPanel {
     if (message) message.textContent = this.tuneMessage;
     const button = this.root.querySelector<HTMLButtonElement>('[data-action="autotune"]');
     if (button) button.textContent = t('setup.autotune');
+  }
+
+  private dynamicsSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'dynamics';
+    section.open = true;
+    section.append(this.el('summary', undefined, t('setup.dynamics.title')));
+    const d = this.state.dynamics ?? { model: 'pointMass', wind: 'calm', seed: 20260919 };
+    const choices = [{ value: 'pointMass', label: t('setup.dynamics.pointMass') }];
+    if (supportsRigid(this.state.vehicleId)) choices.unshift({ value:'sixDof', label:t('setup.dynamics.sixDof') });
+    section.append(this.select('setup.dynamics.model', choices, d.model, value => {
+      const next = { ...(this.state.dynamics ?? d), model: value as DynamicsConfig['model'] };
+      // Legacy flight hides weather controls. Preserve valid settings for a
+      // later return to six-DOF, but repair malformed external state before its
+      // editing controls disappear. Ordinary invalid UI drafts are discarded by render().
+      if (value === 'pointMass') {
+        if (!['calm', 'crosswind', 'shear'].includes(next.wind)) next.wind = 'calm';
+        if (!Number.isInteger(next.seed) || next.seed < 0 || next.seed > 0xffffffff) next.seed = defaultDynamics(this.state.vehicleId).seed;
+      }
+      this.state.dynamics = next;
+      this.render(); this.changed();
+    }));
+    section.append(this.el('p', 'field-note', t(supportsRigid(this.state.vehicleId) ? 'setup.dynamics.note' : 'setup.dynamics.unsupported')));
+    if (d.model === 'sixDof') {
+      section.append(this.select('setup.dynamics.wind', [
+        {value:'calm',label:t('setup.dynamics.calm')}, {value:'crosswind',label:t('setup.dynamics.crosswind')}, {value:'shear',label:t('setup.dynamics.shear')},
+      ],d.wind,value=>{ this.state.dynamics={...(this.state.dynamics ?? d),wind:value as DynamicsConfig['wind']};this.changed(); }));
+      section.append(this.number('setup.dynamics.seed',d.seed,value=>{this.state.dynamics={...(this.state.dynamics ?? d),seed:value};this.changed();},1,0,0xffffffff));
+    }
+    return section;
   }
 
   /** One shared, bounded full-mission tuner; cancellation terminates its worker. */

@@ -1,0 +1,6 @@
+.rigid-controls { flex: none; padding: 10px 14px; font-size: 12px; }
+.rigid-controls[hidden] { display: none; }
+.rigid-controls p { color: var(--muted); margin: 6px 0; }
+.rigid-control-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.rigid-control-fields label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 105px; min-width: 0; }
+.rigid-control-fields input, .rigid-control-fields select { width: 100%; min-height: 36px; }

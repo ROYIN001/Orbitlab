@@ -1,12 +1,18 @@
 # Orbitlab improvement checkpoint
 
 User-selected order: **1 → 2 → 6 → 5 → 3 → 4**.
+Latest scope update: **phases 5, 3 and 4 are deferred at the user's request**.
+Finish phase 6 only in the current work. The user subsequently authorized merging
+the accepted phase into **main** and publishing the website for their review.
+Do this after phase-6 acceptance; verify the resulting GitHub Pages deployment.
 
 ## Decisions agreed on 2026-09-19
 
 - Warn about infeasible missions, allow experiments, and grade every requested target constraint.
 - Keep Simulator as the first page, add quick starts and optional guidance.
 - Full 6DOF: Falcon 9 and Soyuz-2.1a first; autopilot and manual body-rate/throttle commands; disclosed estimates, sensitivity studies and repeatable winds. Agree model/acceptance before implementation; proposal recorded in the parent `implementation-planning/six-dof-design-proposal-th.md`.
+- Once accepted, six-DOF becomes the default for those two vehicles with a legacy toggle.
+- Approved public About identity: **Royin Chunhakit**. Approved bio verbatim: **Royal Thai Air Force scholarships Cadet in Russia**. No contact link or additional biography was supplied.
 - No public deployment has been performed.
 
 ## Phases 1–2 checkpoint
@@ -21,4 +27,11 @@ The result table explicitly reports the displayed instant, separately from the o
 
 ## Current work
 
-Phase 6 core equations, finite actuators/control, vehicle data dossiers and integration. No 6DOF acceptance or completion claim yet. Phases 5, 3 and 4 remain after phase 6 in the requested order.
+**Paused at the user's request to conserve usage.** Publish only the accepted
+phase1–2 commit `ce741ad`; retain phase6 on its own branch. Resume from
+[CONTINUE-PHASE-6.md](CONTINUE-PHASE-6.md), which supersedes the in-progress
+paragraphs below. Final post-payload-fix acceptance has not run.
+
+Phase 6 core equations, finite actuators/control, vehicle data dossiers and integration. No 6DOF acceptance or completion claim yet. Phases 5, 3 and 4 are deferred and must not begin without a later user instruction.
+
+Integration findings: numerical refinement holds guidance/control at 10 ms and refines only the plant. The bounded nominal Falcon recovery passes the original convergence thresholds with finite terminal restart guidance. Falcon now reaches the actual 500 km target using J2-consistent coast planning. One common Soyuz programme reaches ISS under calm/crosswind/shear and has been wired into both the panel and simulation defaults. Full-mission numerical convergence is running. Recovery flow assumptions retain material quantitative differences despite both contact classifications passing; its confidence remains limited. Final sensitivity, browser and integration checks remain before acceptance and the authorized main/Pages publication.

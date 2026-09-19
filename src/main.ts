@@ -10,6 +10,7 @@ import { CameraController, type CameraMode, type CamPhase } from './render/camer
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { MissionResult } from './ui/mission-result';
+import { RigidControls } from './ui/rigid-controls';
 import { Hud } from './ui/hud';
 import { TelemetryPanel } from './ui/telemetry';
 import { OrbitalMap } from './ui/map';
@@ -31,6 +32,10 @@ import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
+import { quatRotate } from './physics/rigid/math';
+
+/** Proper rotation: rendered +Y nose to physics +X nose, no reflection. */
+const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
 
 /**
  * A stage or booster came off within the last few seconds.
@@ -114,6 +119,7 @@ class App {
   hud: Hud;
   tel: TelemetryPanel;
   result: MissionResult;
+  rigidControls: RigidControls;
   map: OrbitalMap;
   onboard: OnboardOverlay;
   timeline: Timeline;
@@ -134,6 +140,9 @@ class App {
   playing = false;
   /** time warp of the live simulation */
   warp = 1;
+  achievedWarp: number | null = null;
+  private rateWallSeconds = 0;
+  private rateSimSeconds = 0;
   /** time warp of the replay cursor (kept separate: scrubbing fast through a
    *  recording must not make the live flight sprint) */
   replayWarp = 1;
@@ -189,6 +198,12 @@ class App {
   constructor() {
     new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
+    this.rigidControls = new RigidControls(document.getElementById('rigid-controls')!, command => {
+      if (!this.sim || !this.player.live) return;
+      this.sim.setRigidCommand(command);
+      this.recorder.captureChangedState();
+      this.telTimer = 1;
+    });
     this.viewport = document.getElementById('viewport')!;
     this.glCanvas = document.getElementById('gl') as HTMLCanvasElement;
     this.mapCanvas = document.getElementById('map') as HTMLCanvasElement;
@@ -223,6 +238,15 @@ class App {
     });
     this.bindControls();
     this.observeSceneBottom();
+  }
+
+  /** Read-only diagnostics for browser verification; heap availability depends
+   * on the browser. Frame byte estimates include calibrated rigid telemetry maps. */
+  getPerformance(): Record<string, unknown> {
+    const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory;
+    return { achievedWarp: this.achievedWarp, physicsControlStepS: this.sim?.rigidRuntime ? 0.01 : null,
+      recording: this.recorder.stats(), recordingBytesIncludeRigidMaps: true,
+      usedJSHeapBytes: memory?.usedJSHeapSize ?? null, allocatedJSHeapBytes: memory?.totalJSHeapSize ?? null };
   }
 
   /**
@@ -578,6 +602,7 @@ class App {
     this.fastForwardTo = null;
     try {
       this.sim = new Simulation(cfg);
+      this.rigidControls.reset();
     } catch (err) {
       console.error(err);
       return;
@@ -644,6 +669,7 @@ class App {
     this.hud.reset();
     this.tel.reset();
     this.result.clear();
+    this.rigidControls.reset();
     this.tel.setExportSource(sim);
     this.explosion.clear();
     // Pay this mission's shader compiles now, while the vehicle is sitting on
@@ -692,10 +718,12 @@ class App {
   }
 
   private frame(now: number): void {
-    const dtReal = Math.min(0.1, Math.max(0, (now - this.lastFrame) / 1000));
+    const elapsedWall = Math.max(0, (now - this.lastFrame) / 1000);
+    const dtReal = Math.min(0.1, elapsedWall);
     this.lastFrame = now;
     this.autoGlow(dtReal);
     const sim = this.sim;
+    const beforeSimulationTime = sim?.state.t ?? 0;
     // The live flight runs whether or not the user is watching the head.
     if (sim && this.playing) {
       const target = this.fastForwardTo;
@@ -703,7 +731,7 @@ class App {
         const budget = performance.now() + 30; // ms per frame for fast-forward
         while (sim.state.t < target - 1e-3 && performance.now() < budget && !sim.isFailed()) {
           const before = sim.state.t;
-          this.recorder.advance(Math.min(600, target - sim.state.t), 3000);
+          this.recorder.advance(Math.min(600, target - sim.state.t), 3000, budget);
           if (sim.state.t <= before) break; // no progress: give up rather than spin
         }
         if (sim.state.t >= target - 1e-3 || sim.isFailed()) this.fastForwardTo = null;
@@ -713,6 +741,22 @@ class App {
         // spend the whole animation frame inside the integrator
         this.recorder.advance(dtReal * this.warp, 20000, performance.now() + 8);
       }
+    }
+    if (sim?.rigidRuntime && this.playing && !sim.isFailed()) {
+      this.rateWallSeconds += elapsedWall;
+      this.rateSimSeconds += Math.max(0, sim.state.t - beforeSimulationTime);
+      if (this.rateWallSeconds >= 0.5) {
+        this.achievedWarp = this.rateSimSeconds / this.rateWallSeconds;
+        this.rateWallSeconds = 0; this.rateSimSeconds = 0;
+      }
+    } else {
+      this.achievedWarp = null;
+      this.rateWallSeconds = 0; this.rateSimSeconds = 0;
+    }
+    const rateLabel = document.getElementById('achieved-warp');
+    if (rateLabel) {
+      rateLabel.hidden = !sim?.rigidRuntime || !this.player.live || this.achievedWarp === null;
+      if (!rateLabel.hidden) rateLabel.textContent = t('ctl.achievedWarp', { rate: this.achievedWarp!.toFixed(2) });
     }
     // The replay cursor runs on its own clock; warp > 1 skips through frames.
     if (sim && !this.player.live && this.player.playing) this.player.advanceCursor(dtReal * this.replayWarp);
@@ -737,6 +781,7 @@ class App {
       this.telTimer = 0;
       this.tel.update(this.simView.sim, this.player.cursor);
       this.result.update(this.simView.sim);
+      this.rigidControls.update(this.shown?.rigid, this.player.live);
     }
     requestAnimationFrame((n) => this.frame(n));
   }
@@ -900,6 +945,13 @@ class App {
     );
     this.rocket.group.quaternion.setFromRotationMatrix(this.basis);
     this.rocket.group.position.set(0, 0, 0);
+    if (frame.rigid) {
+      const attitude = frame.rigid.attitudeQ;
+      this.rocket.group.quaternion.set(attitude.x, attitude.y, attitude.z, attitude.w).multiply(MODEL_TO_BODY);
+      const offset = quatRotate(attitude, frame.rigid.renderOffsetBody);
+      this.rocket.group.position.set(offset.x, offset.y, offset.z);
+      side = quatRotate(attitude, v3(0, 0, 1));
+    }
     // the smoke column trails back towards the pad
     const padVec = this.pad.group.position;
     const padDist = padVec.length();

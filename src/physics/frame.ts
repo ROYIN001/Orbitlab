@@ -32,6 +32,8 @@ import { clone } from './vec3';
 import { propagateKepler } from './orbital';
 import { atmosphere } from './atmosphere';
 import { R_EARTH } from './constants';
+import { cloneRigidTelemetry, interpolateRigidTelemetry, sameRigidConfiguration, type RigidTelemetry } from './rigid/telemetry';
+import { quatRotate } from './rigid/math';
 
 export interface StageFrame {
   id: string;
@@ -81,6 +83,7 @@ export interface BoosterFrame {
 }
 
 export interface DebrisFrame {
+  rigid?: RigidTelemetry;
   id: number;
   name: string;
   r: Vec3;
@@ -144,6 +147,9 @@ export interface FrameElements {
 }
 
 export interface VisualFrame {
+  /** Optional for legacy recordings; new snapshots use schema 2. */
+  schemaVersion?: number;
+  rigid?: RigidTelemetry;
   t: number;
   status: SimStatus;
   ascentPhase: AscentPhase | null;
@@ -401,6 +407,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     }
   }
   const debris: DebrisFrame[] = sim.debris.map((d) => ({
+    rigid: cloneRigidTelemetry(d.rigid),
     id: d.id,
     pressure: debrisPressure(d.r),
     name: d.name,
@@ -412,12 +419,14 @@ export function captureFrame(sim: Simulation): VisualFrame {
     visual: d.visual,
     outcome: d.outcome,
     createdAt: d.createdAt,
-    anchor: debrisAnchor(sim, d, layout),
+    anchor: d.rigid ? d.rigid.renderOffsetBody.x : debrisAnchor(sim, d, layout),
     recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed } : undefined,
     impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
   }));
   return {
     t: s.t,
+    schemaVersion: 2,
+    rigid: cloneRigidTelemetry(s.rigid),
     status: s.status,
     ascentPhase: s.ascentPhase,
     note: s.note,
@@ -531,6 +540,7 @@ const lerpVec = (a: Vec3, b: Vec3, u: number): Vec3 => ({
 export function cloneFrame(f: VisualFrame): VisualFrame {
   return {
     ...f,
+    rigid: cloneRigidTelemetry(f.rigid),
     r: clone(f.r),
     v: clone(f.v),
     dir: clone(f.dir),
@@ -541,6 +551,7 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
     boosters: f.boosters.map((b) => ({ ...b })),
     debris: f.debris.map((d) => ({
       ...d,
+      rigid: cloneRigidTelemetry(d.rigid),
       r: clone(d.r),
       v: clone(d.v),
       dir: clone(d.dir),
@@ -579,8 +590,19 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   if (!(span > 0)) return cloneFrame(a);
   const u = Math.max(0, Math.min(1, (time - a.t) / span));
   if (u <= 0) return cloneFrame(a);
+  const hasRigid = !!a.rigid || !!b.rigid || a.debris.some(d => !!d.rigid) || b.debris.some(d => !!d.rigid);
+  if (hasRigid && u >= 1) return cloneFrame(b);
+  if ((a.rigid || b.rigid) && (!sameRigidConfiguration(a.rigid, b.rigid)
+    || a.activeStageIndex !== b.activeStageIndex || a.payloadSeparated !== b.payloadSeparated
+    || a.fairingAttached !== b.fairingAttached
+    || a.stages.some((stage, i) => stage.id !== b.stages[i]?.id || stage.attached !== b.stages[i]?.attached)
+    || a.boosters.some((booster, i) => booster.id !== b.boosters[i]?.id || booster.attached !== b.boosters[i]?.attached))) {
+    // No meaningful continuous path connects two different CGs/body identities.
+    // Event-pinned recording makes this hold at most the final pre-event interval.
+    return { ...cloneFrame(a), t: a.t + span * u };
+  }
   const dt = span * u;
-  const ballistic = (a.status === 'coast' || a.status === 'orbit') && (b.status === 'coast' || b.status === 'orbit') && a.thrust <= 0;
+  const ballistic = !a.rigid && (a.status === 'coast' || a.status === 'orbit') && (b.status === 'coast' || b.status === 'orbit') && a.thrust <= 0;
   let r: Vec3;
   let v: Vec3;
   if (ballistic) {
@@ -596,25 +618,29 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     const other = b.debris.find((x) => x.id === d.id);
     const rec = d.recovery ? { ...d.recovery } : undefined;
     const imp = d.impact ? { ...d.impact } : undefined;
-    if (!other || !other.alive || !d.alive) {
-      return { ...d, r: clone(d.r), v: clone(d.v), dir: clone(d.dir), recovery: rec, impact: imp };
+    if (!other || !other.alive || !d.alive || ((d.rigid || other.rigid) && !sameRigidConfiguration(d.rigid, other.rigid))) {
+      return { ...d, rigid: cloneRigidTelemetry(d.rigid), r: clone(d.r), v: clone(d.v), dir: clone(d.dir), recovery: rec, impact: imp };
     }
+    const rigid = interpolateRigidTelemetry(d.rigid, other.rigid, u);
     return {
       ...d,
+      rigid,
       r: lerpVec(d.r, other.r, u),
       v: lerpVec(d.v, other.v, u),
-      dir: slerp(d.dir, other.dir, u),
+      dir: rigid ? quatRotate(rigid.attitudeQ, { x: 1, y: 0, z: 0 }) : slerp(d.dir, other.dir, u),
       pressure: mix(d.pressure ?? 0, other.pressure ?? 0, u),
       recovery: rec,
       impact: imp,
     };
   });
+  const rigid = interpolateRigidTelemetry(a.rigid,b.rigid,u);
   return {
     ...a,
+    rigid,
     t: a.t + dt,
     r,
     v,
-    dir: slerp(a.dir, b.dir, u),
+    dir: rigid ? quatRotate(rigid.attitudeQ, {x:1,y:0,z:0}) : slerp(a.dir, b.dir, u),
     throttle: mix(a.throttle, b.throttle, u),
     thrust: mix(a.thrust, b.thrust, u),
     mass: mix(a.mass, b.mass, u),

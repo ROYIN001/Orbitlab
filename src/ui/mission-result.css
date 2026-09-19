@@ -15,6 +15,7 @@
 .mission-result[data-outcome="offTarget"] .mission-result-status { color: var(--warn); }
 .mission-result[data-outcome="failed"] .mission-result-status { color: var(--fail); }
 .mission-result .mission-result-note { color: var(--muted); font-size: 12px; }
+.mission-result-warning { border-left: 3px solid var(--warn); padding-left: 10px; color: var(--warn); }
 .mission-result-table-wrap { overflow-x: auto; max-width: 100%; margin: 12px 0; }
 .mission-result table { width: 100%; min-width: 390px; border-collapse: collapse; font-size: 12px; }
 .mission-result caption { text-align: left; color: var(--muted); padding: 0 0 8px; }

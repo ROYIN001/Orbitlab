@@ -17,7 +17,9 @@ import { orbitById } from '../src/data/orbits';
 import { guidanceForVehicle, DEFAULT_FAILURE } from '../src/physics/defaults';
 import { missionVerdict, type Feasibility } from '../src/ui/panel';
 import { planMission, resolveTarget } from '../src/physics/mission';
-import { RAD } from '../src/physics/constants';
+import { DEG, RAD } from '../src/physics/constants';
+import { defaultDynamics } from '../src/physics/rigid/config';
+import type { RigidCommand, RigidTelemetry } from '../src/physics/rigid/telemetry';
 import type { CameraMode } from '../src/render/cameras';
 import type { Simulation, SimEvent, TelemetrySample } from '../src/physics/simulation';
 import type { VisualFrame } from '../src/physics/frame';
@@ -65,6 +67,19 @@ const EVENTS: SimEvent[] = [
   { t: 155, key: 'evt.meco', severity: 'major', params: { stage: 'Blok A (core)' } },
 ];
 
+function rigidTelemetry(rate = 0): RigidTelemetry {
+  return {
+    modelVersion: 'sixdof-1', attitudeQ: { w: 1, x: 0, y: 0, z: 0 },
+    omegaBody: { x: rate, y: 0, z: 0 }, cgBody: { x: 20, y: 0, z: 0 },
+    inertiaBody: [1, 0, 0, 0, 2, 0, 0, 0, 2], renderOffsetBody: { x: -20, y: 0, z: 0 },
+    controlMode: 'auto', engineDeflections: { 's1.engine.0': [0.01, -0.02] },
+    engineDirectionsBody: { 's1.engine.0': { x: 1, y: 0, z: 0 } },
+    engineThrottles: { 's1.engine.0': 0.8 }, rcsPropellantKg: 30, saturated: false,
+    angleOfAttack: 0, sideslip: 0, aeroWithinEnvelope: true, windECI: { x: 0, y: 0, z: 0 },
+    rawQuaternionNormError: 0,
+  };
+}
+
 function makeFakeSim(cfg: MissionConfig): Simulation {
   const sample: TelemetrySample = {
     t: 0, alt: 0, vInertial: 0, vAir: 0, q: 0, mach: 0, gLoad: 1, mass: 310000, thrust: 0,
@@ -82,6 +97,7 @@ function makeFakeSim(cfg: MissionConfig): Simulation {
 }
 
 interface FakePanelState {
+  dynamics?: MissionConfig['dynamics'];
   vehicleId: string;
   satelliteId: string;
   siteId: string;
@@ -136,9 +152,10 @@ class FakePanel {
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
       launchTime: new Date(s.launchTime.getTime()),
-      guidance: { ...guidanceForVehicle(vehicleById(s.vehicleId)), ...s.guidanceOverrides },
+      guidance: { ...guidanceForVehicle(vehicleById(s.vehicleId), undefined, s.dynamics?.model), ...s.guidanceOverrides },
       failure: { ...s.failure }, boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       guidanceResolved: true,
+      dynamics: s.dynamics ? { ...s.dynamics } : undefined,
     };
   }
   feasibility() {
@@ -236,11 +253,11 @@ beforeEach(() => {
 // ──────────────────────────────────────────────────────────────── tests
 
 describe('createMcpTools', () => {
-  it('builds exactly the nine documented tools, each with a name, schema and annotations', () => {
+  it('builds the documented tools, each with a name, schema and annotations', () => {
     const names = tools.map((t) => t.name);
     expect(names).toEqual([
       'read_flight_state', 'list_missions', 'configure_mission', 'launch_mission',
-      'control_playback', 'seek', 'set_camera', 'get_events', 'export_csv',
+      'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv',
     ]);
     expect(new Set(names).size).toBe(names.length);
     for (const t of tools) {
@@ -263,6 +280,24 @@ describe('list_missions', () => {
 });
 
 describe('read_flight_state', () => {
+  it('returns copied rigid telemetry from the selected replay frame, including detached bodies', () => {
+    host.sim = makeFakeSim(host.panel.getConfig());
+    host.player.live = false;
+    host.recorder.headFrame = makeFrame({ rigid: rigidTelemetry(9) });
+    const rigid = rigidTelemetry(0.2), detached = rigidTelemetry(0.4);
+    host.player.replayFrame = makeFrame({ t: 30, rigid,
+      debris: [{ id: 7, name: 'Stage 1', rigid: detached, outcome: 'landed' }] as VisualFrame['debris'] });
+    const out = tool(tools, 'read_flight_state').execute({}) as any;
+    expect(out.frame.rigid.omegaBody.x).toBe(0.2);
+    expect(out.frame.detachedBodies[0]).toMatchObject({ id: 7, outcome: 'landed', rigid: { omegaBody: { x: 0.4 } } });
+    out.frame.rigid.engineDeflections['s1.engine.0'][0] = 99;
+    out.frame.rigid.attitudeQ.w = 0;
+    out.frame.detachedBodies[0].rigid.engineDirectionsBody['s1.engine.0'].x = -1;
+    expect(rigid.engineDeflections['s1.engine.0'][0]).toBe(0.01);
+    expect(rigid.attitudeQ.w).toBe(1);
+    expect(detached.engineDirectionsBody!['s1.engine.0'].x).toBe(1);
+  });
+
   it('is a safe no-op with no mission configured', () => {
     const out = tool(tools, 'read_flight_state').execute({}) as { hasMission: boolean };
     expect(out.hasMission).toBe(false);
@@ -321,6 +356,27 @@ describe('read_flight_state', () => {
 });
 
 describe('configure_mission', () => {
+  it('uses the same physics defaults as the panel when switching vehicles', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'electron' });
+    expect(host.panel.state.dynamics?.model).toBe('pointMass');
+    configure.execute({ vehicleId: 'falcon9' });
+    expect(host.panel.state.dynamics).toEqual(defaultDynamics('falcon9'));
+    configure.execute({ vehicleId: 'soyuz21a' });
+    expect(host.panel.state.dynamics).toEqual(defaultDynamics('soyuz21a'));
+    configure.execute({ vehicleId: 'electron' });
+    expect(host.panel.state.dynamics).toEqual(defaultDynamics('electron'));
+  });
+
+  it('preserves an explicit current-vehicle model, but accepts explicit overrides with a vehicle change', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', physicsModel: 'pointMass', windScenario: 'crosswind', windSeed: 123 });
+    configure.execute({ vehicleId: 'falcon9', payloadMassKg: 3000 });
+    expect(host.panel.state.dynamics).toEqual({ model: 'pointMass', wind: 'crosswind', seed: 123 });
+    configure.execute({ vehicleId: 'soyuz21a', windScenario: 'shear', windSeed: 10 });
+    expect(host.panel.state.dynamics).toEqual({ model: 'sixDof', wind: 'shear', seed: 10 });
+  });
+
   it('rejects an unknown vehicle with a clear, listing error', () => {
     expect(() => tool(tools, 'configure_mission').execute({ vehicleId: 'saturn-v' }))
       .toThrowError(/Unknown vehicleId "saturn-v"/);
@@ -512,6 +568,43 @@ describe('launch_mission', () => {
   });
 });
 
+describe('set_flight_control', () => {
+  let commands: RigidCommand[];
+  beforeEach(() => {
+    host.panel.state.dynamics = defaultDynamics('soyuz21a');
+    host.sim = makeFakeSim(host.panel.getConfig());
+    commands = [];
+    host.sim.setRigidCommand = command => { commands.push(command); };
+  });
+
+  it('converts manual body rates to radians and applies finite-actuator commands', () => {
+    const out = tool(tools, 'set_flight_control').execute({ mode: 'manual', rollRateDegS: 2, pitchRateDegS: -3, yawRateDegS: 5, throttle: 0.6 }) as any;
+    expect(out.ok).toBe(true);
+    expect(commands).toEqual([{ mode: 'manual', rates: { x: 2 * DEG, y: -3 * DEG, z: 5 * DEG }, throttle: 0.6 }]);
+    tool(tools, 'set_flight_control').execute({ mode: 'auto' });
+    expect(commands[1]).toEqual({ mode: 'auto', rates: { x: 0, y: 0, z: 0 }, throttle: 1 });
+  });
+
+  it.each([
+    { mode: 'invalid' }, { mode: 'manual', rollRateDegS: 5.01 },
+    { mode: 'manual', pitchRateDegS: -6 }, { mode: 'manual', yawRateDegS: NaN },
+    { mode: 'manual', throttle: -0.1 }, { mode: 'manual', throttle: 1.1 },
+  ])('rejects invalid commands atomically: %j', input => {
+    expect(() => tool(tools, 'set_flight_control').execute(input)).toThrow();
+    expect(commands).toEqual([]);
+  });
+
+  it('does not mutate flight controls from replay or a point-mass mission', () => {
+    host.player.live = false;
+    expect(tool(tools, 'set_flight_control').execute({ mode: 'manual' })).toMatchObject({ ok: false, reason: expect.stringContaining('Replay') });
+    expect(host.calls).not.toContain('goLive');
+    host.player.live = true;
+    host.sim!.cfg.dynamics = { model: 'pointMass', wind: 'calm', seed: 0 };
+    expect(tool(tools, 'set_flight_control').execute({ mode: 'manual' })).toMatchObject({ ok: false });
+    expect(commands).toEqual([]);
+  });
+});
+
 describe('control_playback', () => {
   it('is a safe no-op with no mission configured, for every action', () => {
     for (const action of ['play', 'pause', 'live', 'skip_next', 'skip_previous']) {
@@ -677,7 +770,7 @@ describe('registerMcpTools', () => {
     (globalThis as any).window = { addEventListener: (_: string, fn: () => void) => listeners.push(fn) };
     try {
       registerMcpTools(host);
-      expect(registered.length).toBe(9);
+      expect(registered.length).toBe(10);
       for (const fn of listeners) fn();
       expect(abortSeen).toBe(true);
     } finally {

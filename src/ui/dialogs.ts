@@ -12,6 +12,7 @@
  */
 import type { CameraMode } from '../render/cameras';
 import { t } from '../i18n';
+import rigidDossierUrl from '../../docs/SIXDOF-VEHICLE-DATA.md?url';
 
 /** Flight phases the camera sequence can be programmed for. */
 export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment';
@@ -136,6 +137,9 @@ export class PhysicsDialog extends Modal {
     b.append(el('span', 'eyebrow', t('dlg.physics.eyebrow')));
     b.append(el('h2', undefined, t('dlg.physics.title')));
     b.append(el('p', 'lead', t('dlg.physics.intro')));
+    b.append(section('dlg.physics.rigid', 'dlg.physics.rigidText'));
+    b.append(section('dlg.physics.estimates', 'dlg.physics.estimatesText'));
+    const dossier = el('ul'); dossier.append(link(rigidDossierUrl, t('dlg.physics.dossier'))); b.append(dossier);
     b.append(section('dlg.physics.frames', 'dlg.physics.framesText'));
     b.append(section('dlg.physics.forces', 'dlg.physics.forcesText'));
     b.append(section('dlg.physics.atmosphere', 'dlg.physics.atmosphereText'));
@@ -156,6 +160,8 @@ export class PhysicsDialog extends Modal {
       link('https://www.isro.gov.in/PSLV.html', 'ISRO — PSLV'),
       link('https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/rocket-thrust-equation/', 'NASA Glenn — rocket thrust and the ideal rocket equation'),
       link('https://ntrs.nasa.gov/citations/19770009539', 'US Standard Atmosphere 1976 (NASA-TM-X-74335)'),
+      link('https://ntrs.nasa.gov/citations/20160002944', 'NASA — flight equations and reference frames'),
+      link('https://ntrs.nasa.gov/citations/19980210404', 'NASA — dynamics of variable-mass systems'),
       link('https://celestrak.org/software/vallado-sw.php', 'Vallado — Fundamentals of Astrodynamics and Applications'),
       link('https://threejs.org/', 'three.js'),
     );

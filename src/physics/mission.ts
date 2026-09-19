@@ -42,6 +42,9 @@ export interface BurnPlan {
   maxDuration?: number;
   /** apoapsis adjustment burns: true when the apoapsis has to come down (retrograde) */
   lowering?: boolean;
+  /** Six-DOF corrective transfer targets a forecast physical apex, not the
+   * current osculating conic. Metres above R_EARTH; legacy plans omit this. */
+  physicalApoapsis?: number;
 }
 
 export interface MissionPlan {

@@ -6,6 +6,8 @@ import { VEHICLES } from '../data/vehicles';
 import { SATELLITES } from '../data/satellites';
 import { SITES } from '../data/sites';
 import { guidanceForVehicle } from '../physics/defaults';
+import { supportsRigid } from '../physics/rigid/config';
+import type { DynamicsConfig } from '../types';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
 export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection';
@@ -28,6 +30,7 @@ export const GUIDANCE_FIELDS: Record<string, { key: keyof GuidanceParams; scale:
 };
 
 export const NUMBER_FIELDS: Record<string, NumberLimits> = {
+  'setup.dynamics.seed': { min: 0, max: 0xffffffff, integer: true },
   'setup.payloadMass': { min: 1 },
   'setup.perigee': { min: 100 },
   'setup.apogee': { min: 100 },
@@ -85,6 +88,7 @@ export function parseUtcDateTime(raw: string, requireZone = false): Date | null 
 }
 
 export interface ConfigInput {
+  dynamics?: DynamicsConfig;
   vehicleId: string; satelliteId: string; siteId: string;
   orbit: OrbitSpec; launchTime: Date; payloadMass: number;
   guidanceOverrides: Partial<GuidanceParams>; failure: FailureConfig; boosterRecovery: boolean;
@@ -97,6 +101,17 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     if (issue) issues.push(issue);
   };
   const spec = VEHICLES.find((v) => v.id === state.vehicleId);
+  if (state.dynamics !== undefined) {
+    const d = state.dynamics;
+    if (!d || typeof d !== 'object' || Array.isArray(d)) issues.push({ field: 'setup.dynamics.model', code: 'selection' });
+    else {
+      if (d.model !== 'pointMass' && !(d.model === 'sixDof' && supportsRigid(state.vehicleId))) {
+        issues.push({ field: 'setup.dynamics.model', code: 'selection' });
+      }
+      if (!['calm', 'crosswind', 'shear'].includes(d.wind)) issues.push({ field: 'setup.dynamics.wind', code: 'selection' });
+      check(d.seed, 'setup.dynamics.seed', NUMBER_FIELDS['setup.dynamics.seed']);
+    }
+  }
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });
   if (!SATELLITES.some((s) => s.id === state.satelliteId)) issues.push({ field: 'setup.satellite', code: 'selection' });
   if (!SITES.some((s) => s.id === state.siteId) || (spec && !spec.sites.includes(state.siteId))) issues.push({ field: 'setup.site', code: 'selection' });

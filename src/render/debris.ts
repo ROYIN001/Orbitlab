@@ -24,9 +24,11 @@ import { clamp01, hash11, smoothstep } from './noise';
 import { disposeObject } from './dispose';
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
 
 interface DebrisItem {
   group: THREE.Group;
+  rigidGeometry: boolean;
   /** hinge pivot for a fairing half */
   hinge: THREE.Group | null;
   side: 1 | -1;
@@ -158,7 +160,7 @@ export class DebrisView {
     const r = d.visual.diameter / 2;
     const L = d.visual.length;
     // base of the drawn body in the object's own frame (+Y = the thrust axis)
-    const base = d.anchor ?? 0;
+    const base = d.rigid ? 0 : d.anchor ?? 0;
     const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(d.visual.color), metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide });
     const side: 1 | -1 = d.id % 2 === 0 ? 1 : -1;
     let hinge: THREE.Group | null = null;
@@ -201,7 +203,7 @@ export class DebrisView {
     }
     const ax = this.randAxis(d.id);
     return {
-      group: g, hinge, side, plume, createdAt: d.createdAt,
+      group: g, rigidGeometry: !!d.rigid, hinge, side, plume, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, finT: -1, legT: -1,
@@ -227,6 +229,13 @@ export class DebrisView {
       if (!d.alive) continue;
       seen.add(d.id);
       let item = this.items.get(d.id);
+      if (item && item.rigidGeometry !== !!d.rigid) {
+        this.scene.scene.remove(item.group);
+        item.plume?.dispose();
+        disposeObject(item.group);
+        this.items.delete(d.id);
+        item = undefined;
+      }
       if (!item) {
         item = this.build(d);
         this.scene.scene.add(item.group);
@@ -237,7 +246,15 @@ export class DebrisView {
       this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
       this.q.setFromUnitVectors(Y_AXIS, this.dir);
       const age = Math.max(0, t - item.createdAt);
-      if (item.hinge) {
+      if (d.rigid) {
+        const attitude = d.rigid.attitudeQ;
+        this.q.set(attitude.x, attitude.y, attitude.z, attitude.w);
+        item.group.quaternion.copy(this.q).multiply(MODEL_TO_BODY);
+        const offset = d.rigid.renderOffsetBody;
+        this.tmp.set(offset.x, offset.y, offset.z).applyQuaternion(this.q);
+        item.group.position.add(this.tmp);
+        if (item.hinge) item.hinge.rotation.z = 0;
+      } else if (item.hinge) {
         // swing open over the first 4 s, then let the half drift and rotate
         const open = smoothstep(0, 4, age);
         item.hinge.rotation.z = item.side * open * 1.35;
