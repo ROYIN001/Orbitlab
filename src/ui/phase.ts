@@ -37,7 +37,7 @@ export interface PhaseInfo {
 const EMPTY: Record<string, string | number> = {};
 
 /** Phase title, detail and surrounding events for one instant of the flight. */
-export function phaseInfo(frame: VisualFrame | null, events: SimEvent[]): PhaseInfo {
+export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]): PhaseInfo {
   if (!frame) {
     return { titleKey: 'hud.status.prelaunch', detailKey: 'phase.detail.prelaunch', params: EMPTY, lastEvent: null, nextEvent: null };
   }

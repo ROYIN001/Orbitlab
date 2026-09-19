@@ -1,4 +1,6 @@
 /** Minimal canvas line charts for the telemetry panel. */
+import { getLang, t, type Lang } from '../i18n';
+
 export interface Series {
   x: number[];
   y: number[];
@@ -25,6 +27,55 @@ export interface ChartOptions {
   cursor?: number;
   /** format the x ticks as m:ss rather than as plain numbers */
   timeAxis?: boolean;
+  /** Spoken names when the visual legend uses short symbols such as v_air. */
+  seriesLabels?: readonly string[];
+}
+
+export interface ChartSeriesSummary {
+  minimum: number;
+  maximum: number;
+  latest: number;
+  latestTime: number;
+}
+
+/** Statistics of the plotted samples, not a claim about unsampled extrema. */
+export function chartStatistics(series: readonly Series[], start: number, end: number): Array<ChartSeriesSummary | null> {
+  return series.map((s) => {
+    let summary: ChartSeriesSummary | null = null;
+    for (let i = 0; i < s.x.length; i++) {
+      const x = s.x[i], y = s.y[i];
+      if (!Number.isFinite(x) || !Number.isFinite(y) || x < start || x > end) continue;
+      if (!summary) summary = { minimum: y, maximum: y, latest: y, latestTime: x };
+      else {
+        summary.minimum = Math.min(summary.minimum, y);
+        summary.maximum = Math.max(summary.maximum, y);
+        if (x >= summary.latestTime) { summary.latest = y; summary.latestTime = x; }
+      }
+    }
+    return summary;
+  });
+}
+
+const numberFormats: Record<Lang, Intl.NumberFormat> = {
+  en: new Intl.NumberFormat('en', { maximumFractionDigits: 2 }),
+  ru: new Intl.NumberFormat('ru', { maximumFractionDigits: 2 }),
+  th: new Intl.NumberFormat('th', { maximumFractionDigits: 2 }),
+};
+
+/** Text equivalent of one chart; called at the panel's existing 2 Hz cadence. */
+export function chartDescription(series: readonly Series[], opt: ChartOptions, start: number, end: number): string {
+  const format = (value: number): string => numberFormats[getLang()].format(value);
+  const parts = [opt.title, t('tel.chart.window', { start: format(start), end: format(end) })];
+  if (opt.cursor !== undefined && Number.isFinite(opt.cursor)) parts.push(t('tel.chart.cursor', { time: format(opt.cursor) }));
+  const stats = chartStatistics(series, start, end);
+  if (!stats.some((s) => s !== null)) parts.push(t('tel.chart.noData'));
+  else stats.forEach((s, index) => {
+    const name = opt.seriesLabels?.[index] ?? series[index].label ?? opt.title;
+    parts.push(s ? t('tel.chart.sample', {
+      series: name, latest: format(s.latest), time: format(s.latestTime), min: format(s.minimum), max: format(s.maximum),
+    }) : t('tel.chart.seriesNoData', { series: name }));
+  });
+  return parts.join(' ');
 }
 
 const GRID = '#232d3a';
@@ -63,6 +114,15 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   if (opt.yMin !== undefined) yMin = Math.min(yMin, opt.yMin);
   if (opt.yMax !== undefined) yMax = Math.max(yMax, opt.yMax);
   if (xMax - xMin < 1e-9) xMax = xMin + 1;
+  // A named image plus a textual alternative makes the canvas readable without
+  // color or vision. No aria-live: a running flight must not speak eight charts
+  // twice a second. Source arrays are already capped by the telemetry panel.
+  const description = chartDescription(series, opt, xMin, xMax);
+  canvas.setAttribute('role', 'img');
+  if (canvas.getAttribute('aria-label') !== description) {
+    canvas.setAttribute('aria-label', description);
+    canvas.textContent = description;
+  }
   if (yMax - yMin < 1e-9) yMax = yMin + 1;
   const pad = (yMax - yMin) * 0.06;
   yMax += pad;

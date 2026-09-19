@@ -74,7 +74,7 @@ import { Simulation } from '../src/physics/simulation';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import {
   azimuthAllowedFor, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
-  ORBIT_INSERTION_FLOOR, kickStageSink,
+  ORBIT_INSERTION_FLOOR, kickStageSink, launchWindows,
 } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
 import type { MissionConfig } from '../src/types';
@@ -351,7 +351,7 @@ describe('excluded combinations', () => {
 function flySoyuzDefaultMission(): Simulation {
   const cfg: MissionConfig = {
     vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'),
-    launchTime: LAUNCH_TIME,
+    launchTime: launchWindows(orbitById('iss'), siteById('baikonur'), LAUNCH_TIME, 1)[0].time,
     guidance: { ...DEFAULT_GUIDANCE },
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: 7150,
   };
@@ -393,7 +393,7 @@ function flySoyuzDefaultMission(): Simulation {
 describe('Proton-M / Briz-M with the crew ship', () => {
   const protonCrew = (mass: number): MissionConfig => ({
     vehicleId: 'protonm', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'),
-    launchTime: LAUNCH_TIME,
+    launchTime: launchWindows(orbitById('iss'), siteById('baikonur'), LAUNCH_TIME, 1)[0].time,
     guidance: { ...DEFAULT_GUIDANCE },
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass,
   });
@@ -708,7 +708,8 @@ function flyReference(vehicle: string, site: string, orbit: string, satellite: s
   const spec = VEHICLES.find((v) => v.id === vehicle)!;
   const cfg: MissionConfig = {
     vehicleId: vehicle, satelliteId: satellite, siteId: site, orbit: orbitById(orbit),
-    launchTime: LAUNCH_TIME,
+    launchTime: orbitById(orbit).raanMode === 'free' ? LAUNCH_TIME
+      : launchWindows(orbitById(orbit), siteById(site), LAUNCH_TIME, 1)[0].time,
     guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) },
     guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: mass,
@@ -1241,10 +1242,10 @@ describe('single-shot direct insertion', () => {
  * does not fly.
  */
 describe('the shipped default mission', () => {
-  it('is soyuz21a + crew + baikonur + iss on untouched library guidance, and it reaches the target', () => {
+  it('is soyuz21a + crew + baikonur + iss on untouched library guidance, and reaches the target at the next launch window', () => {
     const cfg: MissionConfig = {
       vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'),
-      launchTime: LAUNCH_TIME,
+      launchTime: launchWindows(orbitById('iss'), siteById('baikonur'), LAUNCH_TIME, 1)[0].time,
       guidance: { ...DEFAULT_GUIDANCE },
       failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: 7150,
     };

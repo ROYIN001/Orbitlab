@@ -200,6 +200,7 @@ export class Hud {
   /** index range of the events currently on the ticker, so the DOM is only rebuilt when it changes */
   private tickFrom = -1;
   private tickTo = -1;
+  private tickEvents: readonly SimEvent[] | null = null;
   private store: ModeStore | null = safeStorage();
   private phoneQuery: MediaQueryList | null = null;
   private modeState: HudMode = 'compact';
@@ -877,7 +878,7 @@ export class Hud {
     row.value.textContent = value;
   }
 
-  update(frame: VisualFrame | null, events: SimEvent[], warp: number, replay = false): void {
+  update(frame: VisualFrame | null, events: readonly SimEvent[], warp: number, replay = false): void {
     this.replayTag.textContent = replay ? t('ctl.replay') : '';
     if (!frame) {
       if (this.shownStatus !== 'prelaunch') {
@@ -950,15 +951,16 @@ export class Hud {
    * time: scrubbing back to T+150 s brings back the callouts that were on
    * screen at T+150 s, which a `setTimeout`-driven ticker could never do.
    */
-  private updateTicker(now: number, events: SimEvent[]): void {
+  private updateTicker(now: number, events: readonly SimEvent[]): void {
     let to = 0;
     while (to < events.length && events[to].t <= now + 1e-6) to++;
     let from = to;
     while (from > 0 && now - events[from - 1].t <= TICKER_WINDOW) from--;
     if (to - from > TICKER_ROWS) from = to - TICKER_ROWS;
-    if (from === this.tickFrom && to === this.tickTo) return;
+    if (from === this.tickFrom && to === this.tickTo && events === this.tickEvents) return;
     this.tickFrom = from;
     this.tickTo = to;
+    this.tickEvents = events;
     const rows: HTMLElement[] = [];
     for (let i = from; i < to; i++) {
       const e = events[i];

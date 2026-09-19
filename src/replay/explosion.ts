@@ -158,7 +158,7 @@ export class ExplosionEffect {
    *        effect is scaled off it, so an Electron does not break up in a
    *        Starship-sized fireball.
    */
-  update(scene: SceneManager, frame: VisualFrame, events: SimEvent[], dtReal: number, size: number): void {
+  update(scene: SceneManager, frame: VisualFrame, events: readonly SimEvent[], dtReal: number, size: number): void {
     let lossT: number | null = null;
     for (const e of events) {
       if ((e.key === 'evt.vehicleLost' || e.key === 'evt.impact') && e.t <= frame.t + 1e-6) { lossT = e.t; break; }

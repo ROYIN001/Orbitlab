@@ -56,7 +56,8 @@ describe('launch windows', () => {
 
 describe('failures', () => {
   it('Falcon 9 survives a single Merlin engine-out at T+60 s and still reaches orbit', () => {
-    const cfg = mk({ failure: { mode: 'engineOut', time: 60, stage: 0 } });
+    const time = launchWindows(orbitById('iss'), siteById('cape'), new Date('2026-09-15T12:00:00Z'), 1)[0].time;
+    const cfg = mk({ launchTime: time, failure: { mode: 'engineOut', time: 60, stage: 0 } });
     const sim = fly(cfg, 4 * 3600);
     const keys = sim.events.map((e) => e.key);
     expect(keys).toContain('evt.engineOut');

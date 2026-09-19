@@ -24,15 +24,16 @@
           <span class="version" aria-hidden="true">02</span>
         </div>
         <div class="topbar-right">
-          <button id="btn-physics" class="quiet-btn" type="button">
+          <button id="btn-help" class="quiet-btn" type="button"></button>
+          <button id="btn-physics" class="quiet-btn" type="button" data-i18n-aria-label="dlg.physics.button" data-i18n-title="dlg.physics.button">
             <span aria-hidden="true">ⓘ</span><span data-i18n="dlg.physics.button">Physics &amp; sources</span>
           </button>
-          <button id="btn-camera-plan" class="quiet-btn" type="button">
+          <button id="btn-camera-plan" class="quiet-btn" type="button" data-i18n-aria-label="ctl.cameraSequence" data-i18n-title="ctl.cameraSequence">
             <span aria-hidden="true">◈</span><span data-i18n="ctl.cameraSequence">Camera sequence</span>
           </button>
           <label class="lang">
             <span data-i18n="app.language">Language</span>
-            <select id="lang-select">
+            <select id="lang-select" data-i18n-aria-label="app.language">
               <option value="en">English</option>
               <option value="ru">Русский</option>
               <option value="th">ไทย</option>
@@ -40,6 +41,12 @@
           </label>
         </div>
       </header>
+      <section id="first-use-guide"></section>
+      <nav class="mobile-workspace-nav" aria-label="Workspace" data-i18n-aria-label="nav.workspace">
+        <a href="#setup" data-i18n="nav.setup">Mission</a>
+        <a href="#viewport" data-i18n="nav.flight">Flight</a>
+        <a href="#telemetry" data-i18n="nav.telemetry">Data</a>
+      </nav>
 
       <main class="workspace">
         <aside id="setup" class="panel setup" tabindex="-1"></aside>
@@ -108,6 +115,7 @@
               </label>
             </div>
           </section>
+          <section id="mission-result" class="panel" hidden></section>
         </section>
 
         <aside id="telemetry" class="panel telemetry" tabindex="-1"></aside>

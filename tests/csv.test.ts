@@ -2,10 +2,8 @@
  * `buildTelemetryCsv`/`telemetryCsvFilename` (`src/ui/csv.ts`) — the flight
  * -data CSV format shared by `TelemetryPanel.exportCsv` and the WebMCP
  * `export_csv` tool. Pins the exact text (header, per-sample number
- * formatting, the trailing event section) and, since `src/mcp.ts` still
- * carries its own private `buildCsv` copy rather than importing these
- * helpers, cross-checks that the WebMCP tool's output is byte-for-byte
- * identical to what these helpers produce.
+ * formatting, the trailing event section) and cross-checks that the WebMCP
+ * tool's output is identical to the UI export, including retrospective events.
  */
 import { describe, expect, it } from 'vitest';
 import { buildTelemetryCsv, telemetryCsvFilename } from '../src/ui/csv';
@@ -81,6 +79,16 @@ describe('buildTelemetryCsv', () => {
     expect(tail[5]).toBe('155.2,evt.meco,"{}"');
     expect(tail).toHaveLength(6);
   });
+
+  it('exports retrospective events chronologically without changing the detection log', () => {
+    const sim = { ...makeSim(), events: [
+      { t: 60, key: 'evt.engineOut', severity: 'warn' },
+      { t: 59, key: 'evt.maxQ', severity: 'info' },
+    ] satisfies SimEvent[] };
+    const csv = buildTelemetryCsv(sim);
+    expect(csv.indexOf('59.0,evt.maxQ')).toBeLessThan(csv.indexOf('60.0,evt.engineOut'));
+    expect(sim.events.map((e) => e.t)).toEqual([60, 59]);
+  });
 });
 
 describe('telemetryCsvFilename', () => {
@@ -91,7 +99,11 @@ describe('telemetryCsvFilename', () => {
 
 describe('export_csv WebMCP tool cross-check', () => {
   it('produces text and a filename identical to the shared helpers', () => {
-    const sim = makeSim();
+    const sim = { ...makeSim(), events: [
+      ...EVENTS,
+      { t: 59, key: 'evt.maxQ', severity: 'info' },
+      { t: 155.2, key: 'evt.stageSep', severity: 'major' },
+    ] satisfies SimEvent[] };
     // `export_csv`'s `execute()` only reads `host.sim`; `createMcpTools`
     // builds every tool definition without eagerly touching any other host
     // field (see `src/mcp.ts`'s `createMcpTools`), so this minimal fake is
@@ -103,6 +115,8 @@ describe('export_csv WebMCP tool cross-check', () => {
     const result = exportTool.execute({}) as { ok: boolean; csv: string; filename: string };
     expect(result.ok).toBe(true);
     expect(result.csv).toBe(buildTelemetryCsv(sim));
+    expect(result.csv.indexOf('59.0,evt.maxQ')).toBeLessThan(result.csv.indexOf('155.2,evt.meco'));
+    expect(result.csv.indexOf('155.2,evt.meco')).toBeLessThan(result.csv.indexOf('155.2,evt.stageSep'));
     expect(result.filename).toBe(telemetryCsvFilename(sim));
   });
 });

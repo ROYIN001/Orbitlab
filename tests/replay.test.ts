@@ -11,9 +11,12 @@ import { Simulation } from '../src/physics/simulation';
 import { FlightRecorder } from '../src/replay/recorder';
 import { ReplayPlayer } from '../src/replay/player';
 import { createFrameSimView } from '../src/replay/simview';
-import { interpolateFrames } from '../src/physics/frame';
+import { captureFrame, interpolateFrames } from '../src/physics/frame';
+import { chronologicalEvents } from '../src/physics/events';
 import { phaseInfo } from '../src/ui/phase';
-import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
+import { DEFAULT_GUIDANCE, DEFAULT_FAILURE, guidanceForVehicle } from '../src/physics/defaults';
+import { vehicleById } from '../src/data/vehicles';
+import type { SimEvent } from '../src/physics/simulation';
 import { orbitById } from '../src/data/orbits';
 import type { FailureConfig, MissionConfig } from '../src/types';
 
@@ -476,5 +479,109 @@ describe('phase narration', () => {
     expect(pad.lastEvent).toBeNull();
     expect(pad.nextEvent!.t).toBeGreaterThan(-10);
     expect(phaseInfo(null, rec.events).lastEvent).toBeNull();
+  });
+});
+
+describe('retrospectively detected events', () => {
+  const c: MissionConfig = {
+    ...cfg({ mode: 'engineOut', time: 60, stage: 0 }),
+    vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur',
+    launchTime: new Date('2026-09-20T12:00:00Z'),
+    guidance: guidanceForVehicle(vehicleById('soyuz21a')), guidanceResolved: true,
+  };
+  const flight = record(150, new FlightRecorder(500), c);
+
+  it('keeps detection offsets intact while exposing occurrence order exactly once', () => {
+    const { sim, rec } = flight;
+    const failure = sim.events.find((e) => e.key === 'evt.engineOut')!;
+    const peak = sim.events.find((e) => e.key === 'evt.maxQ')!;
+    expect(peak.t).toBeCloseTo(59, 5);
+    expect(failure.t).toBeCloseTo(60, 5);
+    expect(sim.events.indexOf(failure)).toBeLessThan(sim.events.indexOf(peak));
+    expect(rec.events.indexOf(peak)).toBeLessThan(rec.events.indexOf(failure));
+    expect(rec.events).toEqual(sim.chronologicalEvents);
+    expect(new Set(rec.events).size).toBe(sim.events.length);
+    expect(rec.events).toHaveLength(sim.events.length);
+    // Both event instants survive recorder thinning, including the late peak.
+    for (const e of [failure, peak]) {
+      const k = rec.indexAt(e.t);
+      expect(Math.min(Math.abs(rec.frames[k].t - e.t), Math.abs((rec.frames[k + 1]?.t ?? Infinity) - e.t))).toBeLessThan(1e-8);
+    }
+    const before = rec.events;
+    rec.advance(20);
+    expect(new Set(rec.events).size).toBe(sim.events.length);
+    expect(rec.events).toEqual(sim.chronologicalEvents);
+    expect(before.every((e) => rec.events.includes(e))).toBe(true);
+  });
+
+  it('navigates the closest occurrence and never includes the future failure', () => {
+    const { sim, rec } = flight;
+    const p = new ReplayPlayer(rec);
+    expect(p.nextEventTime(58.99)).toBeCloseTo(59, 5);
+    expect(p.prevEventTime(60.01)).toBeCloseTo(60, 5);
+    expect(p.lastEvent(61)?.key).toBe('evt.engineOut');
+    expect(p.nextEvent(59.5)?.key).toBe('evt.engineOut');
+    const view = createFrameSimView(sim);
+    view.setFrame(p.frameAt(59.5)!);
+    expect(view.sim.events.at(-1)?.key).toBe('evt.maxQ');
+    expect(view.sim.events.every((e) => e.t <= 59.5)).toBe(true);
+    const info = phaseInfo(p.frameAt(59.5)!, rec.events);
+    expect(info.lastEvent?.key).toBe('evt.maxQ');
+    expect(info.nextEvent?.key).toBe('evt.engineOut');
+    view.setFrame(p.frameAt(61)!);
+    expect(view.sim.events.at(-1)?.key).toBe('evt.engineOut');
+    view.setFrame(p.frameAt(58)!);
+    expect(view.sim.events.some((e) => e.key === 'evt.maxQ' || e.key === 'evt.engineOut')).toBe(false);
+  });
+
+  it('refreshes a paused replay prefix when a late event arrives and retains ties', () => {
+    const sim = new Simulation(cfg());
+    const later: SimEvent = { t: 60, key: 'later', severity: 'info' };
+    const peak: SimEvent = { t: 59, key: 'peak', severity: 'info' };
+    const simultaneous: SimEvent = { t: 60, key: 'same-time', severity: 'major' };
+    sim.events.push(later);
+    const view = createFrameSimView(sim), frame = captureFrame(sim);
+    frame.t = 61; view.setFrame(frame);
+    const prefix = view.sim.events;
+    expect(prefix).toEqual([later]);
+    sim.events.push(peak, simultaneous);
+    expect(view.sim.events).toBe(prefix);
+    expect(prefix).toEqual([peak, later, simultaneous]);
+    expect(sim.events).toEqual([later, peak, simultaneous]);
+    expect(chronologicalEvents(sim.events)).toBe(sim.chronologicalEvents);
+  });
+});
+
+describe('telemetry compaction revisions', () => {
+  it('refreshes cached samples through the real cap, including a paused historical cursor', () => {
+    const sim = new Simulation(cfg());
+    const sample = sim.telemetry[0];
+    // Synthetic history avoids simulating several days merely to hit the cap.
+    // The next normal prelaunch sample runs the production compaction path.
+    sim.telemetry.length = 0;
+    for (let i = 0; i < 20000; i++) sim.telemetry.push({ ...sample, t: i - 20009, lat: i / 1000 });
+    const liveView = createFrameSimView(sim), pausedView = createFrameSimView(sim);
+    const liveFrame = captureFrame(sim), pausedFrame = captureFrame(sim);
+    liveView.setFrame(liveFrame);
+    pausedFrame.t = -15000; pausedView.setFrame(pausedFrame);
+    const liveSamples = liveView.sim.telemetry;
+    const pausedSamples = pausedView.sim.telemetry;
+    expect(liveSamples.length).toBe(20000);
+    const beforeRevision = sim.telemetryRevision;
+    sim.advance(1.1);
+    expect(sim.telemetryRevision).toBe(beforeRevision + 1);
+    expect(sim.telemetry.length).toBe(15001);
+    liveView.setFrame(captureFrame(sim));
+    expect(liveView.sim.telemetry).toBe(liveSamples);
+    expect(liveSamples).toEqual(sim.telemetry);
+    expect(liveSamples.at(-1)).toBe(sim.telemetry.at(-1));
+    // No setFrame call: the live recorder may compact while replay is paused.
+    expect(pausedView.sim.telemetry).toBe(pausedSamples);
+    expect(pausedSamples).toEqual(sim.telemetry.filter((s) => s.t <= pausedFrame.t + 1e-6));
+    expect(pausedView.sim.telemetryRevision).toBe(sim.telemetryRevision);
+    pausedFrame.t = -18000; pausedView.setFrame(pausedFrame);
+    expect(pausedView.sim.telemetry).toEqual(sim.telemetry.filter((s) => s.t <= pausedFrame.t + 1e-6));
+    pausedFrame.t = sim.state.t; pausedView.setFrame(pausedFrame);
+    expect(pausedView.sim.telemetry).toEqual(sim.telemetry);
   });
 });

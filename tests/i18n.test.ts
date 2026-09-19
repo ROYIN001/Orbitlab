@@ -90,7 +90,7 @@ function literalCallSites(): Map<string, string> {
   const found = new Map<string, string>();
   for (const [path, text] of SOURCES) {
     for (const m of text.matchAll(/\bt\(\s*'([a-zA-Z0-9._-]+)'/g)) found.set(m[1], path);
-    for (const m of text.matchAll(/data-i18n(?:-title)?="([^"]+)"/g)) found.set(m[1], path);
+    for (const m of text.matchAll(/data-i18n(?:-title|-aria-label)?="([^"]+)"/g)) found.set(m[1], path);
   }
   return found;
 }

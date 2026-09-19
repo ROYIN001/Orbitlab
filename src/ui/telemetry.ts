@@ -30,7 +30,7 @@
  * are elements created once and rewritten with `textContent`. A scrub through a
  * long recording therefore costs the same as a scrub through a short one.
  */
-import type { Simulation } from '../physics/simulation';
+import type { Simulation, SimEvent } from '../physics/simulation';
 import { drawChart, type ChartMarker, type Series } from './charts';
 import { t } from '../i18n';
 import { fmtTime } from './hud';
@@ -90,6 +90,7 @@ export class TelemetryPanel {
   private note!: HTMLElement;
   private rangeBtns: HTMLButtonElement[] = [];
   private shownEvents = 0;
+  private shownEventItems: SimEvent[] = [];
   /** the frame-backed view the panel draws */
   private view: Simulation | null = null;
   /** the live simulation, for the CSV export only */
@@ -158,6 +159,8 @@ export class TelemetryPanel {
       c.className = 'chart';
       r.append(c);
       this.charts[id] = c;
+      c.setAttribute('role', 'img');
+      c.setAttribute('aria-label', `${t(CHART_TITLES[id])} ${t('tel.chart.noData')}`);
     }
     // `headCls` exists for the event log alone: at the two-column breakpoint the
     // panel is a ~300 px scrolling strip, and the log needs a class its heading
@@ -179,6 +182,7 @@ export class TelemetryPanel {
     btn.addEventListener('click', () => this.exportCsv());
     r.append(btn);
     this.shownEvents = 0;
+    this.shownEventItems.length = 0;
     if (this.view) this.update(this.view, this.cursor);
   }
 
@@ -210,6 +214,7 @@ export class TelemetryPanel {
    */
   reset(): void {
     this.shownEvents = 0;
+    this.shownEventItems.length = 0;
     // The empty-state line goes back in, not out: a reset log is exactly the
     // case it exists for.
     this.events.replaceChildren(this.eventsEmpty);
@@ -322,10 +327,10 @@ export class TelemetryPanel {
     }
     const xs = cx.x;
     const xLabel = t('tel.xAxis');
-    const draw = (id: (typeof CHART_IDS)[number], list: Series[], yMin?: number): void => {
+    const draw = (id: (typeof CHART_IDS)[number], list: Series[], yMin?: number, seriesLabels?: string[]): void => {
       drawChart(this.charts[id], list, {
         title: t(CHART_TITLES[id]),
-        markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin,
+        markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin, seriesLabels,
       });
     };
     const set = (list: Series[], i: number, y: number[], color: string, label?: string): void => {
@@ -339,14 +344,14 @@ export class TelemetryPanel {
     draw('altitude', this.one);
     set(this.two, 0, vIn.y, '#8be5cd', 'v');
     set(this.two, 1, vAir.y, '#96a3b4', 'v_air');
-    draw('velocity', this.two);
+    draw('velocity', this.two, undefined, [t('tel.chart.inertial'), t('tel.chart.airspeed')]);
     set(this.one, 0, q.y, '#efa47e');
     draw('q', this.one, 0);
     set(this.one, 0, gL.y, '#7ddba0');
     draw('g', this.one, 0);
     set(this.two, 0, ap.y, '#6ec8ff', 'ap');
     set(this.two, 1, pe.y, '#8be5cd', 'pe');
-    draw('apsides', this.two, 0);
+    draw('apsides', this.two, 0, [t('tel.chart.apogee'), t('tel.chart.perigee')]);
     set(this.one, 0, dv.y, '#c3a6ff');
     draw('dv', this.one, 0);
     // pitch and mass reuse two traces whose charts are already rasterised
@@ -417,12 +422,18 @@ export class TelemetryPanel {
     // while a flight was running.
     const log = this.events;
     const atBottom = log.scrollHeight - log.scrollTop - log.clientHeight <= LOG_STICK;
-    while (this.shownEvents > events.length) {
+    let common = 0;
+    while (common < this.shownEvents && common < events.length && this.shownEventItems[common] === events[common]) common++;
+    // Preserve the unchanged prefix and rebuild only the suffix affected by a
+    // seek or a late event inserted into the chronology (for example max Q).
+    while (this.shownEvents > common) {
       log.lastChild?.remove();
       this.shownEvents--;
+      this.shownEventItems.pop();
     }
     while (this.shownEvents < events.length) {
       const e = events[this.shownEvents++];
+      this.shownEventItems.push(e);
       const div = el('div', e.severity);
       div.append(el('span', 't', fmtTime(e.t)), document.createTextNode(t(e.key, localizeEventParams(view.vehicleSpec, e.params))));
       log.append(div);

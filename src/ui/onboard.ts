@@ -23,8 +23,8 @@
  * the whole viewport: the porthole mask is what hides the 3-D scene outside the
  * glass, and a shortened canvas would leave a strip of unmasked scene.
  */
-import type { Simulation } from '../physics/simulation';
-import { t } from '../i18n';
+import type { Simulation, SimEvent } from '../physics/simulation';
+import { getLang, t } from '../i18n';
 import { dot, normalize } from '../physics/vec3';
 
 interface Tile {
@@ -35,7 +35,8 @@ interface Tile {
 export class OnboardOverlay {
   private canvas: HTMLCanvasElement;
   private lastEvent = '';
-  private lastEventT = -1e9;
+  private lastEventRef: SimEvent | undefined;
+  private lastEventLanguage = '';
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -151,7 +152,12 @@ export class OnboardOverlay {
 
     // ── latest callout ─────────────────────────────────────────────────────
     const last = sim.events[sim.events.length - 1];
-    if (last && last.t !== this.lastEventT) { this.lastEvent = t(last.key, last.params); this.lastEventT = last.t; }
+    const language = getLang();
+    if (last !== this.lastEventRef || language !== this.lastEventLanguage) {
+      this.lastEvent = last ? t(last.key, last.params) : '';
+      this.lastEventRef = last;
+      this.lastEventLanguage = language;
+    }
     const ey = by + padY + gaugeH;
     if (last && s.t - last.t < 12) {
       const blink = Math.floor(s.t * 3) % 2 === 0 || last.severity !== 'fail';

@@ -479,6 +479,17 @@ describe('configure_mission', () => {
     expect(() => tool(tools, 'configure_mission').execute({ failureTimeS: 1e9 }))
       .toThrowError(/"failureTimeS" must be between 0 and 2000/);
   });
+
+  it.each([
+    { perigeeKm: 99 }, { inclinationDeg: 181 }, { ltanHours: -1 },
+    { payloadMassKg: 0 }, { apogeeKm: Number.MAX_VALUE },
+    { launchTimeIso: '2026-02-30T12:00:00Z' }, { launchTimeIso: '2026-09-20T12:00' },
+  ])('rejects invalid input transactionally instead of silently clamping: %j', (input) => {
+    const before = JSON.stringify(host.panel.state);
+    expect(() => tool(tools, 'configure_mission').execute(input)).toThrowError();
+    expect(JSON.stringify(host.panel.state)).toBe(before);
+    expect(host.calls).not.toContain('preview');
+  });
 });
 
 describe('launch_mission', () => {

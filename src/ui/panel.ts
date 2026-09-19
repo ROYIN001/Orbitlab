@@ -40,15 +40,17 @@ import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
 import { liftoffMass, liftoffThrust, idealDeltaV, VehicleModel } from '../physics/vehicle';
 import {
   planMission, launchWindows, resolveTarget, inclinationCorridor, canBurnAfterAscent,
-  apsisTolerance, perigeeTolerance, ASCENT_MARGIN_REQUIRED, type MissionPlan,
+  apsisTolerance, perigeeTolerance, ASCENT_MARGIN_REQUIRED, RAAN_TOLERANCE, type MissionPlan,
 } from '../physics/mission';
-import {
-  runAscent, probeInsertion, DEFAULT_KICKS, DEFAULT_RATES, DEFAULT_LOFTS, needsLoftSearch,
-  type TuneResult, type InsertionProbe,
-} from '../physics/autotune';
+import { wrapPi } from '../physics/orbital';
+import { probeInsertion, type InsertionProbe } from '../physics/autotune';
+import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes } from './names';
+import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue } from '../config/validation';
+import { quickstartMission, type QuickstartId } from './quickstart';
+import { loadExperience, saveExperience, type ExperienceMode } from './experience';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -85,9 +87,7 @@ function toDatetimeLocalUTC(d: Date): string {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 }
 function fromDatetimeLocalUTC(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(s);
-  if (!m) return null;
-  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0));
+  return parseUtcDateTime(s);
 }
 const fmtUTC = (d: Date) => d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
 
@@ -281,8 +281,13 @@ export function missionVerdict(i: VerdictInput): Feasibility {
   // Written first and carried into whatever the rest of the verdict turns out
   // to be, so no branch below can return without it.
   const armed = i.failureMode !== 'none' ? t('setup.verdict.failureArmed', { mode: t(`setup.fail.${i.failureMode}`) }) : '';
+  const planeError = i.plan && i.plan.target.raan !== null
+    ? Math.abs(wrapPi(i.plan.raanExpected - i.plan.target.raan)) : 0;
+  const planeWarning = planeError > RAAN_TOLERANCE
+    ? t('setup.verdict.offWindow', { error: (planeError * RAD).toFixed(1) }) : '';
   const say = (level: Feasibility['level'], ...clauses: string[]): Feasibility =>
-    ({ level, text: [armed, ...clauses].filter((s) => s !== '').join(' ') });
+    ({ level: planeWarning && level === 'ok' ? 'warn' : level,
+      text: [armed, planeWarning, ...clauses].filter((s) => s !== '').join(' ') });
 
   if (cap <= 0) {
     return say('fail', t('setup.verdict.noRating', { vehicle: i.spec.name, class: t(`orbit.class.${cls}`) }));
@@ -359,6 +364,7 @@ export class SetupPanel {
   state: SetupState;
   private running = false;
   private tuning = false;
+  private tuneController: AbortController | null = null;
   private tuneMessage = '';
   /** the mission the current auto-tune result was measured for */
   private tunedFor = '';
@@ -370,6 +376,10 @@ export class SetupPanel {
   private statsEl: HTMLElement | null = null;
   private windowsEl: HTMLElement | null = null;
   private launchBtn: HTMLButtonElement | null = null;
+  private readonly fieldInputs = new Map<string, { input: HTMLInputElement; error: HTMLElement }>();
+  private readonly fieldDrafts = new Map<string, string>();
+  private readonly inputIssues = new Map<string, ValidationIssue>();
+  private experience: ExperienceMode = loadExperience();
   /** the mission plan for the current state; null when the planner rejected it */
   private planCache: ReturnType<typeof planMission> | null = null;
   /** the headless insertion flight for the current state; null when none was run */
@@ -398,6 +408,7 @@ export class SetupPanel {
   }
 
   getConfig(): MissionConfig {
+    if (!this.isValid()) throw new Error(t('setup.validation.summary'));
     const s = this.state;
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
@@ -408,7 +419,75 @@ export class SetupPanel {
     };
   }
 
+  /** Input validity is separate from feasibility: an infeasible experiment may
+   * still launch, but a malformed field must never preview or launch stale data. */
+  isValid(): boolean {
+    return this.inputIssues.size === 0 && validateConfigInput(this.state).length === 0;
+  }
+
+  private validationText(issue: ValidationIssue): string {
+    const params = { limit: issue.limit ?? '' };
+    switch (issue.code) {
+      case 'required': return t('setup.validation.required');
+      case 'number': return t('setup.validation.number');
+      case 'minimum': return t('setup.validation.minimum', params);
+      case 'maximum': return t('setup.validation.maximum', params);
+      case 'integer': return t('setup.validation.integer');
+      case 'date': return t('setup.validation.date');
+      case 'orbitOrder': return t('setup.validation.orbitOrder');
+      case 'selection': return t('setup.validation.selection');
+    }
+  }
+
+  private updateValidation(): void {
+    const issues = [...validateConfigInput(this.state), ...this.inputIssues.values()];
+    for (const [field, { input, error }] of this.fieldInputs) {
+      const issue = issues.find((i) => i.field === field);
+      const message = issue ? this.validationText(issue) : '';
+      input.setAttribute('aria-invalid', String(!!issue));
+      input.setCustomValidity(message);
+      error.textContent = message;
+      error.hidden = !issue;
+      if (issue) {
+        const details = input.closest('details');
+        if (details) details.open = true;
+      }
+    }
+    const guidance = this.root.querySelector<HTMLElement>('.guidance-parameters');
+    if (guidance) guidance.dataset.invalid = String(!!guidance.querySelector('[aria-invalid="true"]'));
+    if (this.launchBtn) this.launchBtn.disabled = this.tuning || issues.length > 0;
+    const tune = this.root.querySelector<HTMLButtonElement>('[data-action="autotune"]');
+    if (tune && !this.tuning) tune.disabled = this.running || issues.length > 0;
+    if (issues.length && this.noteEl) {
+      this.noteEl.className = 'status-note fail';
+      const text = this.noteEl.querySelector('.status-text');
+      if (text) text.textContent = t('setup.validation.summary');
+    } else if (this.noteEl) this.updateVerdict();
+  }
+
+  private registerField(labelKey: string, input: HTMLInputElement, label: HTMLElement): void {
+    const error = this.el('span', 'field-error');
+    error.id = `validation-${labelKey.replace(/\./g, '-')}`;
+    error.hidden = true;
+    error.setAttribute('aria-live', 'polite');
+    input.setAttribute('aria-describedby', error.id);
+    label.append(input, error);
+    this.fieldInputs.set(labelKey, { input, error });
+  }
+
+  private clearFieldDrafts(...fields: string[]): void {
+    for (const field of fields) {
+      this.fieldDrafts.delete(field);
+      this.inputIssues.delete(field);
+    }
+  }
+
+  private clearOrbitDrafts(): void {
+    this.clearFieldDrafts('setup.perigee', 'setup.apogee', 'setup.inclination', 'setup.argPerigee', 'setup.raan', 'setup.ltan');
+  }
+
   setRunning(r: boolean): void {
+    if (r) this.cancelTune();
     this.running = r;
     this.render();
   }
@@ -446,6 +525,9 @@ export class SetupPanel {
    * a second `feasibility()` call racing the clear below.
    */
   applyExternalEdit(opts?: { siteReassigned?: boolean }): Feasibility {
+    this.cancelTune();
+    this.fieldDrafts.clear();
+    this.inputIssues.clear();
     this.siteReassigned = !!opts?.siteReassigned;
     this.tunedFor = this.missionSignature();
     this.render();
@@ -457,7 +539,9 @@ export class SetupPanel {
   /** What an auto-tune result is valid for: change any of it and the tune is stale. */
   private missionSignature(): string {
     const s = this.state;
-    return `${s.vehicleId}|${s.siteId}|${s.orbitId}|${s.orbit.perigee}|${s.orbit.apogee}|${s.orbit.inclination}|${s.payloadMass}|${s.satelliteId}`;
+    return JSON.stringify({ vehicle: s.vehicleId, site: s.siteId, orbit: s.orbit,
+      payload: s.payloadMass, satellite: s.satelliteId, launchTime: s.launchTime,
+      failure: s.failure, recovery: s.boosterRecovery });
   }
 
   // ─── element helpers ──────────────────────────────────────────────────────
@@ -491,17 +575,42 @@ export class SetupPanel {
     lab.appendChild(this.el('span', undefined, t(labelKey)));
     const inp = this.el('input');
     inp.type = 'number';
-    inp.value = String(+value.toFixed(3));
+    inp.value = this.fieldDrafts.get(labelKey) ?? String(+value.toFixed(3));
     inp.step = String(step);
     inp.setAttribute('aria-label', t(labelKey));
-    if (min !== undefined) inp.min = String(min);
-    if (max !== undefined) inp.max = String(max);
+    const def = Object.values(GUIDANCE_FIELDS).find((f) => `setup.${f.key}` === labelKey);
+    const stored = def ? guidanceLimits(def.key, vehicleById(this.state.vehicleId)) : null;
+    const limits = def && stored
+      ? { min: stored.min === undefined ? undefined : stored.min / def.scale, max: stored.max === undefined ? undefined : stored.max / def.scale }
+      : NUMBER_FIELDS[labelKey] ?? { min, max };
+    if (limits.min !== undefined) inp.min = String(limits.min);
+    if (limits.max !== undefined) inp.max = String(limits.max);
     inp.disabled = this.running;
-    inp.addEventListener('change', () => {
-      const v = Number(inp.value);
-      if (isFinite(v)) onChange(v);
+    const read = (): { value: number; issue: ValidationIssue | null } => {
+      const parsed = parseNumberField(inp.value, labelKey, limits);
+      if (inp.validity.badInput) parsed.issue = { field: labelKey, code: 'number' };
+      if (parsed.issue) this.inputIssues.set(labelKey, parsed.issue);
+      else this.inputIssues.delete(labelKey);
+      return parsed;
+    };
+    inp.addEventListener('input', () => {
+      this.cancelTune();
+      this.fieldDrafts.set(labelKey, inp.value);
+      read();
+      this.updateValidation();
     });
-    lab.appendChild(inp);
+    inp.addEventListener('change', () => {
+      const parsed = read();
+      if (!parsed.issue) {
+        this.fieldDrafts.delete(labelKey);
+        onChange(parsed.value);
+      } else {
+        this.cancelTune();
+        this.fieldDrafts.set(labelKey, inp.value);
+      }
+      this.updateValidation();
+    });
+    this.registerField(labelKey, inp, lab);
     return lab;
   }
 
@@ -510,6 +619,65 @@ export class SetupPanel {
     head.appendChild(this.el('span', 'step-number', step));
     head.appendChild(this.el('h2', undefined, t(titleKey)));
     return head;
+  }
+
+  private quickstartSection(): HTMLElement {
+    const section = this.el('section', 'config-section quickstart');
+    section.id = 'quickstart-missions';
+    const heading = this.el('h2', undefined, t('setup.quickstart.title'));
+    heading.id = 'quickstart-title';
+    section.setAttribute('aria-labelledby', heading.id);
+    section.append(heading, this.el('p', 'field-note', t('setup.quickstart.note')));
+    const options: { id: QuickstartId; title: string; detail: string }[] = [
+      { id: 'leo', title: t('setup.quickstart.leo'), detail: t('setup.quickstart.leoDetail') },
+      { id: 'iss', title: t('setup.quickstart.iss'), detail: t('setup.quickstart.issDetail') },
+      { id: 'gto', title: t('setup.quickstart.gto'), detail: t('setup.quickstart.gtoDetail') },
+    ];
+    for (const option of options) {
+      const button = this.el('button', 'quickstart-button');
+      button.type = 'button';
+      button.dataset.quickstart = option.id;
+      button.disabled = this.running;
+      button.append(this.el('strong', undefined, option.title), this.el('span', undefined, option.detail));
+      button.addEventListener('click', () => {
+        if (this.running) return;
+        this.cancelTune();
+        Object.assign(this.state, quickstartMission(option.id));
+        this.tuneMessage = '';
+        this.applyExternalEdit();
+        this.cb.onChange?.(this.getConfig());
+      });
+      section.append(button);
+    }
+    return section;
+  }
+
+  private experienceSection(): HTMLElement {
+    const section = this.el('section', 'config-section experience-section');
+    const label = this.el('label', 'field experience-label');
+    label.append(this.el('span', undefined, t('setup.mode.label')));
+    const select = this.el('select');
+    select.id = 'experience-mode';
+    select.setAttribute('aria-label', t('setup.mode.label'));
+    for (const [value, text] of [['learning', t('setup.mode.learning')], ['advanced', t('setup.mode.advanced')]]) {
+      const option = this.el('option', undefined, text);
+      option.value = value;
+      option.selected = this.experience === value;
+      select.append(option);
+    }
+    select.addEventListener('change', () => {
+      this.experience = select.value as ExperienceMode;
+      saveExperience(this.experience);
+      this.render();
+      if (this.experience === 'advanced') {
+        const guidance = this.root.querySelector<HTMLDetailsElement>('details[data-section="guidance"]');
+        if (guidance) guidance.open = true;
+      }
+    });
+    label.append(select);
+    section.append(label, this.el('p', 'field-note', t(this.experience === 'learning' ? 'setup.mode.learningNote' : 'setup.mode.advancedNote')));
+    if (this.experience === 'learning') section.append(this.el('p', 'field-note experience-glossary', t('setup.mode.glossary')));
+    return section;
   }
 
   private statCell(label: string, value: string, unit?: string): HTMLElement {
@@ -522,6 +690,7 @@ export class SetupPanel {
   }
 
   private changed(): void {
+    this.cancelTune();
     // An auto-tune result belongs to the mission it was measured on.
     const sig = this.missionSignature();
     if (sig !== this.tunedFor) {
@@ -534,7 +703,7 @@ export class SetupPanel {
       }
     }
     this.refresh();
-    this.cb.onChange?.(this.getConfig());
+    if (this.isValid()) this.cb.onChange?.(this.getConfig());
     // The site notice is news about the edit that has just been painted, not a
     // state of the mission: clearing it here is what stops it masking every
     // later verdict for the rest of the session.
@@ -555,16 +724,21 @@ export class SetupPanel {
   render(): void {
     const s = this.state;
     const root = this.root;
+    const openDetails = new Map(Array.from(root.querySelectorAll<HTMLDetailsElement>('details[data-section]'), (details) => [details.dataset.section!, details.open]));
     const active = document.activeElement as HTMLElement | null;
     const focusName = active && root.contains(active) ? active.getAttribute('aria-label') : null;
     const caret = active instanceof HTMLInputElement && active.type !== 'number' ? active.selectionStart : null;
     root.setAttribute('aria-label', t('a11y.setupPanel'));
+    root.dataset.experience = this.experience;
+    this.fieldInputs.clear();
     root.replaceChildren();
     const vehicle = vehicleById(s.vehicleId);
     if (!vehicle.sites.includes(s.siteId)) {
       s.siteId = vehicle.sites[0];
       this.siteReassigned = true;
     }
+
+    s.failure.stage = Math.min(s.failure.stage, vehicle.stages.length - 1);
 
     // heading
     const heading = this.el('div', 'panel-heading');
@@ -577,6 +751,8 @@ export class SetupPanel {
 
     const scroll = this.el('div', 'setup-scroll');
     root.appendChild(scroll);
+    scroll.appendChild(this.experienceSection());
+    scroll.appendChild(this.quickstartSection());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
     const s1 = this.el('section', 'config-section');
@@ -619,6 +795,8 @@ export class SetupPanel {
     const s2 = this.el('section', 'config-section');
     s2.appendChild(this.sectionTitle('02', 'setup.step.payload'));
     s2.appendChild(this.select('setup.satellite', SATELLITES.map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
+      this.clearOrbitDrafts();
+      this.clearFieldDrafts('setup.payloadMass');
       s.satelliteId = v;
       const sat = satelliteById(v);
       s.payloadMass = sat.mass;
@@ -628,7 +806,7 @@ export class SetupPanel {
       this.render();
       this.changed();
     }));
-    s2.appendChild(this.number('setup.payloadMass', s.payloadMass, (v) => { s.payloadMass = Math.max(1, v); this.changed(); }, 10, 1));
+    s2.appendChild(this.number('setup.payloadMass', s.payloadMass, (v) => { s.payloadMass = v; this.changed(); }, 10, 1));
     scroll.appendChild(s2);
 
     // ── 03 target orbit & launch time ───────────────────────────────────────
@@ -644,6 +822,7 @@ export class SetupPanel {
       b.setAttribute('aria-pressed', String(s.orbitId === o.id));
       b.disabled = this.running;
       b.addEventListener('click', () => {
+        this.clearOrbitDrafts();
         s.orbitId = o.id;
         s.orbit = { ...orbitById(o.id) };
         this.render();
@@ -660,35 +839,55 @@ export class SetupPanel {
     const site = siteById(s.siteId);
     const target = resolveTarget(s.orbit, site, s.launchTime);
     const orbitRow = this.el('div', 'row');
-    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { this.customise(); s.orbit.perigee = Math.max(100, v) * 1000; this.changed(); }, 10, 100));
-    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { this.customise(); s.orbit.apogee = Math.max(100, v) * 1000; this.changed(); }, 10, 100));
+    orbitRow.appendChild(this.number('setup.perigee', s.orbit.perigee / 1000, (v) => { this.customise(); s.orbit.perigee = v * 1000; this.changed(); }, 10, 100));
+    orbitRow.appendChild(this.number('setup.apogee', s.orbit.apogee / 1000, (v) => { this.customise(); s.orbit.apogee = v * 1000; this.changed(); }, 10, 100));
     s3.appendChild(orbitRow);
     const orbitRow2 = this.el('div', 'row');
     // `changed()`, not `render()`: the control set does not depend on the
     // inclination, and rebuilding the panel here destroyed the field the
     // operator had just typed into and dropped focus to the body.
-    orbitRow2.appendChild(this.number('setup.inclination', target.inclination * RAD, (v) => { this.customise(); s.orbit.inclination = Math.max(0, Math.min(180, v)); this.changed(); }, 0.1, 0, 180));
-    orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = ((v % 360) + 360) % 360; this.changed(); }, 1, 0, 360));
+    orbitRow2.appendChild(this.number('setup.inclination', target.inclination * RAD, (v) => { this.customise(); s.orbit.inclination = v; this.changed(); }, 0.1, 0, 180));
+    orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = v; this.changed(); }, 1, 0, 360));
     s3.appendChild(orbitRow2);
     s3.appendChild(this.select('setup.raanMode', [
       { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
       { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
     ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
-    if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = ((v % 360) + 360) % 360; this.changed(); }, 1, 0, 360));
-    if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = Math.max(0, Math.min(24, v)); this.changed(); }, 0.25, 0, 24));
+    if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
+    if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
 
     const timeLab = this.el('label', 'field');
     timeLab.appendChild(this.el('span', undefined, t('setup.launchTime')));
     const timeInp = this.el('input');
     timeInp.type = 'datetime-local';
-    timeInp.value = toDatetimeLocalUTC(s.launchTime);
+    timeInp.value = this.fieldDrafts.get('setup.launchTime') ?? toDatetimeLocalUTC(s.launchTime);
     timeInp.disabled = this.running;
     timeInp.setAttribute('aria-label', t('setup.launchTime'));
-    timeInp.addEventListener('change', () => {
+    const readDate = (): Date | null => {
       const d = fromDatetimeLocalUTC(timeInp.value);
-      if (d) { s.launchTime = d; this.changed(); }
+      if (d) this.inputIssues.delete('setup.launchTime');
+      else this.inputIssues.set('setup.launchTime', { field: 'setup.launchTime', code: timeInp.value ? 'date' : 'required' });
+      return d;
+    };
+    timeInp.addEventListener('input', () => {
+      this.cancelTune();
+      this.fieldDrafts.set('setup.launchTime', timeInp.value);
+      readDate();
+      this.updateValidation();
     });
-    timeLab.appendChild(timeInp);
+    timeInp.addEventListener('change', () => {
+      const d = readDate();
+      if (d) {
+        this.fieldDrafts.delete('setup.launchTime');
+        s.launchTime = d;
+        this.changed();
+      } else {
+        this.cancelTune();
+        this.fieldDrafts.set('setup.launchTime', timeInp.value);
+      }
+      this.updateValidation();
+    });
+    this.registerField('setup.launchTime', timeInp, timeLab);
     s3.appendChild(timeLab);
     const winBox = this.el('div', 'windows');
     winBox.id = 'launch-windows';
@@ -723,16 +922,31 @@ export class SetupPanel {
     launch.appendChild(this.el('span', 'launch-label', t(this.running ? 'setup.relaunch' : 'setup.launchMission')));
     launch.appendChild(this.el('span', 'key-hint', 'SPACE'));
     launch.disabled = this.tuning;
-    launch.addEventListener('click', () => this.cb.onLaunch(this.getConfig()));
+    launch.addEventListener('click', () => { if (this.isValid()) this.cb.onLaunch(this.getConfig()); });
     this.launchBtn = launch;
     area.appendChild(launch);
     const reset = this.el('button', 'ghost-button', t('setup.reset'));
     reset.type = 'button';
-    reset.addEventListener('click', () => { this.running = false; this.render(); this.cb.onReset(); });
+    reset.addEventListener('click', () => {
+      this.cancelTune();
+      this.fieldDrafts.clear();
+      this.inputIssues.clear();
+      this.running = false;
+      this.render();
+      this.cb.onReset();
+    });
     area.appendChild(reset);
     area.appendChild(this.el('p', 'launch-note', t('setup.launchNote')));
     root.appendChild(area);
 
+    for (const details of root.querySelectorAll<HTMLDetailsElement>('details[data-section]')) {
+      if (openDetails.has(details.dataset.section!)) details.open = openDetails.get(details.dataset.section!)!;
+    }
+    // A RAAN/LTAN control can disappear when its mode changes. A discarded
+    // field must not keep an invisible draft error blocking the next mission.
+    for (const field of this.inputIssues.keys()) {
+      if (!this.fieldInputs.has(field)) this.clearFieldDrafts(field);
+    }
     this.refresh();
     if (focusName) {
       const again = root.querySelector<HTMLElement>(`[aria-label="${CSS.escape(focusName)}"]`);
@@ -747,6 +961,7 @@ export class SetupPanel {
 
   private guidanceSection(): HTMLElement {
     const gd = this.el('details');
+    gd.dataset.section = 'guidance';
     gd.appendChild(this.el('summary', undefined, t('setup.guidance')));
     const g = this.guidance;
     const set = (k: keyof GuidanceParams, v: number): void => {
@@ -756,31 +971,47 @@ export class SetupPanel {
       this.changed();
     };
     gd.appendChild(this.el('p', 'field-note', t('setup.guidanceNote')));
+    const parameters = this.el('div', 'guidance-parameters');
+    gd.append(parameters);
+    const reveal = this.el('button', 'btn guidance-reveal', t('setup.mode.reveal'));
+    reveal.type = 'button';
+    reveal.addEventListener('click', () => {
+      this.experience = 'advanced';
+      saveExperience(this.experience);
+      this.render();
+      const details = this.root.querySelector<HTMLDetailsElement>('details[data-section="guidance"]');
+      if (details) details.open = true;
+    });
+    gd.append(reveal);
     const r1 = this.el('div', 'row');
     r1.appendChild(this.number('setup.kickAngle', g.kickAngle, (v) => set('kickAngle', v), 0.5, 0, 45));
     r1.appendChild(this.number('setup.maxTurnRate', g.maxTurnRate, (v) => set('maxTurnRate', v), 0.05, 0.1, 3));
-    gd.appendChild(r1);
+    parameters.appendChild(r1);
     const r2 = this.el('div', 'row');
     r2.appendChild(this.number('setup.pitchOverAltitude', g.pitchOverAltitude, (v) => set('pitchOverAltitude', v), 50, 20, 5000));
     r2.appendChild(this.number('setup.kickDuration', g.kickDuration, (v) => set('kickDuration', v), 1, 1, 60));
-    gd.appendChild(r2);
+    parameters.appendChild(r2);
     const r3 = this.el('div', 'row');
     r3.appendChild(this.number('setup.loftAltitude', g.loftAltitude / 1000, (v) => set('loftAltitude', v * 1000), 10, 0, 400));
     r3.appendChild(this.number('setup.gravityTurnEnd', g.gravityTurnEnd / 1000, (v) => set('gravityTurnEnd', v * 1000), 5, 30, 150));
-    gd.appendChild(r3);
+    parameters.appendChild(r3);
     const r4 = this.el('div', 'row');
     r4.appendChild(this.number('setup.pitchMax', g.pitchMax, (v) => set('pitchMax', v), 1, 0, 80));
     r4.appendChild(this.number('setup.pitchMin', g.pitchMin, (v) => set('pitchMin', v), 1, -60, 0));
-    gd.appendChild(r4);
+    parameters.appendChild(r4);
     const r5 = this.el('div', 'row');
     r5.appendChild(this.number('setup.slewRate', g.slewRate, (v) => set('slewRate', v), 0.5, 0.5, 20));
     r5.appendChild(this.number('setup.maxAccel', g.maxAccel, (v) => set('maxAccel', v), 1, 0, 100));
-    gd.appendChild(r5);
-    gd.appendChild(this.number('setup.parkingAltitude', g.parkingAltitude / 1000, (v) => set('parkingAltitude', v * 1000), 10, 0, 2000));
-    const tuneBtn = this.el('button', 'btn', this.tuning ? t('setup.autotuning') : t('setup.autotune'));
+    parameters.appendChild(r5);
+    parameters.appendChild(this.number('setup.parkingAltitude', g.parkingAltitude / 1000, (v) => set('parkingAltitude', v * 1000), 10, 0, 2000));
+    const tuneBtn = this.el('button', 'btn', this.tuning ? t('setup.tune.cancel') : t('setup.autotune'));
     tuneBtn.type = 'button';
-    tuneBtn.disabled = this.running || this.tuning;
-    tuneBtn.addEventListener('click', () => void this.autotune());
+    tuneBtn.dataset.action = 'autotune';
+    tuneBtn.disabled = this.running || (!this.tuning && !this.isValid());
+    tuneBtn.addEventListener('click', () => {
+      if (this.tuning) { this.cancelTune(); this.render(); }
+      else void this.autotune();
+    });
     gd.appendChild(tuneBtn);
     gd.appendChild(this.el('p', 'field-note', t('setup.autotuneScope')));
     const tuneMsg = this.el('div', 'progress', this.tuneMessage);
@@ -792,10 +1023,11 @@ export class SetupPanel {
   private failureSection(vehicle: VehicleSpec): HTMLElement {
     const s = this.state;
     const fd = this.el('details');
+    fd.dataset.section = 'failure';
     fd.appendChild(this.el('summary', undefined, t('setup.failure')));
     fd.appendChild(this.select('setup.failureMode', FAILURE_MODES.map((m) => ({ value: m, label: t(`setup.fail.${m}`) })), s.failure.mode, (v) => { s.failure.mode = v as FailureMode; this.changed(); }));
     const fr = this.el('div', 'row');
-    fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = Math.max(0, v); this.changed(); }, 5, 0, 2000));
+    fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = v; this.changed(); }, 5, 0, 2000));
     fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;
@@ -804,6 +1036,7 @@ export class SetupPanel {
   private optionsSection(vehicle: VehicleSpec): HTMLElement {
     const s = this.state;
     const od = this.el('details');
+    od.dataset.section = 'options';
     od.appendChild(this.el('summary', undefined, t('setup.options')));
     const chk = this.el('label', 'checkbox');
     const cb = this.el('input');
@@ -833,6 +1066,12 @@ export class SetupPanel {
 
   /** Update everything derived from state without rebuilding the controls. */
   private refresh(): void {
+    if (!this.isValid()) {
+      this.planCache = null;
+      this.probeCache = null;
+      this.updateValidation();
+      return;
+    }
     // One plan per refresh: both the info card and the feasibility verdict read
     // it, and planning twice per keystroke buys nothing.
     try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), vehicleById(this.state.vehicleId)); } catch { this.planCache = null; }
@@ -846,6 +1085,7 @@ export class SetupPanel {
       const label = this.launchBtn.querySelector('.launch-label');
       if (label) label.textContent = t(this.running ? 'setup.relaunch' : 'setup.launchMission');
     }
+    this.updateValidation();
   }
 
   private updateStats(): void {
@@ -904,13 +1144,13 @@ export class SetupPanel {
       const row = this.el('button', 'window-row', `▸ ${fmtUTC(w.time)} · RAAN ${(w.raanTarget * RAD).toFixed(1)}°`);
       row.type = 'button';
       row.disabled = this.running;
-      row.addEventListener('click', () => { s.launchTime = w.time; this.render(); this.changed(); });
+      row.addEventListener('click', () => { this.clearFieldDrafts('setup.launchTime'); s.launchTime = w.time; this.render(); this.changed(); });
       box.appendChild(row);
     }
     const btn = this.el('button', 'btn', t('setup.nextWindow'));
     btn.type = 'button';
     btn.disabled = this.running || wins.length === 0;
-    btn.addEventListener('click', () => { if (wins[0]) { s.launchTime = wins[0].time; this.render(); this.changed(); } });
+    btn.addEventListener('click', () => { if (wins[0]) { this.clearFieldDrafts('setup.launchTime'); s.launchTime = wins[0].time; this.render(); this.changed(); } });
     box.appendChild(btn);
   }
 
@@ -1025,44 +1265,57 @@ export class SetupPanel {
     if (text) text.textContent = v.text;
   }
 
-  /** Chunked auto-tune so the UI stays responsive. */
+  private cancelTune(): void {
+    if (!this.tuneController) return;
+    this.tuneController.abort();
+    this.tuneController = null;
+    this.tuning = false;
+    this.tuneMessage = t('setup.tune.cancelled');
+    // Draft edits cancel before blur. Refresh only these nodes so focus and
+    // the unfinished input are retained, while the cancelled worker's last
+    // progress line cannot remain visible as if it were still running.
+    const message = this.root.querySelector('#tune-msg');
+    if (message) message.textContent = this.tuneMessage;
+    const button = this.root.querySelector<HTMLButtonElement>('[data-action="autotune"]');
+    if (button) button.textContent = t('setup.autotune');
+  }
+
+  /** One shared, bounded full-mission tuner; cancellation terminates its worker. */
   private async autotune(): Promise<void> {
-    if (this.tuning) return;
+    if (this.tuning || !this.isValid()) return;
+    const cfg = this.getConfig();
+    const signature = JSON.stringify(cfg);
+    const controller = new AbortController();
+    this.tuneController = controller;
     this.tuning = true;
     this.tuneMessage = t('setup.autotuning');
     this.render();
-    const cfg = this.getConfig();
-    const lofts = needsLoftSearch(cfg) ? DEFAULT_LOFTS : [0];
-    const combos: [number, number, number][] = [];
-    for (const loft of lofts) for (const rate of DEFAULT_RATES) for (const k of DEFAULT_KICKS) combos.push([k, rate, loft]);
-    const results: TuneResult[] = [];
-    for (let i = 0; i < combos.length; i++) {
-      const [k, rate, loft] = combos[i];
-      results.push(runAscent(cfg, k, rate, loft));
-      const msg = this.root.querySelector('#tune-msg');
-      if (msg) msg.textContent = `${t('setup.autotuning')} ${i + 1}/${combos.length}`;
-      if (i % 3 === 2) await new Promise((r) => setTimeout(r, 0));
+    try {
+      const outcome = await runTuneJob(cfg, controller.signal, (progress) => {
+        if (this.tuneController !== controller) return;
+        this.tuneMessage = t(progress.phase === 'ascent' ? 'setup.tune.ascent' : 'setup.tune.mission', { done: progress.completed, total: progress.total });
+        const msg = this.root.querySelector('#tune-msg');
+        if (msg) msg.textContent = this.tuneMessage;
+      });
+      if (this.tuneController !== controller || this.running || !this.isValid() || JSON.stringify(this.getConfig()) !== signature) return;
+      const best = outcome.best;
+      if (best?.missionOnTarget) {
+        this.state.guidanceOverrides = { ...best.guidance };
+        this.tunedFor = this.missionSignature();
+        this.tuneMessage = t('setup.tune.verified', { kick: best.kickAngle, rate: best.maxTurnRate, loft: best.loftAltitude / 1000 });
+        this.cb.onChange?.(this.getConfig());
+      } else this.tuneMessage = t('setup.tune.noTarget');
+    } catch (error) {
+      if (this.tuneController === controller) {
+        this.tuneMessage = t(error instanceof DOMException && error.name === 'AbortError' ? 'setup.tune.cancelled' : 'setup.tune.error');
+      }
+    } finally {
+      if (this.tuneController === controller) {
+        this.tuneController = null;
+        this.tuning = false;
+        this.render();
+      }
     }
-    const ok = results.filter((r) => r.success);
-    let best: TuneResult | null = null;
-    if (ok.length) best = ok.reduce((a, b) => (b.dvRemaining > a.dvRemaining ? b : a));
-    this.tuning = false;
-    if (best) {
-      // Scoped to this mission: `changed()` drops the overrides as soon as the
-      // vehicle, site, orbit or payload moves away from what was measured.
-      this.state.guidanceOverrides = {
-        ...this.state.guidanceOverrides,
-        kickAngle: best.kickAngle,
-        maxTurnRate: best.maxTurnRate,
-        loftAltitude: best.loftAltitude,
-      };
-      this.tunedFor = this.missionSignature();
-      this.tuneMessage = t('setup.autotuneResult', { kick: best.kickAngle, rate: best.maxTurnRate, loft: best.loftAltitude / 1000, dv: Math.round(best.dvRemaining) });
-    } else {
-      this.tuneMessage = t('setup.autotuneFail');
-    }
-    this.render();
-    this.cb.onChange?.(this.getConfig());
   }
 }
 

@@ -124,7 +124,7 @@ export class Timeline {
   private modeLabel: HTMLElement;
   private cb: TimelineCallbacks;
   private chips: Chip[] = [];
-  private events: SimEvent[] = [];
+  private events: readonly SimEvent[] = [];
   private axis = new TimeAxis();
   /** the flying vehicle, for the stage names its events carry (see `evParams`) */
   private vehicle: VehicleSpec | null = null;
@@ -281,33 +281,39 @@ export class Timeline {
   }
 
   /**
-   * Point the bar at the recorded event list. The DOM is only touched when the
-   * number of events has changed; the recording never rewrites past events.
+   * Reconcile by event identity: a retrospectively detected peak can arrive
+   * before an existing chip. Array indexes are not stable event identities.
    */
-  setEvents(events: SimEvent[]): void {
-    if (events.length === this.chips.length && events === this.events) return;
+  setEvents(events: readonly SimEvent[]): void {
+    if (events === this.events) return;
+    const existing = new Map(this.chips.map((chip) => [chip.event, chip]));
+    const focused = document.activeElement;
     this.events = events;
-    if (events.length < this.chips.length) {
-      this.reset();
-      this.events = events;
-    }
-    for (let i = this.chips.length; i < events.length; i++) {
-      const ev = events[i];
+    this.chips = events.map((ev) => {
+      const old = existing.get(ev);
+      if (old) { existing.delete(ev); old.sig = ''; return old; }
       const el = document.createElement('button');
       el.className = `tl-chip sev-${ev.severity}`;
       el.type = 'button';
       const chip: Chip = { el, event: ev, label: eventLabel(ev.key, this.evParams(ev)), width: -1, sig: '', members: [ev], cycle: 0 };
       el.addEventListener('click', () => this.chipClick(chip));
-      this.bar.appendChild(el);
-      this.chips.push(chip);
+      return chip;
+    });
+    for (const old of existing.values()) old.el.remove();
+    // Match keyboard traversal to occurrence order as well as visual placement.
+    for (let i = this.chips.length - 1; i >= 0; i--) {
+      const el = this.chips[i].el;
+      const next = this.chips[i + 1]?.el ?? null;
+      if (el.parentElement !== this.bar || el.nextSibling !== next) this.bar.insertBefore(el, next);
     }
+    if (focused instanceof HTMLElement && focused.isConnected && document.activeElement !== focused) focused.focus({ preventScroll: true });
     this.insertionT = this.insertionTimeOf(events);
     this.insertionLabel = this.insertionLabelFor(events);
     this.layout(true);
   }
 
   /** Mission time at which the ascent ends, or null if it has not yet. */
-  private insertionTimeOf(events: SimEvent[]): number | null {
+  private insertionTimeOf(events: readonly SimEvent[]): number | null {
     let best: number | null = null;
     for (const e of events) {
       if (!INSERTION_KEYS.includes(e.key)) continue;
@@ -316,7 +322,7 @@ export class Timeline {
     return best === null ? null : best + INSERTION_MARGIN;
   }
 
-  private insertionLabelFor(events: SimEvent[]): string {
+  private insertionLabelFor(events: readonly SimEvent[]): string {
     let best: SimEvent | null = null;
     for (const e of events) {
       if (!INSERTION_KEYS.includes(e.key)) continue;

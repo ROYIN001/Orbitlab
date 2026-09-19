@@ -32,6 +32,8 @@ import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
 import { resolveTarget } from './physics/mission';
 import { RAD } from './physics/constants';
+import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, numericIssue, issueText, parseUtcDateTime, assertConfigInput } from './config/validation';
+import { buildTelemetryCsv } from './ui/csv';
 
 // ─────────────────────────────────────────────────────────────── host shape
 
@@ -75,7 +77,7 @@ interface McpPanelHost {
 }
 
 interface McpRecorderHost {
-  readonly events: SimEvent[];
+  readonly events: readonly SimEvent[];
   readonly startTime: number;
   readonly headTime: number;
   recordNow(): VisualFrame;
@@ -148,30 +150,6 @@ const FAILURE_MODES: FailureMode[] = ['none', 'engineOut', 'thrustLoss', 'premat
 const PLAYBACK_ACTIONS = ['play', 'pause', 'warp', 'live', 'skip_next', 'skip_previous'] as const;
 type PlaybackAction = (typeof PLAYBACK_ACTIONS)[number];
 
-/**
- * Guidance override fields, named and ranged exactly like the panel's own
- * "Guidance parameters" section (`src/ui/panel.ts#guidanceSection`) so
- * `configure_mission` rejects the same values the form would. `scale` turns
- * the wire unit (km for altitudes) into the metre/degree/second unit
- * `GuidanceParams` stores; `range` is expressed in the *stored* unit.
- */
-const GUIDANCE_FIELDS: Record<string, { key: keyof GuidanceParams; scale: number; range: [number, number] }> = {
-  pitchOverAltitudeM: { key: 'pitchOverAltitude', scale: 1, range: [20, 5000] },
-  kickAngleDeg: { key: 'kickAngle', scale: 1, range: [0, 45] },
-  kickDurationS: { key: 'kickDuration', scale: 1, range: [1, 60] },
-  maxTurnRateDegS: { key: 'maxTurnRate', scale: 1, range: [0.1, 3] },
-  loftAltitudeKm: { key: 'loftAltitude', scale: 1000, range: [0, 400000] },
-  gravityTurnEndKm: { key: 'gravityTurnEnd', scale: 1000, range: [30000, 150000] },
-  parkingAltitudeKm: { key: 'parkingAltitude', scale: 1000, range: [0, 2000000] },
-  pitchMaxDeg: { key: 'pitchMax', scale: 1, range: [0, 80] },
-  pitchMinDeg: { key: 'pitchMin', scale: 1, range: [-60, 0] },
-  slewRateDegS: { key: 'slewRate', scale: 1, range: [0.5, 20] },
-  maxAccelMs2: { key: 'maxAccel', scale: 1, range: [0, 100] },
-  // Not shown by the panel (no UI control), so only sanity-checked rather
-  // than pinned to a form-measured band.
-  maxTimeToGoS: { key: 'maxTimeToGo', scale: 1, range: [60, 10000] },
-};
-
 // ───────────────────────────────────────────────────────────── input helpers
 
 function asRecord(input: unknown): Record<string, unknown> {
@@ -186,7 +164,7 @@ function expectNumber(v: unknown, field: string): number {
   return v;
 }
 
-function parseGuidanceInput(raw: unknown): Partial<GuidanceParams> {
+function parseGuidanceInput(raw: unknown, spec: VehicleSpec): Partial<GuidanceParams> {
   if (raw === undefined || raw === null) return {};
   if (typeof raw !== 'object' || Array.isArray(raw)) throw new Error('"guidance" must be an object');
   const out: Partial<GuidanceParams> = {};
@@ -195,13 +173,20 @@ function parseGuidanceInput(raw: unknown): Partial<GuidanceParams> {
     if (!def) throw new Error(`Unknown guidance field "${k}". Valid fields: ${Object.keys(GUIDANCE_FIELDS).join(', ')}`);
     const num = expectNumber(v, `guidance.${k}`);
     const stored = num * def.scale;
-    const [lo, hi] = def.range;
-    if (stored < lo || stored > hi) {
+    const { min: lo = -Infinity, max: hi = Infinity } = guidanceLimits(def.key, spec);
+    if (!Number.isFinite(stored) || stored < lo || stored > hi) {
       throw new Error(`guidance.${k} must be between ${lo / def.scale} and ${hi / def.scale} (got ${num})`);
     }
     out[def.key] = stored;
   }
   return out;
+}
+
+function expectFieldNumber(value: unknown, field: string, labelKey: string): number {
+  const num = expectNumber(value, field);
+  const issue = numericIssue(num, field, NUMBER_FIELDS[labelKey]);
+  if (issue) throw new Error(issueText(issue));
+  return num;
 }
 
 /** The inverse of `parseGuidanceInput`, for echoing a resolved config back. */
@@ -241,12 +226,11 @@ function applyOrbitInput(state: McpPanelState, input: Record<string, unknown>): 
     orbit = { ...state.orbit };
   }
   if (hasCustomFields) {
-    if (input.perigeeKm !== undefined) orbit.perigee = Math.max(100, expectNumber(input.perigeeKm, 'perigeeKm')) * 1000;
-    if (input.apogeeKm !== undefined) orbit.apogee = Math.max(100, expectNumber(input.apogeeKm, 'apogeeKm')) * 1000;
-    if (input.inclinationDeg !== undefined) orbit.inclination = Math.max(0, Math.min(180, expectNumber(input.inclinationDeg, 'inclinationDeg')));
+    if (input.perigeeKm !== undefined) orbit.perigee = expectFieldNumber(input.perigeeKm, 'perigeeKm', 'setup.perigee') * 1000;
+    if (input.apogeeKm !== undefined) orbit.apogee = expectFieldNumber(input.apogeeKm, 'apogeeKm', 'setup.apogee') * 1000;
+    if (input.inclinationDeg !== undefined) orbit.inclination = expectFieldNumber(input.inclinationDeg, 'inclinationDeg', 'setup.inclination');
     if (input.argPerigeeDeg !== undefined) {
-      const v = expectNumber(input.argPerigeeDeg, 'argPerigeeDeg');
-      orbit.argPerigee = ((v % 360) + 360) % 360;
+      orbit.argPerigee = expectFieldNumber(input.argPerigeeDeg, 'argPerigeeDeg', 'setup.argPerigee');
     }
     if (input.raanMode !== undefined) {
       const m = expectString(input.raanMode, 'raanMode');
@@ -254,10 +238,9 @@ function applyOrbitInput(state: McpPanelState, input: Record<string, unknown>): 
       orbit.raanMode = m as OrbitSpec['raanMode'];
     }
     if (input.raanDeg !== undefined) {
-      const v = expectNumber(input.raanDeg, 'raanDeg');
-      orbit.raan = ((v % 360) + 360) % 360;
+      orbit.raan = expectFieldNumber(input.raanDeg, 'raanDeg', 'setup.raan');
     }
-    if (input.ltanHours !== undefined) orbit.ltan = Math.max(0, Math.min(24, expectNumber(input.ltanHours, 'ltanHours')));
+    if (input.ltanHours !== undefined) orbit.ltan = expectFieldNumber(input.ltanHours, 'ltanHours', 'setup.ltan');
     if (orbit.perigee > orbit.apogee) {
       throw new Error(`Custom orbit perigee (${(orbit.perigee / 1000).toFixed(1)} km) must not exceed apogee (${(orbit.apogee / 1000).toFixed(1)} km)`);
     }
@@ -338,14 +321,13 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   }
   applyOrbitInput(state, input);
   if (input.payloadMassKg !== undefined) {
-    const v = expectNumber(input.payloadMassKg, 'payloadMassKg');
-    if (v <= 0) throw new Error('"payloadMassKg" must be a positive number');
+    const v = expectFieldNumber(input.payloadMassKg, 'payloadMassKg', 'setup.payloadMass');
     state.payloadMass = v;
   }
   if (input.launchTimeIso !== undefined) {
     const s = expectString(input.launchTimeIso, 'launchTimeIso');
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) throw new Error(`"launchTimeIso" ("${s}") is not a valid ISO 8601 date-time`);
+    const d = parseUtcDateTime(s, true);
+    if (!d) throw new Error(`"launchTimeIso" ("${s}") is not a valid ISO 8601 date-time with a time zone`);
     state.launchTime = d;
   }
   if (input.boosterRecovery !== undefined) {
@@ -363,7 +345,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     const v = expectNumber(input.failureTimeS, 'failureTimeS');
     // Same 0-2000 s band as the panel's own failure-time field (panel.ts's
     // `number('setup.failureTime', ..., 0, 2000)`).
-    if (v < 0 || v > 2000) throw new Error('"failureTimeS" must be between 0 and 2000');
+    if (numericIssue(v, 'failureTimeS', NUMBER_FIELDS['setup.failureTime'])) throw new Error('"failureTimeS" must be between 0 and 2000');
     state.failure = { ...state.failure, time: v };
   }
   if (input.failureStageIndex !== undefined) {
@@ -375,8 +357,9 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     state.failure = { ...state.failure, stage: v };
   }
   if (input.guidance !== undefined) {
-    state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance) };
+    state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, vehicleById(state.vehicleId)) };
   }
+  assertConfigInput(state);
   // Every validator above has run without throwing: commit the whole edit at
   // once, so a throw earlier in this function never leaves a partial write on
   // the state the rest of the app treats as the current mission.
@@ -477,20 +460,6 @@ function playbackState(host: McpAppHost): Record<string, unknown> {
   };
 }
 
-function buildCsv(sim: Simulation): string {
-  const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
-  const lines = [cols.join(',')];
-  for (const s of sim.telemetry) {
-    lines.push([s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase]
-      .map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v))).join(','));
-  }
-  lines.push('');
-  lines.push('# events');
-  lines.push('t_s,event,details');
-  for (const e of sim.events) lines.push(`${e.t.toFixed(1)},${e.key},"${JSON.stringify(e.params ?? {}).replace(/"/g, '""')}"`);
-  return lines.join('\n');
-}
-
 // ──────────────────────────────────────────────────────────── input schemas
 
 const CONFIG_PROPERTIES: Record<string, unknown> = {
@@ -505,7 +474,7 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   raanMode: { type: 'string', enum: RAAN_MODES, description: 'How the ascending node is targeted: free, a fixed RAAN, the ISS plane, or a local time of ascending node.' },
   raanDeg: { type: 'number', minimum: 0, maximum: 360, description: 'Fixed RAAN, deg (raanMode "fixed").' },
   ltanHours: { type: 'number', minimum: 0, maximum: 24, description: 'Local time of ascending node, hours (raanMode "ltan").' },
-  payloadMassKg: { type: 'number', exclusiveMinimum: 0, description: 'Payload mass, kg.' },
+  payloadMassKg: { type: 'number', minimum: 1, description: 'Payload mass, kg.' },
   launchTimeIso: { type: 'string', description: 'Launch epoch, ISO 8601 UTC, e.g. "2026-09-20T12:00:00Z".' },
   boosterRecovery: { type: 'boolean', description: 'Reserve first-stage propellant for recovery (only for vehicles that support it).' },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
@@ -626,6 +595,7 @@ function toolLaunchMission(host: McpAppHost): WebMcpTool {
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     execute: (rawInput: unknown) => {
       const input = asRecord(rawInput);
+      if (Object.keys(input).length === 0) assertConfigInput(host.panel.state);
       const { notices, feasibility } = Object.keys(input).length > 0
         ? applyConfigureInput(host, rawInput)
         : { notices: [] as string[], feasibility: host.panel.feasibility() };
@@ -774,7 +744,7 @@ function toolExportCsv(host: McpAppHost): WebMcpTool {
     execute: () => {
       if (!host.sim) return { ok: false, reason: 'No active mission: nothing recorded yet.' };
       const sim = host.sim;
-      return { ok: true, filename: `orbitlab_${sim.vehicleSpec.id}_${sim.cfg.orbit.id}.csv`, csv: buildCsv(sim) };
+      return { ok: true, filename: `orbitlab_${sim.vehicleSpec.id}_${sim.cfg.orbit.id}.csv`, csv: buildTelemetryCsv(sim) };
     },
   };
 }

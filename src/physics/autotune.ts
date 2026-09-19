@@ -64,7 +64,7 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
   const c: MissionConfig = {
     ...cfg,
     guidance: { ...cfg.guidance, kickAngle, maxTurnRate, loftAltitude },
-    failure: { mode: 'none', time: 0, stage: 0 },
+    failure: { ...cfg.failure },
   };
   const sim = new Simulation(c, { headless: true });
   const flown = sim.cfg.guidance;
@@ -128,11 +128,11 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
 export function flyToTarget(
   cfg: MissionConfig, guidance: GuidanceParams, maxTime = 6 * 3600, maxSteps = 300000,
 ): { onTarget: boolean; misses: OrbitMiss[]; endStatus: string | null; t: number } {
-  const sim = new Simulation({ ...cfg, guidance, guidanceResolved: true, failure: { mode: 'none', time: 0, stage: 0 } }, { headless: true });
+  const sim = new Simulation({ ...cfg, guidance, guidanceResolved: true, failure: { ...cfg.failure } }, { headless: true });
   let guard = 0;
   while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) sim.step(sim.suggestedDt());
   const hit = sim.events.find((e) => e.key === 'evt.targetOrbit');
-  const res = orbitResiduals(sim.plan.target, sim.state.elements);
+  const res = orbitResiduals(sim.plan.target, sim.state.elements, true);
   // A candidate can also fail by never getting far enough to have a residual at
   // all (it broke up, or it is still climbing at the horizon). That used to be
   // reported as a fabricated `ended <status>` entry in the residual list, which
@@ -159,10 +159,16 @@ export function needsLoftSearch(cfg: MissionConfig): boolean {
   return a > 0 && a < 4.8;
 }
 
-export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICKS, rates: number[] = DEFAULT_RATES, lofts?: number[]): AutotuneOutcome {
+export interface TuneProgress { phase: 'ascent' | 'mission'; completed: number; total: number }
+
+export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICKS, rates: number[] = DEFAULT_RATES, lofts?: number[], onProgress?: (progress: TuneProgress) => void): AutotuneOutcome {
   const results: TuneResult[] = [];
   const loftList = lofts ?? (needsLoftSearch(cfg) ? DEFAULT_LOFTS : [0]);
-  for (const loft of loftList) for (const rate of rates) for (const k of candidates) results.push(runAscent(cfg, k, rate, loft));
+  const total = loftList.length * rates.length * candidates.length;
+  for (const loft of loftList) for (const rate of rates) for (const k of candidates) {
+    results.push(runAscent(cfg, k, rate, loft));
+    onProgress?.({ phase: 'ascent', completed: results.length, total });
+  }
   const ok = results.filter((r) => r.success);
   let best: TuneResult | null = null;
   if (ok.length > 0) {
@@ -171,11 +177,13 @@ export function autotune(cfg: MissionConfig, candidates: number[] = DEFAULT_KICK
     // delta-v first so the pass is spent on the candidates most likely to win,
     // and capped at five flights so a tuning click stays affordable.
     const ranked = [...ok].sort((a, b) => b.dvRemaining - a.dvRemaining);
-    for (const r of ranked.slice(0, 5)) {
+    const finalists = ranked.slice(0, 5);
+    for (const [index, r] of finalists.entries()) {
       const m = flyToTarget(cfg, r.guidance);
       r.missionOnTarget = m.onTarget;
       r.missionMisses = m.misses;
       if (m.endStatus !== null) r.missionEndStatus = m.endStatus;
+      onProgress?.({ phase: 'mission', completed: index + 1, total: finalists.length });
     }
     const complete = ranked.filter((r) => r.missionOnTarget);
     best = complete.length > 0 ? complete[0] : ranked[0];

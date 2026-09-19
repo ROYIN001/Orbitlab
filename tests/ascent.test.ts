@@ -7,6 +7,8 @@ import { VEHICLES } from '../src/data/vehicles';
 import { liftoffMass, liftoffThrust, idealDeltaV } from '../src/physics/vehicle';
 import type { MissionConfig } from '../src/types';
 import { G0 } from '../src/physics/constants';
+import { launchWindows } from '../src/physics/mission';
+import { siteById } from '../src/data/sites';
 
 const mk = (over: Partial<MissionConfig>): MissionConfig => ({
   vehicleId: 'falcon9', satelliteId: 'starlink', siteId: 'cape', orbit: orbitById('iss'),
@@ -123,6 +125,7 @@ describe('ascent to parking orbit', () => {
 describe('full missions', () => {
   it('Falcon 9 to the ISS orbit: parking orbit, Hohmann transfer, circularisation, payload separation', () => {
     const cfg = mk({});
+    cfg.launchTime = launchWindows(cfg.orbit, siteById(cfg.siteId), cfg.launchTime, 1)[0].time;
     const tuned = autotune(cfg);
     const sim = flyToEnd({ ...cfg, guidance: { ...cfg.guidance, kickAngle: tuned.best!.kickAngle, maxTurnRate: tuned.best!.maxTurnRate, loftAltitude: tuned.best!.loftAltitude } }, 4 * 3600);
     const keys = sim.events.map((e) => e.key);

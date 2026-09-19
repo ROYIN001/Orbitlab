@@ -83,8 +83,10 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
   let debrisFor = -1;
   const telemetryCache: TelemetrySample[] = [];
   let telemetryCut = -1;
+  let telemetryRevision = -1;
   const eventsCache: SimEvent[] = [];
   let eventsCut = -1;
+  let eventsSource: readonly SimEvent[] | null = null;
 
   const apply = (f: VisualFrame): void => {
     state.t = f.t;
@@ -155,13 +157,13 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
   };
 
   /** Make `out` the first `n` entries of `src`, reusing the array it already has. */
-  const fit = <T>(out: T[], src: T[], n: number): void => {
+  const fit = <T>(out: T[], src: readonly T[], n: number): void => {
     if (out.length > n) out.length = n;
     for (let i = out.length; i < n; i++) out.push(src[i]);
   };
 
   /** Last index of `arr` whose `t` is at or before `time` (exclusive upper bound). */
-  const cut = (arr: { t: number }[], time: number): number => {
+  const cut = (arr: readonly { t: number }[], time: number): number => {
     let lo = 0;
     let hi = arr.length;
     while (lo < hi) {
@@ -210,13 +212,12 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
         const f = frame;
         if (!f) return [];
         const n = cut(sim.telemetry, f.t);
-        if (n !== telemetryCut) {
+        if (n !== telemetryCut || telemetryRevision !== sim.telemetryRevision) {
           telemetryCut = n;
-          // Grown and shrunk in place rather than re-`slice`d. Both source
-          // arrays are append-only, so index i means the same sample for the
-          // whole flight and the copy costs the delta, not the whole array —
-          // `sim.telemetry` reaches tens of thousands of entries on a long
-          // mission and the map reads this getter on every animation frame.
+          // Append/truncate cheaply between compactions. A compaction changes
+          // existing indexes, even when the cursor or prefix length is unchanged.
+          if (telemetryRevision !== sim.telemetryRevision) telemetryCache.length = 0;
+          telemetryRevision = sim.telemetryRevision;
           fit(telemetryCache, sim.telemetry, n);
         }
         return telemetryCache;
@@ -227,10 +228,14 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
       get(): SimEvent[] {
         const f = frame;
         if (!f) return [];
-        const n = cut(sim.events, f.t);
-        if (n !== eventsCut) {
+        const source = sim.chronologicalEvents;
+        const n = cut(source, f.t);
+        if (n !== eventsCut || source !== eventsSource) {
           eventsCut = n;
-          fit(eventsCache, sim.events, n);
+          // A newly detected peak can be inserted before events already shown.
+          if (source !== eventsSource) eventsCache.length = 0;
+          eventsSource = source;
+          fit(eventsCache, source, n);
         }
         return eventsCache;
       },

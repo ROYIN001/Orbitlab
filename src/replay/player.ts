@@ -42,7 +42,7 @@ export class ReplayPlayer {
   get headTime(): number {
     return this.rec.headTime;
   }
-  get events(): SimEvent[] {
+  get events(): readonly SimEvent[] {
     return this.rec.events;
   }
 

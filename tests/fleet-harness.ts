@@ -15,7 +15,7 @@ import { VEHICLES } from '../src/data/vehicles';
 import type { MissionConfig, VehicleSpec } from '../src/types';
 import { G0, DEG, RAD } from '../src/physics/constants';
 import { elementsFromState, wrapPi } from '../src/physics/orbital';
-import { azimuthAllowedFor, inclinationCorridor, resolveTarget } from '../src/physics/mission';
+import { azimuthAllowedFor, inclinationCorridor, resolveTarget, launchWindows } from '../src/physics/mission';
 
 export const LAUNCH_TIME = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
 export const FRACTIONS = [0.25, 0.5, 0.9];
@@ -66,12 +66,9 @@ export function achievedElements(sim: Simulation): ReturnType<typeof elementsFro
  * Independent comparison of the achieved orbit with the mission's target.
  *
  * Graded here, against this file's own bands, from this file's own re-derived
- * elements. RAAN is graded whenever the target constrains it AND the launch was
- * made into a window that could reach that plane — the plane an ascent reaches
- * is fixed at liftoff and no burn in the plan rotates it, so grading it on an
- * off-window launch would fail every flight for something the vehicle was never
- * asked to do. The window test is written out here rather than taken from the
- * simulation, for the same reason as the bands.
+ * elements. RAAN is graded whenever the target constrains it, including an
+ * off-window launch. Capability fixtures select a valid launch window; an
+ * impossible mission must never pass by silently dropping a target constraint.
  */
 export function orbitMisses(sim: Simulation): string[] {
   const el = achievedElements(sim);
@@ -89,9 +86,8 @@ export function orbitMisses(sim: Simulation): string[] {
   const dInc = (el.i - target.inclination) / DEG;
   if (!(Math.abs(dInc) <= INCLINATION_TOLERANCE_DEG)) misses.push(`inclination ${dInc.toFixed(2)}° off`);
   if (target.raan !== null) {
-    const windowReachable = Math.abs(wrapPi(sim.plan.raanExpected - target.raan)) <= RAAN_TOLERANCE_DEG * DEG;
     const dRaan = wrapPi(el.raan - target.raan) / DEG;
-    if (windowReachable && Math.abs(dRaan) > RAAN_TOLERANCE_DEG) misses.push(`RAAN ${dRaan.toFixed(1)}° off`);
+    if (!(Math.abs(dRaan) <= RAAN_TOLERANCE_DEG)) misses.push(`RAAN ${dRaan.toFixed(1)}° off`);
   }
   return misses;
 }
@@ -166,9 +162,11 @@ export function allCases(): FleetCase[] {
 
 export function flyCase(c: FleetCase, satelliteId = 'cubesats'): Simulation {
   const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
+  const orbit = orbitById(c.orbit);
+  const window = orbit.raanMode === 'free' ? undefined : launchWindows(orbit, siteById(c.site), LAUNCH_TIME, 1)[0];
   const cfg: MissionConfig = {
-    vehicleId: c.vehicle, satelliteId, siteId: c.site, orbit: orbitById(c.orbit),
-    launchTime: LAUNCH_TIME,
+    vehicleId: c.vehicle, satelliteId, siteId: c.site, orbit,
+    launchTime: window?.time ?? LAUNCH_TIME,
     guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) },
     guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: c.mass,

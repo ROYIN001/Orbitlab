@@ -117,7 +117,7 @@ export class Narration {
     this.shown = { label: '', title: '', detail: '', event: '', clock: '', ctx: '', state: '' };
   }
 
-  update(frame: VisualFrame | null, events: SimEvent[], st: NarrationState): void {
+  update(frame: VisualFrame | null, events: readonly SimEvent[], st: NarrationState): void {
     const info = phaseInfo(frame, events);
     const label = frame ? t(`hud.status.${frame.status}`) : t('hud.status.prelaunch');
     const title = t(info.titleKey);

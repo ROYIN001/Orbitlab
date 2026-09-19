@@ -163,6 +163,8 @@ input[type="text"] {
 input[type="number"] { font-family: var(--mono); }
 label.field { display: block; margin: 12px 0 0; }
 label.field > span { display: block; margin-bottom: 6px; font-size: 13px; color: #b7c2d0; }
+label.field > .field-error { margin: 6px 0 0; color: var(--fail); font-size: 12px; }
+input[aria-invalid="true"] { border-color: var(--fail); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .checkbox { display: flex; align-items: center; gap: 9px; margin: 10px 0 4px; font-size: 13px; }
 .checkbox input { width: auto; height: auto; accent-color: var(--accent); }
@@ -195,6 +197,20 @@ details[open] summary { margin-bottom: 4px; }
 .setup-scroll { flex: 1; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #354252 transparent; }
 .config-section { padding: 16px 18px 20px; border-bottom: 1px solid var(--line); }
 .config-section:last-child { border-bottom: 0; }
+.quickstart h2 { margin: 0 0 6px; font-size: 14px; }
+.quickstart-button {
+  display: flex; flex-direction: column; width: 100%; gap: 3px;
+  text-align: left; margin-top: 8px; padding: 10px 12px;
+  background: var(--panel2); border: 1px solid var(--line2); border-radius: 7px;
+}
+.quickstart-button strong { font-size: 13px; color: var(--accent); }
+.quickstart-button span { font-size: 11px; line-height: 1.5; color: var(--muted); }
+.quickstart-button:hover:not(:disabled) { border-color: var(--accent-line); }
+.experience-section .experience-label { margin-top: 0; }
+.experience-glossary { padding-top: 6px; border-top: 1px solid var(--line); }
+#setup[data-experience="learning"] .guidance-parameters:not([data-invalid="true"]) { display: none; }
+#setup[data-experience="advanced"] .guidance-reveal { display: none; }
+.guidance-reveal { margin: 8px 0; }
 .section-title { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
 .section-title h2 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 0.1px; }
 .step-number {
@@ -1012,4 +1028,11 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; }
+}
+/* On narrow screens provide direct jumps between the stacked work areas. */
+.mobile-workspace-nav { display: none; }
+@media (max-width: 860px) {
+  .mobile-workspace-nav { display: flex; justify-content: center; gap: 8px; padding: 8px 12px; }
+  .mobile-workspace-nav a { flex: 1; min-height: 40px; padding: 10px; text-align: center; border: 1px solid var(--line); border-radius: 6px; color: var(--text); }
+  #setup, #viewport, #telemetry { scroll-margin-top: 12px; }
 }

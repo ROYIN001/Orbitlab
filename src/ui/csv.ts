@@ -6,18 +6,15 @@
  * (`src/ui/telemetry.ts`, the panel's download button) calls
  * `buildTelemetryCsv`/`telemetryCsvFilename` here and handles only the DOM
  * half itself — Blob, anchor, `URL.createObjectURL`. The WebMCP `export_csv`
- * tool (`src/mcp.ts`) promises "the same format the telemetry panel
- * downloads", but `src/mcp.ts` is owned by the WebMCP wave and currently
- * still carries its own private `buildCsv` copy rather than importing these
- * helpers; it should adopt them, and until it does, `tests/csv.test.ts` pins
- * the two outputs as byte-for-byte identical so the copies cannot silently
- * drift apart.
+ * tool (`src/mcp.ts`) uses the same builder. Event rows use occurrence order,
+ * matching the timeline even when a peak was detected retrospectively.
  *
  * DOM-free on purpose: no `Blob`, no `document`, nothing that only exists in
  * a browser, so this can be unit-tested under `environment: 'node'` and
  * shared with any future non-DOM caller (e.g. a Node-side export).
  */
 import type { Simulation } from '../physics/simulation';
+import { chronologicalEvents } from '../physics/events';
 
 /** Telemetry samples plus the event log, as CSV text (no trailing newline). */
 export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>): string {
@@ -29,7 +26,7 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
   lines.push('');
   lines.push('# events');
   lines.push('t_s,event,details');
-  for (const e of sim.events) lines.push(`${e.t.toFixed(1)},${e.key},"${JSON.stringify(e.params ?? {}).replace(/"/g, '""')}"`);
+  for (const e of chronologicalEvents(sim.events)) lines.push(`${e.t.toFixed(1)},${e.key},"${JSON.stringify(e.params ?? {}).replace(/"/g, '""')}"`);
   return lines.join('\n');
 }
 

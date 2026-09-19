@@ -16,6 +16,7 @@ export class OrbitalMap {
   private trackPts: { lat: number; lon: number }[] = [];
   private trackForSim: Simulation | null = null;
   private trackSeen = 0;
+  private trackRevision = -1;
 
   constructor(canvas: HTMLCanvasElement, imageUrl: string) {
     this.canvas = canvas;
@@ -134,14 +135,15 @@ export class OrbitalMap {
       // Ground track from telemetry, appended in place rather than rebuilt.
       // `filter().map()` over the whole buffer allocated two arrays of up to
       // twenty thousand objects on every animation frame the map was open; the
-      // track only ever grows at one end. It is rebuilt from scratch whenever
-      // the buffer shrinks — which is what scrubbing backwards (the view is
-      // truncated to the cursor) and thinning the buffer both look like.
+      // A compaction can happen while another camera is open, and the buffer
+      // can grow back before the map is drawn again. Its generation catches
+      // that case even when the sample count did not visibly shrink.
       const tel = sim.telemetry;
-      if (this.trackForSim !== sim || tel.length < this.trackSeen) {
+      if (this.trackForSim !== sim || tel.length < this.trackSeen || this.trackRevision !== sim.telemetryRevision) {
         this.trackForSim = sim;
         this.trackPts = [];
         this.trackSeen = 0;
+        this.trackRevision = sim.telemetryRevision;
       }
       for (let i = this.trackSeen; i < tel.length; i++) {
         const smp = tel[i];

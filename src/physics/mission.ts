@@ -581,15 +581,14 @@ export function orbitResiduals(
   // RAAN is a LAUNCH WINDOW property, not a guidance one: the plane an ascent
   // reaches is fixed by the moment of liftoff, and nothing in the burn plan
   // rotates it (a RAAN change at these altitudes costs kilometres per second).
-  // So it is reported always and *graded* only when the mission was launched
-  // into a window that could reach the target plane in the first place —
-  // `checkRaan`, which `Simulation` derives from `plan.raanExpected`. Grading it
-  // unconditionally would fail every flight launched off-window for something
-  // the vehicle was never asked to fix.
+  // Final mission acceptance passes checkRaan=true even off-window: a stable
+  // orbit in another plane has not met the requested target. Intermediate
+  // steering/insertion checks may omit it because a burn cannot fix the
+  // launch-time error; that omission must never grant final mission success.
   let dRaan: number | null = null;
   if (target.raan !== null) {
     dRaan = wrapPi(el.raan - target.raan) / DEG;
-    if (checkRaan && Math.abs(dRaan) > RAAN_TOLERANCE / DEG) {
+    if (checkRaan && !(Math.abs(dRaan) <= RAAN_TOLERANCE / DEG)) {
       misses.push({ param: 'raan', achieved: el.raan / DEG, target: target.raan / DEG });
     }
   }

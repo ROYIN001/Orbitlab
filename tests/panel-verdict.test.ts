@@ -25,7 +25,7 @@ import { siteById, type SiteExtra } from '../src/data/sites';
 import { vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import { orbitById } from '../src/data/orbits';
-import { planMission, resolveTarget } from '../src/physics/mission';
+import { planMission, resolveTarget, launchWindows } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
 import { guidanceForVehicle, DEFAULT_FAILURE } from '../src/physics/defaults';
 import { RAD } from '../src/physics/constants';
@@ -160,7 +160,10 @@ function verdictFor(vehicleId: string, siteId: string, orbitId: string, satellit
   const satellite = satelliteById(satelliteId);
   const payloadMass = mass ?? satellite.mass;
   const cfg: MissionConfig = {
-    vehicleId, satelliteId, siteId, orbit, launchTime: LAUNCH_TIME,
+    vehicleId, satelliteId, siteId, orbit,
+    // These cases isolate vehicle capability; plane-window warnings have a
+    // dedicated test, so use a valid window when the preset constrains it.
+    launchTime: orbit.raanMode === 'free' ? LAUNCH_TIME : (launchWindows(orbit, site, LAUNCH_TIME, 1)[0]?.time ?? LAUNCH_TIME),
     guidance: guidanceForVehicle(spec), guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: payloadMass,
   };

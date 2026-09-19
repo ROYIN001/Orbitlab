@@ -8,6 +8,8 @@ import { TrailLine, OrbitLine } from './render/lines';
 import { LaunchPadView } from './render/launchpad';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { SetupPanel } from './ui/panel';
+import { HelpGuide } from './ui/help';
+import { MissionResult } from './ui/mission-result';
 import { Hud } from './ui/hud';
 import { TelemetryPanel } from './ui/telemetry';
 import { OrbitalMap } from './ui/map';
@@ -111,6 +113,7 @@ class App {
   scene!: SceneManager;
   hud: Hud;
   tel: TelemetryPanel;
+  result: MissionResult;
   map: OrbitalMap;
   onboard: OnboardOverlay;
   timeline: Timeline;
@@ -184,6 +187,8 @@ class App {
   private earthC = new THREE.Vector3();
 
   constructor() {
+    new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
+    this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
     this.viewport = document.getElementById('viewport')!;
     this.glCanvas = document.getElementById('gl') as HTMLCanvasElement;
     this.mapCanvas = document.getElementById('map') as HTMLCanvasElement;
@@ -463,7 +468,7 @@ class App {
   }
 
   private updateMissionName(): void {
-    const cfg = this.panel.getConfig();
+    const cfg = this.panel.state;
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(vehicleById(cfg.vehicleId).name, satelliteName(satelliteById(cfg.satelliteId)));
@@ -508,6 +513,7 @@ class App {
    */
   toggleLiveFlight(): void {
     if (!this.sim) return;
+    if (!this.playing && !this.panel.isValid()) return;
     this.playing = !this.playing;
     if (this.playing) this.panel.setRunning(true);
     this.updatePlayButton();
@@ -529,6 +535,7 @@ class App {
     if (!this.sim) return;
     const wasLive = this.player.live;
     this.player.seek(time);
+    this.telTimer = 1;
     if (wasLive && !this.player.live) this.player.playing = this.playing; // keep playing, now as replay
     if (!wasLive && this.player.live) this.player.playing = false;
     this.updatePlayButton();
@@ -544,6 +551,7 @@ class App {
   /** Forward: next recorded event while replaying, fast-forward while live. */
   skip(): void {
     if (!this.sim) return;
+    if (this.player.live && !this.playing && !this.panel.isValid()) return;
     if (!this.player.live) {
       const next = this.player.nextEventTime(this.player.cursor);
       if (next !== null) this.seek(next); else this.goLive();
@@ -635,6 +643,7 @@ class App {
     this.narration.setVehicle(sim.vehicleSpec);
     this.hud.reset();
     this.tel.reset();
+    this.result.clear();
     this.tel.setExportSource(sim);
     this.explosion.clear();
     // Pay this mission's shader compiles now, while the vehicle is sitting on
@@ -643,6 +652,7 @@ class App {
   }
 
   launch(cfg: MissionConfig): void {
+    if (!this.panel.isValid()) return;
     this.preview(cfg);
     this.playing = true;
     this.panel.setRunning(true);
@@ -650,6 +660,7 @@ class App {
   }
 
   reset(): void {
+    if (!this.panel.isValid()) return;
     this.preview(this.panel.getConfig());
   }
 
@@ -722,7 +733,11 @@ class App {
     // at the timeline cursor like everything else on screen. The live object is
     // given to it separately, for the CSV export of the whole flight.
     this.telTimer += dtReal;
-    if (this.simView && this.telTimer > 0.5) { this.telTimer = 0; this.tel.update(this.simView.sim, this.player.cursor); }
+    if (this.simView && this.telTimer > 0.5) {
+      this.telTimer = 0;
+      this.tel.update(this.simView.sim, this.player.cursor);
+      this.result.update(this.simView.sim);
+    }
     requestAnimationFrame((n) => this.frame(n));
   }
 

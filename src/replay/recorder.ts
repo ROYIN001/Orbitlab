@@ -34,6 +34,7 @@
  */
 import { captureFrame, cloneFrame, type VisualFrame } from '../physics/frame';
 import type { Simulation, SimEvent, SimStatus } from '../physics/simulation';
+import { chronologicalEvents } from '../physics/events';
 
 /** Altitude below which a coast is still an atmospheric one, m. */
 const ATMOSPHERIC_CEILING = 140e3;
@@ -83,8 +84,10 @@ export interface RecorderStats {
 export class FlightRecorder {
   /** Stored frames, strictly increasing in mission time. */
   readonly frames: VisualFrame[] = [];
-  /** Events of the recorded flight, copied as they are emitted. */
-  readonly events: SimEvent[] = [];
+  /** Consumed detections, kept append-only independently of their timestamps. */
+  private detectedEvents: SimEvent[] = [];
+  /** Events in occurrence order for playback and display. */
+  get events(): readonly SimEvent[] { return chronologicalEvents(this.detectedEvents); }
   private sim: Simulation | null = null;
   private maxFrames: number;
   private decimations = 0;
@@ -102,7 +105,7 @@ export class FlightRecorder {
   start(sim: Simulation): void {
     this.sim = sim;
     this.frames.length = 0;
-    this.events.length = 0;
+    this.detectedEvents = [];
     this.decimations = 0;
     this.keep = new WeakSet<VisualFrame>();
     this.copySource = null;
@@ -165,10 +168,10 @@ export class FlightRecorder {
   private pullEvents(): boolean {
     const sim = this.sim;
     if (!sim) return false;
-    if (sim.events.length === this.events.length) return false;
-    for (let i = this.events.length; i < sim.events.length; i++) {
+    if (sim.events.length === this.detectedEvents.length) return false;
+    for (let i = this.detectedEvents.length; i < sim.events.length; i++) {
       const e = sim.events[i];
-      this.events.push(e);
+      this.detectedEvents.push(e);
       const k = this.indexAt(e.t);
       if (k >= 0) {
         this.keep.add(this.frames[k]);

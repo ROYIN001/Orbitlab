@@ -29,6 +29,7 @@ import {
   ORBIT_INSERTION_FLOOR,
 } from './mission';
 import { DEFAULT_GUIDANCE } from './defaults';
+import { chronologicalEvents } from './events';
 
 export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'failed';
 
@@ -307,6 +308,11 @@ export class Simulation {
   readonly state: SimState;
   readonly events: SimEvent[] = [];
   readonly telemetry: TelemetrySample[] = [];
+  private telemetryGeneration = 0;
+  /** Changes when compaction rewrites existing telemetry indexes. */
+  get telemetryRevision(): number { return this.telemetryGeneration; }
+  /** User-facing occurrence order; `events` remains the append-only detection log. */
+  get chronologicalEvents(): readonly SimEvent[] { return chronologicalEvents(this.events); }
   readonly debris: Debris[] = [];
   readonly payloadMass: number;
   readonly headless: boolean;
@@ -1151,8 +1157,9 @@ export class Simulation {
 
   /**
    * Whether this launch was made into a window that could reach the target
-   * plane. Only then is the achieved RAAN part of the acceptance test — see
-   * `orbitResiduals`.
+   * plane. Steering/early-cutoff checks use this to avoid wasting fuel on a
+   * plane the current burn plan cannot correct. Final mission acceptance
+   * always checks every requested constraint, including an off-window RAAN.
    */
   private raanWasReachable(): boolean {
     const want = this.plan.target.raan;
@@ -1803,7 +1810,7 @@ export class Simulation {
    */
   private reachTargetOrbit(el: OrbitalElements, onTarget = true): void {
     const s = this.state;
-    const res = orbitResiduals(this.plan.target, el, this.raanWasReachable());
+    const res = orbitResiduals(this.plan.target, el, true);
     const hit = onTarget && res.onTarget;
     s.status = 'orbit';
     s.note = hit ? 'orbit' : 'orbitOffTarget';
@@ -2145,6 +2152,7 @@ export class Simulation {
       const kept: TelemetrySample[] = [];
       for (let i = 0; i < half; i += 2) kept.push(this.telemetry[i]);
       this.telemetry.splice(0, half, ...kept);
+      this.telemetryGeneration++;
     }
     const act = this.vehicle.active;
     this.telemetry.push({
