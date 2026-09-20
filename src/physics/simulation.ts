@@ -515,7 +515,7 @@ export class Simulation {
   private holdRigidOnPad(): void {
     const runtime = this.rigidRuntime!;
     const s = this.state;
-    const snapshot = buildRigidVehicle(this.vehicle, { pressure: atmosphere(this.site.altitude).p,
+    const snapshot = buildRigidVehicle(this.vehicle, { pressure: atmosphere(s.altitude).p,
       payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined, payloadLength: this.satellite.size?.height,
       coreThrottle: s.coreThrottle, boosterThrottle: s.boosterThrottle, time: s.t, rcsConsumedKgByStage: runtime.consumed });
     const pad = groundPositionEci(this.site.latitude * DEG, this.site.longitude * DEG, this.site.altitude, this.plan.gmst0 + OMEGA_EARTH * s.t);
@@ -524,6 +524,10 @@ export class Simulation {
     s.v = groundVelocityEci(s.r);
     const rigid = { r: s.r, v: s.v, attitudeQ, omegaBody: quatInverseRotate(attitudeQ, v3(0, 0, OMEGA_EARTH)) };
     s.rigid = runtime.telemetry(rigid, s.t, snapshot);
+    // The pad carries a constrained vehicle while its engines already burn.
+    // Their upstream budgets are authoritative before free-flight actuators run.
+    s.rigid.engineThrottles = Object.fromEntries(snapshot.engines.map(engine => [engine.id,
+      engine.thrustBudgetN > 0 ? engine.upstreamThrottle ?? 1 : 0]));
     runtime.snapshot = snapshot;
     s.dir = quatRotate(attitudeQ, v3(1, 0, 0));
     s.mass = snapshot.mass;
@@ -580,7 +584,7 @@ export class Simulation {
     const runtime = createRigidDebris(d, body, this.cfg.dynamics!, parent,
       { stage, vehicleId: this.cfg.vehicleId, consumed: this.rigidRuntime!.consumed, engineFraction,
         runtimeOptions: { massFlowModel: this.rigidRuntime!.massFlowModel, controlGains: this.rigidRuntime!.controlGains,
-          integrationStepS: this.rigidRuntime!.integrationStepS } });
+          integrationStepS: this.rigidRuntime!.integrationStepS, derivativeStepS: this.rigidRuntime!.derivativeStepS } });
     this.rigidDebris.set(d.id, runtime);
   }
 
@@ -630,6 +634,53 @@ export class Simulation {
   private schedule(t: number, label: string, fn: () => void): void {
     this.pending.push({ t, fn, label });
     this.pending.sort((a, b) => a.t - b.t);
+  }
+
+  /** Commit due actions at the accepted clock without advancing physical time. */
+  private processScheduledActions(): boolean {
+    if (this.isFailed() || !this.pending.length || this.pending[0].t > this.state.t + 1e-9) return false;
+    const activeBefore = this.vehicle.active;
+    const wasIgnited = !!activeBefore?.ignited && !activeBefore.cutoff && !activeBefore.burnedOut;
+    let changed = false;
+    while (!this.isFailed() && this.pending.length > 0 && this.pending[0].t <= this.state.t + 1e-9) {
+      this.pending.shift()!.fn();
+      changed = true;
+    }
+    if (changed) {
+      if (this.state.status === 'prelaunch') {
+        const thrust = this.vehicle.thrust(this.state.t, atmosphere(this.state.altitude).p, 1);
+        this.state.thrust = thrust.thrust;
+        this.state.throttle = thrust.burning ? 1 : 0;
+        this.state.coreThrottle = thrust.coreThrottle;
+        this.state.boosterThrottle = thrust.boosterThrottle;
+        if (this.rigidRuntime) this.holdRigidOnPad();
+      } else this.refreshScheduledFlightTelemetry(this.vehicle.active !== activeBefore || !wasIgnited);
+      this.updateDerived();
+    }
+    return changed;
+  }
+
+  /** Refresh accepted operating state without a guidance tick, fuel consumption,
+   * or motion. Orbital ignition still waits for the normal alignment gate. */
+  private refreshScheduledFlightTelemetry(newIgnition: boolean): void {
+    const s = this.state, runtime = this.rigidRuntime;
+    let throttle = s.throttle;
+    if (s.status === 'failed' || s.status === 'orbit') throttle = 0;
+    else if (runtime?.command.mode === 'manual') throttle = runtime.command.throttle;
+    else if (s.status === 'coast' || (s.status === 'burn' && !this.burnIgnited)) throttle = 0;
+    else if (s.status === 'ascent' && newIgnition && this.vehicle.active?.ignited) throttle = throttle || 1;
+    const thrust = throttle > 0 ? this.vehicle.thrust(s.t, atmosphere(s.altitude).p, throttle)
+      : { thrust: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
+    s.thrust = thrust.thrust; s.throttle = thrust.burning ? throttle : 0;
+    s.coreThrottle = thrust.coreThrottle; s.boosterThrottle = thrust.boosterThrottle;
+    if (!runtime || !s.rigid) return;
+    const snapshot = buildRigidVehicle(this.vehicle, { pressure: atmosphere(s.altitude).p,
+      coreThrottle: s.coreThrottle, boosterThrottle: s.boosterThrottle, time: s.t,
+      payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined,
+      payloadLength: this.satellite.size?.height, rcsConsumedKgByStage: runtime.consumed });
+    runtime.synchronizeEngineBudgets(snapshot);
+    s.rigid = runtime.telemetry({ r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody },
+      s.t, snapshot, s.rigid.saturated, s.rigid.rawQuaternionNormError);
   }
   /**
    * Log an event. `at` overrides the timestamp for a *peak-detected* event: the
@@ -789,14 +840,12 @@ export class Simulation {
   }
 
   // ------------------------------------------------------------------ step
-  step(dt: number): number {
+  step(dt: number, onTransition?: () => void): number {
     const s = this.state;
     if (s.status === 'failed') return 0;
-    // pending actions due at or before the current time
-    while (this.pending.length > 0 && this.pending[0].t <= s.t + 1e-9) {
-      const a = this.pending.shift()!;
-      a.fn();
-    }
+    // Observe already-due transitions before integrating; a recorder must never
+    // label the next physical pose with the preceding action's timestamp.
+    if (this.processScheduledActions()) onTransition?.();
     if (this.isFailed()) return 0;
     // an action may have changed the regime (e.g. coast -> burn): re-clamp the step
     dt = Math.min(dt, this.suggestedDt());
@@ -808,6 +857,8 @@ export class Simulation {
     this.stepDebris(dt);
     s.theta = this.plan.gmst0 + OMEGA_EARTH * s.t;
     this.updateDerived();
+    // Commit on arrival too, so pausing exactly on ignition/staging is current.
+    this.processScheduledActions();
     if (this.rigidRuntime && s.liftoff) {
       const event = this.aeroEnvelopeEvents.observe(s.t, s.rigid,
         { id: 'vehicle', name: this.vehicle.active?.spec.name ?? this.satellite.name, scope: 'vehicle' });

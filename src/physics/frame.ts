@@ -634,6 +634,9 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     };
   });
   const rigid = interpolateRigidTelemetry(a.rigid,b.rigid,u);
+  const samePropulsion = a.stages.every((stage, i) => stage.burning === b.stages[i]?.burning
+    && stage.ignited === b.stages[i]?.ignited && stage.engineFraction === b.stages[i]?.engineFraction)
+    && a.boosters.every((booster, i) => booster.burning === b.boosters[i]?.burning);
   return {
     ...a,
     rigid,
@@ -641,8 +644,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     r,
     v,
     dir: rigid ? quatRotate(rigid.attitudeQ, {x:1,y:0,z:0}) : slerp(a.dir, b.dir, u),
-    throttle: mix(a.throttle, b.throttle, u),
-    thrust: mix(a.thrust, b.thrust, u),
+    throttle: samePropulsion ? mix(a.throttle, b.throttle, u) : a.throttle,
+    thrust: samePropulsion ? mix(a.thrust, b.thrust, u) : a.thrust,
     mass: mix(a.mass, b.mass, u),
     altitude: mix(a.altitude, b.altitude, u),
     altitudeAGL: mix(a.altitudeAGL, b.altitudeAGL, u),

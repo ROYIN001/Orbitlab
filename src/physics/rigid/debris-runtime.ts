@@ -26,6 +26,8 @@ export interface RigidDebrisOptions {
   engineFraction?: number;
   /** Continue the same explicit sensitivity model after separation. */
   runtimeOptions?: RigidRuntimeOptions;
+  /** Disclosed terminal timing sensitivity; predictor and plant use the same values. */
+  terminalRestart?: { ignitionDelayS: number; thrustRiseS: number };
 }
 const EARTH_RATE = v3(0, 0, OMEGA_EARTH);
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
@@ -67,6 +69,7 @@ export class RigidDebrisRuntime {
   snapshot: RigidVehicleSnapshot;
   readonly runtime: RigidRuntime;
   readonly recoveryEnabled: boolean;
+  readonly terminalRestart: Readonly<{ ignitionDelayS: number; thrustRiseS: number }>;
   private readonly initialSnapshot: RigidVehicleSnapshot;
   private terminalCoast = false;
   private terminalIgnitionTime?: number;
@@ -75,6 +78,9 @@ export class RigidDebrisRuntime {
     parentSnapshot: RigidVehicleSnapshot, readonly options: RigidDebrisOptions) {
     if (options.engineFraction !== undefined && (!Number.isFinite(options.engineFraction)
       || options.engineFraction < 0 || options.engineFraction > 1)) throw new RangeError('Invalid detached engine health');
+    this.terminalRestart = { ...TERMINAL_RESTART, ...options.terminalRestart };
+    if (![this.terminalRestart.ignitionDelayS, this.terminalRestart.thrustRiseS]
+      .every(value => Number.isFinite(value) && value >= 0)) throw new RangeError('Invalid terminal restart timing');
     this.state = { r: { ...split.state.r }, v: { ...split.state.v }, attitudeQ: { ...split.state.attitudeQ }, omegaBody: { ...split.state.omegaBody } };
     this.runtime = new RigidRuntime(config, `debris.${debris.id}`, options.runtimeOptions);
     Object.assign(this.runtime.consumed, options.consumed ?? {});
@@ -154,7 +160,7 @@ export class RigidDebrisRuntime {
               minimumFlowKgS: engineMassFlow(stage.engine) * minimumThrottle * this.engineHealth(8),
               gravityMs2: g + dot(cross(EARTH_RATE, cross(EARTH_RATE, this.state.r)), up),
               dragKgM: 0.5 * density * this.snapshot.aero.referenceArea * this.snapshot.aero.cdMach[0][1],
-              windUpMs: downward - groundDownward });
+              windUpMs: downward - groundDownward, ...this.terminalRestart });
             if (brakingDistance >= contact.tailClearance) this.terminalIgnitionTime = time;
           }
           const sinceIgnition = this.terminalIgnitionTime === undefined ? -Infinity : time - this.terminalIgnitionTime;
@@ -162,7 +168,9 @@ export class RigidDebrisRuntime {
           // distance, use feasible extra thrust. The minimum is a lower bound
           // on this final continuous burn, not an arbitrary fixed setting.
           throttle = clamp(requestedThrottle, minimumThrottle, 1)
-            * clamp((sinceIgnition - TERMINAL_RESTART.ignitionDelayS) / TERMINAL_RESTART.thrustRiseS, 0, 1);
+            * (this.terminalRestart.thrustRiseS === 0
+              ? Number(sinceIgnition >= this.terminalRestart.ignitionDelayS)
+              : clamp((sinceIgnition - this.terminalRestart.ignitionDelayS) / this.terminalRestart.thrustRiseS, 0, 1));
         } else throttle = clamp(requestedThrottle, minimumThrottle, 1);
         engines = throttle > 0 ? [8] : [];
         // A landing targets zero surface-relative drift. Wind still enters the

@@ -2,6 +2,67 @@
 
 Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control. This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
 
+## Resume checkpoint — 2026-09-20
+
+### Completed orbital gates
+
+Both complete reference missions passed `rigid-mission-convergence.test.ts`
+after payload separation. The 0.01/0.005 s plant comparison retains the same
+0.01 s guidance/control clock and all original tolerances. Both runs per
+vehicle have finite states, actual target events, separated payloads, no
+independent raw-orbit misses and no discontinuous checkpoints.
+
+| Reference | Maximum position difference (m) | Velocity (m/s) | Attitude (degrees) | Event time (s) |
+|---|---:|---:|---:|---:|
+| Falcon LEO | 0.000044174 | 5.700e-8 | 8.386e-9 | 1.152e-11 |
+| Soyuz ISS-plane orbit | 0.002984539 | 3.415e-6 | 5.712e-8 | 1.371e-8 |
+
+Nine common-time checkpoints and respectively 19/21 main events were compared.
+These numerical results verify the implemented model, not real-flight accuracy.
+
+The additional delivered-orbit matrix also passed 7/7:
+
+| Vehicle / flow / wind | Delivered apogee / perigee (km) |
+|---|---:|
+| Falcon / quasi-steady / fixed 5 m/s | 505.653 / 499.969 |
+| Falcon / quasi-steady / fixed 10 m/s | 504.224 / 500.654 |
+| Falcon / quasi-steady / shear | 505.352 / 501.278 |
+| Soyuz / quasi-steady / crosswind | 427.049 / 420.263 |
+| Soyuz / quasi-steady / shear | 427.054 / 420.268 |
+| Falcon / reduced flux / calm | 504.436 / 501.272 |
+| Soyuz / reduced flux / calm | 427.057 / 420.268 |
+
+Each final record independently re-derives the orbit from raw position/velocity,
+confirms payload separation and has no orbit misses. All 40 physics/data/harness
+hashes match across the seven runs and before/after each run. Four parallel SSR
+workers reported a Vite websocket-port collision; they nevertheless produced
+complete verified final records. Those warnings are retained in stderr logs.
+
+Evidence: `../audit-2026-09-19/validation/resume-final-suite.log`,
+`resume-final-suite-summary.json`, `resume-final-delivered-matrix-summary.json`
+and individual `resume-final-*.jsonl` records in that directory. Complete-suite
+status is recorded separately once the remaining regression tests finish.
+
+This dated section supersedes the corresponding open-item statements below; historical results remain intact. The owner selected **orbital acceptance for the two reference vehicles, with Falcon recovery remaining experimental**. Orbital gates above and local browser checks in `SIXDOF-BROWSER-QA.md` are complete. The complete regression suite is still running; publication has not occurred.
+
+Recorded provenance now includes the actual vehicle `dataRevision`, deep-copied runtime wind profile/seed, effective maximum RK step and maximum inertia-derivative offset. CSV schema 3 exports these values plus sampled ECI wind; older recordings leave unknown provenance blank. Both frame interpolation and the independent attitude track reject transitions across data revisions. Metadata/CSV/attitude-track checks passed 15/15, including runtime overrides, nested copy isolation and export from recorded values rather than current settings.
+
+Scheduled actions commit at their accepted clock, including actions already due before integration. The recorder's transition callback captures that post-action pose at the same time. Held-pad ignition and in-flight engine-out/thrust-loss/range-safety now expose actual chamber availability immediately, with no extra motion, fuel charge or gimbal advance. Seven new failure-boundary checks passed, including upper-stage ignition, the unchanged orbital alignment gate, and stopping later queued actions after destruction. Earlier focused pad/staging/replay checks also passed; these bounded fixtures do not replace full-mission evidence. TypeScript passed after the boundary changes.
+
+The reduced-flow derivative study uses a synthetic smooth burn with `Ixx=10 exp(-0.7t)`, one exit on the spin axis and an independent analytic spin solution. All runs use 0.01 s control, 0.0025 s RK and 2 s duration. Only the derivative maximum changes:
+
+| Derivative maximum (s) | Maximum endpoint relative error | Maximum central relative error | Final spin error (rad/s) |
+|---:|---:|---:|---:|
+| 0.001 | 3.50082e-4 | 8.16669e-8 | 4.63635e-9 |
+| 0.0005 | 1.75020e-4 | 2.04171e-8 | 1.15908e-9 |
+| 0.00025 | 8.75051e-5 | 5.10554e-9 | 2.89777e-10 |
+
+The bounded one-sided endpoints exhibit first-order derivative convergence and central samples second order; no global RK-order claim follows. Maximum final attitude error is 8.39e-8 degrees. The actual offset is `min(derivativeStepS, outerDt/4)`; default 0.001 s is unchanged. This verifies the numerical derivative in that declared reduced model, not real tank dynamics.
+
+Terminal-restart stress checks covered delay 0.2/0.5/1.0 s × thrust rise 0.1/0.3/0.5 s for both previously described descent fixtures: 18 trajectories, **14 landed and 4 impacted**. At delay 0.2 s the 74 m fixture impacted for rise 0.1 s; the 255.9 m fixture impacted at all three rises. Those four runs exhausted their fuel and contacted at approximately 105–125 m/s downward. The tests passed because finite state/fuel, restart limits and honest physical contact classification were preserved; the separate nominal landing assertions remain strict. These failures are retained, and **the timing range is not a robust recovery envelope**.
+
+Evidence for the derivative and restart studies: [resume-timing-and-derivative.log](../../audit-2026-09-19/validation/resume-timing-and-derivative.log), 28 checks across `rigid-flow-derivative.test.ts` and `rigid-debris.test.ts`, all passed in 24.43 s. Their success does not mean that every stress trajectory landed.
+
 Status recorded 2026-09-19 while integration is in progress. A test present in source is **coverage**, not evidence that the entire gate passed. Executed by this document's author: 23 actuator/control/aero, 21 runtime, 8 wind-guidance and 12 finite-inventory tests passed. The sensitivity suite has 27 original authority/uncertainty tests and 40 additional component-distribution tests; executed results and a subsequently corrected active-upper-stage fixture are recorded below. Full missions, recovery, rendering and browser performance are separate gates; these segment results do not establish those gates. No NASA check case has yet been run merely by citing its publication.
 
 | Gate | Required independent check and acceptance | Existing coverage / remaining evidence |

@@ -12,12 +12,14 @@ import { matVecMul, quatFromBasis, quatInverseRotate, quatRotate, type Mat3, typ
 import type { RigidVehicleSnapshot } from './mass';
 import { RIGID_MODEL_VERSION } from './config';
 import { fuelAwareCoastRates } from './pointing';
-import type { RigidCommand, RigidTelemetry } from './telemetry';
+import { cloneWindProfile, type RigidCommand, type RigidTelemetry } from './telemetry';
 
 export type SnapshotProvider = (elapsed: number, consumed: Readonly<Record<string, number>>) => RigidVehicleSnapshot;
 export interface RigidRuntimeOptions {
   /** Internal RK step only; command/actuator/RCS cadence remains the outer step. */
   integrationStepS?: number;
+  /** Maximum inertia-difference interval; bounded by outer dt/4, independent of RK refinement. */
+  derivativeStepS?: number;
   /** Reduced point-exit model is a sensitivity comparison, not exact internal-flow dynamics. */
   massFlowModel?: 'quasiSteady' | 'reducedFlux';
   /** Explicit sensitivity override; never mutate shared flight gains. */
@@ -61,7 +63,7 @@ export function targetAttitude(nose: Vec3, sideReference: Vec3): Quat {
 
 /** Declared educational weather, ENU m/s, reproducible at any integration step. */
 export function windScenario(config: DynamicsConfig): WindScenario {
-  if (config.wind === 'calm') return { kind: 'calm' };
+  if (config.wind === 'calm') return { kind: 'calm', seed: config.seed };
   return { kind: config.wind === 'shear' ? 'shear' : 'constant',
     velocityENU: v3(8, 0, 0), referenceAltitude: 0, altitudeRangeM: [0, 12000],
     shearPerMeterENU: config.wind === 'shear' ? v3(0.001, 0.0005, 0) : v3(),
@@ -74,6 +76,7 @@ export class RigidRuntime {
   readonly wind: WindScenario;
   readonly massFlowModel: 'quasiSteady' | 'reducedFlux';
   readonly integrationStepS: number;
+  readonly derivativeStepS: number;
   readonly controlGains: ControlGains;
   private engines = new Map<string, EngineActuatorState>();
   snapshot?: RigidVehicleSnapshot;
@@ -81,6 +84,8 @@ export class RigidRuntime {
     this.wind = windScenario(config);
     this.integrationStepS = options.integrationStepS ?? 0.01;
     if (!Number.isFinite(this.integrationStepS) || this.integrationStepS <= 0 || this.integrationStepS > 0.02) throw new RangeError('Invalid rigid integration step');
+    this.derivativeStepS = options.derivativeStepS ?? 0.001;
+    if (!Number.isFinite(this.derivativeStepS) || this.derivativeStepS <= 0) throw new RangeError('Invalid inertia derivative step');
     this.massFlowModel = options.massFlowModel ?? 'quasiSteady';
     if (!['quasiSteady', 'reducedFlux'].includes(this.massFlowModel)) throw new RangeError('Invalid rotational mass-flow model');
     const gains = options.controlGains ?? FLIGHT_CONTROL_GAINS;
@@ -168,12 +173,25 @@ export class RigidRuntime {
     return { ...this.controlGains, maxAngularAcceleration: acceleration,
       responseDelayS: Math.max(this.controlGains.responseDelayS ?? 0, authority.delay) };
   }
+  /** Apply a discrete upstream ignition/failure at the current clock. Chamber
+   * throttle is instantaneous in this model; gimbal angles and fuel are not. */
+  synchronizeEngineBudgets(snapshot: RigidVehicleSnapshot): void {
+    for (const spec of this.specs(snapshot)) {
+      const current = this.engines.get(spec.id) ?? createEngineStates([spec])[0];
+      this.engines.set(spec.id, { deflections: [...current.deflections], throttle: spec.maxThrust > 0 ? 1 : 0 });
+    }
+    this.snapshot = snapshot;
+  }
+
   telemetry(state: RigidState, time: number, snapshot: RigidVehicleSnapshot, saturated = false, rawError = 0): RigidTelemetry {
     const specs = this.specs(snapshot);
     const states = specs.map(spec => this.engines.get(spec.id) ?? createEngineStates([spec])[0]);
     const wrench = engineWrench(specs, states, snapshot.cg);
     const aero = this.environment(state, time, snapshot);
-    return { modelVersion: RIGID_MODEL_VERSION, massFlowModel: this.massFlowModel, bodyId: this.bodyId,
+    return { modelVersion: RIGID_MODEL_VERSION, dataRevision: snapshot.dataRevision,
+      windProfile: cloneWindProfile(this.wind), integrationMaxStepS: Math.min(this.integrationStepS, 0.01),
+      flowDerivativeMaxStepS: this.derivativeStepS,
+      massFlowModel: this.massFlowModel, bodyId: this.bodyId,
       configurationId: snapshot.components.map(part => part.id).sort().join('|'),
       attitudeQ: { ...state.attitudeQ }, omegaBody: { ...state.omegaBody }, cgBody: { ...snapshot.cg },
       inertiaBody: [...snapshot.inertia] as unknown as RigidTelemetry['inertiaBody'], renderOffsetBody: sub(snapshot.activeBase, snapshot.cg),
@@ -238,7 +256,7 @@ export class RigidRuntime {
       // no finite nozzle disk, slosh or arbitrary internal-fluid momentum.
       // Both inertia variation and outward angular momentum flux are required.
       // Caller must split at every discontinuous configuration/fuel event.
-      const h = Math.min(0.001, dt / 4);
+      const h = Math.min(this.derivativeStepS, dt / 4);
       const before = Math.max(0, elapsed - h), after = Math.min(dt, elapsed + h);
       const left = snapshotAt(before).inertia, right = snapshotAt(after).inertia;
       const derivative = right.map((value, index) => (value - left[index]) / (after - before)) as unknown as Mat3;

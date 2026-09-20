@@ -104,6 +104,41 @@ describe('physical detached bodies', () => {
     expect(data.debris.v.x).toBeGreaterThan(-5);
   });
 
+  it.each([0.2, 0.5, 1].flatMap(ignitionDelayS => [0.1, 0.3, 0.5]
+    .map(thrustRiseS => ({ ignitionDelayS, thrustRiseS }))))('checks the disclosed restart timing $ignitionDelayS/$thrustRiseS s', timing => {
+    for (const [height, downward, fuel] of [[74, 0.05, 2500], [255.9, 24.2, 5296]]) {
+      const data = fixture(true, height, downward, fuel);
+      const body = createRigidDebris(data.debris, data.split, config, data.snapshot,
+        { vehicleId: 'falcon9', stage: data.stage, terminalRestart: timing });
+      let starts = 0, wasBurning = false, remaining = fuel, lastOff = 0;
+      for (let t = 0; t < 120 && data.debris.alive; t += 0.01) {
+        body.step(t, 0.01, () => 0);
+        const recovery = data.debris.recovery!;
+        if (recovery.burning && !wasBurning) {
+          if (starts > 0 || downward < 1) expect(t - lastOff).toBeGreaterThanOrEqual(timing.ignitionDelayS);
+          starts++;
+        }
+        if (!recovery.burning && wasBurning) lastOff = t;
+        wasBurning = recovery.burning;
+        expect(recovery.propellant).toBeGreaterThanOrEqual(0);
+        expect(recovery.propellant).toBeLessThanOrEqual(remaining);
+        expect([...Object.values(body.state.r), ...Object.values(body.state.v),
+          ...Object.values(body.state.attitudeQ), ...Object.values(body.state.omegaBody)].every(Number.isFinite)).toBe(true);
+        remaining = recovery.propellant;
+      }
+      const contact = rigidContactMetrics(body.state, body.snapshot, data.stage.length, data.stage.diameter / 2, () => 0);
+      console.log('TERMINAL_TIMING', JSON.stringify({ ...timing, height, downward, fuel, starts,
+        outcome: data.debris.outcome, remaining, contact }));
+      // The user-approved recovery envelope remains experimental: stress runs
+      // must terminate honestly, not promote every contact to a successful landing.
+      // The separate nominal fixtures above retain their strict landed gates.
+      expect(data.debris.alive).toBe(false);
+      expect(['landed', 'impact']).toContain(data.debris.outcome);
+      expect(acceptsRigidLanding(contact, true)).toBe(data.debris.outcome === 'landed');
+      expect(starts).toBeLessThanOrEqual(2);
+    }
+  }, 20000);
+
   it('records engine cutoff at contact while preserving the physical contact velocity', () => {
     const data = fixture(true, 1000, 3);
     const r = v3(R_EARTH + data.snapshot.cg.x + 0.03, 0, 0);

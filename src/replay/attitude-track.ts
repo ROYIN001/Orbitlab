@@ -33,6 +33,7 @@ export class AttitudeTrack {
   private signature = '';
   private signatureId = 0;
   private modelVersion: string | undefined;
+  private dataRevision: string | undefined;
   private bodyId: string | undefined;
   private configurationId: string | undefined;
   private massFlowModel: string | undefined;
@@ -49,13 +50,13 @@ export class AttitudeTrack {
   }
 
   private signatureFor(value: RigidTelemetry): string {
-    return JSON.stringify([value.modelVersion, value.bodyId, value.configurationId, value.massFlowModel]);
+    return JSON.stringify([value.modelVersion, value.dataRevision, value.bodyId, value.configurationId, value.massFlowModel]);
   }
 
   private identify(value: RigidTelemetry): number {
-    if (value.modelVersion !== this.modelVersion || value.bodyId !== this.bodyId
+    if (value.modelVersion !== this.modelVersion || value.dataRevision !== this.dataRevision || value.bodyId !== this.bodyId
       || value.configurationId !== this.configurationId || value.massFlowModel !== this.massFlowModel || !this.signature) {
-      this.modelVersion = value.modelVersion; this.bodyId = value.bodyId;
+      this.modelVersion = value.modelVersion; this.dataRevision = value.dataRevision; this.bodyId = value.bodyId;
       this.configurationId = value.configurationId; this.massFlowModel = value.massFlowModel;
       this.signature = this.signatureFor(value);
       let id = this.signatureIds.get(this.signature);

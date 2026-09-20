@@ -1,5 +1,62 @@
 # Six-DOF browser checks, 2026-09-19
 
+## Resumed production-bundle checks — 2026-09-20
+
+Local Chromium preview on port 4183, application bundle `index-_S9tc3el.js`:
+
+- Falcon and Soyuz quick starts selected six-DOF; selecting legacy removed the
+  rigid controls, and unsupported Falcon Heavy selected legacy. New mission
+  reset the recording to T−10 with no events.
+- At replay T−2.5, all nine Falcon first-stage chamber fractions were one and
+  the upper chamber was zero. Replay rejected live control changes.
+- Native keyboard entry accepted roll/pitch/yaw 0.2/0.1/−0.1 degrees/s and
+  recorded the corresponding radians/s. At T172.618, pitch/yaw measured
+  0.001744929/−0.001744952 rad/s. Roll was still responding within its finite
+  authority; this short interaction is not a roll-settling acceptance result.
+- Native throttle 0% cut off the upper engine at T172.618. The subsequent
+  restart request at T173.998 emitted ignition at T177.998; exact-time replay
+  showed upper-engine throttle one. Returning to Autopilot worked.
+- Exterior/pad, onboard, space and orbital-map views rendered. The automatic
+  camera sequence can change a chosen view when play resumes. Home seeks to
+  the recording start, as documented; it is not a page-scroll shortcut.
+- CSV returned schema 3 with data revision, complete wind JSON/seed, numerical
+  step bounds, quaternion/rates and actuator maps. The download button was
+  exercised; returned CSV content, rather than an OS file-save check, is the
+  export evidence.
+- Thai and Russian at 390×844 both had document client/scroll widths 375/375,
+  with translated three-axis controls and throttle visible. This is desktop
+  viewport testing, not a physical-phone or screen-reader certification.
+- The options panel explicitly labels recovery experimental and names return
+  aerodynamics, rotational flow and engine restart timing. The physics dialog
+  exposes estimates, omitted physics and the packaged English data dossier.
+- At T799.734, the 4947-frame recording estimated 46,475,774 bytes including
+  975,104 packed rotation bytes. Reported browser used/allocated JS heap was
+  88,001,520/128,285,064 bytes. No compaction had occurred; this is a bounded
+  sample, not a whole-mission memory ceiling. The new metadata allowance is
+  600 bytes per rigid body above the historical estimates below.
+- Requested high warp retained the 0.01 s control clock and displayed achieved
+  speed (observed 0.07–0.15× during background-tab intervals). Concurrent CPU
+  tests and browser background throttling make these measurements unsuitable
+  as a foreground FPS/real-time benchmark. No performance guarantee is made.
+- No console errors or warnings were returned. The temporary viewport override
+  was reset after the checks.
+
+An additional Soyuz run at requested 1× reached T91.370 s and reported achieved
+speed 0.9913× with the same 0.01 s control clock. This is one development-host
+observation under concurrent test load, not a cross-device FPS guarantee.
+
+The dossier was subsequently updated without changing application behavior;
+the final asset/release and complete orbital gates are recorded separately.
+
+Final local bundle `index-CVRs5YM3.js` packages dossier
+`SIXDOF-VEHICLE-DATA-DiE_OxAC.md`. One additional UI fix clears the setup panel's
+running lock when previewing a newly configured mission. Launch followed by
+WebMCP configure returned T−10 with quick-start buttons enabled in that build;
+the packaged dossier link resolved and no console errors were reported.
+An exact T2 engine-out replay also showed one failed first-stage chamber off
+and the other eight on, with the upper chamber off. Physics source did not
+change during the final orbital runs.
+
 These are local development checks, not a deployment or final physics acceptance.
 The first stable browser bundle was built at 17:07 local time into the parent
 audit folder `validation/six-browser-build`, served on port 4180. It predates

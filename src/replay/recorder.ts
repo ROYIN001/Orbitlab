@@ -73,7 +73,10 @@ const RIGID_BYTES = { body: 1250, engine: 170 };
 
 function rigidBytes(value: RigidTelemetry | undefined): number {
   if (!value) return 0;
-  return RIGID_BYTES.body + Object.keys(value.engineDeflections).length * RIGID_BYTES.engine;
+  // Clone/GC trials measured at most 431 extra bytes for the weather/revision
+  // provenance; allow 600, including optional numerical settings.
+  return RIGID_BYTES.body + (value.windProfile ? 600 : 0)
+    + Object.keys(value.engineDeflections).length * RIGID_BYTES.engine;
 }
 
 function frameBytes(frame: VisualFrame): number {
@@ -334,12 +337,11 @@ export class FlightRecorder {
    * goes. Mirrors `Simulation.advance` step for step, so the flight is the one
    * the physics would have flown on its own.
    *
-   * Event fidelity: a simulation step emits events either at its start (the
-   * scheduled-action queue is drained before integrating, with the clock still
-   * on the old time) or after `s.t` has been advanced. Storing the frames on
-   * *both* sides of any step that produced an event therefore guarantees that
-   * every event time is the timestamp of a stored frame, with no re-simulation
-   * and no fabricated state in between.
+   * Scheduled actions commit when their clock is reached. Already-due actions
+   * invoke the transition callback before integration, so their post-action
+   * frame keeps the actual event time and pose. Arrival actions are captured
+   * after the step; neighboring frames retain the pre-event state. This uses
+   * recorded physical states, without re-simulation or invented timestamps.
    */
   /**
    * @param deadline optional `performance.now()` value to stop at. A step count
@@ -382,16 +384,21 @@ export class FlightRecorder {
       const pre = preIsHead ? head! : captureFrame(sim);
       const dueBefore = !head || pre.t - head.t >= this.intervalOf(pre) - 1e-9;
       const nEvents = sim.events.length;
-      const used = sim.step(dt);
+      let transitionCaptured = false;
+      const used = sim.step(dt, () => {
+        this.store(captureFrame(sim), true);
+        if (rigid) this.recordAttitudes(true);
+        transitionCaptured = true;
+      });
       if (rigid) this.recordAttitudes();
       const fired = sim.events.length > nEvents;
-      if (!preIsHead && (dueBefore || fired)) this.store(pre, fired);
+      if (!transitionCaptured && !preIsHead && (dueBefore || fired)) this.store(pre, fired);
       // The pre-step frame is already the head, so there is nothing to store —
       // but if the step emitted an event stamped with *this* time (the queue of
       // scheduled actions is drained before integrating, with the clock still
       // on the old time), the head has to be marked as an event boundary or
       // decimation is free to drop the only frame that event has.
-      else if (preIsHead && fired) this.store(pre, true);
+      else if (!transitionCaptured && preIsHead && fired) this.store(pre, true);
       const s = sim.state;
       const headNow = this.head;
       const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime) - 1e-9;

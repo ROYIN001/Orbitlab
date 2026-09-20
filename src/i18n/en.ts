@@ -73,7 +73,7 @@ export const en: Record<string, string> = {
   'setup.fail.random': 'Random failure',
   'setup.options': 'Options',
   'setup.boosterRecovery': 'Recover first stage (reserve landing propellant)',
-  'setup.recoveryRigidNote': 'Experimental recovery: landing depends strongly on estimated return aerodynamics and mass-flow assumptions. A simulated landing does not verify a real recovery trajectory.',
+  'setup.recoveryRigidNote': 'Experimental recovery: landing depends strongly on estimated return aerodynamics, mass-flow assumptions and engine restart timing. A simulated landing does not verify a real recovery trajectory.',
   'setup.reset': 'New mission',
   'setup.info.height': 'Height',
   'setup.info.liftoffMass': 'Liftoff mass',

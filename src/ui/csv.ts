@@ -17,7 +17,9 @@ import type { Simulation } from '../physics/simulation';
 import { chronologicalEvents } from '../physics/events';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
 
-const RIGID_COLUMNS = ['recording_schema_version', 'rigid_model_version', 'rigid_mass_flow_model', 'body_id', 'configuration_id',
+const RIGID_COLUMNS = ['recording_schema_version', 'rigid_model_version', 'rigid_data_revision',
+  'rigid_mass_flow_model', 'rigid_wind_profile_json', 'rigid_wind_seed', 'rigid_integration_max_step_s', 'rigid_flow_derivative_max_step_s',
+  'wind_eci_x_ms', 'wind_eci_y_ms', 'wind_eci_z_ms', 'body_id', 'configuration_id',
   'attitude_qw', 'attitude_qx', 'attitude_qy', 'attitude_qz',
   'omega_body_x_rad_s', 'omega_body_y_rad_s', 'omega_body_z_rad_s',
   'cg_body_x_m', 'cg_body_y_m', 'cg_body_z_m', 'inertia_body_kg_m2_json',
@@ -29,7 +31,10 @@ const RIGID_COLUMNS = ['recording_schema_version', 'rigid_model_version', 'rigid
 function rigidColumns(value: RigidTelemetry | undefined): string[] {
   if (!value) return RIGID_COLUMNS.map(() => '');
   const q = value.attitudeQ, w = value.omegaBody, cg = value.cgBody;
-  const entries = [2, value.modelVersion, value.massFlowModel ?? '', value.bodyId ?? '', value.configurationId ?? '',
+  const entries = [3, value.modelVersion, value.dataRevision ?? '', value.massFlowModel ?? '',
+    value.windProfile ? JSON.stringify(value.windProfile) : '', value.windProfile ? value.windProfile.seed ?? 0 : '',
+    value.integrationMaxStepS ?? '', value.flowDerivativeMaxStepS ?? '', value.windECI.x, value.windECI.y, value.windECI.z,
+    value.bodyId ?? '', value.configurationId ?? '',
     q.w, q.x, q.y, q.z, w.x, w.y, w.z, cg.x, cg.y, cg.z, JSON.stringify(value.inertiaBody),
     value.controlMode, value.commandRatesBody?.x ?? '', value.commandRatesBody?.y ?? '', value.commandRatesBody?.z ?? '', value.commandThrottle ?? '',
     JSON.stringify(value.engineDeflections), JSON.stringify(value.engineDirectionsBody ?? {}),

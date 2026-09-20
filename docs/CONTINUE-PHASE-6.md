@@ -1,5 +1,28 @@
 # จุดพัก Orbitlab — 19 กันยายน 2026
 
+## ผลล่าสุด 20 กันยายน 2026 — แทนรายการค้างในบันทึกเดิมด้านล่าง
+
+- แก้ metadata/CSV/wind provenance, pad ignition, exact replay events และ in-flight failure telemetry แล้ว พร้อม regression tests
+- ตรวจรับ full delivered mission convergence ของ Falcon 9 และ Soyuz-2.1a ที่ RK 0.01/0.005 s โดยคง control clock 0.01 s **ผ่านทั้งสองรุ่น** หลังแยก payload; ไม่เปลี่ยน tolerance
+- Full delivered matrix **ผ่าน 7/7**: Falcon fixed5/fixed10/shear, Soyuz crosswind/shear และ reducedFlux calm ของทั้งสองรุ่น ทุกกรณีมี target event, payload separated, raw-orbit misses ว่าง และ source hashes คงเดิม
+- หลักฐาน: `../audit-2026-09-19/validation/resume-final-delivered-matrix-summary.json` และ `resume-final-suite.log`; ชุด regression รวมยังรันอยู่ จึงยังไม่สรุปว่าผ่านทั้งหมด
+- Browser QA และข้อจำกัด performance/memory อยู่ใน `SIXDOF-BROWSER-QA.md`; build ล่าสุด `index-CVRs5YM3.js` ผ่าน TypeScript/build พร้อมแก้ setup lock หลัง API preview
+- Recovery เป็น experimental ตามคำตอบล่าสุดของเจ้าของ: stress restart 18 เที่ยวบิน ลงได้ 14 กระแทกพื้น 4; ไม่อ้างว่าเป็น robust envelope
+- งานก่อนเผยแพร่ที่ยังต้องปิด: รอ full suite, สรุปผลใน acceptance/status, commit แล้วรวม main/push และตรวจ GitHub Pages ของ commit นั้น
+- เครดิตล่าสุดขณะบันทึกประมาณ 97; พักเมื่อยอดจริงต่ำกว่า 20 ตามคำสั่งเดิม ระยะ 5/3/4 ไม่ทำในรอบนี้
+
+หัวข้อถัดไปเป็นประวัติการพักรอบก่อน รายการที่แก้แล้วข้างต้นไม่ต้องทำซ้ำ
+
+## เริ่มต่อ 20 กันยายน 2026 — คำสั่งล่าสุดแทนสถานะพักด้านล่าง
+
+- เจ้าของอนุญาตเริ่มระยะ 6 ต่อ และให้พักเมื่อยอดเครดิตต่ำกว่า 20 เครดิต (เป็นยอดเครดิต ไม่ใช่เปอร์เซ็นต์ usage)
+- เครดิตก่อนเริ่ม 1,000; ตรวจเป็นระยะระหว่างงาน ไม่ซื้อหรือเติมเครดิตเอง
+- เจ้าของเลือกตรวจรับการส่งขึ้นวงโคจร 6-DOF ให้ครบ และคงการกู้บูสเตอร์เป็นโหมดทดลองพร้อมข้อจำกัด หลังพบความไวต่อเวลาตอบสนองเครื่องยนต์
+- ระยะ 5/3/4 ยังพักไว้ เป้าหมายวงโคจรและเกณฑ์ numerical convergence เดิมไม่เปลี่ยน
+- แก้ metadata/replay continuity/CSV, pad engine telemetry และ scheduled-event boundary แล้ว; การทบทวนพบ in-flight engine-failure telemetry ที่ต้องปิดก่อนทดสอบ final source
+- เพิ่มการตรวจ derivative interval และ recovery terminal delay/rise; stress failure ของ recovery ต้องเก็บและเปิดเผย ไม่สรุปว่าเป็น robust landing validation
+- `resume-mission-convergence.log` รอบแรกหยุดระหว่างทางเพื่อแก้ failure telemetry **ไม่ใช่ผลผ่าน final source**
+
 ## คำสั่งล่าสุดของเจ้าของ
 
 - ปิดรอบนี้เพราะ usage ใกล้หมด เผยแพร่เฉพาะระยะ 1–2 ซึ่งผ่านการทดสอบแล้ว (`ce741ad`)

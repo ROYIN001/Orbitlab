@@ -115,9 +115,12 @@ describe('buildTelemetryCsv', () => {
     const value = (name: string) => values[header.indexOf(name)];
     expect(legacy).toHaveLength(header.length); expect(values).toHaveLength(header.length);
     expect(legacy.slice(20).every(cell => cell === '')).toBe(true);
-    expect(value('recording_schema_version')).toBe('2');
+    expect(value('recording_schema_version')).toBe('3');
     expect(value('rigid_model_version')).toBe('education-6dof-v1');
     expect(value('rigid_mass_flow_model')).toBe('reducedFlux');
+    for (const name of ['rigid_data_revision', 'rigid_wind_profile_json', 'rigid_wind_seed', 'rigid_integration_max_step_s', 'rigid_flow_derivative_max_step_s']) {
+      expect(value(name)).toBe(''); // Unknown metadata is not filled from a current configuration.
+    }
     expect(Number(value('command_roll_rad_s'))).toBe(0.01); expect(Number(value('command_pitch_rad_s'))).toBe(-0.02);
     expect(Number(value('command_yaw_rad_s'))).toBe(0.03); expect(Number(value('command_throttle'))).toBe(0.6);
     expect(value('body_id')).toBe('stage, "upper"'); expect(value('configuration_id')).toBe('s2+payload');

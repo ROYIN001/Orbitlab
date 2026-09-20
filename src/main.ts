@@ -599,6 +599,7 @@ class App {
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
     this.playing = false;
+    this.panel.setRunning(false);
     this.fastForwardTo = null;
     try {
       this.sim = new Simulation(cfg);

@@ -1,5 +1,23 @@
 # Orbitlab improvement checkpoint
 
+## Latest status — 2026-09-20
+
+This section supersedes historical paused/in-progress statements below.
+Phases 1–2 are already live at main `ce741ad`. Phase 6 was resumed with a
+requirement to pause below 20 actual credits; phases 5/3/4 remain deferred.
+
+Both Falcon and Soyuz complete delivered-orbit convergence gates passed at
+0.01/0.005 s RK with the same 0.01 s control clock. All seven additional wind
+and rotational-flow delivered-orbit cases passed independent raw-state grading.
+Metadata, CSV, pad/failure/replay event boundaries and preview setup locking
+are corrected. TypeScript/build and local browser interactions passed; see
+`SIXDOF-ACCEPTANCE.md` and `SIXDOF-BROWSER-QA.md` for scope and exact evidence.
+
+Recovery remains experimental by the owner's explicit choice, including four
+impacts in 18 terminal-restart stress trajectories. Full regression is still
+running in `../audit-2026-09-19/validation/resume-final-suite.log`; its completed
+result is required before release. Phase 6 is not yet merged or published.
+
 User-selected order: **1 → 2 → 6 → 5 → 3 → 4**.
 Latest scope update: **phases 5, 3 and 4 are deferred at the user's request**.
 Finish phase 6 only in the current work. The user subsequently authorized merging

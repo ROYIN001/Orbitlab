@@ -2,6 +2,7 @@ import type { Vec3 } from '../vec3';
 import type { Quat, Mat3 } from './math';
 import { quatSlerp } from './math';
 import { lerp } from '../vec3';
+import type { WindScenario } from './aero';
 
 /** Commands are inputs to finite actuators, never a replacement for body state. */
 export interface RigidCommand {
@@ -13,6 +14,14 @@ export interface RigidCommand {
 /** Immutable recording payload. All angles and rates are radians internally. */
 export interface RigidTelemetry {
   modelVersion: string;
+  /** Vehicle data used for this sample; absent only in older recordings. */
+  dataRevision?: string;
+  /** Actual runtime weather profile, including sensitivity overrides. */
+  windProfile?: WindScenario;
+  /** Effective maximum RK substep, after the runtime's 10 ms ceiling. */
+  integrationMaxStepS?: number;
+  /** Maximum inertia finite-difference offset; actual offset also obeys outer dt/4. */
+  flowDerivativeMaxStepS?: number;
   /** Explicit sensitivity assumption for rotational propellant mass flow. */
   massFlowModel?: 'quasiSteady' | 'reducedFlux';
   /** Stable physical body identity; configuration changes at discrete separation. */
@@ -44,9 +53,18 @@ export interface RigidTelemetry {
   replayAttitudeAvailable?: boolean;
 }
 
+export function cloneWindProfile(value: WindScenario | undefined): WindScenario | undefined {
+  if (!value) return undefined;
+  return { ...value,
+    velocityENU: value.velocityENU ? { ...value.velocityENU } : undefined,
+    shearPerMeterENU: value.shearPerMeterENU ? { ...value.shearPerMeterENU } : undefined,
+    gustAmplitudeENU: value.gustAmplitudeENU ? { ...value.gustAmplitudeENU } : undefined,
+    altitudeRangeM: value.altitudeRangeM ? [...value.altitudeRangeM] : undefined };
+}
+
 export function cloneRigidTelemetry(value: RigidTelemetry | undefined): RigidTelemetry | undefined {
   if (!value) return undefined;
-  return { ...value, attitudeQ: { ...value.attitudeQ }, omegaBody: { ...value.omegaBody },
+  return { ...value, windProfile: cloneWindProfile(value.windProfile), attitudeQ: { ...value.attitudeQ }, omegaBody: { ...value.omegaBody },
     commandRatesBody: value.commandRatesBody ? { ...value.commandRatesBody } : undefined,
     cgBody: { ...value.cgBody }, inertiaBody: [...value.inertiaBody] as unknown as Mat3,
     renderOffsetBody: { ...value.renderOffsetBody }, windECI: { ...value.windECI },
@@ -57,7 +75,7 @@ export function cloneRigidTelemetry(value: RigidTelemetry | undefined): RigidTel
 }
 
 export function sameRigidConfiguration(a: RigidTelemetry | undefined, b: RigidTelemetry | undefined): boolean {
-  return !!a && !!b && a.modelVersion === b.modelVersion && a.massFlowModel === b.massFlowModel
+  return !!a && !!b && a.modelVersion === b.modelVersion && a.dataRevision === b.dataRevision && a.massFlowModel === b.massFlowModel
     && a.bodyId === b.bodyId && a.configurationId === b.configurationId;
 }
 
