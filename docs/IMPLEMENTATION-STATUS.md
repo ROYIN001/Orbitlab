@@ -2,6 +2,13 @@
 
 ## Latest status — 2026-09-20
 
+**Local acceptance completed:** full regression passed 762 tests in 54 files
+in 1225.00 s, including numerical mission/recovery and component sensitivity.
+TypeScript, production build and documented browser checks passed. The approved
+phase-6 orbital scope is ready for main; recovery remains experimental.
+Verify GitHub Pages for the release commit separately before claiming it live.
+This result supersedes the pending-suite wording retained below.
+
 This section supersedes historical paused/in-progress statements below.
 Phases 1–2 are already live at main `ce741ad`. Phase 6 was resumed with a
 requirement to pause below 20 actual credits; phases 5/3/4 remain deferred.

@@ -4,6 +4,14 @@ Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automati
 
 ## Resume checkpoint — 2026-09-20
 
+**Final local acceptance:** 762 tests in 54 files passed in 1225.00 s on
+2026-09-20, including both delivered-mission convergence cases, recovery
+numerical checks and the 390-case component sensitivity study. TypeScript and
+the production build passed. Local browser results and their performance
+limits are in `SIXDOF-BROWSER-QA.md`. The agreed orbital scope is accepted;
+Falcon recovery remains experimental. This supersedes pending-suite statements
+in earlier checkpoint text below. Deployment is a separate verification step.
+
 ### Completed orbital gates
 
 Both complete reference missions passed `rigid-mission-convergence.test.ts`

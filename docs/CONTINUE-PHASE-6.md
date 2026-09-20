@@ -2,6 +2,11 @@
 
 ## ผลล่าสุด 20 กันยายน 2026 — แทนรายการค้างในบันทึกเดิมด้านล่าง
 
+**ปิดการตรวจรับในเครื่องแล้ว:** full suite ผ่าน 762/762 tests ใน 54 ไฟล์
+ใช้เวลา 1225.00 s พร้อม TypeScript/build และ browser QA ผ่านตามขอบเขตที่ระบุ
+กำลังรวม main และส่งขึ้น GitHub Pages; ให้ตรวจ deployment ของ commit ล่าสุด
+ก่อนอ้างว่าเว็บจริงเผยแพร่สำเร็จ รายการรอ suite ด้านล่างเป็นประวัติก่อนผลออก
+
 - แก้ metadata/CSV/wind provenance, pad ignition, exact replay events และ in-flight failure telemetry แล้ว พร้อม regression tests
 - ตรวจรับ full delivered mission convergence ของ Falcon 9 และ Soyuz-2.1a ที่ RK 0.01/0.005 s โดยคง control clock 0.01 s **ผ่านทั้งสองรุ่น** หลังแยก payload; ไม่เปลี่ยน tolerance
 - Full delivered matrix **ผ่าน 7/7**: Falcon fixed5/fixed10/shear, Soyuz crosswind/shear และ reducedFlux calm ของทั้งสองรุ่น ทุกกรณีมี target event, payload separated, raw-orbit misses ว่าง และ source hashes คงเดิม
