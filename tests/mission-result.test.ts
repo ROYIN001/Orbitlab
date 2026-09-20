@@ -40,7 +40,8 @@ describe('displayed mission result', () => {
     const warning = { t: 90, key: 'evt.aeroEnvelopeExceeded', severity: 'warn' as const,
       params: { scope: 'vehicle', angleOfAttackRad: 35 * DEG, sideslipRad: -2 * DEG } };
     input.events = [...input.events, warning,
-      { ...warning, t: 700, params: { ...warning.params, scope: 'debris', angleOfAttackRad: 160 * DEG } }];
+      { ...warning, t: 700, key: 'evt.debrisSeparated', severity: 'info' as const,
+        params: { ...warning.params, scope: 'debris', angleOfAttackRad: 160 * DEG } }];
     const early = assessMissionResult(input)!;
     expect(early.outcome).toBe('target');
     expect(early.cause).toBe('target');

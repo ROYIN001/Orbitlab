@@ -247,6 +247,8 @@ export const en: Record<string, string> = {
   'tl.evt.burnPredictionUnavailable': 'Burn prediction unavailable',
   'evt.aeroEnvelopeExceeded': 'Estimated aerodynamic range exceeded: {scope}, {name} (α {alphaDeg}°, β {betaDeg}°).',
   'tl.evt.aeroEnvelopeExceeded': 'Aerodynamic model limit',
+  'evt.debrisSeparated': '{name} separated successfully.',
+  'tl.evt.debrisSeparated': 'Separated',
   'aero.scope.vehicle': 'tracked vehicle',
   'aero.scope.debris': 'detached body',
   'result.aeroWarning.vehicle': 'Model limitation: the tracked vehicle exceeded the estimated aerodynamic range at T+{time} s (α {alpha}°, β {beta}°). Treat aerodynamic conclusions for this flight as estimates.',

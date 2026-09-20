@@ -593,8 +593,42 @@ export class Simulation {
     const placements = before?.geometry.boosters.filter(p => p.id.startsWith(`${b.spec.id}.`)) ?? [];
     const partitions = before ? detachedOwnerPartitions(before, placements.map(p => ({ id: p.id, ownerIds: [p.id], datumBody: p.baseBody,
       bodyToParentQ: quatFromAxisAngle(v3(1, 0, 0), p.rotationAboutX) }))) : [];
-    const impulses = placements.map(p => ({ childAId: p.id, childBId: 'active', pointDatumBody: p.baseBody,
-      impulseOnABody: scale(normalize(v3(0, p.baseBody.y, p.baseBody.z)), (b.spec.dryMass + b.propellant) * 3) }));
+    // A real strap-on releases in two stages: the lower thrust strut lets go at
+    // burnout while the upper node (a ball joint plus the oxidizer transfer
+    // line) still holds, so the freed base swings outward under the core's
+    // continued acceleration while the nose stays close; the upper node
+    // releases a beat later, by which point the booster already carries the
+    // rotation that pivot gave it — which is what actually sets the Korolev
+    // cross's splay, not a clean push through the CG. This model has no
+    // articulated joint to hold the nose fixed for that interval, but the same
+    // kinematic OUTCOME is reachable as a single instantaneous impulse: solve
+    // for the linear+angular kick that leaves the nose's velocity unchanged
+    // and gives the base attachment a `kickSpeed` outward kick, and apply that
+    // once, at burnout+sepDelay, instead of a plain CG-centred push.
+    const kickSpeed = 4.5; // m/s at the base attachment, relative to the retained stack — estimated, not measured
+    // The empty booster's own CG, as a fraction of its length from the base:
+    // structure (75% of dry mass) centred at 0.5·L, equipment (25%) at 0.06·L
+    // — the same split `stageMassComponents` builds the body from. Propellant
+    // is ignored: separation is scheduled at burnout, so there is essentially
+    // none left to shift it.
+    const cgFraction = 0.39;
+    const impulses = placements.map(p => {
+      const L = b.spec.length;
+      const radial = normalize(v3(0, p.baseBody.y, p.baseBody.z));
+      const axial = v3(1, 0, 0);
+      const tangential = cross(radial, axial);
+      const mass = b.spec.dryMass + b.propellant;
+      const cg = add(p.baseBody, scale(axial, cgFraction * L));
+      const radius = b.spec.diameter / 2;
+      // Transverse moment of inertia of a uniform cylinder about its own CG.
+      const inertiaTransverse = (mass * (3 * radius * radius + L * L)) / 12;
+      const omega = kickSpeed / L;
+      return {
+        childAId: p.id, childBId: 'active', pointDatumBody: cg,
+        impulseOnABody: scale(radial, mass * kickSpeed * (1 - cgFraction)),
+        angularImpulseOnABody: scale(tangential, inertiaTransverse * omega),
+      };
+    });
     const split = this.rigidSplit(before, partitions, impulses);
     this.vehicle.jettisonBooster(b, this.state.t);
     const first = this.debris.length;

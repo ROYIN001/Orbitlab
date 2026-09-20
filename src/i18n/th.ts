@@ -238,6 +238,8 @@ export const th: Record<string, string> = {
   'tl.evt.burnPredictionUnavailable': 'คาดการณ์จุดเผาไหม้ไม่ได้',
   'evt.aeroEnvelopeExceeded': 'เกินช่วงประมาณค่าของแบบจำลองอากาศพลศาสตร์: {scope}, {name} (α {alphaDeg}°, β {betaDeg}°)',
   'tl.evt.aeroEnvelopeExceeded': 'ขอบเขตแบบจำลองอากาศพลศาสตร์',
+  'evt.debrisSeparated': 'แยกตัวสำเร็จ: {name}',
+  'tl.evt.debrisSeparated': 'แยกตัว',
   'aero.scope.vehicle': 'ยานที่กำลังติดตาม',
   'aero.scope.debris': 'ชิ้นส่วนที่แยกออก',
   'result.aeroWarning.vehicle': 'ข้อจำกัดแบบจำลอง: ยานที่กำลังติดตามเกินช่วงประมาณค่าอากาศพลศาสตร์ที่ T+{time} วินาที (α {alpha}°, β {beta}°) ควรถือข้อสรุปด้านอากาศพลศาสตร์ของเที่ยวบินนี้เป็นค่าประมาณ',
