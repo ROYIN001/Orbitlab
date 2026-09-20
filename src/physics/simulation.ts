@@ -1274,7 +1274,7 @@ export class Simulation {
           pointDatumBody: before.components.find(part => part.kind === 'fairing')!.centerBody,
           impulseOnABody: v3(0, this.vehicleSpec.fairing!.mass / 2 * 2.5, 0) }] : []);
         this.vehicle.jettisonFairing();
-        this.event('evt.fairingSep', 'major', { alt: Math.round(alt / 1000) });
+        this.event('evt.fairingSep', 'success', { alt: Math.round(alt / 1000) });
         const debrisStart = this.debris.length;
         this.spawnFairing(s.r, s.v);
         if (before) {
@@ -1378,7 +1378,7 @@ export class Simulation {
     this.schedule(s.t + delay, 'boosterSep', () => {
       if (!b.attached) return;
       this.detachBooster(b);
-      this.event('evt.boosterSep', 'major', { name: b.spec.name, alt: Math.round(this.state.altitude / 1000), speed: Math.round(this.state.speed) });
+      this.event('evt.boosterSep', 'success', { name: b.spec.name, alt: Math.round(this.state.altitude / 1000), speed: Math.round(this.state.speed) });
     });
   }
 
@@ -1481,7 +1481,7 @@ export class Simulation {
     this.schedule(s.t + sepDelay, 'stageSep', () => {
       if (!prev.attached) return;
       this.detachStage(prev);
-      this.event('evt.stageSep', 'major', { stage: prev.spec.name, n: prev.index + 1, alt: Math.round(this.state.altitude / 1000), speed: Math.round(this.state.speed) });
+      this.event('evt.stageSep', 'success', { stage: prev.spec.name, n: prev.index + 1, alt: Math.round(this.state.altitude / 1000), speed: Math.round(this.state.speed) });
       if (igniteNext) {
         this.schedule(this.state.t + ignDelay, 'ignition', () => {
           this.vehicle.igniteStage(next, this.state.t);
