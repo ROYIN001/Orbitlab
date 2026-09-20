@@ -33,6 +33,7 @@ interface DebrisItem {
   hinge: THREE.Group | null;
   side: 1 | -1;
   plume: Plume | null;
+  bodyMat: THREE.MeshStandardMaterial;
   createdAt: number;
   tumbleAxis: THREE.Vector3;
   tumbleRate: number;
@@ -161,7 +162,8 @@ export class DebrisView {
     const L = d.visual.length;
     // base of the drawn body in the object's own frame (+Y = the thrust axis)
     const base = d.rigid ? 0 : d.anchor ?? 0;
-    const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(d.visual.color), metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide });
+    const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(d.visual.color), metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide,
+      emissive: new THREE.Color(0xdce6ff), emissiveIntensity: 0 });
     const side: 1 | -1 = d.id % 2 === 0 ? 1 : -1;
     let hinge: THREE.Group | null = null;
     let plume: Plume | null = null;
@@ -203,7 +205,7 @@ export class DebrisView {
     }
     const ax = this.randAxis(d.id);
     return {
-      group: g, rigidGeometry: !!d.rigid, hinge, side, plume, createdAt: d.createdAt,
+      group: g, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
       fins, legs, finT: -1, legT: -1,
@@ -273,6 +275,12 @@ export class DebrisView {
       // the landing burn of a booster at 2 km must not draw the vacuum-expanded
       // plume of a second stage at 200 km: use this object's own air pressure
       if (item.plume) item.plume.update(d.burning ? 1 : 0, d.pressure ?? pressure, t);
+      // Freshly separated hardware still catches direct sun even where the sky around it
+      // has gone dark (the same reason a booster in real separation footage reads as a
+      // bright streak): without it a plain-lit grey cylinder is nearly invisible against
+      // the night scene, and the Korolev-cross splay the physics already flies is unreadable.
+      const glow = age < 1.2 ? smoothstep(0, 0.4, age) : Math.max(0, 1 - smoothstep(1.2, 9, age));
+      item.bodyMat.emissiveIntensity = glow * 1.3;
     }
     for (const [id, item] of this.items) {
       if (!seen.has(id)) {

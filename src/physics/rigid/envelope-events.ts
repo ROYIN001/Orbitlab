@@ -20,8 +20,13 @@ export class AeroEnvelopeEvents {
       throw new RangeError('Aerodynamic envelope observation requires a finite time and angles');
     }
     this.recorded.add(body.id);
+    // A detached body has no attitude control and no aerodynamic stabilisation, so it
+    // tumbles past the model's disclosed envelope almost immediately after every normal
+    // separation — that is expected, not a flight anomaly, and does not belong at 'warn'
+    // severity next to a real one (an attached, controlled vehicle exceeding the same
+    // envelope is a different story and stays 'warn').
     return {
-      t: time, key: 'evt.aeroEnvelopeExceeded', severity: 'warn',
+      t: time, key: 'evt.aeroEnvelopeExceeded', severity: body.scope === 'debris' ? 'info' : 'warn',
       params: {
         scope: body.scope, name: body.name, bodyId: telemetry.bodyId ?? body.id,
         configurationId: telemetry.configurationId ?? '', modelVersion: telemetry.modelVersion,
