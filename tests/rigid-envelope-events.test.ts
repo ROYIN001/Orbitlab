@@ -31,7 +31,10 @@ describe('recorded aerodynamic envelope limits', () => {
     for (const id of ['debris-1', 'debris-2']) {
       const debris = { id, name: 'First stage', scope: 'debris' as const };
       const telemetry = { ...envelope(), bodyId: undefined, configurationId: undefined };
-      expect(recorder.observe(20, telemetry, debris)?.params).toMatchObject({ scope: 'debris', bodyId: id, configurationId: '' });
+      const event = recorder.observe(20, telemetry, debris)!;
+      expect(event.key).toBe('evt.debrisSeparated');
+      expect(event.severity).toBe('info');
+      expect(event.params).toMatchObject({ scope: 'debris', bodyId: id, configurationId: '' });
       expect(recorder.observe(21, telemetry, debris)).toBeUndefined();
     }
     expect(new AeroEnvelopeEvents().observe(2, envelope(), body)).toBeDefined();

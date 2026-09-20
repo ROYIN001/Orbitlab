@@ -113,7 +113,8 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
     payloadSeparated: state.payloadSeparated, issPlaneOnly: target.raanMode === 'iss',
     aeroWarnings: events.flatMap(event => {
       const p = event.params;
-      if (event.key !== 'evt.aeroEnvelopeExceeded' || !p || (p.scope !== 'vehicle' && p.scope !== 'debris')
+      if ((event.key !== 'evt.aeroEnvelopeExceeded' && event.key !== 'evt.debrisSeparated')
+        || !p || (p.scope !== 'vehicle' && p.scope !== 'debris')
         || typeof p.angleOfAttackRad !== 'number' || !Number.isFinite(p.angleOfAttackRad)
         || typeof p.sideslipRad !== 'number' || !Number.isFinite(p.sideslipRad)) return [];
       return [{ time: event.t, scope: p.scope, angleOfAttackRad: p.angleOfAttackRad, sideslipRad: p.sideslipRad }];

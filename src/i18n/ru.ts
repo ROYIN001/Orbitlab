@@ -238,6 +238,8 @@ export const ru: Record<string, string> = {
   'tl.evt.burnPredictionUnavailable': 'Прогноз манёвра недоступен',
   'evt.aeroEnvelopeExceeded': 'Выход за расчётный диапазон аэродинамики: {scope}, {name} (α {alphaDeg}°, β {betaDeg}°).',
   'tl.evt.aeroEnvelopeExceeded': 'Предел аэродинамической модели',
+  'evt.debrisSeparated': 'Успешное отделение: {name}.',
+  'tl.evt.debrisSeparated': 'Отделение',
   'aero.scope.vehicle': 'отслеживаемый аппарат',
   'aero.scope.debris': 'отделившееся тело',
   'result.aeroWarning.vehicle': 'Ограничение модели: отслеживаемый аппарат вышел за расчётный диапазон аэродинамики в T+{time} с (α {alpha}°, β {beta}°). Аэродинамические выводы для этого полёта следует считать оценочными.',
