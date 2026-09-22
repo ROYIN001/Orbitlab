@@ -73,7 +73,7 @@ import { VEHICLES } from '../src/data/vehicles';
 import { Simulation } from '../src/physics/simulation';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import {
-  azimuthAllowedFor, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
+  azimuthAllowedFor, azimuthInWindow, planMission, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
   ORBIT_INSERTION_FLOOR, kickStageSink, launchWindows,
 } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
@@ -139,10 +139,12 @@ describe('excluded combinations', () => {
   it('the vehicles that fly the sun-synchronous preset are the ones range safety and capability both allow', () => {
     // The flown set is an *intersection*, not a range-safety statement on its
     // own: a vehicle appears here only if (a) its first site's azimuth window
-    // contains the retrograde launch — Plesetsk (330–90°), Mahia (90–200°),
-    // Jiuquan (90–200°) and Taiyuan (144–200°) are the four sites in the data
-    // that qualify — and (b) at least one of its three `sso` rows survives the
-    // capability and architecture tables. Electron keeps all three (its rows
+    // contains the retrograde launch — Plesetsk (330–90°), Vostochny (340–95°),
+    // Vandenberg (147–201°), Mahia and Jiuquan (90–200°) and Taiyuan (144–200°)
+    // are the sites in the data that qualify — and (b) at least one of its
+    // three `sso` rows survives the capability and architecture tables.
+    // Tanegashima, Sriharikota and Kourou fly it in reality with a dogleg this
+    // model does not have, so they are not among them. Electron keeps all three (its rows
     // are graded against its own 200 kg sun-synchronous rating) and Angara-A5
     // keeps one. Long March 2D passes the range-safety half from Jiuquan and is
     // absent only because of (b): all three of its `sso` rows are excluded
@@ -1033,6 +1035,38 @@ describe('range safety', () => {
       expect(allowed, `${v.id} from ${site.id}`).toBe(!SITE_GEOMETRY[`${v.id}/sso/25`]);
       expect(inc, 'the sso preset must be retrograde').toBeGreaterThan(90 * DEG);
     }
+  });
+
+  /**
+   * ...for every row of the matrix, not only the sun-synchronous ones, and
+   * against the heading the plan FLIES rather than one recomputed here.
+   *
+   * Until this wave 38 accepted rows flew a heading outside their own site's
+   * window while the plan called them reachable: the planner always took the
+   * northbound solution below 75°, so H3 and H-IIA left Tanegashima on 88.1°
+   * against a 90–190° window, and every ISS-plane row from Tanegashima,
+   * Wenchang, Sriharikota and Mahia went north-east into a sector those ranges
+   * close. They now fly the mirror heading, which the window licenses and which
+   * reaches the same plane (tests/range-safety.test.ts has the measurement).
+   */
+  it('every row the matrix flies leaves on a heading its site licenses', () => {
+    const outside: string[] = [];
+    for (const c of fleetCases()) {
+      const site = siteById(c.site);
+      const orbit = orbitById(c.orbit);
+      const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
+      const plan = planMission({
+        vehicleId: c.vehicle, satelliteId: 'cubesats', siteId: c.site, orbit,
+        launchTime: orbit.raanMode === 'free' ? LAUNCH_TIME : launchWindows(orbit, site, LAUNCH_TIME, 1)[0].time,
+        guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) }, guidanceResolved: true,
+        failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: c.mass,
+      }, site, spec);
+      expect(plan.inclinationReachable, caseKey(c)).toBe(true);
+      if (!azimuthInWindow(site, plan.azimuthRotating)) {
+        outside.push(`${caseKey(c)}: ${(plan.azimuthRotating * RAD).toFixed(2)}° from ${site.id} (${site.azimuthMin}–${site.azimuthMax}°)`);
+      }
+    }
+    expect(outside, outside.join('\n')).toEqual([]);
   });
 });
 

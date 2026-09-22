@@ -896,7 +896,7 @@ configuration, and the column that matters is whether it agrees with the outcome
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Plesetsk | target orbit T+3 624 s | 597 × 597 km | T+825 s | ok ✓ |
 | Soyuz-2.1b/Fregat · crew 7.15 t → ISS, Baikonur | break-up T+962 s (no insertion reported) | — | — | **fail** ✓ |
-| Long March 3B/E · comsat 5.5 t → GTO, Xichang | target orbit T+25 798 s | 252 × 35 724 km | T+674 s | warn ✓ |
+| Long March 3B/E · comsat 5.5 t → GTO, Xichang | target orbit T+25 797 s | 252 × 35 723 km | T+674 s | warn ✓ |
 | Ariane 64 · comsat 5.5 t → GTO, Kourou | target orbit T+7 210 s | 245 × 35 716 km | T+834 s | ok ✓ |
 | Vega-C · cubesats 300 kg → 500 km, Kourou | target orbit T+3 052 s | 498 × 498 km | T+319 s | ok ✓ |
 | PSLV-XL · earth-obs 1.75 t → 500 km, Sriharikota | target orbit T+3 451 s | 497 × 497 km | T+703 s | ok ✓ |
@@ -904,7 +904,8 @@ configuration, and the column that matters is whether it agrees with the outcome
 Three rows that belong to the sweep are not in the table because the launch would not be
 licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur**,
 Vega-C to one from Kourou and PSLV-XL to one from Sriharikota all need an azimuth outside
-their site's range-safety window (§6b, range safety), and the verdict says so. The model will
+their site's range-safety window (§6b, range safety), and the verdict says so — Kourou and
+Sriharikota reach the plane in reality with a dogleg, which this model does not fly. The model will
 still fly the plane if asked — the geometry is reachable — which is why Soyuz-2.1b's
 sun-synchronous mission is flown here from the two sites that can licence it.
 
@@ -941,7 +942,7 @@ every margin in this section has to be re-measured with it.*
 
 | table | rule | entries |
 | --- | --- | --- |
-| range safety (`SITE_GEOMETRY`) | the azimuth the orbit needs is outside the site's window — the launch would not be licensed | 45 |
+| range safety (`SITE_GEOMETRY`) | no heading inside the site's window reaches the plane — the launch would not be licensed, or (Tanegashima, Sriharikota, Kourou) only with a dogleg the model does not fly | 45 |
 | `BEYOND_CAPABILITY` | the flight ends with the tanks empty, **or** the ascent stages' margin is below `ASCENT_MARGIN_REQUIRED` (+150 m/s) | 22 |
 | `ARCHITECTURE` | propellant left, orbit reachable, but nothing in the stack can use it | 13 |
 | `KNOWN_GUIDANCE_FAILURES` | **defects**: Δv available, a stage able to spend it, orbit still lost or missed | 4 |
@@ -960,14 +961,30 @@ model now throttles back on the structural placard (§3), which is what a real v
 about it, but load relief does not turn a Δv shortfall into performance. The discriminator is
 the margin, not the event that ends the flight.
 
-**Range safety.** The `sso` preset needs a retrograde, roughly north-westerly or south-easterly
-azimuth (346–348° from the northern sites, 191–193° from the southern ones). Only Plesetsk
-(330–90°) and Mahia (90–200°) have a window that contains it; from Baikonur, Cape Canaveral,
-Kourou, Wenchang, Tanegashima, Sriharikota and Starbase that azimuth points over populated land
-or another country. The table is generated from the site data through `azimuthAllowedFor`, and
-a test asserts that the exclusions are exactly the sites the function rules out, so the matrix
-cannot be shrunk by quietly dropping a case. Angara-A5 and Electron are therefore the only
-vehicles with `sso` acceptance cases.
+**Range safety.** One rule, in `inclinationCorridor`: a site can fly an inclination when a
+launch heading inside its azimuth window reaches it — the northbound solution or its southbound
+mirror (180° − A), whichever the window holds — and the inclination is not below the site's
+declared minimum, with the same 0.25° `CORRIDOR_SLACK` on every edge. The window's reach is
+computed from the window in closed form (`corridorReach`), `azimuthAllowedFor` is the boolean
+form of the same verdict, and `planMission` / `launchWindows` fly the heading the window
+licenses (`launchDescendingFor`). Until this wave `azimuthAllowedFor` tested only the
+northbound heading below 75°, so it rejected Tanegashima's own `leo`/`gto` presets and the ISS
+plane from Wallops, Wenchang, Tanegashima, Jiuquan and Sriharikota (known bug F01) while the
+corridor accepted them — and the planner flew that northbound heading, outside the window, in
+48 fleet rows. They now leave south-east, as those ranges really do; re-flown, all 48 keep their
+acceptance outcome and the 38 accepted ones land within 1.5 km of their previous orbit.
+
+The `sso` preset needs a retrograde heading, roughly 341–349° or 191–199°. Of the sites the
+fleet flies from, Plesetsk (330–90°), Jiuquan and Mahia (90–200°) have a window that contains
+one of the two; from Baikonur, Cape Canaveral, Wenchang, Starbase and Xichang both point over
+populated land or another country. Tanegashima, Sriharikota and Kourou are different in kind:
+their ranges reach sun-synchronous planes with a **dogleg** — a yaw during the ascent — which
+this model does not fly (the guidance holds a single plane, and a post-insertion plane change is
+no stand-in: Sriharikota's window stops 11° short of the plane). They stay excluded, with the
+heading and the corridor's measured reach in the reason. The table is generated from the site
+data through `azimuthAllowedFor`, and a test asserts that the exclusions are exactly the sites
+the function rules out, so the matrix cannot be shrunk by quietly dropping a case. Angara-A5
+and Electron are therefore the only vehicles with `sso` acceptance cases.
 
 **Beyond capability.** Two systematic gaps explain most of it:
 

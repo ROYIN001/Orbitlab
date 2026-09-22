@@ -8,8 +8,8 @@ import { satelliteById } from '../data/satellites';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
-  circularSpeed, visViva, inertialLaunchAzimuth, rotatingLaunchAzimuth, sunSyncInclination,
-  raanFromLaunch, gmst, julianDate, sunRightAscension, nodalPrecessionRate, wrap2pi, wrapPi,
+  circularSpeed, visViva, inertialLaunchAzimuth, rotatingLaunchAzimuth, inclinationForRotatingAzimuth,
+  sunSyncInclination, raanFromLaunch, gmst, julianDate, sunRightAscension, nodalPrecessionRate, wrap2pi, wrapPi,
 } from './orbital';
 
 export interface ResolvedTarget {
@@ -159,26 +159,82 @@ export function minInclinationFor(site: SiteExtra): number {
 }
 
 /**
- * Highest inclination the site's range-safety corridor reaches, rad.
+ * Circular speed the range-safety window is converted to inclinations at: a
+ * 300 km orbit, the reference `SiteExtra.maxInclination` was measured at.
+ */
+const CORRIDOR_REFERENCE_SPEED = circularSpeed(R_EARTH + 300e3);
+
+const wrapDeg = (deg: number): number => ((deg % 360) + 360) % 360;
+
+/** How far (deg) a rotating-frame heading lies outside the site's azimuth window; 0 inside it. */
+function azimuthOutsideWindow(site: SiteExtra, azRad: number): number {
+  const deg = wrapDeg(azRad / DEG);
+  const lo = wrapDeg(site.azimuthMin);
+  const hi = wrapDeg(site.azimuthMax);
+  const inside = lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
+  return inside ? 0 : Math.min(wrapDeg(lo - deg), wrapDeg(deg - hi));
+}
+
+/** Whether a rotating-frame heading (rad) lies inside the site's range-safety azimuth window. */
+export function azimuthInWindow(site: SiteExtra, azRad: number): boolean {
+  return azimuthOutsideWindow(site, azRad) === 0;
+}
+
+/**
+ * The inclinations a heading inside the site's range-safety window reaches, rad.
  *
- * `maxInclination` is the retrograde end of the pair whose prograde end is
- * `minInclination`, measured from the site's own `azimuthMin`/`azimuthMax`
- * window with this module's `rotatingLaunchAzimuth` and re-measured by
- * `tests/data-consistency.test.ts`, so it cannot drift from the corridor it
- * describes. Reading the pair is the "bracket with this pair" half of audit
- * item B25 (see the field's doc comment in src/data/sites.ts) and is what lets
- * the planner test an inclination without re-deriving an azimuth.
+ * Every inclination has two launch headings, northbound A and its mirror
+ * southbound 180° − A, and the site can fly the plane if EITHER lies in its
+ * window. That is how `SiteExtra.maxInclination` / `minInclination` were
+ * always measured (`tests/data-consistency.test.ts` sweeps both solutions),
+ * and it is how the ranges fly: Wallops, Tanegashima and Jiuquan reach the
+ * 42–52° planes on a south-easterly heading, because their north-east is
+ * closed. `azimuthAllowedFor` used to test only the northbound heading below
+ * 75°, which is why it rejected the ISS plane from five sites whose corridor
+ * `inclinationCorridor` said contained it (known bug F01), and Tanegashima's
+ * own minimum inclination, whose due-east heading comes out a hair north of
+ * the 90° edge.
+ *
+ * Closed form rather than a sweep: `inclinationForRotatingAzimuth` has its
+ * extremes only at due east (|φ|) and due west (180° − |φ|), so over one
+ * contiguous window the reach is set by those two points if the window holds
+ * them and by the window's own edges otherwise.
+ */
+export function corridorReach(site: SiteExtra): { lo: number; hi: number } {
+  const lat = site.latitude * DEG;
+  const atMin = inclinationForRotatingAzimuth(lat, site.azimuthMin * DEG, CORRIDOR_REFERENCE_SPEED);
+  const atMax = inclinationForRotatingAzimuth(lat, site.azimuthMax * DEG, CORRIDOR_REFERENCE_SPEED);
+  return {
+    lo: azimuthInWindow(site, Math.PI / 2) ? Math.abs(lat) : Math.min(atMin, atMax),
+    hi: azimuthInWindow(site, 1.5 * Math.PI) ? Math.PI - Math.abs(lat) : Math.max(atMin, atMax),
+  };
+}
+
+/**
+ * Highest inclination the site's range-safety corridor reaches, rad — computed
+ * from the azimuth window itself (`corridorReach`), not read from the declared
+ * `SiteExtra.maxInclination`.
+ *
+ * The declared figure is the same number rounded to 0.1° and held to it by
+ * `tests/data-consistency.test.ts`, but "within 0.2°" is not "equal": a verdict
+ * bracketed with the declared figure and a heading chosen from the window
+ * disagreed in a band up to 0.2° wide at the retrograde end of every site.
+ * Computing both from the window is what makes them one rule.
  */
 export function maxInclinationFor(site: SiteExtra): number {
-  return site.maxInclination * DEG;
+  return corridorReach(site).hi;
 }
 
 /**
  * Slack on either end of the corridor, rad.
  *
  * A resolved sun-synchronous inclination can land a hair outside a bound that
- * was quoted to one decimal, and the declared bounds are themselves quoted to
- * 0.1°. A quarter of a degree is below the 0.3° the mission is graded on.
+ * was quoted to one decimal, and the declared minimum is itself quoted to 0.1°.
+ * The same slack covers a target that sits exactly on an edge of the azimuth
+ * window, where which side its heading falls on is decided by rounding, or by
+ * the plan flying its heading for a slightly different orbit than the 300 km
+ * the window is converted at. A quarter of a degree is below the 0.3° the
+ * mission is graded on.
  */
 export const CORRIDOR_SLACK = 0.25 * DEG;
 
@@ -190,9 +246,24 @@ export type CorridorVerdict = 'ok' | 'belowMinimum' | 'aboveCorridor';
  * and if not, which end it falls outside.
  *
  * The single definition of that question for the whole app: `planMission`
- * reports it as `MissionPlan.inclinationReachable` and the setup panel's
- * pre-flight verdict reads the same function, so the verdict and the planner
- * cannot disagree about what a site can fly (review 2, major #2).
+ * reports it as `MissionPlan.inclinationReachable`, the setup panel's
+ * pre-flight verdict reads the same function, `azimuthAllowedFor` (and through
+ * it the fleet's `SITE_GEOMETRY` table) is its boolean form, and
+ * `launchDescendingFor` flies the heading that the window licenses — so none of
+ * them can disagree about what a site can fly (review 2, major #2).
+ *
+ * The rule: a site can fly an inclination when a heading inside its azimuth
+ * window reaches it — northbound or southbound, see `corridorReach` — and it is
+ * not below the site's declared minimum. Every edge carries the same
+ * `CORRIDOR_SLACK`, applied to the inclination, so a target exactly on an edge
+ * (Tanegashima's own 30.4° minimum is a due-east launch) is inside whatever
+ * the last bit of floating point says about its heading.
+ *
+ * What it does not model is a dogleg. Tanegashima, Sriharikota and Kourou put
+ * sun-synchronous payloads into orbit with a yaw during the ascent that turns a
+ * licensed heading into a plane the window does not reach directly; this model
+ * flies a single-plane ascent, so those planes are 'aboveCorridor' here
+ * (tests/range-safety.test.ts measures by how much).
  *
  * Both ends are real. A site cannot fly below its own latitude, nor below the
  * inclination its corridor allows — that is `minInclinationFor`. It equally
@@ -213,6 +284,47 @@ export function inclinationCorridor(site: SiteExtra, inc: number): CorridorVerdi
   const effective = inc > Math.PI / 2 ? Math.PI - inc : inc;
   if (effective < minInclinationFor(site) - CORRIDOR_SLACK) return 'belowMinimum';
   return 'ok';
+}
+
+/**
+ * Whether the site's range-safety window licenses a launch into `inc` — the
+ * boolean form of `inclinationCorridor`, which is where the rule lives.
+ *
+ * It is the gate `tests/fleet-harness.ts` generates `SITE_GEOMETRY` from, and
+ * it used to be a second implementation of the same question with its own
+ * answer: it tested only the northbound heading below 75° and took the window's
+ * edges with no tolerance, so it rejected missions `inclinationCorridor` called
+ * 'ok' — the 51.64° plane from Wallops, Wenchang, Tanegashima, Jiuquan and
+ * Sriharikota (known bug F01), and Tanegashima's own `leo` and `gto` presets.
+ */
+export function azimuthAllowedFor(site: SiteExtra, inc: number): boolean {
+  return inclinationCorridor(site, inc) === 'ok';
+}
+
+/**
+ * Which launch solution a mission into `inc` flies: southbound (true) or
+ * northbound (false). Shared by `planMission` and `launchWindows`, so the
+ * window a launch time is computed for is the heading that is then flown.
+ *
+ * The heading the window licenses — and when neither does, the one closer to
+ * the window. The site's customary solution (`descendingForPolar` above 75°,
+ * northbound below) is kept wherever the window licenses it, so a mission that
+ * already left on a licensed heading flies exactly what it flew before. The
+ * rest used to fly the northbound heading into a window closed to the
+ * north-east and report the mission as reachable: H3 from Tanegashima on 88.1°
+ * against a 90–190° window, the ISS plane from Wallops on 50° against 90–160°.
+ * The southbound mirror reaches the same plane with the same Earth-rotation
+ * credit. Re-flown, all 48 fleet rows it moves keep their acceptance outcome,
+ * and the 38 accepted ones land within 1.5 km of the orbit they reached before.
+ */
+export function launchDescendingFor(site: SiteExtra, inc: number): boolean {
+  const lat = site.latitude * DEG;
+  const customary = inc > 75 * DEG ? site.descendingForPolar : false;
+  const outside = (descending: boolean): number => {
+    const az = rotatingLaunchAzimuth(lat, inc, CORRIDOR_REFERENCE_SPEED, descending);
+    return az === null ? Infinity : azimuthOutsideWindow(site, az);
+  };
+  return outside(!customary) < outside(customary) ? !customary : customary;
 }
 
 export function resolveInclination(orbit: OrbitSpec, site: SiteExtra): number {
@@ -723,24 +835,6 @@ export function replanBurns(target: ResolvedTarget, el: { periapsisAlt: number; 
 }
 
 /**
- * Whether the launch azimuth needed for `inc` lies inside the site's
- * range-safety window. `minInclination` only constrains prograde launches, so
- * this is what decides whether a site can fly a retrograde (sun-synchronous)
- * mission at all.
- */
-export function azimuthAllowedFor(site: SiteExtra, inc: number): boolean {
-  const lat = site.latitude * DEG;
-  const descending = inc > 75 * DEG ? site.descendingForPolar : false;
-  const vOrb = circularSpeed(R_EARTH + 300e3);
-  const az = rotatingLaunchAzimuth(lat, inc, vOrb, descending);
-  if (az === null) return false;
-  const deg = ((az / DEG) % 360 + 360) % 360;
-  const lo = ((site.azimuthMin % 360) + 360) % 360;
-  const hi = ((site.azimuthMax % 360) + 360) % 360;
-  return lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
-}
-
-/**
  * Whether anything at all can light an engine after the ascent cuts off: the
  * stage that flies the ascent restarts, a kick stage sits above it, or the
  * spacecraft carries its own propulsion.
@@ -763,7 +857,7 @@ export function canBurnAfterAscent(vehicle: VehicleSpec, satellite: SatelliteSpe
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   const { inc: ascentInclination } = ascentInclinationFor(target, site);
-  const descending = ascentInclination > 75 * DEG ? site.descendingForPolar : false;
+  const descending = launchDescendingFor(site, ascentInclination);
   const lat = site.latitude * DEG;
   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
   const azimuthInertial = inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
@@ -925,7 +1019,7 @@ export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, cou
   const t0 = resolveTarget(orbit, site, from);
   if (t0.raan === null) return [];
   const { inc } = ascentInclinationFor(t0, site);
-  const descending = inc > 75 * DEG ? site.descendingForPolar : false;
+  const descending = launchDescendingFor(site, inc);
   const out: LaunchWindow[] = [];
   // Δλ between ascending node and site along the orbit is fixed for given lat/inc.
   // Δλ is the offset between the site's inertial longitude and the node of the

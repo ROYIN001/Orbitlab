@@ -33,9 +33,14 @@ import { allCases, caseKey, fleetCases, BEYOND_CAPABILITY, ARCHITECTURE, LAUNCH_
 import type { MissionConfig, OrbitSpec, VehicleSpec } from '../src/types';
 
 const spec = { id: 'testbed', name: 'Testbed-1', payloadLEO: 10000, payloadGTO: 3000, payloadSSO: 8000 } as unknown as VehicleSpec;
-// A synthetic range with a corridor as wide as the widest real one (Plesetsk
-// reaches 102.6°), so the rating rules below are never decided by geometry.
-const site = { id: 'testrange', name: 'Test Range', latitude: 28, minInclination: 28.5, maxInclination: 102.6 } as unknown as SiteExtra;
+// A synthetic range with a corridor about as wide as the widest real one
+// (Vandenberg's reaches 105.0°), so the rating rules below are never decided by
+// geometry. It needs a real azimuth window: the corridor is measured from the
+// window (`corridorReach`), and at 28° N a 340–120° window reaches 105.1°.
+const site = {
+  id: 'testrange', name: 'Test Range', latitude: 28, minInclination: 28.5, maxInclination: 105.1,
+  azimuthMin: 340, azimuthMax: 120, descendingForPolar: false,
+} as unknown as SiteExtra;
 const leo = { id: 'leo', name: 'LEO', perigee: 500e3, apogee: 500e3, inclination: 45, argPerigee: 0, raanMode: 'free' } as unknown as OrbitSpec;
 const gto = { ...leo, id: 'gto', apogee: 35786e3 } as OrbitSpec;
 const sso = { ...leo, id: 'sso', inclination: 97.8, raanMode: 'ltan' } as OrbitSpec;

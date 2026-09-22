@@ -19,6 +19,7 @@ import { SATELLITES } from '../src/data/satellites';
 import { ORBIT_PRESETS } from '../src/data/orbits';
 import { engineMassFlow, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
 import { circularSpeed, rotatingLaunchAzimuth } from '../src/physics/orbital';
+import { corridorReach } from '../src/physics/mission';
 import { G0, DEG, R_EARTH } from '../src/physics/constants';
 import type { EngineSpec, StageSpec, VehicleSpec } from '../src/types';
 
@@ -347,6 +348,12 @@ describe('geometry and references', () => {
       expect(Math.abs(s.maxInclination - hi), `${s.id}: declared maximum ${s.maxInclination}° against a measured ${hi.toFixed(1)}°`)
         .toBeLessThanOrEqual(0.2);
       expect(s.maxInclination, s.id).toBeGreaterThan(s.minInclination);
+      // The planner's own reach (`corridorReach`, closed form) is what the
+      // verdict and the heading choice read; this sweep is the independent
+      // instrument it is held to, to within the sweep's own 0.05° step.
+      const reachDeg = corridorReach(s);
+      expect(Math.abs(reachDeg.lo / DEG - lo), `${s.id}: corridorReach lo`).toBeLessThanOrEqual(0.051);
+      expect(Math.abs(reachDeg.hi / DEG - hi), `${s.id}: corridorReach hi`).toBeLessThanOrEqual(0.051);
     }
   });
 

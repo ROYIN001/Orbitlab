@@ -13,9 +13,11 @@ import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { VEHICLES } from '../src/data/vehicles';
 import type { MissionConfig, VehicleSpec } from '../src/types';
-import { G0, DEG, RAD } from '../src/physics/constants';
-import { elementsFromState, wrapPi } from '../src/physics/orbital';
-import { azimuthAllowedFor, inclinationCorridor, resolveTarget, launchWindows } from '../src/physics/mission';
+import { G0, DEG, RAD, R_EARTH } from '../src/physics/constants';
+import { circularSpeed, elementsFromState, rotatingLaunchAzimuth, wrapPi } from '../src/physics/orbital';
+import {
+  azimuthAllowedFor, inclinationCorridor, launchDescendingFor, maxInclinationFor, resolveTarget, launchWindows,
+} from '../src/physics/mission';
 
 export const LAUNCH_TIME = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
 export const FRACTIONS = [0.25, 0.5, 0.9];
@@ -273,20 +275,35 @@ export const TANKS_EMPTY_DV = 100;
 
 // ---------------------------------------------------------------------------
 // 1. Not flyable from the site: range safety.
-// The sun-synchronous preset needs a retrograde, roughly north-westerly or
-// south-easterly azimuth. Only Plesetsk and Mahia have a range-safety window
-// that contains it; from Baikonur, Cape Canaveral, Kourou, Wenchang,
-// Tanegashima, Sriharikota and Starbase the azimuth points over populated land
-// or over another country's territory, and the launch would not be licensed.
+// The sun-synchronous preset needs a retrograde heading, roughly 341-349°
+// (north-north-west) or 191-199° (south-south-west). Of the sites the fleet
+// flies from, Plesetsk (330–90°), Jiuquan and Mahia (90–200°) have a window
+// that contains one of the two. From Baikonur, Cape Canaveral, Wenchang,
+// Starbase and Xichang both headings point over populated land or another
+// country's territory, and the launch would not be licensed.
+//
+// Tanegashima, Sriharikota and Kourou are different in kind: their ranges DO
+// put payloads into sun-synchronous orbit, with a dogleg — a yaw during the
+// ascent from a licensed heading. This model flies single-plane ascents (there
+// is no yaw programme in the guidance), so the plane is out of its reach from
+// those three sites, and the reason says so rather than calling the launch
+// unlicensable.
+//
 // The table is generated from the site data so it always describes the sites as
-// they are, and `azimuthAllowedFor` is the single source of truth for it.
+// they are, and `azimuthAllowedFor` — the boolean form of `inclinationCorridor`
+// — is the single source of truth for it. The heading and the reach quoted are
+// measured from the same window, with `launchDescendingFor` choosing the heading
+// the planner would fly.
+const DOGLEG_SSO_SITES = new Set(['tanegashima', 'sriharikota', 'kourou']);
 export const SITE_GEOMETRY: Record<string, string> = {};
 for (const v of VEHICLES) {
   const site = siteById(v.sites[0]);
   const inc = resolveTarget(orbitById('sso'), site, LAUNCH_TIME).inclination;
   if (azimuthAllowedFor(site, inc)) continue;
-  const reason = `a ${(inc * RAD).toFixed(1)}° orbit from ${site.name} needs an azimuth outside the site's `
-    + `${site.azimuthMin}–${site.azimuthMax}° range-safety window`;
+  const az = rotatingLaunchAzimuth(site.latitude * DEG, inc, circularSpeed(R_EARTH + 300e3), launchDescendingFor(site, inc))!;
+  const reason = `a ${(inc * RAD).toFixed(1)}° orbit from ${site.name} needs a ${((az * RAD + 360) % 360).toFixed(1)}° heading, `
+    + `outside the site's ${site.azimuthMin}–${site.azimuthMax}° range-safety window, which reaches ${(maxInclinationFor(site) * RAD).toFixed(1)}° at most`
+    + (DOGLEG_SSO_SITES.has(site.id) ? '; the real range flies it with a dogleg, which this model does not' : '');
   fill(SITE_GEOMETRY, reason, `${v.id}/sso/25`, `${v.id}/sso/50`, `${v.id}/sso/90`);
 }
 
@@ -349,7 +366,7 @@ fill(BEYOND_CAPABILITY,
   'PS1-PS4 run dry at T+908 s, suborbital at -537 x 235 km: +523 m/s of ideal margin and none of it left, which is what a four-stage solid/liquid stack with this much drag spends',
   'pslvxl/leo/90');
 fill(BEYOND_CAPABILITY,
-  'PS4 is a 7.3 kN stage: it runs dry at a 26 295 km apogee (50 %, +346 m/s) and a 9 651 km one (90 %, -414 m/s)',
+  'PS4 is a 7.3 kN stage: it runs dry at a 26 287 km apogee (50 %, +346 m/s) and a 9 650 km one (90 %, -414 m/s)',
   'pslvxl/gto/50', 'pslvxl/gto/90');
 fill(BEYOND_CAPABILITY,
   'ship empty at a 31 635 km apogee of the 35 786 km target',
@@ -358,7 +375,7 @@ fill(BEYOND_CAPABILITY,
 // sun-synchronous one; at 90 % of those the second stage runs dry short of the
 // orbit. Its lower fractions are an ARCHITECTURE limit, not a capability one.
 fill(BEYOND_CAPABILITY,
-  'second stage empty at T+289 s at 155 x 324 km (LEO) and 7 x 303 km (ISS plane)',
+  'second stage empty at T+289 s at 148 x 314 km (LEO) and 14 x 276 km (ISS plane)',
   'longmarch2d/leo/90', 'longmarch2d/iss/90');
 // Electron, H3, Long March 5, Long March 3B/E, Vega-C, Atlas V 551,
 // Vulcan, Ariane 64 and H-IIA 202 have no capability exclusion at all.
@@ -396,7 +413,7 @@ fill(ARCHITECTURE,
   'soyuz21a/leo/25', 'soyuz21a/leo/50', 'soyuz21a/leo/90',
   'soyuz21a/iss/25', 'soyuz21a/iss/50', 'soyuz21a/iss/90');
 fill(ARCHITECTURE,
-  'inserts at 197-199 x 423-606 km with 0.4-1.0 km/s left in the second stage: two hypergolic stages, no restart, and an inert payload',
+  'inserts at 197-199 x 417-603 km with 0.4-1.0 km/s left in the second stage: two hypergolic stages, no restart, and an inert payload',
   'longmarch2d/leo/25', 'longmarch2d/leo/50',
   'longmarch2d/iss/25', 'longmarch2d/iss/50',
   'longmarch2d/sso/25', 'longmarch2d/sso/50', 'longmarch2d/sso/90');
@@ -465,7 +482,7 @@ fill(KNOWN_GUIDANCE_FAILURES,
   'the Vulcain core hands Vinci a sagging trajectory with 19.44 t aboard: break-up at T+941 s at -2 219 x 92 km with 1.7 km/s left and +1 855 m/s of margin (the 500 km case at the same mass is accepted, 497 x 497 km, which is what rules out a capability explanation)',
   'ariane64/iss/90');
 fill(KNOWN_GUIDANCE_FAILURES,
-  'PS4 is still 974 m/s deep with +315 m/s of ideal margin when the stack breaks up at T+567 s at -2 897 x 232 km; the same payload to the 500 km preset instead runs the tanks dry, which is a capability limit and is filed as one',
+  'PS4 is still 971 m/s deep with +315 m/s of ideal margin when the stack breaks up at T+568 s at -2 893 x 231 km; the same payload to the 500 km preset instead runs the tanks dry, which is a capability limit and is filed as one',
   'pslvxl/iss/90');
 
 export const EXCLUDED: Record<string, string> = {
