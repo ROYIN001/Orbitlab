@@ -5,6 +5,26 @@ you while it flies — written for a student rather than for a contributor. If y
 equations and the sources behind them, that is [docs/PHYSICS.md](PHYSICS.md); this guide
 sticks to what you see on screen and what it means.
 
+## 0. Four ways in
+
+The switch in the top bar picks how much of the simulator you see:
+
+- **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
+  space station) straight away.
+- **Watch** — just the picture, three numbers (mission time, altitude, speed over the
+  ground) and one sentence about what is happening and why. **Choose a launch** lists six
+  real rockets on typical missions; the speed buttons run the flight in real time (1×),
+  faster, or at **Auto**, which keeps liftoff, max-Q and every separation in real time and
+  hurries through the long coasts. When the rocket reaches orbit a card offers to keep
+  watching, watch again, pick another launch, or plan a mission of your own.
+- **Explore** — everything below this line, in the learning layout (the advanced guidance
+  parameters stay folded away).
+- **Engineer** — the same workspace with every guidance parameter open.
+
+Switching mode never touches the flight: leave the viewer half-way up and the workspace
+shows the same launch with every instrument on it. Each mode has its own address
+(`#/watch` and so on), and the browser's Back button moves between them.
+
 ## 1. Set up a mission
 
 The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.

@@ -17,6 +17,11 @@ import { OrbitalMap } from './ui/map';
 import { OnboardOverlay } from './ui/onboard';
 import { Timeline } from './ui/timeline';
 import { Narration } from './ui/narration';
+import { HomeScreen } from './ui/home';
+import './ui/modes.css';
+import { WatchView } from './ui/watch';
+import { experienceForMode, hashForMode, initialMode, modeFromHash, saveMode, type AppMode } from './ui/app-mode';
+import { FEATURED_WATCH_MISSION, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
@@ -84,6 +89,14 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
   return frame.payloadSeparated ? 'deployment' : 'orbit';
 }
 
+/**
+ * The camera programme of the landing page and the launch viewer: the same as
+ * the workspace default except that it stays outside the vehicle. The onboard
+ * view draws an instrument strip where the viewer's own readouts are, and the
+ * map is a chart rather than a picture.
+ */
+const WATCH_CAMERA_PLAN: CameraPlan = { ...DEFAULT_CAMERA_PLAN, upper: 'exterior', deployment: 'space' };
+
 const WARPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000];
 /**
  * When the predicted-orbit line is a trajectory rather than an artefact.
@@ -126,6 +139,10 @@ class App {
   narration: Narration;
   cams = new CameraController();
   panel: SetupPanel;
+  home: HomeScreen;
+  watch: WatchView;
+  /** which face of the app is showing (src/ui/app-mode.ts) */
+  mode: AppMode = 'home';
   sim: Simulation | null = null;
   recorder = new FlightRecorder();
   player = new ReplayPlayer(this.recorder);
@@ -223,6 +240,17 @@ class App {
       onLaunch: (cfg) => this.launch(cfg),
       onReset: () => this.reset(),
       onChange: (cfg) => { if (!this.playing) this.preview(cfg); },
+      onExperience: (experience) => this.go(experience === 'advanced' ? 'engineer' : 'explore'),
+    });
+    this.home = new HomeScreen(document.getElementById('home-screen')!, {
+      watchFeatured: () => { this.go('watch'); this.startWatch(FEATURED_WATCH_MISSION); },
+      go: (mode) => this.go(mode),
+    });
+    this.watch = new WatchView(document.getElementById('watch-ui')!, {
+      start: (id) => this.startWatch(id),
+      togglePlay: () => this.togglePlay(),
+      setWarp: (warp) => this.setWarp(warp),
+      explore: () => this.go('explore'),
     });
     this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
@@ -238,6 +266,64 @@ class App {
     });
     this.bindControls();
     this.observeSceneBottom();
+    this.setMode(initialMode(location.hash));
+    // Keep the address naming the mode, without adding a history entry for it.
+    if (location.hash !== hashForMode(this.mode)) history.replaceState(null, '', hashForMode(this.mode));
+    window.addEventListener('hashchange', () => {
+      const mode = modeFromHash(location.hash);
+      if (mode && mode !== this.mode) this.setMode(mode);
+    });
+  }
+
+  /** The landing page and the viewer: no workspace, the scene is the page. */
+  get lean(): boolean {
+    return this.mode === 'home' || this.mode === 'watch';
+  }
+
+  /** Navigate to a mode (a history entry, so Back returns to the last one). */
+  go(mode: AppMode): void {
+    if (location.hash === hashForMode(mode)) this.setMode(mode);
+    else location.hash = hashForMode(mode);
+  }
+
+  /**
+   * Show a mode. Only presentation changes: the mission, the flight and its
+   * recording carry on underneath, so leaving the viewer for the workspace in
+   * the middle of a launch shows the same launch with every instrument on it.
+   */
+  private setMode(mode: AppMode): void {
+    const previous = this.mode;
+    this.mode = mode;
+    document.body.dataset.mode = mode;
+    saveMode(mode);
+    const experience = experienceForMode(mode);
+    if (experience) this.panel.setExperience(experience);
+    document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
+      if (a.dataset.mode === mode) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    document.getElementById('home-screen')!.hidden = mode !== 'home';
+    document.getElementById('watch-ui')!.hidden = mode !== 'watch';
+    // The two faces fly different camera programmes; re-apply at once.
+    this.lastPhase = null;
+    // The target-orbit line is a planning aid: from the pad it is an orange
+    // stroke across the sky that nobody watching a launch could read.
+    this.target.setOpacity(this.lean ? 0 : 1);
+    if (mode === 'watch' && previous !== 'watch') {
+      this.watch.enter(!this.playing && (this.shown?.status ?? 'prelaunch') === 'prelaunch');
+    }
+    if (mode !== 'watch') this.watch.closePicker();
+  }
+
+  /** Load one of the viewer's launches and fly it. */
+  startWatch(id: WatchMissionId): void {
+    if (!this.scene) return;
+    this.goLive();
+    this.panel.loadMission(watchMissionSettings(id));
+    if (!this.panel.isValid()) return;
+    this.launch(this.panel.getConfig());
+    this.setWarp(1);
+    this.watch.begin(id);
   }
 
   /** Read-only diagnostics for browser verification; heap availability depends
@@ -309,7 +395,10 @@ class App {
     this.watchPixelRatio();
     this.resize();
     document.getElementById('loading')!.classList.add('hidden');
-    this.preview(this.panel.getConfig());
+    // The landing page and the viewer open on the featured launch standing on
+    // its pad in daylight; the workspace opens on whatever the panel holds.
+    if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
+    else this.preview(this.panel.getConfig());
     requestAnimationFrame((now) => this.frame(now));
   }
 
@@ -398,6 +487,9 @@ class App {
    */
   private onKey(e: KeyboardEvent): void {
     if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
+    // The landing page has no flight controls on it: Space must not launch the
+    // rocket standing behind it, out of sight.
+    if (this.mode === 'home') return;
     const el = e.target as HTMLElement | null;
     const tag = el?.tagName ?? '';
     const typing = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || el?.isContentEditable === true;
@@ -470,6 +562,8 @@ class App {
     this.hud.applyLabels();
     this.narration.applyLanguage();
     this.timeline.applyStaticText();
+    this.home.applyLanguage();
+    this.watch.applyLanguage();
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
     document.getElementById('controls')?.setAttribute('aria-label', t('a11y.playback'));
     // icon-only buttons take their accessible name from the same key as the tooltip
@@ -618,6 +712,7 @@ class App {
     this.shown = pad;
     this.timeline.reset();
     this.narration.reset();
+    this.watch.reset();
     this.trailIdx = -1;
     this.wasLive = true;
     this.lastPhase = null;
@@ -766,19 +861,28 @@ class App {
     if (this.hudTimer > 0.1) {
       this.hudTimer = 0;
       const replaying = !this.player.live;
-      this.hud.update(this.shown, this.recorder.events, this.activeWarp, replaying);
+      // The instrument card and the telemetry panel are not on screen in the
+      // landing page or the viewer, and a 6-DOF flight wants the CPU they
+      // would spend; both catch up on the first tick back in the workspace.
+      if (!this.lean) this.hud.update(this.shown, this.recorder.events, this.activeWarp, replaying);
       this.narration.update(this.shown, this.recorder.events, {
         replay: replaying,
         playing: replaying ? this.player.playing : this.playing,
         armed: !!sim,
       });
+      if (this.mode === 'watch') {
+        this.watch.update(this.shown, this.recorder.events, {
+          playing: this.playing && this.player.live,
+          vehicleId: sim?.vehicleSpec.id ?? '',
+        });
+      }
     }
     // The telemetry panel is handed the frame-backed view, not the live
     // simulation, so its charts, Δv budget, spent-stage list and event log stop
     // at the timeline cursor like everything else on screen. The live object is
     // given to it separately, for the CSV export of the whole flight.
     this.telTimer += dtReal;
-    if (this.simView && this.telTimer > 0.5) {
+    if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
       this.tel.update(this.simView.sim, this.player.cursor);
       this.result.update(this.simView.sim);
@@ -876,7 +980,10 @@ class App {
     const phase = flightPhase(frame);
     if (phase === null || phase === this.lastPhase) return;
     this.lastPhase = phase;
-    if (this.autoCamera) this.setCamera(this.cameraPlan[phase]);
+    // The viewer always directs its own camera; the workspace follows the
+    // user's programme and its on/off switch.
+    if (this.lean) this.setCamera(WATCH_CAMERA_PLAN[phase]);
+    else if (this.autoCamera) this.setCamera(this.cameraPlan[phase]);
   }
 
   private updateVisuals(dt: number): void {

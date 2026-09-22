@@ -23,6 +23,14 @@
           <span data-i18n="app.tagline">FLIGHT SIMULATOR</span>
           <span class="version" aria-hidden="true">02</span>
         </div>
+        <!-- One app, four faces (src/ui/app-mode.ts). Plain links: the mode is
+             the URL hash, so each mode can be linked to and Back works. -->
+        <nav id="mode-nav" class="mode-nav" data-i18n-aria-label="mode.nav">
+          <a href="#/home" data-mode="home"><span class="mode-glyph" aria-hidden="true">⌂</span><span data-i18n="mode.home">Home</span></a>
+          <a href="#/watch" data-mode="watch"><span class="mode-glyph" aria-hidden="true">▷</span><span data-i18n="mode.watch">Watch</span></a>
+          <a href="#/explore" data-mode="explore"><span class="mode-glyph" aria-hidden="true">◎</span><span data-i18n="mode.explore">Explore</span></a>
+          <a href="#/engineer" data-mode="engineer"><span class="mode-glyph" aria-hidden="true">⌬</span><span data-i18n="mode.engineer">Engineer</span></a>
+        </nav>
         <div class="topbar-right">
           <button id="btn-help" class="quiet-btn" type="button"></button>
           <button id="btn-physics" class="quiet-btn" type="button" data-i18n-aria-label="dlg.physics.button" data-i18n-title="dlg.physics.button">
@@ -95,6 +103,10 @@
                    card is docked. -->
               <div id="hud"></div>
             </div>
+            <!-- The launch viewer's own overlay and the landing page. Inside the
+                 viewport so that full screen takes them along. -->
+            <div id="watch-ui" hidden></div>
+            <section id="home-screen" hidden></section>
           </div>
 
           <section id="controls" class="panel playback">

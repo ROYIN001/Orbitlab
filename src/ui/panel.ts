@@ -48,7 +48,7 @@ import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes } from './names';
-import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue } from '../config/validation';
+import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
 import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
@@ -58,6 +58,13 @@ export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
   onReset: () => void;
   onChange?: (cfg: MissionConfig) => void;
+  /**
+   * The user asked for the other layout from inside the panel (its mode
+   * select, or "Show advanced guidance parameters"). The app owns the mode —
+   * it is also in the URL and the top bar — so the panel reports the request
+   * instead of switching itself.
+   */
+  onExperience?: (mode: ExperienceMode) => void;
 }
 
 interface SetupState {
@@ -541,6 +548,31 @@ export class SetupPanel {
     return verdict;
   }
 
+  /**
+   * Replace the whole mission with a prepared one (a quick start, a launch
+   * picked in the viewer) and preview it. Settings only: nothing launches.
+   */
+  loadMission(mission: ConfigInput & { orbitId: string }): void {
+    this.cancelTune();
+    Object.assign(this.state, mission);
+    this.state.dynamics = defaultDynamics(this.state.vehicleId);
+    this.tuneMessage = '';
+    this.applyExternalEdit();
+    this.cb.onChange?.(this.getConfig());
+  }
+
+  /** Show the learning or the advanced layout (set by the app's mode). */
+  setExperience(mode: ExperienceMode): void {
+    if (mode === this.experience) return;
+    this.experience = mode;
+    saveExperience(mode);
+    this.render();
+    if (mode === 'advanced') {
+      const guidance = this.root.querySelector<HTMLDetailsElement>('details[data-section="guidance"]');
+      if (guidance) guidance.open = true;
+    }
+  }
+
   /** What an auto-tune result is valid for: change any of it and the tune is stale. */
   private missionSignature(): string {
     const s = this.state;
@@ -646,12 +678,7 @@ export class SetupPanel {
       button.append(this.el('strong', undefined, option.title), this.el('span', undefined, option.detail));
       button.addEventListener('click', () => {
         if (this.running) return;
-        this.cancelTune();
-        Object.assign(this.state, quickstartMission(option.id));
-        this.state.dynamics = defaultDynamics(this.state.vehicleId);
-        this.tuneMessage = '';
-        this.applyExternalEdit();
-        this.cb.onChange?.(this.getConfig());
+        this.loadMission(quickstartMission(option.id));
       });
       section.append(button);
     }
@@ -672,13 +699,8 @@ export class SetupPanel {
       select.append(option);
     }
     select.addEventListener('change', () => {
-      this.experience = select.value as ExperienceMode;
-      saveExperience(this.experience);
-      this.render();
-      if (this.experience === 'advanced') {
-        const guidance = this.root.querySelector<HTMLDetailsElement>('details[data-section="guidance"]');
-        if (guidance) guidance.open = true;
-      }
+      const mode = select.value as ExperienceMode;
+      if (this.cb.onExperience) this.cb.onExperience(mode); else this.setExperience(mode);
     });
     label.append(select);
     section.append(label, this.el('p', 'field-note', t(this.experience === 'learning' ? 'setup.mode.learningNote' : 'setup.mode.advancedNote')));
@@ -984,11 +1006,7 @@ export class SetupPanel {
     const reveal = this.el('button', 'btn guidance-reveal', t('setup.mode.reveal'));
     reveal.type = 'button';
     reveal.addEventListener('click', () => {
-      this.experience = 'advanced';
-      saveExperience(this.experience);
-      this.render();
-      const details = this.root.querySelector<HTMLDetailsElement>('details[data-section="guidance"]');
-      if (details) details.open = true;
+      if (this.cb.onExperience) this.cb.onExperience('advanced'); else this.setExperience('advanced');
     });
     gd.append(reveal);
     const r1 = this.el('div', 'row');
