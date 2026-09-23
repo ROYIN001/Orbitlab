@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { propagateJ2Coast, nextJ2Apsis, physicalApsides, shootJ2ApsisVelocity, shootJ2LowestAltitude } from '../src/physics/rigid/orbit-prediction';
+import { propagateJ2Coast, nextJ2Apsis, physicalApsides, shootJ2ApsisVelocity, shootJ2Altitude } from '../src/physics/rigid/orbit-prediction';
 import { J2_EARTH, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { norm, sub, v3 } from '../src/physics/vec3';
 import { elementsFromState, propagateKepler, timeToApoapsis } from '../src/physics/orbital';
@@ -118,20 +118,27 @@ describe('J2 coast prediction for finite-attitude orbital planning', () => {
     expect(physicalApsides({ r: v3(R_EARTH + 100e3, 0, 0), v: v3(0, 5000, 0) })).toBeNull();
   });
 
-  it('shoots the speed at the apex whose next revolution bottoms out at the target altitude', () => {
+  it('shoots the speed whose next revolution puts its lowest, highest or mean altitude on a target', () => {
     // A 51.6° orbit whose lowest point is 489 km, at its highest point.
     const r = R_EARTH + 500e3, inc = 51.6 * Math.PI / 180;
     const speed = Math.sqrt(MU_EARTH * (2 / r - 2 / (r + R_EARTH + 489e3)));
-    const low = { r: v3(r, 0, 0), v: v3(0, speed * Math.cos(inc), speed * Math.sin(inc)) };
-    const apex = nextJ2Apsis(low, 'apoapsis', { includeInitial: true })!;
-    const shot = shootJ2LowestAltitude(apex, apex.v, 496e3, { minSpeedMS: norm(apex.v) - 30, maxSpeedMS: norm(apex.v) + 30 })!;
-    expect(shot).not.toBeNull();
-    expect(Math.abs(physicalApsides({ r: apex.r, v: shot.velocity })!.periapsisAlt - 496e3)).toBeLessThan(1);
-    // Raising the lowest point costs speed: the shot is prograde and a few m/s.
-    expect(shot.speedMS - norm(apex.v)).toBeGreaterThan(0.5);
-    expect(shot.speedMS - norm(apex.v)).toBeLessThan(10);
-    // A target above the burn point is out of reach of any speed.
-    expect(shootJ2LowestAltitude(apex, apex.v, 700e3, { minSpeedMS: norm(apex.v) - 30, maxSpeedMS: norm(apex.v) + 30 })).toBeNull();
+    const orbit = { r: v3(r, 0, 0), v: v3(0, speed * Math.cos(inc), speed * Math.sin(inc)) };
+    const extremes = physicalApsides(orbit)!;
+    const top = propagateJ2Coast(orbit, extremes.apoapsisTimeS)!;
+    // The time of the highest point is where the highest point is.
+    expect(Math.abs(norm(top.r) - R_EARTH - extremes.apoapsisAlt)).toBeLessThan(1);
+    const bracket = { minSpeedMS: norm(top.v) - 30, maxSpeedMS: norm(top.v) + 30 };
+    const lowest = shootJ2Altitude(top, top.v, 'lowest', 494e3, bracket)!;
+    expect(Math.abs(physicalApsides({ r: top.r, v: lowest.velocity })!.periapsisAlt - 494e3)).toBeLessThan(1);
+    // Raising the lowest point costs speed: prograde and a few m/s.
+    expect(lowest.speedMS - norm(top.v)).toBeGreaterThan(0.5);
+    expect(lowest.speedMS - norm(top.v)).toBeLessThan(10);
+    // The middle of the swing can always be put on a target near the burn
+    // point; the lowest point cannot be lifted to the burn point's own height.
+    const mean = shootJ2Altitude(top, top.v, 'mean', extremes.apoapsisAlt, bracket)!;
+    const after = physicalApsides({ r: top.r, v: mean.velocity })!;
+    expect(Math.abs((after.periapsisAlt + after.apoapsisAlt) / 2 - extremes.apoapsisAlt)).toBeLessThan(1);
+    expect(shootJ2Altitude(top, top.v, 'lowest', extremes.apoapsisAlt + 2e3, bracket)).toBeNull();
   });
 
   it('does not manufacture a solution for a missing root, unbracketed target or surface crossing', () => {

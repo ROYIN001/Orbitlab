@@ -26,6 +26,8 @@ export interface ResolvedTarget {
   raanMode: OrbitSpec['raanMode'];
 }
 
+import type { AltitudeMeasure } from './rigid/orbit-prediction';
+
 export type BurnKind = 'raiseApoapsis' | 'shapeAtApoapsis' | 'circularize';
 
 export interface BurnPlan {
@@ -45,9 +47,11 @@ export interface BurnPlan {
   /** Six-DOF corrective transfer targets a forecast physical apex, not the
    * current osculating conic. Metres above R_EARTH; legacy plans omit this. */
   physicalApoapsis?: number;
-  /** Six-DOF perigee correction: flown at the physical apex and aimed at the
-   * lowest altitude of the next revolution under J2. Metres above R_EARTH. */
-  physicalPeriapsis?: number;
+  /** Six-DOF final correction: aimed by J2 shooting at the lowest, highest or
+   * mean altitude of the next revolution (`shootJ2Altitude`), metres above
+   * R_EARTH. A shape burn flies it at the highest point, an apoapsis burn at
+   * the lowest. */
+  physicalObjective?: { measure: AltitudeMeasure; altitudeM: number };
 }
 
 export interface MissionPlan {

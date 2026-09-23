@@ -6,7 +6,7 @@
 import { MU_EARTH, R_EARTH, DEG, RAD } from '../constants';
 import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween, addScaled } from '../vec3';
 import { atmosphere } from '../atmosphere';
-import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2LowestAltitude } from '../rigid/orbit-prediction';
+import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2Altitude } from '../rigid/orbit-prediction';
 import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
 import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
@@ -20,7 +20,7 @@ const MAX_ALIGNMENT_S = 1800;
 const MAX_FINAL_CORRECTIONS = 2;
 
 /** A six-DOF burn sized by J2 shooting and flown as a fixed impulse along the velocity. */
-const physicalTarget = (b: BurnPlan): boolean => b.physicalApoapsis !== undefined || b.physicalPeriapsis !== undefined;
+const physicalTarget = (b: BurnPlan): boolean => b.physicalApoapsis !== undefined || b.physicalObjective !== undefined;
 
 export class BurnSequencer {
   private lastBurnDv = Infinity;
@@ -105,10 +105,10 @@ export class BurnSequencer {
     });
   }
 
-  physicalPerigeeShot(burn: BurnPlan, state: { r: Vec3; v: Vec3 }) {
+  physicalObjectiveShot(burn: BurnPlan, state: { r: Vec3; v: Vec3 }) {
     const speed = norm(state.v);
     const width = Math.max(30, Math.min(1500, 2 * burn.dvEstimate + 20));
-    return shootJ2LowestAltitude(state, state.v, burn.physicalPeriapsis!, {
+    return shootJ2Altitude(state, state.v, burn.physicalObjective!.measure, burn.physicalObjective!.altitudeM, {
       minSpeedMS: Math.max(1, speed - width), maxSpeedMS: speed + width,
     });
   }
@@ -131,13 +131,20 @@ export class BurnSequencer {
     const target = this.sim.plan.target, res = orbitResiduals(target, judged, this.sim.raanWasReachable());
     if (res.onTarget || res.misses.some((m) => m.param !== 'perigee' && m.param !== 'apogee')) return null;
     this.finalCorrections++;
+    const perigeeMiss = res.misses.some((m) => m.param === 'perigee');
+    // A circular target is aimed at its middle: a J2 orbit rises and falls by
+    // kilometres whatever the speed, and only the mean of its lowest and
+    // highest point can always be put on the target.
+    const circular = Math.abs(target.apogee - target.perigee) < 1e3;
+    const physicalObjective = circular ? { measure: 'mean' as const, altitudeM: (target.apogee + target.perigee) / 2 }
+      : perigeeMiss ? { measure: 'lowest' as const, altitudeM: target.perigee } : { measure: 'highest' as const, altitudeM: target.apogee };
     const rA = R_EARTH + judged.apoapsisAlt, rP = R_EARTH + judged.periapsisAlt;
-    const correction: BurnPlan = res.misses.some((m) => m.param === 'perigee')
+    const correction: BurnPlan = perigeeMiss
       ? { id: `physical-perigee-${this.finalCorrections}`, kind: 'shapeAtApoapsis', atU: 0, targetPeriapsis: target.perigee,
-        physicalPeriapsis: target.perigee, done: false,
+        physicalObjective, done: false,
         dvEstimate: Math.max(10, 1.2 * Math.abs(visViva(rA, (rA + R_EARTH + target.perigee) / 2) - visViva(rA, (rA + rP) / 2))) }
       : { id: `physical-apogee-${this.finalCorrections}`, kind: 'raiseApoapsis', atU: 'asap', targetApoapsis: target.apogee,
-        physicalApoapsis: target.apogee, done: false,
+        physicalObjective, done: false,
         dvEstimate: Math.max(10, 1.2 * Math.abs(visViva(rP, (rP + R_EARTH + target.apogee) / 2) - visViva(rP, (rA + rP) / 2))) };
     this.sim.plan.burns.push(correction);
     return correction;
@@ -145,7 +152,7 @@ export class BurnSequencer {
 
   prepareRigidTransfer(burn: BurnPlan): boolean {
     const s = this.sim.state;
-    const shot = burn.physicalPeriapsis !== undefined ? this.physicalPerigeeShot(burn, s) : this.physicalApexShot(burn, s);
+    const shot = burn.physicalObjective ? this.physicalObjectiveShot(burn, s) : this.physicalApexShot(burn, s);
     if (!shot) { this.failRigidOrbitPrediction(); return false; }
     const dv = shot.speedMS - norm(s.v);
     burn.lowering = dv < 0;
@@ -248,7 +255,7 @@ export class BurnSequencer {
     }
     let tGo: number;
     if (burn.kind === 'raiseApoapsis') {
-      burn.lowering = burn.physicalApoapsis === undefined && (burn.targetApoapsis ?? 0) < el.apoapsisAlt;
+      burn.lowering = !physicalTarget(burn) && (burn.targetApoapsis ?? 0) < el.apoapsisAlt;
       // An apoapsis change is made at the periapsis. On a circular parking
       // orbit any point will do when raising ('asap'), but a trim that has to
       // bring the apoapsis *down* must be flown at the periapsis or it digs
@@ -269,9 +276,7 @@ export class BurnSequencer {
       else if (burn.atU === 'asap' || !apsidesDefined) tGo = 0;
       else if (burn.atU === 'node') tGo = Math.min(timeToArgumentOfLatitude(el, 0), timeToArgumentOfLatitude(el, Math.PI));
       else tGo = timeToArgumentOfLatitude(el, burn.atU);
-    } else if (el.e > 1e-3 || (burn.physicalPeriapsis !== undefined && physicalApex)) {
-      // A physical perigee correction is flown at the physical apex even on
-      // an orbit whose osculating ellipse is too round to have one.
+    } else if (el.e > 1e-3) {
       tGo = physicalApex ? physicalApex.timeS : timeToApoapsis(el);
     } else {
       // Circular orbit: the "apoapsis" is a meaningless point on it, so a burn
@@ -287,13 +292,21 @@ export class BurnSequencer {
       // Keep explicit node/argument choices. Replace only the apsis-timed path.
       tGo = peri.timeS > el.period - 150 ? 0 : peri.timeS;
     }
+    if (this.sim.rigidRuntime && burn.physicalObjective) {
+      // A final correction is flown at the true extreme of the revolution —
+      // the highest point to lift the lowest, the lowest to bring the highest
+      // down — which on a round J2 orbit need not be the next local apsis.
+      const extremes = physicalApsides(s);
+      if (!extremes) { this.failRigidOrbitPrediction(); return; }
+      tGo = burn.kind === 'raiseApoapsis' ? extremes.periapsisTimeS : extremes.apoapsisTimeS;
+    }
     if (!isFinite(tGo)) tGo = 0;
     const at = this.sim.rigidRuntime ? propagateJ2Coast(s, tGo) : propagateKepler(s.r, s.v, tGo);
     if (!at) { this.failRigidOrbitPrediction(); return; }
     const vDes = desiredVelocity(at.r, at.v, burn.kind, burn.targetApoapsis, burn.targetPeriapsis, burn.targetInclination);
     let dv = norm(sub(vDes, at.v));
     if (this.sim.rigidRuntime && physicalTarget(burn)) {
-      const shot = burn.physicalPeriapsis !== undefined ? this.physicalPerigeeShot(burn, at) : this.physicalApexShot(burn, at);
+      const shot = burn.physicalObjective ? this.physicalObjectiveShot(burn, at) : this.physicalApexShot(burn, at);
       if (!shot) { this.failRigidOrbitPrediction(); return; }
       const correction = shot.speedMS - norm(at.v);
       burn.lowering = correction < 0; dv = Math.abs(correction);
@@ -757,14 +770,14 @@ export class BurnSequencer {
       const sign = b.lowering ? -1 : 1;
       dirCmd = norm(s.v) > 1 ? scale(normalize(s.v), sign) : s.dir;
       s.burnDvRemaining = Math.abs(need);
-      if (this.sim.rigidRuntime && b.physicalApoapsis !== undefined) {
+      if (this.sim.rigidRuntime && physicalTarget(b)) {
         if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
           this.rigidTransfer = null; this.burnIgnited = false;
         }
         s.burnDvRemaining = this.rigidTransfer
           ? Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv) : Math.max(0.05, b.dvEstimate);
       }
-    } else if (this.sim.rigidRuntime && b.physicalPeriapsis !== undefined) {
+    } else if (this.sim.rigidRuntime && b.physicalObjective) {
       // A physical perigee correction: along or against the velocity, sized
       // by J2 shooting at the aligned ignition state like an apex correction.
       if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
