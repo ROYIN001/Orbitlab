@@ -133,6 +133,22 @@ Requires Node.js 20 or newer and a browser with WebGL 2.
 
 ## Using the simulator
 
+The top bar switches between four modes, each with its own address so it can be linked
+to (`#/home`, `#/watch`, `#/explore`, `#/engineer`); the last one used is remembered.
+
+- **Home** — the landing page over the live scene. One button plays a launch.
+- **Watch** — a launch viewer for people with no background in spaceflight: the scene
+  fills the window, three big numbers (mission time, altitude in km, speed over the
+  ground in km/h) and one plain-language sentence about what the rocket is doing now.
+  Playback runs at an automatic pace — real time for liftoff, max-Q and every separation,
+  faster through the long quiet stretches — or at a fixed speed. The launch list holds
+  six real vehicles on typical missions, each flown to orbit by `tests/watch-missions.test.ts`;
+  the flight ends on a card that offers another launch or the mission builder.
+- **Explore** — the mission builder below in its learning layout.
+- **Engineer** — the full workspace with every guidance parameter.
+
+The mission builder:
+
 1. Choose the launch vehicle, payload, launch site and target orbit in the left panel.
    Editing any orbit field turns the preset into a custom orbit.
 2. For ISS-plane or sun-synchronous missions, click **Next window** to move the launch
@@ -273,7 +289,8 @@ src/render/     Three.js scene (floating origin, Earth shaders), rocket, debris,
                 trails, launch pad, cameras
 src/replay/     flight recorder, replay player, frame-backed simulation view, explosions
 src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map,
-                onboard overlay, timeline/event bar, dialogs
+                onboard overlay, timeline/event bar, dialogs, app modes, landing
+                page and launch viewer
 src/i18n/       English, Russian and Thai dictionaries
 src/mcp.ts      WebMCP tools
 tests/          vitest suites (unit tests and full missions to orbit)
