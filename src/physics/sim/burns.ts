@@ -18,6 +18,8 @@ const MAX_ALIGNMENT_S = 1800;
 
 export class BurnSequencer {
   private lastBurnDv = Infinity;
+  /** the smallest Δv-to-go the current burn has reached, m/s */
+  private minBurnDv = Infinity;
   /** the current burn has lit (the attitude-alignment gate has been passed once) */
   burnIgnited = false;
   /** How long the current burn may wait for its attitude (six-DOF), s. */
@@ -349,6 +351,7 @@ export class BurnSequencer {
     this.alignmentAllowanceS = this.alignmentAllowance();
     s.burnDvRemaining = Math.max(0.05, burn.dvEstimate);
     this.lastBurnDv = Infinity;
+    this.minBurnDv = Infinity;
     this.burnIgnited = false;
     this.rigidTransfer = null;
     s.burnPlaneNormal = null;
@@ -466,7 +469,14 @@ export class BurnSequencer {
       // step having done nothing. `scheduleNextBurn`'s deadband is as low as
       // 0.05 m/s at a geostationary apogee, so this is too.
       if (dv - tailDv < 0.05) complete = true;
-      else if (dv < 40 && dv > this.lastBurnDv * 1.02 + 0.002) complete = true; // passed the minimum
+      // Passed the minimum. Six-DOF compares with the least Δv-to-go since the
+      // engine lit, not with the step before: its 0.01 s steps add ~0.02 m/s
+      // each once past the minimum, under the 2 % rise the test asks of one
+      // step, and Briz-M flew a 7 m/s GTO perigee trim through its minimum and
+      // on until its tanks were dry. (Point-mass keeps the step-to-step form.)
+      else if (dv < 40 && (this.sim.rigidRuntime
+        ? this.burnIgnited && dv > this.minBurnDv * 1.02 + 0.002
+        : dv > this.lastBurnDv * 1.02 + 0.002)) complete = true;
       else if (dv > 40 && s.t - s.burnStartTime > (b.maxDuration ?? this.maxBurnDurationFor(b, el)) && el.e < 1 && el.periapsisAlt > 120e3) {
         // long low-thrust apogee burn: continue at the next apoapsis
         const st = this.sim.vehicle.active;
@@ -488,6 +498,7 @@ export class BurnSequencer {
         return;
       }
       this.lastBurnDv = dv;
+      if (this.burnIgnited) this.minBurnDv = Math.min(this.minBurnDv, dv);
     }
     if (complete) {
       // A burn that ignited and finished inside two seconds cannot have moved

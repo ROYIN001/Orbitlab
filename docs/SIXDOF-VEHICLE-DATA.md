@@ -343,7 +343,7 @@ March — the LM-3B user's manual (chapter 2) and CMSE's Long March 2F article; 
 NASA's H-IIA data sheet and JAXA's SRB-3 page; PSLV — ISRO/LPSC; Electron — Rocket Lab's
 Payload User's Guide 8.0; Starship — SpaceX and published Raptor comparisons.
 
-Nine model changes came with these vehicles. Each applies to every vehicle, Falcon 9 and
+Ten model changes came with these vehicles. Each applies to every vehicle, Falcon 9 and
 Soyuz-2.1a included:
 
 - **Negligible authority is absent authority.** The engine allocator normalises each torque axis
@@ -400,6 +400,11 @@ Soyuz-2.1a included:
   above the target apogee (a transfer orbit's apex is meant to be far above its perigee).
   Electron's ascent into a 600 km sun-synchronous orbit cut off on a 598 km conic apoapsis and
   reached 617 km, where no circularisation can be trimmed back down.
+- **A burn ends when it has passed its minimum, whatever the step.** A shape or circularisation
+  burn ends when its Δv-to-go starts to grow again, and the test asked for a 2 % rise over one
+  step. Six-DOF steps are 0.01 s: past the minimum Briz-M adds about 0.02 m/s a step, under that
+  threshold, so a 7 m/s GTO perigee trim flew through its minimum and on until the tanks were
+  dry. Six-DOF now compares with the smallest Δv-to-go since the engine lit.
 
 Per-vehicle six-DOF guidance: where the point-mass programme pitches over at an angle of attack a
 rigid airframe cannot hold near max-Q, the vehicle carries its own six-DOF overrides
