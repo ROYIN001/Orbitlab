@@ -64,8 +64,15 @@ orbit: its apsides swing several kilometres round a revolution (a 500 km circle 
 from 501 to 515 km of apoapsis). So a six-DOF orbit is **judged on its physical apsides** — the
 lowest and highest altitude of the next revolution under J2 — when the mission decides it is
 on target, in the event that says so, on the result panel and in the acceptance tests. The
-planner's corrections aim at the same physical apex. Point-mass coasts are Kepler, where the
-two are the same.
+planner aims at the same orbit: a coast that arrives above or below the target corrects its
+physical apex before circularising there; the last circularisation to a circular target, when
+no plane change is left, is shot so that the middle of that revolution's lowest and highest
+altitude is the target (a J2 orbit through the burn point rises and falls by kilometres
+whatever its speed — Electron's 600 km sun-synchronous orbit ran 599–624 km after a conic
+circularisation, 595–602 km after an aimed one); and a mission about to end with its physical
+apsides outside the band flies up to two such corrections. An aimed burn is flown along the
+velocity direction at the point it is centred on, held still through the burn. Point-mass
+coasts are Kepler, where the two are the same.
 
 The point-mass model below remains selectable in the setup, and the fleet acceptance matrix
 (§6b) of the regular test suite flies it; the same matrix flown in six-DOF is recorded in

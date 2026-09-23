@@ -343,7 +343,7 @@ March — the LM-3B user's manual (chapter 2) and CMSE's Long March 2F article; 
 NASA's H-IIA data sheet and JAXA's SRB-3 page; PSLV — ISRO/LPSC; Electron — Rocket Lab's
 Payload User's Guide 8.0; Starship — SpaceX and published Raptor comparisons.
 
-Ten model changes came with these vehicles. Each applies to every vehicle, Falcon 9 and
+Eleven model changes came with these vehicles. Each applies to every vehicle, Falcon 9 and
 Soyuz-2.1a included:
 
 - **Negligible authority is absent authority.** The engine allocator normalises each torque axis
@@ -412,6 +412,12 @@ Soyuz-2.1a included:
   step. Six-DOF steps are 0.01 s: past the minimum Briz-M adds about 0.02 m/s a step, under that
   threshold, so a 7 m/s GTO perigee trim flew through its minimum and on until the tanks were
   dry. Six-DOF now compares with the smallest Δv-to-go since the engine lit.
+- **The orbit is the one the vehicle flies, not the osculating ellipse of an instant.** Under J2
+  the osculating apsides swing several kilometres round a revolution, and Vulcan in wind shear
+  ended "511 × 489 km" on an orbit its last burn had put at 500 km. A six-DOF mission is judged
+  on the lowest and highest altitude of its next revolution, and its last circularisation to a
+  circular target is aimed at that orbit, with up to two corrections at the end if it still
+  misses ([PHYSICS.md](PHYSICS.md) §2a).
 
 Per-vehicle six-DOF guidance: where the point-mass programme pitches over at an angle of attack a
 rigid airframe cannot hold near max-Q, the vehicle carries its own six-DOF overrides
