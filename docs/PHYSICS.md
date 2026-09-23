@@ -405,9 +405,9 @@ largest remaining Δv that respects max-Q. No mission requires it.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 197.2 × 200.4 ✓ | 198.7 × 200.6 ✓ | 197.5 × 200.1 ✓ | 151.1 × 354.1 |
-  | 250 km | 219.5 × 346.4 | 241.2 × 299.2 | 247.1 × 265.5 | 140.8 × 2 418.0 |
-  | 300 km | 143.8 × 895.4 | 144.0 × 873.2 | 114.6 × 754.5 (tanks dry) | 140.9 × 2 423.7 |
+  | 200 km | 197.2 × 200.4 ✓ | 198.7 × 200.6 ✓ | 197.5 × 200.1 ✓ | 151.2 × 357.3 |
+  | 250 km | 219.5 × 346.4 | 241.2 × 299.2 | 247.1 × 265.5 | 140.6 × 2 411.8 |
+  | 300 km | 143.8 × 895.4 | 144.0 × 873.2 | 114.6 × 754.5 (tanks dry) | 140.9 × 2 424.8 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind

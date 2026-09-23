@@ -1168,15 +1168,21 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 114.6, ap: 754.5 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
   // rating. Nothing closes, at any altitude or any payload.
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.1, ap: 354.1 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 154.1, ap: 335.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 165.9, ap: 306.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.8, ap: 2418.0 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.8, ap: 2401.1 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2374.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2423.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 141.0, ap: 2410.3 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 140.8, ap: 2387.6 },
+  //
+  // Re-measured when the planner started flying the heading the site's window
+  // licenses: the 'site' inclination (41.0°) used to leave Jiuquan on 87.7°,
+  // north of its 90–200° window, and now leaves on the 92.3° southbound mirror
+  // (tests/range-safety.test.ts). Every verdict is unchanged; the apoapses moved
+  // by up to 6.2 km, which is this 3 km band doing its job.
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.2, ap: 357.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 155.8, ap: 336.2 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 167.7, ap: 304.5 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.6, ap: 2411.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.7, ap: 2395.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2372.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2424.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 140.9, ap: 2404.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 141.1, ap: 2391.1 },
 ];
 
 describe('single-shot direct insertion', () => {
