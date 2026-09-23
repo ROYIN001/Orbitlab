@@ -4,7 +4,8 @@
  * and the end of the mission.
  */
 import { MU_EARTH, R_EARTH, DEG, RAD } from '../constants';
-import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween } from '../vec3';
+import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween, addScaled } from '../vec3';
+import { atmosphere } from '../atmosphere';
 import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity } from '../rigid/orbit-prediction';
 import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
@@ -63,11 +64,16 @@ export class BurnSequencer {
    * osculating apsides of one instant swing several kilometres round the
    * orbit, and Vulcan to a 500 km circle in wind shear read 511 × 489 km on an
    * orbit whose physical apex its last burn had just put at 500 km. Point-mass
-   * coasts are Kepler, where the two are the same.
+   * coasts are Kepler, where the two are the same. Judged, like `el`, on the
+   * state the engine's tail-off still leaves behind: at a cut-off that is
+   * metres per second, and Falcon 9's circularisation read 500 × 452 km
+   * without it.
    */
   judgedElements(el: OrbitalElements): OrbitalElements {
     if (!this.sim.rigidRuntime || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
-    const apsides = physicalApsides(this.sim.state);
+    const s = this.sim.state;
+    const tail = this.sim.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass);
+    const apsides = physicalApsides({ r: s.r, v: tail > 0 ? addScaled(s.v, s.dir, tail) : s.v });
     return apsides ? { ...el, ...apsides } : el;
   }
 
