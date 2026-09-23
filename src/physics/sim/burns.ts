@@ -6,7 +6,7 @@
 import { MU_EARTH, R_EARTH, DEG, RAD } from '../constants';
 import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween, addScaled } from '../vec3';
 import { atmosphere } from '../atmosphere';
-import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity } from '../rigid/orbit-prediction';
+import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2LowestAltitude } from '../rigid/orbit-prediction';
 import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
 import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
@@ -16,6 +16,11 @@ import { BURN_IGNITION_ALIGNMENT, BURN_PREORIENT_TIME, MAX_REPLANS, RIGID_BURN_I
 
 /** Longest a six-DOF burn waits for its attitude, s. */
 const MAX_ALIGNMENT_S = 1800;
+/** Most corrections a six-DOF mission flies to bring its physical apsides into the band at the end. */
+const MAX_FINAL_CORRECTIONS = 2;
+
+/** A six-DOF burn sized by J2 shooting and flown as a fixed impulse along the velocity. */
+const physicalTarget = (b: BurnPlan): boolean => b.physicalApoapsis !== undefined || b.physicalPeriapsis !== undefined;
 
 export class BurnSequencer {
   private lastBurnDv = Infinity;
@@ -30,6 +35,7 @@ export class BurnSequencer {
   rigidScheduledContext: string | null = null;
   rigidCoastIntervened = false;
   rigidApexCorrections = 0;
+  finalCorrections = 0;
   replans = 0;
   /** smallest apsis residual any replan has seen, m (progress detector) */
   lastResidual = Infinity;
@@ -99,8 +105,47 @@ export class BurnSequencer {
     });
   }
 
+  physicalPerigeeShot(burn: BurnPlan, state: { r: Vec3; v: Vec3 }) {
+    const speed = norm(state.v);
+    const width = Math.max(30, Math.min(1500, 2 * burn.dvEstimate + 20));
+    return shootJ2LowestAltitude(state, state.v, burn.physicalPeriapsis!, {
+      minSpeedMS: Math.max(1, speed - width), maxSpeedMS: speed + width,
+    });
+  }
+
+  /**
+   * Six-DOF, a mission about to end: the correction its physical apsides need
+   * when they miss the band (`judgedElements`) and only the apsides do — the
+   * conic planner, looking at the osculating ellipse of the instant, can see
+   * nothing left to fly. Vulcan in wind shear ended 500.2 × 489.2 km for a
+   * 500 km circle: its last perigee trim fell inside the conic deadband at the
+   * apex, where the osculating periapsis read 11 km higher than the lowest
+   * altitude the stage would actually reach. The perigee is corrected at the
+   * physical apex, the apex at the physical perigee; at most
+   * MAX_FINAL_CORRECTIONS of them.
+   */
+  finalPhysicalCorrection(el: OrbitalElements): BurnPlan | null {
+    if (!this.sim.rigidRuntime || this.finalCorrections >= MAX_FINAL_CORRECTIONS) return null;
+    const judged = this.judgedElements(el);
+    if (judged === el) return null;
+    const target = this.sim.plan.target, res = orbitResiduals(target, judged, this.sim.raanWasReachable());
+    if (res.onTarget || res.misses.some((m) => m.param !== 'perigee' && m.param !== 'apogee')) return null;
+    this.finalCorrections++;
+    const rA = R_EARTH + judged.apoapsisAlt, rP = R_EARTH + judged.periapsisAlt;
+    const correction: BurnPlan = res.misses.some((m) => m.param === 'perigee')
+      ? { id: `physical-perigee-${this.finalCorrections}`, kind: 'shapeAtApoapsis', atU: 0, targetPeriapsis: target.perigee,
+        physicalPeriapsis: target.perigee, done: false,
+        dvEstimate: Math.max(10, 1.2 * Math.abs(visViva(rA, (rA + R_EARTH + target.perigee) / 2) - visViva(rA, (rA + rP) / 2))) }
+      : { id: `physical-apogee-${this.finalCorrections}`, kind: 'raiseApoapsis', atU: 'asap', targetApoapsis: target.apogee,
+        physicalApoapsis: target.apogee, done: false,
+        dvEstimate: Math.max(10, 1.2 * Math.abs(visViva(rP, (rP + R_EARTH + target.apogee) / 2) - visViva(rP, (rA + rP) / 2))) };
+    this.sim.plan.burns.push(correction);
+    return correction;
+  }
+
   prepareRigidTransfer(burn: BurnPlan): boolean {
-    const s = this.sim.state, shot = this.physicalApexShot(burn, s);
+    const s = this.sim.state;
+    const shot = burn.physicalPeriapsis !== undefined ? this.physicalPerigeeShot(burn, s) : this.physicalApexShot(burn, s);
     if (!shot) { this.failRigidOrbitPrediction(); return false; }
     const dv = shot.speedMS - norm(s.v);
     burn.lowering = dv < 0;
@@ -126,7 +171,7 @@ export class BurnSequencer {
       }
       return;
     }
-    let burn = this.sim.plan.burns.find((b) => !b.done);
+    let burn = this.sim.plan.burns.find((b) => !b.done) ?? this.finalPhysicalCorrection(el) ?? undefined;
     if (!burn) {
       this.reachTargetOrbit(el);
       return;
@@ -224,7 +269,9 @@ export class BurnSequencer {
       else if (burn.atU === 'asap' || !apsidesDefined) tGo = 0;
       else if (burn.atU === 'node') tGo = Math.min(timeToArgumentOfLatitude(el, 0), timeToArgumentOfLatitude(el, Math.PI));
       else tGo = timeToArgumentOfLatitude(el, burn.atU);
-    } else if (el.e > 1e-3) {
+    } else if (el.e > 1e-3 || (burn.physicalPeriapsis !== undefined && physicalApex)) {
+      // A physical perigee correction is flown at the physical apex even on
+      // an orbit whose osculating ellipse is too round to have one.
       tGo = physicalApex ? physicalApex.timeS : timeToApoapsis(el);
     } else {
       // Circular orbit: the "apoapsis" is a meaningless point on it, so a burn
@@ -245,8 +292,8 @@ export class BurnSequencer {
     if (!at) { this.failRigidOrbitPrediction(); return; }
     const vDes = desiredVelocity(at.r, at.v, burn.kind, burn.targetApoapsis, burn.targetPeriapsis, burn.targetInclination);
     let dv = norm(sub(vDes, at.v));
-    if (this.sim.rigidRuntime && burn.physicalApoapsis !== undefined) {
-      const shot = this.physicalApexShot(burn, at);
+    if (this.sim.rigidRuntime && physicalTarget(burn)) {
+      const shot = burn.physicalPeriapsis !== undefined ? this.physicalPerigeeShot(burn, at) : this.physicalApexShot(burn, at);
       if (!shot) { this.failRigidOrbitPrediction(); return; }
       const correction = shot.speedMS - norm(at.v);
       burn.lowering = correction < 0; dv = Math.abs(correction);
@@ -311,7 +358,9 @@ export class BurnSequencer {
       burn.done = true;
       s.currentBurn = null;
       const next = this.sim.plan.burns.find((b) => !b.done);
-      if (next) this.scheduleNextBurn(el);
+      // Six-DOF goes round again with nothing planned: `scheduleNextBurn`
+      // flies a physical correction if the orbit still misses the band.
+      if (next || this.sim.rigidRuntime) this.scheduleNextBurn(el);
       else this.reachTargetOrbit(el);
       return;
     }
@@ -453,7 +502,7 @@ export class BurnSequencer {
       return;
     }
     let complete = false;
-    if (this.sim.rigidRuntime && b.physicalApoapsis !== undefined) {
+    if (this.sim.rigidRuntime && physicalTarget(b)) {
       complete = this.burnIgnited && !!this.rigidTransfer
         && this.rigidTransfer.deliveredDv + tailDv >= this.rigidTransfer.requiredDv - 0.01;
       if (!complete && this.burnIgnited && s.t - s.burnStartTime > (b.maxDuration ?? 300)) {
@@ -565,8 +614,11 @@ export class BurnSequencer {
       // A short physical-apex correction deliberately changes the temporary
       // conic before the original shape burn. Its real delivered impulse is
       // not a no-op and must not be rejected by the conic progress heuristic.
-      if (!(this.sim.rigidRuntime && b.physicalApoapsis !== undefined)) this.replanRemainingBurns(el, noOpBurn);
-      if (this.sim.plan.burns.some((x) => !x.done)) {
+      if (!(this.sim.rigidRuntime && physicalTarget(b))) this.replanRemainingBurns(el, noOpBurn);
+      // Six-DOF ends through `scheduleNextBurn` too, once the tail-off is
+      // over, so that an orbit whose physical apsides still miss the band gets
+      // its correction (`finalPhysicalCorrection`).
+      if (this.sim.plan.burns.some((x) => !x.done) || this.sim.rigidRuntime) {
         s.status = 'coast';
         s.note = 'coast';
         this.scheduleNextBurn(el);
@@ -712,6 +764,15 @@ export class BurnSequencer {
         s.burnDvRemaining = this.rigidTransfer
           ? Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv) : Math.max(0.05, b.dvEstimate);
       }
+    } else if (this.sim.rigidRuntime && b.physicalPeriapsis !== undefined) {
+      // A physical perigee correction: along or against the velocity, sized
+      // by J2 shooting at the aligned ignition state like an apex correction.
+      if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
+        this.rigidTransfer = null; this.burnIgnited = false;
+      }
+      dirCmd = norm(s.v) > 1 ? scale(normalize(s.v), b.lowering ? -1 : 1) : s.dir;
+      s.burnDvRemaining = this.rigidTransfer
+        ? Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv) : Math.max(0.05, b.dvEstimate);
     } else {
       dirCmd = dvMag > 0.01 ? scale(dvVec, 1 / dvMag) : s.dir;
     }
@@ -727,7 +788,7 @@ export class BurnSequencer {
     // even if the command swings as the remaining Δv goes to zero.
     const gate = this.sim.rigidRuntime ? RIGID_BURN_IGNITION_ALIGNMENT : BURN_IGNITION_ALIGNMENT;
     let aligned = angleBetween(s.dir, dirCmd) < gate;
-    if (this.sim.rigidRuntime?.command.mode === 'auto' && b.physicalApoapsis !== undefined
+    if (this.sim.rigidRuntime?.command.mode === 'auto' && physicalTarget(b)
       && !this.rigidTransfer && aligned) {
       // Solve at the actual aligned ignition state, including any time spent
       // waiting for attitude. The solution only commands finite thrust.

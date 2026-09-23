@@ -243,7 +243,7 @@ export class Simulation {
       && previous.rates.x === accepted.rates.x && previous.rates.y === accepted.rates.y && previous.rates.z === accepted.rates.z) return;
     this.burns.rigidBurnForecast = null;
     this.burns.rigidTransfer = null;
-    if (this.state.currentBurn?.physicalApoapsis !== undefined) this.burns.burnIgnited = false;
+    if (this.state.currentBurn && (this.state.currentBurn.physicalApoapsis !== undefined || this.state.currentBurn.physicalPeriapsis !== undefined)) this.burns.burnIgnited = false;
     if (this.state.status === 'coast') this.burns.rigidCoastIntervened = true;
     if (this.state.rigid) {
       this.state.rigid.controlMode = accepted.mode;

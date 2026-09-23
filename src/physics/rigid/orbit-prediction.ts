@@ -137,6 +137,43 @@ export function physicalApsides(initial: PointState, options: J2CoastOptions = {
   return { periapsisAlt: refined(low, 'periapsis') - R_EARTH, apoapsisAlt: refined(high, 'apoapsis') - R_EARTH };
 }
 
+/**
+ * The speed along `direction` whose next revolution under J2 bottoms out at
+ * `targetAltM`: a perigee correction flown at the apex, aimed at the lowest
+ * altitude the mission is judged on rather than at the osculating periapsis
+ * of the instant. The lowest altitude rises with the speed until the burn
+ * point itself becomes the lowest, so the scan brackets the first crossing and
+ * bisects it. Null when no crossing lies in the bracket.
+ */
+export function shootJ2LowestAltitude(initial: PointState, direction: Vec3, targetAltM: number,
+  options: J2ShootingOptions): { velocity: Vec3; speedMS: number; lowestAltM: number } | null {
+  checkedStep(initial, options);
+  if (!finiteVector(direction) || !(norm(direction) > 0) || !Number.isFinite(targetAltM)
+    || !(options.minSpeedMS > 0) || !(options.maxSpeedMS > options.minSpeedMS)) throw new RangeError('Invalid lowest-altitude shooting bracket');
+  const tolerance = options.radiusToleranceM ?? 0.5;
+  const unit = normalize(direction);
+  const evaluate = (speedMS: number) => {
+    const velocity = scale(unit, speedMS), apsides = physicalApsides({ r: initial.r, v: velocity }, options);
+    return apsides ? { velocity, speedMS, lowestAltM: apsides.periapsisAlt, missM: apsides.periapsisAlt - targetAltM } : null;
+  };
+  let left: ReturnType<typeof evaluate> = null, right: ReturnType<typeof evaluate> = null;
+  for (let index = 0; index <= 8; index++) {
+    const candidate = evaluate(options.minSpeedMS + (options.maxSpeedMS - options.minSpeedMS) * index / 8);
+    if (candidate && Math.abs(candidate.missM) <= tolerance) return candidate;
+    if (left && candidate && Math.sign(left.missM) !== Math.sign(candidate.missM)) { right = candidate; break; }
+    left = candidate;
+  }
+  if (!left || !right) return null;
+  for (let iteration = 0; iteration < 40; iteration++) {
+    const mid = evaluate((left.speedMS + right.speedMS) / 2);
+    if (!mid) return null;
+    if (Math.abs(mid.missM) <= tolerance) return mid;
+    if (Math.sign(mid.missM) === Math.sign(left.missM)) left = mid;
+    else right = mid;
+  }
+  return null;
+}
+
 export interface J2ApsisShot {
   /** An advisory desired velocity, not an impulse applied to vehicle state. */
   velocity: Vec3;

@@ -45,6 +45,9 @@ export interface BurnPlan {
   /** Six-DOF corrective transfer targets a forecast physical apex, not the
    * current osculating conic. Metres above R_EARTH; legacy plans omit this. */
   physicalApoapsis?: number;
+  /** Six-DOF perigee correction: flown at the physical apex and aimed at the
+   * lowest altitude of the next revolution under J2. Metres above R_EARTH. */
+  physicalPeriapsis?: number;
 }
 
 export interface MissionPlan {
