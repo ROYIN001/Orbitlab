@@ -3,13 +3,12 @@ import { Simulation } from '../src/physics/simulation';
 import { rigidMission } from './rigid-harness';
 import { buildRigidVehicle } from '../src/physics/rigid/mass';
 import { quatRotate } from '../src/physics/rigid/math';
-import { elementsFromState, type OrbitalElements } from '../src/physics/orbital';
+import { elementsFromState } from '../src/physics/orbital';
 import type { BurnPlan } from '../src/physics/mission';
 import { MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { v3 } from '../src/physics/vec3';
 
-type BurnBoundary = { startBurn(burn: BurnPlan): void; checkBurn(elements: OrbitalElements): void; burnIgnited: boolean };
-const boundary = (sim: Simulation) => sim as unknown as BurnBoundary;
+const boundary = (sim: Simulation) => sim.burns;
 
 function exhaustedCoast() {
   const sim = new Simulation(rigidMission('leo'), { headless: true });

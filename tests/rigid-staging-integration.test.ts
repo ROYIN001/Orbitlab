@@ -13,18 +13,17 @@ import type { RigidVehicleSnapshot } from '../src/physics/rigid/mass';
 
 // Reach exact event boundaries through the real adapter, without a many-minute
 // flight hiding which mutation lost a component or replaced body state.
-type Boundaries = {
-  rigidDebris: Map<number, { runtime: { integrationStepS: number } }>;
-  currentRigidSnapshot(): RigidVehicleSnapshot;
-  detachStage(stage: StageState): void;
-  detachBooster(booster: BoosterState): void;
-  separatePayload(ignite: boolean): void;
-  stepFlight(dt: number): void;
-  stepOrbit(dt: number): void;
-  stepDebris(dt: number): void;
-  applyManualEngineCommand(stage: StageState, throttle: number): void;
-};
-const boundary = (sim: Simulation) => sim as unknown as Boundaries;
+const boundary = (sim: Simulation) => ({
+  rigidDebris: sim.debrisTracker.rigidDebris,
+  currentRigidSnapshot: (): RigidVehicleSnapshot => sim.rigidLink.currentRigidSnapshot()!,
+  detachStage: (stage: StageState) => sim.staging.detachStage(stage),
+  detachBooster: (booster: BoosterState) => sim.staging.detachBooster(booster),
+  separatePayload: (ignite: boolean) => sim.staging.separatePayload(ignite),
+  stepFlight: (dt: number) => sim.stepFlight(dt),
+  stepOrbit: (dt: number) => (sim as unknown as { stepOrbit(dt: number): void }).stepOrbit(dt),
+  stepDebris: (dt: number) => sim.debrisTracker.stepDebris(dt),
+  applyManualEngineCommand: (stage: StageState, throttle: number) => sim.rigidLink.applyManualEngineCommand(stage, throttle),
+});
 
 function fixture(id: 'leo' | 'iss' = 'leo', inertPayload = false, rigidDt = 0.01) {
   const q = quickstartMission(id, new Date('2026-09-15T12:00:00Z'));

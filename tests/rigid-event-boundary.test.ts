@@ -45,13 +45,11 @@ describe('accepted scheduled-event recording', () => {
     const sim = new Simulation(rigidMission(), { headless: true });
     sim.state.t = 0; sim.step(0); // drain countdown before the boundary fixture
     sim.state.status = 'coast'; sim.state.liftoff = true; sim.state.t = 100;
-    const boundary = sim as unknown as { stageTo(index: number, ignite: boolean): void;
-      stepFlight(dt: number): number; stepDebris(dt: number): void };
     // Isolate event/recorder chronology. The real stage partition and all frame
     // capture/interpolation code run; continuous dynamics are verified elsewhere.
-    boundary.stepFlight = dt => { sim.state.t += dt; return dt; };
-    boundary.stepDebris = () => {};
-    boundary.stageTo(1, false);
+    sim.stepFlight = dt => { sim.state.t += dt; return dt; };
+    sim.debrisTracker.stepDebris = () => {};
+    sim.staging.stageTo(1, false);
     const delay = sim.vehicle.stages[1].spec.sepDelay ?? 2;
     const recorder = new FlightRecorder(4); recorder.start(sim);
     recorder.advance(delay);
@@ -70,8 +68,7 @@ describe('accepted scheduled-event recording', () => {
   it('captures an already-due transition before integration, including a zero-time failure', () => {
     const sim = new Simulation(rigidMission(), { headless: true });
     const recorder = new FlightRecorder(); recorder.start(sim);
-    const boundary = sim as unknown as { schedule(t: number, label: string, action: () => void): void };
-    boundary.schedule(sim.state.t, 'fixture-failure', () => {
+    sim.schedule(sim.state.t, 'fixture-failure', () => {
       sim.state.status = 'failed'; sim.state.destroyed = true;
       sim.events.push({ t: sim.state.t, key: 'evt.vehicleLost', severity: 'fail' });
     });

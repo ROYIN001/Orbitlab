@@ -38,9 +38,7 @@ describe('physical detached bodies', () => {
     const data = fixture(false, 1.83, 4, 0);
     data.split.state.attitudeQ = quatFromAxisAngle(v3(0, 0, 1), Math.PI / 2);
     const body = createRigidDebris(data.debris, data.split, config, data.snapshot, { vehicleId: 'falcon9' });
-    const adapter = sim as unknown as {
-      rigidDebris: Map<number, typeof body>; stepDebris(dt: number): void;
-    };
+    const adapter = sim.debrisTracker;
     sim.debris.push(data.debris);
     adapter.rigidDebris.set(data.debris.id, body);
     sim.state.t = 0.01;
