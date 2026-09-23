@@ -407,7 +407,14 @@ flew several vehicles into the ground.
 
 The **auto-tuner** remains available as an optional refinement: it flies the ascent headlessly
 over a grid of kick angles, pitch-program rates and lofts and keeps the combination with the
-largest remaining Δv that respects max-Q. No mission requires it.
+largest remaining Δv that respects max-Q. No mission requires it. A candidate whose parking
+orbit lands far from the plan is screened out, and the best survivors are then flown to the
+end; when the screen rejects *every* candidate for that reason — Vulcan's Centaur V under a
+heavy payload arcs over its target and inserts at about 137 × 1 200 km against a 250 × 500 km
+plan whatever the kick — the best of them are flown to the end anyway and the mission decides.
+The engine start-up transients (§4) were enough to push the one kick that used to pass the
+screen (9°, flown almost level through the air) into a structural failure, which is how the
+screen's knife edge showed.
 
 ## 6. Mission sequencing
 

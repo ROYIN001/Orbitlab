@@ -156,6 +156,11 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
   validateOperating(op);
   const geometry = getRigidVehicleGeometry(vehicle.spec), components: MassComponent[] = [], engines: BudgetedEngine[] = [], rcs: RcsReservoir[] = [];
   const pressure = op.pressure ?? 0;
+  // A tail-off is judged at the start of the physics step, like the averaged
+  // level the caller passes: an RK substep that lands past the end of the decay
+  // must not switch the engine off for the rest of a step whose mean thrust
+  // still includes it, or the answer depends on the substep length.
+  const stepStart = op.time !== undefined ? op.time - (op.propellantOffsetSeconds ?? 0) : undefined;
   let activeBase = geometry.payloadBase, diameter = op.payloadDiameter ?? 2, highest = geometry.payloadBase.x + (op.payloadLength ?? 3);
   let firstAttached = true;
   for (const st of vehicle.stages) {
@@ -170,7 +175,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     // A core that has been shut down still thrusts through its tail-off; the
     // level the caller passes is already the decayed one (VehicleModel.thrust).
     const coreOn = st.index === vehicle.activeIndex && st.ignited && vehicle.usablePropellant(st) > 0
-      && ((!st.cutoff && !st.burnedOut) || (op.time !== undefined && vehicle.coreTailingOff(st, op.time)));
+      && ((!st.cutoff && !st.burnedOut) || (stepStart !== undefined && vehicle.coreTailingOff(st, stepStart)));
     const throttle = coreOn ? op.coreThrottle ?? 0 : 0;
     const offset = op.propellantOffsetSeconds ?? 0;
     const massFlow = engineMassFlow(st.spec.engine) * st.spec.engine.count * fraction(st.engineFraction) * throttle;
@@ -184,7 +189,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     st.boosters.forEach((b, groupIndex) => {
       if (!b.attached) return;
       const boosterOn = st.index === vehicle.activeIndex && b.ignited && vehicle.usableBoosterPropellant(b) > 0
-        && (!b.burnedOut || (op.time !== undefined && vehicle.boosterTailingOff(b, op.time)));
+        && (!b.burnedOut || (stepStart !== undefined && vehicle.boosterTailingOff(b, stepStart)));
       const bt = boosterOn ? op.boosterThrottle ?? 0 : 0;
       const boosterPropellant = Math.max(Math.min(b.propellant, vehicle.recoveryReserve * b.spec.propellantMass),
         b.propellant - engineMassFlow(b.spec.engine) * b.spec.engine.count * bt * offset);

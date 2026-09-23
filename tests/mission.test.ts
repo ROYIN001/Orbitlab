@@ -195,7 +195,10 @@ describe('autotune covers all vehicles', () => {
       const spec = vehicleById(v);
       const cfg = mk({ vehicleId: v, siteId: site, orbit: orbitById(orbit), satelliteId: 'cubesats', payloadMassOverride: payloadFor[v] ?? Math.max(100, spec.payloadLEO * 0.5) });
       const tuned = autotune(cfg);
-      if (!tuned.best || !tuned.best.success) failures.push(`${v}: ${JSON.stringify(tuned.results.map((r) => [r.kickAngle, r.maxTurnRate, r.reason, Math.round(r.maxQ)]))}`);
+      // A candidate that passed the ascent screen, or — where every candidate
+      // inserts away from the plan and makes the orbit with its later burns
+      // (Vulcan) — one whose whole mission was flown and reached the target.
+      if (!tuned.best || !(tuned.best.success || tuned.best.missionOnTarget)) failures.push(`${v}: ${JSON.stringify(tuned.results.map((r) => [r.kickAngle, r.maxTurnRate, r.reason, Math.round(r.maxQ)]))}`);
       else console.log(`${v}: kick ${tuned.best.kickAngle}° rate ${tuned.best.maxTurnRate}°/s loft ${tuned.best.loftAltitude / 1000} km margin ${Math.round(tuned.best.dvRemaining)} m/s maxQ ${Math.round(tuned.best.maxQ / 1000)} kPa t=${Math.round(tuned.best.tInsertion)} s`);
     }
     expect(failures, failures.join('\n')).toEqual([]);
