@@ -515,7 +515,7 @@ const FLOOD_DECAY = 1.35;
  * / Starlink from the Cape picks 07:08 UTC, i.e. 03:08 local; Starship from
  * Starbase likewise). At T-4 s the pad was a black rectangle with the gantry
  * barely discernible, and after liftoff the only thing on screen was the plume.
- * This is the open item from Review 8 in docs/HANDOFFS.md.
+ * This is the open item from Review 8 in docs/history/HANDOFFS.md.
  *
  * Built once per mission and never added or removed afterwards: the light count
  * is part of every lit material's program cache key, so switching lights on at

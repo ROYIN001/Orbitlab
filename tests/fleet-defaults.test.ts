@@ -158,7 +158,7 @@ describe('excluded combinations', () => {
     expect(SITE_GEOMETRY['longmarch2d/sso/25']).toBeUndefined();
   });
 
-  // Audit item 10 (docs/AUDIT-2026-09-16.md): the fleet gate may not gain a
+  // Audit item 10 (docs/history/AUDIT-2026-09-16.md): the fleet gate may not gain a
   // vehicle it never actually flies. A vehicle whose every matrix row is
   // excluded is allowed only when a dedicated mission flies it to an orbit it
   // really reaches AND SUCCEEDS there — the `default mission` precedent, which
@@ -766,7 +766,7 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
       // the published 24 kN sea level / 25.8 kN vacuum (see vehicles.ts), which
       // is a change to an existing vehicle: the nine-engine mean mass flow is
       // 68.4 kg/s, the 9.7 t first stage burns 142 s instead of 132 s, and
-      // measured MECO moves from T+129 s (pre-wave, docs/AUDIT-2026-09-16.md
+      // measured MECO moves from T+129 s (pre-wave, docs/history/AUDIT-2026-09-16.md
       // line 509) to T+138 s against the published 145-155 s — still 7 s
       // (5 %) early, and recorded as such rather than papered over. Max Q is
       // early too, at T+55 s against a published 60-70 s; that one is the drag

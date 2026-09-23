@@ -18,7 +18,7 @@
  * published time is modelled instead of a back-solved heat-flux limit.
  *
  * Solid-booster jettison delays follow audit item B24
- * (docs/AUDIT-2026-09-16.md): Atlas V GEM-63 5 s, Vulcan GEM-63XL 6 s, H3
+ * (docs/history/AUDIT-2026-09-16.md): Atlas V GEM-63 5 s, Vulcan GEM-63XL 6 s, H3
  * SRB-3 6 s, Long March 5 kerolox strap-ons 3 s, H-IIA SRB-A 8 s. Ariane 6's
  * P120C keeps 2 s: its separation gap was burn duration, not delay, and was
  * fixed by the B22 mean-thrust correction on the motor itself.
@@ -110,7 +110,7 @@ const VIKAS: EngineSpec = { name: 'Vikas', count: 1, thrustSL: 725 * kN, thrustV
 // HPS3 (PSLV PS3): the 240 kN figure is the peak of the grain. 7 600 kg burned
 // in the published 126.7 s is a 60 kg/s mean flow, i.e. ~174 kN mean vacuum
 // thrust — the same correction as P120C above, and the second half of audit
-// item B22 (docs/AUDIT-2026-09-16.md). The old pair burned the grain out in
+// item B22 (docs/history/AUDIT-2026-09-16.md). The old pair burned the grain out in
 // 91.6 s, 27.7 % short. https://en.wikipedia.org/wiki/Polar_Satellite_Launch_Vehicle
 const HPS3: EngineSpec = { name: 'HPS3', count: 1, thrustSL: 150 * kN, thrustVac: 174 * kN, ispSL: 260, ispVac: 295, solid: true, peakFactor: 1.44 };
 const PS4_L25: EngineSpec = { name: 'L-2-5', count: 2, thrustSL: 5 * kN, thrustVac: 7.3 * kN, ispSL: 260, ispVac: 308, vacuumOnly: true };
@@ -195,7 +195,7 @@ const f9Stage2 = (): StageSpec => ({
 // reproduces its callouts. That is a deliberate, documented divergence between
 // two records of the same hardware, not two independent estimates — which is why
 // they are two named helpers over one shared booster set rather than a copied
-// literal. See docs/AUDIT-2026-09-16.md, data proposals, "soyuz Blok A".
+// literal. See docs/history/AUDIT-2026-09-16.md, data proposals, "soyuz Blok A".
 const soyuzBoosters = (): BoosterGroupSpec[] => ([{
   id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3784, propellantMass: 39600,
   engine: RD107A, diameter: 2.68, length: 19.6, sepDelay: 1, conicalTop: true, color: '#c9c7bd',
@@ -216,7 +216,7 @@ const soyuz21bCore = (): StageSpec => ({
 /**
  * The reference orbit each `payload*` rating is quoted FOR.
  *
- * Audit item B26 (docs/AUDIT-2026-09-16.md): the setup panel shows a bare
+ * Audit item B26 (docs/history/AUDIT-2026-09-16.md): the setup panel shows a bare
  * "Rated LEO payload" and the fleet matrix grades against the same number, but a
  * rating is meaningless without the orbit it was measured to — Soyuz-2.1a's
  * 7 430 kg is to 240 km × 51.6° FROM BAIKONUR and drops to 6 800 kg from

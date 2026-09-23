@@ -1,63 +1,88 @@
-# Orbitlab improvement checkpoint
+# Where Orbitlab stands
 
-## Latest status — 2026-09-20
+Updated 2026-09-23. This file states the current position only; how it was reached is in the
+dated records under [history/](history/), and where those disagree with this file, this file is
+right.
 
-**Local acceptance completed:** full regression passed 762 tests in 54 files
-in 1225.00 s, including numerical mission/recovery and component sensitivity.
-TypeScript, production build and documented browser checks passed. The approved
-phase-6 orbital scope is ready for main; recovery remains experimental.
-Verify GitHub Pages for the release commit separately before claiming it live.
-This result supersedes the pending-suite wording retained below.
+## What the app is
 
-This section supersedes historical paused/in-progress statements below.
-Phases 1–2 are already live at main `ce741ad`. Phase 6 was resumed with a
-requirement to pause below 20 actual credits; phases 5/3/4 remain deferred.
+A browser simulator of orbital launches: 18 launch vehicles from 15 launch sites, flown by
+closed-loop ascent guidance and a burn sequencer to the orbit a mission asks for, drawn in 3-D
+from a flight recording that can be replayed and scrubbed. Four modes — Home, Watch
+(ready-made launches with a director's camera), Explore and Engineer (every guidance
+parameter, the six-DOF flight controls, telemetry and CSV export). English, Russian and Thai
+throughout.
 
-Both Falcon and Soyuz complete delivered-orbit convergence gates passed at
-0.01/0.005 s RK with the same 0.01 s control clock. All seven additional wind
-and rotational-flow delivered-orbit cases passed independent raw-state grading.
-Metadata, CSV, pad/failure/replay event boundaries and preview setup locking
-are corrected. TypeScript/build and local browser interactions passed; see
-`SIXDOF-ACCEPTANCE.md` and `SIXDOF-BROWSER-QA.md` for scope and exact evidence.
+- **Physics** ([PHYSICS.md](PHYSICS.md)): point-mass flight for every vehicle; a rigid-body
+  (six-DOF) model with finite actuators for Falcon 9 and Soyuz-2.1a, which is their default.
+  Engines have start-up and tail-off transients, and every cut-off anticipates the tail-off.
+- **Threading**: the physics and the flight recorder run in a Web Worker; the page only draws.
+  `?physics=inline` (or a browser without module workers) runs them on the main thread, with
+  the same flight.
+- **Launch geometry**: every direction is flown inside its site's range-safety corridor; an
+  inclination the corridor does not reach directly is flown with a dogleg of up to 5°, and the
+  setup panel shows what it costs.
 
-Recovery remains experimental by the owner's explicit choice, including two
-impacts in 18 terminal-restart stress trajectories (four before the terminal burn
-was planned mid-throttle; see `SIXDOF-ACCEPTANCE.md`). Full regression is still
-running in `../audit-2026-09-19/validation/resume-final-suite.log`; its completed
-result is required before release. Phase 6 is not yet merged or published.
+## What is experimental
 
-User-selected order: **1 → 2 → 6 → 5 → 3 → 4**.
-Latest scope update: **phases 5, 3 and 4 are deferred at the user's request**.
-Finish phase 6 only in the current work. The user subsequently authorized merging
-the accepted phase into **main** and publishing the website for their review.
-Do this after phase-6 acceptance; verify the resulting GitHub Pages deployment.
+- **Falcon 9 first-stage recovery in six-DOF.** The acceptance landings pass at three
+  integration steps, and 16 of 18 terminal-restart stress trajectories land (the other two end
+  honestly as impacts), but the stage's cold-gas supply runs out before T+180 s and the outcome
+  still depends on the separation state ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)).
+- **Soyuz-2.1a after booster separation in six-DOF**: the vehicle pitches steadily nose-down
+  (from 32° to under 20° above the horizon within five seconds) as the aerodynamic angle limit
+  releases the closed-loop pitch command. It is not a thrust effect and is left for the
+  guidance work (G01).
+- **Vulcan's ascent** inserts well away from its planned parking orbit (about 137 × 1 200 km
+  against 250 × 500 km) and makes the target with its later burns. Every Vulcan mission in the
+  fleet matrix reaches its target; the ascent itself is a guidance-quality item for G01.
 
-## Decisions agreed on 2026-09-19
+## How it is tested
 
-- Warn about infeasible missions, allow experiments, and grade every requested target constraint.
-- Keep Simulator as the first page, add quick starts and optional guidance.
-- Full 6DOF: Falcon 9 and Soyuz-2.1a first; autopilot and manual body-rate/throttle commands; disclosed estimates, sensitivity studies and repeatable winds. Agree model/acceptance before implementation; proposal recorded in the parent `implementation-planning/six-dof-design-proposal-th.md`.
-- Once accepted, six-DOF becomes the default for those two vehicles with a legacy toggle.
-- Approved public About identity: **Royin Chunhakit**. Approved bio verbatim: **Royal Thai Air Force scholarships Cadet in Russia**. No contact link or additional biography was supplied.
-- No public deployment has been performed.
+`npm test` runs the regular suite (vitest): 821 tests in 58 files, about 25 minutes. Among it:
 
-## Phases 1–2 checkpoint
+- **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
+  combinations; 126 are flown with each vehicle's default guidance and must reach their target
+  orbit, and 69 are excluded, each with its measured reason — 33 outside a site's range-safety
+  corridor, 23 beyond the vehicle's capability, 13 needing an architecture the vehicle does not
+  have. No combination is excluded as a guidance failure.
+- **Six-DOF**: rigid-body mechanics, actuators, staging, replay, recovery and mission
+  convergence between 0.01 s and 0.005 s integration steps (tests/rigid-*.test.ts).
+- **The physics worker**: its main-thread mirror is held frame for frame to an in-process
+  recording (tests/session.test.ts).
 
-Implemented strict final RAAN grading and preflight warning, shared UI/API validation, chronological replay/event views, telemetry-compaction invalidation, cancellable worker tuning with full-mission verification, quickstart LEO/ISS/GTO, learning/advanced setup, optional first-use guide, Help/glossary, accessible chart descriptions, mobile section links and frame-based mission results.
+`npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
+model (tests/heavy/, about 15 minutes). `npm run typecheck` and `npm run build` complete the
+gate.
 
-Validation: 447 tests in 22 files pass; TypeScript and production build pass. Browser checks on local dev/production builds include invalid-number launch gating, tuning completion/cancellation/config edit cancellation, chronological max-Q/engine-out replay, ISS quickstart completion and displayed-time result table, Thai/Russian/English content, 390 px layout without horizontal page overflow, Help Skip/Escape/focus restoration. Not a real mobile-device or screen-reader certification.
+## Roadmap
 
-Final-orbit capability fixtures now launch in the correct window. Dedicated off-window regression verifies a stable orbit is reported off target. Acceptance bands were not relaxed.
+The owner's roadmap (2026-09-22) selected 27 items to do now, in this order; the ones marked
+done are on branch `claude/awesome-fermi-r6ntep`.
 
-The result table explicitly reports the displayed instant, separately from the original outcome time: post-insertion orbital drift can therefore exceed the band later. Review-event navigation returns to the original outcome.
+| Item | | Item | |
+|---|---|---|---|
+| F03 delivered-orbit matrix in the repository | done | G04 Bode, step response, margins | |
+| F05 simulation split into modules | done | E04 controller tuning mode | |
+| F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | |
+| F04 break-ups with Δv left | done | G08 control-system failures | |
+| P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | |
+| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
+| F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | |
+| F06 documentation | done | G06 Soyuz launch escape system | |
+| P03 per-vehicle aerodynamic tables | | V05 Gagarin's Start pad | |
+| P01 six-DOF for all 18 vehicles | | V03 vapour cone and booster smoke | |
+| Watch mode: flown missions with booster landings | | G07 ISS rendezvous and docking | |
+| P05 slosh, bending and notch filter | | C01 historical missions | |
+| U07 ГОСТ 20058-80 notation | | | |
+| G03 attitude-loop inspector | | | |
+| E02 live equations panel | | | |
+| E01 reference frames in 3-D | | | |
 
-## Current work
+Twenty further items are kept for later, once these are done.
 
-**Paused at the user's request to conserve usage.** Publish only the accepted
-phase1–2 commit `ce741ad`; retain phase6 on its own branch. Resume from
-[CONTINUE-PHASE-6.md](CONTINUE-PHASE-6.md), which supersedes the in-progress
-paragraphs below. Final post-payload-fix acceptance has not run.
+## Known limitations
 
-Phase 6 core equations, finite actuators/control, vehicle data dossiers and integration. No 6DOF acceptance or completion claim yet. Phases 5, 3 and 4 are deferred and must not begin without a later user instruction.
-
-Integration findings: numerical refinement holds guidance/control at 10 ms and refines only the plant. The bounded nominal Falcon recovery passes the original convergence thresholds with finite terminal restart guidance. Falcon now reaches the actual 500 km target using J2-consistent coast planning. One common Soyuz programme reaches ISS under calm/crosswind/shear and has been wired into both the panel and simulation defaults. Full-mission numerical convergence is running. Recovery flow assumptions retain material quantitative differences despite both contact classifications passing; its confidence remains limited. Final sensitivity, browser and integration checks remain before acceptance and the authorized main/Pages publication.
+- At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
+- The physics has not been validated against flight data; see "Assumptions and limitations" in
+  [PHYSICS.md](PHYSICS.md).

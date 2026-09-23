@@ -29,7 +29,7 @@ No public mass-property schedule, tank contour drawing, gimbal servo specificati
 | S8 | [NASA/CR-2012-217475, Missile Aerodynamics for Ascent and Re-entry](https://ntrs.nasa.gov/search.jsp?R=20130003336) | Primary research description supports separating static coefficients and damping derivatives; it does **not** supply Falcon/Soyuz coefficients. |
 | S9 | [A. A. Ganin, B. I. Katorgin, I. Yu. Fatuev, V. K. Chvanov, Refinement of the ignition system of the engines RD-107, RD-108, 2004](https://vestniksamgu.ssau.ru/est/2004web2/vsys/200422201.pdf), printed 188–196, especially 191 | Original university-hosted research paper by NPO Energomash engineers (affiliations printed 188). It describes a modified fuel-feed assembly accommodating 45° steering-chamber travel, tested in the engine. It does not explicitly resolve ±45° versus 45° total travel, or publish the operational flight-command limit. |
 
-Downloaded research evidence is outside the worktree in `../audit-2026-09-19/sixdof-sources/`: Soyuz 2018 PDF/text and inspected page images; NASA variable-mass PDF/text and equation image; Energomash 2004 paper/text and visually checked printed-page-191 image. Do not bundle these copyrighted manuals in the app.
+Downloaded research evidence is outside the worktree (the owner's local folder, not part of this repository) in `../audit-2026-09-19/sixdof-sources/`: Soyuz 2018 PDF/text and inspected page images; NASA variable-mass PDF/text and equation image; Energomash 2004 paper/text and visually checked printed-page-191 image. Do not bundle these copyrighted manuals in the app.
 
 ## Existing dimensions and mass budgets
 

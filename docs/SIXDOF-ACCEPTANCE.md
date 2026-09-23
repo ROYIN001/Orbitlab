@@ -2,6 +2,15 @@
 
 Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control. This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
 
+**Where the evidence lives.** Paths below that start `../audit-2026-09-19/` or
+`../../implementation-planning/` are the owner's local evidence and planning folders, kept
+outside this repository; they are cited as the record of what was run at the time and cannot
+be opened from a checkout. What *can* be re-run from a checkout: the delivered-orbit matrix
+(`npm run test:heavy`, tests/heavy/), the mission convergence gate
+(tests/rigid-mission-convergence.test.ts), the recovery acceptance (tests/rigid-recovery.test.ts)
+and the component sensitivity study (tests/rigid-sensitivity.test.ts). The current state of the
+whole project is in [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
+
 ## Resume checkpoint — 2026-09-20
 
 **Final local acceptance:** 762 tests in 54 files passed in 1225.00 s on

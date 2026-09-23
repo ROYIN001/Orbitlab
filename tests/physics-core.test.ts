@@ -240,7 +240,7 @@ describe('fairing jettison placard', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Wave 2 / physics follow-up (docs/AUDIT-2026-09-16.md)
+// Wave 2 / physics follow-up (docs/history/AUDIT-2026-09-16.md)
 // ---------------------------------------------------------------------------
 
 describe('atmosphere continuity (B29)', () => {

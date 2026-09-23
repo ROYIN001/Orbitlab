@@ -106,9 +106,9 @@ const PUBLISHED_BURN_TIME: Record<string, number> = {
   // against Avio's 135.7 s on Vega-C: the same grain, two operators, two
   // published burn times. Both are listed as published, and the single mean
   // thrust in vehicles.ts sits between them (136.3 s here, 135.7 s on Vega-C).
-  // docs/AUDIT-2026-09-16.md B22 uses the 130 s figure.
+  // docs/history/AUDIT-2026-09-16.md B22 uses the 130 s figure.
   'ariane64/llpm/p120c': 130,
-  // Pre-existing solids. Published figures from docs/AUDIT-2026-09-16.md B22,
+  // Pre-existing solids. Published figures from docs/history/AUDIT-2026-09-16.md B22,
   // which measured the whole fleet against them.
   'atlasv551/ccb/gem63': 94,
   'vulcan/v1/gem63xl': 87.3,

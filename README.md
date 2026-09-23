@@ -125,6 +125,7 @@ never offers a plane no azimuth in its own window could fly.
 npm install
 npm run dev        # http://localhost:5173
 npm test           # physics, mission and tool tests (vitest)
+npm run test:heavy # the delivered-orbit matrix with wind (about 15 minutes)
 npm run typecheck  # tsc --noEmit
 npm run build      # typecheck, then a static site in dist/
 ```
@@ -221,7 +222,9 @@ The model is documented in [docs/PHYSICS.md](docs/PHYSICS.md): frames, forces, a
 propulsion, guidance law derivation, mission sequencing, launch geometry, the orbit
 propagator and the flight recorder, with the assumptions and limitations. A student-facing
 walkthrough of a mission — what each phase means, how to read the telemetry, and a glossary
-pointer — is in [docs/USER-GUIDE.md](docs/USER-GUIDE.md).
+pointer — is in [docs/USER-GUIDE.md](docs/USER-GUIDE.md). [docs/README.md](docs/README.md) lists
+every document in reading order, and [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)
+says where the project stands.
 
 ### Vehicle data
 
