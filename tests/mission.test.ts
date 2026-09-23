@@ -4,12 +4,14 @@ import { autotune } from '../src/physics/autotune';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
-import { canBurnAfterAscent, DIRECT_APOAPSIS_CAP, launchWindows, planMission, resolveTarget } from '../src/physics/mission';
+import { canBurnAfterAscent, DIRECT_APOAPSIS_CAP, DOGLEG_LIMIT_DEG, inclinationCorridor, launchDirection, launchWindows, planMission, resolveTarget } from '../src/physics/mission';
+import { SITES } from '../src/data/sites';
+import { ORBIT_PRESETS } from '../src/data/orbits';
 import { vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import { nodalPrecessionRate, wrapPi } from '../src/physics/orbital';
 import type { MissionConfig } from '../src/types';
-import { RAD } from '../src/physics/constants';
+import { DEG, RAD } from '../src/physics/constants';
 
 const mk = (over: Partial<MissionConfig>): MissionConfig => ({
   vehicleId: 'falcon9', satelliteId: 'starlink', siteId: 'cape', orbit: orbitById('iss'),
@@ -26,6 +28,75 @@ function fly(cfg: MissionConfig, maxTime: number, stopWhenDone = true): Simulati
   }
   return sim;
 }
+
+/** Degrees a heading lies outside a site's corridor, 0 inside. */
+function outside(site: { azimuthMin: number; azimuthMax: number }, azimuthRad: number): number {
+  const w = (d: number) => ((d % 360) + 360) % 360;
+  const d = w(azimuthRad * RAD), lo = w(site.azimuthMin), hi = w(site.azimuthMax);
+  if (lo <= hi ? d >= lo && d <= hi : d >= lo || d <= hi) return 0;
+  const gap = (a: number, b: number) => Math.min(w(a - b), 360 - w(a - b));
+  return Math.min(gap(d, lo), gap(d, hi));
+}
+
+describe('launch direction and the range-safety corridor', () => {
+  const inc = (orbit: string, site: string) => resolveTarget(orbitById(orbit), siteById(site), new Date(Date.UTC(2026, 8, 15))).inclination;
+
+  it('flies the solution inside the corridor when only one is', () => {
+    // Every one of these used to fly north of east, out of its corridor.
+    for (const [site, orbit] of [['wallops', 'iss'], ['wenchang', 'iss'], ['tanegashima', 'iss'], ['jiuquan', 'iss'],
+      ['sriharikota', 'iss'], ['mahia', 'iss'], ['vandenberg', 'leo'], ['taiyuan', 'leo'], ['tanegashima', 'leo'], ['xichang', 'gto']] as const) {
+      const d = launchDirection(siteById(site), inc(orbit, site));
+      expect(d.descending, `${site}/${orbit}`).toBe(true);
+      expect(d.doglegDeg, `${site}/${orbit}`).toBe(0);
+      expect(outside(siteById(site), d.azimuthRotating), `${site}/${orbit}`).toBeLessThan(0.3);
+    }
+    // ...and a site whose corridor holds the northbound solution keeps it.
+    expect(launchDirection(siteById('cape'), inc('iss', 'cape')).descending).toBe(false);
+    expect(launchDirection(siteById('baikonur'), inc('iss', 'baikonur')).descending).toBe(false);
+  });
+
+  it('doglegs from the corridor edge when the direct heading is just outside it', () => {
+    const kourou = launchDirection(siteById('kourou'), inc('sso', 'kourou'));
+    expect(kourou.allowed).toBe(true);
+    expect(kourou.azimuthRotating * RAD).toBeCloseTo(350, 6);
+    expect(kourou.doglegDeg).toBeGreaterThan(1);
+    expect(kourou.doglegDeg).toBeLessThan(1.5);
+    const tanegashima = launchDirection(siteById('tanegashima'), inc('sso', 'tanegashima'));
+    expect(tanegashima.allowed).toBe(true);
+    expect(tanegashima.azimuthRotating * RAD).toBeCloseTo(190, 6);
+    expect(tanegashima.doglegDeg).toBeGreaterThan(1.5);
+    expect(tanegashima.doglegDeg).toBeLessThan(DOGLEG_LIMIT_DEG);
+    // Too far to turn: Baikonur to a sun-synchronous plane (8.6°) and PSLV's
+    // swing around Sri Lanka (11°) stay refused.
+    expect(launchDirection(siteById('baikonur'), inc('sso', 'baikonur')).allowed).toBe(false);
+    expect(launchDirection(siteById('sriharikota'), inc('sso', 'sriharikota')).allowed).toBe(false);
+  });
+
+  it('never plans a heading outside the corridor for a mission the verdict accepts', () => {
+    for (const site of SITES) for (const orbit of ORBIT_PRESETS) {
+      const cfg = mk({ siteId: site.id, orbit, vehicleId: 'falcon9', satelliteId: 'cubesats' });
+      const target = resolveTarget(orbit, site, cfg.launchTime);
+      if (inclinationCorridor(site, target.inclination) !== 'ok') continue;
+      const plan = planMission(cfg, site, vehicleById('falcon9'));
+      expect(outside(site, plan.azimuthRotating), `${site.id}/${orbit.id} leaves on ${(plan.azimuthRotating * RAD).toFixed(1)}°`)
+        .toBeLessThan(0.3);
+      expect(plan.doglegDeg).toBeLessThanOrEqual(DOGLEG_LIMIT_DEG);
+      // The launch window is computed for the same solution the ascent flies.
+      if (target.raan !== null) expect(launchWindows(orbit, site, cfg.launchTime, 1)[0].descending, `${site.id}/${orbit.id}`).toBe(plan.descending);
+    }
+  });
+
+  it('a dogleg ascent reaches the target plane', () => {
+    const site = siteById('kourou');
+    const orbit = orbitById('sso');
+    const launchTime = launchWindows(orbit, site, new Date(Date.UTC(2026, 8, 15)), 1)[0].time;
+    const sim = fly(mk({ vehicleId: 'vegac', siteId: 'kourou', orbit, satelliteId: 'cubesats', payloadMassOverride: 1150, launchTime,
+      guidance: { ...DEFAULT_GUIDANCE, ...(vehicleById('vegac').guidanceDefaults ?? {}) }, guidanceResolved: true }), 20000);
+    expect(sim.plan.doglegDeg).toBeGreaterThan(1);
+    expect(sim.events.some(e => e.key === 'evt.targetOrbit'), sim.events.map(e => e.key).join(' ')).toBe(true);
+    expect(Math.abs(sim.state.elements.i - sim.plan.target.inclination) / DEG).toBeLessThan(0.3);
+  }, 60000);
+});
 
 describe('launch windows', () => {
   it('finds ISS-plane windows from Baikonur where the ascent RAAN matches the station RAAN', () => {

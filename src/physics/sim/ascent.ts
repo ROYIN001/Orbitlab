@@ -200,10 +200,18 @@ export class AscentMonitor {
 
   finishAscent(el: OrbitalElements): void {
     const s = this.sim.state;
-    this.sim.event('evt.parkingOrbit', 'success', {
-      ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
-      dv: Math.round(this.sim.vehicle.deltaVRemaining()),
-    });
+    // Nothing under the insertion floor is a parking orbit (the same rule the
+    // circularise branch of `checkBurn` states), less the 3 km the cut-off
+    // gate in `checkAscent` allows under it. A last stage that burns out with
+    // its periapsis inside the air has already said `evt.lowPerigee`; calling
+    // that a parking orbit too is how a decaying 107 km arc came to be
+    // announced as an insertion.
+    if (el.periapsisAlt >= ORBIT_INSERTION_FLOOR - 3e3) {
+      this.sim.event('evt.parkingOrbit', 'success', {
+        ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
+        dv: Math.round(this.sim.vehicle.deltaVRemaining()),
+      });
+    }
     // The mission may already be over. A direct insertion that meets the
     // acceptance band at cut-off has nothing left to do, and the plan it was
     // given before liftoff must not be flown anyway: Falcon 9 to the ISS inserts

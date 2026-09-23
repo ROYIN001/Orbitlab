@@ -139,16 +139,18 @@ describe('excluded combinations', () => {
   it('the vehicles that fly the sun-synchronous preset are the ones range safety and capability both allow', () => {
     // The flown set is an *intersection*, not a range-safety statement on its
     // own: a vehicle appears here only if (a) its first site's azimuth window
-    // contains the retrograde launch — Plesetsk (330–90°), Mahia (90–200°),
-    // Jiuquan (90–200°) and Taiyuan (144–200°) are the four sites in the data
-    // that qualify — and (b) at least one of its three `sso` rows survives the
+    // contains the retrograde launch, directly or with a dogleg — Plesetsk
+    // (330–90°), Mahia (90–200°), Jiuquan (90–200°) and Taiyuan (144–200°)
+    // directly, Kourou (350–94°) and Tanegashima (90–190°) with a 1.2° and
+    // 1.9° dogleg — and (b) at least one of its three `sso` rows survives the
     // capability and architecture tables. Electron keeps all three (its rows
     // are graded against its own 200 kg sun-synchronous rating) and Angara-A5
-    // keeps one. Long March 2D passes the range-safety half from Jiuquan and is
-    // absent only because of (b): all three of its `sso` rows are excluded
-    // above, architecturally — it has no restart, not too little delta-v.
+    // keeps one; Vega-C, H-IIA and H3 keep all three and Ariane 64 two. Long
+    // March 2D passes the range-safety half from Jiuquan and is absent only
+    // because of (b): all three of its `sso` rows are excluded above,
+    // architecturally — it has no restart, not too little delta-v.
     const flown = new Set(fleetCases().filter((c) => c.orbit === 'sso').map((c) => c.vehicle));
-    expect([...flown].sort()).toEqual(['angaraa5', 'electron']);
+    expect([...flown].sort()).toEqual(['angaraa5', 'ariane64', 'electron', 'h2a202', 'h3', 'vegac']);
     expect(azimuthAllowedFor(siteById('jiuquan'), resolveTarget(orbitById('sso'), siteById('jiuquan'), LAUNCH_TIME).inclination))
       .toBe(true);
     expect(SITE_GEOMETRY['longmarch2d/sso/25']).toBeUndefined();
@@ -1133,16 +1135,19 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   // kilometres above where the profile closes ends `failed`, with the tanks dry.
   { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 114.6, ap: 754.5 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
-  // rating. Nothing closes, at any altitude or any payload.
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.1, ap: 354.1 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 154.1, ap: 335.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 165.9, ap: 306.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.8, ap: 2418.0 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.8, ap: 2401.1 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2374.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2423.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 141.0, ap: 2410.3 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 140.8, ap: 2387.6 },
+  // rating. Nothing closes, at any altitude or any payload. Re-measured when
+  // Jiuquan's 41° flights moved to the south-east solution inside the site's
+  // 90–200° corridor (they used to leave north of east, across Mongolia): the
+  // cells moved by up to 6 km of apoapsis and none changed its verdict.
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.2, ap: 357.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 155.8, ap: 336.2 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 167.7, ap: 304.5 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.6, ap: 2411.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.7, ap: 2395.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2372.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2424.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 140.9, ap: 2404.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 141.1, ap: 2391.1 },
 ];
 
 describe('single-shot direct insertion', () => {

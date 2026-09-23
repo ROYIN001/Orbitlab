@@ -11,8 +11,10 @@ export interface SiteExtra extends LaunchSiteSpec {
    * mission planner or removed, because `azimuthMin`/`azimuthMax` had no
    * consumer at all and `minInclination` contradicted them (Vandenberg declared
    * 60 deg against a corridor that reaches nothing below 61.6 deg). Both halves
-   * are now real: `azimuthAllowedFor` is the sun-synchronous gate in
-   * tests/fleet-defaults.test.ts, and this field is the corridor stated as the
+   * are now real: `launchDirection` in src/physics/mission.ts picks the
+   * launch solution inside the corridor (or a dogleg from its edge) and
+   * `azimuthAllowedFor` is its yes/no, the sun-synchronous gate in
+   * tests/fleet-defaults.test.ts; this field is the corridor stated as the
    * same kind of number `minInclination` already is, so the planner can test an
    * inclination without re-deriving an azimuth.
    *

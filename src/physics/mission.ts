@@ -52,6 +52,12 @@ export interface MissionPlan {
   /** inclination flown during ascent, rad */
   ascentInclination: number;
   descending: boolean;
+  /**
+   * Yaw the ascent flies after leaving on the edge of the site's corridor,
+   * deg; 0 when the target plane's own heading is inside it (see
+   * `launchDirection`).
+   */
+  doglegDeg: number;
   azimuthInertial: number;
   azimuthRotating: number;
   insertionAltitude: number;
@@ -186,6 +192,80 @@ export const CORRIDOR_SLACK = 0.25 * DEG;
 export type CorridorVerdict = 'ok' | 'belowMinimum' | 'aboveCorridor';
 
 /**
+ * Furthest a launch may head outside its site's corridor and still reach the
+ * target plane, deg of azimuth: the ascent then leaves the pad on the corridor
+ * edge and the closed-loop guidance yaws it back into the plane once it is out
+ * of the dense air — a dogleg. Real launches fly exactly this where the direct
+ * heading crosses land: a sun-synchronous Vega-C from Kourou leaves on the
+ * 350° edge instead of 348.8°, an H-IIA from Tanegashima on 190° instead of
+ * 192°. Five degrees admits those, and not Baikonur's 8.6° to a
+ * sun-synchronous plane, which would cross Russia on a heading the site has
+ * never flown, nor the 11° PSLV needs from Sriharikota to swing around Sri
+ * Lanka, a dogleg deep enough that this model would not fly it honestly.
+ */
+export const DOGLEG_LIMIT_DEG = 5;
+/** A heading this close outside the corridor counts as on its edge, deg. */
+const AZIMUTH_SLACK_DEG = 0.25;
+/** Orbit speed the direction is decided at, the same 300 km the site data is measured at. */
+const DIRECTION_REFERENCE_SPEED = circularSpeed(R_EARTH + 300e3);
+
+export interface LaunchDirection {
+  /** fly the southbound solution (descending node over the site) */
+  descending: boolean;
+  /** the heading the ascent leaves the pad on, rotating frame, rad */
+  azimuthRotating: number;
+  /** yaw the ascent turns through after leaving on the corridor edge, deg (0 = direct) */
+  doglegDeg: number;
+  /** the plane can be flown from this site, directly or with a dogleg */
+  allowed: boolean;
+}
+
+const wrapDeg = (deg: number): number => ((deg % 360) + 360) % 360;
+
+/** Degrees a heading lies outside the site's corridor (0 inside), and the nearest edge. */
+function corridorExcess(site: SiteExtra, azimuthRad: number): { excess: number; edgeDeg: number } {
+  const deg = wrapDeg(azimuthRad / DEG);
+  const lo = wrapDeg(site.azimuthMin), hi = wrapDeg(site.azimuthMax);
+  const inside = lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
+  if (inside) return { excess: 0, edgeDeg: deg };
+  const gap = (a: number, b: number): number => { const d = wrapDeg(a - b); return Math.min(d, 360 - d); };
+  const toLo = gap(deg, lo), toHi = gap(deg, hi);
+  return toLo <= toHi ? { excess: toLo, edgeDeg: lo } : { excess: toHi, edgeDeg: hi };
+}
+
+/**
+ * Which of the two launch solutions to fly, and on what heading.
+ *
+ * Every inclination above the site's latitude can be reached two ways — north
+ * of east (ascending node over the site) or south of east (descending) — and a
+ * range-safety corridor usually admits only one. The choice used to ignore the
+ * corridor entirely: everything up to 75° flew the northbound solution, so an
+ * ISS launch from Wallops, Wenchang, Tanegashima, Jiuquan, Sriharikota or
+ * Mahia, and every prograde launch from Vandenberg and Taiyuan, left the pad
+ * across the land its corridor exists to avoid while the verdict said
+ * "ready". The site's corridor now decides: the solution inside it is flown;
+ * when both are, the site's own preference (`descendingForPolar` above 75°,
+ * northbound below) keeps what it was; when neither is but one is within
+ * `DOGLEG_LIMIT_DEG`, the ascent leaves on that corridor edge and doglegs.
+ */
+export function launchDirection(site: SiteExtra, inc: number, vOrbit = DIRECTION_REFERENCE_SPEED): LaunchDirection {
+  const lat = site.latitude * DEG;
+  const prefer = inc > 75 * DEG ? site.descendingForPolar : false;
+  const options = [prefer, !prefer].map(descending => {
+    const azimuth = rotatingLaunchAzimuth(lat, inc, vOrbit, descending);
+    return { descending, azimuth, ...(azimuth === null ? { excess: Infinity, edgeDeg: 0 } : corridorExcess(site, azimuth)) };
+  });
+  const direct = options.find(o => o.azimuth !== null && o.excess <= AZIMUTH_SLACK_DEG);
+  if (direct) return { descending: direct.descending, azimuthRotating: direct.azimuth!, doglegDeg: 0, allowed: true };
+  const nearest = options[1].excess < options[0].excess ? options[1] : options[0];
+  if (nearest.azimuth !== null && nearest.excess <= DOGLEG_LIMIT_DEG) {
+    return { descending: nearest.descending, azimuthRotating: nearest.edgeDeg * DEG, doglegDeg: nearest.excess, allowed: true };
+  }
+  const fallback = options[0];
+  return { descending: fallback.descending, azimuthRotating: fallback.azimuth ?? Math.PI / 2, doglegDeg: 0, allowed: false };
+}
+
+/**
  * Whether a target inclination lies inside the site's range-safety corridor,
  * and if not, which end it falls outside.
  *
@@ -209,7 +289,7 @@ export type CorridorVerdict = 'ok' | 'belowMinimum' | 'aboveCorridor';
  * inclination itself.
  */
 export function inclinationCorridor(site: SiteExtra, inc: number): CorridorVerdict {
-  if (inc > maxInclinationFor(site) + CORRIDOR_SLACK) return 'aboveCorridor';
+  if (inc > maxInclinationFor(site) + CORRIDOR_SLACK && !launchDirection(site, inc).allowed) return 'aboveCorridor';
   const effective = inc > Math.PI / 2 ? Math.PI - inc : inc;
   if (effective < minInclinationFor(site) - CORRIDOR_SLACK) return 'belowMinimum';
   return 'ok';
@@ -729,15 +809,7 @@ export function replanBurns(target: ResolvedTarget, el: { periapsisAlt: number; 
  * mission at all.
  */
 export function azimuthAllowedFor(site: SiteExtra, inc: number): boolean {
-  const lat = site.latitude * DEG;
-  const descending = inc > 75 * DEG ? site.descendingForPolar : false;
-  const vOrb = circularSpeed(R_EARTH + 300e3);
-  const az = rotatingLaunchAzimuth(lat, inc, vOrb, descending);
-  if (az === null) return false;
-  const deg = ((az / DEG) % 360 + 360) % 360;
-  const lo = ((site.azimuthMin % 360) + 360) % 360;
-  const hi = ((site.azimuthMax % 360) + 360) % 360;
-  return lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
+  return launchDirection(site, inc).allowed;
 }
 
 /**
@@ -763,7 +835,8 @@ export function canBurnAfterAscent(vehicle: VehicleSpec, satellite: SatelliteSpe
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   const { inc: ascentInclination } = ascentInclinationFor(target, site);
-  const descending = ascentInclination > 75 * DEG ? site.descendingForPolar : false;
+  const direction = launchDirection(site, ascentInclination);
+  const descending = direction.descending;
   const lat = site.latitude * DEG;
   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
   const azimuthInertial = inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
@@ -875,7 +948,9 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     }
   }
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
-  const azimuthRotating = rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
+  // A dogleg leaves on the corridor edge; the closed loop turns into the plane.
+  const azimuthRotating = direction.doglegDeg > 0 ? direction.azimuthRotating
+    : rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
   const burns = planBurns(target, ascentInclination, insertionAltitude, insertionApoapsis);
   // What the kick stage is left holding, and whether it can hold it. The ascent
   // stages' shortfall against the orbit they are AIMED at is what a kick stage
@@ -891,7 +966,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     MU_EARTH / (rIns * rIns),
   );
   return {
-    target, ascentInclination, descending, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
+    target, ascentInclination, descending, doglegDeg: direction.doglegDeg, azimuthInertial, azimuthRotating, insertionAltitude, insertionApoapsis, weakFinalStage, burns,
     launchTime: cfg.launchTime, jd0, gmst0, raanExpected,
     planeChangeDeg: Math.abs(target.inclination - ascentInclination) / DEG,
     // Both ends of the corridor, not just the declared minimum: the ascent
@@ -925,7 +1000,7 @@ export function launchWindows(orbit: OrbitSpec, site: SiteExtra, from: Date, cou
   const t0 = resolveTarget(orbit, site, from);
   if (t0.raan === null) return [];
   const { inc } = ascentInclinationFor(t0, site);
-  const descending = inc > 75 * DEG ? site.descendingForPolar : false;
+  const descending = launchDirection(site, inc).descending;
   const out: LaunchWindow[] = [];
   // Δλ between ascending node and site along the orbit is fixed for given lat/inc.
   // Δλ is the offset between the site's inertial longitude and the node of the

@@ -274,12 +274,15 @@ export const TANKS_EMPTY_DV = 100;
 // ---------------------------------------------------------------------------
 // 1. Not flyable from the site: range safety.
 // The sun-synchronous preset needs a retrograde, roughly north-westerly or
-// south-easterly azimuth. Only Plesetsk and Mahia have a range-safety window
-// that contains it; from Baikonur, Cape Canaveral, Kourou, Wenchang,
-// Tanegashima, Sriharikota and Starbase the azimuth points over populated land
-// or over another country's territory, and the launch would not be licensed.
-// The table is generated from the site data so it always describes the sites as
-// they are, and `azimuthAllowedFor` is the single source of truth for it.
+// south-easterly azimuth. Plesetsk, Vostochny, Vandenberg, Jiuquan, Taiyuan and
+// Mahia have a range-safety window that contains it, and Kourou and Tanegashima
+// reach it with a dogleg of 1.2° and 1.9° off their corridor edge
+// (`DOGLEG_LIMIT_DEG` in src/physics/mission.ts). From Baikonur, Cape
+// Canaveral, Wenchang, Sriharikota and Starbase the azimuth points over
+// populated land or over another country's territory, further than a dogleg
+// turns, and the launch would not be licensed. The table is generated from the
+// site data so it always describes the sites as they are, and
+// `azimuthAllowedFor` is the single source of truth for it.
 export const SITE_GEOMETRY: Record<string, string> = {};
 for (const v of VEHICLES) {
   const site = siteById(v.sites[0]);
@@ -467,6 +470,14 @@ fill(KNOWN_GUIDANCE_FAILURES,
 fill(KNOWN_GUIDANCE_FAILURES,
   'PS4 is still 974 m/s deep with +315 m/s of ideal margin when the stack breaks up at T+567 s at -2 897 x 232 km; the same payload to the 500 km preset instead runs the tanks dry, which is a capability limit and is filed as one',
   'pslvxl/iss/90');
+// Entered the matrix when Kourou's sun-synchronous plane became reachable with a
+// dogleg; the same signature as `ariane64/iss/90` at a lighter payload: the
+// Vinci insertion runs the apoapsis out to 7 443 km and the tanks dry with
+// 107 km of periapsis and +2 589 m/s of ideal margin on paper. The 25 % and
+// 50 % rows of the same preset are accepted.
+fill(KNOWN_GUIDANCE_FAILURES,
+  'the Vulcain core hands Vinci a sagging trajectory with 13.5 t aboard and the insertion runs the apoapsis out to 7 443 km: tanks dry at 107 x 7 443 km at T+1 226 s with +2 589 m/s of ideal margin',
+  'ariane64/sso/90');
 
 export const EXCLUDED: Record<string, string> = {
   ...SITE_GEOMETRY, ...BEYOND_CAPABILITY, ...ARCHITECTURE, ...KNOWN_GUIDANCE_FAILURES,

@@ -961,13 +961,15 @@ about it, but load relief does not turn a Δv shortfall into performance. The di
 the margin, not the event that ends the flight.
 
 **Range safety.** The `sso` preset needs a retrograde, roughly north-westerly or south-easterly
-azimuth (346–348° from the northern sites, 191–193° from the southern ones). Only Plesetsk
-(330–90°) and Mahia (90–200°) have a window that contains it; from Baikonur, Cape Canaveral,
-Kourou, Wenchang, Tanegashima, Sriharikota and Starbase that azimuth points over populated land
-or another country. The table is generated from the site data through `azimuthAllowedFor`, and
-a test asserts that the exclusions are exactly the sites the function rules out, so the matrix
-cannot be shrunk by quietly dropping a case. Angara-A5 and Electron are therefore the only
-vehicles with `sso` acceptance cases.
+azimuth (346–348° from the northern sites, 191–193° from the southern ones). Plesetsk
+(330–90°), Vostochny (340–95°), Vandenberg (147–201°), Jiuquan (90–200°), Taiyuan (144–200°)
+and Mahia (90–200°) have a window that contains it, and Kourou and Tanegashima reach it with a
+dogleg (§7); from Baikonur, Cape Canaveral, Wenchang, Sriharikota and Starbase that azimuth
+points over populated land or another country, further than a dogleg turns. The table is
+generated from the site data through `azimuthAllowedFor`, and a test asserts that the
+exclusions are exactly the sites the function rules out, so the matrix cannot be shrunk by
+quietly dropping a case. Angara-A5, Ariane 64, Electron, H-IIA, H3 and Vega-C fly `sso`
+acceptance cases (Ariane 64 at 25 and 50 %; its 90 % row is a guidance failure below).
 
 **Beyond capability.** Two systematic gaps explain most of it:
 
@@ -1000,7 +1002,7 @@ default mission and has a test of its own: Soyuz-2.1a + 7.15 t crew ship from Ba
 into 197 × 200 km at T+536 s and the crew ship circularises at 417.9 × 418.0 km / 51.64° at
 T+3 397 s.
 
-**Guidance defects.** Four, all one family: a heavy upper stage lighting at a fraction of a g
+**Guidance defects.** Five, all one family: a heavy upper stage lighting at a fraction of a g
 under a near-maximum payload, a closed-loop ascent that cannot hold the loft it was given, and a
 break-up on the max-Q placard on the way back down — with the ideal Δv for the mission on paper
 and kilometres per second still in the tanks.
@@ -1011,6 +1013,11 @@ and kilometres per second still in the tanks.
 | Vulcan Centaur → ISS plane, 90 % | break-up T+915 s at −3 857 × 318 km | 2 860 m/s | +1 701 m/s |
 | Ariane 64 → ISS plane, 90 % | break-up T+941 s at −2 219 × 92 km | 1 704 m/s | +1 855 m/s |
 | PSLV-XL → ISS plane, 90 % | break-up T+569 s at −2 910 × 232 km | 968 m/s | +315 m/s |
+| Ariane 64 → sun-synchronous, 90 % | tanks dry T+1 226 s at 107 × 7 443 km | 0 m/s | +2 589 m/s |
+
+The fifth entered the matrix when Kourou's sun-synchronous plane became reachable with a dogleg
+(§7): the Vinci insertion runs the apoapsis out to 7 443 km instead of stopping the burn, which
+is the same hand-over signature as the ISS row at a lighter payload.
 
 The Vulcan pair were in this table two waves ago with "+646/+743 m/s of margin" recorded against
 them; the last wave moved them into `BEYOND_CAPABILITY` and deleted that line. Ariane 64 and
@@ -1133,6 +1140,27 @@ southbound solution); the rotating-frame azimuth corrects for the Earth's veloci
 cannot reach inclinations below its latitude directly (nor below its range-safety minimum),
 so the ascent uses the lowest reachable inclination and a plane change is scheduled at
 apogee.
+
+**Which solution is flown** is decided by the site's range-safety corridor
+(`launchDirection` in `src/physics/mission.ts`), evaluated at a 300 km reference orbit like
+the site data itself. The solution whose heading lies inside the corridor is flown; when both
+do, the site's own preference is kept (the southbound solution above 75° where the site flies
+polar orbits southbound, the northbound one otherwise). The choice used to ignore the corridor
+and fly north of east for everything up to 75°, so an ISS-plane launch from Wallops, Wenchang,
+Tanegashima, Jiuquan, Sriharikota or Mahia, and every prograde launch from Vandenberg and
+Taiyuan, left the pad across the land its corridor avoids — 80 site/orbit combinations, 38 of
+them accepted fleet rows — while the verdict said the mission was ready. They now leave south
+of east (Wallops to the ISS on 130° instead of 50°), and the launch windows are computed for
+the same solution.
+
+**Dogleg.** When neither heading is inside the corridor but one is within `DOGLEG_LIMIT_DEG`
+(5°) of its edge, the ascent leaves on that edge and the closed-loop guidance yaws it into the
+target plane once it is out of the dense air — the dogleg real launches fly. It opens the
+sun-synchronous plane from Kourou (1.2°, as Vega-C flies it) and Tanegashima (1.9°, as H-IIA
+does) and polar planes from Wenchang and Sriharikota (3.3°); Baikonur to a sun-synchronous
+plane (8.6°) and PSLV's swing around Sri Lanka (11°) remain beyond it. The planner reports the
+turn as `doglegDeg`, the setup panel shows it, and the extra steering is paid for in the Δv
+budget like any other.
 
 The ascent produces RAAN = λ_site + θ − Δλ with sin u = sin φ / sin i and
 tan Δλ = sin u cos i / cos u, where λ_site is taken 200 s after liftoff rather than at liftoff:

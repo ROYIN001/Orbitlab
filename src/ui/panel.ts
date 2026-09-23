@@ -364,8 +364,12 @@ export function missionVerdict(i: VerdictInput): Feasibility {
   if (i.payloadMass >= cap * 0.9) {
     notes.push(t('setup.verdict.tight', { mass: num(i.payloadMass), cap: num(cap), class: className }));
   }
-  if (armed !== '' || notes.length > 0) return say('warn', ...notes);
-  return say('ok', t('setup.verdict.readyMargin', { mass: num(i.payloadMass), cap: num(cap), class: className }));
+  // A dogleg is how the site flies this plane, not a problem with the mission:
+  // said, but it does not turn a ready verdict into a warning.
+  const dogleg = i.plan && i.plan.doglegDeg > 0
+    ? t('setup.verdict.dogleg', { site: siteName(i.site), deg: i.plan.doglegDeg.toFixed(1) }) : '';
+  if (armed !== '' || notes.length > 0) return say('warn', ...notes, dogleg);
+  return say('ok', t('setup.verdict.readyMargin', { mass: num(i.payloadMass), cap: num(cap), class: className }), dogleg);
 }
 
 export class SetupPanel {
@@ -1204,6 +1208,7 @@ export class SetupPanel {
       row(t('setup.info.azimuth'), `${(plan.azimuthRotating * RAD).toFixed(1)}° (${plan.descending ? 'S' : 'N'})`);
       row(t('setup.info.ascentInclination'), `${(plan.ascentInclination * RAD).toFixed(2)}°`);
       row(t('setup.info.insertion'), `${num(plan.insertionAltitude / 1000)} × ${num(plan.insertionApoapsis / 1000)} km`);
+      if (plan.doglegDeg > 0) row(t('setup.info.dogleg'), `${plan.doglegDeg.toFixed(1)}°`);
       if (plan.planeChangeDeg > 0.05) row(t('setup.info.planeChange'), `${plan.planeChangeDeg.toFixed(1)}°`, 'warn');
       row(t('setup.info.burnsDv'), `${num(plan.dvEstimateBurns)} m/s (${plan.burns.length})`);
     }
