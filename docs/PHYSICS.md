@@ -59,6 +59,14 @@ it. Two rules keep that affordable and honest over a mission that lasts a day:
   attitude thrusters could stop before the next burn. A burn waits for its attitude as long as
   those thrusters need, not a fixed four minutes.
 
+A six-DOF coast is flown under J2, and there the osculating ellipse of one instant is not the
+orbit: its apsides swing several kilometres round a revolution (a 500 km circle reads anywhere
+from 501 to 515 km of apoapsis). So a six-DOF orbit is **judged on its physical apsides** — the
+lowest and highest altitude of the next revolution under J2 — when the mission decides it is
+on target, in the event that says so, on the result panel and in the acceptance tests. The
+planner's corrections aim at the same physical apex. Point-mass coasts are Kepler, where the
+two are the same.
+
 The point-mass model below remains selectable in the setup, and the fleet acceptance matrix
 (§6b) of the regular test suite flies it; the same matrix flown in six-DOF is recorded in
 [SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md).

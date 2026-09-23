@@ -15,6 +15,7 @@ import { VEHICLES } from '../src/data/vehicles';
 import type { DynamicsConfig, MissionConfig, VehicleSpec } from '../src/types';
 import { G0, DEG, RAD } from '../src/physics/constants';
 import { elementsFromState, wrapPi } from '../src/physics/orbital';
+import { physicalApsides } from '../src/physics/rigid/orbit-prediction';
 import { azimuthAllowedFor, inclinationCorridor, resolveTarget, launchWindows } from '../src/physics/mission';
 
 export const LAUNCH_TIME = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
@@ -56,10 +57,15 @@ export const RAAN_TOLERANCE_DEG = 1.5;
  *
  * `sim.state.elements` is maintained by the simulation; this goes back to
  * `sim.state.r` / `sim.state.v` so that a bug in the bookkeeping of the cached
- * elements cannot pass the gate.
+ * elements cannot pass the gate. A six-DOF flight coasts under J2, so its
+ * apsides are the lowest and highest altitude of the next revolution
+ * propagated from that state, not the osculating ellipse of the instant.
  */
 export function achievedElements(sim: Simulation): ReturnType<typeof elementsFromState> {
-  return elementsFromState(sim.state.r, sim.state.v);
+  const el = elementsFromState(sim.state.r, sim.state.v);
+  if (sim.cfg.dynamics?.model !== 'sixDof' || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
+  const apsides = physicalApsides({ r: sim.state.r, v: sim.state.v });
+  return apsides ? { ...el, ...apsides } : el;
 }
 
 /**

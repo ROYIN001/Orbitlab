@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { propagateJ2Coast, nextJ2Apsis, shootJ2ApsisVelocity } from '../src/physics/rigid/orbit-prediction';
+import { propagateJ2Coast, nextJ2Apsis, physicalApsides, shootJ2ApsisVelocity } from '../src/physics/rigid/orbit-prediction';
 import { J2_EARTH, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { norm, sub, v3 } from '../src/physics/vec3';
 import { elementsFromState, propagateKepler, timeToApoapsis } from '../src/physics/orbital';
@@ -85,6 +85,37 @@ describe('J2 coast prediction for finite-attitude orbital planning', () => {
     const next = nextJ2Apsis(initial, 'periapsis')!;
     expect(next.timeS).toBeGreaterThan(5000);
     expect(Math.abs(next.radiusM - peri)).toBeLessThan(0.03);
+  });
+
+  it('gives the lowest and highest altitude of the next revolution, which the osculating apsides are not', () => {
+    // Brute force: every second of one revolution.
+    const extremes = (initial: { r: ReturnType<typeof v3>; v: ReturnType<typeof v3> }) => {
+      const period = elementsFromState(initial.r, initial.v).period;
+      let state = initial, low = Infinity, high = -Infinity;
+      for (let t = 0; t < period; t++) {
+        state = propagateJ2Coast(state, 1, { stepS: 1 })!;
+        low = Math.min(low, norm(state.r)); high = Math.max(high, norm(state.r));
+      }
+      return { periapsisAlt: low - R_EARTH, apoapsisAlt: high - R_EARTH };
+    };
+    // Falcon 9's cut-off: its physical apex is the one `nextJ2Apsis` finds.
+    const falcon = physicalApsides(cutoff)!, falconFine = extremes(cutoff);
+    expect(Math.abs(falcon.apoapsisAlt - falconFine.apoapsisAlt)).toBeLessThan(2);
+    expect(Math.abs(falcon.periapsisAlt - falconFine.periapsisAlt)).toBeLessThan(2);
+    expect(Math.abs(falcon.apoapsisAlt - (nextJ2Apsis(cutoff, 'apoapsis')!.radiusM - R_EARTH))).toBeLessThan(2);
+    // A circle at 500 km and 51.6°, set up from its osculating elements: under
+    // J2 it rises and falls by kilometres, and the osculating apsides of the
+    // instant are off both extremes.
+    const r = R_EARTH + 500e3, speed = Math.sqrt(MU_EARTH / r), inc = 51.6 * Math.PI / 180;
+    const circle = { r: v3(r, 0, 0), v: v3(0, speed * Math.cos(inc), speed * Math.sin(inc)) };
+    const physical = physicalApsides(circle)!, fine = extremes(circle), osculating = elementsFromState(circle.r, circle.v);
+    expect(Math.abs(physical.apoapsisAlt - fine.apoapsisAlt)).toBeLessThan(2);
+    expect(Math.abs(physical.periapsisAlt - fine.periapsisAlt)).toBeLessThan(2);
+    expect(physical.apoapsisAlt - physical.periapsisAlt).toBeGreaterThan(2e3);
+    expect(Math.abs(osculating.periapsisAlt - physical.periapsisAlt)).toBeGreaterThan(1e3);
+    // Unbound or through the surface: no orbit to judge.
+    expect(physicalApsides({ r: v3(R_EARTH + 300e3, 0, 0), v: v3(0, 12000, 0) })).toBeNull();
+    expect(physicalApsides({ r: v3(R_EARTH + 100e3, 0, 0), v: v3(0, 5000, 0) })).toBeNull();
   });
 
   it('does not manufacture a solution for a missing root, unbracketed target or surface crossing', () => {

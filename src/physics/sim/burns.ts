@@ -5,7 +5,7 @@
  */
 import { MU_EARTH, R_EARTH, DEG, RAD } from '../constants';
 import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween } from '../vec3';
-import { nextJ2Apsis, propagateJ2Coast, shootJ2ApsisVelocity } from '../rigid/orbit-prediction';
+import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity } from '../rigid/orbit-prediction';
 import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
 import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
@@ -55,6 +55,20 @@ export class BurnSequencer {
     const predicted = propagateJ2Coast(this.sim.state, Math.max(0, time - this.sim.state.t));
     this.rigidBurnForecast = predicted ? { ...predicted, burn, time, context } : null;
     return predicted;
+  }
+
+  /**
+   * The orbit a mission is judged on. In six-DOF that is the lowest and
+   * highest altitude of the next revolution under J2 (`physicalApsides`): the
+   * osculating apsides of one instant swing several kilometres round the
+   * orbit, and Vulcan to a 500 km circle in wind shear read 511 × 489 km on an
+   * orbit whose physical apex its last burn had just put at 500 km. Point-mass
+   * coasts are Kepler, where the two are the same.
+   */
+  judgedElements(el: OrbitalElements): OrbitalElements {
+    if (!this.sim.rigidRuntime || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
+    const apsides = physicalApsides(this.sim.state);
+    return apsides ? { ...el, ...apsides } : el;
   }
 
   failRigidOrbitPrediction(): void {
@@ -116,7 +130,7 @@ export class BurnSequencer {
     // band and still look worth a burn — and flying it costs a revolution (ten
     // and a half hours at a geostationary transfer) for an orbit that was
     // already the one that was asked for.
-    if (orbitResiduals(this.sim.plan.target, el, this.sim.raanWasReachable()).onTarget) {
+    if (orbitResiduals(this.sim.plan.target, this.judgedElements(el), this.sim.raanWasReachable()).onTarget) {
       for (const b of this.sim.plan.burns) b.done = true;
       this.reachTargetOrbit(el);
       return;
@@ -632,8 +646,9 @@ export class BurnSequencer {
    * on a geostationary mission, or simply whatever the plan happened to contain
    * when the re-planner ran out of budget.
    */
-  reachTargetOrbit(el: OrbitalElements, onTarget = true): void {
+  reachTargetOrbit(elements: OrbitalElements, onTarget = true): void {
     const s = this.sim.state;
+    const el = this.judgedElements(elements);
     const res = orbitResiduals(this.sim.plan.target, el, true);
     const hit = onTarget && res.onTarget;
     s.status = 'orbit';
@@ -644,6 +659,10 @@ export class BurnSequencer {
       ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
       raan: +(el.raan * RAD).toFixed(1), period: Math.round(el.period / 60),
       dv: Math.round(this.sim.vehicle.deltaVRemaining()),
+      // The apsides the verdict was reached on, unrounded, when they are not
+      // the osculating ones of the frame (six-DOF): the result panel shows
+      // these, not the frame's, so its numbers agree with its verdict.
+      ...(el !== elements ? { apAltM: el.apoapsisAlt, peAltM: el.periapsisAlt } : {}),
       // `res.misses` is deliberately NOT put on the event. It used to be
       // joined into an English `miss` clause here — built inside
       // `orbitResiduals`, in physics — and no dictionary in en/ru/th declared

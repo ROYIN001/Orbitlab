@@ -105,6 +105,38 @@ export function nextJ2Apsis(initial: PointState, kind: ApsisKind, options: J2Aps
   return null;
 }
 
+/**
+ * The lowest and highest altitude of the next revolution under J2, m: the
+ * apsides a six-DOF orbit is judged on. The osculating ellipse of one instant
+ * swings several kilometres around them in low orbit — a 500 km circle reads
+ * anywhere from 501 to 515 km of apoapsis round one revolution — so a mission
+ * judged on it passes or fails by where on the orbit its last burn ended.
+ * Sampled at the forecast step and refined to the apsis on either side of each
+ * extreme sample. Null when the path is unbound or reaches the surface.
+ */
+export function physicalApsides(initial: PointState, options: J2CoastOptions = {}): { periapsisAlt: number; apoapsisAlt: number } | null {
+  const dt = checkedStep(initial, options);
+  const energy = dot(initial.v, initial.v) / 2 - MU_EARTH / norm(initial.r);
+  if (!(energy < 0)) return null;
+  const period = 2 * Math.PI * Math.sqrt((-MU_EARTH / (2 * energy)) ** 3 / MU_EARTH);
+  checkedDuration(period, dt);
+  let state = copy(initial);
+  let low = { radius: norm(state.r), before: state }, high = low;
+  for (let time = 0; time < period;) {
+    const h = Math.min(dt, period - time), after = step(state, h), radius = norm(after.r);
+    if (!(radius > R_EARTH)) return null;
+    if (radius < low.radius) low = { radius, before: state };
+    if (radius > high.radius) high = { radius, before: state };
+    state = after; time += h;
+  }
+  const refined = (sample: { radius: number; before: PointState }, kind: ApsisKind): number => {
+    const found = nextJ2Apsis(sample.before, kind, { stepS: dt, maxTimeS: 2 * dt, includeInitial: true });
+    if (!found) return sample.radius;
+    return kind === 'apoapsis' ? Math.max(sample.radius, found.radiusM) : Math.min(sample.radius, found.radiusM);
+  };
+  return { periapsisAlt: refined(low, 'periapsis') - R_EARTH, apoapsisAlt: refined(high, 'apoapsis') - R_EARTH };
+}
+
 export interface J2ApsisShot {
   /** An advisory desired velocity, not an impulse applied to vehicle state. */
   velocity: Vec3;

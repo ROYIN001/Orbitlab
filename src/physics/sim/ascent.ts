@@ -248,7 +248,7 @@ export class AscentMonitor {
     // sub-tolerance circularisation trim, so `evt.targetOrbit` — the moment the
     // user is waiting for, and the moment the payload is deployed — landed at
     // T+53 min instead of T+9 min (audit item B6).
-    if (orbitResiduals(this.sim.plan.target, el, this.sim.raanWasReachable()).onTarget) {
+    if (orbitResiduals(this.sim.plan.target, this.sim.burns.judgedElements(el), this.sim.raanWasReachable()).onTarget) {
       for (const b of this.sim.plan.burns) b.done = true;
       this.sim.burns.reachTargetOrbit(el);
       return;
