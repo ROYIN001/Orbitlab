@@ -377,6 +377,6 @@ Falcon recovery landings, the sensitivity study) pass, as do the watch missions 
 six-DOF (tests/watch-missions.test.ts) and the delivered-orbit matrix (`npm run test:heavy`).
 
 **In the browser** (Chromium with software WebGL, physics in the worker): Starship (39
-chambers), Falcon Heavy and Proton-M keep real time at 1× (0.98, 0.99 and 0.78 — Proton measured
-while other probes loaded the CPU) and reach 6.0×, 4.7× and 9.8× of a requested 10× during the
-ascent, using 53–61 MB of JavaScript heap.
+chambers), Falcon Heavy and Proton-M keep real time at 1× (0.98, 0.99 and 0.96 of it) and reach
+6.0×, 4.7× and 9.8× of a requested 10× during the ascent, using 53–61 MB of JavaScript heap. The
+10× figures were taken with other test processes loading the CPU.
