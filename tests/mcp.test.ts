@@ -359,7 +359,7 @@ describe('configure_mission', () => {
   it('uses the same physics defaults as the panel when switching vehicles', () => {
     const configure = tool(tools, 'configure_mission');
     configure.execute({ vehicleId: 'electron' });
-    expect(host.panel.state.dynamics?.model).toBe('pointMass');
+    expect(host.panel.state.dynamics?.model).toBe('sixDof');
     configure.execute({ vehicleId: 'falcon9' });
     expect(host.panel.state.dynamics).toEqual(defaultDynamics('falcon9'));
     configure.execute({ vehicleId: 'soyuz21a' });

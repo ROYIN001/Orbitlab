@@ -274,7 +274,7 @@ describe('mission verdict · agrees with the fleet acceptance suite', () => {
         if (verdict.level === 'ok') ready.push(`${key}: ${verdict.text}`);
       }
       expect(ready, `the suite excludes these, the verdict promises them:\n${ready.join('\n')}`).toEqual([]);
-    });
+    }, 30_000); // flies an insertion probe per marginal row: seconds, not the 5 s unit-test default
   }
 
   it('keeps the list of rows it cannot see honest', () => {

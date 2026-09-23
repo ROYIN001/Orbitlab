@@ -57,8 +57,9 @@ describe('configuration validity versus mission feasibility', () => {
     expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.wind', code: 'selection' }]);
     state.dynamics.wind = 'calm'; state.dynamics.model = 'unsupported' as typeof state.dynamics.model;
     expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.model', code: 'selection' }]);
+    // Every vehicle has six-DOF data now (roadmap P01), Electron included.
     state.vehicleId = 'electron'; state.siteId = vehicleById('electron').sites[0]; state.dynamics.model = 'sixDof';
-    expect(validateConfigInput(state)).toEqual([{ field: 'setup.dynamics.model', code: 'selection' }]);
+    expect(validateConfigInput(state)).toEqual([]);
   });
   it.each([
     [-1, 'minimum', 0], [0x100000000, 'maximum', 0xffffffff], [1.5, 'integer', undefined],
