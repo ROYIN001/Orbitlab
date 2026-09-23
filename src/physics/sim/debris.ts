@@ -141,6 +141,18 @@ export class DebrisTracker {
             : event.params;
           this.sim.event(event.key, event.severity, params);
         }
+        // A passive body in a lasting orbit only drifts: nothing acts on its
+        // rotation there, and control ticks for the rest of a day-long
+        // transfer would cost more than the whole ascent. Hand it to the Kepler
+        // path below, which keeps checking that the orbit lasts; its recorded
+        // attitude stays where the rigid body left it.
+        if (d.alive && !d.recovery && norm(d.r) - R_EARTH > 140e3) {
+          const el = elementsFromState(d.r, d.v);
+          if (el.e < 1 && el.periapsisAlt > 120e3) {
+            d.outcome = 'orbit';
+            this.rigidDebris.delete(d.id);
+          }
+        }
         continue;
       }
       const alt = norm(d.r) - R_EARTH;

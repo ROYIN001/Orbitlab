@@ -8,11 +8,11 @@
  * fixed for one and still broken for the other.
  */
 import { Simulation } from '../src/physics/simulation';
-import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
+import { DEFAULT_GUIDANCE, DEFAULT_FAILURE, guidanceForVehicle } from '../src/physics/defaults';
 import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { VEHICLES } from '../src/data/vehicles';
-import type { MissionConfig, VehicleSpec } from '../src/types';
+import type { DynamicsConfig, MissionConfig, VehicleSpec } from '../src/types';
 import { G0, DEG, RAD } from '../src/physics/constants';
 import { elementsFromState, wrapPi } from '../src/physics/orbital';
 import { azimuthAllowedFor, inclinationCorridor, resolveTarget, launchWindows } from '../src/physics/mission';
@@ -160,23 +160,31 @@ export function allCases(): FleetCase[] {
   return out;
 }
 
-export function flyCase(c: FleetCase, satelliteId = 'cubesats'): Simulation {
+/**
+ * Fly one fleet case with the vehicle's default guidance. `dynamics` flies it
+ * as a rigid body instead of the point-mass model the regular fleet test uses
+ * (the six-DOF fleet suite, `npm run test:sixdof-fleet`).
+ */
+export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: DynamicsConfig): Simulation {
   const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
   const orbit = orbitById(c.orbit);
   const window = orbit.raanMode === 'free' ? undefined : launchWindows(orbit, siteById(c.site), LAUNCH_TIME, 1)[0];
   const cfg: MissionConfig = {
     vehicleId: c.vehicle, satelliteId, siteId: c.site, orbit,
     launchTime: window?.time ?? LAUNCH_TIME,
-    guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) },
+    guidance: guidanceForVehicle(spec, DEFAULT_GUIDANCE, dynamics?.model),
     guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: c.mass,
+    ...(dynamics ? { dynamics } : {}),
   };
   const sim = new Simulation(cfg, { headless: true });
   // A GTO mission with a low-thrust kick stage (Briz-M, Fregat, PS4) splits the
   // apogee raising across several perigee passes, which really does take hours.
   const maxTime = c.orbit === 'gto' ? 30 * 3600 : 10 * 3600;
+  // Six-DOF flies its powered phases in 0.01 s control ticks.
+  const maxSteps = dynamics?.model === 'sixDof' ? 20_000_000 : 400000;
   let guard = 0;
-  while (!sim.done && sim.state.t < maxTime && guard++ < 400000) sim.step(sim.suggestedDt());
+  while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) sim.step(sim.suggestedDt());
   return sim;
 }
 

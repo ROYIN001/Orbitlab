@@ -4,7 +4,7 @@ import { RocketView, rigidNozzleIds } from '../src/render/rocket';
 import { DebrisView } from '../src/render/debris';
 import type { SceneManager } from '../src/render/scene';
 import { engineLayout, type NozzlePos } from '../src/render/liveries';
-import { vehicleById } from '../src/data/vehicles';
+import { VEHICLES } from '../src/data/vehicles';
 import { chamberGeometry } from '../src/physics/rigid/vehicle-data';
 import { type RigidTelemetry } from '../src/physics/rigid/telemetry';
 import { quatFromAxisAngle, quatRotate } from '../src/physics/rigid/math';
@@ -36,9 +36,8 @@ function engineHarness() {
 }
 
 describe('rigid render transforms', () => {
-  it('matches actual chamber IDs and ordering for Falcon/Soyuz cores, upper stages and strap-ons', () => {
-    for (const id of ['falcon9', 'soyuz21a']) {
-      const vehicle = vehicleById(id);
+  it('matches actual chamber IDs and ordering for every vehicle\'s cores, upper stages and strap-ons', () => {
+    for (const vehicle of VEHICLES) {
       for (const stage of vehicle.stages.filter(s => !s.isSpacecraft)) {
         const layout = engineLayout(stage.id, stage.engine, stage.diameter / 2);
         expect(rigidNozzleIds(stage.id, stage.id, layout)).toEqual(chamberGeometry(stage.id, stage.id, stage.engine, stage.diameter / 2).map(c => c.id));

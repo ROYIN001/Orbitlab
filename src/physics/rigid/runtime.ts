@@ -149,6 +149,30 @@ export class RigidRuntime {
     return { center, radius, delay };
   }
 
+  /**
+   * The angular acceleration the stage's attitude thrusters give at the
+   * controller's braking share (the slower of pitch and yaw), rad/s², times
+   * `seconds` — the rate they can bring to rest in that time. Infinity when the
+   * stage has no thrusters with gas left; the engines do not count.
+   */
+  coastArrestRate(snapshot: RigidVehicleSnapshot, seconds: number): number {
+    const jets = snapshot.rcsThrusters;
+    const reservoir = snapshot.rcs.find(r => r.stageId === jets[0]?.stageId);
+    if (!jets.length || !reservoir || reservoir.initialPropellantKg <= (this.consumed[reservoir.stageId] ?? 0)) return Infinity;
+    const positive = v3(), negative = v3();
+    for (const jet of jets) {
+      const moment = scale(cross(sub(jet.positionBody, snapshot.cg), normalize(jet.directionBody)), jet.maxThrust);
+      for (const axis of ['y', 'z'] as const) { positive[axis] += Math.max(0, moment[axis]); negative[axis] += Math.max(0, -moment[axis]); }
+    }
+    let rate = Infinity;
+    (['y', 'z'] as const).forEach((axis) => {
+      const row = axis === 'y' ? 1 : 2;
+      const inertiaBound = Math.abs(snapshot.inertia[row * 3]) + Math.abs(snapshot.inertia[row * 3 + 1]) + Math.abs(snapshot.inertia[row * 3 + 2]);
+      rate = Math.min(rate, 0.35 * Math.min(positive[axis], negative[axis]) / Math.max(1e-12, inertiaBound) * seconds);
+    });
+    return rate;
+  }
+
   /** Command cone for attached ascent only; never clip aerodynamic forces.
    * Soyuz's verified reference program permits up to 65% of its conservative
    * torque radius for aerodynamic trim, leaving 35% before axis coupling.

@@ -15,6 +15,13 @@ export const BURN_PREORIENT_TIME = 240;
 
 /** How close to the commanded direction the stack must be before a burn lights, rad. */
 export const BURN_IGNITION_ALIGNMENT = 4 * DEG;
+/**
+ * The same for a six-DOF stack, rad. Its autopilot holds attitude to about a
+ * quarter of a degree, and a burn short enough to lie wholly inside the
+ * terminal steering freeze is flown at the attitude it lit at: Electron's 4 s
+ * Curie trims at 4° off ended 13 km outside their apoapsis band.
+ */
+export const RIGID_BURN_IGNITION_ALIGNMENT = 1 * DEG;
 
 /**
  * Most telemetry samples a flight keeps. Past this the older half is thinned
@@ -51,3 +58,32 @@ export const FAIRING_HEAT_FLUX_LIMIT = 1135;
 export const FAIRING_Q_LIMIT = 1100;
 /** Fairing placard: altitude floor below which the fairing is never dropped, m. */
 export const FAIRING_ALTITUDE_FLOOR = 80e3;
+
+/**
+ * Six-DOF terminal steering freeze for orbital burns, s. In the last seconds
+ * of a burn the direction of the Δv still to go stops meaning anything — it
+ * swings as the residual goes to zero — and a gimballed engine follows it: a
+ * Briz-M cut off turning at 1.1 °/s, more than its 13 N attitude thrusters
+ * could stop before the next burn. Real terminal guidance holds its steering
+ * constant here (PEG freezes it for the last seconds), and so does the six-DOF
+ * autopilot: once less than this much burning is left the command stays where
+ * it was, and the still-thrusting engine brings the body to rest on it. Four
+ * seconds is what a gimbal needs for that. The ascent has no reliable
+ * time-to-go (its cut-off is decided on the orbit, not on a speed), so it is
+ * bounded by the rate ceiling below instead; a twelve-second ascent freeze was
+ * tried and cost a thrust-limited Centaur with 17 t the apoapsis control its
+ * guidance was still flying (1 144 km instead of 500 at cut-off).
+ */
+export const RIGID_STEERING_FREEZE_S = 4;
+
+/**
+ * Six-DOF vacuum ascent: the guidance command swings no faster than this, rad/s.
+ * Near its cut-off the ascent guidance can swing its command at 3-4 °/s (Vulcan's
+ * apoapsis ceiling took its Centaur V from 40° to 12° in eight seconds); a
+ * gimballed stage follows and coasts away turning that fast, which 27 N attitude
+ * thrusters take minutes to stop. A cap on how fast the stage turns, sized on
+ * those thrusters, was tried and was too tight for a heavy Centaur that needs to
+ * pitch down quickly to hold its apoapsis; this caps only the command's swing,
+ * and only at a rate no normal steering reaches.
+ */
+export const RIGID_ASCENT_COMMAND_RATE = 1 * Math.PI / 180;

@@ -258,3 +258,149 @@ The terminal Falcon recovery restart uses explicit timing estimates in `recovery
 The earlier pending-sweep statement is superseded by the 2026-09-20 bounded study: all nine delay/rise combinations were executed for two descent fixtures, producing 14 landings and four fuel-exhaustion impacts. The failures at 0.2 s delay are retained rather than reclassified as success. Passing finite-engine/contact checks establishes honest outcomes, **not** a robust recovery timing envelope. The same log records derivative refinement at 0.001/0.0005/0.00025 s with unchanged control and RK clocks; its independent nonlinear-inertia fixture verifies the reduced-flow derivative only. See the dated acceptance section for numeric errors, exact failure cases and [raw evidence](../../audit-2026-09-19/validation/resume-timing-and-derivative.log).
 
 Acceptance gates before claiming a supported 6DOF vehicle: mass closure across staging and RCS consumption; hand-calculated cylinder/composite fixtures; engine budget conservation and failure-location torque; control rank/saturation and no roll from a centred TVC; fixed-step convergence; seeded-repeatability; baseline versus flux sensitivity; controlled recovery with finite actuators; complete metadata in replay/export. Passing equation fixtures verifies implementation; it does not validate these estimated parameters against real flights.
+
+## The other sixteen vehicles (roadmap P01, 2026-09-23)
+
+Every vehicle now has a rigid body. Falcon 9 and Soyuz-2.1a keep exactly the data above; the
+other sixteen are built by the same factory from three tables in
+`src/physics/rigid/vehicle-data.ts` and the nozzle layout the renderer draws
+(`src/data/engine-layout.ts`), so a chamber is flown where its bell is shown.
+
+**Chambers.** Each bell of a stage's layout is a chamber at that position. The stage's thrust is
+shared equally among its main chambers after the verniers' share; a multi-chamber engine (RD-180's
+two, YF-21C's four) counts as one engine for failures, a cluster of separate engines (Proton's six
+RD-276, Super Heavy's 33 Raptors) as one engine per chamber. Chambers swing in two planes
+("TVC"), or in one plane about their radius from the vehicle axis ("tangential": the Soyuz,
+Proton and Long March first-stage pattern, which gives roll as well), at 20°/s with a 0.1 s lag.
+Falcon Heavy's three cores are Falcon 9 first stages and fly its octaweb, gimbals and thrusters.
+
+**Propellant.** Liquid tanks fill the stage from 10 % to 92 % of its length, split by the
+volumes of the two propellants at the engine's mixture ratio, each liquid settled at the bottom
+of its tank; the order of the tanks is the stage's own. A solid motor's grain is a case-bonded
+tube along 90 % of the motor that burns outward from a bore of 0.3 of the radius: its centre
+stays where it is and what is left sits at the case wall.
+
+**Thrusters.** A stage that coasts or restarts carries a three-axis set of opposed pairs, a stage
+whose engine cannot roll it (one chamber on the axis) a roll pair. Force per nozzle, specific
+impulse (cold gas 65 s, hydrazine 220 s, bipropellant 280 s) and the propellant reserved for
+them are estimates (E).
+
+The travel figures are from a search of public sources on 2026-09-23 (manufacturer and agency
+pages, user's manuals and papers, reached through search-engine extracts rather than read in
+full). A figure marked E is not published and was chosen from engines of the same class.
+
+| Stage | Propellant, O/F, tank order | Steering (± travel) | Roll | Coast thrusters |
+|---|---|---|---|---|
+| Soyuz-2.1b Block I (RD-0124) | as 2.1a's Block I | flown with 2.1a's four-vernier model, E (the RD-0124's four chambers themselves swing, angle not published) | verniers | — |
+| Fregat (S5.92) | UDMH/N2O4 2.0, ox forward | main engine fixed; steered by its thrusters | thrusters | 12 × 50 N hydrazine |
+| Proton-M stage 1 (6 × RD-276) | UDMH/N2O4 2.67 | tangential 7° (ILS Proton guide) | differential | — |
+| Proton-M stage 2 (RD-0210/0211) | 2.6, ox forward | tangential 3.25° | differential | — |
+| Proton-M stage 3 (RD-0213 + RD-0214) | 2.6, ox forward | RD-0213 fixed; RD-0214 vernier (5 % of thrust) 45° | verniers | — |
+| Briz-M (S5.98M) | UDMH/N2O4 1.9 | gimbal 3° E | thrusters | 13.3 N (17D58E) |
+| Angara A5 URM-1 core and strap-ons (RD-191) | kerolox 2.6, ox forward | 8° | strap-on differential; the core's turbine-exhaust roll nozzles (0.4 % of thrust, 30° E) | — |
+| Angara URM-2 (RD-0124A) | kerolox 2.6 | 4° E | thruster pair E | — |
+| Atlas V CCB (RD-180, two chambers) | kerolox 2.72, ox forward | 8° | differential | — |
+| GEM-63 | solid | fixed | — | — |
+| Centaur III (RL10C-1) | hydrolox 5.88, hydrogen forward | 4° E | thrusters | 27 N hydrazine |
+| Vulcan core (2 × BE-4) | methalox 3.4, ox forward E | 5° | differential | — |
+| GEM 63XL | solid | fixed | — | — |
+| Centaur V (2 × RL10C-1-1) | hydrolox 5.88, hydrogen forward | 4° E | differential | 27 N hydrazine |
+| Ariane 6 core (Vulcain 2.1) | hydrolox 6.1, hydrogen forward | 6° E | GH2 roll nozzles, E as a thruster pair | — |
+| P120C (Ariane 6 strap-on, Vega-C stage 1) | solid | movable nozzle 6° E | on Vega-C a thruster pair standing in for AVUM+'s roll control | — |
+| Ariane 6 upper stage (Vinci) | hydrolox 5.8, oxygen forward (ESA) | 5° E | thrusters | GH2 cold gas |
+| Zefiro 40 / Zefiro 9 | solid | 6.5° E / 6° | thruster pair (AVUM+'s roll control) | — |
+| AVUM+ (RD-843) | UDMH/N2O4 2.0 | 10° | thrusters | N2 cold gas |
+| Long March 2D/3B first stage (YF-21C, 4 chambers) | UDMH/N2O4 2.1, ox forward | tangential 10° | differential | — |
+| Long March 3B strap-ons (YF-25) | UDMH/N2O4 2.1 | tangential 10° E (sources conflict: tangential or fixed) | differential | — |
+| Long March 2D/3B second stage (YF-24) | UDMH/N2O4 2.1 | main fixed; four YF-23 verniers (6 % of thrust) 60° | verniers | — |
+| Long March 3B third stage (2 × YF-75) | hydrolox 5.0, hydrogen forward | 4° | differential | hydrazine |
+| Long March 5 core (2 × YF-77) | hydrolox 6.0 | 4° | differential | — |
+| Long March 5 strap-ons (2 × YF-100) | kerolox 2.6 | one plane, 8° E | differential | — |
+| Long March 5 second stage (2 × YF-75D) | hydrolox 6.0 | 4° | differential | hydrazine |
+| H-IIA first stage (LE-7A) | hydrolox 5.9 | 5° E | GH2 roll control, E as a thruster pair | — |
+| SRB-A3 | solid | movable nozzle 5° E | — | — |
+| H-IIA / H3 second stage (LE-5B) | hydrolox 5.0, hydrogen forward | 5° E | thrusters | hydrazine |
+| H3 first stage (2 × LE-9) | hydrolox 5.9 | 5° E | differential | — |
+| SRB-3 | solid | fixed (JAXA: the movable nozzle was dropped) | — | — |
+| PSLV PS1 (S139) | solid | secondary-injection TVC, 3° equivalent E | two roll thrusters | — |
+| PSOM-XL | solid | fixed (two of the six have SITVC in reality; not modelled) | — | — |
+| PSLV PS2 (Vikas) | UH25/N2O4 1.7 | 4° | hot-gas roll motor (0.5 % of thrust, 30° E) | — |
+| PSLV PS3 (HPS3) | solid | flex nozzle 2° | PS4's thrusters, E as a pair on PS3 | — |
+| PSLV PS4 (2 engines) | MMH/MON 2.0 | 3° | differential | bipropellant |
+| Electron stage 1 (9 × Rutherford) | kerolox 2.4 | all nine 5° E | differential | — |
+| Electron stage 2 (Rutherford Vacuum) | kerolox 2.4 | 5° E | thrusters | cold gas |
+| Electron Curie kick stage | bipropellant 1.6 E | fixed | thrusters | cold gas |
+| Super Heavy (33 Raptor 2) | methalox 3.6, methane forward | inner 13 gimbal 15° | differential | — |
+| Starship (3 Raptor + 3 RVac) | methalox 3.6, methane forward | 3 sea-level Raptors 15°, vacuum Raptors fixed | differential | cold gas |
+
+Sources, one per group: Proton and Briz-M — ILS Proton Mission Planner's Guide and roscosmos.ru;
+Soyuz-2.1b and Fregat — KBKhA RD-0124 entry, NPO Lavochkin Fregat page; Angara — the RD-191
+entry and Angara-1.2 description; Atlas V and Centaur — ULA Atlas V User's Guide (2010) and
+"The Centaur Upper Stage Vehicle"; Vulcan and GEM 63XL — BE-4 and GEM descriptions;
+Ariane 6 — EUCASS 2023-873, SABCA's paper on the Ariane 6 thrust-vector actuation, ESA's
+"Ariane 6: what's it made of?"; Vega-C — EUCASS 2019-0186 and 2019-0351, ESA BR-257; Long
+March — the LM-3B user's manual (chapter 2) and CMSE's Long March 2F article; H-IIA and H3 —
+NASA's H-IIA data sheet and JAXA's SRB-3 page; PSLV — ISRO/LPSC; Electron — Rocket Lab's
+Payload User's Guide 8.0; Starship — SpaceX and published Raptor comparisons.
+
+Nine model changes came with these vehicles. Each applies to every vehicle, Falcon 9 and
+Soyuz-2.1a included:
+
+- **Negligible authority is absent authority.** The engine allocator normalises each torque axis
+  by the authority available on it. A stack whose centre of gravity sits 1e-17 m off the axis
+  (PSLV-XL's strap-ons at 22.5° steps) gave its single on-axis core chamber a roll "authority"
+  of rounding error, which normalised into a full-scale axis and drove the nozzle to its stop in
+  an arbitrary direction; the vehicle tumbled at lift-off. An axis with less than 1e-9 of the
+  strongest one's authority is now treated as having none.
+- **Each strap-on group at its own level, solids above their mean.** The six-DOF body and the
+  propellant-boundary step split took one booster level for the whole stage (the strongest group)
+  and clamped every level to 1. PSLV-XL's air-lit pair lights 25 s after its ground-lit four and
+  outlives them, and a solid motor's regressive profile runs above its mean thrust (P120C 1.52 ×)
+  early in the burn: the four were split on the pair's level, which the depletion sensor never
+  reached (the flight stalled in 1e-9 s steps at T+67 s), and every solid delivered less impulse
+  than it burned. The thrust model now reports each group's level, unclamped, and the chambers
+  carry exactly the thrust the flight model flies (tests/rigid-fleet.test.ts).
+- **Held coast.** In vacuum with the engines off, an autopilot settled on its prograde target
+  (turning with it at the orbital rate, at whatever steady lag it keeps) is propagated in the
+  coast's own long steps: the centre of mass by the same J2 gravity, the attitude carried round
+  by the rotation of the velocity direction. Nothing disturbs the body there and that turn costs
+  no gas. Control ticks resume for anything that would make the controller work — an engine, air
+  below 140 km, a manual command, a burn's pre-orientation (entered 30 s early), a rate off the
+  target's. Over 300 s it agrees with control ticks to under a metre and 0.05° (tests).
+- **Terminal steering freeze.** In the last 4 s of an orbital burn the six-DOF autopilot holds
+  its steering command, and the still-thrusting engine brings the body to rest on it. The direction
+  of the Δv still to go swings as it goes to zero; a gimballed Briz-M that followed it cut off
+  turning at 1.1 °/s, more than its 13 N thrusters could stop before the next burn. Real terminal
+  guidance freezes its steering there for the same reason.
+- **The ascent command swings no faster than 1 °/s above the atmosphere, and a burn waits for its
+  stage.** Near cut-off the ascent guidance can swing its command at 3–4 °/s (Vulcan's apoapsis
+  ceiling took its Centaur V from 40° to 12° in 8 s); a gimballed stage followed it and coasted
+  away turning that fast, and 27 N thrusters take minutes to stop that. The six-DOF command is now
+  rate-limited to 1 °/s in vacuum ascent — faster than any normal steering, so only those swings
+  are touched. A cap on how fast the stage itself may turn, sized on its thrusters, was tried and
+  was too tight for a heavy Centaur that has to pitch down quickly to hold its apoapsis. And a burn
+  now waits for its attitude as long as the stage's thrusters need to stop the rotation it has and
+  swing half a turn, with half as much again in hand (never less than the 240 s pre-orientation,
+  never more than 30 min), instead of declaring a pointing failure at a fixed 240 s.
+- **Separations push, but not hard.** An ascent separation gives the spent stage 2 m/s, but never
+  more than 3 m/s of relative speed between the two bodies. A second stage stopped with 1.5 t
+  aboard had thrown Electron's 0.25 t Curie stack forward by 13.5 m/s and raised its apoapsis
+  16 km. Falcon 9's and Soyuz-2.1a's separations are under the cap and unchanged.
+- **A burn waits for the stage it was planned for.** A burn start that finds the staging it
+  planned around still pending retries every second, checking the stage again each time; a retry
+  that did not look again relit Vega-C's spent solid Zefiro 9 at the instant it was jettisoned and
+  never lit the AVUM+.
+- **A six-DOF burn lights within 1° of its direction.** The point-mass gate (the stage pointed
+  within a few degrees of the burn direction) let a rigid stage light while still turning onto it,
+  and the first seconds of thrust went off-line: Vulcan's circularisation at 50 % payload into
+  the 500 km LEO ended 511 × 490 km. A rigid stage now waits until it points within 1°.
+- **The physical apoapsis is corrected both ways.** A coast flown under J2 can arrive far from
+  the conic apoapsis it started on. The six-DOF planner already raised a physical apex that fell
+  short of the target before circularising at it; it now lowers one that overshoots as well.
+  Electron's ascent into a 600 km sun-synchronous orbit cut off on a 598 km conic apoapsis and
+  reached 617 km, where no circularisation can be trimmed back down.
+
+Per-vehicle six-DOF guidance: where the point-mass programme pitches over at an angle of attack a
+rigid airframe cannot hold near max-Q, the vehicle carries its own six-DOF overrides
+(`guidanceDefaultsSixDof` in `src/data/vehicles.ts`): Soyuz-2.1a's early, longer kick (the
+programme it was accepted with) and Atlas V's 8° kick in place of 6°.

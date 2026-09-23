@@ -13,9 +13,11 @@ from a flight recording that can be replayed and scrubbed. Four modes — Home, 
 parameter, the six-DOF flight controls, telemetry and CSV export). English, Russian and Thai
 throughout.
 
-- **Physics** ([PHYSICS.md](PHYSICS.md)): point-mass flight for every vehicle; a rigid-body
-  (six-DOF) model with finite actuators for Falcon 9 and Soyuz-2.1a, which is their default,
-  with aerodynamic tables built from each configuration's own layout.
+- **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
+  for every vehicle, which is the default, with each stage's chambers, steering, thrusters and
+  tanks from its own data and aerodynamic tables built from each configuration's own layout
+  ([SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)); point-mass flight for every vehicle as
+  the alternative.
   Engines have start-up and tail-off transients, and every cut-off anticipates the tail-off.
 - **Threading**: the physics and the flight recorder run in a Web Worker; the page only draws.
   `?physics=inline` (or a browser without module workers) runs them on the main thread, with

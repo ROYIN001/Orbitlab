@@ -1241,9 +1241,6 @@ export class SetupPanel {
   private refreshInsertionProbe(): void {
     const plan = this.planCache;
     const s = this.state;
-    // A rigid flight is seconds of CPU work, not the cheap legacy probe.
-    // Keep editing responsive; only the cancellable worker may run it.
-    if (s.dynamics?.model === 'sixDof') { this.probeCache = null; this.probedFor = ''; return; }
     if (!plan) {
       this.probeCache = null;
       this.probedFor = '';
@@ -1264,7 +1261,11 @@ export class SetupPanel {
       + `|${g.kickDuration}|${g.gravityTurnEnd}|${g.maxTimeToGo}`;
     if (sig === this.probedFor && this.probeCache) return;
     this.probedFor = sig;
-    try { this.probeCache = probeInsertion(this.getConfig()); } catch { this.probeCache = null; }
+    // Flown as a point mass whatever the chosen model: a rigid flight is
+    // seconds of CPU work on the page's own thread, and the two models reach
+    // the same insertions across the fleet (docs/SIXDOF-ACCEPTANCE.md).
+    const cfg = this.getConfig();
+    try { this.probeCache = probeInsertion({ ...cfg, dynamics: { ...(cfg.dynamics ?? { wind: 'calm', seed: 20260919 }), model: 'pointMass' } }); } catch { this.probeCache = null; }
   }
 
   /** The current mission's verdict; see `missionVerdict`. */

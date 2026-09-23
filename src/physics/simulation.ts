@@ -49,7 +49,7 @@ import { FailureInjector } from './sim/failures';
 import { RigidLink } from './sim/rigid-link';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
-import { TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
+import { RIGID_ASCENT_COMMAND_RATE, RIGID_STEERING_FREEZE_S, TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
 import type { Debris, EventSeverity, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
 
 export type { SimStatus, EventSeverity, SimEvent, TelemetrySample, DebrisVisual, Debris, Losses, SimState } from './sim/types';
@@ -145,6 +145,10 @@ export class Simulation {
   readonly debrisTracker = new DebrisTracker(this);
   /** @internal six-DOF body bookkeeping */
   readonly rigidLink = new RigidLink(this);
+  /** The six-DOF steering held through a burn's last seconds (RIGID_STEERING_FREEZE_S). */
+  private frozenCommand: Vec3 | null = null;
+  /** The six-DOF vacuum-ascent command, rate-limited (RIGID_ASCENT_COMMAND_RATE). */
+  private limitedCommand: Vec3 | null = null;
   /** @internal ascent cut-off, max-Q, structural placard, insertion floor */
   readonly ascent: AscentMonitor;
   /** @internal injected failures */
@@ -426,7 +430,10 @@ export class Simulation {
       case 'orbit': dt = Math.min(30, Math.max(1, (s.elements.period || 5400) / 300)); break;
       default: dt = 1;
     }
-    if (this.rigidRuntime) dt = Math.min(dt, this.rigidDt);
+    if (this.rigidRuntime) {
+      const held = this.rigidLink.heldCoastWindow();
+      dt = held > 0 ? Math.min(dt, held) : Math.min(dt, this.rigidDt);
+    }
     // An engine spinning up or tailing off is flown in short steps whatever
     // the regime: a coast or an orbit would otherwise take its whole tail-off
     // in one 10-30 s step.
@@ -451,7 +458,10 @@ export class Simulation {
       const before = this.state.t;
       let steps = 0;
       while (this.state.status !== 'failed' && steps < maxSteps) {
-        const dt = this.suggestedDt();
+        let dt = this.suggestedDt();
+        // A held coast has no control ticks to keep whole: step it by what the
+        // frame brought, so a slow warp still moves every frame.
+        if (dt > this.rigidDt + 1e-9) dt = Math.max(this.rigidDt, Math.min(dt, this.advanceRemainder));
         if (this.advanceRemainder + 1e-10 < dt) break;
         const used = this.step(dt);
         if (!(used > 0)) break;
@@ -622,6 +632,21 @@ export class Simulation {
       throttleCmd = 0;
       s.ascentPhase = null;
     }
+    if (this.rigidRuntime?.command.mode === 'auto') {
+      // Terminal steering freeze: hold the command in an orbital burn's last
+      // seconds (RIGID_STEERING_FREEZE_S).
+      const accel = mass > 0 ? fullThrust.thrustFullVac / mass : 0;
+      const toGo = s.status === 'burn' && this.burns.burnIgnited && accel > 0 ? s.burnDvRemaining / accel : Infinity;
+      if (toGo < RIGID_STEERING_FREEZE_S) dirCmd = this.frozenCommand ??= dirCmd;
+      else this.frozenCommand = null;
+      // Above the atmosphere the ascent command swings no faster than
+      // RIGID_ASCENT_COMMAND_RATE: the stage follows it, and cuts off turning
+      // at the rate it was following.
+      if (s.status === 'ascent' && q < 100) {
+        dirCmd = this.limitedCommand = this.limitedCommand
+          ? slerpLimited(this.limitedCommand, dirCmd, RIGID_ASCENT_COMMAND_RATE * dt) : dirCmd;
+      } else this.limitedCommand = null;
+    }
     // An engine that has just been shut down is still tailing off. Its gimbals
     // keep their authority for that second while it fades, and following a
     // guidance command that no longer has thrust to steer with swung a Falcon 9
@@ -648,14 +673,16 @@ export class Simulation {
       const coreFlow = engineMassFlow(active.spec.engine) * active.spec.engine.count * active.engineFraction * thr.coreThrottle;
       if (coreFlow > 0 && !active.cutoff && !active.burnedOut && this.vehicle.usablePropellant(active) > 0) {
         const left = this.vehicle.usablePropellant(active) - VehicleModel.tailoffReserve(active.spec.engine, coreFlow);
-        dt = Math.min(dt, Math.max(1e-9, left / coreFlow));
+        // A boundary already reached is the depletion sensor's to act on: never
+        // shrink the step towards it forever.
+        if (left > coreFlow * 1e-6) dt = Math.min(dt, left / coreFlow);
       }
-      for (const booster of active.boosters) {
+      for (const [group, booster] of active.boosters.entries()) {
         if (!booster.attached || !booster.ignited || booster.burnedOut) continue;
-        const flow = engineMassFlow(booster.spec.engine) * booster.spec.engine.count * thr.boosterThrottle;
+        const flow = engineMassFlow(booster.spec.engine) * booster.spec.engine.count * (thr.boosterLevels[group] ?? thr.boosterThrottle);
         if (flow > 0 && this.vehicle.usableBoosterPropellant(booster) > 0) {
           const left = this.vehicle.usableBoosterPropellant(booster) - VehicleModel.tailoffReserve(booster.spec.engine, flow);
-          dt = Math.min(dt, Math.max(1e-9, left / flow));
+          if (left > flow * 1e-6) dt = Math.min(dt, left / flow);
         }
       }
       if (dt < dt0) thr = this.vehicle.thrust(s.t, atm.p, throttleCmd, dt);
@@ -677,10 +704,17 @@ export class Simulation {
     let next: { r: Vec3; v: Vec3 };
     let rigidGLoad: number | undefined;
     let rigidAccelerations: { propulsionECI: Vec3; aerodynamicECI: Vec3; gravityECI: Vec3 } | undefined;
-    if (this.rigidRuntime && s.rigid) {
+    const held = this.rigidRuntime && s.rigid && dt > this.rigidDt + 1e-9 && s.status === 'coast'
+      ? this.rigidLink.heldCoastStep(dt) : null;
+    if (held) {
+      next = held.state;
+      s.rigid = held.telemetry;
+      s.dir = quatRotate(held.state.attitudeQ, v3(1, 0, 0));
+      rigidGLoad = 0;
+    } else if (this.rigidRuntime && s.rigid) {
       const runtime = this.rigidRuntime;
       if (runtime.command.mode === 'auto' && s.status === 'ascent' && q > 500) {
-        const snapshot = buildRigidVehicle(this.vehicle, { pressure: atm.p, coreThrottle: thr.coreThrottle, boosterThrottle: thr.boosterThrottle,
+        const snapshot = buildRigidVehicle(this.vehicle, { pressure: atm.p, coreThrottle: thr.coreLevel, boosterThrottle: thr.boosterThrottle, boosterThrottles: thr.boosterLevels,
           time: s.t, rcsConsumedKgByStage: runtime.consumed,
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined,
           payloadLength: this.satellite.size?.height });
@@ -690,7 +724,7 @@ export class Simulation {
         dirCmd, s.status === 'ascent' ? this.rigidLink.rigidSide()
           : quatRotate(nosePointingTarget(s.rigid.attitudeQ, dirCmd), v3(0, 0, 1)), (elapsed, consumed) => buildRigidVehicle(this.vehicle, {
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined, payloadLength: this.satellite.size?.height,
-          pressure: atm.p, coreThrottle: thr.coreThrottle, boosterThrottle: thr.boosterThrottle, time: s.t + elapsed,
+          pressure: atm.p, coreThrottle: thr.coreLevel, boosterThrottle: thr.boosterThrottle, boosterThrottles: thr.boosterLevels, time: s.t + elapsed,
           propellantOffsetSeconds: elapsed, rcsConsumedKgByStage: consumed }));
       next = result.state;
       s.rigid = result.telemetry;
@@ -810,6 +844,14 @@ export class Simulation {
 
   private stepOrbit(dt: number): void {
     const s = this.state;
+    const held = this.rigidRuntime && s.rigid && dt > this.rigidDt + 1e-9 ? this.rigidLink.heldCoastStep(dt) : null;
+    if (held) {
+      s.r = held.state.r; s.v = held.state.v; s.t += dt; s.rigid = held.telemetry;
+      s.dir = quatRotate(held.state.attitudeQ, v3(1, 0, 0));
+      s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0; s.gLoad = 0;
+      s.elements = elementsFromState(s.r, s.v);
+      return;
+    }
     if (this.rigidRuntime && s.rigid) {
       const result = this.rigidRuntime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody },
         dt, normalize(s.v), quatRotate(nosePointingTarget(s.rigid.attitudeQ, normalize(s.v)), v3(0, 0, 1)), (_elapsed, consumed) => buildRigidVehicle(this.vehicle, {

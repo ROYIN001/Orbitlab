@@ -155,6 +155,14 @@ export interface VehicleSpec {
   recoveryReserve?: number;
   /** Default guidance overrides (kick angle etc.) */
   guidanceDefaults?: Partial<GuidanceParams>;
+  /**
+   * Further overrides when the vehicle flies as a rigid body. A point mass can
+   * pitch over at any angle of attack; a real airframe, and the six-DOF model,
+   * cannot hold much more than its trim authority allows through max-Q, so a
+   * programme tuned on the point mass can hand a weak upper stage a flatter
+   * trajectory than it needs (docs/SIXDOF-ACCEPTANCE.md).
+   */
+  guidanceDefaultsSixDof?: Partial<GuidanceParams>;
   /** Reference drag area override (m^2); default from max diameter */
   dragArea?: number;
   /** Crewed launches supported */

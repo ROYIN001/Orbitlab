@@ -146,6 +146,22 @@ export interface ThrustResult {
   coreThrottle: number;
   /** the same for the strap-on boosters of the active stage (solid profile included) */
   boosterThrottle: number;
+  /**
+   * The level the core is flying at, unclamped: a solid motor's regressive
+   * profile runs above its mean thrust early in the burn (P120C 1.52 ×), and a
+   * six-DOF body pushed at the clamped `coreThrottle` delivers less impulse
+   * than the propellant `consume` takes for it.
+   */
+  coreLevel: number;
+  /**
+   * The level of each strap-on group of the active stage, by group index, also
+   * unclamped. `boosterThrottle` is the strongest of them clamped to 1, which is
+   * every group's level while they light and burn out together; PSLV's air-lit
+   * pair lights 25 s after the ground-lit four and outlives them, and a
+   * six-DOF body or a propellant boundary sized on the pair's level for the
+   * four is wrong.
+   */
+  boosterLevels: number[];
   /** any engine currently producing thrust */
   burning: boolean;
 }
@@ -396,7 +412,7 @@ export class VehicleModel {
    */
   thrust(t: number, p: number, throttleCmd: number, dt = 0): ThrustResult {
     const st = this.active;
-    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
+    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, coreLevel: 0, boosterLevels: [], burning: false };
     if (!st) return out;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
     const e = st.spec.engine;
@@ -418,16 +434,19 @@ export class VehicleModel {
       out.thrustFullVac += n * e.thrustVac * profile;
       // `* profile` so a solid core's plume follows its own thrust curve
       out.coreThrottle = Math.min(1, level);
+      out.coreLevel = level;
       out.burning = true;
     } else if (this.coreTailingOff(st, t)) {
       const level = this.coreTailLevel(st, t, dt);
       out.thrust += n * engineThrust(e, p) * level;
       out.mdot += n * engineMassFlow(e) * level;
       out.coreThrottle = Math.min(1, level);
+      out.coreLevel = level;
       out.burning = level > 0;
     }
     // boosters
-    for (const b of st.boosters) {
+    out.boosterLevels = st.boosters.map(() => 0);
+    for (const [group, b] of st.boosters.entries()) {
       if (!b.attached || !b.ignited) continue;
       const be = b.spec.engine;
       const nb = be.count * b.spec.count;
@@ -449,6 +468,7 @@ export class VehicleModel {
       // maximum and a per-group value differ only during the second in which
       // one of them has burned out and is about to be jettisoned.
       out.boosterThrottle = Math.max(out.boosterThrottle, Math.min(1, level));
+      out.boosterLevels[group] = level;
       if (level > 0) out.burning = true;
     }
     return out;

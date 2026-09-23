@@ -12,6 +12,9 @@ import { TAILOFF_SPAN, engineTailoffS, type StageState, type BoosterState } from
 import type { Simulation } from '../simulation';
 import { FAIRING_ALTITUDE_FLOOR, FAIRING_HEAT_FLUX_LIMIT, FAIRING_Q_LIMIT } from './constants';
 
+/** Most relative speed a stage separation gives the two bodies, m/s (springs, not retro-rockets). */
+const MAX_SEPARATION_SPEED = 3;
+
 export class Staging {
   stagingInProgress = false;
   circularizeInserted = false;
@@ -76,14 +79,19 @@ export class Staging {
     const datum = before?.geometry.stageBases[st.index] ?? v3();
     const partitions = before ? detachedOwnerPartitions(before, [{ id: 'stage', ownerIds: [st.spec.id], datumBody: datum }]) : [];
     let impulse = 2 * (st.spec.dryMass + st.propellant);
-    if (before && relativeSeparationSpeed !== undefined) {
-      // Payload release specifies the extra RELATIVE speed, not a stage delta-v:
-      // J = reduced mass * relative speed. Use the component ledger so spent
-      // RCS gas is not silently restored in the two-body momentum balance.
+    if (before) {
+      // Use the component ledger so spent RCS gas is not silently restored in
+      // the two-body momentum balance. J = reduced mass * relative speed.
       const stageMass = before.components.filter(part => part.ownerId === st.spec.id)
         .reduce((sum, part) => sum + part.mass, 0);
-      const retainedMass = before.mass - stageMass;
-      impulse = relativeSeparationSpeed * stageMass * retainedMass / before.mass;
+      const reducedMass = stageMass * (before.mass - stageMass) / before.mass;
+      // Payload release specifies the extra RELATIVE speed, not a stage delta-v.
+      // An ascent separation gives the spent stage 2 m/s, but never more than
+      // MAX_SEPARATION_SPEED between the two: a heavy stage cut off with
+      // propellant aboard pushed Electron's 0.25 t Curie stack forward by
+      // 13.5 m/s and raised its apoapsis 16 km.
+      impulse = relativeSeparationSpeed !== undefined ? relativeSeparationSpeed * reducedMass
+        : Math.min(impulse, MAX_SEPARATION_SPEED * reducedMass);
     }
     const split = this.sim.rigidLink.rigidSplit(before, partitions, before ? [{ childAId: 'stage', childBId: 'active', pointDatumBody: datum,
       impulseOnABody: v3(-impulse, 0, 0) }] : []);

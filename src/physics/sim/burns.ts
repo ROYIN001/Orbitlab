@@ -11,12 +11,17 @@ import { desiredVelocity, planeNormalThrough } from '../guidance';
 import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
 import type { Simulation } from '../simulation';
 import { TAILOFF_SPAN, engineTailoffS } from '../vehicle';
-import { BURN_IGNITION_ALIGNMENT, BURN_PREORIENT_TIME, MAX_REPLANS } from './constants';
+import { BURN_IGNITION_ALIGNMENT, BURN_PREORIENT_TIME, MAX_REPLANS, RIGID_BURN_IGNITION_ALIGNMENT } from './constants';
+
+/** Longest a six-DOF burn waits for its attitude, s. */
+const MAX_ALIGNMENT_S = 1800;
 
 export class BurnSequencer {
   private lastBurnDv = Infinity;
   /** the current burn has lit (the attitude-alignment gate has been passed once) */
   burnIgnited = false;
+  /** How long the current burn may wait for its attitude (six-DOF), s. */
+  alignmentAllowanceS = BURN_PREORIENT_TIME;
   rigidBurnForecast: { burn: BurnPlan; time: number; context: string; r: Vec3; v: Vec3 } | null = null;
   rigidTransfer: { burn: BurnPlan; context: string; direction: Vec3; requiredDv: number; deliveredDv: number } | null = null;
   rigidScheduledContext: string | null = null;
@@ -145,7 +150,11 @@ export class BurnSequencer {
       physicalApex = nextJ2Apsis(s, 'apoapsis', { includeInitial: true });
       if (!physicalApex) { this.failRigidOrbitPrediction(); return; }
       const perigee = burn.targetPeriapsis ?? this.sim.plan.target.perigee;
-      if (physicalApex.radiusM - R_EARTH < perigee - 0.5 * apsisTolerance(perigee)) {
+      // Either way: a coast flown under J2 can arrive tens of kilometres off
+      // the conic apoapsis the ascent cut off on (Electron into a 600 km
+      // sun-synchronous orbit: 598 km at cut-off, 617 km when it got there),
+      // and a circularisation flown at the wrong height cannot be trimmed back.
+      if (Math.abs(physicalApex.radiusM - R_EARTH - perigee) > 0.5 * apsisTolerance(perigee)) {
         if (this.rigidApexCorrections >= 3) { this.failRigidOrbitPrediction(); return; }
         this.rigidApexCorrections++;
         const correction: BurnPlan = { id: `physical-apex-${this.rigidApexCorrections}`, kind: 'raiseApoapsis', atU: 'asap',
@@ -278,15 +287,38 @@ export class BurnSequencer {
     burn.dvEstimate = dv;
     this.sim.event('evt.burnScheduled', 'info', { kind: burn.kind, dv: Math.round(dv), tgo: Math.round(tStart - s.t), dur: Math.round(tBurnThis) });
     const stRef = stage;
-    this.sim.schedule(tStart, 'burnStart', () => {
+    // Staging still pending: retry shortly, checking the stage again each time.
+    // A retry that did not look again landed on the same instant as the
+    // separation it was waiting for, ahead of it, and relit the spent stage
+    // (Vega-C's solid Zefiro 9) while the AVUM+ that took over was never lit.
+    let retries = 0;
+    const start = (): void => {
       const st = this.sim.vehicle.active;
-      if (!st || st.index !== stRef.index) {
-        // staging still pending; retry shortly
-        this.sim.schedule(this.sim.state.t + 1, 'burnStart', () => this.startBurn(burn));
+      if ((!st || st.index !== stRef.index) && retries++ < 30) {
+        this.sim.schedule(this.sim.state.t + 1, 'burnStart', start);
         return;
       }
       this.startBurn(burn);
-    });
+    };
+    this.sim.schedule(tStart, 'burnStart', start);
+  }
+
+  /**
+   * How long a six-DOF burn may wait for its attitude, s: what the stage's
+   * attitude thrusters need to stop the rotation it has now and then swing it
+   * half a turn, at the controller's braking share, with half as much again in
+   * hand — never less than the pre-orientation time, never more than half an
+   * hour. A stage that cut off turning at 1.4 °/s on 27 N thrusters needs
+   * minutes to stop before it can even start to turn back; a fixed 240 s
+   * declared that a pointing failure.
+   */
+  private alignmentAllowance(): number {
+    const runtime = this.sim.rigidRuntime, snapshot = runtime?.snapshot, rigid = this.sim.state.rigid;
+    if (!runtime || !snapshot || !rigid) return BURN_PREORIENT_TIME;
+    const acceleration = runtime.coastArrestRate(snapshot, 1);
+    if (!(acceleration > 0) || !Number.isFinite(acceleration)) return BURN_PREORIENT_TIME;
+    const needed = norm(rigid.omegaBody) / acceleration + 2 * Math.sqrt(Math.PI / acceleration);
+    return Math.min(MAX_ALIGNMENT_S, Math.max(BURN_PREORIENT_TIME, 1.5 * needed));
   }
 
   startBurn(burn: BurnPlan): void {
@@ -310,6 +342,7 @@ export class BurnSequencer {
     s.note = 'burn';
     s.currentBurn = burn;
     s.burnStartTime = s.t;
+    this.alignmentAllowanceS = this.alignmentAllowance();
     s.burnDvRemaining = Math.max(0.05, burn.dvEstimate);
     this.lastBurnDv = Infinity;
     this.burnIgnited = false;
@@ -366,12 +399,13 @@ export class BurnSequencer {
     // Six-DOF can genuinely lose coast pointing authority (for example, empty
     // RCS with the main engine held behind the alignment gate). The old small-
     // trim checks have no time limit below 40 m/s, so this otherwise waits
-    // forever. Allow the same 240 s as preorientation, then report the actual
-    // pointing failure without inventing a propulsive delta-v shortage.
+    // forever. Allow what the stage's thrusters need (`alignmentAllowanceS`),
+    // then report the actual pointing failure without inventing a propulsive
+    // delta-v shortage.
     if (this.sim.rigidRuntime?.command.mode === 'auto' && !this.burnIgnited
-      && s.t - s.burnStartTime >= BURN_PREORIENT_TIME
+      && s.t - s.burnStartTime >= this.alignmentAllowanceS
       && el.e < 1 && el.periapsisAlt > 120e3) {
-      this.sim.event('evt.burnAlignmentTimeout', 'warn', { seconds: BURN_PREORIENT_TIME });
+      this.sim.event('evt.burnAlignmentTimeout', 'warn', { seconds: Math.round(this.alignmentAllowanceS) });
       for (const planned of this.sim.plan.burns) planned.done = true;
       s.burnDvRemaining = 0;
       s.burnPlaneNormal = null;
@@ -639,14 +673,15 @@ export class BurnSequencer {
     // minimum" test. Suborbital is the exception, where every second of
     // thrust is worth more than its direction. Once lit, the burn stays lit
     // even if the command swings as the remaining Δv goes to zero.
-    let aligned = angleBetween(s.dir, dirCmd) < BURN_IGNITION_ALIGNMENT;
+    const gate = this.sim.rigidRuntime ? RIGID_BURN_IGNITION_ALIGNMENT : BURN_IGNITION_ALIGNMENT;
+    let aligned = angleBetween(s.dir, dirCmd) < gate;
     if (this.sim.rigidRuntime?.command.mode === 'auto' && b.physicalApoapsis !== undefined
       && !this.rigidTransfer && aligned) {
       // Solve at the actual aligned ignition state, including any time spent
       // waiting for attitude. The solution only commands finite thrust.
       if (!this.prepareRigidTransfer(b)) return null;
       dirCmd = this.rigidTransfer!.direction;
-      aligned = angleBetween(s.dir, dirCmd) < BURN_IGNITION_ALIGNMENT;
+      aligned = angleBetween(s.dir, dirCmd) < gate;
       if (!aligned) this.rigidTransfer = null;
     }
     if (!this.burnIgnited && !aligned && s.elements.periapsisAlt > 120e3) {

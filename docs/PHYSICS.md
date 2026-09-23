@@ -31,6 +31,38 @@ d²r/dt² = −μ r/|r|³ (+ J2 term in orbit) + (T/m) û_T − ½ ρ |v_air| C_
   atmosphere, up to 30 s in orbit). Exo-atmospheric unpowered coasts use the analytic
   Kepler solution. Mass varies linearly inside a step.
 
+## 2a. Six-DOF flight
+
+Every vehicle flies by default as a **rigid body**: the state adds a quaternion attitude and
+three body rotation rates to **r** and **v**, and the thrust no longer points where guidance
+asks — guidance asks an autopilot, and the autopilot moves real actuators. Each chamber of each
+engine sits where its bell is drawn and swings within its own travel (two planes, or one plane
+tangential to the stage for the Soyuz, Proton and Long March patterns) at a finite rate and lag;
+verniers and attitude thrusters add their own forces; a stage that cannot roll with its engines
+rolls with thrusters. Mass, centre of gravity and the full inertia tensor are rebuilt from the
+stages' structure, tanks and grains as the propellant drains, and the aerodynamic forces and
+moments come from per-configuration tables (§3). The data and their sources are in
+[SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md), the acceptance gates and results in
+[SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md).
+
+The autopilot runs a fixed 0.01 s control clock; the rigid body is integrated with RK4 inside
+it. Two rules keep that affordable and honest over a mission that lasts a day:
+
+- **Held coast.** In vacuum, engines off, the autopilot settled on its prograde target and
+  turning with it, nothing disturbs the body and the turn costs no gas: the stretch is flown in
+  the coast's own long steps, the attitude carried round with the velocity direction at the lag
+  the autopilot keeps. Control ticks resume for an engine, air, a manual command, a rate off the
+  target's, and 30 s before a burn's pre-orientation.
+- **Steering the thrusters can live with.** Above the atmosphere the ascent command swings no
+  faster than 1 °/s, and in the last 4 s of an orbital burn it is held: the direction of a
+  vanishing Δv swings, and a gimballed stage that followed it cut off turning faster than its
+  attitude thrusters could stop before the next burn. A burn waits for its attitude as long as
+  those thrusters need, not a fixed four minutes.
+
+The point-mass model below remains selectable in the setup, and the fleet acceptance matrix
+(§6b) of the regular test suite flies it; the same matrix flown in six-DOF is recorded in
+[SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md).
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic
@@ -1327,8 +1359,9 @@ orbital map and in the RAAN/altitude readouts under high time warp.
 
 - Spherical Earth for altitude and gravity (J2 only as a perturbation); no terrain. Site
   elevation is honoured near the pad only (§8).
-- Point-mass vehicle: attitude is a commanded direction with a slew-rate limit, no rotational
-  dynamics, no aerodynamic lift, no wind.
+- In the point-mass model (selectable): attitude is a commanded direction with a slew-rate
+  limit, no rotational dynamics, no aerodynamic lift, no wind. The six-DOF model (§2a, the
+  default) has all four, from estimated rather than measured vehicle data.
 - One generic drag curve for every launcher and one blunt-body curve for every piece of debris;
   solid-motor thrust profiles are a normalised linear ramp about the published mean. The
   six-DOF normal-force tables are low-order estimates from each vehicle's layout, not wind-tunnel

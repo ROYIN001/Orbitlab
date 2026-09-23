@@ -222,9 +222,15 @@ export function allocateEngineGimbals(
   // Scale each torque row by its available authority. Long axial moment arms
   // must not numerically drown out the weaker, but feasible, roll axis. The
   // reported residual is still the unscaled physical moment in N m.
-  const authority = [0, 1, 2].map(row => Math.hypot(...columns.map(column => column[row])) || 1);
-  const normalizedColumns = columns.map(column => column.map((value, row) => value / authority[row]));
-  const fractions = allocate(normalizedColumns, [target.x, target.y, target.z].map((value, row) => value / authority[row]), -1, groups);
+  const raw = [0, 1, 2].map(row => Math.hypot(...columns.map(column => column[row])));
+  // A row with no real authority is absent, not weak: a single chamber on the
+  // axis has a roll "authority" of rounding error when the centre of gravity
+  // sits 1e-17 m off the axis, and normalising that would ask the nozzle for a
+  // roll it cannot make — full travel in an arbitrary direction.
+  const floor = Math.max(...raw) * 1e-9;
+  const authority = raw.map(value => value > floor ? value : 0);
+  const normalizedColumns = columns.map(column => column.map((value, row) => authority[row] > 0 ? value / authority[row] : 0));
+  const fractions = allocate(normalizedColumns, [target.x, target.y, target.z].map((value, row) => authority[row] > 0 ? value / authority[row] : 0), -1, groups);
   let axisIndex = 0;
   for (let index = 0; index < commands.length; index++) {
     commands[index].deflections = specs[index].gimbalAxesBody.map(() => fractions[axisIndex++] * specs[index].maxGimbalRad);

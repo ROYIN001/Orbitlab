@@ -11,9 +11,10 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
-    // tests/probe is gitignored scratch space; tests/heavy runs separately
-    // (`npm run test:heavy`) because each case is a complete six-DOF flight.
-    exclude: ['**/node_modules/**', 'tests/probe/**', 'tests/heavy/**'],
+    // tests/probe is gitignored scratch space; tests/heavy and
+    // tests/sixdof-fleet run separately (`npm run test:heavy`,
+    // `npm run test:sixdof-fleet`) because each case is a complete six-DOF flight.
+    exclude: ['**/node_modules/**', 'tests/probe/**', 'tests/heavy/**', 'tests/sixdof-fleet/**'],
     environment: 'node',
   },
 });

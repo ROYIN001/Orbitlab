@@ -496,7 +496,7 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   payloadMassKg: { type: 'number', minimum: 1, description: 'Payload mass, kg.' },
   launchTimeIso: { type: 'string', description: 'Launch epoch, ISO 8601 UTC, e.g. "2026-09-20T12:00:00Z".' },
   boosterRecovery: { type: 'boolean', description: 'Reserve first-stage propellant for recovery (only for vehicles that support it).' },
-  physicsModel: { type:'string', enum:['pointMass','sixDof'], description:'Six-DOF is supported by Falcon 9 and Soyuz-2.1a; other vehicles use pointMass.' },
+  physicsModel: { type:'string', enum:['pointMass','sixDof'], description:'Six-DOF is available for every vehicle and is its default; pointMass is the legacy model.' },
   windScenario: { type:'string', enum:['calm','crosswind','shear'], description:'Repeatable wind scenario for six-DOF.' },
   windSeed: { type:'integer', minimum:0, maximum:4294967295, description:'Seed for repeatable six-DOF wind gusts.' },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },

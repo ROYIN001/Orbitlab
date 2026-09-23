@@ -287,6 +287,10 @@ export const VEHICLES: VehicleSpec[] = [
     // and holds booster separation, core cut-off and SECO on their published
     // times (120 / 294 / 535 s against 118 / 287 / 528 s).
     guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    // Flown as a rigid body: an early, longer kick and a faster turn allowance, the
+    // programme that passed the calm, crosswind and shear reference missions with
+    // the actuator limits unchanged (docs/SIXDOF-ACCEPTANCE.md).
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
     notes: 'The crew/cargo launcher for Soyuz MS and Progress: R-7 boosters and core with the RD-0110 third stage, direct insertion.',
   },
   {
@@ -438,6 +442,10 @@ export const VEHICLES: VehicleSpec[] = [
     maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.6 },
     // Five solids give a high initial T/W so it turns early; the loft is what the low-thrust Centaur III needs.
     guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
+    // As a rigid body the booster cannot hold the 25-35° angle of attack the point
+    // mass pitches over at near max-Q, and hands the Centaur a flatter arc; a
+    // larger kick gives the same hand-off without it (docs/SIXDOF-ACCEPTANCE.md).
+    guidanceDefaultsSixDof: { kickAngle: 8 },
     notes: 'Five solid boosters, kerolox core and a high-Isp hydrogen Centaur upper stage. The RD-180 throttles down through max-Q.',
   },
   {
