@@ -10,6 +10,7 @@ import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApo
 import { desiredVelocity, planeNormalThrough } from '../guidance';
 import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
 import type { Simulation } from '../simulation';
+import { TAILOFF_SPAN, engineTailoffS } from '../vehicle';
 import { BURN_IGNITION_ALIGNMENT, BURN_PREORIENT_TIME, MAX_REPLANS } from './constants';
 
 export class BurnSequencer {
@@ -84,6 +85,20 @@ export class BurnSequencer {
 
   scheduleNextBurn(el: OrbitalElements): void {
     const s = this.sim.state;
+    // A stage that has just been shut down is still tailing off. Planning now
+    // would propagate the state from before its last impulse and size the burn
+    // for a stage that may be about to leave, so wait the second or so it
+    // takes and plan from the orbit it actually leaves behind.
+    const tailing = this.sim.vehicle.active;
+    if (tailing && this.sim.vehicle.coreTailingOff(tailing, s.t)) {
+      if (!this.sim.pending.some((p) => p.label === 'burnPlan')) {
+        this.sim.schedule(tailing.cutoffTime + TAILOFF_SPAN * engineTailoffS(tailing.spec.engine), 'burnPlan', () => {
+          const now = this.sim.state;
+          if (now.status === 'coast' && !this.sim.isFailed()) this.scheduleNextBurn(elementsFromState(now.r, now.v));
+        });
+      }
+      return;
+    }
     let burn = this.sim.plan.burns.find((b) => !b.done);
     if (!burn) {
       this.reachTargetOrbit(el);
@@ -338,7 +353,13 @@ export class BurnSequencer {
     }
   }
 
-  checkBurn(el: OrbitalElements): void {
+  /**
+   * Judge the burn in flight. `el` is the orbit the burn would leave behind
+   * if it were cut off now — the osculating orbit plus the `tailDv` m/s the
+   * engine's tail-off still adds along the thrust axis — so every completion
+   * test below anticipates the tail-off, as real cut-off logic does.
+   */
+  checkBurn(el: OrbitalElements, tailDv = 0): void {
     const s = this.sim.state;
     const b = s.currentBurn;
     if (!b) return;
@@ -361,7 +382,7 @@ export class BurnSequencer {
     let complete = false;
     if (this.sim.rigidRuntime && b.physicalApoapsis !== undefined) {
       complete = this.burnIgnited && !!this.rigidTransfer
-        && this.rigidTransfer.deliveredDv >= this.rigidTransfer.requiredDv - 0.01;
+        && this.rigidTransfer.deliveredDv + tailDv >= this.rigidTransfer.requiredDv - 0.01;
       if (!complete && this.burnIgnited && s.t - s.burnStartTime > (b.maxDuration ?? 300)) {
         this.failRigidOrbitPrediction(); return;
       }
@@ -406,7 +427,7 @@ export class BurnSequencer {
       // schedule, or a sub-metre-per-second apsis trim completes on its first
       // step having done nothing. `scheduleNextBurn`'s deadband is as low as
       // 0.05 m/s at a geostationary apogee, so this is too.
-      if (dv < 0.05) complete = true;
+      if (dv - tailDv < 0.05) complete = true;
       else if (dv < 40 && dv > this.lastBurnDv * 1.02 + 0.002) complete = true; // passed the minimum
       else if (dv > 40 && s.t - s.burnStartTime > (b.maxDuration ?? this.maxBurnDurationFor(b, el)) && el.e < 1 && el.periapsisAlt > 120e3) {
         // long low-thrust apogee burn: continue at the next apoapsis
@@ -631,6 +652,10 @@ export class BurnSequencer {
     if (!this.burnIgnited && !aligned && s.elements.periapsisAlt > 120e3) {
       throttleCmd = 0;
     } else {
+      // An engine lit at the burn start and held at zero throttle until the
+      // stack was aligned spins up now, when the valves actually open.
+      const st = this.sim.vehicle.active;
+      if (!this.burnIgnited && st && !(st.level > 0)) this.sim.vehicle.markStart(st, s.t);
       this.burnIgnited = true;
       throttleCmd = 1;
       if (thrustFullVac / mass > maxAccel && maxAccel > 0) throttleCmd = maxAccel / (thrustFullVac / mass);

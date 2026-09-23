@@ -103,6 +103,57 @@ A solid **first stage** gets the same ignition factor as a solid **booster**; ap
 to boosters made the same P120C count differently on Vega-C and on Ariane 6, and understated
 Vega-C's liftoff thrust-to-weight by a third.
 
+**Start-up and shutdown transients.** No engine goes from nothing to full thrust, or back, in
+one integration step. A pump-fed liquid engine reaches rated chamber pressure about a second
+after ignition, while its turbopump spins up; a solid motor's igniter pressurises the grain in a
+few tenths of a second. After shutdown a liquid engine tails off over a few tenths of a second
+as the lines and the pump run down, and a solid motor's burn-out is the last slivers of grain
+burning away over a second or two. The model flies both:
+
+| | start-up (0 → full) | tail-off time constant τ |
+|---|---|---|
+| liquid | 1.0 s, smoothstep rise | 0.25 s |
+| solid | 0.3 s, smoothstep rise | 1.0 s |
+
+(`EngineSpec.startupS` / `tailoffS` override the defaults per engine.) The tail-off is an
+exponential from the level the engine was running at, cut after 5τ (0.7 % left). The mass flow
+follows the thrust through both transients at the engine's own Isp, and each step uses the
+**exact mean** of the transient over the step, in `thrust` and in `consume` alike — so the
+impulse a step delivers and the propellant it burns are the same integral whatever the step
+length (tests/engine-transients.test.ts holds impulse/propellant to g₀·Isp_vac to six digits at
+10, 100 and 500 ms steps).
+
+Three consequences had to be carried through the sequencer:
+
+- **Running dry.** The depletion sensor shuts an engine down with its tail-off's propellant
+  still aboard (ṁτ(1 − e⁻⁵)), and the tail-off then burns it — a stage that runs dry ends with
+  empty tanks, not with a reserve stranded in them.
+- **Cutting off on purpose.** An engine shut down now still adds (F/m)·τ(1 − e⁻⁵) along its
+  axis: 7–12 m/s at the 3–5 g of a typical upper stage near its cut-off, **26 m/s** for Long
+  March 2D's second stage at 10 g — kilometres to tens of kilometres of apoapsis. Every cut-off decision — the ascent gates, the single-shot residual, the
+  burn completion tests, the six-DOF delivered-Δv count — is therefore taken on the orbit the
+  tail-off will leave behind, exactly as real cut-off logic subtracts the tail-off impulse from
+  its target. The flight is not `done` until the final tail-off is over, the next burn is planned
+  from the orbit that tail-off actually leaves, and a payload separates only once the stage below
+  it has stopped thrusting (releasing it in the middle handed Long March 2D's 26 m/s to the spent
+  stage and put the payload 117 km below its planned apoapsis).
+- **Start-up on the pad and in orbit.** Liquid first stages light at T−2.5 s and are at full
+  thrust by T−1.5 s; a solid first stage lifts off a few hundredths of a second after T−0, when
+  its rising thrust passes the stack's weight. An orbital burn that is lit and then held at zero
+  throttle until the stack is aligned spins up when the valves actually open.
+- **Attitude through a tail-off (six-DOF).** The gimbals of an engine that is tailing off still
+  have authority while it fades, so the attitude loop holds the attitude the engine was shut
+  down in rather than following a guidance command that no longer has thrust behind it —
+  following it swung a Falcon 9 stack to 1.3 °/s between MECO and separation, more than the
+  returning stage's cold gas could take out (SIXDOF-ACCEPTANCE.md).
+
+What the transients do *not* do is remove the Soyuz-2.1a nose-down pitch after booster
+separation in six-DOF flight. With the strap-ons now tailing off over a second instead of losing
+3.3 MN in one 10 ms step, the peak pitch rate after separation is unchanged (4.46 → 4.43 °/s):
+that dip is the closed-loop pitch command (a few degrees above the horizon while the vehicle is
+at 32°) being released by the aerodynamic angle limit as the dynamic pressure falls, not a thrust
+step.
+
 Throttle is limited by the engine's minimum throttle, an acceleration limit (e.g. 4.5 g), a
 throttle bucket around max-Q for vehicles that fly one, and the load-relief law of §3.
 

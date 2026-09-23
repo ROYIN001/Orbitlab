@@ -12,7 +12,7 @@ import type { PartitionedRigidBody } from './partition';
 import { RigidRuntime, type RigidRuntimeOptions } from './runtime';
 import type { RigidState } from './integrator';
 import { quatRotate } from './math';
-import { minimumBurnDistance, TERMINAL_RESTART } from './recovery-guidance';
+import { minimumBurnDistance, TERMINAL_PLANNED_THROTTLE_FRACTION, TERMINAL_RESTART } from './recovery-guidance';
 
 export interface RigidContact {
   r: Vec3; clearance: number; tailClearance: number; tiltRad: number;
@@ -155,9 +155,12 @@ export class RigidDebrisRuntime {
         if (this.terminalCoast) {
           if (this.terminalIgnitionTime === undefined) {
             const density = atmosphere(height).rho;
+            // Timed for a throttle in the middle of the range, so the burn can
+            // go down as well as up once it is lit (TERMINAL_PLANNED_THROTTLE_FRACTION).
+            const planned = minimumThrottle + TERMINAL_PLANNED_THROTTLE_FRACTION * (1 - minimumThrottle);
             const brakingDistance = minimumBurnDistance({ massKg: this.snapshot.mass, propellantKg: rc.propellant,
-              downwardMs: groundDownward, minimumThrustN: thrust * minimumThrottle,
-              minimumFlowKgS: engineMassFlow(stage.engine) * minimumThrottle * this.engineHealth(8),
+              downwardMs: groundDownward, minimumThrustN: thrust * planned,
+              minimumFlowKgS: engineMassFlow(stage.engine) * planned * this.engineHealth(8),
               gravityMs2: g + dot(cross(EARTH_RATE, cross(EARTH_RATE, this.state.r)), up),
               dragKgM: 0.5 * density * this.snapshot.aero.referenceArea * this.snapshot.aero.cdMach[0][1],
               windUpMs: downward - groundDownward, ...this.terminalRestart });

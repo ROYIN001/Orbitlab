@@ -8,7 +8,7 @@ import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, clon
 import { detachedOwnerPartitions, fairingHalfPartitions } from '../rigid/partition';
 import { quatFromAxisAngle } from '../rigid/math';
 import { elementsFromState } from '../orbital';
-import type { StageState, BoosterState } from '../vehicle';
+import { TAILOFF_SPAN, engineTailoffS, type StageState, type BoosterState } from '../vehicle';
 import type { Simulation } from '../simulation';
 import { nextDebrisId } from './debris';
 import { FAIRING_ALTITUDE_FLOOR, FAIRING_HEAT_FLUX_LIMIT, FAIRING_Q_LIMIT } from './constants';
@@ -258,6 +258,18 @@ export class Staging {
     const s = this.sim.state;
     if (s.payloadSeparated) return;
     const st = this.sim.vehicle.active;
+    // Not while the stage is still tailing off. The cut-off was timed on the
+    // orbit its tail-off leaves the stack in, so releasing the payload in the
+    // middle of it hands that impulse to the spent stage instead — 26 m/s,
+    // 117 km of apoapsis, for Long March 2D's second stage at 10 g. Real
+    // sequences separate seconds after the shutdown for the same reason.
+    if (st && st.attached && !st.spec.isSpacecraft && this.sim.vehicle.coreTailingOff(st, s.t)) {
+      if (!this.sim.pending.some((p) => p.label === 'payloadSep')) {
+        this.sim.schedule(st.cutoffTime + TAILOFF_SPAN * engineTailoffS(st.spec.engine), 'payloadSep',
+          () => this.separatePayload(igniteSpacecraft));
+      }
+      return;
+    }
     if (st && st.attached && !st.spec.isSpacecraft && this.sim.rigidRuntime) {
       // Estimated 0.5 m/s relative release speed; no manufacturer spring model.
       this.detachStage(st, 0.5);

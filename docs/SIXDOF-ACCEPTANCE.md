@@ -255,6 +255,29 @@ The reduced-flux case had 16.62 s between entry cutoff and the landing burn, the
 
 After the final guidance change, the complete 0.0025 / 0.005 / 0.01 s fixed-control recovery experiment was repeated: all 3 tests and unchanged numerical assertions passed in 155.77 s, with identical T536.386911 s contact classification/time. The nominal 0.01-versus-0.005 s maximum matched-checkpoint differences were 0.002788 m, 0.000011642 m/s and 0.000002428 degrees; the contact-time difference was zero. This supersedes the earlier numerical checkpoint for the current guidance, without changing any thresholds. Evidence: `rigid-recovery-final-finite-convergence.log` and `rigid-recovery-final-finite-convergence.json` in the same validation directory. The later throttle-telemetry correction changes recorded/displayed fractions only, not forces or trajectory.
 
+### Terminal burn planned mid-throttle (engine transients, roadmap P02)
+
+Engine start-up and tail-off transients (PHYSICS.md §4) changed the returning stage's
+separation state slightly, and the recovery above stopped landing: the stage came to a stop
+145 m above the pad at 4 m/s, climbed on the minimum thrust it cannot go below, emptied its
+tanks and fell back. The cause was in the terminal guidance, not the transients. Its restart
+was timed for the *minimum* throttle; the constant-deceleration law then asked for a little
+more than the minimum at ignition, braked early, and as the burn emptied the tanks (about ten
+per cent of the stage's mass) the same law asked for less than the minimum, which a stage
+that cannot hover cannot give. The restart is now timed for a throttle half-way between the
+minimum and full thrust (`TERMINAL_PLANNED_THROTTLE_FRACTION`), leaving room to throttle down
+as well as up once lit — which is how real landing burns are planned. Two further changes
+that belong to the transients: while a shut-down engine is tailing off the attitude loop holds
+the attitude it was shut down in (following a guidance command with the thrust fading had
+swung the stack to 1.3 °/s between MECO and separation, more than the returning stage's gas
+could take out), and a flight is not `done` until its last tail-off is over.
+
+With those changes the 0.0025 / 0.005 / 0.01 s recovery acceptance passes again, all three
+landed, with the unchanged convergence assertions. The 18 terminal-restart stress trajectories
+land 16 times (they landed 14 times before), and the two impacts still terminate honestly as
+impacts. The recovery remains experimental in the sense stated above: the RCS gas is still
+exhausted before T+180 s and the outcome still depends on the separation state.
+
 ## Post-deployment acceptance and bounded payload release
 
 The full mission convergence gate continues beyond the target-orbit event until actual payload separation. It independently recomputes orbital elements from raw position/velocity and applies the pre-existing fleet tolerances; a cached success flag cannot pass this check. The first frozen 0.01/0.005 s pair found Falcon at approximately 654.426 km apogee after deployment, although it had reached 502.476 × 500.584 km at the earlier target event. Both numerical trajectories agreed closely; both failed the actual delivered-orbit criterion. Soyuz passed that first complete pair. This failed Falcon evidence is retained as `../audit-2026-09-19/validation/mission-convergence-before-payload-fix-*`, with identical pre/post source manifests.

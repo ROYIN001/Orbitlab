@@ -20,8 +20,9 @@ Metadata, CSV, pad/failure/replay event boundaries and preview setup locking
 are corrected. TypeScript/build and local browser interactions passed; see
 `SIXDOF-ACCEPTANCE.md` and `SIXDOF-BROWSER-QA.md` for scope and exact evidence.
 
-Recovery remains experimental by the owner's explicit choice, including four
-impacts in 18 terminal-restart stress trajectories. Full regression is still
+Recovery remains experimental by the owner's explicit choice, including two
+impacts in 18 terminal-restart stress trajectories (four before the terminal burn
+was planned mid-throttle; see `SIXDOF-ACCEPTANCE.md`). Full regression is still
 running in `../audit-2026-09-19/validation/resume-final-suite.log`; its completed
 result is required before release. Phase 6 is not yet merged or published.
 

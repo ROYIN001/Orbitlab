@@ -1125,31 +1125,41 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   // changes; the fairing now leaves on Soyuz's published T+157 s callout rather
   // than on the heating placard, which moves the heaviest 300 km cell from
   // 110.7 x 745.3 km to 114.6 x 754.5 km and the rest by under a kilometre.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 197.2, ap: 200.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 198.7, ap: 200.6 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 197.5, ap: 200.1 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 219.5, ap: 346.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 241.2, ap: 299.2 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.1, ap: 265.5 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 143.8, ap: 895.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 144.0, ap: 873.2 },
+  // Re-measured again when engines gained their start-up and tail-off
+  // transients (roadmap P02): every verdict held, the healthy cells moved by
+  // under 2 km, and the failing 6.3 t / 300 km cell moved to 103.8 x 729.8 km —
+  // its third stage spends half a second of its burn spinning up, and the
+  // flight ends `failed` at depletion, before the tail-off that would have
+  // given the impulse back.
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 198.5, ap: 200.9 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.6, ap: 200.3 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 197.9, ap: 200.2 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 220.0, ap: 346.8 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 240.1, ap: 300.9 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.0, ap: 265.2 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 143.5, ap: 894.9 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 144.1, ap: 874.4 },
   // The one cell that does not survive: the heaviest Soyuz row aimed a hundred
   // kilometres above where the profile closes ends `failed`, with the tanks dry.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 114.6, ap: 754.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 103.8, ap: 729.8 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
   // rating. Nothing closes, at any altitude or any payload. Re-measured when
   // Jiuquan's 41° flights moved to the south-east solution inside the site's
   // 90–200° corridor (they used to leave north of east, across Mongolia): the
-  // cells moved by up to 6 km of apoapsis and none changed its verdict.
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.2, ap: 357.3 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 155.8, ap: 336.2 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 167.7, ap: 304.5 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.6, ap: 2411.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.7, ap: 2395.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2372.3 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2424.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 140.9, ap: 2404.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 141.1, ap: 2391.1 },
+  // cells moved by up to 6 km of apoapsis and none changed its verdict. The
+  // engine transients (P02) moved them by up to 9 km of apoapsis and 3 km of
+  // periapsis, again with no verdict changing: a single burn to depletion on a
+  // lofted arc is where a second's difference in the second stage's cut-off
+  // shows most.
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 150.8, ap: 355.2 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 157.5, ap: 331.1 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 171.0, ap: 295.6 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.6, ap: 2415.6 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.7, ap: 2396.9 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.7, ap: 2377.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.6, ap: 2421.1 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 140.6, ap: 2399.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 140.7, ap: 2381.8 },
 ];
 
 describe('single-shot direct insertion', () => {

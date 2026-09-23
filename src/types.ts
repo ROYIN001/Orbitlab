@@ -33,6 +33,17 @@ export interface EngineSpec {
    * sea-level pair reach a trajectory.
    */
   vacuumOnly?: boolean;
+  /**
+   * Start-up transient: time from ignition to full thrust, s. Defaults to
+   * `LIQUID_STARTUP_S` / `SOLID_STARTUP_S` in src/physics/vehicle.ts.
+   */
+  startupS?: number;
+  /**
+   * Shutdown tail-off: time constant of the exponential thrust decay after the
+   * engine is shut down or runs dry, s. Defaults to `LIQUID_TAILOFF_S` /
+   * `SOLID_TAILOFF_S`.
+   */
+  tailoffS?: number;
 }
 
 export interface BoosterGroupSpec {

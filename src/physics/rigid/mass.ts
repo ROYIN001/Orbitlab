@@ -167,7 +167,10 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     const reservoir = rcsGeometry(vehicle.spec.id, st.spec, base);
     rcs.push(reservoir);
     const consumed = op.rcsConsumedKgByStage?.[st.spec.id] ?? 0;
-    const coreOn = st.index === vehicle.activeIndex && st.ignited && !st.cutoff && !st.burnedOut && vehicle.usablePropellant(st) > 0;
+    // A core that has been shut down still thrusts through its tail-off; the
+    // level the caller passes is already the decayed one (VehicleModel.thrust).
+    const coreOn = st.index === vehicle.activeIndex && st.ignited && vehicle.usablePropellant(st) > 0
+      && ((!st.cutoff && !st.burnedOut) || (op.time !== undefined && vehicle.coreTailingOff(st, op.time)));
     const throttle = coreOn ? op.coreThrottle ?? 0 : 0;
     const offset = op.propellantOffsetSeconds ?? 0;
     const massFlow = engineMassFlow(st.spec.engine) * st.spec.engine.count * fraction(st.engineFraction) * throttle;
@@ -180,7 +183,8 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       st.spec.engine.count, st.engineFraction, throttle));
     st.boosters.forEach((b, groupIndex) => {
       if (!b.attached) return;
-      const boosterOn = st.index === vehicle.activeIndex && b.ignited && !b.burnedOut && vehicle.usableBoosterPropellant(b) > 0;
+      const boosterOn = st.index === vehicle.activeIndex && b.ignited && vehicle.usableBoosterPropellant(b) > 0
+        && (!b.burnedOut || (op.time !== undefined && vehicle.boosterTailingOff(b, op.time)));
       const bt = boosterOn ? op.boosterThrottle ?? 0 : 0;
       const boosterPropellant = Math.max(Math.min(b.propellant, vehicle.recoveryReserve * b.spec.propellantMass),
         b.propellant - engineMassFlow(b.spec.engine) * b.spec.engine.count * bt * offset);

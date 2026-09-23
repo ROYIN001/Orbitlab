@@ -8,6 +8,7 @@ import { groundPositionEci, groundVelocityEci } from '../src/physics/orbital';
 import { DEG, OMEGA_EARTH } from '../src/physics/constants';
 import { norm, sub } from '../src/physics/vec3';
 import { rigidMission } from './rigid-harness';
+import { LIQUID_STARTUP_S } from '../src/physics/vehicle';
 
 describe('accepted scheduled-event recording', () => {
   it.each(['leo', 'iss'] as const)('%s records real pad ignition on arrival, with fuel consumed only afterwards', id => {
@@ -25,11 +26,10 @@ describe('accepted scheduled-event recording', () => {
     const exact = player.frameAt(ignition.t)!;
     expect(before.thrust).toBe(0);
     expect(Object.values(before.rigid!.engineThrottles!).every(value => value === 0)).toBe(true);
-    expect(exact.thrust).toBeGreaterThan(1e6);
-    const engines = sim.rigidRuntime!.snapshot!.engines;
-    expect(engines.reduce((sum, engine) => sum + engine.thrustBudgetN, 0)).toBeCloseTo(exact.thrust, 4);
-    for (const engine of engines) expect(exact.rigid!.engineThrottles![engine.id])
-      .toBe(engine.thrustBudgetN > 0 ? engine.upstreamThrottle ?? 1 : 0);
+    // Lit on arrival, but not thrusting yet: a turbopump engine takes about a
+    // second to reach rated chamber pressure (`LIQUID_STARTUP_S`).
+    expect(exact.thrust).toBe(0);
+    for (const engine of sim.rigidRuntime!.snapshot!.engines) expect(engine.thrustBudgetN).toBe(0);
     const datum = sub(exact.r, quatRotate(exact.rigid!.attitudeQ, exact.rigid!.cgBody));
     const pad = groundPositionEci(sim.site.latitude * DEG, sim.site.longitude * DEG, sim.site.altitude,
       sim.plan.gmst0 + OMEGA_EARTH * exact.t);
@@ -39,6 +39,16 @@ describe('accepted scheduled-event recording', () => {
     recorder.advance(0.01);
     expect(sim.vehicle.stages[0].propellant).toBeLessThan(fuel);
     expect(player.frameAt(ignition.t)).toEqual(exact);
+    // Spun up, still on the pad: the recorded thrust is the engine budgets'
+    // sum, chamber by chamber.
+    recorder.advance(LIQUID_STARTUP_S + 0.5);
+    const running = captureFrame(sim);
+    expect(running.liftoff).toBe(false);
+    expect(running.thrust).toBeGreaterThan(1e6);
+    const engines = sim.rigidRuntime!.snapshot!.engines;
+    expect(engines.reduce((sum, engine) => sum + engine.thrustBudgetN, 0)).toBeCloseTo(running.thrust, 4);
+    for (const engine of engines) expect(running.rigid!.engineThrottles![engine.id])
+      .toBe(engine.thrustBudgetN > 0 ? engine.upstreamThrottle ?? 1 : 0);
   });
 
   it('pins the actual stage partition at its scheduled time before any later physical motion', () => {

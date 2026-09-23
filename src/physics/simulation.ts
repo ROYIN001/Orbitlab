@@ -23,7 +23,7 @@ import { siteById, type SiteExtra } from '../data/sites';
 import { vehicleById } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
-import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
+import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
 import { atmosphere } from './atmosphere';
 import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
@@ -49,7 +49,7 @@ import { FailureInjector } from './sim/failures';
 import { RigidLink } from './sim/rigid-link';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
-import { TELEMETRY_CAP } from './sim/constants';
+import { TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
 import type { Debris, EventSeverity, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
 
 export type { SimStatus, EventSeverity, SimEvent, TelemetrySample, DebrisVisual, Debris, Losses, SimState } from './sim/types';
@@ -189,11 +189,11 @@ export class Simulation {
     const ignT = st0.spec.engine.solid ? 0 : -2.5;
     this.schedule(ignT, 'ignition0', () => {
       this.vehicle.igniteStage(st0, this.state.t);
-      for (const b of st0.boosters) if ((b.spec.igniteAt ?? 0) <= 0 && !b.spec.engine.solid) this.vehicle.igniteBooster(b);
+      for (const b of st0.boosters) if ((b.spec.igniteAt ?? 0) <= 0 && !b.spec.engine.solid) this.vehicle.igniteBooster(b, this.state.t);
       this.event('evt.ignition', 'major', { stage: st0.spec.name });
     });
     this.schedule(0, 'liftoff', () => {
-      for (const b of st0.boosters) if ((b.spec.igniteAt ?? 0) <= 0) this.vehicle.igniteBooster(b);
+      for (const b of st0.boosters) if ((b.spec.igniteAt ?? 0) <= 0 && !b.ignited) this.vehicle.igniteBooster(b, this.state.t);
       if (st0.spec.engine.solid && !st0.ignited) {
         this.vehicle.igniteStage(st0, 0);
         this.event('evt.ignition', 'major', { stage: st0.spec.name });
@@ -201,7 +201,7 @@ export class Simulation {
       for (const b of st0.boosters) {
         if ((b.spec.igniteAt ?? 0) > 0) {
           this.schedule(b.spec.igniteAt!, 'boosterIgnite', () => {
-            this.vehicle.igniteBooster(b);
+            this.vehicle.igniteBooster(b, this.state.t);
             this.event('evt.boosterIgnition', 'major', { name: b.spec.name });
           });
         }
@@ -274,8 +274,7 @@ export class Simulation {
     else if (runtime?.command.mode === 'manual') throttle = runtime.command.throttle;
     else if (s.status === 'coast' || (s.status === 'burn' && !this.burns.burnIgnited)) throttle = 0;
     else if (s.status === 'ascent' && newIgnition && this.vehicle.active?.ignited) throttle = throttle || 1;
-    const thrust = throttle > 0 ? this.vehicle.thrust(s.t, atmosphere(s.altitude).p, throttle)
-      : { thrust: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
+    const thrust = this.vehicle.thrust(s.t, atmosphere(s.altitude).p, throttle);
     s.thrust = thrust.thrust; s.throttle = thrust.burning ? throttle : 0;
     s.coreThrottle = thrust.coreThrottle; s.boosterThrottle = thrust.boosterThrottle;
     if (!runtime || !s.rigid) return;
@@ -360,7 +359,10 @@ export class Simulation {
     return this.state.status === 'failed';
   }
   get done(): boolean {
-    return this.state.status === 'failed' || this.state.status === 'orbit';
+    if (this.state.status === 'failed') return true;
+    // The engine shut down on the final cut-off is still tailing off for a
+    // moment, and that impulse is part of the orbit the flight ends in.
+    return this.state.status === 'orbit' && !this.vehicle.inTransient(this.state.t);
   }
 
   /** Step size the simulation would like to take next, s. */
@@ -394,7 +396,9 @@ export class Simulation {
         const st = this.vehicle.active;
         const avail = st ? st.spec.engine.count * st.spec.engine.thrustVac * st.engineFraction : 0;
         const aT = s.mass > 0 ? Math.max(s.thrust, avail) / s.mass : 1;
-        const dv = s.burnDvRemaining > 0 ? s.burnDvRemaining : 20;
+        // What is left once the tail-off is counted, which is what ends the burn.
+        const tail = st ? this.vehicle.tailoffDeltaV(s.t, 0, Math.max(1, s.mass)) : 0;
+        const dv = s.burnDvRemaining > 0 ? Math.max(0.01, s.burnDvRemaining - tail) : 20;
         dt = aT > 0 ? Math.max(0.01, Math.min(0.5, dv / (20 * aT))) : 0.5;
         break;
       }
@@ -406,6 +410,10 @@ export class Simulation {
       default: dt = 1;
     }
     if (this.rigidRuntime) dt = Math.min(dt, this.rigidDt);
+    // An engine spinning up or tailing off is flown in short steps whatever
+    // the regime: a coast or an orbit would otherwise take its whole tail-off
+    // in one 10-30 s step.
+    if (s.status !== 'prelaunch' && dt > TRANSIENT_DT && this.vehicle.inTransient(s.t)) dt = TRANSIENT_DT;
     if (this.pending.length > 0) {
       const gap = this.pending[0].t - s.t;
       if (gap > 1e-4 && gap < dt) dt = gap;
@@ -459,7 +467,7 @@ export class Simulation {
     dt = Math.min(dt, this.suggestedDt());
 
     if (s.status === 'prelaunch') this.stepPrelaunch(dt);
-    else if (s.status === 'orbit') this.stepOrbit(dt);
+    else if (s.status === 'orbit' && !this.vehicle.inTransient(s.t)) this.stepOrbit(dt);
     else dt = this.stepFlight(dt);
 
     this.debrisTracker.stepDebris(dt);
@@ -488,7 +496,7 @@ export class Simulation {
     const tNew = s.t + dt;
     // consume propellant of already-running engines while held down
     const atm = atmosphere(s.altitude);
-    const thr = this.vehicle.thrust(s.t, atm.p, 1);
+    const thr = this.vehicle.thrust(s.t, atm.p, 1, dt);
     if (thr.burning) this.vehicle.consume(s.t, 1, dt);
     s.thrust = thr.thrust;
     s.throttle = thr.burning ? 1 : 0;
@@ -577,6 +585,10 @@ export class Simulation {
       s.ascentPhase = cmd.phase;
       s.pitchCmd = cmd.pitchDeg;
       s.predictedApoapsis = cmd.predictedApoapsis;
+    } else if (s.status === 'orbit') {
+      // The final cut-off's tail-off: hold the attitude it was cut off in.
+      dirCmd = s.dir;
+      throttleCmd = 0;
     } else if (s.status === 'burn' && s.currentBurn) {
       const cmd = this.burns.burnCommand(fullThrust.thrustFullVac, mass, maxAccel, up);
       if (!cmd) return 0;
@@ -593,6 +605,13 @@ export class Simulation {
       throttleCmd = 0;
       s.ascentPhase = null;
     }
+    // An engine that has just been shut down is still tailing off. Its gimbals
+    // keep their authority for that second while it fades, and following a
+    // guidance command that no longer has thrust to steer with swung a Falcon 9
+    // stack to 1.3 °/s between MECO and separation — more than the returning
+    // stage's cold-gas thrusters could take out. Hold the attitude it was shut
+    // down in, as real vehicles do until separation.
+    if (this.rigidRuntime && active && this.vehicle.coreTailingOff(active, s.t)) dirCmd = s.dir;
     // slew-limited attitude
     const slew = this.cfg.guidance.slewRate * DEG * dt;
     if (!this.rigidRuntime) s.dir = slerpLimited(s.dir, dirCmd, slew);
@@ -600,9 +619,30 @@ export class Simulation {
     this.rigidLink.applyManualEngineCommand(active, throttleCmd);
 
     // --- propulsion
-    const thr = throttleCmd > 0
-      ? this.vehicle.thrust(s.t, atm.p, throttleCmd)
-      : { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
+    // Averaged over the step: an engine spinning up or tailing off delivers the
+    // same impulse whatever the step length, and `consume` takes the same mean.
+    let thr = this.vehicle.thrust(s.t, atm.p, throttleCmd, dt);
+    if (this.rigidRuntime && active && thr.burning) {
+      // Liquid reference profiles: split exactly at the first propellant
+      // boundary using the command actually applied in this interval. The
+      // boundary is where the depletion sensor shuts the engine down, with
+      // its tail-off propellant still aboard.
+      const dt0 = dt;
+      const coreFlow = engineMassFlow(active.spec.engine) * active.spec.engine.count * active.engineFraction * thr.coreThrottle;
+      if (coreFlow > 0 && !active.cutoff && !active.burnedOut && this.vehicle.usablePropellant(active) > 0) {
+        const left = this.vehicle.usablePropellant(active) - VehicleModel.tailoffReserve(active.spec.engine, coreFlow);
+        dt = Math.min(dt, Math.max(1e-9, left / coreFlow));
+      }
+      for (const booster of active.boosters) {
+        if (!booster.attached || !booster.ignited || booster.burnedOut) continue;
+        const flow = engineMassFlow(booster.spec.engine) * booster.spec.engine.count * thr.boosterThrottle;
+        if (flow > 0 && this.vehicle.usableBoosterPropellant(booster) > 0) {
+          const left = this.vehicle.usableBoosterPropellant(booster) - VehicleModel.tailoffReserve(booster.spec.engine, flow);
+          dt = Math.min(dt, Math.max(1e-9, left / flow));
+        }
+      }
+      if (dt < dt0) thr = this.vehicle.thrust(s.t, atm.p, throttleCmd, dt);
+    }
     s.thrust = thr.thrust;
     s.throttle = thr.burning ? throttleCmd : 0;
     // What the engines are really doing, as opposed to what was commanded.
@@ -612,18 +652,6 @@ export class Simulation {
     // produced is one rule instead of two.
     s.coreThrottle = thr.coreThrottle;
     s.boosterThrottle = thr.boosterThrottle;
-
-    if (this.rigidRuntime && active && thr.burning) {
-      // Liquid reference profiles: split exactly at the first propellant
-      // boundary using the command actually applied in this interval.
-      const coreFlow = engineMassFlow(active.spec.engine) * active.spec.engine.count * active.engineFraction * thr.coreThrottle;
-      if (coreFlow > 0 && this.vehicle.usablePropellant(active) > 0) dt = Math.min(dt, Math.max(1e-9, this.vehicle.usablePropellant(active) / coreFlow));
-      for (const booster of active.boosters) {
-        if (!booster.attached || !booster.ignited || booster.burnedOut) continue;
-        const flow = engineMassFlow(booster.spec.engine) * booster.spec.engine.count * thr.boosterThrottle;
-        if (flow > 0 && this.vehicle.usableBoosterPropellant(booster) > 0) dt = Math.min(dt, Math.max(1e-9, this.vehicle.usableBoosterPropellant(booster) / flow));
-      }
-    }
 
     // --- integrate
     const area = this.vehicle.frontalArea();
@@ -711,7 +739,11 @@ export class Simulation {
     if (thr.burning) {
       const res = this.vehicle.consume(stepStartTime, throttleCmd, dt);
       for (const b of res.boosterBurnout) this.staging.onBoosterBurnout(b);
-      if (res.coreBurnout && active) this.staging.onCoreBurnout(active, next.r, next.v);
+      if (res.coreBurnout && active) {
+        // Judged on the orbit the stage leaves behind once its tail-off is over.
+        const tail = this.vehicle.tailoffDeltaV(stepStartTime + dt, atm.p, this.vehicle.totalMass());
+        this.staging.onCoreBurnout(active, next.r, tail > 0 ? addScaled(next.v, s.dir, tail) : next.v);
+      }
     }
     if (!this.rigidRuntime) { s.r = next.r; s.v = next.v; s.t += dt; }
     s.mass = this.vehicle.totalMass();
@@ -727,9 +759,15 @@ export class Simulation {
     // --- mission logic
     const el2 = elementsFromState(s.r, s.v);
     s.elements = el2;
-    if (s.status === 'ascent') this.ascent.checkAscent(el2, alt, vz);
+    // A cut-off is decided on the orbit it would leave behind: the engine
+    // shut down now still tails off for a moment, and on an upper stage that
+    // is several metres per second — kilometres of apoapsis.
+    const tailDv = s.status === 'ascent' || s.status === 'burn'
+      ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass) : 0;
+    const elCut = tailDv > 0 ? elementsFromState(s.r, addScaled(s.v, s.dir, tailDv)) : el2;
+    if (s.status === 'ascent') this.ascent.checkAscent(elCut, alt, vz);
     else if (s.status === 'coast') this.burns.checkCoast(el2);
-    else if (s.status === 'burn') this.burns.checkBurn(el2);
+    else if (s.status === 'burn') this.burns.checkBurn(elCut, tailDv);
 
     // --- ground impact / reentry
     const altNew = norm(s.r) - R_EARTH;

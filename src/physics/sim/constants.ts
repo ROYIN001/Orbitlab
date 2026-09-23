@@ -25,6 +25,14 @@ export const BURN_IGNITION_ALIGNMENT = 4 * DEG;
 export const TELEMETRY_CAP = 20000;
 
 /**
+ * Longest step while an engine is spinning up or tailing off, s. The thrust is
+ * averaged over each step (so the impulse is right at any length), but a coast
+ * or an orbit would otherwise swallow a whole tail-off in one 10-30 s step and
+ * the plume would vanish a frame after cut-off.
+ */
+export const TRANSIENT_DT = 0.25;
+
+/**
  * Lowest periapsis the ascent may cut off at when the apoapsis is already on
  * target, m — the same floor `abandonInsertion` holds the post-ascent sequence
  * to, and deliberately the same constant rather than a second copy of 140 km.

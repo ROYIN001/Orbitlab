@@ -6,7 +6,7 @@ import { quatFromBasis } from '../src/physics/rigid/math';
 import { elementsFromState } from '../src/physics/orbital';
 import { cross, norm, normalize, v3 } from '../src/physics/vec3';
 import * as prediction from '../src/physics/rigid/orbit-prediction';
-import { MU_EARTH, R_EARTH, J2_EARTH } from '../src/physics/constants';
+import { G0, MU_EARTH, R_EARTH, J2_EARTH } from '../src/physics/constants';
 
 const boundary = (sim: Simulation) => sim.burns;
 
@@ -58,14 +58,21 @@ describe('J2-consistent six-DOF burn planning', () => {
     boundary(sim).startBurn(correction);
     boundary(sim).checkBurn(sim.state.elements);
     expect(correction.done).toBe(false); // cannot finish before physical ignition/impulse
-    const fuel = sim.vehicle.active!.propellant;
+    const fuel = sim.vehicle.active!.propellant, mass = sim.vehicle.totalMass();
     let maximumDelivered = 0;
     for (let count = 0; count < 4000 && !correction.done && !sim.done; count++) {
       sim.step(sim.suggestedDt());
       maximumDelivered = Math.max(maximumDelivered, boundary(sim).rigidTransfer?.deliveredDv ?? 0);
     }
     expect(correction.done).toBe(true);
-    expect(maximumDelivered).toBeGreaterThan(3);
+    expect(maximumDelivered).toBeGreaterThan(0);
+    // The burn is cut off on the orbit its tail-off leaves behind, so the
+    // correction is only complete once that tail-off has been flown — and the
+    // next burn is planned from there.
+    for (let count = 0; count < 1000 && sim.vehicle.inTransient(sim.state.t); count++) sim.step(sim.suggestedDt());
+    expect(sim.vehicle.inTransient(sim.state.t)).toBe(false);
+    const delivered = G0 * sim.vehicle.active!.spec.engine.ispVac * Math.log(mass / sim.vehicle.totalMass());
+    expect(delivered).toBeGreaterThan(3);
     expect(sim.vehicle.active!.propellant).toBeLessThan(fuel);
     expect(boundary(sim).stalledReplans).toBe(0);
     expect(sim.state.currentBurn?.kind).toBe('shapeAtApoapsis');

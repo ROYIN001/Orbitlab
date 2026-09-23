@@ -5,13 +5,17 @@ import { captureFrame } from '../src/physics/frame';
 import { FlightRecorder } from '../src/replay/recorder';
 import { ReplayPlayer } from '../src/replay/player';
 import { v3 } from '../src/physics/vec3';
+import { engineStartupS } from '../src/physics/vehicle';
 import type { FailureMode } from '../src/types';
 import { rigidMission } from './rigid-harness';
 
 function flying(mode: FailureMode = 'none', time = 0.11) {
   const cfg = rigidMission(); cfg.failure = { mode, time, stage: 0 };
   const sim = new Simulation(cfg, { headless: true });
-  sim.state.t = 0.1; sim.step(0); // Drain countdown, with no integration or fuel consumption.
+  // Drain the countdown with no integration or fuel consumption — the
+  // ignition first, on time, so the engines are past their start-up by T+0.1.
+  sim.state.t = -2.5; sim.step(0);
+  sim.state.t = 0.1; sim.step(0);
   sim.setRigidCommand({ mode: 'manual', throttle: 0.7, rates: v3(0.01, 0.02, -0.01) });
   return sim;
 }
@@ -84,12 +88,16 @@ describe('accepted in-flight propulsion failures', () => {
     sim.processScheduledActions();
     const after = captureFrame(sim);
     expect(next.ignited).toBe(true);
+    // Either way nothing thrusts at the instant of ignition: the engine has
+    // its start-up ahead of it. What differs is whether the command to run
+    // was accepted.
+    expect(after.thrust).toBe(0);
+    expect(Object.values(after.rigid!.engineThrottles!).every(value => value === 0)).toBe(true);
     if (status === 'ascent') {
-      expect(after.thrust).toBeGreaterThan(1e5);
-      expect(Object.values(after.rigid!.engineThrottles!).some(value => value > 0)).toBe(true);
+      expect(after.throttle).toBe(1);
+      expect(sim.vehicle.thrust(sim.state.t + engineStartupS(next.spec.engine), 0, after.throttle).thrust).toBeGreaterThan(1e5);
     } else {
-      expect(after.thrust).toBe(0);
-      expect(Object.values(after.rigid!.engineThrottles!).every(value => value === 0)).toBe(true);
+      expect(after.throttle).toBe(0);
     }
     expect(after.r).toEqual(before.r); expect(after.v).toEqual(before.v);
     expect(after.rigid!.attitudeQ).toEqual(before.rigid!.attitudeQ);
