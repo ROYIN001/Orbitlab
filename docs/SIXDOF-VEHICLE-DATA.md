@@ -382,10 +382,13 @@ Soyuz-2.1a included:
   now waits for its attitude as long as the stage's thrusters need to stop the rotation it has and
   swing half a turn, with half as much again in hand (never less than the 240 s pre-orientation,
   never more than 30 min), instead of declaring a pointing failure at a fixed 240 s.
-- **Separations push, but not hard.** An ascent separation gives the spent stage 2 m/s, but never
-  more than 3 m/s of relative speed between the two bodies. A second stage stopped with 1.5 t
-  aboard had thrown Electron's 0.25 t Curie stack forward by 13.5 m/s and raised its apoapsis
-  16 km. Falcon 9's and Soyuz-2.1a's separations are under the cap and unchanged.
+- **Separations push each body 2 m/s at most.** An ascent separation gives the spent stage
+  2 m/s, and now never gives the stack it leaves more than that. A second stage stopped with
+  1.5 t aboard had thrown Electron's 0.25 t Curie stack forward by 13.5 m/s and raised its
+  apoapsis 16 km. Where the stack left behind is the heavier body — Falcon 9's and Soyuz-2.1a's
+  separations among them — nothing changes. (A first version capped the relative speed at
+  3 m/s instead; that cut Falcon 9's 3.2 m/s and moved its returning stage's touchdown from
+  inside the landing gate to 5.18 m/s against the gate's 5.)
 - **A burn waits for the stage it was planned for.** A burn start that finds the staging it
   planned around still pending retries every second, checking the stage again each time; a retry
   that did not look again relit Vega-C's spent solid Zefiro 9 at the instant it was jettisoned and
