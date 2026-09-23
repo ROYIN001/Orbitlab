@@ -73,7 +73,7 @@ import { VEHICLES } from '../src/data/vehicles';
 import { Simulation } from '../src/physics/simulation';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import {
-  azimuthAllowedFor, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
+  azimuthAllowedFor, azimuthInWindow, planMission, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
   ORBIT_INSERTION_FLOOR, kickStageSink, launchWindows,
 } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
@@ -139,10 +139,12 @@ describe('excluded combinations', () => {
   it('the vehicles that fly the sun-synchronous preset are the ones range safety and capability both allow', () => {
     // The flown set is an *intersection*, not a range-safety statement on its
     // own: a vehicle appears here only if (a) its first site's azimuth window
-    // contains the retrograde launch — Plesetsk (330–90°), Mahia (90–200°),
-    // Jiuquan (90–200°) and Taiyuan (144–200°) are the four sites in the data
-    // that qualify — and (b) at least one of its three `sso` rows survives the
-    // capability and architecture tables. Electron keeps all three (its rows
+    // contains the retrograde launch — Plesetsk (330–90°), Vostochny (340–95°),
+    // Vandenberg (147–201°), Mahia and Jiuquan (90–200°) and Taiyuan (144–200°)
+    // are the sites in the data that qualify — and (b) at least one of its
+    // three `sso` rows survives the capability and architecture tables.
+    // Tanegashima, Sriharikota and Kourou fly it in reality with a dogleg this
+    // model does not have, so they are not among them. Electron keeps all three (its rows
     // are graded against its own 200 kg sun-synchronous rating) and Angara-A5
     // keeps one. Long March 2D passes the range-safety half from Jiuquan and is
     // absent only because of (b): all three of its `sso` rows are excluded
@@ -1034,6 +1036,38 @@ describe('range safety', () => {
       expect(inc, 'the sso preset must be retrograde').toBeGreaterThan(90 * DEG);
     }
   });
+
+  /**
+   * ...for every row of the matrix, not only the sun-synchronous ones, and
+   * against the heading the plan FLIES rather than one recomputed here.
+   *
+   * Until this wave 38 accepted rows flew a heading outside their own site's
+   * window while the plan called them reachable: the planner always took the
+   * northbound solution below 75°, so H3 and H-IIA left Tanegashima on 88.1°
+   * against a 90–190° window, and every ISS-plane row from Tanegashima,
+   * Wenchang, Sriharikota and Mahia went north-east into a sector those ranges
+   * close. They now fly the mirror heading, which the window licenses and which
+   * reaches the same plane (tests/range-safety.test.ts has the measurement).
+   */
+  it('every row the matrix flies leaves on a heading its site licenses', () => {
+    const outside: string[] = [];
+    for (const c of fleetCases()) {
+      const site = siteById(c.site);
+      const orbit = orbitById(c.orbit);
+      const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
+      const plan = planMission({
+        vehicleId: c.vehicle, satelliteId: 'cubesats', siteId: c.site, orbit,
+        launchTime: orbit.raanMode === 'free' ? LAUNCH_TIME : launchWindows(orbit, site, LAUNCH_TIME, 1)[0].time,
+        guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) }, guidanceResolved: true,
+        failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: c.mass,
+      }, site, spec);
+      expect(plan.inclinationReachable, caseKey(c)).toBe(true);
+      if (!azimuthInWindow(site, plan.azimuthRotating)) {
+        outside.push(`${caseKey(c)}: ${(plan.azimuthRotating * RAD).toFixed(2)}° from ${site.id} (${site.azimuthMin}–${site.azimuthMax}°)`);
+      }
+    }
+    expect(outside, outside.join('\n')).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1134,15 +1168,21 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 114.6, ap: 754.5 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
   // rating. Nothing closes, at any altitude or any payload.
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.1, ap: 354.1 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 154.1, ap: 335.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 165.9, ap: 306.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.8, ap: 2418.0 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.8, ap: 2401.1 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2374.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2423.7 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 141.0, ap: 2410.3 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 140.8, ap: 2387.6 },
+  //
+  // Re-measured when the planner started flying the heading the site's window
+  // licenses: the 'site' inclination (41.0°) used to leave Jiuquan on 87.7°,
+  // north of its 90–200° window, and now leaves on the 92.3° southbound mirror
+  // (tests/range-safety.test.ts). Every verdict is unchanged; the apoapses moved
+  // by up to 6.2 km, which is this 3 km band doing its job.
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.2, ap: 357.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 155.8, ap: 336.2 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 167.7, ap: 304.5 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.6, ap: 2411.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.7, ap: 2395.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2372.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2424.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 140.9, ap: 2404.8 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 141.1, ap: 2391.1 },
 ];
 
 describe('single-shot direct insertion', () => {

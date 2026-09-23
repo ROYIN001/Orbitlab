@@ -39,7 +39,7 @@ import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
 import { liftoffMass, liftoffThrust, idealDeltaV, VehicleModel } from '../physics/vehicle';
 import {
-  planMission, launchWindows, resolveTarget, inclinationCorridor, canBurnAfterAscent,
+  planMission, launchWindows, resolveTarget, inclinationCorridor, maxInclinationFor, canBurnAfterAscent,
   apsisTolerance, perigeeTolerance, ASCENT_MARGIN_REQUIRED, RAAN_TOLERANCE, type MissionPlan,
 } from '../physics/mission';
 import { wrapPi } from '../physics/orbital';
@@ -309,9 +309,12 @@ export function missionVerdict(i: VerdictInput): Feasibility {
   // margin the operator can trade, and no amount of Δv buys it.
   const corridor = inclinationCorridor(i.site, i.inclinationDeg * DEG);
   if (corridor === 'aboveCorridor') {
+    // The upper bound quoted is the one the check used — the reach of the
+    // site's azimuth window — not the declared `maxInclination`, which is the
+    // same figure rounded and could print a different last digit.
     return say('fail', t('setup.verdict.corridor', {
       inc: i.inclinationDeg.toFixed(1), site: siteName(i.site),
-      min: i.site.minInclination.toFixed(1), max: i.site.maxInclination.toFixed(1),
+      min: i.site.minInclination.toFixed(1), max: (maxInclinationFor(i.site) * RAD).toFixed(1),
     }));
   }
   const capability = i.plan ? missionCapability(i.spec, i.satellite, i.payloadMass, i.plan) : null;

@@ -312,6 +312,22 @@ export function rotatingLaunchAzimuth(latRad: number, incRad: number, vOrbit: nu
 }
 
 /**
+ * Inclination (rad) that a launch on the rotating-frame azimuth `azRad` puts a
+ * vehicle in — the inverse of `rotatingLaunchAzimuth`, for either solution.
+ *
+ * The heading over the ground is the inertial velocity less the site's eastward
+ * speed, so v·sin(β − A) = v_eq·cos A, i.e. β = A + asin(v_eq·cos A / v); the
+ * inclination then follows from cos i = sin β · cos φ. β is monotonic in A, so
+ * sin β — and with it the inclination — has its extremes at A = 90° (due east,
+ * i = |φ|) and A = 270° (due west, i = 180° − |φ|) and nowhere else.
+ */
+export function inclinationForRotatingAzimuth(latRad: number, azRad: number, vOrbit: number): number {
+  const vEq = OMEGA_EARTH * R_EARTH * Math.cos(latRad);
+  const beta = azRad + Math.asin(Math.max(-1, Math.min(1, (vEq / vOrbit) * Math.cos(azRad))));
+  return Math.acos(Math.max(-1, Math.min(1, Math.sin(beta) * Math.cos(latRad))));
+}
+
+/**
  * Sun-synchronous inclination (rad) for a circular orbit of semi-major axis a.
  * From the J2 nodal precession rate matched to 360°/year.
  */
