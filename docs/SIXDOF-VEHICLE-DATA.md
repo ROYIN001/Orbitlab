@@ -171,19 +171,22 @@ Use opposed physical force pairs, never an unlimited torque actuator. Reference 
 
 No independent continuous coast-control RCS is assumed on the Soyuz launcher stages. RD-0110 verniers cease with their engine flow. Propagate coast attitude rather than snapping it to guidance. The existing synthetic spacecraft propulsion is a separate body/configuration and does not confer control on a detached launcher. Its explicitly synthetic RCS uses 20 N virtual nozzles, Isp 60 s, and a 10 kg gas budget included within spacecraft dry mass (limited to 10% of that dry mass for a tiny payload). This is not a Soyuz MS or Crew Dragon control specification.
 
-Aero definitions **E** (S8 motivates the decomposition, not these coefficients):
+Aero definitions **E** (S8 motivates the decomposition, not these coefficients). Since roadmap item P03 (2026-09-23) each configuration carries its own table, built by `src/physics/rigid/aero-tables.ts` from the vehicle's layout; the single-slope model below it is kept only for a body without a table.
 
-| Parameter | Initial estimate | Sensitivity/limits |
+| Parameter | Estimate | Sensitivity/limits |
 |---|---|---|
 | Reference area S | Existing frontal-area sum for attached geometry; single detached body πR² | Retain explicit area in telemetry; do not mix body and fin reference conventions. |
-| Axial Cd(Mach) | Existing atmosphere/drag model where valid | Multiply 0.5/1/1.5; base-first descent requires its own curve/flag. |
-| CP from aft datum | 0.65 times active body length, adjusted to that body's base | ±0.05L; broader exploratory 0.55–0.75L; E for every configuration. |
-| Small-angle normal slope | 2.0 per rad | 1/2/3 per rad; label small-angle confidence to 15°. |
+| Axial force C_A(Mach) | Nose first: the existing drag curve, along the body, × cos²α. Base first (engines into the flow): the blunt-body curve, Cd 1.0 on the reference area. Detached bodies: their blunt-body Cd both ways. | Multiply 0.5/1/1.5 (nose-first curve). |
+| Small-angle normal force | Slender-body theory: 2α × (cross-section gained) / S at each transition going down from the nose — the fairing's ogive (lift at 45 % of its length from its base), a boat-tail under a wider fairing (negative lift at the joint), each strap-on's nose cone (at 2/3 of the cone from its tip), a blunt top when the fairing has gone. Above Mach 0.8 the cylinder behind the nose adds lift of its own (0 → 0.5 per rad of the nose base area at Mach 1.5, easing to 0.3 at Mach 25), acting three diameters behind the nose. | The scale `normalSlopePerRad`/2 multiplies this term (sweeps 0.5/1/1.5). |
+| Crossflow normal force | η C_dc(M sin α) (A_p/S) sin²α on the planform A_p at its centroid: C_dc 1.2 subsonic, 1.75 at crossflow Mach 1, 1.25 at Mach 10 (Jorgensen, NASA TR R-474); η from the length/diameter ratio (0.55 at 1, 0.7 at 10, 0.9 at 100; Allen & Perkins, NACA TR 1048). Strap-ons count 60 % of their side area (partly hidden by the core); a fairing half counts half its planform. | Not scaled by the slope sweep. |
+| Centre of pressure | The force-weighted mix of the two terms' centres, so it moves aft as the crossflow grows with α, and with Mach as the carry-over appears. As built: Falcon 9 lift-off stack 71 m at Mach 0.5 and 62 m at Mach 1.5 of 72 m (all its lift is at the fairing); Soyuz-2.1a 21.5 m of 47 m (the strap-on noses). `cpBody.x` minus the table's own low-Mach value shifts the whole curve. | ±0.05L; broader exploratory 0.55–0.75L as a shift; E for every configuration. |
 | Dimensionless pitch/yaw rate damping | Negative derivative −10 with `ω L/(2 V)` convention | −5/−10/−15; rate term smoothly suppressed near V=0. |
 | Dimensionless roll damping | Negative derivative −0.2 with `ω diameter/(2 V)` convention | −0.1/−0.2/−0.3. |
-| Falcon grid fins — proposed only, not implemented | No separately actuated fin surfaces are included in the current rigid plant. | Recovery uses estimated passive body aerodynamics and actual finite RCS/TVC. Current return tests do not validate grid-fin forces or control. |
+| Falcon grid fins | Passive only: a returning first stage with grid fins carries four lattice fins of about 0.33 d × 0.4 d, the pair in the crossflow plane giving 3 per rad per m² of fin, 0.5 m below the stage top. Flying engines first that moves its centre of pressure towards the top — aft — by about a third of its length. No fin deflection or fin control. | Current return tests do not validate grid-fin forces or control. |
 
-The CP cross product already supplies the static normal-force moment; do not add an identical static Cm term again. At large AoA use a bounded crossflow/body-drag continuation (e.g. sin-based force law), while clearly marking extrapolation. Controlled flip/re-entry must not use an unbounded linear small-angle formula. A constant CP/derivative set is especially uncertain for a grid-fin-equipped stage returning base-first. Test positive and negative rates to ensure damping removes rotational energy.
+Without a table (a test fixture): CP at 0.65 of the active body length from its base, normal slope 2.0 per rad, drag along the airflow.
+
+The CP cross product already supplies the static normal-force moment; do not add an identical static Cm term again. The table covers every angle from nose first to base first, continuous through broadside (both the axial and the slender-body terms vanish there and the crossflow is common), but its coefficients are still low-order estimates and the 15° small-angle confidence flag is unchanged. Test positive and negative rates to ensure damping removes rotational energy.
 
 Wind scenarios are deterministic ENU inputs, not forecasts: calm; 5 and 10 m/s crosswind; a recorded shear profile and seeded gust process. Save seed, PRNG version, altitude/time profile, fixed sample interval and interpolation. Run all at the same physics time steps independently of render FPS/warp.
 

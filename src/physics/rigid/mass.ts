@@ -4,9 +4,10 @@ import type { BoosterGroupSpec, StageSpec } from '../../types';
 import type { VehicleModel } from '../vehicle';
 import { engineMassFlow, engineThrust } from '../vehicle';
 import { add, scale, sub, v3, type Vec3 } from '../vec3';
-import { dragCoefficient } from '../aero';
+import { dragCoefficient, tumblingDragCoefficient } from '../aero';
 import { assertSPD, type Mat3 } from './math';
 import type { Aero6DofSpec } from './aero';
+import { AERO_MACH, ascentAeroTable, detachedAeroTable, type AeroTable } from './aero-tables';
 import {
   chamberGeometry, getRigidVehicleGeometry, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
   type ChamberGeometry, type RcsReservoir, type RcsThrusterGeometry, type RigidVehicleGeometry,
@@ -133,13 +134,52 @@ function budgetEngines(geometry: readonly ChamberGeometry[], thrustPerEngine: nu
       massFlowKgS: flowPerEngine * available * engine.thrustFraction, upstreamThrottle: upstreamThrottle * available };
   });
 }
-function aeroEstimate(area: number, length: number, base: Vec3, diameter: number): Aero6DofSpec {
-  const mach = [0, 0.6, 0.8, 0.95, 1.05, 1.2, 1.5, 2, 3, 4, 6, 10, 25];
+function aeroEstimate(area: number, length: number, base: Vec3, diameter: number, table?: AeroTable,
+  cd: (mach: number) => number = dragCoefficient): Aero6DofSpec {
   return { referenceArea: area, referenceLength: length,
-    cpBody: add(base, v3(length * 0.65, 0, 0)),
-    cdMach: mach.map((m) => [m, dragCoefficient(m)] as const), normalSlopePerRad: 2,
+    // With a table the centre of pressure is the table's; this is its reference point.
+    cpBody: table ? v3(table.cpX[0], 0, 0) : add(base, v3(length * 0.65, 0, 0)),
+    cdMach: AERO_MACH.map((m) => [m, cd(m)] as const), normalSlopePerRad: 2,
     // Aero evaluator uses L for all axes; scale roll to the diameter convention.
-    rateDamping: v3(0.2 * (diameter / Math.max(length, 1e-6)) ** 2, 10, 10), validAngleRad: 15 * Math.PI / 180 };
+    rateDamping: v3(0.2 * (diameter / Math.max(length, 1e-6)) ** 2, 10, 10), validAngleRad: 15 * Math.PI / 180,
+    ...(table ? { table } : {}) };
+}
+
+/** A payload or spacecraft flying without its launcher: a blunt body, as the point-mass model flies it. */
+const RELEASED_BODY_CD = 2.2;
+
+/** Tables per attached configuration: the stack changes only at separations. */
+const aeroTables = new Map<string, AeroTable>();
+
+function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, area: number, length: number, diameter: number,
+  base: Vec3): { table: AeroTable; cd?: (mach: number) => number } {
+  const launcher = vehicle.stages.some((st) => st.attached && !st.spec.isSpacecraft);
+  if (!launcher) {
+    const key = `released|${length}|${diameter}|${area}|${base.x}`;
+    let table = aeroTables.get(key);
+    if (!table) {
+      table = shiftTable(detachedAeroTable(length, diameter, RELEASED_BODY_CD, area), base.x);
+      aeroTables.set(key, table);
+    }
+    return { table, cd: (m) => tumblingDragCoefficient(RELEASED_BODY_CD, m) };
+  }
+  const active = vehicle.active;
+  // One booster state per strap-on group.
+  const groups = active ? active.boosters.map((b) => b.attached) : [];
+  const stageAttached = vehicle.stages.map((st) => st.attached);
+  const key = `${vehicle.spec.id}|${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${groups.map(Number).join('')}|${area}`;
+  let table = aeroTables.get(key);
+  if (!table) {
+    table = ascentAeroTable(vehicle.spec, { activeIndex: vehicle.activeIndex, stageAttached, fairingAttached: vehicle.fairingAttached, boosterGroups: groups },
+      area, (index) => geometry.stageBases[index].x);
+    aeroTables.set(key, table);
+  }
+  return { table };
+}
+
+/** A detached-body table is built about its own base; move it to the stack datum. */
+function shiftTable(table: AeroTable, dx: number): AeroTable {
+  return { ...table, cpX: table.cpX.map((x) => x + dx), baseCpX: table.baseCpX + dx, planformX: table.planformX + dx };
 }
 function validateOperating(op: RigidOperatingState): void {
   for (const n of [op.pressure ?? 0, op.coreThrottle ?? 0, op.boosterThrottle ?? 0, op.propellantOffsetSeconds ?? 0]) {
@@ -222,9 +262,10 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
   // remains a finite body after separation and must not become drag-free.
   const area = firstAttached && vehicle.payloadAttached && vehicle.payloadMass > 0
     ? Math.PI * (diameter / 2) ** 2 : vehicle.frontalArea();
+  const { table, cd } = stackAeroTable(vehicle, geometry, area, length, diameter, activeBase);
   return { ...properties, engines, rcs,
     rcsThrusters: activeReservoir?.thrusters ?? [], geometry, activeBase,
-    aero: aeroEstimate(area, length, activeBase, diameter),
+    aero: aeroEstimate(area, length, activeBase, diameter, table, cd),
     modelId: 'quasi-steady', dataRevision: RIGID_DATA_REVISION, assumptions: RIGID_DATA_ASSUMPTIONS };
 }
 

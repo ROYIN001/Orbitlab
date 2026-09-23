@@ -294,3 +294,38 @@ The full mission convergence gate continues beyond the target-orbit event until 
 The defect was an overly large payload recoil from applying the generic ascent stage ejection impulse to a light satellite. The payload-specific correction uses an estimated additional relative axial speed of 0.5 m/s and the reduced mass of the exact two component partitions: `J = 0.5 * mStage * mRetained / mTotal`. Both equal/opposite impulses act at one interface; there is no unilateral velocity overwrite. Ordinary ascent-stage impulses remain unchanged. A physical boundary fixture with 14,283 kg upper stage (including 17 kg gas already spent) and 1,000 kg payload previously produced 30.60238 m/s relative release speed. The corrected fixture produces 0.5 m/s, retains the expected finite recoil of each body and conserves combined mass, linear momentum and angular momentum. Staging/partition/debris tests passed34/34 and TypeScript passed. This separation speed is disclosed as an estimate; a real adapter spring/clearance model is outside the scope.
 
 Final complete mission convergence after this correction is recorded separately below when executed; no orbit or numerical tolerance was relaxed to accommodate the defect.
+
+## Per-vehicle aerodynamic tables (roadmap P03, 2026-09-23)
+
+The single normal-force slope at a fixed centre of pressure was replaced by a table per
+configuration (docs/SIXDOF-VEHICLE-DATA.md, "RCS, fins and aerodynamics"): slender-body lift
+where the cross-section grows, viscous crossflow on the planform, a centre of pressure that
+moves with angle and Mach, base-first coefficients for a stage flying engines first, grid-fin
+lift on the returning Falcon stage, and a blunt body for a released payload. The ascent command
+cone now finds its angle by bisection on the tabulated moment instead of assuming a moment
+proportional to sin α.
+
+The change moves both reference vehicles' static stability. Falcon 9's lift is all at its
+fairing (centre of pressure 71 m up a 72 m stack subsonic, 62 m supersonic), so its moment at
+small angles is close to the old estimate and grows faster at large ones. Soyuz-2.1a's strap-on
+noses put its centre of pressure at 21.5 m, about 8 m above the centre of gravity at lift-off
+instead of 17 m, so it needs half the trim moment per degree it did.
+
+Result on the 28 six-DOF test files: 274 of 276 passed at the first run, including both
+reference missions, their 0.01 / 0.005 s convergence, the three recovery landings and the 67
+sensitivity cases. The terminal-restart stress set still lands 16 of 18. Two failed:
+
+- **Soyuz max-Q authority boundary.** Its fixture takes the flow angle the calm ISS mission
+  flies at T+40 s, 4.4 km, 25 kPa. With the old estimate that was 0.3°; with the tables the
+  mission flies 0.61° there (the command cone allows the less unstable vehicle more angle), and
+  at 0.3° the 5° vernier case only just saturated. The fixture now uses the re-measured 0.6°;
+  its assertions are unchanged — 5° travel leaves about 18 % of the moment unmet, 10° trims it.
+- **Released payload drag.** A payload flying alone was given the table of the launcher stack
+  it had left, because the table did not check which stages were still attached. It now gets a
+  blunt-body table with the point-mass model's Cd of 2.2; so does a spacecraft stage flying
+  without its launcher.
+
+The Soyuz late first-stage pitch-down is unchanged in character — the command cone releases a
+closed-loop pitch command that has run far below the vehicle as the dynamic pressure falls — but
+begins earlier, at about T+89 s instead of at booster separation, because the less unstable
+vehicle is released sooner. It stays a guidance item (G01).

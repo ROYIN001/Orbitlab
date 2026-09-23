@@ -14,7 +14,8 @@ parameter, the six-DOF flight controls, telemetry and CSV export). English, Russ
 throughout.
 
 - **Physics** ([PHYSICS.md](PHYSICS.md)): point-mass flight for every vehicle; a rigid-body
-  (six-DOF) model with finite actuators for Falcon 9 and Soyuz-2.1a, which is their default.
+  (six-DOF) model with finite actuators for Falcon 9 and Soyuz-2.1a, which is their default,
+  with aerodynamic tables built from each configuration's own layout.
   Engines have start-up and tail-off transients, and every cut-off anticipates the tail-off.
 - **Threading**: the physics and the flight recorder run in a Web Worker; the page only draws.
   `?physics=inline` (or a browser without module workers) runs them on the main thread, with
@@ -29,9 +30,10 @@ throughout.
   integration steps, and 16 of 18 terminal-restart stress trajectories land (the other two end
   honestly as impacts), but the stage's cold-gas supply runs out before T+180 s and the outcome
   still depends on the separation state ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)).
-- **Soyuz-2.1a after booster separation in six-DOF**: the vehicle pitches steadily nose-down
-  (from 32° to under 20° above the horizon within five seconds) as the aerodynamic angle limit
-  releases the closed-loop pitch command. It is not a thrust effect and is left for the
+- **Soyuz-2.1a's late first-stage pitch in six-DOF**: from about T+89 s, as the dynamic
+  pressure falls, the aerodynamic angle limit releases a closed-loop pitch command that has run
+  far below the vehicle (7° against 33°), and the vehicle pitches down from 60° to 33° above the
+  horizon over twenty seconds at up to 3 °/s. It is not a thrust effect and is left for the
   guidance work (G01).
 - **Vulcan's ascent** inserts well away from its planned parking orbit (about 137 × 1 200 km
   against 250 × 500 km) and makes the target with its later burns. Every Vulcan mission in the
@@ -70,7 +72,7 @@ done are on branch `claude/awesome-fermi-r6ntep`.
 | F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | |
 | F06 documentation | done | G06 Soyuz launch escape system | |
-| P03 per-vehicle aerodynamic tables | | V05 Gagarin's Start pad | |
+| P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | |
 | P01 six-DOF for all 18 vehicles | | V03 vapour cone and booster smoke | |
 | Watch mode: flown missions with booster landings | | G07 ISS rendezvous and docking | |
 | P05 slosh, bending and notch filter | | C01 historical missions | |

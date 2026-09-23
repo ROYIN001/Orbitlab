@@ -5,7 +5,7 @@ import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../constants';
 import { gravityJ2 } from '../gravity';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { allocateEngineGimbals, allocateRcs, createEngineStates, engineWrench, stepEngineActuators, stepRcs, type EngineActuatorSpec, type EngineActuatorState } from './actuators';
-import { aerodynamicWrench, windVelocityECI, type WindScenario } from './aero';
+import { aerodynamicWrench, staticAeroMoment, windVelocityECI, type WindScenario } from './aero';
 import { attitudeControl, rateControl, type ControlGains } from './control';
 import { integrateRigidStep, type RigidState } from './integrator';
 import { matVecMul, quatFromBasis, quatInverseRotate, quatRotate, type Mat3, type Quat } from './math';
@@ -155,11 +155,25 @@ export class RigidRuntime {
    * Falcon retains its separately tested 35% trim/65% reserve program.
    * These are guidance margins, not changes to hardware authority. The rate
    * controller below separately uses 35% of the remaining actual torque. */
-  ascentAngleLimit(snapshot: RigidVehicleSnapshot, dynamicPressure: number): number {
+  ascentAngleLimit(snapshot: RigidVehicleSnapshot, dynamicPressure: number, mach = 0): number {
     if (!Number.isFinite(dynamicPressure) || dynamicPressure < 0) throw new RangeError('Invalid dynamic pressure');
     const authority = this.authority(snapshot);
     const trimShare = snapshot.geometry.vehicleId === 'soyuz21a' ? 0.65 : 0.35;
     const margin = trimShare * Math.max(0, Math.min(authority.radius.y - Math.abs(authority.center.y), authority.radius.z - Math.abs(authority.center.z)));
+    if (snapshot.aero.table) {
+      // The tabulated moment is not proportional to sin α — the crossflow grows
+      // with sin²α and moves the centre of pressure — so find the largest angle
+      // whose static moment the trim share can hold.
+      const moment = (angle: number) => staticAeroMoment(snapshot.aero, mach, dynamicPressure, angle, snapshot.cg);
+      const ceiling = snapshot.aero.validAngleRad;
+      if (!(dynamicPressure > 0) || moment(ceiling) <= margin) return dynamicPressure > 0 ? ceiling : Math.PI;
+      let lo = 0, hi = ceiling;
+      for (let i = 0; i < 30; i++) {
+        const mid = (lo + hi) / 2;
+        if (moment(mid) <= margin) lo = mid; else hi = mid;
+      }
+      return lo;
+    }
     const coefficient = snapshot.aero.normalSlopePerRad + Math.max(...snapshot.aero.cdMach.map(([, cd]) => cd), 0);
     const perSinAngle = dynamicPressure * snapshot.aero.referenceArea * coefficient * norm(sub(snapshot.aero.cpBody, snapshot.cg));
     return perSinAngle > 0 ? Math.min(snapshot.aero.validAngleRad, Math.asin(Math.min(1, margin / perSinAngle))) : Math.PI;

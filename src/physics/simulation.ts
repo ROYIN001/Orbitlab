@@ -684,7 +684,7 @@ export class Simulation {
           time: s.t, rcsConsumedKgByStage: runtime.consumed,
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined,
           payloadLength: this.satellite.size?.height });
-        dirCmd = limitAscentCommand(dirCmd, vAir, runtime.ascentAngleLimit(snapshot, q));
+        dirCmd = limitAscentCommand(dirCmd, vAir, runtime.ascentAngleLimit(snapshot, q, vAirMag / atm.a));
       }
       const result = runtime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody }, dt,
         dirCmd, s.status === 'ascent' ? this.rigidLink.rigidSide()

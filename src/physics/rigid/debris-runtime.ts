@@ -13,6 +13,7 @@ import { RigidRuntime, type RigidRuntimeOptions } from './runtime';
 import type { RigidState } from './integrator';
 import { quatRotate } from './math';
 import { minimumBurnDistance, TERMINAL_PLANNED_THROTTLE_FRACTION, TERMINAL_RESTART } from './recovery-guidance';
+import { detachedAeroTable } from './aero-tables';
 
 export interface RigidContact {
   r: Vec3; clearance: number; tailClearance: number; tiltRad: number;
@@ -87,13 +88,18 @@ export class RigidDebrisRuntime {
     this.recoveryEnabled = !!debris.recovery && options.vehicleId === 'falcon9' && options.stage?.id === 's1';
     const length = debris.visual.length, radius = debris.visual.diameter / 2;
     const mach = [0, 0.6, 1, 1.2, 2, 5, 10, 25];
+    // Its own table: lift at whichever end meets the flow, crossflow drag on
+    // its whole side when it tumbles, and grid-fin lift at the top of a stage
+    // flown back for recovery.
+    const table = detachedAeroTable(length, 2 * radius, debris.cd, debris.area,
+      { gridFins: this.recoveryEnabled && !!options.stage?.gridFins, halfShell: debris.visual.kind === 'fairing' });
     this.initialSnapshot = { ...parentSnapshot, ...split.properties,
       engines: [], rcs: [], rcsThrusters: [], activeBase: v3(),
       geometry: { vehicleId: options.vehicleId, length, stageBases: [v3()], stageHeights: [length],
         fairingBase: v3(length), payloadBase: v3(length), boosters: [], estimated: true },
-      aero: { referenceArea: debris.area, referenceLength: length, cpBody: v3(0.65 * length),
+      aero: { referenceArea: debris.area, referenceLength: length, cpBody: v3(table.cpX[0]),
         cdMach: mach.map(m => [m, tumblingDragCoefficient(debris.cd, m)] as const), normalSlopePerRad: 2,
-        rateDamping: v3(0.2 * (2 * radius / Math.max(length, 0.1)) ** 2, 10, 10), validAngleRad: 15 * DEG } };
+        rateDamping: v3(0.2 * (2 * radius / Math.max(length, 0.1)) ** 2, 10, 10), validAngleRad: 15 * DEG, table } };
     this.snapshot = this.recoveryEnabled ? this.recoverySnapshot(0, 0, 0, [], this.runtime.consumed) : this.initialSnapshot;
     // An exact partition must not silently become a differently loaded body.
     const scaleI = Math.max(1, ...split.properties.inertia.map(Math.abs));
@@ -112,9 +118,10 @@ export class RigidDebrisRuntime {
       engineFraction: this.options.engineFraction,
       propellantOffsetSeconds: elapsed, rcsConsumedKgByStage: consumed,
     });
-    // Base-first descent is not the slender ascent Cd curve. The continuation
-    // remains an estimate, recorded outside the small-angle envelope.
-    return { ...result, aero: { ...result.aero, cdMach: this.initialSnapshot.aero.cdMach } };
+    // Base-first descent is not the slender ascent: the returning stage keeps
+    // the detached body's own table. The continuation remains an estimate,
+    // recorded outside the small-angle envelope.
+    return { ...result, aero: this.initialSnapshot.aero };
   }
 
   private sync(time: number): void {

@@ -61,6 +61,19 @@ Two drag laws, because the model flies two kinds of body:
   halves all fell with the slender ascent curve: two to seven times too little drag, landing too
   fast and too far downrange.
 
+In **six-DOF** flight the attitude matters, so the body also feels a normal force and a
+moment, from a table built for each configuration of the vehicle (Falcon 9 and Soyuz-2.1a;
+`src/physics/rigid/aero-tables.ts`, data in [SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)).
+The normal force is slender-body lift — made where the cross-section grows going down from the
+nose: the fairing, a boat-tail, each strap-on's nose cone — plus viscous crossflow drag on the
+whole planform, which grows with sin²α and acts near its middle (Allen & Perkins; Jorgensen).
+So the centre of pressure is not a fixed point: it moves aft as the angle of attack grows and,
+on Falcon 9, once the flow is supersonic. The table covers every angle from nose first to
+engines first, which is what a tumbling stage or a stage flown back for landing needs: broadside,
+a spent stage now meets the crossflow on its whole side (about ten times the old estimate) and a
+returning Falcon stage carries the lift of its grid fins at its top. The ascent command cone uses
+the same table to find the largest angle of attack whose moment the engines can trim.
+
 Dynamic pressure q = ½ ρ v_air² is tracked for the max-Q event, and the **structural placard** is
 armed continuously from liftoff until payload separation: exceeding 1.15 × the vehicle's quoted
 limit destroys it, on every step of powered or coasting flight rather than only at the detected
@@ -152,7 +165,9 @@ separation in six-DOF flight. With the strap-ons now tailing off over a second i
 3.3 MN in one 10 ms step, the peak pitch rate after separation is unchanged (4.46 → 4.43 °/s):
 that dip is the closed-loop pitch command (a few degrees above the horizon while the vehicle is
 at 32°) being released by the aerodynamic angle limit as the dynamic pressure falls, not a thrust
-step.
+step. With the per-vehicle aerodynamic tables (§3) the less unstable Soyuz is released sooner:
+the pitch-down now begins at about T+89 s, before the strap-ons separate, and takes the vehicle
+from 60° to 33° over twenty seconds at up to 3 °/s while the command runs down to 7°.
 
 Throttle is limited by the engine's minimum throttle, an acceleration limit (e.g. 4.5 g), a
 throttle bucket around max-Q for vehicles that fly one, and the load-relief law of §3.
@@ -1315,7 +1330,9 @@ orbital map and in the RAAN/altitude readouts under high time warp.
 - Point-mass vehicle: attitude is a commanded direction with a slew-rate limit, no rotational
   dynamics, no aerodynamic lift, no wind.
 - One generic drag curve for every launcher and one blunt-body curve for every piece of debris;
-  solid-motor thrust profiles are a normalised linear ramp about the published mean.
+  solid-motor thrust profiles are a normalised linear ramp about the published mean. The
+  six-DOF normal-force tables are low-order estimates from each vehicle's layout, not wind-tunnel
+  or flight data.
 - Guidance is a compact explicit law, not the flight software of any real vehicle; timelines
   and margins are representative, not authoritative.
 - Vehicle data are public figures rounded to about ±10 %; the LEO payload of a
@@ -1413,6 +1430,9 @@ around them change.
 | dynamic pressure | скоростной напор | ความดันพลวัต |
 | max-Q | максимальный скоростной напор | ความดันพลวัตสูงสุด |
 | drag | аэродинамическое сопротивление | แรงต้านอากาศ |
+| normal force | нормальная сила | แรงตั้งฉาก |
+| centre of pressure | центр давления | ศูนย์กลางความดัน |
+| crossflow (viscous) | поперечное обтекание (вязкое) | การไหลตัดขวาง (ความหนืด) |
 | g-load | перегрузка | ความเร่ง (แรง g) |
 | downrange distance | дальность | ระยะตามแนวการบิน |
 | ballistic coast | пассивный участок | ช่วงเคลื่อนที่อิสระ |
