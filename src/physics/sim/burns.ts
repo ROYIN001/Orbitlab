@@ -32,6 +32,15 @@ export class BurnSequencer {
   alignmentAllowanceS = BURN_PREORIENT_TIME;
   rigidBurnForecast: { burn: BurnPlan; time: number; context: string; r: Vec3; v: Vec3 } | null = null;
   rigidTransfer: { burn: BurnPlan; context: string; direction: Vec3; requiredDv: number; deliveredDv: number } | null = null;
+  /**
+   * An aimed burn (`physicalObjective`): the impulse the J2 shot asks for at
+   * the extreme it is centred on, and the velocity direction there. It is
+   * flown along that one inertial direction, as a finite burn centred on an
+   * impulse point is, so the attitude holds still through it: Curie, which
+   * steers on its thrusters alone, ran out of gas following the turning
+   * velocity through a five-minute burn and put its perigee at 63 km.
+   */
+  rigidAim: { burn: BurnPlan; direction: Vec3; requiredDv: number } | null = null;
   rigidScheduledContext: string | null = null;
   rigidCoastIntervened = false;
   rigidApexCorrections = 0;
@@ -88,7 +97,7 @@ export class BurnSequencer {
     this.sim.event('evt.burnPredictionUnavailable', 'warn');
     for (const burn of this.sim.plan.burns) burn.done = true;
     this.sim.pending = this.sim.pending.filter(action => action.label !== 'burnStart');
-    this.rigidBurnForecast = null; this.rigidTransfer = null;
+    this.rigidBurnForecast = null; this.rigidTransfer = null; this.rigidAim = null;
     s.currentBurn = null; s.nextBurnTime = -1; s.burnDvRemaining = 0; s.burnPlaneNormal = null;
     s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0;
     if (this.sim.vehicle.active) this.sim.vehicle.cutoffStage(this.sim.vehicle.active, s.t);
@@ -151,7 +160,12 @@ export class BurnSequencer {
   }
 
   prepareRigidTransfer(burn: BurnPlan): boolean {
-    const s = this.sim.state;
+    const s = this.sim.state, aim = this.rigidAim;
+    if (burn.physicalObjective && aim?.burn === burn) {
+      this.rigidTransfer = { burn, context: this.rigidOrbitContext(), direction: aim.direction, requiredDv: aim.requiredDv, deliveredDv: 0 };
+      s.burnDvRemaining = aim.requiredDv;
+      return true;
+    }
     const shot = burn.physicalObjective ? this.physicalObjectiveShot(burn, s) : this.physicalApexShot(burn, s);
     if (!shot) { this.failRigidOrbitPrediction(); return false; }
     const dv = shot.speedMS - norm(s.v);
@@ -216,6 +230,7 @@ export class BurnSequencer {
     }
     this.rigidBurnForecast = null;
     this.rigidTransfer = null;
+    this.rigidAim = null;
     // A frozen osculating ellipse can overestimate the physical J2 apex by
     // kilometres. Never circularize below a perigee that has not been reached.
     // First raise the actual ballistic apex with a bounded physical impulse.
@@ -324,6 +339,7 @@ export class BurnSequencer {
       if (!shot) { this.failRigidOrbitPrediction(); return; }
       const correction = shot.speedMS - norm(at.v);
       burn.lowering = correction < 0; dv = Math.abs(correction);
+      if (burn.physicalObjective) this.rigidAim = { burn, direction: scale(normalize(at.v), correction < 0 ? -1 : 1), requiredDv: dv };
     }
     const e = stage.spec.engine;
     const thrust = e.count * e.thrustVac * stage.engineFraction;
@@ -782,7 +798,7 @@ export class BurnSequencer {
       // from periapsis and waste propellant moving the periapsis instead.
       const need = norm(vDes) - norm(s.v);
       const sign = b.lowering ? -1 : 1;
-      dirCmd = norm(s.v) > 1 ? scale(normalize(s.v), sign) : s.dir;
+      dirCmd = this.rigidAim?.burn === b ? this.rigidAim.direction : norm(s.v) > 1 ? scale(normalize(s.v), sign) : s.dir;
       s.burnDvRemaining = Math.abs(need);
       if (this.sim.rigidRuntime && physicalTarget(b)) {
         if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
@@ -797,7 +813,7 @@ export class BurnSequencer {
       if (this.rigidTransfer && this.rigidTransfer.context !== this.rigidOrbitContext()) {
         this.rigidTransfer = null; this.burnIgnited = false;
       }
-      dirCmd = norm(s.v) > 1 ? scale(normalize(s.v), b.lowering ? -1 : 1) : s.dir;
+      dirCmd = this.rigidAim?.burn === b ? this.rigidAim.direction : norm(s.v) > 1 ? scale(normalize(s.v), b.lowering ? -1 : 1) : s.dir;
       s.burnDvRemaining = this.rigidTransfer
         ? Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv) : Math.max(0.05, b.dvEstimate);
     } else {
@@ -869,7 +885,9 @@ export class BurnSequencer {
         : propagateKepler(s.r, s.v, Math.max(0, s.nextBurnTime - s.t));
       if (!at) { this.failRigidOrbitPrediction(); return null; }
       const vAt = norm(at.v) > 1 ? normalize(at.v) : dirCmd;
-      if (nb.kind === 'raiseApoapsis') {
+      if (this.rigidAim?.burn === nb) {
+        dirCmd = this.rigidAim.direction;
+      } else if (nb.kind === 'raiseApoapsis') {
         dirCmd = nb.lowering ? scale(vAt, -1) : vAt;
       } else {
         const vDesPre = desiredVelocity(at.r, at.v, nb.kind, nb.targetApoapsis, nb.targetPeriapsis, nb.targetInclination);
@@ -885,11 +903,7 @@ export class BurnSequencer {
     const s = this.sim.state;
     if (this.rigidTransfer && this.sim.rigidRuntime!.command.mode === 'auto' && this.burnIgnited && burning
       && this.rigidTransfer.burn === s.currentBurn) {
-      // An aimed shaping burn is flown along the turning velocity (a long
-      // one sweeps tens of degrees of orbit); its impulse counts along it.
-      const along = this.rigidTransfer.burn.physicalObjective && norm(s.v) > 1
-        ? scale(normalize(s.v), this.rigidTransfer.burn.lowering ? -1 : 1) : this.rigidTransfer.direction;
-      this.rigidTransfer.deliveredDv += dot(propulsionECI, along) * dt;
+      this.rigidTransfer.deliveredDv += dot(propulsionECI, this.rigidTransfer.direction) * dt;
       s.burnDvRemaining = Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv);
     }
   }
