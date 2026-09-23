@@ -13,10 +13,12 @@ import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { VEHICLES } from '../src/data/vehicles';
 import type { DynamicsConfig, MissionConfig, VehicleSpec } from '../src/types';
-import { G0, DEG, RAD } from '../src/physics/constants';
-import { elementsFromState, wrapPi } from '../src/physics/orbital';
+import { G0, DEG, RAD, R_EARTH } from '../src/physics/constants';
+import { circularSpeed, elementsFromState, rotatingLaunchAzimuth, wrapPi } from '../src/physics/orbital';
 import { physicalApsides } from '../src/physics/rigid/orbit-prediction';
-import { azimuthAllowedFor, inclinationCorridor, resolveTarget, launchWindows } from '../src/physics/mission';
+import {
+  azimuthAllowedFor, inclinationCorridor, launchDescendingFor, maxInclinationFor, resolveTarget, launchWindows, DOGLEG_LIMIT_DEG,
+} from '../src/physics/mission';
 
 export const LAUNCH_TIME = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
 export const FRACTIONS = [0.25, 0.5, 0.9];
@@ -287,23 +289,39 @@ export const TANKS_EMPTY_DV = 100;
 
 // ---------------------------------------------------------------------------
 // 1. Not flyable from the site: range safety.
-// The sun-synchronous preset needs a retrograde, roughly north-westerly or
-// south-easterly azimuth. Plesetsk, Vostochny, Vandenberg, Jiuquan, Taiyuan and
-// Mahia have a range-safety window that contains it, and Kourou and Tanegashima
-// reach it with a dogleg of 1.2° and 1.9° off their corridor edge
+// The sun-synchronous preset needs a retrograde heading, roughly 341-349°
+// (north-north-west) or 191-199° (south-south-west) depending on the site's
+// latitude. Plesetsk (330–90°), Vostochny, Vandenberg, Jiuquan, Taiyuan and
+// Mahia have a window that contains one of the two, and Kourou and Tanegashima
+// reach the plane with a dogleg of 1.2° and 1.9° off their window's edge — a
+// yaw during the ascent from a licensed heading, as their ranges really fly it
 // (`DOGLEG_LIMIT_DEG` in src/physics/mission.ts). From Baikonur, Cape
-// Canaveral, Wenchang, Sriharikota and Starbase the azimuth points over
-// populated land or over another country's territory, further than a dogleg
-// turns, and the launch would not be licensed. The table is generated from the
-// site data so it always describes the sites as they are, and
-// `azimuthAllowedFor` is the single source of truth for it.
+// Canaveral, Wenchang, Starbase and Xichang both headings point over populated
+// land or another country's territory, and Sriharikota's window stops 11° short
+// of the plane — further than a dogleg turns in this model — so the launch
+// would not be licensed.
+//
+// The table is generated from the site data so it always describes the sites as
+// they are, and `azimuthAllowedFor` — the boolean form of `inclinationCorridor`
+// — is the single source of truth for it. The heading and the reach quoted are
+// measured from the same window, with `launchDescendingFor` choosing the heading
+// the planner would fly.
+/** Degrees a rotating-frame heading lies outside the site's window. */
+function outsideWindowDeg(site: { azimuthMin: number; azimuthMax: number }, azDeg: number): number {
+  const wrap = (d: number) => ((d % 360) + 360) % 360;
+  const deg = wrap(azDeg), lo = wrap(site.azimuthMin), hi = wrap(site.azimuthMax);
+  const inside = lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
+  return inside ? 0 : Math.min(wrap(lo - deg), wrap(deg - hi));
+}
 export const SITE_GEOMETRY: Record<string, string> = {};
 for (const v of VEHICLES) {
   const site = siteById(v.sites[0]);
   const inc = resolveTarget(orbitById('sso'), site, LAUNCH_TIME).inclination;
   if (azimuthAllowedFor(site, inc)) continue;
-  const reason = `a ${(inc * RAD).toFixed(1)}° orbit from ${site.name} needs an azimuth outside the site's `
-    + `${site.azimuthMin}–${site.azimuthMax}° range-safety window`;
+  const az = (rotatingLaunchAzimuth(site.latitude * DEG, inc, circularSpeed(R_EARTH + 300e3), launchDescendingFor(site, inc))! * RAD + 360) % 360;
+  const reason = `a ${(inc * RAD).toFixed(1)}° orbit from ${site.name} needs a ${az.toFixed(1)}° heading, `
+    + `${outsideWindowDeg(site, az).toFixed(1)}° outside the site's ${site.azimuthMin}–${site.azimuthMax}° range-safety window, which reaches `
+    + `${(maxInclinationFor(site) * RAD).toFixed(1)}° at most — further than the ${DOGLEG_LIMIT_DEG}° dogleg this model flies`;
   fill(SITE_GEOMETRY, reason, `${v.id}/sso/25`, `${v.id}/sso/50`, `${v.id}/sso/90`);
 }
 
@@ -374,7 +392,7 @@ fill(BEYOND_CAPABILITY,
   'PS1-PS4 run dry at T+908 s, suborbital at -1 293 x 204 km: +315 m/s of ideal margin and none of it left, the same limit as the 500 km row at the same payload',
   'pslvxl/iss/90');
 fill(BEYOND_CAPABILITY,
-  'PS4 is a 7.3 kN stage: it runs dry at a 26 295 km apogee (50 %, +346 m/s) and a 9 651 km one (90 %, -414 m/s)',
+  'PS4 is a 7.3 kN stage: it runs dry at a 26 287 km apogee (50 %, +346 m/s) and a 9 650 km one (90 %, -414 m/s)',
   'pslvxl/gto/50', 'pslvxl/gto/90');
 fill(BEYOND_CAPABILITY,
   'ship empty at a 31 635 km apogee of the 35 786 km target',
@@ -383,7 +401,7 @@ fill(BEYOND_CAPABILITY,
 // sun-synchronous one; at 90 % of those the second stage runs dry short of the
 // orbit. Its lower fractions are an ARCHITECTURE limit, not a capability one.
 fill(BEYOND_CAPABILITY,
-  'second stage empty at T+289 s at 155 x 324 km (LEO) and 7 x 303 km (ISS plane)',
+  'second stage empty at T+289 s at 148 x 314 km (LEO) and 14 x 276 km (ISS plane)',
   'longmarch2d/leo/90', 'longmarch2d/iss/90');
 // Electron, H3, Long March 5, Long March 3B/E, Vega-C, Atlas V 551,
 // Vulcan, Ariane 64 and H-IIA 202 have no capability exclusion at all.
@@ -421,7 +439,7 @@ fill(ARCHITECTURE,
   'soyuz21a/leo/25', 'soyuz21a/leo/50', 'soyuz21a/leo/90',
   'soyuz21a/iss/25', 'soyuz21a/iss/50', 'soyuz21a/iss/90');
 fill(ARCHITECTURE,
-  'inserts at 197-199 x 423-606 km with 0.4-1.0 km/s left in the second stage: two hypergolic stages, no restart, and an inert payload',
+  'inserts at 197-199 x 417-603 km with 0.4-1.0 km/s left in the second stage: two hypergolic stages, no restart, and an inert payload',
   'longmarch2d/leo/25', 'longmarch2d/leo/50',
   'longmarch2d/iss/25', 'longmarch2d/iss/50',
   'longmarch2d/sso/25', 'longmarch2d/sso/50', 'longmarch2d/sso/90');

@@ -1,7 +1,12 @@
 import type { LaunchSiteSpec } from '../types';
 
 export interface SiteExtra extends LaunchSiteSpec {
-  /** Use the southbound launch solution for polar / sun-synchronous targets */
+  /**
+   * The site's customary solution for polar / sun-synchronous targets: the
+   * southbound heading when true. A preference only — `launchDirection` in
+   * src/physics/mission.ts flies whichever heading the azimuth window licenses
+   * and falls back on this when the window licenses both or neither.
+   */
   descendingForPolar: boolean;
   /**
    * Highest inclination the range-safety corridor reaches, deg — the retrograde
@@ -11,12 +16,10 @@ export interface SiteExtra extends LaunchSiteSpec {
    * mission planner or removed, because `azimuthMin`/`azimuthMax` had no
    * consumer at all and `minInclination` contradicted them (Vandenberg declared
    * 60 deg against a corridor that reaches nothing below 61.6 deg). Both halves
-   * are now real: `launchDirection` in src/physics/mission.ts picks the
-   * launch solution inside the corridor (or a dogleg from its edge) and
-   * `azimuthAllowedFor` is its yes/no, the sun-synchronous gate in
-   * tests/fleet-defaults.test.ts; this field is the corridor stated as the
-   * same kind of number `minInclination` already is, so the planner can test an
-   * inclination without re-deriving an azimuth.
+   * are now real: `launchDirection` in src/physics/mission.ts flies the launch
+   * solution the window licenses, or a dogleg from its edge, and
+   * `azimuthAllowedFor` — the boolean form of `inclinationCorridor` — is the
+   * sun-synchronous gate in tests/fleet-defaults.test.ts.
    *
    * Every value here is MEASURED from the site's own corridor with the app's own
    * `rotatingLaunchAzimuth` at a 300 km circular orbit — both the ascending and
@@ -24,24 +27,21 @@ export interface SiteExtra extends LaunchSiteSpec {
    * descending one — and `tests/data-consistency.test.ts` re-measures the whole
    * table so the pair cannot drift from the corridor it describes.
    *
-   * The other half of B25 is now closed too: `inclinationCorridor` in
-   * `src/physics/mission.ts` brackets a target inclination with this pair,
-   * `planMission` exposes the verdict as `MissionPlan.inclinationReachable`,
-   * and the setup panel's pre-flight verdict reads the same function — so a
-   * target outside the corridor is reported instead of being flown and called
-   * nominal (release review 2, major #2).
+   * It is the corridor stated for a reader, not the number the planner tests.
+   * `inclinationCorridor` (and with it `planMission`, the setup panel's verdict
+   * and `azimuthAllowedFor`) takes the upper end from the azimuth window
+   * itself, in closed form (`corridorReach`), because a figure held to the
+   * window "within 0.2°" and a heading chosen from the window disagreed inside
+   * that 0.2°. The lower end is still the declared `minInclination` — the
+   * OPERATIONAL minimum, which a site may set above what its geometry allows
+   * (Taiyuan: corridor 61.2°, declared 63°) but never below it.
    *
-   * Bracketing with the pair, rather than calling `azimuthAllowedFor` from the
-   * panel, is deliberate and was measured: the two agree on the retrograde end
-   * for all fifteen sites (which is where the fleet's own `SITE_GEOMETRY` table
-   * uses the azimuth test), but at the prograde end `azimuthAllowedFor` is the
-   * raw corridor edge while `minInclination` is the OPERATIONAL minimum a site
-   * declares, and the two differ wherever a site flies less than its geometry
-   * allows — Taiyuan (corridor 61.2°, declared 63°) and, in the other
-   * direction, every site whose declared minimum is a nearly due-east launch
-   * just outside a corridor that starts at 90° (Jiuquan, Wallops, Tanegashima,
-   * Mahia). Testing the azimuth there would flag ordinary missions those sites
-   * really fly.
+   * This comment used to explain why the panel did NOT call `azimuthAllowedFor`:
+   * it flagged ordinary missions at every site whose declared minimum is a
+   * nearly due-east launch just outside a window that starts at 90° (Jiuquan,
+   * Wallops, Tanegashima, Mahia). That was the function testing only the
+   * northbound heading, not a property of those sites — the southbound mirror
+   * is inside every one of those windows — and it is fixed at the source.
    */
   maxInclination: number;
 }

@@ -531,9 +531,9 @@ screen's knife edge showed.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 197.2 × 200.4 ✓ | 198.7 × 200.6 ✓ | 197.5 × 200.1 ✓ | 151.1 × 354.1 |
-  | 250 km | 219.5 × 346.4 | 241.2 × 299.2 | 247.1 × 265.5 | 140.8 × 2 418.0 |
-  | 300 km | 143.8 × 895.4 | 144.0 × 873.2 | 114.6 × 754.5 (tanks dry) | 140.9 × 2 423.7 |
+  | 200 km | 198.5 × 200.9 ✓ | 197.6 × 200.3 ✓ | 197.9 × 200.2 ✓ | 150.8 × 355.2 |
+  | 250 km | 220.0 × 346.8 | 240.1 × 300.9 | 247.0 × 265.2 | 140.6 × 2 415.6 |
+  | 300 km | 143.5 × 894.9 | 144.1 × 874.4 | 103.8 × 729.8 (tanks dry) | 140.6 × 2 421.1 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind
@@ -543,7 +543,11 @@ screen's knife edge showed.
   rather than re-derived by hand — the Soyuz cells' perigees moved by under 1.5 km (the heaviest
   300 km cell's by 3.9 km, from 110.7 to 114.6; its apoapsis moved further, 9.2 km, from 745.3 to
   754.5) once the fairing started leaving on Soyuz's published T+157 s callout (§4) instead of
-  the heating placard, and both copies now read the post-change figures.
+  the heating placard. The engine transients (P02) moved them again — the heaviest 300 km cell
+  to 103.8 × 729.8 km, its third stage now dry before the tail-off that would have given the
+  impulse back — and Long March 2D's cells moved by up to 6 km of apoapsis when Jiuquan's 41°
+  flights started leaving on the heading the site's window licenses; no verdict changed, and
+  both copies read the current figures.
 
   That change is the second half of a fix the last wave only half made.
   `src/physics/mission.ts` used to carry its own copy in the `DIRECT_INSERTION_CEILING` doc
@@ -1028,17 +1032,19 @@ configuration, and the column that matters is whether it agrees with the outcome
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Plesetsk | target orbit T+3 624 s | 597 × 597 km | T+825 s | ok ✓ |
 | Soyuz-2.1b/Fregat · crew 7.15 t → ISS, Baikonur | break-up T+962 s (no insertion reported) | — | — | **fail** ✓ |
-| Long March 3B/E · comsat 5.5 t → GTO, Xichang | target orbit T+25 798 s | 252 × 35 724 km | T+674 s | warn ✓ |
+| Long March 3B/E · comsat 5.5 t → GTO, Xichang | target orbit T+25 797 s | 252 × 35 723 km | T+674 s | warn ✓ |
 | Ariane 64 · comsat 5.5 t → GTO, Kourou | target orbit T+7 210 s | 245 × 35 716 km | T+834 s | ok ✓ |
 | Vega-C · cubesats 300 kg → 500 km, Kourou | target orbit T+3 052 s | 498 × 498 km | T+319 s | ok ✓ |
 | PSLV-XL · earth-obs 1.75 t → 500 km, Sriharikota | target orbit T+3 451 s | 497 × 497 km | T+703 s | ok ✓ |
 
-Three rows that belong to the sweep are not in the table because the launch would not be
-licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur**,
-Vega-C to one from Kourou and PSLV-XL to one from Sriharikota all need an azimuth outside
-their site's range-safety window (§6b, range safety), and the verdict says so. The model will
-still fly the plane if asked — the geometry is reachable — which is why Soyuz-2.1b's
-sun-synchronous mission is flown here from the two sites that can licence it.
+Two rows that belong to the sweep are not in the table because the launch would not be
+licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur** and
+PSLV-XL to one from Sriharikota need a heading 8.6° and 11.3° outside their site's
+range-safety window — further than the 5° dogleg this model flies (§6b, range safety) — and the
+verdict says so. The model will still fly the plane if asked — the geometry is reachable —
+which is why Soyuz-2.1b's sun-synchronous mission is flown here from the two sites that can
+licence it. Vega-C's sun-synchronous mission from Kourou is licensed with a 1.2° dogleg and is
+flown in the fleet matrix (its `sso` rows) rather than here.
 
 Two rows are failures and both are capability limits with the shortfall measured on the plan:
 
@@ -1073,10 +1079,10 @@ every margin in this section has to be re-measured with it.*
 
 | table | rule | entries |
 | --- | --- | --- |
-| range safety (`SITE_GEOMETRY`) | the azimuth the orbit needs is outside the site's window — the launch would not be licensed | 45 |
-| `BEYOND_CAPABILITY` | the flight ends with the tanks empty, **or** the ascent stages' margin is below `ASCENT_MARGIN_REQUIRED` (+150 m/s) | 22 |
+| range safety (`SITE_GEOMETRY`) | no heading inside the site's window reaches the plane, nor one within the 5° a dogleg turns — the launch would not be licensed | 33 |
+| `BEYOND_CAPABILITY` | the flight ends with the tanks empty, **or** the ascent stages' margin is below `ASCENT_MARGIN_REQUIRED` (+150 m/s) | 23 |
 | `ARCHITECTURE` | propellant left, orbit reachable, but nothing in the stack can use it | 13 |
-| `KNOWN_GUIDANCE_FAILURES` | **defects**: Δv available, a stage able to spend it, orbit still lost or missed | 4 |
+| `KNOWN_GUIDANCE_FAILURES` | **defects**: Δv available, a stage able to spend it, orbit still lost or missed | 0 |
 
 The first and the last two rows of that table are enforced by tests, not by review:
 `azimuthAllowedFor agrees with the planned azimuth` regenerates the range-safety table from the
@@ -1092,16 +1098,30 @@ model now throttles back on the structural placard (§3), which is what a real v
 about it, but load relief does not turn a Δv shortfall into performance. The discriminator is
 the margin, not the event that ends the flight.
 
-**Range safety.** The `sso` preset needs a retrograde, roughly north-westerly or south-easterly
-azimuth (346–348° from the northern sites, 191–193° from the southern ones). Plesetsk
-(330–90°), Vostochny (340–95°), Vandenberg (147–201°), Jiuquan (90–200°), Taiyuan (144–200°)
-and Mahia (90–200°) have a window that contains it, and Kourou and Tanegashima reach it with a
-dogleg (§7); from Baikonur, Cape Canaveral, Wenchang, Sriharikota and Starbase that azimuth
-points over populated land or another country, further than a dogleg turns. The table is
-generated from the site data through `azimuthAllowedFor`, and a test asserts that the
-exclusions are exactly the sites the function rules out, so the matrix cannot be shrunk by
-quietly dropping a case. Angara-A5, Ariane 64, Electron, H-IIA, H3 and Vega-C fly `sso`
-acceptance cases (Ariane 64 at 25 and 50 %; its 90 % row is a guidance failure below).
+**Range safety.** One rule, in `inclinationCorridor`: a site can fly an inclination when a
+launch heading inside its azimuth window reaches it — the northbound solution or its southbound
+mirror (180° − A), whichever the window holds — or when one of the two lies within 5° of the
+window's edge, which the ascent then flies as a dogleg (§7); and the inclination is not below
+the site's declared minimum. Every edge carries the same 0.25° `CORRIDOR_SLACK`. The window's
+direct reach is computed from the window in closed form (`corridorReach`), `azimuthAllowedFor`
+is the boolean form of the same verdict, and `planMission` / `launchWindows` fly the heading
+`launchDirection` chooses from it. Until this wave `azimuthAllowedFor` tested only the
+northbound heading below 75°, so it rejected Tanegashima's own `leo`/`gto` presets and the ISS
+plane from Wallops, Wenchang, Tanegashima, Jiuquan and Sriharikota (known bug F01) while the
+corridor accepted them — and the planner flew that northbound heading, outside the window, in
+48 fleet rows. They now leave south-east, as those ranges really do.
+
+The `sso` preset needs a retrograde heading, roughly 341–349° or 191–199° depending on the
+site's latitude. Plesetsk (330–90°), Vostochny (340–95°), Vandenberg (147–201°), Jiuquan
+(90–200°), Taiyuan (144–200°) and Mahia (90–200°) have a window that contains one of the two.
+Kourou and Tanegashima reach the plane with a dogleg of 1.2° and 1.9° off their corridor edge,
+as their ranges really do. From Baikonur, Cape Canaveral, Wenchang, Starbase and Xichang both
+headings point over populated land or another country, and Sriharikota's window stops 11° short
+of the plane — further than a dogleg turns in this model. The table is generated from the site
+data through `azimuthAllowedFor`, and a test asserts that the exclusions are exactly the sites
+the function rules out, so the matrix cannot be shrunk by quietly dropping a case. Angara-A5,
+Ariane 64, Electron, H-IIA, H3 and Vega-C fly `sso` acceptance cases (Ariane 64 at 25 and 50 %;
+its 90 % row is a guidance failure below).
 
 **Beyond capability.** Two systematic gaps explain most of it:
 
