@@ -102,6 +102,10 @@ export interface Debris {
     missDistance?: number;
     /** a targeted return has fired its entry burn (it waits `armed` until then) */
     entryFlown?: boolean;
+    /** a tower's arms closed on the booster */
+    caught?: boolean;
+    /** the booster came down past the tower's catch height outside its arms */
+    catchPassed?: boolean;
     /** @internal the boostback solution in use and when it was made */
     guidance?: ReturnGuidanceMemory;
   };

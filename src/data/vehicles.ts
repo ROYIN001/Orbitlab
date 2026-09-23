@@ -798,7 +798,10 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['starbase', 'cape'], maxQ: 35e3, maxAccel: 40,
     maxQThrottle: { qStart: 25e3, qEnd: 25e3, throttle: 0.8 },
-    recoverable: true, recoveryReserve: 0.07, crewCapable: true,
+    // Flown back to the tower's arms Super Heavy keeps 11 %: 9 % is the least
+    // the arms catch it with (point-mass, 15.6 t to a 500 km orbit), 11 %
+    // arrives with 72 t to spare.
+    recoverable: true, recoveryReserve: 0.07, returnReserve: 0.11, crewCapable: true,
     // Very high T/W and a hot-staged ship; a shallow kick keeps max-Q inside the 35 kPa placard.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     notes: 'Fully reusable two-stage methalox system; hot-staged ship, integrated payload bay (no fairing).',

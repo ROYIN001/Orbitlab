@@ -106,7 +106,7 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
     // The view supplies frame-backed debris. Require the visible outcome event
     // as well, so accidentally supplied future landed/impact flags cannot leak.
     const landed = boosters.filter(body => events.some(event => (event.key === 'evt.boosterLanded' || event.key === 'evt.boosterLandedZone'
-      || event.key === 'evt.boosterLandedShip') && event.params?.name === body.name));
+      || event.key === 'evt.boosterLandedShip' || event.key === 'evt.boosterCaught') && event.params?.name === body.name));
     const lost = boosters.filter(body => events.some(event => event.key === 'evt.stageImpact' && event.params?.name === body.name));
     if (boosters.length === 0) recovery = 'pending';
     else if (landed.length === boosters.length) recovery = 'landed';

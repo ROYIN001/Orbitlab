@@ -30,4 +30,17 @@ describe('six-DOF return to the launch site', () => {
     // It flew the grid fins through the air and put them to work.
     expect(stage.rigid?.surfaceDeflections).toBeDefined();
   });
+
+  it('catches Super Heavy on the arms of the Starbase tower', { timeout: 600_000 }, () => {
+    const sim = flyWithReturns({ vehicleId: 'starship', siteId: 'starbase', payload: 15600, model: 'sixDof',
+      orbit: orbitById('leo'), plan: { core: { kind: 'landingZone', zoneId: 'olm' } }, tMax: 800 });
+    const booster = sim.debris.find((d) => d.recovery)!;
+    const caught = sim.events.find((e) => e.key === 'evt.boosterCaught');
+    expect(caught).toBeDefined();
+    expect(booster.recovery!.caught).toBe(true);
+    expect(booster.recovery!.missDistance!).toBeLessThan(landingZoneById('olm').radius);
+    expect(Number(caught!.params!.tiltDeg)).toBeLessThanOrEqual(5);
+    expect(Math.abs(Number(caught!.params!.verticalSpeed))).toBeLessThanOrEqual(3);
+    expect(Number(caught!.params!.horizontalSpeed)).toBeLessThanOrEqual(2);
+  });
 });

@@ -8,10 +8,11 @@ import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, RAD, DEG } from '../constants';
 import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, clone, slerpLimited } from '../vec3';
 import { atmosphere } from '../atmosphere';
 import { landingZoneById } from '../../data/landing-zones';
+import { CATCH_HORIZONTAL_SPEED, CATCH_VERTICAL_SPEED } from './return-constants';
 import { groundPositionEci } from '../orbital';
 import {
-  boostbackCommand, brakingHeight, distanceFromTarget, divertAcceleration, ENTRY_BURN_CEILING, entryStep, landingEngineCount, localGravity,
-  predictDescent, type DescentModel, type DescentState, type EntryState,
+  boostbackCommand, brakingHeight, distanceFromTarget, ENTRY_BURN_CEILING, entryStep, landingDivert, landingEngineCount, localGravity,
+  predictDescent, type DescentModel, type DescentState, type EntryState, type ReturnTarget,
 } from './return-guidance';
 import type { RigidVehicleSnapshot } from '../rigid/mass';
 import type { PartitionedRigidBody } from '../rigid/partition';
@@ -60,6 +61,9 @@ const ENTRY_MAX_TILT = 15 * DEG;
 const LANDING_MAX_TILT = 20 * DEG;
 /** Vertical speed a targeted landing burn aims to touch down at, m/s. */
 const TOUCHDOWN_SPEED = 2;
+/** …and into a tower's arms, gentler, well inside what the arms take (`CATCH_VERTICAL_SPEED`). */
+const CATCH_APPROACH_SPEED = 1;
+const touchSpeed = (target: ReturnTarget | undefined) => target?.kind === 'tower' ? CATCH_APPROACH_SPEED : TOUCHDOWN_SPEED;
 /** Fraction of the landing engines' thrust the landing burn is timed for. */
 const LANDING_PLANNED_THROTTLE = 0.7;
 /** Radius of a drone ship's deck, m (Of Course I Still Love You: 52 × 91 m). */
@@ -123,7 +127,7 @@ export class DebrisTracker {
       { stage: asStage, vehicleId: this.sim.cfg.vehicleId, consumed: this.sim.rigidRuntime!.consumed, engineFraction,
         withoutRcs: booster || undefined,
         returnGuidance: rc?.target ? { gmst0: this.sim.plan.gmst0, model: this.descentModel(d),
-          entryTargetSpeed: rc.target.kind === 'pad' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED } : undefined,
+          entryTargetSpeed: rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED } : undefined,
         runtimeOptions: { massFlowModel: this.sim.rigidRuntime!.massFlowModel,
           controlGains: rc?.target ? RETURN_CONTROL_GAINS : this.sim.rigidRuntime!.controlGains, fuelAwareCoast: !!rc?.target || undefined,
           integrationStepS: this.sim.rigidRuntime!.integrationStepS, derivativeStepS: this.sim.rigidRuntime!.derivativeStepS } });
@@ -196,9 +200,9 @@ export class DebrisTracker {
       return {
         cd: d.cd, area: d.area, j2: true,
         entry: { thrustVac: 3 * e.thrustVac, thrustSL: 3 * e.thrustSL, mdot: (3 * e.thrustVac) / (G0 * e.ispVac),
-          targetSpeed: rc.target?.kind === 'pad' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED, reserve: rc.landingReserve },
+          targetSpeed: rc.target && rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED, reserve: rc.landingReserve },
         landing: { thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: 1,
-          level: RETURN_LANDING_LEVEL, vTouch: TOUCHDOWN_SPEED, engines: () => 1 },
+          level: RETURN_LANDING_LEVEL, vTouch: touchSpeed(rc.target), engines: () => 1 },
       };
     }
     const n = e ? entryEngineCount(e, d.mass - rc.propellant, rc.landingReserve) : 0;
@@ -206,11 +210,11 @@ export class DebrisTracker {
       cd: d.cd, area: d.area, j2: !!this.sim.rigidRuntime,
       entry: e ? {
         thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
-        targetSpeed: rc.target?.kind === 'pad' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED, reserve: rc.landingReserve,
+        targetSpeed: rc.target && rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED, reserve: rc.landingReserve,
       } : undefined,
       landing: e ? {
         thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: e.count,
-        level: LANDING_PLANNED_THROTTLE, vTouch: TOUCHDOWN_SPEED,
+        level: LANDING_PLANNED_THROTTLE, vTouch: touchSpeed(rc.target),
       } : undefined,
     };
   }
@@ -227,8 +231,10 @@ export class DebrisTracker {
     if (mode.kind === 'landingZone') {
       const zone = landingZoneById(mode.zoneId);
       const lat = zone.latitude * DEG, lon = zone.longitude * DEG;
-      const alt = this.sim.groundElevation(groundPositionEci(lat, lon, 0, theta));
-      rc.target = { kind: 'pad', id: zone.id, lat, lon, alt, radius: zone.radius };
+      const ground = this.sim.groundElevation(groundPositionEci(lat, lon, 0, theta));
+      rc.target = zone.kind === 'tower'
+        ? { kind: 'tower', id: zone.id, lat, lon, alt: ground + (zone.catchHeight ?? 0), radius: zone.radius, catchHeight: zone.catchHeight ?? 0 }
+        : { kind: 'pad', id: zone.id, lat, lon, alt: ground, radius: zone.radius };
       rc.phase = 'flip';
       return;
     }
@@ -286,6 +292,11 @@ export class DebrisTracker {
       const pressure = Math.min(1, atmosphere(Math.max(0, alt)).p / 101325);
       const thrustOf = (level: number) => (rc.thrustVac - (rc.thrustVac - rc.thrustSL) * pressure) * level;
       let h = Math.min(remaining, alt < 20e3 || rc.phase === 'boostback' || rc.phase === 'flip' ? 0.1 : 0.5);
+      // The last hundred metres of a landing burn in fine steps: the burn
+      // cycles on and off below its engines' minimum thrust, and a tenth of a
+      // second of it is 1.5 m/s at the surface — the whole margin a tower's
+      // arms allow.
+      if (rc.landingStarted && alt - target.alt < 100) h = Math.min(h, 0.02);
       let level = 0;
       let dir = d.dir;
       if (rc.propellant <= 0) rc.phase = rc.phase === 'flip' || rc.phase === 'boostback' ? 'coast' : rc.phase;
@@ -331,7 +342,7 @@ export class DebrisTracker {
           dir = slerpLimited(d.dir, retro, RETURN_TURN_RATE * h);
           break;
         case 'entry': {
-          const targetSpeed = target.kind === 'pad' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED;
+          const targetSpeed = target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED;
           const step = entryStep(rc.entryFlown ? 'burning' : 'armed', vDown > 0, alt, speed, rc.propellant,
             { targetSpeed, reserve: rc.landingReserve });
           if (step.burn) {
@@ -365,7 +376,7 @@ export class DebrisTracker {
           const T = thrustOf(1);
           const minimum = rc.engine?.minThrottle ?? 1;
           if (!rc.landingStarted && vDown > 0 && alt < 20e3) {
-            const stop = brakingHeight({ alt, surfaceAlt: target.alt, vDown, vTouch: TOUCHDOWN_SPEED, mass: d.mass,
+            const stop = brakingHeight({ alt, surfaceAlt: target.alt, vDown, vTouch: touchSpeed(target), mass: d.mass,
               thrust: (y) => (rc.thrustVac - (rc.thrustVac - rc.thrustSL) * Math.min(1, atmosphere(Math.max(0, y)).p / 101325)) * LANDING_PLANNED_THROTTLE,
               flow: rc.mdot * LANDING_PLANNED_THROTTLE, cd: d.cd, area: d.area, gravity: gLocal });
             if (hAgl < 1.1 * stop + 10) {
@@ -374,11 +385,10 @@ export class DebrisTracker {
             }
           }
           if (rc.landingStarted) {
-            const aV = gLocal + Math.max(0, vDown * vDown - TOUCHDOWN_SPEED ** 2) / (2 * hAgl);
-            const tgo = (2 * hAgl) / Math.max(1, vDown + TOUCHDOWN_SPEED);
-            let aH = divertAcceleration(d.r, d.v, target, gmst0, t, tgo);
-            const cap = aV * Math.tan(LANDING_MAX_TILT);
-            if (norm(aH) > cap) aH = scale(normalize(aH), cap);
+            const vTouch = touchSpeed(target);
+            const aV = gLocal + Math.max(0, vDown * vDown - vTouch ** 2) / (2 * hAgl);
+            const tgo = (2 * hAgl) / Math.max(1, vDown + vTouch);
+            const aH = landingDivert(d.r, d.v, target, gmst0, t, tgo, aV, LANDING_MAX_TILT);
             const aCmd = add(scale(up, aV), aH);
             const want = (d.mass * norm(aCmd)) / Math.max(1, T);
             dir = normalize(aCmd);
@@ -404,9 +414,43 @@ export class DebrisTracker {
       remaining -= h;
       const altN = norm(d.r) - R_EARTH;
       const ground = sim.groundElevation(d.r);
+      if (target.kind === 'tower' && !rc.catchPassed && altN <= target.alt) this.catchAttempt(d, t);
+      if (!d.alive) break;
       if (altN <= ground) this.touchdown(d, t);
       else if (t - d.createdAt > 3 * 3600) d.alive = false;
     }
+  }
+
+  /**
+   * The booster's base has come down to the height the tower's arms hold it
+   * at. Inside their envelope, slow and upright enough, the arms close on it
+   * (`evt.boosterCaught`); too fast, it hits them. Outside the envelope it
+   * falls on past them to the ground.
+   */
+  private catchAttempt(d: Debris, t: number): void {
+    const rc = d.recovery!, target = rc.target!;
+    const miss = distanceFromTarget(d.r, target, this.sim.plan.gmst0, t);
+    if (miss > target.radius) { rc.catchPassed = true; return; }
+    const up = normalize(d.r);
+    const ground = sub(d.v, cross(v3(0, 0, OMEGA_EARTH), d.r));
+    const vertical = -dot(ground, up), horizontal = norm(sub(ground, scale(up, -vertical)));
+    const caught = vertical <= CATCH_VERTICAL_SPEED && horizontal <= CATCH_HORIZONTAL_SPEED;
+    this.finishCatch(d, t, miss, caught);
+  }
+
+  private finishCatch(d: Debris, t: number, miss: number, caught: boolean): void {
+    const rc = d.recovery!;
+    d.alive = false;
+    rc.burning = false;
+    rc.missDistance = miss;
+    const ll = eciToLatLon(d.r, this.sim.plan.gmst0 + OMEGA_EARTH * t);
+    d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
+    d.outcome = caught ? 'landed' : 'impact';
+    rc.landed = caught;
+    rc.caught = caught;
+    const at = { lat: +d.impact.lat.toFixed(2), lon: +d.impact.lon.toFixed(2) };
+    if (caught) this.sim.event('evt.boosterCaught', 'success', { name: d.name, ...at });
+    else this.sim.event('evt.stageImpact', 'info', { name: d.name, ...at, miss: Math.round(miss) });
   }
 
   /** Contact with the ground or the sea: a landing, on target or not, or an impact. */
@@ -421,7 +465,8 @@ export class DebrisTracker {
     const miss = distanceFromTarget(d.r, target, this.sim.plan.gmst0, t);
     rc.missDistance = miss;
     const at = { lat: +d.impact.lat.toFixed(2), lon: +d.impact.lon.toFixed(2) };
-    const soft = speed < 12;
+    // A booster without legs, meant for a tower's arms, does not land on the ground.
+    const soft = speed < 12 && target.kind !== 'tower';
     const onTarget = miss <= target.radius;
     // Off a drone ship's deck is the open sea.
     if (soft && (onTarget || target.kind === 'pad')) {
@@ -467,7 +512,7 @@ export class DebrisTracker {
         }
         for (const event of result.events) {
           const contactEvent = event.key === 'evt.stageImpact' || event.key === 'evt.boosterLanded'
-            || event.key === 'evt.boosterLandedZone' || event.key === 'evt.boosterLandedShip';
+            || event.key === 'evt.boosterLandedZone' || event.key === 'evt.boosterLandedShip' || event.key === 'evt.boosterCaught';
           const params = contactEvent && d.impact
             ? { ...event.params, lat: +d.impact.lat.toFixed(2), lon: +d.impact.lon.toFixed(2) }
             : event.params;

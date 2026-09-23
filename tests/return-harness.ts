@@ -12,6 +12,8 @@ import type { MissionConfig, RecoveryPlan } from '../src/types';
 export function flyWithReturns(p: {
   vehicleId: string; siteId?: string; payload: number; orbit: MissionConfig['orbit']; plan?: RecoveryPlan;
   model: 'pointMass' | 'sixDof'; tMax?: number;
+  /** longest step to take, s (a probe sampling the flight finely) */
+  maxDt?: number;
 }): Simulation {
   const spec = vehicleById(p.vehicleId);
   const dynamics = p.model === 'sixDof' ? defaultDynamics(p.vehicleId) : undefined;
@@ -23,7 +25,7 @@ export function flyWithReturns(p: {
   }, { headless: true });
   const tMax = p.tMax ?? 1200;
   while (sim.state.t < tMax && !sim.isFailed()) {
-    sim.step(sim.suggestedDt());
+    sim.step(Math.min(p.maxDt ?? Infinity, sim.suggestedDt()));
     const returning = sim.debris.filter((d) => d.recovery);
     if (returning.length && returning.every((d) => !d.alive) && sim.state.t > 300) break;
   }

@@ -410,6 +410,13 @@ separation and stationed on the trajectory that leaves, it lands 0.7 m from the 
 |---|---|
 | tests/rigid-return.test.ts — Falcon 9, Bandwagon-1, first stage → LZ-1 | landed, 0.8 m, strict contact gate, about 60 s |
 | tests/heavy/falcon-heavy-returns.test.ts — Arabsat-6A, side boosters → LZ-1, LZ-2; core → drone ship | landed 0.8 / 0.8 / 0.7 m, about 2.5 min |
+| tests/rigid-return.test.ts — Starship, Super Heavy → the Starbase tower's arms | caught 0.3 m off, 2.4 m/s down, 0.45 m/s across, 0.5°, about 50 s |
+
+Super Heavy needed two more: its inner three engines cannot throttle below its weight, so the
+end of the burn is flown on as many of them as can hover it (two, then one) instead of a blind
+coast to a single restart; and the divert is solved over no less than 8 s and faded out over
+the last 3 s, after a divert asked to finish in a second or two outran the attitude loop and
+oscillated to 19° over the arms.
 
 Limits: one wind state (calm) and one launch per flight is measured; the fins' lift slope and
 travel, the flip on the centre engine and the drone ship's station are estimates, and the

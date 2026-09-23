@@ -1,5 +1,6 @@
 /**
- * Where a returning first stage is flown back to.
+ * Where a returning first stage is flown back to: two landing pads at Cape
+ * Canaveral and the tower that catches Super Heavy at Starbase.
  *
  * Landing Zones 1 and 2 are SpaceX's two landing pads at Cape Canaveral, on
  * the old Launch Complex 13, about 9 km south of SLC-40 and 15 km south of
@@ -20,14 +21,29 @@ export interface LandingZoneSpec {
   /** degrees */
   latitude: number;
   longitude: number;
-  kind: 'pad';
-  /** radius of the landing surface, m: a touchdown further out has missed it */
+  /** a pad to land on, or a launch tower whose arms catch the booster */
+  kind: 'pad' | 'tower';
+  /**
+   * Radius of the landing surface, m: a touchdown further out has missed it.
+   * For a tower, how far off the tower's catch point the booster's axis may
+   * be for the arms to close on it.
+   */
   radius: number;
+  /** a tower's arms hold the booster with its base this high above the ground, m */
+  catchHeight?: number;
 }
 
 export const LANDING_ZONES: readonly LandingZoneSpec[] = [
   { id: 'lz1', name: 'Landing Zone 1', siteIds: ['cape', 'ksc39a'], latitude: 28.48575, longitude: -80.54294, kind: 'pad', radius: 43 },
   { id: 'lz2', name: 'Landing Zone 2', siteIds: ['cape', 'ksc39a'], latitude: 28.48775, longitude: -80.54494, kind: 'pad', radius: 43 },
+  // Starbase's launch tower catches Super Heavy on the chopsticks, over the
+  // launch mount it lifted off from, so the catch point is the pad itself
+  // (the site's coordinates in src/data/sites.ts, which is where the mount is
+  // drawn). The arms take the booster by the catch pins below its grid fins,
+  // about 64 m up a 71 m booster; closed at about 110 m that holds its base
+  // 46 m up, some 13 m above the mount (an estimate: the catch height is not
+  // published). A 4 m envelope for the arms to close on is an estimate too.
+  { id: 'olm', name: 'Starbase launch tower', siteIds: ['starbase'], latitude: 25.997, longitude: -97.155, kind: 'tower', radius: 4, catchHeight: 46 },
 ];
 
 export function landingZoneById(id: string): LandingZoneSpec {

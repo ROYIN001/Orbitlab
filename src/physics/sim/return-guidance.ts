@@ -30,16 +30,19 @@ import { enuFrame, groundPositionEci } from '../orbital';
 
 /** A landing site fixed to the Earth. */
 export interface ReturnTarget {
-  kind: 'pad' | 'droneShip';
+  /** a landing pad, a drone ship's deck, or a launch tower's catch arms */
+  kind: 'pad' | 'droneShip' | 'tower';
   /** landing zone id, or 'droneShip' */
   id: string;
   /** rad */
   lat: number;
   lon: number;
-  /** height of the landing surface above the mean sphere, m */
+  /** height of the landing surface above the mean sphere, m — for a tower, where the arms hold the booster's base */
   alt: number;
-  /** radius of the landing surface, m */
+  /** radius of the landing surface, m (for a tower, the arms' catch envelope) */
   radius: number;
+  /** a tower's catch point above the ground under it, m */
+  catchHeight?: number;
 }
 
 /** What the returning stage is, as far as its descent is concerned. */
@@ -351,6 +354,39 @@ export function divertAcceleration(r: Vec3, v: Vec3, target: ReturnTarget, gmst0
   const vGround = horizontal(sub(v, cross(OMEGA, r)));
   const tg = Math.max(1, tgo);
   return add(scale(dr, 6 / (tg * tg)), scale(vGround, -4 / tg));
+}
+
+/**
+ * Seconds of a landing burn flown upright at the end: the divert aims to be
+ * over the target this long before touchdown and its lean fades out over the
+ * same time, so the stage arrives vertical and not still sliding sideways —
+ * which a tower's arms, catching at under 5° and 2 m/s, cannot take.
+ */
+export const UPRIGHT_S = 3;
+
+/**
+ * Shortest time-to-go the divert is solved over, s. The law's gains grow as
+ * 1/t², and a divert asked to finish in a few seconds outruns the attitude
+ * loop that has to lean the stage for it: a Super Heavy over the arms was
+ * leaning 19° within three seconds, chasing its own overshoot. At 8 s the
+ * horizontal loop closes at about 0.3 rad/s with a damping of 0.8, well
+ * inside the attitude loop's bandwidth.
+ */
+export const DIVERT_MIN_TGO = 8;
+
+/**
+ * The landing burn's divert: the zero-effort-miss law aimed `UPRIGHT_S`
+ * seconds early (over no less than `DIVERT_MIN_TGO`), held to `maxTilt` off
+ * the vertical deceleration `aV`, and faded to nothing over the last
+ * `UPRIGHT_S` seconds.
+ */
+export function landingDivert(r: Vec3, v: Vec3, target: ReturnTarget, gmst0: number, t: number,
+  tgo: number, aV: number, maxTilt: number): Vec3 {
+  const a = divertAcceleration(r, v, target, gmst0, t, Math.max(DIVERT_MIN_TGO, tgo - UPRIGHT_S));
+  const fade = Math.max(0, Math.min(1, (tgo - 0.5) / (UPRIGHT_S - 0.5)));
+  const cap = aV * Math.tan(maxTilt) * fade;
+  const size = norm(a);
+  return size > cap ? scale(a, cap / Math.max(1e-12, size)) : a;
 }
 
 /** Horizontal distance from the target, m. */

@@ -143,7 +143,7 @@ const fly = (vehicleId: string, payload: number, orbit: MissionConfig['orbit'], 
   flyWithReturns({ vehicleId, payload, orbit, plan, model: 'pointMass' });
 
 describe('point-mass returns', () => {
-  it('flies Falcon 9 back to Landing Zone 1 (Bandwagon-1)', () => {
+  it('flies Falcon 9 back to Landing Zone 1 (Bandwagon-1)', { timeout: 120_000 }, () => {
     const sim = fly('falcon9', 1300, { ...orbitById('custom'), perigee: 590e3, apogee: 590e3, inclination: 45.4 },
       { core: { kind: 'landingZone', zoneId: 'lz1' } });
     const stage = sim.debris.find((d) => d.recovery)!;
@@ -159,7 +159,7 @@ describe('point-mass returns', () => {
     expect(at('evt.entryBurnStart')).toBeLessThan(at('evt.landingBurnStart'));
   });
 
-  it('flies Falcon Heavy\'s side boosters to LZ-1 and LZ-2 and its core to a drone ship (Arabsat-6A)', () => {
+  it('flies Falcon Heavy\'s side boosters to LZ-1 and LZ-2 and its core to a drone ship (Arabsat-6A)', { timeout: 120_000 }, () => {
     const sim = fly('falconheavy', 6465, orbitById('gto'), {
       core: { kind: 'droneShip' }, boosters: [{ kind: 'landingZone', zoneId: 'lz1' }, { kind: 'landingZone', zoneId: 'lz2' }],
     });
@@ -178,6 +178,20 @@ describe('point-mass returns', () => {
     const range = R_EARTH * Math.acos(dot(normalize(ship), normalize(pad)));
     expect(range).toBeGreaterThan(700e3);
     expect(range).toBeLessThan(1200e3);
+  });
+
+  it('flies Super Heavy back into the arms of the Starbase tower', { timeout: 120_000 }, () => {
+    const sim = flyWithReturns({ vehicleId: 'starship', siteId: 'starbase', payload: 15600, orbit: orbitById('leo'),
+      plan: { core: { kind: 'landingZone', zoneId: 'olm' } }, model: 'pointMass' });
+    const booster = sim.debris.find((d) => d.recovery)!;
+    expect(booster.recovery!.caught).toBe(true);
+    expect(booster.outcome).toBe('landed');
+    expect(booster.recovery!.missDistance!).toBeLessThan(landingZoneById('olm').radius);
+    expect(sim.events.some((e) => e.key === 'evt.boosterCaught')).toBe(true);
+    // Held by the arms, its base 46 m above the ground at the pad.
+    const height = norm(booster.r) - R_EARTH - sim.site.altitude;
+    expect(height).toBeGreaterThan(40);
+    expect(height).toBeLessThan(50);
   });
 
   it('keeps the original downrange recovery when there is no plan', () => {

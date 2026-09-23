@@ -1357,8 +1357,8 @@ boostback and burns of §8.1.
 
 A recovery plan (`MissionConfig.recoveryPlan`, `src/types.ts`) names where each recovered body
 goes: a **landing zone** near the launch site (`src/data/landing-zones.ts`: Landing Zones 1 and 2
-at Cape Canaveral, 86 m pads about 300 m apart, 9 km south of SLC-40 and 15 km south of LC-39A)
-or a **drone ship**. Without a plan the original model above is flown unchanged. A plan changes
+at Cape Canaveral, 86 m pads about 300 m apart, 9 km south of SLC-40 and 15 km south of LC-39A;
+the Starbase launch tower, whose arms catch Super Heavy) or a **drone ship**. Without a plan the original model above is flown unchanged. A plan changes
 the propellant reserve too: a body flown back to a landing zone keeps the vehicle's
 `returnReserve` (15 % for Falcon 9 and Falcon Heavy; 13 % is the least that lands Bandwagon-1 on
 LZ-1 in the point-mass model, and 12 % leaves Arabsat-6A's side boosters short of their
@@ -1417,7 +1417,32 @@ them with its own actuators:
 
 A touchdown within the pad's radius (43 m; a drone ship's deck, 30 m) is a landing on the
 target (`evt.boosterLandedZone`, `evt.boosterLandedShip`); a soft touchdown off a pad is a
-landing beside it, and off a ship's deck is the sea. Measured (tests/recovery-return.test.ts,
+landing beside it, and off a ship's deck is the sea.
+
+**The tower catch.** Super Heavy flies back to the Starbase launch tower, whose arms take it by
+the catch pins below its grid fins. The catch point is the pad itself, over the launch mount,
+with the booster's base 46 m above the ground (an estimate — the catch height is not
+published). The landing burn stops on that height instead of the ground, aiming at 1 m/s, and
+the arms close when the base reaches it within 4 m of the tower's catch point, falling at no
+more than 3 m/s, sliding at no more than 2 m/s, and — in six-DOF — tilted no more than 5° and
+turning no faster than 3 °/s (all estimates); caught, the booster stays in the arms
+(`evt.boosterCaught`). Too fast, it hits them; outside the envelope it falls past them, and a
+booster with no legs does not land on the ground. Two things the catch needed that a pad does
+not:
+
+- **A burn that can hover.** Super Heavy's three inner Raptors at their lowest thrust are
+  heavier than the empty booster (2.76 MN against 2.45 MN), so the burn would coast blind to a
+  single restart — the Falcon stage's answer — and drift out of the arms' envelope with no
+  thrust to steer. It flies the end of the burn on as many of the three as the thrust asked for
+  allows (two, then one), switching only when the lit set can no longer fly it.
+- **An upright arrival.** The divert aims to be over the target three seconds before touchdown
+  and its lean fades out over those seconds, and it is solved over no less than eight seconds:
+  the zero-effort-miss gains grow as 1/t², and asked to finish in a second or two they outran the
+  attitude loop that has to lean the stage, which then oscillated to 19° over the arms.
+
+Super Heavy boosts back on its inner thirteen engines and turns on the inner three. Flown back
+to the tower it keeps 11 % of its propellant (`returnReserve`): 9 % is the least the arms catch
+it with in the point-mass model, and 11 % arrives with 72 t to spare. Measured (tests/recovery-return.test.ts,
 tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 
 | Flight | Model | Body | Miss |
@@ -1428,6 +1453,8 @@ tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 | | | core → drone ship, ~930 km downrange | 0.0 m |
 | | six-DOF | side boosters → LZ-1, LZ-2 | 0.8 m, 0.8 m |
 | | | core → drone ship | 0.7 m |
+| Starship (15.6 t, 500 km) | point mass | Super Heavy → tower | 0.0 m, caught |
+| | six-DOF | Super Heavy → tower | 0.3 m, caught at 2.4 m/s down, 0.45 m/s across, 0.5° |
 
 The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
 real flight.

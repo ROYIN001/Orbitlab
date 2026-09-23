@@ -13,20 +13,22 @@ import { RigidRuntime, type RigidRuntimeOptions } from './runtime';
 import type { RigidState } from './integrator';
 import { quatRotate } from './math';
 import { eciToLatLon } from '../orbital';
+import { CATCH_HORIZONTAL_SPEED, CATCH_VERTICAL_SPEED } from '../sim/return-constants';
 import { minimumBurnDistance, TERMINAL_PLANNED_THROTTLE_FRACTION, TERMINAL_RESTART } from './recovery-guidance';
 import { detachedAeroTable, GRID_FIN_SLOPE_PER_M2 } from './aero-tables';
 import { gridFinSurfaces, type ControlSurfaceSpec } from './surfaces';
 import type { ControlGains } from './control';
 import {
-  airVelocityAtDescent, boostbackCommand, brakingHeight, distanceFromTarget, divertAcceleration, ENTRY_BURN_CEILING, entryStep, predictDescent,
+  airVelocityAtDescent, boostbackCommand, brakingHeight, distanceFromTarget, ENTRY_BURN_CEILING, entryStep, landingDivert, predictDescent,
   type DescentModel, type EntryState, type ReturnTarget,
 } from '../sim/return-guidance';
 
 /**
  * The stages the rigid model flies back: every Falcon first stage — Falcon
- * 9's, and Falcon Heavy's core and side boosters, which are the same stage.
+ * 9's, and Falcon Heavy's core and side boosters, which are the same stage —
+ * and Starship's Super Heavy.
  */
-const RIGID_RECOVERABLE = new Set(['falcon9:s1', 'falconheavy:core', 'falconheavy:side']);
+const RIGID_RECOVERABLE = new Set(['falcon9:s1', 'falconheavy:core', 'falconheavy:side', 'starship:superheavy']);
 
 /**
  * Attitude limits of a stage flown back to a target: it turns round on its
@@ -66,6 +68,9 @@ export const RETURN_LANDING_LEVEL = 0.8;
 /** A drone-ship stage's turn after separation is done within this angle and rate. */
 const SHIP_FLIP_DONE_ANGLE = 3 * DEG;
 const SHIP_FLIP_DONE_RATE = 0.2 * DEG;
+/** Tilt and turn rate the tower's arms can take a booster at (estimates). */
+const CATCH_TILT = 5 * DEG;
+const CATCH_RATE = 3 * DEG;
 /** Dynamic pressure below which the grid fins are not asked to steer, Pa. */
 const AERO_STEER_MIN_Q = 500;
 /** Largest angle of attack the aerodynamic steering asks for. */
@@ -221,7 +226,7 @@ export class RigidDebrisRuntime {
     if (downward > 0 && rc.phase === 'coast' && height < 70000) rc.phase = 'entry';
     if (rc.phase === 'entry') {
       if (rc.propellant > rc.landingReserve && height > 25000 && speed > 1400) {
-        throttle = 1; engines = [8, 0, 4]; // Centre and opposing ring engines.
+        throttle = 1; engines = this.trio; // Centre and opposing ring engines.
       } else rc.phase = 'landing';
     }
     let nose = downward > 0 && speed > 20 ? scale(air, -1 / speed) : up;
@@ -247,14 +252,21 @@ export class RigidDebrisRuntime {
     let nose = coastNose, throttle = 0, engines: number[] = [];
     if ((downward > 0 || this.terminalCoast) && height < 20000) {
       const g = MU_EARTH / norm(this.state.r) ** 2;
-      const thrust = engineThrust(stage.engine, atmosphere(height).p) * this.engineHealth(8);
+      const thrust = engineThrust(stage.engine, atmosphere(height).p) * this.health(this.centre);
       const deceleration = Math.max(0.1, thrust / this.snapshot.mass - g);
       const stopDistance = Math.max(0, (downward ** 2 - 4) / (2 * deceleration));
       if (rc.landingStarted || contact.tailClearance < 1.15 * stopDistance + 20) {
         rc.landingStarted = true;
         const groundDownward = -contact.verticalSpeed;
         const demandedAcceleration = Math.max(0, g + (groundDownward ** 2 - 4) / (2 * Math.max(1, contact.tailClearance)));
-        const requestedThrottle = thrust > 0 ? this.snapshot.mass * demandedAcceleration / thrust : 0;
+        // Super Heavy's three inner engines cannot throttle below its weight;
+        // two of them, or one, can. Fly the burn on as many of them as the
+        // thrust asked for allows, so it can hover over the arms instead of
+        // coasting blind to a single restart.
+        const set = this.landingSet === 'one' && !this.terminalCoast ? this.hoverSet(this.snapshot.mass * demandedAcceleration, height) : this.finalSet;
+        this.finalSet = set;
+        const setThrust = set === this.centre ? thrust : engineThrust(stage.engine, atmosphere(height).p) * this.health(set);
+        const requestedThrottle = setThrust > 0 ? this.snapshot.mass * demandedAcceleration / setThrust : 0;
         const minimumThrottle = stage.engine.minThrottle ?? 1;
         // A low-mass stage cannot hover below minimum thrust. A single latched
         // terminal coast/restart replaces rapid on/off pulses. The final burn
@@ -267,8 +279,8 @@ export class RigidDebrisRuntime {
             // go down as well as up once it is lit (TERMINAL_PLANNED_THROTTLE_FRACTION).
             const planned = minimumThrottle + TERMINAL_PLANNED_THROTTLE_FRACTION * (1 - minimumThrottle);
             const brakingDistance = minimumBurnDistance({ massKg: this.snapshot.mass, propellantKg: rc.propellant,
-              downwardMs: groundDownward, minimumThrustN: thrust * planned,
-              minimumFlowKgS: engineMassFlow(stage.engine) * planned * this.engineHealth(8),
+              downwardMs: groundDownward, minimumThrustN: setThrust * planned,
+              minimumFlowKgS: engineMassFlow(stage.engine) * planned * this.health(set),
               gravityMs2: g + dot(cross(EARTH_RATE, cross(EARTH_RATE, this.state.r)), up),
               dragKgM: 0.5 * density * this.snapshot.aero.referenceArea * this.snapshot.aero.cdMach[0][1],
               windUpMs: downward - groundDownward, ...this.terminalRestart });
@@ -283,7 +295,7 @@ export class RigidDebrisRuntime {
               ? Number(sinceIgnition >= this.terminalRestart.ignitionDelayS)
               : clamp((sinceIgnition - this.terminalRestart.ignitionDelayS) / this.terminalRestart.thrustRiseS, 0, 1));
         } else throttle = clamp(requestedThrottle, minimumThrottle, 1);
-        engines = throttle > 0 ? [8] : [];
+        engines = throttle > 0 ? set : [];
         // A landing targets zero surface-relative drift. Wind still enters the
         // actual aerodynamic loads; following zero airspeed would land drifting
         // downwind even when the vehicle tracked that command perfectly.
@@ -292,11 +304,15 @@ export class RigidDebrisRuntime {
         // With a target, the zero-effort-miss divert over the time the
         // constant deceleration takes to reach the ground.
         const lateral = target && this.options.returnGuidance
-          ? divertAcceleration(this.state.r, this.state.v, target, this.options.returnGuidance.gmst0, time,
-            (2 * Math.max(1, contact.tailClearance)) / Math.max(1, groundDownward + 2))
+          ? landingDivert(this.state.r, this.state.v, target, this.options.returnGuidance.gmst0, time,
+            (2 * Math.max(1, contact.tailClearance)) / Math.max(1, groundDownward + 2), demandedAcceleration, LANDING_MAX_TILT)
           : scale(horizontal, -0.35);
         const lateralLimit = demandedAcceleration * Math.tan(target ? LANDING_MAX_TILT : 15 * DEG);
         nose = normalize(add(scale(up, demandedAcceleration), norm(lateral) > lateralLimit ? scale(normalize(lateral), lateralLimit) : lateral));
+        // Engines off in the terminal coast, a lean only turns the body into
+        // the airflow and its lift slides it sideways: a targeted stage falls
+        // straight into the air until the restart.
+        if (target && throttle === 0) nose = coastNose;
       }
       return { nose, throttle, engines };
     }
@@ -322,13 +338,13 @@ export class RigidDebrisRuntime {
     const height = Math.max(0, norm(this.state.r) - R_EARTH);
     const g = MU_EARTH / norm(this.state.r) ** 2;
     const perEngine = engineThrust(stage.engine, atmosphere(height).p);
-    const one = perEngine * this.engineHealth(8);
-    const three = perEngine * this.trio.reduce((sum, i) => sum + this.engineHealth(i), 0);
+    const one = perEngine * this.health(this.centre);
+    const three = perEngine * this.health(this.trio);
     if (!rc.landingStarted) {
       if (!(downward > 0 && height < 20000)) return { nose: this.aeroSteerNose(time, retro), throttle: 0, engines: [] };
       const braking = contact.tailClearance < 1.1 * brakingHeight({ alt: height, surfaceAlt: height - contact.tailClearance, vDown: downward,
-        vTouch: 2, mass: this.snapshot.mass, thrust: (y) => engineThrust(stage.engine, atmosphere(Math.max(0, y)).p) * this.engineHealth(8) * RETURN_LANDING_LEVEL,
-        flow: engineMassFlow(stage.engine) * this.engineHealth(8) * RETURN_LANDING_LEVEL, cd: d.cd, area: d.area, gravity: g }) + 10;
+        vTouch: 2, mass: this.snapshot.mass, thrust: (y) => engineThrust(stage.engine, atmosphere(Math.max(0, y)).p) * this.health(this.centre) * RETURN_LANDING_LEVEL,
+        flow: engineMassFlow(stage.engine) * this.health(this.centre) * RETURN_LANDING_LEVEL, cd: d.cd, area: d.area, gravity: g }) + 10;
       const divert = !braking && this.divertNeedsTime(time, contact, downward, three, g);
       if (!braking && !divert) return { nose: this.aeroSteerNose(time, retro), throttle: 0, engines: [] };
       rc.landingStarted = true;
@@ -337,10 +353,8 @@ export class RigidDebrisRuntime {
     if (this.landingSet === 'three') {
       const groundDownward = -contact.verticalSpeed;
       const aV = Math.max(0, g + (groundDownward ** 2 - 4) / (2 * Math.max(1, contact.tailClearance)));
-      let lateral = divertAcceleration(this.state.r, this.state.v, target, rg.gmst0, time,
-        (2 * Math.max(1, contact.tailClearance)) / Math.max(1, groundDownward + 2));
-      const cap = aV * Math.tan(LANDING_MAX_TILT);
-      if (norm(lateral) > cap) lateral = scale(normalize(lateral), cap);
+      const lateral = landingDivert(this.state.r, this.state.v, target, rg.gmst0, time,
+        (2 * Math.max(1, contact.tailClearance)) / Math.max(1, groundDownward + 2), aV, LANDING_MAX_TILT);
       const wanted = add(scale(up, aV), lateral);
       const force = this.snapshot.mass * norm(wanted);
       if (force > 0.95 * one) {
@@ -460,9 +474,40 @@ export class RigidDebrisRuntime {
     return { nose: command.nose, throttle, engines };
   }
 
-  /** The centre engine and the entry-burn trio of a Falcon octaweb (engine 8 in the middle, 0 and 4 opposite on the ring). */
-  private readonly centre = [8];
-  private readonly trio = [8, 0, 4];
+  /**
+   * The engines a returning stage lights. A Falcon octaweb: the centre engine
+   * (8) and the entry-burn trio, centre and the two opposite on the ring (0
+   * and 4). Super Heavy: the inner three, and the inner thirteen it boosts
+   * back and starts its landing burn on.
+   */
+  private get centre(): number[] { return this.options.stage?.id === 'superheavy' ? [0, 1, 2] : [8]; }
+  private get trio(): number[] { return this.options.stage?.id === 'superheavy' ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [8, 0, 4]; }
+  /** The engine set the landing burn is on (for the terminal coast and restart). */
+  private finalSet: number[] = [];
+  private get isSuperHeavy(): boolean { return this.options.stage?.id === 'superheavy'; }
+  /**
+   * The engines to land on for a thrust of `force`: for a Falcon the centre
+   * engine; for Super Heavy the most of its three inner engines whose lowest
+   * thrust is still under `force`, falling back to one.
+   */
+  private hoverSet(force: number, height: number): number[] {
+    if (!this.isSuperHeavy) return this.centre;
+    const stage = this.options.stage!;
+    const per = engineThrust(stage.engine, atmosphere(Math.max(0, height)).p), minimum = stage.engine.minThrottle ?? 1;
+    const sets = [[0, 1, 2], [0, 1], [0]];
+    // Keep the engines lit while they can fly the thrust asked for: switching
+    // on every small change is a step in thrust and in torque each time.
+    const current = sets.findIndex(set => set.length === this.finalSet.length);
+    if (current >= 0) {
+      const set = sets[current], lo = per * this.health(set) * minimum, hi = per * this.health(set);
+      if (force >= 0.97 * lo && force <= hi) return set;
+      if (force > hi && current > 0) return sets[current - 1];
+    }
+    for (const set of sets) if (per * this.health(set) * minimum <= force) return set;
+    return [0];
+  }
+  /** Healthy engines among `engines`, as a count. */
+  private health(engines: readonly number[]): number { return engines.reduce((sum, i) => sum + this.engineHealth(i), 0); }
 
   private entryState(): EntryState {
     const rc = this.debris.recovery!;
@@ -520,7 +565,7 @@ export class RigidDebrisRuntime {
         if (!g.trim && g.dvNeeded < BOOSTBACK_TRIM_DV) g.trim = true;
         // The last metres per second on the centre engine, throttled down so
         // one control step does not overshoot them.
-        const one = engineThrust(stage.engine, atmosphere(Math.max(0, height)).p) * this.engineHealth(8) / this.snapshot.mass;
+        const one = engineThrust(stage.engine, atmosphere(Math.max(0, height)).p) * this.health(this.centre) / this.snapshot.mass;
         const throttle = g.trim ? clamp(g.dvNeeded / Math.max(1e-6, one * 1.0), minimum, 1) : 1;
         return { nose: g.dir, throttle, engines: g.trim ? this.centre : this.trio };
       }
@@ -536,7 +581,7 @@ export class RigidDebrisRuntime {
         if (step.burn) {
           if (!rc.entryFlown) this.raised.push({ key: 'evt.entryBurnStart', severity: 'info', params: { name: d.name } });
           rc.entryFlown = true;
-          const thrust = this.trio.reduce((sum, i) => sum + this.engineHealth(i), 0)
+          const thrust = this.health(this.trio)
             * engineThrust(stage.engine, atmosphere(Math.max(0, height)).p);
           const aT = thrust / this.snapshot.mass;
           const g = this.solution(time, RETURN_REPLAN_S);
@@ -559,7 +604,10 @@ export class RigidDebrisRuntime {
       }
       case 'landing': {
         const wasStarted = !!rc.landingStarted;
-        const landing = this.targetedLanding(time, contact, retro);
+        // A tower's catch point is the surface this burn stops on.
+        const surface = rc.target!.kind === 'tower' && !rc.catchPassed
+          ? { ...contact, tailClearance: contact.tailClearance - (rc.target!.catchHeight ?? 0) } : contact;
+        const landing = this.targetedLanding(time, surface, retro);
         if (!wasStarted && rc.landingStarted) this.raised.push({ key: 'evt.landingBurnStart', severity: 'info', params: { name: d.name } });
         return landing ?? { nose: retro, throttle: 0, engines: [] };
       }
@@ -583,8 +631,9 @@ export class RigidDebrisRuntime {
       if (target && rg) {
         miss = distanceFromTarget(contact.r, target, rg.gmst0, contactTime);
         d.recovery!.missDistance = miss;
-        // Off a drone ship's deck is the open sea.
-        if (target.kind === 'droneShip' && miss > target.radius) landed = false;
+        // Off a drone ship's deck is the open sea; a booster meant for a
+        // tower's arms has no legs to land on the ground with.
+        if ((target.kind === 'droneShip' && miss > target.radius) || target.kind === 'tower') landed = false;
       }
       const onTarget = !!target && miss !== undefined && miss <= target.radius;
       d.alive = false; d.outcome = landed ? 'landed' : 'impact';
@@ -606,6 +655,28 @@ export class RigidDebrisRuntime {
         severity: landed ? 'success' : 'info', params: { name: d.name, speed: contact.totalSpeed,
           tiltDeg: contact.tiltRad / DEG, verticalSpeed: contact.verticalSpeed, horizontalSpeed: contact.horizontalSpeed,
           ...(target ? { zone: zoneLabel(target), miss: Math.round(miss ?? 0) } : {}) } });
+      return { events, contact };
+    };
+    /**
+     * The booster's base has come down to the tower's catch height inside
+     * the arms' envelope: slow, upright and steady enough, the arms close on
+     * it; otherwise it hits them.
+     */
+    const catchAt = (contact: RigidContact, contactTime: number, miss: number): RigidDebrisStepResult => {
+      const rc = d.recovery!;
+      const caught = contact.tiltRad <= CATCH_TILT && contact.angularRateRadS <= CATCH_RATE
+        && Math.abs(contact.verticalSpeed) <= CATCH_VERTICAL_SPEED && contact.horizontalSpeed <= CATCH_HORIZONTAL_SPEED;
+      d.alive = false; d.outcome = caught ? 'landed' : 'impact';
+      rc.landed = caught; rc.caught = caught; rc.missDistance = miss;
+      rc.burning = false; rc.thrustVac = 0; rc.thrustSL = 0; rc.mdot = 0;
+      this.snapshot = { ...this.snapshot, rcsThrusters: [], engines: this.snapshot.engines.map(engine => ({
+        ...engine, thrustBudgetN: 0, massFlowKgS: 0,
+      })) };
+      this.runtime.snapshot = this.snapshot;
+      d.rigid = this.runtime.telemetry(this.state, contactTime, this.snapshot, d.rigid?.saturated, d.rigid?.rawQuaternionNormError);
+      events.push({ key: caught ? 'evt.boosterCaught' : 'evt.stageImpact', severity: caught ? 'success' : 'info',
+        params: { name: d.name, speed: contact.totalSpeed, tiltDeg: contact.tiltRad / DEG, verticalSpeed: contact.verticalSpeed,
+          horizontalSpeed: contact.horizontalSpeed, zone: zoneLabel(rc.target!), miss: Math.round(miss) } });
       return { events, contact };
     };
     const initialContact = contactNow();
@@ -640,6 +711,12 @@ export class RigidDebrisRuntime {
       // out-of-envelope aero continuation and actuator saturation.
       d.rigid = result.telemetry;
       const nextContact = contactNow();
+      const tower = rc?.target?.kind === 'tower' && !rc.catchPassed && this.options.returnGuidance ? rc.target : undefined;
+      if (tower && nextContact.tailClearance - (tower.catchHeight ?? 0) <= 0) {
+        const miss = distanceFromTarget(this.state.r, tower, this.options.returnGuidance!.gmst0, time + elapsed);
+        if (miss > tower.radius) rc!.catchPassed = true;
+        else return catchAt(nextContact, time + elapsed, miss);
+      }
       if (nextContact.clearance <= 0) return finish(nextContact, time + elapsed);
     }
     return { events };
@@ -670,7 +747,7 @@ const ENTRY_BUDGET_DV = 300;
 
 /** "LZ-1" for a landing zone id "lz1"; the drone ship keeps its id. */
 export function zoneLabel(target: ReturnTarget): string {
-  return target.kind === 'pad' ? target.id.toUpperCase().replace(/^LZ/, 'LZ-') : target.id;
+  return target.kind === 'pad' ? target.id.toUpperCase().replace(/^LZ/, 'LZ-') : target.kind === 'tower' ? 'OLM' : target.id;
 }
 
 export function createRigidDebris(debris: Debris, split: PartitionedRigidBody, config: DynamicsConfig,
