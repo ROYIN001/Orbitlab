@@ -43,7 +43,7 @@ throughout.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 897 tests in 60 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 904 tests in 61 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
