@@ -283,7 +283,8 @@ stays where it is and what is left sits at the case wall.
 **Thrusters.** A stage that coasts or restarts carries a three-axis set of opposed pairs, a stage
 whose engine cannot roll it (one chamber on the axis) a roll pair. Force per nozzle, specific
 impulse (cold gas 65 s, hydrazine 220 s, bipropellant 280 s) and the propellant reserved for
-them are estimates (E).
+them are estimates (E). A spacecraft that carries its own engine steers on that engine's propellant
+and specific impulse (E).
 
 The travel figures are from a search of public sources on 2026-09-23 (manufacturer and agency
 pages, user's manuals and papers, reached through search-engine extracts rather than read in

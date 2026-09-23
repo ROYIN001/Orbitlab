@@ -364,7 +364,11 @@ export function rcsGeometry(vehicleId: string, stage: StageSpec, base = v3()): R
   const initial = !supported ? 0 : extra ? Math.min(stage.dryMass * 0.1, extra.propellantKg) : Math.min(stage.dryMass * 0.1,
     stage.isSpacecraft ? 10 : firstStage ? 100 : 30);
   const force = extra?.forceN ?? (stage.isSpacecraft ? 20 : firstStage ? 200 : 50);
-  const isp = extra?.isp ?? 60;
+  // A spacecraft's attitude thrusters burn its own propellant, at its engine's
+  // specific impulse (E): Long March 2D's 1.2 t Earth-observation satellite,
+  // raising its orbit over seven passes of its 22 N engine, spent 10 kg of the
+  // 60 s cold gas assumed before by the sixth.
+  const isp = extra?.isp ?? (stage.isSpacecraft ? stage.engine.ispVac : 60);
   const L = stage.length, R = stage.diameter / 2;
   const thrusters: RcsThrusterGeometry[] = [];
   if (initial > 0) {
