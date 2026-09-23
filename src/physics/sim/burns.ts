@@ -6,7 +6,7 @@
 import { MU_EARTH, R_EARTH, DEG, RAD } from '../constants';
 import { Vec3, sub, scale, dot, cross, norm, normalize, angleBetween } from '../vec3';
 import { nextJ2Apsis, propagateJ2Coast, shootJ2ApsisVelocity } from '../rigid/orbit-prediction';
-import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal } from '../orbital';
+import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
 import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
 import type { Simulation } from '../simulation';
@@ -159,12 +159,20 @@ export class BurnSequencer {
       // and a circularisation flown there cannot be trimmed back down. "Too
       // high" is above the target's apogee — the height a burn at the apoapsis
       // is meant to be flown at — not above its perigee, which on a transfer
-      // orbit the apex rightly is by 35 000 km.
-      if (apex < perigee - 0.5 * apsisTolerance(perigee) || apex > apogee + 0.5 * apsisTolerance(apogee)) {
+      // orbit the apex rightly is by 35 000 km — and only when no later burn
+      // of the plan brings the apoapsis down anyway (Vulcan's 856 × 137 km
+      // insertion raises its perigee at the apex first, then lowers the apex).
+      const lowersLater = this.sim.plan.burns.slice(this.sim.plan.burns.indexOf(burn) + 1)
+        .some((b) => !b.done && b.kind === 'raiseApoapsis');
+      if (apex < perigee - 0.5 * apsisTolerance(perigee) || (!lowersLater && apex > apogee + 0.5 * apsisTolerance(apogee))) {
         if (this.rigidApexCorrections >= 3) { this.failRigidOrbitPrediction(); return; }
         this.rigidApexCorrections++;
+        // The shooting bracket is sized on the estimate: the vis-viva change
+        // at the periapsis that moves this apex to the target.
+        const rp = R_EARTH + el.periapsisAlt;
+        const dv = Math.abs(visViva(rp, (rp + R_EARTH + apogee) / 2) - visViva(rp, (rp + physicalApex.radiusM) / 2));
         const correction: BurnPlan = { id: `physical-apex-${this.rigidApexCorrections}`, kind: 'raiseApoapsis', atU: 'asap',
-          targetApoapsis: this.sim.plan.target.apogee, physicalApoapsis: this.sim.plan.target.apogee, dvEstimate: 10, done: false };
+          targetApoapsis: apogee, physicalApoapsis: apogee, dvEstimate: Math.max(10, 1.2 * dv), done: false };
         this.sim.plan.burns.splice(this.sim.plan.burns.indexOf(burn), 0, correction);
         burn = correction;
       }
