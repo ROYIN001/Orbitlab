@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:heavy": "vitest run --config vitest.heavy.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

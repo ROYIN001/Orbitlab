@@ -5,6 +5,8 @@ import { DEG } from '../src/physics/constants';
 import { lerp, norm, sub, type Vec3 } from '../src/physics/vec3';
 import { quatAngularDistance, quatSlerp, type Quat } from '../src/physics/rigid/math';
 import { rigidMission } from './rigid-harness';
+import type { DynamicsConfig } from '../src/types';
+import type { RigidRuntimeOptions } from '../src/physics/rigid/runtime';
 import { achievedElements, orbitMisses } from './fleet-harness';
 
 export const MISSION_CHECKPOINTS = [50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000] as const;
@@ -28,9 +30,31 @@ function eventIdentity(event: SimEvent): string {
   return [event.key, p.stage ?? '', p.n ?? '', p.kind ?? '', p.satId ?? '', p.name ?? ''].join('|');
 }
 
+/**
+ * A deviation from the reference mission: another declared wind profile, the
+ * alternate rotational mass-flow model, or a constant-wind speed override
+ * applied to the runtime after construction (the same override path the
+ * sensitivity study uses; it is recorded in the provenance like any profile).
+ */
+export interface MissionVariant {
+  wind?: DynamicsConfig['wind'];
+  massFlowModel?: RigidRuntimeOptions['massFlowModel'];
+  /** east wind speed replacing the declared profile's 8 m/s, m/s */
+  eastWindMs?: number;
+}
+
 export function runRigidMissionConvergence(id: 'leo' | 'iss', integrationStepS: number,
-  progress?: (value: { id: string; integrationStepS: number; t: number; status: string }) => void) {
-  const sim = new Simulation(rigidMission(id), { headless: true, rigidDt: integrationStepS });
+  progress?: (value: { id: string; integrationStepS: number; t: number; status: string }) => void,
+  variant: MissionVariant = {}) {
+  const cfg = rigidMission(id);
+  if (variant.wind) cfg.dynamics = { ...cfg.dynamics!, wind: variant.wind };
+  const sim = new Simulation(cfg, { headless: true, rigidDt: integrationStepS,
+    rigidOptions: variant.massFlowModel ? { massFlowModel: variant.massFlowModel } : undefined });
+  if (variant.eastWindMs !== undefined) {
+    const wind = sim.rigidRuntime!.wind;
+    if (wind.kind === 'calm' || !wind.velocityENU) throw new Error('an east-wind override needs a declared wind profile');
+    wind.velocityENU.x = variant.eastWindMs;
+  }
   const checkpoints: MissionRawSample[] = [];
   const discontinuousCheckpoints: number[] = [];
   let ticks = 0, nextProgress = 0, maximumRate = 0, maximumNormError = 0, finite = true;
@@ -69,7 +93,7 @@ export function runRigidMissionConvergence(id: 'leo' | 'iss', integrationStepS: 
     achievedElements: achievedElements(sim), orbitMisses: orbitMisses(sim), ticks,
     maximumRate, maximumNormError, finite, outsideAeroS, saturatedS,
     modelVersion: sim.state.rigid?.modelVersion, dataRevision: sim.rigidRuntime?.snapshot?.dataRevision,
-    massFlowModel: sim.state.rigid?.massFlowModel,
+    massFlowModel: sim.state.rigid?.massFlowModel, windProfile: sim.state.rigid?.windProfile,
     remainingMassKg: sim.state.mass, remainingRcsKg: sim.state.rigid?.rcsPropellantKg,
     remainingMainFuelKg: sim.vehicle.active?.propellant, checkpoints, discontinuousCheckpoints,
     mainEvents: events.filter(event => MAIN_EVENT_KEYS.has(event.key)).map(event => ({ t: event.t, identity: eventIdentity(event) })),
