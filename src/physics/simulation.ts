@@ -28,6 +28,7 @@ import { atmosphere } from './atmosphere';
 import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
 import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
+import { resolveFlexOptions } from './rigid/flex';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
 import { AeroEnvelopeEvents } from './rigid/envelope-events';
@@ -160,7 +161,11 @@ export class Simulation {
     this.rigidDt = 0.01;
     if (cfgIn.dynamics) {
       if (!validateDynamics(cfgIn.dynamics, cfgIn.vehicleId)) throw new RangeError('Invalid dynamics configuration');
-      if (cfgIn.dynamics.model === 'sixDof') this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', { ...opts.rigidOptions, integrationStepS });
+      if (cfgIn.dynamics.model === 'sixDof') {
+        // Slosh, bending and the notch filter fly on the vehicle only, never on its debris.
+        const flex = resolveFlexOptions(cfgIn.dynamics.flex);
+        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...opts.rigidOptions, integrationStepS, flex } : { ...opts.rigidOptions, integrationStepS });
+      }
     }
     this.site = siteById(cfgIn.siteId);
     this.vehicleSpec = vehicleById(cfgIn.vehicleId);
@@ -805,6 +810,7 @@ export class Simulation {
     // stopped before it is destroyed doing so (see `abandonInsertion`).
     if (this.ascent.abandonInsertion(q, vz)) return dt;
     if (this.ascent.checkStructural(q)) return dt;
+    if (this.checkShellLoads()) return dt;
     this.staging.checkFairing(alt, q, atm.rho, vAirMag);
 
     // --- mission logic
@@ -916,6 +922,19 @@ export class Simulation {
     const want = this.plan.target.raan;
     if (want === null) return false;
     return Math.abs(wrapPi(this.plan.raanExpected - want)) <= RAAN_TOLERANCE;
+  }
+
+  /**
+   * With bending modelled, the stack breaks up where its shells are loaded past
+   * their allowable stress (src/physics/rigid/flex.ts, shell loads).
+   */
+  private checkShellLoads(): boolean {
+    const s = this.state, bending = s.rigid?.flex?.bending;
+    if (!bending || !(bending.loadRatio > 1) || !s.liftoff || this.isFailed()) return false;
+    const base = this.rigidRuntime?.snapshot?.activeBase.x ?? 0;
+    this.event('evt.bendingFailure', 'fail', { x: Math.round(bending.loadStationX - base), pct: Math.round(bending.loadRatio * 100) });
+    this.destroy();
+    return true;
   }
 
   /** @internal */

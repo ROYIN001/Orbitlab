@@ -1,8 +1,10 @@
 import { type Vec3, add, cross, scale, sub } from '../vec3';
 import { type Mat3, type Quat, matVecMul, quatMultiply, quatNorm, quatNormalize, solveSPD } from './math';
 
-/** SI units. r and v locate the CG in ECI; attitudeQ maps Body to ECI. */
-export interface RigidState { r: Vec3; v: Vec3; attitudeQ: Quat; omegaBody: Vec3 }
+/** SI units. r and v locate the CG in ECI; attitudeQ maps Body to ECI.
+ * `flex`, when present, is the flexible body's own state (slosh and bending
+ * coordinates, src/physics/rigid/flex.ts), integrated in the same RK4 step. */
+export interface RigidState { r: Vec3; v: Vec3; attitudeQ: Quat; omegaBody: Vec3; flex?: readonly number[] }
 export interface RigidLoads {
   mass: number;
   inertiaBody: Mat3;
@@ -16,6 +18,9 @@ export interface RigidLoads {
    * Omission is the quasi-steady zero-correction approximation, NOT -I_dot*omega.
    * The caller must state its mass-flow assumptions and avoid counting flux twice. */
   massFlowMomentBody?: Vec3;
+  /** A flexible body's coupled solution (src/physics/rigid/flex.ts): it replaces
+   * the rigid translational and Euler equations, and gives the flex state's rate. */
+  flex?: { accelerationECI: Vec3; omegaDotBody: Vec3; rates: readonly number[] };
 }
 /** Pure evaluation: every RK substage re-evaluates mass, inertia, forces and moments.
  * Supplied stage attitude is normalized; do not mutate state or advance controller
@@ -27,10 +32,12 @@ function finiteVector(v: Vec3, name: string): void {
   if (![v.x, v.y, v.z].every(Number.isFinite)) throw new RangeError(`${name} must be finite`);
 }
 function plus(s: RigidState, k: RigidState, h: number): RigidState {
-  return { r: add(s.r, scale(k.r, h)), v: add(s.v, scale(k.v, h)),
+  const next: RigidState = { r: add(s.r, scale(k.r, h)), v: add(s.v, scale(k.v, h)),
     omegaBody: add(s.omegaBody, scale(k.omegaBody, h)),
     attitudeQ: { w: s.attitudeQ.w + h * k.attitudeQ.w, x: s.attitudeQ.x + h * k.attitudeQ.x,
       y: s.attitudeQ.y + h * k.attitudeQ.y, z: s.attitudeQ.z + h * k.attitudeQ.z } };
+  if (s.flex) next.flex = s.flex.map((value, i) => value + h * k.flex![i]);
+  return next;
 }
 function derivative(t: number, s: RigidState, model: RigidModelFn): RigidState {
   const loads = model(t, { ...s, attitudeQ: quatNormalize(s.attitudeQ) });
@@ -38,6 +45,14 @@ function derivative(t: number, s: RigidState, model: RigidModelFn): RigidState {
   finiteVector(loads.forceECI, 'Force');
   finiteVector(loads.momentBody, 'Moment');
   finiteVector(loads.externalAccelerationECI, 'External acceleration');
+  if (loads.flex) {
+    const { accelerationECI, omegaDotBody, rates } = loads.flex;
+    finiteVector(accelerationECI, 'Flexible-body acceleration'); finiteVector(omegaDotBody, 'Flexible-body angular acceleration');
+    if (rates.length !== (s.flex?.length ?? 0) || !rates.every(Number.isFinite)) throw new RangeError('Flexible-body rates must match its state');
+    const qDot = quatMultiply(s.attitudeQ, { w: 0, ...s.omegaBody });
+    return { r: { ...s.v }, v: accelerationECI, omegaBody: omegaDotBody,
+      attitudeQ: { w: qDot.w / 2, x: qDot.x / 2, y: qDot.y / 2, z: qDot.z / 2 }, flex: rates };
+  }
   const correction = loads.massFlowMomentBody ?? { x: 0, y: 0, z: 0 };
   finiteVector(correction, 'Mass flow moment');
   // Euler's equation in arbitrary body axes: I*w_dot = M - w×(I*w) + M_flow.
@@ -62,6 +77,10 @@ export function integrateRigidStep(t: number, state: RigidState, dt: number, mod
   const inputNorm = quatNorm(state.attitudeQ);
   if (!Number.isFinite(inputNorm) || Math.abs(inputNorm - 1) > 1e-6) throw new RangeError('Initial attitude quaternion must be unit length');
   const s: RigidState = { r: { ...state.r }, v: { ...state.v }, attitudeQ: quatNormalize(state.attitudeQ), omegaBody: { ...state.omegaBody } };
+  if (state.flex) {
+    if (!state.flex.every(Number.isFinite)) throw new RangeError('Flexible-body state must be finite');
+    s.flex = [...state.flex];
+  }
   if (dt === 0) return { state: s, quaternionNormBeforeNormalize: inputNorm };
   const k1 = derivative(t, s, modelFn);
   const k2 = derivative(t + dt / 2, plus(s, k1, dt / 2), modelFn);
@@ -69,6 +88,7 @@ export function integrateRigidStep(t: number, state: RigidState, dt: number, mod
   const k4 = derivative(t + dt, plus(s, k3, dt), modelFn);
   const result = plus(plus(plus(plus(s, k1, dt / 6), k2, dt / 3), k3, dt / 3), k4, dt / 6);
   finiteVector(result.r, 'Integrated position'); finiteVector(result.v, 'Integrated velocity'); finiteVector(result.omegaBody, 'Integrated angular rate');
+  if (result.flex && !result.flex.every(Number.isFinite)) throw new RangeError('Integrated flexible-body state must be finite');
   const quaternionNormBeforeNormalize = quatNorm(result.attitudeQ);
   result.attitudeQ = quatNormalize(result.attitudeQ);
   return { state: result, quaternionNormBeforeNormalize };

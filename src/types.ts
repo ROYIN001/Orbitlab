@@ -305,4 +305,28 @@ export interface DynamicsConfig {
   model: 'pointMass' | 'sixDof';
   wind: 'calm' | 'crosswind' | 'shear';
   seed: number;
+  /** Six-DOF only: propellant slosh, bending and the notch filter (roadmap P05). Absent: rigid. */
+  flex?: FlexConfig;
+}
+
+/**
+ * The flexible body of a six-DOF flight (src/physics/rigid/flex.ts). Every
+ * option is off by default; off, the flight is the rigid one bit for bit.
+ */
+export interface FlexConfig {
+  slosh?: boolean;
+  bending?: boolean;
+  notch?: boolean;
+  /** IMU station, fraction of the current stack from its aft end; absent = the instrument bay */
+  imuStation?: number;
+  /** notch depth numerator and width denominator damping ratios */
+  notchZetaZero?: number;
+  notchZetaPole?: number;
+  /** notch centre as a multiple of the predicted bending frequency */
+  notchFrequencyScale?: number;
+  /** with the filter on, the autopilot's rate gain stays below the bending frequency over this ratio */
+  bandwidthRatio?: number;
+  /** damping ratios of the slosh modes (baffles) and of the bending mode (structure) */
+  sloshDamping?: number;
+  bendingDamping?: number;
 }

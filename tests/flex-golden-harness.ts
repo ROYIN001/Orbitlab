@@ -5,7 +5,6 @@
  * second of state and six-DOF telemetry, the recorded telemetry and the event
  * log hash to the same value, bit for bit.
  */
-import { createHash } from 'node:crypto';
 import { Simulation } from '../src/physics/simulation';
 import { vehicleById } from '../src/data/vehicles';
 import { orbitById } from '../src/data/orbits';
@@ -19,20 +18,22 @@ export const GOLDEN_FLIGHTS = [
   { vehicle: 'angaraa5', site: 'plesetsk', orbit: 'leo' },
 ] as const;
 
-export function flightFingerprint(flight: (typeof GOLDEN_FLIGHTS)[number], until: number,
-  dynamics: DynamicsConfig = { model: 'sixDof', wind: 'crosswind', seed: 20260919 }): string {
+export async function flightFingerprint(flight: (typeof GOLDEN_FLIGHTS)[number], until: number,
+  dynamics: DynamicsConfig = { model: 'sixDof', wind: 'crosswind', seed: 20260919 }): Promise<string> {
   const sim = new Simulation({ vehicleId: flight.vehicle, satelliteId: 'cubesats', siteId: flight.site, orbit: orbitById(flight.orbit),
     launchTime: LAUNCH_TIME, guidance: guidanceForVehicle(vehicleById(flight.vehicle), DEFAULT_GUIDANCE, 'sixDof'), guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, dynamics }, { headless: true });
-  const hash = createHash('sha256');
+  const parts: string[] = [];
   let next = -10;
   while (!sim.done && sim.state.t < until) {
     sim.step(sim.suggestedDt());
-    if (sim.state.t >= next) { hash.update(JSON.stringify([sim.state.t, sim.state.r, sim.state.v, sim.state.rigid])); next += 1; }
+    if (sim.state.t >= next) { parts.push(JSON.stringify([sim.state.t, sim.state.r, sim.state.v, sim.state.rigid])); next += 1; }
   }
-  hash.update(JSON.stringify(sim.telemetry));
-  hash.update(JSON.stringify(sim.events.map((e) => [e.key, e.t])));
-  return hash.digest('hex').slice(0, 16);
+  parts.push(JSON.stringify(sim.telemetry));
+  parts.push(JSON.stringify(sim.events.map((e) => [e.key, e.t])));
+  // SHA-256 of the concatenation, as recorded.
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts.join('')));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
 /** Recorded at 7834edd with crosswind: the first 160 s, and the whole mission. */
