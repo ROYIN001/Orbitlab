@@ -46,6 +46,7 @@ const CAUSES: Partial<Record<string, ResultCause>> = {
   'evt.structuralFailure': 'structure', 'evt.outOfPropellant': 'fuel',
   'evt.insertionAbandoned': 'fuel', 'evt.ftsCommanded': 'range', 'evt.rangeSafety': 'range',
   'evt.noLiftoff': 'liftoff', 'evt.reentry': 'reentry',
+  'evt.bendingFailure': 'structure', // P05: shell loads past their allowable stress
 };
 
 /** Assess the displayed instant. Future events must never leak into a replay. */

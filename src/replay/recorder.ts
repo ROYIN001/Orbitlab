@@ -76,7 +76,17 @@ function rigidBytes(value: RigidTelemetry | undefined): number {
   // Clone/GC trials measured at most 431 extra bytes for the weather/revision
   // provenance; allow 600, including optional numerical settings.
   return RIGID_BYTES.body + (value.windProfile ? 600 : 0)
-    + Object.keys(value.engineDeflections).length * RIGID_BYTES.engine;
+    + Object.keys(value.engineDeflections).length * RIGID_BYTES.engine
+    + flexBytes(value);
+}
+
+/** P05's flexible-body telemetry, when modelled: an estimate from its shape
+ * (objects about 16 B per field plus headers, 8 B per array number). */
+function flexBytes(value: RigidTelemetry): number {
+  const flex = value.flex;
+  if (!flex) return 0;
+  return 120 + (flex.slosh ? 80 + flex.slosh.tanks.length * 140 : 0)
+    + (flex.bending ? 360 + 16 * (flex.bending.shapeX.length + flex.bending.shapeW.length) : 0) + (flex.notch ? 120 : 0);
 }
 
 function frameBytes(frame: VisualFrame): number {

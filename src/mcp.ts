@@ -36,6 +36,10 @@ import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, numericIssue, issueText
 import { buildTelemetryCsv } from './ui/csv';
 import { defaultDynamics } from './physics/rigid/config';
 import { cloneRigidTelemetry } from './physics/rigid/telemetry';
+import { FLEX_LIMITS } from './physics/rigid/flex';
+
+/** configure_mission's `flex` fields (roadmap P05). */
+const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
 
 // ─────────────────────────────────────────────────────────────── host shape
 
@@ -364,6 +368,8 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   if (input.guidance !== undefined) {
     state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, vehicleById(state.vehicleId)) };
   }
+  // --- P05: a vehicle, physics or wind edit keeps the flexible-body settings already chosen.
+  const priorFlex = live.dynamics?.flex;
   if (input.physicsModel !== undefined || input.windScenario !== undefined || input.windSeed !== undefined) {
     const current = state.dynamics ?? { model:'pointMass', wind:'calm', seed:20260919 };
     state.dynamics = {
@@ -371,6 +377,18 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
       wind: (input.windScenario ?? current.wind) as import('./types').DynamicsConfig['wind'],
       seed: (input.windSeed ?? current.seed) as number,
     };
+  }
+  if (priorFlex && state.dynamics && !state.dynamics.flex) state.dynamics = { ...state.dynamics, flex: priorFlex };
+  if (input.flex !== undefined) {
+    // Merged into what is set: a field given as null goes back to its default.
+    if (!input.flex || typeof input.flex !== 'object' || Array.isArray(input.flex)) throw new Error('"flex" must be an object');
+    const current = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const flex: Record<string, unknown> = { ...(current.flex ?? {}) };
+    for (const [key, value] of Object.entries(input.flex as Record<string, unknown>)) {
+      if (!FLEX_KEYS.includes(key)) throw new Error(`Unknown flex field "${key}"`);
+      if (value === null) delete flex[key]; else flex[key] = value;
+    }
+    state.dynamics = { ...current, flex: flex as import('./types').FlexConfig };
   }
   assertConfigInput(state);
   // Every validator above has run without throwing: commit the whole edit at
@@ -499,6 +517,23 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   physicsModel: { type:'string', enum:['pointMass','sixDof'], description:'Six-DOF is available for every vehicle and is its default; pointMass is the legacy model.' },
   windScenario: { type:'string', enum:['calm','crosswind','shear'], description:'Repeatable wind scenario for six-DOF.' },
   windSeed: { type:'integer', minimum:0, maximum:4294967295, description:'Seed for repeatable six-DOF wind gusts.' },
+  flex: {
+    type: 'object',
+    description: 'Six-DOF flexible body (all off by default; off, the flight is the rigid one): propellant slosh, the first bending mode (with shell loads and break-up past their allowable stress), and the bending notch filter with the flexible-vehicle autopilot. Merged into the current settings; null resets a field.',
+    properties: {
+      slosh: { type: ['boolean', 'null'], description: 'First-mode slosh of every liquid tank under thrust.' },
+      bending: { type: ['boolean', 'null'], description: 'First lateral bending mode; the IMU reads the bent structure.' },
+      notch: { type: ['boolean', 'null'], description: 'Notch filter on the pitch/yaw torque, centred on the predicted bending frequency, and the autopilot held below it.' },
+      imuStation: { type: ['number', 'null'], minimum: FLEX_LIMITS.imuStation[0], maximum: FLEX_LIMITS.imuStation[1], description: 'IMU station as a fraction of the stack from its aft end; null = the instrument bay atop the upper stage.' },
+      notchZetaZero: { type: ['number', 'null'], minimum: FLEX_LIMITS.notchZetaZero[0], maximum: FLEX_LIMITS.notchZetaZero[1], description: 'Notch numerator damping ratio (depth = ζz/ζp).' },
+      notchZetaPole: { type: ['number', 'null'], minimum: FLEX_LIMITS.notchZetaPole[0], maximum: FLEX_LIMITS.notchZetaPole[1], description: 'Notch denominator damping ratio (width).' },
+      notchFrequencyScale: { type: ['number', 'null'], minimum: FLEX_LIMITS.notchFrequencyScale[0], maximum: FLEX_LIMITS.notchFrequencyScale[1], description: 'Notch centre as a multiple of the predicted bending frequency (1 = tuned).' },
+      bandwidthRatio: { type: ['number', 'null'], minimum: FLEX_LIMITS.bandwidthRatio[0], maximum: FLEX_LIMITS.bandwidthRatio[1], description: 'With the filter on, the autopilot rate gain is held below the bending frequency divided by this.' },
+      sloshDamping: { type: ['number', 'null'], minimum: FLEX_LIMITS.sloshDamping[0], maximum: FLEX_LIMITS.sloshDamping[1], description: 'Slosh damping ratio (baffles).' },
+      bendingDamping: { type: ['number', 'null'], minimum: FLEX_LIMITS.bendingDamping[0], maximum: FLEX_LIMITS.bendingDamping[1], description: 'Structural damping ratio of the bending mode.' },
+    },
+    additionalProperties: false,
+  },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },

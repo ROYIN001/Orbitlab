@@ -8,6 +8,7 @@ import { SITES } from '../data/sites';
 import { guidanceForVehicle } from '../physics/defaults';
 import { supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
+import { FLEX_LIMITS } from '../physics/rigid/flex';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
 export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection';
@@ -39,6 +40,14 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
   'setup.raan': { min: 0, max: 360 },
   'setup.ltan': { min: 0, max: 24 },
   'setup.failureTime': { min: 0, max: 2000 },
+  // --- P05: the flexible body's tunable parameters, in the units the panel shows
+  'setup.flex.imuStation': { min: FLEX_LIMITS.imuStation[0] * 100, max: FLEX_LIMITS.imuStation[1] * 100 },
+  'setup.flex.notchZetaZero': { min: FLEX_LIMITS.notchZetaZero[0], max: FLEX_LIMITS.notchZetaZero[1] },
+  'setup.flex.notchZetaPole': { min: FLEX_LIMITS.notchZetaPole[0], max: FLEX_LIMITS.notchZetaPole[1] },
+  'setup.flex.notchFrequencyScale': { min: FLEX_LIMITS.notchFrequencyScale[0], max: FLEX_LIMITS.notchFrequencyScale[1] },
+  'setup.flex.bandwidthRatio': { min: FLEX_LIMITS.bandwidthRatio[0], max: FLEX_LIMITS.bandwidthRatio[1] },
+  'setup.flex.sloshDamping': { min: FLEX_LIMITS.sloshDamping[0] * 100, max: FLEX_LIMITS.sloshDamping[1] * 100 },
+  'setup.flex.bendingDamping': { min: FLEX_LIMITS.bendingDamping[0] * 100, max: FLEX_LIMITS.bendingDamping[1] * 100 },
 };
 
 /** Vehicle programmes are trusted data, not fresh user overrides. Extending a
@@ -110,6 +119,7 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
       }
       if (!['calm', 'crosswind', 'shear'].includes(d.wind)) issues.push({ field: 'setup.dynamics.wind', code: 'selection' });
       check(d.seed, 'setup.dynamics.seed', NUMBER_FIELDS['setup.dynamics.seed']);
+      if (d.flex !== undefined) issues.push(...flexIssues(d.flex));
     }
   }
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });
@@ -142,6 +152,21 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   check(state.failure.time, 'setup.failureTime', NUMBER_FIELDS['setup.failureTime']);
   check(state.failure.stage, 'setup.failureStage', { min: 0, max: spec ? spec.stages.length - 1 : 0, integer: true });
   if (typeof state.boosterRecovery !== 'boolean' || (state.boosterRecovery && spec && !spec.recoverable)) issues.push({ field: 'setup.boosterRecovery', code: 'selection' });
+  return issues;
+}
+
+/** The flexible body (roadmap P05): booleans, and each tunable within its range. */
+function flexIssues(flex: unknown): ValidationIssue[] {
+  if (!flex || typeof flex !== 'object' || Array.isArray(flex)) return [{ field: 'setup.flex.title', code: 'selection' }];
+  const f = flex as Record<string, unknown>, issues: ValidationIssue[] = [];
+  for (const key of ['slosh', 'bending', 'notch']) {
+    if (f[key] !== undefined && typeof f[key] !== 'boolean') issues.push({ field: `setup.flex.${key}`, code: 'selection' });
+  }
+  for (const [key, [min, max]] of Object.entries(FLEX_LIMITS)) {
+    if (f[key] === undefined) continue;
+    const issue = numericIssue(f[key], `setup.flex.${key}`, { min, max });
+    if (issue) issues.push(issue);
+  }
   return issues;
 }
 

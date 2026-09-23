@@ -779,3 +779,33 @@ describe('registerMcpTools', () => {
     }
   });
 });
+
+// --- P05 ---
+describe('configure_mission: the flexible body', () => {
+  it('merges flex settings, keeps them across vehicle and wind edits, and resets a field with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', flex: { bending: true, notch: true, notchZetaZero: 0.01 } });
+    expect(host.panel.state.dynamics?.flex).toEqual({ bending: true, notch: true, notchZetaZero: 0.01 });
+    configure.execute({ flex: { slosh: true, imuStation: 0.4 } });
+    configure.execute({ vehicleId: 'soyuz21a', windScenario: 'shear' });
+    expect(host.panel.state.dynamics).toMatchObject({ model: 'sixDof', wind: 'shear',
+      flex: { bending: true, notch: true, notchZetaZero: 0.01, slosh: true, imuStation: 0.4 } });
+    configure.execute({ flex: { imuStation: null } });
+    expect(host.panel.state.dynamics?.flex).toEqual({ bending: true, notch: true, notchZetaZero: 0.01, slosh: true });
+  });
+
+  it('rejects an unknown field and a value outside its range, leaving the settings as they were', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ flex: { bending: true } });
+    expect(() => configure.execute({ flex: { stiffness: 2 } })).toThrow(/Unknown flex field "stiffness"/);
+    expect(() => configure.execute({ flex: { notchFrequencyScale: 5 } })).toThrow(/setup\.flex\.notchFrequencyScale must be at most 2/);
+    expect(() => configure.execute({ flex: { notch: 'yes' } })).toThrow(/setup\.flex\.notch is not a valid selection/);
+    expect(host.panel.state.dynamics?.flex).toEqual({ bending: true });
+  });
+
+  it('describes the flex object in its input schema', () => {
+    const schema = tool(tools, 'configure_mission').inputSchema as { properties: Record<string, { properties?: Record<string, unknown> }> };
+    expect(Object.keys(schema.properties.flex.properties!)).toEqual(['slosh', 'bending', 'notch', 'imuStation', 'notchZetaZero',
+      'notchZetaPole', 'notchFrequencyScale', 'bandwidthRatio', 'sloshDamping', 'bendingDamping']);
+  });
+});

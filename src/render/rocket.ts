@@ -35,6 +35,41 @@ const ENGINE_LIGHT_DAY = 0.3;
 const ENGINE_LIGHT_NIGHT = 3.1;
 const ENGINE_LIGHT_DECAY = 1.8;
 
+// --- P05: the bending mode drawn on the stack ---------------------------------
+/**
+ * Real bending is centimetres on a 70 m stack; drawn at this scale it is a
+ * visible sway when the loop is healthy and an unmistakable whip when it is not.
+ */
+export const BENDING_DISPLAY_SCALE = 25;
+/** Samples of the mode shape the shader interpolates (telemetry's every fourth beam node). */
+const BEND_SAMPLES = 11;
+/**
+ * The same bend for every rocket material: each vertex, taken into the
+ * stack's own frame (+Y the nose, y = 0 the active base), moves sideways by
+ * the mode shape at its height times the modal coordinates.
+ */
+const BEND_VERTEX = /* glsl */`
+vec4 mvPosition = vec4( transformed, 1.0 );
+#ifdef USE_BATCHING
+	mvPosition = batchingMatrix * mvPosition;
+#endif
+#ifdef USE_INSTANCING
+	mvPosition = instanceMatrix * mvPosition;
+#endif
+vec4 bendWorld = modelMatrix * mvPosition;
+if ( uBendAmp.x != 0.0 || uBendAmp.y != 0.0 ) {
+	vec4 bendLocal = uBendInverse * bendWorld;
+	float u = clamp( ( bendLocal.y - uBendY0 ) / uBendDy, 0.0, ${BEND_SAMPLES - 1}.0 );
+	int i = int( min( floor( u ), ${BEND_SAMPLES - 2}.0 ) );
+	float phi = mix( uBendShape[ i ], uBendShape[ i + 1 ], u - float( i ) );
+	bendLocal.x += uBendAmp.x * phi;
+	bendLocal.z += uBendAmp.y * phi;
+	bendWorld = uBendWorld * bendLocal;
+}
+mvPosition = viewMatrix * bendWorld;
+gl_Position = projectionMatrix * mvPosition;
+`;
+
 interface BoosterUnit {
   group: THREE.Group;
   plume: Plume;
@@ -172,6 +207,49 @@ export class RocketView {
     this.group.add(this.satellite.group);
     this.group.add(this.engineLight);
     this.height = total;
+    this.installBending();
+  }
+
+  /** P05: uniforms shared by every patched material of this stack. */
+  private readonly bend = {
+    uBendWorld: { value: new THREE.Matrix4() }, uBendInverse: { value: new THREE.Matrix4() },
+    uBendShape: { value: new Array<number>(BEND_SAMPLES).fill(0) }, uBendY0: { value: 0 }, uBendDy: { value: 1 },
+    uBendAmp: { value: new THREE.Vector2() },
+  };
+
+  private installBending(): void {
+    const patched = new Set<THREE.Material>();
+    this.group.traverse((object) => {
+      const mesh = object as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        if (patched.has(material) || !(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshBasicMaterial)) continue;
+        patched.add(material);
+        material.onBeforeCompile = (shader) => {
+          Object.assign(shader.uniforms, this.bend);
+          shader.vertexShader = `uniform mat4 uBendWorld;\nuniform mat4 uBendInverse;\nuniform float uBendShape[${BEND_SAMPLES}];\n`
+            + `uniform float uBendY0;\nuniform float uBendDy;\nuniform vec2 uBendAmp;\n`
+            + shader.vertexShader.replace('#include <project_vertex>', BEND_VERTEX);
+        };
+        material.customProgramCacheKey = () => 'orbitlab-bend';
+      }
+    });
+  }
+
+  /** P05: the frame's bending mode and its modal coordinates, onto the uniforms. */
+  private updateBending(frame: VisualFrame): void {
+    const bending = frame.rigid?.flex?.bending, amp = this.bend.uBendAmp.value;
+    if (!bending || bending.shapeX.length !== BEND_SAMPLES || frame.destroyed) { amp.set(0, 0); return; }
+    // The group's origin is the active base: body x of the base = CG + render offset.
+    const base = frame.rigid!.cgBody.x + frame.rigid!.renderOffsetBody.x;
+    this.bend.uBendY0.value = bending.shapeX[0] - base;
+    this.bend.uBendDy.value = (bending.shapeX[BEND_SAMPLES - 1] - bending.shapeX[0]) / (BEND_SAMPLES - 1);
+    for (let i = 0; i < BEND_SAMPLES; i++) this.bend.uBendShape.value[i] = bending.shapeW[i];
+    // Body y is the model's −x, body z its +z (renderToBody).
+    amp.set(-bending.modal.y * BENDING_DISPLAY_SCALE, bending.modal.z * BENDING_DISPLAY_SCALE);
+    this.group.updateMatrixWorld(true);
+    this.bend.uBendWorld.value.copy(this.group.matrixWorld);
+    this.bend.uBendInverse.value.copy(this.group.matrixWorld).invert();
   }
 
   private mat(color: string | number, metal = 0.1, rough = 0.6): THREE.MeshStandardMaterial {
@@ -539,6 +617,7 @@ export class RocketView {
       return;
     }
     this.group.visible = true;
+    this.updateBending(frame);
     const t = frame.t;
     const pressure = frame.pressure;
     let y = 0;
