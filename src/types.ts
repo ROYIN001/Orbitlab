@@ -153,6 +153,12 @@ export interface VehicleSpec {
   recoverable?: boolean;
   /** Fraction of first-stage propellant reserved for recovery */
   recoveryReserve?: number;
+  /**
+   * Fraction reserved instead when the stage flies back to a landing zone near
+   * the launch site: the boostback burn that turns it round costs more than
+   * the entry and landing burns of a downrange landing.
+   */
+  returnReserve?: number;
   /** Default guidance overrides (kick angle etc.) */
   guidanceDefaults?: Partial<GuidanceParams>;
   /**
@@ -289,6 +295,12 @@ export interface MissionConfig {
   failure: FailureConfig;
   /** Recover the first stage (reserves propellant) */
   boosterRecovery: boolean;
+  /**
+   * Where each recovered body is flown back to. Absent, every recovered body
+   * lands where it comes down, with no boostback (the original model). Only
+   * read when `boosterRecovery` is set.
+   */
+  recoveryPlan?: RecoveryPlan;
   /** Extra payload mass added by the user, kg */
   payloadMassOverride?: number;
   /**
@@ -299,6 +311,24 @@ export interface MissionConfig {
    * equal the library defaults.
    */
   guidanceResolved?: boolean;
+}
+
+/**
+ * How one recovered body comes home.
+ *
+ * - `droneShip`: no boostback; a ship is stationed where the stage is
+ *   predicted to come down at separation, and the entry and landing burns
+ *   steer onto its deck.
+ * - `landingZone`: a boostback burn turns the stage round and flies it back to
+ *   a landing zone near the launch site (`src/data/landing-zones.ts`).
+ */
+export type RecoveryMode = { kind: 'droneShip' } | { kind: 'landingZone'; zoneId: string };
+
+export interface RecoveryPlan {
+  /** the first stage, or the core of a vehicle with strap-ons */
+  core?: RecoveryMode;
+  /** strap-ons, in the order they separate within their group (Falcon Heavy's two side boosters) */
+  boosters?: readonly RecoveryMode[];
 }
 
 export interface DynamicsConfig {

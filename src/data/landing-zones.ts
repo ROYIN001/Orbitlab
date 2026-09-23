@@ -1,0 +1,42 @@
+/**
+ * Where a returning first stage is flown back to.
+ *
+ * Landing Zones 1 and 2 are SpaceX's two landing pads at Cape Canaveral, on
+ * the old Launch Complex 13, about 9 km south of SLC-40 and 15 km south of
+ * LC-39A. Each is a concrete circle 86 m across (282 ft) with the stylised X
+ * in the middle; they stand about 300 m apart, LZ-2 to the north-west.
+ * Coordinates are the pad centres from Wikidata (Q22078213, Q109558428).
+ *
+ * The landing surface's height is not stored: the simulation's ground is the
+ * launch site's own elevation for 50 km around the pad (`groundElevation`),
+ * and a pad has to be where the ground is or a touchdown on it would be judged
+ * against the wrong surface.
+ */
+export interface LandingZoneSpec {
+  id: string;
+  name: string;
+  /** launch sites whose flights can fly back here */
+  siteIds: readonly string[];
+  /** degrees */
+  latitude: number;
+  longitude: number;
+  kind: 'pad';
+  /** radius of the landing surface, m: a touchdown further out has missed it */
+  radius: number;
+}
+
+export const LANDING_ZONES: readonly LandingZoneSpec[] = [
+  { id: 'lz1', name: 'Landing Zone 1', siteIds: ['cape', 'ksc39a'], latitude: 28.48575, longitude: -80.54294, kind: 'pad', radius: 43 },
+  { id: 'lz2', name: 'Landing Zone 2', siteIds: ['cape', 'ksc39a'], latitude: 28.48775, longitude: -80.54494, kind: 'pad', radius: 43 },
+];
+
+export function landingZoneById(id: string): LandingZoneSpec {
+  const zone = LANDING_ZONES.find((z) => z.id === id);
+  if (!zone) throw new Error(`Unknown landing zone ${id}`);
+  return zone;
+}
+
+/** The landing zones a flight from `siteId` can return to. */
+export function landingZonesForSite(siteId: string): LandingZoneSpec[] {
+  return LANDING_ZONES.filter((z) => z.siteIds.includes(siteId));
+}

@@ -1,5 +1,6 @@
 /** Variable mass/CG/full inertia from disclosed component estimates. Pure: never
  * consumes fuel, changes staging, or mutates the legacy VehicleModel. */
+import type { ControlSurfaceSpec } from './surfaces';
 import type { BoosterGroupSpec, StageSpec } from '../../types';
 import type { VehicleModel } from '../vehicle';
 import { engineMassFlow, engineThrust } from '../vehicle';
@@ -40,6 +41,8 @@ export interface RigidOperatingState {
 }
 export interface RigidVehicleSnapshot extends MassProperties {
   engines: BudgetedEngine[]; rcs: RcsReservoir[]; rcsThrusters: RcsThrusterGeometry[];
+  /** Aerodynamic control surfaces (a returning stage's grid fins); absent on every other body. */
+  surfaces?: ControlSurfaceSpec[];
   geometry: RigidVehicleGeometry; activeBase: Vec3; aero: Aero6DofSpec;
   modelId: string; dataRevision: string; assumptions: readonly string[];
 }
@@ -270,7 +273,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       const boosterOn = st.index === vehicle.activeIndex && b.ignited && vehicle.usableBoosterPropellant(b) > 0
         && (!b.burnedOut || (stepStart !== undefined && vehicle.boosterTailingOff(b, stepStart)));
       const bt = boosterOn ? op.boosterThrottles?.[groupIndex] ?? op.boosterThrottle ?? 0 : 0;
-      const boosterPropellant = Math.max(Math.min(b.propellant, vehicle.recoveryReserve * b.spec.propellantMass),
+      const boosterPropellant = Math.max(Math.min(b.propellant, vehicle.boosterRecoveryReserve * b.spec.propellantMass),
         b.propellant - engineMassFlow(b.spec.engine) * b.spec.engine.count * bt * offset);
       const placements = geometry.boosters.filter(p => p.stageIndex === st.index && p.groupIndex === groupIndex);
       for (const placement of placements) {
@@ -313,9 +316,12 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
  * this pure factory, and provide actual clamped throttle for a recovery burn.
  */
 export function buildDetachedStage(vehicleId: string, stage: StageSpec, propellant: number,
-  op: RigidOperatingState & { engineFraction?: number; activeEngineIndices?: readonly number[] } = {}): RigidVehicleSnapshot {
+  op: RigidOperatingState & { engineFraction?: number; activeEngineIndices?: readonly number[];
+    /** a strap-on flown back: the attached model gives strap-ons no attitude thrusters, and separation adds none */
+    withoutRcs?: boolean } = {}): RigidVehicleSnapshot {
   validateOperating(op);
-  const reservoir = rcsGeometry(vehicleId, stage);
+  const reservoir = op.withoutRcs ? { stageId: stage.id, initialPropellantKg: 0, centerBody: v3(0.85 * stage.length, 0, 0), thrusters: [] }
+    : rcsGeometry(vehicleId, stage);
   const throttle = propellant > 0 ? op.coreThrottle ?? 0 : 0;
   const engines = budgetEngines(chamberGeometry(stage.id, stage.id, stage.engine, stage.diameter / 2),
     engineThrust(stage.engine, op.pressure ?? 0) * throttle, engineMassFlow(stage.engine) * throttle,

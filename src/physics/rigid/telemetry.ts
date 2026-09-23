@@ -42,6 +42,8 @@ export interface RigidTelemetry {
   engineDirectionsBody?: Record<string, Vec3>;
   /** Applied per-chamber throttle; includes engine-off/failure state. */
   engineThrottles?: Record<string, number>;
+  /** Deflection of each aerodynamic control surface (grid fins), rad; absent on a body without them. */
+  surfaceDeflections?: Record<string, number>;
   rcsPropellantKg: number;
   saturated: boolean;
   angleOfAttack: number;
@@ -71,7 +73,8 @@ export function cloneRigidTelemetry(value: RigidTelemetry | undefined): RigidTel
     engineDeflections: Object.fromEntries(Object.entries(value.engineDeflections).map(([id, angles]) => [id, [...angles]])),
     engineDirectionsBody: value.engineDirectionsBody
       ? Object.fromEntries(Object.entries(value.engineDirectionsBody).map(([id, direction]) => [id, { ...direction }])) : undefined,
-    engineThrottles: value.engineThrottles ? { ...value.engineThrottles } : undefined };
+    engineThrottles: value.engineThrottles ? { ...value.engineThrottles } : undefined,
+    surfaceDeflections: value.surfaceDeflections ? { ...value.surfaceDeflections } : undefined };
 }
 
 export function sameRigidConfiguration(a: RigidTelemetry | undefined, b: RigidTelemetry | undefined): boolean {
@@ -107,6 +110,10 @@ export function interpolateRigidTelemetry(a: RigidTelemetry | undefined, b: Rigi
       const length = Math.hypot(blended.x, blended.y, blended.z);
       if (length > 1e-12) copy.engineDirectionsBody![id] = { x: blended.x / length, y: blended.y / length, z: blended.z / length };
     }
+  }
+  for (const [id, angle] of Object.entries(copy.surfaceDeflections ?? {})) {
+    const next = b.surfaceDeflections?.[id];
+    if (next !== undefined) copy.surfaceDeflections![id] = mix(angle, next);
   }
   for (const [id, throttle] of Object.entries(copy.engineThrottles ?? {})) {
     const next = b.engineThrottles?.[id];

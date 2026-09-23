@@ -872,7 +872,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // (Fregat, Briz-M, Curie...), which is an orbital-manoeuvring stage instead.
   const strongSpec = weakFinalStage ? { ..._vehicle, stages: _vehicle.stages.slice(0, -1) } : _vehicle;
   const carried = weakFinalStage ? last.dryMass + last.propellantMass : 0;
-  const dvStrong = new VehicleModel(strongSpec, payload + carried, cfg.boosterRecovery).deltaVRemaining();
+  const dvStrong = new VehicleModel(strongSpec, payload + carried, cfg.boosterRecovery, undefined, cfg.recoveryPlan).deltaVRemaining();
   const vRot = OMEGA_EARTH * R_EARTH * Math.cos(lat) * Math.sin(azimuthInertial);
   /**
    * Ideal delta-v an ascent straight into the orbit h × ha costs these stages:

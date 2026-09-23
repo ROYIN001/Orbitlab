@@ -2,7 +2,7 @@
  * Runtime vehicle model: propellant bookkeeping, thrust at altitude,
  * staging state, frontal area and delta-v accounting.
  */
-import type { VehicleSpec, StageSpec, BoosterGroupSpec, EngineSpec, SatelliteSpec } from '../types';
+import type { VehicleSpec, StageSpec, BoosterGroupSpec, EngineSpec, SatelliteSpec, RecoveryMode, RecoveryPlan } from '../types';
 import { G0, P0 } from './constants';
 
 export interface BoosterState {
@@ -274,6 +274,25 @@ export function solidProfile(fractionBurned: number, peakFactor = 1.2): number {
   return p * (1 - solidTail(p) * f);
 }
 
+/**
+ * Propellant fractions held back for recovery, core and strap-ons.
+ *
+ * Without a plan every recovered body keeps the vehicle's `recoveryReserve`
+ * and lands where it comes down. With one, a body flown back to a landing zone
+ * keeps the larger `returnReserve` for its boostback, one landed on a drone
+ * ship keeps `recoveryReserve`, and a body the plan does not name is expended
+ * and keeps nothing. The strap-ons of one group share a propellant state, so
+ * the group keeps the largest reserve any of them needs.
+ */
+export function recoveryReserves(spec: VehicleSpec, boosterRecovery: boolean, plan?: RecoveryPlan): { core: number; boosters: number } {
+  if (!boosterRecovery || !spec.recoverable) return { core: 0, boosters: 0 };
+  const base = spec.recoveryReserve ?? 0;
+  if (!plan) return { core: base, boosters: base };
+  const of = (mode: RecoveryMode | undefined): number => !mode ? 0
+    : mode.kind === 'landingZone' ? spec.returnReserve ?? base : base;
+  return { core: of(plan.core), boosters: Math.max(0, ...(plan.boosters ?? []).map(of)) };
+}
+
 export class VehicleModel {
   readonly spec: VehicleSpec;
   readonly stages: StageState[];
@@ -281,17 +300,21 @@ export class VehicleModel {
   payloadMass: number;
   payloadAttached = true;
   activeIndex = 0;
-  /** first-stage propellant fraction reserved for recovery */
+  /** first-stage (core) propellant fraction reserved for recovery */
   recoveryReserve: number;
+  /** strap-on propellant fraction reserved for recovery */
+  boosterRecoveryReserve: number;
 
   /** index of the last launcher stage (excludes the spacecraft stage) */
   readonly lastLauncherIndex: number;
   readonly hasSpacecraftStage: boolean;
 
-  constructor(spec: VehicleSpec, payloadMass: number, boosterRecovery = false, spacecraft?: SatelliteSpec) {
+  constructor(spec: VehicleSpec, payloadMass: number, boosterRecovery = false, spacecraft?: SatelliteSpec, plan?: RecoveryPlan) {
     this.spec = spec;
     this.fairingAttached = spec.fairing !== null;
-    this.recoveryReserve = boosterRecovery && spec.recoverable ? spec.recoveryReserve ?? 0 : 0;
+    const reserves = recoveryReserves(spec, boosterRecovery, plan);
+    this.recoveryReserve = reserves.core;
+    this.boosterRecoveryReserve = reserves.boosters;
     const stageSpecs: StageSpec[] = [...spec.stages];
     this.lastLauncherIndex = spec.stages.length - 1;
     this.hasSpacecraftStage = false;
@@ -349,7 +372,7 @@ export class VehicleModel {
     return Math.max(0, st.propellant - reserve);
   }
   usableBoosterPropellant(bs: BoosterState): number {
-    const reserve = this.recoveryReserve * bs.spec.propellantMass;
+    const reserve = this.boosterRecoveryReserve * bs.spec.propellantMass;
     return Math.max(0, bs.propellant - reserve);
   }
 
@@ -364,7 +387,7 @@ export class VehicleModel {
     return solidProfile(1 - this.usablePropellant(st) / usable, st.spec.engine.peakFactor);
   }
   private solidProfileForBooster(b: BoosterState): number {
-    const usable = Math.max(1e-9, b.spec.propellantMass * (1 - this.recoveryReserve));
+    const usable = Math.max(1e-9, b.spec.propellantMass * (1 - this.boosterRecoveryReserve));
     return solidProfile(1 - this.usableBoosterPropellant(b) / usable, b.spec.engine.peakFactor);
   }
 
@@ -610,7 +633,7 @@ export class VehicleModel {
         const flow = nb * engineMassFlow(be) * level;
         b.propellant -= flow * dt;
         if (this.usableBoosterPropellant(b) <= VehicleModel.tailoffReserve(be, flow)) {
-          b.propellant = Math.max(b.propellant, this.recoveryReserve * b.spec.propellantMass);
+          b.propellant = Math.max(b.propellant, this.boosterRecoveryReserve * b.spec.propellantMass);
           b.burnedOut = true;
           b.burnoutTime = t + dt;
           const perLevel = VehicleModel.tailoffReserve(be, nb * engineMassFlow(be));

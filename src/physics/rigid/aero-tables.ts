@@ -106,7 +106,7 @@ const OGIVE_CP = 0.55;
 const CONE_CP = 2 / 3;
 
 /** Grid fins: normal-force slope per rad of one fin, per square metre of fin. */
-const GRID_FIN_SLOPE_PER_M2 = 3;
+export const GRID_FIN_SLOPE_PER_M2 = 3;
 
 interface TableInput {
   referenceArea: number;

@@ -395,7 +395,10 @@ export const VEHICLES: VehicleSpec[] = [
     // fairing at T+189 s, both OUTSIDE their published windows. The change
     // trades one disclosed disagreement for three.
     maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.75 },
-    recoverable: true, recoveryReserve: 0.12, crewCapable: true,
+    // A return to the launch site keeps 15 % instead: measured on Bandwagon-1
+    // (1.3 t to 590 km at 45.4°), 13 % is the least that lands on LZ-1 in the
+    // point-mass model, and 15 % touches down with 12.7 t to spare.
+    recoverable: true, recoveryReserve: 0.12, returnReserve: 0.15, crewCapable: true,
     // Shallow kick and a slow pitch program put MECO near 65 km, which is what the published timeline implies.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     notes: 'Partially reusable; enabling booster recovery reserves propellant for the boost-back/landing burns.',
@@ -419,7 +422,10 @@ export const VEHICLES: VehicleSpec[] = [
       f9Stage2(),
     ],
     sites: ['cape'], maxQ: 40e3, maxAccel: 45,
-    recoverable: true, recoveryReserve: 0.12,
+    // Side boosters flown back to LZ-1 and LZ-2 keep 15 %: at 12 % they run
+    // into their landing reserve before the boostback is done (Arabsat-6A,
+    // 6.5 t to GTO, point-mass model).
+    recoverable: true, recoveryReserve: 0.12, returnReserve: 0.15,
     // As Falcon 9, with a loft for the long second-stage burn under a heavy payload.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
     notes: 'Three Falcon 9 cores; the center core throttles down until side-booster separation.',

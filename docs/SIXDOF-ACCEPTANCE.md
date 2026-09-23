@@ -380,3 +380,37 @@ six-DOF (tests/watch-missions.test.ts) and the delivered-orbit matrix (`npm run 
 chambers), Falcon Heavy and Proton-M keep real time at 1× (0.98, 0.99 and 0.96 of it) and reach
 6.0×, 4.7× and 9.8× of a requested 10× during the ascent, using 53–61 MB of JavaScript heap. The
 10× figures were taken with other test processes loading the CPU.
+
+## Returns to a landing zone and a drone ship (roadmap item 10b, 2026-09-23)
+
+A recovery plan flies a Falcon first stage to a target instead of wherever it comes down
+([PHYSICS.md](PHYSICS.md) §8.1). In six-DOF that brought four model additions, each switched on
+only for a body with a target, so the original recovery above flies exactly as before
+(tests/rigid-recovery.test.ts and the rest of the rigid suite are unchanged and pass):
+
+- **Grid fins as actuators** (`src/physics/rigid/surfaces.ts`): four control surfaces at the top
+  of the stage, ±20° at 30 °/s, allocated after the engines and before the cold gas. A body
+  without surfaces — every other body — flies the runtime exactly as before.
+- **Turning on the centre engine's gimbal** after separation (the flip) and at the top of an
+  entry burn that finds the stage pointing wrong, at the lowest thrust.
+- **Coast pointing rationed to the cold gas left** (`fuelAwareCoast`) for a returning stage,
+  as the vehicle's own orbital coasts already were; it stops where the fins bite (q > 100 Pa).
+- **Recovered Falcon Heavy cores.** The core and the side boosters now fly the recovery the
+  Falcon 9 stage does. A side booster has no cold-gas thrusters in the attached model, so its
+  returning body has none either (`withoutRcs`) and is turned by its engines and fins alone.
+
+What the rigid body did that the point mass does not: a base-first stage with fixed fins trims
+at about 3.4° of angle of attack, and the lift of that trim carried a Falcon 9 stage 600 m past
+LZ-1 through the dense air; with the fins steering it lands 0.8 m from the pad's centre. Falcon
+Heavy's core arrives at its entry burn with no cold gas (spent on the ascent) and, turned on
+three engines at 70 km, came down 10 km from its ship; turned on the centre engine after
+separation and stationed on the trajectory that leaves, it lands 0.7 m from the deck's centre.
+
+| Test | Result |
+|---|---|
+| tests/rigid-return.test.ts — Falcon 9, Bandwagon-1, first stage → LZ-1 | landed, 0.8 m, strict contact gate, about 60 s |
+| tests/heavy/falcon-heavy-returns.test.ts — Arabsat-6A, side boosters → LZ-1, LZ-2; core → drone ship | landed 0.8 / 0.8 / 0.7 m, about 2.5 min |
+
+Limits: one wind state (calm) and one launch per flight is measured; the fins' lift slope and
+travel, the flip on the centre engine and the drone ship's station are estimates, and the
+targeted landings are not a robustness envelope.

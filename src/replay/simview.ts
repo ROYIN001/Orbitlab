@@ -212,6 +212,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
               ? {
                 propellant: 0, thrustVac: 0, thrustSL: 0, mdot: 0, landingReserve: 0,
                 burning: d.burning, phase: d.recovery.phase, landed: d.recovery.landed,
+                target: d.recovery.target, missDistance: d.recovery.missDistance,
               }
               : undefined,
             impact: d.impact ? { ...d.impact } : undefined,

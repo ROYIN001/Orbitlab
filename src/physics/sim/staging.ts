@@ -69,7 +69,7 @@ export class Staging {
     this.sim.debrisTracker.spawnBoosterDebris(b);
     if (before) {
       this.sim.rigidLink.applyRetainedRigid(split);
-      placements.forEach((p, i) => this.sim.debrisTracker.attachRigidDebris(this.sim.debris[first + i], split.find(part => part.id === p.id)!, before));
+      placements.forEach((p, i) => this.sim.debrisTracker.attachRigidDebris(this.sim.debris[first + i], split.find(part => part.id === p.id)!, before, b.spec));
     }
   }
 

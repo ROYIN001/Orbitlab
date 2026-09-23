@@ -197,6 +197,8 @@ export const en: Record<string, string> = {
   'tel.debris.burnup': 'burned up',
   'tel.debris.entryBurn': 'entry burn',
   'tel.debris.landingBurn': 'landing burn',
+  'tel.debris.boostback': 'boostback burn',
+  'tel.debris.flip': 'turning round',
   'tel.plan': 'Flight plan',
   'tel.burn.raiseApoapsis': 'Raise apogee',
   'tel.burn.shapeAtApoapsis': 'Apogee burn (circularise / plane change)',
@@ -275,6 +277,12 @@ export const en: Record<string, string> = {
   'evt.reentry': 'Orbit decayed: re-entry at {alt} km',
   'evt.stageImpact': '{name} impact at {lat}°, {lon}°',
   'evt.boosterLanded': '{name} landed at {lat}°, {lon}°',
+  'evt.boosterLandedZone': '{name} landed on {zone}',
+  'evt.boosterLandedShip': '{name} landed on the drone ship',
+  'evt.boostbackStart': '{name}: boostback burn, turning back towards the landing zone',
+  'evt.boostbackEnd': '{name}: boostback complete',
+  'evt.entryBurnStart': '{name}: entry burn',
+  'evt.landingBurnStart': '{name}: landing burn',
   // units / misc
   'u.km': 'km',
   'u.m': 'm',
@@ -352,6 +360,12 @@ export const en: Record<string, string> = {
   'tl.evt.reentry': 'Re-entry',
   'tl.evt.stageImpact': 'Stage impact',
   'tl.evt.boosterLanded': 'Booster landed',
+  'tl.evt.boosterLandedZone': 'Landed on pad',
+  'tl.evt.boosterLandedShip': 'Landed on ship',
+  'tl.evt.boostbackStart': 'Boostback',
+  'tl.evt.boostbackEnd': 'Boostback end',
+  'tl.evt.entryBurnStart': 'Entry burn',
+  'tl.evt.landingBurnStart': 'Landing burn',
 
   // ─── wave 2 · design pass ────────────────────────────────────────────────
   // shell

@@ -1350,7 +1350,87 @@ Separated boosters, stages and fairing halves are propagated individually with g
 drag until impact (reported with latitude/longitude) or, if they end up above a 120 km perigee,
 kept as orbital debris. Each flies with its own blunt-body drag coefficient (§3), not the
 slender ascent curve. Recovered boosters fly the entry and landing burns described above and
-report a landing when they touch down below 12 m/s.
+report a landing when they touch down below 12 m/s; a stage flown to a target flies the
+boostback and burns of §8.1.
+
+### 8.1 Flying a stage back to a target
+
+A recovery plan (`MissionConfig.recoveryPlan`, `src/types.ts`) names where each recovered body
+goes: a **landing zone** near the launch site (`src/data/landing-zones.ts`: Landing Zones 1 and 2
+at Cape Canaveral, 86 m pads about 300 m apart, 9 km south of SLC-40 and 15 km south of LC-39A)
+or a **drone ship**. Without a plan the original model above is flown unchanged. A plan changes
+the propellant reserve too: a body flown back to a landing zone keeps the vehicle's
+`returnReserve` (15 % for Falcon 9 and Falcon Heavy; 13 % is the least that lands Bandwagon-1 on
+LZ-1 in the point-mass model, and 12 % leaves Arabsat-6A's side boosters short of their
+boostback), a drone-ship body keeps `recoveryReserve`, and a body the plan leaves out is
+expended with nothing held back.
+
+The guidance is one piece, `src/physics/sim/return-guidance.ts`, shared by both flight models:
+
+- **Prediction.** Where the stage comes down is a point-mass integration from its present state:
+  gravity (with J2 when the rigid body is flying, which has it), blunt-body drag in the rotating
+  atmosphere, the entry burn the stage is going to fly, and the landing burn — the prediction
+  ends where that burn has stopped the stage, because a retrograde landing burn brakes the
+  horizontal velocity too and a purely ballistic point is hundreds of metres from where the
+  stage really stops. The integration steps onto the entry burn's 70 km ceiling instead of
+  across it and ends each burn on its target speed, so the prediction does not jump from one
+  evaluation to the next.
+- **Boostback.** After separation the stage turns round and burns back. The burn's direction
+  solves J·Δv = −miss, with J the 2 × 2 sensitivity of the landing point (east, north) to the
+  stage's east and north velocity, by finite differences of the prediction, re-evaluated every
+  half second and every tenth of a second in the final trim on the centre engine. The solve is
+  deliberately horizontal: the full 2 × 3 minimum-norm answer also uses the vertical velocity,
+  and the cheapest way to shorten a flight is then to thrust at the ground. Before the
+  boostback is finished, the prediction assumes the propellant it will leave (the rocket
+  equation on the velocity it still needs), not a full tank for the entry burn.
+- **Entry burn.** A returning stage crosses 70 km slower than a downrange one, so its burn
+  waits armed until the airspeed is over its target (550 m/s for a return to the launch site,
+  1.4 km/s downrange) and leans up to 15° off retrograde to trim the landing point.
+- **Landing burn.** A constant deceleration to 2 m/s at the pad, lit at the drag-aware braking
+  height, with the zero-effort-miss divert of Ebrahimi, Bahrami and Roshanian (2008) in the
+  horizontal plane, a = 6·Δr/t² − 4·v/t, leaning up to 20°.
+
+The point-mass stage flies these directly: it turns at 10 °/s, burns three engines on the
+boostback and one on its trim. The rigid stage (`src/physics/rigid/debris-runtime.ts`) flies
+them with its own actuators:
+
+- it **turns round on its centre engine's gimbal** at the lowest thrust: the model's cold-gas
+  thrusters (an estimate, 200 N a nozzle) cannot turn a 60 t stage in the time a boostback has,
+  and it keeps them for the coast, where its pointing is rationed to the gas left
+  (`fuelAwareCoastRates`);
+- a stage bound for a drone ship turns straight after separation to the attitude it will need
+  at the top of its entry burn and coasts there; the ship is stationed on the trajectory that
+  turn leaves it on. Falcon Heavy's core spends its cold gas on the ascent and could not turn
+  during its coast at all;
+- an entry burn that finds the stage pointing more than 15° off lights the centre engine alone
+  to turn it before the other two;
+- **the grid fins steer**. They are control surfaces (`src/physics/rigid/surfaces.ts`): each
+  deflects ±20° at 30 °/s, and its deflection adds q·S·C_Nα·δ of lift at the top of the stage.
+  The fixed fins of the detached aerodynamic table leave a base-first stage slightly unstable
+  at zero angle of attack — it trims at about 3.4° — and that trim's lift carried a stage 600 m
+  past its pad through the dense air. The steerable fins hold the angle, and the guidance leans
+  the stage so that its own lift moves the landing point onto the target (the body is pushed
+  against the side its top leans to);
+- a landing burn that would not have time to divert a large miss lights early on three engines
+  and hands over to the centre engine once one can carry it; the centre engine then finishes
+  with the original terminal coast and single restart (`TERMINAL_RESTART`).
+
+A touchdown within the pad's radius (43 m; a drone ship's deck, 30 m) is a landing on the
+target (`evt.boosterLandedZone`, `evt.boosterLandedShip`); a soft touchdown off a pad is a
+landing beside it, and off a ship's deck is the sea. Measured (tests/recovery-return.test.ts,
+tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
+
+| Flight | Model | Body | Miss |
+|---|---|---|---|
+| Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.0 m |
+| | six-DOF | first stage → LZ-1 | 0.8 m |
+| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.0 m, 0.0 m |
+| | | core → drone ship, ~930 km downrange | 0.0 m |
+| | six-DOF | side boosters → LZ-1, LZ-2 | 0.8 m, 0.8 m |
+| | | core → drone ship | 0.7 m |
+
+The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
+real flight.
 
 Orbital debris is Kepler-propagated for speed, but the classification has to stay true: the
 perigee is re-checked every step and an object that can no longer stay up is handed back to the

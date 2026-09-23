@@ -174,7 +174,7 @@ export class Simulation {
     this.satellite = satelliteById(cfg.satelliteId);
     this.payloadMass = cfg.payloadMassOverride ?? this.satellite.mass;
     this.plan = planMission(cfg, this.site, this.vehicleSpec);
-    this.vehicle = new VehicleModel(this.vehicleSpec, this.payloadMass, cfg.boosterRecovery, this.satellite);
+    this.vehicle = new VehicleModel(this.vehicleSpec, this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
     this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis);
     this.ascent = new AscentMonitor(this);
     this.failures = new FailureInjector(this, cfg);

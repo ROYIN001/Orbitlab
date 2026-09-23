@@ -105,7 +105,8 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
     const boosters = input.debris.filter(body => body.createdAt <= state.t + 1e-6 && body.recovery);
     // The view supplies frame-backed debris. Require the visible outcome event
     // as well, so accidentally supplied future landed/impact flags cannot leak.
-    const landed = boosters.filter(body => events.some(event => event.key === 'evt.boosterLanded' && event.params?.name === body.name));
+    const landed = boosters.filter(body => events.some(event => (event.key === 'evt.boosterLanded' || event.key === 'evt.boosterLandedZone'
+      || event.key === 'evt.boosterLandedShip') && event.params?.name === body.name));
     const lost = boosters.filter(body => events.some(event => event.key === 'evt.stageImpact' && event.params?.name === body.name));
     if (boosters.length === 0) recovery = 'pending';
     else if (landed.length === boosters.length) recovery = 'landed';

@@ -28,6 +28,7 @@ import type { Simulation, SimStatus, Debris, DebrisVisual, Losses } from './simu
 import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
+import type { ReturnTarget } from './sim/return-guidance';
 import { clone } from './vec3';
 import { propagateKepler } from './orbital';
 import { atmosphere } from './atmosphere';
@@ -111,8 +112,12 @@ export interface DebrisFrame {
    * really were level with the core's, keep `anchor = 0`.
    */
   anchor?: number;
-  /** first-stage recovery state, for the grid fins, legs and landing burn */
-  recovery?: { phase: 'coast' | 'entry' | 'landing'; landed: boolean };
+  /**
+   * First-stage recovery state, for the grid fins, legs and landing burn, and
+   * where the stage is being flown to — the landing zone or the drone ship the
+   * renderer draws under it.
+   */
+  recovery?: { phase: NonNullable<Debris['recovery']>['phase']; landed: boolean; target?: ReturnTarget; missDistance?: number };
   /**
    * Where this object came down, once it has. Carried on the frame so the
    * telemetry panel's spent-stage list can be driven from the displayed
@@ -420,7 +425,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     outcome: d.outcome,
     createdAt: d.createdAt,
     anchor: d.rigid ? d.rigid.renderOffsetBody.x : debrisAnchor(sim, d, layout),
-    recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed } : undefined,
+    recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed, target: d.recovery.target, missDistance: d.recovery.missDistance } : undefined,
     impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
   }));
   return {

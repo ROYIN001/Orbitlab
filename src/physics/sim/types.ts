@@ -5,6 +5,21 @@ import type { Vec3 } from '../vec3';
 import type { OrbitalElements } from '../orbital';
 import type { AscentPhase } from '../guidance';
 import type { BurnPlan } from '../mission';
+import type { ReturnTarget } from './return-guidance';
+
+/** What a returning stage's guidance carries from one step to the next. */
+export interface ReturnGuidanceMemory {
+  /** mission time of the last solution, s */
+  t: number;
+  /** thrust direction it asked for (ECI) */
+  dir: Vec3;
+  /** horizontal velocity still needed, m/s */
+  dvNeeded: number;
+  /** the burn is down to its trim on the centre engine */
+  trim: boolean;
+  /** the entry burn's horizontal correction, m/s² (ECI) */
+  lateral?: Vec3;
+}
 
 export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'failed';
 
@@ -76,7 +91,19 @@ export interface Debris {
     landingReserve: number;
     /** the landing burn has begun (its bang-bang throttling keeps the plume lit) */
     landingStarted?: boolean;
-    phase: 'coast' | 'entry' | 'landing';
+    /**
+     * `flip` and `boostback` are flown only by a stage returning to a landing
+     * zone: it turns round after separation and burns back towards the site.
+     */
+    phase: 'coast' | 'flip' | 'boostback' | 'entry' | 'landing';
+    /** where the stage is flown to; absent, it lands wherever it comes down */
+    target?: ReturnTarget;
+    /** horizontal distance from the target at touchdown, m */
+    missDistance?: number;
+    /** a targeted return has fired its entry burn (it waits `armed` until then) */
+    entryFlown?: boolean;
+    /** @internal the boostback solution in use and when it was made */
+    guidance?: ReturnGuidanceMemory;
   };
   outcome?: 'impact' | 'landed' | 'orbit' | 'burnup';
   impact?: { lat: number; lon: number };
