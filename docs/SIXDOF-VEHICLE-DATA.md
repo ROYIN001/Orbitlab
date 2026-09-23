@@ -396,7 +396,8 @@ Soyuz-2.1a included:
   the 500 km LEO ended 511 × 490 km. A rigid stage now waits until it points within 1°.
 - **The physical apoapsis is corrected both ways.** A coast flown under J2 can arrive far from
   the conic apoapsis it started on. The six-DOF planner already raised a physical apex that fell
-  short of the target before circularising at it; it now lowers one that overshoots as well.
+  short of the target perigee before circularising at it; it now also lowers one that rises
+  above the target apogee (a transfer orbit's apex is meant to be far above its perigee).
   Electron's ascent into a 600 km sun-synchronous orbit cut off on a 598 km conic apoapsis and
   reached 617 km, where no circularisation can be trimmed back down.
 

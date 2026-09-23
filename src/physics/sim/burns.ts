@@ -149,12 +149,16 @@ export class BurnSequencer {
     if (this.sim.rigidRuntime && burn.kind !== 'raiseApoapsis' && el.e < 1 && el.periapsisAlt > 120e3) {
       physicalApex = nextJ2Apsis(s, 'apoapsis', { includeInitial: true });
       if (!physicalApex) { this.failRigidOrbitPrediction(); return; }
-      const perigee = burn.targetPeriapsis ?? this.sim.plan.target.perigee;
-      // Either way: a coast flown under J2 can arrive tens of kilometres off
-      // the conic apoapsis the ascent cut off on (Electron into a 600 km
+      const perigee = burn.targetPeriapsis ?? this.sim.plan.target.perigee, apogee = this.sim.plan.target.apogee;
+      const apex = physicalApex.radiusM - R_EARTH;
+      // Too high as well: a coast flown under J2 can arrive tens of kilometres
+      // above the conic apoapsis the ascent cut off on (Electron into a 600 km
       // sun-synchronous orbit: 598 km at cut-off, 617 km when it got there),
-      // and a circularisation flown at the wrong height cannot be trimmed back.
-      if (Math.abs(physicalApex.radiusM - R_EARTH - perigee) > 0.5 * apsisTolerance(perigee)) {
+      // and a circularisation flown there cannot be trimmed back down. "Too
+      // high" is above the target's apogee — the height a burn at the apoapsis
+      // is meant to be flown at — not above its perigee, which on a transfer
+      // orbit the apex rightly is by 35 000 km.
+      if (apex < perigee - 0.5 * apsisTolerance(perigee) || apex > apogee + 0.5 * apsisTolerance(apogee)) {
         if (this.rigidApexCorrections >= 3) { this.failRigidOrbitPrediction(); return; }
         this.rigidApexCorrections++;
         const correction: BurnPlan = { id: `physical-apex-${this.rigidApexCorrections}`, kind: 'raiseApoapsis', atU: 'asap',
