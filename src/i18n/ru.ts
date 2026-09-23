@@ -425,6 +425,7 @@ export const ru: Record<string, string> = {
   'sim.ended': 'ЗАВЕРШЕНО',
   'ctl.resetCamera': 'Сбросить камеру',
   'ctl.glow': 'Свечение (блум)',
+  'ctl.glowUnsupported': 'Свечение недоступно: видеокарта не может отрисовать нужное для него изображение с широким диапазоном яркости',
   'ctl.fullscreen': 'Во весь экран',
   'ctl.cameraSequence': 'Программа съёмки',
   'ctl.autoCamera': 'Переключать камеры автоматически',

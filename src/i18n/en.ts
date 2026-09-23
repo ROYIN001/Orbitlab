@@ -441,6 +441,7 @@ export const en: Record<string, string> = {
   // camera sequence
   'ctl.resetCamera': 'Reset camera',
   'ctl.glow': 'Glow (bloom)',
+  'ctl.glowUnsupported': 'Glow unavailable: this graphics card cannot render the high-range image it needs',
   'ctl.fullscreen': 'Full screen',
   'ctl.cameraSequence': 'Camera sequence',
   'ctl.autoCamera': 'Switch cameras automatically',

@@ -427,6 +427,7 @@ export const th: Record<string, string> = {
   'sim.ended': 'จบภารกิจ',
   'ctl.resetCamera': 'รีเซ็ตมุมกล้อง',
   'ctl.glow': 'แสงเรือง (บลูม)',
+  'ctl.glowUnsupported': 'ใช้แสงเรืองไม่ได้: การ์ดจอเครื่องนี้เรนเดอร์ภาพช่วงความสว่างกว้างที่เอฟเฟกต์ต้องใช้ไม่ได้',
   'ctl.fullscreen': 'เต็มหน้าจอ',
   'ctl.cameraSequence': 'ลำดับมุมกล้อง',
   'ctl.autoCamera': 'สลับมุมกล้องอัตโนมัติ',

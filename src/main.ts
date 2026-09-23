@@ -37,7 +37,11 @@ import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
+import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
+
+/** The viewer's own choice of glow, remembered between visits. */
+const GLOW_STORAGE_KEY = 'orbitlab.glow';
 
 /** Proper rotation: rendered +Y nose to physics +X nose, no reflection. */
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
@@ -195,12 +199,8 @@ class App {
   private liveBtn!: HTMLButtonElement;
   private warpSel!: HTMLSelectElement;
   private glowBtn!: HTMLButtonElement;
-  /** the glow is still following the frame rate (nobody has pressed the button) */
-  private glowAuto = true;
-  /** smoothed frame time, s — drives the automatic glow cut-out */
-  private frameTime = 1 / 60;
-  /** frames drawn since start (the glow heuristic ignores the first few seconds) */
-  private frames = 0;
+  /** decides from the frame rate whether the glow is affordable (src/render/glow-governor.ts) */
+  private readonly glow = new GlowGovernor();
   /** kept alive for as long as the app is: it publishes `--sb-h` */
   private sbObserver: ResizeObserver | null = null;
   private sbHeight = -1;
@@ -387,6 +387,7 @@ class App {
   async init(): Promise<void> {
     const tex = await loadEarthTextures(base);
     this.scene = new SceneManager(this.glCanvas, tex);
+    this.restoreGlow();
     this.debrisView = new DebrisView(this.scene);
     this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line);
     this.cams.attach(this.viewport);
@@ -456,9 +457,11 @@ class App {
       // overlay is not a modal — a click that lands here first must not throw.
       if (!this.scene) return;
       // Touching the control also takes it off automatic: whoever has an
-      // opinion about the glow outranks the frame-rate heuristic.
-      this.glowAuto = false;
+      // opinion about the glow outranks the frame-rate heuristic, and it is
+      // remembered for the next visit.
+      this.glow.settle();
       this.setGlow(!this.scene.bloomEnabled);
+      try { localStorage.setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
     });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
@@ -786,6 +789,28 @@ class App {
     this.preview(this.panel.getConfig());
   }
 
+  /**
+   * The glow as the viewer last left it, or none at all on a GPU that cannot
+   * draw it (no renderable half-float target): the button then says why
+   * instead of toggling nothing.
+   */
+  private restoreGlow(): void {
+    if (!this.scene.glowSupported) {
+      this.glow.settle();
+      this.setGlow(false);
+      this.glowBtn.disabled = true;
+      this.glowBtn.setAttribute('data-i18n-title', 'ctl.glowUnsupported');
+      this.glowBtn.title = t('ctl.glowUnsupported');
+      return;
+    }
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(GLOW_STORAGE_KEY); } catch { /* storage blocked */ }
+    if (stored === 'on' || stored === 'off') {
+      this.glow.settle();
+      this.setGlow(stored === 'on');
+    }
+  }
+
   /** Switch the bloom pass and keep the button's state in sync with it. */
   private setGlow(on: boolean): void {
     this.scene.setBloom(on);
@@ -794,30 +819,22 @@ class App {
   }
 
   /**
-   * Drop the glow when the machine cannot afford it.
-   *
-   * Bloom is eleven extra full-screen passes; on an integrated GPU at a high
-   * pixel ratio that is the difference between 60 fps and a slideshow, and a
-   * simulator that stutters is worse than one without a halo round the plume.
-   * The frame time is smoothed over about a second so that a single long frame
-   * — a shader compile, a tab coming back to the foreground — does not trip it,
-   * and the decision is only ever taken while nobody has touched the control.
+   * Let the frame rate decide whether the glow stays (see `GlowGovernor`).
+   * Frames that measure something other than the renderer are left out: a
+   * fast-forward spends up to 30 ms of every frame on physics, and a frame
+   * longer than the 100 ms clamp is a tab coming back from the background.
    */
-  private autoGlow(dtReal: number): void {
-    this.frameTime += (dtReal - this.frameTime) * 0.05;
-    // Warm-up: the first seconds are texture uploads, shader compiles and the
-    // first mission being built, none of which say anything about the steady
-    // frame rate.
-    if (this.frames++ < 240) return;
-    if (!this.glowAuto || !this.scene.bloomEnabled) return;
-    if (this.frameTime > 0.032) this.setGlow(false);
+  private autoGlow(elapsedWall: number): void {
+    const measuring = this.fastForwardTo === null && elapsedWall < 0.1 && document.visibilityState === 'visible';
+    const action = this.glow.sample(elapsedWall, this.scene.bloomEnabled, measuring);
+    if (action) this.setGlow(action === 'on');
   }
 
   private frame(now: number): void {
     const elapsedWall = Math.max(0, (now - this.lastFrame) / 1000);
     const dtReal = Math.min(0.1, elapsedWall);
     this.lastFrame = now;
-    this.autoGlow(dtReal);
+    this.autoGlow(elapsedWall);
     const sim = this.sim;
     const beforeSimulationTime = sim?.state.t ?? 0;
     // The live flight runs whether or not the user is watching the head.
