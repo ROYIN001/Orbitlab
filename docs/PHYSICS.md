@@ -237,7 +237,10 @@ runs into all the time, and each of the following limits fixes one observed fail
   `h_end(θ) = h + v_z t_go + ½ (a_T sin θ − g_eff) t_go²` with `t_go = (v_ins − v_h)/(a_T cos θ)`,
   evaluated over eleven candidate pitches. For a stage with margin the optimum is the pitch
   limit itself and the cap never binds. Removing this cap costs a heavy Falcon 9 about
-  400 m/s of steering loss, which is the difference between reaching orbit and not.
+  400 m/s of steering loss, which is the difference between reaching orbit and not. g_eff in
+  that expression is the mean over the burn, not its present value: the centrifugal term grows
+  as the horizontal speed climbs to orbital speed, and a frozen g_eff overstated the sink of a
+  stage lighting at 4–5 km/s by about a factor of two (see "Guidance defects", §6b).
 - **Apoapsis ceiling.** Once the osculating apoapsis is at or above the insertion apoapsis
   there is nothing to gain from climbing, so the pitch ceiling is squeezed from pitchMax down
   to pitchMin over an "excess apoapsis" band. This is what stops the runaway that used to
@@ -246,7 +249,10 @@ runs into all the time, and each of the following limits fixes one observed fail
   stage climbing from a 200 km staging altitude to a higher circular target spends minutes
   between the two, and with the old altitude gate nothing limited the apoapsis over that whole
   stretch — aimed straight at 500 × 500 km, Soyuz-2.1a ran its apoapsis out to 2 474 km while
-  the periapsis chased it.
+  the periapsis chased it. It does not apply while the vehicle is descending more than 500 m/s
+  short of the insertion speed (a lofted weak stage past its apex, whose apoapsis is behind it),
+  nor while the stage is flying a lofted hand-off, which climbs past the insertion apoapsis on
+  purpose.
 - **Load relief.** Whatever the steering law asks for, the throttle is backed off once the
   dynamic pressure passes 95 % of the vehicle's structural placard (§3). This is the protection
   every real launcher has, and it only acts on a trajectory already heading for the placard.
@@ -457,7 +463,10 @@ largest remaining Δv that respects max-Q. No mission requires it.
   when the vehicle can light an engine again afterwards (a restartable stage, or a later stage
   with propellant) and when the running stage still has more than 20 s of burn time: cutting
   off a Blok I, or a stage two seconds from depletion, would throw the mission away rather
-  than save it.
+  than save it. Nor does it fire when the circularisation at the apoapsis would be deeper
+  than the 400 m/s (700 m/s for a stage that cannot hold altitude) `onCoreBurnout` allows
+  before it trades a burn for a coast: a Centaur V under 19 t climbs past the apoapsis target
+  on purpose, and cut off there it was handed a 3.4 km/s circularisation it could not fly.
 - **Step size near cut-off.** A metre per second moves a nearly circular apoapsis by
   kilometres, so the integrator drops to 0.02 s steps for the last seconds of the ascent. "The
   last seconds" is measured as the *speed still to be gained* (within 250 m/s of the insertion
@@ -826,9 +835,8 @@ made the fleet matrix verify only that the simulation agreed with itself; the ba
 numerically identical today, and that is the point — when they stop being, the gate says so.
 
 What the fleet delivers, at the three payload fractions the acceptance test uses
-(`+` = orbit reached inside the acceptance band, `-` = excluded — four of these are guidance
-defects rather than limits: Vulcan's two 90 % rows, Ariane 64 `iss` 90 % and PSLV-XL `iss` 90 %,
-listed under "Guidance defects" below — `n/a` = range safety,
+(`+` = orbit reached inside the acceptance band, `-` = excluded as a capability or architecture
+limit — no guidance defects are left, see "Guidance defects" below — `n/a` = range safety,
 `—` = no such preset for this vehicle):
 
 | vehicle | leo 25/50/90 % | iss 25/50/90 % | sso 25/50/90 % | gto 25/50/90 % |
@@ -840,14 +848,14 @@ listed under "Guidance defects" below — `n/a` = range safety,
 | Falcon 9 Block 5 | + + - | + + - | n/a | + + - |
 | Falcon Heavy | + + - | + + - | n/a | + + - |
 | Atlas V 551 | + + + | + + + | n/a | + + + |
-| Vulcan Centaur VC4 | + + - | + + - | n/a | + + + |
-| Ariane 64 | + + + | + + - | n/a | + + + |
-| Vega-C | + + + | + + + | n/a | — |
+| Vulcan Centaur VC4 | + + + | + + + | n/a | + + + |
+| Ariane 64 | + + + | + + + | + + + | + + + |
+| Vega-C | + + + | + + + | + + + | — |
 | Long March 2D | - - - | - - - | - - - | — |
 | Long March 3B/E | + + + | + + + | n/a | + + + |
-| H-IIA 202 (historical) | + + + | + + + | n/a | + + + |
+| H-IIA 202 (historical) | + + + | + + + | + + + | + + + |
 | Long March 5 | + + + | + + + | n/a | + + + |
-| H3-22 | + + + | + + + | n/a | + + + |
+| H3-22 | + + + | + + + | + + + | + + + |
 | PSLV-XL | + + - | + + - | n/a | + - - |
 | Electron | + + + | + + + | + + + | — |
 | Starship (Super Heavy) | + + + | + + + | n/a | + + - |
@@ -855,7 +863,9 @@ listed under "Guidance defects" below — `n/a` = range safety,
 The largest payload the model delivers to each preset, found by bisection, against the
 published figure. Bisection assumes the passing region is contiguous in payload mass, which is
 not always true near the limit (Atlas V reaches GTO at 8.0 t but not at 8.9 t, so its 6.2 t
-here is a lower bound, not a ceiling):
+here is a lower bound, not a ceiling). The Vulcan, Ariane 64, Vega-C, H-IIA and H3 rows were
+re-measured after the launch-direction and guidance changes of September 2026 (a `>` is the
+top of the search, 115 % of the rating); the others date from the previous wave:
 
 | vehicle | leo (500 km) | iss (420 km) | sso (600 km) | gto |
 | --- | --- | --- | --- | --- |
@@ -866,10 +876,12 @@ here is a lower bound, not a ceiling):
 | Falcon 9 | 17.9 t / 22.8 t | 17.1 t / 22.8 t | — | 6.3 t / 8.3 t |
 | Falcon Heavy | 45.1 t / 63.8 t | 43.1 t / 63.8 t | — | 19.3 t / 26.7 t |
 | Atlas V 551 | 16.9 t / 18.9 t | 15.5 t / 18.9 t | — | ≥ 6.2 t / 8.9 t |
-| Vulcan Centaur VC4 | 15.6 t / 24.4 t | 12.8 t / 24.4 t | — | > 12.1 t / 12.1 t |
-| Ariane 64 | 16.8 t / 21.6 t | 14.8 t / 21.6 t | — | > 11.5 t / 11.5 t |
+| Vulcan Centaur VC4 | 21.7 t / 21.4 t | 20.0 t / 21.4 t | — | > 13.3 t / 11.6 t |
+| Ariane 64 | > 24.8 t / 21.6 t | 23.3 t / 21.6 t | > 17.3 t / 15.0 t | > 13.2 t / 11.5 t |
+| Vega-C | > 3.8 t / 3.3 t | > 3.8 t / 3.3 t | > 2.6 t / 2.3 t | — |
+| H-IIA 202 | 9.3 t / 10.0 t | 9.0 t / 10.0 t | > 4.1 t / 3.6 t | 4.3 t / 4.1 t |
 | Long March 5 | > 25 t | > 25 t | — | > 14 t |
-| H3-22 | > 10 t | > 10 t | — | > 4 t |
+| H3-22 | > 11.5 t / 10.0 t | > 11.5 t / 10.0 t | > 4.6 t / 4.0 t | > 4.6 t / 4.0 t |
 | PSLV-XL | 2.8 t / 3.8 t | 2.6 t / 3.8 t | — | 0.6 t / 1.4 t |
 | Electron | > 0.30 t | > 0.30 t | 0.2 t / 0.30 t | — |
 | Starship | > 100 t | > 100 t | — | 21.2 t / 27 t |
@@ -1002,35 +1014,52 @@ default mission and has a test of its own: Soyuz-2.1a + 7.15 t crew ship from Ba
 into 197 × 200 km at T+536 s and the crew ship circularises at 417.9 × 418.0 km / 51.64° at
 T+3 397 s.
 
-**Guidance defects.** Five, all one family: a heavy upper stage lighting at a fraction of a g
-under a near-maximum payload, a closed-loop ascent that cannot hold the loft it was given, and a
-break-up on the max-Q placard on the way back down — with the ideal Δv for the mission on paper
-and kilometres per second still in the tanks.
+**Guidance defects.** None left. There were five, all one family: a heavy upper stage lighting
+at a fraction of a g under a near-maximum payload, a closed-loop ascent that could not hold the
+loft it was given, and a break-up on the way back down — with the ideal Δv for the mission on
+paper and kilometres per second still in the tanks.
 
-| case | ends | Δv left | ascent margin |
-| --- | --- | --- | --- |
-| Vulcan Centaur → 500 km, 90 % | break-up T+963 s at −3 429 × 331 km | 2 657 m/s | +1 865 m/s |
-| Vulcan Centaur → ISS plane, 90 % | break-up T+915 s at −3 857 × 318 km | 2 860 m/s | +1 701 m/s |
-| Ariane 64 → ISS plane, 90 % | break-up T+941 s at −2 219 × 92 km | 1 704 m/s | +1 855 m/s |
-| PSLV-XL → ISS plane, 90 % | break-up T+569 s at −2 910 × 232 km | 968 m/s | +315 m/s |
-| Ariane 64 → sun-synchronous, 90 % | tanks dry T+1 226 s at 107 × 7 443 km | 0 m/s | +2 589 m/s |
+| case | was | is |
+| --- | --- | --- |
+| Vulcan Centaur → 500 km, 90 % | break-up T+963 s, 2 657 m/s left | 500.1 × 501.9 km, SECO T+1 305 s |
+| Vulcan Centaur → ISS plane, 90 % | break-up T+915 s, 2 860 m/s left | 417.0 × 417.3 km, SECO T+1 366 s |
+| Ariane 64 → ISS plane, 90 % | break-up T+941 s, 1 704 m/s left | 420.1 × 421.8 km, SECO T+1 074 s |
+| Ariane 64 → sun-synchronous, 90 % | tanks dry at 107 × 7 443 km | 597.0 × 597.3 km, SECO T+1 017 s |
+| PSLV-XL → ISS plane, 90 % | break-up T+569 s, 968 m/s left | tanks dry T+908 s at −1 293 × 204 km: a capability limit |
 
-The fifth entered the matrix when Kourou's sun-synchronous plane became reachable with a dogleg
-(§7): the Vinci insertion runs the apoapsis out to 7 443 km instead of stopping the burn, which
-is the same hand-over signature as the ISS row at a lighter payload.
+Traced flight by flight, four things were wrong, three in the guidance law and one in three
+vehicles' programs:
 
-The Vulcan pair were in this table two waves ago with "+646/+743 m/s of margin" recorded against
-them; the last wave moved them into `BEYOND_CAPABILITY` and deleted that line. Ariane 64 and
-PSLV-XL had been in `BEYOND_CAPABILITY` all along. Nothing about the flights changed — the test
-that now checks the rule did. Two of the four have an explicit counter-example that rules out a
-capability explanation on its own: `ariane64/leo/90` carries the *same* 19.44 t to a *higher*
-500 km orbit and is accepted at 497 × 497 km, and `pslvxl/leo/90` with the same payload runs its
-tanks dry instead of breaking up, which is the capability limit and is filed as one.
+1. **The thrust-limited pitch cap charged the wrong sink.** It picks the pitch that leaves the
+   stage highest when the horizontal speed reaches the insertion speed, and evaluated the fall
+   with the effective gravity of the *present* speed held for the whole burn. At 4.7 km/s that
+   is 5.4 m/s²; over a burn that ends at orbital speed, where the centrifugal term cancels
+   gravity, the mean is about half of it. The cap now uses the mean over the burn (vh ramping
+   linearly to vh + D, so ⟨vh²⟩ = (vh² + vh(vh+D) + (vh+D)²)/3). A strong stage still sits on
+   `pitchMax`; a weak one is allowed to climb.
+2. **The apoapsis guard cut a lofted stage off.** Centaur V climbing to 450 km on purpose was
+   read as a runaway, shut down at 380 km and handed a "circularise at apoapsis" burn 3.4 km/s
+   deep that it could not fly; the velocity-to-be-gained steering pointed it 15° below the
+   horizon and it sank into the air. The guard now fires only when the circularisation at the
+   apoapsis is within the same 400/700 m/s shortfall `onCoreBurnout` already requires before it
+   trades a burn for a coast.
+3. **The apoapsis ceiling dived a stage that was already descending**, and flattened one flying
+   a lofted hand-off. Both have an osculating apoapsis above the insertion apoapsis for a
+   reason — the first is past its apex and short of orbital speed, the second is handing over
+   climbing — and neither is the runaway the ceiling exists for. It no longer applies while the
+   vehicle is sinking more than 500 m/s short of the insertion speed, nor while a loft is flown.
+4. **Three programs.** Vulcan now flies 40° of pitch authority, a 150 km loft and a 3° kick
+   (was 30°, 80 km, 1.5°); Ariane 64 never pitches below 10° (the closed loop used to command
+   the stack level at 70 km while it could still see the P120Cs' thrust, leaving a 0.84 g core
+   to climb back); PSLV-XL hands its 0.2 g PS4 over climbing with an 80 km loft. Each was
+   chosen from the middle of a region of its own guidance-parameter grid where every row of
+   that vehicle passes, not at an edge.
 
-Closing them needs an ascent profile that trades the loft for horizontal speed at staging: the
-previous wave's 48-point sweep over kick angle, turn rate, loft and pitch limit is on the record
-and reproduces — no point in that grid recovers any of them. That is a wave of guidance work,
-and it is scope rather than a statement about these vehicles.
+PSLV-XL to the ISS plane at 90 % still does not reach orbit, and should not be expected to: with
+the hand-over fixed it spends every kilogram and ends suborbital, exactly like the 500 km row at
+the same payload, with +315 m/s of ideal margin against losses of about 2.3 km/s. It is filed as
+a capability limit. Vulcan's insertions end 34–95 s inside the 1 400 s clock a 0.15–0.5 g
+stage is given; that is what a Centaur V burning 54 t at 48 kg/s takes.
 
 The three entries the table carried last wave — an apoapsis 16–2 650 km above a **circular**
 target that the retrograde trim did not close, with propellant and a restartable stage

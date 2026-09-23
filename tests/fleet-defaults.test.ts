@@ -42,7 +42,9 @@
  *      margin, an order of magnitude over the threshold. Two of them had been
  *      MOVED here out of `KNOWN_GUIDANCE_FAILURES` by the previous wave, which
  *      is what let that wave report "six defects closed" when it had closed
- *      four (review follow-up). All four are back below, where they belong.
+ *      four (review follow-up). All four went back below, and have since been
+ *      fixed in the guidance: the Vulcan and Ariane 64 rows fly, and
+ *      `pslvxl/iss/90` now runs its tanks dry and is filed here honestly.
  *
  *      Several genuine entries end in a break-up rather than an empty tank, and
  *      that is the classification working, not failing: an underpowered stack
@@ -59,9 +61,9 @@
  *   4. `KNOWN_GUIDANCE_FAILURES` — everything else: the vehicle had both the
  *      delta-v and a way to spend it, and the guidance still lost or missed the
  *      orbit. These are defects, and `known guidance failures still fail`
- *      asserts they are all still broken so the list cannot rot. It holds FOUR
- *      entries; see the table's own comment for what closed, what was
- *      mis-filed, and what the count this file used to report actually was.
+ *      asserts they are all still broken so the list cannot rot. It is EMPTY:
+ *      the table's own comment records the last four (five, once Kourou's
+ *      sun-synchronous plane joined the matrix) and what closed them.
  *
  * See `docs/PHYSICS.md`, "Fleet acceptance and reference payloads", for the
  * numbers behind the classification.

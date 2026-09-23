@@ -3,6 +3,7 @@
  * orbital sequence, max-Q and the structural placard, and the insertion floor.
  */
 import { MU_EARTH, R_EARTH, RAD } from '../constants';
+import { norm } from '../vec3';
 import type { OrbitalElements } from '../orbital';
 import { orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
 import type { Simulation } from '../simulation';
@@ -174,6 +175,15 @@ export class AscentMonitor {
       // Only worth it while there is still propellant to save: a stage seconds
       // from depletion should simply finish the job.
       && this.sim.vehicle.stageBurnTimeLeft() > 20
+      // ...and only when the stack could actually finish at the apoapsis. A
+      // weak hydrogen stage under a heavy payload (Centaur V or Vinci at
+      // 0.25–0.3 g) climbs on purpose: its lofted arc is how it keeps altitude
+      // while it builds three kilometres per second of horizontal speed, and
+      // the apoapsis running past the target on the way up is not a runaway.
+      // Cut off there, it was handed a circularisation it could not fly — the
+      // same shortfall test `onCoreBurnout` applies before it trades a burn for
+      // a coast — and sank from 450 km back into the air.
+      && this.circularizeShortfall(el, Math.max(hIns, haIns)) < (s.thrust / s.mass < 0.9 * this.effectiveGravity() ? 700 : 400)
     ) {
       const act = this.sim.vehicle.active;
       this.sim.staging.cutoffAscentStage(act);
@@ -196,6 +206,25 @@ export class AscentMonitor {
         this.sim.destroy();
       }
     }
+  }
+
+  /**
+   * Speed the stack would still have to gain at its apoapsis to raise the
+   * periapsis to `targetPeriapsis` there, m/s.
+   */
+  private circularizeShortfall(el: OrbitalElements, targetPeriapsis: number): number {
+    const ra = R_EARTH + el.apoapsisAlt;
+    const rp = Math.min(ra, R_EARTH + targetPeriapsis);
+    const vWanted = Math.sqrt(MU_EARTH * (2 / ra - 2 / (ra + rp)));
+    return vWanted - el.h / ra;
+  }
+
+  /** Gravity less the centrifugal term of the horizontal speed, m/s². */
+  private effectiveGravity(): number {
+    const s = this.sim.state;
+    const rm = norm(s.r);
+    const vh2 = Math.max(0, s.speed * s.speed - s.vz * s.vz);
+    return MU_EARTH / (rm * rm) - vh2 / rm;
   }
 
   finishAscent(el: OrbitalElements): void {

@@ -349,8 +349,16 @@ fill(BEYOND_CAPABILITY,
   'second stage empty at a 15 484 km apogee of the 35 786 km target (-485 m/s)',
   'falconheavy/gto/90');
 fill(BEYOND_CAPABILITY,
-  'PS1-PS4 run dry at T+908 s, suborbital at -537 x 235 km: +523 m/s of ideal margin and none of it left, which is what a four-stage solid/liquid stack with this much drag spends',
+  'PS1-PS4 run dry at T+908 s, suborbital at -695 x 273 km: +523 m/s of ideal margin and none of it left, which is what a four-stage solid/liquid stack with this much drag spends',
   'pslvxl/leo/90');
+// Filed as a guidance failure until the lofted hand-off (PSLV-XL's 80 km
+// `loftAltitude`) and the apoapsis-ceiling fixes in `AscentGuidance`: it used to
+// break up at T+569 s with 968 m/s left. Handed over climbing, the PS4 now
+// spends every kilogram and still ends suborbital — the same capability limit
+// as the 500 km row above, one ISS plane further away.
+fill(BEYOND_CAPABILITY,
+  'PS1-PS4 run dry at T+908 s, suborbital at -1 293 x 204 km: +315 m/s of ideal margin and none of it left, the same limit as the 500 km row at the same payload',
+  'pslvxl/iss/90');
 fill(BEYOND_CAPABILITY,
   'PS4 is a 7.3 kN stage: it runs dry at a 26 295 km apogee (50 %, +346 m/s) and a 9 651 km one (90 %, -414 m/s)',
   'pslvxl/gto/50', 'pslvxl/gto/90');
@@ -444,40 +452,32 @@ fill(ARCHITECTURE,
 //                                                       ->  419.1 x 421.9 km, evt.targetOrbit T+8 707 s
 //   h2a202/iss/90     420 x 436 km, three burns, 3.9 h  ->  420.5 x 421.8 km, evt.targetOrbit T+5 792 s
 //
-// The four entries below are what is left, and all four arrive here the same
-// way: the fleet gate now CHECKS the BEYOND_CAPABILITY rule instead of stating
-// it, and these are the rows that failed the check. Each one has the delta-v on
-// paper (`ascentMargin`, measured against the shipped ASCENT_LOSS_ALLOWANCE)
-// and a stage able to spend it, and each one is destroyed short of orbit. That
-// is the definition of this table.
+// The four entries that were left here — Vulcan Centaur to 500 km and the ISS
+// plane at 90 %, Ariane 64 to the ISS plane at 90 % (and its sun-synchronous
+// 90 % row, which joined when Kourou's plane became reachable with a dogleg),
+// and PSLV-XL to the ISS plane at 90 % — shared one signature: a heavy upper
+// stage lighting at a fraction of a g under a near-maximum payload, a
+// closed-loop ascent that could not hold the loft it was given, and a break-up
+// on the way back down with kilometres per second still in the tanks.
 //
-// They share one signature, which is why they are listed together: a heavy
-// upper stage lighting at a fraction of a g under a near-maximum payload, a
-// closed-loop ascent that cannot hold the loft it was given, and a break-up on
-// the max-Q placard on the way back down. The previous wave's sweep is on the
-// record and reproduces — no kick angle, turn rate, loft or pitch limit in the
-// tuning grid recovers them — which makes the fix a profile that trades the
-// loft for horizontal speed at staging, not another point in the same grid.
-// That is a wave's worth of guidance work, and it is scope, not a capability
-// statement about Vulcan, Ariane 64 or PSLV.
+// The fix was in the guidance, then in three vehicles' own programs (see
+// docs/PHYSICS.md, "Guidance defects"):
+//
+//   1. The thrust-limited pitch cap charged the weak stage the effective
+//      gravity of its present speed for the whole burn; it now uses the mean
+//      over the burn, as the centrifugal relief grows toward orbital speed.
+//   2. The apoapsis guard cut a lofted Centaur V off at 380 km and handed it
+//      a circularisation 3.4 km/s deep; it now fires only when the stack could
+//      finish at the apoapsis (the shortfall test `onCoreBurnout` uses).
+//   3. The apoapsis ceiling dived a stage that was already descending far
+//      from orbital speed, and flattened a stage flying a lofted hand-off;
+//      neither is the runaway it exists for.
+//   4. Vulcan flies 40° / 150 km loft / 3° kick, Ariane 64 never pitches below
+//      10° while its P120Cs burn, and PSLV-XL hands its PS4 over climbing.
+//
+// All four Vulcan and Ariane rows now reach their orbits; PSLV-XL runs dry
+// instead of breaking up, which is its capability limit and is filed above.
 export const KNOWN_GUIDANCE_FAILURES: Record<string, string> = {};
-fill(KNOWN_GUIDANCE_FAILURES,
-  'Centaur V lights at 0.29 g under 19.26 t and the lofted arc falls back before it reaches orbital speed: break-up at T+830-882 s with 3.4-3.6 km/s left and +2 383/+2 547 m/s of ideal ascent margin',
-  'vulcan/leo/90', 'vulcan/iss/90');
-fill(KNOWN_GUIDANCE_FAILURES,
-  'the Vulcain core hands Vinci a sagging trajectory with 19.44 t aboard: break-up at T+941 s at -2 219 x 92 km with 1.7 km/s left and +1 855 m/s of margin (the 500 km case at the same mass is accepted, 497 x 497 km, which is what rules out a capability explanation)',
-  'ariane64/iss/90');
-fill(KNOWN_GUIDANCE_FAILURES,
-  'PS4 is still 974 m/s deep with +315 m/s of ideal margin when the stack breaks up at T+567 s at -2 897 x 232 km; the same payload to the 500 km preset instead runs the tanks dry, which is a capability limit and is filed as one',
-  'pslvxl/iss/90');
-// Entered the matrix when Kourou's sun-synchronous plane became reachable with a
-// dogleg; the same signature as `ariane64/iss/90` at a lighter payload: the
-// Vinci insertion runs the apoapsis out to 7 443 km and the tanks dry with
-// 107 km of periapsis and +2 589 m/s of ideal margin on paper. The 25 % and
-// 50 % rows of the same preset are accepted.
-fill(KNOWN_GUIDANCE_FAILURES,
-  'the Vulcain core hands Vinci a sagging trajectory with 13.5 t aboard and the insertion runs the apoapsis out to 7 443 km: tanks dry at 107 x 7 443 km at T+1 226 s with +2 589 m/s of ideal margin',
-  'ariane64/sso/90');
 
 export const EXCLUDED: Record<string, string> = {
   ...SITE_GEOMETRY, ...BEYOND_CAPABILITY, ...ARCHITECTURE, ...KNOWN_GUIDANCE_FAILURES,

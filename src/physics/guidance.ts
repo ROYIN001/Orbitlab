@@ -315,6 +315,17 @@ export class AscentGuidance {
       // speed reaches the insertion speed; when the stage is strong enough the
       // optimum is pitchMax and this cap never binds.
       const D = Math.max(50, vIns - vhMag);
+      // The sink is evaluated with the effective gravity AVERAGED over the burn,
+      // not frozen at its present value: the centrifugal relief grows as the
+      // horizontal speed climbs toward vIns (g_eff reaches zero at orbital
+      // speed). With vh ramping roughly linearly from vh to vh + D, the mean of
+      // vh² is (vh² + vh(vh + D) + (vh + D)²)/3. Frozen, a stage lighting at
+      // 4.7 km/s is charged 5.4 m/s² of sink for the whole burn instead of an
+      // average of about 2.5, which pushed the optimum toward a flat, short
+      // burn and handed Centaur V and Vinci under 19 t trajectories that fell
+      // back into the air.
+      const vhEnd = vhMag + D;
+      const gEffBurn = MU_EARTH / (rm * rm) - (vhMag * vhMag + vhMag * vhEnd + vhEnd * vhEnd) / (3 * rm);
       let capTheta = p.pitchMax;
       let bestH = -Infinity;
       for (let k = 0; k <= 10; k++) {
@@ -322,7 +333,7 @@ export class AscentGuidance {
         const u = aT * Math.cos(th);
         if (u < 0.05) continue;
         const tg = Math.min(D / u, 3000);
-        const hEnd = inp.altitude + vz * tg + 0.5 * (aT * Math.sin(th) - gEff) * tg * tg;
+        const hEnd = inp.altitude + vz * tg + 0.5 * (aT * Math.sin(th) - gEffBurn) * tg * tg;
         if (hEnd > bestH) {
           bestH = hEnd;
           capTheta = th / DEG;
@@ -347,8 +358,24 @@ export class AscentGuidance {
       // orbit impossible for a stack with no restart. Above ~110 km there is no
       // aerodynamic reason to keep climbing once the apoapsis is where the plan
       // wants it, so the gate is the lower of the two.
+      //
+      // Not on the way down while still far from orbital speed. A heavily
+      // lofted weak stage (Centaur V under 19 t) peaks above the insertion
+      // apoapsis and then descends while it builds the last two kilometres per
+      // second; its osculating apoapsis is then behind it and says nothing
+      // about climbing, and squeezing the pitch to `pitchMin` there dived it
+      // from 440 km into the air. What it lacks is periapsis, which is the
+      // thrust-limited cap's business.
       const band = Math.max(15e3, 0.08 * this.insertionApoapsis);
-      if (gEff < aT && inp.altitude > Math.min(this.insertionAltitude - band, 110e3)) {
+      //
+      // Nor while this stage is flying a lofted hand-off (`vzT > 0`): it is
+      // handing over CLIMBING on purpose, so that the weak stage after it
+      // keeps altitude while it builds speed, and an apoapsis past the
+      // insertion apoapsis is the loft working. Squeezing the pitch there
+      // flattened PSLV-XL's third stage at 210 km and left a 0.22 g PS4 to
+      // sink into the air.
+      const sinkingShort = vz < 0 && D > 500;
+      if (gEff < aT && !sinkingShort && !(vzT > 0) && inp.altitude > Math.min(this.insertionAltitude - band, 110e3)) {
         const excess = isFinite(inp.apoapsisAlt) ? (inp.apoapsisAlt - this.insertionApoapsis) / band : 4;
         const f = Math.max(0, Math.min(1, excess));
         const floorTheta = inp.altitude > this.insertionAltitude - 15e3 ? p.pitchMin : Math.min(0, p.pitchMax);

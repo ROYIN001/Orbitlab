@@ -516,7 +516,11 @@ export const VEHICLES: VehicleSpec[] = [
     // unchanged by it (leo/iss 25-50 % and all three GTO rows accepted) and the
     // ascent auto-tuner, which grades a candidate against the orbit the PLAN
     // asked for, stops reporting every point in its grid as an insertion miss.
-    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 30, loftAltitude: 80e3, parkingAltitude: 250e3 },
+    // Centaur V lights at 0.27-0.3 g under a near-rated payload and cannot hold
+    // altitude at any attitude, so the core has to hand it a high, climbing
+    // arc: 40° of pitch authority and a 150 km loft. At 30° / 80 km the 90 %
+    // LEO and ISS rows fell back into the air with 3.4-3.6 km/s aboard.
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 40, loftAltitude: 150e3, parkingAltitude: 250e3 },
     notes: 'Methalox first stage with up to six solids; Centaur V is a long-coast hydrogen upper stage.',
   },
   {
@@ -533,7 +537,12 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['kourou'], maxQ: 55e3, maxAccel: 45,
     // P120C solids turn the vehicle quickly; the Vinci upper stage needs the loft.
-    guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 150e3 },
+    // pitchMin 10: with the P120Cs still burning the closed loop used to
+    // command the stack level or slightly nose-down at 70 km (it sees the
+    // boosters' thrust, not the 0.84 g core that is left after they drop), and
+    // the Vulcain then spent its burn climbing back — handing Vinci a sagging
+    // arc under 13.5-19.4 t. Never pitching below 10° keeps that altitude.
+    guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 35, pitchMin: 10, loftAltitude: 150e3 },
     notes: 'Hydrogen core with four P120C solids; the Vinci upper stage restarts for multi-orbit missions.',
   },
   {
@@ -746,7 +755,9 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['sriharikota'], maxQ: 70e3, maxAccel: 60,
     // Four alternating stages; a gentle turn keeps PS2 high enough for the solid PS3.
-    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 0 },
+    // An 80 km loft: the 0.2 g PS4 cannot hold altitude, so PS3 hands it over
+    // climbing instead of level at 210 km.
+    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 80e3 },
     notes: 'Four alternating solid/liquid stages; two of six strap-ons are air-lit at T+25 s.',
   },
   {
