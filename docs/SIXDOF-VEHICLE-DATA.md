@@ -400,7 +400,9 @@ Soyuz-2.1a included:
 - **The physical apoapsis is corrected both ways.** A coast flown under J2 can arrive far from
   the conic apoapsis it started on. The six-DOF planner already raised a physical apex that fell
   short of the target perigee before circularising at it; it now also lowers one that rises
-  above the target apogee (a transfer orbit's apex is meant to be far above its perigee),
+  more than 80 % of the acceptance band above the target apogee (a transfer orbit's apex is
+  meant to be far above its perigee; Soyuz's crewed spacecraft, at 426.6 km for a 420 km orbit,
+  circularises where it is instead of spending a revolution on a lowering burn),
   unless a later burn of the plan lowers the apoapsis anyway, and sizes the correction on the
   vis-viva Δv it needs rather than a fixed 10 m/s.
   Electron's ascent into a 600 km sun-synchronous orbit cut off on a 598 km conic apoapsis and

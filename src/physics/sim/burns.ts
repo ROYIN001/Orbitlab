@@ -162,9 +162,13 @@ export class BurnSequencer {
       // orbit the apex rightly is by 35 000 km — and only when no later burn
       // of the plan brings the apoapsis down anyway (Vulcan's 856 × 137 km
       // insertion raises its perigee at the apex first, then lowers the apex).
+      // The high side uses the planner's band, 80 % of the one the orbit is
+      // judged on: a circularisation flown a few kilometres high still ends
+      // inside it (Soyuz's crewed spacecraft to the 420 km station orbit,
+      // physical apex 426.6 km), and a lowering burn costs a revolution.
       const lowersLater = this.sim.plan.burns.slice(this.sim.plan.burns.indexOf(burn) + 1)
         .some((b) => !b.done && b.kind === 'raiseApoapsis');
-      if (apex < perigee - 0.5 * apsisTolerance(perigee) || (!lowersLater && apex > apogee + 0.5 * apsisTolerance(apogee))) {
+      if (apex < perigee - 0.5 * apsisTolerance(perigee) || (!lowersLater && apex > apogee + 0.8 * apsisTolerance(apogee))) {
         if (this.rigidApexCorrections >= 3) { this.failRigidOrbitPrediction(); return; }
         this.rigidApexCorrections++;
         // The shooting bracket is sized on the estimate: the vis-viva change
