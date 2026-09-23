@@ -9,7 +9,7 @@ import { atmosphere } from '../atmosphere';
 import { nextJ2Apsis, physicalApsides, propagateJ2Coast, shootJ2ApsisVelocity, shootJ2Altitude } from '../rigid/orbit-prediction';
 import { OrbitalElements, elementsFromState, timeToArgumentOfLatitude, timeToApoapsis, timeToPeriapsis, propagateKepler, planeNormal, visViva } from '../orbital';
 import { desiredVelocity, planeNormalThrough } from '../guidance';
-import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
+import { BurnPlan, replanBurns, orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR, INCLINATION_TOLERANCE } from '../mission';
 import type { Simulation } from '../simulation';
 import { TAILOFF_SPAN, engineTailoffS } from '../vehicle';
 import { BURN_IGNITION_ALIGNMENT, BURN_PREORIENT_TIME, MAX_REPLANS, RIGID_BURN_IGNITION_ALIGNMENT } from './constants';
@@ -252,6 +252,20 @@ export class BurnSequencer {
         this.sim.plan.burns.splice(this.sim.plan.burns.indexOf(burn), 0, correction);
         burn = correction;
       }
+    }
+    // Six-DOF: the last shaping burn to a circular target is aimed at the
+    // orbit the mission is judged on — the middle of the lowest and highest
+    // altitude of the next revolution under J2 — and flown along the
+    // velocity. A conic circularisation leaves whatever eccentricity J2 hides
+    // from the osculating ellipse at cut-off: Electron's 600 km
+    // sun-synchronous orbit came out 599–624 km, with its Curie stage's
+    // attitude gas too low for another burn. Only when no plane change is
+    // left to fly, which this burn would then not make.
+    const target = this.sim.plan.target;
+    if (this.sim.rigidRuntime && burn.kind === 'shapeAtApoapsis' && !burn.physicalObjective
+      && Math.abs(target.apogee - target.perigee) < 1e3 && Math.abs(target.inclination - el.i) < 0.5 * INCLINATION_TOLERANCE
+      && this.sim.plan.burns.filter((b) => !b.done).length === 1) {
+      burn.physicalObjective = { measure: 'mean', altitudeM: (target.apogee + target.perigee) / 2 };
     }
     let tGo: number;
     if (burn.kind === 'raiseApoapsis') {
@@ -871,7 +885,11 @@ export class BurnSequencer {
     const s = this.sim.state;
     if (this.rigidTransfer && this.sim.rigidRuntime!.command.mode === 'auto' && this.burnIgnited && burning
       && this.rigidTransfer.burn === s.currentBurn) {
-      this.rigidTransfer.deliveredDv += dot(propulsionECI, this.rigidTransfer.direction) * dt;
+      // An aimed shaping burn is flown along the turning velocity (a long
+      // one sweeps tens of degrees of orbit); its impulse counts along it.
+      const along = this.rigidTransfer.burn.physicalObjective && norm(s.v) > 1
+        ? scale(normalize(s.v), this.rigidTransfer.burn.lowering ? -1 : 1) : this.rigidTransfer.direction;
+      this.rigidTransfer.deliveredDv += dot(propulsionECI, along) * dt;
       s.burnDvRemaining = Math.max(0, this.rigidTransfer.requiredDv - this.rigidTransfer.deliveredDv);
     }
   }
