@@ -1,12 +1,13 @@
 # Six-degree-of-freedom acceptance gates
 
-Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control. This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
+Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control, extended to all eighteen vehicles (roadmap P01, last section). This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
 
 **Where the evidence lives.** Paths below that start `../audit-2026-09-19/` or
 `../../implementation-planning/` are the owner's local evidence and planning folders, kept
 outside this repository; they are cited as the record of what was run at the time and cannot
 be opened from a checkout. What *can* be re-run from a checkout: the delivered-orbit matrix
-(`npm run test:heavy`, tests/heavy/), the mission convergence gate
+(`npm run test:heavy`, tests/heavy/), the six-DOF fleet matrix (`npm run test:sixdof-fleet`,
+tests/sixdof-fleet/), the mission convergence gate
 (tests/rigid-mission-convergence.test.ts), the recovery acceptance (tests/rigid-recovery.test.ts)
 and the component sensitivity study (tests/rigid-sensitivity.test.ts). The current state of the
 whole project is in [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
@@ -329,3 +330,53 @@ The Soyuz late first-stage pitch-down is unchanged in character — the command 
 closed-loop pitch command that has run far below the vehicle as the dynamic pressure falls — but
 begins earlier, at about T+89 s instead of at booster separation, because the less unstable
 vehicle is released sooner. It stays a guidance item (G01).
+
+## Every vehicle in six-DOF (roadmap P01, 2026-09-23)
+
+The other sixteen vehicles were given six-DOF data — chambers where their bells are drawn,
+per-stage steering, thrusters, tanks and grains ([SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md),
+"The other sixteen vehicles") — and six-DOF became the default for all eighteen.
+
+**The gate.** `npm run test:sixdof-fleet` (tests/sixdof-fleet/) flies, as rigid bodies with
+each vehicle's own actuators:
+
+- every accepted row of the regular fleet matrix — 126 vehicle × orbit × payload cases of
+  sixteen vehicles — judged by the same `acceptanceFailures` as tests/fleet-defaults.test.ts
+  (the target-orbit event, the orbit re-derived from the raw state, the insertion clock);
+- each of those vehicles' first accepted case again in the two declared wind scenarios,
+  crosswind and shear (32 cases);
+- Long March 2D's real mission, its satellite to the 600 km sun-synchronous orbit at 25/50/90 %
+  of the rating (3 cases). Long March 2D and Soyuz-2.1a have no accepted matrix row; Soyuz-2.1a's
+  real mission, the crewed spacecraft to the station orbit, is the reference mission of
+  tests/rigid-simulation.test.ts.
+
+Result at commit 68ace10: **161 of 161 passed** in 2 h 39 min on four cores; the
+slowest cases are the Proton-M and Angara A5 transfers (about 7 minutes each), the median about
+2 minutes. An earlier run of the 158 matrix and wind cases at e504089 passed 158 of 158.
+
+**How the orbit is judged.** A six-DOF coast is flown under J2, where the osculating apsides of
+one instant swing several kilometres round a revolution. Judged on them, cases passed or failed
+by where on the orbit their last burn ended (Vulcan in wind shear: "511 × 489 km" on an orbit its
+last burn had put at 500 km). Six-DOF missions — in the simulation, on the result panel and in
+this gate — are now judged on the lowest and highest altitude of the next revolution
+(`physicalApsides`), and the planner aims at that orbit ([PHYSICS.md](PHYSICS.md) §2a). The
+point-mass matrix is unchanged: its coasts are Kepler, where the two are the same.
+
+**What flying the fleet found.** Eleven model changes, each listed with its measured cause in
+SIXDOF-VEHICLE-DATA.md: negligible allocator rows, per-group booster levels, held coast,
+the terminal steering freeze, the vacuum command-rate limit and alignment allowance, separation
+speed per body, burn retries that re-check the stage, the 1° ignition gate, the two-sided
+physical apex, the step-independent cut-off, and the judged orbit. Two data changes came out of
+it as well: Atlas V and Soyuz-2.1a fly six-DOF-specific kick programmes, and a spacecraft with its
+own engine steers on that engine's propellant (Long March 2D's satellite spent 10 kg of the cold
+gas assumed before by its sixth orbit-raising pass).
+
+**The rest of the six-DOF suite.** The 30 rigid-body test files (352 tests: mechanics,
+actuators, staging, replay, both reference missions, their 0.01 / 0.005 s convergence, the three
+Falcon recovery landings, the sensitivity study) pass, as do the watch missions flown in
+six-DOF (tests/watch-missions.test.ts) and the delivered-orbit matrix (`npm run test:heavy`).
+
+**In the browser** (Chromium with software WebGL, physics in the worker): Starship (39
+chambers), Falcon Heavy and Proton-M keep real time at 1× (0.98, 0.99 and 0.78 — Proton measured
+while other probes loaded the CPU) and reach 6.0×, 4.7× and 9.8× of a requested 10× during the
+ascent, using 53–61 MB of JavaScript heap.

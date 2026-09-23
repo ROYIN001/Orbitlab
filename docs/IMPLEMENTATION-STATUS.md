@@ -43,7 +43,7 @@ throughout.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 821 tests in 58 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 897 tests in 60 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -51,12 +51,17 @@ throughout.
   corridor, 23 beyond the vehicle's capability, 13 needing an architecture the vehicle does not
   have. No combination is excluded as a guidance failure.
 - **Six-DOF**: rigid-body mechanics, actuators, staging, replay, recovery and mission
-  convergence between 0.01 s and 0.005 s integration steps (tests/rigid-*.test.ts).
+  convergence between 0.01 s and 0.005 s integration steps, and every vehicle's six-DOF data
+  held to its flight data — mass closure, three-axis authority, chamber thrust
+  (tests/rigid-*.test.ts).
 - **The physics worker**: its main-thread mirror is held frame for frame to an in-process
   recording (tests/session.test.ts).
 
 `npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
-model (tests/heavy/, about 15 minutes). `npm run typecheck` and `npm run build` complete the
+model (tests/heavy/, about 15 minutes). `npm run test:sixdof-fleet` flies the fleet matrix as
+rigid bodies: its 126 accepted cases, each vehicle's first case in crosswind and shear, and Long
+March 2D's real mission — 161 cases, about 2 h 40 min on four cores
+([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and `npm run build` complete the
 gate.
 
 ## Roadmap
@@ -75,7 +80,7 @@ done are on branch `claude/awesome-fermi-r6ntep`.
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | |
 | F06 documentation | done | G06 Soyuz launch escape system | |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | |
-| P01 six-DOF for all 18 vehicles | | V03 vapour cone and booster smoke | |
+| P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | |
 | Watch mode: flown missions with booster landings | | G07 ISS rendezvous and docking | |
 | P05 slosh, bending and notch filter | | C01 historical missions | |
 | U07 ГОСТ 20058-80 notation | | | |
