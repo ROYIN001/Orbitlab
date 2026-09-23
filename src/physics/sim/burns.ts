@@ -275,11 +275,14 @@ export class BurnSequencer {
     // from the osculating ellipse at cut-off: Electron's 600 km
     // sun-synchronous orbit came out 599–624 km, with its Curie stage's
     // attitude gas too low for another burn. Only when no plane change is
-    // left to fly, which this burn would then not make.
+    // left to fly, which this burn would then not make, and only for a burn
+    // one pass can fly: Long March 2D's satellite raises its own perigee on a
+    // 22 N engine over hours of passes, which an aimed impulse cannot model.
     const target = this.sim.plan.target;
     if (this.sim.rigidRuntime && burn.kind === 'shapeAtApoapsis' && !burn.physicalObjective
       && Math.abs(target.apogee - target.perigee) < 1e3 && Math.abs(target.inclination - el.i) < 0.5 * INCLINATION_TOLERANCE
-      && this.sim.plan.burns.filter((b) => !b.done).length === 1) {
+      && this.sim.plan.burns.filter((b) => !b.done).length === 1
+      && this.sim.vehicle.burnTimeFor(burn.dvEstimate, true) < 0.8 * this.maxBurnDurationFor(burn, el)) {
       burn.physicalObjective = { measure: 'mean', altitudeM: (target.apogee + target.perigee) / 2 };
     }
     let tGo: number;
