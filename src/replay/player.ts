@@ -13,10 +13,10 @@
  */
 import { cloneFrame, interpolateFrames, type VisualFrame } from '../physics/frame';
 import type { SimEvent } from '../physics/simulation';
-import type { FlightRecorder } from './recorder';
+import type { RecordingSource } from './recorder';
 
 export class ReplayPlayer {
-  private rec: FlightRecorder;
+  private rec: RecordingSource;
   /** mission time the user is looking at */
   cursor = 0;
   /** true while the cursor tracks the recording head */
@@ -24,9 +24,15 @@ export class ReplayPlayer {
   /** replay playback: whether the cursor advances on its own */
   playing = false;
 
-  constructor(rec: FlightRecorder) {
+  constructor(rec: RecordingSource) {
     this.rec = rec;
     this.cursor = rec.startTime;
+  }
+
+  /** Read another recording — a new mission — from its start, live. */
+  use(rec: RecordingSource): void {
+    this.rec = rec;
+    this.reset();
   }
 
   /** Back to live at the start of a new mission. */

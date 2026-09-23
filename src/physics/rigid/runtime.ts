@@ -70,6 +70,14 @@ export function windScenario(config: DynamicsConfig): WindScenario {
     gustAmplitudeENU: v3(2, 1, 0), gustPeriodSeconds: 12, seed: config.seed };
 }
 
+/** Throw `RangeError` for a flight command the runtime would refuse. */
+export function validateRigidCommand(command: RigidCommand): void {
+  if (!['auto', 'manual'].includes(command.mode) || ![command.rates.x, command.rates.y, command.rates.z, command.throttle].every(Number.isFinite)
+    || command.throttle < 0 || command.throttle > 1 || Math.max(Math.abs(command.rates.x), Math.abs(command.rates.y), Math.abs(command.rates.z)) > 5 * DEG + 1e-12) {
+    throw new RangeError('Invalid rigid flight command');
+  }
+}
+
 export class RigidRuntime {
   command: RigidCommand = { mode: 'auto', rates: v3(), throttle: 1 };
   readonly consumed: Record<string, number> = {};
@@ -94,10 +102,7 @@ export class RigidRuntime {
   }
 
   setCommand(command: RigidCommand): void {
-    if (!['auto', 'manual'].includes(command.mode) || ![command.rates.x, command.rates.y, command.rates.z, command.throttle].every(Number.isFinite)
-      || command.throttle < 0 || command.throttle > 1 || Math.max(Math.abs(command.rates.x), Math.abs(command.rates.y), Math.abs(command.rates.z)) > 5 * DEG + 1e-12) {
-      throw new RangeError('Invalid rigid flight command');
-    }
+    validateRigidCommand(command);
     this.command = { ...command, rates: { ...command.rates } };
   }
 

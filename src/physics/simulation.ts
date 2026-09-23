@@ -97,7 +97,24 @@ export class Simulation {
   get telemetryRevision(): number { return this.telemetryGeneration; }
   /** User-facing occurrence order; `events` remains the append-only detection log. */
   get chronologicalEvents(): readonly SimEvent[] { return chronologicalEvents(this.events); }
+  /**
+   * @internal Take telemetry recorded by the same mission flown elsewhere —
+   * the physics worker (src/session/mirror.ts) — into this never-stepped
+   * shell: appended samples, or the whole buffer again after a compaction.
+   */
+  mirrorTelemetry(samples: readonly TelemetrySample[], reset: boolean, revision: number): void {
+    if (reset) this.telemetry.length = 0;
+    for (const sample of samples) this.telemetry.push(sample);
+    this.telemetryGeneration = revision;
+  }
   readonly debris: Debris[] = [];
+  private debrisCounter = 0;
+  /**
+   * @internal Next identifier for a separated body. Numbered per mission, so
+   * a flight's debris — and the body names its six-DOF events carry — do not
+   * depend on how many missions this page, or this worker, flew before it.
+   */
+  nextDebrisId(): number { return ++this.debrisCounter; }
   readonly payloadMass: number;
   readonly headless: boolean;
   readonly rigidRuntime?: RigidRuntime;

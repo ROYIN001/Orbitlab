@@ -17,9 +17,6 @@ import type { Simulation } from '../simulation';
 import type { Debris } from './types';
 import { pointMassAcceleration } from './forces';
 
-let debrisCounter = 0;
-/** Next debris identifier; shared by every simulation in the process, as it always was. */
-export function nextDebrisId(): number { return ++debrisCounter; }
 
 /**
  * Airspeed a returning stage's entry burn aims to reach, m/s. Above roughly
@@ -84,7 +81,7 @@ export class DebrisTracker {
       const ang = (2 * Math.PI * k) / spec.count;
       const lateral = add(scale(side, Math.cos(ang)), scale(side2, Math.sin(ang)));
       const d: Debris = {
-        id: ++debrisCounter, name: spec.name, r: addScaled(s.r, lateral, spec.diameter + 2), v: addScaled(s.v, lateral, 3),
+        id: this.sim.nextDebrisId(), name: spec.name, r: addScaled(s.r, lateral, spec.diameter + 2), v: addScaled(s.v, lateral, 3),
         dir: clone(s.dir), mass: spec.dryMass + b.propellant, area: Math.PI * (spec.diameter / 2) ** 2 * 1.5, cd: 1.2,
         visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', conicalTop: spec.conicalTop, kind: 'booster' },
         alive: true, createdAt: s.t,
@@ -99,7 +96,7 @@ export class DebrisTracker {
     const spec: StageSpec = st.spec;
     const recoverable = st.index === 0 && this.sim.vehicleSpec.recoverable && this.sim.vehicle.recoveryReserve > 0;
     const d: Debris = {
-      id: ++debrisCounter, name: spec.name, r: clone(s.r), v: addScaled(s.v, normalize(s.dir), -2),
+      id: this.sim.nextDebrisId(), name: spec.name, r: clone(s.r), v: addScaled(s.v, normalize(s.dir), -2),
       dir: clone(s.dir), mass: spec.dryMass + st.propellant, area: Math.PI * (spec.diameter / 2) ** 2 * 1.5, cd: 1.2,
       visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', kind: 'stage' },
       alive: true, createdAt: s.t,
@@ -117,7 +114,7 @@ export class DebrisTracker {
     side = normalize(side);
     for (const sgn of [1, -1]) {
       this.sim.debris.push({
-        id: ++debrisCounter, name: 'fairing', r: addScaled(r, side, sgn * (f.diameter / 2 + 1)), v: addScaled(v, side, sgn * 2.5),
+        id: this.sim.nextDebrisId(), name: 'fairing', r: addScaled(r, side, sgn * (f.diameter / 2 + 1)), v: addScaled(v, side, sgn * 2.5),
         dir: along, mass: f.mass / 2, area: (f.diameter * f.length) / 2, cd: 1.5,
         visual: { diameter: f.diameter, length: f.length, color: f.color ?? '#eee', kind: 'fairing' },
         alive: true, createdAt: this.sim.state.t,

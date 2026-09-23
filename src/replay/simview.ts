@@ -56,6 +56,80 @@ export interface FrameSimView {
   readonly sim: Simulation;
 }
 
+/**
+ * Copy what a frame records into a simulation-shaped state and vehicle, in
+ * place. The frame-backed view below uses it on its private copies; the
+ * main-thread shell of a mission flown in the physics worker
+ * (src/session/mirror.ts) uses it on the shell itself.
+ */
+export function applyFrameToState(state: SimState, vehicle: VehicleModel, stages: VehicleModel['stages'], f: VisualFrame): void {
+  state.rigid = cloneRigidTelemetry(f.rigid);
+  state.t = f.t;
+  state.status = f.status;
+  state.ascentPhase = f.ascentPhase;
+  state.note = f.note;
+  state.r.x = f.r.x; state.r.y = f.r.y; state.r.z = f.r.z;
+  state.v.x = f.v.x; state.v.y = f.v.y; state.v.z = f.v.z;
+  state.dir.x = f.dir.x; state.dir.y = f.dir.y; state.dir.z = f.dir.z;
+  state.throttle = f.throttle;
+  state.thrust = f.thrust;
+  state.mass = f.mass;
+  state.q = f.q;
+  state.mach = f.mach;
+  state.gLoad = f.gLoad;
+  state.altitude = f.altitude;
+  state.altitudeAGL = f.altitudeAGL;
+  state.airspeed = f.airspeed;
+  state.speed = f.speed;
+  state.downrange = f.downrange;
+  state.lat = f.lat;
+  state.lon = f.lon;
+  state.theta = f.theta;
+  state.pitchCmd = f.pitchCmd;
+  state.vz = f.vz;
+  state.nextBurnTime = f.nextBurnTime;
+  state.payloadSeparated = f.payloadSeparated;
+  state.destroyed = f.destroyed;
+  state.liftoff = f.liftoff;
+  const e = f.elements;
+  state.elements.a = e.a; state.elements.e = e.e; state.elements.i = e.i;
+  state.elements.raan = e.raan; state.elements.argp = e.argp; state.elements.nu = e.nu;
+  state.elements.energy = e.energy; state.elements.h = e.h; state.elements.u = e.u;
+  state.elements.periapsisAlt = e.periapsisAlt;
+  state.elements.apoapsisAlt = e.apoapsisAlt;
+  state.elements.period = e.period;
+  state.maxQ.value = f.maxQ.value; state.maxQ.t = f.maxQ.t; state.maxQ.alt = f.maxQ.alt;
+  state.losses.dvThrust = f.losses.dvThrust;
+  state.losses.gravity = f.losses.gravity;
+  state.losses.drag = f.losses.drag;
+  state.losses.steering = f.losses.steering;
+  vehicle.activeIndex = f.activeStageIndex;
+  vehicle.fairingAttached = f.fairingAttached;
+  // Per-stage state, so `vehicle.stages[]` agrees with the frame rather than
+  // with the live flight running on ahead of it. `bi` walks the frame's flat
+  // booster list, which `captureFrame` emits stage by stage in the same order.
+  let bi = 0;
+  for (let i = 0; i < stages.length; i++) {
+    const st = stages[i];
+    const sf = f.stages[i];
+    if (sf) {
+      st.attached = sf.attached;
+      st.ignited = !!sf.ignited;
+      if (sf.ignitionTime !== undefined) st.ignitionTime = sf.ignitionTime;
+      if (sf.sepTime !== undefined) st.sepTime = sf.sepTime;
+      if (sf.engineFraction !== undefined) st.engineFraction = sf.engineFraction;
+      st.propellant = sf.propellantFraction * st.spec.propellantMass;
+    }
+    for (const b of st.boosters) {
+      const bf = f.boosters[bi++];
+      if (!bf || bf.id !== b.spec.id) continue;
+      b.attached = bf.attached;
+      b.propellant = bf.propellantFraction * b.spec.propellantMass;
+      if (bf.burnoutTime !== undefined) b.burnoutTime = bf.burnoutTime;
+    }
+  }
+}
+
 /** Build a view of `sim` that reports whatever frame it is pointed at. */
 export function createFrameSimView(sim: Simulation): FrameSimView {
   const view = Object.create(sim) as Simulation & Record<string, unknown>;
@@ -91,71 +165,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
   let eventsSource: readonly SimEvent[] | null = null;
 
   const apply = (f: VisualFrame): void => {
-    state.rigid = cloneRigidTelemetry(f.rigid);
-    state.t = f.t;
-    state.status = f.status;
-    state.ascentPhase = f.ascentPhase;
-    state.note = f.note;
-    state.r.x = f.r.x; state.r.y = f.r.y; state.r.z = f.r.z;
-    state.v.x = f.v.x; state.v.y = f.v.y; state.v.z = f.v.z;
-    state.dir.x = f.dir.x; state.dir.y = f.dir.y; state.dir.z = f.dir.z;
-    state.throttle = f.throttle;
-    state.thrust = f.thrust;
-    state.mass = f.mass;
-    state.q = f.q;
-    state.mach = f.mach;
-    state.gLoad = f.gLoad;
-    state.altitude = f.altitude;
-    state.altitudeAGL = f.altitudeAGL;
-    state.airspeed = f.airspeed;
-    state.speed = f.speed;
-    state.downrange = f.downrange;
-    state.lat = f.lat;
-    state.lon = f.lon;
-    state.theta = f.theta;
-    state.pitchCmd = f.pitchCmd;
-    state.vz = f.vz;
-    state.nextBurnTime = f.nextBurnTime;
-    state.payloadSeparated = f.payloadSeparated;
-    state.destroyed = f.destroyed;
-    state.liftoff = f.liftoff;
-    const e = f.elements;
-    state.elements.a = e.a; state.elements.e = e.e; state.elements.i = e.i;
-    state.elements.raan = e.raan; state.elements.argp = e.argp; state.elements.nu = e.nu;
-    state.elements.energy = e.energy; state.elements.h = e.h; state.elements.u = e.u;
-    state.elements.periapsisAlt = e.periapsisAlt;
-    state.elements.apoapsisAlt = e.apoapsisAlt;
-    state.elements.period = e.period;
-    state.maxQ.value = f.maxQ.value; state.maxQ.t = f.maxQ.t; state.maxQ.alt = f.maxQ.alt;
-    state.losses.dvThrust = f.losses.dvThrust;
-    state.losses.gravity = f.losses.gravity;
-    state.losses.drag = f.losses.drag;
-    state.losses.steering = f.losses.steering;
-    vehicle.activeIndex = f.activeStageIndex;
-    vehicle.fairingAttached = f.fairingAttached;
-    // Per-stage state, so `vehicle.stages[]` agrees with the frame rather than
-    // with the live flight running on ahead of it. `bi` walks the frame's flat
-    // booster list, which `captureFrame` emits stage by stage in the same order.
-    let bi = 0;
-    for (let i = 0; i < stages.length; i++) {
-      const st = stages[i];
-      const sf = f.stages[i];
-      if (sf) {
-        st.attached = sf.attached;
-        st.ignited = !!sf.ignited;
-        if (sf.ignitionTime !== undefined) st.ignitionTime = sf.ignitionTime;
-        if (sf.sepTime !== undefined) st.sepTime = sf.sepTime;
-        if (sf.engineFraction !== undefined) st.engineFraction = sf.engineFraction;
-        st.propellant = sf.propellantFraction * st.spec.propellantMass;
-      }
-      for (const b of st.boosters) {
-        const bf = f.boosters[bi++];
-        if (!bf || bf.id !== b.spec.id) continue;
-        b.attached = bf.attached;
-        b.propellant = bf.propellantFraction * b.spec.propellantMass;
-        if (bf.burnoutTime !== undefined) b.burnoutTime = bf.burnoutTime;
-      }
-    }
+    applyFrameToState(state, vehicle, stages, f);
     frame = f;
   };
 

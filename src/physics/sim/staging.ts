@@ -10,7 +10,6 @@ import { quatFromAxisAngle } from '../rigid/math';
 import { elementsFromState } from '../orbital';
 import { TAILOFF_SPAN, engineTailoffS, type StageState, type BoosterState } from '../vehicle';
 import type { Simulation } from '../simulation';
-import { nextDebrisId } from './debris';
 import { FAIRING_ALTITUDE_FLOOR, FAIRING_HEAT_FLUX_LIMIT, FAIRING_Q_LIMIT } from './constants';
 
 export class Staging {
@@ -283,7 +282,7 @@ export class Staging {
       const elNow = elementsFromState(s.r, s.v);
       const orbital = elNow.e < 1 && elNow.periapsisAlt > 120e3;
       this.sim.debris.push({
-        id: nextDebrisId(), name: st.spec.name, r: clone(s.r), v: addScaled(s.v, vDir, -0.5), dir: clone(s.dir),
+        id: this.sim.nextDebrisId(), name: st.spec.name, r: clone(s.r), v: addScaled(s.v, vDir, -0.5), dir: clone(s.dir),
         mass: st.spec.dryMass + st.propellant, area: Math.PI * (st.spec.diameter / 2) ** 2, cd: 2.2,
         visual: { diameter: st.spec.diameter, length: st.spec.length, color: st.spec.color ?? '#ccc', kind: 'upperStage' },
         alive: true, createdAt: s.t, outcome: orbital ? 'orbit' : undefined,

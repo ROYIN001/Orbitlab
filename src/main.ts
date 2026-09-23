@@ -25,7 +25,8 @@ import { FEATURED_WATCH_MISSION, watchMissionSettings, type WatchMissionId } fro
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
-import { FlightRecorder } from './replay/recorder';
+import { FlightRecorder, type RecordingSource } from './replay/recorder';
+import { InlineSession, WorkerSession, createPhysicsWorker, type FlightSession, type SessionWorker } from './session/session';
 import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
@@ -147,9 +148,26 @@ class App {
   watch: WatchView;
   /** which face of the app is showing (src/ui/app-mode.ts) */
   mode: AppMode = 'home';
+  /** The mission being flown: its simulation, its recording and their clock (src/session). */
+  session: FlightSession | null = null;
+  /**
+   * The mission's simulation, `session.sim`. With the physics in the worker it
+   * is the main-thread shell: every read works, nothing here may step it.
+   */
   sim: Simulation | null = null;
-  recorder = new FlightRecorder();
+  /** The mission's recording, `session.recorder` (an empty one before the first mission). */
+  recorder: RecordingSource = new FlightRecorder();
   player = new ReplayPlayer(this.recorder);
+  /**
+   * Where the physics runs: in a worker (the default), or on the main thread
+   * where a module worker cannot start or `?physics=inline` asks for it.
+   */
+  private physicsMode: 'worker' | 'inline' = new URLSearchParams(location.search).get('physics') === 'inline' ? 'inline' : 'worker';
+  /** The one physics worker, shared by every mission; undefined until first needed. */
+  private physicsWorker: SessionWorker | null | undefined;
+  private sessionCount = 0;
+  /** mission time at the previous animation frame, for the achieved-warp readout */
+  private rateLastT: number | null = null;
   simView: FrameSimView | null = null;
   rocket: RocketView | null = null;
   pad: LaunchPadView | null = null;
@@ -216,9 +234,8 @@ class App {
     new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
     this.rigidControls = new RigidControls(document.getElementById('rigid-controls')!, command => {
-      if (!this.sim || !this.player.live) return;
-      this.sim.setRigidCommand(command);
-      this.recorder.captureChangedState();
+      if (!this.session || !this.player.live) return;
+      this.session.setRigidCommand(command);
       this.telTimer = 1;
     });
     this.viewport = document.getElementById('viewport')!;
@@ -331,6 +348,7 @@ class App {
   getPerformance(): Record<string, unknown> {
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory;
     return { achievedWarp: this.achievedWarp, physicsControlStepS: this.sim?.rigidRuntime ? 0.01 : null,
+      physicsThread: this.session?.kind ?? null,
       recording: this.recorder.stats(), recordingBytesIncludeRigidMaps: true,
       usedJSHeapBytes: memory?.usedJSHeapSize ?? null, allocatedJSHeapBytes: memory?.totalJSHeapSize ?? null };
   }
@@ -698,15 +716,20 @@ class App {
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;
+    let session: FlightSession;
     try {
-      this.sim = new Simulation(cfg);
+      session = this.createSession(cfg);
       this.rigidControls.reset();
     } catch (err) {
       console.error(err);
       return;
     }
-    this.recorder.start(this.sim);
-    this.player.reset();
+    this.session?.dispose();
+    this.session = session;
+    this.sim = session.sim;
+    this.recorder = session.recorder;
+    this.player.use(this.recorder);
+    this.rateLastT = null;
     this.simView = createFrameSimView(this.sim);
     // a copy, like every other frame the views are handed: the pad frame is the
     // first entry of the recording and must not be reachable from the HUD
@@ -727,6 +750,36 @@ class App {
     this.updatePlayButton();
     this.updateMissionName();
     this.setupViews();
+  }
+
+  /**
+   * A session for `cfg`: in the physics worker, or on the main thread when the
+   * worker cannot be had. A worker that fails before it has flown anything is
+   * given up for the rest of the page, and the mission is rebuilt in-process.
+   */
+  private createSession(cfg: MissionConfig): FlightSession {
+    if (this.physicsMode === 'worker') {
+      if (this.physicsWorker === undefined) this.physicsWorker = createPhysicsWorker();
+      const worker = this.physicsWorker;
+      if (worker) {
+        return new WorkerSession(cfg, worker, ++this.sessionCount,
+          (message) => this.physicsFallback(cfg, message, worker),
+          (message) => { console.error('physics worker:', message); this.playing = false; this.updatePlayButton(); });
+      }
+      this.physicsMode = 'inline';
+    }
+    return new InlineSession(cfg);
+  }
+
+  /** The worker could not fly the mission: fly it on the main thread instead. */
+  private physicsFallback(cfg: MissionConfig, message: string, worker: SessionWorker): void {
+    console.warn('Physics worker unavailable, flying on the main thread instead:', message);
+    worker.terminate();
+    if (this.physicsWorker === worker) this.physicsWorker = null;
+    this.physicsMode = 'inline';
+    const wasPlaying = this.playing;
+    this.preview(cfg);
+    if (wasPlaying) { this.playing = true; this.panel.setRunning(true); this.updatePlayButton(); }
   }
 
   private setupViews(): void {
@@ -836,29 +889,42 @@ class App {
     this.lastFrame = now;
     this.autoGlow(elapsedWall);
     const sim = this.sim;
-    const beforeSimulationTime = sim?.state.t ?? 0;
+    const session = this.session;
     // The live flight runs whether or not the user is watching the head.
-    if (sim && this.playing) {
+    if (sim && session && this.playing) {
       const target = this.fastForwardTo;
       if (target !== null && target > sim.state.t + 1e-3 && !sim.isFailed()) {
-        const budget = performance.now() + 30; // ms per frame for fast-forward
-        while (sim.state.t < target - 1e-3 && performance.now() < budget && !sim.isFailed()) {
-          const before = sim.state.t;
-          this.recorder.advance(Math.min(600, target - sim.state.t), 3000, budget);
-          if (sim.state.t <= before) break; // no progress: give up rather than spin
-        }
-        if (sim.state.t >= target - 1e-3 || sim.isFailed()) this.fastForwardTo = null;
+        // In the worker the chunks run on their own; on the main thread
+        // `tick` spends up to 30 ms of this frame on them.
+        session.fastForward(target);
+        session.tick();
+        if (!session.fastForwarding) this.fastForwardTo = null;
       } else {
         this.fastForwardTo = null;
-        // a wall-clock budget as well as a step budget, so a high warp cannot
-        // spend the whole animation frame inside the integrator
-        this.recorder.advance(dtReal * this.warp, 20000, performance.now() + 8);
+        session.halt();
+        // A wall-clock budget as well as a step budget, so a high warp cannot
+        // spend the whole animation frame inside the integrator. The worker
+        // has a thread of its own and may use most of a frame's worth.
+        // The 0.1 s clamp on the frame time keeps a slow renderer from being
+        // handed huge steps; with the physics off the main thread a slow
+        // renderer no longer slows the flight, so the worker is asked for the
+        // wall time that really passed (up to half a second — longer is a
+        // tab coming back from the background, not a slow frame).
+        const worker = session.kind === 'worker';
+        const budget = worker ? Math.min(450, Math.max(8, 900 * elapsedWall)) : 8;
+        session.advance((worker ? Math.min(0.5, elapsedWall) : dtReal) * this.warp, budget);
       }
-    }
+    } else session?.halt();
+    // Measured frame to frame: in the worker, the time asked for this frame
+    // arrives before the next one.
+    const simT = sim?.state.t ?? 0;
+    const flown = this.rateLastT === null ? 0 : Math.max(0, simT - this.rateLastT);
+    this.rateLastT = sim ? simT : null;
     if (sim?.rigidRuntime && this.playing && !sim.isFailed()) {
       this.rateWallSeconds += elapsedWall;
-      this.rateSimSeconds += Math.max(0, sim.state.t - beforeSimulationTime);
-      if (this.rateWallSeconds >= 0.5) {
+      this.rateSimSeconds += flown;
+      // Replies from the worker arrive in bursts; average over a longer window there.
+      if (this.rateWallSeconds >= (session?.kind === 'worker' ? 2 : 0.5)) {
         this.achievedWarp = this.rateSimSeconds / this.rateWallSeconds;
         this.rateWallSeconds = 0; this.rateSimSeconds = 0;
       }
