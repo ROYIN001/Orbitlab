@@ -1,6 +1,7 @@
 /** Flight adapter: commands request torque; only physical wrenches change state. */
 import type { DynamicsConfig } from '../../types';
 import { atmosphere } from '../atmosphere';
+import { dispersedWind, type AirDispersion } from '../dispersion';
 import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../constants';
 import { gravityJ2 } from '../gravity';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
@@ -55,6 +56,8 @@ export interface RigidRuntimeOptions {
    * asks for it.
    */
   fuelAwareCoast?: boolean;
+  /** G05: a Monte Carlo run's air — the density over the standard atmosphere's, a steady wind and gust phase over the mission's. */
+  air?: AirDispersion;
 }
 export interface RigidAccelerations {
   propulsionECI: Vec3;
@@ -118,6 +121,8 @@ export class RigidRuntime {
   readonly derivativeStepS: number;
   readonly controlGains: ControlGains;
   private readonly fuelAwareCoast: boolean;
+  /** G05: the air's density over the standard atmosphere's; absent, the standard atmosphere. */
+  private readonly densityFactor?: number;
   private engines = new Map<string, EngineActuatorState>();
   /** Control-surface deflections, rad, by surface id. */
   private surfaces = new Map<string, number>();
@@ -139,7 +144,8 @@ export class RigidRuntime {
   attitudeTest?: AttitudeTestRecord;
   snapshot?: RigidVehicleSnapshot;
   constructor(config: DynamicsConfig, readonly bodyId = 'vehicle', options: RigidRuntimeOptions = {}) {
-    this.wind = windScenario(config);
+    this.wind = dispersedWind(windScenario(config), options.air);
+    this.densityFactor = options.air?.densityFactor;
     this.integrationStepS = options.integrationStepS ?? 0.01;
     if (!Number.isFinite(this.integrationStepS) || this.integrationStepS <= 0 || this.integrationStepS > 0.02) throw new RangeError('Invalid rigid integration step');
     this.derivativeStepS = options.derivativeStepS ?? 0.001;
@@ -200,7 +206,7 @@ export class RigidRuntime {
   }
   private environment(state: RigidState, time: number, snapshot: RigidVehicleSnapshot) {
     const atm = atmosphere(norm(state.r) - R_EARTH);
-    return aerodynamicWrench(snapshot.aero, { density: atm.rho, speedOfSound: atm.a,
+    return aerodynamicWrench(snapshot.aero, { density: this.densityFactor === undefined ? atm.rho : atm.rho * this.densityFactor, speedOfSound: atm.a,
       airVelocityBody: quatInverseRotate(state.attitudeQ, this.airVelocity(state, time)),
       omegaBody: state.omegaBody, cgBody: snapshot.cg });
   }

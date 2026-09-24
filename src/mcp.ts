@@ -51,6 +51,9 @@ import { CYCLE_LIMITS, EXPLICIT_LAWS, type ExplicitGuidanceRecord } from './phys
 import { elementsFromState } from './physics/orbital';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
+import { MONTE_CARLO_RUNS, OUTPUT_KEYS, validMonteCarloConfig, type MonteCarloConfig, type OutputStats } from './physics/monte-carlo';
+import type { MonteCarloJob } from './physics/monte-carlo-job';
+import { cloneDispersions, DISPERSION_KEYS, DISPERSION_SIGMA_LIMITS, type DispersionSettings } from './physics/dispersion';
 
 /** configure_mission's `flex` fields (roadmap P05). */
 const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
@@ -144,6 +147,18 @@ export interface McpAppHost {
   previousEvent(): void;
   preview(cfg: MissionConfig): void;
   launch(cfg: MissionConfig): void;
+  /** G05: the Monte Carlo set the window runs; absent, `run_monte_carlo` reports that none can run. */
+  readonly monteCarlo?: McpMonteCarloHost;
+}
+
+/** G05: the app's Monte Carlo runner, as the window drives it. */
+export interface McpMonteCarloHost {
+  /** The window's current settings, which a start input is merged over. */
+  settings(): MonteCarloConfig;
+  /** Fly a set on the mission in the setup panel; a reason when it cannot start. */
+  start(mc: MonteCarloConfig): MonteCarloJob | string;
+  stop(): void;
+  readonly job: MonteCarloJob | null;
 }
 
 // ───────────────────────────────────────────────────────────────── tool type
@@ -1255,6 +1270,97 @@ function toolRunAttitudeTest(host: McpAppHost): WebMcpTool {
   };
 }
 
+// --- G05 ---
+/** A dispersions input merged over `base`: each quantity's `enabled` and `sigma`, checked against its limits. */
+function mergeDispersions(base: DispersionSettings, raw: unknown): DispersionSettings {
+  if (raw === undefined) return base;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('"dispersions" must be an object.');
+  const out = cloneDispersions(base);
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(DISPERSION_KEYS as readonly string[]).includes(key)) throw new Error(`Unknown dispersion "${key}". Valid: ${DISPERSION_KEYS.join(', ')}.`);
+    const k = key as keyof DispersionSettings, v = asRecord(value), [lo, hi] = DISPERSION_SIGMA_LIMITS[k];
+    if (Object.keys(v).some((f) => f !== 'enabled' && f !== 'sigma')) throw new Error(`"dispersions.${key}" takes "enabled" and "sigma" only.`);
+    if (v.enabled !== undefined && typeof v.enabled !== 'boolean') throw new Error(`"dispersions.${key}.enabled" must be a boolean.`);
+    if (v.sigma !== undefined) {
+      const sigma = expectNumber(v.sigma, `dispersions.${key}.sigma`);
+      if (sigma < lo || sigma > hi) throw new Error(`"dispersions.${key}.sigma" must be between ${lo} and ${hi}.`);
+      out[k].sigma = sigma;
+    }
+    if (v.enabled !== undefined) out[k].enabled = v.enabled as boolean;
+  }
+  return out;
+}
+
+function roundStats(s: OutputStats, digits: number): Record<string, number | null> {
+  const r = (x: number | undefined) => (x === undefined || !Number.isFinite(x) ? null : +x.toFixed(digits));
+  return { n: s.n, mean: r(s.mean), sigma: r(s.sigma), threeSigma: r(3 * s.sigma), min: r(s.min), max: r(s.max), ...(s.bias !== undefined ? { bias: r(s.bias) } : {}) };
+}
+
+/** The state of the app's Monte Carlo set, with its statistics per guidance law. */
+function monteCarloStatus(job: MonteCarloJob | null, includeCsv: boolean): Record<string, unknown> {
+  if (!job) return { ok: true, state: 'none' };
+  const progress = job.progress(), summary = job.summary();
+  const digits: Record<string, number> = { perigeeKm: 3, apogeeKm: 3, inclinationDeg: 4, dvLeft: 1 };
+  return {
+    ok: true, state: job.state, done: progress.done, total: progress.total, etaS: progress.etaS === null ? null : Math.round(progress.etaS),
+    workers: job.workerCount, vehicleId: job.cfg.vehicleId, runs: job.mc.runs, seed: job.mc.seed, compareLaws: job.mc.compareLaws,
+    dispersions: job.mc.dispersions, target: summary.target,
+    laws: summary.laws.map((l) => ({
+      law: l.law, runs: l.runs, inserted: l.inserted, short: l.short, lost: l.lost, lostReasons: l.reasons,
+      stats: Object.fromEntries(OUTPUT_KEYS.map((k) => [k, roundStats(l.stats[k], digits[k])])),
+      ellipse3SigmaKm: l.ellipse ? { perigeeKm: +l.ellipse.cx.toFixed(3), apogeeKm: +l.ellipse.cy.toFixed(3), semiMajorKm: +l.ellipse.a.toFixed(3),
+        semiMinorKm: +l.ellipse.b.toFixed(3), angleDeg: +(l.ellipse.angle * RAD).toFixed(1) } : null,
+      sensitivity: Object.fromEntries(OUTPUT_KEYS.map((k) => {
+        const sens = l.sensitivity[k];
+        return [k, sens.ok ? { shares: Object.fromEntries(Object.entries(sens.shares).map(([q, v]) => [q, +(v ?? 0).toFixed(3)])),
+          other: +sens.other.toFixed(3), rSquared: +sens.rSquared.toFixed(3) } : null];
+      })),
+    })),
+    ...(includeCsv ? { csv: job.csv() } : {}),
+  };
+}
+
+function toolRunMonteCarlo(host: McpAppHost): WebMcpTool {
+  const dispersionSchema = { type: 'object', additionalProperties: false, properties: Object.fromEntries(DISPERSION_KEYS.map((k) => [k, {
+    type: 'object', additionalProperties: false, properties: { enabled: { type: 'boolean' },
+      sigma: { type: 'number', minimum: DISPERSION_SIGMA_LIMITS[k][0], maximum: DISPERSION_SIGMA_LIMITS[k][1] } } }])) };
+  return {
+    name: 'run_monte_carlo', title: 'Monte Carlo insertion accuracy',
+    description: 'Roadmap G05: fly the mission in the setup panel many times in six-DOF, each run with its thrust, Isp, propellant and dry mass (per stage and strap-on group), air density and wind dispersed and — with the inertial navigation — a fresh IMU realisation, to the end of the powered ascent. '
+      + 'action "start" starts a set (runs 20–2000, seed, compareLaws flies the standard law, PEG and IGM on the same draws, dispersions as {quantity: {enabled, sigma}} over the window\'s settings: sigma in % for thrust, isp, propellant, dryMass and density, m/s per horizontal axis for wind; the imu has none). '
+      + 'Runs take tens of seconds each, spread over the machine\'s cores: "status" reads the progress and, per law, the orbit at cut-off (perigee, apogee, inclination: mean, σ, 3σ, bias from the planned insertion; Δv left), the 3σ perigee–apogee ellipse, how many runs were lost and why, and each dispersion\'s share of each element\'s variance; includeCsv adds every run as CSV. "stop" ends the set.',
+    inputSchema: { type: 'object', properties: {
+      action: { type: 'string', enum: ['start', 'status', 'stop'] },
+      runs: { type: 'integer', minimum: MONTE_CARLO_RUNS.min, maximum: MONTE_CARLO_RUNS.max },
+      seed: { type: 'integer', minimum: 0, maximum: 4294967295 },
+      compareLaws: { type: 'boolean' },
+      dispersions: dispersionSchema,
+      includeCsv: { type: 'boolean' },
+    }, required: ['action'], additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    execute: raw => {
+      const input = asRecord(raw), action = input.action, mc = host.monteCarlo;
+      if (action !== 'start' && action !== 'status' && action !== 'stop') throw new Error('"action" must be "start", "status" or "stop".');
+      if (input.includeCsv !== undefined && typeof input.includeCsv !== 'boolean') throw new Error('"includeCsv" must be a boolean.');
+      if (!mc) return { ok: false, reason: 'This page has no Monte Carlo runner.' };
+      if (action === 'status') return monteCarloStatus(mc.job, input.includeCsv === true);
+      if (action === 'stop') { mc.stop(); return monteCarloStatus(mc.job, false); }
+      const base = mc.settings();
+      const config: MonteCarloConfig = {
+        runs: input.runs === undefined ? base.runs : expectNumber(input.runs, 'runs'),
+        seed: input.seed === undefined ? base.seed : expectNumber(input.seed, 'seed'),
+        compareLaws: input.compareLaws === undefined ? base.compareLaws : input.compareLaws as boolean,
+        dispersions: mergeDispersions(base.dispersions, input.dispersions),
+      };
+      if (typeof config.compareLaws !== 'boolean') throw new Error('"compareLaws" must be a boolean.');
+      if (!validMonteCarloConfig(config)) throw new Error(`"runs" must be an integer from ${MONTE_CARLO_RUNS.min} to ${MONTE_CARLO_RUNS.max}, "seed" an integer from 0 to 4294967295.`);
+      const started = mc.start(config);
+      if (typeof started === 'string') return { ok: false, reason: started };
+      return { ...monteCarloStatus(started, false), started: true };
+    },
+  };
+}
+
 /** Build the tool definitions against `host`. Pure and DOM-free. */
 export function createMcpTools(host: McpAppHost): WebMcpTool[] {
   return [
@@ -1270,6 +1376,7 @@ export function createMcpTools(host: McpAppHost): WebMcpTool[] {
     toolExportCsv(host),
     toolRunAttitudeTest(host),
     toolInjectControlFault(host),
+    toolRunMonteCarlo(host),
   ];
 }
 
