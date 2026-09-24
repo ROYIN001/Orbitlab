@@ -736,9 +736,11 @@ Q − S·t_λ is negative — thrust spent early moves the cut-off further than 
   for the terminal altitude and plane. In its last 20 s it steers on the velocity alone (the
   "χ̃ mode"), in its last 3 s it holds.
 
-A new solution is blended into the last one's law over a cycle (1 s by default, 0.1–4 s): steps
-of a few hundredths of a degree at every cycle had kept the attitude thrusters of a Falcon 9
-upper stage firing through the whole burn, with none left for the orbit's trim burn.
+A new solution is blended into the last one's law over a cycle (1 s by default, 0.1–4 s), and the
+command passes a first-order filter of two cycles (shortened to t_go/20 as the cut-off nears,
+where a lag would be flown uncorrected): steps of a few hundredths of a degree at every cycle had
+kept the attitude thrusters of a Falcon 9 upper stage firing through the whole burn, and a Falcon
+Heavy's spent half its gas on the ripple the blend left and could not point its last trim burn.
 
 **The load relief, released** (the owner's choice for G01): in six-DOF flights with PEG or IGM,
 once the dynamic pressure falls under 500 Pa the command is released from where the load relief
@@ -749,15 +751,15 @@ jumps from 0.4° to 24° (§2d, G03). A release at 1 °/s everywhere was tried a
 **What it does** (calm air, LEO insertion 200 × 500 km; tests/explicit-guidance.test.ts and
 tests/heavy/explicit-fleet-*.test.ts):
 
-- In a vacuum ascent from 120 km at 2.5 km/s, a single stage lands in 199.9 × 201.7 km (PEG) and
-  200.0 × 201.4 km (IGM) aimed at 200 × 200 km, and 400.0 × 401.8 / 399.9 × 401.2 km aimed at
-  400 × 400 km, inclination within 0.001°; IGM's own prediction of the cut-off is hundreds of
+- In a vacuum ascent from 120 km at 2.5 km/s, a single stage lands in 199.6 × 200.7 km (PEG) and
+  200.0 × 202.0 km (IGM) aimed at 200 × 200 km, and 399.8 × 401.1 / 399.9 × 401.7 km aimed at
+  400 × 400 km, inclination within 0.002° (the test cuts off on the target's energy); IGM's own prediction of the cut-off is hundreds of
   kilometres off early in the burn and converges as it closes, PEG's is right from the start.
 - Falcon 9, six-DOF: the standard flight inserts at 200 × 497 km with 5415 m/s left; PEG
   engages at T+135 s (the first stage out of the atmosphere) and inserts at 199 × 498 km with
-  5440 m/s left; IGM at 200 × 497 km with 5434 m/s. The largest attitude error after the first
+  5440 m/s left; IGM at 200 × 497 km with 5432 m/s. The largest attitude error after the first
   minute falls from 37.5° to 5.5°.
-- Falcon 9, point mass: 5458 m/s left (standard), 5464 (PEG), 5466 (IGM).
+- Falcon 9, point mass: 5458 m/s left (standard), 5463 (PEG), 5465 (IGM).
 - The whole fleet on its reference missions, on both laws: tests/heavy/explicit-fleet-*.test.ts
   (the results go in docs/history/PARALLEL-GNC-2026-09.md, G01, when the run finishes).
 
