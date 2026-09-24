@@ -325,20 +325,26 @@ export interface MissionConfig {
 /**
  * How one recovered body comes home.
  *
+ * - `downrange`: entry and landing burns wherever the stage comes down, with
+ *   no target: what `boosterRecovery` flies with no plan at all.
  * - `droneShip`: no boostback; a ship is stationed where the stage is
  *   predicted to come down at separation, and the entry and landing burns
  *   steer onto its deck.
  * - `landingZone`: a boostback burn turns the stage round and flies it back to
  *   a landing zone near the launch site (`src/data/landing-zones.ts`).
+ * - `expended`: not recovered; it keeps no propellant back.
  */
-export type RecoveryMode = { kind: 'droneShip' } | { kind: 'landingZone'; zoneId: string };
+export type RecoveryMode = { kind: 'downrange' } | { kind: 'droneShip' } | { kind: 'landingZone'; zoneId: string } | { kind: 'expended' };
 
 export interface RecoveryPlan {
-  /** the first stage, or the core of a vehicle with strap-ons */
+  /** the first stage, or the core of a vehicle with strap-ons; left out, it is expended */
   core?: RecoveryMode;
-  /** strap-ons, in the order they separate within their group (Falcon Heavy's two side boosters) */
+  /** strap-ons, in the order they separate within their group (Falcon Heavy's two side boosters); one left out is expended */
   boosters?: readonly RecoveryMode[];
 }
+
+/** The modes that fly a stage to a target: a ship's deck, a pad, a tower's arms. */
+export type TargetedRecovery = Extract<RecoveryMode, { kind: 'droneShip' | 'landingZone' }>;
 
 export interface DynamicsConfig {
   model: 'pointMass' | 'sixDof';

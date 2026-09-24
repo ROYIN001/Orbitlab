@@ -31,7 +31,7 @@
  *   cached per configuration, and can only make the verdict worse, never
  *   better.
  */
-import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryPlan } from '../types';
+import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
 import { RATING_ORBITS, VEHICLES, vehicleById } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
@@ -47,11 +47,13 @@ import { probeInsertion, type InsertionProbe } from '../physics/autotune';
 import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
-import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes } from './names';
-import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
+import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes, zoneName } from './names';
+import { GUIDANCE_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
+import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
 import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
+import { SHIP_RETURN_VERIFIED_PAYLOAD } from '../physics/sim/ship-descent';
 import type { DynamicsConfig } from '../types';
 
 export interface SetupCallbacks {
@@ -369,6 +371,11 @@ export function missionVerdict(i: VerdictInput): Feasibility {
   if (i.payloadMass >= cap * 0.9) {
     notes.push(t('setup.verdict.tight', { mass: num(i.payloadMass), cap: num(cap), class: className }));
   }
+  // A suborbital ship brings its payload home with it, and it has only been
+  // flown home with so much (`SHIP_RETURN_VERIFIED_PAYLOAD`).
+  if (i.orbit.suborbital && i.payloadMass > SHIP_RETURN_VERIFIED_PAYLOAD) {
+    notes.push(t('setup.verdict.suborbitalHeavy', { mass: num(i.payloadMass), max: num(SHIP_RETURN_VERIFIED_PAYLOAD) }));
+  }
   // A dogleg is how the site flies this plane, not a problem with the mission:
   // said, but it does not turn a ready verdict into a warning.
   const dogleg = i.plan && i.plan.doglegDeg > 0
@@ -603,11 +610,11 @@ export class SetupPanel {
     return e;
   }
 
-  private select(labelKey: string, options: { value: string; label: string }[], value: string, onChange: (v: string) => void): HTMLElement {
+  private select(labelKey: string, options: { value: string; label: string }[], value: string, onChange: (v: string) => void, label = t(labelKey)): HTMLElement {
     const lab = this.el('label', 'field');
-    lab.appendChild(this.el('span', undefined, t(labelKey)));
+    lab.appendChild(this.el('span', undefined, label));
     const sel = this.el('select');
-    sel.setAttribute('aria-label', t(labelKey));
+    sel.setAttribute('aria-label', label);
     for (const o of options) {
       const op = this.el('option', undefined, o.label);
       op.value = o.value;
@@ -632,7 +639,7 @@ export class SetupPanel {
     const stored = def ? guidanceLimits(def.key, vehicleById(this.state.vehicleId)) : null;
     const limits = def && stored
       ? { min: stored.min === undefined ? undefined : stored.min / def.scale, max: stored.max === undefined ? undefined : stored.max / def.scale }
-      : NUMBER_FIELDS[labelKey] ?? { min, max };
+      : fieldLimits(labelKey, this.state.orbit) ?? { min, max };
     if (limits.min !== undefined) inp.min = String(limits.min);
     if (limits.max !== undefined) inp.max = String(limits.max);
     inp.disabled = this.running;
@@ -806,6 +813,8 @@ export class SetupPanel {
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
       if (!spec.recoverable) s.boosterRecovery = false;
       s.recoveryPlan = undefined;
+      // only a ship that flies itself home can take a suborbital target
+      if (s.orbit.suborbital && !flightHomeCapable(spec)) s.orbit = this.orbitalAgain(s.orbit);
       this.render();
       this.changed();
     }));
@@ -893,6 +902,7 @@ export class SetupPanel {
     orbitRow2.appendChild(this.number('setup.inclination', target.inclination * RAD, (v) => { this.customise(); s.orbit.inclination = v; this.changed(); }, 0.1, 0, 180));
     orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = v; this.changed(); }, 1, 0, 360));
     s3.appendChild(orbitRow2);
+    if (flightHomeCapable(vehicle)) s3.appendChild(this.suborbitalOption());
     s3.appendChild(this.select('setup.raanMode', [
       { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
       { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
@@ -1084,12 +1094,84 @@ export class SetupPanel {
     cb.type = 'checkbox';
     cb.checked = s.boosterRecovery;
     cb.disabled = this.running || !vehicle.recoverable;
-    cb.addEventListener('change', () => { s.boosterRecovery = cb.checked; this.changed(); });
+    // re-rendered: the landing choices below come and go with it
+    cb.addEventListener('change', () => { s.boosterRecovery = cb.checked; this.render(); this.changed(); });
     chk.appendChild(cb);
     chk.appendChild(this.el('span', undefined, t('setup.boosterRecovery')));
     od.appendChild(chk);
+    if (vehicle.recoverable && s.boosterRecovery) od.appendChild(this.recoveryChoices(vehicle));
     if (vehicle.recoverable && s.dynamics?.model === 'sixDof') od.appendChild(this.el('p', 'field-note', t('setup.recoveryRigidNote')));
     return od;
+  }
+
+  /**
+   * A suborbital test flight, for a vehicle whose ship flies itself home.
+   * Ticked, it starts from Flight 5's path (213 × −15 km); unticked, the
+   * orbit is circularised at its apogee.
+   */
+  private suborbitalOption(): HTMLElement {
+    const s = this.state;
+    const box = this.el('div', 'suborbital-option');
+    const lab = this.el('label', 'checkbox');
+    const cb = this.el('input');
+    cb.type = 'checkbox';
+    cb.checked = !!s.orbit.suborbital;
+    cb.disabled = this.running;
+    cb.addEventListener('change', () => {
+      this.clearOrbitDrafts();
+      this.customise();
+      s.orbit = cb.checked ? { ...s.orbit, suborbital: true, perigee: -15e3, apogee: 213e3 } : this.orbitalAgain(s.orbit);
+      this.render();
+      this.changed();
+    });
+    lab.append(cb, this.el('span', undefined, t('setup.suborbital')));
+    box.appendChild(lab);
+    if (s.orbit.suborbital) box.appendChild(this.el('p', 'field-note', t('setup.suborbitalNote')));
+    return box;
+  }
+
+  /** A suborbital target made an orbit again: circular at its apogee. */
+  private orbitalAgain(orbit: OrbitSpec): OrbitSpec {
+    const { suborbital: _dropped, ...rest } = orbit;
+    const alt = Math.max(rest.apogee, 200e3);
+    return { ...rest, perigee: alt, apogee: alt };
+  }
+
+  /**
+   * Where each recovered stage lands: where it comes down (the recovery with
+   * no plan), a drone ship, a landing zone of this site, a tower's arms, or
+   * not at all. Every choice left on "where it comes down" is no plan.
+   */
+  private recoveryChoices(vehicle: VehicleSpec): HTMLElement {
+    const s = this.state;
+    const box = this.el('div', 'recovery-choices');
+    const core = vehicle.stages[0];
+    const strapOns = (core.boosters ?? []).filter((b) => b.engine.count > 1).reduce((n, b) => n + b.count, 0);
+    const zones = landingZonesForSite(s.siteId);
+    const choices = (legs: boolean): { value: string; label: string }[] => [
+      { value: 'downrange', label: t('setup.recovery.downrange') },
+      ...(legs ? [{ value: 'droneShip', label: t('setup.recovery.droneShip') }] : []),
+      ...zones.filter((z) => (z.kind === 'tower') !== legs).map((z) => ({ value: `zone:${z.id}`, label: zoneName(z) })),
+      { value: 'expended', label: t('setup.recovery.expended') },
+    ];
+    const plan = s.recoveryPlan;
+    const current = (mode: RecoveryMode | undefined): string =>
+      !plan ? 'downrange' : !mode ? 'expended' : mode.kind === 'landingZone' ? `zone:${mode.zoneId}` : mode.kind;
+    const picked = [current(plan?.core), ...Array.from({ length: strapOns }, (_, k) => current(plan?.boosters?.[k]))];
+    const toMode = (v: string): RecoveryMode => v.startsWith('zone:') ? { kind: 'landingZone', zoneId: v.slice(5) }
+      : { kind: v as 'downrange' | 'droneShip' | 'expended' };
+    const apply = (): void => {
+      s.recoveryPlan = picked.every((v) => v === 'downrange') ? undefined
+        : { core: toMode(picked[0]), ...(strapOns ? { boosters: picked.slice(1).map(toMode) } : {}) };
+      this.changed();
+    };
+    box.appendChild(this.select('setup.recovery.core', choices(!!core.legs), picked[0], (v) => { picked[0] = v; apply(); }));
+    for (let k = 0; k < strapOns; k++) {
+      box.appendChild(this.select('setup.recovery.booster', choices(true), picked[k + 1], (v) => { picked[k + 1] = v; apply(); },
+        t('setup.recovery.booster', { n: k + 1 })));
+    }
+    if (zones.some((z) => z.kind === 'pad')) box.appendChild(this.el('p', 'field-note', t('setup.recovery.note')));
+    return box;
   }
 
   private customise(): void {

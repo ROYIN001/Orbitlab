@@ -19,7 +19,9 @@ tablet, and a single stack on a phone with the viewport first.
 - **18 launch vehicles** from 16 launch sites — see [Fleet](#fleet) below. Parallel
   boosters (including air-lit ones), hot staging, per-motor solid thrust profiles,
   throttle buckets at max-Q, acceleration limits, first-stage recovery with entry and
-  landing burns.
+  landing burns — flown back with a boostback to Landing Zones 1 and 2, to a drone ship, or
+  into the Starbase tower's arms — and Starship's suborbital test flights, the ship flying
+  itself home to a splashdown.
 - **Orbit presets** (ISS, Starlink, sun-synchronous at 600 km, polar, GPS/GLONASS MEO,
   GTO, GEO, Molniya, Tundra) plus fully custom orbits. Launch-window computation for the ISS
   plane and for sun-synchronous local-time constraints (RAAN targeting).

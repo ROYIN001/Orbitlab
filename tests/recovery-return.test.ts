@@ -207,4 +207,26 @@ describe('point-mass returns', () => {
     expect(stage.outcome).toBe('landed');
     expect(sim.events.some((e) => e.key.startsWith('evt.boostback'))).toBe(false);
   });
+
+  it('flies a stage planned "downrange" exactly as with no plan at all', { timeout: 120_000 }, () => {
+    const free = fly('falcon9', 1000, orbitById('leo'));
+    const planned = fly('falcon9', 1000, orbitById('leo'), { core: { kind: 'downrange' } });
+    const a = free.debris.find((d) => d.recovery)!, b = planned.debris.find((d) => d.recovery)!;
+    expect(b.recovery!.target).toBeUndefined();
+    expect(b.outcome).toBe(a.outcome);
+    expect(b.impact).toEqual(a.impact);
+    expect(planned.events.map((e) => e.key)).toEqual(free.events.map((e) => e.key));
+  });
+
+  it('keeps nothing back for an expended stage, and brings the rest of the plan home', { timeout: 120_000 }, () => {
+    const fh = vehicleById('falconheavy');
+    const plan: RecoveryPlan = { core: { kind: 'expended' }, boosters: [{ kind: 'landingZone', zoneId: 'lz1' }, { kind: 'expended' }] };
+    expect(recoveryReserves(fh, true, plan)).toEqual({ core: 0, boosters: 0.15 });
+    const sim = fly('falconheavy', 6465, orbitById('gto'), plan);
+    const recovered = sim.debris.filter((d) => d.recovery);
+    // one side booster flown home; the other and the core are expended
+    expect(recovered.map((d) => d.recovery!.target?.id)).toEqual(['lz1']);
+    expect(recovered[0].outcome).toBe('landed');
+    expect(sim.events.filter((e) => e.key === 'evt.boosterLandedZone').map((e) => e.params?.zone)).toEqual(['LZ-1']);
+  });
 });

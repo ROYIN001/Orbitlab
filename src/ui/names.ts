@@ -22,6 +22,7 @@ import { t } from '../i18n';
 import type { SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { SATELLITES } from '../data/satellites';
+import type { LandingZoneSpec } from '../data/landing-zones';
 import { RAD } from '../physics/constants';
 
 /** A dictionary entry, or the English literal from the data file when there is none. */
@@ -34,6 +35,7 @@ export const vehicleNotes = (v: VehicleSpec): string => localized(`vehicle.${v.i
 export const vehicleManufacturer = (v: VehicleSpec): string => localized(`vehicle.${v.id}.manufacturer`, v.manufacturer);
 export const satelliteName = (s: SatelliteSpec): string => localized(`sat.${s.id}.name`, s.name);
 export const siteName = (s: SiteExtra): string => localized(`site.${s.id}.name`, s.name);
+export const zoneName = (z: LandingZoneSpec): string => localized(`zone.${z.id}.name`, z.name);
 
 /** A stage or booster group of `vehicle`, by its id. */
 export const stageName = (vehicleId: string, stageId: string, fallback: string): string =>

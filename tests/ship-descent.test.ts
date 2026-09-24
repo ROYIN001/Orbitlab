@@ -38,6 +38,15 @@ describe('a suborbital target', () => {
     expect(Math.sqrt(speed2)).toBeCloseTo(Math.sqrt(MU_EARTH * (2 / (R_EARTH + 150e3) - 1 / plan.target.a)), 6);
   });
 
+  it('flies with no payload at all, even one that would have had its own engine', () => {
+    // A 0 kg spacecraft stage has no dry mass for the rigid body to be built from.
+    for (const model of ['pointMass', 'sixDof'] as const) {
+      const sim = new Simulation({ ...flight5Config(model), satelliteId: 'comsat', payloadMassOverride: 0 }, { headless: true });
+      expect(sim.vehicle.hasSpacecraftStage).toBe(false);
+      sim.step(sim.suggestedDt());
+    }
+  });
+
   it('leaves an orbit plan exactly as it was', () => {
     const cfg = { ...flight5Config('pointMass'), orbit: orbitById('leo') };
     const plan = planMission(cfg, siteById('starbase'), vehicleById('starship'));

@@ -1358,12 +1358,19 @@ boostback and burns of §8.1.
 A recovery plan (`MissionConfig.recoveryPlan`, `src/types.ts`) names where each recovered body
 goes: a **landing zone** near the launch site (`src/data/landing-zones.ts`: Landing Zones 1 and 2
 at Cape Canaveral, 86 m pads about 300 m apart, 9 km south of SLC-40 and 15 km south of LC-39A;
-the Starbase launch tower, whose arms catch Super Heavy) or a **drone ship**. Without a plan the original model above is flown unchanged. A plan changes
-the propellant reserve too: a body flown back to a landing zone keeps the vehicle's
-`returnReserve` (15 % for Falcon 9 and Falcon Heavy; 13 % is the least that lands Bandwagon-1 on
-LZ-1 in the point-mass model, and 12 % leaves Arabsat-6A's side boosters short of their
-boostback), a drone-ship body keeps `recoveryReserve`, and a body the plan leaves out is
-expended with nothing held back.
+the Starbase launch tower, whose arms catch Super Heavy) or a **drone ship**; a body can also be
+flown **downrange**, the original model above with no target, or **expended**. Without a plan
+every recovered body is flown downrange, unchanged. A plan changes the propellant reserve too: a
+body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for Falcon 9 and
+Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 12 %
+leaves Arabsat-6A's side boosters short of their boostback), a drone-ship or downrange body keeps
+`recoveryReserve`, and a body the plan expends, or leaves out, holds nothing back.
+
+The plan is checked with the rest of the configuration (`validateConfigInput`): a landing zone has
+to be one the flight's site can reach, a pad or a drone ship's deck needs a stage with legs, and
+a tower's arms take only a stage without them (Super Heavy). The mission panel offers each
+recoverable stage the choices its site and its hardware allow, and the WebMCP
+`configure_mission` tool takes the same plan (`recoveryPlan`; `list_missions` lists the zones).
 
 The guidance is one piece, `src/physics/sim/return-guidance.ts`, shared by both flight models:
 
@@ -1471,8 +1478,17 @@ inertial space while the ground rotates out from under it.
 Starship's test flights do not reach orbit. Flight 5 (13 October 2024) cut its ship off on a
 213 × −15 km trajectory at 26.2° — the perigee is under the ground, so no deorbit burn is needed
 — and the ship came back down belly first an hour later and splashed down in the Indian Ocean
-off Western Australia. An orbit preset with `suborbital: true` (`OrbitSpec.suborbital`) asks for
+off Western Australia. An orbit with `suborbital: true` (`OrbitSpec.suborbital`) asks for
 exactly that (src/physics/mission.ts, src/physics/sim/ascent.ts, src/physics/sim/ship-descent.ts).
+It is offered for a vehicle whose upper stage flies itself home — one with flaps, Starship —
+with the perigee between −1000 and 0 km, and a test flight may carry no payload at all (the
+mission panel's "Suborbital test flight" option, WebMCP's `suborbital`). A payload stays aboard
+and comes down with the ship: the 30 t kept for landing still sets down a ship carrying 60 t in
+the point-mass model, and 30 t in six-DOF, which then comes down further east (13°S 120°E). At
+60 t the six-DOF ship is lost: its centre of mass further forward, the flaps hold a shallower
+entry whose lift carries it back out of the air, and it comes in again half an hour later at
+Mach 16 at 30 km, far too steep to fly home. There is no entry guidance that would steer the
+lift down; the pre-flight verdict warns above 30 t (`SHIP_RETURN_VERIFIED_PAYLOAD`).
 
 **Cut-off.** A suborbital target has no burns after the ascent. The ascent is aimed at
 `SUBORBITAL_CUTOFF_ALTITUDE`, 150 km, where Starship's ship shuts down, and it is cut off still

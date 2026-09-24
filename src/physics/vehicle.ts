@@ -2,7 +2,7 @@
  * Runtime vehicle model: propellant bookkeeping, thrust at altitude,
  * staging state, frontal area and delta-v accounting.
  */
-import type { VehicleSpec, StageSpec, BoosterGroupSpec, EngineSpec, SatelliteSpec, RecoveryMode, RecoveryPlan } from '../types';
+import type { VehicleSpec, StageSpec, BoosterGroupSpec, EngineSpec, SatelliteSpec, RecoveryMode, RecoveryPlan, TargetedRecovery } from '../types';
 import { G0, P0 } from './constants';
 
 export interface BoosterState {
@@ -296,11 +296,15 @@ export function solidProfile(fractionBurned: number, peakFactor = 1.2): number {
  * and keeps nothing. The strap-ons of one group share a propellant state, so
  * the group keeps the largest reserve any of them needs.
  */
+/** A mode that flies the stage to a target, rather than down where it falls or not at all. */
+export const targetedRecovery = (mode: RecoveryMode | undefined): mode is TargetedRecovery =>
+  mode?.kind === 'droneShip' || mode?.kind === 'landingZone';
+
 export function recoveryReserves(spec: VehicleSpec, boosterRecovery: boolean, plan?: RecoveryPlan): { core: number; boosters: number } {
   if (!boosterRecovery || !spec.recoverable) return { core: 0, boosters: 0 };
   const base = spec.recoveryReserve ?? 0;
   if (!plan) return { core: base, boosters: base };
-  const of = (mode: RecoveryMode | undefined): number => !mode ? 0
+  const of = (mode: RecoveryMode | undefined): number => !mode || mode.kind === 'expended' ? 0
     : mode.kind === 'landingZone' ? spec.returnReserve ?? base : base;
   return { core: of(plan.core), boosters: Math.max(0, ...(plan.boosters ?? []).map(of)) };
 }
@@ -330,7 +334,9 @@ export class VehicleModel {
     const stageSpecs: StageSpec[] = [...spec.stages];
     this.lastLauncherIndex = spec.stages.length - 1;
     this.hasSpacecraftStage = false;
-    if (spacecraft?.propulsion) {
+    // A suborbital test flight may carry no payload at all, and nothing is
+    // left of a spacecraft to fly on its own engine.
+    if (spacecraft?.propulsion && payloadMass > 0) {
       const pr = spacecraft.propulsion;
       stageSpecs.push({
         id: 'spacecraft', name: spacecraft.name, dryMass: payloadMass * (1 - pr.propellantFraction),

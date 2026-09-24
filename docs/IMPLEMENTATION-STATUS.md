@@ -25,6 +25,11 @@ throughout.
 - **Launch geometry**: every direction is flown inside its site's range-safety corridor; an
   inclination the corridor does not reach directly is flown with a dogleg of up to 5°, and the
   setup panel shows what it costs.
+- **Recovery** ([PHYSICS.md §8.1–8.2](PHYSICS.md)): a recovered stage can be flown back with a
+  boostback to Landing Zone 1 or 2, to a drone ship, or to the Starbase tower's arms, and
+  Starship can fly a suborbital test flight whose ship comes home to a splashdown. The Watch
+  launches fly Bandwagon-1, Arabsat-6A and Flight 5 that way; Explore and Engineer offer the
+  same choices (off by default).
 
 ## What is experimental
 
@@ -37,6 +42,10 @@ throughout.
   far below the vehicle (7° against 33°), and the vehicle pitches down from 60° to 33° above the
   horizon over twenty seconds at up to 3 °/s. It is not a thrust effect and is left for the
   guidance work (G01).
+- **Flying back and flying home.** The returns and the ship's descent are flown on estimated
+  data (return aerodynamics, the flaps, the catch envelope, the landing propellant), and
+  Flight 5's ship comes down about six minutes early and 15–25° of longitude short of the real
+  splashdown (PHYSICS.md §8.2).
 - **Vulcan's ascent** inserts well away from its planned parking orbit (about 137 × 1 200 km
   against 250 × 500 km) and makes the target with its later burns. Every Vulcan mission in the
   fleet matrix reaches its target; the ascent itself is a guidance-quality item for G01.
@@ -66,8 +75,9 @@ gate.
 
 ## Roadmap
 
-The owner's roadmap (2026-09-22) selected 27 items to do now, in this order; the ones marked
-done are on branch `claude/awesome-fermi-r6ntep`.
+The owner's roadmap (2026-09-22) selected 27 items to do now, in this order. The first ten are
+on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
+`claude/exciting-bardeen-2v14fj`.
 
 | Item | | Item | |
 |---|---|---|---|
@@ -81,7 +91,7 @@ done are on branch `claude/awesome-fermi-r6ntep`.
 | F06 documentation | done | G06 Soyuz launch escape system | |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | |
-| Watch mode: flown missions with booster landings | | G07 ISS rendezvous and docking | |
+| Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | |
 | P05 slosh, bending and notch filter | | C01 historical missions | |
 | U07 ГОСТ 20058-80 notation | | | |
 | G03 attitude-loop inspector | | | |

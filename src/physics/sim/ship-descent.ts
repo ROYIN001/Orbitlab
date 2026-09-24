@@ -50,6 +50,15 @@ import type { Simulation } from '../simulation';
  * for the flip.
  */
 export const SHIP_LANDING_PROPELLANT = 30e3;
+
+/**
+ * Heaviest payload the ship has been flown home with in both flight models,
+ * kg. At 60 t the point-mass ship still lands, but the six-DOF one, its
+ * centre of mass further forward, holds a shallower entry whose lift carries
+ * it back out of the air; it comes in again half an hour later far too steep
+ * and is lost (PHYSICS.md §8.2). The pre-flight verdict warns above this.
+ */
+export const SHIP_RETURN_VERIFIED_PAYLOAD = 30e3;
 /** Height the entry is flown from, m. */
 export const ENTRY_INTERFACE = 120e3;
 /** Hypersonic angle of attack, the belly into the flow. */

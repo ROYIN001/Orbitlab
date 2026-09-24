@@ -51,13 +51,21 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    sun-synchronous local time), **Next window** moves the launch time to the next moment the
    ascent plane actually reaches that RAAN; launching off-window still works, it just costs a
    plane-change burn at apogee (see [§5](#5-reading-the-telemetry-panel)).
+   With Starship, **Suborbital test flight** turns the target into a Flight 5-style path:
+   the ship is cut off short of orbit (perigee between −1000 and 0 km, below the ground) and
+   flies itself home to a splashdown about an hour later; such a flight may carry no payload.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
 program**, which flies the ascent headlessly over a grid of values and keeps the one with
 the largest remaining Δv. **Failure scenario** arms an engine-out, a thrust loss, a
 premature separation, a stuck fairing, a range-safety destruct, or a random one of those, at
-a mission time and stage you choose.
+a mission time and stage you choose. Under **Options**, **Recover first stage** keeps landing
+propellant back; with it on, each recoverable stage gets a choice of where it lands — where it
+comes down at sea, a drone ship, a landing zone of the launch site (LZ-1 and LZ-2 at Cape
+Canaveral and Kennedy), the Starbase tower's arms for Super Heavy, or expended. Flying back to a
+landing zone costs a boostback burn, so the stage keeps more propellant back and the payload
+falls.
 
 **The status line above the Launch button is a pre-flight verdict**, not decoration: it
 reads *fail* (red) when the payload is over the vehicle's rated capability, the target orbit

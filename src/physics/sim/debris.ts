@@ -3,7 +3,7 @@
  * stage, each propagated individually until impact, landing or orbit.
  * Recovered boosters fly their entry and landing burns here.
  */
-import type { BoosterGroupSpec, StageSpec, EngineSpec, RecoveryMode } from '../../types';
+import type { BoosterGroupSpec, StageSpec, EngineSpec, TargetedRecovery } from '../../types';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, RAD, DEG } from '../constants';
 import { Vec3, v3, add, sub, scale, dot, cross, norm, normalize, addScaled, clone, slerpLimited } from '../vec3';
 import { atmosphere } from '../atmosphere';
@@ -21,6 +21,7 @@ import { rk4Step } from '../integrator';
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from '../rigid/math';
 import { elementsFromState, eciToLatLon, propagateKepler } from '../orbital';
 import type { StageState, BoosterState } from '../vehicle';
+import { targetedRecovery } from '../vehicle';
 import type { Simulation } from '../simulation';
 import type { Debris } from './types';
 import { pointMassAcceleration } from './forces';
@@ -158,9 +159,9 @@ export class DebrisTracker {
       };
       // A plan names the strap-ons it brings back; one it leaves out is expended.
       const mode = plan ? plan.boosters?.[k] : undefined;
-      if (recoverable && (!plan || mode)) {
+      if (recoverable && (!plan || (mode && mode.kind !== 'expended'))) {
         d.recovery = recoveryFor(spec.engine, spec.dryMass, Math.max(0, b.propellant));
-        if (mode) this.planReturn(d, mode);
+        if (targetedRecovery(mode)) this.planReturn(d, mode);
       }
       this.sim.debris.push(d);
     }
@@ -179,7 +180,7 @@ export class DebrisTracker {
     if (recoverable) {
       d.recovery = recoveryFor(spec.engine, spec.dryMass, Math.max(0, st.propellant));
       const mode = this.sim.cfg.recoveryPlan?.core;
-      if (mode) this.planReturn(d, mode);
+      if (targetedRecovery(mode)) this.planReturn(d, mode);
     }
     this.sim.debris.push(d);
   }
@@ -226,7 +227,7 @@ export class DebrisTracker {
    * come down — which is how a recovery ship is placed, days ahead, from the
    * planned trajectory.
    */
-  planReturn(d: Debris, mode: RecoveryMode): void {
+  planReturn(d: Debris, mode: TargetedRecovery): void {
     const rc = d.recovery!;
     const theta = this.sim.plan.gmst0 + OMEGA_EARTH * this.sim.state.t;
     if (mode.kind === 'landingZone') {

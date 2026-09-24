@@ -105,6 +105,19 @@ export interface ConfigInput {
 const SUBORBITAL_PERIGEE_MIN = -1000;
 
 /**
+ * The limits a numeric field has for this orbit: a suborbital target's
+ * perigee is below the ground (and no higher), and its flight may carry no
+ * payload at all; everything else is `NUMBER_FIELDS`.
+ */
+export function fieldLimits(field: string, orbit?: Pick<OrbitSpec, 'suborbital'>): NumberLimits | undefined {
+  if (orbit?.suborbital) {
+    if (field === 'setup.perigee') return { min: SUBORBITAL_PERIGEE_MIN, max: 0 };
+    if (field === 'setup.payloadMass') return { min: 0 };
+  }
+  return NUMBER_FIELDS[field];
+}
+
+/**
  * A suborbital target is a flight whose upper stage flies itself home from
  * the cut-off (src/physics/sim/ship-descent.ts), which only a stage with flaps
  * does.
@@ -126,6 +139,7 @@ function recoveryPlanInvalid(plan: RecoveryPlan, spec: VehicleSpec, siteId: stri
   const bad = (mode: RecoveryMode | undefined, legs: boolean): boolean => {
     if (mode === undefined) return false;
     if (typeof mode !== 'object' || mode === null) return true;
+    if (mode.kind === 'downrange' || mode.kind === 'expended') return false;
     if (mode.kind === 'droneShip') return !legs;
     if (mode.kind !== 'landingZone') return true;
     const zone = LANDING_ZONES.find((z) => z.id === mode.zoneId);
@@ -160,11 +174,9 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   if (!SITES.some((s) => s.id === state.siteId) || (spec && !spec.sites.includes(state.siteId))) issues.push({ field: 'setup.site', code: 'selection' });
   const orbit = state.orbit;
   // A suborbital test flight may carry nothing at all (Flight 5 did not).
-  check(state.payloadMass, 'setup.payloadMass', orbit.suborbital ? { min: 0 } : NUMBER_FIELDS['setup.payloadMass']);
-  if (orbit.suborbital) {
-    if (spec && !flightHomeCapable(spec)) issues.push({ field: 'setup.perigee', code: 'suborbital' });
-    check(orbit.perigee / 1000, 'setup.perigee', { min: SUBORBITAL_PERIGEE_MIN, max: 0 });
-  } else check(orbit.perigee / 1000, 'setup.perigee', NUMBER_FIELDS['setup.perigee']);
+  check(state.payloadMass, 'setup.payloadMass', fieldLimits('setup.payloadMass', orbit));
+  if (orbit.suborbital && spec && !flightHomeCapable(spec)) issues.push({ field: 'setup.perigee', code: 'suborbital' });
+  check(orbit.perigee / 1000, 'setup.perigee', fieldLimits('setup.perigee', orbit));
   check(orbit.apogee / 1000, 'setup.apogee', NUMBER_FIELDS['setup.apogee']);
   if (Number.isFinite(orbit.perigee) && Number.isFinite(orbit.apogee) && orbit.perigee > orbit.apogee) {
     issues.push({ field: 'setup.perigee', code: 'orbitOrder' });
