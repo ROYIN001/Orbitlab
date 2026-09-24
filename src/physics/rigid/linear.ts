@@ -47,6 +47,8 @@ export interface PlaneModel {
   kOmega: number;
   /** The bending filter on the moment demand (pitch and yaw, with P05's notch). */
   notch?: Biquad;
+  /** Weight of the aerodynamic feed-forward the autopilot flies (E04); absent, 1. */
+  feedForward?: number;
 }
 
 export interface PlaneMargins {
@@ -127,6 +129,8 @@ export interface LinearisationContext {
   kTheta: Vec3;
   kOmega: Vec3;
   notch?: Biquad;
+  /** The feed-forward's weight (E04); absent, 1. */
+  feedForward?: number;
 }
 
 const E: Record<LinearAxis, Vec3> = { x: v3(1, 0, 0), y: v3(0, 1, 0), z: v3(0, 0, 1) };
@@ -203,7 +207,8 @@ export function linearisePlane(axis: LinearAxis, ctx: LinearisationContext): Pla
     cAngle[k] = sign * ctx.imuSlope; cRate[k + 1] = sign * ctx.imuSlope;
   }
   return { axis, n, states: perturbs.map((p) => p.name), A, B, cAngle, cRate, cAero, actuator, tau,
-    inertia: ctx.inertia[axis], kTheta: ctx.kTheta[axis], kOmega: ctx.kOmega[axis], ...(axis !== 'x' && ctx.notch ? { notch: ctx.notch } : {}) };
+    inertia: ctx.inertia[axis], kTheta: ctx.kTheta[axis], kOmega: ctx.kOmega[axis], ...(axis !== 'x' && ctx.notch ? { notch: ctx.notch } : {}),
+    ...(ctx.feedForward !== undefined ? { feedForward: ctx.feedForward } : {}) };
 }
 
 export function linearise(ctx: LinearisationContext): LinearModel {
@@ -258,7 +263,7 @@ export function closedLoop(p: PlaneModel, T: number, ffError: number): { dim: nu
   const s = sample(p, T), m = s.m, notch = p.notch, dim = m + (notch ? 2 : 0);
   // Moment demand: m_d = I K_ω (K_θ (θ_c − θ̂) − ω̂) = K·z + k θ_c.
   const K = s.cAngle.map((c, i) => -p.inertia * p.kOmega * (p.kTheta * c + s.cRate[i])), k = p.inertia * p.kOmega * p.kTheta;
-  const ff = 1 + ffError, M = new Array<number>(dim * dim).fill(0), g = new Array<number>(dim).fill(0);
+  const ff = (p.feedForward ?? 1) * (1 + ffError), M = new Array<number>(dim * dim).fill(0), g = new Array<number>(dim).fill(0);
   const b0 = notch ? notch.b0 : 1;
   // M_req = b0 (K z + k θ_c) + w1 − (1+x) c_a z.
   const req = K.map((v, i) => b0 * v - ff * s.cAero[i]);
@@ -306,6 +311,24 @@ export function prepare(p: PlaneModel, T: number, sampled = sample(p, T)): Prepa
 
 /** L(e^{jωT}): the loop broken at the autopilot's (filtered) moment demand, feed-forward inside. */
 export function loopGain(p: PlaneModel, T: number, ffError: number, omega: number, prepared = prepare(p, T)): { re: number; im: number } {
+  return combine(p, plantAt(prepared, omega, T), ffError);
+}
+
+/** The plant's responses at one frequency: IMU angle, IMU rate and the air's moment per delivered moment, and the notch. */
+export interface PlantPoint { zr: number; zi: number; hA: Complex; hR: Complex; hF: Complex }
+type Complex = { re: number; im: number };
+
+/** The loop from the plant's responses and the plane's gains: I·K_ω(K_θ h_θ + h_ω)·N(z) / (1 + w(1 + x) h_F). */
+function combine(p: PlaneModel, pt: PlantPoint, ffError: number): Complex {
+  const gain = p.inertia * p.kOmega, { hA, hR, hF } = pt;
+  let num = { re: gain * (p.kTheta * hA.re + hR.re), im: gain * (p.kTheta * hA.im + hR.im) };
+  if (p.notch) num = cmul(num, biquadAt(p.notch, pt.zr, pt.zi));
+  const ff = (p.feedForward ?? 1) * (1 + ffError);
+  const den = { re: 1 + ff * hF.re, im: ff * hF.im };
+  return cdiv(num, den);
+}
+
+function plantAt(prepared: Prepared, omega: number, T: number): PlantPoint {
   const { m, H, g } = prepared, zr = Math.cos(omega * T), zi = Math.sin(omega * T);
   // (zI − H) v = g for Hessenberg H: elimination touches only the subdiagonal.
   const Ar = new Array<number>(m * m), Ai = new Array<number>(m * m);
@@ -334,12 +357,7 @@ export function loopGain(p: PlaneModel, T: number, ffError: number, omega: numbe
     vr[r] = (sr * pr + si * pi) / pd; vi[r] = (si * pr - sr * pi) / pd;
   }
   const dotc = (c: number[]) => ({ re: c.reduce((a, v, i) => a + v * vr[i], 0), im: c.reduce((a, v, i) => a + v * vi[i], 0) });
-  const hA = dotc(prepared.cA), hR = dotc(prepared.cR), hF = dotc(prepared.cF);
-  const gain = p.inertia * p.kOmega;
-  let num = { re: gain * (p.kTheta * hA.re + hR.re), im: gain * (p.kTheta * hA.im + hR.im) };
-  if (p.notch) num = cmul(num, biquadAt(p.notch, zr, zi));
-  const den = { re: 1 + (1 + ffError) * hF.re, im: (1 + ffError) * hF.im };
-  return cdiv(num, den);
+  return { zr, zi, hA: dotc(prepared.cA), hR: dotc(prepared.cR), hF: dotc(prepared.cF) };
 }
 const cmul = (a: { re: number; im: number }, b: { re: number; im: number }) => ({ re: a.re * b.re - a.im * b.im, im: a.re * b.im + a.im * b.re });
 function cdiv(a: { re: number; im: number }, b: { re: number; im: number }) {
@@ -357,12 +375,32 @@ export function biquadAt(f: Biquad, zr: number, zi: number): { re: number; im: n
 
 export interface BodePoint { omega: number; magDb: number; phaseDeg: number }
 
-/** L over a logarithmic grid from 0.01 rad/s to just below the Nyquist frequency, phase unwrapped. */
-export function bode(p: PlaneModel, T: number, ffError: number, points = 240): BodePoint[] {
-  const s = prepare(p, T), lo = Math.log10(0.01), hi = Math.log10(0.98 * Math.PI / T), out: BodePoint[] = [];
-  let last: number | undefined;
+/**
+ * The plant's responses over the Bode grid — a logarithmic one from 0.01 rad/s to just below the
+ * Nyquist frequency. They do not depend on the autopilot's gains or feed-forward (E04 reuses them
+ * for every trial).
+ */
+export interface PlantTable { omega: number[]; points: PlantPoint[] }
+export function plantTable(p: PlaneModel, T: number, points = 240): PlantTable {
+  const s = prepare(p, T), lo = Math.log10(0.01), hi = Math.log10(0.98 * Math.PI / T), omega: number[] = [], pts: PlantPoint[] = [];
   for (let i = 0; i < points; i++) {
-    const omega = 10 ** (lo + (hi - lo) * i / (points - 1)), L = loopGain(p, T, ffError, omega, s);
+    const w = 10 ** (lo + (hi - lo) * i / (points - 1));
+    omega.push(w); pts.push(plantAt(s, w, T));
+  }
+  return { omega, points: pts };
+}
+
+/** L over the Bode grid, phase unwrapped. */
+export function bode(p: PlaneModel, T: number, ffError: number, points = 240): BodePoint[] {
+  return curveFromTable(p, plantTable(p, T, points), ffError);
+}
+
+/** The loop's Bode curve from a plant table and the plane's gains (which may be a trial's). */
+export function curveFromTable(p: PlaneModel, table: PlantTable, ffError: number): BodePoint[] {
+  const out: BodePoint[] = [];
+  let last: number | undefined;
+  for (let i = 0; i < table.omega.length; i++) {
+    const omega = table.omega[i], L = combine(p, table.points[i], ffError);
     let phase = Math.atan2(L.im, L.re) * 180 / Math.PI;
     if (last !== undefined) { while (phase - last > 180) phase -= 360; while (phase - last < -180) phase += 360; }
     last = phase;
@@ -376,15 +414,26 @@ export function bode(p: PlaneModel, T: number, ffError: number, points = 240): B
 
 export function margins(p: PlaneModel, T: number, ffError: number): PlaneMargins {
   if (p.actuator === 'none') return { active: false, stable: false, growthRate: NaN, growthFrequency: NaN, openLoopUnstable: 0 };
+  const growth = closedLoopGrowth(p, T, ffError);
+  return { active: true, stable: growth.rate < 1e-3, growthRate: growth.rate, growthFrequency: growth.frequency,
+    openLoopUnstable: openLoopUnstable(p, T, ffError), ...marginsFromCurve(bode(p, T, ffError, 240)) };
+}
+
+/** The closed loop's least damped mode: its growth rate, s⁻¹ (ln|λ|/T), and frequency, rad/s. */
+export function closedLoopGrowth(p: PlaneModel, T: number, ffError: number): { rate: number; frequency: number } {
   const { dim, M } = closedLoop(p, T, ffError);
   const eig = eigenvalues(M, dim);
-  let growthRate = -Infinity, growthFrequency = 0;
+  let rate = -Infinity, frequency = 0;
   eig.re.forEach((re, i) => {
-    const rate = Math.log(Math.hypot(re, eig.im[i])) / T;
-    if (rate > growthRate) { growthRate = rate; growthFrequency = Math.abs(Math.atan2(eig.im[i], re)) / T; }
+    const r = Math.log(Math.hypot(re, eig.im[i])) / T;
+    if (r > rate) { rate = r; frequency = Math.abs(Math.atan2(eig.im[i], re)) / T; }
   });
-  const curve = bode(p, T, ffError, 240), out: PlaneMargins = { active: true, stable: growthRate < 1e-3, growthRate, growthFrequency,
-    openLoopUnstable: openLoopUnstable(p, T, ffError) };
+  return { rate, frequency };
+}
+
+/** Phase margin at the first crossover, gain margin above it, gain-reduction margin below it, from a Bode curve. */
+export function marginsFromCurve(curve: readonly BodePoint[]): Pick<PlaneMargins, 'pmDeg' | 'wcRadS' | 'gmDb' | 'wgRadS' | 'gmLowDb'> {
+  const out: Pick<PlaneMargins, 'pmDeg' | 'wcRadS' | 'gmDb' | 'wgRadS' | 'gmLowDb'> = {};
   const at = (a: BodePoint, b: BodePoint, f: number) => ({ omega: 10 ** (Math.log10(a.omega) + f * (Math.log10(b.omega) - Math.log10(a.omega))),
     magDb: a.magDb + f * (b.magDb - a.magDb), phaseDeg: a.phaseDeg + f * (b.phaseDeg - a.phaseDeg) });
   const wrap = (deg: number) => { let x = ((deg % 360) + 360) % 360; if (x > 180) x -= 360; return x; };
@@ -414,8 +463,8 @@ export function margins(p: PlaneModel, T: number, ffError: number): PlaneMargins
 
 /** Poles outside the unit circle (beyond a 0.001 s⁻¹ growth) of the plant closed only through the feed-forward. */
 export function openLoopUnstable(p: PlaneModel, T: number, ffError: number): number {
-  const s = sample(p, T), m = s.m, M = s.Phi.slice();
-  for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) M[i * m + j] -= s.Gamma[i] * (1 + ffError) * s.cAero[j];
+  const s = sample(p, T), m = s.m, M = s.Phi.slice(), ff = (p.feedForward ?? 1) * (1 + ffError);
+  for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) M[i * m + j] -= s.Gamma[i] * ff * s.cAero[j];
   const e = eigenvalues(M, m);
   return e.re.filter((re, i) => Math.log(Math.hypot(re, e.im[i])) / T > 1e-3).length;
 }
@@ -426,15 +475,21 @@ export interface StepResponse { t: number[]; angle: number[]; sensed: number[]; 
 
 /** The closed loop's response to a step of the attitude command, rad, over `duration` s. */
 export function stepResponse(p: PlaneModel, T: number, ffError: number, stepRad: number, duration: number): StepResponse {
+  return commandResponse(p, T, ffError, () => stepRad, duration);
+}
+
+/** The closed loop's response to an attitude command θ_c(t), rad (held over each step), over `duration` s. */
+export function commandResponse(p: PlaneModel, T: number, ffError: number, command: (t: number) => number, duration: number): StepResponse {
   const { dim, M, g, s } = closedLoop(p, T, ffError), out: StepResponse = { t: [], angle: [], sensed: [], rate: [], demand: [], delivered: [] };
   let x = new Array<number>(dim).fill(0);
   const steps = Math.round(duration / T), m = s.m;
   const K = s.cAngle.map((c, i) => -p.inertia * p.kOmega * (p.kTheta * c + s.cRate[i])), k = p.inertia * p.kOmega * p.kTheta;
+  const ff = (p.feedForward ?? 1) * (1 + ffError);
   for (let step = 0; step <= steps; step++) {
-    const z = x.slice(0, m), demand = K.reduce((a, v, i) => a + v * z[i], 0) + k * stepRad;
+    const stepRad = command(step * T), z = x.slice(0, m), demand = K.reduce((a, v, i) => a + v * z[i], 0) + k * stepRad;
     out.t.push(step * T); out.angle.push(z[0]); out.sensed.push(s.cAngle.reduce((a, v, i) => a + v * z[i], 0));
     out.rate.push(s.cRate.reduce((a, v, i) => a + v * z[i], 0)); out.demand.push(demand);
-    const req = (p.notch ? p.notch.b0 * demand + x[m] : demand) - (1 + ffError) * s.cAero.reduce((a, v, i) => a + v * z[i], 0);
+    const req = (p.notch ? p.notch.b0 * demand + x[m] : demand) - ff * s.cAero.reduce((a, v, i) => a + v * z[i], 0);
     out.delivered.push(s.deliveredIndex !== undefined ? z[s.deliveredIndex] : req);
     const next = new Array<number>(dim).fill(0);
     for (let i = 0; i < dim; i++) { let v = g[i] * stepRad; for (let j = 0; j < dim; j++) v += M[i * dim + j] * x[j]; next[i] = v; }

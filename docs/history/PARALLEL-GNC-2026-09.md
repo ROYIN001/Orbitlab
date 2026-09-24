@@ -36,6 +36,11 @@ here; this file records progress for the owner to fold in at the merge.
   ±X %** setting; a **chart of the margins over the flight**, from linearisations recorded as the
   flight goes and flights bit for bit as before; the **step response from the linear model
   only** (a step injected into the flight belongs to E04); the loop **linearised every 0.5 s**.
+- E04 (asked 2026-09-24): the tuning is **set before launch** in the mission configuration, with
+  a **what-if** on the recorded loop during and after a flight; **K_θ, K_ω, the rate and
+  angular-acceleration limits and the feed-forward's weight** per channel; a **flight test** (step
+  or doublet) against the linear prediction; and an **auto-tuner** for phase- and gain-margin
+  targets.
 
 ## Progress
 
@@ -46,7 +51,7 @@ here; this file records progress for the owner to fold in at the merge.
 | G03 attitude-loop inspector | done 2026-09-24 (see below) |
 | E02 live equations panel | done 2026-09-24 (see below) |
 | G04 Bode, step response, margins | done 2026-09-24 (see below) |
-| E04 controller tuning mode | |
+| E04 controller tuning mode | done 2026-09-24 (see below) |
 | G02 inertial navigation and Kalman filter | |
 | G08 control-system failures | |
 | G01 PEG and IGM guidance | (also: the load relief's switch-off, see G03) |
@@ -316,3 +321,63 @@ tests/mcp.test.ts.
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged (3.5 min); typecheck passes.
 After the owner's 0.5 s cadence: `npm test` 68 files / 973 tests pass; the whole-mission
 fingerprints pass unchanged; typecheck passes.
+
+### E04 — tuning the autopilot, and flight tests
+
+Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2g, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §12.
+
+- **The setting** (`DynamicsConfig.control`, `src/physics/rigid/control-config.ts`): per channel
+  (roll; pitch–yaw) K_θ, K_ω, rate limit, angular-acceleration ceiling; the feed-forward's
+  weight. Validated in `validateDynamics` and `validateConfigInput`; the setup panel's *Attitude
+  autopilot* section (Engineer mode, six-DOF); `configure_mission.control` (merged field by field,
+  null resets, kept across vehicle and wind edits). Absent, the runtime is untouched; the defaults
+  set explicitly fly the same bits (tested).
+- **A decision taken here**: pitch–yaw gains set by hand are flown as set, without P05's
+  flexible-vehicle cap, so that a tuning flies what its analysis showed; the cap still applies to
+  the default gains. For the owner to confirm.
+- **The runtime**: optional `feedForward` and `capPitchYawGains` options (the gimbals asked for
+  M_d − w·M_aero, the weight 1 taking the old path); `PlaneModel.feedForward` so G04's
+  linearisation carries it; `startAttitudeTest` and the record, the offset rotating the target
+  about its own axis.
+- **Trials and auto-tune** (`src/physics/rigid/tuning.ts`): the plant's frequency response per
+  model computed once (`plantTable` in `linear.ts`, which `bode` and `margins` now use too — the
+  G04 numbers are unchanged), trial margins by arithmetic; the search for the highest K_θ with
+  K_θ/K_ω in 0.25–0.5 meeting the targets over 16 sampled models, checked on every model with
+  failures added back.
+- **Flight tests** (`src/physics/rigid/attitude-test.ts`): `Simulation.startAttitudeTest`, the
+  `evt.attitudeTestStep`/`Doublet` events, a stub on the telemetry while it runs and the record
+  once at the end; in a worker session (F02) the main-thread shell checks it and sends an
+  `attitudeTest` message (`src/session/`); `run_attitude_test` and `read_flight_state.attitudeTest`.
+- **The inspector**: two more tabs, Tuning and Flight test (`src/ui/loop-tuning.ts`).
+- **What it found**: the default rigid autopilot sits at the 45° phase-margin target (auto-tune:
+  1.61/3.39 against 1.5/3); with P05 no PD gains meet 45°/6 dB over the flight (a slosh
+  resonance at T+33.5 s), 40°/4 dB gives 0.74/1.49, and flown again those keep GM ≥ 4.1 dB against
+  the default's 2.3 dB. Flight tests: roll follows the linear model to 0.8 %; pitch and yaw
+  depart from it where the acceleration, rate and stopping-distance limiters hold the axis and
+  where guidance follows the velocity the test bends.
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- E04 ---`); `src/types.ts` (`DynamicsConfig.control`, and `ControlConfig`,
+`ControlChannelConfig` at the end); `src/config/validation.ts` (the fields' ranges, one call, one
+function); `src/mcp.ts` (`control` in configure_mission's schema and handler, keeping it on
+vehicle and wind edits; the `run_attitude_test` tool; `attitudeTest` in read_flight_state);
+`src/ui/panel.ts` (the section, two lines keeping the tuning on a vehicle change, `applyControl`
+and `currentControl`); `src/physics/simulation.ts` (the tuning passed to the vehicle's runtime,
+`startAttitudeTest`, the record on the samples); `src/main.ts` (three callbacks in the
+inspector's construction); `src/ui/names.ts` (the test's axis and sense in the event text);
+`src/style.css` (one rule). Also: `src/session/protocol.ts`, `core.ts`, `session.ts` (the worker
+message), `src/physics/rigid/config.ts`, `runtime.ts`, `linear.ts`, `src/ui/loop-inspector.ts`,
+`.css`, `loop-analysis.ts` (`logTick` exported).
+
+**Tests**: tests/control-tuning.test.ts (the defaults and their bits; the cap only for default
+gains; ranges; the feed-forward weight in flight and in the linear loop; trials equal to the
+recorded margins; auto-tune on a PD loop — widest, well damped — and infeasible targets; P05
+tuned and flown again with its margins kept; the test shapes, refusals, a roll step against the
+prediction with the stub and the single record, a yaw step held by the limiters; the event text),
+blocks in tests/mcp.test.ts and tests/session.test.ts (a test flown in the worker records as
+on the main thread).
+
+
+**Results (2026-09-24)**: `npm test` 69 files / 992 tests pass (12 min); the whole-mission
+fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.

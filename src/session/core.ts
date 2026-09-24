@@ -71,6 +71,11 @@ export class SimCore {
           this.recorder.captureChangedState();
           this.report();
           break;
+        case 'attitudeTest':
+          // E04: the shell has checked it; the worker's own checks decide.
+          this.sim.startAttitudeTest(message.spec);
+          this.report();
+          break;
       }
     } catch (err) {
       this.fastForward = null;

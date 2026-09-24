@@ -94,9 +94,11 @@ export function localizeEventParams(
   const kind = typeof params.kind === 'string' ? localized(`tel.burn.${params.kind}`, params.kind) : null;
   const commandMode = params.mode === 'auto' || params.mode === 'manual' ? localized(`control.mode.${params.mode}`, params.mode) : null;
   const envelopeScope = params.scope === 'vehicle' ? t('aero.scope.vehicle') : params.scope === 'debris' ? t('aero.scope.debris') : null;
+  // E04: an attitude test's axis, and its amplitude in the standard's sense (ISO in the event).
+  const testAxis = params.testAxis === 'roll' || params.testAxis === 'pitch' || params.testAxis === 'yaw' ? t(TEST_AXIS[params.testAxis]) : null;
   if ((stage === null || stage === params.stage)
     && (name === null || name === params.name)
-    && (kind === null || kind === params.kind) && commandMode === null && envelopeScope === null) return params;
+    && (kind === null || kind === params.kind) && commandMode === null && envelopeScope === null && testAxis === null) return params;
   const out = { ...params };
   if (stage !== null) out.stage = stage;
   if (name !== null) out.name = name;
@@ -119,8 +121,13 @@ export function localizeEventParams(
     if (getNotation() === 'gost' && typeof params.yawRateRadS === 'number') out.yawRateRadS = (params.yawRateRadS === 0 ? 0 : -params.yawRateRadS).toFixed(3);
     if (typeof params.throttle === 'number') out.throttle = (params.throttle * 100).toFixed(1);
   }
+  if (testAxis !== null) {
+    out.testAxis = testAxis;
+    if (getNotation() === 'gost' && params.testAxis === 'yaw' && typeof params.amplitudeDeg === 'number') out.amplitudeDeg = -params.amplitudeDeg;
+  }
   return out;
 }
+const TEST_AXIS = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop.axis.yaw' } as const;
 
 /**
  * The localized name of a spacecraft by its `src/data/satellites.ts` id, or

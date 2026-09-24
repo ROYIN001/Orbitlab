@@ -55,6 +55,8 @@ import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
 import type { FlexConfig } from '../types';
 import { FLEX_DEFAULTS } from '../physics/rigid/flex';
+import type { ControlConfig } from '../types';
+import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_DEFAULTS, controlFieldKey, controlValue, type ControlChannelKey } from '../physics/rigid/control-config';
 import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
 
 export interface SetupCallbacks {
@@ -796,8 +798,10 @@ export class SetupPanel {
     s1.appendChild(this.select('setup.vehicle', VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })), s.vehicleId, (v) => {
       s.vehicleId = v;
       const flex = s.dynamics?.flex;
+      const control = s.dynamics?.control;
       s.dynamics = defaultDynamics(v);
       if (flex) s.dynamics.flex = flex;
+      if (control) s.dynamics.control = control;
       const spec = vehicleById(v);
       this.siteReassigned = false;
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
@@ -943,6 +947,7 @@ export class SetupPanel {
     const s4 = this.el('section', 'config-section');
     s4.appendChild(this.dynamicsSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.flexSection());
+    if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.controlSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
     s4.appendChild(this.optionsSection(vehicle));
@@ -1137,6 +1142,65 @@ export class SetupPanel {
     if (flex.bending) section.append(this.number('setup.flex.bendingDamping', (flex.bendingDamping ?? FLEX_DEFAULTS.bendingDamping) * 100, (value) => update({ bendingDamping: value / 100 }), 0.1));
     return section;
   }
+
+  // --- E04: the attitude autopilot's tuning (Engineer mode, six-DOF only) --------
+  /**
+   * K_θ, K_ω and the rate and angular-acceleration limits of the roll channel and of the pitch–yaw
+   * pair, and the weight of the aerodynamic feed-forward. Untouched, the default autopilot flies.
+   */
+  private controlSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'control';
+    const control: ControlConfig | undefined = this.state.dynamics?.control;
+    if (control) section.open = true;
+    section.append(this.el('summary', undefined, t('setup.control.title')));
+    section.append(this.el('p', 'field-note', t('setup.control.note')));
+    const update = (next: ControlConfig | undefined, rebuild = false): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { control: next } : {}) };
+      if (!next) delete this.state.dynamics.control;
+      if (rebuild) this.render();
+      this.changed();
+    };
+    const STEP: Record<ControlChannelKey, number> = { attitudeGain: 0.05, rateGain: 0.1, maxRateDegS: 0.5, maxAccelerationDegS2: 0.1 };
+    for (const channel of CONTROL_CHANNELS) {
+      section.append(this.el('p', 'field-subtitle', t(channel === 'roll' ? 'setup.control.roll' : 'setup.control.pitchYaw')));
+      for (const key of CONTROL_CHANNEL_KEYS) {
+        section.append(this.number(controlFieldKey(channel, key), controlValue(control, channel, key), (value) => {
+          const current = this.state.dynamics?.control ?? {};
+          update({ ...current, [channel]: { ...(current[channel] ?? {}), [key]: value } });
+        }, STEP[key]));
+      }
+    }
+    section.append(this.number(controlFieldKey('feedForward'), (control?.feedForward ?? CONTROL_DEFAULTS.feedForward) * 100,
+      (value) => update({ ...(this.state.dynamics?.control ?? {}), feedForward: value / 100 }), 5));
+    if (control) {
+      const reset = this.el('button', 'ghost-button', t('setup.control.reset'));
+      reset.type = 'button';
+      reset.disabled = this.running;
+      reset.addEventListener('click', () => { for (const key of this.controlFieldKeys()) this.fieldDrafts.delete(key); update(undefined, true); });
+      section.append(reset);
+    }
+    return section;
+  }
+  private controlFieldKeys(): string[] {
+    return [...CONTROL_CHANNELS.flatMap((channel) => CONTROL_CHANNEL_KEYS.map((key) => controlFieldKey(channel, key))), controlFieldKey('feedForward')];
+  }
+
+  /** E04: take a tuning (the attitude-loop inspector's "use for the next launch"); undefined restores the defaults. */
+  applyControl(control: ControlConfig | undefined): boolean {
+    // Also while a flight runs: the setup then holds it for the next launch.
+    const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+    if (dynamics.model !== 'sixDof') return false;
+    this.state.dynamics = { ...dynamics, ...(control ? { control } : {}) };
+    if (!control) delete this.state.dynamics.control;
+    for (const key of this.controlFieldKeys()) this.fieldDrafts.delete(key);
+    this.render();
+    this.changed();
+    return true;
+  }
+  /** E04: the tuning the setup holds. */
+  currentControl(): ControlConfig | undefined { return this.state.dynamics?.control; }
 
   private optionsSection(vehicle: VehicleSpec): HTMLElement {
     const s = this.state;

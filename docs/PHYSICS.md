@@ -468,6 +468,70 @@ with P05 (eight sloshing tanks, 21 states a plane); over a whole flight to orbit
 run-to-run noise on Falcon 9. A 25-minute Falcon 9 flight keeps some 940 models, 1.7 MB (4.2 MB
 with P05); Proton-M with P05, 3.7 MB over its first 150 s.
 
+## 2g. Tuning the autopilot, and flight tests (roadmap E04)
+
+**What a mission can set** (`DynamicsConfig.control`, src/physics/rigid/control-config.ts; the
+Engineer mode's *Attitude autopilot* section and `configure_mission.control`): for the roll
+channel and for the pitch–yaw pair, K_θ and K_ω (1/s), the rate limit (°/s) and the ceiling of the
+scheduled angular-acceleration limit (°/s², §2d); and the weight w of the aerodynamic
+feed-forward, 0–1 — the gimbals are asked for M_d − w·M_aero. Nothing set, the runtime flies its
+own defaults (K_θ = 1.5, K_ω = 3 s⁻¹, 8 and 5 °/s, 5 and 3 °/s², w = 1) bit for bit; the same
+values set explicitly fly the same bits on a rigid vehicle. Pitch–yaw gains set by hand are flown
+as set: P05's flexible-vehicle cap (K_ω ≤ ω_b/ratio, §2b) applies to the default gains only, so
+that a tuning flies what its analysis showed. Debris keep the defaults.
+
+**Trials on the linearised loop.** The plant G04 records (§2f) does not depend on the gains or
+the feed-forward weight: its responses h_θ, h_ω and h_F per delivered moment are computed once
+per model on the Bode grid, and a trial's loop gain is arithmetic on them,
+L = I·K_ω(K_θ h_θ + h_ω)·N(z) / (1 + w(1 + x) h_F). The inspector's *Tuning* tab draws the
+trial's |L|, 1° step and phase margin over the flight against the flown loop's, with both
+margins and the closed loop's stability (its eigenvalues) at the instant on screen.
+
+**Auto-tune** (src/physics/rigid/tuning.ts) searches K_ω over 0.2–20 s⁻¹ (36 steps) and the ratio
+K_θ/K_ω over 0.25–0.5 — the rate loop at least twice as fast as the attitude loop, which gives the
+rigid double integrator a damping ratio ζ = ½√(K_ω/K_θ) of 0.7 to 1 — for the highest K_θ (the
+attitude loop's bandwidth) whose phase margin, gain margin and gain-reduction margin meet the
+targets (45° and 6 dB by default) over the channel's planes of 16 models sampled from the flight
+so far (or the one on screen), each candidate checked for closed-loop stability; then refines it.
+The answer is checked on every model of the flight; a model that fails joins the sample and the
+search runs again (a slosh resonance can sit at one instant only). When nothing meets the
+targets it says so and gives the stable gains nearest to them.
+
+What it finds on Falcon 9 (crosswind, over the first 55 s):
+
+- Rigid: K_θ 1.61, K_ω 3.39 s⁻¹ — the default autopilot (1.5, 3) is already at the 45° target;
+  the gimbals' 0.1 s lag sets the limit.
+- With all of P05: PM ≥ 45° and GM ≥ 6 dB cannot both be met by the two gains over the flight —
+  at T+33.5 s a slosh mode sits where lower gains lose gain margin and higher ones lose it at the
+  bending mode (no PD gains are stable at K_θ 0.5, K_ω 1.0 there). At PM ≥ 40°, GM ≥ 4 dB it
+  gives K_θ 0.74, K_ω 1.49 s⁻¹ (the flexible autopilot flies 0.91–0.99, 1.83–1.97); **flown again
+  with them, the linearised loop keeps GM ≥ 4.1 dB and PM ≥ 48.8° over the ascent** (2.3 dB and
+  40.3° with the defaults), and the flight reaches its orbit (tests/control-tuning.test.ts).
+- Without the feed-forward (w = 0) or at half of it, the rigid Falcon 9 still reaches orbit; a
+  1 °/s pitch–yaw rate limit doubles the largest attitude error of the ascent (4.9° to 11°).
+
+**Flight tests** (src/physics/rigid/attitude-test.ts; the *Flight test* tab and
+`run_attitude_test`): a step (held 0.2–20 s) or a doublet (each half as long) of 0.1–5° is added
+to the autopilot's target about one body axis — the target is rotated about its own axis, so the
+autopilot sees a change of command and guidance is untouched — in a live six-DOF flight under the
+autopilot. Every control step records the offset, the attitude reached along the axis as the IMU
+reads it (the offset less the error left to it, less the error before the test) and which
+limiter held the axis; the loop linearised at the start predicts the same response. While the test
+runs the telemetry carries a stub; the sample where it ends carries the record, once — a physics
+worker (F02) sends every sample across. It changes the flight, and is logged as an event.
+
+What the tests show on Falcon 9 at T+40 s:
+
+- Roll, 1° step: the flight follows the linear model to 0.8 % RMS of the amplitude — nothing in
+  roll limits it.
+- Pitch, 1° step: rise 0.95 s against 0.84 s, overshoot 0.3 % against 6.3 %: the
+  angular-acceleration limit holds the axis a tenth of the time, and guidance, which steers the
+  nose along the velocity, follows the velocity the offset itself bends.
+- Yaw, 3° step: rise 1.4 s against 0.84 s — the limiters the linear loop leaves out hold the
+  axis for part of it (the tab gives each one's share). A 1° pitch doublet with 1 s halves falls
+  well behind the model after the reversal, where the error to close is twice the amplitude.
+- With P05: 1.4 s against 1.3 s, the IMU's bending ripple in both.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

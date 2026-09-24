@@ -110,3 +110,26 @@ dialog.loop-inspector {
 .la-note { margin-top: 10px; }
 .la-none { margin: 10px 0; padding: 8px 12px; border-radius: 8px; background: var(--panel3); color: var(--muted); font-size: 12.5px; }
 @media (max-width: 1000px) { .la-grid { grid-template-columns: 1fr; } }
+
+/* E04: the tuning and flight-test tabs. */
+.lt-row { gap: 12px; margin: 8px 0 4px; }
+.lt-row .la-ff input[type="range"] { width: 120px; }
+.lt-row .la-ff input[type="number"] { width: 64px; padding: 3px 6px; background: var(--panel3); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font-family: var(--mono); }
+.lt-row select { padding: 3px 6px; background: var(--panel3); color: var(--text); border: 1px solid var(--line); border-radius: 6px; }
+.lt-channel { font-weight: 600; color: var(--text); }
+.lt-button { padding: 5px 10px; font-size: 12px; color: var(--text); background: var(--panel3); border: 1px solid var(--line); border-radius: 7px; cursor: pointer; }
+.lt-button.primary { color: var(--accent); border-color: var(--accent-line); }
+.lt-button:disabled { opacity: 0.5; cursor: default; }
+.lt-message { font-size: 12px; color: var(--accent); }
+.lt-result { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text); }
+.lt-result:empty { display: none; }
+.lt-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.lt-table th, .lt-table td { padding: 3px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+.lt-table th { color: var(--muted); font-weight: 500; }
+.lt-table td { font-family: var(--mono); color: var(--text); }
+.lt-table td.ok { color: var(--ok); }
+.lt-table td.bad { color: var(--fail); }
+.la-plots canvas[hidden] { display: none; }
+.loop-inspector .lt-row select { width: auto; flex: none; height: 28px; }
+.loop-inspector .lt-row .la-ff input[type="number"] { width: 64px; height: 28px; padding: 2px 6px; flex: none; }
+.loop-inspector .lt-row .la-ff span { white-space: nowrap; }

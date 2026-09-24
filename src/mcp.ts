@@ -40,6 +40,8 @@ import { FLEX_LIMITS } from './physics/rigid/flex';
 import { aeroAngles, bodyRates, getNotation, simulatorRates } from './ui/notation';
 import { loopLimiterNames, loopView } from './ui/loop-view';
 import { linearModelAt, PLANE_OF, type LinearModel } from './physics/rigid/linear';
+import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS } from './physics/rigid/control-config';
+import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
 
 /** configure_mission's `flex` fields (roadmap P05). */
@@ -383,6 +385,13 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     };
   }
   if (priorFlex && state.dynamics && !state.dynamics.flex) state.dynamics = { ...state.dynamics, flex: priorFlex };
+  // --- E04: and the autopilot's tuning.
+  const priorControl = live.dynamics?.control;
+  if (priorControl && state.dynamics && !state.dynamics.control) state.dynamics = { ...state.dynamics, control: priorControl };
+  if (input.control !== undefined) {
+    const { control: _, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    state.dynamics = { ...rest, ...mergeControl(state.dynamics?.control, input.control) };
+  }
   if (input.flex !== undefined) {
     // Merged into what is set: a field given as null goes back to its default.
     if (!input.flex || typeof input.flex !== 'object' || Array.isArray(input.flex)) throw new Error('"flex" must be an object');
@@ -583,6 +592,16 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
     },
     additionalProperties: false,
   },
+  control: {
+    type: 'object',
+    description: 'Six-DOF attitude autopilot tuning (roadmap E04; absent, the default autopilot). Per channel (roll; pitchYaw, the pitch–yaw pair): K_θ attitudeGain and K_ω rateGain in 1/s, the rate limit maxRateDegS and the angular-acceleration ceiling maxAccelerationDegS2; and feedForward, the weight of the aerodynamic feed-forward (0–1). Pitch–yaw gains set here are flown as set, without the flexible-vehicle cap. Merged into the current settings; null resets a field, a channel or (control: null) all of it.',
+    properties: {
+      ...Object.fromEntries(CONTROL_CHANNELS.map((channel) => [channel, { type: ['object', 'null'], properties: Object.fromEntries(CONTROL_CHANNEL_KEYS.map((key) =>
+        [key, { type: ['number', 'null'], minimum: CONTROL_LIMITS[key][0], maximum: CONTROL_LIMITS[key][1] }])), additionalProperties: false }])),
+      feedForward: { type: ['number', 'null'], minimum: CONTROL_LIMITS.feedForward[0], maximum: CONTROL_LIMITS.feedForward[1] },
+    },
+    additionalProperties: false,
+  },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
@@ -637,6 +656,8 @@ function toolReadFlightState(host: McpAppHost): WebMcpTool {
         frame: frameSummary(frame, host.sim.vehicleSpec),
         // G04: the linearised attitude loop's margins at the cursor (6-DOF only).
         loopMargins: loopMarginsSummary(linearModelAt(host.sim.telemetry, cursor)),
+        // E04: the latest attitude test at or before the cursor.
+        attitudeTest: attitudeTestSummary(attitudeTestAt(host.sim.telemetry, cursor)),
         lastEvent: last ? eventOut(last) : null,
         nextEvent: next ? eventOut(next) : null,
       };
@@ -891,6 +912,73 @@ function toolSetFlightControl(host: McpAppHost): WebMcpTool {
   };
 }
 
+/** E04: configure_mission's `control`, merged field by field into the current tuning (null resets). */
+function mergeControl(current: import('./types').ControlConfig | undefined, input: unknown): { control?: import('./types').ControlConfig } {
+  if (input === null) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('"control" must be an object or null');
+  const next: Record<string, unknown> = { ...(current ?? {}) };
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (key === 'feedForward') { if (value === null) delete next.feedForward; else next.feedForward = value; continue; }
+    if (!(CONTROL_CHANNELS as readonly string[]).includes(key)) throw new Error(`Unknown control field "${key}"`);
+    if (value === null) { delete next[key]; continue; }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`"control.${key}" must be an object or null`);
+    const channel: Record<string, unknown> = { ...((next[key] as Record<string, unknown> | undefined) ?? {}) };
+    for (const [field, v] of Object.entries(value as Record<string, unknown>)) {
+      if (!(CONTROL_CHANNEL_KEYS as readonly string[]).includes(field)) throw new Error(`Unknown control field "${key}.${field}"`);
+      if (v === null) delete channel[field]; else channel[field] = v;
+    }
+    if (Object.keys(channel).length) next[key] = channel; else delete next[key];
+  }
+  return Object.keys(next).length ? { control: next as import('./types').ControlConfig } : {};
+}
+
+/** E04: the latest attitude test at or before the cursor, measured against the linear prediction, in ISO axes. */
+function attitudeTestSummary(record: AttitudeTestRecord | undefined): Record<string, unknown> | null {
+  if (!record) return null;
+  const { spec } = record, iso = spec.axis === 'x' ? { axis: 'roll', sign: spec.sign } : spec.axis === 'z' ? { axis: 'pitch', sign: -spec.sign } : { axis: 'yaw', sign: spec.sign };
+  const measured = pulseMetrics(record.t, record.response, spec), prediction = predictAttitudeTest(record);
+  const predicted = prediction ? pulseMetrics(prediction.t, prediction.response, spec) : null;
+  return { axis: iso.axis, kind: spec.kind, amplitudeDeg: iso.sign * spec.amplitudeRad * RAD, holdS: spec.holdS, startS: record.startS,
+    durationS: attitudeTestDuration(spec), recordedS: record.progressS ?? (record.t.length ? record.t[record.t.length - 1] : 0), done: record.done, aborted: record.aborted ?? null,
+    measured: { riseS: measured.riseS ?? null, overshootPct: measured.overshootPct, peakOverAmplitude: measured.peak },
+    predicted: predicted ? { riseS: predicted.riseS ?? null, overshootPct: predicted.overshootPct, peakOverAmplitude: predicted.peak, linearisedAtS: record.model!.t } : null,
+    rmsMismatchOverAmplitude: prediction ? responseMismatch(record.response, prediction.response, spec.amplitudeRad) : null,
+    limiterShare: limiterShares(record) };
+}
+
+function toolRunAttitudeTest(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'run_attitude_test', title: 'Run an attitude test in flight',
+    description: 'Roadmap E04: add a step or a doublet to the six-DOF autopilot\'s attitude target about one body axis of the live flight, and record the response against what the linearised loop predicts (read it with read_flight_state.attitudeTest). ISO 1151 axes: roll positive right side down, pitch positive nose up, yaw positive nose right. Needs a live six-DOF flight under the autopilot; one test at a time. It changes the flight.',
+    inputSchema: { type: 'object', properties: {
+      axis: { type: 'string', enum: ['roll', 'pitch', 'yaw'] },
+      kind: { type: 'string', enum: ['step', 'doublet'] },
+      amplitudeDeg: { type: 'number', minimum: -ATTITUDE_TEST_LIMITS.amplitudeDeg[1], maximum: ATTITUDE_TEST_LIMITS.amplitudeDeg[1], description: 'Offset of the first pulse, deg; at least 0.1 in size.' },
+      holdS: { type: 'number', minimum: ATTITUDE_TEST_LIMITS.holdS[0], maximum: ATTITUDE_TEST_LIMITS.holdS[1], description: 'Step: how long it is held; doublet: each half, s.' },
+    }, required: ['axis', 'kind', 'amplitudeDeg', 'holdS'], additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    execute: raw => {
+      const input = asRecord(raw), axis = input.axis, kind = input.kind;
+      if (axis !== 'roll' && axis !== 'pitch' && axis !== 'yaw') throw new Error('"axis" must be "roll", "pitch" or "yaw".');
+      if (kind !== 'step' && kind !== 'doublet') throw new Error('"kind" must be "step" or "doublet".');
+      const amplitude = expectNumber(input.amplitudeDeg, 'amplitudeDeg'), hold = expectNumber(input.holdS, 'holdS');
+      const [aMin, aMax] = ATTITUDE_TEST_LIMITS.amplitudeDeg, [hMin, hMax] = ATTITUDE_TEST_LIMITS.holdS;
+      if (Math.abs(amplitude) < aMin || Math.abs(amplitude) > aMax) throw new Error(`"amplitudeDeg" must be between ${aMin} and ${aMax} degrees in size.`);
+      if (hold < hMin || hold > hMax) throw new Error(`"holdS" must be between ${hMin} and ${hMax} s.`);
+      if (!host.sim || host.sim.cfg.dynamics?.model !== 'sixDof') return { ok: false, reason: 'An active 6DOF mission is required.' };
+      if (!host.player.live) return { ok: false, reason: 'Replay cannot change the flight. Return to live first.' };
+      // ISO axes to the simulator's: pitch q about −z, yaw r about +y.
+      const sim = axis === 'roll' ? { axis: 'x' as const, sign: 1 } : axis === 'pitch' ? { axis: 'z' as const, sign: -1 } : { axis: 'y' as const, sign: 1 };
+      const sign = (Math.sign(amplitude) * sim.sign) as 1 | -1;
+      const result = host.sim.startAttitudeTest({ axis: sim.axis, sign, kind, amplitudeRad: Math.abs(amplitude) * DEG, holdS: hold });
+      if (typeof result === 'string') return { ok: false, reason: result };
+      // In a worker session the record comes back on the telemetry; the model is the latest linearisation.
+      return { ok: true, startS: result.startS, durationS: attitudeTestDuration(result.spec),
+        linearisedAtS: (result.model ?? linearModelAt(host.sim.telemetry, result.startS))?.t ?? null };
+    },
+  };
+}
+
 /** Build the tool definitions against `host`. Pure and DOM-free. */
 export function createMcpTools(host: McpAppHost): WebMcpTool[] {
   return [
@@ -904,6 +992,7 @@ export function createMcpTools(host: McpAppHost): WebMcpTool[] {
     toolSetCamera(host),
     toolGetEvents(host),
     toolExportCsv(host),
+    toolRunAttitudeTest(host),
   ];
 }
 

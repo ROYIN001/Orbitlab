@@ -242,7 +242,10 @@ class App {
       this.telTimer = 1;
     }, opener => this.loopInspector.open(opener));
     // G03: the attitude-loop inspector, opened from the 6-DOF panel in the Engineer mode.
-    this.loopInspector = new LoopInspector({ togglePlay: () => this.togglePlay() });
+    this.loopInspector = new LoopInspector({ togglePlay: () => this.togglePlay(),
+      // E04: the tuning tab writes into the mission setup, and the flight-test tab flies in the live flight.
+      applyControl: (control) => this.panel.applyControl(control), currentControl: () => this.panel.currentControl(),
+      startAttitudeTest: (spec) => (this.simView && this.player.live ? this.simView.sim.startAttitudeTest(spec) : 'notLive') });
     this.viewport = document.getElementById('viewport')!;
     this.glCanvas = document.getElementById('gl') as HTMLCanvasElement;
     this.mapCanvas = document.getElementById('map') as HTMLCanvasElement;

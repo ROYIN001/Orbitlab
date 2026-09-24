@@ -11,6 +11,7 @@
 import type { VisualFrame } from '../physics/frame';
 import type { MissionPlan } from '../physics/mission';
 import type { RigidCommand } from '../physics/rigid/telemetry';
+import type { AttitudeTestSpec } from '../physics/rigid/attitude-test';
 import type { SimEvent, TelemetrySample } from '../physics/simulation';
 import type { SimState } from '../physics/sim/types';
 import type { MissionConfig } from '../types';
@@ -25,7 +26,9 @@ export type ToCore =
   /** Abandon a fast-forward in progress. */
   | { type: 'halt'; session: number }
   /** A live flight-control command, pinned into the recording as it is accepted. */
-  | { type: 'command'; session: number; command: RigidCommand };
+  | { type: 'command'; session: number; command: RigidCommand }
+  /** E04: an attitude test flown from the worker's next step. */
+  | { type: 'attitudeTest'; session: number; spec: AttitudeTestSpec };
 
 /**
  * The part of a rotation telemetry record `AttitudeTrack.record` reads: the

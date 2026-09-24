@@ -257,7 +257,7 @@ describe('createMcpTools', () => {
     const names = tools.map((t) => t.name);
     expect(names).toEqual([
       'read_flight_state', 'list_missions', 'configure_mission', 'launch_mission',
-      'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv',
+      'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv', 'run_attitude_test',
     ]);
     expect(new Set(names).size).toBe(names.length);
     for (const t of tools) {
@@ -334,6 +334,25 @@ describe('read_flight_state', () => {
       pitch: { phaseMarginDeg: 47, gainMarginDb: 30, lowGainMarginDb: null, stable: true }, yaw: { phaseMarginDeg: 45 } });
     host.player.cursor = 0.5;
     expect((tool(tools, 'read_flight_state').execute({}) as any).loopMargins).toBeNull();
+  });
+
+  it('summarises the latest attitude test against its prediction (roadmap E04)', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).attitudeTest).toBeNull();
+    const n = 200, t = Array.from({ length: n }, (_, i) => i * 0.01);
+    // Pitch in the simulator's −z sense: nose up in ISO 1151.
+    const attitudeTest = { spec: { axis: 'z', sign: -1, kind: 'step', amplitudeRad: 0.02, holdS: 1.5 }, startS: 0.5, t, command: t.map(() => 0.02),
+      response: t.map((x) => 0.02 * Math.min(1, x)), limits: t.map((_, i) => (i < 50 ? 2 : 0)), baselineRad: 0, done: true };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), attitudeTest };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).attitudeTest;
+    expect(out).toMatchObject({ axis: 'pitch', kind: 'step', startS: 0.5, done: true, predicted: null, rmsMismatchOverAmplitude: null });
+    expect(out.amplitudeDeg).toBeCloseTo(0.02 * 180 / Math.PI, 9);
+    expect(out.measured.riseS).toBeCloseTo(0.8, 6);
+    expect(out.limiterShare.rate).toBeCloseTo(50 / 150, 9);
   });
 
   it('is a safe no-op with no mission configured', () => {
@@ -810,7 +829,7 @@ describe('registerMcpTools', () => {
     (globalThis as any).window = { addEventListener: (_: string, fn: () => void) => listeners.push(fn) };
     try {
       registerMcpTools(host);
-      expect(registered.length).toBe(10);
+      expect(registered.length).toBe(11);
       for (const fn of listeners) fn();
       expect(abortSeen).toBe(true);
     } finally {
@@ -847,5 +866,47 @@ describe('configure_mission: the flexible body', () => {
     const schema = tool(tools, 'configure_mission').inputSchema as { properties: Record<string, { properties?: Record<string, unknown> }> };
     expect(Object.keys(schema.properties.flex.properties!)).toEqual(['slosh', 'bending', 'notch', 'imuStation', 'notchZetaZero',
       'notchZetaPole', 'notchFrequencyScale', 'bandwidthRatio', 'sloshDamping', 'bendingDamping']);
+  });
+});
+
+// --- E04 ---
+describe('configure_mission: the attitude autopilot (roadmap E04)', () => {
+  it('merges the tuning field by field, keeps it across vehicle and wind edits, and resets with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', control: { pitchYaw: { attitudeGain: 0.8, rateGain: 1.6 }, feedForward: 0.5 } });
+    expect(host.panel.state.dynamics?.control).toEqual({ pitchYaw: { attitudeGain: 0.8, rateGain: 1.6 }, feedForward: 0.5 });
+    configure.execute({ control: { roll: { maxRateDegS: 4 }, pitchYaw: { rateGain: null } } });
+    configure.execute({ vehicleId: 'soyuz21a', windScenario: 'shear' });
+    expect(host.panel.state.dynamics).toMatchObject({ model: 'sixDof', wind: 'shear',
+      control: { roll: { maxRateDegS: 4 }, pitchYaw: { attitudeGain: 0.8 }, feedForward: 0.5 } });
+    configure.execute({ control: { pitchYaw: null, feedForward: null } });
+    expect(host.panel.state.dynamics?.control).toEqual({ roll: { maxRateDegS: 4 } });
+    configure.execute({ control: null });
+    expect(host.panel.state.dynamics?.control).toBeUndefined();
+  });
+
+  it('rejects an unknown field and a value outside its range, leaving the tuning as it was', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ control: { roll: { attitudeGain: 2 } } });
+    expect(() => configure.execute({ control: { yaw: {} } })).toThrow(/Unknown control field "yaw"/);
+    expect(() => configure.execute({ control: { roll: { gain: 1 } } })).toThrow(/Unknown control field "roll.gain"/);
+    expect(() => configure.execute({ control: { pitchYaw: { rateGain: 99 } } })).toThrow(/setup\.control\.pitchYawRateGain must be at most 30/);
+    expect(host.panel.state.dynamics?.control).toEqual({ roll: { attitudeGain: 2 } });
+  });
+
+  it('runs an attitude test only in a live six-DOF flight, in ISO axes', () => {
+    const run = tool(tools, 'run_attitude_test');
+    expect(() => run.execute({ axis: 'pitch', kind: 'step', amplitudeDeg: 0.01, holdS: 2 })).toThrow(/amplitudeDeg/);
+    expect(() => run.execute({ axis: 'nose', kind: 'step', amplitudeDeg: 1, holdS: 2 })).toThrow(/axis/);
+    expect(run.execute({ axis: 'pitch', kind: 'step', amplitudeDeg: 1, holdS: 2 })).toMatchObject({ ok: false });
+    let asked: unknown;
+    host.sim = { ...makeFakeSim(host.panel.getConfig()), cfg: { ...host.panel.getConfig(), dynamics: { model: 'sixDof', wind: 'calm', seed: 1 } },
+      startAttitudeTest: (spec: unknown) => { asked = spec; return { spec, startS: 12, t: [], command: [], response: [], limits: [], baselineRad: 0, done: false }; } } as unknown as Simulation;
+    host.player.live = true;
+    expect(run.execute({ axis: 'pitch', kind: 'doublet', amplitudeDeg: 2, holdS: 1 })).toMatchObject({ ok: true, startS: 12, durationS: 7 });
+    // ISO pitch up is the simulator's −z.
+    expect(asked).toEqual({ axis: 'z', sign: -1, kind: 'doublet', amplitudeRad: 2 * Math.PI / 180, holdS: 1 });
+    host.player.live = false;
+    expect(run.execute({ axis: 'yaw', kind: 'step', amplitudeDeg: -1, holdS: 1 })).toMatchObject({ ok: false });
   });
 });

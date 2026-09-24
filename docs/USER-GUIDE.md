@@ -311,6 +311,27 @@ than the chart. Details and checks against the nonlinear flight in PHYSICS.md §
 each plane's margins (`loop_pitch_pm_deg`, `loop_pitch_gm_db`, …) and `read_flight_state` a
 `loopMargins` summary.
 
+## 12. Tuning the autopilot and flight tests (Engineer mode)
+
+**In the mission setup**, a six-DOF mission's *Attitude autopilot* section sets the roll channel's
+and the pitch–yaw pair's K_θ and K_ω, rate limit and angular-acceleration ceiling, and how much of
+the air's moment is fed forward (%). Left alone, the default autopilot flies; *Back to the default
+autopilot* clears it.
+
+**The inspector's Tuning tab** (§9) tries other gains on the loop the flight has linearised: move
+K_θ, K_ω and the feed-forward and the tab redraws the loop gain, the 1° step and the phase margin
+over the flight — flown dashed, trial in yellow — with both margins at the instant on screen
+(green where the trial meets the targets). *Auto-tune* finds the widest-bandwidth gains that meet
+the phase and gain margins you set, over the flight so far or at this instant, and says when no
+gains can; *Use for the next launch* writes the trial into the mission setup. Rate and
+acceleration limits act only in flight.
+
+**The Flight test tab** flies a step or a doublet in the live flight about the axis picked in the
+title bar, and draws the attitude reached against what the linear model predicted, with rise
+time, overshoot, the difference between them and how long each limiter held the axis. It changes
+the flight (the event log says when), and works only live, six-DOF, under the autopilot, one test
+at a time; the result stays in the recording for replay. Details in PHYSICS.md §2g.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

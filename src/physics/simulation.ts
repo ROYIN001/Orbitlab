@@ -29,6 +29,8 @@ import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
 import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
 import { resolveFlexOptions } from './rigid/flex';
+import { resolveControl } from './rigid/control-config';
+import { attitudeTestStub, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './rigid/attitude-test';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
 import { AeroEnvelopeEvents } from './rigid/envelope-events';
@@ -168,7 +170,10 @@ export class Simulation {
         const flex = resolveFlexOptions(cfgIn.dynamics.flex);
         // G03: the flown vehicle records its attitude loop for the inspector (its debris do not).
         const options = { ...opts.rigidOptions, integrationStepS, recordLoop: opts.rigidOptions?.recordLoop ?? true };
-        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...options, flex } : options);
+        // E04: the mission's autopilot tuning, on the vehicle only; absent, the runtime's defaults untouched.
+        const control = resolveControl(cfgIn.dynamics.control);
+        const tuned = control ? { ...options, controlGains: control.gains, feedForward: control.feedForward, capPitchYawGains: control.capPitchYawGains } : options;
+        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...tuned, flex } : tuned);
       }
     }
     this.site = siteById(cfgIn.siteId);
@@ -264,6 +269,27 @@ export class Simulation {
     const r = accepted.rates;
     this.event('evt.controlCommand', 'info', { mode: accepted.mode,
       rollRateRadS: r.x, pitchRateRadS: r.z === 0 ? 0 : -r.z, yawRateRadS: r.y, throttle: accepted.throttle });
+  }
+
+  /**
+   * E04: fly an attitude test — a step or a doublet added to the autopilot's target about one
+   * body axis — from the next step, and log it. Six-DOF, in flight, under the autopilot, and one
+   * at a time; otherwise the reason it cannot start.
+   */
+  private reportedAttitudeTest?: AttitudeTestRecord;
+  startAttitudeTest(spec: AttitudeTestSpec): AttitudeTestRecord | 'notSixDof' | 'notFlying' | 'manual' | 'running' {
+    validateAttitudeTestSpec(spec);
+    const runtime = this.rigidRuntime;
+    if (!runtime || !runtime.recordLoop) return 'notSixDof';
+    if (!['ascent', 'coast', 'burn', 'orbit'].includes(this.state.status) || this.state.destroyed || this.done) return 'notFlying';
+    if (runtime.command.mode !== 'auto') return 'manual';
+    if (runtime.attitudeTest && !runtime.attitudeTest.done) return 'running';
+    const record = runtime.startAttitudeTest(spec, this.state.t);
+    // The axis and sense in ISO 1151 body axes, as the control command's (src/ui/notation.ts).
+    const iso = spec.axis === 'x' ? { axis: 'roll', sign: spec.sign } : spec.axis === 'z' ? { axis: 'pitch', sign: -spec.sign } : { axis: 'yaw', sign: spec.sign };
+    this.event(spec.kind === 'doublet' ? 'evt.attitudeTestDoublet' : 'evt.attitudeTestStep', 'info',
+      { testAxis: iso.axis, amplitudeDeg: +(iso.sign * spec.amplitudeRad * RAD).toFixed(2), holdS: spec.holdS });
+    return record;
   }
 
   // ------------------------------------------------------------------ utils
@@ -1049,6 +1075,13 @@ export class Simulation {
     // G04: the sample carries the loop's latest linearisation (shared, immutable) while it is recent.
     const rigid = cloneRigidTelemetry(s.rigid), linear = this.rigidRuntime?.latestLinear;
     if (rigid && linear && s.t - linear.t <= 1.5) rigid.linearModel = linear;
+    // E04: while an attitude test runs, the samples carry a stub; the one where it ends, the whole
+    // record (once — a physics worker sends every sample across).
+    const test = this.rigidRuntime?.attitudeTest;
+    if (rigid && test && s.t >= test.startS) {
+      if (!test.done) rigid.attitudeTest = attitudeTestStub(test);
+      else if (this.reportedAttitudeTest !== test) { rigid.attitudeTest = test; this.reportedAttitudeTest = test; }
+    }
     this.telemetry.push({
       rigid,
       t: s.t, alt: s.altitude, vInertial: s.speed, vAir: s.airspeed, q: s.q, mach: s.mach, gLoad: s.gLoad,

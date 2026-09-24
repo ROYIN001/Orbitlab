@@ -9,6 +9,7 @@ import { guidanceForVehicle } from '../physics/defaults';
 import { supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
 import { FLEX_LIMITS } from '../physics/rigid/flex';
+import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS, controlFieldKey, controlProblems } from '../physics/rigid/control-config';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
 export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection';
@@ -48,6 +49,10 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
   'setup.flex.bandwidthRatio': { min: FLEX_LIMITS.bandwidthRatio[0], max: FLEX_LIMITS.bandwidthRatio[1] },
   'setup.flex.sloshDamping': { min: FLEX_LIMITS.sloshDamping[0] * 100, max: FLEX_LIMITS.sloshDamping[1] * 100 },
   'setup.flex.bendingDamping': { min: FLEX_LIMITS.bendingDamping[0] * 100, max: FLEX_LIMITS.bendingDamping[1] * 100 },
+  // --- E04: the attitude autopilot's tuning, in the units the panel shows
+  ...Object.fromEntries(CONTROL_CHANNELS.flatMap((channel) => CONTROL_CHANNEL_KEYS.map((key) =>
+    [controlFieldKey(channel, key), { min: CONTROL_LIMITS[key][0], max: CONTROL_LIMITS[key][1] }]))),
+  [controlFieldKey('feedForward')]: { min: CONTROL_LIMITS.feedForward[0] * 100, max: CONTROL_LIMITS.feedForward[1] * 100 },
 };
 
 /** Vehicle programmes are trusted data, not fresh user overrides. Extending a
@@ -120,6 +125,7 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
       if (!['calm', 'crosswind', 'shear'].includes(d.wind)) issues.push({ field: 'setup.dynamics.wind', code: 'selection' });
       check(d.seed, 'setup.dynamics.seed', NUMBER_FIELDS['setup.dynamics.seed']);
       if (d.flex !== undefined) issues.push(...flexIssues(d.flex));
+      if (d.control !== undefined) issues.push(...controlIssues(d.control));
     }
   }
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });
@@ -168,6 +174,16 @@ function flexIssues(flex: unknown): ValidationIssue[] {
     if (issue) issues.push(issue);
   }
   return issues;
+}
+
+/** The attitude autopilot's tuning (roadmap E04): each setting within its range. */
+function controlIssues(control: unknown): ValidationIssue[] {
+  return controlProblems(control).map(({ field, value, limits }): ValidationIssue => {
+    if (!limits) return { field, code: 'selection' };
+    const scale = field === controlFieldKey('feedForward') ? 100 : 1;
+    return numericIssue(typeof value === 'number' ? value * scale : value, field, { min: limits[0] * scale, max: limits[1] * scale })
+      ?? { field, code: 'selection' };
+  });
 }
 
 export function issueText(issue: ValidationIssue): string {

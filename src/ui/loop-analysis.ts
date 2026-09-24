@@ -28,7 +28,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 }
 const fixed = (v: number | undefined, digits: number) => (v === undefined || !Number.isFinite(v) ? '—' : v.toFixed(digits));
 /** Tick labels of a log₁₀ axis: 0.01, 0.3, 10, 300 … */
-function logTick(x: number): string {
+export function logTick(x: number): string {
   const v = 10 ** x;
   return v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(0) : v >= 1 ? v.toFixed(1) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3);
 }

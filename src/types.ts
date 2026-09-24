@@ -307,6 +307,8 @@ export interface DynamicsConfig {
   seed: number;
   /** Six-DOF only: propellant slosh, bending and the notch filter (roadmap P05). Absent: rigid. */
   flex?: FlexConfig;
+  /** Six-DOF only: the attitude autopilot's tuning (roadmap E04). Absent: the default autopilot, bit for bit. */
+  control?: ControlConfig;
 }
 
 /**
@@ -329,4 +331,25 @@ export interface FlexConfig {
   /** damping ratios of the slosh modes (baffles) and of the bending mode (structure) */
   sloshDamping?: number;
   bendingDamping?: number;
+}
+
+// --- E04 ---
+/** One channel of the attitude autopilot (src/physics/rigid/control-config.ts); absent fields keep the default. */
+export interface ControlChannelConfig {
+  /** K_θ, 1/s: the rate commanded per radian of attitude error */
+  attitudeGain?: number;
+  /** K_ω, 1/s: the angular acceleration commanded per rad/s of rate error */
+  rateGain?: number;
+  /** the rate limit, deg/s, and the ceiling of the scheduled angular-acceleration limit, deg/s² */
+  maxRateDegS?: number;
+  maxAccelerationDegS2?: number;
+}
+
+/** The attitude autopilot's tuning (roadmap E04): the roll channel, the pitch–yaw pair and the feed-forward. */
+export interface ControlConfig {
+  roll?: ControlChannelConfig;
+  /** Set gains here are flown as set: P05's flexible-vehicle cap applies to the defaults only. */
+  pitchYaw?: ControlChannelConfig;
+  /** weight of the aerodynamic feed-forward, 0–1 (1: full, the default) */
+  feedForward?: number;
 }

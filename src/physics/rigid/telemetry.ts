@@ -6,6 +6,7 @@ import type { WindScenario } from './aero';
 import type { FlexTelemetry } from './flex';
 import { cloneAttitudeLoop, type AttitudeLoopTelemetry } from './loop';
 import type { LinearModel } from './linear';
+import type { AttitudeTestRecord } from './attitude-test';
 
 /** Commands are inputs to finite actuators, never a replacement for body state. */
 export interface RigidCommand {
@@ -63,6 +64,8 @@ export interface RigidTelemetry {
    * telemetry samples only, and shared, never copied: nothing writes to it.
    */
   linearModel?: LinearModel;
+  /** An attitude test (roadmap E04), on the telemetry samples around it; shared, written only while it runs. */
+  attitudeTest?: AttitudeTestRecord;
 }
 
 export function cloneWindProfile(value: WindScenario | undefined): WindScenario | undefined {
