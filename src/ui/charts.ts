@@ -6,6 +6,8 @@ export interface Series {
   y: number[];
   color: string;
   label?: string;
+  /** Dash pattern, px; solid when absent (the attitude-loop inspector's commands, G03). */
+  dash?: number[];
 }
 export interface ChartMarker {
   x: number;
@@ -29,6 +31,8 @@ export interface ChartOptions {
   timeAxis?: boolean;
   /** Spoken names when the visual legend uses short symbols such as v_air. */
   seriesLabels?: readonly string[];
+  /** Tick label of the x axis (a log axis plots log₁₀ x and labels 10^x; the G04 Bode plot). */
+  xFormat?: (x: number) => string;
 }
 
 export interface ChartSeriesSummary {
@@ -133,7 +137,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   if (opt.yMin === undefined || yMin < opt.yMin) yMin -= pad;
   const sx = (x: number) => padL + ((x - xMin) / (xMax - xMin)) * pw;
   const sy = (y: number) => padT + (1 - (y - yMin) / (yMax - yMin)) * ph;
-  const fmtX = opt.timeAxis ? fmtClock : fmt;
+  const fmtX = opt.xFormat ?? (opt.timeAxis ? fmtClock : fmt);
   // grid
   g.strokeStyle = GRID;
   g.lineWidth = 1;
@@ -185,6 +189,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   for (const s of series) {
     g.strokeStyle = s.color;
     g.lineWidth = 1.5;
+    g.setLineDash(s.dash ?? []);
     g.beginPath();
     let started = false;
     for (let i = 0; i < s.x.length; i++) {
@@ -195,6 +200,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
     }
     g.stroke();
   }
+  g.setLineDash([]);
   // the instant the rest of the app is showing
   if (opt.cursor !== undefined && isFinite(opt.cursor) && opt.cursor >= xMin && opt.cursor <= xMax) {
     const px = sx(opt.cursor);

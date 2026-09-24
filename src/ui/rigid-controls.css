@@ -4,3 +4,6 @@
 .rigid-control-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 .rigid-control-fields label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 105px; min-width: 0; }
 .rigid-control-fields input, .rigid-control-fields select { width: 100%; min-height: 36px; }
+/* G03: the stop command and the attitude-loop inspector's button, side by side. */
+.rigid-control-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.rigid-inspect { color: var(--accent); border-color: var(--accent-line); }

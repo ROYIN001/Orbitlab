@@ -39,6 +39,17 @@ import { defaultDynamics } from './physics/rigid/config';
 import { cloneRigidTelemetry } from './physics/rigid/telemetry';
 import { FLEX_LIMITS } from './physics/rigid/flex';
 import { aeroAngles, bodyRates, getNotation, simulatorRates } from './ui/notation';
+import { loopLimiterNames, loopView } from './ui/loop-view';
+import { linearModelAt, PLANE_OF, type LinearModel } from './physics/rigid/linear';
+import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS } from './physics/rigid/control-config';
+import { AIDING_KEYS, AIDING_LIMITS, IMU_KEYS, NAV_GRADES } from './physics/nav/config';
+import { IMU_LIMITS } from './physics/nav/sensors';
+import { navigationAt, type NavigationRecord } from './physics/nav/navigation';
+import { CONTROL_FAULT_KINDS, CONTROL_FAULT_PRESETS, FAULT_AXES, FAULT_FIELDS, FAULT_TIME_LIMITS, IMU_UNIT_COUNT, MAX_FAULTS, controlFaultProblems } from './physics/rigid/fault-config';
+import type { ControlFaultRecord } from './physics/rigid/faults';
+import { CYCLE_LIMITS, EXPLICIT_LAWS, type ExplicitGuidanceRecord } from './physics/explicit-guidance';
+import { elementsFromState } from './physics/orbital';
+import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
 
 /** configure_mission's `flex` fields (roadmap P05). */
@@ -425,6 +436,34 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     };
   }
   if (priorFlex && state.dynamics && !state.dynamics.flex) state.dynamics = { ...state.dynamics, flex: priorFlex };
+  // --- E04: and the autopilot's tuning.
+  const priorControl = live.dynamics?.control;
+  if (priorControl && state.dynamics && !state.dynamics.control) state.dynamics = { ...state.dynamics, control: priorControl };
+  // --- G02: and the navigation.
+  const priorNavigation = live.dynamics?.navigation;
+  if (priorNavigation && state.dynamics && !state.dynamics.navigation) state.dynamics = { ...state.dynamics, navigation: priorNavigation };
+  if (input.navigation !== undefined) {
+    const { navigation: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    state.dynamics = { ...rest, ...mergeNavigation(previous, input.navigation) };
+  }
+  // --- G01: and the explicit guidance.
+  const priorExplicit = live.dynamics?.explicitGuidance;
+  if (priorExplicit && state.dynamics && !state.dynamics.explicitGuidance) state.dynamics = { ...state.dynamics, explicitGuidance: priorExplicit };
+  if (input.explicitGuidance !== undefined) {
+    const { explicitGuidance: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    state.dynamics = { ...rest, ...mergeExplicitGuidance(previous, input.explicitGuidance) };
+  }
+  // --- G08: and the failures.
+  const priorFaults = live.dynamics?.controlFaults;
+  if (priorFaults && state.dynamics && !state.dynamics.controlFaults) state.dynamics = { ...state.dynamics, controlFaults: priorFaults };
+  if (input.controlFaults !== undefined) {
+    const { controlFaults: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    state.dynamics = { ...rest, ...mergeControlFaults(previous, input.controlFaults) };
+  }
+  if (input.control !== undefined) {
+    const { control: _, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    state.dynamics = { ...rest, ...mergeControl(state.dynamics?.control, input.control) };
+  }
   if (input.flex !== undefined) {
     // Merged into what is set: a field given as null goes back to its default.
     if (!input.flex || typeof input.flex !== 'object' || Array.isArray(input.flex)) throw new Error('"flex" must be an object');
@@ -541,7 +580,38 @@ function flightDynamics(rigid: RigidTelemetry): Record<string, unknown> {
     iso: { pDegS: iso.roll * RAD, qDegS: iso.pitch * RAD, rDegS: iso.yaw * RAD },
     gost: { omegaXDegS: gost.roll * RAD, omegaYDegS: gost.yaw * RAD, omegaZDegS: gost.pitch * RAD },
     alphaDeg: angles.alpha * RAD, betaDeg: angles.beta * RAD,
+    // G03: the attitude loop at this step, in ISO 1151 axes (as set_flight_control takes them).
+    attitudeLoop: attitudeLoopSummary(rigid),
   };
+}
+
+/** What the autopilot decided at this step (roadmap G03), in ISO axes: roll about x, pitch about y, yaw about z. */
+function attitudeLoopSummary(rigid: RigidTelemetry): Record<string, unknown> | null {
+  const view = loopView(rigid, 'iso');
+  if (!view) return null;
+  return {
+    mode: view.mode,
+    attitudeErrorDeg: view.errorDeg ?? null, rateCommandDegS: view.commandDegS, rateMeasuredDegS: view.measuredDegS,
+    rateSensedDegS: view.sensedDegS, angularAccelerationDegS2: view.accelerationDegS2,
+    gains: { attitudePerS: view.gains.attitude, ratePerS: view.gains.rate, maxRateDegS: view.gains.maxRateDegS,
+      maxAngularAccelerationDegS2: view.gains.maxAccelerationDegS2 },
+    momentKNm: { demand: view.momentKNm.demand, filtered: view.momentKNm.filtered ?? null, engines: view.momentKNm.engines,
+      jets: view.momentKNm.jets, aero: view.momentKNm.aero, unmet: view.momentKNm.unmet },
+    unmetSignificant: view.unmetSignificant, limiters: loopLimiterNames(view),
+    gimbalUsePct: view.gimbalUsePct, rcsDutyPct: view.rcsDutyPct, loadReliefDeg: view.loadReliefDeg ?? null,
+  };
+}
+
+/** The loop's stability margins per plane (roadmap G04), from the latest linearisation at or before the cursor. */
+function loopMarginsSummary(model: LinearModel | undefined): Record<string, unknown> | null {
+  if (!model) return null;
+  const plane = (axis: keyof typeof PLANE_OF) => {
+    const m = model.margins[PLANE_OF[axis]], p = model.planes[PLANE_OF[axis]];
+    return { actuator: p.actuator, states: p.states, stable: m.active ? m.stable : null, leastDampedGrowthPerS: m.growthRate, leastDampedRadS: m.growthFrequency,
+      phaseMarginDeg: m.pmDeg ?? null, crossoverRadS: m.wcRadS ?? null, gainMarginDb: m.gmDb ?? null, gainMarginRadS: m.wgRadS ?? null,
+      lowGainMarginDb: m.gmLowDb ?? null, openLoopUnstablePoles: m.openLoopUnstable };
+  };
+  return { linearisedAtS: model.t, controlStepS: model.T, roll: plane('roll'), pitch: plane('pitch'), yaw: plane('yaw') };
 }
 
 function eventOut(e: SimEvent): Record<string, unknown> {
@@ -610,6 +680,51 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
     },
     additionalProperties: false,
   },
+  control: {
+    type: 'object',
+    description: 'Six-DOF attitude autopilot tuning (roadmap E04; absent, the default autopilot). Per channel (roll; pitchYaw, the pitch–yaw pair): K_θ attitudeGain and K_ω rateGain in 1/s, the rate limit maxRateDegS and the angular-acceleration ceiling maxAccelerationDegS2; and feedForward, the weight of the aerodynamic feed-forward (0–1). Pitch–yaw gains set here are flown as set, without the flexible-vehicle cap. Merged into the current settings; null resets a field, a channel or (control: null) all of it.',
+    properties: {
+      ...Object.fromEntries(CONTROL_CHANNELS.map((channel) => [channel, { type: ['object', 'null'], properties: Object.fromEntries(CONTROL_CHANNEL_KEYS.map((key) =>
+        [key, { type: ['number', 'null'], minimum: CONTROL_LIMITS[key][0], maximum: CONTROL_LIMITS[key][1] }])), additionalProperties: false }])),
+      feedForward: { type: ['number', 'null'], minimum: CONTROL_LIMITS.feedForward[0], maximum: CONTROL_LIMITS.feedForward[1] },
+    },
+    additionalProperties: false,
+  },
+  navigation: {
+    type: ['object', 'null'],
+    description: 'Six-DOF inertial navigation (roadmap G02; absent or null, the flight knows its true state): an IMU of a grade (navigation, tactical, mems; custom takes the imu figures over tactical) with a 21-state error-state Kalman filter aided by GNSS (with one outage) and a star tracker; the autopilot, ascent guidance and the cut-off fly on its estimate. Merged into the current settings; null resets a field, or (navigation: null) turns it off.',
+    properties: {
+      grade: { type: ['string', 'null'], enum: [...NAV_GRADES, null] },
+      imu: { type: ['object', 'null'], properties: Object.fromEntries(IMU_KEYS.map((key) => [key, { type: ['number', 'null'], minimum: IMU_LIMITS[key][0], maximum: IMU_LIMITS[key][1] }])), additionalProperties: false,
+        description: 'Gyro bias deg/h, bias instability deg/h, angle random walk deg/√h, scale factor ppm; accelerometer bias µg, instability µg, velocity random walk m/s/√h, scale factor ppm; pad alignment deg (1σ).' },
+      gnss: { type: ['boolean', 'null'] },
+      ...Object.fromEntries(AIDING_KEYS.map((key) => [key, { type: ['number', 'null'], minimum: AIDING_LIMITS[key][0], maximum: AIDING_LIMITS[key][1] }])),
+      gnssOutage: { type: ['array', 'null'], items: { type: 'number', minimum: 0 }, minItems: 2, maxItems: 2, description: 'Mission seconds [start, end) without GNSS fixes.' },
+      starTracker: { type: ['boolean', 'null'] },
+      seed: { type: ['integer', 'null'], minimum: 0, maximum: 4294967295 },
+    },
+    additionalProperties: false,
+  },
+  controlFaults: {
+    type: ['object', 'null'],
+    description: `Six-DOF failures of the control system (roadmap G08; absent or null, nothing fails): up to ${MAX_FAULTS} failures, each striking at its mission time (and not before its stage flies), and the FDIR (IMU voting 2-of-3, the gimbal monitor with engine-out steering, RCS jet isolation, the backup computer), off unless fdir is true. A preset replaces the list with an accident's: ${Object.entries(CONTROL_FAULT_PRESETS).map(([k, p]) => `${k} (${p.vehicleId})`).join(', ')} — set vehicleId to its vehicle. Given fields replace the current ones; null resets a field.`,
+    properties: {
+      faults: { type: ['array', 'null'], maxItems: MAX_FAULTS, items: faultSchema(true) },
+      fdir: { type: ['boolean', 'null'] },
+      preset: { type: ['string', 'null'], enum: [...Object.keys(CONTROL_FAULT_PRESETS), null] },
+      seed: { type: ['integer', 'null'], minimum: 0, maximum: 4294967295 },
+    },
+    additionalProperties: false,
+  },
+  explicitGuidance: {
+    type: ['object', 'null'],
+    description: 'Explicit ascent guidance (roadmap G01; absent or null, the standard ascent guidance): "peg" (the Space Shuttle\'s Powered Explicit Guidance, a predictor–corrector on the velocity to be gained) or "igm" (the Saturn V\'s Iterative Guidance Mode, closed form in the terminal frame). The first stage flies the pitch program; the law takes over once a later stage is lit or the first is out of the atmosphere (q < 100 Pa above 70 km), and steers to the insertion orbit\'s perigee — altitude, speed, flight-path angle and plane. In six-DOF it also releases the load relief smoothly. Given fields replace the current ones; null resets a field.',
+    properties: {
+      law: { type: 'string', enum: EXPLICIT_LAWS },
+      cycleS: { type: ['number', 'null'], minimum: CYCLE_LIMITS[0], maximum: CYCLE_LIMITS[1], description: 'Guidance cycle, s (default 1).' },
+    },
+    additionalProperties: false,
+  },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
@@ -662,6 +777,16 @@ function toolReadFlightState(host: McpAppHost): WebMcpTool {
         site: { id: host.sim.site.id, name: host.sim.site.name },
         satellite: { id: host.sim.satellite.id, name: host.sim.satellite.name },
         frame: frameSummary(frame, host.sim.vehicleSpec),
+        // G04: the linearised attitude loop's margins at the cursor (6-DOF only).
+        loopMargins: loopMarginsSummary(linearModelAt(host.sim.telemetry, cursor)),
+        // E04: the latest attitude test at or before the cursor.
+        attitudeTest: attitudeTestSummary(attitudeTestAt(host.sim.telemetry, cursor)),
+        // G02: what the navigation believes, at the cursor.
+        navigation: navigationSummary(navigationAt(host.sim.telemetry, cursor)),
+        // G01: the explicit ascent guidance, at the cursor.
+        explicitGuidance: explicitGuidanceSummary(host.sim.telemetry, cursor),
+        // G08: the failures struck and the FDIR's state, at the cursor.
+        controlFaults: controlFaultsSummary(host.sim.telemetry, cursor),
         lastEvent: last ? eventOut(last) : null,
         nextEvent: next ? eventOut(next) : null,
       };
@@ -919,6 +1044,217 @@ function toolSetFlightControl(host: McpAppHost): WebMcpTool {
   };
 }
 
+/** E04: configure_mission's `control`, merged field by field into the current tuning (null resets). */
+function mergeControl(current: import('./types').ControlConfig | undefined, input: unknown): { control?: import('./types').ControlConfig } {
+  if (input === null) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('"control" must be an object or null');
+  const next: Record<string, unknown> = { ...(current ?? {}) };
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (key === 'feedForward') { if (value === null) delete next.feedForward; else next.feedForward = value; continue; }
+    if (!(CONTROL_CHANNELS as readonly string[]).includes(key)) throw new Error(`Unknown control field "${key}"`);
+    if (value === null) { delete next[key]; continue; }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`"control.${key}" must be an object or null`);
+    const channel: Record<string, unknown> = { ...((next[key] as Record<string, unknown> | undefined) ?? {}) };
+    for (const [field, v] of Object.entries(value as Record<string, unknown>)) {
+      if (!(CONTROL_CHANNEL_KEYS as readonly string[]).includes(field)) throw new Error(`Unknown control field "${key}.${field}"`);
+      if (v === null) delete channel[field]; else channel[field] = v;
+    }
+    if (Object.keys(channel).length) next[key] = channel; else delete next[key];
+  }
+  return Object.keys(next).length ? { control: next as import('./types').ControlConfig } : {};
+}
+
+/** G02: configure_mission's `navigation`, merged field by field (null resets a field; `navigation: null` turns it off). */
+function mergeNavigation(current: import('./types').NavigationConfig | undefined, input: unknown): { navigation?: import('./types').NavigationConfig } {
+  if (input === null) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('"navigation" must be an object or null');
+  const next: Record<string, unknown> = { ...(current ?? {}) };
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (key === 'imu') {
+      if (value === null) { delete next.imu; continue; }
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('"navigation.imu" must be an object or null');
+      const imu: Record<string, unknown> = { ...((next.imu as Record<string, unknown> | undefined) ?? {}) };
+      for (const [field, v] of Object.entries(value as Record<string, unknown>)) {
+        if (!(IMU_KEYS as string[]).includes(field)) throw new Error(`Unknown navigation field "imu.${field}"`);
+        if (v === null) delete imu[field]; else imu[field] = v;
+      }
+      if (Object.keys(imu).length) next.imu = imu; else delete next.imu;
+      continue;
+    }
+    if (!['grade', 'gnss', 'starTracker', 'gnssOutage', 'seed', ...AIDING_KEYS].includes(key)) throw new Error(`Unknown navigation field "${key}"`);
+    if (value === null) delete next[key]; else next[key] = value;
+  }
+  return { navigation: next as import('./types').NavigationConfig };
+}
+
+/**
+ * G08: one failure's JSON schema. Engines, jets and IMU units count from 1; the axis is ISO 1151's.
+ * `time` is required in a mission's list, and defaults to now for a live injection.
+ */
+function faultSchema(timeRequired: boolean): Record<string, unknown> {
+  return {
+    type: 'object',
+    properties: {
+      kind: { type: 'string', enum: CONTROL_FAULT_KINDS, description: Object.entries(FAULT_FIELDS).map(([k, f]) => `${k}${f.length ? ` (${f.join(', ')})` : ''}`).join('; ') },
+      time: { type: 'number', minimum: FAULT_TIME_LIMITS[0], maximum: FAULT_TIME_LIMITS[1], description: 'Mission time it strikes, s.' },
+      stage: { type: 'integer', minimum: 0, maximum: 9, description: 'Not before this stage (0-based) flies.' },
+      engine: { oneOf: [{ type: 'integer', minimum: 1, maximum: 64 }, { const: 'all' }], description: 'Engine of the flying stage (1-based) or "all".' },
+      jet: { oneOf: [{ type: 'integer', minimum: 1, maximum: 64 }, { const: 'all' }], description: 'RCS jet of the flying stage (1-based) or "all".' },
+      units: { oneOf: [{ type: 'array', items: { type: 'integer', minimum: 1, maximum: IMU_UNIT_COUNT }, minItems: 1, maxItems: IMU_UNIT_COUNT }, { const: 'all' }],
+        description: 'IMU units struck (1–3), or "all" for a common-mode failure; default [1].' },
+      axis: { type: 'string', enum: FAULT_AXES, description: 'ISO 1151 body axis; absent, every axis.' },
+      sign: { type: 'integer', enum: [1, -1], description: 'gimbalHardover: which stop.' },
+      magnitude: { type: 'number', description: 'gyroBias deg/s; gyroNoise deg/s 1σ; accelBias mg; gimbalSlow the fraction of the rate left (0–1); computerHold s.' },
+    },
+    required: timeRequired ? ['kind', 'time'] : ['kind'],
+    additionalProperties: false,
+  };
+}
+
+/** G08: configure_mission's `controlFaults` (null turns them off; a preset replaces the list; null resets a field). */
+function mergeControlFaults(current: import('./types').ControlFaultsConfig | undefined, input: unknown): { controlFaults?: import('./types').ControlFaultsConfig } {
+  if (input === null) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('"controlFaults" must be an object or null');
+  const next: Record<string, unknown> = { faults: [], ...(current ?? {}) };
+  const given = input as Record<string, unknown>;
+  for (const [key, value] of Object.entries(given)) {
+    if (!['faults', 'fdir', 'preset', 'seed'].includes(key)) throw new Error(`Unknown controlFaults field "${key}"`);
+    if (value === null) { if (key === 'faults') next.faults = []; else delete next[key]; continue; }
+    next[key] = value;
+  }
+  if (typeof given.preset === 'string') {
+    const preset = CONTROL_FAULT_PRESETS[given.preset];
+    if (!preset) throw new Error(`Unknown controlFaults preset "${given.preset}"`);
+    if (given.faults === undefined) next.faults = preset.faults.map((f) => ({ ...f }));
+  } else if (given.faults !== undefined) delete next.preset;
+  return { controlFaults: next as unknown as import('./types').ControlFaultsConfig };
+}
+
+/** G01: configure_mission's `explicitGuidance` (null turns it off; null resets a field). */
+function mergeExplicitGuidance(current: import('./types').ExplicitGuidanceConfig | undefined, input: unknown): { explicitGuidance?: import('./types').ExplicitGuidanceConfig } {
+  if (input === null) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('"explicitGuidance" must be an object or null');
+  const next: Record<string, unknown> = { ...(current ?? {}) };
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (key !== 'law' && key !== 'cycleS') throw new Error(`Unknown explicitGuidance field "${key}"`);
+    if (value === null) delete next[key]; else next[key] = value;
+  }
+  if (next.law === undefined) throw new Error('"explicitGuidance.law" is required ("peg" or "igm")');
+  return { explicitGuidance: next as unknown as import('./types').ExplicitGuidanceConfig };
+}
+
+/** G01: the explicit guidance at the cursor (during the ascent). */
+function explicitGuidanceSummary(samples: readonly { t: number; explicitGuidance?: ExplicitGuidanceRecord }[], cursor: number): Record<string, unknown> | null {
+  for (let i = samples.length - 1; i >= 0; i--) {
+    if (samples[i].t > cursor + 1e-9) continue;
+    const g = samples[i].explicitGuidance;
+    if (!g) return null;
+    const km = (m: number | undefined) => (m === undefined ? null : m / 1000);
+    return { law: g.law, status: g.status, timeToGoS: g.tGo ?? null, velocityToGainMs: g.vGo ?? null,
+      predictedCutoff: { periapsisKm: km(g.predictedPeriapsis), apoapsisKm: km(g.predictedApoapsis) },
+      target: { periapsisKm: km(g.targetPeriapsis), apoapsisKm: km(g.targetApoapsis) },
+      correctionMs: g.miss ?? null, pitchDeg: g.pitchDeg ?? null, yawOutOfPlaneDeg: g.yawDeg ?? null, standardPitchDeg: g.standardPitchDeg, stagesPlanned: g.stages };
+  }
+  return null;
+}
+
+/** G08: the failures and the FDIR at the cursor. */
+function controlFaultsSummary(samples: readonly { t: number; rigid?: { controlFaults?: ControlFaultRecord } }[], cursor: number): Record<string, unknown> | null {
+  let record: ControlFaultRecord | undefined;
+  for (let i = samples.length - 1; i >= 0; i--) {
+    if (samples[i].t > cursor + 1e-9) continue;
+    record = samples[i].rigid?.controlFaults;
+    break;
+  }
+  if (!record) return null;
+  const deg = (v: { x: number; y: number; z: number } | undefined) => (v ? { x: v.x * RAD, y: v.y * RAD, z: v.z * RAD } : null);
+  return { fdir: record.fdir, struck: record.active, imuUnits: record.units, imuInUse: record.selected, openLoop: record.openLoop,
+    computer: record.computer, engines: record.engines, jets: record.jets,
+    sensedRateDegSBody: deg(record.sensedRateBody), trueRateDegSBody: deg(record.trueRateBody), sensorAttitudeErrorDegBody: deg(record.sensorAttitudeErrorBody) };
+}
+
+function toolInjectControlFault(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'inject_control_fault', title: 'Inject a control-system failure in flight',
+    description: 'Roadmap G08: strike the live six-DOF flight with a failure of its control system — an actuator (gimbalStuck, gimbalHardover, gimbalSlow, actuatorPolarity, rcsStuckOn, rcsFailedOff), a sensor (rateInverted, gyroStuck, gyroBias, gyroNoise, imuFailure; accelBias, gnssLoss and starTrackerLoss need navigation) or the flight computer (computerHold, gainSign) — now, or at `time` if later. fdir switches the FDIR (IMU voting, the gimbal monitor, jet isolation, the backup computer); a flight that carries no failures yet has it off unless set. Events and read_flight_state.controlFaults show what happens. It changes the flight.',
+    inputSchema: { ...faultSchema(false), properties: { ...(faultSchema(false).properties as Record<string, unknown>), fdir: { type: 'boolean' } } },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    execute: raw => {
+      const { fdir, ...input } = asRecord(raw);
+      if (fdir !== undefined && typeof fdir !== 'boolean') throw new Error('"fdir" must be a boolean.');
+      if (!host.sim || host.sim.cfg.dynamics?.model !== 'sixDof') return { ok: false, reason: 'An active 6DOF mission is required.' };
+      if (!host.player.live) return { ok: false, reason: 'Replay cannot change the flight. Return to live first.' };
+      const spec = { ...input, time: input.time ?? host.sim.state.t } as import('./types').ControlFaultSpec;
+      const problems = controlFaultProblems(spec, { navigation: !!host.sim.rigidRuntime?.navigation });
+      if (problems.length) throw new Error(`Invalid failure: ${problems.map((p) => `${p.field.replace('setup.faults.', '')}=${JSON.stringify(p.value)}`).join(', ')}`);
+      const result = host.sim.injectControlFault(spec, fdir as boolean | undefined);
+      return result === 'injected' ? { ok: true, strikesAtS: Math.max(spec.time, host.sim.state.t) } : { ok: false, reason: result };
+    },
+  };
+}
+
+/** G02: the navigation at the cursor: errors against the filter's 3σ (radial, along-track, cross-track; body axes), and the orbit it believes in. */
+function navigationSummary(record: NavigationRecord | undefined): Record<string, unknown> | null {
+  if (!record) return null;
+  const rsw = (v: { x: number; y: number; z: number }) => ({ radial: v.x, alongTrack: v.y, crossTrack: v.z });
+  const body = (v: { x: number; y: number; z: number }, k: number) => ({ x: v.x * k, y: v.y * k, z: v.z * k });
+  const el = elementsFromState(record.r, record.v);
+  return { timeS: record.t, gnss: record.gnss, starTracker: record.starTracker,
+    positionErrorM: rsw(record.positionError), position3SigmaM: rsw(body(record.positionSigma, 3)),
+    velocityErrorMs: rsw(record.velocityError), velocity3SigmaMs: rsw(body(record.velocitySigma, 3)),
+    attitudeErrorDegBody: body(record.attitudeError, RAD), attitude3SigmaDegBody: body(record.attitudeSigma, 3 * RAD),
+    believedApoapsisKm: el.apoapsisAlt / 1000, believedPeriapsisKm: el.periapsisAlt / 1000,
+    innovation: { positionM: record.innovation.position ?? null, velocityMs: record.innovation.velocity ?? null,
+      attitudeArcsec: record.innovation.attitude === undefined ? null : record.innovation.attitude * RAD * 3600 } };
+}
+
+/** E04: the latest attitude test at or before the cursor, measured against the linear prediction, in ISO axes. */
+function attitudeTestSummary(record: AttitudeTestRecord | undefined): Record<string, unknown> | null {
+  if (!record) return null;
+  const { spec } = record, iso = spec.axis === 'x' ? { axis: 'roll', sign: spec.sign } : spec.axis === 'z' ? { axis: 'pitch', sign: -spec.sign } : { axis: 'yaw', sign: spec.sign };
+  const measured = pulseMetrics(record.t, record.response, spec), prediction = predictAttitudeTest(record);
+  const predicted = prediction ? pulseMetrics(prediction.t, prediction.response, spec) : null;
+  return { axis: iso.axis, kind: spec.kind, amplitudeDeg: iso.sign * spec.amplitudeRad * RAD, holdS: spec.holdS, startS: record.startS,
+    durationS: attitudeTestDuration(spec), recordedS: record.progressS ?? (record.t.length ? record.t[record.t.length - 1] : 0), done: record.done, aborted: record.aborted ?? null,
+    measured: { riseS: measured.riseS ?? null, overshootPct: measured.overshootPct, peakOverAmplitude: measured.peak },
+    predicted: predicted ? { riseS: predicted.riseS ?? null, overshootPct: predicted.overshootPct, peakOverAmplitude: predicted.peak, linearisedAtS: record.model!.t } : null,
+    rmsMismatchOverAmplitude: prediction ? responseMismatch(record.response, prediction.response, spec.amplitudeRad) : null,
+    limiterShare: limiterShares(record) };
+}
+
+function toolRunAttitudeTest(host: McpAppHost): WebMcpTool {
+  return {
+    name: 'run_attitude_test', title: 'Run an attitude test in flight',
+    description: 'Roadmap E04: add a step or a doublet to the six-DOF autopilot\'s attitude target about one body axis of the live flight, and record the response against what the linearised loop predicts (read it with read_flight_state.attitudeTest). ISO 1151 axes: roll positive right side down, pitch positive nose up, yaw positive nose right. Needs a live six-DOF flight under the autopilot; one test at a time. It changes the flight.',
+    inputSchema: { type: 'object', properties: {
+      axis: { type: 'string', enum: ['roll', 'pitch', 'yaw'] },
+      kind: { type: 'string', enum: ['step', 'doublet'] },
+      amplitudeDeg: { type: 'number', minimum: -ATTITUDE_TEST_LIMITS.amplitudeDeg[1], maximum: ATTITUDE_TEST_LIMITS.amplitudeDeg[1], description: 'Offset of the first pulse, deg; at least 0.1 in size.' },
+      holdS: { type: 'number', minimum: ATTITUDE_TEST_LIMITS.holdS[0], maximum: ATTITUDE_TEST_LIMITS.holdS[1], description: 'Step: how long it is held; doublet: each half, s.' },
+    }, required: ['axis', 'kind', 'amplitudeDeg', 'holdS'], additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    execute: raw => {
+      const input = asRecord(raw), axis = input.axis, kind = input.kind;
+      if (axis !== 'roll' && axis !== 'pitch' && axis !== 'yaw') throw new Error('"axis" must be "roll", "pitch" or "yaw".');
+      if (kind !== 'step' && kind !== 'doublet') throw new Error('"kind" must be "step" or "doublet".');
+      const amplitude = expectNumber(input.amplitudeDeg, 'amplitudeDeg'), hold = expectNumber(input.holdS, 'holdS');
+      const [aMin, aMax] = ATTITUDE_TEST_LIMITS.amplitudeDeg, [hMin, hMax] = ATTITUDE_TEST_LIMITS.holdS;
+      if (Math.abs(amplitude) < aMin || Math.abs(amplitude) > aMax) throw new Error(`"amplitudeDeg" must be between ${aMin} and ${aMax} degrees in size.`);
+      if (hold < hMin || hold > hMax) throw new Error(`"holdS" must be between ${hMin} and ${hMax} s.`);
+      if (!host.sim || host.sim.cfg.dynamics?.model !== 'sixDof') return { ok: false, reason: 'An active 6DOF mission is required.' };
+      if (!host.player.live) return { ok: false, reason: 'Replay cannot change the flight. Return to live first.' };
+      // ISO axes to the simulator's: pitch q about −z, yaw r about +y.
+      const sim = axis === 'roll' ? { axis: 'x' as const, sign: 1 } : axis === 'pitch' ? { axis: 'z' as const, sign: -1 } : { axis: 'y' as const, sign: 1 };
+      const sign = (Math.sign(amplitude) * sim.sign) as 1 | -1;
+      const result = host.sim.startAttitudeTest({ axis: sim.axis, sign, kind, amplitudeRad: Math.abs(amplitude) * DEG, holdS: hold });
+      if (typeof result === 'string') return { ok: false, reason: result };
+      // In a worker session the record comes back on the telemetry; the model is the latest linearisation.
+      return { ok: true, startS: result.startS, durationS: attitudeTestDuration(result.spec),
+        linearisedAtS: (result.model ?? linearModelAt(host.sim.telemetry, result.startS))?.t ?? null };
+    },
+  };
+}
+
 /** Build the tool definitions against `host`. Pure and DOM-free. */
 export function createMcpTools(host: McpAppHost): WebMcpTool[] {
   return [
@@ -932,6 +1268,8 @@ export function createMcpTools(host: McpAppHost): WebMcpTool[] {
     toolSetCamera(host),
     toolGetEvents(host),
     toolExportCsv(host),
+    toolRunAttitudeTest(host),
+    toolInjectControlFault(host),
   ];
 }
 

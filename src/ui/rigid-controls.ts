@@ -1,4 +1,4 @@
-import { getLang, onLangChange, type Lang } from '../i18n';
+import { getLang, onLangChange, t, type Lang } from '../i18n';
 import type { RigidCommand, RigidTelemetry } from '../physics/rigid/telemetry';
 import { DEG, RAD } from '../physics/constants';
 import './rigid-controls.css';
@@ -25,7 +25,9 @@ export class RigidControls {
   private inputs = new Map<string, HTMLInputElement>();
   private measured = document.createElement('p');
   private notice = document.createElement('p');
-  constructor(private host:HTMLElement, private onCommand:(command:RigidCommand)=>void) {
+  /** G03: the attitude-loop inspector's button, shown in the Engineer mode. */
+  private inspectorAvailable = false;
+  constructor(private host:HTMLElement, private onCommand:(command:RigidCommand)=>void, private onInspect?:(opener:HTMLElement)=>void) {
     this.host.classList.add('rigid-controls');
     this.host.hidden = true;
     onLangChange(()=>this.render());
@@ -67,8 +69,13 @@ export class RigidControls {
     }
     const zero=document.createElement('button');zero.type='button';zero.className='btn';zero.textContent=copy.zero;
     zero.addEventListener('click',()=>{this.command.rates={x:0,y:0,z:0};this.emit();this.render();});this.controls.push(zero);
-    details.append(fields,zero,help,this.measured,this.notice);this.host.replaceChildren(details);this.refresh();
+    const actions=document.createElement('div');actions.className='rigid-control-actions';actions.append(zero);
+    if(this.onInspect&&this.inspectorAvailable){ const inspect=document.createElement('button');inspect.type='button';inspect.className='btn rigid-inspect';
+      inspect.textContent=t('loop.button');inspect.addEventListener('click',()=>this.onInspect?.(inspect));actions.append(inspect); }
+    details.append(fields,actions,help,this.measured,this.notice);this.host.replaceChildren(details);this.refresh();
   }
+  /** G03: offer the attitude-loop inspector (the Engineer mode) or not. */
+  setInspectorAvailable(available:boolean):void { if(available===this.inspectorAvailable)return; this.inspectorAvailable=available; this.render(); }
   update(value:RigidTelemetry|undefined,live:boolean):void {this.last=value;this.live=live;this.host.hidden=!value;this.refresh();}
   private refresh():void {
     const copy=COPY[getLang()];

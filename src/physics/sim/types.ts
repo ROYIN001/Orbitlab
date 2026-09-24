@@ -5,6 +5,8 @@ import type { Vec3 } from '../vec3';
 import type { OrbitalElements } from '../orbital';
 import type { AscentPhase } from '../guidance';
 import type { BurnPlan } from '../mission';
+import type { EomRecord } from '../eom';
+import type { ExplicitGuidanceRecord } from '../explicit-guidance';
 import type { ReturnTarget } from './return-guidance';
 
 /** What a returning stage's guidance carries from one step to the next. */
@@ -67,6 +69,8 @@ export interface TelemetrySample {
   lon: number;
   stage: number;
   phase: string;
+  /** G01: the explicit ascent guidance's record at this sample, during the ascent. */
+  explicitGuidance?: ExplicitGuidanceRecord;
 }
 
 export interface DebrisVisual {
@@ -142,6 +146,8 @@ export interface Losses {
 
 export interface SimState {
   rigid?: RigidTelemetry;
+  /** The equations of motion as the last flight step solved them (roadmap E02); absent outside powered and atmospheric flight. */
+  eom?: EomRecord;
   t: number;
   r: Vec3;
   v: Vec3;

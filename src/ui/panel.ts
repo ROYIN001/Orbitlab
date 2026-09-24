@@ -57,7 +57,15 @@ import { SHIP_RETURN_VERIFIED_PAYLOAD } from '../physics/sim/ship-descent';
 import type { DynamicsConfig } from '../types';
 import type { FlexConfig } from '../types';
 import { FLEX_DEFAULTS } from '../physics/rigid/flex';
+import type { ControlConfig, NavigationConfig } from '../types';
+import { aidingFor, imuFor, IMU_KEYS, NAV_FIELD_KEYS, NAV_GRADES } from '../physics/nav/config';
+import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_DEFAULTS, controlFieldKey, controlValue, type ControlChannelKey } from '../physics/rigid/control-config';
 import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
+import type { ControlFaultKind, ControlFaultSpec, ControlFaultsConfig } from '../types';
+import { CONTROL_FAULT_KINDS, CONTROL_FAULT_PRESETS, FAULT_AXES, FAULT_FIELDS, FAULT_GROUP, FAULT_MAGNITUDE, MAX_FAULTS, NAVIGATION_FAULTS } from '../physics/rigid/fault-config';
+import { faultKindName } from './fault-names';
+import type { ExplicitGuidanceConfig } from '../types';
+import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -815,8 +823,16 @@ export class SetupPanel {
     s1.appendChild(this.select('setup.vehicle', VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })), s.vehicleId, (v) => {
       s.vehicleId = v;
       const flex = s.dynamics?.flex;
+      const control = s.dynamics?.control;
+      const navigation = s.dynamics?.navigation;
+      const controlFaults = s.dynamics?.controlFaults;
+      const explicitGuidance = s.dynamics?.explicitGuidance;
       s.dynamics = defaultDynamics(v);
+      if (explicitGuidance) s.dynamics.explicitGuidance = explicitGuidance;
       if (flex) s.dynamics.flex = flex;
+      if (control) s.dynamics.control = control;
+      if (navigation) s.dynamics.navigation = navigation;
+      if (controlFaults) s.dynamics.controlFaults = controlFaults;
       const spec = vehicleById(v);
       this.siteReassigned = false;
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
@@ -967,6 +983,10 @@ export class SetupPanel {
     const s4 = this.el('section', 'config-section');
     s4.appendChild(this.dynamicsSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.flexSection());
+    if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.controlSection());
+    if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.navigationSection());
+    if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.faultsSection());
+    if (this.experience === 'advanced') s4.appendChild(this.explicitGuidanceSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
     s4.appendChild(this.optionsSection(vehicle));
@@ -1161,6 +1181,334 @@ export class SetupPanel {
     if (flex.bending) section.append(this.number('setup.flex.bendingDamping', (flex.bendingDamping ?? FLEX_DEFAULTS.bendingDamping) * 100, (value) => update({ bendingDamping: value / 100 }), 0.1));
     return section;
   }
+
+  // --- E04: the attitude autopilot's tuning (Engineer mode, six-DOF only) --------
+  /**
+   * K_θ, K_ω and the rate and angular-acceleration limits of the roll channel and of the pitch–yaw
+   * pair, and the weight of the aerodynamic feed-forward. Untouched, the default autopilot flies.
+   */
+  private controlSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'control';
+    const control: ControlConfig | undefined = this.state.dynamics?.control;
+    if (control) section.open = true;
+    section.append(this.el('summary', undefined, t('setup.control.title')));
+    section.append(this.el('p', 'field-note', t('setup.control.note')));
+    const update = (next: ControlConfig | undefined, rebuild = false): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { control: next } : {}) };
+      if (!next) delete this.state.dynamics.control;
+      if (rebuild) this.render();
+      this.changed();
+    };
+    const STEP: Record<ControlChannelKey, number> = { attitudeGain: 0.05, rateGain: 0.1, maxRateDegS: 0.5, maxAccelerationDegS2: 0.1 };
+    for (const channel of CONTROL_CHANNELS) {
+      section.append(this.el('p', 'field-subtitle', t(channel === 'roll' ? 'setup.control.roll' : 'setup.control.pitchYaw')));
+      for (const key of CONTROL_CHANNEL_KEYS) {
+        section.append(this.number(controlFieldKey(channel, key), controlValue(control, channel, key), (value) => {
+          const current = this.state.dynamics?.control ?? {};
+          update({ ...current, [channel]: { ...(current[channel] ?? {}), [key]: value } });
+        }, STEP[key]));
+      }
+    }
+    section.append(this.number(controlFieldKey('feedForward'), (control?.feedForward ?? CONTROL_DEFAULTS.feedForward) * 100,
+      (value) => update({ ...(this.state.dynamics?.control ?? {}), feedForward: value / 100 }), 5));
+    if (control) {
+      const reset = this.el('button', 'ghost-button', t('setup.control.reset'));
+      reset.type = 'button';
+      reset.disabled = this.running;
+      reset.addEventListener('click', () => { for (const key of this.controlFieldKeys()) this.fieldDrafts.delete(key); update(undefined, true); });
+      section.append(reset);
+    }
+    return section;
+  }
+  private controlFieldKeys(): string[] {
+    return [...CONTROL_CHANNELS.flatMap((channel) => CONTROL_CHANNEL_KEYS.map((key) => controlFieldKey(channel, key))), controlFieldKey('feedForward')];
+  }
+
+  // --- G02: inertial navigation (Engineer mode, six-DOF only) ----------------------
+  /**
+   * An IMU of a grade, or its figures; GNSS with an outage; a star tracker. Off, the flight knows
+   * its true state.
+   */
+  private navigationSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'navigation';
+    const nav: NavigationConfig | undefined = this.state.dynamics?.navigation;
+    section.append(this.el('summary', undefined, t('setup.nav.title')));
+    section.append(this.el('p', 'field-note', t('setup.nav.note')));
+    const update = (next: NavigationConfig | undefined, rebuild = false): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { navigation: next } : {}) };
+      if (!next) delete this.state.dynamics.navigation;
+      if (rebuild) this.render();
+      this.changed();
+    };
+    const current = (): NavigationConfig => this.state.dynamics?.navigation ?? {};
+    const toggle = (label: string, checked: boolean, onChange: (on: boolean) => void): void => {
+      const row = this.el('label', 'checkbox'), box = this.el('input');
+      box.type = 'checkbox'; box.checked = checked; box.disabled = this.running;
+      box.addEventListener('change', () => onChange(box.checked));
+      row.append(box, this.el('span', undefined, label));
+      section.append(row);
+    };
+    toggle(t('setup.nav.enable'), !!nav, (on) => { for (const key of Object.values(NAV_FIELD_KEYS)) this.fieldDrafts.delete(key); update(on ? { grade: 'tactical' } : undefined, true); });
+    if (!nav) return section;
+    const GRADE_NAME = { navigation: 'setup.nav.grade.navigation', tactical: 'setup.nav.grade.tactical', mems: 'setup.nav.grade.mems', custom: 'setup.nav.grade.custom' } as const;
+    const grade = nav.grade ?? 'tactical';
+    section.append(this.select('setup.nav.grade', NAV_GRADES.map((g) => ({ value: g, label: t(GRADE_NAME[g]) })), grade, (value) => {
+      for (const key of IMU_KEYS) this.fieldDrafts.delete(NAV_FIELD_KEYS[key]);
+      const { imu: _imu, ...rest } = current();
+      update({ ...rest, grade: value as NavigationConfig['grade'], ...(value === 'custom' ? { imu: { ...imuFor(current()) } } : {}) }, true);
+    }));
+    const imu = imuFor(nav);
+    if (grade === 'custom') {
+      const STEP: Record<string, number> = { gyroBiasDegH: 0.1, gyroBiasInstabilityDegH: 0.1, gyroArwDegRtH: 0.01, gyroScalePpm: 10, accelBiasUg: 10, accelBiasInstabilityUg: 10, accelVrwMsRtH: 0.01, accelScalePpm: 10, alignmentDeg: 0.01 };
+      for (const key of IMU_KEYS) {
+        section.append(this.number(NAV_FIELD_KEYS[key], imu[key], (value) => update({ ...current(), imu: { ...(current().imu ?? {}), [key]: value } }), STEP[key]));
+      }
+    } else {
+      section.append(this.el('p', 'field-note', t('setup.nav.figures', { gb: imu.gyroBiasDegH, arw: imu.gyroArwDegRtH, ab: imu.accelBiasUg, vrw: imu.accelVrwMsRtH,
+        gs: imu.gyroScalePpm, as: imu.accelScalePpm, align: imu.alignmentDeg })));
+    }
+    const aiding = aidingFor(nav);
+    toggle(t('setup.nav.gnss'), aiding.gnss, (on) => update({ ...current(), gnss: on }, true));
+    if (aiding.gnss) {
+      section.append(this.number(NAV_FIELD_KEYS.gnssPositionM, aiding.gnssPositionM, (value) => update({ ...current(), gnssPositionM: value }), 0.5));
+      section.append(this.number(NAV_FIELD_KEYS.gnssVelocityMs, aiding.gnssVelocityMs, (value) => update({ ...current(), gnssVelocityMs: value }), 0.01));
+      section.append(this.number(NAV_FIELD_KEYS.gnssRateHz, aiding.gnssRateHz, (value) => update({ ...current(), gnssRateHz: value }), 1));
+      toggle(t('setup.nav.outage'), !!nav.gnssOutage, (on) => {
+        const { gnssOutage: _o, ...rest } = current();
+        update(on ? { ...rest, gnssOutage: [60, 200] } : rest, true);
+      });
+      if (nav.gnssOutage) {
+        const [a, b] = nav.gnssOutage;
+        section.append(this.number(NAV_FIELD_KEYS.gnssOutageStart, a, (value) => update({ ...current(), gnssOutage: [value, Math.max(value + 1, current().gnssOutage?.[1] ?? value + 1)] }), 10));
+        section.append(this.number(NAV_FIELD_KEYS.gnssOutageEnd, b, (value) => update({ ...current(), gnssOutage: [Math.min(current().gnssOutage?.[0] ?? 0, value - 1), value] }), 10));
+      }
+    }
+    toggle(t('setup.nav.starTracker'), aiding.starTracker, (on) => update({ ...current(), starTracker: on }, true));
+    if (aiding.starTracker) {
+      section.append(this.number(NAV_FIELD_KEYS.starTrackerArcsec, aiding.starTrackerArcsec, (value) => update({ ...current(), starTrackerArcsec: value }), 1));
+      section.append(this.number(NAV_FIELD_KEYS.starTrackerMinAltitudeKm, aiding.starTrackerMinAltitudeKm, (value) => update({ ...current(), starTrackerMinAltitudeKm: value }), 10));
+    }
+    return section;
+  }
+
+  // --- G01: explicit ascent guidance (Engineer mode) --------------------------------
+  /** The standard ascent guidance, PEG or IGM for the stages out of the atmosphere, and the guidance cycle. */
+  private explicitGuidanceSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'explicit';
+    const config: ExplicitGuidanceConfig | undefined = this.state.dynamics?.explicitGuidance;
+    if (config) section.open = true;
+    section.append(this.el('summary', undefined, t('setup.explicit.title')));
+    section.append(this.el('p', 'field-note', t('setup.explicit.note')));
+    const update = (next: ExplicitGuidanceConfig | undefined): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { explicitGuidance: next } : {}) };
+      if (!next) delete this.state.dynamics.explicitGuidance;
+      this.render();
+      this.changed();
+    };
+    section.append(this.select(EXPLICIT_FIELD_KEYS.law, [
+      { value: 'standard', label: t('setup.explicit.standard') }, { value: 'peg', label: t('setup.explicit.peg') }, { value: 'igm', label: t('setup.explicit.igm') },
+    ], config?.law ?? 'standard', (value) => {
+      this.fieldDrafts.delete(EXPLICIT_FIELD_KEYS.cycleS);
+      update(value === 'standard' ? undefined : { ...(this.state.dynamics?.explicitGuidance ?? {}), law: value as ExplicitGuidanceConfig['law'] });
+    }));
+    section.append(this.el('p', 'field-note', t(config ? `setup.explicit.about.${config.law}` : 'setup.explicit.about.standard')));
+    if (config) {
+      section.append(this.number(EXPLICIT_FIELD_KEYS.cycleS, config.cycleS ?? 1, (value) => update({ ...config, cycleS: value }), 0.1));
+      section.append(this.el('p', 'field-note', t('setup.explicit.engage')));
+    }
+    return section;
+  }
+
+  // --- G08: failures of the control system (Engineer mode, six-DOF only) ---------
+  /**
+   * An accident's preset, or a list of failures — actuators, sensors, the flight computer — each
+   * with its time and target, and the FDIR switch. Empty, nothing fails.
+   */
+  private faultsSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'faults';
+    const config: ControlFaultsConfig | undefined = this.state.dynamics?.controlFaults;
+    if (config) section.open = true;
+    section.append(this.el('summary', undefined, t('setup.faults.title')));
+    section.append(this.el('p', 'field-note', t('setup.faults.note')));
+    const update = (next: ControlFaultsConfig | undefined, rebuild = true): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { controlFaults: next } : {}) };
+      if (!next) delete this.state.dynamics.controlFaults;
+      if (rebuild) this.render();
+      this.changed();
+    };
+    const current = (): ControlFaultsConfig => this.state.dynamics?.controlFaults ?? { faults: [] };
+    const setFaults = (faults: ControlFaultSpec[]): void => {
+      const { preset: _preset, ...rest } = current();
+      update({ ...rest, faults });
+    };
+    // The preset: an accident, on its own vehicle.
+    const presetValue = config?.preset ?? (config ? 'custom' : 'none');
+    const presets = [{ value: 'none', label: t('setup.faults.preset.none') }, { value: 'custom', label: t('setup.faults.preset.custom') },
+      ...Object.entries(CONTROL_FAULT_PRESETS).map(([key, p]) => ({ value: key, label: `${t(`setup.faults.preset.${key}`)} — ${vehicleById(p.vehicleId).name}` }))];
+    section.append(this.select('setup.faults.preset', presets, presetValue, (value) => {
+      if (value === 'none') { update(undefined); return; }
+      if (value === 'custom') { const { preset: _preset, ...rest } = current(); update({ ...rest }); return; }
+      const preset = CONTROL_FAULT_PRESETS[value];
+      const next: ControlFaultsConfig = { ...current(), preset: value, faults: preset.faults.map((f) => ({ ...f, ...(Array.isArray(f.units) ? { units: [...f.units] } : {}) })) };
+      if (preset.vehicleId !== this.state.vehicleId) this.faultPresetVehicle(preset.vehicleId);
+      update(next);
+    }));
+    if (!config) return section;
+    if (config.preset && CONTROL_FAULT_PRESETS[config.preset]) {
+      section.append(this.el('p', 'field-note fault-preset-note', t(`setup.faults.presetNote.${config.preset}`)));
+      const own = CONTROL_FAULT_PRESETS[config.preset].vehicleId;
+      if (own !== this.state.vehicleId) section.append(this.el('p', 'field-note warn', t('setup.faults.otherVehicle', { vehicle: vehicleById(own).name })));
+    }
+    // The FDIR.
+    const fdirRow = this.el('label', 'checkbox'), fdirBox = this.el('input');
+    fdirBox.type = 'checkbox'; fdirBox.checked = config.fdir === true; fdirBox.disabled = this.running;
+    fdirBox.addEventListener('change', () => update({ ...current(), fdir: fdirBox.checked }));
+    fdirRow.append(fdirBox, this.el('span', undefined, t('setup.faults.fdir')));
+    section.append(fdirRow, this.el('p', 'field-note', t('setup.faults.fdirNote')));
+    // The failures.
+    const vehicle = vehicleById(this.state.vehicleId), navigation = !!this.state.dynamics?.navigation;
+    config.faults.forEach((fault, index) => section.append(this.faultRow(fault, index, vehicle, navigation, (next) => {
+      const faults = [...current().faults];
+      if (next) faults[index] = next; else faults.splice(index, 1);
+      setFaults(faults);
+    })));
+    if (!config.faults.length) section.append(this.el('p', 'field-note', t('setup.faults.empty')));
+    const buttons = this.el('div', 'fault-buttons');
+    const add = this.el('button', 'ghost-button', t('setup.faults.add'));
+    add.type = 'button';
+    add.disabled = this.running || config.faults.length >= MAX_FAULTS;
+    add.addEventListener('click', () => setFaults([...current().faults, { kind: 'gyroBias', time: 30, units: [1], axis: 'pitch', magnitude: 1 }]));
+    const clear = this.el('button', 'ghost-button', t('setup.faults.clear'));
+    clear.type = 'button';
+    clear.disabled = this.running;
+    clear.addEventListener('click', () => update(undefined));
+    buttons.append(add, clear);
+    section.append(buttons);
+    return section;
+  }
+
+  /** G08: one failure — its kind, time and stage, and what its kind takes. */
+  private faultRow(fault: ControlFaultSpec, index: number, vehicle: VehicleSpec, navigation: boolean, change: (next: ControlFaultSpec | undefined) => void): HTMLElement {
+    const row = this.el('div', 'fault-row');
+    row.dataset.fault = String(index);
+    const head = this.el('div', 'fault-row-head');
+    head.append(this.el('strong', undefined, `${index + 1}. ${faultKindName(fault.kind)}`));
+    const remove = this.el('button', 'ghost-button fault-remove', '✕');
+    remove.type = 'button'; remove.disabled = this.running;
+    remove.title = t('setup.faults.remove'); remove.setAttribute('aria-label', t('setup.faults.remove'));
+    remove.addEventListener('click', () => change(undefined));
+    head.append(remove);
+    row.append(head);
+    const field = (labelKey: string, control: HTMLElement): void => {
+      const lab = this.el('label', 'field');
+      lab.append(this.el('span', undefined, t(labelKey)), control);
+      row.append(lab);
+    };
+    const choice = (options: { value: string; label: string; disabled?: boolean; group?: string }[], value: string, onChange: (v: string) => void): HTMLSelectElement => {
+      const sel = this.el('select');
+      const groups = new Map<string, HTMLElement>();
+      for (const o of options) {
+        const op = this.el('option', undefined, o.label);
+        op.value = o.value; op.selected = o.value === value; op.disabled = !!o.disabled;
+        if (o.group) {
+          let g = groups.get(o.group);
+          if (!g) { g = this.el('optgroup'); (g as HTMLOptGroupElement).label = o.group; groups.set(o.group, g); sel.append(g); }
+          g.append(op);
+        } else sel.append(op);
+      }
+      sel.disabled = this.running;
+      sel.addEventListener('change', () => onChange(sel.value));
+      return sel;
+    };
+    const numberInput = (value: number, limits: readonly [number, number], step: number, onChange: (v: number) => void): HTMLInputElement => {
+      const inp = this.el('input');
+      inp.type = 'number'; inp.value = String(+value.toFixed(3)); inp.step = String(step);
+      inp.min = String(limits[0]); inp.max = String(limits[1]); inp.disabled = this.running;
+      inp.addEventListener('change', () => {
+        const v = Number(inp.value);
+        if (inp.value.trim() === '' || !Number.isFinite(v)) { inp.value = String(+value.toFixed(3)); return; }
+        onChange(Math.min(limits[1], Math.max(limits[0], v)));
+      });
+      return inp;
+    };
+    const set = (patch: Partial<ControlFaultSpec>) => change({ ...fault, ...patch });
+    // The kind: a new kind keeps the time and stage and takes its own defaults.
+    const kinds = CONTROL_FAULT_KINDS.map((k) => ({ value: k, label: faultKindName(k) + (NAVIGATION_FAULTS.includes(k) && !navigation ? ` (${t('setup.faults.needsNav')})` : ''),
+      disabled: NAVIGATION_FAULTS.includes(k) && !navigation, group: t(`fault.group.${FAULT_GROUP[k]}`) }));
+    field('setup.faults.kind', choice(kinds, fault.kind, (v) => change(defaultFault(v as ControlFaultKind, fault.time, fault.stage))));
+    field('setup.faults.time', numberInput(fault.time, [0, 1e5], 1, (v) => set({ time: v })));
+    field('setup.faults.stage', choice([{ value: '', label: t('setup.faults.stageAny') },
+      ...vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` }))],
+    fault.stage === undefined ? '' : String(fault.stage), (v) => { const { stage: _s, ...rest } = fault; change(v === '' ? rest : { ...rest, stage: Number(v) }); }));
+    const fields = FAULT_FIELDS[fault.kind];
+    if (fields.includes('engine')) {
+      const stage = vehicle.stages[Math.min(fault.stage ?? 0, vehicle.stages.length - 1)];
+      const count = Math.max(1, stage?.engine.count ?? 1);
+      field('setup.faults.engine', choice([{ value: 'all', label: t('fault.all') }, ...Array.from({ length: count }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))],
+        String(fault.engine ?? 'all'), (v) => set({ engine: v === 'all' ? 'all' : Number(v) })));
+    }
+    if (fields.includes('jet')) {
+      field('setup.faults.jet', choice([{ value: 'all', label: t('fault.all') }, ...Array.from({ length: 16 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))],
+        String(fault.jet ?? 'all'), (v) => set({ jet: v === 'all' ? 'all' : Number(v) })));
+    }
+    if (fields.includes('units')) {
+      const units = fault.units === 'all' ? 'all' : (fault.units ?? [1]).join(',');
+      field('setup.faults.units', choice([{ value: '1', label: '1' }, { value: '2', label: '2' }, { value: '3', label: '3' }, { value: '1,2', label: '1 + 2' },
+        { value: 'all', label: t('fault.target.allUnits') }], units, (v) => set({ units: v === 'all' ? 'all' : v.split(',').map(Number) })));
+    }
+    if (fields.includes('axis')) {
+      field('setup.faults.axis', choice([...(fault.kind === 'gimbalHardover' ? [] : [{ value: '', label: t('setup.faults.axisAll') }]),
+        ...FAULT_AXES.filter((a) => !fault.kind.startsWith('gimbal') || a !== 'roll').map((a) => ({ value: a, label: t(`loop.axis.${a}`) }))],
+      fault.axis ?? '', (v) => { const { axis: _a, ...rest } = fault; change(v === '' ? rest : { ...rest, axis: v as ControlFaultSpec['axis'] }); }));
+    }
+    if (fields.includes('sign')) {
+      field('setup.faults.sign', choice([{ value: '1', label: '+' }, { value: '-1', label: '−' }], String(fault.sign ?? 1), (v) => set({ sign: Number(v) as 1 | -1 })));
+    }
+    const size = FAULT_MAGNITUDE[fault.kind];
+    if (fields.includes('magnitude') && size) {
+      const lab = this.el('label', 'field');
+      lab.append(this.el('span', undefined, `${t(`setup.faults.magnitude.${fault.kind}`)}${size.unit ? ` (${t(size.unit)})` : ''}`),
+        numberInput(fault.magnitude ?? size.value, size.limits, size.value / 10, (v) => set({ magnitude: v })));
+      row.append(lab);
+    }
+    row.append(this.el('p', 'field-note', t(`fault.about.${fault.kind}`)));
+    return row;
+  }
+
+  /** G08: a preset flies on its own vehicle, as the vehicle select would set it (the Engineer settings kept). */
+  private faultPresetVehicle(vehicleId: string): void {
+    const s = this.state, kept = s.dynamics;
+    s.vehicleId = vehicleId;
+    s.dynamics = defaultDynamics(vehicleId);
+    for (const key of ['flex', 'control', 'navigation', 'controlFaults', 'explicitGuidance'] as const) if (kept?.[key]) (s.dynamics as unknown as Record<string, unknown>)[key] = kept[key];
+    const spec = vehicleById(vehicleId);
+    this.siteReassigned = false;
+    if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
+    if (!spec.recoverable) s.boosterRecovery = false;
+  }
+
+  /** E04: take a tuning (the attitude-loop inspector's "use for the next launch"); undefined restores the defaults. */
+  applyControl(control: ControlConfig | undefined): boolean {
+    // Also while a flight runs: the setup then holds it for the next launch.
+    const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+    if (dynamics.model !== 'sixDof') return false;
+    this.state.dynamics = { ...dynamics, ...(control ? { control } : {}) };
+    if (!control) delete this.state.dynamics.control;
+    for (const key of this.controlFieldKeys()) this.fieldDrafts.delete(key);
+    this.render();
+    this.changed();
+    return true;
+  }
+  /** E04: the tuning the setup holds. */
+  currentControl(): ControlConfig | undefined { return this.state.dynamics?.control; }
 
   private optionsSection(vehicle: VehicleSpec): HTMLElement {
     const s = this.state;
@@ -1556,3 +1904,15 @@ export class SetupPanel {
   }
 }
 
+/** G08: a failure of a kind with its own defaults, at `time` (and `stage`). */
+function defaultFault(kind: ControlFaultKind, time: number, stage?: number): ControlFaultSpec {
+  const base: ControlFaultSpec = { kind, time, ...(stage !== undefined ? { stage } : {}) };
+  const fields = FAULT_FIELDS[kind];
+  if (fields.includes('engine')) base.engine = 1;
+  if (fields.includes('jet')) base.jet = 1;
+  if (fields.includes('units')) base.units = [1];
+  if (kind === 'gimbalHardover') { base.axis = 'pitch'; base.sign = 1; } else if (fields.includes('axis') && kind !== 'actuatorPolarity') base.axis = 'pitch';
+  const size = FAULT_MAGNITUDE[kind];
+  if (size) base.magnitude = size.value;
+  return base;
+}

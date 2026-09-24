@@ -32,7 +32,7 @@
  */
 import type { Simulation, SimEvent } from '../physics/simulation';
 import { drawChart, type ChartMarker, type Series } from './charts';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { fmtTime } from './hud';
 import { eventLabel } from './phase';
 import { localizeEventParams, stageNameByLabel } from './names';
@@ -40,6 +40,9 @@ import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { TelemetrySample } from '../physics/sim/types';
 import { symbolText, withSymbol, type Quantity } from './notation';
+import { EquationsPanel } from './equations';
+import type { EquationLevel } from './equations-model';
+import type { VisualFrame } from '../physics/frame';
 
 type Range = 'mission' | 'ascent';
 
@@ -135,6 +138,12 @@ export class TelemetryPanel {
    * rebuild without `Hud` having to be told one happened.
    */
   readonly dockHost: HTMLElement = el('div', 'telemetry-dock');
+  /** E02: the live equations, a second view of this panel; the frame on screen, and the mode's set. */
+  private equations = new EquationsPanel();
+  private viewMode: 'charts' | 'equations' = 'charts';
+  private viewBtns: HTMLButtonElement[] = [];
+  private frame: VisualFrame | null = null;
+  private equationLevel: EquationLevel = 'explore';
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -165,10 +174,27 @@ export class TelemetryPanel {
     }
     head.append(toggle);
     r.append(head);
+    // E02: charts or the live equations.
+    const views = el('div', 'tel-view-toggle');
+    views.setAttribute('role', 'group');
+    views.setAttribute('aria-label', t('tel.view'));
+    this.viewBtns = [];
+    for (const [mode, key] of [['charts', 'tel.view.charts'], ['equations', 'tel.view.equations']] as const) {
+      const b = el('button', undefined, t(key)) as HTMLButtonElement;
+      b.type = 'button';
+      b.dataset.view = mode;
+      b.setAttribute('aria-pressed', String(this.viewMode === mode));
+      b.addEventListener('click', () => this.setView(mode));
+      views.append(b);
+      this.viewBtns.push(b);
+    }
+    r.append(views);
+    r.classList.toggle('view-equations', this.viewMode === 'equations');
     // First block under the heading: the docked instrument card, when the user
     // has put it there. Empty (and collapsed by `:empty` in style.css) when the
     // card is floating over the picture.
     r.append(this.dockHost);
+    r.append(this.equations.root);
     this.note = el('p', 'chart-note hidden');
     r.append(this.note);
     for (const id of CHART_IDS) {
@@ -241,6 +267,22 @@ export class TelemetryPanel {
     });
   }
 
+  /** E02: the charts, or the live equations. */
+  setView(mode: 'charts' | 'equations'): void {
+    this.viewMode = mode;
+    this.root.classList.toggle('view-equations', mode === 'equations');
+    for (const b of this.viewBtns) b.setAttribute('aria-pressed', String(b.dataset.view === mode));
+    if (this.view) this.update(this.view, this.cursor);
+    else this.equations.update(null, null, this.equationLevel, getLang());
+  }
+
+  /** E02: the Explore mode's equations or the Engineer mode's fuller set. */
+  setEquationLevel(level: EquationLevel): void {
+    if (level === this.equationLevel) return;
+    this.equationLevel = level;
+    if (this.viewMode === 'equations') this.setView('equations');
+  }
+
   private setRange(mode: Range): void {
     this.range = mode;
     for (const b of this.rangeBtns) {
@@ -294,9 +336,17 @@ export class TelemetryPanel {
    * @param view   the frame-backed simulation view for the displayed frame
    * @param cursor mission time the rest of the app is showing
    */
-  update(view: Simulation, cursor?: number): void {
+  update(view: Simulation, cursor?: number, frame?: VisualFrame | null): void {
     this.view = view;
     if (cursor !== undefined) this.cursor = cursor;
+    if (frame !== undefined) this.frame = frame;
+    // E02: the equations view draws no charts.
+    if (this.viewMode === 'equations') {
+      const vehicle = view.vehicle;
+      this.equations.update(this.frame, { siteLatitudeDeg: view.site.latitude, siteAltitudeM: view.site.altitude,
+        activeStage: vehicle.active, usablePropellant: (stage) => vehicle.usablePropellant(stage) }, this.equationLevel, getLang());
+      return;
+    }
     // Truncated to the cursor by the frame view, so `last` is the newest sample
     // that had been taken by the displayed instant.
     const tel = view.telemetry;

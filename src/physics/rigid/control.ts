@@ -24,6 +24,21 @@ export interface ControlDemand {
   momentBody: Vec3;
   saturated: boolean;
 }
+/**
+ * What the loop decided on the way, for the attitude-loop inspector (roadmap
+ * G03). Filled only when passed; never read back, so passing one cannot change
+ * a demand. Limiter flags are per axis: bit 0 x, bit 1 y, bit 2 z.
+ */
+export interface ControlTrace {
+  /** Attitude error as a rotation vector in body axes, rad (attitude mode only). */
+  attitudeError?: Vec3;
+  /** Axes whose rate the stopping distance held below the proportional one. */
+  stoppingLimited: number;
+  /** Axes whose rate request met the rate limit. */
+  rateLimited: number;
+  /** Axes whose angular-acceleration request met its (scheduled) limit. */
+  accelerationLimited: number;
+}
 const axes = ['x', 'y', 'z'] as const;
 function checkGains(gains: ControlGains): void {
   if (!Number.isFinite(gains.responseDelayS ?? 0) || (gains.responseDelayS ?? 0) < 0) throw new RangeError('Invalid control response delay');
@@ -38,7 +53,7 @@ function limited(vector: Vec3, limit: Vec3): Vec3 {
 }
 
 /** Manual commands are body rates in rad/s: X roll, Y pitch, Z yaw. */
-export function rateControl(desiredRates: Vec3, omegaBody: Vec3, inertiaBody: Mat3, gains: ControlGains): ControlDemand {
+export function rateControl(desiredRates: Vec3, omegaBody: Vec3, inertiaBody: Mat3, gains: ControlGains, trace?: ControlTrace): ControlDemand {
   checkGains(gains);
   const rates = limited(desiredRates, gains.maxRate);
   const error = sub(rates, omegaBody);
@@ -49,6 +64,10 @@ export function rateControl(desiredRates: Vec3, omegaBody: Vec3, inertiaBody: Ma
   const momentBody = matVecMul(inertiaBody, acceleration);
   const gyroscopic = cross(omegaBody, matVecMul(inertiaBody, omegaBody));
   momentBody.x += gyroscopic.x; momentBody.y += gyroscopic.y; momentBody.z += gyroscopic.z;
+  if (trace) {
+    trace.rateLimited = axes.reduce((bits, axis, index) => bits | (rates[axis] !== desiredRates[axis] ? 1 << index : 0), 0);
+    trace.accelerationLimited = axes.reduce((bits, axis, index) => bits | (acceleration[axis] !== requested[axis] ? 1 << index : 0), 0);
+  }
   return {
     desiredRates: rates, angularAcceleration: acceleration, momentBody,
     saturated: axes.some(axis => rates[axis] !== desiredRates[axis] || acceleration[axis] !== requested[axis]),
@@ -56,7 +75,7 @@ export function rateControl(desiredRates: Vec3, omegaBody: Vec3, inertiaBody: Ma
 }
 
 /** Hamilton qBodyToInertial; the shortest error rotation is expressed in Body. */
-export function attitudeControl(attitude: Quat, target: Quat, omegaBody: Vec3, inertiaBody: Mat3, gains: ControlGains): ControlDemand {
+export function attitudeControl(attitude: Quat, target: Quat, omegaBody: Vec3, inertiaBody: Mat3, gains: ControlGains, trace?: ControlTrace): ControlDemand {
   const error = quatNormalize(quatMultiply(quatConjugate(quatNormalize(attitude)), quatNormalize(target)));
   // q and -q describe the same attitude, including the exact 180-degree tie.
   const first = Math.abs(error.x) > 1e-14 ? error.x : Math.abs(error.y) > 1e-14 ? error.y : error.z;
@@ -68,7 +87,8 @@ export function attitudeControl(attitude: Quat, target: Quat, omegaBody: Vec3, i
   checkGains(gains);
   const rotation = v3(factor * error.x, factor * error.y, factor * error.z);
   let limitedByStoppingDistance = false;
-  const requested = v3(...axes.map(axis => {
+  if (trace) { trace.attitudeError = { ...rotation }; trace.stoppingLimited = 0; }
+  const requested = v3(...axes.map((axis, index) => {
     const distance = Math.abs(rotation[axis]), acceleration = gains.maxAngularAcceleration[axis];
     const delayVelocity = acceleration * (gains.responseDelayS ?? 0);
     // distance = v*delay + v²/(2*a). Rationalized form avoids cancellation
@@ -77,9 +97,10 @@ export function attitudeControl(attitude: Quat, target: Quat, omegaBody: Vec3, i
       / (Math.sqrt(delayVelocity ** 2 + 2 * acceleration * distance) + delayVelocity || 1) : 0;
     const proportional = distance * gains.attitudeGain[axis];
     limitedByStoppingDistance ||= stoppingRate < proportional;
+    if (trace && stoppingRate < proportional) trace.stoppingLimited |= 1 << index;
     return Math.sign(rotation[axis]) * Math.min(proportional, stoppingRate);
   }) as [number, number, number]);
-  const demand = rateControl(requested, omegaBody, inertiaBody, gains);
+  const demand = rateControl(requested, omegaBody, inertiaBody, gains, trace);
   return { ...demand, saturated: demand.saturated || limitedByStoppingDistance };
 }
 

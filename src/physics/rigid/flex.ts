@@ -283,6 +283,13 @@ export class FlexBody {
     return flex;
   }
 
+  /** G02: what the IMU's case reads, as `sensed`, without recording it (the navigation's truth at a step's end). */
+  imuCase(attitudeQ: Quat, omegaBody: Vec3): { attitudeQ: Quat; omegaBody: Vec3 } {
+    const recorded = this.sensorError, reading = this.sensed(attitudeQ, omegaBody);
+    this.sensorError = recorded;
+    return reading;
+  }
+
   /** Keep the state at the end of the step. */
   end(time: number, flex: readonly number[] | undefined): void {
     const context = this.context;
@@ -325,6 +332,15 @@ export class FlexBody {
     const rate = frequency / this.options.bandwidthRatio, cap = (value: number, limit: number) => Math.min(value, limit);
     return { ...gains, rateGain: v3(gains.rateGain.x, cap(gains.rateGain.y, rate), cap(gains.rateGain.z, rate)),
       attitudeGain: v3(gains.attitudeGain.x, cap(gains.attitudeGain.y, rate / 2), cap(gains.attitudeGain.z, rate / 2)) };
+  }
+
+  /** G04: this step's flexible state layout, the IMU's view of the bending, and the notch, for the linearised loop. */
+  linearContext(): { tanks: string[]; bending: boolean; imuSlope: number; notch?: Biquad } {
+    const c = this.context;
+    if (!c) return { tanks: [], bending: false, imuSlope: 0 };
+    return { tanks: c.tanks.map((tank) => tank.id), bending: c.dynamicBending,
+      imuSlope: this.options.bending && c.mode ? modeSlope(c.mode, c.imuX) : 0,
+      ...(this.options.notch && this.notchFilter ? { notch: { ...this.notchFilter } } : {}) };
   }
 
   /** The notch on the pitch and yaw torque the autopilot asks for. */

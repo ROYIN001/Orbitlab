@@ -12,6 +12,7 @@ import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { MissionResult } from './ui/mission-result';
 import { RigidControls } from './ui/rigid-controls';
+import { LoopInspector } from './ui/loop-inspector';
 import { Hud } from './ui/hud';
 import { TelemetryPanel } from './ui/telemetry';
 import { OrbitalMap } from './ui/map';
@@ -211,6 +212,7 @@ class App {
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
   private physicsDialog: PhysicsDialog;
+  private loopInspector: LoopInspector;
   private cameraDialog: CameraDialog;
   private shown: VisualFrame | null = null;
   private wasLive = true;
@@ -267,7 +269,12 @@ class App {
       if (!this.session || !this.player.live) return;
       this.session.setRigidCommand(command);
       this.telTimer = 1;
-    });
+    }, opener => this.loopInspector.open(opener));
+    // G03: the attitude-loop inspector, opened from the 6-DOF panel in the Engineer mode.
+    this.loopInspector = new LoopInspector({ togglePlay: () => this.togglePlay(),
+      // E04: the tuning tab writes into the mission setup, and the flight-test tab flies in the live flight.
+      applyControl: (control) => this.panel.applyControl(control), currentControl: () => this.panel.currentControl(),
+      startAttitudeTest: (spec) => (this.simView && this.player.live ? this.simView.sim.startAttitudeTest(spec) : 'notLive') });
     this.viewport = document.getElementById('viewport')!;
     this.glCanvas = document.getElementById('gl') as HTMLCanvasElement;
     this.mapCanvas = document.getElementById('map') as HTMLCanvasElement;
@@ -346,6 +353,9 @@ class App {
     saveMode(mode);
     const experience = experienceForMode(mode);
     if (experience) this.panel.setExperience(experience);
+    this.rigidControls.setInspectorAvailable(mode === 'engineer');
+    this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
+    if (mode !== 'engineer') this.loopInspector.close();
     document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
       if (a.dataset.mode === mode) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -1020,9 +1030,13 @@ class App {
     this.telTimer += dtReal;
     if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
-      this.tel.update(this.simView.sim, this.player.cursor);
+      this.tel.update(this.simView.sim, this.player.cursor, this.shown);
       this.result.update(this.simView.sim);
       this.rigidControls.update(this.shown?.rigid, this.player.live);
+    }
+    if (this.loopInspector.isOpen) {
+      this.loopInspector.update(this.shown, this.recorder.frames, this.player.cursor, this.player.live,
+        this.player.live ? this.playing : this.player.playing, this.simView?.sim.telemetry ?? []);
     }
     requestAnimationFrame((n) => this.frame(n));
   }

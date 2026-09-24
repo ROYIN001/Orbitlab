@@ -16,7 +16,10 @@
 import type { Simulation } from '../physics/simulation';
 import { chronologicalEvents } from '../physics/events';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
+import { PLANE_OF } from '../physics/rigid/linear';
 import { aeroAngles, bodyRates, getNotation, type Notation } from './notation';
+import { LOOP_AXES, loopLimiterNames, loopView, triple } from './loop-view';
+import type { TelemetrySample } from '../physics/sim/types';
 
 const RIGID_COLUMNS = ['recording_schema_version', 'rigid_model_version', 'rigid_data_revision',
   'rigid_mass_flow_model', 'rigid_wind_profile_json', 'rigid_wind_seed', 'rigid_integration_max_step_s', 'rigid_flow_derivative_max_step_s',
@@ -61,6 +64,23 @@ function notationColumns(value: RigidTelemetry | undefined, n: Notation): string
     .map(entry => typeof entry === 'number' ? (Number.isInteger(entry) ? String(entry) : entry.toPrecision(12)) : entry);
 }
 
+// --- G03: the attitude loop, in the axes and signs of the notation in force
+const LOOP_GROUPS = [['attitude_error', 'rad'], ['rate_command', 'rad_s'], ['angular_acceleration', 'rad_s2'], ['moment_demand', 'n_m'],
+  ['moment_filtered', 'n_m'], ['moment_engines', 'n_m'], ['moment_jets', 'n_m'], ['moment_aero', 'n_m']] as const;
+function loopColumnNames(n: Notation): string[] {
+  return [...LOOP_GROUPS.flatMap(([name, unit]) => LOOP_AXES.map(axis => `${n}_loop_${name}_${axis}_${unit}`)),
+    'loop_gimbal_use', 'loop_rcs_duty', 'loop_limiters', 'loop_load_relief_rad'];
+}
+function loopColumns(value: RigidTelemetry | undefined, n: Notation): string[] {
+  const loop = value?.attitudeLoop, view = loopView(value, n);
+  if (!loop || !view) return loopColumnNames(n).map(() => '');
+  const vectors = [loop.attitudeErrorBody, loop.desiredRatesBody, loop.angularAccelerationBody, loop.momentDemandBody,
+    loop.momentFilteredBody, loop.engineMomentBody, loop.rcsMomentBody, loop.aeroMomentBody];
+  const entries: (string | number)[] = [...vectors.flatMap((v): (string | number)[] => (v ? LOOP_AXES.map(axis => triple(v, n)[axis]) : ['', '', ''])),
+    loop.gimbalUse, loop.rcsDuty, loopLimiterNames(view).join('|'), loop.loadRelief?.appliedRad ?? ''];
+  return entries.map(entry => typeof entry === 'number' ? (Number.isInteger(entry) ? String(entry) : entry.toPrecision(9)) : entry);
+}
+
 // --- P05: the flexible body, when it was modelled
 const FLEX_COLUMNS = ['slosh_active', 'slosh_max_displacement_m', 'slosh_displacements_m_json',
   'bending_frequency_hz', 'bending_modal_y', 'bending_modal_z', 'bending_deflection_m',
@@ -82,6 +102,63 @@ function flexColumns(value: RigidTelemetry | undefined): string[] {
   });
 }
 
+// --- G04: the linearised loop's margins, per plane, from the latest linearisation (once a second)
+const MARGIN_FIELDS = ['stable', 'growth_per_s', 'pm_deg', 'crossover_rad_s', 'gm_db', 'gm_rad_s', 'gm_low_db'] as const;
+const MARGIN_COLUMNS = ['loop_linearised_t_s', ...LOOP_AXES.flatMap(axis => MARGIN_FIELDS.map(field => `loop_${axis}_${field}`))];
+function marginColumns(value: RigidTelemetry | undefined): string[] {
+  const model = value?.linearModel;
+  if (!model) return MARGIN_COLUMNS.map(() => '');
+  const entries: (string | number | boolean)[] = [model.t, ...LOOP_AXES.flatMap((axis) => {
+    const m = model.margins[PLANE_OF[axis]];
+    return [m.active ? m.stable : '', m.growthRate, m.pmDeg ?? '', m.wcRadS ?? '', m.gmDb ?? '', m.wgRadS ?? '', m.gmLowDb ?? ''];
+  })];
+  return entries.map(entry => typeof entry === 'number' ? (Number.isFinite(entry) ? (Number.isInteger(entry) ? String(entry) : entry.toPrecision(6)) : '') : String(entry));
+}
+
+// --- G02: the navigation against the truth: radial, along-track, cross-track; attitude in the notation's axes
+const NAV_COLUMNS = (n: Notation) => [
+  ...['pos_err', 'pos_3sigma'].flatMap((name) => ['radial', 'along', 'cross'].map((a) => `nav_${name}_${a}_m`)),
+  ...['vel_err', 'vel_3sigma'].flatMap((name) => ['radial', 'along', 'cross'].map((a) => `nav_${name}_${a}_ms`)),
+  ...['att_err', 'att_3sigma'].flatMap((name) => LOOP_AXES.map((a) => `${n}_nav_${name}_${a}_deg`)),
+  'nav_gnss', 'nav_star_tracker',
+];
+function navColumns(value: RigidTelemetry | undefined, n: Notation): string[] {
+  const nav = value?.navigation;
+  if (!nav) return NAV_COLUMNS(n).map(() => '');
+  const three = (v: { x: number; y: number; z: number }, k = 1) => [v.x * k, v.y * k, v.z * k];
+  const angles = (v: { x: number; y: number; z: number }, k: number) => { const t = triple(v, n, k); return LOOP_AXES.map((a) => t[a]); };
+  const entries: (string | number)[] = [...three(nav.positionError), ...three(nav.positionSigma, 3), ...three(nav.velocityError), ...three(nav.velocitySigma, 3),
+    ...angles(nav.attitudeError, 180 / Math.PI), ...angles(nav.attitudeSigma, 540 / Math.PI).map(Math.abs), nav.gnss, nav.starTracker];
+  return entries.map(entry => typeof entry === 'number' ? entry.toPrecision(6) : entry);
+}
+
+// --- G08: the failures and the FDIR: IMU units in use, the computer, engines and jets out; sensed less true rate in the notation's axes
+const FAULT_COLUMNS = (n: Notation) => ['faults_struck', 'fdir', 'imu_units', 'imu_in_use', 'open_loop', 'computer', 'engines_failed', 'jets_failed',
+  ...LOOP_AXES.map((a) => `${n}_sensed_minus_true_rate_${a}_degs`), ...LOOP_AXES.map((a) => `${n}_sensor_att_err_${a}_deg`)];
+function faultColumns(value: RigidTelemetry | undefined, n: Notation): string[] {
+  const f = value?.controlFaults;
+  if (!f) return FAULT_COLUMNS(n).map(() => '');
+  const angles = (v: { x: number; y: number; z: number } | undefined) => {
+    if (!v) return LOOP_AXES.map(() => '');
+    const t = triple(v, n, 180 / Math.PI);
+    return LOOP_AXES.map((a) => t[a].toPrecision(6));
+  };
+  const rateError = f.sensedRateBody && f.trueRateBody
+    ? { x: f.sensedRateBody.x - f.trueRateBody.x, y: f.sensedRateBody.y - f.trueRateBody.y, z: f.sensedRateBody.z - f.trueRateBody.z } : undefined;
+  return [f.active.filter((a) => !a.missed).map((a) => a.kind).join(' '), String(f.fdir), f.units.join(' '), f.selected.join(' '), String(f.openLoop), f.computer,
+    f.engines.map((e) => `${e.engine}:${e.state}`).join(' '), f.jets.map((j) => `${j.jet}:${j.state}`).join(' '), ...angles(rateError), ...angles(f.sensorAttitudeErrorBody)];
+}
+
+// --- G01: the explicit ascent guidance: its state, time and velocity to go, the orbit it predicts, its steering
+const GUIDE_COLUMNS = ['guide_law', 'guide_status', 'guide_tgo_s', 'guide_vgo_ms', 'guide_pred_periapsis_m', 'guide_pred_apoapsis_m',
+  'guide_pitch_deg', 'guide_standard_pitch_deg', 'guide_yaw_deg', 'guide_correction_ms'];
+function guideColumns(s: TelemetrySample): string[] {
+  const g = s.explicitGuidance;
+  if (!g) return GUIDE_COLUMNS.map(() => '');
+  const n = (v: number | undefined) => (v === undefined || !Number.isFinite(v) ? '' : v.toPrecision(7));
+  return [g.law, g.status, n(g.tGo), n(g.vGo), n(g.predictedPeriapsis), n(g.predictedApoapsis), n(g.pitchDeg), n(g.standardPitchDeg), n(g.yawDeg), n(g.miss)];
+}
+
 /** Telemetry samples plus the event log, as CSV text (no trailing newline). */
 export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>): string {
   const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
@@ -89,14 +166,29 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
   if (hasRigid) cols.push(...RIGID_COLUMNS);
   const notation = getNotation();
   if (hasRigid) cols.push(...notationColumnNames(notation));
+  const hasLoop = sim.telemetry.some(sample => !!sample.rigid?.attitudeLoop);
+  if (hasLoop) cols.push(...loopColumnNames(notation));
   const hasFlex = sim.telemetry.some(sample => !!sample.rigid?.flex);
   if (hasFlex) cols.push(...FLEX_COLUMNS);
+  const hasMargins = sim.telemetry.some(sample => !!sample.rigid?.linearModel);
+  if (hasMargins) cols.push(...MARGIN_COLUMNS);
+  const hasNav = sim.telemetry.some(sample => !!sample.rigid?.navigation);
+  if (hasNav) cols.push(...NAV_COLUMNS(notation));
+  const hasFaults = sim.telemetry.some(sample => !!sample.rigid?.controlFaults);
+  if (hasFaults) cols.push(...FAULT_COLUMNS(notation));
+  const hasGuide = sim.telemetry.some(sample => !!sample.explicitGuidance);
+  if (hasGuide) cols.push(...GUIDE_COLUMNS);
   const lines = [cols.join(',')];
   for (const s of sim.telemetry) {
     const row = [s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase].map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v)));
     if (hasRigid) row.push(...rigidColumns(s.rigid));
     if (hasRigid) row.push(...notationColumns(s.rigid, notation));
+    if (hasLoop) row.push(...loopColumns(s.rigid, notation));
     if (hasFlex) row.push(...flexColumns(s.rigid));
+    if (hasMargins) row.push(...marginColumns(s.rigid));
+    if (hasNav) row.push(...navColumns(s.rigid, notation));
+    if (hasFaults) row.push(...faultColumns(s.rigid, notation));
+    if (hasGuide) row.push(...guideColumns(s));
     lines.push(row.join(','));
   }
   lines.push('');

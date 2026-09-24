@@ -273,6 +273,145 @@ card, the charts, the 6-DOF controls and the rates you type into them, the event
 CSV. The full table, with each quantity's definition and sign, is in *Physics and sources*
 (PHYSICS.md §2c).
 
+## 9. The attitude-loop inspector (Engineer mode)
+
+In a six-DOF flight in the Engineer mode, the 6-DOF panel under the timeline has an
+**Attitude-loop inspector** button. It opens a window over the workspace (drag it by its title
+bar; Esc or × closes it) with the autopilot drawn as a block diagram, left to right: guidance
+(and the ascent's load relief), attitude error, attitude loop, rate error, rate loop, moment,
+bending filter, actuators, vehicle, and the IMU feeding back. Each block shows the values of the
+control step on screen for roll, pitch and yaw, in the axes and signs of the notation in force
+(§8); a block outlined in orange is being held by a limit, and the tag on its row says which
+(*stop*: slower than the gain asks, to stop on the target; *max*: at its limit). Below, four
+charts cover the last 10, 30 or 120 s — attitude error, rate, moment and actuator use — the
+rate and moment charts for the axis picked in the title bar. The play button runs and pauses
+the flight or the replay as the main one does. The inspector reads the recording, so scrubbing
+back shows the loop at any recorded instant. Details in PHYSICS.md §2d.
+
+## 10. Live equations (Explore and Engineer mode)
+
+The telemetry panel has two views: **Charts** and **Equations**. Equations shows the
+equations the simulation is solving at the instant on screen — live, or wherever the replay
+cursor stands — each as a formula in the notation in force (§8), then the same formula with the
+numbers put in, and, where the flight provides an independent left-hand side, a **balance**
+line: green when the recorded motion satisfies the equation within 1 %. The Explore mode shows
+Newton's second law, dynamic pressure and Mach number, drag and lift, the rocket equation and
+the ascent's Δv budget; the Engineer mode adds thrust against ambient pressure, vis-viva, gravity
+with J2, the angles of attack and sideslip, Euler's rotation equations, quaternion kinematics and
+the attitude autopilot. An equation with nothing to act on (no air, engines off, a coast
+propagated analytically) says so. Details in PHYSICS.md §2e.
+
+## 11. Frequency response, margins and step response (Engineer mode)
+
+The attitude-loop inspector (§9) has three tabs: **Loop** (the block diagram), **Frequency
+response** and **Step response**. The last two analyse the loop linearised about the flight's
+state every half second, for the axis picked in the title bar, at the instant on screen (the
+header says when the model was taken).
+
+- **Frequency response**: the Bode plot of the loop gain |L| and its phase against ω on a
+  logarithmic axis, with the 0 dB and −180° lines, ω_c (where |L| crosses 0 dB) and ω_g (where
+  the phase crosses −180°) marked. Beside it a verdict — green when the closed loop is stable,
+  red when it is not, with its least damped mode — then the phase margin, the gain margin, the
+  gain-reduction margin when the loop has one, the number of unstable open-loop poles, and the
+  model (its states, the actuator, the gimbal lag and the gains). The chart below charts the
+  phase and gain margins over the flight so far, with a red line wherever the loop was unstable.
+- **Step response**: the linear loop's answer to a 1° attitude step over 10 s — the command, the
+  body's angle and, with P05's bending, what the IMU reads; the moment asked and delivered —
+  with the rise time, overshoot, settling time and the angle after 10 s.
+- **Feed-forward error** (both tabs): the autopilot feeds forward the air's moment; the slider
+  makes that estimate wrong by −100 % (none) to +100 % (double) and redraws the plot, the margins
+  and the step, to show how much the loop leans on it.
+
+The linear loop has no rate, acceleration or gimbal limits, so a large step in flight is slower
+than the chart. Details and checks against the nonlinear flight in PHYSICS.md §2f. The CSV adds
+each plane's margins (`loop_pitch_pm_deg`, `loop_pitch_gm_db`, …) and `read_flight_state` a
+`loopMargins` summary.
+
+## 12. Tuning the autopilot and flight tests (Engineer mode)
+
+**In the mission setup**, a six-DOF mission's *Attitude autopilot* section sets the roll channel's
+and the pitch–yaw pair's K_θ and K_ω, rate limit and angular-acceleration ceiling, and how much of
+the air's moment is fed forward (%). Left alone, the default autopilot flies; *Back to the default
+autopilot* clears it.
+
+**The inspector's Tuning tab** (§9) tries other gains on the loop the flight has linearised: move
+K_θ, K_ω and the feed-forward and the tab redraws the loop gain, the 1° step and the phase margin
+over the flight — flown dashed, trial in yellow — with both margins at the instant on screen
+(green where the trial meets the targets). *Auto-tune* finds the widest-bandwidth gains that meet
+the phase and gain margins you set, over the flight so far or at this instant, and says when no
+gains can; *Use for the next launch* writes the trial into the mission setup. Rate and
+acceleration limits act only in flight.
+
+**The Flight test tab** flies a step or a doublet in the live flight about the axis picked in the
+title bar, and draws the attitude reached against what the linear model predicted, with rise
+time, overshoot, the difference between them and how long each limiter held the axis. It changes
+the flight (the event log says when), and works only live, six-DOF, under the autopilot, one test
+at a time; the result stays in the recording for replay. Details in PHYSICS.md §2g.
+
+## 13. Inertial navigation (Engineer mode)
+
+In a six-DOF mission's setup, the *Navigation (INS / GNSS)* section turns on an inertial
+measurement unit — a navigation, tactical or MEMS grade, or your own figures — with GNSS fixes
+(and an outage you can set) and a star tracker. The autopilot, ascent guidance and the cut-off
+then fly on what the navigation believes rather than on the truth, so a poor unit without GNSS
+puts the payload into a different orbit than the one it thinks it reached.
+
+The attitude-loop inspector's **Navigation** tab (§9) charts the errors — true less estimated —
+of position and velocity (radial, along-track, cross-track) and of attitude (roll, pitch, yaw in
+the notation in force), each with the ±3σ the Kalman filter claims (dashed), GNSS outages marked,
+and the orbit the navigation believes in less the true one. Beside them: GNSS and star-tracker
+state, the errors against their 3σ, the orbit believed and true, the sensor biases true and
+estimated, and the latest innovations. The CSV adds the same (`nav_*`) and `read_flight_state` a
+`navigation` summary. Details in PHYSICS.md §2h.
+
+## 14. Control-system failures and FDIR (Engineer mode)
+
+In a six-DOF mission's setup, the *Control-system failures (G08)* section breaks the autopilot's
+hardware at a set time: an actuator (a nozzle stuck, hard-over, slowed or wired backwards; an RCS
+jet stuck on or dead), a sensor (one, two or all three IMUs reading the rate backwards, stuck,
+biased or noisy, or failing outright; with navigation on, an accelerometer bias and the loss of
+GNSS or the star tracker) or the flight computer (a hang, a gain of the wrong sign). Pick
+**Scenario** for an accident — Proton-M 2013, Ariane 501, Vega VV17 — or a Falcon 9 nozzle
+hard-over; it switches to the vehicle the scenario was written for and explains what happened.
+Or build a list of up to eight failures, each with its time, the stage it waits for, and its
+target.
+
+**FDIR** switches fault detection, isolation and recovery on: the three IMUs vote (2 of 3), a
+model of each nozzle actuator catches one that does not follow its command and shuts that engine
+down if the stage can spare it, a jet firing unasked is closed off, and a backup computer takes
+over from a hung one. Fly the same failure with FDIR on and off to see what it saves — and what it
+cannot: a failure every IMU shares, a wiring error the monitors read as correct, a software error
+the backup computer shares.
+
+A failure can also be injected into a live flight with WebMCP's `inject_control_fault`. The
+attitude-loop inspector (§9) marks the IMU, actuator and control-law blocks that failed, with each
+unit's and engine's state; its rate chart shows what the IMUs read against the truth. The event log
+reports every failure and every FDIR action; the CSV adds the failures' columns and
+`read_flight_state` a `controlFaults` summary. A launcher that loses control in the air breaks up
+when its lateral load q·α passes 300 kPa·°. Details in PHYSICS.md §2i.
+
+## 15. PEG and IGM ascent guidance (Engineer mode)
+
+The *Ascent guidance: PEG and IGM (G01)* section picks the guidance the upper stages fly. The
+first stage always flies its pitch program; once a later stage is lit, or the first stage is out
+of the atmosphere (under 100 Pa above 70 km), **PEG** — the Space Shuttle's Powered Explicit
+Guidance — or **IGM** — the Saturn V's Iterative Guidance Mode — steers to the insertion orbit's
+perigee: its altitude and speed, a level flight path, and the orbit's plane. Both steer by the
+linear tangent law from the stages still to burn; PEG corrects itself against a numerical
+prediction of the cut-off, IGM solves in closed form with averaged gravity. If the stages left
+cannot reach the target, the standard guidance takes over again (and the event log says so).
+**Guidance cycle** sets how often the law re-solves (1 s by default).
+
+In six-DOF flights with PEG or IGM the ascent load relief is also released at 4 °/s once the
+dynamic pressure falls below 500 Pa, where the standard flight releases it all at once and swings
+the stack by up to 24°.
+
+The attitude-loop inspector's **Guidance** tab (§9) charts the time and velocity to go, the pitch
+the law steers against the standard law's (and its yaw out of the target plane), and the orbit it
+predicts at cut-off against the target, with the law's state. The cut-off itself is still decided
+by the ascent on the orbit actually reached. The CSV adds `guide_*` columns and
+`read_flight_state` an `explicitGuidance` summary. Details in PHYSICS.md §2j.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

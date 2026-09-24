@@ -253,6 +253,9 @@ both, and that ISO y points to the right of the flight path and ГОСТ y above
 | Load factor | n | n | Non-gravitational acceleration over g₀ |
 | Mass | m | m | |
 | Thrust | F | P | |
+| Rolling moment | L | M<sub>x</sub> | About x; positive rolls the right side down |
+| Pitching moment | M | M<sub>z</sub> | Positive nose up |
+| Yawing moment | N | M<sub>y</sub> | ISO: about z, positive nose right; ГОСТ: about y, positive nose left |
 
 The same letter can mean different things across the two: γ is the flight-path angle in ISO
 and the roll angle in ГОСТ, θ the pitch angle in ISO (Θ) and the flight-path angle in ГОСТ, q the
@@ -269,6 +272,503 @@ and the `evt.controlCommand` event records them so.
 Before U07 the 6-DOF controls called the simulator's y rate "pitch" and z rate "yaw", and the
 event log's α was its x–z angle; with the stack's roll reference those are the yaw rate, the
 pitch rate and the sideslip. They are now the standards'.
+
+## 2d. The attitude loop and its inspector (roadmap G03)
+
+The six-DOF autopilot (src/physics/rigid/control.ts, run by `RigidRuntime.step` at the 0.01 s
+control clock) is a cascade, per body axis:
+
+1. **Attitude error.** The target attitude — the guidance direction for the nose, with the roll
+   reference — against the attitude the IMU reads, as a rotation vector **e** in body axes.
+2. **Attitude loop.** ω_d = K_θ·e, but never faster than the rate from which the axis can still
+   stop on the target: with the angular-acceleration limit a and the actuators' response delay
+   τ, d = ω·τ + ω²/2a gives the **stopping-distance** rate; then the **rate limit** (8°/s in
+   roll, 5°/s in pitch and yaw).
+3. **Rate loop.** ε = K_ω·(ω_d − ω̂), limited to what the actuators can deliver: a **scheduled
+   angular-acceleration limit**, 35 % of the authority left once the air's moment and the
+   gyroscopic term are paid for, over the inertia (at most 5°/s² in roll, 3°/s² in pitch and
+   yaw). K_θ = 1.5 s⁻¹ and K_ω = 3 s⁻¹ on every axis; with P05's bending filter K_ω ≤ ω_b/6 and
+   K_θ half that.
+4. **Moment.** M = I·ε + ω × Iω; with P05, through the notch.
+5. **Actuators.** The gimbals are asked for M − M_aero; whatever they cannot give goes to the
+   attitude thrusters; whatever the thrusters cannot give is left unmet (the telemetry's
+   `saturated` flag, past 1 N·m and 5 % of M).
+
+Upstream, the ascent's **load relief** turns the guidance direction towards the relative wind
+when the angle to it would load the structure past its limit (above 500 Pa of dynamic
+pressure). Manual rates (the 6-DOF panel) enter at step 3 with the rate limit.
+
+Every control step of the flown vehicle records what the loop decided (`attitudeLoop` in the
+six-DOF telemetry, src/physics/rigid/loop.ts): target, error, rate command, the rates the
+controller read, angular acceleration, the moment asked for (and after the notch), the air's,
+the engines' and the thrusters' moments, the gains and limits in force, which limiters held
+which axis, gimbal travel and thruster duty used, and the load relief. It is a record only —
+the loop never reads it — so a flight is the same bit for bit with or without it
+(tests/attitude-loop.test.ts, and the P05 fingerprints with the record left out). The record
+also checks the cascade's own arithmetic: wherever no limit acts, ω_d = K_θ·e and
+ε = K_ω·(ω_d − ω̂) hold to 12 digits over a Falcon 9 ascent.
+
+The Engineer mode's **attitude-loop inspector** (a button in the 6-DOF panel) draws the cascade
+as a block diagram with the values of the step on screen, in the notation in force (§2c; the
+moments are L, M, N in ISO and M<sub>x</sub>, M<sub>z</sub>, M<sub>y</sub> in ГОСТ), outlines a
+block held by a limit, and charts the last 10, 30 or 120 s: attitude error; rate command,
+measured and IMU-read rate; moment asked, delivered and the air's; gimbal and thruster use. It
+reads the recording, so it works in replay as in live flight. The CSV adds the same record in
+the notation's axes (`iso_loop_*` or `gost_loop_*`, `loop_limiters`), and `read_flight_state`
+a summary in ISO axes (`flightDynamics.attitudeLoop`).
+
+What it shows on Falcon 9 to LEO in the crosswind scenario:
+
+- From T+20 s to T+85 s, max-q included, the attitude error stays under 0.25° while the gimbals
+  carry the air's pitching moment (about 300 kN·m at T+60 s); the attitude thrusters are at
+  full duty about half the time, filling in behind the gimbals' lag.
+- From T+89 s guidance pitches the command away from the airflow (0.7° to 11° in four seconds)
+  faster than the stack follows: the pitch error grows to 4.6° with the pitch rate held by its
+  stopping distance, and the air's pitching moment reaches 2.4 MN·m at T+96 s.
+- At T+127.3 s the dynamic pressure falls through 500 Pa and the load relief, which had been
+  holding the command 24° nearer the air than guidance asked (39° asked, 15° allowed), switches
+  off in one step: the attitude error jumps from 0.4° to 24° and the stack swings back at its
+  5°/s rate limit for five seconds.
+- After staging the upper stage's roll authority is so small (an ε limit of 0.02°/s²) that its
+  roll rate is held by the stopping distance.
+
+## 2e. The live equations panel (roadmap E02)
+
+The telemetry panel's **Equations** view writes out the equations the simulation is solving,
+in the notation in force (§2c: F or P for thrust, D or X for drag, C_D or c_x, q̄ or q, Ma or M,
+Λ for ГОСТ's attitude quaternion), with the values of the instant on screen substituted:
+
+- **Explore and Engineer mode**: Newton's second law m**a** = **F** + **F**_A + m**g** (each
+  force and the load factor); dynamic pressure and Mach number; drag and lift (in six-DOF the
+  axial and normal coefficients of the vehicle's tables, split along and across the airflow);
+  the rocket equation for the burning stage, with the Δv of every stage the HUD shows; the
+  ascent's Δv budget, ideal less gravity, drag and steering losses against the speed gained
+  since liftoff.
+- **Engineer mode adds** thrust against ambient pressure, F = F_vac − p_a·A_e (the running
+  engines at their levels, with A_e = (F_vac − F_SL)/p₀, which is how every engine's thrust is
+  computed); vis-viva and the apsides; gravity with J2; α and β from the body-axis airflow in
+  the standard's axes (ISO α = arctan(w/u), β = arcsin(v/V); ГОСТ α = −arctan(V_y/V_x),
+  β = arcsin(V_z/V)); Euler's equations I·ω̇ + ω × Iω = M per axis; quaternion kinematics
+  q̇ = ½ q ⊗ ω; and the attitude autopilot's two gains on the pitch axis (§2d).
+
+**Where the numbers come from.** Each flight step records its equation terms
+(`SimState.eom`, src/physics/eom.ts, carried into every recorded frame but not into the
+telemetry): the specific forces of the engines (with the attitude thrusters), the air and
+gravity at the step start — in six-DOF those the rigid body was integrated with, in the
+point-mass model those of its force law — the step's mean acceleration (v_end − v_start)/Δt,
+the running engines' vacuum thrust and exit area, the air data, the Δv book at the step end, and
+in six-DOF the body rates and attitude at both ends. Every value is from one step, so a replayed
+frame balances as a live one does. The record reads the flight and never feeds back: the P05
+golden fingerprints are unchanged.
+
+**The balance checks** compare an independent left-hand side with the right: the measured mean
+acceleration with the sum of the forces over the mass; the speed gained since liftoff
+(v_end − ω_E (R_E + h) cos φ of the pad) with the Δv book; I·ω̇ + ω × Iω with ω̇ measured over the
+step against the moments of engines, thrusters and air (judged against the size of those
+moments, which nearly cancel through max-q); the step's change of attitude with ½ q ⊗ ω at its
+middle; the thrust flown with T_vac − p_a·A_e; gravity used with the formula; the rate command
+with K_θ·e where no limiter holds it. A check passes under 1 %. Over a Falcon 9 ascent to LEO
+(tests/equations.test.ts): Newton's law balances to 0.4 % at worst in six-DOF (the step's mean
+against its start, worst through staging and the slews) and 0.14 % in point mass; the Δv book
+within 0.1 % in six-DOF; the thrust formula exactly; Euler's equations to about 0.1–0.2 % of the
+moments; quaternion kinematics to 10⁻⁴ or better.
+
+## 2f. The loop, linearised: frequency response, margins and step response (roadmap G04)
+
+Every half second the flown vehicle's runtime linearises its attitude loop about the state at
+the start of that control step, one plane at a time (src/physics/rigid/linear.ts). The planes are roll (body x), pitch (the rotation about the
+simulator's z, which swings the nose along +y) and yaw (about y); each plane's state is
+
+- the rotation angle and rate about the axis;
+- in pitch and yaw, the lateral drift velocity along the axis the rotation swings the nose to;
+- with P05, each tank's slosh displacement and rate in that plane, and the first bending mode's
+  coordinate and rate.
+
+**The plant** is the flight's own equations of motion — the same derivative function the RK4
+integrator calls, with the aerodynamics, gravity, thrust, slosh and bending — differentiated
+numerically: one-sided differences about the step's state, the angle and rate perturbed by
+10⁻⁴ rad and rad/s, the drift by 10⁻⁴ of the speed, slosh by 1 mm and bending by 10⁻⁴. The input
+is the moment the actuators deliver about the axis: for engines, B comes from moving every
+engine the way the gimbal allocation does for ±ΔM (so a gimbal's side force on the drift and its
+excitation of the bending and slosh are in it); for the attitude thrusters, a pure moment. The
+outputs are what the IMU reads (angle and rate, plus the bending slope at its station) and the
+air's moment about the axis, which the autopilot feeds forward.
+
+**The loop** is closed as the autopilot runs it: sampled every T = 0.01 s with the moment held
+for the step (zero-order hold, exact through e^{AT}), the gimbals' first-order lag τ (the
+slowest engine's time constant), the demand M_d = I·K_ω(K_θ(θ_c − θ̂) − ω̂) through P05's notch
+(its biquad, exactly as flown) and the gimbals asked for M_d − (1 + x)·M_aero, where x is the
+**feed-forward error** the inspector sets (0 is exact; −100 % is no feed-forward). The loop gain
+L(e^{jωT}) is broken at the filtered demand, the feed-forward inside the plant; it is evaluated
+on 240 logarithmic frequencies from 0.01 rad/s to the Nyquist frequency, each an O(n²) solve on
+the plant in Hessenberg form.
+
+**Margins.** The phase margin is 180° + ∠L at the first 0 dB crossover ω_c; the gain margin is
+the smallest −|L| in dB where the phase crosses −180° above ω_c (at ω_g); the gain-reduction
+margin is the same below ω_c (a conditionally stable loop: the aerodynamically unstable airframe
+needs a minimum gain), within 40 dB. Stability is not read off the Bode plot but decided by the
+closed loop's eigenvalues (balanced, Hessenberg, shifted QR after EISPACK's hqr): the loop is
+stable when no mode grows faster than 0.001 s⁻¹. The lateral drift is neutral — nothing in the
+attitude loop restores it; guidance steers it out — so a mode at exactly zero is not counted.
+The loop's open-loop unstable poles are counted as well: with any, the Bode margins are read with
+Nyquist's count. On Falcon 9 there are two, a slow drift oscillation (0.006 s⁻¹, a 170 s period)
+left by the feed-forward's lag; they do not change the margins' meaning at the crossover.
+
+**The step response** is the closed loop's response to a 1° attitude step over 10 s: body and
+IMU angle, moment asked and delivered, rise time (10–90 %), overshoot, settling time (2 %).
+
+**Left out** (the inspector says so): the rate, angular-acceleration and gimbal-travel limits (a
+linear loop has none — a step large enough to meet them is slower in flight), the attitude
+thrusters while the engines steer, coupling between the planes, the load relief and guidance
+(the command is held), and what changes over the linearisation's second (mass, thrust, dynamic
+pressure). The record is shared by the telemetry samples of that second — never copied, never
+in a recorded frame — and leaves the golden fingerprints alone: every flight is the same bit
+for bit with it.
+
+**Checks** (tests/linear-loop.test.ts):
+
+- A PD autopilot on a double integrator: the phase margin equals the textbook
+  arctan(ω_c/K_θ) − arctan(τω_c) − ω_cT/2 to 0.3°, and the gain margin is where the closed loop's
+  eigenvalues leave the unit circle (±3 %). Without the feed-forward, an unstable airframe
+  (M_α/I = 0.5 s⁻²) goes unstable where the gain falls below M_α/(I·K_ωK_θ).
+- On Falcon 9's own models, the Bode gain margin is where the eigenvalues cross (±5 %), and the
+  Hessenberg loop gain equals a dense complex solve to 10⁻⁹.
+- **Against the nonlinear flight.** Flown with P05's bending and no notch, the model at T+1 s
+  says the loop is unstable at 7.70 rad/s, growing at 2.86 s⁻¹ (a damping ratio of −0.35). The
+  flight's bending coordinate oscillates at 7.66 rad/s over T+1–2.5 s and its envelope grows at
+  2.4 s⁻¹ from T+0.5 s to T+2 s, before the gimbals saturate (−0.30); the stack breaks up at
+  T+7.1 s. (§2b's −0.22 was a first estimate from the loop gain at resonance.)
+
+**What it shows on Falcon 9** (crosswind, T+62 s, max-q):
+
+- Rigid, pitch: stable, phase margin 46° at 3.1 rad/s (0.49 Hz), gain margin 35.5 dB at
+  41.6 rad/s; a 1° step rises in 0.84 s with 6 % overshoot and settles in 2.5 s.
+- **The margins hardly move over the flight.** The feed-forward takes the air's moment out, and
+  the controller's I·K_ω cancels the inertia, so the loop is the gains' double integrator behind
+  the gimbals' lag and the hold: a phase margin of 46.2° at 3.1 rad/s on the gimbals from
+  lift-off to orbit (the textbook value above, with τ = 0.1 s), 64.6° on the thrusters (roll after
+  staging, no lag). Between main-engine cut-off and separation nothing steers the stack, and the
+  inspector says there is no loop rather than an unstable one.
+- **The feed-forward at max-q.** Falcon 9's aerodynamic instability, M_α/I ≈ 0.24 s⁻², is small
+  against the loop's K_ωK_θ = 4.5 s⁻². Without the feed-forward (−100 %) the phase margin
+  rises to 52° — the feed-forward also cancels the air's pitch damping — while a gain-reduction
+  margin of −24.5 dB appears and the attitude settles off the command; at +50 % the phase margin
+  falls to 43°.
+- With all of P05 (slosh, bending, the notch and the slower flexible-vehicle gains): stable,
+  phase margin 45° at 2.2 rad/s, but a gain margin of only 3.0 dB at 8.3 rad/s — between the
+  slosh (4.8 rad/s, 0.76 Hz) and the notched bending mode (11.9 rad/s, 1.89 Hz at T+62 s) —
+  against the customary 6 dB; a gain-reduction margin of −32 dB. A 1° step rises in 1.35 s with
+  4–5 % overshoot, the IMU showing the bending.
+- Bending without the notch: unstable from lift-off, as above, the phase margin −153°.
+
+**Cost.** Linearising the three planes takes 17 evaluations of the equations of motion (37 with
+P05's states) and the margins 720 loop-gain points and six small eigenvalue problems. Every half
+second, with the G03 record, over the first 150 s: +6 % CPU on Falcon 9 and +27 % on Proton-M
+with P05 (eight sloshing tanks, 21 states a plane); over a whole flight to orbit, within the
+run-to-run noise on Falcon 9. A 25-minute Falcon 9 flight keeps some 940 models, 1.7 MB (4.2 MB
+with P05); Proton-M with P05, 3.7 MB over its first 150 s.
+
+## 2g. Tuning the autopilot, and flight tests (roadmap E04)
+
+**What a mission can set** (`DynamicsConfig.control`, src/physics/rigid/control-config.ts; the
+Engineer mode's *Attitude autopilot* section and `configure_mission.control`): for the roll
+channel and for the pitch–yaw pair, K_θ and K_ω (1/s), the rate limit (°/s) and the ceiling of the
+scheduled angular-acceleration limit (°/s², §2d); and the weight w of the aerodynamic
+feed-forward, 0–1 — the gimbals are asked for M_d − w·M_aero. Nothing set, the runtime flies its
+own defaults (K_θ = 1.5, K_ω = 3 s⁻¹, 8 and 5 °/s, 5 and 3 °/s², w = 1) bit for bit; the same
+values set explicitly fly the same bits on a rigid vehicle. Pitch–yaw gains set by hand are flown
+as set: P05's flexible-vehicle cap (K_ω ≤ ω_b/ratio, §2b) applies to the default gains only, so
+that a tuning flies what its analysis showed. Debris keep the defaults.
+
+**Trials on the linearised loop.** The plant G04 records (§2f) does not depend on the gains or
+the feed-forward weight: its responses h_θ, h_ω and h_F per delivered moment are computed once
+per model on the Bode grid, and a trial's loop gain is arithmetic on them,
+L = I·K_ω(K_θ h_θ + h_ω)·N(z) / (1 + w(1 + x) h_F). The inspector's *Tuning* tab draws the
+trial's |L|, 1° step and phase margin over the flight against the flown loop's, with both
+margins and the closed loop's stability (its eigenvalues) at the instant on screen.
+
+**Auto-tune** (src/physics/rigid/tuning.ts) searches K_ω over 0.2–20 s⁻¹ (36 steps) and the ratio
+K_θ/K_ω over 0.25–0.5 — the rate loop at least twice as fast as the attitude loop, which gives the
+rigid double integrator a damping ratio ζ = ½√(K_ω/K_θ) of 0.7 to 1 — for the highest K_θ (the
+attitude loop's bandwidth) whose phase margin, gain margin and gain-reduction margin meet the
+targets (45° and 6 dB by default) over the channel's planes of 16 models sampled from the flight
+so far (or the one on screen), each candidate checked for closed-loop stability; then refines it.
+The answer is checked on every model of the flight; a model that fails joins the sample and the
+search runs again (a slosh resonance can sit at one instant only). When nothing meets the
+targets it says so and gives the stable gains nearest to them.
+
+What it finds on Falcon 9 (crosswind, over the first 55 s):
+
+- Rigid: K_θ 1.61, K_ω 3.39 s⁻¹ — the default autopilot (1.5, 3) is already at the 45° target;
+  the gimbals' 0.1 s lag sets the limit.
+- With all of P05: PM ≥ 45° and GM ≥ 6 dB cannot both be met by the two gains over the flight —
+  at T+33.5 s a slosh mode sits where lower gains lose gain margin and higher ones lose it at the
+  bending mode (no PD gains are stable at K_θ 0.5, K_ω 1.0 there). At PM ≥ 40°, GM ≥ 4 dB it
+  gives K_θ 0.74, K_ω 1.49 s⁻¹ (the flexible autopilot flies 0.91–0.99, 1.83–1.97); **flown again
+  with them, the linearised loop keeps GM ≥ 4.1 dB and PM ≥ 48.8° over the ascent** (2.3 dB and
+  40.3° with the defaults), and the flight reaches its orbit (tests/control-tuning.test.ts).
+- Without the feed-forward (w = 0) or at half of it, the rigid Falcon 9 still reaches orbit; a
+  1 °/s pitch–yaw rate limit doubles the largest attitude error of the ascent (4.9° to 11°).
+
+**Flight tests** (src/physics/rigid/attitude-test.ts; the *Flight test* tab and
+`run_attitude_test`): a step (held 0.2–20 s) or a doublet (each half as long) of 0.1–5° is added
+to the autopilot's target about one body axis — the target is rotated about its own axis, so the
+autopilot sees a change of command and guidance is untouched — in a live six-DOF flight under the
+autopilot. Every control step records the offset, the attitude reached along the axis as the IMU
+reads it (the offset less the error left to it, less the error before the test) and which
+limiter held the axis; the loop linearised at the start predicts the same response. While the test
+runs the telemetry carries a stub; the sample where it ends carries the record, once — a physics
+worker (F02) sends every sample across. It changes the flight, and is logged as an event.
+
+What the tests show on Falcon 9 at T+40 s:
+
+- Roll, 1° step: the flight follows the linear model to 0.8 % RMS of the amplitude — nothing in
+  roll limits it.
+- Pitch, 1° step: rise 0.95 s against 0.84 s, overshoot 0.3 % against 6.3 %: the
+  angular-acceleration limit holds the axis a tenth of the time, and guidance, which steers the
+  nose along the velocity, follows the velocity the offset itself bends.
+- Yaw, 3° step: rise 1.4 s against 0.84 s — the limiters the linear loop leaves out hold the
+  axis for part of it (the tab gives each one's share). A 1° pitch doublet with 1 s halves falls
+  well behind the model after the reversal, where the error to close is twice the amplitude.
+- With P05: 1.4 s against 1.3 s, the IMU's bending ripple in both.
+
+## 2h. Inertial navigation, GNSS and a star tracker (roadmap G02)
+
+Off by default, and off, the flight knows its true state bit for bit as before. On
+(`DynamicsConfig.navigation`, the Engineer mode's *Navigation* section, `configure_mission`),
+the flown vehicle carries an inertial measurement unit and flies on what its navigation
+believes (src/physics/nav/).
+
+**The IMU** (sensors.ts). Per axis, gyros and accelerometers have a turn-on bias, an in-run bias
+that wanders as a first-order Gauss–Markov process (300 s), a scale-factor error and white noise
+(angle and velocity random walk), drawn from the navigation's own seeded stream (it never moves
+the wind's). Three grades, textbook orders of magnitude (Groves, *Principles of GNSS, Inertial,
+and Multisensor Integrated Navigation Systems*, 2nd ed., ch. 4), or custom figures:
+
+| Grade | Gyro bias | ARW | Accel. bias | VRW | Scale factors | Pad alignment |
+|---|---|---|---|---|---|---|
+| Navigation (ring-laser) | 0.005 °/h | 0.002 °/√h | 30 µg | 0.01 m/s/√h | 5 / 50 ppm | 0.005° |
+| Tactical (fibre-optic) | 1 °/h | 0.05 °/√h | 500 µg | 0.05 m/s/√h | 100 / 300 ppm | 0.05° |
+| MEMS | 30 °/h | 0.3 °/√h | 5 mg | 0.2 m/s/√h | 1000 / 2000 ppm | 0.3° |
+
+At every control step the IMU gives the increments since the last one: the rotation Δθ from the
+attitude of its own case (with P05, the bent structure's at its station) and the specific-force
+velocity Δv, the true velocity change less free fall from the last state, in body axes at
+mid-step — each with its errors.
+
+**The strapdown solution** (navigation.ts) integrates them in the Earth-centred inertial frame:
+q̂ ← q̂ ⊗ exp(Δθ̂), then position and velocity as free fall under the same J2 gravity (RK4, steps of
+at most 0.5 s, so a long held coast is carried exactly) plus the rotated Δv̂. With perfect sensors
+it follows the truth to under a millimetre per second over two minutes of thrust.
+
+**The filter** is an error-state extended Kalman filter of 21 errors — position, velocity,
+attitude (an ECI rotation, C = (I + [φ×]) Ĉ), the gyros' and accelerometers' biases and scale
+factors — propagated with Φ = I + F·dt at every step (F carries the gravity gradient, −[f×],
+−Ĉ on the biases and −Ĉ·diag(f), −Ĉ·diag(ω) on the scale factors) and the sensors' noise, plus a
+tuning margin of velocity noise of 10⁻⁴ of the specific force per √s under thrust (vibration, the
+step's discretisation, misalignment). It is corrected by scalar updates and the correction folded
+into the solution:
+
+- **GNSS**: position and velocity fixes (5 m, 0.05 m/s, 1 Hz by default), with one outage to set;
+- **star tracker**: attitude (10″, 1 Hz) above 150 km and below 1 °/s of body rate.
+
+At a staging the centre of mass the flight is tracked by moves; the vehicle knows its own
+geometry, so the solution moves with it.
+
+**Who flies on it.** The autopilot reads the navigation's attitude and bias-corrected rate (the
+average over the last step) instead of the truth; ascent guidance takes its position and
+velocity; the ascent's and the burns' cut-offs judge the orbit it believes in (and its thrust
+axis for the tail-off); a coast points prograde by it. Air data (the relative wind for the load
+relief) stay true, as an air-data system would give them; planning and steering the in-orbit
+burns (src/physics/sim/burns.ts, the other session's) still read the truth.
+
+**What it shows on Falcon 9 to LEO** (crosswind; tests/navigation.test.ts):
+
+- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 1.7 per
+  axis, 0.5 % of samples outside 3σ), under 5 m and 0.1 m/s; the orbit it believes in is the true
+  one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop: the
+  attitude thrusters run at full duty 84 % of the first minute against 64 % on the truth.
+- A GNSS outage from T+60 s to T+200 s: the error grows to about 130 m and 1.9 m/s, inside the
+  filter's growing 3σ, and falls back to metres at the first fix.
+- MEMS without GNSS: 12 km and 30 m/s of error by orbit; guidance cuts off on an orbit the
+  navigation believes is 200 × 529 km while the true one is 202 × 511 km. The star tracker, above
+  150 km, brings the attitude error from 1.6° to seconds of arc.
+- Navigation grade without GNSS: 80 m and 0.6 m/s; the apoapsis 1.4 km off.
+
+**Cost**: within the run-to-run noise (runs with navigation were not slower).
+
+## 2i. Failures of the control system, and the FDIR (roadmap G08)
+
+Off by default, and off, nothing fails and every flight is the one it was, bit for bit. On
+(`DynamicsConfig.controlFaults`, the Engineer mode's *Control-system failures* section,
+`configure_mission`, or injected live with `inject_control_fault`), the flown vehicle's control
+system carries up to eight failures, each striking at its mission time — and, if given, not
+before its stage flies — and an FDIR (fault detection, isolation and recovery) that can be
+switched on or off to compare (src/physics/rigid/faults.ts, fault-config.ts). Until the first
+failure strikes, the layer hands the runtime back the very objects it was given, so the flight
+is the one without it, bit for bit.
+
+**Sensors.** Three redundant IMUs. Each reads the body rate — the IMU case's, with P05 the bent
+structure's at its station — through its failures, and integrates its own attitude from what it
+reads (a strapdown unit: e_u ← e_u + (ω_u − ω)·dt, a small rotation in body axes), so a gyro
+that reads wrong drifts that unit's attitude too. Failures: the rate about an axis read with the
+wrong sign (*rateInverted*), frozen (*gyroStuck*), a bias jump (*gyroBias*, °/s), noise
+(*gyroNoise*, 1σ °/s), and a unit that flags itself failed and puts out its diagnostic word as
+attitude — a fixed 34° error — and no rate (*imuFailure*); each on units 1–3 or on all three (a
+common-mode failure). With G02's navigation on, the selected units' errors enter its gyro and
+accelerometer increments instead, and three more apply: an accelerometer bias jump (mg), and the
+loss of GNSS or the star tracker.
+
+**Actuators.** A nozzle stuck where it stood (*gimbalStuck*); driven to its stop in pitch or yaw,
+at its own rate, whatever it is commanded (*gimbalHardover*); its rate cut and its lag stretched
+by a factor (*gimbalSlow*); or wired backwards, moving against its command — with its position
+sensor read backwards too, so the computer believes it and the jets do not make up for it
+(*actuatorPolarity*). An RCS jet stuck on, or dead. Targets are an engine (every chamber of it)
+or a jet of the stage flying when the failure strikes, or all of them.
+
+**The flight computer.** A hang (*computerHold*, s): the nozzles and jets keep the last commands
+it sent. A gain loaded with the wrong sign (*gainSign*): the control moment about that axis is
+reversed.
+
+**The FDIR**, when on:
+
+| Monitor | Detects | Recovery |
+|---|---|---|
+| IMU vote | a unit's flag; a unit whose rate (0.5 °/s), attitude (2°) or acceleration (5 mg) stays off the per-axis median of three for 0.1 s | isolate it; fly the median of three, the mean of two (a disagreement between two is reported, not resolved), the one left; with none, open the loop — the nozzles held central and no feed-forward |
+| Gimbal monitor | a nozzle more than max(0.5°, 10 % of its travel) off a model of the healthy actuator, fed the same commands, for 0.3 s (the model reads the position sensor, so a miswired nozzle passes) | shut that engine down if its stage can spare it — another engine still steers, and at most a quarter of the stage's engines (at least one) are out — else fly on |
+| Jet monitor | a jet firing at over half duty when asked for under 5 % for 0.2 s; or silent when asked for over 20 % for 0.3 s | close it off; leave it out of the allocation |
+| Watchdog | a hung computer | the backup takes over after 0.2 s |
+
+Off, the computer reads IMU 1 alone and watches nothing. An engine shut down goes the way of an
+engine-out: its share of `engineFraction` (thrust and flow alike), with the engine the FDIR named
+— not the lowest-numbered — the one that stops (`StageState.shutEngines`), so the others steer on.
+
+**Break-up.** A launcher that loses control in the air is broken up by the air: with the failures
+layer (and only with it), the attached stack is lost when q·α — the dynamic pressure times the
+total angle of attack — exceeds 300 kPa·°. The fleet's healthy ascents stay under 135 kPa·°
+(Angara A5; calm and shear winds, measured over all eighteen vehicles), much of it late in the
+ascent where q is small and α large.
+
+**The accidents re-created** (tests/control-faults.test.ts; calm wind, LEO):
+
+- **Proton-M, 2 July 2013**: the yaw-channel angular-rate sensors installed upside down. The yaw
+  rate read backwards in all three units from lift-off: the vehicle breaks up at T+12.6 s, FDIR or
+  not — three sensors wrong the same way outvote nothing.
+- **Ariane 501, 4 June 1996**: both inertial reference systems shut down on the same software
+  exception at H0+36.7 s and the on-board computer flew their diagnostic words. On Ariane 6 (the
+  fleet's nearest vehicle), all three IMUs failing at T+36.7 s: without the FDIR the nozzles go to
+  their stops and the vehicle breaks up at T+38.9 s (the real one at H0+39 s); with it, the loop is
+  opened and the vehicle — aerodynamically unstable — breaks up at T+41.4 s.
+- **Vega VV17, 17 November 2020**: two cables of the AVUM's nozzle actuators swapped at
+  integration. The AVUM+ nozzle wired backwards from stage 4: at its burn the stage tumbles (up
+  to 168° off its attitude), and the orbit is 242 × 500 km instead of 500 × 500 km. The gimbal
+  monitor sees nothing, FDIR or not.
+- **A Falcon 9 nozzle hard-over** (hypothetical) at T+60 s: without the FDIR the other eight
+  engines fight it — the angle of attack reaches 28° — and the orbit misses its apoapsis by
+  12 km; with it the engine is shut down at T+60.3 s and the flight is nominal on
+  eight.
+
+**Other failures on Falcon 9** (tests/probe; the FDIR off / on):
+
+| Failure | FDIR off | FDIR on |
+|---|---|---|
+| Gyro bias 2 °/s in pitch, IMU 1, T+30 s | breaks up at T+38.8 s: the vehicle drifts while the computer believes it on its attitude | IMU 1 isolated at T+30.1 s; nominal |
+| IMU 1 fails, T+30 s | breaks up at T+33.6 s | isolated at once; nominal |
+| The same bias on IMUs 1 and 2 | breaks up at T+38.8 s | the good IMU 3 is outvoted and isolated; breaks up at T+38.8 s |
+| Computer hang of 3 s, T+50 s | survives | backup at T+50.2 s |
+| Pitch gain of the wrong sign, T+50 s | breaks up at T+54.9 s | the same (the backup runs the same software) |
+| Every nozzle stuck, T+20 s | breaks up at T+41.3 s | the same: no engine left to steer with, none shut down |
+| RCS jet 1 stuck on, T+300 s | perigee 193 km, tumbling after the burn | jet closed off at T+300.2 s; nominal |
+| Every RCS jet dead, T+300 s | nominal (the engine steers) | the same; each jet left out as it fails to fire |
+| Gyro noise 0.5 °/s, all units | survives | survives; one unit falsely isolated at T+98 s |
+
+## 2j. PEG and IGM ascent guidance (roadmap G01)
+
+Off by default, and off, every flight is the one it was, bit for bit. On
+(`DynamicsConfig.explicitGuidance`, the Engineer mode's *Ascent guidance* section,
+`configure_mission`), the first stage still flies its pitch program; once a later stage is lit,
+or the first stage is out of the atmosphere (under 100 Pa above 70 km) with no strap-on still
+burning, an explicit law steers the rest of the ascent (src/physics/explicit-guidance.ts). Both
+point-mass and six-DOF flights take it.
+
+**The target** is the insertion orbit's perigee: the radius r_T = R + h_ins, the perigee speed
+of the insertion ellipse v_T = √(μ(2/r_T − 2/(r_T + r_a))), a flight-path angle of zero, in the
+plane of the mission's inclination through the vehicle's position — the plane the standard law
+steers into. The cut-off is still the ascent's own (src/physics/sim/ascent.ts), on the orbit
+reached, so an elliptical insertion may be cut when its apoapsis arrives and its periapsis is
+safe, before the law's own t_go runs out; the burns that follow set the rest.
+
+**The stages left** (`burnProfile`): walking the stages the ascent flies (the weak final stage
+left out, as the standard law leaves it), each at vacuum thrust from its mass at ignition —
+a(t) = a₀/(1 − t/τ), τ = v_e/a₀ — capped at the vehicle's acceleration ceiling (a constant
+acceleration while throttled), with the staging gaps as coasts. Its thrust integrals, from
+t = 0 to T, stage by stage:
+
+L = ∫a dt = −v_e ln(1 − T/τ),  J = ∫t·a dt = τL − v_e T,  H = ∫t²·a dt = τJ − v_e T²/2,
+
+S = ∫∫a = T·L − J,  Q = ∫∫t·a = T·J − H
+
+(constant acceleration: L = aT, J = aT²/2, H = aT³/3; a coast adds time only). t_go is the time
+the profile takes to give L = |v_go|; if all of it cannot, the law hands back.
+
+**The steering law** of both is the linear tangent: the thrust direction
+i_F(t) = unit(λ + λ̇·(t − t_λ)) with t_λ = J/L, which leaves the velocity gained along λ and
+moves the cut-off point by λS + λ̇(Q − S·t_λ); the turn rate
+λ̇ = (r_go − λS)/(Q − S·t_λ), with r_go the position still to gain across λ, is what the
+terminal altitude and plane need (bounded so it never turns the thrust more than 0.8 rad off λ;
+Q − S·t_λ is negative — thrust spent early moves the cut-off further than thrust spent late).
+
+- **PEG** (the Space Shuttle's Powered Explicit Guidance, in the predictor–corrector form of
+  its Unified Powered Flight Guidance; Jaggers, AIAA 77-1051, 1977) carries the velocity to be
+  gained v_go from cycle to cycle, less what the engines gave meanwhile. Each cycle: t_go and the
+  integrals from |v_go|; λ = unit(v_go); r_go = r_d − (r + v·t_go + r_grav) with its downrange
+  component left free (set so λ·r_go = S); λ̇; then the flight to cut-off is **integrated** — J2
+  gravity and the thrust on the law, RK4 in steps of at most 2 s broken at the staging edges —
+  giving the predicted r_p, v_p and the gravity displacement r_grav for the next cycle; the
+  desired state is re-aimed at r_p (r_d = r_T·unit(r_p in the plane), v_d from r_d), and the
+  miss corrects v_go: v_go += v_d − v_p. On engaging it iterates up to twelve times, then three
+  per cycle; with under 8 s to go it flies its last solution.
+- **IGM** (the Saturn V's Iterative Guidance Mode; Chandler & Smith, J. Spacecraft 4, 1967)
+  solves in closed form in the terminal frame at the predicted cut-off point: the central angle
+  to go from the mean horizontal speed and radius, gravity as the mean of its value now and at
+  the target (−μ/r² along each radius), the velocity to be gained ΔV = V_T − v − ḡ·t_go iterated
+  with t_go; the thrust along ΔV, turned by the same linear tangent terms (the Saturn's K₁…K₄)
+  for the terminal altitude and plane. In its last 20 s it steers on the velocity alone (the
+  "χ̃ mode"), in its last 3 s it holds.
+
+A new solution is blended into the last one's law over a cycle (1 s by default, 0.1–4 s), and the
+command passes a first-order filter of two cycles (shortened to t_go/20 as the cut-off nears,
+where a lag would be flown uncorrected): steps of a few hundredths of a degree at every cycle had
+kept the attitude thrusters of a Falcon 9 upper stage firing through the whole burn, and a Falcon
+Heavy's spent half its gas on the ripple the blend left and could not point its last trim burn.
+
+**The load relief, released** (the owner's choice for G01): in six-DOF flights with PEG or IGM,
+once the dynamic pressure falls under 500 Pa the command is released from where the load relief
+held it at 4 °/s (under the stack's own 5 °/s) and, below 100 Pa, at the vacuum ascent's
+1 °/s. The standard flight releases it all at once at 500 Pa: on Falcon 9 the attitude error
+jumps from 0.4° to 24° (§2d, G03). A release at 1 °/s everywhere was tried and cost 93 m/s.
+
+**What it does** (calm air, LEO insertion 200 × 500 km; tests/explicit-guidance.test.ts and
+tests/heavy/explicit-fleet-*.test.ts):
+
+- In a vacuum ascent from 120 km at 2.5 km/s, a single stage lands in 199.6 × 200.7 km (PEG) and
+  200.0 × 202.0 km (IGM) aimed at 200 × 200 km, and 399.8 × 401.1 / 399.9 × 401.7 km aimed at
+  400 × 400 km, inclination within 0.002° (the test cuts off on the target's energy); IGM's own prediction of the cut-off is hundreds of
+  kilometres off early in the burn and converges as it closes, PEG's is right from the start.
+- Falcon 9, six-DOF: the standard flight inserts at 200 × 497 km with 5415 m/s left; PEG
+  engages at T+135 s (the first stage out of the atmosphere) and inserts at 199 × 498 km with
+  5440 m/s left; IGM at 200 × 497 km with 5432 m/s. The largest attitude error after the first
+  minute falls from 37.5° to 5.5°.
+- Falcon 9, point mass: 5458 m/s left (standard), 5463 (PEG), 5465 (IGM).
+- The whole fleet on its reference missions, six-DOF in crosswind, on both laws
+  (tests/heavy/explicit-fleet-*.test.ts): all 16 vehicles reach their target orbit on PEG and
+  on IGM and pass the fleet's acceptance (32 of 32). On 14 the law takes over between T+95 s
+  (PSLV-XL) and T+182 s (Long March 5) and flies to cut-off. On Proton-M and Angara A5, at their
+  reference payloads, the stages left are short of the target when the law would take over
+  (`evt.guidanceShort`, T+111 s and T+203 s), so the standard law keeps flying and still gets
+  there. The Δv left at insertion differs by less than 30 m/s between the two laws on most
+  vehicles and by 55 m/s on PSLV-XL (PEG ahead); on Soyuz-2.1b and Vulcan IGM leaves 260–270 m/s
+  more. The flights are listed in docs/history/PARALLEL-GNC-2026-09.md, G01.
 
 ## 3. Atmosphere and aerodynamics
 

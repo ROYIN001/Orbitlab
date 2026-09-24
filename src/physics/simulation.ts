@@ -20,6 +20,7 @@
  * - `sim/rigid-link.ts` — the six-DOF body behind the stages
  */
 import type { MissionConfig, SatelliteSpec, VehicleSpec, GuidanceParams, DynamicsConfig } from '../types';
+import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
 import { vehicleById } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
@@ -30,17 +31,25 @@ import { dragCoefficient, tumblingDragCoefficient } from './aero';
 import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
 import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
 import { resolveFlexOptions } from './rigid/flex';
+import { resolveControl } from './rigid/control-config';
+import { resolveNavigation } from './nav/config';
+import { resolveControlFaults, faultSeed, validControlFaultsConfig } from './rigid/fault-config';
+import { BREAKUP_Q_ALPHA_KPA_DEG } from './rigid/faults';
+import { attitudeTestStub, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './rigid/attitude-test';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
 import { AeroEnvelopeEvents } from './rigid/envelope-events';
 import { buildRigidVehicle } from './rigid/mass';
 import { rigidContactMetrics } from './rigid/debris-runtime';
-import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from './rigid/math';
+import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from './rigid/math';
+import { gravity, gravityJ2 } from './gravity';
+import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
 import { rk4Step } from './integrator';
-import { elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
+import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
 import { VehicleModel, StageState, engineMassFlow } from './vehicle';
-import { AscentGuidance } from './guidance';
+import { AscentGuidance, planeNormalThrough } from './guidance';
+import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
 import { MissionPlan, planMission, RAAN_TOLERANCE } from './mission';
 import { DEFAULT_GUIDANCE, guidanceForVehicle } from './defaults';
 import { chronologicalEvents } from './events';
@@ -120,6 +129,11 @@ export class Simulation {
   nextDebrisId(): number { return ++this.debrisCounter; }
   readonly payloadMass: number;
   readonly headless: boolean;
+  /**
+   * E02: whether each step writes `SimState.eom` for the live equations panel. The tuner's
+   * candidate flights, which nothing displays, leave it off: it is over a tenth of their time.
+   */
+  private readonly recordEquations: boolean;
   readonly rigidRuntime?: RigidRuntime;
   private readonly rigidDt: number;
   private advanceRemainder = 0;
@@ -154,12 +168,17 @@ export class Simulation {
   private frozenCommand: Vec3 | null = null;
   /** The six-DOF vacuum-ascent command, rate-limited (RIGID_ASCENT_COMMAND_RATE). */
   private limitedCommand: Vec3 | null = null;
+  /** G01: PEG or IGM for the stages out of the atmosphere, when the mission flies one. */
+  readonly explicitGuidance?: ExplicitGuidance;
+  /** G01: the load relief's last command, from which a PEG/IGM flight releases it at a bounded rate. */
+  private relievedCommand: Vec3 | null = null;
   /** @internal ascent cut-off, max-Q, structural placard, insertion floor */
   readonly ascent: AscentMonitor;
   /** @internal injected failures */
   readonly failures: FailureInjector;
-  constructor(cfgIn: MissionConfig, opts: { headless?: boolean; rigidDt?: number; rigidOptions?: RigidRuntimeOptions } = {}) {
+  constructor(cfgIn: MissionConfig, opts: { headless?: boolean; rigidDt?: number; rigidOptions?: RigidRuntimeOptions; equations?: boolean } = {}) {
     this.headless = opts.headless ?? false;
+    this.recordEquations = opts.equations ?? true;
     const integrationStepS = opts.rigidDt ?? opts.rigidOptions?.integrationStepS ?? 0.01;
     if (!(integrationStepS > 0 && integrationStepS <= 0.02)) throw new RangeError('Rigid timestep must be in (0, 0.02] s');
     this.rigidDt = 0.01;
@@ -168,7 +187,18 @@ export class Simulation {
       if (cfgIn.dynamics.model === 'sixDof') {
         // Slosh, bending and the notch filter fly on the vehicle only, never on its debris.
         const flex = resolveFlexOptions(cfgIn.dynamics.flex);
-        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...opts.rigidOptions, integrationStepS, flex } : { ...opts.rigidOptions, integrationStepS });
+        // G03: the flown vehicle records its attitude loop for the inspector (its debris do not).
+        const options = { ...opts.rigidOptions, integrationStepS, recordLoop: opts.rigidOptions?.recordLoop ?? true };
+        // E04: the mission's autopilot tuning, on the vehicle only; absent, the runtime's defaults untouched.
+        const control = resolveControl(cfgIn.dynamics.control);
+        const tuned = control ? { ...options, controlGains: control.gains, feedForward: control.feedForward, capPitchYawGains: control.capPitchYawGains } : options;
+        // G02: inertial navigation, on the vehicle only.
+        const navigation = resolveNavigation(cfgIn.dynamics.navigation, cfgIn.dynamics.seed);
+        const navigated = navigation ? { ...tuned, navigation } : tuned;
+        // G08: the control system's failures and its FDIR, on the vehicle only.
+        const faults = resolveControlFaults(cfgIn.dynamics.controlFaults, cfgIn.dynamics.seed);
+        const faulted = faults ? { ...navigated, faults } : navigated;
+        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...faulted, flex } : faulted);
       }
     }
     this.site = siteById(cfgIn.siteId);
@@ -186,6 +216,13 @@ export class Simulation {
     this.vehicle = new VehicleModel(this.vehicleSpec, this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
     this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis,
       this.plan.suborbitalAim);
+    // G01: PEG or IGM, aimed at the same insertion orbit (orbital targets only: a suborbital flight keeps its own guidance).
+    const explicit = cfgIn.dynamics?.explicitGuidance;
+    if (explicit && !this.plan.suborbitalAim) {
+      this.explicitGuidance = new ExplicitGuidance({ law: explicit.law, cycleS: explicit.cycleS ?? 1 },
+        insertionTarget(this.plan.insertionAltitude, this.plan.insertionApoapsis, this.plan.ascentInclination),
+        { periapsis: this.plan.insertionAltitude, apoapsis: Math.max(this.plan.insertionAltitude, this.plan.insertionApoapsis) });
+    }
     this.ascent = new AscentMonitor(this);
     this.failures = new FailureInjector(this, cfg);
 
@@ -265,6 +302,97 @@ export class Simulation {
     const r = accepted.rates;
     this.event('evt.controlCommand', 'info', { mode: accepted.mode,
       rollRateRadS: r.x, pitchRateRadS: r.z === 0 ? 0 : -r.z, yawRateRadS: r.y, throttle: accepted.throttle });
+  }
+
+  /**
+   * E04: fly an attitude test — a step or a doublet added to the autopilot's target about one
+   * body axis — from the next step, and log it. Six-DOF, in flight, under the autopilot, and one
+   * at a time; otherwise the reason it cannot start.
+   */
+  private reportedAttitudeTest?: AttitudeTestRecord;
+
+  /**
+   * G02: position, velocity, altitude, elements and vertical speed as guidance knows them at a
+   * step's start — the navigation's, or the very same true values without one.
+   */
+  private navigationView(s: SimState, alt: number, el: OrbitalElements, vz: number): { r: Vec3; v: Vec3; alt: number; el: OrbitalElements; vz: number } {
+    const nav = this.rigidRuntime?.navigation;
+    if (!nav?.aligned) return { r: s.r, v: s.v, alt, el, vz };
+    const { r, v } = nav.estimate;
+    return { r, v, alt: norm(r) - R_EARTH, el: elementsFromState(r, v), vz: dot(v, normalize(r)) };
+  }
+  /**
+   * G02: the vehicle's state as its navigation knows it — position, velocity, thrust axis, orbital
+   * elements, attitude and body rate — for logic that should fly on what the vehicle knows (burn
+   * planning and steering). Without navigation these are the true state's very own objects, so
+   * reading them changes nothing.
+   */
+  knownState(): { r: Vec3; v: Vec3; dir: Vec3; elements: OrbitalElements; attitudeQ?: Quat; omegaBody?: Vec3 } {
+    const s = this.state, nav = this.rigidRuntime?.navigation;
+    if (!nav?.aligned) return { r: s.r, v: s.v, dir: s.dir, elements: s.elements, attitudeQ: s.rigid?.attitudeQ, omegaBody: s.rigid?.omegaBody };
+    const e = nav.estimate;
+    if (this.knownElements?.t !== e.t || this.knownElements.r !== e.r) this.knownElements = { t: e.t, r: e.r, elements: elementsFromState(e.r, e.v) };
+    return { r: e.r, v: e.v, dir: quatRotate(e.attitudeQ, v3(1, 0, 0)), elements: this.knownElements.elements, attitudeQ: e.attitudeQ, omegaBody: nav.rate };
+  }
+  private knownElements?: { t: number; r: Vec3; elements: OrbitalElements };
+
+  /** G02: the step end's position, velocity and thrust axis as the cut-off judges them (the truth's own objects without navigation). */
+  private navigationEnd(r: Vec3, v: Vec3, dir: Vec3): { r: Vec3; v: Vec3; dir: Vec3 } {
+    const nav = this.rigidRuntime?.navigation;
+    if (!nav?.aligned) return { r, v, dir };
+    const e = nav.estimate;
+    return { r: e.r, v: e.v, dir: quatRotate(e.attitudeQ, v3(1, 0, 0)) };
+  }
+  /** G08: tell the failures which stage is flying, before a step. */
+  private faultStage(): void {
+    const faults = this.rigidRuntime?.faults;
+    if (!faults) return;
+    faults.stage = this.vehicle.activeIndex;
+    faults.stageId = this.vehicle.active?.spec.id ?? '';
+  }
+  /** G08: after a step, the failures' and the FDIR's events, and the engines the FDIR shuts down (the others steer on). */
+  private faultOutcome(): void {
+    const faults = this.rigidRuntime?.faults;
+    if (!faults) return;
+    for (const e of faults.takeEvents()) this.event(e.key, e.severity, e.params, e.t);
+    for (const { stageId, engineIndex, t } of faults.takeShutdowns()) {
+      const st = this.vehicle.stages.find((x) => x.attached && x.spec.id === stageId);
+      if (!st || st.shutEngines?.includes(engineIndex)) continue;
+      const n = st.spec.engine.count;
+      st.shutEngines = [...(st.shutEngines ?? []), engineIndex];
+      st.engineFraction = Math.max(0, st.engineFraction - 1 / n);
+      faults.engineShut(stageId, engineIndex);
+      this.event('evt.fdirEngineShutdown', 'warn', { ...this.stageParams(st), engine: engineIndex + 1, n: Math.round(n * st.engineFraction), total: n }, t);
+    }
+  }
+  /**
+   * G08: a failure of the control system from now on (or at its time, if later). A flight that
+   * carries no failures takes them from here, with the FDIR as `fdir` says (off by default); `fdir`
+   * also switches it on a flight that does. Six-DOF and flying; otherwise the reason it cannot.
+   */
+  injectControlFault(spec: ControlFaultSpec, fdir?: boolean): 'injected' | 'notSixDof' | 'notFlying' | 'invalid' {
+    const runtime = this.rigidRuntime;
+    if (!runtime) return 'notSixDof';
+    if (!validControlFaultsConfig({ faults: [spec] }, { navigation: !!runtime.navigation })) return 'invalid';
+    if (['failed', 'done'].includes(this.state.status) || this.state.destroyed || this.done) return 'notFlying';
+    const faults = runtime.enableFaults({ faults: [], fdir: fdir === true, seed: faultSeed(this.cfg.dynamics?.seed ?? 0) });
+    if (fdir !== undefined) faults.fdir = fdir;
+    faults.add({ ...spec, time: Math.max(spec.time, this.state.t) });
+    return 'injected';
+  }
+  startAttitudeTest(spec: AttitudeTestSpec): AttitudeTestRecord | 'notSixDof' | 'notFlying' | 'manual' | 'running' {
+    validateAttitudeTestSpec(spec);
+    const runtime = this.rigidRuntime;
+    if (!runtime || !runtime.recordLoop) return 'notSixDof';
+    if (!['ascent', 'coast', 'burn', 'orbit'].includes(this.state.status) || this.state.destroyed || this.done) return 'notFlying';
+    if (runtime.command.mode !== 'auto') return 'manual';
+    if (runtime.attitudeTest && !runtime.attitudeTest.done) return 'running';
+    const record = runtime.startAttitudeTest(spec, this.state.t);
+    // The axis and sense in ISO 1151 body axes, as the control command's (src/ui/notation.ts).
+    const iso = spec.axis === 'x' ? { axis: 'roll', sign: spec.sign } : spec.axis === 'z' ? { axis: 'pitch', sign: -spec.sign } : { axis: 'yaw', sign: spec.sign };
+    this.event(spec.kind === 'doublet' ? 'evt.attitudeTestDoublet' : 'evt.attitudeTestStep', 'info',
+      { testAxis: iso.axis, amplitudeDeg: +(iso.sign * spec.amplitudeRad * RAD).toFixed(2), holdS: spec.holdS });
+    return record;
   }
 
   // ------------------------------------------------------------------ utils
@@ -516,6 +644,8 @@ export class Simulation {
     if (this.isFailed()) return 0;
     // an action may have changed the regime (e.g. coast -> burn): re-clamp the step
     dt = Math.min(dt, this.suggestedDt());
+    // E02: written by a flight step, so no step's record outlives it.
+    s.eom = undefined;
 
     if (s.status === 'prelaunch') this.stepPrelaunch(dt);
     else if (s.status === 'orbit' && !this.vehicle.inTransient(s.t)) this.stepOrbit(dt);
@@ -606,6 +736,8 @@ export class Simulation {
     const el = s.elements;
     const up = normalize(s.r);
     const vz = dot(s.v, up);
+    // G02: guidance and the cut-off fly on what the navigation knows (the truth without one).
+    const known = this.navigationView(s, alt, el, vz);
 
     // --- steering & throttle command
     let dirCmd = s.dir;
@@ -620,8 +752,8 @@ export class Simulation {
     if (s.status === 'ascent') {
       const cmd = this.guidance.update({
         requireDownrangeKick: !!this.rigidRuntime,
-        vGround: this.rigidRuntime ? sub(s.v, cross(v3(0, 0, OMEGA_EARTH), s.r)) : undefined,
-        t: s.t, r: s.r, v: s.v, vAir, altitudeAGL: alt - this.site.altitude, altitude: alt, q,
+        vGround: this.rigidRuntime ? sub(known.v, cross(v3(0, 0, OMEGA_EARTH), known.r)) : undefined,
+        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.alt - this.site.altitude, altitude: known.alt, q,
         thrustAccelFull: fullThrust.thrustFullVac / mass, isFirstStage: (active?.index ?? 0) === 0,
         thrustAccel: Math.min(fullThrust.thrust, maxAccel > 0 ? maxAccel * mass : Infinity) / mass,
         timeToGo: (dv: number) => this.vehicle.burnTimeFor(dv, false, this.plan.weakFinalStage),
@@ -632,7 +764,7 @@ export class Simulation {
         // line above only at the hand-over TO the kick stage, which is the one
         // place the lofted hand-off has to see it (see `GuidanceInputs`).
         kickStageAccel: this.vehicle.nextStageAccel(false),
-        apoapsisAlt: el.e < 1 ? el.apoapsisAlt : Infinity,
+        apoapsisAlt: known.el.e < 1 ? known.el.apoapsisAlt : Infinity,
         maxQThrottle: this.vehicleSpec.maxQThrottle, maxAccel, maxQPlacard: this.ascent.maxQAscent,
       });
       dirCmd = cmd.dir;
@@ -640,6 +772,21 @@ export class Simulation {
       s.ascentPhase = cmd.phase;
       s.pitchCmd = cmd.pitchDeg;
       s.predictedApoapsis = cmd.predictedApoapsis;
+      // G01: PEG or IGM steers once a later stage is lit or the first is out of the atmosphere;
+      // the standard law flies whenever it cannot (the stages left short of the target).
+      const explicit = this.explicitGuidance;
+      if (explicit) {
+        const iy = planeNormalThrough(normalize(known.r), this.plan.ascentInclination, normalize(cross(known.r, known.v)));
+        const steer = explicit.update({ t: s.t, r: known.r, v: known.v, iy, standardDir: cmd.dir,
+          ready: explicitReady({ closedLoop: cmd.phase === 'closedLoop', burning: s.thrust > 0, activeIndex: active?.index ?? 0, q, altitude: known.alt }),
+          profile: () => burnProfile(this.vehicle, { excludeWeakFinal: this.plan.weakFinalStage, maxAccel }) });
+        for (const e of explicit.takeEvents()) this.event(e.key, e.key === 'evt.guidanceShort' || e.key === 'evt.guidanceDiverged' ? 'warn' : 'info', e.params);
+        if (steer) {
+          dirCmd = steer;
+          s.pitchCmd = explicit.record?.pitchDeg ?? s.pitchCmd;
+          if (explicit.record?.predictedApoapsis !== undefined) s.predictedApoapsis = explicit.record.predictedApoapsis;
+        }
+      }
     } else if (s.status === 'orbit') {
       // The final cut-off's tail-off: hold the attitude it was cut off in.
       dirCmd = s.dir;
@@ -677,9 +824,12 @@ export class Simulation {
       // Above the atmosphere the ascent command swings no faster than
       // RIGID_ASCENT_COMMAND_RATE: the stage follows it, and cuts off turning
       // at the rate it was following.
-      if (s.status === 'ascent' && q < 100) {
+      // G01: a PEG/IGM flight releases the load relief (which holds the command above 500 Pa) from
+      // where it held it, at LOAD_RELIEF_RELEASE_RATE down to 100 Pa and at the vacuum rate below.
+      if (s.status === 'ascent' && (this.explicitGuidance ? q <= 500 : q < 100)) {
+        const rate = this.explicitGuidance && q >= 100 ? LOAD_RELIEF_RELEASE_RATE : RIGID_ASCENT_COMMAND_RATE;
         dirCmd = this.limitedCommand = this.limitedCommand
-          ? slerpLimited(this.limitedCommand, dirCmd, RIGID_ASCENT_COMMAND_RATE * dt) : dirCmd;
+          ? slerpLimited(this.limitedCommand, dirCmd, rate * dt) : this.relievedCommand ?? dirCmd;
       } else this.limitedCommand = null;
     }
     // An engine that has just been shut down is still tailing off. Its gimbals
@@ -734,6 +884,7 @@ export class Simulation {
     s.boosterThrottle = thr.boosterThrottle;
 
     // --- integrate
+    const rigidBefore = s.rigid; // E02: the body rates and attitude at the step start
     const area = this.vehicle.frontalArea();
     const thrustAccel = thr.thrust / mass;
     const useKepler = !thr.burning && alt > 140e3 && s.status !== 'ascent';
@@ -750,13 +901,22 @@ export class Simulation {
       rigidGLoad = 0;
     } else if (this.rigidRuntime && s.rigid) {
       const runtime = this.rigidRuntime;
+      let loadRelief: { requestedRad: number; limitRad: number; appliedRad: number } | undefined;
       if (runtime.command.mode === 'auto' && s.status === 'ascent' && q > 500) {
         const snapshot = buildRigidVehicle(this.vehicle, { pressure: atm.p, coreThrottle: thr.coreLevel, boosterThrottle: thr.boosterThrottle, boosterThrottles: thr.boosterLevels,
           time: s.t, rcsConsumedKgByStage: runtime.consumed,
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined,
           payloadLength: this.satellite.size?.height });
-        dirCmd = limitAscentCommand(dirCmd, vAir, runtime.ascentAngleLimit(snapshot, q, vAirMag / atm.a));
+        const requested = dirCmd, limitRad = runtime.ascentAngleLimit(snapshot, q, vAirMag / atm.a);
+        dirCmd = limitAscentCommand(dirCmd, vAir, limitRad);
+        if (this.explicitGuidance) this.relievedCommand = dirCmd;
+        // G03: what the load relief did, for the attitude-loop inspector.
+        if (runtime.recordLoop) {
+          const angle = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, dot(normalize(a), normalize(b)))));
+          loadRelief = { requestedRad: angle(requested, vAir), limitRad, appliedRad: angle(requested, dirCmd) };
+        }
       }
+      this.faultStage();
       const result = runtime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody }, dt,
         dirCmd, s.status === 'ascent' ? this.rigidLink.rigidSide() : bellyCmd
           ?? quatRotate(nosePointingTarget(s.rigid.attitudeQ, dirCmd), v3(0, 0, 1)), (elapsed, consumed) => buildRigidVehicle(this.vehicle, {
@@ -765,10 +925,12 @@ export class Simulation {
           propellantOffsetSeconds: elapsed, rcsConsumedKgByStage: consumed }));
       next = result.state;
       s.rigid = result.telemetry;
+      if (loadRelief && s.rigid.attitudeLoop) s.rigid.attitudeLoop.loadRelief = loadRelief;
       s.dir = quatRotate(result.state.attitudeQ, v3(1, 0, 0));
       rigidGLoad = norm(result.nonGrav) / G0;
       rigidAccelerations = result.accelerationsStart;
       this.burns.accountDeliveredDv(result.accelerationsStart.propulsionECI, thr.burning, dt);
+      this.faultOutcome();
     } else if (useKepler) {
       next = propagateKepler(s.r, s.v, dt);
     } else if (s.status === 'descent') {
@@ -825,6 +987,29 @@ export class Simulation {
     s.gLoad = rigidGLoad ?? norm(aNonGrav) / G0;
     this.ascent.trackMaxQ(alt, vz, q);
 
+    // E02: Newton's second law as this step solved it, for the live equations
+    // panel — its terms at the step start and the step's mean acceleration.
+    // Read only; nothing here feeds back into the flight.
+    if (dt > 0 && this.recordEquations) {
+      const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels);
+      const pointDrag = vAirMag > 0.1 && atm.rho > 0 && alt < 1000e3 ? scale(vAir, -dragAccel / vAirMag) : v3();
+      s.eom = {
+        t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : useKepler ? 'kepler' : 'pointMass',
+        mass, r: { ...s.r }, v: { ...s.v }, density: atm.rho, soundSpeed: atm.a, pressure: atm.p, airspeed: vAirMag,
+        airVelocity: { ...vAir }, dynamicPressure: q, mach: atm.a > 0 ? vAirMag / atm.a : 0,
+        thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea,
+        referenceArea: rigidAccelerations ? this.rigidRuntime!.snapshot?.aero.referenceArea ?? area : area,
+        ...(rigidAccelerations || held || useKepler ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
+        thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held || useKepler ? v3() : scale(s.dir, thrustAccel),
+        aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held || useKepler ? v3() : pointDrag,
+        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : held ? gravityJ2(s.r) : gravity(s.r),
+        measuredAccel: scale(sub(next.v, s.v), 1 / dt),
+        speedEnd: norm(next.v), losses: { ...s.losses },
+        ...(rigidBefore && s.rigid && rigidAccelerations ? { omega0: { ...rigidBefore.omegaBody }, omega1: { ...s.rigid.omegaBody },
+          q0: { ...rigidBefore.attitudeQ }, q1: { ...s.rigid.attitudeQ } } : {}),
+      };
+    }
+
     // --- propellant & staging
     const stepStartTime = s.t;
     if (this.rigidRuntime) { s.r = next.r; s.v = next.v; s.t += dt; }
@@ -834,7 +1019,8 @@ export class Simulation {
       if (res.coreBurnout && active) {
         // Judged on the orbit the stage leaves behind once its tail-off is over.
         const tail = this.vehicle.tailoffDeltaV(stepStartTime + dt, atm.p, this.vehicle.totalMass());
-        this.staging.onCoreBurnout(active, next.r, tail > 0 ? addScaled(next.v, s.dir, tail) : next.v);
+        const end = this.navigationEnd(next.r, next.v, s.dir);
+        this.staging.onCoreBurnout(active, end.r, tail > 0 ? addScaled(end.v, end.dir, tail) : end.v);
       }
     }
     if (!this.rigidRuntime) { s.r = next.r; s.v = next.v; s.t += dt; }
@@ -844,9 +1030,10 @@ export class Simulation {
     // --- insertion floor. Asked BEFORE the structural placard, because the
     // whole point of it is that a stack still trying to reach orbit must be
     // stopped before it is destroyed doing so (see `abandonInsertion`).
-    if (this.ascent.abandonInsertion(q, vz)) return dt;
+    if (this.ascent.abandonInsertion(q, known.vz)) return dt;
     if (this.ascent.checkStructural(q)) return dt;
     if (this.checkShellLoads()) return dt;
+    if (this.checkAeroBreakup(q)) return dt;
     this.staging.checkFairing(alt, q, atm.rho, vAirMag);
 
     // --- mission logic
@@ -857,8 +1044,10 @@ export class Simulation {
     // is several metres per second — kilometres of apoapsis.
     const tailDv = s.status === 'ascent' || s.status === 'burn'
       ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass) : 0;
-    const elCut = tailDv > 0 ? elementsFromState(s.r, addScaled(s.v, s.dir, tailDv)) : el2;
-    if (s.status === 'ascent') this.ascent.checkAscent(elCut, alt, vz);
+    const judged = this.navigationEnd(s.r, s.v, s.dir);
+    const elJudged = judged.r === s.r ? el2 : elementsFromState(judged.r, judged.v);
+    const elCut = tailDv > 0 ? elementsFromState(judged.r, addScaled(judged.v, judged.dir, tailDv)) : elJudged;
+    if (s.status === 'ascent') this.ascent.checkAscent(elCut, known.alt, known.vz);
     else if (s.status === 'coast') this.burns.checkCoast(el2);
     else if (s.status === 'burn') this.burns.checkBurn(elCut, tailDv);
 
@@ -933,20 +1122,27 @@ export class Simulation {
     const held = this.rigidRuntime && s.rigid && dt > this.rigidDt + 1e-9 ? this.rigidLink.heldCoastStep(dt) : null;
     if (held) {
       s.r = held.state.r; s.v = held.state.v; s.t += dt; s.rigid = held.telemetry;
+      // G02: the navigation coasts along, its IMU still reading.
+      this.rigidRuntime?.navigation?.advance(s.t, s.r, s.v, held.state.attitudeQ, held.state.omegaBody);
       s.dir = quatRotate(held.state.attitudeQ, v3(1, 0, 0));
       s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0; s.gLoad = 0;
       s.elements = elementsFromState(s.r, s.v);
       return;
     }
     if (this.rigidRuntime && s.rigid) {
+      // G02: prograde as the navigation knows it.
+      const nav = this.rigidRuntime.navigation?.aligned ? this.rigidRuntime.navigation.estimate : undefined;
+      const prograde = normalize(nav ? nav.v : s.v), attitude = nav ? nav.attitudeQ : s.rigid.attitudeQ;
+      this.faultStage();
       const result = this.rigidRuntime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody },
-        dt, normalize(s.v), quatRotate(nosePointingTarget(s.rigid.attitudeQ, normalize(s.v)), v3(0, 0, 1)), (_elapsed, consumed) => buildRigidVehicle(this.vehicle, {
+        dt, prograde, quatRotate(nosePointingTarget(attitude, prograde), v3(0, 0, 1)), (_elapsed, consumed) => buildRigidVehicle(this.vehicle, {
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined, payloadLength: this.satellite.size?.height, rcsConsumedKgByStage: consumed }));
       s.r = result.state.r; s.v = result.state.v; s.t += dt; s.rigid = result.telemetry;
       s.dir = quatRotate(result.state.attitudeQ, v3(1, 0, 0)); s.mass = result.snapshot.mass;
       s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0;
       s.gLoad = norm(result.nonGrav) / G0;
       s.elements = elementsFromState(s.r, s.v);
+      this.faultOutcome();
       if (norm(s.r) - R_EARTH < 80e3) {
         this.event('evt.reentry', 'fail', { alt: Math.round((norm(s.r) - R_EARTH) / 1000) });
         s.status = 'failed'; s.note = 'reentry';
@@ -1013,6 +1209,20 @@ export class Simulation {
     if (!bending || !(bending.loadRatio > 1) || !s.liftoff || this.isFailed()) return false;
     const base = this.rigidRuntime?.snapshot?.activeBase.x ?? 0;
     this.event('evt.bendingFailure', 'fail', { x: Math.round(bending.loadStationX - base), pct: Math.round(bending.loadRatio * 100) });
+    this.destroy();
+    return true;
+  }
+
+  /**
+   * G08: with the failures layer, a launcher that has lost control breaks up under the air's
+   * lateral load, q·α past BREAKUP_Q_ALPHA_KPA_DEG.
+   */
+  private checkAeroBreakup(q: number): boolean {
+    const s = this.state, rigid = s.rigid;
+    if (!this.rigidRuntime?.faults || !rigid || !s.liftoff || s.payloadSeparated || this.isFailed()) return false;
+    const alphaDeg = Math.hypot(rigid.angleOfAttack, rigid.sideslip) * RAD, qAlpha = q / 1000 * alphaDeg;
+    if (!(qAlpha > BREAKUP_Q_ALPHA_KPA_DEG)) return false;
+    this.event('evt.aeroBreakup', 'fail', { qAlpha: Math.round(qAlpha), alphaDeg: +alphaDeg.toFixed(1), q: +(q / 1000).toFixed(1) });
     this.destroy();
     return true;
   }
@@ -1085,8 +1295,21 @@ export class Simulation {
       this.telemetryGeneration++;
     }
     const act = this.vehicle.active;
+    // G04: the sample carries the loop's latest linearisation (shared, immutable) while it is recent.
+    const rigid = cloneRigidTelemetry(s.rigid), linear = this.rigidRuntime?.latestLinear;
+    if (rigid && linear && s.t - linear.t <= 1.5) rigid.linearModel = linear;
+    // G02: what the navigation believes, against the truth and the filter's σ.
+    const navigation = this.rigidRuntime?.navigation?.record();
+    if (rigid && navigation) rigid.navigation = navigation;
+    // E04: while an attitude test runs, the samples carry a stub; the one where it ends, the whole
+    // record (once — a physics worker sends every sample across).
+    const test = this.rigidRuntime?.attitudeTest;
+    if (rigid && test && s.t >= test.startS) {
+      if (!test.done) rigid.attitudeTest = attitudeTestStub(test);
+      else if (this.reportedAttitudeTest !== test) { rigid.attitudeTest = test; this.reportedAttitudeTest = test; }
+    }
     this.telemetry.push({
-      rigid: cloneRigidTelemetry(s.rigid),
+      rigid,
       t: s.t, alt: s.altitude, vInertial: s.speed, vAir: s.airspeed, q: s.q, mach: s.mach, gLoad: s.gLoad,
       mass: s.mass, thrust: s.thrust, throttle: s.throttle, pitch: s.pitchCmd,
       ap: isFinite(s.elements.apoapsisAlt) ? s.elements.apoapsisAlt : -1, pe: s.elements.periapsisAlt, inc: s.elements.i * RAD,
@@ -1098,6 +1321,8 @@ export class Simulation {
       dvRemaining: s.payloadSeparated ? this.vehicle.spacecraftDeltaV() : this.vehicle.deltaVRemaining(),
       downrange: s.downrange, lat: s.lat, lon: s.lon,
       stage: act ? act.index + 1 : 0, phase: s.status === 'ascent' ? s.ascentPhase ?? '' : s.status,
+      // G01: the explicit guidance, during the ascent.
+      ...(this.explicitGuidance?.record && s.status === 'ascent' ? { explicitGuidance: { ...this.explicitGuidance.record } } : {}),
     });
   }
 
