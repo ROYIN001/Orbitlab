@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { autoWarp, groundSpeed, reachedOrbit, watchBeat, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
+import { autoWarp, flightEnding, groundSpeed, reachedOrbit, watchBeat, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
 import { OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
-import type { VisualFrame } from '../src/physics/frame';
+import type { DebrisFrame, VisualFrame } from '../src/physics/frame';
 import type { SimEvent } from '../src/physics/simulation';
 import { en } from '../src/i18n/en';
 
@@ -80,5 +80,65 @@ describe('launch viewer beats', () => {
       expect(en[copy.label]).toBeTruthy();
       expect(en[copy.text]).toBeTruthy();
     }
+  });
+});
+
+/** A stage flown home to a landing zone, in the given phase. */
+function home(phase: NonNullable<DebrisFrame['recovery']>['phase'], alive = true): DebrisFrame {
+  return {
+    id: 1, name: 'First stage', r: { x: R_EARTH, y: 0, z: 0 }, v: { x: 0, y: 0, z: 0 }, dir: { x: 1, y: 0, z: 0 },
+    alive, burning: false, createdAt: 150, outcome: alive ? undefined : 'landed',
+    visual: { kind: 'stage', length: 41, diameter: 3.66, color: '#fff' },
+    recovery: { phase, landed: !alive, target: { kind: 'pad', id: 'lz1', lat: 0, lon: 0, alt: 3, radius: 43 } },
+  } as DebrisFrame;
+}
+
+describe('a stage flown home, and a ship', () => {
+  it('cuts to the stage for its boostback, entry, landing and touchdown, then back to the rocket', () => {
+    const upper = { altitude: 150e3, activeStageIndex: 1 };
+    const events = [ev(160, 'evt.boostbackStart'), ev(400, 'evt.entryBurnStart'), ev(470, 'evt.landingBurnStart'), ev(490, 'evt.boosterLandedZone')];
+    expect(watchBeat(frame({ t: 165, ...upper }), events)).toBe('boostback');
+    expect(watchBeat(frame({ t: 300, ...upper }), events)).toBe('upperStage');
+    expect(watchBeat(frame({ t: 405, ...upper }), events)).toBe('entryBurn');
+    expect(watchBeat(frame({ t: 475, ...upper }), events)).toBe('landingBurn');
+    expect(watchBeat(frame({ t: 495, ...upper }), events)).toBe('boosterLanded');
+    expect(watchBeat(frame({ t: 510, ...upper }), events)).toBe('upperStage');
+    expect(watchBeat(frame({ t: 495, ...upper }), [ev(490, 'evt.boosterLandedShip')])).toBe('boosterLandedShip');
+    expect(watchBeat(frame({ t: 425, ...upper }), [ev(420, 'evt.boosterCaught')])).toBe('boosterCaught');
+  });
+
+  it('follows a ship home from its cut-off to the water', () => {
+    const fast = { v: { x: 0, y: OMEGA_EARTH * R_EARTH + 7000, z: 0 } };
+    const slow = { v: { x: 0, y: OMEGA_EARTH * R_EARTH + 200, z: 0 } };
+    expect(watchBeat(frame({ t: 515, status: 'descent', descentPhase: 'coast' }), [ev(510, 'evt.suborbitalTarget')])).toBe('suborbital');
+    expect(watchBeat(frame({ t: 900, status: 'descent', descentPhase: 'coast' }), [])).toBe('shipCoast');
+    expect(watchBeat(frame({ t: 2800, status: 'descent', descentPhase: 'entry', ...fast }), [])).toBe('shipEntry');
+    expect(watchBeat(frame({ t: 3200, status: 'descent', descentPhase: 'entry', ...slow }), [])).toBe('bellyFlop');
+    expect(watchBeat(frame({ t: 3300, status: 'descent', descentPhase: 'bellyflop', ...slow }), [])).toBe('bellyFlop');
+    expect(watchBeat(frame({ t: 3500, status: 'descent', descentPhase: 'flip' }), [])).toBe('shipFlip');
+    expect(watchBeat(frame({ t: 3520, status: 'descent', descentPhase: 'landing' }), [])).toBe('shipFlip');
+    expect(watchBeat(frame({ t: 3540, status: 'landed', note: 'splashdown' }), [])).toBe('splashdown');
+    expect(watchBeat(frame({ t: 3540, status: 'landed', note: 'shipLost' }), [])).toBe('failed');
+  });
+
+  it('never runs past a stage flying home: 5× while it flies, 2× from its entry burn', () => {
+    const coast = frame({ t: 520, status: 'coast', nextBurnTime: 1500 });
+    expect(autoWarp(coast, 'coast')).toBe(50);
+    expect(autoWarp({ ...coast, debris: [home('coast')] }, 'coast')).toBe(5);
+    expect(autoWarp({ ...coast, debris: [home('landing')] }, 'coast')).toBe(2);
+    expect(autoWarp({ ...coast, debris: [home('landing', false)] }, 'coast')).toBe(50);
+    expect(autoWarp(frame({ t: 900, status: 'descent', descentPhase: 'coast' }), 'shipCoast')).toBe(50);
+    expect(autoWarp(frame({ t: 2800, status: 'descent', descentPhase: 'entry' }), 'shipEntry')).toBe(10);
+  });
+
+  it('ends the flight in orbit only once every stage flown home is down, and a ship on its splashdown', () => {
+    const inOrbit = { t: 600, status: 'orbit' as const };
+    expect(flightEnding(frame({ ...inOrbit, debris: [home('landing')] }), [])).toBeNull();
+    expect(flightEnding(frame({ ...inOrbit, debris: [home('landing', false)] }), [ev(595, 'evt.boosterLandedZone')])).toBeNull();
+    expect(flightEnding(frame({ ...inOrbit, debris: [home('landing', false)] }), [ev(585, 'evt.boosterLandedZone')])).toBe('orbit');
+    expect(flightEnding(frame({ t: 3545, status: 'landed', note: 'splashdown' }), [])).toBe('splashdown');
+    expect(flightEnding(frame({ t: 3545, status: 'landed', note: 'shipLost' }), [])).toBe('failed');
+    expect(flightEnding(frame({ t: 90, status: 'failed' }), [])).toBe('failed');
+    expect(flightEnding(frame({ t: 900, status: 'descent', descentPhase: 'coast' }), [])).toBeNull();
   });
 });

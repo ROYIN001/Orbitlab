@@ -154,6 +154,15 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
   border: 1px solid rgba(139, 229, 205, 0.45); color: var(--accent); background: rgba(12, 21, 33, 0.78);
 }
 .watch-missions-btn:hover { border-color: var(--accent); }
+.watch-follow-btn {
+  padding: 10px 14px; border-radius: 9px; font-size: 13px; white-space: nowrap;
+  border: 1px solid rgba(103, 132, 138, 0.3); color: #dce8ef; background: rgba(12, 21, 33, 0.78);
+}
+.watch-follow-btn:hover { border-color: var(--accent); color: #fff; }
+.watch-follow-btn[hidden] { display: none; }
+/* a stage home, a ship down in the water: the same green as orbit */
+.watch-caption[data-beat='boosterLanded'] .watch-beat, .watch-caption[data-beat='boosterLandedShip'] .watch-beat,
+.watch-caption[data-beat='boosterCaught'] .watch-beat, .watch-caption[data-beat='splashdown'] .watch-beat { color: var(--ok); }
 
 /* while the launch list is up, the readouts under it are only noise */
 .watch-ui.picking .watch-bottom { visibility: hidden; }

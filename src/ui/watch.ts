@@ -14,7 +14,7 @@ import type { VisualFrame } from '../physics/frame';
 import type { SimEvent } from '../physics/simulation';
 import { vehicleById } from '../data/vehicles';
 import { fmtTime } from './hud';
-import { autoWarp, groundSpeed, reachedOrbit, watchBeat, WATCH_BEATS, type WatchBeat } from './watch-logic';
+import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat } from './watch-logic';
 import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
 
 export interface WatchHost {
@@ -24,6 +24,8 @@ export interface WatchHost {
   setWarp(warp: number): void;
   /** leave for the mission builder with the current mission loaded */
   explore(): void;
+  /** point the camera at a stage flying home, or back at the rocket */
+  follow(target: 'booster' | 'rocket'): void;
 }
 
 /** 'auto' or a fixed time warp */
@@ -36,6 +38,14 @@ interface UpdateState {
   playing: boolean;
   /** the vehicle the frame belongs to */
   vehicleId: string;
+  /** a stage flown home is in the frame, and whether the camera is on it */
+  follow?: { available: boolean; booster: boolean };
+  /**
+   * The stage the camera follows instead of the rocket: the height and speed
+   * on screen are its own, or they would read 200 km and 27,000 km/h under a
+   * landing.
+   */
+  subject?: { altitude: number; speed: number };
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -73,7 +83,7 @@ export class WatchView {
   private beat: WatchBeat | null = null;
   private lastFrame: VisualFrame | null = null;
   /** the frame the end card was written for, so a language change rewrites the same card */
-  private endFrame: { frame: VisualFrame; success: boolean } | null = null;
+  private endFrame: { frame: VisualFrame; ending: 'orbit' | 'splashdown' | 'failed' } | null = null;
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
@@ -85,9 +95,10 @@ export class WatchView {
   private playBtn: HTMLButtonElement;
   private speedGroup: HTMLElement;
   private missionsBtn: HTMLButtonElement;
+  private followBtn: HTMLButtonElement;
   private picker: HTMLElement;
   private endCard: HTMLElement;
-  private shown = { label: '', text: '', clock: '', alt: '', speed: '', playing: false };
+  private shown = { label: '', text: '', clock: '', alt: '', speed: '', playing: false, follow: '' };
 
   constructor(private root: HTMLElement, private host: WatchHost) {
     root.classList.add('watch-ui');
@@ -131,8 +142,14 @@ export class WatchView {
     this.missionsBtn = el('button', 'watch-missions-btn');
     this.missionsBtn.type = 'button';
     this.missionsBtn.addEventListener('click', () => this.openPicker());
+    // Shown while a stage is flying home: the camera goes to it on its own for
+    // the landing, and this takes it there (or back) whenever the viewer likes.
+    this.followBtn = el('button', 'watch-follow-btn');
+    this.followBtn.type = 'button';
+    this.followBtn.hidden = true;
+    this.followBtn.addEventListener('click', () => this.host.follow(this.followBtn.dataset.target === 'booster' ? 'booster' : 'rocket'));
     const controls = el('div', 'watch-controls');
-    controls.append(this.playBtn, this.speedGroup, this.missionsBtn);
+    controls.append(this.playBtn, this.speedGroup, this.followBtn, this.missionsBtn);
 
     const bar = el('div', 'watch-bar');
     bar.append(stats, controls);
@@ -238,17 +255,28 @@ export class WatchView {
     }
     const clock = frame ? fmtClock(frame.t) : fmtClock(-10);
     // above the ground, so the pad reads 0 rather than the site's elevation
-    const alt = frame ? fmtAltitude(frame.altitudeAGL) : fmtAltitude(0);
-    const speed = frame ? num(frame.liftoff ? groundSpeed(frame) * 3.6 : 0) : num(0);
+    const subject = state.subject;
+    const alt = subject ? fmtAltitude(subject.altitude) : frame ? fmtAltitude(frame.altitudeAGL) : fmtAltitude(0);
+    const speed = subject ? num(subject.speed * 3.6) : frame ? num(frame.liftoff ? groundSpeed(frame) * 3.6 : 0) : num(0);
     if (clock !== this.shown.clock) { this.clockValue.textContent = clock; this.shown.clock = clock; }
     if (alt !== this.shown.alt) { this.altValue.textContent = alt; this.shown.alt = alt; }
     if (speed !== this.shown.speed) { this.speedValue.textContent = speed; this.shown.speed = speed; }
     if (state.playing !== this.shown.playing) this.syncPlay(state.playing);
+    this.syncFollow(state.follow);
     if (this.speed === 'auto' && state.playing) this.applyAutoWarp();
     if (!this.ended && frame) {
-      if (frame.status === 'failed') { this.ended = true; this.showEnd(frame, false); }
-      else if (reachedOrbit(frame, events)) { this.ended = true; this.showEnd(frame, true); }
+      const ending = flightEnding(frame, events);
+      if (ending) { this.ended = true; this.showEnd(frame, ending); }
     }
+  }
+
+  private syncFollow(follow: UpdateState['follow']): void {
+    const key = !follow || (!follow.available && !follow.booster) ? '' : follow.booster ? 'rocket' : 'booster';
+    if (key === this.shown.follow) return;
+    this.shown.follow = key;
+    this.followBtn.hidden = !key;
+    this.followBtn.dataset.target = key;
+    if (key) this.followBtn.textContent = t(key === 'booster' ? 'watch.follow.booster' : 'watch.follow.rocket');
   }
 
   private syncPlay(playing: boolean): void {
@@ -259,17 +287,21 @@ export class WatchView {
     this.playBtn.setAttribute('aria-label', title);
   }
 
-  private showEnd(frame: VisualFrame, success: boolean): void {
-    this.endFrame = { frame, success };
+  private showEnd(frame: VisualFrame, ending: 'orbit' | 'splashdown' | 'failed'): void {
+    const success = ending !== 'failed';
+    this.endFrame = { frame, ending };
     if (!this.picker.hidden) return;
     const card = this.endCard;
     card.replaceChildren();
     card.classList.toggle('failed', !success);
-    const title = el('h2', undefined, t(success ? 'watch.end.title' : 'watch.fail.title'));
+    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle' : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
-    if (success) {
+    if (ending === 'splashdown') {
+      const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
+      card.append(el('p', undefined, t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
+    } else if (success) {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
       const period = frame.elements.period;
       card.append(el('p', undefined, t('watch.end.text', {
@@ -337,8 +369,8 @@ export class WatchView {
     this.missionsBtn.textContent = t('watch.missions');
     this.syncPlay(this.shown.playing);
     // numbers are re-formatted in the new locale on the next update
-    this.shown = { ...this.shown, label: '', text: '', clock: '', alt: '', speed: '' };
+    this.shown = { ...this.shown, label: '', text: '', clock: '', alt: '', speed: '', follow: '' };
     if (!this.picker.hidden) this.renderPicker();
-    if (!this.endCard.hidden && this.endFrame) this.showEnd(this.endFrame.frame, this.endFrame.success);
+    if (!this.endCard.hidden && this.endFrame) this.showEnd(this.endFrame.frame, this.endFrame.ending);
   }
 }

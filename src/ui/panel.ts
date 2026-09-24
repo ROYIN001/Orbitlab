@@ -31,7 +31,7 @@
  *   cached per configuration, and can only make the verdict worse, never
  *   better.
  */
-import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec } from '../types';
+import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryPlan } from '../types';
 import { RATING_ORBITS, VEHICLES, vehicleById } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
@@ -79,6 +79,11 @@ interface SetupState {
   guidanceOverrides: Partial<GuidanceParams>;
   failure: FailureConfig;
   boosterRecovery: boolean;
+  /**
+   * Where each recovered stage flies back to, from a prepared mission. It
+   * belongs to one vehicle at one site, so changing either drops it.
+   */
+  recoveryPlan?: RecoveryPlan;
   payloadMass: number;
 }
 
@@ -429,6 +434,7 @@ export class SetupPanel {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
       launchTime: new Date(s.launchTime.getTime()), guidance: this.guidance, failure: { ...s.failure },
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
+      ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
       // the values above are already merged with the vehicle's own programme
       guidanceResolved: true,
       dynamics: s.dynamics ? { ...s.dynamics } : undefined,
@@ -452,6 +458,7 @@ export class SetupPanel {
       case 'date': return t('setup.validation.date');
       case 'orbitOrder': return t('setup.validation.orbitOrder');
       case 'selection': return t('setup.validation.selection');
+      case 'suborbital': return t('setup.validation.suborbital');
     }
   }
 
@@ -559,6 +566,8 @@ export class SetupPanel {
   loadMission(mission: ConfigInput & { orbitId: string }): void {
     this.cancelTune();
     Object.assign(this.state, mission);
+    // a mission without a plan must not inherit the last one's
+    this.state.recoveryPlan = mission.recoveryPlan ? structuredClone(mission.recoveryPlan) : undefined;
     this.state.dynamics = defaultDynamics(this.state.vehicleId);
     this.tuneMessage = '';
     this.applyExternalEdit();
@@ -582,7 +591,7 @@ export class SetupPanel {
     const s = this.state;
     return JSON.stringify({ vehicle: s.vehicleId, site: s.siteId, orbit: s.orbit,
       payload: s.payloadMass, satellite: s.satelliteId, launchTime: s.launchTime,
-      failure: s.failure, recovery: s.boosterRecovery, dynamics: s.dynamics });
+      failure: s.failure, recovery: s.boosterRecovery, plan: s.recoveryPlan, dynamics: s.dynamics });
   }
 
   // ─── element helpers ──────────────────────────────────────────────────────
@@ -796,6 +805,7 @@ export class SetupPanel {
       this.siteReassigned = false;
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
       if (!spec.recoverable) s.boosterRecovery = false;
+      s.recoveryPlan = undefined;
       this.render();
       this.changed();
     }));
@@ -815,6 +825,7 @@ export class SetupPanel {
     }
     s1.appendChild(this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
       s.siteId = v;
+      s.recoveryPlan = undefined;
       this.siteReassigned = false;
       this.render();
       this.changed();

@@ -144,8 +144,11 @@ to (`#/home`, `#/watch`, `#/explore`, `#/engineer`); the last one used is rememb
   ground in km/h) and one plain-language sentence about what the rocket is doing now.
   Playback runs at an automatic pace — real time for liftoff, max-Q and every separation,
   faster through the long quiet stretches — or at a fixed speed. The launch list holds
-  six real vehicles on typical missions, each flown to orbit by `tests/watch-missions.test.ts`;
-  the flight ends on a card that offers another launch or the mission builder.
+  six real flights — among them Bandwagon-1 and Arabsat-6A with their boosters landing
+  back at the Cape and on a drone ship, and Starship Flight 5 with its tower catch and
+  splashdown — each flown to its target, and every stage it flies home landed, by
+  `tests/watch-missions.test.ts`; the camera follows a returning stage for its landing,
+  and the flight ends on a card that offers another launch or the mission builder.
 - **Explore** — the mission builder below in its learning layout.
 - **Engineer** — the full workspace with every guidance parameter.
 

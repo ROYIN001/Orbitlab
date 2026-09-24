@@ -15,9 +15,9 @@ import { t } from '../i18n';
 import rigidDossierUrl from '../../docs/SIXDOF-VEHICLE-DATA.md?url';
 
 /** Flight phases the camera sequence can be programmed for. */
-export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment';
+export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment' | 'descent';
 
-export const FLIGHT_PHASES: FlightPhase[] = ['pad', 'ascent', 'staging', 'upper', 'coast', 'burn', 'orbit', 'deployment'];
+export const FLIGHT_PHASES: FlightPhase[] = ['pad', 'ascent', 'staging', 'upper', 'coast', 'burn', 'orbit', 'deployment', 'descent'];
 
 export type CameraPlan = Record<FlightPhase, CameraMode>;
 
@@ -31,6 +31,8 @@ export const DEFAULT_CAMERA_PLAN: CameraPlan = {
   burn: 'space',
   orbit: 'space',
   deployment: 'map',
+  // a ship flown home from a suborbital cut-off, from the entry interface down
+  descent: 'exterior',
 };
 
 const CAMERA_MODES: CameraMode[] = ['exterior', 'onboard', 'space', 'map'];

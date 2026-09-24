@@ -13,10 +13,18 @@ The switch in the top bar picks how much of the simulator you see:
   space station) straight away.
 - **Watch** — just the picture, three numbers (mission time, altitude, speed over the
   ground) and one sentence about what is happening and why. **Choose a launch** lists six
-  real rockets on typical missions; the speed buttons run the flight in real time (1×),
-  faster, or at **Auto**, which keeps liftoff, max-Q and every separation in real time and
-  hurries through the long coasts. When the rocket reaches orbit a card offers to keep
-  watching, watch again, pick another launch, or plan a mission of your own.
+  real flights, each flown as it was, only in daylight today: Soyuz to the space station,
+  Falcon 9's Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's
+  Arabsat-6A with the side boosters back on Landing Zones 1 and 2 and the core on a drone
+  ship, Starship Flight 5 with the booster caught by the tower and the ship splashing down
+  in the Indian Ocean, Ariane 6 with 32 Amazon Leo satellites, and Electron from New
+  Zealand. The speed buttons run the flight in real time (1×), faster, or at **Auto**,
+  which keeps liftoff, max-Q, every separation and every landing in real time and hurries
+  through the long coasts. The camera cuts to a stage flying home for its entry and
+  landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the
+  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship
+  is down in the water, a card offers to keep watching, watch again, pick another launch,
+  or plan a mission of your own.
 - **Explore** — everything below this line, in the learning layout (the advanced guidance
   parameters stay folded away).
 - **Engineer** — the same workspace with every guidance parameter open.
