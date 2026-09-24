@@ -9,6 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:heavy": "vitest run --config vitest.heavy.config.ts",
+    "test:sixdof-fleet": "vitest run --config vitest.sixdof-fleet.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

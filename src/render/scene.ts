@@ -319,7 +319,10 @@ export class SceneManager {
   /** post-processing chain: MSAA scene target -> bloom -> tone map + sRGB */
   private composer: EffectComposer;
   private sceneTarget: THREE.WebGLRenderTarget;
-  private bloomPass: UnrealBloomPass;
+  /** null when the GPU cannot render to a half-float target (see the constructor) */
+  private bloomPass: UnrealBloomPass | null = null;
+  /** the GPU can render to the half-float targets the glow needs */
+  readonly glowSupported: boolean;
   /** clear colour pre-compensated for the output pass's tone mapping */
   private clearColor = new THREE.Color();
   private clearKey = '';
@@ -463,25 +466,37 @@ export class SceneManager {
     // the same multi-frame hitch the fog and the shadow flags are carefully
     // written to avoid. Switching bloom off then costs one full-screen blit,
     // not a stall.
+    //
+    // A half-float colour attachment is only renderable with
+    // EXT_color_buffer_float (or, on some mobile GPUs, only the half-float
+    // variant). Without either the target is incomplete and every frame comes
+    // out black, and `UnrealBloomPass` hard-codes half-float for its own eleven
+    // targets. Such a GPU gets an 8-bit scene target and no bloom pass: the
+    // same chain and the same tone mapping, highlights clipped at white before
+    // it, and no glow to offer.
+    const extensions = this.renderer.extensions;
+    this.glowSupported = extensions.has('EXT_color_buffer_float') || extensions.has('EXT_color_buffer_half_float');
     const size = this.renderer.getDrawingBufferSize(new THREE.Vector2());
     this.sceneTarget = new THREE.WebGLRenderTarget(Math.max(1, size.x), Math.max(1, size.y), {
-      type: THREE.HalfFloatType, samples: 4, depthBuffer: true, stencilBuffer: false,
+      type: this.glowSupported ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: 4, depthBuffer: true, stencilBuffer: false,
     });
     this.sceneTarget.texture.name = 'orbitlab.scene';
     this.composer = new EffectComposer(this.renderer, this.sceneTarget);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, size.x), Math.max(1, size.y)), BLOOM_GROUND, BLOOM_RADIUS, BLOOM_THRESHOLD);
-    this.composer.addPass(this.bloomPass);
+    if (this.glowSupported) {
+      this.bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, size.x), Math.max(1, size.y)), BLOOM_GROUND, BLOOM_RADIUS, BLOOM_THRESHOLD);
+      this.composer.addPass(this.bloomPass);
+    }
     this.composer.addPass(new OutputPass());
   }
 
   /** Turn the bloom pass on or off (the rest of the chain always runs). */
   setBloom(on: boolean): void {
-    this.bloomPass.enabled = on;
+    if (this.bloomPass) this.bloomPass.enabled = on;
   }
 
   get bloomEnabled(): boolean {
-    return this.bloomPass.enabled;
+    return this.bloomPass?.enabled ?? false;
   }
 
   /**
@@ -743,7 +758,7 @@ export class SceneManager {
     // the pad the air already does it (and the haze in `sky.ts` is that term),
     // in vacuum only the camera does, and that is where the plume, the city
     // lights and the sun have nothing between them and the lens.
-    this.bloomPass.strength = BLOOM_GROUND + (BLOOM_SPACE - BLOOM_GROUND) * (1 - sky.groundFactor);
+    if (this.bloomPass) this.bloomPass.strength = BLOOM_GROUND + (BLOOM_SPACE - BLOOM_GROUND) * (1 - sky.groundFactor);
     this.starsMat.uniforms.uOpacity.value = sky.stars;
     this.stars.visible = sky.stars > 0.004;
     const rim = 0.25 + 0.75 * (1 - sky.groundFactor);

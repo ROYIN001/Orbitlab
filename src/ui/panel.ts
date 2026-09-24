@@ -367,8 +367,12 @@ export function missionVerdict(i: VerdictInput): Feasibility {
   if (i.payloadMass >= cap * 0.9) {
     notes.push(t('setup.verdict.tight', { mass: num(i.payloadMass), cap: num(cap), class: className }));
   }
-  if (armed !== '' || notes.length > 0) return say('warn', ...notes);
-  return say('ok', t('setup.verdict.readyMargin', { mass: num(i.payloadMass), cap: num(cap), class: className }));
+  // A dogleg is how the site flies this plane, not a problem with the mission:
+  // said, but it does not turn a ready verdict into a warning.
+  const dogleg = i.plan && i.plan.doglegDeg > 0
+    ? t('setup.verdict.dogleg', { site: siteName(i.site), deg: i.plan.doglegDeg.toFixed(1) }) : '';
+  if (armed !== '' || notes.length > 0) return say('warn', ...notes, dogleg);
+  return say('ok', t('setup.verdict.readyMargin', { mass: num(i.payloadMass), cap: num(cap), class: className }), dogleg);
 }
 
 export class SetupPanel {
@@ -1207,6 +1211,7 @@ export class SetupPanel {
       row(t('setup.info.azimuth'), `${(plan.azimuthRotating * RAD).toFixed(1)}° (${plan.descending ? 'S' : 'N'})`);
       row(t('setup.info.ascentInclination'), `${(plan.ascentInclination * RAD).toFixed(2)}°`);
       row(t('setup.info.insertion'), `${num(plan.insertionAltitude / 1000)} × ${num(plan.insertionApoapsis / 1000)} km`);
+      if (plan.doglegDeg > 0) row(t('setup.info.dogleg'), `${plan.doglegDeg.toFixed(1)}°`);
       if (plan.planeChangeDeg > 0.05) row(t('setup.info.planeChange'), `${plan.planeChangeDeg.toFixed(1)}°`, 'warn');
       row(t('setup.info.burnsDv'), `${num(plan.dvEstimateBurns)} m/s (${plan.burns.length})`);
     }
@@ -1239,9 +1244,6 @@ export class SetupPanel {
   private refreshInsertionProbe(): void {
     const plan = this.planCache;
     const s = this.state;
-    // A rigid flight is seconds of CPU work, not the cheap legacy probe.
-    // Keep editing responsive; only the cancellable worker may run it.
-    if (s.dynamics?.model === 'sixDof') { this.probeCache = null; this.probedFor = ''; return; }
     if (!plan) {
       this.probeCache = null;
       this.probedFor = '';
@@ -1262,7 +1264,11 @@ export class SetupPanel {
       + `|${g.kickDuration}|${g.gravityTurnEnd}|${g.maxTimeToGo}`;
     if (sig === this.probedFor && this.probeCache) return;
     this.probedFor = sig;
-    try { this.probeCache = probeInsertion(this.getConfig()); } catch { this.probeCache = null; }
+    // Flown as a point mass whatever the chosen model: a rigid flight is
+    // seconds of CPU work on the page's own thread, and the two models reach
+    // the same insertions across the fleet (docs/SIXDOF-ACCEPTANCE.md).
+    const cfg = this.getConfig();
+    try { this.probeCache = probeInsertion({ ...cfg, dynamics: { ...(cfg.dynamics ?? { wind: 'calm', seed: 20260919 }), model: 'pointMass' } }); } catch { this.probeCache = null; }
   }
 
   /** The current mission's verdict; see `missionVerdict`. */

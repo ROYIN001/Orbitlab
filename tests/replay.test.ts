@@ -495,7 +495,8 @@ describe('retrospectively detected events', () => {
     const { sim, rec } = flight;
     const failure = sim.events.find((e) => e.key === 'evt.engineOut')!;
     const peak = sim.events.find((e) => e.key === 'evt.maxQ')!;
-    expect(peak.t).toBeCloseTo(59, 5);
+    // T+59.2 s since engines spin up at ignition (T+59.0 s before that)
+    expect(peak.t).toBeCloseTo(59.2, 5);
     expect(failure.t).toBeCloseTo(60, 5);
     expect(sim.events.indexOf(failure)).toBeLessThan(sim.events.indexOf(peak));
     expect(rec.events.indexOf(peak)).toBeLessThan(rec.events.indexOf(failure));
@@ -517,7 +518,7 @@ describe('retrospectively detected events', () => {
   it('navigates the closest occurrence and never includes the future failure', () => {
     const { sim, rec } = flight;
     const p = new ReplayPlayer(rec);
-    expect(p.nextEventTime(58.99)).toBeCloseTo(59, 5);
+    expect(p.nextEventTime(58.99)).toBeCloseTo(59.2, 5);
     expect(p.prevEventTime(60.01)).toBeCloseTo(60, 5);
     expect(p.lastEvent(61)?.key).toBe('evt.engineOut');
     expect(p.nextEvent(59.5)?.key).toBe('evt.engineOut');

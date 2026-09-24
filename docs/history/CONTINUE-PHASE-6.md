@@ -45,10 +45,10 @@
 
 ## ตำแหน่งงาน
 
-- Main: `C:\Users\Royin\OneDrive\Desktop\Royin\Orbitlab\Claude code version`
-- Phase 6: `C:\Users\Royin\OneDrive\Desktop\Royin\Orbitlab\Orbitlab-improvements`
-- หลักฐานฉบับเต็ม: `C:\Users\Royin\OneDrive\Desktop\Royin\Orbitlab\audit-2026-09-19`
-- ข้อตกลง: `..\implementation-planning\six-dof-design-proposal-th.md`
+- Main: this repository
+- Phase 6: the owner's separate Phase 6 working copy (not part of this repository; its work was merged here)
+- หลักฐานฉบับเต็ม: โฟลเดอร์ `audit-2026-09-19` บนเครื่องของเจ้าของ (ไม่อยู่ใน repository นี้; เมทริกซ์วงโคจรที่ทำซ้ำได้คือ `npm run test:heavy`)
+- ข้อตกลง: `implementation-planning/six-dof-design-proposal-th.md` บนเครื่องของเจ้าของ (ไม่อยู่ใน repository นี้)
 - อ่าน `SIXDOF-ACCEPTANCE.md`, `SIXDOF-VEHICLE-DATA.md`, `SIXDOF-BROWSER-QA.md` ประกอบ ผลเก่าไม่ใช่หลักฐานของ source ล่าสุด
 
 ## สิ่งที่ทำแล้วในระยะ 6
@@ -91,13 +91,13 @@ Full mission convergence รอบก่อนพบ Falcon **หลังปล
 
 ## คำสั่งเริ่มต่อ
 
-ใช้ Node ที่ `C:\Users\Royin\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe` ใน phase6 worktree (`node_modules` เป็น junction ไป main checkout)
+ใช้ Node.js 20 ขึ้นไปใน checkout ของ repository นี้
 
-```powershell
+```bash
 git status --short
-& 'C:\Users\Royin\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' node_modules/typescript/bin/tsc --noEmit
+npx tsc --noEmit
 # หลังแก้รายการ1–3และfreeze source จึงรันงานหนัก
-& 'C:\Users\Royin\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe' node_modules/vitest/vitest.mjs run tests/rigid-mission-convergence.test.ts --disableConsoleIntercept
+npx vitest run tests/rigid-mission-convergence.test.ts --disableConsoleIntercept
 ```
 
 เก็บ config/source hashes/seed/dt กับผลทุกแถว ทั้ง pass และ fail ไม่รันงานหนักซ้ำโดยไม่มีเหตุผล

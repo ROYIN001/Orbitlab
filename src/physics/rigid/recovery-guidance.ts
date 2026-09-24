@@ -1,6 +1,24 @@
 /** Educational terminal-restart timing estimates, not Falcon hardware data. */
 export const TERMINAL_RESTART = { ignitionDelayS: 0.5, thrustRiseS: 0.3, contactSpeedMs: 3 } as const;
 
+/**
+ * Where in its throttle range the final landing burn is planned, as a
+ * fraction of the way from the minimum to full thrust.
+ *
+ * A stage that cannot hover gets one restart and must arrive at the ground
+ * with the burn still lit, so the burn needs room to throttle both ways once
+ * it is going: up if the stage is falling faster than planned, *down* as the
+ * burn empties the tanks and the same thrust decelerates a lighter stage
+ * harder. Timing the ignition for the minimum throttle left no room below:
+ * the constant-deceleration law asked for a little more than the minimum at
+ * ignition, braked early, and ten per cent of the stage's mass later was
+ * asking for less than the minimum — a Falcon 9 stage came to a stop 145 m
+ * above the pad, climbed on the minimum thrust it could not go below, and fell
+ * back with its tanks dry. Planning the burn mid-range is what real landing
+ * burns do for the same reason.
+ */
+export const TERMINAL_PLANNED_THROTTLE_FRACTION = 0.5;
+
 export interface MinimumBurnPrediction {
   massKg: number; propellantKg: number; downwardMs: number;
   minimumThrustN: number; minimumFlowKgS: number; gravityMs2: number;

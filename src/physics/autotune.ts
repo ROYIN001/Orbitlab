@@ -82,6 +82,9 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
     if (s.status === 'failed' || s.status === 'orbit') break;
     if (sim.events.some((e) => e.key === 'evt.parkingOrbit')) break;
   }
+  // The engine that made the parking orbit is still tailing off, and the cut-off
+  // was timed on the orbit that tail-off leaves: that is the orbit to judge.
+  for (let n = 0; n < 1000 && sim.state.status !== 'failed' && sim.vehicle.inTransient(sim.state.t); n++) sim.step(sim.suggestedDt());
   const s = sim.state;
   const parking = sim.events.find((e) => e.key === 'evt.parkingOrbit');
   const reached = !!parking && s.status !== 'failed';
@@ -197,9 +200,27 @@ export function autotune(cfg: MissionConfig, candidates?: number[], rates?: numb
     const complete = ranked.filter((r) => r.missionOnTarget);
     best = complete.length > 0 ? complete[0] : ranked[0];
   } else {
-    // nothing succeeded: prefer the candidate that got closest (highest remaining dv, then lowest maxQ)
+    // Nothing passed the ascent screen. The screen stands in for "worth flying
+    // to the end", and when every candidate fails it only for inserting away
+    // from the plan it has nothing left to say: a weak upper stage that arcs
+    // over its target and makes the orbit with the later burns — Vulcan's
+    // Centaur V under a heavy payload inserts at 137 x 1 200 km against a
+    // 250 x 500 km plan on every candidate — is exactly that case. Fly the best
+    // of them to the end, as the second pass above does for survivors, and let
+    // the mission decide.
+    const offPlan = results.filter((r) => r.reason === 'insertion')
+      .sort((a, b) => b.dvRemaining - a.dvRemaining).slice(0, rigid ? 2 : 5);
+    for (const [index, r] of offPlan.entries()) {
+      const m = flyToTarget(cfg, r.guidance);
+      r.missionOnTarget = m.onTarget;
+      r.missionMisses = m.misses;
+      if (m.endStatus !== null) r.missionEndStatus = m.endStatus;
+      onProgress?.({ phase: 'mission', completed: index + 1, total: offPlan.length });
+      if (m.onTarget) { best = r; break; }
+    }
+    // otherwise prefer the candidate that got closest (highest remaining dv, then lowest maxQ)
     const partial = results.filter((r) => r.reason === 'maxQ' || r.reason === 'dip' || r.reason === 'insertion');
-    if (partial.length > 0) best = partial.reduce((a, b) => (b.dvRemaining > a.dvRemaining ? b : a));
+    if (!best && partial.length > 0) best = partial.reduce((a, b) => (b.dvRemaining > a.dvRemaining ? b : a));
   }
   return { best, results };
 }

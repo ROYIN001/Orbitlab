@@ -3,7 +3,7 @@ import type { LaunchSiteSpec } from '../types';
 export interface SiteExtra extends LaunchSiteSpec {
   /**
    * The site's customary solution for polar / sun-synchronous targets: the
-   * southbound heading when true. A preference only — `launchDescendingFor` in
+   * southbound heading when true. A preference only — `launchDirection` in
    * src/physics/mission.ts flies whichever heading the azimuth window licenses
    * and falls back on this when the window licenses both or neither.
    */
@@ -15,7 +15,11 @@ export interface SiteExtra extends LaunchSiteSpec {
    * Audit item B25 asked for the azimuth corridor to be either wired into the
    * mission planner or removed, because `azimuthMin`/`azimuthMax` had no
    * consumer at all and `minInclination` contradicted them (Vandenberg declared
-   * 60 deg against a corridor that reaches nothing below 61.6 deg).
+   * 60 deg against a corridor that reaches nothing below 61.6 deg). Both halves
+   * are now real: `launchDirection` in src/physics/mission.ts flies the launch
+   * solution the window licenses, or a dogleg from its edge, and
+   * `azimuthAllowedFor` — the boolean form of `inclinationCorridor` — is the
+   * sun-synchronous gate in tests/fleet-defaults.test.ts.
    *
    * Every value here is MEASURED from the site's own corridor with the app's own
    * `rotatingLaunchAzimuth` at a 300 km circular orbit — both the ascending and

@@ -18,7 +18,7 @@
  * published time is modelled instead of a back-solved heat-flux limit.
  *
  * Solid-booster jettison delays follow audit item B24
- * (docs/AUDIT-2026-09-16.md): Atlas V GEM-63 5 s, Vulcan GEM-63XL 6 s, H3
+ * (docs/history/AUDIT-2026-09-16.md): Atlas V GEM-63 5 s, Vulcan GEM-63XL 6 s, H3
  * SRB-3 6 s, Long March 5 kerolox strap-ons 3 s, H-IIA SRB-A 8 s. Ariane 6's
  * P120C keeps 2 s: its separation gap was burn duration, not delay, and was
  * fixed by the B22 mean-thrust correction on the motor itself.
@@ -110,7 +110,7 @@ const VIKAS: EngineSpec = { name: 'Vikas', count: 1, thrustSL: 725 * kN, thrustV
 // HPS3 (PSLV PS3): the 240 kN figure is the peak of the grain. 7 600 kg burned
 // in the published 126.7 s is a 60 kg/s mean flow, i.e. ~174 kN mean vacuum
 // thrust — the same correction as P120C above, and the second half of audit
-// item B22 (docs/AUDIT-2026-09-16.md). The old pair burned the grain out in
+// item B22 (docs/history/AUDIT-2026-09-16.md). The old pair burned the grain out in
 // 91.6 s, 27.7 % short. https://en.wikipedia.org/wiki/Polar_Satellite_Launch_Vehicle
 const HPS3: EngineSpec = { name: 'HPS3', count: 1, thrustSL: 150 * kN, thrustVac: 174 * kN, ispSL: 260, ispVac: 295, solid: true, peakFactor: 1.44 };
 const PS4_L25: EngineSpec = { name: 'L-2-5', count: 2, thrustSL: 5 * kN, thrustVac: 7.3 * kN, ispSL: 260, ispVac: 308, vacuumOnly: true };
@@ -195,7 +195,7 @@ const f9Stage2 = (): StageSpec => ({
 // reproduces its callouts. That is a deliberate, documented divergence between
 // two records of the same hardware, not two independent estimates — which is why
 // they are two named helpers over one shared booster set rather than a copied
-// literal. See docs/AUDIT-2026-09-16.md, data proposals, "soyuz Blok A".
+// literal. See docs/history/AUDIT-2026-09-16.md, data proposals, "soyuz Blok A".
 const soyuzBoosters = (): BoosterGroupSpec[] => ([{
   id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3784, propellantMass: 39600,
   engine: RD107A, diameter: 2.68, length: 19.6, sepDelay: 1, conicalTop: true, color: '#c9c7bd',
@@ -216,7 +216,7 @@ const soyuz21bCore = (): StageSpec => ({
 /**
  * The reference orbit each `payload*` rating is quoted FOR.
  *
- * Audit item B26 (docs/AUDIT-2026-09-16.md): the setup panel shows a bare
+ * Audit item B26 (docs/history/AUDIT-2026-09-16.md): the setup panel shows a bare
  * "Rated LEO payload" and the fleet matrix grades against the same number, but a
  * rating is meaningless without the orbit it was measured to — Soyuz-2.1a's
  * 7 430 kg is to 240 km × 51.6° FROM BAIKONUR and drops to 6 800 kg from
@@ -287,6 +287,10 @@ export const VEHICLES: VehicleSpec[] = [
     // and holds booster separation, core cut-off and SECO on their published
     // times (120 / 294 / 535 s against 118 / 287 / 528 s).
     guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    // Flown as a rigid body: an early, longer kick and a faster turn allowance, the
+    // programme that passed the calm, crosswind and shear reference missions with
+    // the actuator limits unchanged (docs/SIXDOF-ACCEPTANCE.md).
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
     notes: 'The crew/cargo launcher for Soyuz MS and Progress: R-7 boosters and core with the RD-0110 third stage, direct insertion.',
   },
   {
@@ -438,6 +442,10 @@ export const VEHICLES: VehicleSpec[] = [
     maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.6 },
     // Five solids give a high initial T/W so it turns early; the loft is what the low-thrust Centaur III needs.
     guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
+    // As a rigid body the booster cannot hold the 25-35° angle of attack the point
+    // mass pitches over at near max-Q, and hands the Centaur a flatter arc; a
+    // larger kick gives the same hand-off without it (docs/SIXDOF-ACCEPTANCE.md).
+    guidanceDefaultsSixDof: { kickAngle: 8 },
     notes: 'Five solid boosters, kerolox core and a high-Isp hydrogen Centaur upper stage. The RD-180 throttles down through max-Q.',
   },
   {
@@ -516,7 +524,11 @@ export const VEHICLES: VehicleSpec[] = [
     // unchanged by it (leo/iss 25-50 % and all three GTO rows accepted) and the
     // ascent auto-tuner, which grades a candidate against the orbit the PLAN
     // asked for, stops reporting every point in its grid as an insertion miss.
-    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 30, loftAltitude: 80e3, parkingAltitude: 250e3 },
+    // Centaur V lights at 0.27-0.3 g under a near-rated payload and cannot hold
+    // altitude at any attitude, so the core has to hand it a high, climbing
+    // arc: 40° of pitch authority and a 150 km loft. At 30° / 80 km the 90 %
+    // LEO and ISS rows fell back into the air with 3.4-3.6 km/s aboard.
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 40, loftAltitude: 150e3, parkingAltitude: 250e3 },
     notes: 'Methalox first stage with up to six solids; Centaur V is a long-coast hydrogen upper stage.',
   },
   {
@@ -533,7 +545,12 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['kourou'], maxQ: 55e3, maxAccel: 45,
     // P120C solids turn the vehicle quickly; the Vinci upper stage needs the loft.
-    guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 150e3 },
+    // pitchMin 10: with the P120Cs still burning the closed loop used to
+    // command the stack level or slightly nose-down at 70 km (it sees the
+    // boosters' thrust, not the 0.84 g core that is left after they drop), and
+    // the Vulcain then spent its burn climbing back — handing Vinci a sagging
+    // arc under 13.5-19.4 t. Never pitching below 10° keeps that altitude.
+    guidanceDefaults: { kickAngle: 6, maxTurnRate: 0.3, pitchMax: 35, pitchMin: 10, loftAltitude: 150e3 },
     notes: 'Hydrogen core with four P120C solids; the Vinci upper stage restarts for multi-orbit missions.',
   },
   {
@@ -746,7 +763,9 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['sriharikota'], maxQ: 70e3, maxAccel: 60,
     // Four alternating stages; a gentle turn keeps PS2 high enough for the solid PS3.
-    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 0 },
+    // An 80 km loft: the 0.2 g PS4 cannot hold altitude, so PS3 hands it over
+    // climbing instead of level at 210 km.
+    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 80e3 },
     notes: 'Four alternating solid/liquid stages; two of six strap-ons are air-lit at T+25 s.',
   },
   {

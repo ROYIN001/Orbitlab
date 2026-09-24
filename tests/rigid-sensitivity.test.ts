@@ -187,9 +187,12 @@ describe('Soyuz max-Q authority boundary regression', () => {
     vehicle.consume(0, 1, 42.5);
     const snapshot = buildRigidVehicle(vehicle, { pressure: atmosphere(4470).p, coreThrottle: 1, boosterThrottle: 1 });
     // Measured-regime fixture, not an expected mission trace: q=25 kPa,
-    // 250 m/s, .3° flow angle and .005 rad/s steady turning rate. Required
-    // TVC trim must oppose the independent CP and damping wrench.
-    const speed = 250, flowAngle = 0.3 * DEG;
+    // 250 m/s, .6° flow angle and .005 rad/s steady turning rate. Required
+    // TVC trim must oppose the independent CP and damping wrench. The flow
+    // angle is what the calm ISS reference mission flies here with the
+    // per-vehicle aerodynamic tables (0.61° at T+40 s, 4.4 km, 24 kPa); with
+    // the earlier single-slope estimate it flew 0.3°.
+    const speed = 250, flowAngle = 0.6 * DEG;
     const aero = aerodynamicWrench(snapshot.aero, { density: 2 * 25000 / speed ** 2, speedOfSound: 320,
       airVelocityBody: v3(speed * Math.cos(flowAngle), speed * Math.sin(flowAngle), 0), omegaBody: v3(0, 0, 0.005), cgBody: snapshot.cg });
     const required = scale(aero.momentBody, -1);

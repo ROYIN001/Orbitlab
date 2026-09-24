@@ -4,11 +4,12 @@ import type { BoosterGroupSpec, StageSpec } from '../../types';
 import type { VehicleModel } from '../vehicle';
 import { engineMassFlow, engineThrust } from '../vehicle';
 import { add, scale, sub, v3, type Vec3 } from '../vec3';
-import { dragCoefficient } from '../aero';
+import { dragCoefficient, tumblingDragCoefficient } from '../aero';
 import { assertSPD, type Mat3 } from './math';
 import type { Aero6DofSpec } from './aero';
+import { AERO_MACH, ascentAeroTable, detachedAeroTable, type AeroTable } from './aero-tables';
 import {
-  chamberGeometry, getRigidVehicleGeometry, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
+  chamberGeometry, getRigidVehicleGeometry, PROPELLANT_DENSITY, PROPELLANT_LOADS, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
   type ChamberGeometry, type RcsReservoir, type RcsThrusterGeometry, type RigidVehicleGeometry,
 } from './vehicle-data';
 
@@ -27,7 +28,10 @@ export interface BudgetedEngine extends ChamberGeometry {
   upstreamThrottle?: number;
 }
 export interface RigidOperatingState {
+  /** Throttles are engine levels: a solid motor's may exceed 1 (its profile above the mean thrust). */
   pressure?: number; coreThrottle?: number; boosterThrottle?: number; time?: number;
+  /** Level of each strap-on group of the active stage; `boosterThrottle` stands in for a missing one. */
+  boosterThrottles?: readonly number[];
   /** RK trial time within a held-command step. Pure prediction, not consumption. */
   propellantOffsetSeconds?: number;
   rcsConsumedKgByStage?: Readonly<Record<string, number>>;
@@ -41,6 +45,13 @@ export interface RigidVehicleSnapshot extends MassProperties {
 }
 const diagonal = (a: number, b: number, c: number): Mat3 => [a, 0, 0, 0, b, 0, 0, 0, c];
 const finiteVector = (p: Vec3) => [p.x, p.y, p.z].every(Number.isFinite);
+
+/** A thick-walled tube about its own centre: a solid motor's grain around its bore. */
+export function annulusInertia(mass: number, outer: number, inner: number, length: number): Mat3 {
+  if (![mass, outer, inner, length].every((n) => Number.isFinite(n) && n >= 0) || inner > outer) throw new RangeError('Invalid annulus mass or dimensions');
+  const r2 = outer ** 2 + inner ** 2;
+  return diagonal(mass * r2 / 2, mass * (r2 / 4 + length ** 2 / 12), mass * (r2 / 4 + length ** 2 / 12));
+}
 
 export function cylinderInertia(mass: number, radius: number, length: number, thinShell = false): Mat3 {
   if (![mass, radius, length].every((n) => Number.isFinite(n) && n >= 0)) throw new RangeError('Invalid cylinder mass or dimensions');
@@ -115,6 +126,31 @@ export function stageMassComponents(
   addCylinder('equipment', dryStructure * 0.25, radius * 0.85, length * 0.08, add(base, v3(length * 0.06, 0, 0)));
   if (rcs && initialGas > consumed) addCylinder('rcs', initialGas - consumed, radius * 0.2, length * 0.02, rcs.centerBody);
   const fill = stage.propellantMass > 0 ? fraction(propellant / stage.propellantMass) : 0;
+  const load = PROPELLANT_LOADS[stage.id];
+  if (load?.family === 'solid') {
+    // A case-bonded grain burning outward from its bore: the length stays,
+    // the web thins, and what is left sits at the case wall.
+    const outer = radius * 0.95, port = radius * 0.3;
+    const inner = Math.sqrt(outer ** 2 - fill * (outer ** 2 - port ** 2));
+    if (propellant > 0) components.push({ id: `${ownerId}.fuel`, ownerId, mass: propellant, centerBody: add(base, v3(length * 0.5, 0, 0)),
+      inertiaAtCenter: annulusInertia(propellant, outer, inner, length * 0.9), kind: 'fuel' });
+    return components;
+  }
+  if (load) {
+    // Tanks between 10 % and 92 % of the stage, sized by volume; each
+    // liquid settled at the bottom of its tank.
+    const ratio = load.mixtureRatio ?? 2.56;
+    const [oxDensity, fuelDensity] = PROPELLANT_DENSITY[load.family];
+    const of = ratio / (1 + ratio);
+    const fuelVolume = (1 - of) / fuelDensity, oxVolume = of / oxDensity;
+    const zone = length * 0.82, fuelTank = zone * fuelVolume / (fuelVolume + oxVolume), oxTank = zone - fuelTank;
+    const fuelBottom = length * 0.10 + (load.oxidizerForward ? 0 : oxTank);
+    const oxBottom = length * 0.10 + (load.oxidizerForward ? fuelTank : 0);
+    const fuelLength = fuelTank * fill, oxLength = oxTank * fill;
+    addCylinder('fuel', propellant * (1 - of), radius * 0.90, fuelLength, add(base, v3(fuelBottom + fuelLength / 2, 0, 0)));
+    addCylinder('oxidizer', propellant * of, radius * 0.90, oxLength, add(base, v3(oxBottom + oxLength / 2, 0, 0)));
+    return components;
+  }
   const of = oxidizerFraction(stage.id);
   const fuelLength = length * 0.32 * fill, oxLength = length * 0.50 * fill;
   addCylinder('fuel', propellant * (1 - of), radius * 0.90, fuelLength, add(base, v3(length * 0.10 + fuelLength / 2, 0, 0)));
@@ -133,29 +169,77 @@ function budgetEngines(geometry: readonly ChamberGeometry[], thrustPerEngine: nu
       massFlowKgS: flowPerEngine * available * engine.thrustFraction, upstreamThrottle: upstreamThrottle * available };
   });
 }
-function aeroEstimate(area: number, length: number, base: Vec3, diameter: number): Aero6DofSpec {
-  const mach = [0, 0.6, 0.8, 0.95, 1.05, 1.2, 1.5, 2, 3, 4, 6, 10, 25];
+function aeroEstimate(area: number, length: number, base: Vec3, diameter: number, table?: AeroTable,
+  cd: (mach: number) => number = dragCoefficient): Aero6DofSpec {
   return { referenceArea: area, referenceLength: length,
-    cpBody: add(base, v3(length * 0.65, 0, 0)),
-    cdMach: mach.map((m) => [m, dragCoefficient(m)] as const), normalSlopePerRad: 2,
+    // With a table the centre of pressure is the table's; this is its reference point.
+    cpBody: table ? v3(table.cpX[0], 0, 0) : add(base, v3(length * 0.65, 0, 0)),
+    cdMach: AERO_MACH.map((m) => [m, cd(m)] as const), normalSlopePerRad: 2,
     // Aero evaluator uses L for all axes; scale roll to the diameter convention.
-    rateDamping: v3(0.2 * (diameter / Math.max(length, 1e-6)) ** 2, 10, 10), validAngleRad: 15 * Math.PI / 180 };
+    rateDamping: v3(0.2 * (diameter / Math.max(length, 1e-6)) ** 2, 10, 10), validAngleRad: 15 * Math.PI / 180,
+    ...(table ? { table } : {}) };
 }
+
+/** A payload or spacecraft flying without its launcher: a blunt body, as the point-mass model flies it. */
+const RELEASED_BODY_CD = 2.2;
+
+/** Tables per attached configuration: the stack changes only at separations. */
+const aeroTables = new Map<string, AeroTable>();
+
+function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, area: number, length: number, diameter: number,
+  base: Vec3): { table: AeroTable; cd?: (mach: number) => number } {
+  const launcher = vehicle.stages.some((st) => st.attached && !st.spec.isSpacecraft);
+  if (!launcher) {
+    const key = `released|${length}|${diameter}|${area}|${base.x}`;
+    let table = aeroTables.get(key);
+    if (!table) {
+      table = shiftTable(detachedAeroTable(length, diameter, RELEASED_BODY_CD, area), base.x);
+      aeroTables.set(key, table);
+    }
+    return { table, cd: (m) => tumblingDragCoefficient(RELEASED_BODY_CD, m) };
+  }
+  const active = vehicle.active;
+  // One booster state per strap-on group.
+  const groups = active ? active.boosters.map((b) => b.attached) : [];
+  const stageAttached = vehicle.stages.map((st) => st.attached);
+  const key = `${vehicle.spec.id}|${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${groups.map(Number).join('')}|${area}`;
+  let table = aeroTables.get(key);
+  if (!table) {
+    table = ascentAeroTable(vehicle.spec, { activeIndex: vehicle.activeIndex, stageAttached, fairingAttached: vehicle.fairingAttached, boosterGroups: groups },
+      area, (index) => geometry.stageBases[index].x);
+    aeroTables.set(key, table);
+  }
+  return { table };
+}
+
+/** A detached-body table is built about its own base; move it to the stack datum. */
+function shiftTable(table: AeroTable, dx: number): AeroTable {
+  return { ...table, cpX: table.cpX.map((x) => x + dx), baseCpX: table.baseCpX + dx, planformX: table.planformX + dx };
+}
+const MAX_LEVEL = 2;
 function validateOperating(op: RigidOperatingState): void {
-  for (const n of [op.pressure ?? 0, op.coreThrottle ?? 0, op.boosterThrottle ?? 0, op.propellantOffsetSeconds ?? 0]) {
+  for (const n of [op.pressure ?? 0, op.coreThrottle ?? 0, op.boosterThrottle ?? 0, op.propellantOffsetSeconds ?? 0, ...(op.boosterThrottles ?? [])]) {
     if (!Number.isFinite(n) || n < 0) throw new RangeError('Invalid rigid operating state');
   }
-  if ((op.coreThrottle ?? 0) > 1 || (op.boosterThrottle ?? 0) > 1) throw new RangeError('Throttle must already be clamped to [0,1]');
+  // Levels, not commands: a solid's regressive profile runs up to about 1.5 ×
+  // its mean thrust early in the burn. Anything past 2 is not an engine.
+  if ((op.coreThrottle ?? 0) > MAX_LEVEL || (op.boosterThrottle ?? 0) > MAX_LEVEL || (op.boosterThrottles ?? []).some((n) => n > MAX_LEVEL)) {
+    throw new RangeError('Engine level outside [0, 2]');
+  }
 }
 
 /** Live attached stack, keeping the original full-stack datum across staging.
  * Engine budgets sum legacy thrust; this does not consume thrust or RCS fuel.
  */
 export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState = {}): RigidVehicleSnapshot {
-  if (!['falcon9', 'soyuz21a'].includes(vehicle.spec.id)) throw new RangeError('No verified reference profile for this vehicle');
   validateOperating(op);
   const geometry = getRigidVehicleGeometry(vehicle.spec), components: MassComponent[] = [], engines: BudgetedEngine[] = [], rcs: RcsReservoir[] = [];
   const pressure = op.pressure ?? 0;
+  // A tail-off is judged at the start of the physics step, like the averaged
+  // level the caller passes: an RK substep that lands past the end of the decay
+  // must not switch the engine off for the rest of a step whose mean thrust
+  // still includes it, or the answer depends on the substep length.
+  const stepStart = op.time !== undefined ? op.time - (op.propellantOffsetSeconds ?? 0) : undefined;
   let activeBase = geometry.payloadBase, diameter = op.payloadDiameter ?? 2, highest = geometry.payloadBase.x + (op.payloadLength ?? 3);
   let firstAttached = true;
   for (const st of vehicle.stages) {
@@ -167,7 +251,10 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     const reservoir = rcsGeometry(vehicle.spec.id, st.spec, base);
     rcs.push(reservoir);
     const consumed = op.rcsConsumedKgByStage?.[st.spec.id] ?? 0;
-    const coreOn = st.index === vehicle.activeIndex && st.ignited && !st.cutoff && !st.burnedOut && vehicle.usablePropellant(st) > 0;
+    // A core that has been shut down still thrusts through its tail-off; the
+    // level the caller passes is already the decayed one (VehicleModel.thrust).
+    const coreOn = st.index === vehicle.activeIndex && st.ignited && vehicle.usablePropellant(st) > 0
+      && ((!st.cutoff && !st.burnedOut) || (stepStart !== undefined && vehicle.coreTailingOff(st, stepStart)));
     const throttle = coreOn ? op.coreThrottle ?? 0 : 0;
     const offset = op.propellantOffsetSeconds ?? 0;
     const massFlow = engineMassFlow(st.spec.engine) * st.spec.engine.count * fraction(st.engineFraction) * throttle;
@@ -180,8 +267,9 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       st.spec.engine.count, st.engineFraction, throttle));
     st.boosters.forEach((b, groupIndex) => {
       if (!b.attached) return;
-      const boosterOn = st.index === vehicle.activeIndex && b.ignited && !b.burnedOut && vehicle.usableBoosterPropellant(b) > 0;
-      const bt = boosterOn ? op.boosterThrottle ?? 0 : 0;
+      const boosterOn = st.index === vehicle.activeIndex && b.ignited && vehicle.usableBoosterPropellant(b) > 0
+        && (!b.burnedOut || (stepStart !== undefined && vehicle.boosterTailingOff(b, stepStart)));
+      const bt = boosterOn ? op.boosterThrottles?.[groupIndex] ?? op.boosterThrottle ?? 0 : 0;
       const boosterPropellant = Math.max(Math.min(b.propellant, vehicle.recoveryReserve * b.spec.propellantMass),
         b.propellant - engineMassFlow(b.spec.engine) * b.spec.engine.count * bt * offset);
       const placements = geometry.boosters.filter(p => p.stageIndex === st.index && p.groupIndex === groupIndex);
@@ -213,9 +301,10 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
   // remains a finite body after separation and must not become drag-free.
   const area = firstAttached && vehicle.payloadAttached && vehicle.payloadMass > 0
     ? Math.PI * (diameter / 2) ** 2 : vehicle.frontalArea();
+  const { table, cd } = stackAeroTable(vehicle, geometry, area, length, diameter, activeBase);
   return { ...properties, engines, rcs,
     rcsThrusters: activeReservoir?.thrusters ?? [], geometry, activeBase,
-    aero: aeroEstimate(area, length, activeBase, diameter),
+    aero: aeroEstimate(area, length, activeBase, diameter, table, cd),
     modelId: 'quasi-steady', dataRevision: RIGID_DATA_REVISION, assumptions: RIGID_DATA_ASSUMPTIONS };
 }
 

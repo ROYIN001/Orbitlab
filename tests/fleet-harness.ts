@@ -8,15 +8,16 @@
  * fixed for one and still broken for the other.
  */
 import { Simulation } from '../src/physics/simulation';
-import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
+import { DEFAULT_GUIDANCE, DEFAULT_FAILURE, guidanceForVehicle } from '../src/physics/defaults';
 import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { VEHICLES } from '../src/data/vehicles';
-import type { MissionConfig, VehicleSpec } from '../src/types';
+import type { DynamicsConfig, MissionConfig, VehicleSpec } from '../src/types';
 import { G0, DEG, RAD, R_EARTH } from '../src/physics/constants';
 import { circularSpeed, elementsFromState, rotatingLaunchAzimuth, wrapPi } from '../src/physics/orbital';
+import { physicalApsides } from '../src/physics/rigid/orbit-prediction';
 import {
-  azimuthAllowedFor, inclinationCorridor, launchDescendingFor, maxInclinationFor, resolveTarget, launchWindows,
+  azimuthAllowedFor, inclinationCorridor, launchDescendingFor, maxInclinationFor, resolveTarget, launchWindows, DOGLEG_LIMIT_DEG,
 } from '../src/physics/mission';
 
 export const LAUNCH_TIME = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
@@ -58,10 +59,15 @@ export const RAAN_TOLERANCE_DEG = 1.5;
  *
  * `sim.state.elements` is maintained by the simulation; this goes back to
  * `sim.state.r` / `sim.state.v` so that a bug in the bookkeeping of the cached
- * elements cannot pass the gate.
+ * elements cannot pass the gate. A six-DOF flight coasts under J2, so its
+ * apsides are the lowest and highest altitude of the next revolution
+ * propagated from that state, not the osculating ellipse of the instant.
  */
 export function achievedElements(sim: Simulation): ReturnType<typeof elementsFromState> {
-  return elementsFromState(sim.state.r, sim.state.v);
+  const el = elementsFromState(sim.state.r, sim.state.v);
+  if (sim.cfg.dynamics?.model !== 'sixDof' || !(el.e < 1) || el.periapsisAlt < 120e3) return el;
+  const apsides = physicalApsides({ r: sim.state.r, v: sim.state.v });
+  return apsides ? { ...el, ...apsides } : el;
 }
 
 /**
@@ -162,23 +168,31 @@ export function allCases(): FleetCase[] {
   return out;
 }
 
-export function flyCase(c: FleetCase, satelliteId = 'cubesats'): Simulation {
+/**
+ * Fly one fleet case with the vehicle's default guidance. `dynamics` flies it
+ * as a rigid body instead of the point-mass model the regular fleet test uses
+ * (the six-DOF fleet suite, `npm run test:sixdof-fleet`).
+ */
+export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: DynamicsConfig): Simulation {
   const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
   const orbit = orbitById(c.orbit);
   const window = orbit.raanMode === 'free' ? undefined : launchWindows(orbit, siteById(c.site), LAUNCH_TIME, 1)[0];
   const cfg: MissionConfig = {
     vehicleId: c.vehicle, satelliteId, siteId: c.site, orbit,
     launchTime: window?.time ?? LAUNCH_TIME,
-    guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) },
+    guidance: guidanceForVehicle(spec, DEFAULT_GUIDANCE, dynamics?.model),
     guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: c.mass,
+    ...(dynamics ? { dynamics } : {}),
   };
   const sim = new Simulation(cfg, { headless: true });
   // A GTO mission with a low-thrust kick stage (Briz-M, Fregat, PS4) splits the
   // apogee raising across several perigee passes, which really does take hours.
   const maxTime = c.orbit === 'gto' ? 30 * 3600 : 10 * 3600;
+  // Six-DOF flies its powered phases in 0.01 s control ticks.
+  const maxSteps = dynamics?.model === 'sixDof' ? 20_000_000 : 400000;
   let guard = 0;
-  while (!sim.done && sim.state.t < maxTime && guard++ < 400000) sim.step(sim.suggestedDt());
+  while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) sim.step(sim.suggestedDt());
   return sim;
 }
 
@@ -276,34 +290,38 @@ export const TANKS_EMPTY_DV = 100;
 // ---------------------------------------------------------------------------
 // 1. Not flyable from the site: range safety.
 // The sun-synchronous preset needs a retrograde heading, roughly 341-349°
-// (north-north-west) or 191-199° (south-south-west). Of the sites the fleet
-// flies from, Plesetsk (330–90°), Jiuquan and Mahia (90–200°) have a window
-// that contains one of the two. From Baikonur, Cape Canaveral, Wenchang,
-// Starbase and Xichang both headings point over populated land or another
-// country's territory, and the launch would not be licensed.
-//
-// Tanegashima, Sriharikota and Kourou are different in kind: their ranges DO
-// put payloads into sun-synchronous orbit, with a dogleg — a yaw during the
-// ascent from a licensed heading. This model flies single-plane ascents (there
-// is no yaw programme in the guidance), so the plane is out of its reach from
-// those three sites, and the reason says so rather than calling the launch
-// unlicensable.
+// (north-north-west) or 191-199° (south-south-west) depending on the site's
+// latitude. Plesetsk (330–90°), Vostochny, Vandenberg, Jiuquan, Taiyuan and
+// Mahia have a window that contains one of the two, and Kourou and Tanegashima
+// reach the plane with a dogleg of 1.2° and 1.9° off their window's edge — a
+// yaw during the ascent from a licensed heading, as their ranges really fly it
+// (`DOGLEG_LIMIT_DEG` in src/physics/mission.ts). From Baikonur, Cape
+// Canaveral, Wenchang, Starbase and Xichang both headings point over populated
+// land or another country's territory, and Sriharikota's window stops 11° short
+// of the plane — further than a dogleg turns in this model — so the launch
+// would not be licensed.
 //
 // The table is generated from the site data so it always describes the sites as
 // they are, and `azimuthAllowedFor` — the boolean form of `inclinationCorridor`
 // — is the single source of truth for it. The heading and the reach quoted are
 // measured from the same window, with `launchDescendingFor` choosing the heading
 // the planner would fly.
-const DOGLEG_SSO_SITES = new Set(['tanegashima', 'sriharikota', 'kourou']);
+/** Degrees a rotating-frame heading lies outside the site's window. */
+function outsideWindowDeg(site: { azimuthMin: number; azimuthMax: number }, azDeg: number): number {
+  const wrap = (d: number) => ((d % 360) + 360) % 360;
+  const deg = wrap(azDeg), lo = wrap(site.azimuthMin), hi = wrap(site.azimuthMax);
+  const inside = lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
+  return inside ? 0 : Math.min(wrap(lo - deg), wrap(deg - hi));
+}
 export const SITE_GEOMETRY: Record<string, string> = {};
 for (const v of VEHICLES) {
   const site = siteById(v.sites[0]);
   const inc = resolveTarget(orbitById('sso'), site, LAUNCH_TIME).inclination;
   if (azimuthAllowedFor(site, inc)) continue;
-  const az = rotatingLaunchAzimuth(site.latitude * DEG, inc, circularSpeed(R_EARTH + 300e3), launchDescendingFor(site, inc))!;
-  const reason = `a ${(inc * RAD).toFixed(1)}° orbit from ${site.name} needs a ${((az * RAD + 360) % 360).toFixed(1)}° heading, `
-    + `outside the site's ${site.azimuthMin}–${site.azimuthMax}° range-safety window, which reaches ${(maxInclinationFor(site) * RAD).toFixed(1)}° at most`
-    + (DOGLEG_SSO_SITES.has(site.id) ? '; the real range flies it with a dogleg, which this model does not' : '');
+  const az = (rotatingLaunchAzimuth(site.latitude * DEG, inc, circularSpeed(R_EARTH + 300e3), launchDescendingFor(site, inc))! * RAD + 360) % 360;
+  const reason = `a ${(inc * RAD).toFixed(1)}° orbit from ${site.name} needs a ${az.toFixed(1)}° heading, `
+    + `${outsideWindowDeg(site, az).toFixed(1)}° outside the site's ${site.azimuthMin}–${site.azimuthMax}° range-safety window, which reaches `
+    + `${(maxInclinationFor(site) * RAD).toFixed(1)}° at most — further than the ${DOGLEG_LIMIT_DEG}° dogleg this model flies`;
   fill(SITE_GEOMETRY, reason, `${v.id}/sso/25`, `${v.id}/sso/50`, `${v.id}/sso/90`);
 }
 
@@ -363,8 +381,16 @@ fill(BEYOND_CAPABILITY,
   'second stage empty at a 15 484 km apogee of the 35 786 km target (-485 m/s)',
   'falconheavy/gto/90');
 fill(BEYOND_CAPABILITY,
-  'PS1-PS4 run dry at T+908 s, suborbital at -537 x 235 km: +523 m/s of ideal margin and none of it left, which is what a four-stage solid/liquid stack with this much drag spends',
+  'PS1-PS4 run dry at T+908 s, suborbital at -695 x 273 km: +523 m/s of ideal margin and none of it left, which is what a four-stage solid/liquid stack with this much drag spends',
   'pslvxl/leo/90');
+// Filed as a guidance failure until the lofted hand-off (PSLV-XL's 80 km
+// `loftAltitude`) and the apoapsis-ceiling fixes in `AscentGuidance`: it used to
+// break up at T+569 s with 968 m/s left. Handed over climbing, the PS4 now
+// spends every kilogram and still ends suborbital — the same capability limit
+// as the 500 km row above, one ISS plane further away.
+fill(BEYOND_CAPABILITY,
+  'PS1-PS4 run dry at T+908 s, suborbital at -1 293 x 204 km: +315 m/s of ideal margin and none of it left, the same limit as the 500 km row at the same payload',
+  'pslvxl/iss/90');
 fill(BEYOND_CAPABILITY,
   'PS4 is a 7.3 kN stage: it runs dry at a 26 287 km apogee (50 %, +346 m/s) and a 9 650 km one (90 %, -414 m/s)',
   'pslvxl/gto/50', 'pslvxl/gto/90');
@@ -458,32 +484,32 @@ fill(ARCHITECTURE,
 //                                                       ->  419.1 x 421.9 km, evt.targetOrbit T+8 707 s
 //   h2a202/iss/90     420 x 436 km, three burns, 3.9 h  ->  420.5 x 421.8 km, evt.targetOrbit T+5 792 s
 //
-// The four entries below are what is left, and all four arrive here the same
-// way: the fleet gate now CHECKS the BEYOND_CAPABILITY rule instead of stating
-// it, and these are the rows that failed the check. Each one has the delta-v on
-// paper (`ascentMargin`, measured against the shipped ASCENT_LOSS_ALLOWANCE)
-// and a stage able to spend it, and each one is destroyed short of orbit. That
-// is the definition of this table.
+// The four entries that were left here — Vulcan Centaur to 500 km and the ISS
+// plane at 90 %, Ariane 64 to the ISS plane at 90 % (and its sun-synchronous
+// 90 % row, which joined when Kourou's plane became reachable with a dogleg),
+// and PSLV-XL to the ISS plane at 90 % — shared one signature: a heavy upper
+// stage lighting at a fraction of a g under a near-maximum payload, a
+// closed-loop ascent that could not hold the loft it was given, and a break-up
+// on the way back down with kilometres per second still in the tanks.
 //
-// They share one signature, which is why they are listed together: a heavy
-// upper stage lighting at a fraction of a g under a near-maximum payload, a
-// closed-loop ascent that cannot hold the loft it was given, and a break-up on
-// the max-Q placard on the way back down. The previous wave's sweep is on the
-// record and reproduces — no kick angle, turn rate, loft or pitch limit in the
-// tuning grid recovers them — which makes the fix a profile that trades the
-// loft for horizontal speed at staging, not another point in the same grid.
-// That is a wave's worth of guidance work, and it is scope, not a capability
-// statement about Vulcan, Ariane 64 or PSLV.
+// The fix was in the guidance, then in three vehicles' own programs (see
+// docs/PHYSICS.md, "Guidance defects"):
+//
+//   1. The thrust-limited pitch cap charged the weak stage the effective
+//      gravity of its present speed for the whole burn; it now uses the mean
+//      over the burn, as the centrifugal relief grows toward orbital speed.
+//   2. The apoapsis guard cut a lofted Centaur V off at 380 km and handed it
+//      a circularisation 3.4 km/s deep; it now fires only when the stack could
+//      finish at the apoapsis (the shortfall test `onCoreBurnout` uses).
+//   3. The apoapsis ceiling dived a stage that was already descending far
+//      from orbital speed, and flattened a stage flying a lofted hand-off;
+//      neither is the runaway it exists for.
+//   4. Vulcan flies 40° / 150 km loft / 3° kick, Ariane 64 never pitches below
+//      10° while its P120Cs burn, and PSLV-XL hands its PS4 over climbing.
+//
+// All four Vulcan and Ariane rows now reach their orbits; PSLV-XL runs dry
+// instead of breaking up, which is its capability limit and is filed above.
 export const KNOWN_GUIDANCE_FAILURES: Record<string, string> = {};
-fill(KNOWN_GUIDANCE_FAILURES,
-  'Centaur V lights at 0.29 g under 19.26 t and the lofted arc falls back before it reaches orbital speed: break-up at T+830-882 s with 3.4-3.6 km/s left and +2 383/+2 547 m/s of ideal ascent margin',
-  'vulcan/leo/90', 'vulcan/iss/90');
-fill(KNOWN_GUIDANCE_FAILURES,
-  'the Vulcain core hands Vinci a sagging trajectory with 19.44 t aboard: break-up at T+941 s at -2 219 x 92 km with 1.7 km/s left and +1 855 m/s of margin (the 500 km case at the same mass is accepted, 497 x 497 km, which is what rules out a capability explanation)',
-  'ariane64/iss/90');
-fill(KNOWN_GUIDANCE_FAILURES,
-  'PS4 is still 971 m/s deep with +315 m/s of ideal margin when the stack breaks up at T+568 s at -2 893 x 231 km; the same payload to the 500 km preset instead runs the tanks dry, which is a capability limit and is filed as one',
-  'pslvxl/iss/90');
 
 export const EXCLUDED: Record<string, string> = {
   ...SITE_GEOMETRY, ...BEYOND_CAPABILITY, ...ARCHITECTURE, ...KNOWN_GUIDANCE_FAILURES,

@@ -116,7 +116,8 @@ describe('reference vehicle mass and geometry closure', () => {
 
   it.each(['falcon9', 'soyuz21a'])('%s evaluates RK trial mass/CG without consuming legacy fuel', id => {
     const vm = new VehicleModel(vehicleById(id), 1000, id === 'falcon9');
-    vm.igniteStage(vm.stages[0], 0); vm.stages[0].boosters.forEach(b => vm.igniteBooster(b));
+    // lit five seconds ago, so past its start-up transient
+    vm.igniteStage(vm.stages[0], -5); vm.stages[0].boosters.forEach(b => vm.igniteBooster(b));
     const thrust = vm.thrust(0, 101325, 0.8);
     const op = { pressure: 101325, coreThrottle: thrust.coreThrottle, boosterThrottle: thrust.boosterThrottle };
     const before = JSON.stringify(vm), initial = buildRigidVehicle(vm, op);

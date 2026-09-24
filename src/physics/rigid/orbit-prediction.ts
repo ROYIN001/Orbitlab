@@ -105,6 +105,95 @@ export function nextJ2Apsis(initial: PointState, kind: ApsisKind, options: J2Aps
   return null;
 }
 
+export interface PhysicalApsides {
+  periapsisAlt: number;
+  apoapsisAlt: number;
+  /** from the initial state to the lowest and to the highest point, s */
+  periapsisTimeS: number;
+  apoapsisTimeS: number;
+}
+
+/**
+ * The lowest and highest altitude of the next revolution under J2, m: the
+ * apsides a six-DOF orbit is judged on. The osculating ellipse of one instant
+ * swings several kilometres around them in low orbit — a 500 km circle reads
+ * anywhere from 501 to 515 km of apoapsis round one revolution — so a mission
+ * judged on it passes or fails by where on the orbit its last burn ended.
+ * Sampled at the forecast step and refined to the apsis on either side of each
+ * extreme sample. Null when the path is unbound or reaches the surface.
+ */
+export function physicalApsides(initial: PointState, options: J2CoastOptions = {}): PhysicalApsides | null {
+  const dt = checkedStep(initial, options);
+  const energy = dot(initial.v, initial.v) / 2 - MU_EARTH / norm(initial.r);
+  if (!(energy < 0)) return null;
+  const period = 2 * Math.PI * Math.sqrt((-MU_EARTH / (2 * energy)) ** 3 / MU_EARTH);
+  checkedDuration(period, dt);
+  let state = copy(initial);
+  // Each extreme sample keeps the state one step before it (the initial
+  // state for the starting point itself) and when that was.
+  let low = { radius: norm(state.r), before: state, beforeTime: 0, time: 0 }, high = low;
+  for (let time = 0; time < period;) {
+    const h = Math.min(dt, period - time), after = step(state, h), radius = norm(after.r);
+    if (!(radius > R_EARTH)) return null;
+    if (radius < low.radius) low = { radius, before: state, beforeTime: time, time: time + h };
+    if (radius > high.radius) high = { radius, before: state, beforeTime: time, time: time + h };
+    state = after; time += h;
+  }
+  const refined = (sample: typeof low, kind: ApsisKind) => {
+    const found = nextJ2Apsis(sample.before, kind, { stepS: dt, maxTimeS: 2 * dt, includeInitial: true });
+    const better = found && (kind === 'apoapsis' ? found.radiusM > sample.radius : found.radiusM < sample.radius);
+    return better ? { radius: found.radiusM, time: sample.beforeTime + found.timeS } : sample;
+  };
+  const lowest = refined(low, 'periapsis'), highest = refined(high, 'apoapsis');
+  return { periapsisAlt: lowest.radius - R_EARTH, apoapsisAlt: highest.radius - R_EARTH,
+    periapsisTimeS: lowest.time, apoapsisTimeS: highest.time };
+}
+
+/** What a six-DOF correction aims at: the lowest, the highest, or the mean of the two altitudes of the next revolution. */
+export type AltitudeMeasure = 'lowest' | 'highest' | 'mean';
+
+/**
+ * The speed along `direction` that puts one measure of the next revolution
+ * under J2 at `targetAltM`. Every measure rises with the speed, so the scan
+ * brackets the first crossing and bisects it. The mean of the lowest and
+ * highest altitude is what a correction to a circular target aims at: a J2
+ * orbit through the burn point rises and falls by kilometres whatever the
+ * speed (Electron's 600 km sun-synchronous "circle" ran 599.6–616.5 km), so
+ * its lowest point cannot be put AT the target from the top of that swing, but
+ * its middle always can. Null when no crossing lies in the bracket.
+ */
+export function shootJ2Altitude(initial: PointState, direction: Vec3, measure: AltitudeMeasure, targetAltM: number,
+  options: J2ShootingOptions): { velocity: Vec3; speedMS: number; altitudeM: number } | null {
+  checkedStep(initial, options);
+  if (!finiteVector(direction) || !(norm(direction) > 0) || !Number.isFinite(targetAltM)
+    || !(options.minSpeedMS > 0) || !(options.maxSpeedMS > options.minSpeedMS)) throw new RangeError('Invalid altitude shooting bracket');
+  const tolerance = options.radiusToleranceM ?? 0.5;
+  const unit = normalize(direction);
+  const evaluate = (speedMS: number) => {
+    const velocity = scale(unit, speedMS), apsides = physicalApsides({ r: initial.r, v: velocity }, options);
+    if (!apsides) return null;
+    const altitudeM = measure === 'lowest' ? apsides.periapsisAlt : measure === 'highest' ? apsides.apoapsisAlt
+      : (apsides.periapsisAlt + apsides.apoapsisAlt) / 2;
+    return { velocity, speedMS, altitudeM, missM: altitudeM - targetAltM };
+  };
+  let left: ReturnType<typeof evaluate> = null, right: ReturnType<typeof evaluate> = null;
+  for (let index = 0; index <= 8; index++) {
+    const candidate = evaluate(options.minSpeedMS + (options.maxSpeedMS - options.minSpeedMS) * index / 8);
+    if (candidate && Math.abs(candidate.missM) <= tolerance) return candidate;
+    if (left && candidate && Math.sign(left.missM) !== Math.sign(candidate.missM)) { right = candidate; break; }
+    left = candidate;
+  }
+  if (!left || !right) return null;
+  for (let iteration = 0; iteration < 40; iteration++) {
+    const mid = evaluate((left.speedMS + right.speedMS) / 2);
+    if (!mid) return null;
+    if (Math.abs(mid.missM) <= tolerance) return mid;
+    if (Math.sign(mid.missM) === Math.sign(left.missM)) left = mid;
+    else right = mid;
+  }
+  return null;
+}
+
 export interface J2ApsisShot {
   /** An advisory desired velocity, not an impulse applied to vehicle state. */
   velocity: Vec3;

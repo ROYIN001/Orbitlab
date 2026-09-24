@@ -25,7 +25,8 @@ import { FEATURED_WATCH_MISSION, watchMissionSettings, type WatchMissionId } fro
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
-import { FlightRecorder } from './replay/recorder';
+import { FlightRecorder, type RecordingSource } from './replay/recorder';
+import { InlineSession, WorkerSession, createPhysicsWorker, type FlightSession, type SessionWorker } from './session/session';
 import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
@@ -37,7 +38,11 @@ import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
+import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
+
+/** The viewer's own choice of glow, remembered between visits. */
+const GLOW_STORAGE_KEY = 'orbitlab.glow';
 
 /** Proper rotation: rendered +Y nose to physics +X nose, no reflection. */
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
@@ -143,9 +148,26 @@ class App {
   watch: WatchView;
   /** which face of the app is showing (src/ui/app-mode.ts) */
   mode: AppMode = 'home';
+  /** The mission being flown: its simulation, its recording and their clock (src/session). */
+  session: FlightSession | null = null;
+  /**
+   * The mission's simulation, `session.sim`. With the physics in the worker it
+   * is the main-thread shell: every read works, nothing here may step it.
+   */
   sim: Simulation | null = null;
-  recorder = new FlightRecorder();
+  /** The mission's recording, `session.recorder` (an empty one before the first mission). */
+  recorder: RecordingSource = new FlightRecorder();
   player = new ReplayPlayer(this.recorder);
+  /**
+   * Where the physics runs: in a worker (the default), or on the main thread
+   * where a module worker cannot start or `?physics=inline` asks for it.
+   */
+  private physicsMode: 'worker' | 'inline' = new URLSearchParams(location.search).get('physics') === 'inline' ? 'inline' : 'worker';
+  /** The one physics worker, shared by every mission; undefined until first needed. */
+  private physicsWorker: SessionWorker | null | undefined;
+  private sessionCount = 0;
+  /** mission time at the previous animation frame, for the achieved-warp readout */
+  private rateLastT: number | null = null;
   simView: FrameSimView | null = null;
   rocket: RocketView | null = null;
   pad: LaunchPadView | null = null;
@@ -195,12 +217,8 @@ class App {
   private liveBtn!: HTMLButtonElement;
   private warpSel!: HTMLSelectElement;
   private glowBtn!: HTMLButtonElement;
-  /** the glow is still following the frame rate (nobody has pressed the button) */
-  private glowAuto = true;
-  /** smoothed frame time, s — drives the automatic glow cut-out */
-  private frameTime = 1 / 60;
-  /** frames drawn since start (the glow heuristic ignores the first few seconds) */
-  private frames = 0;
+  /** decides from the frame rate whether the glow is affordable (src/render/glow-governor.ts) */
+  private readonly glow = new GlowGovernor();
   /** kept alive for as long as the app is: it publishes `--sb-h` */
   private sbObserver: ResizeObserver | null = null;
   private sbHeight = -1;
@@ -216,9 +234,8 @@ class App {
     new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
     this.rigidControls = new RigidControls(document.getElementById('rigid-controls')!, command => {
-      if (!this.sim || !this.player.live) return;
-      this.sim.setRigidCommand(command);
-      this.recorder.captureChangedState();
+      if (!this.session || !this.player.live) return;
+      this.session.setRigidCommand(command);
       this.telTimer = 1;
     });
     this.viewport = document.getElementById('viewport')!;
@@ -331,6 +348,7 @@ class App {
   getPerformance(): Record<string, unknown> {
     const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory;
     return { achievedWarp: this.achievedWarp, physicsControlStepS: this.sim?.rigidRuntime ? 0.01 : null,
+      physicsThread: this.session?.kind ?? null,
       recording: this.recorder.stats(), recordingBytesIncludeRigidMaps: true,
       usedJSHeapBytes: memory?.usedJSHeapSize ?? null, allocatedJSHeapBytes: memory?.totalJSHeapSize ?? null };
   }
@@ -387,6 +405,7 @@ class App {
   async init(): Promise<void> {
     const tex = await loadEarthTextures(base);
     this.scene = new SceneManager(this.glCanvas, tex);
+    this.restoreGlow();
     this.debrisView = new DebrisView(this.scene);
     this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line);
     this.cams.attach(this.viewport);
@@ -456,9 +475,11 @@ class App {
       // overlay is not a modal — a click that lands here first must not throw.
       if (!this.scene) return;
       // Touching the control also takes it off automatic: whoever has an
-      // opinion about the glow outranks the frame-rate heuristic.
-      this.glowAuto = false;
+      // opinion about the glow outranks the frame-rate heuristic, and it is
+      // remembered for the next visit.
+      this.glow.settle();
       this.setGlow(!this.scene.bloomEnabled);
+      try { localStorage.setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
     });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
@@ -695,15 +716,20 @@ class App {
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;
+    let session: FlightSession;
     try {
-      this.sim = new Simulation(cfg);
+      session = this.createSession(cfg);
       this.rigidControls.reset();
     } catch (err) {
       console.error(err);
       return;
     }
-    this.recorder.start(this.sim);
-    this.player.reset();
+    this.session?.dispose();
+    this.session = session;
+    this.sim = session.sim;
+    this.recorder = session.recorder;
+    this.player.use(this.recorder);
+    this.rateLastT = null;
     this.simView = createFrameSimView(this.sim);
     // a copy, like every other frame the views are handed: the pad frame is the
     // first entry of the recording and must not be reachable from the HUD
@@ -724,6 +750,36 @@ class App {
     this.updatePlayButton();
     this.updateMissionName();
     this.setupViews();
+  }
+
+  /**
+   * A session for `cfg`: in the physics worker, or on the main thread when the
+   * worker cannot be had. A worker that fails before it has flown anything is
+   * given up for the rest of the page, and the mission is rebuilt in-process.
+   */
+  private createSession(cfg: MissionConfig): FlightSession {
+    if (this.physicsMode === 'worker') {
+      if (this.physicsWorker === undefined) this.physicsWorker = createPhysicsWorker();
+      const worker = this.physicsWorker;
+      if (worker) {
+        return new WorkerSession(cfg, worker, ++this.sessionCount,
+          (message) => this.physicsFallback(cfg, message, worker),
+          (message) => { console.error('physics worker:', message); this.playing = false; this.updatePlayButton(); });
+      }
+      this.physicsMode = 'inline';
+    }
+    return new InlineSession(cfg);
+  }
+
+  /** The worker could not fly the mission: fly it on the main thread instead. */
+  private physicsFallback(cfg: MissionConfig, message: string, worker: SessionWorker): void {
+    console.warn('Physics worker unavailable, flying on the main thread instead:', message);
+    worker.terminate();
+    if (this.physicsWorker === worker) this.physicsWorker = null;
+    this.physicsMode = 'inline';
+    const wasPlaying = this.playing;
+    this.preview(cfg);
+    if (wasPlaying) { this.playing = true; this.panel.setRunning(true); this.updatePlayButton(); }
   }
 
   private setupViews(): void {
@@ -786,6 +842,28 @@ class App {
     this.preview(this.panel.getConfig());
   }
 
+  /**
+   * The glow as the viewer last left it, or none at all on a GPU that cannot
+   * draw it (no renderable half-float target): the button then says why
+   * instead of toggling nothing.
+   */
+  private restoreGlow(): void {
+    if (!this.scene.glowSupported) {
+      this.glow.settle();
+      this.setGlow(false);
+      this.glowBtn.disabled = true;
+      this.glowBtn.setAttribute('data-i18n-title', 'ctl.glowUnsupported');
+      this.glowBtn.title = t('ctl.glowUnsupported');
+      return;
+    }
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(GLOW_STORAGE_KEY); } catch { /* storage blocked */ }
+    if (stored === 'on' || stored === 'off') {
+      this.glow.settle();
+      this.setGlow(stored === 'on');
+    }
+  }
+
   /** Switch the bloom pass and keep the button's state in sync with it. */
   private setGlow(on: boolean): void {
     this.scene.setBloom(on);
@@ -794,54 +872,59 @@ class App {
   }
 
   /**
-   * Drop the glow when the machine cannot afford it.
-   *
-   * Bloom is eleven extra full-screen passes; on an integrated GPU at a high
-   * pixel ratio that is the difference between 60 fps and a slideshow, and a
-   * simulator that stutters is worse than one without a halo round the plume.
-   * The frame time is smoothed over about a second so that a single long frame
-   * — a shader compile, a tab coming back to the foreground — does not trip it,
-   * and the decision is only ever taken while nobody has touched the control.
+   * Let the frame rate decide whether the glow stays (see `GlowGovernor`).
+   * Frames that measure something other than the renderer are left out: a
+   * fast-forward spends up to 30 ms of every frame on physics, and a frame
+   * longer than the 100 ms clamp is a tab coming back from the background.
    */
-  private autoGlow(dtReal: number): void {
-    this.frameTime += (dtReal - this.frameTime) * 0.05;
-    // Warm-up: the first seconds are texture uploads, shader compiles and the
-    // first mission being built, none of which say anything about the steady
-    // frame rate.
-    if (this.frames++ < 240) return;
-    if (!this.glowAuto || !this.scene.bloomEnabled) return;
-    if (this.frameTime > 0.032) this.setGlow(false);
+  private autoGlow(elapsedWall: number): void {
+    const measuring = this.fastForwardTo === null && elapsedWall < 0.1 && document.visibilityState === 'visible';
+    const action = this.glow.sample(elapsedWall, this.scene.bloomEnabled, measuring);
+    if (action) this.setGlow(action === 'on');
   }
 
   private frame(now: number): void {
     const elapsedWall = Math.max(0, (now - this.lastFrame) / 1000);
     const dtReal = Math.min(0.1, elapsedWall);
     this.lastFrame = now;
-    this.autoGlow(dtReal);
+    this.autoGlow(elapsedWall);
     const sim = this.sim;
-    const beforeSimulationTime = sim?.state.t ?? 0;
+    const session = this.session;
     // The live flight runs whether or not the user is watching the head.
-    if (sim && this.playing) {
+    if (sim && session && this.playing) {
       const target = this.fastForwardTo;
       if (target !== null && target > sim.state.t + 1e-3 && !sim.isFailed()) {
-        const budget = performance.now() + 30; // ms per frame for fast-forward
-        while (sim.state.t < target - 1e-3 && performance.now() < budget && !sim.isFailed()) {
-          const before = sim.state.t;
-          this.recorder.advance(Math.min(600, target - sim.state.t), 3000, budget);
-          if (sim.state.t <= before) break; // no progress: give up rather than spin
-        }
-        if (sim.state.t >= target - 1e-3 || sim.isFailed()) this.fastForwardTo = null;
+        // In the worker the chunks run on their own; on the main thread
+        // `tick` spends up to 30 ms of this frame on them.
+        session.fastForward(target);
+        session.tick();
+        if (!session.fastForwarding) this.fastForwardTo = null;
       } else {
         this.fastForwardTo = null;
-        // a wall-clock budget as well as a step budget, so a high warp cannot
-        // spend the whole animation frame inside the integrator
-        this.recorder.advance(dtReal * this.warp, 20000, performance.now() + 8);
+        session.halt();
+        // A wall-clock budget as well as a step budget, so a high warp cannot
+        // spend the whole animation frame inside the integrator. The worker
+        // has a thread of its own and may use most of a frame's worth.
+        // The 0.1 s clamp on the frame time keeps a slow renderer from being
+        // handed huge steps; with the physics off the main thread a slow
+        // renderer no longer slows the flight, so the worker is asked for the
+        // wall time that really passed (up to half a second — longer is a
+        // tab coming back from the background, not a slow frame).
+        const worker = session.kind === 'worker';
+        const budget = worker ? Math.min(450, Math.max(8, 900 * elapsedWall)) : 8;
+        session.advance((worker ? Math.min(0.5, elapsedWall) : dtReal) * this.warp, budget);
       }
-    }
+    } else session?.halt();
+    // Measured frame to frame: in the worker, the time asked for this frame
+    // arrives before the next one.
+    const simT = sim?.state.t ?? 0;
+    const flown = this.rateLastT === null ? 0 : Math.max(0, simT - this.rateLastT);
+    this.rateLastT = sim ? simT : null;
     if (sim?.rigidRuntime && this.playing && !sim.isFailed()) {
       this.rateWallSeconds += elapsedWall;
-      this.rateSimSeconds += Math.max(0, sim.state.t - beforeSimulationTime);
-      if (this.rateWallSeconds >= 0.5) {
+      this.rateSimSeconds += flown;
+      // Replies from the worker arrive in bursts; average over a longer window there.
+      if (this.rateWallSeconds >= (session?.kind === 'worker' ? 2 : 0.5)) {
         this.achievedWarp = this.rateSimSeconds / this.rateWallSeconds;
         this.rateWallSeconds = 0; this.rateSimSeconds = 0;
       }

@@ -3,24 +3,17 @@ import { Simulation } from '../src/physics/simulation';
 import { rigidMission } from './rigid-harness';
 import { buildRigidVehicle } from '../src/physics/rigid/mass';
 import { quatFromBasis } from '../src/physics/rigid/math';
-import { elementsFromState, type OrbitalElements } from '../src/physics/orbital';
+import { elementsFromState } from '../src/physics/orbital';
 import { cross, norm, normalize, v3 } from '../src/physics/vec3';
 import * as prediction from '../src/physics/rigid/orbit-prediction';
-import type { BurnPlan } from '../src/physics/mission';
-import { MU_EARTH, R_EARTH, J2_EARTH } from '../src/physics/constants';
+import { G0, MU_EARTH, R_EARTH, J2_EARTH } from '../src/physics/constants';
 
-type Boundary = {
-  scheduleNextBurn(el: OrbitalElements): void; startBurn(burn: BurnPlan): void; checkBurn(el: OrbitalElements): void;
-  checkCoast(el: OrbitalElements): void;
-  rigidBurnForecast: unknown; rigidTransfer: { requiredDv: number; deliveredDv: number } | null;
-  burnIgnited: boolean; stalledReplans: number; pending: { label: string; t: number }[];
-};
-const boundary = (sim: Simulation) => sim as unknown as Boundary;
+const boundary = (sim: Simulation) => sim.burns;
 
 function cutoffFixture() {
   const sim = new Simulation(rigidMission('leo'), { headless: true });
   sim.state.t = 0; sim.step(0);
-  boundary(sim).pending = [];
+  sim.pending = [];
   sim.vehicle.stages[0].attached = false; sim.vehicle.activeIndex = 1; sim.vehicle.fairingAttached = false;
   sim.vehicle.stages[1].propellant = 20000;
   sim.vehicle.cutoffStage(sim.vehicle.stages[1], 476);
@@ -61,18 +54,25 @@ describe('J2-consistent six-DOF burn planning', () => {
     const correction = sim.state.currentBurn!;
     expect(correction.physicalApoapsis).toBe(500000);
     expect(sim.plan.burns.map(b => b.kind)).toEqual(['raiseApoapsis', 'shapeAtApoapsis']);
-    boundary(sim).pending = [];
+    sim.pending = [];
     boundary(sim).startBurn(correction);
     boundary(sim).checkBurn(sim.state.elements);
     expect(correction.done).toBe(false); // cannot finish before physical ignition/impulse
-    const fuel = sim.vehicle.active!.propellant;
+    const fuel = sim.vehicle.active!.propellant, mass = sim.vehicle.totalMass();
     let maximumDelivered = 0;
     for (let count = 0; count < 4000 && !correction.done && !sim.done; count++) {
       sim.step(sim.suggestedDt());
       maximumDelivered = Math.max(maximumDelivered, boundary(sim).rigidTransfer?.deliveredDv ?? 0);
     }
     expect(correction.done).toBe(true);
-    expect(maximumDelivered).toBeGreaterThan(3);
+    expect(maximumDelivered).toBeGreaterThan(0);
+    // The burn is cut off on the orbit its tail-off leaves behind, so the
+    // correction is only complete once that tail-off has been flown — and the
+    // next burn is planned from there.
+    for (let count = 0; count < 1000 && sim.vehicle.inTransient(sim.state.t); count++) sim.step(sim.suggestedDt());
+    expect(sim.vehicle.inTransient(sim.state.t)).toBe(false);
+    const delivered = G0 * sim.vehicle.active!.spec.engine.ispVac * Math.log(mass / sim.vehicle.totalMass());
+    expect(delivered).toBeGreaterThan(3);
     expect(sim.vehicle.active!.propellant).toBeLessThan(fuel);
     expect(boundary(sim).stalledReplans).toBe(0);
     expect(sim.state.currentBurn?.kind).toBe('shapeAtApoapsis');
@@ -91,13 +91,13 @@ describe('J2-consistent six-DOF burn planning', () => {
     expect(sim.state.status).toBe('coast'); expect(sim.state.thrust).toBe(0);
     sim.setRigidCommand({ mode: 'auto', rates: v3(), throttle: 0 });
     boundary(sim).checkCoast(sim.state.elements);
-    expect(boundary(sim).pending.filter(action => action.label === 'burnStart')).toHaveLength(1);
+    expect(sim.pending.filter(action => action.label === 'burnStart')).toHaveLength(1);
     expect(sim.state.currentBurn).not.toBe(burn);
     const firstForecast = boundary(sim).rigidBurnForecast;
     sim.vehicle.active!.engineFraction = 0.8;
     boundary(sim).checkCoast(sim.state.elements);
     expect(boundary(sim).rigidBurnForecast).not.toBe(firstForecast);
-    expect(boundary(sim).pending.filter(action => action.label === 'burnStart')).toHaveLength(1);
+    expect(sim.pending.filter(action => action.label === 'burnStart')).toHaveLength(1);
   });
 
   it('retains physical state and an honest off-target result if a needed forecast has no solution', () => {

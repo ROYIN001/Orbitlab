@@ -31,6 +31,53 @@ d²r/dt² = −μ r/|r|³ (+ J2 term in orbit) + (T/m) û_T − ½ ρ |v_air| C_
   atmosphere, up to 30 s in orbit). Exo-atmospheric unpowered coasts use the analytic
   Kepler solution. Mass varies linearly inside a step.
 
+## 2a. Six-DOF flight
+
+Every vehicle flies by default as a **rigid body**: the state adds a quaternion attitude and
+three body rotation rates to **r** and **v**, and the thrust no longer points where guidance
+asks — guidance asks an autopilot, and the autopilot moves real actuators. Each chamber of each
+engine sits where its bell is drawn and swings within its own travel (two planes, or one plane
+tangential to the stage for the Soyuz, Proton and Long March patterns) at a finite rate and lag;
+verniers and attitude thrusters add their own forces; a stage that cannot roll with its engines
+rolls with thrusters. Mass, centre of gravity and the full inertia tensor are rebuilt from the
+stages' structure, tanks and grains as the propellant drains, and the aerodynamic forces and
+moments come from per-configuration tables (§3). The data and their sources are in
+[SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md), the acceptance gates and results in
+[SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md).
+
+The autopilot runs a fixed 0.01 s control clock; the rigid body is integrated with RK4 inside
+it. Two rules keep that affordable and honest over a mission that lasts a day:
+
+- **Held coast.** In vacuum, engines off, the autopilot settled on its prograde target and
+  turning with it, nothing disturbs the body and the turn costs no gas: the stretch is flown in
+  the coast's own long steps, the attitude carried round with the velocity direction at the lag
+  the autopilot keeps. Control ticks resume for an engine, air, a manual command, a rate off the
+  target's, and 30 s before a burn's pre-orientation.
+- **Steering the thrusters can live with.** Above the atmosphere the ascent command swings no
+  faster than 1 °/s, and in the last 4 s of an orbital burn it is held: the direction of a
+  vanishing Δv swings, and a gimballed stage that followed it cut off turning faster than its
+  attitude thrusters could stop before the next burn. A burn waits for its attitude as long as
+  those thrusters need, not a fixed four minutes.
+
+A six-DOF coast is flown under J2, and there the osculating ellipse of one instant is not the
+orbit: its apsides swing several kilometres round a revolution (a 500 km circle reads anywhere
+from 501 to 515 km of apoapsis). So a six-DOF orbit is **judged on its physical apsides** — the
+lowest and highest altitude of the next revolution under J2 — when the mission decides it is
+on target, in the event that says so, on the result panel and in the acceptance tests. The
+planner aims at the same orbit: a coast that arrives above or below the target corrects its
+physical apex before circularising there; the last circularisation to a circular target, when
+no plane change is left, is shot so that the middle of that revolution's lowest and highest
+altitude is the target (a J2 orbit through the burn point rises and falls by kilometres
+whatever its speed — Electron's 600 km sun-synchronous orbit ran 599–624 km after a conic
+circularisation, 595–602 km after an aimed one); and a mission about to end with its physical
+apsides outside the band flies up to two such corrections. An aimed burn is flown along the
+velocity direction at the point it is centred on, held still through the burn. Point-mass
+coasts are Kepler, where the two are the same.
+
+The point-mass model below remains selectable in the setup, and the fleet acceptance matrix
+(§6b) of the regular test suite flies it; the same matrix flown in six-DOF is recorded in
+[SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md).
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic
@@ -60,6 +107,19 @@ Two drag laws, because the model flies two kinds of body:
   coefficient since the type was written and nothing read it, so boosters, stages and fairing
   halves all fell with the slender ascent curve: two to seven times too little drag, landing too
   fast and too far downrange.
+
+In **six-DOF** flight the attitude matters, so the body also feels a normal force and a
+moment, from a table built for each configuration of the vehicle (Falcon 9 and Soyuz-2.1a;
+`src/physics/rigid/aero-tables.ts`, data in [SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)).
+The normal force is slender-body lift — made where the cross-section grows going down from the
+nose: the fairing, a boat-tail, each strap-on's nose cone — plus viscous crossflow drag on the
+whole planform, which grows with sin²α and acts near its middle (Allen & Perkins; Jorgensen).
+So the centre of pressure is not a fixed point: it moves aft as the angle of attack grows and,
+on Falcon 9, once the flow is supersonic. The table covers every angle from nose first to
+engines first, which is what a tumbling stage or a stage flown back for landing needs: broadside,
+a spent stage now meets the crossflow on its whole side (about ten times the old estimate) and a
+returning Falcon stage carries the lift of its grid fins at its top. The ascent command cone uses
+the same table to find the largest angle of attack whose moment the engines can trim.
 
 Dynamic pressure q = ½ ρ v_air² is tracked for the max-Q event, and the **structural placard** is
 armed continuously from liftoff until payload separation: exceeding 1.15 × the vehicle's quoted
@@ -102,6 +162,59 @@ ln(1/(1−c)) = Pc, which makes that integral exactly 1 for any peak — 1.2 →
 A solid **first stage** gets the same ignition factor as a solid **booster**; applying it only
 to boosters made the same P120C count differently on Vega-C and on Ariane 6, and understated
 Vega-C's liftoff thrust-to-weight by a third.
+
+**Start-up and shutdown transients.** No engine goes from nothing to full thrust, or back, in
+one integration step. A pump-fed liquid engine reaches rated chamber pressure about a second
+after ignition, while its turbopump spins up; a solid motor's igniter pressurises the grain in a
+few tenths of a second. After shutdown a liquid engine tails off over a few tenths of a second
+as the lines and the pump run down, and a solid motor's burn-out is the last slivers of grain
+burning away over a second or two. The model flies both:
+
+| | start-up (0 → full) | tail-off time constant τ |
+|---|---|---|
+| liquid | 1.0 s, smoothstep rise | 0.25 s |
+| solid | 0.3 s, smoothstep rise | 1.0 s |
+
+(`EngineSpec.startupS` / `tailoffS` override the defaults per engine.) The tail-off is an
+exponential from the level the engine was running at, cut after 5τ (0.7 % left). The mass flow
+follows the thrust through both transients at the engine's own Isp, and each step uses the
+**exact mean** of the transient over the step, in `thrust` and in `consume` alike — so the
+impulse a step delivers and the propellant it burns are the same integral whatever the step
+length (tests/engine-transients.test.ts holds impulse/propellant to g₀·Isp_vac to six digits at
+10, 100 and 500 ms steps).
+
+Three consequences had to be carried through the sequencer:
+
+- **Running dry.** The depletion sensor shuts an engine down with its tail-off's propellant
+  still aboard (ṁτ(1 − e⁻⁵)), and the tail-off then burns it — a stage that runs dry ends with
+  empty tanks, not with a reserve stranded in them.
+- **Cutting off on purpose.** An engine shut down now still adds (F/m)·τ(1 − e⁻⁵) along its
+  axis: 7–12 m/s at the 3–5 g of a typical upper stage near its cut-off, **26 m/s** for Long
+  March 2D's second stage at 10 g — kilometres to tens of kilometres of apoapsis. Every cut-off decision — the ascent gates, the single-shot residual, the
+  burn completion tests, the six-DOF delivered-Δv count — is therefore taken on the orbit the
+  tail-off will leave behind, exactly as real cut-off logic subtracts the tail-off impulse from
+  its target. The flight is not `done` until the final tail-off is over, the next burn is planned
+  from the orbit that tail-off actually leaves, and a payload separates only once the stage below
+  it has stopped thrusting (releasing it in the middle handed Long March 2D's 26 m/s to the spent
+  stage and put the payload 117 km below its planned apoapsis).
+- **Start-up on the pad and in orbit.** Liquid first stages light at T−2.5 s and are at full
+  thrust by T−1.5 s; a solid first stage lifts off a few hundredths of a second after T−0, when
+  its rising thrust passes the stack's weight. An orbital burn that is lit and then held at zero
+  throttle until the stack is aligned spins up when the valves actually open.
+- **Attitude through a tail-off (six-DOF).** The gimbals of an engine that is tailing off still
+  have authority while it fades, so the attitude loop holds the attitude the engine was shut
+  down in rather than following a guidance command that no longer has thrust behind it —
+  following it swung a Falcon 9 stack to 1.3 °/s between MECO and separation, more than the
+  returning stage's cold gas could take out (SIXDOF-ACCEPTANCE.md).
+
+What the transients do *not* do is remove the Soyuz-2.1a nose-down pitch after booster
+separation in six-DOF flight. With the strap-ons now tailing off over a second instead of losing
+3.3 MN in one 10 ms step, the peak pitch rate after separation is unchanged (4.46 → 4.43 °/s):
+that dip is the closed-loop pitch command (a few degrees above the horizon while the vehicle is
+at 32°) being released by the aerodynamic angle limit as the dynamic pressure falls, not a thrust
+step. With the per-vehicle aerodynamic tables (§3) the less unstable Soyuz is released sooner:
+the pitch-down now begins at about T+89 s, before the strap-ons separate, and takes the vehicle
+from 60° to 33° over twenty seconds at up to 3 °/s while the command runs down to 7°.
 
 Throttle is limited by the engine's minimum throttle, an acceleration limit (e.g. 4.5 g), a
 throttle bucket around max-Q for vehicles that fly one, and the load-relief law of §3.
@@ -237,7 +350,10 @@ runs into all the time, and each of the following limits fixes one observed fail
   `h_end(θ) = h + v_z t_go + ½ (a_T sin θ − g_eff) t_go²` with `t_go = (v_ins − v_h)/(a_T cos θ)`,
   evaluated over eleven candidate pitches. For a stage with margin the optimum is the pitch
   limit itself and the cap never binds. Removing this cap costs a heavy Falcon 9 about
-  400 m/s of steering loss, which is the difference between reaching orbit and not.
+  400 m/s of steering loss, which is the difference between reaching orbit and not. g_eff in
+  that expression is the mean over the burn, not its present value: the centrifugal term grows
+  as the horizontal speed climbs to orbital speed, and a frozen g_eff overstated the sink of a
+  stage lighting at 4–5 km/s by about a factor of two (see "Guidance defects", §6b).
 - **Apoapsis ceiling.** Once the osculating apoapsis is at or above the insertion apoapsis
   there is nothing to gain from climbing, so the pitch ceiling is squeezed from pitchMax down
   to pitchMin over an "excess apoapsis" band. This is what stops the runaway that used to
@@ -246,7 +362,10 @@ runs into all the time, and each of the following limits fixes one observed fail
   stage climbing from a 200 km staging altitude to a higher circular target spends minutes
   between the two, and with the old altitude gate nothing limited the apoapsis over that whole
   stretch — aimed straight at 500 × 500 km, Soyuz-2.1a ran its apoapsis out to 2 474 km while
-  the periapsis chased it.
+  the periapsis chased it. It does not apply while the vehicle is descending more than 500 m/s
+  short of the insertion speed (a lofted weak stage past its apex, whose apoapsis is behind it),
+  nor while the stage is flying a lofted hand-off, which climbs past the insertion apoapsis on
+  purpose.
 - **Load relief.** Whatever the steering law asks for, the throttle is backed off once the
   dynamic pressure passes 95 % of the vehicle's structural placard (§3). This is the protection
   every real launcher has, and it only acts on a trajectory already heading for the placard.
@@ -350,7 +469,14 @@ flew several vehicles into the ground.
 
 The **auto-tuner** remains available as an optional refinement: it flies the ascent headlessly
 over a grid of kick angles, pitch-program rates and lofts and keeps the combination with the
-largest remaining Δv that respects max-Q. No mission requires it.
+largest remaining Δv that respects max-Q. No mission requires it. A candidate whose parking
+orbit lands far from the plan is screened out, and the best survivors are then flown to the
+end; when the screen rejects *every* candidate for that reason — Vulcan's Centaur V under a
+heavy payload arcs over its target and inserts at about 137 × 1 200 km against a 250 × 500 km
+plan whatever the kick — the best of them are flown to the end anyway and the mission decides.
+The engine start-up transients (§4) were enough to push the one kick that used to pass the
+screen (9°, flown almost level through the air) into a structural failure, which is how the
+screen's knife edge showed.
 
 ## 6. Mission sequencing
 
@@ -405,9 +531,9 @@ largest remaining Δv that respects max-Q. No mission requires it.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 197.2 × 200.4 ✓ | 198.7 × 200.6 ✓ | 197.5 × 200.1 ✓ | 151.2 × 357.3 |
-  | 250 km | 219.5 × 346.4 | 241.2 × 299.2 | 247.1 × 265.5 | 140.6 × 2 411.8 |
-  | 300 km | 143.8 × 895.4 | 144.0 × 873.2 | 114.6 × 754.5 (tanks dry) | 140.9 × 2 424.8 |
+  | 200 km | 198.5 × 200.9 ✓ | 197.6 × 200.3 ✓ | 197.9 × 200.2 ✓ | 150.8 × 355.2 |
+  | 250 km | 220.0 × 346.8 | 240.1 × 300.9 | 247.0 × 265.2 | 140.6 × 2 415.6 |
+  | 300 km | 143.5 × 894.9 | 144.1 × 874.4 | 103.8 × 729.8 (tanks dry) | 140.6 × 2 421.1 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind
@@ -417,7 +543,11 @@ largest remaining Δv that respects max-Q. No mission requires it.
   rather than re-derived by hand — the Soyuz cells' perigees moved by under 1.5 km (the heaviest
   300 km cell's by 3.9 km, from 110.7 to 114.6; its apoapsis moved further, 9.2 km, from 745.3 to
   754.5) once the fairing started leaving on Soyuz's published T+157 s callout (§4) instead of
-  the heating placard, and both copies now read the post-change figures.
+  the heating placard. The engine transients (P02) moved them again — the heaviest 300 km cell
+  to 103.8 × 729.8 km, its third stage now dry before the tail-off that would have given the
+  impulse back — and Long March 2D's cells moved by up to 6 km of apoapsis when Jiuquan's 41°
+  flights started leaving on the heading the site's window licenses; no verdict changed, and
+  both copies read the current figures.
 
   That change is the second half of a fix the last wave only half made.
   `src/physics/mission.ts` used to carry its own copy in the `DIRECT_INSERTION_CEILING` doc
@@ -457,7 +587,10 @@ largest remaining Δv that respects max-Q. No mission requires it.
   when the vehicle can light an engine again afterwards (a restartable stage, or a later stage
   with propellant) and when the running stage still has more than 20 s of burn time: cutting
   off a Blok I, or a stage two seconds from depletion, would throw the mission away rather
-  than save it.
+  than save it. Nor does it fire when the circularisation at the apoapsis would be deeper
+  than the 400 m/s (700 m/s for a stage that cannot hold altitude) `onCoreBurnout` allows
+  before it trades a burn for a coast: a Centaur V under 19 t climbs past the apoapsis target
+  on purpose, and cut off there it was handed a 3.4 km/s circularisation it could not fly.
 - **Step size near cut-off.** A metre per second moves a nearly circular apoapsis by
   kilometres, so the integrator drops to 0.02 s steps for the last seconds of the ascent. "The
   last seconds" is measured as the *speed still to be gained* (within 250 m/s of the insertion
@@ -826,9 +959,8 @@ made the fleet matrix verify only that the simulation agreed with itself; the ba
 numerically identical today, and that is the point — when they stop being, the gate says so.
 
 What the fleet delivers, at the three payload fractions the acceptance test uses
-(`+` = orbit reached inside the acceptance band, `-` = excluded — four of these are guidance
-defects rather than limits: Vulcan's two 90 % rows, Ariane 64 `iss` 90 % and PSLV-XL `iss` 90 %,
-listed under "Guidance defects" below — `n/a` = range safety,
+(`+` = orbit reached inside the acceptance band, `-` = excluded as a capability or architecture
+limit — no guidance defects are left, see "Guidance defects" below — `n/a` = range safety,
 `—` = no such preset for this vehicle):
 
 | vehicle | leo 25/50/90 % | iss 25/50/90 % | sso 25/50/90 % | gto 25/50/90 % |
@@ -840,14 +972,14 @@ listed under "Guidance defects" below — `n/a` = range safety,
 | Falcon 9 Block 5 | + + - | + + - | n/a | + + - |
 | Falcon Heavy | + + - | + + - | n/a | + + - |
 | Atlas V 551 | + + + | + + + | n/a | + + + |
-| Vulcan Centaur VC4 | + + - | + + - | n/a | + + + |
-| Ariane 64 | + + + | + + - | n/a | + + + |
-| Vega-C | + + + | + + + | n/a | — |
+| Vulcan Centaur VC4 | + + + | + + + | n/a | + + + |
+| Ariane 64 | + + + | + + + | + + + | + + + |
+| Vega-C | + + + | + + + | + + + | — |
 | Long March 2D | - - - | - - - | - - - | — |
 | Long March 3B/E | + + + | + + + | n/a | + + + |
-| H-IIA 202 (historical) | + + + | + + + | n/a | + + + |
+| H-IIA 202 (historical) | + + + | + + + | + + + | + + + |
 | Long March 5 | + + + | + + + | n/a | + + + |
-| H3-22 | + + + | + + + | n/a | + + + |
+| H3-22 | + + + | + + + | + + + | + + + |
 | PSLV-XL | + + - | + + - | n/a | + - - |
 | Electron | + + + | + + + | + + + | — |
 | Starship (Super Heavy) | + + + | + + + | n/a | + + - |
@@ -855,7 +987,9 @@ listed under "Guidance defects" below — `n/a` = range safety,
 The largest payload the model delivers to each preset, found by bisection, against the
 published figure. Bisection assumes the passing region is contiguous in payload mass, which is
 not always true near the limit (Atlas V reaches GTO at 8.0 t but not at 8.9 t, so its 6.2 t
-here is a lower bound, not a ceiling):
+here is a lower bound, not a ceiling). The Vulcan, Ariane 64, Vega-C, H-IIA and H3 rows were
+re-measured after the launch-direction and guidance changes of September 2026 (a `>` is the
+top of the search, 115 % of the rating); the others date from the previous wave:
 
 | vehicle | leo (500 km) | iss (420 km) | sso (600 km) | gto |
 | --- | --- | --- | --- | --- |
@@ -866,10 +1000,12 @@ here is a lower bound, not a ceiling):
 | Falcon 9 | 17.9 t / 22.8 t | 17.1 t / 22.8 t | — | 6.3 t / 8.3 t |
 | Falcon Heavy | 45.1 t / 63.8 t | 43.1 t / 63.8 t | — | 19.3 t / 26.7 t |
 | Atlas V 551 | 16.9 t / 18.9 t | 15.5 t / 18.9 t | — | ≥ 6.2 t / 8.9 t |
-| Vulcan Centaur VC4 | 15.6 t / 24.4 t | 12.8 t / 24.4 t | — | > 12.1 t / 12.1 t |
-| Ariane 64 | 16.8 t / 21.6 t | 14.8 t / 21.6 t | — | > 11.5 t / 11.5 t |
+| Vulcan Centaur VC4 | 21.7 t / 21.4 t | 20.0 t / 21.4 t | — | > 13.3 t / 11.6 t |
+| Ariane 64 | > 24.8 t / 21.6 t | 23.3 t / 21.6 t | > 17.3 t / 15.0 t | > 13.2 t / 11.5 t |
+| Vega-C | > 3.8 t / 3.3 t | > 3.8 t / 3.3 t | > 2.6 t / 2.3 t | — |
+| H-IIA 202 | 9.3 t / 10.0 t | 9.0 t / 10.0 t | > 4.1 t / 3.6 t | 4.3 t / 4.1 t |
 | Long March 5 | > 25 t | > 25 t | — | > 14 t |
-| H3-22 | > 10 t | > 10 t | — | > 4 t |
+| H3-22 | > 11.5 t / 10.0 t | > 11.5 t / 10.0 t | > 4.6 t / 4.0 t | > 4.6 t / 4.0 t |
 | PSLV-XL | 2.8 t / 3.8 t | 2.6 t / 3.8 t | — | 0.6 t / 1.4 t |
 | Electron | > 0.30 t | > 0.30 t | 0.2 t / 0.30 t | — |
 | Starship | > 100 t | > 100 t | — | 21.2 t / 27 t |
@@ -901,13 +1037,14 @@ configuration, and the column that matters is whether it agrees with the outcome
 | Vega-C · cubesats 300 kg → 500 km, Kourou | target orbit T+3 052 s | 498 × 498 km | T+319 s | ok ✓ |
 | PSLV-XL · earth-obs 1.75 t → 500 km, Sriharikota | target orbit T+3 451 s | 497 × 497 km | T+703 s | ok ✓ |
 
-Three rows that belong to the sweep are not in the table because the launch would not be
-licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur**,
-Vega-C to one from Kourou and PSLV-XL to one from Sriharikota all need an azimuth outside
-their site's range-safety window (§6b, range safety), and the verdict says so — Kourou and
-Sriharikota reach the plane in reality with a dogleg, which this model does not fly. The model will
-still fly the plane if asked — the geometry is reachable — which is why Soyuz-2.1b's
-sun-synchronous mission is flown here from the two sites that can licence it.
+Two rows that belong to the sweep are not in the table because the launch would not be
+licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur** and
+PSLV-XL to one from Sriharikota need a heading 8.6° and 11.3° outside their site's
+range-safety window — further than the 5° dogleg this model flies (§6b, range safety) — and the
+verdict says so. The model will still fly the plane if asked — the geometry is reachable —
+which is why Soyuz-2.1b's sun-synchronous mission is flown here from the two sites that can
+licence it. Vega-C's sun-synchronous mission from Kourou is licensed with a 1.2° dogleg and is
+flown in the fleet matrix (its `sso` rows) rather than here.
 
 Two rows are failures and both are capability limits with the shortfall measured on the plan:
 
@@ -942,10 +1079,10 @@ every margin in this section has to be re-measured with it.*
 
 | table | rule | entries |
 | --- | --- | --- |
-| range safety (`SITE_GEOMETRY`) | no heading inside the site's window reaches the plane — the launch would not be licensed, or (Tanegashima, Sriharikota, Kourou) only with a dogleg the model does not fly | 45 |
-| `BEYOND_CAPABILITY` | the flight ends with the tanks empty, **or** the ascent stages' margin is below `ASCENT_MARGIN_REQUIRED` (+150 m/s) | 22 |
+| range safety (`SITE_GEOMETRY`) | no heading inside the site's window reaches the plane, nor one within the 5° a dogleg turns — the launch would not be licensed | 33 |
+| `BEYOND_CAPABILITY` | the flight ends with the tanks empty, **or** the ascent stages' margin is below `ASCENT_MARGIN_REQUIRED` (+150 m/s) | 23 |
 | `ARCHITECTURE` | propellant left, orbit reachable, but nothing in the stack can use it | 13 |
-| `KNOWN_GUIDANCE_FAILURES` | **defects**: Δv available, a stage able to spend it, orbit still lost or missed | 4 |
+| `KNOWN_GUIDANCE_FAILURES` | **defects**: Δv available, a stage able to spend it, orbit still lost or missed | 0 |
 
 The first and the last two rows of that table are enforced by tests, not by review:
 `azimuthAllowedFor agrees with the planned azimuth` regenerates the range-safety table from the
@@ -963,28 +1100,28 @@ the margin, not the event that ends the flight.
 
 **Range safety.** One rule, in `inclinationCorridor`: a site can fly an inclination when a
 launch heading inside its azimuth window reaches it — the northbound solution or its southbound
-mirror (180° − A), whichever the window holds — and the inclination is not below the site's
-declared minimum, with the same 0.25° `CORRIDOR_SLACK` on every edge. The window's reach is
-computed from the window in closed form (`corridorReach`), `azimuthAllowedFor` is the boolean
-form of the same verdict, and `planMission` / `launchWindows` fly the heading the window
-licenses (`launchDescendingFor`). Until this wave `azimuthAllowedFor` tested only the
+mirror (180° − A), whichever the window holds — or when one of the two lies within 5° of the
+window's edge, which the ascent then flies as a dogleg (§7); and the inclination is not below
+the site's declared minimum. Every edge carries the same 0.25° `CORRIDOR_SLACK`. The window's
+direct reach is computed from the window in closed form (`corridorReach`), `azimuthAllowedFor`
+is the boolean form of the same verdict, and `planMission` / `launchWindows` fly the heading
+`launchDirection` chooses from it. Until this wave `azimuthAllowedFor` tested only the
 northbound heading below 75°, so it rejected Tanegashima's own `leo`/`gto` presets and the ISS
 plane from Wallops, Wenchang, Tanegashima, Jiuquan and Sriharikota (known bug F01) while the
 corridor accepted them — and the planner flew that northbound heading, outside the window, in
-48 fleet rows. They now leave south-east, as those ranges really do; re-flown, all 48 keep their
-acceptance outcome and the 38 accepted ones land within 1.5 km of their previous orbit.
+48 fleet rows. They now leave south-east, as those ranges really do.
 
-The `sso` preset needs a retrograde heading, roughly 341–349° or 191–199°. Of the sites the
-fleet flies from, Plesetsk (330–90°), Jiuquan and Mahia (90–200°) have a window that contains
-one of the two; from Baikonur, Cape Canaveral, Wenchang, Starbase and Xichang both point over
-populated land or another country. Tanegashima, Sriharikota and Kourou are different in kind:
-their ranges reach sun-synchronous planes with a **dogleg** — a yaw during the ascent — which
-this model does not fly (the guidance holds a single plane, and a post-insertion plane change is
-no stand-in: Sriharikota's window stops 11° short of the plane). They stay excluded, with the
-heading and the corridor's measured reach in the reason. The table is generated from the site
+The `sso` preset needs a retrograde heading, roughly 341–349° or 191–199° depending on the
+site's latitude. Plesetsk (330–90°), Vostochny (340–95°), Vandenberg (147–201°), Jiuquan
+(90–200°), Taiyuan (144–200°) and Mahia (90–200°) have a window that contains one of the two.
+Kourou and Tanegashima reach the plane with a dogleg of 1.2° and 1.9° off their corridor edge,
+as their ranges really do. From Baikonur, Cape Canaveral, Wenchang, Starbase and Xichang both
+headings point over populated land or another country, and Sriharikota's window stops 11° short
+of the plane — further than a dogleg turns in this model. The table is generated from the site
 data through `azimuthAllowedFor`, and a test asserts that the exclusions are exactly the sites
-the function rules out, so the matrix cannot be shrunk by quietly dropping a case. Angara-A5
-and Electron are therefore the only vehicles with `sso` acceptance cases.
+the function rules out, so the matrix cannot be shrunk by quietly dropping a case. Angara-A5,
+Ariane 64, Electron, H-IIA, H3 and Vega-C fly `sso` acceptance cases (Ariane 64 at 25 and 50 %;
+its 90 % row is a guidance failure below).
 
 **Beyond capability.** Two systematic gaps explain most of it:
 
@@ -1017,30 +1154,52 @@ default mission and has a test of its own: Soyuz-2.1a + 7.15 t crew ship from Ba
 into 197 × 200 km at T+536 s and the crew ship circularises at 417.9 × 418.0 km / 51.64° at
 T+3 397 s.
 
-**Guidance defects.** Four, all one family: a heavy upper stage lighting at a fraction of a g
-under a near-maximum payload, a closed-loop ascent that cannot hold the loft it was given, and a
-break-up on the max-Q placard on the way back down — with the ideal Δv for the mission on paper
-and kilometres per second still in the tanks.
+**Guidance defects.** None left. There were five, all one family: a heavy upper stage lighting
+at a fraction of a g under a near-maximum payload, a closed-loop ascent that could not hold the
+loft it was given, and a break-up on the way back down — with the ideal Δv for the mission on
+paper and kilometres per second still in the tanks.
 
-| case | ends | Δv left | ascent margin |
-| --- | --- | --- | --- |
-| Vulcan Centaur → 500 km, 90 % | break-up T+963 s at −3 429 × 331 km | 2 657 m/s | +1 865 m/s |
-| Vulcan Centaur → ISS plane, 90 % | break-up T+915 s at −3 857 × 318 km | 2 860 m/s | +1 701 m/s |
-| Ariane 64 → ISS plane, 90 % | break-up T+941 s at −2 219 × 92 km | 1 704 m/s | +1 855 m/s |
-| PSLV-XL → ISS plane, 90 % | break-up T+569 s at −2 910 × 232 km | 968 m/s | +315 m/s |
+| case | was | is |
+| --- | --- | --- |
+| Vulcan Centaur → 500 km, 90 % | break-up T+963 s, 2 657 m/s left | 500.1 × 501.9 km, SECO T+1 305 s |
+| Vulcan Centaur → ISS plane, 90 % | break-up T+915 s, 2 860 m/s left | 417.0 × 417.3 km, SECO T+1 366 s |
+| Ariane 64 → ISS plane, 90 % | break-up T+941 s, 1 704 m/s left | 420.1 × 421.8 km, SECO T+1 074 s |
+| Ariane 64 → sun-synchronous, 90 % | tanks dry at 107 × 7 443 km | 597.0 × 597.3 km, SECO T+1 017 s |
+| PSLV-XL → ISS plane, 90 % | break-up T+569 s, 968 m/s left | tanks dry T+908 s at −1 293 × 204 km: a capability limit |
 
-The Vulcan pair were in this table two waves ago with "+646/+743 m/s of margin" recorded against
-them; the last wave moved them into `BEYOND_CAPABILITY` and deleted that line. Ariane 64 and
-PSLV-XL had been in `BEYOND_CAPABILITY` all along. Nothing about the flights changed — the test
-that now checks the rule did. Two of the four have an explicit counter-example that rules out a
-capability explanation on its own: `ariane64/leo/90` carries the *same* 19.44 t to a *higher*
-500 km orbit and is accepted at 497 × 497 km, and `pslvxl/leo/90` with the same payload runs its
-tanks dry instead of breaking up, which is the capability limit and is filed as one.
+Traced flight by flight, four things were wrong, three in the guidance law and one in three
+vehicles' programs:
 
-Closing them needs an ascent profile that trades the loft for horizontal speed at staging: the
-previous wave's 48-point sweep over kick angle, turn rate, loft and pitch limit is on the record
-and reproduces — no point in that grid recovers any of them. That is a wave of guidance work,
-and it is scope rather than a statement about these vehicles.
+1. **The thrust-limited pitch cap charged the wrong sink.** It picks the pitch that leaves the
+   stage highest when the horizontal speed reaches the insertion speed, and evaluated the fall
+   with the effective gravity of the *present* speed held for the whole burn. At 4.7 km/s that
+   is 5.4 m/s²; over a burn that ends at orbital speed, where the centrifugal term cancels
+   gravity, the mean is about half of it. The cap now uses the mean over the burn (vh ramping
+   linearly to vh + D, so ⟨vh²⟩ = (vh² + vh(vh+D) + (vh+D)²)/3). A strong stage still sits on
+   `pitchMax`; a weak one is allowed to climb.
+2. **The apoapsis guard cut a lofted stage off.** Centaur V climbing to 450 km on purpose was
+   read as a runaway, shut down at 380 km and handed a "circularise at apoapsis" burn 3.4 km/s
+   deep that it could not fly; the velocity-to-be-gained steering pointed it 15° below the
+   horizon and it sank into the air. The guard now fires only when the circularisation at the
+   apoapsis is within the same 400/700 m/s shortfall `onCoreBurnout` already requires before it
+   trades a burn for a coast.
+3. **The apoapsis ceiling dived a stage that was already descending**, and flattened one flying
+   a lofted hand-off. Both have an osculating apoapsis above the insertion apoapsis for a
+   reason — the first is past its apex and short of orbital speed, the second is handing over
+   climbing — and neither is the runaway the ceiling exists for. It no longer applies while the
+   vehicle is sinking more than 500 m/s short of the insertion speed, nor while a loft is flown.
+4. **Three programs.** Vulcan now flies 40° of pitch authority, a 150 km loft and a 3° kick
+   (was 30°, 80 km, 1.5°); Ariane 64 never pitches below 10° (the closed loop used to command
+   the stack level at 70 km while it could still see the P120Cs' thrust, leaving a 0.84 g core
+   to climb back); PSLV-XL hands its 0.2 g PS4 over climbing with an 80 km loft. Each was
+   chosen from the middle of a region of its own guidance-parameter grid where every row of
+   that vehicle passes, not at an edge.
+
+PSLV-XL to the ISS plane at 90 % still does not reach orbit, and should not be expected to: with
+the hand-over fixed it spends every kilogram and ends suborbital, exactly like the 500 km row at
+the same payload, with +315 m/s of ideal margin against losses of about 2.3 km/s. It is filed as
+a capability limit. Vulcan's insertions end 34–95 s inside the 1 400 s clock a 0.15–0.5 g
+stage is given; that is what a Centaur V burning 54 t at 48 kg/s takes.
 
 The three entries the table carried last wave — an apoapsis 16–2 650 km above a **circular**
 target that the retrograde trim did not close, with propellant and a restartable stage
@@ -1151,6 +1310,27 @@ cannot reach inclinations below its latitude directly (nor below its range-safet
 so the ascent uses the lowest reachable inclination and a plane change is scheduled at
 apogee.
 
+**Which solution is flown** is decided by the site's range-safety corridor
+(`launchDirection` in `src/physics/mission.ts`), evaluated at a 300 km reference orbit like
+the site data itself. The solution whose heading lies inside the corridor is flown; when both
+do, the site's own preference is kept (the southbound solution above 75° where the site flies
+polar orbits southbound, the northbound one otherwise). The choice used to ignore the corridor
+and fly north of east for everything up to 75°, so an ISS-plane launch from Wallops, Wenchang,
+Tanegashima, Jiuquan, Sriharikota or Mahia, and every prograde launch from Vandenberg and
+Taiyuan, left the pad across the land its corridor avoids — 80 site/orbit combinations, 38 of
+them accepted fleet rows — while the verdict said the mission was ready. They now leave south
+of east (Wallops to the ISS on 130° instead of 50°), and the launch windows are computed for
+the same solution.
+
+**Dogleg.** When neither heading is inside the corridor but one is within `DOGLEG_LIMIT_DEG`
+(5°) of its edge, the ascent leaves on that edge and the closed-loop guidance yaws it into the
+target plane once it is out of the dense air — the dogleg real launches fly. It opens the
+sun-synchronous plane from Kourou (1.2°, as Vega-C flies it) and Tanegashima (1.9°, as H-IIA
+does) and polar planes from Wenchang and Sriharikota (3.3°); Baikonur to a sun-synchronous
+plane (8.6°) and PSLV's swing around Sri Lanka (11°) remain beyond it. The planner reports the
+turn as `doglegDeg`, the setup panel shows it, and the extra steering is paid for in the Δv
+budget like any other.
+
 The ascent produces RAAN = λ_site + θ − Δλ with sin u = sin φ / sin i and
 tan Δλ = sin u cos i / cos u, where λ_site is taken 200 s after liftoff rather than at liftoff:
 the plane of the orbit is fixed by the velocity vector, and for the first minutes that vector is
@@ -1214,10 +1394,13 @@ orbital map and in the RAAN/altitude readouts under high time warp.
 
 - Spherical Earth for altitude and gravity (J2 only as a perturbation); no terrain. Site
   elevation is honoured near the pad only (§8).
-- Point-mass vehicle: attitude is a commanded direction with a slew-rate limit, no rotational
-  dynamics, no aerodynamic lift, no wind.
+- In the point-mass model (selectable): attitude is a commanded direction with a slew-rate
+  limit, no rotational dynamics, no aerodynamic lift, no wind. The six-DOF model (§2a, the
+  default) has all four, from estimated rather than measured vehicle data.
 - One generic drag curve for every launcher and one blunt-body curve for every piece of debris;
-  solid-motor thrust profiles are a normalised linear ramp about the published mean.
+  solid-motor thrust profiles are a normalised linear ramp about the published mean. The
+  six-DOF normal-force tables are low-order estimates from each vehicle's layout, not wind-tunnel
+  or flight data.
 - Guidance is a compact explicit law, not the flight software of any real vehicle; timelines
   and margins are representative, not authoritative.
 - Vehicle data are public figures rounded to about ±10 %; the LEO payload of a
@@ -1315,6 +1498,9 @@ around them change.
 | dynamic pressure | скоростной напор | ความดันพลวัต |
 | max-Q | максимальный скоростной напор | ความดันพลวัตสูงสุด |
 | drag | аэродинамическое сопротивление | แรงต้านอากาศ |
+| normal force | нормальная сила | แรงตั้งฉาก |
+| centre of pressure | центр давления | ศูนย์กลางความดัน |
+| crossflow (viscous) | поперечное обтекание (вязкое) | การไหลตัดขวาง (ความหนืด) |
 | g-load | перегрузка | ความเร่ง (แรง g) |
 | downrange distance | дальность | ระยะตามแนวการบิน |
 | ballistic coast | пассивный участок | ช่วงเคลื่อนที่อิสระ |

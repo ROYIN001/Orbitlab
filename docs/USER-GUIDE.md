@@ -89,8 +89,12 @@ Four camera views, switchable from the tabs above the viewport or keys `1`–`4`
   terminator, and where spent stages came down.
 
 The small buttons beside the camera tabs reset the view, toggle the **glow** (the bloom around
-the plume, the ignition flash and the city lights) and go full screen. The glow switches itself
-off if the frame rate cannot afford it, and stays wherever you put it once you press it.
+the plume, the ignition flash and the city lights) and go full screen. If the picture falls below
+about 24 frames per second the glow is switched off for a few seconds as a test: it stays off
+only if that made the picture faster, and comes back otherwise. A screen or power-saving mode
+that holds the browser at 30 fps therefore keeps its glow. Once you press the button your choice
+is kept, also on your next visit. On a graphics card that cannot draw the high-range image the
+glow needs, the button is greyed out and the scene is drawn without it.
 
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
@@ -169,6 +173,14 @@ once at real-time speed:
 - **Time warp** (`,`/`.` or the warp selector) speeds up whichever clock is active. The live
   flight and the replay cursor keep separate warps on purpose, so scrubbing fast through a
   recording never makes the live mission sprint ahead of you.
+- **The physics runs in its own thread** (a Web Worker), so the speed you ask for no longer
+  depends on how fast your graphics card draws. On a six-DOF flight the readout under the
+  warp selector shows the speed actually achieved; on a software-rendered test machine drawing
+  3 frames a second, a 10× Falcon 9 flight reached 8.6× this way against 0.5× with the physics
+  on the drawing thread. The flight itself is the same either way: the worker runs the same
+  simulation and recorder code on the same requests. Adding `?physics=inline` to the address
+  flies the physics on the main thread as before, which is also what happens automatically in
+  a browser that cannot start a module worker.
 - **Skip to next event** jumps to the next planned burn (live) or the next recorded event
   (replay); the back-skip button goes to the previous one.
 

@@ -8,6 +8,7 @@ import { groundPositionEci, groundVelocityEci } from '../src/physics/orbital';
 import { DEG, OMEGA_EARTH } from '../src/physics/constants';
 import { norm, sub } from '../src/physics/vec3';
 import { rigidMission } from './rigid-harness';
+import { LIQUID_STARTUP_S } from '../src/physics/vehicle';
 
 describe('accepted scheduled-event recording', () => {
   it.each(['leo', 'iss'] as const)('%s records real pad ignition on arrival, with fuel consumed only afterwards', id => {
@@ -25,11 +26,10 @@ describe('accepted scheduled-event recording', () => {
     const exact = player.frameAt(ignition.t)!;
     expect(before.thrust).toBe(0);
     expect(Object.values(before.rigid!.engineThrottles!).every(value => value === 0)).toBe(true);
-    expect(exact.thrust).toBeGreaterThan(1e6);
-    const engines = sim.rigidRuntime!.snapshot!.engines;
-    expect(engines.reduce((sum, engine) => sum + engine.thrustBudgetN, 0)).toBeCloseTo(exact.thrust, 4);
-    for (const engine of engines) expect(exact.rigid!.engineThrottles![engine.id])
-      .toBe(engine.thrustBudgetN > 0 ? engine.upstreamThrottle ?? 1 : 0);
+    // Lit on arrival, but not thrusting yet: a turbopump engine takes about a
+    // second to reach rated chamber pressure (`LIQUID_STARTUP_S`).
+    expect(exact.thrust).toBe(0);
+    for (const engine of sim.rigidRuntime!.snapshot!.engines) expect(engine.thrustBudgetN).toBe(0);
     const datum = sub(exact.r, quatRotate(exact.rigid!.attitudeQ, exact.rigid!.cgBody));
     const pad = groundPositionEci(sim.site.latitude * DEG, sim.site.longitude * DEG, sim.site.altitude,
       sim.plan.gmst0 + OMEGA_EARTH * exact.t);
@@ -39,19 +39,27 @@ describe('accepted scheduled-event recording', () => {
     recorder.advance(0.01);
     expect(sim.vehicle.stages[0].propellant).toBeLessThan(fuel);
     expect(player.frameAt(ignition.t)).toEqual(exact);
+    // Spun up, still on the pad: the recorded thrust is the engine budgets'
+    // sum, chamber by chamber.
+    recorder.advance(LIQUID_STARTUP_S + 0.5);
+    const running = captureFrame(sim);
+    expect(running.liftoff).toBe(false);
+    expect(running.thrust).toBeGreaterThan(1e6);
+    const engines = sim.rigidRuntime!.snapshot!.engines;
+    expect(engines.reduce((sum, engine) => sum + engine.thrustBudgetN, 0)).toBeCloseTo(running.thrust, 4);
+    for (const engine of engines) expect(running.rigid!.engineThrottles![engine.id])
+      .toBe(engine.thrustBudgetN > 0 ? engine.upstreamThrottle ?? 1 : 0);
   });
 
   it('pins the actual stage partition at its scheduled time before any later physical motion', () => {
     const sim = new Simulation(rigidMission(), { headless: true });
     sim.state.t = 0; sim.step(0); // drain countdown before the boundary fixture
     sim.state.status = 'coast'; sim.state.liftoff = true; sim.state.t = 100;
-    const boundary = sim as unknown as { stageTo(index: number, ignite: boolean): void;
-      stepFlight(dt: number): number; stepDebris(dt: number): void };
     // Isolate event/recorder chronology. The real stage partition and all frame
     // capture/interpolation code run; continuous dynamics are verified elsewhere.
-    boundary.stepFlight = dt => { sim.state.t += dt; return dt; };
-    boundary.stepDebris = () => {};
-    boundary.stageTo(1, false);
+    sim.stepFlight = dt => { sim.state.t += dt; return dt; };
+    sim.debrisTracker.stepDebris = () => {};
+    sim.staging.stageTo(1, false);
     const delay = sim.vehicle.stages[1].spec.sepDelay ?? 2;
     const recorder = new FlightRecorder(4); recorder.start(sim);
     recorder.advance(delay);
@@ -70,8 +78,7 @@ describe('accepted scheduled-event recording', () => {
   it('captures an already-due transition before integration, including a zero-time failure', () => {
     const sim = new Simulation(rigidMission(), { headless: true });
     const recorder = new FlightRecorder(); recorder.start(sim);
-    const boundary = sim as unknown as { schedule(t: number, label: string, action: () => void): void };
-    boundary.schedule(sim.state.t, 'fixture-failure', () => {
+    sim.schedule(sim.state.t, 'fixture-failure', () => {
       sim.state.status = 'failed'; sim.state.destroyed = true;
       sim.events.push({ t: sim.state.t, key: 'evt.vehicleLost', severity: 'fail' });
     });

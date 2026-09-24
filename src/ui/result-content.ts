@@ -62,7 +62,12 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
   // Orbital numbers are explicitly the displayed frame, not rounded event
   // params or the live simulation's eventual orbit.
   const target = plan.target;
-  const elements = state.elements;
+  // A six-DOF verdict is reached on the lowest and highest altitude of the
+  // next revolution under J2, which the event carries; the frame's osculating
+  // apsides swing kilometres round that orbit and would contradict it.
+  const judged = completed?.params;
+  const elements = judged && typeof judged.apAltM === 'number' && typeof judged.peAltM === 'number'
+    ? { ...state.elements, apoapsisAlt: judged.apAltM, periapsisAlt: judged.peAltM } : state.elements;
   const residual = orbitResiduals(target, elements, true);
   const misses = new Set(residual.misses.map(miss => miss.param));
   const metric = (key: OrbitMissParam, wanted: number | null, actual: number, delta: number | null, unit: 'km' | 'deg'): ResultMetric => ({

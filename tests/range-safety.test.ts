@@ -5,11 +5,13 @@
  *
  * THE RULE. A site can fly an inclination when a launch heading inside its
  * azimuth window reaches it — the northbound solution or its southbound mirror,
- * whichever the window holds — and the inclination is not below the site's
- * declared minimum. Every edge carries the same `CORRIDOR_SLACK`, applied to the
- * inclination. `inclinationCorridor` implements it, `azimuthAllowedFor` is its
- * boolean form, `planMission` / `launchWindows` fly the heading the window
- * licenses (`launchDescendingFor`), and the panel reads the corridor.
+ * whichever the window holds — or when one of the two lies within
+ * `DOGLEG_LIMIT_DEG` of the window, flown as a dogleg from its edge; and the
+ * inclination is not below the site's declared minimum. Every edge carries the
+ * same `CORRIDOR_SLACK`, applied to the inclination. `inclinationCorridor`
+ * implements it, `azimuthAllowedFor` is its boolean form, `planMission` /
+ * `launchWindows` fly the heading `launchDirection` chooses, and the panel
+ * reads the corridor.
  *
  * WHAT DISAGREED, measured at 2026-09-22T03:00Z before this wave:
  *
@@ -24,13 +26,12 @@
  *  - `planMission` flew the northbound heading in every one of those cases, into
  *    a sector the site closes, and reported the mission as reachable.
  *  - Sun-synchronous from Tanegashima, Sriharikota and Kourou was rejected by
- *    BOTH. That was not a disagreement and still is not: those ranges reach the
- *    plane with a dogleg — a yaw during the ascent — and this model flies a
- *    single-plane ascent. Adding one is a guidance change, and the fleet's
- *    regression bands rest on the guidance as it is; a post-insertion plane
- *    change would not be a stand-in for it either (Sriharikota's window stops
- *    11° short of the plane, ~1.4 km/s at orbital speed). So the three stay out
- *    of the corridor, and the distance is pinned below so it cannot drift.
+ *    BOTH. That was not a disagreement: those ranges reach the plane with a
+ *    dogleg — a yaw during the ascent — which this model did not fly. It does
+ *    now, up to `DOGLEG_LIMIT_DEG` (roadmap F01), so Kourou and Tanegashima fly
+ *    it; Sriharikota's window stops 11° short of the plane, ~1.4 km/s at
+ *    orbital speed, and stays out. The distances are pinned below so they
+ *    cannot drift.
  */
 import { describe, expect, it } from 'vitest';
 import { SITES, siteById, type SiteExtra } from '../src/data/sites';
@@ -38,8 +39,8 @@ import { orbitById, ORBIT_PRESETS } from '../src/data/orbits';
 import { vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import {
-  azimuthAllowedFor, azimuthInWindow, corridorReach, inclinationCorridor, launchDescendingFor, launchWindows,
-  minInclinationFor, planMission, resolveTarget, CORRIDOR_SLACK,
+  azimuthAllowedFor, azimuthInWindow, corridorReach, inclinationCorridor, launchDescendingFor, launchDirection, launchWindows,
+  minInclinationFor, planMission, resolveTarget, CORRIDOR_SLACK, DOGLEG_LIMIT_DEG,
 } from '../src/physics/mission';
 import { circularSpeed, rotatingLaunchAzimuth, wrapPi } from '../src/physics/orbital';
 import { guidanceForVehicle, DEFAULT_FAILURE } from '../src/physics/defaults';
@@ -49,6 +50,14 @@ import type { MissionConfig, OrbitSpec } from '../src/types';
 
 const T = new Date(Date.UTC(2026, 8, 22, 3, 0, 0));
 const V300 = circularSpeed(R_EARTH + 300e3);
+
+/** Degrees a rotating-frame heading (rad) lies outside the site's window; 0 inside it. */
+function outsideDeg(site: SiteExtra, azRad: number): number {
+  const wrap = (d: number) => ((d % 360) + 360) % 360;
+  const deg = wrap(azRad * RAD), lo = wrap(site.azimuthMin), hi = wrap(site.azimuthMax);
+  const inside = lo <= hi ? deg >= lo && deg <= hi : deg >= lo || deg <= hi;
+  return inside ? 0 : Math.min(wrap(lo - deg), wrap(deg - hi));
+}
 
 /** Both launch headings for `inc`, deg — [northbound, southbound] — or [] when the site is above it. */
 function headings(site: SiteExtra, inc: number): number[] {
@@ -83,12 +92,15 @@ describe('range safety · one rule', () => {
    * A sweep over every inclination from every site, in 0.05° steps, with an
    * INDEPENDENT test of the geometry: whether either heading lands in the
    * window, taken straight from `rotatingLaunchAzimuth`. The corridor may only
-   * say 'ok' where such a heading exists (within the slack), and must say 'ok'
-   * wherever one exists above the declared minimum.
+   * say 'ok' where such a heading exists (within the slack) or where one lies
+   * within `DOGLEG_LIMIT_DEG` of the window — then flown as a dogleg from its
+   * edge — and must say 'ok' wherever a direct one exists above the declared
+   * minimum.
    */
   it('azimuthAllowedFor, inclinationCorridor and the heading agree at every inclination from every site', () => {
     const wrong: string[] = [];
     const hit = (site: SiteExtra, inc: number): boolean => headings(site, inc).some((az) => azimuthInWindow(site, az));
+    const nearest = (site: SiteExtra, inc: number): number => Math.min(...headings(site, inc).map((az) => outsideDeg(site, az)));
     for (const site of SITES) {
       for (let deg = 0; deg <= 180; deg += 0.05) {
         const inc = deg * DEG;
@@ -98,8 +110,12 @@ describe('range safety · one rule', () => {
         const effective = inc > Math.PI / 2 ? Math.PI - inc : inc;
         const aboveFloor = effective >= minInclinationFor(site) - CORRIDOR_SLACK;
         if (hit(site, inc) && aboveFloor && verdict !== 'ok') wrong.push(`${tag}: a licensed heading exists, verdict ${verdict}`);
-        if (verdict === 'ok' && ![inc, inc - CORRIDOR_SLACK, inc + CORRIDOR_SLACK].some((i) => hit(site, i))) {
-          wrong.push(`${tag}: 'ok' with no licensed heading within the slack`);
+        const direct = [inc, inc - CORRIDOR_SLACK, inc + CORRIDOR_SLACK].some((i) => hit(site, i));
+        if (verdict === 'ok' && !direct) {
+          // Only as a dogleg: a heading within the limit, and the planner leaving on the window's edge.
+          const d = launchDirection(site, inc);
+          if (!(nearest(site, inc) <= DOGLEG_LIMIT_DEG + 1e-9)) wrong.push(`${tag}: 'ok' with no heading within the dogleg limit`);
+          else if (!(d.doglegDeg > 0 && outsideDeg(site, d.azimuthRotating) < 1e-6)) wrong.push(`${tag}: a dogleg that does not leave on the edge`);
         }
         // ...and the heading the planner picks is the licensed one.
         if (verdict === 'ok' && hit(site, inc)) {
@@ -188,31 +204,44 @@ describe('range safety · the reported cases', () => {
   });
 
   /**
-   * Not a disagreement: rejected by both before and after, because the real
-   * ranges get there with a dogleg this model does not fly. Pinned with the
-   * measured distance — how far past the window's reach the plane is — so a data
-   * or rule change that moves it has to say so here. The heading the planner
-   * would fly is the nearer one and is unchanged from before this wave, which
-   * is what the PSLV-XL reference timeline in tests/fleet-defaults.test.ts flies.
+   * Not a disagreement: rejected by both before, because the real ranges get
+   * there with a dogleg. The model flies one now (roadmap F01): Kourou and
+   * Tanegashima leave on their window's edge and yaw into the plane, and
+   * Sriharikota, 11° short, stays out. Pinned with the measured distance — how
+   * far past the window's direct reach the plane is — so a data or rule change
+   * that moves it has to say so here. The heading is the nearer one, which is
+   * what the PSLV-XL reference timeline in tests/fleet-defaults.test.ts flies.
    */
-  it('sun-synchronous from Tanegashima, Sriharikota and Kourou is out of reach without a dogleg', () => {
+  it('sun-synchronous from Tanegashima and Kourou is a dogleg, from Sriharikota out of reach', () => {
     const sso = orbitById('sso');
-    const cases: [vehicle: string, site: string, pastReach: number, descending: boolean][] = [
-      ['h3', 'tanegashima', 1.70, true], ['pslvxl', 'sriharikota', 11.05, true], ['vegac', 'kourou', 1.20, false],
+    const cases: [vehicle: string, site: string, pastReach: number, descending: boolean, flown: boolean][] = [
+      ['h3', 'tanegashima', 1.70, true, true], ['vegac', 'kourou', 1.20, false, true], ['pslvxl', 'sriharikota', 11.05, true, false],
     ];
-    for (const [vehicle, siteId, pastReach, descending] of cases) {
+    for (const [vehicle, siteId, pastReach, descending, flown] of cases) {
       const site = siteById(siteId);
       const inc = resolveTarget(sso, site, T).inclination;
-      expect(headings(site, inc).some((az) => azimuthInWindow(site, az)), siteId).toBe(false);
-      expect(azimuthAllowedFor(site, inc), siteId).toBe(false);
-      expect(inclinationCorridor(site, inc), siteId).toBe('aboveCorridor');
+      expect(headings(site, inc).some((az) => azimuthInWindow(site, az)), `${siteId}: no direct heading`).toBe(false);
       expect((inc - corridorReach(site).hi) * RAD, siteId).toBeCloseTo(pastReach, 1);
       expect(launchDescendingFor(site, inc), siteId).toBe(descending);
+      expect(azimuthAllowedFor(site, inc), siteId).toBe(flown);
+      expect(inclinationCorridor(site, inc), siteId).toBe(flown ? 'ok' : 'aboveCorridor');
       const p = plan(vehicle, siteId, sso, 300);
-      expect(p.inclinationReachable, siteId).toBe(false);
+      expect(p.inclinationReachable, siteId).toBe(flown);
       const v = verdict(vehicle, siteId, sso, 300);
-      expect(v.level, siteId).toBe('fail');
-      expect(v.text, siteId).toContain('range-safety corridor');
+      if (flown) {
+        const d = launchDirection(site, inc);
+        expect(d.doglegDeg, siteId).toBeGreaterThan(0);
+        expect(d.doglegDeg, siteId).toBeLessThanOrEqual(DOGLEG_LIMIT_DEG);
+        expect(p.doglegDeg, siteId).toBeCloseTo(d.doglegDeg, 6);
+        expect(outsideDeg(site, p.azimuthRotating), `${siteId}: leaves on the window's edge`).toBeLessThan(1e-6);
+        expect(v.level, `${siteId}: ${v.text}`).not.toBe('fail');
+        expect(v.text, siteId).not.toContain('would not be licensed');
+        expect(v.text, `${siteId}: the panel names the dogleg`).toContain('dogleg');
+      } else {
+        expect(v.level, siteId).toBe('fail');
+        expect(v.text, siteId).toContain('range-safety corridor');
+        expect(v.text, siteId).toContain('would not be licensed');
+      }
     }
   });
 });
@@ -250,7 +279,8 @@ describe('range safety · the planner and the panel', () => {
           wrong.push(`${tag}: reachable, but flies ${(p.azimuthRotating * RAD).toFixed(2)}° outside ${site.azimuthMin}–${site.azimuthMax}°`);
         }
         const v = verdict('falcon9', site.id, orbit);
-        if (v.text.includes('range-safety corridor') !== (corridor === 'aboveCorridor')) wrong.push(`${tag}: verdict "${v.text}", corridor ${corridor}`);
+        if (v.text.includes('would not be licensed') !== (corridor === 'aboveCorridor')) wrong.push(`${tag}: verdict "${v.text}", corridor ${corridor}`);
+        if (p.inclinationReachable && p.doglegDeg > 0 && !v.text.includes('dogleg')) wrong.push(`${tag}: a ${p.doglegDeg.toFixed(1)}° dogleg the verdict does not mention`);
         if (corridor === 'ok' && v.text.includes('unreachable')) wrong.push(`${tag}: verdict calls an 'ok' plane unreachable`);
       }
     }

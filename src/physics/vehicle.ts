@@ -13,6 +13,12 @@ export interface BoosterState {
   burnedOut: boolean;
   /** mission time at burnout, for jettison delay */
   burnoutTime: number;
+  /** mission time the motor was lit, s (start-up transient) */
+  startTime: number;
+  /** thrust level (fraction of full) the motor was running at, last step */
+  level: number;
+  /** level it was running at when it ran dry, the start of its tail-off */
+  stopLevel: number;
 }
 
 export interface StageState {
@@ -36,6 +42,88 @@ export interface StageState {
   cutoffTime: number;
   /** number of ignitions performed */
   ignitions: number;
+  /** mission time of the latest ignition — or of the burn actually starting to thrust, s */
+  startTime: number;
+  /** thrust level (fraction of full, all factors) the core was running at, last step */
+  level: number;
+  /** level at the latest shutdown, the start of its tail-off */
+  stopLevel: number;
+}
+
+/**
+ * Engine start-up and shutdown transients.
+ *
+ * A rocket engine does not go from nothing to full thrust in a step. A
+ * pump-fed liquid engine spins its turbopump up and reaches rated chamber
+ * pressure in about a second; a solid motor's igniter pressurises the grain in
+ * a few tenths. After shutdown, liquid engines tail off as the lines and the
+ * pump run down, over a few tenths of a second, and a solid motor's burn-out
+ * is the slivers of grain left against the case burning away over a second or
+ * two. The propellant for all of it comes out of the tanks, so the mass flow
+ * follows the thrust through both transients at the engine's own Isp.
+ *
+ * Instantaneous thrust switching was the model before this, and it matters
+ * most where a large thrust disappears at once — four Soyuz strap-ons burning
+ * out together took ~3.3 MN off the stack in one 10 ms step, and the six-DOF
+ * attitude loop answered it with a nose dip.
+ */
+export const LIQUID_STARTUP_S = 1.0;
+export const SOLID_STARTUP_S = 0.3;
+export const LIQUID_TAILOFF_S = 0.25;
+export const SOLID_TAILOFF_S = 1.0;
+/** A tail-off is over after this many time constants (e⁻⁵ ≈ 0.7 % of its start). */
+export const TAILOFF_SPAN = 5;
+
+export function engineStartupS(e: EngineSpec): number {
+  return e.startupS ?? (e.solid ? SOLID_STARTUP_S : LIQUID_STARTUP_S);
+}
+export function engineTailoffS(e: EngineSpec): number {
+  return e.tailoffS ?? (e.solid ? SOLID_TAILOFF_S : LIQUID_TAILOFF_S);
+}
+
+/** Smooth start-up rise: 0 at ignition, 1 after `startup` s. */
+function rise(x: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  return x * x * (3 - 2 * x);
+}
+/** ∫ rise, for the step average. */
+function riseIntegral(x: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 0.5 + (x - 1);
+  return x * x * x - 0.5 * x * x * x * x;
+}
+
+/**
+ * Mean start-up factor over [since, since + dt] s after ignition (the value at
+ * `since` when dt is 0), so that a step's thrust and its propellant use are the
+ * same integral whatever the step length.
+ */
+export function startupFactor(e: EngineSpec, since: number, dt = 0): number {
+  const T = engineStartupS(e);
+  if (!(T > 0) || since >= T) return 1;
+  if (!(dt > 0)) return rise(since / T);
+  return (riseIntegral((since + dt) / T) - riseIntegral(since / T)) * T / dt;
+}
+
+/** Mean tail-off factor over [since, since + dt] s after shutdown (0 once it is over). */
+export function tailoffFactor(e: EngineSpec, since: number, dt = 0): number {
+  const tau = engineTailoffS(e);
+  const end = TAILOFF_SPAN * tau;
+  if (!(tau > 0) || since >= end || since < 0) return 0;
+  if (!(dt > 0)) return Math.exp(-since / tau);
+  const b = Math.min(end, since + dt);
+  return tau * (Math.exp(-since / tau) - Math.exp(-b / tau)) / dt;
+}
+
+/**
+ * Whether an engine shut down at `stopTime` is still tailing off at `t`. The
+ * nanosecond of slack makes the end of a tail-off, `stopTime + span`, count as
+ * over whatever the rounding of that sum: an action scheduled for the moment
+ * a tail-off ends must find it ended.
+ */
+export function inTailoff(e: EngineSpec, stopTime: number, t: number): boolean {
+  return t - stopTime >= 0 && t - stopTime < TAILOFF_SPAN * engineTailoffS(e) - 1e-9;
 }
 
 export interface ThrustResult {
@@ -58,6 +146,22 @@ export interface ThrustResult {
   coreThrottle: number;
   /** the same for the strap-on boosters of the active stage (solid profile included) */
   boosterThrottle: number;
+  /**
+   * The level the core is flying at, unclamped: a solid motor's regressive
+   * profile runs above its mean thrust early in the burn (P120C 1.52 ×), and a
+   * six-DOF body pushed at the clamped `coreThrottle` delivers less impulse
+   * than the propellant `consume` takes for it.
+   */
+  coreLevel: number;
+  /**
+   * The level of each strap-on group of the active stage, by group index, also
+   * unclamped. `boosterThrottle` is the strongest of them clamped to 1, which is
+   * every group's level while they light and burn out together; PSLV's air-lit
+   * pair lights 25 s after the ground-lit four and outlives them, and a
+   * six-DOF body or a propellant boundary sized on the pair's level for the
+   * four is wrong.
+   */
+  boosterLevels: number[];
   /** any engine currently producing thrust */
   burning: boolean;
 }
@@ -221,11 +325,17 @@ export class VehicleModel {
         ignited: false,
         burnedOut: false,
         burnoutTime: 0,
+        startTime: -Infinity,
+        level: 0,
+        stopLevel: 0,
       })),
       ignitionTime: 0,
       sepTime: 0,
       cutoffTime: 0,
       ignitions: 0,
+      startTime: -Infinity,
+      level: 0,
+      stopLevel: 0,
     }));
   }
 
@@ -293,15 +403,22 @@ export class VehicleModel {
   /**
    * Thrust and mass flow at mission time t, ambient pressure p, with a commanded
    * throttle (0..1) for the core engines. Does not consume propellant.
+   *
+   * `dt` > 0 averages the start-up and tail-off transients over [t, t + dt],
+   * which is what the step that follows will fly; `consume` takes the same
+   * average, so a step's impulse and its propellant always agree. A throttle
+   * command of 0 lights nothing, but an engine already shut down keeps tailing
+   * off whatever the command.
    */
-  thrust(t: number, p: number, throttleCmd: number): ThrustResult {
+  thrust(t: number, p: number, throttleCmd: number, dt = 0): ThrustResult {
     const st = this.active;
-    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, burning: false };
+    const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, coreLevel: 0, boosterLevels: [], burning: false };
     if (!st) return out;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
+    const e = st.spec.engine;
+    const n = e.count * st.engineFraction;
     // core
-    if (st.ignited && !st.cutoff && !st.burnedOut && this.usablePropellant(st) > 0 && st.engineFraction > 0) {
-      const e = st.spec.engine;
+    if (throttleCmd > 0 && st.ignited && !st.cutoff && !st.burnedOut && this.usablePropellant(st) > 0 && st.engineFraction > 0) {
       let thr = throttleCmd;
       if (boostersBurning && st.spec.throttleWithBoosters !== undefined) {
         const tSince = t - st.ignitionTime;
@@ -311,33 +428,133 @@ export class VehicleModel {
       thr = Math.max(minT, Math.min(1, thr));
       let profile = 1;
       if (e.solid) profile = this.solidProfileFor(st);
-      const n = e.count * st.engineFraction;
-      out.thrust += n * engineThrust(e, p) * thr * profile;
-      out.mdot += n * engineMassFlow(e) * thr * profile;
+      const level = thr * profile * startupFactor(e, t - st.startTime, dt);
+      out.thrust += n * engineThrust(e, p) * level;
+      out.mdot += n * engineMassFlow(e) * level;
       out.thrustFullVac += n * e.thrustVac * profile;
       // `* profile` so a solid core's plume follows its own thrust curve
-      out.coreThrottle = Math.min(1, thr * profile);
+      out.coreThrottle = Math.min(1, level);
+      out.coreLevel = level;
       out.burning = true;
+    } else if (this.coreTailingOff(st, t)) {
+      const level = this.coreTailLevel(st, t, dt);
+      out.thrust += n * engineThrust(e, p) * level;
+      out.mdot += n * engineMassFlow(e) * level;
+      out.coreThrottle = Math.min(1, level);
+      out.coreLevel = level;
+      out.burning = level > 0;
     }
     // boosters
-    for (const b of st.boosters) {
-      if (!b.attached || !b.ignited || b.burnedOut || this.usableBoosterPropellant(b) <= 0) continue;
-      const e = b.spec.engine;
-      let profile = 1;
-      if (e.solid) profile = this.solidProfileForBooster(b);
-      const thr = e.solid ? 1 : Math.max(e.minThrottle ?? 1, Math.min(1, throttleCmd));
-      const n = e.count * b.spec.count;
-      out.thrust += n * engineThrust(e, p) * thr * profile;
-      out.mdot += n * engineMassFlow(e) * thr * profile;
-      out.thrustFullVac += n * e.thrustVac * profile;
+    out.boosterLevels = st.boosters.map(() => 0);
+    for (const [group, b] of st.boosters.entries()) {
+      if (!b.attached || !b.ignited) continue;
+      const be = b.spec.engine;
+      const nb = be.count * b.spec.count;
+      let level = 0;
+      if (!b.burnedOut) {
+        if (!(throttleCmd > 0) || this.usableBoosterPropellant(b) <= 0) continue;
+        let profile = 1;
+        if (be.solid) profile = this.solidProfileForBooster(b);
+        const thr = be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd));
+        level = thr * profile * startupFactor(be, t - b.startTime, dt);
+        out.thrustFullVac += nb * be.thrustVac * profile;
+      } else if (this.boosterTailingOff(b, t)) {
+        level = this.boosterTailLevel(b, t, dt);
+      } else continue;
+      out.thrust += nb * engineThrust(be, p) * level;
+      out.mdot += nb * engineMassFlow(be) * level;
       // The strongest burning group wins: several groups on one stage (H3's
       // SRB-3 pair, Angara's four URM-1s) light and burn out together, so a
       // maximum and a per-group value differ only during the second in which
       // one of them has burned out and is about to be jettisoned.
-      out.boosterThrottle = Math.max(out.boosterThrottle, Math.min(1, thr * profile));
-      out.burning = true;
+      out.boosterThrottle = Math.max(out.boosterThrottle, Math.min(1, level));
+      out.boosterLevels[group] = level;
+      if (level > 0) out.burning = true;
     }
     return out;
+  }
+
+  /**
+   * Mean tail-off level over [t, t + dt], never more than the tanks still
+   * hold: `thrust` and `consume` both use it, so the last step of a tail-off
+   * cannot deliver impulse the propellant was not there for.
+   */
+  private coreTailLevel(st: StageState, t: number, dt: number): number {
+    const e = st.spec.engine;
+    const level = st.stopLevel * tailoffFactor(e, t - st.cutoffTime, dt);
+    if (!(dt > 0)) return level;
+    return Math.min(level, this.usablePropellant(st) / (e.count * st.engineFraction * engineMassFlow(e) * dt));
+  }
+  private boosterTailLevel(b: BoosterState, t: number, dt: number): number {
+    const e = b.spec.engine;
+    const level = b.stopLevel * tailoffFactor(e, t - b.burnoutTime, dt);
+    if (!(dt > 0)) return level;
+    return Math.min(level, this.usableBoosterPropellant(b) / (e.count * engineMassFlow(e) * dt));
+  }
+
+  /** The stage's core was shut down (or ran dry) and is still tailing off at `t`. */
+  coreTailingOff(st: StageState, t: number): boolean {
+    return st.ignited && (st.cutoff || st.burnedOut) && st.stopLevel > 0 && st.engineFraction > 0
+      && this.usablePropellant(st) > 0 && inTailoff(st.spec.engine, st.cutoffTime, t);
+  }
+  /** The strap-on group ran dry and is still tailing off at `t`. */
+  boosterTailingOff(b: BoosterState, t: number): boolean {
+    return b.burnedOut && b.stopLevel > 0 && this.usableBoosterPropellant(b) > 0 && inTailoff(b.spec.engine, b.burnoutTime, t);
+  }
+
+  /**
+   * Propellant an engine running at `flow` kg/s still burns in its tail-off, kg.
+   * The depletion sensor shuts the engine down with this much aboard, so the
+   * tail-off runs on real propellant and ends with the tanks empty.
+   */
+  static tailoffReserve(e: EngineSpec, flow: number): number {
+    return flow * engineTailoffS(e) * (1 - Math.exp(-TAILOFF_SPAN));
+  }
+
+  /**
+   * An engine of the active stage (or one of its boosters) is spinning up or
+   * tailing off at `t` — the thrust is changing faster than the ascent's normal
+   * step resolves.
+   */
+  inTransient(t: number): boolean {
+    const st = this.active;
+    if (!st) return false;
+    const e = st.spec.engine;
+    if (st.ignited && !st.cutoff && !st.burnedOut && t - st.startTime < engineStartupS(e)) return true;
+    if (this.coreTailingOff(st, t)) return true;
+    for (const b of st.boosters) {
+      if (!b.attached || !b.ignited) continue;
+      if (!b.burnedOut && t - b.startTime < engineStartupS(b.spec.engine)) return true;
+      if (this.boosterTailingOff(b, t)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Velocity the active core's tail-off still adds after `t`, m/s along the
+   * thrust axis, at ambient pressure `p` and stack mass `mass`: all of it if
+   * the core were shut down at `t` from the level it ran at on the last step,
+   * what is left of it if it is already tailing off. This is what a cut-off
+   * has to anticipate — real ascent guidance subtracts the tail-off impulse
+   * from its cut-off target in exactly this way — and what the orbit a cut-off
+   * leaves behind is measured with.
+   */
+  tailoffDeltaV(t: number, p: number, mass: number): number {
+    const st = this.active;
+    if (!st || !(mass > 0) || !st.ignited || !(st.engineFraction > 0)) return 0;
+    const e = st.spec.engine;
+    const tau = engineTailoffS(e);
+    let level: number;
+    let fraction: number;
+    if (!st.cutoff && !st.burnedOut) {
+      level = st.level;
+      fraction = 1 - Math.exp(-TAILOFF_SPAN);
+    } else if (this.coreTailingOff(st, t)) {
+      level = st.stopLevel;
+      fraction = Math.exp(-Math.max(0, t - st.cutoffTime) / tau) - Math.exp(-TAILOFF_SPAN);
+    } else return 0;
+    if (!(level > 0) || !(fraction > 0)) return 0;
+    return e.count * st.engineFraction * engineThrust(e, p) * level * tau * fraction / mass;
   }
 
   /** Consume propellant for dt seconds at the given conditions. Returns burnout flags. */
@@ -346,8 +563,9 @@ export class VehicleModel {
     const res = { coreBurnout: false, boosterBurnout: [] as BoosterState[] };
     if (!st) return res;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
-    if (st.ignited && !st.cutoff && !st.burnedOut && st.engineFraction > 0) {
-      const e = st.spec.engine;
+    const e = st.spec.engine;
+    const n = e.count * st.engineFraction;
+    if (throttleCmd > 0 && st.ignited && !st.cutoff && !st.burnedOut && st.engineFraction > 0) {
       let thr = throttleCmd;
       if (boostersBurning && st.spec.throttleWithBoosters !== undefined && t - st.ignitionTime > 20) {
         thr = Math.min(thr, st.spec.throttleWithBoosters);
@@ -356,28 +574,53 @@ export class VehicleModel {
       thr = Math.max(minT, Math.min(1, thr));
       let profile = 1;
       if (e.solid) profile = this.solidProfileFor(st);
-      const used = e.count * st.engineFraction * engineMassFlow(e) * thr * profile * dt;
-      st.propellant -= used;
-      if (this.usablePropellant(st) <= 0) {
+      const level = thr * profile * startupFactor(e, t - st.startTime, dt);
+      st.level = level;
+      const flow = n * engineMassFlow(e) * level;
+      st.propellant -= flow * dt;
+      // Shut down by the depletion sensor with the tail-off's propellant aboard.
+      if (this.usablePropellant(st) <= VehicleModel.tailoffReserve(e, flow)) {
         st.propellant = Math.max(st.propellant, st.index === 0 ? this.recoveryReserve * st.spec.propellantMass : 0);
         st.burnedOut = true;
-        st.cutoffTime = t;
+        st.cutoffTime = t + dt;
+        // The sensor trips within a step of the reserve, so scale the tail-off
+        // to burn exactly what is left.
+        const perLevel = VehicleModel.tailoffReserve(e, n * engineMassFlow(e));
+        st.stopLevel = perLevel > 0 ? Math.min(level, this.usablePropellant(st) / perLevel) : 0;
         res.coreBurnout = true;
       }
+    } else if (this.coreTailingOff(st, t)) {
+      const level = this.coreTailLevel(st, t, dt);
+      st.propellant -= Math.min(this.usablePropellant(st), n * engineMassFlow(e) * level * dt);
+      st.level = 0;
+    } else {
+      st.level = 0;
     }
     for (const b of st.boosters) {
-      if (!b.attached || !b.ignited || b.burnedOut) continue;
-      const e = b.spec.engine;
-      let profile = 1;
-      if (e.solid) profile = this.solidProfileForBooster(b);
-      const thr = e.solid ? 1 : Math.max(e.minThrottle ?? 1, Math.min(1, throttleCmd));
-      const used = e.count * engineMassFlow(e) * thr * profile * dt;
-      b.propellant -= used;
-      if (this.usableBoosterPropellant(b) <= 0) {
-        b.propellant = Math.max(b.propellant, this.recoveryReserve * b.spec.propellantMass);
-        b.burnedOut = true;
-        b.burnoutTime = t;
-        res.boosterBurnout.push(b);
+      if (!b.attached || !b.ignited) continue;
+      const be = b.spec.engine;
+      const nb = be.count;
+      if (!b.burnedOut) {
+        if (!(throttleCmd > 0)) { b.level = 0; continue; }
+        let profile = 1;
+        if (be.solid) profile = this.solidProfileForBooster(b);
+        const thr = be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd));
+        const level = thr * profile * startupFactor(be, t - b.startTime, dt);
+        b.level = level;
+        const flow = nb * engineMassFlow(be) * level;
+        b.propellant -= flow * dt;
+        if (this.usableBoosterPropellant(b) <= VehicleModel.tailoffReserve(be, flow)) {
+          b.propellant = Math.max(b.propellant, this.recoveryReserve * b.spec.propellantMass);
+          b.burnedOut = true;
+          b.burnoutTime = t + dt;
+          const perLevel = VehicleModel.tailoffReserve(be, nb * engineMassFlow(be));
+          b.stopLevel = perLevel > 0 ? Math.min(level, this.usableBoosterPropellant(b) / perLevel) : 0;
+          res.boosterBurnout.push(b);
+        }
+      } else if (this.boosterTailingOff(b, t)) {
+        const level = this.boosterTailLevel(b, t, dt);
+        b.propellant -= Math.min(this.usableBoosterPropellant(b), nb * engineMassFlow(be) * level * dt);
+        b.level = 0;
       }
     }
     return res;
@@ -388,14 +631,32 @@ export class VehicleModel {
     st.ignited = true;
     st.cutoff = false;
     st.ignitions += 1;
+    st.startTime = t;
   }
-  igniteBooster(b: BoosterState): void {
+  /**
+   * Light a strap-on group. Without a time the motor is taken as already at
+   * full thrust (a fixture that is not flying the start-up).
+   */
+  igniteBooster(b: BoosterState, t = -Infinity): void {
     b.ignited = true;
+    b.startTime = t;
+  }
+  /**
+   * The engine starts thrusting now rather than at ignition: an orbital burn
+   * that was lit and then held at zero throttle until its attitude was right
+   * spins up when it actually opens the valves.
+   */
+  markStart(st: StageState, t: number): void {
+    st.startTime = t;
   }
   cutoffStage(st: StageState, t: number): void {
     if (st.ignited && !st.cutoff) {
       st.cutoff = true;
-      st.cutoffTime = t;
+      // A stage that ran dry is already tailing off from its depletion time.
+      if (!st.burnedOut) {
+        st.cutoffTime = t;
+        st.stopLevel = st.level;
+      }
     }
   }
   jettisonBooster(b: BoosterState, t: number): void {

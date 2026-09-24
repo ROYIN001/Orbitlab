@@ -33,6 +33,17 @@ export interface EngineSpec {
    * sea-level pair reach a trajectory.
    */
   vacuumOnly?: boolean;
+  /**
+   * Start-up transient: time from ignition to full thrust, s. Defaults to
+   * `LIQUID_STARTUP_S` / `SOLID_STARTUP_S` in src/physics/vehicle.ts.
+   */
+  startupS?: number;
+  /**
+   * Shutdown tail-off: time constant of the exponential thrust decay after the
+   * engine is shut down or runs dry, s. Defaults to `LIQUID_TAILOFF_S` /
+   * `SOLID_TAILOFF_S`.
+   */
+  tailoffS?: number;
 }
 
 export interface BoosterGroupSpec {
@@ -144,6 +155,14 @@ export interface VehicleSpec {
   recoveryReserve?: number;
   /** Default guidance overrides (kick angle etc.) */
   guidanceDefaults?: Partial<GuidanceParams>;
+  /**
+   * Further overrides when the vehicle flies as a rigid body. A point mass can
+   * pitch over at any angle of attack; a real airframe, and the six-DOF model,
+   * cannot hold much more than its trim authority allows through max-Q, so a
+   * programme tuned on the point mass can hand a weak upper stage a flatter
+   * trajectory than it needs (docs/SIXDOF-ACCEPTANCE.md).
+   */
+  guidanceDefaultsSixDof?: Partial<GuidanceParams>;
   /** Reference drag area override (m^2); default from max diameter */
   dragArea?: number;
   /** Crewed launches supported */

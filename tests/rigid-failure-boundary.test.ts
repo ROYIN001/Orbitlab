@@ -5,14 +5,17 @@ import { captureFrame } from '../src/physics/frame';
 import { FlightRecorder } from '../src/replay/recorder';
 import { ReplayPlayer } from '../src/replay/player';
 import { v3 } from '../src/physics/vec3';
+import { engineStartupS } from '../src/physics/vehicle';
 import type { FailureMode } from '../src/types';
-import type { StageState } from '../src/physics/vehicle';
 import { rigidMission } from './rigid-harness';
 
 function flying(mode: FailureMode = 'none', time = 0.11) {
   const cfg = rigidMission(); cfg.failure = { mode, time, stage: 0 };
   const sim = new Simulation(cfg, { headless: true });
-  sim.state.t = 0.1; sim.step(0); // Drain countdown, with no integration or fuel consumption.
+  // Drain the countdown with no integration or fuel consumption — the
+  // ignition first, on time, so the engines are past their start-up by T+0.1.
+  sim.state.t = -2.5; sim.step(0);
+  sim.state.t = 0.1; sim.step(0);
   sim.setRigidCommand({ mode: 'manual', throttle: 0.7, rates: v3(0.01, 0.02, -0.01) });
   return sim;
 }
@@ -52,12 +55,10 @@ describe('accepted in-flight propulsion failures', () => {
 
   it('refreshes an already-due failure without consuming fuel or moving finite gimbals', () => {
     const sim = flying('thrustLoss', 100); sim.step(0.01);
-    const boundary = sim as unknown as { schedule(t: number, label: string, action: () => void): void;
-      applyFailure(): void; processScheduledActions(): boolean };
     const before = captureFrame(sim), beforeFuel = fuel(sim);
     expect(Object.values(before.rigid!.engineDeflections).flat().some(angle => angle !== 0)).toBe(true);
-    boundary.schedule(sim.state.t, 'fixture-thrust-loss', () => boundary.applyFailure());
-    expect(boundary.processScheduledActions()).toBe(true);
+    sim.schedule(sim.state.t, 'fixture-thrust-loss', () => sim.failures.applyFailure());
+    expect(sim.processScheduledActions()).toBe(true);
     const after = captureFrame(sim);
     for (const key of ['t', 'r', 'v', 'mass'] as const) expect(after[key]).toEqual(before[key]);
     for (const key of ['attitudeQ', 'omegaBody', 'engineDeflections', 'cgBody', 'inertiaBody'] as const)
@@ -69,9 +70,8 @@ describe('accepted in-flight propulsion failures', () => {
 
   it('stops processing later due actions after range safety destroys the vehicle', () => {
     const sim = flying('rangeSafety', 0.11);
-    const boundary = sim as unknown as { schedule(t: number, label: string, action: () => void): void };
     let ran = false;
-    boundary.schedule(0.11, 'fixture-after-destruction', () => { ran = true; });
+    sim.schedule(0.11, 'fixture-after-destruction', () => { ran = true; });
     sim.step(0.01);
     expect(sim.isFailed()).toBe(true); expect(ran).toBe(false);
     expect(Object.values(sim.state.rigid!.engineThrottles!).every(value => value === 0)).toBe(true);
@@ -79,23 +79,25 @@ describe('accepted in-flight propulsion failures', () => {
 
   it.each(['ascent', 'burn'] as const)('accepts an upper-stage ignition in %s while preserving the orbital alignment gate', status => {
     const sim = flying();
-    const boundary = sim as unknown as { detachStage(stage: StageState): void;
-      schedule(t: number, label: string, action: () => void): void; processScheduledActions(): boolean };
-    boundary.detachStage(sim.vehicle.stages[0]);
+    sim.staging.detachStage(sim.vehicle.stages[0]);
     sim.state.status = status; sim.state.throttle = 0;
     sim.rigidRuntime!.setCommand({ mode: 'auto', throttle: 1, rates: v3() });
     const before = captureFrame(sim), beforeFuel = fuel(sim), next = sim.vehicle.active!;
     expect(next.ignited).toBe(false);
-    boundary.schedule(sim.state.t, 'fixture-upper-ignition', () => sim.vehicle.igniteStage(next, sim.state.t));
-    boundary.processScheduledActions();
+    sim.schedule(sim.state.t, 'fixture-upper-ignition', () => sim.vehicle.igniteStage(next, sim.state.t));
+    sim.processScheduledActions();
     const after = captureFrame(sim);
     expect(next.ignited).toBe(true);
+    // Either way nothing thrusts at the instant of ignition: the engine has
+    // its start-up ahead of it. What differs is whether the command to run
+    // was accepted.
+    expect(after.thrust).toBe(0);
+    expect(Object.values(after.rigid!.engineThrottles!).every(value => value === 0)).toBe(true);
     if (status === 'ascent') {
-      expect(after.thrust).toBeGreaterThan(1e5);
-      expect(Object.values(after.rigid!.engineThrottles!).some(value => value > 0)).toBe(true);
+      expect(after.throttle).toBe(1);
+      expect(sim.vehicle.thrust(sim.state.t + engineStartupS(next.spec.engine), 0, after.throttle).thrust).toBeGreaterThan(1e5);
     } else {
-      expect(after.thrust).toBe(0);
-      expect(Object.values(after.rigid!.engineThrottles!).every(value => value === 0)).toBe(true);
+      expect(after.throttle).toBe(0);
     }
     expect(after.r).toEqual(before.r); expect(after.v).toEqual(before.v);
     expect(after.rigid!.attitudeQ).toEqual(before.rigid!.attitudeQ);

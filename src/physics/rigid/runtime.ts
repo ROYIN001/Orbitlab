@@ -5,7 +5,7 @@ import { DEG, G0, OMEGA_EARTH, R_EARTH } from '../constants';
 import { gravityJ2 } from '../gravity';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { allocateEngineGimbals, allocateRcs, createEngineStates, engineWrench, stepEngineActuators, stepRcs, type EngineActuatorSpec, type EngineActuatorState } from './actuators';
-import { aerodynamicWrench, windVelocityECI, type WindScenario } from './aero';
+import { aerodynamicWrench, staticAeroMoment, windVelocityECI, type WindScenario } from './aero';
 import { attitudeControl, rateControl, type ControlGains } from './control';
 import { integrateRigidStep, type RigidState } from './integrator';
 import { matVecMul, quatFromBasis, quatInverseRotate, quatRotate, type Mat3, type Quat } from './math';
@@ -70,6 +70,14 @@ export function windScenario(config: DynamicsConfig): WindScenario {
     gustAmplitudeENU: v3(2, 1, 0), gustPeriodSeconds: 12, seed: config.seed };
 }
 
+/** Throw `RangeError` for a flight command the runtime would refuse. */
+export function validateRigidCommand(command: RigidCommand): void {
+  if (!['auto', 'manual'].includes(command.mode) || ![command.rates.x, command.rates.y, command.rates.z, command.throttle].every(Number.isFinite)
+    || command.throttle < 0 || command.throttle > 1 || Math.max(Math.abs(command.rates.x), Math.abs(command.rates.y), Math.abs(command.rates.z)) > 5 * DEG + 1e-12) {
+    throw new RangeError('Invalid rigid flight command');
+  }
+}
+
 export class RigidRuntime {
   command: RigidCommand = { mode: 'auto', rates: v3(), throttle: 1 };
   readonly consumed: Record<string, number> = {};
@@ -94,10 +102,7 @@ export class RigidRuntime {
   }
 
   setCommand(command: RigidCommand): void {
-    if (!['auto', 'manual'].includes(command.mode) || ![command.rates.x, command.rates.y, command.rates.z, command.throttle].every(Number.isFinite)
-      || command.throttle < 0 || command.throttle > 1 || Math.max(Math.abs(command.rates.x), Math.abs(command.rates.y), Math.abs(command.rates.z)) > 5 * DEG + 1e-12) {
-      throw new RangeError('Invalid rigid flight command');
-    }
+    validateRigidCommand(command);
     this.command = { ...command, rates: { ...command.rates } };
   }
 
@@ -144,17 +149,55 @@ export class RigidRuntime {
     return { center, radius, delay };
   }
 
+  /**
+   * The angular acceleration the stage's attitude thrusters give at the
+   * controller's braking share (the slower of pitch and yaw), rad/s², times
+   * `seconds` — the rate they can bring to rest in that time. Infinity when the
+   * stage has no thrusters with gas left; the engines do not count.
+   */
+  coastArrestRate(snapshot: RigidVehicleSnapshot, seconds: number): number {
+    const jets = snapshot.rcsThrusters;
+    const reservoir = snapshot.rcs.find(r => r.stageId === jets[0]?.stageId);
+    if (!jets.length || !reservoir || reservoir.initialPropellantKg <= (this.consumed[reservoir.stageId] ?? 0)) return Infinity;
+    const positive = v3(), negative = v3();
+    for (const jet of jets) {
+      const moment = scale(cross(sub(jet.positionBody, snapshot.cg), normalize(jet.directionBody)), jet.maxThrust);
+      for (const axis of ['y', 'z'] as const) { positive[axis] += Math.max(0, moment[axis]); negative[axis] += Math.max(0, -moment[axis]); }
+    }
+    let rate = Infinity;
+    (['y', 'z'] as const).forEach((axis) => {
+      const row = axis === 'y' ? 1 : 2;
+      const inertiaBound = Math.abs(snapshot.inertia[row * 3]) + Math.abs(snapshot.inertia[row * 3 + 1]) + Math.abs(snapshot.inertia[row * 3 + 2]);
+      rate = Math.min(rate, 0.35 * Math.min(positive[axis], negative[axis]) / Math.max(1e-12, inertiaBound) * seconds);
+    });
+    return rate;
+  }
+
   /** Command cone for attached ascent only; never clip aerodynamic forces.
    * Soyuz's verified reference program permits up to 65% of its conservative
    * torque radius for aerodynamic trim, leaving 35% before axis coupling.
    * Falcon retains its separately tested 35% trim/65% reserve program.
    * These are guidance margins, not changes to hardware authority. The rate
    * controller below separately uses 35% of the remaining actual torque. */
-  ascentAngleLimit(snapshot: RigidVehicleSnapshot, dynamicPressure: number): number {
+  ascentAngleLimit(snapshot: RigidVehicleSnapshot, dynamicPressure: number, mach = 0): number {
     if (!Number.isFinite(dynamicPressure) || dynamicPressure < 0) throw new RangeError('Invalid dynamic pressure');
     const authority = this.authority(snapshot);
     const trimShare = snapshot.geometry.vehicleId === 'soyuz21a' ? 0.65 : 0.35;
     const margin = trimShare * Math.max(0, Math.min(authority.radius.y - Math.abs(authority.center.y), authority.radius.z - Math.abs(authority.center.z)));
+    if (snapshot.aero.table) {
+      // The tabulated moment is not proportional to sin α — the crossflow grows
+      // with sin²α and moves the centre of pressure — so find the largest angle
+      // whose static moment the trim share can hold.
+      const moment = (angle: number) => staticAeroMoment(snapshot.aero, mach, dynamicPressure, angle, snapshot.cg);
+      const ceiling = snapshot.aero.validAngleRad;
+      if (!(dynamicPressure > 0) || moment(ceiling) <= margin) return dynamicPressure > 0 ? ceiling : Math.PI;
+      let lo = 0, hi = ceiling;
+      for (let i = 0; i < 30; i++) {
+        const mid = (lo + hi) / 2;
+        if (moment(mid) <= margin) lo = mid; else hi = mid;
+      }
+      return lo;
+    }
     const coefficient = snapshot.aero.normalSlopePerRad + Math.max(...snapshot.aero.cdMach.map(([, cd]) => cd), 0);
     const perSinAngle = dynamicPressure * snapshot.aero.referenceArea * coefficient * norm(sub(snapshot.aero.cpBody, snapshot.cg));
     return perSinAngle > 0 ? Math.min(snapshot.aero.validAngleRad, Math.asin(Math.min(1, margin / perSinAngle))) : Math.PI;

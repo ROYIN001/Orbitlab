@@ -1,6 +1,16 @@
 # Six-degree-of-freedom acceptance gates
 
-Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control. This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
+Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control, extended to all eighteen vehicles (roadmap P01, last section). This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
+
+**Where the evidence lives.** Paths below that start `../audit-2026-09-19/` or
+`../../implementation-planning/` are the owner's local evidence and planning folders, kept
+outside this repository; they are cited as the record of what was run at the time and cannot
+be opened from a checkout. What *can* be re-run from a checkout: the delivered-orbit matrix
+(`npm run test:heavy`, tests/heavy/), the six-DOF fleet matrix (`npm run test:sixdof-fleet`,
+tests/sixdof-fleet/), the mission convergence gate
+(tests/rigid-mission-convergence.test.ts), the recovery acceptance (tests/rigid-recovery.test.ts)
+and the component sensitivity study (tests/rigid-sensitivity.test.ts). The current state of the
+whole project is in [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
 
 ## Resume checkpoint — 2026-09-20
 
@@ -255,6 +265,29 @@ The reduced-flux case had 16.62 s between entry cutoff and the landing burn, the
 
 After the final guidance change, the complete 0.0025 / 0.005 / 0.01 s fixed-control recovery experiment was repeated: all 3 tests and unchanged numerical assertions passed in 155.77 s, with identical T536.386911 s contact classification/time. The nominal 0.01-versus-0.005 s maximum matched-checkpoint differences were 0.002788 m, 0.000011642 m/s and 0.000002428 degrees; the contact-time difference was zero. This supersedes the earlier numerical checkpoint for the current guidance, without changing any thresholds. Evidence: `rigid-recovery-final-finite-convergence.log` and `rigid-recovery-final-finite-convergence.json` in the same validation directory. The later throttle-telemetry correction changes recorded/displayed fractions only, not forces or trajectory.
 
+### Terminal burn planned mid-throttle (engine transients, roadmap P02)
+
+Engine start-up and tail-off transients (PHYSICS.md §4) changed the returning stage's
+separation state slightly, and the recovery above stopped landing: the stage came to a stop
+145 m above the pad at 4 m/s, climbed on the minimum thrust it cannot go below, emptied its
+tanks and fell back. The cause was in the terminal guidance, not the transients. Its restart
+was timed for the *minimum* throttle; the constant-deceleration law then asked for a little
+more than the minimum at ignition, braked early, and as the burn emptied the tanks (about ten
+per cent of the stage's mass) the same law asked for less than the minimum, which a stage
+that cannot hover cannot give. The restart is now timed for a throttle half-way between the
+minimum and full thrust (`TERMINAL_PLANNED_THROTTLE_FRACTION`), leaving room to throttle down
+as well as up once lit — which is how real landing burns are planned. Two further changes
+that belong to the transients: while a shut-down engine is tailing off the attitude loop holds
+the attitude it was shut down in (following a guidance command with the thrust fading had
+swung the stack to 1.3 °/s between MECO and separation, more than the returning stage's gas
+could take out), and a flight is not `done` until its last tail-off is over.
+
+With those changes the 0.0025 / 0.005 / 0.01 s recovery acceptance passes again, all three
+landed, with the unchanged convergence assertions. The 18 terminal-restart stress trajectories
+land 16 times (they landed 14 times before), and the two impacts still terminate honestly as
+impacts. The recovery remains experimental in the sense stated above: the RCS gas is still
+exhausted before T+180 s and the outcome still depends on the separation state.
+
 ## Post-deployment acceptance and bounded payload release
 
 The full mission convergence gate continues beyond the target-orbit event until actual payload separation. It independently recomputes orbital elements from raw position/velocity and applies the pre-existing fleet tolerances; a cached success flag cannot pass this check. The first frozen 0.01/0.005 s pair found Falcon at approximately 654.426 km apogee after deployment, although it had reached 502.476 × 500.584 km at the earlier target event. Both numerical trajectories agreed closely; both failed the actual delivered-orbit criterion. Soyuz passed that first complete pair. This failed Falcon evidence is retained as `../audit-2026-09-19/validation/mission-convergence-before-payload-fix-*`, with identical pre/post source manifests.
@@ -262,3 +295,88 @@ The full mission convergence gate continues beyond the target-orbit event until 
 The defect was an overly large payload recoil from applying the generic ascent stage ejection impulse to a light satellite. The payload-specific correction uses an estimated additional relative axial speed of 0.5 m/s and the reduced mass of the exact two component partitions: `J = 0.5 * mStage * mRetained / mTotal`. Both equal/opposite impulses act at one interface; there is no unilateral velocity overwrite. Ordinary ascent-stage impulses remain unchanged. A physical boundary fixture with 14,283 kg upper stage (including 17 kg gas already spent) and 1,000 kg payload previously produced 30.60238 m/s relative release speed. The corrected fixture produces 0.5 m/s, retains the expected finite recoil of each body and conserves combined mass, linear momentum and angular momentum. Staging/partition/debris tests passed34/34 and TypeScript passed. This separation speed is disclosed as an estimate; a real adapter spring/clearance model is outside the scope.
 
 Final complete mission convergence after this correction is recorded separately below when executed; no orbit or numerical tolerance was relaxed to accommodate the defect.
+
+## Per-vehicle aerodynamic tables (roadmap P03, 2026-09-23)
+
+The single normal-force slope at a fixed centre of pressure was replaced by a table per
+configuration (docs/SIXDOF-VEHICLE-DATA.md, "RCS, fins and aerodynamics"): slender-body lift
+where the cross-section grows, viscous crossflow on the planform, a centre of pressure that
+moves with angle and Mach, base-first coefficients for a stage flying engines first, grid-fin
+lift on the returning Falcon stage, and a blunt body for a released payload. The ascent command
+cone now finds its angle by bisection on the tabulated moment instead of assuming a moment
+proportional to sin α.
+
+The change moves both reference vehicles' static stability. Falcon 9's lift is all at its
+fairing (centre of pressure 71 m up a 72 m stack subsonic, 62 m supersonic), so its moment at
+small angles is close to the old estimate and grows faster at large ones. Soyuz-2.1a's strap-on
+noses put its centre of pressure at 21.5 m, about 8 m above the centre of gravity at lift-off
+instead of 17 m, so it needs half the trim moment per degree it did.
+
+Result on the 28 six-DOF test files: 274 of 276 passed at the first run, including both
+reference missions, their 0.01 / 0.005 s convergence, the three recovery landings and the 67
+sensitivity cases. The terminal-restart stress set still lands 16 of 18. Two failed:
+
+- **Soyuz max-Q authority boundary.** Its fixture takes the flow angle the calm ISS mission
+  flies at T+40 s, 4.4 km, 25 kPa. With the old estimate that was 0.3°; with the tables the
+  mission flies 0.61° there (the command cone allows the less unstable vehicle more angle), and
+  at 0.3° the 5° vernier case only just saturated. The fixture now uses the re-measured 0.6°;
+  its assertions are unchanged — 5° travel leaves about 18 % of the moment unmet, 10° trims it.
+- **Released payload drag.** A payload flying alone was given the table of the launcher stack
+  it had left, because the table did not check which stages were still attached. It now gets a
+  blunt-body table with the point-mass model's Cd of 2.2; so does a spacecraft stage flying
+  without its launcher.
+
+The Soyuz late first-stage pitch-down is unchanged in character — the command cone releases a
+closed-loop pitch command that has run far below the vehicle as the dynamic pressure falls — but
+begins earlier, at about T+89 s instead of at booster separation, because the less unstable
+vehicle is released sooner. It stays a guidance item (G01).
+
+## Every vehicle in six-DOF (roadmap P01, 2026-09-23)
+
+The other sixteen vehicles were given six-DOF data — chambers where their bells are drawn,
+per-stage steering, thrusters, tanks and grains ([SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md),
+"The other sixteen vehicles") — and six-DOF became the default for all eighteen.
+
+**The gate.** `npm run test:sixdof-fleet` (tests/sixdof-fleet/) flies, as rigid bodies with
+each vehicle's own actuators:
+
+- every accepted row of the regular fleet matrix — 126 vehicle × orbit × payload cases of
+  sixteen vehicles — judged by the same `acceptanceFailures` as tests/fleet-defaults.test.ts
+  (the target-orbit event, the orbit re-derived from the raw state, the insertion clock);
+- each of those vehicles' first accepted case again in the two declared wind scenarios,
+  crosswind and shear (32 cases);
+- Long March 2D's real mission, its satellite to the 600 km sun-synchronous orbit at 25/50/90 %
+  of the rating (3 cases). Long March 2D and Soyuz-2.1a have no accepted matrix row; Soyuz-2.1a's
+  real mission, the crewed spacecraft to the station orbit, is the reference mission of
+  tests/rigid-simulation.test.ts.
+
+Result at commit 68ace10: **161 of 161 passed** in 2 h 39 min on four cores; the
+slowest cases are the Proton-M and Angara A5 transfers (about 7 minutes each), the median about
+2 minutes. An earlier run of the 158 matrix and wind cases at e504089 passed 158 of 158.
+
+**How the orbit is judged.** A six-DOF coast is flown under J2, where the osculating apsides of
+one instant swing several kilometres round a revolution. Judged on them, cases passed or failed
+by where on the orbit their last burn ended (Vulcan in wind shear: "511 × 489 km" on an orbit its
+last burn had put at 500 km). Six-DOF missions — in the simulation, on the result panel and in
+this gate — are now judged on the lowest and highest altitude of the next revolution
+(`physicalApsides`), and the planner aims at that orbit ([PHYSICS.md](PHYSICS.md) §2a). The
+point-mass matrix is unchanged: its coasts are Kepler, where the two are the same.
+
+**What flying the fleet found.** Eleven model changes, each listed with its measured cause in
+SIXDOF-VEHICLE-DATA.md: negligible allocator rows, per-group booster levels, held coast,
+the terminal steering freeze, the vacuum command-rate limit and alignment allowance, separation
+speed per body, burn retries that re-check the stage, the 1° ignition gate, the two-sided
+physical apex, the step-independent cut-off, and the judged orbit. Two data changes came out of
+it as well: Atlas V and Soyuz-2.1a fly six-DOF-specific kick programmes, and a spacecraft with its
+own engine steers on that engine's propellant (Long March 2D's satellite spent 10 kg of the cold
+gas assumed before by its sixth orbit-raising pass).
+
+**The rest of the six-DOF suite.** The 30 rigid-body test files (352 tests: mechanics,
+actuators, staging, replay, both reference missions, their 0.01 / 0.005 s convergence, the three
+Falcon recovery landings, the sensitivity study) pass, as do the watch missions flown in
+six-DOF (tests/watch-missions.test.ts) and the delivered-orbit matrix (`npm run test:heavy`).
+
+**In the browser** (Chromium with software WebGL, physics in the worker): Starship (39
+chambers), Falcon Heavy and Proton-M keep real time at 1× (0.98, 0.99 and 0.96 of it) and reach
+6.0×, 4.7× and 9.8× of a requested 10× during the ascent, using 53–61 MB of JavaScript heap. The
+10× figures were taken with other test processes loading the CPU.

@@ -42,7 +42,9 @@
  *      margin, an order of magnitude over the threshold. Two of them had been
  *      MOVED here out of `KNOWN_GUIDANCE_FAILURES` by the previous wave, which
  *      is what let that wave report "six defects closed" when it had closed
- *      four (review follow-up). All four are back below, where they belong.
+ *      four (review follow-up). All four went back below, and have since been
+ *      fixed in the guidance: the Vulcan and Ariane 64 rows fly, and
+ *      `pslvxl/iss/90` now runs its tanks dry and is filed here honestly.
  *
  *      Several genuine entries end in a break-up rather than an empty tank, and
  *      that is the classification working, not failing: an underpowered stack
@@ -59,9 +61,9 @@
  *   4. `KNOWN_GUIDANCE_FAILURES` — everything else: the vehicle had both the
  *      delta-v and a way to spend it, and the guidance still lost or missed the
  *      orbit. These are defects, and `known guidance failures still fail`
- *      asserts they are all still broken so the list cannot rot. It holds FOUR
- *      entries; see the table's own comment for what closed, what was
- *      mis-filed, and what the count this file used to report actually was.
+ *      asserts they are all still broken so the list cannot rot. It is EMPTY:
+ *      the table's own comment records the last four (five, once Kourou's
+ *      sun-synchronous plane joined the matrix) and what closed them.
  *
  * See `docs/PHYSICS.md`, "Fleet acceptance and reference payloads", for the
  * numbers behind the classification.
@@ -139,24 +141,26 @@ describe('excluded combinations', () => {
   it('the vehicles that fly the sun-synchronous preset are the ones range safety and capability both allow', () => {
     // The flown set is an *intersection*, not a range-safety statement on its
     // own: a vehicle appears here only if (a) its first site's azimuth window
-    // contains the retrograde launch — Plesetsk (330–90°), Vostochny (340–95°),
-    // Vandenberg (147–201°), Mahia and Jiuquan (90–200°) and Taiyuan (144–200°)
-    // are the sites in the data that qualify — and (b) at least one of its
-    // three `sso` rows survives the capability and architecture tables.
-    // Tanegashima, Sriharikota and Kourou fly it in reality with a dogleg this
-    // model does not have, so they are not among them. Electron keeps all three (its rows
+    // contains the retrograde launch, directly or with a dogleg — Plesetsk
+    // (330–90°), Vostochny (340–95°), Vandenberg (147–201°), Mahia and Jiuquan
+    // (90–200°) and Taiyuan (144–200°) directly, Kourou (350–94°) and
+    // Tanegashima (90–190°) with a 1.2° and 1.9° dogleg (Sriharikota's window
+    // stops 11° short, beyond the 5° a dogleg turns here) — and (b) at least one
+    // of its three `sso` rows survives the
+    // capability and architecture tables. Electron keeps all three (its rows
     // are graded against its own 200 kg sun-synchronous rating) and Angara-A5
-    // keeps one. Long March 2D passes the range-safety half from Jiuquan and is
-    // absent only because of (b): all three of its `sso` rows are excluded
-    // above, architecturally — it has no restart, not too little delta-v.
+    // keeps one; Vega-C, H-IIA and H3 keep all three and Ariane 64 two. Long
+    // March 2D passes the range-safety half from Jiuquan and is absent only
+    // because of (b): all three of its `sso` rows are excluded above,
+    // architecturally — it has no restart, not too little delta-v.
     const flown = new Set(fleetCases().filter((c) => c.orbit === 'sso').map((c) => c.vehicle));
-    expect([...flown].sort()).toEqual(['angaraa5', 'electron']);
+    expect([...flown].sort()).toEqual(['angaraa5', 'ariane64', 'electron', 'h2a202', 'h3', 'vegac']);
     expect(azimuthAllowedFor(siteById('jiuquan'), resolveTarget(orbitById('sso'), siteById('jiuquan'), LAUNCH_TIME).inclination))
       .toBe(true);
     expect(SITE_GEOMETRY['longmarch2d/sso/25']).toBeUndefined();
   });
 
-  // Audit item 10 (docs/AUDIT-2026-09-16.md): the fleet gate may not gain a
+  // Audit item 10 (docs/history/AUDIT-2026-09-16.md): the fleet gate may not gain a
   // vehicle it never actually flies. A vehicle whose every matrix row is
   // excluded is allowed only when a dedicated mission flies it to an orbit it
   // really reaches AND SUCCEEDS there — the `default mission` precedent, which
@@ -764,7 +768,7 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
       // the published 24 kN sea level / 25.8 kN vacuum (see vehicles.ts), which
       // is a change to an existing vehicle: the nine-engine mean mass flow is
       // 68.4 kg/s, the 9.7 t first stage burns 142 s instead of 132 s, and
-      // measured MECO moves from T+129 s (pre-wave, docs/AUDIT-2026-09-16.md
+      // measured MECO moves from T+129 s (pre-wave, docs/history/AUDIT-2026-09-16.md
       // line 509) to T+138 s against the published 145-155 s — still 7 s
       // (5 %) early, and recorded as such rather than papered over. Max Q is
       // early too, at T+55 s against a published 60-70 s; that one is the drag
@@ -1048,6 +1052,8 @@ describe('range safety', () => {
    * Wenchang, Sriharikota and Mahia went north-east into a sector those ranges
    * close. They now fly the mirror heading, which the window licenses and which
    * reaches the same plane (tests/range-safety.test.ts has the measurement).
+   * A row flown with a dogleg leaves on the window's edge itself, which counts
+   * as inside to the 0.05° the plan's own insertion orbit moves a heading by.
    */
   it('every row the matrix flies leaves on a heading its site licenses', () => {
     const outside: string[] = [];
@@ -1062,7 +1068,7 @@ describe('range safety', () => {
         failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: c.mass,
       }, site, spec);
       expect(plan.inclinationReachable, caseKey(c)).toBe(true);
-      if (!azimuthInWindow(site, plan.azimuthRotating)) {
+      if (![0, 0.05, -0.05].some((d) => azimuthInWindow(site, plan.azimuthRotating + d * DEG))) {
         outside.push(`${caseKey(c)}: ${(plan.azimuthRotating * RAD).toFixed(2)}° from ${site.id} (${site.azimuthMin}–${site.azimuthMax}°)`);
       }
     }
@@ -1155,34 +1161,43 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   // changes; the fairing now leaves on Soyuz's published T+157 s callout rather
   // than on the heating placard, which moves the heaviest 300 km cell from
   // 110.7 x 745.3 km to 114.6 x 754.5 km and the rest by under a kilometre.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 197.2, ap: 200.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 198.7, ap: 200.6 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 197.5, ap: 200.1 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 219.5, ap: 346.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 241.2, ap: 299.2 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.1, ap: 265.5 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 143.8, ap: 895.4 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 144.0, ap: 873.2 },
+  // Re-measured again when engines gained their start-up and tail-off
+  // transients (roadmap P02): every verdict held, the healthy cells moved by
+  // under 2 km, and the failing 6.3 t / 300 km cell moved to 103.8 x 729.8 km —
+  // its third stage spends half a second of its burn spinning up, and the
+  // flight ends `failed` at depletion, before the tail-off that would have
+  // given the impulse back.
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 198.5, ap: 200.9 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.6, ap: 200.3 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 197.9, ap: 200.2 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 220.0, ap: 346.8 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 240.1, ap: 300.9 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.0, ap: 265.2 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 143.5, ap: 894.9 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 144.1, ap: 874.4 },
   // The one cell that does not survive: the heaviest Soyuz row aimed a hundred
   // kilometres above where the profile closes ends `failed`, with the tanks dry.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 114.6, ap: 754.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 103.8, ap: 729.8 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
-  // rating. Nothing closes, at any altitude or any payload.
-  //
-  // Re-measured when the planner started flying the heading the site's window
-  // licenses: the 'site' inclination (41.0°) used to leave Jiuquan on 87.7°,
-  // north of its 90–200° window, and now leaves on the 92.3° southbound mirror
-  // (tests/range-safety.test.ts). Every verdict is unchanged; the apoapses moved
-  // by up to 6.2 km, which is this 3 km band doing its job.
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 151.2, ap: 357.3 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 155.8, ap: 336.2 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 167.7, ap: 304.5 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.6, ap: 2411.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.7, ap: 2395.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.5, ap: 2372.3 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.9, ap: 2424.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 140.9, ap: 2404.8 },
-  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 141.1, ap: 2391.1 },
+  // rating. Nothing closes, at any altitude or any payload. Re-measured when
+  // the planner started flying the heading the site's window licenses: the
+  // 'site' inclination (41.0°) used to leave Jiuquan on 87.7°, north of its
+  // 90–200° window across Mongolia, and now leaves on the 92.3° southbound
+  // mirror (tests/range-safety.test.ts); the cells moved by up to 6 km of
+  // apoapsis and none changed its verdict. The
+  // engine transients (P02) moved them by up to 9 km of apoapsis and 3 km of
+  // periapsis, again with no verdict changing: a single burn to depletion on a
+  // lofted arc is where a second's difference in the second stage's cut-off
+  // shows most.
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 200, closes: false, pe: 150.8, ap: 355.2 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 200, closes: false, pe: 157.5, ap: 331.1 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 200, closes: false, pe: 171.0, ap: 295.6 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 250, closes: false, pe: 140.6, ap: 2415.6 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 250, closes: false, pe: 140.7, ap: 2396.9 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 250, closes: false, pe: 140.7, ap: 2377.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 325, hKm: 300, closes: false, pe: 140.6, ap: 2421.1 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 650, hKm: 300, closes: false, pe: 140.6, ap: 2399.3 },
+  { vehicle: 'longmarch2d', site: 'jiuquan', mass: 1170, hKm: 300, closes: false, pe: 140.7, ap: 2381.8 },
 ];
 
 describe('single-shot direct insertion', () => {

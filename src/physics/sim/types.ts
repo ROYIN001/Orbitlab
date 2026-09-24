@@ -1,0 +1,150 @@
+/** Types shared by the simulation and everything that reads its state. */
+import type { RigidTelemetry } from '../rigid/telemetry';
+import type { EngineSpec } from '../../types';
+import type { Vec3 } from '../vec3';
+import type { OrbitalElements } from '../orbital';
+import type { AscentPhase } from '../guidance';
+import type { BurnPlan } from '../mission';
+
+export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'failed';
+
+export type EventSeverity = 'info' | 'major' | 'warn' | 'fail' | 'success';
+
+export interface SimEvent {
+  t: number;
+  key: string;
+  params?: Record<string, string | number>;
+  severity: EventSeverity;
+}
+
+export interface TelemetrySample {
+  rigid?: RigidTelemetry;
+  t: number;
+  alt: number;
+  vInertial: number;
+  vAir: number;
+  q: number;
+  mach: number;
+  gLoad: number;
+  mass: number;
+  thrust: number;
+  throttle: number;
+  pitch: number;
+  ap: number;
+  pe: number;
+  inc: number;
+  dvRemaining: number;
+  downrange: number;
+  lat: number;
+  lon: number;
+  stage: number;
+  phase: string;
+}
+
+export interface DebrisVisual {
+  diameter: number;
+  length: number;
+  color: string;
+  conicalTop?: boolean;
+  kind: 'stage' | 'booster' | 'fairing' | 'upperStage';
+}
+
+export interface Debris {
+  rigid?: RigidTelemetry;
+  id: number;
+  name: string;
+  r: Vec3;
+  v: Vec3;
+  /** thrust/attitude axis for rendering */
+  dir: Vec3;
+  mass: number;
+  area: number;
+  cd: number;
+  visual: DebrisVisual;
+  alive: boolean;
+  createdAt: number;
+  recovery?: {
+    /**
+     * Engine of the returning stage, so the number of engines burning can be
+     * re-chosen for the landing. Optional: a frame-backed view of a recorded
+     * flight rebuilds the phase and the flags, not the propulsion.
+     */
+    engine?: EngineSpec;
+    propellant: number; thrustVac: number; thrustSL: number; mdot: number;
+    burning: boolean; landed: boolean;
+    /** propellant held back for the landing burn, kg */
+    landingReserve: number;
+    /** the landing burn has begun (its bang-bang throttling keeps the plume lit) */
+    landingStarted?: boolean;
+    phase: 'coast' | 'entry' | 'landing';
+  };
+  outcome?: 'impact' | 'landed' | 'orbit' | 'burnup';
+  impact?: { lat: number; lon: number };
+}
+
+export interface Losses {
+  dvThrust: number;
+  gravity: number;
+  drag: number;
+  steering: number;
+}
+
+export interface SimState {
+  rigid?: RigidTelemetry;
+  t: number;
+  r: Vec3;
+  v: Vec3;
+  /** unit thrust/body axis direction (ECI) */
+  dir: Vec3;
+  status: SimStatus;
+  ascentPhase: AscentPhase | null;
+  throttle: number;
+  /**
+   * What the engines are actually running at, as opposed to what guidance
+   * commanded (`throttle`): the minimum-throttle clamp, the
+   * `throttleWithBoosters` clamp and a solid motor's thrust profile are all
+   * already in these. Output only — nothing in the physics reads them back;
+   * they exist so the renderer's plumes can be driven from the frame instead of
+   * from a second copy of the clamping rules (`ThrustResult.coreThrottle`).
+   */
+  coreThrottle: number;
+  boosterThrottle: number;
+  thrust: number;
+  mass: number;
+  q: number;
+  mach: number;
+  gLoad: number;
+  altitude: number;
+  altitudeAGL: number;
+  airspeed: number;
+  speed: number;
+  downrange: number;
+  lat: number;
+  lon: number;
+  elements: OrbitalElements;
+  maxQ: { value: number; t: number; alt: number };
+  losses: Losses;
+  currentBurn: BurnPlan | null;
+  burnStartTime: number;
+  burnDvRemaining: number;
+  /** target orbit-plane normal fixed at burn start (plane-change burns) */
+  burnPlaneNormal: Vec3 | null;
+  nextBurnTime: number;
+  payloadSeparated: boolean;
+  destroyed: boolean;
+  liftoff: boolean;
+  /** local sidereal angle of Greenwich at time t */
+  theta: number;
+  pitchCmd: number;
+  predictedApoapsis: number;
+  /** vertical speed, m/s */
+  vz: number;
+  /** progress note key for the HUD */
+  note: string;
+}
+
+export interface PendingAction {
+  t: number;
+  fn: () => void;
+  label: string;
+}

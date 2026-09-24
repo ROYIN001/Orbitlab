@@ -113,7 +113,85 @@ export interface RecorderStats {
   rotationWindows: Array<AttitudeWindow & { bodyId: string }>;
 }
 
-export class FlightRecorder {
+/**
+ * What reading a recording needs — the replay cursor, the app's frame loop and
+ * the WebMCP tools. `FlightRecorder` is one; the main-thread mirror of a
+ * recording made in the physics worker (src/session/mirror.ts) is the other.
+ */
+export interface RecordingSource {
+  /** Stored frames, strictly increasing in mission time. Never mutate them. */
+  readonly frames: readonly VisualFrame[];
+  /** Events in occurrence order. */
+  readonly events: readonly SimEvent[];
+  readonly startTime: number;
+  readonly headTime: number;
+  readonly head: VisualFrame | null;
+  indexAt(t: number): number;
+  /** Decorate a fresh replay frame from the recorded rotation history. */
+  applyRecordedAttitudes(frame: VisualFrame): VisualFrame;
+  /** A copy of the live instant, for drawing. */
+  recordNow(): VisualFrame;
+  stats(): RecorderStats;
+}
+
+/** Index of the last frame at or before `t` (0 when `t` precedes the start, -1 when empty). */
+export function frameIndexAt(frames: readonly VisualFrame[], t: number): number {
+  const n = frames.length;
+  if (n === 0) return -1;
+  if (t <= frames[0].t) return 0;
+  if (t >= frames[n - 1].t) return n - 1;
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (frames[mid].t <= t) lo = mid; else hi = mid;
+  }
+  return lo;
+}
+
+/** One accepted rotation sample, as `AttitudeTrack.record` took it. */
+export type AttitudeObserver = (key: string, t: number, telemetry: RigidTelemetry, force: boolean) => void;
+
+/**
+ * Decorate a replay frame from compact rotation histories keyed by body. Shared
+ * by the recorder and its main-thread mirror, so both answer identically.
+ */
+export function applyAttitudeTracks(tracks: ReadonlyMap<string, AttitudeTrack>, frame: VisualFrame): VisualFrame {
+  const apply = (fallbackId: string, telemetry: RigidTelemetry | undefined): boolean => {
+    if (!telemetry) return false;
+    const track = tracks.get(telemetry.bodyId ?? fallbackId);
+    const pose = track?.at(frame.t, telemetry);
+    telemetry.replayAttitudeAvailable = !!pose;
+    if (!pose) return false;
+    telemetry.attitudeQ = pose.attitudeQ; telemetry.omegaBody = pose.omegaBody;
+    return true;
+  };
+  if (apply('vehicle', frame.rigid)) frame.dir = quatRotate(frame.rigid!.attitudeQ, { x: 1, y: 0, z: 0 });
+  for (const debris of frame.debris) {
+    if (apply(`debris-${debris.id}`, debris.rigid)) debris.dir = quatRotate(debris.rigid!.attitudeQ, { x: 1, y: 0, z: 0 });
+  }
+  return frame;
+}
+
+/** Bytes a recording retains: frames at the calibrated estimate plus packed rotations. */
+export function recordingStats(frames: readonly VisualFrame[], events: number, decimations: number,
+  tracks: ReadonlyMap<string, AttitudeTrack>): RecorderStats {
+  let bytes = 0;
+  for (const fr of frames) bytes += frameBytes(fr);
+  const rotationWindows = [...tracks].map(([bodyId, track]) => ({ bodyId, ...track.window() }));
+  const rotationBytes = rotationWindows.reduce((sum, track) => sum + track.bytes, 0);
+  const shape = frames.length > 0 ? frames[frames.length - 1] : undefined;
+  return {
+    frames: frames.length,
+    events,
+    bytes: bytes + rotationBytes,
+    bytesPerFrame: shape ? frameBytes(shape) : FRAME_BYTES.base,
+    decimations,
+    rotationBytes, rotationWindows,
+  };
+}
+
+export class FlightRecorder implements RecordingSource {
   /** Stored frames, strictly increasing in mission time. */
   readonly frames: VisualFrame[] = [];
   /** Consumed detections, kept append-only independently of their timestamps. */
@@ -132,8 +210,18 @@ export class FlightRecorder {
   private rigidRemainder = 0;
   private attitudeTracks = new Map<string, AttitudeTrack>();
 
-  constructor(private readonly requestedMaxFrames?: number) {
+  /**
+   * @param observer told of every rotation sample the recorder accepts, so a
+   *        mirror of this recording in another thread can keep the same
+   *        rotation history (src/session/core.ts).
+   */
+  constructor(private readonly requestedMaxFrames?: number, private readonly observer?: AttitudeObserver) {
     this.maxFrames = requestedMaxFrames ?? DEFAULT_MAX_FRAMES;
+  }
+
+  /** How many times the oldest coast frames have been thinned so far. */
+  get decimationCount(): number {
+    return this.decimations;
   }
 
   /** Start (or restart) recording a mission; captures the frame on the pad. */
@@ -179,6 +267,7 @@ export class FlightRecorder {
       let track = this.attitudeTracks.get(id);
       if (!track) { track = new AttitudeTrack(); this.attitudeTracks.set(id, track); }
       track.record(sim.state.t, telemetry, force);
+      this.observer?.(id, sim.state.t, telemetry, force);
     };
     record('vehicle', sim.state.rigid);
     for (const debris of sim.debris) if (debris.alive) record(`debris-${debris.id}`, debris.rigid);
@@ -187,20 +276,7 @@ export class FlightRecorder {
   /** Decorate a fresh replay frame from compact rotation history, never physics.
    * Outside a retained window the flag exposes the limitation to the UI. */
   applyRecordedAttitudes(frame: VisualFrame): VisualFrame {
-    const apply = (fallbackId: string, telemetry: RigidTelemetry | undefined): boolean => {
-      if (!telemetry) return false;
-      const track = this.attitudeTracks.get(telemetry.bodyId ?? fallbackId);
-      const pose = track?.at(frame.t, telemetry);
-      telemetry.replayAttitudeAvailable = !!pose;
-      if (!pose) return false;
-      telemetry.attitudeQ = pose.attitudeQ; telemetry.omegaBody = pose.omegaBody;
-      return true;
-    };
-    if (apply('vehicle', frame.rigid)) frame.dir = quatRotate(frame.rigid!.attitudeQ, { x: 1, y: 0, z: 0 });
-    for (const debris of frame.debris) {
-      if (apply(`debris-${debris.id}`, debris.rigid)) debris.dir = quatRotate(debris.rigid!.attitudeQ, { x: 1, y: 0, z: 0 });
-    }
-    return frame;
+    return applyAttitudeTracks(this.attitudeTracks, frame);
   }
 
   /**
@@ -467,17 +543,7 @@ export class FlightRecorder {
 
   /** Index of the last frame at or before `t` (0 when `t` precedes the start). */
   indexAt(t: number): number {
-    const n = this.frames.length;
-    if (n === 0) return -1;
-    if (t <= this.frames[0].t) return 0;
-    if (t >= this.frames[n - 1].t) return n - 1;
-    let lo = 0;
-    let hi = n - 1;
-    while (hi - lo > 1) {
-      const mid = (lo + hi) >> 1;
-      if (this.frames[mid].t <= t) lo = mid; else hi = mid;
-    }
-    return lo;
+    return frameIndexAt(this.frames, t);
   }
 
   /**
@@ -493,18 +559,7 @@ export class FlightRecorder {
   }
 
   stats(): RecorderStats {
-    let bytes = 0;
-    for (const fr of this.frames) bytes += frameBytes(fr);
-    const rotationWindows = [...this.attitudeTracks].map(([bodyId, track]) => ({ bodyId, ...track.window() }));
-    const rotationBytes = rotationWindows.reduce((sum, track) => sum + track.bytes, 0);
-    return {
-      frames: this.frames.length,
-      events: this.events.length,
-      bytes: bytes + rotationBytes,
-      bytesPerFrame: this.bytesPerFrame,
-      decimations: this.decimations,
-      rotationBytes, rotationWindows,
-    };
+    return recordingStats(this.frames, this.events.length, this.decimations, this.attitudeTracks);
   }
 
   /** Hard ceiling on stored frames (exposed so a test can check the budget). */
