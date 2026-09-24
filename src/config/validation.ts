@@ -11,6 +11,7 @@ import type { DynamicsConfig } from '../types';
 import { FLEX_LIMITS } from '../physics/rigid/flex';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS, controlFieldKey, controlProblems } from '../physics/rigid/control-config';
 import { AIDING_KEYS, AIDING_LIMITS, IMU_KEYS, NAV_FIELD_KEYS, navigationProblems } from '../physics/nav/config';
+import { controlFaultsProblems } from '../physics/rigid/fault-config';
 import { IMU_LIMITS } from '../physics/nav/sensors';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
@@ -135,6 +136,8 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
       if (d.control !== undefined) issues.push(...controlIssues(d.control));
       if (d.navigation !== undefined) issues.push(...navigationProblems(d.navigation).map(({ field, value, limits }): ValidationIssue =>
         (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
+      if (d.controlFaults !== undefined) issues.push(...controlFaultsProblems(d.controlFaults, { navigation: d.navigation !== undefined })
+        .map(({ field, value, limits }): ValidationIssue => (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
     }
   }
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });

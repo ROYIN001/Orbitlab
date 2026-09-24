@@ -21,8 +21,8 @@ const RSW_COLOR = ['#6ec8ff', '#8be5cd', '#efa47e'] as const;
 const AXIS_COLOR = { roll: '#f2c14e', pitch: '#8be5cd', yaw: '#c792ea' } as const;
 const RSW_NAME = ['nav.radial', 'nav.along', 'nav.cross'] as const;
 const AXIS_NAME = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop.axis.yaw' } as const;
-const GNSS_NAME = { fix: 'nav.gnss.fix', outage: 'nav.gnss.outage', off: 'nav.gnss.off' } as const;
-const STAR_NAME = { fix: 'nav.star.fix', unavailable: 'nav.star.unavailable', off: 'nav.star.off' } as const;
+const GNSS_NAME = { fix: 'nav.gnss.fix', outage: 'nav.gnss.outage', off: 'nav.gnss.off', failed: 'nav.failed' } as const;
+const STAR_NAME = { fix: 'nav.star.fix', unavailable: 'nav.star.unavailable', off: 'nav.star.off', failed: 'nav.failed' } as const;
 const MAX_POINTS = 600;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {

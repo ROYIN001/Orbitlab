@@ -597,6 +597,91 @@ burns (src/physics/sim/burns.ts, the other session's) still read the truth.
 
 **Cost**: within the run-to-run noise (runs with navigation were not slower).
 
+## 2i. Failures of the control system, and the FDIR (roadmap G08)
+
+Off by default, and off, nothing fails and every flight is the one it was, bit for bit. On
+(`DynamicsConfig.controlFaults`, the Engineer mode's *Control-system failures* section,
+`configure_mission`, or injected live with `inject_control_fault`), the flown vehicle's control
+system carries up to eight failures, each striking at its mission time — and, if given, not
+before its stage flies — and an FDIR (fault detection, isolation and recovery) that can be
+switched on or off to compare (src/physics/rigid/faults.ts, fault-config.ts). Until the first
+failure strikes, the layer hands the runtime back the very objects it was given, so the flight
+is the one without it, bit for bit.
+
+**Sensors.** Three redundant IMUs. Each reads the body rate — the IMU case's, with P05 the bent
+structure's at its station — through its failures, and integrates its own attitude from what it
+reads (a strapdown unit: e_u ← e_u + (ω_u − ω)·dt, a small rotation in body axes), so a gyro
+that reads wrong drifts that unit's attitude too. Failures: the rate about an axis read with the
+wrong sign (*rateInverted*), frozen (*gyroStuck*), a bias jump (*gyroBias*, °/s), noise
+(*gyroNoise*, 1σ °/s), and a unit that flags itself failed and puts out its diagnostic word as
+attitude — a fixed 34° error — and no rate (*imuFailure*); each on units 1–3 or on all three (a
+common-mode failure). With G02's navigation on, the selected units' errors enter its gyro and
+accelerometer increments instead, and three more apply: an accelerometer bias jump (mg), and the
+loss of GNSS or the star tracker.
+
+**Actuators.** A nozzle stuck where it stood (*gimbalStuck*); driven to its stop in pitch or yaw,
+at its own rate, whatever it is commanded (*gimbalHardover*); its rate cut and its lag stretched
+by a factor (*gimbalSlow*); or wired backwards, moving against its command — with its position
+sensor read backwards too, so the computer believes it and the jets do not make up for it
+(*actuatorPolarity*). An RCS jet stuck on, or dead. Targets are an engine (every chamber of it)
+or a jet of the stage flying when the failure strikes, or all of them.
+
+**The flight computer.** A hang (*computerHold*, s): the nozzles and jets keep the last commands
+it sent. A gain loaded with the wrong sign (*gainSign*): the control moment about that axis is
+reversed.
+
+**The FDIR**, when on:
+
+| Monitor | Detects | Recovery |
+|---|---|---|
+| IMU vote | a unit's flag; a unit whose rate (0.5 °/s), attitude (2°) or acceleration (5 mg) stays off the per-axis median of three for 0.1 s | isolate it; fly the median of three, the mean of two (a disagreement between two is reported, not resolved), the one left; with none, open the loop — the nozzles held central and no feed-forward |
+| Gimbal monitor | a nozzle more than max(0.5°, 10 % of its travel) off a model of the healthy actuator, fed the same commands, for 0.3 s (the model reads the position sensor, so a miswired nozzle passes) | shut that engine down if its stage can spare it — another engine still steers, and at most a quarter of the stage's engines (at least one) are out — else fly on |
+| Jet monitor | a jet firing at over half duty when asked for under 5 % for 0.2 s; or silent when asked for over 20 % for 0.3 s | close it off; leave it out of the allocation |
+| Watchdog | a hung computer | the backup takes over after 0.2 s |
+
+Off, the computer reads IMU 1 alone and watches nothing. An engine shut down goes the way of an
+engine-out: its share of `engineFraction` (thrust and flow alike), with the engine the FDIR named
+— not the lowest-numbered — the one that stops (`StageState.shutEngines`), so the others steer on.
+
+**Break-up.** A launcher that loses control in the air is broken up by the air: with the failures
+layer (and only with it), the attached stack is lost when q·α — the dynamic pressure times the
+total angle of attack — exceeds 300 kPa·°. The fleet's healthy ascents stay under 135 kPa·°
+(Angara A5; calm and shear winds, measured over all eighteen vehicles), much of it late in the
+ascent where q is small and α large.
+
+**The accidents re-created** (tests/control-faults.test.ts; calm wind, LEO):
+
+- **Proton-M, 2 July 2013**: the yaw-channel angular-rate sensors installed upside down. The yaw
+  rate read backwards in all three units from lift-off: the vehicle breaks up at T+12.6 s, FDIR or
+  not — three sensors wrong the same way outvote nothing.
+- **Ariane 501, 4 June 1996**: both inertial reference systems shut down on the same software
+  exception at H0+36.7 s and the on-board computer flew their diagnostic words. On Ariane 6 (the
+  fleet's nearest vehicle), all three IMUs failing at T+36.7 s: without the FDIR the nozzles go to
+  their stops and the vehicle breaks up at T+38.9 s (the real one at H0+39 s); with it, the loop is
+  opened and the vehicle — aerodynamically unstable — breaks up at T+41.4 s.
+- **Vega VV17, 17 November 2020**: two cables of the AVUM's nozzle actuators swapped at
+  integration. The AVUM+ nozzle wired backwards from stage 4: at its burn the stage tumbles (up
+  to 168° off its attitude), and the orbit is 242 × 500 km instead of 500 × 500 km. The gimbal
+  monitor sees nothing, FDIR or not.
+- **A Falcon 9 nozzle hard-over** (hypothetical) at T+60 s: without the FDIR the other eight
+  engines fight it — the angle of attack reaches 28° — and the orbit misses its apoapsis by
+  12 km; with it the engine is shut down at T+60.3 s and the flight is nominal on
+  eight.
+
+**Other failures on Falcon 9** (tests/probe; the FDIR off / on):
+
+| Failure | FDIR off | FDIR on |
+|---|---|---|
+| Gyro bias 2 °/s in pitch, IMU 1, T+30 s | breaks up at T+38.8 s: the vehicle drifts while the computer believes it on its attitude | IMU 1 isolated at T+30.1 s; nominal |
+| IMU 1 fails, T+30 s | breaks up at T+33.6 s | isolated at once; nominal |
+| The same bias on IMUs 1 and 2 | breaks up at T+38.8 s | the good IMU 3 is outvoted and isolated; breaks up at T+38.8 s |
+| Computer hang of 3 s, T+50 s | survives | backup at T+50.2 s |
+| Pitch gain of the wrong sign, T+50 s | breaks up at T+54.9 s | the same (the backup runs the same software) |
+| Every nozzle stuck, T+20 s | breaks up at T+41.3 s | the same: no engine left to steer with, none shut down |
+| RCS jet 1 stuck on, T+300 s | perigee 193 km, tumbling after the burn | jet closed off at T+300.2 s; nominal |
+| Every RCS jet dead, T+300 s | nominal (the engine steers) | the same; each jet left out as it fails to fire |
+| Gyro noise 0.5 °/s, all units | survives | survives; one unit falsely isolated at T+98 s |
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

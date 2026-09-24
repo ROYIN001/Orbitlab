@@ -3,6 +3,7 @@ import { VEHICLES } from '../../data/vehicles';
 import { validFlexConfig } from './flex';
 import { validControlConfig } from './control-config';
 import { validNavigationConfig } from '../nav/config';
+import { validControlFaultsConfig } from './fault-config';
 
 export const RIGID_MODEL_VERSION = 'sixdof-1';
 /**
@@ -23,5 +24,6 @@ export function validateDynamics(value: unknown, vehicleId: string): value is Dy
     && Number.isInteger(d.seed) && d.seed >= 0 && d.seed <= 0xffffffff
     && (d.flex === undefined || validFlexConfig(d.flex))
     && (d.control === undefined || validControlConfig(d.control))
-    && (d.navigation === undefined || validNavigationConfig(d.navigation));
+    && (d.navigation === undefined || validNavigationConfig(d.navigation))
+    && (d.controlFaults === undefined || validControlFaultsConfig(d.controlFaults, { navigation: d.navigation !== undefined }));
 }

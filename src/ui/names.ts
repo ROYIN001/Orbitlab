@@ -24,6 +24,7 @@ import type { SiteExtra } from '../data/sites';
 import { SATELLITES } from '../data/satellites';
 import { RAD } from '../physics/constants';
 import { aeroAngles, getNotation } from './notation';
+import { faultKindName, faultTargetText, isFaultKind } from './fault-names';
 
 /** A dictionary entry, or the English literal from the data file when there is none. */
 export function localized(key: string, fallback: string): string {
@@ -96,9 +97,13 @@ export function localizeEventParams(
   const envelopeScope = params.scope === 'vehicle' ? t('aero.scope.vehicle') : params.scope === 'debris' ? t('aero.scope.debris') : null;
   // E04: an attitude test's axis, and its amplitude in the standard's sense (ISO in the event).
   const testAxis = params.testAxis === 'roll' || params.testAxis === 'pitch' || params.testAxis === 'yaw' ? t(TEST_AXIS[params.testAxis]) : null;
+  // G08: a control-system failure — its kind, and where it struck — and the FDIR's reason.
+  const faultKind = isFaultKind(params.faultKind) ? faultKindName(params.faultKind) : null;
+  const fdirReason = params.fdirReason === 'flag' || params.fdirReason === 'vote' ? t(`fault.reason.${params.fdirReason}`) : null;
   if ((stage === null || stage === params.stage)
     && (name === null || name === params.name)
-    && (kind === null || kind === params.kind) && commandMode === null && envelopeScope === null && testAxis === null) return params;
+    && (kind === null || kind === params.kind) && commandMode === null && envelopeScope === null && testAxis === null
+    && faultKind === null && fdirReason === null && params.engine === undefined && params.jet === undefined && params.units === undefined) return params;
   const out = { ...params };
   if (stage !== null) out.stage = stage;
   if (name !== null) out.name = name;
@@ -125,6 +130,16 @@ export function localizeEventParams(
     out.testAxis = testAxis;
     if (getNotation() === 'gost' && params.testAxis === 'yaw' && typeof params.amplitudeDeg === 'number') out.amplitudeDeg = -params.amplitudeDeg;
   }
+  if (faultKind !== null) {
+    out.faultKind = faultKind;
+    const target = faultTargetText({ engine: params.engine, jet: params.jet, units: params.units, axis: params.faultAxis });
+    out.faultTarget = target ? ` (${target})` : '';
+  }
+  if (fdirReason !== null) out.fdirReason = fdirReason;
+  // G08: engines, jets and units as lists ("1,2" → "1, 2"; "all" in words).
+  if (params.engine !== undefined) out.engine = params.engine === 'all' ? t('fault.all') : String(params.engine).split(',').join(', ');
+  if (params.jet !== undefined) out.jet = params.jet === 'all' ? t('fault.all') : String(params.jet).split(',').join(', ');
+  if (params.units !== undefined) out.units = params.units === 'all' ? t('fault.all') : String(params.units).split(',').join(', ');
   return out;
 }
 const TEST_AXIS = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop.axis.yaw' } as const;

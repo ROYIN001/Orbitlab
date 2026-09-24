@@ -348,6 +348,32 @@ state, the errors against their 3σ, the orbit believed and true, the sensor bia
 estimated, and the latest innovations. The CSV adds the same (`nav_*`) and `read_flight_state` a
 `navigation` summary. Details in PHYSICS.md §2h.
 
+## 14. Control-system failures and FDIR (Engineer mode)
+
+In a six-DOF mission's setup, the *Control-system failures (G08)* section breaks the autopilot's
+hardware at a set time: an actuator (a nozzle stuck, hard-over, slowed or wired backwards; an RCS
+jet stuck on or dead), a sensor (one, two or all three IMUs reading the rate backwards, stuck,
+biased or noisy, or failing outright; with navigation on, an accelerometer bias and the loss of
+GNSS or the star tracker) or the flight computer (a hang, a gain of the wrong sign). Pick
+**Scenario** for an accident — Proton-M 2013, Ariane 501, Vega VV17 — or a Falcon 9 nozzle
+hard-over; it switches to the vehicle the scenario was written for and explains what happened.
+Or build a list of up to eight failures, each with its time, the stage it waits for, and its
+target.
+
+**FDIR** switches fault detection, isolation and recovery on: the three IMUs vote (2 of 3), a
+model of each nozzle actuator catches one that does not follow its command and shuts that engine
+down if the stage can spare it, a jet firing unasked is closed off, and a backup computer takes
+over from a hung one. Fly the same failure with FDIR on and off to see what it saves — and what it
+cannot: a failure every IMU shares, a wiring error the monitors read as correct, a software error
+the backup computer shares.
+
+A failure can also be injected into a live flight with WebMCP's `inject_control_fault`. The
+attitude-loop inspector (§9) marks the IMU, actuator and control-law blocks that failed, with each
+unit's and engine's state; its rate chart shows what the IMUs read against the truth. The event log
+reports every failure and every FDIR action; the CSV adds the failures' columns and
+`read_flight_state` a `controlFaults` summary. A launcher that loses control in the air breaks up
+when its lateral load q·α passes 300 kPa·°. Details in PHYSICS.md §2i.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

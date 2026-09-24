@@ -58,6 +58,8 @@ export interface LoopView {
   loadReliefDeg?: { requested: number; limit: number; applied: number };
   /** How far the IMU's reading is off the rigid body (P05 bending), deg. */
   imuErrorDeg?: number;
+  /** G08: the IMUs read through a failure — what they read is not the body's rate. */
+  sensorFault?: boolean;
   /** The bending filter's centre, Hz (P05). */
   notchHz?: number;
 }
@@ -91,6 +93,7 @@ export function loopView(rigid: RigidTelemetry | undefined, n: Notation = getNot
     ...(loop.loadRelief ? { loadReliefDeg: { requested: loop.loadRelief.requestedRad * RAD, limit: loop.loadRelief.limitRad * RAD,
       applied: loop.loadRelief.appliedRad * RAD } } : {}),
     ...(rigid.flex?.bending ? { imuErrorDeg: rigid.flex.bending.sensorErrorRad * RAD } : {}),
+    ...(rigid.controlFaults?.trueRateBody ? { sensorFault: true } : {}),
     ...(rigid.flex?.notch ? { notchHz: rigid.flex.notch.centerHz } : {}),
   };
 }

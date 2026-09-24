@@ -19,6 +19,7 @@
  * - `sim/rigid-link.ts` — the six-DOF body behind the stages
  */
 import type { MissionConfig, SatelliteSpec, VehicleSpec, GuidanceParams, DynamicsConfig } from '../types';
+import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
 import { vehicleById } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
@@ -31,6 +32,8 @@ import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
 import { resolveFlexOptions } from './rigid/flex';
 import { resolveControl } from './rigid/control-config';
 import { resolveNavigation } from './nav/config';
+import { resolveControlFaults, faultSeed, validControlFaultsConfig } from './rigid/fault-config';
+import { BREAKUP_Q_ALPHA_KPA_DEG } from './rigid/faults';
 import { attitudeTestStub, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './rigid/attitude-test';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
@@ -177,7 +180,10 @@ export class Simulation {
         // G02: inertial navigation, on the vehicle only.
         const navigation = resolveNavigation(cfgIn.dynamics.navigation, cfgIn.dynamics.seed);
         const navigated = navigation ? { ...tuned, navigation } : tuned;
-        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...navigated, flex } : navigated);
+        // G08: the control system's failures and its FDIR, on the vehicle only.
+        const faults = resolveControlFaults(cfgIn.dynamics.controlFaults, cfgIn.dynamics.seed);
+        const faulted = faults ? { ...navigated, faults } : navigated;
+        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...faulted, flex } : faulted);
       }
     }
     this.site = siteById(cfgIn.siteId);
@@ -313,6 +319,43 @@ export class Simulation {
     if (!nav?.aligned) return { r, v, dir };
     const e = nav.estimate;
     return { r: e.r, v: e.v, dir: quatRotate(e.attitudeQ, v3(1, 0, 0)) };
+  }
+  /** G08: tell the failures which stage is flying, before a step. */
+  private faultStage(): void {
+    const faults = this.rigidRuntime?.faults;
+    if (!faults) return;
+    faults.stage = this.vehicle.activeIndex;
+    faults.stageId = this.vehicle.active?.spec.id ?? '';
+  }
+  /** G08: after a step, the failures' and the FDIR's events, and the engines the FDIR shuts down (the others steer on). */
+  private faultOutcome(): void {
+    const faults = this.rigidRuntime?.faults;
+    if (!faults) return;
+    for (const e of faults.takeEvents()) this.event(e.key, e.severity, e.params, e.t);
+    for (const { stageId, engineIndex, t } of faults.takeShutdowns()) {
+      const st = this.vehicle.stages.find((x) => x.attached && x.spec.id === stageId);
+      if (!st || st.shutEngines?.includes(engineIndex)) continue;
+      const n = st.spec.engine.count;
+      st.shutEngines = [...(st.shutEngines ?? []), engineIndex];
+      st.engineFraction = Math.max(0, st.engineFraction - 1 / n);
+      faults.engineShut(stageId, engineIndex);
+      this.event('evt.fdirEngineShutdown', 'warn', { ...this.stageParams(st), engine: engineIndex + 1, n: Math.round(n * st.engineFraction), total: n }, t);
+    }
+  }
+  /**
+   * G08: a failure of the control system from now on (or at its time, if later). A flight that
+   * carries no failures takes them from here, with the FDIR as `fdir` says (off by default); `fdir`
+   * also switches it on a flight that does. Six-DOF and flying; otherwise the reason it cannot.
+   */
+  injectControlFault(spec: ControlFaultSpec, fdir?: boolean): 'injected' | 'notSixDof' | 'notFlying' | 'invalid' {
+    const runtime = this.rigidRuntime;
+    if (!runtime) return 'notSixDof';
+    if (!validControlFaultsConfig({ faults: [spec] }, { navigation: !!runtime.navigation })) return 'invalid';
+    if (['failed', 'done'].includes(this.state.status) || this.state.destroyed || this.done) return 'notFlying';
+    const faults = runtime.enableFaults({ faults: [], fdir: fdir === true, seed: faultSeed(this.cfg.dynamics?.seed ?? 0) });
+    if (fdir !== undefined) faults.fdir = fdir;
+    faults.add({ ...spec, time: Math.max(spec.time, this.state.t) });
+    return 'injected';
   }
   startAttitudeTest(spec: AttitudeTestSpec): AttitudeTestRecord | 'notSixDof' | 'notFlying' | 'manual' | 'running' {
     validateAttitudeTestSpec(spec);
@@ -807,6 +850,7 @@ export class Simulation {
           loadRelief = { requestedRad: angle(requested, vAir), limitRad, appliedRad: angle(requested, dirCmd) };
         }
       }
+      this.faultStage();
       const result = runtime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody }, dt,
         dirCmd, s.status === 'ascent' ? this.rigidLink.rigidSide()
           : quatRotate(nosePointingTarget(s.rigid.attitudeQ, dirCmd), v3(0, 0, 1)), (elapsed, consumed) => buildRigidVehicle(this.vehicle, {
@@ -820,6 +864,7 @@ export class Simulation {
       rigidGLoad = norm(result.nonGrav) / G0;
       rigidAccelerations = result.accelerationsStart;
       this.burns.accountDeliveredDv(result.accelerationsStart.propulsionECI, thr.burning, dt);
+      this.faultOutcome();
     } else if (useKepler) {
       next = propagateKepler(s.r, s.v, dt);
     } else {
@@ -918,6 +963,7 @@ export class Simulation {
     if (this.ascent.abandonInsertion(q, known.vz)) return dt;
     if (this.ascent.checkStructural(q)) return dt;
     if (this.checkShellLoads()) return dt;
+    if (this.checkAeroBreakup(q)) return dt;
     this.staging.checkFairing(alt, q, atm.rho, vAirMag);
 
     // --- mission logic
@@ -973,6 +1019,7 @@ export class Simulation {
       // G02: prograde as the navigation knows it.
       const nav = this.rigidRuntime.navigation?.aligned ? this.rigidRuntime.navigation.estimate : undefined;
       const prograde = normalize(nav ? nav.v : s.v), attitude = nav ? nav.attitudeQ : s.rigid.attitudeQ;
+      this.faultStage();
       const result = this.rigidRuntime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody },
         dt, prograde, quatRotate(nosePointingTarget(attitude, prograde), v3(0, 0, 1)), (_elapsed, consumed) => buildRigidVehicle(this.vehicle, {
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined, payloadLength: this.satellite.size?.height, rcsConsumedKgByStage: consumed }));
@@ -981,6 +1028,7 @@ export class Simulation {
       s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0;
       s.gLoad = norm(result.nonGrav) / G0;
       s.elements = elementsFromState(s.r, s.v);
+      this.faultOutcome();
       if (norm(s.r) - R_EARTH < 80e3) {
         this.event('evt.reentry', 'fail', { alt: Math.round((norm(s.r) - R_EARTH) / 1000) });
         s.status = 'failed'; s.note = 'reentry';
@@ -1047,6 +1095,20 @@ export class Simulation {
     if (!bending || !(bending.loadRatio > 1) || !s.liftoff || this.isFailed()) return false;
     const base = this.rigidRuntime?.snapshot?.activeBase.x ?? 0;
     this.event('evt.bendingFailure', 'fail', { x: Math.round(bending.loadStationX - base), pct: Math.round(bending.loadRatio * 100) });
+    this.destroy();
+    return true;
+  }
+
+  /**
+   * G08: with the failures layer, a launcher that has lost control breaks up under the air's
+   * lateral load, q·α past BREAKUP_Q_ALPHA_KPA_DEG.
+   */
+  private checkAeroBreakup(q: number): boolean {
+    const s = this.state, rigid = s.rigid;
+    if (!this.rigidRuntime?.faults || !rigid || !s.liftoff || s.payloadSeparated || this.isFailed()) return false;
+    const alphaDeg = Math.hypot(rigid.angleOfAttack, rigid.sideslip) * RAD, qAlpha = q / 1000 * alphaDeg;
+    if (!(qAlpha > BREAKUP_Q_ALPHA_KPA_DEG)) return false;
+    this.event('evt.aeroBreakup', 'fail', { qAlpha: Math.round(qAlpha), alphaDeg: +alphaDeg.toFixed(1), q: +(q / 1000).toFixed(1) });
     this.destroy();
     return true;
   }

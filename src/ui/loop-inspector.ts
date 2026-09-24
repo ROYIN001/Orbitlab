@@ -19,6 +19,9 @@ import { LoopAnalysis } from './loop-analysis';
 import { LoopTuning, type LoopTuningHost } from './loop-tuning';
 import { LoopNavigation } from './loop-navigation';
 import type { TelemetrySample } from '../physics/sim/types';
+import type { ControlFaultRecord } from '../physics/rigid/faults';
+import { FAULT_GROUP } from '../physics/rigid/fault-config';
+import { faultKindName, faultTargetText } from './fault-names';
 import './loop-inspector.css';
 
 export interface LoopInspectorHost extends LoopTuningHost {
@@ -71,7 +74,7 @@ function gain(sub: string, value: string): DocumentFragment {
 }
 
 interface Row { axis: LoopAxis; value: string; symbol?: Quantity; warn?: boolean; tag?: string; tagTitle?: string }
-type BlockState = 'on' | 'warn' | 'off';
+type BlockState = 'on' | 'warn' | 'off' | 'fault';
 
 export class LoopInspector {
   readonly el: HTMLDialogElement;
@@ -326,6 +329,9 @@ export class LoopInspector {
     // 9 the vehicle: measured rates, and the air's moment
     blocks.push(this.block('vehicle', 'loop.block.vehicle', degS, this.rows(view?.measuredDegS, 3, { symbol: RATE_SYMBOL }),
       view ? [`${t('loop.vehicle.aero')}: ${LOOP_AXES.map((axis) => signed(view.momentKNm.aero[axis], 1)).join(' / ')} ${kNm}`] : [], 'on'));
+    // G08: the failed parts, marked.
+    const faults = frame?.rigid?.controlFaults;
+    if (faults) for (const b of blocks) this.markFaults(b, faults);
     const cells: HTMLElement[] = [];
     blocks.forEach((b, i) => { if (i) cells.push(el('div', 'li-arrow')); cells.push(b); });
     this.forward.replaceChildren(...cells);
@@ -339,6 +345,7 @@ export class LoopInspector {
       return cell;
     };
     const line = (from: number, to: number) => { const cell = el('div', 'li-line'); cell.style.gridColumn = `${from} / ${to}`; return cell; };
+    if (faults) this.markFaults(imu, faults);
     imu.style.gridColumn = '17';
     this.feedback.replaceChildren(tap(3, 'loop.feedback.attitude', true), line(4, 7), tap(7, 'loop.feedback.rate', false), line(8, 17), imu);
   }
@@ -354,7 +361,7 @@ export class LoopInspector {
       { x, y: pick((v) => v.commandDegS[axis]), color, label: t('loop.series.command'), dash: [4, 3] },
       { x, y: pick((v) => v.measuredDegS[axis]), color: '#e7edf4', label: t('loop.series.measured') },
     ];
-    if (history.views.some((v) => v.imuErrorDeg !== undefined)) rate.push({ x, y: pick((v) => v.sensedDegS[axis]), color: '#6ec8ff', label: t('loop.series.sensed') });
+    if (history.views.some((v) => v.imuErrorDeg !== undefined || v.sensorFault)) rate.push({ x, y: pick((v) => v.sensedDegS[axis]), color: '#6ec8ff', label: t('loop.series.sensed') });
     drawChart(this.charts.rate, rate, { ...base, title: t('loop.chart.rate', { axis: axisName, symbol: symbolText(RATE_SYMBOL[axis]) }) });
     drawChart(this.charts.moment, [
       { x, y: pick((v) => (v.momentKNm.filtered ?? v.momentKNm.demand)[axis]), color, label: t('loop.series.demand'), dash: [4, 3] },
@@ -365,6 +372,36 @@ export class LoopInspector {
       { x, y: pick((v) => v.gimbalUsePct), color: '#6ec8ff', label: t('loop.series.tvc') },
       { x, y: pick((v) => v.rcsDutyPct), color: '#efa47e', label: t('loop.series.rcs') },
     ], { ...base, title: t('loop.chart.actuators'), yMin: 0, yMax: 100 });
+  }
+
+  /**
+   * G08: a block the failures struck, marked: the IMUs (sensor failures, each unit's state and the
+   * vote), the actuators (nozzles and jets), and the control law (the flight computer).
+   */
+  private markFaults(box: HTMLElement, record: ControlFaultRecord): void {
+    const kind = box.classList.contains('li-imu') ? 'sensor' : box.classList.contains('li-actuators') ? 'actuator' : box.classList.contains('li-moment') ? 'computer' : null;
+    if (!kind) return;
+    const struck = record.active.filter((a) => !a.missed && FAULT_GROUP[a.kind] === kind);
+    const notes: string[] = struck.map((a) => {
+      const target = faultTargetText({ engine: a.engines, jet: a.jets, units: a.units?.length === 3 ? 'all' : a.units, axis: a.axis });
+      return `⚠ ${faultKindName(a.kind)}${target ? ` — ${target}` : ''}`;
+    });
+    if (kind === 'sensor') {
+      if (record.units.some((u) => u !== 'ok') || struck.length) {
+        notes.push(`${t('loop.fault.units')}: ${record.units.map((u, i) => `${i + 1} ${t(`loop.fault.unit.${u}`)}`).join(' · ')}`);
+        notes.push(record.openLoop ? t('loop.fault.openLoop') : `${t('loop.fault.inUse')}: ${record.selected.join(', ')}`);
+      }
+    } else if (kind === 'actuator') {
+      for (const e of record.engines) notes.push(`${t('fault.target.engine', { n: e.engine })}: ${t(`loop.fault.engine.${e.state}`)}`);
+      for (const j of record.jets) notes.push(`${t('fault.target.jet', { n: j.jet })}: ${t(`loop.fault.jet.${j.state}`)}`);
+    } else if (record.computer !== 'primary') notes.push(t(`loop.fault.computer.${record.computer}`));
+    if (!notes.length) return;
+    const failed = struck.length > 0 || (kind === 'sensor' && record.openLoop) || (kind === 'actuator' && (record.engines.length > 0 || record.jets.length > 0));
+    box.classList.remove('warn', 'off');
+    if (failed) box.classList.add('fault');
+    const badge = el('span', 'li-fault-badge', t(record.fdir ? 'loop.fault.badgeFdir' : 'loop.fault.badge'));
+    box.querySelector('h4')?.append(' ', badge);
+    for (const note of notes) box.append(el('p', 'li-note li-fault-note', note));
   }
 
   private startDrag(e: PointerEvent): void {

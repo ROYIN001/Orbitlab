@@ -257,7 +257,7 @@ describe('createMcpTools', () => {
     const names = tools.map((t) => t.name);
     expect(names).toEqual([
       'read_flight_state', 'list_missions', 'configure_mission', 'launch_mission',
-      'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv', 'run_attitude_test',
+      'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv', 'run_attitude_test', 'inject_control_fault',
     ]);
     expect(new Set(names).size).toBe(names.length);
     for (const t of tools) {
@@ -829,7 +829,7 @@ describe('registerMcpTools', () => {
     (globalThis as any).window = { addEventListener: (_: string, fn: () => void) => listeners.push(fn) };
     try {
       registerMcpTools(host);
-      expect(registered.length).toBe(11);
+      expect(registered.length).toBe(12);
       for (const fn of listeners) fn();
       expect(abortSeen).toBe(true);
     } finally {
@@ -942,5 +942,56 @@ describe('configure_mission: the navigation (roadmap G02)', () => {
     expect(out).toMatchObject({ timeS: 1.4, gnss: 'outage', starTracker: 'unavailable', positionErrorM: { radial: 1, alongTrack: -2, crossTrack: 3 },
       position3SigmaM: { radial: 3 }, innovation: { positionM: 4, velocityMs: null, attitudeArcsec: null } });
     expect(out.believedApoapsisKm).toBeCloseTo(400, 0);
+  });
+});
+
+// --- G08 ---
+describe('the control system\'s failures (roadmap G08)', () => {
+  it('sets failures from a preset or a list, keeps them across edits, and turns them off with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'ariane64', controlFaults: { preset: 'ariane501', fdir: true } });
+    expect(host.panel.state.dynamics?.controlFaults).toEqual({ faults: [{ kind: 'imuFailure', time: 36.7, units: 'all' }], fdir: true, preset: 'ariane501' });
+    configure.execute({ windScenario: 'shear' });
+    expect(host.panel.state.dynamics?.controlFaults?.preset).toBe('ariane501');
+    configure.execute({ controlFaults: { faults: [{ kind: 'gyroBias', time: 30, units: [1, 2], axis: 'pitch', magnitude: 2 }] } });
+    expect(host.panel.state.dynamics?.controlFaults).toEqual({ faults: [{ kind: 'gyroBias', time: 30, units: [1, 2], axis: 'pitch', magnitude: 2 }], fdir: true });
+    expect(() => configure.execute({ controlFaults: { faults: [{ kind: 'gyroBias', time: 30, magnitude: 500 }] } })).toThrow(/setup\.faults\.magnitude must be at most 90/);
+    expect(() => configure.execute({ controlFaults: { faults: [{ kind: 'gnssLoss', time: 30 }] } })).toThrow(/setup\.faults\.kind/);
+    expect(() => configure.execute({ controlFaults: { lasers: true } })).toThrow(/Unknown controlFaults field "lasers"/);
+    configure.execute({ controlFaults: { fdir: null } });
+    expect(host.panel.state.dynamics?.controlFaults?.fdir).toBeUndefined();
+    configure.execute({ controlFaults: null });
+    expect(host.panel.state.dynamics?.controlFaults).toBeUndefined();
+  });
+
+  it('injects a failure only into a live six-DOF flight, checked first', () => {
+    const inject = tool(tools, 'inject_control_fault');
+    expect(inject.execute({ kind: 'gainSign', axis: 'yaw' })).toMatchObject({ ok: false });
+    let asked: unknown[] = [];
+    host.sim = { ...makeFakeSim(host.panel.getConfig()), cfg: { ...host.panel.getConfig(), dynamics: { model: 'sixDof', wind: 'calm', seed: 1 } },
+      state: { t: 42 }, rigidRuntime: {},
+      injectControlFault: (spec: unknown, fdir: unknown) => { asked = [spec, fdir]; return 'injected'; } } as unknown as Simulation;
+    host.player.live = true;
+    expect(inject.execute({ kind: 'gimbalHardover', engine: 3, axis: 'pitch', sign: -1, fdir: true })).toEqual({ ok: true, strikesAtS: 42 });
+    expect(asked).toEqual([{ kind: 'gimbalHardover', engine: 3, axis: 'pitch', sign: -1, time: 42 }, true]);
+    expect(() => inject.execute({ kind: 'gyroBias', units: [4] })).toThrow(/units/);
+    expect(() => inject.execute({ kind: 'accelBias' })).toThrow(/kind/);
+    host.player.live = false;
+    expect(inject.execute({ kind: 'gainSign' })).toMatchObject({ ok: false });
+  });
+
+  it('reports the failures and the FDIR at the cursor', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).controlFaults).toBeNull();
+    const controlFaults = { fdir: true, active: [{ kind: 'gyroBias', since: 1, units: [1], axis: 'pitch' }], units: ['isolated', 'ok', 'ok'], selected: [2, 3],
+      openLoop: false, computer: 'primary', engines: [], jets: [], sensedRateBody: { x: 0, y: 0, z: 0.01 }, trueRateBody: { x: 0, y: 0, z: 0 } };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), controlFaults };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).controlFaults;
+    expect(out).toMatchObject({ fdir: true, imuUnits: ['isolated', 'ok', 'ok'], imuInUse: [2, 3], computer: 'primary', sensorAttitudeErrorDegBody: null });
+    expect(out.sensedRateDegSBody.z).toBeCloseTo(0.573, 3);
   });
 });

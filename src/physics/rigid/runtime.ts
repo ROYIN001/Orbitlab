@@ -13,6 +13,8 @@ import { integrateRigidStep, rigidDerivative, type RigidState } from './integrat
 import { matVecMul, quatFromAxisAngle, quatFromBasis, quatInverseRotate, quatMultiply, quatRotate, type Mat3, type Quat } from './math';
 import { attitudeTestDuration, attitudeTestOffset, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './attitude-test';
 import { NavigationSystem, type NavigationOptions } from '../nav/navigation';
+import { ControlFaults } from './faults';
+import type { ControlFaultOptions } from './fault-config';
 import type { RigidVehicleSnapshot } from './mass';
 import { RIGID_MODEL_VERSION } from './config';
 import { fuelAwareCoastRates } from './pointing';
@@ -43,6 +45,8 @@ export interface RigidRuntimeOptions {
   capPitchYawGains?: boolean;
   /** G02: inertial navigation aided by GNSS and a star tracker; the autopilot then flies on its estimate. */
   navigation?: NavigationOptions;
+  /** G08: failures of the control system and the FDIR; absent, nothing fails. */
+  faults?: ControlFaultOptions;
 }
 export interface RigidAccelerations {
   propulsionECI: Vec3;
@@ -115,6 +119,8 @@ export class RigidRuntime {
   readonly capPitchYawGains: boolean;
   /** G02: the vehicle's navigation, when it flies one. */
   readonly navigation?: NavigationSystem;
+  /** G08: the control system's failures and its FDIR, when the flight carries any. */
+  faults?: ControlFaults;
   /** The attitude loop linearised about a recent step (roadmap G04), and when it is next due. */
   latestLinear?: LinearModel;
   private nextLinearAt = -Infinity;
@@ -137,6 +143,7 @@ export class RigidRuntime {
     if (!(this.feedForward >= 0 && this.feedForward <= 1)) throw new RangeError('Invalid feed-forward weight');
     this.capPitchYawGains = options.capPitchYawGains ?? true;
     if (options.navigation) this.navigation = new NavigationSystem(options.navigation);
+    if (options.faults) this.enableFaults(options.faults);
     const flex = options.flex;
     if (flex && (flex.slosh || flex.bending || flex.notch)) {
       if (![flex.notchZetaZero, flex.notchZetaPole, flex.notchFrequencyScale, flex.bandwidthRatio, flex.sloshDamping, flex.bendingDamping].every(Number.isFinite)
@@ -144,6 +151,14 @@ export class RigidRuntime {
         || (flex.imuStation !== undefined && !(flex.imuStation >= 0 && flex.imuStation <= 1))) throw new RangeError('Invalid flexible-body options');
       this.flex = new FlexBody({ ...flex });
     }
+  }
+
+  /** G08: carry failures (from now on, for a live injection); the navigation reads its sensors through them. */
+  enableFaults(options: ControlFaultOptions): ControlFaults {
+    if (this.faults) return this.faults;
+    this.faults = new ControlFaults(options);
+    if (this.navigation) this.navigation.faults = this.faults;
+    return this.faults;
   }
 
   setCommand(command: RigidCommand): void {
@@ -292,7 +307,8 @@ export class RigidRuntime {
       saturated, angleOfAttack: aero.angleOfAttack, sideslip: aero.sideslip, aeroWithinEnvelope: aero.withinEnvelope,
       windECI: this.windAt(state.r, time), rawQuaternionNormError: rawError,
       ...(this.flex ? { flex: this.flex.telemetry() } : {}),
-      ...(loop ? { attitudeLoop: loop } : {}) };
+      ...(loop ? { attitudeLoop: loop } : {}),
+      ...(this.faults ? { controlFaults: this.faults.record() } : {}) };
   }
 
   /** The attitude loop as it ran this step (roadmap G03): copies, never references into the loop. */
@@ -342,8 +358,12 @@ export class RigidRuntime {
     const flexStart = flex?.begin(time, dt, start, aeroStart.forceBody, Math.min(this.integrationStepS, 0.01));
     // With bending, the autopilot sees what its IMU reads, not the rigid body.
     const imuCase = flex ? flex.sensed(state.attitudeQ, state.omegaBody) : state;
+    // G08: the failures due strike; the IMUs read through theirs (the navigation takes them as increments).
+    const faults = this.faults;
+    faults?.begin(time, this.specs(start), this.engines, start.rcsThrusters, imuCase.omegaBody);
+    const measured = faults ? faults.sense(dt, imuCase) : imuCase;
     // G02: with a navigation system, what the navigation makes of it.
-    const sensed = this.navigation ? this.navigation.reading(time, state.r, state.v, imuCase.attitudeQ, imuCase.omegaBody) : imuCase;
+    const sensed = this.navigation ? this.navigation.reading(time, state.r, state.v, imuCase.attitudeQ, imuCase.omegaBody) : measured;
     const gains = flex && this.capPitchYawGains ? flex.limitGains(this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody))
       : this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody);
     // G03: the trace only reads what the controller decides.
@@ -387,18 +407,30 @@ export class RigidRuntime {
         gasLimited = true;
       }
     }
+    // G08: a gain of the wrong sign, or no IMU left to close the loop on.
+    if (faults) demand = faults.demand(demand);
     const unfilteredMoment = demand.momentBody;
     if (flex?.options.notch) demand = { ...demand, momentBody: flex.filterMoment(demand.momentBody) };
     const states = specs.map(spec => this.engines.get(spec.id) ?? createEngineStates([spec])[0]);
     // E04: the air's moment fed forward, at the mission's weight (the default, 1, is the moment itself).
-    const fedForward = this.feedForward === 1 ? aeroStart.momentBody : scale(aeroStart.momentBody, this.feedForward);
+    // (G08: with the loop open the computer cannot know the air's moment either.)
+    const fedForward = faults?.openLoop ? v3() : this.feedForward === 1 ? aeroStart.momentBody : scale(aeroStart.momentBody, this.feedForward);
     const allocation = allocateEngineGimbals(specs, specs.map(e => e.maxThrust > 0 ? 1 : 0), sub(demand.momentBody, fedForward), start.cg);
-    const actualStates = stepEngineActuators(specs, states, allocation.commands, dt);
-    const midpointStates = stepEngineActuators(specs, states, allocation.commands, dt / 2);
+    // G08: the nozzles receive what a held computer last sent, and failed ones move as they must.
+    const drive = faults?.drive(specs, allocation.commands);
+    const actuate = (elapsed: number) => drive ? faults!.actuate(drive, states, elapsed) : stepEngineActuators(specs, states, allocation.commands, elapsed);
+    const actualStates = actuate(dt);
+    const midpointStates = actuate(dt / 2);
     const engineActual = engineWrench(specs, midpointStates, start.cg);
-    const residual = sub(sub(demand.momentBody, fedForward), engineActual.momentBody);
-    const rcsAllocation = allocateRcs(jets, residual, start.cg, Math.max(1, start.aero.referenceLength));
-    const rcs = stepRcs(jets, rcsAllocation.duties, gas, dt, start.cg);
+    // The jets take what the nozzles leave, as the computer reads them (G08: a miswired nozzle reads the wrong way round).
+    const believed = faults ? faults.reported(midpointStates, specs) : midpointStates;
+    const engineRead = believed === midpointStates ? engineActual : engineWrench(specs, believed, start.cg);
+    const residual = sub(sub(demand.momentBody, fedForward), engineRead.momentBody);
+    // G08: the jets the FDIR has not closed off; the duty each jet really fires at.
+    const usableJets = faults ? faults.usableJets(jets) : jets;
+    const rcsAllocation = allocateRcs(usableJets, residual, start.cg, Math.max(1, start.aero.referenceLength));
+    const duties = faults ? faults.jetDuties(jets, usableJets, rcsAllocation.duties) : undefined;
+    const rcs = stepRcs(jets, duties ? duties.actual : rcsAllocation.duties, gas, dt, start.cg);
     const snapshots = new Map<number, RigidVehicleSnapshot>([[0, start]]);
     const snapshotAt = (elapsed: number): RigidVehicleSnapshot => {
       const cached = snapshots.get(elapsed);
@@ -410,7 +442,7 @@ export class RigidRuntime {
       return snapshot;
     };
     const statesAt = (elapsed: number): EngineActuatorState[] => elapsed === dt ? actualStates : elapsed === dt / 2 ? midpointStates
-      : stepEngineActuators(specs, states, allocation.commands, elapsed);
+      : actuate(elapsed);
     const flowMoment = (elapsed: number, snapshot: RigidVehicleSnapshot, omega: Vec3): Vec3 => {
       if (this.massFlowModel === 'quasiSteady' || dt === 0) return v3();
       // Reduced negligible/symmetric internal-motion comparison. Point exits,
@@ -491,6 +523,9 @@ export class RigidRuntime {
       this.navigation.advance(time + dt, integratedState.r, integratedState.v, imuEnd.attitudeQ, imuEnd.omegaBody);
     }
     if (dt > 0) {
+      // G08: the step taken; the FDIR's monitors judge it.
+      if (faults && drive && duties) faults.commit(time, dt, { specs, drive, start: states, actual: actualStates, jets,
+        computerDuties: duties.computer, actualDuties: duties.actual, gas: gas > 0 });
       specs.forEach((spec, i) => this.engines.set(spec.id, actualStates[i]));
       if (reservoir) this.consumed[reservoir.stageId] = (initialConsumed[reservoir.stageId] ?? 0) + rcs.consumedKg;
     }

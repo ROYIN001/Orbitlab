@@ -131,6 +131,23 @@ function navColumns(value: RigidTelemetry | undefined, n: Notation): string[] {
   return entries.map(entry => typeof entry === 'number' ? entry.toPrecision(6) : entry);
 }
 
+// --- G08: the failures and the FDIR: IMU units in use, the computer, engines and jets out; sensed less true rate in the notation's axes
+const FAULT_COLUMNS = (n: Notation) => ['faults_struck', 'fdir', 'imu_units', 'imu_in_use', 'open_loop', 'computer', 'engines_failed', 'jets_failed',
+  ...LOOP_AXES.map((a) => `${n}_sensed_minus_true_rate_${a}_degs`), ...LOOP_AXES.map((a) => `${n}_sensor_att_err_${a}_deg`)];
+function faultColumns(value: RigidTelemetry | undefined, n: Notation): string[] {
+  const f = value?.controlFaults;
+  if (!f) return FAULT_COLUMNS(n).map(() => '');
+  const angles = (v: { x: number; y: number; z: number } | undefined) => {
+    if (!v) return LOOP_AXES.map(() => '');
+    const t = triple(v, n, 180 / Math.PI);
+    return LOOP_AXES.map((a) => t[a].toPrecision(6));
+  };
+  const rateError = f.sensedRateBody && f.trueRateBody
+    ? { x: f.sensedRateBody.x - f.trueRateBody.x, y: f.sensedRateBody.y - f.trueRateBody.y, z: f.sensedRateBody.z - f.trueRateBody.z } : undefined;
+  return [f.active.filter((a) => !a.missed).map((a) => a.kind).join(' '), String(f.fdir), f.units.join(' '), f.selected.join(' '), String(f.openLoop), f.computer,
+    f.engines.map((e) => `${e.engine}:${e.state}`).join(' '), f.jets.map((j) => `${j.jet}:${j.state}`).join(' '), ...angles(rateError), ...angles(f.sensorAttitudeErrorBody)];
+}
+
 /** Telemetry samples plus the event log, as CSV text (no trailing newline). */
 export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>): string {
   const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
@@ -146,6 +163,8 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
   if (hasMargins) cols.push(...MARGIN_COLUMNS);
   const hasNav = sim.telemetry.some(sample => !!sample.rigid?.navigation);
   if (hasNav) cols.push(...NAV_COLUMNS(notation));
+  const hasFaults = sim.telemetry.some(sample => !!sample.rigid?.controlFaults);
+  if (hasFaults) cols.push(...FAULT_COLUMNS(notation));
   const lines = [cols.join(',')];
   for (const s of sim.telemetry) {
     const row = [s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase].map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v)));
@@ -155,6 +174,7 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
     if (hasFlex) row.push(...flexColumns(s.rigid));
     if (hasMargins) row.push(...marginColumns(s.rigid));
     if (hasNav) row.push(...navColumns(s.rigid, notation));
+    if (hasFaults) row.push(...faultColumns(s.rigid, notation));
     lines.push(row.join(','));
   }
   lines.push('');

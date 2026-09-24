@@ -25,6 +25,15 @@ import { quatFromAxisAngle, quatMultiply, quatNormalize, quatRotate, quatSlerp, 
 import { BIAS_CORRELATION_S, DEG_PER_HOUR, DEG_PER_ROOT_HOUR, MICRO_G, MS_PER_ROOT_HOUR, NormalStream, type AidingSpec, type ImuSpec } from './sensors';
 
 export interface NavigationOptions { imu: ImuSpec; aiding: AidingSpec; seed: number }
+/**
+ * G08: failures of the sensors the navigation takes (src/physics/rigid/faults.ts): the error the
+ * failed IMU adds to the increments between two updates (a rotation, rad, and a velocity, m/s, in
+ * body axes), and aiding that has failed.
+ */
+export interface NavigationFaultHooks {
+  increment(t0: number, t1: number): { dTheta: Vec3; dV: Vec3 } | undefined;
+  aidingLost(t: number): { gnss: boolean; starTracker: boolean };
+}
 
 /** What the navigation has done, for the telemetry: errors against the filter's own σ, and the aiding. */
 export interface NavigationRecord {
@@ -45,8 +54,8 @@ export interface NavigationRecord {
   gyroBiasEstimate: Vec3;
   accelBias: Vec3;
   accelBiasEstimate: Vec3;
-  gnss: 'fix' | 'outage' | 'off';
-  starTracker: 'fix' | 'unavailable' | 'off';
+  gnss: 'fix' | 'outage' | 'off' | 'failed';
+  starTracker: 'fix' | 'unavailable' | 'off' | 'failed';
   /** The latest innovations' sizes: GNSS position (m) and velocity (m/s), star tracker (rad). */
   innovation: { position?: number; velocity?: number; attitude?: number };
 }
@@ -117,6 +126,8 @@ export class NavigationSystem {
   private nextStar = -Infinity;
   private status: { gnss: NavigationRecord['gnss']; star: NavigationRecord['starTracker'] } = { gnss: 'off', star: 'off' };
   private innovation: NavigationRecord['innovation'] = {};
+  /** G08: the sensors' failures, when the flight carries any. */
+  faults?: NavigationFaultHooks;
 
   constructor(options: NavigationOptions) {
     this.imu = { ...options.imu };
@@ -197,8 +208,11 @@ export class NavigationSystem {
     const dvSfEci = sub(v, freeFall(last.r, last.v, dt).v);
     const dvTrue = quatRotate(conj(quatSlerp(last.q, q, 0.5)), dvSfEci);
     const mul = (a: Vec3, b: Vec3) => v3(a.x * b.x, a.y * b.y, a.z * b.z);
-    const dTheta = add(add(add(dThetaTrue, mul(this.gyroScale, dThetaTrue)), scale(this.gyroBias, dt)), this.gauss(s.gArw * Math.sqrt(dt)));
-    const dV = add(add(add(dvTrue, mul(this.accelScale, dvTrue)), scale(this.accelBias, dt)), this.gauss(s.aVrw * Math.sqrt(dt)));
+    let dTheta = add(add(add(dThetaTrue, mul(this.gyroScale, dThetaTrue)), scale(this.gyroBias, dt)), this.gauss(s.gArw * Math.sqrt(dt)));
+    let dV = add(add(add(dvTrue, mul(this.accelScale, dvTrue)), scale(this.accelBias, dt)), this.gauss(s.aVrw * Math.sqrt(dt)));
+    // G08: what a failed IMU adds.
+    const fault = this.faults?.increment(last.t, t);
+    if (fault) { dTheta = add(dTheta, fault.dTheta); dV = add(dV, fault.dV); }
     const decay = Math.exp(-dt / BIAS_CORRELATION_S), drive = Math.sqrt(1 - decay * decay);
     this.gyroBias = add(scale(this.gyroBias, decay), this.gauss(s.gInstab * drive));
     this.accelBias = add(scale(this.accelBias, decay), this.gauss(s.aInstab * drive));
@@ -255,6 +269,7 @@ export class NavigationSystem {
   private aid(t: number, r: Vec3, v: Vec3, q: Quat, omegaBody: Vec3): void {
     const a = this.aiding, x = new Float64Array(N);
     let updated = false;
+    const lost = this.faults?.aidingLost(t);
     const update = (index: number, residual: number, variance: number) => {
       const P = this.P, S = P[index * N + index] + variance, pi = new Float64Array(N);
       for (let k = 0; k < N; k++) pi[k] = P[k * N + index];
@@ -263,8 +278,8 @@ export class NavigationSystem {
       for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) P[i * N + j] -= pi[i] * pi[j] / S;
       updated = true;
     };
-    this.status.gnss = !a.gnss ? 'off' : this.outage(t) ? 'outage' : 'fix';
-    if (a.gnss && t + 1e-9 >= this.nextGnss) {
+    this.status.gnss = !a.gnss ? 'off' : lost?.gnss ? 'failed' : this.outage(t) ? 'outage' : 'fix';
+    if (a.gnss && !lost?.gnss && t + 1e-9 >= this.nextGnss) {
       this.nextGnss = t + 1 / a.gnssRateHz;
       if (!this.outage(t)) {
         const dr = sub(add(r, this.gauss(a.gnssPositionM)), this.r), dv = sub(add(v, this.gauss(a.gnssVelocityMs)), this.v);
@@ -274,8 +289,8 @@ export class NavigationSystem {
       }
     }
     const high = norm(r) - R_EARTH >= a.starTrackerMinAltitudeKm * 1000, slow = norm(omegaBody) <= a.starTrackerMaxRateDegS * Math.PI / 180;
-    this.status.star = !a.starTracker ? 'off' : high && slow ? 'fix' : 'unavailable';
-    if (a.starTracker && high && slow && t + 1e-9 >= this.nextStar) {
+    this.status.star = !a.starTracker ? 'off' : lost?.starTracker ? 'failed' : high && slow ? 'fix' : 'unavailable';
+    if (a.starTracker && !lost?.starTracker && high && slow && t + 1e-9 >= this.nextStar) {
       this.nextStar = t + 1 / a.starTrackerRateHz;
       const sigma = a.starTrackerArcsec * Math.PI / 180 / 3600;
       const measured = quatMultiply(q, expQ(this.gauss(sigma)));

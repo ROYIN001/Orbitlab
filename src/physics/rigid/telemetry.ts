@@ -8,6 +8,7 @@ import { cloneAttitudeLoop, type AttitudeLoopTelemetry } from './loop';
 import type { LinearModel } from './linear';
 import type { AttitudeTestRecord } from './attitude-test';
 import type { NavigationRecord } from '../nav/navigation';
+import type { ControlFaultRecord } from './faults';
 
 /** Commands are inputs to finite actuators, never a replacement for body state. */
 export interface RigidCommand {
@@ -69,6 +70,8 @@ export interface RigidTelemetry {
   attitudeTest?: AttitudeTestRecord;
   /** G02: the navigation's record at this sample, on the telemetry samples only. */
   navigation?: NavigationRecord;
+  /** G08: the control system's failures and the FDIR's state, on flights that carry them. */
+  controlFaults?: ControlFaultRecord;
 }
 
 export function cloneWindProfile(value: WindScenario | undefined): WindScenario | undefined {

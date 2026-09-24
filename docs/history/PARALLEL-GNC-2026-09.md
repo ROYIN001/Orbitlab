@@ -68,7 +68,7 @@ here; this file records progress for the owner to fold in at the merge.
 | G04 Bode, step response, margins | done 2026-09-24 (see below) |
 | E04 controller tuning mode | done 2026-09-24 (see below) |
 | G02 inertial navigation and Kalman filter | done 2026-09-24 (see below) |
-| G08 control-system failures | |
+| G08 control-system failures | done 2026-09-24 (see below) |
 | G01 PEG and IGM guidance | (also: the load relief's switch-off, see G03) |
 | G05 Monte Carlo insertion accuracy | |
 
@@ -451,3 +451,67 @@ tests/session.test.ts (a navigated flight in the worker records as on the main t
 
 **Results (2026-09-24)**: `npm test` 70 files / 1003 tests pass (12 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.
+
+### G08 — failures of the control system, and the FDIR
+
+Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2i, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §14.
+
+- **The failures** (`src/physics/rigid/faults.ts`, `fault-config.ts`): sixteen kinds in three
+  groups — actuators (nozzle stuck, hard-over, slowed, wired backwards; RCS jet stuck on, dead),
+  sensors (three redundant strapdown IMUs: rate read backwards, stuck, biased, noisy, a unit that
+  fails and flies its diagnostic word; with G02 on, an accelerometer bias and the loss of GNSS or
+  the star tracker) and the flight computer (a hang, a gain of the wrong sign). Each strikes at
+  its time and, if given, not before its stage flies; targets are an engine or jet of the flying
+  stage, or IMU units 1–3, or all of them.
+- **The FDIR** (switchable): the IMU vote (median of three, isolation by flag or by persistent
+  distance from the median, the mean of two, an open loop with none); a model of every healthy
+  nozzle actuator fed the computer's commands, and an engine shut down when its nozzle stays off
+  the model for 0.3 s — only if the stage can spare it; jet isolation; a backup computer after
+  0.2 s. Off, the computer reads IMU 1 and watches nothing.
+- **Where it plugs in** (`RigidRuntime.step`, optional `faults`): the IMU case through the units
+  and the vote (without navigation) or into the navigation's increments (with it); the control
+  law's moment (a wrong gain, an open loop); the commands the nozzles receive and the hardware
+  that moves them; the jets the allocator may use and the duty each fires at; the nozzles as the
+  computer reads them, for the jets' share. With nothing struck every seam hands back the very
+  object it was given: a flight that carries the layer — or has a failure still to come — is the
+  flight without it, bit for bit (tested).
+- **An engine shut down** (`StageState.shutEngines`, `buildRigidVehicle`): the stage's
+  `engineFraction` loses the engine's share and the engine the FDIR named is the one that stops;
+  without the list, the old rule (the lowest index first), untouched.
+- **Break-up**: with the layer only, the attached stack is lost when q·α exceeds 300 kPa·°. The
+  fleet's healthy ascents reach at most 133 kPa·° (measured on all eighteen vehicles, calm and
+  shear). *Whether every flight should break up this way is the owner's to decide.*
+- **Presets**: Proton-M 2013, Ariane 501 (on Ariane 6, the nearest in the fleet), Vega VV17 and a
+  hypothetical Falcon 9 nozzle hard-over, each with an explanation; the setup switches to the
+  preset's vehicle.
+- **Live injection**: `Simulation.injectControlFault(spec, fdir?)` (a flight without failures
+  takes the layer from then on), through the worker (`controlFault` message; the shell checks it
+  first), and WebMCP's `inject_control_fault`.
+- **The record**: `RigidTelemetry.controlFaults` (failures struck, each IMU's state and those in
+  use, open loop, the computer, engines and jets out, the sensed against the true rate and the
+  sensors' attitude error); `read_flight_state.controlFaults`; CSV columns; events for every
+  failure and FDIR action (`evt.controlFault`, `evt.fdir*`, `evt.aeroBreakup`); the inspector
+  marks the IMU, actuator and control-law blocks that failed and plots the sensed rate.
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- G08 ---`); `src/types.ts` (`DynamicsConfig.controlFaults`; the G08 types at the end);
+`src/config/validation.ts` (one call); `src/mcp.ts` (`controlFaults` in configure_mission's schema
+and handler, kept across edits; `controlFaults` in read_flight_state; the `inject_control_fault`
+tool); `src/ui/panel.ts` (the section; a line keeping it on a vehicle change);
+`src/physics/simulation.ts` (the runtime's option; the stage told before a step and the events and
+shutdowns taken after; the break-up check; `injectControlFault`); `src/physics/vehicle.ts` (the
+optional `StageState.shutEngines`); `src/physics/rigid/mass.ts` (`budgetEngines` takes it). Also:
+`src/physics/rigid/runtime.ts`, `telemetry.ts`, `config.ts`, `src/physics/nav/navigation.ts` (the
+failure hooks and a `failed` aiding state), `src/session/*`, `src/ui/csv.ts`, `names.ts`,
+`loop-inspector.ts`, `loop-view.ts`, `loop-navigation.ts`, `fault-names.ts`, the stylesheets, and
+tests/i18n.test.ts (the G08 key families).
+
+**Tests**: tests/control-faults.test.ts (bit for bit until the first failure; every seam hands
+back its own object; the vote, a bad majority, common mode, an open loop, a flagged unit; hard-over,
+stuck, slowed, miswired nozzles and the monitor; the engine-out rule; jets; the hang and the
+backup; a wrong gain; the shut engine's budget; Ariane 501, Proton-M and the Falcon 9 hard-over
+flown; a live injection; a sensor failure through the navigation; settings, validation, presets;
+the events in three languages; the CSV), blocks in tests/mcp.test.ts and tests/session.test.ts (a
+failure injected in the worker records as on the main thread).
+

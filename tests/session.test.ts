@@ -200,6 +200,30 @@ describe('physics worker session', () => {
     expect(() => remote.sim.startAttitudeTest({ ...spec, amplitudeRad: 1 })).toThrow(RangeError);
   }, 120000);
 
+  it('takes a failure injected live in the worker as on the main thread (roadmap G08)', () => {
+    const inline = new InlineSession(rigidMission('leo'));
+    const worker = new InProcessWorker();
+    const remote = new WorkerSession(rigidMission('leo'), worker, 1, (m) => { throw new Error(m); });
+    worker.flush();
+    const fly = (n: number) => {
+      for (let i = 0; i < n; i++) {
+        inline.advance(0.05, UNBUDGETED);
+        remote.advance(0.05, UNBUDGETED);
+        worker.flush();
+      }
+    };
+    fly(400);
+    const spec = { kind: 'gyroBias' as const, time: 0, units: [1], axis: 'yaw' as const, magnitude: 1 };
+    expect(inline.sim.injectControlFault(spec, true)).toBe('injected');
+    expect(remote.sim.injectControlFault(spec, true)).toBe('injected');
+    expect(remote.sim.injectControlFault({ kind: 'gnssLoss', time: 0 })).toBe('invalid');
+    worker.flush();
+    fly(100);
+    expect(inline.sim.events.some((e) => e.key === 'evt.fdirImuIsolated')).toBe(true);
+    expect(snapshot(remote)).toEqual(snapshot(inline));
+    expect(remote.sim.telemetry.at(-1)!.rigid!.controlFaults!.units).toEqual(['isolated', 'ok', 'ok']);
+  }, 120000);
+
   it('flies on inertial navigation in the worker as on the main thread (roadmap G02)', () => {
     const mission = () => { const m = rigidMission('leo'); return { ...m, dynamics: { ...m.dynamics!, navigation: { grade: 'mems' as const, gnssOutage: [5, 20] as [number, number] } } }; };
     const inline = new InlineSession(mission());

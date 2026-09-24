@@ -25,6 +25,8 @@ import { FlightRecorder, type RecordingSource } from '../replay/recorder';
 import type { MissionConfig } from '../types';
 import { RecordingMirror } from './mirror';
 import type { FromCore, ToCore } from './protocol';
+import { validControlFaultsConfig } from '../physics/rigid/fault-config';
+import type { ControlFaultSpec } from '../types';
 
 export interface FlightSession {
   readonly kind: 'inline' | 'worker';
@@ -136,6 +138,8 @@ export class WorkerSession implements FlightSession {
     this.sim.setRigidCommand = (command) => this.setRigidCommand(command);
     // E04: and an attitude test.
     this.sim.startAttitudeTest = (spec) => this.startAttitudeTest(spec);
+    // G08: and a failure injected live.
+    this.sim.injectControlFault = (spec, fdir) => this.injectControlFault(spec, fdir);
     let started = false;
     worker.onmessage = ({ data }) => {
       if (this.disposed || data.session !== this.session) return;
@@ -221,6 +225,16 @@ export class WorkerSession implements FlightSession {
     this.sentTestUntil = shell.state.t + attitudeTestDuration(spec) + 1;
     this.post({ type: 'attitudeTest', session: this.session, spec: { ...spec } });
     return { spec: { ...spec }, startS: shell.state.t, t: [], command: [], response: [], limits: [], baselineRad: 0, done: false };
+  }
+  /** G08: the shell answers what the worker's `Simulation.injectControlFault` would refuse, then sends it. */
+  injectControlFault(spec: ControlFaultSpec, fdir?: boolean): 'injected' | 'notSixDof' | 'notFlying' | 'invalid' {
+    const shell = this.sim;
+    if (!shell.rigidRuntime) return 'notSixDof';
+    if (!validControlFaultsConfig({ faults: [spec] }, { navigation: !!shell.rigidRuntime.navigation })) return 'invalid';
+    if (['failed', 'done'].includes(shell.state.status) || shell.state.destroyed || shell.isFailed() || shell.done) return 'notFlying';
+    this.post({ type: 'controlFault', session: this.session, spec: { ...spec, ...(Array.isArray(spec.units) ? { units: [...spec.units] } : {}) },
+      ...(fdir !== undefined ? { fdir } : {}) });
+    return 'injected';
   }
   dispose(): void {
     if (this.disposed) return;

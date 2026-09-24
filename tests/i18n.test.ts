@@ -146,6 +146,12 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^sat\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts satelliteName' },
   { pattern: /^site\.[a-z0-9]+\.name$/, from: 'ui/names.ts siteName' },
   { pattern: /^stage\.[a-z0-9]+\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts stageName' },
+  // G08: the control system's failures, by kind, group and state.
+  { pattern: /^fault\.(kind|about)\.[a-zA-Z]+$/, from: 'ui/fault-names.ts faultKindName; ui/panel.ts faultRow: t(`fault.about.${fault.kind}`)' },
+  { pattern: /^fault\.group\.(actuator|sensor|computer)$/, from: 'ui/panel.ts faultRow: t(`fault.group.${FAULT_GROUP[k]}`)' },
+  { pattern: /^fault\.reason\.(flag|vote)$/, from: 'ui/names.ts: t(`fault.reason.${params.fdirReason}`)' },
+  { pattern: /^loop\.fault\.(unit|engine|jet|computer)\.[a-zA-Z]+$/, from: 'ui/loop-inspector.ts markFaults' },
+  { pattern: /^setup\.faults\.(preset|presetNote|magnitude)\.[a-zA-Z0-9]+$/, from: 'ui/panel.ts faultsSection / faultRow' },
 ];
 
 /**

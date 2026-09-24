@@ -311,6 +311,8 @@ export interface DynamicsConfig {
   control?: ControlConfig;
   /** Six-DOF only: inertial navigation with GNSS and a star tracker (roadmap G02). Absent: the flight knows its true state. */
   navigation?: NavigationConfig;
+  /** Six-DOF only: failures of the control system and the FDIR that meets them (roadmap G08). Absent: nothing fails, bit for bit. */
+  controlFaults?: ControlFaultsConfig;
 }
 
 /**
@@ -380,3 +382,42 @@ export interface NavigationConfig {
   seed?: number;
 }
 
+// --- G08 ---
+/** A failure of the control system (src/physics/rigid/faults.ts): actuators, sensors or the flight computer. */
+export type ControlFaultKind =
+  | 'gimbalStuck' | 'gimbalHardover' | 'gimbalSlow' | 'actuatorPolarity' | 'rcsStuckOn' | 'rcsFailedOff'
+  | 'rateInverted' | 'gyroStuck' | 'gyroBias' | 'gyroNoise' | 'imuFailure' | 'accelBias' | 'gnssLoss' | 'starTrackerLoss'
+  | 'computerHold' | 'gainSign';
+/** One failure: what fails, when, and where. Engines, jets and IMU units count from 1. */
+export interface ControlFaultSpec {
+  kind: ControlFaultKind;
+  /** mission time it appears, s */
+  time: number;
+  /** not before this stage (0-based, as `FailureConfig.stage`) is the one flying */
+  stage?: number;
+  /** actuators: the engine of the flying stage, or all of them */
+  engine?: number | 'all';
+  /** RCS: the jet of the flying stage, or all of them */
+  jet?: number | 'all';
+  /** sensors: the IMU units it strikes, or all three (a common-mode failure) */
+  units?: number[] | 'all';
+  /** the axis, in ISO 1151 body axes (roll x, pitch y, yaw z); absent, every axis */
+  axis?: 'roll' | 'pitch' | 'yaw';
+  /** hard-over: the side of the stop */
+  sign?: 1 | -1;
+  /**
+   * The size, in the kind's unit: gyroBias °/s, gyroNoise °/s (1σ), accelBias mg,
+   * gimbalSlow the fraction of the rate left, computerHold s.
+   */
+  magnitude?: number;
+}
+/** The failures a flight carries, and whether its FDIR is on. */
+export interface ControlFaultsConfig {
+  faults: ControlFaultSpec[];
+  /** fault detection, isolation and recovery: IMU voting, the gimbal monitor, jet isolation, the backup computer (default off) */
+  fdir?: boolean;
+  /** the accident preset the list came from, for the panel */
+  preset?: string;
+  /** the sensors' random seed; absent, derived from the dynamics seed */
+  seed?: number;
+}

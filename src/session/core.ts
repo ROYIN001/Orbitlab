@@ -76,6 +76,11 @@ export class SimCore {
           this.sim.startAttitudeTest(message.spec);
           this.report();
           break;
+        case 'controlFault':
+          // G08: the shell has checked it; the worker's own checks decide.
+          this.sim.injectControlFault(message.spec, message.fdir);
+          this.report();
+          break;
       }
     } catch (err) {
       this.fastForward = null;
