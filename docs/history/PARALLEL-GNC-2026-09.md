@@ -135,6 +135,11 @@ axes (one statement). `configure_mission` is untouched.
 round trip, α and β planes, and a Falcon 9 flight to T+120 s: nose-down q during the pitch-over
 equal to ГОСТ ω_z, ISO y to the right of the path and ГОСТ y above it, α under 5°, the CSV's
 columns by language); updated expectations in tests/i18n.test.ts (the event's α, β),
-tests/mcp.test.ts (`set_flight_control` in ISO axes) and the fake DOM of
-tests/rigid-controls.test.ts (appended text).
+tests/mcp.test.ts (`set_flight_control` in ISO axes), tests/rigid-replay.test.ts (the recorded
+`evt.controlCommand` in ISO axes) and the fake DOM of tests/rigid-controls.test.ts (appended
+text).
+
+**Results (2026-09-24)**: `npm test` 65 files / 932 tests pass (the one expectation in
+tests/rigid-replay.test.ts updated after the first full run); typecheck and build pass. Flights
+are bit for bit as before (the golden fingerprints in the regular suite pass unchanged).
 
