@@ -522,3 +522,8 @@ flight with a suborbital target:
 
 Limits: the flaps' areas, travel and rate, the header tanks' places, the entry angle of attack
 and the flip's timing are estimates; one calm flight is measured.
+
+**The rigid fleet with 10b.** `npm run test:sixdof-fleet` re-run at commit 340657b (all of 10b,
+before the merge with P05; the fleet's default missions fly no recovery plan): **161 of 161
+passed** in 2 h 5 min on four cores, part of it shared with the regular suite — the targeted
+returns leave the fleet's flights as they were.
