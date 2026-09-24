@@ -452,3 +452,7 @@ upper stage to its own liquid oxygen (§2b, "What the baffles are for") — the 
 most tanked vehicle (Proton-M: eight sloshing tanks), mostly the coupled solve at each
 integrator evaluation and the shell-load sweep at each control step.
 
+**The rigid fleet with P05 off.** `npm run test:sixdof-fleet` re-run at the P05 commit 723c811
+(options absent, as every default mission flies): **161 of 161 passed** in 2 h 9 min on four
+cores, the same result as at 68ace10 — P05 leaves the rigid vehicle untouched.
+

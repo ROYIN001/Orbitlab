@@ -92,7 +92,7 @@ tests/heavy/flex-fleet-*.test.ts (every vehicle's reference case with everything
 (18 vehicles with everything on) and the three whole-mission fingerprints pass in
 `npm run test:heavy` (22 min for the P05 files); shell loads peak at 5–44 % of allowable,
 bending at 0.1–14 cm (Starship), slosh at 4–50 cm. `npm run test:sixdof-fleet` re-run on the
-P05 commit (723c811): see the note added when it finished.
+P05 commit (723c811): **161 of 161 passed** in 2 h 9 min (finished 2026-09-24).
 
 ### U07 — ISO 1151 and ГОСТ 20058-80 notation
 
