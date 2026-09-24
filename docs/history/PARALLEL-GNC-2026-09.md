@@ -77,7 +77,7 @@ here; this file records progress for the owner to fold in at the merge.
 | E04 controller tuning mode | done 2026-09-24 (see below) |
 | G02 inertial navigation and Kalman filter | done 2026-09-24 (see below) |
 | G08 control-system failures | done 2026-09-24 (see below) |
-| G01 PEG and IGM guidance | (also: the load relief's switch-off, see G03) |
+| G01 PEG and IGM guidance | done 2026-09-24 (see below; also the load relief's switch-off, see G03) |
 | G05 Monte Carlo insertion accuracy | |
 
 ### P05 — slosh, bending and the bending filter
@@ -573,3 +573,27 @@ where the standard flight swings over 20°; the CSV; settings; the events in thr
 block in tests/mcp.test.ts, and tests/heavy/explicit-fleet-1/2.test.ts (every vehicle's reference
 mission on PEG and on IGM, judged as the fleet is).
 
+**Results (2026-09-24, on the code merged with main)**: `npm test` 79 files / 1110 tests pass;
+the whole-mission fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and
+build pass. tests/heavy/explicit-fleet-1/2.test.ts: every vehicle reaches its target orbit on both
+laws and passes the fleet's acceptance, 32 of 32 (reference mission `leo` at 25 % payload,
+six-DOF, crosswind, seed 20260919; 30 min):
+
+| Vehicle | Law takes over | Δv left, PEG (m/s) | Δv left, IGM (m/s) |
+|---|---|---|---|
+| Soyuz-2.1b | T+128 s | 2680 | 2940 |
+| Proton-M | no — short at T+111 s, standard law flies | 3013 | 3013 |
+| Angara A5 | no — short at T+203 s, standard law flies | 3470 | 3470 |
+| Falcon 9 | T+143 s | 2940 | 2937 |
+| Falcon Heavy | T+151 s | 2807 | 2800 |
+| Atlas V 551 | T+118 s | 4300 | 4280 |
+| Vulcan | T+175 s | 4830 | 5098 |
+| Ariane 64 | T+136 s | 4811 | 4785 |
+| Vega C | T+121 s | 1139 | 1140 |
+| Long March 3B/E | T+140 s | 4082 | 4075 |
+| H-IIA 202 | T+121 s | 3769 | 3748 |
+| Long March 5 | T+182 s | 4434 | 4452 |
+| H3 | T+142 s | 5399 | 5372 |
+| PSLV-XL | T+95 s | 1633 | 1578 |
+| Electron | T+129 s | 2700 | 2700 |
+| Starship | T+136 s | 2472 | 2467 |

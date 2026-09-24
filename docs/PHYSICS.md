@@ -760,8 +760,15 @@ tests/heavy/explicit-fleet-*.test.ts):
   5440 m/s left; IGM at 200 × 497 km with 5432 m/s. The largest attitude error after the first
   minute falls from 37.5° to 5.5°.
 - Falcon 9, point mass: 5458 m/s left (standard), 5463 (PEG), 5465 (IGM).
-- The whole fleet on its reference missions, on both laws: tests/heavy/explicit-fleet-*.test.ts
-  (the results go in docs/history/PARALLEL-GNC-2026-09.md, G01, when the run finishes).
+- The whole fleet on its reference missions, six-DOF in crosswind, on both laws
+  (tests/heavy/explicit-fleet-*.test.ts): all 16 vehicles reach their target orbit on PEG and
+  on IGM and pass the fleet's acceptance (32 of 32). On 14 the law takes over between T+95 s
+  (PSLV-XL) and T+182 s (Long March 5) and flies to cut-off. On Proton-M and Angara A5, at their
+  reference payloads, the stages left are short of the target when the law would take over
+  (`evt.guidanceShort`, T+111 s and T+203 s), so the standard law keeps flying and still gets
+  there. The Δv left at insertion differs by less than 30 m/s between the two laws on most
+  vehicles and by 55 m/s on PSLV-XL (PEG ahead); on Soyuz-2.1b and Vulcan IGM leaves 260–270 m/s
+  more. The flights are listed in docs/history/PARALLEL-GNC-2026-09.md, G01.
 
 ## 3. Atmosphere and aerodynamics
 
