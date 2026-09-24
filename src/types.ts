@@ -85,6 +85,13 @@ export interface StageSpec {
   boosters?: BoosterGroupSpec[];
   color?: string;
   accentColor?: string;
+  /**
+   * How the stage is drawn when it is not a plain cylinder (render only):
+   * `r7Core` is the R-7 family's Blok A, tapering to its engines below the
+   * booster tips and topped by the open truss the next stage fires through;
+   * `r7Upper` is Blok I, whose aft skirt falls away after staging.
+   */
+  profile?: 'r7Core' | 'r7Upper';
   /** Simple visual hints */
   fins?: boolean;
   gridFins?: boolean;

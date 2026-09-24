@@ -17,11 +17,13 @@
  */
 import * as THREE from 'three';
 import type { DebrisFrame } from '../physics/frame';
+import { interstageHeight } from '../physics/frame';
 import type { SceneManager } from './scene';
 import { Plume } from './plume';
 import { ogiveProfile } from './liveries';
 import { clamp01, hash11, smoothstep } from './noise';
 import { disposeObject } from './dispose';
+import { R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7CoreProfile, r7CoreTop, r7TrussGeometry } from './soyuz';
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
@@ -207,22 +209,31 @@ export class DebrisView {
       shell.add(new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, L - cylH, 20), 24, -Math.PI / 2, Math.PI), m));
       hinge.add(shell);
       g.add(hinge);
-    } else {
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 24), m);
-      body.position.y = base + L / 2;
+    } else if (d.visual.conicalTop) {
+      // an R-7 strap-on, the shape it flew in (render/soyuz.ts)
+      const body = new THREE.Mesh(r7BoosterGeometry(r, L, R7_FLARE, 24, 20), m);
+      body.position.y = base;
       g.add(body);
-      if (d.visual.conicalTop) {
-        const pts: THREE.Vector2[] = [];
-        for (let i = 0; i <= 12; i++) {
-          const s = i / 12;
-          pts.push(new THREE.Vector2(i === 12 ? 0 : Math.max(0.02, r * (1 - Math.pow(s, 1.35) * 0.97)), base + L + s * L * 0.42));
-        }
-        g.add(new THREE.Mesh(new THREE.LatheGeometry(pts, 20), m));
+      plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
+      plume.group.position.y = base - r * 1.2;
+      g.add(plume.group);
+    } else {
+      if (d.visual.profile === 'r7Core') {
+        // Blok A keeps its taper and the truss it carried Blok I on
+        const body = new THREE.Mesh(new THREE.LatheGeometry(r7CoreProfile(r, L, 24), 24), m);
+        body.position.y = base;
+        g.add(body);
+        const truss = new THREE.Mesh(r7TrussGeometry(r7CoreTop(r), L - R7_TRUSS_INSIDE, L + interstageHeight(2 * r, 2 * r7CoreTop(r))), m);
+        truss.position.y = base;
+        g.add(truss);
       } else {
-        const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.9, r * 1.2, 20, 1, true), m);
-        skirt.position.y = base - r * 0.6;
-        g.add(skirt);
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 24), m);
+        body.position.y = base + L / 2;
+        g.add(body);
       }
+      const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.9, r * 1.2, 20, 1, true), m);
+      skirt.position.y = base - r * 0.6;
+      g.add(skirt);
       if (d.recovery) ({ fins, legs, legAngle, footDrop } = this.recoveryHardware(g, r, L, base, m, d.recovery.target?.kind !== 'tower'));
       plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
       plume.group.position.y = base - r * 1.2;

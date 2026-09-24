@@ -174,7 +174,7 @@ export class DebrisTracker {
     const d: Debris = {
       id: this.sim.nextDebrisId(), name: spec.name, r: clone(s.r), v: addScaled(s.v, normalize(s.dir), -2),
       dir: clone(s.dir), mass: spec.dryMass + st.propellant, area: Math.PI * (spec.diameter / 2) ** 2 * 1.5, cd: 1.2,
-      visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', kind: 'stage' },
+      visual: { diameter: spec.diameter, length: spec.length, color: spec.color ?? '#ccc', kind: 'stage', ...(spec.profile ? { profile: spec.profile } : {}) },
       alive: true, createdAt: s.t,
     };
     if (recoverable) {

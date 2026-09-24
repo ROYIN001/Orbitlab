@@ -74,6 +74,8 @@ export interface DebrisVisual {
   length: number;
   color: string;
   conicalTop?: boolean;
+  /** `StageSpec.profile`, so a spent stage keeps the shape it was drawn with */
+  profile?: 'r7Core' | 'r7Upper';
   kind: 'stage' | 'booster' | 'fairing' | 'upperStage';
 }
 

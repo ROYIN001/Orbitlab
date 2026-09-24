@@ -203,13 +203,13 @@ const soyuzBoosters = (): BoosterGroupSpec[] => ([{
 /** Blok A as flown by Soyuz-2.1a: 87 000 kg, held to the published 2.1a clock. */
 const soyuz21aCore = (): StageSpec => ({
   id: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 87000, engine: RD108A,
-  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c',
+  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core',
   boosters: soyuzBoosters(),
 });
 /** Blok A with the published 90 100 kg load (63 800 LOX + 26 300 RP-1). */
 const soyuz21bCore = (): StageSpec => ({
   id: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 90100, engine: RD108A,
-  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c',
+  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core',
   boosters: soyuzBoosters(),
 });
 
@@ -274,7 +274,7 @@ export const VEHICLES: VehicleSpec[] = [
     fairing: { mass: 1000, diameter: 3.7, length: 10.1, sepAltitude: 95e3, sepTime: 157, color: '#e8e8e8' },
     stages: [
       soyuz21aCore(),
-      { id: 'blokI', name: 'Blok I (3rd stage, RD-0110)', dryMass: 2410, propellantMass: 22900, engine: RD0110, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd' },
+      { id: 'blokI', name: 'Blok I (3rd stage, RD-0110)', dryMass: 2410, propellantMass: 22900, engine: RD0110, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper' },
     ],
     sites: ['baikonur', 'plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 60,
     crewCapable: true,
@@ -303,7 +303,7 @@ export const VEHICLES: VehicleSpec[] = [
       // The audited 90 100 kg Blok A load — see the comment on the two core
       // helpers above for why 2.1a keeps 87 000 kg and only 2.1b takes this.
       soyuz21bCore(),
-      { id: 'blokI', name: 'Blok I (3rd stage)', dryMass: 2355, propellantMass: 23000, engine: RD0124, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd' },
+      { id: 'blokI', name: 'Blok I (3rd stage)', dryMass: 2355, propellantMass: 23000, engine: RD0124, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper' },
       { id: 'fregat', name: 'Fregat-M', dryMass: 1050, propellantMass: 5350, engine: S592, diameter: 3.35, length: 1.5, restartable: true, sepDelay: 2, ignitionDelay: 3, color: '#b8b0a0' },
     ],
     sites: ['baikonur', 'plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 60,
