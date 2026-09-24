@@ -515,3 +515,6 @@ flown; a live injection; a sensor failure through the navigation; settings, vali
 the events in three languages; the CSV), blocks in tests/mcp.test.ts and tests/session.test.ts (a
 failure injected in the worker records as on the main thread).
 
+
+**Results (2026-09-24)**: `npm test` 71 files / 1035 tests pass (12 min); the whole-mission
+fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.
