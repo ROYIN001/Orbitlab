@@ -24,9 +24,12 @@ export interface ResolvedTarget {
   /** desired RAAN, rad, or null if unconstrained */
   raan: number | null;
   raanMode: OrbitSpec['raanMode'];
+  /** a trajectory back to the surface, not an orbit (`OrbitSpec.suborbital`) */
+  suborbital?: boolean;
 }
 
 import type { AltitudeMeasure } from './rigid/orbit-prediction';
+import type { SuborbitalAim } from './guidance';
 
 export type BurnKind = 'raiseApoapsis' | 'shapeAtApoapsis' | 'circularize';
 
@@ -70,6 +73,12 @@ export interface MissionPlan {
   insertionAltitude: number;
   /** apoapsis of the insertion orbit (== insertionAltitude for a circular parking orbit) */
   insertionApoapsis: number;
+  /**
+   * A suborbital target's ellipse, for the ascent guidance (`SuborbitalAim`):
+   * the ascent is cut off near the insertion altitude, still climbing towards
+   * the apogee. Absent for every orbit (flown level to its perigee speed).
+   */
+  suborbitalAim?: SuborbitalAim;
   /** the final stage is a low-thrust kick stage: insert into an ellipse and circularise at apogee */
   weakFinalStage: boolean;
   burns: BurnPlan[];
@@ -324,7 +333,8 @@ export function resolveTarget(orbit: OrbitSpec, site: SiteExtra, launchTime: Dat
     case 'ltan': raan = raanFromLtan(launchTime, orbit.ltan ?? 10.5); break;
     default: raan = null;
   }
-  return { perigee, apogee, a, e, inclination, argp: orbit.argPerigee * DEG, raan, raanMode: orbit.raanMode };
+  return { perigee, apogee, a, e, inclination, argp: orbit.argPerigee * DEG, raan, raanMode: orbit.raanMode,
+    ...(orbit.suborbital ? { suborbital: true } : {}) };
 }
 
 /** Lowest inclination the site can reach directly (prograde), rad. */
@@ -420,6 +430,15 @@ export const ASCENT_MARGIN_REQUIRED = 150;
  * 94 × 94 km parking orbit, which is the same defect with a quieter symptom.
  */
 export const ORBIT_INSERTION_FLOOR = 140e3;
+
+/**
+ * Height a suborbital target's ascent is cut off at, m (or its apogee, if
+ * lower). Starship's ship shuts down at about 150 km on its test flights and
+ * climbs on to an apogee some 60° of arc downrange; cutting off at the apogee
+ * instead would put the whole coast a quarter of a revolution short, and
+ * Flight 5's splashdown in the Atlantic rather than the Indian Ocean.
+ */
+export const SUBORBITAL_CUTOFF_ALTITUDE = 150e3;
 
 /**
  * How far a stack sinks while a low-thrust kick stage makes up an ascent
@@ -901,7 +920,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const ascentReaches = (h: number, ha: number): boolean =>
     dvStrong - ascentCost(h, ha) >= ASCENT_MARGIN_REQUIRED;
 
-  let insertionAltitude = Math.max(parkingOverride, insertionAltitudeFor(target));
+  let insertionAltitude = target.suborbital ? Math.min(target.apogee, SUBORBITAL_CUTOFF_ALTITUDE) : Math.max(parkingOverride, insertionAltitudeFor(target));
   // The ascent flies straight into the transfer ellipse whose apogee is the
   // target (capped): that is what most launchers do, it saves a restart, and —
   // more importantly for the guidance — it gives the closed loop and the
@@ -927,9 +946,13 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const crewed = satellite.crewed === true;
   const haCandidate = insertionApoapsisFor(target, insertionAltitude);
   let insertionApoapsis = insertionAltitude;
-  if (!crewed && haCandidate > insertionAltitude + 1e3 && ascentReaches(insertionAltitude, haCandidate)) {
+  if (!target.suborbital && !crewed && haCandidate > insertionAltitude + 1e3 && ascentReaches(insertionAltitude, haCandidate)) {
     insertionApoapsis = haCandidate;
   }
+  // A suborbital target is cut off on its way up, at the height the ascent
+  // flies to, climbing at the rate of the target ellipse there.
+  const suborbitalAim: SuborbitalAim | undefined = target.suborbital ? { a: target.a, p: target.a * (1 - target.e * target.e) } : undefined;
+  if (target.suborbital) insertionApoapsis = target.apogee;
   // Single-shot stack: nothing can light an engine after the ascent cuts off,
   // so a parking orbit is not a parking orbit — it is the final orbit. Aim the
   // ascent at the mission's own orbit instead, exactly as a real launcher
@@ -946,7 +969,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // (Soyuz-2.1a, Long March 2D). The same ideal-delta-v test as above decides:
   // a stack that cannot reach the target directly is aimed at the parking orbit
   // it can reach, which at least leaves the payload in a stable orbit.
-  if (!restartable && parkingOverride <= 0 && target.perigee <= DIRECT_INSERTION_CEILING) {
+  if (!target.suborbital && !restartable && parkingOverride <= 0 && target.perigee <= DIRECT_INSERTION_CEILING) {
     const hFinal = target.perigee;
     const haFinal = Math.max(hFinal, target.apogee);
     if (ascentReaches(hFinal, haFinal)) {
@@ -958,12 +981,19 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // A dogleg leaves on the corridor edge; the closed loop turns into the plane.
   const azimuthRotating = direction.doglegDeg > 0 ? direction.azimuthRotating
     : rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
-  const burns = planBurns(target, ascentInclination, insertionAltitude, insertionApoapsis);
+  // A suborbital target is flown to its apogee and cut off there, when the
+  // periapsis has risen to the target's (`AscentMonitor.checkAscent`): there
+  // is no orbit to shape afterwards, so no burns, and what the ascent owes is
+  // the target ellipse's own speed at that apogee.
+  const burns = target.suborbital ? [] : planBurns(target, ascentInclination, insertionAltitude, insertionApoapsis);
+  const insertionCost = target.suborbital
+    ? visViva(R_EARTH + insertionAltitude, target.a) + ASCENT_LOSS_ALLOWANCE - vRot
+    : ascentCost(insertionAltitude, insertionApoapsis);
   // What the kick stage is left holding, and whether it can hold it. The ascent
   // stages' shortfall against the orbit they are AIMED at is what a kick stage
   // has to make up; `kickStageSink` turns that into the altitude the stack
   // loses making it up, which is the term the Δv budget cannot see.
-  const ascentMakeUp = Math.max(0, ascentCost(insertionAltitude, insertionApoapsis) - dvStrong);
+  const ascentMakeUp = Math.max(0, insertionCost - dvStrong);
   const kickStageAccel = weakFinalStage ? aLast : 0;
   const rIns = R_EARTH + insertionAltitude;
   const insertionSink = kickStageSink(
@@ -986,8 +1016,9 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     // The same arithmetic as `ascentReaches`, evaluated against the MISSION's
     // own orbit rather than against whatever the planner ended up aiming at:
     // that is the question a capability claim asks.
-    ascentMargin: dvStrong - ascentCost(target.perigee, target.apogee),
+    ascentMargin: dvStrong - (target.suborbital ? insertionCost : ascentCost(target.perigee, target.apogee)),
     ascentMakeUp, kickStageAccel, insertionSink,
+    ...(suborbitalAim ? { suborbitalAim } : {}),
   };
 }
 

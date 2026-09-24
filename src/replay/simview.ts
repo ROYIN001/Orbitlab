@@ -67,6 +67,7 @@ export function applyFrameToState(state: SimState, vehicle: VehicleModel, stages
   state.t = f.t;
   state.status = f.status;
   state.ascentPhase = f.ascentPhase;
+  state.descentPhase = f.descentPhase ?? null;
   state.note = f.note;
   state.r.x = f.r.x; state.r.y = f.r.y; state.r.z = f.r.z;
   state.v.x = f.v.x; state.v.y = f.v.y; state.v.z = f.v.z;

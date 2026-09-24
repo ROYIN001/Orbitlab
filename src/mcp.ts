@@ -420,6 +420,7 @@ function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<stri
     timeS: frame.t,
     status: frame.status,
     ascentPhase: frame.ascentPhase,
+    descentPhase: frame.descentPhase ?? null,
     noteKey: frame.note,
     liftoff: frame.liftoff,
     destroyed: frame.destroyed,

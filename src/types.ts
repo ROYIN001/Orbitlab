@@ -211,6 +211,15 @@ export interface OrbitSpec {
   raan?: number;
   /** Local time of ascending node, hours (raanMode = 'ltan') */
   ltan?: number;
+  /**
+   * A trajectory that comes back down rather than an orbit: the perigee is
+   * below the ground (a negative altitude). The ascent is cut off on the
+   * apsides of that ellipse, the flight is judged there, and the last stage
+   * then flies itself back to the surface — Starship's ship on its test
+   * flights, 213 × −15 km. Only a vehicle whose last stage can fly that
+   * return (`StageSpec.flaps`) is given one.
+   */
+  suborbital?: boolean;
   description: string;
 }
 

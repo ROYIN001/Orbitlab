@@ -15,6 +15,7 @@
  * - `sim/staging.ts` — boosters, stages, fairing and payload separation
  * - `sim/burns.ts` — the orbital burn sequence and the end of the mission
  * - `sim/debris.ts` — separated hardware and recovered boosters
+ * - `sim/ship-descent.ts` — a suborbital flight's ship flying itself home
  * - `sim/failures.ts` — injected failures
  * - `sim/rigid-link.ts` — the six-DOF body behind the stages
  */
@@ -33,7 +34,7 @@ import { nosePointingTarget } from './rigid/guidance-attitude';
 import { AeroEnvelopeEvents } from './rigid/envelope-events';
 import { buildRigidVehicle } from './rigid/mass';
 import { rigidContactMetrics } from './rigid/debris-runtime';
-import { quatRotate } from './rigid/math';
+import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from './rigid/math';
 import { validateDynamics } from './rigid/config';
 import { rk4Step } from './integrator';
 import { elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
@@ -47,12 +48,13 @@ import { BurnSequencer } from './sim/burns';
 import { DebrisTracker } from './sim/debris';
 import { FailureInjector } from './sim/failures';
 import { RigidLink } from './sim/rigid-link';
+import { ShipDescent } from './sim/ship-descent';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
 import { RIGID_ASCENT_COMMAND_RATE, RIGID_STEERING_FREEZE_S, TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
 import type { Debris, EventSeverity, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
 
-export type { SimStatus, EventSeverity, SimEvent, TelemetrySample, DebrisVisual, Debris, Losses, SimState } from './sim/types';
+export type { SimStatus, DescentPhase, EventSeverity, SimEvent, TelemetrySample, DebrisVisual, Debris, Losses, SimState } from './sim/types';
 export { hashSeed, mulberry32 } from './sim/seed';
 export { FAIRING_HEAT_FLUX_LIMIT, FAIRING_Q_LIMIT, FAIRING_ALTITUDE_FLOOR } from './sim/constants';
 
@@ -145,6 +147,8 @@ export class Simulation {
   readonly debrisTracker = new DebrisTracker(this);
   /** @internal six-DOF body bookkeeping */
   readonly rigidLink = new RigidLink(this);
+  /** @internal a suborbital flight's return to the surface */
+  readonly shipDescent = new ShipDescent(this);
   /** The six-DOF steering held through a burn's last seconds (RIGID_STEERING_FREEZE_S). */
   private frozenCommand: Vec3 | null = null;
   /** The six-DOF vacuum-ascent command, rate-limited (RIGID_ASCENT_COMMAND_RATE). */
@@ -175,7 +179,8 @@ export class Simulation {
     this.payloadMass = cfg.payloadMassOverride ?? this.satellite.mass;
     this.plan = planMission(cfg, this.site, this.vehicleSpec);
     this.vehicle = new VehicleModel(this.vehicleSpec, this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
-    this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis);
+    this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis,
+      this.plan.suborbitalAim);
     this.ascent = new AscentMonitor(this);
     this.failures = new FailureInjector(this, cfg);
 
@@ -383,6 +388,7 @@ export class Simulation {
     if (this.state.status === 'failed') return true;
     // The engine shut down on the final cut-off is still tailing off for a
     // moment, and that impulse is part of the orbit the flight ends in.
+    if (this.state.status === 'landed') return true;
     return this.state.status === 'orbit' && !this.vehicle.inTransient(this.state.t);
   }
 
@@ -415,7 +421,8 @@ export class Simulation {
         // zero from the coast, and a 0.5 s step at full thrust overshoots a
         // small trim burn by tens of m/s.
         const st = this.vehicle.active;
-        const avail = st ? st.spec.engine.count * st.spec.engine.thrustVac * st.engineFraction : 0;
+        const avail = st ? (st.litEngines ? VehicleModel.enginesRunning(st) * st.spec.engine.thrustVac
+          : st.spec.engine.count * st.spec.engine.thrustVac * st.engineFraction) : 0;
         const aT = s.mass > 0 ? Math.max(s.thrust, avail) / s.mass : 1;
         // What is left once the tail-off is counted, which is what ends the burn.
         const tail = st ? this.vehicle.tailoffDeltaV(s.t, 0, Math.max(1, s.mass)) : 0;
@@ -428,6 +435,15 @@ export class Simulation {
       // scheduled burn, which the pending-action clamp below takes care of.
       case 'coast': dt = s.altitude > 2000e3 ? 60 : s.altitude > 140e3 ? 10 : 0.5; break;
       case 'orbit': dt = Math.min(30, Math.max(1, (s.elements.period || 5400) / 300)); break;
+      case 'descent': {
+        // Kepler above the air; the entry resolved at its speed; the flip and
+        // the landing burn finely.
+        const phase = this.shipDescent.phase;
+        dt = phase === 'coast' ? (s.altitude > 140e3 ? 10 : 0.5)
+          : phase === 'flip' || phase === 'landing' ? 0.02 : s.altitude > 40e3 ? 0.2 : 0.05;
+        break;
+      }
+      case 'landed': dt = 1; break;
       default: dt = 1;
     }
     if (this.rigidRuntime) {
@@ -495,6 +511,7 @@ export class Simulation {
 
     if (s.status === 'prelaunch') this.stepPrelaunch(dt);
     else if (s.status === 'orbit' && !this.vehicle.inTransient(s.t)) this.stepOrbit(dt);
+    else if (s.status === 'landed') this.stepLanded(dt);
     else dt = this.stepFlight(dt);
 
     this.debrisTracker.stepDebris(dt);
@@ -585,6 +602,9 @@ export class Simulation {
     // --- steering & throttle command
     let dirCmd = s.dir;
     let throttleCmd = 0;
+    /** where a returning ship's belly is to face (`ShipDescent`) */
+    let bellyCmd: Vec3 | null = null;
+    let slewRate = this.cfg.guidance.slewRate * DEG;
     const active = this.vehicle.active;
     const fullThrust = this.vehicle.thrust(s.t, atm.p, 1);
     const maxAccel = this.cfg.guidance.maxAccel > 0 ? this.cfg.guidance.maxAccel : this.vehicleSpec.maxAccel;
@@ -616,6 +636,13 @@ export class Simulation {
       // The final cut-off's tail-off: hold the attitude it was cut off in.
       dirCmd = s.dir;
       throttleCmd = 0;
+    } else if (s.status === 'descent') {
+      const cmd = this.shipDescent.command();
+      dirCmd = cmd.nose;
+      bellyCmd = cmd.belly;
+      throttleCmd = cmd.throttle;
+      slewRate = cmd.slewRate;
+      s.ascentPhase = null;
     } else if (s.status === 'burn' && s.currentBurn) {
       const cmd = this.burns.burnCommand(fullThrust.thrustFullVac, mass, maxAccel, up);
       if (!cmd) return 0;
@@ -653,9 +680,9 @@ export class Simulation {
     // stack to 1.3 °/s between MECO and separation — more than the returning
     // stage's cold-gas thrusters could take out. Hold the attitude it was shut
     // down in, as real vehicles do until separation.
-    if (this.rigidRuntime && active && this.vehicle.coreTailingOff(active, s.t)) dirCmd = s.dir;
+    if (this.rigidRuntime && active && this.vehicle.coreTailingOff(active, s.t) && s.status !== 'descent') dirCmd = s.dir;
     // slew-limited attitude
-    const slew = this.cfg.guidance.slewRate * DEG * dt;
+    const slew = slewRate * dt;
     if (!this.rigidRuntime) s.dir = slerpLimited(s.dir, dirCmd, slew);
     if (this.rigidRuntime?.command.mode === 'manual') throttleCmd = this.rigidRuntime.command.throttle;
     this.rigidLink.applyManualEngineCommand(active, throttleCmd);
@@ -670,7 +697,8 @@ export class Simulation {
       // boundary is where the depletion sensor shuts the engine down, with
       // its tail-off propellant still aboard.
       const dt0 = dt;
-      const coreFlow = engineMassFlow(active.spec.engine) * active.spec.engine.count * active.engineFraction * thr.coreThrottle;
+      const coreFlow = active.litEngines ? engineMassFlow(active.spec.engine) * VehicleModel.enginesRunning(active) * thr.coreThrottle
+        : engineMassFlow(active.spec.engine) * active.spec.engine.count * active.engineFraction * thr.coreThrottle;
       if (coreFlow > 0 && !active.cutoff && !active.burnedOut && this.vehicle.usablePropellant(active) > 0) {
         const left = this.vehicle.usablePropellant(active) - VehicleModel.tailoffReserve(active.spec.engine, coreFlow);
         // A boundary already reached is the depletion sensor's to act on: never
@@ -704,7 +732,8 @@ export class Simulation {
     let next: { r: Vec3; v: Vec3 };
     let rigidGLoad: number | undefined;
     let rigidAccelerations: { propulsionECI: Vec3; aerodynamicECI: Vec3; gravityECI: Vec3 } | undefined;
-    const held = this.rigidRuntime && s.rigid && dt > this.rigidDt + 1e-9 && s.status === 'coast'
+    const held = this.rigidRuntime && s.rigid && dt > this.rigidDt + 1e-9
+      && (s.status === 'coast' || (s.status === 'descent' && this.shipDescent.phase === 'coast'))
       ? this.rigidLink.heldCoastStep(dt) : null;
     if (held) {
       next = held.state;
@@ -721,8 +750,8 @@ export class Simulation {
         dirCmd = limitAscentCommand(dirCmd, vAir, runtime.ascentAngleLimit(snapshot, q, vAirMag / atm.a));
       }
       const result = runtime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody }, dt,
-        dirCmd, s.status === 'ascent' ? this.rigidLink.rigidSide()
-          : quatRotate(nosePointingTarget(s.rigid.attitudeQ, dirCmd), v3(0, 0, 1)), (elapsed, consumed) => buildRigidVehicle(this.vehicle, {
+        dirCmd, s.status === 'ascent' ? this.rigidLink.rigidSide() : bellyCmd
+          ?? quatRotate(nosePointingTarget(s.rigid.attitudeQ, dirCmd), v3(0, 0, 1)), (elapsed, consumed) => buildRigidVehicle(this.vehicle, {
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined, payloadLength: this.satellite.size?.height,
           pressure: atm.p, coreThrottle: thr.coreLevel, boosterThrottle: thr.boosterThrottle, boosterThrottles: thr.boosterLevels, time: s.t + elapsed,
           propellantOffsetSeconds: elapsed, rcsConsumedKgByStage: consumed }));
@@ -734,6 +763,8 @@ export class Simulation {
       this.burns.accountDeliveredDv(result.accelerationsStart.propulsionECI, thr.burning, dt);
     } else if (useKepler) {
       next = propagateKepler(s.r, s.v, dt);
+    } else if (s.status === 'descent') {
+      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
     } else {
       next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, false));
     }
@@ -778,9 +809,11 @@ export class Simulation {
     // Proper acceleration for the g-load: thrust and drag are never
     // perpendicular — during ascent they are close to ANTI-parallel — so
     // hypot() over-reported by ~23 % (audit item B40(1)). Sum them as vectors.
-    const aNonGrav = vAirMag > 1
-      ? add(scale(s.dir, thrustAccel), scale(vAir, -dragAccel / vAirMag))
-      : scale(s.dir, thrustAccel);
+    const aNonGrav = s.status === 'descent' && !rigidAccelerations
+      ? add(scale(s.dir, thrustAccel), this.shipDescent.aeroAcceleration(s.r, s.v, s.dir, mass))
+      : vAirMag > 1
+        ? add(scale(s.dir, thrustAccel), scale(vAir, -dragAccel / vAirMag))
+        : scale(s.dir, thrustAccel);
     s.gLoad = rigidGLoad ?? norm(aNonGrav) / G0;
     this.ascent.trackMaxQ(alt, vz, q);
 
@@ -835,11 +868,55 @@ export class Simulation {
         { ...snapshot, cg: sub(snapshot.cg, snapshot.activeBase) }, snapshot.aero.referenceLength, radius, r => this.groundElevation(r));
       groundImpact = contact.clearance < -0.01;
     }
-    if (s.liftoff && groundImpact && !this.isFailed()) {
+    if (s.liftoff && groundImpact && s.status === 'descent') {
+      // A returning ship meets the water: a splashdown, or the end of it.
+      this.shipDescent.touchdown();
+      this.settleOnSurface();
+    } else if (s.liftoff && groundImpact && !this.isFailed()) {
       this.event('evt.impact', 'fail', { speed: Math.round(norm(sub(s.v, cross(omega, s.r)))) });
       this.destroy();
     }
     return dt;
+  }
+
+  /** Put a vehicle that has come down at rest on the surface, where it came down. */
+  private settleOnSurface(): void {
+    const s = this.state;
+    const up = normalize(s.r);
+    const surface = R_EARTH + this.groundElevation(s.r);
+    if (s.rigid && this.rigidRuntime?.snapshot) {
+      // The lowest point of the body on the surface: the engines' end, upright.
+      const snapshot = this.rigidRuntime.snapshot;
+      const base = add(s.r, quatRotate(s.rigid.attitudeQ, sub(snapshot.activeBase, snapshot.cg)));
+      s.r = addScaled(s.r, up, surface - norm(base));
+    } else {
+      s.r = scale(up, surface);
+    }
+    s.v = groundVelocityEci(s.r);
+    if (s.rigid) {
+      s.rigid = { ...s.rigid, omegaBody: quatInverseRotate(s.rigid.attitudeQ, v3(0, 0, OMEGA_EARTH)) };
+    }
+    this.updateDerived();
+  }
+
+  /**
+   * A vehicle at rest on the surface — a ship after its splashdown — turning
+   * with the Earth while the clock runs on (and the debris still flying).
+   */
+  private stepLanded(dt: number): void {
+    const s = this.state;
+    const turn = quatFromAxisAngle(v3(0, 0, 1), OMEGA_EARTH * dt);
+    s.r = quatRotate(turn, s.r);
+    s.v = groundVelocityEci(s.r);
+    s.t += dt;
+    s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0;
+    s.gLoad = 1;
+    if (s.rigid && this.rigidRuntime?.snapshot) {
+      const attitudeQ = quatNormalize(quatMultiply(turn, s.rigid.attitudeQ));
+      s.rigid = this.rigidRuntime.telemetry({ r: s.r, v: s.v, attitudeQ, omegaBody: quatInverseRotate(attitudeQ, v3(0, 0, OMEGA_EARTH)) },
+        s.t, this.rigidRuntime.snapshot);
+      s.dir = quatRotate(attitudeQ, v3(1, 0, 0));
+    }
   }
 
   private stepOrbit(dt: number): void {

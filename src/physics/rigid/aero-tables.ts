@@ -262,6 +262,31 @@ export function detachedAeroTable(length: number, diameter: number, cd: number, 
   });
 }
 
+/**
+ * Starship's ship falling belly first after a suborbital flight: a 9 m tube
+ * under an ogive nose of about 1.3 diameters. Broadside the crossflow acts on
+ * the planform — the tube, and two thirds of the nose's side — so its centre
+ * sits a little behind the middle of the ship, and at the 70–90° the ship
+ * flies at, nose-first slender-body lift is a small correction made on the
+ * ogive. The flaps are not in the table: they are control surfaces
+ * (`shipFlapSurfaces`), whose trim drag is added where they are. An estimate
+ * built the same way as every other table here, not a SpaceX figure.
+ */
+export function shipDescentAeroTable(length: number, diameter: number, referenceArea: number): AeroTable {
+  const L = Math.max(length, 0.1), d = Math.max(diameter, 0.1);
+  const nose = Math.min(1.3 * d, 0.4 * L), tube = L - nose;
+  const noseSide = (2 / 3) * d * nose;
+  const planformArea = tube * d + noseSide;
+  const planformX = (tube * d * tube / 2 + noseSide * (tube + 0.4 * nose)) / planformArea;
+  return buildTable({
+    referenceArea, terms: [{ area: circle(d), x: L - OGIVE_CP * nose }], nose: { area: circle(d), baseX: tube, diameter: d },
+    baseTerms: [{ area: circle(d), x: 0.1 * d }], planformArea, planformX, length: L, diameter: d,
+    axial: dragCoefficient,
+    // Engines first after the flip: the skirt and the six bells, a blunt base.
+    baseAxial: (m) => tumblingDragCoefficient(1.0, m),
+  });
+}
+
 /** Interpolate one of a table's per-Mach columns. */
 export function atMach(table: AeroTable, column: readonly number[], mach: number): number {
   const m = table.mach;

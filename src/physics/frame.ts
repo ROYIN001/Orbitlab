@@ -24,7 +24,7 @@
  * mission (`src/replay/simview.ts`) until they are converted properly; the
  * telemetry panel stays live on purpose, since it charts the whole flight.
  */
-import type { Simulation, SimStatus, Debris, DebrisVisual, Losses } from './simulation';
+import type { Simulation, SimStatus, DescentPhase, Debris, DebrisVisual, Losses } from './simulation';
 import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
@@ -158,6 +158,8 @@ export interface VisualFrame {
   t: number;
   status: SimStatus;
   ascentPhase: AscentPhase | null;
+  /** a suborbital flight's return (`SimState.descentPhase`); absent on older recordings */
+  descentPhase?: DescentPhase | null;
   /** HUD note key (countdown, ascent, coast, burn, orbit, orbitOffTarget, suborbital, destroyed, reentry, noLiftoff) */
   note: string;
   r: Vec3;
@@ -434,6 +436,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     rigid: cloneRigidTelemetry(s.rigid),
     status: s.status,
     ascentPhase: s.ascentPhase,
+    ...(s.descentPhase ? { descentPhase: s.descentPhase } : {}),
     note: s.note,
     r: clone(s.r),
     v: clone(s.v),
@@ -607,7 +610,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return { ...cloneFrame(a), t: a.t + span * u };
   }
   const dt = span * u;
-  const ballistic = !a.rigid && (a.status === 'coast' || a.status === 'orbit') && (b.status === 'coast' || b.status === 'orbit') && a.thrust <= 0;
+  const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
+  const ballistic = !a.rigid && coasting(a) && coasting(b) && a.thrust <= 0;
   let r: Vec3;
   let v: Vec3;
   if (ballistic) {

@@ -16,6 +16,14 @@
  * of the moment the engines left over, clipped to the travel: four fins have
  * one more degree of freedom than the three moments, and the minimum-norm
  * answer spends it on keeping every fin as close to neutral as it can.
+ *
+ * Starship's flaps are the other kind of surface: plates on the hull that
+ * work as drag brakes in a stream that meets them face on — the ship falling
+ * belly first — and do nothing edge on. Their force grows with the square of
+ * the part of the flow against their face (`flow: 'facing'`), and it is never
+ * negative: folded against the hull a flap makes none, fully out it makes its
+ * whole drag, and the control works on the difference about a half-open trim
+ * position (`neutralRad`), which the body's own table does not include.
  */
 import { add, cross, scale, sub, v3, type Vec3 } from '../vec3';
 import type { Wrench } from './actuators';
@@ -31,6 +39,15 @@ export interface ControlSurfaceSpec {
   maxDeflectionRad: number;
   maxRateRadS: number;
   timeConstantS: number;
+  /**
+   * `axial` (the default): a grid fin, whose force changes sign with the
+   * stream along the body (`flowSign`). `facing`: a plate that pushes along
+   * its force direction only when the stream meets that face, scaled by the
+   * square of the part of the stream that does (`surfaceFlow`).
+   */
+  flow?: 'axial' | 'facing';
+  /** deflection the command is measured from, rad: a plate's force is `slope × (δ + neutralRad)` */
+  neutralRad?: number;
 }
 
 /** Deflection of each surface, rad. */
@@ -43,16 +60,49 @@ export function flowSign(airVelocityBody: Vec3): number {
   return airVelocityBody.x < 0 ? 1 : -1;
 }
 
+/**
+ * How much of each surface's force the stream gives it now: `flowSign` for a
+ * grid fin, and for a plate the square of the stream's component against its
+ * face (0 when the stream comes from behind it).
+ */
+export function surfaceFlow(specs: readonly ControlSurfaceSpec[], airVelocityBody: Vec3): number[] {
+  const speed = Math.hypot(airVelocityBody.x, airVelocityBody.y, airVelocityBody.z);
+  return specs.map((spec) => {
+    if (spec.flow !== 'facing') return flowSign(airVelocityBody);
+    if (!(speed > 0)) return 0;
+    const n = spec.forceDirectionBody;
+    const against = -(airVelocityBody.x * n.x + airVelocityBody.y * n.y + airVelocityBody.z * n.z) / speed;
+    return against > 0 ? against * against : 0;
+  });
+}
+
+/** One sign for every surface, or one flow factor per surface (`surfaceFlow`). */
+export type SurfaceFlow = number | readonly number[];
+const flowOf = (flow: SurfaceFlow, i: number): number => typeof flow === 'number' ? flow : flow[i] ?? 0;
+const withNeutral = (spec: ControlSurfaceSpec, deflection: number): number =>
+  spec.neutralRad !== undefined ? deflection + spec.neutralRad : deflection;
+
 /** Force and moment of the surfaces' deflections about `cg`. */
 export function surfaceWrench(specs: readonly ControlSurfaceSpec[], deflections: SurfaceDeflections,
-  dynamicPressure: number, sign: number, cg: Vec3): Wrench {
+  dynamicPressure: number, sign: SurfaceFlow, cg: Vec3): Wrench {
   let force = v3(), moment = v3();
   specs.forEach((spec, i) => {
-    const f = scale(spec.forceDirectionBody, sign * dynamicPressure * spec.forceSlopeM2 * (deflections[i] ?? 0));
+    const f = scale(spec.forceDirectionBody, flowOf(sign, i) * dynamicPressure * spec.forceSlopeM2 * withNeutral(spec, deflections[i] ?? 0));
     force = add(force, f);
     moment = add(moment, cross(sub(spec.positionBody, cg), f));
   });
   return { forceBody: force, momentBody: moment };
+}
+
+/** Moment the surfaces make at zero command (a plate's trim drag), N·m. */
+export function surfaceNeutralMoment(specs: readonly ControlSurfaceSpec[], dynamicPressure: number, sign: SurfaceFlow, cg: Vec3): Vec3 {
+  let moment = v3();
+  specs.forEach((spec, i) => {
+    if (!spec.neutralRad) return;
+    const f = scale(spec.forceDirectionBody, flowOf(sign, i) * dynamicPressure * spec.forceSlopeM2 * spec.neutralRad);
+    moment = add(moment, cross(sub(spec.positionBody, cg), f));
+  });
+  return moment;
 }
 
 /**
@@ -61,9 +111,11 @@ export function surfaceWrench(specs: readonly ControlSurfaceSpec[], deflections:
  * at no dynamic pressure, where a fin has nothing to push on.
  */
 export function allocateSurfaces(specs: readonly ControlSurfaceSpec[], moment: Vec3, dynamicPressure: number,
-  sign: number, cg: Vec3): number[] {
+  sign: SurfaceFlow, cg: Vec3): number[] {
   if (!specs.length || !(dynamicPressure > 0)) return specs.map(() => 0);
-  const columns = specs.map((spec) => cross(sub(spec.positionBody, cg), scale(spec.forceDirectionBody, sign * dynamicPressure * spec.forceSlopeM2)));
+  const columns = specs.map((spec, i) => cross(sub(spec.positionBody, cg), scale(spec.forceDirectionBody, flowOf(sign, i) * dynamicPressure * spec.forceSlopeM2)));
+  // What is asked of the deflections is what the trim drag does not already give.
+  if (specs.some((spec) => spec.neutralRad)) moment = sub(moment, surfaceNeutralMoment(specs, dynamicPressure, sign, cg));
   // BBᵀ, 3×3, plus a small regularisation relative to its own size.
   const m = [0, 0, 0, 0, 0, 0, 0, 0, 0];
   const comp = (c: Vec3) => [c.x, c.y, c.z];
@@ -78,13 +130,16 @@ export function allocateSurfaces(specs: readonly ControlSurfaceSpec[], moment: V
   return columns.map((c, i) => clamp(c.x * y[0] + c.y * y[1] + c.z * y[2], -specs[i].maxDeflectionRad, specs[i].maxDeflectionRad));
 }
 
-/** Largest moment the surfaces can give about each body axis at this dynamic pressure, N·m. */
-export function surfaceAuthority(specs: readonly ControlSurfaceSpec[], dynamicPressure: number, cg: Vec3): Vec3 {
+/**
+ * Largest moment the surfaces can give about each body axis at this dynamic
+ * pressure, N·m, either way from their neutral one (`surfaceNeutralMoment`).
+ */
+export function surfaceAuthority(specs: readonly ControlSurfaceSpec[], dynamicPressure: number, cg: Vec3, sign: SurfaceFlow = 1): Vec3 {
   const out = v3();
-  for (const spec of specs) {
-    const per = cross(sub(spec.positionBody, cg), scale(spec.forceDirectionBody, dynamicPressure * spec.forceSlopeM2 * spec.maxDeflectionRad));
+  specs.forEach((spec, i) => {
+    const per = cross(sub(spec.positionBody, cg), scale(spec.forceDirectionBody, Math.abs(flowOf(sign, i)) * dynamicPressure * spec.forceSlopeM2 * spec.maxDeflectionRad));
     out.x += Math.abs(per.x); out.y += Math.abs(per.y); out.z += Math.abs(per.z);
-  }
+  });
   return out;
 }
 
@@ -130,4 +185,33 @@ export function gridFinSurfaces(ownerId: string, length: number, diameter: numbe
     id: `${ownerId}.gridFin.${id}`, positionBody, forceDirectionBody,
     forceSlopeM2: slopePerM2 * area, maxDeflectionRad: 20 * Math.PI / 180, maxRateRadS: 30 * Math.PI / 180, timeConstantS: 0.1,
   }));
+}
+
+/**
+ * Starship's four flaps: two forward near the nose, two larger aft by the
+ * engines, hinged along the hull at 65° either side of the belly (+Z, the
+ * heat-shield side) and working as drag plates in the stream that meets the
+ * belly. Each pushes along the hull's tangent there — mostly against the fall,
+ * and a little outward — so the pair fore against the pair aft pitches the
+ * ship, one side against the other rolls it, and the diagonal pairs yaw it
+ * with their outward components. Areas (18 m² forward, 32 m² aft), the plate
+ * drag coefficient of 1.2, the ±34° of travel either side of half open and
+ * the 20 °/s they move at are estimates; SpaceX publishes none of them.
+ */
+export function shipFlapSurfaces(ownerId: string, length: number, diameter: number): ControlSurfaceSpec[] {
+  const R = diameter / 2, hinge = 65 * Math.PI / 180, travel = 0.6;
+  const flap = (id: string, x: number, side: number, area: number, span: number): ControlSurfaceSpec => {
+    const r = R + span / 2;
+    return {
+      id: `${ownerId}.flap.${id}`, positionBody: v3(x, side * r * Math.sin(hinge), r * Math.cos(hinge)),
+      forceDirectionBody: v3(0, side * Math.cos(hinge), -Math.sin(hinge)),
+      // Fully out, the plate's whole drag, 1.2 q A; folded, none.
+      forceSlopeM2: 1.2 * area / (2 * travel), maxDeflectionRad: travel, neutralRad: travel,
+      maxRateRadS: 20 * Math.PI / 180, timeConstantS: 0.15, flow: 'facing',
+    };
+  };
+  return [
+    flap('fwdLeft', 0.86 * length, 1, 18, 3), flap('fwdRight', 0.86 * length, -1, 18, 3),
+    flap('aftLeft', 0.13 * length, 1, 32, 4), flap('aftRight', 0.13 * length, -1, 32, 4),
+  ];
 }

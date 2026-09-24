@@ -21,7 +21,20 @@ export interface ReturnGuidanceMemory {
   lateral?: Vec3;
 }
 
-export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'failed';
+/**
+ * `descent`: after a suborbital cut-off the last stage flies itself back — the
+ * coast, the entry, the flip and the landing burn (`ShipDescent`). `landed`: it
+ * has come down on the surface, intact or not, and the clock runs on with it
+ * sitting there. Neither is ever reached by a flight to orbit.
+ */
+export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'descent' | 'landed' | 'failed';
+
+/**
+ * Where a returning ship is in its descent: coasting above the air, entering
+ * belly first, falling belly first below the speed of sound, swinging upright
+ * on its engines, and braking to the surface.
+ */
+export type DescentPhase = 'coast' | 'entry' | 'bellyflop' | 'flip' | 'landing';
 
 export type EventSeverity = 'info' | 'major' | 'warn' | 'fail' | 'success';
 
@@ -172,6 +185,8 @@ export interface SimState {
   vz: number;
   /** progress note key for the HUD */
   note: string;
+  /** a suborbital flight's return, while its status is `descent` */
+  descentPhase?: DescentPhase | null;
 }
 
 export interface PendingAction {

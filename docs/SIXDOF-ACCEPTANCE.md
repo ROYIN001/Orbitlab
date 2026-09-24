@@ -421,3 +421,29 @@ oscillated to 19° over the arms.
 Limits: one wind state (calm) and one launch per flight is measured; the fins' lift slope and
 travel, the flip on the centre engine and the drone ship's station are estimates, and the
 targeted landings are not a robustness envelope.
+
+### Starship's ship home from a suborbital cut-off (2026-09-24)
+
+Flight 5's ship is flown by the vehicle's own rigid body from its cut-off on a 213 × −15 km
+trajectory to a splashdown ([PHYSICS.md](PHYSICS.md) §8.2). Additions, each reached only by a
+flight with a suborbital target:
+
+- **Flaps as actuators**: plate surfaces (`flow: 'facing'`, `neutralRad`) whose force grows with
+  the square of the stream against their face and is never negative, controlled about a
+  half-open trim that the runtime counts as a moment it starts from. Grid fins fly unchanged.
+- **The ship's belly-first table** (`shipDescentAeroTable`) and its landing propellant in its
+  header tanks (`headerTankComponents`), valid at any angle and to Mach 30, so a belly-first
+  entry is not flagged as outside the model.
+- **Partial light-up** (`StageState.litEngines`): the three sea-level Raptors alone, then two,
+  then one, with thrust and flow following in the legacy model too.
+- **Gains for the flip and the landing burn** (`setControlGains`, `ControlGains.authorityShare`
+  0.7 in place of 0.35), no roll commanded on the engines, and one engine lit alone only for the
+  last settle: a single off-axis Raptor cannot pitch the ship without rolling it, and asked for
+  both it took its pitch back out and left the ship leaning 16° until it slid off sideways.
+
+| Test | Result |
+|---|---|
+| tests/heavy/starship-flight5.test.ts — Starship Flight 5 whole: booster caught, ship home | cut-off 211 × −15 km; entry T+39:42 at 8.3 kPa peak; flip 1.06 km; splashdown T+59:00 at 1.6 m/s, 0.3 m/s across, 2°, 24.5°S 83.6°E; about 2.5 min |
+
+Limits: the flaps' areas, travel and rate, the header tanks' places, the entry angle of attack
+and the flip's timing are estimates; one calm flight is measured.

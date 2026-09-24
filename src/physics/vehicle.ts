@@ -48,6 +48,18 @@ export interface StageState {
   level: number;
   /** level at the latest shutdown, the start of its tail-off */
   stopLevel: number;
+  /**
+   * Engines lit, by engine index, when not all of them are: Starship's ship
+   * lands on its three sea-level Raptors and leaves the vacuum ones cold.
+   * Absent, every engine runs.
+   */
+  litEngines?: readonly number[];
+  /**
+   * The stage is flying itself back to the surface after a suborbital cut-off
+   * (`ShipDescent`): its landing propellant sits in its header tanks and its
+   * flaps are working.
+   */
+  descent?: boolean;
 }
 
 /**
@@ -433,13 +445,18 @@ export class VehicleModel {
    * command of 0 lights nothing, but an engine already shut down keeps tailing
    * off whatever the command.
    */
+  /** Engines of the stage running, counting failures and a partial light-up (`litEngines`). */
+  static enginesRunning(st: StageState): number {
+    return st.litEngines ? st.litEngines.length * st.engineFraction : st.spec.engine.count * st.engineFraction;
+  }
+
   thrust(t: number, p: number, throttleCmd: number, dt = 0): ThrustResult {
     const st = this.active;
     const out: ThrustResult = { thrust: 0, mdot: 0, thrustFullVac: 0, coreThrottle: 0, boosterThrottle: 0, coreLevel: 0, boosterLevels: [], burning: false };
     if (!st) return out;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
     const e = st.spec.engine;
-    const n = e.count * st.engineFraction;
+    const n = VehicleModel.enginesRunning(st);
     // core
     if (throttleCmd > 0 && st.ignited && !st.cutoff && !st.burnedOut && this.usablePropellant(st) > 0 && st.engineFraction > 0) {
       let thr = throttleCmd;
@@ -506,7 +523,7 @@ export class VehicleModel {
     const e = st.spec.engine;
     const level = st.stopLevel * tailoffFactor(e, t - st.cutoffTime, dt);
     if (!(dt > 0)) return level;
-    return Math.min(level, this.usablePropellant(st) / (e.count * st.engineFraction * engineMassFlow(e) * dt));
+    return Math.min(level, this.usablePropellant(st) / (VehicleModel.enginesRunning(st) * engineMassFlow(e) * dt));
   }
   private boosterTailLevel(b: BoosterState, t: number, dt: number): number {
     const e = b.spec.engine;
@@ -577,7 +594,7 @@ export class VehicleModel {
       fraction = Math.exp(-Math.max(0, t - st.cutoffTime) / tau) - Math.exp(-TAILOFF_SPAN);
     } else return 0;
     if (!(level > 0) || !(fraction > 0)) return 0;
-    return e.count * st.engineFraction * engineThrust(e, p) * level * tau * fraction / mass;
+    return VehicleModel.enginesRunning(st) * engineThrust(e, p) * level * tau * fraction / mass;
   }
 
   /** Consume propellant for dt seconds at the given conditions. Returns burnout flags. */
@@ -587,7 +604,7 @@ export class VehicleModel {
     if (!st) return res;
     const boostersBurning = st.boosters.some((b) => b.attached && b.ignited && !b.burnedOut);
     const e = st.spec.engine;
-    const n = e.count * st.engineFraction;
+    const n = VehicleModel.enginesRunning(st);
     if (throttleCmd > 0 && st.ignited && !st.cutoff && !st.burnedOut && st.engineFraction > 0) {
       let thr = throttleCmd;
       if (boostersBurning && st.spec.throttleWithBoosters !== undefined && t - st.ignitionTime > 20) {

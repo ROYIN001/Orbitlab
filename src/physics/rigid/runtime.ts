@@ -12,7 +12,7 @@ import { matVecMul, quatFromBasis, quatInverseRotate, quatRotate, type Mat3, typ
 import type { RigidVehicleSnapshot } from './mass';
 import { RIGID_MODEL_VERSION } from './config';
 import { fuelAwareCoastRates } from './pointing';
-import { allocateSurfaces, flowSign, stepSurfaces, surfaceAuthority, surfaceWrench } from './surfaces';
+import { allocateSurfaces, stepSurfaces, surfaceAuthority, surfaceFlow, surfaceNeutralMoment, surfaceWrench, type SurfaceFlow } from './surfaces';
 import { cloneWindProfile, type RigidCommand, type RigidTelemetry } from './telemetry';
 
 export type SnapshotProvider = (elapsed: number, consumed: Readonly<Record<string, number>>) => RigidVehicleSnapshot;
@@ -110,7 +110,23 @@ export class RigidRuntime {
     this.fuelAwareCoast = !!options.fuelAwareCoast;
     const gains = options.controlGains ?? FLIGHT_CONTROL_GAINS;
     this.controlGains = { attitudeGain: { ...gains.attitudeGain }, rateGain: { ...gains.rateGain },
-      maxRate: { ...gains.maxRate }, maxAngularAcceleration: { ...gains.maxAngularAcceleration }, responseDelayS: gains.responseDelayS };
+      maxRate: { ...gains.maxRate }, maxAngularAcceleration: { ...gains.maxAngularAcceleration }, responseDelayS: gains.responseDelayS,
+      ...(gains.authorityShare !== undefined ? { authorityShare: gains.authorityShare } : {}) };
+  }
+
+  /**
+   * Fly with other gains from now on. A ship returning belly first turns
+   * slowly on its flaps and then has to swing upright in seconds on its
+   * engines; one set of gains cannot do both.
+   */
+  setControlGains(gains: ControlGains): void {
+    const own = this.controlGains;
+    Object.assign(own.attitudeGain, gains.attitudeGain);
+    Object.assign(own.rateGain, gains.rateGain);
+    Object.assign(own.maxRate, gains.maxRate);
+    Object.assign(own.maxAngularAcceleration, gains.maxAngularAcceleration);
+    own.responseDelayS = gains.responseDelayS;
+    own.authorityShare = gains.authorityShare;
   }
 
   setCommand(command: RigidCommand): void {
@@ -132,7 +148,7 @@ export class RigidRuntime {
     return snapshot.engines.map(engine => ({ ...engine, maxThrust: engine.thrustBudgetN }));
   }
 
-  private authority(snapshot: RigidVehicleSnapshot, dynamicPressure = 0): { center: Vec3; radius: Vec3; delay: number } {
+  private authority(snapshot: RigidVehicleSnapshot, dynamicPressure = 0, surfaceFlows: SurfaceFlow = 1): { center: Vec3; radius: Vec3; delay: number } {
     const center = v3(), radius = v3();
     let delay = 0;
     for (const engine of snapshot.engines) {
@@ -159,8 +175,13 @@ export class RigidRuntime {
     }
     for (const axis of ['x', 'y', 'z'] as const) radius[axis] += Math.min(positive[axis], negative[axis]);
     if (snapshot.surfaces?.length && dynamicPressure > 0) {
-      const fins = surfaceAuthority(snapshot.surfaces, dynamicPressure, snapshot.cg);
+      const fins = surfaceAuthority(snapshot.surfaces, dynamicPressure, snapshot.cg, surfaceFlows);
       for (const axis of ['x', 'y', 'z'] as const) radius[axis] += fins[axis];
+      // A plate's trim drag is a moment the controller starts from, like an engine's offset.
+      if (snapshot.surfaces.some(f => f.neutralRad)) {
+        const neutral = surfaceNeutralMoment(snapshot.surfaces, dynamicPressure, surfaceFlows, snapshot.cg);
+        center.x += neutral.x; center.y += neutral.y; center.z += neutral.z;
+      }
       delay = Math.max(delay, ...snapshot.surfaces.map(f => f.timeConstantS + f.maxDeflectionRad / Math.max(1e-9, f.maxRateRadS)));
     }
     return { center, radius, delay };
@@ -220,13 +241,13 @@ export class RigidRuntime {
     return perSinAngle > 0 ? Math.min(snapshot.aero.validAngleRad, Math.asin(Math.min(1, margin / perSinAngle))) : Math.PI;
   }
 
-  private scheduledGains(snapshot: RigidVehicleSnapshot, aeroMoment: Vec3, omega: Vec3, dynamicPressure = 0): ControlGains {
-    const authority = this.authority(snapshot, dynamicPressure), gyro = cross(omega, matVecMul(snapshot.inertia, omega));
+  private scheduledGains(snapshot: RigidVehicleSnapshot, aeroMoment: Vec3, omega: Vec3, dynamicPressure = 0, surfaceFlows: SurfaceFlow = 1): ControlGains {
+    const authority = this.authority(snapshot, dynamicPressure, surfaceFlows), gyro = cross(omega, matVecMul(snapshot.inertia, omega));
     const acceleration = v3();
     (['x', 'y', 'z'] as const).forEach((axis, index) => {
       const offset = authority.center[axis] + aeroMoment[axis] - gyro[axis];
       // Symmetric braking reserve, conservative about cross-axis inertia.
-      const margin = 0.35 * Math.max(0, authority.radius[axis] - Math.abs(offset));
+      const margin = (this.controlGains.authorityShare ?? 0.35) * Math.max(0, authority.radius[axis] - Math.abs(offset));
       const inertiaBound = Math.abs(snapshot.inertia[index * 3]) + Math.abs(snapshot.inertia[index * 3 + 1]) + Math.abs(snapshot.inertia[index * 3 + 2]);
       acceleration[axis] = Math.min(this.controlGains.maxAngularAcceleration[axis], margin / Math.max(1e-12, inertiaBound));
     });
@@ -272,7 +293,8 @@ export class RigidRuntime {
     const start = provider(0, initialConsumed);
     const aeroStart = this.environment(state, time, start);
     const fins = start.surfaces?.length ? start.surfaces : undefined;
-    const gains = this.scheduledGains(start, aeroStart.momentBody, state.omegaBody, fins ? aeroStart.dynamicPressure : 0);
+    const finFlow = fins ? surfaceFlow(fins, quatInverseRotate(state.attitudeQ, this.airVelocity(state, time))) : 1;
+    const gains = this.scheduledGains(start, aeroStart.momentBody, state.omegaBody, fins ? aeroStart.dynamicPressure : 0, finFlow);
     let demand = this.command.mode === 'manual'
       ? rateControl(this.command.rates, state.omegaBody, start.inertia, gains)
       : attitudeControl(state.attitudeQ, targetAttitude(noseCommand, sideReference), state.omegaBody, start.inertia, gains);
@@ -301,12 +323,11 @@ export class RigidRuntime {
     const engineActual = engineWrench(specs, midpointStates, start.cg);
     let residual = sub(sub(demand.momentBody, aeroStart.momentBody), engineActual.momentBody);
     // Grid fins take what the engines could not, before the cold gas does.
-    const finSign = fins ? flowSign(quatInverseRotate(state.attitudeQ, this.airVelocity(state, time))) : 1;
     const finStart = fins ? fins.map(f => this.surfaces.get(f.id) ?? 0) : [];
-    const finCommands = fins ? allocateSurfaces(fins, residual, aeroStart.dynamicPressure, finSign, start.cg) : [];
+    const finCommands = fins ? allocateSurfaces(fins, residual, aeroStart.dynamicPressure, finFlow, start.cg) : [];
     const finActual = fins ? stepSurfaces(fins, finStart, finCommands, dt) : [];
     const finMidpoint = fins ? stepSurfaces(fins, finStart, finCommands, dt / 2) : [];
-    if (fins) residual = sub(residual, surfaceWrench(fins, finMidpoint, aeroStart.dynamicPressure, finSign, start.cg).momentBody);
+    if (fins) residual = sub(residual, surfaceWrench(fins, finMidpoint, aeroStart.dynamicPressure, finFlow, start.cg).momentBody);
     const rcsAllocation = allocateRcs(jets, residual, start.cg, Math.max(1, start.aero.referenceLength));
     const rcs = stepRcs(jets, rcsAllocation.duties, gas, dt, start.cg);
     const snapshots = new Map<number, RigidVehicleSnapshot>([[0, start]]);
@@ -348,7 +369,7 @@ export class RigidRuntime {
         // The fins deflect over the interval like a gimbal; their force at the trial state's own dynamic pressure.
         const deflections = elapsed === dt ? finActual : elapsed === dt / 2 ? finMidpoint : stepSurfaces(fins, finStart, finCommands, elapsed);
         const finLoads = surfaceWrench(fins, deflections, aero.dynamicPressure,
-          flowSign(quatInverseRotate(trial.attitudeQ, this.airVelocity(trial, at))), snapshot.cg);
+          surfaceFlow(fins, quatInverseRotate(trial.attitudeQ, this.airVelocity(trial, at))), snapshot.cg);
         aero.forceBody = add(aero.forceBody, finLoads.forceBody);
         aero.momentBody = add(aero.momentBody, finLoads.momentBody);
       }

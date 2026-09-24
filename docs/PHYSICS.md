@@ -1459,6 +1459,73 @@ tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
 real flight.
 
+### 8.2 A suborbital target and the ship that flies itself home
+
+Starship's test flights do not reach orbit. Flight 5 (13 October 2024) cut its ship off on a
+213 × −15 km trajectory at 26.2° — the perigee is under the ground, so no deorbit burn is needed
+— and the ship came back down belly first an hour later and splashed down in the Indian Ocean
+off Western Australia. An orbit preset with `suborbital: true` (`OrbitSpec.suborbital`) asks for
+exactly that (src/physics/mission.ts, src/physics/sim/ascent.ts, src/physics/sim/ship-descent.ts).
+
+**Cut-off.** A suborbital target has no burns after the ascent. The ascent is aimed at
+`SUBORBITAL_CUTOFF_ALTITUDE`, 150 km, where Starship's ship shuts down, and it is cut off still
+climbing: in the last minute, or within 10 km of that height, the last stage holds the target
+ellipse's flight-path angle at the height it is at, the climb rate growing with the horizontal
+speed (`AscentGuidance`, `SuborbitalAim`). The cut-off comes when the periapsis — with the
+tail-off counted — has risen to the target's, and the flight is judged there, on the osculating
+apsides (`evt.suborbitalTarget`). Cutting off at the apogee instead puts the whole coast a
+quarter of a revolution short, and Flight 5's splashdown in the Atlantic.
+
+**The ship's return** is five phases, flown the same way in both models (`ShipDescent`):
+
+1. *Coast.* The ship turns to its entry attitude — belly (+Z, the heat-shield side) to the flight
+   path, nose 70° above it — on its cold-gas thrusters and holds it (six-DOF: held-coast steps,
+   as an orbital coast). Thirty seconds after the cut-off it vents its main tanks and keeps
+   30 t (`SHIP_LANDING_PROPELLANT`) in its header tanks, the liquid oxygen one in the nose.
+2. *Entry*, from 120 km, belly first at an angle of attack easing from 70° hypersonic to 80° once
+   subsonic, with the lift of the tilted belly pointed up.
+3. *Belly flop*, subsonic, falling at about 85 m/s.
+4. *Flip* at about a kilometre (`flipHeight`): the three sea-level Raptors light at their least
+   and swing the ship upright in about eight seconds.
+5. *Landing burn*: a constant deceleration that reaches the water at 1.5 m/s, on two or three
+   of those engines, leaning up to 30° to take out the fifty-odd metres a second of sideways
+   speed the flip's own thrust leaves, and upright for the last three seconds. One engine is lit
+   alone only to settle the last metres: it sits off the axis, where its gimbal cannot pitch the
+   ship without rolling it too, and two at their least still lift the ship.
+
+A splashdown slower than 6 m/s down and 5 m/s across, leaning under 15°, is intact
+(`evt.shipSplashdown`); anything else breaks the ship up (`evt.shipImpact`). Either way the flight
+is `landed` and the clock runs on with the ship on the water.
+
+**The six-DOF ship.** Belly first is what its aerodynamic table is built for
+(`shipDescentAeroTable`): a 9 m tube under a 1.3-diameter ogive, the crossflow acting on the
+planform (the tube and two thirds of the nose's side, centred a little behind the middle) and a
+small slender-body lift on the ogive. At 70° that gives a lift of about a third of the drag. The
+four flaps are control surfaces (`shipFlapSurfaces`): drag plates hinged along the hull 65° either
+side of the belly, 18 m² forward and 32 m² aft, whose force grows with the square of the stream
+meeting their face and is never negative — folded they make none, fully out their whole drag —
+and the control works about a half-open trim. Fore against aft pitches the ship, one side
+against the other rolls it, and the diagonal pairs yaw it with the outward part of their push.
+With the landing propellant in the header tanks the centre of mass sits at 47 % of the length,
+and the flaps hold 70° hypersonic at about 30° of their 34° either way; at the belly flop they
+use 10°. The flip and the landing burn fly with twice the usual share of the gimbals' spare
+authority (`ControlGains.authorityShare`), and with the roll left free.
+
+Measured on Flight 5 (tests/ship-descent.test.ts, tests/heavy/starship-flight5.test.ts):
+
+| | Point mass | Six-DOF | Flight 5 |
+|---|---|---|---|
+| Cut-off | T+7:52, 210 × −14 km | T+7:58, 211 × −15 km | ≈ T+8:30 |
+| Entry interface (120 km) | T+41:25 | T+39:42 | ≈ T+47 |
+| Peak dynamic pressure on entry | 9.6 kPa | 8.3 kPa | — |
+| Flip | 1.12 km | 1.06 km | ≈ 1 km |
+| Splashdown | T+61:00, 22.8°S 93.3°E, 1.5 m/s | T+59:00, 24.5°S 83.6°E, 1.6 m/s, 2° | T+1:05:40, off Western Australia |
+
+The model comes down about six minutes early and 15–25° of longitude short of the real splashdown.
+The trajectory is nearly tangent to the top of the air, so where it meets it moves a long way
+for small differences: the published apsides are presumably not osculating Kepler elements at
+the cut-off, and six-DOF's J2 alone moves the entry by about a minute.
+
 Orbital debris is Kepler-propagated for speed, but the classification has to stay true: the
 perigee is re-checked every step and an object that can no longer stay up is handed back to the
 drag path. The spent launcher stage released at payload separation takes its outcome from the
