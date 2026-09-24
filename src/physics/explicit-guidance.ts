@@ -51,6 +51,8 @@ export interface ThrustIntegrals { L: number; J: number; S: number; Q: number }
 export const PEG_TERMINAL_S = 8;
 export const IGM_CHI_TILDE_S = 20;
 export const IGM_TERMINAL_S = 3;
+/** The command's low-pass filter, in guidance cycles. */
+const FILTER_CYCLES = 2;
 /** Seconds between two of the law's events about handing back and taking over. */
 const EVENT_QUIET_S = 20;
 /** Out of the atmosphere: the dynamic pressure, Pa, and the altitude, m, under and over which the laws may take over from the first stage. */
@@ -409,6 +411,8 @@ export class ExplicitGuidance {
   private status: ExplicitStatus = 'standby';
   private stages = 0;
   private blend?: { from: (t: number) => Vec3; t0: number };
+  /** The command after its low-pass filter, and when it was last given. */
+  private filtered?: { dir: Vec3; t: number };
   private lastEventT = -Infinity;
   private readonly events: ExplicitEvent[] = [];
   record?: ExplicitGuidanceRecord;
@@ -462,6 +466,16 @@ export class ExplicitGuidance {
       if (w >= 1) this.blend = undefined;
       else { const k = w * w * (3 - 2 * w); dir = normalize(add(scale(this.blend.from(input.t), 1 - k), scale(dir, k))); }
     }
+    // A first-order filter of two cycles smooths what the blend leaves of each cycle's ripple, which
+    // the nozzles, lagging, left to the attitude thrusters: a Falcon Heavy upper stage spent half its
+    // gas on it and had none left to point its last trim burn.
+    if (dir) {
+      // Shorter as the cut-off nears, where a lag would be flown uncorrected.
+      const f = this.filtered, dt = f ? input.t - f.t : 0;
+      const tau = Math.min(FILTER_CYCLES * this.options.cycleS, Math.max(0, s!.tGo - (input.t - (this.nextCycle - this.options.cycleS))) / 20);
+      dir = f && dt > 0 && tau > 0 ? normalize(add(f.dir, scale(sub(dir, f.dir), Math.min(1, dt / tau)))) : f && dt === 0 ? f.dir : dir;
+      this.filtered = { dir, t: input.t };
+    } else this.filtered = undefined;
     const el = s?.rPredicted && s.vPredicted ? elementsFromState(s.rPredicted, s.vPredicted) : undefined;
     this.record = {
       law: this.options.law, status: this.status,
