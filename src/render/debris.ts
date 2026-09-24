@@ -41,13 +41,17 @@ interface DebrisItem {
   fins: THREE.Group[];
   /** landing-leg pivots, folded until the landing burn */
   legs: THREE.Group[];
+  /** how far the legs swing out, rad, and how far below the base their feet then are, m */
+  legAngle: number;
+  footDrop: number;
   /** mission time the fins / legs started deploying (-1 = still stowed) */
   finT: number;
   legT: number;
   /**
    * The drawn body of a recovered stage, built with its base at 0 and moved
    * to the frame's `anchor` every frame: the anchor of a stage flown home
-   * changes after separation (`debrisAnchor` in src/physics/frame.ts).
+   * changes after separation (`debrisAnchor` in src/physics/frame.ts). It is
+   * also lifted onto its legs as they come out (see `recoveryHardware`).
    */
   shift: THREE.Group | null;
 }
@@ -113,7 +117,8 @@ export class DebrisView {
    * returned so `update` can hinge them on the recovery phase: fins stowed flat
    * against the body until entry, legs folded until the landing burn.
    */
-  private recoveryHardware(g: THREE.Group, r: number, L: number, base: number, m: THREE.Material, withLegs: boolean): { fins: THREE.Group[]; legs: THREE.Group[] } {
+  private recoveryHardware(g: THREE.Group, r: number, L: number, base: number, m: THREE.Material, withLegs: boolean):
+    { fins: THREE.Group[]; legs: THREE.Group[]; legAngle: number; footDrop: number } {
     const fins: THREE.Group[] = [];
     const legs: THREE.Group[] = [];
     const finMat = new THREE.MeshStandardMaterial({
@@ -139,14 +144,21 @@ export class DebrisView {
       fins.push(pivot);
     }
     // A booster flown back to a tower's arms has no legs to deploy.
-    if (!withLegs) return { fins, legs };
-    const legLen = L * 0.3;
+    if (!withLegs) return { fins, legs, legAngle: 0, footDrop: 0 };
+    // Deployed, the feet stand a little below the engine skirt, some 20 m
+    // across on a Falcon 9. The physics lands the stage on its base (its
+    // tail, in six-DOF), so the body is lifted by `footDrop` as the legs come
+    // out and the feet, not the engines, stand on the ground.
+    const legLen = L * 0.22;
+    const hingeY = L * 0.03;
+    const footDrop = r * 1.3;
+    const legAngle = Math.acos(Math.max(-1, Math.min(1, (-footDrop - hingeY) / legLen)));
     const legGeo = new THREE.CylinderGeometry(r * 0.09, r * 0.14, legLen, 8);
     const footGeo = new THREE.CylinderGeometry(r * 0.2, r * 0.2, r * 0.14, 8);
     for (let i = 0; i < 4; i++) {
       const ang = (i / 4) * Math.PI * 2;
       const az = new THREE.Group();
-      az.position.set(Math.cos(ang) * r * 0.98, base + L * 0.03, Math.sin(ang) * r * 0.98);
+      az.position.set(Math.cos(ang) * r * 0.98, base + hingeY, Math.sin(ang) * r * 0.98);
       az.rotation.y = -ang;                    // local +X now points radially out
       const pivot = new THREE.Group();
       // stowed the leg lies along the body pointing at the nose, which is where
@@ -161,7 +173,7 @@ export class DebrisView {
       g.add(az);
       legs.push(pivot);
     }
-    return { fins, legs };
+    return { fins, legs, legAngle, footDrop };
   }
 
   private build(d: DebrisFrame): DebrisItem {
@@ -170,7 +182,7 @@ export class DebrisView {
     const L = d.visual.length;
     // base of the drawn body in the object's own frame (+Y = the thrust axis);
     // a recovered stage's moves, so its body is built at 0 and shifted
-    const shift = !d.rigid && d.recovery && d.visual.kind !== 'fairing' ? new THREE.Group() : null;
+    const shift = d.recovery && d.visual.kind !== 'fairing' ? new THREE.Group() : null;
     if (shift) root.add(shift);
     const g = shift ?? root;
     const base = d.rigid || shift ? 0 : d.anchor ?? 0;
@@ -181,6 +193,7 @@ export class DebrisView {
     let plume: Plume | null = null;
     let fins: THREE.Group[] = [];
     let legs: THREE.Group[] = [];
+    let legAngle = 0, footDrop = 0;
     if (d.visual.kind === 'fairing') {
       // one half shell: hinge sits at the nose so it can swing open
       hinge = new THREE.Group();
@@ -210,7 +223,7 @@ export class DebrisView {
         skirt.position.y = base - r * 0.6;
         g.add(skirt);
       }
-      if (d.recovery) ({ fins, legs } = this.recoveryHardware(g, r, L, base, m, d.recovery.target?.kind !== 'tower'));
+      if (d.recovery) ({ fins, legs, legAngle, footDrop } = this.recoveryHardware(g, r, L, base, m, d.recovery.target?.kind !== 'tower'));
       plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
       plume.group.position.y = base - r * 1.2;
       g.add(plume.group);
@@ -220,7 +233,7 @@ export class DebrisView {
       group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
-      fins, legs, finT: -1, legT: -1, shift,
+      fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
     };
   }
 
@@ -260,7 +273,8 @@ export class DebrisView {
       }
       this.scene.toScene(d.r, this.tmp);
       item.group.position.copy(this.tmp);
-      if (item.shift) item.shift.position.y = d.anchor ?? 0;
+      // A rigid body is placed from its own render offset (below).
+      if (item.shift) item.shift.position.y = d.rigid ? 0 : d.anchor ?? 0;
       this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
       this.q.setFromUnitVectors(Y_AXIS, this.dir);
       const age = Math.max(0, t - item.createdAt);
@@ -279,8 +293,9 @@ export class DebrisView {
         const spin = Math.max(0, age - 3) * item.tumbleRate;
         this.qt.setFromAxisAngle(item.tumbleAxis, spin);
         item.group.quaternion.copy(this.q).multiply(this.qt);
-      } else if (d.burning) {
-        // an engine is firing: hold attitude along the thrust axis
+      } else if (d.burning || d.recovery) {
+        // an engine is firing, or the stage is being flown home (and then
+        // stands where it landed): hold attitude along the thrust axis
         item.group.quaternion.copy(this.q);
       } else {
         const spin = age * item.tumbleRate;
@@ -331,7 +346,8 @@ export class DebrisView {
     const finOut = item.finT >= 0 ? clamp01(smoothstep(0, 2.5, t - item.finT)) : 0;
     const legOut = item.legT >= 0 ? clamp01(smoothstep(0, 4, t - item.legT)) : 0;
     for (const f of item.fins) f.rotation.x = -finOut * 1.45;
-    for (const l of item.legs) l.rotation.z = -legOut * 2.15;
+    for (const l of item.legs) l.rotation.z = -legOut * item.legAngle;
+    if (item.shift) item.shift.position.y += legOut * item.footDrop;
   }
 
   clear(): void {

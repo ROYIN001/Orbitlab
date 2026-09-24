@@ -244,11 +244,11 @@ function heatShield(g: CanvasRenderingContext2D, W: number, H: number, half: num
     g.stroke();
   }
   const rows = Math.ceil(H / th), cols = Math.ceil((2 * w) / tw);
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 28; i++) {
     const r = Math.floor(hash11(seed + i * 1.7) * rows);
     const c = Math.floor(hash11(seed + i * 2.9 + 0.3) * cols);
     const x = ((c * tw + (r % 2) * tw / 2 - w) % W + W) % W;
-    g.fillStyle = hash11(seed + i * 3.3) < 0.7 ? 'rgba(214,212,204,0.55)' : 'rgba(92,94,98,0.6)';
+    g.fillStyle = hash11(seed + i * 3.3) < 0.5 ? 'rgba(214,212,204,0.3)' : 'rgba(92,94,98,0.5)';
     g.fillRect(x, r * th, tw, th);
   }
   g.restore();

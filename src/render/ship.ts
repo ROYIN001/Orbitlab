@@ -21,14 +21,16 @@ export const SHIP_NOSE_FRACTION = 0.34;
 export const FLAP_FOLD = 75 * Math.PI / 180;
 
 /**
- * Tangent-ogive nose, for `LatheGeometry`: the ship's nose is fuller than the
- * Von Kármán shape a fairing gets, which is what lets the forward flaps sit on
- * it with most of the hull's width still under them.
+ * Radius of a tangent-ogive nose `y` metres above its base: the ship's nose is
+ * fuller than the Von Kármán shape a fairing gets, which is what lets the
+ * forward flaps sit on it with most of the hull's width still under them.
  */
 export function tangentOgiveRadius(radius: number, noseHeight: number, y: number): number {
+  // The ogive's arc has radius rho and is tangent to the hull at the base
+  // (y = 0), where its centre is level with it; it closes on the axis at the tip.
   const rho = (radius * radius + noseHeight * noseHeight) / (2 * radius);
-  const d = noseHeight - Math.min(noseHeight, Math.max(0, y));
-  return Math.max(0, Math.sqrt(rho * rho - d * d) + radius - rho);
+  const h = Math.min(noseHeight, Math.max(0, y));
+  return Math.max(0, Math.sqrt(rho * rho - h * h) + radius - rho);
 }
 
 export function tangentOgiveProfile(radius: number, y0: number, noseHeight: number, segments = 24): THREE.Vector2[] {

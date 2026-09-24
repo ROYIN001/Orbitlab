@@ -37,6 +37,22 @@ function deflections(value: number): RigidTelemetry {
   return { surfaceDeflections } as unknown as RigidTelemetry;
 }
 
+describe("Starship's nose", () => {
+  it('meets the hull flush at its base and closes to a point at the tip', () => {
+    const R = ship.diameter / 2;
+    expect(tangentOgiveRadius(R, noseH, 0)).toBeCloseTo(R, 12);
+    expect(tangentOgiveRadius(R, noseH, noseH)).toBeCloseTo(0, 9);
+    // tangent to the hull: no step in slope where the barrel ends
+    expect((R - tangentOgiveRadius(R, noseH, 0.01)) / 0.01).toBeLessThan(0.01);
+    let last = R;
+    for (let y = 0.5; y <= noseH; y += 0.5) {
+      const r = tangentOgiveRadius(R, noseH, y);
+      expect(r).toBeLessThan(last);
+      last = r;
+    }
+  });
+});
+
 describe("Starship's flaps, drawn", () => {
   it('are the physics flaps: same ids, at the same stations along the hull, on the belly side', () => {
     const { group, flaps } = built();

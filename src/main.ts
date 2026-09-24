@@ -1081,6 +1081,9 @@ class App {
     const phase = flightPhase(frame);
     if (phase === null || phase === this.lastPhase) return;
     this.lastPhase = phase;
+    // The phases are the vehicle's: while a stage flown home is being
+    // followed, they say nothing about where the camera should be.
+    if (this.focusDebrisId !== null && frame.debris.some((d) => d.id === this.focusDebrisId)) return;
     // The viewer always directs its own camera; the workspace follows the
     // user's programme and its on/off switch.
     if (this.lean) this.setCamera(WATCH_CAMERA_PLAN[phase]);
