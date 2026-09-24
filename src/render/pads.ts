@@ -3,7 +3,7 @@
  *
  * Every site gets its own pad with recognisable real-world cues — the Soyuz
  * "tulip" support arms and flame pit, SLC-40's transporter/erector and lightning
- * masts, Starbase's orbital launch mount and chopstick arms, Kourou's mobile
+ * masts, LC-39A's hardstand and Shuttle-era service structure, Starbase's orbital launch mount and chopstick arms, Kourou's mobile
  * gantry, Tanegashima's mobile launcher — plus terrain (hills, coastline,
  * vegetation), roads and support buildings appropriate to the place.
  *
@@ -187,6 +187,8 @@ const BIOMES: Record<string, Biome> = {
   plesetsk: { ground: 0x4b5a3c, ground2: 0x35482f, rock: 0x6b6a58, hills: 90, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'forest' },
   vostochny: { ground: 0x4f5c3a, ground2: 0x3a4a30, rock: 0x74705c, hills: 160, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'forest' },
   cape: { ground: 0x6f7c46, ground2: 0x8e8a5c, rock: 0xbdb188, hills: 12, coastal: true, seaAz: 100, shore: 2400, water: 0x1d5b7a, vegetation: 'scrub' },
+  // LC-39A stands about 1.5 km back from the beach, north of the Cape pads.
+  ksc39a: { ground: 0x6f7c46, ground2: 0x8e8a5c, rock: 0xbdb188, hills: 10, coastal: true, seaAz: 75, shore: 1500, water: 0x1d5b7a, vegetation: 'scrub' },
   vandenberg: { ground: 0x8a8a5e, ground2: 0x6d7248, rock: 0x9a8f72, hills: 230, coastal: true, seaAz: 250, shore: 1600, water: 0x1b4a68, vegetation: 'scrub' },
   wallops: { ground: 0x7d8a52, ground2: 0x9aa06a, rock: 0xc3b891, hills: 6, coastal: true, seaAz: 110, shore: 900, water: 0x235f7c, vegetation: 'grass' },
   starbase: { ground: 0x9a9268, ground2: 0x7d7d54, rock: 0xc0b48c, hills: 8, coastal: true, seaAz: 95, shore: 3200, water: 0x1f6080, vegetation: 'scrub' },
@@ -216,9 +218,19 @@ interface Land {
   clearings: { x: number; z: number; r: number; h: number }[];
   /** extra distance of the shoreline from the pad along the coast, m, as a function of the along-coast coordinate */
   bulges: { t: number; extra: number }[];
+  /** radius the detailed ground has to reach to take in every landing zone, m */
+  reach: number;
 }
 
-const NO_LAND: Land = { clearings: [], bulges: [] };
+const NO_LAND: Land = { clearings: [], bulges: [], reach: 0 };
+/** Radius of the detailed ground around a pad, m. */
+const TERRAIN_RADIUS = 13e3;
+/**
+ * Detailed ground kept beyond the farthest landing zone, m: the outer third
+ * of the disc dissolves into the far ring (water, on a coast), and a zone has
+ * to stand on solid ground, not in that fade.
+ */
+const ZONE_REACH = 6000;
 /** Half-width of a shoreline bulge along the coast, m. */
 const BULGE_WIDTH = 4000;
 /** Land kept between a landing zone and the sea, m. */
@@ -239,10 +251,12 @@ function landFor(site: SiteExtra, b: Biome, mountHeight: number): Land {
   if (!zones.length) return NO_LAND;
   const sea = azDir(b.seaAz);
   const M = (R_EARTH * Math.PI) / 180;
-  const land: Land = { clearings: [], bulges: [] };
+  const land: Land = { clearings: [], bulges: [], reach: 0 };
   for (const zone of zones) {
     const x = (zone.longitude - site.longitude) * Math.cos(site.latitude * DEG2) * M;
     const z = -(zone.latitude - site.latitude) * M;
+    // LZ-1 is 9 km from SLC-40 but 15 km from LC-39A, past the usual disc.
+    land.reach = Math.max(land.reach, Math.hypot(x, z) + ZONE_REACH);
     // The ground mesh sits 0.4 m below its heights and the whole grade is
     // lowered by the mount: this leaves the clearing just under the pad's
     // apron, which is drawn at the landing height (src/render/recovery.ts).
@@ -281,7 +295,7 @@ function terrain(ctx: Ctx, b: Biome, land: Land = NO_LAND): THREE.Object3D[] {
   // A disc, not a square: a square plane's corners would poke out past the
   // coarse far ring. Vertices are packed towards the pad by remapping the
   // radius, so the detail is where the camera spends its time.
-  const SIZE = 13e3;
+  const SIZE = Math.max(TERRAIN_RADIUS, land.reach);
   const geo = ctx.geo(new THREE.RingGeometry(4, SIZE, 96, 44));
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position as THREE.BufferAttribute;
@@ -789,9 +803,11 @@ const slc40Pad: Builder = (ctx) => {
     mouthRadius: 15,
     mountHeight: 6,
     animate(t) {
-      // retract from T-7 s, clear by T-3 s, then continue away after liftoff
+      // retract from T-7 s, clear by T-3 s, then continue away after liftoff;
+      // the hinge is on the -X side, so a positive turn about Z tips it away
+      // from the vehicle (a negative one swept it through the rocket)
       const a = smoothstep(-7, -3, t) * 1.12 + smoothstep(0, 6, t) * 0.18;
-      sbPivot.rotation.z = -a;
+      sbPivot.rotation.z = a;
     },
   };
 };
@@ -808,6 +824,126 @@ const slc4ePad: Builder = (ctx) => {
   shelter.castShadow = true;
   g.add(shelter);
   return base;
+};
+
+/** A thin straight member from `a` to `b` (a guy or catenary wire, a brace). */
+function strut(a: THREE.Vector3, b: THREE.Vector3, r: number): THREE.BufferGeometry {
+  const d = new THREE.Vector3().subVectors(b, a);
+  const g = new THREE.CylinderGeometry(r, r, d.length(), 5, 1);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize()));
+  g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  return g;
+}
+
+/** Height of LC-39A's hardstand over the marsh around it, m. */
+const LC39A_MOUND = 14;
+
+/**
+ * Kennedy LC-39A: the Apollo and Shuttle pad that Falcon 9 and Falcon Heavy
+ * fly from. The pad sits on a raised octagonal hardstand about 15 m above
+ * the marsh, reached by a ramp from the west, with the flame trench running
+ * north-south through it. The Shuttle-era fixed service structure stands
+ * beside the mount, its lightning mast and catenary wires on top and the crew
+ * access arm swung clear; the transporter-erector that brought the rocket up
+ * the ramp and lifted it stands on the west side and tips back before
+ * liftoff.
+ */
+const lc39aPad: Builder = (ctx) => {
+  const g = new THREE.Group();
+  const H = ctx.H;
+  const top = LC39A_MOUND;
+  const concrete = ctx.mat(0xa4a298, 0.05, 0.92);
+  // The hardstand: an octagonal mound, flat on top, and the ramp up to it.
+  const mound = new THREE.CylinderGeometry(80, 122, top, 8, 1);
+  mound.rotateY(Math.PI / 8);
+  mound.translate(0, top / 2, 0);
+  const rampLen = 120, slope = Math.atan2(top, rampLen);
+  const ramp = new THREE.BoxGeometry(rampLen / Math.cos(slope), 1.6, 26);
+  ramp.rotateZ(slope);
+  ramp.translate(-72 - rampLen / 2, top / 2 - 0.6, 0);
+  const hard = new THREE.Mesh(ctx.geo(merged([mound, ramp])), concrete);
+  hard.receiveShadow = true;
+  hard.castShadow = true;
+  g.add(hard);
+  const deck = new THREE.Group();
+  deck.position.y = top;
+  g.add(deck);
+  for (const o of [...flameTrench(ctx, 18, 70, 12, 0), ...flameTrench(ctx, 18, 70, 12, Math.PI)]) deck.add(o);
+  const mount = new THREE.Mesh(ctx.geo(merged([
+    box(24, 6, 24, 0, 3, 0),
+    ...[0, 1, 2, 3].map((i) => { const a = (i / 4) * Math.PI * 2 + Math.PI / 4; return cyl(1.4, 1.4, 6, Math.cos(a) * 9, 3, Math.sin(a) * 9, 8); }),
+  ])), ctx.mat(0x55595e, 0.5, 0.5));
+  mount.castShadow = true;
+  deck.add(mount);
+
+  // Fixed service structure, east of the mount, with the mast and wires.
+  const fssH = 81, fssX = ctx.R + 17, fssZ = -4;
+  const steel = ctx.mat(0x8f9398, 0.45, 0.55);
+  const fss = new THREE.Mesh(ctx.geo(merged([
+    lattice(12, 12, fssH, 14, 0.8),
+    box(13, 1.2, 13, 0, fssH, 0),
+    lattice(3, 3, 26, 6, 0.35).translate(0, fssH, 0),
+    cyl(0.25, 0.4, 8, 0, fssH + 30, 0, 6),
+  ])), steel);
+  fss.position.set(fssX, 0, fssZ);
+  fss.castShadow = true;
+  deck.add(fss);
+  const tip = new THREE.Vector3(fssX, top + fssH + 34, fssZ);
+  const wires = new THREE.Mesh(ctx.geo(merged([
+    strut(tip, new THREE.Vector3(fssX, 0, fssZ - 320), 0.12),
+    strut(tip, new THREE.Vector3(fssX, 0, fssZ + 340), 0.12),
+  ])), ctx.mat(0x3b3d40, 0.3, 0.7));
+  g.add(wires);
+  // Crew access arm, swung clear of the vehicle, at the capsule's height.
+  const toVehicle = new THREE.Vector2(-fssX, -fssZ);
+  const armLen = toVehicle.length() - 6 - ctx.R - 1;
+  const arm = hingedArm(ctx, armLen, 3, 0xc9ccd0);
+  const armY = Math.min(fssH - 4, 6 + H * 0.86);
+  arm.position.set(fssX + (toVehicle.x / toVehicle.length()) * 6, armY, fssZ + (toVehicle.y / toVehicle.length()) * 6);
+  arm.rotation.y = Math.atan2(-toVehicle.y, toVehicle.x) + Math.PI / 2;
+  deck.add(arm);
+
+  // Transporter-erector on the ramp side, hinged at the mount.
+  const tePivot = new THREE.Group();
+  tePivot.position.set(-(ctx.R + 3.5), 6, 0);
+  const teLen = H * 0.93;
+  const te = new THREE.Mesh(ctx.geo(merged([
+    lattice(5, 6, teLen, 18, 0.65),
+    ...[1, 2, 3].map((i) => box(3.4, 1.6, 2.4, 1.9, teLen * (i / 4), 0)),
+  ])), ctx.mat(0xa6aaaf, 0.5, 0.5));
+  te.castShadow = true;
+  tePivot.add(te);
+  deck.add(tePivot);
+  // Its rails down the ramp.
+  const railParts: THREE.BufferGeometry[] = [];
+  for (const z of [-5, 5]) {
+    const r = new THREE.BoxGeometry(rampLen / Math.cos(slope) + 70, 0.5, 1.2);
+    r.rotateZ(slope);
+    r.translate(-72 - rampLen / 2, top / 2 + 0.5, z);
+    railParts.push(r);
+  }
+  g.add(new THREE.Mesh(ctx.geo(merged(railParts)), ctx.mat(0x6b6b6b, 0.3, 0.8)));
+
+  // The Shuttle-era sound-suppression water tower and the pad's tank farm.
+  g.add(waterTower(ctx, -260, -170, 88));
+  g.add(tankFarm(ctx, 190, 150, 2, 9, 16));
+  g.add(tankFarm(ctx, -170, 190, 2, 7, 12));
+  // SpaceX's hangar at the foot of the ramp.
+  const hif = new THREE.Mesh(ctx.geo(merged([box(60, 24, 110, -330, 12, 0), box(64, 2, 114, -330, 25, 0)])), ctx.mat(0xd5d2c9, 0.05, 0.85));
+  hif.castShadow = true;
+  g.add(hif);
+  for (const o of infrastructure(ctx, 270, -1)) g.add(o);
+
+  return {
+    group: g,
+    trenchAzimuth: 0,
+    mouthRadius: 16,
+    mountHeight: top + 6,
+    animate(t) {
+      // Tips back from T-7 s, away from the vehicle, and on after liftoff.
+      tePivot.rotation.z = smoothstep(-7, -3, t) * 0.35 + smoothstep(0, 6, t) * 0.15;
+    },
+  };
 };
 
 /** Wallops LC-2: small pad on flat coast. */
@@ -835,7 +971,7 @@ const wallopsPad: Builder = (ctx) => {
   for (const o of infrastructure(ctx, 270, -1)) g.add(o);
   return {
     group: g, trenchAzimuth: 0, mouthRadius: 7, mountHeight: 3,
-    animate(t) { sbPivot.rotation.z = -(smoothstep(-8, -3, t) * 1.15); },
+    animate(t) { sbPivot.rotation.z = smoothstep(-8, -3, t) * 1.15; },
   };
 };
 
@@ -1125,13 +1261,13 @@ const mahiaPad: Builder = (ctx) => {
   for (const o of infrastructure(ctx, 320, -1)) g.add(o);
   return {
     group: g, trenchAzimuth: 0, mouthRadius: 5, mountHeight: 3.4,
-    animate(t) { sbPivot.rotation.z = -(smoothstep(-8, -2.5, t) * 1.2); },
+    animate(t) { sbPivot.rotation.z = smoothstep(-8, -2.5, t) * 1.2; },
   };
 };
 
 const BUILDERS: Record<string, Builder> = {
   baikonur: soyuzPad, plesetsk: soyuzPad, vostochny: soyuzPad,
-  cape: slc40Pad, vandenberg: slc4ePad, wallops: wallopsPad,
+  cape: slc40Pad, ksc39a: lc39aPad, vandenberg: slc4ePad, wallops: wallopsPad,
   starbase: starbasePad, kourou: kourouPad, wenchang: wenchangPad,
   tanegashima: tanegashimaPad, sriharikota: sriharikotaPad, mahia: mahiaPad,
 };

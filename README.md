@@ -16,7 +16,7 @@ tablet, and a single stack on a phone with the viewport first.
   (J2 oblateness in orbit), US Standard Atmosphere 1976 with an exponential upper
   atmosphere, Mach-dependent drag, pressure-dependent thrust and specific impulse,
   real staging tables, Earth-rotation velocity credit, RK4 integration.
-- **18 launch vehicles** from 15 launch sites — see [Fleet](#fleet) below. Parallel
+- **18 launch vehicles** from 16 launch sites — see [Fleet](#fleet) below. Parallel
   boosters (including air-lit ones), hot staging, per-motor solid thrust profiles,
   throttle buckets at max-Q, acceleration limits, first-stage recovery with entry and
   landing burns.
@@ -76,8 +76,8 @@ not directly comparable vehicle-to-vehicle, since the reference orbit differs.
 | Soyuz-2.1b / Fregat-M | RU | 3 | Baikonur, Plesetsk, Vostochny | 8,670 kg | 1,900 kg | 4,900 kg |
 | Proton-M / Briz-M | RU | 4 | Baikonur | 23,000 kg | 6,920 kg | – |
 | Angara-A5 / Briz-M | RU | 3 | Plesetsk, Vostochny | 24,500 kg | 5,400 kg | – |
-| Falcon 9 Block 5 | US | 2 | Cape Canaveral, Vandenberg | 22,800 kg | 8,300 kg | 15,000 kg |
-| Falcon Heavy | US | 2 | Cape Canaveral | 63,800 kg | 26,700 kg | – |
+| Falcon 9 Block 5 | US | 2 | Cape Canaveral SLC-40, Kennedy LC-39A, Vandenberg | 22,800 kg | 8,300 kg | 15,000 kg |
+| Falcon Heavy | US | 2 | Cape Canaveral SLC-40, Kennedy LC-39A | 63,800 kg | 26,700 kg | – |
 | Atlas V 551 | US | 2 | Cape Canaveral, Vandenberg | 18,850 kg | 8,900 kg | – |
 | Vulcan Centaur VC4 | US | 2 | Cape Canaveral, Vandenberg | 21,400 kg | 11,600 kg | 18,500 kg |
 | Ariane 64 | EU | 2 | Kourou | 21,600 kg | 11,500 kg | 15,000 kg |
@@ -106,7 +106,8 @@ never offers a plane no azimuth in its own window could fly.
 | Baikonur Cosmodrome | KZ | 51.6°–91.8° |
 | Plesetsk Cosmodrome | RU | 62.8°–102.6° |
 | Vostochny Cosmodrome | RU | 51.7°–100.9° |
-| Cape Canaveral / KSC | US | 28.5°–57.6° |
+| Cape Canaveral SLC-40 | US | 28.5°–57.6° |
+| Kennedy LC-39A | US | 28.6°–57.7° |
 | Vandenberg SFB | US | 61.6°–104.9° |
 | Wallops Flight Facility | US | 38.0°–72.3° |
 | Starbase (Boca Chica) | US | 26.0°–31.8° |

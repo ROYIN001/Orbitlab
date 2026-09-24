@@ -33,7 +33,7 @@ export interface SiteExtra extends LaunchSiteSpec {
    *
    * Bracketing with the pair, rather than calling `azimuthAllowedFor` from the
    * panel, is deliberate and was measured: the two agree on the retrograde end
-   * for all fifteen sites (which is where the fleet's own `SITE_GEOMETRY` table
+   * for every site (which is where the fleet's own `SITE_GEOMETRY` table
    * uses the azimuth test), but at the prograde end `azimuthAllowedFor` is the
    * raw corridor edge while `minInclination` is the OPERATIONAL minimum a site
    * declares, and the two differ wherever a site flies less than its geometry
@@ -70,7 +70,13 @@ export const SITES: SiteExtra[] = [
   { id: 'baikonur', name: 'Baikonur Cosmodrome', country: 'KZ', latitude: 45.965, longitude: 63.305, altitude: 90, minInclination: 51.6, maxInclination: 91.8, azimuthMin: 355, azimuthMax: 65, tz: 'UTC+5', descendingForPolar: false },
   { id: 'plesetsk', name: 'Plesetsk Cosmodrome', country: 'RU', latitude: 62.925, longitude: 40.578, altitude: 100, minInclination: 62.8, maxInclination: 102.6, azimuthMin: 330, azimuthMax: 90, tz: 'UTC+3', descendingForPolar: false },
   { id: 'vostochny', name: 'Vostochny Cosmodrome', country: 'RU', latitude: 51.884, longitude: 128.334, altitude: 250, minInclination: 51.7, maxInclination: 100.9, azimuthMin: 340, azimuthMax: 95, tz: 'UTC+9', descendingForPolar: false },
-  { id: 'cape', name: 'Cape Canaveral / KSC', country: 'US', latitude: 28.562, longitude: -80.577, altitude: 3, minInclination: 28.5, maxInclination: 57.6, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false },
+  { id: 'cape', name: 'Cape Canaveral SLC-40', country: 'US', latitude: 28.562, longitude: -80.577, altitude: 3, minInclination: 28.5, maxInclination: 57.6, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false },
+  // Kennedy LC-39A, 6 km north of SLC-40 on the same coast and the same range
+  // corridor. The pad stands on a hardstand some 15 m above the marsh; that
+  // mound is drawn (src/render/pads.ts) but the site keeps the ground level,
+  // which is also where the ground under Landing Zones 1 and 2 is taken to be
+  // (`Simulation.groundElevation` holds a site's altitude out to 50 km).
+  { id: 'ksc39a', name: 'Kennedy LC-39A', country: 'US', latitude: 28.60833, longitude: -80.60444, altitude: 3, minInclination: 28.6, maxInclination: 57.7, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false },
   // minInclination 61.6, not 60: at 34.742 deg N the 147-201 deg corridor
   // reaches nothing below 61.6 deg on the app's own rotating-frame azimuth, so
   // 60 deg was a target no azimuth in the site's own window could fly — and the

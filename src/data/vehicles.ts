@@ -385,7 +385,7 @@ export const VEHICLES: VehicleSpec[] = [
       { id: 's1', name: 'First stage (9× Merlin 1D)', dryMass: 25600, propellantMass: 395700, engine: MERLIN1D, diameter: 3.66, length: 42, color: '#f2f2f2', accentColor: '#1a1a1a', gridFins: true, legs: true },
       f9Stage2(),
     ],
-    sites: ['cape', 'vandenberg'], maxQ: 40e3, maxAccel: 45,
+    sites: ['cape', 'ksc39a', 'vandenberg'], maxQ: 40e3, maxAccel: 45,
     // 22 kPa, not the real ~33 kPa peak, and deliberately so. Raising it was
     // measured across 26/30/33/36 kPa and with the bucket removed (table in
     // docs/PHYSICS.md §6a): the max-Q marker only reaches T+59 s even with no
@@ -421,7 +421,7 @@ export const VEHICLES: VehicleSpec[] = [
       },
       f9Stage2(),
     ],
-    sites: ['cape'], maxQ: 40e3, maxAccel: 45,
+    sites: ['cape', 'ksc39a'], maxQ: 40e3, maxAccel: 45,
     // Side boosters flown back to LZ-1 and LZ-2 keep 15 %: at 12 % they run
     // into their landing reserve before the boostback is done (Arabsat-6A,
     // 6.5 t to GTO, point-mass model).
