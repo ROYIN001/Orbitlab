@@ -17,13 +17,17 @@ here; this file records progress for the owner to fold in at the merge.
 - P05 (asked 2026-09-23): with P05 on, **every vehicle must reach orbit**; **bending past the
   structure's limit breaks the vehicle up**; the **IMU station and the notch's parameters are
   tunable in the Engineer mode** from P05 on; and the bending is **drawn in 3-D**.
+- U07 (asked 2026-09-24): the **language decides** — Russian ГОСТ 20058-80, English and Thai
+  ISO 1151; **everywhere**, with a **symbol table in Physics and sources**; a **setting in the
+  Engineer mode's setup**, by language unless chosen; and the **numbers follow each standard's
+  axes and positive directions**, not only its letters.
 
 ## Progress
 
 | Item | State |
 |---|---|
 | P05 slosh, bending and notch filter | done 2026-09-24 (see below) |
-| U07 ГОСТ 20058-80 notation | |
+| U07 ГОСТ 20058-80 notation | done 2026-09-24 (see below) |
 | G03 attitude-loop inspector | |
 | E02 live equations panel | |
 | G04 Bode, step response, margins | |
@@ -89,4 +93,48 @@ tests/heavy/flex-fleet-*.test.ts (every vehicle's reference case with everything
 `npm run test:heavy` (22 min for the P05 files); shell loads peak at 5–44 % of allowable,
 bending at 0.1–14 cm (Starship), slosh at 4–50 cm. `npm run test:sixdof-fleet` re-run on the
 P05 commit (723c811): see the note added when it finished.
+
+### U07 — ISO 1151 and ГОСТ 20058-80 notation
+
+Physics in [../PHYSICS.md](../PHYSICS.md) §2c (the axes, the mapping and the table), use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §8. Code: `src/ui/notation.ts` (symbols, the preference,
+`bodyRates`/`simulatorRates`, `aeroAngles`), `src/ui/notation.css`.
+
+- **Choice**: `auto` (Russian → ГОСТ, English and Thai → ISO), `iso` or `gost`, stored in
+  `localStorage` (`orbitlab.notation`) as a display preference, not a mission setting; set in the
+  Engineer mode's setup, which shows the standard in force. A change relabels the app as a
+  language change does.
+- **Symbols** in the telemetry card (full and compact), the charts' titles, the onboard view, the
+  6-DOF controls and the table in *Physics and sources* (20 quantities, both columns, the one in
+  force highlighted, each definition in that standard's signs).
+- **Axes and signs**: the simulator's body axes are relabelled into each standard's
+  (ISO (x, y, z) = (x, −z, y); ГОСТ (x, y, z) = (x, −y, −z)), so the rate fields, the measured
+  rates, the manual rate commands, the event log's α and β, the result screen's aerodynamic
+  warnings and the CSV's `iso_*`/`gost_*` columns read in the standard in force.
+- **What was found on the way**: the 6-DOF controls called the simulator's y rate "pitch" and its
+  z rate "yaw", and the event log's α was its x–z angle. During ascent the simulator's y lies in
+  the trajectory plane (towards the belly) and z across it, so those were physically the yaw
+  rate, the pitch rate and the sideslip: Falcon 9's pitch-over showed as a "yaw" rate. Now the
+  pitch-over reads q < 0 (ISO) and ω_z < 0 (ГОСТ), and a flight test checks it.
+- **Unchanged**: the physics, the recorded telemetry, the CSV's existing columns and
+  `read_flight_state`'s `rigid` object stay in the simulator's axes, so every flight and golden
+  fingerprint is bit for bit as before; `read_flight_state` adds a `flightDynamics` object with
+  both standards' rates and α, β.
+
+**Files touched that the other session also edits**: the three dictionaries (`// --- U07 ---`
+blocks); `src/ui/panel.ts` (the notation section and one call line); `src/main.ts` (three lines
+after `initLang()`, none in the camera or floating-origin code); `src/ui/mission-result.ts` (the
+aerodynamic warnings' α and β only, not the recovery part). One change in `src/mcp.ts` is not
+additive and is deliberate: **`set_flight_control` takes its rates in ISO axes** (roll p, pitch
+q positive nose up, yaw r positive nose right) and returns `ratesRadS` as `{ p, q, r }`; before,
+its "pitch" and "yaw" went to the simulator's y and z unconverted. `frameSummary` gains
+`flightDynamics`. `src/physics/simulation.ts`: `evt.controlCommand` records the command in ISO
+axes (one statement). `configure_mission` is untouched.
+
+**Tests**: tests/notation.test.ts (the choice and its listeners, both symbol sets, the rate
+round trip, α and β planes, and a Falcon 9 flight to T+120 s: nose-down q during the pitch-over
+equal to ГОСТ ω_z, ISO y to the right of the path and ГОСТ y above it, α under 5°, the CSV's
+columns by language); updated expectations in tests/i18n.test.ts (the event's α, β),
+tests/mcp.test.ts (`set_flight_control` in ISO axes) and the fake DOM of
+tests/rigid-controls.test.ts (appended text).
 

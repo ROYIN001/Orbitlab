@@ -1,6 +1,7 @@
 import { getLang, onLangChange, t } from '../i18n';
 import { RAD } from '../physics/constants';
 import { assessMissionResult, RESULT_COPY, type ResultInput, type ResultMetric } from './result-content';
+import { aeroAngles } from './notation';
 import './mission-result.css';
 
 export interface MissionResultOptions { onSeek?: (time: number) => void }
@@ -93,8 +94,9 @@ export class MissionResult {
     this.aeroWarnings.hidden = model.aeroWarnings.length === 0;
     this.aeroWarnings.replaceChildren(...model.aeroWarnings.map(warning => {
       const paragraph = document.createElement('p');
+      const angles = aeroAngles(warning.angleOfAttackRad, warning.sideslipRad); // U07: the standard's α and β
       paragraph.textContent = t(warning.scope === 'vehicle' ? 'result.aeroWarning.vehicle' : 'result.aeroWarning.debris', {
-        time: warning.time.toFixed(1), alpha: (warning.angleOfAttackRad * RAD).toFixed(1), beta: (warning.sideslipRad * RAD).toFixed(1),
+        time: warning.time.toFixed(1), alpha: (angles.alpha * RAD).toFixed(1), beta: (angles.beta * RAD).toFixed(1),
       });
       return paragraph;
     }));

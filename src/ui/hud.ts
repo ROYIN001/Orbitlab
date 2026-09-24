@@ -52,6 +52,7 @@ import { t } from '../i18n';
 import { RAD } from '../physics/constants';
 import { hasNextBurn } from './phase';
 import { localizeEventParams, stageName } from './names';
+import { withSymbol, type Quantity } from './notation';
 import { coerceHudMode, loadHudMode, nextHudMode, saveHudMode, type HudMode, type ModeStore } from './hudmode';
 import {
   canFloat,
@@ -125,6 +126,13 @@ const COMPACT_ROWS: ReadonlyArray<readonly [id: string, labelKey: string]> = [
   ['c.stage', 'hud.shortStage'],
   ['c.dv', 'hud.shortDv'],
 ];
+
+/** U07: the symbol each full-card label carries, in the notation in force. */
+const HUD_SYMBOLS: Readonly<Record<string, Quantity>> = {
+  'hud.altitude': 'altitude', 'hud.vertical': 'verticalSpeed', 'hud.q': 'dynamicPressure', 'hud.thrust': 'thrust',
+  'hud.mass': 'mass', 'hud.g': 'loadFactor', 'hud.pitch': 'pitchAngle', 'hud.airspeed': 'airspeed', 'hud.mach': 'mach',
+  'hud.shortAltitude': 'altitude', 'hud.shortVertical': 'verticalSpeed',
+};
 
 /** Dictionary key naming each mode, for the toggle's tooltip and a11y name. */
 const MODE_LABEL: Record<HudMode, string> = {
@@ -848,7 +856,10 @@ export class Hud {
 
   /** Re-label after a language change (values are rewritten on the next frame). */
   applyLabels(): void {
-    for (const k of Object.keys(this.rows)) this.rows[k].key.textContent = t(this.rows[k].labelKey);
+    for (const k of Object.keys(this.rows)) {
+      const labelKey = this.rows[k].labelKey, symbol = HUD_SYMBOLS[labelKey];
+      this.rows[k].key.textContent = symbol ? withSymbol(t(labelKey), symbol) : t(labelKey);
+    }
     this.chipBox = null; // measured again: a chip is only as wide as its buttons
     this.applyLayout(); // the toggle's tooltip and accessible name are translated too
     this.shownStatus = '';

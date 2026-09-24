@@ -1,0 +1,11 @@
+/* U07: the notation table in the Physics and sources dialog, and symbols in markup. */
+var.notation-symbol { font-style: italic; font-family: 'Times New Roman', 'Noto Serif', serif; font-size: 1.08em; }
+var.notation-symbol sub { font-size: 0.72em; }
+.notation-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 6px 0 14px; font-size: 13px; }
+.notation-table thead th:nth-child(1) { width: 30%; }
+.notation-table thead th:nth-child(2), .notation-table thead th:nth-child(3) { width: 15%; text-align: center; }
+.notation-table th, .notation-table td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+.notation-table thead th { color: #a9b7c8; font-weight: 600; }
+.notation-table tbody th { font-weight: 500; }
+.notation-table td:nth-child(2), .notation-table td:nth-child(3) { text-align: center; white-space: nowrap; color: #8c99a8; }
+.notation-table .active { color: var(--accent) !important; background: rgba(139, 229, 205, 0.06); }

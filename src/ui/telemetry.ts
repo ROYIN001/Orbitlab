@@ -39,6 +39,7 @@ import { localizeEventParams, stageNameByLabel } from './names';
 import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { TelemetrySample } from '../physics/sim/types';
+import { symbolText, withSymbol, type Quantity } from './notation';
 
 type Range = 'mission' | 'ascent';
 
@@ -55,6 +56,15 @@ const CHART_TITLES: Record<(typeof CHART_IDS)[number], string> = {
 // --- P05: two more charts, only for a flight that modelled the flexible body
 const FLEX_CHART_IDS = ['flex', 'load'] as const;
 const FLEX_CHART_TITLES: Record<(typeof FLEX_CHART_IDS)[number], string> = { flex: 'tel.flex', load: 'tel.load' };
+
+/** U07: the symbol a chart's title carries, in the notation in force. */
+const CHART_SYMBOLS: Partial<Record<string, Quantity>> = {
+  altitude: 'altitude', q: 'dynamicPressure', g: 'loadFactor', pitch: 'pitchAngle', mass: 'mass',
+};
+const chartTitle = (id: (typeof CHART_IDS)[number]): string => {
+  const symbol = CHART_SYMBOLS[id];
+  return symbol ? withSymbol(t(CHART_TITLES[id]), symbol) : t(CHART_TITLES[id]);
+};
 
 /** How close to the bottom the log has to be before an update re-pins it there, px. */
 const LOG_STICK = 24;
@@ -167,7 +177,7 @@ export class TelemetryPanel {
       r.append(c);
       this.charts[id] = c;
       c.setAttribute('role', 'img');
-      c.setAttribute('aria-label', `${t(CHART_TITLES[id])} ${t('tel.chart.noData')}`);
+      c.setAttribute('aria-label', `${chartTitle(id)} ${t('tel.chart.noData')}`);
     }
     for (const id of FLEX_CHART_IDS) {
       const c = document.createElement('canvas');
@@ -271,7 +281,7 @@ export class TelemetryPanel {
     this.note.classList.add('hidden');
     this.cursor = 0;
     for (const id of CHART_IDS) {
-      drawChart(this.charts[id], [], { title: t(CHART_TITLES[id]), xMin: -10, xMax: 60, timeAxis: true, xLabel: t('tel.xAxis') });
+      drawChart(this.charts[id], [], { title: chartTitle(id), xMin: -10, xMax: 60, timeAxis: true, xLabel: t('tel.xAxis') });
     }
     for (const id of FLEX_CHART_IDS) this.charts[id].classList.add('hidden');
     this.view = null;
@@ -375,7 +385,7 @@ export class TelemetryPanel {
     const xLabel = t('tel.xAxis');
     const draw = (id: (typeof CHART_IDS)[number], list: Series[], yMin?: number, seriesLabels?: string[]): void => {
       drawChart(this.charts[id], list, {
-        title: t(CHART_TITLES[id]),
+        title: chartTitle(id),
         markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin, seriesLabels,
       });
     };
@@ -389,7 +399,7 @@ export class TelemetryPanel {
     set(this.one, 0, alt.y, '#6ec8ff');
     draw('altitude', this.one);
     set(this.two, 0, vIn.y, '#8be5cd', 'v');
-    set(this.two, 1, vAir.y, '#96a3b4', 'v_air');
+    set(this.two, 1, vAir.y, '#96a3b4', symbolText('airspeed'));
     draw('velocity', this.two, undefined, [t('tel.chart.inertial'), t('tel.chart.airspeed')]);
     set(this.one, 0, q.y, '#efa47e');
     draw('q', this.one, 0);

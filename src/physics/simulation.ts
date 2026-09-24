@@ -255,8 +255,11 @@ export class Simulation {
       this.state.rigid.commandRatesBody = { ...accepted.rates };
       this.state.rigid.commandThrottle = accepted.throttle;
     }
+    // Rates in ISO 1151 body axes (p, q, r; src/ui/notation.ts): the simulator's
+    // x is the nose, y the belly side and z the left, so q = −ω_z and r = ω_y.
+    const r = accepted.rates;
     this.event('evt.controlCommand', 'info', { mode: accepted.mode,
-      rollRateRadS: accepted.rates.x, pitchRateRadS: accepted.rates.y, yawRateRadS: accepted.rates.z, throttle: accepted.throttle });
+      rollRateRadS: r.x, pitchRateRadS: r.z === 0 ? 0 : -r.z, yawRateRadS: r.y, throttle: accepted.throttle });
   }
 
   // ------------------------------------------------------------------ utils

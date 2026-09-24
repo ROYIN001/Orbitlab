@@ -37,6 +37,8 @@ import { buildTelemetryCsv } from './ui/csv';
 import { defaultDynamics } from './physics/rigid/config';
 import { cloneRigidTelemetry } from './physics/rigid/telemetry';
 import { FLEX_LIMITS } from './physics/rigid/flex';
+import { aeroAngles, bodyRates, getNotation, simulatorRates } from './ui/notation';
+import type { RigidTelemetry } from './physics/rigid/telemetry';
 
 /** configure_mission's `flex` fields (roadmap P05). */
 const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
@@ -446,6 +448,8 @@ function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<stri
     // Same immutable recording data the user sees, including replay cursor.
     // Quaternion/rates use the documented SI/body-frame conventions.
     rigid: cloneRigidTelemetry(frame.rigid) ?? null,
+    // U07: the same rates and α, β in the two standards' body axes and signs.
+    flightDynamics: frame.rigid ? flightDynamics(frame.rigid) : null,
     detachedBodies: frame.debris.map(body => ({ id: body.id, name: body.name, outcome: body.outcome ?? null,
       rigid: cloneRigidTelemetry(body.rigid) ?? null })),
     altitudeKm: frame.altitude / 1000,
@@ -478,6 +482,18 @@ function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<stri
       burning: sf.burning,
       propellantFraction: sf.propellantFraction,
     } : null,
+  };
+}
+
+/** Body rates (deg/s) and aerodynamic angles (deg) in ISO 1151 and ГОСТ 20058-80 axes. */
+function flightDynamics(rigid: RigidTelemetry): Record<string, unknown> {
+  const iso = bodyRates(rigid.omegaBody, 'iso'), gost = bodyRates(rigid.omegaBody, 'gost');
+  const angles = aeroAngles(rigid.angleOfAttack, rigid.sideslip);
+  return {
+    notation: getNotation(),
+    iso: { pDegS: iso.roll * RAD, qDegS: iso.pitch * RAD, rDegS: iso.yaw * RAD },
+    gost: { omegaXDegS: gost.roll * RAD, omegaYDegS: gost.yaw * RAD, omegaZDegS: gost.pitch * RAD },
+    alphaDeg: angles.alpha * RAD, betaDeg: angles.beta * RAD,
   };
 }
 
@@ -810,7 +826,7 @@ function toolExportCsv(host: McpAppHost): WebMcpTool {
 function toolSetFlightControl(host: McpAppHost): WebMcpTool {
   return {
     name: 'set_flight_control', title: 'Set live flight controls',
-    description: 'Set automatic guidance or manual body roll/pitch/yaw rate commands and throttle for a live 6DOF mission. Rates are degrees per second; commands act through finite actuators and do not directly set attitude. Replay is read-only.',
+    description: 'Set automatic guidance or manual body roll/pitch/yaw rate commands and throttle for a live 6DOF mission. Rates are degrees per second in ISO 1151 body axes: roll p positive right side down, pitch q positive nose up, yaw r positive nose right (x to the nose, y to the right, z to the belly). Commands act through finite actuators and do not directly set attitude. Replay is read-only.',
     inputSchema: { type: 'object', properties: {
       mode: { type: 'string', enum: ['auto', 'manual'] },
       rollRateDegS: { type: 'number', minimum: -5, maximum: 5 },
@@ -827,13 +843,15 @@ function toolSetFlightControl(host: McpAppHost): WebMcpTool {
         if (value < -5 || value > 5) throw new Error(`"${name}" must be between -5 and 5 degrees per second.`);
         return value * DEG;
       };
-      const rates = { x: rate('rollRateDegS'), y: rate('pitchRateDegS'), z: rate('yawRateDegS') };
+      // ISO 1151 body axes (src/ui/notation.ts), whatever the interface shows.
+      const iso = { roll: rate('rollRateDegS'), pitch: rate('pitchRateDegS'), yaw: rate('yawRateDegS') };
+      const rates = simulatorRates(iso, 'iso');
       const throttle = input.throttle === undefined ? 1 : expectNumber(input.throttle, 'throttle');
       if (throttle < 0 || throttle > 1) throw new Error('"throttle" must be between 0 and 1.');
       if (!host.sim || host.sim.cfg.dynamics?.model !== 'sixDof') return { ok: false, reason: 'An active 6DOF mission is required.' };
       if (!host.player.live) return { ok: false, reason: 'Replay cannot change live flight controls. Return to live first.' };
       host.sim.setRigidCommand({ mode, rates, throttle });
-      return { ok: true, mode, ratesRadS: rates, throttle };
+      return { ok: true, mode, ratesRadS: { p: iso.roll, q: iso.pitch, r: iso.yaw }, throttle };
     },
   };
 }

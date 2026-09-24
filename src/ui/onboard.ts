@@ -26,6 +26,7 @@
 import type { Simulation, SimEvent } from '../physics/simulation';
 import { getLang, t } from '../i18n';
 import { dot, normalize } from '../physics/vec3';
+import { symbolText } from './notation';
 
 interface Tile {
   label: string;
@@ -204,7 +205,7 @@ export class OnboardOverlay {
     g.fillStyle = '#8ca0b5';
     g.font = `${Math.round(9 * S)}px ui-monospace, monospace`;
     g.textAlign = 'center';
-    const label = `${t('ob.horizon')} ${((pitch * 180) / Math.PI).toFixed(0)}°`;
+    const label = `${t('ob.horizon')} ${symbolText('pitchAngle')} ${((pitch * 180) / Math.PI).toFixed(0)}°`;
     g.fillText(OnboardOverlay.trim(g, label, w), ax, y + h - 2 * S);
   }
 
@@ -221,7 +222,7 @@ export class OnboardOverlay {
     g.fillStyle = '#fff';
     g.font = `600 ${Math.round(15 * S)}px "Space Grotesk", ui-monospace, monospace`;
     g.textAlign = 'center';
-    g.fillText(`${gLoad.toFixed(1)} ${t('ob.gload')}`, gx, gy - 4 * S);
+    g.fillText(`${symbolText('loadFactor')} ${gLoad.toFixed(1)} ${t('ob.gload')}`, gx, gy - 4 * S);
     g.fillStyle = '#8ca0b5';
     g.font = `${Math.round(9 * S)}px ui-monospace, monospace`;
     g.fillText('0     4     8', gx, gy + 12 * S);

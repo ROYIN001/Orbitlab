@@ -260,7 +260,9 @@ describe('call sites', () => {
       withLang(lang);
       const display = localizeEventParams(null, params)!;
       expect(display.scope).toBe(t('aero.scope.debris'));
-      expect(display.alphaDeg).toBe('30.0'); expect(display.betaDeg).toBe('-3.0');
+      // The recorded pair is the simulator's own (30° in its x–z plane, −3° in x–y);
+      // shown are the standard α and β, alike in ISO 1151 and ГОСТ 20058-80 (U07).
+      expect(display.alphaDeg).toBe('-3.5'); expect(display.betaDeg).toBe('-30.0');
       expect(t('evt.aeroEnvelopeExceeded', display)).not.toMatch(/\{[a-zA-Z]+\}/);
       expect(params.scope).toBe('debris'); expect(params.angleOfAttackRad).toBe(Math.PI / 6);
     }

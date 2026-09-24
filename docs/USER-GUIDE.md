@@ -246,6 +246,17 @@ bending deflection and the largest slosh displacement, cm) and **shell stress** 
 loaded section, % of its allowable). The 3-D view draws the bending at 25 times its size. The
 CSV export adds the same quantities, per sample. The physics is in PHYSICS.md §2b.
 
+## 8. Notation
+
+Rates and angles are written in **ISO 1151** in English and Thai and in **ГОСТ 20058-80** in
+Russian; the Engineer mode's setup can fix either (*Flight-dynamics notation*). The two differ
+in more than letters: ISO's body y axis points to the right and z to the belly, ГОСТ's y to the
+top and z to the right, so the pitch rate is q in one and ωz in the other, and a nose-right yaw
+is positive in ISO (r) but negative in ГОСТ (ωy). Everything follows the choice — the telemetry
+card, the charts, the 6-DOF controls and the rates you type into them, the event log and the
+CSV. The full table, with each quantity's definition and sign, is in *Physics and sources*
+(PHYSICS.md §2c).
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

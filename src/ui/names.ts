@@ -23,6 +23,7 @@ import type { SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { SATELLITES } from '../data/satellites';
 import { RAD } from '../physics/constants';
+import { aeroAngles, getNotation } from './notation';
 
 /** A dictionary entry, or the English literal from the data file when there is none. */
 export function localized(key: string, fallback: string): string {
@@ -102,14 +103,20 @@ export function localizeEventParams(
   if (kind !== null) out.kind = kind;
   if (envelopeScope !== null) {
     out.scope = envelopeScope;
-    if (typeof params.angleOfAttackRad === 'number') out.alphaDeg = (params.angleOfAttackRad * RAD).toFixed(1);
-    if (typeof params.sideslipRad === 'number') out.betaDeg = (params.sideslipRad * RAD).toFixed(1);
+    // U07: α and β in the standard's body axes, from the simulator's own pair.
+    if (typeof params.angleOfAttackRad === 'number' && typeof params.sideslipRad === 'number') {
+      const angles = aeroAngles(params.angleOfAttackRad, params.sideslipRad);
+      out.alphaDeg = (angles.alpha * RAD).toFixed(1);
+      out.betaDeg = (angles.beta * RAD).toFixed(1);
+    }
   }
   if (commandMode !== null) {
     out.mode = commandMode;
     for (const key of ['rollRateRadS', 'pitchRateRadS', 'yawRateRadS']) {
       if (typeof params[key] === 'number') out[key] = Number(params[key]).toFixed(3);
     }
+    // U07: the event carries ISO rates; ГОСТ's yaw axis is ISO's reversed (ωy = −r).
+    if (getNotation() === 'gost' && typeof params.yawRateRadS === 'number') out.yawRateRadS = (params.yawRateRadS === 0 ? 0 : -params.yawRateRadS).toFixed(3);
     if (typeof params.throttle === 'number') out.throttle = (params.throttle * 100).toFixed(1);
   }
   return out;

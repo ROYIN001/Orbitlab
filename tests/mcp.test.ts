@@ -577,10 +577,12 @@ describe('set_flight_control', () => {
     host.sim.setRigidCommand = command => { commands.push(command); };
   });
 
-  it('converts manual body rates to radians and applies finite-actuator commands', () => {
+  it('converts manual ISO body rates (p, q, r) to the simulator\'s axes in radians and applies finite-actuator commands', () => {
     const out = tool(tools, 'set_flight_control').execute({ mode: 'manual', rollRateDegS: 2, pitchRateDegS: -3, yawRateDegS: 5, throttle: 0.6 }) as any;
     expect(out.ok).toBe(true);
-    expect(commands).toEqual([{ mode: 'manual', rates: { x: 2 * DEG, y: -3 * DEG, z: 5 * DEG }, throttle: 0.6 }]);
+    // The simulator's x is the nose, y the belly side, z the left: x = p, y = r, z = −q (src/ui/notation.ts).
+    expect(commands).toEqual([{ mode: 'manual', rates: { x: 2 * DEG, y: 5 * DEG, z: 3 * DEG }, throttle: 0.6 }]);
+    expect(out.ratesRadS).toEqual({ p: 2 * DEG, q: -3 * DEG, r: 5 * DEG });
     tool(tools, 'set_flight_control').execute({ mode: 'auto' });
     expect(commands[1]).toEqual({ mode: 'auto', rates: { x: 0, y: 0, z: 0 }, throttle: 1 });
   });

@@ -55,6 +55,7 @@ import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
 import type { FlexConfig } from '../types';
 import { FLEX_DEFAULTS } from '../physics/rigid/flex';
+import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -786,6 +787,7 @@ export class SetupPanel {
     const scroll = this.el('div', 'setup-scroll');
     root.appendChild(scroll);
     scroll.appendChild(this.experienceSection());
+    if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
     scroll.appendChild(this.quickstartSection());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
@@ -1066,6 +1068,21 @@ export class SetupPanel {
     fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;
+  }
+
+  // --- U07: the flight-dynamics notation (Engineer mode) -------------------------
+  /** ISO 1151 or ГОСТ 20058-80, or by language; a preference, not a mission setting. */
+  private notationSection(): HTMLElement {
+    const section = this.el('section', 'config-section notation-section');
+    section.append(this.select('setup.notation', [
+      { value: 'auto', label: t('setup.notation.auto', { standard: notationFor(getLang(), 'auto') === 'gost' ? 'ГОСТ 20058-80' : 'ISO 1151' }) },
+      { value: 'iso', label: t('setup.notation.iso') },
+      { value: 'gost', label: t('setup.notation.gost') },
+    ], getNotationPreference(), (value) => setNotationPreference(value as NotationPreference)));
+    section.append(this.el('p', 'field-note', t('setup.notation.note')));
+    // A display preference: never disabled by a running mission.
+    section.querySelector('select')!.disabled = false;
+    return section;
   }
 
   // --- P05: the flexible vehicle (Engineer mode, six-DOF only) ------------------

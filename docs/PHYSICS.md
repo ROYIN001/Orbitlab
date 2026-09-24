@@ -208,6 +208,68 @@ liquid (Dodge's I₀, under 0.2 % of a stack's); slosh and bending of a separate
 the vehicle during a held coast (the motion restarts from rest when control resumes). The 3-D
 view draws the bending mode at 25 times its size.
 
+## 2c. Notation: ISO 1151 and ГОСТ 20058-80 (roadmap U07)
+
+The app writes flight-dynamics quantities in one of two notations: **ISO 1151** (parts 1 and 2,
+with ISO 80000 for the Mach number) or **ГОСТ 20058-80**. By default the interface language
+decides — Russian reads ГОСТ, English and Thai read ISO — and the Engineer mode's setup can fix
+either. The notation decides symbols, body axes and signs everywhere the app shows a rate or an
+angle: the telemetry card, the charts, the onboard view, the 6-DOF controls (their manual rate
+commands too), the event log, the result screen, the CSV export's rate and angle columns, and the
+table in *Physics and sources*. Code: src/ui/notation.ts.
+
+**Body axes.** Both standards put x along the vehicle to the nose. ISO puts y to the right and z
+to the belly (down in level flight); ГОСТ puts y in the plane of symmetry to the top and z to the
+right. The simulator keeps its own axes: x the nose, and y, z the two lateral axes its attitude
+reference holds — during ascent y lies in the trajectory plane towards the belly (downrange on
+the pad) and z to the left of the heading. The standards' axes are fixed relabellings of those:
+
+    ISO   (x, y, z) = (x,  −z,  y)       p = ωx,   q = −ωz,   r = ωy
+    ГОСТ  (x, y, z) = (x,  −y,  −z)      ωx = ωx,  ωy = −ωy,  ωz = −ωz
+
+so the pitch-over after liftoff is a negative (nose-down) q in ISO and a negative ωz in ГОСТ, and
+a nose-right yaw is +r in ISO but −ωy in ГОСТ (tests/notation.test.ts flies Falcon 9 and checks
+both, and that ISO y points to the right of the flight path and ГОСТ y above it).
+
+| Quantity | ISO 1151 | ГОСТ 20058-80 | Definition and sign |
+|---|---|---|---|
+| Body axis x | x | x | Along the vehicle, to the nose |
+| Body axis y | y | y | ISO: to the right; ГОСТ: in the plane of symmetry, to the top |
+| Body axis z | z | z | ISO: to the belly; ГОСТ: to the right |
+| Roll rate | p | ω<sub>x</sub> | About x; positive right side down |
+| Pitch rate | q | ω<sub>z</sub> | Positive nose up |
+| Yaw rate | r | ω<sub>y</sub> | ISO: about z, positive nose right; ГОСТ: about y, positive nose left |
+| Angle of attack | α | α | In the plane of symmetry; positive with the air from below |
+| Sideslip angle | β | β | Out of the plane of symmetry; positive with the air from the right |
+| Pitch angle | Θ | ϑ | x above the horizontal plane positive |
+| Roll angle | Φ | γ | Positive right side down |
+| Yaw angle | Ψ | ψ | ISO: clockwise from north (nose right); ГОСТ: from x<sub>g</sub>, anticlockwise seen from above (nose left) |
+| Flight-path angle | γ | θ | Velocity above the horizontal plane positive |
+| Altitude | h | H | |
+| Airspeed | V | V | |
+| Vertical speed | ḣ | V<sub>y</sub> | |
+| Dynamic pressure | q̄ | q | ½ρV² |
+| Mach number | Ma | M | V/a |
+| Load factor | n | n | Non-gravitational acceleration over g₀ |
+| Mass | m | m | |
+| Thrust | F | P | |
+
+The same letter can mean different things across the two: γ is the flight-path angle in ISO
+and the roll angle in ГОСТ, θ the pitch angle in ISO (Θ) and the flight-path angle in ГОСТ, q the
+pitch rate in ISO and the dynamic pressure in ГОСТ.
+
+**What stays in the simulator's axes.** The recorded six-DOF telemetry, the CSV's rigid columns
+(`omega_body_*`, `command_roll/pitch/yaw_rad_s` = its x, y, z, and `angle_of_attack_rad` /
+`sideslip_rad`, its angles in its x–z and x–y planes) and `read_flight_state`'s `rigid` object keep
+the simulator's own axes, so a recording reads the same in any notation; the CSV adds
+`iso_*` or `gost_*` columns, and `read_flight_state` a `flightDynamics` object with both. The
+WebMCP `set_flight_control` takes its rates in ISO axes (p, q, r) whatever the interface shows,
+and the `evt.controlCommand` event records them so.
+
+Before U07 the 6-DOF controls called the simulator's y rate "pitch" and z rate "yaw", and the
+event log's α was its x–z angle; with the stack's roll reference those are the yaw rate, the
+pitch rate and the sideslip. They are now the standards'.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

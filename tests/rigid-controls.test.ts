@@ -15,8 +15,8 @@ class Element {
   private listeners = new Map<string, Array<() => void>>();
   constructor(name: string) { this.tagName = name.toUpperCase(); }
   get valueAsNumber(): number { return Number(this.value); }
-  append(...children: Element[]): void { this.children.push(...children); }
-  replaceChildren(...children: Element[]): void { this.children = children; }
+  append(...children: (Element | string)[]): void { this.children.push(...children.map(text)); }
+  replaceChildren(...children: (Element | string)[]): void { this.children = children.map(text); }
   setAttribute(_name: string, _value: string): void {}
   addEventListener(name: string, callback: () => void): void {
     const callbacks = this.listeners.get(name) ?? []; callbacks.push(callback); this.listeners.set(name, callbacks);
@@ -24,6 +24,9 @@ class Element {
   dispatch(name: string): void { for (const callback of this.listeners.get(name) ?? []) callback(); }
   all(tag: string): Element[] { return this.children.flatMap(child => [...(child.tagName === tag.toUpperCase() ? [child] : []), ...child.all(tag)]); }
 }
+
+/** A string appended as a node, as the DOM does. */
+const text = (child: Element | string): Element => (typeof child === 'string' ? Object.assign(new Element('#text'), { textContent: child }) : child);
 
 function frame(mode: 'auto' | 'manual', roll = 0, throttle = 1): RigidTelemetry {
   return { modelVersion: 'test', attitudeQ: { w: 1, x: 0, y: 0, z: 0 }, omegaBody: { x: 0, y: 0, z: 0 },

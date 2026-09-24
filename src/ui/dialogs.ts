@@ -13,6 +13,8 @@
 import type { CameraMode } from '../render/cameras';
 import { t } from '../i18n';
 import rigidDossierUrl from '../../docs/SIXDOF-VEHICLE-DATA.md?url';
+import { getNotation, QUANTITIES, symbolNode, type Quantity } from './notation';
+import './notation.css';
 
 /** Flight phases the camera sequence can be programmed for. */
 export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment';
@@ -49,6 +51,52 @@ function section(titleKey: string, textKey: string): DocumentFragment {
   const f = document.createDocumentFragment();
   f.append(el('h3', undefined, t(titleKey)), el('p', undefined, t(textKey)));
   return f;
+}
+
+// --- U07: the notation table -------------------------------------------------
+const QUANTITY_NAMES: Record<Quantity, string> = {
+  axisX: 'notation.q.axisX', axisY: 'notation.q.axisY', axisZ: 'notation.q.axisZ',
+  rollRate: 'notation.q.rollRate', pitchRate: 'notation.q.pitchRate', yawRate: 'notation.q.yawRate',
+  alpha: 'notation.q.alpha', beta: 'notation.q.beta', pitchAngle: 'notation.q.pitchAngle', rollAngle: 'notation.q.rollAngle',
+  yawAngle: 'notation.q.yawAngle', pathAngle: 'notation.q.pathAngle', altitude: 'notation.q.altitude', airspeed: 'notation.q.airspeed',
+  verticalSpeed: 'notation.q.verticalSpeed', dynamicPressure: 'notation.q.dynamicPressure', mach: 'notation.q.mach',
+  loadFactor: 'notation.q.loadFactor', mass: 'notation.q.mass', thrust: 'notation.q.thrust',
+};
+/** Each quantity's definition: one text, or one per standard where they differ. */
+const QUANTITY_DEFINITIONS: Record<Quantity, string | { iso: string; gost: string }> = {
+  axisX: 'notation.def.axisX',
+  axisY: { iso: 'notation.def.iso.axisY', gost: 'notation.def.gost.axisY' },
+  axisZ: { iso: 'notation.def.iso.axisZ', gost: 'notation.def.gost.axisZ' },
+  rollRate: 'notation.def.rollRate', pitchRate: 'notation.def.pitchRate',
+  yawRate: { iso: 'notation.def.iso.yawRate', gost: 'notation.def.gost.yawRate' },
+  alpha: 'notation.def.alpha', beta: 'notation.def.beta', pitchAngle: 'notation.def.pitchAngle', rollAngle: 'notation.def.rollAngle',
+  yawAngle: { iso: 'notation.def.iso.yawAngle', gost: 'notation.def.gost.yawAngle' },
+  pathAngle: 'notation.def.pathAngle', altitude: 'notation.def.altitude', airspeed: 'notation.def.airspeed',
+  verticalSpeed: 'notation.def.verticalSpeed', dynamicPressure: 'notation.def.dynamicPressure', mach: 'notation.def.mach',
+  loadFactor: 'notation.def.loadFactor', mass: 'notation.def.mass', thrust: 'notation.def.thrust',
+};
+
+/** Symbols in both standards, and each quantity's definition and sign in the one in force. */
+function notationTable(): HTMLTableElement {
+  const n = getNotation(), table = el('table', 'notation-table') as HTMLTableElement;
+  const head = el('tr');
+  for (const [key, active] of [['notation.col.quantity', false], ['notation.col.iso', n === 'iso'], ['notation.col.gost', n === 'gost'], ['notation.col.meaning', false]] as const) {
+    const th = el('th', active ? 'active' : undefined, t(key));
+    th.setAttribute('scope', 'col');
+    head.append(th);
+  }
+  const thead = el('thead'); thead.append(head);
+  const tbody = el('tbody');
+  for (const q of QUANTITIES) {
+    const row = el('tr'), definition = QUANTITY_DEFINITIONS[q];
+    const name = el('th', undefined, t(QUANTITY_NAMES[q])); name.setAttribute('scope', 'row');
+    const iso = el('td', n === 'iso' ? 'active' : undefined), gost = el('td', n === 'gost' ? 'active' : undefined);
+    iso.append(symbolNode(q, 'iso')); gost.append(symbolNode(q, 'gost'));
+    row.append(name, iso, gost, el('td', undefined, t(typeof definition === 'string' ? definition : definition[n])));
+    tbody.append(row);
+  }
+  table.append(thead, tbody);
+  return table;
 }
 
 function link(href: string, label: string): HTMLLIElement {
@@ -141,6 +189,7 @@ export class PhysicsDialog extends Modal {
     b.append(section('dlg.physics.estimates', 'dlg.physics.estimatesText'));
     const dossier = el('ul'); dossier.append(link(rigidDossierUrl, t('dlg.physics.dossier'))); b.append(dossier);
     b.append(section('dlg.physics.frames', 'dlg.physics.framesText'));
+    b.append(section('dlg.physics.notation', 'dlg.physics.notationText'), notationTable());
     b.append(section('dlg.physics.forces', 'dlg.physics.forcesText'));
     b.append(section('dlg.physics.atmosphere', 'dlg.physics.atmosphereText'));
     b.append(section('dlg.physics.propulsion', 'dlg.physics.propulsionText'));
