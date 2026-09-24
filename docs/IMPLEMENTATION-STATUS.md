@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-09-23. This file states the current position only; how it was reached is in the
+Updated 2026-09-24. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -30,6 +30,11 @@ throughout.
   Starship can fly a suborbital test flight whose ship comes home to a splashdown. The Watch
   launches fly Bandwagon-1, Arabsat-6A and Flight 5 that way; Explore and Engineer offer the
   same choices (off by default).
+- **The R-7 as drawn** (`src/render/soyuz.ts`): Blok A's taper from 2.05 m at its engines to
+  2.95 m, the strap-ons leaning in against it, the open truss up to Blok I, Blok I's aft skirt
+  falling away in three petals ten seconds after Blok A, the frost on the oxygen tanks shedding
+  in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
+  fins, the tower pulling away at T+114.5 s. Drawing only; the physics is unchanged.
 
 ## What is experimental
 
@@ -87,13 +92,13 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | F04 break-ups with Δv left | done | G08 control-system failures | |
 | P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | |
 | F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
-| F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | |
+| F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | |
-| P05 slosh, bending and notch filter | | C01 historical missions | |
-| U07 ГОСТ 20058-80 notation | | | |
+| P05 slosh, bending and notch filter | done | C01 historical missions | |
+| U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | | | |
 | E02 live equations panel | | | |
 | E01 reference frames in 3-D | | | |
