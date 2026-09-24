@@ -98,8 +98,14 @@ function flexBytes(value: RigidTelemetry): number {
     + (flex.bending ? 360 + 16 * (flex.bending.shapeX.length + flex.bending.shapeW.length) : 0) + (flex.notch ? 120 : 0);
 }
 
+/** E02's equation record: 1 595 B measured for a six-DOF one (node --expose-gc, 20 000
+ * records); a point-mass one lacks the four rate and attitude vectors, about 350 B. */
+function eomBytes(frame: VisualFrame): number {
+  return frame.eom ? (frame.eom.q0 ? 1600 : 1250) : 0;
+}
+
 function frameBytes(frame: VisualFrame): number {
-  return FRAME_BYTES.base + frame.stages.length * FRAME_BYTES.stage
+  return FRAME_BYTES.base + eomBytes(frame) + frame.stages.length * FRAME_BYTES.stage
     + frame.boosters.length * FRAME_BYTES.booster + frame.debris.length * FRAME_BYTES.debris
     + rigidBytes(frame.rigid) + frame.debris.reduce((sum, body) => sum + rigidBytes(body.rigid), 0);
 }

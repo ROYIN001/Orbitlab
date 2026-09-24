@@ -26,6 +26,11 @@ here; this file records progress for the owner to fold in at the merge.
   from T+0; **no single-step button** (analysis belongs to G04 and E04).
 - The load relief's switch-off at 500 Pa, found by G03 (asked 2026-09-24): **fix it with G01**
   (PEG/IGM), not on its own.
+- E02 (asked 2026-09-24): an **Equations view in the telemetry panel**; Explore mode: Newton,
+  dynamic pressure and Mach, drag, the rocket equation, the Δv budget — **thrust against ambient
+  pressure and vis-viva in the Engineer mode** with gravity (J2), α/β, Euler, quaternion
+  kinematics and the control law; **balance checks**, with the equation terms recorded per step
+  and flights bit for bit as before.
 
 ## Progress
 
@@ -34,7 +39,7 @@ here; this file records progress for the owner to fold in at the merge.
 | P05 slosh, bending and notch filter | done 2026-09-24 (see below) |
 | U07 ГОСТ 20058-80 notation | done 2026-09-24 (see below) |
 | G03 attitude-loop inspector | done 2026-09-24 (see below) |
-| E02 live equations panel | |
+| E02 live equations panel | done 2026-09-24 (see below) |
 | G04 Bode, step response, margins | |
 | E04 controller tuning mode | |
 | G02 inertial navigation and Kalman filter | |
@@ -197,4 +202,38 @@ tests/rigid-controls.test.ts.
 
 **Results (2026-09-24)**: `npm test` 66 files / 946 tests pass (10 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged (3 min); typecheck passes.
+
+### E02 — the live equations panel
+
+Physics in [../PHYSICS.md](../PHYSICS.md) §2e, use in [../USER-GUIDE.md](../USER-GUIDE.md) §10.
+
+- **The record** (`src/physics/eom.ts`): every flight step writes `SimState.eom` — the engines',
+  the air's and gravity's specific forces at the step start, the step's mean acceleration, the
+  running engines' vacuum thrust and exit area, air data, the Δv book at the step end, and in
+  six-DOF the body rates and attitude at both ends; cleared at every step, so no record outlives
+  its step. It goes into every recorded frame (copied, never shared) but not into the
+  telemetry, so the golden fingerprints are unchanged. About 1.6 kB a frame (measured).
+- **The view** (`src/ui/equations.ts`, `equations-model.ts`, `equations.css`): Charts |
+  Equations in the telemetry panel's header; MathML formulas in the notation in force (vectors
+  bold through CSS — MathML Core ignores `mathvariant`), the substituted values, the balance
+  line, and a note where a model difference or a limiter matters. Explore: 5 equations;
+  Engineer: 12.
+- **What the checks show** on Falcon 9 to LEO: Newton's law balances to 0.4 % at worst (six-DOF),
+  the Δv book to 0.1 %, the thrust formula exactly, Euler's equations to 0.1–0.2 % of the
+  moments, quaternion kinematics to 10⁻⁴; at T+127 s the control law shows the rate limit that
+  G03 found holding the pitch command.
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- E02 ---`), `src/physics/simulation.ts` (the record, built from the step's own values
+after the g-load; the step start's rigid state kept for it), `src/physics/sim/types.ts`
+(`SimState.eom`), `src/physics/frame.ts` (`VisualFrame.eom`, captured, cloned and taken from the
+left frame when interpolating — `DebrisFrame` untouched), `src/replay/recorder.ts` (the byte
+estimate), `src/main.ts` (the frame passed to the telemetry panel; the level set in `setMode`),
+`src/ui/telemetry.ts` (the view toggle and the equations container).
+
+**Tests**: tests/equations.test.ts (Newton's law, the thrust formula and the Δv book over a
+Falcon 9 ascent in six-DOF and point mass; no record outside flight steps or in the telemetry;
+the Explore and Engineer sets; every check passing through max-q; the limiter note at T+127 s;
+α and β alike in both standards; Euler rows in each standard's axes; the vacuum-engine note; the
+record copied with every frame).
 

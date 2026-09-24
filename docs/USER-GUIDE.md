@@ -272,6 +272,19 @@ rate and moment charts for the axis picked in the title bar. The play button run
 the flight or the replay as the main one does. The inspector reads the recording, so scrubbing
 back shows the loop at any recorded instant. Details in PHYSICS.md §2d.
 
+## 10. Live equations (Explore and Engineer mode)
+
+The telemetry panel has two views: **Charts** and **Equations**. Equations shows the
+equations the simulation is solving at the instant on screen — live, or wherever the replay
+cursor stands — each as a formula in the notation in force (§8), then the same formula with the
+numbers put in, and, where the flight provides an independent left-hand side, a **balance**
+line: green when the recorded motion satisfies the equation within 1 %. The Explore mode shows
+Newton's second law, dynamic pressure and Mach number, drag and lift, the rocket equation and
+the ascent's Δv budget; the Engineer mode adds thrust against ambient pressure, vis-viva, gravity
+with J2, the angles of attack and sideslip, Euler's rotation equations, quaternion kinematics and
+the attitude autopilot. An equation with nothing to act on (no air, engines off, a coast
+propagated analytically) says so. Details in PHYSICS.md §2e.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

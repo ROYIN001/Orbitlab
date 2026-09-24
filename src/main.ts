@@ -321,6 +321,7 @@ class App {
     const experience = experienceForMode(mode);
     if (experience) this.panel.setExperience(experience);
     this.rigidControls.setInspectorAvailable(mode === 'engineer');
+    this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
     if (mode !== 'engineer') this.loopInspector.close();
     document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
       if (a.dataset.mode === mode) a.setAttribute('aria-current', 'page');
@@ -974,7 +975,7 @@ class App {
     this.telTimer += dtReal;
     if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
-      this.tel.update(this.simView.sim, this.player.cursor);
+      this.tel.update(this.simView.sim, this.player.cursor, this.shown);
       this.result.update(this.simView.sim);
       this.rigidControls.update(this.shown?.rigid, this.player.live);
     }

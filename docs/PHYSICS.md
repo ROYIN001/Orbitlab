@@ -332,6 +332,47 @@ What it shows on Falcon 9 to LEO in the crosswind scenario:
 - After staging the upper stage's roll authority is so small (an ε limit of 0.02°/s²) that its
   roll rate is held by the stopping distance.
 
+## 2e. The live equations panel (roadmap E02)
+
+The telemetry panel's **Equations** view writes out the equations the simulation is solving,
+in the notation in force (§2c: F or P for thrust, D or X for drag, C_D or c_x, q̄ or q, Ma or M,
+Λ for ГОСТ's attitude quaternion), with the values of the instant on screen substituted:
+
+- **Explore and Engineer mode**: Newton's second law m**a** = **F** + **F**_A + m**g** (each
+  force and the load factor); dynamic pressure and Mach number; drag and lift (in six-DOF the
+  axial and normal coefficients of the vehicle's tables, split along and across the airflow);
+  the rocket equation for the burning stage, with the Δv of every stage the HUD shows; the
+  ascent's Δv budget, ideal less gravity, drag and steering losses against the speed gained
+  since liftoff.
+- **Engineer mode adds** thrust against ambient pressure, F = F_vac − p_a·A_e (the running
+  engines at their levels, with A_e = (F_vac − F_SL)/p₀, which is how every engine's thrust is
+  computed); vis-viva and the apsides; gravity with J2; α and β from the body-axis airflow in
+  the standard's axes (ISO α = arctan(w/u), β = arcsin(v/V); ГОСТ α = −arctan(V_y/V_x),
+  β = arcsin(V_z/V)); Euler's equations I·ω̇ + ω × Iω = M per axis; quaternion kinematics
+  q̇ = ½ q ⊗ ω; and the attitude autopilot's two gains on the pitch axis (§2d).
+
+**Where the numbers come from.** Each flight step records its equation terms
+(`SimState.eom`, src/physics/eom.ts, carried into every recorded frame but not into the
+telemetry): the specific forces of the engines (with the attitude thrusters), the air and
+gravity at the step start — in six-DOF those the rigid body was integrated with, in the
+point-mass model those of its force law — the step's mean acceleration (v_end − v_start)/Δt,
+the running engines' vacuum thrust and exit area, the air data, the Δv book at the step end, and
+in six-DOF the body rates and attitude at both ends. Every value is from one step, so a replayed
+frame balances as a live one does. The record reads the flight and never feeds back: the P05
+golden fingerprints are unchanged.
+
+**The balance checks** compare an independent left-hand side with the right: the measured mean
+acceleration with the sum of the forces over the mass; the speed gained since liftoff
+(v_end − ω_E (R_E + h) cos φ of the pad) with the Δv book; I·ω̇ + ω × Iω with ω̇ measured over the
+step against the moments of engines, thrusters and air (judged against the size of those
+moments, which nearly cancel through max-q); the step's change of attitude with ½ q ⊗ ω at its
+middle; the thrust flown with T_vac − p_a·A_e; gravity used with the formula; the rate command
+with K_θ·e where no limiter holds it. A check passes under 1 %. Over a Falcon 9 ascent to LEO
+(tests/equations.test.ts): Newton's law balances to 0.4 % at worst in six-DOF (the step's mean
+against its start, worst through staging and the slews) and 0.14 % in point mass; the Δv book
+within 0.1 % in six-DOF; the thrust formula exactly; Euler's equations to about 0.1–0.2 % of the
+moments; quaternion kinematics to 10⁻⁴ or better.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

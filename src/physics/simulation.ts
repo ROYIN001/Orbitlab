@@ -35,6 +35,8 @@ import { AeroEnvelopeEvents } from './rigid/envelope-events';
 import { buildRigidVehicle } from './rigid/mass';
 import { rigidContactMetrics } from './rigid/debris-runtime';
 import { quatRotate } from './rigid/math';
+import { gravity, gravityJ2 } from './gravity';
+import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
 import { rk4Step } from './integrator';
 import { elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
@@ -502,6 +504,8 @@ export class Simulation {
     if (this.isFailed()) return 0;
     // an action may have changed the regime (e.g. coast -> burn): re-clamp the step
     dt = Math.min(dt, this.suggestedDt());
+    // E02: written by a flight step, so no step's record outlives it.
+    s.eom = undefined;
 
     if (s.status === 'prelaunch') this.stepPrelaunch(dt);
     else if (s.status === 'orbit' && !this.vehicle.inTransient(s.t)) this.stepOrbit(dt);
@@ -708,6 +712,7 @@ export class Simulation {
     s.boosterThrottle = thr.boosterThrottle;
 
     // --- integrate
+    const rigidBefore = s.rigid; // E02: the body rates and attitude at the step start
     const area = this.vehicle.frontalArea();
     const thrustAccel = thr.thrust / mass;
     const useKepler = !thr.burning && alt > 140e3 && s.status !== 'ascent';
@@ -801,6 +806,29 @@ export class Simulation {
       : scale(s.dir, thrustAccel);
     s.gLoad = rigidGLoad ?? norm(aNonGrav) / G0;
     this.ascent.trackMaxQ(alt, vz, q);
+
+    // E02: Newton's second law as this step solved it, for the live equations
+    // panel — its terms at the step start and the step's mean acceleration.
+    // Read only; nothing here feeds back into the flight.
+    if (dt > 0) {
+      const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels);
+      const pointDrag = vAirMag > 0.1 && atm.rho > 0 && alt < 1000e3 ? scale(vAir, -dragAccel / vAirMag) : v3();
+      s.eom = {
+        t: s.t, dt, integrator: held ? 'heldCoast' : rigidAccelerations ? 'rigid' : useKepler ? 'kepler' : 'pointMass',
+        mass, r: { ...s.r }, v: { ...s.v }, density: atm.rho, soundSpeed: atm.a, pressure: atm.p, airspeed: vAirMag,
+        airVelocity: { ...vAir }, dynamicPressure: q, mach: atm.a > 0 ? vAirMag / atm.a : 0,
+        thrust: thr.thrust, vacuumThrust: engines.vacuumThrust, exitArea: engines.exitArea,
+        referenceArea: rigidAccelerations ? this.rigidRuntime!.snapshot?.aero.referenceArea ?? area : area,
+        ...(rigidAccelerations || held || useKepler ? {} : { dragCoefficient: dragCoefficient(vAirMag / atm.a) }),
+        thrustAccel: rigidAccelerations ? { ...rigidAccelerations.propulsionECI } : held || useKepler ? v3() : scale(s.dir, thrustAccel),
+        aeroAccel: rigidAccelerations ? { ...rigidAccelerations.aerodynamicECI } : held || useKepler ? v3() : pointDrag,
+        gravityAccel: rigidAccelerations ? { ...rigidAccelerations.gravityECI } : held ? gravityJ2(s.r) : gravity(s.r),
+        measuredAccel: scale(sub(next.v, s.v), 1 / dt),
+        speedEnd: norm(next.v), losses: { ...s.losses },
+        ...(rigidBefore && s.rigid && rigidAccelerations ? { omega0: { ...rigidBefore.omegaBody }, omega1: { ...s.rigid.omegaBody },
+          q0: { ...rigidBefore.attitudeQ }, q1: { ...s.rigid.attitudeQ } } : {}),
+      };
+    }
 
     // --- propellant & staging
     const stepStartTime = s.t;
