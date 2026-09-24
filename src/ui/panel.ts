@@ -48,7 +48,7 @@ import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes, zoneName } from './names';
-import { GUIDANCE_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
+import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
@@ -100,7 +100,6 @@ export interface Feasibility {
   text: string;
 }
 
-const FAILURE_MODES: FailureMode[] = ['none', 'engineOut', 'thrustLoss', 'prematureSep', 'fairingStuck', 'rangeSafety', 'random'];
 
 function toDatetimeLocalUTC(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -472,6 +471,7 @@ export class SetupPanel {
       case 'orbitOrder': return t('setup.validation.orbitOrder');
       case 'selection': return t('setup.validation.selection');
       case 'suborbital': return t('setup.validation.suborbital');
+      case 'failureUnavailable': return t('setup.validation.failureUnavailable');
     }
   }
 
@@ -1086,9 +1086,14 @@ export class SetupPanel {
     const fd = this.el('details');
     fd.dataset.section = 'failure';
     fd.appendChild(this.el('summary', undefined, t('setup.failure')));
-    fd.appendChild(this.select('setup.failureMode', FAILURE_MODES.map((m) => ({ value: m, label: t(`setup.fail.${m}`) })), s.failure.mode, (v) => { s.failure.mode = v as FailureMode; this.changed(); }));
+    // only the failures this vehicle and payload can have (a launch abort needs an escape system)
+    const modes = FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, s.satelliteId));
+    fd.appendChild(this.select('setup.failureMode', modes.map((m) => ({ value: m, label: t(`setup.fail.${m}`) })), s.failure.mode, (v) => { s.failure.mode = v as FailureMode; this.changed(); }));
     const fr = this.el('div', 'row');
-    fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = v; this.changed(); }, 5, 0, 2000));
+    // a strap-on collision and a stage separation failure happen at their separations, not at a time
+    if (s.failure.mode !== 'boosterCollision' && s.failure.mode !== 'stagingFailure') {
+      fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = v; this.changed(); }, 5, -10, 2000));
+    }
     fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;

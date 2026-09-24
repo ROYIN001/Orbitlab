@@ -147,7 +147,7 @@ function plumeKindFor(engine: { solid?: boolean; ispVac: number }, vehicleId: st
 
 /** Grid-fin texture: an open lattice so the fin reads as a grid, not a plate. */
 let gridTex: THREE.Texture | null = null;
-function gridFinTexture(): THREE.Texture {
+export function gridFinTexture(): THREE.Texture {
   if (gridTex) return gridTex;
   const c = document.createElement('canvas');
   c.width = c.height = 64;

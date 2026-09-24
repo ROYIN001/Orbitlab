@@ -71,6 +71,10 @@ export class SimCore {
           this.recorder.captureChangedState();
           this.report();
           break;
+        case 'abort':
+          if (this.sim.commandAbort()) this.recorder.captureChangedState();
+          this.report();
+          break;
       }
     } catch (err) {
       this.fastForward = null;

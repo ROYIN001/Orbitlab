@@ -272,6 +272,8 @@ export const VEHICLES: VehicleSpec[] = [
     // timeline. See `FairingSpec.sepTime` in src/types.ts for why the published
     // TIME is modelled rather than a back-solved heat-flux placard.
     fairing: { mass: 1000, diameter: 3.7, length: 10.1, sepAltitude: 95e3, sepTime: 157, color: '#e8e8e8' },
+    // A crewed launch carries the escape tower and the fairing's abort motors (G06).
+    escapeSystem: 'soyuz',
     stages: [
       soyuz21aCore(),
       { id: 'blokI', name: 'Blok I (3rd stage, RD-0110)', dryMass: 2410, propellantMass: 22900, engine: RD0110, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper' },

@@ -25,6 +25,7 @@
  * telemetry panel stays live on purpose, since it charts the whole flight.
  */
 import type { Simulation, SimStatus, DescentPhase, Debris, DebrisVisual, Losses } from './simulation';
+import type { AbortState } from './sim/types';
 import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
@@ -164,6 +165,8 @@ export interface VisualFrame {
   ascentPhase: AscentPhase | null;
   /** a suborbital flight's return (`SimState.descentPhase`); absent on older recordings */
   descentPhase?: DescentPhase | null;
+  /** a launch abort (`SimState.abort`, roadmap G06): the escaping body is what the frame's state describes */
+  abort?: AbortState;
   /** HUD note key (countdown, ascent, coast, burn, orbit, orbitOffTarget, suborbital, destroyed, reentry, noLiftoff) */
   note: string;
   r: Vec3;
@@ -455,6 +458,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     status: s.status,
     ascentPhase: s.ascentPhase,
     ...(s.descentPhase ? { descentPhase: s.descentPhase } : {}),
+    ...(s.abort ? { abort: cloneAbort(s.abort) } : {}),
     note: s.note,
     r: clone(s.r),
     v: clone(s.v),
@@ -563,9 +567,15 @@ const lerpVec = (a: Vec3, b: Vec3, u: number): Vec3 => ({
  * is a spec object owned by the simulation, and copying it per frame would cost
  * more than the rest of the frame put together.
  */
+/** A deep copy of an abort's state. */
+export function cloneAbort(a: AbortState): AbortState {
+  return { ...a, motors: { ...a.motors }, ...(a.rocketLost ? { rocketLost: { r: clone(a.rocketLost.r), t: a.rocketLost.t } } : {}) };
+}
+
 export function cloneFrame(f: VisualFrame): VisualFrame {
   return {
     ...f,
+    ...(f.abort ? { abort: cloneAbort(f.abort) } : {}),
     rigid: cloneRigidTelemetry(f.rigid),
     r: clone(f.r),
     v: clone(f.v),
@@ -607,6 +617,15 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
  * The result is a fresh frame; the inputs are never mutated. The function is
  * pure, so seeking twice to the same time produces deep-equal frames.
  */
+function blendAbort(a: AbortState | undefined, b: AbortState | undefined, u: number): AbortState {
+  if (!a || !b) return cloneAbort((u < 0.5 ? a : b) ?? (a ?? b)!);
+  const near = cloneAbort(u < 0.5 ? a : b);
+  if (a.body !== b.body) return near;
+  return { ...near, drogue: mix(a.drogue, b.drogue, u), main: mix(a.main, b.main, u),
+    motors: { main: mix(a.motors.main, b.motors.main, u), control: mix(a.motors.control, b.motors.control, u),
+      fairing: mix(a.motors.fairing, b.motors.fairing, u), softLanding: mix(a.motors.softLanding, b.motors.softLanding, u) } };
+}
+
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
   // Degenerate spans and a seek that lands on `a` itself still hand back a
@@ -666,6 +685,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     && a.boosters.every((booster, i) => booster.burning === b.boosters[i]?.burning);
   return {
     ...a,
+    // the escape's flags and parachutes step, its motors blend
+    ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
     rigid,
     t: a.t + dt,
     r,

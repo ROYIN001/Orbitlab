@@ -160,7 +160,10 @@ export class ExplosionEffect {
    */
   update(scene: SceneManager, frame: VisualFrame, events: readonly SimEvent[], dtReal: number, size: number): void {
     let lossT: number | null = null;
-    for (const e of events) {
+    // G06: after an abort the frame is the crew's, and the rocket they left breaks up where it was
+    const left = frame.abort?.rocketLost;
+    if (left && left.t <= frame.t + 1e-6) lossT = left.t;
+    else for (const e of events) {
       if ((e.key === 'evt.vehicleLost' || e.key === 'evt.impact') && e.t <= frame.t + 1e-6) { lossT = e.t; break; }
     }
     // `destroyed` alone is not enough (a vehicle can be lost without an event
@@ -172,7 +175,7 @@ export class ExplosionEffect {
     }
     if (this.playedFor !== lossT) {
       this.clear();
-      this.spawn(scene, lossT, frame.r, Math.max(6, size));
+      this.spawn(scene, lossT, left ? left.r : frame.r, left ? 30 : Math.max(6, size));
     }
     const g = this.group;
     if (!g) return;

@@ -146,6 +146,7 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^sat\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts satelliteName' },
   { pattern: /^site\.[a-z0-9]+\.name$/, from: 'ui/names.ts siteName' },
   { pattern: /^zone\.[a-z0-9]+\.name$/, from: 'ui/names.ts zoneName' },
+  { pattern: /^abort\.mode\.[a-z]+$/, from: 'ui/names.ts localizeEventParams (G06)' },
   { pattern: /^stage\.[a-z0-9]+\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts stageName' },
 ];
 

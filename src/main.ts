@@ -41,6 +41,7 @@ import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
 import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
+import { EscapeView } from './render/escape';
 import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
@@ -73,6 +74,8 @@ function recentSeparation(frame: VisualFrame): boolean {
 
 /** Pick the cinematic camera framing for this instant of the flight. */
 function camPhase(frame: VisualFrame): CamPhase {
+  // G06: pulled back as the escape fires, then close on the crew's descent module
+  if (frame.abort) return frame.t - frame.abort.t0 < 8 ? 'staging' : 'coast';
   if (!frame.liftoff) return 'pad';
   if (recentSeparation(frame)) return 'staging';
   if (frame.t < 12) return 'liftoff';
@@ -89,6 +92,8 @@ function camPhase(frame: VisualFrame): CamPhase {
  * thing they were watching.
  */
 function flightPhase(frame: VisualFrame): FlightPhase | null {
+  // G06: an abort, like a ship's return, is watched from outside
+  if (frame.abort) return 'descent';
   if (!frame.liftoff || frame.status === 'prelaunch') return 'pad';
   if (frame.status === 'failed') return null;
   if (recentSeparation(frame)) return 'staging';
@@ -190,6 +195,8 @@ class App {
   target = new OrbitLine(0xefa47e, false);
   /** E01: the reference frames drawn in 3-D, chosen from the Frames menu */
   frames = new FramesView(frameSymbols);
+  /** G06: the escaping head section or descent module */
+  private escapeView: EscapeView | null = null;
   private framesMenu!: FramesMenu;
   /** the live simulation is advancing */
   playing = false;
@@ -231,6 +238,8 @@ class App {
   private playBtn!: HTMLButtonElement;
   private playGlyph!: HTMLElement;
   private liveBtn!: HTMLButtonElement;
+  /** G06: the Engineer mode's launch abort */
+  private abortBtn!: HTMLButtonElement;
   private warpSel!: HTMLSelectElement;
   private glowBtn!: HTMLButtonElement;
   /** decides from the frame rate whether the glow is affordable (src/render/glow-governor.ts) */
@@ -508,6 +517,11 @@ class App {
     document.getElementById('btn-skip')!.addEventListener('click', () => this.skip());
     document.getElementById('btn-prev')!.addEventListener('click', () => this.previousEvent());
     this.liveBtn.addEventListener('click', () => this.goLive());
+    this.abortBtn = document.getElementById('btn-abort') as HTMLButtonElement;
+    this.abortBtn.addEventListener('click', () => {
+      if (this.mode !== 'engineer' || !this.player.live || !this.abortArmed(this.shown)) return;
+      this.session?.commandAbort();
+    });
     document.querySelectorAll<HTMLButtonElement>('.cam-btn').forEach((b) => {
       b.addEventListener('click', () => this.setCamera(b.dataset.cam as CameraMode));
     });
@@ -705,6 +719,12 @@ class App {
     this.updatePlayButton();
   }
 
+  /** Whether a launch abort can be commanded at `frame`: armed from the countdown until orbit or the spacecraft's separation. */
+  private abortArmed(frame: VisualFrame | null): boolean {
+    if (!frame || frame.abort || frame.payloadSeparated || frame.destroyed) return false;
+    return frame.status === 'prelaunch' || frame.status === 'ascent' || frame.status === 'burn' || frame.status === 'coast';
+  }
+
   private updatePlayButton(): void {
     const running = this.player.live ? this.playing : this.player.playing;
     this.playGlyph.textContent = running ? '❚❚' : '▶';
@@ -846,6 +866,17 @@ class App {
     }
     this.rocket = new RocketView(sim.vehicleSpec, sim.satellite);
     this.scene.scene.add(this.rocket.group, this.rocket.worldGroup);
+    // G06: a crewed Soyuz's escape, drawn when it fires
+    if (this.escapeView) {
+      this.scene.scene.remove(this.escapeView.group);
+      this.escapeView.dispose();
+      this.escapeView = null;
+    }
+    const fairing = sim.vehicleSpec.fairing;
+    if (sim.escape.fitted && fairing) {
+      this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
+      this.scene.scene.add(this.escapeView.group);
+    }
     this.pad = new LaunchPadView(sim.site, sim.vehicleSpec);
     this.scene.scene.add(this.pad.group);
     if (this.recoveryScenery) {
@@ -1193,6 +1224,9 @@ class App {
     if (this.player.live) this.player.syncLive(frame.t);
     this.shown = frame;
     view.setFrame(frame);
+    // G06: the abort is there on a crewed Soyuz, and live until the escape system stands down
+    this.abortBtn.hidden = !sim.escape.fitted;
+    this.abortBtn.disabled = !this.player.live || !this.abortArmed(frame);
     if (this.mode === 'watch') this.steerWatchFocus(frame);
     this.followCameraPlan(frame);
     if (this.wasLive !== this.player.live) {
@@ -1263,10 +1297,18 @@ class App {
     if (padDist > 1) this.backDir.copy(padVec).divideScalar(padDist);
     else this.backDir.set(-frame.dir.x, -frame.dir.y, -frame.dir.z);
     this.rocket.update(frame, { backDir: this.backDir, padDistance: padDist, night });
+    // G06: after an abort the frame is the escaping body; the rocket it left is debris
+    if (frame.abort) this.rocket.group.visible = false;
+    if (this.escapeView) {
+      this.escapeView.group.position.copy(this.rocket.group.position);
+      this.escapeView.group.quaternion.copy(this.rocket.group.quaternion);
+      this.escapeView.update(frame);
+    }
     // Size of the object actually being tracked: the stack now, the spacecraft
     // after payload separation. It frames the camera, decides when the space
     // view's marker takes over, and scales the break-up effect.
-    const height = frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
+    const height = frame.abort && this.escapeView ? this.escapeView.size(frame)
+      : frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
     this.explosion.update(scene, frame, this.recorder.events, dt, height);
     // lines
     this.syncTrail(this.player.cursor, this.player.live, frame);
@@ -1276,7 +1318,7 @@ class App {
     this.target.update(scene);
     this.debrisView.update(frame.debris, frame.t);
     // camera
-    const radius = frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
+    const radius = frame.abort ? Math.min(2, height / 4) : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
     if (focus) {
       // A stage flown home: framed on its own axis, over its own ground.
@@ -1292,8 +1334,11 @@ class App {
         t: frame.t, phase: 'ascent', agl: norm(focus.r) - R_EARTH - ground,
       }, dt, R_EARTH);
     } else {
+      // G06: under a parachute the camera frames the canopy above the capsule,
+      // not the ground below its heat shield
+      const canopy = frame.abort?.body === 'capsule' && (frame.abort.main > 0.2 || frame.abort.drogue > 0.2);
       this.cams.update(scene.camera, {
-        pos: this.originV, up, east, north, dir: frame.dir, side, height, radius,
+        pos: this.originV, up, east, north, dir: canopy ? scale(frame.dir, -1) : frame.dir, side, height, radius,
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
         vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
         t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,

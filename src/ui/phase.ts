@@ -10,6 +10,7 @@
  */
 import type { VisualFrame } from '../physics/frame';
 import type { DescentPhase, SimEvent } from '../physics/simulation';
+import type { EscapePhase } from '../physics/rigid/escape';
 import { RAD } from '../physics/constants';
 import { t } from '../i18n';
 
@@ -37,6 +38,11 @@ export interface PhaseInfo {
 const EMPTY: Record<string, string | number> = {};
 
 /** Label of each part of a returning ship's descent. */
+/** G06: a launch abort's progress (`EscapePhase`), as a title. */
+export const ABORT_PHASE_KEYS: Readonly<Record<EscapePhase, string>> = {
+  escape: 'hud.abort.escape', coast: 'hud.abort.coast', fall: 'hud.abort.fall', drogue: 'hud.abort.drogue', main: 'hud.abort.main', landed: 'hud.abort.landed',
+};
+
 export const DESCENT_PHASE_KEYS: Readonly<Record<DescentPhase, string>> = {
   coast: 'hud.descent.coast', entry: 'hud.descent.entry', bellyflop: 'hud.descent.bellyflop',
   flip: 'hud.descent.flip', landing: 'hud.descent.landing',
@@ -88,7 +94,22 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       params.alt = (frame.altitude / 1000).toFixed(1);
       params.speed = frame.airspeed.toFixed(0);
       break;
+    case 'abort':
+      titleKey = frame.abort ? ABORT_PHASE_KEYS[frame.abort.phase] : 'hud.status.abort';
+      detailKey = 'phase.detail.abort';
+      params.alt = (frame.altitude / 1000).toFixed(1);
+      params.speed = frame.airspeed.toFixed(0);
+      params.g = frame.gLoad.toFixed(1);
+      break;
     case 'landed':
+      if (frame.abort) {
+        // the crew's descent module, down after an abort
+        titleKey = 'hud.abort.landed';
+        detailKey = 'phase.detail.abortLanded';
+        params.km = (frame.downrange / 1000).toFixed(1);
+        params.g = frame.abort.maxG.toFixed(1);
+        break;
+      }
       titleKey = 'hud.status.landed';
       detailKey = 'phase.detail.landed';
       params.lat = frame.lat.toFixed(2);

@@ -303,6 +303,13 @@ export const LES_JETTISON = 114.5;
  * fairing; the tower is jettisoned on its own motor, pulling ahead and off to
  * one side. Only the look: the abort itself is roadmap item G06.
  */
+/**
+ * Where the crewed fairing's lattice fins sit, as a fraction of its length:
+ * on the part that leaves in an abort, just above the service module
+ * (render/escape.ts cuts the head section there).
+ */
+export const FIN_CENTRE = 0.36;
+
 export class CrewedTop {
   readonly tower = new THREE.Group();
   readonly fins = new THREE.Group();
@@ -357,7 +364,7 @@ export class CrewedTop {
     for (let k = 0; k < 4; k++) {
       const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
       const fin = new THREE.Mesh(finGeo, finMat);
-      fin.position.set(Math.cos(a) * (fairingR + 0.08), fairingLength * 0.3, Math.sin(a) * (fairingR + 0.08));
+      fin.position.set(Math.cos(a) * (fairingR + 0.08), fairingLength * FIN_CENTRE, Math.sin(a) * (fairingR + 0.08));
       fin.rotation.y = -a + Math.PI / 2;
       this.fins.add(fin);
     }

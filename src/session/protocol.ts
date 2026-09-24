@@ -25,7 +25,9 @@ export type ToCore =
   /** Abandon a fast-forward in progress. */
   | { type: 'halt'; session: number }
   /** A live flight-control command, pinned into the recording as it is accepted. */
-  | { type: 'command'; session: number; command: RigidCommand };
+  | { type: 'command'; session: number; command: RigidCommand }
+  /** Fire the escape system (roadmap G06), pinned into the recording as it is accepted. */
+  | { type: 'abort'; session: number };
 
 /**
  * The part of a rotation telemetry record `AttitudeTrack.record` reads: the

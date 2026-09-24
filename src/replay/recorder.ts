@@ -301,6 +301,9 @@ export class FlightRecorder implements RecordingSource {
       case 'burn':
       case 'failed':
         return DENSE_INTERVAL;
+      case 'abort':
+        // An escape: dense in the air, sparse on a ballistic arc above it.
+        return altitude < ATMOSPHERIC_CEILING ? DENSE_INTERVAL : 10;
       case 'coast':
         if (altitude < ATMOSPHERIC_CEILING) return 2;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;

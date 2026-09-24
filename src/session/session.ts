@@ -44,6 +44,8 @@ export interface FlightSession {
   tick(): void;
   /** A live flight-control command; throws `RangeError` for one the runtime would refuse. */
   setRigidCommand(command: RigidCommand): void;
+  /** Fire a crewed launch's escape system now (roadmap G06); nothing when there is none to fire. */
+  commandAbort(): void;
   dispose(): void;
 }
 
@@ -89,6 +91,9 @@ export class InlineSession implements FlightSession {
   setRigidCommand(command: RigidCommand): void {
     this.sim.setRigidCommand(command);
     this.recorder.captureChangedState();
+  }
+  commandAbort(): void {
+    if (this.sim.commandAbort()) this.recorder.captureChangedState();
   }
   dispose(): void {
     this.target = null;
@@ -196,6 +201,10 @@ export class WorkerSession implements FlightSession {
     if (!this.sim.rigidRuntime || this.sim.isFailed()) return;
     validateRigidCommand(command);
     this.post({ type: 'command', session: this.session, command: { ...command, rates: { ...command.rates } } });
+  }
+  commandAbort(): void {
+    // the worker's flight decides whether there is an escape to fire
+    this.post({ type: 'abort', session: this.session });
   }
   dispose(): void {
     if (this.disposed) return;

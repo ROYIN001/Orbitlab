@@ -146,6 +146,8 @@ export interface VehicleSpec {
   payloadSSO?: number;
   /** Fairing, or null for an integrated payload bay (Starship) */
   fairing: FairingSpec | null;
+  /** The launch escape system a crewed launch carries (roadmap G06): Soyuz's tower and fairing motors. */
+  escapeSystem?: 'soyuz';
   /** Serial stages in burn order (stage[0] is the first stage) */
   stages: StageSpec[];
   /** Launch site ids this vehicle can fly from */
@@ -288,6 +290,14 @@ export type FailureMode =
   | 'prematureSep'
   | 'fairingStuck'
   | 'rangeSafety'
+  /** a commanded launch abort (a crewed Soyuz's escape system; nothing else has one) */
+  | 'launchAbort'
+  /** a fire on the pad before liftoff (Soyuz T-10-1, 1983) */
+  | 'padFire'
+  /** a strap-on striking the core as it separates (Soyuz MS-10, 2018) */
+  | 'boosterCollision'
+  /** a stage separation that half-fails, the next stage lighting still attached (Soyuz 18a, 1975) */
+  | 'stagingFailure'
   | 'random';
 
 export interface FailureConfig {

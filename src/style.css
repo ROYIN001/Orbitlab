@@ -383,6 +383,14 @@ details[open] summary { margin-bottom: 4px; }
 .tool-btn[aria-pressed='true'] { color: var(--accent); border-color: var(--accent-line); }
 .tool-btn[aria-pressed='false'] { color: #7c8b99; }
 
+/* G06: the Engineer mode's launch abort, shown on a crewed Soyuz */
+.ctl-btn.abort-btn {
+  width: auto; padding: 0 12px; font: 700 12px var(--display); letter-spacing: 1px; text-transform: uppercase;
+  color: #ffe4e4; background: #7a1f24; border: 1px solid #d9505a;
+}
+.ctl-btn.abort-btn:hover:not(:disabled) { background: #9b2830; }
+.ctl-btn.abort-btn:disabled { opacity: 0.45; }
+
 /* E01: the Frames menu, below the camera tools (src/ui/frames-menu.ts) */
 .frames-menu {
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
