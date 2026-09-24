@@ -130,7 +130,7 @@ describe('the recorded loop on a flying Falcon 9', () => {
     const on = new Simulation(mission(), { headless: true });
     while (on.state.t < 30) on.step(on.suggestedDt());
     expect(off.state.rigid!.attitudeLoop).toBeUndefined();
-    const withoutLoop = (key: string, value: unknown) => (key === 'attitudeLoop' ? undefined : value);
+    const withoutLoop = (key: string, value: unknown) => (key === 'attitudeLoop' || key === 'linearModel' ? undefined : value);
     expect(JSON.stringify([on.state.r, on.state.v, on.state.rigid, on.telemetry], withoutLoop))
       .toBe(JSON.stringify([off.state.r, off.state.v, off.state.rigid, off.telemetry], withoutLoop));
   });

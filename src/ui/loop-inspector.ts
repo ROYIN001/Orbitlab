@@ -15,6 +15,8 @@ import { drawChart, type Series } from './charts';
 import { fmtTime } from './hud';
 import { axisLetter, LOOP_AXES, loopHistory, loopView, triple, type LoopAxis, type LoopView, type Triple } from './loop-view';
 import { getNotation, onNotationChange, symbolNode, symbolText, type Quantity } from './notation';
+import { LoopAnalysis } from './loop-analysis';
+import type { TelemetrySample } from '../physics/sim/types';
 import './loop-inspector.css';
 
 export interface LoopInspectorHost {
@@ -27,6 +29,9 @@ export const AXIS_COLOR: Readonly<Record<LoopAxis, string>> = { roll: '#f2c14e',
 const RATE_SYMBOL: Readonly<Record<LoopAxis, Quantity>> = { roll: 'rollRate', pitch: 'pitchRate', yaw: 'yawRate' };
 const MOMENT_SYMBOL: Readonly<Record<LoopAxis, Quantity>> = { roll: 'rollMoment', pitch: 'pitchMoment', yaw: 'yawMoment' };
 const WINDOWS_S = [10, 30, 120] as const;
+type Tab = 'loop' | 'frequency' | 'step';
+const TABS: readonly Tab[] = ['loop', 'frequency', 'step'];
+const TAB_NAME: Readonly<Record<Tab, string>> = { loop: 'loop.tab.loop', frequency: 'loop.tab.frequency', step: 'loop.tab.step' };
 const AXIS_NAME: Readonly<Record<LoopAxis, string>> = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop.axis.yaw' };
 const REFRESH_MS = 200;
 const MINUS = '−';
@@ -86,11 +91,18 @@ export class LoopInspector {
   private none = el('p', 'li-none');
   private charts = { error: el('canvas'), rate: el('canvas'), moment: el('canvas'), actuators: el('canvas') };
   private axis: LoopAxis = 'pitch';
+  /** G04: the loop, its frequency response, or its step response. */
+  private tab: Tab = 'loop';
+  private tabButtons = new Map<Tab, HTMLButtonElement>();
+  private tabBar = el('div', 'li-tabs');
+  private loopPanel = el('div', 'li-loop');
+  private analysis = new LoopAnalysis();
   private windowS: number = 30;
   private opener: HTMLElement | null = null;
   private lastRender = -Infinity;
   private lastKey = '';
-  private args: { frame?: VisualFrame | null; frames: readonly VisualFrame[]; cursor: number; live: boolean; running: boolean } = { frames: [], cursor: 0, live: true, running: false };
+  private args: { frame?: VisualFrame | null; frames: readonly VisualFrame[]; cursor: number; live: boolean; running: boolean; samples: readonly TelemetrySample[] }
+    = { frames: [], cursor: 0, live: true, running: false, samples: [] };
   private drag: { dx: number; dy: number; id: number } | null = null;
 
   constructor(private host: LoopInspectorHost) {
@@ -119,7 +131,15 @@ export class LoopInspector {
     const diagram = el('div', 'li-diagram'); diagram.append(this.forward, this.feedback);
     const chartGrid = el('div', 'li-charts');
     for (const canvas of Object.values(this.charts)) chartGrid.append(canvas);
-    this.el.append(this.head, this.intro, this.legend, diagram, this.none, chartGrid);
+    this.loopPanel.append(this.intro, this.legend, diagram, this.none, chartGrid);
+    this.tabBar.setAttribute('role', 'tablist');
+    for (const tab of TABS) {
+      const b = el('button', 'li-tab'); b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.tab = tab;
+      b.addEventListener('click', () => { this.tab = tab; this.refresh(true); });
+      this.tabButtons.set(tab, b); this.tabBar.append(b);
+    }
+    this.analysis.setOnChange(() => this.refresh(true));
+    this.el.append(this.head, this.tabBar, this.loopPanel, this.analysis.frequencyPanel, this.analysis.stepPanel);
     this.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); this.close(); } });
     this.head.addEventListener('pointerdown', (e) => this.startDrag(e));
     this.head.addEventListener('pointermove', (e) => this.moveDrag(e));
@@ -147,15 +167,16 @@ export class LoopInspector {
   }
 
   /** Called every rendered frame while open; draws at most five times a second, and only on a change. */
-  update(frame: VisualFrame | null | undefined, frames: readonly VisualFrame[], cursor: number, live: boolean, running: boolean): void {
-    this.args = { frame, frames, cursor, live, running };
+  update(frame: VisualFrame | null | undefined, frames: readonly VisualFrame[], cursor: number, live: boolean, running: boolean,
+    samples: readonly TelemetrySample[] = []): void {
+    this.args = { frame, frames, cursor, live, running, samples };
     if (this.isOpen) this.refresh(false);
   }
 
   private refresh(force: boolean): void {
     const now = performance.now();
-    const { frame, frames, cursor, live, running } = this.args;
-    const key = `${cursor}|${live}|${running}|${frames.length}|${frame?.t}`;
+    const { frame, frames, cursor, live, running, samples } = this.args;
+    const key = `${cursor}|${live}|${running}|${frames.length}|${frame?.t}|${this.tab}|${samples.length}`;
     if (!force && (now - this.lastRender < REFRESH_MS || key === this.lastKey)) return;
     this.lastRender = now; this.lastKey = key;
     this.chrome();
@@ -167,6 +188,13 @@ export class LoopInspector {
     this.play.textContent = running ? '❚❚' : '▶';
     const playLabel = t(running ? 'ctl.pause' : 'ctl.play');
     this.play.title = playLabel; this.play.setAttribute('aria-label', playLabel);
+    for (const [tab, b] of this.tabButtons) b.setAttribute('aria-selected', String(tab === this.tab));
+    this.loopPanel.hidden = this.tab !== 'loop';
+    this.analysis.frequencyPanel.hidden = this.tab !== 'frequency';
+    this.analysis.stepPanel.hidden = this.tab !== 'step';
+    this.windowLabel.hidden = this.tab !== 'loop';
+    if (this.tab === 'frequency') { this.analysis.renderFrequency(this.axis, samples, cursor); return; }
+    if (this.tab === 'step') { this.analysis.renderStep(this.axis, samples, cursor); return; }
     this.diagram(view, frame);
     this.none.hidden = !!view;
     this.drawCharts(frames, cursor);
@@ -176,6 +204,7 @@ export class LoopInspector {
   private chrome(): void {
     const n = getNotation();
     this.eyebrow.textContent = t('loop.eyebrow');
+    for (const [tab, b] of this.tabButtons) b.textContent = t(TAB_NAME[tab]);
     this.titleEl.textContent = t('loop.title');
     this.head.title = t('loop.drag');
     this.intro.textContent = t('loop.intro', { standard: n === 'gost' ? 'ГОСТ 20058-80' : 'ISO 1151' });

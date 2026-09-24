@@ -1046,8 +1046,11 @@ export class Simulation {
       this.telemetryGeneration++;
     }
     const act = this.vehicle.active;
+    // G04: the sample carries the loop's latest linearisation (shared, immutable) while it is recent.
+    const rigid = cloneRigidTelemetry(s.rigid), linear = this.rigidRuntime?.latestLinear;
+    if (rigid && linear && s.t - linear.t <= 1.5) rigid.linearModel = linear;
     this.telemetry.push({
-      rigid: cloneRigidTelemetry(s.rigid),
+      rigid,
       t: s.t, alt: s.altitude, vInertial: s.speed, vAir: s.airspeed, q: s.q, mach: s.mach, gLoad: s.gLoad,
       mass: s.mass, thrust: s.thrust, throttle: s.throttle, pitch: s.pitchCmd,
       ap: isFinite(s.elements.apoapsisAlt) ? s.elements.apoapsisAlt : -1, pe: s.elements.periapsisAlt, inc: s.elements.i * RAD,

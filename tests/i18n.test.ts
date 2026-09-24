@@ -164,7 +164,6 @@ const RESERVED: Record<string, string> = {
   'u.kg': 'unit symbols are not wired to their call sites yet',
   'u.t': 'unit symbols are not wired to their call sites yet',
   'u.kN': 'unit symbols are not wired to their call sites yet',
-  'u.s': 'unit symbols are not wired to their call sites yet',
   'u.min': 'unit symbols are not wired to their call sites yet',
   'u.kPa': 'unit symbols are not wired to their call sites yet',
   'u.deg': 'unit symbols are not wired to their call sites yet',

@@ -373,6 +373,101 @@ against its start, worst through staging and the slews) and 0.14 % in point mass
 within 0.1 % in six-DOF; the thrust formula exactly; Euler's equations to about 0.1–0.2 % of the
 moments; quaternion kinematics to 10⁻⁴ or better.
 
+## 2f. The loop, linearised: frequency response, margins and step response (roadmap G04)
+
+Once a second of powered flight (every 5 s with the engines off) the flown vehicle's runtime
+linearises its attitude loop about the state at the start of that control step, one plane at a
+time (src/physics/rigid/linear.ts). The planes are roll (body x), pitch (the rotation about the
+simulator's z, which swings the nose along +y) and yaw (about y); each plane's state is
+
+- the rotation angle and rate about the axis;
+- in pitch and yaw, the lateral drift velocity along the axis the rotation swings the nose to;
+- with P05, each tank's slosh displacement and rate in that plane, and the first bending mode's
+  coordinate and rate.
+
+**The plant** is the flight's own equations of motion — the same derivative function the RK4
+integrator calls, with the aerodynamics, gravity, thrust, slosh and bending — differentiated
+numerically: one-sided differences about the step's state, the angle and rate perturbed by
+10⁻⁴ rad and rad/s, the drift by 10⁻⁴ of the speed, slosh by 1 mm and bending by 10⁻⁴. The input
+is the moment the actuators deliver about the axis: for engines, B comes from moving every
+engine the way the gimbal allocation does for ±ΔM (so a gimbal's side force on the drift and its
+excitation of the bending and slosh are in it); for the attitude thrusters, a pure moment. The
+outputs are what the IMU reads (angle and rate, plus the bending slope at its station) and the
+air's moment about the axis, which the autopilot feeds forward.
+
+**The loop** is closed as the autopilot runs it: sampled every T = 0.01 s with the moment held
+for the step (zero-order hold, exact through e^{AT}), the gimbals' first-order lag τ (the
+slowest engine's time constant), the demand M_d = I·K_ω(K_θ(θ_c − θ̂) − ω̂) through P05's notch
+(its biquad, exactly as flown) and the gimbals asked for M_d − (1 + x)·M_aero, where x is the
+**feed-forward error** the inspector sets (0 is exact; −100 % is no feed-forward). The loop gain
+L(e^{jωT}) is broken at the filtered demand, the feed-forward inside the plant; it is evaluated
+on 240 logarithmic frequencies from 0.01 rad/s to the Nyquist frequency, each an O(n²) solve on
+the plant in Hessenberg form.
+
+**Margins.** The phase margin is 180° + ∠L at the first 0 dB crossover ω_c; the gain margin is
+the smallest −|L| in dB where the phase crosses −180° above ω_c (at ω_g); the gain-reduction
+margin is the same below ω_c (a conditionally stable loop: the aerodynamically unstable airframe
+needs a minimum gain), within 40 dB. Stability is not read off the Bode plot but decided by the
+closed loop's eigenvalues (balanced, Hessenberg, shifted QR after EISPACK's hqr): the loop is
+stable when no mode grows faster than 0.001 s⁻¹. The lateral drift is neutral — nothing in the
+attitude loop restores it; guidance steers it out — so a mode at exactly zero is not counted.
+The loop's open-loop unstable poles are counted as well: with any, the Bode margins are read with
+Nyquist's count. On Falcon 9 there are two, a slow drift oscillation (0.006 s⁻¹, a 170 s period)
+left by the feed-forward's lag; they do not change the margins' meaning at the crossover.
+
+**The step response** is the closed loop's response to a 1° attitude step over 10 s: body and
+IMU angle, moment asked and delivered, rise time (10–90 %), overshoot, settling time (2 %).
+
+**Left out** (the inspector says so): the rate, angular-acceleration and gimbal-travel limits (a
+linear loop has none — a step large enough to meet them is slower in flight), the attitude
+thrusters while the engines steer, coupling between the planes, the load relief and guidance
+(the command is held), and what changes over the linearisation's second (mass, thrust, dynamic
+pressure). The record is shared by the telemetry samples of that second — never copied, never
+in a recorded frame — and leaves the golden fingerprints alone: every flight is the same bit
+for bit with it.
+
+**Checks** (tests/linear-loop.test.ts):
+
+- A PD autopilot on a double integrator: the phase margin equals the textbook
+  arctan(ω_c/K_θ) − arctan(τω_c) − ω_cT/2 to 0.3°, and the gain margin is where the closed loop's
+  eigenvalues leave the unit circle (±3 %). Without the feed-forward, an unstable airframe
+  (M_α/I = 0.5 s⁻²) goes unstable where the gain falls below M_α/(I·K_ωK_θ).
+- On Falcon 9's own models, the Bode gain margin is where the eigenvalues cross (±5 %), and the
+  Hessenberg loop gain equals a dense complex solve to 10⁻⁹.
+- **Against the nonlinear flight.** Flown with P05's bending and no notch, the model at T+1 s
+  says the loop is unstable at 7.70 rad/s, growing at 2.86 s⁻¹ (a damping ratio of −0.35). The
+  flight's bending coordinate oscillates at 7.66 rad/s over T+1–2.5 s and its envelope grows at
+  2.4 s⁻¹ from T+0.5 s to T+2 s, before the gimbals saturate (−0.30); the stack breaks up at
+  T+7.1 s. (§2b's −0.22 was a first estimate from the loop gain at resonance.)
+
+**What it shows on Falcon 9** (crosswind, T+62 s, max-q):
+
+- Rigid, pitch: stable, phase margin 46° at 3.1 rad/s (0.49 Hz), gain margin 35.5 dB at
+  41.6 rad/s; a 1° step rises in 0.84 s with 6 % overshoot and settles in 2.5 s.
+- **The margins hardly move over the flight.** The feed-forward takes the air's moment out, and
+  the controller's I·K_ω cancels the inertia, so the loop is the gains' double integrator behind
+  the gimbals' lag and the hold: a phase margin of 46.2° at 3.1 rad/s on the gimbals from
+  lift-off to orbit (the textbook value above, with τ = 0.1 s), 64.6° on the thrusters (roll after
+  staging, no lag). Between main-engine cut-off and separation nothing steers the stack, and the
+  inspector says there is no loop rather than an unstable one.
+- **The feed-forward at max-q.** Falcon 9's aerodynamic instability, M_α/I ≈ 0.24 s⁻², is small
+  against the loop's K_ωK_θ = 4.5 s⁻². Without the feed-forward (−100 %) the phase margin
+  rises to 52° — the feed-forward also cancels the air's pitch damping — while a gain-reduction
+  margin of −24.5 dB appears and the attitude settles off the command; at +50 % the phase margin
+  falls to 43°.
+- With all of P05 (slosh, bending, the notch and the slower flexible-vehicle gains): stable,
+  phase margin 45° at 2.2 rad/s, but a gain margin of only 3.0 dB at 8.3 rad/s — between the
+  slosh (4.8 rad/s, 0.76 Hz) and the notched bending mode (11.9 rad/s, 1.89 Hz at T+62 s) —
+  against the customary 6 dB; a gain-reduction margin of −32 dB. A 1° step rises in 1.35 s with
+  4–5 % overshoot, the IMU showing the bending.
+- Bending without the notch: unstable from lift-off, as above, the phase margin −153°.
+
+**Cost.** Linearising the three planes takes 17 evaluations of the equations of motion (37 with
+P05's states) and the margins 720 loop-gain points and six small eigenvalue problems. With the G03
+record, over the first 150 s: +6 % CPU on Falcon 9, +7 % on Proton-M, +22 % on Proton-M with P05
+(eight sloshing tanks). A 25-minute flight to orbit keeps some 460 models, 0.8 MB (2 MB with
+P05).
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

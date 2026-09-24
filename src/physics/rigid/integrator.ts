@@ -67,6 +67,9 @@ function derivative(t: number, s: RigidState, model: RigidModelFn): RigidState {
     omegaBody: omegaDot, attitudeQ: { w: qDot.w / 2, x: qDot.x / 2, y: qDot.y / 2, z: qDot.z / 2 } };
 }
 
+/** The full state derivative the integrator evaluates, for the attitude loop's linearisation (roadmap G04). */
+export function rigidDerivative(t: number, s: RigidState, model: RigidModelFn): RigidState { return derivative(t, s, model); }
+
 /** Coupled classic RK4. No hidden gravity, rotation constraints, control torques or
  * event handling. Quaternion projection occurs only after the accepted step;
  * pre-projection norm is returned so a caller can detect an inadequate timestep.

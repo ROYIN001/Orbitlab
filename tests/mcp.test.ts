@@ -317,6 +317,25 @@ describe('read_flight_state', () => {
     expect(loop.unmetSignificant).toBe(false);
   });
 
+  it('reports the linearised loop\'s margins at the cursor, per plane (roadmap G04)', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).loopMargins).toBeNull();
+    const plane = (axis: 'x' | 'y' | 'z') => ({ axis, n: 2, states: ['angle', 'rate'], actuator: axis === 'x' ? 'jets' : 'engines' });
+    const margin = (pm: number) => ({ active: true, stable: true, growthRate: -0.5, growthFrequency: 2, pmDeg: pm, wcRadS: 3, gmDb: 30, wgRadS: 40, openLoopUnstable: 0 });
+    const linearModel = { t: 1, T: 0.01, planes: { x: plane('x'), y: plane('y'), z: plane('z') }, margins: { x: margin(60), y: margin(45), z: margin(47) } };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), linearModel };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).loopMargins;
+    // Pitch is the simulator's z plane, yaw its y.
+    expect(out).toMatchObject({ linearisedAtS: 1, controlStepS: 0.01, roll: { actuator: 'jets', phaseMarginDeg: 60 },
+      pitch: { phaseMarginDeg: 47, gainMarginDb: 30, lowGainMarginDb: null, stable: true }, yaw: { phaseMarginDeg: 45 } });
+    host.player.cursor = 0.5;
+    expect((tool(tools, 'read_flight_state').execute({}) as any).loopMargins).toBeNull();
+  });
+
   it('is a safe no-op with no mission configured', () => {
     const out = tool(tools, 'read_flight_state').execute({}) as { hasMission: boolean };
     expect(out.hasMission).toBe(false);

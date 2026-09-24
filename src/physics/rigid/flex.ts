@@ -327,6 +327,15 @@ export class FlexBody {
       attitudeGain: v3(gains.attitudeGain.x, cap(gains.attitudeGain.y, rate / 2), cap(gains.attitudeGain.z, rate / 2)) };
   }
 
+  /** G04: this step's flexible state layout, the IMU's view of the bending, and the notch, for the linearised loop. */
+  linearContext(): { tanks: string[]; bending: boolean; imuSlope: number; notch?: Biquad } {
+    const c = this.context;
+    if (!c) return { tanks: [], bending: false, imuSlope: 0 };
+    return { tanks: c.tanks.map((tank) => tank.id), bending: c.dynamicBending,
+      imuSlope: this.options.bending && c.mode ? modeSlope(c.mode, c.imuX) : 0,
+      ...(this.options.notch && this.notchFilter ? { notch: { ...this.notchFilter } } : {}) };
+  }
+
   /** The notch on the pitch and yaw torque the autopilot asks for. */
   filterMoment(moment: Vec3): Vec3 {
     const filter = this.notchFilter;

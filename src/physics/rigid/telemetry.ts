@@ -5,6 +5,7 @@ import { lerp } from '../vec3';
 import type { WindScenario } from './aero';
 import type { FlexTelemetry } from './flex';
 import { cloneAttitudeLoop, type AttitudeLoopTelemetry } from './loop';
+import type { LinearModel } from './linear';
 
 /** Commands are inputs to finite actuators, never a replacement for body state. */
 export interface RigidCommand {
@@ -57,6 +58,11 @@ export interface RigidTelemetry {
   flex?: FlexTelemetry;
   /** The attitude loop's decisions at this step (roadmap G03); the flown vehicle only. */
   attitudeLoop?: AttitudeLoopTelemetry;
+  /**
+   * The loop linearised about a recent step, with its margins (roadmap G04). On
+   * telemetry samples only, and shared, never copied: nothing writes to it.
+   */
+  linearModel?: LinearModel;
 }
 
 export function cloneWindProfile(value: WindScenario | undefined): WindScenario | undefined {

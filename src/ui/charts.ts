@@ -31,6 +31,8 @@ export interface ChartOptions {
   timeAxis?: boolean;
   /** Spoken names when the visual legend uses short symbols such as v_air. */
   seriesLabels?: readonly string[];
+  /** Tick label of the x axis (a log axis plots log₁₀ x and labels 10^x; the G04 Bode plot). */
+  xFormat?: (x: number) => string;
 }
 
 export interface ChartSeriesSummary {
@@ -135,7 +137,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   if (opt.yMin === undefined || yMin < opt.yMin) yMin -= pad;
   const sx = (x: number) => padL + ((x - xMin) / (xMax - xMin)) * pw;
   const sy = (y: number) => padT + (1 - (y - yMin) / (yMax - yMin)) * ph;
-  const fmtX = opt.timeAxis ? fmtClock : fmt;
+  const fmtX = opt.xFormat ?? (opt.timeAxis ? fmtClock : fmt);
   // grid
   g.strokeStyle = GRID;
   g.lineWidth = 1;

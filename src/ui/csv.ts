@@ -16,6 +16,7 @@
 import type { Simulation } from '../physics/simulation';
 import { chronologicalEvents } from '../physics/events';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
+import { PLANE_OF } from '../physics/rigid/linear';
 import { aeroAngles, bodyRates, getNotation, type Notation } from './notation';
 import { LOOP_AXES, loopLimiterNames, loopView, triple } from './loop-view';
 
@@ -100,6 +101,19 @@ function flexColumns(value: RigidTelemetry | undefined): string[] {
   });
 }
 
+// --- G04: the linearised loop's margins, per plane, from the latest linearisation (once a second)
+const MARGIN_FIELDS = ['stable', 'growth_per_s', 'pm_deg', 'crossover_rad_s', 'gm_db', 'gm_rad_s', 'gm_low_db'] as const;
+const MARGIN_COLUMNS = ['loop_linearised_t_s', ...LOOP_AXES.flatMap(axis => MARGIN_FIELDS.map(field => `loop_${axis}_${field}`))];
+function marginColumns(value: RigidTelemetry | undefined): string[] {
+  const model = value?.linearModel;
+  if (!model) return MARGIN_COLUMNS.map(() => '');
+  const entries: (string | number | boolean)[] = [model.t, ...LOOP_AXES.flatMap((axis) => {
+    const m = model.margins[PLANE_OF[axis]];
+    return [m.active ? m.stable : '', m.growthRate, m.pmDeg ?? '', m.wcRadS ?? '', m.gmDb ?? '', m.wgRadS ?? '', m.gmLowDb ?? ''];
+  })];
+  return entries.map(entry => typeof entry === 'number' ? (Number.isFinite(entry) ? (Number.isInteger(entry) ? String(entry) : entry.toPrecision(6)) : '') : String(entry));
+}
+
 /** Telemetry samples plus the event log, as CSV text (no trailing newline). */
 export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>): string {
   const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
@@ -111,6 +125,8 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
   if (hasLoop) cols.push(...loopColumnNames(notation));
   const hasFlex = sim.telemetry.some(sample => !!sample.rigid?.flex);
   if (hasFlex) cols.push(...FLEX_COLUMNS);
+  const hasMargins = sim.telemetry.some(sample => !!sample.rigid?.linearModel);
+  if (hasMargins) cols.push(...MARGIN_COLUMNS);
   const lines = [cols.join(',')];
   for (const s of sim.telemetry) {
     const row = [s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase].map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v)));
@@ -118,6 +134,7 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
     if (hasRigid) row.push(...notationColumns(s.rigid, notation));
     if (hasLoop) row.push(...loopColumns(s.rigid, notation));
     if (hasFlex) row.push(...flexColumns(s.rigid));
+    if (hasMargins) row.push(...marginColumns(s.rigid));
     lines.push(row.join(','));
   }
   lines.push('');

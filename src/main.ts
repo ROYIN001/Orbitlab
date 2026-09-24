@@ -981,7 +981,7 @@ class App {
     }
     if (this.loopInspector.isOpen) {
       this.loopInspector.update(this.shown, this.recorder.frames, this.player.cursor, this.player.live,
-        this.player.live ? this.playing : this.player.playing);
+        this.player.live ? this.playing : this.player.playing, this.simView?.sim.telemetry ?? []);
     }
     requestAnimationFrame((n) => this.frame(n));
   }

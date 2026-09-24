@@ -8,7 +8,8 @@ import { allocateEngineGimbals, allocateRcs, createEngineStates, engineWrench, s
 import { aerodynamicWrench, staticAeroMoment, windVelocityECI, type WindScenario } from './aero';
 import { attitudeControl, rateControl, type ControlDemand, type ControlGains, type ControlTrace } from './control';
 import { encodeLoopLimits, type AttitudeLoopTelemetry } from './loop';
-import { integrateRigidStep, type RigidState } from './integrator';
+import { linearise, type LinearModel } from './linear';
+import { integrateRigidStep, rigidDerivative, type RigidState } from './integrator';
 import { matVecMul, quatFromBasis, quatInverseRotate, quatRotate, type Mat3, type Quat } from './math';
 import type { RigidVehicleSnapshot } from './mass';
 import { RIGID_MODEL_VERSION } from './config';
@@ -17,6 +18,8 @@ import { FlexBody, type FlexOptions } from './flex';
 import { cloneWindProfile, type RigidCommand, type RigidTelemetry } from './telemetry';
 
 export type SnapshotProvider = (elapsed: number, consumed: Readonly<Record<string, number>>) => RigidVehicleSnapshot;
+/** A side-effect-free evaluation of a step's model (G04's linearisation). */
+interface LinearProbe { engineStates?: unknown; extraMomentBody?: Vec3 }
 export interface RigidRuntimeOptions {
   /** Internal RK step only; command/actuator/RCS cadence remains the outer step. */
   integrationStepS?: number;
@@ -97,6 +100,9 @@ export class RigidRuntime {
   readonly flex?: FlexBody;
   /** Whether `step` records the attitude loop (roadmap G03). */
   readonly recordLoop: boolean;
+  /** The attitude loop linearised about a recent step (roadmap G04), and when it is next due. */
+  latestLinear?: LinearModel;
+  private nextLinearAt = -Infinity;
   snapshot?: RigidVehicleSnapshot;
   constructor(config: DynamicsConfig, readonly bodyId = 'vehicle', options: RigidRuntimeOptions = {}) {
     this.wind = windScenario(config);
@@ -365,23 +371,25 @@ export class RigidRuntime {
       return pointExitFlowMoment(derivative, omega, exits);
     };
     let nonGrav = v3(), accelerationsStart: RigidAccelerations | undefined;
-    const model = (at: number, trial: Readonly<RigidState>) => {
+    // `probe` (G04's linearisation only): other engine states, or an extra pure moment, and no side effects.
+    const model = (at: number, trial: Readonly<RigidState>, probe?: LinearProbe) => {
       const elapsed = Math.max(0, Math.min(dt, at - time));
       const snapshot = snapshotAt(elapsed);
-      const engine = engineWrench(this.specs(snapshot), statesAt(elapsed), snapshot.cg);
+      const engine = engineWrench(this.specs(snapshot), (probe?.engineStates as EngineActuatorState[] | undefined) ?? statesAt(elapsed), snapshot.cg);
       // RCS duty and actual impulse are held for the control interval; update
       // moment about the trial CG without changing the reservoir a second time.
-      const rcsMoment = add(rcs.wrench.momentBody, cross(sub(start.cg, snapshot.cg), rcs.wrench.forceBody));
+      const rcsHeld = add(rcs.wrench.momentBody, cross(sub(start.cg, snapshot.cg), rcs.wrench.forceBody));
+      const rcsMoment = probe?.extraMomentBody ? add(rcsHeld, probe.extraMomentBody) : rcsHeld;
       const aero = this.environment(trial, at, snapshot);
       if (trial.flex) {
         const gravityECI = gravityJ2(trial.r);
         const result = flex!.loads({ snapshot, attitudeQ: trial.attitudeQ, omegaBody: trial.omegaBody, flex: trial.flex, engine,
           enginePositions: this.specs(snapshot).map(spec => spec.positionBody), rcsJets: jets, rcsDuties: rcs.duties,
           rcsForceBody: rcs.wrench.forceBody, rcsMomentBody: rcsMoment, aeroForceBody: aero.forceBody, aeroMomentBody: aero.momentBody,
-          gravityECI, flowMomentBody: flowMoment(elapsed, snapshot, trial.omegaBody) }, !accelerationsStart);
+          gravityECI, flowMomentBody: flowMoment(elapsed, snapshot, trial.omegaBody) }, !accelerationsStart && !probe);
         const forceECI = quatRotate(trial.attitudeQ, result.forceBody);
-        nonGrav = scale(forceECI, 1 / snapshot.mass);
-        if (!accelerationsStart) accelerationsStart = {
+        if (!probe) nonGrav = scale(forceECI, 1 / snapshot.mass);
+        if (!accelerationsStart && !probe) accelerationsStart = {
           propulsionECI: scale(quatRotate(trial.attitudeQ, sub(result.forceBody, aero.forceBody)), 1 / snapshot.mass),
           aerodynamicECI: scale(quatRotate(trial.attitudeQ, aero.forceBody), 1 / snapshot.mass), gravityECI,
         };
@@ -389,9 +397,9 @@ export class RigidRuntime {
           flex: { accelerationECI: result.accelerationECI, omegaDotBody: result.omegaDotBody, rates: result.rates } };
       }
       const forceECI = quatRotate(trial.attitudeQ, add(add(engine.forceBody, rcs.wrench.forceBody), aero.forceBody));
-      nonGrav = scale(forceECI, 1 / snapshot.mass);
+      if (!probe) nonGrav = scale(forceECI, 1 / snapshot.mass);
       const gravityECI = gravityJ2(trial.r);
-      if (!accelerationsStart) accelerationsStart = {
+      if (!accelerationsStart && !probe) accelerationsStart = {
         propulsionECI: scale(quatRotate(trial.attitudeQ, add(engine.forceBody, rcs.wrench.forceBody)), 1 / snapshot.mass),
         aerodynamicECI: scale(quatRotate(trial.attitudeQ, aero.forceBody), 1 / snapshot.mass), gravityECI,
       };
@@ -429,6 +437,31 @@ export class RigidRuntime {
     this.snapshot = end;
     const remainingTorque = sub(residual, rcs.wrench.momentBody);
     const saturated = demand.saturated || norm(remainingTorque) > Math.max(1, norm(demand.momentBody) * 0.05);
+    // G04: the loop linearised about this step's start, every second (every 5 s with the engines off).
+    if (trace && dt > 0 && time + 1e-9 >= this.nextLinearAt) {
+      const every = specs.some(engine => engine.maxThrust > 0) ? 1 : 5;
+      this.nextLinearAt = (Math.floor(time / every + 1e-9) + 1) * every;
+      try {
+        const flexContext = flex?.linearContext() ?? { tanks: [], bending: false, imuSlope: 0 };
+        const requested = sub(demand.momentBody, aeroStart.momentBody), throttles = specs.map(e => e.maxThrust > 0 ? 1 : 0);
+        const baseMoment = engineWrench(specs, states, start.cg).momentBody;
+        const axisOf = { x: v3(1, 0, 0), y: v3(0, 1, 0), z: v3(0, 0, 1) } as const;
+        this.latestLinear = linearise({ time, T: dt, state: initial, hasJets: jets.length > 0,
+          derivative: (trial, probe) => rigidDerivative(time, trial, (at, s) => model(at, s, probe ?? {})),
+          aeroMoment: (trial) => this.environment(trial, time, start).momentBody,
+          engineProbe: (axis, dM) => {
+            if (!specs.some(e => e.maxThrust > 0 && e.gimbalAxesBody.length > 0)) return null;
+            const moved = allocateEngineGimbals(specs, throttles, add(requested, scale(axisOf[axis], dM)), start.cg);
+            const engineStates = states.map((state, i) => ({ ...state, deflections: state.deflections.map((d, j) =>
+              d + (moved.commands[i].deflections[j] ?? 0) - (allocation.commands[i].deflections[j] ?? 0)) }));
+            return { engineStates, momentChange: dot(sub(engineWrench(specs, engineStates, start.cg).momentBody, baseMoment), axisOf[axis]) };
+          },
+          tanks: flexContext.tanks, bending: flexContext.bending, imuSlope: flexContext.imuSlope,
+          tau: specs.reduce((m, e) => (e.maxThrust > 0 && e.gimbalAxesBody.length > 0 ? Math.max(m, e.timeConstantS) : m), 0),
+          inertia: v3(start.inertia[0], start.inertia[4], start.inertia[8]), kTheta: gains.attitudeGain, kOmega: gains.rateGain,
+          ...(flexContext.notch ? { notch: flexContext.notch } : {}) });
+      } catch { /* a record only: never let the analysis stop a flight */ }
+    }
     const loop = trace ? this.loopRecord(trace, { target, demand, unfilteredMoment, sensedOmega: sensed.omegaBody,
       gains, aeroMoment: aeroStart.momentBody, engineMoment: engineActual.momentBody, rcsMoment: rcs.wrench.momentBody,
       gasLimited, gimbalLimited: allocation.saturated, rcsLimited: rcsAllocation.saturated, specs, engineStates: actualStates, rcsDuties: rcs.duties }) : undefined;

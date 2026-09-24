@@ -31,6 +31,11 @@ here; this file records progress for the owner to fold in at the merge.
   pressure and vis-viva in the Engineer mode** with gravity (J2), α/β, Euler, quaternion
   kinematics and the control law; **balance checks**, with the equation terms recorded per step
   and flights bit for bit as before.
+- G04 (asked 2026-09-24): **tabs in G03's window** — Loop | Frequency response | Step response;
+  the linear model **with P05's bending, slosh, IMU and notch**, plus a **feed-forward error
+  ±X %** setting; a **chart of the margins over the flight**, from linearisations recorded as the
+  flight goes and flights bit for bit as before; the **step response from the linear model
+  only** (a step injected into the flight belongs to E04).
 
 ## Progress
 
@@ -40,7 +45,7 @@ here; this file records progress for the owner to fold in at the merge.
 | U07 ГОСТ 20058-80 notation | done 2026-09-24 (see below) |
 | G03 attitude-loop inspector | done 2026-09-24 (see below) |
 | E02 live equations panel | done 2026-09-24 (see below) |
-| G04 Bode, step response, margins | |
+| G04 Bode, step response, margins | done 2026-09-24 (see below) |
 | E04 controller tuning mode | |
 | G02 inertial navigation and Kalman filter | |
 | G08 control-system failures | |
@@ -240,3 +245,72 @@ record copied with every frame).
 **Results (2026-09-24)**: `npm test` 67 files / 956 tests pass (10 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged (3 min); typecheck passes.
 
+### G04 — frequency response, margins and step response
+
+Physics, checks and findings in [../PHYSICS.md](../PHYSICS.md) §2f, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §11.
+
+- **The linearisation** (`src/physics/rigid/linear.ts`): per plane (roll, pitch, yaw), the
+  flight's own derivative function differentiated numerically about the step's state — angle,
+  rate, lateral drift, and with P05 each tank's slosh and the bending mode — with the delivered
+  moment as input (B from the gimbal allocation's own engine moves, or a pure thruster moment),
+  the IMU's readings (with the bending slope) and the air's moment as outputs. Sampled with a
+  zero-order hold through the gimbal lag, closed through P05's notch biquad and the feed-forward
+  (with its error), margins from a Hessenberg-form loop gain on 240 frequencies, stability from
+  the closed loop's eigenvalues (balanced shifted QR), the step response by stepping the
+  discrete closed loop.
+- **Cadence — a departure from "every step"**: the plan said the linear parameters would be
+  recorded every step. They are recorded **once a second of powered flight and every 5 s with
+  the engines off**: a linearisation costs 17–37 evaluations of the equations of motion and 720
+  loop-gain points, so at every 0.01 s control step a flight would run about ten times slower.
+  The chart of the margins over the flight has a 1 s resolution. For the owner to confirm or
+  change.
+- **The record**: `RigidRuntime.latestLinear` (built only where `recordLoop` is on, so for the
+  flown vehicle only), attached by `Simulation.sample()` to the telemetry samples of that second
+  as `RigidTelemetry.linearModel` — one shared, immutable object, never copied, not in recorded
+  frames. The golden harness and the G03 "same flight" test leave it out with `attitudeLoop`;
+  the flights are bit for bit as before (the whole-mission fingerprints below).
+- **The tabs** (`src/ui/loop-analysis.ts`, `loop-inspector.ts`, `.css`): Loop | Frequency
+  response | Step response in G03's window; Bode magnitude and phase on a log axis with ω_c and
+  ω_g marked and the phase drawn with the crossover's phase in (−360°, 0°]; the verdict, margins
+  and model; PM and GM over the flight with red lines where unstable; the 1° step (angle, IMU,
+  moment asked and delivered) with rise, overshoot and settling; the feed-forward error slider
+  (−100 % to +100 %, both tabs). `drawChart` takes an optional x-tick formatter.
+- **Also**: CSV columns `loop_linearised_t_s` and per plane `loop_{roll,pitch,yaw}_{stable,
+  growth_per_s, pm_deg, crossover_rad_s, gm_db, gm_rad_s, gm_low_db}`; `read_flight_state.loopMargins`
+  (per plane, at the cursor); units in the tabs from the dictionaries (`u.s` now has a call site
+  and left the i18n test's reserved list).
+- **What it found**: Falcon 9 rigid at max-q has a textbook loop (PM 46° at 0.49 Hz, GM 35 dB),
+  and the margins **hardly move over the flight** — the feed-forward removes the air's moment,
+  so they are set by the gains, the gimbal lag and the hold (46.2° on the gimbals, 64.6° on the
+  thrusters). The feed-forward matters little: M_α/I ≈ 0.24 s⁻² against K_ωK_θ = 4.5 s⁻²;
+  without it the PM rises to 52° (it also cancels the air's damping) and a −24.5 dB
+  gain-reduction margin appears. With all of P05 the loop is stable but its **gain margin is
+  only 3 dB** at 8.3 rad/s, between the slosh (4.8 rad/s) and the notched bending mode
+  (11.9 rad/s) — short of the customary 6 dB; worth a look in E04 (tuning). Without the notch
+  the linear model predicts the divergence the flight shows: 7.70 against 7.66 rad/s, a growth
+  of 2.86 against about 2.4 s⁻¹ (§2b's damping estimate of −0.22 is nearer −0.3).
+- **Cost**: +6 % CPU on Falcon 9, +7 % on Proton-M, +22 % on Proton-M with P05 (with the G03
+  record, first 150 s, medians of three); some 460 models on a flight to orbit, 0.8 MB (2 MB
+  with P05).
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- G04 ---`), `src/physics/simulation.ts` (two lines in `sample()`), `src/mcp.ts`
+(`loopMargins` in `read_flight_state`, and its helper), `src/main.ts` (the telemetry passed to
+the inspector). RigidRuntime (`runtime.ts`): an optional probe argument to its internal model
+function, the `latestLinear` field and the linearisation behind `recordLoop`, all pure
+evaluations — absent `recordLoop`, the code path is what it was; `integrator.ts` exports
+`rigidDerivative`; `flex.ts` a read-only `linearContext()`; `telemetry.ts` the optional field.
+
+**Tests**: tests/linear-loop.test.ts (expm and the eigenvalues, also of a badly scaled matrix;
+a PD loop on a double integrator against the textbook phase margin, its gain margin against the
+eigenvalues, its step response, and an unstable airframe without the feed-forward; Falcon 9's
+models once a second, in the telemetry and not the frames, with the right states per plane,
+rigid and P05 margins at max-q, Bode gain margins against the eigenvalues, the Hessenberg solve
+against a dense one, the feed-forward error, roll on the thrusters after staging, the CSV
+columns; the model against the nonlinear flight without the notch), a block in
+tests/mcp.test.ts.
+
+
+**Results (2026-09-24)**: `npm test` 68 files / 973 tests pass (12 min); the whole-mission
+fingerprints of tests/heavy/flex-golden.test.ts pass unchanged (3.5 min); typecheck passes.

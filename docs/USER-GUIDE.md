@@ -285,6 +285,32 @@ with J2, the angles of attack and sideslip, Euler's rotation equations, quaterni
 the attitude autopilot. An equation with nothing to act on (no air, engines off, a coast
 propagated analytically) says so. Details in PHYSICS.md §2e.
 
+## 11. Frequency response, margins and step response (Engineer mode)
+
+The attitude-loop inspector (§9) has three tabs: **Loop** (the block diagram), **Frequency
+response** and **Step response**. The last two analyse the loop linearised about the flight's
+state — once a second while the engines burn, every 5 s with them off — for the axis picked in
+the title bar, at the instant on screen (the header says when the model was taken).
+
+- **Frequency response**: the Bode plot of the loop gain |L| and its phase against ω on a
+  logarithmic axis, with the 0 dB and −180° lines, ω_c (where |L| crosses 0 dB) and ω_g (where
+  the phase crosses −180°) marked. Beside it a verdict — green when the closed loop is stable,
+  red when it is not, with its least damped mode — then the phase margin, the gain margin, the
+  gain-reduction margin when the loop has one, the number of unstable open-loop poles, and the
+  model (its states, the actuator, the gimbal lag and the gains). The chart below charts the
+  phase and gain margins over the flight so far, with a red line wherever the loop was unstable.
+- **Step response**: the linear loop's answer to a 1° attitude step over 10 s — the command, the
+  body's angle and, with P05's bending, what the IMU reads; the moment asked and delivered —
+  with the rise time, overshoot, settling time and the angle after 10 s.
+- **Feed-forward error** (both tabs): the autopilot feeds forward the air's moment; the slider
+  makes that estimate wrong by −100 % (none) to +100 % (double) and redraws the plot, the margins
+  and the step, to show how much the loop leans on it.
+
+The linear loop has no rate, acceleration or gimbal limits, so a large step in flight is slower
+than the chart. Details and checks against the nonlinear flight in PHYSICS.md §2f. The CSV adds
+each plane's margins (`loop_pitch_pm_deg`, `loop_pitch_gm_db`, …) and `read_flight_state` a
+`loopMargins` summary.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

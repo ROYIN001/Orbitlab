@@ -5,9 +5,10 @@
  * second of state and six-DOF telemetry, the recorded telemetry and the event
  * log hash to the same value, bit for bit.
  *
- * The attitude loop's record (roadmap G03, `attitudeLoop`) came later and is
- * left out of the fingerprint: it only reads the loop, so with it left out the
- * flight must still hash as it did at 7834edd.
+ * The attitude loop's record (roadmap G03, `attitudeLoop`) and its
+ * linearisation (G04, `linearModel`) came later and are left out of the
+ * fingerprint: they only read the loop, so with them left out the flight must
+ * still hash as it did at 7834edd.
  */
 import { Simulation } from '../src/physics/simulation';
 import { vehicleById } from '../src/data/vehicles';
@@ -28,7 +29,7 @@ export async function flightFingerprint(flight: (typeof GOLDEN_FLIGHTS)[number],
     launchTime: LAUNCH_TIME, guidance: guidanceForVehicle(vehicleById(flight.vehicle), DEFAULT_GUIDANCE, 'sixDof'), guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, dynamics }, { headless: true });
   const parts: string[] = [];
-  const withoutLoop = (key: string, value: unknown) => (key === 'attitudeLoop' ? undefined : value);
+  const withoutLoop = (key: string, value: unknown) => (key === 'attitudeLoop' || key === 'linearModel' ? undefined : value);
   let next = -10;
   while (!sim.done && sim.state.t < until) {
     sim.step(sim.suggestedDt());

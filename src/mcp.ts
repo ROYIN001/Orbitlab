@@ -39,6 +39,7 @@ import { cloneRigidTelemetry } from './physics/rigid/telemetry';
 import { FLEX_LIMITS } from './physics/rigid/flex';
 import { aeroAngles, bodyRates, getNotation, simulatorRates } from './ui/notation';
 import { loopLimiterNames, loopView } from './ui/loop-view';
+import { linearModelAt, PLANE_OF, type LinearModel } from './physics/rigid/linear';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
 
 /** configure_mission's `flex` fields (roadmap P05). */
@@ -517,6 +518,18 @@ function attitudeLoopSummary(rigid: RigidTelemetry): Record<string, unknown> | n
   };
 }
 
+/** The loop's stability margins per plane (roadmap G04), from the latest linearisation at or before the cursor. */
+function loopMarginsSummary(model: LinearModel | undefined): Record<string, unknown> | null {
+  if (!model) return null;
+  const plane = (axis: keyof typeof PLANE_OF) => {
+    const m = model.margins[PLANE_OF[axis]], p = model.planes[PLANE_OF[axis]];
+    return { actuator: p.actuator, states: p.states, stable: m.active ? m.stable : null, leastDampedGrowthPerS: m.growthRate, leastDampedRadS: m.growthFrequency,
+      phaseMarginDeg: m.pmDeg ?? null, crossoverRadS: m.wcRadS ?? null, gainMarginDb: m.gmDb ?? null, gainMarginRadS: m.wgRadS ?? null,
+      lowGainMarginDb: m.gmLowDb ?? null, openLoopUnstablePoles: m.openLoopUnstable };
+  };
+  return { linearisedAtS: model.t, controlStepS: model.T, roll: plane('roll'), pitch: plane('pitch'), yaw: plane('yaw') };
+}
+
 function eventOut(e: SimEvent): Record<string, unknown> {
   return { timeS: e.t, key: e.key, severity: e.severity, params: e.params ?? {} };
 }
@@ -622,6 +635,8 @@ function toolReadFlightState(host: McpAppHost): WebMcpTool {
         site: { id: host.sim.site.id, name: host.sim.site.name },
         satellite: { id: host.sim.satellite.id, name: host.sim.satellite.name },
         frame: frameSummary(frame, host.sim.vehicleSpec),
+        // G04: the linearised attitude loop's margins at the cursor (6-DOF only).
+        loopMargins: loopMarginsSummary(linearModelAt(host.sim.telemetry, cursor)),
         lastEvent: last ? eventOut(last) : null,
         nextEvent: next ? eventOut(next) : null,
       };
