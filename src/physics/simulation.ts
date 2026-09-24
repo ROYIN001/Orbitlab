@@ -1214,12 +1214,13 @@ export class Simulation {
   }
 
   /**
-   * G08: with the failures layer, a launcher that has lost control breaks up under the air's
-   * lateral load, q·α past BREAKUP_Q_ALPHA_KPA_DEG.
+   * A six-DOF launcher that has lost control on the ascent breaks up under the air's lateral load,
+   * q·α past BREAKUP_Q_ALPHA_KPA_DEG (G08; every six-DOF ascent since G05's Q0). A re-entry is
+   * flown at a large angle of attack on purpose and is not judged by it.
    */
   private checkAeroBreakup(q: number): boolean {
     const s = this.state, rigid = s.rigid;
-    if (!this.rigidRuntime?.faults || !rigid || !s.liftoff || s.payloadSeparated || this.isFailed()) return false;
+    if (!rigid || s.status !== 'ascent' || !s.liftoff || s.payloadSeparated || this.isFailed()) return false;
     const alphaDeg = Math.hypot(rigid.angleOfAttack, rigid.sideslip) * RAD, qAlpha = q / 1000 * alphaDeg;
     if (!(qAlpha > BREAKUP_Q_ALPHA_KPA_DEG)) return false;
     this.event('evt.aeroBreakup', 'fail', { qAlpha: Math.round(qAlpha), alphaDeg: +alphaDeg.toFixed(1), q: +(q / 1000).toFixed(1) });

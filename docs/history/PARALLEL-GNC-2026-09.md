@@ -55,8 +55,8 @@ here; this file records progress for the owner to fold in at the merge.
   accidents** (Proton-M 2013, Ariane 5 flight 501, Vega VV17, a stuck gimbal); a simple **FDIR**
   (2-of-3 IMU voting, gimbal monitoring, reconfiguration) that can be switched off to compare;
   failures **set in the mission setup and injected live** (and through WebMCP), marked in the
-  attitude-loop inspector. Break-up by q·α with the failures layer only (asked, not yet answered:
-  kept that way).
+  attitude-loop inspector. Break-up by q·α with the failures layer only at first; the owner then
+  chose (Q0, 2026-09-24) **every six-DOF ascent**, done with G05.
 - G01 (asked 2026-09-24): **PEG and IGM both, selectable**; the first stage flies the pitch
   program as before and **PEG/IGM takes over out of the atmosphere or after staging**; the target
   is the **whole insertion state — altitude and speed, flight-path angle, and the orbit's plane
@@ -489,7 +489,7 @@ Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2i, use in
   without the list, the old rule (the lowest index first), untouched.
 - **Break-up**: with the layer only, the attached stack is lost when q·α exceeds 300 kPa·°. The
   fleet's healthy ascents reach at most 133 kPa·° (measured on all eighteen vehicles, calm and
-  shear). *Whether every flight should break up this way is the owner's to decide.*
+  shear). The owner chose (Q0) every six-DOF ascent; done with G05 (see there).
 - **Presets**: Proton-M 2013, Ariane 501 (on Ariane 6, the nearest in the fleet), Vega VV17 and a
   hypothetical Falcon 9 nozzle hard-over, each with an explanation; the setup switches to the
   preset's vehicle.

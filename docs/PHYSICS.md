@@ -643,9 +643,10 @@ Off, the computer reads IMU 1 alone and watches nothing. An engine shut down goe
 engine-out: its share of `engineFraction` (thrust and flow alike), with the engine the FDIR named
 — not the lowest-numbered — the one that stops (`StageState.shutEngines`), so the others steer on.
 
-**Break-up.** A launcher that loses control in the air is broken up by the air: with the failures
-layer (and only with it), the attached stack is lost when q·α — the dynamic pressure times the
-total angle of attack — exceeds 300 kPa·°. The fleet's healthy ascents stay under 135 kPa·°
+**Break-up.** A launcher that loses control in the air is broken up by the air: on any six-DOF
+ascent (with the failures layer or without it, since G05), the attached stack is lost when q·α —
+the dynamic pressure times the total angle of attack — exceeds 300 kPa·°. A re-entry, flown at a
+large angle of attack on purpose, is not judged by it. The fleet's healthy ascents stay under 135 kPa·°
 (Angara A5; calm and shear winds, measured over all eighteen vehicles), much of it late in the
 ascent where q is small and α large.
 

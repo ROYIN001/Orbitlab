@@ -387,8 +387,9 @@ A failure can also be injected into a live flight with WebMCP's `inject_control_
 attitude-loop inspector (§9) marks the IMU, actuator and control-law blocks that failed, with each
 unit's and engine's state; its rate chart shows what the IMUs read against the truth. The event log
 reports every failure and every FDIR action; the CSV adds the failures' columns and
-`read_flight_state` a `controlFaults` summary. A launcher that loses control in the air breaks up
-when its lateral load q·α passes 300 kPa·°. Details in PHYSICS.md §2i.
+`read_flight_state` a `controlFaults` summary. A six-DOF launcher that loses control on the ascent
+breaks up when its lateral load q·α passes 300 kPa·° — with or without the failures layer.
+Details in PHYSICS.md §2i.
 
 ## 15. PEG and IGM ascent guidance (Engineer mode)
 
