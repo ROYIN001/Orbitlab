@@ -55,7 +55,8 @@ import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
 import type { FlexConfig } from '../types';
 import { FLEX_DEFAULTS } from '../physics/rigid/flex';
-import type { ControlConfig } from '../types';
+import type { ControlConfig, NavigationConfig } from '../types';
+import { aidingFor, imuFor, IMU_KEYS, NAV_FIELD_KEYS, NAV_GRADES } from '../physics/nav/config';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_DEFAULTS, controlFieldKey, controlValue, type ControlChannelKey } from '../physics/rigid/control-config';
 import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
 
@@ -799,9 +800,11 @@ export class SetupPanel {
       s.vehicleId = v;
       const flex = s.dynamics?.flex;
       const control = s.dynamics?.control;
+      const navigation = s.dynamics?.navigation;
       s.dynamics = defaultDynamics(v);
       if (flex) s.dynamics.flex = flex;
       if (control) s.dynamics.control = control;
+      if (navigation) s.dynamics.navigation = navigation;
       const spec = vehicleById(v);
       this.siteReassigned = false;
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
@@ -948,6 +951,7 @@ export class SetupPanel {
     s4.appendChild(this.dynamicsSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.flexSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.controlSection());
+    if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.navigationSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
     s4.appendChild(this.optionsSection(vehicle));
@@ -1185,6 +1189,75 @@ export class SetupPanel {
   }
   private controlFieldKeys(): string[] {
     return [...CONTROL_CHANNELS.flatMap((channel) => CONTROL_CHANNEL_KEYS.map((key) => controlFieldKey(channel, key))), controlFieldKey('feedForward')];
+  }
+
+  // --- G02: inertial navigation (Engineer mode, six-DOF only) ----------------------
+  /**
+   * An IMU of a grade, or its figures; GNSS with an outage; a star tracker. Off, the flight knows
+   * its true state.
+   */
+  private navigationSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'navigation';
+    const nav: NavigationConfig | undefined = this.state.dynamics?.navigation;
+    section.append(this.el('summary', undefined, t('setup.nav.title')));
+    section.append(this.el('p', 'field-note', t('setup.nav.note')));
+    const update = (next: NavigationConfig | undefined, rebuild = false): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { navigation: next } : {}) };
+      if (!next) delete this.state.dynamics.navigation;
+      if (rebuild) this.render();
+      this.changed();
+    };
+    const current = (): NavigationConfig => this.state.dynamics?.navigation ?? {};
+    const toggle = (label: string, checked: boolean, onChange: (on: boolean) => void): void => {
+      const row = this.el('label', 'checkbox'), box = this.el('input');
+      box.type = 'checkbox'; box.checked = checked; box.disabled = this.running;
+      box.addEventListener('change', () => onChange(box.checked));
+      row.append(box, this.el('span', undefined, label));
+      section.append(row);
+    };
+    toggle(t('setup.nav.enable'), !!nav, (on) => { for (const key of Object.values(NAV_FIELD_KEYS)) this.fieldDrafts.delete(key); update(on ? { grade: 'tactical' } : undefined, true); });
+    if (!nav) return section;
+    const GRADE_NAME = { navigation: 'setup.nav.grade.navigation', tactical: 'setup.nav.grade.tactical', mems: 'setup.nav.grade.mems', custom: 'setup.nav.grade.custom' } as const;
+    const grade = nav.grade ?? 'tactical';
+    section.append(this.select('setup.nav.grade', NAV_GRADES.map((g) => ({ value: g, label: t(GRADE_NAME[g]) })), grade, (value) => {
+      for (const key of IMU_KEYS) this.fieldDrafts.delete(NAV_FIELD_KEYS[key]);
+      const { imu: _imu, ...rest } = current();
+      update({ ...rest, grade: value as NavigationConfig['grade'], ...(value === 'custom' ? { imu: { ...imuFor(current()) } } : {}) }, true);
+    }));
+    const imu = imuFor(nav);
+    if (grade === 'custom') {
+      const STEP: Record<string, number> = { gyroBiasDegH: 0.1, gyroBiasInstabilityDegH: 0.1, gyroArwDegRtH: 0.01, gyroScalePpm: 10, accelBiasUg: 10, accelBiasInstabilityUg: 10, accelVrwMsRtH: 0.01, accelScalePpm: 10, alignmentDeg: 0.01 };
+      for (const key of IMU_KEYS) {
+        section.append(this.number(NAV_FIELD_KEYS[key], imu[key], (value) => update({ ...current(), imu: { ...(current().imu ?? {}), [key]: value } }), STEP[key]));
+      }
+    } else {
+      section.append(this.el('p', 'field-note', t('setup.nav.figures', { gb: imu.gyroBiasDegH, arw: imu.gyroArwDegRtH, ab: imu.accelBiasUg, vrw: imu.accelVrwMsRtH,
+        gs: imu.gyroScalePpm, as: imu.accelScalePpm, align: imu.alignmentDeg })));
+    }
+    const aiding = aidingFor(nav);
+    toggle(t('setup.nav.gnss'), aiding.gnss, (on) => update({ ...current(), gnss: on }, true));
+    if (aiding.gnss) {
+      section.append(this.number(NAV_FIELD_KEYS.gnssPositionM, aiding.gnssPositionM, (value) => update({ ...current(), gnssPositionM: value }), 0.5));
+      section.append(this.number(NAV_FIELD_KEYS.gnssVelocityMs, aiding.gnssVelocityMs, (value) => update({ ...current(), gnssVelocityMs: value }), 0.01));
+      section.append(this.number(NAV_FIELD_KEYS.gnssRateHz, aiding.gnssRateHz, (value) => update({ ...current(), gnssRateHz: value }), 1));
+      toggle(t('setup.nav.outage'), !!nav.gnssOutage, (on) => {
+        const { gnssOutage: _o, ...rest } = current();
+        update(on ? { ...rest, gnssOutage: [60, 200] } : rest, true);
+      });
+      if (nav.gnssOutage) {
+        const [a, b] = nav.gnssOutage;
+        section.append(this.number(NAV_FIELD_KEYS.gnssOutageStart, a, (value) => update({ ...current(), gnssOutage: [value, Math.max(value + 1, current().gnssOutage?.[1] ?? value + 1)] }), 10));
+        section.append(this.number(NAV_FIELD_KEYS.gnssOutageEnd, b, (value) => update({ ...current(), gnssOutage: [Math.min(current().gnssOutage?.[0] ?? 0, value - 1), value] }), 10));
+      }
+    }
+    toggle(t('setup.nav.starTracker'), aiding.starTracker, (on) => update({ ...current(), starTracker: on }, true));
+    if (aiding.starTracker) {
+      section.append(this.number(NAV_FIELD_KEYS.starTrackerArcsec, aiding.starTrackerArcsec, (value) => update({ ...current(), starTrackerArcsec: value }), 1));
+      section.append(this.number(NAV_FIELD_KEYS.starTrackerMinAltitudeKm, aiding.starTrackerMinAltitudeKm, (value) => update({ ...current(), starTrackerMinAltitudeKm: value }), 10));
+    }
+    return section;
   }
 
   /** E04: take a tuning (the attitude-loop inspector's "use for the next launch"); undefined restores the defaults. */

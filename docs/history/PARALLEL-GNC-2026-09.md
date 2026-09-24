@@ -40,7 +40,14 @@ here; this file records progress for the owner to fold in at the merge.
   a **what-if** on the recorded loop during and after a flight; **K_θ, K_ω, the rate and
   angular-acceleration limits and the feed-forward's weight** per channel; a **flight test** (step
   or doublet) against the linear prediction; and an **auto-tuner** for phase- and gain-margin
-  targets.
+  targets. Confirmed afterwards: pitch–yaw gains set by hand fly without P05's cap, and the
+  auto-tuner maximises K_θ with K_θ/K_ω in 0.25–0.5.
+- G02 (asked 2026-09-24): an **IMU** (gyro and accelerometer bias, scale factor, noise, random
+  walk) with a **strapdown INS** and an **error-state Kalman filter** aided by **GNSS** (with
+  outages to set) and a **star tracker in orbit**; **both the autopilot and guidance fly on the
+  estimate**; **sensor-grade presets** (navigation, tactical, MEMS) and custom values in the
+  Engineer mode; a **Navigation tab** in the attitude-loop inspector (errors against the ±3σ the
+  filter claims, innovations, GNSS state). Off by default, and off, every flight bit for bit.
 
 ## Progress
 
@@ -52,7 +59,7 @@ here; this file records progress for the owner to fold in at the merge.
 | E02 live equations panel | done 2026-09-24 (see below) |
 | G04 Bode, step response, margins | done 2026-09-24 (see below) |
 | E04 controller tuning mode | done 2026-09-24 (see below) |
-| G02 inertial navigation and Kalman filter | |
+| G02 inertial navigation and Kalman filter | done 2026-09-24 (see below) |
 | G08 control-system failures | |
 | G01 PEG and IGM guidance | (also: the load relief's switch-off, see G03) |
 | G05 Monte Carlo insertion accuracy | |
@@ -333,9 +340,9 @@ Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2g, use in
   autopilot* section (Engineer mode, six-DOF); `configure_mission.control` (merged field by field,
   null resets, kept across vehicle and wind edits). Absent, the runtime is untouched; the defaults
   set explicitly fly the same bits (tested).
-- **A decision taken here**: pitch–yaw gains set by hand are flown as set, without P05's
-  flexible-vehicle cap, so that a tuning flies what its analysis showed; the cap still applies to
-  the default gains. For the owner to confirm.
+- **Pitch–yaw gains set by hand are flown as set**, without P05's flexible-vehicle cap, so that
+  a tuning flies what its analysis showed; the cap still applies to the default gains (proposed
+  here, confirmed by the owner 2026-09-24).
 - **The runtime**: optional `feedForward` and `capPitchYawGains` options (the gimbals asked for
   M_d − w·M_aero, the weight 1 taking the old path); `PlaneModel.feedForward` so G04's
   linearisation carries it; `startAttitudeTest` and the record, the offset rotating the target
@@ -380,4 +387,56 @@ on the main thread).
 
 
 **Results (2026-09-24)**: `npm test` 69 files / 992 tests pass (12 min); the whole-mission
+fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.
+
+### G02 — inertial navigation, GNSS and a star tracker
+
+Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2h, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §13.
+
+- **The sensors** (`src/physics/nav/sensors.ts`): the IMU's error model (turn-on bias,
+  Gauss–Markov in-run bias, scale factor, angle and velocity random walk), three grades, GNSS and
+  star-tracker figures, and the navigation's own seeded normal stream (the wind's untouched).
+- **The navigation** (`src/physics/nav/navigation.ts`): strapdown in ECI with free fall under J2
+  plus the specific force; a 21-state error-state EKF (position, velocity, attitude, gyro and
+  accelerometer biases and scale factors) with GNSS position/velocity and star-tracker attitude
+  as scalar updates; a staging's centre-of-mass shift carried into the solution; long gaps (held
+  coasts) integrated in substeps.
+- **Who flies on it**: the autopilot (the `sensed` seam in `RigidRuntime.step`: the navigation's
+  attitude and rate; `reading` at the step start, `advance` at its end), ascent guidance (its
+  position and velocity), the ascent and burn cut-offs and core burnout (the orbit it believes
+  in), the in-orbit prograde hold. **Left on the truth**: air data (load relief), and the
+  in-orbit burns' planning and steering, which read `sim.state` inside `src/physics/sim/burns.ts`
+  — the other session's file; moving them needs edits there (for the owner to decide).
+- **A tuning margin**: the filter adds velocity noise of 10⁻⁴ of the specific force per √s under
+  thrust; without it (and before carrying the staging's centre-of-mass shift) it was
+  overconfident through staging and max-q (a mean normalised error of 4 against 1).
+- **The record**: `RigidTelemetry.navigation` on the telemetry samples (errors in the true
+  orbit's radial/along/cross axes and body axes, the filter's σ, biases true and estimated, GNSS
+  and star-tracker state, innovations); `read_flight_state.navigation`; CSV `nav_*` columns; the
+  inspector's Navigation tab (`src/ui/loop-navigation.ts`); the setup's Navigation section.
+- **What it found**: see PHYSICS §2h — tactical + GNSS consistent within 3σ and the orbit true to
+  tens of metres; a 140 s GNSS outage costs 130 m; MEMS without GNSS believes in a 529 km apoapsis
+  while flying a 511 km one; gyro noise makes the attitude thrusters work harder (84 % against
+  64 % full duty).
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- G02 ---`); `src/types.ts` (`DynamicsConfig.navigation`; `NavigationConfig` at the end);
+`src/config/validation.ts` (ranges, one call); `src/mcp.ts` (`navigation` in configure_mission's
+schema and handler, kept across edits; `navigation` in read_flight_state); `src/ui/panel.ts` (the
+section, a line keeping it on a vehicle change); `src/physics/simulation.ts` (the runtime's
+option; guidance's inputs, the cut-off's elements, core burnout's state and the orbit's prograde
+hold taken through `navigationView`/`navigationEnd`, which hand back the very same true objects
+without navigation; the held coast advancing it; the record on the samples). Also:
+`src/physics/rigid/runtime.ts` (optional `navigation`; the `sensed` seam), `flex.ts`
+(`imuCase`), `config.ts`, `telemetry.ts`, `src/ui/csv.ts`, `loop-inspector.ts`.
+
+**Tests**: tests/navigation.test.ts (perfect sensors follow the truth; long steps as short ones;
+seeded; settings and ranges; tactical + GNSS within 3σ through staging, its believed orbit true;
+an outage within the filter's σ and the recovery; MEMS without GNSS off its believed orbit, the
+star tracker fixing the attitude; no navigation, no record), blocks in tests/mcp.test.ts and
+tests/session.test.ts (a navigated flight in the worker records as on the main thread).
+
+
+**Results (2026-09-24)**: `npm test` 70 files / 1003 tests pass (12 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.

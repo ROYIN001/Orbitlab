@@ -114,6 +114,23 @@ function marginColumns(value: RigidTelemetry | undefined): string[] {
   return entries.map(entry => typeof entry === 'number' ? (Number.isFinite(entry) ? (Number.isInteger(entry) ? String(entry) : entry.toPrecision(6)) : '') : String(entry));
 }
 
+// --- G02: the navigation against the truth: radial, along-track, cross-track; attitude in the notation's axes
+const NAV_COLUMNS = (n: Notation) => [
+  ...['pos_err', 'pos_3sigma'].flatMap((name) => ['radial', 'along', 'cross'].map((a) => `nav_${name}_${a}_m`)),
+  ...['vel_err', 'vel_3sigma'].flatMap((name) => ['radial', 'along', 'cross'].map((a) => `nav_${name}_${a}_ms`)),
+  ...['att_err', 'att_3sigma'].flatMap((name) => LOOP_AXES.map((a) => `${n}_nav_${name}_${a}_deg`)),
+  'nav_gnss', 'nav_star_tracker',
+];
+function navColumns(value: RigidTelemetry | undefined, n: Notation): string[] {
+  const nav = value?.navigation;
+  if (!nav) return NAV_COLUMNS(n).map(() => '');
+  const three = (v: { x: number; y: number; z: number }, k = 1) => [v.x * k, v.y * k, v.z * k];
+  const angles = (v: { x: number; y: number; z: number }, k: number) => { const t = triple(v, n, k); return LOOP_AXES.map((a) => t[a]); };
+  const entries: (string | number)[] = [...three(nav.positionError), ...three(nav.positionSigma, 3), ...three(nav.velocityError), ...three(nav.velocitySigma, 3),
+    ...angles(nav.attitudeError, 180 / Math.PI), ...angles(nav.attitudeSigma, 540 / Math.PI).map(Math.abs), nav.gnss, nav.starTracker];
+  return entries.map(entry => typeof entry === 'number' ? entry.toPrecision(6) : entry);
+}
+
 /** Telemetry samples plus the event log, as CSV text (no trailing newline). */
 export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>): string {
   const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
@@ -127,6 +144,8 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
   if (hasFlex) cols.push(...FLEX_COLUMNS);
   const hasMargins = sim.telemetry.some(sample => !!sample.rigid?.linearModel);
   if (hasMargins) cols.push(...MARGIN_COLUMNS);
+  const hasNav = sim.telemetry.some(sample => !!sample.rigid?.navigation);
+  if (hasNav) cols.push(...NAV_COLUMNS(notation));
   const lines = [cols.join(',')];
   for (const s of sim.telemetry) {
     const row = [s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase].map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v)));
@@ -135,6 +154,7 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
     if (hasLoop) row.push(...loopColumns(s.rigid, notation));
     if (hasFlex) row.push(...flexColumns(s.rigid));
     if (hasMargins) row.push(...marginColumns(s.rigid));
+    if (hasNav) row.push(...navColumns(s.rigid, notation));
     lines.push(row.join(','));
   }
   lines.push('');

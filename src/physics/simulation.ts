@@ -30,6 +30,7 @@ import { cloneRigidTelemetry, type RigidCommand } from './rigid/telemetry';
 import { RigidRuntime, type RigidRuntimeOptions } from './rigid/runtime';
 import { resolveFlexOptions } from './rigid/flex';
 import { resolveControl } from './rigid/control-config';
+import { resolveNavigation } from './nav/config';
 import { attitudeTestStub, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './rigid/attitude-test';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
@@ -41,7 +42,7 @@ import { gravity, gravityJ2 } from './gravity';
 import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
 import { rk4Step } from './integrator';
-import { elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
+import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
 import { VehicleModel, StageState, engineMassFlow } from './vehicle';
 import { AscentGuidance } from './guidance';
 import { MissionPlan, planMission, RAAN_TOLERANCE } from './mission';
@@ -173,7 +174,10 @@ export class Simulation {
         // E04: the mission's autopilot tuning, on the vehicle only; absent, the runtime's defaults untouched.
         const control = resolveControl(cfgIn.dynamics.control);
         const tuned = control ? { ...options, controlGains: control.gains, feedForward: control.feedForward, capPitchYawGains: control.capPitchYawGains } : options;
-        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...tuned, flex } : tuned);
+        // G02: inertial navigation, on the vehicle only.
+        const navigation = resolveNavigation(cfgIn.dynamics.navigation, cfgIn.dynamics.seed);
+        const navigated = navigation ? { ...tuned, navigation } : tuned;
+        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...navigated, flex } : navigated);
       }
     }
     this.site = siteById(cfgIn.siteId);
@@ -277,6 +281,24 @@ export class Simulation {
    * at a time; otherwise the reason it cannot start.
    */
   private reportedAttitudeTest?: AttitudeTestRecord;
+
+  /**
+   * G02: position, velocity, altitude, elements and vertical speed as guidance knows them at a
+   * step's start — the navigation's, or the very same true values without one.
+   */
+  private navigationView(s: SimState, alt: number, el: OrbitalElements, vz: number): { r: Vec3; v: Vec3; alt: number; el: OrbitalElements; vz: number } {
+    const nav = this.rigidRuntime?.navigation;
+    if (!nav?.aligned) return { r: s.r, v: s.v, alt, el, vz };
+    const { r, v } = nav.estimate;
+    return { r, v, alt: norm(r) - R_EARTH, el: elementsFromState(r, v), vz: dot(v, normalize(r)) };
+  }
+  /** G02: the step end's position, velocity and thrust axis as the cut-off judges them (the truth's own objects without navigation). */
+  private navigationEnd(r: Vec3, v: Vec3, dir: Vec3): { r: Vec3; v: Vec3; dir: Vec3 } {
+    const nav = this.rigidRuntime?.navigation;
+    if (!nav?.aligned) return { r, v, dir };
+    const e = nav.estimate;
+    return { r: e.r, v: e.v, dir: quatRotate(e.attitudeQ, v3(1, 0, 0)) };
+  }
   startAttitudeTest(spec: AttitudeTestSpec): AttitudeTestRecord | 'notSixDof' | 'notFlying' | 'manual' | 'running' {
     validateAttitudeTestSpec(spec);
     const runtime = this.rigidRuntime;
@@ -621,6 +643,8 @@ export class Simulation {
     const el = s.elements;
     const up = normalize(s.r);
     const vz = dot(s.v, up);
+    // G02: guidance and the cut-off fly on what the navigation knows (the truth without one).
+    const known = this.navigationView(s, alt, el, vz);
 
     // --- steering & throttle command
     let dirCmd = s.dir;
@@ -632,8 +656,8 @@ export class Simulation {
     if (s.status === 'ascent') {
       const cmd = this.guidance.update({
         requireDownrangeKick: !!this.rigidRuntime,
-        vGround: this.rigidRuntime ? sub(s.v, cross(v3(0, 0, OMEGA_EARTH), s.r)) : undefined,
-        t: s.t, r: s.r, v: s.v, vAir, altitudeAGL: alt - this.site.altitude, altitude: alt, q,
+        vGround: this.rigidRuntime ? sub(known.v, cross(v3(0, 0, OMEGA_EARTH), known.r)) : undefined,
+        t: s.t, r: known.r, v: known.v, vAir, altitudeAGL: known.alt - this.site.altitude, altitude: known.alt, q,
         thrustAccelFull: fullThrust.thrustFullVac / mass, isFirstStage: (active?.index ?? 0) === 0,
         thrustAccel: Math.min(fullThrust.thrust, maxAccel > 0 ? maxAccel * mass : Infinity) / mass,
         timeToGo: (dv: number) => this.vehicle.burnTimeFor(dv, false, this.plan.weakFinalStage),
@@ -644,7 +668,7 @@ export class Simulation {
         // line above only at the hand-over TO the kick stage, which is the one
         // place the lofted hand-off has to see it (see `GuidanceInputs`).
         kickStageAccel: this.vehicle.nextStageAccel(false),
-        apoapsisAlt: el.e < 1 ? el.apoapsisAlt : Infinity,
+        apoapsisAlt: known.el.e < 1 ? known.el.apoapsisAlt : Infinity,
         maxQThrottle: this.vehicleSpec.maxQThrottle, maxAccel, maxQPlacard: this.ascent.maxQAscent,
       });
       dirCmd = cmd.dir;
@@ -865,7 +889,8 @@ export class Simulation {
       if (res.coreBurnout && active) {
         // Judged on the orbit the stage leaves behind once its tail-off is over.
         const tail = this.vehicle.tailoffDeltaV(stepStartTime + dt, atm.p, this.vehicle.totalMass());
-        this.staging.onCoreBurnout(active, next.r, tail > 0 ? addScaled(next.v, s.dir, tail) : next.v);
+        const end = this.navigationEnd(next.r, next.v, s.dir);
+        this.staging.onCoreBurnout(active, end.r, tail > 0 ? addScaled(end.v, end.dir, tail) : end.v);
       }
     }
     if (!this.rigidRuntime) { s.r = next.r; s.v = next.v; s.t += dt; }
@@ -875,7 +900,7 @@ export class Simulation {
     // --- insertion floor. Asked BEFORE the structural placard, because the
     // whole point of it is that a stack still trying to reach orbit must be
     // stopped before it is destroyed doing so (see `abandonInsertion`).
-    if (this.ascent.abandonInsertion(q, vz)) return dt;
+    if (this.ascent.abandonInsertion(q, known.vz)) return dt;
     if (this.ascent.checkStructural(q)) return dt;
     if (this.checkShellLoads()) return dt;
     this.staging.checkFairing(alt, q, atm.rho, vAirMag);
@@ -888,8 +913,10 @@ export class Simulation {
     // is several metres per second — kilometres of apoapsis.
     const tailDv = s.status === 'ascent' || s.status === 'burn'
       ? this.vehicle.tailoffDeltaV(s.t, atmosphere(Math.max(0, norm(s.r) - R_EARTH)).p, s.mass) : 0;
-    const elCut = tailDv > 0 ? elementsFromState(s.r, addScaled(s.v, s.dir, tailDv)) : el2;
-    if (s.status === 'ascent') this.ascent.checkAscent(elCut, alt, vz);
+    const judged = this.navigationEnd(s.r, s.v, s.dir);
+    const elJudged = judged.r === s.r ? el2 : elementsFromState(judged.r, judged.v);
+    const elCut = tailDv > 0 ? elementsFromState(judged.r, addScaled(judged.v, judged.dir, tailDv)) : elJudged;
+    if (s.status === 'ascent') this.ascent.checkAscent(elCut, known.alt, known.vz);
     else if (s.status === 'coast') this.burns.checkCoast(el2);
     else if (s.status === 'burn') this.burns.checkBurn(elCut, tailDv);
 
@@ -920,14 +947,19 @@ export class Simulation {
     const held = this.rigidRuntime && s.rigid && dt > this.rigidDt + 1e-9 ? this.rigidLink.heldCoastStep(dt) : null;
     if (held) {
       s.r = held.state.r; s.v = held.state.v; s.t += dt; s.rigid = held.telemetry;
+      // G02: the navigation coasts along, its IMU still reading.
+      this.rigidRuntime?.navigation?.advance(s.t, s.r, s.v, held.state.attitudeQ, held.state.omegaBody);
       s.dir = quatRotate(held.state.attitudeQ, v3(1, 0, 0));
       s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0; s.gLoad = 0;
       s.elements = elementsFromState(s.r, s.v);
       return;
     }
     if (this.rigidRuntime && s.rigid) {
+      // G02: prograde as the navigation knows it.
+      const nav = this.rigidRuntime.navigation?.aligned ? this.rigidRuntime.navigation.estimate : undefined;
+      const prograde = normalize(nav ? nav.v : s.v), attitude = nav ? nav.attitudeQ : s.rigid.attitudeQ;
       const result = this.rigidRuntime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody },
-        dt, normalize(s.v), quatRotate(nosePointingTarget(s.rigid.attitudeQ, normalize(s.v)), v3(0, 0, 1)), (_elapsed, consumed) => buildRigidVehicle(this.vehicle, {
+        dt, prograde, quatRotate(nosePointingTarget(attitude, prograde), v3(0, 0, 1)), (_elapsed, consumed) => buildRigidVehicle(this.vehicle, {
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined, payloadLength: this.satellite.size?.height, rcsConsumedKgByStage: consumed }));
       s.r = result.state.r; s.v = result.state.v; s.t += dt; s.rigid = result.telemetry;
       s.dir = quatRotate(result.state.attitudeQ, v3(1, 0, 0)); s.mass = result.snapshot.mass;
@@ -1075,6 +1107,9 @@ export class Simulation {
     // G04: the sample carries the loop's latest linearisation (shared, immutable) while it is recent.
     const rigid = cloneRigidTelemetry(s.rigid), linear = this.rigidRuntime?.latestLinear;
     if (rigid && linear && s.t - linear.t <= 1.5) rigid.linearModel = linear;
+    // G02: what the navigation believes, against the truth and the filter's σ.
+    const navigation = this.rigidRuntime?.navigation?.record();
+    if (rigid && navigation) rigid.navigation = navigation;
     // E04: while an attitude test runs, the samples carry a stub; the one where it ends, the whole
     // record (once — a physics worker sends every sample across).
     const test = this.rigidRuntime?.attitudeTest;

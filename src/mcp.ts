@@ -41,6 +41,10 @@ import { aeroAngles, bodyRates, getNotation, simulatorRates } from './ui/notatio
 import { loopLimiterNames, loopView } from './ui/loop-view';
 import { linearModelAt, PLANE_OF, type LinearModel } from './physics/rigid/linear';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS } from './physics/rigid/control-config';
+import { AIDING_KEYS, AIDING_LIMITS, IMU_KEYS, NAV_GRADES } from './physics/nav/config';
+import { IMU_LIMITS } from './physics/nav/sensors';
+import { navigationAt, type NavigationRecord } from './physics/nav/navigation';
+import { elementsFromState } from './physics/orbital';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
 
@@ -388,6 +392,13 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   // --- E04: and the autopilot's tuning.
   const priorControl = live.dynamics?.control;
   if (priorControl && state.dynamics && !state.dynamics.control) state.dynamics = { ...state.dynamics, control: priorControl };
+  // --- G02: and the navigation.
+  const priorNavigation = live.dynamics?.navigation;
+  if (priorNavigation && state.dynamics && !state.dynamics.navigation) state.dynamics = { ...state.dynamics, navigation: priorNavigation };
+  if (input.navigation !== undefined) {
+    const { navigation: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    state.dynamics = { ...rest, ...mergeNavigation(previous, input.navigation) };
+  }
   if (input.control !== undefined) {
     const { control: _, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
     state.dynamics = { ...rest, ...mergeControl(state.dynamics?.control, input.control) };
@@ -602,6 +613,21 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
     },
     additionalProperties: false,
   },
+  navigation: {
+    type: ['object', 'null'],
+    description: 'Six-DOF inertial navigation (roadmap G02; absent or null, the flight knows its true state): an IMU of a grade (navigation, tactical, mems; custom takes the imu figures over tactical) with a 21-state error-state Kalman filter aided by GNSS (with one outage) and a star tracker; the autopilot, ascent guidance and the cut-off fly on its estimate. Merged into the current settings; null resets a field, or (navigation: null) turns it off.',
+    properties: {
+      grade: { type: ['string', 'null'], enum: [...NAV_GRADES, null] },
+      imu: { type: ['object', 'null'], properties: Object.fromEntries(IMU_KEYS.map((key) => [key, { type: ['number', 'null'], minimum: IMU_LIMITS[key][0], maximum: IMU_LIMITS[key][1] }])), additionalProperties: false,
+        description: 'Gyro bias deg/h, bias instability deg/h, angle random walk deg/√h, scale factor ppm; accelerometer bias µg, instability µg, velocity random walk m/s/√h, scale factor ppm; pad alignment deg (1σ).' },
+      gnss: { type: ['boolean', 'null'] },
+      ...Object.fromEntries(AIDING_KEYS.map((key) => [key, { type: ['number', 'null'], minimum: AIDING_LIMITS[key][0], maximum: AIDING_LIMITS[key][1] }])),
+      gnssOutage: { type: ['array', 'null'], items: { type: 'number', minimum: 0 }, minItems: 2, maxItems: 2, description: 'Mission seconds [start, end) without GNSS fixes.' },
+      starTracker: { type: ['boolean', 'null'] },
+      seed: { type: ['integer', 'null'], minimum: 0, maximum: 4294967295 },
+    },
+    additionalProperties: false,
+  },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
@@ -658,6 +684,8 @@ function toolReadFlightState(host: McpAppHost): WebMcpTool {
         loopMargins: loopMarginsSummary(linearModelAt(host.sim.telemetry, cursor)),
         // E04: the latest attitude test at or before the cursor.
         attitudeTest: attitudeTestSummary(attitudeTestAt(host.sim.telemetry, cursor)),
+        // G02: what the navigation believes, at the cursor.
+        navigation: navigationSummary(navigationAt(host.sim.telemetry, cursor)),
         lastEvent: last ? eventOut(last) : null,
         nextEvent: next ? eventOut(next) : null,
       };
@@ -930,6 +958,44 @@ function mergeControl(current: import('./types').ControlConfig | undefined, inpu
     if (Object.keys(channel).length) next[key] = channel; else delete next[key];
   }
   return Object.keys(next).length ? { control: next as import('./types').ControlConfig } : {};
+}
+
+/** G02: configure_mission's `navigation`, merged field by field (null resets a field; `navigation: null` turns it off). */
+function mergeNavigation(current: import('./types').NavigationConfig | undefined, input: unknown): { navigation?: import('./types').NavigationConfig } {
+  if (input === null) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('"navigation" must be an object or null');
+  const next: Record<string, unknown> = { ...(current ?? {}) };
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (key === 'imu') {
+      if (value === null) { delete next.imu; continue; }
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('"navigation.imu" must be an object or null');
+      const imu: Record<string, unknown> = { ...((next.imu as Record<string, unknown> | undefined) ?? {}) };
+      for (const [field, v] of Object.entries(value as Record<string, unknown>)) {
+        if (!(IMU_KEYS as string[]).includes(field)) throw new Error(`Unknown navigation field "imu.${field}"`);
+        if (v === null) delete imu[field]; else imu[field] = v;
+      }
+      if (Object.keys(imu).length) next.imu = imu; else delete next.imu;
+      continue;
+    }
+    if (!['grade', 'gnss', 'starTracker', 'gnssOutage', 'seed', ...AIDING_KEYS].includes(key)) throw new Error(`Unknown navigation field "${key}"`);
+    if (value === null) delete next[key]; else next[key] = value;
+  }
+  return { navigation: next as import('./types').NavigationConfig };
+}
+
+/** G02: the navigation at the cursor: errors against the filter's 3σ (radial, along-track, cross-track; body axes), and the orbit it believes in. */
+function navigationSummary(record: NavigationRecord | undefined): Record<string, unknown> | null {
+  if (!record) return null;
+  const rsw = (v: { x: number; y: number; z: number }) => ({ radial: v.x, alongTrack: v.y, crossTrack: v.z });
+  const body = (v: { x: number; y: number; z: number }, k: number) => ({ x: v.x * k, y: v.y * k, z: v.z * k });
+  const el = elementsFromState(record.r, record.v);
+  return { timeS: record.t, gnss: record.gnss, starTracker: record.starTracker,
+    positionErrorM: rsw(record.positionError), position3SigmaM: rsw(body(record.positionSigma, 3)),
+    velocityErrorMs: rsw(record.velocityError), velocity3SigmaMs: rsw(body(record.velocitySigma, 3)),
+    attitudeErrorDegBody: body(record.attitudeError, RAD), attitude3SigmaDegBody: body(record.attitudeSigma, 3 * RAD),
+    believedApoapsisKm: el.apoapsisAlt / 1000, believedPeriapsisKm: el.periapsisAlt / 1000,
+    innovation: { positionM: record.innovation.position ?? null, velocityMs: record.innovation.velocity ?? null,
+      attitudeArcsec: record.innovation.attitude === undefined ? null : record.innovation.attitude * RAD * 3600 } };
 }
 
 /** E04: the latest attitude test at or before the cursor, measured against the linear prediction, in ISO axes. */

@@ -200,6 +200,21 @@ describe('physics worker session', () => {
     expect(() => remote.sim.startAttitudeTest({ ...spec, amplitudeRad: 1 })).toThrow(RangeError);
   }, 120000);
 
+  it('flies on inertial navigation in the worker as on the main thread (roadmap G02)', () => {
+    const mission = () => { const m = rigidMission('leo'); return { ...m, dynamics: { ...m.dynamics!, navigation: { grade: 'mems' as const, gnssOutage: [5, 20] as [number, number] } } }; };
+    const inline = new InlineSession(mission());
+    const worker = new InProcessWorker();
+    const remote = new WorkerSession(mission(), worker, 1, (m) => { throw new Error(m); });
+    worker.flush();
+    for (let i = 0; i < 600; i++) {
+      inline.advance(0.05, UNBUDGETED);
+      remote.advance(0.05, UNBUDGETED);
+      worker.flush();
+    }
+    expect(inline.sim.telemetry.some((s) => s.rigid?.navigation?.gnss === 'outage')).toBe(true);
+    expect(snapshot(remote)).toEqual(snapshot(inline));
+  }, 120000);
+
   it('asks for no more than two frames of flight ahead of what has come back', () => {
     const worker = new InProcessWorker();
     const remote = new WorkerSession(cfg(), worker, 1, (m) => { throw new Error(m); });

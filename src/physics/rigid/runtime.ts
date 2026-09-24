@@ -12,6 +12,7 @@ import { linearise, type LinearModel } from './linear';
 import { integrateRigidStep, rigidDerivative, type RigidState } from './integrator';
 import { matVecMul, quatFromAxisAngle, quatFromBasis, quatInverseRotate, quatMultiply, quatRotate, type Mat3, type Quat } from './math';
 import { attitudeTestDuration, attitudeTestOffset, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './attitude-test';
+import { NavigationSystem, type NavigationOptions } from '../nav/navigation';
 import type { RigidVehicleSnapshot } from './mass';
 import { RIGID_MODEL_VERSION } from './config';
 import { fuelAwareCoastRates } from './pointing';
@@ -40,6 +41,8 @@ export interface RigidRuntimeOptions {
   feedForward?: number;
   /** E04: false when the pitch–yaw gains were set by hand, which P05's flexible-vehicle cap then leaves alone. */
   capPitchYawGains?: boolean;
+  /** G02: inertial navigation aided by GNSS and a star tracker; the autopilot then flies on its estimate. */
+  navigation?: NavigationOptions;
 }
 export interface RigidAccelerations {
   propulsionECI: Vec3;
@@ -110,6 +113,8 @@ export class RigidRuntime {
   /** E04: the aerodynamic feed-forward's weight, and whether P05's cap applies to the pitch–yaw gains. */
   readonly feedForward: number;
   readonly capPitchYawGains: boolean;
+  /** G02: the vehicle's navigation, when it flies one. */
+  readonly navigation?: NavigationSystem;
   /** The attitude loop linearised about a recent step (roadmap G04), and when it is next due. */
   latestLinear?: LinearModel;
   private nextLinearAt = -Infinity;
@@ -131,6 +136,7 @@ export class RigidRuntime {
     this.feedForward = options.feedForward ?? 1;
     if (!(this.feedForward >= 0 && this.feedForward <= 1)) throw new RangeError('Invalid feed-forward weight');
     this.capPitchYawGains = options.capPitchYawGains ?? true;
+    if (options.navigation) this.navigation = new NavigationSystem(options.navigation);
     const flex = options.flex;
     if (flex && (flex.slosh || flex.bending || flex.notch)) {
       if (![flex.notchZetaZero, flex.notchZetaPole, flex.notchFrequencyScale, flex.bandwidthRatio, flex.sloshDamping, flex.bendingDamping].every(Number.isFinite)
@@ -335,7 +341,9 @@ export class RigidRuntime {
     const flex = this.flex;
     const flexStart = flex?.begin(time, dt, start, aeroStart.forceBody, Math.min(this.integrationStepS, 0.01));
     // With bending, the autopilot sees what its IMU reads, not the rigid body.
-    const sensed = flex ? flex.sensed(state.attitudeQ, state.omegaBody) : state;
+    const imuCase = flex ? flex.sensed(state.attitudeQ, state.omegaBody) : state;
+    // G02: with a navigation system, what the navigation makes of it.
+    const sensed = this.navigation ? this.navigation.reading(time, state.r, state.v, imuCase.attitudeQ, imuCase.omegaBody) : imuCase;
     const gains = flex && this.capPitchYawGains ? flex.limitGains(this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody))
       : this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody);
     // G03: the trace only reads what the controller decides.
@@ -476,6 +484,11 @@ export class RigidRuntime {
       flex.end(time + dt, integratedState.flex);
       const { flex: _carried, ...rigid } = integratedState;
       integratedState = rigid;
+    }
+    // G02: the navigation follows the IMU to the step's end, where guidance and the cut-off read it.
+    if (this.navigation && dt > 0) {
+      const imuEnd = flex ? flex.imuCase(integratedState.attitudeQ, integratedState.omegaBody) : integratedState;
+      this.navigation.advance(time + dt, integratedState.r, integratedState.v, imuEnd.attitudeQ, imuEnd.omegaBody);
     }
     if (dt > 0) {
       specs.forEach((spec, i) => this.engines.set(spec.id, actualStates[i]));

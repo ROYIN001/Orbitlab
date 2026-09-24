@@ -159,8 +159,6 @@ const RESERVED: Record<string, string> = {
   // (ui/hud.ts:186-198, ui/telemetry.ts:200-229, ui/panel.ts:697-702). Wiring
   // those call sites is the fix; deleting the keys would be the wrong half of
   // it. Raised as an open item by the wave-3 translation pass.
-  'u.m': 'unit symbols are not wired to their call sites yet',
-  'u.ms': 'unit symbols are not wired to their call sites yet',
   'u.kg': 'unit symbols are not wired to their call sites yet',
   'u.t': 'unit symbols are not wired to their call sites yet',
   'u.kN': 'unit symbols are not wired to their call sites yet',

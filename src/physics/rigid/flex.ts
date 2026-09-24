@@ -283,6 +283,13 @@ export class FlexBody {
     return flex;
   }
 
+  /** G02: what the IMU's case reads, as `sensed`, without recording it (the navigation's truth at a step's end). */
+  imuCase(attitudeQ: Quat, omegaBody: Vec3): { attitudeQ: Quat; omegaBody: Vec3 } {
+    const recorded = this.sensorError, reading = this.sensed(attitudeQ, omegaBody);
+    this.sensorError = recorded;
+    return reading;
+  }
+
   /** Keep the state at the end of the step. */
   end(time: number, flex: readonly number[] | undefined): void {
     const context = this.context;

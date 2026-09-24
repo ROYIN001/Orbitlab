@@ -532,6 +532,71 @@ What the tests show on Falcon 9 at T+40 s:
   well behind the model after the reversal, where the error to close is twice the amplitude.
 - With P05: 1.4 s against 1.3 s, the IMU's bending ripple in both.
 
+## 2h. Inertial navigation, GNSS and a star tracker (roadmap G02)
+
+Off by default, and off, the flight knows its true state bit for bit as before. On
+(`DynamicsConfig.navigation`, the Engineer mode's *Navigation* section, `configure_mission`),
+the flown vehicle carries an inertial measurement unit and flies on what its navigation
+believes (src/physics/nav/).
+
+**The IMU** (sensors.ts). Per axis, gyros and accelerometers have a turn-on bias, an in-run bias
+that wanders as a first-order Gauss–Markov process (300 s), a scale-factor error and white noise
+(angle and velocity random walk), drawn from the navigation's own seeded stream (it never moves
+the wind's). Three grades, textbook orders of magnitude (Groves, *Principles of GNSS, Inertial,
+and Multisensor Integrated Navigation Systems*, 2nd ed., ch. 4), or custom figures:
+
+| Grade | Gyro bias | ARW | Accel. bias | VRW | Scale factors | Pad alignment |
+|---|---|---|---|---|---|---|
+| Navigation (ring-laser) | 0.005 °/h | 0.002 °/√h | 30 µg | 0.01 m/s/√h | 5 / 50 ppm | 0.005° |
+| Tactical (fibre-optic) | 1 °/h | 0.05 °/√h | 500 µg | 0.05 m/s/√h | 100 / 300 ppm | 0.05° |
+| MEMS | 30 °/h | 0.3 °/√h | 5 mg | 0.2 m/s/√h | 1000 / 2000 ppm | 0.3° |
+
+At every control step the IMU gives the increments since the last one: the rotation Δθ from the
+attitude of its own case (with P05, the bent structure's at its station) and the specific-force
+velocity Δv, the true velocity change less free fall from the last state, in body axes at
+mid-step — each with its errors.
+
+**The strapdown solution** (navigation.ts) integrates them in the Earth-centred inertial frame:
+q̂ ← q̂ ⊗ exp(Δθ̂), then position and velocity as free fall under the same J2 gravity (RK4, steps of
+at most 0.5 s, so a long held coast is carried exactly) plus the rotated Δv̂. With perfect sensors
+it follows the truth to under a millimetre per second over two minutes of thrust.
+
+**The filter** is an error-state extended Kalman filter of 21 errors — position, velocity,
+attitude (an ECI rotation, C = (I + [φ×]) Ĉ), the gyros' and accelerometers' biases and scale
+factors — propagated with Φ = I + F·dt at every step (F carries the gravity gradient, −[f×],
+−Ĉ on the biases and −Ĉ·diag(f), −Ĉ·diag(ω) on the scale factors) and the sensors' noise, plus a
+tuning margin of velocity noise of 10⁻⁴ of the specific force per √s under thrust (vibration, the
+step's discretisation, misalignment). It is corrected by scalar updates and the correction folded
+into the solution:
+
+- **GNSS**: position and velocity fixes (5 m, 0.05 m/s, 1 Hz by default), with one outage to set;
+- **star tracker**: attitude (10″, 1 Hz) above 150 km and below 1 °/s of body rate.
+
+At a staging the centre of mass the flight is tracked by moves; the vehicle knows its own
+geometry, so the solution moves with it.
+
+**Who flies on it.** The autopilot reads the navigation's attitude and bias-corrected rate (the
+average over the last step) instead of the truth; ascent guidance takes its position and
+velocity; the ascent's and the burns' cut-offs judge the orbit it believes in (and its thrust
+axis for the tail-off); a coast points prograde by it. Air data (the relative wind for the load
+relief) stay true, as an air-data system would give them; planning and steering the in-orbit
+burns (src/physics/sim/burns.ts, the other session's) still read the truth.
+
+**What it shows on Falcon 9 to LEO** (crosswind; tests/navigation.test.ts):
+
+- Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 1.7 per
+  axis, 0.5 % of samples outside 3σ), under 5 m and 0.1 m/s; the orbit it believes in is the true
+  one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop: the
+  attitude thrusters run at full duty 84 % of the first minute against 64 % on the truth.
+- A GNSS outage from T+60 s to T+200 s: the error grows to about 130 m and 1.9 m/s, inside the
+  filter's growing 3σ, and falls back to metres at the first fix.
+- MEMS without GNSS: 12 km and 30 m/s of error by orbit; guidance cuts off on an orbit the
+  navigation believes is 200 × 529 km while the true one is 202 × 511 km. The star tracker, above
+  150 km, brings the attitude error from 1.6° to seconds of arc.
+- Navigation grade without GNSS: 80 m and 0.6 m/s; the apoapsis 1.4 km off.
+
+**Cost**: within the run-to-run noise (runs with navigation were not slower).
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

@@ -910,3 +910,37 @@ describe('configure_mission: the attitude autopilot (roadmap E04)', () => {
     expect(run.execute({ axis: 'yaw', kind: 'step', amplitudeDeg: -1, holdS: 1 })).toMatchObject({ ok: false });
   });
 });
+
+// --- G02 ---
+describe('configure_mission: the navigation (roadmap G02)', () => {
+  it('merges the navigation field by field, keeps it across edits, and turns it off with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', navigation: { grade: 'custom', imu: { gyroBiasDegH: 2 }, gnssOutage: [60, 120] } });
+    expect(host.panel.state.dynamics?.navigation).toEqual({ grade: 'custom', imu: { gyroBiasDegH: 2 }, gnssOutage: [60, 120] });
+    configure.execute({ navigation: { imu: { accelBiasUg: 900, gyroBiasDegH: null }, starTracker: false } });
+    configure.execute({ windScenario: 'shear' });
+    expect(host.panel.state.dynamics).toMatchObject({ wind: 'shear', navigation: { grade: 'custom', imu: { accelBiasUg: 900 }, gnssOutage: [60, 120], starTracker: false } });
+    expect(() => configure.execute({ navigation: { lidar: true } })).toThrow(/Unknown navigation field "lidar"/);
+    expect(() => configure.execute({ navigation: { gnssRateHz: 100 } })).toThrow(/setup\.nav\.gnssRate must be at most 20/);
+    configure.execute({ navigation: null });
+    expect(host.panel.state.dynamics?.navigation).toBeUndefined();
+  });
+
+  it('reports what the navigation believes at the cursor', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).navigation).toBeNull();
+    const v = (x: number, y: number, z: number) => ({ x, y, z });
+    const navigation = { t: 1.4, r: v(6_778_137, 0, 0), v: v(0, 7_668.6, 0), positionError: v(1, -2, 3), velocityError: v(0.01, 0, 0), attitudeError: v(0, 0, 1e-4),
+      positionSigma: v(1, 1, 1), velocitySigma: v(0.01, 0.01, 0.01), attitudeSigma: v(1e-4, 1e-4, 1e-4), gyroBias: v(0, 0, 0), gyroBiasEstimate: v(0, 0, 0),
+      accelBias: v(0, 0, 0), accelBiasEstimate: v(0, 0, 0), gnss: 'outage', starTracker: 'unavailable', innovation: { position: 4 } };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), navigation };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).navigation;
+    expect(out).toMatchObject({ timeS: 1.4, gnss: 'outage', starTracker: 'unavailable', positionErrorM: { radial: 1, alongTrack: -2, crossTrack: 3 },
+      position3SigmaM: { radial: 3 }, innovation: { positionM: 4, velocityMs: null, attitudeArcsec: null } });
+    expect(out.believedApoapsisKm).toBeCloseTo(400, 0);
+  });
+});

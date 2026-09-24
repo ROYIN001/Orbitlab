@@ -332,6 +332,22 @@ time, overshoot, the difference between them and how long each limiter held the 
 the flight (the event log says when), and works only live, six-DOF, under the autopilot, one test
 at a time; the result stays in the recording for replay. Details in PHYSICS.md §2g.
 
+## 13. Inertial navigation (Engineer mode)
+
+In a six-DOF mission's setup, the *Navigation (INS / GNSS)* section turns on an inertial
+measurement unit — a navigation, tactical or MEMS grade, or your own figures — with GNSS fixes
+(and an outage you can set) and a star tracker. The autopilot, ascent guidance and the cut-off
+then fly on what the navigation believes rather than on the truth, so a poor unit without GNSS
+puts the payload into a different orbit than the one it thinks it reached.
+
+The attitude-loop inspector's **Navigation** tab (§9) charts the errors — true less estimated —
+of position and velocity (radial, along-track, cross-track) and of attitude (roll, pitch, yaw in
+the notation in force), each with the ±3σ the Kalman filter claims (dashed), GNSS outages marked,
+and the orbit the navigation believes in less the true one. Beside them: GNSS and star-tracker
+state, the errors against their 3σ, the orbit believed and true, the sensor biases true and
+estimated, and the latest innovations. The CSV adds the same (`nav_*`) and `read_flight_state` a
+`navigation` summary. Details in PHYSICS.md §2h.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

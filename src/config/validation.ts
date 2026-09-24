@@ -10,6 +10,8 @@ import { supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
 import { FLEX_LIMITS } from '../physics/rigid/flex';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS, controlFieldKey, controlProblems } from '../physics/rigid/control-config';
+import { AIDING_KEYS, AIDING_LIMITS, IMU_KEYS, NAV_FIELD_KEYS, navigationProblems } from '../physics/nav/config';
+import { IMU_LIMITS } from '../physics/nav/sensors';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
 export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection';
@@ -53,6 +55,11 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
   ...Object.fromEntries(CONTROL_CHANNELS.flatMap((channel) => CONTROL_CHANNEL_KEYS.map((key) =>
     [controlFieldKey(channel, key), { min: CONTROL_LIMITS[key][0], max: CONTROL_LIMITS[key][1] }]))),
   [controlFieldKey('feedForward')]: { min: CONTROL_LIMITS.feedForward[0] * 100, max: CONTROL_LIMITS.feedForward[1] * 100 },
+  // --- G02: the navigation's figures, in the units the panel shows
+  ...Object.fromEntries(IMU_KEYS.map((key) => [NAV_FIELD_KEYS[key], { min: IMU_LIMITS[key][0], max: IMU_LIMITS[key][1] }])),
+  ...Object.fromEntries(AIDING_KEYS.map((key) => [NAV_FIELD_KEYS[key], { min: AIDING_LIMITS[key][0], max: AIDING_LIMITS[key][1] }])),
+  [NAV_FIELD_KEYS.gnssOutageStart]: { min: 0, max: 1e6 },
+  [NAV_FIELD_KEYS.gnssOutageEnd]: { min: 0, max: 1e6 },
 };
 
 /** Vehicle programmes are trusted data, not fresh user overrides. Extending a
@@ -126,6 +133,8 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
       check(d.seed, 'setup.dynamics.seed', NUMBER_FIELDS['setup.dynamics.seed']);
       if (d.flex !== undefined) issues.push(...flexIssues(d.flex));
       if (d.control !== undefined) issues.push(...controlIssues(d.control));
+      if (d.navigation !== undefined) issues.push(...navigationProblems(d.navigation).map(({ field, value, limits }): ValidationIssue =>
+        (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
     }
   }
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });

@@ -17,6 +17,7 @@ import { axisLetter, LOOP_AXES, loopHistory, loopView, triple, type LoopAxis, ty
 import { getNotation, onNotationChange, symbolNode, symbolText, type Quantity } from './notation';
 import { LoopAnalysis } from './loop-analysis';
 import { LoopTuning, type LoopTuningHost } from './loop-tuning';
+import { LoopNavigation } from './loop-navigation';
 import type { TelemetrySample } from '../physics/sim/types';
 import './loop-inspector.css';
 
@@ -30,10 +31,10 @@ export const AXIS_COLOR: Readonly<Record<LoopAxis, string>> = { roll: '#f2c14e',
 const RATE_SYMBOL: Readonly<Record<LoopAxis, Quantity>> = { roll: 'rollRate', pitch: 'pitchRate', yaw: 'yawRate' };
 const MOMENT_SYMBOL: Readonly<Record<LoopAxis, Quantity>> = { roll: 'rollMoment', pitch: 'pitchMoment', yaw: 'yawMoment' };
 const WINDOWS_S = [10, 30, 120] as const;
-type Tab = 'loop' | 'frequency' | 'step' | 'tuning' | 'test';
-const TABS: readonly Tab[] = ['loop', 'frequency', 'step', 'tuning', 'test'];
+type Tab = 'loop' | 'frequency' | 'step' | 'tuning' | 'test' | 'navigation';
+const TABS: readonly Tab[] = ['loop', 'frequency', 'step', 'tuning', 'test', 'navigation'];
 const TAB_NAME: Readonly<Record<Tab, string>> = { loop: 'loop.tab.loop', frequency: 'loop.tab.frequency', step: 'loop.tab.step',
-  tuning: 'loop.tab.tuning', test: 'loop.tab.test' };
+  tuning: 'loop.tab.tuning', test: 'loop.tab.test', navigation: 'loop.tab.navigation' };
 const AXIS_NAME: Readonly<Record<LoopAxis, string>> = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop.axis.yaw' };
 const REFRESH_MS = 200;
 const MINUS = '−';
@@ -101,6 +102,8 @@ export class LoopInspector {
   private analysis = new LoopAnalysis();
   /** E04: tuning on the linearised loop, and attitude tests in flight. */
   private tuning: LoopTuning;
+  /** G02: the navigation against the truth. */
+  private navigation = new LoopNavigation();
   private windowS: number = 30;
   private opener: HTMLElement | null = null;
   private lastRender = -Infinity;
@@ -145,7 +148,8 @@ export class LoopInspector {
     }
     this.analysis.setOnChange(() => this.refresh(true));
     this.tuning.setOnChange(() => this.refresh(true));
-    this.el.append(this.head, this.tabBar, this.loopPanel, this.analysis.frequencyPanel, this.analysis.stepPanel, this.tuning.tuningPanel, this.tuning.testPanel);
+    this.el.append(this.head, this.tabBar, this.loopPanel, this.analysis.frequencyPanel, this.analysis.stepPanel, this.tuning.tuningPanel, this.tuning.testPanel,
+      this.navigation.panel);
     this.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); this.close(); } });
     this.head.addEventListener('pointerdown', (e) => this.startDrag(e));
     this.head.addEventListener('pointermove', (e) => this.moveDrag(e));
@@ -200,11 +204,13 @@ export class LoopInspector {
     this.analysis.stepPanel.hidden = this.tab !== 'step';
     this.tuning.tuningPanel.hidden = this.tab !== 'tuning';
     this.tuning.testPanel.hidden = this.tab !== 'test';
+    this.navigation.panel.hidden = this.tab !== 'navigation';
     this.windowLabel.hidden = this.tab !== 'loop';
     if (this.tab === 'frequency') { this.analysis.renderFrequency(this.axis, samples, cursor); return; }
     if (this.tab === 'step') { this.analysis.renderStep(this.axis, samples, cursor); return; }
     if (this.tab === 'tuning') { this.tuning.renderTuning(this.axis, samples, cursor, live); return; }
     if (this.tab === 'test') { this.tuning.renderTest(this.axis, samples, cursor, live); return; }
+    if (this.tab === 'navigation') { this.navigation.render(samples, cursor); return; }
     this.diagram(view, frame);
     this.none.hidden = !!view;
     this.drawCharts(frames, cursor);

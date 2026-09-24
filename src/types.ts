@@ -309,6 +309,8 @@ export interface DynamicsConfig {
   flex?: FlexConfig;
   /** Six-DOF only: the attitude autopilot's tuning (roadmap E04). Absent: the default autopilot, bit for bit. */
   control?: ControlConfig;
+  /** Six-DOF only: inertial navigation with GNSS and a star tracker (roadmap G02). Absent: the flight knows its true state. */
+  navigation?: NavigationConfig;
 }
 
 /**
@@ -353,3 +355,28 @@ export interface ControlConfig {
   /** weight of the aerodynamic feed-forward, 0–1 (1: full, the default) */
   feedForward?: number;
 }
+
+// --- G02 ---
+/** The navigation a six-DOF flight flies on (src/physics/nav/); its presence turns it on. */
+export interface NavigationConfig {
+  /** the IMU's grade; 'custom' starts from tactical and takes `imu` */
+  grade?: 'navigation' | 'tactical' | 'mems' | 'custom';
+  /** figures over the grade's (src/physics/nav/sensors.ts `ImuSpec`) */
+  imu?: {
+    gyroBiasDegH?: number; gyroBiasInstabilityDegH?: number; gyroArwDegRtH?: number; gyroScalePpm?: number;
+    accelBiasUg?: number; accelBiasInstabilityUg?: number; accelVrwMsRtH?: number; accelScalePpm?: number; alignmentDeg?: number;
+  };
+  /** GNSS fixes (default on): noise, m and m/s; rate, Hz; an outage, mission seconds [start, end) */
+  gnss?: boolean;
+  gnssPositionM?: number;
+  gnssVelocityMs?: number;
+  gnssRateHz?: number;
+  gnssOutage?: [number, number];
+  /** star tracker (default on): noise, arcsec; lowest altitude it sees stars from, km */
+  starTracker?: boolean;
+  starTrackerArcsec?: number;
+  starTrackerMinAltitudeKm?: number;
+  /** the sensors' random seed; absent, derived from the dynamics seed */
+  seed?: number;
+}
+
