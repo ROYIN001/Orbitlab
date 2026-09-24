@@ -6,6 +6,8 @@ export interface Series {
   y: number[];
   color: string;
   label?: string;
+  /** Dash pattern, px; solid when absent (the attitude-loop inspector's commands, G03). */
+  dash?: number[];
 }
 export interface ChartMarker {
   x: number;
@@ -185,6 +187,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   for (const s of series) {
     g.strokeStyle = s.color;
     g.lineWidth = 1.5;
+    g.setLineDash(s.dash ?? []);
     g.beginPath();
     let started = false;
     for (let i = 0; i < s.x.length; i++) {
@@ -195,6 +198,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
     }
     g.stroke();
   }
+  g.setLineDash([]);
   // the instant the rest of the app is showing
   if (opt.cursor !== undefined && isFinite(opt.cursor) && opt.cursor >= xMin && opt.cursor <= xMax) {
     const px = sx(opt.cursor);

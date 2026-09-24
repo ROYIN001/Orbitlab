@@ -21,6 +21,9 @@ here; this file records progress for the owner to fold in at the merge.
   ISO 1151; **everywhere**, with a **symbol table in Physics and sources**; a **setting in the
   Engineer mode's setup**, by language unless chosen; and the **numbers follow each standard's
   axes and positive directions**, not only its letters.
+- G03 (asked 2026-09-24): a **window of its own**, opened from the 6-DOF panel; the loop is
+  **recorded at every control step** and left out of the golden fingerprints, so replay works
+  from T+0; **no single-step button** (analysis belongs to G04 and E04).
 
 ## Progress
 
@@ -28,7 +31,7 @@ here; this file records progress for the owner to fold in at the merge.
 |---|---|
 | P05 slosh, bending and notch filter | done 2026-09-24 (see below) |
 | U07 ГОСТ 20058-80 notation | done 2026-09-24 (see below) |
-| G03 attitude-loop inspector | |
+| G03 attitude-loop inspector | done 2026-09-24 (see below) |
 | E02 live equations panel | |
 | G04 Bode, step response, margins | |
 | E04 controller tuning mode | |
@@ -142,4 +145,51 @@ text).
 **Results (2026-09-24)**: `npm test` 65 files / 932 tests pass (the one expectation in
 tests/rigid-replay.test.ts updated after the first full run); typecheck and build pass. Flights
 are bit for bit as before (the golden fingerprints in the regular suite pass unchanged).
+
+### G03 — the attitude-loop inspector
+
+Physics and findings in [../PHYSICS.md](../PHYSICS.md) §2d, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §9.
+
+- **The record** (`src/physics/rigid/loop.ts`): at every control step of the flown vehicle,
+  `RigidTelemetry.attitudeLoop` holds the target, the attitude error, the rate command, the rates
+  the controller read, the angular acceleration, the moment asked for (and after P05's notch),
+  the air's, the engines' and the thrusters' moments, the gains and limits in force, the limiter
+  flags per axis, gimbal travel and thruster duty used, and the ascent load relief. The
+  controller fills an optional `ControlTrace` (`control.ts`) that it never reads back; the
+  runtime's new `recordLoop` option (off by default, on for the vehicle in `Simulation`, never
+  for debris) builds the record. The recorder counts ~1.6 kB a frame for it (measured); the
+  CPU cost is within run-to-run noise (−1 % Falcon 9, +4 % Soyuz over 200 s).
+- **Bit for bit**: the P05 golden fingerprints leave `attitudeLoop` out and still match 7834edd;
+  a flight with the record off equals the flight with it on.
+- **The inspector** (`src/ui/loop-inspector.ts`, `loop-view.ts`): a non-modal, draggable window
+  over the Engineer mode, opened from the 6-DOF panel — nine blocks and the IMU's feedback path
+  with the step's values in the notation in force (U07; new symbols L M N / M<sub>x</sub>
+  M<sub>z</sub> M<sub>y</sub> for the moments, also in the notation table), blocks held by a
+  limit outlined, and four charts over 10/30/120 s; its own play/pause; live and replay.
+- **Also**: CSV columns `iso_loop_*`/`gost_loop_*`, `loop_limiters`, … in the notation's axes;
+  `read_flight_state.frame.flightDynamics.attitudeLoop` in ISO axes; an "attitude loop" section in
+  Physics and sources; `drawChart` series take an optional dash pattern.
+- **What it found**: on Falcon 9 the load relief holds the ascent command up to 24° nearer the
+  air than guidance asks, and switches off in one step when the dynamic pressure falls through
+  500 Pa (T+127.3 s): the attitude error jumps to 24° and the stack slews at its 5°/s limit for
+  five seconds. Left as it is here — a fix changes every six-DOF ascent — and reported to the
+  owner. Also: from T+89 s guidance pitches away from the airflow faster than the stack follows
+  (4.6° of pitch error, the rate held by its stopping distance).
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- G03 ---`), `src/physics/simulation.ts` (the vehicle runtime's `recordLoop`; the load
+relief's angles recorded — the relief call itself computes the same values in the same order),
+`src/mcp.ts` (`attitudeLoop` in `flightDynamics`), `src/main.ts` (the inspector: one field, its
+construction beside the 6-DOF panel's, two lines in `setMode`, three in the frame loop — none in
+the camera or floating-origin code), `src/replay/recorder.ts` (the byte estimate).
+RigidRuntime (`runtime.ts`, `control.ts`): optional `recordLoop` and `trace` only; absent, the
+code path computes what it did.
+
+**Tests**: tests/attitude-loop.test.ts (the trace leaves every demand bit-identical and names
+each limiter; flags pack and unpack; a Falcon 9 ascent records every step, the vehicle only,
+obeys ω_d = K_θ·e and ε = K_ω·(ω_d − ω̂) to 12 digits wherever no limit acts, records the load
+relief, flies bit-identically with the record off; the views in ISO and ГОСТ; history windows;
+the CSV columns), a block in tests/mcp.test.ts, the inspector button in
+tests/rigid-controls.test.ts.
 

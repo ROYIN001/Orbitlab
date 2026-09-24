@@ -1,0 +1,86 @@
+/* G03: the attitude-loop inspector, a non-modal window over the Engineer mode. */
+dialog.loop-inspector {
+  position: fixed; inset: auto; left: 50%; top: 68px; transform: translateX(-50%); margin: 0; z-index: 60;
+  width: min(1260px, calc(100vw - 24px)); max-height: calc(100vh - 84px); overflow: auto;
+  background: var(--panel2); color: var(--text); border: 1px solid #3e5165; border-radius: 14px;
+  padding: 0 18px 16px; box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+}
+.li-head {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin: 0 -18px; padding: 12px 18px 10px; background: var(--panel2); border-bottom: 1px solid var(--line);
+  cursor: move; user-select: none; touch-action: none;
+}
+.li-heading { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.li-heading .eyebrow { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+.li-title { margin: 0; font: 500 20px/1.2 var(--display); letter-spacing: -0.3px; }
+.li-status { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; }
+.li-time { font-size: 16px; color: var(--text); }
+.li-tag { padding: 2px 8px; border-radius: 999px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--accent); border: 1px solid var(--accent-line); background: var(--accent-weak); }
+.li-tag.replay { color: var(--blue); border-color: #2d5170; background: #122436; }
+.li-mode { color: var(--muted); font-family: var(--sans); font-size: 12px; }
+.li-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; cursor: default; }
+.li-play { min-width: 40px; }
+.li-field { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.li-field select { padding: 4px 6px; font-size: 12px; }
+.li-axes { display: flex; border: 1px solid var(--line2); border-radius: 8px; overflow: hidden; }
+.li-axis { padding: 5px 10px; font-size: 12px; color: var(--muted); background: transparent; border-right: 1px solid var(--line2); }
+.li-axis:last-child { border-right: 0; }
+.li-axis[aria-pressed="true"] { color: var(--axis); background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 -2px 0 var(--axis); }
+.li-close { position: static; float: none; margin: 0; }
+.li-intro { margin: 10px 0 4px; font-size: 12.5px; line-height: 1.5; color: #b8c8d9; }
+.li-legend { display: flex; gap: 16px; margin: 4px 0 10px; font-size: 12px; color: var(--muted); }
+.li-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.li-legend-item i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+/* The forward path: nine blocks with an arrow column between each pair. */
+.li-forward, .li-feedback {
+  display: grid; column-gap: 0;
+  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr) 14px
+    minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr) 14px minmax(0, 1fr);
+}
+.li-block {
+  min-width: 0; padding: 7px 7px 6px; border: 1px solid var(--line2); border-radius: 9px; background: var(--panel3);
+  font-size: 11px; line-height: 1.35;
+}
+.li-block h4 { margin: 0 0 5px; font: 600 11px/1.25 var(--sans); color: #cddae6; }
+.li-unit { font-weight: 400; color: var(--dim); white-space: nowrap; }
+.li-block.li-sum { border-radius: 22px; text-align: left; }
+.li-block.warn { border-color: var(--warn); box-shadow: 0 0 0 1px rgba(239, 164, 126, 0.35) inset; }
+.li-block.off { opacity: 0.45; }
+.li-rows { display: grid; gap: 1px; }
+.li-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: baseline; gap: 3px; font-family: var(--mono); }
+.li-ax { font-family: var(--mono); font-weight: 600; }
+.li-ax var.notation-symbol { font-family: var(--mono); font-style: normal; font-size: 1em; }
+.li-val { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+.li-row.warn .li-val { color: var(--warn); }
+.li-flag { padding: 0 4px; border-radius: 4px; font-size: 9px; color: #1b1208; background: var(--warn); font-family: var(--sans); }
+.li-note var.notation-symbol { font-size: 1.1em; }
+.li-note { margin: 4px 0 0; font-size: 10.5px; line-height: 1.35; color: var(--muted); overflow-wrap: anywhere; }
+.li-arrow { position: relative; }
+.li-arrow::before { content: ''; position: absolute; left: 1px; right: 5px; top: 50%; border-top: 1px solid var(--accent-line); }
+.li-arrow::after { content: ''; position: absolute; right: 1px; top: calc(50% - 4px); border: 4px solid transparent; border-left: 5px solid var(--accent-line); border-right: 0; }
+
+/* The feedback path, under the forward one: the IMU back to both junctions. */
+.li-feedback { margin-top: 0; min-height: 58px; }
+.li-feedback .li-block { margin-top: 14px; position: relative; }
+.li-feedback .li-imu::before { content: ''; position: absolute; left: 50%; top: -15px; height: 14px; border-left: 1px solid var(--accent-line); }
+.li-feedback .li-imu::after { content: ''; position: absolute; right: 100%; top: 50%; width: 8px; border-top: 1px solid var(--accent-line); }
+.li-line { position: relative; }
+.li-line::before { content: ''; position: absolute; left: 0; right: 0; top: calc(50% + 7px); border-top: 1px solid var(--accent-line); }
+.li-tap { position: relative; }
+.li-tap::before { content: ''; position: absolute; left: 50%; top: 5px; bottom: calc(50% - 7px); border-left: 1px solid var(--accent-line); }
+.li-tap::after { content: ''; position: absolute; left: calc(50% - 4px); top: 0; border: 4px solid transparent; border-bottom: 5px solid var(--accent-line); border-top: 0; }
+.li-tap .li-tap-label { position: absolute; left: calc(50% + 6px); top: 10px; font-size: 10px; color: var(--muted); white-space: nowrap; }
+.li-tap:not(.first) { background: linear-gradient(var(--accent-line), var(--accent-line)) no-repeat left 0 top calc(50% + 7px) / 100% 1px; }
+.li-tap.first { background: linear-gradient(var(--accent-line), var(--accent-line)) no-repeat right 0 top calc(50% + 7px) / 50% 1px; }
+/* The tap sits in an arrow-wide column but spans the block column it points into. */
+.li-feedback .li-tap { grid-row: 1; }
+
+.li-none { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--panel3); color: var(--muted); font-size: 12.5px; }
+.li-charts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.li-charts canvas { width: 100%; height: 158px; background: var(--panel3); border: 1px solid var(--line); border-radius: 8px; }
+
+@media (max-width: 1100px) {
+  .li-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

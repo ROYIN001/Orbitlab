@@ -298,6 +298,25 @@ describe('read_flight_state', () => {
     expect(detached.engineDirectionsBody!['s1.engine.0'].x).toBe(1);
   });
 
+  it('summarises the attitude loop in ISO axes (roadmap G03)', () => {
+    host.sim = makeFakeSim(host.panel.getConfig());
+    host.player.live = false;
+    const v = (x: number, y: number, z: number) => ({ x, y, z });
+    const rigid = { ...rigidTelemetry(0), attitudeLoop: { attitudeErrorBody: v(0, 0.01, -0.02), desiredRatesBody: v(0, 0.001, -0.002), sensedOmegaBody: v(0, 0, 0),
+      angularAccelerationBody: v(0, 0, 0), momentDemandBody: v(0, 1000, -2000), aeroMomentBody: v(0, -500, 0), engineMomentBody: v(0, 1500, -2000),
+      rcsMomentBody: v(0, 0, 0), gains: { attitudeGain: v(1.5, 1.5, 1.5), rateGain: v(3, 3, 3), maxRate: v(0.1, 0.1, 0.1), maxAngularAcceleration: v(0.05, 0.05, 0.05) },
+      limits: 1 << 5, gimbalUse: 0.25, rcsDuty: 0, loadRelief: { requestedRad: 0.1, limitRad: 0.2, appliedRad: 0 } } };
+    host.player.replayFrame = makeFrame({ t: 30, rigid });
+    const loop = (tool(tools, 'read_flight_state').execute({}) as any).frame.flightDynamics.attitudeLoop;
+    // ISO: pitch q = −(simulator z), yaw r = simulator y.
+    expect(loop.attitudeErrorDeg.pitch).toBeCloseTo(0.02 * 180 / Math.PI, 9);
+    expect(loop.attitudeErrorDeg.yaw).toBeCloseTo(0.01 * 180 / Math.PI, 9);
+    expect(loop.momentKNm.demand).toEqual({ roll: 0, pitch: 2, yaw: 1 });
+    expect(loop.limiters).toEqual(['rate:pitch']);
+    expect(loop.gimbalUsePct).toBe(25);
+    expect(loop.unmetSignificant).toBe(false);
+  });
+
   it('is a safe no-op with no mission configured', () => {
     const out = tool(tools, 'read_flight_state').execute({}) as { hasMission: boolean };
     expect(out.hasMission).toBe(false);

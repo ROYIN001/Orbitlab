@@ -38,6 +38,7 @@ import { defaultDynamics } from './physics/rigid/config';
 import { cloneRigidTelemetry } from './physics/rigid/telemetry';
 import { FLEX_LIMITS } from './physics/rigid/flex';
 import { aeroAngles, bodyRates, getNotation, simulatorRates } from './ui/notation';
+import { loopLimiterNames, loopView } from './ui/loop-view';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
 
 /** configure_mission's `flex` fields (roadmap P05). */
@@ -494,6 +495,25 @@ function flightDynamics(rigid: RigidTelemetry): Record<string, unknown> {
     iso: { pDegS: iso.roll * RAD, qDegS: iso.pitch * RAD, rDegS: iso.yaw * RAD },
     gost: { omegaXDegS: gost.roll * RAD, omegaYDegS: gost.yaw * RAD, omegaZDegS: gost.pitch * RAD },
     alphaDeg: angles.alpha * RAD, betaDeg: angles.beta * RAD,
+    // G03: the attitude loop at this step, in ISO 1151 axes (as set_flight_control takes them).
+    attitudeLoop: attitudeLoopSummary(rigid),
+  };
+}
+
+/** What the autopilot decided at this step (roadmap G03), in ISO axes: roll about x, pitch about y, yaw about z. */
+function attitudeLoopSummary(rigid: RigidTelemetry): Record<string, unknown> | null {
+  const view = loopView(rigid, 'iso');
+  if (!view) return null;
+  return {
+    mode: view.mode,
+    attitudeErrorDeg: view.errorDeg ?? null, rateCommandDegS: view.commandDegS, rateMeasuredDegS: view.measuredDegS,
+    rateSensedDegS: view.sensedDegS, angularAccelerationDegS2: view.accelerationDegS2,
+    gains: { attitudePerS: view.gains.attitude, ratePerS: view.gains.rate, maxRateDegS: view.gains.maxRateDegS,
+      maxAngularAccelerationDegS2: view.gains.maxAccelerationDegS2 },
+    momentKNm: { demand: view.momentKNm.demand, filtered: view.momentKNm.filtered ?? null, engines: view.momentKNm.engines,
+      jets: view.momentKNm.jets, aero: view.momentKNm.aero, unmet: view.momentKNm.unmet },
+    unmetSignificant: view.unmetSignificant, limiters: loopLimiterNames(view),
+    gimbalUsePct: view.gimbalUsePct, rcsDutyPct: view.rcsDutyPct, loadReliefDeg: view.loadReliefDeg ?? null,
   };
 }
 

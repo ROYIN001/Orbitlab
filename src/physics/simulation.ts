@@ -164,7 +164,9 @@ export class Simulation {
       if (cfgIn.dynamics.model === 'sixDof') {
         // Slosh, bending and the notch filter fly on the vehicle only, never on its debris.
         const flex = resolveFlexOptions(cfgIn.dynamics.flex);
-        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...opts.rigidOptions, integrationStepS, flex } : { ...opts.rigidOptions, integrationStepS });
+        // G03: the flown vehicle records its attitude loop for the inspector (its debris do not).
+        const options = { ...opts.rigidOptions, integrationStepS, recordLoop: opts.rigidOptions?.recordLoop ?? true };
+        this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...options, flex } : options);
       }
     }
     this.site = siteById(cfgIn.siteId);
@@ -721,12 +723,19 @@ export class Simulation {
       rigidGLoad = 0;
     } else if (this.rigidRuntime && s.rigid) {
       const runtime = this.rigidRuntime;
+      let loadRelief: { requestedRad: number; limitRad: number; appliedRad: number } | undefined;
       if (runtime.command.mode === 'auto' && s.status === 'ascent' && q > 500) {
         const snapshot = buildRigidVehicle(this.vehicle, { pressure: atm.p, coreThrottle: thr.coreLevel, boosterThrottle: thr.boosterThrottle, boosterThrottles: thr.boosterLevels,
           time: s.t, rcsConsumedKgByStage: runtime.consumed,
           payloadDiameter: this.satellite.size ? Math.max(this.satellite.size.width, this.satellite.size.depth) : undefined,
           payloadLength: this.satellite.size?.height });
-        dirCmd = limitAscentCommand(dirCmd, vAir, runtime.ascentAngleLimit(snapshot, q, vAirMag / atm.a));
+        const requested = dirCmd, limitRad = runtime.ascentAngleLimit(snapshot, q, vAirMag / atm.a);
+        dirCmd = limitAscentCommand(dirCmd, vAir, limitRad);
+        // G03: what the load relief did, for the attitude-loop inspector.
+        if (runtime.recordLoop) {
+          const angle = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, dot(normalize(a), normalize(b)))));
+          loadRelief = { requestedRad: angle(requested, vAir), limitRad, appliedRad: angle(requested, dirCmd) };
+        }
       }
       const result = runtime.step(s.t, { r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody }, dt,
         dirCmd, s.status === 'ascent' ? this.rigidLink.rigidSide()
@@ -736,6 +745,7 @@ export class Simulation {
           propellantOffsetSeconds: elapsed, rcsConsumedKgByStage: consumed }));
       next = result.state;
       s.rigid = result.telemetry;
+      if (loadRelief && s.rigid.attitudeLoop) s.rigid.attitudeLoop.loadRelief = loadRelief;
       s.dir = quatRotate(result.state.attitudeQ, v3(1, 0, 0));
       rigidGLoad = norm(result.nonGrav) / G0;
       rigidAccelerations = result.accelerationsStart;

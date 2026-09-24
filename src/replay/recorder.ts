@@ -77,7 +77,16 @@ function rigidBytes(value: RigidTelemetry | undefined): number {
   // provenance; allow 600, including optional numerical settings.
   return RIGID_BYTES.body + (value.windProfile ? 600 : 0)
     + Object.keys(value.engineDeflections).length * RIGID_BYTES.engine
-    + flexBytes(value);
+    + flexBytes(value) + loopBytes(value);
+}
+
+/** G03's attitude-loop record: 1 523 B measured for one with target and load
+ * relief (node --expose-gc, 20 000 records), plus 70 B for each further vector —
+ * the rates the controller read, and the filtered moment with P05's notch. */
+function loopBytes(value: RigidTelemetry): number {
+  const loop = value.attitudeLoop;
+  if (!loop) return 0;
+  return 1620 + (loop.momentFilteredBody ? 70 : 0);
 }
 
 /** P05's flexible-body telemetry, when modelled: an estimate from its shape

@@ -4,6 +4,7 @@ import { quatSlerp } from './math';
 import { lerp } from '../vec3';
 import type { WindScenario } from './aero';
 import type { FlexTelemetry } from './flex';
+import { cloneAttitudeLoop, type AttitudeLoopTelemetry } from './loop';
 
 /** Commands are inputs to finite actuators, never a replacement for body state. */
 export interface RigidCommand {
@@ -54,6 +55,8 @@ export interface RigidTelemetry {
   replayAttitudeAvailable?: boolean;
   /** Slosh, bending and notch filter state (roadmap P05); absent when not modelled. */
   flex?: FlexTelemetry;
+  /** The attitude loop's decisions at this step (roadmap G03); the flown vehicle only. */
+  attitudeLoop?: AttitudeLoopTelemetry;
 }
 
 export function cloneWindProfile(value: WindScenario | undefined): WindScenario | undefined {
@@ -75,7 +78,8 @@ export function cloneRigidTelemetry(value: RigidTelemetry | undefined): RigidTel
     engineDirectionsBody: value.engineDirectionsBody
       ? Object.fromEntries(Object.entries(value.engineDirectionsBody).map(([id, direction]) => [id, { ...direction }])) : undefined,
     engineThrottles: value.engineThrottles ? { ...value.engineThrottles } : undefined,
-    ...(value.flex ? { flex: cloneFlexTelemetry(value.flex) } : {}) };
+    ...(value.flex ? { flex: cloneFlexTelemetry(value.flex) } : {}),
+    ...(value.attitudeLoop ? { attitudeLoop: cloneAttitudeLoop(value.attitudeLoop) } : {}) };
 }
 
 function cloneFlexTelemetry(value: FlexTelemetry): FlexTelemetry {

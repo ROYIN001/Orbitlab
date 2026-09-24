@@ -253,6 +253,9 @@ both, and that ISO y points to the right of the flight path and ГОСТ y above
 | Load factor | n | n | Non-gravitational acceleration over g₀ |
 | Mass | m | m | |
 | Thrust | F | P | |
+| Rolling moment | L | M<sub>x</sub> | About x; positive rolls the right side down |
+| Pitching moment | M | M<sub>z</sub> | Positive nose up |
+| Yawing moment | N | M<sub>y</sub> | ISO: about z, positive nose right; ГОСТ: about y, positive nose left |
 
 The same letter can mean different things across the two: γ is the flight-path angle in ISO
 and the roll angle in ГОСТ, θ the pitch angle in ISO (Θ) and the flight-path angle in ГОСТ, q the
@@ -269,6 +272,65 @@ and the `evt.controlCommand` event records them so.
 Before U07 the 6-DOF controls called the simulator's y rate "pitch" and z rate "yaw", and the
 event log's α was its x–z angle; with the stack's roll reference those are the yaw rate, the
 pitch rate and the sideslip. They are now the standards'.
+
+## 2d. The attitude loop and its inspector (roadmap G03)
+
+The six-DOF autopilot (src/physics/rigid/control.ts, run by `RigidRuntime.step` at the 0.01 s
+control clock) is a cascade, per body axis:
+
+1. **Attitude error.** The target attitude — the guidance direction for the nose, with the roll
+   reference — against the attitude the IMU reads, as a rotation vector **e** in body axes.
+2. **Attitude loop.** ω_d = K_θ·e, but never faster than the rate from which the axis can still
+   stop on the target: with the angular-acceleration limit a and the actuators' response delay
+   τ, d = ω·τ + ω²/2a gives the **stopping-distance** rate; then the **rate limit** (8°/s in
+   roll, 5°/s in pitch and yaw).
+3. **Rate loop.** ε = K_ω·(ω_d − ω̂), limited to what the actuators can deliver: a **scheduled
+   angular-acceleration limit**, 35 % of the authority left once the air's moment and the
+   gyroscopic term are paid for, over the inertia (at most 5°/s² in roll, 3°/s² in pitch and
+   yaw). K_θ = 1.5 s⁻¹ and K_ω = 3 s⁻¹ on every axis; with P05's bending filter K_ω ≤ ω_b/6 and
+   K_θ half that.
+4. **Moment.** M = I·ε + ω × Iω; with P05, through the notch.
+5. **Actuators.** The gimbals are asked for M − M_aero; whatever they cannot give goes to the
+   attitude thrusters; whatever the thrusters cannot give is left unmet (the telemetry's
+   `saturated` flag, past 1 N·m and 5 % of M).
+
+Upstream, the ascent's **load relief** turns the guidance direction towards the relative wind
+when the angle to it would load the structure past its limit (above 500 Pa of dynamic
+pressure). Manual rates (the 6-DOF panel) enter at step 3 with the rate limit.
+
+Every control step of the flown vehicle records what the loop decided (`attitudeLoop` in the
+six-DOF telemetry, src/physics/rigid/loop.ts): target, error, rate command, the rates the
+controller read, angular acceleration, the moment asked for (and after the notch), the air's,
+the engines' and the thrusters' moments, the gains and limits in force, which limiters held
+which axis, gimbal travel and thruster duty used, and the load relief. It is a record only —
+the loop never reads it — so a flight is the same bit for bit with or without it
+(tests/attitude-loop.test.ts, and the P05 fingerprints with the record left out). The record
+also checks the cascade's own arithmetic: wherever no limit acts, ω_d = K_θ·e and
+ε = K_ω·(ω_d − ω̂) hold to 12 digits over a Falcon 9 ascent.
+
+The Engineer mode's **attitude-loop inspector** (a button in the 6-DOF panel) draws the cascade
+as a block diagram with the values of the step on screen, in the notation in force (§2c; the
+moments are L, M, N in ISO and M<sub>x</sub>, M<sub>z</sub>, M<sub>y</sub> in ГОСТ), outlines a
+block held by a limit, and charts the last 10, 30 or 120 s: attitude error; rate command,
+measured and IMU-read rate; moment asked, delivered and the air's; gimbal and thruster use. It
+reads the recording, so it works in replay as in live flight. The CSV adds the same record in
+the notation's axes (`iso_loop_*` or `gost_loop_*`, `loop_limiters`), and `read_flight_state`
+a summary in ISO axes (`flightDynamics.attitudeLoop`).
+
+What it shows on Falcon 9 to LEO in the crosswind scenario:
+
+- From T+20 s to T+85 s, max-q included, the attitude error stays under 0.25° while the gimbals
+  carry the air's pitching moment (about 300 kN·m at T+60 s); the attitude thrusters are at
+  full duty about half the time, filling in behind the gimbals' lag.
+- From T+89 s guidance pitches the command away from the airflow (0.7° to 11° in four seconds)
+  faster than the stack follows: the pitch error grows to 4.6° with the pitch rate held by its
+  stopping distance, and the air's pitching moment reaches 2.4 MN·m at T+96 s.
+- At T+127.3 s the dynamic pressure falls through 500 Pa and the load relief, which had been
+  holding the command 24° nearer the air than guidance asked (39° asked, 15° allowed), switches
+  off in one step: the attitude error jumps from 0.4° to 24° and the stack swings back at its
+  5°/s rate limit for five seconds.
+- After staging the upper stage's roll authority is so small (an ε limit of 0.02°/s²) that its
+  roll rate is held by the stopping distance.
 
 ## 3. Atmosphere and aerodynamics
 

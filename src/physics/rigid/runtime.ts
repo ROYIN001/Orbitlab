@@ -6,7 +6,8 @@ import { gravityJ2 } from '../gravity';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { allocateEngineGimbals, allocateRcs, createEngineStates, engineWrench, stepEngineActuators, stepRcs, type EngineActuatorSpec, type EngineActuatorState } from './actuators';
 import { aerodynamicWrench, staticAeroMoment, windVelocityECI, type WindScenario } from './aero';
-import { attitudeControl, rateControl, type ControlGains } from './control';
+import { attitudeControl, rateControl, type ControlDemand, type ControlGains, type ControlTrace } from './control';
+import { encodeLoopLimits, type AttitudeLoopTelemetry } from './loop';
 import { integrateRigidStep, type RigidState } from './integrator';
 import { matVecMul, quatFromBasis, quatInverseRotate, quatRotate, type Mat3, type Quat } from './math';
 import type { RigidVehicleSnapshot } from './mass';
@@ -27,6 +28,8 @@ export interface RigidRuntimeOptions {
   controlGains?: ControlGains;
   /** Slosh, bending and the notch filter (roadmap P05). Absent or all off: the rigid body. */
   flex?: FlexOptions;
+  /** Record the attitude loop's decisions in the telemetry (roadmap G03); reads the loop, never changes it. */
+  recordLoop?: boolean;
 }
 export interface RigidAccelerations {
   propulsionECI: Vec3;
@@ -92,6 +95,8 @@ export class RigidRuntime {
   private engines = new Map<string, EngineActuatorState>();
   /** The flexible body, when slosh, bending or the notch filter is modelled. */
   readonly flex?: FlexBody;
+  /** Whether `step` records the attitude loop (roadmap G03). */
+  readonly recordLoop: boolean;
   snapshot?: RigidVehicleSnapshot;
   constructor(config: DynamicsConfig, readonly bodyId = 'vehicle', options: RigidRuntimeOptions = {}) {
     this.wind = windScenario(config);
@@ -104,6 +109,7 @@ export class RigidRuntime {
     const gains = options.controlGains ?? FLIGHT_CONTROL_GAINS;
     this.controlGains = { attitudeGain: { ...gains.attitudeGain }, rateGain: { ...gains.rateGain },
       maxRate: { ...gains.maxRate }, maxAngularAcceleration: { ...gains.maxAngularAcceleration }, responseDelayS: gains.responseDelayS };
+    this.recordLoop = options.recordLoop === true;
     const flex = options.flex;
     if (flex && (flex.slosh || flex.bending || flex.notch)) {
       if (![flex.notchZetaZero, flex.notchZetaPole, flex.notchFrequencyScale, flex.bandwidthRatio, flex.sloshDamping, flex.bendingDamping].every(Number.isFinite)
@@ -238,7 +244,7 @@ export class RigidRuntime {
     this.snapshot = snapshot;
   }
 
-  telemetry(state: RigidState, time: number, snapshot: RigidVehicleSnapshot, saturated = false, rawError = 0): RigidTelemetry {
+  telemetry(state: RigidState, time: number, snapshot: RigidVehicleSnapshot, saturated = false, rawError = 0, loop?: AttitudeLoopTelemetry): RigidTelemetry {
     const specs = this.specs(snapshot);
     const states = specs.map(spec => this.engines.get(spec.id) ?? createEngineStates([spec])[0]);
     const wrench = engineWrench(specs, states, snapshot.cg);
@@ -258,7 +264,33 @@ export class RigidRuntime {
       rcsPropellantKg: snapshot.rcs.reduce((sum, r) => sum + Math.max(0, r.initialPropellantKg - (this.consumed[r.stageId] ?? 0)), 0),
       saturated, angleOfAttack: aero.angleOfAttack, sideslip: aero.sideslip, aeroWithinEnvelope: aero.withinEnvelope,
       windECI: this.windAt(state.r, time), rawQuaternionNormError: rawError,
-      ...(this.flex ? { flex: this.flex.telemetry() } : {}) };
+      ...(this.flex ? { flex: this.flex.telemetry() } : {}),
+      ...(loop ? { attitudeLoop: loop } : {}) };
+  }
+
+  /** The attitude loop as it ran this step (roadmap G03): copies, never references into the loop. */
+  private loopRecord(trace: ControlTrace, step: { target?: Quat; demand: ControlDemand; unfilteredMoment: Vec3; sensedOmega: Vec3;
+    gains: ControlGains; aeroMoment: Vec3; engineMoment: Vec3; rcsMoment: Vec3; gasLimited: boolean; gimbalLimited: boolean; rcsLimited: boolean;
+    specs: readonly EngineActuatorSpec[]; engineStates: readonly EngineActuatorState[]; rcsDuties: readonly number[] }): AttitudeLoopTelemetry {
+    const copy = (v: Vec3): Vec3 => ({ x: v.x, y: v.y, z: v.z }), g = step.gains, notch = !!this.flex?.options.notch;
+    let gimbalUse = 0;
+    step.specs.forEach((spec, index) => {
+      if (spec.maxGimbalRad > 0) gimbalUse = Math.max(gimbalUse, Math.hypot(...step.engineStates[index].deflections) / spec.maxGimbalRad);
+    });
+    return {
+      ...(step.target ? { targetQ: { ...step.target } } : {}),
+      ...(trace.attitudeError ? { attitudeErrorBody: copy(trace.attitudeError) } : {}),
+      desiredRatesBody: copy(step.demand.desiredRates),
+      sensedOmegaBody: copy(step.sensedOmega),
+      angularAccelerationBody: copy(step.demand.angularAcceleration),
+      momentDemandBody: copy(step.unfilteredMoment),
+      ...(notch ? { momentFilteredBody: copy(step.demand.momentBody) } : {}),
+      aeroMomentBody: copy(step.aeroMoment), engineMomentBody: copy(step.engineMoment), rcsMomentBody: copy(step.rcsMoment),
+      gains: { attitudeGain: copy(g.attitudeGain), rateGain: copy(g.rateGain), maxRate: copy(g.maxRate),
+        maxAngularAcceleration: copy(g.maxAngularAcceleration), ...(g.responseDelayS !== undefined ? { responseDelayS: g.responseDelayS } : {}) },
+      limits: encodeLoopLimits(trace, { gasBudget: step.gasLimited, gimbal: step.gimbalLimited, rcs: step.rcsLimited }),
+      gimbalUse: Math.min(1, gimbalUse), rcsDuty: step.rcsDuties.reduce((max, duty) => Math.max(max, duty), 0),
+    };
   }
 
   step(time: number, state: RigidState, dt: number, noseCommand: Vec3, sideReference: Vec3, provider: SnapshotProvider) {
@@ -272,9 +304,13 @@ export class RigidRuntime {
     const sensed = flex ? flex.sensed(state.attitudeQ, state.omegaBody) : state;
     const gains = flex ? flex.limitGains(this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody))
       : this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody);
-    let demand = this.command.mode === 'manual'
-      ? rateControl(this.command.rates, sensed.omegaBody, start.inertia, gains)
-      : attitudeControl(sensed.attitudeQ, targetAttitude(noseCommand, sideReference), sensed.omegaBody, start.inertia, gains);
+    // G03: the trace only reads what the controller decides.
+    const trace: ControlTrace | undefined = this.recordLoop ? { stoppingLimited: 0, rateLimited: 0, accelerationLimited: 0 } : undefined;
+    const target = this.command.mode === 'manual' ? undefined : targetAttitude(noseCommand, sideReference);
+    let demand = !target
+      ? rateControl(this.command.rates, sensed.omegaBody, start.inertia, gains, trace)
+      : attitudeControl(sensed.attitudeQ, target, sensed.omegaBody, start.inertia, gains, trace);
+    let gasLimited = false;
     const specs = this.specs(start);
     const activeStage = start.rcsThrusters[0]?.stageId;
     const reservoir = start.rcs.find(r => r.stageId === activeStage);
@@ -288,9 +324,11 @@ export class RigidRuntime {
       const budget = fuelAwareCoastRates({ requestedRatesBody: demand.desiredRates, omegaBody: sensed.omegaBody,
         inertiaBody: start.inertia, remainingGasKg: gas, jets });
       if (budget.limited) {
-        demand = { ...rateControl(budget.ratesBody, sensed.omegaBody, start.inertia, gains), saturated: true };
+        demand = { ...rateControl(budget.ratesBody, sensed.omegaBody, start.inertia, gains, trace), saturated: true };
+        gasLimited = true;
       }
     }
+    const unfilteredMoment = demand.momentBody;
     if (flex?.options.notch) demand = { ...demand, momentBody: flex.filterMoment(demand.momentBody) };
     const states = specs.map(spec => this.engines.get(spec.id) ?? createEngineStates([spec])[0]);
     const allocation = allocateEngineGimbals(specs, specs.map(e => e.maxThrust > 0 ? 1 : 0), sub(demand.momentBody, aeroStart.momentBody), start.cg);
@@ -391,7 +429,10 @@ export class RigidRuntime {
     this.snapshot = end;
     const remainingTorque = sub(residual, rcs.wrench.momentBody);
     const saturated = demand.saturated || norm(remainingTorque) > Math.max(1, norm(demand.momentBody) * 0.05);
+    const loop = trace ? this.loopRecord(trace, { target, demand, unfilteredMoment, sensedOmega: sensed.omegaBody,
+      gains, aeroMoment: aeroStart.momentBody, engineMoment: engineActual.momentBody, rcsMoment: rcs.wrench.momentBody,
+      gasLimited, gimbalLimited: allocation.saturated, rcsLimited: rcsAllocation.saturated, specs, engineStates: actualStates, rcsDuties: rcs.duties }) : undefined;
     return { state: integratedState, snapshot: end, nonGrav, accelerationsStart: accelerationsStart!,
-      telemetry: this.telemetry(integratedState, time + dt, end, saturated, rawError) };
+      telemetry: this.telemetry(integratedState, time + dt, end, saturated, rawError, loop) };
   }
 }

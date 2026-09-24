@@ -45,6 +45,22 @@ function mount(accept: (command: RigidCommand) => void) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('rigid flight control interactions', () => {
+  it('offers the attitude-loop inspector in the Engineer mode, in live flight and replay alike (G03)', () => {
+    vi.stubGlobal('document', { createElement: (name: string) => new Element(name), createTextNode: () => new Element('#text'), activeElement: null });
+    const host = new Element('div'), opened: unknown[] = [];
+    const control = new RigidControls(host as unknown as HTMLElement, () => {}, (opener) => opened.push(opener));
+    control.update(frame('auto'), false);
+    const inspect = () => host.all('button').find((b) => b.className.includes('rigid-inspect'));
+    expect(inspect()).toBeUndefined();
+    control.setInspectorAvailable(true);
+    control.update(frame('auto'), false);
+    expect(inspect()!.disabled).toBe(false);
+    inspect()!.dispatch('click');
+    expect(opened).toEqual([inspect()]);
+    control.setInspectorAvailable(false);
+    expect(inspect()).toBeUndefined();
+  });
+
   it('keeps an accepted mode/rate change visible while the next periodic frame is pending', () => {
     const accepted: RigidCommand[] = [];
     const { host, control } = mount(command => accepted.push(command));

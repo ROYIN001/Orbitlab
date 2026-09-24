@@ -257,6 +257,21 @@ card, the charts, the 6-DOF controls and the rates you type into them, the event
 CSV. The full table, with each quantity's definition and sign, is in *Physics and sources*
 (PHYSICS.md §2c).
 
+## 9. The attitude-loop inspector (Engineer mode)
+
+In a six-DOF flight in the Engineer mode, the 6-DOF panel under the timeline has an
+**Attitude-loop inspector** button. It opens a window over the workspace (drag it by its title
+bar; Esc or × closes it) with the autopilot drawn as a block diagram, left to right: guidance
+(and the ascent's load relief), attitude error, attitude loop, rate error, rate loop, moment,
+bending filter, actuators, vehicle, and the IMU feeding back. Each block shows the values of the
+control step on screen for roll, pitch and yaw, in the axes and signs of the notation in force
+(§8); a block outlined in orange is being held by a limit, and the tag on its row says which
+(*stop*: slower than the gain asks, to stop on the target; *max*: at its limit). Below, four
+charts cover the last 10, 30 or 120 s — attitude error, rate, moment and actuator use — the
+rate and moment charts for the axis picked in the title bar. The play button runs and pauses
+the flight or the replay as the main one does. The inspector reads the recording, so scrubbing
+back shows the loop at any recorded instant. Details in PHYSICS.md §2d.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and
