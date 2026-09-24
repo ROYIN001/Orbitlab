@@ -289,8 +289,8 @@ propagated analytically) says so. Details in PHYSICS.md §2e.
 
 The attitude-loop inspector (§9) has three tabs: **Loop** (the block diagram), **Frequency
 response** and **Step response**. The last two analyse the loop linearised about the flight's
-state — once a second while the engines burn, every 5 s with them off — for the axis picked in
-the title bar, at the instant on screen (the header says when the model was taken).
+state every half second, for the axis picked in the title bar, at the instant on screen (the
+header says when the model was taken).
 
 - **Frequency response**: the Bode plot of the loop gain |L| and its phase against ω on a
   logarithmic axis, with the 0 dB and −180° lines, ω_c (where |L| crosses 0 dB) and ω_g (where

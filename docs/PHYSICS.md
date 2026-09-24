@@ -375,9 +375,8 @@ moments; quaternion kinematics to 10⁻⁴ or better.
 
 ## 2f. The loop, linearised: frequency response, margins and step response (roadmap G04)
 
-Once a second of powered flight (every 5 s with the engines off) the flown vehicle's runtime
-linearises its attitude loop about the state at the start of that control step, one plane at a
-time (src/physics/rigid/linear.ts). The planes are roll (body x), pitch (the rotation about the
+Every half second the flown vehicle's runtime linearises its attitude loop about the state at
+the start of that control step, one plane at a time (src/physics/rigid/linear.ts). The planes are roll (body x), pitch (the rotation about the
 simulator's z, which swings the nose along +y) and yaw (about y); each plane's state is
 
 - the rotation angle and rate about the axis;
@@ -463,10 +462,11 @@ for bit with it.
 - Bending without the notch: unstable from lift-off, as above, the phase margin −153°.
 
 **Cost.** Linearising the three planes takes 17 evaluations of the equations of motion (37 with
-P05's states) and the margins 720 loop-gain points and six small eigenvalue problems. With the G03
-record, over the first 150 s: +6 % CPU on Falcon 9, +7 % on Proton-M, +22 % on Proton-M with P05
-(eight sloshing tanks). A 25-minute flight to orbit keeps some 460 models, 0.8 MB (2 MB with
-P05).
+P05's states) and the margins 720 loop-gain points and six small eigenvalue problems. Every half
+second, with the G03 record, over the first 150 s: +6 % CPU on Falcon 9 and +27 % on Proton-M
+with P05 (eight sloshing tanks, 21 states a plane); over a whole flight to orbit, within the
+run-to-run noise on Falcon 9. A 25-minute Falcon 9 flight keeps some 940 models, 1.7 MB (4.2 MB
+with P05); Proton-M with P05, 3.7 MB over its first 150 s.
 
 ## 3. Atmosphere and aerodynamics
 

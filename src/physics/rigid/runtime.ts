@@ -18,6 +18,8 @@ import { FlexBody, type FlexOptions } from './flex';
 import { cloneWindProfile, type RigidCommand, type RigidTelemetry } from './telemetry';
 
 export type SnapshotProvider = (elapsed: number, consumed: Readonly<Record<string, number>>) => RigidVehicleSnapshot;
+/** How often the flown vehicle's attitude loop is linearised (roadmap G04), s. */
+export const LINEARISE_EVERY_S = 0.5;
 /** A side-effect-free evaluation of a step's model (G04's linearisation). */
 interface LinearProbe { engineStates?: unknown; extraMomentBody?: Vec3 }
 export interface RigidRuntimeOptions {
@@ -437,10 +439,9 @@ export class RigidRuntime {
     this.snapshot = end;
     const remainingTorque = sub(residual, rcs.wrench.momentBody);
     const saturated = demand.saturated || norm(remainingTorque) > Math.max(1, norm(demand.momentBody) * 0.05);
-    // G04: the loop linearised about this step's start, every second (every 5 s with the engines off).
+    // G04: the loop linearised about this step's start, every half second.
     if (trace && dt > 0 && time + 1e-9 >= this.nextLinearAt) {
-      const every = specs.some(engine => engine.maxThrust > 0) ? 1 : 5;
-      this.nextLinearAt = (Math.floor(time / every + 1e-9) + 1) * every;
+      this.nextLinearAt = (Math.floor(time / LINEARISE_EVERY_S + 1e-9) + 1) * LINEARISE_EVERY_S;
       try {
         const flexContext = flex?.linearContext() ?? { tanks: [], bending: false, imuSlope: 0 };
         const requested = sub(demand.momentBody, aeroStart.momentBody), throttles = specs.map(e => e.maxThrust > 0 ? 1 : 0);

@@ -150,11 +150,11 @@ describe('Falcon 9\'s loop over its ascent', () => {
   const rigid = falcon9(), rigidMax = flyTo(rigid, 62);
   const full = falcon9({ slosh: true, bending: true, notch: true }), fullMax = flyTo(full, 62);
 
-  it('is linearised every second of powered flight, and handed to the telemetry but not to the frames', () => {
+  it('is linearised every half second, and handed to the telemetry but not to the frames', () => {
     const models = [...new Set(rigid.telemetry.map((s) => s.rigid?.linearModel).filter((m): m is LinearModel => !!m))];
-    expect(models.length).toBeGreaterThan(55);
+    expect(models.length).toBeGreaterThan(110);
     const gaps = models.slice(1).map((m, i) => m.t - models[i].t);
-    expect(Math.max(...gaps)).toBeLessThan(1.05);
+    expect(Math.max(...gaps)).toBeLessThan(0.55);
     for (const s of rigid.telemetry) if (s.rigid?.linearModel) expect(s.t - s.rigid.linearModel.t).toBeLessThanOrEqual(1.5);
     expect(captureFrame(rigid).rigid?.linearModel).toBeUndefined();
     expect(modelAt(rigid.telemetry, 40)!.t).toBeLessThanOrEqual(40);

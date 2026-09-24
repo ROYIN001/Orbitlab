@@ -975,7 +975,7 @@ export const en: Record<string, string> = {
   'freq.ff': 'Feed-forward error',
   'freq.ffNote': 'The aerodynamic moment the autopilot feeds forward, off by this much (0: exact).',
   'freq.at': 'Linearised at {t} · {axis}',
-  'freq.none': 'No linearised loop at this instant: the loop is linearised once a second while it runs (every 5 s with the engines off).',
+  'freq.none': 'No linearised loop at this instant: the loop is linearised every half second while it runs.',
   'freq.noActuator': 'Nothing steers this axis at this instant (engines off, no attitude thrusters): there is no loop to analyse.',
   'freq.mag': 'Loop gain |L| (dB)',
   'freq.phase': 'Phase ∠L (°)',

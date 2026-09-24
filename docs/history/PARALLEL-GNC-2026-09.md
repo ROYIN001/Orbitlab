@@ -35,7 +35,7 @@ here; this file records progress for the owner to fold in at the merge.
   the linear model **with P05's bending, slosh, IMU and notch**, plus a **feed-forward error
   ±X %** setting; a **chart of the margins over the flight**, from linearisations recorded as the
   flight goes and flights bit for bit as before; the **step response from the linear model
-  only** (a step injected into the flight belongs to E04).
+  only** (a step injected into the flight belongs to E04); the loop **linearised every 0.5 s**.
 
 ## Progress
 
@@ -259,12 +259,12 @@ Physics, checks and findings in [../PHYSICS.md](../PHYSICS.md) §2f, use in
   (with its error), margins from a Hessenberg-form loop gain on 240 frequencies, stability from
   the closed loop's eigenvalues (balanced shifted QR), the step response by stepping the
   discrete closed loop.
-- **Cadence — a departure from "every step"**: the plan said the linear parameters would be
-  recorded every step. They are recorded **once a second of powered flight and every 5 s with
-  the engines off**: a linearisation costs 17–37 evaluations of the equations of motion and 720
-  loop-gain points, so at every 0.01 s control step a flight would run about ten times slower.
-  The chart of the margins over the flight has a 1 s resolution. For the owner to confirm or
-  change.
+- **Cadence**: the plan said the linear parameters would be recorded every step; a
+  linearisation costs 17–37 evaluations of the equations of motion and 720 loop-gain points, so
+  at every 0.01 s control step a flight would run about ten times slower. First done once a
+  second (every 5 s with the engines off); **the owner chose every 0.5 s** (asked 2026-09-24),
+  now throughout the flight — in a coast it costs nothing measurable, the long coasts being
+  propagated without the rigid runtime.
 - **The record**: `RigidRuntime.latestLinear` (built only where `recordLoop` is on, so for the
   flown vehicle only), attached by `Simulation.sample()` to the telemetry samples of that second
   as `RigidTelemetry.linearModel` — one shared, immutable object, never copied, not in recorded
@@ -290,9 +290,9 @@ Physics, checks and findings in [../PHYSICS.md](../PHYSICS.md) §2f, use in
   (11.9 rad/s) — short of the customary 6 dB; worth a look in E04 (tuning). Without the notch
   the linear model predicts the divergence the flight shows: 7.70 against 7.66 rad/s, a growth
   of 2.86 against about 2.4 s⁻¹ (§2b's damping estimate of −0.22 is nearer −0.3).
-- **Cost**: +6 % CPU on Falcon 9, +7 % on Proton-M, +22 % on Proton-M with P05 (with the G03
-  record, first 150 s, medians of three); some 460 models on a flight to orbit, 0.8 MB (2 MB
-  with P05).
+- **Cost** (every 0.5 s, with the G03 record, medians of three): +6 % CPU on Falcon 9 and +27 %
+  on Proton-M with P05 over the first 150 s; within the noise over Falcon 9's whole flight to
+  orbit. Some 940 models on that flight, 1.7 MB (4.2 MB with P05).
 
 **Files touched that the other session also edits** (additive): the three dictionaries
 (`// --- G04 ---`), `src/physics/simulation.ts` (two lines in `sample()`), `src/mcp.ts`
@@ -305,7 +305,7 @@ evaluations — absent `recordLoop`, the code path is what it was; `integrator.t
 **Tests**: tests/linear-loop.test.ts (expm and the eigenvalues, also of a badly scaled matrix;
 a PD loop on a double integrator against the textbook phase margin, its gain margin against the
 eigenvalues, its step response, and an unstable airframe without the feed-forward; Falcon 9's
-models once a second, in the telemetry and not the frames, with the right states per plane,
+models every half second, in the telemetry and not the frames, with the right states per plane,
 rigid and P05 margins at max-q, Bode gain margins against the eigenvalues, the Hessenberg solve
 against a dense one, the feed-forward error, roll on the thrusters after staging, the CSV
 columns; the model against the nonlinear flight without the notch), a block in
@@ -314,3 +314,5 @@ tests/mcp.test.ts.
 
 **Results (2026-09-24)**: `npm test` 68 files / 973 tests pass (12 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged (3.5 min); typecheck passes.
+After the owner's 0.5 s cadence: `npm test` 68 files / 973 tests pass; the whole-mission
+fingerprints pass unchanged; typecheck passes.

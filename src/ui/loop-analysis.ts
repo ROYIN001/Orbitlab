@@ -2,7 +2,7 @@
  * The attitude-loop inspector's analysis tabs (roadmap G04): the loop's
  * frequency response (Bode), its margins at the instant on screen and over the
  * flight, and its response to a 1° attitude step — from the linearisation the
- * runtime records once a second (src/physics/rigid/linear.ts), with a chosen
+ * runtime records every half second (src/physics/rigid/linear.ts), with a chosen
  * error in the aerodynamic feed-forward.
  */
 import { t } from '../i18n';
