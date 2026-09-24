@@ -222,7 +222,7 @@ export class TelemetryPanel {
     for (let i = lo; i < hi; i += stride) push(tel[i]);
     if (hi - lo > 0 && (hi - 1 - lo) % stride !== 0) push(tel[hi - 1]);
     const series = (y: number[], color: string, label?: string): Series => ({ x: fx.x, y, color, label });
-    drawChart(this.charts.flex, [series(bend.y, '#ffb86b', 'bend'), series(slosh.y, '#6ec8ff', 'slosh')], {
+    drawChart(this.charts.flex, [series(bend.y, '#ffb86b', 'w'), series(slosh.y, '#6ec8ff', 's')], {
       title: t(FLEX_CHART_TITLES.flex), markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin: 0,
       seriesLabels: [t('tel.chart.bending'), t('tel.chart.slosh')],
     });

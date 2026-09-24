@@ -78,6 +78,136 @@ The point-mass model below remains selectable in the setup, and the fleet accept
 (§6b) of the regular test suite flies it; the same matrix flown in six-DOF is recorded in
 [SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md).
 
+## 2b. The flexible vehicle: slosh, bending and the bending filter (roadmap P05)
+
+Three options of the six-DOF model, each off by default, set in the Engineer mode's setup (and
+`configure_mission`'s `flex` object): **propellant slosh**, the **first bending mode** with the
+shell loads it carries, and the **bending filter** — a notch on the autopilot's pitch and yaw
+torque with an autopilot held below the bending frequency. Off, the flight is the rigid one bit
+for bit (tests/rigid-flex-golden.test.ts hashes three flights recorded before the options
+existed). The code is src/physics/rigid/slosh.ts, bending.ts, notch.ts and flex.ts.
+
+**Slosh.** Each liquid tank of the mass model (§2a: a solid cylinder of radius a = 0.9 R filled
+to depth h, settled at the bottom of its tank) has its first lateral mode as the spring-mass
+analogue of NASA SP-106 (Abramson, 1966, ch. 6) and Dodge (SwRI, 2000, ch. 3):
+
+    ω₁² = (ξ₁ g / a) tanh(ξ₁ h / a)            ξ₁ = 1.8412, the first zero of J₁′
+    m₁  = m_L · 2 tanh(ξ₁ h / a) / (ξ₁ (ξ₁² − 1) h / a)
+    H₁  = h − (2a / ξ₁) tanh(ξ₁ h / 2a)         (height of m₁ above the tank bottom)
+
+g here is the axial acceleration under thrust. m₁ moves across the tank on a spring k₁ = m₁ω₁²
+and a damper (ζ = 3 %, a tank with ring baffles, whose damping NASA SP-8031 puts at a few per
+cent), and rides along it with the tank on a constraint force; the rest of the liquid stays with the tank where it keeps the liquid's centre
+of mass. H₁ follows from the potential-flow pressure on the wall and the bottom of a tank moved
+sideways: the moment about the bottom is
+
+    M = −m_L Ẍ (h/2 + a²/4h) − Σₙ mₙ ẍₙ [h − a (1 − 2 sech(ξₙh/a)) / (ξₙ tanh(ξₙh/a))]
+
+and a spring-mass whose axial carrying force acts where the mass is reproduces it when each
+mass sits at Hₙ; that axial force at a displaced mass turns the tank exactly as the equivalent
+pendulum (length g/ω₁², hinged H₁ + g/ω₁² above the bottom) does. The Ẍ term checks the whole
+construction: a liquid held at lateral acceleration tilts its surface by Ẍ/g and moves its
+centre by a²/4h per unit tilt, and Σₙ mₙLₙ = m_L a²/4h because Σ 2/(ξₙ²(ξₙ² − 1)) = 1/4 — the
+first mode carries 98.7 % of it (tests/rigid-flex.test.ts). The liquid sloshes only under at
+least 1 m/s² of thrust; in a coast it is carried with its tank (liquid in weightlessness is
+beyond the model) and a new burn starts it from rest. A solid grain does not slosh, and a film
+shallower than a twentieth of the radius is carried with its tank.
+
+**Coupling.** The body frame's origin stays the stack's centre of mass with every liquid at
+rest, the point the rigid model flies. With the slosh masses taken out, the rest of the stack is
+a rigid body B (mass m_B, centre b, inertia I_B about b), and with a the non-gravitational
+acceleration of the origin and α = ω̇:
+
+    B:  m_B(a + α×b + ω×(ω×b)) = F − Σ(fᵢ + Nᵢeᵢ)
+        I_B α + ω×I_Bω = M − b×F − Σ(ρᵢ − b)×(fᵢ + Nᵢeᵢ)
+    mᵢ: mᵢ(a + α×ρᵢ + ω×(ω×ρᵢ) + 2ω×ṡᵢ + s̈ᵢ + φ(xᵢ)η̈) = fᵢ + Nᵢeᵢ
+
+where fᵢ is the spring and damper, eᵢ the tank's axis and Nᵢ its carrying force. The axial row of
+each tank's equation gives Nᵢ linear in (a, α), and the body's six equations are solved exactly
+every time the integrator evaluates them: the exchange of momentum between the liquid and the
+stack is exact within the analogue (the test holds momentum, angular momentum and energy of a
+free stage to 10⁻⁷, and the frequency of a slosh mass against the free stage to the
+reduced-mass formula to nine digits). Gravity acts alike on every part and drops out.
+
+**Bending.** The first lateral mode of the attached stack, in both planes, from a free-free
+Euler–Bernoulli beam of 40 cubic elements built on the mass model itself. Every component is a
+uniform line mass (a cylinder, a shell and a grain annulus all satisfy L² = 12(I_t − I_x/2)/m,
+which gives each one's length from its inertia); the sloshing part of each liquid is left out,
+since it moves on its own. Stiffness is the stage and fairing shells, EI = E π r³ t with the
+wall thickness t of a shell carrying the stage's whole structural mass at the specific modulus
+of aluminium alloys and steel, E/ρ ≈ 26 MN·m/kg (70 GPa, 2 700 kg/m³; the two differ by under
+5 %); strap-ons add their own EI, a payload is stiff, and a gap between shells takes its
+neighbour's EI. These are estimates (E), not modal surveys: at liftoff they give 1.1 Hz for
+Starship, 1.6 Hz for Falcon 9, 3.2 Hz for Soyuz-2.1a and 6.9 Hz for Electron (the table is in
+[SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)), the band where large launchers' first modes
+are reported (1–3 Hz; NASA SP-8036). The mode is recomputed every 0.5 s of flight and at every
+separation, normalised to a largest deflection of 1, and couples through the three standard
+paths (SP-8036; Greensite, *Analysis and Design of Space Vehicle Flight Control Systems*, 1970):
+
+- *generalised force*: Q = Σ φ(xₖ) F_k,lat from every engine, attitude thruster, the aerodynamic
+  normal force at its centre of pressure and the slosh reactions at their tanks;
+- *the thrust follows the structure*: each chamber's thrust turns with the local slope φ′(x)η at
+  its mount, and each tank's axis with the slope at the tank. Together with the axial
+  compression each section carries (the mass forward of it, accelerated: a geometric softening
+  a_x ∫ m_fwd φ′² dx) the follower thrust nearly cancels — Beal (AIAA J. 3(3), 1965) — and the
+  mode's frequency under thrust stays within 1 % of the structure's for every vehicle;
+- *the IMU reads the bent structure*: θ = θ_rigid + φ′(x_s)η and ω = ω_rigid + φ′(x_s)η̇ at its
+  station x_s, and the autopilot steers by those readings. The IMU sits in the instrument bay at
+  the forward end of the uppermost launcher stage (as Saturn V's Instrument Unit and Soyuz's
+  приборный отсек do); the Engineer mode can move it anywhere along the stack.
+
+A mode faster than 1/h of the integration step (16 Hz at 0.01 s) is carried quasi-statically,
+η = Q/K: RK4 cannot follow it (its stability limit is 2.8) and nothing the 100 Hz autopilot and
+its 0.1 s actuators do reaches it. The short upper stacks (Blok I with Fregat, 45 Hz; H3's
+second stage, 75 Hz) are such modes. Structural damping is 0.5 %, SP-8036's design value.
+
+**Shell loads.** With bending, every control step sums the loads aft of each section — every
+point force, and the inertia of every element, rigid and elastic — into the axial force N and
+the bending moment M it carries, and the stress |N|/A + |M|/Z against an effective allowable of
+250 MPa for the shell's wall area A and section modulus Z (from the same wall). The stack breaks
+up (`evt.bendingFailure`) where that ratio passes 1. The allowable is an estimate between the
+buckling of an unpressurised shell with its knock-down factor and the strength of aluminium-
+lithium alloys; nominal flights load their shells to 5–35 % of it.
+
+**The bending filter.** Falcon 9's rigid autopilot crosses over near 0.5 Hz, a third of its
+first bending mode; with the IMU in the instrument bay the bending path's loop gain is about one
+even off resonance, and at resonance it is some 40 times the structure's own damping. Flown
+without a filter the mode diverges (an effective damping ratio of −0.22) and the stack breaks up
+seven seconds after liftoff. The filter is the classical pair:
+
+- a second-order **notch** on the pitch and yaw torque the autopilot asks for,
+  H(s) = (s² + 2ζ_z ω_n s + ω_n²)/(s² + 2ζ_p ω_n s + ω_n²), ζ_z = 0.02 and ζ_p = 0.3 (23 dB deep),
+  centred on the mode's frequency under the current thrust — what the flight software predicts,
+  as real launchers schedule their filters on time of flight — and discretised by the Tustin
+  transform prewarped at ω_n on the 100 Hz control clock (Franklin, Powell & Workman, *Digital
+  Control of Dynamic Systems*, §6.3); it steps aside above 80 % of the Nyquist frequency;
+- an **autopilot held below the mode**: the rate gain at most ω_b/6 and the attitude gain half
+  that, so the loop gain stays below one where the notch does not reach. Classical launchers
+  crossed over five to ten times below their first mode (Saturn V near 0.15–0.2 Hz); the rigid
+  autopilot here, tuned without flexibility, runs three times faster.
+
+The aerodynamic feed-forward of the autopilot is not filtered. With the filter on, Falcon 9's
+bending peaks at 6 cm in the liftoff transient and is no larger through max-q; every vehicle
+reaches its orbit with its shells under half their allowable ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). The Engineer mode tunes all of
+it: the notch's depth, width and centre (detuned, it no longer stabilises the mode), the
+bandwidth ratio, the two damping ratios and the IMU station.
+
+**What the baffles are for.** Ariane 6's upper stage carries some 11 t of sloshing oxygen on a
+26 t stack at 0.3 Hz, close to the autopilot's bandwidth. With the damping of a nearly bare tank
+(1 %) the loop fights the liquid with its cold-gas thrusters until the 60 kg of gas is gone,
+five minutes into the Vinci burn; the liquid's swirl then drags the stack into an 8 °/s roll
+the single gimballed engine cannot stop, and the circularisation burn never aligns — the way
+Falcon 1's second flight was lost in 2007 (a liquid-oxygen slosh the thrust vector control
+fed, then a roll past its roll thrusters). At 3 % the same flight reaches its orbit with the
+liquid within 25 cm. The Engineer mode's slosh damping reproduces either.
+
+**Not modelled.** Higher bending modes, torsion and longitudinal modes (POGO); aeroelastic
+coupling of the bending with the airflow; the inertia of a gimballing engine ("tail wags dog");
+slosh in weightlessness, rotary slosh and higher slosh modes; the reduced pitch inertia of a
+liquid (Dodge's I₀, under 0.2 % of a stack's); slosh and bending of a separated stage, and of
+the vehicle during a held coast (the motion restarts from rest when control resumes). The 3-D
+view draws the bending mode at 25 times its size.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

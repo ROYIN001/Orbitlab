@@ -424,3 +424,51 @@ Per-vehicle six-DOF guidance: where the point-mass programme pitches over at an 
 rigid airframe cannot hold near max-Q, the vehicle carries its own six-DOF overrides
 (`guidanceDefaultsSixDof` in `src/data/vehicles.ts`): Soyuz-2.1a's early, longer kick (the
 programme it was accepted with) and Atlas V's 8° kick in place of 6°.
+
+## The flexible vehicle (roadmap P05, 2026-09-23)
+
+Slosh, the first bending mode and the bending filter (docs/PHYSICS.md §2b) take no new data:
+they are built on the component model above. What they add, all estimates (E):
+
+- **Slosh.** Every liquid of the mass model is a tank of radius 0.9 R filled to its depth; the
+  first-mode analogue of NASA SP-106 / Dodge (2000) gives its sloshing mass, height and
+  frequency. Damping 3 % (a tank with ring baffles). Solid grains do not slosh.
+- **Bending.** Each component is a uniform line mass along the axis; each stage's structure
+  (75 % of its dry mass) and the fairing are shells of the stage's radius whose wall carries
+  that whole mass, EI = (E/ρ)·m r²/(2L) at E/ρ = 70 GPa / 2 700 kg/m³; a strap-on adds its own
+  EI, a payload is ten times the stiffest shell, and a gap takes its neighbour's. The structure
+  also carries the engines' mass, so the shells are, if anything, stiff. Damping 0.5 %.
+- **Shell stress.** The same wall: area A = m/(ρL), section modulus Z = m r/(2ρL); allowable
+  250 MPa.
+- **IMU.** The forward end of the uppermost launcher stage still attached (its instrument bay).
+
+At liftoff, full, with a 1 t payload (tests/probe run of `firstBendingMode` on the liftoff mass
+model; the rate-gain cap is the bending filter's autopilot limit, ω_b/6, against the rigid 3/s):
+
+| Vehicle | f₁ structure, Hz | f₁ under thrust, Hz | M_g / M | IMU station, % of stack | φ′ at IMU, 1/m | rate gain cap, 1/s | slosh f₁, Hz | largest m₁ / M |
+|---|---|---|---|---|---|---|---|---|
+| Soyuz-2.1a | 3.34 | 3.34 | 0.016 | 75 | 0.051 | 3.00 | 0.70–0.74 | 0.9 % |
+| Soyuz-2.1b / Fregat-M | 2.82 | 2.81 | 0.015 | 75 | 0.046 | 2.94 | 0.51–0.73 | 0.9 % |
+| Proton-M / Briz-M | 2.96 | 2.95 | 0.014 | 75 | 0.036 | 3.00 | 0.56–0.62 | 3.6 % |
+| Angara-A5 / Briz-M | 4.03 | 4.03 | 0.008 | 70 | 0.037 | 3.00 | 0.51–0.67 | 1.0 % |
+| Falcon 9 Block 5 | 1.64 | 1.64 | 0.034 | 79 | 0.038 | 1.72 | 0.63–0.63 | 1.9 % |
+| Falcon Heavy | 1.86 | 1.85 | 0.010 | 79 | 0.036 | 1.94 | 0.68–0.68 | 0.7 % |
+| Atlas V 551 | 1.83 | 1.82 | 0.004 | 66 | 0.030 | 1.91 | 0.68–0.76 | 1.6 % |
+| Vulcan Centaur VC4 | 4.16 | 4.16 | 0.009 | 74 | 0.035 | 3.00 | 0.49–0.50 | 3.4 % |
+| Ariane 64 | 4.33 | 4.32 | 0.007 | 67 | 0.033 | 3.00 | 0.51–0.52 | 2.6 % |
+| Vega-C | 4.83 | 4.82 | 0.007 | 74 | 0.057 | 3.00 | 0.75–0.76 | 0.1 % |
+| Long March 2D | 3.24 | 3.24 | 0.057 | 85 | 0.061 | 3.00 | 0.63–0.63 | 3.0 % |
+| Long March 3B/E | 1.97 | 1.96 | 0.013 | 81 | 0.040 | 2.05 | 0.64–0.78 | 1.8 % |
+| H-IIA 202 (historical) | 3.37 | 3.36 | 0.013 | 78 | 0.040 | 3.00 | 0.61–0.62 | 3.0 % |
+| Long March 5 | 4.70 | 4.70 | 0.006 | 77 | 0.039 | 3.00 | 0.50–0.62 | 2.3 % |
+| H3-22 | 3.99 | 3.99 | 0.011 | 80 | 0.040 | 3.00 | 0.51–0.52 | 5.9 % |
+| PSLV-XL | 2.98 | 2.97 | 0.010 | 79 | 0.051 | 3.00 | 0.81–1.18 | 0.9 % |
+| Electron | 7.03 | 7.03 | 0.113 | 81 | 0.182 | 3.00 | 0.87–1.14 | 2.2 % |
+| Starship (Super Heavy) | 1.14 | 1.14 | 0.073 | 97 | 0.028 | 1.19 | 0.40–0.40 | 2.8 % |
+
+The frequencies rise as the propellant goes (Falcon 9's from 1.6 Hz at liftoff to 2.5 Hz at
+T+120 s) and jump at every separation: the stacks left after it measured 9–75 Hz (Vega-C 18 Hz,
+then 49 Hz; Soyuz-2.1b's Blok I with Fregat 45 Hz; H3's second stage 75 Hz), and those above
+16 Hz are faster than the 0.01 s step integrates and are carried quasi-statically (§2b).
+Large launchers' first modes are reported at 1–3 Hz (NASA SP-8036); Electron, 18 m long, is the
+stiff outlier here.

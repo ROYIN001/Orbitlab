@@ -32,6 +32,9 @@ export function flyFlexible(cfg: MissionConfig, maxTime: number, rigidDt?: numbe
     if (flex?.bending) { maxLoad = Math.max(maxLoad, flex.bending.loadRatio); maxDeflection = Math.max(maxDeflection, flex.bending.deflectionM); }
     for (const tank of flex?.slosh?.tanks ?? []) maxSlosh = Math.max(maxSlosh, tank.displacementM);
   }
+  // One line per flight for the acceptance record (docs/SIXDOF-ACCEPTANCE.md).
+  console.log(`flexible ${cfg.vehicleId}: ${sim.state.status}, shell load ${(maxLoad * 100).toFixed(0)} %, `
+    + `bending ${(maxDeflection * 100).toFixed(1)} cm, slosh ${(maxSlosh * 100).toFixed(0)} cm, t ${sim.state.t.toFixed(0)} s`);
   return { sim, maxLoad, maxDeflection, maxSlosh };
 }
 
