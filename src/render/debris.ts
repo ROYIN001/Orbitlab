@@ -17,11 +17,13 @@
  */
 import * as THREE from 'three';
 import type { DebrisFrame } from '../physics/frame';
+import { interstageHeight } from '../physics/frame';
 import type { SceneManager } from './scene';
 import { Plume } from './plume';
 import { ogiveProfile } from './liveries';
 import { clamp01, hash11, smoothstep } from './noise';
 import { disposeObject } from './dispose';
+import { R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7CoreProfile, r7CoreTop, r7TrussGeometry } from './soyuz';
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 const MODEL_TO_BODY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
@@ -41,9 +43,19 @@ interface DebrisItem {
   fins: THREE.Group[];
   /** landing-leg pivots, folded until the landing burn */
   legs: THREE.Group[];
+  /** how far the legs swing out, rad, and how far below the base their feet then are, m */
+  legAngle: number;
+  footDrop: number;
   /** mission time the fins / legs started deploying (-1 = still stowed) */
   finT: number;
   legT: number;
+  /**
+   * The drawn body of a recovered stage, built with its base at 0 and moved
+   * to the frame's `anchor` every frame: the anchor of a stage flown home
+   * changes after separation (`debrisAnchor` in src/physics/frame.ts). It is
+   * also lifted onto its legs as they come out (see `recoveryHardware`).
+   */
+  shift: THREE.Group | null;
 }
 
 /** Grid-fin texture: an open lattice so the fin reads as a grid, not a plate. */
@@ -107,7 +119,8 @@ export class DebrisView {
    * returned so `update` can hinge them on the recovery phase: fins stowed flat
    * against the body until entry, legs folded until the landing burn.
    */
-  private recoveryHardware(g: THREE.Group, r: number, L: number, base: number, m: THREE.Material): { fins: THREE.Group[]; legs: THREE.Group[] } {
+  private recoveryHardware(g: THREE.Group, r: number, L: number, base: number, m: THREE.Material, withLegs: boolean):
+    { fins: THREE.Group[]; legs: THREE.Group[]; legAngle: number; footDrop: number } {
     const fins: THREE.Group[] = [];
     const legs: THREE.Group[] = [];
     const finMat = new THREE.MeshStandardMaterial({
@@ -132,13 +145,22 @@ export class DebrisView {
       g.add(az);
       fins.push(pivot);
     }
-    const legLen = L * 0.3;
+    // A booster flown back to a tower's arms has no legs to deploy.
+    if (!withLegs) return { fins, legs, legAngle: 0, footDrop: 0 };
+    // Deployed, the feet stand a little below the engine skirt, some 20 m
+    // across on a Falcon 9. The physics lands the stage on its base (its
+    // tail, in six-DOF), so the body is lifted by `footDrop` as the legs come
+    // out and the feet, not the engines, stand on the ground.
+    const legLen = L * 0.22;
+    const hingeY = L * 0.03;
+    const footDrop = r * 1.3;
+    const legAngle = Math.acos(Math.max(-1, Math.min(1, (-footDrop - hingeY) / legLen)));
     const legGeo = new THREE.CylinderGeometry(r * 0.09, r * 0.14, legLen, 8);
     const footGeo = new THREE.CylinderGeometry(r * 0.2, r * 0.2, r * 0.14, 8);
     for (let i = 0; i < 4; i++) {
       const ang = (i / 4) * Math.PI * 2;
       const az = new THREE.Group();
-      az.position.set(Math.cos(ang) * r * 0.98, base + L * 0.03, Math.sin(ang) * r * 0.98);
+      az.position.set(Math.cos(ang) * r * 0.98, base + hingeY, Math.sin(ang) * r * 0.98);
       az.rotation.y = -ang;                    // local +X now points radially out
       const pivot = new THREE.Group();
       // stowed the leg lies along the body pointing at the nose, which is where
@@ -153,15 +175,19 @@ export class DebrisView {
       g.add(az);
       legs.push(pivot);
     }
-    return { fins, legs };
+    return { fins, legs, legAngle, footDrop };
   }
 
   private build(d: DebrisFrame): DebrisItem {
-    const g = new THREE.Group();
+    const root = new THREE.Group();
     const r = d.visual.diameter / 2;
     const L = d.visual.length;
-    // base of the drawn body in the object's own frame (+Y = the thrust axis)
-    const base = d.rigid ? 0 : d.anchor ?? 0;
+    // base of the drawn body in the object's own frame (+Y = the thrust axis);
+    // a recovered stage's moves, so its body is built at 0 and shifted
+    const shift = d.recovery && d.visual.kind !== 'fairing' ? new THREE.Group() : null;
+    if (shift) root.add(shift);
+    const g = shift ?? root;
+    const base = d.rigid || shift ? 0 : d.anchor ?? 0;
     const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(d.visual.color), metalness: 0.3, roughness: 0.55, side: THREE.DoubleSide,
       emissive: new THREE.Color(0xdce6ff), emissiveIntensity: 0 });
     const side: 1 | -1 = d.id % 2 === 0 ? 1 : -1;
@@ -169,6 +195,7 @@ export class DebrisView {
     let plume: Plume | null = null;
     let fins: THREE.Group[] = [];
     let legs: THREE.Group[] = [];
+    let legAngle = 0, footDrop = 0;
     if (d.visual.kind === 'fairing') {
       // one half shell: hinge sits at the nose so it can swing open
       hinge = new THREE.Group();
@@ -182,33 +209,42 @@ export class DebrisView {
       shell.add(new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, L - cylH, 20), 24, -Math.PI / 2, Math.PI), m));
       hinge.add(shell);
       g.add(hinge);
-    } else {
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 24), m);
-      body.position.y = base + L / 2;
+    } else if (d.visual.conicalTop) {
+      // an R-7 strap-on, the shape it flew in (render/soyuz.ts)
+      const body = new THREE.Mesh(r7BoosterGeometry(r, L, R7_FLARE, 24, 20), m);
+      body.position.y = base;
       g.add(body);
-      if (d.visual.conicalTop) {
-        const pts: THREE.Vector2[] = [];
-        for (let i = 0; i <= 12; i++) {
-          const s = i / 12;
-          pts.push(new THREE.Vector2(i === 12 ? 0 : Math.max(0.02, r * (1 - Math.pow(s, 1.35) * 0.97)), base + L + s * L * 0.42));
-        }
-        g.add(new THREE.Mesh(new THREE.LatheGeometry(pts, 20), m));
+      plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
+      plume.group.position.y = base - r * 1.2;
+      g.add(plume.group);
+    } else {
+      if (d.visual.profile === 'r7Core') {
+        // Blok A keeps its taper and the truss it carried Blok I on
+        const body = new THREE.Mesh(new THREE.LatheGeometry(r7CoreProfile(r, L, 24), 24), m);
+        body.position.y = base;
+        g.add(body);
+        const truss = new THREE.Mesh(r7TrussGeometry(r7CoreTop(r), L - R7_TRUSS_INSIDE, L + interstageHeight(2 * r, 2 * r7CoreTop(r))), m);
+        truss.position.y = base;
+        g.add(truss);
       } else {
-        const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.9, r * 1.2, 20, 1, true), m);
-        skirt.position.y = base - r * 0.6;
-        g.add(skirt);
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 24), m);
+        body.position.y = base + L / 2;
+        g.add(body);
       }
-      if (d.recovery) ({ fins, legs } = this.recoveryHardware(g, r, L, base, m));
+      const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.9, r * 1.2, 20, 1, true), m);
+      skirt.position.y = base - r * 0.6;
+      g.add(skirt);
+      if (d.recovery) ({ fins, legs, legAngle, footDrop } = this.recoveryHardware(g, r, L, base, m, d.recovery.target?.kind !== 'tower'));
       plume = new Plume({ radius: r * 0.75, length: Math.max(8, r * 11), kind: 'liquid', seed: hash11(d.id * 3.7) });
       plume.group.position.y = base - r * 1.2;
       g.add(plume.group);
     }
     const ax = this.randAxis(d.id);
     return {
-      group: g, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, createdAt: d.createdAt,
+      group: root, rigidGeometry: !!d.rigid, hinge, side, plume, bodyMat: m, createdAt: d.createdAt,
       tumbleAxis: ax,
       tumbleRate: (hash11(d.id * 9.1 + 4.4) - 0.5) * (d.visual.kind === 'fairing' ? 0.9 : 0.55),
-      fins, legs, finT: -1, legT: -1,
+      fins, legs, legAngle, footDrop, finT: -1, legT: -1, shift,
     };
   }
 
@@ -228,7 +264,10 @@ export class DebrisView {
   update(list: DebrisFrame[], t: number, pressure = 0): void {
     const seen = new Set<number>();
     for (const d of list) {
-      if (!d.alive) continue;
+      // A stage that landed stays where it came down (the tracker carries it
+      // round with the Earth); everything else that is no longer flying has
+      // hit the ground or the sea and is gone.
+      if (!d.alive && d.outcome !== 'landed') continue;
       seen.add(d.id);
       let item = this.items.get(d.id);
       if (item && item.rigidGeometry !== !!d.rigid) {
@@ -245,6 +284,8 @@ export class DebrisView {
       }
       this.scene.toScene(d.r, this.tmp);
       item.group.position.copy(this.tmp);
+      // A rigid body is placed from its own render offset (below).
+      if (item.shift) item.shift.position.y = d.rigid ? 0 : d.anchor ?? 0;
       this.dir.set(d.dir.x, d.dir.y, d.dir.z).normalize();
       this.q.setFromUnitVectors(Y_AXIS, this.dir);
       const age = Math.max(0, t - item.createdAt);
@@ -263,8 +304,9 @@ export class DebrisView {
         const spin = Math.max(0, age - 3) * item.tumbleRate;
         this.qt.setFromAxisAngle(item.tumbleAxis, spin);
         item.group.quaternion.copy(this.q).multiply(this.qt);
-      } else if (d.burning) {
-        // an engine is firing: hold attitude along the thrust axis
+      } else if (d.burning || d.recovery) {
+        // an engine is firing, or the stage is being flown home (and then
+        // stands where it landed): hold attitude along the thrust axis
         item.group.quaternion.copy(this.q);
       } else {
         const spin = age * item.tumbleRate;
@@ -301,7 +343,10 @@ export class DebrisView {
   private updateRecovery(item: DebrisItem, d: DebrisFrame, t: number): void {
     const phase = d.recovery?.phase ?? 'coast';
     const finsWanted = phase === 'entry' || phase === 'landing';
-    const legsWanted = phase === 'landing' || !!d.recovery?.landed;
+    // The return flight is in its 'landing' phase from the end of the entry
+    // burn, 40 km up; the legs wait for the landing burn itself. Frames
+    // recorded before the flag existed fall back on the phase.
+    const legsWanted = (phase === 'landing' && (d.recovery?.landingBurn ?? true)) || !!d.recovery?.landed;
     // The deployment is a function of *mission* time, not of wall-clock frames,
     // so it runs at the same rate at 1× and at 1000× warp and a replay
     // reproduces it exactly. The start time is latched on the frame the phase
@@ -312,7 +357,8 @@ export class DebrisView {
     const finOut = item.finT >= 0 ? clamp01(smoothstep(0, 2.5, t - item.finT)) : 0;
     const legOut = item.legT >= 0 ? clamp01(smoothstep(0, 4, t - item.legT)) : 0;
     for (const f of item.fins) f.rotation.x = -finOut * 1.45;
-    for (const l of item.legs) l.rotation.z = -legOut * 2.15;
+    for (const l of item.legs) l.rotation.z = -legOut * item.legAngle;
+    if (item.shift) item.shift.position.y += legOut * item.footDrop;
   }
 
   clear(): void {

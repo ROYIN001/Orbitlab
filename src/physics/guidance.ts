@@ -162,6 +162,26 @@ export function loadReliefThrottle(q: number, placard: number): number {
   return Math.max(LOAD_RELIEF_MIN_THROTTLE, 1 - (1 - LOAD_RELIEF_MIN_THROTTLE) * Math.min(1, over));
 }
 
+/** A suborbital target's ellipse: semi-major axis and semi-latus rectum, m. */
+export interface SuborbitalAim { a: number; p: number }
+
+/** Horizontal and (climbing) radial speed of an ellipse at radius `r`, m/s. */
+export function ellipseVelocityAt(r: number, aim: SuborbitalAim): { horizontal: number; radial: number } {
+  const horizontal = Math.sqrt(MU_EARTH * aim.p) / r;
+  const speed2 = MU_EARTH * (2 / r - 1 / aim.a);
+  return { horizontal, radial: Math.sqrt(Math.max(0, speed2 - horizontal * horizontal)) };
+}
+
+/**
+ * A suborbital ascent holds its ellipse's flight-path angle within this far of
+ * its cut-off height, m, or this long before its cut-off, s, taking up the
+ * climb rate over `SUBORBITAL_TERMINAL_TAU` s — slowly enough for a six-DOF
+ * stage whose command swings at `RIGID_ASCENT_COMMAND_RATE`.
+ */
+const SUBORBITAL_TERMINAL_BAND = 10e3;
+const SUBORBITAL_TERMINAL_S = 60;
+const SUBORBITAL_TERMINAL_TAU = 15;
+
 export class AscentGuidance {
   phase: AscentPhase = 'vertical';
   private kickStart = -1;
@@ -171,14 +191,23 @@ export class AscentGuidance {
   private readonly ascentInclination: number;
   private readonly insertionAltitude: number;
   private readonly insertionApoapsis: number;
+  /**
+   * A suborbital target's ellipse (semi-major axis and semi-latus rectum, m):
+   * the ascent is cut off still climbing, on its way up to an apogee far
+   * downrange, wherever it has the ellipse's own velocity. Absent for every
+   * orbit, which is flown level to the perigee speed of its insertion orbit.
+   */
+  private readonly suborbital?: SuborbitalAim;
   lastPitch = 90;
 
-  constructor(params: GuidanceParams, azimuthRotating: number, ascentInclination: number, insertionAltitude: number, insertionApoapsis = insertionAltitude) {
+  constructor(params: GuidanceParams, azimuthRotating: number, ascentInclination: number, insertionAltitude: number, insertionApoapsis = insertionAltitude,
+    suborbital?: SuborbitalAim) {
     this.params = params;
     this.azimuthRotating = azimuthRotating;
     this.ascentInclination = ascentInclination;
     this.insertionAltitude = insertionAltitude;
     this.insertionApoapsis = Math.max(insertionApoapsis, insertionAltitude);
+    this.suborbital = suborbital;
   }
 
   update(inp: GuidanceInputs): GuidanceCommand {
@@ -228,11 +257,18 @@ export class AscentGuidance {
       const gEff = MU_EARTH / (rm * rm) - (vhMag * vhMag) / rm;
       const rIns = R_EARTH + this.insertionAltitude;
       const aIns = (rIns + R_EARTH + this.insertionApoapsis) / 2;
-      const vIns = Math.sqrt(MU_EARTH * (2 / rIns - 1 / aIns)); // perigee speed of the insertion orbit
+      // Perigee speed of the insertion orbit; for a suborbital target, the
+      // speed of its ellipse at the height it is cut off at.
+      const aim = this.suborbital ? ellipseVelocityAt(rIns, this.suborbital) : null;
+      const vIns = aim?.horizontal ?? Math.sqrt(MU_EARTH * (2 / rIns - 1 / aIns));
       const dvRem = Math.max(30, vIns - vhMag);
       // Planning horizon: burn time of the remaining stages, capped so that a weak
       // final stage does not force an inefficient loft.
-      const T = Math.max(12, Math.min(p.maxTimeToGo, inp.timeToGo(dvRem)));
+      // A suborbital cut-off has a climb rate to arrive with, which a horizon
+      // held at twelve seconds past the real one would not: planned too late,
+      // the last seconds pitch down to keep off a height it would only have
+      // reached after the cut-off.
+      const T = Math.max(this.suborbital ? 2 : 12, Math.min(p.maxTimeToGo, inp.timeToGo(dvRem)));
       // Lofted hand-off: when the next stage cannot hold altitude at hand-off
       // speed (Centaur-class upper stages) the current stage has to hand over
       // *climbing*, so that the ballistic arc keeps the stack high while the
@@ -246,6 +282,7 @@ export class AscentGuidance {
       const hT = inp.nextStageAccel > 0
         ? Math.min(this.insertionAltitude, BOOSTER_TARGET_CEILING)
         : this.insertionAltitude;
+      const finalSuborbital = aim !== null && !(inp.nextStageAccel > 0);
       let vzT = 0;
       let Tplan = T;
       // Whatever lights next is what has to be handed a flyable trajectory, and
@@ -302,7 +339,23 @@ export class AscentGuidance {
       // whenever the altitude error cannot be flown out in the time available.
       const aCorrMax = Math.max(1.5, 0.6 * aT);
       const aCorr = Math.max(-aCorrMax, Math.min(aCorrMax, -B * Tplan * 0.5));
-      const aZ = aNull + aCorr;
+      let aZ = aNull + aCorr;
+      // The last stage of a suborbital ascent is cut off climbing, at its
+      // ellipse's flight-path angle: near its cut-off height, or in its last
+      // minute, it holds the angle of the ellipse at the height it is at — the climb rate growing
+      // with the horizontal speed — instead of flying level to it. The cut-off
+      // comes when the periapsis reaches the target's, a few seconds before
+      // the horizontal speed the plan's horizon counts to, so a climb rate
+      // still to be taken up then would leave the apogee short. The height is
+      // only gently trimmed: a few kilometres of it matter far less than the
+      // angle, and a stiff trim fights the climb it is there to allow.
+      if (finalSuborbital && (inp.altitude > hT - SUBORBITAL_TERMINAL_BAND || Tplan < SUBORBITAL_TERMINAL_S)) {
+        const here = ellipseVelocityAt(rm, this.suborbital!);
+        const trim = Math.max(-5, Math.min(5, (hT - inp.altitude) / 200));
+        const ratio = here.radial / here.horizontal;
+        // What the angle asks of the climb rate as the stage speeds up, plus the error.
+        aZ = aT * ratio + (vhMag * ratio + trim - vz) / SUBORBITAL_TERMINAL_TAU;
+      }
       let sinTheta = (aZ + gEff) / aT;
       sinTheta = Math.max(-1, Math.min(1, sinTheta));
       let theta = Math.asin(sinTheta) / DEG;

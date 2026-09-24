@@ -9,7 +9,7 @@
  * data can drive a screen reader or a future caption track.
  */
 import type { VisualFrame } from '../physics/frame';
-import type { SimEvent } from '../physics/simulation';
+import type { DescentPhase, SimEvent } from '../physics/simulation';
 import { RAD } from '../physics/constants';
 import { t } from '../i18n';
 
@@ -35,6 +35,12 @@ export interface PhaseInfo {
 }
 
 const EMPTY: Record<string, string | number> = {};
+
+/** Label of each part of a returning ship's descent. */
+export const DESCENT_PHASE_KEYS: Readonly<Record<DescentPhase, string>> = {
+  coast: 'hud.descent.coast', entry: 'hud.descent.entry', bellyflop: 'hud.descent.bellyflop',
+  flip: 'hud.descent.flip', landing: 'hud.descent.landing',
+};
 
 /** Phase title, detail and surrounding events for one instant of the flight. */
 export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]): PhaseInfo {
@@ -75,6 +81,18 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       params.ap = fmtAlt(frame.elements.apoapsisAlt);
       params.pe = fmtAlt(frame.elements.periapsisAlt);
       params.inc = (frame.elements.i * RAD).toFixed(2);
+      break;
+    case 'descent':
+      titleKey = frame.descentPhase ? DESCENT_PHASE_KEYS[frame.descentPhase] : 'hud.status.descent';
+      detailKey = 'phase.detail.descent';
+      params.alt = (frame.altitude / 1000).toFixed(1);
+      params.speed = frame.airspeed.toFixed(0);
+      break;
+    case 'landed':
+      titleKey = 'hud.status.landed';
+      detailKey = 'phase.detail.landed';
+      params.lat = frame.lat.toFixed(2);
+      params.lon = frame.lon.toFixed(2);
       break;
     default:
       titleKey = 'hud.status.failed';

@@ -85,6 +85,13 @@ export interface StageSpec {
   boosters?: BoosterGroupSpec[];
   color?: string;
   accentColor?: string;
+  /**
+   * How the stage is drawn when it is not a plain cylinder (render only):
+   * `r7Core` is the R-7 family's Blok A, tapering to its engines below the
+   * booster tips and topped by the open truss the next stage fires through;
+   * `r7Upper` is Blok I, whose aft skirt falls away after staging.
+   */
+  profile?: 'r7Core' | 'r7Upper';
   /** Simple visual hints */
   fins?: boolean;
   gridFins?: boolean;
@@ -153,6 +160,12 @@ export interface VehicleSpec {
   recoverable?: boolean;
   /** Fraction of first-stage propellant reserved for recovery */
   recoveryReserve?: number;
+  /**
+   * Fraction reserved instead when the stage flies back to a landing zone near
+   * the launch site: the boostback burn that turns it round costs more than
+   * the entry and landing burns of a downrange landing.
+   */
+  returnReserve?: number;
   /** Default guidance overrides (kick angle etc.) */
   guidanceDefaults?: Partial<GuidanceParams>;
   /**
@@ -205,6 +218,15 @@ export interface OrbitSpec {
   raan?: number;
   /** Local time of ascending node, hours (raanMode = 'ltan') */
   ltan?: number;
+  /**
+   * A trajectory that comes back down rather than an orbit: the perigee is
+   * below the ground (a negative altitude). The ascent is cut off on the
+   * apsides of that ellipse, the flight is judged there, and the last stage
+   * then flies itself back to the surface — Starship's ship on its test
+   * flights, 213 × −15 km. Only a vehicle whose last stage can fly that
+   * return (`StageSpec.flaps`) is given one.
+   */
+  suborbital?: boolean;
   description: string;
 }
 
@@ -289,6 +311,12 @@ export interface MissionConfig {
   failure: FailureConfig;
   /** Recover the first stage (reserves propellant) */
   boosterRecovery: boolean;
+  /**
+   * Where each recovered body is flown back to. Absent, every recovered body
+   * lands where it comes down, with no boostback (the original model). Only
+   * read when `boosterRecovery` is set.
+   */
+  recoveryPlan?: RecoveryPlan;
   /** Extra payload mass added by the user, kg */
   payloadMassOverride?: number;
   /**
@@ -300,6 +328,30 @@ export interface MissionConfig {
    */
   guidanceResolved?: boolean;
 }
+
+/**
+ * How one recovered body comes home.
+ *
+ * - `downrange`: entry and landing burns wherever the stage comes down, with
+ *   no target: what `boosterRecovery` flies with no plan at all.
+ * - `droneShip`: no boostback; a ship is stationed where the stage is
+ *   predicted to come down at separation, and the entry and landing burns
+ *   steer onto its deck.
+ * - `landingZone`: a boostback burn turns the stage round and flies it back to
+ *   a landing zone near the launch site (`src/data/landing-zones.ts`).
+ * - `expended`: not recovered; it keeps no propellant back.
+ */
+export type RecoveryMode = { kind: 'downrange' } | { kind: 'droneShip' } | { kind: 'landingZone'; zoneId: string } | { kind: 'expended' };
+
+export interface RecoveryPlan {
+  /** the first stage, or the core of a vehicle with strap-ons; left out, it is expended */
+  core?: RecoveryMode;
+  /** strap-ons, in the order they separate within their group (Falcon Heavy's two side boosters); one left out is expended */
+  boosters?: readonly RecoveryMode[];
+}
+
+/** The modes that fly a stage to a target: a ship's deck, a pad, a tower's arms. */
+export type TargetedRecovery = Extract<RecoveryMode, { kind: 'droneShip' | 'landingZone' }>;
 
 export interface DynamicsConfig {
   model: 'pointMass' | 'sixDof';

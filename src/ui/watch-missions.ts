@@ -15,9 +15,9 @@ import { orbitById } from '../data/orbits';
 import { siteById } from '../data/sites';
 import { DEFAULT_FAILURE } from '../physics/defaults';
 import { launchWindows } from '../physics/mission';
-import type { OrbitSpec } from '../types';
+import type { OrbitSpec, RecoveryPlan } from '../types';
 
-export type WatchMissionId = 'soyuzIss' | 'falcon9Leo' | 'starshipLeo' | 'falconHeavyGto' | 'ariane6Gto' | 'electronSso';
+export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -32,6 +32,13 @@ export interface WatchMission {
   titleKey: string;
   /** i18n key of the one-line card blurb */
   blurbKey: string;
+  /**
+   * i18n key of the payload as flown ("Bandwagon-1 (11 satellites)"): the
+   * catalogue entry in `satelliteId` only supplies its model and shape.
+   */
+  payloadKey?: string;
+  /** stages flown back, which turns booster recovery on */
+  recoveryPlan?: RecoveryPlan;
 }
 
 /**
@@ -42,17 +49,38 @@ export interface WatchMission {
  */
 const MORNING_SSO: Partial<OrbitSpec> = { ltan: 22.5 };
 
+/**
+ * Each launch as it was really flown, except the date: the viewer launches in
+ * daylight at the pad (`daylightLaunchTime`), and the historical dates are
+ * item C01's to replay.
+ */
 export const WATCH_MISSIONS: readonly WatchMission[] = [
   { id: 'soyuzIss', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
     titleKey: 'watch.mission.soyuzIss', blurbKey: 'watch.mission.soyuzIssBlurb' },
-  { id: 'falcon9Leo', vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', orbitId: 'leo', payloadMass: 1000,
-    titleKey: 'watch.mission.falcon9Leo', blurbKey: 'watch.mission.falcon9LeoBlurb' },
-  { id: 'starshipLeo', vehicleId: 'starship', siteId: 'starbase', satelliteId: 'starlink', orbitId: 'leo', payloadMass: 15600,
-    titleKey: 'watch.mission.starshipLeo', blurbKey: 'watch.mission.starshipLeoBlurb' },
-  { id: 'falconHeavyGto', vehicleId: 'falconheavy', siteId: 'cape', satelliteId: 'comsat', orbitId: 'gto', payloadMass: 5500,
-    titleKey: 'watch.mission.falconHeavyGto', blurbKey: 'watch.mission.falconHeavyGtoBlurb' },
-  { id: 'ariane6Gto', vehicleId: 'ariane64', siteId: 'kourou', satelliteId: 'comsat', orbitId: 'gto', payloadMass: 5500,
-    titleKey: 'watch.mission.ariane6Gto', blurbKey: 'watch.mission.ariane6GtoBlurb' },
+  // Bandwagon-1, 7 April 2024: eleven rideshare satellites, about 1.3 t, to
+  // ~590 km at 45.4° from LC-39A, the first stage back to Landing Zone 1.
+  { id: 'falcon9Bandwagon', vehicleId: 'falcon9', siteId: 'ksc39a', satelliteId: 'cubesats', orbitId: 'custom', payloadMass: 1300,
+    orbit: { perigee: 590e3, apogee: 590e3, inclination: 45.4, raanMode: 'free' },
+    recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz1' } },
+    titleKey: 'watch.mission.falcon9Bandwagon', blurbKey: 'watch.mission.falcon9BandwagonBlurb', payloadKey: 'watch.payload.bandwagon' },
+  // Flight 5, 13 October 2024: Super Heavy caught by the tower's arms, the
+  // ship cut off on a 213 × −15 km path to a splashdown in the Indian Ocean.
+  // It carried no payload.
+  { id: 'starshipFlight5', vehicleId: 'starship', siteId: 'starbase', satelliteId: 'cubesats', orbitId: 'custom', payloadMass: 0,
+    orbit: { perigee: -15e3, apogee: 213e3, inclination: 26.2, raanMode: 'free', suborbital: true },
+    recoveryPlan: { core: { kind: 'landingZone', zoneId: 'olm' } },
+    titleKey: 'watch.mission.starshipFlight5', blurbKey: 'watch.mission.starshipFlight5Blurb', payloadKey: 'watch.payload.flight5' },
+  // Arabsat-6A, 11 April 2019: 6,465 kg to GTO from LC-39A, the side
+  // boosters back to Landing Zones 1 and 2, the core to Of Course I Still
+  // Love You.
+  { id: 'falconHeavyArabsat', vehicleId: 'falconheavy', siteId: 'ksc39a', satelliteId: 'comsat', orbitId: 'gto', payloadMass: 6465,
+    recoveryPlan: { core: { kind: 'droneShip' }, boosters: [{ kind: 'landingZone', zoneId: 'lz1' }, { kind: 'landingZone', zoneId: 'lz2' }] },
+    titleKey: 'watch.mission.falconHeavyArabsat', blurbKey: 'watch.mission.falconHeavyArabsatBlurb', payloadKey: 'watch.payload.arabsat' },
+  // VA267 / LE-01, 12 February 2026: 32 Amazon Leo satellites, about 20 t,
+  // to 465 km at 51.9°. The Starlink stack stands in for their dispenser.
+  { id: 'ariane6AmazonLeo', vehicleId: 'ariane64', siteId: 'kourou', satelliteId: 'starlink', orbitId: 'custom', payloadMass: 20000,
+    orbit: { perigee: 465e3, apogee: 465e3, inclination: 51.9, raanMode: 'free' },
+    titleKey: 'watch.mission.ariane6AmazonLeo', blurbKey: 'watch.mission.ariane6AmazonLeoBlurb', payloadKey: 'watch.payload.amazonLeo' },
   { id: 'electronSso', vehicleId: 'electron', siteId: 'mahia', satelliteId: 'cubesats', orbitId: 'sso', payloadMass: 150, orbit: MORNING_SSO,
     titleKey: 'watch.mission.electronSso', blurbKey: 'watch.mission.electronSsoBlurb' },
 ];
@@ -115,7 +143,8 @@ export function watchMissionSettings(id: WatchMissionId, from: Date = new Date()
   const settings: WatchMissionSettings = {
     vehicleId: m.vehicleId, siteId: m.siteId, satelliteId: m.satelliteId, payloadMass: m.payloadMass,
     orbitId: m.orbitId, orbit, launchTime: daylightLaunchTime(orbit, m.siteId, from),
-    guidanceOverrides: {}, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
+    guidanceOverrides: {}, failure: { ...DEFAULT_FAILURE },
+    boosterRecovery: !!m.recoveryPlan, recoveryPlan: m.recoveryPlan,
   };
   assertConfigInput(settings);
   return settings;

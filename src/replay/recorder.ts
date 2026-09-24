@@ -306,6 +306,11 @@ export class FlightRecorder implements RecordingSource {
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'orbit':
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
+      case 'descent':
+        // A returning ship: sparse on its coast above the air, dense from the entry on.
+        return altitude < ATMOSPHERIC_CEILING ? DENSE_INTERVAL : 30;
+      case 'landed':
+        return 30;
     }
   }
 

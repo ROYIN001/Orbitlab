@@ -16,10 +16,12 @@ tablet, and a single stack on a phone with the viewport first.
   (J2 oblateness in orbit), US Standard Atmosphere 1976 with an exponential upper
   atmosphere, Mach-dependent drag, pressure-dependent thrust and specific impulse,
   real staging tables, Earth-rotation velocity credit, RK4 integration.
-- **18 launch vehicles** from 15 launch sites — see [Fleet](#fleet) below. Parallel
+- **18 launch vehicles** from 16 launch sites — see [Fleet](#fleet) below. Parallel
   boosters (including air-lit ones), hot staging, per-motor solid thrust profiles,
   throttle buckets at max-Q, acceleration limits, first-stage recovery with entry and
-  landing burns.
+  landing burns — flown back with a boostback to Landing Zones 1 and 2, to a drone ship, or
+  into the Starbase tower's arms — and Starship's suborbital test flights, the ship flying
+  itself home to a splashdown.
 - **Orbit presets** (ISS, Starlink, sun-synchronous at 600 km, polar, GPS/GLONASS MEO,
   GTO, GEO, Molniya, Tundra) plus fully custom orbits. Launch-window computation for the ISS
   plane and for sun-synchronous local-time constraints (RAAN targeting).
@@ -76,8 +78,8 @@ not directly comparable vehicle-to-vehicle, since the reference orbit differs.
 | Soyuz-2.1b / Fregat-M | RU | 3 | Baikonur, Plesetsk, Vostochny | 8,670 kg | 1,900 kg | 4,900 kg |
 | Proton-M / Briz-M | RU | 4 | Baikonur | 23,000 kg | 6,920 kg | – |
 | Angara-A5 / Briz-M | RU | 3 | Plesetsk, Vostochny | 24,500 kg | 5,400 kg | – |
-| Falcon 9 Block 5 | US | 2 | Cape Canaveral, Vandenberg | 22,800 kg | 8,300 kg | 15,000 kg |
-| Falcon Heavy | US | 2 | Cape Canaveral | 63,800 kg | 26,700 kg | – |
+| Falcon 9 Block 5 | US | 2 | Cape Canaveral SLC-40, Kennedy LC-39A, Vandenberg | 22,800 kg | 8,300 kg | 15,000 kg |
+| Falcon Heavy | US | 2 | Cape Canaveral SLC-40, Kennedy LC-39A | 63,800 kg | 26,700 kg | – |
 | Atlas V 551 | US | 2 | Cape Canaveral, Vandenberg | 18,850 kg | 8,900 kg | – |
 | Vulcan Centaur VC4 | US | 2 | Cape Canaveral, Vandenberg | 21,400 kg | 11,600 kg | 18,500 kg |
 | Ariane 64 | EU | 2 | Kourou | 21,600 kg | 11,500 kg | 15,000 kg |
@@ -106,7 +108,8 @@ never offers a plane no azimuth in its own window could fly.
 | Baikonur Cosmodrome | KZ | 51.6°–91.8° |
 | Plesetsk Cosmodrome | RU | 62.8°–102.6° |
 | Vostochny Cosmodrome | RU | 51.7°–100.9° |
-| Cape Canaveral / KSC | US | 28.5°–57.6° |
+| Cape Canaveral SLC-40 | US | 28.5°–57.6° |
+| Kennedy LC-39A | US | 28.6°–57.7° |
 | Vandenberg SFB | US | 61.6°–104.9° |
 | Wallops Flight Facility | US | 38.0°–72.3° |
 | Starbase (Boca Chica) | US | 26.0°–31.8° |
@@ -143,8 +146,11 @@ to (`#/home`, `#/watch`, `#/explore`, `#/engineer`); the last one used is rememb
   ground in km/h) and one plain-language sentence about what the rocket is doing now.
   Playback runs at an automatic pace — real time for liftoff, max-Q and every separation,
   faster through the long quiet stretches — or at a fixed speed. The launch list holds
-  six real vehicles on typical missions, each flown to orbit by `tests/watch-missions.test.ts`;
-  the flight ends on a card that offers another launch or the mission builder.
+  six real flights — among them Bandwagon-1 and Arabsat-6A with their boosters landing
+  back at the Cape and on a drone ship, and Starship Flight 5 with its tower catch and
+  splashdown — each flown to its target, and every stage it flies home landed, by
+  `tests/watch-missions.test.ts`; the camera follows a returning stage for its landing,
+  and the flight ends on a card that offers another launch or the mission builder.
 - **Explore** — the mission builder below in its learning layout.
 - **Engineer** — the full workspace with every guidance parameter.
 

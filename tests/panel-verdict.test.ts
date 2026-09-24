@@ -62,6 +62,19 @@ describe('mission verdict', () => {
     expect(ratedPayload({ ...spec, payloadSSO: undefined } as VehicleSpec, 'sso')).toEqual({ cap: 10000, cls: 'leo' });
   });
 
+  it('warns when a suborbital ship would bring home more than it has been flown home with', () => {
+    const starship = vehicleById('starship');
+    const flight5 = { ...base, spec: starship, site: siteById('starbase'), inclinationDeg: 26.2,
+      orbit: { ...leo, id: 'custom', perigee: -15e3, apogee: 213e3, inclination: 26.2, suborbital: true } as OrbitSpec };
+    expect(missionVerdict({ ...flight5, payloadMass: 0 }).level).toBe('ok');
+    expect(missionVerdict({ ...flight5, payloadMass: 30000 }).level).toBe('ok');
+    const heavy = missionVerdict({ ...flight5, payloadMass: 60000 });
+    expect(heavy.level).toBe('warn');
+    expect(heavy.text).toMatch(/flown home with at most 30,000 kg/);
+    // an orbit keeps its payload; nothing to bring home
+    expect(missionVerdict({ ...flight5, orbit: leo, payloadMass: 60000 }).text).not.toMatch(/flown home/);
+  });
+
   it('reports a comfortable margin as ready', () => {
     const v = missionVerdict(base);
     expect(v.level).toBe('ok');

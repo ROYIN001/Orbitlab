@@ -456,3 +456,69 @@ integrator evaluation and the shell-load sweep at each control step.
 (options absent, as every default mission flies): **161 of 161 passed** in 2 h 9 min on four
 cores, the same result as at 68ace10 — P05 leaves the rigid vehicle untouched.
 
+## Returns to a landing zone and a drone ship (roadmap item 10b, 2026-09-23)
+
+A recovery plan flies a Falcon first stage to a target instead of wherever it comes down
+([PHYSICS.md](PHYSICS.md) §8.1). In six-DOF that brought four model additions, each switched on
+only for a body with a target, so the original recovery above flies exactly as before
+(tests/rigid-recovery.test.ts and the rest of the rigid suite are unchanged and pass):
+
+- **Grid fins as actuators** (`src/physics/rigid/surfaces.ts`): four control surfaces at the top
+  of the stage, ±20° at 30 °/s, allocated after the engines and before the cold gas. A body
+  without surfaces — every other body — flies the runtime exactly as before.
+- **Turning on the centre engine's gimbal** after separation (the flip) and at the top of an
+  entry burn that finds the stage pointing wrong, at the lowest thrust.
+- **Coast pointing rationed to the cold gas left** (`fuelAwareCoast`) for a returning stage,
+  as the vehicle's own orbital coasts already were; it stops where the fins bite (q > 100 Pa).
+- **Recovered Falcon Heavy cores.** The core and the side boosters now fly the recovery the
+  Falcon 9 stage does. A side booster has no cold-gas thrusters in the attached model, so its
+  returning body has none either (`withoutRcs`) and is turned by its engines and fins alone.
+
+What the rigid body did that the point mass does not: a base-first stage with fixed fins trims
+at about 3.4° of angle of attack, and the lift of that trim carried a Falcon 9 stage 600 m past
+LZ-1 through the dense air; with the fins steering it lands 0.8 m from the pad's centre. Falcon
+Heavy's core arrives at its entry burn with no cold gas (spent on the ascent) and, turned on
+three engines at 70 km, came down 10 km from its ship; turned on the centre engine after
+separation and stationed on the trajectory that leaves, it lands 0.7 m from the deck's centre.
+
+| Test | Result |
+|---|---|
+| tests/rigid-return.test.ts — Falcon 9, Bandwagon-1, first stage → LZ-1 | landed, 0.8 m, strict contact gate, about 60 s |
+| tests/heavy/falcon-heavy-returns.test.ts — Arabsat-6A, side boosters → LZ-1, LZ-2; core → drone ship | landed 0.8 / 0.8 / 0.7 m, about 2.5 min |
+| tests/rigid-return.test.ts — Starship, Super Heavy → the Starbase tower's arms | caught 0.3 m off, 2.4 m/s down, 0.45 m/s across, 0.5°, about 50 s |
+
+Super Heavy needed two more: its inner three engines cannot throttle below its weight, so the
+end of the burn is flown on as many of them as can hover it (two, then one) instead of a blind
+coast to a single restart; and the divert is solved over no less than 8 s and faded out over
+the last 3 s, after a divert asked to finish in a second or two outran the attitude loop and
+oscillated to 19° over the arms.
+
+Limits: one wind state (calm) and one launch per flight is measured; the fins' lift slope and
+travel, the flip on the centre engine and the drone ship's station are estimates, and the
+targeted landings are not a robustness envelope.
+
+### Starship's ship home from a suborbital cut-off (2026-09-24)
+
+Flight 5's ship is flown by the vehicle's own rigid body from its cut-off on a 213 × −15 km
+trajectory to a splashdown ([PHYSICS.md](PHYSICS.md) §8.2). Additions, each reached only by a
+flight with a suborbital target:
+
+- **Flaps as actuators**: plate surfaces (`flow: 'facing'`, `neutralRad`) whose force grows with
+  the square of the stream against their face and is never negative, controlled about a
+  half-open trim that the runtime counts as a moment it starts from. Grid fins fly unchanged.
+- **The ship's belly-first table** (`shipDescentAeroTable`) and its landing propellant in its
+  header tanks (`headerTankComponents`), valid at any angle and to Mach 30, so a belly-first
+  entry is not flagged as outside the model.
+- **Partial light-up** (`StageState.litEngines`): the three sea-level Raptors alone, then two,
+  then one, with thrust and flow following in the legacy model too.
+- **Gains for the flip and the landing burn** (`setControlGains`, `ControlGains.authorityShare`
+  0.7 in place of 0.35), no roll commanded on the engines, and one engine lit alone only for the
+  last settle: a single off-axis Raptor cannot pitch the ship without rolling it, and asked for
+  both it took its pitch back out and left the ship leaning 16° until it slid off sideways.
+
+| Test | Result |
+|---|---|
+| tests/heavy/starship-flight5.test.ts — Starship Flight 5 whole: booster caught, ship home | cut-off 211 × −15 km; entry T+39:42 at 8.3 kPa peak; flip 1.06 km; splashdown T+59:00 at 1.6 m/s, 0.3 m/s across, 2°, 24.5°S 83.6°E; about 2.5 min |
+
+Limits: the flaps' areas, travel and rate, the header tanks' places, the entry angle of attack
+and the flip's timing are estimates; one calm flight is measured.

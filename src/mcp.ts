@@ -21,7 +21,7 @@
  * transitively and defeat the point of the split); instead `registerMcpTools`
  * is typed to accept anything with the same shape, which `App` already has.
  */
-import type { FailureConfig, FailureMode, GuidanceParams, MissionConfig, OrbitSpec, VehicleSpec } from './types';
+import type { FailureConfig, FailureMode, GuidanceParams, MissionConfig, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from './types';
 import type { Simulation, SimEvent } from './physics/simulation';
 import type { VisualFrame, StageFrame } from './physics/frame';
 import type { CameraMode } from './render/cameras';
@@ -32,7 +32,8 @@ import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
 import { resolveTarget } from './physics/mission';
 import { DEG, RAD } from './physics/constants';
-import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, numericIssue, issueText, parseUtcDateTime, assertConfigInput } from './config/validation';
+import { GUIDANCE_FIELDS, NUMBER_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, numericIssue, issueText, parseUtcDateTime, assertConfigInput } from './config/validation';
+import { LANDING_ZONES } from './data/landing-zones';
 import { buildTelemetryCsv } from './ui/csv';
 import { defaultDynamics } from './physics/rigid/config';
 import { cloneRigidTelemetry } from './physics/rigid/telemetry';
@@ -59,6 +60,7 @@ interface McpPanelState {
   guidanceOverrides: Partial<GuidanceParams>;
   failure: FailureConfig;
   boosterRecovery: boolean;
+  recoveryPlan?: RecoveryPlan;
   payloadMass: number;
 }
 
@@ -192,11 +194,36 @@ function parseGuidanceInput(raw: unknown, spec: VehicleSpec): Partial<GuidancePa
   return out;
 }
 
-function expectFieldNumber(value: unknown, field: string, labelKey: string): number {
+function expectFieldNumber(value: unknown, field: string, labelKey: string, orbit?: Pick<OrbitSpec, 'suborbital'>): number {
   const num = expectNumber(value, field);
-  const issue = numericIssue(num, field, NUMBER_FIELDS[labelKey]);
+  const issue = numericIssue(num, field, fieldLimits(labelKey, orbit));
   if (issue) throw new Error(issueText(issue));
   return num;
+}
+
+const RECOVERY_KINDS: RecoveryMode['kind'][] = ['downrange', 'droneShip', 'landingZone', 'expended'];
+
+function parseRecoveryMode(value: unknown, field: string): RecoveryMode {
+  const m = asRecord(value);
+  const kind = expectString(m.kind, `${field}.kind`);
+  if (!RECOVERY_KINDS.includes(kind as RecoveryMode['kind'])) throw new Error(`"${field}.kind" must be one of ${RECOVERY_KINDS.join(', ')}`);
+  if (kind === 'landingZone') {
+    const zoneId = expectString(m.zoneId, `${field}.zoneId`);
+    if (!LANDING_ZONES.some((z) => z.id === zoneId)) throw new Error(`Unknown landing zone "${zoneId}". Valid ids: ${LANDING_ZONES.map((z) => z.id).join(', ')}`);
+    return { kind: 'landingZone', zoneId };
+  }
+  return { kind } as RecoveryMode;
+}
+
+function parseRecoveryPlan(value: unknown): RecoveryPlan {
+  const p = asRecord(value);
+  const plan: { core?: RecoveryMode; boosters?: RecoveryMode[] } = {};
+  if (p.core !== undefined) plan.core = parseRecoveryMode(p.core, 'recoveryPlan.core');
+  if (p.boosters !== undefined) {
+    if (!Array.isArray(p.boosters)) throw new Error('"recoveryPlan.boosters" must be an array');
+    plan.boosters = p.boosters.map((b, i) => parseRecoveryMode(b, `recoveryPlan.boosters[${i}]`));
+  }
+  return plan;
 }
 
 /** The inverse of `parseGuidanceInput`, for echoing a resolved config back. */
@@ -214,7 +241,7 @@ function guidanceToOutput(g: GuidanceParams): Record<string, number> {
  * into a "custom" orbit, per `SetupPanel.customise()`.
  */
 function applyOrbitInput(state: McpPanelState, input: Record<string, unknown>): void {
-  const customKeys = ['perigeeKm', 'apogeeKm', 'inclinationDeg', 'argPerigeeDeg', 'raanMode', 'raanDeg', 'ltanHours'];
+  const customKeys = ['perigeeKm', 'apogeeKm', 'inclinationDeg', 'argPerigeeDeg', 'raanMode', 'raanDeg', 'ltanHours', 'suborbital'];
   const hasCustomFields = customKeys.some((k) => input[k] !== undefined);
   let orbit: OrbitSpec;
   let explicitCustom = false;
@@ -236,7 +263,13 @@ function applyOrbitInput(state: McpPanelState, input: Record<string, unknown>): 
     orbit = { ...state.orbit };
   }
   if (hasCustomFields) {
-    if (input.perigeeKm !== undefined) orbit.perigee = expectFieldNumber(input.perigeeKm, 'perigeeKm', 'setup.perigee') * 1000;
+    // First: a suborbital target changes what the perigee may be.
+    if (input.suborbital !== undefined) {
+      if (typeof input.suborbital !== 'boolean') throw new Error('"suborbital" must be a boolean');
+      if (input.suborbital) orbit.suborbital = true;
+      else delete orbit.suborbital;
+    }
+    if (input.perigeeKm !== undefined) orbit.perigee = expectFieldNumber(input.perigeeKm, 'perigeeKm', 'setup.perigee', orbit) * 1000;
     if (input.apogeeKm !== undefined) orbit.apogee = expectFieldNumber(input.apogeeKm, 'apogeeKm', 'setup.apogee') * 1000;
     if (input.inclinationDeg !== undefined) orbit.inclination = expectFieldNumber(input.inclinationDeg, 'inclinationDeg', 'setup.inclination');
     if (input.argPerigeeDeg !== undefined) {
@@ -314,12 +347,15 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
       notices.push(`Site reassigned to "${state.siteId}": ${spec.name} does not fly from the previously selected site.`);
     }
     if (!spec.recoverable) state.boosterRecovery = false;
+    // a plan belongs to one vehicle at one site, as on the panel
+    if (id !== live.vehicleId) state.recoveryPlan = undefined;
   }
   if (input.siteId !== undefined) {
     const id = expectString(input.siteId, 'siteId');
     if (!SITES.some((s) => s.id === id)) throw new Error(`Unknown siteId "${id}". Valid ids: ${SITES.map((s) => s.id).join(', ')}`);
     const spec = vehicleById(state.vehicleId);
     if (!spec.sites.includes(id)) throw new Error(`${spec.name} does not fly from "${id}". Valid sites for this vehicle: ${spec.sites.join(', ')}`);
+    if (id !== live.siteId) state.recoveryPlan = undefined;
     state.siteId = id;
   }
   if (input.satelliteId !== undefined) {
@@ -332,7 +368,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   }
   applyOrbitInput(state, input);
   if (input.payloadMassKg !== undefined) {
-    const v = expectFieldNumber(input.payloadMassKg, 'payloadMassKg', 'setup.payloadMass');
+    const v = expectFieldNumber(input.payloadMassKg, 'payloadMassKg', 'setup.payloadMass', state.orbit);
     state.payloadMass = v;
   }
   if (input.launchTimeIso !== undefined) {
@@ -346,6 +382,14 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     const spec = vehicleById(state.vehicleId);
     if (input.boosterRecovery && !spec.recoverable) throw new Error(`${spec.name} has no first-stage recovery option`);
     state.boosterRecovery = input.boosterRecovery;
+  }
+  if (input.recoveryPlan !== undefined) {
+    // null clears it; the plan itself is checked against the vehicle and the
+    // site by `assertConfigInput` below
+    state.recoveryPlan = input.recoveryPlan === null ? undefined : parseRecoveryPlan(input.recoveryPlan);
+    if (state.recoveryPlan && !vehicleById(state.vehicleId).recoverable) {
+      throw new Error(`${vehicleById(state.vehicleId).name} has no first-stage recovery option`);
+    }
   }
   if (input.failureMode !== undefined) {
     const m = expectString(input.failureMode, 'failureMode');
@@ -418,8 +462,10 @@ function summarizeConfig(cfg: MissionConfig): Record<string, unknown> {
       resolvedInclinationDeg: target.inclination * RAD,
       argPerigeeDeg: cfg.orbit.argPerigee,
       raanMode: cfg.orbit.raanMode,
+      suborbital: !!cfg.orbit.suborbital,
     },
     boosterRecovery: cfg.boosterRecovery,
+    recoveryPlan: cfg.recoveryPlan ? structuredClone(cfg.recoveryPlan) : null,
     dynamics: cfg.dynamics ? { ...cfg.dynamics } : { model:'pointMass', wind:'calm', seed:20260919 },
     failure: { mode: cfg.failure.mode, timeS: cfg.failure.time, stageIndex: cfg.failure.stage },
     guidance: guidanceToOutput(cfg.guidance),
@@ -440,6 +486,7 @@ function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<stri
     timeS: frame.t,
     status: frame.status,
     ascentPhase: frame.ascentPhase,
+    descentPhase: frame.descentPhase ?? null,
     noteKey: frame.note,
     liftoff: frame.liftoff,
     destroyed: frame.destroyed,
@@ -520,16 +567,29 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   siteId: { type: 'string', enum: SITES.map((s) => s.id), description: 'Launch site id; must be one the vehicle flies from (see list_missions).' },
   satelliteId: { type: 'string', enum: SATELLITES.map((s) => s.id), description: 'Payload id. Sets payloadMassKg to its typical mass unless payloadMassKg is also given.' },
   orbitId: { type: 'string', enum: [...ORBIT_PRESETS.map((o) => o.id)], description: 'Orbit preset id, or "custom" together with the fields below.' },
-  perigeeKm: { type: 'number', minimum: 100, description: 'Custom orbit perigee altitude, km. Setting this (or any other custom field) switches the orbit to "custom".' },
+  perigeeKm: { type: 'number', minimum: -1000, description: 'Custom orbit perigee altitude, km: at least 100 for an orbit, between -1000 and 0 for a suborbital flight. Setting this (or any other custom field) switches the orbit to "custom".' },
+  suborbital: { type: 'boolean', description: 'A suborbital test flight (Starship only): the ship is cut off short of orbit on a path whose perigee is below the ground, and flies itself home to a splashdown, as on Flight 5 (perigee -15 km, apogee 213 km, 26.2°). Switches the orbit to "custom".' },
   apogeeKm: { type: 'number', minimum: 100, description: 'Custom orbit apogee altitude, km.' },
   inclinationDeg: { type: 'number', minimum: 0, maximum: 180, description: 'Custom orbit inclination, deg.' },
   argPerigeeDeg: { type: 'number', minimum: 0, maximum: 360, description: 'Custom orbit argument of perigee, deg.' },
   raanMode: { type: 'string', enum: RAAN_MODES, description: 'How the ascending node is targeted: free, a fixed RAAN, the ISS plane, or a local time of ascending node.' },
   raanDeg: { type: 'number', minimum: 0, maximum: 360, description: 'Fixed RAAN, deg (raanMode "fixed").' },
   ltanHours: { type: 'number', minimum: 0, maximum: 24, description: 'Local time of ascending node, hours (raanMode "ltan").' },
-  payloadMassKg: { type: 'number', minimum: 1, description: 'Payload mass, kg.' },
+  payloadMassKg: { type: 'number', minimum: 0, description: 'Payload mass, kg: at least 1, or 0 on a suborbital flight.' },
   launchTimeIso: { type: 'string', description: 'Launch epoch, ISO 8601 UTC, e.g. "2026-09-20T12:00:00Z".' },
   boosterRecovery: { type: 'boolean', description: 'Reserve first-stage propellant for recovery (only for vehicles that support it).' },
+  recoveryPlan: {
+    type: ['object', 'null'],
+    description: 'Where each recovered stage flies with boosterRecovery on (null clears it: every stage lands downrange where it comes down). '
+      + '"core" is the first stage or the core; "boosters" are the strap-ons in separation order. Each is {kind:"downrange"}, {kind:"droneShip"} (needs legs), '
+      + '{kind:"landingZone", zoneId} (a zone of the launch site: a pad needs legs, a tower catches a stage without them) or {kind:"expended"}; '
+      + 'a stage the plan leaves out is expended. See list_missions for the landing zones.',
+    properties: {
+      core: { type: 'object', properties: { kind: { type: 'string', enum: RECOVERY_KINDS }, zoneId: { type: 'string', enum: LANDING_ZONES.map((z) => z.id) } }, required: ['kind'] },
+      boosters: { type: 'array', items: { type: 'object', properties: { kind: { type: 'string', enum: RECOVERY_KINDS }, zoneId: { type: 'string', enum: LANDING_ZONES.map((z) => z.id) } }, required: ['kind'] } },
+    },
+    additionalProperties: false,
+  },
   physicsModel: { type:'string', enum:['pointMass','sixDof'], description:'Six-DOF is available for every vehicle and is its default; pointMass is the legacy model.' },
   windScenario: { type:'string', enum:['calm','crosswind','shear'], description:'Repeatable wind scenario for six-DOF.' },
   windSeed: { type:'integer', minimum:0, maximum:4294967295, description:'Seed for repeatable six-DOF wind gusts.' },
@@ -621,7 +681,10 @@ function toolListMissions(): WebMcpTool {
         id: v.id, name: v.name, country: v.country, manufacturer: v.manufacturer,
         sites: v.sites, stageCount: v.stages.length,
         payloadLeoKg: v.payloadLEO, payloadGtoKg: v.payloadGTO, payloadSsoKg: v.payloadSSO ?? null,
-        recoverable: !!v.recoverable, crewCapable: !!v.crewCapable,
+        recoverable: !!v.recoverable, crewCapable: !!v.crewCapable, suborbitalCapable: flightHomeCapable(v),
+      })),
+      landingZones: LANDING_ZONES.map((z) => ({
+        id: z.id, name: z.name, kind: z.kind, siteIds: z.siteIds, latitudeDeg: z.latitude, longitudeDeg: z.longitude,
       })),
       sites: SITES.map((s) => ({
         id: s.id, name: s.name, country: s.country, latitudeDeg: s.latitude, longitudeDeg: s.longitude,

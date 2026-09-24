@@ -110,3 +110,40 @@ describe('configuration validity versus mission feasibility', () => {
     expect(validateConfigInput(state).map((i) => i.field)).toEqual(['setup.apogee', 'setup.launchTime', 'setup.maxTurnRate', 'setup.failureStage']);
   });
 });
+
+describe('recovery plans and suborbital targets', () => {
+  const recovered = (over: Partial<ConfigInput>): ConfigInput => ({ ...mission(), boosterRecovery: true, ...over });
+  const field = (state: ConfigInput) => validateConfigInput(state).map((i) => `${i.field}:${i.code}`);
+
+  it('flies a stage only to a place it can reach from its site, on the hardware that place needs', () => {
+    expect(field(recovered({ recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz1' } } }))).toEqual([]);
+    expect(field(recovered({ siteId: 'ksc39a', recoveryPlan: { core: { kind: 'droneShip' } } }))).toEqual([]);
+    expect(field(recovered({ vehicleId: 'falconheavy', siteId: 'ksc39a', satelliteId: 'comsat', recoveryPlan: {
+      core: { kind: 'droneShip' }, boosters: [{ kind: 'landingZone', zoneId: 'lz1' }, { kind: 'landingZone', zoneId: 'lz2' }],
+    } }))).toEqual([]);
+    expect(field(recovered({ vehicleId: 'starship', siteId: 'starbase', recoveryPlan: { core: { kind: 'landingZone', zoneId: 'olm' } } }))).toEqual([]);
+    const bad = 'setup.boosterRecovery:selection';
+    // no such zone; a zone of another site; Falcon 9 from Vandenberg has no LZ-1
+    expect(field(recovered({ recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz9' } } }))).toEqual([bad]);
+    expect(field(recovered({ recoveryPlan: { core: { kind: 'landingZone', zoneId: 'olm' } } }))).toEqual([bad]);
+    expect(field(recovered({ siteId: 'vandenberg', recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz1' } } }))).toEqual([bad]);
+    // Super Heavy has no legs for a ship's deck; Falcon Heavy has two strap-ons, not three
+    expect(field(recovered({ vehicleId: 'starship', siteId: 'starbase', recoveryPlan: { core: { kind: 'droneShip' } } }))).toEqual([bad]);
+    expect(field(recovered({ vehicleId: 'falconheavy', satelliteId: 'comsat', recoveryPlan: { boosters: [{ kind: 'droneShip' }, { kind: 'droneShip' }, { kind: 'droneShip' }] } }))).toEqual([bad]);
+    // a vehicle that is not recovered at all
+    expect(field({ ...mission(), vehicleId: 'soyuz21a', siteId: 'baikonur', recoveryPlan: { core: { kind: 'droneShip' } } })).toEqual([bad]);
+  });
+
+  it('takes a suborbital target from Starship only, with its perigee below the ground and no payload needed', () => {
+    const flight5 = (over: Partial<ConfigInput> = {}): ConfigInput => ({
+      ...mission(), vehicleId: 'starship', siteId: 'starbase', payloadMass: 0,
+      orbit: { ...orbitById('custom'), perigee: -15e3, apogee: 213e3, inclination: 26.2, suborbital: true }, ...over,
+    });
+    expect(field(flight5())).toEqual([]);
+    expect(field(flight5({ vehicleId: 'falcon9', siteId: 'cape' }))).toEqual(['setup.perigee:suborbital']);
+    expect(field(flight5({ orbit: { ...flight5().orbit, perigee: 50e3 } }))).toEqual(['setup.perigee:maximum']);
+    expect(field(flight5({ orbit: { ...flight5().orbit, perigee: -2000e3 } }))).toEqual(['setup.perigee:minimum']);
+    // an orbit still needs its payload and a perigee above the air
+    expect(field(flight5({ orbit: { ...orbitById('leo') } }))).toEqual(['setup.payloadMass:minimum']);
+  });
+});

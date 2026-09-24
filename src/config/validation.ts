@@ -1,8 +1,9 @@
 /** Shared validation of configuration data, separate from mission feasibility.
  * A valid but overweight or unreachable mission is still an experiment the
  * operator may launch. Only malformed or unsupported input is rejected here. */
-import type { FailureConfig, GuidanceParams, OrbitSpec, VehicleSpec } from '../types';
+import type { FailureConfig, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from '../types';
 import { VEHICLES } from '../data/vehicles';
+import { LANDING_ZONES } from '../data/landing-zones';
 import { SATELLITES } from '../data/satellites';
 import { SITES } from '../data/sites';
 import { guidanceForVehicle } from '../physics/defaults';
@@ -11,7 +12,7 @@ import type { DynamicsConfig } from '../types';
 import { FLEX_LIMITS } from '../physics/rigid/flex';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
-export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection';
+export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection' | 'suborbital';
 export interface ValidationIssue { field: string; code: ValidationCode; limit?: number }
 
 /** Bounds are in the stored SI/degree units; UI and WebMCP convert at the edge. */
@@ -101,6 +102,62 @@ export interface ConfigInput {
   vehicleId: string; satelliteId: string; siteId: string;
   orbit: OrbitSpec; launchTime: Date; payloadMass: number;
   guidanceOverrides: Partial<GuidanceParams>; failure: FailureConfig; boosterRecovery: boolean;
+  /** where each recovered stage is flown back to (`boosterRecovery` has to be on for it to fly) */
+  recoveryPlan?: RecoveryPlan;
+}
+
+/**
+ * Lowest perigee a suborbital target may name, km: the trajectory has to come
+ * back down, and a kilometre or so below the surface is where a real one aims
+ * (Flight 5 flew 213 × −15 km), but not a dive into the core.
+ */
+const SUBORBITAL_PERIGEE_MIN = -1000;
+
+/**
+ * The limits a numeric field has for this orbit: a suborbital target's
+ * perigee is below the ground (and no higher), and its flight may carry no
+ * payload at all; everything else is `NUMBER_FIELDS`.
+ */
+export function fieldLimits(field: string, orbit?: Pick<OrbitSpec, 'suborbital'>): NumberLimits | undefined {
+  if (orbit?.suborbital) {
+    if (field === 'setup.perigee') return { min: SUBORBITAL_PERIGEE_MIN, max: 0 };
+    if (field === 'setup.payloadMass') return { min: 0 };
+  }
+  return NUMBER_FIELDS[field];
+}
+
+/**
+ * A suborbital target is a flight whose upper stage flies itself home from
+ * the cut-off (src/physics/sim/ship-descent.ts), which only a stage with flaps
+ * does.
+ */
+export function flightHomeCapable(spec: VehicleSpec | undefined): boolean {
+  return !!spec?.stages.some((st) => st.flaps);
+}
+
+/**
+ * The recovery plan: every stage it names flown to a place the flight can
+ * reach from its site, on the hardware that place needs — legs for a pad or a
+ * drone ship's deck; a tower's arms take a stage without them.
+ */
+function recoveryPlanInvalid(plan: RecoveryPlan, spec: VehicleSpec, siteId: string): boolean {
+  if (typeof plan !== 'object' || plan === null || Array.isArray(plan)) return true;
+  if (!spec.recoverable) return true;
+  const core = spec.stages[0];
+  const strapOns = core.boosters?.reduce((n, b) => n + b.count, 0) ?? 0;
+  const bad = (mode: RecoveryMode | undefined, legs: boolean): boolean => {
+    if (mode === undefined) return false;
+    if (typeof mode !== 'object' || mode === null) return true;
+    if (mode.kind === 'downrange' || mode.kind === 'expended') return false;
+    if (mode.kind === 'droneShip') return !legs;
+    if (mode.kind !== 'landingZone') return true;
+    const zone = LANDING_ZONES.find((z) => z.id === mode.zoneId);
+    if (!zone || !zone.siteIds.includes(siteId)) return true;
+    return zone.kind === 'tower' ? legs : !legs;
+  };
+  if (plan.boosters !== undefined && (!Array.isArray(plan.boosters) || plan.boosters.length > strapOns)) return true;
+  // Strap-ons carry no leg flag of their own: Falcon Heavy's are Falcon 9 cores.
+  return bad(plan.core, !!core.legs) || (plan.boosters ?? []).some((m) => bad(m, true));
 }
 
 export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
@@ -125,9 +182,11 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });
   if (!SATELLITES.some((s) => s.id === state.satelliteId)) issues.push({ field: 'setup.satellite', code: 'selection' });
   if (!SITES.some((s) => s.id === state.siteId) || (spec && !spec.sites.includes(state.siteId))) issues.push({ field: 'setup.site', code: 'selection' });
-  check(state.payloadMass, 'setup.payloadMass', NUMBER_FIELDS['setup.payloadMass']);
   const orbit = state.orbit;
-  check(orbit.perigee / 1000, 'setup.perigee', NUMBER_FIELDS['setup.perigee']);
+  // A suborbital test flight may carry nothing at all (Flight 5 did not).
+  check(state.payloadMass, 'setup.payloadMass', fieldLimits('setup.payloadMass', orbit));
+  if (orbit.suborbital && spec && !flightHomeCapable(spec)) issues.push({ field: 'setup.perigee', code: 'suborbital' });
+  check(orbit.perigee / 1000, 'setup.perigee', fieldLimits('setup.perigee', orbit));
   check(orbit.apogee / 1000, 'setup.apogee', NUMBER_FIELDS['setup.apogee']);
   if (Number.isFinite(orbit.perigee) && Number.isFinite(orbit.apogee) && orbit.perigee > orbit.apogee) {
     issues.push({ field: 'setup.perigee', code: 'orbitOrder' });
@@ -152,6 +211,9 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   check(state.failure.time, 'setup.failureTime', NUMBER_FIELDS['setup.failureTime']);
   check(state.failure.stage, 'setup.failureStage', { min: 0, max: spec ? spec.stages.length - 1 : 0, integer: true });
   if (typeof state.boosterRecovery !== 'boolean' || (state.boosterRecovery && spec && !spec.recoverable)) issues.push({ field: 'setup.boosterRecovery', code: 'selection' });
+  else if (state.recoveryPlan !== undefined && spec && recoveryPlanInvalid(state.recoveryPlan, spec, state.siteId)) {
+    issues.push({ field: 'setup.boosterRecovery', code: 'selection' });
+  }
   return issues;
 }
 
@@ -180,6 +242,7 @@ export function issueText(issue: ValidationIssue): string {
     case 'date': return `${issue.field} must be a valid ISO 8601 date-time`;
     case 'orbitOrder': return 'Custom orbit perigee must not exceed apogee';
     case 'selection': return `${issue.field} is not a valid selection`;
+    case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship)';
   }
 }
 

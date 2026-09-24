@@ -13,10 +13,18 @@ The switch in the top bar picks how much of the simulator you see:
   space station) straight away.
 - **Watch** — just the picture, three numbers (mission time, altitude, speed over the
   ground) and one sentence about what is happening and why. **Choose a launch** lists six
-  real rockets on typical missions; the speed buttons run the flight in real time (1×),
-  faster, or at **Auto**, which keeps liftoff, max-Q and every separation in real time and
-  hurries through the long coasts. When the rocket reaches orbit a card offers to keep
-  watching, watch again, pick another launch, or plan a mission of your own.
+  real flights, each flown as it was, only in daylight today: Soyuz to the space station,
+  Falcon 9's Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's
+  Arabsat-6A with the side boosters back on Landing Zones 1 and 2 and the core on a drone
+  ship, Starship Flight 5 with the booster caught by the tower and the ship splashing down
+  in the Indian Ocean, Ariane 6 with 32 Amazon Leo satellites, and Electron from New
+  Zealand. The speed buttons run the flight in real time (1×), faster, or at **Auto**,
+  which keeps liftoff, max-Q, every separation and every landing in real time and hurries
+  through the long coasts. The camera cuts to a stage flying home for its entry and
+  landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the
+  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship
+  is down in the water, a card offers to keep watching, watch again, pick another launch,
+  or plan a mission of your own.
 - **Explore** — everything below this line, in the learning layout (the advanced guidance
   parameters stay folded away).
 - **Engineer** — the same workspace with every guidance parameter open.
@@ -43,13 +51,21 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    sun-synchronous local time), **Next window** moves the launch time to the next moment the
    ascent plane actually reaches that RAAN; launching off-window still works, it just costs a
    plane-change burn at apogee (see [§5](#5-reading-the-telemetry-panel)).
+   With Starship, **Suborbital test flight** turns the target into a Flight 5-style path:
+   the ship is cut off short of orbit (perigee between −1000 and 0 km, below the ground) and
+   flies itself home to a splashdown about an hour later; such a flight may carry no payload.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
 program**, which flies the ascent headlessly over a grid of values and keeps the one with
 the largest remaining Δv. **Failure scenario** arms an engine-out, a thrust loss, a
 premature separation, a stuck fairing, a range-safety destruct, or a random one of those, at
-a mission time and stage you choose.
+a mission time and stage you choose. Under **Options**, **Recover first stage** keeps landing
+propellant back; with it on, each recoverable stage gets a choice of where it lands — where it
+comes down at sea, a drone ship, a landing zone of the launch site (LZ-1 and LZ-2 at Cape
+Canaveral and Kennedy), the Starbase tower's arms for Super Heavy, or expended. Flying back to a
+landing zone costs a boostback burn, so the stage keeps more propellant back and the payload
+falls.
 
 **The status line above the Launch button is a pre-flight verdict**, not decoration: it
 reads *fail* (red) when the payload is over the vehicle's rated capability, the target orbit

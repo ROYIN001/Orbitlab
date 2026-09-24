@@ -17,7 +17,9 @@ export class AscentMonitor {
   constructor(readonly sim: Simulation) {
     this.maxQAscent = sim.vehicleSpec.maxQ;
     const rIns = R_EARTH + sim.plan.insertionAltitude;
-    this.insertionSpeed = Math.sqrt(MU_EARTH * (2 / rIns - 2 / (2 * R_EARTH + sim.plan.insertionAltitude + sim.plan.insertionApoapsis)));
+    // A suborbital target's speed at its cut-off height; an orbit's perigee speed.
+    this.insertionSpeed = sim.plan.target.suborbital ? Math.sqrt(MU_EARTH * (2 / rIns - 1 / sim.plan.target.a))
+      : Math.sqrt(MU_EARTH * (2 / rIns - 2 / (2 * R_EARTH + sim.plan.insertionAltitude + sim.plan.insertionApoapsis)));
   }
 
   bestAscentResidual = Infinity;
@@ -104,6 +106,10 @@ export class AscentMonitor {
 
   // ------------------------------------------------------------ ascent
   checkAscent(el: OrbitalElements, alt: number, vz: number): void {
+    if (this.sim.plan.target.suborbital) {
+      this.checkSuborbitalAscent(el, alt, vz);
+      return;
+    }
     const s = this.sim.state;
     const hIns = this.sim.plan.insertionAltitude;
     const haIns = this.sim.plan.insertionApoapsis;
@@ -198,7 +204,12 @@ export class AscentMonitor {
       this.sim.burns.scheduleNextBurn(el);
       return;
     }
-    // range safety / loss of vehicle: falling back without thrust below 100 km
+    this.rangeSafety(alt, vz);
+  }
+
+  /** Range safety / loss of vehicle: falling back without thrust below 100 km. */
+  private rangeSafety(alt: number, vz: number): void {
+    const s = this.sim.state;
     const thrusting = s.thrust > 0;
     if (!thrusting && !this.sim.staging.stagingInProgress && this.sim.pending.every((p) => p.label !== 'ignition' && p.label !== 'stageSep') && vz < -50 && alt < 100e3 && s.t > 5) {
       if (!this.sim.vehicle.activeHasPropellant() || (this.sim.vehicle.active?.engineFraction ?? 1) === 0) {
@@ -206,6 +217,38 @@ export class AscentMonitor {
         this.sim.destroy();
       }
     }
+  }
+
+  /**
+   * Cut-off on a suborbital target (`OrbitSpec.suborbital`). The ascent is
+   * aimed at the target's apogee, and near there the stage is flying level
+   * and building speed, which raises the periapsis from deep inside the Earth
+   * towards the target's: the moment it gets there, with the tail-off counted
+   * (`el` is the orbit the cut-off leaves), is the cut-off. Everything the
+   * orbital clauses do — the transfer ellipse, the apoapsis guard, the
+   * circularisation — is for an orbit, and there is none to make.
+   */
+  private checkSuborbitalAscent(el: OrbitalElements, alt: number, vz: number): void {
+    const target = this.sim.plan.target;
+    if (this.sim.state.liftoff && alt > 100e3 && el.e < 1 && el.periapsisAlt >= target.perigee) {
+      this.sim.staging.cutoffAscentStage(this.sim.vehicle.active);
+      this.finishSuborbital(el);
+      return;
+    }
+    this.rangeSafety(alt, vz);
+  }
+
+  /** The suborbital target is reached (or missed): judge it and fly home. */
+  finishSuborbital(el: OrbitalElements): void {
+    const hit = orbitResiduals(this.sim.plan.target, el, this.sim.raanWasReachable()).onTarget;
+    for (const b of this.sim.plan.burns) b.done = true;
+    this.sim.event(hit ? 'evt.suborbitalTarget' : 'evt.suborbitalOffTarget', hit ? 'success' : 'warn', {
+      ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
+      // The apsides the verdict was reached on, for the result panel: the
+      // frame's own drift away from them as the ship falls back into the air.
+      apAltM: el.apoapsisAlt, peAltM: el.periapsisAlt,
+    });
+    this.sim.shipDescent.start();
   }
 
   /**
@@ -362,7 +405,10 @@ export class AscentMonitor {
     // happen to a stack that had already been handed to the coast/burn logic.
     // It is deliberately NOT tested in `stepOrbit`, where `orbitArea()` models a
     // small satellite and a stacked launcher's placard is meaningless.
-    if (s.liftoff && !s.payloadSeparated && !this.structuralFailed && q > this.maxQAscent * 1.15) {
+    // Not on a suborbital flight's return either: the placard is the stack's
+    // on the way up, and a ship falling belly first is loaded across its
+    // side, over its whole length, which is a different structure question.
+    if (s.liftoff && !s.payloadSeparated && !this.structuralFailed && s.status !== 'descent' && q > this.maxQAscent * 1.15) {
       this.structuralFailed = true;
       this.sim.event('evt.structuralFailure', 'fail', { q: Math.round(q / 1000) });
       this.sim.destroy();

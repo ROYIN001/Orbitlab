@@ -107,6 +107,7 @@ interface FakePanelState {
   guidanceOverrides: MissionConfig['guidance'] extends infer G ? Partial<G> : never;
   failure: MissionConfig['failure'];
   boosterRecovery: boolean;
+  recoveryPlan?: MissionConfig['recoveryPlan'];
   payloadMass: number;
 }
 
@@ -154,6 +155,7 @@ class FakePanel {
       launchTime: new Date(s.launchTime.getTime()),
       guidance: { ...guidanceForVehicle(vehicleById(s.vehicleId), undefined, s.dynamics?.model), ...s.guidanceOverrides },
       failure: { ...s.failure }, boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
+      ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
       guidanceResolved: true,
       dynamics: s.dynamics ? { ...s.dynamics } : undefined,
     };
@@ -444,6 +446,43 @@ describe('configure_mission', () => {
   it('rejects booster recovery on a vehicle that has none', () => {
     expect(() => tool(tools, 'configure_mission').execute({ vehicleId: 'soyuz21a', boosterRecovery: true }))
       .toThrowError(/has no first-stage recovery option/);
+  });
+
+  it('sets where each recovered stage lands, checks it against the vehicle and the site, and clears it with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    const out = configure.execute({ vehicleId: 'falconheavy', siteId: 'ksc39a', satelliteId: 'comsat', orbitId: 'gto', boosterRecovery: true,
+      recoveryPlan: { core: { kind: 'droneShip' }, boosters: [{ kind: 'landingZone', zoneId: 'lz1' }, { kind: 'landingZone', zoneId: 'lz2' }] } }) as any;
+    expect(host.panel.state.recoveryPlan?.boosters?.[1]).toEqual({ kind: 'landingZone', zoneId: 'lz2' });
+    expect(out.config.recoveryPlan.core).toEqual({ kind: 'droneShip' });
+    // Starbase's tower is not a place a flight from Kennedy can reach; a kind that does not exist
+    expect(() => configure.execute({ recoveryPlan: { core: { kind: 'landingZone', zoneId: 'olm' } } })).toThrowError(/boosterRecovery/);
+    expect(() => configure.execute({ recoveryPlan: { core: { kind: 'teleport' } } })).toThrowError(/must be one of/);
+    expect(() => configure.execute({ recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz9' } } })).toThrowError(/Unknown landing zone/);
+    // a rejected edit leaves the plan as it was
+    expect(host.panel.state.recoveryPlan?.core).toEqual({ kind: 'droneShip' });
+    configure.execute({ recoveryPlan: null });
+    expect(host.panel.state.recoveryPlan).toBeUndefined();
+    // a plan belongs to one vehicle at one site
+    configure.execute({ recoveryPlan: { core: { kind: 'expended' } } });
+    configure.execute({ vehicleId: 'falcon9' });
+    expect(host.panel.state.recoveryPlan).toBeUndefined();
+  });
+
+  it('takes a suborbital target for Starship only, with its perigee below the ground', () => {
+    const configure = tool(tools, 'configure_mission');
+    const out = configure.execute({ vehicleId: 'starship', siteId: 'starbase', suborbital: true, perigeeKm: -15, apogeeKm: 213, inclinationDeg: 26.2, payloadMassKg: 0 }) as any;
+    expect(host.panel.state.orbit.suborbital).toBe(true);
+    expect(host.panel.state.orbit.perigee).toBe(-15000);
+    expect(out.config.orbit.suborbital).toBe(true);
+    expect(() => configure.execute({ perigeeKm: 50 })).toThrowError(/at most 0/);
+    expect(() => configure.execute({ vehicleId: 'falcon9', siteId: 'cape' })).toThrowError(/suborbital target/);
+    // an orbit again needs a perigee above the air and a payload
+    expect(() => configure.execute({ suborbital: false })).toThrowError(/setup\.perigee must be at least 100/);
+    configure.execute({ suborbital: false, perigeeKm: 213, payloadMassKg: 1000 });
+    expect(host.panel.state.orbit.suborbital).toBeUndefined();
+    const missions = tool(tools, 'list_missions').execute({}) as any;
+    expect(missions.vehicles.find((v: any) => v.id === 'starship').suborbitalCapable).toBe(true);
+    expect(missions.landingZones.map((z: any) => z.id)).toEqual(['lz1', 'lz2', 'olm']);
   });
 
   it('rejects a custom perigee above the apogee', () => {
