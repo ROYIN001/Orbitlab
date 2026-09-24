@@ -682,6 +682,85 @@ ascent where q is small and α large.
 | Every RCS jet dead, T+300 s | nominal (the engine steers) | the same; each jet left out as it fails to fire |
 | Gyro noise 0.5 °/s, all units | survives | survives; one unit falsely isolated at T+98 s |
 
+## 2j. PEG and IGM ascent guidance (roadmap G01)
+
+Off by default, and off, every flight is the one it was, bit for bit. On
+(`DynamicsConfig.explicitGuidance`, the Engineer mode's *Ascent guidance* section,
+`configure_mission`), the first stage still flies its pitch program; once a later stage is lit,
+or the first stage is out of the atmosphere (under 100 Pa above 70 km) with no strap-on still
+burning, an explicit law steers the rest of the ascent (src/physics/explicit-guidance.ts). Both
+point-mass and six-DOF flights take it.
+
+**The target** is the insertion orbit's perigee: the radius r_T = R + h_ins, the perigee speed
+of the insertion ellipse v_T = √(μ(2/r_T − 2/(r_T + r_a))), a flight-path angle of zero, in the
+plane of the mission's inclination through the vehicle's position — the plane the standard law
+steers into. The cut-off is still the ascent's own (src/physics/sim/ascent.ts), on the orbit
+reached, so an elliptical insertion may be cut when its apoapsis arrives and its periapsis is
+safe, before the law's own t_go runs out; the burns that follow set the rest.
+
+**The stages left** (`burnProfile`): walking the stages the ascent flies (the weak final stage
+left out, as the standard law leaves it), each at vacuum thrust from its mass at ignition —
+a(t) = a₀/(1 − t/τ), τ = v_e/a₀ — capped at the vehicle's acceleration ceiling (a constant
+acceleration while throttled), with the staging gaps as coasts. Its thrust integrals, from
+t = 0 to T, stage by stage:
+
+L = ∫a dt = −v_e ln(1 − T/τ),  J = ∫t·a dt = τL − v_e T,  H = ∫t²·a dt = τJ − v_e T²/2,
+
+S = ∫∫a = T·L − J,  Q = ∫∫t·a = T·J − H
+
+(constant acceleration: L = aT, J = aT²/2, H = aT³/3; a coast adds time only). t_go is the time
+the profile takes to give L = |v_go|; if all of it cannot, the law hands back.
+
+**The steering law** of both is the linear tangent: the thrust direction
+i_F(t) = unit(λ + λ̇·(t − t_λ)) with t_λ = J/L, which leaves the velocity gained along λ and
+moves the cut-off point by λS + λ̇(Q − S·t_λ); the turn rate
+λ̇ = (r_go − λS)/(Q − S·t_λ), with r_go the position still to gain across λ, is what the
+terminal altitude and plane need (bounded so it never turns the thrust more than 0.8 rad off λ;
+Q − S·t_λ is negative — thrust spent early moves the cut-off further than thrust spent late).
+
+- **PEG** (the Space Shuttle's Powered Explicit Guidance, in the predictor–corrector form of
+  its Unified Powered Flight Guidance; Jaggers, AIAA 77-1051, 1977) carries the velocity to be
+  gained v_go from cycle to cycle, less what the engines gave meanwhile. Each cycle: t_go and the
+  integrals from |v_go|; λ = unit(v_go); r_go = r_d − (r + v·t_go + r_grav) with its downrange
+  component left free (set so λ·r_go = S); λ̇; then the flight to cut-off is **integrated** — J2
+  gravity and the thrust on the law, RK4 in steps of at most 2 s broken at the staging edges —
+  giving the predicted r_p, v_p and the gravity displacement r_grav for the next cycle; the
+  desired state is re-aimed at r_p (r_d = r_T·unit(r_p in the plane), v_d from r_d), and the
+  miss corrects v_go: v_go += v_d − v_p. On engaging it iterates up to twelve times, then three
+  per cycle; with under 8 s to go it flies its last solution.
+- **IGM** (the Saturn V's Iterative Guidance Mode; Chandler & Smith, J. Spacecraft 4, 1967)
+  solves in closed form in the terminal frame at the predicted cut-off point: the central angle
+  to go from the mean horizontal speed and radius, gravity as the mean of its value now and at
+  the target (−μ/r² along each radius), the velocity to be gained ΔV = V_T − v − ḡ·t_go iterated
+  with t_go; the thrust along ΔV, turned by the same linear tangent terms (the Saturn's K₁…K₄)
+  for the terminal altitude and plane. In its last 20 s it steers on the velocity alone (the
+  "χ̃ mode"), in its last 3 s it holds.
+
+A new solution is blended into the last one's law over a cycle (1 s by default, 0.1–4 s): steps
+of a few hundredths of a degree at every cycle had kept the attitude thrusters of a Falcon 9
+upper stage firing through the whole burn, with none left for the orbit's trim burn.
+
+**The load relief, released** (the owner's choice for G01): in six-DOF flights with PEG or IGM,
+once the dynamic pressure falls under 500 Pa the command is released from where the load relief
+held it at 4 °/s (under the stack's own 5 °/s) and, below 100 Pa, at the vacuum ascent's
+1 °/s. The standard flight releases it all at once at 500 Pa: on Falcon 9 the attitude error
+jumps from 0.4° to 24° (§2d, G03). A release at 1 °/s everywhere was tried and cost 93 m/s.
+
+**What it does** (calm air, LEO insertion 200 × 500 km; tests/explicit-guidance.test.ts and
+tests/heavy/explicit-fleet-*.test.ts):
+
+- In a vacuum ascent from 120 km at 2.5 km/s, a single stage lands in 199.9 × 201.7 km (PEG) and
+  200.0 × 201.4 km (IGM) aimed at 200 × 200 km, and 400.0 × 401.8 / 399.9 × 401.2 km aimed at
+  400 × 400 km, inclination within 0.001°; IGM's own prediction of the cut-off is hundreds of
+  kilometres off early in the burn and converges as it closes, PEG's is right from the start.
+- Falcon 9, six-DOF: the standard flight inserts at 200 × 497 km with 5415 m/s left; PEG
+  engages at T+135 s (the first stage out of the atmosphere) and inserts at 199 × 498 km with
+  5440 m/s left; IGM at 200 × 497 km with 5434 m/s. The largest attitude error after the first
+  minute falls from 37.5° to 5.5°.
+- Falcon 9, point mass: 5458 m/s left (standard), 5464 (PEG), 5466 (IGM).
+- The whole fleet on its reference missions, on both laws: tests/heavy/explicit-fleet-*.test.ts
+  (the results go in docs/history/PARALLEL-GNC-2026-09.md, G01, when the run finishes).
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

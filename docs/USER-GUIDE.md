@@ -374,6 +374,28 @@ reports every failure and every FDIR action; the CSV adds the failures' columns 
 `read_flight_state` a `controlFaults` summary. A launcher that loses control in the air breaks up
 when its lateral load q·α passes 300 kPa·°. Details in PHYSICS.md §2i.
 
+## 15. PEG and IGM ascent guidance (Engineer mode)
+
+The *Ascent guidance: PEG and IGM (G01)* section picks the guidance the upper stages fly. The
+first stage always flies its pitch program; once a later stage is lit, or the first stage is out
+of the atmosphere (under 100 Pa above 70 km), **PEG** — the Space Shuttle's Powered Explicit
+Guidance — or **IGM** — the Saturn V's Iterative Guidance Mode — steers to the insertion orbit's
+perigee: its altitude and speed, a level flight path, and the orbit's plane. Both steer by the
+linear tangent law from the stages still to burn; PEG corrects itself against a numerical
+prediction of the cut-off, IGM solves in closed form with averaged gravity. If the stages left
+cannot reach the target, the standard guidance takes over again (and the event log says so).
+**Guidance cycle** sets how often the law re-solves (1 s by default).
+
+In six-DOF flights with PEG or IGM the ascent load relief is also released at 4 °/s once the
+dynamic pressure falls below 500 Pa, where the standard flight releases it all at once and swings
+the stack by up to 24°.
+
+The attitude-loop inspector's **Guidance** tab (§9) charts the time and velocity to go, the pitch
+the law steers against the standard law's (and its yaw out of the target plane), and the orbit it
+predicts at cut-off against the target, with the law's state. The cut-off itself is still decided
+by the ascent on the orbit actually reached. The CSV adds `guide_*` columns and
+`read_flight_state` an `explicitGuidance` summary. Details in PHYSICS.md §2j.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

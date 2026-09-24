@@ -152,6 +152,8 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^fault\.reason\.(flag|vote)$/, from: 'ui/names.ts: t(`fault.reason.${params.fdirReason}`)' },
   { pattern: /^loop\.fault\.(unit|engine|jet|computer)\.[a-zA-Z]+$/, from: 'ui/loop-inspector.ts markFaults' },
   { pattern: /^setup\.faults\.(preset|presetNote|magnitude)\.[a-zA-Z0-9]+$/, from: 'ui/panel.ts faultsSection / faultRow' },
+  // G01: the explicit guidance's laws.
+  { pattern: /^setup\.explicit\.about\.(standard|peg|igm)$/, from: 'ui/panel.ts explicitGuidanceSection: t(`setup.explicit.about.${config.law}`)' },
 ];
 
 /**

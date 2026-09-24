@@ -62,6 +62,8 @@ import { getNotationPreference, notationFor, setNotationPreference, type Notatio
 import type { ControlFaultKind, ControlFaultSpec, ControlFaultsConfig } from '../types';
 import { CONTROL_FAULT_KINDS, CONTROL_FAULT_PRESETS, FAULT_AXES, FAULT_FIELDS, FAULT_GROUP, FAULT_MAGNITUDE, MAX_FAULTS, NAVIGATION_FAULTS } from '../physics/rigid/fault-config';
 import { faultKindName } from './fault-names';
+import type { ExplicitGuidanceConfig } from '../types';
+import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -805,7 +807,9 @@ export class SetupPanel {
       const control = s.dynamics?.control;
       const navigation = s.dynamics?.navigation;
       const controlFaults = s.dynamics?.controlFaults;
+      const explicitGuidance = s.dynamics?.explicitGuidance;
       s.dynamics = defaultDynamics(v);
+      if (explicitGuidance) s.dynamics.explicitGuidance = explicitGuidance;
       if (flex) s.dynamics.flex = flex;
       if (control) s.dynamics.control = control;
       if (navigation) s.dynamics.navigation = navigation;
@@ -958,6 +962,7 @@ export class SetupPanel {
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.controlSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.navigationSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.faultsSection());
+    if (this.experience === 'advanced') s4.appendChild(this.explicitGuidanceSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
     s4.appendChild(this.optionsSection(vehicle));
@@ -1266,6 +1271,36 @@ export class SetupPanel {
     return section;
   }
 
+  // --- G01: explicit ascent guidance (Engineer mode) --------------------------------
+  /** The standard ascent guidance, PEG or IGM for the stages out of the atmosphere, and the guidance cycle. */
+  private explicitGuidanceSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'explicit';
+    const config: ExplicitGuidanceConfig | undefined = this.state.dynamics?.explicitGuidance;
+    if (config) section.open = true;
+    section.append(this.el('summary', undefined, t('setup.explicit.title')));
+    section.append(this.el('p', 'field-note', t('setup.explicit.note')));
+    const update = (next: ExplicitGuidanceConfig | undefined): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { explicitGuidance: next } : {}) };
+      if (!next) delete this.state.dynamics.explicitGuidance;
+      this.render();
+      this.changed();
+    };
+    section.append(this.select(EXPLICIT_FIELD_KEYS.law, [
+      { value: 'standard', label: t('setup.explicit.standard') }, { value: 'peg', label: t('setup.explicit.peg') }, { value: 'igm', label: t('setup.explicit.igm') },
+    ], config?.law ?? 'standard', (value) => {
+      this.fieldDrafts.delete(EXPLICIT_FIELD_KEYS.cycleS);
+      update(value === 'standard' ? undefined : { ...(this.state.dynamics?.explicitGuidance ?? {}), law: value as ExplicitGuidanceConfig['law'] });
+    }));
+    section.append(this.el('p', 'field-note', t(config ? `setup.explicit.about.${config.law}` : 'setup.explicit.about.standard')));
+    if (config) {
+      section.append(this.number(EXPLICIT_FIELD_KEYS.cycleS, config.cycleS ?? 1, (value) => update({ ...config, cycleS: value }), 0.1));
+      section.append(this.el('p', 'field-note', t('setup.explicit.engage')));
+    }
+    return section;
+  }
+
   // --- G08: failures of the control system (Engineer mode, six-DOF only) ---------
   /**
    * An accident's preset, or a list of failures — actuators, sensors, the flight computer — each
@@ -1429,7 +1464,7 @@ export class SetupPanel {
     const s = this.state, kept = s.dynamics;
     s.vehicleId = vehicleId;
     s.dynamics = defaultDynamics(vehicleId);
-    for (const key of ['flex', 'control', 'navigation', 'controlFaults'] as const) if (kept?.[key]) (s.dynamics as unknown as Record<string, unknown>)[key] = kept[key];
+    for (const key of ['flex', 'control', 'navigation', 'controlFaults', 'explicitGuidance'] as const) if (kept?.[key]) (s.dynamics as unknown as Record<string, unknown>)[key] = kept[key];
     const spec = vehicleById(vehicleId);
     this.siteReassigned = false;
     if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }

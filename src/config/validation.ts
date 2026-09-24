@@ -12,6 +12,7 @@ import { FLEX_LIMITS } from '../physics/rigid/flex';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS, controlFieldKey, controlProblems } from '../physics/rigid/control-config';
 import { AIDING_KEYS, AIDING_LIMITS, IMU_KEYS, NAV_FIELD_KEYS, navigationProblems } from '../physics/nav/config';
 import { controlFaultsProblems } from '../physics/rigid/fault-config';
+import { explicitGuidanceProblems } from '../physics/explicit-guidance';
 import { IMU_LIMITS } from '../physics/nav/sensors';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
@@ -61,6 +62,8 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
   ...Object.fromEntries(AIDING_KEYS.map((key) => [NAV_FIELD_KEYS[key], { min: AIDING_LIMITS[key][0], max: AIDING_LIMITS[key][1] }])),
   [NAV_FIELD_KEYS.gnssOutageStart]: { min: 0, max: 1e6 },
   [NAV_FIELD_KEYS.gnssOutageEnd]: { min: 0, max: 1e6 },
+  // --- G01: the explicit guidance's cycle
+  'setup.explicit.cycle': { min: 0.1, max: 4 },
 };
 
 /** Vehicle programmes are trusted data, not fresh user overrides. Extending a
@@ -137,6 +140,8 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
       if (d.navigation !== undefined) issues.push(...navigationProblems(d.navigation).map(({ field, value, limits }): ValidationIssue =>
         (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
       if (d.controlFaults !== undefined) issues.push(...controlFaultsProblems(d.controlFaults, { navigation: d.navigation !== undefined })
+        .map(({ field, value, limits }): ValidationIssue => (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
+      if (d.explicitGuidance !== undefined) issues.push(...explicitGuidanceProblems(d.explicitGuidance)
         .map(({ field, value, limits }): ValidationIssue => (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
     }
   }

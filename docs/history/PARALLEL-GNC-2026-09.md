@@ -55,7 +55,15 @@ here; this file records progress for the owner to fold in at the merge.
   accidents** (Proton-M 2013, Ariane 5 flight 501, Vega VV17, a stuck gimbal); a simple **FDIR**
   (2-of-3 IMU voting, gimbal monitoring, reconfiguration) that can be switched off to compare;
   failures **set in the mission setup and injected live** (and through WebMCP), marked in the
-  attitude-loop inspector.
+  attitude-loop inspector. Break-up by q·α with the failures layer only (asked, not yet answered:
+  kept that way).
+- G01 (asked 2026-09-24): **PEG and IGM both, selectable**; the first stage flies the pitch
+  program as before and **PEG/IGM takes over out of the atmosphere or after staging**; the target
+  is the **whole insertion state — altitude and speed, flight-path angle, and the orbit's plane
+  (yaw steering to the inclination)**; the guidance is chosen in the Engineer mode, with a
+  **Guidance tab in the attitude-loop inspector** (t_go, the orbit it predicts, its steering
+  against the standard law); the load relief's switch-off is **released smoothly, in PEG/IGM
+  flights only** (every other flight bit for bit as before).
 
 ## Progress
 
@@ -518,3 +526,50 @@ failure injected in the worker records as on the main thread).
 
 **Results (2026-09-24)**: `npm test` 71 files / 1035 tests pass (12 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.
+
+### G01 — PEG and IGM ascent guidance
+
+Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2j, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §15.
+
+- **The laws** (`src/physics/explicit-guidance.ts`): the burn ahead from the vehicle's stages
+  (`burnProfile`: each stage from its mass at ignition, the acceleration ceiling, the staging
+  gaps, the weak final stage left out as the standard law leaves it), its thrust integrals, and
+  the linear tangent law; **PEG** as a predictor–corrector on the velocity to be gained with the
+  cut-off predicted by integrating J2 gravity and the thrust, **IGM** in closed form in the
+  terminal frame with averaged gravity and its χ̃ mode; the target the insertion orbit's perigee
+  (radius, speed, a level flight path) in the plane of the mission's inclination.
+- **In flight** (`ExplicitGuidance`, `Simulation`): the standard law still runs every step; the
+  explicit one takes over once a later stage is lit or the first is out of the atmosphere (under
+  100 Pa above 70 km, no strap-on burning), re-solves every cycle and blends each solution into
+  the last, and hands back — with an event — when the stages left fall short or it does not
+  converge. Guidance reads the navigation's state when G02 is on. The cut-off stays the ascent's
+  (`sim/ascent.ts`, the other session's), on the orbit reached.
+- **The load relief** (the G03 finding, fixed here as decided): in six-DOF PEG/IGM flights the
+  command is released from where the relief held it at 4 °/s below 500 Pa, not all at once;
+  every other flight is untouched (`this.explicitGuidance` guards both lines).
+- **The record**: `TelemetrySample.explicitGuidance` during the ascent (law, state, t_go, v_go,
+  the orbit predicted at cut-off and the target, the pitch it steers and the standard law's, its
+  yaw out of the target plane, PEG's last correction, the stages planned);
+  `read_flight_state.explicitGuidance`; CSV `guide_*`; the inspector's Guidance tab
+  (`src/ui/loop-guidance.ts`); events `evt.guidanceEngaged/Resumed/Short/Diverged`.
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- G01 ---`); `src/types.ts` (`DynamicsConfig.explicitGuidance`; `ExplicitGuidanceConfig` at
+the end); `src/physics/sim/types.ts` (the optional `TelemetrySample.explicitGuidance`);
+`src/config/validation.ts` (a range, one call); `src/mcp.ts` (`explicitGuidance` in
+configure_mission's schema and handler, kept across edits; the summary in read_flight_state);
+`src/ui/panel.ts` (the section; lines keeping it on a vehicle change and a G08 preset's vehicle
+switch); `src/physics/simulation.ts` (the law built beside the standard one; its direction taken
+after the standard command in the ascent; the release in the ascent's rate limit and the relief's
+last command kept; the record on the samples). Also `src/physics/rigid/config.ts`,
+`src/ui/csv.ts`, `loop-inspector.ts`, `loop-guidance.ts`, tests/i18n.test.ts (a key family).
+
+**Tests**: tests/explicit-guidance.test.ts (the thrust integrals against numerical sums; t_go
+and the shortfall; the vehicle's burn ahead; PEG and IGM into three orbits in a vacuum ascent;
+handing back when short; the engage rule; Falcon 9 to its insertion orbit on both, from the
+second stage, on no more propellant; the six-DOF load relief released under 8° of attitude error
+where the standard flight swings over 20°; the CSV; settings; the events in three languages), a
+block in tests/mcp.test.ts, and tests/heavy/explicit-fleet-1/2.test.ts (every vehicle's reference
+mission on PEG and on IGM, judged as the fleet is).
+

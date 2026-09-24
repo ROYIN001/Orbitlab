@@ -19,6 +19,7 @@ import type { RigidTelemetry } from '../physics/rigid/telemetry';
 import { PLANE_OF } from '../physics/rigid/linear';
 import { aeroAngles, bodyRates, getNotation, type Notation } from './notation';
 import { LOOP_AXES, loopLimiterNames, loopView, triple } from './loop-view';
+import type { TelemetrySample } from '../physics/sim/types';
 
 const RIGID_COLUMNS = ['recording_schema_version', 'rigid_model_version', 'rigid_data_revision',
   'rigid_mass_flow_model', 'rigid_wind_profile_json', 'rigid_wind_seed', 'rigid_integration_max_step_s', 'rigid_flow_derivative_max_step_s',
@@ -148,6 +149,16 @@ function faultColumns(value: RigidTelemetry | undefined, n: Notation): string[] 
     f.engines.map((e) => `${e.engine}:${e.state}`).join(' '), f.jets.map((j) => `${j.jet}:${j.state}`).join(' '), ...angles(rateError), ...angles(f.sensorAttitudeErrorBody)];
 }
 
+// --- G01: the explicit ascent guidance: its state, time and velocity to go, the orbit it predicts, its steering
+const GUIDE_COLUMNS = ['guide_law', 'guide_status', 'guide_tgo_s', 'guide_vgo_ms', 'guide_pred_periapsis_m', 'guide_pred_apoapsis_m',
+  'guide_pitch_deg', 'guide_standard_pitch_deg', 'guide_yaw_deg', 'guide_correction_ms'];
+function guideColumns(s: TelemetrySample): string[] {
+  const g = s.explicitGuidance;
+  if (!g) return GUIDE_COLUMNS.map(() => '');
+  const n = (v: number | undefined) => (v === undefined || !Number.isFinite(v) ? '' : v.toPrecision(7));
+  return [g.law, g.status, n(g.tGo), n(g.vGo), n(g.predictedPeriapsis), n(g.predictedApoapsis), n(g.pitchDeg), n(g.standardPitchDeg), n(g.yawDeg), n(g.miss)];
+}
+
 /** Telemetry samples plus the event log, as CSV text (no trailing newline). */
 export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>): string {
   const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
@@ -165,6 +176,8 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
   if (hasNav) cols.push(...NAV_COLUMNS(notation));
   const hasFaults = sim.telemetry.some(sample => !!sample.rigid?.controlFaults);
   if (hasFaults) cols.push(...FAULT_COLUMNS(notation));
+  const hasGuide = sim.telemetry.some(sample => !!sample.explicitGuidance);
+  if (hasGuide) cols.push(...GUIDE_COLUMNS);
   const lines = [cols.join(',')];
   for (const s of sim.telemetry) {
     const row = [s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase].map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v)));
@@ -175,6 +188,7 @@ export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>)
     if (hasMargins) row.push(...marginColumns(s.rigid));
     if (hasNav) row.push(...navColumns(s.rigid, notation));
     if (hasFaults) row.push(...faultColumns(s.rigid, notation));
+    if (hasGuide) row.push(...guideColumns(s));
     lines.push(row.join(','));
   }
   lines.push('');

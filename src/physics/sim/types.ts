@@ -6,6 +6,7 @@ import type { OrbitalElements } from '../orbital';
 import type { AscentPhase } from '../guidance';
 import type { BurnPlan } from '../mission';
 import type { EomRecord } from '../eom';
+import type { ExplicitGuidanceRecord } from '../explicit-guidance';
 
 export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'failed';
 
@@ -40,6 +41,8 @@ export interface TelemetrySample {
   lon: number;
   stage: number;
   phase: string;
+  /** G01: the explicit ascent guidance's record at this sample, during the ascent. */
+  explicitGuidance?: ExplicitGuidanceRecord;
 }
 
 export interface DebrisVisual {

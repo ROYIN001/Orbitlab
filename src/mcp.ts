@@ -46,6 +46,7 @@ import { IMU_LIMITS } from './physics/nav/sensors';
 import { navigationAt, type NavigationRecord } from './physics/nav/navigation';
 import { CONTROL_FAULT_KINDS, CONTROL_FAULT_PRESETS, FAULT_AXES, FAULT_FIELDS, FAULT_TIME_LIMITS, IMU_UNIT_COUNT, MAX_FAULTS, controlFaultProblems } from './physics/rigid/fault-config';
 import type { ControlFaultRecord } from './physics/rigid/faults';
+import { CYCLE_LIMITS, EXPLICIT_LAWS, type ExplicitGuidanceRecord } from './physics/explicit-guidance';
 import { elementsFromState } from './physics/orbital';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
@@ -401,6 +402,13 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     const { navigation: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
     state.dynamics = { ...rest, ...mergeNavigation(previous, input.navigation) };
   }
+  // --- G01: and the explicit guidance.
+  const priorExplicit = live.dynamics?.explicitGuidance;
+  if (priorExplicit && state.dynamics && !state.dynamics.explicitGuidance) state.dynamics = { ...state.dynamics, explicitGuidance: priorExplicit };
+  if (input.explicitGuidance !== undefined) {
+    const { explicitGuidance: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    state.dynamics = { ...rest, ...mergeExplicitGuidance(previous, input.explicitGuidance) };
+  }
   // --- G08: and the failures.
   const priorFaults = live.dynamics?.controlFaults;
   if (priorFaults && state.dynamics && !state.dynamics.controlFaults) state.dynamics = { ...state.dynamics, controlFaults: priorFaults };
@@ -648,6 +656,15 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
     },
     additionalProperties: false,
   },
+  explicitGuidance: {
+    type: ['object', 'null'],
+    description: 'Explicit ascent guidance (roadmap G01; absent or null, the standard ascent guidance): "peg" (the Space Shuttle\'s Powered Explicit Guidance, a predictor–corrector on the velocity to be gained) or "igm" (the Saturn V\'s Iterative Guidance Mode, closed form in the terminal frame). The first stage flies the pitch program; the law takes over once a later stage is lit or the first is out of the atmosphere (q < 100 Pa above 70 km), and steers to the insertion orbit\'s perigee — altitude, speed, flight-path angle and plane. In six-DOF it also releases the load relief smoothly. Given fields replace the current ones; null resets a field.',
+    properties: {
+      law: { type: 'string', enum: EXPLICIT_LAWS },
+      cycleS: { type: ['number', 'null'], minimum: CYCLE_LIMITS[0], maximum: CYCLE_LIMITS[1], description: 'Guidance cycle, s (default 1).' },
+    },
+    additionalProperties: false,
+  },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
@@ -706,6 +723,8 @@ function toolReadFlightState(host: McpAppHost): WebMcpTool {
         attitudeTest: attitudeTestSummary(attitudeTestAt(host.sim.telemetry, cursor)),
         // G02: what the navigation believes, at the cursor.
         navigation: navigationSummary(navigationAt(host.sim.telemetry, cursor)),
+        // G01: the explicit ascent guidance, at the cursor.
+        explicitGuidance: explicitGuidanceSummary(host.sim.telemetry, cursor),
         // G08: the failures struck and the FDIR's state, at the cursor.
         controlFaults: controlFaultsSummary(host.sim.telemetry, cursor),
         lastEvent: last ? eventOut(last) : null,
@@ -1046,6 +1065,34 @@ function mergeControlFaults(current: import('./types').ControlFaultsConfig | und
     if (given.faults === undefined) next.faults = preset.faults.map((f) => ({ ...f }));
   } else if (given.faults !== undefined) delete next.preset;
   return { controlFaults: next as unknown as import('./types').ControlFaultsConfig };
+}
+
+/** G01: configure_mission's `explicitGuidance` (null turns it off; null resets a field). */
+function mergeExplicitGuidance(current: import('./types').ExplicitGuidanceConfig | undefined, input: unknown): { explicitGuidance?: import('./types').ExplicitGuidanceConfig } {
+  if (input === null) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('"explicitGuidance" must be an object or null');
+  const next: Record<string, unknown> = { ...(current ?? {}) };
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (key !== 'law' && key !== 'cycleS') throw new Error(`Unknown explicitGuidance field "${key}"`);
+    if (value === null) delete next[key]; else next[key] = value;
+  }
+  if (next.law === undefined) throw new Error('"explicitGuidance.law" is required ("peg" or "igm")');
+  return { explicitGuidance: next as unknown as import('./types').ExplicitGuidanceConfig };
+}
+
+/** G01: the explicit guidance at the cursor (during the ascent). */
+function explicitGuidanceSummary(samples: readonly { t: number; explicitGuidance?: ExplicitGuidanceRecord }[], cursor: number): Record<string, unknown> | null {
+  for (let i = samples.length - 1; i >= 0; i--) {
+    if (samples[i].t > cursor + 1e-9) continue;
+    const g = samples[i].explicitGuidance;
+    if (!g) return null;
+    const km = (m: number | undefined) => (m === undefined ? null : m / 1000);
+    return { law: g.law, status: g.status, timeToGoS: g.tGo ?? null, velocityToGainMs: g.vGo ?? null,
+      predictedCutoff: { periapsisKm: km(g.predictedPeriapsis), apoapsisKm: km(g.predictedApoapsis) },
+      target: { periapsisKm: km(g.targetPeriapsis), apoapsisKm: km(g.targetApoapsis) },
+      correctionMs: g.miss ?? null, pitchDeg: g.pitchDeg ?? null, yawOutOfPlaneDeg: g.yawDeg ?? null, standardPitchDeg: g.standardPitchDeg, stagesPlanned: g.stages };
+  }
+  return null;
 }
 
 /** G08: the failures and the FDIR at the cursor. */

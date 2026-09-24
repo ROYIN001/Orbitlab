@@ -313,6 +313,8 @@ export interface DynamicsConfig {
   navigation?: NavigationConfig;
   /** Six-DOF only: failures of the control system and the FDIR that meets them (roadmap G08). Absent: nothing fails, bit for bit. */
   controlFaults?: ControlFaultsConfig;
+  /** PEG or IGM for the stages out of the atmosphere (roadmap G01). Absent: the standard ascent guidance, bit for bit. */
+  explicitGuidance?: ExplicitGuidanceConfig;
 }
 
 /**
@@ -420,4 +422,13 @@ export interface ControlFaultsConfig {
   preset?: string;
   /** the sensors' random seed; absent, derived from the dynamics seed */
   seed?: number;
+}
+
+// --- G01 ---
+/** Explicit ascent guidance (src/physics/explicit-guidance.ts): which law, and its cycle. */
+export interface ExplicitGuidanceConfig {
+  /** 'peg': the Shuttle's Powered Explicit Guidance; 'igm': the Saturn V's Iterative Guidance Mode */
+  law: 'peg' | 'igm';
+  /** guidance cycle, s (default 1) */
+  cycleS?: number;
 }

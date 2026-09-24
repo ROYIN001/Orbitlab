@@ -47,7 +47,8 @@ import { validateDynamics } from './rigid/config';
 import { rk4Step } from './integrator';
 import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
 import { VehicleModel, StageState, engineMassFlow } from './vehicle';
-import { AscentGuidance } from './guidance';
+import { AscentGuidance, planeNormalThrough } from './guidance';
+import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
 import { MissionPlan, planMission, RAAN_TOLERANCE } from './mission';
 import { DEFAULT_GUIDANCE, guidanceForVehicle } from './defaults';
 import { chronologicalEvents } from './events';
@@ -158,6 +159,10 @@ export class Simulation {
   private frozenCommand: Vec3 | null = null;
   /** The six-DOF vacuum-ascent command, rate-limited (RIGID_ASCENT_COMMAND_RATE). */
   private limitedCommand: Vec3 | null = null;
+  /** G01: PEG or IGM for the stages out of the atmosphere, when the mission flies one. */
+  readonly explicitGuidance?: ExplicitGuidance;
+  /** G01: the load relief's last command, from which a PEG/IGM flight releases it at a bounded rate. */
+  private relievedCommand: Vec3 | null = null;
   /** @internal ascent cut-off, max-Q, structural placard, insertion floor */
   readonly ascent: AscentMonitor;
   /** @internal injected failures */
@@ -200,6 +205,13 @@ export class Simulation {
     this.plan = planMission(cfg, this.site, this.vehicleSpec);
     this.vehicle = new VehicleModel(this.vehicleSpec, this.payloadMass, cfg.boosterRecovery, this.satellite);
     this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis);
+    // G01: PEG or IGM, aimed at the same insertion orbit.
+    const explicit = cfgIn.dynamics?.explicitGuidance;
+    if (explicit) {
+      this.explicitGuidance = new ExplicitGuidance({ law: explicit.law, cycleS: explicit.cycleS ?? 1 },
+        insertionTarget(this.plan.insertionAltitude, this.plan.insertionApoapsis, this.plan.ascentInclination),
+        { periapsis: this.plan.insertionAltitude, apoapsis: Math.max(this.plan.insertionAltitude, this.plan.insertionApoapsis) });
+    }
     this.ascent = new AscentMonitor(this);
     this.failures = new FailureInjector(this, cfg);
 
@@ -734,6 +746,21 @@ export class Simulation {
       s.ascentPhase = cmd.phase;
       s.pitchCmd = cmd.pitchDeg;
       s.predictedApoapsis = cmd.predictedApoapsis;
+      // G01: PEG or IGM steers once a later stage is lit or the first is out of the atmosphere;
+      // the standard law flies whenever it cannot (the stages left short of the target).
+      const explicit = this.explicitGuidance;
+      if (explicit) {
+        const iy = planeNormalThrough(normalize(known.r), this.plan.ascentInclination, normalize(cross(known.r, known.v)));
+        const steer = explicit.update({ t: s.t, r: known.r, v: known.v, iy, standardDir: cmd.dir,
+          ready: explicitReady({ closedLoop: cmd.phase === 'closedLoop', burning: s.thrust > 0, activeIndex: active?.index ?? 0, q, altitude: known.alt }),
+          profile: () => burnProfile(this.vehicle, { excludeWeakFinal: this.plan.weakFinalStage, maxAccel }) });
+        for (const e of explicit.takeEvents()) this.event(e.key, e.key === 'evt.guidanceShort' || e.key === 'evt.guidanceDiverged' ? 'warn' : 'info', e.params);
+        if (steer) {
+          dirCmd = steer;
+          s.pitchCmd = explicit.record?.pitchDeg ?? s.pitchCmd;
+          if (explicit.record?.predictedApoapsis !== undefined) s.predictedApoapsis = explicit.record.predictedApoapsis;
+        }
+      }
     } else if (s.status === 'orbit') {
       // The final cut-off's tail-off: hold the attitude it was cut off in.
       dirCmd = s.dir;
@@ -764,9 +791,12 @@ export class Simulation {
       // Above the atmosphere the ascent command swings no faster than
       // RIGID_ASCENT_COMMAND_RATE: the stage follows it, and cuts off turning
       // at the rate it was following.
-      if (s.status === 'ascent' && q < 100) {
+      // G01: a PEG/IGM flight releases the load relief (which holds the command above 500 Pa) from
+      // where it held it, at LOAD_RELIEF_RELEASE_RATE down to 100 Pa and at the vacuum rate below.
+      if (s.status === 'ascent' && (this.explicitGuidance ? q <= 500 : q < 100)) {
+        const rate = this.explicitGuidance && q >= 100 ? LOAD_RELIEF_RELEASE_RATE : RIGID_ASCENT_COMMAND_RATE;
         dirCmd = this.limitedCommand = this.limitedCommand
-          ? slerpLimited(this.limitedCommand, dirCmd, RIGID_ASCENT_COMMAND_RATE * dt) : dirCmd;
+          ? slerpLimited(this.limitedCommand, dirCmd, rate * dt) : this.relievedCommand ?? dirCmd;
       } else this.limitedCommand = null;
     }
     // An engine that has just been shut down is still tailing off. Its gimbals
@@ -844,6 +874,7 @@ export class Simulation {
           payloadLength: this.satellite.size?.height });
         const requested = dirCmd, limitRad = runtime.ascentAngleLimit(snapshot, q, vAirMag / atm.a);
         dirCmd = limitAscentCommand(dirCmd, vAir, limitRad);
+        if (this.explicitGuidance) this.relievedCommand = dirCmd;
         // G03: what the load relief did, for the attitude-loop inspector.
         if (runtime.recordLoop) {
           const angle = (a: Vec3, b: Vec3) => Math.acos(Math.max(-1, Math.min(1, dot(normalize(a), normalize(b)))));
@@ -1207,6 +1238,8 @@ export class Simulation {
       dvRemaining: s.payloadSeparated ? this.vehicle.spacecraftDeltaV() : this.vehicle.deltaVRemaining(),
       downrange: s.downrange, lat: s.lat, lon: s.lon,
       stage: act ? act.index + 1 : 0, phase: s.status === 'ascent' ? s.ascentPhase ?? '' : s.status,
+      // G01: the explicit guidance, during the ascent.
+      ...(this.explicitGuidance?.record && s.status === 'ascent' ? { explicitGuidance: { ...this.explicitGuidance.record } } : {}),
     });
   }
 

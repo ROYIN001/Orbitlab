@@ -995,3 +995,36 @@ describe('the control system\'s failures (roadmap G08)', () => {
     expect(out.sensedRateDegSBody.z).toBeCloseTo(0.573, 3);
   });
 });
+
+// --- G01 ---
+describe('explicit ascent guidance (roadmap G01)', () => {
+  it('sets PEG or IGM, keeps it across edits, and turns it off with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', explicitGuidance: { law: 'peg' } });
+    expect(host.panel.state.dynamics?.explicitGuidance).toEqual({ law: 'peg' });
+    configure.execute({ explicitGuidance: { law: 'igm', cycleS: 2 } });
+    configure.execute({ windScenario: 'shear' });
+    expect(host.panel.state.dynamics?.explicitGuidance).toEqual({ law: 'igm', cycleS: 2 });
+    configure.execute({ explicitGuidance: { cycleS: null } });
+    expect(host.panel.state.dynamics?.explicitGuidance).toEqual({ law: 'igm' });
+    expect(() => configure.execute({ explicitGuidance: { law: 'apollo' } })).toThrow(/setup\.explicit\.law/);
+    expect(() => configure.execute({ explicitGuidance: { cycleS: 9 } })).toThrow(/setup\.explicit\.cycle must be at most 4/);
+    expect(() => configure.execute({ explicitGuidance: { gain: 1 } })).toThrow(/Unknown explicitGuidance field "gain"/);
+    configure.execute({ explicitGuidance: null });
+    expect(host.panel.state.dynamics?.explicitGuidance).toBeUndefined();
+  });
+
+  it('reports the explicit guidance at the cursor', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5 });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).explicitGuidance).toBeNull();
+    (sim.telemetry[1] as any).explicitGuidance = { law: 'peg', status: 'engaged', tGo: 300, vGo: 5400, predictedApoapsis: 499e3, predictedPeriapsis: 200e3,
+      targetApoapsis: 500e3, targetPeriapsis: 200e3, miss: 0.3, pitchDeg: 12, yawDeg: 0.1, standardPitchDeg: 9, stages: 1 };
+    expect((tool(tools, 'read_flight_state').execute({}) as any).explicitGuidance).toEqual({ law: 'peg', status: 'engaged', timeToGoS: 300, velocityToGainMs: 5400,
+      predictedCutoff: { periapsisKm: 200, apoapsisKm: 499 }, target: { periapsisKm: 200, apoapsisKm: 500 }, correctionMs: 0.3, pitchDeg: 12,
+      yawOutOfPlaneDeg: 0.1, standardPitchDeg: 9, stagesPlanned: 1 });
+  });
+});
