@@ -12,6 +12,7 @@ import { matVecMul, quatFromBasis, quatInverseRotate, quatRotate, type Mat3, typ
 import type { RigidVehicleSnapshot } from './mass';
 import { RIGID_MODEL_VERSION } from './config';
 import { fuelAwareCoastRates } from './pointing';
+import { FlexBody, type FlexOptions } from './flex';
 import { cloneWindProfile, type RigidCommand, type RigidTelemetry } from './telemetry';
 
 export type SnapshotProvider = (elapsed: number, consumed: Readonly<Record<string, number>>) => RigidVehicleSnapshot;
@@ -24,6 +25,8 @@ export interface RigidRuntimeOptions {
   massFlowModel?: 'quasiSteady' | 'reducedFlux';
   /** Explicit sensitivity override; never mutate shared flight gains. */
   controlGains?: ControlGains;
+  /** Slosh, bending and the notch filter (roadmap P05). Absent or all off: the rigid body. */
+  flex?: FlexOptions;
 }
 export interface RigidAccelerations {
   propulsionECI: Vec3;
@@ -87,6 +90,8 @@ export class RigidRuntime {
   readonly derivativeStepS: number;
   readonly controlGains: ControlGains;
   private engines = new Map<string, EngineActuatorState>();
+  /** The flexible body, when slosh, bending or the notch filter is modelled. */
+  readonly flex?: FlexBody;
   snapshot?: RigidVehicleSnapshot;
   constructor(config: DynamicsConfig, readonly bodyId = 'vehicle', options: RigidRuntimeOptions = {}) {
     this.wind = windScenario(config);
@@ -99,6 +104,13 @@ export class RigidRuntime {
     const gains = options.controlGains ?? FLIGHT_CONTROL_GAINS;
     this.controlGains = { attitudeGain: { ...gains.attitudeGain }, rateGain: { ...gains.rateGain },
       maxRate: { ...gains.maxRate }, maxAngularAcceleration: { ...gains.maxAngularAcceleration }, responseDelayS: gains.responseDelayS };
+    const flex = options.flex;
+    if (flex && (flex.slosh || flex.bending || flex.notch)) {
+      if (![flex.notchZetaZero, flex.notchZetaPole, flex.notchFrequencyScale, flex.bandwidthRatio, flex.sloshDamping, flex.bendingDamping].every(Number.isFinite)
+        || flex.notchZetaZero < 0 || !(flex.notchZetaPole > 0) || !(flex.notchFrequencyScale > 0) || !(flex.bandwidthRatio > 0) || flex.sloshDamping < 0 || flex.bendingDamping < 0
+        || (flex.imuStation !== undefined && !(flex.imuStation >= 0 && flex.imuStation <= 1))) throw new RangeError('Invalid flexible-body options');
+      this.flex = new FlexBody({ ...flex });
+    }
   }
 
   setCommand(command: RigidCommand): void {
@@ -245,7 +257,8 @@ export class RigidRuntime {
         ? states[i].throttle * (snapshot.engines[i].upstreamThrottle ?? 1) : 0])),
       rcsPropellantKg: snapshot.rcs.reduce((sum, r) => sum + Math.max(0, r.initialPropellantKg - (this.consumed[r.stageId] ?? 0)), 0),
       saturated, angleOfAttack: aero.angleOfAttack, sideslip: aero.sideslip, aeroWithinEnvelope: aero.withinEnvelope,
-      windECI: this.windAt(state.r, time), rawQuaternionNormError: rawError };
+      windECI: this.windAt(state.r, time), rawQuaternionNormError: rawError,
+      ...(this.flex ? { flex: this.flex.telemetry() } : {}) };
   }
 
   step(time: number, state: RigidState, dt: number, noseCommand: Vec3, sideReference: Vec3, provider: SnapshotProvider) {
@@ -253,10 +266,15 @@ export class RigidRuntime {
     const initialConsumed = { ...this.consumed };
     const start = provider(0, initialConsumed);
     const aeroStart = this.environment(state, time, start);
-    const gains = this.scheduledGains(start, aeroStart.momentBody, state.omegaBody);
+    const flex = this.flex;
+    const flexStart = flex?.begin(time, dt, start, aeroStart.forceBody, Math.min(this.integrationStepS, 0.01));
+    // With bending, the autopilot sees what its IMU reads, not the rigid body.
+    const sensed = flex ? flex.sensed(state.attitudeQ, state.omegaBody) : state;
+    const gains = flex ? flex.limitGains(this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody))
+      : this.scheduledGains(start, aeroStart.momentBody, sensed.omegaBody);
     let demand = this.command.mode === 'manual'
-      ? rateControl(this.command.rates, state.omegaBody, start.inertia, gains)
-      : attitudeControl(state.attitudeQ, targetAttitude(noseCommand, sideReference), state.omegaBody, start.inertia, gains);
+      ? rateControl(this.command.rates, sensed.omegaBody, start.inertia, gains)
+      : attitudeControl(sensed.attitudeQ, targetAttitude(noseCommand, sideReference), sensed.omegaBody, start.inertia, gains);
     const specs = this.specs(start);
     const activeStage = start.rcsThrusters[0]?.stageId;
     const reservoir = start.rcs.find(r => r.stageId === activeStage);
@@ -267,12 +285,13 @@ export class RigidRuntime {
     // Recovery has its own guidance and is not an orbital pointing maneuver.
     if (this.bodyId === 'vehicle' && this.command.mode === 'auto' && norm(state.r) - R_EARTH > 140e3
       && specs.every(engine => engine.maxThrust === 0)) {
-      const budget = fuelAwareCoastRates({ requestedRatesBody: demand.desiredRates, omegaBody: state.omegaBody,
+      const budget = fuelAwareCoastRates({ requestedRatesBody: demand.desiredRates, omegaBody: sensed.omegaBody,
         inertiaBody: start.inertia, remainingGasKg: gas, jets });
       if (budget.limited) {
-        demand = { ...rateControl(budget.ratesBody, state.omegaBody, start.inertia, gains), saturated: true };
+        demand = { ...rateControl(budget.ratesBody, sensed.omegaBody, start.inertia, gains), saturated: true };
       }
     }
+    if (flex?.options.notch) demand = { ...demand, momentBody: flex.filterMoment(demand.momentBody) };
     const states = specs.map(spec => this.engines.get(spec.id) ?? createEngineStates([spec])[0]);
     const allocation = allocateEngineGimbals(specs, specs.map(e => e.maxThrust > 0 ? 1 : 0), sub(demand.momentBody, aeroStart.momentBody), start.cg);
     const actualStates = stepEngineActuators(specs, states, allocation.commands, dt);
@@ -316,6 +335,21 @@ export class RigidRuntime {
       // moment about the trial CG without changing the reservoir a second time.
       const rcsMoment = add(rcs.wrench.momentBody, cross(sub(start.cg, snapshot.cg), rcs.wrench.forceBody));
       const aero = this.environment(trial, at, snapshot);
+      if (trial.flex) {
+        const gravityECI = gravityJ2(trial.r);
+        const result = flex!.loads({ snapshot, attitudeQ: trial.attitudeQ, omegaBody: trial.omegaBody, flex: trial.flex, engine,
+          enginePositions: this.specs(snapshot).map(spec => spec.positionBody), rcsJets: jets, rcsDuties: rcs.duties,
+          rcsForceBody: rcs.wrench.forceBody, rcsMomentBody: rcsMoment, aeroForceBody: aero.forceBody, aeroMomentBody: aero.momentBody,
+          gravityECI, flowMomentBody: flowMoment(elapsed, snapshot, trial.omegaBody) }, !accelerationsStart);
+        const forceECI = quatRotate(trial.attitudeQ, result.forceBody);
+        nonGrav = scale(forceECI, 1 / snapshot.mass);
+        if (!accelerationsStart) accelerationsStart = {
+          propulsionECI: scale(quatRotate(trial.attitudeQ, sub(result.forceBody, aero.forceBody)), 1 / snapshot.mass),
+          aerodynamicECI: scale(quatRotate(trial.attitudeQ, aero.forceBody), 1 / snapshot.mass), gravityECI,
+        };
+        return { mass: snapshot.mass, inertiaBody: snapshot.inertia, forceECI, momentBody: result.momentBody, externalAccelerationECI: gravityECI,
+          flex: { accelerationECI: result.accelerationECI, omegaDotBody: result.omegaDotBody, rates: result.rates } };
+      }
       const forceECI = quatRotate(trial.attitudeQ, add(add(engine.forceBody, rcs.wrench.forceBody), aero.forceBody));
       nonGrav = scale(forceECI, 1 / snapshot.mass);
       const gravityECI = gravityJ2(trial.r);
@@ -332,7 +366,10 @@ export class RigidRuntime {
     // All trial snapshots/deflections retain elapsed time from the outer interval.
     const substeps = Math.max(1, Math.ceil(dt / Math.min(this.integrationStepS, 0.01)));
     const stepSize = dt / substeps;
-    let integratedState = state, rawError = 0;
+    // With bending the flexible solution runs even with nothing to integrate (a
+    // quasi-static mode), for its loads; slosh alone only while a tank sloshes.
+    const initial: RigidState = flexStart && (flexStart.length || flex!.options.bending) ? { ...state, flex: flexStart } : state;
+    let integratedState = initial, rawError = 0;
     for (let index = 0; index < substeps; index++) {
       const integrated = integrateRigidStep(time + index * stepSize, integratedState, stepSize, model);
       integratedState = integrated.state;
@@ -340,8 +377,13 @@ export class RigidRuntime {
     }
     // The integrator intentionally does not evaluate loads for a zero-duration
     // read. Return the same initial physical acceleration decomposition anyway.
-    if (!accelerationsStart) model(time, state);
+    if (!accelerationsStart) model(time, initial);
     const end = snapshotAt(dt);
+    if (flex && dt > 0) {
+      flex.end(time + dt, integratedState.flex);
+      const { flex: _carried, ...rigid } = integratedState;
+      integratedState = rigid;
+    }
     if (dt > 0) {
       specs.forEach((spec, i) => this.engines.set(spec.id, actualStates[i]));
       if (reservoir) this.consumed[reservoir.stageId] = (initialConsumed[reservoir.stageId] ?? 0) + rcs.consumedKg;

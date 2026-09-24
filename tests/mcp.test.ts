@@ -577,10 +577,12 @@ describe('set_flight_control', () => {
     host.sim.setRigidCommand = command => { commands.push(command); };
   });
 
-  it('converts manual body rates to radians and applies finite-actuator commands', () => {
+  it('converts manual ISO body rates (p, q, r) to the simulator\'s axes in radians and applies finite-actuator commands', () => {
     const out = tool(tools, 'set_flight_control').execute({ mode: 'manual', rollRateDegS: 2, pitchRateDegS: -3, yawRateDegS: 5, throttle: 0.6 }) as any;
     expect(out.ok).toBe(true);
-    expect(commands).toEqual([{ mode: 'manual', rates: { x: 2 * DEG, y: -3 * DEG, z: 5 * DEG }, throttle: 0.6 }]);
+    // The simulator's x is the nose, y the belly side, z the left: x = p, y = r, z = −q (src/ui/notation.ts).
+    expect(commands).toEqual([{ mode: 'manual', rates: { x: 2 * DEG, y: 5 * DEG, z: 3 * DEG }, throttle: 0.6 }]);
+    expect(out.ratesRadS).toEqual({ p: 2 * DEG, q: -3 * DEG, r: 5 * DEG });
     tool(tools, 'set_flight_control').execute({ mode: 'auto' });
     expect(commands[1]).toEqual({ mode: 'auto', rates: { x: 0, y: 0, z: 0 }, throttle: 1 });
   });
@@ -777,5 +779,35 @@ describe('registerMcpTools', () => {
       delete (globalThis as any).document;
       delete (globalThis as any).window;
     }
+  });
+});
+
+// --- P05 ---
+describe('configure_mission: the flexible body', () => {
+  it('merges flex settings, keeps them across vehicle and wind edits, and resets a field with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', flex: { bending: true, notch: true, notchZetaZero: 0.01 } });
+    expect(host.panel.state.dynamics?.flex).toEqual({ bending: true, notch: true, notchZetaZero: 0.01 });
+    configure.execute({ flex: { slosh: true, imuStation: 0.4 } });
+    configure.execute({ vehicleId: 'soyuz21a', windScenario: 'shear' });
+    expect(host.panel.state.dynamics).toMatchObject({ model: 'sixDof', wind: 'shear',
+      flex: { bending: true, notch: true, notchZetaZero: 0.01, slosh: true, imuStation: 0.4 } });
+    configure.execute({ flex: { imuStation: null } });
+    expect(host.panel.state.dynamics?.flex).toEqual({ bending: true, notch: true, notchZetaZero: 0.01, slosh: true });
+  });
+
+  it('rejects an unknown field and a value outside its range, leaving the settings as they were', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ flex: { bending: true } });
+    expect(() => configure.execute({ flex: { stiffness: 2 } })).toThrow(/Unknown flex field "stiffness"/);
+    expect(() => configure.execute({ flex: { notchFrequencyScale: 5 } })).toThrow(/setup\.flex\.notchFrequencyScale must be at most 2/);
+    expect(() => configure.execute({ flex: { notch: 'yes' } })).toThrow(/setup\.flex\.notch is not a valid selection/);
+    expect(host.panel.state.dynamics?.flex).toEqual({ bending: true });
+  });
+
+  it('describes the flex object in its input schema', () => {
+    const schema = tool(tools, 'configure_mission').inputSchema as { properties: Record<string, { properties?: Record<string, unknown> }> };
+    expect(Object.keys(schema.properties.flex.properties!)).toEqual(['slosh', 'bending', 'notch', 'imuStation', 'notchZetaZero',
+      'notchZetaPole', 'notchFrequencyScale', 'bandwidthRatio', 'sloshDamping', 'bendingDamping']);
   });
 });

@@ -38,6 +38,8 @@ import { eventLabel } from './phase';
 import { localizeEventParams, stageNameByLabel } from './names';
 import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
+import type { TelemetrySample } from '../physics/sim/types';
+import { symbolText, withSymbol, type Quantity } from './notation';
 
 type Range = 'mission' | 'ascent';
 
@@ -51,6 +53,19 @@ const CHART_TITLES: Record<(typeof CHART_IDS)[number], string> = {
   altitude: 'tel.altitude', velocity: 'tel.velocity', q: 'tel.q', g: 'tel.g',
   apsides: 'tel.apsides', dv: 'tel.dv', pitch: 'tel.pitch', mass: 'tel.mass',
 };
+// --- P05: two more charts, only for a flight that modelled the flexible body
+const FLEX_CHART_IDS = ['flex', 'load'] as const;
+const FLEX_CHART_TITLES: Record<(typeof FLEX_CHART_IDS)[number], string> = { flex: 'tel.flex', load: 'tel.load' };
+
+/** U07: the symbol a chart's title carries, in the notation in force. */
+const CHART_SYMBOLS: Partial<Record<string, Quantity>> = {
+  altitude: 'altitude', q: 'dynamicPressure', g: 'loadFactor', pitch: 'pitchAngle', mass: 'mass',
+};
+const chartTitle = (id: (typeof CHART_IDS)[number]): string => {
+  const symbol = CHART_SYMBOLS[id];
+  return symbol ? withSymbol(t(CHART_TITLES[id]), symbol) : t(CHART_TITLES[id]);
+};
+
 /** How close to the bottom the log has to be before an update re-pins it there, px. */
 const LOG_STICK = 24;
 /**
@@ -107,6 +122,8 @@ export class TelemetryPanel {
   private markerPool: ChartMarker[] = [];
   private markers: ChartMarker[] = [];
   private rowPools: Map<HTMLElement, { rows: HTMLElement[]; used: number }> = new Map();
+  /** P05: bending, slosh and shell-stress traces, and their x */
+  private flexTraces: Trace[] = [trace(), trace(), trace()];
   /**
    * Where the instrument card goes when it is docked (`src/ui/hud.ts`).
    *
@@ -160,7 +177,15 @@ export class TelemetryPanel {
       r.append(c);
       this.charts[id] = c;
       c.setAttribute('role', 'img');
-      c.setAttribute('aria-label', `${t(CHART_TITLES[id])} ${t('tel.chart.noData')}`);
+      c.setAttribute('aria-label', `${chartTitle(id)} ${t('tel.chart.noData')}`);
+    }
+    for (const id of FLEX_CHART_IDS) {
+      const c = document.createElement('canvas');
+      c.className = 'chart hidden';
+      r.append(c);
+      this.charts[id] = c;
+      c.setAttribute('role', 'img');
+      c.setAttribute('aria-label', t(FLEX_CHART_TITLES[id]));
     }
     // `headCls` exists for the event log alone: at the two-column breakpoint the
     // panel is a ~300 px scrolling strip, and the log needs a class its heading
@@ -184,6 +209,36 @@ export class TelemetryPanel {
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
     if (this.view) this.update(this.view, this.cursor);
+  }
+
+  /**
+   * P05: bending deflection and the largest slosh displacement (cm), and the
+   * shell stress against its allowable (%), for a flight that modelled them.
+   */
+  private drawFlex(tel: readonly TelemetrySample[], lo: number, hi: number, stride: number, xMin: number, xMax: number, xLabel: string): void {
+    const has = tel.some((s) => !!s.rigid?.flex);
+    for (const id of FLEX_CHART_IDS) this.charts[id].classList.toggle('hidden', !has);
+    if (!has) return;
+    const [fx, bend, slosh] = this.flexTraces, load = trace();
+    fx.x.length = 0; bend.y.length = 0; slosh.y.length = 0;
+    const push = (s: TelemetrySample): void => {
+      const flex = s.rigid?.flex;
+      fx.x.push(s.t);
+      bend.y.push(flex?.bending ? flex.bending.deflectionM * 100 : NaN);
+      const tanks = flex?.slosh?.tanks ?? [];
+      slosh.y.push(flex?.slosh ? (tanks.length ? Math.max(...tanks.map((tank) => tank.displacementM)) * 100 : 0) : NaN);
+      load.y.push(flex?.bending ? flex.bending.loadRatio * 100 : NaN);
+    };
+    for (let i = lo; i < hi; i += stride) push(tel[i]);
+    if (hi - lo > 0 && (hi - 1 - lo) % stride !== 0) push(tel[hi - 1]);
+    const series = (y: number[], color: string, label?: string): Series => ({ x: fx.x, y, color, label });
+    drawChart(this.charts.flex, [series(bend.y, '#ffb86b', 'w'), series(slosh.y, '#6ec8ff', 's')], {
+      title: t(FLEX_CHART_TITLES.flex), markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin: 0,
+      seriesLabels: [t('tel.chart.bending'), t('tel.chart.slosh')],
+    });
+    drawChart(this.charts.load, [series(load.y, '#ff7b7b')], {
+      title: t(FLEX_CHART_TITLES.load), markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin: 0,
+    });
   }
 
   private setRange(mode: Range): void {
@@ -226,8 +281,9 @@ export class TelemetryPanel {
     this.note.classList.add('hidden');
     this.cursor = 0;
     for (const id of CHART_IDS) {
-      drawChart(this.charts[id], [], { title: t(CHART_TITLES[id]), xMin: -10, xMax: 60, timeAxis: true, xLabel: t('tel.xAxis') });
+      drawChart(this.charts[id], [], { title: chartTitle(id), xMin: -10, xMax: 60, timeAxis: true, xLabel: t('tel.xAxis') });
     }
+    for (const id of FLEX_CHART_IDS) this.charts[id].classList.add('hidden');
     this.view = null;
     this.live = null;
   }
@@ -329,7 +385,7 @@ export class TelemetryPanel {
     const xLabel = t('tel.xAxis');
     const draw = (id: (typeof CHART_IDS)[number], list: Series[], yMin?: number, seriesLabels?: string[]): void => {
       drawChart(this.charts[id], list, {
-        title: t(CHART_TITLES[id]),
+        title: chartTitle(id),
         markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin, seriesLabels,
       });
     };
@@ -343,7 +399,7 @@ export class TelemetryPanel {
     set(this.one, 0, alt.y, '#6ec8ff');
     draw('altitude', this.one);
     set(this.two, 0, vIn.y, '#8be5cd', 'v');
-    set(this.two, 1, vAir.y, '#96a3b4', 'v_air');
+    set(this.two, 1, vAir.y, '#96a3b4', symbolText('airspeed'));
     draw('velocity', this.two, undefined, [t('tel.chart.inertial'), t('tel.chart.airspeed')]);
     set(this.one, 0, q.y, '#efa47e');
     draw('q', this.one, 0);
@@ -363,6 +419,7 @@ export class TelemetryPanel {
     draw('pitch', this.one);
     set(this.one, 0, vIn.y, '#9be7ff');
     draw('mass', this.one, 0);
+    this.drawFlex(tel, lo, hi, stride, xMin, xMax, xLabel);
 
     // Δv budget — the frame's own loss book-keeping, so it rewinds.
     const L = view.state.losses;

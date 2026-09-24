@@ -38,6 +38,7 @@ import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
+import { initNotation, onNotationChange } from './ui/notation';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
 
@@ -1192,7 +1193,11 @@ class App {
 }
 
 initLang();
+initNotation();
 const app = new App();
+// U07: a notation chosen in the Engineer mode (or changed with the language)
+// relabels everything the language does.
+onNotationChange(() => app.applyLanguage());
 // exposed for automated testing / console experiments
 (window as unknown as { orbitlab: App }).orbitlab = app;
 // WebMCP tools (src/mcp.ts): optional, never blocks startup on failure.

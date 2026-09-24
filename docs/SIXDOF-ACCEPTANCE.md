@@ -380,3 +380,79 @@ six-DOF (tests/watch-missions.test.ts) and the delivered-orbit matrix (`npm run 
 chambers), Falcon Heavy and Proton-M keep real time at 1× (0.98, 0.99 and 0.96 of it) and reach
 6.0×, 4.7× and 9.8× of a requested 10× during the ascent, using 53–61 MB of JavaScript heap. The
 10× figures were taken with other test processes loading the CPU.
+
+## The flexible vehicle (roadmap P05, 2026-09-24)
+
+Slosh, the first bending mode with its shell loads, and the bending filter (PHYSICS.md §2b) are
+options, all off by default.
+
+**Off, nothing moves.** tests/rigid-flex-golden.test.ts hashes every second of state and six-DOF
+telemetry, the recorded telemetry and the event log of Falcon 9, Soyuz-2.1a and Angara A5 in
+crosswind over their first 160 s — flown with the options absent and, for Falcon 9, given and
+all off — against the hashes recorded at 7834edd before any of it was written;
+tests/heavy/flex-golden.test.ts does the same for the three whole missions to orbit. All match
+bit for bit.
+
+**The model's own checks** (tests/rigid-flex.test.ts): the slosh analogue against its closed
+forms and the potential-flow tilt moment (the first mode carries 98.74 % of it); a free half-full
+Falcon 9 stage whose two tanks slosh for 10 s holds its momentum to 10⁻⁹, angular momentum to
+10⁻⁷ and energy to 10⁻⁷, and a slosh mass accelerates against the free stage at the
+reduced-mass rate to nine digits; a uniform free-free beam gives 22.373/(2πL²)·√(EI/μ) within
+0.1 % with its nodes at 22.4 % from each end; a real stack's mode is orthogonal to its rigid
+translation and rotation to 10⁻⁹; the IMU reads rate and attitude shifted by the local slope;
+the notch is unity at zero and Nyquist frequency and ζ_z/ζ_p deep at its centre; the shell
+stress above the engines at liftoff is the thrust over the wall area.
+
+**In closed loop** (tests/rigid-flex-flight.test.ts, Falcon 9 in crosswind): with bending and
+no filter the first mode diverges and the stack breaks up in the first 15 s (at T+7 s, over
+30 cm of modal deflection); with the filter it flies through max-q (to T+90 s) with under
+10 cm and under 50 % of the shells' allowable; with slosh alone its four tanks slosh by
+millimetres to decimetres.
+
+**Every vehicle, flexible** (`npm run test:heavy`, tests/heavy/flex-fleet-*.test.ts): each
+vehicle's reference case — the first accepted fleet row, Soyuz-2.1a's crew mission to the
+station orbit and Long March 2D's 650 kg to the 600 km sun-synchronous orbit — flown in
+crosswind with slosh, bending and the filter all on, judged by the fleet's acceptance
+(target orbit, re-derived orbit, insertion clock) with no shell past 80 % of its allowable:
+
+| Vehicle | shell load, % | bending, cm | slosh, cm |
+|---|---|---|---|
+| Soyuz-2.1a (crew, ISS) | 13 | 1.1 | 6 |
+| Soyuz-2.1b | 14 | 0.7 | 6 |
+| Proton-M | 23 | 3.4 | 25 |
+| Angara-A5 | 9 | 1.2 | 13 |
+| Falcon 9 | 28 | 5.8 | 15 |
+| Falcon Heavy | 35 | 7.7 | 22 |
+| Atlas V 551 | 17 | 5.7 | 12 |
+| Vulcan | 11 | 2.6 | 27 |
+| Ariane 64 | 9 | 1.5 | 25 |
+| Vega-C | 7 | 0.6 | 7 |
+| Long March 2D (SSO) | 15 | 0.5 | 7 |
+| Long March 3B/E | 20 | 3.0 | 9 |
+| Long March 5 | 9 | 0.8 | 26 |
+| H-IIA 202 | 13 | 2.0 | 17 |
+| H3 | 13 | 0.6 | 18 |
+| PSLV-XL | 8 | 1.1 | 4 |
+| Electron | 5 | 0.1 | 4 |
+| Starship | 44 | 14.0 | 50 |
+
+All eighteen reach their target. Peak loads come near max-q or at the heaviest thrust, peak
+bending mostly in the liftoff transient. Falcon 9's reference mission flown at 0.01 s and
+0.005 s delivers the same orbit within 2 km and the same peak bending, load and slosh to the
+digits above (27 %, 6.1 cm, 13 cm).
+
+**What it cost to get there**, each found by flying the fleet: the notch alone did not
+stabilise Falcon 9 (the autopilot's gain near the mode was the problem, hence the bandwidth
+limit); the follower thrust without the axial compression's geometric stiffness put the notch
+6 % off the mode (Beal's cancellation fixed it); the 45–75 Hz upper stacks broke RK4 at 0.01 s
+until modes faster than 1/h went quasi-static; and Ariane 64 at 1 % slosh damping lost its
+upper stage to its own liquid oxygen (§2b, "What the baffles are for") — the default is 3 %.
+
+**Cost.** With all three options on, a flight takes 50–55 % more CPU than the rigid one on the
+most tanked vehicle (Proton-M: eight sloshing tanks), mostly the coupled solve at each
+integrator evaluation and the shell-load sweep at each control step.
+
+**The rigid fleet with P05 off.** `npm run test:sixdof-fleet` re-run at the P05 commit 723c811
+(options absent, as every default mission flies): **161 of 161 passed** in 2 h 9 min on four
+cores, the same result as at 68ace10 — P05 leaves the rigid vehicle untouched.
+

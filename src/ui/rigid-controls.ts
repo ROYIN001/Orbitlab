@@ -2,6 +2,11 @@ import { getLang, onLangChange, type Lang } from '../i18n';
 import type { RigidCommand, RigidTelemetry } from '../physics/rigid/telemetry';
 import { DEG, RAD } from '../physics/constants';
 import './rigid-controls.css';
+import { bodyRates, labelWithSymbol, onNotationChange, simulatorRates, symbolNode, withSymbol, type Quantity } from './notation';
+
+/** U07: the rate fields in the notation's axes (ISO p q r; ГОСТ ωx ωz ωy). */
+type RateKey = 'roll' | 'pitch' | 'yaw';
+const RATE_SYMBOL: Record<RateKey, Quantity> = { roll: 'rollRate', pitch: 'pitchRate', yaw: 'yawRate' };
 
 interface Copy { title:string; mode:string; auto:string; manual:string; throttle:string; roll:string; pitch:string; yaw:string; zero:string; help:string; replay:string; rates:string; limit:string; envelope:string; fuel:string; history:string }
 const COPY: Record<Lang, Copy> = {
@@ -24,6 +29,7 @@ export class RigidControls {
     this.host.classList.add('rigid-controls');
     this.host.hidden = true;
     onLangChange(()=>this.render());
+    onNotationChange(()=>this.render());
     this.render();
   }
   reset():void { this.command={mode:'auto',rates:{x:0,y:0,z:0},throttle:1}; this.last=undefined; this.host.hidden=true; this.render(); }
@@ -49,12 +55,15 @@ export class RigidControls {
     mode.value=this.command.mode;
     mode.addEventListener('change',()=>{this.command.mode=mode.value as RigidCommand['mode'];this.emit();this.refresh();});
     const label=document.createElement('label');label.append(document.createTextNode(copy.mode),mode); fields.append(label);this.controls.push(mode);
-    for(const [key,text]of [['x',copy.roll],['y',copy.pitch],['z',copy.yaw],['throttle',copy.throttle]] as const) {
+    for(const [key,text]of [['roll',withSymbol(copy.roll,RATE_SYMBOL.roll)],['pitch',withSymbol(copy.pitch,RATE_SYMBOL.pitch)],['yaw',withSymbol(copy.yaw,RATE_SYMBOL.yaw)],['throttle',copy.throttle]] as const) {
       const input=document.createElement('input'); input.type='number';input.step='0.1';input.min=key==='throttle'?'0':'-5';input.max=key==='throttle'?'100':'5';
-      input.value=String(key==='throttle'?this.command.throttle*100:this.command.rates[key]*RAD);input.setAttribute('aria-label',text);
+      input.value=String(key==='throttle'?this.command.throttle*100:bodyRates(this.command.rates)[key]*RAD);input.setAttribute('aria-label',text);
       this.inputs.set(key,input);
-      input.addEventListener('change',()=>{ const value=input.valueAsNumber;if(!input.validity.valid||!Number.isFinite(value))return;if(key==='throttle')this.command.throttle=value/100;else this.command.rates[key]=value*DEG;this.emit(); });
-      const row=document.createElement('label');row.append(document.createTextNode(text),input);fields.append(row);this.controls.push(input);
+      input.addEventListener('change',()=>{ const value=input.valueAsNumber;if(!input.validity.valid||!Number.isFinite(value))return;
+        if(key==='throttle')this.command.throttle=value/100;
+        else { const rates=bodyRates(this.command.rates); rates[key]=value*DEG; this.command.rates=simulatorRates(rates); }
+        this.emit(); });
+      const row=document.createElement('label');row.append(key==='throttle'?document.createTextNode(text):labelWithSymbol(copy[key],RATE_SYMBOL[key]),input);fields.append(row);this.controls.push(input);
     }
     const zero=document.createElement('button');zero.type='button';zero.className='btn';zero.textContent=copy.zero;
     zero.addEventListener('click',()=>{this.command.rates={x:0,y:0,z:0};this.emit();this.render();});this.controls.push(zero);
@@ -70,12 +79,12 @@ export class RigidControls {
       if(this.live) this.command={mode:recorded.controlMode,rates:{...recorded.commandRatesBody},throttle:recorded.commandThrottle};
       if(this.modeInput) this.modeInput.value=recorded.controlMode;
       for(const[key,input]of this.inputs) if(!this.live || document.activeElement!==input) {
-        input.value=String(key==='throttle'?recorded.commandThrottle*100:recorded.commandRatesBody[key as 'x'|'y'|'z']*RAD);
+        input.value=String(key==='throttle'?recorded.commandThrottle*100:bodyRates(recorded.commandRatesBody)[key as RateKey]*RAD);
       }
       for(const control of this.controls) control.disabled=!this.live || (control.tagName!=='SELECT' && recorded.controlMode!=='manual');
     }
-    const r=this.last.omegaBody;
-    this.measured.textContent=`${copy.rates}: ${[r.x,r.y,r.z].map(v=>(v*RAD).toFixed(2)).join(' / ')} °/s · ${copy.fuel}: ${this.last.rcsPropellantKg.toFixed(2)} kg`;
+    const r=bodyRates(this.last.omegaBody), symbols=(['roll','pitch','yaw'] as const).flatMap((k,i)=>i?[' / ',symbolNode(RATE_SYMBOL[k])]:[symbolNode(RATE_SYMBOL[k])]);
+    this.measured.replaceChildren(`${copy.rates} (`,...symbols,`): ${[r.roll,r.pitch,r.yaw].map(v=>(v*RAD).toFixed(2)).join(' / ')} °/s · ${copy.fuel}: ${this.last.rcsPropellantKg.toFixed(2)} kg`);
     this.notice.textContent=[!this.live?copy.replay:'',this.last.replayAttitudeAvailable===false?copy.history:'',this.last.saturated?copy.limit:'',!this.last.aeroWithinEnvelope?copy.envelope:''].filter(Boolean).join(' · ');
   }
 }

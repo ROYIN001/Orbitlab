@@ -16,6 +16,7 @@
 import type { Simulation } from '../physics/simulation';
 import { chronologicalEvents } from '../physics/events';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
+import { aeroAngles, bodyRates, getNotation, type Notation } from './notation';
 
 const RIGID_COLUMNS = ['recording_schema_version', 'rigid_model_version', 'rigid_data_revision',
   'rigid_mass_flow_model', 'rigid_wind_profile_json', 'rigid_wind_seed', 'rigid_integration_max_step_s', 'rigid_flow_derivative_max_step_s',
@@ -47,15 +48,55 @@ function rigidColumns(value: RigidTelemetry | undefined): string[] {
   });
 }
 
+// --- U07: rates and aerodynamic angles in the axes and signs of the notation in force
+function notationColumnNames(n: Notation): string[] {
+  const rates = n === 'iso' ? ['p', 'q', 'r'] : ['omega_x', 'omega_z', 'omega_y'];
+  return [...rates.map(name => `${n}_${name}_rad_s`), ...rates.map(name => `${n}_command_${name}_rad_s`), `${n}_alpha_rad`, `${n}_beta_rad`];
+}
+function notationColumns(value: RigidTelemetry | undefined, n: Notation): string[] {
+  if (!value) return notationColumnNames(n).map(() => '');
+  const rates = bodyRates(value.omegaBody, n), command = value.commandRatesBody ? bodyRates(value.commandRatesBody, n) : null;
+  const angles = aeroAngles(value.angleOfAttack, value.sideslip);
+  return [rates.roll, rates.pitch, rates.yaw, command?.roll ?? '', command?.pitch ?? '', command?.yaw ?? '', angles.alpha, angles.beta]
+    .map(entry => typeof entry === 'number' ? (Number.isInteger(entry) ? String(entry) : entry.toPrecision(12)) : entry);
+}
+
+// --- P05: the flexible body, when it was modelled
+const FLEX_COLUMNS = ['slosh_active', 'slosh_max_displacement_m', 'slosh_displacements_m_json',
+  'bending_frequency_hz', 'bending_modal_y', 'bending_modal_z', 'bending_deflection_m',
+  'imu_station_m', 'imu_sensor_error_rad', 'shell_load_ratio', 'shell_load_station_m', 'notch_center_hz'];
+
+function flexColumns(value: RigidTelemetry | undefined): string[] {
+  const flex = value?.flex;
+  if (!flex) return FLEX_COLUMNS.map(() => '');
+  const tanks = flex.slosh?.tanks ?? [];
+  const b = flex.bending;
+  const entries: (string | number | boolean)[] = [flex.slosh ? flex.slosh.active : '', tanks.length ? Math.max(...tanks.map((tank) => tank.displacementM)) : '',
+    tanks.length ? JSON.stringify(Object.fromEntries(tanks.map((tank) => [tank.id, tank.displacementM]))) : '',
+    b?.frequencyHz ?? '', b?.modal.y ?? '', b?.modal.z ?? '', b?.deflectionM ?? '', b?.imuStationX ?? '', b?.sensorErrorRad ?? '',
+    b?.loadRatio ?? '', b?.loadStationX ?? '', flex.notch?.centerHz ?? ''];
+  return entries.map(value => {
+    if (typeof value === 'number') return Number.isInteger(value) ? String(value) : value.toPrecision(9);
+    const text = String(value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  });
+}
+
 /** Telemetry samples plus the event log, as CSV text (no trailing newline). */
 export function buildTelemetryCsv(sim: Pick<Simulation, 'telemetry' | 'events'>): string {
   const cols = ['t_s', 'alt_m', 'v_inertial_ms', 'v_air_ms', 'q_pa', 'mach', 'g_load', 'mass_kg', 'thrust_n', 'throttle', 'pitch_deg', 'apoapsis_m', 'periapsis_m', 'inclination_deg', 'dv_remaining_ms', 'downrange_m', 'lat_deg', 'lon_deg', 'stage', 'phase'];
   const hasRigid = sim.telemetry.some(sample => !!sample.rigid);
   if (hasRigid) cols.push(...RIGID_COLUMNS);
+  const notation = getNotation();
+  if (hasRigid) cols.push(...notationColumnNames(notation));
+  const hasFlex = sim.telemetry.some(sample => !!sample.rigid?.flex);
+  if (hasFlex) cols.push(...FLEX_COLUMNS);
   const lines = [cols.join(',')];
   for (const s of sim.telemetry) {
     const row = [s.t, s.alt, s.vInertial, s.vAir, s.q, s.mach, s.gLoad, s.mass, s.thrust, s.throttle, s.pitch, s.ap, s.pe, s.inc, s.dvRemaining, s.downrange, s.lat, s.lon, s.stage, s.phase].map((v) => (typeof v === 'number' ? (Number.isInteger(v) ? String(v) : v.toPrecision(7)) : String(v)));
     if (hasRigid) row.push(...rigidColumns(s.rigid));
+    if (hasRigid) row.push(...notationColumns(s.rigid, notation));
+    if (hasFlex) row.push(...flexColumns(s.rigid));
     lines.push(row.join(','));
   }
   lines.push('');

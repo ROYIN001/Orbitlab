@@ -53,6 +53,9 @@ import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
 import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
+import type { FlexConfig } from '../types';
+import { FLEX_DEFAULTS } from '../physics/rigid/flex';
+import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -787,6 +790,7 @@ export class SetupPanel {
     const scroll = this.el('div', 'setup-scroll');
     root.appendChild(scroll);
     scroll.appendChild(this.experienceSection());
+    if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
     scroll.appendChild(this.quickstartSection());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
@@ -794,7 +798,9 @@ export class SetupPanel {
     s1.appendChild(this.sectionTitle('01', 'setup.step.vehicle'));
     s1.appendChild(this.select('setup.vehicle', VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })), s.vehicleId, (v) => {
       s.vehicleId = v;
+      const flex = s.dynamics?.flex;
       s.dynamics = defaultDynamics(v);
+      if (flex) s.dynamics.flex = flex;
       const spec = vehicleById(v);
       this.siteReassigned = false;
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
@@ -939,6 +945,7 @@ export class SetupPanel {
     // ── collapsible: guidance / failure / options ───────────────────────────
     const s4 = this.el('section', 'config-section');
     s4.appendChild(this.dynamicsSection());
+    if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.flexSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
     s4.appendChild(this.optionsSection(vehicle));
@@ -1064,6 +1071,74 @@ export class SetupPanel {
     fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;
+  }
+
+  // --- U07: the flight-dynamics notation (Engineer mode) -------------------------
+  /** ISO 1151 or ГОСТ 20058-80, or by language; a preference, not a mission setting. */
+  private notationSection(): HTMLElement {
+    const section = this.el('section', 'config-section notation-section');
+    section.append(this.select('setup.notation', [
+      { value: 'auto', label: t('setup.notation.auto', { standard: notationFor(getLang(), 'auto') === 'gost' ? 'ГОСТ 20058-80' : 'ISO 1151' }) },
+      { value: 'iso', label: t('setup.notation.iso') },
+      { value: 'gost', label: t('setup.notation.gost') },
+    ], getNotationPreference(), (value) => setNotationPreference(value as NotationPreference)));
+    section.append(this.el('p', 'field-note', t('setup.notation.note')));
+    // A display preference: never disabled by a running mission.
+    section.querySelector('select')!.disabled = false;
+    return section;
+  }
+
+  // --- P05: the flexible vehicle (Engineer mode, six-DOF only) ------------------
+  /**
+   * Slosh, bending and the bending filter, with the parameters an engineer
+   * tunes: where the IMU sits, the notch's depth, width and centre, the
+   * autopilot's bandwidth and the two damping ratios. All off by default.
+   */
+  private flexSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'flex';
+    section.append(this.el('summary', undefined, t('setup.flex.title')));
+    const flex: FlexConfig = this.state.dynamics?.flex ?? {};
+    const update = (patch: Partial<FlexConfig>, rebuild = false): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const next: Record<string, unknown> = { ...(dynamics.flex ?? {}), ...patch };
+      for (const key of Object.keys(next)) if (next[key] === undefined || next[key] === false) delete next[key];
+      this.state.dynamics = { ...dynamics, ...(Object.keys(next).length ? { flex: next as FlexConfig } : {}) };
+      if (!Object.keys(next).length) delete this.state.dynamics.flex;
+      if (rebuild) this.render();
+      this.changed();
+    };
+    const toggle = (key: 'slosh' | 'bending' | 'notch', label: string): void => {
+      const row = this.el('label', 'checkbox');
+      const box = this.el('input');
+      box.type = 'checkbox';
+      box.checked = !!flex[key];
+      box.disabled = this.running;
+      box.addEventListener('change', () => update({ [key]: box.checked }, true));
+      row.append(box, this.el('span', undefined, label));
+      section.append(row);
+    };
+    toggle('slosh', t('setup.flex.slosh'));
+    toggle('bending', t('setup.flex.bending'));
+    toggle('notch', t('setup.flex.notch'));
+    section.append(this.el('p', 'field-note', t('setup.flex.note')));
+    if (flex.bending || flex.notch) {
+      section.append(this.select('setup.flex.imu', [
+        { value: 'bay', label: t('setup.flex.imuBay') }, { value: 'custom', label: t('setup.flex.imuCustom') },
+      ], flex.imuStation === undefined ? 'bay' : 'custom', (value) => update({ imuStation: value === 'bay' ? undefined : 0.5 }, true)));
+      if (flex.imuStation !== undefined) {
+        section.append(this.number('setup.flex.imuStation', flex.imuStation * 100, (value) => update({ imuStation: value / 100 }), 1));
+      }
+    }
+    if (flex.notch) {
+      section.append(this.number('setup.flex.notchZetaZero', flex.notchZetaZero ?? FLEX_DEFAULTS.notchZetaZero, (value) => update({ notchZetaZero: value }), 0.005));
+      section.append(this.number('setup.flex.notchZetaPole', flex.notchZetaPole ?? FLEX_DEFAULTS.notchZetaPole, (value) => update({ notchZetaPole: value }), 0.05));
+      section.append(this.number('setup.flex.notchFrequencyScale', flex.notchFrequencyScale ?? FLEX_DEFAULTS.notchFrequencyScale, (value) => update({ notchFrequencyScale: value }), 0.05));
+      section.append(this.number('setup.flex.bandwidthRatio', flex.bandwidthRatio ?? FLEX_DEFAULTS.bandwidthRatio, (value) => update({ bandwidthRatio: value }), 0.5));
+    }
+    if (flex.slosh) section.append(this.number('setup.flex.sloshDamping', (flex.sloshDamping ?? FLEX_DEFAULTS.sloshDamping) * 100, (value) => update({ sloshDamping: value / 100 }), 0.1));
+    if (flex.bending) section.append(this.number('setup.flex.bendingDamping', (flex.bendingDamping ?? FLEX_DEFAULTS.bendingDamping) * 100, (value) => update({ bendingDamping: value / 100 }), 0.1));
+    return section;
   }
 
   private optionsSection(vehicle: VehicleSpec): HTMLElement {

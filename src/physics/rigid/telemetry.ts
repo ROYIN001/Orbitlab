@@ -3,6 +3,7 @@ import type { Quat, Mat3 } from './math';
 import { quatSlerp } from './math';
 import { lerp } from '../vec3';
 import type { WindScenario } from './aero';
+import type { FlexTelemetry } from './flex';
 
 /** Commands are inputs to finite actuators, never a replacement for body state. */
 export interface RigidCommand {
@@ -51,6 +52,8 @@ export interface RigidTelemetry {
   rawQuaternionNormError: number;
   /** Replay-only availability flag; false requires a retained-window warning. */
   replayAttitudeAvailable?: boolean;
+  /** Slosh, bending and notch filter state (roadmap P05); absent when not modelled. */
+  flex?: FlexTelemetry;
 }
 
 export function cloneWindProfile(value: WindScenario | undefined): WindScenario | undefined {
@@ -71,7 +74,17 @@ export function cloneRigidTelemetry(value: RigidTelemetry | undefined): RigidTel
     engineDeflections: Object.fromEntries(Object.entries(value.engineDeflections).map(([id, angles]) => [id, [...angles]])),
     engineDirectionsBody: value.engineDirectionsBody
       ? Object.fromEntries(Object.entries(value.engineDirectionsBody).map(([id, direction]) => [id, { ...direction }])) : undefined,
-    engineThrottles: value.engineThrottles ? { ...value.engineThrottles } : undefined };
+    engineThrottles: value.engineThrottles ? { ...value.engineThrottles } : undefined,
+    ...(value.flex ? { flex: cloneFlexTelemetry(value.flex) } : {}) };
+}
+
+function cloneFlexTelemetry(value: FlexTelemetry): FlexTelemetry {
+  return {
+    ...(value.slosh ? { slosh: { active: value.slosh.active, tanks: value.slosh.tanks.map((tank) => ({ ...tank })) } } : {}),
+    ...(value.bending ? { bending: { ...value.bending, modal: { ...value.bending.modal },
+      shapeX: [...value.bending.shapeX], shapeW: [...value.bending.shapeW] } } : {}),
+    ...(value.notch ? { notch: { ...value.notch } } : {}),
+  };
 }
 
 export function sameRigidConfiguration(a: RigidTelemetry | undefined, b: RigidTelemetry | undefined): boolean {

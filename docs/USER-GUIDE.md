@@ -220,6 +220,43 @@ vehicle's placard by 15%), or simply running the tanks dry short of orbital spee
 configuration always fails the same way at the same instant, so a "why did that happen" is
 always answerable by scrubbing back to it.
 
+## 7. The flexible vehicle (Engineer mode)
+
+In the Engineer mode, with six-DOF physics, the setup has a **Flexible vehicle** section. Its
+three options are off by default, and with all three off the flight is exactly the rigid one.
+
+- **Propellant slosh**: the liquid in every tank sways under thrust (its first mode), pushing
+  the stack sideways and turning it; a new burn starts it from rest.
+- **Structural bending**: the stack bends in its first mode, the autopilot steers by what its
+  IMU reads on the bent structure, and the stack **breaks up** where its shells are loaded
+  past their allowable stress (the event log says where).
+- **Bending filter**: a notch filter on the autopilot's pitch and yaw commands, centred on the
+  predicted bending frequency, with the autopilot held below that frequency.
+
+Turn on bending without the filter to see why launchers need one: the IMU feeds the bending
+back into the engines and the first mode grows until the stack breaks up, within seconds of
+liftoff on a Falcon 9. With the filter on, the same flight reaches orbit with centimetres of
+bending. The section also sets where the IMU is (the instrument bay atop the upper stage, or
+any station along the stack), the notch's depth (ζz), width (ζp) and centre, the ratio of
+bending frequency to autopilot bandwidth, and the slosh and structural damping — a detuned
+notch or a sensor in the wrong place is enough to lose the vehicle.
+
+Two more charts appear in the telemetry panel: **bending and slosh** (the stack's largest
+bending deflection and the largest slosh displacement, cm) and **shell stress** (the most
+loaded section, % of its allowable). The 3-D view draws the bending at 25 times its size. The
+CSV export adds the same quantities, per sample. The physics is in PHYSICS.md §2b.
+
+## 8. Notation
+
+Rates and angles are written in **ISO 1151** in English and Thai and in **ГОСТ 20058-80** in
+Russian; the Engineer mode's setup can fix either (*Flight-dynamics notation*). The two differ
+in more than letters: ISO's body y axis points to the right and z to the belly, ГОСТ's y to the
+top and z to the right, so the pitch rate is q in one and ωz in the other, and a nose-right yaw
+is positive in ISO (r) but negative in ГОСТ (ωy). Everything follows the choice — the telemetry
+card, the charts, the 6-DOF controls and the rates you type into them, the event log and the
+CSV. The full table, with each quantity's definition and sign, is in *Physics and sources*
+(PHYSICS.md §2c).
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

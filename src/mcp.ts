@@ -36,6 +36,12 @@ import { GUIDANCE_FIELDS, NUMBER_FIELDS, guidanceLimits, numericIssue, issueText
 import { buildTelemetryCsv } from './ui/csv';
 import { defaultDynamics } from './physics/rigid/config';
 import { cloneRigidTelemetry } from './physics/rigid/telemetry';
+import { FLEX_LIMITS } from './physics/rigid/flex';
+import { aeroAngles, bodyRates, getNotation, simulatorRates } from './ui/notation';
+import type { RigidTelemetry } from './physics/rigid/telemetry';
+
+/** configure_mission's `flex` fields (roadmap P05). */
+const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
 
 // ─────────────────────────────────────────────────────────────── host shape
 
@@ -364,6 +370,8 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   if (input.guidance !== undefined) {
     state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, vehicleById(state.vehicleId)) };
   }
+  // --- P05: a vehicle, physics or wind edit keeps the flexible-body settings already chosen.
+  const priorFlex = live.dynamics?.flex;
   if (input.physicsModel !== undefined || input.windScenario !== undefined || input.windSeed !== undefined) {
     const current = state.dynamics ?? { model:'pointMass', wind:'calm', seed:20260919 };
     state.dynamics = {
@@ -371,6 +379,18 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
       wind: (input.windScenario ?? current.wind) as import('./types').DynamicsConfig['wind'],
       seed: (input.windSeed ?? current.seed) as number,
     };
+  }
+  if (priorFlex && state.dynamics && !state.dynamics.flex) state.dynamics = { ...state.dynamics, flex: priorFlex };
+  if (input.flex !== undefined) {
+    // Merged into what is set: a field given as null goes back to its default.
+    if (!input.flex || typeof input.flex !== 'object' || Array.isArray(input.flex)) throw new Error('"flex" must be an object');
+    const current = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const flex: Record<string, unknown> = { ...(current.flex ?? {}) };
+    for (const [key, value] of Object.entries(input.flex as Record<string, unknown>)) {
+      if (!FLEX_KEYS.includes(key)) throw new Error(`Unknown flex field "${key}"`);
+      if (value === null) delete flex[key]; else flex[key] = value;
+    }
+    state.dynamics = { ...current, flex: flex as import('./types').FlexConfig };
   }
   assertConfigInput(state);
   // Every validator above has run without throwing: commit the whole edit at
@@ -428,6 +448,8 @@ function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<stri
     // Same immutable recording data the user sees, including replay cursor.
     // Quaternion/rates use the documented SI/body-frame conventions.
     rigid: cloneRigidTelemetry(frame.rigid) ?? null,
+    // U07: the same rates and α, β in the two standards' body axes and signs.
+    flightDynamics: frame.rigid ? flightDynamics(frame.rigid) : null,
     detachedBodies: frame.debris.map(body => ({ id: body.id, name: body.name, outcome: body.outcome ?? null,
       rigid: cloneRigidTelemetry(body.rigid) ?? null })),
     altitudeKm: frame.altitude / 1000,
@@ -460,6 +482,18 @@ function frameSummary(frame: VisualFrame, vehicleSpec: VehicleSpec): Record<stri
       burning: sf.burning,
       propellantFraction: sf.propellantFraction,
     } : null,
+  };
+}
+
+/** Body rates (deg/s) and aerodynamic angles (deg) in ISO 1151 and ГОСТ 20058-80 axes. */
+function flightDynamics(rigid: RigidTelemetry): Record<string, unknown> {
+  const iso = bodyRates(rigid.omegaBody, 'iso'), gost = bodyRates(rigid.omegaBody, 'gost');
+  const angles = aeroAngles(rigid.angleOfAttack, rigid.sideslip);
+  return {
+    notation: getNotation(),
+    iso: { pDegS: iso.roll * RAD, qDegS: iso.pitch * RAD, rDegS: iso.yaw * RAD },
+    gost: { omegaXDegS: gost.roll * RAD, omegaYDegS: gost.yaw * RAD, omegaZDegS: gost.pitch * RAD },
+    alphaDeg: angles.alpha * RAD, betaDeg: angles.beta * RAD,
   };
 }
 
@@ -499,6 +533,23 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   physicsModel: { type:'string', enum:['pointMass','sixDof'], description:'Six-DOF is available for every vehicle and is its default; pointMass is the legacy model.' },
   windScenario: { type:'string', enum:['calm','crosswind','shear'], description:'Repeatable wind scenario for six-DOF.' },
   windSeed: { type:'integer', minimum:0, maximum:4294967295, description:'Seed for repeatable six-DOF wind gusts.' },
+  flex: {
+    type: 'object',
+    description: 'Six-DOF flexible body (all off by default; off, the flight is the rigid one): propellant slosh, the first bending mode (with shell loads and break-up past their allowable stress), and the bending notch filter with the flexible-vehicle autopilot. Merged into the current settings; null resets a field.',
+    properties: {
+      slosh: { type: ['boolean', 'null'], description: 'First-mode slosh of every liquid tank under thrust.' },
+      bending: { type: ['boolean', 'null'], description: 'First lateral bending mode; the IMU reads the bent structure.' },
+      notch: { type: ['boolean', 'null'], description: 'Notch filter on the pitch/yaw torque, centred on the predicted bending frequency, and the autopilot held below it.' },
+      imuStation: { type: ['number', 'null'], minimum: FLEX_LIMITS.imuStation[0], maximum: FLEX_LIMITS.imuStation[1], description: 'IMU station as a fraction of the stack from its aft end; null = the instrument bay atop the upper stage.' },
+      notchZetaZero: { type: ['number', 'null'], minimum: FLEX_LIMITS.notchZetaZero[0], maximum: FLEX_LIMITS.notchZetaZero[1], description: 'Notch numerator damping ratio (depth = ζz/ζp).' },
+      notchZetaPole: { type: ['number', 'null'], minimum: FLEX_LIMITS.notchZetaPole[0], maximum: FLEX_LIMITS.notchZetaPole[1], description: 'Notch denominator damping ratio (width).' },
+      notchFrequencyScale: { type: ['number', 'null'], minimum: FLEX_LIMITS.notchFrequencyScale[0], maximum: FLEX_LIMITS.notchFrequencyScale[1], description: 'Notch centre as a multiple of the predicted bending frequency (1 = tuned).' },
+      bandwidthRatio: { type: ['number', 'null'], minimum: FLEX_LIMITS.bandwidthRatio[0], maximum: FLEX_LIMITS.bandwidthRatio[1], description: 'With the filter on, the autopilot rate gain is held below the bending frequency divided by this.' },
+      sloshDamping: { type: ['number', 'null'], minimum: FLEX_LIMITS.sloshDamping[0], maximum: FLEX_LIMITS.sloshDamping[1], description: 'Slosh damping ratio (baffles).' },
+      bendingDamping: { type: ['number', 'null'], minimum: FLEX_LIMITS.bendingDamping[0], maximum: FLEX_LIMITS.bendingDamping[1], description: 'Structural damping ratio of the bending mode.' },
+    },
+    additionalProperties: false,
+  },
   failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
@@ -775,7 +826,7 @@ function toolExportCsv(host: McpAppHost): WebMcpTool {
 function toolSetFlightControl(host: McpAppHost): WebMcpTool {
   return {
     name: 'set_flight_control', title: 'Set live flight controls',
-    description: 'Set automatic guidance or manual body roll/pitch/yaw rate commands and throttle for a live 6DOF mission. Rates are degrees per second; commands act through finite actuators and do not directly set attitude. Replay is read-only.',
+    description: 'Set automatic guidance or manual body roll/pitch/yaw rate commands and throttle for a live 6DOF mission. Rates are degrees per second in ISO 1151 body axes: roll p positive right side down, pitch q positive nose up, yaw r positive nose right (x to the nose, y to the right, z to the belly). Commands act through finite actuators and do not directly set attitude. Replay is read-only.',
     inputSchema: { type: 'object', properties: {
       mode: { type: 'string', enum: ['auto', 'manual'] },
       rollRateDegS: { type: 'number', minimum: -5, maximum: 5 },
@@ -792,13 +843,15 @@ function toolSetFlightControl(host: McpAppHost): WebMcpTool {
         if (value < -5 || value > 5) throw new Error(`"${name}" must be between -5 and 5 degrees per second.`);
         return value * DEG;
       };
-      const rates = { x: rate('rollRateDegS'), y: rate('pitchRateDegS'), z: rate('yawRateDegS') };
+      // ISO 1151 body axes (src/ui/notation.ts), whatever the interface shows.
+      const iso = { roll: rate('rollRateDegS'), pitch: rate('pitchRateDegS'), yaw: rate('yawRateDegS') };
+      const rates = simulatorRates(iso, 'iso');
       const throttle = input.throttle === undefined ? 1 : expectNumber(input.throttle, 'throttle');
       if (throttle < 0 || throttle > 1) throw new Error('"throttle" must be between 0 and 1.');
       if (!host.sim || host.sim.cfg.dynamics?.model !== 'sixDof') return { ok: false, reason: 'An active 6DOF mission is required.' };
       if (!host.player.live) return { ok: false, reason: 'Replay cannot change live flight controls. Return to live first.' };
       host.sim.setRigidCommand({ mode, rates, throttle });
-      return { ok: true, mode, ratesRadS: rates, throttle };
+      return { ok: true, mode, ratesRadS: { p: iso.roll, q: iso.pitch, r: iso.yaw }, throttle };
     },
   };
 }

@@ -158,8 +158,9 @@ describe('accepted command recording', () => {
     const command = { mode: 'manual' as const, rates: v3(0.01, -0.02, 0.03), throttle: 0.6 };
     sim.setRigidCommand(command);
     const event = sim.events.at(-1)!;
+    // The event records ISO 1151 rates (U07): p = x, q = −z, r = y of the simulator's body axes.
     expect(event).toEqual({ t: at, key: 'evt.controlCommand', severity: 'info', params: {
-      mode: 'manual', rollRateRadS: 0.01, pitchRateRadS: -0.02, yawRateRadS: 0.03, throttle: 0.6,
+      mode: 'manual', rollRateRadS: 0.01, pitchRateRadS: -0.03, yawRateRadS: -0.02, throttle: 0.6,
     } });
     expect(sim.state.rigid).toEqual({ ...actual, controlMode: 'manual', commandRatesBody: command.rates, commandThrottle: 0.6 });
     recorder.captureChangedState();

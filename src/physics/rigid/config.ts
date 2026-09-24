@@ -1,5 +1,6 @@
 import type { DynamicsConfig } from '../../types';
 import { VEHICLES } from '../../data/vehicles';
+import { validFlexConfig } from './flex';
 
 export const RIGID_MODEL_VERSION = 'sixdof-1';
 /**
@@ -17,5 +18,6 @@ export function validateDynamics(value: unknown, vehicleId: string): value is Dy
   const d = value as DynamicsConfig;
   return (d.model === 'pointMass' || (d.model === 'sixDof' && supportsRigid(vehicleId)))
     && ['calm', 'crosswind', 'shear'].includes(d.wind)
-    && Number.isInteger(d.seed) && d.seed >= 0 && d.seed <= 0xffffffff;
+    && Number.isInteger(d.seed) && d.seed >= 0 && d.seed <= 0xffffffff
+    && (d.flex === undefined || validFlexConfig(d.flex));
 }
