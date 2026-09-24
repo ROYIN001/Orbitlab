@@ -195,3 +195,6 @@ relief, flies bit-identically with the record off; the views in ISO and ГОСТ
 the CSV columns), a block in tests/mcp.test.ts, the inspector button in
 tests/rigid-controls.test.ts.
 
+**Results (2026-09-24)**: `npm test` 66 files / 946 tests pass (10 min); the whole-mission
+fingerprints of tests/heavy/flex-golden.test.ts pass unchanged (3 min); typecheck passes.
+
