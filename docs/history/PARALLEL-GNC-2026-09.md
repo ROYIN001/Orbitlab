@@ -237,3 +237,6 @@ the Explore and Engineer sets; every check passing through max-q; the limiter no
 α and β alike in both standards; Euler rows in each standard's axes; the vacuum-engine note; the
 record copied with every frame).
 
+**Results (2026-09-24)**: `npm test` 67 files / 956 tests pass (10 min); the whole-mission
+fingerprints of tests/heavy/flex-golden.test.ts pass unchanged (3 min); typecheck passes.
+
