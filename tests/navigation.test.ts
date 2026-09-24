@@ -171,5 +171,17 @@ describe('Falcon 9 flying on its navigation', () => {
     expect(sim.rigidRuntime!.navigation).toBeUndefined();
     expect(sim.telemetry.every((s) => !s.rigid?.navigation)).toBe(true);
     expect(norm(sim.state.v)).toBeGreaterThan(0);
+    // What the vehicle knows is the truth's very own objects.
+    const known = sim.knownState();
+    expect(known.r).toBe(sim.state.r); expect(known.v).toBe(sim.state.v); expect(known.dir).toBe(sim.state.dir); expect(known.elements).toBe(sim.state.elements);
+  });
+
+  it('hands burn logic the state the navigation knows', { timeout: 60_000 }, () => {
+    const sim = fly({ grade: 'mems', gnss: false }, 30);
+    const known = sim.knownState(), estimate = sim.rigidRuntime!.navigation!.estimate;
+    expect(known.r).toBe(estimate.r); expect(known.v).toBe(estimate.v);
+    expect(norm(add(known.r, scale(sim.state.r, -1)))).toBeGreaterThan(0);
+    expect(known.elements.apoapsisAlt).toBeCloseTo(elementsFromState(estimate.r, estimate.v).apoapsisAlt, 6);
+    expect(sim.knownState().elements).toBe(known.elements);
   });
 });

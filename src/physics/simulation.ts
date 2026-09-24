@@ -37,7 +37,7 @@ import { nosePointingTarget } from './rigid/guidance-attitude';
 import { AeroEnvelopeEvents } from './rigid/envelope-events';
 import { buildRigidVehicle } from './rigid/mass';
 import { rigidContactMetrics } from './rigid/debris-runtime';
-import { quatRotate } from './rigid/math';
+import { quatRotate, type Quat } from './rigid/math';
 import { gravity, gravityJ2 } from './gravity';
 import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
@@ -292,6 +292,21 @@ export class Simulation {
     const { r, v } = nav.estimate;
     return { r, v, alt: norm(r) - R_EARTH, el: elementsFromState(r, v), vz: dot(v, normalize(r)) };
   }
+  /**
+   * G02: the vehicle's state as its navigation knows it — position, velocity, thrust axis, orbital
+   * elements, attitude and body rate — for logic that should fly on what the vehicle knows (burn
+   * planning and steering). Without navigation these are the true state's very own objects, so
+   * reading them changes nothing.
+   */
+  knownState(): { r: Vec3; v: Vec3; dir: Vec3; elements: OrbitalElements; attitudeQ?: Quat; omegaBody?: Vec3 } {
+    const s = this.state, nav = this.rigidRuntime?.navigation;
+    if (!nav?.aligned) return { r: s.r, v: s.v, dir: s.dir, elements: s.elements, attitudeQ: s.rigid?.attitudeQ, omegaBody: s.rigid?.omegaBody };
+    const e = nav.estimate;
+    if (this.knownElements?.t !== e.t || this.knownElements.r !== e.r) this.knownElements = { t: e.t, r: e.r, elements: elementsFromState(e.r, e.v) };
+    return { r: e.r, v: e.v, dir: quatRotate(e.attitudeQ, v3(1, 0, 0)), elements: this.knownElements.elements, attitudeQ: e.attitudeQ, omegaBody: nav.rate };
+  }
+  private knownElements?: { t: number; r: Vec3; elements: OrbitalElements };
+
   /** G02: the step end's position, velocity and thrust axis as the cut-off judges them (the truth's own objects without navigation). */
   private navigationEnd(r: Vec3, v: Vec3, dir: Vec3): { r: Vec3; v: Vec3; dir: Vec3 } {
     const nav = this.rigidRuntime?.navigation;

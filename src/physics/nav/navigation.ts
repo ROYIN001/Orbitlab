@@ -186,6 +186,8 @@ export class NavigationSystem {
   /** The navigation's solution, for guidance and the cut-off. */
   get estimate(): { t: number; r: Vec3; v: Vec3; attitudeQ: Quat } { return { t: this.t, r: this.r, v: this.v, attitudeQ: this.q }; }
   get aligned(): boolean { return !!this.last; }
+  /** The bias-corrected body rate of the last step, rad/s. */
+  get rate(): Vec3 { return this.omega; }
 
   private propagate(t: number, v: Vec3, q: Quat): void {
     const last = this.last!, dt = t - last.t, s = this.sig;
