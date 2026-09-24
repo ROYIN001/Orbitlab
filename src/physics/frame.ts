@@ -24,10 +24,11 @@
  * mission (`src/replay/simview.ts`) until they are converted properly; the
  * telemetry panel stays live on purpose, since it charts the whole flight.
  */
-import type { Simulation, SimStatus, Debris, DebrisVisual, Losses } from './simulation';
+import type { Simulation, SimStatus, DescentPhase, Debris, DebrisVisual, Losses } from './simulation';
 import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
+import type { ReturnTarget } from './sim/return-guidance';
 import { clone } from './vec3';
 import { propagateKepler } from './orbital';
 import { atmosphere } from './atmosphere';
@@ -112,8 +113,16 @@ export interface DebrisFrame {
    * really were level with the core's, keep `anchor = 0`.
    */
   anchor?: number;
-  /** first-stage recovery state, for the grid fins, legs and landing burn */
-  recovery?: { phase: 'coast' | 'entry' | 'landing'; landed: boolean };
+  /**
+   * First-stage recovery state, for the grid fins, legs and landing burn, and
+   * where the stage is being flown to — the landing zone or the drone ship the
+   * renderer draws under it.
+   */
+  recovery?: {
+    phase: NonNullable<Debris['recovery']>['phase']; landed: boolean; target?: ReturnTarget; missDistance?: number;
+    /** the landing burn has lit (the legs come out for it) */
+    landingBurn?: boolean;
+  };
   /**
    * Where this object came down, once it has. Carried on the frame so the
    * telemetry panel's spent-stage list can be driven from the displayed
@@ -156,6 +165,8 @@ export interface VisualFrame {
   t: number;
   status: SimStatus;
   ascentPhase: AscentPhase | null;
+  /** a suborbital flight's return (`SimState.descentPhase`); absent on older recordings */
+  descentPhase?: DescentPhase | null;
   /** HUD note key (countdown, ascent, coast, burn, orbit, orbitOffTarget, suborbital, destroyed, reentry, noLiftoff) */
   note: string;
   r: Vec3;
@@ -312,6 +323,14 @@ function attachedBaseAt(sim: Simulation, layout: StackLayout, at: number): numbe
 }
 
 /**
+ * A recovered stage is flown, and lands, on its physics point: that is where
+ * its legs touch the ground. It separates hanging below the stack like any
+ * spent stage, and eases up onto that point over the seconds after, while it
+ * is still close enough to the stack for the offset to matter.
+ */
+const RECOVERY_ANCHOR_SETTLE = [2, 20] as const;
+
+/**
  * Offset from `d.r` to the base of the drawn body — see `DebrisFrame.anchor`.
  *
  * Deliberately **not** memoised. It used to be cached in a per-Simulation
@@ -330,7 +349,12 @@ function debrisAnchor(sim: Simulation, d: Debris, layout: StackLayout): number {
     // the spent stage hangs below the separation plane, which is where the
     // remaining stack's base — and therefore the origin — now sits
     const idx = sim.vehicle.stages.findIndex((st) => st.spec.name === d.name);
-    return -(idx >= 0 ? layout.height[idx] : d.visual.length);
+    const hang = -(idx >= 0 ? layout.height[idx] : d.visual.length);
+    if (!d.recovery) return hang;
+    const age = sim.state.t - d.createdAt;
+    const [from, to] = RECOVERY_ANCHOR_SETTLE;
+    const k = Math.max(0, Math.min(1, (age - from) / (to - from)));
+    return hang * (1 - k * k * (3 - 2 * k));
   }
   if (d.visual.kind === 'fairing') {
     // the halves come off the top of whatever was still attached at jettison;
@@ -423,7 +447,8 @@ export function captureFrame(sim: Simulation): VisualFrame {
     outcome: d.outcome,
     createdAt: d.createdAt,
     anchor: d.rigid ? d.rigid.renderOffsetBody.x : debrisAnchor(sim, d, layout),
-    recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed } : undefined,
+    recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed, target: d.recovery.target, missDistance: d.recovery.missDistance,
+      landingBurn: !!d.recovery.landingStarted } : undefined,
     impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
   }));
   return {
@@ -433,6 +458,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     ...(s.eom ? { eom: cloneEom(s.eom) } : {}),
     status: s.status,
     ascentPhase: s.ascentPhase,
+    ...(s.descentPhase ? { descentPhase: s.descentPhase } : {}),
     note: s.note,
     r: clone(s.r),
     v: clone(s.v),
@@ -607,7 +633,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     return { ...cloneFrame(a), t: a.t + span * u };
   }
   const dt = span * u;
-  const ballistic = !a.rigid && (a.status === 'coast' || a.status === 'orbit') && (b.status === 'coast' || b.status === 'orbit') && a.thrust <= 0;
+  const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
+  const ballistic = !a.rigid && coasting(a) && coasting(b) && a.thrust <= 0;
   let r: Vec3;
   let v: Vec3;
   if (ballistic) {

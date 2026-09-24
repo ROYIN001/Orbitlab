@@ -33,9 +33,14 @@ import { allCases, caseKey, fleetCases, BEYOND_CAPABILITY, ARCHITECTURE, LAUNCH_
 import type { MissionConfig, OrbitSpec, VehicleSpec } from '../src/types';
 
 const spec = { id: 'testbed', name: 'Testbed-1', payloadLEO: 10000, payloadGTO: 3000, payloadSSO: 8000 } as unknown as VehicleSpec;
-// A synthetic range with a corridor as wide as the widest real one (Plesetsk
-// reaches 102.6°), so the rating rules below are never decided by geometry.
-const site = { id: 'testrange', name: 'Test Range', latitude: 28, minInclination: 28.5, maxInclination: 102.6 } as unknown as SiteExtra;
+// A synthetic range with a corridor about as wide as the widest real one
+// (Vandenberg's reaches 105.0°), so the rating rules below are never decided by
+// geometry. It needs a real azimuth window: the corridor is measured from the
+// window (`corridorReach`), and at 28° N a 340–120° window reaches 105.1°.
+const site = {
+  id: 'testrange', name: 'Test Range', latitude: 28, minInclination: 28.5, maxInclination: 105.1,
+  azimuthMin: 340, azimuthMax: 120, descendingForPolar: false,
+} as unknown as SiteExtra;
 const leo = { id: 'leo', name: 'LEO', perigee: 500e3, apogee: 500e3, inclination: 45, argPerigee: 0, raanMode: 'free' } as unknown as OrbitSpec;
 const gto = { ...leo, id: 'gto', apogee: 35786e3 } as OrbitSpec;
 const sso = { ...leo, id: 'sso', inclination: 97.8, raanMode: 'ltan' } as OrbitSpec;
@@ -55,6 +60,19 @@ describe('mission verdict', () => {
     expect(ratedPayload(spec, 'sso')).toEqual({ cap: 8000, cls: 'sso' });
     // no published SSO figure: judged on LEO and says which figure it used
     expect(ratedPayload({ ...spec, payloadSSO: undefined } as VehicleSpec, 'sso')).toEqual({ cap: 10000, cls: 'leo' });
+  });
+
+  it('warns when a suborbital ship would bring home more than it has been flown home with', () => {
+    const starship = vehicleById('starship');
+    const flight5 = { ...base, spec: starship, site: siteById('starbase'), inclinationDeg: 26.2,
+      orbit: { ...leo, id: 'custom', perigee: -15e3, apogee: 213e3, inclination: 26.2, suborbital: true } as OrbitSpec };
+    expect(missionVerdict({ ...flight5, payloadMass: 0 }).level).toBe('ok');
+    expect(missionVerdict({ ...flight5, payloadMass: 30000 }).level).toBe('ok');
+    const heavy = missionVerdict({ ...flight5, payloadMass: 60000 });
+    expect(heavy.level).toBe('warn');
+    expect(heavy.text).toMatch(/flown home with at most 30,000 kg/);
+    // an orbit keeps its payload; nothing to bring home
+    expect(missionVerdict({ ...flight5, orbit: leo, payloadMass: 60000 }).text).not.toMatch(/flown home/);
   });
 
   it('reports a comfortable margin as ready', () => {

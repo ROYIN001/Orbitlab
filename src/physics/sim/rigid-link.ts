@@ -140,7 +140,9 @@ export class RigidLink {
   heldCoastWindow(): number {
     const sim = this.sim, s = sim.state, runtime = sim.rigidRuntime;
     if (!runtime || !s.rigid || runtime.command.mode !== 'auto') return 0;
-    if (s.status !== 'coast' && s.status !== 'orbit') return 0;
+    // A returning ship holds its entry attitude on its coast, not prograde.
+    const descent = s.status === 'descent' && sim.shipDescent.phase === 'coast';
+    if (s.status !== 'coast' && s.status !== 'orbit' && !descent) return 0;
     if (s.altitude < HELD_ALTITUDE_M || sim.vehicle.inTransient(s.t)) return 0;
     const snapshot = runtime.snapshot;
     if (!snapshot || snapshot.engines.some((engine) => engine.thrustBudgetN > 0)) return 0;
@@ -149,8 +151,13 @@ export class RigidLink {
       if (!(s.nextBurnTime > s.t)) return 0;
       window = s.nextBurnTime - BURN_PREORIENT_TIME - HELD_BURN_MARGIN_S - s.t;
     }
+    if (descent) {
+      window = sim.shipDescent.coastWindow();
+      // Control ticks while anything is still to happen aboard (the vent).
+      if (sim.pending.length > 0) window = Math.min(window, sim.pending[0].t - s.t - 1);
+    }
     if (!(window > 0.02)) return 0;
-    const target = nosePointingTarget(s.rigid.attitudeQ, s.v);
+    const target = descent ? sim.shipDescent.coastAttitude(s.r, s.v) : nosePointingTarget(s.rigid.attitudeQ, s.v);
     if (quatAngularDistance(s.rigid.attitudeQ, target) > HELD_ATTITUDE_TOLERANCE_RAD) return 0;
     const rate = quatInverseRotate(s.rigid.attitudeQ, progradeRate(s.r, s.v));
     if (norm(sub(s.rigid.omegaBody, rate)) > HELD_RATE_TOLERANCE_RAD_S) return 0;

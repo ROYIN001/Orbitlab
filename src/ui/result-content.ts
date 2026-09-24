@@ -53,11 +53,13 @@ const CAUSES: Partial<Record<string, ResultCause>> = {
 export function assessMissionResult(input: ResultInput): MissionResultModel | null {
   const { state, plan, cfg } = input;
   const events = input.events.filter(event => event.t <= state.t + 1e-6).sort((a, b) => a.t - b.t);
-  const completed = [...events].reverse().find(event => event.key === 'evt.targetOrbit' || event.key === 'evt.offTargetOrbit');
+  // A suborbital target is judged at its cut-off, like an orbit at its insertion.
+  const completed = [...events].reverse().find(event => event.key === 'evt.targetOrbit' || event.key === 'evt.offTargetOrbit'
+    || event.key === 'evt.suborbitalTarget' || event.key === 'evt.suborbitalOffTarget');
   if (state.status !== 'failed' && !completed) return null;
 
   const outcome: ResultOutcome = state.status === 'failed' ? 'failed'
-    : completed!.key === 'evt.targetOrbit' ? 'target' : 'offTarget';
+    : completed!.key === 'evt.targetOrbit' || completed!.key === 'evt.suborbitalTarget' ? 'target' : 'offTarget';
   const terminalFailure = [...events].reverse().find(event => event.severity === 'fail');
   const outcomeTime = outcome === 'failed' ? terminalFailure?.t ?? state.t : completed!.t;
   // Orbital numbers are explicitly the displayed frame, not rounded event
@@ -106,7 +108,8 @@ export function assessMissionResult(input: ResultInput): MissionResultModel | nu
     const boosters = input.debris.filter(body => body.createdAt <= state.t + 1e-6 && body.recovery);
     // The view supplies frame-backed debris. Require the visible outcome event
     // as well, so accidentally supplied future landed/impact flags cannot leak.
-    const landed = boosters.filter(body => events.some(event => event.key === 'evt.boosterLanded' && event.params?.name === body.name));
+    const landed = boosters.filter(body => events.some(event => (event.key === 'evt.boosterLanded' || event.key === 'evt.boosterLandedZone'
+      || event.key === 'evt.boosterLandedShip' || event.key === 'evt.boosterCaught') && event.params?.name === body.name));
     const lost = boosters.filter(body => events.some(event => event.key === 'evt.stageImpact' && event.params?.name === body.name));
     if (boosters.length === 0) recovery = 'pending';
     else if (landed.length === boosters.length) recovery = 'landed';

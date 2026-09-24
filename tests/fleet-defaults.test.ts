@@ -75,7 +75,7 @@ import { VEHICLES } from '../src/data/vehicles';
 import { Simulation } from '../src/physics/simulation';
 import { DEFAULT_GUIDANCE, DEFAULT_FAILURE } from '../src/physics/defaults';
 import {
-  azimuthAllowedFor, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
+  azimuthAllowedFor, azimuthInWindow, planMission, resolveTarget, ASCENT_MARGIN_REQUIRED, DIRECT_INSERTION_CEILING,
   ORBIT_INSERTION_FLOOR, kickStageSink, launchWindows,
 } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
@@ -142,9 +142,11 @@ describe('excluded combinations', () => {
     // The flown set is an *intersection*, not a range-safety statement on its
     // own: a vehicle appears here only if (a) its first site's azimuth window
     // contains the retrograde launch, directly or with a dogleg — Plesetsk
-    // (330–90°), Mahia (90–200°), Jiuquan (90–200°) and Taiyuan (144–200°)
-    // directly, Kourou (350–94°) and Tanegashima (90–190°) with a 1.2° and
-    // 1.9° dogleg — and (b) at least one of its three `sso` rows survives the
+    // (330–90°), Vostochny (340–95°), Vandenberg (147–201°), Mahia and Jiuquan
+    // (90–200°) and Taiyuan (144–200°) directly, Kourou (350–94°) and
+    // Tanegashima (90–190°) with a 1.2° and 1.9° dogleg (Sriharikota's window
+    // stops 11° short, beyond the 5° a dogleg turns here) — and (b) at least one
+    // of its three `sso` rows survives the
     // capability and architecture tables. Electron keeps all three (its rows
     // are graded against its own 200 kg sun-synchronous rating) and Angara-A5
     // keeps one; Vega-C, H-IIA and H3 keep all three and Ariane 64 two. Long
@@ -1038,6 +1040,40 @@ describe('range safety', () => {
       expect(inc, 'the sso preset must be retrograde').toBeGreaterThan(90 * DEG);
     }
   });
+
+  /**
+   * ...for every row of the matrix, not only the sun-synchronous ones, and
+   * against the heading the plan FLIES rather than one recomputed here.
+   *
+   * Until this wave 38 accepted rows flew a heading outside their own site's
+   * window while the plan called them reachable: the planner always took the
+   * northbound solution below 75°, so H3 and H-IIA left Tanegashima on 88.1°
+   * against a 90–190° window, and every ISS-plane row from Tanegashima,
+   * Wenchang, Sriharikota and Mahia went north-east into a sector those ranges
+   * close. They now fly the mirror heading, which the window licenses and which
+   * reaches the same plane (tests/range-safety.test.ts has the measurement).
+   * A row flown with a dogleg leaves on the window's edge itself, which counts
+   * as inside to the 0.05° the plan's own insertion orbit moves a heading by.
+   */
+  it('every row the matrix flies leaves on a heading its site licenses', () => {
+    const outside: string[] = [];
+    for (const c of fleetCases()) {
+      const site = siteById(c.site);
+      const orbit = orbitById(c.orbit);
+      const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
+      const plan = planMission({
+        vehicleId: c.vehicle, satelliteId: 'cubesats', siteId: c.site, orbit,
+        launchTime: orbit.raanMode === 'free' ? LAUNCH_TIME : launchWindows(orbit, site, LAUNCH_TIME, 1)[0].time,
+        guidance: { ...DEFAULT_GUIDANCE, ...(spec.guidanceDefaults ?? {}) }, guidanceResolved: true,
+        failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: c.mass,
+      }, site, spec);
+      expect(plan.inclinationReachable, caseKey(c)).toBe(true);
+      if (![0, 0.05, -0.05].some((d) => azimuthInWindow(site, plan.azimuthRotating + d * DEG))) {
+        outside.push(`${caseKey(c)}: ${(plan.azimuthRotating * RAD).toFixed(2)}° from ${site.id} (${site.azimuthMin}–${site.azimuthMax}°)`);
+      }
+    }
+    expect(outside, outside.join('\n')).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1144,9 +1180,11 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 103.8, ap: 729.8 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
   // rating. Nothing closes, at any altitude or any payload. Re-measured when
-  // Jiuquan's 41° flights moved to the south-east solution inside the site's
-  // 90–200° corridor (they used to leave north of east, across Mongolia): the
-  // cells moved by up to 6 km of apoapsis and none changed its verdict. The
+  // the planner started flying the heading the site's window licenses: the
+  // 'site' inclination (41.0°) used to leave Jiuquan on 87.7°, north of its
+  // 90–200° window across Mongolia, and now leaves on the 92.3° southbound
+  // mirror (tests/range-safety.test.ts); the cells moved by up to 6 km of
+  // apoapsis and none changed its verdict. The
   // engine transients (P02) moved them by up to 9 km of apoapsis and 3 km of
   // periapsis, again with no verdict changing: a single burn to depletion on a
   // lofted arc is where a second's difference in the second stage's cut-off

@@ -203,13 +203,13 @@ const soyuzBoosters = (): BoosterGroupSpec[] => ([{
 /** Blok A as flown by Soyuz-2.1a: 87 000 kg, held to the published 2.1a clock. */
 const soyuz21aCore = (): StageSpec => ({
   id: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 87000, engine: RD108A,
-  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c',
+  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core',
   boosters: soyuzBoosters(),
 });
 /** Blok A with the published 90 100 kg load (63 800 LOX + 26 300 RP-1). */
 const soyuz21bCore = (): StageSpec => ({
   id: 'blokA', name: 'Blok A (core)', dryMass: 6545, propellantMass: 90100, engine: RD108A,
-  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c',
+  diameter: 2.95, length: 27.8, color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core',
   boosters: soyuzBoosters(),
 });
 
@@ -274,7 +274,7 @@ export const VEHICLES: VehicleSpec[] = [
     fairing: { mass: 1000, diameter: 3.7, length: 10.1, sepAltitude: 95e3, sepTime: 157, color: '#e8e8e8' },
     stages: [
       soyuz21aCore(),
-      { id: 'blokI', name: 'Blok I (3rd stage, RD-0110)', dryMass: 2410, propellantMass: 22900, engine: RD0110, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd' },
+      { id: 'blokI', name: 'Blok I (3rd stage, RD-0110)', dryMass: 2410, propellantMass: 22900, engine: RD0110, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper' },
     ],
     sites: ['baikonur', 'plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 60,
     crewCapable: true,
@@ -303,7 +303,7 @@ export const VEHICLES: VehicleSpec[] = [
       // The audited 90 100 kg Blok A load — see the comment on the two core
       // helpers above for why 2.1a keeps 87 000 kg and only 2.1b takes this.
       soyuz21bCore(),
-      { id: 'blokI', name: 'Blok I (3rd stage)', dryMass: 2355, propellantMass: 23000, engine: RD0124, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd' },
+      { id: 'blokI', name: 'Blok I (3rd stage)', dryMass: 2355, propellantMass: 23000, engine: RD0124, diameter: 2.66, length: 6.7, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper' },
       { id: 'fregat', name: 'Fregat-M', dryMass: 1050, propellantMass: 5350, engine: S592, diameter: 3.35, length: 1.5, restartable: true, sepDelay: 2, ignitionDelay: 3, color: '#b8b0a0' },
     ],
     sites: ['baikonur', 'plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 60,
@@ -385,7 +385,7 @@ export const VEHICLES: VehicleSpec[] = [
       { id: 's1', name: 'First stage (9× Merlin 1D)', dryMass: 25600, propellantMass: 395700, engine: MERLIN1D, diameter: 3.66, length: 42, color: '#f2f2f2', accentColor: '#1a1a1a', gridFins: true, legs: true },
       f9Stage2(),
     ],
-    sites: ['cape', 'vandenberg'], maxQ: 40e3, maxAccel: 45,
+    sites: ['cape', 'ksc39a', 'vandenberg'], maxQ: 40e3, maxAccel: 45,
     // 22 kPa, not the real ~33 kPa peak, and deliberately so. Raising it was
     // measured across 26/30/33/36 kPa and with the bucket removed (table in
     // docs/PHYSICS.md §6a): the max-Q marker only reaches T+59 s even with no
@@ -395,7 +395,10 @@ export const VEHICLES: VehicleSpec[] = [
     // fairing at T+189 s, both OUTSIDE their published windows. The change
     // trades one disclosed disagreement for three.
     maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.75 },
-    recoverable: true, recoveryReserve: 0.12, crewCapable: true,
+    // A return to the launch site keeps 15 % instead: measured on Bandwagon-1
+    // (1.3 t to 590 km at 45.4°), 13 % is the least that lands on LZ-1 in the
+    // point-mass model, and 15 % touches down with 12.7 t to spare.
+    recoverable: true, recoveryReserve: 0.12, returnReserve: 0.15, crewCapable: true,
     // Shallow kick and a slow pitch program put MECO near 65 km, which is what the published timeline implies.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     notes: 'Partially reusable; enabling booster recovery reserves propellant for the boost-back/landing burns.',
@@ -418,8 +421,11 @@ export const VEHICLES: VehicleSpec[] = [
       },
       f9Stage2(),
     ],
-    sites: ['cape'], maxQ: 40e3, maxAccel: 45,
-    recoverable: true, recoveryReserve: 0.12,
+    sites: ['cape', 'ksc39a'], maxQ: 40e3, maxAccel: 45,
+    // Side boosters flown back to LZ-1 and LZ-2 keep 15 %: at 12 % they run
+    // into their landing reserve before the boostback is done (Arabsat-6A,
+    // 6.5 t to GTO, point-mass model).
+    recoverable: true, recoveryReserve: 0.12, returnReserve: 0.15,
     // As Falcon 9, with a loft for the long second-stage burn under a heavy payload.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
     notes: 'Three Falcon 9 cores; the center core throttles down until side-booster separation.',
@@ -792,7 +798,10 @@ export const VEHICLES: VehicleSpec[] = [
     ],
     sites: ['starbase', 'cape'], maxQ: 35e3, maxAccel: 40,
     maxQThrottle: { qStart: 25e3, qEnd: 25e3, throttle: 0.8 },
-    recoverable: true, recoveryReserve: 0.07, crewCapable: true,
+    // Flown back to the tower's arms Super Heavy keeps 11 %: 9 % is the least
+    // the arms catch it with (point-mass, 15.6 t to a 500 km orbit), 11 %
+    // arrives with 72 t to spare.
+    recoverable: true, recoveryReserve: 0.07, returnReserve: 0.11, crewCapable: true,
     // Very high T/W and a hot-staged ship; a shallow kick keeps max-Q inside the 35 kPa placard.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     notes: 'Fully reusable two-stage methalox system; hot-staged ship, integrated payload bay (no fairing).',

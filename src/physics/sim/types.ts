@@ -7,8 +7,36 @@ import type { AscentPhase } from '../guidance';
 import type { BurnPlan } from '../mission';
 import type { EomRecord } from '../eom';
 import type { ExplicitGuidanceRecord } from '../explicit-guidance';
+import type { ReturnTarget } from './return-guidance';
 
-export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'failed';
+/** What a returning stage's guidance carries from one step to the next. */
+export interface ReturnGuidanceMemory {
+  /** mission time of the last solution, s */
+  t: number;
+  /** thrust direction it asked for (ECI) */
+  dir: Vec3;
+  /** horizontal velocity still needed, m/s */
+  dvNeeded: number;
+  /** the burn is down to its trim on the centre engine */
+  trim: boolean;
+  /** the entry burn's horizontal correction, m/s² (ECI) */
+  lateral?: Vec3;
+}
+
+/**
+ * `descent`: after a suborbital cut-off the last stage flies itself back — the
+ * coast, the entry, the flip and the landing burn (`ShipDescent`). `landed`: it
+ * has come down on the surface, intact or not, and the clock runs on with it
+ * sitting there. Neither is ever reached by a flight to orbit.
+ */
+export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'descent' | 'landed' | 'failed';
+
+/**
+ * Where a returning ship is in its descent: coasting above the air, entering
+ * belly first, falling belly first below the speed of sound, swinging upright
+ * on its engines, and braking to the surface.
+ */
+export type DescentPhase = 'coast' | 'entry' | 'bellyflop' | 'flip' | 'landing';
 
 export type EventSeverity = 'info' | 'major' | 'warn' | 'fail' | 'success';
 
@@ -50,6 +78,8 @@ export interface DebrisVisual {
   length: number;
   color: string;
   conicalTop?: boolean;
+  /** `StageSpec.profile`, so a spent stage keeps the shape it was drawn with */
+  profile?: 'r7Core' | 'r7Upper';
   kind: 'stage' | 'booster' | 'fairing' | 'upperStage';
 }
 
@@ -80,10 +110,31 @@ export interface Debris {
     landingReserve: number;
     /** the landing burn has begun (its bang-bang throttling keeps the plume lit) */
     landingStarted?: boolean;
-    phase: 'coast' | 'entry' | 'landing';
+    /**
+     * `flip` and `boostback` are flown only by a stage returning to a landing
+     * zone: it turns round after separation and burns back towards the site.
+     */
+    phase: 'coast' | 'flip' | 'boostback' | 'entry' | 'landing';
+    /** where the stage is flown to; absent, it lands wherever it comes down */
+    target?: ReturnTarget;
+    /** horizontal distance from the target at touchdown, m */
+    missDistance?: number;
+    /** a targeted return has fired its entry burn (it waits `armed` until then) */
+    entryFlown?: boolean;
+    /** a tower's arms closed on the booster */
+    caught?: boolean;
+    /** the booster came down past the tower's catch height outside its arms */
+    catchPassed?: boolean;
+    /** @internal the boostback solution in use and when it was made */
+    guidance?: ReturnGuidanceMemory;
   };
   outcome?: 'impact' | 'landed' | 'orbit' | 'burnup';
   impact?: { lat: number; lon: number };
+  /**
+   * Once it has landed: the mission time its stored state is for. From there
+   * it only turns with the Earth (see `DebrisTracker.stepDebris`).
+   */
+  restT?: number;
 }
 
 export interface Losses {
@@ -147,6 +198,8 @@ export interface SimState {
   vz: number;
   /** progress note key for the HUD */
   note: string;
+  /** a suborbital flight's return, while its status is `descent` */
+  descentPhase?: DescentPhase | null;
 }
 
 export interface PendingAction {

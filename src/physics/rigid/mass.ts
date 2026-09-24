@@ -1,5 +1,6 @@
 /** Variable mass/CG/full inertia from disclosed component estimates. Pure: never
  * consumes fuel, changes staging, or mutates the legacy VehicleModel. */
+import { shipFlapSurfaces, type ControlSurfaceSpec } from './surfaces';
 import type { BoosterGroupSpec, StageSpec } from '../../types';
 import type { VehicleModel } from '../vehicle';
 import { engineMassFlow, engineThrust } from '../vehicle';
@@ -7,7 +8,7 @@ import { add, scale, sub, v3, type Vec3 } from '../vec3';
 import { dragCoefficient, tumblingDragCoefficient } from '../aero';
 import { assertSPD, type Mat3 } from './math';
 import type { Aero6DofSpec } from './aero';
-import { AERO_MACH, ascentAeroTable, detachedAeroTable, type AeroTable } from './aero-tables';
+import { AERO_MACH, ascentAeroTable, detachedAeroTable, shipDescentAeroTable, type AeroTable } from './aero-tables';
 import {
   chamberGeometry, getRigidVehicleGeometry, PROPELLANT_DENSITY, PROPELLANT_LOADS, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
   type ChamberGeometry, type RcsReservoir, type RcsThrusterGeometry, type RigidVehicleGeometry,
@@ -40,6 +41,8 @@ export interface RigidOperatingState {
 }
 export interface RigidVehicleSnapshot extends MassProperties {
   engines: BudgetedEngine[]; rcs: RcsReservoir[]; rcsThrusters: RcsThrusterGeometry[];
+  /** Aerodynamic control surfaces (a returning stage's grid fins); absent on every other body. */
+  surfaces?: ControlSurfaceSpec[];
   geometry: RigidVehicleGeometry; activeBase: Vec3; aero: Aero6DofSpec;
   modelId: string; dataRevision: string; assumptions: readonly string[];
 }
@@ -158,6 +161,30 @@ export function stageMassComponents(
   return components;
 }
 
+/**
+ * A ship flying itself back holds its landing propellant in its header tanks,
+ * not at the bottom of its main tanks: the liquid oxygen header in the nose
+ * and the methane header at the top of the oxygen tank, as Starship's are.
+ * That is what puts the centre of mass of a nearly empty ship near its middle,
+ * where the flaps can hold it belly first. Positions (88 % and 56 % of the
+ * length) and the headers' 1.6 m radius are estimates; everything but the
+ * propellant is `stageMassComponents` unchanged.
+ */
+export function headerTankComponents(stage: StageSpec, propellant: number, base: Vec3, ownerId = stage.id): MassComponent[] {
+  checkPropellant(propellant, stage.propellantMass);
+  if (!(propellant > 0)) return [];
+  const load = PROPELLANT_LOADS[stage.id];
+  const ratio = load?.mixtureRatio ?? 3.6;
+  const [oxDensity, fuelDensity] = PROPELLANT_DENSITY[load?.family === 'solid' || !load ? 'methalox' : load.family];
+  const of = ratio / (1 + ratio);
+  const radius = Math.min(1.6, 0.35 * stage.diameter / 2);
+  const header = (kind: 'fuel' | 'oxidizer', m: number, density: number, x: number): MassComponent => {
+    const len = Math.max(0.1, m / density / (Math.PI * radius * radius));
+    return { id: `${ownerId}.${kind}`, ownerId, mass: m, centerBody: add(base, v3(x, 0, 0)), inertiaAtCenter: cylinderInertia(m, radius, len), kind };
+  };
+  return [header('oxidizer', propellant * of, oxDensity, 0.88 * stage.length), header('fuel', propellant * (1 - of), fuelDensity, 0.56 * stage.length)];
+}
+
 function budgetEngines(geometry: readonly ChamberGeometry[], thrustPerEngine: number, flowPerEngine: number,
   count: number, engineFraction = 1, upstreamThrottle = 1, shutEngines?: readonly number[]): BudgetedEngine[] {
   // Consume the failed engine budget from index 0 first: off-axis Falcon fault
@@ -268,20 +295,31 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       && ((!st.cutoff && !st.burnedOut) || (stepStart !== undefined && vehicle.coreTailingOff(st, stepStart)));
     const throttle = coreOn ? op.coreThrottle ?? 0 : 0;
     const offset = op.propellantOffsetSeconds ?? 0;
-    const massFlow = engineMassFlow(st.spec.engine) * st.spec.engine.count * fraction(st.engineFraction) * throttle;
+    const massFlow = st.litEngines ? engineMassFlow(st.spec.engine) * st.litEngines.length * fraction(st.engineFraction) * throttle
+      : engineMassFlow(st.spec.engine) * st.spec.engine.count * fraction(st.engineFraction) * throttle;
     const propellantFloor = st.index === 0 ? vehicle.recoveryReserve * st.spec.propellantMass : 0;
     const propellant = Math.max(Math.min(st.propellant, propellantFloor), st.propellant - massFlow * offset);
-    components.push(...stageMassComponents(st.spec, propellant, base, st.spec.id,
-      { ...reservoir, consumedKg: consumed }));
-    engines.push(...budgetEngines(chamberGeometry(st.spec.id, st.spec.id, st.spec.engine, st.spec.diameter / 2, base),
+    if (st.descent) {
+      components.push(...stageMassComponents(st.spec, 0, base, st.spec.id, { ...reservoir, consumedKg: consumed }),
+        ...headerTankComponents(st.spec, propellant, base));
+    } else {
+      components.push(...stageMassComponents(st.spec, propellant, base, st.spec.id,
+        { ...reservoir, consumedKg: consumed }));
+    }
+    const budgeted = budgetEngines(chamberGeometry(st.spec.id, st.spec.id, st.spec.engine, st.spec.diameter / 2, base),
       engineThrust(st.spec.engine, pressure) * throttle, engineMassFlow(st.spec.engine) * throttle,
-      st.spec.engine.count, st.engineFraction, throttle, st.shutEngines));
+      st.spec.engine.count, st.engineFraction, throttle, st.shutEngines);
+    // Engines left cold (`StageState.litEngines`) make no thrust and burn nothing.
+    if (st.litEngines) for (const engine of budgeted) {
+      if (!st.litEngines.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }
+    }
+    engines.push(...budgeted);
     st.boosters.forEach((b, groupIndex) => {
       if (!b.attached) return;
       const boosterOn = st.index === vehicle.activeIndex && b.ignited && vehicle.usableBoosterPropellant(b) > 0
         && (!b.burnedOut || (stepStart !== undefined && vehicle.boosterTailingOff(b, stepStart)));
       const bt = boosterOn ? op.boosterThrottles?.[groupIndex] ?? op.boosterThrottle ?? 0 : 0;
-      const boosterPropellant = Math.max(Math.min(b.propellant, vehicle.recoveryReserve * b.spec.propellantMass),
+      const boosterPropellant = Math.max(Math.min(b.propellant, vehicle.boosterRecoveryReserve * b.spec.propellantMass),
         b.propellant - engineMassFlow(b.spec.engine) * b.spec.engine.count * bt * offset);
       const placements = geometry.boosters.filter(p => p.stageIndex === st.index && p.groupIndex === groupIndex);
       for (const placement of placements) {
@@ -312,6 +350,20 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
   // remains a finite body after separation and must not become drag-free.
   const area = firstAttached && vehicle.payloadAttached && vehicle.payloadMass > 0
     ? Math.PI * (diameter / 2) ** 2 : vehicle.frontalArea();
+  const returning = vehicle.active?.descent ? vehicle.active : undefined;
+  if (returning) {
+    // A ship flying itself back alone: its belly-first table, and its flaps.
+    const spec = returning.spec;
+    const table = shipDescentTable(spec, area, activeBase);
+    const aero = aeroEstimate(area, spec.length, activeBase, spec.diameter, table);
+    return { ...properties, engines, rcs,
+      rcsThrusters: activeReservoir?.thrusters ?? [], geometry, activeBase,
+      surfaces: spec.flaps ? shipFlapSurfaces(spec.id, spec.length, spec.diameter).map((flap) => ({ ...flap, positionBody: add(flap.positionBody, activeBase) })) : undefined,
+      // Belly first is what the table is built for, at any angle, and the
+      // entry starts above Mach 25, where its last column is simply carried on.
+      aero: { ...aero, validAngleRad: Math.PI, cdMach: [...aero.cdMach, [DESCENT_MACH_CEILING, dragCoefficient(DESCENT_MACH_CEILING)] as const] },
+      modelId: 'quasi-steady', dataRevision: RIGID_DATA_REVISION, assumptions: RIGID_DATA_ASSUMPTIONS };
+  }
   const { table, cd } = stackAeroTable(vehicle, geometry, area, length, diameter, activeBase);
   return { ...properties, engines, rcs,
     rcsThrusters: activeReservoir?.thrusters ?? [], geometry, activeBase,
@@ -319,14 +371,30 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     modelId: 'quasi-steady', dataRevision: RIGID_DATA_REVISION, assumptions: RIGID_DATA_ASSUMPTIONS };
 }
 
+/** Fastest a returning ship meets the air, as a Mach number the descent table is flown to. */
+const DESCENT_MACH_CEILING = 30;
+
+function shipDescentTable(stage: StageSpec, area: number, base: Vec3): AeroTable {
+  const key = `descent|${stage.id}|${stage.length}|${stage.diameter}|${area}|${base.x}`;
+  let table = aeroTables.get(key);
+  if (!table) {
+    table = shiftTable(shipDescentAeroTable(stage.length, stage.diameter, area), base.x);
+    aeroTables.set(key, table);
+  }
+  return table;
+}
+
 /** Independent detached stage (Falcon recovery or a ballistic Soyuz body).
  * No implicit boosters, fairing or payload. Consume retained propellant outside
  * this pure factory, and provide actual clamped throttle for a recovery burn.
  */
 export function buildDetachedStage(vehicleId: string, stage: StageSpec, propellant: number,
-  op: RigidOperatingState & { engineFraction?: number; activeEngineIndices?: readonly number[] } = {}): RigidVehicleSnapshot {
+  op: RigidOperatingState & { engineFraction?: number; activeEngineIndices?: readonly number[];
+    /** a strap-on flown back: the attached model gives strap-ons no attitude thrusters, and separation adds none */
+    withoutRcs?: boolean } = {}): RigidVehicleSnapshot {
   validateOperating(op);
-  const reservoir = rcsGeometry(vehicleId, stage);
+  const reservoir = op.withoutRcs ? { stageId: stage.id, initialPropellantKg: 0, centerBody: v3(0.85 * stage.length, 0, 0), thrusters: [] }
+    : rcsGeometry(vehicleId, stage);
   const throttle = propellant > 0 ? op.coreThrottle ?? 0 : 0;
   const engines = budgetEngines(chamberGeometry(stage.id, stage.id, stage.engine, stage.diameter / 2),
     engineThrust(stage.engine, op.pressure ?? 0) * throttle, engineMassFlow(stage.engine) * throttle,

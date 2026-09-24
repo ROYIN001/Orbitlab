@@ -145,6 +145,7 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^vehicle\.[a-z0-9]+\.(notes|manufacturer)$/, from: 'ui/names.ts vehicleNotes / vehicleManufacturer' },
   { pattern: /^sat\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts satelliteName' },
   { pattern: /^site\.[a-z0-9]+\.name$/, from: 'ui/names.ts siteName' },
+  { pattern: /^zone\.[a-z0-9]+\.name$/, from: 'ui/names.ts zoneName' },
   { pattern: /^stage\.[a-z0-9]+\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts stageName' },
   // G08: the control system's failures, by kind, group and state.
   { pattern: /^fault\.(kind|about)\.[a-zA-Z]+$/, from: 'ui/fault-names.ts faultKindName; ui/panel.ts faultRow: t(`fault.about.${fault.kind}`)' },

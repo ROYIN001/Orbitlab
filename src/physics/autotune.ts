@@ -159,7 +159,7 @@ export const DEFAULT_LOFTS = [0, 80e3, 150e3, 250e3];
 export function needsLoftSearch(cfg: MissionConfig): boolean {
   const spec = vehicleById(cfg.vehicleId);
   const sat = satelliteById(cfg.satelliteId);
-  const vm = new VehicleModel(spec, cfg.payloadMassOverride ?? sat.mass, cfg.boosterRecovery, sat);
+  const vm = new VehicleModel(spec, cfg.payloadMassOverride ?? sat.mass, cfg.boosterRecovery, sat, cfg.recoveryPlan);
   const a = vm.nextStageAccel(false);
   return a > 0 && a < 4.8;
 }

@@ -6,6 +6,7 @@ import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
 import { TrailLine, OrbitLine } from './render/lines';
 import { LaunchPadView } from './render/launchpad';
+import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
@@ -22,7 +23,7 @@ import { HomeScreen } from './ui/home';
 import './ui/modes.css';
 import { WatchView } from './ui/watch';
 import { experienceForMode, hashForMode, initialMode, modeFromHash, saveMode, type AppMode } from './ui/app-mode';
-import { FEATURED_WATCH_MISSION, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
+import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
@@ -32,7 +33,7 @@ import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
-import { R_EARTH } from './physics/constants';
+import { OMEGA_EARTH, R_EARTH } from './physics/constants';
 import { normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
@@ -93,6 +94,10 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
   if (frame.status === 'ascent') return frame.activeStageIndex > 0 ? 'upper' : 'ascent';
   if (frame.status === 'coast') return 'coast';
   if (frame.status === 'burn') return 'burn';
+  // A ship flown home: the coast across the planet, then everything from the
+  // entry interface to the water.
+  if (frame.status === 'descent') return frame.descentPhase === 'coast' ? 'coast' : 'descent';
+  if (frame.status === 'landed') return 'descent';
   return frame.payloadSeparated ? 'deployment' : 'orbit';
 }
 
@@ -103,6 +108,9 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
  * map is a chart rather than a picture.
  */
 const WATCH_CAMERA_PLAN: CameraPlan = { ...DEFAULT_CAMERA_PLAN, upper: 'exterior', deployment: 'space' };
+
+/** Mission time the viewer stays on a stage flown home after it is down, s. */
+const WATCH_FOCUS_HOLD = 10;
 
 const WARPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000];
 /**
@@ -173,6 +181,8 @@ class App {
   simView: FrameSimView | null = null;
   rocket: RocketView | null = null;
   pad: LaunchPadView | null = null;
+  /** landing zones, a drone ship, the sea a ship comes home to */
+  private recoveryScenery: RecoverySceneryView | null = null;
   debrisView!: DebrisView;
   trail = new TrailLine(0x8be5cd);
   predicted = new OrbitLine(0xffffff, true);
@@ -231,6 +241,25 @@ class App {
   private bz = new THREE.Vector3();
   private backDir = new THREE.Vector3(0, -1, 0);
   private originV = new THREE.Vector3();
+  /**
+   * The body the camera follows when it is not the vehicle: a stage flown
+   * home, by its debris id. Null follows the vehicle. When the body is no
+   * longer in the frame (not yet separated, or scrubbed back before it was)
+   * the vehicle is followed.
+   */
+  focusDebrisId: number | null = null;
+  /**
+   * What the viewer's camera follows: its own programme (the rocket, and each
+   * stage flown home for its entry, landing and a few seconds after), or
+   * whichever the viewer picked with the follow button, for the rest of the
+   * flight.
+   */
+  private watchFollow: 'auto' | 'rocket' | 'booster' = 'auto';
+  /** mission time the followed stage was first seen down, s (-1 while it flies) */
+  private focusDownT = -1;
+  /** the viewer mission's payload as flown (i18n key), in place of the catalogue name */
+  private watchPayloadKey: string | null = null;
+  private vehiclePos = new THREE.Vector3();
   private earthC = new THREE.Vector3();
 
   constructor() {
@@ -276,6 +305,7 @@ class App {
       togglePlay: () => this.togglePlay(),
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go('explore'),
+      follow: (target) => { this.watchFollow = target; },
     });
     this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
@@ -340,7 +370,11 @@ class App {
     if (mode === 'watch' && previous !== 'watch') {
       this.watch.enter(!this.playing && (this.shown?.status ?? 'prelaunch') === 'prelaunch');
     }
-    if (mode !== 'watch') this.watch.closePicker();
+    if (mode !== 'watch') {
+      this.watch.closePicker();
+      // the workspace follows the vehicle; the viewer picks its own target again
+      this.focusDebrisId = null;
+    }
   }
 
   /** Load one of the viewer's launches and fly it. */
@@ -352,6 +386,8 @@ class App {
     this.launch(this.panel.getConfig());
     this.setWarp(1);
     this.watch.begin(id);
+    this.watchPayloadKey = watchMissionById(id)?.payloadKey ?? null;
+    this.updateMissionName();
   }
 
   /** Read-only diagnostics for browser verification; heap availability depends
@@ -621,7 +657,8 @@ class App {
     const cfg = this.panel.state;
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
-    this.narration.setMission(vehicleById(cfg.vehicleId).name, satelliteName(satelliteById(cfg.satelliteId)));
+    this.narration.setMission(vehicleById(cfg.vehicleId).name,
+      this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(satelliteById(cfg.satelliteId)));
   }
 
   setCamera(mode: CameraMode): void {
@@ -750,6 +787,9 @@ class App {
     this.timeline.reset();
     this.narration.reset();
     this.watch.reset();
+    this.watchPayloadKey = null;
+    this.watchFollow = 'auto';
+    this.focusDownT = -1;
     this.trailIdx = -1;
     this.wasLive = true;
     this.lastPhase = null;
@@ -809,6 +849,13 @@ class App {
     this.scene.scene.add(this.rocket.group, this.rocket.worldGroup);
     this.pad = new LaunchPadView(sim.site, sim.vehicleSpec);
     this.scene.scene.add(this.pad.group);
+    if (this.recoveryScenery) {
+      this.scene.scene.remove(this.recoveryScenery.group);
+      this.recoveryScenery.dispose();
+    }
+    this.recoveryScenery = new RecoverySceneryView(sim.site);
+    this.scene.scene.add(this.recoveryScenery.group);
+    this.focusDebrisId = null;
     this.cams.reset();
     this.debrisView.clear();
     this.trail.clear();
@@ -968,6 +1015,11 @@ class App {
         this.watch.update(this.shown, this.recorder.events, {
           playing: this.playing && this.player.live,
           vehicleId: sim?.vehicleSpec.id ?? '',
+          follow: {
+            available: !!this.shown?.debris.some((d) => d.alive && d.recovery?.target),
+            booster: this.focusDebrisId !== null,
+          },
+          subject: this.watchSubject(),
         });
       }
     }
@@ -1074,10 +1126,56 @@ class App {
    * replaying. A manual choice is never undone here — it simply lasts until
    * the next phase change, which is how the Codex version behaved.
    */
+  /**
+   * Point the viewer's camera at the rocket or at a stage flying home (see
+   * `watchFollow`), cutting to the exterior view on the stage and back to the
+   * programme's view for the rocket's phase when it lets go.
+   */
+  private steerWatchFocus(frame: VisualFrame): void {
+    const next = this.watchFocusTarget(frame);
+    if (next === this.focusDebrisId) return;
+    this.focusDebrisId = next;
+    this.focusDownT = -1;
+    const phase = flightPhase(frame);
+    this.setCamera(next !== null ? 'exterior' : phase ? WATCH_CAMERA_PLAN[phase] : this.camMode);
+    this.cams.reset();
+  }
+
+  /** Height above the ground and speed over it of the stage the viewer follows. */
+  private watchSubject(): { altitude: number; speed: number } | undefined {
+    const d = this.focusDebrisId === null ? undefined : this.shown?.debris.find((x) => x.id === this.focusDebrisId);
+    if (!d || !this.sim) return undefined;
+    const r = Math.hypot(d.r.x, d.r.y, d.r.z);
+    // ω × r with ω along +z, as `groundSpeed` does for the vehicle
+    const vx = d.v.x + OMEGA_EARTH * d.r.y, vy = d.v.y - OMEGA_EARTH * d.r.x;
+    return { altitude: Math.max(0, r - R_EARTH - this.sim.groundElevation(d.r)), speed: d.alive ? Math.hypot(vx, vy, d.v.z) : 0 };
+  }
+
+  /** The stage the viewer's camera should be on, or null for the rocket. */
+  private watchFocusTarget(frame: VisualFrame): number | null {
+    if (this.watchFollow === 'rocket') return null;
+    const home = frame.debris.filter((d) => d.recovery?.target && (d.alive || d.outcome === 'landed'));
+    const current = home.find((d) => d.id === this.focusDebrisId);
+    if (this.watchFollow === 'booster') return current?.id ?? home.find((d) => d.alive)?.id ?? home[0]?.id ?? null;
+    if (current) {
+      if (current.alive) return current.id;
+      // held for a few seconds once it is down (a backward seek starts the wait again)
+      if (this.focusDownT < 0 || frame.t < this.focusDownT) this.focusDownT = frame.t;
+      if (frame.t - this.focusDownT < WATCH_FOCUS_HOLD) return current.id;
+    }
+    // A stage is worth cutting to once it is back in the air: its entry burn,
+    // the fall and the landing.
+    const next = home.find((d) => d.alive && (d.recovery!.phase === 'entry' || d.recovery!.phase === 'landing'));
+    return next?.id ?? null;
+  }
+
   private followCameraPlan(frame: VisualFrame): void {
     const phase = flightPhase(frame);
     if (phase === null || phase === this.lastPhase) return;
     this.lastPhase = phase;
+    // The phases are the vehicle's: while a stage flown home is being
+    // followed, they say nothing about where the camera should be.
+    if (this.focusDebrisId !== null && frame.debris.some((d) => d.id === this.focusDebrisId)) return;
     // The viewer always directs its own camera; the workspace follows the
     // user's programme and its on/off switch.
     if (this.lean) this.setCamera(WATCH_CAMERA_PLAN[phase]);
@@ -1100,6 +1198,7 @@ class App {
     if (this.player.live) this.player.syncLive(frame.t);
     this.shown = frame;
     view.setFrame(frame);
+    if (this.mode === 'watch') this.steerWatchFocus(frame);
     this.followCameraPlan(frame);
     if (this.wasLive !== this.player.live) {
       this.wasLive = this.player.live;
@@ -1110,7 +1209,9 @@ class App {
     }
     this.timeline.setEvents(this.recorder.events);
     this.timeline.update(this.recorder.startTime, this.recorder.headTime, this.player.cursor, this.player.live);
-    scene.origin = { x: frame.r.x, y: frame.r.y, z: frame.r.z };
+    const focus = this.focusDebrisId === null ? undefined : frame.debris.find((d) => d.id === this.focusDebrisId);
+    const focusR = focus ? focus.r : frame.r;
+    scene.origin = { x: focusR.x, y: focusR.y, z: focusR.z };
     // the sun (and therefore every sky/exposure/shading decision) comes from the
     // frame's own epoch, so a replayed frame relights identically
     const sunDir = sunDirectionEci(frame.jd);
@@ -1123,6 +1224,7 @@ class App {
     // own light on the stack; both are what a night launch is lit by.
     const night = 1 - dayFactorAt(dot(normalize(frame.r), sunDir));
     this.pad.update(scene, frame, night);
+    this.recoveryScenery?.update(scene, frame);
     // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y x Z
     //
     // The roll reference is the normal of the launch-azimuth plane, not
@@ -1150,12 +1252,14 @@ class App {
       this.bz.set(side.x, side.y, side.z),
     );
     this.rocket.group.quaternion.setFromRotationMatrix(this.basis);
-    this.rocket.group.position.set(0, 0, 0);
+    // The vehicle sits at the origin unless the camera is following something else.
+    scene.toScene(frame.r, this.vehiclePos);
+    this.rocket.group.position.copy(this.vehiclePos);
     if (frame.rigid) {
       const attitude = frame.rigid.attitudeQ;
       this.rocket.group.quaternion.set(attitude.x, attitude.y, attitude.z, attitude.w).multiply(MODEL_TO_BODY);
       const offset = quatRotate(attitude, frame.rigid.renderOffsetBody);
-      this.rocket.group.position.set(offset.x, offset.y, offset.z);
+      this.rocket.group.position.set(this.vehiclePos.x + offset.x, this.vehiclePos.y + offset.y, this.vehiclePos.z + offset.z);
       side = quatRotate(attitude, v3(0, 0, 1));
     }
     // the smoke column trails back towards the pad
@@ -1179,12 +1283,27 @@ class App {
     // camera
     const radius = frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
-    this.cams.update(scene.camera, {
-      pos: this.originV, up, east, north, dir: frame.dir, side, height, radius,
-      earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
-      vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
-      t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
-    }, dt, R_EARTH);
+    if (focus) {
+      // A stage flown home: framed on its own axis, over its own ground.
+      const f = enuFrame(focus.r);
+      const along = focus.rigid ? quatRotate(focus.rigid.attitudeQ, v3(0, 0, 1)) : cross(focus.dir, f.up);
+      const fSide = norm(along) > 0.05 ? normalize(along) : f.east;
+      const ground = sim.groundElevation(focus.r);
+      this.cams.update(scene.camera, {
+        pos: this.originV, up: f.up, east: f.east, north: f.north, dir: focus.dir, side: fSide,
+        height: focus.visual.length, radius: focus.visual.diameter / 2,
+        earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: focus.burning ? 0.1 : 0,
+        vDir: norm(focus.v) > 1 ? normalize(focus.v) : f.up,
+        t: frame.t, phase: 'ascent', agl: norm(focus.r) - R_EARTH - ground,
+      }, dt, R_EARTH);
+    } else {
+      this.cams.update(scene.camera, {
+        pos: this.originV, up, east, north, dir: frame.dir, side, height, radius,
+        earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
+        vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
+        t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
+      }, dt, R_EARTH);
+    }
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);

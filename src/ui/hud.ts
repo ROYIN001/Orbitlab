@@ -50,7 +50,7 @@ import type { VisualFrame } from '../physics/frame';
 import type { VehicleSpec } from '../types';
 import { t } from '../i18n';
 import { RAD } from '../physics/constants';
-import { hasNextBurn } from './phase';
+import { DESCENT_PHASE_KEYS, hasNextBurn } from './phase';
 import { localizeEventParams, stageName } from './names';
 import { withSymbol, type Quantity } from './notation';
 import { coerceHudMode, loadHudMode, nextHudMode, saveHudMode, type HudMode, type ModeStore } from './hudmode';
@@ -901,14 +901,15 @@ export class Hud {
     const elm = frame.elements;
     let phase = '';
     if (frame.status === 'ascent' && frame.ascentPhase) phase = t(`hud.phase.${frame.ascentPhase}`);
+    else if (frame.status === 'descent' && frame.descentPhase) phase = t(DESCENT_PHASE_KEYS[frame.descentPhase]);
     else if (frame.status === 'coast' && hasNextBurn(frame)) phase = `${t('hud.nextBurn')} ${fmtTime(frame.nextBurnTime - frame.t).slice(2)}`;
     const status = `${t(`hud.status.${frame.status}`)}${phase ? ' · ' + phase : ''}`;
     if (status !== this.shownStatus) { this.status.textContent = status; this.shownStatus = status; }
     let note = '';
     let noteCls = 'note';
-    if (frame.status === 'orbit' || frame.status === 'failed') {
+    if (frame.status === 'orbit' || frame.status === 'failed' || frame.status === 'descent' || frame.status === 'landed') {
       note = t(`hud.note.${frame.note}`);
-      noteCls = `note ${frame.status === 'failed' ? 'fail' : frame.note === 'orbitOffTarget' ? 'warn' : 'ok'}`;
+      noteCls = `note ${frame.status === 'failed' ? 'fail' : frame.note === 'orbitOffTarget' || frame.note === 'shipLost' ? 'warn' : 'ok'}`;
     }
     if (note !== this.shownNote) {
       this.note.textContent = note;

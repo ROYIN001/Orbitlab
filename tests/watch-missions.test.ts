@@ -58,25 +58,39 @@ describe('viewer missions', () => {
     expect(localSolarHour(t, siteById('cape').longitude)).toBeCloseTo(10, 0);
   });
 
-  it.each(WATCH_MISSIONS.map((m) => m.id))('%s reaches orbit as the app flies it', { timeout: 600_000 }, (id) => {
+  it.each(WATCH_MISSIONS.map((m) => m.id))('%s reaches its target as the app flies it, and lands what it flies home', { timeout: 900_000 }, (id) => {
     const s = watchMissionSettings(id, FROM[0]);
     const dynamics = defaultDynamics(s.vehicleId);
     const sim = new Simulation({
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit,
       launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
       guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
-      failure: s.failure, boosterRecovery: false, dynamics,
+      failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,
     }, { headless: true });
+    const suborbital = !!s.orbit.suborbital;
     let guard = 0;
-    let orbit = false;
+    let there = false;
     while (!sim.done && !sim.isFailed() && sim.state.t < 1800 && guard++ < 400000) {
       sim.step(sim.suggestedDt());
-      if (sim.state.status === 'orbit' || sim.events.some((e) => e.key === 'evt.parkingOrbit' || e.key === 'evt.targetOrbit')) {
-        orbit = reachedOrbit(captureFrame(sim), sim.events);
-        if (orbit) break;
+      if (suborbital) {
+        // Flight 5's ship is cut off on its way home; the splashdown is flown
+        // in tests/heavy/starship-flight5.test.ts.
+        if (sim.events.some((e) => e.key === 'evt.suborbitalTarget')) { there = true; break; }
+      } else if (sim.state.status === 'orbit' || sim.events.some((e) => e.key === 'evt.parkingOrbit' || e.key === 'evt.targetOrbit')) {
+        there = reachedOrbit(captureFrame(sim), sim.events);
+        if (there) break;
       }
     }
     expect(sim.isFailed()).toBe(false);
-    expect(orbit).toBe(true);
+    expect(there).toBe(true);
+    // Every stage flown home comes down where it was sent.
+    const home = () => sim.debris.filter((d) => d.recovery?.target);
+    expect(home().length).toBe(s.recoveryPlan ? [s.recoveryPlan.core, ...(s.recoveryPlan.boosters ?? [])].filter(Boolean).length : 0);
+    const until = sim.state.t + 900;
+    while (home().some((d) => d.alive) && sim.state.t < until && !sim.isFailed()) sim.step(sim.suggestedDt());
+    for (const d of home()) {
+      expect(d.outcome, `${d.name} → ${d.recovery!.target!.id}`).toBe('landed');
+      expect(d.recovery!.missDistance!).toBeLessThan(d.recovery!.target!.radius);
+    }
   });
 });

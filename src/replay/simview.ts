@@ -67,6 +67,7 @@ export function applyFrameToState(state: SimState, vehicle: VehicleModel, stages
   state.t = f.t;
   state.status = f.status;
   state.ascentPhase = f.ascentPhase;
+  state.descentPhase = f.descentPhase ?? null;
   state.note = f.note;
   state.r.x = f.r.x; state.r.y = f.r.y; state.r.z = f.r.z;
   state.v.x = f.v.x; state.v.y = f.v.y; state.v.z = f.v.z;
@@ -212,6 +213,7 @@ export function createFrameSimView(sim: Simulation): FrameSimView {
               ? {
                 propellant: 0, thrustVac: 0, thrustSL: 0, mdot: 0, landingReserve: 0,
                 burning: d.burning, phase: d.recovery.phase, landed: d.recovery.landed,
+                target: d.recovery.target, missDistance: d.recovery.missDistance,
               }
               : undefined,
             impact: d.impact ? { ...d.impact } : undefined,

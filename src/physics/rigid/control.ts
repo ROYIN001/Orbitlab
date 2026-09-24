@@ -11,6 +11,12 @@ export interface ControlGains {
   maxAngularAcceleration: Vec3;
   /** Conservative actuator response/slew allowance in stopping-distance shaping. */
   responseDelayS?: number;
+  /**
+   * Share of the actuators' spare authority the controller may plan to
+   * accelerate with, (0, 1]; 0.35 when absent (`RigidRuntime.scheduledGains`).
+   * A ship's flip, swung upright in seconds on its engines, asks for more.
+   */
+  authorityShare?: number;
 }
 export interface ControlDemand {
   desiredRates: Vec3;
@@ -36,6 +42,7 @@ export interface ControlTrace {
 const axes = ['x', 'y', 'z'] as const;
 function checkGains(gains: ControlGains): void {
   if (!Number.isFinite(gains.responseDelayS ?? 0) || (gains.responseDelayS ?? 0) < 0) throw new RangeError('Invalid control response delay');
+  if (gains.authorityShare !== undefined && !(gains.authorityShare > 0 && gains.authorityShare <= 1)) throw new RangeError('Invalid control authority share');
   for (const vector of [gains.attitudeGain, gains.rateGain, gains.maxRate, gains.maxAngularAcceleration]) {
     if (axes.some(axis => !Number.isFinite(vector[axis]) || vector[axis] < 0)) throw new RangeError('Control gains/limits must be finite and nonnegative');
   }

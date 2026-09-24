@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { RocketView, rigidNozzleIds } from '../src/render/rocket';
 import { DebrisView } from '../src/render/debris';
@@ -106,4 +106,53 @@ describe('rigid render transforms', () => {
     expect(group.position.distanceTo(new THREE.Vector3(10 + newOffset.x, 20 + newOffset.y, 30 + newOffset.z))).toBeLessThan(1e-10);
     renderer.clear();
   });
+});
+
+describe('a stage flown home, drawn', () => {
+  // The grid fins' lattice is a canvas texture; nothing here draws it.
+  const withCanvas = <T>(run: () => T): T => {
+    const context = new Proxy({}, { get: () => () => undefined });
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => context }) });
+    try { return run(); } finally { vi.unstubAllGlobals(); }
+  };
+  const landed = (kind: 'pad' | 'tower'): DebrisFrame => ({
+    id: 7, name: 'First stage', r: v3(0, 0, 0), v: v3(), dir: v3(0, 1, 0), alive: false, outcome: 'landed',
+    burning: false, createdAt: 0, anchor: 0, visual: { kind: 'stage', length: 41.2, diameter: 3.66, color: '#fff' },
+    recovery: { phase: 'landing', landed: true, landingBurn: true,
+      target: { kind, id: kind === 'pad' ? 'lz1' : 'olm', lat: 0, lon: 0, alt: 0, radius: 40 } },
+  });
+
+  it('stands on its feet on the point it landed on, its engines clear of the ground', () => withCanvas(() => {
+    const scene = new THREE.Scene();
+    const manager = { scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y, p.z) } as unknown as SceneManager;
+    const renderer = new DebrisView(manager);
+    const d = landed('pad');
+    renderer.update([d], 100);
+    renderer.update([d], 110);
+    const group = scene.children.find(child => child instanceof THREE.Group)!;
+    group.updateMatrixWorld(true);
+    const items = (renderer as unknown as { items: Map<number, { legs: THREE.Group[] }> }).items;
+    const legs = items.get(7)!.legs;
+    expect(legs).toHaveLength(4);
+    const lowest = Math.min(...legs.map((leg) => new THREE.Box3().setFromObject(leg).min.y));
+    // the edge of a foot pad, tilted with its leg, a few decimetres into the ground
+    expect(lowest).toBeGreaterThan(-0.5);
+    expect(lowest).toBeLessThan(0.05);
+    // About 20 m across the feet, like a Falcon 9's.
+    const spread = new THREE.Box3();
+    for (const leg of legs) spread.expandByObject(leg);
+    expect(spread.max.x - spread.min.x).toBeGreaterThan(17);
+    expect(spread.max.x - spread.min.x).toBeLessThan(24);
+    renderer.clear();
+  }));
+
+  it('has no legs when it was flown to a tower\'s arms', () => withCanvas(() => {
+    const scene = new THREE.Scene();
+    const manager = { scene, toScene: (p: { x: number; y: number; z: number }, out: THREE.Vector3) => out.set(p.x, p.y, p.z) } as unknown as SceneManager;
+    const renderer = new DebrisView(manager);
+    renderer.update([landed('tower')], 100);
+    const items = (renderer as unknown as { items: Map<number, { legs: THREE.Group[] }> }).items;
+    expect(items.get(7)!.legs).toHaveLength(0);
+    renderer.clear();
+  }));
 });

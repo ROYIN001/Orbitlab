@@ -1214,9 +1214,9 @@ screen's knife edge showed.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 197.2 × 200.4 ✓ | 198.7 × 200.6 ✓ | 197.5 × 200.1 ✓ | 151.1 × 354.1 |
-  | 250 km | 219.5 × 346.4 | 241.2 × 299.2 | 247.1 × 265.5 | 140.8 × 2 418.0 |
-  | 300 km | 143.8 × 895.4 | 144.0 × 873.2 | 114.6 × 754.5 (tanks dry) | 140.9 × 2 423.7 |
+  | 200 km | 198.5 × 200.9 ✓ | 197.6 × 200.3 ✓ | 197.9 × 200.2 ✓ | 150.8 × 355.2 |
+  | 250 km | 220.0 × 346.8 | 240.1 × 300.9 | 247.0 × 265.2 | 140.6 × 2 415.6 |
+  | 300 km | 143.5 × 894.9 | 144.1 × 874.4 | 103.8 × 729.8 (tanks dry) | 140.6 × 2 421.1 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind
@@ -1226,7 +1226,11 @@ screen's knife edge showed.
   rather than re-derived by hand — the Soyuz cells' perigees moved by under 1.5 km (the heaviest
   300 km cell's by 3.9 km, from 110.7 to 114.6; its apoapsis moved further, 9.2 km, from 745.3 to
   754.5) once the fairing started leaving on Soyuz's published T+157 s callout (§4) instead of
-  the heating placard, and both copies now read the post-change figures.
+  the heating placard. The engine transients (P02) moved them again — the heaviest 300 km cell
+  to 103.8 × 729.8 km, its third stage now dry before the tail-off that would have given the
+  impulse back — and Long March 2D's cells moved by up to 6 km of apoapsis when Jiuquan's 41°
+  flights started leaving on the heading the site's window licenses; no verdict changed, and
+  both copies read the current figures.
 
   That change is the second half of a fix the last wave only half made.
   `src/physics/mission.ts` used to carry its own copy in the `DIRECT_INSERTION_CEILING` doc
@@ -1711,17 +1715,19 @@ configuration, and the column that matters is whether it agrees with the outcome
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Plesetsk | target orbit T+3 624 s | 597 × 597 km | T+825 s | ok ✓ |
 | Soyuz-2.1b/Fregat · crew 7.15 t → ISS, Baikonur | break-up T+962 s (no insertion reported) | — | — | **fail** ✓ |
-| Long March 3B/E · comsat 5.5 t → GTO, Xichang | target orbit T+25 798 s | 252 × 35 724 km | T+674 s | warn ✓ |
+| Long March 3B/E · comsat 5.5 t → GTO, Xichang | target orbit T+25 797 s | 252 × 35 723 km | T+674 s | warn ✓ |
 | Ariane 64 · comsat 5.5 t → GTO, Kourou | target orbit T+7 210 s | 245 × 35 716 km | T+834 s | ok ✓ |
 | Vega-C · cubesats 300 kg → 500 km, Kourou | target orbit T+3 052 s | 498 × 498 km | T+319 s | ok ✓ |
 | PSLV-XL · earth-obs 1.75 t → 500 km, Sriharikota | target orbit T+3 451 s | 497 × 497 km | T+703 s | ok ✓ |
 
-Three rows that belong to the sweep are not in the table because the launch would not be
-licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur**,
-Vega-C to one from Kourou and PSLV-XL to one from Sriharikota all need an azimuth outside
-their site's range-safety window (§6b, range safety), and the verdict says so. The model will
-still fly the plane if asked — the geometry is reachable — which is why Soyuz-2.1b's
-sun-synchronous mission is flown here from the two sites that can licence it.
+Two rows that belong to the sweep are not in the table because the launch would not be
+licensed rather than not flown: Soyuz-2.1b to a sun-synchronous orbit **from Baikonur** and
+PSLV-XL to one from Sriharikota need a heading 8.6° and 11.3° outside their site's
+range-safety window — further than the 5° dogleg this model flies (§6b, range safety) — and the
+verdict says so. The model will still fly the plane if asked — the geometry is reachable —
+which is why Soyuz-2.1b's sun-synchronous mission is flown here from the two sites that can
+licence it. Vega-C's sun-synchronous mission from Kourou is licensed with a 1.2° dogleg and is
+flown in the fleet matrix (its `sso` rows) rather than here.
 
 Two rows are failures and both are capability limits with the shortfall measured on the plan:
 
@@ -1756,10 +1762,10 @@ every margin in this section has to be re-measured with it.*
 
 | table | rule | entries |
 | --- | --- | --- |
-| range safety (`SITE_GEOMETRY`) | the azimuth the orbit needs is outside the site's window — the launch would not be licensed | 45 |
-| `BEYOND_CAPABILITY` | the flight ends with the tanks empty, **or** the ascent stages' margin is below `ASCENT_MARGIN_REQUIRED` (+150 m/s) | 22 |
+| range safety (`SITE_GEOMETRY`) | no heading inside the site's window reaches the plane, nor one within the 5° a dogleg turns — the launch would not be licensed | 33 |
+| `BEYOND_CAPABILITY` | the flight ends with the tanks empty, **or** the ascent stages' margin is below `ASCENT_MARGIN_REQUIRED` (+150 m/s) | 23 |
 | `ARCHITECTURE` | propellant left, orbit reachable, but nothing in the stack can use it | 13 |
-| `KNOWN_GUIDANCE_FAILURES` | **defects**: Δv available, a stage able to spend it, orbit still lost or missed | 4 |
+| `KNOWN_GUIDANCE_FAILURES` | **defects**: Δv available, a stage able to spend it, orbit still lost or missed | 0 |
 
 The first and the last two rows of that table are enforced by tests, not by review:
 `azimuthAllowedFor agrees with the planned azimuth` regenerates the range-safety table from the
@@ -1775,16 +1781,30 @@ model now throttles back on the structural placard (§3), which is what a real v
 about it, but load relief does not turn a Δv shortfall into performance. The discriminator is
 the margin, not the event that ends the flight.
 
-**Range safety.** The `sso` preset needs a retrograde, roughly north-westerly or south-easterly
-azimuth (346–348° from the northern sites, 191–193° from the southern ones). Plesetsk
-(330–90°), Vostochny (340–95°), Vandenberg (147–201°), Jiuquan (90–200°), Taiyuan (144–200°)
-and Mahia (90–200°) have a window that contains it, and Kourou and Tanegashima reach it with a
-dogleg (§7); from Baikonur, Cape Canaveral, Wenchang, Sriharikota and Starbase that azimuth
-points over populated land or another country, further than a dogleg turns. The table is
-generated from the site data through `azimuthAllowedFor`, and a test asserts that the
-exclusions are exactly the sites the function rules out, so the matrix cannot be shrunk by
-quietly dropping a case. Angara-A5, Ariane 64, Electron, H-IIA, H3 and Vega-C fly `sso`
-acceptance cases (Ariane 64 at 25 and 50 %; its 90 % row is a guidance failure below).
+**Range safety.** One rule, in `inclinationCorridor`: a site can fly an inclination when a
+launch heading inside its azimuth window reaches it — the northbound solution or its southbound
+mirror (180° − A), whichever the window holds — or when one of the two lies within 5° of the
+window's edge, which the ascent then flies as a dogleg (§7); and the inclination is not below
+the site's declared minimum. Every edge carries the same 0.25° `CORRIDOR_SLACK`. The window's
+direct reach is computed from the window in closed form (`corridorReach`), `azimuthAllowedFor`
+is the boolean form of the same verdict, and `planMission` / `launchWindows` fly the heading
+`launchDirection` chooses from it. Until this wave `azimuthAllowedFor` tested only the
+northbound heading below 75°, so it rejected Tanegashima's own `leo`/`gto` presets and the ISS
+plane from Wallops, Wenchang, Tanegashima, Jiuquan and Sriharikota (known bug F01) while the
+corridor accepted them — and the planner flew that northbound heading, outside the window, in
+48 fleet rows. They now leave south-east, as those ranges really do.
+
+The `sso` preset needs a retrograde heading, roughly 341–349° or 191–199° depending on the
+site's latitude. Plesetsk (330–90°), Vostochny (340–95°), Vandenberg (147–201°), Jiuquan
+(90–200°), Taiyuan (144–200°) and Mahia (90–200°) have a window that contains one of the two.
+Kourou and Tanegashima reach the plane with a dogleg of 1.2° and 1.9° off their corridor edge,
+as their ranges really do. From Baikonur, Cape Canaveral, Wenchang, Starbase and Xichang both
+headings point over populated land or another country, and Sriharikota's window stops 11° short
+of the plane — further than a dogleg turns in this model. The table is generated from the site
+data through `azimuthAllowedFor`, and a test asserts that the exclusions are exactly the sites
+the function rules out, so the matrix cannot be shrunk by quietly dropping a case. Angara-A5,
+Ariane 64, Electron, H-IIA, H3 and Vega-C fly `sso` acceptance cases (Ariane 64 at 25 and 50 %;
+its 90 % row is a guidance failure below).
 
 **Beyond capability.** Two systematic gaps explain most of it:
 
@@ -2033,7 +2053,204 @@ Separated boosters, stages and fairing halves are propagated individually with g
 drag until impact (reported with latitude/longitude) or, if they end up above a 120 km perigee,
 kept as orbital debris. Each flies with its own blunt-body drag coefficient (§3), not the
 slender ascent curve. Recovered boosters fly the entry and landing burns described above and
-report a landing when they touch down below 12 m/s.
+report a landing when they touch down below 12 m/s; a stage flown to a target flies the
+boostback and burns of §8.1.
+
+### 8.1 Flying a stage back to a target
+
+A recovery plan (`MissionConfig.recoveryPlan`, `src/types.ts`) names where each recovered body
+goes: a **landing zone** near the launch site (`src/data/landing-zones.ts`: Landing Zones 1 and 2
+at Cape Canaveral, 86 m pads about 300 m apart, 9 km south of SLC-40 and 15 km south of LC-39A;
+the Starbase launch tower, whose arms catch Super Heavy) or a **drone ship**; a body can also be
+flown **downrange**, the original model above with no target, or **expended**. Without a plan
+every recovered body is flown downrange, unchanged. A plan changes the propellant reserve too: a
+body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for Falcon 9 and
+Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 12 %
+leaves Arabsat-6A's side boosters short of their boostback), a drone-ship or downrange body keeps
+`recoveryReserve`, and a body the plan expends, or leaves out, holds nothing back.
+
+The plan is checked with the rest of the configuration (`validateConfigInput`): a landing zone has
+to be one the flight's site can reach, a pad or a drone ship's deck needs a stage with legs, and
+a tower's arms take only a stage without them (Super Heavy). The mission panel offers each
+recoverable stage the choices its site and its hardware allow, and the WebMCP
+`configure_mission` tool takes the same plan (`recoveryPlan`; `list_missions` lists the zones).
+
+The guidance is one piece, `src/physics/sim/return-guidance.ts`, shared by both flight models:
+
+- **Prediction.** Where the stage comes down is a point-mass integration from its present state:
+  gravity (with J2 when the rigid body is flying, which has it), blunt-body drag in the rotating
+  atmosphere, the entry burn the stage is going to fly, and the landing burn — the prediction
+  ends where that burn has stopped the stage, because a retrograde landing burn brakes the
+  horizontal velocity too and a purely ballistic point is hundreds of metres from where the
+  stage really stops. The integration steps onto the entry burn's 70 km ceiling instead of
+  across it and ends each burn on its target speed, so the prediction does not jump from one
+  evaluation to the next.
+- **Boostback.** After separation the stage turns round and burns back. The burn's direction
+  solves J·Δv = −miss, with J the 2 × 2 sensitivity of the landing point (east, north) to the
+  stage's east and north velocity, by finite differences of the prediction, re-evaluated every
+  half second and every tenth of a second in the final trim on the centre engine. The solve is
+  deliberately horizontal: the full 2 × 3 minimum-norm answer also uses the vertical velocity,
+  and the cheapest way to shorten a flight is then to thrust at the ground. Before the
+  boostback is finished, the prediction assumes the propellant it will leave (the rocket
+  equation on the velocity it still needs), not a full tank for the entry burn.
+- **Entry burn.** A returning stage crosses 70 km slower than a downrange one, so its burn
+  waits armed until the airspeed is over its target (550 m/s for a return to the launch site,
+  1.4 km/s downrange) and leans up to 15° off retrograde to trim the landing point.
+- **Landing burn.** A constant deceleration to 2 m/s at the pad, lit at the drag-aware braking
+  height, with the zero-effort-miss divert of Ebrahimi, Bahrami and Roshanian (2008) in the
+  horizontal plane, a = 6·Δr/t² − 4·v/t, leaning up to 20°.
+
+The point-mass stage flies these directly: it turns at 10 °/s, burns three engines on the
+boostback and one on its trim. The rigid stage (`src/physics/rigid/debris-runtime.ts`) flies
+them with its own actuators:
+
+- it **turns round on its centre engine's gimbal** at the lowest thrust: the model's cold-gas
+  thrusters (an estimate, 200 N a nozzle) cannot turn a 60 t stage in the time a boostback has,
+  and it keeps them for the coast, where its pointing is rationed to the gas left
+  (`fuelAwareCoastRates`);
+- a stage bound for a drone ship turns straight after separation to the attitude it will need
+  at the top of its entry burn and coasts there; the ship is stationed on the trajectory that
+  turn leaves it on. Falcon Heavy's core spends its cold gas on the ascent and could not turn
+  during its coast at all;
+- an entry burn that finds the stage pointing more than 15° off lights the centre engine alone
+  to turn it before the other two;
+- **the grid fins steer**. They are control surfaces (`src/physics/rigid/surfaces.ts`): each
+  deflects ±20° at 30 °/s, and its deflection adds q·S·C_Nα·δ of lift at the top of the stage.
+  The fixed fins of the detached aerodynamic table leave a base-first stage slightly unstable
+  at zero angle of attack — it trims at about 3.4° — and that trim's lift carried a stage 600 m
+  past its pad through the dense air. The steerable fins hold the angle, and the guidance leans
+  the stage so that its own lift moves the landing point onto the target (the body is pushed
+  against the side its top leans to);
+- a landing burn that would not have time to divert a large miss lights early on three engines
+  and hands over to the centre engine once one can carry it; the centre engine then finishes
+  with the original terminal coast and single restart (`TERMINAL_RESTART`).
+
+A touchdown within the pad's radius (43 m; a drone ship's deck, 30 m) is a landing on the
+target (`evt.boosterLandedZone`, `evt.boosterLandedShip`); a soft touchdown off a pad is a
+landing beside it, and off a ship's deck is the sea.
+
+**The tower catch.** Super Heavy flies back to the Starbase launch tower, whose arms take it by
+the catch pins below its grid fins. The catch point is the pad itself, over the launch mount,
+with the booster's base 13 m above the launch mount it lifted off from — the level every
+height at the pad is measured from, some 33 m over the ground — and the pins about 110 m over
+the ground (an estimate — the catch height is not published). The landing burn stops on that height instead of the ground, aiming at 1 m/s, and
+the arms close when the base reaches it within 4 m of the tower's catch point, falling at no
+more than 3 m/s, sliding at no more than 2 m/s, and — in six-DOF — tilted no more than 5° and
+turning no faster than 3 °/s (all estimates); caught, the booster stays in the arms
+(`evt.boosterCaught`). Too fast, it hits them; outside the envelope it falls past them, and a
+booster with no legs does not land on the ground. Two things the catch needed that a pad does
+not:
+
+- **A burn that can hover.** Super Heavy's three inner Raptors at their lowest thrust are
+  heavier than the empty booster (2.76 MN against 2.45 MN), so the burn would coast blind to a
+  single restart — the Falcon stage's answer — and drift out of the arms' envelope with no
+  thrust to steer. It flies the end of the burn on as many of the three as the thrust asked for
+  allows (two, then one), switching only when the lit set can no longer fly it.
+- **An upright arrival.** The divert aims to be over the target three seconds before touchdown
+  and its lean fades out over those seconds, and it is solved over no less than eight seconds:
+  the zero-effort-miss gains grow as 1/t², and asked to finish in a second or two they outran the
+  attitude loop that has to lean the stage, which then oscillated to 19° over the arms.
+
+Super Heavy boosts back on its inner thirteen engines and turns on the inner three. Flown back
+to the tower it keeps 11 % of its propellant (`returnReserve`): 9 % is the least the arms catch
+it with in the point-mass model, and 11 % arrives with 72 t to spare. Measured (tests/recovery-return.test.ts,
+tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
+
+| Flight | Model | Body | Miss |
+|---|---|---|---|
+| Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.0 m |
+| | six-DOF | first stage → LZ-1 | 0.8 m |
+| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.0 m, 0.0 m |
+| | | core → drone ship, ~930 km downrange | 0.0 m |
+| | six-DOF | side boosters → LZ-1, LZ-2 | 0.8 m, 0.8 m |
+| | | core → drone ship | 0.7 m |
+| Starship (15.6 t, 500 km) | point mass | Super Heavy → tower | 0.0 m, caught |
+| | six-DOF | Super Heavy → tower | 0.3 m, caught at 2.4 m/s down, 0.45 m/s across, 0.5° |
+
+The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
+real flight.
+
+A stage that has landed or been caught is no longer integrated, but it stays in the state: it
+turns with the Earth from then on (position, velocity ω × r, and in six-DOF its attitude and
+a body rate of exactly the Earth's), so the booster on its pad, on the drone ship's deck or in
+the tower's arms stays where it came down for the rest of the flight instead of hanging in
+inertial space while the ground rotates out from under it.
+
+### 8.2 A suborbital target and the ship that flies itself home
+
+Starship's test flights do not reach orbit. Flight 5 (13 October 2024) cut its ship off on a
+213 × −15 km trajectory at 26.2° — the perigee is under the ground, so no deorbit burn is needed
+— and the ship came back down belly first an hour later and splashed down in the Indian Ocean
+off Western Australia. An orbit with `suborbital: true` (`OrbitSpec.suborbital`) asks for
+exactly that (src/physics/mission.ts, src/physics/sim/ascent.ts, src/physics/sim/ship-descent.ts).
+It is offered for a vehicle whose upper stage flies itself home — one with flaps, Starship —
+with the perigee between −1000 and 0 km, and a test flight may carry no payload at all (the
+mission panel's "Suborbital test flight" option, WebMCP's `suborbital`). A payload stays aboard
+and comes down with the ship: the 30 t kept for landing still sets down a ship carrying 60 t in
+the point-mass model, and 30 t in six-DOF, which then comes down further east (13°S 120°E). At
+60 t the six-DOF ship is lost: its centre of mass further forward, the flaps hold a shallower
+entry whose lift carries it back out of the air, and it comes in again half an hour later at
+Mach 16 at 30 km, far too steep to fly home. There is no entry guidance that would steer the
+lift down; the pre-flight verdict warns above 30 t (`SHIP_RETURN_VERIFIED_PAYLOAD`).
+
+**Cut-off.** A suborbital target has no burns after the ascent. The ascent is aimed at
+`SUBORBITAL_CUTOFF_ALTITUDE`, 150 km, where Starship's ship shuts down, and it is cut off still
+climbing: in the last minute, or within 10 km of that height, the last stage holds the target
+ellipse's flight-path angle at the height it is at, the climb rate growing with the horizontal
+speed (`AscentGuidance`, `SuborbitalAim`). The cut-off comes when the periapsis — with the
+tail-off counted — has risen to the target's, and the flight is judged there, on the osculating
+apsides (`evt.suborbitalTarget`). Cutting off at the apogee instead puts the whole coast a
+quarter of a revolution short, and Flight 5's splashdown in the Atlantic.
+
+**The ship's return** is five phases, flown the same way in both models (`ShipDescent`):
+
+1. *Coast.* The ship turns to its entry attitude — belly (+Z, the heat-shield side) to the flight
+   path, nose 70° above it — on its cold-gas thrusters and holds it (six-DOF: held-coast steps,
+   as an orbital coast). Thirty seconds after the cut-off it vents its main tanks and keeps
+   30 t (`SHIP_LANDING_PROPELLANT`) in its header tanks, the liquid oxygen one in the nose.
+2. *Entry*, from 120 km, belly first at an angle of attack easing from 70° hypersonic to 80° once
+   subsonic, with the lift of the tilted belly pointed up.
+3. *Belly flop*, subsonic, falling at about 85 m/s.
+4. *Flip* at about a kilometre (`flipHeight`): the three sea-level Raptors light at their least
+   and swing the ship upright in about eight seconds.
+5. *Landing burn*: a constant deceleration that reaches the water at 1.5 m/s, on two or three
+   of those engines, leaning up to 30° to take out the fifty-odd metres a second of sideways
+   speed the flip's own thrust leaves, and upright for the last three seconds. One engine is lit
+   alone only to settle the last metres: it sits off the axis, where its gimbal cannot pitch the
+   ship without rolling it too, and two at their least still lift the ship.
+
+A splashdown slower than 6 m/s down and 5 m/s across, leaning under 15°, is intact
+(`evt.shipSplashdown`); anything else breaks the ship up (`evt.shipImpact`). Either way the flight
+is `landed` and the clock runs on with the ship on the water.
+
+**The six-DOF ship.** Belly first is what its aerodynamic table is built for
+(`shipDescentAeroTable`): a 9 m tube under a 1.3-diameter ogive, the crossflow acting on the
+planform (the tube and two thirds of the nose's side, centred a little behind the middle) and a
+small slender-body lift on the ogive. At 70° that gives a lift of about a third of the drag. The
+four flaps are control surfaces (`shipFlapSurfaces`): drag plates hinged along the hull 65° either
+side of the belly, 18 m² forward and 32 m² aft, whose force grows with the square of the stream
+meeting their face and is never negative — folded they make none, fully out their whole drag —
+and the control works about a half-open trim. Fore against aft pitches the ship, one side
+against the other rolls it, and the diagonal pairs yaw it with the outward part of their push.
+With the landing propellant in the header tanks the centre of mass sits at 47 % of the length,
+and the flaps hold 70° hypersonic at about 30° of their 34° either way; at the belly flop they
+use 10°. The flip and the landing burn fly with twice the usual share of the gimbals' spare
+authority (`ControlGains.authorityShare`), and with the roll left free.
+
+Measured on Flight 5 (tests/ship-descent.test.ts, tests/heavy/starship-flight5.test.ts):
+
+| | Point mass | Six-DOF | Flight 5 |
+|---|---|---|---|
+| Cut-off | T+7:52, 210 × −14 km | T+7:58, 211 × −15 km | ≈ T+8:30 |
+| Entry interface (120 km) | T+41:25 | T+39:42 | ≈ T+47 |
+| Peak dynamic pressure on entry | 9.6 kPa | 8.3 kPa | — |
+| Flip | 1.12 km | 1.06 km | ≈ 1 km |
+| Splashdown | T+61:00, 22.8°S 93.3°E, 1.5 m/s | T+59:00, 24.5°S 83.6°E, 1.6 m/s, 2° | T+1:05:40, off Western Australia |
+
+The model comes down about six minutes early and 15–25° of longitude short of the real splashdown.
+The trajectory is nearly tangent to the top of the air, so where it meets it moves a long way
+for small differences: the published apsides are presumably not osculating Kepler elements at
+the cut-off, and six-DOF's J2 alone moves the entry by about a minute.
 
 Orbital debris is Kepler-propagated for speed, but the classification has to stay true: the
 perigee is re-checked every step and an object that can no longer stay up is handed back to the

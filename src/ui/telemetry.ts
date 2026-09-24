@@ -510,7 +510,10 @@ export class TelemetryPanel {
       any = true;
       let st: string;
       if (!d.alive) st = t(`tel.debris.${d.outcome ?? 'impact'}`);
-      else if (d.recovery?.burning) st = d.recovery.phase === 'entry' ? t('tel.debris.entryBurn') : t('tel.debris.landingBurn');
+      else if (d.recovery?.burning) {
+        st = d.recovery.phase === 'entry' ? t('tel.debris.entryBurn') : d.recovery.phase === 'boostback' ? t('tel.debris.boostback')
+          : d.recovery.phase === 'flip' ? t('tel.debris.flip') : t('tel.debris.landingBurn');
+      }
       else if (d.outcome === 'orbit') st = t('tel.debris.orbit');
       else st = t('tel.debris.falling');
       const alt2 = Math.max(0, (Math.hypot(d.r.x, d.r.y, d.r.z) - R_EARTH) / 1000);
