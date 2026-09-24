@@ -35,6 +35,10 @@ throughout.
   falling away in three petals ten seconds after Blok A, the frost on the oxygen tanks shedding
   in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
   fins, the tower pulling away at T+114.5 s. Drawing only; the physics is unchanged.
+- **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
+  buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
+  R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
+  track and the sidereal angle as arcs and values, in ISO 1151 or ГОСТ 20058-80 symbols.
 
 ## What is experimental
 
@@ -57,7 +61,7 @@ throughout.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 993 tests in 72 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1008 tests in 74 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -101,7 +105,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | | | |
 | E02 live equations panel | | | |
-| E01 reference frames in 3-D | | | |
+| E01 reference frames in 3-D | done | | |
 
 Twenty further items are kept for later, once these are done.
 

@@ -527,3 +527,7 @@ and the flip's timing are estimates; one calm flight is measured.
 before the merge with P05; the fleet's default missions fly no recovery plan): **161 of 161
 passed** in 2 h 5 min on four cores, part of it shared with the regular suite — the targeted
 returns leave the fleet's flights as they were.
+
+**The rigid fleet after the merge with P05.** `npm run test:sixdof-fleet` at the merge commit
+e8741b9, where the rigid runtime carries both P05's flexible body and 10b's control surfaces:
+**161 of 161 passed** in 2 h 5 min on four cores, part of it shared with browser runs.

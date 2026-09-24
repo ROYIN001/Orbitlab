@@ -32,7 +32,7 @@ export type Quantity =
   | 'axisX' | 'axisY' | 'axisZ'
   | 'rollRate' | 'pitchRate' | 'yawRate'
   | 'alpha' | 'beta'
-  | 'pitchAngle' | 'rollAngle' | 'yawAngle' | 'pathAngle'
+  | 'pitchAngle' | 'rollAngle' | 'yawAngle' | 'pathAngle' | 'trackAngle'
   | 'altitude' | 'airspeed' | 'verticalSpeed' | 'dynamicPressure' | 'mach' | 'loadFactor' | 'mass' | 'thrust';
 
 const s = (base: string, sub?: string): NotationSymbol => (sub ? { base, sub } : { base });
@@ -50,6 +50,7 @@ export const SYMBOLS: Readonly<Record<Quantity, Readonly<Record<Notation, Notati
   rollAngle: { iso: s('Φ'), gost: s('γ') },
   yawAngle: { iso: s('Ψ'), gost: s('ψ') },
   pathAngle: { iso: s('γ'), gost: s('θ') },
+  trackAngle: { iso: s('χ'), gost: s('Ψ') },
   altitude: { iso: s('h'), gost: s('H') },
   airspeed: { iso: s('V'), gost: s('V') },
   verticalSpeed: { iso: s('ḣ'), gost: s('V', 'y') },

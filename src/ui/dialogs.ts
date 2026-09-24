@@ -60,7 +60,7 @@ const QUANTITY_NAMES: Record<Quantity, string> = {
   axisX: 'notation.q.axisX', axisY: 'notation.q.axisY', axisZ: 'notation.q.axisZ',
   rollRate: 'notation.q.rollRate', pitchRate: 'notation.q.pitchRate', yawRate: 'notation.q.yawRate',
   alpha: 'notation.q.alpha', beta: 'notation.q.beta', pitchAngle: 'notation.q.pitchAngle', rollAngle: 'notation.q.rollAngle',
-  yawAngle: 'notation.q.yawAngle', pathAngle: 'notation.q.pathAngle', altitude: 'notation.q.altitude', airspeed: 'notation.q.airspeed',
+  yawAngle: 'notation.q.yawAngle', pathAngle: 'notation.q.pathAngle', trackAngle: 'notation.q.trackAngle', altitude: 'notation.q.altitude', airspeed: 'notation.q.airspeed',
   verticalSpeed: 'notation.q.verticalSpeed', dynamicPressure: 'notation.q.dynamicPressure', mach: 'notation.q.mach',
   loadFactor: 'notation.q.loadFactor', mass: 'notation.q.mass', thrust: 'notation.q.thrust',
 };
@@ -73,7 +73,9 @@ const QUANTITY_DEFINITIONS: Record<Quantity, string | { iso: string; gost: strin
   yawRate: { iso: 'notation.def.iso.yawRate', gost: 'notation.def.gost.yawRate' },
   alpha: 'notation.def.alpha', beta: 'notation.def.beta', pitchAngle: 'notation.def.pitchAngle', rollAngle: 'notation.def.rollAngle',
   yawAngle: { iso: 'notation.def.iso.yawAngle', gost: 'notation.def.gost.yawAngle' },
-  pathAngle: 'notation.def.pathAngle', altitude: 'notation.def.altitude', airspeed: 'notation.def.airspeed',
+  pathAngle: 'notation.def.pathAngle',
+  trackAngle: { iso: 'notation.def.iso.trackAngle', gost: 'notation.def.gost.trackAngle' },
+  altitude: 'notation.def.altitude', airspeed: 'notation.def.airspeed',
   verticalSpeed: 'notation.def.verticalSpeed', dynamicPressure: 'notation.def.dynamicPressure', mach: 'notation.def.mach',
   loadFactor: 'notation.def.loadFactor', mass: 'notation.def.mass', thrust: 'notation.def.thrust',
 };

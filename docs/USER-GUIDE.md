@@ -104,13 +104,34 @@ Four camera views, switchable from the tabs above the viewport or keys `1`–`4`
 - **Map** — a 2-D ground track with the predicted orbit, the target orbit, the day/night
   terminator, and where spent stages came down.
 
-The small buttons beside the camera tabs reset the view, toggle the **glow** (the bloom around
-the plume, the ignition flash and the city lights) and go full screen. If the picture falls below
-about 24 frames per second the glow is switched off for a few seconds as a test: it stays off
-only if that made the picture faster, and comes back otherwise. A screen or power-saving mode
-that holds the browser at 30 fps therefore keeps its glow. Once you press the button your choice
-is kept, also on your next visit. On a graphics card that cannot draw the high-range image the
-glow needs, the button is greyed out and the scene is drawn without it.
+The small buttons beside the camera tabs open the **Frames** menu (below), reset the view,
+toggle the **glow** (the bloom around the plume, the ignition flash and the city lights) and go
+full screen. If the picture falls below about 24 frames per second the glow is switched off for
+a few seconds as a test: it stays off only if that made the picture faster, and comes back
+otherwise. A screen or power-saving mode that holds the browser at 30 fps therefore keeps its
+glow. Once you press the button your choice is kept, also on your next visit. On a graphics card
+that cannot draw the high-range image the glow needs, the button is greyed out and the scene is
+drawn without it.
+
+**Reference frames.** The first of those buttons opens the **Frames** menu (Explore and
+Engineer). Tick any of four groups and they are drawn on the vehicle in the exterior and space
+views, with the angles between them as arcs and their values beside them:
+
+- **Body and air-path axes** — the vehicle's own axes and the axes of its velocity through the
+  air, with the angle of attack α and the sideslip β;
+- **Normal earth and flight-path axes** — the local horizon and the direction of flight over
+  the ground, with pitch, yaw and roll, the flight-path angle and the track;
+- **Orbital axes R, S, W** — radial, along the track and the orbit normal;
+- **Earth-centred inertial and Earth-fixed axes** — at the centre of the planet (best seen in
+  the space view), with the Greenwich sidereal angle between them.
+
+Everything is written in the notation in force (see *Physics and sources*): ISO 1151 in English
+and Thai, ГОСТ 20058-80 in Russian, unless the Engineer mode's setup fixes one. In ГОСТ the
+normal Earth frame's x<sub>g</sub> lies along the launch azimuth, so yaw ψ and track Ψ read the
+departure from it; in ISO they are bearings from north. With the nose within half a degree of
+vertical — on the pad and through the vertical rise — yaw and roll have no value and only the
+pitch is shown. Every frame is off to begin with, and your choice is kept for the next visit.
+The details are in [PHYSICS.md §2d](PHYSICS.md).
 
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,

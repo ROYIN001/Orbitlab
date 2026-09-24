@@ -39,7 +39,9 @@ import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
-import { initNotation, onNotationChange } from './ui/notation';
+import { getNotation, initNotation, onNotationChange } from './ui/notation';
+import { FramesView } from './render/frames';
+import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
 
@@ -186,6 +188,9 @@ class App {
   trail = new TrailLine(0x8be5cd);
   predicted = new OrbitLine(0xffffff, true);
   target = new OrbitLine(0xefa47e, false);
+  /** E01: the reference frames drawn in 3-D, chosen from the Frames menu */
+  frames = new FramesView(frameSymbols);
+  private framesMenu!: FramesMenu;
   /** the live simulation is advancing */
   playing = false;
   /** time warp of the live simulation */
@@ -444,7 +449,7 @@ class App {
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
     this.debrisView = new DebrisView(this.scene);
-    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line);
+    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.frames.group);
     this.cams.attach(this.viewport);
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.viewport);
@@ -473,6 +478,7 @@ class App {
     this.trail.setResolution(w, h);
     this.predicted.setResolution(w, h);
     this.target.setResolution(w, h);
+    this.frames.setResolution(w, h);
   }
 
   /** Warp that the on-screen selector is currently editing. */
@@ -519,6 +525,8 @@ class App {
       try { localStorage.setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
     });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
+    this.framesMenu = new FramesMenu(document.getElementById('btn-frames') as HTMLButtonElement, (groups) => this.frames.setShown(groups));
+    this.frames.setShown(this.framesMenu.groups);
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
       const l = (e.target as HTMLSelectElement).value as Lang;
       setLang(l);
@@ -628,6 +636,7 @@ class App {
     document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((node) => node.setAttribute('aria-label', node.title));
     this.viewport.setAttribute('aria-label', t('a11y.viewport'));
     this.warpSel?.setAttribute('aria-label', t('ctl.warp'));
+    this.framesMenu?.applyLanguage();
     // both dialogs rebuild their body from the dictionaries when opened; an
     // open one has to be rebuilt now
     if (this.physicsDialog.isOpen) this.physicsDialog.applyLanguage();
@@ -1290,6 +1299,10 @@ class App {
         t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
       }, dt, R_EARTH);
     }
+    // E01: the frames, where the camera looks at the vehicle from outside it
+    const framesView = (this.mode === 'explore' || this.mode === 'engineer') && (this.camMode === 'exterior' || this.camMode === 'space');
+    if (framesView) this.frames.update(frame, scene.camera, this.vehiclePos, this.earthC, sim.plan.azimuthRotating, getNotation(), !focus);
+    else this.frames.group.visible = false;
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);

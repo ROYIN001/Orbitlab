@@ -245,6 +245,7 @@ both, and that ISO y points to the right of the flight path and ГОСТ y above
 | Roll angle | Φ | γ | Positive right side down |
 | Yaw angle | Ψ | ψ | ISO: clockwise from north (nose right); ГОСТ: from x<sub>g</sub>, anticlockwise seen from above (nose left) |
 | Flight-path angle | γ | θ | Velocity above the horizontal plane positive |
+| Track angle | χ | Ψ | ISO: bearing of the velocity over the ground, clockwise from north; ГОСТ: from x<sub>g</sub>, anticlockwise seen from above |
 | Altitude | h | H | |
 | Airspeed | V | V | |
 | Vertical speed | ḣ | V<sub>y</sub> | |
@@ -269,6 +270,48 @@ and the `evt.controlCommand` event records them so.
 Before U07 the 6-DOF controls called the simulator's y rate "pitch" and z rate "yaw", and the
 event log's α was its x–z angle; with the stack's roll reference those are the yaw rate, the
 pitch rate and the sideslip. They are now the standards'.
+
+## 2d. Reference frames in 3-D (roadmap E01)
+
+The Frames menu by the camera buttons draws the frames of flight dynamics on the vehicle, and
+the angles between them as arcs with their values, in the notation in force (§2c). Four groups,
+all off until chosen: the body and air-path axes with α and β; the normal Earth and flight-path
+axes with pitch, yaw, roll, the flight-path angle and the track; the orbital axes R, S, W; ECI
+and ECEF at the Earth's centre with the Greenwich sidereal angle between them. The frames carried
+with the vehicle are drawn at a constant size on the screen, from its centre of mass, in the
+exterior and space views. Code: src/physics/reference-frames.ts (the vectors and angles),
+src/render/frames.ts (the drawing).
+
+| Frame | ISO 1151 | ГОСТ 20058-80 | Velocity it is built on |
+|---|---|---|---|
+| Body (связанная) | x nose, y right, z belly | x nose, y top, z right | — |
+| Air-path (скоростная) | x<sub>a</sub> along V, z<sub>a</sub> in the plane of symmetry towards the belly | x<sub>a</sub> along V, y<sub>a</sub> in the plane of symmetry towards the top | Relative to the air: the Earth's rotation and the wind taken out |
+| Normal Earth (нормальная земная), carried with the vehicle | x<sub>g</sub> north, y<sub>g</sub> east, z<sub>g</sub> down | y<sub>g</sub> up, x<sub>g</sub> horizontal on the launch azimuth, z<sub>g</sub> to its right | — |
+| Flight-path (траекторная) | x<sub>k</sub> along V<sub>k</sub>, z<sub>k</sub> in the vertical plane, down | x<sub>k</sub> along V<sub>k</sub>, y<sub>k</sub> in the vertical plane, up | Relative to the ground (the Earth's rotation taken out) |
+| Orbital RSW | R radial, S along the track, W the orbit normal (LVLH: x = S, y = −W, z = −R) | same | Inertial |
+| ECI, ECEF | X to the vernal equinox, Z to the pole; ECEF turned about Z by the sidereal angle θ<sub>G</sub> | same, the angle written S | — |
+
+ГОСТ leaves the direction of x<sub>g</sub> to the task; a launch frame measures yaw from the firing
+direction, so x<sub>g</sub> lies along the launch azimuth over the ground and ψ and Ψ read the
+departure from it (positive to the left). ISO's heading and track read from north.
+
+Pitch is the nose's elevation above the horizontal plane; yaw the bearing of its horizontal
+projection; roll the turn about the nose from wings level (the right axis horizontal), positive
+right side down. Within 0.5° of the vertical yaw and roll have no value (the Euler angles'
+singularity) and are not drawn: on the pad and through the vertical rise only the pitch shows,
+drawn from the side the vehicle will pitch over to. α and β are taken in the plane of symmetry
+and out of it as in §2c, and agree with what the six-DOF body records to 10⁻⁶ rad, wind included
+(tests/reference-frames.test.ts). A point-mass flight has no roll of its own: it is held wings
+level on the launch azimuth's plane, as the 3-D stack is drawn, so its roll reads zero.
+
+Reading them: early in an ascent, while the speed over the ground is still small, the heading
+and the track read several degrees off the launch azimuth (a Falcon 9 ascent from Cape
+Canaveral to LEO reads about 103° against 88° at T+60 s). The ascent is steered in the inertial
+frame, and taking the Earth's eastward 408 m/s out of an inertial velocity that is itself not much
+larger turns the velocity over the ground well away from it; the gap closes as the vehicle
+gathers speed. Through the same stretch a six-DOF ascent reads a roll of 10–15°: its attitude
+reference holds the belly in the inertial trajectory plane (§2c), not in the vertical plane
+through the nose.
 
 ## 3. Atmosphere and aerodynamics
 
