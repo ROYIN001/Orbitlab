@@ -124,6 +124,11 @@ export interface Debris {
   };
   outcome?: 'impact' | 'landed' | 'orbit' | 'burnup';
   impact?: { lat: number; lon: number };
+  /**
+   * Once it has landed: the mission time its stored state is for. From there
+   * it only turns with the Earth (see `DebrisTracker.stepDebris`).
+   */
+  restT?: number;
 }
 
 export interface Losses {

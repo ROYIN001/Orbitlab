@@ -117,7 +117,11 @@ export interface DebrisFrame {
    * where the stage is being flown to — the landing zone or the drone ship the
    * renderer draws under it.
    */
-  recovery?: { phase: NonNullable<Debris['recovery']>['phase']; landed: boolean; target?: ReturnTarget; missDistance?: number };
+  recovery?: {
+    phase: NonNullable<Debris['recovery']>['phase']; landed: boolean; target?: ReturnTarget; missDistance?: number;
+    /** the landing burn has lit (the legs come out for it) */
+    landingBurn?: boolean;
+  };
   /**
    * Where this object came down, once it has. Carried on the frame so the
    * telemetry panel's spent-stage list can be driven from the displayed
@@ -316,6 +320,14 @@ function attachedBaseAt(sim: Simulation, layout: StackLayout, at: number): numbe
 }
 
 /**
+ * A recovered stage is flown, and lands, on its physics point: that is where
+ * its legs touch the ground. It separates hanging below the stack like any
+ * spent stage, and eases up onto that point over the seconds after, while it
+ * is still close enough to the stack for the offset to matter.
+ */
+const RECOVERY_ANCHOR_SETTLE = [2, 20] as const;
+
+/**
  * Offset from `d.r` to the base of the drawn body — see `DebrisFrame.anchor`.
  *
  * Deliberately **not** memoised. It used to be cached in a per-Simulation
@@ -334,7 +346,12 @@ function debrisAnchor(sim: Simulation, d: Debris, layout: StackLayout): number {
     // the spent stage hangs below the separation plane, which is where the
     // remaining stack's base — and therefore the origin — now sits
     const idx = sim.vehicle.stages.findIndex((st) => st.spec.name === d.name);
-    return -(idx >= 0 ? layout.height[idx] : d.visual.length);
+    const hang = -(idx >= 0 ? layout.height[idx] : d.visual.length);
+    if (!d.recovery) return hang;
+    const age = sim.state.t - d.createdAt;
+    const [from, to] = RECOVERY_ANCHOR_SETTLE;
+    const k = Math.max(0, Math.min(1, (age - from) / (to - from)));
+    return hang * (1 - k * k * (3 - 2 * k));
   }
   if (d.visual.kind === 'fairing') {
     // the halves come off the top of whatever was still attached at jettison;
@@ -427,7 +444,8 @@ export function captureFrame(sim: Simulation): VisualFrame {
     outcome: d.outcome,
     createdAt: d.createdAt,
     anchor: d.rigid ? d.rigid.renderOffsetBody.x : debrisAnchor(sim, d, layout),
-    recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed, target: d.recovery.target, missDistance: d.recovery.missDistance } : undefined,
+    recovery: d.recovery ? { phase: d.recovery.phase, landed: d.recovery.landed, target: d.recovery.target, missDistance: d.recovery.missDistance,
+      landingBurn: !!d.recovery.landingStarted } : undefined,
     impact: d.impact ? { lat: d.impact.lat, lon: d.impact.lon } : undefined,
   }));
   return {

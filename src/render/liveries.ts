@@ -94,6 +94,12 @@ export interface StageLivery {
    * a rectangular tab (user report, wave 5).
    */
   seams?: number[];
+  /**
+   * Black thermal tiles over the belly, as the half-width in u either side of
+   * u = 0 — the model's +z meridian, which is the body frame's +z, the side a
+   * belly-first ship presents to the flow.
+   */
+  heatShield?: number;
 }
 
 const FLAG_BY_COUNTRY: Record<string, FlagId> = {
@@ -118,7 +124,9 @@ const OVERRIDES: Record<string, Partial<StageLivery>> = {
   'pslvxl/ps1': { base: '#eceae4', text: 'PSLV', textColor: '#e67e22', textAt: 0.5, bands: [{ at: 0.9, h: 0.06, color: '#e67e22' }] },
   'electron/e1': { base: '#17171a', text: 'ELECTRON', textColor: '#d8d8dc', textAt: 0.5, bands: [] },
   'starship/superheavy': { base: '#b6b8bd', steel: true, text: 'SUPER HEAVY', textColor: '#2c2c30', textAt: 0.55, bands: [] },
-  'starship/ship': { base: '#b6b8bd', steel: true, text: 'STARSHIP', textColor: '#2c2c30', textAt: 0.5, bands: [] },
+  // Tiled to about 72° either side of the belly: the flaps' hinges are at 65°
+  // (rigid/surfaces.ts), on the edge of the black, as they are on the real ship.
+  'starship/ship': { base: '#b6b8bd', steel: true, text: 'STARSHIP', textColor: '#2c2c30', textAt: 0.5, bands: [], heatShield: 0.2 },
 };
 
 export function stageLivery(vehicle: VehicleSpec, stage: StageSpec): StageLivery {
@@ -209,6 +217,43 @@ function drawFlag(g: CanvasRenderingContext2D, id: FlagId, x: number, y: number,
 }
 
 const POT = [64, 128, 256, 512];
+/**
+ * Hexagonal thermal tiles, about 0.3 m across, over the belly. The canvas is
+ * stretched differently along and around the stage, so the tile size is laid
+ * out in metres and converted on each axis. A few tiles are the off-white of a
+ * replacement or a patch, the way the real shield looks after a few flights.
+ */
+function heatShield(g: CanvasRenderingContext2D, W: number, H: number, half: number, diameter: number, length: number, seed: number): void {
+  const w = half * W;
+  g.save();
+  g.beginPath();
+  g.rect(0, 0, w, H);
+  g.rect(W - w, 0, w, H);
+  g.clip();
+  g.fillStyle = '#1b1c1f';
+  g.fillRect(0, 0, W, H);
+  const tw = Math.max(3, (0.32 * W) / (Math.PI * diameter));
+  const th = Math.max(3, (0.28 * H) / Math.max(1, length));
+  g.strokeStyle = 'rgba(255,255,255,0.07)';
+  g.lineWidth = 1;
+  let row = 0;
+  for (let y = 0; y < H; y += th, row++) {
+    g.beginPath();
+    g.moveTo(0, y); g.lineTo(W, y);
+    for (let x = (row % 2) * tw / 2; x < W; x += tw) { g.moveTo(x, y); g.lineTo(x, y + th); }
+    g.stroke();
+  }
+  const rows = Math.ceil(H / th), cols = Math.ceil((2 * w) / tw);
+  for (let i = 0; i < 90; i++) {
+    const r = Math.floor(hash11(seed + i * 1.7) * rows);
+    const c = Math.floor(hash11(seed + i * 2.9 + 0.3) * cols);
+    const x = ((c * tw + (r % 2) * tw / 2 - w) % W + W) % W;
+    g.fillStyle = hash11(seed + i * 3.3) < 0.7 ? 'rgba(214,212,204,0.55)' : 'rgba(92,94,98,0.6)';
+    g.fillRect(x, r * th, tw, th);
+  }
+  g.restore();
+}
+
 function nearestPot(x: number): number {
   let best = POT[0];
   for (const p of POT) if (Math.abs(p - x) < Math.abs(best - x)) best = p;
@@ -294,6 +339,8 @@ export function bodyTexture(liv: StageLivery, diameter: number, length: number, 
     g.fillStyle = 'rgba(255,255,255,0.20)';
     g.fillRect(x + w / 2, 0, Math.max(1, w * 0.45), H);
   }
+
+  if (liv.heatShield) heatShield(g, W, H, liv.heatShield, diameter, length, seed);
 
   if (liv.text) {
     const px = Math.max(12, Math.min(W * 0.42, H * 0.032));

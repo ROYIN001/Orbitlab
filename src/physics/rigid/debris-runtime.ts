@@ -83,7 +83,11 @@ export interface RigidContact {
   angularRateRadS: number; verticalSpeed: number; horizontalSpeed: number; totalSpeed: number;
 }
 export interface RigidDebrisEvent { key: string; severity: 'info' | 'success'; params: Record<string, string | number> }
-export interface RigidDebrisStepResult { events: RigidDebrisEvent[]; contact?: RigidContact }
+export interface RigidDebrisStepResult {
+  events: RigidDebrisEvent[]; contact?: RigidContact;
+  /** mission time of the contact, s */
+  contactTime?: number;
+}
 export interface RigidDebrisOptions {
   vehicleId: string; stage?: StageSpec; consumed?: Readonly<Record<string, number>>;
   /** Preserve the parent's spatial engine-out allocation; separation is no repair. */
@@ -655,7 +659,7 @@ export class RigidDebrisRuntime {
         severity: landed ? 'success' : 'info', params: { name: d.name, speed: contact.totalSpeed,
           tiltDeg: contact.tiltRad / DEG, verticalSpeed: contact.verticalSpeed, horizontalSpeed: contact.horizontalSpeed,
           ...(target ? { zone: zoneLabel(target), miss: Math.round(miss ?? 0) } : {}) } });
-      return { events, contact };
+      return { events, contact, contactTime };
     };
     /**
      * The booster's base has come down to the tower's catch height inside
@@ -677,7 +681,7 @@ export class RigidDebrisRuntime {
       events.push({ key: caught ? 'evt.boosterCaught' : 'evt.stageImpact', severity: caught ? 'success' : 'info',
         params: { name: d.name, speed: contact.totalSpeed, tiltDeg: contact.tiltRad / DEG, verticalSpeed: contact.verticalSpeed,
           horizontalSpeed: contact.horizontalSpeed, zone: zoneLabel(rc.target!), miss: Math.round(miss) } });
-      return { events, contact };
+      return { events, contact, contactTime };
     };
     const initialContact = contactNow();
     if (initialContact.clearance <= 0) return finish(initialContact, time);

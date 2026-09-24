@@ -14,17 +14,29 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { SiteExtra } from '../data/sites';
+import { landingZonesForSite } from '../data/landing-zones';
 import type { VehicleSpec } from '../types';
 import { R_EARTH } from '../physics/constants';
 import { fbm2, hash11, smoothstep } from './noise';
+
+/**
+ * A booster flown back to the pad's own tower (Super Heavy to Starbase's
+ * arms): the height of its base above the level the vehicle stood on at
+ * liftoff, m, and the height the arms hold it at.
+ */
+export interface TowerReturn {
+  baseHeight: number;
+  catchHeight: number;
+}
 
 export interface PadBuild {
   group: THREE.Group;
   /**
    * @param t mission time, s (negative during the countdown)
    * @param altAGL vehicle altitude above the pad, m
+   * @param tower a booster coming back to be caught, when there is one
    */
-  animate(t: number, altAGL: number): void;
+  animate(t: number, altAGL: number, tower?: TowerReturn): void;
   /** direction the flame trench vents, rad in the local XZ plane */
   trenchAzimuth: number;
   /** radius of the trench mouth / flame pit, m */
@@ -192,7 +204,59 @@ function curveDrop(x: number, z: number): number {
   return (x * x + z * z) / (2 * R_EARTH);
 }
 
-function heightAt(x: number, z: number, b: Biome, sea: THREE.Vector2): number {
+/**
+ * Landing zones near the pad, as the terrain has to know them: a flat
+ * clearing at the height the simulation lands a stage on, and land under it.
+ * Cape Canaveral's landing zones are 9 km south of SLC-40 and 3 km nearer
+ * the sea than the straight procedural shoreline allows, so the shore bulges
+ * out around them — which is what the real cape does.
+ */
+interface Land {
+  /** clearings in the local frame (x east, z south), m; `h` is the height to flatten to */
+  clearings: { x: number; z: number; r: number; h: number }[];
+  /** extra distance of the shoreline from the pad along the coast, m, as a function of the along-coast coordinate */
+  bulges: { t: number; extra: number }[];
+}
+
+const NO_LAND: Land = { clearings: [], bulges: [] };
+/** Half-width of a shoreline bulge along the coast, m. */
+const BULGE_WIDTH = 4000;
+/** Land kept between a landing zone and the sea, m. */
+const ZONE_INLAND = 1500;
+
+/** Distance from the pad to the shoreline at (x, z), m. */
+function shoreAt(x: number, z: number, b: Biome, sea: THREE.Vector2, land: Land): number {
+  let shore = b.shore;
+  if (land.bulges.length) {
+    const t = -x * sea.y + z * sea.x;
+    for (const bulge of land.bulges) shore += bulge.extra * Math.exp(-(((t - bulge.t) / BULGE_WIDTH) ** 2));
+  }
+  return shore;
+}
+
+function landFor(site: SiteExtra, b: Biome, mountHeight: number): Land {
+  const zones = landingZonesForSite(site.id).filter((z) => z.kind === 'pad');
+  if (!zones.length) return NO_LAND;
+  const sea = azDir(b.seaAz);
+  const M = (R_EARTH * Math.PI) / 180;
+  const land: Land = { clearings: [], bulges: [] };
+  for (const zone of zones) {
+    const x = (zone.longitude - site.longitude) * Math.cos(site.latitude * DEG2) * M;
+    const z = -(zone.latitude - site.latitude) * M;
+    // The ground mesh sits 0.4 m below its heights and the whole grade is
+    // lowered by the mount: this leaves the clearing just under the pad's
+    // apron, which is drawn at the landing height (src/render/recovery.ts).
+    land.clearings.push({ x, z, r: zone.radius * 2.6, h: mountHeight + 0.1 });
+    if (b.coastal) {
+      const toSea = x * sea.x + z * sea.y;
+      const extra = toSea + ZONE_INLAND - b.shore;
+      if (extra > 0) land.bulges.push({ t: -x * sea.y + z * sea.x, extra });
+    }
+  }
+  return land;
+}
+
+function heightAt(x: number, z: number, b: Biome, sea: THREE.Vector2, land: Land = NO_LAND): number {
   const d = Math.hypot(x, z);
   const flat = smoothstep(APRON, APRON * 3.2, d);
   let h = (fbm2(x / 2400 + 4.2, z / 2400 - 1.7, 4) - 0.45) * b.hills;
@@ -200,13 +264,18 @@ function heightAt(x: number, z: number, b: Biome, sea: THREE.Vector2): number {
   h *= flat;
   if (b.coastal) {
     const s = x * sea.x + z * sea.y;              // distance toward the sea
-    const ramp = smoothstep(b.shore - (b.cliffs ? 120 : 900), b.shore + (b.cliffs ? 60 : 600), s);
+    const shore = shoreAt(x, z, b, sea, land);
+    const ramp = smoothstep(shore - (b.cliffs ? 120 : 900), shore + (b.cliffs ? 60 : 600), s);
     h = h * (1 - ramp) - ramp * (b.cliffs ? 140 : 60);
+  }
+  for (const c of land.clearings) {
+    const k = 1 - smoothstep(c.r, c.r * 2.5, Math.hypot(x - c.x, z - c.z));
+    if (k > 0) h += (c.h - h) * k;
   }
   return h;
 }
 
-function terrain(ctx: Ctx, b: Biome): THREE.Object3D[] {
+function terrain(ctx: Ctx, b: Biome, land: Land = NO_LAND): THREE.Object3D[] {
   const out: THREE.Object3D[] = [];
   const sea = azDir(b.seaAz);
   // A disc, not a square: a square plane's corners would poke out past the
@@ -231,7 +300,7 @@ function terrain(ctx: Ctx, b: Biome): THREE.Object3D[] {
   const sand = new THREE.Color(0xcdbd94);
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i);
-    const h = heightAt(x, z, b, sea) - curveDrop(x, z);
+    const h = heightAt(x, z, b, sea, land) - curveDrop(x, z);
     pos.setY(i, h);
     const mix = fbm2(x / 900 + 2.1, z / 900 - 3.3, 3);
     c.copy(g1).lerp(g2, mix);
@@ -239,7 +308,8 @@ function terrain(ctx: Ctx, b: Biome): THREE.Object3D[] {
     if (hLocal > b.hills * 0.32) c.lerp(rock, smoothstep(b.hills * 0.32, b.hills * 0.9, hLocal));
     if (b.coastal) {
       const s = x * sea.x + z * sea.y;
-      c.lerp(sand, smoothstep(b.shore - 500, b.shore + 120, s) * (b.cliffs ? 0.35 : 0.9));
+      const shore = shoreAt(x, z, b, sea, land);
+      c.lerp(sand, smoothstep(shore - 500, shore + 120, s) * (b.cliffs ? 0.35 : 0.9));
     }
     // concrete apron fades in near the pad
     const d = Math.hypot(x, z);
@@ -314,13 +384,13 @@ function terrain(ctx: Ctx, b: Biome): THREE.Object3D[] {
     out.push(water);
   }
 
-  const veg = vegetation(ctx, b, sea);
+  const veg = vegetation(ctx, b, sea, land);
   if (veg) out.push(veg);
   return out;
 }
 
 /** Instanced trees / bushes scattered on the terrain, never on the apron. */
-function vegetation(ctx: Ctx, b: Biome, sea: THREE.Vector2): THREE.Object3D | null {
+function vegetation(ctx: Ctx, b: Biome, sea: THREE.Vector2, land: Land = NO_LAND): THREE.Object3D | null {
   const style = b.vegetation;
   if (style === 'none') return null;
   const spec: Record<Exclude<Vegetation, 'none'>, { n: number; h: number; r: number; trunk: number; color: number; spread: number }> = {
@@ -347,8 +417,9 @@ function vegetation(ctx: Ctx, b: Biome, sea: THREE.Vector2): THREE.Object3D | nu
     const a = hash11(i * 3.7) * Math.PI * 2;
     const rr = APRON * 1.6 + Math.pow(hash11(i * 7.1 + 1.3), 0.6) * s.spread;
     const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
-    if (b.coastal && x * sea.x + z * sea.y > b.shore - 300) continue;
-    const h = heightAt(x, z, b, sea);
+    if (b.coastal && x * sea.x + z * sea.y > shoreAt(x, z, b, sea, land) - 300) continue;
+    if (land.clearings.some((c) => Math.hypot(x - c.x, z - c.z) < c.r * 1.8)) continue;
+    const h = heightAt(x, z, b, sea, land);
     if (h < -5) continue;
     if (fbm2(x / 1500 + 9, z / 1500 - 4, 2) < 0.38) continue;   // clearings
     p.set(x, h - 0.5 - curveDrop(x, z), z);
@@ -803,7 +874,8 @@ const starbasePad: Builder = (ctx) => {
   g.add(tower);
   // carriage + chopstick arms
   const carriage = new THREE.Group();
-  carriage.position.set(-(olmR + 16), H * 0.62, 0);
+  const stackY = H * 0.62;
+  carriage.position.set(-(olmR + 16), stackY, 0);
   g.add(carriage);
   const chopsticks: THREE.Group[] = [];
   for (const s of [1, -1]) {
@@ -828,16 +900,35 @@ const starbasePad: Builder = (ctx) => {
   g.add(tankFarm(ctx, 210, 30, 3, 7, 22));
   for (const o of infrastructure(ctx, 280, -1)) g.add(o);
 
+  const mountHeight = legH + 13;
+  // Where the arms meet the booster: from the pivot to the booster's axis.
+  const reach = olmR + 16 - 6;
   return {
-    group: g, trenchAzimuth: Math.PI / 2, mouthRadius: olmR * 1.4, mountHeight: legH + 13,
-    animate(t, altAGL) {
-      const open = smoothstep(-1.5, 3, t) * 0.35 + smoothstep(0, 120, altAGL) * 0.2;
+    group: g, trenchAzimuth: Math.PI / 2, mouthRadius: olmR * 1.4, mountHeight,
+    animate(t, altAGL, tower) {
+      let open = smoothstep(-1.5, 3, t) * 0.35 + smoothstep(0, 120, altAGL) * 0.2;
+      if (tower) {
+        // After liftoff the carriage rides up to the catch pins' height — the
+        // booster's base held at `catchHeight` above the mount, the pins 64 m
+        // above that — and the arms wait open; they close on the booster over
+        // the last 25 m of its fall, until they clasp its hull.
+        const pins = tower.catchHeight + CATCH_PIN_HEIGHT + mountHeight;
+        carriage.position.y = stackY + (pins - stackY) * smoothstep(40, 200, t);
+        const clasp = Math.atan2(ctx.R + 2.25 + 0.3 - 6, reach);
+        const closing = 1 - smoothstep(tower.catchHeight, tower.catchHeight + 25, tower.baseHeight);
+        open = 0.55 + (clasp - 0.55) * closing;
+      } else {
+        carriage.position.y = stackY;
+      }
       chopsticks[0].rotation.y = -open;
       chopsticks[1].rotation.y = open;
       qd.rotation.z = smoothstep(-6, -2, t) * 1.3;
     },
   };
 };
+
+/** Height of Super Heavy's catch pins above its base, m (just below the grid fins on a 71 m booster). */
+const CATCH_PIN_HEIGHT = 64;
 
 /** Kourou ELA-4: mobile gantry that rolls back, umbilical mast, jungle. */
 const kourouPad: Builder = (ctx) => {
@@ -1070,7 +1161,7 @@ export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T exte
   // is also where four spot lights stop being worth what they cost.
   const flood = padFloodlights(ctx, build);
   build.group.add(flood.group);
-  const terrainParts = terrain(ctx, biome);
+  const terrainParts = terrain(ctx, biome, landFor(site, biome, build.mountHeight));
   for (const o of terrainParts) grade.add(o);
   grade.add(build.group);
   root.add(grade);

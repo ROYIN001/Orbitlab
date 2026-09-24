@@ -12,7 +12,7 @@ import type { Vec3 } from '../physics/vec3';
 import { enuFrame } from '../physics/orbital';
 import { DEG, R_EARTH } from '../physics/constants';
 import type { SceneManager } from './scene';
-import { buildPad, type PadBuild } from './pads';
+import { buildPad, type PadBuild, type TowerReturn } from './pads';
 import { GroundSmoke, PadGlow } from './smoke';
 import { disposeObject } from './dispose';
 import { clamp01, smoothstep } from './noise';
@@ -152,6 +152,22 @@ export class LaunchPadView {
   }
 
   /**
+   * A booster in the frame flying back to be caught by this pad's tower: how
+   * high its base is above the level the vehicle stood on, and where the arms
+   * hold it.
+   */
+  private towerReturn(frame: VisualFrame): TowerReturn | undefined {
+    for (const d of frame.debris) {
+      const target = d.recovery?.target;
+      if (target?.kind !== 'tower') continue;
+      const anchor = d.anchor ?? 0;
+      const bx = d.r.x + d.dir.x * anchor, by = d.r.y + d.dir.y * anchor, bz = d.r.z + d.dir.z * anchor;
+      return { baseHeight: Math.hypot(bx, by, bz) - this.siteRadius, catchHeight: target.catchHeight ?? 0 };
+    }
+    return undefined;
+  }
+
+  /**
    * Fade the local terrain patch out with slant range instead of popping it
    * off at a fixed distance: a 13 km disc of tan geometry composited over the
    * Blue-Marble globe reads as a lens with a hard rim from a few tens of km up.
@@ -193,7 +209,7 @@ export class LaunchPadView {
     // thing switching it off changes is the draw-call count.
     if (this.pad.structures) this.pad.structures.visible = dist < STRUCTURES_FAR;
 
-    this.pad.animate(frame.t, frame.altitudeAGL);
+    this.pad.animate(frame.t, frame.altitudeAGL, this.towerReturn(frame));
 
     // The first stage's ignition time is only meaningful once it has ignited
     // (a liquid core lights several seconds *before* T-0, so the raw field is

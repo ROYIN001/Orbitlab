@@ -157,6 +157,12 @@ describe('point-mass returns', () => {
     expect(at('evt.boostbackStart')).toBeLessThan(at('evt.boostbackEnd'));
     expect(at('evt.boostbackEnd')).toBeLessThan(at('evt.entryBurnStart'));
     expect(at('evt.entryBurnStart')).toBeLessThan(at('evt.landingBurnStart'));
+    // Down, it stays on the pad while the flight goes on: it turns with the Earth.
+    const target = stage.recovery!.target!, miss = stage.recovery!.missDistance!;
+    const t0 = sim.state.t;
+    while (sim.state.t < t0 + 300) sim.step(sim.suggestedDt());
+    expect(Math.abs(distanceFromTarget(stage.r, target, sim.plan.gmst0, sim.state.t) - miss)).toBeLessThan(0.01);
+    expect(norm(sub(stage.v, groundVelocityEci(stage.r)))).toBeLessThan(1e-6);
   });
 
   it('flies Falcon Heavy\'s side boosters to LZ-1 and LZ-2 and its core to a drone ship (Arabsat-6A)', { timeout: 120_000 }, () => {
@@ -188,10 +194,10 @@ describe('point-mass returns', () => {
     expect(booster.outcome).toBe('landed');
     expect(booster.recovery!.missDistance!).toBeLessThan(landingZoneById('olm').radius);
     expect(sim.events.some((e) => e.key === 'evt.boosterCaught')).toBe(true);
-    // Held by the arms, its base 46 m above the ground at the pad.
+    // Held by the arms, its base 13 m above the launch mount it lifted off from.
     const height = norm(booster.r) - R_EARTH - sim.site.altitude;
-    expect(height).toBeGreaterThan(40);
-    expect(height).toBeLessThan(50);
+    expect(height).toBeGreaterThan(8);
+    expect(height).toBeLessThan(18);
   });
 
   it('keeps the original downrange recovery when there is no plan', () => {

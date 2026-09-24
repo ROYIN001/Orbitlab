@@ -1421,8 +1421,9 @@ landing beside it, and off a ship's deck is the sea.
 
 **The tower catch.** Super Heavy flies back to the Starbase launch tower, whose arms take it by
 the catch pins below its grid fins. The catch point is the pad itself, over the launch mount,
-with the booster's base 46 m above the ground (an estimate — the catch height is not
-published). The landing burn stops on that height instead of the ground, aiming at 1 m/s, and
+with the booster's base 13 m above the launch mount it lifted off from — the level every
+height at the pad is measured from, some 33 m over the ground — and the pins about 110 m over
+the ground (an estimate — the catch height is not published). The landing burn stops on that height instead of the ground, aiming at 1 m/s, and
 the arms close when the base reaches it within 4 m of the tower's catch point, falling at no
 more than 3 m/s, sliding at no more than 2 m/s, and — in six-DOF — tilted no more than 5° and
 turning no faster than 3 °/s (all estimates); caught, the booster stays in the arms
@@ -1458,6 +1459,12 @@ tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 
 The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
 real flight.
+
+A stage that has landed or been caught is no longer integrated, but it stays in the state: it
+turns with the Earth from then on (position, velocity ω × r, and in six-DOF its attitude and
+a body rate of exactly the Earth's), so the booster on its pad, on the drone ship's deck or in
+the tower's arms stays where it came down for the rest of the flight instead of hanging in
+inertial space while the ground rotates out from under it.
 
 ### 8.2 A suborbital target and the ship that flies itself home
 

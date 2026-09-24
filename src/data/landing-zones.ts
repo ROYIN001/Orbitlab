@@ -40,10 +40,14 @@ export const LANDING_ZONES: readonly LandingZoneSpec[] = [
   // launch mount it lifted off from, so the catch point is the pad itself
   // (the site's coordinates in src/data/sites.ts, which is where the mount is
   // drawn). The arms take the booster by the catch pins below its grid fins,
-  // about 64 m up a 71 m booster; closed at about 110 m that holds its base
-  // 46 m up, some 13 m above the mount (an estimate: the catch height is not
-  // published). A 4 m envelope for the arms to close on is an estimate too.
-  { id: 'olm', name: 'Starbase launch tower', siteIds: ['starbase'], latitude: 25.997, longitude: -97.155, kind: 'tower', radius: 4, catchHeight: 46 },
+  // about 64 m up a 71 m booster. Like every height at a pad, the catch
+  // height is measured from the level the vehicle stands on at liftoff, which
+  // at Starbase is the top of the launch mount, some 33 m over the ground
+  // (src/render/pads.ts draws it there): closed at about 110 m over the
+  // ground, the arms hold the booster's base 13 m above the mount (an
+  // estimate: the catch height is not published). A 4 m envelope for the
+  // arms to close on is an estimate too.
+  { id: 'olm', name: 'Starbase launch tower', siteIds: ['starbase'], latitude: 25.997, longitude: -97.155, kind: 'tower', radius: 4, catchHeight: 13 },
 ];
 
 export function landingZoneById(id: string): LandingZoneSpec {

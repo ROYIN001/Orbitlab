@@ -6,6 +6,7 @@ import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
 import { TrailLine, OrbitLine } from './render/lines';
 import { LaunchPadView } from './render/launchpad';
+import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
@@ -171,6 +172,8 @@ class App {
   simView: FrameSimView | null = null;
   rocket: RocketView | null = null;
   pad: LaunchPadView | null = null;
+  /** landing zones, a drone ship, the sea a ship comes home to */
+  private recoveryScenery: RecoverySceneryView | null = null;
   debrisView!: DebrisView;
   trail = new TrailLine(0x8be5cd);
   predicted = new OrbitLine(0xffffff, true);
@@ -228,6 +231,14 @@ class App {
   private bz = new THREE.Vector3();
   private backDir = new THREE.Vector3(0, -1, 0);
   private originV = new THREE.Vector3();
+  /**
+   * The body the camera follows when it is not the vehicle: a stage flown
+   * home, by its debris id. Null follows the vehicle. When the body is no
+   * longer in the frame (not yet separated, or scrubbed back before it was)
+   * the vehicle is followed.
+   */
+  focusDebrisId: number | null = null;
+  private vehiclePos = new THREE.Vector3();
   private earthC = new THREE.Vector3();
 
   constructor() {
@@ -798,6 +809,13 @@ class App {
     this.scene.scene.add(this.rocket.group, this.rocket.worldGroup);
     this.pad = new LaunchPadView(sim.site, sim.vehicleSpec);
     this.scene.scene.add(this.pad.group);
+    if (this.recoveryScenery) {
+      this.scene.scene.remove(this.recoveryScenery.group);
+      this.recoveryScenery.dispose();
+    }
+    this.recoveryScenery = new RecoverySceneryView(sim.site);
+    this.scene.scene.add(this.recoveryScenery.group);
+    this.focusDebrisId = null;
     this.cams.reset();
     this.debrisView.clear();
     this.trail.clear();
@@ -1095,7 +1113,9 @@ class App {
     }
     this.timeline.setEvents(this.recorder.events);
     this.timeline.update(this.recorder.startTime, this.recorder.headTime, this.player.cursor, this.player.live);
-    scene.origin = { x: frame.r.x, y: frame.r.y, z: frame.r.z };
+    const focus = this.focusDebrisId === null ? undefined : frame.debris.find((d) => d.id === this.focusDebrisId);
+    const focusR = focus ? focus.r : frame.r;
+    scene.origin = { x: focusR.x, y: focusR.y, z: focusR.z };
     // the sun (and therefore every sky/exposure/shading decision) comes from the
     // frame's own epoch, so a replayed frame relights identically
     const sunDir = sunDirectionEci(frame.jd);
@@ -1108,6 +1128,7 @@ class App {
     // own light on the stack; both are what a night launch is lit by.
     const night = 1 - dayFactorAt(dot(normalize(frame.r), sunDir));
     this.pad.update(scene, frame, night);
+    this.recoveryScenery?.update(scene, frame);
     // vehicle orientation: Y = body axis, Z = window side (horizontal), X = Y x Z
     //
     // The roll reference is the normal of the launch-azimuth plane, not
@@ -1135,12 +1156,14 @@ class App {
       this.bz.set(side.x, side.y, side.z),
     );
     this.rocket.group.quaternion.setFromRotationMatrix(this.basis);
-    this.rocket.group.position.set(0, 0, 0);
+    // The vehicle sits at the origin unless the camera is following something else.
+    scene.toScene(frame.r, this.vehiclePos);
+    this.rocket.group.position.copy(this.vehiclePos);
     if (frame.rigid) {
       const attitude = frame.rigid.attitudeQ;
       this.rocket.group.quaternion.set(attitude.x, attitude.y, attitude.z, attitude.w).multiply(MODEL_TO_BODY);
       const offset = quatRotate(attitude, frame.rigid.renderOffsetBody);
-      this.rocket.group.position.set(offset.x, offset.y, offset.z);
+      this.rocket.group.position.set(this.vehiclePos.x + offset.x, this.vehiclePos.y + offset.y, this.vehiclePos.z + offset.z);
       side = quatRotate(attitude, v3(0, 0, 1));
     }
     // the smoke column trails back towards the pad
@@ -1164,12 +1187,27 @@ class App {
     // camera
     const radius = frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
-    this.cams.update(scene.camera, {
-      pos: this.originV, up, east, north, dir: frame.dir, side, height, radius,
-      earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
-      vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
-      t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
-    }, dt, R_EARTH);
+    if (focus) {
+      // A stage flown home: framed on its own axis, over its own ground.
+      const f = enuFrame(focus.r);
+      const along = focus.rigid ? quatRotate(focus.rigid.attitudeQ, v3(0, 0, 1)) : cross(focus.dir, f.up);
+      const fSide = norm(along) > 0.05 ? normalize(along) : f.east;
+      const ground = sim.groundElevation(focus.r);
+      this.cams.update(scene.camera, {
+        pos: this.originV, up: f.up, east: f.east, north: f.north, dir: focus.dir, side: fSide,
+        height: focus.visual.length, radius: focus.visual.diameter / 2,
+        earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: focus.burning ? 0.1 : 0,
+        vDir: norm(focus.v) > 1 ? normalize(focus.v) : f.up,
+        t: frame.t, phase: 'ascent', agl: norm(focus.r) - R_EARTH - ground,
+      }, dt, R_EARTH);
+    } else {
+      this.cams.update(scene.camera, {
+        pos: this.originV, up, east, north, dir: frame.dir, side, height, radius,
+        earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
+        vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
+        t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
+      }, dt, R_EARTH);
+    }
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);

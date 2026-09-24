@@ -18,6 +18,7 @@ import type { RigidVehicleSnapshot } from '../rigid/mass';
 import type { PartitionedRigidBody } from '../rigid/partition';
 import { createRigidDebris, RETURN_CONTROL_GAINS, RETURN_LANDING_LEVEL, returnPropellant, zoneLabel, type RigidDebrisRuntime } from '../rigid/debris-runtime';
 import { rk4Step } from '../integrator';
+import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate } from '../rigid/math';
 import { elementsFromState, eciToLatLon, propagateKepler } from '../orbital';
 import type { StageState, BoosterState } from '../vehicle';
 import type { Simulation } from '../simulation';
@@ -441,6 +442,7 @@ export class DebrisTracker {
   private finishCatch(d: Debris, t: number, miss: number, caught: boolean): void {
     const rc = d.recovery!;
     d.alive = false;
+    d.restT = t;
     rc.burning = false;
     rc.missDistance = miss;
     const ll = eciToLatLon(d.r, this.sim.plan.gmst0 + OMEGA_EARTH * t);
@@ -457,6 +459,7 @@ export class DebrisTracker {
   private touchdown(d: Debris, t: number): void {
     const rc = d.recovery!, target = rc.target!;
     d.alive = false;
+    d.restT = t;
     rc.burning = false;
     const theta = this.sim.plan.gmst0 + OMEGA_EARTH * t;
     const ll = eciToLatLon(d.r, theta);
@@ -498,6 +501,32 @@ export class DebrisTracker {
     }
   }
 
+  /**
+   * A stage that has landed — on a pad, a drone ship's deck, a tower's arms —
+   * stays where it came down: it turns with the Earth, which is all that
+   * moves it, rather than staying put in inertial space and sliding off the
+   * pad at the speed of the ground. It is turned from the instant it came to
+   * rest, which is part-way through the step that landed it, to the end of
+   * the current step.
+   */
+  private rest(d: Debris): void {
+    const now = this.sim.state.t;
+    const from = d.restT ?? now;
+    if (now > from) DebrisTracker.rideWithEarth(d, now - from);
+    d.restT = now;
+  }
+
+  private static rideWithEarth(d: Debris, dt: number): void {
+    const turn = quatFromAxisAngle(v3(0, 0, 1), OMEGA_EARTH * dt);
+    d.r = quatRotate(turn, d.r);
+    d.v = cross(v3(0, 0, OMEGA_EARTH), d.r);
+    d.dir = quatRotate(turn, d.dir);
+    if (d.rigid) {
+      const attitudeQ = quatNormalize(quatMultiply(turn, d.rigid.attitudeQ));
+      d.rigid = { ...d.rigid, attitudeQ, omegaBody: quatInverseRotate(attitudeQ, v3(0, 0, OMEGA_EARTH)) };
+    }
+  }
+
   stepDebris(dt: number): void {
     const omega = v3(0, 0, OMEGA_EARTH);
     for (const d of this.sim.debris) {
@@ -506,6 +535,7 @@ export class DebrisTracker {
       if (rigid) {
         const from = Math.max(d.createdAt, this.sim.state.t - dt);
         const result = rigid.step(from, Math.max(0, this.sim.state.t - from), r => this.sim.groundElevation(r));
+        if (result.contactTime !== undefined) d.restT = result.contactTime;
         if (result.contact) {
           const ll = eciToLatLon(result.contact.r, this.sim.plan.gmst0 + OMEGA_EARTH * this.sim.state.t);
           d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
@@ -628,6 +658,7 @@ export class DebrisTracker {
         const touchdown = altN <= ground || (altN <= ground + 3 && d.recovery !== undefined && vImpactNow < 12);
         if (touchdown) {
           d.alive = false;
+          d.restT = this.sim.state.t - dt + (k + 1) * h;
           const ll = eciToLatLon(d.r, this.sim.state.theta);
           d.impact = { lat: ll.lat * RAD, lon: ll.lon * RAD };
           const vImpact = vImpactNow;
@@ -647,5 +678,6 @@ export class DebrisTracker {
         }
       }
     }
+    for (const d of this.sim.debris) if (!d.alive && d.outcome === 'landed') this.rest(d);
   }
 }

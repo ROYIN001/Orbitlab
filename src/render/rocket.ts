@@ -19,6 +19,7 @@ import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, s
 import { clamp01, seedFromString, smoothstep } from './noise';
 import { disposeObject } from './dispose';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
+import { buildShipFlaps, foldShipFlaps, SHIP_NOSE_FRACTION, tangentOgiveProfile, type FlapVisual } from './ship';
 
 export interface RocketEnv {
   /** unit vector (scene axes) from the vehicle back down its flight path */
@@ -67,6 +68,8 @@ interface StagePart {
   /** cached position in `frame.stages` (see `stageFrame`) */
   frameIndex: number;
   boosters: BoosterSet[];
+  /** Starship's flaps, folded on the recorded deflections */
+  flaps: FlapVisual[];
 }
 
 interface EngineVisual {
@@ -261,7 +264,11 @@ export class RocketView {
     const r = spec.diameter / 2;
     const liv = stageLivery(this.spec, spec);
     const seed = seedFromString(this.spec.id + spec.id);
-    const tex = bodyTexture(liv, spec.diameter, spec.length, seed);
+    // A top stage flown without a fairing (Starship's ship) carries its payload
+    // inside its own nose, so it has to close the stack itself.
+    const noseH = !this.spec.fairing && index === this.spec.stages.length - 1 ? spec.length * SHIP_NOSE_FRACTION : 0;
+    const barrel = spec.length - noseH;
+    const tex = bodyTexture(liv, spec.diameter, barrel, seed);
     this.textures.push(tex);
     // `SceneManager` provides a small procedural sky/ground PMREM probe, so a
     // metallic surface now has something to reflect: bare stainless (Starship,
@@ -269,11 +276,23 @@ export class RocketView {
     // near-dielectric — a 0.12 metalness on white paint is already generous.
     const bodyMat = new THREE.MeshStandardMaterial({ map: tex, metalness: liv.steel ? 0.72 : 0.12, roughness: liv.steel ? 0.34 : 0.62 });
     this.materials.push(bodyMat);
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, spec.length, 40, 1), bodyMat);
-    body.position.y = spec.length / 2;
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, barrel, 40, 1), bodyMat);
+    body.position.y = barrel / 2;
     body.castShadow = true;
     body.receiveShadow = true;
     g.add(body);
+    if (noseH > 0) {
+      // Its own canvas: the lathe's v runs over the nose alone, and the
+      // marking and bands belong to the barrel. `LatheGeometry` and
+      // `CylinderGeometry` share u, so the heat shield continues onto it.
+      const noseTex = bodyTexture({ ...liv, text: undefined, flag: undefined, bands: [], soot: false }, spec.diameter, noseH, seed + 0.5);
+      this.textures.push(noseTex);
+      const noseMat = new THREE.MeshStandardMaterial({ map: noseTex, metalness: bodyMat.metalness, roughness: bodyMat.roughness });
+      this.materials.push(noseMat);
+      const nose = new THREE.Mesh(new THREE.LatheGeometry(tangentOgiveProfile(r, barrel, noseH, 24), 40), noseMat);
+      nose.castShadow = true;
+      g.add(nose);
+    }
 
     // The adapter's own height comes from the same `interstageHeight` that
     // produced `stackHeight` inside `stackLayout`, so the drawn cone and the
@@ -296,7 +315,12 @@ export class RocketView {
 
     if (spec.gridFins) this.addGridFins(g, r, spec.length);
     if (spec.legs) this.addLegs(g, r, spec.length);
-    if (spec.flaps) this.addFlaps(g, r, spec.length);
+    let flaps: FlapVisual[] = [];
+    if (spec.flaps) {
+      const built = buildShipFlaps(spec, noseH, this.mat('#24262a', 0.5, 0.55));
+      g.add(built.group);
+      flaps = built.flaps;
+    }
     if (spec.fins) this.addFins(g, r);
 
     const kind = plumeKindFor(spec.engine, this.spec.id);
@@ -350,7 +374,7 @@ export class RocketView {
       boosters.push({ spec: b, units, frameIndex: -1 });
     }
 
-    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters };
+    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters, flaps };
   }
 
   /**
@@ -468,23 +492,6 @@ export class RocketView {
     }
   }
 
-  private addFlaps(g: THREE.Group, r: number, len: number): void {
-    const mat = this.mat('#24262a', 0.5, 0.55);
-    // two forward flaps near the nose, two larger aft flaps near the tank
-    for (let i = 0; i < 4; i++) {
-      const fwd = i < 2;
-      const ang = (i % 2 ? 1 : -1) * Math.PI * 0.32 + (fwd ? 0 : Math.PI * 0.06);
-      const span = r * (fwd ? 0.75 : 1.05);
-      const chord = fwd ? len * 0.1 : len * 0.16;
-      const flap = new THREE.Mesh(new THREE.BoxGeometry(span, chord, r * 0.22), mat);
-      flap.position.set(Math.cos(ang) * (r + span * 0.42), fwd ? len * 0.84 : len * 0.16, Math.sin(ang) * (r + span * 0.42));
-      flap.rotation.y = -ang;
-      flap.rotation.z = Math.cos(ang) * 0.12;
-      flap.castShadow = true;
-      g.add(flap);
-    }
-  }
-
   private addFins(g: THREE.Group, r: number): void {
     const mat = this.mat('#3a3d42', 0.3, 0.6);
     for (let i = 0; i < 4; i++) {
@@ -549,6 +556,7 @@ export class RocketView {
       part.group.visible = attached;
       if (!attached || !sf) continue;
       this.updateEngineVisual(part.engines, frame.rigid);
+      if (part.flaps.length) foldShipFlaps(part.flaps, frame.rigid);
       part.group.position.y = y;
       const burning = sf.burning;
       // The *effective* core throttle, not the guidance command: Angara's core
