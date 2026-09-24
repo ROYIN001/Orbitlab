@@ -48,6 +48,14 @@ here; this file records progress for the owner to fold in at the merge.
   estimate**; **sensor-grade presets** (navigation, tactical, MEMS) and custom values in the
   Engineer mode; a **Navigation tab** in the attitude-loop inspector (errors against the ±3σ the
   filter claims, innovations, GNSS state). Off by default, and off, every flight bit for bit.
+  Afterwards: the in-orbit burns should fly on the estimate too, **done by the other session**
+  from written instructions ([HANDOFF-G02-BURNS.md](HANDOFF-G02-BURNS.md)), on
+  `Simulation.knownState()`.
+- G08 (asked 2026-09-24): **actuator, sensor and flight-computer failures**; **presets of real
+  accidents** (Proton-M 2013, Ariane 5 flight 501, Vega VV17, a stuck gimbal); a simple **FDIR**
+  (2-of-3 IMU voting, gimbal monitoring, reconfiguration) that can be switched off to compare;
+  failures **set in the mission setup and injected live** (and through WebMCP), marked in the
+  attitude-loop inspector.
 
 ## Progress
 
@@ -407,7 +415,10 @@ Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2h, use in
   position and velocity), the ascent and burn cut-offs and core burnout (the orbit it believes
   in), the in-orbit prograde hold. **Left on the truth**: air data (load relief), and the
   in-orbit burns' planning and steering, which read `sim.state` inside `src/physics/sim/burns.ts`
-  — the other session's file; moving them needs edits there (for the owner to decide).
+  — the other session's file. The owner decided they should fly on the estimate, done by the
+  other session: `Simulation.knownState()` (the navigation's position, velocity, thrust axis,
+  elements, attitude and rate, or the truth's very own objects without it) is there for it, and
+  [HANDOFF-G02-BURNS.md](HANDOFF-G02-BURNS.md) lists every read to move and the acceptance tests.
 - **A tuning margin**: the filter adds velocity noise of 10⁻⁴ of the specific force per √s under
   thrust; without it (and before carrying the staging's centre-of-mass shift) it was
   overconfident through staging and max-q (a mean normalised error of 4 against 1).
