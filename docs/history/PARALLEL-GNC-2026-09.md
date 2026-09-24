@@ -24,6 +24,8 @@ here; this file records progress for the owner to fold in at the merge.
 - G03 (asked 2026-09-24): a **window of its own**, opened from the 6-DOF panel; the loop is
   **recorded at every control step** and left out of the golden fingerprints, so replay works
   from T+0; **no single-step button** (analysis belongs to G04 and E04).
+- The load relief's switch-off at 500 Pa, found by G03 (asked 2026-09-24): **fix it with G01**
+  (PEG/IGM), not on its own.
 
 ## Progress
 
@@ -37,7 +39,7 @@ here; this file records progress for the owner to fold in at the merge.
 | E04 controller tuning mode | |
 | G02 inertial navigation and Kalman filter | |
 | G08 control-system failures | |
-| G01 PEG and IGM guidance | |
+| G01 PEG and IGM guidance | (also: the load relief's switch-off, see G03) |
 | G05 Monte Carlo insertion accuracy | |
 
 ### P05 — slosh, bending and the bending filter
@@ -173,8 +175,8 @@ Physics and findings in [../PHYSICS.md](../PHYSICS.md) §2d, use in
 - **What it found**: on Falcon 9 the load relief holds the ascent command up to 24° nearer the
   air than guidance asks, and switches off in one step when the dynamic pressure falls through
   500 Pa (T+127.3 s): the attitude error jumps to 24° and the stack slews at its 5°/s limit for
-  five seconds. Left as it is here — a fix changes every six-DOF ascent — and reported to the
-  owner. Also: from T+89 s guidance pitches away from the airflow faster than the stack follows
+  five seconds. Left as it is here — a fix changes every six-DOF ascent — and, as the owner
+  decided, to be fixed with G01. Also: from T+89 s guidance pitches away from the airflow faster than the stack follows
   (4.6° of pitch error, the rate held by its stopping distance).
 
 **Files touched that the other session also edits** (additive): the three dictionaries
