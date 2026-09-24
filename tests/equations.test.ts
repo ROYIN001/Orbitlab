@@ -57,6 +57,20 @@ describe('the equation record (roadmap E02)', () => {
     while (sim.state.t < 5) sim.step(sim.suggestedDt());
     expect(sim.telemetry.every((sample) => !('eom' in sample))).toBe(true);
   });
+
+  it('is not written in a flight built without it (the tuner\'s), which flies the same', () => {
+    const on = new Simulation(mission('pointMass'), { headless: true });
+    const off = new Simulation(mission('pointMass'), { headless: true, equations: false });
+    while (on.state.t < 60) {
+      on.step(on.suggestedDt());
+      off.step(off.suggestedDt());
+      expect(off.state.eom).toBeUndefined();
+    }
+    expect(on.state.eom).toBeDefined();
+    expect(off.state.t).toBe(on.state.t);
+    expect(off.state.r).toEqual(on.state.r);
+    expect(off.state.v).toEqual(on.state.v);
+  });
 });
 
 describe('the equations panel\'s numbers', () => {

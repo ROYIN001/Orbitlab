@@ -129,6 +129,11 @@ export class Simulation {
   nextDebrisId(): number { return ++this.debrisCounter; }
   readonly payloadMass: number;
   readonly headless: boolean;
+  /**
+   * E02: whether each step writes `SimState.eom` for the live equations panel. The tuner's
+   * candidate flights, which nothing displays, leave it off: it is over a tenth of their time.
+   */
+  private readonly recordEquations: boolean;
   readonly rigidRuntime?: RigidRuntime;
   private readonly rigidDt: number;
   private advanceRemainder = 0;
@@ -171,8 +176,9 @@ export class Simulation {
   readonly ascent: AscentMonitor;
   /** @internal injected failures */
   readonly failures: FailureInjector;
-  constructor(cfgIn: MissionConfig, opts: { headless?: boolean; rigidDt?: number; rigidOptions?: RigidRuntimeOptions } = {}) {
+  constructor(cfgIn: MissionConfig, opts: { headless?: boolean; rigidDt?: number; rigidOptions?: RigidRuntimeOptions; equations?: boolean } = {}) {
     this.headless = opts.headless ?? false;
+    this.recordEquations = opts.equations ?? true;
     const integrationStepS = opts.rigidDt ?? opts.rigidOptions?.integrationStepS ?? 0.01;
     if (!(integrationStepS > 0 && integrationStepS <= 0.02)) throw new RangeError('Rigid timestep must be in (0, 0.02] s');
     this.rigidDt = 0.01;
@@ -984,7 +990,7 @@ export class Simulation {
     // E02: Newton's second law as this step solved it, for the live equations
     // panel — its terms at the step start and the step's mean acceleration.
     // Read only; nothing here feeds back into the flight.
-    if (dt > 0) {
+    if (dt > 0 && this.recordEquations) {
       const engines = runningEngines(active, thr.coreLevel, thr.boosterLevels);
       const pointDrag = vAirMag > 0.1 && atm.rho > 0 && alt < 1000e3 ? scale(vAir, -dragAccel / vAirMag) : v3();
       s.eom = {

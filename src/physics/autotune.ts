@@ -66,7 +66,7 @@ export function runAscent(cfg: MissionConfig, kickAngle: number, maxTurnRate = c
     guidance: { ...cfg.guidance, kickAngle, maxTurnRate, loftAltitude },
     failure: { ...cfg.failure },
   };
-  const sim = new Simulation(c, { headless: true });
+  const sim = new Simulation(c, { headless: true, equations: false });
   const flown = sim.cfg.guidance;
   let minAltCL = Infinity;
   let maxAlt = 0;
@@ -133,7 +133,7 @@ export function flyToTarget(
   cfg: MissionConfig, guidance: GuidanceParams, maxTime = 6 * 3600,
   maxSteps = cfg.dynamics?.model === 'sixDof' ? Math.ceil((maxTime + 10) / 0.01) + 1000 : 300000,
 ): { onTarget: boolean; misses: OrbitMiss[]; endStatus: string | null; t: number } {
-  const sim = new Simulation({ ...cfg, guidance, guidanceResolved: true, failure: { ...cfg.failure } }, { headless: true });
+  const sim = new Simulation({ ...cfg, guidance, guidanceResolved: true, failure: { ...cfg.failure } }, { headless: true, equations: false });
   let guard = 0;
   while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) sim.step(sim.suggestedDt());
   const hit = sim.events.find((e) => e.key === 'evt.targetOrbit');
@@ -300,7 +300,7 @@ export interface InsertionProbe {
  * and on purpose.
  */
 export function probeInsertion(cfg: MissionConfig, horizon = INSERTION_PROBE_HORIZON): InsertionProbe {
-  const sim = new Simulation({ ...cfg, failure: { mode: 'none', time: 0, stage: 0 } }, { headless: true });
+  const sim = new Simulation({ ...cfg, failure: { mode: 'none', time: 0, stage: 0 } }, { headless: true, equations: false });
   let best = -Infinity;
   let apoapsis = 0;
   let tInsertion = -1;
