@@ -1,18 +1,22 @@
 # Validation against flight data
 
 [PHYSICS.md](PHYSICS.md) §6a compares each vehicle's timeline with a published callout the model
-was **calibrated** against, and §10 says the physics "has not been validated against flight data".
-This document is that validation: the simulator flies real missions as they were flown (vehicle,
-pad, payload, orbit and booster recovery), and its trajectory is compared with measurements from
-those flights, using tolerances fixed before the comparison. Nothing in `src/` was changed for it.
+was **calibrated** against. This document is the validation: the simulator flies real missions
+as they were flown (vehicle, pad, payload, orbit and booster recovery), and its trajectory is
+compared with measurements from those flights, using tolerances fixed before the comparison.
 Where the model and the flight disagree, the disagreement is recorded here with its most likely
 cause. It is not tuned away.
 
-Status on 2026-09-25, main @ 844ffca:
+The comparison was first made with nothing in `src/` changed (main @ 844ffca). It then led to one
+data change and one bug fix, both in §2 "Data change applied": Falcon 9's first stage now flies
+its published masses, and a propellant-conservation bug found along the way is fixed (F10).
+Nothing was fitted to the flights.
+
+Status on 2026-09-25:
 
 | vehicle | reference | state |
 | --- | --- | --- |
-| Falcon 9 Block 5 | Webcast telemetry of five flights, 2018–2019 | Compared in both flight models (§2) |
+| Falcon 9 Block 5 | Webcast telemetry of five flights, 2018–2019 | Compared in both flight models (§2); first-stage masses corrected |
 | Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos) | Compared in both flight models (§3) |
 | Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
 
@@ -94,6 +98,9 @@ What the simulator flies in place of what was flown:
   gap in the trace 2 s after it. Take the time as good to about ±3 s.
 
 ### Results
+
+*Measured before the data change below (main @ 844ffca, first stage 395.7 t / 25.6 t); the
+tables with the published masses are under "Data change applied".*
 
 The flight value is followed by point mass and six-DOF, with the error relative to the flight in
 brackets.
@@ -219,7 +226,9 @@ The events file puts the real throttle-down window at 18–35 s long, between T+
 This is inside the ±10 % the data are quoted to (PHYSICS.md §10), but it is **systematic**:
 all five flights agree on the sign and on the size. It is a vehicle-data finding
 (`src/data/vehicles.ts`, `falcon9` first stage and `MERLIN1D`), not an error in the equations.
-Nothing has been changed here, because changing it moves every calibrated row of PHYSICS.md §6a.
+The published first-stage masses have since been applied ("Data change applied" below), which
+narrows this gap by about a third (the expended burn is 157.9 s against 168 s) but does not
+close it.
 
 **F2. Speed at T+100 s is 14–22 % high on three flights, and 2–6 % high on the other two.** The
 same cause as F1 seen earlier in the flight: a higher mass flow is a higher thrust-to-weight once
@@ -258,36 +267,172 @@ things: one systematic vehicle-data offset (F1, and F2 as its consequence), one 
 (F4), and the guidance's fixed choices (F3, F6). F5 is a difference between the two flight
 models.
 
-### Proposed data change (not applied)
+### Data change applied
 
-F1 has a sourced candidate fix. Wikipedia's "Falcon 9 Block 5" specification table
-(`action=raw`, read 2026-09-25) cites *Espace & Exploration* no. 39 (May 2017,
-"Fiche technique: Falcon-9") for the first stage's tank capacities and empty mass:
+F1 had a sourced fix. Wikipedia's "Falcon 9 Block 5" specification table (`action=raw`, read
+2026-09-25) cites *Espace & Exploration* no. 39 (May 2017, "Fiche technique: Falcon-9") for the
+first stage's tank capacities and empty mass:
 
-| first stage | model (`src/data/vehicles.ts`) | published |
+| first stage | before (main @ 844ffca) | now (`src/data/vehicles.ts`) |
 | --- | --- | --- |
 | propellant | 395 700 kg | 287 400 kg LOX + 123 500 kg RP-1 = 410 900 kg |
 | empty mass | 25 600 kg | 22 200 kg |
 
-These values were flown once, in memory only, through the same comparison. Nothing in `src/` was
-edited. The results for the point-mass model:
+Falcon Heavy's cores and the second stage keep their own figures. The second stage's published
+4 000 kg empty and 107 500 kg of propellant are within 7 % and 0.5 % of the model's
+4 300 / 108 000 kg. It was not part of F1, so it was left alone.
 
-| variant | rows in tolerance (of 66) | MECO, expended (flight 168 s) | speed at T+100 s (flights 723–874 m/s) |
+The values were flown in memory first and then applied. A throttle bucket at 28 kPa and 70 % was
+tried at the same time and made the comparison worse (42 of 66 rows in point mass), so it was not
+applied. PHYSICS.md §6a has the re-measured bucket table.
+
+**Rows in tolerance, before → after:**
+
+| flight | rows | point mass | six-DOF |
 | --- | ---: | ---: | ---: |
-| as shipped | 43 | 152.4 s | 878–902 m/s |
-| published propellant and empty mass | **49** | 157.9 s | 841–865 m/s |
-| the same, plus a throttle bucket at 28 kPa / 70 % | 42 | 154.2 s | 928–952 m/s |
+| CRS-16 | 14 | 11 → 12 | 9 → 11 |
+| Iridium NEXT 8 | 13 | 9 → 12 | 9 → 11 |
+| GPS III SV01 | 14 | 9 → 11 | 8 → 11 |
+| SSO-A (held out) | 11 | 8 → 6 | 9 → 7 |
+| Bangabandhu-1 (held out) | 14 | 6 → 8 | 6 → 8 |
+| **total** | 66 | **43 → 49** | **41 → 48** |
 
-The published masses improve MECO and the early speed on every flight. A throttle-bucket change
-makes things worse, so it is not proposed. The published masses are not fitted to these flights,
-so all five stay independent evidence: this is data correction, not calibration. Anything that
-later *has* to be fitted, such as the throttle profile, would be fitted on CRS-16, Iridium NEXT 8
-and GPS III SV01, and judged on the held-out SSO-A and Bangabandhu-1.
+**Hold-out.** Before any change, anything that had to be fitted was to be fitted on CRS-16,
+Iridium NEXT 8 and GPS III SV01 and judged on SSO-A and Bangabandhu-1. Nothing was fitted in the
+end: both numbers are published values, not chosen from these flights. The split is still
+reported. The three "fit" flights gained 13 rows between the two models. The two held-out
+flights gained none overall: Bangabandhu-1 gained 2 and SSO-A lost 2, because with the longer
+burn SSO-A's MECO speed is now above the flight's (the fixed 12 % drone-ship reserve, F4, is too
+large for that mission).
 
-Applying the change is left to a separate change, made once the parallel work in `src/` has
-merged. It moves every Falcon 9 row of PHYSICS.md §6a, the Falcon 9 rows of the fleet and
-recovery tests (the Bandwagon-1 landing margin among them), and the six-DOF mass properties in
-SIXDOF-VEHICLE-DATA.md, and each of those has to be re-measured with it.
+**What is left of F1 and F2.** MECO is now 4–10 % early (it was 7–12 %). The expended flight's
+first-stage burn is 157.9 s against 168 s. The speed at T+100 s is within 1–16 % (it was 2–22 %).
+The first minute moved the other way: the heavier stack is 1–11 % slow at T+60 s, where it was
+within 9 %, and GPS III SV01's T+60 s speed is now just outside its tolerance in point mass.
+Less acceleration early and a cut-off that still comes early together point at the throttle
+profile, not the loaded mass. The real Merlins throttle deeper and longer through max Q (18–35 s
+between T+43 and T+78 s in the events files) and then run longer. There is no public source for
+that profile, so it stays a disclosed difference.
+
+Results with the published masses (the tables in "Results" above are the earlier ones):
+
+**SpaceX CRS-16 (RTLS)**
+
+| milestone | unit | flight | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| max Q (callout) | s | 54.0 | 50.0 (−7 %) | 49.5 (−8 %) | ±5.4 |
+| T+60 altitude | km | 8.8 | 9.5 (+8 %) | 9.5 (+8 %) | ±2.3 |
+| T+60 speed | m/s | 318 | 316 (−1 %) | 317 (0 %) | ±37 |
+| T+100 altitude | km | 27.1 | 30.4 (+12 %) | 30.8 (+14 %) | ±5.1 |
+| T+100 speed | m/s | 723 | 841 (+16 %) ✗ | 840 (+16 %) ✗ | ±77 |
+| T+140 altitude | km | 61.4 | 62.7 (+2 %) | 72.8 (+19 %) ✗ | ±10.2 |
+| T+140 speed | m/s | 1516 | 1528 (+1 %) | 1552 (+2 %) | ±157 |
+| MECO | s | 145.0 | 132.8 (−8 %) | 132.7 (−8 %) | ±14.5 |
+| MECO altitude | km | 66.9 | 57.3 (−14 %) | 64.2 (−4 %) | ±11.0 |
+| MECO speed | m/s | 1624 | 1551 (−4 %) | 1596 (−2 %) | ±167 |
+| SES-1 | s | 156.0 | 139.8 (−10 %) ✗ | 139.7 (−10 %) ✗ | ±15.6 |
+| SECO-1 | s | 535.6 | 501.9 (−6 %) | 499.6 (−7 %) | ±53.6 |
+| SECO-1 altitude | km | 207.0 | 200.0 (−3 %) | 200.0 (−3 %) | ±32.0 |
+| SECO-1 speed | m/s | 7538 | 7461 (−1 %) | 7474 (−1 %) | ±759 |
+
+**SSO-A (drone ship)**
+
+| milestone | unit | flight | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| max Q (callout) | s | 58.0 | 50.4 (−13 %) ✗ | 50.3 (−13 %) ✗ | ±5.8 |
+| T+60 altitude | km | 9.3 | 9.7 (+4 %) | 9.7 (+4 %) | ±2.4 |
+| T+60 speed | m/s | 355 | 320 (−10 %) | 321 (−10 %) | ±41 |
+| T+100 altitude | km | 29.8 | 30.3 (+2 %) | 30.5 (+2 %) | ±5.5 |
+| T+100 speed | m/s | 778 | 865 (+11 %) ✗ | 867 (+11 %) ✗ | ±83 |
+| T+140 altitude | km | 70.1 | 61.3 (−13 %) | 67.8 (−3 %) | ±11.5 |
+| T+140 speed | m/s | 1591 | 1819 (+14 %) ✗ | 1838 (+16 %) ✗ | ±164 |
+| MECO | s | 143.0 | 137.5 (−4 %) | 137.5 (−4 %) | ±14.3 |
+| MECO altitude | km | 74.2 | 59.4 (−20 %) ✗ | 65.3 (−12 %) | ±12.1 |
+| MECO speed | m/s | 1642 | 1815 (+11 %) ✗ | 1842 (+12 %) ✗ | ±169 |
+| SES-1 | s | 154.0 | 144.5 (−6 %) | 144.5 (−6 %) | ±15.4 |
+
+**Iridium NEXT 8 (drone ship)**
+
+| milestone | unit | flight | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| max Q (callout) | s | 61.0 | 50.3 (−18 %) ✗ | 50.1 (−18 %) ✗ | ±6.1 |
+| T+60 altitude | km | 9.0 | 9.5 (+6 %) | 9.5 (+6 %) | ±2.4 |
+| T+60 speed | m/s | 343 | 316 (−8 %) | 317 (−8 %) | ±39 |
+| T+100 altitude | km | 27.5 | 29.6 (+8 %) | 29.8 (+8 %) | ±5.1 |
+| T+100 speed | m/s | 773 | 847 (+10 %) | 849 (+10 %) | ±82 |
+| T+140 altitude | km | 58.7 | 60.2 (+3 %) | 66.2 (+13 %) | ±9.8 |
+| T+140 speed | m/s | 1621 | 1767 (+9 %) | 1793 (+11 %) ✗ | ±167 |
+| MECO | s | 150.0 | 137.3 (−8 %) | 137.3 (−8 %) | ±15.0 |
+| MECO altitude | km | 68.5 | 58.2 (−15 %) | 63.5 (−7 %) | ±11.3 |
+| MECO speed | m/s | 1896 | 1764 (−7 %) | 1797 (−5 %) | ±195 |
+| SECO-1 | s | 531.2 | 521.4 (−2 %) | 513.1 (−3 %) | ±53.1 |
+| SECO-1 altitude | km | 183.0 | 200.9 (+10 %) | 200.0 (+9 %) | ±28.4 |
+| SECO-1 speed | m/s | 7911 | 7858 (−1 %) | 7867 (−1 %) | ±796 |
+
+**Bangabandhu-1 (drone ship)**
+
+| milestone | unit | flight | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| max Q (callout) | s | 74.0 | 50.3 (−32 %) ✗✗ | 49.9 (−33 %) ✗✗ | ±7.4 |
+| T+60 altitude | km | 8.9 | 9.6 (+8 %) | 9.6 (+8 %) | ±2.3 |
+| T+60 speed | m/s | 337 | 318 (−6 %) | 319 (−5 %) | ±39 |
+| T+100 altitude | km | 25.5 | 30.6 (+20 %) ✗ | 31.0 (+22 %) ✗ | ±4.8 |
+| T+100 speed | m/s | 874 | 852 (−3 %) | 853 (−2 %) | ±92 |
+| T+140 altitude | km | 53.5 | 63.1 (+18 %) ✗ | 72.4 (+35 %) ✗ | ±9.0 |
+| T+140 speed | m/s | 1901 | 1748 (−8 %) | 1744 (−8 %) | ±195 |
+| MECO | s | 152.0 | 137.5 (−10 %) | 137.5 (−10 %) | ±15.2 |
+| MECO altitude | km | 64.5 | 61.2 (−5 %) | 69.6 (+8 %) | ±10.7 |
+| MECO speed | m/s | 2259 | 1745 (−23 %) ✗ | 1752 (−22 %) ✗ | ±231 |
+| SES-1 | s | 163.0 | 144.5 (−11 %) ✗ | 144.5 (−11 %) ✗ | ±16.3 |
+| SECO-1 | s | 501.8 | 503.5 (0 %) | 496.7 (−1 %) | ±50.2 |
+| SECO-1 altitude | km | 164.0 | 254.4 (+55 %) ✗✗ | 250.0 (+52 %) ✗✗ | ±25.6 |
+| SECO-1 speed | m/s | 7490 | 7736 (+3 %) | 7750 (+3 %) | ±754 |
+
+**GPS III SV01 (expended)**
+
+| milestone | unit | flight | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| max Q (callout) | s | 63.0 | 50.1 (−20 %) ✗ | 49.6 (−21 %) ✗ | ±6.3 |
+| T+60 altitude | km | 9.0 | 9.6 (+7 %) | 9.6 (+7 %) | ±2.4 |
+| T+60 speed | m/s | 359 | 318 (−11 %) ✗ | 319 (−11 %) | ±41 |
+| T+100 altitude | km | 27.1 | 30.7 (+13 %) | 31.1 (+15 %) | ±5.1 |
+| T+100 speed | m/s | 836 | 848 (+1 %) | 848 (+1 %) | ±89 |
+| T+140 altitude | km | 56.3 | 63.4 (+13 %) | 73.6 (+31 %) ✗ | ±9.4 |
+| T+140 speed | m/s | 1763 | 1822 (+3 %) | 1791 (+2 %) | ±181 |
+| MECO | s | 168.0 | 157.9 (−6 %) | 157.8 (−6 %) | ±16.8 |
+| MECO altitude | km | 82.8 | 77.0 (−7 %) | 93.3 (+13 %) | ±13.4 |
+| MECO speed | m/s | 2653 | 2547 (−4 %) | 2388 (−10 %) | ±270 |
+| SES-1 | s | 179.0 | 164.9 (−8 %) | 164.8 (−8 %) | ±17.9 |
+| SECO-1 | s | 500.8 | 500.5 (0 %) | 501.1 (0 %) | ±50.1 |
+| SECO-1 altitude | km | 168.0 | 200.0 (+19 %) ✗ | 200.0 (+19 %) ✗ | ±26.2 |
+| SECO-1 speed | m/s | 7852 | 7944 (+1 %) | 7952 (+1 %) | ±790 |
+
+**What else the change moved** (all re-measured on 2026-09-25, full `npm test` green):
+
+- **PHYSICS.md §6a:** Falcon 9's reference timeline has MECO at T+156.3 s (150.8 s before) and
+  fairing jettison at T+221.5 s. Both are still inside their published windows. Max Q is still
+  the one row outside.
+- **The flexible autopilot (PHYSICS.md §2g):** the first bending mode is lower (1.61 Hz at T+25 s,
+  where it was 1.72 Hz). The two PD gains can no longer hold GM ≥ 4 dB from lift-off (best about
+  2.7 dB), and the default flexible autopilot is within 0.1 dB of that. The tuner now reports
+  4 dB as infeasible and is exercised at 2.5 dB in `tests/control-tuning.test.ts`.
+- **The equations panel:** the load relief releases at T+130.5 s (it was T+127.3 s).
+- **Landing:** from the 255.9 m descent fixture the lighter stage coasts and lights once. The old
+  stage braked first and relit. Bandwagon-1's return to LZ-1 still needs 13 % and lands with
+  15 %.
+- **Golden fingerprints:** Falcon 9's six-DOF flight was re-recorded by the P05 baseline commit
+  (7834edd) with only these two numbers changed. The current code with the flexible options off
+  matches it bit for bit, over the first 160 s and over the whole mission.
+
+**F10. A propellant-conservation bug, found through the change.** In the point-mass path, a step
+that ran through the tank's depletion boundary burned its full flow × dt, and `consume()` then
+clamped the tank back to empty. That is impulse no propellant paid for. It showed up because
+410.9 t happened to put the boundary inside a 0.5 s step in `tests/engine-transients.test.ts`:
+418 kg of free propellant, specific impulse 0.3 s high. 395.7 t had missed it by luck. The
+burning level is now capped at what the tank holds, in `thrust()` and `consume()`, for cores and
+strap-ons alike, the way the tail-off already was (`VehicleModel.withinTank`). A new test sweeps
+the propellant load so the boundary falls anywhere inside a step. The six-DOF path splits its step
+at the boundary and was not affected.
 
 ## 3. Soyuz-2.1a, Electron and Ariane 64: published timelines
 
@@ -370,7 +515,8 @@ to T+538 s, 387 s. The model runs it from T+141 s to T+439 s, 298 s. With the mo
 (`src/data/vehicles.ts`: 2 300 kg of propellant, one Rutherford Vacuum at 25.8 kN and 343 s,
 about 7.7 kg/s), 298 s is exactly a burn to depletion. The real stage burns for longer, so it
 must carry more propellant (about 3 t at the same flow) or throttle below full thrust. Nothing
-reachable here says which. This is a vehicle-data finding, like F1, and it is not applied. The
+reachable here says which. This is a vehicle-data finding, like F1, but unlike F1 no published
+stage mass exists to correct it (Rocket Lab does not publish them), so it is not applied. The
 first stage is 4 % early, as PHYSICS.md §6a already records.
 
 **F8. Soyuz inserts into a 197 × 200 km orbit; the flight went to 200 × 242 km.** The model aims

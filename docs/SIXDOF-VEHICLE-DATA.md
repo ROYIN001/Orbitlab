@@ -37,7 +37,7 @@ All numbers in the following table are **L**, copied from `src/data/vehicles.ts`
 
 | Vehicle/body id | Count | Dry kg each | Propellant kg each | Body length m | Diameter m |
 |---|---:|---:|---:|---:|---:|
-| Falcon `s1` | 1 | 25,600 | 395,700 | 42 | 3.66 |
+| Falcon `s1` | 1 | 22,200 | 410,900 | 42 | 3.66 |
 | Falcon `s2` | 1 | 4,300 | 108,000 | 15 | 3.66 |
 | Falcon fairing | 1 | 1,900 | 0 | 13.1 | 5.2 |
 | Soyuz `blokA` | 1 | 6,545 | 87,000 | 27.8 | 2.95 |
@@ -45,7 +45,9 @@ All numbers in the following table are **L**, copied from `src/data/vehicles.ts`
 | Soyuz `blokI` | 1 | 2,410 | 22,900 | 6.7 | 2.66 |
 | Soyuz fairing | 1 | 1,000 | 0 | 10.1 | 3.7 |
 
-For a 1,000 kg inert payload, these sum to Falcon 536,500 kg and Soyuz 294,391 kg before any propellant consumption (D). A spacecraft propulsion stage is already part of payload mass in `VehicleModel`; do not add that payload a second time.
+For a 1,000 kg inert payload, these sum to Falcon 548,300 kg and Soyuz 294,391 kg before any propellant consumption (D).
+
+Update 2026-09-25: Falcon `s1` now carries its published masses, 287,400 kg LOX + 123,500 kg RP-1 and a 22,200 kg empty stage (*Espace & Exploration* no. 39, via Wikipedia's "Falcon 9 Block 5"), in place of 25,600 / 395,700 kg (536,500 kg with a 1 t payload). This is an announced vehicle change, made after the model was compared with five flights' webcast telemetry; see [VALIDATION.md](VALIDATION.md). A spacecraft propulsion stage is already part of payload mass in `VehicleModel`; do not add that payload a second time.
 
 Published comparison, **P**, not replacement instructions:
 
@@ -105,9 +107,9 @@ Derived reference estimates from this recipe, **E/D**, per detached body with un
 
 | Body | Main propellant remaining | Mass kg | CG X m | Ixx kg·m² | Iyy=Izz kg·m² |
 |---|---:|---:|---:|---:|---:|
-| Falcon s1 | 100% | 421,300 | 22.8868 | 6.085e5 | 4.175e7 |
-| Falcon s1 | 50% | 223,450 | 18.3400 | 3.401e5 | 1.567e7 |
-| Falcon s1 | 0% | 25,600 | 16.4555 | 7.177e4 | 4.523e6 |
+| Falcon s1 | 100% | 433,100 | 22.9525 | 6.195e5 | 4.240e7 |
+| Falcon s1 | 50% | 227,650 | 18.3774 | 3.409e5 | 1.548e7 |
+| Falcon s1 | 0% | 22,200 | 16.4670 | 6.220e4 | 3.925e6 |
 | Falcon s2 | 100% | 112,300 | 8.2296 | 1.585e5 | 1.447e6 |
 | Falcon s2 | 50% | 58,300 | 6.5826 | 8.526e4 | 5.210e5 |
 | Falcon s2 | 0% | 4,300 | 5.8981 | 1.202e4 | 1.025e5 |
@@ -121,7 +123,7 @@ Derived reference estimates from this recipe, **E/D**, per detached body with un
 | Soyuz Blok I | 50% | 13,860 | 2.8937 | 1.179e4 | 3.303e4 |
 | Soyuz Blok I | 0% | 2,410 | 2.6130 | 3.582e3 | 1.249e4 |
 
-These arithmetic results were also generated in an independent Python component calculation saved with the research evidence. They do not validate the estimated physical distribution.
+These arithmetic results were also generated in an independent Python component calculation saved with the research evidence. They do not validate the estimated physical distribution. The three Falcon s1 rows were recomputed on 2026-09-25 with `buildDetachedStage` for the published masses (the same call reproduces the earlier rows exactly with the earlier masses); the independent Python check was not repeated for them.
 
 ## Engine counts, points and budgets
 
@@ -465,6 +467,13 @@ model; the rate-gain cap is the bending filter's autopilot limit, ω_b/6, agains
 | PSLV-XL | 2.98 | 2.97 | 0.010 | 79 | 0.051 | 3.00 | 0.81–1.18 | 0.9 % |
 | Electron | 7.03 | 7.03 | 0.113 | 81 | 0.182 | 3.00 | 0.87–1.14 | 2.2 % |
 | Starship (Super Heavy) | 1.14 | 1.14 | 0.073 | 97 | 0.028 | 1.19 | 0.40–0.40 | 2.8 % |
+
+The Falcon 9 row above was measured with the earlier first-stage masses. With the published
+ones (VALIDATION.md) the same `firstBendingMode` call on the lift-off stack lowers f₁ by 6 % (from
+1.60 to 1.50 Hz in a run on `buildRigidVehicle` with a 1 t payload, which does not reproduce the
+row's 1.64 Hz exactly) and the rate-gain cap with it, to about 1.6/s. In flight the mode sits at
+1.61 Hz at T+25 s where it was 1.72 Hz. Consequences for the tuned flexible autopilot are in
+PHYSICS.md §2g.
 
 The frequencies rise as the propellant goes (Falcon 9's from 1.6 Hz at liftoff to 2.5 Hz at
 T+120 s) and jump at every separation: the stacks left after it measured 9–75 Hz (Vega-C 18 Hz,

@@ -402,7 +402,8 @@ export const VEHICLES: VehicleSpec[] = [
     maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.75 },
     // A return to the launch site keeps 15 % instead: measured on Bandwagon-1
     // (1.3 t to 590 km at 45.4°), 13 % is the least that lands on LZ-1 in the
-    // point-mass model, and 15 % touches down with 12.7 t to spare.
+    // point-mass model, and 15 % touches down with 13.0 t to spare (both with
+    // the published first-stage masses above).
     recoverable: true, recoveryReserve: 0.12, returnReserve: 0.15, crewCapable: true,
     // Shallow kick and a slow pitch program put MECO near 65 km, which is what the published timeline implies.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
