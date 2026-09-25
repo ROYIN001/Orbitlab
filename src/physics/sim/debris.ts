@@ -488,6 +488,8 @@ export class DebrisTracker {
   spawnFairing(r: Vec3, v: Vec3): void {
     const f = this.sim.vehicleSpec.fairing;
     if (!f) return;
+    // a fairing with its own adapter cone narrows to the stage it stood on
+    const adapter = f.adapter ? [...this.sim.vehicleSpec.stages].reverse().find((st) => !st.isSpacecraft) : undefined;
     const along = normalize(this.sim.state.dir);
     let side = cross(along, normalize(r));
     if (norm(side) < 1e-6) side = cross(along, v3(1, 0, 0));
@@ -496,7 +498,7 @@ export class DebrisTracker {
       this.sim.debris.push({
         id: this.sim.nextDebrisId(), name: 'fairing', r: addScaled(r, side, sgn * (f.diameter / 2 + 1)), v: addScaled(v, side, sgn * 2.5),
         dir: along, mass: f.mass / 2, area: (f.diameter * f.length) / 2, cd: 1.5,
-        visual: { diameter: f.diameter, length: f.length, color: f.color ?? '#eee', kind: 'fairing' },
+        visual: { diameter: f.diameter, length: f.length, color: f.color ?? '#eee', kind: 'fairing', ...(adapter ? { adapter: f.adapter, baseDiameter: adapter.diameter } : {}) },
         alive: true, createdAt: this.sim.state.t,
       });
     }

@@ -229,8 +229,16 @@ export class OrbitLine {
     const o = this.baseOpacity * Math.max(0, Math.min(1, f));
     if (this.material.opacity === o) return;
     this.material.opacity = o;
-    this.line.visible = o > 0.004;
+    this.line.visible = o > 0.004 && !this.hidden;
   }
+
+  /** Kept out of the picture whatever its opacity (G07: close to the station). */
+  setHidden(hidden: boolean): void {
+    if (hidden === this.hidden) return;
+    this.hidden = hidden;
+    this.line.visible = !hidden && this.material.opacity > 0.004;
+  }
+  private hidden = false;
 
   setPoints(pts: Vec3[]): void {
     const n = Math.min(pts.length, this.capacity);

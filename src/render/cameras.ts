@@ -32,6 +32,10 @@ export interface CameraFocus {
   /** vehicle altitude above the pad, m (keeps the camera out of the ground) */
   agl: number;
   phase: CamPhase;
+  /** G07: the station, scene coordinates, while the spacecraft closes on it or is docked: the exterior camera keeps both in view */
+  partner?: THREE.Vector3;
+  /** G07: the spacecraft's docking TV camera, which the onboard view becomes during the approach */
+  dockingEye?: { pos: THREE.Vector3; dir: Vec3; up: Vec3 };
 }
 
 interface Framing {
@@ -61,6 +65,13 @@ export class CameraController {
   az = 0.9;
   userEl = 0;
   zoom = 1;
+  /**
+   * How far out the exterior view may be pulled, in the same units as `zoom`:
+   * the pad's ~1 km near the ground, and up to a few hundred kilometres once
+   * the vehicle is above the atmosphere, far enough to see an expanding plume
+   * whole (roadmap V02, the twilight jellyfish).
+   */
+  private maxZoom = 14;
   // space
   spaceAz = 0.3;
   spaceEl = 0.35;
@@ -124,7 +135,7 @@ export class CameraController {
         && !!node.closest('button, select, input, label, a, .scene-ui');
     };
     const zoomBy = (factor: number): void => {
-      if (this.mode === 'exterior') this.zoom = Math.max(0.35, Math.min(14, this.zoom * factor));
+      if (this.mode === 'exterior') this.zoom = Math.max(0.35, Math.min(this.maxZoom, this.zoom * factor));
       else if (this.mode === 'space') this.spaceDist = Math.max(1.05, Math.min(12, this.spaceDist * factor));
     };
     const spread = (): number => {
@@ -229,6 +240,8 @@ export class CameraController {
     const jz = fbm1s(f.t * 8.3 + 23.1, 2) * shake;
 
     if (this.mode === 'exterior') {
+      this.maxZoom = 14 * Math.max(1, Math.min(300, 1 + (f.agl - 40e3) / 1e3));
+      if (this.zoom > this.maxZoom) this.zoom = this.maxZoom;
       const fr = FRAMING[f.phase];
       // critically damped approach to the framing of the current phase
       const k = this.first ? 1e9 : 1.4;
@@ -238,14 +251,31 @@ export class CameraController {
       this.autoLift = damp(this.autoLift, fr.lift, k, dt);
       const el = Math.max(-0.85, Math.min(1.45, this.autoEl + this.userEl));
       const d = f.height * this.autoDist * this.zoom;
-      this.horiz.copy(east).multiplyScalar(Math.cos(this.az)).addScaledVector(north, Math.sin(this.az));
-      this.desired.copy(f.pos)
-        .addScaledVector(this.horiz, Math.cos(el) * d)
-        .addScaledVector(up, Math.sin(el) * d + f.height * this.autoLift);
-      // never dip below the ground near the pad
-      const hAboveGround = this.tmp.copy(this.desired).sub(f.pos).dot(up) + f.agl;
-      if (hAboveGround < 5) this.desired.addScaledVector(up, 5 - hAboveGround);
-      this.desiredTarget.copy(f.pos).addScaledVector(dir, f.height * this.autoAim);
+      if (f.partner) {
+        // G07: behind the spacecraft, looking past it at the station; the drag turns the view about the line between them
+        const u = this.tmp.copy(f.partner).sub(f.pos);
+        const range = u.length();
+        u.normalize();
+        const p1 = this.horiz.copy(up).addScaledVector(u, -up.dot(u));
+        if (p1.lengthSq() < 1e-6) p1.copy(east).addScaledVector(u, -east.dot(u));
+        p1.normalize();
+        const a = this.az - 0.9, e = 0.3 + this.userEl;
+        const px = Math.cos(a), py = Math.sin(a);
+        this.desired.copy(f.pos).addScaledVector(u, -Math.cos(e) * d)
+          .addScaledVector(p1, Math.sin(e) * d * px)
+          .addScaledVector(this.side.crossVectors(u, p1), Math.sin(e) * d * py);
+        this.desiredTarget.copy(f.pos).addScaledVector(u, Math.min(range * 0.5, d * 1.5));
+        this.side.set(f.side.x, f.side.y, f.side.z);
+      } else {
+        this.horiz.copy(east).multiplyScalar(Math.cos(this.az)).addScaledVector(north, Math.sin(this.az));
+        this.desired.copy(f.pos)
+          .addScaledVector(this.horiz, Math.cos(el) * d)
+          .addScaledVector(up, Math.sin(el) * d + f.height * this.autoLift);
+        // never dip below the ground near the pad
+        const hAboveGround = this.tmp.copy(this.desired).sub(f.pos).dot(up) + f.agl;
+        if (hAboveGround < 5) this.desired.addScaledVector(up, 5 - hAboveGround);
+        this.desiredTarget.copy(f.pos).addScaledVector(dir, f.height * this.autoAim);
+      }
       const lambda = this.first ? 1e9 : 9;
       this.pos.set(damp(this.pos.x, this.desired.x, lambda, dt), damp(this.pos.y, this.desired.y, lambda, dt), damp(this.pos.z, this.desired.z, lambda, dt));
       this.target.set(damp(this.target.x, this.desiredTarget.x, lambda, dt), damp(this.target.y, this.desiredTarget.y, lambda, dt), damp(this.target.z, this.desiredTarget.z, lambda, dt));
@@ -254,6 +284,14 @@ export class CameraController {
       camera.lookAt(this.target);
       camera.fov = 48;
       this.first = false;
+    } else if (this.mode === 'onboard' && f.dockingEye) {
+      // G07: the TV camera beside the docking probe, looking along the docking axis
+      const eye = f.dockingEye;
+      camera.position.copy(eye.pos);
+      camera.up.set(eye.up.x, eye.up.y, eye.up.z);
+      camera.lookAt(this.tmp.copy(eye.pos).add(this.dir.set(eye.dir.x, eye.dir.y, eye.dir.z)));
+      camera.fov = 34;
+      this.first = true;
     } else if (this.mode === 'onboard') {
       // side-mounted camera near the top of the stack, looking forward and out
       this.desired.copy(f.pos).addScaledVector(dir, f.height * 0.86).addScaledVector(side, f.radius * 1.15);

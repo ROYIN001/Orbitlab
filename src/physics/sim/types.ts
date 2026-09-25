@@ -1,4 +1,5 @@
 /** Types shared by the simulation and everything that reads its state. */
+import type { RendezvousState } from './rendezvous';
 import type { RigidTelemetry } from '../rigid/telemetry';
 import type { EngineSpec } from '../../types';
 import type { Vec3 } from '../vec3';
@@ -8,6 +9,7 @@ import type { BurnPlan } from '../mission';
 import type { EomRecord } from '../eom';
 import type { ExplicitGuidanceRecord } from '../explicit-guidance';
 import type { ReturnTarget } from './return-guidance';
+import type { EscapeStatus } from '../rigid/escape';
 
 /** What a returning stage's guidance carries from one step to the next. */
 export interface ReturnGuidanceMemory {
@@ -29,7 +31,7 @@ export interface ReturnGuidanceMemory {
  * has come down on the surface, intact or not, and the clock runs on with it
  * sitting there. Neither is ever reached by a flight to orbit.
  */
-export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'descent' | 'landed' | 'failed';
+export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'descent' | 'abort' | 'rendezvous' | 'landed' | 'failed';
 
 /**
  * Where a returning ship is in its descent: coasting above the air, entering
@@ -80,7 +82,14 @@ export interface DebrisVisual {
   conicalTop?: boolean;
   /** `StageSpec.profile`, so a spent stage keeps the shape it was drawn with */
   profile?: 'r7Core' | 'r7Upper';
-  kind: 'stage' | 'booster' | 'fairing' | 'upperStage';
+  kind: 'stage' | 'booster' | 'fairing' | 'upperStage'
+    /** after an abort: the tower (if still on), the upper fairing and the orbital module; the orbital and service modules */
+    | 'escapeHead' | 'modules';
+  /** `escapeHead`: the tower was still on it */
+  tower?: boolean;
+  /** `fairing`: its own adapter cone's height, m, down to `baseDiameter` (`FairingSpec.adapter`) */
+  adapter?: number;
+  baseDiameter?: number;
 }
 
 export interface Debris {
@@ -200,6 +209,18 @@ export interface SimState {
   note: string;
   /** a suborbital flight's return, while its status is `descent` */
   descentPhase?: DescentPhase | null;
+  /** a launch abort (roadmap G06): the escape's progress, from the command to the descent module at rest */
+  abort?: AbortState;
+  /** a rendezvous with the station (roadmap G07), from the spacecraft's separation to the hooks closed */
+  rendezvous?: RendezvousState;
+}
+
+/** A launch abort as the frame carries it (src/physics/sim/abort.ts). */
+export interface AbortState extends EscapeStatus {
+  /** event key of what set it off */
+  cause: string;
+  /** where and when the rocket was lost, for the drawing; absent for a commanded abort that leaves it flying */
+  rocketLost?: { r: Vec3; t: number };
 }
 
 export interface PendingAction {

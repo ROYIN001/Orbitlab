@@ -1,16 +1,13 @@
 /**
  * Instanced billboard smoke.
  *
- * Two effects share one technique: every puff's position, size and opacity are
+ * One technique: every puff's position, size and opacity are
  * computed in the vertex shader from a per-instance seed and the mission time,
  * so the CPU does no per-particle work and a replayed flight produces exactly
  * the same cloud.
  *
  *  - `GroundSmoke`  the steam/soot cloud that billows sideways out of the flame
  *                   trench at ignition and rises around the pad.
- *  - `AscentTrail`  the smoke column left behind the vehicle in the lower
- *                   atmosphere; puffs are placed along the line from the
- *                   vehicle back towards the pad, so it needs no history.
  *  - `PadGlow`      the lit patch of concrete under the engines.
  */
 import * as THREE from 'three';
@@ -37,6 +34,8 @@ const GROUND_VERT = BILLBOARD_HEAD + /* glsl */ `
   uniform float uSize;     // base puff radius, m
   uniform float uJetA;     // trench azimuth in the local frame, rad
   uniform float uRise;     // vertical rise rate, relative to the fast layer
+  uniform float uGrow;     // how fast a puff widens, per second of its age
+  uniform vec3 uDrift;     // the surface wind that carries the cloud, m/s, pad axes
   uniform float uOpacity;
   uniform vec3 uColor;
   uniform vec3 uHot;
@@ -56,38 +55,11 @@ const GROUND_VERT = BILLBOARD_HEAD + /* glsl */ `
     float a = max(age, 0.0);
     float rr = uR0 + spd * tau * (1.0 - exp(-a / tau));
     float y = 1.5 + uRise * (1.1 + 4.2 * rnd) * pow(a, 1.15) + rr * 0.10;
-    vec3 centre = vec3(cos(ang) * rr, y, sin(ang) * rr);
-    float size = uSize * (0.55 + 0.9 * rnd) * (1.0 + a * 0.34) * alive;
+    vec3 centre = vec3(cos(ang) * rr, y, sin(ang) * rr) + uDrift * a;
+    float size = uSize * (0.55 + 0.9 * rnd) * (1.0 + a * uGrow) * alive;
     float fade = smoothstep(0.0, 0.35, a) * (1.0 - smoothstep(life * 0.4, life, a));
     vAlpha = fade * uOpacity * alive;
     vTint = mix(uHot, uColor, smoothstep(0.0, 1.1, a));
-    vec4 mv = modelViewMatrix * vec4(centre, 1.0);
-    mv.xy += position.xy * size;
-    gl_Position = projectionMatrix * mv;
-    #include <logdepthbuf_vertex>
-  }
-`;
-
-const TRAIL_VERT = BILLBOARD_HEAD + /* glsl */ `
-  uniform float uT;
-  uniform vec3 uBack;     // unit vector from the vehicle back down the trail
-  uniform float uLength;  // trail length, m
-  uniform float uSize;
-  uniform float uOpacity;
-  uniform vec3 uColor;
-  uniform vec3 uHot;
-  void main() {
-    vUv = uv;
-    float id = iSeed;
-    float u = id;                                  // 0 at the vehicle, 1 at the far end
-    float rnd = h11(id * 37.7 + 5.3);
-    float rnd2 = h11(id * 71.3 + 11.9);
-    float d = u * uLength;
-    vec3 drift = vec3(sin(id * 41.0 + uT * 0.25), 0.0, cos(id * 29.0 + uT * 0.2)) * (uSize * 1.4 * u);
-    vec3 centre = uBack * d + drift + vec3((rnd - 0.5), (rnd2 - 0.5), (rnd - rnd2)) * uSize * u * 2.0;
-    float size = uSize * (0.6 + 0.8 * rnd) * (0.35 + 2.6 * u);
-    vAlpha = uOpacity * smoothstep(0.0, 0.04, u) * (1.0 - smoothstep(0.55, 1.0, u));
-    vTint = mix(uHot, uColor, smoothstep(0.0, 0.12, u));
     vec4 mv = modelViewMatrix * vec4(centre, 1.0);
     mv.xy += position.xy * size;
     gl_Position = projectionMatrix * mv;
@@ -184,6 +156,8 @@ export class GroundSmoke {
     life?: number;
     /** vertical rise rate relative to the default */
     rise?: number;
+    /** how fast a puff widens, per second of its age (0.34 by default) */
+    grow?: number;
     /** peak opacity 0..1 */
     opacity?: number;
   }) {
@@ -194,7 +168,7 @@ export class GroundSmoke {
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
       uniforms: {
         uT: { value: -1 }, uEmitDur: { value: opts.emitDuration ?? 16 }, uLife: { value: opts.life ?? 26 },
-        uSpeed: { value: opts.speed }, uRise: { value: opts.rise ?? 1 },
+        uSpeed: { value: opts.speed }, uRise: { value: opts.rise ?? 1 }, uGrow: { value: opts.grow ?? 0.34 }, uDrift: { value: new THREE.Vector3() },
         uR0: { value: opts.mouthRadius }, uSize: { value: opts.puffSize }, uJetA: { value: opts.trenchAzimuth },
         uOpacity: { value: 0 }, uColor: { value: new THREE.Color(opts.color ?? 0xd8dbe0) },
         uHot: { value: new THREE.Color(opts.hot ?? 0xffd6a0) }, uMap: { value: puffTexture() },
@@ -209,56 +183,12 @@ export class GroundSmoke {
    * @param tSinceIgnition mission time minus first-stage ignition time, s
    * @param intensity overall strength 0..1 (throttle × proximity to the pad)
    */
-  update(tSinceIgnition: number, intensity: number): void {
+  update(tSinceIgnition: number, intensity: number, drift?: THREE.Vector3): void {
     const u = this.mat.uniforms;
+    if (drift) (u.uDrift.value as THREE.Vector3).copy(drift);
     u.uT.value = tSinceIgnition;
     u.uOpacity.value = Math.max(0, Math.min(1, intensity)) * this.peak;
     this.mesh.visible = tSinceIgnition > -0.2 && (u.uOpacity.value as number) > 0.004;
-  }
-
-  dispose(): void {
-    this.geo.dispose();
-    this.mat.dispose();
-  }
-}
-
-/** Smoke column trailing the vehicle in the lower atmosphere. */
-export class AscentTrail {
-  readonly mesh: THREE.Mesh;
-  private mat: THREE.ShaderMaterial;
-  private geo: THREE.InstancedBufferGeometry;
-  private back = new THREE.Vector3(0, -1, 0);
-
-  constructor(count = 150) {
-    this.geo = billboardGeometry(count);
-    this.mat = new THREE.ShaderMaterial({
-      vertexShader: TRAIL_VERT, fragmentShader: PUFF_FRAG,
-      transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: {
-        uT: { value: 0 }, uBack: { value: this.back }, uLength: { value: 1000 }, uSize: { value: 8 },
-        uOpacity: { value: 0 }, uColor: { value: new THREE.Color(0xc9ccd2) }, uHot: { value: new THREE.Color(0xffb870) },
-        uMap: { value: puffTexture() },
-      },
-    });
-    this.mesh = new THREE.Mesh(this.geo, this.mat);
-    this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = 3;
-  }
-
-  /**
-   * @param backDir unit vector (scene space) pointing from the vehicle back along its path
-   * @param length trail length, m
-   * @param size base puff radius, m
-   * @param opacity 0..1
-   */
-  update(t: number, backDir: THREE.Vector3, length: number, size: number, opacity: number): void {
-    const u = this.mat.uniforms;
-    (u.uBack.value as THREE.Vector3).copy(backDir);
-    u.uT.value = t;
-    u.uLength.value = length;
-    u.uSize.value = size;
-    u.uOpacity.value = Math.max(0, Math.min(1, opacity));
-    this.mesh.visible = opacity > 0.01;
   }
 
   dispose(): void {

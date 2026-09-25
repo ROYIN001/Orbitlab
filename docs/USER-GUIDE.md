@@ -11,20 +11,25 @@ The switch in the top bar picks how much of the simulator you see:
 
 - **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
   space station) straight away.
-- **Watch** — just the picture, three numbers (mission time, altitude, speed over the
-  ground) and one sentence about what is happening and why. **Choose a launch** lists six
-  real flights, each flown as it was, only in daylight today: Soyuz to the space station,
-  Falcon 9's Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's
-  Arabsat-6A with the side boosters back on Landing Zones 1 and 2 and the core on a drone
-  ship, Starship Flight 5 with the booster caught by the tower and the ship splashing down
-  in the Indian Ocean, Ariane 6 with 32 Amazon Leo satellites, and Electron from New
-  Zealand. The speed buttons run the flight in real time (1×), faster, or at **Auto**,
-  which keeps liftoff, max-Q, every separation and every landing in real time and hurries
-  through the long coasts. The camera cuts to a stage flying home for its entry and
+- **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
+  and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
+  each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's
+  Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's Arabsat-6A with the
+  side boosters back on Landing Zones 1 and 2 and the core on a drone ship, Starship Flight 5
+  with the booster caught by the tower and the ship splashing down in the Indian Ocean, Ariane 6
+  with 32 Amazon Leo satellites, Electron from New Zealand, and the three crews the Soyuz escape
+  system has saved: Soyuz T-10-1 (a fire on the pad, 1983), Soyuz 18a (a stage separation
+  failure at 145 km, 1975) and Soyuz MS-10 (a strap-on striking the core, 2018), each flown to
+  the crew on the ground from Gagarin's Start, Baikonur's Site 1/5, where they really flew from
+  (every other Soyuz from Baikonur stands on Site 31/6, today's crew pad). The speed buttons run the flight in real time (1×), faster, or at
+  **Auto**, which keeps liftoff, max-Q, every separation and every landing in real time and
+  hurries through the long coasts. The smoke a rocket leaves stays where it was left and drifts
+  only with the flight's wind, and passing the speed of sound can wear a cloud of condensation
+  round the fairing in humid air. The camera cuts to a stage flying home for its entry and
   landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the
-  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship
-  is down in the water, a card offers to keep watching, watch again, pick another launch,
-  or plan a mission of your own.
+  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship is
+  down in the water, a card offers to keep watching, watch again, pick another launch, or plan a
+  mission of your own.
 - **Explore** — everything below this line, in the learning layout (the advanced guidance
   parameters stay folded away).
 - **Engineer** — the same workspace with every guidance parameter open.
@@ -32,6 +37,14 @@ The switch in the top bar picks how much of the simulator you see:
 Switching mode never touches the flight: leave the viewer half-way up and the workspace
 shows the same launch with every instrument on it. Each mode has its own address
 (`#/watch` and so on), and the browser's Back button moves between them.
+
+**Installing Orbitlab and using it offline.** The published site can be installed as an app
+(Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
+and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
+network at all — the page, the physics and auto-tune workers and the Earth textures are all kept
+on the device, and the fonts too once they have loaded. When a new version is published, a note
+at the bottom of the page offers **Reload**; until you press it, the version you have keeps
+running.
 
 ## 1. Set up a mission
 
@@ -41,7 +54,11 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    its height, liftoff mass and thrust, thrust-to-weight ratio, stage count and rated
    payload to LEO/GTO/SSO. The site list below it only offers sites that vehicle actually
    flies from; picking a vehicle that cannot fly from your current site moves you to one
-   that can and says so.
+   that can and says so. Four sites at the end of the list are greyed out — Yasny, where
+   Dnepr launched THEOS-1, Kapustin Yar, Svobodny and Palmachim: they are in the simulator
+   with their real range-safety corridors, but no vehicle in the fleet flies from them yet.
+   Palmachim is the one site that can only launch against the Earth's rotation (west over the
+   Mediterranean, 141.5–146.6° of inclination).
 2. **Payload.** Choose a satellite/spacecraft (its mass fills in automatically) or type a
    payload mass of your own.
 3. **Target orbit & launch time.** The pills (ISS, Starlink, sun-synchronous, polar, GPS,
@@ -55,12 +72,26 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    the ship is cut off short of orbit (perigee between −1000 and 0 km, below the ground) and
    flies itself home to a splashdown about an hour later; such a flight may carry no payload.
 
+**Share & save the mission**, at the top of the panel, keeps a mission beyond the tab:
+**Copy link** puts an address on the clipboard that opens Orbitlab on this exact mission —
+vehicle, site, payload, orbit, launch time, guidance edits, failure scenario, recovery and every
+Engineer setting (six-DOF or point mass, wind, slosh and bending, the autopilot's gains,
+navigation, control-system failures, PEG/IGM) — and **Save file** / **Open file** do the same
+through a `.orbitlab.json` file. The workspace also remembers the last mission by itself, so
+closing the tab and coming back in Explore or Engineer finds it where you left it. A link or
+file is checked the same way the WebMCP `configure_mission` tool checks its input: a value
+that cannot be used (a perigee above the apogee, a gain out of range, a site the vehicle does
+not fly from) goes back to its default, the rest of the mission is kept, and a note under the
+buttons lists what was reset. The file carries a format version, so a file from a later
+Orbitlab still opens as far as this one understands it, and says so.
+
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
 program**, which flies the ascent headlessly over a grid of values and keeps the one with
 the largest remaining Δv. **Failure scenario** arms an engine-out, a thrust loss, a
 premature separation, a stuck fairing, a range-safety destruct, or a random one of those, at
-a mission time and stage you choose. Under **Options**, **Recover first stage** keeps landing
+a mission time and stage you choose; the historical failures of §6 and, on a crewed Soyuz, a
+launch abort are there too. Under **Options**, **Recover first stage** keeps landing
 propellant back; with it on, each recoverable stage gets a choice of where it lands — where it
 comes down at sea, a drone ship, a landing zone of the launch site (LZ-1 and LZ-2 at Cape
 Canaveral and Kennedy), the Starbase tower's arms for Super Heavy, or expended. Flying back to a
@@ -104,13 +135,75 @@ Four camera views, switchable from the tabs above the viewport or keys `1`–`4`
 - **Map** — a 2-D ground track with the predicted orbit, the target orbit, the day/night
   terminator, and where spent stages came down.
 
-The small buttons beside the camera tabs reset the view, toggle the **glow** (the bloom around
-the plume, the ignition flash and the city lights) and go full screen. If the picture falls below
-about 24 frames per second the glow is switched off for a few seconds as a test: it stays off
-only if that made the picture faster, and comes back otherwise. A screen or power-saving mode
-that holds the browser at 30 fps therefore keeps its glow. Once you press the button your choice
-is kept, also on your next visit. On a graphics card that cannot draw the high-range image the
-glow needs, the button is greyed out and the scene is drawn without it.
+The small buttons beside the camera tabs open the **Frames** menu (below), reset the view,
+toggle the **glow** (the bloom around the plume, the ignition flash and the city lights) and go
+full screen. If the picture falls below about 24 frames per second the glow is switched off for
+a few seconds as a test: it stays off only if that made the picture faster, and comes back
+otherwise. A screen or power-saving mode that holds the browser at 30 fps therefore keeps its
+glow. Once you press the button your choice is kept, also on your next visit. On a graphics card
+that cannot draw the high-range image the glow needs, the button is greyed out and the scene is
+drawn without it.
+
+**Reference frames.** The first of those buttons opens the **Frames** menu (Explore and
+Engineer). Tick any of four groups and they are drawn on the vehicle in the exterior and space
+views, with the angles between them as arcs and their values beside them:
+
+- **Body and air-path axes** — the vehicle's own axes and the axes of its velocity through the
+  air, with the angle of attack α and the sideslip β;
+- **Normal earth and flight-path axes** — the local horizon and the direction of flight over
+  the ground, with pitch, yaw and roll, the flight-path angle and the track;
+- **Orbital axes R, S, W** — radial, along the track and the orbit normal;
+- **Earth-centred inertial and Earth-fixed axes** — at the centre of the planet (best seen in
+  the space view), with the Greenwich sidereal angle between them.
+
+Everything is written in the notation in force (see *Physics and sources*): ISO 1151 in English
+and Thai, ГОСТ 20058-80 in Russian, unless the Engineer mode's setup fixes one. In ГОСТ the
+normal Earth frame's x<sub>g</sub> lies along the launch azimuth, so yaw ψ and track Ψ read the
+departure from it; in ISO they are bearings from north. With the nose within half a degree of
+vertical — on the pad and through the vertical rise — yaw and roll have no value and only the
+pitch is shown. Every frame is off to begin with, and your choice is kept for the next visit.
+The details are in [PHYSICS.md §2k](PHYSICS.md).
+
+**Sound** (the ♪ button, also in the viewer) is off until you turn it on — browsers only let a
+page play sound after you click something — and stays as you left it. What you hear is
+worked out for where the camera is: the roar grows with the engines' thrust and falls with
+distance (6 dB each time it doubles); far away it is only the low rumble, because the air soaks
+up the treble first; it comes **late**, at the speed of sound — watch the liftoff from the
+press site 5 km away and the sound reaches you 15 s after the picture, and a separation high up
+is heard long after it is seen; its pitch drops as the rocket pulls away (Doppler); and it fades
+out as the rocket climbs into air too thin to carry it, whoever is listening. The onboard camera
+hears the engines through the structure instead, muffled but steady. Ignition, stage and
+fairing separation, landings and a vehicle's loss have sounds of their own, delayed the same
+way. With the flight sped up, the sound is quieter and plays without the delay (the picture
+would otherwise be minutes ahead of it); paused, it is silent. These sounds are synthesised in
+the browser. The model is in PHYSICS.md §11.
+
+**Real launch audio in the viewer.** With the sound on, *Soyuz to the space station* plays
+NASA's broadcast of the real Soyuz MS-27 launch (8 April 2025, public domain) in step with the
+mission clock, from the last minute of the countdown to the spacecraft's separation: the
+Russian launch-control calls under NASA's English commentary. It plays at 1× — at the viewer's
+*Auto* pace that is every event from ignition to orbit — and pauses while the flight is sped
+up, picking up at the right second when it slows down again; the simulator's own sound steps
+aside while it plays. The other five launches were broadcast by SpaceX, Arianespace and Rocket
+Lab, whose broadcasts may not be republished, so they play the simulated sound. You can give
+any of them a recording of your own under **Launch audio** in *Choose a launch*: pick the file
+(an audio file or a video), say at what time in it the rocket lifts off (m:ss or h:mm:ss), and
+it plays the same way. It is kept in this browser and never uploaded. There are no broadcasts
+in Thai, so the commentary is in the language it was broadcast in whatever language the page
+is in.
+
+**The sky** is computed, not painted: sunlight scattered by the air molecules (Rayleigh — the
+blue) and by haze (Mie — the white glare round the sun), with the ozone layer's absorption, in a
+round atmosphere 100 km deep. So the colours follow from where the sun is and where the camera is:
+a deep blue overhead at noon paling to the horizon; at dusk a red and orange band under a
+darkening blue, and the Earth's shadow rising opposite; from orbit a thin bright blue line along
+the limb. Launch at dusk or dawn and follow the rocket out of the Earth's shadow into sunlight:
+above about 50 km its exhaust, with almost no air left to hold it in, balloons out over tens of
+kilometres and catches the sun — the "twilight jellyfish" — a pale glowing dome with trailing
+streamers against the darkened sky; pull the exterior camera back with the wheel (above the
+atmosphere it goes out to a couple of hundred kilometres) to see it whole. On a graphics card too
+slow for the scattering sky, the same test as the glow's switches back to the simpler painted sky
+after the glow's own test; `?sky=gradient` in the address forces it.
 
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
@@ -222,6 +315,48 @@ that follows the timeline cursor; **Ascent** zooms every chart to liftoff → pa
   interface.
 - **Export CSV** writes the whole recorded flight — the same telemetry samples and events —
   to a file you can open in a spreadsheet.
+- **Flight report** saves one HTML file ready for a lab report or a thesis: the mission's
+  set-up (vehicle, site, payload, target orbit, launch time, flight model, wind, ascent guidance,
+  navigation, slosh and bending, the autopilot, control-system failures, the failure scenario),
+  the result with the target-against-actual orbit table, the key figures (mass at liftoff,
+  maximum dynamic pressure and load factor and when, orbit insertion, Δv left), the event log,
+  and the charts — the eight above redrawn over the whole flight (the ascent ones up to 30 s
+  after insertion), plus every Engineer chart open on screen at the time, such as the Bode plot
+  or the step response. It is written in the language on screen, needs no network, and prints
+  to A4: open it and use *Print → Save as PDF*. It ends with a link that opens the same mission.
+- **PNG**: hover over any chart — here or in the Engineer windows — or tab to it, and a small
+  **PNG** button saves it redrawn on white at 2400 × 1200 pixels.
+
+### How long will it stay up?
+
+**Orbit lifetime**, beside the flight report, opens once the flight on screen is in orbit (a
+perigee above 100 km). It carries that orbit on — for a month, a year, five or twenty-five years —
+under the forces that act after the launch, each of which can be switched off to see what it does:
+the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
+works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
+the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
+and the pressure of sunlight. Choose low, mean or high solar activity: at 400 km a CubeSat lasts
+about four months at solar maximum and over a year at solar minimum. The *mean elements* method
+covers decades in a moment with J2 and drag; the *full equations* include every force but are
+slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
+payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
+charts — perigee and apogee, inclination and eccentricity — which can be saved as PNG like any
+other. The flight itself is not changed. The model is in PHYSICS.md §9a.
+
+### Comparing two flights
+
+**Compare with another flight**, above the event log, sets two flights side by side — PEG
+against IGM, one set of autopilot gains against another, a nominal flight against one with a
+control-system failure. **Use as reference** pins the flight on screen; change one thing and fly
+again, and every chart carries the reference as a dashed trace in the same colour (labelled
+*ref*), the 3-D view its path as a dashed violet line (turned with the Earth, so a reference
+flown from the same pad on another day still lies over the same ground), and a table lists what
+both flights have — orbit insertion, perigee, apogee and inclination at the end, maximum dynamic
+pressure and when, maximum load factor, Δv left, and the times of max-Q, MECO, separation, SECO
+and the orbit — with the difference. **Save flight** writes the flight to a
+`.orbitlab-flight.json` file (its telemetry, events, path and mission) and **Open flight** reads
+one back as the reference, so a comparison can span days or be handed to someone else. × stops
+comparing.
 
 ## 6. Failures
 
@@ -235,6 +370,31 @@ vehicle's placard by 15%), or simply running the tanks dry short of orbital spee
 (**suborbital**). Every one of these is deterministic and replayable: the same mission
 configuration always fails the same way at the same instant, so a "why did that happen" is
 always answerable by scrubbing back to it.
+
+Three failures are the ones crewed Soyuz rockets really met: a **fire on the pad** (at the
+time you set, from T−10 s), a **strap-on striking the core** as the strap-ons separate, and a
+**stage that fails to separate** cleanly at the separation of the stage you choose. On any
+other flight they lose the vehicle.
+
+**The Soyuz escape system.** A Soyuz-2.1a carrying a crew has its launch escape system armed
+from the countdown until the spacecraft is in orbit. When a failure is losing the rocket, it
+fires on its own, and it can be fired on purpose: the **Launch abort** failure at a time, or
+the red **Abort** button beside the playback controls in the Engineer mode. What happens
+depends on when:
+
+- up to T+114.5 s, the **escape tower** on the fairing's nose pulls the crew's section off the
+  rocket at 14–16 g and away from the pad; the fairing's lattice fins open;
+- from then until the fairing goes at T+157 s, **four motors on the fairing** do the tower's
+  job, as on Soyuz MS-10;
+- after that, the **spacecraft separates** from the rocket and its modules part, as on Soyuz 18a.
+
+The descent module then drops free and comes down as a real one does: a ballistic fall from
+high aborts, a drogue and then the 1 000 m² main parachute, the heat shield dropped, and six
+soft-landing motors a metre above the ground. The flight follows the crew — the telemetry,
+the g-load and the camera are theirs — while the rocket left behind falls or breaks up. The
+flight ends with the crew on the ground ("Crew landed after an abort"); the event log gives
+where and the highest g they took. The details and how the three historical aborts compare are
+in [PHYSICS.md §8.3](PHYSICS.md).
 
 ## 7. The flexible vehicle (Engineer mode)
 
@@ -413,7 +573,38 @@ predicts at cut-off against the target, with the law's state. The cut-off itself
 by the ascent on the orbit actually reached. The CSV adds `guide_*` columns and
 `read_flight_state` an `explicitGuidance` summary. Details in PHYSICS.md §2j.
 
-## 16. Monte Carlo insertion accuracy (Engineer mode)
+## 16. A flight to the station
+
+With a **Soyuz-2.1a**, the **Crewed spacecraft** (a Soyuz MS) and the **ISS** orbit, section 03
+of the setup offers **Flight to the station**: none (stay in the insertion
+orbit), **two-orbit** (about 3 h, as Soyuz MS-28 flew it), **four-orbit** (about 6 h, as Soyuz
+TMA-19M) or **two-day** (34 orbits, as Soyuz MS-01), and the **docking port**: Rassvet or
+Prichal from below, Poisk from above, Zvezda's aft port from behind. Pick a launch window
+(**Next window**) so the station's plane is the one the launch reaches.
+
+The rocket puts the spacecraft into a 200 × 242 km orbit; from there the spacecraft flies
+itself. Its engine fires for the profile's burns — the phase shows *Rendezvous burn* with the
+burn and its Δv, and between them *Phasing* with the time to the next one — then the transfer
+brings it 2.2 km behind and below the station, and **Kurs**, the automatic radio system, takes
+over: the approach to 400 m, the **flyaround** onto the port's axis, **stationkeeping** 150 m
+out, the **final approach** at a walking pace, then **contact**, capture and the hooks closing
+13 minutes later. The telemetry panel's first chart is then *Relative motion*: the station at
+the centre, its direction of flight to the right, up away from the Earth, the same scale both
+ways, zooming in as the spacecraft closes. Near the station the exterior camera looks past the
+spacecraft at it; the onboard camera (2) is the Soyuz's docking TV camera, with the port's
+target to line up in its reticle and the range, closing speed and offset from the axis.
+
+In the Engineer mode a **TORU** panel appears during the approach. **Take over (TORU)** hands
+the spacecraft to you wherever it is: the translation buttons (or W/S, the arrows, X to stop)
+set its velocity in toward the port, right and up as the TV picture shows them, the rotation
+buttons its turn rates. Keep the target's cross on its disc and close at 0.1–0.35 m/s: a
+contact faster, slower, more than 0.34 m off the axis, drifting sideways at 0.1 m/s or more, or
+turned more than 7° (10° in roll) is not captured, and Kurs backs away for one more try before
+the docking is called off. **Hand back to Kurs** lets it fly back to the stationkeeping point
+and in again. How the profiles, the approach and the contact limits compare with real flights
+is in [PHYSICS.md §9.2](PHYSICS.md).
+
+## 17. Monte Carlo insertion accuracy (Engineer mode)
 
 The *Monte Carlo: insertion accuracy (G05)* section opens a window that flies the mission in the
 setup panel many times — always in six-DOF — each run with its own vehicle and air, to the end
@@ -450,7 +641,7 @@ runs per number drawn). Runs lost — broken up, or short of orbit — are count
 *Download CSV* writes every run: its orbit, how it ended, and what it drew.
 
 WebMCP's `run_monte_carlo` starts (`action: "start"`, with the same settings), reads
-(`"status"`, optionally with the CSV) and stops the same set. Details in PHYSICS.md §2k, with what
+(`"status"`, optionally with the CSV) and stops the same set. Details in PHYSICS.md §2l, with what
 the recorded sets found: Falcon 9 delivered to about a kilometre on every law, but even the
 minimal dispersions lose a few runs to the air's loads, and leave a few in the wrong plane.
 

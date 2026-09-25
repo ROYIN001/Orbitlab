@@ -1166,18 +1166,23 @@ const DIRECT_INSERTION_GRID: DirectInsertionCell[] = [
   // under 2 km, and the failing 6.3 t / 300 km cell moved to 103.8 x 729.8 km —
   // its third stage spends half a second of its burn spinning up, and the
   // flight ends `failed` at depletion, before the tail-off that would have
-  // given the impulse back.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 198.5, ap: 200.9 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.6, ap: 200.3 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 197.9, ap: 200.2 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 220.0, ap: 346.8 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 240.1, ap: 300.9 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.0, ap: 265.2 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 143.5, ap: 894.9 },
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 144.1, ap: 874.4 },
+  // given the impulse back. Re-measured once more when the fairing became the
+  // 4.11 × 11.43 m unit with its own adapter (owner's figures, 2026-09-25; it
+  // was 3.7 × 10.1 m on an adapter of its own): every verdict held, the cells
+  // that reach orbit moved by up to 4.3 km of apoapsis, and the failing 6.3 t /
+  // 300 km cell, which carries the wider fairing's drag longest on the heaviest
+  // stack, moved to 88.7 x 700.9 km.
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 200, closes: true, pe: 198.0, ap: 200.7 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 200, closes: true, pe: 197.6, ap: 200.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 200, closes: true, pe: 198.6, ap: 200.3 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 250, closes: false, pe: 219.4, ap: 345.5 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 250, closes: false, pe: 240.3, ap: 301.4 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 250, closes: false, pe: 247.3, ap: 266.3 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 1755, hKm: 300, closes: false, pe: 143.9, ap: 899.2 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 3510, hKm: 300, closes: false, pe: 143.8, ap: 875.5 },
   // The one cell that does not survive: the heaviest Soyuz row aimed a hundred
   // kilometres above where the profile closes ends `failed`, with the tanks dry.
-  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 103.8, ap: 729.8 },
+  { vehicle: 'soyuz21a', site: 'baikonur', mass: 6318, hKm: 300, closes: false, pe: 88.7, ap: 700.9 },
   // Long March 2D from Jiuquan at 25 / 50 / 90 % of its 1.3 t sun-synchronous
   // rating. Nothing closes, at any altitude or any payload. Re-measured when
   // the planner started flying the heading the site's window licenses: the

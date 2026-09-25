@@ -309,13 +309,23 @@ export class FlightRecorder implements RecordingSource {
    * loose fields rather than a frame so the live step loop can ask the question
    * without paying for a snapshot it may not keep.
    */
-  private interval(status: SimStatus, t: number, altitude: number, nextBurnTime: number): number {
+  private interval(status: SimStatus, t: number, altitude: number, nextBurnTime: number, range = Infinity, burning = false): number {
     switch (status) {
       case 'prelaunch':
       case 'ascent':
       case 'burn':
       case 'failed':
         return DENSE_INTERVAL;
+      case 'rendezvous':
+        // G07: sparse on the phasing orbits, dense on the approach and at the port
+        if (burning) return 2;
+        if (range < 300) return 0.5;
+        if (range < 3000) return 2;
+        if (range < 30e3) return 5;
+        return nextBurnTime > t && nextBurnTime - t < 120 ? 5 : 30;
+      case 'abort':
+        // An escape: dense in the air, sparse on a ballistic arc above it.
+        return altitude < ATMOSPHERIC_CEILING ? DENSE_INTERVAL : 10;
       case 'coast':
         if (altitude < ATMOSPHERIC_CEILING) return 2;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
@@ -330,7 +340,7 @@ export class FlightRecorder implements RecordingSource {
   }
 
   private intervalOf(f: VisualFrame): number {
-    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime);
+    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn');
   }
 
   /**
@@ -507,7 +517,7 @@ export class FlightRecorder implements RecordingSource {
       else if (!transitionCaptured && preIsHead && fired) this.store(pre, true);
       const s = sim.state;
       const headNow = this.head;
-      const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime) - 1e-9;
+      const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn') - 1e-9;
       if (dueAfter || fired) this.store(captureFrame(sim), fired);
       if (fired) this.pullEvents();
       if (rigid && !(used > 0)) { stalled = true; break; }

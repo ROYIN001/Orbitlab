@@ -146,7 +146,15 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^sat\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts satelliteName' },
   { pattern: /^site\.[a-z0-9]+\.name$/, from: 'ui/names.ts siteName' },
   { pattern: /^zone\.[a-z0-9]+\.name$/, from: 'ui/names.ts zoneName' },
+  { pattern: /^abort\.mode\.[a-z]+$/, from: 'ui/names.ts localizeEventParams (G06)' },
   { pattern: /^stage\.[a-z0-9]+\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts stageName' },
+  // G07: a flight to the station
+  { pattern: /^setup\.rendezvous\.[a-zA-Z]+$/, from: 'ui/panel.ts rendezvousOption: t(`setup.rendezvous.${id}`)' },
+  { pattern: /^rv\.port\.[a-zA-Z]+$/, from: 'ui/panel.ts, ui/phase.ts, ui/names.ts: t(`rv.port.${id}`)' },
+  { pattern: /^rv\.profile\.[a-zA-Z]+$/, from: 'ui/names.ts localizeEventParams: localized(`rv.profile.${id}`)' },
+  { pattern: /^rv\.burn\.[a-z]+$/, from: 'ui/names.ts rendezvousBurnName: localized(`rv.burn.${id}`)' },
+  { pattern: /^hud\.rv\.[a-zA-Z]+$/, from: 'ui/phase.ts, ui/hud.ts: t(`hud.rv.${phase}`)' },
+  { pattern: /^phase\.detail\.rv\.[a-zA-Z]+$/, from: 'ui/phase.ts phaseInfo: `phase.detail.rv.${phase}`' },
   // G08: the control system's failures, by kind, group and state.
   { pattern: /^fault\.(kind|about)\.[a-zA-Z]+$/, from: 'ui/fault-names.ts faultKindName; ui/panel.ts faultRow: t(`fault.about.${fault.kind}`)' },
   { pattern: /^fault\.group\.(actuator|sensor|computer)$/, from: 'ui/panel.ts faultRow: t(`fault.group.${FAULT_GROUP[k]}`)' },
@@ -172,11 +180,8 @@ const RESERVED: Record<string, string> = {
   // (ui/hud.ts:186-198, ui/telemetry.ts:200-229, ui/panel.ts:697-702). Wiring
   // those call sites is the fix; deleting the keys would be the wrong half of
   // it. Raised as an open item by the wave-3 translation pass.
-  'u.kg': 'unit symbols are not wired to their call sites yet',
-  'u.t': 'unit symbols are not wired to their call sites yet',
   'u.kN': 'unit symbols are not wired to their call sites yet',
   'u.min': 'unit symbols are not wired to their call sites yet',
-  'u.kPa': 'unit symbols are not wired to their call sites yet',
   'u.deg': 'unit symbols are not wired to their call sites yet',
   // The setup aside is announced with a11y.setupPanel and headed with
   // app.missionControl + app.buildMission; the old caption has no call site.

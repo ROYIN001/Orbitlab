@@ -58,7 +58,25 @@ describe('viewer missions', () => {
     expect(localSolarHour(t, siteById('cape').longitude)).toBeCloseTo(10, 0);
   });
 
-  it.each(WATCH_MISSIONS.map((m) => m.id))('%s reaches its target as the app flies it, and lands what it flies home', { timeout: 900_000 }, (id) => {
+  // G06: the launch aborts end with the crew under their parachutes, not in orbit
+  const ABORT_MODES: Record<string, string> = { soyuzMs10: 'fairing', soyuzT10: 'tower', soyuz18a: 'separation' };
+  it.each(WATCH_MISSIONS.filter((m) => m.failure).map((m) => m.id))('%s meets its failure and fires the escape system the way its crew did', { timeout: 300_000 }, (id) => {
+    const s = watchMissionSettings(id, FROM[0]);
+    const dynamics = defaultDynamics(s.vehicleId);
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit,
+      launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
+      guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,
+    }, { headless: true });
+    // up to the abort; the crews' flights home are in tests/launch-abort.test.ts and tests/heavy/soyuz-aborts.test.ts
+    let guard = 0;
+    while (!sim.state.abort && !sim.isFailed() && sim.state.t < 600 && guard++ < 400000) sim.step(sim.suggestedDt());
+    expect(sim.state.abort?.mode).toBe(ABORT_MODES[id]);
+    expect(sim.isFailed()).toBe(false);
+  });
+
+  it.each(WATCH_MISSIONS.filter((m) => !m.failure).map((m) => m.id))('%s reaches its target as the app flies it, and lands what it flies home', { timeout: 900_000 }, (id) => {
     const s = watchMissionSettings(id, FROM[0]);
     const dynamics = defaultDynamics(s.vehicleId);
     const sim = new Simulation({

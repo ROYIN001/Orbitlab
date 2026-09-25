@@ -60,6 +60,8 @@ import { DebrisTracker } from './sim/debris';
 import { FailureInjector } from './sim/failures';
 import { RigidLink } from './sim/rigid-link';
 import { ShipDescent } from './sim/ship-descent';
+import { LaunchEscape } from './sim/abort';
+import { Rendezvous, type ToruCommand } from './sim/rendezvous';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
 import { RIGID_ASCENT_COMMAND_RATE, RIGID_STEERING_FREEZE_S, TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
@@ -167,6 +169,10 @@ export class Simulation {
   readonly rigidLink = new RigidLink(this);
   /** @internal a suborbital flight's return to the surface */
   readonly shipDescent = new ShipDescent(this);
+  /** a crewed launch's escape system and, once it has fired, the escape (roadmap G06) */
+  readonly escape = new LaunchEscape(this);
+  /** G07: the flight on to the station, from the spacecraft's separation */
+  readonly rendezvous = new Rendezvous(this);
   /** The six-DOF steering held through a burn's last seconds (RIGID_STEERING_FREEZE_S). */
   private frozenCommand: Vec3 | null = null;
   /** The six-DOF vacuum-ascent command, rate-limited (RIGID_ASCENT_COMMAND_RATE). */
@@ -424,6 +430,8 @@ export class Simulation {
       changed = true;
     }
     if (changed) {
+      // an action that set off an abort has handed the state to the escape
+      if (this.state.status === 'abort') { this.updateDerived(); return changed; }
       if (this.state.status === 'prelaunch') {
         const thrust = this.vehicle.thrust(this.state.t, atmosphere(this.state.altitude).p, 1);
         this.state.thrust = thrust.thrust;
@@ -589,6 +597,8 @@ export class Simulation {
           : phase === 'flip' || phase === 'landing' ? 0.02 : s.altitude > 40e3 ? 0.2 : 0.05;
         break;
       }
+      case 'abort': dt = this.escape.suggestedDt(); break;
+      case 'rendezvous': dt = this.rendezvous.suggestedDt(); break;
       case 'landed': dt = 1; break;
       default: dt = 1;
     }
@@ -658,8 +668,12 @@ export class Simulation {
     s.eom = undefined;
 
     if (s.status === 'prelaunch') this.stepPrelaunch(dt);
+    // G07: docked (or kept by the station after a docking called off), the rendezvous still flies the spacecraft
+    else if (s.status === 'orbit' && this.rendezvous.holding) this.rendezvous.step(dt);
     else if (s.status === 'orbit' && !this.vehicle.inTransient(s.t)) this.stepOrbit(dt);
     else if (s.status === 'landed') this.stepLanded(dt);
+    else if (s.status === 'abort') this.escape.step(dt);
+    else if (s.status === 'rendezvous') this.rendezvous.step(dt);
     else dt = this.stepFlight(dt);
 
     this.debrisTracker.stepDebris(dt);
@@ -1115,6 +1129,12 @@ export class Simulation {
   private stepLanded(dt: number): void {
     const s = this.state;
     const turn = quatFromAxisAngle(v3(0, 0, 1), OMEGA_EARTH * dt);
+    if (this.escape.flight) {
+      // the descent module at rest after an abort
+      this.escape.rest(turn);
+      s.t += dt;
+      return;
+    }
     s.r = quatRotate(turn, s.r);
     s.v = groundVelocityEci(s.r);
     s.t += dt;
@@ -1246,15 +1266,41 @@ export class Simulation {
     s.note = 'suborbital';
   }
 
-  /** @internal */
+  /**
+   * Lose the vehicle. With a crew on it and its escape system armed, the
+   * escape fires instead, and it is the rocket alone that is lost.
+   */
   destroy(): void {
     const s = this.state;
+    if (this.escape.available) {
+      const cause = [...this.events].reverse().find((e) => e.severity === 'fail')?.key ?? 'evt.vehicleLost';
+      if (this.escape.begin(cause, true)) return;
+    }
     s.destroyed = true;
     s.status = 'failed';
     s.note = 'destroyed';
     s.thrust = 0;
     s.throttle = 0;
     this.event('evt.vehicleLost', 'fail', { t: Math.round(s.t) });
+  }
+
+  /**
+   * Abort the launch by hand (the Engineer mode's ABORT, a `launchAbort`
+   * failure): the escape system fires and the rocket, its engines shut down,
+   * is left to fall. False when there is no escape to fly.
+   */
+  /**
+   * G07: the TORU hand controllers in the Engineer mode (null hands the
+   * approach back to the automatic system).
+   */
+  commandToru(cmd: ToruCommand | null): boolean {
+    return this.state.status === 'rendezvous' && this.rendezvous.command(cmd);
+  }
+
+  commandAbort(): boolean {
+    if (!this.escape.available) return false;
+    this.event('evt.abortCommand', 'warn');
+    return this.escape.begin('evt.abortCommand', false);
   }
 
   // ------------------------------------------------------------ derived
@@ -1266,7 +1312,7 @@ export class Simulation {
     s.altitudeAGL = s.altitude - this.groundElevation(s.r);
     const omega = v3(0, 0, OMEGA_EARTH);
     const vAir = this.rigidRuntime ? this.rigidRuntime.airVelocity(s, s.t) : sub(s.v, cross(omega, s.r));
-    if (this.rigidRuntime?.snapshot) s.mass = this.rigidRuntime.snapshot.mass;
+    if (this.rigidRuntime?.snapshot && !this.escape.flight) s.mass = this.rigidRuntime.snapshot.mass;
     s.airspeed = norm(vAir);
     s.speed = norm(s.v);
     const atm = atmosphere(Math.max(0, s.altitude));
@@ -1279,7 +1325,7 @@ export class Simulation {
     const cosC = Math.sin(lat0) * Math.sin(ll.lat) + Math.cos(lat0) * Math.cos(ll.lat) * Math.cos(ll.lon - lon0);
     s.downrange = R_EARTH * Math.acos(Math.max(-1, Math.min(1, cosC)));
     s.vz = dot(s.v, normalize(s.r));
-    if (s.status === 'prelaunch' || s.status === 'orbit') s.elements = elementsFromState(s.r, s.v);
+    if (s.status === 'prelaunch' || s.status === 'orbit' || s.status === 'abort' || s.status === 'rendezvous') s.elements = elementsFromState(s.r, s.v);
   }
 
   private sample(): void {

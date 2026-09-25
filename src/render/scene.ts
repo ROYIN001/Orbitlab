@@ -9,6 +9,7 @@
  */
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { PhysicalSky } from './atmosphere';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
@@ -134,6 +135,9 @@ const ATMO_VERT = /* glsl */ `
     #include <logdepthbuf_vertex>
   }
 `;
+/** V02: the sun's illuminance in the scattering sky's units, set so noon reads like the gradient sky it replaces. */
+const SKY_ILLUMINANCE = 8;
+
 const ATMO_FRAG = /* glsl */ `
   #include <common>
   #include <logdepthbuf_pars_fragment>
@@ -323,6 +327,9 @@ export class SceneManager {
   private bloomPass: UnrealBloomPass | null = null;
   /** the GPU can render to the half-float targets the glow needs */
   readonly glowSupported: boolean;
+  /** V02: the scattering sky, when the GPU can hold its tables */
+  private physicalSky: PhysicalSky | null = null;
+  private physicalSkyOn = true;
   /** clear colour pre-compensated for the output pass's tone mapping */
   private clearColor = new THREE.Color();
   private clearKey = '';
@@ -488,6 +495,21 @@ export class SceneManager {
       this.composer.addPass(this.bloomPass);
     }
     this.composer.addPass(new OutputPass());
+    // V02: the physically based sky, where float targets exist for its tables
+    if (this.glowSupported) {
+      this.physicalSky = new PhysicalSky(this.renderer, THREE.HalfFloatType);
+      this.scene.add(this.physicalSky.mesh);
+    }
+  }
+
+  /** V02: the scattering sky, or (off, or no float targets) the gradient of sky.ts. */
+  setPhysicalSky(on: boolean): void {
+    this.physicalSkyOn = on && !!this.physicalSky;
+    if (this.physicalSky) this.physicalSky.mesh.visible = this.physicalSkyOn;
+  }
+
+  get physicalSkyEnabled(): boolean {
+    return this.physicalSkyOn;
   }
 
   /** Turn the bloom pass on or off (the rest of the chain always runs). */
@@ -743,6 +765,10 @@ export class SceneManager {
       this.camera.position.y + this.origin.y,
       this.camera.position.z + this.origin.z,
     );
+    if (this.physicalSky && this.physicalSkyOn) {
+      this.camera.updateMatrixWorld();
+      this.physicalSky.update(this.camera, camEci, sd, SKY_ILLUMINANCE);
+    }
     this.camUp.copy(camEci);
     // `camUp` becomes the local vertical for the hemisphere light, the
     // environment probe and the Earth-shine fill, so it must be a unit vector

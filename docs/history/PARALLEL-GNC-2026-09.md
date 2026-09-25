@@ -624,8 +624,8 @@ six-DOF, crosswind, seed 20260919; 30 min):
 
 ### G05 — Monte Carlo insertion accuracy
 
-Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2k, use in
-[../USER-GUIDE.md](../USER-GUIDE.md) §16.
+Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2l, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §17.
 
 - **The dispersions** (`src/physics/dispersion.ts`): per stage and strap-on group thrust, Isp,
   propellant and dry mass; the air's density; a steady wind and gust phase over the mission's;
@@ -687,7 +687,7 @@ perigee on PEG and IGM the wind's and the Isp's; the inclination over all the ru
 (46 %), through the runs in the wrong plane. Soyuz's shares are not computed (19 numbers drawn,
 57 runs needed).
 
-**Known issues** (the runs not on target; PHYSICS §2k has them in full), left for the owner:
+**Known issues** (the runs not on target; PHYSICS §2l has them in full), left for the owner:
 
 1. Falcon 9 breaks up on q past its placard (46 kPa) at T+68–88 s: runs 21, 23, 25, 34, on every
    law (the three examined had +6.7 to +9.6 m/s of dispersed wind to the east).

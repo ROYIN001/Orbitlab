@@ -131,6 +131,13 @@ export interface FairingSpec {
    * the atmosphere at its published time does not shed the fairing there.
    */
   sepTime?: number;
+  /**
+   * Height of the fairing's own lower cone, m, down to the diameter of the
+   * stage it stands on, counted in `length`: that stage then carries no
+   * interstage adapter of its own. Soyuz-2.1a's 4.11 × 11.43 m unit includes
+   * its transition section.
+   */
+  adapter?: number;
   color?: string;
 }
 
@@ -146,6 +153,8 @@ export interface VehicleSpec {
   payloadSSO?: number;
   /** Fairing, or null for an integrated payload bay (Starship) */
   fairing: FairingSpec | null;
+  /** The launch escape system a crewed launch carries (roadmap G06): Soyuz's tower and fairing motors. */
+  escapeSystem?: 'soyuz';
   /** Serial stages in burn order (stage[0] is the first stage) */
   stages: StageSpec[];
   /** Launch site ids this vehicle can fly from */
@@ -288,6 +297,14 @@ export type FailureMode =
   | 'prematureSep'
   | 'fairingStuck'
   | 'rangeSafety'
+  /** a commanded launch abort (a crewed Soyuz's escape system; nothing else has one) */
+  | 'launchAbort'
+  /** a fire on the pad before liftoff (Soyuz T-10-1, 1983) */
+  | 'padFire'
+  /** a strap-on striking the core as it separates (Soyuz MS-10, 2018) */
+  | 'boosterCollision'
+  /** a stage separation that half-fails, the next stage lighting still attached (Soyuz 18a, 1975) */
+  | 'stagingFailure'
   | 'random';
 
 export interface FailureConfig {
@@ -319,6 +336,17 @@ export interface MissionConfig {
   recoveryPlan?: RecoveryPlan;
   /** Extra payload mass added by the user, kg */
   payloadMassOverride?: number;
+  /**
+   * Fly on to the station and dock (roadmap G07): the profile, the Russian
+   * port, and whether the Engineer mode may take the final approach by hand.
+   * Only read for a spacecraft with its own propulsion to the ISS orbit.
+   */
+  rendezvous?: { profile: import('./physics/rendezvous/profiles').RendezvousProfileId; port?: import('./physics/rendezvous/ports').PortId };
+  /**
+   * The site's launch pad the mission is drawn on (`SiteExtra.pads`), when it
+   * names one; absent, the site's first. The physics does not read it.
+   */
+  padId?: string;
   /**
    * `guidance` has already been merged with the vehicle's `guidanceDefaults`.
    * The simulation merges them itself when this is false/absent, so a caller

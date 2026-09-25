@@ -1,5 +1,18 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
+import { registerServiceWorker } from './pwa/register';
+import { downloadFlightReport } from './ui/report';
+import { LaunchAudio } from './audio/launch-audio';
+import { TwilightPlume } from './render/twilight-plume';
+import { LifetimeDialog } from './ui/lifetime';
+import { spacecraftFor } from './physics/propagator/spacecraft';
+import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
+import { SoundtrackPanel } from './ui/soundtrack-panel';
+import { ComparePanel } from './ui/compare';
+import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
+import { assessMissionResult } from './ui/result-content';
+import { enableChartExport } from './ui/chart-export';
+import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, saveStoredMission } from './config/mission-file';
 import { SceneManager, loadEarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
@@ -32,16 +45,26 @@ import { FlightRecorder, type RecordingSource } from './replay/recorder';
 import { InlineSession, WorkerSession, createPhysicsWorker, type FlightSession, type SessionWorker } from './session/session';
 import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
+import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
-import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
-import { OMEGA_EARTH, R_EARTH } from './physics/constants';
-import { normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
+import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
+import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
+import { add, normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
-import { initNotation, onNotationChange } from './ui/notation';
+import { getNotation, initNotation, onNotationChange } from './ui/notation';
+import { FramesView } from './render/frames';
+import { EscapeView } from './render/escape';
+import { StationView } from './render/station';
+import { PORTS, TARGET_OFFSET, targetOffset } from './physics/rendezvous/ports';
+import { SPACECRAFT } from './physics/rendezvous/profiles';
+import type { RendezvousState } from './physics/sim/rendezvous';
+import { RendezvousPlot } from './ui/rendezvous-plot';
+import { ToruControls } from './ui/toru-controls';
+import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
 
@@ -73,6 +96,8 @@ function recentSeparation(frame: VisualFrame): boolean {
 
 /** Pick the cinematic camera framing for this instant of the flight. */
 function camPhase(frame: VisualFrame): CamPhase {
+  // G06: pulled back as the escape fires, then close on the crew's descent module
+  if (frame.abort) return frame.t - frame.abort.t0 < 8 ? 'staging' : 'coast';
   if (!frame.liftoff) return 'pad';
   if (recentSeparation(frame)) return 'staging';
   if (frame.t < 12) return 'liftoff';
@@ -89,6 +114,8 @@ function camPhase(frame: VisualFrame): CamPhase {
  * thing they were watching.
  */
 function flightPhase(frame: VisualFrame): FlightPhase | null {
+  // G06: an abort, like a ship's return, is watched from outside
+  if (frame.abort) return 'descent';
   if (!frame.liftoff || frame.status === 'prelaunch') return 'pad';
   if (frame.status === 'failed') return null;
   if (recentSeparation(frame)) return 'staging';
@@ -99,6 +126,9 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
   // entry interface to the water.
   if (frame.status === 'descent') return frame.descentPhase === 'coast' ? 'coast' : 'descent';
   if (frame.status === 'landed') return 'descent';
+  // G07: close to the station, from the automatic approach on
+  const rv = frame.rendezvous;
+  if (rv && rv.range < NEAR_STATION && rv.phase !== 'separation' && rv.phase !== 'coast' && rv.phase !== 'burn') return 'proximity';
   return frame.payloadSeparated ? 'deployment' : 'orbit';
 }
 
@@ -113,6 +143,8 @@ const WATCH_CAMERA_PLAN: CameraPlan = { ...DEFAULT_CAMERA_PLAN, upper: 'exterior
 /** Mission time the viewer stays on a stage flown home after it is down, s. */
 const WATCH_FOCUS_HOLD = 10;
 
+/** G07: within this of the station the cameras frame it with the spacecraft, m. */
+const NEAR_STATION = 6000;
 const WARPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000];
 /**
  * When the predicted-orbit line is a trajectory rather than an artefact.
@@ -149,6 +181,8 @@ class App {
   tel: TelemetryPanel;
   result: MissionResult;
   rigidControls: RigidControls;
+  /** G07: the TORU hand controllers */
+  toruControls!: ToruControls;
   map: OrbitalMap;
   onboard: OnboardOverlay;
   timeline: Timeline;
@@ -188,6 +222,35 @@ class App {
   trail = new TrailLine(0x8be5cd);
   predicted = new OrbitLine(0xffffff, true);
   target = new OrbitLine(0xefa47e, false);
+  /** E01: the reference frames drawn in 3-D, chosen from the Frames menu */
+  frames = new FramesView(frameSymbols);
+  /** G06: the escaping head section or descent module */
+  private escapeView: EscapeView | null = null;
+  /** G07: the station a rendezvous flies to */
+  private stationView: StationView | null = null;
+  private dockingEyePos = new THREE.Vector3();
+  /** the 3-D picture is the docking TV camera's (drawn black and white) */
+  private tvPicture = false;
+  /** G07: the relative motion in the station's frame, in the telemetry panel */
+  private rendezvousPlot = new RendezvousPlot();
+  private framesMenu!: FramesMenu;
+  /** V02: the twilight jellyfish, and a scratch vector for its position */
+  private readonly twilight = new TwilightPlume();
+  private readonly twilightPos = new THREE.Vector3();
+  /** V01: the launch as the camera hears it */
+  readonly audio = new LaunchAudio();
+  /** P07: the long-term orbit window */
+  private lifetime = new LifetimeDialog();
+  /** V01: a viewer launch's real broadcast, when there is one */
+  readonly soundtrack = new SoundtrackPlayer();
+  private soundtrackPanel = new SoundtrackPanel((id) => { if (this.watchSoundtrackId === id) void this.loadSoundtrack(id); });
+  /** the viewer launch whose soundtrack is loaded */
+  private watchSoundtrackId: WatchMissionId | null = null;
+  /** U02: the reference flight's path, dashed, turned to this flight's launch */
+  ghost = new OrbitLine(0xc3a6ff, true, REFERENCE_PATH_POINTS + 1, 1.8);
+  /** the launch the ghost was last turned to, Julian date */
+  private ghostJd = NaN;
+  compare!: ComparePanel;
   /** the live simulation is advancing */
   playing = false;
   /** time warp of the live simulation */
@@ -208,6 +271,8 @@ class App {
   hudTimer = 0;
   telTimer = 0;
   explosion = new ExplosionEffect();
+  /** V03: exhaust trails */
+  private trails: ExhaustTrails | null = null;
   viewport: HTMLElement;
   glCanvas: HTMLCanvasElement;
   mapCanvas: HTMLCanvasElement;
@@ -231,10 +296,14 @@ class App {
   private playBtn!: HTMLButtonElement;
   private playGlyph!: HTMLElement;
   private liveBtn!: HTMLButtonElement;
+  /** G06: the Engineer mode's launch abort */
+  private abortBtn!: HTMLButtonElement;
   private warpSel!: HTMLSelectElement;
   private glowBtn!: HTMLButtonElement;
   /** decides from the frame rate whether the glow is affordable (src/render/glow-governor.ts) */
   private readonly glow = new GlowGovernor();
+  /** V02: the same frame-rate trial for the scattering sky */
+  private readonly skyGovernor = new GlowGovernor();
   /** kept alive for as long as the app is: it publishes `--sb-h` */
   private sbObserver: ResizeObserver | null = null;
   private sbHeight = -1;
@@ -242,7 +311,6 @@ class App {
   private bx = new THREE.Vector3();
   private by = new THREE.Vector3();
   private bz = new THREE.Vector3();
-  private backDir = new THREE.Vector3(0, -1, 0);
   private originV = new THREE.Vector3();
   /**
    * The body the camera follows when it is not the vehicle: a stage flown
@@ -268,6 +336,9 @@ class App {
   constructor() {
     new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
+    this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
+      if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
+    });
     this.rigidControls = new RigidControls(document.getElementById('rigid-controls')!, command => {
       if (!this.session || !this.player.live) return;
       this.session.setRigidCommand(command);
@@ -284,7 +355,14 @@ class App {
     this.obCanvas = document.getElementById('onboard') as HTMLCanvasElement;
     // The telemetry panel first: it owns the slot the instrument card docks
     // into, and `Hud` reads its stored placement in its own constructor.
-    this.tel = new TelemetryPanel(document.getElementById('telemetry')!);
+    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport(), () => this.orbitLifetime());
+    this.compare = new ComparePanel({
+      currentAsReference: () => this.currentAsReference(),
+      current: () => this.tel.exportSource(),
+      onReference: (ref) => { this.tel.setReference(ref); this.ghostJd = NaN; },
+    });
+    this.tel.compareHost.append(this.compare.root);
+    this.tel.rendezvousHost.append(this.rendezvousPlot.canvas);
     this.hud = new Hud(document.getElementById('hud')!, document.getElementById('ticker')!, this.tel.dockHost);
     this.map = new OrbitalMap(this.mapCanvas, `${base}textures/earth_atmos_2048.jpg`);
     this.onboard = new OnboardOverlay(this.obCanvas);
@@ -311,6 +389,7 @@ class App {
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go('explore'),
       follow: (target) => { this.watchFollow = target; },
+      pickerFooter: () => this.soundtrackPanel.render(),
     });
     this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
@@ -392,6 +471,7 @@ class App {
     this.launch(this.panel.getConfig());
     this.setWarp(1);
     this.watch.begin(id);
+    void this.loadSoundtrack(id);
     this.watchPayloadKey = watchMissionById(id)?.payloadKey ?? null;
     this.updateMissionName();
   }
@@ -459,19 +539,114 @@ class App {
     const tex = await loadEarthTextures(base);
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
+    // V02: `?sky=gradient` keeps the old sky, for comparison or a GPU the trial misjudges
+    if (new URLSearchParams(location.search).get('sky') === 'gradient') { this.scene.setPhysicalSky(false); this.skyGovernor.settle(); }
     this.debrisView = new DebrisView(this.scene);
-    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line);
+    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.frames.group, this.ghost.line, this.twilight.mesh);
+    this.ghost.line.visible = false;
     this.cams.attach(this.viewport);
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.viewport);
     this.watchPixelRatio();
     this.resize();
     document.getElementById('loading')!.classList.add('hidden');
-    // The landing page and the viewer open on the featured launch standing on
-    // its pad in daylight; the workspace opens on whatever the panel holds.
-    if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
-    else this.preview(this.panel.getConfig());
+    // A mission link opens the workspace on its mission; otherwise the landing
+    // page and the viewer open on the featured launch standing on its pad in
+    // daylight, and the workspace on the mission it held when it was closed.
+    if (await this.openMissionLink()) { /* previewed by the panel */ }
+    else if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
+    else {
+      const stored = loadStoredMission();
+      if (stored) this.panel.share.apply(stored, 'stored');
+      else this.preview(this.panel.getConfig());
+    }
     requestAnimationFrame((now) => this.frame(now));
+    registerServiceWorker();
+  }
+
+  /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
+  private async loadSoundtrack(id: WatchMissionId): Promise<void> {
+    this.watchSoundtrackId = id;
+    const track = await soundtrackFor(id, (name) => t('snd.mine', { name }));
+    // a different flight may have started while the recording was being read
+    if (this.watchSoundtrackId === id) this.soundtrack.set(track);
+  }
+
+  /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
+  private orbitLifetime(): void {
+    const f = this.shown, sim = this.sim;
+    const opener = document.getElementById('btn-orbit-lifetime');
+    const inOrbit = !!f && !!sim && f.status !== 'prelaunch' && f.elements.periapsisAlt > 100e3 && f.elements.e < 1;
+    if (!inOrbit) { this.lifetime.openFor(null, opener); return; }
+    const sat = sim.satellite;
+    const el = f.elements;
+    this.lifetime.openFor({
+      r: [f.r.x, f.r.y, f.r.z], v: [f.v.x, f.v.y, f.v.z], jd: f.jd,
+      spacecraft: spacecraftFor(sat.kind, sim.cfg.payloadMassOverride ?? sat.mass),
+      label: t('life.start', { sat: satelliteName(sat), pe: (el.periapsisAlt / 1000).toFixed(0), ap: (el.apoapsisAlt / 1000).toFixed(0),
+        inc: (el.i * RAD).toFixed(1), t: f.t.toFixed(0) }),
+    }, opener);
+  }
+
+  /** U02: the flight on screen as a reference to compare later flights against. */
+  private currentAsReference(): ReferenceFlight | null {
+    const sim = this.tel.exportSource();
+    if (!sim || !sim.telemetry.length) return null;
+    const law = sim.cfg.dynamics?.explicitGuidance?.law;
+    const faults = sim.cfg.dynamics?.controlFaults?.faults.length ?? 0;
+    const label = [sim.vehicleSpec.name, law ? law.toUpperCase() : t('cmp.standard'),
+      ...(faults ? [t('cmp.faults', { n: faults })] : []), sim.cfg.launchTime.toISOString().slice(0, 16).replace('T', ' ')].join(' · ');
+    return referenceFromFlight({
+      label, mission: missionDocument(this.panel.missionState()), launchJd: julianDate(sim.cfg.launchTime),
+      telemetry: sim.telemetry, events: sim.events,
+      path: this.recorder.frames.filter((f) => f.status !== 'prelaunch'),
+    });
+  }
+
+  /** U02: keep the reference's path turned to the launch on screen. */
+  private syncGhost(): void {
+    const ref = this.compare?.ref;
+    const cfg = this.sim?.cfg;
+    this.ghost.line.visible = !!ref && !!cfg;
+    if (!ref || !cfg) return;
+    const jd = julianDate(cfg.launchTime);
+    if (jd !== this.ghostJd) {
+      this.ghostJd = jd;
+      this.ghost.setPoints(alignTrajectory(ref, jd));
+    }
+    this.ghost.update(this.scene);
+  }
+
+  /** U06: the flight report, from the whole recorded flight and the result on screen. */
+  private async flightReport(): Promise<void> {
+    const sim = this.tel.exportSource();
+    if (!sim) return;
+    await downloadFlightReport({
+      flight: sim,
+      result: this.simView ? assessMissionResult(this.simView.sim) : null,
+      link: await this.panel.share.link().catch(() => null),
+      exclude: this.tel.chartCanvases(),
+      guidanceEdited: Object.keys(this.panel.state.guidanceOverrides).length > 0,
+    });
+  }
+
+  /**
+   * The mission a link carries (`?m=…`, roadmap U01), loaded into the
+   * workspace. The parameter comes off the address once read, so the address
+   * does not go on naming a mission the user has since edited.
+   */
+  private async openMissionLink(): Promise<boolean> {
+    const url = new URL(location.href);
+    const param = url.searchParams.get(MISSION_PARAM);
+    if (param === null) return false;
+    url.searchParams.delete(MISSION_PARAM);
+    let raw: unknown = null;
+    try { raw = await decodeMissionParam(param); } catch { /* reported as unusable below */ }
+    if (this.lean) this.setMode('explore');
+    history.replaceState(null, '', `${url.pathname}${url.search}${hashForMode(this.mode)}`);
+    const parsed = this.panel.share.apply(raw, 'link');
+    if (!parsed.usable) this.preview(this.panel.getConfig());
+    return true;
   }
 
   /**
@@ -489,6 +664,7 @@ class App {
     this.trail.setResolution(w, h);
     this.predicted.setResolution(w, h);
     this.target.setResolution(w, h);
+    this.frames.setResolution(w, h);
   }
 
   /** Warp that the on-screen selector is currently editing. */
@@ -518,6 +694,11 @@ class App {
     document.getElementById('btn-skip')!.addEventListener('click', () => this.skip());
     document.getElementById('btn-prev')!.addEventListener('click', () => this.previousEvent());
     this.liveBtn.addEventListener('click', () => this.goLive());
+    this.abortBtn = document.getElementById('btn-abort') as HTMLButtonElement;
+    this.abortBtn.addEventListener('click', () => {
+      if (this.mode !== 'engineer' || !this.player.live || !this.abortArmed(this.shown)) return;
+      this.session?.commandAbort();
+    });
     document.querySelectorAll<HTMLButtonElement>('.cam-btn').forEach((b) => {
       b.addEventListener('click', () => this.setCamera(b.dataset.cam as CameraMode));
     });
@@ -535,6 +716,18 @@ class App {
       try { localStorage.setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
     });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
+    this.framesMenu = new FramesMenu(document.getElementById('btn-frames') as HTMLButtonElement, (groups) => this.frames.setShown(groups));
+    this.frames.setShown(this.framesMenu.groups);
+    // V01: sound, off until asked for; a choice kept from an earlier visit
+    // starts at the first click or key press, as browsers require
+    const soundBtn = document.getElementById('btn-sound') as HTMLButtonElement;
+    const showSound = (): void => {
+      soundBtn.classList.toggle('active', this.audio.on);
+      soundBtn.setAttribute('aria-pressed', String(this.audio.on));
+    };
+    soundBtn.addEventListener('click', () => { this.audio.toggle(); showSound(); });
+    for (const type of ['pointerdown', 'keydown'] as const) window.addEventListener(type, () => this.audio.sound.resumeOnGesture(), { capture: true });
+    showSound();
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
       const l = (e.target as HTMLSelectElement).value as Lang;
       setLang(l);
@@ -633,6 +826,8 @@ class App {
     if (meta) meta.setAttribute('content', t('app.subtitle'));
     this.panel.render();
     this.tel.build();
+    this.toruControls.render();
+    this.compare.render();
     this.hud.applyLabels();
     this.narration.applyLanguage();
     this.timeline.applyStaticText();
@@ -644,6 +839,7 @@ class App {
     document.querySelectorAll<HTMLElement>('[data-i18n-title]').forEach((node) => node.setAttribute('aria-label', node.title));
     this.viewport.setAttribute('aria-label', t('a11y.viewport'));
     this.warpSel?.setAttribute('aria-label', t('ctl.warp'));
+    this.framesMenu?.applyLanguage();
     // both dialogs rebuild their body from the dictionaries when opened; an
     // open one has to be rebuilt now
     if (this.physicsDialog.isOpen) this.physicsDialog.applyLanguage();
@@ -712,6 +908,12 @@ class App {
     this.updatePlayButton();
   }
 
+  /** Whether a launch abort can be commanded at `frame`: armed from the countdown until orbit or the spacecraft's separation. */
+  private abortArmed(frame: VisualFrame | null): boolean {
+    if (!frame || frame.abort || frame.payloadSeparated || frame.destroyed) return false;
+    return frame.status === 'prelaunch' || frame.status === 'ascent' || frame.status === 'burn' || frame.status === 'coast';
+  }
+
   private updatePlayButton(): void {
     const running = this.player.live ? this.playing : this.player.playing;
     this.playGlyph.textContent = running ? '❚❚' : '▶';
@@ -767,6 +969,14 @@ class App {
 
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
+    this.audio.reset();
+    // every new flight drops the broadcast; `startWatch` puts its own back after launching
+    this.soundtrack.set(null);
+    this.watchSoundtrackId = null;
+    // The workspace's mission outlives the tab (roadmap U01): every edit, from
+    // the panel or over WebMCP, previews. The viewer's prepared launches do
+    // not replace it.
+    if (!this.lean) saveStoredMission(this.panel.missionState());
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;
@@ -774,6 +984,7 @@ class App {
     try {
       session = this.createSession(cfg);
       this.rigidControls.reset();
+      this.toruControls.reset();
     } catch (err) {
       console.error(err);
       return;
@@ -844,16 +1055,44 @@ class App {
     const sim = this.sim;
     // release the previous mission's GPU resources before building the new one
     if (this.rocket) {
-      this.scene.scene.remove(this.rocket.group, this.rocket.worldGroup);
+      this.scene.scene.remove(this.rocket.group);
       this.rocket.dispose();
     }
     if (this.pad) {
       this.scene.scene.remove(this.pad.group);
       this.pad.dispose();
     }
-    this.rocket = new RocketView(sim.vehicleSpec, sim.satellite);
-    this.scene.scene.add(this.rocket.group, this.rocket.worldGroup);
-    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec);
+    this.rocket = new RocketView(sim.vehicleSpec, sim.satellite, { humidity: SITE_HUMIDITY[sim.site.id] });
+    this.scene.scene.add(this.rocket.group);
+    // V03: the smoke the flight leaves in the air, from its own recording
+    if (this.trails) {
+      this.scene.scene.remove(this.trails.mesh);
+      this.trails.dispose();
+    }
+    this.trails = new ExhaustTrails(sim.vehicleSpec, sim.site.id, sim.cfg.dynamics, sim.plan.azimuthRotating);
+    this.scene.scene.add(this.trails.mesh);
+    // G06: a crewed Soyuz's escape, drawn when it fires
+    if (this.escapeView) {
+      this.scene.scene.remove(this.escapeView.group);
+      this.escapeView.dispose();
+      this.escapeView = null;
+    }
+    const fairing = sim.vehicleSpec.fairing;
+    if (sim.escape.fitted && fairing) {
+      this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
+      this.scene.scene.add(this.escapeView.group);
+    }
+    if (this.stationView) {
+      this.scene.scene.remove(this.stationView.group);
+      this.stationView.dispose();
+      this.stationView = null;
+    }
+    if (sim.rendezvous.enabled) {
+      this.stationView = new StationView();
+      this.scene.scene.add(this.stationView.group);
+    }
+    // V05: the pad the mission names, its launch table turned to the launch azimuth
+    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec, { padId: sim.cfg.padId, azimuth: sim.plan.azimuthRotating, dynamics: sim.cfg.dynamics });
     this.scene.scene.add(this.pad.group);
     if (this.recoveryScenery) {
       this.scene.scene.remove(this.recoveryScenery.group);
@@ -886,6 +1125,7 @@ class App {
     this.tel.reset();
     this.result.clear();
     this.rigidControls.reset();
+    this.toruControls.reset();
     this.tel.setExportSource(sim);
     this.explosion.clear();
     // Pay this mission's shader compiles now, while the vehicle is sitting on
@@ -945,6 +1185,12 @@ class App {
     const measuring = this.fastForwardTo === null && elapsedWall < 0.1 && document.visibilityState === 'visible';
     const action = this.glow.sample(elapsedWall, this.scene.bloomEnabled, measuring);
     if (action) this.setGlow(action === 'on');
+    // V02: the scattering sky gets the same trial, once the glow's is over, so
+    // the two never confound each other: still too slow → the gradient sky
+    if (this.glow.settled || !this.scene.glowSupported) {
+      const sky = this.skyGovernor.sample(elapsedWall, this.scene.physicalSkyEnabled, measuring);
+      if (sky) this.scene.setPhysicalSky(sky === 'on');
+    }
   }
 
   private frame(now: number): void {
@@ -1037,8 +1283,12 @@ class App {
     if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
       this.tel.update(this.simView.sim, this.player.cursor, this.shown);
+      this.rendezvousPlot.update(this.recorder.frames, this.shown);
+      this.compare.update();
       this.result.update(this.simView.sim);
-      this.rigidControls.update(this.shown?.rigid, this.player.live);
+      // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
+      this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
+      this.toruControls.update(this.shown, this.player.live, this.mode === 'engineer');
     }
     if (this.loopInspector.isOpen) {
       this.loopInspector.update(this.shown, this.recorder.frames, this.player.cursor, this.player.live,
@@ -1048,6 +1298,19 @@ class App {
   }
 
   /** Keep the trail consistent with the cursor: extend forward, rebuild on a rewind. */
+  /**
+   * G07: the docking TV camera — beside the probe's tip, offset toward the
+   * port's target as far as the target stands from the port, looking along the
+   * docking axis, with the target's side up.
+   */
+  private dockingEye(frame: VisualFrame, rv: RendezvousState): { pos: THREE.Vector3; dir: Vec3; up: Vec3 } {
+    const q = rv.station.q;
+    const o = targetOffset(PORTS[rv.port]);
+    const side = normalize(quatRotate(q, o));
+    const at = add(scale(frame.dir, SPACECRAFT.probe + 0.2), scale(side, TARGET_OFFSET));
+    return { pos: this.dockingEyePos.set(this.vehiclePos.x + at.x, this.vehiclePos.y + at.y, this.vehiclePos.z + at.z), dir: frame.dir, up: side };
+  }
+
   private syncTrail(cursor: number, live: boolean, liveFrame: VisualFrame): void {
     const frames = this.recorder.frames;
     if (frames.length === 0) return;
@@ -1204,6 +1467,9 @@ class App {
     if (this.player.live) this.player.syncLive(frame.t);
     this.shown = frame;
     view.setFrame(frame);
+    // G06: the abort is there on a crewed Soyuz, and live until the escape system stands down
+    this.abortBtn.hidden = !sim.escape.fitted;
+    this.abortBtn.disabled = !this.player.live || !this.abortArmed(frame);
     if (this.mode === 'watch') this.steerWatchFocus(frame);
     this.followCameraPlan(frame);
     if (this.wasLive !== this.player.live) {
@@ -1268,27 +1534,49 @@ class App {
       this.rocket.group.position.set(this.vehiclePos.x + offset.x, this.vehiclePos.y + offset.y, this.vehiclePos.z + offset.z);
       side = quatRotate(attitude, v3(0, 0, 1));
     }
-    // the smoke column trails back towards the pad
     const padVec = this.pad.group.position;
     const padDist = padVec.length();
-    if (padDist > 1) this.backDir.copy(padVec).divideScalar(padDist);
-    else this.backDir.set(-frame.dir.x, -frame.dir.y, -frame.dir.z);
-    this.rocket.update(frame, { backDir: this.backDir, padDistance: padDist, night });
+    this.rocket.update(frame, { night });
+    this.trails?.update(this.recorder.frames, frame.t, (p, out) => scene.toScene(p, out), night);
+    // G06: after an abort the frame is the escaping body; the rocket it left is debris
+    if (frame.abort) this.rocket.group.visible = false;
+    if (this.stationView) {
+      const rv = frame.rendezvous;
+      this.stationView.group.visible = !!rv;
+      if (rv) {
+        scene.toScene(rv.station.r, this.stationView.group.position);
+        this.stationView.group.quaternion.set(rv.station.q.x, rv.station.q.y, rv.station.q.z, rv.station.q.w);
+      }
+    }
+    if (this.escapeView) {
+      this.escapeView.group.position.copy(this.rocket.group.position);
+      this.escapeView.group.quaternion.copy(this.rocket.group.quaternion);
+      this.escapeView.update(frame);
+    }
     // Size of the object actually being tracked: the stack now, the spacecraft
     // after payload separation. It frames the camera, decides when the space
     // view's marker takes over, and scales the break-up effect.
-    const height = frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
+    const height = frame.abort && this.escapeView ? this.escapeView.size(frame)
+      : frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
     this.explosion.update(scene, frame, this.recorder.events, dt, height);
     // lines
     this.syncTrail(this.player.cursor, this.player.live, frame);
     this.trail.update(scene);
+    this.syncGhost();
     this.syncPredicted(frame, dt);
     this.predicted.update(scene);
     this.target.update(scene);
     this.debrisView.update(frame.debris, frame.t);
     // camera
-    const radius = frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
+    const radius = frame.abort ? Math.min(2, height / 4) : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
+    // G07: close to the station the exterior view keeps it in the picture, and the onboard view is the docking TV camera;
+    // the flight-path lines, kilometres long through the middle of that picture, stand aside
+    const rv = frame.rendezvous;
+    const nearStation = !!rv && !!this.stationView && rv.range < NEAR_STATION && rv.phase !== 'coast' && rv.phase !== 'burn' && rv.phase !== 'separation';
+    const docking = !!rv && nearStation && (rv.phase === 'approach' || rv.phase === 'flyaround' || rv.phase === 'stationkeeping' || rv.phase === 'final' || rv.phase === 'retreat');
+    this.trail.line.visible = !nearStation;
+    this.predicted.setHidden(nearStation);
     if (focus) {
       // A stage flown home: framed on its own axis, over its own ground.
       const f = enuFrame(focus.r);
@@ -1303,13 +1591,22 @@ class App {
         t: frame.t, phase: 'ascent', agl: norm(focus.r) - R_EARTH - ground,
       }, dt, R_EARTH);
     } else {
+      // G06: under a parachute the camera frames the canopy above the capsule,
+      // not the ground below its heat shield
+      const canopy = frame.abort?.body === 'capsule' && (frame.abort.main > 0.2 || frame.abort.drogue > 0.2);
       this.cams.update(scene.camera, {
-        pos: this.originV, up, east, north, dir: frame.dir, side, height, radius,
+        pos: this.originV, up, east, north, dir: canopy ? scale(frame.dir, -1) : frame.dir, side, height, radius,
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
         vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
         t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
+        ...(nearStation ? { partner: this.stationView!.group.position } : {}),
+        ...(docking && rv ? { dockingEye: this.dockingEye(frame, rv) } : {}),
       }, dt, R_EARTH);
     }
+    // E01: the frames, where the camera looks at the vehicle from outside it
+    const framesView = (this.mode === 'explore' || this.mode === 'engineer') && (this.camMode === 'exterior' || this.camMode === 'space');
+    if (framesView) this.frames.update(frame, scene.camera, this.vehiclePos, this.earthC, sim.plan.azimuthRotating, getNotation(), !focus);
+    else this.frames.group.visible = false;
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);
@@ -1318,6 +1615,20 @@ class App {
     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
     // a 3 m CubeSat carrier and by 2x for Starship (render hand-off).
     scene.update(frame, sunDir, camAlt, height);
+    // V01: what the camera hears — the map has no listener, so it is silent
+    const cam = scene.camera.position, origin = scene.origin;
+    // V02: the exhaust lit by a sun the ground no longer sees
+    const camR = Math.hypot(cam.x + origin.x, cam.y + origin.y, cam.z + origin.z) || 1;
+    const camSunElev = ((cam.x + origin.x) * sunDir.x + (cam.y + origin.y) * sunDir.y + (cam.z + origin.z) * sunDir.z) / camR;
+    this.twilight.update(frame, scene.toScene(frame.r, this.twilightPos), frame.dir, sunDir, camSunElev, scene.camera);
+    this.audio.update({
+      t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
+      listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
+      warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
+      onboard: this.camMode === 'onboard',
+      suppressed: this.soundtrack.sounding,
+    });
+    this.soundtrack.update(frame.t, this.activeWarp, this.player.live ? this.playing : this.player.playing, this.audio.on);
     // The map and the onboard overlay still take a `Simulation` (they belong to
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,
@@ -1326,13 +1637,19 @@ class App {
       this.map.draw(view.sim, sim.site.latitude, sim.site.longitude, Math.max(0, this.sbHeight));
     } else {
       scene.render();
-      if (this.camMode === 'onboard') this.onboard.draw(view.sim, !!sim.satellite.crewed, Math.max(0, this.sbHeight));
+      // the Soyuz's TV camera sends a black-and-white picture
+      const tv = this.camMode === 'onboard' && docking && !!rv;
+      if (tv !== this.tvPicture) { this.tvPicture = tv; this.glCanvas.style.filter = tv ? 'grayscale(1) contrast(1.12)' : ''; }
+      if (this.camMode === 'onboard' && docking && rv) this.onboard.drawDocking(rv, Math.max(0, this.sbHeight));
+      else if (this.camMode === 'onboard') this.onboard.draw(view.sim, !!sim.satellite.crewed, Math.max(0, this.sbHeight));
     }
   }
 }
 
 initLang();
 initNotation();
+// U06: every chart the app draws can be saved as a PNG
+enableChartExport();
 const app = new App();
 // U07: a notation chosen in the Engineer mode (or changed with the language)
 // relabels everything the language does.

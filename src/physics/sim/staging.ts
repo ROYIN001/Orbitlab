@@ -112,6 +112,7 @@ export class Staging {
       if (!b.attached) return;
       this.detachBooster(b);
       this.sim.event('evt.boosterSep', 'success', { name: b.spec.name, alt: Math.round(this.sim.state.altitude / 1000), speed: Math.round(this.sim.state.speed) });
+      this.sim.failures.onBoosterSeparation();
     });
   }
 
@@ -215,6 +216,7 @@ export class Staging {
       if (!prev.attached) return;
       this.detachStage(prev);
       this.sim.event('evt.stageSep', 'success', { stage: prev.spec.name, n: prev.index + 1, alt: Math.round(this.sim.state.altitude / 1000), speed: Math.round(this.sim.state.speed) });
+      this.sim.failures.onStageSeparation(prev.index);
       if (igniteNext) {
         this.sim.schedule(this.sim.state.t + ignDelay, 'ignition', () => {
           this.sim.vehicle.igniteStage(next, this.sim.state.t);

@@ -48,7 +48,7 @@ import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
 import { t, getLang } from '../i18n';
 import { localized, satelliteName, siteName, stageName, vehicleManufacturer, vehicleNotes, zoneName } from './names';
-import { GUIDANCE_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
+import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
@@ -61,11 +61,15 @@ import type { ControlConfig, NavigationConfig } from '../types';
 import { aidingFor, imuFor, IMU_KEYS, NAV_FIELD_KEYS, NAV_GRADES } from '../physics/nav/config';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_DEFAULTS, controlFieldKey, controlValue, type ControlChannelKey } from '../physics/rigid/control-config';
 import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
+import { PROFILE_IDS, rendezvousAvailable, type RendezvousProfileId } from '../physics/rendezvous/profiles';
+import { PORT_IDS, type PortId } from '../physics/rendezvous/ports';
 import type { ControlFaultKind, ControlFaultSpec, ControlFaultsConfig } from '../types';
 import { CONTROL_FAULT_KINDS, CONTROL_FAULT_PRESETS, FAULT_AXES, FAULT_FIELDS, FAULT_GROUP, FAULT_MAGNITUDE, MAX_FAULTS, NAVIGATION_FAULTS } from '../physics/rigid/fault-config';
 import { faultKindName } from './fault-names';
 import type { ExplicitGuidanceConfig } from '../types';
 import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
+import { copyMission, type MissionState } from '../config/mission-file';
+import { MissionShare } from './mission-share';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -99,6 +103,10 @@ interface SetupState {
    * belongs to one vehicle at one site, so changing either drops it.
    */
   recoveryPlan?: RecoveryPlan;
+  /** the site's launch pad a prepared mission names; changing the vehicle or the site drops it */
+  padId?: string;
+  /** a flight on to the station (G07); dropped when the orbit or the payload no longer allows one */
+  rendezvous?: MissionConfig['rendezvous'];
   payloadMass: number;
 }
 
@@ -110,7 +118,6 @@ export interface Feasibility {
   text: string;
 }
 
-const FAILURE_MODES: FailureMode[] = ['none', 'engineOut', 'thrustLoss', 'prematureSep', 'fairingStuck', 'rangeSafety', 'random'];
 
 function toDatetimeLocalUTC(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -408,6 +415,8 @@ export class SetupPanel {
   private tuning = false;
   private tuneController: AbortController | null = null;
   private tuneMessage = '';
+  /** the "Share & save" row (roadmap U01) */
+  readonly share = new MissionShare(this);
   /** the mission the current auto-tune result was measured for */
   private tunedFor = '';
   /** the vehicle forced a different site than the one that was selected */
@@ -458,6 +467,8 @@ export class SetupPanel {
       launchTime: new Date(s.launchTime.getTime()), guidance: this.guidance, failure: { ...s.failure },
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
+      ...(s.padId ? { padId: s.padId } : {}),
+      ...(s.rendezvous ? { rendezvous: { ...s.rendezvous } } : {}),
       // the values above are already merged with the vehicle's own programme
       guidanceResolved: true,
       dynamics: s.dynamics ? { ...s.dynamics } : undefined,
@@ -482,6 +493,8 @@ export class SetupPanel {
       case 'orbitOrder': return t('setup.validation.orbitOrder');
       case 'selection': return t('setup.validation.selection');
       case 'suborbital': return t('setup.validation.suborbital');
+      case 'failureUnavailable': return t('setup.validation.failureUnavailable');
+      case 'rendezvousUnavailable': return t('setup.validation.rendezvousUnavailable');
     }
   }
 
@@ -591,7 +604,34 @@ export class SetupPanel {
     Object.assign(this.state, mission);
     // a mission without a plan must not inherit the last one's
     this.state.recoveryPlan = mission.recoveryPlan ? structuredClone(mission.recoveryPlan) : undefined;
+    // nor its pad, nor its flight to the station
+    this.state.padId = mission.padId;
+    this.state.rendezvous = mission.rendezvous ? { ...mission.rendezvous } : undefined;
     this.state.dynamics = defaultDynamics(this.state.vehicleId);
+    this.tuneMessage = '';
+    this.applyExternalEdit();
+    this.cb.onChange?.(this.getConfig());
+  }
+
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  /** The mission as it stands, as a copy (roadmap U01: links, files, the page's own copy). */
+  missionState(): MissionState {
+    return copyMission(this.state);
+  }
+
+  /**
+   * Replace the whole mission with a saved one — dynamics and all, unlike
+   * `loadMission`, which gives a prepared mission the vehicle's defaults.
+   * The caller has validated it (`parseMissionDocument`).
+   */
+  restoreMission(mission: MissionState): void {
+    this.cancelTune();
+    Object.assign(this.state, copyMission(mission));
+    if (!mission.recoveryPlan) this.state.recoveryPlan = undefined;
+    if (!mission.dynamics) this.state.dynamics = undefined;
     this.tuneMessage = '';
     this.applyExternalEdit();
     this.cb.onChange?.(this.getConfig());
@@ -787,6 +827,7 @@ export class SetupPanel {
    */
   render(): void {
     const s = this.state;
+    if (s.rendezvous && !this.rendezvousAvailable()) s.rendezvous = undefined;
     const root = this.root;
     const openDetails = new Map(Array.from(root.querySelectorAll<HTMLDetailsElement>('details[data-section]'), (details) => [details.dataset.section!, details.open]));
     const active = document.activeElement as HTMLElement | null;
@@ -818,6 +859,7 @@ export class SetupPanel {
     scroll.appendChild(this.experienceSection());
     if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
     scroll.appendChild(this.quickstartSection());
+    scroll.appendChild(this.share.section());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
     const s1 = this.el('section', 'config-section');
@@ -840,6 +882,7 @@ export class SetupPanel {
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
       if (!spec.recoverable) s.boosterRecovery = false;
       s.recoveryPlan = undefined;
+      s.padId = undefined;
       // only a ship that flies itself home can take a suborbital target
       if (s.orbit.suborbital && !flightHomeCapable(spec)) s.orbit = this.orbitalAgain(s.orbit);
       this.render();
@@ -859,13 +902,28 @@ export class SetupPanel {
       notes.appendChild(document.createTextNode(vehicleNotes(vehicle)));
       s1.appendChild(notes);
     }
-    s1.appendChild(this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
+    const siteField = this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
       s.siteId = v;
       s.recoveryPlan = undefined;
+      s.padId = undefined;
       this.siteReassigned = false;
       this.render();
       this.changed();
-    }));
+    });
+    // Sites no vehicle flies from yet (roadmap C04), shown for what they are
+    const unflown = SITES.filter((x) => !VEHICLES.some((v) => v.sites.includes(x.id)));
+    if (unflown.length) {
+      const group = this.el('optgroup');
+      group.label = t('setup.siteUnflown');
+      for (const x of unflown) {
+        const op = this.el('option', undefined, siteName(x));
+        op.value = x.id;
+        op.disabled = true;
+        group.appendChild(op);
+      }
+      siteField.querySelector('select')!.appendChild(group);
+    }
+    s1.appendChild(siteField);
     const coords = this.el('p', 'field-note');
     coords.id = 'site-coordinates';
     s1.appendChild(coords);
@@ -936,6 +994,7 @@ export class SetupPanel {
     ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
     if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
     if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+    if (this.rendezvousAvailable()) s3.appendChild(this.rendezvousOption());
 
     const timeLab = this.el('label', 'field');
     timeLab.appendChild(this.el('span', undefined, t('setup.launchTime')));
@@ -1109,9 +1168,14 @@ export class SetupPanel {
     const fd = this.el('details');
     fd.dataset.section = 'failure';
     fd.appendChild(this.el('summary', undefined, t('setup.failure')));
-    fd.appendChild(this.select('setup.failureMode', FAILURE_MODES.map((m) => ({ value: m, label: t(`setup.fail.${m}`) })), s.failure.mode, (v) => { s.failure.mode = v as FailureMode; this.changed(); }));
+    // only the failures this vehicle and payload can have (a launch abort needs an escape system)
+    const modes = FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, s.satelliteId));
+    fd.appendChild(this.select('setup.failureMode', modes.map((m) => ({ value: m, label: t(`setup.fail.${m}`) })), s.failure.mode, (v) => { s.failure.mode = v as FailureMode; this.changed(); }));
     const fr = this.el('div', 'row');
-    fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = v; this.changed(); }, 5, 0, 2000));
+    // a strap-on collision and a stage separation failure happen at their separations, not at a time
+    if (s.failure.mode !== 'boosterCollision' && s.failure.mode !== 'stagingFailure') {
+      fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = v; this.changed(); }, 5, -10, 2000));
+    }
     fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;
@@ -1570,6 +1634,37 @@ export class SetupPanel {
     lab.append(cb, this.el('span', undefined, t('setup.suborbital')));
     box.appendChild(lab);
     if (s.orbit.suborbital) box.appendChild(this.el('p', 'field-note', t('setup.suborbitalNote')));
+    return box;
+  }
+
+  /** A flight on to the station: a Soyuz MS to the ISS orbit (the rule `validateConfigInput` states). */
+  private rendezvousAvailable(): boolean {
+    const s = this.state;
+    return rendezvousAvailable(s.vehicleId, s.satelliteId, s.orbit);
+  }
+
+  /**
+   * G07: fly on to the station after the insertion — which of the three
+   * rendezvous profiles, and to which of the Russian segment's ports.
+   */
+  private rendezvousOption(): HTMLElement {
+    const s = this.state;
+    const box = this.el('div', 'rendezvous-option');
+    box.appendChild(this.select('setup.rendezvous', [
+      { value: '', label: t('setup.rendezvous.none') },
+      ...PROFILE_IDS.map((id) => ({ value: id, label: t(`setup.rendezvous.${id}`) })),
+    ], s.rendezvous?.profile ?? '', (v) => {
+      s.rendezvous = v ? { profile: v as RendezvousProfileId, port: s.rendezvous?.port ?? 'rassvet' } : undefined;
+      this.render();
+      this.changed();
+    }));
+    if (s.rendezvous) {
+      box.appendChild(this.select('setup.rendezvousPort', PORT_IDS.map((id) => ({ value: id, label: t(`rv.port.${id}`) })), s.rendezvous.port ?? 'rassvet', (v) => {
+        if (s.rendezvous) s.rendezvous = { ...s.rendezvous, port: v as PortId };
+        this.changed();
+      }));
+      box.appendChild(this.el('p', 'field-note', t('setup.rendezvousNote')));
+    }
     return box;
   }
 

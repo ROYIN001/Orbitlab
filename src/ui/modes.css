@@ -55,7 +55,9 @@ body[data-mode='home'] .viewport, body[data-mode='watch'] .viewport {
 /* The landing page covers the scene's own overlay; the viewer keeps only the
    mission title and the camera reset / full-screen tools of it. */
 body[data-mode='home'] .scene-ui { display: none; }
-body[data-mode='watch'] :is(.camera-tabs, #btn-glow, #ticker, #hud, .scene-bottom) { display: none !important; }
+body[data-mode='watch'] :is(.camera-tabs, #btn-glow, #btn-frames, .frames-menu, #ticker, #hud, .scene-bottom) { display: none !important; }
+/* G06: aborting by hand is the Engineer mode's */
+body:not([data-mode='engineer']) #btn-abort { display: none !important; }
 body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
 
 /* ── the landing page ────────────────────────────────────────────────────── */

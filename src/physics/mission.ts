@@ -5,6 +5,7 @@
 import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { satelliteById } from '../data/satellites';
+import { rendezvousAvailable } from './rendezvous/profiles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
@@ -176,6 +177,18 @@ export function raanFromLtan(date: Date, ltanHours: number): number {
  * dropping it silences the burns but leaves `inclinationReachable` false,
  * because `reachable` compares with a 1e-6 tolerance.
  */
+/**
+ * A site that can only launch against the Earth's rotation (roadmap C04:
+ * Palmachim, whose window opens west over the Mediterranean because every
+ * other direction crosses a neighbour). Its declared minimum is itself
+ * retrograde, so the rules that mirror a retrograde plane onto its prograde
+ * twin (`inclinationCorridor`, `ascentInclinationFor`) take it as it stands.
+ * Every other site declares a prograde floor, and none of this applies to it.
+ */
+export function retrogradeOnly(site: SiteExtra): boolean {
+  return site.minInclination > 90;
+}
+
 export function minInclinationFor(site: SiteExtra): number {
   return Math.max(site.minInclination * DEG, Math.abs(site.latitude) * DEG + 0.05 * DEG);
 }
@@ -369,7 +382,8 @@ export function launchDirection(site: SiteExtra, inc: number, vOrbit = CORRIDOR_
  */
 export function inclinationCorridor(site: SiteExtra, inc: number): CorridorVerdict {
   if (inc > maxInclinationFor(site) + CORRIDOR_SLACK && !launchDirection(site, inc).allowed) return 'aboveCorridor';
-  const effective = inc > Math.PI / 2 ? Math.PI - inc : inc;
+  // A retrograde-only site's floor is itself retrograde, and is compared as it stands.
+  const effective = inc > Math.PI / 2 && !retrogradeOnly(site) ? Math.PI - inc : inc;
   if (effective < minInclinationFor(site) - CORRIDOR_SLACK) return 'belowMinimum';
   return 'ok';
 }
@@ -424,6 +438,11 @@ export function resolveTarget(orbit: OrbitSpec, site: SiteExtra, launchTime: Dat
 export function ascentInclinationFor(target: ResolvedTarget, site: SiteExtra): { inc: number; reachable: boolean } {
   const lat = Math.abs(site.latitude) * DEG;
   const it = target.inclination;
+  if (retrogradeOnly(site)) {
+    // Palmachim: nothing below the site's own retrograde floor, prograde or not
+    const minInc = minInclinationFor(site), maxInc = Math.PI - lat - 0.05 * DEG;
+    return { inc: Math.min(Math.max(it, minInc), maxInc), reachable: it >= minInc - 1e-6 && it <= maxInc + 1e-6 };
+  }
   if (it <= Math.PI / 2) {
     const minInc = minInclinationFor(site);
     return { inc: Math.max(it, minInc), reachable: it >= minInc - 1e-6 };
@@ -513,6 +532,9 @@ export const ASCENT_MARGIN_REQUIRED = 150;
  * 94 × 94 km parking orbit, which is the same defect with a quieter symptom.
  */
 export const ORBIT_INSERTION_FLOOR = 140e3;
+
+/** The orbit Soyuz-2.1a puts a Soyuz MS or Progress MS into for the station: perigee and apogee, m (RussianSpaceWeb, Soyuz MS-17: 200 ± 2 × 242 ± 5 km). */
+export const RENDEZVOUS_INSERTION = { perigee: 200e3, apogee: 242e3 } as const;
 
 /**
  * Height a suborbital target's ascent is cut off at, m (or its apogee, if
@@ -1049,6 +1071,15 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
       insertionAltitude = hFinal;
       insertionApoapsis = haFinal;
     }
+  }
+  // A flight to the station (roadmap G07) is inserted where Soyuz MS and
+  // Progress MS are, 200 × 242 km with the cut-off near perigee: the
+  // spacecraft's own burns raise it to the station from there, and the
+  // rendezvous profiles are timed from that orbit (docs/PHYSICS.md §9.2).
+  if (cfg.rendezvous && rendezvousAvailable(cfg.vehicleId, cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
+    && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
+    insertionAltitude = RENDEZVOUS_INSERTION.perigee;
+    insertionApoapsis = RENDEZVOUS_INSERTION.apogee;
   }
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
   // A dogleg leaves on the corridor edge; the closed loop turns into the plane.
