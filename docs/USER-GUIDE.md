@@ -413,6 +413,39 @@ predicts at cut-off against the target, with the law's state. The cut-off itself
 by the ascent on the orbit actually reached. The CSV adds `guide_*` columns and
 `read_flight_state` an `explicitGuidance` summary. Details in PHYSICS.md §2j.
 
+## 16. Monte Carlo insertion accuracy (Engineer mode)
+
+The *Monte Carlo: insertion accuracy (G05)* section opens a window that flies the mission in the
+setup panel many times — always in six-DOF — each run with its own vehicle and air, to the end
+of the powered ascent, and shows how accurately the ascent inserts.
+
+**Settings.** *Runs* (20–2000, 200 by default) and a *Seed*: the same seed draws the same numbers,
+whatever is switched off and whichever guidance flies, so two sets can be compared run by run.
+*Fly the three guidance laws* flies every run with the standard guidance, PEG and IGM (§15) on
+the same draws — three times the flights. Each dispersion can be switched off and its 1σ edited:
+thrust 1 %, specific impulse 0.3 %, propellant loaded 0.5 %, dry mass 0.5 % (each per stage and
+per strap-on group), air density 5 %, a steady wind of 5 m/s per horizontal axis added to the
+mission's (with a new phase of its gusts), and — when the mission flies the inertial navigation
+(§13) — a fresh realisation of its IMU's errors. Draws are normal, clipped at 3σ. The mission is
+planned on the nominal vehicle; the dispersed one flies.
+
+**Running.** *Start* spreads the runs over the computer's cores (all but one, at most 16); a
+six-DOF run takes tens of seconds, so 200 runs take a quarter of an hour to an hour or two. The
+results fill in as the runs land, and *Stop* ends the set with what it has.
+
+**Results.** The table gives, per guidance law, the runs in orbit, and the perigee, apogee,
+inclination and Δv left at cut-off as mean ± 3σ, with the bias from the planned insertion. The
+chart plots each run's perigee against its apogee, with each law's 3σ ellipse and the planned
+insertion; hovering a point shows the run. Histograms show the spread of each element for the
+law chosen above them, with the planned value marked. **What drives the spread** regresses each
+element on the numbers the runs drew: each dispersion's share of the variance, and *other* for
+what it leaves — the gusts' and the IMU's realisations, and anything not linear (it needs three
+runs per number drawn). Runs lost — broken up, or short of orbit — are counted with their cause.
+*Download CSV* writes every run: its orbit, how it ended, and what it drew.
+
+WebMCP's `run_monte_carlo` starts (`action: "start"`, with the same settings), reads
+(`"status"`, optionally with the CSV) and stops the same set. Details in PHYSICS.md §2k.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

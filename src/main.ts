@@ -13,6 +13,7 @@ import { HelpGuide } from './ui/help';
 import { MissionResult } from './ui/mission-result';
 import { RigidControls } from './ui/rigid-controls';
 import { LoopInspector } from './ui/loop-inspector';
+import { MonteCarloWindow } from './ui/monte-carlo';
 import { Hud } from './ui/hud';
 import { TelemetryPanel } from './ui/telemetry';
 import { OrbitalMap } from './ui/map';
@@ -213,6 +214,8 @@ class App {
   obCanvas: HTMLCanvasElement;
   private physicsDialog: PhysicsDialog;
   private loopInspector: LoopInspector;
+  /** G05: the Monte Carlo window, and the app's Monte Carlo runner (WebMCP's run_monte_carlo). */
+  readonly monteCarlo: MonteCarloWindow;
   private cameraDialog: CameraDialog;
   private shown: VisualFrame | null = null;
   private wasLive = true;
@@ -295,7 +298,9 @@ class App {
       onReset: () => this.reset(),
       onChange: (cfg) => { if (!this.playing) this.preview(cfg); },
       onExperience: (experience) => this.go(experience === 'advanced' ? 'engineer' : 'explore'),
+      onMonteCarlo: (opener) => this.monteCarlo.open(opener),
     });
+    this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig() });
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
       watchFeatured: () => { this.go('watch'); this.startWatch(FEATURED_WATCH_MISSION); },
       go: (mode) => this.go(mode),
@@ -356,6 +361,7 @@ class App {
     this.rigidControls.setInspectorAvailable(mode === 'engineer');
     this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
     if (mode !== 'engineer') this.loopInspector.close();
+    if (mode !== 'engineer') this.monteCarlo.close(); // G05: a running set flies on
     document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
       if (a.dataset.mode === mode) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');

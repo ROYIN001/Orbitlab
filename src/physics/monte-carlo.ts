@@ -292,17 +292,20 @@ function slotColumn(slot: DrawSlot): string {
   if (slot.key === 'density') return 'density_pct';
   return `${slot.element}_${slot.key}_pct`;
 }
+const fixed = (v: number, digits: number): string => (Number.isFinite(v) ? v.toFixed(digits) : '');
+/** A text field, quoted when it holds a comma, a quote or a line break. */
+const csvText = (v: string): string => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 /** Every run, one row: its orbit, how it ended, and what it drew (as the deviation it flew: %, m/s). */
 export function monteCarloCsv(runs: readonly MonteCarloRun[], layout: readonly DrawSlot[], settings: Readonly<DispersionSettings>): string {
   const head = ['run', 'law', 'outcome', 'reason', 'perigee_km', 'apogee_km', 'inclination_deg', 'dv_left_ms', 'cutoff_s', 'max_q_kpa', 'max_qalpha_kpa_deg',
     ...layout.map(slotColumn)];
-  const value = (slot: DrawSlot, z: number): string => {
+  const value = (slot: DrawSlot, z: number | undefined): string => {
     const s = settings[slot.key];
-    return (s.enabled ? s.sigma * z : 0).toFixed(4);
+    return z === undefined || !Number.isFinite(z) ? '' : (s.enabled ? s.sigma * z : 0).toFixed(4);
   };
   const rows = [...runs].sort((a, b) => a.index - b.index || GUIDANCE_LAWS.indexOf(a.law) - GUIDANCE_LAWS.indexOf(b.law)).map((r) => [
-    r.index, r.law, r.outcome, r.reason ?? '', r.perigeeKm.toFixed(3), Number.isFinite(r.apogeeKm) ? r.apogeeKm.toFixed(3) : '', r.inclinationDeg.toFixed(4),
-    r.dvLeft.toFixed(1), r.cutoffS.toFixed(2), r.maxQkPa.toFixed(2), r.maxQAlpha.toFixed(1),
+    r.index, r.law, r.outcome, csvText(r.reason ?? ''), fixed(r.perigeeKm, 3), fixed(r.apogeeKm, 3), fixed(r.inclinationDeg, 4),
+    fixed(r.dvLeft, 1), fixed(r.cutoffS, 2), fixed(r.maxQkPa, 2), fixed(r.maxQAlpha, 1),
     ...layout.map((slot, j) => value(slot, r.z[j])),
   ].join(','));
   return [head.join(','), ...rows].join('\n') + '\n';

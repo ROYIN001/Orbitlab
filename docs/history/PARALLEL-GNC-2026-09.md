@@ -13,7 +13,11 @@ here; this file records progress for the owner to fold in at the merge.
 - PEG/IGM (G01), INS + Kalman (G02) and slosh/bending/notch (P05) are options, off by default,
   and off they leave every flight bit for bit as it was.
 - U07: the notation is switchable; Russian uses ГОСТ 20058-80, English and Thai ISO.
-- G05: minimal dispersions. Heavy tests go to `npm run test:heavy`.
+- G05: minimal dispersions. Heavy tests go to `npm run test:heavy`. Asked 2026-09-24: **200 runs by
+  default, 20–2000**; **six-DOF only**; the minimal set as defaults, **each 1σ editable and
+  switchable**; the orbit's spread per law **with which dispersion drives it** (a sensitivity);
+  a **window of its own in the Engineer mode**, opened from the setup, with progress, and a WebMCP
+  `run_monte_carlo`; one law by default, **the three on the same draws when asked** (a checkbox).
 - P05 (asked 2026-09-23): with P05 on, **every vehicle must reach orbit**; **bending past the
   structure's limit breaks the vehicle up**; the **IMU station and the notch's parameters are
   tunable in the Engineer mode** from P05 on; and the bending is **drawn in 3-D**.
@@ -78,7 +82,7 @@ here; this file records progress for the owner to fold in at the merge.
 | G02 inertial navigation and Kalman filter | done 2026-09-24 (see below) |
 | G08 control-system failures | done 2026-09-24 (see below) |
 | G01 PEG and IGM guidance | done 2026-09-24 (see below; also the load relief's switch-off, see G03) |
-| G05 Monte Carlo insertion accuracy | |
+| G05 Monte Carlo insertion accuracy | done 2026-09-25 (see below; also Q0, the q·α break-up for every six-DOF ascent) |
 
 ### P05 — slosh, bending and the bending filter
 
@@ -597,3 +601,45 @@ six-DOF, crosswind, seed 20260919; 30 min):
 | PSLV-XL | T+95 s | 1633 | 1578 |
 | Electron | T+129 s | 2700 | 2700 |
 | Starship | T+136 s | 2472 | 2467 |
+
+### G05 — Monte Carlo insertion accuracy
+
+Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2k, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §16.
+
+- **The dispersions** (`src/physics/dispersion.ts`): per stage and strap-on group thrust, Isp,
+  propellant and dry mass; the air's density; a steady wind and gust phase over the mission's;
+  with G02 a fresh IMU realisation. Each run draws all its numbers from its own seeded stream in
+  one order, clipped at ±3σ. `Simulation`'s `dispersion` option flies the dispersed vehicle
+  (`dispersedVehicle`) and air (`RigidRuntimeOptions.air`, the density factor in the step and the
+  point-mass drag) on the nominal plan; absent, nothing changes.
+- **The set** (`src/physics/monte-carlo.ts`): `flyRun` flies a run in six-DOF to the end of the
+  powered ascent, without the attitude-loop and equation records; `summarizeMonteCarlo` gives per
+  law the statistics, the 3σ perigee–apogee ellipse, the runs lost and why, and the regression
+  shares; `monteCarloCsv` every run. `MonteCarloJob` (`monte-carlo-job.ts`) flies a set in a pool
+  of workers (`monte-carlo.worker.ts`), all the laws on run k before run k + 1.
+- **The window** (`src/ui/monte-carlo.ts`, `.css`): opened from the setup's *Monte Carlo* section
+  (Engineer mode); settings, progress and stop, the table, the scatter with its ellipses, the
+  histograms, the shares, the CSV. It is also the app's runner for WebMCP's `run_monte_carlo`
+  (start, status, stop).
+- **Q0** (the owner's answer, with G05): the q·α break-up of G08 now judges every six-DOF ascent,
+  not only flights with the failures layer; a re-entry is not judged by it.
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- G05 ---`); `src/mcp.ts` (`McpAppHost.monteCarlo`, the tool); `src/ui/panel.ts` (the
+section, `SetupCallbacks.onMonteCarlo`); `src/main.ts` (the window, closed outside the Engineer
+mode); `src/physics/simulation.ts` (the `dispersion` option: the vehicle model, the density
+factor, the rigid runtime's air, the navigation seed; Q0's break-up rule);
+`src/physics/sim/forces.ts` (an optional density factor); `src/physics/rigid/runtime.ts` (the
+air option). tests/i18n.test.ts (two key families).
+
+**Tests**: tests/monte-carlo.test.ts (the draws: reproducible, per stage and strap-on group,
+independent of what is switched off, standard normal and clipped; the dispersed vehicle and wind;
+nothing dispersed flies bit for bit; thrust, density and wind reach the flight; a fresh IMU; the
+settings; the set's laws; the statistics, the ellipse, the regression and the shares; the CSV;
+the job: order, workers, a dead worker, stop), a block in tests/mcp.test.ts, and
+tests/heavy/monte-carlo-*.test.ts (Falcon 9 on the three laws, Soyuz-2.1b with its strap-ons,
+Falcon 9 with the navigation; each set in the bands, no run lost).
+
+**Results**: to follow when the heavy sets have run.
+

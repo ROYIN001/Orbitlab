@@ -78,6 +78,8 @@ export interface SetupCallbacks {
    * instead of switching itself.
    */
   onExperience?: (mode: ExperienceMode) => void;
+  /** G05: open the Monte Carlo window on the mission as set here. */
+  onMonteCarlo?: (opener: HTMLElement) => void;
 }
 
 interface SetupState {
@@ -987,6 +989,7 @@ export class SetupPanel {
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.navigationSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.faultsSection());
     if (this.experience === 'advanced') s4.appendChild(this.explicitGuidanceSection());
+    if (this.experience === 'advanced' && this.cb.onMonteCarlo) s4.appendChild(this.monteCarloSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
     s4.appendChild(this.optionsSection(vehicle));
@@ -1322,6 +1325,20 @@ export class SetupPanel {
       section.append(this.number(EXPLICIT_FIELD_KEYS.cycleS, config.cycleS ?? 1, (value) => update({ ...config, cycleS: value }), 0.1));
       section.append(this.el('p', 'field-note', t('setup.explicit.engage')));
     }
+    return section;
+  }
+
+  // --- G05: Monte Carlo insertion accuracy (Engineer mode) ------------------------
+  /** Opens the Monte Carlo window on the mission as it is set here (its runs fly six-DOF). */
+  private monteCarloSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'montecarlo';
+    section.append(this.el('summary', undefined, t('setup.mc.title')));
+    section.append(this.el('p', 'field-note', t('setup.mc.note')));
+    const open = this.el('button', 'btn', t('setup.mc.open'));
+    open.type = 'button';
+    open.addEventListener('click', () => this.cb.onMonteCarlo?.(open));
+    section.append(open);
     return section;
   }
 

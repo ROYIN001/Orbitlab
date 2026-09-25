@@ -771,6 +771,57 @@ tests/heavy/explicit-fleet-*.test.ts):
   vehicles and by 55 m/s on PSLV-XL (PEG ahead); on Soyuz-2.1b and Vulcan IGM leaves 260–270 m/s
   more. The flights are listed in docs/history/PARALLEL-GNC-2026-09.md, G01.
 
+## 2k. Monte Carlo insertion accuracy (roadmap G05)
+
+A tool, not a flight option: nothing in a single flight changes. The Engineer mode's
+*Monte Carlo* window (and WebMCP's `run_monte_carlo`) flies the mission in the setup panel many
+times in six-DOF (src/physics/monte-carlo.ts), each run to the end of its powered ascent — the
+first moment it is neither on the pad nor in the ascent and its engines' tail-off is over — and
+reads the orbit it is left in: perigee, apogee, inclination (osculating, as the ascent's own
+cut-off judges them) and the Δv the stack has left.
+
+**The dispersions** (src/physics/dispersion.ts). Per stage and per strap-on group (a group's
+boosters share their draw): thrust, specific impulse, propellant loaded, dry mass; for the run:
+the air's density (the whole standard atmosphere scaled), a steady wind added to the mission's,
+east and north, with a new phase of its gusts, and — with the inertial navigation of G02 — a new
+seed for the IMU's error model, a fresh realisation of the same grade. A thrust factor keeps the
+Isp, so the flow ṁ = T/(g₀ I_sp) and the burn time follow the thrust; an Isp factor keeps the
+thrust. The default 1σ is the minimal set agreed with the owner — thrust 1 %, Isp 0.3 %,
+propellant and dry mass 0.5 %, density 5 %, wind 5 m/s per axis — every one editable, and
+switchable off.
+
+**The draws.** Run k of a set seeded S draws from its own mulberry32 stream (seeded by a 32-bit
+mix of S and k), by Box–Muller, one standard normal number z per quantity, clipped at ±3σ (a
+4σ engine is a failed engine, not a dispersed one), a factor 1 + σz. All the numbers are drawn,
+always in the same order, whether their quantity is on or not: switching one off moves no other,
+and the three guidance laws fly the same vehicles through the same air.
+
+**Nominal plan, dispersed flight.** The mission is planned (`planMission`, the guidance
+defaults, the fairing and max-Q placards) on the nominal vehicle; the vehicle model that flies
+— `VehicleModel`, and the rigid body built from it — is the dispersed one, and what the flight
+computer reads of it (thrust, mass, the stages left) it reads as its sensors would. The density
+factor scales the air in the six-DOF aerodynamics and in the step's dynamic pressure (and in the
+point-mass drag); the wind changes the six-DOF scenario. With nothing dispersed, a flight is the
+nominal one bit for bit (tests/monte-carlo.test.ts), and so is one with the attitude-loop and
+equation records off, which a run flies without.
+
+**What is read.** Per law, over the runs in orbit (periapsis at or above the insertion floor
+less 3 km): mean, σ, extremes and bias from the planned insertion of each element; the 3σ
+ellipse of (perigee, apogee) from their sample covariance (the eigenvectors, √λ scaled by 3);
+the runs lost (the vehicle broken up, or short of orbit) and why. **Which dispersion drives
+it**: each element is regressed, by least squares with an intercept, on the numbers the
+switched-on quantities drew; a term's share of the element's variance is b²·var(z)/var(y),
+summed over the stages for each quantity, and what the fit leaves (1 − Σ shares) is *other* —
+the gusts' and the IMU's realisations, which are not numbers drawn, and whatever is not linear.
+The shares are shown only with three runs per number drawn.
+
+**The runs** fly in a pool of Web Workers (all the machine's cores but one, at most 16), every
+law flying run k before any flies run k + 1, so a set stopped early still compares like with
+like; a run the physics throws on is a lost run, not a lost set. A six-DOF run takes 30–55 s of
+one core here (Falcon 9 about 40 s).
+
+**What it finds**: the heavy sets (tests/heavy/monte-carlo-*.test.ts) are recorded in docs/history/PARALLEL-GNC-2026-09.md, G05, when they have run.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic
