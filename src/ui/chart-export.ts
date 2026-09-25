@@ -78,8 +78,16 @@ export function visibleCharts(root: ParentNode = document): HTMLCanvasElement[] 
 function place(): void {
   if (!button || !target) return;
   const r = target.getBoundingClientRect();
-  button.style.left = `${Math.round(r.right - button.offsetWidth - 4)}px`;
-  button.style.top = `${Math.round(r.bottom - button.offsetHeight - 20)}px`;
+  const x = Math.round(r.right - button.offsetWidth - 4), y = Math.round(r.bottom - button.offsetHeight - 20);
+  button.style.left = `${x}px`;
+  button.style.top = `${y}px`;
+  // Inside a transformed ancestor (a dragged dialog) "fixed" is relative to
+  // that ancestor, not the viewport: measure where it landed and correct.
+  const got = button.getBoundingClientRect();
+  if (Math.abs(got.left - x) > 0.5 || Math.abs(got.top - y) > 0.5) {
+    button.style.left = `${Math.round(2 * x - got.left)}px`;
+    button.style.top = `${Math.round(2 * y - got.top)}px`;
+  }
 }
 
 function show(canvas: HTMLCanvasElement): void {
