@@ -37,6 +37,7 @@ import { atmosphere } from './atmosphere';
 import { R_EARTH } from './constants';
 import { cloneRigidTelemetry, interpolateRigidTelemetry, sameRigidConfiguration, type RigidTelemetry } from './rigid/telemetry';
 import { quatRotate } from './rigid/math';
+import { cloneEom, type EomRecord } from './eom';
 
 export interface StageFrame {
   id: string;
@@ -161,6 +162,8 @@ export interface VisualFrame {
   /** Optional for legacy recordings; new snapshots use schema 2. */
   schemaVersion?: number;
   rigid?: RigidTelemetry;
+  /** The equations of motion as the frame's last flight step solved them (roadmap E02). */
+  eom?: EomRecord;
   t: number;
   status: SimStatus;
   ascentPhase: AscentPhase | null;
@@ -460,6 +463,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     t: s.t,
     schemaVersion: 2,
     rigid: cloneRigidTelemetry(s.rigid),
+    ...(s.eom ? { eom: cloneEom(s.eom) } : {}),
     status: s.status,
     ascentPhase: s.ascentPhase,
     ...(s.descentPhase ? { descentPhase: s.descentPhase } : {}),
@@ -619,6 +623,7 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
     ...(f.abort ? { abort: cloneAbort(f.abort) } : {}),
     ...(f.rendezvous ? { rendezvous: cloneRendezvous(f.rendezvous) } : {}),
     rigid: cloneRigidTelemetry(f.rigid),
+    ...(f.eom ? { eom: cloneEom(f.eom) } : {}),
     r: clone(f.r),
     v: clone(f.v),
     dir: clone(f.dir),
@@ -735,6 +740,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
     ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
     rigid,
+    // E02: the left frame's step, copied like everything else handed out.
+    ...(a.eom ? { eom: cloneEom(a.eom) } : {}),
     t: a.t + dt,
     r,
     v,

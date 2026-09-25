@@ -65,6 +65,7 @@ const QUANTITY_NAMES: Record<Quantity, string> = {
   yawAngle: 'notation.q.yawAngle', pathAngle: 'notation.q.pathAngle', trackAngle: 'notation.q.trackAngle', altitude: 'notation.q.altitude', airspeed: 'notation.q.airspeed',
   verticalSpeed: 'notation.q.verticalSpeed', dynamicPressure: 'notation.q.dynamicPressure', mach: 'notation.q.mach',
   loadFactor: 'notation.q.loadFactor', mass: 'notation.q.mass', thrust: 'notation.q.thrust',
+  rollMoment: 'notation.q.rollMoment', pitchMoment: 'notation.q.pitchMoment', yawMoment: 'notation.q.yawMoment',
 };
 /** Each quantity's definition: one text, or one per standard where they differ. */
 const QUANTITY_DEFINITIONS: Record<Quantity, string | { iso: string; gost: string }> = {
@@ -80,6 +81,8 @@ const QUANTITY_DEFINITIONS: Record<Quantity, string | { iso: string; gost: strin
   altitude: 'notation.def.altitude', airspeed: 'notation.def.airspeed',
   verticalSpeed: 'notation.def.verticalSpeed', dynamicPressure: 'notation.def.dynamicPressure', mach: 'notation.def.mach',
   loadFactor: 'notation.def.loadFactor', mass: 'notation.def.mass', thrust: 'notation.def.thrust',
+  rollMoment: 'notation.def.rollMoment', pitchMoment: 'notation.def.pitchMoment',
+  yawMoment: { iso: 'notation.def.iso.yawMoment', gost: 'notation.def.gost.yawMoment' },
 };
 
 /** Symbols in both standards, and each quantity's definition and sign in the one in force. */
@@ -200,6 +203,7 @@ export class PhysicsDialog extends Modal {
     b.append(section('dlg.physics.atmosphere', 'dlg.physics.atmosphereText'));
     b.append(section('dlg.physics.propulsion', 'dlg.physics.propulsionText'));
     b.append(section('dlg.physics.guidance', 'dlg.physics.guidanceText'));
+    b.append(section('dlg.physics.loop', 'dlg.physics.loopText')); // G03
     b.append(section('dlg.physics.sequencing', 'dlg.physics.sequencingText'));
     b.append(section('dlg.physics.limits', 'dlg.physics.limitsText'));
     b.append(section('dlg.physics.shortcuts', 'dlg.physics.shortcutsText'));

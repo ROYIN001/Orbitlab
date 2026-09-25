@@ -38,6 +38,14 @@ Switching mode never touches the flight: leave the viewer half-way up and the wo
 shows the same launch with every instrument on it. Each mode has its own address
 (`#/watch` and so on), and the browser's Back button moves between them.
 
+**Installing Orbitlab and using it offline.** The published site can be installed as an app
+(Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
+and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
+network at all — the page, the physics and auto-tune workers and the Earth textures are all kept
+on the device, and the fonts too once they have loaded. When a new version is published, a note
+at the bottom of the page offers **Reload**; until you press it, the version you have keeps
+running.
+
 ## 1. Set up a mission
 
 The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.
@@ -46,7 +54,11 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    its height, liftoff mass and thrust, thrust-to-weight ratio, stage count and rated
    payload to LEO/GTO/SSO. The site list below it only offers sites that vehicle actually
    flies from; picking a vehicle that cannot fly from your current site moves you to one
-   that can and says so.
+   that can and says so. Four sites at the end of the list are greyed out — Yasny, where
+   Dnepr launched THEOS-1, Kapustin Yar, Svobodny and Palmachim: they are in the simulator
+   with their real range-safety corridors, but no vehicle in the fleet flies from them yet.
+   Palmachim is the one site that can only launch against the Earth's rotation (west over the
+   Mediterranean, 141.5–146.6° of inclination).
 2. **Payload.** Choose a satellite/spacecraft (its mass fills in automatically) or type a
    payload mass of your own.
 3. **Target orbit & launch time.** The pills (ISS, Starlink, sun-synchronous, polar, GPS,
@@ -59,6 +71,19 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    With Starship, **Suborbital test flight** turns the target into a Flight 5-style path:
    the ship is cut off short of orbit (perigee between −1000 and 0 km, below the ground) and
    flies itself home to a splashdown about an hour later; such a flight may carry no payload.
+
+**Share & save the mission**, at the top of the panel, keeps a mission beyond the tab:
+**Copy link** puts an address on the clipboard that opens Orbitlab on this exact mission —
+vehicle, site, payload, orbit, launch time, guidance edits, failure scenario, recovery and every
+Engineer setting (six-DOF or point mass, wind, slosh and bending, the autopilot's gains,
+navigation, control-system failures, PEG/IGM) — and **Save file** / **Open file** do the same
+through a `.orbitlab.json` file. The workspace also remembers the last mission by itself, so
+closing the tab and coming back in Explore or Engineer finds it where you left it. A link or
+file is checked the same way the WebMCP `configure_mission` tool checks its input: a value
+that cannot be used (a perigee above the apogee, a gain out of range, a site the vehicle does
+not fly from) goes back to its default, the rest of the mission is kept, and a note under the
+buttons lists what was reset. The file carries a format version, so a file from a later
+Orbitlab still opens as far as this one understands it, and says so.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
@@ -137,7 +162,48 @@ normal Earth frame's x<sub>g</sub> lies along the launch azimuth, so yaw ψ and 
 departure from it; in ISO they are bearings from north. With the nose within half a degree of
 vertical — on the pad and through the vertical rise — yaw and roll have no value and only the
 pitch is shown. Every frame is off to begin with, and your choice is kept for the next visit.
-The details are in [PHYSICS.md §2d](PHYSICS.md).
+The details are in [PHYSICS.md §2k](PHYSICS.md).
+
+**Sound** (the ♪ button, also in the viewer) is off until you turn it on — browsers only let a
+page play sound after you click something — and stays as you left it. What you hear is
+worked out for where the camera is: the roar grows with the engines' thrust and falls with
+distance (6 dB each time it doubles); far away it is only the low rumble, because the air soaks
+up the treble first; it comes **late**, at the speed of sound — watch the liftoff from the
+press site 5 km away and the sound reaches you 15 s after the picture, and a separation high up
+is heard long after it is seen; its pitch drops as the rocket pulls away (Doppler); and it fades
+out as the rocket climbs into air too thin to carry it, whoever is listening. The onboard camera
+hears the engines through the structure instead, muffled but steady. Ignition, stage and
+fairing separation, landings and a vehicle's loss have sounds of their own, delayed the same
+way. With the flight sped up, the sound is quieter and plays without the delay (the picture
+would otherwise be minutes ahead of it); paused, it is silent. These sounds are synthesised in
+the browser. The model is in PHYSICS.md §11.
+
+**Real launch audio in the viewer.** With the sound on, *Soyuz to the space station* plays
+NASA's broadcast of the real Soyuz MS-27 launch (8 April 2025, public domain) in step with the
+mission clock, from the last minute of the countdown to the spacecraft's separation: the
+Russian launch-control calls under NASA's English commentary. It plays at 1× — at the viewer's
+*Auto* pace that is every event from ignition to orbit — and pauses while the flight is sped
+up, picking up at the right second when it slows down again; the simulator's own sound steps
+aside while it plays. The other five launches were broadcast by SpaceX, Arianespace and Rocket
+Lab, whose broadcasts may not be republished, so they play the simulated sound. You can give
+any of them a recording of your own under **Launch audio** in *Choose a launch*: pick the file
+(an audio file or a video), say at what time in it the rocket lifts off (m:ss or h:mm:ss), and
+it plays the same way. It is kept in this browser and never uploaded. There are no broadcasts
+in Thai, so the commentary is in the language it was broadcast in whatever language the page
+is in.
+
+**The sky** is computed, not painted: sunlight scattered by the air molecules (Rayleigh — the
+blue) and by haze (Mie — the white glare round the sun), with the ozone layer's absorption, in a
+round atmosphere 100 km deep. So the colours follow from where the sun is and where the camera is:
+a deep blue overhead at noon paling to the horizon; at dusk a red and orange band under a
+darkening blue, and the Earth's shadow rising opposite; from orbit a thin bright blue line along
+the limb. Launch at dusk or dawn and follow the rocket out of the Earth's shadow into sunlight:
+above about 50 km its exhaust, with almost no air left to hold it in, balloons out over tens of
+kilometres and catches the sun — the "twilight jellyfish" — a pale glowing dome with trailing
+streamers against the darkened sky; pull the exterior camera back with the wheel (above the
+atmosphere it goes out to a couple of hundred kilometres) to see it whole. On a graphics card too
+slow for the scattering sky, the same test as the glow's switches back to the simpler painted sky
+after the glow's own test; `?sky=gradient` in the address forces it.
 
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
@@ -249,6 +315,48 @@ that follows the timeline cursor; **Ascent** zooms every chart to liftoff → pa
   interface.
 - **Export CSV** writes the whole recorded flight — the same telemetry samples and events —
   to a file you can open in a spreadsheet.
+- **Flight report** saves one HTML file ready for a lab report or a thesis: the mission's
+  set-up (vehicle, site, payload, target orbit, launch time, flight model, wind, ascent guidance,
+  navigation, slosh and bending, the autopilot, control-system failures, the failure scenario),
+  the result with the target-against-actual orbit table, the key figures (mass at liftoff,
+  maximum dynamic pressure and load factor and when, orbit insertion, Δv left), the event log,
+  and the charts — the eight above redrawn over the whole flight (the ascent ones up to 30 s
+  after insertion), plus every Engineer chart open on screen at the time, such as the Bode plot
+  or the step response. It is written in the language on screen, needs no network, and prints
+  to A4: open it and use *Print → Save as PDF*. It ends with a link that opens the same mission.
+- **PNG**: hover over any chart — here or in the Engineer windows — or tab to it, and a small
+  **PNG** button saves it redrawn on white at 2400 × 1200 pixels.
+
+### How long will it stay up?
+
+**Orbit lifetime**, beside the flight report, opens once the flight on screen is in orbit (a
+perigee above 100 km). It carries that orbit on — for a month, a year, five or twenty-five years —
+under the forces that act after the launch, each of which can be switched off to see what it does:
+the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
+works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
+the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
+and the pressure of sunlight. Choose low, mean or high solar activity: at 400 km a CubeSat lasts
+about four months at solar maximum and over a year at solar minimum. The *mean elements* method
+covers decades in a moment with J2 and drag; the *full equations* include every force but are
+slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
+payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
+charts — perigee and apogee, inclination and eccentricity — which can be saved as PNG like any
+other. The flight itself is not changed. The model is in PHYSICS.md §9a.
+
+### Comparing two flights
+
+**Compare with another flight**, above the event log, sets two flights side by side — PEG
+against IGM, one set of autopilot gains against another, a nominal flight against one with a
+control-system failure. **Use as reference** pins the flight on screen; change one thing and fly
+again, and every chart carries the reference as a dashed trace in the same colour (labelled
+*ref*), the 3-D view its path as a dashed violet line (turned with the Earth, so a reference
+flown from the same pad on another day still lies over the same ground), and a table lists what
+both flights have — orbit insertion, perigee, apogee and inclination at the end, maximum dynamic
+pressure and when, maximum load factor, Δv left, and the times of max-Q, MECO, separation, SECO
+and the orbit — with the difference. **Save flight** writes the flight to a
+`.orbitlab-flight.json` file (its telemetry, events, path and mission) and **Open flight** reads
+one back as the reference, so a comparison can span days or be handed to someone else. × stops
+comparing.
 
 ## 6. Failures
 
@@ -325,7 +433,146 @@ card, the charts, the 6-DOF controls and the rates you type into them, the event
 CSV. The full table, with each quantity's definition and sign, is in *Physics and sources*
 (PHYSICS.md §2c).
 
-## 9. A flight to the station
+## 9. The attitude-loop inspector (Engineer mode)
+
+In a six-DOF flight in the Engineer mode, the 6-DOF panel under the timeline has an
+**Attitude-loop inspector** button. It opens a window over the workspace (drag it by its title
+bar; Esc or × closes it) with the autopilot drawn as a block diagram, left to right: guidance
+(and the ascent's load relief), attitude error, attitude loop, rate error, rate loop, moment,
+bending filter, actuators, vehicle, and the IMU feeding back. Each block shows the values of the
+control step on screen for roll, pitch and yaw, in the axes and signs of the notation in force
+(§8); a block outlined in orange is being held by a limit, and the tag on its row says which
+(*stop*: slower than the gain asks, to stop on the target; *max*: at its limit). Below, four
+charts cover the last 10, 30 or 120 s — attitude error, rate, moment and actuator use — the
+rate and moment charts for the axis picked in the title bar. The play button runs and pauses
+the flight or the replay as the main one does. The inspector reads the recording, so scrubbing
+back shows the loop at any recorded instant. Details in PHYSICS.md §2d.
+
+## 10. Live equations (Explore and Engineer mode)
+
+The telemetry panel has two views: **Charts** and **Equations**. Equations shows the
+equations the simulation is solving at the instant on screen — live, or wherever the replay
+cursor stands — each as a formula in the notation in force (§8), then the same formula with the
+numbers put in, and, where the flight provides an independent left-hand side, a **balance**
+line: green when the recorded motion satisfies the equation within 1 %. The Explore mode shows
+Newton's second law, dynamic pressure and Mach number, drag and lift, the rocket equation and
+the ascent's Δv budget; the Engineer mode adds thrust against ambient pressure, vis-viva, gravity
+with J2, the angles of attack and sideslip, Euler's rotation equations, quaternion kinematics and
+the attitude autopilot. An equation with nothing to act on (no air, engines off, a coast
+propagated analytically) says so. Details in PHYSICS.md §2e.
+
+## 11. Frequency response, margins and step response (Engineer mode)
+
+The attitude-loop inspector (§9) has three tabs: **Loop** (the block diagram), **Frequency
+response** and **Step response**. The last two analyse the loop linearised about the flight's
+state every half second, for the axis picked in the title bar, at the instant on screen (the
+header says when the model was taken).
+
+- **Frequency response**: the Bode plot of the loop gain |L| and its phase against ω on a
+  logarithmic axis, with the 0 dB and −180° lines, ω_c (where |L| crosses 0 dB) and ω_g (where
+  the phase crosses −180°) marked. Beside it a verdict — green when the closed loop is stable,
+  red when it is not, with its least damped mode — then the phase margin, the gain margin, the
+  gain-reduction margin when the loop has one, the number of unstable open-loop poles, and the
+  model (its states, the actuator, the gimbal lag and the gains). The chart below charts the
+  phase and gain margins over the flight so far, with a red line wherever the loop was unstable.
+- **Step response**: the linear loop's answer to a 1° attitude step over 10 s — the command, the
+  body's angle and, with P05's bending, what the IMU reads; the moment asked and delivered —
+  with the rise time, overshoot, settling time and the angle after 10 s.
+- **Feed-forward error** (both tabs): the autopilot feeds forward the air's moment; the slider
+  makes that estimate wrong by −100 % (none) to +100 % (double) and redraws the plot, the margins
+  and the step, to show how much the loop leans on it.
+
+The linear loop has no rate, acceleration or gimbal limits, so a large step in flight is slower
+than the chart. Details and checks against the nonlinear flight in PHYSICS.md §2f. The CSV adds
+each plane's margins (`loop_pitch_pm_deg`, `loop_pitch_gm_db`, …) and `read_flight_state` a
+`loopMargins` summary.
+
+## 12. Tuning the autopilot and flight tests (Engineer mode)
+
+**In the mission setup**, a six-DOF mission's *Attitude autopilot* section sets the roll channel's
+and the pitch–yaw pair's K_θ and K_ω, rate limit and angular-acceleration ceiling, and how much of
+the air's moment is fed forward (%). Left alone, the default autopilot flies; *Back to the default
+autopilot* clears it.
+
+**The inspector's Tuning tab** (§9) tries other gains on the loop the flight has linearised: move
+K_θ, K_ω and the feed-forward and the tab redraws the loop gain, the 1° step and the phase margin
+over the flight — flown dashed, trial in yellow — with both margins at the instant on screen
+(green where the trial meets the targets). *Auto-tune* finds the widest-bandwidth gains that meet
+the phase and gain margins you set, over the flight so far or at this instant, and says when no
+gains can; *Use for the next launch* writes the trial into the mission setup. Rate and
+acceleration limits act only in flight.
+
+**The Flight test tab** flies a step or a doublet in the live flight about the axis picked in the
+title bar, and draws the attitude reached against what the linear model predicted, with rise
+time, overshoot, the difference between them and how long each limiter held the axis. It changes
+the flight (the event log says when), and works only live, six-DOF, under the autopilot, one test
+at a time; the result stays in the recording for replay. Details in PHYSICS.md §2g.
+
+## 13. Inertial navigation (Engineer mode)
+
+In a six-DOF mission's setup, the *Navigation (INS / GNSS)* section turns on an inertial
+measurement unit — a navigation, tactical or MEMS grade, or your own figures — with GNSS fixes
+(and an outage you can set) and a star tracker. The autopilot, ascent guidance and the cut-off
+then fly on what the navigation believes rather than on the truth, so a poor unit without GNSS
+puts the payload into a different orbit than the one it thinks it reached.
+
+The attitude-loop inspector's **Navigation** tab (§9) charts the errors — true less estimated —
+of position and velocity (radial, along-track, cross-track) and of attitude (roll, pitch, yaw in
+the notation in force), each with the ±3σ the Kalman filter claims (dashed), GNSS outages marked,
+and the orbit the navigation believes in less the true one. Beside them: GNSS and star-tracker
+state, the errors against their 3σ, the orbit believed and true, the sensor biases true and
+estimated, and the latest innovations. The CSV adds the same (`nav_*`) and `read_flight_state` a
+`navigation` summary. Details in PHYSICS.md §2h.
+
+## 14. Control-system failures and FDIR (Engineer mode)
+
+In a six-DOF mission's setup, the *Control-system failures (G08)* section breaks the autopilot's
+hardware at a set time: an actuator (a nozzle stuck, hard-over, slowed or wired backwards; an RCS
+jet stuck on or dead), a sensor (one, two or all three IMUs reading the rate backwards, stuck,
+biased or noisy, or failing outright; with navigation on, an accelerometer bias and the loss of
+GNSS or the star tracker) or the flight computer (a hang, a gain of the wrong sign). Pick
+**Scenario** for an accident — Proton-M 2013, Ariane 501, Vega VV17 — or a Falcon 9 nozzle
+hard-over; it switches to the vehicle the scenario was written for and explains what happened.
+Or build a list of up to eight failures, each with its time, the stage it waits for, and its
+target.
+
+**FDIR** switches fault detection, isolation and recovery on: the three IMUs vote (2 of 3), a
+model of each nozzle actuator catches one that does not follow its command and shuts that engine
+down if the stage can spare it, a jet firing unasked is closed off, and a backup computer takes
+over from a hung one. Fly the same failure with FDIR on and off to see what it saves — and what it
+cannot: a failure every IMU shares, a wiring error the monitors read as correct, a software error
+the backup computer shares.
+
+A failure can also be injected into a live flight with WebMCP's `inject_control_fault`. The
+attitude-loop inspector (§9) marks the IMU, actuator and control-law blocks that failed, with each
+unit's and engine's state; its rate chart shows what the IMUs read against the truth. The event log
+reports every failure and every FDIR action; the CSV adds the failures' columns and
+`read_flight_state` a `controlFaults` summary. A launcher that loses control in the air breaks up
+when its lateral load q·α passes 300 kPa·°. Details in PHYSICS.md §2i.
+
+## 15. PEG and IGM ascent guidance (Engineer mode)
+
+The *Ascent guidance: PEG and IGM (G01)* section picks the guidance the upper stages fly. The
+first stage always flies its pitch program; once a later stage is lit, or the first stage is out
+of the atmosphere (under 100 Pa above 70 km), **PEG** — the Space Shuttle's Powered Explicit
+Guidance — or **IGM** — the Saturn V's Iterative Guidance Mode — steers to the insertion orbit's
+perigee: its altitude and speed, a level flight path, and the orbit's plane. Both steer by the
+linear tangent law from the stages still to burn; PEG corrects itself against a numerical
+prediction of the cut-off, IGM solves in closed form with averaged gravity. If the stages left
+cannot reach the target, the standard guidance takes over again (and the event log says so).
+**Guidance cycle** sets how often the law re-solves (1 s by default).
+
+In six-DOF flights with PEG or IGM the ascent load relief is also released at 4 °/s once the
+dynamic pressure falls below 500 Pa, where the standard flight releases it all at once and swings
+the stack by up to 24°.
+
+The attitude-loop inspector's **Guidance** tab (§9) charts the time and velocity to go, the pitch
+the law steers against the standard law's (and its yaw out of the target plane), and the orbit it
+predicts at cut-off against the target, with the law's state. The cut-off itself is still decided
+by the ascent on the orbit actually reached. The CSV adds `guide_*` columns and
+`read_flight_state` an `explicitGuidance` summary. Details in PHYSICS.md §2j.
+
+## 16. A flight to the station
 
 With a **Soyuz-2.1a**, the **Crewed spacecraft** (a Soyuz MS) and the **ISS** orbit, section 03
 of the setup offers **Flight to the station**: none (stay in the insertion

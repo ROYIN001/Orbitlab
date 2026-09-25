@@ -18,6 +18,7 @@
  * in-process recording frame for frame).
  */
 import type { ToruCommand } from '../physics/sim/rendezvous';
+import { attitudeTestAt, attitudeTestDuration, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from '../physics/rigid/attitude-test';
 import { Simulation } from '../physics/simulation';
 import { validateRigidCommand } from '../physics/rigid/runtime';
 import type { RigidCommand } from '../physics/rigid/telemetry';
@@ -25,6 +26,8 @@ import { FlightRecorder, type RecordingSource } from '../replay/recorder';
 import type { MissionConfig } from '../types';
 import { RecordingMirror } from './mirror';
 import type { FromCore, ToCore } from './protocol';
+import { validControlFaultsConfig } from '../physics/rigid/fault-config';
+import type { ControlFaultSpec } from '../types';
 
 export interface FlightSession {
   readonly kind: 'inline' | 'worker';
@@ -126,6 +129,9 @@ export class WorkerSession implements FlightSession {
   private readonly pendingAdvance = new Set<number>();
   private ff: { id: number; target: number } | null = null;
   private disposed = false;
+  /** E04: when the last attitude test was sent, and until when it can still be running. */
+  private sentTestFrom?: number;
+  private sentTestUntil?: number;
 
   /**
    * @param onFailure the worker could not fly the mission at all (it failed
@@ -141,6 +147,10 @@ export class WorkerSession implements FlightSession {
     // The WebMCP tools command a live flight through `sim.setRigidCommand`;
     // on the shell that has to mean the flight in the worker.
     this.sim.setRigidCommand = (command) => this.setRigidCommand(command);
+    // E04: and an attitude test.
+    this.sim.startAttitudeTest = (spec) => this.startAttitudeTest(spec);
+    // G08: and a failure injected live.
+    this.sim.injectControlFault = (spec, fdir) => this.injectControlFault(spec, fdir);
     let started = false;
     worker.onmessage = ({ data }) => {
       if (this.disposed || data.session !== this.session) return;
@@ -215,6 +225,35 @@ export class WorkerSession implements FlightSession {
   commandToru(cmd: ToruCommand | null): void {
     // and whether there is an approach to take over
     this.post({ type: 'toru', session: this.session, cmd: cmd ? { translate: { ...cmd.translate }, rotate: { ...cmd.rotate } } : null });
+  }
+  /**
+   * E04: the shell answers what the worker's `Simulation.startAttitudeTest` would refuse, from the
+   * mirrored state, then sends it; the record comes back on the telemetry.
+   */
+  startAttitudeTest(spec: AttitudeTestSpec): AttitudeTestRecord | 'notSixDof' | 'notFlying' | 'manual' | 'running' {
+    const shell = this.sim;
+    validateAttitudeTestSpec(spec);
+    if (!shell.rigidRuntime || !shell.rigidRuntime.recordLoop) return 'notSixDof';
+    if (!['ascent', 'coast', 'burn', 'orbit'].includes(shell.state.status) || shell.state.destroyed || shell.isFailed()) return 'notFlying';
+    if (shell.state.rigid?.controlMode === 'manual') return 'manual';
+    const last = attitudeTestAt(shell.telemetry, shell.state.t);
+    if (last && !last.done && shell.state.t < last.startS + attitudeTestDuration(last.spec) + 1) return 'running';
+    // One just sent shows on the telemetry only with the worker's next sample.
+    if (this.sentTestUntil !== undefined && shell.state.t < this.sentTestUntil && !(last && last.done && last.startS >= this.sentTestFrom!)) return 'running';
+    this.sentTestFrom = shell.state.t;
+    this.sentTestUntil = shell.state.t + attitudeTestDuration(spec) + 1;
+    this.post({ type: 'attitudeTest', session: this.session, spec: { ...spec } });
+    return { spec: { ...spec }, startS: shell.state.t, t: [], command: [], response: [], limits: [], baselineRad: 0, done: false };
+  }
+  /** G08: the shell answers what the worker's `Simulation.injectControlFault` would refuse, then sends it. */
+  injectControlFault(spec: ControlFaultSpec, fdir?: boolean): 'injected' | 'notSixDof' | 'notFlying' | 'invalid' {
+    const shell = this.sim;
+    if (!shell.rigidRuntime) return 'notSixDof';
+    if (!validControlFaultsConfig({ faults: [spec] }, { navigation: !!shell.rigidRuntime.navigation })) return 'invalid';
+    if (['failed', 'done'].includes(shell.state.status) || shell.state.destroyed || shell.isFailed() || shell.done) return 'notFlying';
+    this.post({ type: 'controlFault', session: this.session, spec: { ...spec, ...(Array.isArray(spec.units) ? { units: [...spec.units] } : {}) },
+      ...(fdir !== undefined ? { fdir } : {}) });
+    return 'injected';
   }
   dispose(): void {
     if (this.disposed) return;

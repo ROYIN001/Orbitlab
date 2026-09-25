@@ -387,6 +387,14 @@ export interface DynamicsConfig {
   seed: number;
   /** Six-DOF only: propellant slosh, bending and the notch filter (roadmap P05). Absent: rigid. */
   flex?: FlexConfig;
+  /** Six-DOF only: the attitude autopilot's tuning (roadmap E04). Absent: the default autopilot, bit for bit. */
+  control?: ControlConfig;
+  /** Six-DOF only: inertial navigation with GNSS and a star tracker (roadmap G02). Absent: the flight knows its true state. */
+  navigation?: NavigationConfig;
+  /** Six-DOF only: failures of the control system and the FDIR that meets them (roadmap G08). Absent: nothing fails, bit for bit. */
+  controlFaults?: ControlFaultsConfig;
+  /** PEG or IGM for the stages out of the atmosphere (roadmap G01). Absent: the standard ascent guidance, bit for bit. */
+  explicitGuidance?: ExplicitGuidanceConfig;
 }
 
 /**
@@ -409,4 +417,98 @@ export interface FlexConfig {
   /** damping ratios of the slosh modes (baffles) and of the bending mode (structure) */
   sloshDamping?: number;
   bendingDamping?: number;
+}
+
+// --- E04 ---
+/** One channel of the attitude autopilot (src/physics/rigid/control-config.ts); absent fields keep the default. */
+export interface ControlChannelConfig {
+  /** K_θ, 1/s: the rate commanded per radian of attitude error */
+  attitudeGain?: number;
+  /** K_ω, 1/s: the angular acceleration commanded per rad/s of rate error */
+  rateGain?: number;
+  /** the rate limit, deg/s, and the ceiling of the scheduled angular-acceleration limit, deg/s² */
+  maxRateDegS?: number;
+  maxAccelerationDegS2?: number;
+}
+
+/** The attitude autopilot's tuning (roadmap E04): the roll channel, the pitch–yaw pair and the feed-forward. */
+export interface ControlConfig {
+  roll?: ControlChannelConfig;
+  /** Set gains here are flown as set: P05's flexible-vehicle cap applies to the defaults only. */
+  pitchYaw?: ControlChannelConfig;
+  /** weight of the aerodynamic feed-forward, 0–1 (1: full, the default) */
+  feedForward?: number;
+}
+
+// --- G02 ---
+/** The navigation a six-DOF flight flies on (src/physics/nav/); its presence turns it on. */
+export interface NavigationConfig {
+  /** the IMU's grade; 'custom' starts from tactical and takes `imu` */
+  grade?: 'navigation' | 'tactical' | 'mems' | 'custom';
+  /** figures over the grade's (src/physics/nav/sensors.ts `ImuSpec`) */
+  imu?: {
+    gyroBiasDegH?: number; gyroBiasInstabilityDegH?: number; gyroArwDegRtH?: number; gyroScalePpm?: number;
+    accelBiasUg?: number; accelBiasInstabilityUg?: number; accelVrwMsRtH?: number; accelScalePpm?: number; alignmentDeg?: number;
+  };
+  /** GNSS fixes (default on): noise, m and m/s; rate, Hz; an outage, mission seconds [start, end) */
+  gnss?: boolean;
+  gnssPositionM?: number;
+  gnssVelocityMs?: number;
+  gnssRateHz?: number;
+  gnssOutage?: [number, number];
+  /** star tracker (default on): noise, arcsec; lowest altitude it sees stars from, km */
+  starTracker?: boolean;
+  starTrackerArcsec?: number;
+  starTrackerMinAltitudeKm?: number;
+  /** the sensors' random seed; absent, derived from the dynamics seed */
+  seed?: number;
+}
+
+// --- G08 ---
+/** A failure of the control system (src/physics/rigid/faults.ts): actuators, sensors or the flight computer. */
+export type ControlFaultKind =
+  | 'gimbalStuck' | 'gimbalHardover' | 'gimbalSlow' | 'actuatorPolarity' | 'rcsStuckOn' | 'rcsFailedOff'
+  | 'rateInverted' | 'gyroStuck' | 'gyroBias' | 'gyroNoise' | 'imuFailure' | 'accelBias' | 'gnssLoss' | 'starTrackerLoss'
+  | 'computerHold' | 'gainSign';
+/** One failure: what fails, when, and where. Engines, jets and IMU units count from 1. */
+export interface ControlFaultSpec {
+  kind: ControlFaultKind;
+  /** mission time it appears, s */
+  time: number;
+  /** not before this stage (0-based, as `FailureConfig.stage`) is the one flying */
+  stage?: number;
+  /** actuators: the engine of the flying stage, or all of them */
+  engine?: number | 'all';
+  /** RCS: the jet of the flying stage, or all of them */
+  jet?: number | 'all';
+  /** sensors: the IMU units it strikes, or all three (a common-mode failure) */
+  units?: number[] | 'all';
+  /** the axis, in ISO 1151 body axes (roll x, pitch y, yaw z); absent, every axis */
+  axis?: 'roll' | 'pitch' | 'yaw';
+  /** hard-over: the side of the stop */
+  sign?: 1 | -1;
+  /**
+   * The size, in the kind's unit: gyroBias °/s, gyroNoise °/s (1σ), accelBias mg,
+   * gimbalSlow the fraction of the rate left, computerHold s.
+   */
+  magnitude?: number;
+}
+/** The failures a flight carries, and whether its FDIR is on. */
+export interface ControlFaultsConfig {
+  faults: ControlFaultSpec[];
+  /** fault detection, isolation and recovery: IMU voting, the gimbal monitor, jet isolation, the backup computer (default off) */
+  fdir?: boolean;
+  /** the accident preset the list came from, for the panel */
+  preset?: string;
+  /** the sensors' random seed; absent, derived from the dynamics seed */
+  seed?: number;
+}
+
+// --- G01 ---
+/** Explicit ascent guidance (src/physics/explicit-guidance.ts): which law, and its cycle. */
+export interface ExplicitGuidanceConfig {
+  /** 'peg': the Shuttle's Powered Explicit Guidance; 'igm': the Saturn V's Iterative Guidance Mode */
+  law: 'peg' | 'igm';
+  /** guidance cycle, s (default 1) */
+  cycleS?: number;
 }

@@ -97,3 +97,18 @@ export function skyState(sunElev: number, camAltitude: number, visibility = 45e3
   }
   return out;
 }
+
+/**
+ * How much sunlight reaches a point in space, 0..1 (roadmap V02): the Earth's
+ * shadow as a cylinder with a soft edge — the same geometry the vehicle's own
+ * lighting uses (src/render/scene.ts, "eclipse") — lifted by the height of the
+ * atmosphere, which keeps a point grazing the limb in reddened light a little
+ * longer. `r` is ECI metres from the Earth's centre, `sunDir` a unit vector.
+ */
+export function sunlitAt(r: { x: number; y: number; z: number }, sunDir: { x: number; y: number; z: number }, earthRadius = 6378137): number {
+  const along = r.x * sunDir.x + r.y * sunDir.y + r.z * sunDir.z;
+  if (along >= 0) return 1;
+  const px = r.x - along * sunDir.x, py = r.y - along * sunDir.y, pz = r.z - along * sunDir.z;
+  const perp = Math.hypot(px, py, pz);
+  return smoothstep(earthRadius * 0.995, earthRadius + 60e3, perp);
+}

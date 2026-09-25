@@ -173,6 +173,72 @@ describe('physics worker session', () => {
     expect(() => remote.sim.setRigidCommand({ mode: 'manual', throttle: 2, rates: { x: 0, y: 0, z: 0 } })).toThrow(RangeError);
   }, 120000);
 
+  it('flies an attitude test in the worker as on the main thread (roadmap E04)', () => {
+    const inline = new InlineSession(rigidMission('leo'));
+    const worker = new InProcessWorker();
+    const remote = new WorkerSession(rigidMission('leo'), worker, 1, (m) => { throw new Error(m); });
+    worker.flush();
+    const fly = (seconds: number, n: number) => {
+      for (let i = 0; i < n; i++) {
+        inline.advance(seconds, UNBUDGETED);
+        remote.advance(seconds, UNBUDGETED);
+        worker.flush();
+      }
+    };
+    fly(0.05, 600);
+    const spec = { axis: 'x' as const, sign: 1 as const, kind: 'doublet' as const, amplitudeRad: 0.01, holdS: 0.5 };
+    expect(typeof inline.sim.startAttitudeTest(spec)).toBe('object');
+    expect(typeof remote.sim.startAttitudeTest(spec)).toBe('object');
+    worker.flush();
+    expect(remote.sim.startAttitudeTest(spec)).toBe('running');
+    fly(0.05, 160);
+    expect(inline.sim.events.some((e) => e.key === 'evt.attitudeTestDoublet')).toBe(true);
+    expect(snapshot(remote)).toEqual(snapshot(inline));
+    const done = remote.sim.telemetry.filter((s) => s.rigid?.attitudeTest?.done);
+    expect(done.length).toBe(1);
+    expect(done[0].rigid!.attitudeTest!.t.length).toBe(600);
+    expect(() => remote.sim.startAttitudeTest({ ...spec, amplitudeRad: 1 })).toThrow(RangeError);
+  }, 120000);
+
+  it('takes a failure injected live in the worker as on the main thread (roadmap G08)', () => {
+    const inline = new InlineSession(rigidMission('leo'));
+    const worker = new InProcessWorker();
+    const remote = new WorkerSession(rigidMission('leo'), worker, 1, (m) => { throw new Error(m); });
+    worker.flush();
+    const fly = (n: number) => {
+      for (let i = 0; i < n; i++) {
+        inline.advance(0.05, UNBUDGETED);
+        remote.advance(0.05, UNBUDGETED);
+        worker.flush();
+      }
+    };
+    fly(400);
+    const spec = { kind: 'gyroBias' as const, time: 0, units: [1], axis: 'yaw' as const, magnitude: 1 };
+    expect(inline.sim.injectControlFault(spec, true)).toBe('injected');
+    expect(remote.sim.injectControlFault(spec, true)).toBe('injected');
+    expect(remote.sim.injectControlFault({ kind: 'gnssLoss', time: 0 })).toBe('invalid');
+    worker.flush();
+    fly(100);
+    expect(inline.sim.events.some((e) => e.key === 'evt.fdirImuIsolated')).toBe(true);
+    expect(snapshot(remote)).toEqual(snapshot(inline));
+    expect(remote.sim.telemetry.at(-1)!.rigid!.controlFaults!.units).toEqual(['isolated', 'ok', 'ok']);
+  }, 120000);
+
+  it('flies on inertial navigation in the worker as on the main thread (roadmap G02)', () => {
+    const mission = () => { const m = rigidMission('leo'); return { ...m, dynamics: { ...m.dynamics!, navigation: { grade: 'mems' as const, gnssOutage: [5, 20] as [number, number] } } }; };
+    const inline = new InlineSession(mission());
+    const worker = new InProcessWorker();
+    const remote = new WorkerSession(mission(), worker, 1, (m) => { throw new Error(m); });
+    worker.flush();
+    for (let i = 0; i < 600; i++) {
+      inline.advance(0.05, UNBUDGETED);
+      remote.advance(0.05, UNBUDGETED);
+      worker.flush();
+    }
+    expect(inline.sim.telemetry.some((s) => s.rigid?.navigation?.gnss === 'outage')).toBe(true);
+    expect(snapshot(remote)).toEqual(snapshot(inline));
+  }, 120000);
+
   it('asks for no more than two frames of flight ahead of what has come back', () => {
     const worker = new InProcessWorker();
     const remote = new WorkerSession(cfg(), worker, 1, (m) => { throw new Error(m); });

@@ -32,39 +32,26 @@
  */
 import type { Simulation, SimEvent } from '../physics/simulation';
 import { drawChart, type ChartMarker, type Series } from './charts';
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { fmtTime } from './hud';
 import { eventLabel } from './phase';
 import { localizeEventParams, stageNameByLabel } from './names';
 import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { TelemetrySample } from '../physics/sim/types';
-import { symbolText, withSymbol, type Quantity } from './notation';
+import { symbolText } from './notation';
+import { EquationsPanel } from './equations';
+import type { EquationLevel } from './equations-model';
+import type { VisualFrame } from '../physics/frame';
+import { downloadBlob } from './download';
+import { ASCENT_MARKERS, CHART_IDS, ORBIT_MARKERS, chartTitle, referenceSeries } from './telemetry-charts';
+import { referenceWindow, type ReferenceFlight } from '../replay/reference';
 
 type Range = 'mission' | 'ascent';
 
-/** Events worth a dashed line on every chart. */
-const ASCENT_MARKERS = ['evt.maxQ', 'evt.meco', 'evt.stageSep', 'evt.seco', 'evt.fairingSep'];
-const ORBIT_MARKERS = ['evt.parkingOrbit', 'evt.burnStart', 'evt.burnComplete', 'evt.targetOrbit'];
-
-const CHART_IDS = ['altitude', 'velocity', 'q', 'g', 'apsides', 'dv', 'pitch', 'mass'] as const;
-/** Dictionary key for each chart's title, so `reset()` can redraw them empty. */
-const CHART_TITLES: Record<(typeof CHART_IDS)[number], string> = {
-  altitude: 'tel.altitude', velocity: 'tel.velocity', q: 'tel.q', g: 'tel.g',
-  apsides: 'tel.apsides', dv: 'tel.dv', pitch: 'tel.pitch', mass: 'tel.mass',
-};
 // --- P05: two more charts, only for a flight that modelled the flexible body
 const FLEX_CHART_IDS = ['flex', 'load'] as const;
 const FLEX_CHART_TITLES: Record<(typeof FLEX_CHART_IDS)[number], string> = { flex: 'tel.flex', load: 'tel.load' };
-
-/** U07: the symbol a chart's title carries, in the notation in force. */
-const CHART_SYMBOLS: Partial<Record<string, Quantity>> = {
-  altitude: 'altitude', q: 'dynamicPressure', g: 'loadFactor', pitch: 'pitchAngle', mass: 'mass',
-};
-const chartTitle = (id: (typeof CHART_IDS)[number]): string => {
-  const symbol = CHART_SYMBOLS[id];
-  return symbol ? withSymbol(t(CHART_TITLES[id]), symbol) : t(CHART_TITLES[id]);
-};
 
 /** How close to the bottom the log has to be before an update re-pins it there, px. */
 const LOG_STICK = 24;
@@ -137,9 +124,21 @@ export class TelemetryPanel {
   readonly dockHost: HTMLElement = el('div', 'telemetry-dock');
   /** G07: where the rendezvous's relative-motion plot goes (built once, like `dockHost`) */
   readonly rendezvousHost: HTMLElement = el('div', 'telemetry-rv');
+  /** U02: where the app puts the comparison (src/ui/compare.ts); kept across rebuilds like the dock. */
+  readonly compareHost: HTMLElement = el('div', 'telemetry-compare');
+  /** U02: the reference flight every chart also draws, dashed. */
+  private reference: ReferenceFlight | null = null;
+  /** E02: the live equations, a second view of this panel; the frame on screen, and the mode's set. */
+  private equations = new EquationsPanel();
+  private viewMode: 'charts' | 'equations' = 'charts';
+  private viewBtns: HTMLButtonElement[] = [];
+  private frame: VisualFrame | null = null;
+  private equationLevel: EquationLevel = 'explore';
 
-  constructor(root: HTMLElement) {
+  constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null) {
     this.root = root;
+    this.onReport = onReport;
+    this.onLifetime = onLifetime;
     this.build();
   }
 
@@ -167,11 +166,28 @@ export class TelemetryPanel {
     }
     head.append(toggle);
     r.append(head);
+    // E02: charts or the live equations.
+    const views = el('div', 'tel-view-toggle');
+    views.setAttribute('role', 'group');
+    views.setAttribute('aria-label', t('tel.view'));
+    this.viewBtns = [];
+    for (const [mode, key] of [['charts', 'tel.view.charts'], ['equations', 'tel.view.equations']] as const) {
+      const b = el('button', undefined, t(key)) as HTMLButtonElement;
+      b.type = 'button';
+      b.dataset.view = mode;
+      b.setAttribute('aria-pressed', String(this.viewMode === mode));
+      b.addEventListener('click', () => this.setView(mode));
+      views.append(b);
+      this.viewBtns.push(b);
+    }
+    r.append(views);
+    r.classList.toggle('view-equations', this.viewMode === 'equations');
     // First block under the heading: the docked instrument card, when the user
     // has put it there. Empty (and collapsed by `:empty` in style.css) when the
     // card is floating over the picture.
     r.append(this.dockHost);
     r.append(this.rendezvousHost);
+    r.append(this.equations.root);
     this.note = el('p', 'chart-note hidden');
     r.append(this.note);
     for (const id of CHART_IDS) {
@@ -202,6 +218,7 @@ export class TelemetryPanel {
     this.losses = mk('tel.losses', 'list info');
     this.plan = mk('tel.plan', 'list info plan');
     this.debris = mk('tel.debris', 'list info');
+    r.append(this.compareHost);
     this.events = mk('tel.events', 'events', 'events-head');
     this.eventsEmpty = el('div', 'events-empty', t('tel.noEvents'));
     this.events.append(this.eventsEmpty);
@@ -209,6 +226,22 @@ export class TelemetryPanel {
     btn.type = 'button';
     btn.addEventListener('click', () => this.exportCsv());
     r.append(btn);
+    // U06: the flight report, which the app assembles (it holds the result and the link)
+    if (this.onReport) {
+      const report = el('button', 'btn export-btn', t('report.button')) as HTMLButtonElement;
+      report.type = 'button';
+      report.id = 'btn-flight-report';
+      report.addEventListener('click', () => this.onReport?.());
+      r.append(report);
+    }
+    // P07: the orbit carried on for years, once the flight is in orbit
+    if (this.onLifetime) {
+      const life = el('button', 'btn export-btn', t('life.button')) as HTMLButtonElement;
+      life.type = 'button';
+      life.id = 'btn-orbit-lifetime';
+      life.addEventListener('click', () => this.onLifetime?.());
+      r.append(life);
+    }
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
     if (this.view) this.update(this.view, this.cursor);
@@ -242,6 +275,22 @@ export class TelemetryPanel {
     drawChart(this.charts.load, [series(load.y, '#ff7b7b')], {
       title: t(FLEX_CHART_TITLES.load), markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin: 0,
     });
+  }
+
+  /** E02: the charts, or the live equations. */
+  setView(mode: 'charts' | 'equations'): void {
+    this.viewMode = mode;
+    this.root.classList.toggle('view-equations', mode === 'equations');
+    for (const b of this.viewBtns) b.setAttribute('aria-pressed', String(b.dataset.view === mode));
+    if (this.view) this.update(this.view, this.cursor);
+    else this.equations.update(null, null, this.equationLevel, getLang());
+  }
+
+  /** E02: the Explore mode's equations or the Engineer mode's fuller set. */
+  setEquationLevel(level: EquationLevel): void {
+    if (level === this.equationLevel) return;
+    this.equationLevel = level;
+    if (this.viewMode === 'equations') this.setView('equations');
   }
 
   private setRange(mode: Range): void {
@@ -297,9 +346,17 @@ export class TelemetryPanel {
    * @param view   the frame-backed simulation view for the displayed frame
    * @param cursor mission time the rest of the app is showing
    */
-  update(view: Simulation, cursor?: number): void {
+  update(view: Simulation, cursor?: number, frame?: VisualFrame | null): void {
     this.view = view;
     if (cursor !== undefined) this.cursor = cursor;
+    if (frame !== undefined) this.frame = frame;
+    // E02: the equations view draws no charts.
+    if (this.viewMode === 'equations') {
+      const vehicle = view.vehicle;
+      this.equations.update(this.frame, { siteLatitudeDeg: view.site.latitude, siteAltitudeM: view.site.altitude,
+        activeStage: vehicle.active, usablePropellant: (stage) => vehicle.usablePropellant(stage) }, this.equationLevel, getLang());
+      return;
+    }
     // Truncated to the cursor by the frame view, so `last` is the newest sample
     // that had been taken by the displayed instant.
     const tel = view.telemetry;
@@ -386,7 +443,9 @@ export class TelemetryPanel {
     }
     const xs = cx.x;
     const xLabel = t('tel.xAxis');
+    const refRows = this.reference ? referenceWindow(this.reference.telemetry, xMin, xMax) : null;
     const draw = (id: (typeof CHART_IDS)[number], list: Series[], yMin?: number, seriesLabels?: string[]): void => {
+      if (refRows) list = [...list, ...referenceSeries(id, refRows, list)];
       drawChart(this.charts[id], list, {
         title: chartTitle(id),
         markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin, seriesLabels,
@@ -549,16 +608,32 @@ export class TelemetryPanel {
     this.rowPools.delete(box);
   }
 
+  /** U06: set by the app to offer the flight report beside the CSV export. */
+  onReport: (() => void) | null = null;
+  /** P07: set by the app to offer the orbit-lifetime analysis. */
+  onLifetime: (() => void) | null = null;
+
+  /** U02: draw a reference flight on every chart, dashed (null: none). */
+  setReference(ref: ReferenceFlight | null): void {
+    this.reference = ref;
+    if (this.view) this.update(this.view, this.cursor);
+  }
+
+  /** The whole flight the CSV and the report are made from. */
+  exportSource(): Simulation | null {
+    return this.live;
+  }
+
+  /** The panel's own charts, which the report redraws over the whole flight. */
+  chartCanvases(): Set<HTMLCanvasElement> {
+    return new Set(Object.values(this.charts));
+  }
+
   exportCsv(): void {
     const sim = this.live;
     if (!sim) return;
     const csv = buildTelemetryCsv(sim);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = telemetryCsvFilename(sim);
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    downloadBlob(new Blob([csv], { type: 'text/csv' }), telemetryCsvFilename(sim));
   }
 }
 

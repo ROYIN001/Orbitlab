@@ -207,6 +207,12 @@ const BIOMES: Record<string, Biome> = {
   tanegashima: { ground: 0x47603c, ground2: 0x5a7146, rock: 0x8d8570, hills: 70, coastal: true, seaAz: 120, shore: 700, water: 0x1c6a86, vegetation: 'forest', cliffs: true },
   sriharikota: { ground: 0x6b7a44, ground2: 0x8a8a58, rock: 0xc0ae82, hills: 10, coastal: true, seaAz: 100, shore: 3000, water: 0x226a80, vegetation: 'palms' },
   mahia: { ground: 0x5f7a3e, ground2: 0x748c4c, rock: 0x8b8064, hills: 140, coastal: true, seaAz: 140, shore: 800, water: 0x1a5570, vegetation: 'grass', cliffs: true },
+  // roadmap C04: the Orenburg steppe, the Volga–Akhtuba semi-desert, the Amur
+  // taiga, and Palmachim's dunes with the sea 1 km to the west
+  yasny: { ground: 0xa39a70, ground2: 0x8a845c, rock: 0xb0a07e, hills: 40, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'steppe' },
+  kapustinyar: { ground: 0xb3a47a, ground2: 0x9c9168, rock: 0xc0b08a, hills: 15, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'steppe' },
+  svobodny: { ground: 0x4d5a3a, ground2: 0x3a4a30, rock: 0x72705c, hills: 120, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'forest' },
+  palmachim: { ground: 0xc9b98a, ground2: 0xb3a676, rock: 0xd2c29a, hills: 12, coastal: true, seaAz: 285, shore: 1000, water: 0x1f6a8a, vegetation: 'scrub' },
 };
 
 const APRON = 520;  // radius of the flat concrete apron, m

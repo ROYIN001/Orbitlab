@@ -90,6 +90,8 @@ export const SITE_HUMIDITY: Record<string, number> = {
   kourou: 0.95, wenchang: 0.9, cape: 0.85, ksc39a: 0.85, sriharikota: 0.85, tanegashima: 0.85,
   starbase: 0.8, wallops: 0.75, mahia: 0.75, vandenberg: 0.7, plesetsk: 0.7, vostochny: 0.6,
   xichang: 0.6, taiyuan: 0.35, baikonur: 0.3, jiuquan: 0.2,
+  // C04's sites: the Mediterranean coast, the Amur's monsoon summers, the Orenburg and lower-Volga steppe
+  palmachim: 0.7, svobodny: 0.55, yasny: 0.3, kapustinyar: 0.3,
 };
 
 /** A puff budget: past it the oldest part of the column is thinned harder. */

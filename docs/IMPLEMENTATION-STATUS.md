@@ -6,7 +6,7 @@ right.
 
 ## What the app is
 
-A browser simulator of orbital launches: 18 launch vehicles from 16 launch sites, flown by
+A browser simulator of orbital launches: 18 launch vehicles from 16 launch sites (and four more in the site table, flown by no vehicle yet), flown by
 closed-loop ascent guidance and a burn sequencer to the orbit a mission asks for, drawn in 3-D
 from a flight recording that can be replayed and scrubbed. Four modes — Home, Watch
 (ready-made launches with a director's camera), Explore and Engineer (every guidance
@@ -85,7 +85,7 @@ throughout.
   view becomes the Soyuz's docking TV camera, and the telemetry panel plots the motion in the
   station's LVLH frame. In the Engineer mode TORU takes the approach over by hand. Watch has
   "Soyuz MS: at the station in 3 hours".
-- **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
+- **Reference frames in 3-D** ([PHYSICS.md §2k](PHYSICS.md)): a Frames menu by the camera
   buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
   R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
   track and the sidereal angle as arcs and values, in ISO 1151 or ГОСТ 20058-80 symbols.
@@ -138,7 +138,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1037 tests in 77 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1 274 tests in 92 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -186,6 +186,20 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | E01 reference frames in 3-D | done | | |
 
 Twenty further items are kept for later, once these are done.
+
+Eight of the "interesting" items are being done alongside them on branch
+`claude/interest-group-8`, in this order:
+
+| Item | |
+|---|---|
+| U01 mission links and mission files | done |
+| U03 install as an app, work offline (PWA) | done |
+| C04 more launch sites (Yasny, Kapustin Yar, Svobodny, Palmachim) | done — no vehicle flies from them yet |
+| U06 chart and flight-report export | done |
+| U02 comparing two flights | done |
+| V01 sound | done |
+| P07 long-term orbit perturbations | done |
+| V02 physically based sky | done |
 
 ## Known limitations
 

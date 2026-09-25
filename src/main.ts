@@ -1,5 +1,18 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
+import { registerServiceWorker } from './pwa/register';
+import { downloadFlightReport } from './ui/report';
+import { LaunchAudio } from './audio/launch-audio';
+import { TwilightPlume } from './render/twilight-plume';
+import { LifetimeDialog } from './ui/lifetime';
+import { spacecraftFor } from './physics/propagator/spacecraft';
+import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
+import { SoundtrackPanel } from './ui/soundtrack-panel';
+import { ComparePanel } from './ui/compare';
+import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
+import { assessMissionResult } from './ui/result-content';
+import { enableChartExport } from './ui/chart-export';
+import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, saveStoredMission } from './config/mission-file';
 import { SceneManager, loadEarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
@@ -12,6 +25,7 @@ import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { MissionResult } from './ui/mission-result';
 import { RigidControls } from './ui/rigid-controls';
+import { LoopInspector } from './ui/loop-inspector';
 import { Hud } from './ui/hud';
 import { TelemetryPanel } from './ui/telemetry';
 import { OrbitalMap } from './ui/map';
@@ -32,8 +46,8 @@ import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
 import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
-import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
-import { OMEGA_EARTH, R_EARTH } from './physics/constants';
+import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
+import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
 import { add, normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
@@ -219,6 +233,23 @@ class App {
   /** G07: the relative motion in the station's frame, in the telemetry panel */
   private rendezvousPlot = new RendezvousPlot();
   private framesMenu!: FramesMenu;
+  /** V02: the twilight jellyfish, and a scratch vector for its position */
+  private readonly twilight = new TwilightPlume();
+  private readonly twilightPos = new THREE.Vector3();
+  /** V01: the launch as the camera hears it */
+  readonly audio = new LaunchAudio();
+  /** P07: the long-term orbit window */
+  private lifetime = new LifetimeDialog();
+  /** V01: a viewer launch's real broadcast, when there is one */
+  readonly soundtrack = new SoundtrackPlayer();
+  private soundtrackPanel = new SoundtrackPanel((id) => { if (this.watchSoundtrackId === id) void this.loadSoundtrack(id); });
+  /** the viewer launch whose soundtrack is loaded */
+  private watchSoundtrackId: WatchMissionId | null = null;
+  /** U02: the reference flight's path, dashed, turned to this flight's launch */
+  ghost = new OrbitLine(0xc3a6ff, true, REFERENCE_PATH_POINTS + 1, 1.8);
+  /** the launch the ghost was last turned to, Julian date */
+  private ghostJd = NaN;
+  compare!: ComparePanel;
   /** the live simulation is advancing */
   playing = false;
   /** time warp of the live simulation */
@@ -246,6 +277,7 @@ class App {
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
   private physicsDialog: PhysicsDialog;
+  private loopInspector: LoopInspector;
   private cameraDialog: CameraDialog;
   private shown: VisualFrame | null = null;
   private wasLive = true;
@@ -267,6 +299,8 @@ class App {
   private glowBtn!: HTMLButtonElement;
   /** decides from the frame rate whether the glow is affordable (src/render/glow-governor.ts) */
   private readonly glow = new GlowGovernor();
+  /** V02: the same frame-rate trial for the scattering sky */
+  private readonly skyGovernor = new GlowGovernor();
   /** kept alive for as long as the app is: it publishes `--sb-h` */
   private sbObserver: ResizeObserver | null = null;
   private sbHeight = -1;
@@ -306,14 +340,25 @@ class App {
       if (!this.session || !this.player.live) return;
       this.session.setRigidCommand(command);
       this.telTimer = 1;
-    });
+    }, opener => this.loopInspector.open(opener));
+    // G03: the attitude-loop inspector, opened from the 6-DOF panel in the Engineer mode.
+    this.loopInspector = new LoopInspector({ togglePlay: () => this.togglePlay(),
+      // E04: the tuning tab writes into the mission setup, and the flight-test tab flies in the live flight.
+      applyControl: (control) => this.panel.applyControl(control), currentControl: () => this.panel.currentControl(),
+      startAttitudeTest: (spec) => (this.simView && this.player.live ? this.simView.sim.startAttitudeTest(spec) : 'notLive') });
     this.viewport = document.getElementById('viewport')!;
     this.glCanvas = document.getElementById('gl') as HTMLCanvasElement;
     this.mapCanvas = document.getElementById('map') as HTMLCanvasElement;
     this.obCanvas = document.getElementById('onboard') as HTMLCanvasElement;
     // The telemetry panel first: it owns the slot the instrument card docks
     // into, and `Hud` reads its stored placement in its own constructor.
-    this.tel = new TelemetryPanel(document.getElementById('telemetry')!);
+    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport(), () => this.orbitLifetime());
+    this.compare = new ComparePanel({
+      currentAsReference: () => this.currentAsReference(),
+      current: () => this.tel.exportSource(),
+      onReference: (ref) => { this.tel.setReference(ref); this.ghostJd = NaN; },
+    });
+    this.tel.compareHost.append(this.compare.root);
     this.tel.rendezvousHost.append(this.rendezvousPlot.canvas);
     this.hud = new Hud(document.getElementById('hud')!, document.getElementById('ticker')!, this.tel.dockHost);
     this.map = new OrbitalMap(this.mapCanvas, `${base}textures/earth_atmos_2048.jpg`);
@@ -339,6 +384,7 @@ class App {
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go('explore'),
       follow: (target) => { this.watchFollow = target; },
+      pickerFooter: () => this.soundtrackPanel.render(),
     });
     this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
@@ -386,6 +432,9 @@ class App {
     saveMode(mode);
     const experience = experienceForMode(mode);
     if (experience) this.panel.setExperience(experience);
+    this.rigidControls.setInspectorAvailable(mode === 'engineer');
+    this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
+    if (mode !== 'engineer') this.loopInspector.close();
     document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
       if (a.dataset.mode === mode) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
@@ -416,6 +465,7 @@ class App {
     this.launch(this.panel.getConfig());
     this.setWarp(1);
     this.watch.begin(id);
+    void this.loadSoundtrack(id);
     this.watchPayloadKey = watchMissionById(id)?.payloadKey ?? null;
     this.updateMissionName();
   }
@@ -483,19 +533,114 @@ class App {
     const tex = await loadEarthTextures(base);
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
+    // V02: `?sky=gradient` keeps the old sky, for comparison or a GPU the trial misjudges
+    if (new URLSearchParams(location.search).get('sky') === 'gradient') { this.scene.setPhysicalSky(false); this.skyGovernor.settle(); }
     this.debrisView = new DebrisView(this.scene);
-    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.frames.group);
+    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.frames.group, this.ghost.line, this.twilight.mesh);
+    this.ghost.line.visible = false;
     this.cams.attach(this.viewport);
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.viewport);
     this.watchPixelRatio();
     this.resize();
     document.getElementById('loading')!.classList.add('hidden');
-    // The landing page and the viewer open on the featured launch standing on
-    // its pad in daylight; the workspace opens on whatever the panel holds.
-    if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
-    else this.preview(this.panel.getConfig());
+    // A mission link opens the workspace on its mission; otherwise the landing
+    // page and the viewer open on the featured launch standing on its pad in
+    // daylight, and the workspace on the mission it held when it was closed.
+    if (await this.openMissionLink()) { /* previewed by the panel */ }
+    else if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
+    else {
+      const stored = loadStoredMission();
+      if (stored) this.panel.share.apply(stored, 'stored');
+      else this.preview(this.panel.getConfig());
+    }
     requestAnimationFrame((now) => this.frame(now));
+    registerServiceWorker();
+  }
+
+  /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
+  private async loadSoundtrack(id: WatchMissionId): Promise<void> {
+    this.watchSoundtrackId = id;
+    const track = await soundtrackFor(id, (name) => t('snd.mine', { name }));
+    // a different flight may have started while the recording was being read
+    if (this.watchSoundtrackId === id) this.soundtrack.set(track);
+  }
+
+  /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
+  private orbitLifetime(): void {
+    const f = this.shown, sim = this.sim;
+    const opener = document.getElementById('btn-orbit-lifetime');
+    const inOrbit = !!f && !!sim && f.status !== 'prelaunch' && f.elements.periapsisAlt > 100e3 && f.elements.e < 1;
+    if (!inOrbit) { this.lifetime.openFor(null, opener); return; }
+    const sat = sim.satellite;
+    const el = f.elements;
+    this.lifetime.openFor({
+      r: [f.r.x, f.r.y, f.r.z], v: [f.v.x, f.v.y, f.v.z], jd: f.jd,
+      spacecraft: spacecraftFor(sat.kind, sim.cfg.payloadMassOverride ?? sat.mass),
+      label: t('life.start', { sat: satelliteName(sat), pe: (el.periapsisAlt / 1000).toFixed(0), ap: (el.apoapsisAlt / 1000).toFixed(0),
+        inc: (el.i * RAD).toFixed(1), t: f.t.toFixed(0) }),
+    }, opener);
+  }
+
+  /** U02: the flight on screen as a reference to compare later flights against. */
+  private currentAsReference(): ReferenceFlight | null {
+    const sim = this.tel.exportSource();
+    if (!sim || !sim.telemetry.length) return null;
+    const law = sim.cfg.dynamics?.explicitGuidance?.law;
+    const faults = sim.cfg.dynamics?.controlFaults?.faults.length ?? 0;
+    const label = [sim.vehicleSpec.name, law ? law.toUpperCase() : t('cmp.standard'),
+      ...(faults ? [t('cmp.faults', { n: faults })] : []), sim.cfg.launchTime.toISOString().slice(0, 16).replace('T', ' ')].join(' · ');
+    return referenceFromFlight({
+      label, mission: missionDocument(this.panel.missionState()), launchJd: julianDate(sim.cfg.launchTime),
+      telemetry: sim.telemetry, events: sim.events,
+      path: this.recorder.frames.filter((f) => f.status !== 'prelaunch'),
+    });
+  }
+
+  /** U02: keep the reference's path turned to the launch on screen. */
+  private syncGhost(): void {
+    const ref = this.compare?.ref;
+    const cfg = this.sim?.cfg;
+    this.ghost.line.visible = !!ref && !!cfg;
+    if (!ref || !cfg) return;
+    const jd = julianDate(cfg.launchTime);
+    if (jd !== this.ghostJd) {
+      this.ghostJd = jd;
+      this.ghost.setPoints(alignTrajectory(ref, jd));
+    }
+    this.ghost.update(this.scene);
+  }
+
+  /** U06: the flight report, from the whole recorded flight and the result on screen. */
+  private async flightReport(): Promise<void> {
+    const sim = this.tel.exportSource();
+    if (!sim) return;
+    await downloadFlightReport({
+      flight: sim,
+      result: this.simView ? assessMissionResult(this.simView.sim) : null,
+      link: await this.panel.share.link().catch(() => null),
+      exclude: this.tel.chartCanvases(),
+      guidanceEdited: Object.keys(this.panel.state.guidanceOverrides).length > 0,
+    });
+  }
+
+  /**
+   * The mission a link carries (`?m=…`, roadmap U01), loaded into the
+   * workspace. The parameter comes off the address once read, so the address
+   * does not go on naming a mission the user has since edited.
+   */
+  private async openMissionLink(): Promise<boolean> {
+    const url = new URL(location.href);
+    const param = url.searchParams.get(MISSION_PARAM);
+    if (param === null) return false;
+    url.searchParams.delete(MISSION_PARAM);
+    let raw: unknown = null;
+    try { raw = await decodeMissionParam(param); } catch { /* reported as unusable below */ }
+    if (this.lean) this.setMode('explore');
+    history.replaceState(null, '', `${url.pathname}${url.search}${hashForMode(this.mode)}`);
+    const parsed = this.panel.share.apply(raw, 'link');
+    if (!parsed.usable) this.preview(this.panel.getConfig());
+    return true;
   }
 
   /**
@@ -567,6 +712,16 @@ class App {
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
     this.framesMenu = new FramesMenu(document.getElementById('btn-frames') as HTMLButtonElement, (groups) => this.frames.setShown(groups));
     this.frames.setShown(this.framesMenu.groups);
+    // V01: sound, off until asked for; a choice kept from an earlier visit
+    // starts at the first click or key press, as browsers require
+    const soundBtn = document.getElementById('btn-sound') as HTMLButtonElement;
+    const showSound = (): void => {
+      soundBtn.classList.toggle('active', this.audio.on);
+      soundBtn.setAttribute('aria-pressed', String(this.audio.on));
+    };
+    soundBtn.addEventListener('click', () => { this.audio.toggle(); showSound(); });
+    for (const type of ['pointerdown', 'keydown'] as const) window.addEventListener(type, () => this.audio.sound.resumeOnGesture(), { capture: true });
+    showSound();
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
       const l = (e.target as HTMLSelectElement).value as Lang;
       setLang(l);
@@ -666,6 +821,7 @@ class App {
     this.panel.render();
     this.tel.build();
     this.toruControls.render();
+    this.compare.render();
     this.hud.applyLabels();
     this.narration.applyLanguage();
     this.timeline.applyStaticText();
@@ -807,6 +963,14 @@ class App {
 
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
+    this.audio.reset();
+    // every new flight drops the broadcast; `startWatch` puts its own back after launching
+    this.soundtrack.set(null);
+    this.watchSoundtrackId = null;
+    // The workspace's mission outlives the tab (roadmap U01): every edit, from
+    // the panel or over WebMCP, previews. The viewer's prepared launches do
+    // not replace it.
+    if (!this.lean) saveStoredMission(this.panel.missionState());
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;
@@ -1015,6 +1179,12 @@ class App {
     const measuring = this.fastForwardTo === null && elapsedWall < 0.1 && document.visibilityState === 'visible';
     const action = this.glow.sample(elapsedWall, this.scene.bloomEnabled, measuring);
     if (action) this.setGlow(action === 'on');
+    // V02: the scattering sky gets the same trial, once the glow's is over, so
+    // the two never confound each other: still too slow → the gradient sky
+    if (this.glow.settled || !this.scene.glowSupported) {
+      const sky = this.skyGovernor.sample(elapsedWall, this.scene.physicalSkyEnabled, measuring);
+      if (sky) this.scene.setPhysicalSky(sky === 'on');
+    }
   }
 
   private frame(now: number): void {
@@ -1106,12 +1276,17 @@ class App {
     this.telTimer += dtReal;
     if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
-      this.tel.update(this.simView.sim, this.player.cursor);
+      this.tel.update(this.simView.sim, this.player.cursor, this.shown);
       this.rendezvousPlot.update(this.recorder.frames, this.shown);
+      this.compare.update();
       this.result.update(this.simView.sim);
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
       this.toruControls.update(this.shown, this.player.live, this.mode === 'engineer');
+    }
+    if (this.loopInspector.isOpen) {
+      this.loopInspector.update(this.shown, this.recorder.frames, this.player.cursor, this.player.live,
+        this.player.live ? this.playing : this.player.playing, this.simView?.sim.telemetry ?? []);
     }
     requestAnimationFrame((n) => this.frame(n));
   }
@@ -1381,6 +1556,7 @@ class App {
     // lines
     this.syncTrail(this.player.cursor, this.player.live, frame);
     this.trail.update(scene);
+    this.syncGhost();
     this.syncPredicted(frame, dt);
     this.predicted.update(scene);
     this.target.update(scene);
@@ -1433,6 +1609,20 @@ class App {
     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
     // a 3 m CubeSat carrier and by 2x for Starship (render hand-off).
     scene.update(frame, sunDir, camAlt, height);
+    // V01: what the camera hears — the map has no listener, so it is silent
+    const cam = scene.camera.position, origin = scene.origin;
+    // V02: the exhaust lit by a sun the ground no longer sees
+    const camR = Math.hypot(cam.x + origin.x, cam.y + origin.y, cam.z + origin.z) || 1;
+    const camSunElev = ((cam.x + origin.x) * sunDir.x + (cam.y + origin.y) * sunDir.y + (cam.z + origin.z) * sunDir.z) / camR;
+    this.twilight.update(frame, scene.toScene(frame.r, this.twilightPos), frame.dir, sunDir, camSunElev, scene.camera);
+    this.audio.update({
+      t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
+      listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
+      warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
+      onboard: this.camMode === 'onboard',
+      suppressed: this.soundtrack.sounding,
+    });
+    this.soundtrack.update(frame.t, this.activeWarp, this.player.live ? this.playing : this.player.playing, this.audio.on);
     // The map and the onboard overlay still take a `Simulation` (they belong to
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,
@@ -1452,6 +1642,8 @@ class App {
 
 initLang();
 initNotation();
+// U06: every chart the app draws can be saved as a PNG
+enableChartExport();
 const app = new App();
 // U07: a notation chosen in the Engineer mode (or changed with the language)
 // relabels everything the language does.

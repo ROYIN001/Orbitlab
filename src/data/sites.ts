@@ -135,6 +135,59 @@ export const SITES: SiteExtra[] = [
   { id: 'taiyuan', name: 'Taiyuan Satellite Launch Center', country: 'CN', latitude: 38.849, longitude: 111.608, altitude: 1500, minInclination: 63, maxInclination: 103.5, azimuthMin: 144, azimuthMax: 200, tz: 'UTC+8', descendingForPolar: true },
   { id: 'xichang', name: 'Xichang Satellite Launch Center', country: 'CN', latitude: 28.246, longitude: 102.027, altitude: 1825, minInclination: 28.5, maxInclination: 31, azimuthMin: 94, azimuthMax: 104, tz: 'UTC+8', descendingForPolar: false },
   { id: 'mahia', name: 'Rocket Lab LC-1 (Mahia)', country: 'NZ', latitude: -39.26, longitude: 177.865, altitude: 40, minInclination: 39, maxInclination: 103.4, azimuthMin: 90, azimuthMax: 200, tz: 'UTC+12', descendingForPolar: true },
+
+  // ── Roadmap C04: sites no vehicle in the fleet flies from yet ──────────────
+  // They are here for the vehicles that will: Dnepr from Yasny first, which
+  // put Thailand's THEOS-1 into orbit on 1 October 2008. Until then the setup
+  // panel lists them greyed out and validation refuses them, because
+  // `VehicleSpec.sites` is what licenses a launch. Every azimuth window below
+  // is DERIVED from the inclinations the site has flown, with the app's own
+  // `rotatingLaunchAzimuth` at the 300 km reference orbit, not quoted from a
+  // range document (none was reachable); `tests/data-consistency.test.ts`
+  // holds `maxInclination` to the window, as for every other site.
+  //
+  // Yasny (Dombarovsky), Orenburg oblast: the Dnepr silo launches of ISC
+  // Kosmotras, 2006–2015. Flown: Genesis I/II at 64.5° (41.7° or 138.3° of
+  // azimuth); THEOS-1 at 98.8°, Sich-2 and others at 98.2°, KOMPSAT-3A at 97.5°
+  // (343.8–345.9° north or 194.1–196.2° south). THEOS-1 lifted off at 06:37 UTC,
+  // 10:36 local solar time, for a 10:00 descending node — a southbound launch,
+  // so the window is the southern one that holds both families, 130–200°.
+  // Coordinates from ru.wikipedia (the launch base; the silo itself is not
+  // published); the elevation of the steppe there, about 300 m, is estimated.
+  // https://ru.wikipedia.org/wiki/Ясный_(пусковая_база) ,
+  // https://directory.eoportal.org/web/eoportal/satellite-missions/t/theos ,
+  // https://www.eoportal.org/satellite-missions/genesis-complex ,
+  // https://spaceflightnow.com/2015/03/26/south-korean-satellite-launched-by-dnepr-rocket/
+  { id: 'yasny', name: 'Yasny (Dombarovsky)', country: 'RU', latitude: 51.0939, longitude: 59.8422, altitude: 300, minInclination: 64.5, maxInclination: 101.2, azimuthMin: 130, azimuthMax: 200, tz: 'UTC+5', descendingForPolar: true },
+  // Kapustin Yar, Astrakhan oblast: Kosmos-3M from site 107, 1973–1999 and
+  // 2008 (the pad was dismantled by 2021). Flown: 48.5° (Orbcomm 2008, MegSat)
+  // and 50.7° (Kosmos-1374, BOR-4) — due east to 72.5° or 107.5° of azimuth,
+  // eastward over Kazakhstan, so 70–110°. The declared floor is the latitude
+  // (a 48.5° plane is 48.57° from here). Coordinates: the range's, from
+  // ru.wikipedia; the Caspian lowland is near sea level, 20 m estimated.
+  // https://ru.wikipedia.org/wiki/Капустин_Яр , https://en.wikipedia.org/wiki/Kosmos-3M ,
+  // https://en.wikinews.org/wiki/Kosmos-3M_rocket_launches_six_Orbcomm_satellites ,
+  // https://ru.wikipedia.org/wiki/Космос-1374
+  { id: 'kapustinyar', name: 'Kapustin Yar', country: 'RU', latitude: 48.5667, longitude: 46.2952, altitude: 20, minInclination: 48.6, maxInclination: 51.3, azimuthMin: 70, azimuthMax: 110, tz: 'UTC+4', descendingForPolar: false },
+  // Svobodny, Amur oblast: five Start-1 launches 1997–2006 (Zeya, Early Bird,
+  // EROS-A, Odin, EROS-B), all sun-synchronous at 97.3–97.8°, and closed in
+  // 2007 in favour of Vostochny, 50 km away. Its launches went north, over the
+  // taiga (345.3–346.1° of azimuth), so the window is 340–20°: the
+  // sun-synchronous planes and nothing the site never flew. Elevation
+  // (about 200 m) estimated.
+  // https://ru.wikipedia.org/wiki/Свободный_(космодром) , https://en.wikipedia.org/wiki/Svobodny_Cosmodrome ,
+  // https://www.eoportal.org/satellite-missions/eros-a , https://en.wikipedia.org/wiki/Odin_(satellite)
+  { id: 'svobodny', name: 'Svobodny Cosmodrome', country: 'RU', latitude: 51.8167, longitude: 128.3, altitude: 200, minInclination: 76.7, maxInclination: 101, azimuthMin: 340, azimuthMax: 20, tz: 'UTC+9', descendingForPolar: false },
+  // Palmachim, Israel: Shavit, 1988 to date. Every other direction crosses a
+  // neighbour, so it launches west over the Mediterranean, against the
+  // Earth's rotation: Ofeq planes of 141.7–143.5° (287.9–291.4° of azimuth,
+  // north of west). Window 280–300°, and the floor is retrograde — the one
+  // site `retrogradeOnly` (src/physics/mission.ts) applies to. Pad
+  // coordinates and the airbase's 10 m from en.wikipedia.
+  // https://en.wikipedia.org/wiki/Palmachim_Airbase , http://astronauticsnow.com/israelspace/index.html ,
+  // https://en.wikipedia.org/wiki/Ofeq-9 , https://en.wikipedia.org/wiki/Ofek-16 ,
+  // https://spaceflightnow.com/2023/03/30/israel-launches-radar-spy-satellite-into-retrograde-orbit/
+  { id: 'palmachim', name: 'Palmachim Airbase', country: 'IL', latitude: 31.8844, longitude: 34.6803, altitude: 10, minInclination: 141.5, maxInclination: 146.6, azimuthMin: 280, azimuthMax: 300, tz: 'UTC+2', descendingForPolar: false },
 ];
 
 export const siteById = (id: string): SiteExtra => {

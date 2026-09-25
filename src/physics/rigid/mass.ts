@@ -186,10 +186,21 @@ export function headerTankComponents(stage: StageSpec, propellant: number, base:
 }
 
 function budgetEngines(geometry: readonly ChamberGeometry[], thrustPerEngine: number, flowPerEngine: number,
-  count: number, engineFraction = 1, upstreamThrottle = 1): BudgetedEngine[] {
+  count: number, engineFraction = 1, upstreamThrottle = 1, shutEngines?: readonly number[]): BudgetedEngine[] {
   // Consume the failed engine budget from index 0 first: off-axis Falcon fault
   // stays spatially localized instead of reducing every engine equally.
   const failed = count * (1 - fraction(engineFraction));
+  if (shutEngines?.length) {
+    // G08: the engines the FDIR shut down go first; any budget left is lost from the lowest index of the rest.
+    const shut = new Set(shutEngines), rest = failed - shut.size;
+    return geometry.map((engine) => {
+      let rank = 0;
+      for (let i = 0; i < engine.engineIndex; i++) if (!shut.has(i)) rank++;
+      const available = shut.has(engine.engineIndex) ? 0 : fraction(rank + 1 - rest);
+      return { ...engine, thrustBudgetN: thrustPerEngine * available * engine.thrustFraction,
+        massFlowKgS: flowPerEngine * available * engine.thrustFraction, upstreamThrottle: upstreamThrottle * available };
+    });
+  }
   return geometry.map((engine) => {
     const available = fraction(engine.engineIndex + 1 - failed);
     return { ...engine, thrustBudgetN: thrustPerEngine * available * engine.thrustFraction,
@@ -297,7 +308,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     }
     const budgeted = budgetEngines(chamberGeometry(st.spec.id, st.spec.id, st.spec.engine, st.spec.diameter / 2, base),
       engineThrust(st.spec.engine, pressure) * throttle, engineMassFlow(st.spec.engine) * throttle,
-      st.spec.engine.count, st.engineFraction, throttle);
+      st.spec.engine.count, st.engineFraction, throttle, st.shutEngines);
     // Engines left cold (`StageState.litEngines`) make no thrust and burn nothing.
     if (st.litEngines) for (const engine of budgeted) {
       if (!st.litEngines.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }

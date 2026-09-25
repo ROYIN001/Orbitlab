@@ -259,7 +259,7 @@ describe('createMcpTools', () => {
     const names = tools.map((t) => t.name);
     expect(names).toEqual([
       'read_flight_state', 'list_missions', 'configure_mission', 'launch_mission',
-      'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv',
+      'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv', 'run_attitude_test', 'inject_control_fault',
     ]);
     expect(new Set(names).size).toBe(names.length);
     for (const t of tools) {
@@ -298,6 +298,63 @@ describe('read_flight_state', () => {
     expect(rigid.engineDeflections['s1.engine.0'][0]).toBe(0.01);
     expect(rigid.attitudeQ.w).toBe(1);
     expect(detached.engineDirectionsBody!['s1.engine.0'].x).toBe(1);
+  });
+
+  it('summarises the attitude loop in ISO axes (roadmap G03)', () => {
+    host.sim = makeFakeSim(host.panel.getConfig());
+    host.player.live = false;
+    const v = (x: number, y: number, z: number) => ({ x, y, z });
+    const rigid = { ...rigidTelemetry(0), attitudeLoop: { attitudeErrorBody: v(0, 0.01, -0.02), desiredRatesBody: v(0, 0.001, -0.002), sensedOmegaBody: v(0, 0, 0),
+      angularAccelerationBody: v(0, 0, 0), momentDemandBody: v(0, 1000, -2000), aeroMomentBody: v(0, -500, 0), engineMomentBody: v(0, 1500, -2000),
+      rcsMomentBody: v(0, 0, 0), gains: { attitudeGain: v(1.5, 1.5, 1.5), rateGain: v(3, 3, 3), maxRate: v(0.1, 0.1, 0.1), maxAngularAcceleration: v(0.05, 0.05, 0.05) },
+      limits: 1 << 5, gimbalUse: 0.25, rcsDuty: 0, loadRelief: { requestedRad: 0.1, limitRad: 0.2, appliedRad: 0 } } };
+    host.player.replayFrame = makeFrame({ t: 30, rigid });
+    const loop = (tool(tools, 'read_flight_state').execute({}) as any).frame.flightDynamics.attitudeLoop;
+    // ISO: pitch q = −(simulator z), yaw r = simulator y.
+    expect(loop.attitudeErrorDeg.pitch).toBeCloseTo(0.02 * 180 / Math.PI, 9);
+    expect(loop.attitudeErrorDeg.yaw).toBeCloseTo(0.01 * 180 / Math.PI, 9);
+    expect(loop.momentKNm.demand).toEqual({ roll: 0, pitch: 2, yaw: 1 });
+    expect(loop.limiters).toEqual(['rate:pitch']);
+    expect(loop.gimbalUsePct).toBe(25);
+    expect(loop.unmetSignificant).toBe(false);
+  });
+
+  it('reports the linearised loop\'s margins at the cursor, per plane (roadmap G04)', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).loopMargins).toBeNull();
+    const plane = (axis: 'x' | 'y' | 'z') => ({ axis, n: 2, states: ['angle', 'rate'], actuator: axis === 'x' ? 'jets' : 'engines' });
+    const margin = (pm: number) => ({ active: true, stable: true, growthRate: -0.5, growthFrequency: 2, pmDeg: pm, wcRadS: 3, gmDb: 30, wgRadS: 40, openLoopUnstable: 0 });
+    const linearModel = { t: 1, T: 0.01, planes: { x: plane('x'), y: plane('y'), z: plane('z') }, margins: { x: margin(60), y: margin(45), z: margin(47) } };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), linearModel };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).loopMargins;
+    // Pitch is the simulator's z plane, yaw its y.
+    expect(out).toMatchObject({ linearisedAtS: 1, controlStepS: 0.01, roll: { actuator: 'jets', phaseMarginDeg: 60 },
+      pitch: { phaseMarginDeg: 47, gainMarginDb: 30, lowGainMarginDb: null, stable: true }, yaw: { phaseMarginDeg: 45 } });
+    host.player.cursor = 0.5;
+    expect((tool(tools, 'read_flight_state').execute({}) as any).loopMargins).toBeNull();
+  });
+
+  it('summarises the latest attitude test against its prediction (roadmap E04)', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).attitudeTest).toBeNull();
+    const n = 200, t = Array.from({ length: n }, (_, i) => i * 0.01);
+    // Pitch in the simulator's −z sense: nose up in ISO 1151.
+    const attitudeTest = { spec: { axis: 'z', sign: -1, kind: 'step', amplitudeRad: 0.02, holdS: 1.5 }, startS: 0.5, t, command: t.map(() => 0.02),
+      response: t.map((x) => 0.02 * Math.min(1, x)), limits: t.map((_, i) => (i < 50 ? 2 : 0)), baselineRad: 0, done: true };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), attitudeTest };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).attitudeTest;
+    expect(out).toMatchObject({ axis: 'pitch', kind: 'step', startS: 0.5, done: true, predicted: null, rmsMismatchOverAmplitude: null });
+    expect(out.amplitudeDeg).toBeCloseTo(0.02 * 180 / Math.PI, 9);
+    expect(out.measured.riseS).toBeCloseTo(0.8, 6);
+    expect(out.limiterShare.rate).toBeCloseTo(50 / 150, 9);
   });
 
   it('is a safe no-op with no mission configured', () => {
@@ -811,7 +868,7 @@ describe('registerMcpTools', () => {
     (globalThis as any).window = { addEventListener: (_: string, fn: () => void) => listeners.push(fn) };
     try {
       registerMcpTools(host);
-      expect(registered.length).toBe(10);
+      expect(registered.length).toBe(12);
       for (const fn of listeners) fn();
       expect(abortSeen).toBe(true);
     } finally {
@@ -848,5 +905,165 @@ describe('configure_mission: the flexible body', () => {
     const schema = tool(tools, 'configure_mission').inputSchema as { properties: Record<string, { properties?: Record<string, unknown> }> };
     expect(Object.keys(schema.properties.flex.properties!)).toEqual(['slosh', 'bending', 'notch', 'imuStation', 'notchZetaZero',
       'notchZetaPole', 'notchFrequencyScale', 'bandwidthRatio', 'sloshDamping', 'bendingDamping']);
+  });
+});
+
+// --- E04 ---
+describe('configure_mission: the attitude autopilot (roadmap E04)', () => {
+  it('merges the tuning field by field, keeps it across vehicle and wind edits, and resets with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', control: { pitchYaw: { attitudeGain: 0.8, rateGain: 1.6 }, feedForward: 0.5 } });
+    expect(host.panel.state.dynamics?.control).toEqual({ pitchYaw: { attitudeGain: 0.8, rateGain: 1.6 }, feedForward: 0.5 });
+    configure.execute({ control: { roll: { maxRateDegS: 4 }, pitchYaw: { rateGain: null } } });
+    configure.execute({ vehicleId: 'soyuz21a', windScenario: 'shear' });
+    expect(host.panel.state.dynamics).toMatchObject({ model: 'sixDof', wind: 'shear',
+      control: { roll: { maxRateDegS: 4 }, pitchYaw: { attitudeGain: 0.8 }, feedForward: 0.5 } });
+    configure.execute({ control: { pitchYaw: null, feedForward: null } });
+    expect(host.panel.state.dynamics?.control).toEqual({ roll: { maxRateDegS: 4 } });
+    configure.execute({ control: null });
+    expect(host.panel.state.dynamics?.control).toBeUndefined();
+  });
+
+  it('rejects an unknown field and a value outside its range, leaving the tuning as it was', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ control: { roll: { attitudeGain: 2 } } });
+    expect(() => configure.execute({ control: { yaw: {} } })).toThrow(/Unknown control field "yaw"/);
+    expect(() => configure.execute({ control: { roll: { gain: 1 } } })).toThrow(/Unknown control field "roll.gain"/);
+    expect(() => configure.execute({ control: { pitchYaw: { rateGain: 99 } } })).toThrow(/setup\.control\.pitchYawRateGain must be at most 30/);
+    expect(host.panel.state.dynamics?.control).toEqual({ roll: { attitudeGain: 2 } });
+  });
+
+  it('runs an attitude test only in a live six-DOF flight, in ISO axes', () => {
+    const run = tool(tools, 'run_attitude_test');
+    expect(() => run.execute({ axis: 'pitch', kind: 'step', amplitudeDeg: 0.01, holdS: 2 })).toThrow(/amplitudeDeg/);
+    expect(() => run.execute({ axis: 'nose', kind: 'step', amplitudeDeg: 1, holdS: 2 })).toThrow(/axis/);
+    expect(run.execute({ axis: 'pitch', kind: 'step', amplitudeDeg: 1, holdS: 2 })).toMatchObject({ ok: false });
+    let asked: unknown;
+    host.sim = { ...makeFakeSim(host.panel.getConfig()), cfg: { ...host.panel.getConfig(), dynamics: { model: 'sixDof', wind: 'calm', seed: 1 } },
+      startAttitudeTest: (spec: unknown) => { asked = spec; return { spec, startS: 12, t: [], command: [], response: [], limits: [], baselineRad: 0, done: false }; } } as unknown as Simulation;
+    host.player.live = true;
+    expect(run.execute({ axis: 'pitch', kind: 'doublet', amplitudeDeg: 2, holdS: 1 })).toMatchObject({ ok: true, startS: 12, durationS: 7 });
+    // ISO pitch up is the simulator's −z.
+    expect(asked).toEqual({ axis: 'z', sign: -1, kind: 'doublet', amplitudeRad: 2 * Math.PI / 180, holdS: 1 });
+    host.player.live = false;
+    expect(run.execute({ axis: 'yaw', kind: 'step', amplitudeDeg: -1, holdS: 1 })).toMatchObject({ ok: false });
+  });
+});
+
+// --- G02 ---
+describe('configure_mission: the navigation (roadmap G02)', () => {
+  it('merges the navigation field by field, keeps it across edits, and turns it off with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', navigation: { grade: 'custom', imu: { gyroBiasDegH: 2 }, gnssOutage: [60, 120] } });
+    expect(host.panel.state.dynamics?.navigation).toEqual({ grade: 'custom', imu: { gyroBiasDegH: 2 }, gnssOutage: [60, 120] });
+    configure.execute({ navigation: { imu: { accelBiasUg: 900, gyroBiasDegH: null }, starTracker: false } });
+    configure.execute({ windScenario: 'shear' });
+    expect(host.panel.state.dynamics).toMatchObject({ wind: 'shear', navigation: { grade: 'custom', imu: { accelBiasUg: 900 }, gnssOutage: [60, 120], starTracker: false } });
+    expect(() => configure.execute({ navigation: { lidar: true } })).toThrow(/Unknown navigation field "lidar"/);
+    expect(() => configure.execute({ navigation: { gnssRateHz: 100 } })).toThrow(/setup\.nav\.gnssRate must be at most 20/);
+    configure.execute({ navigation: null });
+    expect(host.panel.state.dynamics?.navigation).toBeUndefined();
+  });
+
+  it('reports what the navigation believes at the cursor', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).navigation).toBeNull();
+    const v = (x: number, y: number, z: number) => ({ x, y, z });
+    const navigation = { t: 1.4, r: v(6_778_137, 0, 0), v: v(0, 7_668.6, 0), positionError: v(1, -2, 3), velocityError: v(0.01, 0, 0), attitudeError: v(0, 0, 1e-4),
+      positionSigma: v(1, 1, 1), velocitySigma: v(0.01, 0.01, 0.01), attitudeSigma: v(1e-4, 1e-4, 1e-4), gyroBias: v(0, 0, 0), gyroBiasEstimate: v(0, 0, 0),
+      accelBias: v(0, 0, 0), accelBiasEstimate: v(0, 0, 0), gnss: 'outage', starTracker: 'unavailable', innovation: { position: 4 } };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), navigation };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).navigation;
+    expect(out).toMatchObject({ timeS: 1.4, gnss: 'outage', starTracker: 'unavailable', positionErrorM: { radial: 1, alongTrack: -2, crossTrack: 3 },
+      position3SigmaM: { radial: 3 }, innovation: { positionM: 4, velocityMs: null, attitudeArcsec: null } });
+    expect(out.believedApoapsisKm).toBeCloseTo(400, 0);
+  });
+});
+
+// --- G08 ---
+describe('the control system\'s failures (roadmap G08)', () => {
+  it('sets failures from a preset or a list, keeps them across edits, and turns them off with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'ariane64', controlFaults: { preset: 'ariane501', fdir: true } });
+    expect(host.panel.state.dynamics?.controlFaults).toEqual({ faults: [{ kind: 'imuFailure', time: 36.7, units: 'all' }], fdir: true, preset: 'ariane501' });
+    configure.execute({ windScenario: 'shear' });
+    expect(host.panel.state.dynamics?.controlFaults?.preset).toBe('ariane501');
+    configure.execute({ controlFaults: { faults: [{ kind: 'gyroBias', time: 30, units: [1, 2], axis: 'pitch', magnitude: 2 }] } });
+    expect(host.panel.state.dynamics?.controlFaults).toEqual({ faults: [{ kind: 'gyroBias', time: 30, units: [1, 2], axis: 'pitch', magnitude: 2 }], fdir: true });
+    expect(() => configure.execute({ controlFaults: { faults: [{ kind: 'gyroBias', time: 30, magnitude: 500 }] } })).toThrow(/setup\.faults\.magnitude must be at most 90/);
+    expect(() => configure.execute({ controlFaults: { faults: [{ kind: 'gnssLoss', time: 30 }] } })).toThrow(/setup\.faults\.kind/);
+    expect(() => configure.execute({ controlFaults: { lasers: true } })).toThrow(/Unknown controlFaults field "lasers"/);
+    configure.execute({ controlFaults: { fdir: null } });
+    expect(host.panel.state.dynamics?.controlFaults?.fdir).toBeUndefined();
+    configure.execute({ controlFaults: null });
+    expect(host.panel.state.dynamics?.controlFaults).toBeUndefined();
+  });
+
+  it('injects a failure only into a live six-DOF flight, checked first', () => {
+    const inject = tool(tools, 'inject_control_fault');
+    expect(inject.execute({ kind: 'gainSign', axis: 'yaw' })).toMatchObject({ ok: false });
+    let asked: unknown[] = [];
+    host.sim = { ...makeFakeSim(host.panel.getConfig()), cfg: { ...host.panel.getConfig(), dynamics: { model: 'sixDof', wind: 'calm', seed: 1 } },
+      state: { t: 42 }, rigidRuntime: {},
+      injectControlFault: (spec: unknown, fdir: unknown) => { asked = [spec, fdir]; return 'injected'; } } as unknown as Simulation;
+    host.player.live = true;
+    expect(inject.execute({ kind: 'gimbalHardover', engine: 3, axis: 'pitch', sign: -1, fdir: true })).toEqual({ ok: true, strikesAtS: 42 });
+    expect(asked).toEqual([{ kind: 'gimbalHardover', engine: 3, axis: 'pitch', sign: -1, time: 42 }, true]);
+    expect(() => inject.execute({ kind: 'gyroBias', units: [4] })).toThrow(/units/);
+    expect(() => inject.execute({ kind: 'accelBias' })).toThrow(/kind/);
+    host.player.live = false;
+    expect(inject.execute({ kind: 'gainSign' })).toMatchObject({ ok: false });
+  });
+
+  it('reports the failures and the FDIR at the cursor', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5, rigid: rigidTelemetry(0) });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).controlFaults).toBeNull();
+    const controlFaults = { fdir: true, active: [{ kind: 'gyroBias', since: 1, units: [1], axis: 'pitch' }], units: ['isolated', 'ok', 'ok'], selected: [2, 3],
+      openLoop: false, computer: 'primary', engines: [], jets: [], sensedRateBody: { x: 0, y: 0, z: 0.01 }, trueRateBody: { x: 0, y: 0, z: 0 } };
+    (sim.telemetry[1] as any).rigid = { ...rigidTelemetry(0), controlFaults };
+    const out = (tool(tools, 'read_flight_state').execute({}) as any).controlFaults;
+    expect(out).toMatchObject({ fdir: true, imuUnits: ['isolated', 'ok', 'ok'], imuInUse: [2, 3], computer: 'primary', sensorAttitudeErrorDegBody: null });
+    expect(out.sensedRateDegSBody.z).toBeCloseTo(0.573, 3);
+  });
+});
+
+// --- G01 ---
+describe('explicit ascent guidance (roadmap G01)', () => {
+  it('sets PEG or IGM, keeps it across edits, and turns it off with null', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9', explicitGuidance: { law: 'peg' } });
+    expect(host.panel.state.dynamics?.explicitGuidance).toEqual({ law: 'peg' });
+    configure.execute({ explicitGuidance: { law: 'igm', cycleS: 2 } });
+    configure.execute({ windScenario: 'shear' });
+    expect(host.panel.state.dynamics?.explicitGuidance).toEqual({ law: 'igm', cycleS: 2 });
+    configure.execute({ explicitGuidance: { cycleS: null } });
+    expect(host.panel.state.dynamics?.explicitGuidance).toEqual({ law: 'igm' });
+    expect(() => configure.execute({ explicitGuidance: { law: 'apollo' } })).toThrow(/setup\.explicit\.law/);
+    expect(() => configure.execute({ explicitGuidance: { cycleS: 9 } })).toThrow(/setup\.explicit\.cycle must be at most 4/);
+    expect(() => configure.execute({ explicitGuidance: { gain: 1 } })).toThrow(/Unknown explicitGuidance field "gain"/);
+    configure.execute({ explicitGuidance: null });
+    expect(host.panel.state.dynamics?.explicitGuidance).toBeUndefined();
+  });
+
+  it('reports the explicit guidance at the cursor', () => {
+    const sim = makeFakeSim(host.panel.getConfig());
+    host.sim = sim;
+    host.player.live = false;
+    host.player.cursor = 1.5;
+    host.player.replayFrame = makeFrame({ t: 1.5 });
+    expect((tool(tools, 'read_flight_state').execute({}) as any).explicitGuidance).toBeNull();
+    (sim.telemetry[1] as any).explicitGuidance = { law: 'peg', status: 'engaged', tGo: 300, vGo: 5400, predictedApoapsis: 499e3, predictedPeriapsis: 200e3,
+      targetApoapsis: 500e3, targetPeriapsis: 200e3, miss: 0.3, pitchDeg: 12, yawDeg: 0.1, standardPitchDeg: 9, stages: 1 };
+    expect((tool(tools, 'read_flight_state').execute({}) as any).explicitGuidance).toEqual({ law: 'peg', status: 'engaged', timeToGoS: 300, velocityToGainMs: 5400,
+      predictedCutoff: { periapsisKm: 200, apoapsisKm: 499 }, target: { periapsisKm: 200, apoapsisKm: 500 }, correctionMs: 0.3, pitchDeg: 12,
+      yawOutOfPlaneDeg: 0.1, standardPitchDeg: 9, stagesPlanned: 1 });
   });
 });

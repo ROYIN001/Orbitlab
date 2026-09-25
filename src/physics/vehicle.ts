@@ -33,6 +33,8 @@ export interface StageState {
   burnedOut: boolean;
   /** fraction of engines still running (engine-out failures) */
   engineFraction: number;
+  /** G08: the engines the FDIR shut down, by engine index; they are the first of the share `engineFraction` lost */
+  shutEngines?: number[];
   boosters: BoosterState[];
   /** mission time of first ignition */
   ignitionTime: number;

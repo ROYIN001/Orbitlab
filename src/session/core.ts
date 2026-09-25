@@ -79,6 +79,16 @@ export class SimCore {
           if (this.sim.commandToru(message.cmd)) this.recorder.captureChangedState();
           this.report();
           break;
+        case 'attitudeTest':
+          // E04: the shell has checked it; the worker's own checks decide.
+          this.sim.startAttitudeTest(message.spec);
+          this.report();
+          break;
+        case 'controlFault':
+          // G08: the shell has checked it; the worker's own checks decide.
+          this.sim.injectControlFault(message.spec, message.fdir);
+          this.report();
+          break;
       }
     } catch (err) {
       this.fastForward = null;

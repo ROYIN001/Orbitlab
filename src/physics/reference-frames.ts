@@ -1,7 +1,7 @@
 /**
  * The reference frames of flight dynamics at one instant of a flight (roadmap
  * E01), and the angles between them, in ISO 1151 or ГОСТ 20058-80 axes
- * (docs/PHYSICS.md §2c, §2d). Pure vector arithmetic on a recorded frame: the
+ * (docs/PHYSICS.md §2c, §2k). Pure vector arithmetic on a recorded frame: the
  * 3-D view (src/render/frames.ts) draws what this returns.
  *
  * Every frame is a triad of unit vectors in ECI:

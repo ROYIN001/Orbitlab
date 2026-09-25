@@ -206,6 +206,16 @@ details[open] summary { margin-bottom: 4px; }
 .quickstart-button strong { font-size: 13px; color: var(--accent); }
 .quickstart-button span { font-size: 11px; line-height: 1.5; color: var(--muted); }
 .quickstart-button:hover:not(:disabled) { border-color: var(--accent-line); }
+.mission-share h2 { margin: 0 0 4px; font-size: 14px; }
+.share-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.share-actions .ghost-button { font-size: 12px; padding: 7px 4px; }
+.share-notice { position: relative; margin-top: 10px; padding: 8px 28px 8px 10px; border-radius: 7px; font-size: 12px; line-height: 1.5;
+  border: 1px solid var(--line2); background: var(--panel2); }
+.share-notice[data-level="warn"] { border-color: #b8893a; }
+.share-notice[data-level="error"] { border-color: #c2553f; }
+.share-notice p { margin: 0; }
+.share-notice ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); }
+.share-notice-close { position: absolute; top: 4px; right: 6px; font-size: 16px; line-height: 1; color: var(--muted); }
 .experience-section .experience-label { margin-top: 0; }
 .experience-glossary { padding-top: 6px; border-top: 1px solid var(--line); }
 #setup[data-experience="learning"] .guidance-parameters:not([data-invalid="true"]) { display: none; }
@@ -1066,3 +1076,77 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
   .mobile-workspace-nav a { flex: 1; min-height: 40px; padding: 10px; text-align: center; border: 1px solid var(--line); border-radius: 6px; color: var(--text); }
   #setup, #viewport, #telemetry { scroll-margin-top: 12px; }
 }
+
+/* --- E04: a sub-heading inside a setup section (the autopilot's channels). */
+.field-subtitle { margin: 12px 0 0; font-size: 12px; font-weight: 600; color: var(--text); }
+
+/* G08: the failures of the control system in the setup panel. */
+.fault-row { margin: 10px 0; padding: 8px 10px 4px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255, 107, 107, 0.04); }
+.fault-row-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.fault-row .field-note { margin-top: 4px; }
+.fault-remove { width: auto; flex: 0 0 auto; margin-top: 0; padding: 2px 10px; }
+.fault-buttons { display: flex; gap: 8px; margin-top: 8px; }
+.fault-buttons .ghost-button { flex: 1 1 0; margin-top: 0; }
+.fault-preset-note { border-left: 2px solid #ff8f8f; padding-left: 8px; }
+.field-note.warn { color: var(--warn); }
+
+/* U03: the offline app's notices (src/pwa/register.ts) */
+.pwa-toast {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 50;
+  display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 16px; border-radius: 9px; font-size: 13px;
+  background: var(--panel2); border: 1px solid var(--accent-line); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+.pwa-toast-action { padding: 6px 12px; border-radius: 6px; background: var(--accent); color: #06231c; font-weight: 600; }
+.pwa-toast-close { font-size: 17px; line-height: 1; color: var(--muted); }
+
+/* U06: the "PNG" button a chart shows on hover or focus (src/ui/chart-export.ts) */
+.chart-png {
+  position: fixed; z-index: 40; padding: 2px 7px; border-radius: 5px;
+  font: 600 10px/1.4 var(--sans); letter-spacing: 0.4px; color: var(--accent);
+  background: rgba(8, 12, 19, 0.88); border: 1px solid var(--accent-line);
+}
+.chart-png:hover, .chart-png:focus-visible { background: var(--accent-weak); }
+canvas.chart:focus-visible { outline: 1px solid var(--accent-line); outline-offset: 1px; }
+
+/* U02: comparing two flights (src/ui/compare.ts) */
+.compare-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 6px; }
+.compare-actions .btn { font-size: 11px; padding: 6px 4px; }
+.compare-chip { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line2); border-radius: 6px; font-size: 12px; }
+.compare-chip span:nth-child(2) { flex: 1; }
+.compare-swatch { width: 18px; border-top: 2px dashed #c3a6ff; }
+.compare-clear { font-size: 16px; line-height: 1; color: var(--muted); }
+.compare-message { font-size: 12px; color: #efa47e; margin: 4px 0; }
+.compare-table table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+.compare-table th, .compare-table td { padding: 3px 4px; border-bottom: 1px solid var(--line); text-align: left; font-weight: 400; }
+.compare-table thead th { color: var(--muted); font-size: 10px; letter-spacing: 0.4px; text-transform: uppercase; }
+.compare-table td.num { text-align: right; font-family: ui-monospace, monospace; white-space: nowrap; }
+
+/* V01: the viewer's launch audio (src/ui/soundtrack-panel.ts) */
+.watch-audio { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.watch-audio h3 { margin: 0 0 4px; font-size: 13px; }
+.watch-audio-note { margin: 0 0 8px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.watch-audio-list { display: grid; gap: 4px; }
+.watch-audio-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) auto auto auto; gap: 8px; align-items: center; font-size: 11px; }
+.watch-audio-row strong { font-weight: 600; }
+.watch-audio-status { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-audio-t0 { display: flex; gap: 4px; align-items: center; color: var(--muted); }
+.watch-audio-t0 input { width: 5.5em; height: 22px; font-size: 11px; padding: 1px 4px; border: 1px solid var(--line2); border-radius: 4px; background: var(--panel2); }
+.watch-audio-btn { padding: 3px 8px; border: 1px solid var(--line2); border-radius: 5px; color: #a7b5c7; }
+.watch-audio-btn:hover { color: var(--text); border-color: var(--accent-line); }
+@media (max-width: 640px) { .watch-audio-row { grid-template-columns: 1fr 1fr; } }
+
+/* P07: the orbit-lifetime dialog (src/ui/lifetime.ts) */
+.lifetime-dialog { width: min(820px, calc(100vw - 32px)); }
+.life-start { font: 12px ui-monospace, monospace; color: var(--accent); }
+.life-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; margin-top: 10px; }
+.life-forces { border: 1px solid var(--line2); border-radius: 7px; padding: 8px 12px; display: grid; gap: 6px; }
+.life-forces legend { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.life-check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.life-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+.life-settings .field { margin-top: 0; }
+.life-run { margin-top: 12px; min-width: 140px; }
+.life-status { font-size: 12px; color: var(--muted); min-height: 1.4em; }
+.life-verdict { font-size: 15px; font-weight: 600; color: var(--accent); }
+.life-chart { width: 100%; height: 200px; display: block; margin-top: 8px; }
+@media (max-width: 640px) { .life-form, .life-settings { grid-template-columns: 1fr; } }

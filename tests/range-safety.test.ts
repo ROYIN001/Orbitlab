@@ -40,7 +40,7 @@ import { vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import {
   azimuthAllowedFor, azimuthInWindow, corridorReach, inclinationCorridor, launchDescendingFor, launchDirection, launchWindows,
-  minInclinationFor, planMission, resolveTarget, CORRIDOR_SLACK, DOGLEG_LIMIT_DEG,
+  minInclinationFor, planMission, resolveTarget, CORRIDOR_SLACK, DOGLEG_LIMIT_DEG, ascentInclinationFor, retrogradeOnly,
 } from '../src/physics/mission';
 import { circularSpeed, rotatingLaunchAzimuth, wrapPi } from '../src/physics/orbital';
 import { guidanceForVehicle, DEFAULT_FAILURE } from '../src/physics/defaults';
@@ -285,5 +285,65 @@ describe('range safety · the planner and the panel', () => {
       }
     }
     expect(wrong, wrong.join('\n')).toEqual([]);
+  });
+});
+
+/**
+ * Roadmap C04: Palmachim launches only against the Earth's rotation, west over
+ * the Mediterranean, so its floor is retrograde. `retrogradeOnly` is the one
+ * rule that differs for it, and applies to no other site.
+ */
+describe('range safety · a retrograde-only site (Palmachim)', () => {
+  const palmachim = siteById('palmachim');
+
+  it('is the only site whose floor is retrograde', () => {
+    expect(SITES.filter(retrogradeOnly).map((s) => s.id)).toEqual(['palmachim']);
+  });
+
+  it('flies the Ofeq planes west-north-west, inside its window', () => {
+    for (const incDeg of [141.7, 142.5, 143.5]) {
+      expect(inclinationCorridor(palmachim, incDeg * DEG), `${incDeg}°`).toBe('ok');
+      const dir = launchDirection(palmachim, incDeg * DEG);
+      expect(dir.allowed).toBe(true);
+      expect(dir.doglegDeg).toBe(0);
+      expect(outsideDeg(palmachim, dir.azimuthRotating)).toBe(0);
+      const az = ((dir.azimuthRotating * RAD) % 360 + 360) % 360;
+      expect(az).toBeGreaterThan(280);
+      expect(az).toBeLessThan(300);
+    }
+  });
+
+  it('refuses every prograde plane, polar and sun-synchronous ones included', () => {
+    for (const incDeg of [32, 51.64, 90, 97.8, 120]) {
+      expect(inclinationCorridor(palmachim, incDeg * DEG), `${incDeg}°`).toBe('belowMinimum');
+    }
+    expect(inclinationCorridor(palmachim, 150 * DEG)).toBe('aboveCorridor');
+  });
+
+  it('plans the ascent into its own floor and calls anything below it unreachable', () => {
+    const iss = resolveTarget(orbitById('iss'), palmachim, T);
+    expect(ascentInclinationFor(iss, palmachim)).toEqual({ inc: minInclinationFor(palmachim), reachable: false });
+    const ofeq = { ...iss, inclination: 142.5 * DEG };
+    expect(ascentInclinationFor(ofeq, palmachim)).toEqual({ inc: 142.5 * DEG, reachable: true });
+    // its 'site' preset is its own retrograde floor, and reachable
+    const leo = resolveTarget(orbitById('leo'), palmachim, T);
+    expect(leo.inclination * RAD).toBeCloseTo(141.5, 6);
+    expect(inclinationCorridor(palmachim, leo.inclination)).toBe('ok');
+  });
+});
+
+describe('launch sites no vehicle flies from yet (C04)', () => {
+  it('are Yasny, Kapustin Yar, Svobodny and Palmachim, and validation refuses them for every vehicle', async () => {
+    const { VEHICLES } = await import('../src/data/vehicles');
+    const { validateConfigInput } = await import('../src/config/validation');
+    const unflown = SITES.filter((s) => !VEHICLES.some((v) => v.sites.includes(s.id))).map((s) => s.id);
+    expect(unflown).toEqual(['yasny', 'kapustinyar', 'svobodny', 'palmachim']);
+    for (const siteId of unflown) {
+      const issues = validateConfigInput({
+        vehicleId: 'soyuz21a', siteId, satelliteId: 'crew', payloadMass: 7150, orbit: { ...orbitById('leo') },
+        launchTime: T, guidanceOverrides: {}, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
+      });
+      expect(issues.map((i) => i.field)).toContain('setup.site');
+    }
   });
 });

@@ -13,6 +13,11 @@ import { FLEX_LIMITS } from '../physics/rigid/flex';
 import { PROFILE_IDS, rendezvousAvailable } from '../physics/rendezvous/profiles';
 import { PORT_IDS } from '../physics/rendezvous/ports';
 import type { MissionConfig } from '../types';
+import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS, controlFieldKey, controlProblems } from '../physics/rigid/control-config';
+import { AIDING_KEYS, AIDING_LIMITS, IMU_KEYS, NAV_FIELD_KEYS, navigationProblems } from '../physics/nav/config';
+import { controlFaultsProblems } from '../physics/rigid/fault-config';
+import { explicitGuidanceProblems } from '../physics/explicit-guidance';
+import { IMU_LIMITS } from '../physics/nav/sensors';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
 export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection' | 'suborbital'
@@ -57,6 +62,17 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
   'setup.flex.bandwidthRatio': { min: FLEX_LIMITS.bandwidthRatio[0], max: FLEX_LIMITS.bandwidthRatio[1] },
   'setup.flex.sloshDamping': { min: FLEX_LIMITS.sloshDamping[0] * 100, max: FLEX_LIMITS.sloshDamping[1] * 100 },
   'setup.flex.bendingDamping': { min: FLEX_LIMITS.bendingDamping[0] * 100, max: FLEX_LIMITS.bendingDamping[1] * 100 },
+  // --- E04: the attitude autopilot's tuning, in the units the panel shows
+  ...Object.fromEntries(CONTROL_CHANNELS.flatMap((channel) => CONTROL_CHANNEL_KEYS.map((key) =>
+    [controlFieldKey(channel, key), { min: CONTROL_LIMITS[key][0], max: CONTROL_LIMITS[key][1] }]))),
+  [controlFieldKey('feedForward')]: { min: CONTROL_LIMITS.feedForward[0] * 100, max: CONTROL_LIMITS.feedForward[1] * 100 },
+  // --- G02: the navigation's figures, in the units the panel shows
+  ...Object.fromEntries(IMU_KEYS.map((key) => [NAV_FIELD_KEYS[key], { min: IMU_LIMITS[key][0], max: IMU_LIMITS[key][1] }])),
+  ...Object.fromEntries(AIDING_KEYS.map((key) => [NAV_FIELD_KEYS[key], { min: AIDING_LIMITS[key][0], max: AIDING_LIMITS[key][1] }])),
+  [NAV_FIELD_KEYS.gnssOutageStart]: { min: 0, max: 1e6 },
+  [NAV_FIELD_KEYS.gnssOutageEnd]: { min: 0, max: 1e6 },
+  // --- G01: the explicit guidance's cycle
+  'setup.explicit.cycle': { min: 0.1, max: 4 },
 };
 
 /** Vehicle programmes are trusted data, not fresh user overrides. Extending a
@@ -213,6 +229,13 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
       if (!['calm', 'crosswind', 'shear'].includes(d.wind)) issues.push({ field: 'setup.dynamics.wind', code: 'selection' });
       check(d.seed, 'setup.dynamics.seed', NUMBER_FIELDS['setup.dynamics.seed']);
       if (d.flex !== undefined) issues.push(...flexIssues(d.flex));
+      if (d.control !== undefined) issues.push(...controlIssues(d.control));
+      if (d.navigation !== undefined) issues.push(...navigationProblems(d.navigation).map(({ field, value, limits }): ValidationIssue =>
+        (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
+      if (d.controlFaults !== undefined) issues.push(...controlFaultsProblems(d.controlFaults, { navigation: d.navigation !== undefined })
+        .map(({ field, value, limits }): ValidationIssue => (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
+      if (d.explicitGuidance !== undefined) issues.push(...explicitGuidanceProblems(d.explicitGuidance)
+        .map(({ field, value, limits }): ValidationIssue => (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
     }
   }
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });
@@ -267,6 +290,16 @@ function flexIssues(flex: unknown): ValidationIssue[] {
     if (issue) issues.push(issue);
   }
   return issues;
+}
+
+/** The attitude autopilot's tuning (roadmap E04): each setting within its range. */
+function controlIssues(control: unknown): ValidationIssue[] {
+  return controlProblems(control).map(({ field, value, limits }): ValidationIssue => {
+    if (!limits) return { field, code: 'selection' };
+    const scale = field === controlFieldKey('feedForward') ? 100 : 1;
+    return numericIssue(typeof value === 'number' ? value * scale : value, field, { min: limits[0] * scale, max: limits[1] * scale })
+      ?? { field, code: 'selection' };
+  });
 }
 
 export function issueText(issue: ValidationIssue): string {

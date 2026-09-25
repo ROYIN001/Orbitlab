@@ -33,7 +33,8 @@ export type Quantity =
   | 'rollRate' | 'pitchRate' | 'yawRate'
   | 'alpha' | 'beta'
   | 'pitchAngle' | 'rollAngle' | 'yawAngle' | 'pathAngle' | 'trackAngle'
-  | 'altitude' | 'airspeed' | 'verticalSpeed' | 'dynamicPressure' | 'mach' | 'loadFactor' | 'mass' | 'thrust';
+  | 'altitude' | 'airspeed' | 'verticalSpeed' | 'dynamicPressure' | 'mach' | 'loadFactor' | 'mass' | 'thrust'
+  | 'rollMoment' | 'pitchMoment' | 'yawMoment';
 
 const s = (base: string, sub?: string): NotationSymbol => (sub ? { base, sub } : { base });
 /** The table, in the order the physics dialog lists it. */
@@ -59,6 +60,10 @@ export const SYMBOLS: Readonly<Record<Quantity, Readonly<Record<Notation, Notati
   loadFactor: { iso: s('n'), gost: s('n') },
   mass: { iso: s('m'), gost: s('m') },
   thrust: { iso: s('F'), gost: s('P') },
+  // G03: the moments about the body axes (the attitude-loop inspector).
+  rollMoment: { iso: s('L'), gost: s('M', 'x') },
+  pitchMoment: { iso: s('M'), gost: s('M', 'z') },
+  yawMoment: { iso: s('N'), gost: s('M', 'y') },
 };
 export const QUANTITIES = Object.keys(SYMBOLS) as Quantity[];
 
