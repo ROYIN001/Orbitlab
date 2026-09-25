@@ -41,6 +41,12 @@ export { exhaustKind, type ExhaustKind };
 type PuffKind = ExhaustKind | 'vent' | 'sepMotor' | 'staging';
 /** How long each separation keeps puffing, s after it */
 const SEPARATION_PUFF: Record<'vent' | 'sepMotor' | 'staging', number> = { vent: 2, sepMotor: 1.2, staging: 0.8 };
+/**
+ * A separation's cloud leaves with its hardware's speed through the air and
+ * is slowed by it, s: the Korolev cross's clouds keep up with their boosters
+ * for a while. Grows with altitude, where the air is thin (estimates).
+ */
+const CARRY: Partial<Record<PuffKind, number>> = { vent: 2.5, sepMotor: 1.2, staging: 1.0 };
 
 
 interface ExhaustLook {
@@ -70,9 +76,9 @@ const LOOKS: Record<PuffKind, ExhaustLook> = {
   hypergolic: { color: 0xb38566, opacity: 0.4, lifetime: 220, fade: [15e3, 35e3], width: 1.2, spread: 1.8 },
   // vented oxygen boils into a cloud that billows out in the thin air of a separation at 40–60 km;
   // in near-vacuum a separation motor's or a stage's puff spreads wide and fast (`spread` grows with altitude)
-  vent: { color: 0xf3f6f9, opacity: 0.3, lifetime: 30, fade: [90e3, 140e3], width: 1.5, spread: 14 },
-  sepMotor: { color: 0xe6e5e1, opacity: 0.7, lifetime: 45, fade: [110e3, 160e3], width: 2.5, spread: 4 },
-  staging: { color: 0xd4d5d8, opacity: 0.4, lifetime: 20, fade: [120e3, 180e3], width: 1.1, spread: 5 },
+  vent: { color: 0xf3f6f9, opacity: 0.12, lifetime: 30, fade: [90e3, 140e3], width: 1.5, spread: 5 },
+  sepMotor: { color: 0xe6e5e1, opacity: 0.3, lifetime: 45, fade: [110e3, 160e3], width: 2.5, spread: 2 },
+  staging: { color: 0xd4d5d8, opacity: 0.2, lifetime: 20, fade: [120e3, 180e3], width: 1.1, spread: 2.5 },
 };
 
 /**
@@ -97,6 +103,8 @@ interface Emission {
   kind: PuffKind;
   /** position fixed to the ground: the ECI point turned back by the Earth's rotation at `t` */
   x: number; y: number; z: number;
+  /** a separation's cloud: its speed through the air at `t`, in the same ground-fixed axes, m/s, and how long the air takes to stop it, s */
+  carry?: { x: number; y: number; z: number; tau: number };
   altitude: number;
   diameter: number;
   /** 0–1: how much smoke this engine leaves at this altitude */
@@ -229,8 +237,13 @@ export class ExhaustTrails {
       if (e.frame % stride !== 0) continue;
       const alpha = e.strength * look.opacity * smoothstep(0, 0.35, age) * (1 - smoothstep(0.3 * look.lifetime, look.lifetime, age));
       if (alpha < 0.01) continue;
-      // the ground-fixed point, turned with the Earth to now
-      let px = e.x * cosT - e.y * sinT, py = e.x * sinT + e.y * cosT, pz = e.z;
+      // the ground-fixed point, carried on by its own speed while the air slows it, turned with the Earth to now
+      let gx = e.x, gy = e.y, gz = e.z;
+      if (e.carry) {
+        const k = e.carry.tau * (1 - Math.exp(-age / e.carry.tau));
+        gx += e.carry.x * k; gy += e.carry.y * k; gz += e.carry.z * k;
+      }
+      let px = gx * cosT - gy * sinT, py = gx * sinT + gy * cosT, pz = gz;
       if (this.wind && age > 0) {
         const w = windVelocityECI(this.wind, v(px, py, pz), e.altitude, t - age / 2);
         px += w.x * age; py += w.y * age; pz += w.z * age;
@@ -248,7 +261,9 @@ export class ExhaustTrails {
       }
       this.axis[k] = ax; this.axis[k + 1] = ay; this.axis[k + 2] = az;
       // the column widens with age, and faster where the air is thin
-      const width = e.diameter * look.width * (1 + 0.6 * Math.sqrt(age)) + look.spread * Math.pow(age, 0.8) * (1 + e.altitude / 12e3);
+      // (a separation's puff spreads on its own gas, less with the thin air)
+      const thin = 1 + e.altitude / (e.carry ? 40e3 : 12e3);
+      const width = e.diameter * look.width * (1 + 0.6 * Math.sqrt(age)) + look.spread * Math.pow(age, 0.8) * thin;
       this.size[n * 2] = width;
       this.size[n * 2 + 1] = Math.max(width, len * stride * 1.8);
       const c = this.colors[e.kind];
@@ -278,15 +293,23 @@ export class ExhaustTrails {
   private emit(f: VisualFrame, index: number): void {
     // the ground-fixed frame: the ECI point turned back by the Earth's rotation
     const c = Math.cos(-OMEGA_EARTH * f.t), s = Math.sin(-OMEGA_EARTH * f.t);
-    const add = (key: string, kind: PuffKind, p: Vec3, diameter: number) => {
+    const add = (key: string, kind: PuffKind, p: Vec3, diameter: number, vel?: Vec3) => {
       const strength = this.strength(kind, f.altitude);
       if (strength < 0.02) return;
       const i = this.emissions.length;
-      const prev = this.lastOfKey.get(key);
+      // an exhaust column joins its own neighbours; a separation's cloud is a puff
+      const prev = vel ? undefined : this.lastOfKey.get(key);
       if (prev !== undefined && f.t - this.emissions[prev].t < 1.5) this.emissions[prev].next = i;
       this.lastOfKey.set(key, i);
-      this.emissions.push({ t: f.t, key, kind, x: p.x * c - p.y * s, y: p.x * s + p.y * c, z: p.z,
-        altitude: f.altitude, diameter, strength, next: -1, frame: index });
+      const e: Emission = { t: f.t, key, kind, x: p.x * c - p.y * s, y: p.x * s + p.y * c, z: p.z,
+        altitude: f.altitude, diameter, strength, next: -1, frame: index };
+      const tau0 = CARRY[kind];
+      if (vel && tau0) {
+        // through the air: less the air's own turning with the Earth
+        const ax = vel.x + OMEGA_EARTH * p.y, ay = vel.y - OMEGA_EARTH * p.x;
+        e.carry = { x: ax * c - ay * s, y: ax * s + ay * c, z: vel.z, tau: tau0 * (1 + f.altitude / 30e3) };
+      }
+      this.emissions.push(e);
     };
     const base = this.stackBase(f);
     if (f.liftoff && !f.destroyed && !f.abort) {
@@ -315,13 +338,13 @@ export class ExhaustTrails {
         if (kind === 'solid') {
           if (since < SEPARATION_PUFF.sepMotor) {
             // separation motors at the nose and at the aft skirt push the booster clear
-            add(`sepN${d.id}`, 'sepMotor', along(d.visual.length * 0.9), d.visual.diameter);
-            add(`sepA${d.id}`, 'sepMotor', d.r, d.visual.diameter);
+            add(`sepN${d.id}`, 'sepMotor', along(d.visual.length * 0.9), d.visual.diameter, d.v);
+            add(`sepA${d.id}`, 'sepMotor', d.r, d.visual.diameter, d.v);
           }
-        } else if (since < SEPARATION_PUFF.vent) add(`vent${d.id}`, 'vent', along(d.visual.length * 0.85), d.visual.diameter);
+        } else if (since < SEPARATION_PUFF.vent) add(`vent${d.id}`, 'vent', along(d.visual.length * 0.85), d.visual.diameter, d.v);
       } else if ((d.visual.kind === 'stage' || d.visual.kind === 'upperStage') && since < SEPARATION_PUFF.staging) {
         // the spent stage's debris point is its separation plane
-        add(`stage${d.id}`, 'staging', d.r, d.visual.diameter);
+        add(`stage${d.id}`, 'staging', d.r, d.visual.diameter, d.v);
       }
     }
     const a = f.abort;
@@ -385,9 +408,11 @@ const VERT = /* glsl */ `
   attribute vec4 iLook;   // colour, opacity
   varying vec2 vUv;
   varying vec4 vLook;
+  varying float vStreak;
   void main() {
     vUv = uv;
     vLook = iLook;
+    vStreak = step(0.5, length(iAxis));
     vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
     // a streak along the column as it is seen: shortened when it points at the eye
     vec3 a = (modelViewMatrix * vec4(iAxis, 0.0)).xyz;
@@ -408,10 +433,11 @@ const FRAG = /* glsl */ `
   uniform float uLight;
   varying vec2 vUv;
   varying vec4 vLook;
+  varying float vStreak;
   void main() {
     #include <logdepthbuf_fragment>
-    // along the column only the blob's middle: a streak with no gaps between its neighbours
-    vec4 t = texture2D(uMap, vec2(0.5 + (vUv.x - 0.5) * 0.45, vUv.y));
+    // along a column only the blob's middle: a streak with no gaps between its neighbours; a lone puff whole
+    vec4 t = texture2D(uMap, vec2(0.5 + (vUv.x - 0.5) * mix(1.0, 0.45, vStreak), vUv.y));
     float a = t.a * vLook.a;
     if (a < 0.004) discard;
     gl_FragColor = vec4(vLook.rgb * t.rgb * uLight, a);
