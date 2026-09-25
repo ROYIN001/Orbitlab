@@ -206,6 +206,16 @@ details[open] summary { margin-bottom: 4px; }
 .quickstart-button strong { font-size: 13px; color: var(--accent); }
 .quickstart-button span { font-size: 11px; line-height: 1.5; color: var(--muted); }
 .quickstart-button:hover:not(:disabled) { border-color: var(--accent-line); }
+.mission-share h2 { margin: 0 0 4px; font-size: 14px; }
+.share-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.share-actions .ghost-button { font-size: 12px; padding: 7px 4px; }
+.share-notice { position: relative; margin-top: 10px; padding: 8px 28px 8px 10px; border-radius: 7px; font-size: 12px; line-height: 1.5;
+  border: 1px solid var(--line2); background: var(--panel2); }
+.share-notice[data-level="warn"] { border-color: #b8893a; }
+.share-notice[data-level="error"] { border-color: #c2553f; }
+.share-notice p { margin: 0; }
+.share-notice ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); }
+.share-notice-close { position: absolute; top: 4px; right: 6px; font-size: 16px; line-height: 1; color: var(--muted); }
 .experience-section .experience-label { margin-top: 0; }
 .experience-glossary { padding-top: 6px; border-top: 1px solid var(--line); }
 #setup[data-experience="learning"] .guidance-parameters:not([data-invalid="true"]) { display: none; }

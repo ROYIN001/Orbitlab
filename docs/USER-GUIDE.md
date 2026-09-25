@@ -55,6 +55,19 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    the ship is cut off short of orbit (perigee between −1000 and 0 km, below the ground) and
    flies itself home to a splashdown about an hour later; such a flight may carry no payload.
 
+**Share & save the mission**, at the top of the panel, keeps a mission beyond the tab:
+**Copy link** puts an address on the clipboard that opens Orbitlab on this exact mission —
+vehicle, site, payload, orbit, launch time, guidance edits, failure scenario, recovery and every
+Engineer setting (six-DOF or point mass, wind, slosh and bending, the autopilot's gains,
+navigation, control-system failures, PEG/IGM) — and **Save file** / **Open file** do the same
+through a `.orbitlab.json` file. The workspace also remembers the last mission by itself, so
+closing the tab and coming back in Explore or Engineer finds it where you left it. A link or
+file is checked the same way the WebMCP `configure_mission` tool checks its input: a value
+that cannot be used (a perigee above the apogee, a gain out of range, a site the vehicle does
+not fly from) goes back to its default, the rest of the mission is kept, and a note under the
+buttons lists what was reset. The file carries a format version, so a file from a later
+Orbitlab still opens as far as this one understands it, and says so.
+
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
 program**, which flies the ascent headlessly over a grid of values and keeps the one with

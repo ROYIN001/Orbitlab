@@ -100,6 +100,20 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 
 Twenty further items are kept for later, once these are done.
 
+Eight of the "interesting" items are being done alongside them on branch
+`claude/interest-group-8`, in this order:
+
+| Item | |
+|---|---|
+| U01 mission links and mission files | done |
+| U03 install as an app, work offline (PWA) | |
+| C04 more launch sites (Yasny, Kapustin Yar, Svobodny, Palmachim) | |
+| U06 chart and flight-report export | |
+| U02 comparing two flights | |
+| V01 sound | |
+| P07 long-term orbit perturbations | |
+| V02 physically based sky | |
+
 ## Known limitations
 
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.

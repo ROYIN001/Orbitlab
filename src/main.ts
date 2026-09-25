@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
+import { MISSION_PARAM, decodeMissionParam, loadStoredMission, saveStoredMission } from './config/mission-file';
 import { SceneManager, loadEarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
@@ -461,11 +462,36 @@ class App {
     this.watchPixelRatio();
     this.resize();
     document.getElementById('loading')!.classList.add('hidden');
-    // The landing page and the viewer open on the featured launch standing on
-    // its pad in daylight; the workspace opens on whatever the panel holds.
-    if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
-    else this.preview(this.panel.getConfig());
+    // A mission link opens the workspace on its mission; otherwise the landing
+    // page and the viewer open on the featured launch standing on its pad in
+    // daylight, and the workspace on the mission it held when it was closed.
+    if (await this.openMissionLink()) { /* previewed by the panel */ }
+    else if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
+    else {
+      const stored = loadStoredMission();
+      if (stored) this.panel.share.apply(stored, 'stored');
+      else this.preview(this.panel.getConfig());
+    }
     requestAnimationFrame((now) => this.frame(now));
+  }
+
+  /**
+   * The mission a link carries (`?m=…`, roadmap U01), loaded into the
+   * workspace. The parameter comes off the address once read, so the address
+   * does not go on naming a mission the user has since edited.
+   */
+  private async openMissionLink(): Promise<boolean> {
+    const url = new URL(location.href);
+    const param = url.searchParams.get(MISSION_PARAM);
+    if (param === null) return false;
+    url.searchParams.delete(MISSION_PARAM);
+    let raw: unknown = null;
+    try { raw = await decodeMissionParam(param); } catch { /* reported as unusable below */ }
+    if (this.lean) this.setMode('explore');
+    history.replaceState(null, '', `${url.pathname}${url.search}${hashForMode(this.mode)}`);
+    const parsed = this.panel.share.apply(raw, 'link');
+    if (!parsed.usable) this.preview(this.panel.getConfig());
+    return true;
   }
 
   /**
@@ -761,6 +787,10 @@ class App {
 
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
+    // The workspace's mission outlives the tab (roadmap U01): every edit, from
+    // the panel or over WebMCP, previews. The viewer's prepared launches do
+    // not replace it.
+    if (!this.lean) saveStoredMission(this.panel.missionState());
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;

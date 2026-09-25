@@ -43,6 +43,7 @@ import { symbolText, withSymbol, type Quantity } from './notation';
 import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
 import type { VisualFrame } from '../physics/frame';
+import { downloadBlob } from './download';
 
 type Range = 'mission' | 'ascent';
 
@@ -600,12 +601,7 @@ export class TelemetryPanel {
     const sim = this.live;
     if (!sim) return;
     const csv = buildTelemetryCsv(sim);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = telemetryCsvFilename(sim);
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    downloadBlob(new Blob([csv], { type: 'text/csv' }), telemetryCsvFilename(sim));
   }
 }
 
