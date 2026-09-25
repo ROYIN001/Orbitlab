@@ -183,7 +183,7 @@ describe('spatial thrust and finite authority data', () => {
     const running = landing.engines.filter(e => e.thrustBudgetN > 0);
     expect(running.map(e => e.id)).toEqual(['s1.engine.8']);
     expect(cross(sub(running[0].positionBody, landing.cg), v3(100, 20, 30)).x).toBe(0);
-    expect(landing.mass).toBeCloseTo(45600, 9);
+    expect(landing.mass).toBeCloseTo(spec.stages[0].dryMass + 20000, 9);
   });
 
   it('models Soyuz fixed mains and verniers as six/eight-chamber shared-feed clusters', () => {

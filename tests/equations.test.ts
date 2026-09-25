@@ -76,7 +76,7 @@ describe('the equation record (roadmap E02)', () => {
 describe('the equations panel\'s numbers', () => {
   const sim = new Simulation(mission('sixDof'), { headless: true });
   const frames: { t: number; frame: VisualFrame; list: Equation[]; gost: Equation[] }[] = [];
-  const marks = [30, 62, 127.3, 200];
+  const marks = [30, 62, 131.5, 200];
   let k = 0;
   while (k < marks.length) {
     sim.step(sim.suggestedDt());
@@ -105,7 +105,8 @@ describe('the equations panel\'s numbers', () => {
   });
 
   it('says when a limiter, not the gain, sets the rate command', () => {
-    // T+127.3 s: the load relief has just switched off, and the stack slews at its rate limit (see G03).
+    // T+131.5 s: the load relief switched off at T+130.5 s, and the stack slews at its rate limit
+    // until T+135.4 s (see G03; T+127.3 s before the published first-stage masses).
     const control = byId(frames[2].list, 'control');
     expect(control.check).toBeUndefined();
     expect(control.note).toBe('eq.note.rateLimited');

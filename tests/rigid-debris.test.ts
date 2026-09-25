@@ -85,18 +85,22 @@ describe('physical detached bodies', () => {
       expect(data.debris.recovery!.burning).toBe(false);
       expect(data.debris.recovery!.propellant).toBe(fuel);
     }
-    let starts = data.debris.recovery!.burning ? 1 : 0, wasBurning = data.debris.recovery!.burning;
+    // Whether the stage is still burning from the first step depends on its
+    // thrust-to-weight: the published 22.2 t stage (docs/VALIDATION.md, F1)
+    // coasts from 255.9 m where the old 25.6 t one braked first. Either way
+    // it must reach the ground on exactly one final ignition.
+    let ignitions = 0, wasBurning = data.debris.recovery!.burning;
     let lastOff = 0;
     for (let t = 0.01; t < 60 && data.debris.alive; t += 0.01) {
       body.step(t, 0.01, () => 0);
       if (data.debris.recovery!.burning && !wasBurning) {
-        starts++; expect(t - lastOff).toBeGreaterThanOrEqual(TERMINAL_RESTART.ignitionDelayS);
+        ignitions++; expect(t - lastOff).toBeGreaterThanOrEqual(TERMINAL_RESTART.ignitionDelayS);
       }
       if (!data.debris.recovery!.burning && wasBurning) lastOff = t;
       wasBurning = data.debris.recovery!.burning;
     }
     expect(data.debris.outcome).toBe('landed');
-    expect(starts).toBe(downward < 1 ? 1 : 2);
+    expect(ignitions).toBe(1);
     expect(data.debris.recovery!.propellant).toBeGreaterThan(1000);
     expect(data.debris.v.x).toBeLessThan(-0.5);
     expect(data.debris.v.x).toBeGreaterThan(-5);
@@ -148,8 +152,11 @@ describe('physical detached bodies', () => {
     expect(data.debris.recovery!.mdot).toBe(0);
     expect(data.debris.recovery!.thrustVac).toBe(0);
     expect(data.debris.rigid!.engineThrottles!['s1.engine.8']).toBe(0);
+    // The contact velocity is the physical one: not zeroed, and no faster
+    // than falling freely from 3 m/s over the 0.02 s step (the lighter
+    // published stage does not light for a 3 m/s contact).
     expect(data.debris.v.x).toBeLessThan(-2);
-    expect(data.debris.v.x).toBeGreaterThan(-3);
+    expect(data.debris.v.x).toBeGreaterThan(-3 - 9.81 * 0.02);
   });
 
   it('continues explicit mass-flow and controller sensitivity options after separation', () => {
@@ -243,8 +250,8 @@ describe('physical detached bodies', () => {
     expect(data.debris.recovery!.propellant).toBe(0);
     expect(data.debris.recovery!.burning).toBe(false);
     expect(data.debris.rigid?.engineThrottles?.['s1.engine.8']).toBe(0);
-    expect(data.debris.mass).toBeGreaterThan(25500); // RCS use may reduce the included dry budget.
-    expect(data.debris.mass).toBeLessThanOrEqual(25600);
+    expect(data.debris.mass).toBeGreaterThan(data.stage.dryMass - 100); // RCS use may reduce the included dry budget.
+    expect(data.debris.mass).toBeLessThanOrEqual(data.stage.dryMass);
   });
 
   it('transfers used gas within the exact partition and never refills it at separation', () => {
@@ -254,7 +261,7 @@ describe('physical detached bodies', () => {
     const body = createRigidDebris(data.debris, data.split, config, spent, { vehicleId: 'falcon9', stage: data.stage, consumed: { s1: 73 } });
     expect(body.runtime.consumed.s1).toBe(73);
     expect(data.debris.rigid?.rcsPropellantKg).toBe(27);
-    expect(data.debris.mass).toBe(30527);
+    expect(data.debris.mass).toBe(data.stage.dryMass + 5000 - 73);
     expect(() => createRigidDebris(data.debris, data.split, config, spent, { vehicleId: 'falcon9', stage: data.stage })).toThrow(/partition/);
   });
 

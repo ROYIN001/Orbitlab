@@ -12,13 +12,16 @@ import { flyMission } from '../validation/flight-harness';
 import { FALCON9_REFERENCES } from '../validation/reference-data';
 import { falcon9Rows, formatRows } from '../validation/compare';
 
-/** Measured 2026-09-25 on main @ 844ffca. */
+/**
+ * Measured 2026-09-25 with the published first-stage masses (docs/VALIDATION.md,
+ * "Data change applied"); the list measured before them is in that document.
+ */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
-  crs16: ['T+100/altitude', 'T+100/speed', 'T+140/altitude', 'meco/time', 'ses1/time'],
-  ssoA: ['maxQ/time', 'T+100/speed'],
-  iridium8: ['maxQ/time', 'T+100/speed', 'T+140/altitude', 'meco/time'],
-  bangabandhu1: ['maxQ/time', 'T+100/altitude', 'T+140/altitude', 'T+140/speed', 'meco/time', 'meco/speed', 'ses1/time', 'seco1/altitude'],
-  gps3sv01: ['maxQ/time', 'T+100/altitude', 'T+140/altitude', 'meco/speed', 'ses1/time', 'seco1/altitude'],
+  crs16: ['T+100/speed', 'T+140/altitude', 'ses1/time'],
+  ssoA: ['maxQ/time', 'T+100/speed', 'T+140/speed', 'meco/speed'],
+  iridium8: ['maxQ/time', 'T+140/speed'],
+  bangabandhu1: ['maxQ/time', 'T+100/altitude', 'T+140/altitude', 'meco/speed', 'ses1/time', 'seco1/altitude'],
+  gps3sv01: ['maxQ/time', 'T+140/altitude', 'seco1/altitude'],
 };
 
 describe('Falcon 9 against webcast telemetry (six-DOF)', () => {

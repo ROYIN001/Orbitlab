@@ -123,13 +123,16 @@ describe('tuning on the linearised loop', () => {
   it('meets its targets in the flight it tunes: Falcon 9 with P05, flown again with the gains it found', { timeout: 240_000 }, () => {
     const flex = { slosh: true, bending: true, notch: true };
     const models = modelsOf(flyTo(falcon9({ flex }), 60));
-    const targets = { pmDeg: 40, gmDb: 4 };
+    // With the published first-stage masses (docs/VALIDATION.md, F1) the first
+    // bending mode sits lower (1.61 Hz at T+25 s, 1.72 Hz before) and two PD
+    // gains cannot hold GM 4 dB from lift-off: the best is ~2.7 dB, which the
+    // default flexible autopilot already comes within 0.1 dB of (PHYSICS.md §2g).
+    // GM ≥ 4 dB is correctly reported infeasible; 2.5 dB is met.
+    expect(autoTune(tuneCases(models, ['y', 'z'], 16), T, { pmDeg: 40, gmDb: 4 }, 1, tuneCases(models, ['y', 'z'], Infinity)).feasible).toBe(false);
+    const targets = { pmDeg: 40, gmDb: 2.5 };
     const r = autoTune(tuneCases(models, ['y', 'z'], 16), T, targets, 1, tuneCases(models, ['y', 'z'], Infinity));
     expect(r.feasible).toBe(true);
     expect(r.cases).toBeGreaterThan(200);
-    // The default flexible autopilot misses the gain margin; the tuned one keeps it through max-q.
-    const flownGm = Math.min(...models.filter((m) => m.t > 1).map((m) => m.margins.z.gmDb ?? Infinity));
-    expect(flownGm).toBeLessThan(targets.gmDb);
     const tuned = flyTo(falcon9({ flex, control: { pitchYaw: { attitudeGain: r.gains.kTheta, rateGain: r.gains.kOmega } } }), 90);
     expect(tuned.state.status).toBe('ascent');
     const again = modelsOf(tuned).filter((m) => m.t > 1);

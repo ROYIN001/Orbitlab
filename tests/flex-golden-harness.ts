@@ -42,9 +42,15 @@ export async function flightFingerprint(flight: (typeof GOLDEN_FLIGHTS)[number],
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
-/** Recorded at 7834edd with crosswind: the first 160 s, and the whole mission. */
+/**
+ * Recorded at 7834edd with crosswind: the first 160 s, and the whole mission.
+ * Falcon 9's were re-recorded when its first stage took the published masses
+ * (docs/VALIDATION.md, F1): by 7834edd itself with only those two numbers
+ * changed, so they still pin the flight as it was before P05. The old values
+ * were '6bbf5b89a9e2ef67' and '79335bdea3cbfea9'.
+ */
 export const GOLDEN: Record<(typeof GOLDEN_FLIGHTS)[number]['vehicle'], { first160s: string; mission: string }> = {
-  falcon9: { first160s: '6bbf5b89a9e2ef67', mission: '79335bdea3cbfea9' },
+  falcon9: { first160s: 'a2a7fd3be9557223', mission: 'dcc841438202bf56' },
   soyuz21a: { first160s: 'cdfd42e224a80772', mission: 'a5d8d75d0bd685c9' },
   angaraa5: { first160s: 'c3022008e3f8d476', mission: '08a8c33302e646d6' },
 };

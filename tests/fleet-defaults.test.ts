@@ -732,9 +732,9 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('falcon9', 'cape', 'iss', 'starlink', 15600),
     milestones: [
       { label: 'max Q', at: maxQTime, published: '65-80 s', regression: [44, 58] },
-      { label: 'MECO', at: evTime('evt.meco'), published: '150-165 s', regression: [145, 165] },
-      { label: 'stage separation', at: evTime('evt.stageSep'), published: 'MECO + 3 s', regression: [148, 168] },
-      { label: 'MVac ignition', at: evTime('evt.ignition', 1), published: 'MECO + 7 s', regression: [152, 172] },
+      { label: 'MECO', at: evTime('evt.meco'), published: '150-165 s', regression: [146, 166] },
+      { label: 'stage separation', at: evTime('evt.stageSep'), published: 'MECO + 3 s', regression: [149, 169] },
+      { label: 'MVac ignition', at: evTime('evt.ignition', 1), published: 'MECO + 7 s', regression: [153, 173] },
       { label: 'fairing jettison', at: evTime('evt.fairingSep'), published: '190-230 s', regression: [185, 235] },
       { label: 'SECO', at: evTime('evt.seco'), published: '500-560 s', regression: [495, 565] },
     ],

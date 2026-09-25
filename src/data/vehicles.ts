@@ -382,18 +382,23 @@ export const VEHICLES: VehicleSpec[] = [
     height: 70, payloadLEO: 22800, payloadGTO: 8300, payloadSSO: 15000,
     fairing: { mass: 1900, diameter: 5.2, length: 13.1, sepAltitude: 110e3, color: '#f4f4f4' },
     stages: [
-      { id: 's1', name: 'First stage (9× Merlin 1D)', dryMass: 25600, propellantMass: 395700, engine: MERLIN1D, diameter: 3.66, length: 42, color: '#f2f2f2', accentColor: '#1a1a1a', gridFins: true, legs: true },
+      // Published first-stage masses: 287 400 kg LOX + 123 500 kg RP-1 and a
+      // 22 200 kg empty stage (Espace & Exploration no. 39, May 2017, as cited
+      // by Wikipedia's "Falcon 9 Block 5"). The 395 700 / 25 600 kg flown before
+      // cut the burn ~10 % short of five flights' webcast telemetry
+      // (docs/VALIDATION.md, F1). Falcon Heavy's cores keep their own figures.
+      { id: 's1', name: 'First stage (9× Merlin 1D)', dryMass: 22200, propellantMass: 410900, engine: MERLIN1D, diameter: 3.66, length: 42, color: '#f2f2f2', accentColor: '#1a1a1a', gridFins: true, legs: true },
       f9Stage2(),
     ],
     sites: ['cape', 'ksc39a', 'vandenberg'], maxQ: 40e3, maxAccel: 45,
-    // 22 kPa, not the real ~33 kPa peak, and deliberately so. Raising it was
-    // measured across 26/30/33/36 kPa and with the bucket removed (table in
-    // docs/PHYSICS.md §6a): the max-Q marker only reaches T+59 s even with no
-    // throttle-down at all, still short of the published 65-80 s, because when
-    // q peaks is set by the ascent profile rather than by the bucket — while a
-    // vehicle that does not throttle back reaches MECO at T+145 s and drops the
-    // fairing at T+189 s, both OUTSIDE their published windows. The change
-    // trades one disclosed disagreement for three.
+    // 22 kPa, not the real ~33 kPa peak. Raising it was measured across
+    // 26/30/33 kPa and with the bucket removed (table in docs/PHYSICS.md §6a):
+    // the max-Q marker only reaches T+61 s even with no throttle-down at all,
+    // still short of the published 65-80 s, because when q peaks is set by the
+    // ascent profile rather than by the bucket. With the published first-stage
+    // masses MECO and fairing jettison stay inside their windows either way,
+    // but a later, deeper bucket moves the early ascent further from five
+    // flights' webcast telemetry (docs/VALIDATION.md), so it stays.
     maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.75 },
     // A return to the launch site keeps 15 % instead: measured on Bandwagon-1
     // (1.3 t to 590 km at 45.4°), 13 % is the least that lands on LZ-1 in the
