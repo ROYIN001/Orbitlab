@@ -98,6 +98,11 @@ describe('the question bank', () => {
     }
   });
 
+  it('has a picture of every vehicle a question can show', () => {
+    const pictures = Object.keys(import.meta.glob('../public/lessons/vehicles/*.jpg')).map((p) => p.replace(/^.*\/(.+)\.jpg$/, '$1'));
+    for (const q of BUILTIN_QUESTIONS) if (q.type === 'vehicle') for (const v of q.vehicles) expect(pictures, `${q.id}: ${v}`).toContain(v);
+  });
+
   it('checks the numbers the charts are asked about: max-Q at about T+50 s, MECO later with an engine out', () => {
     const f9 = FLIGHT_DATA['f9-leo'];
     const q = f9.series.q!;

@@ -9,10 +9,10 @@ const WHICH = T('Which launch vehicle is this?', 'Какая это ракета
 
 export const BASICS: readonly unknown[] = [
   vehicle('b-vehicle-distinct', 6, 1, 'vehicles', WHICH,
-    ['soyuz21a', 'falconheavy', 'starship', 'electron', 'protonm', 'pslvxl'],
-    T('Each has a shape of its own: Soyuz its four tapered strap-ons (the Korolev cross when they separate), Falcon Heavy three cores side by side, Starship a stainless-steel ship on a 71 m booster, Electron a slender 18 m carbon-fibre rocket, Proton-M six fuel tanks round its oxidiser tank, PSLV-XL six long strap-on boosters.',
-      'У каждой свой облик: у «Союза» четыре конических боковых блока («крест Королёва» при разделении), у Falcon Heavy три блока рядом, у Starship корабль из нержавеющей стали на 71-метровом ускорителе, у Electron тонкий 18-метровый корпус из углепластика, у «Протона-М» шесть топливных баков вокруг бака окислителя, у PSLV-XL шесть длинных стартовых ускорителей.',
-      'แต่ละลำมีรูปทรงเฉพาะ: โซยุซมีบูสเตอร์ด้านข้างทรงเรียวสี่ท่อน (กางเป็น «กางเขนของโคโรเลฟ» ตอนแยกตัว) Falcon Heavy มีแกนสามแกนเรียงกัน Starship เป็นยานเหล็กกล้าไร้สนิมบนบูสเตอร์สูง 71 ม. Electron เป็นจรวดคาร์บอนไฟเบอร์เรียวสูง 18 ม. Proton-M มีถังเชื้อเพลิงหกถังรอบถังสารออกซิไดซ์ และ PSLV-XL มีบูสเตอร์ยาวหกท่อน')),
+    ['soyuz21a', 'falconheavy', 'starship', 'electron', 'atlasv551', 'pslvxl'],
+    T('Each has a shape of its own: Soyuz its four tapered strap-ons (the Korolev cross when they separate), Falcon Heavy three cores side by side, Starship a stainless-steel ship on a 71 m booster, Electron a slender black 18 m carbon-fibre rocket, Atlas V an orange core with slim white solid boosters, PSLV-XL six long strap-on boosters.',
+      'У каждой свой облик: у «Союза» четыре конических боковых блока («крест Королёва» при разделении), у Falcon Heavy три блока рядом, у Starship корабль из нержавеющей стали на 71-метровом ускорителе, у Electron тонкий чёрный 18-метровый корпус из углепластика, у Atlas V оранжевый центральный блок с тонкими белыми твердотопливными ускорителями, у PSLV-XL шесть длинных стартовых ускорителей.',
+      'แต่ละลำมีรูปทรงเฉพาะ: โซยุซมีบูสเตอร์ด้านข้างทรงเรียวสี่ท่อน (กางเป็น «กางเขนของโคโรเลฟ» ตอนแยกตัว) Falcon Heavy มีแกนสามแกนเรียงกัน Starship เป็นยานเหล็กกล้าไร้สนิมบนบูสเตอร์สูง 71 ม. Electron เป็นจรวดคาร์บอนไฟเบอร์สีดำเรียวสูง 18 ม. Atlas V มีลำตัวหลักสีส้มกับบูสเตอร์เชื้อเพลิงแข็งสีขาวเรียว และ PSLV-XL มีบูสเตอร์ยาวหกท่อน')),
   vehicle('b-vehicle-similar', 6, 2, 'vehicles', WHICH,
     ['falcon9', 'atlasv551', 'vulcan', 'ariane64', 'h3', 'longmarch5', 'angaraa5', 'longmarch2d'],
     T('Look at the details: the number and size of the strap-ons (none on Falcon 9, five slim solids on Atlas V 551, four on Ariane 64 and Vulcan VC4, two on H3-22), the fairing\'s width against the core, and the core\'s colour and proportions.',

@@ -10,6 +10,7 @@ import { norm } from '../physics/vec3';
 import { physicalApsides } from '../physics/rigid/orbit-prediction';
 import { satelliteById } from '../data/satellites';
 import type { LessonFlight, MeasureId } from './types';
+import { unitText } from './text';
 
 export interface MeasureDef {
   /** the unit it is given in (a symbol, the same in every language) */
@@ -131,10 +132,10 @@ export function missionTarget(flight: LessonFlight, measure: MeasureId): number 
   }
 }
 
-/** Shown with the measure's own number of decimals. */
+/** Shown with the measure's own number of decimals, and its unit as the interface language writes it. */
 export function formatMeasure(measure: MeasureId, value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '—';
   const def = MEASURES[measure];
   const text = value.toFixed(def.digits);
-  return def.unit ? `${text} ${def.unit}` : text;
+  return def.unit ? `${text} ${unitText(def.unit)}` : text;
 }

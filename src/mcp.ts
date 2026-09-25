@@ -51,6 +51,7 @@ import { CYCLE_LIMITS, EXPLICIT_LAWS, type ExplicitGuidanceRecord } from './phys
 import { elementsFromState } from './physics/orbital';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
+import { createLessonTools, type LessonToolsHost } from './lessons/mcp-tools';
 
 /** configure_mission's `flex` fields (roadmap P05). */
 const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
@@ -144,6 +145,8 @@ export interface McpAppHost {
   previousEvent(): void;
   preview(cfg: MissionConfig): void;
   launch(cfg: MissionConfig): void;
+  /** E03: the lessons and the placement test, when the app has them */
+  lessons?: LessonToolsHost;
 }
 
 // ───────────────────────────────────────────────────────────────── tool type
@@ -1269,6 +1272,7 @@ export function createMcpTools(host: McpAppHost): WebMcpTool[] {
     toolExportCsv(host),
     toolRunAttitudeTest(host),
     toolInjectControlFault(host),
+    ...(host.lessons ? createLessonTools(host.lessons) : []), // E03
   ];
 }
 
