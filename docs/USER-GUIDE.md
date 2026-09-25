@@ -33,6 +33,14 @@ Switching mode never touches the flight: leave the viewer half-way up and the wo
 shows the same launch with every instrument on it. Each mode has its own address
 (`#/watch` and so on), and the browser's Back button moves between them.
 
+**Installing Orbitlab and using it offline.** The published site can be installed as an app
+(Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
+and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
+network at all — the page, the physics and auto-tune workers and the Earth textures are all kept
+on the device, and the fonts too once they have loaded. When a new version is published, a note
+at the bottom of the page offers **Reload**; until you press it, the version you have keeps
+running.
+
 ## 1. Set up a mission
 
 The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.

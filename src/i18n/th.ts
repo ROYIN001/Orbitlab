@@ -699,6 +699,10 @@ export const th: Record<string, string> = {
   'share.notice.reset': 'โหลดภารกิจจาก{source}แล้ว แต่การตั้งค่าต่อไปนี้ใช้ไม่ได้ จึงกลับเป็นค่าเริ่มต้น:',
   'share.notice.unusable': 'ใช้{source}เป็นภารกิจไม่ได้ เพราะไม่ใช่ภารกิจของ Orbitlab หรือข้อมูลเสียหาย ภารกิจปัจจุบันไม่เปลี่ยนแปลง',
   'share.notice.newer': 'บันทึกด้วย Orbitlab รุ่นที่ใหม่กว่า ส่วนที่รุ่นนี้ไม่รู้จักจึงถูกข้ามไป',
+  // U03: ใช้งานออฟไลน์
+  'pwa.offlineReady': 'Orbitlab พร้อมใช้งานแบบออฟไลน์แล้ว',
+  'pwa.updateReady': 'Orbitlab รุ่นใหม่พร้อมใช้งานแล้ว',
+  'pwa.reload': 'โหลดใหม่',
   'setup.mode.label': 'โหมดการใช้งาน',
   'setup.mode.learning': 'เรียนรู้',
   'setup.mode.advanced': 'ขั้นสูง',

@@ -698,6 +698,10 @@ export const ru: Record<string, string> = {
   'share.notice.reset': 'Миссия загружена из {source}, но эти настройки использовать нельзя, и они возвращены к значениям по умолчанию:',
   'share.notice.unusable': 'Из {source} не удалось взять миссию: это не миссия Orbitlab, или данные повреждены. Текущая миссия не изменена.',
   'share.notice.newer': 'она сохранена более новой версией Orbitlab, поэтому то, чего эта версия не знает, пропущено',
+  // U03: работа без сети
+  'pwa.offlineReady': 'Orbitlab готов к работе без сети.',
+  'pwa.updateReady': 'Готова новая версия Orbitlab.',
+  'pwa.reload': 'Перезагрузить',
   'setup.mode.label': 'Режим интерфейса',
   'setup.mode.learning': 'Обучение',
   'setup.mode.advanced': 'Расширенный',

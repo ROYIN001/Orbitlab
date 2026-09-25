@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
+import { registerServiceWorker } from './pwa/register';
 import { MISSION_PARAM, decodeMissionParam, loadStoredMission, saveStoredMission } from './config/mission-file';
 import { SceneManager, loadEarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
@@ -473,6 +474,7 @@ class App {
       else this.preview(this.panel.getConfig());
     }
     requestAnimationFrame((now) => this.frame(now));
+    registerServiceWorker();
   }
 
   /**
