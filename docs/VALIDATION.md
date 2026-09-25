@@ -258,6 +258,37 @@ things: one systematic vehicle-data offset (F1, and F2 as its consequence), one 
 (F4), and the guidance's fixed choices (F3, F6). F5 is a difference between the two flight
 models.
 
+### Proposed data change (not applied)
+
+F1 has a sourced candidate fix. Wikipedia's "Falcon 9 Block 5" specification table
+(`action=raw`, read 2026-09-25) cites *Espace & Exploration* no. 39 (May 2017,
+"Fiche technique: Falcon-9") for the first stage's tank capacities and empty mass:
+
+| first stage | model (`src/data/vehicles.ts`) | published |
+| --- | --- | --- |
+| propellant | 395 700 kg | 287 400 kg LOX + 123 500 kg RP-1 = 410 900 kg |
+| empty mass | 25 600 kg | 22 200 kg |
+
+These values were flown once, in memory only, through the same comparison. Nothing in `src/` was
+edited. The results for the point-mass model:
+
+| variant | rows in tolerance (of 66) | MECO, expended (flight 168 s) | speed at T+100 s (flights 723–874 m/s) |
+| --- | ---: | ---: | ---: |
+| as shipped | 43 | 152.4 s | 878–902 m/s |
+| published propellant and empty mass | **49** | 157.9 s | 841–865 m/s |
+| the same, plus a throttle bucket at 28 kPa / 70 % | 42 | 154.2 s | 928–952 m/s |
+
+The published masses improve MECO and the early speed on every flight. A throttle-bucket change
+makes things worse, so it is not proposed. The published masses are not fitted to these flights,
+so all five stay independent evidence: this is data correction, not calibration. Anything that
+later *has* to be fitted, such as the throttle profile, would be fitted on CRS-16, Iridium NEXT 8
+and GPS III SV01, and judged on the held-out SSO-A and Bangabandhu-1.
+
+Applying the change is left to a separate change, made once the parallel work in `src/` has
+merged. It moves every Falcon 9 row of PHYSICS.md §6a, the Falcon 9 rows of the fleet and
+recovery tests (the Bandwagon-1 landing margin among them), and the six-DOF mass properties in
+SIXDOF-VEHICLE-DATA.md, and each of those has to be re-measured with it.
+
 ## 3. Soyuz-2.1a, Electron and Ariane 6: not yet compared
 
 The sources for these vehicles are the operators' and NASA's published launch timelines, for
