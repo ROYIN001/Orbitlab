@@ -13,8 +13,8 @@ Status on 2026-09-25, main @ 844ffca:
 | vehicle | reference | state |
 | --- | --- | --- |
 | Falcon 9 Block 5 | Webcast telemetry of five flights, 2018–2019 | Compared in both flight models (§2) |
-| Soyuz-2.1a | Roscosmos / NASA launch timelines to the ISS | Not yet done: the sources cannot be reached from the build environment (§3) |
-| Electron, Ariane 6 | Operator timelines | Not yet done, same reason (§3) |
+| Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos) | Compared in both flight models (§3) |
+| Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
 
 ## 1. Method
 
@@ -289,20 +289,110 @@ merged. It moves every Falcon 9 row of PHYSICS.md §6a, the Falcon 9 rows of the
 recovery tests (the Bandwagon-1 landing margin among them), and the six-DOF mass properties in
 SIXDOF-VEHICLE-DATA.md, and each of those has to be re-measured with it.
 
-## 3. Soyuz-2.1a, Electron and Ariane 6: not yet compared
+## 3. Soyuz-2.1a, Electron and Ariane 64: published timelines
 
-The sources for these vehicles are the operators' and NASA's published launch timelines, for
-example the ISS-mission Soyuz timelines on nasa.gov, Rocket Lab's mission press kits and
-Arianespace's launch kits. None of them could be reached from the environment this was
-written in, where only GitHub was reachable. They are left out rather than filled in from
-memory. Until they are compared, the Soyuz, Electron and Ariane 6 rows of PHYSICS.md §6a are
-calibration targets, not validation.
+### Sources
+
+These references are event timelines, not telemetry traces: they give times, sometimes an
+altitude, and for Soyuz the initial orbit. The test code is
+`tests/validation/timelines.test.ts` (point mass) and `tests/heavy/validation-timelines.test.ts`
+(six-DOF). The tolerances are the same as in §1.
+
+| flight | what the source gives | source | kind |
+| --- | --- | --- | --- |
+| **Soyuz MS-25**, 2024-03-23, Baikonur → ISS, spacecraft ~7 152 kg | as-flown event times to 0.01 s, a 200.0 × 242.0 km initial orbit, altitudes and speeds at the fairing and core separation | [russianspaceweb.com/soyuz-ms-25.html](https://www.russianspaceweb.com/soyuz-ms-25.html) (Anatoly Zak, quoting Roskosmos) | secondary. roscosmos.ru and energia.ru refused the connection. |
+| **Electron "No Time Toulouse"**, 2024-06-20, Mahia → 635 km, 98°, 150 kg (5 Kinéis satellites) | planned event times | [Rocket Lab press kit](https://rocketlabcorp.com/assets/Uploads/No-Time-Toulouse-Press-Kit.pdf); payload from [Kinéis](https://kineis.com/en/nanosatellites-kineis-size-doesnt-matter/) | primary, planned |
+| **Ariane 64 VA267** (Amazon Leo LE-01), 2026-02-12, Kourou → ~465 km, "approximately 20 tons" | planned times and altitudes | [Arianespace launch kit](https://www.ariane.group/app/uploads/2026/02/LAUNCH-KIT-VA267-EN_FINAL.pdf), "Flight sequence"; 51.9° inclination from [NASASpaceflight](https://www.nasaspaceflight.com/2026/02/le-01-launch/) | primary, planned |
+
+Three caveats about how independent these comparisons are:
+
+- **The altitudes and speeds for Soyuz are nominal.** They are the profile RussianSpaceWeb
+  repeats word for word for every crewed flight since MS-16, not a measurement of MS-25. The
+  times cross-check: MS-21, -23, -24 and -26 on the same site agree with them to within 0.5 s.
+- **Speeds are reported but not graded.** None of these sources says whether its speed is
+  inertial or relative to the Earth. At Soyuz staging the two differ by about 0.3 km/s, which
+  is more than the tolerance. Grading would mean choosing the frame after seeing the result.
+  The model's speed comes out close to the source's speed in one frame at one event and in the
+  other frame at the next (see the table).
+- **These timelines are the same kind of number PHYSICS.md §6a calibrates against.** The Soyuz
+  and Ariane 64 times in the table below are close to that section's published callouts (Soyuz:
+  118 / 287 / 528 s), so their agreement is partly calibration, not independent evidence. The
+  altitudes, Soyuz's initial orbit and Electron's second stage (which §6a does not list) are
+  the independent part. The Soyuz and Ariane 64 fairings are flown on fixed times (`fairing.sepTime`, 157 s and
+  200 s), so their times agree by construction. Their altitudes are still a real comparison.
+
+### Results
+
+**Soyuz MS-25** (as flown)
+
+| milestone | flight | point mass | six-DOF | tolerance |
+| --- | ---: | ---: | ---: | ---: |
+| strap-on separation | 117.8 s | 120.6 s (+2 %) | 120.7 s (+2 %) | ±11.8 s |
+| fairing jettison | 153.3 s | 157.1 s (+2 %) | 157.0 s (+2 %) | ±15.3 s |
+| fairing altitude (nominal) | 79 km | 89.8 km (+14 %) | 99.3 km (+26 %) ✗ | ±12.8 km |
+| core separation | 287.7 s | 294.6 s (+2 %) | 294.5 s (+2 %) | ±28.8 s |
+| core separation altitude (nominal) | 157 km | 166.5 km (+6 %) | 183.7 km (+17 %) ✗ | ±24.6 km |
+| third-stage cut-off | 525.9 s | 536.3 s (+2 %) | 532.8 s (+1 %) | ±52.6 s |
+| spacecraft separation | 529.2 s | 537.6 s (+2 %) | 534.1 s (+1 %) | ±52.9 s |
+| initial orbit, perigee | 200.0 km | 197.0 km | 197.0 km | ±31.0 km |
+| initial orbit, apogee | 242.0 km | 200.0 km (−17 %) ✗ | 200.0 km (−17 %) ✗ | ±37.3 km |
+| *speed at fairing (frame not stated)* | *2.2 km/s* | *1.93 relative / 2.20 inertial* | *2.01 / 2.28* | *not graded* |
+| *speed at core separation (frame not stated)* | *3.8 km/s* | *3.86 relative / 4.15 inertial* | *3.92 / 4.21* | *not graded* |
+
+**Electron "No Time Toulouse"** (planned)
+
+| milestone | press kit | point mass | six-DOF | tolerance |
+| --- | ---: | ---: | ---: | ---: |
+| MECO | 144 s | 138.2 s (−4 %) | 138.3 s (−4 %) | ±14.4 s |
+| stage separation | 148 s | 139.2 s (−6 %) | 139.3 s (−6 %) | ±14.8 s |
+| second-stage ignition | 151 s | 141.2 s (−6 %) | 141.3 s (−6 %) | ±15.1 s |
+| fairing separation | 187 s | 185.3 s (−1 %) | 158.6 s (−15 %) ✗ | ±18.7 s |
+| SECO | 538 s | 439.2 s (−18 %) ✗ | 439.5 s (−18 %) ✗ | ±53.8 s |
+| kick-stage separation | 542 s | 442.5 s (−18 %) ✗ | 442.8 s (−18 %) ✗ | ±54.2 s |
+
+**Ariane 64 VA267** (planned)
+
+| milestone | launch kit | point mass | six-DOF | tolerance |
+| --- | ---: | ---: | ---: | ---: |
+| P120C separation | 145 s | 137.3 s (−5 %) | 137.4 s (−5 %) | ±14.5 s |
+| P120C separation altitude | 87 km | 87.1 km (0 %) | 101.0 km (+16 %) | ±14.1 km |
+| fairing separation | 191 s | 200.1 s (+5 %) | 200.0 s (+5 %) | ±19.1 s |
+| fairing altitude | 127 km | 128.5 km (+1 %) | 159.2 km (+25 %) ✗ | ±20.1 km |
+| main-stage separation | 463 s | 447.8 s (−3 %) | 448.1 s (−3 %) | ±46.3 s |
+| main-stage separation altitude | 265 km | 230.2 km (−13 %) | 298.0 km (+12 %) | ±40.8 km |
+| Vinci first ignition | 472 s | 453.8 s (−4 %) | 454.1 s (−4 %) | ±47.2 s |
+| Vinci ignition altitude | 269 km | 233.8 km (−13 %) | 302.2 km (+12 %) | ±41.4 km |
+
+### Findings
+
+**F7. Electron's second stage burns about 25 % too short.** The press kit runs it from T+151 s
+to T+538 s, 387 s. The model runs it from T+141 s to T+439 s, 298 s. With the model's data
+(`src/data/vehicles.ts`: 2 300 kg of propellant, one Rutherford Vacuum at 25.8 kN and 343 s,
+about 7.7 kg/s), 298 s is exactly a burn to depletion. The real stage burns for longer, so it
+must carry more propellant (about 3 t at the same flow) or throttle below full thrust. Nothing
+reachable here says which. This is a vehicle-data finding, like F1, and it is not applied. The
+first stage is 4 % early, as PHYSICS.md §6a already records.
+
+**F8. Soyuz inserts into a 197 × 200 km orbit; the flight went to 200 × 242 km.** The model aims
+the third stage at a circular 200 km parking orbit and lets the crew ship raise it. The real
+Soyuz is put on an ellipse with a 242 km apogee from the start. This is a guidance choice, like
+F6, not physics. The times of the whole ascent agree with the flight to within 2 %.
+
+**F9. The six-DOF model climbs higher than the point-mass model on every vehicle.** Soyuz is
+10–17 km higher at fairing and core separation. Ariane 64 is 14–68 km higher from booster
+separation onwards. Electron's six-DOF fairing leaves 27 s earlier than the point-mass one,
+because it is released on the heating placard, which is reached sooner on the higher
+trajectory. This is the same behaviour as F5 on Falcon 9, now seen on four vehicles: the
+six-DOF ascent comes out of max Q steeper than the flights, while the point-mass ascent tracks
+the published altitudes (Ariane 64: 87.1 km against 87 km at booster separation, 128.5 km
+against 127 km at the fairing).
 
 ## 4. Re-running
 
 ```sh
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
+npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~3 min
 ```
 
 When a test fails, its message prints the whole comparison table for that flight. If the change
