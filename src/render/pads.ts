@@ -1216,7 +1216,7 @@ function r7BaikonurPad(ctx: Ctx, p: R7PadSpec): PadBuild {
 const gagarinStart: Builder = (ctx) => r7BaikonurPad(ctx, {
   pitAz: 300, near: -25, far: 225, halfTop: 50, ramp: 170, halfFloor: 38, depth: 45, bridgeEnd: 18,
   deck: [110, 70, 80], rail: 1750, mik: [130, 48, 30], bunker: [-30, 200],
-  mastH: 68, masts: [[-70, 90], [-70, -90], [120, 95], [120, -95]],
+  mastH: 68, masts: [[-110, 110], [-110, -110], [150, 110], [150, -110]],
   floods: [[-48, 62], [-48, -62], [30, 66], [30, -66]],
   tanks: [-160, -210], water: [-300, 190],
   colors: { arm: 0x7d8a86, mast: 0x8f9496, gantry: 0x9aa0a6, table: 0x5f6468, concrete: 0xa7a398, pitTop: 0x9b917c, pitFloor: 0x3a342c, mikWall: 0xd6d2c4 },
@@ -1234,7 +1234,7 @@ const gagarinStart: Builder = (ctx) => r7BaikonurPad(ctx, {
 const site31: Builder = (ctx) => r7BaikonurPad(ctx, {
   pitAz: 250, near: -15, far: 120, halfTop: 16, ramp: 88, halfFloor: 13, depth: 24, bridgeEnd: 15,
   deck: [100, 60, 85], rail: 650, mik: [110, 42, 26], bunker: [-20, -150],
-  mastH: 64, masts: [[-60, 55], [-60, -55], [70, 55], [70, -55]],
+  mastH: 64, masts: [[-105, 90], [-105, -90], [110, 90], [110, -90]],
   floods: [[-46, 40], [-46, -40], [30, 44], [30, -44]],
   tanks: [-150, 190], water: [-260, -210],
   colors: { arm: 0x8e9aa6, mast: 0xa9b0b6, gantry: 0xaab1b8, table: 0x646a70, concrete: 0xacaaa0, pitTop: 0x9a9384, pitFloor: 0x3b3833, mikWall: 0xdedbd0 },

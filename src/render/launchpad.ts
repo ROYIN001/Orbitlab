@@ -16,6 +16,20 @@ import { buildPad, type PadBuild, type TowerReturn } from './pads';
 import { GroundSmoke, PadGlow } from './smoke';
 import { disposeObject } from './dispose';
 import { clamp01, smoothstep } from './noise';
+import { quatRotate } from '../physics/rigid/math';
+
+/**
+ * How high the vehicle's base stands above the pad, m: what a pad's arms and
+ * masts react to. A rigid body's state is its centre of mass, 14.5 m up a
+ * Soyuz on the pad, so its altitude alone had an R-7's arms open before the
+ * engines lit. A pad abort's escape is not the rocket leaving.
+ */
+function baseHeight(frame: VisualFrame): number {
+  if (frame.abort && !frame.liftoff) return 0;
+  if (!frame.rigid) return frame.altitudeAGL;
+  const off = quatRotate(frame.rigid.attitudeQ, frame.rigid.renderOffsetBody), r = frame.r;
+  return frame.altitudeAGL + (off.x * r.x + off.y * r.y + off.z * r.z) / Math.hypot(r.x, r.y, r.z);
+}
 
 /**
  * Slant range over which the local terrain patch dissolves into the globe.
@@ -213,7 +227,7 @@ export class LaunchPadView {
     // thing switching it off changes is the draw-call count.
     if (this.pad.structures) this.pad.structures.visible = dist < STRUCTURES_FAR;
 
-    this.pad.animate(frame.t, frame.altitudeAGL, this.towerReturn(frame));
+    this.pad.animate(frame.t, baseHeight(frame), this.towerReturn(frame));
 
     // The first stage's ignition time is only meaningful once it has ignited
     // (a liquid core lights several seconds *before* T-0, so the raw field is

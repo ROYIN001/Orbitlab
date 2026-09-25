@@ -54,6 +54,9 @@ throughout.
   door, the bunker, the propellant store and the lightning masts; Gagarin's Start has its quarry
   and the Korolev and Gagarin cottages. Drawing only: every pad launches from the site's own
   point, so the choice changes no trajectory. Any other vehicle at Baikonur keeps the generic pad.
+  Every pad's arms and masts now react to the height of the vehicle's base: in six-DOF the state
+  is the centre of mass, 14.5 m up a Soyuz on the pad, and the generic R-7 pad's arms had been
+  standing half open before the engines lit.
 - **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
   buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
   R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
@@ -98,7 +101,7 @@ throughout.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1024 tests in 75 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1030 tests in 76 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -136,7 +139,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | done |
-| P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | |
+| P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | |
 | P05 slosh, bending and notch filter | done | C01 historical missions | |
