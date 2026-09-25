@@ -543,3 +543,8 @@ docking with the station (G07), which changes the flight only for a mission that
 its insertion at 200 × 242 km, the hand-over at the cut-off, the steps after the docking; the
 fleet's missions carry no rendezvous, so every one flies the ascent it flew before:
 **161 of 161 passed** in 1 h 42 min on four cores, run alone.
+
+**The rigid fleet after the merge with main.** `npm run test:sixdof-fleet` at the merge commit
+022b17e, where G06, V05, V03, E01 and G07 meet PR #17 and the control, navigation and guidance
+work (G03, E02, G04, E04, G02, G08, G01, P07; all of it off in the fleet's default missions):
+**161 of 161 passed** in 1 h 45 min on four cores, run alone.
