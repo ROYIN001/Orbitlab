@@ -168,12 +168,12 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 
 | Item | | Item | |
 |---|---|---|---|
-| F03 delivered-orbit matrix in the repository | done | G04 Bode, step response, margins | |
-| F05 simulation split into modules | done | E04 controller tuning mode | |
-| F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | |
-| F04 break-ups with Δv left | done | G08 control-system failures | |
-| P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | |
-| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
+| F03 delivered-orbit matrix in the repository | done | G04 Bode, step response, margins | done |
+| F05 simulation split into modules | done | E04 controller tuning mode | done |
+| F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | done |
+| F04 break-ups with Δv left | done | G08 control-system failures | done |
+| P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | done |
+| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | not started |
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
@@ -181,8 +181,8 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
 | P05 slosh, bending and notch filter | done | C01 historical missions | |
 | U07 ГОСТ 20058-80 notation | done | | |
-| G03 attitude-loop inspector | | | |
-| E02 live equations panel | | | |
+| G03 attitude-loop inspector | done | | |
+| E02 live equations panel | done | | |
 | E01 reference frames in 3-D | done | | |
 
 Twenty further items are kept for later, once these are done.
