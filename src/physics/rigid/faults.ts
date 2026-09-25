@@ -55,7 +55,7 @@ export const FDIR = {
 /**
  * A launcher that loses control in the air breaks up under its lateral load: q·α, the dynamic
  * pressure times the total angle of attack, kPa·°. The fleet's healthy ascents stay under 135;
- * the failures layer (and only it) breaks the vehicle up past this.
+ * every six-DOF ascent breaks up past this.
  */
 export const BREAKUP_Q_ALPHA_KPA_DEG = 300;
 /** A failed unit's attitude output: its diagnostic word flown as data (Ariane 501), a large fixed error, rad. */

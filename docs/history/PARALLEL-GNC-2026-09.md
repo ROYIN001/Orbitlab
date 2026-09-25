@@ -13,7 +13,15 @@ here; this file records progress for the owner to fold in at the merge.
 - PEG/IGM (G01), INS + Kalman (G02) and slosh/bending/notch (P05) are options, off by default,
   and off they leave every flight bit for bit as it was.
 - U07: the notation is switchable; Russian uses ГОСТ 20058-80, English and Thai ISO.
-- G05: minimal dispersions. Heavy tests go to `npm run test:heavy`.
+- G05: minimal dispersions. Heavy tests go to `npm run test:heavy`. Asked 2026-09-24: **200 runs by
+  default, 20–2000**; **six-DOF only**; the minimal set as defaults, **each 1σ editable and
+  switchable**; the orbit's spread per law **with which dispersion drives it** (a sensitivity);
+  a **window of its own in the Engineer mode**, opened from the setup, with progress, and a WebMCP
+  `run_monte_carlo`; one law by default, **the three on the same draws when asked** (a checkbox).
+  On its findings (asked 2026-09-25): **fix the tactical/MEMS burn alignment here** (finding 5;
+  `sim/burns.ts` may be edited for it) and record the others as known issues; the heavy sets
+  **check the tool** (every run counted, every loss named) and **guard the recorded numbers**
+  (ceilings on the runs lost, bands on the runs on target); **the wind's 1σ stays 5 m/s** per axis.
 - P05 (asked 2026-09-23): with P05 on, **every vehicle must reach orbit**; **bending past the
   structure's limit breaks the vehicle up**; the **IMU station and the notch's parameters are
   tunable in the Engineer mode** from P05 on; and the bending is **drawn in 3-D**.
@@ -55,8 +63,8 @@ here; this file records progress for the owner to fold in at the merge.
   accidents** (Proton-M 2013, Ariane 5 flight 501, Vega VV17, a stuck gimbal); a simple **FDIR**
   (2-of-3 IMU voting, gimbal monitoring, reconfiguration) that can be switched off to compare;
   failures **set in the mission setup and injected live** (and through WebMCP), marked in the
-  attitude-loop inspector. Break-up by q·α with the failures layer only (asked, not yet answered:
-  kept that way).
+  attitude-loop inspector. Break-up by q·α with the failures layer only at first; the owner then
+  chose (Q0, 2026-09-24) **every six-DOF ascent**, done with G05.
 - G01 (asked 2026-09-24): **PEG and IGM both, selectable**; the first stage flies the pitch
   program as before and **PEG/IGM takes over out of the atmosphere or after staging**; the target
   is the **whole insertion state — altitude and speed, flight-path angle, and the orbit's plane
@@ -78,7 +86,7 @@ here; this file records progress for the owner to fold in at the merge.
 | G02 inertial navigation and Kalman filter | done 2026-09-24 (see below) |
 | G08 control-system failures | done 2026-09-24 (see below) |
 | G01 PEG and IGM guidance | done 2026-09-24 (see below; also the load relief's switch-off, see G03) |
-| G05 Monte Carlo insertion accuracy | |
+| G05 Monte Carlo insertion accuracy | done 2026-09-25 (see below; also Q0, the q·α break-up for every six-DOF ascent) |
 
 ### P05 — slosh, bending and the bending filter
 
@@ -460,6 +468,22 @@ tests/session.test.ts (a navigated flight in the worker records as on the main t
 **Results (2026-09-24)**: `npm test` 70 files / 1003 tests pass (12 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.
 
+**Fixed with G05 (2026-09-25; finding 5 there, the owner's choice to fix it here)**: that harder
+work was the whole second stage's cold gas. With a tactical or MEMS unit the gyro noise, read as
+rate and turned into moment by the rate loop, fired the jets until the 30 kg were gone by T+250 s;
+in orbit the stack could not turn for its circularisation burn, so every such flight ended with
+`evt.burnAlignmentTimeout` and off its target. The jets now have a rate deadband when the flight
+flies on a navigation (`JET_RATE_DEADBAND_SIGMA` = 4 in `src/physics/rigid/runtime.ts`, on the
+σ the navigation reports for its rate, `NavigationSystem.rateNoise`): an axis whose rate error is
+within 4σ is left to the nozzles, and a slew fires them as before. A deadband on the moment (tried
+first) could not tell the noise from a slew: the loop's acceleration limit holds a slew's demand
+to less than the noise's. A low-pass filter on the rate did not save the gas. Falcon 9 to its
+reference orbit now reaches it on every grade: second-stage gas 16.4 kg tactical, 14.7 kg MEMS,
+17.2 kg navigation grade, 17.3 kg on the truth (PHYSICS §2h). Without navigation nothing changes
+(the golden fingerprints). Tests: the rate's noise in tests/navigation.test.ts;
+tests/heavy/navigation-burns.test.ts (tactical and MEMS reach the target orbit, gas to spare).
+`src/physics/sim/burns.ts` was not touched.
+
 ### G08 — failures of the control system, and the FDIR
 
 Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2i, use in
@@ -489,7 +513,7 @@ Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2i, use in
   without the list, the old rule (the lowest index first), untouched.
 - **Break-up**: with the layer only, the attached stack is lost when q·α exceeds 300 kPa·°. The
   fleet's healthy ascents reach at most 133 kPa·° (measured on all eighteen vehicles, calm and
-  shear). *Whether every flight should break up this way is the owner's to decide.*
+  shear). The owner chose (Q0) every six-DOF ascent; done with G05 (see there).
 - **Presets**: Proton-M 2013, Ariane 501 (on Ariane 6, the nearest in the fleet), Vega VV17 and a
   hypothetical Falcon 9 nozzle hard-over, each with an explanation; the setup switches to the
   preset's vehicle.
@@ -597,3 +621,91 @@ six-DOF, crosswind, seed 20260919; 30 min):
 | PSLV-XL | T+95 s | 1633 | 1578 |
 | Electron | T+129 s | 2700 | 2700 |
 | Starship | T+136 s | 2472 | 2467 |
+
+### G05 — Monte Carlo insertion accuracy
+
+Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2l, use in
+[../USER-GUIDE.md](../USER-GUIDE.md) §17.
+
+- **The dispersions** (`src/physics/dispersion.ts`): per stage and strap-on group thrust, Isp,
+  propellant and dry mass; the air's density; a steady wind and gust phase over the mission's;
+  with G02 a fresh IMU realisation. Each run draws all its numbers from its own seeded stream in
+  one order, clipped at ±3σ. `Simulation`'s `dispersion` option flies the dispersed vehicle
+  (`dispersedVehicle`) and air (`RigidRuntimeOptions.air`, the density factor in the step and the
+  point-mass drag) on the nominal plan; absent, nothing changes.
+- **The set** (`src/physics/monte-carlo.ts`): `flyRun` flies a run in six-DOF to the end of its
+  mission, without the attitude-loop and equation records, and reads its orbit there (against
+  the target, the apsides under J2) and at the ascent's cut-off (against the planned insertion) —
+  the second point added after an Electron set, whose ascent cuts off short for its kick stage,
+  came back with no run in orbit; `summarizeMonteCarlo` gives per
+  law the statistics, the 3σ perigee–apogee ellipse, the runs lost and why, and the regression
+  shares; `monteCarloCsv` every run. `MonteCarloJob` (`monte-carlo-job.ts`) flies a set in a pool
+  of workers (`monte-carlo.worker.ts`), all the laws on run k before run k + 1.
+- **The window** (`src/ui/monte-carlo.ts`, `.css`): opened from the setup's *Monte Carlo* section
+  (Engineer mode); settings, progress and stop, the table, the scatter with its ellipses, the
+  histograms, the shares, the CSV. It is also the app's runner for WebMCP's `run_monte_carlo`
+  (start, status, stop).
+- **Q0** (the owner's answer, with G05): the q·α break-up of G08 now judges every six-DOF ascent,
+  not only flights with the failures layer; a re-entry is not judged by it.
+
+**Files touched that the other session also edits** (additive): the three dictionaries
+(`// --- G05 ---`); `src/mcp.ts` (`McpAppHost.monteCarlo`, the tool); `src/ui/panel.ts` (the
+section, `SetupCallbacks.onMonteCarlo`); `src/main.ts` (the window, closed outside the Engineer
+mode); `src/physics/simulation.ts` (the `dispersion` option: the vehicle model, the density
+factor, the rigid runtime's air, the navigation seed; Q0's break-up rule);
+`src/physics/sim/forces.ts` (an optional density factor); `src/physics/rigid/runtime.ts` (the
+air option). tests/i18n.test.ts (two key families).
+
+**Tests**: tests/monte-carlo.test.ts (the draws: reproducible, per stage and strap-on group,
+independent of what is switched off, standard normal and clipped; the dispersed vehicle and wind;
+nothing dispersed flies bit for bit; thrust, density and wind reach the flight; a fresh IMU; the
+settings; the set's laws; the statistics, the ellipse, the regression and the shares; the CSV;
+the job: order, workers, a dead worker, stop), a block in tests/mcp.test.ts, and
+tests/heavy/monte-carlo-*.test.ts (Falcon 9 on the three laws, 40 runs each so the shares are
+computed; Soyuz-2.1b with its strap-ons, 30; Falcon 9 on PEG with a tactical navigation, 20: every
+run counted in one outcome, every loss named by the failure that caused it — never
+`evt.vehicleLost`, a timeout or a thrown error — and no more lost, no fewer on target, the runs on
+target within bands, than when recorded).
+
+**Results (2026-09-25)**, seed 1, each vehicle's reference mission to 500 × 500 km, six-DOF in
+crosswind, the minimal set (± 3σ, bias; the full lines printed by the sets, run with
+`--reporter=default`: under an AI agent vitest hides a passing test's output):
+
+| Set | In orbit | On target | Lost (why) | On target: perigee, apogee (km), inclination (°) | s/run |
+|---|---|---|---|---|---|
+| Falcon 9 standard, 40 | 36 | 33 | 4 structuralFailure | 499.78 ± 1.11 (−0.22), 501.37 ± 0.84 (+1.37), 28.6138 ± 0.0006 | 80 |
+| Falcon 9 PEG, 40 | 36 | 33 | 4 structuralFailure | 499.80 ± 1.10 (−0.20), 501.53 ± 0.83 (+1.53), 28.6156 ± 0.0009 | 83 |
+| Falcon 9 IGM, 40 | 36 | 33 | 4 structuralFailure | 499.89 ± 1.07 (−0.11), 501.44 ± 0.81 (+1.44), 28.6133 ± 0.0001 | 83 |
+| Falcon 9 PEG + tactical, 20 | 20 | 19 | 0 | 499.76 ± 0.91 (−0.24), 501.39 ± 0.60 (+1.39), 28.6155 ± 0.0013 | 68 |
+| Soyuz-2.1b standard, 30 | 24 | 24 | 3 aeroBreakup, 3 outOfPropellant | 494.79 ± 5.18 (−5.21), 505.20 ± 5.20 (+5.20), 51.6033 ± 0.0114 | 111 |
+
+(Five sets on four cores, 76 min.) At the cut-off, against the planned 200 × 500 km:
+Falcon 9 standard 200.00 ± 0.00 × 497.86 ± 1.31, PEG 199.36 ± 0.64 × 497.62 ± 1.11, IGM
+200.01 ± 0.02 × 497.82 ± 1.27; Soyuz 195.86 ± 16.30 × 497.06 ± 0.07. The shares at the cut-off:
+the apogee is the propellant's and the thrust's (standard 24 % / 14 %, IGM 34 % / 40 %), the
+perigee on PEG and IGM the wind's and the Isp's; the inclination over all the runs in orbit is the wind's
+(46 %), through the runs in the wrong plane. Soyuz's shares are not computed (19 numbers drawn,
+57 runs needed).
+
+**Known issues** (the runs not on target; PHYSICS §2l has them in full), left for the owner:
+
+1. Falcon 9 breaks up on q past its placard (46 kPa) at T+68–88 s: runs 21, 23, 25, 34, on every
+   law (the three examined had +6.7 to +9.6 m/s of dispersed wind to the east).
+2. Soyuz-2.1b breaks up on q·α (Q0's 300 kPa·°) at T+34–62 s: runs 1, 20, 23 (+6 to +13 m/s to
+   the east, α 8–17°).
+3. Soyuz-2.1b runs out of propellant: runs 12, 16, 25 (run 12: the third stage burns to its last
+   propellant at T+1493 s on a 6400 km-apogee path; the ascent never cuts off). Not understood.
+4. Falcon 9 stays in the wrong plane (29.1–29.3° against 28.61°, already at the cut-off): runs
+   13, 35, 36 on every law, 13 with the navigation too; run 13 timed out aligning for its burn.
+   Not understood.
+5. A tactical or MEMS navigation missed its target on every flight (the set: 20 in orbit, none on
+   target): the gyro noise had emptied the second stage's gas. **Fixed** (G02 above, the jets'
+   rate deadband): 19 of 20 on target.
+6. Electron (3 probe runs, no heavy set): one run's second stage cut off with no burn prediction
+   (`evt.burnPredictionUnavailable`, −14.6 m/s to the east); it ended suborbital, the kick stage
+   unlit.
+
+Also found by the sets and fixed on the way: the Electron set came back with no run in orbit (the
+orbit is now read at the end of the mission too); the loss's reason read `evt.vehicleLost`, which
+follows every loss (now the first failure). 
+

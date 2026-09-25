@@ -163,6 +163,10 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^setup\.faults\.(preset|presetNote|magnitude)\.[a-zA-Z0-9]+$/, from: 'ui/panel.ts faultsSection / faultRow' },
   // G01: the explicit guidance's laws.
   { pattern: /^setup\.explicit\.about\.(standard|peg|igm)$/, from: 'ui/panel.ts explicitGuidanceSection: t(`setup.explicit.about.${config.law}`)' },
+  // G05: the Monte Carlo window's dispersions and states.
+  { pattern: /^mc\.q\.(thrust|isp|propellant|dryMass|density|wind|imu)(\.about)?$/, from: 'ui/monte-carlo.ts chrome: t(`mc.q.${key}`), t(`mc.q.${key}.about`)' },
+  { pattern: /^mc\.(progress|state)\.(running|done|stopped)$/, from: 'ui/monte-carlo.ts render: t(`mc.progress.${job.state}`), t(`mc.state.${job.state}`)' },
+  { pattern: /^mc\.(point|point\.about|table\.caption|target)\.(final|cutoff)$/, from: 'ui/monte-carlo.ts: t(`mc.point.${point}`), t(`mc.table.caption.${this.point}`), t(`mc.target.${this.point}`)' },
 ];
 
 /**
