@@ -78,6 +78,15 @@ export function pointExitFlowMoment(inertiaRate: Mat3, omega: Vec3,
   }
   return moment;
 }
+/**
+ * G02: the jets' rate deadband, in multiples of the 1σ white noise of the rate the navigation reads.
+ * A gyro's white noise reads as rate, and the rate loop turns it into moment (a tactical gyro's
+ * 0.05°/√h is about 0.008°/s at 100 Hz, some hundreds of N·m on a second stage). Nozzles only
+ * jitter on it; proportional jets would spend the stage's gas on it in a minute. So the jets fire
+ * on an axis only when the rate error there stands out of that noise, like a real RCS's rate
+ * deadband. 4σ: a false firing a minute or so on the three axes at 100 Hz.
+ */
+export const JET_RATE_DEADBAND_SIGMA = 4;
 export const FLIGHT_CONTROL_GAINS: ControlGains = {
   attitudeGain: v3(1.5, 1.5, 1.5), rateGain: v3(3, 3, 3),
   maxRate: v3(8 * DEG, 5 * DEG, 5 * DEG), maxAngularAcceleration: v3(5 * DEG, 3 * DEG, 3 * DEG),
@@ -481,6 +490,12 @@ export class RigidRuntime {
     const finActual = fins ? stepSurfaces(fins, finStart, finCommands, dt) : [];
     const finMidpoint = fins ? stepSurfaces(fins, finStart, finCommands, dt / 2) : [];
     if (fins) residual = sub(residual, surfaceWrench(fins, finMidpoint, aeroStart.dynamicPressure, finFlow, start.cg).momentBody);
+    // G02: through a navigation system the rate is read with the gyro's noise; the jets leave an axis
+    // whose rate error is within that noise to the nozzles (the loop on the truth has none to leave).
+    if (this.navigation && this.navigation.rateNoise > 0) {
+      const band = JET_RATE_DEADBAND_SIGMA * this.navigation.rateNoise, error = sub(demand.desiredRates, sensed.omegaBody);
+      residual = v3(Math.abs(error.x) > band ? residual.x : 0, Math.abs(error.y) > band ? residual.y : 0, Math.abs(error.z) > band ? residual.z : 0);
+    }
     // G08: the jets the FDIR has not closed off; the duty each jet really fires at.
     const usableJets = faults ? faults.usableJets(jets) : jets;
     const rcsAllocation = allocateRcs(usableJets, residual, start.cg, Math.max(1, start.aero.referenceLength));

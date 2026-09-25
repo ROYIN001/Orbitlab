@@ -464,6 +464,22 @@ tests/session.test.ts (a navigated flight in the worker records as on the main t
 **Results (2026-09-24)**: `npm test` 70 files / 1003 tests pass (12 min); the whole-mission
 fingerprints of tests/heavy/flex-golden.test.ts pass unchanged; typecheck and build pass.
 
+**Fixed with G05 (2026-09-25; finding 5 there, the owner's choice to fix it here)**: that harder
+work was the whole second stage's cold gas. With a tactical or MEMS unit the gyro noise, read as
+rate and turned into moment by the rate loop, fired the jets until the 30 kg were gone by T+250 s;
+in orbit the stack could not turn for its circularisation burn, so every such flight ended with
+`evt.burnAlignmentTimeout` and off its target. The jets now have a rate deadband when the flight
+flies on a navigation (`JET_RATE_DEADBAND_SIGMA` = 4 in `src/physics/rigid/runtime.ts`, on the
+σ the navigation reports for its rate, `NavigationSystem.rateNoise`): an axis whose rate error is
+within 4σ is left to the nozzles, and a slew fires them as before. A deadband on the moment (tried
+first) could not tell the noise from a slew: the loop's acceleration limit holds a slew's demand
+to less than the noise's. A low-pass filter on the rate did not save the gas. Falcon 9 to its
+reference orbit now reaches it on every grade: second-stage gas 16.4 kg tactical, 14.7 kg MEMS,
+17.2 kg navigation grade, 17.3 kg on the truth (PHYSICS §2h). Without navigation nothing changes
+(the golden fingerprints). Tests: the rate's noise in tests/navigation.test.ts;
+tests/heavy/navigation-burns.test.ts (tactical and MEMS reach the target orbit, gas to spare).
+`src/physics/sim/burns.ts` was not touched.
+
 ### G08 — failures of the control system, and the FDIR
 
 Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2i, use in

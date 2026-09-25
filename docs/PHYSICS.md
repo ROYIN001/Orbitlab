@@ -586,14 +586,38 @@ burns (src/physics/sim/burns.ts, the other session's) still read the truth.
 
 - Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 1.7 per
   axis, 0.5 % of samples outside 3σ), under 5 m and 0.1 m/s; the orbit it believes in is the true
-  one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop: the
-  attitude thrusters run at full duty 84 % of the first minute against 64 % on the truth.
+  one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop,
+  and the jets' deadband below keeps it off them.
 - A GNSS outage from T+60 s to T+200 s: the error grows to about 130 m and 1.9 m/s, inside the
   filter's growing 3σ, and falls back to metres at the first fix.
 - MEMS without GNSS: 12 km and 30 m/s of error by orbit; guidance cuts off on an orbit the
   navigation believes is 200 × 529 km while the true one is 202 × 511 km. The star tracker, above
   150 km, brings the attitude error from 1.6° to seconds of arc.
 - Navigation grade without GNSS: 80 m and 0.6 m/s; the apoapsis 1.4 km off.
+
+**The jets' rate deadband** (G05's finding). A gyro's white noise reads as rate: over a 10 ms
+step, a tactical gyro's 0.05 °/√h is 1.45·10⁻⁴ rad/s per axis, and the rate loop (3 s⁻¹ times the
+inertia) turns it into a moment demand of some hundreds of N·m on Falcon 9's second stage, half
+its jets' authority. The nozzles only jitter on it; the jets, allocated in proportion to what the
+nozzles leave, spent the stage's 30 kg of cold gas on it by T+250 s, and in orbit the stack could
+not turn for its circularisation burn (`evt.burnAlignmentTimeout`, on every tactical and MEMS
+flight). So, flying on a navigation, the jets fire on an axis only when the rate error the loop
+reads there stands out of that noise: beyond 4σ of it (`JET_RATE_DEADBAND_SIGMA`; σ = ARW/√Δt of
+the step the rate was read over, `NavigationSystem.rateNoise`), a rate deadband as a real
+reaction control system has, with a false firing about once a minute. Within it the axis is left
+to the nozzles, and in a coast to drift until the attitude error asks for more than the band:
+the attitude holds to about 4σ/k_θ (0.02° tactical, 0.13° MEMS). A slew asks for a hundred times
+the band and fires them as before. On the truth the loop reads no noise and nothing changes.
+Falcon 9 to its reference orbit (500 km, 28.6°; tests/heavy/navigation-burns.test.ts):
+
+| Grade | Jets at full duty, first minute | 2nd-stage gas to T+480 s | … to the end | Orbit |
+|---|---|---|---|---|
+| truth (no navigation) | 60 % | 7.0 kg | 17.3 kg | 500.3 × 509.8 km, 28.614° |
+| navigation | 44 % | 6.8 kg | 17.2 kg | 500.5 × 510.1 km, 28.614° |
+| tactical | 12 % | 4.4 kg | 16.4 kg | 500.5 × 510.2 km, 28.614° |
+| MEMS | 6 % | 2.1 kg | 14.7 kg | 500.4 × 509.4 km, 28.614° |
+
+Before it, the tactical and MEMS flights had used all 30 kg by T+250 s and ended off their target.
 
 **Cost**: within the run-to-run noise (runs with navigation were not slower).
 
