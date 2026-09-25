@@ -30,6 +30,7 @@ import { FlightRecorder, type RecordingSource } from './replay/recorder';
 import { InlineSession, WorkerSession, createPhysicsWorker, type FlightSession, type SessionWorker } from './session/session';
 import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
+import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH } from './physics/constants';
@@ -218,6 +219,8 @@ class App {
   hudTimer = 0;
   telTimer = 0;
   explosion = new ExplosionEffect();
+  /** V03: exhaust trails */
+  private trails: ExhaustTrails | null = null;
   viewport: HTMLElement;
   glCanvas: HTMLCanvasElement;
   mapCanvas: HTMLCanvasElement;
@@ -251,7 +254,6 @@ class App {
   private bx = new THREE.Vector3();
   private by = new THREE.Vector3();
   private bz = new THREE.Vector3();
-  private backDir = new THREE.Vector3(0, -1, 0);
   private originV = new THREE.Vector3();
   /**
    * The body the camera follows when it is not the vehicle: a stage flown
@@ -857,15 +859,22 @@ class App {
     const sim = this.sim;
     // release the previous mission's GPU resources before building the new one
     if (this.rocket) {
-      this.scene.scene.remove(this.rocket.group, this.rocket.worldGroup);
+      this.scene.scene.remove(this.rocket.group);
       this.rocket.dispose();
     }
     if (this.pad) {
       this.scene.scene.remove(this.pad.group);
       this.pad.dispose();
     }
-    this.rocket = new RocketView(sim.vehicleSpec, sim.satellite);
-    this.scene.scene.add(this.rocket.group, this.rocket.worldGroup);
+    this.rocket = new RocketView(sim.vehicleSpec, sim.satellite, { humidity: SITE_HUMIDITY[sim.site.id] });
+    this.scene.scene.add(this.rocket.group);
+    // V03: the smoke the flight leaves in the air, from its own recording
+    if (this.trails) {
+      this.scene.scene.remove(this.trails.mesh);
+      this.trails.dispose();
+    }
+    this.trails = new ExhaustTrails(sim.vehicleSpec, sim.site.id, sim.cfg.dynamics, sim.plan.azimuthRotating);
+    this.scene.scene.add(this.trails.mesh);
     // G06: a crewed Soyuz's escape, drawn when it fires
     if (this.escapeView) {
       this.scene.scene.remove(this.escapeView.group);
@@ -878,7 +887,7 @@ class App {
       this.scene.scene.add(this.escapeView.group);
     }
     // V05: the pad the mission names, its launch table turned to the launch azimuth
-    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec, { padId: sim.cfg.padId, azimuth: sim.plan.azimuthRotating });
+    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec, { padId: sim.cfg.padId, azimuth: sim.plan.azimuthRotating, dynamics: sim.cfg.dynamics });
     this.scene.scene.add(this.pad.group);
     if (this.recoveryScenery) {
       this.scene.scene.remove(this.recoveryScenery.group);
@@ -1292,12 +1301,10 @@ class App {
       this.rocket.group.position.set(this.vehiclePos.x + offset.x, this.vehiclePos.y + offset.y, this.vehiclePos.z + offset.z);
       side = quatRotate(attitude, v3(0, 0, 1));
     }
-    // the smoke column trails back towards the pad
     const padVec = this.pad.group.position;
     const padDist = padVec.length();
-    if (padDist > 1) this.backDir.copy(padVec).divideScalar(padDist);
-    else this.backDir.set(-frame.dir.x, -frame.dir.y, -frame.dir.z);
-    this.rocket.update(frame, { backDir: this.backDir, padDistance: padDist, night });
+    this.rocket.update(frame, { night });
+    this.trails?.update(this.recorder.frames, frame.t, (p, out) => scene.toScene(p, out), night);
     // G06: after an abort the frame is the escaping body; the rocket it left is debris
     if (frame.abort) this.rocket.group.visible = false;
     if (this.escapeView) {

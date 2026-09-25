@@ -23,7 +23,9 @@ The switch in the top bar picks how much of the simulator you see:
   the crew on the ground from Gagarin's Start, Baikonur's Site 1/5, where they really flew from
   (every other Soyuz from Baikonur stands on Site 31/6, today's crew pad). The speed buttons run the flight in real time (1×), faster, or at
   **Auto**, which keeps liftoff, max-Q, every separation and every landing in real time and
-  hurries through the long coasts. The camera cuts to a stage flying home for its entry and
+  hurries through the long coasts. The smoke a rocket leaves stays where it was left and drifts
+  only with the flight's wind, and passing the speed of sound can wear a cloud of condensation
+  round the fairing in humid air. The camera cuts to a stage flying home for its entry and
   landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the
   rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship is
   down in the water, a card offers to keep watching, watch again, pick another launch, or plan a

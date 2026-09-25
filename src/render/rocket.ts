@@ -14,22 +14,18 @@ import type { BoosterFrame, StageFrame, VisualFrame } from '../physics/frame';
 import { interstageHeight, stackLayout } from '../physics/frame';
 import { buildSatellite, type SatelliteView } from './satellite';
 import { Plume, type PlumeKind } from './plume';
-import { AscentTrail } from './smoke';
 import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout, type NozzlePos } from './liveries';
-import { clamp01, seedFromString, smoothstep } from './noise';
+import { clamp01, seedFromString } from './noise';
 import { disposeObject } from './dispose';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
 import { buildShipFlaps, foldShipFlaps, SHIP_NOSE_FRACTION, tangentOgiveProfile, type FlapVisual } from './ship';
+import { VapourCone, vapourStrength } from './vapour';
 import {
   AftSkirt, CrewedTop, FrostCoat, R7_BOOSTER_GAP, R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7BoosterTip, r7CoreBase,
   r7CoreProfile, r7CoreTop, r7RudderGeometry, r7TrussGeometry,
 } from './soyuz';
 
 export interface RocketEnv {
-  /** unit vector (scene axes) from the vehicle back down its flight path */
-  backDir: THREE.Vector3;
-  /** distance from the vehicle to the pad, m */
-  padDistance: number;
   /** 0 = full day, 1 = night at the vehicle; scales the exhaust's own light */
   night: number;
 }
@@ -169,8 +165,6 @@ export function gridFinTexture(): THREE.Texture {
 
 export class RocketView {
   readonly group = new THREE.Group();
-  /** unrotated group that lives in scene space (holds the ascent smoke trail) */
-  readonly worldGroup = new THREE.Group();
   readonly spec: VehicleSpec;
   readonly height: number;
   private stages: StagePart[] = [];
@@ -178,9 +172,13 @@ export class RocketView {
   private fairingLength = 0;
   /** a crewed Soyuz's escape tower and fairing fins */
   private crewedTop: CrewedTop | null = null;
+  /** V03: the condensation collar through Mach 1, at the fairing's shoulder (or a ship's) */
+  private vapour: VapourCone | null = null;
+  /** where the collar starts: above the fairing's base, or below the top of the stack */
+  private vapourAt: { onFairing: boolean; y: number } | null = null;
+  private readonly humidity: number;
   private readonly crewed: boolean;
   private satellite: SatelliteView;
-  private trail = new AscentTrail(140);
   private materials: THREE.Material[] = [];
   private textures: THREE.Texture[] = [];
   private matCache = new Map<string, THREE.MeshStandardMaterial>();
@@ -194,10 +192,11 @@ export class RocketView {
   private engineQuaternion = new THREE.Quaternion();
   private engineParentInverse = new THREE.Quaternion();
 
-  constructor(spec: VehicleSpec, sat: SatelliteSpec) {
+  /** @param opts.humidity the launch site's air, 0–1: how thick the vapour cone is (`SITE_HUMIDITY`) */
+  constructor(spec: VehicleSpec, sat: SatelliteSpec, opts: { humidity?: number } = {}) {
     this.spec = spec;
     this.crewed = !!sat.crewed;
-    this.worldGroup.add(this.trail.mesh);
+    this.humidity = opts.humidity ?? 0.6;
     // One source of truth for the stacking geometry. `stackLayout` already
     // computes both the per-stage height and the diameter of whatever sits on
     // top of each stage; this view used to re-derive the "next non-spacecraft
@@ -220,6 +219,16 @@ export class RocketView {
       this.group.add(this.fairing);
       total += spec.fairing.length;
     }
+    // the collar forms where the nose's curve meets the cylinder: the fairing's shoulder, or a ship's
+    const last = spec.stages[spec.stages.length - 1];
+    if (spec.fairing) {
+      this.vapour = new VapourCone(spec.fairing.diameter / 2, spec.fairing.diameter * 1.7);
+      this.vapourAt = { onFairing: true, y: spec.fairing.length * 0.52 };
+    } else if (last && !last.isSpacecraft) {
+      this.vapour = new VapourCone(last.diameter / 2, last.diameter * 1.7);
+      this.vapourAt = { onFairing: false, y: last.length * SHIP_NOSE_FRACTION };
+    }
+    if (this.vapour) this.group.add(this.vapour.group);
     this.satellite = buildSatellite(sat);
     this.group.add(this.satellite.group);
     this.group.add(this.engineLight);
@@ -686,7 +695,6 @@ export class RocketView {
   update(frame: VisualFrame, env: RocketEnv): void {
     if (frame.destroyed) {
       this.group.visible = false;
-      this.trail.mesh.visible = false;
       return;
     }
     this.group.visible = true;
@@ -793,6 +801,12 @@ export class RocketView {
       this.fairing.position.y = top;
       this.crewedTop?.update(sinceLiftoff, this.fairingLength);
     }
+    if (this.vapour && this.vapourAt) {
+      const on = this.vapourAt.onFairing ? frame.fairingAttached : true;
+      const strength = on && frame.liftoff && !frame.abort && frame.thrust > 0 ? vapourStrength(frame.mach, frame.altitude, this.humidity) : 0;
+      this.vapour.group.position.y = this.vapourAt.onFairing ? top + this.vapourAt.y : top - this.vapourAt.y;
+      this.vapour.update(strength, t, env.night);
+    }
     // payload
     const satG = this.satellite.group;
     const sepT = frame.payloadSepT ?? -1;
@@ -809,17 +823,6 @@ export class RocketView {
       satG.position.y = top + this.satellite.height / 2 + 0.5;
       this.satellite.setDeploy(0);
       satG.visible = !this.spec.fairing ? false : !frame.fairingAttached;
-    }
-
-    // ascent smoke trail: a column stretching back towards the pad
-    const denseAir = 1 - smoothstep(9e3, 34e3, frame.altitude);
-    const burningNow = frame.thrust > 0 && frame.liftoff;
-    const trailOpacity = burningNow ? denseAir * 0.55 * smoothstep(40, 500, frame.altitudeAGL) : 0;
-    if (trailOpacity > 0.01) {
-      const len = Math.min(env.padDistance, 5200);
-      this.trail.update(t, env.backDir, len, Math.max(6, this.currentRadius(frame) * 3.4), trailOpacity);
-    } else {
-      this.trail.update(t, env.backDir, 1, 1, 0);
     }
   }
 
@@ -857,12 +860,11 @@ export class RocketView {
       p.vernier?.dispose();
       for (const bg of p.boosters) for (const u of bg.units) { u.plume.dispose(); u.vernier?.dispose(); }
     }
-    this.trail.dispose();
     this.crewedTop?.dispose();
+    this.vapour?.dispose();
     for (const t of this.textures) t.dispose();
     for (const m of this.materials) m.dispose();
     disposeObject(this.group);
-    disposeObject(this.worldGroup);
     this.stages = [];
   }
 }

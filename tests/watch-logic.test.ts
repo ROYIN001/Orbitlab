@@ -17,6 +17,20 @@ function frame(o: Partial<VisualFrame> = {}): VisualFrame {
 const ev = (t: number, key: string): SimEvent => ({ t, key, severity: 'info' });
 
 describe('launch viewer beats', () => {
+  it('names the speed of sound, and a solid booster\'s separation (V03)', () => {
+    expect(watchBeat(frame({ t: 30, altitude: 6000, mach: 0.98 }), [])).toBe('transonic');
+    expect(watchBeat(frame({ t: 30, altitude: 6000, mach: 0.8 }), [])).toBe('gravityTurn');
+    expect(watchBeat(frame({ t: 40, altitude: 16000, mach: 1.0 }), [])).toBe('gravityTurn');
+    const sep = [ev(120, 'evt.boosterSep')];
+    expect(watchBeat(frame({ t: 121, altitude: 60e3 }), sep)).toBe('boosterSep');
+    expect(watchBeat(frame({ t: 121, altitude: 60e3 }), sep, false, true)).toBe('boosterSepSolid');
+    expect(watchBeat(frame({ t: 121, altitude: 60e3 }), sep, true, false)).toBe('boosterSepCross');
+    for (const beat of ['transonic', 'boosterSepSolid'] as const) {
+      expect(en[WATCH_BEATS[beat].label as keyof typeof en]).toBeTruthy();
+      expect(en[WATCH_BEATS[beat].text as keyof typeof en]).toBeTruthy();
+    }
+  });
+
   it('counts down on the pad and follows the flight status', () => {
     expect(watchBeat(null, [])).toBe('countdown');
     expect(watchBeat(frame({ t: -5, status: 'prelaunch', liftoff: false }), [])).toBe('countdown');

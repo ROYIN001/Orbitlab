@@ -17,6 +17,10 @@ import { GroundSmoke, PadGlow } from './smoke';
 import { disposeObject } from './dispose';
 import { clamp01, smoothstep } from './noise';
 import { quatRotate } from '../physics/rigid/math';
+import { windVelocityENU, type WindScenario } from '../physics/rigid/aero';
+import { windScenario } from '../physics/rigid/runtime';
+import type { DynamicsConfig } from '../types';
+import { exhaustKind } from './exhaust';
 
 /**
  * How high the vehicle's base stands above the pad, m: what a pad's arms and
@@ -54,6 +58,9 @@ export class LaunchPadView {
   private smoke: GroundSmoke;
   /** slower, larger, fainter second layer of the pad cloud */
   private smokeSlow: GroundSmoke;
+  /** V03: the cloud that hangs over the pad for minutes, drifting with the flight's surface wind */
+  private smokeLinger: GroundSmoke;
+  private drift = new THREE.Vector3();
   private glow: PadGlow;
   private materials: THREE.MeshStandardMaterial[] = [];
   private matCache = new Map<string, THREE.MeshStandardMaterial>();
@@ -79,8 +86,9 @@ export class LaunchPadView {
   /**
    * @param opts.padId the site's pad (`SiteExtra.pads`); absent, its first
    * @param opts.azimuth the launch azimuth, rad from north: an R-7's launch table turns to it
+   * @param opts.dynamics the flight's physics: its wind, if any, carries the cloud
    */
-  constructor(site: SiteExtra, vehicle: VehicleSpec, opts: { padId?: string; azimuth?: number } = {}) {
+  constructor(site: SiteExtra, vehicle: VehicleSpec, opts: { padId?: string; azimuth?: number; dynamics?: DynamicsConfig } = {}) {
     this.cosLat = Math.cos(site.latitude * DEG);
     this.sinLat = Math.sin(site.latitude * DEG);
     this.lonRad = site.longitude * DEG;
@@ -137,9 +145,38 @@ export class LaunchPadView {
       opacity: 0.34,
     });
     this.smokeSlow.mesh.renderOrder = 3;
+    // Third, lingering layer (V03): what is left over the pad minutes later,
+    // far more of it from solid motors, carried off by the flight's own
+    // surface wind — the mean of it, so the cloud does not swing with the
+    // gusts — and standing where it formed on a calm day.
+    const first = vehicle.stages[0];
+    const solid = !!first && (exhaustKind(first) === 'solid' || (first.boosters ?? []).some((b) => exhaustKind(b) === 'solid'));
+    this.smokeLinger = new GroundSmoke({
+      count: 110,
+      trenchAzimuth: this.pad.trenchAzimuth,
+      mouthRadius: mouth * 2,
+      puffSize: Math.max(26, mouth * 2.8) * (solid ? 1.6 : 1),
+      speed: Math.max(6, vehicle.height * 0.15),
+      color: 0xcdd0d6,
+      hot: 0xe8d8c0,
+      emitDuration: 26,
+      life: 420,
+      rise: 0.16,
+      grow: 0.045,
+      opacity: solid ? 0.55 : 0.3,
+    });
+    this.smokeLinger.mesh.renderOrder = 2;
+    const d = opts.dynamics;
+    const wind: WindScenario | null = d && d.model === 'sixDof' && d.wind !== 'calm' ? { ...windScenario(d), gustAmplitudeENU: { x: 0, y: 0, z: 0 } } : null;
+    if (wind) {
+      const w = windVelocityENU(wind, 10, 0);
+      // pad axes: x east, y up, z south
+      this.drift.set(w.x, 0, -w.y);
+    }
     this.glow = new PadGlow(Math.max(30, mouth * 4));
     const deck = this.pad.deck ?? this.pad.group;
     deck.add(this.smokeSlow.mesh);
+    deck.add(this.smokeLinger.mesh);
     deck.add(this.smoke.mesh);
     deck.add(this.glow.mesh);
   }
@@ -237,15 +274,18 @@ export class LaunchPadView {
     if (!st0 || !st0.ignited) {
       this.smoke.update(-1, 0);
       this.smokeSlow.update(-1, 0);
+      this.smokeLinger.update(-1, 0);
       this.glow.update(0, frame.t);
       return;
     }
     const since = frame.t - (st0.ignitionTime ?? 0);
     // the cloud builds at ignition and dissipates over the following half minute
     const cloud = smoothstep(-0.15, 0.4, since) * (1 - smoothstep(20, 36, since));
-    this.smoke.update(since, cloud);
+    this.smoke.update(since, cloud, this.drift);
     // the slow layer lags the jet and hangs around long after it has stopped
-    this.smokeSlow.update(since, smoothstep(0.2, 2.5, since) * (1 - smoothstep(48, 95, since)));
+    this.smokeSlow.update(since, smoothstep(0.2, 2.5, since) * (1 - smoothstep(48, 95, since)), this.drift);
+    // and what is left of it all hangs over the pad for minutes
+    this.smokeLinger.update(since, smoothstep(1, 8, since) * (1 - smoothstep(240, 480, since)), this.drift);
     const near = 1 - smoothstep(25, 220, frame.altitudeAGL);
     this.glow.update(frame.thrust > 0 ? near * Math.max(0.25, frame.throttle) : 0, frame.t);
   }
@@ -253,6 +293,7 @@ export class LaunchPadView {
   dispose(): void {
     this.smoke.dispose();
     this.smokeSlow.dispose();
+    this.smokeLinger.dispose();
     this.glow.dispose();
     for (const m of this.materials) m.dispose();
     for (const g of this.geometries) g.dispose();

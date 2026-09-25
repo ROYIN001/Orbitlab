@@ -13,6 +13,7 @@ import { getLang, t } from '../i18n';
 import type { VisualFrame } from '../physics/frame';
 import type { SimEvent } from '../physics/simulation';
 import { vehicleById } from '../data/vehicles';
+import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
 import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat } from './watch-logic';
 import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
@@ -236,12 +237,23 @@ export class WatchView {
     }
   }
 
+  /** V03: whether a vehicle's strap-ons are solid motors (cached by id). */
+  private solidBoosters(vehicleId: string): boolean {
+    if (this.solidFor?.id !== vehicleId) {
+      let spec: ReturnType<typeof vehicleById> | undefined;
+      try { spec = vehicleById(vehicleId); } catch { spec = undefined; }
+      this.solidFor = { id: vehicleId, solid: !!spec?.stages.some((st) => (st.boosters ?? []).some((b) => exhaustKind(b) === 'solid')) };
+    }
+    return this.solidFor.solid;
+  }
+  private solidFor?: { id: string; solid: boolean };
+
   /** Called at the HUD's 10 Hz with the frame on screen. */
   update(frame: VisualFrame | null, events: readonly SimEvent[], state: UpdateState): void {
     this.lastFrame = frame;
     // Four strap-ons leaving together is the Soyuz "Korolev cross".
     const cross = state.vehicleId.startsWith('soyuz');
-    const beat = watchBeat(frame, events, cross);
+    const beat = watchBeat(frame, events, cross, this.solidBoosters(state.vehicleId));
     this.beat = beat;
     const copy = WATCH_BEATS[beat];
     const label = t(copy.label);

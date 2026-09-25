@@ -16,7 +16,7 @@ import type { SimEvent } from '../physics/simulation';
 import { OMEGA_EARTH } from '../physics/constants';
 
 export type WatchBeat =
-  | 'countdown' | 'liftoff' | 'climb' | 'maxQ' | 'gravityTurn' | 'boosterSep' | 'boosterSepCross'
+  | 'countdown' | 'liftoff' | 'climb' | 'transonic' | 'maxQ' | 'gravityTurn' | 'boosterSep' | 'boosterSepCross' | 'boosterSepSolid'
   | 'fairingSep' | 'stageSep' | 'upperStage' | 'coast' | 'burn' | 'orbit' | 'deployed' | 'failed'
   // a stage flown home
   | 'boostback' | 'entryBurn' | 'landingBurn' | 'boosterLanded' | 'boosterLandedShip' | 'boosterCaught'
@@ -35,6 +35,8 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   gravityTurn: { label: 'watch.beat.gravityTurn', text: 'watch.say.gravityTurn' },
   boosterSep: { label: 'watch.beat.boosterSep', text: 'watch.say.boosterSep' },
   boosterSepCross: { label: 'watch.beat.boosterSep', text: 'watch.say.boosterSepCross' },
+  boosterSepSolid: { label: 'watch.beat.boosterSep', text: 'watch.say.boosterSepSolid' },
+  transonic: { label: 'watch.beat.transonic', text: 'watch.say.transonic' },
   fairingSep: { label: 'watch.beat.fairingSep', text: 'watch.say.fairingSep' },
   stageSep: { label: 'watch.beat.stageSep', text: 'watch.say.stageSep' },
   upperStage: { label: 'watch.beat.upperStage', text: 'watch.say.upperStage' },
@@ -113,6 +115,8 @@ const RETURN_SETTLE = 10;
 const RETURN_DOWN = new Set(['evt.boosterLandedZone', 'evt.boosterLanded', 'evt.boosterLandedShip', 'evt.boosterCaught', 'evt.stageImpact']);
 /** seconds after liftoff that are "liftoff" rather than the climb */
 const LIFTOFF_HOLD = 12;
+/** Mach band the transonic beat holds for (the vapour cone's, render/vapour.ts) */
+const TRANSONIC: readonly [number, number] = [0.9, 1.15];
 /** below this the rocket is still rising almost straight up */
 const CLIMB_ALTITUDE = 4000;
 
@@ -121,9 +125,10 @@ const CLIMB_ALTITUDE = 4000;
  *
  * `crossSeparation` picks the Soyuz wording for the strap-on separation: four
  * boosters peeling away together is the "Korolev cross", which is worth
- * naming to anyone watching one.
+ * naming to anyone watching one. `solidBoosters` picks the solid-motor
+ * wording: their separation motors and the smoke they leave (V03).
  */
-export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[], crossSeparation = false): WatchBeat {
+export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[], crossSeparation = false, solidBoosters = false): WatchBeat {
   if (!frame) return 'countdown';
   if (frame.status === 'failed' || frame.destroyed) return 'failed';
   // a pad abort happens before liftoff: its events are what is on screen
@@ -137,7 +142,8 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
       if (b.key === e.key && frame.t - e.t <= b.hold) {
         if (b.key === 'evt.abort') return ABORT_BEATS[String(e.params?.mode)] ?? b.beat;
         if (b.key === 'evt.escapeCapsule') return capsuleBeat(frame);
-        return b.beat === 'boosterSep' && crossSeparation ? 'boosterSepCross' : b.beat;
+        if (b.beat === 'boosterSep') return crossSeparation ? 'boosterSepCross' : solidBoosters ? 'boosterSepSolid' : 'boosterSep';
+        return b.beat;
       }
     }
   }
@@ -146,6 +152,8 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
     case 'ascent': {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
       if (since < LIFTOFF_HOLD) return 'liftoff';
+      // V03: through the speed of sound, while the air still carries the water for a vapour cone
+      if (frame.mach >= TRANSONIC[0] && frame.mach <= TRANSONIC[1] && frame.altitude < 15e3) return 'transonic';
       if (frame.activeStageIndex > 0) return 'upperStage';
       return frame.altitude < CLIMB_ALTITUDE ? 'climb' : 'gravityTurn';
     }

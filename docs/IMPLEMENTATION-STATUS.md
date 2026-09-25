@@ -57,6 +57,21 @@ throughout.
   Every pad's arms and masts now react to the height of the vehicle's base: in six-DOF the state
   is the centre of mass, 14.5 m up a Soyuz on the pad, and the generic R-7 pad's arms had been
   standing half open before the engines lit.
+- **Smoke and the vapour cone** (roadmap V03, `src/render/trails.ts`, `vapour.ts`): the exhaust
+  trail is drawn from the flight's own recording — a puff for every engine burning in every
+  recorded frame, the core's, each strap-on's, a stage flying home, an escape motor — fixed where
+  it was left, widening and fading with age, and carried by the flight's own wind: the six-DOF
+  crosswind or shear, nothing when the flight is calm (the default) or point-mass. So a scrub or a
+  replay draws the same trail. What it looks like is the propellant's: solid motors a thick white
+  column that hangs for minutes, kerosene a thin grey one (darker behind a Merlin's gas
+  generator), hydrogen almost nothing but a contrail in humid air, methane little, the
+  hypergolic stages a reddish-brown haze. Separations leave their own puffs: a liquid strap-on
+  venting its oxygen (the Korolev cross), a solid booster's separation motors, a stage's
+  separation plane. The pad's cloud has a third layer that lingers for minutes, heavier after
+  solid motors, drifting with the surface wind. Through Mach 0.85–1.15 below about 13 km a
+  condensation collar forms at the fairing's shoulder (a ship's, on Starship), strong at humid
+  coastal sites and faint over the steppe. Watch names the speed of sound and a solid booster's
+  separation. Drawing only; the physics is unchanged.
 - **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
   buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
   R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
@@ -80,6 +95,15 @@ throughout.
 | Cottages of Korolev and Gagarin | by the assembly building at Site 2 | — | Advantour (2.5 km from the pad; drawn nearer) |
 | Lightning masts, floodlights, tanks, erector, locomotive | | | estimates |
 
+### Smoke and the vapour cone: estimates
+
+Everything V03 draws is an estimate from launch photographs and climate, not a measurement:
+each exhaust's colour, opacity, lifetime, width and the altitudes it thins out over
+(`LOOKS` in `src/render/trails.ts`), the separation puffs, each site's humidity
+(`SITE_HUMIDITY`: Kourou 0.95 … Jiuquan 0.2), the vapour cone's Mach band (0.85–1.15), its
+ceiling (13.5 km) and its size, and the lingering cloud's lifetime (up to 8 min). The trail
+moves only with the physics' wind; the calm default leaves it where it was made.
+
 ## What is experimental
 
 - **Falcon 9 first-stage recovery in six-DOF.** The acceptance landings pass at three
@@ -101,7 +125,7 @@ throughout.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1030 tests in 76 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1037 tests in 77 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -140,7 +164,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
-| P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | |
+| P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | |
 | P05 slosh, bending and notch filter | done | C01 historical missions | |
 | U07 ГОСТ 20058-80 notation | done | | |
