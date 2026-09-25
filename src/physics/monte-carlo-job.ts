@@ -7,8 +7,8 @@
 import type { MissionConfig, VehicleSpec } from '../types';
 import { vehicleById } from '../data/vehicles';
 import {
-  drawLayout, insertionTargetOf, monteCarloCsv, monteCarloLaws, summarizeMonteCarlo,
-  type DrawSlot, type GuidanceLaw, type InsertionTarget, type MonteCarloConfig, type MonteCarloRun, type MonteCarloSummary,
+  drawLayout, missionTargetsOf, monteCarloCsv, monteCarloLaws, summarizeMonteCarlo,
+  type DrawSlot, type GuidanceLaw, type InsertionTarget, type MeasurePoint, type MonteCarloConfig, type MonteCarloRun, type MonteCarloSummary,
 } from './monte-carlo';
 
 export interface MonteCarloRequest { cfg: MissionConfig; mc: MonteCarloConfig; index: number; law: GuidanceLaw }
@@ -36,7 +36,8 @@ export class MonteCarloJob {
   readonly runs: MonteCarloRun[] = [];
   readonly spec: VehicleSpec;
   readonly layout: DrawSlot[];
-  readonly target: InsertionTarget;
+  /** what the runs are aimed at, at the end of the mission and at the ascent's cut-off */
+  readonly targets: Record<MeasurePoint, InsertionTarget>;
   readonly laws: GuidanceLaw[];
   readonly total: number;
   readonly startedAt = Date.now();
@@ -53,7 +54,8 @@ export class MonteCarloJob {
   } = {}) {
     this.spec = vehicleById(cfg.vehicleId);
     this.layout = drawLayout(this.spec);
-    this.target = insertionTargetOf(cfg);
+    if (cfg.orbit.suborbital) throw new Error('A Monte Carlo set reads orbits: a suborbital target has none.');
+    this.targets = missionTargetsOf(cfg);
     this.laws = monteCarloLaws(cfg, mc);
     // Every law flies run k before any flies run k + 1, so a set stopped early still compares like with like.
     for (let index = 0; index < mc.runs; index++) for (const law of this.laws) this.queue.push({ index, law });
@@ -95,8 +97,8 @@ export class MonteCarloJob {
     if (reply.type === 'run') this.runs.push(reply.run);
     else {
       // A run the physics threw on is a lost run, with the message as its reason: one bad run must not end a set.
-      this.runs.push({ index: reply.index, law: reply.law, outcome: 'lost', reason: `error: ${reply.message}`, perigeeKm: NaN, apogeeKm: NaN,
-        inclinationDeg: NaN, dvLeft: NaN, cutoffS: NaN, maxQkPa: NaN, maxQAlpha: NaN, z: [], ms: 0 });
+      this.runs.push({ index: reply.index, law: reply.law, outcome: 'lost', reason: `error: ${reply.message}`, onTarget: false,
+        maxQkPa: NaN, maxQAlpha: NaN, z: [], ms: 0 });
     }
     this.options.onChange?.(this);
     if (fliesOn) this.next(worker);
@@ -122,7 +124,7 @@ export class MonteCarloJob {
   }
 
   summary(): MonteCarloSummary {
-    if (this.cached?.n !== this.runs.length) this.cached = { n: this.runs.length, summary: summarizeMonteCarlo(this.runs, this.layout, this.mc.dispersions, this.target) };
+    if (this.cached?.n !== this.runs.length) this.cached = { n: this.runs.length, summary: summarizeMonteCarlo(this.runs, this.layout, this.mc.dispersions, this.targets) };
     return this.cached.summary;
   }
 

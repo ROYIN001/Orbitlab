@@ -51,7 +51,7 @@ import { CYCLE_LIMITS, EXPLICIT_LAWS, type ExplicitGuidanceRecord } from './phys
 import { elementsFromState } from './physics/orbital';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
-import { MONTE_CARLO_RUNS, OUTPUT_KEYS, validMonteCarloConfig, type MonteCarloConfig, type OutputStats } from './physics/monte-carlo';
+import { MONTE_CARLO_RUNS, OUTPUT_KEYS, validMonteCarloConfig, type MonteCarloConfig, type OutputStats, type PointSummary } from './physics/monte-carlo';
 import type { MonteCarloJob } from './physics/monte-carlo-job';
 import { cloneDispersions, DISPERSION_KEYS, DISPERSION_SIGMA_LIMITS, type DispersionSettings } from './physics/dispersion';
 
@@ -1296,25 +1296,33 @@ function roundStats(s: OutputStats, digits: number): Record<string, number | nul
   return { n: s.n, mean: r(s.mean), sigma: r(s.sigma), threeSigma: r(3 * s.sigma), min: r(s.min), max: r(s.max), ...(s.bias !== undefined ? { bias: r(s.bias) } : {}) };
 }
 
-/** The state of the app's Monte Carlo set, with its statistics per guidance law. */
+/** A law's runs read at one point: statistics, the 3σ ellipse and the shares. */
+function pointStatus(p: PointSummary): Record<string, unknown> {
+  const digits: Record<string, number> = { perigeeKm: 3, apogeeKm: 3, inclinationDeg: 4, dvLeft: 1 };
+  return {
+    runs: p.n,
+    stats: Object.fromEntries(OUTPUT_KEYS.map((k) => [k, roundStats(p.stats[k], digits[k])])),
+    ellipse3SigmaKm: p.ellipse ? { perigeeKm: +p.ellipse.cx.toFixed(3), apogeeKm: +p.ellipse.cy.toFixed(3), semiMajorKm: +p.ellipse.a.toFixed(3),
+      semiMinorKm: +p.ellipse.b.toFixed(3), angleDeg: +(p.ellipse.angle * RAD).toFixed(1) } : null,
+    sensitivity: Object.fromEntries(OUTPUT_KEYS.map((k) => {
+      const sens = p.sensitivity[k];
+      return [k, sens.ok ? { shares: Object.fromEntries(Object.entries(sens.shares).map(([q, v]) => [q, +(v ?? 0).toFixed(3)])),
+        other: +sens.other.toFixed(3), rSquared: +sens.rSquared.toFixed(3) } : null];
+    })),
+  };
+}
+
+/** The state of the app's Monte Carlo set, with its statistics per guidance law at the end of the mission and at the ascent's cut-off. */
 function monteCarloStatus(job: MonteCarloJob | null, includeCsv: boolean): Record<string, unknown> {
   if (!job) return { ok: true, state: 'none' };
   const progress = job.progress(), summary = job.summary();
-  const digits: Record<string, number> = { perigeeKm: 3, apogeeKm: 3, inclinationDeg: 4, dvLeft: 1 };
   return {
     ok: true, state: job.state, done: progress.done, total: progress.total, etaS: progress.etaS === null ? null : Math.round(progress.etaS),
     workers: job.workerCount, vehicleId: job.cfg.vehicleId, runs: job.mc.runs, seed: job.mc.seed, compareLaws: job.mc.compareLaws,
-    dispersions: job.mc.dispersions, target: summary.target,
+    dispersions: job.mc.dispersions, targets: summary.targets,
     laws: summary.laws.map((l) => ({
-      law: l.law, runs: l.runs, inserted: l.inserted, short: l.short, lost: l.lost, lostReasons: l.reasons,
-      stats: Object.fromEntries(OUTPUT_KEYS.map((k) => [k, roundStats(l.stats[k], digits[k])])),
-      ellipse3SigmaKm: l.ellipse ? { perigeeKm: +l.ellipse.cx.toFixed(3), apogeeKm: +l.ellipse.cy.toFixed(3), semiMajorKm: +l.ellipse.a.toFixed(3),
-        semiMinorKm: +l.ellipse.b.toFixed(3), angleDeg: +(l.ellipse.angle * RAD).toFixed(1) } : null,
-      sensitivity: Object.fromEntries(OUTPUT_KEYS.map((k) => {
-        const sens = l.sensitivity[k];
-        return [k, sens.ok ? { shares: Object.fromEntries(Object.entries(sens.shares).map(([q, v]) => [q, +(v ?? 0).toFixed(3)])),
-          other: +sens.other.toFixed(3), rSquared: +sens.rSquared.toFixed(3) } : null];
-      })),
+      law: l.law, runs: l.runs, inserted: l.inserted, short: l.short, lost: l.lost, onTarget: l.onTarget, lostReasons: l.reasons,
+      final: pointStatus(l.points.final), cutoff: pointStatus(l.points.cutoff),
     })),
     ...(includeCsv ? { csv: job.csv() } : {}),
   };
@@ -1326,9 +1334,9 @@ function toolRunMonteCarlo(host: McpAppHost): WebMcpTool {
       sigma: { type: 'number', minimum: DISPERSION_SIGMA_LIMITS[k][0], maximum: DISPERSION_SIGMA_LIMITS[k][1] } } }])) };
   return {
     name: 'run_monte_carlo', title: 'Monte Carlo insertion accuracy',
-    description: 'Roadmap G05: fly the mission in the setup panel many times in six-DOF, each run with its thrust, Isp, propellant and dry mass (per stage and strap-on group), air density and wind dispersed and — with the inertial navigation — a fresh IMU realisation, to the end of the powered ascent. '
+    description: 'Roadmap G05: fly the mission in the setup panel many times in six-DOF, each run with its thrust, Isp, propellant and dry mass (per stage and strap-on group), air density and wind dispersed and — with the inertial navigation — a fresh IMU realisation, to the end of the mission, reading its orbit there (after every planned burn: what the payload is delivered to) and at the end of the powered ascent (the ascent guidance\'s accuracy). '
       + 'action "start" starts a set (runs 20–2000, seed, compareLaws flies the standard law, PEG and IGM on the same draws, dispersions as {quantity: {enabled, sigma}} over the window\'s settings: sigma in % for thrust, isp, propellant, dryMass and density, m/s per horizontal axis for wind; the imu has none). '
-      + 'Runs take tens of seconds each, spread over the machine\'s cores: "status" reads the progress and, per law, the orbit at cut-off (perigee, apogee, inclination: mean, σ, 3σ, bias from the planned insertion; Δv left), the 3σ perigee–apogee ellipse, how many runs were lost and why, and each dispersion\'s share of each element\'s variance; includeCsv adds every run as CSV. "stop" ends the set.',
+      + 'Runs take tens of seconds each, spread over the machine\'s cores: "status" reads the progress and, per law, how many runs reached orbit and their target, how many were lost and why, and at both points (final: against the target orbit; cutoff: against the planned insertion) perigee, apogee, inclination and Δv left as mean, σ, 3σ and bias, the 3σ perigee–apogee ellipse, and each dispersion\'s share of each element\'s variance; includeCsv adds every run as CSV. "stop" ends the set.',
     inputSchema: { type: 'object', properties: {
       action: { type: 'string', enum: ['start', 'status', 'stop'] },
       runs: { type: 'integer', minimum: MONTE_CARLO_RUNS.min, maximum: MONTE_CARLO_RUNS.max },

@@ -1078,8 +1078,9 @@ describe('Monte Carlo insertion accuracy (roadmap G05)', () => {
     const worker = (): MonteCarloWorker => {
       const w: MonteCarloWorker = { onmessage: null, onerror: null, terminate() { w.onmessage = null; },
         postMessage(req) {
-          setTimeout(() => w.onmessage?.({ data: { type: 'run', run: { index: req.index, law: req.law, outcome: 'inserted', perigeeKm: 200 + (req.index % 5) * 0.1,
-            apogeeKm: 500 - (req.index % 3), inclinationDeg: 28.61, dvLeft: 2900, cutoffS: 487, maxQkPa: 31, maxQAlpha: 100, z: [], ms: 40_000 } } } as unknown as MessageEvent<MonteCarloReply>), 0);
+          const final = { perigeeKm: 200 + (req.index % 5) * 0.1, apogeeKm: 500 - (req.index % 3), inclinationDeg: 28.61, dvLeft: 2900, t: 3200 };
+          setTimeout(() => w.onmessage?.({ data: { type: 'run', run: { index: req.index, law: req.law, outcome: 'inserted', onTarget: true, final, cutoff: { ...final, t: 487 },
+            maxQkPa: 31, maxQAlpha: 100, z: [], ms: 40_000 } } } as unknown as MessageEvent<MonteCarloReply>), 0);
         } };
       return w;
     };
@@ -1120,10 +1121,12 @@ describe('Monte Carlo insertion accuracy (roadmap G05)', () => {
     const status = run.execute({ action: 'status', includeCsv: true }) as any;
     expect(status).toMatchObject({ state: 'done', done: 60, total: 60, etaS: null });
     expect(status.laws.map((l: any) => l.law)).toEqual(['standard', 'peg', 'igm']);
-    expect(status.laws[0]).toMatchObject({ runs: 20, inserted: 20, short: 0, lost: 0 });
-    expect(status.laws[0].stats.perigeeKm.mean).toBeCloseTo(200.2, 6);
-    expect(status.laws[0].stats.perigeeKm.threeSigma).toBeCloseTo(3 * status.laws[0].stats.perigeeKm.sigma, 3);
-    expect(status.laws[0].ellipse3SigmaKm).not.toBeNull();
+    expect(status.laws[0]).toMatchObject({ runs: 20, inserted: 20, short: 0, lost: 0, onTarget: 20 });
+    expect(status.targets.final.perigeeKm).toBeGreaterThan(status.targets.cutoff.perigeeKm - 1e-9);
+    expect(status.laws[0].final.stats.perigeeKm.mean).toBeCloseTo(200.2, 6);
+    expect(status.laws[0].final.stats.perigeeKm.threeSigma).toBeCloseTo(3 * status.laws[0].final.stats.perigeeKm.sigma, 3);
+    expect(status.laws[0].final.ellipse3SigmaKm).not.toBeNull();
+    expect(status.laws[0].cutoff.runs).toBe(20);
     expect(status.csv.trim().split('\n')).toHaveLength(61);
     run.execute({ action: 'start', runs: 20 });
     const stopped = run.execute({ action: 'stop' }) as any;

@@ -174,10 +174,11 @@ describe('the Monte Carlo set (roadmap G05)', () => {
     const runs: MonteCarloRun[] = [];
     for (let i = 0; i < 300; i++) {
       const z = drawDispersion(vehicleById('falcon9'), DEFAULT_DISPERSIONS, 21, i).draws.map((d) => d.z);
-      runs.push({ index: i, law: 'standard', outcome: 'inserted', perigeeKm: 200 + 2 * z[thrustSlot] + 1 * z[densitySlot], apogeeKm: 500, inclinationDeg: 28.6,
-        dvLeft: 3000, cutoffS: 480, maxQkPa: 30, maxQAlpha: 100, z, ms: 1 });
+      const final = { perigeeKm: 200 + 2 * z[thrustSlot] + 1 * z[densitySlot], apogeeKm: 500, inclinationDeg: 28.6, dvLeft: 3000, t: 3000 };
+      runs.push({ index: i, law: 'standard', outcome: 'inserted', onTarget: true, final, cutoff: { ...final, perigeeKm: 190 + z[densitySlot], t: 480 },
+        maxQkPa: 30, maxQAlpha: 100, z, ms: 1 });
     }
-    const fit = regress(runs.map((r) => [r.z[thrustSlot], r.z[densitySlot]]), runs.map((r) => r.perigeeKm))!;
+    const fit = regress(runs.map((r) => [r.z[thrustSlot], r.z[densitySlot]]), runs.map((r) => r.final!.perigeeKm))!;
     expect(fit.coef[0]).toBeCloseTo(2, 9);
     expect(fit.coef[1]).toBeCloseTo(1, 9);
     expect(fit.rSquared).toBeCloseTo(1, 9);
@@ -189,25 +190,39 @@ describe('the Monte Carlo set (roadmap G05)', () => {
     expect(sens.shares.density!).toBeGreaterThan(0.1);
     expect(sens.shares.density!).toBeLessThan(0.28);
     expect(sens.other).toBeLessThan(0.02);
+    // At the cut-off only the density drove the perigee.
+    const atCutoff = sensitivityOf(runs, layout, DEFAULT_DISPERSIONS, 'perigeeKm', 'cutoff');
+    expect(atCutoff.shares.density!).toBeGreaterThan(0.95);
     // Too few runs for the terms: no shares shown.
     expect(sensitivityOf(runs.slice(0, 20), layout, DEFAULT_DISPERSIONS, 'perigeeKm').ok).toBe(false);
-    const summary = summarizeMonteCarlo([...runs, { ...runs[0], index: 300, outcome: 'lost', reason: 'evt.aeroBreakup' }], layout, DEFAULT_DISPERSIONS,
-      { perigeeKm: 200, apogeeKm: 500, inclinationDeg: 28.6 });
+    const { final: _f, ...lostRun } = runs[0];
+    const summary = summarizeMonteCarlo([...runs, { ...lostRun, index: 300, outcome: 'lost', onTarget: false, reason: 'evt.aeroBreakup' }], layout, DEFAULT_DISPERSIONS,
+      { final: { perigeeKm: 200, apogeeKm: 500, inclinationDeg: 28.6 }, cutoff: { perigeeKm: 190, apogeeKm: 500, inclinationDeg: 28.6 } });
     expect(summary.laws).toHaveLength(1);
-    expect(summary.laws[0]).toMatchObject({ runs: 301, inserted: 300, lost: 1, reasons: { 'evt.aeroBreakup': 1 } });
-    expect(Math.abs(summary.laws[0].stats.perigeeKm.bias!)).toBeLessThan(0.3);
+    expect(summary.laws[0]).toMatchObject({ runs: 301, inserted: 300, lost: 1, onTarget: 300, reasons: { 'evt.aeroBreakup': 1 } });
+    expect(summary.laws[0].points.final.n).toBe(300);
+    expect(summary.laws[0].points.cutoff.n).toBe(301); // the lost run got through its ascent
+    expect(Math.abs(summary.laws[0].points.final.stats.perigeeKm.bias!)).toBeLessThan(0.3);
+    expect(Math.abs(summary.laws[0].points.cutoff.stats.perigeeKm.bias!)).toBeLessThan(0.2);
   });
 
   it('writes every run as CSV, with what it drew as the deviation it flew', () => {
     const layout = drawLayout(vehicleById('falcon9'));
     const z = layout.map((_, i) => (i === 0 ? 1 : 0));
-    const csv = monteCarloCsv([{ index: 0, law: 'peg', outcome: 'inserted', perigeeKm: 200.5, apogeeKm: 499, inclinationDeg: 28.61, dvLeft: 2900,
-      cutoffS: 487, maxQkPa: 31, maxQAlpha: 105, z, ms: 1 }], layout, DEFAULT_DISPERSIONS);
-    const [head, row] = csv.trim().split('\n');
-    expect(head.split(',').slice(0, 4)).toEqual(['run', 'law', 'outcome', 'reason']);
-    expect(head).toContain(`${layout[0].element}_thrust_pct`);
-    expect(head).toContain('wind_east_ms');
-    expect(row.split(',')[11]).toBe('1.0000'); // 1σ of thrust: +1 %
+    const orbit = { perigeeKm: 200.5, apogeeKm: 499, inclinationDeg: 28.61, dvLeft: 2900, t: 3200 };
+    const csv = monteCarloCsv([{ index: 0, law: 'peg', outcome: 'inserted', onTarget: true, cutoff: { ...orbit, t: 487 }, final: orbit,
+      maxQkPa: 31, maxQAlpha: 105, z, ms: 1 }, { index: 1, law: 'peg', outcome: 'lost', onTarget: false, reason: 'error: a, b', maxQkPa: NaN, maxQAlpha: NaN, z: [], ms: 0 }],
+      layout, DEFAULT_DISPERSIONS);
+    const [head, row, lost] = csv.trim().split('\n');
+    const cols = head.split(',');
+    expect(cols.slice(0, 5)).toEqual(['run', 'law', 'outcome', 'reason', 'on_target']);
+    expect(cols).toContain('cutoff_perigee_km');
+    expect(cols).toContain('final_apogee_km');
+    expect(cols).toContain(`${layout[0].element}_thrust_pct`);
+    expect(cols).toContain('wind_east_ms');
+    expect(row.split(',')[cols.indexOf(`${layout[0].element}_thrust_pct`)]).toBe('1.0000'); // 1σ of thrust: +1 %
+    expect(row.split(',')[cols.indexOf('final_time_s')]).toBe('3200.0');
+    expect(lost).toContain('"error: a, b"');
   });
 });
 
@@ -221,8 +236,9 @@ function fakeWorkers(log: MonteCarloRequest[], opts: { dieOn?: number } = {}) {
         log.push(req);
         setTimeout(() => {
           if (opts.dieOn === req.index && !died) { died = true; w.onerror?.({ message: 'boom', preventDefault() {} } as ErrorEvent); return; }
-          const reply: MonteCarloReply = { type: 'run', run: { index: req.index, law: req.law, outcome: 'inserted', perigeeKm: 200 + req.index % 3, apogeeKm: 500,
-            inclinationDeg: 28.6, dvLeft: 3000, cutoffS: 480, maxQkPa: 30, maxQAlpha: 100, z: [], ms: 1000 } };
+          const final = { perigeeKm: 200 + req.index % 3, apogeeKm: 500, inclinationDeg: 28.6, dvLeft: 3000, t: 3000 };
+          const reply: MonteCarloReply = { type: 'run', run: { index: req.index, law: req.law, outcome: 'inserted', onTarget: true, final, cutoff: { ...final, t: 480 },
+            maxQkPa: 30, maxQAlpha: 100, z: [], ms: 1000 } };
           w.onmessage?.({ data: reply } as MessageEvent<MonteCarloReply>);
         }, 0);
       },
@@ -240,7 +256,8 @@ describe('the Monte Carlo job (roadmap G05)', () => {
     const job = new MonteCarloJob(mission(), mc, { workers: 4, createWorker: fakeWorkers(log) });
     expect(job.total).toBe(60);
     expect(job.workerCount).toBe(4);
-    expect(job.target.perigeeKm).toBeCloseTo(job.target.perigeeKm, 6);
+    expect(job.targets.final.perigeeKm).toBe(500);
+    expect(job.targets.cutoff.perigeeKm).toBe(200);
     while (job.state === 'running') await settle();
     expect(job.state).toBe('done');
     expect(job.runs).toHaveLength(60);

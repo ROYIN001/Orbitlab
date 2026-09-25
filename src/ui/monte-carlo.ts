@@ -16,8 +16,8 @@ import {
   cloneDispersions, DEFAULT_DISPERSIONS, DISPERSION_KEYS, DISPERSION_SIGMA_LIMITS, type DispersionKey,
 } from '../physics/dispersion';
 import {
-  defaultMonteCarlo, histogram, insertionTargetOf, monteCarloLaws, MONTE_CARLO_RUNS, OUTPUT_KEYS, validMonteCarloConfig,
-  type Ellipse, type GuidanceLaw, type InsertionTarget, type LawSummary, type MonteCarloConfig, type MonteCarloRun, type OutputKey,
+  defaultMonteCarlo, histogram, MEASURE_POINTS, missionTargetsOf, monteCarloLaws, MONTE_CARLO_RUNS, OUTPUT_KEYS, runsAt, validMonteCarloConfig,
+  type Ellipse, type GuidanceLaw, type InsertionTarget, type LawSummary, type MeasurePoint, type MonteCarloConfig, type MonteCarloRun, type OutputKey,
 } from '../physics/monte-carlo';
 import { MonteCarloJob } from '../physics/monte-carlo-job';
 import type { McpMonteCarloHost } from '../mcp';
@@ -71,6 +71,7 @@ export function duration(seconds: number): string {
 /** The name of the event that lost a run, short. */
 function reasonName(key: string): string {
   if (key.startsWith('error: ')) return t('mc.reason.error', { message: key.slice(7) });
+  if (key === 'timeout') return t('mc.reason.timeout');
   const short = t(`tl.${key}`);
   return short !== `tl.${key}` ? short : key;
 }
@@ -144,6 +145,10 @@ export class MonteCarloWindow implements McpMonteCarloHost {
   private config: MonteCarloConfig = defaultMonteCarlo();
   /** the law the histograms and the sensitivity show */
   private law: GuidanceLaw = 'standard';
+  /** where the runs' orbits are read: the end of the mission, or the ascent's cut-off */
+  private point: MeasurePoint = 'final';
+  private pointBar = el('div', 'mc-points');
+  private pointNote = el('p', 'mc-note');
   private head = el('header', 'mc-head');
   private eyebrow = el('span', 'eyebrow');
   private titleEl = el('h2', 'mc-title');
@@ -207,7 +212,8 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     const sensBox = el('div', 'mc-chart mc-sens-box'); sensBox.append(this.sensTitle, this.sensNote, this.sens);
     const grid = el('div', 'mc-grid'); grid.append(scatterBox, histBox);
     const actions = el('div', 'mc-actions'); actions.append(this.csvBtn);
-    this.results.append(this.summaryTable, grid, sensBox, this.lost, actions);
+    this.pointBar.setAttribute('role', 'group');
+    this.results.append(this.pointBar, this.pointNote, this.summaryTable, grid, sensBox, this.lost, actions);
     this.el.append(this.head, this.intro, this.mission, this.form, this.formError, controls, this.empty, this.results, this.tooltip);
     this.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); this.close(); } });
     this.head.addEventListener('pointerdown', (e) => this.startDrag(e));
@@ -251,6 +257,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     if (this.job?.state === 'running') return t('mc.busy');
     if (!validMonteCarloConfig(mc)) return t('mc.invalid');
     const cfg = this.host.config();
+    if (cfg.orbit.suborbital) return t('mc.suborbital');
     try {
       this.config = { ...mc, dispersions: cloneDispersions(mc.dispersions) };
       this.job = new MonteCarloJob(cfg, this.config, { onChange: () => this.schedule() });
@@ -370,12 +377,14 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     this.results.hidden = !summary;
     if (!summary || !job) return;
     if (!job.laws.includes(this.law)) this.law = job.laws[0];
-    this.renderTable(summary.laws, summary.target);
+    const point = this.point, target = summary.targets[point];
+    this.renderPointBar();
+    this.renderTable(summary.laws, target);
     this.renderLegend(job.laws);
-    this.drawScatter(job.runs, summary.laws, summary.target);
+    this.drawScatter(runsAt(job.runs, point), summary.laws, target);
     this.renderLawBar(job.laws);
-    const lawRuns = job.runs.filter((r) => r.law === this.law && r.outcome === 'inserted');
-    for (const k of OUTPUT_KEYS) this.drawHistogram(this.hists[k], k, lawRuns, summary.target);
+    const lawRuns = runsAt(job.runs.filter((r) => r.law === this.law), point);
+    for (const k of OUTPUT_KEYS) this.drawHistogram(this.hists[k], k, lawRuns, target);
     this.renderSensitivity(summary.laws.find((l) => l.law === this.law));
     this.renderLost(summary.laws);
   }
@@ -414,19 +423,34 @@ export class MonteCarloWindow implements McpMonteCarloHost {
 
   private renderMission(): void {
     const job = this.job, cfg = job?.cfg ?? this.host.config();
-    let target: InsertionTarget | null = job?.target ?? null;
-    if (!target) { try { target = insertionTargetOf(cfg); } catch { target = null; } }
+    let targets: Record<MeasurePoint, InsertionTarget> | null = job?.targets ?? null;
+    if (!targets && !cfg.orbit.suborbital) { try { targets = missionTargetsOf(cfg); } catch { targets = null; } }
     const laws = job?.laws ?? monteCarloLaws(cfg, { compareLaws: this.compareInput.checked });
+    const km = (v: number | undefined) => (v === undefined ? '—' : num(v, 0));
     this.mission.textContent = t('mc.mission', {
       vehicle: vehicleById(cfg.vehicleId).name, site: siteName(siteById(cfg.siteId)),
-      pe: target ? num(target.perigeeKm, 0) : '—', ap: target ? num(target.apogeeKm, 0) : '—', inc: target ? num(target.inclinationDeg, 2) : '—',
+      pe: km(targets?.final.perigeeKm), ap: km(targets?.final.apogeeKm), inc: targets ? num(targets.final.inclinationDeg, 2) : '—',
+      ipe: km(targets?.cutoff.perigeeKm), iap: km(targets?.cutoff.apogeeKm),
       laws: laws.map((l) => t(LAW_NAME[l])).join(', '),
     });
   }
 
+  /** The end of the mission, or the ascent's cut-off. */
+  private renderPointBar(): void {
+    this.pointBar.setAttribute('aria-label', t('mc.point.label'));
+    this.pointBar.replaceChildren(...MEASURE_POINTS.map((point) => {
+      const b = el('button', 'mc-point-btn', t(`mc.point.${point}`)); b.type = 'button';
+      b.setAttribute('aria-pressed', String(point === this.point));
+      b.addEventListener('click', () => { this.point = point; this.render(true); });
+      return b;
+    }));
+    this.pointNote.textContent = t(`mc.point.about.${this.point}`);
+  }
+
   private renderTable(laws: readonly LawSummary[], target: InsertionTarget): void {
     const head = el('tr');
-    head.append(el('th', undefined, t('mc.col.law')), el('th', undefined, t('mc.col.runs')), el('th', undefined, t('mc.col.inserted')));
+    head.append(el('th', undefined, t('mc.col.law')), el('th', undefined, t('mc.col.runs')), el('th', undefined, t('mc.col.inserted')),
+      el('th', undefined, t('mc.col.onTarget')));
     for (const k of OUTPUT_KEYS) {
       const th = el('th', undefined, `${t(OUTPUT_NAME[k])} (${OUTPUT_UNIT[k]})`);
       if (k !== 'dvLeft') th.title = t('mc.col.target', { v: num(k === 'perigeeKm' ? target.perigeeKm : k === 'apogeeKm' ? target.apogeeKm : target.inclinationDeg, OUTPUT_DIGITS[k]) });
@@ -437,9 +461,10 @@ export class MonteCarloWindow implements McpMonteCarloHost {
       const dot = el('i'); dot.style.background = LAW_COLOR[l.law];
       name.append(dot, t(LAW_NAME[l.law]));
       tr.append(name, el('td', 'mc-num', String(l.runs)),
-        el('td', 'mc-num', `${num(100 * l.inserted / Math.max(1, l.runs), 1)} %`));
+        el('td', 'mc-num', `${num(100 * l.inserted / Math.max(1, l.runs), 1)} %`),
+        el('td', 'mc-num', `${num(100 * l.onTarget / Math.max(1, l.runs), 1)} %`));
       for (const k of OUTPUT_KEYS) {
-        const s = l.stats[k], d = OUTPUT_DIGITS[k] + (k === 'dvLeft' ? 0 : 1);
+        const s = l.points[this.point].stats[k], d = OUTPUT_DIGITS[k] + (k === 'dvLeft' ? 0 : 1);
         const cell = el('td', 'mc-num');
         if (!s.n) { cell.textContent = '—'; tr.append(cell); continue; }
         cell.append(el('span', 'mc-mean', num(s.mean, OUTPUT_DIGITS[k])), el('span', 'mc-sigma', ` ± ${num(3 * s.sigma, d)}`));
@@ -448,7 +473,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
       }
       return tr;
     });
-    const caption = el('caption', undefined, t('mc.table.caption'));
+    const caption = el('caption', undefined, t(`mc.table.caption.${this.point}`));
     this.summaryTable.replaceChildren(caption, el('thead'), el('tbody'));
     this.summaryTable.tHead!.append(head);
     this.summaryTable.tBodies[0].append(...rows);
@@ -462,7 +487,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
       return item;
     });
     const target = el('span', 'mc-legend-item'), cross = el('b', 'mc-cross', '+');
-    target.append(cross, t('mc.target'));
+    target.append(cross, t(`mc.target.${this.point}`));
     const ellipse = el('span', 'mc-legend-item', t('mc.ellipse'));
     this.legend.replaceChildren(...items, target, ellipse);
   }
@@ -483,10 +508,10 @@ export class MonteCarloWindow implements McpMonteCarloHost {
 
   private drawScatter(runs: readonly MonteCarloRun[], laws: readonly LawSummary[], target: InsertionTarget): void {
     const { g, w, h } = prepare(this.scatter);
-    const inserted = runs.filter((r) => r.outcome === 'inserted' && Number.isFinite(r.apogeeKm));
-    const ellipses = laws.filter((l) => l.ellipse).map((l) => ({ law: l.law, pts: ellipsePoints(l.ellipse!) }));
-    const xs = [...inserted.map((r) => r.perigeeKm), target.perigeeKm, ...ellipses.flatMap((e) => e.pts.map((p) => p.x))];
-    const ys = [...inserted.map((r) => r.apogeeKm), target.apogeeKm, ...ellipses.flatMap((e) => e.pts.map((p) => p.y))];
+    const point = this.point, inserted = runs.filter((r) => Number.isFinite(r[point]!.apogeeKm));
+    const ellipses = laws.filter((l) => l.points[point].ellipse).map((l) => ({ law: l.law, pts: ellipsePoints(l.points[point].ellipse!) }));
+    const xs = [...inserted.map((r) => r[point]!.perigeeKm), target.perigeeKm, ...ellipses.flatMap((e) => e.pts.map((p) => p.x))];
+    const ys = [...inserted.map((r) => r[point]!.apogeeKm), target.apogeeKm, ...ellipses.flatMap((e) => e.pts.map((p) => p.y))];
     const f = axes(g, w, h, padded(xs), padded(ys), t('mc.axis.perigee'), t('mc.axis.apogee'));
     g.save(); g.beginPath(); g.rect(f.padL, f.padT, f.pw, f.ph); g.clip();
     for (const e of ellipses) {
@@ -497,12 +522,12 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     }
     const hover: HoverPoint[] = [];
     for (const r of inserted) {
-      const px = sx(f, r.perigeeKm), py = sy(f, r.apogeeKm);
+      const o = r[point]!, px = sx(f, o.perigeeKm), py = sy(f, o.apogeeKm);
       g.beginPath(); g.arc(px, py, 4, 0, 2 * Math.PI);
       g.fillStyle = LAW_COLOR[r.law]; g.fill();
       g.lineWidth = 2; g.strokeStyle = SURFACE; g.stroke();
-      hover.push({ x: px, y: py, text: t('mc.tip.run', { n: r.index + 1, law: t(LAW_NAME[r.law]), pe: num(r.perigeeKm, 2), ap: num(r.apogeeKm, 2),
-        inc: num(r.inclinationDeg, 3), dv: num(r.dvLeft, 0) }) });
+      hover.push({ x: px, y: py, text: t('mc.tip.run', { n: r.index + 1, law: t(LAW_NAME[r.law]), pe: num(o.perigeeKm, 2), ap: num(o.apogeeKm, 2),
+        inc: num(o.inclinationDeg, 3), dv: num(o.dvLeft, 0) }) });
     }
     const tx = sx(f, target.perigeeKm), ty = sy(f, target.apogeeKm);
     g.strokeStyle = INK; g.lineWidth = 2;
@@ -515,7 +540,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
 
   private drawHistogram(canvas: HTMLCanvasElement, key: OutputKey, runs: readonly MonteCarloRun[], target: InsertionTarget): void {
     const { g, w, h } = prepare(canvas);
-    const values = runs.map((r) => r[key]).filter(Number.isFinite);
+    const values = runs.map((r) => r[this.point]![key]).filter(Number.isFinite);
     const aim = key === 'perigeeKm' ? target.perigeeKm : key === 'apogeeKm' ? target.apogeeKm : key === 'inclinationDeg' ? target.inclinationDeg : undefined;
     const bins = Math.max(6, Math.min(24, Math.round(Math.sqrt(values.length) * 1.5)));
     const [lo, hi] = padded([...values, ...(aim !== undefined ? [aim] : [])], 0.04);
@@ -540,7 +565,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
       g.strokeStyle = INK; g.globalAlpha = 0.7; g.lineWidth = 1;
       g.beginPath(); g.moveTo(px + 0.5, f.padT); g.lineTo(px + 0.5, f.padT + f.ph); g.stroke();
       g.globalAlpha = 1; g.fillStyle = AXIS_TEXT; g.font = '10px system-ui, sans-serif'; g.textAlign = px > f.padL + f.pw - 50 ? 'right' : 'left';
-      g.fillText(t('mc.target'), px + (g.textAlign === 'right' ? -4 : 4), f.padT + 10);
+      g.fillText(t(`mc.target.${this.point}`), px + (g.textAlign === 'right' ? -4 : 4), f.padT + 10);
     }
     this.hover.set(canvas, hover);
     canvas.setAttribute('role', 'img');
@@ -549,10 +574,10 @@ export class MonteCarloWindow implements McpMonteCarloHost {
 
   private renderSensitivity(law: LawSummary | undefined): void {
     if (!law) { this.sens.replaceChildren(); return; }
-    const anyOk = OUTPUT_KEYS.some((k) => law.sensitivity[k].ok);
+    const sensitivity = law.points[this.point].sensitivity, anyOk = OUTPUT_KEYS.some((k) => sensitivity[k].ok);
     this.sensNote.textContent = t(anyOk ? 'mc.sens.note' : 'mc.sens.few', { law: t(LAW_NAME[law.law]) });
     this.sens.replaceChildren(...OUTPUT_KEYS.map((k) => {
-      const s = law.sensitivity[k], box = el('div', 'mc-sens-out');
+      const s = sensitivity[k], box = el('div', 'mc-sens-out');
       box.append(el('h4', undefined, t(OUTPUT_NAME[k])));
       if (!s.ok) { box.append(el('p', 'mc-note', '—')); return box; }
       const rows = (Object.entries(s.shares) as [DispersionKey, number][]).sort((a, b) => b[1] - a[1]);

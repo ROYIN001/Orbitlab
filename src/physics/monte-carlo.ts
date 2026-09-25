@@ -12,6 +12,7 @@ import { Simulation } from './simulation';
 import { elementsFromState } from './orbital';
 import { RAD } from './constants';
 import { ORBIT_INSERTION_FLOOR } from './mission';
+import { physicalApsides } from './rigid/orbit-prediction';
 import {
   cloneDispersions, DEFAULT_DISPERSIONS, drawDispersion, PROPULSION_KEYS, propulsionElements, validDispersions,
   type DispersionDraw, type DispersionKey, type DispersionSettings, type DrawnRun,
@@ -56,23 +57,32 @@ export function runMission(cfg: MissionConfig, law: GuidanceLaw): MissionConfig 
   return { ...cfg, dynamics: law === 'standard' ? rest : { ...rest, explicitGuidance: { law, ...(cycleS !== undefined ? { cycleS } : {}) } } };
 }
 
-/** How a run's ascent ended: in orbit, short of one (its periapsis in the air), or with the vehicle lost. */
+/** How a run ended: in orbit, short of one (its periapsis in the air), or with the vehicle lost. */
 export type RunOutcome = 'inserted' | 'short' | 'lost';
 
-/** One run: its orbit at the end of the powered ascent (the tail-off over), and the numbers it drew. */
+/** An orbit a run was left in: apsides, inclination, and the Δv the stack still had, at mission time `t`. */
+export interface RunOrbit { perigeeKm: number; apogeeKm: number; inclinationDeg: number; dvLeft: number; t: number }
+
+/**
+ * Where a run's orbit is read: at the end of the powered ascent (the ascent guidance's accuracy),
+ * or at the end of the mission, after every planned burn (the orbit the payload is delivered to).
+ */
+export type MeasurePoint = 'final' | 'cutoff';
+export const MEASURE_POINTS: readonly MeasurePoint[] = ['final', 'cutoff'];
+
+/** One run: the orbits it was left in, how it ended, and the numbers it drew. */
 export interface MonteCarloRun {
   index: number;
   law: GuidanceLaw;
   outcome: RunOutcome;
-  /** the event that ended it, when it was lost */
+  /** what ended it when it was lost: the failure's event key, or 'timeout' */
   reason?: string;
-  perigeeKm: number;
-  apogeeKm: number;
-  inclinationDeg: number;
-  /** Δv the stack has left, m/s */
-  dvLeft: number;
-  /** mission time of the cut-off, s */
-  cutoffS: number;
+  /** the mission reached its target orbit (`evt.targetOrbit`) */
+  onTarget: boolean;
+  /** at the end of the powered ascent, osculating (as the ascent's cut-off judges it) */
+  cutoff?: RunOrbit;
+  /** at the end of the mission; in six-DOF the apsides the next revolution flies under J2 */
+  final?: RunOrbit;
   maxQkPa: number;
   /** the largest q·α of the ascent, kPa·° */
   maxQAlpha: number;
@@ -91,37 +101,44 @@ export function drawLayout(spec: VehicleSpec): DrawSlot[] {
   return out;
 }
 
-/** Longest a run may fly before it is called lost, mission s. */
-const RUN_TIME_LIMIT_S = 3 * 3600;
+/** Longest a run may fly before it is called lost, mission s (a transfer to GTO coasts for hours). */
+const RUN_TIME_LIMIT_S = 30 * 3600;
+
+function orbitOf(sim: Simulation, physical: boolean): RunOrbit {
+  const s = sim.state, el = elementsFromState(s.r, s.v);
+  const apsides = physical && el.e < 1 && el.periapsisAlt >= 120e3 && sim.rigidRuntime ? physicalApsides({ r: s.r, v: s.v }) : null;
+  const periapsis = apsides?.periapsisAlt ?? el.periapsisAlt, apoapsis = apsides?.apoapsisAlt ?? (el.e < 1 ? el.apoapsisAlt : Infinity);
+  return { perigeeKm: periapsis / 1000, apogeeKm: apoapsis / 1000, inclinationDeg: el.i * RAD,
+    dvLeft: s.payloadSeparated ? sim.vehicle.spacecraftDeltaV() : sim.vehicle.deltaVRemaining(), t: s.t };
+}
 
 /**
- * Fly one run to the end of its powered ascent — the first moment it is neither on the pad nor in
- * the ascent and its engines' tail-off is over — or to its loss. The loop records nothing it does
- * not need (no attitude-loop record, no equation record): the flight is the same.
+ * Fly one run to the end of its mission — its target orbit reached (or missed) after every
+ * planned burn — or to its loss, reading its orbit also at the end of the powered ascent (the first
+ * moment it is neither on the pad nor in the ascent, its engines' tail-off over). The loop records
+ * nothing it does not need (no attitude-loop record, no equation record): the flight is the same.
  */
 export function flyRun(cfg: MissionConfig, drawn: DrawnRun, law: GuidanceLaw): MonteCarloRun {
   const started = typeof performance !== 'undefined' ? performance.now() : Date.now();
   const sim = new Simulation(runMission(cfg, law), { headless: true, equations: false, rigidOptions: { recordLoop: false }, dispersion: drawn.dispersion });
-  let cutoffS = NaN, maxQAlpha = 0, guard = 0;
-  while (sim.state.status !== 'failed' && sim.state.t < RUN_TIME_LIMIT_S && guard++ < 5_000_000) {
-    const s = sim.state;
-    if (s.status !== 'prelaunch' && s.status !== 'ascent') {
-      if (Number.isNaN(cutoffS)) cutoffS = s.t;
-      if (s.status === 'burn' || !sim.vehicle.inTransient(s.t)) break;
-    }
+  let cutoff: RunOrbit | undefined, maxQAlpha = 0, guard = 0;
+  while (!sim.done && sim.state.t < RUN_TIME_LIMIT_S && guard++ < 20_000_000) {
     sim.step(sim.suggestedDt());
-    const after = sim.state;
-    if (after.status === 'ascent' && after.rigid) maxQAlpha = Math.max(maxQAlpha, after.q / 1000 * Math.hypot(after.rigid.angleOfAttack, after.rigid.sideslip) * RAD);
+    const s = sim.state;
+    if (s.status === 'ascent' && s.rigid) maxQAlpha = Math.max(maxQAlpha, s.q / 1000 * Math.hypot(s.rigid.angleOfAttack, s.rigid.sideslip) * RAD);
+    if (!cutoff && s.status !== 'prelaunch' && s.status !== 'ascent' && s.status !== 'failed'
+      && (s.status === 'burn' || !sim.vehicle.inTransient(s.t))) cutoff = orbitOf(sim, false);
   }
-  const s = sim.state, el = elementsFromState(s.r, s.v);
-  const lost = s.status === 'failed' || Number.isNaN(cutoffS);
-  const reason = lost ? [...sim.events].reverse().find((e) => e.severity === 'fail')?.key ?? 'evt.timeout' : undefined;
-  const outcome: RunOutcome = lost ? 'lost' : el.e < 1 && el.periapsisAlt >= ORBIT_INSERTION_FLOOR - 3e3 ? 'inserted' : 'short';
+  const s = sim.state, failed = s.status === 'failed', timedOut = !sim.done;
+  if (!cutoff && !failed && !timedOut) cutoff = orbitOf(sim, false);
+  const final = failed || timedOut ? undefined : orbitOf(sim, true);
+  const reason = failed ? [...sim.events].reverse().find((e) => e.severity === 'fail')?.key ?? sim.events[sim.events.length - 1]?.key ?? 'failed'
+    : timedOut ? 'timeout' : undefined;
+  const outcome: RunOutcome = !final ? 'lost' : final.perigeeKm >= (ORBIT_INSERTION_FLOOR - 3e3) / 1000 && Number.isFinite(final.apogeeKm) ? 'inserted' : 'short';
   const ended = typeof performance !== 'undefined' ? performance.now() : Date.now();
   return {
-    index: drawn.index, law, outcome, ...(reason ? { reason } : {}),
-    perigeeKm: el.periapsisAlt / 1000, apogeeKm: el.e < 1 ? el.apoapsisAlt / 1000 : Infinity, inclinationDeg: el.i * RAD,
-    dvLeft: sim.vehicle.deltaVRemaining(), cutoffS: Number.isNaN(cutoffS) ? s.t : cutoffS,
+    index: drawn.index, law, outcome, ...(reason ? { reason } : {}), onTarget: sim.events.some((e) => e.key === 'evt.targetOrbit'),
+    ...(cutoff ? { cutoff } : {}), ...(final ? { final } : {}),
     maxQkPa: s.maxQ.value / 1000, maxQAlpha, z: drawn.draws.map((d) => d.z), ms: ended - started,
   };
 }
@@ -131,12 +148,16 @@ export function flyMonteCarloRun(cfg: MissionConfig, spec: VehicleSpec, mc: Mont
   return flyRun(cfg, drawDispersion(spec, mc.dispersions, mc.seed, index), law);
 }
 
-/** What the runs are aimed at: the insertion orbit the mission plans. */
+/** What the runs are aimed at: an orbit's apsides and inclination. */
 export interface InsertionTarget { perigeeKm: number; apogeeKm: number; inclinationDeg: number }
-export function insertionTargetOf(cfg: MissionConfig): InsertionTarget {
+/** At the end of the mission, its target orbit; at the end of the ascent, the insertion orbit it plans. */
+export function missionTargetsOf(cfg: MissionConfig): Record<MeasurePoint, InsertionTarget> {
   const plan = new Simulation(runMission(cfg, 'standard'), { headless: true, equations: false, rigidOptions: { recordLoop: false } }).plan;
-  return { perigeeKm: plan.insertionAltitude / 1000, apogeeKm: Math.max(plan.insertionAltitude, plan.insertionApoapsis) / 1000,
-    inclinationDeg: plan.ascentInclination * RAD };
+  return {
+    final: { perigeeKm: plan.target.perigee / 1000, apogeeKm: plan.target.apogee / 1000, inclinationDeg: plan.target.inclination * RAD },
+    cutoff: { perigeeKm: plan.insertionAltitude / 1000, apogeeKm: Math.max(plan.insertionAltitude, plan.insertionApoapsis) / 1000,
+      inclinationDeg: plan.ascentInclination * RAD },
+  };
 }
 
 // --- statistics ---
@@ -148,20 +169,27 @@ export interface OutputStats { n: number; mean: number; sigma: number; min: numb
 export interface Ellipse { cx: number; cy: number; a: number; b: number; angle: number }
 /** Each dispersion's share of an output's variance, from the regression; `other` is what it leaves unexplained. */
 export interface Sensitivity { shares: Partial<Record<DispersionKey, number>>; other: number; rSquared: number; ok: boolean }
+/** A law's runs read at one point: the statistics, the 3σ ellipse of (perigee, apogee) in km, and the shares. */
+export interface PointSummary {
+  /** the runs read here: in orbit at the end of the mission, or through the ascent's cut-off */
+  n: number;
+  stats: Record<OutputKey, OutputStats>;
+  ellipse?: Ellipse;
+  sensitivity: Record<OutputKey, Sensitivity>;
+}
 export interface LawSummary {
   law: GuidanceLaw;
   runs: number;
   inserted: number;
   short: number;
   lost: number;
-  /** why runs were lost, by event key */
+  /** runs whose mission reached its target orbit */
+  onTarget: number;
+  /** why runs were lost, by event key (or 'timeout') */
   reasons: Record<string, number>;
-  stats: Record<OutputKey, OutputStats>;
-  /** the 3σ ellipse of (perigee, apogee), km */
-  ellipse?: Ellipse;
-  sensitivity: Record<OutputKey, Sensitivity>;
+  points: Record<MeasurePoint, PointSummary>;
 }
-export interface MonteCarloSummary { target: InsertionTarget; laws: LawSummary[] }
+export interface MonteCarloSummary { targets: Record<MeasurePoint, InsertionTarget>; laws: LawSummary[] }
 
 export function statsOf(values: readonly number[], target?: number): OutputStats {
   const n = values.length;
@@ -233,10 +261,11 @@ export const SENSITIVITY_RUNS_PER_TERM = 3;
  * quantity. What is left — the IMU's and the gusts' realisations, and what is not linear — is
  * `other`.
  */
-export function sensitivityOf(runs: readonly MonteCarloRun[], layout: readonly DrawSlot[], settings: Readonly<DispersionSettings>, output: OutputKey): Sensitivity {
+export function sensitivityOf(runs: readonly MonteCarloRun[], layout: readonly DrawSlot[], settings: Readonly<DispersionSettings>, output: OutputKey,
+  point: MeasurePoint = 'final'): Sensitivity {
   const columns = layout.map((slot, j) => ({ slot, j })).filter(({ slot }) => settings[slot.key].enabled && settings[slot.key].sigma > 0);
   const empty: Sensitivity = { shares: {}, other: 1, rSquared: 0, ok: false };
-  const y = runs.map((r) => r[output]);
+  const y = runs.map((r) => r[point]?.[output] ?? NaN);
   if (!columns.length || runs.length < SENSITIVITY_RUNS_PER_TERM * columns.length || !y.every(Number.isFinite)) return empty;
   const x = runs.map((r) => columns.map(({ j }) => r.z[j]));
   const fit = regress(x, y);
@@ -254,21 +283,37 @@ export function sensitivityOf(runs: readonly MonteCarloRun[], layout: readonly D
   return { shares, other: Math.max(0, 1 - explained), rSquared: fit.rSquared, ok: true };
 }
 
+/** The runs a point reads: at the end of the mission those in orbit, at the cut-off every run that got there on an ellipse. */
+export function runsAt(runs: readonly MonteCarloRun[], point: MeasurePoint): MonteCarloRun[] {
+  return point === 'final' ? runs.filter((r) => r.outcome === 'inserted' && r.final)
+    : runs.filter((r) => r.cutoff && Number.isFinite(r.cutoff.apogeeKm));
+}
+
+function pointSummary(runs: readonly MonteCarloRun[], layout: readonly DrawSlot[], settings: Readonly<DispersionSettings>, point: MeasurePoint,
+  target: InsertionTarget): PointSummary {
+  const read = runsAt(runs, point), at = (k: OutputKey) => read.map((r) => r[point]![k]);
+  const targetOf: Record<OutputKey, number | undefined> = { perigeeKm: target.perigeeKm, apogeeKm: target.apogeeKm, inclinationDeg: target.inclinationDeg, dvLeft: undefined };
+  const ellipse = ellipseOf(at('perigeeKm'), at('apogeeKm'));
+  return {
+    n: read.length,
+    stats: Object.fromEntries(OUTPUT_KEYS.map((k) => [k, statsOf(at(k), targetOf[k])])) as Record<OutputKey, OutputStats>,
+    ...(ellipse ? { ellipse } : {}),
+    sensitivity: Object.fromEntries(OUTPUT_KEYS.map((k) => [k, sensitivityOf(read, layout, settings, k, point)])) as Record<OutputKey, Sensitivity>,
+  };
+}
+
 export function summarizeMonteCarlo(runs: readonly MonteCarloRun[], layout: readonly DrawSlot[], settings: Readonly<DispersionSettings>,
-  target: InsertionTarget): MonteCarloSummary {
+  targets: Record<MeasurePoint, InsertionTarget>): MonteCarloSummary {
   const laws = GUIDANCE_LAWS.filter((law) => runs.some((r) => r.law === law));
   return {
-    target,
+    targets,
     laws: laws.map((law) => {
-      const all = runs.filter((r) => r.law === law), inserted = all.filter((r) => r.outcome === 'inserted');
+      const all = runs.filter((r) => r.law === law);
       const reasons: Record<string, number> = {};
       for (const r of all) if (r.reason) reasons[r.reason] = (reasons[r.reason] ?? 0) + 1;
-      const targetOf: Record<OutputKey, number | undefined> = { perigeeKm: target.perigeeKm, apogeeKm: target.apogeeKm, inclinationDeg: target.inclinationDeg, dvLeft: undefined };
-      const stats = Object.fromEntries(OUTPUT_KEYS.map((k) => [k, statsOf(inserted.map((r) => r[k]), targetOf[k])])) as Record<OutputKey, OutputStats>;
-      const sensitivity = Object.fromEntries(OUTPUT_KEYS.map((k) => [k, sensitivityOf(inserted, layout, settings, k)])) as Record<OutputKey, Sensitivity>;
-      const ellipse = ellipseOf(inserted.map((r) => r.perigeeKm), inserted.map((r) => r.apogeeKm));
-      return { law, runs: all.length, inserted: inserted.length, short: all.filter((r) => r.outcome === 'short').length,
-        lost: all.filter((r) => r.outcome === 'lost').length, reasons, stats, ...(ellipse ? { ellipse } : {}), sensitivity };
+      return { law, runs: all.length, inserted: all.filter((r) => r.outcome === 'inserted').length, short: all.filter((r) => r.outcome === 'short').length,
+        lost: all.filter((r) => r.outcome === 'lost').length, onTarget: all.filter((r) => r.onTarget).length, reasons,
+        points: { final: pointSummary(all, layout, settings, 'final', targets.final), cutoff: pointSummary(all, layout, settings, 'cutoff', targets.cutoff) } };
     }),
   };
 }
@@ -295,17 +340,18 @@ function slotColumn(slot: DrawSlot): string {
 const fixed = (v: number, digits: number): string => (Number.isFinite(v) ? v.toFixed(digits) : '');
 /** A text field, quoted when it holds a comma, a quote or a line break. */
 const csvText = (v: string): string => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-/** Every run, one row: its orbit, how it ended, and what it drew (as the deviation it flew: %, m/s). */
+/** Every run, one row: how it ended, its orbits at the cut-off and at the end, and what it drew (as the deviation it flew: %, m/s). */
 export function monteCarloCsv(runs: readonly MonteCarloRun[], layout: readonly DrawSlot[], settings: Readonly<DispersionSettings>): string {
-  const head = ['run', 'law', 'outcome', 'reason', 'perigee_km', 'apogee_km', 'inclination_deg', 'dv_left_ms', 'cutoff_s', 'max_q_kpa', 'max_qalpha_kpa_deg',
+  const orbitHead = (p: MeasurePoint) => [`${p}_perigee_km`, `${p}_apogee_km`, `${p}_inclination_deg`, `${p}_dv_left_ms`, `${p}_time_s`];
+  const orbit = (o: RunOrbit | undefined) => o ? [fixed(o.perigeeKm, 3), fixed(o.apogeeKm, 3), fixed(o.inclinationDeg, 4), fixed(o.dvLeft, 1), fixed(o.t, 1)] : ['', '', '', '', ''];
+  const head = ['run', 'law', 'outcome', 'reason', 'on_target', ...orbitHead('cutoff'), ...orbitHead('final'), 'max_q_kpa', 'max_qalpha_kpa_deg',
     ...layout.map(slotColumn)];
   const value = (slot: DrawSlot, z: number | undefined): string => {
     const s = settings[slot.key];
     return z === undefined || !Number.isFinite(z) ? '' : (s.enabled ? s.sigma * z : 0).toFixed(4);
   };
   const rows = [...runs].sort((a, b) => a.index - b.index || GUIDANCE_LAWS.indexOf(a.law) - GUIDANCE_LAWS.indexOf(b.law)).map((r) => [
-    r.index, r.law, r.outcome, csvText(r.reason ?? ''), fixed(r.perigeeKm, 3), fixed(r.apogeeKm, 3), fixed(r.inclinationDeg, 4),
-    fixed(r.dvLeft, 1), fixed(r.cutoffS, 2), fixed(r.maxQkPa, 2), fixed(r.maxQAlpha, 1),
+    r.index, r.law, r.outcome, csvText(r.reason ?? ''), r.onTarget ? 1 : 0, ...orbit(r.cutoff), ...orbit(r.final), fixed(r.maxQkPa, 2), fixed(r.maxQAlpha, 1),
     ...layout.map((slot, j) => value(slot, r.z[j])),
   ].join(','));
   return [head.join(','), ...rows].join('\n') + '\n';
