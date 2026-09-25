@@ -148,8 +148,22 @@ out as the rocket climbs into air too thin to carry it, whoever is listening. Th
 hears the engines through the structure instead, muffled but steady. Ignition, stage and
 fairing separation, landings and a vehicle's loss have sounds of their own, delayed the same
 way. With the flight sped up, the sound is quieter and plays without the delay (the picture
-would otherwise be minutes ahead of it); paused, it is silent. Every sound is synthesised in
-the browser — there are no recordings. The model is in PHYSICS.md §11.
+would otherwise be minutes ahead of it); paused, it is silent. These sounds are synthesised in
+the browser. The model is in PHYSICS.md §11.
+
+**Real launch audio in the viewer.** With the sound on, *Soyuz to the space station* plays
+NASA's broadcast of the real Soyuz MS-27 launch (8 April 2025, public domain) in step with the
+mission clock, from the last minute of the countdown to the spacecraft's separation: the
+Russian launch-control calls under NASA's English commentary. It plays at 1× — at the viewer's
+*Auto* pace that is every event from ignition to orbit — and pauses while the flight is sped
+up, picking up at the right second when it slows down again; the simulator's own sound steps
+aside while it plays. The other five launches were broadcast by SpaceX, Arianespace and Rocket
+Lab, whose broadcasts may not be republished, so they play the simulated sound. You can give
+any of them a recording of your own under **Launch audio** in *Choose a launch*: pick the file
+(an audio file or a video), say at what time in it the rocket lifts off (m:ss or h:mm:ss), and
+it plays the same way. It is kept in this browser and never uploaded. There are no broadcasts
+in Thai, so the commentary is in the language it was broadcast in whatever language the page
+is in.
 
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,

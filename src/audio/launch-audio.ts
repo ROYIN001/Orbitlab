@@ -40,6 +40,8 @@ export interface AudioFrameInput {
   playing: boolean;
   /** the camera rides the vehicle */
   onboard: boolean;
+  /** a real broadcast is playing (the viewer's launches): the synthesised sound steps aside */
+  suppressed?: boolean;
 }
 
 export class LaunchAudio {
@@ -65,7 +67,8 @@ export class LaunchAudio {
 
   update(o: AudioFrameInput): void {
     if (!this.sound.on) return;
-    const { gain, delayed } = warpGain(o.warp, o.playing);
+    const w = warpGain(o.warp, o.playing);
+    const delayed = w.delayed, gain = o.suppressed ? 0 : w.gain;
     const c = SPEED_OF_SOUND_0;
     const heardAt = (distanceAt: (tau: number) => number): number => (delayed ? retardedTime(o.t, distanceAt, c) : o.t);
     const sources: HeardSource[] = [];

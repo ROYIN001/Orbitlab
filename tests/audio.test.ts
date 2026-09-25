@@ -107,3 +107,44 @@ describe('event sounds (V01)', () => {
     expect(cues).toHaveLength(0);
   });
 });
+
+describe('launch broadcasts (V01)', () => {
+  it('plays the broadcast in step with the mission clock, re-cued only when it drifts', async () => {
+    const { soundtrackAction, MAX_DRIFT } = await import('../src/audio/soundtrack');
+    const base = { t: 5, warp: 1, playing: true, enabled: true, t0: 60, duration: 600, currentTime: 65, paused: false };
+    expect(soundtrackAction(base)).toEqual({ kind: 'play', seek: null, rate: 1 });
+    expect(soundtrackAction({ ...base, currentTime: 65 + MAX_DRIFT * 2 })).toEqual({ kind: 'play', seek: 65, rate: 1 });
+    expect(soundtrackAction({ ...base, paused: true })).toEqual({ kind: 'play', seek: 65, rate: 1 });
+    // a small drift is eased out: behind, a little faster; ahead, a little slower
+    const behind = soundtrackAction({ ...base, currentTime: 64.5 }), ahead = soundtrackAction({ ...base, currentTime: 65.5 });
+    expect(behind.kind === 'play' && behind.seek === null && behind.rate > 1 && behind.rate <= 1.06).toBe(true);
+    expect(ahead.kind === 'play' && ahead.seek === null && ahead.rate < 1 && ahead.rate >= 0.94).toBe(true);
+    // the countdown: T-10 s is 50 s into the recording
+    expect(soundtrackAction({ ...base, t: -10, currentTime: 0, paused: true })).toEqual({ kind: 'play', seek: 50, rate: 1 });
+  });
+
+  it('is silent in warped time, paused, switched off, and outside the recording', async () => {
+    const { soundtrackAction } = await import('../src/audio/soundtrack');
+    const base = { t: 5, warp: 1, playing: true, enabled: true, t0: 60, duration: 600, currentTime: 65, paused: false };
+    for (const o of [{ warp: 10 }, { playing: false }, { enabled: false }, { t: -70 }, { t: 545 }]) {
+      expect(soundtrackAction({ ...base, ...o }), JSON.stringify(o)).toEqual({ kind: 'pause' });
+    }
+  });
+
+  it('bundles only the NASA broadcast, with its liftoff 60 s in', async () => {
+    const { BUNDLED_SOUNDTRACKS } = await import('../src/audio/soundtrack');
+    expect(Object.keys(BUNDLED_SOUNDTRACKS)).toEqual(['soyuzIss']);
+    expect(BUNDLED_SOUNDTRACKS.soyuzIss).toMatchObject({ url: 'audio/soyuz-ms-27-nasa.mp3', t0: 60 });
+  });
+
+  it('reads the liftoff time of a recording as m:ss, h:mm:ss or seconds', async () => {
+    const { parseOffset, formatOffset } = await import('../src/ui/soundtrack-panel');
+    expect(parseOffset('1:07:11')).toBe(4031);
+    expect(parseOffset('67:11')).toBe(4031);
+    expect(parseOffset('12.5')).toBe(12.5);
+    expect(parseOffset('1:xx')).toBeNull();
+    expect(parseOffset('')).toBeNull();
+    expect(formatOffset(4031)).toBe('1:07:11');
+    expect(formatOffset(65)).toBe('1:05');
+  });
+});

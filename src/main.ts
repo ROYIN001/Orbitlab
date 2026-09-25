@@ -3,6 +3,8 @@ import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
 import { registerServiceWorker } from './pwa/register';
 import { downloadFlightReport } from './ui/report';
 import { LaunchAudio } from './audio/launch-audio';
+import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
+import { SoundtrackPanel } from './ui/soundtrack-panel';
 import { ComparePanel } from './ui/compare';
 import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
 import { assessMissionResult } from './ui/result-content';
@@ -197,6 +199,11 @@ class App {
   target = new OrbitLine(0xefa47e, false);
   /** V01: the launch as the camera hears it */
   readonly audio = new LaunchAudio();
+  /** V01: a viewer launch's real broadcast, when there is one */
+  readonly soundtrack = new SoundtrackPlayer();
+  private soundtrackPanel = new SoundtrackPanel((id) => { if (this.watchSoundtrackId === id) void this.loadSoundtrack(id); });
+  /** the viewer launch whose soundtrack is loaded */
+  private watchSoundtrackId: WatchMissionId | null = null;
   /** U02: the reference flight's path, dashed, turned to this flight's launch */
   ghost = new OrbitLine(0xc3a6ff, true, REFERENCE_PATH_POINTS + 1, 1.8);
   /** the launch the ghost was last turned to, Julian date */
@@ -327,6 +334,7 @@ class App {
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go('explore'),
       follow: (target) => { this.watchFollow = target; },
+      pickerFooter: () => this.soundtrackPanel.render(),
     });
     this.physicsDialog = new PhysicsDialog(document.getElementById('physics-dialog') as HTMLDialogElement);
     this.cameraDialog = new CameraDialog(document.getElementById('camera-dialog') as HTMLDialogElement, {
@@ -407,6 +415,7 @@ class App {
     this.launch(this.panel.getConfig());
     this.setWarp(1);
     this.watch.begin(id);
+    void this.loadSoundtrack(id);
     this.watchPayloadKey = watchMissionById(id)?.payloadKey ?? null;
     this.updateMissionName();
   }
@@ -495,6 +504,14 @@ class App {
     }
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
+  }
+
+  /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
+  private async loadSoundtrack(id: WatchMissionId): Promise<void> {
+    this.watchSoundtrackId = id;
+    const track = await soundtrackFor(id, (name) => t('snd.mine', { name }));
+    // a different flight may have started while the recording was being read
+    if (this.watchSoundtrackId === id) this.soundtrack.set(track);
   }
 
   /** U02: the flight on screen as a reference to compare later flights against. */
@@ -863,6 +880,9 @@ class App {
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
     this.audio.reset();
+    // every new flight drops the broadcast; `startWatch` puts its own back after launching
+    this.soundtrack.set(null);
+    this.watchSoundtrackId = null;
     // The workspace's mission outlives the tab (roadmap U01): every edit, from
     // the panel or over WebMCP, previews. The viewer's prepared launches do
     // not replace it.
@@ -1427,7 +1447,9 @@ class App {
       listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
       warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
       onboard: this.camMode === 'onboard',
+      suppressed: this.soundtrack.sounding,
     });
+    this.soundtrack.update(frame.t, this.activeWarp, this.player.live ? this.playing : this.player.playing, this.audio.on);
     // The map and the onboard overlay still take a `Simulation` (they belong to
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,

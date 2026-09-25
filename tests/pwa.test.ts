@@ -188,3 +188,18 @@ describe('the build (U03)', () => {
     expect(urls).toEqual(expect.arrayContaining(['manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png']));
   }, 120_000);
 });
+
+describe('media seeks from the cache (U03 with V01)', () => {
+  it('answers a Range request with the part asked for', async () => {
+    const { rangeResponse } = await import('../src/pwa/sw-core');
+    const whole = () => new Response('0123456789', { headers: { 'content-type': 'audio/mpeg' } });
+    const r = await rangeResponse(whole(), 'bytes=2-5');
+    expect(r.status).toBe(206);
+    expect(await r.text()).toBe('2345');
+    expect(r.headers.get('content-range')).toBe('bytes 2-5/10');
+    expect(r.headers.get('content-type')).toBe('audio/mpeg');
+    expect(await (await rangeResponse(whole(), 'bytes=7-')).text()).toBe('789');
+    expect(await (await rangeResponse(whole(), 'bytes=-3')).text()).toBe('789');
+    expect((await rangeResponse(whole(), 'bytes=20-')).status).toBe(416);
+  });
+});

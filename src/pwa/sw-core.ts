@@ -114,6 +114,29 @@ export async function prune(scope: SwScope, manifest: PrecacheManifest): Promise
   }
 }
 
+/**
+ * Part of a cached response, as a `206 Partial Content`: what a media element
+ * asks for when it seeks. A range it cannot satisfy gets a 416.
+ */
+export async function rangeResponse(whole: Response, range: string): Promise<Response> {
+  const body = await whole.blob();
+  const size = body.size;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
+  let start = m && m[1] !== '' ? Number(m[1]) : NaN;
+  let end = m && m[2] !== '' ? Number(m[2]) : size - 1;
+  // "bytes=-500": the last 500 bytes
+  if (m && m[1] === '' && m[2] !== '') { start = Math.max(0, size - Number(m[2])); end = size - 1; }
+  if (!Number.isFinite(start) || start >= size || end < start) {
+    return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } });
+  }
+  end = Math.min(end, size - 1);
+  const headers = new Headers(whole.headers);
+  headers.set('Content-Range', `bytes ${start}-${end}/${size}`);
+  headers.set('Content-Length', String(end - start + 1));
+  headers.set('Accept-Ranges', 'bytes');
+  return new Response(body.slice(start, end + 1), { status: 206, headers });
+}
+
 /** Answer one GET. */
 export async function respond(scope: SwScope, manifest: PrecacheManifest, request: Request, precached: ReadonlySet<string>): Promise<Response> {
   const base = new URL(scope.registration.scope);
@@ -123,7 +146,10 @@ export async function respond(scope: SwScope, manifest: PrecacheManifest, reques
     const cache = await scope.caches.open(precacheName(manifest.version));
     const key = route === 'page' ? new URL('index.html', base).href : url.href;
     const hit = await cache.match(key, { ignoreSearch: true });
-    return hit ?? scope.fetch(request);
+    if (!hit) return scope.fetch(request);
+    // an <audio> element seeks with Range requests; a cached whole file answers them (V01)
+    const range = request.headers?.get('range');
+    return range ? rangeResponse(hit, range) : hit;
   }
   if (route === 'runtime') {
     const cache = await scope.caches.open(RUNTIME_CACHE);

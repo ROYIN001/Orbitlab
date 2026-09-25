@@ -1093,3 +1093,17 @@ canvas.chart:focus-visible { outline: 1px solid var(--accent-line); outline-offs
 .compare-table th, .compare-table td { padding: 3px 4px; border-bottom: 1px solid var(--line); text-align: left; font-weight: 400; }
 .compare-table thead th { color: var(--muted); font-size: 10px; letter-spacing: 0.4px; text-transform: uppercase; }
 .compare-table td.num { text-align: right; font-family: ui-monospace, monospace; white-space: nowrap; }
+
+/* V01: the viewer's launch audio (src/ui/soundtrack-panel.ts) */
+.watch-audio { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.watch-audio h3 { margin: 0 0 4px; font-size: 13px; }
+.watch-audio-note { margin: 0 0 8px; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.watch-audio-list { display: grid; gap: 4px; }
+.watch-audio-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) auto auto auto; gap: 8px; align-items: center; font-size: 11px; }
+.watch-audio-row strong { font-weight: 600; }
+.watch-audio-status { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-audio-t0 { display: flex; gap: 4px; align-items: center; color: var(--muted); }
+.watch-audio-t0 input { width: 5.5em; height: 22px; font-size: 11px; padding: 1px 4px; border: 1px solid var(--line2); border-radius: 4px; background: var(--panel2); }
+.watch-audio-btn { padding: 3px 8px; border: 1px solid var(--line2); border-radius: 5px; color: #a7b5c7; }
+.watch-audio-btn:hover { color: var(--text); border-color: var(--accent-line); }
+@media (max-width: 640px) { .watch-audio-row { grid-template-columns: 1fr 1fr; } }

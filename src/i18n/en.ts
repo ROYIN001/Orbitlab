@@ -781,6 +781,16 @@ export const en: Record<string, string> = {
   'cmp.row.event': '{event}, time T+',
   // V01: sound
   'ctl.sound': 'Sound (off until you turn it on)',
+  // V01: the viewer's launch audio
+  'snd.title': 'Launch audio',
+  'snd.note': 'With the sound on (♪), a launch that has a broadcast free to share plays it in step with the flight: the countdown, launch control and the commentary, in the broadcast\'s own language. The others play the simulator\'s own sound, because their broadcasts are copyrighted — but you can add a recording you have of one: it stays in this browser and is never uploaded. Say at what time in the recording the rocket lifts off.',
+  'snd.bundled': 'NASA broadcast of {flight} (public domain)',
+  'snd.synth': 'Simulated sound',
+  'snd.mine': 'Your recording: {name}',
+  'snd.add': 'Add recording',
+  'snd.remove': 'Remove',
+  'snd.t0': 'Liftoff at',
+  'snd.badT0': 'Write the liftoff time in the recording as m:ss or h:mm:ss.',
   'setup.mode.label': 'Workspace mode',
   'setup.mode.learning': 'Learning',
   'setup.mode.advanced': 'Advanced',

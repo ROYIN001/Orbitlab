@@ -26,6 +26,8 @@ export interface WatchHost {
   explore(): void;
   /** point the camera at a stage flying home, or back at the rocket */
   follow(target: 'booster' | 'rocket'): void;
+  /** V01: shown under the launches, the launch audio each one plays */
+  pickerFooter?(): HTMLElement | null;
 }
 
 /** 'auto' or a fixed time warp */
@@ -353,6 +355,8 @@ export class WatchView {
       grid.append(b);
     }
     card.replaceChildren(head, el('p', 'watch-pick-lead', t('watch.pick.lead')), grid);
+    const footer = this.host.pickerFooter?.();
+    if (footer) card.append(footer);
   }
 
   applyLanguage(): void {
