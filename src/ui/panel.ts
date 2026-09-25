@@ -66,6 +66,8 @@ import { CONTROL_FAULT_KINDS, CONTROL_FAULT_PRESETS, FAULT_AXES, FAULT_FIELDS, F
 import { faultKindName } from './fault-names';
 import type { ExplicitGuidanceConfig } from '../types';
 import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
+import { copyMission, type MissionState } from '../config/mission-file';
+import { MissionShare } from './mission-share';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -406,6 +408,8 @@ export class SetupPanel {
   private tuning = false;
   private tuneController: AbortController | null = null;
   private tuneMessage = '';
+  /** the "Share & save" row (roadmap U01) */
+  readonly share = new MissionShare(this);
   /** the mission the current auto-tune result was measured for */
   private tunedFor = '';
   /** the vehicle forced a different site than the one that was selected */
@@ -590,6 +594,30 @@ export class SetupPanel {
     // a mission without a plan must not inherit the last one's
     this.state.recoveryPlan = mission.recoveryPlan ? structuredClone(mission.recoveryPlan) : undefined;
     this.state.dynamics = defaultDynamics(this.state.vehicleId);
+    this.tuneMessage = '';
+    this.applyExternalEdit();
+    this.cb.onChange?.(this.getConfig());
+  }
+
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  /** The mission as it stands, as a copy (roadmap U01: links, files, the page's own copy). */
+  missionState(): MissionState {
+    return copyMission(this.state);
+  }
+
+  /**
+   * Replace the whole mission with a saved one — dynamics and all, unlike
+   * `loadMission`, which gives a prepared mission the vehicle's defaults.
+   * The caller has validated it (`parseMissionDocument`).
+   */
+  restoreMission(mission: MissionState): void {
+    this.cancelTune();
+    Object.assign(this.state, copyMission(mission));
+    if (!mission.recoveryPlan) this.state.recoveryPlan = undefined;
+    if (!mission.dynamics) this.state.dynamics = undefined;
     this.tuneMessage = '';
     this.applyExternalEdit();
     this.cb.onChange?.(this.getConfig());
@@ -816,6 +844,7 @@ export class SetupPanel {
     scroll.appendChild(this.experienceSection());
     if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
     scroll.appendChild(this.quickstartSection());
+    scroll.appendChild(this.share.section());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
     const s1 = this.el('section', 'config-section');
@@ -857,13 +886,27 @@ export class SetupPanel {
       notes.appendChild(document.createTextNode(vehicleNotes(vehicle)));
       s1.appendChild(notes);
     }
-    s1.appendChild(this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
+    const siteField = this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
       s.siteId = v;
       s.recoveryPlan = undefined;
       this.siteReassigned = false;
       this.render();
       this.changed();
-    }));
+    });
+    // Sites no vehicle flies from yet (roadmap C04), shown for what they are
+    const unflown = SITES.filter((x) => !VEHICLES.some((v) => v.sites.includes(x.id)));
+    if (unflown.length) {
+      const group = this.el('optgroup');
+      group.label = t('setup.siteUnflown');
+      for (const x of unflown) {
+        const op = this.el('option', undefined, siteName(x));
+        op.value = x.id;
+        op.disabled = true;
+        group.appendChild(op);
+      }
+      siteField.querySelector('select')!.appendChild(group);
+    }
+    s1.appendChild(siteField);
     const coords = this.el('p', 'field-note');
     coords.id = 'site-coordinates';
     s1.appendChild(coords);

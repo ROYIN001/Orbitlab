@@ -2023,6 +2023,18 @@ plane (8.6°) and PSLV's swing around Sri Lanka (11°) remain beyond it. The pla
 turn as `doglegDeg`, the setup panel shows it, and the extra steering is paid for in the Δv
 budget like any other.
 
+**A retrograde-only site.** Palmachim (roadmap C04) launches only west, over the Mediterranean,
+because every other direction crosses a neighbour: its 280–300° window reaches 136.4–146.6°,
+and the Ofeq satellites fly 141.7–143.5°. Its declared floor, 141.5°, is therefore itself
+retrograde, where every other site's is prograde, and the two rules that fold a retrograde plane
+onto its prograde twin (i → 180° − i) — the corridor's floor check and the ascent's choice of
+inclination — take it as it stands for such a site (`retrogradeOnly`, src/physics/mission.ts,
+true only where the declared minimum exceeds 90°). A prograde plane, a polar one or a
+sun-synchronous one from Palmachim is below its floor; its `site` preset is the 141.5° plane.
+Nothing changes for any other site. Palmachim, Yasny, Kapustin Yar and Svobodny are in the site
+table for vehicles to come (Dnepr from Yasny first); their windows are derived from the
+inclinations each has flown, with the sources in src/data/sites.ts.
+
 The ascent produces RAAN = λ_site + θ − Δλ with sin u = sin φ / sin i and
 tan Δλ = sin u cos i / cos u, where λ_site is taken 200 s after liftoff rather than at liftoff:
 the plane of the orbit is fixed by the velocity vector, and for the first minutes that vector is
@@ -2279,6 +2291,47 @@ After the final burn the spacecraft is propagated numerically with J2 and upper-
 drag (ballistic area ≈ 1 % of mass in m²). Nodal precession and slow decay are visible on the
 orbital map and in the RAAN/altitude readouts under high time warp.
 
+### 9a. Long-term perturbations and orbit lifetime (roadmap P07)
+
+A separate propagator, src/physics/propagator/, carries an orbit on for days to decades once the
+flight is in orbit (the *Orbit lifetime* window). Nothing in the flight imports it — the ascent,
+the burns and the six-DOF orbit verdict (`physicalApsides`) are exactly what they were, which
+tests/propagator.test.ts holds by scanning the imports — and it is built to be reused by the
+rendezvous (G07) and the lunar transfer (C05).
+
+- **Gravity**: the central term and the zonal harmonics J2 = 1.08263·10⁻³, J3 = −2.53266·10⁻⁶,
+  J4 = −1.61962·10⁻⁶ (EGM96, unnormalised), as the gradient of the zonal potential (the test
+  differentiates the potential numerically and requires the accelerations to match).
+- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth. ρ is Harris–Priester
+  (Montenbruck & Gill, *Satellite Orbits*, 2000, §3.5.2, Table 3.8, 100–1000 km): the table's
+  minimum rising to its maximum as cosⁿ(ψ/2) of the angle from the diurnal bulge, whose apex lags
+  the Sun by 30°; n goes from 2 at the equator to 6 in polar orbits. The table is for mean solar
+  activity; low and high activity take ∓0.45 decades of density above 500 km, tapering to none at
+  120 km (a fit to the spread of the CIRA/MSIS profiles between F10.7 = 70 and 250, good to a
+  factor of two).
+- **Sun and Moon**: third-body accelerations (the direct pull less the pull on the Earth), with
+  the low-precision ephemerides of Montenbruck & Gill §3.3.2 (Sun to 0.1 %, Moon to a few hundred
+  kilometres).
+- **Sunlight pressure**: a cannonball, P_⊙ = 4.56 µN/m² at 1 AU times C_R A/m, off inside the
+  Earth's cylindrical shadow.
+- **Cowell**: Dormand–Prince 5(4) with step control on the relative position error (10⁻⁹ in the
+  window). **Mean elements**: J2's secular rates of the node and the perigee, and drag's rates of
+  a and e averaged over a revolution by Gauss's equations at 36 points of eccentric anomaly, in
+  steps of up to six hours (shorter as the orbit decays); no Sun, Moon or sunlight.
+- Both stop at a perigee of 120 km, where a satellite is lost within a revolution or two; that
+  instant is reported as the lifetime.
+
+Checked (tests/propagator.test.ts): J2's nodal regression against −3/2 n J2 (R/p)² cos i to
+0.1 %; a force-free orbit kept to a metre over five days; a space station at 420 km losing 1–6 km
+a month, with Cowell and the mean elements within 25 % of each other; a 1U CubeSat at 400 km
+down in 30 days to two years depending on the Sun (the model: 113, 211 and 397 days for high,
+mean and low activity); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
+Sun and the Moon (known: about 0.75–0.95°); and sunlight pressure raising a light satellite's
+eccentricity.
+
+The payloads' cross-sections are estimates by class (src/physics/propagator/spacecraft.ts); the
+window lets them be changed, and the lifetime is inversely proportional to C_D A/m.
+
 ## 10. Assumptions and limitations
 
 - Spherical Earth for altitude and gravity (J2 only as a perturbation); no terrain. Site
@@ -2315,6 +2368,57 @@ orbital map and in the RAAN/altitude readouts under high time warp.
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.
   - Four engines' quoted sea-level Isp is 2.4–6.9 % away from what their thrust and mass flow
     deliver; the model flies the delivered value (§4).
+
+## 11. Sound heard at the camera (roadmap V01)
+
+src/audio/acoustics.ts; the synthesis is src/audio/engine-sound.ts. Nothing here feeds back
+into the flight.
+
+- **Source.** A rocket exhaust radiates a fraction η ≈ 0.5 % of its mechanical power ½·F·vₑ as
+  sound (Eldred, *Acoustic Loads Generated by the Propulsion System*, NASA SP-8072, 1971), so
+  L_W = 10·log₁₀(η·½·F·vₑ / 10⁻¹² W): about 204 dB for Saturn V (34 MN, 2.6 km/s), 198 dB for
+  Falcon 9. vₑ is taken as 2.8 km/s where a stage's own is not at hand.
+- **Thin air.** The power coupled into sound scales with the density around the exhaust, taken
+  as the ambient pressure ratio p/p₀; below 1 Pa (about 100 km) nothing is carried.
+- **Spreading.** Hemispherical spreading from a point: L_p = L_W − 20·log₁₀ r − 8 dB, which
+  puts Saturn V at about 121 dB at 5 km, where the press site stood.
+- **Absorption.** The audible band is cut above a corner that falls with range, 9 kHz close by
+  to a few hundred hertz at tens of kilometres — a fit to the ISO 9613-1 atmospheric absorption
+  (20 °C, 50 % relative humidity) at a 6 dB loss.
+- **Delay and Doppler.** What is heard at t left the source at the retarded time τ with
+  τ = t − r(τ)/c, solved by fixed-point iteration over the recorded trajectory (c = 340.3 m/s);
+  the pitch is scaled by c/(c + v_r). Events are heard at t_e + r(t_e)/c.
+- **Loudspeaker.** 120 dB plays at full scale and every 20 dB less at a tenth of it; below
+  40 dB nothing plays. Warped time drops the delay and plays at 35 % (up to 5×) or 18 % (up to
+  50×), silent beyond; the onboard camera hears a structure-borne rumble that follows the
+  throttle.
+
+The roar is synthesised from brown, pink and white noise (the last gated by a slow random
+envelope for the crackle of a shock-laden exhaust), filtered and mixed by the numbers above;
+the cues are filtered noise bursts over a falling sine thump.
+
+## 12. The sky (roadmap V02)
+
+src/render/atmosphere.ts, after Hillaire, *A Scalable and Production Ready Sky and Atmosphere
+Rendering Technique* (EGSR 2020), with the parameters of Bruneton's reference implementation:
+Rayleigh scattering 5.802/13.558/33.1·10⁻⁶ m⁻¹ at 680/550/440 nm with an 8 km scale height; Mie
+scattering 3.996·10⁻⁶ m⁻¹ and extinction 4.40·10⁻⁶ m⁻¹, 1.2 km scale height, Cornette–Shanks phase
+with g = 0.8; ozone absorption 0.650/1.881/0.085·10⁻⁶ m⁻¹ in a tent 30 km wide about 25 km; the
+atmosphere 100 km deep over a sphere of the equatorial radius. Two tables are computed once on the
+GPU: transmittance to the top of the atmosphere (256 × 64, Bruneton's parametrisation) and the
+multiple-scattering term (32 × 32, Hillaire's isotropic sum of all orders beyond the first, with a
+ground albedo of 0.3). Every frame each view ray is marched with 24 samples from the camera through
+the atmosphere — single scattering with the Earth's shadow, softened over a quarter of a degree at
+the geometric horizon, plus the multiple-scattering term — and the sun's disc is added through the
+transmittance in front of it. Lengths are metres in float32; the sphere intersections are written as
+(R − r)(R + r) + r²μ² so that the difference of two 4·10¹³ m² squares does not swallow the kilometres
+at the limb. A NaN or infinity from a degenerate ray is zeroed before the bloom can spread it.
+
+The twilight "jellyfish" (src/render/twilight-plume.ts) is a billboard behind a thrusting vehicle
+above 45 km, its radius growing 0.45 m per metre of altitude to at most 60 km, lit by the soft
+cylindrical shadow of the Earth at the vehicle (`sunlitAt`, src/render/sky.ts) and weighted by the
+observer's twilight (the sun between about 6° above and 18° below the camera's horizon); it fades out
+for a camera inside it. It is an illustration of the phenomenon, not a plume-expansion model.
 
 ## Glossary (EN / RU / TH)
 

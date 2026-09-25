@@ -39,35 +39,19 @@ import { localizeEventParams, stageNameByLabel } from './names';
 import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { TelemetrySample } from '../physics/sim/types';
-import { symbolText, withSymbol, type Quantity } from './notation';
+import { symbolText } from './notation';
 import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
 import type { VisualFrame } from '../physics/frame';
+import { downloadBlob } from './download';
+import { ASCENT_MARKERS, CHART_IDS, ORBIT_MARKERS, chartTitle, referenceSeries } from './telemetry-charts';
+import { referenceWindow, type ReferenceFlight } from '../replay/reference';
 
 type Range = 'mission' | 'ascent';
 
-/** Events worth a dashed line on every chart. */
-const ASCENT_MARKERS = ['evt.maxQ', 'evt.meco', 'evt.stageSep', 'evt.seco', 'evt.fairingSep'];
-const ORBIT_MARKERS = ['evt.parkingOrbit', 'evt.burnStart', 'evt.burnComplete', 'evt.targetOrbit'];
-
-const CHART_IDS = ['altitude', 'velocity', 'q', 'g', 'apsides', 'dv', 'pitch', 'mass'] as const;
-/** Dictionary key for each chart's title, so `reset()` can redraw them empty. */
-const CHART_TITLES: Record<(typeof CHART_IDS)[number], string> = {
-  altitude: 'tel.altitude', velocity: 'tel.velocity', q: 'tel.q', g: 'tel.g',
-  apsides: 'tel.apsides', dv: 'tel.dv', pitch: 'tel.pitch', mass: 'tel.mass',
-};
 // --- P05: two more charts, only for a flight that modelled the flexible body
 const FLEX_CHART_IDS = ['flex', 'load'] as const;
 const FLEX_CHART_TITLES: Record<(typeof FLEX_CHART_IDS)[number], string> = { flex: 'tel.flex', load: 'tel.load' };
-
-/** U07: the symbol a chart's title carries, in the notation in force. */
-const CHART_SYMBOLS: Partial<Record<string, Quantity>> = {
-  altitude: 'altitude', q: 'dynamicPressure', g: 'loadFactor', pitch: 'pitchAngle', mass: 'mass',
-};
-const chartTitle = (id: (typeof CHART_IDS)[number]): string => {
-  const symbol = CHART_SYMBOLS[id];
-  return symbol ? withSymbol(t(CHART_TITLES[id]), symbol) : t(CHART_TITLES[id]);
-};
 
 /** How close to the bottom the log has to be before an update re-pins it there, px. */
 const LOG_STICK = 24;
@@ -138,6 +122,10 @@ export class TelemetryPanel {
    * rebuild without `Hud` having to be told one happened.
    */
   readonly dockHost: HTMLElement = el('div', 'telemetry-dock');
+  /** U02: where the app puts the comparison (src/ui/compare.ts); kept across rebuilds like the dock. */
+  readonly compareHost: HTMLElement = el('div', 'telemetry-compare');
+  /** U02: the reference flight every chart also draws, dashed. */
+  private reference: ReferenceFlight | null = null;
   /** E02: the live equations, a second view of this panel; the frame on screen, and the mode's set. */
   private equations = new EquationsPanel();
   private viewMode: 'charts' | 'equations' = 'charts';
@@ -145,8 +133,10 @@ export class TelemetryPanel {
   private frame: VisualFrame | null = null;
   private equationLevel: EquationLevel = 'explore';
 
-  constructor(root: HTMLElement) {
+  constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null) {
     this.root = root;
+    this.onReport = onReport;
+    this.onLifetime = onLifetime;
     this.build();
   }
 
@@ -225,6 +215,7 @@ export class TelemetryPanel {
     this.losses = mk('tel.losses', 'list info');
     this.plan = mk('tel.plan', 'list info plan');
     this.debris = mk('tel.debris', 'list info');
+    r.append(this.compareHost);
     this.events = mk('tel.events', 'events', 'events-head');
     this.eventsEmpty = el('div', 'events-empty', t('tel.noEvents'));
     this.events.append(this.eventsEmpty);
@@ -232,6 +223,22 @@ export class TelemetryPanel {
     btn.type = 'button';
     btn.addEventListener('click', () => this.exportCsv());
     r.append(btn);
+    // U06: the flight report, which the app assembles (it holds the result and the link)
+    if (this.onReport) {
+      const report = el('button', 'btn export-btn', t('report.button')) as HTMLButtonElement;
+      report.type = 'button';
+      report.id = 'btn-flight-report';
+      report.addEventListener('click', () => this.onReport?.());
+      r.append(report);
+    }
+    // P07: the orbit carried on for years, once the flight is in orbit
+    if (this.onLifetime) {
+      const life = el('button', 'btn export-btn', t('life.button')) as HTMLButtonElement;
+      life.type = 'button';
+      life.id = 'btn-orbit-lifetime';
+      life.addEventListener('click', () => this.onLifetime?.());
+      r.append(life);
+    }
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
     if (this.view) this.update(this.view, this.cursor);
@@ -433,7 +440,9 @@ export class TelemetryPanel {
     }
     const xs = cx.x;
     const xLabel = t('tel.xAxis');
+    const refRows = this.reference ? referenceWindow(this.reference.telemetry, xMin, xMax) : null;
     const draw = (id: (typeof CHART_IDS)[number], list: Series[], yMin?: number, seriesLabels?: string[]): void => {
+      if (refRows) list = [...list, ...referenceSeries(id, refRows, list)];
       drawChart(this.charts[id], list, {
         title: chartTitle(id),
         markers: this.markers, xMin, xMax, cursor: this.cursor, timeAxis: true, xLabel, yMin, seriesLabels,
@@ -596,16 +605,32 @@ export class TelemetryPanel {
     this.rowPools.delete(box);
   }
 
+  /** U06: set by the app to offer the flight report beside the CSV export. */
+  onReport: (() => void) | null = null;
+  /** P07: set by the app to offer the orbit-lifetime analysis. */
+  onLifetime: (() => void) | null = null;
+
+  /** U02: draw a reference flight on every chart, dashed (null: none). */
+  setReference(ref: ReferenceFlight | null): void {
+    this.reference = ref;
+    if (this.view) this.update(this.view, this.cursor);
+  }
+
+  /** The whole flight the CSV and the report are made from. */
+  exportSource(): Simulation | null {
+    return this.live;
+  }
+
+  /** The panel's own charts, which the report redraws over the whole flight. */
+  chartCanvases(): Set<HTMLCanvasElement> {
+    return new Set(Object.values(this.charts));
+  }
+
   exportCsv(): void {
     const sim = this.live;
     if (!sim) return;
     const csv = buildTelemetryCsv(sim);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = telemetryCsvFilename(sim);
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    downloadBlob(new Blob([csv], { type: 'text/csv' }), telemetryCsvFilename(sim));
   }
 }
 

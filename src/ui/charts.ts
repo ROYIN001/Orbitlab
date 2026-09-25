@@ -82,9 +82,40 @@ export function chartDescription(series: readonly Series[], opt: ChartOptions, s
   return parts.join(' ');
 }
 
-const GRID = '#232d3a';
-const AXIS_TEXT = '#8695a8';
-const TITLE_TEXT = '#e7edf4';
+/** The colours a chart is drawn in: the panel's dark ones, or paper's for an exported image (U06). */
+export interface ChartTheme {
+  background: string | null;
+  grid: string;
+  axisText: string;
+  titleText: string;
+  cursor: string;
+  /** a series' or marker's own colour, as this theme draws it */
+  ink: (color: string) => string;
+}
+
+export const SCREEN_THEME: ChartTheme = {
+  background: null, grid: '#232d3a', axisText: '#8695a8', titleText: '#e7edf4', cursor: '#8be5cd', ink: (c) => c,
+};
+
+/**
+ * White paper: the panel's colours are light, for a dark background, so each
+ * is darkened to about 60 % until it reads on white.
+ */
+export const PRINT_THEME: ChartTheme = {
+  background: '#ffffff', grid: '#dde2e8', axisText: '#4b5563', titleText: '#111827', cursor: '#0f766e', ink: darken,
+};
+
+export function darken(color: string, factor = 0.6): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(color);
+  if (!m) return color;
+  const n = parseInt(m[1], 16);
+  const channel = (shift: number) => Math.round(((n >> shift) & 255) * factor).toString(16).padStart(2, '0');
+  return `#${channel(16)}${channel(8)}${channel(0)}`;
+}
+
+/** Called with what each chart was last drawn from (src/ui/chart-export.ts registers it). */
+let onDrawn: ((canvas: HTMLCanvasElement, series: Series[], opt: ChartOptions) => void) | null = null;
+export function setChartDrawnHook(hook: typeof onDrawn): void { onDrawn = hook; }
 
 export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: ChartOptions): void {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -96,8 +127,29 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   }
   const g = canvas.getContext('2d')!;
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const description = paintChart(g, w, h, series, opt, SCREEN_THEME);
+  // A named image plus a textual alternative makes the canvas readable without
+  // color or vision. No aria-live: a running flight must not speak eight charts
+  // twice a second. Source arrays are already capped by the telemetry panel.
+  canvas.setAttribute('role', 'img');
+  if (canvas.getAttribute('aria-label') !== description) {
+    canvas.setAttribute('aria-label', description);
+    canvas.textContent = description;
+  }
+  onDrawn?.(canvas, series, opt);
+}
+
+/**
+ * Draw a chart into a 2-D context of `w` × `h` CSS pixels, in a theme; returns
+ * its text description. `drawChart` is this on the panel's canvas; an export
+ * (src/ui/chart-export.ts) is this on a larger one, in `PRINT_THEME`.
+ */
+export function paintChart(g: CanvasRenderingContext2D, w: number, h: number, series: Series[], opt: ChartOptions, theme: ChartTheme, scale = 1): string {
   g.clearRect(0, 0, w, h);
-  const padL = 44, padR = 8, padT = 18, padB = 18;
+  if (theme.background) { g.fillStyle = theme.background; g.fillRect(0, 0, w, h); }
+  const GRID = theme.grid, AXIS_TEXT = theme.axisText, TITLE_TEXT = theme.titleText;
+  const px = (n: number) => n * scale;
+  const padL = px(44), padR = px(8), padT = px(18), padB = px(18);
   const pw = w - padL - padR, ph = h - padT - padB;
   let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
   for (const s of series) {
@@ -118,15 +170,7 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   if (opt.yMin !== undefined) yMin = Math.min(yMin, opt.yMin);
   if (opt.yMax !== undefined) yMax = Math.max(yMax, opt.yMax);
   if (xMax - xMin < 1e-9) xMax = xMin + 1;
-  // A named image plus a textual alternative makes the canvas readable without
-  // color or vision. No aria-live: a running flight must not speak eight charts
-  // twice a second. Source arrays are already capped by the telemetry panel.
   const description = chartDescription(series, opt, xMin, xMax);
-  canvas.setAttribute('role', 'img');
-  if (canvas.getAttribute('aria-label') !== description) {
-    canvas.setAttribute('aria-label', description);
-    canvas.textContent = description;
-  }
   if (yMax - yMin < 1e-9) yMax = yMin + 1;
   const pad = (yMax - yMin) * 0.06;
   yMax += pad;
@@ -140,8 +184,8 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   const fmtX = opt.xFormat ?? (opt.timeAxis ? fmtClock : fmt);
   // grid
   g.strokeStyle = GRID;
-  g.lineWidth = 1;
-  g.font = '10px ui-monospace, monospace';
+  g.lineWidth = px(1);
+  g.font = `${px(10)}px ui-monospace, monospace`;
   g.fillStyle = AXIS_TEXT;
   const ticksY = 4;
   for (let i = 0; i <= ticksY; i++) {
@@ -149,18 +193,18 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
     const py = sy(y);
     g.beginPath(); g.moveTo(padL, py); g.lineTo(w - padR, py); g.stroke();
     g.textAlign = 'right';
-    g.fillText(fmt(y), padL - 4, py + 3);
+    g.fillText(fmt(y), padL - px(4), py + px(3));
   }
   const ticksX = 4;
   for (let i = 0; i <= ticksX; i++) {
     const x = xMin + ((xMax - xMin) * i) / ticksX;
-    const px = sx(x);
-    g.beginPath(); g.moveTo(px, padT); g.lineTo(px, h - padB); g.stroke();
+    const xp = sx(x);
+    g.beginPath(); g.moveTo(xp, padT); g.lineTo(xp, h - padB); g.stroke();
     // The last tick label sits exactly where the axis unit goes, so the unit
     // wins: it says what all of them mean.
     if (i === ticksX && opt.xLabel) continue;
     g.textAlign = 'center';
-    g.fillText(fmtX(x), px, h - 5);
+    g.fillText(fmtX(x), xp, h - px(5));
   }
   // markers
   g.save();
@@ -169,17 +213,17 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   g.clip();
   for (const m of opt.markers ?? []) {
     if (m.x < xMin || m.x > xMax) continue;
-    const px = sx(m.x);
-    g.strokeStyle = m.color; g.setLineDash([3, 3]);
-    g.beginPath(); g.moveTo(px, padT); g.lineTo(px, h - padB); g.stroke();
+    const xp = sx(m.x);
+    g.strokeStyle = theme.ink(m.color); g.setLineDash([px(3), px(3)]);
+    g.beginPath(); g.moveTo(xp, padT); g.lineTo(xp, h - padB); g.stroke();
     g.setLineDash([]);
     if (m.label) {
       g.save();
-      g.translate(px + 3, padT + 2);
+      g.translate(xp + px(3), padT + px(2));
       g.textAlign = 'left';
       g.textBaseline = 'top';
-      g.font = '9px ui-monospace, monospace';
-      g.fillStyle = m.color;
+      g.font = `${px(9)}px ui-monospace, monospace`;
+      g.fillStyle = theme.ink(m.color);
       g.fillText(m.label, 0, 0);
       g.restore();
       g.textBaseline = 'alphabetic';
@@ -187,48 +231,49 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   }
   // series
   for (const s of series) {
-    g.strokeStyle = s.color;
-    g.lineWidth = 1.5;
-    g.setLineDash(s.dash ?? []);
+    g.strokeStyle = theme.ink(s.color);
+    g.lineWidth = px(1.5);
+    g.setLineDash((s.dash ?? []).map(px));
     g.beginPath();
     let started = false;
     for (let i = 0; i < s.x.length; i++) {
       const x = s.x[i], y = s.y[i];
       if (!isFinite(x) || !isFinite(y)) { started = false; continue; }
-      const px = sx(x), py = sy(y);
-      if (!started) { g.moveTo(px, py); started = true; } else g.lineTo(px, py);
+      const xp = sx(x), py = sy(y);
+      if (!started) { g.moveTo(xp, py); started = true; } else g.lineTo(xp, py);
     }
     g.stroke();
   }
   g.setLineDash([]);
   // the instant the rest of the app is showing
   if (opt.cursor !== undefined && isFinite(opt.cursor) && opt.cursor >= xMin && opt.cursor <= xMax) {
-    const px = sx(opt.cursor);
-    g.strokeStyle = '#8be5cd';
-    g.lineWidth = 1;
-    g.beginPath(); g.moveTo(px, padT); g.lineTo(px, h - padB); g.stroke();
+    const xp = sx(opt.cursor);
+    g.strokeStyle = theme.cursor;
+    g.lineWidth = px(1);
+    g.beginPath(); g.moveTo(xp, padT); g.lineTo(xp, h - padB); g.stroke();
   }
   g.restore();
   // title & legend
   g.textAlign = 'left';
   g.fillStyle = TITLE_TEXT;
-  g.font = '600 11px "Space Grotesk", system-ui, sans-serif';
-  g.fillText(opt.title, padL, 12);
+  g.font = `600 ${px(11)}px "Space Grotesk", system-ui, sans-serif`;
+  g.fillText(opt.title, padL, px(12));
   let lx = w - padR;
-  g.font = '10px "DM Sans", system-ui, sans-serif';
+  g.font = `${px(10)}px "DM Sans", system-ui, sans-serif`;
   for (const s of [...series].reverse()) {
     if (!s.label) continue;
     g.textAlign = 'right';
-    g.fillStyle = s.color;
-    g.fillText(s.label, lx, 12);
-    lx -= g.measureText(s.label).width + 12;
+    g.fillStyle = theme.ink(s.color);
+    g.fillText(s.label, lx, px(12));
+    lx -= g.measureText(s.label).width + px(12);
   }
   if (opt.xLabel) {
     g.textAlign = 'right';
     g.fillStyle = AXIS_TEXT;
-    g.font = '9px "DM Sans", system-ui, sans-serif';
-    g.fillText(opt.xLabel, w - padR, h - 5);
+    g.font = `${px(9)}px "DM Sans", system-ui, sans-serif`;
+    g.fillText(opt.xLabel, w - padR, h - px(5));
   }
+  return description;
 }
 
 function fmt(v: number): string {

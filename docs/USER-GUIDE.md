@@ -33,6 +33,14 @@ Switching mode never touches the flight: leave the viewer half-way up and the wo
 shows the same launch with every instrument on it. Each mode has its own address
 (`#/watch` and so on), and the browser's Back button moves between them.
 
+**Installing Orbitlab and using it offline.** The published site can be installed as an app
+(Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
+and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
+network at all — the page, the physics and auto-tune workers and the Earth textures are all kept
+on the device, and the fonts too once they have loaded. When a new version is published, a note
+at the bottom of the page offers **Reload**; until you press it, the version you have keeps
+running.
+
 ## 1. Set up a mission
 
 The left-hand panel (top of the page on a phone) builds a `MissionConfig` in three steps.
@@ -41,7 +49,11 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    its height, liftoff mass and thrust, thrust-to-weight ratio, stage count and rated
    payload to LEO/GTO/SSO. The site list below it only offers sites that vehicle actually
    flies from; picking a vehicle that cannot fly from your current site moves you to one
-   that can and says so.
+   that can and says so. Four sites at the end of the list are greyed out — Yasny, where
+   Dnepr launched THEOS-1, Kapustin Yar, Svobodny and Palmachim: they are in the simulator
+   with their real range-safety corridors, but no vehicle in the fleet flies from them yet.
+   Palmachim is the one site that can only launch against the Earth's rotation (west over the
+   Mediterranean, 141.5–146.6° of inclination).
 2. **Payload.** Choose a satellite/spacecraft (its mass fills in automatically) or type a
    payload mass of your own.
 3. **Target orbit & launch time.** The pills (ISS, Starlink, sun-synchronous, polar, GPS,
@@ -54,6 +66,19 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    With Starship, **Suborbital test flight** turns the target into a Flight 5-style path:
    the ship is cut off short of orbit (perigee between −1000 and 0 km, below the ground) and
    flies itself home to a splashdown about an hour later; such a flight may carry no payload.
+
+**Share & save the mission**, at the top of the panel, keeps a mission beyond the tab:
+**Copy link** puts an address on the clipboard that opens Orbitlab on this exact mission —
+vehicle, site, payload, orbit, launch time, guidance edits, failure scenario, recovery and every
+Engineer setting (six-DOF or point mass, wind, slosh and bending, the autopilot's gains,
+navigation, control-system failures, PEG/IGM) — and **Save file** / **Open file** do the same
+through a `.orbitlab.json` file. The workspace also remembers the last mission by itself, so
+closing the tab and coming back in Explore or Engineer finds it where you left it. A link or
+file is checked the same way the WebMCP `configure_mission` tool checks its input: a value
+that cannot be used (a perigee above the apogee, a gain out of range, a site the vehicle does
+not fly from) goes back to its default, the rest of the mission is kept, and a note under the
+buttons lists what was reset. The file carries a format version, so a file from a later
+Orbitlab still opens as far as this one understands it, and says so.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
@@ -111,6 +136,47 @@ only if that made the picture faster, and comes back otherwise. A screen or powe
 that holds the browser at 30 fps therefore keeps its glow. Once you press the button your choice
 is kept, also on your next visit. On a graphics card that cannot draw the high-range image the
 glow needs, the button is greyed out and the scene is drawn without it.
+
+**Sound** (the ♪ button, also in the viewer) is off until you turn it on — browsers only let a
+page play sound after you click something — and stays as you left it. What you hear is
+worked out for where the camera is: the roar grows with the engines' thrust and falls with
+distance (6 dB each time it doubles); far away it is only the low rumble, because the air soaks
+up the treble first; it comes **late**, at the speed of sound — watch the liftoff from the
+press site 5 km away and the sound reaches you 15 s after the picture, and a separation high up
+is heard long after it is seen; its pitch drops as the rocket pulls away (Doppler); and it fades
+out as the rocket climbs into air too thin to carry it, whoever is listening. The onboard camera
+hears the engines through the structure instead, muffled but steady. Ignition, stage and
+fairing separation, landings and a vehicle's loss have sounds of their own, delayed the same
+way. With the flight sped up, the sound is quieter and plays without the delay (the picture
+would otherwise be minutes ahead of it); paused, it is silent. These sounds are synthesised in
+the browser. The model is in PHYSICS.md §11.
+
+**Real launch audio in the viewer.** With the sound on, *Soyuz to the space station* plays
+NASA's broadcast of the real Soyuz MS-27 launch (8 April 2025, public domain) in step with the
+mission clock, from the last minute of the countdown to the spacecraft's separation: the
+Russian launch-control calls under NASA's English commentary. It plays at 1× — at the viewer's
+*Auto* pace that is every event from ignition to orbit — and pauses while the flight is sped
+up, picking up at the right second when it slows down again; the simulator's own sound steps
+aside while it plays. The other five launches were broadcast by SpaceX, Arianespace and Rocket
+Lab, whose broadcasts may not be republished, so they play the simulated sound. You can give
+any of them a recording of your own under **Launch audio** in *Choose a launch*: pick the file
+(an audio file or a video), say at what time in it the rocket lifts off (m:ss or h:mm:ss), and
+it plays the same way. It is kept in this browser and never uploaded. There are no broadcasts
+in Thai, so the commentary is in the language it was broadcast in whatever language the page
+is in.
+
+**The sky** is computed, not painted: sunlight scattered by the air molecules (Rayleigh — the
+blue) and by haze (Mie — the white glare round the sun), with the ozone layer's absorption, in a
+round atmosphere 100 km deep. So the colours follow from where the sun is and where the camera is:
+a deep blue overhead at noon paling to the horizon; at dusk a red and orange band under a
+darkening blue, and the Earth's shadow rising opposite; from orbit a thin bright blue line along
+the limb. Launch at dusk or dawn and follow the rocket out of the Earth's shadow into sunlight:
+above about 50 km its exhaust, with almost no air left to hold it in, balloons out over tens of
+kilometres and catches the sun — the "twilight jellyfish" — a pale glowing dome with trailing
+streamers against the darkened sky; pull the exterior camera back with the wheel (above the
+atmosphere it goes out to a couple of hundred kilometres) to see it whole. On a graphics card too
+slow for the scattering sky, the same test as the glow's switches back to the simpler painted sky
+after the glow's own test; `?sky=gradient` in the address forces it.
 
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
@@ -222,6 +288,48 @@ that follows the timeline cursor; **Ascent** zooms every chart to liftoff → pa
   interface.
 - **Export CSV** writes the whole recorded flight — the same telemetry samples and events —
   to a file you can open in a spreadsheet.
+- **Flight report** saves one HTML file ready for a lab report or a thesis: the mission's
+  set-up (vehicle, site, payload, target orbit, launch time, flight model, wind, ascent guidance,
+  navigation, slosh and bending, the autopilot, control-system failures, the failure scenario),
+  the result with the target-against-actual orbit table, the key figures (mass at liftoff,
+  maximum dynamic pressure and load factor and when, orbit insertion, Δv left), the event log,
+  and the charts — the eight above redrawn over the whole flight (the ascent ones up to 30 s
+  after insertion), plus every Engineer chart open on screen at the time, such as the Bode plot
+  or the step response. It is written in the language on screen, needs no network, and prints
+  to A4: open it and use *Print → Save as PDF*. It ends with a link that opens the same mission.
+- **PNG**: hover over any chart — here or in the Engineer windows — or tab to it, and a small
+  **PNG** button saves it redrawn on white at 2400 × 1200 pixels.
+
+### How long will it stay up?
+
+**Orbit lifetime**, beside the flight report, opens once the flight on screen is in orbit (a
+perigee above 100 km). It carries that orbit on — for a month, a year, five or twenty-five years —
+under the forces that act after the launch, each of which can be switched off to see what it does:
+the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
+works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
+the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
+and the pressure of sunlight. Choose low, mean or high solar activity: at 400 km a CubeSat lasts
+about four months at solar maximum and over a year at solar minimum. The *mean elements* method
+covers decades in a moment with J2 and drag; the *full equations* include every force but are
+slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
+payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
+charts — perigee and apogee, inclination and eccentricity — which can be saved as PNG like any
+other. The flight itself is not changed. The model is in PHYSICS.md §9a.
+
+### Comparing two flights
+
+**Compare with another flight**, above the event log, sets two flights side by side — PEG
+against IGM, one set of autopilot gains against another, a nominal flight against one with a
+control-system failure. **Use as reference** pins the flight on screen; change one thing and fly
+again, and every chart carries the reference as a dashed trace in the same colour (labelled
+*ref*), the 3-D view its path as a dashed violet line (turned with the Earth, so a reference
+flown from the same pad on another day still lies over the same ground), and a table lists what
+both flights have — orbit insertion, perigee, apogee and inclination at the end, maximum dynamic
+pressure and when, maximum load factor, Δv left, and the times of max-Q, MECO, separation, SECO
+and the orbit — with the difference. **Save flight** writes the flight to a
+`.orbitlab-flight.json` file (its telemetry, events, path and mission) and **Open flight** reads
+one back as the reference, so a comparison can span days or be handed to someone else. × stops
+comparing.
 
 ## 6. Failures
 

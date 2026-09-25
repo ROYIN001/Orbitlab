@@ -168,11 +168,8 @@ const RESERVED: Record<string, string> = {
   // (ui/hud.ts:186-198, ui/telemetry.ts:200-229, ui/panel.ts:697-702). Wiring
   // those call sites is the fix; deleting the keys would be the wrong half of
   // it. Raised as an open item by the wave-3 translation pass.
-  'u.kg': 'unit symbols are not wired to their call sites yet',
-  'u.t': 'unit symbols are not wired to their call sites yet',
   'u.kN': 'unit symbols are not wired to their call sites yet',
   'u.min': 'unit symbols are not wired to their call sites yet',
-  'u.kPa': 'unit symbols are not wired to their call sites yet',
   'u.deg': 'unit symbols are not wired to their call sites yet',
   // The setup aside is announced with a11y.setupPanel and headed with
   // app.missionControl + app.buildMission; the old caption has no call site.
