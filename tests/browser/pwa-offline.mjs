@@ -64,9 +64,11 @@ const offlineFetch = await page.evaluate(async () => {
 });
 if (!offlineFetch) fail('a precached script did not load offline');
 await page.evaluate(() => window.__mcp('launch_mission', {}));
-await page.waitForTimeout(8000);
+await page.evaluate(() => window.__mcp('control_playback', { action: 'warp', warp: 10 })).catch(() => { /* older tool shape */ });
+await page.waitForTimeout(12000);
 const state = await page.evaluate(() => window.__mcp('read_flight_state', {}));
 console.log('offline flight', JSON.stringify({ t: state.headTimeS, playing: state.playing }));
+// the countdown starts at T-10 s: past liftoff means the physics worker ran from the cache
 if (!(state.headTimeS > 0)) fail('the flight did not run offline');
 if (shots) await page.screenshot({ path: `${shots}/u03-offline.png` });
 

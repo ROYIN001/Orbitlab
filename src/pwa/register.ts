@@ -5,7 +5,14 @@
  * running version. The dev server never registers one.
  */
 import { t } from '../i18n';
-import { SKIP_WAITING } from './sw-core';
+
+/**
+ * The message that moves a waiting worker on: `SKIP_WAITING` in sw-core.ts,
+ * spelled out here (tests/pwa.test.ts holds them equal) because importing it
+ * would make sw-core a chunk the page and the worker share, and a classic
+ * service worker cannot import one.
+ */
+export const SKIP_WAITING_MESSAGE = 'orbitlab:skip-waiting';
 
 /** How often an open tab asks whether a new version was deployed. */
 const UPDATE_CHECK_MS = 60 * 60 * 1000;
@@ -23,7 +30,7 @@ export function registerServiceWorker(): void {
   });
   sw.register('./sw.js').then((registration) => {
     const offer = (worker: ServiceWorker): void => {
-      toast(t('pwa.updateReady'), t('pwa.reload'), () => worker.postMessage(SKIP_WAITING));
+      toast(t('pwa.updateReady'), t('pwa.reload'), () => worker.postMessage(SKIP_WAITING_MESSAGE));
     };
     if (registration.waiting && sw.controller) offer(registration.waiting);
     registration.addEventListener('updatefound', () => {

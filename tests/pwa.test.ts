@@ -10,6 +10,7 @@ import {
   MANIFEST_KEY, PRECACHE_PREFIX, RUNTIME_CACHE, SKIP_WAITING, installServiceWorker, precache, precacheName, prune, respond, routeFor,
   type CacheLike, type CachesLike, type PrecacheManifest, type SwScope,
 } from '../src/pwa/sw-core';
+import { SKIP_WAITING_MESSAGE } from '../src/pwa/register';
 import { PRECACHE_PLACEHOLDER, injectPrecacheManifest, precacheManifest, precacheable } from '../src/pwa/manifest';
 
 const SCOPE = 'https://example.github.io/Orbitlab/';
@@ -143,6 +144,10 @@ describe('service worker (U03)', () => {
     expect(await (await respond(sw, m, new Request(font), new Set())).text()).toBe('FONT');
   });
 
+  it('agrees with the page on the message that moves a waiting version on', () => {
+    expect(SKIP_WAITING_MESSAGE).toBe(SKIP_WAITING);
+  });
+
   it('moves onto a waiting version only when the page asks, and claims the page when it activates', async () => {
     const sw = fakeScope(serverOf(V1));
     const m = manifestOf(V1);
@@ -167,6 +172,9 @@ describe('the build (U03)', () => {
     const sw = output.find((o) => o.fileName === 'sw.js');
     expect(sw?.type).toBe('chunk');
     const code = (sw as Rollup.OutputChunk).code;
+    // a classic service worker: one self-contained script, no module imports
+    expect((sw as Rollup.OutputChunk).imports).toEqual([]);
+    expect(code).not.toMatch(/\bimport\s*[{*]|\bimport\s*\(|\bexport\s*[{*]/);
     const literal = /JSON\.parse\(("(?:[^"\\]|\\.)*")\)/.exec(code);
     const manifest = JSON.parse(JSON.parse(literal![1])) as PrecacheManifest;
     const urls = manifest.entries.map((e) => e.url);
