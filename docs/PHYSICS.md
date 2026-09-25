@@ -2023,6 +2023,18 @@ plane (8.6°) and PSLV's swing around Sri Lanka (11°) remain beyond it. The pla
 turn as `doglegDeg`, the setup panel shows it, and the extra steering is paid for in the Δv
 budget like any other.
 
+**A retrograde-only site.** Palmachim (roadmap C04) launches only west, over the Mediterranean,
+because every other direction crosses a neighbour: its 280–300° window reaches 136.4–146.6°,
+and the Ofeq satellites fly 141.7–143.5°. Its declared floor, 141.5°, is therefore itself
+retrograde, where every other site's is prograde, and the two rules that fold a retrograde plane
+onto its prograde twin (i → 180° − i) — the corridor's floor check and the ascent's choice of
+inclination — take it as it stands for such a site (`retrogradeOnly`, src/physics/mission.ts,
+true only where the declared minimum exceeds 90°). A prograde plane, a polar one or a
+sun-synchronous one from Palmachim is below its floor; its `site` preset is the 141.5° plane.
+Nothing changes for any other site. Palmachim, Yasny, Kapustin Yar and Svobodny are in the site
+table for vehicles to come (Dnepr from Yasny first); their windows are derived from the
+inclinations each has flown, with the sources in src/data/sites.ts.
+
 The ascent produces RAAN = λ_site + θ − Δλ with sin u = sin φ / sin i and
 tan Δλ = sin u cos i / cos u, where λ_site is taken 200 s after liftoff rather than at liftoff:
 the plane of the orbit is fixed by the velocity vector, and for the first minutes that vector is

@@ -886,13 +886,27 @@ export class SetupPanel {
       notes.appendChild(document.createTextNode(vehicleNotes(vehicle)));
       s1.appendChild(notes);
     }
-    s1.appendChild(this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
+    const siteField = this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
       s.siteId = v;
       s.recoveryPlan = undefined;
       this.siteReassigned = false;
       this.render();
       this.changed();
-    }));
+    });
+    // Sites no vehicle flies from yet (roadmap C04), shown for what they are
+    const unflown = SITES.filter((x) => !VEHICLES.some((v) => v.sites.includes(x.id)));
+    if (unflown.length) {
+      const group = this.el('optgroup');
+      group.label = t('setup.siteUnflown');
+      for (const x of unflown) {
+        const op = this.el('option', undefined, siteName(x));
+        op.value = x.id;
+        op.disabled = true;
+        group.appendChild(op);
+      }
+      siteField.querySelector('select')!.appendChild(group);
+    }
+    s1.appendChild(siteField);
     const coords = this.el('p', 'field-note');
     coords.id = 'site-coordinates';
     s1.appendChild(coords);

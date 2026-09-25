@@ -49,7 +49,11 @@ The left-hand panel (top of the page on a phone) builds a `MissionConfig` in thr
    its height, liftoff mass and thrust, thrust-to-weight ratio, stage count and rated
    payload to LEO/GTO/SSO. The site list below it only offers sites that vehicle actually
    flies from; picking a vehicle that cannot fly from your current site moves you to one
-   that can and says so.
+   that can and says so. Four sites at the end of the list are greyed out — Yasny, where
+   Dnepr launched THEOS-1, Kapustin Yar, Svobodny and Palmachim: they are in the simulator
+   with their real range-safety corridors, but no vehicle in the fleet flies from them yet.
+   Palmachim is the one site that can only launch against the Earth's rotation (west over the
+   Mediterranean, 141.5–146.6° of inclination).
 2. **Payload.** Choose a satellite/spacecraft (its mass fills in automatically) or type a
    payload mass of your own.
 3. **Target orbit & launch time.** The pills (ISS, Starlink, sun-synchronous, polar, GPS,

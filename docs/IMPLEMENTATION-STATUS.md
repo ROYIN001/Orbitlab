@@ -6,7 +6,7 @@ right.
 
 ## What the app is
 
-A browser simulator of orbital launches: 18 launch vehicles from 16 launch sites, flown by
+A browser simulator of orbital launches: 18 launch vehicles from 16 launch sites (and four more in the site table, flown by no vehicle yet), flown by
 closed-loop ascent guidance and a burn sequencer to the orbit a mission asks for, drawn in 3-D
 from a flight recording that can be replayed and scrubbed. Four modes — Home, Watch
 (ready-made launches with a director's camera), Explore and Engineer (every guidance
@@ -106,8 +106,8 @@ Eight of the "interesting" items are being done alongside them on branch
 | Item | |
 |---|---|
 | U01 mission links and mission files | done |
-| U03 install as an app, work offline (PWA) | |
-| C04 more launch sites (Yasny, Kapustin Yar, Svobodny, Palmachim) | |
+| U03 install as an app, work offline (PWA) | done |
+| C04 more launch sites (Yasny, Kapustin Yar, Svobodny, Palmachim) | done — no vehicle flies from them yet |
 | U06 chart and flight-report export | |
 | U02 comparing two flights | |
 | V01 sound | |
