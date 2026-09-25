@@ -108,9 +108,9 @@ Eight of the "interesting" items are being done alongside them on branch
 | U01 mission links and mission files | done |
 | U03 install as an app, work offline (PWA) | done |
 | C04 more launch sites (Yasny, Kapustin Yar, Svobodny, Palmachim) | done — no vehicle flies from them yet |
-| U06 chart and flight-report export | |
-| U02 comparing two flights | |
-| V01 sound | |
+| U06 chart and flight-report export | done |
+| U02 comparing two flights | done |
+| V01 sound | done |
 | P07 long-term orbit perturbations | |
 | V02 physically based sky | |
 

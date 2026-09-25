@@ -137,6 +137,20 @@ that holds the browser at 30 fps therefore keeps its glow. Once you press the bu
 is kept, also on your next visit. On a graphics card that cannot draw the high-range image the
 glow needs, the button is greyed out and the scene is drawn without it.
 
+**Sound** (the ♪ button, also in the viewer) is off until you turn it on — browsers only let a
+page play sound after you click something — and stays as you left it. What you hear is
+worked out for where the camera is: the roar grows with the engines' thrust and falls with
+distance (6 dB each time it doubles); far away it is only the low rumble, because the air soaks
+up the treble first; it comes **late**, at the speed of sound — watch the liftoff from the
+press site 5 km away and the sound reaches you 15 s after the picture, and a separation high up
+is heard long after it is seen; its pitch drops as the rocket pulls away (Doppler); and it fades
+out as the rocket climbs into air too thin to carry it, whoever is listening. The onboard camera
+hears the engines through the structure instead, muffled but steady. Ignition, stage and
+fairing separation, landings and a vehicle's loss have sounds of their own, delayed the same
+way. With the flight sped up, the sound is quieter and plays without the delay (the picture
+would otherwise be minutes ahead of it); paused, it is silent. Every sound is synthesised in
+the browser — there are no recordings. The model is in PHYSICS.md §11.
+
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
 upper stage, coast, burn, deployment, orbit — in live flight and in replay alike. Picking a
@@ -247,6 +261,32 @@ that follows the timeline cursor; **Ascent** zooms every chart to liftoff → pa
   interface.
 - **Export CSV** writes the whole recorded flight — the same telemetry samples and events —
   to a file you can open in a spreadsheet.
+- **Flight report** saves one HTML file ready for a lab report or a thesis: the mission's
+  set-up (vehicle, site, payload, target orbit, launch time, flight model, wind, ascent guidance,
+  navigation, slosh and bending, the autopilot, control-system failures, the failure scenario),
+  the result with the target-against-actual orbit table, the key figures (mass at liftoff,
+  maximum dynamic pressure and load factor and when, orbit insertion, Δv left), the event log,
+  and the charts — the eight above redrawn over the whole flight (the ascent ones up to 30 s
+  after insertion), plus every Engineer chart open on screen at the time, such as the Bode plot
+  or the step response. It is written in the language on screen, needs no network, and prints
+  to A4: open it and use *Print → Save as PDF*. It ends with a link that opens the same mission.
+- **PNG**: hover over any chart — here or in the Engineer windows — or tab to it, and a small
+  **PNG** button saves it redrawn on white at 2400 × 1200 pixels.
+
+### Comparing two flights
+
+**Compare with another flight**, above the event log, sets two flights side by side — PEG
+against IGM, one set of autopilot gains against another, a nominal flight against one with a
+control-system failure. **Use as reference** pins the flight on screen; change one thing and fly
+again, and every chart carries the reference as a dashed trace in the same colour (labelled
+*ref*), the 3-D view its path as a dashed violet line (turned with the Earth, so a reference
+flown from the same pad on another day still lies over the same ground), and a table lists what
+both flights have — orbit insertion, perigee, apogee and inclination at the end, maximum dynamic
+pressure and when, maximum load factor, Δv left, and the times of max-Q, MECO, separation, SECO
+and the orbit — with the difference. **Save flight** writes the flight to a
+`.orbitlab-flight.json` file (its telemetry, events, path and mission) and **Open flight** reads
+one back as the reference, so a comparison can span days or be handed to someone else. × stops
+comparing.
 
 ## 6. Failures
 

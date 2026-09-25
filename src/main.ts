@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
 import { registerServiceWorker } from './pwa/register';
-import { MISSION_PARAM, decodeMissionParam, loadStoredMission, saveStoredMission } from './config/mission-file';
+import { downloadFlightReport } from './ui/report';
+import { LaunchAudio } from './audio/launch-audio';
+import { ComparePanel } from './ui/compare';
+import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
+import { assessMissionResult } from './ui/result-content';
+import { enableChartExport } from './ui/chart-export';
+import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, saveStoredMission } from './config/mission-file';
 import { SceneManager, loadEarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
@@ -34,7 +40,7 @@ import { InlineSession, WorkerSession, createPhysicsWorker, type FlightSession, 
 import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
-import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
+import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH } from './physics/constants';
 import { normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
@@ -189,6 +195,13 @@ class App {
   trail = new TrailLine(0x8be5cd);
   predicted = new OrbitLine(0xffffff, true);
   target = new OrbitLine(0xefa47e, false);
+  /** V01: the launch as the camera hears it */
+  readonly audio = new LaunchAudio();
+  /** U02: the reference flight's path, dashed, turned to this flight's launch */
+  ghost = new OrbitLine(0xc3a6ff, true, REFERENCE_PATH_POINTS + 1, 1.8);
+  /** the launch the ghost was last turned to, Julian date */
+  private ghostJd = NaN;
+  compare!: ComparePanel;
   /** the live simulation is advancing */
   playing = false;
   /** time warp of the live simulation */
@@ -283,7 +296,13 @@ class App {
     this.obCanvas = document.getElementById('onboard') as HTMLCanvasElement;
     // The telemetry panel first: it owns the slot the instrument card docks
     // into, and `Hud` reads its stored placement in its own constructor.
-    this.tel = new TelemetryPanel(document.getElementById('telemetry')!);
+    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport());
+    this.compare = new ComparePanel({
+      currentAsReference: () => this.currentAsReference(),
+      current: () => this.tel.exportSource(),
+      onReference: (ref) => { this.tel.setReference(ref); this.ghostJd = NaN; },
+    });
+    this.tel.compareHost.append(this.compare.root);
     this.hud = new Hud(document.getElementById('hud')!, document.getElementById('ticker')!, this.tel.dockHost);
     this.map = new OrbitalMap(this.mapCanvas, `${base}textures/earth_atmos_2048.jpg`);
     this.onboard = new OnboardOverlay(this.obCanvas);
@@ -456,7 +475,8 @@ class App {
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
     this.debrisView = new DebrisView(this.scene);
-    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line);
+    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.ghost.line);
+    this.ghost.line.visible = false;
     this.cams.attach(this.viewport);
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(this.viewport);
@@ -475,6 +495,48 @@ class App {
     }
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
+  }
+
+  /** U02: the flight on screen as a reference to compare later flights against. */
+  private currentAsReference(): ReferenceFlight | null {
+    const sim = this.tel.exportSource();
+    if (!sim || !sim.telemetry.length) return null;
+    const law = sim.cfg.dynamics?.explicitGuidance?.law;
+    const faults = sim.cfg.dynamics?.controlFaults?.faults.length ?? 0;
+    const label = [sim.vehicleSpec.name, law ? law.toUpperCase() : t('cmp.standard'),
+      ...(faults ? [t('cmp.faults', { n: faults })] : []), sim.cfg.launchTime.toISOString().slice(0, 16).replace('T', ' ')].join(' · ');
+    return referenceFromFlight({
+      label, mission: missionDocument(this.panel.missionState()), launchJd: julianDate(sim.cfg.launchTime),
+      telemetry: sim.telemetry, events: sim.events,
+      path: this.recorder.frames.filter((f) => f.status !== 'prelaunch'),
+    });
+  }
+
+  /** U02: keep the reference's path turned to the launch on screen. */
+  private syncGhost(): void {
+    const ref = this.compare?.ref;
+    const cfg = this.sim?.cfg;
+    this.ghost.line.visible = !!ref && !!cfg;
+    if (!ref || !cfg) return;
+    const jd = julianDate(cfg.launchTime);
+    if (jd !== this.ghostJd) {
+      this.ghostJd = jd;
+      this.ghost.setPoints(alignTrajectory(ref, jd));
+    }
+    this.ghost.update(this.scene);
+  }
+
+  /** U06: the flight report, from the whole recorded flight and the result on screen. */
+  private async flightReport(): Promise<void> {
+    const sim = this.tel.exportSource();
+    if (!sim) return;
+    await downloadFlightReport({
+      flight: sim,
+      result: this.simView ? assessMissionResult(this.simView.sim) : null,
+      link: await this.panel.share.link().catch(() => null),
+      exclude: this.tel.chartCanvases(),
+      guidanceEdited: Object.keys(this.panel.state.guidanceOverrides).length > 0,
+    });
   }
 
   /**
@@ -557,6 +619,16 @@ class App {
       try { localStorage.setItem(GLOW_STORAGE_KEY, this.scene.bloomEnabled ? 'on' : 'off'); } catch { /* preference is optional */ }
     });
     document.getElementById('btn-fullscreen')!.addEventListener('click', () => void this.toggleFullscreen());
+    // V01: sound, off until asked for; a choice kept from an earlier visit
+    // starts at the first click or key press, as browsers require
+    const soundBtn = document.getElementById('btn-sound') as HTMLButtonElement;
+    const showSound = (): void => {
+      soundBtn.classList.toggle('active', this.audio.on);
+      soundBtn.setAttribute('aria-pressed', String(this.audio.on));
+    };
+    soundBtn.addEventListener('click', () => { this.audio.toggle(); showSound(); });
+    for (const type of ['pointerdown', 'keydown'] as const) window.addEventListener(type, () => this.audio.sound.resumeOnGesture(), { capture: true });
+    showSound();
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
       const l = (e.target as HTMLSelectElement).value as Lang;
       setLang(l);
@@ -655,6 +727,7 @@ class App {
     if (meta) meta.setAttribute('content', t('app.subtitle'));
     this.panel.render();
     this.tel.build();
+    this.compare.render();
     this.hud.applyLabels();
     this.narration.applyLanguage();
     this.timeline.applyStaticText();
@@ -789,6 +862,7 @@ class App {
 
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
+    this.audio.reset();
     // The workspace's mission outlives the tab (roadmap U01): every edit, from
     // the panel or over WebMCP, previews. The viewer's prepared launches do
     // not replace it.
@@ -1063,6 +1137,7 @@ class App {
     if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
       this.tel.update(this.simView.sim, this.player.cursor, this.shown);
+      this.compare.update();
       this.result.update(this.simView.sim);
       this.rigidControls.update(this.shown?.rigid, this.player.live);
     }
@@ -1308,6 +1383,7 @@ class App {
     // lines
     this.syncTrail(this.player.cursor, this.player.live, frame);
     this.trail.update(scene);
+    this.syncGhost();
     this.syncPredicted(frame, dt);
     this.predicted.update(scene);
     this.target.update(scene);
@@ -1344,6 +1420,14 @@ class App {
     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
     // a 3 m CubeSat carrier and by 2x for Starship (render hand-off).
     scene.update(frame, sunDir, camAlt, height);
+    // V01: what the camera hears — the map has no listener, so it is silent
+    const cam = scene.camera.position, origin = scene.origin;
+    this.audio.update({
+      t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
+      listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
+      warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
+      onboard: this.camMode === 'onboard',
+    });
     // The map and the onboard overlay still take a `Simulation` (they belong to
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,
@@ -1359,6 +1443,8 @@ class App {
 
 initLang();
 initNotation();
+// U06: every chart the app draws can be saved as a PNG
+enableChartExport();
 const app = new App();
 // U07: a notation chosen in the Engineer mode (or changed with the language)
 // relabels everything the language does.

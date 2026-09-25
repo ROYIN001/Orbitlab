@@ -1071,3 +1071,25 @@ dialog.dialog::backdrop { background: rgba(3, 8, 17, 0.78); backdrop-filter: blu
 }
 .pwa-toast-action { padding: 6px 12px; border-radius: 6px; background: var(--accent); color: #06231c; font-weight: 600; }
 .pwa-toast-close { font-size: 17px; line-height: 1; color: var(--muted); }
+
+/* U06: the "PNG" button a chart shows on hover or focus (src/ui/chart-export.ts) */
+.chart-png {
+  position: fixed; z-index: 40; padding: 2px 7px; border-radius: 5px;
+  font: 600 10px/1.4 var(--sans); letter-spacing: 0.4px; color: var(--accent);
+  background: rgba(8, 12, 19, 0.88); border: 1px solid var(--accent-line);
+}
+.chart-png:hover, .chart-png:focus-visible { background: var(--accent-weak); }
+canvas.chart:focus-visible { outline: 1px solid var(--accent-line); outline-offset: 1px; }
+
+/* U02: comparing two flights (src/ui/compare.ts) */
+.compare-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 6px; }
+.compare-actions .btn { font-size: 11px; padding: 6px 4px; }
+.compare-chip { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line2); border-radius: 6px; font-size: 12px; }
+.compare-chip span:nth-child(2) { flex: 1; }
+.compare-swatch { width: 18px; border-top: 2px dashed #c3a6ff; }
+.compare-clear { font-size: 16px; line-height: 1; color: var(--muted); }
+.compare-message { font-size: 12px; color: #efa47e; margin: 4px 0; }
+.compare-table table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11px; }
+.compare-table th, .compare-table td { padding: 3px 4px; border-bottom: 1px solid var(--line); text-align: left; font-weight: 400; }
+.compare-table thead th { color: var(--muted); font-size: 10px; letter-spacing: 0.4px; text-transform: uppercase; }
+.compare-table td.num { text-align: right; font-family: ui-monospace, monospace; white-space: nowrap; }
