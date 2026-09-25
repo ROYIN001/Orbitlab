@@ -133,9 +133,10 @@ export class TelemetryPanel {
   private frame: VisualFrame | null = null;
   private equationLevel: EquationLevel = 'explore';
 
-  constructor(root: HTMLElement, onReport: (() => void) | null = null) {
+  constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null) {
     this.root = root;
     this.onReport = onReport;
+    this.onLifetime = onLifetime;
     this.build();
   }
 
@@ -229,6 +230,14 @@ export class TelemetryPanel {
       report.id = 'btn-flight-report';
       report.addEventListener('click', () => this.onReport?.());
       r.append(report);
+    }
+    // P07: the orbit carried on for years, once the flight is in orbit
+    if (this.onLifetime) {
+      const life = el('button', 'btn export-btn', t('life.button')) as HTMLButtonElement;
+      life.type = 'button';
+      life.id = 'btn-orbit-lifetime';
+      life.addEventListener('click', () => this.onLifetime?.());
+      r.append(life);
     }
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
@@ -598,6 +607,8 @@ export class TelemetryPanel {
 
   /** U06: set by the app to offer the flight report beside the CSV export. */
   onReport: (() => void) | null = null;
+  /** P07: set by the app to offer the orbit-lifetime analysis. */
+  onLifetime: (() => void) | null = null;
 
   /** U02: draw a reference flight on every chart, dashed (null: none). */
   setReference(ref: ReferenceFlight | null): void {

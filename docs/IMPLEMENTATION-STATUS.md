@@ -111,7 +111,7 @@ Eight of the "interesting" items are being done alongside them on branch
 | U06 chart and flight-report export | done |
 | U02 comparing two flights | done |
 | V01 sound | done |
-| P07 long-term orbit perturbations | |
+| P07 long-term orbit perturbations | done |
 | V02 physically based sky | |
 
 ## Known limitations

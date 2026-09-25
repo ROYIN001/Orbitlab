@@ -287,6 +287,22 @@ that follows the timeline cursor; **Ascent** zooms every chart to liftoff → pa
 - **PNG**: hover over any chart — here or in the Engineer windows — or tab to it, and a small
   **PNG** button saves it redrawn on white at 2400 × 1200 pixels.
 
+### How long will it stay up?
+
+**Orbit lifetime**, beside the flight report, opens once the flight on screen is in orbit (a
+perigee above 100 km). It carries that orbit on — for a month, a year, five or twenty-five years —
+under the forces that act after the launch, each of which can be switched off to see what it does:
+the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
+works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
+the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
+and the pressure of sunlight. Choose low, mean or high solar activity: at 400 km a CubeSat lasts
+about four months at solar maximum and over a year at solar minimum. The *mean elements* method
+covers decades in a moment with J2 and drag; the *full equations* include every force but are
+slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
+payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
+charts — perigee and apogee, inclination and eccentricity — which can be saved as PNG like any
+other. The flight itself is not changed. The model is in PHYSICS.md §9a.
+
 ### Comparing two flights
 
 **Compare with another flight**, above the event log, sets two flights side by side — PEG

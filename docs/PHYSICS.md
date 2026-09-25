@@ -2291,6 +2291,47 @@ After the final burn the spacecraft is propagated numerically with J2 and upper-
 drag (ballistic area ≈ 1 % of mass in m²). Nodal precession and slow decay are visible on the
 orbital map and in the RAAN/altitude readouts under high time warp.
 
+### 9a. Long-term perturbations and orbit lifetime (roadmap P07)
+
+A separate propagator, src/physics/propagator/, carries an orbit on for days to decades once the
+flight is in orbit (the *Orbit lifetime* window). Nothing in the flight imports it — the ascent,
+the burns and the six-DOF orbit verdict (`physicalApsides`) are exactly what they were, which
+tests/propagator.test.ts holds by scanning the imports — and it is built to be reused by the
+rendezvous (G07) and the lunar transfer (C05).
+
+- **Gravity**: the central term and the zonal harmonics J2 = 1.08263·10⁻³, J3 = −2.53266·10⁻⁶,
+  J4 = −1.61962·10⁻⁶ (EGM96, unnormalised), as the gradient of the zonal potential (the test
+  differentiates the potential numerically and requires the accelerations to match).
+- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth. ρ is Harris–Priester
+  (Montenbruck & Gill, *Satellite Orbits*, 2000, §3.5.2, Table 3.8, 100–1000 km): the table's
+  minimum rising to its maximum as cosⁿ(ψ/2) of the angle from the diurnal bulge, whose apex lags
+  the Sun by 30°; n goes from 2 at the equator to 6 in polar orbits. The table is for mean solar
+  activity; low and high activity take ∓0.45 decades of density above 500 km, tapering to none at
+  120 km (a fit to the spread of the CIRA/MSIS profiles between F10.7 = 70 and 250, good to a
+  factor of two).
+- **Sun and Moon**: third-body accelerations (the direct pull less the pull on the Earth), with
+  the low-precision ephemerides of Montenbruck & Gill §3.3.2 (Sun to 0.1 %, Moon to a few hundred
+  kilometres).
+- **Sunlight pressure**: a cannonball, P_⊙ = 4.56 µN/m² at 1 AU times C_R A/m, off inside the
+  Earth's cylindrical shadow.
+- **Cowell**: Dormand–Prince 5(4) with step control on the relative position error (10⁻⁹ in the
+  window). **Mean elements**: J2's secular rates of the node and the perigee, and drag's rates of
+  a and e averaged over a revolution by Gauss's equations at 36 points of eccentric anomaly, in
+  steps of up to six hours (shorter as the orbit decays); no Sun, Moon or sunlight.
+- Both stop at a perigee of 120 km, where a satellite is lost within a revolution or two; that
+  instant is reported as the lifetime.
+
+Checked (tests/propagator.test.ts): J2's nodal regression against −3/2 n J2 (R/p)² cos i to
+0.1 %; a force-free orbit kept to a metre over five days; a space station at 420 km losing 1–6 km
+a month, with Cowell and the mean elements within 25 % of each other; a 1U CubeSat at 400 km
+down in 30 days to two years depending on the Sun (the model: 113, 211 and 397 days for high,
+mean and low activity); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
+Sun and the Moon (known: about 0.75–0.95°); and sunlight pressure raising a light satellite's
+eccentricity.
+
+The payloads' cross-sections are estimates by class (src/physics/propagator/spacecraft.ts); the
+window lets them be changed, and the lifetime is inversely proportional to C_D A/m.
+
 ## 10. Assumptions and limitations
 
 - Spherical Earth for altitude and gravity (J2 only as a perturbation); no terrain. Site

@@ -3,6 +3,8 @@ import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
 import { registerServiceWorker } from './pwa/register';
 import { downloadFlightReport } from './ui/report';
 import { LaunchAudio } from './audio/launch-audio';
+import { LifetimeDialog } from './ui/lifetime';
+import { spacecraftFor } from './physics/propagator/spacecraft';
 import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
 import { SoundtrackPanel } from './ui/soundtrack-panel';
 import { ComparePanel } from './ui/compare';
@@ -43,7 +45,7 @@ import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
-import { OMEGA_EARTH, R_EARTH } from './physics/constants';
+import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
 import { normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
@@ -199,6 +201,8 @@ class App {
   target = new OrbitLine(0xefa47e, false);
   /** V01: the launch as the camera hears it */
   readonly audio = new LaunchAudio();
+  /** P07: the long-term orbit window */
+  private lifetime = new LifetimeDialog();
   /** V01: a viewer launch's real broadcast, when there is one */
   readonly soundtrack = new SoundtrackPlayer();
   private soundtrackPanel = new SoundtrackPanel((id) => { if (this.watchSoundtrackId === id) void this.loadSoundtrack(id); });
@@ -303,7 +307,7 @@ class App {
     this.obCanvas = document.getElementById('onboard') as HTMLCanvasElement;
     // The telemetry panel first: it owns the slot the instrument card docks
     // into, and `Hud` reads its stored placement in its own constructor.
-    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport());
+    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport(), () => this.orbitLifetime());
     this.compare = new ComparePanel({
       currentAsReference: () => this.currentAsReference(),
       current: () => this.tel.exportSource(),
@@ -512,6 +516,22 @@ class App {
     const track = await soundtrackFor(id, (name) => t('snd.mine', { name }));
     // a different flight may have started while the recording was being read
     if (this.watchSoundtrackId === id) this.soundtrack.set(track);
+  }
+
+  /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
+  private orbitLifetime(): void {
+    const f = this.shown, sim = this.sim;
+    const opener = document.getElementById('btn-orbit-lifetime');
+    const inOrbit = !!f && !!sim && f.status !== 'prelaunch' && f.elements.periapsisAlt > 100e3 && f.elements.e < 1;
+    if (!inOrbit) { this.lifetime.openFor(null, opener); return; }
+    const sat = sim.satellite;
+    const el = f.elements;
+    this.lifetime.openFor({
+      r: [f.r.x, f.r.y, f.r.z], v: [f.v.x, f.v.y, f.v.z], jd: f.jd,
+      spacecraft: spacecraftFor(sat.kind, sim.cfg.payloadMassOverride ?? sat.mass),
+      label: t('life.start', { sat: satelliteName(sat), pe: (el.periapsisAlt / 1000).toFixed(0), ap: (el.apoapsisAlt / 1000).toFixed(0),
+        inc: (el.i * RAD).toFixed(1), t: f.t.toFixed(0) }),
+    }, opener);
   }
 
   /** U02: the flight on screen as a reference to compare later flights against. */
