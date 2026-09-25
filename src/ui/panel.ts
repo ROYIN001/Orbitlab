@@ -89,6 +89,8 @@ interface SetupState {
    * belongs to one vehicle at one site, so changing either drops it.
    */
   recoveryPlan?: RecoveryPlan;
+  /** the site's launch pad a prepared mission names; changing the vehicle or the site drops it */
+  padId?: string;
   payloadMass: number;
 }
 
@@ -447,6 +449,7 @@ export class SetupPanel {
       launchTime: new Date(s.launchTime.getTime()), guidance: this.guidance, failure: { ...s.failure },
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
+      ...(s.padId ? { padId: s.padId } : {}),
       // the values above are already merged with the vehicle's own programme
       guidanceResolved: true,
       dynamics: s.dynamics ? { ...s.dynamics } : undefined,
@@ -581,6 +584,8 @@ export class SetupPanel {
     Object.assign(this.state, mission);
     // a mission without a plan must not inherit the last one's
     this.state.recoveryPlan = mission.recoveryPlan ? structuredClone(mission.recoveryPlan) : undefined;
+    // nor its pad
+    this.state.padId = mission.padId;
     this.state.dynamics = defaultDynamics(this.state.vehicleId);
     this.tuneMessage = '';
     this.applyExternalEdit();
@@ -822,6 +827,7 @@ export class SetupPanel {
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
       if (!spec.recoverable) s.boosterRecovery = false;
       s.recoveryPlan = undefined;
+      s.padId = undefined;
       // only a ship that flies itself home can take a suborbital target
       if (s.orbit.suborbital && !flightHomeCapable(spec)) s.orbit = this.orbitalAgain(s.orbit);
       this.render();
@@ -844,6 +850,7 @@ export class SetupPanel {
     s1.appendChild(this.select('setup.site', SITES.filter((x) => vehicle.sites.includes(x.id)).map((x) => ({ value: x.id, label: siteName(x) })), s.siteId, (v) => {
       s.siteId = v;
       s.recoveryPlan = undefined;
+      s.padId = undefined;
       this.siteReassigned = false;
       this.render();
       this.changed();

@@ -20,7 +20,8 @@ The switch in the top bar picks how much of the simulator you see:
   with 32 Amazon Leo satellites, Electron from New Zealand, and the three crews the Soyuz escape
   system has saved: Soyuz T-10-1 (a fire on the pad, 1983), Soyuz 18a (a stage separation
   failure at 145 km, 1975) and Soyuz MS-10 (a strap-on striking the core, 2018), each flown to
-  the crew on the ground. The speed buttons run the flight in real time (1×), faster, or at
+  the crew on the ground from Gagarin's Start, Baikonur's Site 1/5, where they really flew from
+  (every other Soyuz from Baikonur stands on Site 31/6, today's crew pad). The speed buttons run the flight in real time (1×), faster, or at
   **Auto**, which keeps liftoff, max-Q, every separation and every landing in real time and
   hurries through the long coasts. The camera cuts to a stage flying home for its entry and
   landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the

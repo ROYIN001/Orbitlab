@@ -337,6 +337,11 @@ export interface MissionConfig {
   /** Extra payload mass added by the user, kg */
   payloadMassOverride?: number;
   /**
+   * The site's launch pad the mission is drawn on (`SiteExtra.pads`), when it
+   * names one; absent, the site's first. The physics does not read it.
+   */
+  padId?: string;
+  /**
    * `guidance` has already been merged with the vehicle's `guidanceDefaults`.
    * The simulation merges them itself when this is false/absent, so a caller
    * that only knows `DEFAULT_GUIDANCE` still flies each vehicle's own pitch

@@ -44,10 +44,38 @@ throughout.
 - **Soyuz-2.1a's fairing** is the 4.11 × 11.43 m unit with its own adapter cone down to Blok I,
   drawn and flown (it was 3.7 × 10.1 m): the stack stands 46.85 m, 51.0 m with the escape tower,
   inside the owner's 46.3–51.38 m, and a crewed head with the tower is 15.59 m.
+- **Baikonur's pads** (roadmap V05, `src/render/pads.ts`): an R-7 from Baikonur is drawn on
+  Site 31/6, where every crewed Soyuz has flown from since MS-16 (2020), and the three Watch
+  aborts on Gagarin's Start, Site 1/5, where T-10-1, 18a and MS-10 flew from (`padId` in the
+  mission; see below). Both have the КБОМ "Тюльпан" launch system turned to the launch azimuth —
+  the rocket hanging in the table by its strap-ons, four support arms that swing clear on their
+  counterweights as it rises, the two cable masts already back — the service gantry's halves
+  lowered, the rail line to the assembly building with the erector and its locomotive at its
+  door, the bunker, the propellant store and the lightning masts; Gagarin's Start has its quarry
+  and the Korolev and Gagarin cottages. Drawing only: every pad launches from the site's own
+  point, so the choice changes no trajectory. Any other vehicle at Baikonur keeps the generic pad.
 - **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
   buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
   R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
   track and the sidereal angle as arcs and values, in ISO 1151 or ГОСТ 20058-80 symbols.
+
+### Baikonur's pads: what is sourced and what is estimated
+
+| | Site 1/5, Gagarin's Start | Site 31/6 | Source |
+|---|---|---|---|
+| Position | 45.920°N 63.342°E | 45.996°N 63.564°E | en.wikipedia (drawn at the site's own point) |
+| Pit | 250 m long, 100 m wide, 45 m deep | 135 × 32 m, 24 m deep | Site 1: Roscosmos, elementy (50 m deep in Техника—молодёжи 1991); Site 31: "scaled down", at least 20 m deep where the service cabin fell in 2025 (Habr, iXBT); its length and width are estimates |
+| Direction the pit runs | 300° | 250° | estimates: no source gives them |
+| Launch table opening | 15 m | 15 m | ESA, on the Kourou copy of the Baikonur design |
+| Support arms | lean 17° in while they hold the rocket; swing 60° out | the same | КБОМ study (CyberLeninka); the swing is an estimate |
+| Rocket's base below the table's deck | 4.5 m | 4.5 m | estimate |
+| Cable masts | 27 m and 38 m, back by T−10 s | the same | retracted at T−35 s and T−15 s (NASA prelaunch timelines); heights estimates |
+| Service gantry | two 50 m halves, lowered | the same | lowered at about T−40 min (NASA); size an estimate |
+| Assembly building | Site 2, 1.75 km along the rail, 130 × 48 × 30 m | structure 40, 650 m, 110 × 42 × 26 m | distance 1.6–2 km (GlobalSecurity, en.wikipedia), 600 m (ESA, uncertain); sizes estimates |
+| Bunker | 200 m from the pad | 150 m | Site 1: 4glaza, elementy; Site 31: estimate |
+| Service cabin niche | — | shut in the gas duct's wall | Habr, iXBT |
+| Cottages of Korolev and Gagarin | by the assembly building at Site 2 | — | Advantour (2.5 km from the pad; drawn nearer) |
+| Lightning masts, floodlights, tanks, erector, locomotive | | | estimates |
 
 ## What is experimental
 

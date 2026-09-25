@@ -44,6 +44,8 @@ export interface WatchMission {
   recoveryPlan?: RecoveryPlan;
   /** the failure the flight met, for the launch aborts (G06) */
   failure?: FailureConfig;
+  /** the pad it flew from, when not the site's first (`SiteExtra.pads`) */
+  padId?: string;
 }
 
 /**
@@ -92,17 +94,17 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // (MS-10 flew a Soyuz-FG, T-10-1 a Soyuz-U, 18a the original Soyuz).
   // Soyuz MS-10, 11 October 2018: a strap-on struck the core at separation,
   // T+118.6 s; the fairing's motors pulled the crew away at T+121.6 s.
-  { id: 'soyuzMs10', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
+  { id: 'soyuzMs10', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150, padId: 'site1',
     failure: { mode: 'boosterCollision', time: 0, stage: 0 },
     titleKey: 'watch.mission.soyuzMs10', blurbKey: 'watch.mission.soyuzMs10Blurb', payloadKey: 'watch.payload.soyuzMs10' },
   // Soyuz T-10-1, 26 September 1983: a fire at the foot of the rocket on the
   // pad; the tower pulled the crew away seconds before it exploded.
-  { id: 'soyuzT10', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
+  { id: 'soyuzT10', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150, padId: 'site1',
     failure: { mode: 'padFire', time: -6, stage: 0 },
     titleKey: 'watch.mission.soyuzT10', blurbKey: 'watch.mission.soyuzT10Blurb', payloadKey: 'watch.payload.soyuzT10' },
   // Soyuz 18a, 5 April 1975: the core and the upper stage parted only half
   // way at T+288.6 s; the spacecraft fell back from 192 km to the Altai.
-  { id: 'soyuz18a', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
+  { id: 'soyuz18a', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150, padId: 'site1',
     failure: { mode: 'stagingFailure', time: 0, stage: 0 },
     titleKey: 'watch.mission.soyuz18a', blurbKey: 'watch.mission.soyuz18aBlurb', payloadKey: 'watch.payload.soyuz18a' },
 ];
@@ -167,6 +169,7 @@ export function watchMissionSettings(id: WatchMissionId, from: Date = new Date()
     orbitId: m.orbitId, orbit, launchTime: daylightLaunchTime(orbit, m.siteId, from),
     guidanceOverrides: {}, failure: { ...(m.failure ?? DEFAULT_FAILURE) },
     boosterRecovery: !!m.recoveryPlan, recoveryPlan: m.recoveryPlan,
+    ...(m.padId ? { padId: m.padId } : {}),
   };
   assertConfigInput(settings);
   return settings;

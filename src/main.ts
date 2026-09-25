@@ -877,7 +877,8 @@ class App {
       this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
       this.scene.scene.add(this.escapeView.group);
     }
-    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec);
+    // V05: the pad the mission names, its launch table turned to the launch azimuth
+    this.pad = new LaunchPadView(sim.site, sim.vehicleSpec, { padId: sim.cfg.padId, azimuth: sim.plan.azimuthRotating });
     this.scene.scene.add(this.pad.group);
     if (this.recoveryScenery) {
       this.scene.scene.remove(this.recoveryScenery.group);

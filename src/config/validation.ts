@@ -107,6 +107,8 @@ export interface ConfigInput {
   guidanceOverrides: Partial<GuidanceParams>; failure: FailureConfig; boosterRecovery: boolean;
   /** where each recovered stage is flown back to (`boosterRecovery` has to be on for it to fly) */
   recoveryPlan?: RecoveryPlan;
+  /** the site's launch pad, when the mission names one (`SiteExtra.pads`) */
+  padId?: string;
 }
 
 /**
@@ -186,6 +188,9 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     if (issue) issues.push(issue);
   };
   const spec = VEHICLES.find((v) => v.id === state.vehicleId);
+  if (state.padId !== undefined && !SITES.find((x) => x.id === state.siteId)?.pads?.some((p) => p.id === state.padId)) {
+    issues.push({ field: 'setup.site', code: 'selection' });
+  }
   if (state.dynamics !== undefined) {
     const d = state.dynamics;
     if (!d || typeof d !== 'object' || Array.isArray(d)) issues.push({ field: 'setup.dynamics.model', code: 'selection' });

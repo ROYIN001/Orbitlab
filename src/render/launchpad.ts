@@ -62,7 +62,11 @@ export class LaunchPadView {
   /** radius used for the shadow frustum, m */
   readonly shadowRadius: number;
 
-  constructor(site: SiteExtra, vehicle: VehicleSpec) {
+  /**
+   * @param opts.padId the site's pad (`SiteExtra.pads`); absent, its first
+   * @param opts.azimuth the launch azimuth, rad from north: an R-7's launch table turns to it
+   */
+  constructor(site: SiteExtra, vehicle: VehicleSpec, opts: { padId?: string; azimuth?: number } = {}) {
     this.cosLat = Math.cos(site.latitude * DEG);
     this.sinLat = Math.sin(site.latitude * DEG);
     this.lonRad = site.longitude * DEG;
@@ -77,7 +81,7 @@ export class LaunchPadView {
       }
       return m;
     };
-    this.pad = buildPad(site, vehicle, (g) => { this.geometries.push(g); return g; }, mat);
+    this.pad = buildPad(site, vehicle, (g) => { this.geometries.push(g); return g; }, mat, opts);
     this.group.add(this.pad.group);
     this.shadowRadius = Math.max(140, vehicle.height * 1.9);
     for (const o of this.pad.terrainParts ?? []) {
