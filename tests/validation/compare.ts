@@ -8,7 +8,7 @@
  * in docs/VALIDATION.md.
  */
 import type { FlownMission } from './flight-harness';
-import { GROSS_FACTOR, TOLERANCE, type Falcon9Reference } from './reference-data';
+import { GROSS_FACTOR, TOLERANCE, type Falcon9Reference, type TimelineMilestone, type TimelineReference } from './reference-data';
 
 export type Quantity = 'time' | 'speed' | 'altitude';
 
@@ -68,4 +68,31 @@ export function falcon9Rows(ref: Falcon9Reference, flown: FlownMission): Row[] {
 export function formatRows(rows: readonly Row[]): string {
   const unit = (q: Quantity, x: number) => (q === 'altitude' ? `${(x / 1e3).toFixed(1)} km` : q === 'speed' ? `${x.toFixed(0)} m/s` : `${x.toFixed(1)} s`);
   return rows.map((r) => `${r.agrees ? 'ok  ' : r.gross ? 'GROSS' : 'diff'} ${r.key.padEnd(28)} ref ${unit(r.quantity, r.reference).padStart(10)}  model ${unit(r.quantity, r.model).padStart(10)}  ±${unit(r.quantity, r.tolerance)}`).join('\n');
+}
+
+/** The time of the milestone's event in a flown mission. */
+export function milestoneTime(m: TimelineMilestone, flown: FlownMission): number | undefined {
+  if (m.afterEvent) {
+    const after = flown.eventTime(m.afterEvent);
+    return after === undefined ? undefined : flown.eventTimeAfter(m.event, after);
+  }
+  return flown.events.filter((e) => e.key === m.event)[(m.nth ?? 1) - 1]?.t;
+}
+
+/** Graded rows for a published timeline: every time, every altitude, and the insertion apsides. */
+export function timelineRows(ref: TimelineReference, flown: FlownMission): Row[] {
+  const rows: Row[] = [];
+  for (const m of ref.milestones) {
+    const t = milestoneTime(m, flown);
+    rows.push(row(`${ref.id}/${m.id}/time`, 'time', m.t, t));
+    if (m.alt !== undefined) rows.push(row(`${ref.id}/${m.id}/altitude`, 'altitude', m.alt, t === undefined ? undefined : flown.at(t).alt));
+  }
+  if (ref.insertion) {
+    // The apsides the simulator announces at the end of the ascent.
+    const e = flown.events.find((x) => x.key === 'evt.parkingOrbit' || x.key === 'evt.targetOrbit');
+    const km = (k: string) => (typeof e?.params?.[k] === 'number' ? (e.params[k] as number) * 1e3 : undefined);
+    rows.push(row(`${ref.id}/insertion/perigee`, 'altitude', ref.insertion.perigee, km('pe')));
+    rows.push(row(`${ref.id}/insertion/apogee`, 'altitude', ref.insertion.apogee, km('ap')));
+  }
+  return rows;
 }

@@ -163,3 +163,122 @@ export const TOLERANCE = {
  * tests, so any change to the set fails.
  */
 export const GROSS_FACTOR = 3;
+
+/**
+ * One milestone of a published timeline. `event` names the simulator event it
+ * is compared with; `nth` picks the n-th occurrence (1-based) where a key
+ * repeats (the first `evt.stageSep` is the core's, the second the upper
+ * stage's), and `afterEvent` takes the first occurrence after another event
+ * (the second stage's `evt.ignition` after `evt.meco`).
+ */
+export interface TimelineMilestone {
+  id: string;
+  label: string;
+  event: string;
+  nth?: number;
+  afterEvent?: string;
+  /** s after liftoff */
+  t: number;
+  /** m, where the source gives it */
+  alt?: number;
+  /**
+   * m/s, where the source gives it. Reported but not graded: none of these
+   * sources says whether its speed is inertial or relative to the Earth, and
+   * at the Soyuz's staging the two differ by ~0.3 km/s — more than the
+   * tolerance — so grading it would mean choosing the frame after the fact.
+   */
+  v?: number;
+}
+
+export interface TimelineReference {
+  id: string;
+  name: string;
+  date: string;
+  /** where each number comes from, and whether it is flown or planned */
+  sources: string;
+  mission: SimMission;
+  milestones: TimelineMilestone[];
+  /** the initial orbit, where the source gives it, m */
+  insertion?: { perigee: number; apogee: number };
+}
+
+/**
+ * Soyuz MS-25, 23 March 2024, Baikonur Site 31 to the ISS. Every time is the
+ * as-flown value (to 0.01 s) from Anatoly Zak, russianspaceweb.com/soyuz-ms-25.html,
+ * which quotes Roskosmos; the spacecraft mass (~7 152 kg) and the 200.0 × 242.0 km
+ * initial orbit are from the same page. The altitudes (45 / 79 / 157 km) are the
+ * nominal profile that page repeats for every crewed flight since MS-16, not a
+ * measurement of this one. The other crewed flights on the same site
+ * (MS-21, -23, -24, -26) agree with these times to within 0.5 s.
+ */
+export const SOYUZ_MS25: TimelineReference = {
+  id: 'soyuzMs25', name: 'Soyuz MS-25', date: '2024-03-23',
+  sources: 'russianspaceweb.com/soyuz-ms-25.html (secondary, quoting Roskosmos); flown times, nominal altitudes',
+  mission: {
+    vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', orbit: { raanMode: 'free' },
+    payloadMass: 7152, launchTime: new Date('2026-09-22T18:00:00Z'),
+  },
+  milestones: [
+    { id: 'boosterSep', label: 'strap-on separation', event: 'evt.boosterSep', t: 117.8 },
+    // The model flies Soyuz's fairing on a fixed 157 s (`fairing.sepTime`,
+    // PHYSICS.md §4), so this row agrees or not by construction; its
+    // altitude is still a genuine comparison.
+    { id: 'fairing', label: 'fairing jettison', event: 'evt.fairingSep', t: 153.33, alt: 79e3, v: 2200 },
+    { id: 'coreSep', label: 'core (Blok A) separation', event: 'evt.stageSep', nth: 1, t: 287.70, alt: 157e3, v: 3800 },
+    { id: 'seco', label: 'third-stage cut-off', event: 'evt.seco', t: 525.93 },
+    { id: 'payloadSep', label: 'spacecraft separation', event: 'evt.payloadSep', t: 529.229 },
+  ],
+  insertion: { perigee: 200.0e3, apogee: 242.0e3 },
+};
+
+/**
+ * Electron "No Time Toulouse", 20 June 2024, LC-1 Mahia: five Kinéis
+ * satellites to 635 km at 98°. Times, orbit and inclination from Rocket Lab's
+ * press kit (rocketlabcorp.com/assets/Uploads/No-Time-Toulouse-Press-Kit.pdf):
+ * a pre-flight *planned* timeline, primary source. Payload 150 kg from Kinéis
+ * ("each of the 5 launches will carry just 150kg of payload",
+ * kineis.com/en/nanosatellites-kineis-size-doesnt-matter/).
+ */
+export const ELECTRON_NTT: TimelineReference = {
+  id: 'electronNtt', name: 'Electron "No Time Toulouse"', date: '2024-06-20',
+  sources: 'Rocket Lab press kit (primary, planned timeline); Kinéis (payload)',
+  mission: {
+    vehicleId: 'electron', siteId: 'mahia', satelliteId: 'cubesats', orbitId: 'custom',
+    orbit: { perigee: 635e3, apogee: 635e3, inclination: 98, raanMode: 'free' },
+    payloadMass: 150, launchTime: new Date('2026-09-22T18:00:00Z'),
+  },
+  milestones: [
+    { id: 'meco', label: 'MECO', event: 'evt.meco', t: 144 },
+    { id: 'stageSep', label: 'stage separation', event: 'evt.stageSep', nth: 1, t: 148 },
+    { id: 'ses1', label: 'second-stage ignition', event: 'evt.ignition', afterEvent: 'evt.meco', t: 151 },
+    { id: 'fairing', label: 'fairing separation', event: 'evt.fairingSep', t: 187 },
+    { id: 'seco', label: 'SECO', event: 'evt.seco', t: 538 },
+    { id: 'kickSep', label: 'kick stage separation', event: 'evt.stageSep', nth: 2, t: 542 },
+  ],
+};
+
+/**
+ * Ariane 64 VA267 (Amazon Leo LE-01), 12 February 2026, Kourou: 32 satellites,
+ * "a total payload of approximately 20 tons", to ~465 km. Times and altitudes
+ * from the "Flight sequence" page of the launch kit
+ * (ariane.group/app/uploads/2026/02/LAUNCH-KIT-VA267-EN_FINAL.pdf): a planned
+ * timeline, primary source. The kit gives no inclination; 51.9° is from
+ * NASASpaceflight's launch report (nasaspaceflight.com/2026/02/le-01-launch/).
+ */
+export const ARIANE64_VA267: TimelineReference = {
+  id: 'ariane64Va267', name: 'Ariane 64 VA267', date: '2026-02-12',
+  sources: 'Arianespace launch kit (primary, planned timeline); NASASpaceflight (inclination)',
+  mission: {
+    vehicleId: 'ariane64', siteId: 'kourou', satelliteId: 'starlink', orbitId: 'custom',
+    orbit: { perigee: 465e3, apogee: 465e3, inclination: 51.9, raanMode: 'free' },
+    payloadMass: 20000, launchTime: new Date('2026-09-22T18:00:00Z'),
+  },
+  milestones: [
+    { id: 'boosterSep', label: 'P120C separation', event: 'evt.boosterSep', t: 145, alt: 87e3 },
+    { id: 'fairing', label: 'fairing separation', event: 'evt.fairingSep', t: 191, alt: 127e3 },
+    { id: 'coreSep', label: 'main-stage separation', event: 'evt.stageSep', nth: 1, t: 463, alt: 265e3 },
+    { id: 'vinci', label: 'Vinci first ignition', event: 'evt.ignition', afterEvent: 'evt.meco', t: 472, alt: 269e3 },
+  ],
+};
+
+export const TIMELINE_REFERENCES: readonly TimelineReference[] = [SOYUZ_MS25, ELECTRON_NTT, ARIANE64_VA267];

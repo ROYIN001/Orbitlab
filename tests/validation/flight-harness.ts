@@ -15,7 +15,7 @@ import { orbitById } from '../../src/data/orbits';
 import { vehicleById } from '../../src/data/vehicles';
 import { defaultDynamics } from '../../src/physics/rigid/config';
 import type { OrbitSpec, RecoveryPlan } from '../../src/types';
-import type { TelemetrySample } from '../../src/physics/sim/types';
+import type { SimEvent, TelemetrySample } from '../../src/physics/sim/types';
 
 /** The mission as the simulator is asked to fly it. */
 export interface SimMission {
@@ -39,6 +39,8 @@ export interface FlownMission {
   eventTime: (key: string) => number | undefined;
   /** time of the first occurrence of an event key strictly after t, s */
   eventTimeAfter: (key: string, t: number) => number | undefined;
+  /** every event, in order */
+  events: readonly SimEvent[];
   /** linear interpolation of the telemetry at time t, s */
   at: (t: number) => TelemetrySample;
   /** the last sample flown */
@@ -89,6 +91,7 @@ export function flyMission(m: SimMission, model: ModelKind, opts: { until?: numb
     model, failed: sim.isFailed(),
     eventTime: (key) => events.find((e) => e.key === key)?.t,
     eventTimeAfter: (key, t) => events.find((e) => e.key === key && e.t > t)?.t,
+    events,
     at, last: tel[tel.length - 1],
   };
 }
