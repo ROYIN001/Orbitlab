@@ -3,6 +3,7 @@ import { initLang, setLang, getLang, t, applyStatic, type Lang } from './i18n';
 import { registerServiceWorker } from './pwa/register';
 import { downloadFlightReport } from './ui/report';
 import { LaunchAudio } from './audio/launch-audio';
+import { TwilightPlume } from './render/twilight-plume';
 import { LifetimeDialog } from './ui/lifetime';
 import { spacecraftFor } from './physics/propagator/spacecraft';
 import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
@@ -199,6 +200,9 @@ class App {
   trail = new TrailLine(0x8be5cd);
   predicted = new OrbitLine(0xffffff, true);
   target = new OrbitLine(0xefa47e, false);
+  /** V02: the twilight jellyfish, and a scratch vector for its position */
+  private readonly twilight = new TwilightPlume();
+  private readonly twilightPos = new THREE.Vector3();
   /** V01: the launch as the camera hears it */
   readonly audio = new LaunchAudio();
   /** P07: the long-term orbit window */
@@ -258,6 +262,8 @@ class App {
   private glowBtn!: HTMLButtonElement;
   /** decides from the frame rate whether the glow is affordable (src/render/glow-governor.ts) */
   private readonly glow = new GlowGovernor();
+  /** V02: the same frame-rate trial for the scattering sky */
+  private readonly skyGovernor = new GlowGovernor();
   /** kept alive for as long as the app is: it publishes `--sb-h` */
   private sbObserver: ResizeObserver | null = null;
   private sbHeight = -1;
@@ -487,8 +493,10 @@ class App {
     const tex = await loadEarthTextures(base);
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
+    // V02: `?sky=gradient` keeps the old sky, for comparison or a GPU the trial misjudges
+    if (new URLSearchParams(location.search).get('sky') === 'gradient') { this.scene.setPhysicalSky(false); this.skyGovernor.settle(); }
     this.debrisView = new DebrisView(this.scene);
-    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.ghost.line);
+    this.scene.scene.add(this.trail.line, this.predicted.line, this.target.line, this.ghost.line, this.twilight.mesh);
     this.ghost.line.visible = false;
     this.cams.attach(this.viewport);
     const ro = new ResizeObserver(() => this.resize());
@@ -1085,6 +1093,12 @@ class App {
     const measuring = this.fastForwardTo === null && elapsedWall < 0.1 && document.visibilityState === 'visible';
     const action = this.glow.sample(elapsedWall, this.scene.bloomEnabled, measuring);
     if (action) this.setGlow(action === 'on');
+    // V02: the scattering sky gets the same trial, once the glow's is over, so
+    // the two never confound each other: still too slow → the gradient sky
+    if (this.glow.settled || !this.scene.glowSupported) {
+      const sky = this.skyGovernor.sample(elapsedWall, this.scene.physicalSkyEnabled, measuring);
+      if (sky) this.scene.setPhysicalSky(sky === 'on');
+    }
   }
 
   private frame(now: number): void {
@@ -1462,6 +1476,10 @@ class App {
     scene.update(frame, sunDir, camAlt, height);
     // V01: what the camera hears — the map has no listener, so it is silent
     const cam = scene.camera.position, origin = scene.origin;
+    // V02: the exhaust lit by a sun the ground no longer sees
+    const camR = Math.hypot(cam.x + origin.x, cam.y + origin.y, cam.z + origin.z) || 1;
+    const camSunElev = ((cam.x + origin.x) * sunDir.x + (cam.y + origin.y) * sunDir.y + (cam.z + origin.z) * sunDir.z) / camR;
+    this.twilight.update(frame, scene.toScene(frame.r, this.twilightPos), frame.dir, sunDir, camSunElev, scene.camera);
     this.audio.update({
       t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
       listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },

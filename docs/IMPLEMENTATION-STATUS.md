@@ -112,7 +112,7 @@ Eight of the "interesting" items are being done alongside them on branch
 | U02 comparing two flights | done |
 | V01 sound | done |
 | P07 long-term orbit perturbations | done |
-| V02 physically based sky | |
+| V02 physically based sky | done |
 
 ## Known limitations
 

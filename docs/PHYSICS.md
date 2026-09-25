@@ -2397,6 +2397,29 @@ The roar is synthesised from brown, pink and white noise (the last gated by a sl
 envelope for the crackle of a shock-laden exhaust), filtered and mixed by the numbers above;
 the cues are filtered noise bursts over a falling sine thump.
 
+## 12. The sky (roadmap V02)
+
+src/render/atmosphere.ts, after Hillaire, *A Scalable and Production Ready Sky and Atmosphere
+Rendering Technique* (EGSR 2020), with the parameters of Bruneton's reference implementation:
+Rayleigh scattering 5.802/13.558/33.1·10⁻⁶ m⁻¹ at 680/550/440 nm with an 8 km scale height; Mie
+scattering 3.996·10⁻⁶ m⁻¹ and extinction 4.40·10⁻⁶ m⁻¹, 1.2 km scale height, Cornette–Shanks phase
+with g = 0.8; ozone absorption 0.650/1.881/0.085·10⁻⁶ m⁻¹ in a tent 30 km wide about 25 km; the
+atmosphere 100 km deep over a sphere of the equatorial radius. Two tables are computed once on the
+GPU: transmittance to the top of the atmosphere (256 × 64, Bruneton's parametrisation) and the
+multiple-scattering term (32 × 32, Hillaire's isotropic sum of all orders beyond the first, with a
+ground albedo of 0.3). Every frame each view ray is marched with 24 samples from the camera through
+the atmosphere — single scattering with the Earth's shadow, softened over a quarter of a degree at
+the geometric horizon, plus the multiple-scattering term — and the sun's disc is added through the
+transmittance in front of it. Lengths are metres in float32; the sphere intersections are written as
+(R − r)(R + r) + r²μ² so that the difference of two 4·10¹³ m² squares does not swallow the kilometres
+at the limb. A NaN or infinity from a degenerate ray is zeroed before the bloom can spread it.
+
+The twilight "jellyfish" (src/render/twilight-plume.ts) is a billboard behind a thrusting vehicle
+above 45 km, its radius growing 0.45 m per metre of altitude to at most 60 km, lit by the soft
+cylindrical shadow of the Earth at the vehicle (`sunlitAt`, src/render/sky.ts) and weighted by the
+observer's twilight (the sun between about 6° above and 18° below the camera's horizon); it fades out
+for a camera inside it. It is an illustration of the phenomenon, not a plume-expansion model.
+
 ## Glossary (EN / RU / TH)
 
 This table is the source of truth for `src/i18n/ru.ts` and `src/i18n/th.ts`, and

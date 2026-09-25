@@ -165,6 +165,19 @@ it plays the same way. It is kept in this browser and never uploaded. There are 
 in Thai, so the commentary is in the language it was broadcast in whatever language the page
 is in.
 
+**The sky** is computed, not painted: sunlight scattered by the air molecules (Rayleigh — the
+blue) and by haze (Mie — the white glare round the sun), with the ozone layer's absorption, in a
+round atmosphere 100 km deep. So the colours follow from where the sun is and where the camera is:
+a deep blue overhead at noon paling to the horizon; at dusk a red and orange band under a
+darkening blue, and the Earth's shadow rising opposite; from orbit a thin bright blue line along
+the limb. Launch at dusk or dawn and follow the rocket out of the Earth's shadow into sunlight:
+above about 50 km its exhaust, with almost no air left to hold it in, balloons out over tens of
+kilometres and catches the sun — the "twilight jellyfish" — a pale glowing dome with trailing
+streamers against the darkened sky; pull the exterior camera back with the wheel (above the
+atmosphere it goes out to a couple of hundred kilometres) to see it whole. On a graphics card too
+slow for the scattering sky, the same test as the glow's switches back to the simpler painted sky
+after the glow's own test; `?sky=gradient` in the address forces it.
+
 **Camera sequence** (top bar) assigns one of those four views to each flight phase and
 switches automatically as the mission moves through them — pad, liftoff, ascent, staging,
 upper stage, coast, burn, deployment, orbit — in live flight and in replay alike. Picking a
