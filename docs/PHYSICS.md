@@ -245,6 +245,7 @@ both, and that ISO y points to the right of the flight path and ГОСТ y above
 | Roll angle | Φ | γ | Positive right side down |
 | Yaw angle | Ψ | ψ | ISO: clockwise from north (nose right); ГОСТ: from x<sub>g</sub>, anticlockwise seen from above (nose left) |
 | Flight-path angle | γ | θ | Velocity above the horizontal plane positive |
+| Track angle | χ | Ψ | ISO: bearing of the velocity over the ground, clockwise from north; ГОСТ: from x<sub>g</sub>, anticlockwise seen from above |
 | Altitude | h | H | |
 | Airspeed | V | V | |
 | Vertical speed | ḣ | V<sub>y</sub> | |
@@ -776,6 +777,48 @@ tests/heavy/explicit-fleet-*.test.ts):
   vehicles and by 55 m/s on PSLV-XL (PEG ahead); on Soyuz-2.1b and Vulcan IGM leaves 260–270 m/s
   more. The flights are listed in docs/history/PARALLEL-GNC-2026-09.md, G01.
 
+## 2k. Reference frames in 3-D (roadmap E01)
+
+The Frames menu by the camera buttons draws the frames of flight dynamics on the vehicle, and
+the angles between them as arcs with their values, in the notation in force (§2c). Four groups,
+all off until chosen: the body and air-path axes with α and β; the normal Earth and flight-path
+axes with pitch, yaw, roll, the flight-path angle and the track; the orbital axes R, S, W; ECI
+and ECEF at the Earth's centre with the Greenwich sidereal angle between them. The frames carried
+with the vehicle are drawn at a constant size on the screen, from its centre of mass, in the
+exterior and space views. Code: src/physics/reference-frames.ts (the vectors and angles),
+src/render/frames.ts (the drawing).
+
+| Frame | ISO 1151 | ГОСТ 20058-80 | Velocity it is built on |
+|---|---|---|---|
+| Body (связанная) | x nose, y right, z belly | x nose, y top, z right | — |
+| Air-path (скоростная) | x<sub>a</sub> along V, z<sub>a</sub> in the plane of symmetry towards the belly | x<sub>a</sub> along V, y<sub>a</sub> in the plane of symmetry towards the top | Relative to the air: the Earth's rotation and the wind taken out |
+| Normal Earth (нормальная земная), carried with the vehicle | x<sub>g</sub> north, y<sub>g</sub> east, z<sub>g</sub> down | y<sub>g</sub> up, x<sub>g</sub> horizontal on the launch azimuth, z<sub>g</sub> to its right | — |
+| Flight-path (траекторная) | x<sub>k</sub> along V<sub>k</sub>, z<sub>k</sub> in the vertical plane, down | x<sub>k</sub> along V<sub>k</sub>, y<sub>k</sub> in the vertical plane, up | Relative to the ground (the Earth's rotation taken out) |
+| Orbital RSW | R radial, S along the track, W the orbit normal (LVLH: x = S, y = −W, z = −R) | same | Inertial |
+| ECI, ECEF | X to the vernal equinox, Z to the pole; ECEF turned about Z by the sidereal angle θ<sub>G</sub> | same, the angle written S | — |
+
+ГОСТ leaves the direction of x<sub>g</sub> to the task; a launch frame measures yaw from the firing
+direction, so x<sub>g</sub> lies along the launch azimuth over the ground and ψ and Ψ read the
+departure from it (positive to the left). ISO's heading and track read from north.
+
+Pitch is the nose's elevation above the horizontal plane; yaw the bearing of its horizontal
+projection; roll the turn about the nose from wings level (the right axis horizontal), positive
+right side down. Within 0.5° of the vertical yaw and roll have no value (the Euler angles'
+singularity) and are not drawn: on the pad and through the vertical rise only the pitch shows,
+drawn from the side the vehicle will pitch over to. α and β are taken in the plane of symmetry
+and out of it as in §2c, and agree with what the six-DOF body records to 10⁻⁶ rad, wind included
+(tests/reference-frames.test.ts). A point-mass flight has no roll of its own: it is held wings
+level on the launch azimuth's plane, as the 3-D stack is drawn, so its roll reads zero.
+
+Reading them: early in an ascent, while the speed over the ground is still small, the heading
+and the track read several degrees off the launch azimuth (a Falcon 9 ascent from Cape
+Canaveral to LEO reads about 103° against 88° at T+60 s). The ascent is steered in the inertial
+frame, and taking the Earth's eastward 408 m/s out of an inertial velocity that is itself not much
+larger turns the velocity over the ground well away from it; the gap closes as the vehicle
+gathers speed. Through the same stretch a six-DOF ascent reads a roll of 10–15°: its attitude
+reference holds the belly in the inertial trajectory plane (§2c), not in the vertical plane
+through the nose.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic
@@ -1229,9 +1272,9 @@ screen's knife edge showed.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 198.5 × 200.9 ✓ | 197.6 × 200.3 ✓ | 197.9 × 200.2 ✓ | 150.8 × 355.2 |
-  | 250 km | 220.0 × 346.8 | 240.1 × 300.9 | 247.0 × 265.2 | 140.6 × 2 415.6 |
-  | 300 km | 143.5 × 894.9 | 144.1 × 874.4 | 103.8 × 729.8 (tanks dry) | 140.6 × 2 421.1 |
+  | 200 km | 198.0 × 200.7 ✓ | 197.6 × 200.4 ✓ | 198.6 × 200.3 ✓ | 150.8 × 355.2 |
+  | 250 km | 219.4 × 345.5 | 240.3 × 301.4 | 247.3 × 266.3 | 140.6 × 2 415.6 |
+  | 300 km | 143.9 × 899.2 | 143.8 × 875.5 | 88.7 × 700.9 (tanks dry) | 140.6 × 2 421.1 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind
@@ -1244,8 +1287,11 @@ screen's knife edge showed.
   the heating placard. The engine transients (P02) moved them again — the heaviest 300 km cell
   to 103.8 × 729.8 km, its third stage now dry before the tail-off that would have given the
   impulse back — and Long March 2D's cells moved by up to 6 km of apoapsis when Jiuquan's 41°
-  flights started leaving on the heading the site's window licenses; no verdict changed, and
-  both copies read the current figures.
+  flights started leaving on the heading the site's window licenses. The 4.11 × 11.43 m fairing
+  with its own adapter (owner's figures, 2026-09-25; it was 3.7 × 10.1 m) moved the Soyuz cells
+  that reach orbit by up to 4.3 km of apoapsis and the heaviest 300 km cell, which carries the
+  wider fairing's drag longest, to 88.7 × 700.9 km. No verdict changed, and both copies read the
+  current figures.
 
   That change is the second half of a fix the last wave only half made.
   `src/physics/mission.ts` used to carry its own copy in the `DIRECT_INSERTION_CEILING` doc
@@ -2078,7 +2124,12 @@ on exactly the trajectories it exists for.
 Failure injection modifies the active stage: engine-out reduces thrust by one engine's share,
 thrust loss shuts the stage down, premature separation drops it, a stuck fairing keeps its
 mass, range safety terminates the flight. A vehicle falling back through 100 km without
-propulsion triggers a range-safety termination.
+propulsion triggers a range-safety termination. Three failures that crewed R-7s really met are
+modes of their own (G06): a fire on the pad (`padFire`, at its time, down to T−10 s), a strap-on
+striking the core as it separates (`boosterCollision`, the vehicle out of control 3 s later) and
+a stage separation that half-fails (`stagingFailure`, at the separation of the chosen stage, out
+of control 6 s later); on a crewed Soyuz each sets off the escape of §8.3, on anything else it
+loses the vehicle. `launchAbort` fires a crewed Soyuz's escape at its time.
 
 Separated boosters, stages and fairing halves are propagated individually with gravity and
 drag until impact (reported with latitude/longitude) or, if they end up above a 120 km perigee,
@@ -2300,19 +2351,198 @@ hundred kilometres downrange. Using the pad's elevation as the ground everywhere
 1500 km downrange of Vostochny landing 250 m up, and it grows with the inland Chinese sites
 (Jiuquan ~1000 m, Taiyuan ~1500 m).
 
+### 8.3 A crewed launch's escape (roadmap G06)
+
+A crewed Soyuz-2.1a carries the escape system (САС) from the countdown until its spacecraft is in
+orbit or has left the rocket. It fires on its own when a failure is losing the rocket with the
+crew on it — immediately on a total loss of thrust or a premature separation, and wherever the
+flight would otherwise be ended as lost (a structural or bending failure, range safety, a fire on
+the pad, a strap-on collision, a separation failure) — on the `launchAbort` failure, and on the
+Engineer mode's ABORT button. From the command on, the simulation's state is the escaping body
+and its status `abort`; the rocket left behind is debris, broken up where it was when it is being
+lost. The flight ends with the crew at rest, status `landed`. Code: src/physics/rigid/escape.ts
+(the bodies), src/physics/sim/abort.ts (the hand-over).
+
+| Time of the abort | Way out | What flies |
+|---|---|---|
+| Countdown to T+114.5 s | The tower's main motor, with its control motor pushing the tower's top sideways | The head section: tower, upper fairing, orbital and descent modules (7 635 kg) |
+| T+114.5 s to the fairing's jettison (T+157 s) | The fairing's four motors (РДГ 860М), as on MS-10 | The head section without the tower |
+| After the fairing | The spacecraft released from the rocket on springs | Service, descent and orbital modules together |
+
+Every body is a rigid body integrated like the rocket (RK4, J2 gravity, 5–20 ms steps) with the
+motors as forces at their stations and a low-order aerodynamic model: axial drag against Mach, a
+normal force at a centre of pressure, crossflow drag at large angles, damping. The head section's
+lattice fins open 2.5 s after the command; closed, its centre of pressure is 0.4 m ahead of its
+centre of mass, open, 1.0 m behind. The descent module is released at the top of the climb or
+14 s after a tower abort, 8 s after a fairing abort, 10 s after a separation, and moves clear
+at 2 m/s: out of the fairing's bottom, or away from the orbital and service modules. It is flown heat shield first (its own axes: +x out of the shield), stable
+with its pressure acting through the shield's centre of curvature 1.3 m behind its CG, and
+symmetric, so its entry is ballistic, without lift — as 18a's and MS-10's were.
+
+Parachutes pull at the riser point on the module's top, against the air: the drogue (24 m²,
+C<sub>D</sub> 0.6) opens below 10.5 km and 260 m/s for 16 s; the main (1 000 m², C<sub>D</sub> 0.8)
+below 7.5 km, reefed to 8 % for 4 s, then opening over 4 s. Released below 3 km the module
+skips the drogue and opens the main 1 s later. The heat shield (90 kg) is dropped 12 s after the
+main is open; 1 m above the ground the six soft-landing motors give 105 kN for 0.25 s. The crew's
+g is the specific force on the body carrying them, and its peak is kept.
+
+| Quantity | Value | Source |
+|---|---|---|
+| Head section with the tower | 7 635 kg | Braeunig, Soyuz specifications |
+| Fairing; head with the tower | 4.11 m × 11.43 m; 15.59 m (the tower 4.16 m above the nose) | owner's figures (2026-09-25), TASS/RIA for the 4.11 × 11.43 m unit; the tower's split into truss, motor and cap is an estimate |
+| Descent module; orbital module | 2 950 kg, 2.17 m; 1 300 kg | Soyuz MS data (en.wikipedia), GCTC |
+| Tower's main motor | 1.05 MN for 1.55 s, 800 kg of propellant, Isp 218 s | 76 tf is quoted (MKB Iskra, vesvks.ru), but the 14–17 g of T-10-1 needs about 1 MN on this mass: chosen for the g |
+| Control motor | 4 kN for 1.6 s, at the tower's top | estimate |
+| Fairing motors | 280 kN together for 2.6 s, 300 kg | estimate (thrust and burn not published) |
+| Tower jettison, fairing jettison | T+114.5 s, T+157 s | MKB Iskra (T+114 s), Soyuz MS timelines |
+| Main parachute, drogue | 1 000 m², 24 m² (16–25 m² quoted) | ESA, RussianSpaceWeb |
+| Descent rate on the main | 7.2 m/s | ESA |
+| Soft landing | at about 1 m, down at 1.5 m/s | ESA, GCTC |
+| Fin effect, aerodynamic coefficients, release times, heat-shield mass | | estimates |
+
+Flown in six-DOF (tests/launch-abort.test.ts, tests/heavy/soyuz-aborts.test.ts), against the
+three aborts the escape system has flown:
+
+| | Model | Flight |
+|---|---|---|
+| **T-10-1** (pad fire, 1983) | 14.3 g; apogee 1.4 km; down 0.3 km from the pad 2.8 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
+| **MS-10** (strap-on collision, 2018) | abort at T+123.7 s in the fairing mode; apogee 147 km; 10.4 g; down 505 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
+| **18a** (separation failure, 1975) | abort at T+300 s in the separation mode; apogee 192 km; 18.5 g; down 1 548 km downrange at 50.72°N 83.04°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
+
+18a comes out close. MS-10 does not, for a reason outside the escape: at T+120 s this Soyuz-2.1a
+is at about 60 km and 2.1 km/s, some 16 km higher and 400 m/s faster than MS-10's Soyuz-FG, so its
+crew leaves on a loftier arc. T-10-1's crew came down farther away, in wind this model does not
+fly, and after a longer flight: at the model's 7.2 m/s its 5 min 13 s would need an apogee near
+2 km, where the model's head section, as wide as the 4.11 m fairing, climbs to 1.4 km.
+
+Limits: the fairing motors, the control motor, the fins' effect and the aerodynamics are
+estimates; the descent module flies a ballistic entry after every abort; the rocket left behind
+is point-mass debris; one calm flight of each is measured.
+
 ## 9. Orbit propagation
+
+### 9.1 After the final burn
 
 After the final burn the spacecraft is propagated numerically with J2 and upper-atmosphere
 drag (ballistic area ≈ 1 % of mass in m²). Nodal precession and slow decay are visible on the
 orbital map and in the RAAN/altitude readouts under high time warp.
 
-### 9a. Long-term perturbations and orbit lifetime (roadmap P07)
+### 9.2 A flight to the station (roadmap G07)
+
+A Soyuz-2.1a carrying the crewed spacecraft (a Soyuz MS) to the ISS orbit with a rendezvous
+profile flies on from the insertion to the station and docks; the profiles and the approach are
+those Soyuz MS and Progress MS share. Code:
+src/physics/rendezvous/ (station, profiles, plan, targeting, ports) and
+src/physics/sim/rendezvous.ts (the flight).
+
+**Insertion.** The ascent aims at 200 × 242 km, the orbit Soyuz-2.1a gives a Soyuz MS or
+Progress MS (MS-17: 200 ± 2 × 242 ± 5 km, separation at T+8:49 near perigee). The model cuts
+off at T+9:00 in 200 × 240 km. The stage's tail-off impulse, which the cut-off is judged with,
+is given to the spacecraft before it separates.
+
+**The station** is a reference orbit, not a live TLE: a circle at 418 km in the plane the
+launch windows use (the ISS flies 413 × 422 km, 51.64°), integrated under the same J2 gravity
+as the spacecraft (drag left out for both; the ISS loses 50–100 m a day). Its phase is set
+from the plan: the nominal plan is flown forward from the actual separation, the station is
+placed ahead of the spacecraft's arrival by the aim point's distance and flown back to the
+separation. That is what flight control does with the station's reboosts in the weeks before
+each launch ("two reboosts to set up a 15-degree phasing" before Progress MS-08), and it
+makes every profile the nominal one for the flight actually flown. The phase that results is
+checked against the windows the profiles are flown in:
+
+| Profile | Station ahead at separation, model | Flown window |
+|---|---|---|
+| Two-orbit | 11.2° | 12–18° (lozga.livejournal.com), "10–15°" (Roscosmos, 2026) |
+| Four-orbit | 25.7° | 18–40° |
+| Two-day | 309° | 240°–360°–30°, best near 270° (SoyCOM) |
+
+**The burns.** Each profile is the burn sequence of a flight that flew it, at that flight's
+times after separation (each burn's centre) and with its phasing burns' sizes, posigrade along
+the horizontal. Only the last two are solved: the transfer, which arrives at the aim point's
+height level (at an apsis) half a transfer later — Newton on the J2 coast for the nominal plan,
+and in flight a shot at the aim point's position (Newton on a finite-difference Jacobian, no
+Keplerian Lambert solution trusted); and the braking burn at the aim point, which leaves the
+spacecraft closing on the station at 4 m/s. The two-day profile's first-day trim (nominally
+2 m/s posigrade) is solved in flight by secant so that the station's lead at the transfer is
+the plan's, over a coast that includes the phasing burn still to come. Every impulse is solved
+at the centre of its finite burn; the burns are flown on the main engine (СКД) at 2 950 N.
+
+| Two-orbit | Model (MET, Δv) | Soyuz MS-28, 27 Nov 2025 (RussianSpaceWeb) |
+|---|---|---|
+| DV1 | 0:34.1, 22.0 m/s | ≈0:34, 22 m/s |
+| DV2 (first rendezvous burn) | 1:05.8, 50.9 m/s | 1:05:38, 50.85 m/s (473.7 km from the ISS; model 311 km) |
+| DV3 (transfer) | 1:55.8, 42.2 m/s | 1:55:49, 30.83 m/s (50.5 km; model 38 km) |
+| Braking at the aim point | 2:42.9, 2.24 km, 5.7 m/s | 2:39:58, 2.27 km, 5.35 m/s, then 5.06 and 1.35 m/s on the thrusters |
+| Flyaround, stationkeeping, final | 2:52.2, 2:59.7, 3:02.7 | 2:50, 2:56, 2:59 |
+| Contact | **3:13:12** at Rassvet | **3:10:33** at Rassvet (MS-17: 3:03:38) |
+| Hooks closed | 3:26:12 (13 min) | about 13 min after contact |
+
+| | Four-orbit: model | Soyuz TMA-19M, 15 Dec 2015 (Spaceflight Now) | Two-day: model | Soyuz MS-01, 7 Jul 2016 (Spaceflight Now) |
+|---|---|---|---|---|
+| Phasing | 28.5, 23.6, 12.3, 5.8, 8.5 m/s | 28.54, 23.57, 12.262, 5.798, 8.505 m/s | 21.6, 22.5 m/s; trim 2.0 m/s at 1 d 00:43; 24.0 m/s | 21.63, 22.55 m/s; 2.00 m/s at 1 d 00:43; 24.029 m/s |
+| Transfer | 21.6 m/s at 5:05.5 | 20.797 m/s at 5:05:17 | 34.4 m/s | 32.203 m/s |
+| Braking | 9.7 m/s | 6.985 + 6.008 + 2.004 m/s | 7.6 m/s | 5.519 + 5.868 + 1.441 m/s |
+| Contact | **6:22:24** | **6:20:59** | **2 d 02:37** | **2 d 02:35** |
+
+The model's split between the two-orbit transfer and its braking differs from MS-28's (42 +
+6 m/s against 31 + 12 m/s) because it brings the spacecraft to the aim point level, where
+MS-28 arrived still closing; the sum is the same, and the whole two-orbit flight costs
+116.8 m/s against MS-28's 117.
+
+**The approach (Kurs)** is flown in six degrees of freedom: the spacecraft is a rigid body
+(RK4, J2) whose attitude is held by the thrusters' torque and whose translation asks for a
+velocity relative to the station's rotating frame, within what the thrusters give.
+
+| Phase | Model | Flight (SoyCOM, RSW, SFN) |
+|---|---|---|
+| Approach | from the aim point (2.2 km behind and 1 km below) to 400 m off the port, at up to 4 m/s, braking at 0.012 m/s² | 2.27 km to 400 m in about 10 min |
+| Flyaround | from 400 m to the stationkeeping point on the port's axis, turning at 0.0024 rad/s (at least 5 min) | from 400 m (range rate 2–2.5 m/s) to 150 m (0); about 6 min, 50° of arc |
+| Stationkeeping | 150 m from the port (probe to port), held 3 min | 100–200 m; 3–6 min |
+| Final approach | along the port's axis at 0.12 + 0.002 × distance m/s, at most 0.5 m/s | about 11 min; 0.25 m/s; 0.1 m/s at contact |
+| Capture | 0.1–0.35 m/s closing, ≤ 0.1 m/s across, ≤ 0.34 m off the axis, ≤ 7° pitch/yaw, ≤ 10° roll, ≤ 0.6 °/s | the docking system's limits (SoyCOM) |
+| Missed contact | back to the stationkeeping point, one more try, then the docking is called off | |
+| Hooks | 13 min from contact to docked | about 13 min |
+
+| Spacecraft | Value | Source |
+|---|---|---|
+| Main engine (СКД, S5.80) | 2 950 N, Isp 302 s | KTDU-80 |
+| Thrusters (ДПО-Б, 28 × 129 N) | 460 N along the long axis, 258 N across; Isp 291 s | MS-28's 5.06 m/s in 79.6 s on them; a pair across |
+| Torque, inertia, probe 4.2 m ahead of the centre of mass | 400 N·m; 4 300 / 35 500 / 35 500 kg·m² | estimates |
+
+**The ports** (station body axes = its LVLH axes: x forward, z to nadir; the Russian segment
+trails the centre of mass, which is taken at the S0 truss): Rassvet (−13.2, 0, +8.1) m nadir,
+Poisk (−26.1, 0, −6.1) m zenith, Prichal (−26.1, 0, +18.7) m nadir, Zvezda aft (−37.6, 0, 0) m.
+These are laid out from module lengths (Destiny 8.5 m, Unity 5.5 m, PMA-1 1.9 m, Zarya 12.6 m,
+Zvezda 13.1 m), not a released drawing, and agree with an independent estimate to about 1 m.
+Each port has its docking target 1.1 m to one side, a cross on a 0.6 m standoff; the TV
+camera sits the same distance beside the probe, so the cross sits on its disc when the probe
+is on the axis.
+
+**TORU.** In the Engineer mode the operator can take the approach over from Kurs at any point
+of it, as the station crew does with TORU (usually during stationkeeping at 150–200 m;
+Progress MS-33, March 2026, from about 180 m). The translation controller asks for a velocity
+along the port's axes, in steps of 0.05 m/s in and out and 0.02 m/s across; the rotation
+controller asks for rates in steps of 0.1 °/s, and the attitude is held in the station's frame
+when they are zero. Handing back lets Kurs fly the spacecraft back to the stationkeeping point
+and in again. Every command is pinned into the recording like a six-DOF command.
+
+Flown headless (tests/rendezvous.test.ts, tests/heavy/rendezvous.test.ts): every profile
+docks, to every port, in the point-mass and the six-DOF ascent alike.
+
+Limits: the station is a reference circle, not the ISS's measured orbit; the phasing burns are
+copied from one flight each rather than computed from the insertion as flight control does;
+Kurs navigates without error, so an automatic contact is always on the axis; the station holds
+its LVLH attitude exactly (the ISS goes to free drift at contact); the thruster layout, the
+spacecraft's inertia and the port positions are estimates.
+
+### 9.3 Long-term perturbations and orbit lifetime (roadmap P07)
 
 A separate propagator, src/physics/propagator/, carries an orbit on for days to decades once the
 flight is in orbit (the *Orbit lifetime* window). Nothing in the flight imports it — the ascent,
 the burns and the six-DOF orbit verdict (`physicalApsides`) are exactly what they were, which
 tests/propagator.test.ts holds by scanning the imports — and it is built to be reused by the
-rendezvous (G07) and the lunar transfer (C05).
+lunar transfer (C05); the rendezvous (G07, §9.2) flies its own J2 coasts, hours to two days,
+where drag and the third bodies are left out for both vehicles alike.
 
 - **Gravity**: the central term and the zonal harmonics J2 = 1.08263·10⁻³, J3 = −2.53266·10⁻⁶,
   J4 = −1.61962·10⁻⁶ (EGM96, unnormalised), as the gradient of the zonal potential (the test

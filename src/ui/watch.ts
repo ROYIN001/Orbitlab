@@ -13,8 +13,9 @@ import { getLang, t } from '../i18n';
 import type { VisualFrame } from '../physics/frame';
 import type { SimEvent } from '../physics/simulation';
 import { vehicleById } from '../data/vehicles';
+import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat } from './watch-logic';
+import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
 import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
 
 export interface WatchHost {
@@ -85,7 +86,7 @@ export class WatchView {
   private beat: WatchBeat | null = null;
   private lastFrame: VisualFrame | null = null;
   /** the frame the end card was written for, so a language change rewrites the same card */
-  private endFrame: { frame: VisualFrame; ending: 'orbit' | 'splashdown' | 'failed' } | null = null;
+  private endFrame: { frame: VisualFrame; ending: WatchEnding } | null = null;
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
@@ -238,12 +239,23 @@ export class WatchView {
     }
   }
 
+  /** V03: whether a vehicle's strap-ons are solid motors (cached by id). */
+  private solidBoosters(vehicleId: string): boolean {
+    if (this.solidFor?.id !== vehicleId) {
+      let spec: ReturnType<typeof vehicleById> | undefined;
+      try { spec = vehicleById(vehicleId); } catch { spec = undefined; }
+      this.solidFor = { id: vehicleId, solid: !!spec?.stages.some((st) => (st.boosters ?? []).some((b) => exhaustKind(b) === 'solid')) };
+    }
+    return this.solidFor.solid;
+  }
+  private solidFor?: { id: string; solid: boolean };
+
   /** Called at the HUD's 10 Hz with the frame on screen. */
   update(frame: VisualFrame | null, events: readonly SimEvent[], state: UpdateState): void {
     this.lastFrame = frame;
     // Four strap-ons leaving together is the Soyuz "Korolev cross".
     const cross = state.vehicleId.startsWith('soyuz');
-    const beat = watchBeat(frame, events, cross);
+    const beat = watchBeat(frame, events, cross, this.solidBoosters(state.vehicleId));
     this.beat = beat;
     const copy = WATCH_BEATS[beat];
     const label = t(copy.label);
@@ -259,7 +271,9 @@ export class WatchView {
     // above the ground, so the pad reads 0 rather than the site's elevation
     const subject = state.subject;
     const alt = subject ? fmtAltitude(subject.altitude) : frame ? fmtAltitude(frame.altitudeAGL) : fmtAltitude(0);
-    const speed = subject ? num(subject.speed * 3.6) : frame ? num(frame.liftoff ? groundSpeed(frame) * 3.6 : 0) : num(0);
+    // a pad abort never lifts off, but its crew does (T-10-1)
+    const moving = !!frame && (frame.liftoff || !!frame.abort);
+    const speed = subject ? num(subject.speed * 3.6) : frame ? num(moving ? groundSpeed(frame) * 3.6 : 0) : num(0);
     if (clock !== this.shown.clock) { this.clockValue.textContent = clock; this.shown.clock = clock; }
     if (alt !== this.shown.alt) { this.altValue.textContent = alt; this.shown.alt = alt; }
     if (speed !== this.shown.speed) { this.speedValue.textContent = speed; this.shown.speed = speed; }
@@ -289,18 +303,33 @@ export class WatchView {
     this.playBtn.setAttribute('aria-label', title);
   }
 
-  private showEnd(frame: VisualFrame, ending: 'orbit' | 'splashdown' | 'failed'): void {
+  private showEnd(frame: VisualFrame, ending: WatchEnding): void {
     const success = ending !== 'failed';
     this.endFrame = { frame, ending };
     if (!this.picker.hidden) return;
     const card = this.endCard;
     card.replaceChildren();
     card.classList.toggle('failed', !success);
-    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle' : 'watch.fail.title'));
+    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
+      : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle' : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
-    card.append(el('span', 'eyebrow', t(success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
-    if (ending === 'splashdown') {
+    card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
+    if (ending === 'crewSafe') {
+      // G06: the rocket was lost, the crew was not
+      const since = frame.t - (frame.abort?.t0 ?? frame.t);
+      card.append(el('p', undefined, t('watch.end.crewSafeText', {
+        km: num(frame.downrange / 1000), g: num(frame.abort?.maxG ?? 0), time: fmtClock(since).replace(/^T\+/, ''),
+      })));
+    } else if (ending === 'docked') {
+      // G07: at the station
+      const rv = frame.rendezvous!;
+      const since = (rv.contact?.t ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
+      card.append(el('p', undefined, t('watch.end.dockedText', {
+        port: t(`rv.port.${rv.port}`), time: fmtClock(since).replace(/^T\+/, ''), burns: num(rv.burns.length),
+      })));
+      card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
+    } else if (ending === 'splashdown') {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
       card.append(el('p', undefined, t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
     } else if (success) {

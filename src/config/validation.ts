@@ -1,15 +1,18 @@
 /** Shared validation of configuration data, separate from mission feasibility.
  * A valid but overweight or unreachable mission is still an experiment the
  * operator may launch. Only malformed or unsupported input is rejected here. */
-import type { FailureConfig, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from '../types';
+import type { FailureConfig, FailureMode, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from '../types';
 import { VEHICLES } from '../data/vehicles';
 import { LANDING_ZONES } from '../data/landing-zones';
-import { SATELLITES } from '../data/satellites';
+import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES } from '../data/sites';
 import { guidanceForVehicle } from '../physics/defaults';
 import { supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
 import { FLEX_LIMITS } from '../physics/rigid/flex';
+import { PROFILE_IDS, rendezvousAvailable } from '../physics/rendezvous/profiles';
+import { PORT_IDS } from '../physics/rendezvous/ports';
+import type { MissionConfig } from '../types';
 import { CONTROL_CHANNEL_KEYS, CONTROL_CHANNELS, CONTROL_LIMITS, controlFieldKey, controlProblems } from '../physics/rigid/control-config';
 import { AIDING_KEYS, AIDING_LIMITS, IMU_KEYS, NAV_FIELD_KEYS, navigationProblems } from '../physics/nav/config';
 import { controlFaultsProblems } from '../physics/rigid/fault-config';
@@ -17,7 +20,11 @@ import { explicitGuidanceProblems } from '../physics/explicit-guidance';
 import { IMU_LIMITS } from '../physics/nav/sensors';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
-export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection' | 'suborbital';
+export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection' | 'suborbital'
+  /** a failure the vehicle cannot have: an abort without an escape system, a strap-on collision without strap-ons */
+  | 'failureUnavailable'
+  /** a rendezvous needs the station's orbit and a spacecraft with its own engine */
+  | 'rendezvousUnavailable';
 export interface ValidationIssue { field: string; code: ValidationCode; limit?: number }
 
 /** Bounds are in the stored SI/degree units; UI and WebMCP convert at the edge. */
@@ -45,7 +52,8 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
   'setup.argPerigee': { min: 0, max: 360 },
   'setup.raan': { min: 0, max: 360 },
   'setup.ltan': { min: 0, max: 24 },
-  'setup.failureTime': { min: 0, max: 2000 },
+  // from the countdown's first seconds (a fire on the pad) on
+  'setup.failureTime': { min: -10, max: 2000 },
   // --- P05: the flexible body's tunable parameters, in the units the panel shows
   'setup.flex.imuStation': { min: FLEX_LIMITS.imuStation[0] * 100, max: FLEX_LIMITS.imuStation[1] * 100 },
   'setup.flex.notchZetaZero': { min: FLEX_LIMITS.notchZetaZero[0], max: FLEX_LIMITS.notchZetaZero[1] },
@@ -120,6 +128,10 @@ export interface ConfigInput {
   guidanceOverrides: Partial<GuidanceParams>; failure: FailureConfig; boosterRecovery: boolean;
   /** where each recovered stage is flown back to (`boosterRecovery` has to be on for it to fly) */
   recoveryPlan?: RecoveryPlan;
+  /** the site's launch pad, when the mission names one (`SiteExtra.pads`) */
+  padId?: string;
+  /** fly on to the station and dock (roadmap G07) */
+  rendezvous?: MissionConfig['rendezvous'];
 }
 
 /**
@@ -134,6 +146,22 @@ const SUBORBITAL_PERIGEE_MIN = -1000;
  * perigee is below the ground (and no higher), and its flight may carry no
  * payload at all; everything else is `NUMBER_FIELDS`.
  */
+/** Every failure scenario, in the order the mission panel offers them. */
+export const FAILURE_MODES: readonly FailureMode[] = ['none', 'engineOut', 'thrustLoss', 'prematureSep', 'fairingStuck', 'rangeSafety',
+  'launchAbort', 'padFire', 'boosterCollision', 'stagingFailure', 'random'];
+
+/**
+ * Whether a vehicle can have this failure: a launch abort needs an escape
+ * system and a crew for it (roadmap G06), a strap-on collision strap-ons, a
+ * stage separation failure a second stage.
+ */
+export function failureAvailable(mode: FailureMode, spec: VehicleSpec, satelliteId: string): boolean {
+  if (mode === 'launchAbort') return !!spec.escapeSystem && !!satelliteById(satelliteId)?.crewed;
+  if (mode === 'boosterCollision') return !!spec.stages[0]?.boosters?.length;
+  if (mode === 'stagingFailure') return spec.stages.filter((st) => !st.isSpacecraft).length > 1;
+  return true;
+}
+
 export function fieldLimits(field: string, orbit?: Pick<OrbitSpec, 'suborbital'>): NumberLimits | undefined {
   if (orbit?.suborbital) {
     if (field === 'setup.perigee') return { min: SUBORBITAL_PERIGEE_MIN, max: 0 };
@@ -183,6 +211,14 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     if (issue) issues.push(issue);
   };
   const spec = VEHICLES.find((v) => v.id === state.vehicleId);
+  if (state.padId !== undefined && !SITES.find((x) => x.id === state.siteId)?.pads?.some((p) => p.id === state.padId)) {
+    issues.push({ field: 'setup.site', code: 'selection' });
+  }
+  if (state.rendezvous !== undefined) {
+    const rv = state.rendezvous;
+    if (!rv || !PROFILE_IDS.includes(rv.profile) || (rv.port !== undefined && !PORT_IDS.includes(rv.port))) issues.push({ field: 'setup.rendezvous', code: 'selection' });
+    else if (!rendezvousAvailable(state.vehicleId, state.satelliteId, state.orbit)) issues.push({ field: 'setup.rendezvous', code: 'rendezvousUnavailable' });
+  }
   if (state.dynamics !== undefined) {
     const d = state.dynamics;
     if (!d || typeof d !== 'object' || Array.isArray(d)) issues.push({ field: 'setup.dynamics.model', code: 'selection' });
@@ -230,7 +266,8 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
       if (issue) issues.push({ ...issue, limit: issue.limit === undefined ? undefined : issue.limit / def.scale });
     }
   }
-  if (!['none', 'engineOut', 'thrustLoss', 'prematureSep', 'fairingStuck', 'rangeSafety', 'random'].includes(state.failure.mode)) issues.push({ field: 'setup.failureMode', code: 'selection' });
+  if (!(FAILURE_MODES as readonly string[]).includes(state.failure.mode)) issues.push({ field: 'setup.failureMode', code: 'selection' });
+  else if (spec && !failureAvailable(state.failure.mode, spec, state.satelliteId)) issues.push({ field: 'setup.failureMode', code: 'failureUnavailable' });
   check(state.failure.time, 'setup.failureTime', NUMBER_FIELDS['setup.failureTime']);
   check(state.failure.stage, 'setup.failureStage', { min: 0, max: spec ? spec.stages.length - 1 : 0, integer: true });
   if (typeof state.boosterRecovery !== 'boolean' || (state.boosterRecovery && spec && !spec.recoverable)) issues.push({ field: 'setup.boosterRecovery', code: 'selection' });
@@ -276,6 +313,8 @@ export function issueText(issue: ValidationIssue): string {
     case 'orbitOrder': return 'Custom orbit perigee must not exceed apogee';
     case 'selection': return `${issue.field} is not a valid selection`;
     case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship)';
+    case 'failureUnavailable': return 'This vehicle cannot have that failure: a launch abort needs a crewed Soyuz, a strap-on collision strap-ons, a stage separation failure a second stage';
+    case 'rendezvousUnavailable': return 'A flight to the station needs the crewed spacecraft on a Soyuz-2.1a and the ISS orbit';
   }
 }
 

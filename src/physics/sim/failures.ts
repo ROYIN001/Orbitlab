@@ -1,7 +1,17 @@
-/** Deterministic failure injection (engine-out, thrust loss, premature separation, stuck fairing, range safety). */
+/**
+ * Deterministic failure injection (engine-out, thrust loss, premature
+ * separation, stuck fairing, range safety), the three historical failures of a
+ * crewed R-7 (a pad fire, a strap-on striking the core, a stage separation
+ * that half-fails) and a commanded launch abort (roadmap G06).
+ */
 import type { MissionConfig, FailureMode } from '../../types';
 import type { Simulation } from '../simulation';
 import { hashSeed, mulberry32 } from './seed';
+
+/** From a strap-on striking the core to the vehicle out of control, s (Soyuz MS-10: T+118.6 s to the abort at T+121.6 s). */
+export const COLLISION_TO_LOSS = 3;
+/** From a stage separation that half-fails to the attitude limit, s (Soyuz 18a: T+288.6 s, the abort some 6 s later; estimate). */
+export const STAGING_TO_LOSS = 6;
 
 export class FailureInjector {
   failureApplied = false;
@@ -28,9 +38,32 @@ export class FailureInjector {
 
   /** Queue the injected failure (after the launch actions, as before). */
   arm(): void {
-    if (this.failureMode !== 'none' && this.failureMode !== 'fairingStuck') {
-      this.sim.schedule(this.failureTime, 'failure', () => this.applyFailure());
-    }
+    const mode = this.failureMode;
+    // the historical failures of a strap-on and of a stage are set off by their separations
+    if (mode === 'none' || mode === 'fairingStuck' || mode === 'boosterCollision' || mode === 'stagingFailure') return;
+    this.sim.schedule(this.failureTime, 'failure', () => this.applyFailure());
+  }
+
+  /** The strap-ons have separated: one of them strikes the core, which soon goes out of control. */
+  onBoosterSeparation(): void {
+    if (this.failureMode !== 'boosterCollision' || this.failureApplied) return;
+    this.failureApplied = true;
+    this.sim.event('evt.boosterCollision', 'fail');
+    this.sim.schedule(this.sim.state.t + COLLISION_TO_LOSS, 'failure', () => {
+      this.sim.event('evt.attitudeLost', 'fail');
+      this.sim.destroy();
+    });
+  }
+
+  /** Stage `index` has separated: the chosen one only half-lets go, and the next stage lights still attached. */
+  onStageSeparation(index: number): void {
+    if (this.failureMode !== 'stagingFailure' || this.failureApplied || index !== this.failureStage) return;
+    this.failureApplied = true;
+    this.sim.event('evt.stagingFailure', 'fail', { stage: this.sim.vehicle.stages[index]?.spec.name ?? '' });
+    this.sim.schedule(this.sim.state.t + STAGING_TO_LOSS, 'failure', () => {
+      this.sim.event('evt.attitudeLost', 'fail');
+      this.sim.destroy();
+    });
   }
 
 
@@ -52,6 +85,8 @@ export class FailureInjector {
       case 'thrustLoss':
         target.engineFraction = 0;
         this.sim.event('evt.thrustLoss', 'fail', { stage: target.spec.name });
+        // a crew does not wait for the rocket to fall back
+        if (this.sim.escape.available) this.sim.escape.begin('evt.thrustLoss', true);
         break;
       case 'prematureSep': {
         // A stage that has not lit yet cannot separate prematurely — it is
@@ -66,10 +101,18 @@ export class FailureInjector {
         this.sim.event('evt.prematureSep', 'fail', { stage: victim.spec.name });
         victim.burnedOut = true;
         victim.cutoffTime = s.t;
+        if (this.sim.escape.available) { this.sim.escape.begin('evt.prematureSep', true); break; }
         for (const b of victim.boosters) if (b.attached) { b.burnedOut = true; this.sim.staging.detachBooster(b); }
         this.sim.staging.onCoreBurnout(victim, s.r, s.v);
         break;
       }
+      case 'launchAbort':
+        if (!this.sim.commandAbort()) this.sim.event('evt.abortUnavailable', 'warn');
+        break;
+      case 'padFire':
+        this.sim.event('evt.padFire', 'fail');
+        this.sim.destroy();
+        break;
       case 'rangeSafety':
         this.sim.event('evt.ftsCommanded', 'fail');
         this.sim.destroy();

@@ -80,6 +80,12 @@ export const stageName = (vehicleId: string, stageId: string, fallback: string):
  * enum id — and is translated here through the same `tel.burn.*` labels the
  * flight-plan list uses.
  */
+/** A rendezvous burn's name ('dv2' → "Burn 2", 'brake' → "Braking"). */
+export function rendezvousBurnName(id: string): string {
+  const n = /^dv(\d)$/.exec(id);
+  return n ? t('rv.burn.n', { n: n[1] }) : localized(`rv.burn.${id}`, id);
+}
+
 export function localizeEventParams(
   vehicle: VehicleSpec | null,
   params?: Record<string, string | number>,
@@ -96,6 +102,12 @@ export function localizeEventParams(
   // raiseApoapsis" in every language, English included.
   const kind = typeof params.kind === 'string' ? localized(`tel.burn.${params.kind}`, params.kind) : null;
   const commandMode = params.mode === 'auto' || params.mode === 'manual' ? localized(`control.mode.${params.mode}`, params.mode) : null;
+  // G06: which way out a launch abort took
+  const abortMode = params.mode === 'tower' || params.mode === 'fairing' || params.mode === 'separation' ? localized(`abort.mode.${params.mode}`, params.mode) : null;
+  // G07: a rendezvous's burn, profile and port are ids
+  const burn = typeof params.burn === 'string' ? rendezvousBurnName(params.burn) : null;
+  const profile = typeof params.profile === 'string' ? localized(`rv.profile.${params.profile}`, params.profile) : null;
+  const port = typeof params.port === 'string' ? localized(`rv.port.${params.port}`, params.port) : null;
   const envelopeScope = params.scope === 'vehicle' ? t('aero.scope.vehicle') : params.scope === 'debris' ? t('aero.scope.debris') : null;
   // E04: an attitude test's axis, and its amplitude in the standard's sense (ISO in the event).
   const testAxis = params.testAxis === 'roll' || params.testAxis === 'pitch' || params.testAxis === 'yaw' ? t(TEST_AXIS[params.testAxis]) : null;
@@ -104,12 +116,17 @@ export function localizeEventParams(
   const fdirReason = params.fdirReason === 'flag' || params.fdirReason === 'vote' ? t(`fault.reason.${params.fdirReason}`) : null;
   if ((stage === null || stage === params.stage)
     && (name === null || name === params.name)
-    && (kind === null || kind === params.kind) && commandMode === null && envelopeScope === null && testAxis === null
-    && faultKind === null && fdirReason === null && params.engine === undefined && params.jet === undefined && params.units === undefined) return params;
+    && (kind === null || kind === params.kind) && commandMode === null && abortMode === null && envelopeScope === null && testAxis === null
+    && faultKind === null && fdirReason === null && params.engine === undefined && params.jet === undefined && params.units === undefined
+    && burn === null && profile === null && port === null) return params;
   const out = { ...params };
   if (stage !== null) out.stage = stage;
   if (name !== null) out.name = name;
   if (kind !== null) out.kind = kind;
+  if (abortMode !== null) out.mode = abortMode;
+  if (burn !== null) out.burn = burn;
+  if (profile !== null) out.profile = profile;
+  if (port !== null) out.port = port;
   if (envelopeScope !== null) {
     out.scope = envelopeScope;
     // U07: α and β in the standard's body axes, from the simulator's own pair.
@@ -157,6 +174,9 @@ export function satelliteNameById(id: string): string | null {
 }
 
 export function stageNameByLabel(vehicle: VehicleSpec | null, name: string): string {
+  // G06: what a launch abort leaves behind is named by the escape, not the vehicle
+  if (name === 'escapeHead') return t('abort.part.head');
+  if (name === 'modules') return t('abort.part.modules');
   if (!vehicle) return name;
   for (const st of vehicle.stages) {
     if (st.name === name) return stageName(vehicle.id, st.id, name);

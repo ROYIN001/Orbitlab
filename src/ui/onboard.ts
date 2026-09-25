@@ -24,6 +24,7 @@
  * glass, and a shortened canvas would leave a strip of unmasked scene.
  */
 import type { Simulation, SimEvent } from '../physics/simulation';
+import type { RendezvousState } from '../physics/sim/rendezvous';
 import { getLang, t } from '../i18n';
 import { dot, normalize } from '../physics/vec3';
 import { symbolText } from './notation';
@@ -55,6 +56,79 @@ export class OnboardOverlay {
       if (g.measureText(text.slice(0, mid) + dots).width <= max) lo = mid; else hi = mid - 1;
     }
     return lo > 0 ? text.slice(0, lo) + dots : '';
+  }
+
+  /**
+   * G07: the docking TV camera's picture — the scene is the camera's view
+   * along the docking axis; over it, the reticle the port's target is lined
+   * up in and the figures the crew and the station read during the approach:
+   * range, closing speed, offset from the axis.
+   */
+  drawDocking(rv: RendezvousState, bottomInset = 0): void {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
+    if (W === 0 || H === 0) return;
+    if (this.canvas.width !== Math.round(W * dpr) || this.canvas.height !== Math.round(H * dpr)) {
+      this.canvas.width = Math.round(W * dpr);
+      this.canvas.height = Math.round(H * dpr);
+    }
+    const g = this.canvas.getContext('2d')!;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const S = Math.max(0.6, Math.min(1.2, W / 900));
+    const viewH = Math.max(80, H - bottomInset);
+    const cx = W / 2, cy = H / 2;
+    // the picture's edge darkens as a TV camera's does
+    const vig = g.createRadialGradient(cx, cy, Math.min(W, H) * 0.35, cx, cy, Math.hypot(W, H) * 0.6);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+    g.fillStyle = vig;
+    g.fillRect(0, 0, W, H);
+    // the reticle: a ring, the cross with a gap at its centre, ticks every tenth of the ring
+    const R = Math.min(W, H) * 0.14;
+    g.strokeStyle = 'rgba(232,240,246,0.85)';
+    g.lineWidth = Math.max(1, 1.4 * S);
+    g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke();
+    g.beginPath();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      g.moveTo(cx + dx * R * 0.18, cy + dy * R * 0.18);
+      g.lineTo(cx + dx * R * 2.2, cy + dy * R * 2.2);
+    }
+    for (let i = 1; i <= 11; i++) {
+      if (i === 5) continue;
+      const k = (i / 5) * R, len = i % 5 === 0 ? 7 * S : 4 * S;
+      if (k > R * 2.2) break;
+      g.moveTo(cx + k, cy - len); g.lineTo(cx + k, cy + len);
+      g.moveTo(cx - k, cy - len); g.lineTo(cx - k, cy + len);
+      g.moveTo(cx - len, cy + k); g.lineTo(cx + len, cy + k);
+      g.moveTo(cx - len, cy - k); g.lineTo(cx + len, cy - k);
+    }
+    g.stroke();
+    // the figures in one row under the reticle, the caption under them: clear of the title above and the narration below
+    const lang = getLang();
+    const fmt = (x: number, d: number) => x.toLocaleString(lang, { minimumFractionDigits: d, maximumFractionDigits: d });
+    const axial = rv.axial ?? rv.range;
+    const parts = [
+      `${t('dock.range')} ${axial >= 1000 ? `${fmt(axial / 1000, 2)} ${t('rv.unit.km')}` : `${fmt(Math.max(0, axial), 1)} ${t('rv.unit.m')}`}`,
+      `${t('dock.rate')} ${fmt(rv.rangeRate, 2)} ${t('dock.mps')}`,
+      `${t('dock.lateral')} ${rv.lateral !== undefined ? `${fmt(rv.lateral, 2)} ${t('rv.unit.m')}` : '—'}`,
+      ...(rv.manual ? [t('hud.rv.manual')] : []),
+    ];
+    const fs = Math.round(12 * S);
+    g.font = `600 ${fs}px "JetBrains Mono", ui-monospace, monospace`;
+    g.textAlign = 'center';
+    g.textBaseline = 'top';
+    const row = OnboardOverlay.trim(g, parts.join('   '), W - 32 * S);
+    const y = Math.min(cy + R + 12 * S, viewH - 2 * fs - 16 * S);
+    const rw = g.measureText(row).width;
+    g.fillStyle = 'rgba(0,0,0,0.5)';
+    g.fillRect(cx - rw / 2 - 8 * S, y - 4 * S, rw + 16 * S, fs + 8 * S);
+    g.fillStyle = rv.manual ? '#ffcf6b' : '#eef4f8';
+    g.fillText(row, cx, y);
+    g.font = `600 ${Math.round(10.5 * S)}px "Space Grotesk", system-ui, sans-serif`;
+    g.fillStyle = '#b8c6d4';
+    g.fillText(OnboardOverlay.trim(g, t('dock.caption'), W - 32 * S), cx, y + fs + 10 * S);
+    g.textBaseline = 'alphabetic';
   }
 
   draw(sim: Simulation | null, crewed: boolean, bottomInset = 0): void {

@@ -25,6 +25,8 @@
  * telemetry panel stays live on purpose, since it charts the whole flight.
  */
 import type { Simulation, SimStatus, DescentPhase, Debris, DebrisVisual, Losses } from './simulation';
+import type { AbortState } from './sim/types';
+import type { RendezvousState } from './sim/rendezvous';
 import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
@@ -167,6 +169,10 @@ export interface VisualFrame {
   ascentPhase: AscentPhase | null;
   /** a suborbital flight's return (`SimState.descentPhase`); absent on older recordings */
   descentPhase?: DescentPhase | null;
+  /** a launch abort (`SimState.abort`, roadmap G06): the escaping body is what the frame's state describes */
+  abort?: AbortState;
+  /** a rendezvous with the station (`SimState.rendezvous`, roadmap G07): the station and the approach */
+  rendezvous?: RendezvousState;
   /** HUD note key (countdown, ascent, coast, burn, orbit, orbitOffTarget, suborbital, destroyed, reentry, noLiftoff) */
   note: string;
   r: Vec3;
@@ -288,7 +294,9 @@ export function stackLayout(spec: VehicleSpec): StackLayout {
     base.push(total);
     if (st.isSpacecraft) { height.push(0); topDiameter.push(null); continue; }
     const next = spec.stages.slice(i + 1).find((s) => !s.isSpacecraft);
-    const topD = next ? next.diameter : spec.fairing ? spec.fairing.diameter : null;
+    // a fairing with its own adapter cone stands flush on the stage below it
+    const ownAdapter = !next && !!spec.fairing?.adapter;
+    const topD = next ? next.diameter : spec.fairing ? (ownAdapter ? st.diameter : spec.fairing.diameter) : null;
     topDiameter.push(topD);
     const h = st.length + interstageHeight(st.diameter, topD);
     height.push(h);
@@ -459,6 +467,8 @@ export function captureFrame(sim: Simulation): VisualFrame {
     status: s.status,
     ascentPhase: s.ascentPhase,
     ...(s.descentPhase ? { descentPhase: s.descentPhase } : {}),
+    ...(s.abort ? { abort: cloneAbort(s.abort) } : {}),
+    ...(s.rendezvous ? { rendezvous: cloneRendezvous(s.rendezvous) } : {}),
     note: s.note,
     r: clone(s.r),
     v: clone(s.v),
@@ -567,9 +577,51 @@ const lerpVec = (a: Vec3, b: Vec3, u: number): Vec3 => ({
  * is a spec object owned by the simulation, and copying it per frame would cost
  * more than the rest of the frame put together.
  */
+/** A deep copy of a rendezvous's state. */
+export function cloneRendezvous(a: RendezvousState): RendezvousState {
+  return {
+    ...a, station: { r: clone(a.station.r), v: clone(a.station.v), q: { ...a.station.q } },
+    rel: { r: clone(a.rel.r), v: clone(a.rel.v) }, burns: a.burns.map((b) => ({ ...b })),
+    ...(a.contact ? { contact: { ...a.contact } } : {}),
+  };
+}
+
+/** Cubic Hermite between two states `span` seconds apart: an orbit's arc, not its chord. */
+function hermite(ar: Vec3, av: Vec3, br: Vec3, bv: Vec3, u: number, span: number): { r: Vec3; v: Vec3 } {
+  const u2 = u * u, u3 = u2 * u;
+  const h00 = 2 * u3 - 3 * u2 + 1, h10 = (u3 - 2 * u2 + u) * span, h01 = -2 * u3 + 3 * u2, h11 = (u3 - u2) * span;
+  const d00 = (6 * u2 - 6 * u) / span, d10 = 3 * u2 - 4 * u + 1, d01 = (-6 * u2 + 6 * u) / span, d11 = 3 * u2 - 2 * u;
+  const m = (c0: number, c1: number, c2: number, c3: number): Vec3 => ({
+    x: c0 * ar.x + c1 * av.x + c2 * br.x + c3 * bv.x, y: c0 * ar.y + c1 * av.y + c2 * br.y + c3 * bv.y, z: c0 * ar.z + c1 * av.z + c2 * br.z + c3 * bv.z });
+  return { r: m(h00, h10, h01, h11), v: m(d00, d10, d01, d11) };
+}
+
+/** The rendezvous between two frames: both bodies on their arcs, the flags of the nearer frame. */
+function blendRendezvous(a: RendezvousState | undefined, b: RendezvousState | undefined, u: number, span: number): RendezvousState {
+  if (!a || !b) return cloneRendezvous((u < 0.5 ? a : b) ?? (a ?? b)!);
+  const near = cloneRendezvous(u < 0.5 ? a : b);
+  const st = hermite(a.station.r, a.station.v, b.station.r, b.station.v, u, span);
+  const rel = hermite(a.rel.r, a.rel.v, b.rel.r, b.rel.v, u, span);
+  const qa = a.station.q, qb = b.station.q;
+  const dotq = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z < 0 ? -1 : 1;
+  const q = { w: mix(qa.w, dotq * qb.w, u), x: mix(qa.x, dotq * qb.x, u), y: mix(qa.y, dotq * qb.y, u), z: mix(qa.z, dotq * qb.z, u) };
+  const qn = Math.hypot(q.w, q.x, q.y, q.z) || 1;
+  return { ...near, station: { r: st.r, v: st.v, q: { w: q.w / qn, x: q.x / qn, y: q.y / qn, z: q.z / qn } }, rel,
+    range: mix(a.range, b.range, u), rangeRate: mix(a.rangeRate, b.rangeRate, u),
+    ...(a.axial !== undefined && b.axial !== undefined ? { axial: mix(a.axial, b.axial, u), lateral: mix(a.lateral ?? 0, b.lateral ?? 0, u) } : {}),
+    propellant: mix(a.propellant, b.propellant, u) };
+}
+
+/** A deep copy of an abort's state. */
+export function cloneAbort(a: AbortState): AbortState {
+  return { ...a, motors: { ...a.motors }, ...(a.rocketLost ? { rocketLost: { r: clone(a.rocketLost.r), t: a.rocketLost.t } } : {}) };
+}
+
 export function cloneFrame(f: VisualFrame): VisualFrame {
   return {
     ...f,
+    ...(f.abort ? { abort: cloneAbort(f.abort) } : {}),
+    ...(f.rendezvous ? { rendezvous: cloneRendezvous(f.rendezvous) } : {}),
     rigid: cloneRigidTelemetry(f.rigid),
     ...(f.eom ? { eom: cloneEom(f.eom) } : {}),
     r: clone(f.r),
@@ -612,6 +664,15 @@ export function cloneFrame(f: VisualFrame): VisualFrame {
  * The result is a fresh frame; the inputs are never mutated. The function is
  * pure, so seeking twice to the same time produces deep-equal frames.
  */
+function blendAbort(a: AbortState | undefined, b: AbortState | undefined, u: number): AbortState {
+  if (!a || !b) return cloneAbort((u < 0.5 ? a : b) ?? (a ?? b)!);
+  const near = cloneAbort(u < 0.5 ? a : b);
+  if (a.body !== b.body) return near;
+  return { ...near, drogue: mix(a.drogue, b.drogue, u), main: mix(a.main, b.main, u),
+    motors: { main: mix(a.motors.main, b.motors.main, u), control: mix(a.motors.control, b.motors.control, u),
+      fairing: mix(a.motors.fairing, b.motors.fairing, u), softLanding: mix(a.motors.softLanding, b.motors.softLanding, u) } };
+}
+
 export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number): VisualFrame {
   const span = b.t - a.t;
   // Degenerate spans and a seek that lands on `a` itself still hand back a
@@ -639,6 +700,10 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   let v: Vec3;
   if (ballistic) {
     const p = propagateKepler(a.r, a.v, dt);
+    r = p.r;
+    v = p.v;
+  } else if (a.status === 'rendezvous' && b.status === 'rendezvous') {
+    const p = hermite(a.r, a.v, b.r, b.v, u, span);
     r = p.r;
     v = p.v;
   } else {
@@ -671,6 +736,9 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     && a.boosters.every((booster, i) => booster.burning === b.boosters[i]?.burning);
   return {
     ...a,
+    // the escape's flags and parachutes step, its motors blend
+    ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
+    ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
     rigid,
     // E02: the left frame's step, copied like everything else handed out.
     ...(a.eom ? { eom: cloneEom(a.eom) } : {}),

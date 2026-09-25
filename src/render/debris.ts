@@ -202,13 +202,41 @@ export class DebrisView {
       hinge.position.y = base + L;
       const shell = new THREE.Group();
       shell.position.y = -L;
-      const cylH = L * 0.55;
-      const half = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH, 24, 1, true, -Math.PI / 2, Math.PI), m);
-      half.position.y = cylH / 2;
+      const cylH = L * 0.55, adapter = d.visual.adapter ?? 0;
+      if (adapter > 0) {
+        const cone = new THREE.Mesh(new THREE.CylinderGeometry(r, (d.visual.baseDiameter ?? 2 * r) / 2, adapter, 24, 1, true, -Math.PI / 2, Math.PI), m);
+        cone.position.y = adapter / 2;
+        shell.add(cone);
+      }
+      const half = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH - adapter, 24, 1, true, -Math.PI / 2, Math.PI), m);
+      half.position.y = adapter + (cylH - adapter) / 2;
       shell.add(half);
       shell.add(new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, L - cylH, 20), 24, -Math.PI / 2, Math.PI), m));
       hinge.add(shell);
       g.add(hinge);
+    } else if (d.visual.kind === 'escapeHead') {
+      // G06: what an abort leaves when the descent module drops out — the
+      // fairing above the service module (with the tower, if it was still on)
+      const cylH = L * 0.35;
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH, 24), m);
+      cyl.position.y = base + cylH / 2;
+      g.add(cyl);
+      const nose = new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, L - cylH, 20), 24), m);
+      nose.position.y = base;
+      g.add(nose);
+      if (d.visual.tower) {
+        const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 5, 12), m);
+        tower.position.y = base + L + 1.6 + 2.5;
+        g.add(tower);
+      }
+    } else if (d.visual.kind === 'modules') {
+      // the service module, and the orbital module parted from it
+      const sm = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L, 24), m);
+      sm.position.y = base + L / 2;
+      g.add(sm);
+      const om = new THREE.Mesh(new THREE.SphereGeometry(1.15, 18, 12), m);
+      om.position.set(r + 2, base + L / 2, 0);
+      g.add(om);
     } else if (d.visual.conicalTop) {
       // an R-7 strap-on, the shape it flew in (render/soyuz.ts)
       const body = new THREE.Mesh(r7BoosterGeometry(r, L, R7_FLARE, 24, 20), m);
@@ -321,7 +349,9 @@ export class DebrisView {
       // has gone dark (the same reason a booster in real separation footage reads as a
       // bright streak): without it a plain-lit grey cylinder is nearly invisible against
       // the night scene, and the Korolev-cross splay the physics already flies is unreadable.
-      const glow = age < 1.2 ? smoothstep(0, 0.4, age) : Math.max(0, 1 - smoothstep(1.2, 9, age));
+      // (Not what an abort leaves beside the crew's descent module: it is seen from metres away.)
+      const escapePart = d.visual.kind === 'escapeHead' || d.visual.kind === 'modules';
+      const glow = escapePart ? 0 : age < 1.2 ? smoothstep(0, 0.4, age) : Math.max(0, 1 - smoothstep(1.2, 9, age));
       item.bodyMat.emissiveIntensity = glow * 1.3;
     }
     for (const [id, item] of this.items) {

@@ -383,7 +383,7 @@ details[open] summary { margin-bottom: 4px; }
 .cam-btn:hover { color: #fff; }
 .cam-btn.active { background: #2f4049; color: #fff; }
 
-.camera-tools { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.camera-tools { display: flex; flex-direction: column; gap: 8px; flex: none; position: relative; }
 .tool-btn {
   display: grid; place-items: center; width: 32px; height: 32px;
   border: 1px solid rgba(102, 129, 142, 0.35); border-radius: 7px;
@@ -392,6 +392,31 @@ details[open] summary { margin-bottom: 4px; }
 .tool-btn:hover { color: #fff; border-color: var(--accent-line); }
 .tool-btn[aria-pressed='true'] { color: var(--accent); border-color: var(--accent-line); }
 .tool-btn[aria-pressed='false'] { color: #7c8b99; }
+
+/* G06: the Engineer mode's launch abort, shown on a crewed Soyuz */
+.ctl-btn.abort-btn {
+  width: auto; padding: 0 12px; font: 700 12px var(--display); letter-spacing: 1px; text-transform: uppercase;
+  color: #ffe4e4; background: #7a1f24; border: 1px solid #d9505a;
+}
+.ctl-btn.abort-btn:hover:not(:disabled) { background: #9b2830; }
+.ctl-btn.abort-btn:disabled { opacity: 0.45; }
+
+/* E01: the Frames menu, below the camera tools (src/ui/frames-menu.ts) */
+.frames-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
+  width: max-content; max-width: min(340px, calc(100vw - 32px));
+  padding: 10px 12px 8px; border-radius: 8px;
+  background: rgba(12, 21, 33, 0.92); border: 1px solid rgba(103, 132, 138, 0.35);
+  backdrop-filter: blur(10px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 12.5px; color: #d6e2ec;
+}
+.frames-menu-title { font: 600 11px var(--display); letter-spacing: 1px; text-transform: uppercase; color: #a7bdcf; margin-bottom: 6px; }
+.frames-menu-row { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; padding: 5px 2px; cursor: pointer; }
+.frames-menu-row input { margin: 0; accent-color: var(--accent); }
+.frames-swatch { display: flex; gap: 2px; }
+.frames-swatch i { width: 8px; height: 8px; border-radius: 50%; }
+.frames-symbols { color: #9fb3c4; font-family: var(--mono); font-size: 12px; white-space: nowrap; padding-left: 8px; }
+.frames-menu-note { margin: 6px 2px 0; font-size: 11px; color: #8a9bab; max-width: 300px; }
 
 #ticker {
   align-self: flex-end;
@@ -753,6 +778,9 @@ details[open] summary { margin-bottom: 4px; }
   width: 100%; height: 118px; display: block;
   background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; margin: 10px 0 0;
 }
+/* G07: the relative-motion plot keeps equal scales, so it needs the height */
+.chart.rv-plot { height: 230px; }
+.telemetry-rv:empty { display: none; }
 h3.section {
   margin: 20px 0 8px; font: 600 11px var(--sans);
   letter-spacing: 1.4px; text-transform: uppercase; color: var(--accent);

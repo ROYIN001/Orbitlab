@@ -44,6 +44,25 @@ const everything = (): MissionState => ({
 const viaJson = (state: MissionState) => JSON.parse(missionFileText(missionDocument(state)));
 
 describe('mission document (U01)', () => {
+  it('keeps the pad (V05) and the flight to the station (G07), and drops them with the mission they belong to', () => {
+    const state: MissionState = { ...fallback(), padId: 'site1', rendezvous: { profile: 'fourOrbit', port: 'poisk' } };
+    expect(validateConfigInput(state)).toEqual([]);
+    const back = parseMissionDocument(viaJson(state), fallback());
+    expect(back.issues).toEqual([]);
+    expect(back.state.padId).toBe('site1');
+    expect(back.state.rendezvous).toEqual({ profile: 'fourOrbit', port: 'poisk' });
+    // a document naming a mission without them has none, whatever the page held
+    const plain = parseMissionDocument(viaJson(fallback()), state);
+    expect(plain.state.padId).toBeUndefined();
+    expect(plain.state.rendezvous).toBeUndefined();
+    // one the rules refuse goes back to none, with the field named
+    const bad = viaJson(state);
+    bad.mission.rendezvous = { profile: 'oneOrbit' };
+    const fixed = parseMissionDocument(bad, fallback());
+    expect(fixed.issues.map((i) => i.field)).toContain('setup.rendezvous');
+    expect(fixed.state.rendezvous).toBeUndefined();
+  });
+
   it('names its format and version', () => {
     const doc = missionDocument(fallback());
     expect(doc.format).toBe(MISSION_FORMAT);

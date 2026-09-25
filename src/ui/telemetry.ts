@@ -122,6 +122,8 @@ export class TelemetryPanel {
    * rebuild without `Hud` having to be told one happened.
    */
   readonly dockHost: HTMLElement = el('div', 'telemetry-dock');
+  /** G07: where the rendezvous's relative-motion plot goes (built once, like `dockHost`) */
+  readonly rendezvousHost: HTMLElement = el('div', 'telemetry-rv');
   /** U02: where the app puts the comparison (src/ui/compare.ts); kept across rebuilds like the dock. */
   readonly compareHost: HTMLElement = el('div', 'telemetry-compare');
   /** U02: the reference flight every chart also draws, dashed. */
@@ -184,6 +186,7 @@ export class TelemetryPanel {
     // has put it there. Empty (and collapsed by `:empty` in style.css) when the
     // card is floating over the picture.
     r.append(this.dockHost);
+    r.append(this.rendezvousHost);
     r.append(this.equations.root);
     this.note = el('p', 'chart-note hidden');
     r.append(this.note);

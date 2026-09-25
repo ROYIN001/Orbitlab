@@ -1,5 +1,13 @@
 import type { LaunchSiteSpec } from '../types';
 
+/** One launch pad of a site, as the drawing tells it apart (roadmap V05). */
+export interface LaunchPad {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
 export interface SiteExtra extends LaunchSiteSpec {
   /**
    * The site's customary solution for polar / sun-synchronous targets: the
@@ -44,6 +52,13 @@ export interface SiteExtra extends LaunchSiteSpec {
    * is inside every one of those windows — and it is fixed at the source.
    */
   maxInclination: number;
+  /**
+   * The site's launch pads, where the drawing tells them apart (V05); the
+   * first is the one a mission flies from unless it names another. Only the
+   * drawing reads them: every pad is launched from the site's own point above,
+   * so the choice changes no trajectory.
+   */
+  pads?: readonly LaunchPad[];
 }
 
 export const SITES: SiteExtra[] = [
@@ -67,7 +82,14 @@ export const SITES: SiteExtra[] = [
   // Sea of Okhotsk) and sun-synchronous Meteor-M/Kanopus missions on a
   // ~347 deg heading. The old placeholder could not express either edge.
   // Audit item B25.
-  { id: 'baikonur', name: 'Baikonur Cosmodrome', country: 'KZ', latitude: 45.965, longitude: 63.305, altitude: 90, minInclination: 51.6, maxInclination: 91.8, azimuthMin: 355, azimuthMax: 65, tz: 'UTC+5', descendingForPolar: false },
+  { id: 'baikonur', name: 'Baikonur Cosmodrome', country: 'KZ', latitude: 45.965, longitude: 63.305, altitude: 90, minInclination: 51.6, maxInclination: 91.8, azimuthMin: 355, azimuthMax: 65, tz: 'UTC+5', descendingForPolar: false,
+    // Site 31/6 has flown every crewed Soyuz since MS-16 (2020); Gagarin's
+    // Start, Site 1/5, flew them from Vostok 1 to MS-15 (2019), T-10-1, 18a and
+    // MS-10 among them. Coordinates: en.wikipedia (Gagarin's Start, Site 31).
+    pads: [
+      { id: 'site31', name: 'Site 31/6', latitude: 45.996, longitude: 63.564 },
+      { id: 'site1', name: "Gagarin's Start (Site 1/5)", latitude: 45.920, longitude: 63.342 },
+    ] },
   { id: 'plesetsk', name: 'Plesetsk Cosmodrome', country: 'RU', latitude: 62.925, longitude: 40.578, altitude: 100, minInclination: 62.8, maxInclination: 102.6, azimuthMin: 330, azimuthMax: 90, tz: 'UTC+3', descendingForPolar: false },
   { id: 'vostochny', name: 'Vostochny Cosmodrome', country: 'RU', latitude: 51.884, longitude: 128.334, altitude: 250, minInclination: 51.7, maxInclination: 100.9, azimuthMin: 340, azimuthMax: 95, tz: 'UTC+9', descendingForPolar: false },
   { id: 'cape', name: 'Cape Canaveral SLC-40', country: 'US', latitude: 28.562, longitude: -80.577, altitude: 3, minInclination: 28.5, maxInclination: 57.6, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false },

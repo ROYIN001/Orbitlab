@@ -17,9 +17,9 @@ import { getNotation, QUANTITIES, symbolNode, type Quantity } from './notation';
 import './notation.css';
 
 /** Flight phases the camera sequence can be programmed for. */
-export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment' | 'descent';
+export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment' | 'proximity' | 'descent';
 
-export const FLIGHT_PHASES: FlightPhase[] = ['pad', 'ascent', 'staging', 'upper', 'coast', 'burn', 'orbit', 'deployment', 'descent'];
+export const FLIGHT_PHASES: FlightPhase[] = ['pad', 'ascent', 'staging', 'upper', 'coast', 'burn', 'orbit', 'deployment', 'proximity', 'descent'];
 
 export type CameraPlan = Record<FlightPhase, CameraMode>;
 
@@ -33,6 +33,8 @@ export const DEFAULT_CAMERA_PLAN: CameraPlan = {
   burn: 'space',
   orbit: 'space',
   deployment: 'map',
+  // G07: close to the station, from the automatic approach to the docking — the station in the picture
+  proximity: 'exterior',
   // a ship flown home from a suborbital cut-off, from the entry interface down
   descent: 'exterior',
 };
@@ -60,7 +62,7 @@ const QUANTITY_NAMES: Record<Quantity, string> = {
   axisX: 'notation.q.axisX', axisY: 'notation.q.axisY', axisZ: 'notation.q.axisZ',
   rollRate: 'notation.q.rollRate', pitchRate: 'notation.q.pitchRate', yawRate: 'notation.q.yawRate',
   alpha: 'notation.q.alpha', beta: 'notation.q.beta', pitchAngle: 'notation.q.pitchAngle', rollAngle: 'notation.q.rollAngle',
-  yawAngle: 'notation.q.yawAngle', pathAngle: 'notation.q.pathAngle', altitude: 'notation.q.altitude', airspeed: 'notation.q.airspeed',
+  yawAngle: 'notation.q.yawAngle', pathAngle: 'notation.q.pathAngle', trackAngle: 'notation.q.trackAngle', altitude: 'notation.q.altitude', airspeed: 'notation.q.airspeed',
   verticalSpeed: 'notation.q.verticalSpeed', dynamicPressure: 'notation.q.dynamicPressure', mach: 'notation.q.mach',
   loadFactor: 'notation.q.loadFactor', mass: 'notation.q.mass', thrust: 'notation.q.thrust',
   rollMoment: 'notation.q.rollMoment', pitchMoment: 'notation.q.pitchMoment', yawMoment: 'notation.q.yawMoment',
@@ -74,7 +76,9 @@ const QUANTITY_DEFINITIONS: Record<Quantity, string | { iso: string; gost: strin
   yawRate: { iso: 'notation.def.iso.yawRate', gost: 'notation.def.gost.yawRate' },
   alpha: 'notation.def.alpha', beta: 'notation.def.beta', pitchAngle: 'notation.def.pitchAngle', rollAngle: 'notation.def.rollAngle',
   yawAngle: { iso: 'notation.def.iso.yawAngle', gost: 'notation.def.gost.yawAngle' },
-  pathAngle: 'notation.def.pathAngle', altitude: 'notation.def.altitude', airspeed: 'notation.def.airspeed',
+  pathAngle: 'notation.def.pathAngle',
+  trackAngle: { iso: 'notation.def.iso.trackAngle', gost: 'notation.def.gost.trackAngle' },
+  altitude: 'notation.def.altitude', airspeed: 'notation.def.airspeed',
   verticalSpeed: 'notation.def.verticalSpeed', dynamicPressure: 'notation.def.dynamicPressure', mach: 'notation.def.mach',
   loadFactor: 'notation.def.loadFactor', mass: 'notation.def.mass', thrust: 'notation.def.thrust',
   rollMoment: 'notation.def.rollMoment', pitchMoment: 'notation.def.pitchMoment',

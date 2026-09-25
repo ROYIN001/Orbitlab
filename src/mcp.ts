@@ -32,7 +32,7 @@ import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
 import { resolveTarget } from './physics/mission';
 import { DEG, RAD } from './physics/constants';
-import { GUIDANCE_FIELDS, NUMBER_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, numericIssue, issueText, parseUtcDateTime, assertConfigInput } from './config/validation';
+import { FAILURE_MODES, GUIDANCE_FIELDS, NUMBER_FIELDS, fieldLimits, flightHomeCapable, guidanceLimits, numericIssue, issueText, parseUtcDateTime, assertConfigInput } from './config/validation';
 import { LANDING_ZONES } from './data/landing-zones';
 import { buildTelemetryCsv } from './ui/csv';
 import { defaultDynamics } from './physics/rigid/config';
@@ -169,7 +169,6 @@ export interface WebMcpTool {
 const CAMERA_MODES: CameraMode[] = ['exterior', 'onboard', 'space', 'map'];
 const RAAN_MODES: OrbitSpec['raanMode'][] = ['free', 'fixed', 'iss', 'ltan'];
 /** Mirrors the union in `src/types.ts` (`FailureMode`); not re-exported there. */
-const FAILURE_MODES: FailureMode[] = ['none', 'engineOut', 'thrustLoss', 'prematureSep', 'fairingStuck', 'rangeSafety', 'random'];
 const PLAYBACK_ACTIONS = ['play', 'pause', 'warp', 'live', 'skip_next', 'skip_previous'] as const;
 type PlaybackAction = (typeof PLAYBACK_ACTIONS)[number];
 
@@ -404,7 +403,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   }
   if (input.failureMode !== undefined) {
     const m = expectString(input.failureMode, 'failureMode');
-    if (!FAILURE_MODES.includes(m as FailureMode)) throw new Error(`"failureMode" must be one of ${FAILURE_MODES.join(', ')}`);
+    if (!(FAILURE_MODES as readonly string[]).includes(m as FailureMode)) throw new Error(`"failureMode" must be one of ${FAILURE_MODES.join(', ')}`);
     state.failure = { ...state.failure, mode: m as FailureMode };
   }
   if (input.failureTimeS !== undefined) {
@@ -725,7 +724,7 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
     },
     additionalProperties: false,
   },
-  failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it.' },
+  failureMode: { type: 'string', enum: FAILURE_MODES, description: 'Inject a failure scenario; "none" disarms it. "launchAbort" fires a crewed Soyuz\'s escape system at failureTimeS; "padFire" (before liftoff, failureTimeS down to -10), "boosterCollision" (at the strap-ons\' separation) and "stagingFailure" (at the separation of failureStage) are the failures of Soyuz T-10-1, MS-10 and 18a, and on a crewed Soyuz set its escape off.' },
   failureTimeS: { type: 'number', minimum: 0, maximum: 2000, description: 'Mission time the failure is injected, s.' },
   failureStageIndex: { type: 'integer', minimum: 0, description: 'Stage index the failure affects (0-based).' },
   guidance: {

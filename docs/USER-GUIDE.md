@@ -11,20 +11,25 @@ The switch in the top bar picks how much of the simulator you see:
 
 - **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
   space station) straight away.
-- **Watch** — just the picture, three numbers (mission time, altitude, speed over the
-  ground) and one sentence about what is happening and why. **Choose a launch** lists six
-  real flights, each flown as it was, only in daylight today: Soyuz to the space station,
-  Falcon 9's Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's
-  Arabsat-6A with the side boosters back on Landing Zones 1 and 2 and the core on a drone
-  ship, Starship Flight 5 with the booster caught by the tower and the ship splashing down
-  in the Indian Ocean, Ariane 6 with 32 Amazon Leo satellites, and Electron from New
-  Zealand. The speed buttons run the flight in real time (1×), faster, or at **Auto**,
-  which keeps liftoff, max-Q, every separation and every landing in real time and hurries
-  through the long coasts. The camera cuts to a stage flying home for its entry and
+- **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
+  and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
+  each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's
+  Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's Arabsat-6A with the
+  side boosters back on Landing Zones 1 and 2 and the core on a drone ship, Starship Flight 5
+  with the booster caught by the tower and the ship splashing down in the Indian Ocean, Ariane 6
+  with 32 Amazon Leo satellites, Electron from New Zealand, and the three crews the Soyuz escape
+  system has saved: Soyuz T-10-1 (a fire on the pad, 1983), Soyuz 18a (a stage separation
+  failure at 145 km, 1975) and Soyuz MS-10 (a strap-on striking the core, 2018), each flown to
+  the crew on the ground from Gagarin's Start, Baikonur's Site 1/5, where they really flew from
+  (every other Soyuz from Baikonur stands on Site 31/6, today's crew pad). The speed buttons run the flight in real time (1×), faster, or at
+  **Auto**, which keeps liftoff, max-Q, every separation and every landing in real time and
+  hurries through the long coasts. The smoke a rocket leaves stays where it was left and drifts
+  only with the flight's wind, and passing the speed of sound can wear a cloud of condensation
+  round the fairing in humid air. The camera cuts to a stage flying home for its entry and
   landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the
-  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship
-  is down in the water, a card offers to keep watching, watch again, pick another launch,
-  or plan a mission of your own.
+  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship is
+  down in the water, a card offers to keep watching, watch again, pick another launch, or plan a
+  mission of your own.
 - **Explore** — everything below this line, in the learning layout (the advanced guidance
   parameters stay folded away).
 - **Engineer** — the same workspace with every guidance parameter open.
@@ -85,7 +90,8 @@ loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Aut
 program**, which flies the ascent headlessly over a grid of values and keeps the one with
 the largest remaining Δv. **Failure scenario** arms an engine-out, a thrust loss, a
 premature separation, a stuck fairing, a range-safety destruct, or a random one of those, at
-a mission time and stage you choose. Under **Options**, **Recover first stage** keeps landing
+a mission time and stage you choose; the historical failures of §6 and, on a crewed Soyuz, a
+launch abort are there too. Under **Options**, **Recover first stage** keeps landing
 propellant back; with it on, each recoverable stage gets a choice of where it lands — where it
 comes down at sea, a drone ship, a landing zone of the launch site (LZ-1 and LZ-2 at Cape
 Canaveral and Kennedy), the Starbase tower's arms for Super Heavy, or expended. Flying back to a
@@ -129,13 +135,34 @@ Four camera views, switchable from the tabs above the viewport or keys `1`–`4`
 - **Map** — a 2-D ground track with the predicted orbit, the target orbit, the day/night
   terminator, and where spent stages came down.
 
-The small buttons beside the camera tabs reset the view, toggle the **glow** (the bloom around
-the plume, the ignition flash and the city lights) and go full screen. If the picture falls below
-about 24 frames per second the glow is switched off for a few seconds as a test: it stays off
-only if that made the picture faster, and comes back otherwise. A screen or power-saving mode
-that holds the browser at 30 fps therefore keeps its glow. Once you press the button your choice
-is kept, also on your next visit. On a graphics card that cannot draw the high-range image the
-glow needs, the button is greyed out and the scene is drawn without it.
+The small buttons beside the camera tabs open the **Frames** menu (below), reset the view,
+toggle the **glow** (the bloom around the plume, the ignition flash and the city lights) and go
+full screen. If the picture falls below about 24 frames per second the glow is switched off for
+a few seconds as a test: it stays off only if that made the picture faster, and comes back
+otherwise. A screen or power-saving mode that holds the browser at 30 fps therefore keeps its
+glow. Once you press the button your choice is kept, also on your next visit. On a graphics card
+that cannot draw the high-range image the glow needs, the button is greyed out and the scene is
+drawn without it.
+
+**Reference frames.** The first of those buttons opens the **Frames** menu (Explore and
+Engineer). Tick any of four groups and they are drawn on the vehicle in the exterior and space
+views, with the angles between them as arcs and their values beside them:
+
+- **Body and air-path axes** — the vehicle's own axes and the axes of its velocity through the
+  air, with the angle of attack α and the sideslip β;
+- **Normal earth and flight-path axes** — the local horizon and the direction of flight over
+  the ground, with pitch, yaw and roll, the flight-path angle and the track;
+- **Orbital axes R, S, W** — radial, along the track and the orbit normal;
+- **Earth-centred inertial and Earth-fixed axes** — at the centre of the planet (best seen in
+  the space view), with the Greenwich sidereal angle between them.
+
+Everything is written in the notation in force (see *Physics and sources*): ISO 1151 in English
+and Thai, ГОСТ 20058-80 in Russian, unless the Engineer mode's setup fixes one. In ГОСТ the
+normal Earth frame's x<sub>g</sub> lies along the launch azimuth, so yaw ψ and track Ψ read the
+departure from it; in ISO they are bearings from north. With the nose within half a degree of
+vertical — on the pad and through the vertical rise — yaw and roll have no value and only the
+pitch is shown. Every frame is off to begin with, and your choice is kept for the next visit.
+The details are in [PHYSICS.md §2k](PHYSICS.md).
 
 **Sound** (the ♪ button, also in the viewer) is off until you turn it on — browsers only let a
 page play sound after you click something — and stays as you left it. What you hear is
@@ -344,6 +371,31 @@ vehicle's placard by 15%), or simply running the tanks dry short of orbital spee
 configuration always fails the same way at the same instant, so a "why did that happen" is
 always answerable by scrubbing back to it.
 
+Three failures are the ones crewed Soyuz rockets really met: a **fire on the pad** (at the
+time you set, from T−10 s), a **strap-on striking the core** as the strap-ons separate, and a
+**stage that fails to separate** cleanly at the separation of the stage you choose. On any
+other flight they lose the vehicle.
+
+**The Soyuz escape system.** A Soyuz-2.1a carrying a crew has its launch escape system armed
+from the countdown until the spacecraft is in orbit. When a failure is losing the rocket, it
+fires on its own, and it can be fired on purpose: the **Launch abort** failure at a time, or
+the red **Abort** button beside the playback controls in the Engineer mode. What happens
+depends on when:
+
+- up to T+114.5 s, the **escape tower** on the fairing's nose pulls the crew's section off the
+  rocket at 14–16 g and away from the pad; the fairing's lattice fins open;
+- from then until the fairing goes at T+157 s, **four motors on the fairing** do the tower's
+  job, as on Soyuz MS-10;
+- after that, the **spacecraft separates** from the rocket and its modules part, as on Soyuz 18a.
+
+The descent module then drops free and comes down as a real one does: a ballistic fall from
+high aborts, a drogue and then the 1 000 m² main parachute, the heat shield dropped, and six
+soft-landing motors a metre above the ground. The flight follows the crew — the telemetry,
+the g-load and the camera are theirs — while the rocket left behind falls or breaks up. The
+flight ends with the crew on the ground ("Crew landed after an abort"); the event log gives
+where and the highest g they took. The details and how the three historical aborts compare are
+in [PHYSICS.md §8.3](PHYSICS.md).
+
 ## 7. The flexible vehicle (Engineer mode)
 
 In the Engineer mode, with six-DOF physics, the setup has a **Flexible vehicle** section. Its
@@ -519,6 +571,37 @@ the law steers against the standard law's (and its yaw out of the target plane),
 predicts at cut-off against the target, with the law's state. The cut-off itself is still decided
 by the ascent on the orbit actually reached. The CSV adds `guide_*` columns and
 `read_flight_state` an `explicitGuidance` summary. Details in PHYSICS.md §2j.
+
+## 16. A flight to the station
+
+With a **Soyuz-2.1a**, the **Crewed spacecraft** (a Soyuz MS) and the **ISS** orbit, section 03
+of the setup offers **Flight to the station**: none (stay in the insertion
+orbit), **two-orbit** (about 3 h, as Soyuz MS-28 flew it), **four-orbit** (about 6 h, as Soyuz
+TMA-19M) or **two-day** (34 orbits, as Soyuz MS-01), and the **docking port**: Rassvet or
+Prichal from below, Poisk from above, Zvezda's aft port from behind. Pick a launch window
+(**Next window**) so the station's plane is the one the launch reaches.
+
+The rocket puts the spacecraft into a 200 × 242 km orbit; from there the spacecraft flies
+itself. Its engine fires for the profile's burns — the phase shows *Rendezvous burn* with the
+burn and its Δv, and between them *Phasing* with the time to the next one — then the transfer
+brings it 2.2 km behind and below the station, and **Kurs**, the automatic radio system, takes
+over: the approach to 400 m, the **flyaround** onto the port's axis, **stationkeeping** 150 m
+out, the **final approach** at a walking pace, then **contact**, capture and the hooks closing
+13 minutes later. The telemetry panel's first chart is then *Relative motion*: the station at
+the centre, its direction of flight to the right, up away from the Earth, the same scale both
+ways, zooming in as the spacecraft closes. Near the station the exterior camera looks past the
+spacecraft at it; the onboard camera (2) is the Soyuz's docking TV camera, with the port's
+target to line up in its reticle and the range, closing speed and offset from the axis.
+
+In the Engineer mode a **TORU** panel appears during the approach. **Take over (TORU)** hands
+the spacecraft to you wherever it is: the translation buttons (or W/S, the arrows, X to stop)
+set its velocity in toward the port, right and up as the TV picture shows them, the rotation
+buttons its turn rates. Keep the target's cross on its disc and close at 0.1–0.35 m/s: a
+contact faster, slower, more than 0.34 m off the axis, drifting sideways at 0.1 m/s or more, or
+turned more than 7° (10° in roll) is not captured, and Kurs backs away for one more try before
+the docking is called off. **Hand back to Kurs** lets it fly back to the stationkeeping point
+and in again. How the profiles, the approach and the contact limits compare with real flights
+is in [PHYSICS.md §9.2](PHYSICS.md).
 
 ## Glossary
 

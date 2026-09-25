@@ -8,7 +8,7 @@
  * WebMCP, and a value it rejects goes back to its default (the rest of the
  * mission is kept) with an issue naming the field, for the page to show.
  */
-import type { DynamicsConfig, FailureConfig, GuidanceParams, OrbitSpec, RecoveryPlan } from '../types';
+import type { DynamicsConfig, FailureConfig, GuidanceParams, MissionConfig, OrbitSpec, RecoveryPlan } from '../types';
 import { VEHICLES } from '../data/vehicles';
 import { SATELLITES } from '../data/satellites';
 import { ORBIT_PRESETS } from '../data/orbits';
@@ -42,6 +42,10 @@ export interface MissionDocument {
     boosterRecovery: boolean;
     recoveryPlan?: RecoveryPlan;
     dynamics?: DynamicsConfig;
+    /** the site's pad, when not its first (V05) */
+    padId?: string;
+    /** the flight on to the station (G07) */
+    rendezvous?: MissionConfig['rendezvous'];
   };
 }
 
@@ -81,6 +85,8 @@ export function missionDocument(state: MissionState): MissionDocument {
       boosterRecovery: state.boosterRecovery,
       ...(state.recoveryPlan ? { recoveryPlan: clone(state.recoveryPlan) } : {}),
       ...(state.dynamics ? { dynamics: clone(state.dynamics) } : {}),
+      ...(state.padId ? { padId: state.padId } : {}),
+      ...(state.rendezvous ? { rendezvous: clone(state.rendezvous) } : {}),
     },
   };
 }
@@ -125,6 +131,9 @@ function overlay(m: Record<string, unknown>, fallback: MissionState, issues: Mis
   }
   str('satelliteId', 'setup.satellite');
   str('siteId', 'setup.site');
+  // a pad belongs to one site; a flight to the station to one vehicle and payload
+  if (vehicleChanged || out.siteId !== fallback.siteId) out.padId = undefined;
+  if (vehicleChanged || out.satelliteId !== fallback.satelliteId) out.rendezvous = undefined;
   str('orbitId', 'setup.orbit');
   if (m.orbit !== undefined) {
     if (isRecord(m.orbit)) out.orbit = { ...clone(m.orbit) } as unknown as OrbitSpec;
@@ -151,6 +160,15 @@ function overlay(m: Record<string, unknown>, fallback: MissionState, issues: Mis
     if (isRecord(m.dynamics)) out.dynamics = clone(m.dynamics) as unknown as DynamicsConfig;
     else issues.push({ field: 'setup.dynamics.model', code: 'selection' });
   }
+  // A document that names its mission names these too, or has none.
+  if (m.padId !== undefined) {
+    if (typeof m.padId === 'string') out.padId = m.padId;
+    else issues.push({ field: 'setup.site', code: 'selection' });
+  } else if (m.vehicleId !== undefined) out.padId = undefined;
+  if (m.rendezvous !== undefined) {
+    if (isRecord(m.rendezvous)) out.rendezvous = clone(m.rendezvous) as unknown as MissionConfig['rendezvous'];
+    else issues.push({ field: 'setup.rendezvous', code: 'selection' });
+  } else if (m.vehicleId !== undefined) out.rendezvous = undefined;
   return out;
 }
 
@@ -169,7 +187,8 @@ function reset(state: MissionState, field: string, fallback: MissionState): void
     Object.assign(state, copyMission(fallback));
     return;
   }
-  if (field === 'setup.site') { if (d.site) state.siteId = d.site; state.recoveryPlan = undefined; return; }
+  if (field === 'setup.site') { if (d.site) state.siteId = d.site; state.recoveryPlan = undefined; state.padId = undefined; return; }
+  if (field === 'setup.rendezvous') { state.rendezvous = undefined; return; }
   if (field === 'setup.satellite') {
     state.satelliteId = fallback.satelliteId;
     state.payloadMass = SATELLITES.find((s) => s.id === fallback.satelliteId)?.mass ?? fallback.payloadMass;

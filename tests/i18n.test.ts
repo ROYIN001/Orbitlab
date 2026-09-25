@@ -146,7 +146,15 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^sat\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts satelliteName' },
   { pattern: /^site\.[a-z0-9]+\.name$/, from: 'ui/names.ts siteName' },
   { pattern: /^zone\.[a-z0-9]+\.name$/, from: 'ui/names.ts zoneName' },
+  { pattern: /^abort\.mode\.[a-z]+$/, from: 'ui/names.ts localizeEventParams (G06)' },
   { pattern: /^stage\.[a-z0-9]+\.[a-zA-Z0-9]+\.name$/, from: 'ui/names.ts stageName' },
+  // G07: a flight to the station
+  { pattern: /^setup\.rendezvous\.[a-zA-Z]+$/, from: 'ui/panel.ts rendezvousOption: t(`setup.rendezvous.${id}`)' },
+  { pattern: /^rv\.port\.[a-zA-Z]+$/, from: 'ui/panel.ts, ui/phase.ts, ui/names.ts: t(`rv.port.${id}`)' },
+  { pattern: /^rv\.profile\.[a-zA-Z]+$/, from: 'ui/names.ts localizeEventParams: localized(`rv.profile.${id}`)' },
+  { pattern: /^rv\.burn\.[a-z]+$/, from: 'ui/names.ts rendezvousBurnName: localized(`rv.burn.${id}`)' },
+  { pattern: /^hud\.rv\.[a-zA-Z]+$/, from: 'ui/phase.ts, ui/hud.ts: t(`hud.rv.${phase}`)' },
+  { pattern: /^phase\.detail\.rv\.[a-zA-Z]+$/, from: 'ui/phase.ts phaseInfo: `phase.detail.rv.${phase}`' },
   // G08: the control system's failures, by kind, group and state.
   { pattern: /^fault\.(kind|about)\.[a-zA-Z]+$/, from: 'ui/fault-names.ts faultKindName; ui/panel.ts faultRow: t(`fault.about.${fault.kind}`)' },
   { pattern: /^fault\.group\.(actuator|sensor|computer)$/, from: 'ui/panel.ts faultRow: t(`fault.group.${FAULT_GROUP[k]}`)' },

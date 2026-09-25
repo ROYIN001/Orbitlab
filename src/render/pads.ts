@@ -52,6 +52,12 @@ export interface PadBuild {
    * distance instead of leaving a 13 km disc stuck on the globe.
    */
   terrainParts?: THREE.Object3D[];
+  /** pits the ground has to leave open, pad-local (V05: Gagarin's Start's quarry, Site 31's trench) */
+  holes?: PitHole[];
+  /** ground flattened (and kept clear of bushes) under the pad's rail line and buildings */
+  clearings?: { x: number; z: number; r: number; h: number }[];
+  /** where the floodlight masts stand, pad-local x/z, when the default ring would put them over a pit */
+  floodPositions?: [number, number][];
   /**
    * The pad structures only (tower, mount, masts, buildings). They are
    * metre-scale and opaque, so they are switched off much closer in than the
@@ -79,6 +85,10 @@ interface Ctx {
   mat: MatFn;
   /** register a geometry so the view disposes it when the mission is rebuilt */
   geo: <T extends THREE.BufferGeometry>(g: T) => T;
+  /** the site's pad the mission flies from (`SiteExtra.pads`), when the site has several */
+  pad?: string;
+  /** launch azimuth, rad from north: an R-7's launch table is turned to it */
+  azimuth: number;
 }
 
 // ------------------------------------------------------------------ helpers
@@ -183,7 +193,7 @@ interface Biome {
 }
 
 const BIOMES: Record<string, Biome> = {
-  baikonur: { ground: 0xa89b74, ground2: 0x8f8560, rock: 0xb4a583, hills: 55, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'steppe' },
+  baikonur: { ground: 0xa89b74, ground2: 0x8f8560, rock: 0xb4a583, hills: 10, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'steppe' },
   plesetsk: { ground: 0x4b5a3c, ground2: 0x35482f, rock: 0x6b6a58, hills: 90, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'forest' },
   vostochny: { ground: 0x4f5c3a, ground2: 0x3a4a30, rock: 0x74705c, hills: 160, coastal: false, seaAz: 0, shore: 0, water: 0x2a5a80, vegetation: 'forest' },
   cape: { ground: 0x6f7c46, ground2: 0x8e8a5c, rock: 0xbdb188, hills: 12, coastal: true, seaAz: 100, shore: 2400, water: 0x1d5b7a, vegetation: 'scrub' },
@@ -295,14 +305,47 @@ function heightAt(x: number, z: number, b: Biome, sea: THREE.Vector2, land: Land
   return h;
 }
 
-function terrain(ctx: Ctx, b: Biome, land: Land = NO_LAND): THREE.Object3D[] {
+/**
+ * A rectangular pit in the ground, pad-local: centred on (x, z), `halfL` along
+ * the unit axis (ux, uz), `halfW` across it.
+ */
+export interface PitHole { x: number; z: number; ux: number; uz: number; halfL: number; halfW: number }
+
+/**
+ * Drop the ground's triangles over a pit so it can be seen into. The test is
+ * each triangle's extent in the pit's own axes, so it errs on the side of
+ * cutting; the pad's deck, which has the pit's exact outline, covers the
+ * ragged edge that leaves.
+ */
+function cutHoles(geo: THREE.BufferGeometry, holes: readonly PitHole[]): void {
+  const pos = geo.attributes.position as THREE.BufferAttribute, index = geo.index!;
+  const keep: number[] = [];
+  for (let i = 0; i < index.count; i += 3) {
+    const tri = [index.getX(i), index.getX(i + 1), index.getX(i + 2)];
+    const cut = holes.some((h) => {
+      let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+      for (const k of tri) {
+        const dx = pos.getX(k) - h.x, dz = pos.getZ(k) - h.z;
+        const u = dx * h.ux + dz * h.uz, v = -dx * h.uz + dz * h.ux;
+        u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v);
+      }
+      return u1 > -h.halfL && u0 < h.halfL && v1 > -h.halfW && v0 < h.halfW;
+    });
+    if (!cut) keep.push(...tri);
+  }
+  geo.setIndex(keep);
+}
+
+function terrain(ctx: Ctx, b: Biome, land: Land = NO_LAND, holes: readonly PitHole[] = []): THREE.Object3D[] {
   const out: THREE.Object3D[] = [];
   const sea = azDir(b.seaAz);
   // A disc, not a square: a square plane's corners would poke out past the
   // coarse far ring. Vertices are packed towards the pad by remapping the
   // radius, so the detail is where the camera spends its time.
   const SIZE = Math.max(TERRAIN_RADIUS, land.reach);
-  const geo = ctx.geo(new THREE.RingGeometry(4, SIZE, 96, 44));
+  // a pit has to be cut from the ground: finer, and packed closer in
+  const fine = holes.length > 0;
+  const geo = ctx.geo(new THREE.RingGeometry(4, SIZE, fine ? 192 : 96, fine ? 140 : 44));
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
@@ -310,7 +353,7 @@ function terrain(ctx: Ctx, b: Biome, land: Land = NO_LAND): THREE.Object3D[] {
     const r0 = Math.hypot(px, pz);
     if (r0 < 1e-6) continue;
     const tt = Math.max(0, Math.min(1, (r0 - 4) / (SIZE - 4)));
-    const rr = 4 + (SIZE - 4) * Math.pow(tt, 1.9);
+    const rr = 4 + (SIZE - 4) * Math.pow(tt, fine ? 2.2 : 1.9);
     pos.setX(i, (px * rr) / r0);
     pos.setZ(i, (pz * rr) / r0);
   }
@@ -340,6 +383,7 @@ function terrain(ctx: Ctx, b: Biome, land: Land = NO_LAND): THREE.Object3D[] {
     colors[i * 4 + 3] = 1 - 0.75 * smoothstep(SIZE * 0.68, SIZE, d);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+  if (fine) cutHoles(geo, holes);
   geo.computeVertexNormals();
   // transparent so the whole patch can be faded out with slant range instead
   // of popping off at a fixed distance (see LaunchPadView.setTerrainFade)
@@ -620,7 +664,8 @@ const FLOOD_DECAY = 1.35;
 function padFloodlights(ctx: Ctx, build: PadBuild): { group: THREE.Group; set(night: number): void } {
   const g = new THREE.Group();
   const H = ctx.H;
-  const radius = Math.max(46, build.mouthRadius * 3.0);
+  const placed = build.floodPositions;
+  const radius = placed?.length ? Math.max(...placed.map(([x, z]) => Math.hypot(x, z))) : Math.max(46, build.mouthRadius * 3.0);
   const mastH = Math.max(11, H * 0.30);
   // aimed a little under half way up the stack: the interesting hardware (the
   // engines, the launch mount, the lower tank) is at the bottom
@@ -632,8 +677,9 @@ function padFloodlights(ctx: Ctx, build: PadBuild): { group: THREE.Group; set(ni
   const mastParts: THREE.BufferGeometry[] = [];
   const lampParts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < FLOOD_COUNT; i++) {
-    const a = (i / FLOOD_COUNT) * Math.PI * 2 + Math.PI / FLOOD_COUNT;
-    const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
+    const a0 = (i / FLOOD_COUNT) * Math.PI * 2 + Math.PI / FLOOD_COUNT;
+    const x = placed?.[i] ? placed[i][0] : Math.cos(a0) * radius, z = placed?.[i] ? placed[i][1] : Math.sin(a0) * radius;
+    const a = Math.atan2(z, x);
     mastParts.push(cyl(0.35, 0.75, mastH, x, mastH / 2, z, 6));
     mastParts.push(box(2.6, 0.5, 1.4, x, mastH + 0.4, z, -a));
     lampParts.push(box(2.2, 1.1, 1.0, x, mastH + 1.1, z, -a));
@@ -758,6 +804,456 @@ const soyuzPad: Builder = (ctx) => {
     },
   };
 };
+
+// ------------------------------------------------ Baikonur: Gagarin's Start and Site 31 (V05)
+
+/**
+ * How far an R-7 hangs below its launch table's deck, m: the four support
+ * arms hold it by the strap-ons' upper ends, and its engines stand down in the
+ * table's opening (estimate).
+ */
+export const R7_HANG = 4.5;
+/** The launch table's opening, radius, m: 15 m across (ESA's description of the Baikonur design it copied at Kourou). */
+const R7_OPENING = 7.5;
+/** Outer radius of the turning table, and of the hole the fixed structure leaves for it, m (estimate) */
+const R7_TABLE = 10.5;
+/** The support arms lean 17° in from the vertical while they hold the rocket (КБОМ study, CyberLeninka). */
+const R7_ARM_LEAN = 17 * DEG2;
+/** How far out the counterweights swing the arms once the load comes off, rad (estimate) */
+const R7_ARM_OPEN = 60 * DEG2;
+/** The clamp at an arm's top reaches this far in from the arm's axis, m */
+export const R7_CLAMP_IN = 1.45;
+
+/**
+ * One of Baikonur's R-7 pads (roadmap V05). Distances along the pit are `u`,
+ * the way the flame leaves, and across it `v`, both from the rocket's axis.
+ */
+interface R7PadSpec {
+  /** compass azimuth of the pit's axis, deg (an estimate: no source gives it) */
+  pitAz: number;
+  /** the pit's rim: from behind the rocket to its far end along `u`, and half its width, m */
+  near: number; far: number; halfTop: number;
+  /** where its floor meets the far ramp, the floor's half width and the depth, m */
+  ramp: number; halfFloor: number; depth: number;
+  /** the launcher's own deck over the pit, from `near` to this `u`, m */
+  bridgeEnd: number;
+  /** the concrete around the pit, m of `u` behind and beyond it and of `v` to each side */
+  deck: [number, number, number];
+  /** rail line from the launcher's back to the assembly building, m; the building's length, width, height */
+  rail: number; mik: [number, number, number];
+  /** the command bunker, at this `u`, `v` */
+  bunker: [number, number];
+  /** lightning masts' height, m, at these `u`, `v` */
+  mastH: number; masts: [number, number][];
+  /** floodlight masts at these `u`, `v` */
+  floods: [number, number][];
+  /** propellant tanks and water tower, at `u`, `v` */
+  tanks: [number, number]; water: [number, number];
+  colors: { arm: number; mast: number; gantry: number; table: number; concrete: number; pitTop: number; pitFloor: number; mikWall: number };
+  /** Gagarin's Start: the cottages Korolev and Gagarin slept in before Vostok 1, by the assembly building */
+  cottages?: boolean;
+  /** Site 31: the service cabin's niche in the gas duct's wall, shut for launch */
+  cabinNiche?: boolean;
+}
+
+/** Pad-local (x east, z south) from a pad's `u`, `v`. */
+function padPoint(ux: number, uz: number, u: number, v: number): [number, number] {
+  return [u * ux - v * uz, u * uz + v * ux];
+}
+
+/** The pit, in its own axes (x = `u`, z = `v`): walls darkening with depth, seen from above and inside. */
+function r7Pit(ctx: Ctx, p: R7PadSpec): THREE.Mesh {
+  const pos: number[] = [], col: number[] = [];
+  const top = new THREE.Color(p.colors.pitTop), bottom = new THREE.Color(p.colors.pitFloor), c = new THREE.Color();
+  type P = [number, number, number];
+  const quad = (...q: P[]) => {
+    for (const i of [0, 1, 2, 0, 2, 3]) {
+      const [x, y, z] = q[i];
+      pos.push(x, y, z);
+      c.copy(top).lerp(bottom, Math.min(1, -y / p.depth));
+      col.push(c.r, c.g, c.b);
+    }
+  };
+  const D = -p.depth;
+  const P0: P = [p.near, 0, -p.halfTop], P1: P = [p.far, 0, -p.halfTop], P2: P = [p.far, 0, p.halfTop], P3: P = [p.near, 0, p.halfTop];
+  const F0: P = [p.near, D, -p.halfFloor], F1: P = [p.ramp, D, -p.halfFloor], F2: P = [p.ramp, D, p.halfFloor], F3: P = [p.near, D, p.halfFloor];
+  quad(F0, F1, F2, F3);   // floor
+  quad(F1, P1, P2, F2);   // the far ramp the exhaust leaves by
+  quad(P0, P1, F1, F0);   // side walls
+  quad(P3, F3, F2, P2);
+  quad(P0, F0, F3, P3);   // the wall under the launcher
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(ctx.geo(g), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0, side: THREE.DoubleSide }));
+  m.receiveShadow = true;
+  return m;
+}
+
+/** A flat slab from `u0`..`u1`, `v0`..`v1` with a rectangular hole, in the pad's axes. */
+function slabWithHole(ctx: Ctx, outer: [number, number, number, number], hole: [number, number, number, number], color: number, y: number): THREE.Mesh {
+  const [u0, u1, v0, v1] = outer, [h0, h1, k0, k1] = hole;
+  // shape (x, y) becomes (x, 0, −y) once laid flat
+  const shape = new THREE.Shape([new THREE.Vector2(u0, -v0), new THREE.Vector2(u1, -v0), new THREE.Vector2(u1, -v1), new THREE.Vector2(u0, -v1)]);
+  shape.holes.push(new THREE.Path([new THREE.Vector2(h0, -k0), new THREE.Vector2(h0, -k1), new THREE.Vector2(h1, -k1), new THREE.Vector2(h1, -k0)]));
+  const g = new THREE.ShapeGeometry(shape);
+  g.rotateX(-Math.PI / 2);
+  g.translate(0, y, 0);
+  const m = new THREE.Mesh(ctx.geo(g), ctx.mat(color, 0.02, 0.95));
+  m.receiveShadow = true;
+  return m;
+}
+
+/** The launcher's deck over the pit's near end, with the round hole the turning table sits in. */
+function launcherDeck(ctx: Ctx, u0: number, u1: number, halfW: number, thick: number, color: number): THREE.Mesh {
+  const shape = new THREE.Shape([new THREE.Vector2(u0, -halfW), new THREE.Vector2(u1, -halfW), new THREE.Vector2(u1, halfW), new THREE.Vector2(u0, halfW)]);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, R7_TABLE + 0.1, 0, Math.PI * 2, true);
+  shape.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: false, curveSegments: 40 });
+  g.rotateX(-Math.PI / 2);   // the extrusion rises along +y
+  g.translate(0, -thick, 0);
+  const m = new THREE.Mesh(ctx.geo(g), ctx.mat(color, 0.05, 0.9));
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+
+/**
+ * The R-7's launch system (КБОМ, "Тюльпан"), turned to the launch azimuth as
+ * the real table is: the ring the rocket hangs in, the four support arms at
+ * the strap-ons' upper ends with their counterweights, and the two cable
+ * masts, already swung back (T−35 s and T−15 s; the countdown here starts at
+ * T−10 s). Built in the rocket's own axes: the strap-ons lie on ±x and ±z.
+ */
+function r7LaunchSystem(ctx: Ctx, p: R7PadSpec): { group: THREE.Group; arms: THREE.Group[] } {
+  const g = new THREE.Group();
+  const heading = azDir(ctx.azimuth / DEG2);
+  g.rotation.y = Math.atan2(-heading.y, heading.x);
+  // the turning table: a steel ring round the opening
+  const ring = new THREE.Shape();
+  ring.absarc(0, 0, R7_TABLE, 0, Math.PI * 2, false);
+  const inner = new THREE.Path();
+  inner.absarc(0, 0, R7_OPENING, 0, Math.PI * 2, true);
+  ring.holes.push(inner);
+  const ringGeo = new THREE.ExtrudeGeometry(ring, { depth: 2.4, bevelEnabled: false, curveSegments: 48 });
+  ringGeo.rotateX(-Math.PI / 2);
+  ringGeo.translate(0, -2.4, 0);
+  const table = new THREE.Mesh(ctx.geo(ringGeo), ctx.mat(p.colors.table, 0.45, 0.55));
+  table.castShadow = true; table.receiveShadow = true;
+  g.add(table);
+
+  // four arms, each at a strap-on: pivot on the table, top at the strap-on's upper end
+  const core = ctx.vehicle.stages[0], strap = core.boosters?.[0];
+  const strapR = strap ? core.diameter / 2 + strap.diameter / 2 : ctx.R * 0.6;
+  const holdY = -R7_HANG + (strap ? strap.length * 0.85 : ctx.H * 0.35);
+  const pivotY = 0.6;
+  const armL = (holdY - pivotY) / Math.cos(R7_ARM_LEAN);
+  const topR = strapR + (strap ? strap.diameter / 2 : 1.3) + 0.25;
+  const pivotR = topR + armL * Math.sin(R7_ARM_LEAN);
+  const lever = Math.hypot(2.8, 2.2), leverA = Math.atan2(-2.2, 2.8);
+  const leverGeo = new THREE.BoxGeometry(lever, 0.6, 0.8);
+  leverGeo.rotateZ(leverA);
+  leverGeo.translate(1.4, -1.1, 0);
+  const armGeo = ctx.geo(merged([
+    lattice(1.3, 1.0, armL, Math.max(4, Math.round(armL / 2.2)), 0.26),
+    box(1.8, 1.1, 1.3, -0.55, armL, 0),            // the clamp at the strap-on's pocket
+    leverGeo,
+    box(2.2, 2.6, 2.0, 2.8, -3.5, 0),              // the counterweight
+  ]));
+  const armMat = ctx.mat(p.colors.arm, 0.35, 0.6);
+  const arms: THREE.Group[] = [];
+  for (let k = 0; k < 4; k++) {
+    const az = new THREE.Group();
+    az.rotation.y = -k * Math.PI / 2;
+    const pivot = new THREE.Group();
+    pivot.position.set(pivotR, pivotY, 0);
+    pivot.rotation.z = R7_ARM_LEAN;
+    const arm = new THREE.Mesh(armGeo, armMat);
+    arm.castShadow = true;
+    arm.userData.part = 'r7Arm';
+    pivot.add(arm);
+    az.add(pivot);
+    g.add(az);
+    arms.push(pivot);
+  }
+
+  // the cable masts between the arms, swung back from the rocket: the fuelling
+  // and cable mast to the core, the upper cable mast to Blok I
+  const mastMat = ctx.mat(p.colors.mast, 0.35, 0.6);
+  for (const [phi, h, lean] of [[Math.PI / 4, 27, 28 * DEG2], [Math.PI * 5 / 4, 38, 22 * DEG2]] as const) {
+    const az = new THREE.Group();
+    az.rotation.y = -phi;
+    const pivot = new THREE.Group();
+    pivot.position.set(R7_TABLE + 1.2, 0, 0);
+    pivot.rotation.z = -lean;
+    const mast = new THREE.Mesh(ctx.geo(merged([
+      lattice(2.2, 2.2, h, Math.round(h / 2.6), 0.32),
+      box(5.5, 0.9, 1.2, -2.6, h - 1.5, 0),        // the boom that carried the connectors
+      box(3.4, 0.3, 3.4, 0, h * 0.5, 0),           // a working platform
+    ])), mastMat);
+    mast.castShadow = true;
+    pivot.add(mast);
+    az.add(pivot);
+    g.add(az);
+  }
+  return { group: g, arms };
+}
+
+/** A straight rail line on its bed, with its sleepers, along `u` from `u0` back to `u1` (`u1` < `u0`). */
+function railLine(ctx: Ctx, u0: number, u1: number, v: number): THREE.Object3D[] {
+  const len = u0 - u1, mid = (u0 + u1) / 2, gauge = 1.52;
+  const out: THREE.Object3D[] = [];
+  const bed = new THREE.Mesh(ctx.geo(box(len, 0.35, 4.6, mid, 0.05, v)), ctx.mat(0x6f675c, 0, 0.98));
+  bed.receiveShadow = true;
+  out.push(bed);
+  out.push(new THREE.Mesh(ctx.geo(merged([box(len, 0.16, 0.08, mid, 0.33, v - gauge / 2), box(len, 0.16, 0.08, mid, 0.33, v + gauge / 2)])), ctx.mat(0x7a7d80, 0.8, 0.35)));
+  const n = Math.floor(len / 0.6);
+  const sleepers = new THREE.InstancedMesh(ctx.geo(new THREE.BoxGeometry(0.26, 0.14, 2.75)), ctx.mat(0x4a4038, 0, 0.9), n);
+  const m = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) {
+    m.makeTranslation(u1 + 0.3 + i * 0.6, 0.25, v);
+    sleepers.setMatrixAt(i, m);
+  }
+  sleepers.instanceMatrix.needsUpdate = true;
+  out.push(sleepers);
+  return out;
+}
+
+/** The erector the rocket rode out on, lying on the rail, and the shunting locomotive, along `u` from `u0`. */
+function erectorTrain(ctx: Ctx, u0: number, v: number): THREE.Object3D[] {
+  const girder = lattice(3.0, 3.4, 51, 16, 0.34);
+  girder.rotateZ(-Math.PI / 2);                    // its length along +u
+  girder.translate(u0, 3.2, v);
+  const parts = [girder, box(4, 5.5, 4.2, u0 + 0.5, 3.1, v), box(2.2, 3.6, 4.6, u0 + 49, 4.6, v)];
+  for (const du of [3, 14, 37, 48]) parts.push(box(3.2, 1.3, 2.9, u0 + du, 1.05, v));
+  const erector = new THREE.Mesh(ctx.geo(merged(parts)), ctx.mat(0x56644f, 0.3, 0.7));
+  erector.castShadow = true;
+  const lu = u0 - 20;
+  const loco = new THREE.Mesh(ctx.geo(merged([
+    box(13.5, 3.3, 3.1, lu - 1.2, 2.55, v), box(3.6, 4.4, 3.2, lu + 7.3, 3.1, v),
+    box(3, 1.1, 2.6, lu - 5.5, 0.95, v), box(3, 1.1, 2.6, lu + 5.5, 0.95, v),
+  ])), ctx.mat(0x2f5f8f, 0.25, 0.6));
+  loco.castShadow = true;
+  const stripe = new THREE.Mesh(ctx.geo(box(17.2, 0.35, 3.25, lu + 0.6, 2.2, v)), ctx.mat(0xe9e6dc, 0.1, 0.6));
+  return [erector, loco, stripe];
+}
+
+/** An assembly building (МИК) at the rail line's end: the high bay the rocket rides out of, an annex beside it. */
+function assemblyBuilding(ctx: Ctx, uDoor: number, v: number, [L, W, H]: [number, number, number], wall: number): THREE.Object3D[] {
+  const cu = uDoor - L / 2;
+  const walls = new THREE.Mesh(ctx.geo(merged([
+    box(L, H, W, cu, H / 2, v),
+    box(L * 0.7, H * 0.45, W * 0.8, cu - L * 0.05, H * 0.225, v + W * 0.9),
+  ])), ctx.mat(wall, 0.05, 0.85));
+  walls.castShadow = true; walls.receiveShadow = true;
+  const roof = new THREE.Mesh(ctx.geo(merged([
+    box(L * 1.01, 0.8, W * 1.02, cu, H + 0.4, v),
+    box(L * 0.71, 0.6, W * 0.82, cu - L * 0.05, H * 0.45 + 0.3, v + W * 0.9),
+  ])), ctx.mat(0x6f7378, 0.1, 0.8));
+  // the gate the rail runs in by, facing the pad
+  const gate = new THREE.Mesh(ctx.geo(box(0.4, H * 0.8, 14, uDoor + 0.2, H * 0.4, v)), ctx.mat(0x3d4247, 0.4, 0.6));
+  return [walls, roof, gate];
+}
+
+/** The command bunker: an earth mound over the rooms, the entrance, two periscopes. */
+function bunker(ctx: Ctx, u: number, v: number): THREE.Object3D[] {
+  const mound = new THREE.SphereGeometry(17, 24, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+  mound.scale(1, 0.36, 1);
+  mound.translate(u, 0, v);
+  const earth = new THREE.Mesh(ctx.geo(mound), ctx.mat(0x8a8260, 0, 1));
+  earth.receiveShadow = true;
+  const towardPad = Math.atan2(-v, -u);
+  const e = [Math.cos(towardPad) * 17, Math.sin(towardPad) * 17];
+  const concrete = new THREE.Mesh(ctx.geo(merged([
+    box(7, 3.4, 5, u + e[0], 1.7, v + e[1], -towardPad),
+    cyl(0.35, 0.35, 2.4, u - 2, 6.6, v, 8), cyl(0.35, 0.35, 2.4, u + 2, 6.6, v, 8),
+  ])), ctx.mat(0xb7b3a8, 0.05, 0.9));
+  concrete.castShadow = true;
+  return [earth, concrete];
+}
+
+/** The two cottages at Site 2 where Korolev and Gagarin spent the night before Vostok 1, with their trees. */
+function cottages(ctx: Ctx, u: number, v: number): THREE.Object3D[] {
+  const walls: THREE.BufferGeometry[] = [], roofs: THREE.BufferGeometry[] = [], trees: THREE.BufferGeometry[] = [];
+  for (const [du, dv] of [[0, 0], [30, 22]]) {
+    walls.push(box(11, 3.2, 8, u + du, 1.6, v + dv));
+    const tri = new THREE.Shape([new THREE.Vector2(-4.4, 0), new THREE.Vector2(4.4, 0), new THREE.Vector2(0, 2.4)]);
+    const roof = new THREE.ExtrudeGeometry(tri, { depth: 12, bevelEnabled: false });
+    roof.translate(0, 3.2, -6);
+    roof.rotateY(Math.PI / 2);
+    roof.translate(u + du, 0, v + dv);
+    roofs.push(roof);
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = hash11(i * 3.1) * Math.PI * 2, r = 14 + hash11(i * 7.7) * 22;
+    const cone = new THREE.ConeGeometry(2.6, 8, 7);
+    cone.translate(u + 15 + Math.cos(a) * r, 5.5, v + 11 + Math.sin(a) * r);
+    trees.push(cone, cyl(0.25, 0.3, 2, u + 15 + Math.cos(a) * r, 1, v + 11 + Math.sin(a) * r, 5));
+  }
+  const w = new THREE.Mesh(ctx.geo(merged(walls)), ctx.mat(0xe4dccb, 0.02, 0.9));
+  w.castShadow = true;
+  // extruded, so unindexed like one another
+  const r = new THREE.Mesh(ctx.geo(merged(roofs)), ctx.mat(0x6e4a3a, 0.05, 0.85));
+  const t = new THREE.Mesh(ctx.geo(merged(trees)), ctx.mat(0x4f5f36, 0, 0.95));
+  t.castShadow = true;
+  return [w, r, t];
+}
+
+/**
+ * An R-7 pad at Baikonur (V05): the pit, the launcher's deck over its near
+ * end, the launch system turned to the azimuth, the service gantry's halves
+ * lowered either side, the rail line to the assembly building with the
+ * erector and its locomotive, the bunker, the propellant store, the masts.
+ * Dimensions come with their sources in docs/IMPLEMENTATION-STATUS.md; what
+ * no source gives is an estimate, marked as one.
+ */
+function r7BaikonurPad(ctx: Ctx, p: R7PadSpec): PadBuild {
+  const root = new THREE.Group();
+  const axis = azDir(p.pitAz);
+  const ux = axis.x, uz = axis.y;
+  // the pad's own axes: x along the pit (the way the flame leaves), z across it
+  const site = new THREE.Group();
+  site.rotation.y = Math.atan2(-uz, ux);
+  root.add(site);
+
+  site.add(r7Pit(ctx, p));
+  const [behind, beyond, side] = p.deck;
+  site.add(slabWithHole(ctx, [p.near - behind, p.far + beyond, -p.halfTop - side, p.halfTop + side], [p.near, p.far, -p.halfTop, p.halfTop], p.colors.concrete, 0.02));
+  site.add(launcherDeck(ctx, p.near, p.bridgeEnd, p.halfTop + 2, 7, p.colors.concrete));
+  // piers from the pit's floor to the deck, and the one-sided deflector under the rocket
+  const piers: THREE.BufferGeometry[] = [];
+  for (const u of [p.near + 4, p.bridgeEnd - 4]) for (const v of [-p.halfFloor * 0.7, p.halfFloor * 0.7]) piers.push(box(5, p.depth - 7, 5, u, -7 - (p.depth - 7) / 2, v));
+  const shelf = new THREE.Shape([new THREE.Vector2(p.near, -p.depth), new THREE.Vector2(p.near, -p.depth * 0.45), new THREE.Vector2(p.near + p.depth * 1.1, -p.depth)]);
+  const deflector = new THREE.ExtrudeGeometry(shelf, { depth: p.halfFloor * 1.6, bevelEnabled: false });
+  deflector.translate(0, 0, -p.halfFloor * 0.8);
+  const pierMat = ctx.mat(0x7c776d, 0.05, 0.95);
+  site.add(new THREE.Mesh(ctx.geo(merged(piers)), pierMat), new THREE.Mesh(ctx.geo(deflector), pierMat));
+  if (p.cabinNiche) {
+    // the service cabin's niche, shut: the cabin rides out of it under the rocket between launches
+    site.add(new THREE.Mesh(ctx.geo(box(0.4, 8, 17, p.near + 0.25, -7 - 4.5, 0)), ctx.mat(0x7d8b93, 0.5, 0.5)));
+  }
+
+  // the launch system, turned to the azimuth in the pad's own frame
+  const sys = r7LaunchSystem(ctx, p);
+  root.add(sys.group);
+
+  // the service gantry's two halves, lowered either side of the pit
+  const gantryMat = ctx.mat(p.colors.gantry, 0.35, 0.6);
+  for (const s of [1, -1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(-2, 3.4, s * (R7_TABLE + 3));
+    pivot.rotation.x = s * (Math.PI / 2 - 0.05);
+    const half = new THREE.Mesh(ctx.geo(merged([lattice(9, 6, 50, 12, 0.6), box(10, 0.5, 7, 0, 50, 0)])), gantryMat);
+    half.castShadow = true;
+    pivot.add(half);
+    site.add(pivot);
+  }
+
+  // lightning masts round the pad
+  const mastMesh = new THREE.InstancedMesh(ctx.geo(mastGeo(p.mastH)), ctx.mat(0xb9bcc0, 0.4, 0.55), p.masts.length);
+  const mm = new THREE.Matrix4();
+  p.masts.forEach(([u, v], i) => { mm.makeTranslation(u, 0, v); mastMesh.setMatrixAt(i, mm); });
+  mastMesh.instanceMatrix.needsUpdate = true;
+  mastMesh.castShadow = true;
+  site.add(mastMesh);
+
+  // the rail line to the assembly building, the erector parked at its door
+  const railEnd = p.near - p.rail;
+  for (const o of railLine(ctx, p.near - 1, railEnd, 0)) site.add(o);
+  for (const o of erectorTrain(ctx, railEnd + 30, 0)) site.add(o);
+  for (const o of assemblyBuilding(ctx, railEnd, 0, p.mik, p.colors.mikWall)) site.add(o);
+  if (p.cottages) for (const o of cottages(ctx, railEnd - p.mik[0] * 0.4, p.mik[1] + 120)) site.add(o);
+  for (const o of bunker(ctx, p.bunker[0], p.bunker[1])) site.add(o);
+  const tanks = tankFarm(ctx, p.tanks[0], p.tanks[1], 4, 5, 13);
+  site.add(tanks);
+  site.add(waterTower(ctx, p.water[0], p.water[1], 34));
+
+  // roads: along the rail, to the bunker, round the pad; a few service buildings by the bunker
+  const roads: THREE.BufferGeometry[] = [
+    box(p.rail + 40, 0.12, 8, p.near - p.rail / 2, 0.08, 16),
+    box(8, 0.12, Math.abs(p.bunker[1]) + 10, p.bunker[0], 0.08, p.bunker[1] / 2),
+    box(p.far - p.near + behind + beyond, 0.12, 8, (p.near - behind + p.far + beyond) / 2, 0.08, p.halfTop + side - 6),
+    box(p.far - p.near + behind + beyond, 0.12, 8, (p.near - behind + p.far + beyond) / 2, 0.08, -p.halfTop - side + 6),
+  ];
+  site.add(new THREE.Mesh(ctx.geo(merged(roads)), ctx.mat(0x4b4b4d, 0, 0.98)));
+  const huts: THREE.BufferGeometry[] = [], hutRoofs: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 6; i++) {
+    const u = p.bunker[0] - 70 - hash11(i * 4.3) * 90, v = p.bunker[1] + Math.sign(p.bunker[1]) * (30 + hash11(i * 2.9) * 70);
+    const w = 14 + hash11(i * 8.1) * 22, d = 10 + hash11(i * 1.7) * 14, h = 4 + hash11(i * 6.1) * 6;
+    huts.push(box(w, h, d, u, h / 2, v));
+    hutRoofs.push(box(w * 1.05, 0.5, d * 1.05, u, h + 0.25, v));
+  }
+  const hm = new THREE.Mesh(ctx.geo(merged(huts)), ctx.mat(0xd9d6cc, 0.05, 0.85));
+  hm.castShadow = true;
+  site.add(hm, new THREE.Mesh(ctx.geo(merged(hutRoofs)), ctx.mat(0x6f7378, 0.1, 0.8)));
+
+  // what the ground and the floodlights need to know, in the pad's x/z
+  const at = (u: number, v: number) => padPoint(ux, uz, u, v);
+  const [cx, cz] = at((p.near + p.far) / 2, 0);
+  const holes: PitHole[] = [{ x: cx, z: cz, ux, uz, halfL: (p.far - p.near) / 2, halfW: p.halfTop }];
+  const clearings: { x: number; z: number; r: number; h: number }[] = [];
+  for (let u = p.near - 300; u > railEnd - p.mik[0] - 60; u -= 70) { const [x, z] = at(u, 0); clearings.push({ x, z, r: 45, h: 0 }); }
+  { const [x, z] = at(railEnd - p.mik[0] / 2, p.mik[1] * 0.4); clearings.push({ x, z, r: p.mik[0] * 0.9, h: 0 }); }
+  if (p.cottages) { const [x, z] = at(railEnd - p.mik[0] * 0.4, p.mik[1] + 130); clearings.push({ x, z, r: 70, h: 0 }); }
+
+  return {
+    group: root,
+    trenchAzimuth: Math.atan2(uz, ux),
+    mouthRadius: R7_OPENING * 1.6,
+    // the rocket hangs in the table: its base is below the deck the ground is level with
+    mountHeight: -R7_HANG,
+    holes, clearings,
+    floodPositions: p.floods.map(([u, v]) => at(u, v)),
+    animate(_t, altAGL) {
+      // the load comes off the arms as the rocket rises, and their counterweights swing them out
+      const open = smoothstep(0.05, 3.0, altAGL);
+      for (const a of sys.arms) a.rotation.z = R7_ARM_LEAN - open * (R7_ARM_LEAN + R7_ARM_OPEN);
+    },
+  };
+}
+
+/**
+ * Gagarin's Start, Site 1/5: the pit dug in 1956, 250 m long, 100 m wide and
+ * 45 m deep (Roscosmos; 50 m in Техника—молодёжи 1991), the bunker 200 m away
+ * (4glaza, elementy), the assembly building at Site 2 some 1.6–2 km off
+ * (GlobalSecurity; en.wikipedia), and the cottages by it (Advantour).
+ */
+const gagarinStart: Builder = (ctx) => r7BaikonurPad(ctx, {
+  pitAz: 300, near: -25, far: 225, halfTop: 50, ramp: 170, halfFloor: 38, depth: 45, bridgeEnd: 18,
+  deck: [110, 70, 80], rail: 1750, mik: [130, 48, 30], bunker: [-30, 200],
+  mastH: 68, masts: [[-110, 110], [-110, -110], [150, 110], [150, -110]],
+  floods: [[-48, 62], [-48, -62], [30, 66], [30, -66]],
+  tanks: [-160, -210], water: [-300, 190],
+  colors: { arm: 0x7d8a86, mast: 0x8f9496, gantry: 0x9aa0a6, table: 0x5f6468, concrete: 0xa7a398, pitTop: 0x9b917c, pitFloor: 0x3a342c, mikWall: 0xd6d2c4 },
+  cottages: true,
+});
+
+/**
+ * Site 31/6: the same launch system over a smaller trench (en.wikipedia,
+ * RussianSpaceWeb: "scaled down"), at least 20 m deep where the service cabin
+ * fell in November 2025, the cabin's niche in its wall (Habr, iXBT); its
+ * assembly building, structure 40, a few hundred metres off (ESA: 600 m,
+ * uncertain). Trench length and width, the bunker's place and the buildings'
+ * sizes are estimates.
+ */
+const site31: Builder = (ctx) => r7BaikonurPad(ctx, {
+  pitAz: 250, near: -15, far: 120, halfTop: 16, ramp: 88, halfFloor: 13, depth: 24, bridgeEnd: 15,
+  deck: [100, 60, 85], rail: 650, mik: [110, 42, 26], bunker: [-20, -150],
+  mastH: 64, masts: [[-105, 90], [-105, -90], [110, 90], [110, -90]],
+  floods: [[-46, 40], [-46, -40], [30, 44], [30, -44]],
+  tanks: [-150, 190], water: [-260, -210],
+  colors: { arm: 0x8e9aa6, mast: 0xa9b0b6, gantry: 0xaab1b8, table: 0x646a70, concrete: 0xacaaa0, pitTop: 0x9a9384, pitFloor: 0x3b3833, mikWall: 0xdedbd0 },
+  cabinNiche: true,
+});
+
+/**
+ * Baikonur: an R-7 flies from the pad the mission names, Site 31/6 unless it
+ * is Gagarin's Start; anything else (Proton's own pads are not drawn) keeps
+ * the generic pad.
+ */
+const baikonurPad: Builder = (ctx) => (ctx.vehicle.stages[0]?.profile !== 'r7Core' ? soyuzPad(ctx)
+  : ctx.pad === 'site1' ? gagarinStart(ctx) : site31(ctx));
 
 /** Cape Canaveral SLC-40 style: transporter/erector, trench, lightning masts. */
 const slc40Pad: Builder = (ctx) => {
@@ -1272,21 +1768,22 @@ const mahiaPad: Builder = (ctx) => {
 };
 
 const BUILDERS: Record<string, Builder> = {
-  baikonur: soyuzPad, plesetsk: soyuzPad, vostochny: soyuzPad,
+  baikonur: baikonurPad, plesetsk: soyuzPad, vostochny: soyuzPad,
   cape: slc40Pad, ksc39a: lc39aPad, vandenberg: slc4ePad, wallops: wallopsPad,
   starbase: starbasePad, kourou: kourouPad, wenchang: wenchangPad,
   tanegashima: tanegashimaPad, sriharikota: sriharikotaPad, mahia: mahiaPad,
 };
 
 /** Build the complete launch complex (terrain + pad) for a site and vehicle. */
-export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T extends THREE.BufferGeometry>(g: T) => T, matFn: MatFn): PadBuild {
+export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T extends THREE.BufferGeometry>(g: T) => T, matFn: MatFn,
+  opts: { padId?: string; azimuth?: number } = {}): PadBuild {
   let R = 0;
   for (const st of vehicle.stages) {
     R = Math.max(R, st.diameter / 2);
     for (const b of st.boosters ?? []) R = Math.max(R, st.diameter / 2 + b.diameter);
   }
   if (vehicle.fairing) R = Math.max(R, vehicle.fairing.diameter / 2);
-  const ctx: Ctx = { site, vehicle, H: vehicle.height, R, mat: matFn, geo: geoSink };
+  const ctx: Ctx = { site, vehicle, H: vehicle.height, R, mat: matFn, geo: geoSink, pad: opts.padId ?? site.pads?.[0]?.id, azimuth: opts.azimuth ?? 0 };
   const biome = BIOMES[site.id] ?? BIOMES.cape;
   const build = (BUILDERS[site.id] ?? slc40Pad)(ctx);
   const root = new THREE.Group();
@@ -1303,7 +1800,10 @@ export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T exte
   // is also where four spot lights stop being worth what they cost.
   const flood = padFloodlights(ctx, build);
   build.group.add(flood.group);
-  const terrainParts = terrain(ctx, biome, landFor(site, biome, build.mountHeight));
+  const base = landFor(site, biome, build.mountHeight);
+  // a copy: `landFor` hands out the shared NO_LAND when a site has no landing zone
+  const land: Land = { ...base, clearings: [...base.clearings, ...(build.clearings ?? [])] };
+  const terrainParts = terrain(ctx, biome, land, build.holes);
   for (const o of terrainParts) grade.add(o);
   grade.add(build.group);
   root.add(grade);

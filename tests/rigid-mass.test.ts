@@ -97,7 +97,8 @@ describe('reference vehicle mass and geometry closure', () => {
     const falcon = getRigidVehicleGeometry(vehicleById('falcon9'));
     const soyuz = getRigidVehicleGeometry(vehicleById('soyuz21a'));
     expect(falcon.length).toBeCloseTo(72.394, 10);
-    expect(soyuz.length).toBeCloseTo(47.263, 10);
+    // the 4.11 × 11.43 m fairing stands flush on Blok I, its adapter inside its own length
+    expect(soyuz.length).toBeCloseTo(46.849, 10);
     expect(falcon.stageBases[1].x).toBe(42);
     expect(falcon.payloadBase.x - falcon.fairingBase.x).toBeCloseTo(0.5, 12);
     const expected = [v3(0, 0, 2.815), v3(0, -2.815, 0), v3(0, 0, -2.815), v3(0, 2.815, 0)];
