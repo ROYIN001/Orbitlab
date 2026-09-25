@@ -22,7 +22,7 @@ import { buildShipFlaps, foldShipFlaps, SHIP_NOSE_FRACTION, tangentOgiveProfile,
 import { VapourCone, vapourStrength } from './vapour';
 import {
   AftSkirt, CrewedTop, FrostCoat, R7_BOOSTER_GAP, R7_FLARE, R7_TRUSS_INSIDE, r7BoosterGeometry, r7BoosterTip, r7CoreBase,
-  r7CoreProfile, r7CoreTop, r7RudderGeometry, r7TrussGeometry,
+  r7CoreProfile, r7CoreTop, r7RudderGeometry, r7TrussGeometry, buildSoyuzMs,
 } from './soyuz';
 
 export interface RocketEnv {
@@ -229,7 +229,8 @@ export class RocketView {
       this.vapourAt = { onFairing: false, y: last.length * SHIP_NOSE_FRACTION };
     }
     if (this.vapour) this.group.add(this.vapour.group);
-    this.satellite = buildSatellite(sat);
+    // a crewed R-7 carries a Soyuz MS (G07: its shape matters at the station's port)
+    this.satellite = this.crewed && spec.stages.some((st) => st.profile === 'r7Core') ? buildSoyuzMs() : buildSatellite(sat);
     this.group.add(this.satellite.group);
     this.group.add(this.engineLight);
     this.height = total;

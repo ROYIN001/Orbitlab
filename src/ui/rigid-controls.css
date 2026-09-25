@@ -4,3 +4,12 @@
 .rigid-control-fields { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 .rigid-control-fields label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 105px; min-width: 0; }
 .rigid-control-fields input, .rigid-control-fields select { width: 100%; min-height: 36px; }
+
+/* G07: the TORU hand controllers */
+.toru-controls { flex: none; padding: 10px 14px; font-size: 12px; }
+.toru-controls[hidden] { display: none; }
+.toru-controls p { color: var(--muted); margin: 6px 0; }
+.toru-controls h4 { margin: 10px 0 6px; font: 600 11px var(--sans); letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+.toru-controls .toru-take { margin: 6px 0 2px; }
+.toru-pad { display: flex; flex-wrap: wrap; gap: 6px; }
+.toru-pad .btn { min-width: 0; padding: 5px 9px; font-size: 12px; }

@@ -24,7 +24,9 @@ export type WatchBeat =
   | 'suborbital' | 'shipCoast' | 'shipEntry' | 'bellyFlop' | 'shipFlip' | 'splashdown'
   // a launch abort (G06): what went wrong, the way out, the crew's way down
   | 'padFire' | 'boosterCollision' | 'stagingFailure' | 'abortTower' | 'abortFairing' | 'abortSeparation'
-  | 'escapeCoast' | 'escapeCapsule' | 'escapeModules' | 'ballistic' | 'drogue' | 'mainChute' | 'mainDescent' | 'softLanding' | 'crewSafe';
+  | 'escapeCoast' | 'escapeCapsule' | 'escapeModules' | 'ballistic' | 'drogue' | 'mainChute' | 'mainDescent' | 'softLanding' | 'crewSafe'
+  // a flight on to the station (G07)
+  | 'rvPlan' | 'rvPhasing' | 'rvBurn' | 'rvApproach' | 'rvFlyaround' | 'rvStationkeeping' | 'rvFinal' | 'rvContact' | 'rvCapture' | 'rvDocked';
 
 /** Label and sentence of each beat. Literal keys, so the i18n suite sees their call sites. */
 export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
@@ -72,6 +74,16 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   mainDescent: { label: 'watch.beat.mainDescent', text: 'watch.say.mainDescent' },
   softLanding: { label: 'watch.beat.softLanding', text: 'watch.say.softLanding' },
   crewSafe: { label: 'watch.beat.crewSafe', text: 'watch.say.crewSafe' },
+  rvPlan: { label: 'watch.beat.rvPlan', text: 'watch.say.rvPlan' },
+  rvPhasing: { label: 'watch.beat.rvPhasing', text: 'watch.say.rvPhasing' },
+  rvBurn: { label: 'watch.beat.rvBurn', text: 'watch.say.rvBurn' },
+  rvApproach: { label: 'watch.beat.rvApproach', text: 'watch.say.rvApproach' },
+  rvFlyaround: { label: 'watch.beat.rvFlyaround', text: 'watch.say.rvFlyaround' },
+  rvStationkeeping: { label: 'watch.beat.rvStationkeeping', text: 'watch.say.rvStationkeeping' },
+  rvFinal: { label: 'watch.beat.rvFinal', text: 'watch.say.rvFinal' },
+  rvContact: { label: 'watch.beat.rvContact', text: 'watch.say.rvContact' },
+  rvCapture: { label: 'watch.beat.rvCapture', text: 'watch.say.rvCapture' },
+  rvDocked: { label: 'watch.beat.rvDocked', text: 'watch.say.rvDocked' },
 };
 
 /**
@@ -103,6 +115,9 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
   { key: 'evt.escapeMain', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeMainLow', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeSoftLanding', beat: 'softLanding', hold: 10 },
+  // G07: the plan is read out after the separation; the contact is its own moment
+  { key: 'evt.rendezvousPlan', beat: 'rvPlan', hold: 20 },
+  { key: 'evt.contact', beat: 'rvContact', hold: 20 },
 ];
 const ABORT_BEATS: Record<string, WatchBeat> = { tower: 'abortTower', fairing: 'abortFairing', separation: 'abortSeparation' };
 /** Above this, a falling descent module is coasting or entering, not yet on its way to its parachutes, m. */
@@ -148,6 +163,7 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
     }
   }
   if (frame.abort) return abortBeat(frame);
+  if (frame.rendezvous) return rendezvousBeat(frame);
   switch (frame.status) {
     case 'ascent': {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
@@ -169,6 +185,21 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
       }
     case 'landed': return frame.note === 'shipLost' ? 'failed' : 'splashdown';
     default: return frame.payloadSeparated ? 'deployed' : 'orbit';
+  }
+}
+
+/** A flight to the station between its events: what the spacecraft is doing now. */
+function rendezvousBeat(frame: VisualFrame): WatchBeat {
+  switch (frame.rendezvous!.phase) {
+    case 'burn': return 'rvBurn';
+    case 'approach': return 'rvApproach';
+    case 'flyaround': return 'rvFlyaround';
+    case 'stationkeeping': case 'retreat': return 'rvStationkeeping';
+    case 'final': return 'rvFinal';
+    case 'capture': return 'rvCapture';
+    case 'docked': return 'rvDocked';
+    case 'aborted': return 'orbit';
+    default: return 'rvPhasing';
   }
 }
 
@@ -252,6 +283,25 @@ function beatWarp(frame: VisualFrame, beat: WatchBeat): number {
       return frame.altitude > 80e3 ? 10 : 2;
     case 'mainDescent':
       return frame.altitudeAGL > 400 ? 20 : frame.altitudeAGL > 80 ? 5 : 1;
+    // G07: the hours of phasing go by quickly, each burn and the approach at a pace to follow, the last metres in real time
+    case 'rvPhasing': {
+      const tgo = frame.nextBurnTime - frame.t;
+      return frame.nextBurnTime > 0 && tgo < 90 ? 5 : 100;
+    }
+    case 'rvBurn':
+      return 5;
+    case 'rvApproach':
+    case 'rvFlyaround':
+      return 10;
+    case 'rvStationkeeping':
+      return 5;
+    case 'rvFinal': {
+      const axial = frame.rendezvous?.axial ?? Infinity;
+      return axial > 30 ? 5 : axial > 5 ? 2 : 1;
+    }
+    case 'rvCapture':
+    case 'rvDocked':
+      return 25;
     default:
       return 1;
   }
@@ -281,14 +331,23 @@ export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEven
   return false;
 }
 
+/** How a flight on screen ends. */
+export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'failed';
+
 /**
  * How the flight on screen has ended, if it has: in orbit, with a splashdown
  * (a suborbital ship flown home), or lost. The end card waits for every stage
  * flown home to be down and a few seconds more, so it does not cover a
  * landing.
  */
-export function flightEnding(frame: VisualFrame | null, events: readonly SimEvent[]): 'orbit' | 'splashdown' | 'crewSafe' | 'failed' | null {
+export function flightEnding(frame: VisualFrame | null, events: readonly SimEvent[]): WatchEnding | null {
   if (!frame) return null;
+  // G07: a flight to the station ends docked (or in orbit by it, when the docking was called off), not at the insertion
+  const rv = frame.rendezvous;
+  if (rv) {
+    if (rv.phase === 'docked') return rv.dockedAt !== undefined && frame.t - rv.dockedAt >= RETURN_SETTLE ? 'docked' : null;
+    return rv.phase === 'aborted' ? 'orbit' : null;
+  }
   // G06: after an abort, the end is the crew down and a few seconds more
   if (frame.abort) {
     if (frame.status !== 'landed') return null;

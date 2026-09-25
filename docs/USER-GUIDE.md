@@ -325,6 +325,37 @@ card, the charts, the 6-DOF controls and the rates you type into them, the event
 CSV. The full table, with each quantity's definition and sign, is in *Physics and sources*
 (PHYSICS.md §2c).
 
+## 9. A flight to the station
+
+With a **Soyuz-2.1a**, the **Crewed spacecraft** (a Soyuz MS) and the **ISS** orbit, section 03
+of the setup offers **Flight to the station**: none (stay in the insertion
+orbit), **two-orbit** (about 3 h, as Soyuz MS-28 flew it), **four-orbit** (about 6 h, as Soyuz
+TMA-19M) or **two-day** (34 orbits, as Soyuz MS-01), and the **docking port**: Rassvet or
+Prichal from below, Poisk from above, Zvezda's aft port from behind. Pick a launch window
+(**Next window**) so the station's plane is the one the launch reaches.
+
+The rocket puts the spacecraft into a 200 × 242 km orbit; from there the spacecraft flies
+itself. Its engine fires for the profile's burns — the phase shows *Rendezvous burn* with the
+burn and its Δv, and between them *Phasing* with the time to the next one — then the transfer
+brings it 2.2 km behind and below the station, and **Kurs**, the automatic radio system, takes
+over: the approach to 400 m, the **flyaround** onto the port's axis, **stationkeeping** 150 m
+out, the **final approach** at a walking pace, then **contact**, capture and the hooks closing
+13 minutes later. The telemetry panel's first chart is then *Relative motion*: the station at
+the centre, its direction of flight to the right, up away from the Earth, the same scale both
+ways, zooming in as the spacecraft closes. Near the station the exterior camera looks past the
+spacecraft at it; the onboard camera (2) is the Soyuz's docking TV camera, with the port's
+target to line up in its reticle and the range, closing speed and offset from the axis.
+
+In the Engineer mode a **TORU** panel appears during the approach. **Take over (TORU)** hands
+the spacecraft to you wherever it is: the translation buttons (or W/S, the arrows, X to stop)
+set its velocity in toward the port, right and up as the TV picture shows them, the rotation
+buttons its turn rates. Keep the target's cross on its disc and close at 0.1–0.35 m/s: a
+contact faster, slower, more than 0.34 m off the axis, drifting sideways at 0.1 m/s or more, or
+turned more than 7° (10° in roll) is not captured, and Kurs backs away for one more try before
+the docking is called off. **Hand back to Kurs** lets it fly back to the stationkeeping point
+and in again. How the profiles, the approach and the contact limits compare with real flights
+is in [PHYSICS.md §9.2](PHYSICS.md).
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

@@ -58,6 +58,8 @@ import type { DynamicsConfig } from '../types';
 import type { FlexConfig } from '../types';
 import { FLEX_DEFAULTS } from '../physics/rigid/flex';
 import { getNotationPreference, notationFor, setNotationPreference, type NotationPreference } from './notation';
+import { PROFILE_IDS, rendezvousAvailable, type RendezvousProfileId } from '../physics/rendezvous/profiles';
+import { PORT_IDS, type PortId } from '../physics/rendezvous/ports';
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
@@ -91,6 +93,8 @@ interface SetupState {
   recoveryPlan?: RecoveryPlan;
   /** the site's launch pad a prepared mission names; changing the vehicle or the site drops it */
   padId?: string;
+  /** a flight on to the station (G07); dropped when the orbit or the payload no longer allows one */
+  rendezvous?: MissionConfig['rendezvous'];
   payloadMass: number;
 }
 
@@ -450,6 +454,7 @@ export class SetupPanel {
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
       ...(s.padId ? { padId: s.padId } : {}),
+      ...(s.rendezvous ? { rendezvous: { ...s.rendezvous } } : {}),
       // the values above are already merged with the vehicle's own programme
       guidanceResolved: true,
       dynamics: s.dynamics ? { ...s.dynamics } : undefined,
@@ -475,6 +480,7 @@ export class SetupPanel {
       case 'selection': return t('setup.validation.selection');
       case 'suborbital': return t('setup.validation.suborbital');
       case 'failureUnavailable': return t('setup.validation.failureUnavailable');
+      case 'rendezvousUnavailable': return t('setup.validation.rendezvousUnavailable');
     }
   }
 
@@ -584,8 +590,9 @@ export class SetupPanel {
     Object.assign(this.state, mission);
     // a mission without a plan must not inherit the last one's
     this.state.recoveryPlan = mission.recoveryPlan ? structuredClone(mission.recoveryPlan) : undefined;
-    // nor its pad
+    // nor its pad, nor its flight to the station
     this.state.padId = mission.padId;
+    this.state.rendezvous = mission.rendezvous ? { ...mission.rendezvous } : undefined;
     this.state.dynamics = defaultDynamics(this.state.vehicleId);
     this.tuneMessage = '';
     this.applyExternalEdit();
@@ -782,6 +789,7 @@ export class SetupPanel {
    */
   render(): void {
     const s = this.state;
+    if (s.rendezvous && !this.rendezvousAvailable()) s.rendezvous = undefined;
     const root = this.root;
     const openDetails = new Map(Array.from(root.querySelectorAll<HTMLDetailsElement>('details[data-section]'), (details) => [details.dataset.section!, details.open]));
     const active = document.activeElement as HTMLElement | null;
@@ -925,6 +933,7 @@ export class SetupPanel {
     ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
     if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
     if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+    if (this.rendezvousAvailable()) s3.appendChild(this.rendezvousOption());
 
     const timeLab = this.el('label', 'field');
     timeLab.appendChild(this.el('span', undefined, t('setup.launchTime')));
@@ -1217,6 +1226,37 @@ export class SetupPanel {
     lab.append(cb, this.el('span', undefined, t('setup.suborbital')));
     box.appendChild(lab);
     if (s.orbit.suborbital) box.appendChild(this.el('p', 'field-note', t('setup.suborbitalNote')));
+    return box;
+  }
+
+  /** A flight on to the station: a Soyuz MS to the ISS orbit (the rule `validateConfigInput` states). */
+  private rendezvousAvailable(): boolean {
+    const s = this.state;
+    return rendezvousAvailable(s.vehicleId, s.satelliteId, s.orbit);
+  }
+
+  /**
+   * G07: fly on to the station after the insertion — which of the three
+   * rendezvous profiles, and to which of the Russian segment's ports.
+   */
+  private rendezvousOption(): HTMLElement {
+    const s = this.state;
+    const box = this.el('div', 'rendezvous-option');
+    box.appendChild(this.select('setup.rendezvous', [
+      { value: '', label: t('setup.rendezvous.none') },
+      ...PROFILE_IDS.map((id) => ({ value: id, label: t(`setup.rendezvous.${id}`) })),
+    ], s.rendezvous?.profile ?? '', (v) => {
+      s.rendezvous = v ? { profile: v as RendezvousProfileId, port: s.rendezvous?.port ?? 'rassvet' } : undefined;
+      this.render();
+      this.changed();
+    }));
+    if (s.rendezvous) {
+      box.appendChild(this.select('setup.rendezvousPort', PORT_IDS.map((id) => ({ value: id, label: t(`rv.port.${id}`) })), s.rendezvous.port ?? 'rassvet', (v) => {
+        if (s.rendezvous) s.rendezvous = { ...s.rendezvous, port: v as PortId };
+        this.changed();
+      }));
+      box.appendChild(this.el('p', 'field-note', t('setup.rendezvousNote')));
+    }
     return box;
   }
 

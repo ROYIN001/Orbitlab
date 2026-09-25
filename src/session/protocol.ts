@@ -8,6 +8,7 @@
  * mission plan when the plan changed. Everything here survives structured
  * clone; nothing carries a function or a class instance.
  */
+import type { ToruCommand } from '../physics/sim/rendezvous';
 import type { VisualFrame } from '../physics/frame';
 import type { MissionPlan } from '../physics/mission';
 import type { RigidCommand } from '../physics/rigid/telemetry';
@@ -27,7 +28,9 @@ export type ToCore =
   /** A live flight-control command, pinned into the recording as it is accepted. */
   | { type: 'command'; session: number; command: RigidCommand }
   /** Fire the escape system (roadmap G06), pinned into the recording as it is accepted. */
-  | { type: 'abort'; session: number };
+  | { type: 'abort'; session: number }
+  /** The TORU hand controllers (roadmap G07; null hands the approach back to Kurs), pinned into the recording as accepted. */
+  | { type: 'toru'; session: number; cmd: ToruCommand | null };
 
 /**
  * The part of a rotation telemetry record `AttitudeTrack.record` reads: the

@@ -135,6 +135,8 @@ export class TelemetryPanel {
    * rebuild without `Hud` having to be told one happened.
    */
   readonly dockHost: HTMLElement = el('div', 'telemetry-dock');
+  /** G07: where the rendezvous's relative-motion plot goes (built once, like `dockHost`) */
+  readonly rendezvousHost: HTMLElement = el('div', 'telemetry-rv');
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -169,6 +171,7 @@ export class TelemetryPanel {
     // has put it there. Empty (and collapsed by `:empty` in style.css) when the
     // card is floating over the picture.
     r.append(this.dockHost);
+    r.append(this.rendezvousHost);
     this.note = el('p', 'chart-note hidden');
     r.append(this.note);
     for (const id of CHART_IDS) {

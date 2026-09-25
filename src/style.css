@@ -768,6 +768,9 @@ details[open] summary { margin-bottom: 4px; }
   width: 100%; height: 118px; display: block;
   background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; margin: 10px 0 0;
 }
+/* G07: the relative-motion plot keeps equal scales, so it needs the height */
+.chart.rv-plot { height: 230px; }
+.telemetry-rv:empty { display: none; }
 h3.section {
   margin: 20px 0 8px; font: 600 11px var(--sans);
   letter-spacing: 1.4px; text-transform: uppercase; color: var(--accent);

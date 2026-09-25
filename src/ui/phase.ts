@@ -13,6 +13,7 @@ import type { DescentPhase, SimEvent } from '../physics/simulation';
 import type { EscapePhase } from '../physics/rigid/escape';
 import { RAD } from '../physics/constants';
 import { t } from '../i18n';
+import { rendezvousBurnName } from './names';
 
 export interface PlannedEvent {
   t: number;
@@ -81,7 +82,18 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       detailKey = 'phase.detail.burn';
       params.dv = frame.dvRemaining.toFixed(0);
       break;
+    case 'rendezvous':
+      rendezvousPhase(frame, params);
+      titleKey = `hud.rv.${frame.rendezvous?.phase ?? 'separation'}`;
+      detailKey = `phase.detail.rv.${frame.rendezvous?.phase ?? 'separation'}`;
+      break;
     case 'orbit':
+      if (frame.rendezvous && (frame.rendezvous.phase === 'docked' || frame.rendezvous.phase === 'aborted')) {
+        rendezvousPhase(frame, params);
+        titleKey = `hud.rv.${frame.rendezvous.phase}`;
+        detailKey = `phase.detail.rv.${frame.rendezvous.phase}`;
+        break;
+      }
       titleKey = 'hud.status.orbit';
       detailKey = frame.payloadSeparated ? 'phase.detail.deployed' : 'phase.detail.orbit';
       params.ap = fmtAlt(frame.elements.apoapsisAlt);
@@ -128,9 +140,45 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
     else { nextEvent = { t: e.t, key: e.key, params: e.params, planned: false }; break; }
   }
   if (!nextEvent && hasNextBurn(frame)) {
-    nextEvent = { t: frame.nextBurnTime, key: 'evt.burnStart', planned: true };
+    // a rendezvous names its next burn (the time is the burn's centre)
+    const next = frame.rendezvous?.burns.find((b) => !b.done);
+    nextEvent = next && frame.status === 'rendezvous'
+      ? { t: next.t, key: 'evt.rendezvousBurn', params: { burn: next.id, dv: next.dv }, planned: true }
+      : { t: frame.nextBurnTime, key: 'evt.burnStart', planned: true };
   }
   return { titleKey, detailKey, params, lastEvent, nextEvent };
+}
+
+/** A distance for the rendezvous narration: kilometres to 2 decimals from 1 km out, metres inside. */
+export function rendezvousRange(m: number): { range: string; unit: string } {
+  return m >= 1000 ? { range: (m / 1000).toFixed(m >= 100e3 ? 0 : 2), unit: t('rv.unit.km') } : { range: m.toFixed(0), unit: t('rv.unit.m') };
+}
+
+/** The parameters of a rendezvous's phase detail. */
+function rendezvousPhase(frame: VisualFrame, params: Record<string, string | number>): void {
+  const rv = frame.rendezvous;
+  if (!rv) return;
+  Object.assign(params, rendezvousRange(rv.range));
+  params.rate = rv.rangeRate.toFixed(2);
+  params.ap = fmtAlt(frame.elements.apoapsisAlt);
+  params.pe = fmtAlt(frame.elements.periapsisAlt);
+  const next = rv.burns.find((b) => !b.done);
+  params.tgo = next ? fmtDuration(next.t - frame.t) : '—';
+  const burn = rv.burn ? rv.burns.find((b) => b.id === rv.burn) : undefined;
+  params.burn = burn ? rendezvousBurnName(burn.id) : '';
+  params.dv = burn ? burn.dv.toFixed(1) : '0';
+  params.axial = rv.axial !== undefined ? Math.max(0, rv.axial).toFixed(1) : '—';
+  params.lateral = rv.lateral !== undefined ? rv.lateral.toFixed(2) : '—';
+  params.port = t(`rv.port.${rv.port}`);
+  if (rv.dockedAt !== undefined) params.hours = (rv.dockedAt / 3600).toFixed(2);
+}
+
+/** A span of time as h:mm:ss or m:ss. */
+function fmtDuration(s: number): string {
+  const x = Math.max(0, Math.round(s));
+  const h = Math.floor(x / 3600), m = Math.floor((x % 3600) / 60), sec = x % 60;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${p(m)}:${p(sec)}` : `${m}:${p(sec)}`;
 }
 
 /** A burn is scheduled and still ahead of this frame. */

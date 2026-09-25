@@ -75,6 +75,10 @@ export class SimCore {
           if (this.sim.commandAbort()) this.recorder.captureChangedState();
           this.report();
           break;
+        case 'toru':
+          if (this.sim.commandToru(message.cmd)) this.recorder.captureChangedState();
+          this.report();
+          break;
       }
     } catch (err) {
       this.fastForward = null;

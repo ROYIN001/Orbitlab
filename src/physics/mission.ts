@@ -5,6 +5,7 @@
 import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { satelliteById } from '../data/satellites';
+import { rendezvousAvailable } from './rendezvous/profiles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
@@ -513,6 +514,9 @@ export const ASCENT_MARGIN_REQUIRED = 150;
  * 94 × 94 km parking orbit, which is the same defect with a quieter symptom.
  */
 export const ORBIT_INSERTION_FLOOR = 140e3;
+
+/** The orbit Soyuz-2.1a puts a Soyuz MS or Progress MS into for the station: perigee and apogee, m (RussianSpaceWeb, Soyuz MS-17: 200 ± 2 × 242 ± 5 km). */
+export const RENDEZVOUS_INSERTION = { perigee: 200e3, apogee: 242e3 } as const;
 
 /**
  * Height a suborbital target's ascent is cut off at, m (or its apogee, if
@@ -1049,6 +1053,15 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
       insertionAltitude = hFinal;
       insertionApoapsis = haFinal;
     }
+  }
+  // A flight to the station (roadmap G07) is inserted where Soyuz MS and
+  // Progress MS are, 200 × 242 km with the cut-off near perigee: the
+  // spacecraft's own burns raise it to the station from there, and the
+  // rendezvous profiles are timed from that orbit (docs/PHYSICS.md §9.2).
+  if (cfg.rendezvous && rendezvousAvailable(cfg.vehicleId, cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
+    && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
+    insertionAltitude = RENDEZVOUS_INSERTION.perigee;
+    insertionApoapsis = RENDEZVOUS_INSERTION.apogee;
   }
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
   // A dogleg leaves on the corridor edge; the closed loop turns into the plane.

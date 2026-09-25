@@ -10,11 +10,16 @@ import { guidanceForVehicle } from '../physics/defaults';
 import { supportsRigid } from '../physics/rigid/config';
 import type { DynamicsConfig } from '../types';
 import { FLEX_LIMITS } from '../physics/rigid/flex';
+import { PROFILE_IDS, rendezvousAvailable } from '../physics/rendezvous/profiles';
+import { PORT_IDS } from '../physics/rendezvous/ports';
+import type { MissionConfig } from '../types';
 
 export interface NumberLimits { min?: number; max?: number; integer?: boolean }
 export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'integer' | 'date' | 'orbitOrder' | 'selection' | 'suborbital'
   /** a failure the vehicle cannot have: an abort without an escape system, a strap-on collision without strap-ons */
-  | 'failureUnavailable';
+  | 'failureUnavailable'
+  /** a rendezvous needs the station's orbit and a spacecraft with its own engine */
+  | 'rendezvousUnavailable';
 export interface ValidationIssue { field: string; code: ValidationCode; limit?: number }
 
 /** Bounds are in the stored SI/degree units; UI and WebMCP convert at the edge. */
@@ -109,6 +114,8 @@ export interface ConfigInput {
   recoveryPlan?: RecoveryPlan;
   /** the site's launch pad, when the mission names one (`SiteExtra.pads`) */
   padId?: string;
+  /** fly on to the station and dock (roadmap G07) */
+  rendezvous?: MissionConfig['rendezvous'];
 }
 
 /**
@@ -191,6 +198,11 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   if (state.padId !== undefined && !SITES.find((x) => x.id === state.siteId)?.pads?.some((p) => p.id === state.padId)) {
     issues.push({ field: 'setup.site', code: 'selection' });
   }
+  if (state.rendezvous !== undefined) {
+    const rv = state.rendezvous;
+    if (!rv || !PROFILE_IDS.includes(rv.profile) || (rv.port !== undefined && !PORT_IDS.includes(rv.port))) issues.push({ field: 'setup.rendezvous', code: 'selection' });
+    else if (!rendezvousAvailable(state.vehicleId, state.satelliteId, state.orbit)) issues.push({ field: 'setup.rendezvous', code: 'rendezvousUnavailable' });
+  }
   if (state.dynamics !== undefined) {
     const d = state.dynamics;
     if (!d || typeof d !== 'object' || Array.isArray(d)) issues.push({ field: 'setup.dynamics.model', code: 'selection' });
@@ -269,6 +281,7 @@ export function issueText(issue: ValidationIssue): string {
     case 'selection': return `${issue.field} is not a valid selection`;
     case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship)';
     case 'failureUnavailable': return 'This vehicle cannot have that failure: a launch abort needs a crewed Soyuz, a strap-on collision strap-ons, a stage separation failure a second stage';
+    case 'rendezvousUnavailable': return 'A flight to the station needs the crewed spacecraft on a Soyuz-2.1a and the ISS orbit';
   }
 }
 

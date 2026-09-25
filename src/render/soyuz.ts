@@ -399,3 +399,82 @@ export class CrewedTop {
     (this.flame.material as THREE.Material).dispose();
   }
 }
+
+// ------------------------------------------------------------------ Soyuz MS after separation (G07)
+
+/** The spacecraft's length, service module to the probe's tip, m. */
+export const SOYUZ_MS_LENGTH = 7.48;
+
+/**
+ * The Soyuz MS spacecraft as it flies free (roadmap G07): the service module
+ * with its two solar wings, the descent module's bell, the orbital module's
+ * sphere with the docking probe on top and the Kurs antennas on booms. Built
+ * along +Y from the service module's aft end, as a payload is; `setDeploy`
+ * unfolds the wings and the antennas over the first minute after separation.
+ */
+export function buildSoyuzMs(): { group: THREE.Group; height: number; setDeploy(p: number): void; dispose(): void } {
+  const g = new THREE.Group();
+  const mats: THREE.Material[] = [], geos: THREE.BufferGeometry[] = [];
+  const mat = (color: number, metal = 0.2, rough = 0.6, emissive = 0) => {
+    const m = new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough, emissive });
+    mats.push(m);
+    return m;
+  };
+  const green = mat(0x5b6457, 0.25, 0.7), olive = mat(0x7c7a66, 0.1, 0.85), grey = mat(0xa3a7ab, 0.5, 0.45);
+  const panel = mat(0x1b2a6b, 0.6, 0.25, 0x070c24), dark = mat(0x3c3f44, 0.4, 0.6);
+  const add = (geo: THREE.BufferGeometry, m: THREE.Material, y: number, parent: THREE.Object3D = g) => {
+    geos.push(geo);
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.position.y = y;
+    mesh.castShadow = true;
+    parent.add(mesh);
+    return mesh;
+  };
+  // service module: the aft skirt, the body, the radiator band
+  add(new THREE.CylinderGeometry(1.36, 1.36, 2.3, 32), green, 1.15);
+  add(new THREE.CylinderGeometry(1.36, 1.1, 0.4, 32), dark, 0.2);
+  add(new THREE.CylinderGeometry(1.1, 1.36, 0.3, 32), green, 2.45);
+  // the descent module's bell, heat shield down, and the orbital module's sphere
+  const bell = [[0, 0], [0.95, 0.02], [1.085, 0.15], [1.07, 0.6], [0.95, 1.2], [0.72, 1.8], [0.46, 2.1], [0.36, 2.24], [0, 2.24]]
+    .map(([r, y]) => new THREE.Vector2(r, y));
+  add(new THREE.LatheGeometry(bell, 32), olive, 2.6);
+  add(new THREE.SphereGeometry(1.1, 28, 18), olive, 6.0).scale.set(1, 1.08, 1);
+  // the docking probe and the hatch ring
+  add(new THREE.CylinderGeometry(0.62, 0.62, 0.12, 24), dark, 7.1);
+  add(new THREE.CylinderGeometry(0.05, 0.14, 0.42, 12), grey, 7.27);
+  // two solar wings on the service module, and the Kurs antenna booms on the orbital module
+  const wings: THREE.Group[] = [];
+  for (const s of [1, -1]) {
+    const hinge = new THREE.Group();
+    hinge.position.set(s * 1.36, 1.6, 0);
+    const w = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.03, 1.2), panel);
+    geos.push(w.geometry);
+    w.position.x = s * 2.2;
+    hinge.add(w);
+    g.add(hinge);
+    wings.push(hinge);
+  }
+  const booms: THREE.Group[] = [];
+  for (const [ax, az] of [[1, 0], [-1, 0], [0, 1]]) {
+    const hinge = new THREE.Group();
+    hinge.position.set(ax * 1.05, 6.4, az * 1.05);
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.4, 6), grey);
+    geos.push(rod.geometry);
+    rod.position.y = 0.7;
+    hinge.add(rod);
+    const dish = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.12, 12, 1, true), grey);
+    geos.push(dish.geometry);
+    dish.position.y = 1.45;
+    hinge.add(dish);
+    hinge.lookAt(ax * 3, 6.9, az * 3);
+    g.add(hinge);
+    booms.push(hinge);
+  }
+  const setDeploy = (p: number) => {
+    const k = smoothstep(0.1, 0.7, p);
+    for (const [i, w] of wings.entries()) w.rotation.z = (i === 0 ? 1 : -1) * (1 - k) * Math.PI / 2;
+    for (const b of booms) b.scale.setScalar(0.2 + 0.8 * smoothstep(0.4, 1, p));
+  };
+  setDeploy(0);
+  return { group: g, height: SOYUZ_MS_LENGTH, setDeploy, dispose: () => { for (const m of mats) m.dispose(); for (const x of geos) x.dispose(); } };
+}

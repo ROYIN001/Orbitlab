@@ -1,4 +1,5 @@
 /** Types shared by the simulation and everything that reads its state. */
+import type { RendezvousState } from './rendezvous';
 import type { RigidTelemetry } from '../rigid/telemetry';
 import type { EngineSpec } from '../../types';
 import type { Vec3 } from '../vec3';
@@ -28,7 +29,7 @@ export interface ReturnGuidanceMemory {
  * has come down on the surface, intact or not, and the clock runs on with it
  * sitting there. Neither is ever reached by a flight to orbit.
  */
-export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'descent' | 'abort' | 'landed' | 'failed';
+export type SimStatus = 'prelaunch' | 'ascent' | 'coast' | 'burn' | 'orbit' | 'descent' | 'abort' | 'rendezvous' | 'landed' | 'failed';
 
 /**
  * Where a returning ship is in its descent: coasting above the air, entering
@@ -204,6 +205,8 @@ export interface SimState {
   descentPhase?: DescentPhase | null;
   /** a launch abort (roadmap G06): the escape's progress, from the command to the descent module at rest */
   abort?: AbortState;
+  /** a rendezvous with the station (roadmap G07), from the spacecraft's separation to the hooks closed */
+  rendezvous?: RendezvousState;
 }
 
 /** A launch abort as the frame carries it (src/physics/sim/abort.ts). */

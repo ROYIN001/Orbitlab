@@ -15,7 +15,7 @@ import type { SimEvent } from '../physics/simulation';
 import { vehicleById } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat } from './watch-logic';
+import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
 import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
 
 export interface WatchHost {
@@ -84,7 +84,7 @@ export class WatchView {
   private beat: WatchBeat | null = null;
   private lastFrame: VisualFrame | null = null;
   /** the frame the end card was written for, so a language change rewrites the same card */
-  private endFrame: { frame: VisualFrame; ending: 'orbit' | 'splashdown' | 'crewSafe' | 'failed' } | null = null;
+  private endFrame: { frame: VisualFrame; ending: WatchEnding } | null = null;
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
@@ -301,7 +301,7 @@ export class WatchView {
     this.playBtn.setAttribute('aria-label', title);
   }
 
-  private showEnd(frame: VisualFrame, ending: 'orbit' | 'splashdown' | 'crewSafe' | 'failed'): void {
+  private showEnd(frame: VisualFrame, ending: WatchEnding): void {
     const success = ending !== 'failed';
     this.endFrame = { frame, ending };
     if (!this.picker.hidden) return;
@@ -309,7 +309,7 @@ export class WatchView {
     card.replaceChildren();
     card.classList.toggle('failed', !success);
     const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
-      : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : 'watch.fail.title'));
+      : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle' : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
@@ -319,6 +319,14 @@ export class WatchView {
       card.append(el('p', undefined, t('watch.end.crewSafeText', {
         km: num(frame.downrange / 1000), g: num(frame.abort?.maxG ?? 0), time: fmtClock(since).replace(/^T\+/, ''),
       })));
+    } else if (ending === 'docked') {
+      // G07: at the station
+      const rv = frame.rendezvous!;
+      const since = (rv.contact?.t ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
+      card.append(el('p', undefined, t('watch.end.dockedText', {
+        port: t(`rv.port.${rv.port}`), time: fmtClock(since).replace(/^T\+/, ''), burns: num(rv.burns.length),
+      })));
+      card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
     } else if (ending === 'splashdown') {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
       card.append(el('p', undefined, t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));

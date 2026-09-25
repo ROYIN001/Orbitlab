@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-09-24. This file states the current position only; how it was reached is in the
+Updated 2026-09-25. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -72,6 +72,19 @@ throughout.
   condensation collar forms at the fairing's shoulder (a ship's, on Starship), strong at humid
   coastal sites and faint over the steppe. Watch names the speed of sound and a solid booster's
   separation. Drawing only; the physics is unchanged.
+- **A flight to the station** (roadmap G07, [PHYSICS.md §9.2](PHYSICS.md)): a Soyuz MS (the
+  crewed spacecraft on a Soyuz-2.1a) launched to the ISS orbit can fly on to the station and dock — the two-orbit
+  (about 3 h, as Soyuz MS-28), four-orbit (about 6 h, as TMA-19M) or two-day (as MS-01)
+  profile, to Rassvet, Poisk, Prichal or Zvezda's aft port. The ascent inserts at 200 × 242 km;
+  the station is phased to the plan as flight control phases it; the phasing burns are the
+  flights' own, the transfer and the braking are solved on the J2 coast, and Kurs flies the
+  approach, flyaround, stationkeeping and final approach in six degrees of freedom to a contact
+  judged against the docking system's limits. Docking comes at 3:13 (MS-28: 3:10), 6:22
+  (TMA-19M: 6:21) and 2 d 02:37 (MS-01: 2 d 02:35). The ISS is drawn with its ports and their
+  docking targets; the exterior camera keeps the station in the picture near it, the onboard
+  view becomes the Soyuz's docking TV camera, and the telemetry panel plots the motion in the
+  station's LVLH frame. In the Engineer mode TORU takes the approach over by hand. Watch has
+  "Soyuz MS: at the station in 3 hours".
 - **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
   buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
   R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
@@ -165,7 +178,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | done |
-| Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | |
+| Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
 | P05 slosh, bending and notch filter | done | C01 historical missions | |
 | U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | | | |

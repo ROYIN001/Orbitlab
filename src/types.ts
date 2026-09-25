@@ -337,6 +337,12 @@ export interface MissionConfig {
   /** Extra payload mass added by the user, kg */
   payloadMassOverride?: number;
   /**
+   * Fly on to the station and dock (roadmap G07): the profile, the Russian
+   * port, and whether the Engineer mode may take the final approach by hand.
+   * Only read for a spacecraft with its own propulsion to the ISS orbit.
+   */
+  rendezvous?: { profile: import('./physics/rendezvous/profiles').RendezvousProfileId; port?: import('./physics/rendezvous/ports').PortId };
+  /**
    * The site's launch pad the mission is drawn on (`SiteExtra.pads`), when it
    * names one; absent, the site's first. The physics does not read it.
    */

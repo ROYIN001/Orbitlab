@@ -17,6 +17,7 @@
  * thread flew them (tests/session.test.ts holds the worker path's mirror to the
  * in-process recording frame for frame).
  */
+import type { ToruCommand } from '../physics/sim/rendezvous';
 import { Simulation } from '../physics/simulation';
 import { validateRigidCommand } from '../physics/rigid/runtime';
 import type { RigidCommand } from '../physics/rigid/telemetry';
@@ -46,6 +47,8 @@ export interface FlightSession {
   setRigidCommand(command: RigidCommand): void;
   /** Fire a crewed launch's escape system now (roadmap G06); nothing when there is none to fire. */
   commandAbort(): void;
+  /** The TORU hand controllers during a rendezvous's approach (G07); null hands it back to Kurs. */
+  commandToru(cmd: ToruCommand | null): void;
   dispose(): void;
 }
 
@@ -94,6 +97,9 @@ export class InlineSession implements FlightSession {
   }
   commandAbort(): void {
     if (this.sim.commandAbort()) this.recorder.captureChangedState();
+  }
+  commandToru(cmd: ToruCommand | null): void {
+    if (this.sim.commandToru(cmd)) this.recorder.captureChangedState();
   }
   dispose(): void {
     this.target = null;
@@ -205,6 +211,10 @@ export class WorkerSession implements FlightSession {
   commandAbort(): void {
     // the worker's flight decides whether there is an escape to fire
     this.post({ type: 'abort', session: this.session });
+  }
+  commandToru(cmd: ToruCommand | null): void {
+    // and whether there is an approach to take over
+    this.post({ type: 'toru', session: this.session, cmd: cmd ? { translate: { ...cmd.translate }, rotate: { ...cmd.rotate } } : null });
   }
   dispose(): void {
     if (this.disposed) return;

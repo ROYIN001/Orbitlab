@@ -79,6 +79,12 @@ export const stageName = (vehicleId: string, stageId: string, fallback: string):
  * enum id — and is translated here through the same `tel.burn.*` labels the
  * flight-plan list uses.
  */
+/** A rendezvous burn's name ('dv2' → "Burn 2", 'brake' → "Braking"). */
+export function rendezvousBurnName(id: string): string {
+  const n = /^dv(\d)$/.exec(id);
+  return n ? t('rv.burn.n', { n: n[1] }) : localized(`rv.burn.${id}`, id);
+}
+
 export function localizeEventParams(
   vehicle: VehicleSpec | null,
   params?: Record<string, string | number>,
@@ -97,15 +103,23 @@ export function localizeEventParams(
   const commandMode = params.mode === 'auto' || params.mode === 'manual' ? localized(`control.mode.${params.mode}`, params.mode) : null;
   // G06: which way out a launch abort took
   const abortMode = params.mode === 'tower' || params.mode === 'fairing' || params.mode === 'separation' ? localized(`abort.mode.${params.mode}`, params.mode) : null;
+  // G07: a rendezvous's burn, profile and port are ids
+  const burn = typeof params.burn === 'string' ? rendezvousBurnName(params.burn) : null;
+  const profile = typeof params.profile === 'string' ? localized(`rv.profile.${params.profile}`, params.profile) : null;
+  const port = typeof params.port === 'string' ? localized(`rv.port.${params.port}`, params.port) : null;
   const envelopeScope = params.scope === 'vehicle' ? t('aero.scope.vehicle') : params.scope === 'debris' ? t('aero.scope.debris') : null;
   if ((stage === null || stage === params.stage)
     && (name === null || name === params.name)
-    && (kind === null || kind === params.kind) && commandMode === null && abortMode === null && envelopeScope === null) return params;
+    && (kind === null || kind === params.kind) && commandMode === null && abortMode === null && envelopeScope === null
+    && burn === null && profile === null && port === null) return params;
   const out = { ...params };
   if (stage !== null) out.stage = stage;
   if (name !== null) out.name = name;
   if (kind !== null) out.kind = kind;
   if (abortMode !== null) out.mode = abortMode;
+  if (burn !== null) out.burn = burn;
+  if (profile !== null) out.profile = profile;
+  if (port !== null) out.port = port;
   if (envelopeScope !== null) {
     out.scope = envelopeScope;
     // U07: α and β in the standard's body axes, from the simulator's own pair.

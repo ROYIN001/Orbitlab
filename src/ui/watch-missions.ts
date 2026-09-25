@@ -17,10 +17,10 @@ import { orbitById } from '../data/orbits';
 import { siteById } from '../data/sites';
 import { DEFAULT_FAILURE } from '../physics/defaults';
 import { launchWindows } from '../physics/mission';
-import type { FailureConfig, OrbitSpec, RecoveryPlan } from '../types';
+import type { FailureConfig, MissionConfig, OrbitSpec, RecoveryPlan } from '../types';
 
 export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
-  | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a';
+  | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -46,6 +46,8 @@ export interface WatchMission {
   failure?: FailureConfig;
   /** the pad it flew from, when not the site's first (`SiteExtra.pads`) */
   padId?: string;
+  /** the flight on to the station (G07) */
+  rendezvous?: MissionConfig['rendezvous'];
 }
 
 /**
@@ -107,6 +109,11 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   { id: 'soyuz18a', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150, padId: 'site1',
     failure: { mode: 'stagingFailure', time: 0, stage: 0 },
     titleKey: 'watch.mission.soyuz18a', blurbKey: 'watch.mission.soyuz18aBlurb', payloadKey: 'watch.payload.soyuz18a' },
+  // G07: Soyuz MS-28, 27 November 2025, from Site 31/6 — the two-orbit
+  // profile, docked at Rassvet 3 h 10 min after liftoff.
+  { id: 'soyuzMsDocking', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
+    rendezvous: { profile: 'twoOrbit', port: 'rassvet' },
+    titleKey: 'watch.mission.soyuzMsDocking', blurbKey: 'watch.mission.soyuzMsDockingBlurb', payloadKey: 'watch.payload.soyuzMsDocking' },
 ];
 
 /** The launch the home page's big button plays. */
@@ -170,6 +177,7 @@ export function watchMissionSettings(id: WatchMissionId, from: Date = new Date()
     guidanceOverrides: {}, failure: { ...(m.failure ?? DEFAULT_FAILURE) },
     boosterRecovery: !!m.recoveryPlan, recoveryPlan: m.recoveryPlan,
     ...(m.padId ? { padId: m.padId } : {}),
+    ...(m.rendezvous ? { rendezvous: { ...m.rendezvous } } : {}),
   };
   assertConfigInput(settings);
   return settings;

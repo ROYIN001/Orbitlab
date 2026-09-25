@@ -34,7 +34,7 @@ import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH } from './physics/constants';
-import { normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
+import { add, normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
@@ -43,6 +43,12 @@ import { registerMcpTools } from './mcp';
 import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
 import { EscapeView } from './render/escape';
+import { StationView } from './render/station';
+import { PORTS, TARGET_OFFSET, targetOffset } from './physics/rendezvous/ports';
+import { SPACECRAFT } from './physics/rendezvous/profiles';
+import type { RendezvousState } from './physics/sim/rendezvous';
+import { RendezvousPlot } from './ui/rendezvous-plot';
+import { ToruControls } from './ui/toru-controls';
 import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
@@ -119,6 +125,8 @@ const WATCH_CAMERA_PLAN: CameraPlan = { ...DEFAULT_CAMERA_PLAN, upper: 'exterior
 /** Mission time the viewer stays on a stage flown home after it is down, s. */
 const WATCH_FOCUS_HOLD = 10;
 
+/** G07: within this of the station the cameras frame it with the spacecraft, m. */
+const NEAR_STATION = 6000;
 const WARPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000];
 /**
  * When the predicted-orbit line is a trajectory rather than an artefact.
@@ -155,6 +163,8 @@ class App {
   tel: TelemetryPanel;
   result: MissionResult;
   rigidControls: RigidControls;
+  /** G07: the TORU hand controllers */
+  toruControls!: ToruControls;
   map: OrbitalMap;
   onboard: OnboardOverlay;
   timeline: Timeline;
@@ -198,6 +208,13 @@ class App {
   frames = new FramesView(frameSymbols);
   /** G06: the escaping head section or descent module */
   private escapeView: EscapeView | null = null;
+  /** G07: the station a rendezvous flies to */
+  private stationView: StationView | null = null;
+  private dockingEyePos = new THREE.Vector3();
+  /** the 3-D picture is the docking TV camera's (drawn black and white) */
+  private tvPicture = false;
+  /** G07: the relative motion in the station's frame, in the telemetry panel */
+  private rendezvousPlot = new RendezvousPlot();
   private framesMenu!: FramesMenu;
   /** the live simulation is advancing */
   playing = false;
@@ -279,6 +296,9 @@ class App {
   constructor() {
     new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
+    this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
+      if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
+    });
     this.rigidControls = new RigidControls(document.getElementById('rigid-controls')!, command => {
       if (!this.session || !this.player.live) return;
       this.session.setRigidCommand(command);
@@ -291,6 +311,7 @@ class App {
     // The telemetry panel first: it owns the slot the instrument card docks
     // into, and `Hud` reads its stored placement in its own constructor.
     this.tel = new TelemetryPanel(document.getElementById('telemetry')!);
+    this.tel.rendezvousHost.append(this.rendezvousPlot.canvas);
     this.hud = new Hud(document.getElementById('hud')!, document.getElementById('ticker')!, this.tel.dockHost);
     this.map = new OrbitalMap(this.mapCanvas, `${base}textures/earth_atmos_2048.jpg`);
     this.onboard = new OnboardOverlay(this.obCanvas);
@@ -641,6 +662,7 @@ class App {
     if (meta) meta.setAttribute('content', t('app.subtitle'));
     this.panel.render();
     this.tel.build();
+    this.toruControls.render();
     this.hud.applyLabels();
     this.narration.applyLanguage();
     this.timeline.applyStaticText();
@@ -789,6 +811,7 @@ class App {
     try {
       session = this.createSession(cfg);
       this.rigidControls.reset();
+      this.toruControls.reset();
     } catch (err) {
       console.error(err);
       return;
@@ -886,6 +909,15 @@ class App {
       this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
       this.scene.scene.add(this.escapeView.group);
     }
+    if (this.stationView) {
+      this.scene.scene.remove(this.stationView.group);
+      this.stationView.dispose();
+      this.stationView = null;
+    }
+    if (sim.rendezvous.enabled) {
+      this.stationView = new StationView();
+      this.scene.scene.add(this.stationView.group);
+    }
     // V05: the pad the mission names, its launch table turned to the launch azimuth
     this.pad = new LaunchPadView(sim.site, sim.vehicleSpec, { padId: sim.cfg.padId, azimuth: sim.plan.azimuthRotating, dynamics: sim.cfg.dynamics });
     this.scene.scene.add(this.pad.group);
@@ -920,6 +952,7 @@ class App {
     this.tel.reset();
     this.result.clear();
     this.rigidControls.reset();
+    this.toruControls.reset();
     this.tel.setExportSource(sim);
     this.explosion.clear();
     // Pay this mission's shader compiles now, while the vehicle is sitting on
@@ -1071,13 +1104,29 @@ class App {
     if (this.simView && this.telTimer > 0.5 && !this.lean) {
       this.telTimer = 0;
       this.tel.update(this.simView.sim, this.player.cursor);
+      this.rendezvousPlot.update(this.recorder.frames, this.shown);
       this.result.update(this.simView.sim);
-      this.rigidControls.update(this.shown?.rigid, this.player.live);
+      // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
+      this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
+      this.toruControls.update(this.shown, this.player.live, this.mode === 'engineer');
     }
     requestAnimationFrame((n) => this.frame(n));
   }
 
   /** Keep the trail consistent with the cursor: extend forward, rebuild on a rewind. */
+  /**
+   * G07: the docking TV camera — beside the probe's tip, offset toward the
+   * port's target as far as the target stands from the port, looking along the
+   * docking axis, with the target's side up.
+   */
+  private dockingEye(frame: VisualFrame, rv: RendezvousState): { pos: THREE.Vector3; dir: Vec3; up: Vec3 } {
+    const q = rv.station.q;
+    const o = targetOffset(PORTS[rv.port]);
+    const side = normalize(quatRotate(q, o));
+    const at = add(scale(frame.dir, SPACECRAFT.probe + 0.2), scale(side, TARGET_OFFSET));
+    return { pos: this.dockingEyePos.set(this.vehiclePos.x + at.x, this.vehiclePos.y + at.y, this.vehiclePos.z + at.z), dir: frame.dir, up: side };
+  }
+
   private syncTrail(cursor: number, live: boolean, liveFrame: VisualFrame): void {
     const frames = this.recorder.frames;
     if (frames.length === 0) return;
@@ -1307,6 +1356,14 @@ class App {
     this.trails?.update(this.recorder.frames, frame.t, (p, out) => scene.toScene(p, out), night);
     // G06: after an abort the frame is the escaping body; the rocket it left is debris
     if (frame.abort) this.rocket.group.visible = false;
+    if (this.stationView) {
+      const rv = frame.rendezvous;
+      this.stationView.group.visible = !!rv;
+      if (rv) {
+        scene.toScene(rv.station.r, this.stationView.group.position);
+        this.stationView.group.quaternion.set(rv.station.q.x, rv.station.q.y, rv.station.q.z, rv.station.q.w);
+      }
+    }
     if (this.escapeView) {
       this.escapeView.group.position.copy(this.rocket.group.position);
       this.escapeView.group.quaternion.copy(this.rocket.group.quaternion);
@@ -1328,6 +1385,13 @@ class App {
     // camera
     const radius = frame.abort ? Math.min(2, height / 4) : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
+    // G07: close to the station the exterior view keeps it in the picture, and the onboard view is the docking TV camera;
+    // the flight-path lines, kilometres long through the middle of that picture, stand aside
+    const rv = frame.rendezvous;
+    const nearStation = !!rv && !!this.stationView && rv.range < NEAR_STATION && rv.phase !== 'coast' && rv.phase !== 'burn' && rv.phase !== 'separation';
+    const docking = !!rv && nearStation && (rv.phase === 'approach' || rv.phase === 'flyaround' || rv.phase === 'stationkeeping' || rv.phase === 'final' || rv.phase === 'retreat');
+    this.trail.line.visible = !nearStation;
+    this.predicted.setHidden(nearStation);
     if (focus) {
       // A stage flown home: framed on its own axis, over its own ground.
       const f = enuFrame(focus.r);
@@ -1350,6 +1414,8 @@ class App {
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
         vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
         t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
+        ...(nearStation ? { partner: this.stationView!.group.position } : {}),
+        ...(docking && rv ? { dockingEye: this.dockingEye(frame, rv) } : {}),
       }, dt, R_EARTH);
     }
     // E01: the frames, where the camera looks at the vehicle from outside it
@@ -1372,7 +1438,11 @@ class App {
       this.map.draw(view.sim, sim.site.latitude, sim.site.longitude, Math.max(0, this.sbHeight));
     } else {
       scene.render();
-      if (this.camMode === 'onboard') this.onboard.draw(view.sim, !!sim.satellite.crewed, Math.max(0, this.sbHeight));
+      // the Soyuz's TV camera sends a black-and-white picture
+      const tv = this.camMode === 'onboard' && docking && !!rv;
+      if (tv !== this.tvPicture) { this.tvPicture = tv; this.glCanvas.style.filter = tv ? 'grayscale(1) contrast(1.12)' : ''; }
+      if (this.camMode === 'onboard' && docking && rv) this.onboard.drawDocking(rv, Math.max(0, this.sbHeight));
+      else if (this.camMode === 'onboard') this.onboard.draw(view.sim, !!sim.satellite.crewed, Math.max(0, this.sbHeight));
     }
   }
 }

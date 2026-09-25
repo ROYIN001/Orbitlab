@@ -272,6 +272,15 @@ export class AscentMonitor {
 
   finishAscent(el: OrbitalElements): void {
     const s = this.sim.state;
+    // G07: a flight to the station hands over to the rendezvous at the cut-off
+    if (this.sim.rendezvous.enabled && el.periapsisAlt >= ORBIT_INSERTION_FLOOR - 3e3) {
+      this.sim.event('evt.parkingOrbit', 'success', {
+        ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
+        dv: Math.round(this.sim.vehicle.deltaVRemaining()),
+      });
+      this.sim.rendezvous.onInsertion();
+      return;
+    }
     // Nothing under the insertion floor is a parking orbit (the same rule the
     // circularise branch of `checkBurn` states), less the 3 km the cut-off
     // gate in `checkAscent` allows under it. A last stage that burns out with
