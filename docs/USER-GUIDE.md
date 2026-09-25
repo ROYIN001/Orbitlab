@@ -417,7 +417,11 @@ by the ascent on the orbit actually reached. The CSV adds `guide_*` columns and
 
 The *Monte Carlo: insertion accuracy (G05)* section opens a window that flies the mission in the
 setup panel many times — always in six-DOF — each run with its own vehicle and air, to the end
-of the powered ascent, and shows how accurately the ascent inserts.
+of the mission, and shows how accurately the payload is put into orbit. The orbit is read at
+two points, switched above the table: **at the end of the mission**, after every planned burn,
+against the target orbit; and **at the ascent's cut-off**, against the insertion the mission
+plans — the ascent guidance's own accuracy (a mission whose upper stage finishes the insertion
+later, like Electron's, cuts off short of it on purpose).
 
 **Settings.** *Runs* (20–2000, 200 by default) and a *Seed*: the same seed draws the same numbers,
 whatever is switched off and whichever guidance flies, so two sets can be compared run by run.
@@ -430,11 +434,13 @@ mission's (with a new phase of its gusts), and — when the mission flies the in
 planned on the nominal vehicle; the dispersed one flies.
 
 **Running.** *Start* spreads the runs over the computer's cores (all but one, at most 16); a
-six-DOF run takes tens of seconds, so 200 runs take a quarter of an hour to an hour or two. The
+six-DOF run takes about a minute (longer for a mission that coasts to a higher orbit), so 200
+runs take from about half an hour to a few hours. The
 results fill in as the runs land, and *Stop* ends the set with what it has.
 
-**Results.** The table gives, per guidance law, the runs in orbit, and the perigee, apogee,
-inclination and Δv left at cut-off as mean ± 3σ, with the bias from the planned insertion. The
+**Results.** The table gives, per guidance law, the runs in orbit and on target, and the perigee,
+apogee, inclination and Δv left at the chosen point as mean ± 3σ, with the bias from the target
+(or the planned insertion). The
 chart plots each run's perigee against its apogee, with each law's 3σ ellipse and the planned
 insertion; hovering a point shows the run. Histograms show the spread of each element for the
 law chosen above them, with the planned value marked. **What drives the spread** regresses each

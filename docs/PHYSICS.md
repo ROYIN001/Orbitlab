@@ -775,10 +775,15 @@ tests/heavy/explicit-fleet-*.test.ts):
 
 A tool, not a flight option: nothing in a single flight changes. The Engineer mode's
 *Monte Carlo* window (and WebMCP's `run_monte_carlo`) flies the mission in the setup panel many
-times in six-DOF (src/physics/monte-carlo.ts), each run to the end of its powered ascent — the
-first moment it is neither on the pad nor in the ascent and its engines' tail-off is over — and
-reads the orbit it is left in: perigee, apogee, inclination (osculating, as the ascent's own
-cut-off judges them) and the Δv the stack has left.
+times in six-DOF (src/physics/monte-carlo.ts), each run to the end of its mission — its target
+orbit, after every planned burn — and reads its orbit (perigee, apogee, inclination, and the Δv
+the stack has left) at two points: **at the end of the mission**, against the target orbit, as
+the apsides the next revolution flies under J2 (the fleet acceptance's measure, §2a) — the orbit
+the payload is delivered to; and **at the ascent's cut-off**, the first moment the vehicle is
+neither on the pad nor in the ascent and its engines' tail-off is over, against the insertion the
+mission plans, osculating as the ascent's own cut-off judges it — the ascent guidance's own
+accuracy. A mission whose upper stage finishes the insertion later (Electron's kick stage) cuts
+off short of it on purpose; only the first point says whether it got there.
 
 **The dispersions** (src/physics/dispersion.ts). Per stage and per strap-on group (a group's
 boosters share their draw): thrust, specific impulse, propellant loaded, dry mass; for the run:
@@ -805,8 +810,10 @@ point-mass drag); the wind changes the six-DOF scenario. With nothing dispersed,
 nominal one bit for bit (tests/monte-carlo.test.ts), and so is one with the attitude-loop and
 equation records off, which a run flies without.
 
-**What is read.** Per law, over the runs in orbit (periapsis at or above the insertion floor
-less 3 km): mean, σ, extremes and bias from the planned insertion of each element; the 3σ
+**What is read.** Per law: the runs in orbit at the end (periapsis at or above the insertion
+floor less 3 km), those whose mission reached its target orbit, those lost and why; and at each
+point, over the runs read there (in orbit at the end; through the cut-off at the other), the
+mean, σ, extremes and bias of each element; the 3σ
 ellipse of (perigee, apogee) from their sample covariance (the eigenvectors, √λ scaled by 3);
 the runs lost (the vehicle broken up, or short of orbit) and why. **Which dispersion drives
 it**: each element is regressed, by least squares with an intercept, on the numbers the
@@ -817,8 +824,9 @@ The shares are shown only with three runs per number drawn.
 
 **The runs** fly in a pool of Web Workers (all the machine's cores but one, at most 16), every
 law flying run k before any flies run k + 1, so a set stopped early still compares like with
-like; a run the physics throws on is a lost run, not a lost set. A six-DOF run takes 30–55 s of
-one core here (Falcon 9 about 40 s).
+like; a run the physics throws on is a lost run, not a lost set. A six-DOF run takes about a
+minute of one core here to a LEO target (Falcon 9 64 s, 41 of them to the cut-off; Soyuz-2.1b
+84 s), longer when the target is reached by a Hohmann transfer (Electron to 500 km, 2–3 min).
 
 **What it finds**: the heavy sets (tests/heavy/monte-carlo-*.test.ts) are recorded in docs/history/PARALLEL-GNC-2026-09.md, G05, when they have run.
 

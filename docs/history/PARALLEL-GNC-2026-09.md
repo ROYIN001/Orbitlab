@@ -613,8 +613,11 @@ Physics, method and findings in [../PHYSICS.md](../PHYSICS.md) §2k, use in
   one order, clipped at ±3σ. `Simulation`'s `dispersion` option flies the dispersed vehicle
   (`dispersedVehicle`) and air (`RigidRuntimeOptions.air`, the density factor in the step and the
   point-mass drag) on the nominal plan; absent, nothing changes.
-- **The set** (`src/physics/monte-carlo.ts`): `flyRun` flies a run in six-DOF to the end of the
-  powered ascent, without the attitude-loop and equation records; `summarizeMonteCarlo` gives per
+- **The set** (`src/physics/monte-carlo.ts`): `flyRun` flies a run in six-DOF to the end of its
+  mission, without the attitude-loop and equation records, and reads its orbit there (against
+  the target, the apsides under J2) and at the ascent's cut-off (against the planned insertion) —
+  the second point added after an Electron set, whose ascent cuts off short for its kick stage,
+  came back with no run in orbit; `summarizeMonteCarlo` gives per
   law the statistics, the 3σ perigee–apogee ellipse, the runs lost and why, and the regression
   shares; `monteCarloCsv` every run. `MonteCarloJob` (`monte-carlo-job.ts`) flies a set in a pool
   of workers (`monte-carlo.worker.ts`), all the laws on run k before run k + 1.
