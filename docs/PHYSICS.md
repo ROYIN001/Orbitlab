@@ -852,7 +852,56 @@ like; a run the physics throws on is a lost run, not a lost set. A six-DOF run t
 minute of one core here to a LEO target (Falcon 9 64 s, 41 of them to the cut-off; Soyuz-2.1b
 84 s), longer when the target is reached by a Hohmann transfer (Electron to 500 km, 2–3 min).
 
-**What it finds**: the heavy sets (tests/heavy/monte-carlo-*.test.ts) are recorded in docs/history/PARALLEL-GNC-2026-09.md, G05, when they have run.
+**What it finds** (tests/heavy/monte-carlo-*.test.ts, seed 1: each vehicle's reference mission to
+a 500 × 500 km orbit, six-DOF in crosswind, the minimal set; the whole record in
+docs/history/PARALLEL-GNC-2026-09.md, G05). The runs that reached their target orbit, ± 3σ (bias):
+
+| Set | In orbit | On target | Lost | Perigee, km | Apogee, km | Inclination, ° |
+|---|---|---|---|---|---|---|
+| Falcon 9, standard, 40 runs | 36 | 33 | 4 | 499.78 ± 1.11 (−0.22) | 501.37 ± 0.84 (+1.37) | 28.6138 ± 0.0006 (+0.0018) |
+| Falcon 9, PEG, 40 | 36 | 33 | 4 | 499.80 ± 1.10 (−0.20) | 501.53 ± 0.83 (+1.53) | 28.6156 ± 0.0009 (+0.0036) |
+| Falcon 9, IGM, 40 | 36 | 33 | 4 | 499.89 ± 1.07 (−0.11) | 501.44 ± 0.81 (+1.44) | 28.6133 ± 0.0001 (+0.0013) |
+| Falcon 9, PEG, tactical navigation, 20 | 20 | 19 | 0 | 499.76 ± 0.91 (−0.24) | 501.39 ± 0.60 (+1.39) | 28.6155 ± 0.0013 (+0.0035) |
+| Soyuz-2.1b, standard, 30 | 24 | 24 | 6 | 494.79 ± 5.18 (−5.21) | 505.20 ± 5.20 (+5.20) | 51.6033 ± 0.0114 (+0.0033) |
+
+Delivered, the orbit is good to a kilometre or so on Falcon 9 and five on Soyuz, whatever the
+law; the three laws lose and miss the same runs: the losses come before an explicit law engages
+(on Falcon 9 at T+135 s, §2j), and the runs that miss are already in the wrong plane at the
+cut-off, whichever law flew the ascent. At the cut-off (the planned 200 × 500 km insertion)
+Falcon 9 reaches 200.00 ± 0.00 × 497.86 ± 1.31 km
+on the standard guidance (it cuts off on the perigee), 199.36 ± 0.64 × 497.62 ± 1.11 on PEG,
+200.01 ± 0.02 × 497.82 ± 1.27 on IGM; Soyuz 195.86 ± 16.30 × 497.06 ± 0.07. What drives the
+cut-off's apogee is the propellant and the thrust (standard 24 % and 14 %, IGM 34 % and 40 %);
+its perigee on PEG and IGM, the wind and the Isp (the standard guidance cuts off on it); the
+inclination's spread over all the runs in orbit (± 0.47°)
+is the wind's (46 %), through the runs that stayed in the wrong plane.
+
+**What it found wrong** — the runs not on target, the known issues of the G05 record:
+
+1. *Falcon 9 breaks up on dynamic pressure* past its placard (46 kPa, 1.15 × 40 kPa) at T+68–88 s,
+   in 4 runs of 40 on every law (runs 21, 23, 25, 34; the three examined with a dispersed wind of
+   +6.7 to +9.6 m/s to the east). The load relief does not hold them under it.
+2. *Soyuz-2.1b breaks up on q·α* (the 300 kPa·° of Q0) at T+34–62 s in 3 of 30 (runs 1, 20, 23;
+   +6 to +13 m/s to the east, α 8–17°).
+3. *Soyuz-2.1b runs out of propellant* in 3 of 30 (runs 12, 16, 25): run 12's third stage burns on
+   after the core's cut-off to its last propellant at T+1493 s, on a path of 6400 km apogee and
+   a perigee inside the Earth — the ascent never cuts off. Not yet understood.
+4. *Falcon 9 stays in the wrong plane* in 3 of 40 on every law (runs 13, 35, 36; 1 of 20 with
+   the navigation): in orbit at 29.1–29.3° against 28.61°, a plane they were in already at the
+   ascent's cut-off, most still in the 200 × 500 km parking orbit; run 13 (a wind of −14.5 m/s to
+   the north) timed out aligning for its burn (`evt.burnAlignmentTimeout`, then
+   `evt.offTargetOrbit`). Not yet understood.
+5. *With a tactical or MEMS navigation every flight missed its target*: the gyro noise had spent
+   the second stage's gas before orbit. Fixed by the jets' rate deadband (§2h); the set now
+   reaches its target 19 times in 20.
+6. *Electron* (a probe of 3 runs, not a heavy set): one run's second stage cut off with no burn
+   prediction (`evt.burnPredictionUnavailable`, a wind of −14.6 m/s to the east) and the flight
+   ended suborbital, its kick stage unlit.
+
+The heavy sets hold the tool to account (every run counted, every loss named by the failure
+that caused it) and the flights to what they did when recorded (no more runs lost, no fewer on
+target, the runs on target within bands); the losses themselves are left for the owner to
+decide on.
 
 ## 3. Atmosphere and aerodynamics
 

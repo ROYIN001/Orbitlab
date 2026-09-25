@@ -450,7 +450,9 @@ runs per number drawn). Runs lost — broken up, or short of orbit — are count
 *Download CSV* writes every run: its orbit, how it ended, and what it drew.
 
 WebMCP's `run_monte_carlo` starts (`action: "start"`, with the same settings), reads
-(`"status"`, optionally with the CSV) and stops the same set. Details in PHYSICS.md §2k.
+(`"status"`, optionally with the CSV) and stops the same set. Details in PHYSICS.md §2k, with what
+the recorded sets found: Falcon 9 delivered to about a kilometre on every law, but even the
+minimal dispersions lose a few runs to the air's loads, and leave a few in the wrong plane.
 
 ## Glossary
 
