@@ -83,7 +83,7 @@ export class WatchView {
   private beat: WatchBeat | null = null;
   private lastFrame: VisualFrame | null = null;
   /** the frame the end card was written for, so a language change rewrites the same card */
-  private endFrame: { frame: VisualFrame; ending: 'orbit' | 'splashdown' | 'failed' } | null = null;
+  private endFrame: { frame: VisualFrame; ending: 'orbit' | 'splashdown' | 'crewSafe' | 'failed' } | null = null;
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
@@ -257,7 +257,9 @@ export class WatchView {
     // above the ground, so the pad reads 0 rather than the site's elevation
     const subject = state.subject;
     const alt = subject ? fmtAltitude(subject.altitude) : frame ? fmtAltitude(frame.altitudeAGL) : fmtAltitude(0);
-    const speed = subject ? num(subject.speed * 3.6) : frame ? num(frame.liftoff ? groundSpeed(frame) * 3.6 : 0) : num(0);
+    // a pad abort never lifts off, but its crew does (T-10-1)
+    const moving = !!frame && (frame.liftoff || !!frame.abort);
+    const speed = subject ? num(subject.speed * 3.6) : frame ? num(moving ? groundSpeed(frame) * 3.6 : 0) : num(0);
     if (clock !== this.shown.clock) { this.clockValue.textContent = clock; this.shown.clock = clock; }
     if (alt !== this.shown.alt) { this.altValue.textContent = alt; this.shown.alt = alt; }
     if (speed !== this.shown.speed) { this.speedValue.textContent = speed; this.shown.speed = speed; }
@@ -287,18 +289,25 @@ export class WatchView {
     this.playBtn.setAttribute('aria-label', title);
   }
 
-  private showEnd(frame: VisualFrame, ending: 'orbit' | 'splashdown' | 'failed'): void {
+  private showEnd(frame: VisualFrame, ending: 'orbit' | 'splashdown' | 'crewSafe' | 'failed'): void {
     const success = ending !== 'failed';
     this.endFrame = { frame, ending };
     if (!this.picker.hidden) return;
     const card = this.endCard;
     card.replaceChildren();
     card.classList.toggle('failed', !success);
-    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle' : 'watch.fail.title'));
+    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
+      : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
-    card.append(el('span', 'eyebrow', t(success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
-    if (ending === 'splashdown') {
+    card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
+    if (ending === 'crewSafe') {
+      // G06: the rocket was lost, the crew was not
+      const since = frame.t - (frame.abort?.t0 ?? frame.t);
+      card.append(el('p', undefined, t('watch.end.crewSafeText', {
+        km: num(frame.downrange / 1000), g: num(frame.abort?.maxG ?? 0), time: fmtClock(since).replace(/^T\+/, ''),
+      })));
+    } else if (ending === 'splashdown') {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
       card.append(el('p', undefined, t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
     } else if (success) {

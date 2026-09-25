@@ -1599,7 +1599,12 @@ on exactly the trajectories it exists for.
 Failure injection modifies the active stage: engine-out reduces thrust by one engine's share,
 thrust loss shuts the stage down, premature separation drops it, a stuck fairing keeps its
 mass, range safety terminates the flight. A vehicle falling back through 100 km without
-propulsion triggers a range-safety termination.
+propulsion triggers a range-safety termination. Three failures that crewed R-7s really met are
+modes of their own (G06): a fire on the pad (`padFire`, at its time, down to T−10 s), a strap-on
+striking the core as it separates (`boosterCollision`, the vehicle out of control 3 s later) and
+a stage separation that half-fails (`stagingFailure`, at the separation of the chosen stage, out
+of control 6 s later); on a crewed Soyuz each sets off the escape of §8.3, on anything else it
+loses the vehicle. `launchAbort` fires a crewed Soyuz's escape at its time.
 
 Separated boosters, stages and fairing halves are propagated individually with gravity and
 drag until impact (reported with latitude/longitude) or, if they end up above a 120 km perigee,
@@ -1815,6 +1820,73 @@ elevation only near the pad and the landing zone, fading to the mean sphere over
 hundred kilometres downrange. Using the pad's elevation as the ground everywhere had a booster
 1500 km downrange of Vostochny landing 250 m up, and it grows with the inland Chinese sites
 (Jiuquan ~1000 m, Taiyuan ~1500 m).
+
+### 8.3 A crewed launch's escape (roadmap G06)
+
+A crewed Soyuz-2.1a carries the escape system (САС) from the countdown until its spacecraft is in
+orbit or has left the rocket. It fires on its own when a failure is losing the rocket with the
+crew on it — immediately on a total loss of thrust or a premature separation, and wherever the
+flight would otherwise be ended as lost (a structural or bending failure, range safety, a fire on
+the pad, a strap-on collision, a separation failure) — on the `launchAbort` failure, and on the
+Engineer mode's ABORT button. From the command on, the simulation's state is the escaping body
+and its status `abort`; the rocket left behind is debris, broken up where it was when it is being
+lost. The flight ends with the crew at rest, status `landed`. Code: src/physics/rigid/escape.ts
+(the bodies), src/physics/sim/abort.ts (the hand-over).
+
+| Time of the abort | Way out | What flies |
+|---|---|---|
+| Countdown to T+114.5 s | The tower's main motor, with its control motor pushing the tower's top sideways | The head section: tower, upper fairing, orbital and descent modules (7 635 kg) |
+| T+114.5 s to the fairing's jettison (T+157 s) | The fairing's four motors (РДГ 860М), as on MS-10 | The head section without the tower |
+| After the fairing | The spacecraft released from the rocket on springs | Service, descent and orbital modules together |
+
+Every body is a rigid body integrated like the rocket (RK4, J2 gravity, 5–20 ms steps) with the
+motors as forces at their stations and a low-order aerodynamic model: axial drag against Mach, a
+normal force at a centre of pressure, crossflow drag at large angles, damping. The head section's
+lattice fins open 2.5 s after the command; closed, its centre of pressure is 0.4 m ahead of its
+centre of mass, open, 1.0 m behind. The descent module is released at the top of the climb or
+14 s after a tower abort, 8 s after a fairing abort, 10 s after a separation, and moves clear
+at 2 m/s: out of the fairing's bottom, or away from the orbital and service modules. It is flown heat shield first (its own axes: +x out of the shield), stable
+with its pressure acting through the shield's centre of curvature 1.3 m behind its CG, and
+symmetric, so its entry is ballistic, without lift — as 18a's and MS-10's were.
+
+Parachutes pull at the riser point on the module's top, against the air: the drogue (24 m²,
+C<sub>D</sub> 0.6) opens below 10.5 km and 260 m/s for 16 s; the main (1 000 m², C<sub>D</sub> 0.8)
+below 7.5 km, reefed to 8 % for 4 s, then opening over 4 s. Released below 3 km the module
+skips the drogue and opens the main 1 s later. The heat shield (90 kg) is dropped 12 s after the
+main is open; 1 m above the ground the six soft-landing motors give 105 kN for 0.25 s. The crew's
+g is the specific force on the body carrying them, and its peak is kept.
+
+| Quantity | Value | Source |
+|---|---|---|
+| Head section with the tower | 7 635 kg | Braeunig, Soyuz specifications |
+| Descent module; orbital module | 2 950 kg, 2.17 m; 1 300 kg | Soyuz MS data (en.wikipedia), GCTC |
+| Tower's main motor | 1.05 MN for 1.55 s, 800 kg of propellant, Isp 218 s | 76 tf is quoted (MKB Iskra, vesvks.ru), but the 14–17 g of T-10-1 needs about 1 MN on this mass: chosen for the g |
+| Control motor | 4 kN for 1.6 s, at the tower's top | estimate |
+| Fairing motors | 280 kN together for 2.6 s, 300 kg | estimate (thrust and burn not published) |
+| Tower jettison, fairing jettison | T+114.5 s, T+157 s | MKB Iskra (T+114 s), Soyuz MS timelines |
+| Main parachute, drogue | 1 000 m², 24 m² (16–25 m² quoted) | ESA, RussianSpaceWeb |
+| Descent rate on the main | 7.2 m/s | ESA |
+| Soft landing | at about 1 m, down at 1.5 m/s | ESA, GCTC |
+| Fin effect, aerodynamic coefficients, release times, heat-shield mass | | estimates |
+
+Flown in six-DOF (tests/launch-abort.test.ts, tests/heavy/soyuz-aborts.test.ts), against the
+three aborts the escape system has flown:
+
+| | Model | Flight |
+|---|---|---|
+| **T-10-1** (pad fire, 1983) | 14.6 g; apogee 1.8 km; down 0.6 km from the pad 3.7 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
+| **MS-10** (strap-on collision, 2018) | abort at T+123.7 s in the fairing mode; apogee 147 km; 10.5 g; down 512 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
+| **18a** (separation failure, 1975) | abort at T+300 s in the separation mode; apogee 192 km; 18.5 g; down 1 559 km downrange at 50.74°N 83.20°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
+
+18a comes out close. MS-10 does not, for a reason outside the escape: at T+120 s this Soyuz-2.1a
+is at 60 km and 2.08 km/s, some 16 km higher and 400 m/s faster than MS-10's Soyuz-FG, so its
+crew leaves on a loftier arc. T-10-1's crew came down farther away, in wind this model does not
+fly, and after a longer flight: at the model's 7.2 m/s its 5 min 13 s would need an apogee near
+2 km.
+
+Limits: the fairing motors, the control motor, the fins' effect and the aerodynamics are
+estimates; the descent module flies a ballistic entry after every abort; the rocket left behind
+is point-mass debris; one calm flight of each is measured.
 
 ## 9. Orbit propagation
 

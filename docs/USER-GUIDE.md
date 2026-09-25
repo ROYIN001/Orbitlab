@@ -11,20 +11,22 @@ The switch in the top bar picks how much of the simulator you see:
 
 - **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
   space station) straight away.
-- **Watch** — just the picture, three numbers (mission time, altitude, speed over the
-  ground) and one sentence about what is happening and why. **Choose a launch** lists six
-  real flights, each flown as it was, only in daylight today: Soyuz to the space station,
-  Falcon 9's Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's
-  Arabsat-6A with the side boosters back on Landing Zones 1 and 2 and the core on a drone
-  ship, Starship Flight 5 with the booster caught by the tower and the ship splashing down
-  in the Indian Ocean, Ariane 6 with 32 Amazon Leo satellites, and Electron from New
-  Zealand. The speed buttons run the flight in real time (1×), faster, or at **Auto**,
-  which keeps liftoff, max-Q, every separation and every landing in real time and hurries
-  through the long coasts. The camera cuts to a stage flying home for its entry and
+- **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
+  and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
+  each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's
+  Bandwagon-1 with its first stage back on Landing Zone 1, Falcon Heavy's Arabsat-6A with the
+  side boosters back on Landing Zones 1 and 2 and the core on a drone ship, Starship Flight 5
+  with the booster caught by the tower and the ship splashing down in the Indian Ocean, Ariane 6
+  with 32 Amazon Leo satellites, Electron from New Zealand, and the three crews the Soyuz escape
+  system has saved: Soyuz T-10-1 (a fire on the pad, 1983), Soyuz 18a (a stage separation
+  failure at 145 km, 1975) and Soyuz MS-10 (a strap-on striking the core, 2018), each flown to
+  the crew on the ground. The speed buttons run the flight in real time (1×), faster, or at
+  **Auto**, which keeps liftoff, max-Q, every separation and every landing in real time and
+  hurries through the long coasts. The camera cuts to a stage flying home for its entry and
   landing and comes back to the rocket afterwards; **Follow the booster** / **Follow the
-  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship
-  is down in the water, a card offers to keep watching, watch again, pick another launch,
-  or plan a mission of your own.
+  rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship is
+  down in the water, a card offers to keep watching, watch again, pick another launch, or plan a
+  mission of your own.
 - **Explore** — everything below this line, in the learning layout (the advanced guidance
   parameters stay folded away).
 - **Engineer** — the same workspace with every guidance parameter open.
@@ -60,7 +62,8 @@ loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Aut
 program**, which flies the ascent headlessly over a grid of values and keeps the one with
 the largest remaining Δv. **Failure scenario** arms an engine-out, a thrust loss, a
 premature separation, a stuck fairing, a range-safety destruct, or a random one of those, at
-a mission time and stage you choose. Under **Options**, **Recover first stage** keeps landing
+a mission time and stage you choose; the historical failures of §6 and, on a crewed Soyuz, a
+launch abort are there too. Under **Options**, **Recover first stage** keeps landing
 propellant back; with it on, each recoverable stage gets a choice of where it lands — where it
 comes down at sea, a drone ship, a landing zone of the launch site (LZ-1 and LZ-2 at Cape
 Canaveral and Kennedy), the Starbase tower's arms for Super Heavy, or expended. Flying back to a
@@ -256,6 +259,31 @@ vehicle's placard by 15%), or simply running the tanks dry short of orbital spee
 (**suborbital**). Every one of these is deterministic and replayable: the same mission
 configuration always fails the same way at the same instant, so a "why did that happen" is
 always answerable by scrubbing back to it.
+
+Three failures are the ones crewed Soyuz rockets really met: a **fire on the pad** (at the
+time you set, from T−10 s), a **strap-on striking the core** as the strap-ons separate, and a
+**stage that fails to separate** cleanly at the separation of the stage you choose. On any
+other flight they lose the vehicle.
+
+**The Soyuz escape system.** A Soyuz-2.1a carrying a crew has its launch escape system armed
+from the countdown until the spacecraft is in orbit. When a failure is losing the rocket, it
+fires on its own, and it can be fired on purpose: the **Launch abort** failure at a time, or
+the red **Abort** button beside the playback controls in the Engineer mode. What happens
+depends on when:
+
+- up to T+114.5 s, the **escape tower** on the fairing's nose pulls the crew's section off the
+  rocket at 14–16 g and away from the pad; the fairing's lattice fins open;
+- from then until the fairing goes at T+157 s, **four motors on the fairing** do the tower's
+  job, as on Soyuz MS-10;
+- after that, the **spacecraft separates** from the rocket and its modules part, as on Soyuz 18a.
+
+The descent module then drops free and comes down as a real one does: a ballistic fall from
+high aborts, a drogue and then the 1 000 m² main parachute, the heat shield dropped, and six
+soft-landing motors a metre above the ground. The flight follows the crew — the telemetry,
+the g-load and the camera are theirs — while the rocket left behind falls or breaks up. The
+flight ends with the crew on the ground ("Crew landed after an abort"); the event log gives
+where and the highest g they took. The details and how the three historical aborts compare are
+in [PHYSICS.md §8.3](PHYSICS.md).
 
 ## 7. The flexible vehicle (Engineer mode)
 

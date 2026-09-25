@@ -177,7 +177,8 @@ export class EscapeView {
 
     // --- the descent module: +Y out of its heat shield, its body towards −Y
     const dm = ESCAPE.descentModule;
-    const bell = [[0.95, -0.02], [1.085, -0.15], [1.07, -0.6], [0.95, -1.2], [0.72, -1.8], [0.46, -2.1], [0.36, -dm.length]] as const;
+    // from the hatch on top down to the shield's rim: a lathe faces outward with its profile rising in y
+    const bell = [[0, -dm.length], [0.36, -dm.length], [0.46, -2.1], [0.72, -1.8], [0.95, -1.2], [1.07, -0.6], [1.085, -0.15], [0.95, -0.02]] as const;
     const body = new THREE.Mesh(geo(new THREE.LatheGeometry(bell.map(([r, y]) => new THREE.Vector2(r, y)), 32)), mat('#7c7a66', 0.1, 0.85));
     this.capsule.add(body);
     this.heatShield = new THREE.Mesh(geo(new THREE.SphereGeometry(2.235, 32, 6, 0, Math.PI * 2, 0, 0.5)), mat('#3b2d24', 0.05, 0.95));

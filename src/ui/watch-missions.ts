@@ -6,6 +6,8 @@
  * vehicle, site, payload and orbit that flies to orbit with the default
  * guidance — `tests/watch-missions.test.ts` flies each one to prove it — and
  * none of them uses a site whose range-safety corridor the chosen orbit leaves.
+ * The exceptions are the three launch aborts (G06), each a failure that really
+ * happened, explained as it happens, and each flown to its crew at rest.
  *
  * Like the quick-start missions these only build settings; they never launch.
  */
@@ -15,9 +17,10 @@ import { orbitById } from '../data/orbits';
 import { siteById } from '../data/sites';
 import { DEFAULT_FAILURE } from '../physics/defaults';
 import { launchWindows } from '../physics/mission';
-import type { OrbitSpec, RecoveryPlan } from '../types';
+import type { FailureConfig, OrbitSpec, RecoveryPlan } from '../types';
 
-export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso';
+export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
+  | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -39,6 +42,8 @@ export interface WatchMission {
   payloadKey?: string;
   /** stages flown back, which turns booster recovery on */
   recoveryPlan?: RecoveryPlan;
+  /** the failure the flight met, for the launch aborts (G06) */
+  failure?: FailureConfig;
 }
 
 /**
@@ -83,6 +88,23 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
     titleKey: 'watch.mission.ariane6AmazonLeo', blurbKey: 'watch.mission.ariane6AmazonLeoBlurb', payloadKey: 'watch.payload.amazonLeo' },
   { id: 'electronSso', vehicleId: 'electron', siteId: 'mahia', satelliteId: 'cubesats', orbitId: 'sso', payloadMass: 150, orbit: MORNING_SSO,
     titleKey: 'watch.mission.electronSso', blurbKey: 'watch.mission.electronSsoBlurb' },
+  // G06: three crews saved by the escape system, flown on the Soyuz-2.1a
+  // (MS-10 flew a Soyuz-FG, T-10-1 a Soyuz-U, 18a the original Soyuz).
+  // Soyuz MS-10, 11 October 2018: a strap-on struck the core at separation,
+  // T+118.6 s; the fairing's motors pulled the crew away at T+121.6 s.
+  { id: 'soyuzMs10', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
+    failure: { mode: 'boosterCollision', time: 0, stage: 0 },
+    titleKey: 'watch.mission.soyuzMs10', blurbKey: 'watch.mission.soyuzMs10Blurb', payloadKey: 'watch.payload.soyuzMs10' },
+  // Soyuz T-10-1, 26 September 1983: a fire at the foot of the rocket on the
+  // pad; the tower pulled the crew away seconds before it exploded.
+  { id: 'soyuzT10', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
+    failure: { mode: 'padFire', time: -6, stage: 0 },
+    titleKey: 'watch.mission.soyuzT10', blurbKey: 'watch.mission.soyuzT10Blurb', payloadKey: 'watch.payload.soyuzT10' },
+  // Soyuz 18a, 5 April 1975: the core and the upper stage parted only half
+  // way at T+288.6 s; the spacecraft fell back from 192 km to the Altai.
+  { id: 'soyuz18a', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
+    failure: { mode: 'stagingFailure', time: 0, stage: 0 },
+    titleKey: 'watch.mission.soyuz18a', blurbKey: 'watch.mission.soyuz18aBlurb', payloadKey: 'watch.payload.soyuz18a' },
 ];
 
 /** The launch the home page's big button plays. */
@@ -143,7 +165,7 @@ export function watchMissionSettings(id: WatchMissionId, from: Date = new Date()
   const settings: WatchMissionSettings = {
     vehicleId: m.vehicleId, siteId: m.siteId, satelliteId: m.satelliteId, payloadMass: m.payloadMass,
     orbitId: m.orbitId, orbit, launchTime: daylightLaunchTime(orbit, m.siteId, from),
-    guidanceOverrides: {}, failure: { ...DEFAULT_FAILURE },
+    guidanceOverrides: {}, failure: { ...(m.failure ?? DEFAULT_FAILURE) },
     boosterRecovery: !!m.recoveryPlan, recoveryPlan: m.recoveryPlan,
   };
   assertConfigInput(settings);

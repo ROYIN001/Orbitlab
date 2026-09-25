@@ -430,7 +430,10 @@ export class EscapeFlight {
     this.onRelease(s.body === 'head' ? 'head' : 'modules', { ...this.state }, t);
     // capsule axes: +x out of the heat shield, which faced the service module
     const flip = quatFromAxisAngle(v3(0, 1, 0), Math.PI);
-    this.state = { r, v: addScaled(v, quatRotate(this.state.attitudeQ, v3(1, 0, 0)), -ESCAPE.capsuleDrop), attitudeQ: quatMultiply(this.state.attitudeQ, flip),
+    // it drops out of the bottom of a head section; after a separation the
+    // service module is pushed away behind it (18a), so it moves ahead of the modules
+    const drop = s.body === 'head' ? -ESCAPE.capsuleDrop : ESCAPE.capsuleDrop;
+    this.state = { r, v: addScaled(v, quatRotate(this.state.attitudeQ, v3(1, 0, 0)), drop), attitudeQ: quatMultiply(this.state.attitudeQ, flip),
       omegaBody: { x: -this.state.omegaBody.x, y: this.state.omegaBody.y, z: -this.state.omegaBody.z } };
     this.config = c;
     s.body = 'capsule'; s.phase = 'fall'; s.finsOpen = false;
@@ -444,7 +447,9 @@ export class EscapeFlight {
     s.touchdownSpeed = Math.abs(vz);
     s.phase = 'landed';
     s.motors = { main: 0, control: 0, fairing: 0, softLanding: 0 };
-    s.drogue = 0;
+    // the main parachute is released on the ground so it does not drag the module over
+    s.drogue = 0; s.main = 0;
+    this.drogueAt = undefined; this.mainAt = undefined;
     this.events.push({ key: 'evt.escapeLanded', severity: 'success', params: { speed: +s.touchdownSpeed.toFixed(1), g: +s.maxG.toFixed(1) } });
   }
 

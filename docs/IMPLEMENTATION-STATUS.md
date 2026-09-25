@@ -35,6 +35,12 @@ throughout.
   falling away in three petals ten seconds after Blok A, the frost on the oxygen tanks shedding
   in the first half minute, and on a crewed launch the escape tower and the fairing's four grid
   fins, the tower pulling away at T+114.5 s. Drawing only; the physics is unchanged.
+- **Launch escape** ([PHYSICS.md §8.3](PHYSICS.md)): a crewed Soyuz's escape tower, fairing
+  motors and spacecraft separation, flown as rigid bodies to the descent module on its
+  parachutes and soft-landing motors. It fires on any failure that is losing the rocket with the
+  crew on it, on the `launchAbort` failure and on the Engineer mode's Abort button; the pad fire,
+  strap-on collision and separation failure of Soyuz T-10-1, MS-10 and 18a are failure modes and
+  Watch launches.
 - **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
   buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
   R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
@@ -61,7 +67,7 @@ throughout.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1008 tests in 74 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1023 tests in 75 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -76,7 +82,8 @@ throughout.
   recording (tests/session.test.ts).
 
 `npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
-model (tests/heavy/, about 15 minutes). `npm run test:sixdof-fleet` flies the fleet matrix as
+model, and Soyuz MS-10's and 18a's aborts flown to the crew on the ground (tests/heavy/, about
+15 minutes). `npm run test:sixdof-fleet` flies the fleet matrix as
 rigid bodies: its 126 accepted cases, each vehicle's first case in crosswind and shear, and Long
 March 2D's real mission — 161 cases, about 2 h 40 min on four cores
 ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and `npm run build` complete the
@@ -97,7 +104,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | |
 | F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
-| F06 documentation | done | G06 Soyuz launch escape system | |
+| F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | |
