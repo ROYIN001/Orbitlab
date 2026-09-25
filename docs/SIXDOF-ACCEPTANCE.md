@@ -531,3 +531,9 @@ returns leave the fleet's flights as they were.
 **The rigid fleet after the merge with P05.** `npm run test:sixdof-fleet` at the merge commit
 e8741b9, where the rigid runtime carries both P05's flexible body and 10b's control surfaces:
 **161 of 161 passed** in 2 h 5 min on four cores, part of it shared with browser runs.
+
+**The rigid fleet with G06 and the 4.11 m fairing.** `npm run test:sixdof-fleet` at commit
+f406949: the launch escape (G06; the fleet's missions carry no failure, so none aborts) and
+Soyuz-2.1a's fairing as the 4.11 × 11.43 m unit with its own adapter (it was 3.7 × 10.1 m on an
+adapter of its own), which moves every Soyuz-2.1a case's drag, geometry and inertia:
+**161 of 161 passed** in 1 h 43 min on four cores, run alone.
