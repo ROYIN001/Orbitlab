@@ -9,7 +9,7 @@
  * downrange at 50°50′N 83°25′E, 18–21 g. MS-10 does not: at T+120 s this
  * Soyuz-2.1a is some 16 km higher and 400 m/s faster than MS-10's Soyuz-FG
  * was, so its crew climbs to about 147 km (93 km in 2018), comes down about
- * 510 km downrange (402 km) at about 10.5 g (6.7 g). docs/PHYSICS.md §8.3.
+ * 505 km downrange (402 km) at about 10.4 g (6.7 g). docs/PHYSICS.md §8.3.
  */
 import { describe, expect, it } from 'vitest';
 import { crewedSoyuz, flyAbort } from '../abort-harness';

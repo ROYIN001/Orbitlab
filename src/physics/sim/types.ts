@@ -82,6 +82,9 @@ export interface DebrisVisual {
     | 'escapeHead' | 'modules';
   /** `escapeHead`: the tower was still on it */
   tower?: boolean;
+  /** `fairing`: its own adapter cone's height, m, down to `baseDiameter` (`FairingSpec.adapter`) */
+  adapter?: number;
+  baseDiameter?: number;
 }
 
 export interface Debris {

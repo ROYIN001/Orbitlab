@@ -36,9 +36,15 @@ export async function flightFingerprint(flight: (typeof GOLDEN_FLIGHTS)[number],
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
 }
 
-/** Recorded at 7834edd with crosswind: the first 160 s, and the whole mission. */
+/**
+ * Recorded at 7834edd with crosswind: the first 160 s, and the whole mission.
+ * Soyuz-2.1a's were re-recorded when its fairing became the 4.11 × 11.43 m unit
+ * with its own adapter (owner's figures, 2026-09-25): a change to the vehicle,
+ * not to the options, and with every option given and off it still flies the
+ * same 160 s bit for bit.
+ */
 export const GOLDEN: Record<(typeof GOLDEN_FLIGHTS)[number]['vehicle'], { first160s: string; mission: string }> = {
   falcon9: { first160s: '6bbf5b89a9e2ef67', mission: '79335bdea3cbfea9' },
-  soyuz21a: { first160s: 'cdfd42e224a80772', mission: 'a5d8d75d0bd685c9' },
+  soyuz21a: { first160s: '839f89154a81d07c', mission: '1edcbd927a140a70' },
   angaraa5: { first160s: 'c3022008e3f8d476', mission: '08a8c33302e646d6' },
 };

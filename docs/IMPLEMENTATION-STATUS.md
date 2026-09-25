@@ -41,6 +41,9 @@ throughout.
   crew on it, on the `launchAbort` failure and on the Engineer mode's Abort button; the pad fire,
   strap-on collision and separation failure of Soyuz T-10-1, MS-10 and 18a are failure modes and
   Watch launches.
+- **Soyuz-2.1a's fairing** is the 4.11 × 11.43 m unit with its own adapter cone down to Blok I,
+  drawn and flown (it was 3.7 × 10.1 m): the stack stands 46.85 m, 51.0 m with the escape tower,
+  inside the owner's 46.3–51.38 m, and a crewed head with the tower is 15.59 m.
 - **Reference frames in 3-D** ([PHYSICS.md §2d](PHYSICS.md)): a Frames menu by the camera
   buttons draws the body and air-path axes, the normal Earth and flight-path axes, the orbital
   R, S, W and ECI/ECEF on the flight, with α, β, pitch, yaw, roll, the flight-path angle, the
@@ -67,7 +70,7 @@ throughout.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1023 tests in 75 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1024 tests in 75 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target

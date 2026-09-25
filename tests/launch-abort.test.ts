@@ -11,7 +11,7 @@ import { orbitById } from '../src/data/orbits';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
 import { failureAvailable, validateConfigInput } from '../src/config/validation';
 import { ESCAPE, EscapeFlight, capsuleConfiguration, motorImpulse } from '../src/physics/rigid/escape';
-import { captureFrame, interpolateFrames } from '../src/physics/frame';
+import { captureFrame, interpolateFrames, stackLayout } from '../src/physics/frame';
 import { G0, R_EARTH, OMEGA_EARTH } from '../src/physics/constants';
 import { addScaled, cross, norm, v3 } from '../src/physics/vec3';
 import { groundPositionEci, enuFrame } from '../src/physics/orbital';
@@ -22,6 +22,17 @@ const keys = (sim: Simulation) => sim.events.map((e) => e.key);
 const log = (sim: Simulation) => sim.events.map((e) => `${e.t.toFixed(1)} ${e.key} ${JSON.stringify(e.params ?? {})}`).join('\n');
 
 describe('the escape system', () => {
+  it('flies the head section the vehicle draws: the same fairing, and a 15.59 m head with the tower', () => {
+    const fairing = vehicleById('soyuz21a').fairing!;
+    expect(ESCAPE.fairing.diameter).toBe(fairing.diameter);
+    expect(ESCAPE.fairing.length + ESCAPE.serviceModule.length).toBeCloseTo(fairing.length, 6);
+    expect(fairing.length + ESCAPE.tower.length).toBeCloseTo(15.59, 6);
+    // the stack stands 46.3–51.38 m, without and with the tower (owner's figures)
+    const stack = stackLayout(vehicleById('soyuz21a')).total + fairing.length;
+    expect(stack).toBeGreaterThanOrEqual(46.3);
+    expect(stack + ESCAPE.tower.length).toBeLessThanOrEqual(51.38);
+  });
+
   it('is fitted to a crewed Soyuz only, and armed from the countdown until orbit', () => {
     expect(crewedSoyuz('none', 0).escape.fitted).toBe(true);
     expect(crewedSoyuz('none', 0, 'sixDof', 'comsat').escape.fitted).toBe(false);

@@ -654,8 +654,17 @@ export class RocketView {
     const m = new THREE.MeshStandardMaterial({ map: tex, metalness: 0.15, roughness: 0.5 });
     this.materials.push(m);
     const cylH = f.length * 0.52;
-    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH, 40, 1), m);
-    cyl.position.y = cylH / 2;
+    // a fairing with its own adapter narrows to the stage it stands on
+    const adapter = f.adapter ?? 0;
+    if (adapter > 0) {
+      const below = [...spec.stages].reverse().find((st) => !st.isSpacecraft);
+      const cone = new THREE.Mesh(new THREE.CylinderGeometry(r, (below?.diameter ?? f.diameter) / 2, adapter, 40, 1), m);
+      cone.position.y = adapter / 2;
+      cone.castShadow = true;
+      g.add(cone);
+    }
+    const cyl = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH - adapter, 40, 1), m);
+    cyl.position.y = adapter + (cylH - adapter) / 2;
     cyl.castShadow = true;
     g.add(cyl);
     const noseH = f.length - cylH;

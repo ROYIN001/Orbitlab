@@ -288,7 +288,9 @@ export function stackLayout(spec: VehicleSpec): StackLayout {
     base.push(total);
     if (st.isSpacecraft) { height.push(0); topDiameter.push(null); continue; }
     const next = spec.stages.slice(i + 1).find((s) => !s.isSpacecraft);
-    const topD = next ? next.diameter : spec.fairing ? spec.fairing.diameter : null;
+    // a fairing with its own adapter cone stands flush on the stage below it
+    const ownAdapter = !next && !!spec.fairing?.adapter;
+    const topD = next ? next.diameter : spec.fairing ? (ownAdapter ? st.diameter : spec.fairing.diameter) : null;
     topDiameter.push(topD);
     const h = st.length + interstageHeight(st.diameter, topD);
     height.push(h);

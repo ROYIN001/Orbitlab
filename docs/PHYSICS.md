@@ -766,9 +766,9 @@ screen's knife edge showed.
 
   | target | Soyuz-2.1a + 1.755 t | + 3.51 t | + 6.318 t | Long March 2D + 325 kg |
   | --- | --- | --- | --- | --- |
-  | 200 km | 198.5 × 200.9 ✓ | 197.6 × 200.3 ✓ | 197.9 × 200.2 ✓ | 150.8 × 355.2 |
-  | 250 km | 220.0 × 346.8 | 240.1 × 300.9 | 247.0 × 265.2 | 140.6 × 2 415.6 |
-  | 300 km | 143.5 × 894.9 | 144.1 × 874.4 | 103.8 × 729.8 (tanks dry) | 140.6 × 2 421.1 |
+  | 200 km | 198.0 × 200.7 ✓ | 197.6 × 200.4 ✓ | 198.6 × 200.3 ✓ | 150.8 × 355.2 |
+  | 250 km | 219.4 × 345.5 | 240.3 × 301.4 | 247.3 × 266.3 | 140.6 × 2 415.6 |
+  | 300 km | 143.9 × 899.2 | 143.8 × 875.5 | 88.7 × 700.9 (tanks dry) | 140.6 × 2 421.1 |
 
   This grid is **asserted**, not quoted: it is a data table in the `single-shot direct
   insertion` section of `tests/fleet-defaults.test.ts`, and `the grid behind
@@ -781,8 +781,11 @@ screen's knife edge showed.
   the heating placard. The engine transients (P02) moved them again — the heaviest 300 km cell
   to 103.8 × 729.8 km, its third stage now dry before the tail-off that would have given the
   impulse back — and Long March 2D's cells moved by up to 6 km of apoapsis when Jiuquan's 41°
-  flights started leaving on the heading the site's window licenses; no verdict changed, and
-  both copies read the current figures.
+  flights started leaving on the heading the site's window licenses. The 4.11 × 11.43 m fairing
+  with its own adapter (owner's figures, 2026-09-25; it was 3.7 × 10.1 m) moved the Soyuz cells
+  that reach orbit by up to 4.3 km of apoapsis and the heaviest 300 km cell, which carries the
+  wider fairing's drag longest, to 88.7 × 700.9 km. No verdict changed, and both copies read the
+  current figures.
 
   That change is the second half of a fix the last wave only half made.
   `src/physics/mission.ts` used to carry its own copy in the `DIRECT_INSERTION_CEILING` doc
@@ -1859,6 +1862,7 @@ g is the specific force on the body carrying them, and its peak is kept.
 | Quantity | Value | Source |
 |---|---|---|
 | Head section with the tower | 7 635 kg | Braeunig, Soyuz specifications |
+| Fairing; head with the tower | 4.11 m × 11.43 m; 15.59 m (the tower 4.16 m above the nose) | owner's figures (2026-09-25), TASS/RIA for the 4.11 × 11.43 m unit; the tower's split into truss, motor and cap is an estimate |
 | Descent module; orbital module | 2 950 kg, 2.17 m; 1 300 kg | Soyuz MS data (en.wikipedia), GCTC |
 | Tower's main motor | 1.05 MN for 1.55 s, 800 kg of propellant, Isp 218 s | 76 tf is quoted (MKB Iskra, vesvks.ru), but the 14–17 g of T-10-1 needs about 1 MN on this mass: chosen for the g |
 | Control motor | 4 kN for 1.6 s, at the tower's top | estimate |
@@ -1874,15 +1878,15 @@ three aborts the escape system has flown:
 
 | | Model | Flight |
 |---|---|---|
-| **T-10-1** (pad fire, 1983) | 14.6 g; apogee 1.8 km; down 0.6 km from the pad 3.7 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
-| **MS-10** (strap-on collision, 2018) | abort at T+123.7 s in the fairing mode; apogee 147 km; 10.5 g; down 512 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
-| **18a** (separation failure, 1975) | abort at T+300 s in the separation mode; apogee 192 km; 18.5 g; down 1 559 km downrange at 50.74°N 83.20°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
+| **T-10-1** (pad fire, 1983) | 14.3 g; apogee 1.4 km; down 0.3 km from the pad 2.8 min after the abort | 14–17 g; 1.2–2 km; about 4 km away, 5 min 13 s (at night, in wind) |
+| **MS-10** (strap-on collision, 2018) | abort at T+123.7 s in the fairing mode; apogee 147 km; 10.4 g; down 505 km downrange | T+121.6 s; 93 km; 6.7 g; 402 km, near Zhezkazgan |
+| **18a** (separation failure, 1975) | abort at T+300 s in the separation mode; apogee 192 km; 18.5 g; down 1 548 km downrange at 50.72°N 83.04°E | T+288.6 s; 192 km; 18–21 g; 1 574 km, 50.83°N 83.42°E |
 
 18a comes out close. MS-10 does not, for a reason outside the escape: at T+120 s this Soyuz-2.1a
-is at 60 km and 2.08 km/s, some 16 km higher and 400 m/s faster than MS-10's Soyuz-FG, so its
+is at about 60 km and 2.1 km/s, some 16 km higher and 400 m/s faster than MS-10's Soyuz-FG, so its
 crew leaves on a loftier arc. T-10-1's crew came down farther away, in wind this model does not
 fly, and after a longer flight: at the model's 7.2 m/s its 5 min 13 s would need an apogee near
-2 km.
+2 km, where the model's head section, as wide as the 4.11 m fairing, climbs to 1.4 km.
 
 Limits: the fairing motors, the control motor, the fins' effect and the aerodynamics are
 estimates; the descent module flies a ballistic entry after every abort; the rocket left behind

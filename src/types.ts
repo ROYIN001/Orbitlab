@@ -131,6 +131,13 @@ export interface FairingSpec {
    * the atmosphere at its published time does not shed the fairing there.
    */
   sepTime?: number;
+  /**
+   * Height of the fairing's own lower cone, m, down to the diameter of the
+   * stage it stands on, counted in `length`: that stage then carries no
+   * interstage adapter of its own. Soyuz-2.1a's 4.11 × 11.43 m unit includes
+   * its transition section.
+   */
+  adapter?: number;
   color?: string;
 }
 

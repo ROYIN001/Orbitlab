@@ -47,6 +47,15 @@ export type EscapePhase = 'escape' | 'coast' | 'fall' | 'drogue' | 'main' | 'lan
 /** Which body is flying: the head section, the whole spacecraft, or the descent module alone. */
 export type EscapeBody = 'head' | 'spacecraft' | 'capsule';
 
+/**
+ * The escape tower above the fairing's nose, m: the adapter truss, the motor,
+ * the separation motor's cap. 4.16 m altogether, so that a crewed Soyuz's head
+ * is 15.59 m with the 11.43 m fairing (owner's figures; the split is an estimate).
+ */
+const TOWER_TRUSS = 1.0, TOWER_MOTOR = 2.3, TOWER_CAP = 0.86;
+/** The fairing from the service module's interface to its nose, m: the vehicle's 11.43 m less the service module's 2.7 m. */
+const HEAD_FAIRING = 8.73;
+
 /** The data the escape is flown on. Estimates are marked; the rest is sourced (PHYSICS.md §8.3). */
 export const ESCAPE = {
   /** nominal tower jettison, s after liftoff (MKB Iskra: T+114 s; Soyuz MS flights T+114–115 s) */
@@ -56,16 +65,17 @@ export const ESCAPE = {
     /** net axial thrust, N. 76 tf is quoted, but the crews of T-10-1 felt 14–17 g, which needs about 1 MN on this mass (estimate) */
     thrust: 1.05e6, rise: 0.08, burn: 1.55, tailOff: 0.4,
     /** station of the main motor's nozzles and of the control motor above the head section's base, m */
-    nozzleX: 9.0, controlX: 12.6,
+    nozzleX: HEAD_FAIRING + TOWER_TRUSS, controlX: HEAD_FAIRING + TOWER_TRUSS + TOWER_MOTOR,
     /** control motor: a sideways push at the tower's top that turns the head section away from the pad (estimate) */
     controlThrust: 4e3, controlBurn: 1.6,
-    length: 6.5 },
+    truss: TOWER_TRUSS, motor: TOWER_MOTOR, cap: TOWER_CAP,
+    length: TOWER_TRUSS + TOWER_MOTOR + TOWER_CAP },
   /** the upper fairing with its grid fins and its four РДГ 860М motors (mass, thrust and burn are estimates) */
   fairing: { mass: 1645, propellant: 300, thrust: 280e3, rise: 0.1, burn: 2.6, tailOff: 0.3, nozzleX: 5.2,
     /** the head section's length from the service module's interface to the fairing's nose, m */
-    length: 7.4,
-    /** the crewed fairing's diameter (Soyuz-FG: 2.72 m) */
-    diameter: 2.72,
+    length: HEAD_FAIRING,
+    /** the fairing's diameter: the vehicle's (src/data/vehicles.ts) */
+    diameter: 4.11,
     /** seconds after the abort before the grid fins open (T-10-1: at about 650 m, estimate) */
     finsOpen: 2.5 },
   orbitalModule: { mass: 1300, x0: 2.25, length: 2.6 },
@@ -178,7 +188,7 @@ export function headConfiguration(tower: boolean, towerPropellant: number, fairi
     { mass: om.mass, x0: om.x0, length: om.length, radius: 1.1 },
     { mass: f.mass - f.propellant + fairingPropellant, x0: 0, length: f.length, radius: R * 0.9 },
   ];
-  if (tower) parts.push({ mass: tw.mass - tw.propellant + towerPropellant, x0: f.length + 1.6, length: tw.length - 1.6, radius: 0.42 });
+  if (tower) parts.push({ mass: tw.mass - tw.propellant + towerPropellant, x0: f.length + tw.truss, length: tw.length - tw.truss, radius: 0.42 });
   const m = massProperties(parts);
   const length = f.length + (tower ? tw.length : 0);
   const margin = finsOpen ? 1.0 : -0.4;

@@ -154,7 +154,7 @@ export class EscapeView {
     this.crewedTop = new CrewedTop(R, headL, (c, metal, rough) => mat(c, metal, rough), finMaterial);
     this.tower = this.crewedTop.tower;
     this.head.add(this.tower);
-    const nozzleY = 1.6 + 3.6 * 0.72;
+    const tw = ESCAPE.tower, nozzleY = tw.truss + tw.motor * 0.72;
     for (let k = 0; k < 8; k++) {
       const az = new THREE.Group();
       az.rotation.y = -(k / 8) * Math.PI * 2;
@@ -169,7 +169,7 @@ export class EscapeView {
     }
     this.controlPlume = new Plume({ radius: 0.08, length: 2.5, kind: 'solid', seed: 0.9 });
     const control = new THREE.Group();
-    control.position.set(0.45, 1.6 + 3.6 + 0.4, 0);
+    control.position.set(0.45, tw.truss + tw.motor + tw.cap * 0.3, 0);
     control.rotation.z = Math.PI / 2;
     control.add(this.controlPlume.group);
     this.tower.add(control);

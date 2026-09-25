@@ -13,6 +13,7 @@
  */
 import * as THREE from 'three';
 import { fbm2, smoothstep } from './noise';
+import { ESCAPE } from '../physics/rigid/escape';
 
 /** Blok A's radius at its engines, as a share of its widest. */
 const CORE_BASE = 2.05 / 2.95;
@@ -320,7 +321,7 @@ export class CrewedTop {
     const dark = mat('#3c3f44', 0.4, 0.6);
     // the adapter truss from the fairing's nose to the motor, then the motor,
     // its ring of canted nozzles and the separation motor's cap
-    const trussH = 1.6, motorH = 3.6, motorR = 0.42;
+    const trussH = ESCAPE.tower.truss, motorH = ESCAPE.tower.motor, capH = ESCAPE.tower.cap, motorR = 0.42;
     const parts: THREE.BufferGeometry[] = [];
     for (let k = 0; k < 4; k++) {
       const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
@@ -347,8 +348,8 @@ export class CrewedTop {
       az.add(nozzle);
       this.tower.add(az);
     }
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(motorR, 1.3, 20), steel);
-    cap.position.y = trussH + motorH + 0.65;
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(motorR, capH, 20), steel);
+    cap.position.y = trussH + motorH + capH / 2;
     this.tower.add(cap);
     this.tower.position.y = fairingLength;
     this.flame = new THREE.Mesh(new THREE.ConeGeometry(0.5, 4, 12, 1, true),

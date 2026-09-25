@@ -202,9 +202,14 @@ export class DebrisView {
       hinge.position.y = base + L;
       const shell = new THREE.Group();
       shell.position.y = -L;
-      const cylH = L * 0.55;
-      const half = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH, 24, 1, true, -Math.PI / 2, Math.PI), m);
-      half.position.y = cylH / 2;
+      const cylH = L * 0.55, adapter = d.visual.adapter ?? 0;
+      if (adapter > 0) {
+        const cone = new THREE.Mesh(new THREE.CylinderGeometry(r, (d.visual.baseDiameter ?? 2 * r) / 2, adapter, 24, 1, true, -Math.PI / 2, Math.PI), m);
+        cone.position.y = adapter / 2;
+        shell.add(cone);
+      }
+      const half = new THREE.Mesh(new THREE.CylinderGeometry(r, r, cylH - adapter, 24, 1, true, -Math.PI / 2, Math.PI), m);
+      half.position.y = adapter + (cylH - adapter) / 2;
       shell.add(half);
       shell.add(new THREE.Mesh(new THREE.LatheGeometry(ogiveProfile(r, cylH, L - cylH, 20), 24, -Math.PI / 2, Math.PI), m));
       hinge.add(shell);
