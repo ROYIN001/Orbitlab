@@ -1,0 +1,10 @@
+soyuz-ms-27-nasa.mp3
+  NASA TV coverage of the launch of Soyuz MS-27 (NASA astronaut Jonny Kim,
+  Roscosmos cosmonauts Sergey Ryzhikov and Alexey Zubritsky), Baikonur
+  Cosmodrome, 8 April 2025: 600 s from T-60 s to T+540 s, mono, 48 kbit/s.
+  Source: NASA Image and Video Library, video
+  iss073m260980444_NASA_Astronaut_Jonny_Kim_Soyuz_MS-27_Launch_250408
+  (https://images.nasa.gov). NASA material is not protected by copyright in
+  the United States (NASA Images and Media Usage Guidelines); the broadcast
+  carries the Roscosmos launch-control loop under NASA's commentary.
+  T-0 (liftoff) is at 60.0 s in this file.

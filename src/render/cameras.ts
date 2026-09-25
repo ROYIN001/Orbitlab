@@ -61,6 +61,13 @@ export class CameraController {
   az = 0.9;
   userEl = 0;
   zoom = 1;
+  /**
+   * How far out the exterior view may be pulled, in the same units as `zoom`:
+   * the pad's ~1 km near the ground, and up to a few hundred kilometres once
+   * the vehicle is above the atmosphere, far enough to see an expanding plume
+   * whole (roadmap V02, the twilight jellyfish).
+   */
+  private maxZoom = 14;
   // space
   spaceAz = 0.3;
   spaceEl = 0.35;
@@ -124,7 +131,7 @@ export class CameraController {
         && !!node.closest('button, select, input, label, a, .scene-ui');
     };
     const zoomBy = (factor: number): void => {
-      if (this.mode === 'exterior') this.zoom = Math.max(0.35, Math.min(14, this.zoom * factor));
+      if (this.mode === 'exterior') this.zoom = Math.max(0.35, Math.min(this.maxZoom, this.zoom * factor));
       else if (this.mode === 'space') this.spaceDist = Math.max(1.05, Math.min(12, this.spaceDist * factor));
     };
     const spread = (): number => {
@@ -229,6 +236,8 @@ export class CameraController {
     const jz = fbm1s(f.t * 8.3 + 23.1, 2) * shake;
 
     if (this.mode === 'exterior') {
+      this.maxZoom = 14 * Math.max(1, Math.min(300, 1 + (f.agl - 40e3) / 1e3));
+      if (this.zoom > this.maxZoom) this.zoom = this.maxZoom;
       const fr = FRAMING[f.phase];
       // critically damped approach to the framing of the current phase
       const k = this.first ? 1e9 : 1.4;
