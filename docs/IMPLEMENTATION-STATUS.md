@@ -204,5 +204,10 @@ Eight of the "interesting" items are being done alongside them on branch
 ## Known limitations
 
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
-- The physics has not been validated against flight data; see "Assumptions and limitations" in
+- The physics has been compared with flight data for four vehicles only: Falcon 9 against webcast
+  telemetry of five flights, Soyuz-2.1a, Electron and Ariane 64 against published timelines
+  ([VALIDATION.md](VALIDATION.md)). No disagreement pointed at the equations. Falcon 9's first
+  stage now flies its published masses as a result. Electron's second stage still burns ~25 %
+  short, and the six-DOF ascent climbs higher than the flights after max Q on every vehicle
+  compared. The other fourteen vehicles are not compared; see "Assumptions and limitations" in
   [PHYSICS.md](PHYSICS.md).

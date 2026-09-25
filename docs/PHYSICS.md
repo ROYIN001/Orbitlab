@@ -326,10 +326,11 @@ What it shows on Falcon 9 to LEO in the crosswind scenario:
 - From T+89 s guidance pitches the command away from the airflow (0.7° to 11° in four seconds)
   faster than the stack follows: the pitch error grows to 4.6° with the pitch rate held by its
   stopping distance, and the air's pitching moment reaches 2.4 MN·m at T+96 s.
-- At T+127.3 s the dynamic pressure falls through 500 Pa and the load relief, which had been
-  holding the command 24° nearer the air than guidance asked (39° asked, 15° allowed), switches
-  off in one step: the attitude error jumps from 0.4° to 24° and the stack swings back at its
-  5°/s rate limit for five seconds.
+- At T+130.5 s the dynamic pressure falls through 500 Pa and the load relief, which had been
+  holding the command nearer the air than guidance asked, switches off in one step: the
+  attitude error jumps and the stack swings back at its 5°/s rate limit until T+135.4 s.
+  (Measured with Falcon 9's published first-stage masses; with the earlier ones it was T+127.3 s,
+  39° asked and 15° allowed, an error jumping from 0.4° to 24°.)
 - After staging the upper stage's roll authority is so small (an ε limit of 0.02°/s²) that its
   roll rate is held by the stopping distance.
 
@@ -502,12 +503,17 @@ What it finds on Falcon 9 (crosswind, over the first 55 s):
 
 - Rigid: K_θ 1.61, K_ω 3.39 s⁻¹ — the default autopilot (1.5, 3) is already at the 45° target;
   the gimbals' 0.1 s lag sets the limit.
-- With all of P05: PM ≥ 45° and GM ≥ 6 dB cannot both be met by the two gains over the flight —
-  at T+33.5 s a slosh mode sits where lower gains lose gain margin and higher ones lose it at the
-  bending mode (no PD gains are stable at K_θ 0.5, K_ω 1.0 there). At PM ≥ 40°, GM ≥ 4 dB it
-  gives K_θ 0.74, K_ω 1.49 s⁻¹ (the flexible autopilot flies 0.91–0.99, 1.83–1.97); **flown again
-  with them, the linearised loop keeps GM ≥ 4.1 dB and PM ≥ 48.8° over the ascent** (2.3 dB and
-  40.3° with the defaults), and the flight reaches its orbit (tests/control-tuning.test.ts).
+- With all of P05: PM ≥ 45° and GM ≥ 6 dB cannot both be met by the two gains over the flight.
+  A slosh mode sits where lower gains lose gain margin and higher ones lose it at the bending
+  mode. With Falcon 9's published first-stage masses (VALIDATION.md) the first bending mode is
+  lower (1.61 Hz at T+25 s, where it was 1.72 Hz), and PM ≥ 40°, GM ≥ 4 dB can no longer be met
+  either: over the gain grid the best is about 2.7 dB, limited from lift-off, and the tuner says
+  so. At PM ≥ 40°, GM ≥ 2.5 dB it gives K_θ 0.82, K_ω 1.64 s⁻¹. Flown again with them, the
+  linearised loop keeps GM ≥ 2.71 dB and PM ≥ 46.4° over the first 90 s, against 2.64 dB and
+  45.1° with the defaults, so the default flexible autopilot is already within 0.1 dB of what two
+  gains can do (tests/control-tuning.test.ts). With the earlier masses the tuner found K_θ 0.74,
+  K_ω 1.49 s⁻¹ for GM ≥ 4 dB, and flown again they kept GM ≥ 4.1 dB and PM ≥ 48.8° (2.3 dB and
+  40.3° with the defaults).
 - Without the feed-forward (w = 0) or at half of it, the rigid Falcon 9 still reaches orbit; a
   1 °/s pitch–yaw rate limit doubles the largest attitude error of the ascent (4.9° to 11°).
 
@@ -1596,7 +1602,7 @@ seven left:
 
 | mission | milestone | model | published |
 | --- | --- | --- | --- |
-| Falcon 9 | max Q | 50.3 s | 65–80 s |
+| Falcon 9 | max Q | 49.4 s | 65–80 s |
 | Electron | max Q | 50.7 s | 60–70 s |
 | Electron | MECO | 138.0 s | 145–155 s |
 | Soyuz-2.1a | core cut-off | 294.1 s | ~287 s |
@@ -1623,14 +1629,18 @@ them with an earlier revision:
 
 **Falcon 9, Starlink-class 15.6 t to the ISS plane from Cape Canaveral**
 
+Measured 2026-09-25 with the published first-stage masses (410.9 t of propellant, 22.2 t
+empty; [VALIDATION.md](VALIDATION.md), "Data change applied"). The values before them are in
+brackets.
+
 | milestone | published | model | window |
 | --- | --- | --- | --- |
-| max Q | 65–80 s | 50.3 s (22.6 kPa) | 44–58 |
-| MECO | 150–165 s | 150.8 s | 145–165 |
-| stage separation | MECO + 3 s | 153.8 s | 148–168 |
-| MVac ignition | MECO + 7 s | 157.8 s | 152–172 |
-| fairing jettison | 190–230 s | 210.9 s (108 km) | 185–235 |
-| SECO | 500–560 s | 526.4 s | 495–565 |
+| max Q | 65–80 s | 49.4 s, 22.2 kPa (50.3 s) | 44–58 |
+| MECO | 150–165 s | 156.3 s (150.8 s) | 146–166 |
+| stage separation | MECO + 3 s | 159.3 s (153.8 s) | 149–169 |
+| MVac ignition | MECO + 7 s | 163.3 s (157.8 s) | 153–173 |
+| fairing jettison | 190–230 s | 221.5 s, 109 km (210.9 s) | 185–235 |
+| SECO | 500–560 s | 528.6 s (526.4 s) | 495–565 |
 
 Max Q is the one milestone in this table that disagrees with its published figure, and it is a
 *data* disagreement rather than a guidance one: `maxQThrottle` starts Falcon 9's throttle bucket
@@ -1640,26 +1650,26 @@ and low.
 
 **Raising `qStart` does not close it, and was measured rather than assumed.** A review proposed
 moving the bucket to the real ~33 kPa peak and expected the disagreement list to drop by one.
-Flown, the same mission with `qStart` at 26 / 30 / 33 / 36 kPa and with the bucket removed
-entirely gives:
+Flown with the published masses, the same mission with `qStart` at 26 / 30 / 33 kPa and with
+the bucket removed entirely gives (the first measurement, with the earlier masses, in brackets):
 
 | `qStart` | max Q | MECO (150–165) | fairing (190–230) |
 | --- | --- | --- | --- |
-| 22 kPa (shipped) | 50.3 s, 22.6 kPa | 150.8 s | 210.9 s |
-| 26 kPa | 44.6 s, 26.1 kPa | 148.2 s | 200.3 s |
-| 30 kPa | 50.7 s, 30.1 kPa | 146.2 s | 192.9 s |
-| 33 kPa | 57.6 s, 33.0 kPa | 145.0 s | 188.8 s |
-| no bucket | 59.2 s, 33.1 kPa | 145.0 s | 188.6 s |
+| 22 kPa (shipped) | 49.4 s, 22.2 kPa (50.3 s) | 156.3 s (150.8 s) | 221.5 s (210.9 s) |
+| 26 kPa | 47.6 s, 26.1 kPa (44.6 s) | 153.8 s (148.2 s) | 210.0 s (200.3 s) |
+| 30 kPa | 54.0 s, 30.0 kPa (50.7 s) | 151.8 s (146.2 s) | 201.7 s (192.9 s) |
+| 33 kPa | 61.3 s, 31.8 kPa (57.6 s) | 151.1 s (145.0 s) | 199.1 s (188.8 s) |
+| no bucket | 61.3 s, 31.8 kPa (59.2 s) | 151.1 s (145.0 s) | 199.1 s (188.6 s) |
 
-The peak *value* is a data question and 33 kPa reproduces the real one exactly; the peak *time*
-is not. Even with no throttle-down at all the modelled q peaks at T+59 s, six seconds short of
-the published window, because when q peaks is set by the ascent profile — the speed the vehicle
-has at the altitude where density has fallen away — and not by the bucket. Meanwhile a vehicle
-that never throttles back climbs faster, so MECO moves to T+145 s and fairing jettison to
-T+188.8 s, both of which *leave* their published windows. The change therefore takes the
-disagreement list from seven entries to nine while still missing max Q. Closing it honestly
-means a lofter first-stage profile (`guidanceDefaults`), which moves every other row in this
-table, so the shipped data stay where they are and the disagreement stays disclosed.
+The peak *time* is not a bucket question. Even with no throttle-down at all the modelled q peaks
+at T+61 s, four seconds short of the published window, because when q peaks is set by the ascent
+profile (the speed the vehicle has at the altitude where density has fallen away) and not by
+the bucket. With the earlier masses a vehicle that never throttled back also pushed MECO and
+fairing jettison *out* of their windows; with the published masses both stay inside, so that
+argument is gone. What keeps the shipped 22 kPa is the flight data: a later, deeper bucket moves
+the early ascent further from five flights' webcast telemetry (VALIDATION.md: 42 of 66 rows in
+tolerance against 49), and it still misses max Q. Closing it honestly means a lofter first-stage
+profile (`guidanceDefaults`), which moves every other row in this table.
 
 **Soyuz-2.1a, 7.15 t crew ship from Baikonur to the ISS** (the application's default mission)
 
@@ -2270,7 +2280,8 @@ the Starbase launch tower, whose arms catch Super Heavy) or a **drone ship**; a 
 flown **downrange**, the original model above with no target, or **expended**. Without a plan
 every recovered body is flown downrange, unchanged. A plan changes the propellant reserve too: a
 body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for Falcon 9 and
-Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 12 %
+Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 15 %
+touches down with 13.0 t to spare, measured with Falcon 9's published first-stage masses; 12 %
 leaves Arabsat-6A's side boosters short of their boostback), a drone-ship or downrange body keeps
 `recoveryReserve`, and a body the plan expends, or leaves out, holds nothing back.
 
@@ -2363,14 +2374,18 @@ tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 
 | Flight | Model | Body | Miss |
 |---|---|---|---|
-| Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.0 m |
-| | six-DOF | first stage → LZ-1 | 0.8 m |
+| Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.2 m |
+| | six-DOF | first stage → LZ-1 | 1.6 m |
 | Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.0 m, 0.0 m |
 | | | core → drone ship, ~930 km downrange | 0.0 m |
 | | six-DOF | side boosters → LZ-1, LZ-2 | 0.8 m, 0.8 m |
 | | | core → drone ship | 0.7 m |
 | Starship (15.6 t, 500 km) | point mass | Super Heavy → tower | 0.0 m, caught |
 | | six-DOF | Super Heavy → tower | 0.3 m, caught at 2.4 m/s down, 0.45 m/s across, 0.5° |
+
+The Falcon 9 rows were re-measured on 2026-09-25 with the published first-stage masses
+(VALIDATION.md). The rows they replace (0.0 m and 0.8 m) were already out of date: with the
+earlier masses the same harness now gives 0.7 m and 1.5 m.
 
 The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
 real flight.
@@ -2726,6 +2741,10 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
   - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
     jettison **time** their operator publishes (§4). Neither is a model of the real decision,
     which is a heating placard evaluated against a specific fairing's thermal design.
+  - The physics has been compared with flight data for Falcon 9 (webcast telemetry of five
+    flights), Soyuz-2.1a, Electron and Ariane 64 (published timelines):
+    [VALIDATION.md](VALIDATION.md). Electron's second stage burns ~25 % short of its published
+    timeline, and no published stage mass exists to correct it.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.

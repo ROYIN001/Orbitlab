@@ -476,7 +476,7 @@ export class VehicleModel {
       thr = Math.max(minT, Math.min(1, thr));
       let profile = 1;
       if (e.solid) profile = this.solidProfileFor(st);
-      const level = thr * profile * startupFactor(e, t - st.startTime, dt);
+      const level = VehicleModel.withinTank(thr * profile * startupFactor(e, t - st.startTime, dt), this.usablePropellant(st), n * engineMassFlow(e), dt);
       out.thrust += n * engineThrust(e, p) * level;
       out.mdot += n * engineMassFlow(e) * level;
       out.thrustFullVac += n * e.thrustVac * profile;
@@ -504,7 +504,7 @@ export class VehicleModel {
         let profile = 1;
         if (be.solid) profile = this.solidProfileForBooster(b);
         const thr = be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd));
-        level = thr * profile * startupFactor(be, t - b.startTime, dt);
+        level = VehicleModel.withinTank(thr * profile * startupFactor(be, t - b.startTime, dt), this.usableBoosterPropellant(b), be.count * engineMassFlow(be), dt);
         out.thrustFullVac += nb * be.thrustVac * profile;
       } else if (this.boosterTailingOff(b, t)) {
         level = this.boosterTailLevel(b, t, dt);
@@ -520,6 +520,19 @@ export class VehicleModel {
       if (level > 0) out.burning = true;
     }
     return out;
+  }
+
+  /**
+   * A burning engine's level over [t, t + dt], never more than the tanks still
+   * hold. Without it a step that runs through the depletion boundary burned
+   * its full flow × dt, the tank was clamped back to empty, and the difference
+   * was impulse no propellant paid for: 418 kg on Falcon 9's first stage at a
+   * 0.5 s step (Isp 0.3 s high). `thrust` and `consume` both apply it, so the
+   * two stay equal; the tail-off below has always done the same.
+   */
+  private static withinTank(level: number, usable: number, flowAtFull: number, dt: number): number {
+    if (!(dt > 0) || !(flowAtFull > 0)) return level;
+    return Math.min(level, usable / (flowAtFull * dt));
   }
 
   /**
@@ -622,7 +635,7 @@ export class VehicleModel {
       thr = Math.max(minT, Math.min(1, thr));
       let profile = 1;
       if (e.solid) profile = this.solidProfileFor(st);
-      const level = thr * profile * startupFactor(e, t - st.startTime, dt);
+      const level = VehicleModel.withinTank(thr * profile * startupFactor(e, t - st.startTime, dt), this.usablePropellant(st), n * engineMassFlow(e), dt);
       st.level = level;
       const flow = n * engineMassFlow(e) * level;
       st.propellant -= flow * dt;
@@ -653,7 +666,7 @@ export class VehicleModel {
         let profile = 1;
         if (be.solid) profile = this.solidProfileForBooster(b);
         const thr = be.solid ? 1 : Math.max(be.minThrottle ?? 1, Math.min(1, throttleCmd));
-        const level = thr * profile * startupFactor(be, t - b.startTime, dt);
+        const level = VehicleModel.withinTank(thr * profile * startupFactor(be, t - b.startTime, dt), this.usableBoosterPropellant(b), nb * engineMassFlow(be), dt);
         b.level = level;
         const flow = nb * engineMassFlow(be) * level;
         b.propellant -= flow * dt;

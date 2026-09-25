@@ -732,9 +732,9 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('falcon9', 'cape', 'iss', 'starlink', 15600),
     milestones: [
       { label: 'max Q', at: maxQTime, published: '65-80 s', regression: [44, 58] },
-      { label: 'MECO', at: evTime('evt.meco'), published: '150-165 s', regression: [145, 165] },
-      { label: 'stage separation', at: evTime('evt.stageSep'), published: 'MECO + 3 s', regression: [148, 168] },
-      { label: 'MVac ignition', at: evTime('evt.ignition', 1), published: 'MECO + 7 s', regression: [152, 172] },
+      { label: 'MECO', at: evTime('evt.meco'), published: '150-165 s', regression: [146, 166] },
+      { label: 'stage separation', at: evTime('evt.stageSep'), published: 'MECO + 3 s', regression: [149, 169] },
+      { label: 'MVac ignition', at: evTime('evt.ignition', 1), published: 'MECO + 7 s', regression: [153, 173] },
       { label: 'fairing jettison', at: evTime('evt.fairingSep'), published: '190-230 s', regression: [185, 235] },
       { label: 'SECO', at: evTime('evt.seco'), published: '500-560 s', regression: [495, 565] },
     ],
@@ -920,12 +920,14 @@ describe('reference timelines', () => {
    *
    *    Raising Falcon 9's `qStart` to the real ~33 kPa peak was tried and
    *    measured (the table is in docs/PHYSICS.md §6a and next to the value in
-   *    vehicles.ts): the marker moves to T+57.6 s and still misses 65-80 s,
-   *    while MECO moves to T+145.0 s and fairing jettison to T+188.8 s, both
-   *    outside their own published windows. Removing the bucket entirely puts
-   *    max Q at T+59.2 s — the peak TIME is a property of the ascent profile,
-   *    not of the bucket — so no value of `qStart` takes this row off the list
-   *    and three values put two more rows on it.
+   *    vehicles.ts): with the published first-stage masses the marker moves to
+   *    T+61.3 s and still misses 65-80 s, and removing the bucket entirely does
+   *    no better — the peak TIME is a property of the ascent profile, not of
+   *    the bucket — so no value of `qStart` takes this row off the list. (With
+   *    the earlier masses it also pushed MECO and fairing jettison out of their
+   *    windows; with the published ones they stay in, and the bucket stays at
+   *    22 kPa because a later one moves the early ascent further from the
+   *    webcast telemetry in docs/VALIDATION.md.)
    *  - Electron MECO (T+138 s vs 145-155 s) — the corrected 24 kN / 25.8 kN
    *    Rutherford gives a 142 s first-stage burn; still ~5 % early.
    *  - Ariane 64 core cut-off (T+445 s vs ~460 s) — the Vulcain phase runs ~15 s
