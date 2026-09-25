@@ -132,7 +132,9 @@ export function flyRun(cfg: MissionConfig, drawn: DrawnRun, law: GuidanceLaw): M
   const s = sim.state, failed = s.status === 'failed', timedOut = !sim.done;
   if (!cutoff && !failed && !timedOut) cutoff = orbitOf(sim, false);
   const final = failed || timedOut ? undefined : orbitOf(sim, true);
-  const reason = failed ? [...sim.events].reverse().find((e) => e.severity === 'fail')?.key ?? sim.events[sim.events.length - 1]?.key ?? 'failed'
+  // The first failure is the cause (a break-up, the range safety, …): `evt.vehicleLost` follows every one of them.
+  const reason = failed ? sim.events.find((e) => e.severity === 'fail' && e.key !== 'evt.vehicleLost')?.key
+    ?? sim.events.find((e) => e.severity === 'fail')?.key ?? sim.events[sim.events.length - 1]?.key ?? 'failed'
     : timedOut ? 'timeout' : undefined;
   const outcome: RunOutcome = !final ? 'lost' : final.perigeeKm >= (ORBIT_INSERTION_FLOOR - 3e3) / 1000 && Number.isFinite(final.apogeeKm) ? 'inserted' : 'short';
   const ended = typeof performance !== 'undefined' ? performance.now() : Date.now();
