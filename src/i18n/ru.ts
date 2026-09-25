@@ -538,6 +538,7 @@ export const ru: Record<string, string> = {
   'cam.phase.burn': 'Манёвр на орбите',
   'cam.phase.orbit': 'Орбитальный полёт',
   'cam.phase.deployment': 'Отделение полезной нагрузки',
+  'cam.phase.proximity': 'У станции',
   'cam.phase.descent': 'Возвращение на Землю',
   'dlg.physics.button': 'Физика и источники',
   'dlg.physics.eyebrow': 'КАК ЭТО УСТРОЕНО',

@@ -554,6 +554,7 @@ export const en: Record<string, string> = {
   'cam.phase.burn': 'Orbital burn',
   'cam.phase.orbit': 'Orbital flight',
   'cam.phase.deployment': 'Payload deployment',
+  'cam.phase.proximity': 'Near the station',
   'cam.phase.descent': 'Return to Earth',
   // physics & sources dialog
   'dlg.physics.button': 'Physics & sources',

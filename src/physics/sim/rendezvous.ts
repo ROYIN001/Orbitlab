@@ -584,6 +584,8 @@ export class Rendezvous {
     const q = this.body?.attitudeQ ?? this.attitude;
     s.dir = quatRotate(q, v3(1, 0, 0));
     s.mass = this.mass();
+    // in free fall but for the main engine (a few hundredths of a g); the thrusters' pushes are smaller still
+    s.gLoad = this.phase === 'burn' ? SPACECRAFT.mainThrust / s.mass / G0 : 0;
     const sc = sim.vehicle.stages.find((x) => x.spec.isSpacecraft);
     if (sc) sc.propellant = this.propellant;
     s.rigid = this.telemetry(q);

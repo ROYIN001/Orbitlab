@@ -17,9 +17,9 @@ import { getNotation, QUANTITIES, symbolNode, type Quantity } from './notation';
 import './notation.css';
 
 /** Flight phases the camera sequence can be programmed for. */
-export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment' | 'descent';
+export type FlightPhase = 'pad' | 'ascent' | 'staging' | 'upper' | 'coast' | 'burn' | 'orbit' | 'deployment' | 'proximity' | 'descent';
 
-export const FLIGHT_PHASES: FlightPhase[] = ['pad', 'ascent', 'staging', 'upper', 'coast', 'burn', 'orbit', 'deployment', 'descent'];
+export const FLIGHT_PHASES: FlightPhase[] = ['pad', 'ascent', 'staging', 'upper', 'coast', 'burn', 'orbit', 'deployment', 'proximity', 'descent'];
 
 export type CameraPlan = Record<FlightPhase, CameraMode>;
 
@@ -33,6 +33,8 @@ export const DEFAULT_CAMERA_PLAN: CameraPlan = {
   burn: 'space',
   orbit: 'space',
   deployment: 'map',
+  // G07: close to the station, from the automatic approach to the docking — the station in the picture
+  proximity: 'exterior',
   // a ship flown home from a suborbital cut-off, from the entry interface down
   descent: 'exterior',
 };

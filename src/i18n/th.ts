@@ -540,6 +540,7 @@ export const th: Record<string, string> = {
   'cam.phase.burn': 'การจุดเครื่องในวงโคจร',
   'cam.phase.orbit': 'การบินในวงโคจร',
   'cam.phase.deployment': 'การปล่อยน้ำหนักบรรทุก',
+  'cam.phase.proximity': 'ใกล้สถานีอวกาศ',
   'cam.phase.descent': 'การกลับสู่โลก',
   'dlg.physics.button': 'ฟิสิกส์และแหล่งอ้างอิง',
   'dlg.physics.eyebrow': 'เบื้องหลังการทำงาน',

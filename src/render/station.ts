@@ -95,10 +95,10 @@ export class StationView {
       this.geometries.push(ring.geometry);
       ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
       t.add(ring);
-      // the target: a disc on the hull 1 m beside the port, a cross on a 0.6 m standoff in front of it
+      // the target: a black disc on the hull 1.1 m beside the port, a white cross on a 0.6 m standoff in front of it
       const o = targetOffset(port);
       const base = new THREE.Vector3(o.x, o.y, o.z);
-      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.28, 20), mat(0x101010, 0, 0.9));
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.32, 20), mat(0x101010, 0, 0.9));
       this.geometries.push(disc.geometry);
       disc.position.copy(base);
       disc.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n);
@@ -108,7 +108,7 @@ export class StationView {
       post.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
       post.position.copy(base).addScaledVector(n, 0.3);
       t.add(post);
-      const bar = new THREE.BoxGeometry(0.34, 0.05, 0.02), bar2 = new THREE.BoxGeometry(0.05, 0.34, 0.02);
+      const bar = new THREE.BoxGeometry(0.5, 0.07, 0.03), bar2 = new THREE.BoxGeometry(0.07, 0.5, 0.03);
       this.geometries.push(bar, bar2);
       for (const geo of [bar, bar2]) {
         const m = new THREE.Mesh(geo, white);

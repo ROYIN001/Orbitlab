@@ -72,7 +72,19 @@ export class RendezvousPlot {
     const g = c.getContext('2d')!;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
-    const padL = 40, padR = 10, padT = 22, padB = 18;
+    const padL = 40, padR = 10, padB = 18;
+    // the title, and the figures beside it where they fit, under it where they do not
+    const lang = getLang();
+    const figs = t('rvplot.figures', {
+      range: range >= 1000 ? `${(range / 1000).toLocaleString(lang, { maximumFractionDigits: 2 })} ${t('rv.unit.km')}` : `${range.toLocaleString(lang, { maximumFractionDigits: 0 })} ${t('rv.unit.m')}`,
+      rate: rate.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    });
+    g.font = '600 11px "Space Grotesk", system-ui, sans-serif';
+    const titleW = g.measureText(t('rvplot.title')).width;
+    g.font = '10px ui-monospace, monospace';
+    const figsW = g.measureText(figs).width;
+    const oneLine = 10 + titleW + 16 + figsW <= w - padR;
+    const padT = oneLine ? 34 : 46;
     const pw = w - padL - padR, ph = h - padT - padB;
     // equal scale on both axes, the station at the centre, a round span a little past the spacecraft
     const half = niceSpan(Math.max(range * 1.25, 40));
@@ -82,8 +94,8 @@ export class RendezvousPlot {
     const sy = (m: number) => cy + m * scale; // +z (R-bar, toward the Earth) is down
     const km = half >= 5000;
     const unit = km ? t('rv.unit.km') : t('rv.unit.m');
-    const lang = getLang();
-    const fmt = (m: number) => (km ? m / 1000 : m).toLocaleString(lang, { maximumFractionDigits: 1 });
+    // (+ 0 turns the −0 of the zero line into 0)
+    const fmt = (m: number) => ((km ? m / 1000 : m) + 0).toLocaleString(lang, { maximumFractionDigits: 1 });
     // grid, at a round step
     const step = niceSpan(half / 2.5);
     g.strokeStyle = GRID;
@@ -91,10 +103,16 @@ export class RendezvousPlot {
     g.font = '10px ui-monospace, monospace';
     g.fillStyle = AXIS_TEXT;
     const xHalf = pw / 2 / scale, zHalf = ph / 2 / scale;
+    // the axis's name sits bottom right; tick labels stop short of it
+    g.font = '9px "DM Sans", system-ui, sans-serif';
+    const xName = t('rvplot.vbar', { unit });
+    const xNameLeft = w - padR - g.measureText(xName).width - 8;
+    g.font = '10px ui-monospace, monospace';
     for (let k = -Math.floor(xHalf / step); k <= Math.floor(xHalf / step); k++) {
       const px = sx(k * step);
       g.beginPath(); g.moveTo(px, padT); g.lineTo(px, h - padB); g.stroke();
-      if (k !== 0 && Math.abs(px - (w - padR)) > 30) { g.textAlign = 'center'; g.fillText(fmt(k * step), px, h - 5); }
+      const label = fmt(k * step), half = g.measureText(label).width / 2;
+      if (px + half < xNameLeft) { g.textAlign = 'center'; g.fillText(label, px, h - 5); }
     }
     for (let k = -Math.floor(zHalf / step); k <= Math.floor(zHalf / step); k++) {
       const py = sy(k * step);
@@ -144,20 +162,15 @@ export class RendezvousPlot {
     g.textAlign = 'left';
     g.fillStyle = TITLE_TEXT;
     g.font = '600 11px "Space Grotesk", system-ui, sans-serif';
-    g.fillText(t('rvplot.title'), padL, 14);
-    const figs = t('rvplot.figures', {
-      range: range >= 1000 ? `${(range / 1000).toLocaleString(lang, { maximumFractionDigits: 2 })} ${t('rv.unit.km')}` : `${range.toLocaleString(lang, { maximumFractionDigits: 0 })} ${t('rv.unit.m')}`,
-      rate: rate.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    });
-    g.textAlign = 'right';
+    g.fillText(t('rvplot.title'), 10, 14);
     g.font = '10px ui-monospace, monospace';
-    g.fillStyle = TITLE_TEXT;
-    g.fillText(figs, w - padR, 14);
+    if (oneLine) { g.textAlign = 'right'; g.fillText(figs, w - padR, 14); } else g.fillText(figs, 10, 28);
     g.fillStyle = AXIS_TEXT;
     g.font = '9px "DM Sans", system-ui, sans-serif';
-    g.fillText(t('rvplot.vbar', { unit }), w - padR, h - 5);
+    g.textAlign = 'right';
+    g.fillText(xName, w - padR, h - 5);
     g.textAlign = 'left';
-    g.fillText(t('rvplot.up', { unit }), padL + 4, padT + 10);
+    g.fillText(t('rvplot.up', { unit }), padL, padT - 6);
     const label = t('rvplot.aria', { x: fmt(x), z: fmt(-z), unit, range: figs });
     if (c.getAttribute('aria-label') !== label) { c.setAttribute('aria-label', label); c.textContent = label; }
   }

@@ -318,7 +318,13 @@ describe('settings', () => {
 describe('the viewer and the plot', () => {
   it('narrates the phases and ends only when docked', () => {
     const sim = new Simulation(mission(), { headless: true });
+    // separating, before the plan: already on the way, not an ending
+    fly(sim, (s) => s.state.status === 'rendezvous');
+    expect(sim.state.rendezvous).toBeUndefined();
+    expect(flightEnding(captureFrame(sim), sim.events)).toBeNull();
     fly(sim, (s) => s.state.rendezvous?.phase === 'coast' && s.state.t > 1200);
+    // coasting in free fall, not at the third stage's last g
+    expect(sim.state.gLoad).toBe(0);
     let frame = captureFrame(sim);
     expect(watchBeat(frame, sim.events)).toBe('rvPhasing');
     expect(flightEnding(frame, sim.events)).toBeNull();

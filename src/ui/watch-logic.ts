@@ -343,6 +343,8 @@ export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'fail
 export function flightEnding(frame: VisualFrame | null, events: readonly SimEvent[]): WatchEnding | null {
   if (!frame) return null;
   // G07: a flight to the station ends docked (or in orbit by it, when the docking was called off), not at the insertion
+  // before its plan (the spacecraft still separating) the flight is already on its way to the station
+  if (frame.status === 'rendezvous' && !frame.rendezvous) return null;
   const rv = frame.rendezvous;
   if (rv) {
     if (rv.phase === 'docked') return rv.dockedAt !== undefined && frame.t - rv.dockedAt >= RETURN_SETTLE ? 'docked' : null;
