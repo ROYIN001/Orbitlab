@@ -603,6 +603,20 @@ the docking is called off. **Hand back to Kurs** lets it fly back to the station
 and in again. How the profiles, the approach and the contact limits compare with real flights
 is in [PHYSICS.md §9.2](PHYSICS.md).
 
+## 17. Historical missions
+
+Real flights, replayed on the day and at the second they flew: Soyuz MS-16 (the first crew on a
+Soyuz-2.1a, 2020), Soyuz MS-25 (2024), ORBCOMM-2 (the first Falcon 9 booster to land, 2015), the
+first Angara-A5 (2014) and H-IIA with Hayabusa2 (2014). In **Watch** they are under *From
+history* in the list of launches; in **Explore** and **Engineer** open *Historical missions* at
+the top of the setup panel, which fills the settings as flown — change anything, then launch.
+
+Because the date is the real one, the light is too: ORBCOMM-2 lifts off in the dark, as it did.
+For the two Soyuz flights the space station's orbit is the one measured that day, so the launch
+reaches its plane and the spacecraft flies on to dock as its crew did. Where the model differs
+from the flight — a later Falcon 9 standing in for the 2015 one, the Hayabusa2 flight ending in
+its parking orbit — is listed in [PHYSICS.md §13](PHYSICS.md).
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

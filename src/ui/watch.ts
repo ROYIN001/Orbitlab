@@ -16,7 +16,7 @@ import { vehicleById } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
 import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
-import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
+import { WATCH_MISSIONS, historicalDate, isHistorical, type WatchMissionId } from './watch-missions';
 
 export interface WatchHost {
   /** load a viewer mission and launch it */
@@ -372,18 +372,24 @@ export class WatchView {
     close.title = t('watch.pick.close');
     close.addEventListener('click', () => this.closePicker());
     head.append(title, close);
-    const grid = el('div', 'watch-mission-grid');
-    for (const m of WATCH_MISSIONS) {
-      const b = el('button', 'watch-mission');
-      b.type = 'button';
-      b.dataset.mission = m.id;
-      if (m.id === this.missionId) b.classList.add('current');
-      const spec = vehicleById(m.vehicleId);
-      b.append(el('span', 'watch-mission-vehicle', `${spec.name} · ${spec.country}`), el('strong', undefined, t(m.titleKey)), el('span', 'watch-mission-blurb', t(m.blurbKey)));
-      b.addEventListener('click', () => this.host.start(m.id));
-      grid.append(b);
-    }
-    card.replaceChildren(head, el('p', 'watch-pick-lead', t('watch.pick.lead')), grid);
+    const grid = (historical: boolean): HTMLElement => {
+      const g = el('div', 'watch-mission-grid');
+      for (const m of WATCH_MISSIONS.filter((x) => isHistorical(x) === historical)) {
+        const b = el('button', 'watch-mission');
+        b.type = 'button';
+        b.dataset.mission = m.id;
+        if (m.id === this.missionId) b.classList.add('current');
+        const spec = vehicleById(m.vehicleId);
+        const tag = m.launchTime ? `${spec.name} · ${historicalDate(m.launchTime)}` : `${spec.name} · ${spec.country}`;
+        b.append(el('span', 'watch-mission-vehicle', tag), el('strong', undefined, t(m.titleKey)), el('span', 'watch-mission-blurb', t(m.blurbKey)));
+        b.addEventListener('click', () => this.host.start(m.id));
+        g.append(b);
+      }
+      return g;
+    };
+    const history = el('h3', 'watch-pick-group', t('watch.pick.history'));
+    card.replaceChildren(head, el('p', 'watch-pick-lead', t('watch.pick.lead')), grid(false),
+      history, el('p', 'watch-pick-lead', t('watch.pick.historyLead')), grid(true));
     const footer = this.host.pickerFooter?.();
     if (footer) card.append(footer);
   }

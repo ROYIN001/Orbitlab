@@ -13,6 +13,7 @@
  */
 import type { ConfigInput } from '../config/validation';
 import { assertConfigInput } from '../config/validation';
+import { getLang } from '../i18n';
 import { orbitById } from '../data/orbits';
 import { siteById } from '../data/sites';
 import { DEFAULT_FAILURE } from '../physics/defaults';
@@ -20,7 +21,8 @@ import { launchWindows } from '../physics/mission';
 import type { FailureConfig, MissionConfig, OrbitSpec, RecoveryPlan } from '../types';
 
 export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
-  | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking';
+  | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking'
+  | 'soyuzMs16' | 'soyuzMs25' | 'falcon9Orbcomm2' | 'angaraA5Flight1' | 'h2aHayabusa2';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -48,6 +50,21 @@ export interface WatchMission {
   padId?: string;
   /** the flight on to the station (G07) */
   rendezvous?: MissionConfig['rendezvous'];
+  /**
+   * The real liftoff, ISO 8601 UTC, for a flight replayed on its own day
+   * (roadmap C01): it launches at this instant, in whatever light the pad had,
+   * instead of at a daylight window.
+   */
+  launchTime?: string;
+}
+
+/** A flight replayed on its own day and second (roadmap C01). */
+export const isHistorical = (m: WatchMission): boolean => m.launchTime !== undefined;
+
+/** A historical flight's date, UTC, in the reader's language ("23 March 2024"). */
+export function historicalDate(iso: string): string {
+  const locale = { en: 'en-GB', ru: 'ru-RU', th: 'th-TH-u-ca-gregory' }[getLang()];
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(iso));
 }
 
 /**
@@ -59,9 +76,10 @@ export interface WatchMission {
 const MORNING_SSO: Partial<OrbitSpec> = { ltan: 22.5 };
 
 /**
- * Each launch as it was really flown, except the date: the viewer launches in
- * daylight at the pad (`daylightLaunchTime`), and the historical dates are
- * item C01's to replay.
+ * Each launch as it was really flown. The first ten keep everything but the
+ * date: the viewer launches them in daylight at the pad (`daylightLaunchTime`).
+ * The historical flights (roadmap C01, the ones with a `launchTime`) keep the
+ * date too, to the second; sources for every value in docs/PHYSICS.md §13.
  */
 export const WATCH_MISSIONS: readonly WatchMission[] = [
   { id: 'soyuzIss', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
@@ -114,6 +132,39 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   { id: 'soyuzMsDocking', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7150,
     rendezvous: { profile: 'twoOrbit', port: 'rassvet' },
     titleKey: 'watch.mission.soyuzMsDocking', blurbKey: 'watch.mission.soyuzMsDockingBlurb', payloadKey: 'watch.payload.soyuzMsDocking' },
+  // C01 — historical flights on the vehicles of the fleet.
+  // Soyuz MS-16, 9 April 2020: the first crew on a Soyuz-2.1a, from Site 31/6;
+  // the four-orbit profile, docked at Poisk 6 h 08 min after liftoff.
+  { id: 'soyuzMs16', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7218,
+    rendezvous: { profile: 'fourOrbit', port: 'poisk' }, launchTime: '2020-04-09T08:05:06.463Z',
+    titleKey: 'watch.mission.soyuzMs16', blurbKey: 'watch.mission.soyuzMs16Blurb', payloadKey: 'watch.payload.soyuzMs16' },
+  // Soyuz MS-25, 23 March 2024, two days after an automatic cut-off at T−20 s:
+  // the two-day profile, docked at Prichal on 25 March.
+  { id: 'soyuzMs25', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7152,
+    rendezvous: { profile: 'twoDay', port: 'prichal' }, launchTime: '2024-03-23T12:36:10.573Z',
+    titleKey: 'watch.mission.soyuzMs25', blurbKey: 'watch.mission.soyuzMs25Blurb', payloadKey: 'watch.payload.soyuzMs25' },
+  // Falcon 9 flight 20, 22 December 2015 (the evening of the 21st at the Cape):
+  // eleven ORBCOMM OG2 satellites to ~613 × 657 km at 47°, and the first
+  // orbital booster to land, at Landing Zone 1. It was the first Falcon 9
+  // "Full Thrust"; the fleet's Block 5 stands in for it.
+  { id: 'falcon9Orbcomm2', vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', orbitId: 'custom', payloadMass: 2553,
+    orbit: { perigee: 613e3, apogee: 657e3, inclination: 47.0, raanMode: 'free' },
+    recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz1' } }, launchTime: '2015-12-22T01:29:00Z',
+    titleKey: 'watch.mission.falcon9Orbcomm2', blurbKey: 'watch.mission.falcon9Orbcomm2Blurb', payloadKey: 'watch.payload.orbcomm2' },
+  // Angara-A5 1L, 23 December 2014: the first flight, from Plesetsk, a 2,042 kg
+  // dummy taken to geostationary altitude by four Briz-M burns over nine hours.
+  { id: 'angaraA5Flight1', vehicleId: 'angaraa5', siteId: 'plesetsk', satelliteId: 'comsat', orbitId: 'geo', payloadMass: 2042,
+    launchTime: '2014-12-23T05:57:00Z',
+    titleKey: 'watch.mission.angaraA5Flight1', blurbKey: 'watch.mission.angaraA5Flight1Blurb', payloadKey: 'watch.payload.angaraDummy' },
+  // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a
+  // 250 × 254 km parking orbit at 30.0°, below the pad's 30.4° latitude — a
+  // yaw the model does not fly, so it aims at the lowest plane it can reach.
+  // The second stage's restart towards the asteroid, 1 h 39 min later, is not
+  // flown either: the model has no escape target. Hayabusa2 alone (600 kg);
+  // the three passengers, about a tenth of a tonne, are left out.
+  { id: 'h2aHayabusa2', vehicleId: 'h2a202', siteId: 'tanegashima', satelliteId: 'science', orbitId: 'custom', payloadMass: 600,
+    orbit: { perigee: 250e3, apogee: 254e3, inclination: 30.4, raanMode: 'free' }, launchTime: '2014-12-03T04:22:04Z',
+    titleKey: 'watch.mission.h2aHayabusa2', blurbKey: 'watch.mission.h2aHayabusa2Blurb', payloadKey: 'watch.payload.hayabusa2' },
 ];
 
 /** The launch the home page's big button plays. */
@@ -173,7 +224,7 @@ export function watchMissionSettings(id: WatchMissionId, from: Date = new Date()
   const orbit = { ...orbitById(m.orbitId), ...m.orbit };
   const settings: WatchMissionSettings = {
     vehicleId: m.vehicleId, siteId: m.siteId, satelliteId: m.satelliteId, payloadMass: m.payloadMass,
-    orbitId: m.orbitId, orbit, launchTime: daylightLaunchTime(orbit, m.siteId, from),
+    orbitId: m.orbitId, orbit, launchTime: m.launchTime ? new Date(m.launchTime) : daylightLaunchTime(orbit, m.siteId, from),
     guidanceOverrides: {}, failure: { ...(m.failure ?? DEFAULT_FAILURE) },
     boosterRecovery: !!m.recoveryPlan, recoveryPlan: m.recoveryPlan,
     ...(m.padId ? { padId: m.padId } : {}),

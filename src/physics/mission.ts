@@ -150,9 +150,31 @@ const ISS_RAAN0 = 200 * DEG;
 const ISS_A = R_EARTH + 420e3;
 const ISS_INC = 51.64 * DEG;
 
+/**
+ * The station's measured node at the historical launches flown to it (roadmap
+ * C01), interpolated between the two ISS TLEs (NORAD 25544) either side of
+ * liftoff: 2020-04-09 from 20100.15584978 (330.0733°) and 20100.35421498
+ * (329.0927°); 2020-05-30 extrapolated 4.4 h from 20151.61686127 (75.4313°);
+ * 2024-03-23 from 24083.43487593 (20.4792°) and 24083.54107639 (19.9531°).
+ * TLE copies: github.com/emit-sds/emit-sds-l1b-geo (end_to_end_testing/
+ * iss_spice/iss_tle.txt) and github.com/wparker781/REACT-GC
+ * (sat_tracking_and_pred/ref_tles_2024/25544.txt). The linear model above
+ * extrapolated six years back is tens of degrees out, so within
+ * `ISS_ANCHOR_REACH` of one of these the node regresses from the anchor.
+ */
+const ISS_ANCHORS: readonly { epoch: number; raan: number }[] = [
+  { epoch: Date.UTC(2020, 3, 9, 8, 5, 6), raan: 329.18 * DEG },   // Soyuz MS-16
+  { epoch: Date.UTC(2020, 4, 30, 19, 22, 45), raan: 74.49 * DEG }, // Crew Dragon Demo-2
+  { epoch: Date.UTC(2024, 2, 23, 12, 36, 10), raan: 20.03 * DEG }, // Soyuz MS-25
+];
+const ISS_ANCHOR_REACH = 10 * 86400e3;
+
 export function issRaanAt(date: Date): number {
   const rate = nodalPrecessionRate(ISS_A, 0.0005, ISS_INC); // rad/s (negative)
-  const dt = (date.getTime() - ISS_EPOCH) / 1000;
+  const t = date.getTime();
+  const anchor = ISS_ANCHORS.find((a) => Math.abs(t - a.epoch) <= ISS_ANCHOR_REACH);
+  if (anchor) return wrap2pi(anchor.raan + rate * (t - anchor.epoch) / 1000);
+  const dt = (t - ISS_EPOCH) / 1000;
   return wrap2pi(ISS_RAAN0 + rate * dt);
 }
 

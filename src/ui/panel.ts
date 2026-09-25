@@ -51,6 +51,7 @@ import { localized, satelliteName, siteName, stageName, vehicleManufacturer, veh
 import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
+import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionSettings } from './watch-missions';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
 import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
 import { SHIP_RETURN_VERIFIED_PAYLOAD } from '../physics/sim/ship-descent';
@@ -759,6 +760,38 @@ export class SetupPanel {
     return section;
   }
 
+  /**
+   * The flights of history (roadmap C01), the viewer's own list: each fills
+   * the settings as flown, on its day and at its second, for the reader to
+   * launch as it is or to change.
+   */
+  /** the historical list stays open across the panel's re-renders */
+  private historyOpen = false;
+
+  private historicalSection(): HTMLElement {
+    const section = this.el('details', 'config-section quickstart historical-missions') as HTMLDetailsElement;
+    section.id = 'historical-missions';
+    section.open = this.historyOpen;
+    section.addEventListener('toggle', () => { this.historyOpen = section.open; });
+    const summary = this.el('summary', undefined);
+    summary.append(this.el('h2', undefined, t('setup.history.title')));
+    section.append(summary, this.el('p', 'field-note', t('setup.history.note')));
+    for (const m of WATCH_MISSIONS.filter(isHistorical)) {
+      const button = this.el('button', 'quickstart-button');
+      button.type = 'button';
+      button.dataset.historical = m.id;
+      button.disabled = this.running;
+      const spec = vehicleById(m.vehicleId);
+      button.append(this.el('strong', undefined, t(m.titleKey)), this.el('span', undefined, `${spec.name} · ${historicalDate(m.launchTime!)}`));
+      button.addEventListener('click', () => {
+        if (this.running) return;
+        this.loadMission(watchMissionSettings(m.id));
+      });
+      section.append(button);
+    }
+    return section;
+  }
+
   private experienceSection(): HTMLElement {
     const section = this.el('section', 'config-section experience-section');
     const label = this.el('label', 'field experience-label');
@@ -857,6 +890,7 @@ export class SetupPanel {
     scroll.appendChild(this.experienceSection());
     if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
     scroll.appendChild(this.quickstartSection());
+    scroll.appendChild(this.historicalSection());
     scroll.appendChild(this.share.section());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────

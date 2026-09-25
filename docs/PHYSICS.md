@@ -2650,6 +2650,56 @@ cylindrical shadow of the Earth at the vehicle (`sunlitAt`, src/render/sky.ts) a
 observer's twilight (the sun between about 6° above and 18° below the camera's horizon); it fades out
 for a camera inside it. It is an illustration of the phenomenon, not a plume-expansion model.
 
+## 13. Historical missions (roadmap C01)
+
+src/ui/watch-missions.ts (the entries with a `launchTime`), src/physics/mission.ts
+(`ISS_ANCHORS`). Each is a real flight replayed on its own day, to the second: the launch time
+drives the Earth's rotation (GMST) and the Sun's direction exactly as any other launch time does,
+so a night launch is dark and the station stands where it stood. They are offered in Watch
+(*From history*) and in the setup panel of Explore and Engineer (*Historical missions*).
+
+**13.1 The flights and what is taken from them.** Liftoff times, pads, masses and orbits are from
+Jonathan McDowell's GCAT (launch.tsv, satcat.tsv, lp.tsv, read 2026-09-25) unless another source
+is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's Space Report*.
+
+| Flight | Liftoff (UTC) | Vehicle / site | Payload | Target flown to | Source |
+|---|---|---|---|---|---|
+| Soyuz MS-16 | 2020-04-09 08:05:06.463 | Soyuz-2.1a, Baikonur 31/6 | 7,218 kg | ISS plane; four-orbit rendezvous, Poisk | GCAT; RSW *soyuz-ms-16*; JSR 777 |
+| Soyuz MS-25 | 2024-03-23 12:36:10.573 | Soyuz-2.1a, Baikonur 31/6 | 7,152 kg | ISS plane; two-day rendezvous, Prichal | RSW *soyuz-ms-25*; JSR 831 |
+| ORBCOMM-2 (F9 flight 20) | 2015-12-22 01:29:00 | Falcon 9, SLC-40; core to LZ-1 | 2,553 kg (11 × 172 kg + dispenser) | 613 × 657 km, 47.0° | GCAT; JSR 721 |
+| Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
+| Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
+
+**13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
+regression, which six years back is tens of degrees out. Within 10 days of a historical flight
+to the station it regresses instead from that day's measured node, interpolated between the two
+ISS TLEs (NORAD 25544) either side of liftoff: 329.18° at MS-16's liftoff (TLEs 20100.15584978,
+330.0733°, and 20100.35421498, 329.0927°), 74.49° at Demo-2's (extrapolated 4.4 h from
+20151.61686127, 75.4313°) and 20.03° at MS-25's (24083.43487593, 20.4792°, and 24083.54107639,
+19.9531°). The TLEs are public copies (github.com/emit-sds/emit-sds-l1b-geo,
+`end_to_end_testing/iss_spice/iss_tle.txt`; github.com/wparker781/REACT-GC,
+`sat_tracking_and_pred/ref_tles_2024/25544.txt`); Space-Track itself needs an account. With the
+measured node the model's own launch window opens 158 s (MS-16) and 69 s (MS-25) from the real
+liftoff — the difference between its one head start for every launch (`T_PLANE`, 200 s) and the
+one flown — and MS-16, launched at its real second, reaches a plane 0.4° from the station's
+(tests/watch-missions.test.ts).
+
+**13.3 What stands in, and what is left out (approximations).**
+- *ORBCOMM-2* flew the first Falcon 9 Full Thrust (v1.2, 2015); the fleet's Block 5 stands in
+  for it, with more thrust per Merlin (about 190 against 170 klbf) — so it stages earlier (T+129 s
+  against about T+140 s planned) and lands sooner (T+517 s against T+604 s).
+- *Angara-A5 1L* is flown to a 35,786 km circular equatorial orbit, the target; the flight
+  itself ended 35,625 × 36,946 km at 0.49° after four Briz-M burns, then raised the stage to a
+  36,155 × 39,089 km disposal orbit. The model's burn plan is its own, not the flown one.
+- *Hayabusa2*: the parking orbit was 30.0°, below the pad's 30.4° latitude — a yaw the model does
+  not fly, so it aims at 30.4°. The restart towards Ryugu (T+5,966–6,211 s, C3 ≈ 21 km²/s²) is
+  not flown: the model has no escape target. The three passengers (Shin'en-2, DESPATCH,
+  PROCYON, together about a tenth of a tonne) are left out.
+- *Soyuz MS-16 / MS-25*: 200 × 242 km insertion as for every crewed Soyuz (§9.2); the measured
+  Blok I orbits were 192 × 218 km and 193 × 218 km.
+- The pads of Plesetsk, Tanegashima and SLC-40 are the sites' own coordinates, within a few
+  kilometres of the pads flown.
+
 ## Glossary (EN / RU / TH)
 
 This table is the source of truth for `src/i18n/ru.ts` and `src/i18n/th.ts`, and

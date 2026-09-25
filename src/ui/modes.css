@@ -184,6 +184,7 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
 .watch-close { flex: none; width: 36px; height: 36px; border-radius: 8px; font-size: 24px; line-height: 1; color: var(--muted); }
 .watch-close:hover { color: #fff; background: var(--panel2); }
 .watch-pick-lead { margin: 0; font-size: 14px; color: var(--muted); }
+.watch-pick-group { margin: 22px 0 4px; font: 600 15px/1.3 var(--display); letter-spacing: 0.5px; }
 .watch-mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-top: 16px; }
 .watch-mission {
   display: flex; flex-direction: column; gap: 5px; text-align: left;
