@@ -2733,6 +2733,44 @@ drawing all take that vehicle:
 - *Drawing*: the dimensions above; the side-wall taper, the four SuperDraco pods, the four
   windows, the trunk's half cover of solar cells and its four fins are drawn from photographs.
 
+**13.5 The model against the flight.** src/ui/flown.ts, src/ui/flown-view.ts. Each historical
+mission carries the real flight's event times and orbit (`WatchMission.flown`, sources as in
+§13.1; ≈ marks a planned, rounded or second-hand value), matched to the n-th occurrence of the
+simulation's own event. Watch's caption sets the real time beside the one just seen, the end card
+and the panel under the mission result (Explore, Engineer) tabulate them with the orbit the
+payload was left in (the last target orbit the simulation reported up to separation), and the
+telemetry charts mark the real events in orange. Only a flight whose settings are unchanged — the
+same vehicle, site, payload, mass and second of launch (`historicalFor`) — is compared.
+
+Six-DOF flights as the viewer flies them, model − flight, s (tests/watch-missions.test.ts holds
+each ascent event within a minute or 30 % of its flown time; tests/heavy/historical-docking.test.ts
+the dockings):
+
+| Flight | Strap-ons / SRBs | Fairing | MECO / core sep. | Upper-stage cut-off | Other |
+|---|---|---|---|---|---|
+| Soyuz MS-16 | +2.7 (≈118) | +4.0 (≈153) | +6.5 (≈288) | — | separation +5.1 (530); contact 6:29 against 6:08:15 |
+| Soyuz MS-25 | +2.9 (117.8) | +3.7 (153.33) | +6.8 (287.7) | +7.3 (525.93) | separation +5.2 (529.2); contact 2 d 02:37 against 2 d 02:26:39 |
+| ORBCOMM-2 | — | −14.7 (≈175) | −11.4 / −12.4 (≈140 / ≈144) | — | Max Q −34 (≈84); landing at LZ-1 −87 (≈604) |
+| Angara-A5 1L | −10.7 (213.7) | −89.1 (345.1) | +0.9 (330.9) | −16.5 (≈733) | URM-2 separation −18.6 (738.4) |
+| Demo-2 | — | — | −20.1 / −20.1 (153 / 156) | −11.1 (527) | Max Q −6.9 (58); landing on the ship −10 (562) |
+| Hayabusa2 | +0.1 (107) | −1.0 (251) | −5.3 / −7.3 (396 / 404) | −48 (680) | — |
+
+The differences are the model's, and mostly known: the Soyuz-2.1a's accepted ascent runs about
+five seconds long throughout. Falcon 9 Block 5 stands in for the 2015 Full Thrust, and its
+default pitch programme with the 12 % drone-ship reserve cuts off the first stage 20 s early on
+Demo-2's heavy crewed ascent. Angara-A5 drops its fairing on the heating placard at 256 s, where
+the real one kept it until after the core had gone (345 s). H-IIA's model flies a short second
+burn and circularises at apogee, where the real one cut off at 680 s into the parking orbit
+directly. The two dockings are the G07 profiles', copied from other flights (§9.2): the
+four-orbit one is Soyuz TMA-19M's 6 h 21 min, and MS-16 was planned for 6 h 11 min.
+
+*A limitation found here:* Demo-2 reaches its orbit in six-DOF, the default everywhere, with
+75 m/s to spare; in the point-mass model (a choice in Engineer) its second stage runs dry about
+100 m/s short. The first stage holds back a fixed 12 % of its propellant for any drone-ship
+return, 47.5 t, where this booster lands with 11 t of it unburnt; flown expended, the same
+ascent cuts off the first stage at T+152 s (the real one at 153 s) with nearly 1 km/s left.
+A reserve sized for each return, rather than one fraction for all, is left for later.
+
 ## Glossary (EN / RU / TH)
 
 This table is the source of truth for `src/i18n/ru.ts` and `src/i18n/th.ts`, and

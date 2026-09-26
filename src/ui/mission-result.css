@@ -29,3 +29,12 @@
   .mission-result { padding: 14px; }
   .mission-result th, .mission-result td { padding: 7px 6px; }
 }
+
+/* C01: the real flight beside the simulated one (src/ui/flown-view.ts) */
+.flown table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.flown caption { text-align: left; font-weight: 600; padding-bottom: 6px; }
+.flown th, .flown td { padding: 3px 6px; text-align: right; border-bottom: 1px solid var(--line2, #2a3342); font-variant-numeric: tabular-nums; }
+.flown th[scope="row"], .flown thead th:first-child { text-align: left; }
+.flown-note { font-size: 11px; color: var(--muted); margin: 6px 0 0; }
+.watch-real { margin: 4px 0 0; font-size: 13px; color: var(--accent); }
+.watch-end .flown { margin: 12px 0; text-align: left; }

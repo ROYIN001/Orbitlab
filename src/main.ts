@@ -24,6 +24,7 @@ import { CameraController, type CameraMode, type CamPhase } from './render/camer
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { MissionResult } from './ui/mission-result';
+import { FlownPanel } from './ui/flown-view';
 import { RigidControls } from './ui/rigid-controls';
 import { LoopInspector } from './ui/loop-inspector';
 import { Hud } from './ui/hud';
@@ -36,7 +37,7 @@ import { HomeScreen } from './ui/home';
 import './ui/modes.css';
 import { WatchView } from './ui/watch';
 import { experienceForMode, hashForMode, initialMode, modeFromHash, saveMode, type AppMode } from './ui/app-mode';
-import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
+import { FEATURED_WATCH_MISSION, historicalFor, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
@@ -179,6 +180,8 @@ class App {
   hud: Hud;
   tel: TelemetryPanel;
   result: MissionResult;
+  /** C01: the real flight beside the simulated one */
+  flown: FlownPanel;
   rigidControls: RigidControls;
   /** G07: the TORU hand controllers */
   toruControls!: ToruControls;
@@ -333,6 +336,7 @@ class App {
   constructor() {
     new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
+    this.flown = new FlownPanel(document.getElementById('flown-result')!);
     this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
       if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
     });
@@ -1113,11 +1117,14 @@ class App {
     // src/data and are translated by `localizeEventParams` at the point of
     // rendering (src/ui/names.ts).
     this.hud.setVehicle(sim.vehicleSpec);
+    // C01: an unchanged historical flight draws the real one's events on the charts
+    this.tel.setFlown(historicalFor({ ...sim.cfg, payloadMass: sim.cfg.payloadMassOverride })?.flown ?? null);
     this.timeline.setVehicle(sim.vehicleSpec);
     this.narration.setVehicle(sim.vehicleSpec);
     this.hud.reset();
     this.tel.reset();
     this.result.clear();
+    this.flown.clear();
     this.rigidControls.reset();
     this.toruControls.reset();
     this.tel.setExportSource(sim);
@@ -1280,6 +1287,7 @@ class App {
       this.rendezvousPlot.update(this.recorder.frames, this.shown);
       this.compare.update();
       this.result.update(this.simView.sim);
+      this.flown.update(this.simView.sim);
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
       this.toruControls.update(this.shown, this.player.live, this.mode === 'engineer');

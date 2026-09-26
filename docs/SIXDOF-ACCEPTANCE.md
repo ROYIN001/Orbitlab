@@ -549,3 +549,9 @@ historical missions on their real dates and the station's node regressed from th
 one within ten days of a historical flight to it (`issRaanAt`); the fleet's missions are all
 dated 2026, where the node is the one it was, so every case flies as before:
 **161 of 161 passed** in 2 h 16 min on four cores, run alone but for a ten-second unit test.
+
+**The rigid fleet with C01 part 2.** `npm run test:sixdof-fleet` at commit 501e4d6: Crew Dragon
+flown without a fairing (`missionVehicle`, the exposed payload's nose in the aerodynamic table)
+and the drone-ship entry burn that spends the stage's spare propellant; the fleet's missions
+carry neither a crew Dragon nor a recovery plan, so every case flies as before:
+**161 of 161 passed** in 2 h 2 min on four cores, run alone.

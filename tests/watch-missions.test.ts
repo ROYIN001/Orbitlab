@@ -21,6 +21,7 @@ import { defaultDynamics } from '../src/physics/rigid/config';
 import { reachedOrbit } from '../src/ui/watch-logic';
 import { captureFrame } from '../src/physics/frame';
 import { en } from '../src/i18n/en';
+import { compareEvents } from '../src/ui/flown';
 
 const FROM = [new Date('2026-09-22T03:00:00Z'), new Date('2027-03-14T17:30:00Z')];
 
@@ -132,6 +133,15 @@ describe('viewer missions', () => {
     for (const d of home()) {
       expect(d.outcome, `${d.name} → ${d.recovery!.target!.id}`).toBe('landed');
       expect(d.recovery!.missDistance!).toBeLessThan(d.recovery!.target!.radius);
+    }
+    // C01: a historical flight's ascent happens as flown, give or take the
+    // model's own guidance — within a minute, or 30 % of the time flown
+    const flown = watchMissionById(id)!.flown;
+    for (const row of flown ? compareEvents(flown, sim.events) : []) {
+      if (['evt.maxQ', 'evt.boosterSep', 'evt.fairingSep', 'evt.meco'].includes(row.key) || (row.key === 'evt.stageSep' && row.n === 1)) {
+        expect(row.sim, `${id} ${row.key}`).not.toBeNull();
+      }
+      if (row.delta !== null) expect(Math.abs(row.delta), `${id} ${row.key} ${row.n}`).toBeLessThan(Math.max(60, 0.3 * row.real));
     }
   });
 });

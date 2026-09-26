@@ -620,6 +620,18 @@ separates. Where the model differs
 from the flight — a later Falcon 9 standing in for the 2015 one, the Hayabusa2 flight ending in
 its parking orbit — is listed in [PHYSICS.md §13](PHYSICS.md).
 
+Each historical flight is set beside the real one. In **Watch**, when the rocket does something
+the real flight's timeline records — the strap-ons falling away, the main engine cutting off, the
+booster landing, the spacecraft docking — the caption adds a line such as *Real flight: MECO at
+T+02:33 (here T+02:13)*, and the end card has a table of every such event, the model's time
+against the real one, and the orbit the payload was left in. In **Explore** and **Engineer** the
+same table is under the mission result, and the telemetry charts mark the real flight's events in
+orange beside the model's grey ones. A time marked ≈ is a planned, rounded or second-hand figure.
+The table only appears while the settings are the historical flight's own: change the payload,
+the date or the vehicle and it is a different flight. The model flies its own guidance, not the
+real pitch programme, so the times differ by seconds to a minute; why, flight by flight, is in
+[PHYSICS.md §13](PHYSICS.md).
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

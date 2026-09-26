@@ -19,6 +19,7 @@ import { siteById } from '../data/sites';
 import { DEFAULT_FAILURE } from '../physics/defaults';
 import { launchWindows } from '../physics/mission';
 import type { FailureConfig, MissionConfig, OrbitSpec, RecoveryPlan } from '../types';
+import type { FlownRecord } from './flown';
 
 export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
   | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking'
@@ -56,10 +57,23 @@ export interface WatchMission {
    * instead of at a daylight window.
    */
   launchTime?: string;
+  /** the real flight's event times and orbit, to compare with (C01; sources in docs/PHYSICS.md §13) */
+  flown?: FlownRecord;
 }
 
 /** A flight replayed on its own day and second (roadmap C01). */
 export const isHistorical = (m: WatchMission): boolean => m.launchTime !== undefined;
+
+/**
+ * The historical flight a mission's settings are, if they are one unchanged:
+ * the same vehicle, site, payload and mass, launched at the same second. Its
+ * flown record is then a fair comparison; anything edited is a different flight.
+ */
+export function historicalFor(cfg: { vehicleId: string; siteId: string; satelliteId: string; payloadMass?: number; launchTime: Date }): WatchMission | undefined {
+  return WATCH_MISSIONS.find((m) => m.launchTime !== undefined && m.vehicleId === cfg.vehicleId && m.siteId === cfg.siteId
+    && m.satelliteId === cfg.satelliteId && (cfg.payloadMass === undefined || m.payloadMass === cfg.payloadMass)
+    && Math.abs(new Date(m.launchTime).getTime() - cfg.launchTime.getTime()) < 1000);
+}
 
 /** A historical flight's date, UTC, in the reader's language ("23 March 2024"). */
 export function historicalDate(iso: string): string {
@@ -137,11 +151,23 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // the four-orbit profile, docked at Poisk 6 h 08 min after liftoff.
   { id: 'soyuzMs16', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7218,
     rendezvous: { profile: 'fourOrbit', port: 'poisk' }, launchTime: '2020-04-09T08:05:06.463Z',
+    // RSW gives the ascent in prose ("slightly less than two minutes", "about
+    // 4.8 min"); separation from GCAT, docking 14:13:21 UTC (RSW, JSR 777)
+    flown: { events: [
+      { key: 'evt.boosterSep', t: 118, approx: true }, { key: 'evt.fairingSep', t: 153, approx: true },
+      { key: 'evt.stageSep', t: 288, approx: true }, { key: 'evt.payloadSep', t: 530 },
+      { key: 'evt.contact', t: 22095 },
+    ], orbit: { perigee: 192, apogee: 218, inclination: 51.66 } },
     titleKey: 'watch.mission.soyuzMs16', blurbKey: 'watch.mission.soyuzMs16Blurb', payloadKey: 'watch.payload.soyuzMs16' },
   // Soyuz MS-25, 23 March 2024, two days after an automatic cut-off at T−20 s:
   // the two-day profile, docked at Prichal on 25 March.
   { id: 'soyuzMs25', vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbitId: 'iss', payloadMass: 7152,
     rendezvous: { profile: 'twoDay', port: 'prichal' }, launchTime: '2024-03-23T12:36:10.573Z',
+    // the telemetry times RSW publishes; docking 2024-03-25 15:02:50 UTC (JSR 831)
+    flown: { events: [
+      { key: 'evt.boosterSep', t: 117.8 }, { key: 'evt.fairingSep', t: 153.33 }, { key: 'evt.stageSep', t: 287.7 },
+      { key: 'evt.seco', t: 525.93 }, { key: 'evt.payloadSep', t: 529.229 }, { key: 'evt.contact', t: 181599.4 },
+    ], orbit: { perigee: 193, apogee: 218, inclination: 51.65 } },
     titleKey: 'watch.mission.soyuzMs25', blurbKey: 'watch.mission.soyuzMs25Blurb', payloadKey: 'watch.payload.soyuzMs25' },
   // Falcon 9 flight 20, 22 December 2015 (the evening of the 21st at the Cape):
   // eleven ORBCOMM OG2 satellites to ~613 × 657 km at 47°, and the first
@@ -150,11 +176,25 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   { id: 'falcon9Orbcomm2', vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', orbitId: 'custom', payloadMass: 2553,
     orbit: { perigee: 613e3, apogee: 657e3, inclination: 47.0, raanMode: 'free' },
     recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz1' } }, launchTime: '2015-12-22T01:29:00Z',
+    // the pre-launch timeline (Spaceflight Now); the landing 01:39 UTC (JSR
+    // 721), the first satellite out at 01:44 (GCAT, to the minute)
+    flown: { events: [
+      { key: 'evt.maxQ', t: 84, approx: true }, { key: 'evt.meco', t: 140, approx: true },
+      { key: 'evt.stageSep', t: 144, approx: true }, { key: 'evt.fairingSep', t: 175, approx: true },
+      { key: 'evt.boosterLandedZone', t: 604, approx: true }, { key: 'evt.payloadSep', t: 900, approx: true },
+    ], orbit: { perigee: 613, apogee: 657, inclination: 47.0 } },
     titleKey: 'watch.mission.falcon9Orbcomm2', blurbKey: 'watch.mission.falcon9Orbcomm2Blurb', payloadKey: 'watch.payload.orbcomm2' },
   // Angara-A5 1L, 23 December 2014: the first flight, from Plesetsk, a 2,042 kg
   // dummy taken to geostationary altitude by four Briz-M burns over nine hours.
   { id: 'angaraA5Flight1', vehicleId: 'angaraa5', siteId: 'plesetsk', satelliteId: 'comsat', orbitId: 'geo', payloadMass: 2042,
     launchTime: '2014-12-23T05:57:00Z',
+    // the telemetry table RSW publishes; the upper stage's cut-off from the
+    // Novosti Kosmonavtiki timeline; the dummy's simulated release at 9:00:37
+    flown: { events: [
+      { key: 'evt.boosterSep', t: 213.7 }, { key: 'evt.stageSep', t: 330.924 }, { key: 'evt.fairingSep', t: 345.075 },
+      { key: 'evt.seco', t: 733, approx: true }, { key: 'evt.stageSep', n: 2, t: 738.412 },
+      { key: 'evt.payloadSep', t: 32437, approx: true },
+    ], orbit: { perigee: 35625, apogee: 36946, inclination: 0.49, approx: true } },
     titleKey: 'watch.mission.angaraA5Flight1', blurbKey: 'watch.mission.angaraA5Flight1Blurb', payloadKey: 'watch.payload.angaraDummy' },
   // Crew Dragon Demo-2, 30 May 2020: the first crew launched from the United
   // States since 2011, Crew Dragon "Endeavour" on top of Falcon 9 without a
@@ -164,6 +204,11 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   { id: 'falcon9Demo2', vehicleId: 'falcon9', siteId: 'ksc39a', satelliteId: 'crewDragon', orbitId: 'iss', payloadMass: 13055,
     orbit: { perigee: 190e3, apogee: 211e3 },
     recoveryPlan: { core: { kind: 'droneShip' } }, launchTime: '2020-05-30T19:22:45Z',
+    // NASA's launch timeline
+    flown: { events: [
+      { key: 'evt.maxQ', t: 58 }, { key: 'evt.meco', t: 153 }, { key: 'evt.stageSep', t: 156 },
+      { key: 'evt.seco', t: 527 }, { key: 'evt.boosterLandedShip', t: 562 }, { key: 'evt.payloadSep', t: 720 },
+    ], orbit: { perigee: 190, apogee: 211, inclination: 51.6 } },
     titleKey: 'watch.mission.falcon9Demo2', blurbKey: 'watch.mission.falcon9Demo2Blurb', payloadKey: 'watch.payload.demo2' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a
   // 250 × 254 km parking orbit at 30.0°, below the pad's 30.4° latitude — a
@@ -173,6 +218,11 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // the three passengers, about a tenth of a tonne, are left out.
   { id: 'h2aHayabusa2', vehicleId: 'h2a202', siteId: 'tanegashima', satelliteId: 'science', orbitId: 'custom', payloadMass: 600,
     orbit: { perigee: 250e3, apogee: 254e3, inclination: 30.4, raanMode: 'free' }, launchTime: '2014-12-03T04:22:04Z',
+    // MHI's quick review of the flight
+    flown: { events: [
+      { key: 'evt.boosterSep', t: 107 }, { key: 'evt.fairingSep', t: 251 }, { key: 'evt.meco', t: 396 },
+      { key: 'evt.stageSep', t: 404 }, { key: 'evt.seco', t: 680 },
+    ], orbit: { perigee: 250, apogee: 254, inclination: 30.0 } },
     titleKey: 'watch.mission.h2aHayabusa2', blurbKey: 'watch.mission.h2aHayabusa2Blurb', payloadKey: 'watch.payload.hayabusa2' },
 ];
 

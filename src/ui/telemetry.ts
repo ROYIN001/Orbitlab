@@ -45,6 +45,7 @@ import type { EquationLevel } from './equations-model';
 import type { VisualFrame } from '../physics/frame';
 import { downloadBlob } from './download';
 import { ASCENT_MARKERS, CHART_IDS, ORBIT_MARKERS, chartTitle, referenceSeries } from './telemetry-charts';
+import type { FlownRecord } from './flown';
 import { referenceWindow, type ReferenceFlight } from '../replay/reference';
 
 type Range = 'mission' | 'ascent';
@@ -108,6 +109,13 @@ export class TelemetryPanel {
   /** marker pool (never shrinks) and the exact-length view handed to the chart */
   private markerPool: ChartMarker[] = [];
   private markers: ChartMarker[] = [];
+  /** C01: a historical flight's real event times, drawn beside the model's */
+  private flown: FlownRecord | null = null;
+
+  /** Draw the real flight's events on the charts too (roadmap C01), or stop. */
+  setFlown(record: FlownRecord | null): void {
+    this.flown = record;
+  }
   private rowPools: Map<HTMLElement, { rows: HTMLElement[]; used: number }> = new Map();
   /** P05: bending, slosh and shell-stress traces, and their x */
   private flexTraces: Trace[] = [trace(), trace(), trace()];
@@ -397,6 +405,17 @@ export class TelemetryPanel {
       m.x = e.t;
       m.color = orbit ? '#5c7d76' : '#3a4a5c';
       m.label = eventLabel(e.key, localizeEventParams(view.vehicleSpec, e.params));
+      this.markers[nMarkers++] = m;
+    }
+    for (const f of this.flown?.events ?? []) {
+      if (!ASCENT_MARKERS.includes(f.key)) continue;
+      let m = this.markerPool[nMarkers];
+      if (!m) { m = { x: 0, color: '' }; this.markerPool.push(m); }
+      m.x = f.t;
+      m.color = '#c9974a';
+      // unlabelled: beside the model's own markers a second row of names is
+      // unreadable; the colour is the real flight's (USER-GUIDE §17)
+      m.label = undefined;
       this.markers[nMarkers++] = m;
     }
     this.markers.length = nMarkers;

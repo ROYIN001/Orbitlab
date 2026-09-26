@@ -16,7 +16,9 @@ import { vehicleById } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
 import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
-import { WATCH_MISSIONS, historicalDate, isHistorical, type WatchMissionId } from './watch-missions';
+import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionById, type WatchMissionId } from './watch-missions';
+import { FLOWN_LABEL, recentFlown } from './flown';
+import { flownTable, fmtMissionTime } from './flown-view';
 
 export interface WatchHost {
   /** load a viewer mission and launch it */
@@ -90,6 +92,10 @@ export class WatchView {
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
+  /** C01: what the real flight did at the moment just passed */
+  private realLine: HTMLElement;
+  private realShown = '';
+  private lastEvents: readonly SimEvent[] = [];
   private clockValue: HTMLElement;
   private altValue: HTMLElement;
   private speedValue: HTMLElement;
@@ -109,7 +115,9 @@ export class WatchView {
     this.caption.setAttribute('aria-live', 'polite');
     this.beatLabel = el('span', 'eyebrow watch-beat');
     this.beatText = el('p', 'watch-say');
-    this.caption.append(this.beatLabel, this.beatText);
+    this.realLine = el('p', 'watch-real');
+    this.realLine.hidden = true;
+    this.caption.append(this.beatLabel, this.beatText, this.realLine);
 
     const stats = el('div', 'watch-stats');
     this.clockValue = el('span', 'watch-num');
@@ -267,6 +275,16 @@ export class WatchView {
       this.shown.text = text;
       this.caption.dataset.beat = beat;
     }
+    this.lastEvents = events;
+    // C01: a historical flight says when the real one did what was just seen
+    const flown = this.missionId ? watchMissionById(this.missionId)?.flown : undefined;
+    const row = flown && frame ? recentFlown(flown, events, frame.t) : null;
+    const real = row ? t('watch.real', { event: t(FLOWN_LABEL[row.key]), real: `${row.approx ? '≈ ' : ''}${fmtMissionTime(row.real)}`, model: fmtMissionTime(row.sim!) }) : '';
+    if (real !== this.realShown) {
+      this.realShown = real;
+      this.realLine.textContent = real;
+      this.realLine.hidden = !real;
+    }
     const clock = frame ? fmtClock(frame.t) : fmtClock(-10);
     // above the ground, so the pad reads 0 rather than the site's elevation
     const subject = state.subject;
@@ -344,6 +362,9 @@ export class WatchView {
     } else {
       card.append(el('p', undefined, t('watch.fail.text', { time: fmtClock(frame.t) })));
     }
+    // C01: the real flight beside this one
+    const flown = this.missionId ? watchMissionById(this.missionId)?.flown : undefined;
+    if (flown) card.append(flownTable(flown, this.lastEvents));
     const actions = el('div', 'watch-end-actions');
     const button = (key: string, cls: string, action: () => void): void => {
       const b = el('button', cls, t(key));
