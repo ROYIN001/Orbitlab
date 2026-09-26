@@ -184,7 +184,9 @@ it brings seven satellites of known shape down within 25 % of their re-entries o
 miss distance and an estimated probability of collision; the probability is held to the published
 figures of the Iridium 33–Cosmos 2251 collision (M01). **Overflights** lists when the satellites of a
 group — the Earth-imaging ones, say — pass over a place, how high, at what off-nadir angle and
-whether in daylight; sun-synchronous imagers come over at their published local times (M02). Build is
+whether in daylight; sun-synchronous imagers come over at their published local times (M02).
+**When it will come down** predicts a low object's re-entry with the agencies' ±20 % window; its
+case study, the four Long March 5B core stages, came down inside their windows (M03). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 

@@ -199,6 +199,12 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   (optical cameras need it, radars do not) and whether the satellite is heading north or south.
   Engineer adds the distance from the ground track, the local solar time and the timing
   uncertainty. It is when the place *could* be seen, not that it is.
+- **When it will come down**, for a satellite whose perigee is under 700 km: give the object's mass
+  and mean cross-section (an element set does not carry them) and C_D, and its orbit is carried
+  down with the Sun as measured and forecast to a predicted re-entry, with the window of ±20 % of
+  the time left that the agencies use. More than a year away, the orbit lifetime analysis is the
+  tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
+  their first element sets and sets each prediction beside the re-entry on record.
 - **Search** by name, catalogue number or international designator, then pick a satellite. Its
   orbit and its track are drawn. The right panel gives its catalogue number and designator, the
   epoch of its element set and how old the set is, where it is now, its period, its mean perigee

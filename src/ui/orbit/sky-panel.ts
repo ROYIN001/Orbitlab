@@ -10,7 +10,9 @@
  * For the one picked it adds its passes over a place (R03), how far off its
  * element set may be (R04) and its close approaches to everything loaded
  * (M01, src/orbit/screening.ts); for the group, when its satellites pass over
- * a place (M02, src/orbit/overflights.ts).
+ * a place (M02, src/orbit/overflights.ts); for a low one, when it will come
+ * down, and the Long March 5B core stages as the case study (M03,
+ * src/orbit/reentry.ts).
  *
  * The logic is src/orbit/real-sky.ts, omm.ts, tle.ts and sgp4.ts; this is the
  * page's part, driven by the playground (src/ui/orbit/playground.ts), which
@@ -40,6 +42,10 @@ import { footprintAngle } from '../../orbit/applications';
 import { GROWTH_PER_DAY, uncertaintyAt } from '../../orbit/uncertainty';
 import { screenInSlices, type Conjunction } from '../../orbit/screening';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
+import { predictReentry, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
+import { measuredActivity } from '../../physics/propagator/activity';
+import { CZ5B_STAGES } from '../../data/cz5b';
+import type { SpaceWeather } from '../../provider/space-weather';
 
 export interface SkyHost {
   level(): AppLevel;
@@ -116,6 +122,10 @@ export class RealSky {
   /** M02: overflights of the place by the group on screen: the settings, and the last search */
   private over = { minEl: 60 * Math.PI / 180, days: 1, daylight: false, open: false };
   private overSearch: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Overflight[]; stop: boolean } | null = null;
+  /** M03: the object's mass and size for the re-entry prediction, the last prediction, and the case study's */
+  private reentry = { mass: 1000, area: 5, cd: 2.2, open: false };
+  private reentryResult: { key: string; state: 'running' | 'done'; result: Reentry | null; sun: string } | null = null;
+  private caseStudy: { name: string; missionKey: string; p: Reentry; actual: number }[] | null = null;
 
   constructor(private readonly host: SkyHost) {}
 
@@ -399,6 +409,8 @@ export class RealSky {
     box.append(dl);
     box.append(this.uncertaintyBlock(o));
     if (now.error === 0) box.append(this.approachesBlock(o));
+    // M03: a low orbit's re-entry
+    if (now.error === 0 && !f.deepSpace && f.perigeeAlt < REENTRY_BELOW) box.append(this.reentryBlock(o));
     const thai = THAI_SATELLITES.find((s) => s.norad === o.el.satnum);
     if (thai) box.append(el('p', 'pg-note', t(thai.aboutKey)));
     if (now.error === 0) box.append(this.passesSection(o));
@@ -569,6 +581,111 @@ export class RealSky {
     box.append(ol);
     if (list.length > OVER_LIMIT) box.append(el('p', 'pg-note', t('sky.more', { n: num(list.length - OVER_LIMIT) })));
     box.append(el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].pass.top.jd) })));
+    return box;
+  }
+
+  // ─── re-entry (M03) ────────────────────────────────────────────────────────
+
+  /** The Sun's activity as measured and forecast, from the space-weather dataset of the data mode chosen (R05); GFZ's months alone without it. */
+  private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string }> {
+    let sw: SpaceWeather | null = null;
+    try { sw = (await this.host.provider().load('spaceWeather')).data; } catch { sw = null; }
+    const m = measuredActivity(sw);
+    return { series: m.series, note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }) };
+  }
+
+  private async runReentry(o: SkyObject): Promise<void> {
+    const key = `${o.key}|${this.reentry.mass}|${this.reentry.area}|${this.reentry.cd}`;
+    this.reentryResult = { key, state: 'running', result: null, sun: '' };
+    this.host.refreshFacts();
+    const { series, note } = await this.sun();
+    // the mean elements run a year in well under a second: no slices needed
+    const result = predictReentry(o.el, { mass: this.reentry.mass, area: this.reentry.area, cd: this.reentry.cd }, series);
+    if (this.reentryResult?.key !== key) return;
+    this.reentryResult = { key, state: 'done', result, sun: note };
+    this.host.refreshFacts();
+  }
+
+  private async runCaseStudy(): Promise<void> {
+    const { series } = await this.sun();
+    this.caseStudy = CZ5B_STAGES.map((s) => ({
+      name: s.name, missionKey: s.missionKey,
+      p: predictReentry(elementsFromRecord(s.elements), { mass: s.mass, area: tumblingCylinderArea(s.length, s.diameter), cd: 2.2 }, series),
+      actual: Date.parse(s.reentry) / 86400000 + 2440587.5,
+    }));
+    this.host.refreshFacts();
+  }
+
+  private reentryBlock(o: SkyObject): HTMLElement {
+    const box = el('details', 'pg-tool pg-reentry');
+    box.open = this.reentry.open;
+    box.addEventListener('toggle', () => { this.reentry.open = box.open; });
+    box.append(el('summary', undefined, t('reentry.title')), el('p', 'pg-tool-lead', t('reentry.lead')));
+    const row = el('div', 'pg-tool-row');
+    const field = (label: string, value: number, set: (v: number) => void): HTMLElement => {
+      const l = el('label');
+      const i = el('input');
+      i.type = 'number'; i.min = '0'; i.step = 'any'; i.value = String(value);
+      i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v) && v > 0) set(v); });
+      l.append(el('span', undefined, label), i);
+      return l;
+    };
+    row.append(
+      field(t('life.mass'), this.reentry.mass, (v) => { this.reentry.mass = v; }),
+      field(t('life.area'), this.reentry.area, (v) => { this.reentry.area = v; }),
+      field(t('life.cd'), this.reentry.cd, (v) => { this.reentry.cd = v; }),
+    );
+    box.append(row);
+    const mine = this.reentryResult && this.reentryResult.key.startsWith(`${o.key}|`) ? this.reentryResult : null;
+    box.append(button('watch-btn', t('reentry.run'), () => { void this.runReentry(o); }));
+    const out = el('p', 'pg-tool-out');
+    out.setAttribute('role', 'status');
+    box.append(out);
+    if (mine?.state === 'running') out.textContent = t('reentry.running');
+    else if (mine?.result) {
+      const r = mine.result;
+      if (r.jd === null) out.textContent = t('reentry.stays');
+      else {
+        out.textContent = t('reentry.result', {
+          date: fullDate(r.jd), from: fullDate(r.window![0]), to: fullDate(r.window![1]), days: num(r.jd - r.from, 1), pct: num(WINDOW_FRACTION * 100),
+        });
+      }
+      box.append(el('p', 'pg-note', mine.sun));
+    }
+    const note = el('p', 'pg-note');
+    const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
+    note.append(t('reentry.note'), ' ', link('Klinkrad, ESA, 2013', 'https://conference.sdo.esoc.esa.int/proceedings/sdc6/paper/148/SDC6-paper148.pdf'), '.');
+    box.append(note);
+    box.append(this.caseStudyBlock());
+    return box;
+  }
+
+  /** The Long March 5B core stages, each predicted from its first element set against its re-entry on record. */
+  private caseStudyBlock(): HTMLElement {
+    const box = el('div', 'pg-reentry-case');
+    box.append(el('h3', 'pg-case-title', t('reentry.case.title')), el('p', 'pg-tool-lead', t('reentry.case.lead')));
+    if (!this.caseStudy) {
+      box.append(button('watch-btn', t('reentry.case.run'), () => { void this.runCaseStudy(); }));
+      return box;
+    }
+    // to the nearest minute, as GCAT records them
+    const utcTime = (jd: number) => `${new Date(Math.round((jd - 2440587.5) * 1440) * 60e3).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+    const ol = el('ol', 'pg-conj-list');
+    for (const c of this.caseStudy) {
+      const li = el('li');
+      const head = el('div', 'pg-conj-head');
+      head.append(el('span', 'pg-sky-name', c.name));
+      li.append(head, el('div', 'pg-conj-more', t(c.missionKey)));
+      if (c.p.jd === null) { li.append(el('div', 'pg-conj-main', t('reentry.stays'))); ol.append(li); continue; }
+      const err = ((c.p.jd - c.p.from) / (c.actual - c.p.from) - 1) * 100;
+      const inside = c.actual >= c.p.window![0] && c.actual <= c.p.window![1];
+      li.append(el('div', 'pg-conj-main', t('reentry.case.row', {
+        from: utcTime(c.p.from), pred: utcTime(c.p.jd), actual: utcTime(c.actual), err: `${err >= 0 ? '+' : '−'}${num(Math.abs(err), 1)}`,
+      })));
+      li.append(el('div', 'pg-conj-more', t(inside ? 'reentry.case.inside' : 'reentry.case.outside', { from: utcTime(c.p.window![0]), to: utcTime(c.p.window![1]) })));
+      ol.append(li);
+    }
+    box.append(ol, el('p', 'pg-note', t('reentry.case.source')));
     return box;
   }
 
@@ -822,6 +939,8 @@ const PASS_LIMIT = 12;
 const CONJ_LIMIT = 20;
 /** How many overflights are listed, soonest first. */
 const OVER_LIMIT = 40;
+/** A re-entry is predicted for an orbit whose perigee is below this, m: higher, it is years away and the lifetime analysis is the tool. */
+const REENTRY_BELOW = 700e3;
 
 const SUPERSCRIPT: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
 /** A probability from its logarithm, as 2.7 × 10⁻⁵¹, however small. */
@@ -836,6 +955,8 @@ const dateOf = (jd: number): Date => new Date((jd - 2440587.5) * 86400e3);
 /** A pass's time on the device's clock: 19:42:05. */
 const clockTime = (jd: number): string => dateOf(jd).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const dayName = (jd: number): string => dateOf(jd).toLocaleDateString(getLang(), { weekday: 'long', day: 'numeric', month: 'long' });
+/** A date months away, with its year, on the device's clock. */
+const fullDate = (jd: number): string => dateOf(jd).toLocaleString(getLang(), { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 /** The device's time zone, as the date says it: GMT+7, UTC. */
 function zoneName(jd: number): string {
   const part = new Intl.DateTimeFormat(getLang(), { timeZoneName: 'short' }).formatToParts(dateOf(jd)).find((x) => x.type === 'timeZoneName');

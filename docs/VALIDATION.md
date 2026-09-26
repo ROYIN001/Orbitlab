@@ -29,6 +29,7 @@ Status on 2026-09-25:
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
+| Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −1.4 to +18.9 % (§7), 2026-09-26 |
 | Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
 | Close approaches (M01) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade (§7), 2026-09-26 |
 | Space weather in the lifetime (R05) | NRLMSISE-00 as ECSS-E-ST-10-04C tabulates it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | All seven within 25 % of their days in orbit with the measured Sun (+0.3 to −22 %); a fixed moderate Sun is off by −74 to +83 % (§6), 2026-09-26 |
@@ -1291,13 +1292,58 @@ THEOS-2 was added to the test after the first run, at the same tolerance. Landsa
 first written as 10:00 ± 15 minutes (Landsat 7's requirement) and corrected to the USGS figure for
 Landsat 8 and 9 before this was committed; the results are within the tolerance either way.
 
+### Re-entry prediction (M03)
+
+For a satellite in a low orbit (perigee under 700 km), **When it will come down**
+(`src/orbit/reentry.ts`) carries its element set's mean orbit (`src/orbit/mean-state.ts`) down by
+the long-term propagator's mean elements, J2 and drag in the R05 density with the Sun as
+measured and forecast, until the perigee is under 120 km. The user gives the mass and mean
+cross-section, which an element set does not carry. The window is ±20 % of the time left, the
+convention of the agencies that make these predictions: ESA takes it as about two standard
+deviations and found its own predictions outside it in about 5 % of 15 campaigns
+([Klinkrad, "Methods and procedures for re-entry predictions at ESA", 2013](https://conference.sdo.esoc.esa.int/proceedings/sdc6/paper/148/SDC6-paper148.pdf)).
+It narrows as the time left does, with each later element set.
+
+The case study is the four Long March 5B core stages, 21.6 t each, left in orbit by their
+launches and fallen uncontrolled days later. Each is predicted from its first element set
+(CelesTrak) as a tumbling cylinder of GCAT's 31.7 × 5.0 m, whose mean cross-section is a quarter
+of its surface (Cauchy: 134.3 m²), C_D 2.2, the Sun as measured, against its re-entry as GCAT
+records it. The tolerance, the re-entry inside the ±20 % window, was fixed before the comparison.
+
+| stage (payload) | first element set | predicted | re-entry (GCAT) | error of the time left | ±20 % window | fixed moderate Sun |
+| --- | --- | --- | --- | --- | --- | --- |
+| Y1 (crew spacecraft test) | 2020-05-05 14:12 | 2020-05-11 13:31 | 2020-05-11 15:34 | −1.4 % | inside | −31.1 % |
+| Y2 (Tianhe) | 2021-04-29 09:08 | 2021-05-08 18:39 | 2021-05-09 02:14 | −3.2 % | inside | −34.6 % |
+| Y3 (Wentian) | 2022-07-24 14:45 | 2022-07-30 06:33 | 2022-07-30 16:51 | −7.0 % | inside | −16.6 % |
+| Y4 (Mengtian) | 2022-10-31 13:01 | 2022-11-05 03:35 | 2022-11-04 10:01 | +18.9 % | inside, 4.5 h from its edge | +10.7 % |
+
+Times are UTC. `tests/reentry.test.ts` holds each inside its window, the cross-section to
+Cauchy's formula, and the measured Sun's mean error (7.6 %) below the fixed Sun's (23 %).
+
+**Findings.**
+
+- **All four came down inside the window**, three of them within 7 % of the time left. That is
+  as good as ESA reports for half its own predictions (within ±6 %), with a size taken from a
+  catalogue rather than fitted to the tracking. Four cases are not a statistic.
+- **Y4 came down 18.9 % sooner than predicted**, near the window's edge. It flew in the most
+  active Sun of the four (monthly F10.7 133.5 in October 2022, against 69 for Y1 and 75 for Y2),
+  where a monthly mean hides most of the day-to-day swing. Its first element set is also the only
+  one with a drag term already fitted (B* 4.7 × 10⁻⁴). The fixed moderate Sun happened to do better for it alone; averaged over the four, the measured
+  Sun is three times nearer.
+- **The stages tumble, and their area is a guess.** A stage flying broadside (158.5 m²) would
+  come down about 15 % sooner than the tumbling average; one end-on (19.6 m²), far later. With the
+  area fitted to the stage's own decay, as the agencies do, the window can be trusted; with a
+  catalogue's size, it is an estimate, and the page says so.
+- **Daily storms are smoothed out.** The Sun is read month by month; a geomagnetic storm in the
+  last days would move a re-entry by hours.
+
 ## 8. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
 npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
 npx vitest run tests/activity.test.ts tests/propagator.test.ts                   # the Sun's activity in the lifetime, ~5 s
-npx vitest run tests/conjunction.test.ts tests/overflights.test.ts               # close approaches, overflights, ~5 s
+npx vitest run tests/conjunction.test.ts tests/overflights.test.ts tests/reentry.test.ts   # the military track, ~6 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min
