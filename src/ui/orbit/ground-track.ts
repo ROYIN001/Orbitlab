@@ -11,7 +11,7 @@
  */
 import { t } from '../../i18n';
 import { DEG, RAD, R_EARTH } from '../../physics/constants';
-import { sunDirectionEci } from '../../physics/orbital';
+import { gmst, sunDirectionEci } from '../../physics/orbital';
 import type { OrbitState } from '../../orbit/kepler';
 import { footprintCircle } from '../../orbit/applications';
 
@@ -23,6 +23,8 @@ export interface TrackOverlay {
   footprint?: number;
   /** the camera's swath, m, drawn along the next revolution */
   swath?: number;
+  /** R02: a catalogue group's satellites, the points below them (rad, latitude then longitude, `count` pairs), named in the legend */
+  points?: { latlon: Float32Array; count: number; label: string };
 }
 
 /** The point `d` m from (lat, lon) along bearing `b` on the sphere, rad. */
@@ -40,7 +42,7 @@ export function trackSpans(nodalPeriod: number): { past: number; future: number 
 }
 
 const COLORS = { past: 'rgba(239, 164, 126, 0.55)', future: '#efa47e', sat: '#ffffff', sun: '#ffd28a', night: 'rgba(0, 0, 10, 0.52)', station: '#c3a6ff',
-  footprint: 'rgba(110, 200, 255, 0.95)', swath: 'rgba(125, 219, 160, 0.9)' };
+  footprint: 'rgba(110, 200, 255, 0.95)', swath: 'rgba(125, 219, 160, 0.9)', points: '#9ad7ff' };
 
 export class GroundTrackView {
   private img: HTMLImageElement | null = null;
@@ -54,9 +56,11 @@ export class GroundTrackView {
   /**
    * Draw the track around `time` (s after the orbit's epoch, Julian date
    * `jd`): `stateOf` says where the satellite is at any time — on one orbit,
-   * or on a plan of several (O02) — and `period` how long a revolution takes.
+   * or on a plan of several (O02), or by SGP4 (R02) — and `period` how long a
+   * revolution takes. With no satellite (`stateOf` null) the map shows the
+   * night side and whatever the overlay brings.
    */
-  draw(stateOf: (t: number) => OrbitState, time: number, jd: number, period: number, overlay: TrackOverlay = {}): void {
+  draw(stateOf: ((t: number) => OrbitState) | null, time: number, jd: number, period: number, overlay: TrackOverlay = {}): void {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
     if (W === 0 || H === 0) return;
@@ -70,10 +74,11 @@ export class GroundTrackView {
     g.fillRect(0, 0, W, H);
     // the legend's entries, in as many lines as the width needs; over the map (under it, a card could cover it)
     g.font = '12px system-ui, sans-serif';
-    const items: [string, string, number[]][] = [
+    const items: [string, string, number[]][] = stateOf ? [
       [COLORS.sat, t('pg.track.now'), []], [COLORS.future, t('pg.track.next'), []],
       [COLORS.past, t('pg.track.past'), [4, 4]], [COLORS.sun, t('pg.track.sun'), []],
-    ];
+    ] : [[COLORS.sun, t('pg.track.sun'), []]];
+    if (overlay.points) items.push([COLORS.points, overlay.points.label, []]);
     // O04: what an application adds
     if (overlay.station) items.push([COLORS.station, t('use.station'), []]);
     if (overlay.footprint) items.push([COLORS.footprint, t('use.footprint'), [1]]);
@@ -106,10 +111,10 @@ export class GroundTrackView {
     { const [, y] = xy(0, 0); g.beginPath(); g.moveTo(ox, y); g.lineTo(ox + mw, y); g.stroke(); }
 
     // the night side, bounded by the terminator (as src/ui/map.ts draws it)
-    const now = stateOf(time);
+    const now = stateOf ? stateOf(time) : null;
     const sun = sunDirectionEci(jd);
     const subLat = Math.asin(sun.z);
-    const subLon = wrapLon(Math.atan2(sun.y, sun.x) - now.theta);
+    const subLon = wrapLon(Math.atan2(sun.y, sun.x) - (now ? now.theta : gmst(jd)));
     const tanDec = Math.abs(Math.tan(subLat)) < 1e-6 ? (subLat < 0 ? -1e-6 : 1e-6) : Math.tan(subLat);
     g.fillStyle = COLORS.night;
     g.beginPath();
@@ -124,14 +129,27 @@ export class GroundTrackView {
     g.closePath();
     g.fill();
 
+    // R02: a group's satellites, a dot each
+    if (overlay.points) {
+      const { latlon, count } = overlay.points;
+      g.fillStyle = COLORS.points;
+      const r = count > 500 ? 1.4 : 2.2;
+      for (let k = 0; k < count; k++) {
+        const [x, y] = xy(latlon[2 * k], latlon[2 * k + 1]);
+        g.fillRect(x - r, y - r, 2 * r, 2 * r);
+      }
+    }
+
     // the track: a revolution back, faint; the next ones, bright
-    const span = trackSpans(period);
-    const samples = (dt: number) => Math.max(120, Math.min(900, Math.round((dt / period) * 240)));
-    this.track(g, stateOf, time - span.past, time, samples(span.past), xy, mw, COLORS.past, 1.5, [4, 4]);
-    this.track(g, stateOf, time, time + span.future, samples(span.future), xy, mw, COLORS.future, 2, []);
+    if (stateOf) {
+      const span = trackSpans(period);
+      const samples = (dt: number) => Math.max(120, Math.min(900, Math.round((dt / period) * 240)));
+      this.track(g, stateOf, time - span.past, time, samples(span.past), xy, mw, COLORS.past, 1.5, [4, 4]);
+      this.track(g, stateOf, time, time + span.future, samples(span.future), xy, mw, COLORS.future, 2, []);
+    }
 
     // O04: the camera's swath along the next revolution, the footprint, the ground station
-    if (overlay.swath && overlay.swath > 0) {
+    if (stateOf && overlay.swath && overlay.swath > 0) {
       const n = 360, pts = Array.from({ length: n }, (_, k) => stateOf(time + (period * k) / (n - 1)));
       const edges: { lat: number; lon: number }[][] = [[], []];
       for (let k = 0; k < n - 1; k++) {
@@ -142,7 +160,7 @@ export class GroundTrackView {
       }
       for (const e of edges) this.line(g, e, xy, mw, COLORS.swath, 1.2, [2, 3]);
     }
-    if (overlay.footprint && overlay.footprint > 0) {
+    if (now && overlay.footprint && overlay.footprint > 0) {
       this.line(g, footprintCircle(now.lat, now.lon, overlay.footprint, 180), xy, mw, COLORS.footprint, 1.6, []);
     }
     if (overlay.station) {
@@ -155,7 +173,7 @@ export class GroundTrackView {
 
     // the point under the Sun, and the one under the satellite
     { const [x, y] = xy(subLat, subLon); g.fillStyle = COLORS.sun; g.beginPath(); g.arc(x, y, 4.5, 0, 2 * Math.PI); g.fill(); }
-    {
+    if (now) {
       const [x, y] = xy(now.lat, now.lon);
       g.fillStyle = COLORS.sat;
       g.strokeStyle = 'rgba(5, 8, 13, 0.9)';

@@ -10,6 +10,7 @@ import { DATA_MODES, type DataMode } from '../provider/data-mode';
 import { DATA_HOSTS, DATASET_IDS, type DatasetId } from '../provider/datasets';
 import type { DataProvider, Dataset } from '../provider/data-provider';
 import type { SpaceWeather } from '../provider/space-weather';
+import type { SatelliteCatalog } from '../provider/satellites';
 
 export interface DataDialogHost {
   mode(): DataMode;
@@ -26,7 +27,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 type Loaded = { state: 'loading' } | { state: 'done'; set: Dataset<unknown> } | { state: 'failed'; reason: string };
 
-const SET_NAME: Record<DatasetId, string> = { spaceWeather: 'data.set.spaceWeather' };
+const SET_NAME: Record<DatasetId, string> = { spaceWeather: 'data.set.spaceWeather', satellites: 'data.set.satellites' };
 const MODE_TEXT: Record<DataMode, readonly [string, string]> = {
   offline: ['data.offline.title', 'data.offline.text'],
   online: ['data.online.title', 'data.online.text'],
@@ -104,9 +105,11 @@ export class DataDialog extends Modal {
       else if (got.state === 'failed') li.append(el('span', 'data-set-status warn', t('data.failed', { reason: got.reason })));
       else {
         const set = got.set;
-        li.append(el('span', 'data-set-status', `${t('data.asOf', { date: this.date(set.asOf) })} · ${set.from === 'online'
-          ? t('data.from.online', { source: set.source.name }) : t('data.from.snapshot')}`));
+        const from = set.from === 'snapshot' ? t('data.from.snapshot')
+          : set.fetched ? t('data.from.onlineKept', { source: set.source.name, date: this.date(set.fetched) }) : t('data.from.online', { source: set.source.name });
+        li.append(el('span', 'data-set-status', `${t('data.asOf', { date: this.date(set.asOf) })} · ${from}`));
         if (id === 'spaceWeather') li.append(el('span', 'data-set-summary', this.spaceWeather(set.data as SpaceWeather)));
+        if (id === 'satellites') li.append(el('span', 'data-set-summary', this.satellites(set.data as SatelliteCatalog)));
         if (set.fallback) li.append(el('span', 'data-set-status warn', t('data.fallback', { reason: set.fallback })));
       }
       list.append(li);
@@ -117,6 +120,10 @@ export class DataDialog extends Modal {
 
   private date(iso: string): string {
     return new Date(iso).toLocaleString(getLang(), { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC';
+  }
+
+  private satellites(c: SatelliteCatalog): string {
+    return t('data.summary.satellites', { n: c.groups.reduce((n, g) => n + g.sets.length, 0).toLocaleString(getLang()), groups: c.groups.length });
   }
 
   private spaceWeather(sw: SpaceWeather): string {

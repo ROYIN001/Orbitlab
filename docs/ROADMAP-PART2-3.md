@@ -47,8 +47,8 @@ The owner's answers in the planning conversation, which every item below follows
    - Offline reads data snapshots bundled with the build, each marked "data as of …".
    - Online reads the live sources and falls back to the snapshot on any failure:
      - [CelesTrak](https://celestrak.org/NORAD/documentation/gp-data-formats.php) GP data as
-       OMM JSON. Whether it sends CORS headers is **unverified** (the planning sandbox could not
-       reach it), so the plan assumes it may not, and the snapshot is the fallback.
+       OMM JSON. CORS verified on 2026-09-26 (`access-control-allow-origin: *`). Asked at most
+       once in two hours, as CelesTrak asks (R02).
      - [NOAA SWPC](https://services.swpc.noaa.gov/json/) JSON for F10.7 and Kp. CORS verified
        (`access-control-allow-origin: *`).
      - [Launch Library 2](https://thespacedevs.com/llapi) for upcoming and past launches.

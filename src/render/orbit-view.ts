@@ -17,7 +17,7 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import type { EarthTextures } from './scene';
 import { R_EARTH } from '../physics/constants';
-import { sunDirectionEci } from '../physics/orbital';
+import { gmst, sunDirectionEci } from '../physics/orbital';
 import { equalTimeCuts, hitsEarth, stateAt, type Orbit } from '../orbit/kepler';
 
 /** metres to scene units (thousands of km) */
@@ -160,6 +160,11 @@ export class OrbitView {
   private size = { w: 1, h: 1 };
   /** the farthest point of the plan's other orbits, m: framing takes them in too */
   private ghostReach = 0;
+  /** R02: a catalogue group's satellites, as points; and the moment the Earth is drawn at when no orbit is */
+  private points: THREE.Points | null = null;
+  private bareJd = 2451545;
+  /** R02: the farthest of the points, m (for framing them with no orbit) */
+  private reach = 0;
 
   constructor(private readonly canvas: HTMLCanvasElement, textures: Promise<EarthTextures> | null) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -228,18 +233,63 @@ export class OrbitView {
     if (before !== this.options.sectors) this.shape = { a: NaN, e: NaN };
   }
 
-  /** A new orbit: its shape is rebuilt; `frame` moves the camera out to see all of it. */
-  setOrbit(orbit: Orbit, frame = false): void {
+  /** A new orbit (null: none — R02's satellites alone): its shape is rebuilt; `frame` moves the camera out to see all of it. */
+  setOrbit(orbit: Orbit | null, frame = false): void {
     this.orbit = orbit;
     if (frame) this.frameOrbit();
   }
 
   /** Back far enough to see the whole orbit. */
   frameOrbit(): void {
-    if (!this.orbit) return;
-    const ra = Math.max(this.orbit.a * (1 + Math.min(this.orbit.e, 0.97)), this.ghostReach) * S;
-    this.dist = Math.max(RE * 3.2, ra * 3.1);
+    if (!this.orbit) { if (this.reach > 0) this.frameRadius(this.reach); return; }
+    this.frameRadius(Math.max(this.orbit.a * (1 + Math.min(this.orbit.e, 0.97)), this.ghostReach));
+  }
+
+  /** R02: back far enough to see everything within `radius` of the Earth's centre, m. */
+  frameRadius(radius: number): void {
+    this.dist = Math.max(RE * 3.2, radius * S * 3.1);
     this.el = 0.45;
+  }
+
+  /**
+   * R02: a catalogue group's satellites as points, `count` of them from `xyz`
+   * (m, ECI, three numbers each); null to clear. The buffer is reused while
+   * the count allows, so a group redrawn every frame allocates nothing.
+   */
+  setPoints(xyz: Float32Array | null, count = 0, color = 0x9ad7ff): void {
+    if (!xyz || count <= 0) {
+      if (this.points) this.points.visible = false;
+      this.reach = 0;
+      return;
+    }
+    let pts = this.points;
+    const attr = pts?.geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
+    if (!pts || !attr || attr.count < count) {
+      if (pts) { this.scene.remove(pts); pts.geometry.dispose(); (pts.material as THREE.Material).dispose(); }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(Math.max(count, 64) * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      pts = new THREE.Points(geo, new THREE.PointsMaterial({ color, size: 3.4, sizeAttenuation: false, transparent: true, opacity: 0.9 }));
+      pts.frustumCulled = false;
+      this.points = pts;
+      this.scene.add(pts);
+    }
+    const a = pts.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const arr = a.array as Float32Array;
+    let reach = 0;
+    for (let k = 0; k < count * 3; k += 3) {
+      arr[k] = xyz[k] * S; arr[k + 1] = xyz[k + 1] * S; arr[k + 2] = xyz[k + 2] * S;
+      reach = Math.max(reach, Math.hypot(xyz[k], xyz[k + 1], xyz[k + 2]));
+    }
+    a.needsUpdate = true;
+    pts.geometry.setDrawRange(0, count);
+    (pts.material as THREE.PointsMaterial).color.setHex(color);
+    pts.visible = true;
+    this.reach = reach;
+  }
+
+  /** R02: with no orbit, the moment the Earth and the Sun are drawn at (Julian date). */
+  setBareTime(jd: number): void {
+    this.bareJd = jd;
   }
 
   resize(w: number, h: number): void {
@@ -345,11 +395,20 @@ export class OrbitView {
     this.shape = { a: o.a, e: o.e };
   }
 
-  /** Draw the orbit `t` seconds after its epoch. */
+  /** Draw the orbit `t` seconds after its epoch (with none, the Earth at `setBareTime`'s moment). */
   update(t: number): void {
     const o = this.orbit;
-    if (!o) return;
-    if (o.a !== this.shape.a || o.e !== this.shape.e) this.rebuildShape(o);
+    const drawn = !!o;
+    for (const part of [this.perifocal, this.node, this.nodeLabel, this.nodeLine, this.sat, this.radius, this.normal]) part.visible = drawn;
+    if (!o) {
+      this.turnEarth(gmst(this.bareJd), this.bareJd);
+      this.equator.scale.setScalar(Math.max(RE * 1.6, this.reach * S * 1.1));
+      this.axes.visible = this.options.engineer;
+      return;
+    }
+    // R02: a real satellite's osculating orbit wobbles a little every frame; below a part in a
+    // million the drawing would not change, so the shape is not rebuilt for it
+    if (!(Math.abs(o.a - this.shape.a) <= 1e-6 * Math.abs(o.a)) || !(Math.abs(o.e - this.shape.e) <= 1e-6)) this.rebuildShape(o);
     const s = stateAt(o, t, this.options.j2);
     // perifocal → ECI: the columns are the unit vectors to perigee, 90° on, and along h
     const cO = Math.cos(s.raan), sO = Math.sin(s.raan), ci = Math.cos(o.i), si = Math.sin(o.i), cw = Math.cos(s.argp), sw = Math.sin(s.argp);
@@ -381,17 +440,21 @@ export class OrbitView {
     this.normal.setDirection(new THREE.Vector3(sO * si, -cO * si, ci));
     this.normal.setLength(Math.max(RE * 1.8, extent * 0.45), 0.8, 0.45);
     this.normal.visible = this.axes.visible = this.options.engineer;
-    // the Earth turns with the sidereal angle; the Sun where it is that day
-    this.earth.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), s.theta)
-      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
-    const sun = sunDirectionEci(o.jd0 + t / 86400);
-    (this.earthMat.uniforms.sunDir.value as THREE.Vector3).set(sun.x, sun.y, sun.z);
+    this.turnEarth(s.theta, o.jd0 + t / 86400);
     // markers keep a size on screen
     const px = this.dist * 0.0065;
     for (const m of [this.perigee, this.apogee, this.node]) m.scale.setScalar(px);
     this.sat.scale.setScalar(px * 1.15);
     this.target.scale.setScalar(px * 1.1);
     for (const m of this.markers.children) if (m instanceof THREE.Mesh) m.scale.setScalar(px * 0.8);
+  }
+
+  /** The Earth turned by the sidereal angle `theta`; the Sun where it is at `jd`. */
+  private turnEarth(theta: number, jd: number): void {
+    this.earth.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), theta)
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
+    const sun = sunDirectionEci(jd);
+    (this.earthMat.uniforms.sunDir.value as THREE.Vector3).set(sun.x, sun.y, sun.z);
   }
 
   render(): void {

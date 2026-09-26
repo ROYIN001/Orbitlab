@@ -1,0 +1,429 @@
+/**
+ * Real satellites in the Orbit section (roadmap R02): the catalogue groups
+ * of the satellites dataset (src/provider/satellites.ts, from the bundled
+ * snapshot or, online, from CelesTrak), or the element sets of a file the
+ * user brings, drawn where SGP4 puts them now — a group as points in 3-D
+ * and on the map, the one picked with its orbit, its track and what its
+ * element set says. The time is real: the clock starts at this moment and
+ * runs at the playground's speed.
+ *
+ * The logic is src/orbit/real-sky.ts, omm.ts, tle.ts and sgp4.ts; this is the
+ * page's part, driven by the playground (src/ui/orbit/playground.ts), which
+ * lends it its views, its time bar and its two side panels.
+ */
+import { t, getLang } from '../../i18n';
+import { RAD } from '../../physics/constants';
+import { julianDate } from '../../physics/orbital';
+import type { AppLevel } from '../app-mode';
+import type { Dataset, DataProvider } from '../../provider/data-provider';
+import { SAT_GROUPS, type SatelliteCatalog } from '../../provider/satellites';
+import { elementsFromRecord, readElementFile, type ElementFile, type OmmProblem } from '../../orbit/omm';
+import {
+  elementAge, searchSky, skyFacts, skyObjects, skyOrbit, skyPositions, skyState, type SkyObject, type SkySourceId,
+} from '../../orbit/real-sky';
+import type { Orbit, OrbitState } from '../../orbit/kepler';
+import type { OrbitView } from '../../render/orbit-view';
+import type { GroundTrackView } from './ground-track';
+import { THAI_SATELLITES } from '../../data/thai-satellites';
+import type { TleField } from '../../orbit/tle';
+import type { Sgp4Error } from '../../orbit/sgp4';
+import { button, el, num, span } from './dom';
+
+export interface SkyHost {
+  level(): AppLevel;
+  provider(): DataProvider;
+  /** the panels are out of date: draw them again */
+  refresh(): void;
+  /** only the right panel is (a satellite picked): the list keeps its place */
+  refreshFacts(): void;
+  /** put an orbit in the playground (the picked satellite's, now) */
+  toPlayground(orbit: Orbit, label: string): void;
+}
+
+/** A file larger than this is not read: a whole catalogue is a few MB. */
+export const MAX_IMPORT_BYTES = 30 * 1024 * 1024;
+/** How many of a group's list are shown at once; the search narrows the rest. */
+const LIST_LIMIT = 150;
+/** A group larger than this has its points moved a few times a second, not every frame. */
+const EVERY_FRAME = 3000;
+
+const SOURCE_KEY: Record<SkySourceId, string> = {
+  stations: 'sky.group.stations', thai: 'sky.group.thai', gnss: 'sky.group.gnss', weather: 'sky.group.weather',
+  debris: 'sky.group.debris', imported: 'sky.group.imported',
+};
+const ABOUT_KEY: Record<SkySourceId, string> = {
+  stations: 'sky.about.stations', thai: 'sky.about.thai', gnss: 'sky.about.gnss', weather: 'sky.about.weather',
+  debris: 'sky.about.debris', imported: 'sky.about.imported',
+};
+/** What a group's text rests on, beyond the catalogue itself. */
+const ABOUT_SOURCE: Partial<Record<SkySourceId, { title: string; url: string }>> = {
+  debris: { title: 'NASA Orbital Debris Quarterly News 11-2 (April 2007)', url: 'https://orbitaldebris.jsc.nasa.gov/quarterly-news/pdfs/odqnv11i2.pdf' },
+};
+
+/** SGP4's error codes, in words (src/orbit/sgp4.ts). */
+const ERROR_KEY: Record<Exclude<Sgp4Error, 0>, string> = {
+  1: 'sky.err.1', 2: 'sky.err.2', 3: 'sky.err.3', 4: 'sky.err.4', 5: 'sky.err.5', 6: 'sky.err.6',
+};
+/** The two-line format's fields, in words. */
+const FIELD_KEY: Record<TleField, string> = {
+  format: 'sky.field.format', satnum: 'sky.field.satnum', epoch: 'sky.field.epoch', ndot: 'sky.field.ndot', nddot: 'sky.field.nddot',
+  bstar: 'sky.field.bstar', inclination: 'sky.field.inclination', node: 'sky.field.node', eccentricity: 'sky.field.eccentricity',
+  argp: 'sky.field.argp', anomaly: 'sky.field.anomaly', meanMotion: 'sky.field.meanMotion',
+};
+
+type Status = { state: 'idle' } | { state: 'loading' } | { state: 'ready'; set: Dataset<SatelliteCatalog> } | { state: 'failed'; reason: string };
+
+export class RealSky {
+  /** the moment on screen, Julian date (UTC) */
+  jd = julianDate(new Date());
+  private status: Status = { state: 'idle' };
+  private source: SkySourceId = 'stations';
+  private query = '';
+  private selectedKey: string | null = 'stations:25544';
+  private readonly bySource = new Map<SkySourceId, SkyObject[]>();
+  private imported: { file: string; result: ElementFile } | null = null;
+  private importNote: string | null = null;
+  /** the group's positions and the points below them, reused */
+  private xyz = new Float32Array(0);
+  private latlon = new Float32Array(0);
+  private count = 0;
+  private pointsClock = 0;
+  /** the points must be moved now, not at the next quarter second: a new group, or a jump in time */
+  private stale = true;
+  private framedKey: string | null = null;
+  private lastGood: OrbitState | null = null;
+  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement } = {};
+
+  constructor(private readonly host: SkyHost) {}
+
+  /** Load the catalogue (once; again after the data mode changes). */
+  load(): void {
+    if (this.status.state === 'loading' || this.status.state === 'ready') return;
+    this.status = { state: 'loading' };
+    this.host.provider().load('satellites').then(
+      (set) => { this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); },
+      (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); },
+    );
+  }
+
+  /** The data mode changed: the catalogue is loaded again from the new provider when next shown. */
+  reset(): void {
+    this.status = { state: 'idle' };
+    this.bySource.clear();
+  }
+
+  /** Back to this moment. */
+  now(): void {
+    this.jd = julianDate(new Date());
+    this.stale = true;
+  }
+
+  advance(seconds: number): void {
+    this.jd += seconds / 86400;
+  }
+
+  /** The satellites of the source on screen, made ready for SGP4 the first time they are wanted. */
+  private objects(source = this.source): SkyObject[] {
+    const kept = this.bySource.get(source);
+    if (kept) return kept;
+    let sets: SkyObject[] = [];
+    if (source === 'imported') sets = this.imported ? skyObjects(this.imported.result.sets, 'imported') : [];
+    else if (this.status.state === 'ready') {
+      const group = this.status.set.data.groups.find((g) => g.id === source);
+      sets = group ? skyObjects(group.sets.map(elementsFromRecord), source) : [];
+    } else return [];
+    this.bySource.set(source, sets);
+    return sets;
+  }
+
+  private get selected(): SkyObject | null {
+    return this.selectedKey ? this.objects().find((o) => o.key === this.selectedKey) ?? null : null;
+  }
+
+  private select(key: string | null): void {
+    this.selectedKey = key;
+    this.lastGood = null;
+    for (const b of this.list?.querySelectorAll<HTMLButtonElement>('button[data-key]') ?? []) b.setAttribute('aria-pressed', String(b.dataset.key === key));
+    this.host.refreshFacts();
+  }
+
+  /** the list on screen, to mark the one picked without drawing it again */
+  private list: HTMLElement | null = null;
+
+  private setSource(source: SkySourceId): void {
+    this.source = source;
+    this.query = '';
+    const first = this.objects()[0];
+    // a debris cloud is looked at as a whole; any other group opens on its first satellite
+    this.selectedKey = first && source !== 'debris' ? first.key : null;
+    this.stale = true;
+    this.framedKey = null;
+    this.host.refresh();
+  }
+
+  /** Where the picked satellite is at `jd`: SGP4's answer, or the last one it gave where it gives none. */
+  private stateAt(o: SkyObject, jd: number): OrbitState | null {
+    const s = skyState(o, jd);
+    if (s.error === 0) { this.lastGood = s; return s; }
+    return this.lastGood;
+  }
+
+  // ─── drawing ──────────────────────────────────────────────────────────────
+
+  /** One frame of the 3-D view. */
+  draw3d(view: OrbitView, realSeconds: number): void {
+    this.tick(realSeconds);
+    const sel = this.selected;
+    const orbit = sel ? skyOrbit(sel, this.jd) : null;
+    view.setBareTime(this.jd);
+    view.setPoints(this.count ? this.xyz : null, this.count);
+    view.setOrbit(orbit);
+    // a new satellite or group: the camera stands back to see it (its orbit, or the whole group)
+    const key = `${this.source}|${sel?.key ?? ''}`;
+    if (key !== this.framedKey && (orbit || this.count)) {
+      this.framedKey = key;
+      view.frameOrbit();
+    }
+    view.update(0);
+    view.render();
+  }
+
+  /** One frame of the map. */
+  drawTrack(track: GroundTrackView, realSeconds: number): void {
+    this.tick(realSeconds);
+    const sel = this.selected;
+    const jd = this.jd;
+    const now = sel ? this.stateAt(sel, jd) : null;
+    const stateOf = sel && now ? (tt: number) => this.stateAt(sel, jd + tt / 86400) ?? now : null;
+    track.draw(stateOf, 0, jd, sel ? skyFacts(sel).period : 5400, {
+      points: this.count ? { latlon: this.latlon, count: this.count, label: t(SOURCE_KEY[this.source]) } : undefined,
+    });
+  }
+
+  /** The group's points, moved to the moment on screen: every frame, or four times a second for a large group. */
+  private tick(realSeconds: number): void {
+    if (this.status.state === 'idle') this.load();
+    const objs = this.objects();
+    this.pointsClock += realSeconds;
+    if (objs.length > EVERY_FRAME && !this.stale && this.pointsClock < 0.25) return;
+    this.pointsClock = 0;
+    this.stale = false;
+    if (this.xyz.length < objs.length * 3) {
+      this.xyz = new Float32Array(objs.length * 3);
+      this.latlon = new Float32Array(objs.length * 2);
+    }
+    this.count = skyPositions(objs, this.jd, this.xyz, this.latlon);
+  }
+
+  // ─── the panels ───────────────────────────────────────────────────────────
+
+  /** The left panel: the group, the search, the list, a file of one's own. */
+  controls(): HTMLElement {
+    const box = el('section', 'pg-sky');
+    box.append(el('p', 'pg-lead', t('sky.lead')));
+    const st = this.status;
+    if (st.state === 'loading' || st.state === 'idle') { box.append(el('p', 'pg-note', t('sky.loading'))); }
+    if (st.state === 'failed') box.append(el('p', 'pg-warn', t('sky.failed', { reason: st.reason })));
+
+    const pick = el('label', 'pg-preset');
+    pick.append(el('span', undefined, t('sky.group')));
+    const sel = el('select');
+    const ids: SkySourceId[] = [...SAT_GROUPS.map((g) => g.id), ...(this.imported ? ['imported' as const] : [])];
+    sel.append(...ids.map((id) => { const o = el('option', undefined, t(SOURCE_KEY[id])); o.value = id; return o; }));
+    sel.value = this.source;
+    sel.addEventListener('change', () => this.setSource(sel.value as SkySourceId));
+    pick.append(sel);
+    box.append(pick);
+
+    const objs = this.objects();
+    const about = el('p', 'pg-tool-lead', t(ABOUT_KEY[this.source], { n: num(objs.length) }));
+    const src = ABOUT_SOURCE[this.source];
+    if (src) {
+      const a = el('a', undefined, src.title);
+      a.href = src.url; a.target = '_blank'; a.rel = 'noopener';
+      about.append(' ', a);
+    }
+    box.append(about);
+
+    if (objs.length) {
+      const search = el('input', 'pg-sky-search');
+      search.type = 'search';
+      search.placeholder = t('sky.search');
+      search.setAttribute('aria-label', t('sky.search'));
+      search.value = this.query;
+      const list = el('ul', 'pg-sky-list');
+      list.setAttribute('aria-label', t(SOURCE_KEY[this.source]));
+      const fill = () => {
+        const found = searchSky(objs, this.query);
+        list.replaceChildren(...found.slice(0, LIST_LIMIT).map((o) => {
+          const li = el('li');
+          const b = button('pg-sky-item', '', () => this.select(o.key === this.selectedKey ? null : o.key));
+          b.dataset.key = o.key;
+          b.setAttribute('aria-pressed', String(o.key === this.selectedKey));
+          b.append(el('span', 'pg-sky-name', o.el.name ?? t('sky.unnamed')), el('span', 'pg-sky-num', String(o.el.satnum)));
+          li.append(b);
+          return li;
+        }));
+        if (!found.length) list.append(el('li', 'pg-note', t('sky.none')));
+        if (found.length > LIST_LIMIT) list.append(el('li', 'pg-note', t('sky.more', { n: num(found.length - LIST_LIMIT) })));
+      };
+      search.addEventListener('input', () => { this.query = search.value; fill(); });
+      fill();
+      this.list = list;
+      box.append(search, list);
+    }
+
+    // a file of one's own: read here, sent nowhere
+    const imp = el('div', 'pg-sky-import');
+    const input = el('input');
+    input.type = 'file';
+    input.accept = '.txt,.tle,.3le,.2le,.json,.csv,.xml,.kvn,text/plain,application/json,text/csv,application/xml';
+    input.hidden = true;
+    input.addEventListener('change', () => { const f = input.files?.[0]; if (f) void this.importFile(f); input.value = ''; });
+    imp.append(input, button('watch-btn', t('sky.import'), () => input.click()), el('p', 'pg-note', t('sky.import.note')));
+    if (this.importNote) imp.append(this.importReport());
+    box.append(imp);
+    return box;
+  }
+
+  private importReport(): HTMLElement {
+    const box = el('div', 'pg-sky-report');
+    box.setAttribute('aria-live', 'polite');
+    box.append(el('p', undefined, this.importNote ?? ''));
+    const r = this.imported?.result;
+    if (r && r.rejected.length) {
+      box.append(el('p', 'pg-warn', t('sky.import.rejected', { n: num(r.rejected.length) })));
+      const ul = el('ul', 'pg-sky-problems');
+      for (const rej of r.rejected.slice(0, 8)) ul.append(el('li', undefined, `${r.format === 'tle' ? t('sky.at.line', { n: rej.at }) : t('sky.at.set', { n: rej.at })}: ${rej.problems.map(problemText).join('; ')}`));
+      if (r.rejected.length > 8) ul.append(el('li', undefined, '…'));
+      box.append(ul);
+    }
+    return box;
+  }
+
+  /** Read a file the user picked: in this page, nowhere else. */
+  async importFile(file: File): Promise<void> {
+    if (file.size > MAX_IMPORT_BYTES) {
+      this.importNote = t('sky.import.tooBig', { mb: num(MAX_IMPORT_BYTES / 1024 / 1024) });
+      this.host.refresh();
+      return;
+    }
+    const result = readElementFile(await file.text());
+    if (!result.sets.length) {
+      this.importNote = t('sky.import.empty', { file: file.name });
+      this.imported = result.rejected.length ? { file: file.name, result } : this.imported;
+      this.host.refresh();
+      return;
+    }
+    this.imported = { file: file.name, result };
+    this.importNote = t('sky.import.read', { n: num(result.sets.length), file: file.name, format: (result.format ?? '').toUpperCase() });
+    this.bySource.delete('imported');
+    this.setSource('imported');
+  }
+
+  /** The right panel: the picked satellite, what its element set says, and where the data are from. */
+  facts(): HTMLElement {
+    const box = el('div', 'pg-sky-facts');
+    this.live = {};
+    const st = this.status;
+    if (st.state === 'ready' && this.source !== 'imported') {
+      const set = st.set;
+      const from = set.from === 'snapshot' ? t('data.from.snapshot')
+        : set.fetched ? t('data.from.onlineKept', { source: set.source.name, date: utc(set.fetched) }) : t('data.from.online', { source: set.source.name });
+      box.append(el('p', 'pg-note', `${t('sky.asOf', { date: utc(set.asOf) })} · ${from}`));
+      if (set.fallback) box.append(el('p', 'pg-note warn', t('data.fallback', { reason: set.fallback })));
+    }
+    const o = this.selected;
+    box.append(el('h2', 'pg-facts-title', o ? (o.el.name ?? t('sky.unnamed')) : t('sky.facts')));
+    if (!o) { box.append(el('p', 'pg-note', t('sky.pick'))); return box; }
+
+    const engineer = this.host.level() === 'engineer';
+    const f = skyFacts(o);
+    const dl = el('dl', 'pg-dl');
+    const row = (k: string, v: string): HTMLElement => { const dd = el('dd', undefined, v); dl.append(el('dt', undefined, k), dd); return dd; };
+    const now = skyState(o, this.jd);
+    if (now.error !== 0) box.append(el('p', 'pg-warn', t('sky.error', { why: t(ERROR_KEY[now.error]) })));
+    row(t('sky.f.norad'), String(o.el.satnum));
+    if (o.el.intldesg) row(t('sky.f.cospar'), cospar(o.el.intldesg));
+    row(t('sky.f.epoch'), utc(new Date((o.el.jdEpoch + o.el.jdEpochFrac - 2440587.5) * 86400e3).toISOString()));
+    this.live.age = row(t('sky.f.age'), '');
+    this.live.alt = row(t('pg.f.altNow'), '');
+    this.live.speed = row(t('pg.f.speedNow'), '');
+    this.live.latlon = row(t('pg.f.latlon'), '');
+    row(t('pg.f.period'), span(f.period));
+    row(t('sky.f.meanApsides'), `${num(f.perigeeAlt / 1000)} × ${num(f.apogeeAlt / 1000)} ${t('u.km')}`);
+    row(t('sky.f.incl'), `${num(f.inclination * RAD, 2)}°`);
+    row(t('sky.f.theory'), t(f.deepSpace ? 'sky.theory.sdp4' : 'sky.theory.sgp4'));
+    if (engineer) {
+      const e = o.el;
+      row(t('sky.f.n'), `${num(e.noKozai * 1440 / (2 * Math.PI), 8)} ${t('sky.unit.revDay')}`);
+      row(t('pg.e'), num(e.ecco, 7));
+      row(t('pg.raan'), `${num(e.nodeo * RAD, 4)}°`);
+      row(t('pg.argp'), `${num(e.argpo * RAD, 4)}°`);
+      row(t('pg.m0'), `${num(e.mo * RAD, 4)}°`);
+      row(t('sky.f.bstar'), e.bstar === 0 ? '0' : e.bstar.toExponential(4));
+      row(t('sky.f.elnum'), String(e.elnum));
+      row(t('sky.f.revnum'), String(e.revnum));
+      this.live.teme = row(t('sky.f.teme'), '');
+    }
+    box.append(dl);
+    const thai = THAI_SATELLITES.find((s) => s.norad === o.el.satnum);
+    if (thai) box.append(el('p', 'pg-note', t(thai.aboutKey)));
+    if (now.error === 0) {
+      const orbit = skyOrbit(o, this.jd);
+      if (orbit) {
+        const go = button('watch-btn', t('sky.toPlayground'), () => this.host.toPlayground(orbit, o.el.name ?? String(o.el.satnum)));
+        box.append(go, el('p', 'pg-note', t('sky.toPlayground.note')));
+      }
+    }
+    this.updateLive();
+    return box;
+  }
+
+  /** The readouts that move with the satellite. */
+  updateLive(): void {
+    const o = this.selected, L = this.live;
+    if (!o) return;
+    const s = skyState(o, this.jd);
+    const age = elementAge(o.el, this.jd) * 86400;
+    if (L.age) {
+      L.age.textContent = age >= 0 ? span(age) : t('sky.ageBefore', { age: span(-age) });
+      L.age.classList.toggle('warn', Math.abs(age) > 7 * 86400);
+    }
+    if (s.error !== 0) return;
+    if (L.alt) L.alt.textContent = `${num(s.alt / 1000)} ${t('u.km')}`;
+    if (L.speed) L.speed.textContent = `${num(Math.hypot(s.v.x, s.v.y, s.v.z) / 1000, 3)} ${t('u.kms')}`;
+    if (L.latlon) L.latlon.textContent = `${num(Math.abs(s.lat * RAD), 2)}° ${s.lat >= 0 ? 'N' : 'S'} · ${num(Math.abs(s.lon * RAD), 2)}° ${s.lon >= 0 ? 'E' : 'W'}`;
+    if (L.teme) L.teme.textContent = `${[s.r.x, s.r.y, s.r.z].map((c) => num(c / 1000, 1)).join(', ')} ${t('u.km')}; ${[s.v.x, s.v.y, s.v.z].map((c) => num(c / 1000, 3)).join(', ')} ${t('u.kms')}`;
+  }
+
+  /** The clock's words: the date and time on screen, UTC, and whether it is now. */
+  clock(warp: number): { time: string; live: boolean } {
+    const d = new Date((this.jd - 2440587.5) * 86400e3);
+    const live = warp === 1 && Math.abs(this.jd - julianDate(new Date())) * 86400 < 5;
+    return { time: t('pg.utc', { date: d.toLocaleString(getLang(), { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }), live };
+  }
+}
+
+/** "98067A" as the catalogue writes it: "1998-067A". */
+function cospar(intldesg: string): string {
+  const m = /^(\d{2})(\d{3})([A-Z]*)$/.exec(intldesg);
+  if (!m) return intldesg;
+  return `${Number(m[1]) < 57 ? '20' : '19'}${m[1]}-${m[2]}${m[3]}`;
+}
+
+function utc(iso: string): string {
+  return `${new Date(iso).toLocaleString(getLang(), { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })} UTC`;
+}
+
+/** What could not be read of an element set, in words. */
+export function problemText(p: OmmProblem): string {
+  switch (p.kind) {
+    case 'missing': return t('sky.problem.missing', { field: p.field });
+    case 'value': return t('sky.problem.value', { field: p.field });
+    case 'theory': return t('sky.problem.theory', { theory: p.theory });
+    case 'checksum': return t('sky.problem.checksum', { line: p.line });
+    case 'mismatch': return t('sky.problem.mismatch');
+    default: return t('sky.problem.field', { line: p.kind === 'line1' ? 1 : 2, field: t(FIELD_KEY[p.field]) });
+  }
+}

@@ -168,13 +168,22 @@ and Thaicom), each from public sources with its catalogue orbit. The model is Ke
 the Landsat and Sentinel-2 orbits; the planner is held to Vallado's and Curtis's worked
 examples ([docs/VALIDATION.md](docs/VALIDATION.md) §5). **Continue in Orbit** (under the telemetry panel,
 and on the viewer's end card) puts the orbit a flight reached into the playground, with the
-spacecraft in it and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). Build is
+spacecraft in it and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). **Real
+satellites**, beside the playground, draws the satellites of a group where they are now: the space
+stations, Thailand's satellites, GPS/GLONASS/Galileo/BeiDou, the weather satellites and the debris
+of Fengyun-1C. Their element sets come from CelesTrak and are propagated by SGP4/SDP4, the
+reference implementation of AIAA 2006-6753, held to every line of its published verification
+(R01–R02, `src/orbit/sgp4.ts`, [docs/VALIDATION.md](docs/VALIDATION.md) §6). Your own TLE or OMM
+file can be read in the page too. Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 
 The cloud in the top bar switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
 each dated, so `dist/` works on a network with no internet — and **online**, which fetches from
-the sources and falls back to the snapshot (roadmap S04, `src/provider/`).
+the sources and falls back to the snapshot (roadmap S04, `src/provider/`). The snapshots are space
+weather (NOAA SWPC) and the satellite catalogue (CelesTrak, asked at most once in two hours). A
+baseline of each is committed; the deploy to GitHub Pages runs every day and builds with fresh
+ones, which it does not commit (R02).
 
 The launch section's levels, with the landing page:
 

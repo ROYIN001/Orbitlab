@@ -46,7 +46,7 @@ import { OrbitPlayground } from './ui/orbit/playground';
 import { DataDialog } from './ui/data-dialog';
 import { applyWebFonts } from './ui/web-fonts';
 import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
-import { createDataProvider, type DataProvider } from './provider/data-provider';
+import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
 import { isPlannedSection } from './ui/section-plan';
 import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
@@ -310,7 +310,9 @@ class App {
   private physicsDialog: PhysicsDialog;
   /** S04: offline (the default) or online, and where datasets come from under it */
   private dataMode: DataMode = loadDataMode();
-  private dataProvider: DataProvider = createDataProvider(this.dataMode, document.baseURI, (url, init) => fetch(url, init));
+  /** R02: online answers kept so a source is not asked more often than it allows (CelesTrak: every two hours) */
+  private readonly recentAnswers = new CacheStorageRecent(typeof caches !== 'undefined' ? caches as unknown as RecentCaches : null);
+  private dataProvider: DataProvider = createDataProvider(this.dataMode, document.baseURI, (url, init) => fetch(url, init), this.recentAnswers);
   private dataDialog!: DataDialog;
   private loopInspector: LoopInspector;
   /** G05: the Monte Carlo window, and the app's Monte Carlo runner (WebMCP's run_monte_carlo). */
@@ -425,6 +427,8 @@ class App {
       lifetime: (h, opener) => this.lifetime.openFor(h, opener),
       textures: () => (this.earthTextures ??= loadEarthTextures(base)),
       mapUrl: `${base}textures/earth_atmos_2048.jpg`,
+      // R02: the satellite catalogue comes through the data mode chosen
+      data: () => this.dataProvider,
     });
     this.watch = new WatchView(document.getElementById('watch-ui')!, {
       start: (id) => this.startWatch(id),
@@ -476,7 +480,8 @@ class App {
   private setDataMode(mode: DataMode): void {
     this.dataMode = mode;
     saveDataMode(mode);
-    this.dataProvider = createDataProvider(mode, document.baseURI, (url, init) => fetch(url, init));
+    this.dataProvider = createDataProvider(mode, document.baseURI, (url, init) => fetch(url, init), this.recentAnswers);
+    this.playground?.dataChanged();
     applyWebFonts(mode);
     this.syncDataMode();
   }

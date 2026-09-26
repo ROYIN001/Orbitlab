@@ -51,6 +51,8 @@ import type { OrbitHandoff } from '../../orbit/handoff';
 import { GroundTrackView } from './ground-track';
 import { Field, altKm, button, clockText, deg, el, hhmm, km, num, plain, sci, span } from './dom';
 import { CannonView } from './cannon-view';
+import { RealSky } from './sky-panel';
+import type { DataProvider } from '../../provider/data-provider';
 
 export interface PlaygroundHost {
   go(route: AppRoute): void;
@@ -60,7 +62,12 @@ export interface PlaygroundHost {
   textures(): Promise<EarthTextures> | null;
   /** the flat map of the Earth for the ground track */
   mapUrl: string;
+  /** R02: where datasets come from, in the data mode chosen */
+  data(): DataProvider;
 }
+
+/** R02: what the playground shows — its own orbit, or the real satellites */
+type PgMode = 'orbit' | 'sky';
 
 /** The playground's views: the tour's three, and the Engineer's porkchop plot (O02). */
 type PgView = TourView | 'porkchop';
@@ -124,6 +131,11 @@ export class OrbitPlayground {
   private spiralFactsTick = 0;
   private readonly track: GroundTrackView;
   private readonly cannonView: CannonView;
+  /** R02: the real satellites, and the speed the playground's own clock had before them */
+  private mode: PgMode = 'orbit';
+  private readonly sky: RealSky;
+  private skyEntered = false;
+  private orbitWarp = PG_DEFAULT_WARP;
   private raf = 0;
   private last = 0;
   private liveTick = 0;
@@ -160,6 +172,13 @@ export class OrbitPlayground {
     this.cannonView = new CannonView(this.canvases.cannon);
     this.cannonView.aim(this.cannon.altitude, this.cannon.elevation);
     this.porkchopView = new PorkchopView(this.canvases.porkchop, (dep, tof) => this.pickTransfer(dep, tof));
+    this.sky = new RealSky({
+      level: () => this.level,
+      provider: () => host.data(),
+      refresh: () => { if (this.mode === 'sky') { this.renderControls(); this.renderFacts(); } },
+      refreshFacts: () => { if (this.mode === 'sky') this.renderFacts(); },
+      toPlayground: (orbit, label) => this.fromSky(orbit, label),
+    });
     this.tabs.setAttribute('role', 'tablist');
     this.views.append(...VIEWS.map((v) => this.canvases[v]), this.hint);
     // the tour card is over the view on a wide screen and under it on a phone (playground.css)
@@ -187,6 +206,8 @@ export class OrbitPlayground {
     const entering = !this.visible || level !== this.level;
     if (level === 'watch' && (entering || this.level !== 'watch')) this.applyTourStep();
     if (level !== 'engineer' && this.view === 'porkchop') this.view = '3d';
+    // the Watch level is the tour: the real satellites are the other levels'
+    if (level === 'watch' && this.mode === 'sky') this.leaveSky();
     // Lambert's rendezvous is the Engineer's: the other levels have no control to clear it with
     if (level !== 'engineer' && this.maneuver?.kind === 'rendezvous') { this.maneuver = null; this.replan(); }
     this.level = level;
@@ -208,6 +229,66 @@ export class OrbitPlayground {
 
   applyLanguage(): void {
     this.render();
+  }
+
+  /** R02: the data mode changed: the catalogue is loaded again, from the new source. */
+  dataChanged(): void {
+    this.sky.reset();
+    if (this.mode === 'sky' && this.visible) this.render();
+  }
+
+  // ─── the real satellites (R02) ────────────────────────────────────────────
+
+  private setMode(mode: PgMode): void {
+    if (mode === this.mode) return;
+    if (mode === 'orbit') { this.leaveSky(); this.render(); this.resize(); return; }
+    this.mode = 'sky';
+    this.orbitWarp = this.warp;
+    // real time, from now the first time
+    this.warp = 1;
+    this.playing = true;
+    if (!this.skyEntered) { this.sky.now(); this.skyEntered = true; }
+    if (this.view !== '3d' && this.view !== 'track') this.view = '3d';
+    this.render();
+    this.resize();
+  }
+
+  private leaveSky(): void {
+    this.mode = 'orbit';
+    this.warp = this.orbitWarp;
+    this.orbitView?.setPoints(null);
+    this.orbitView?.setOrbit(this.orbit, true);
+  }
+
+  /** A real satellite's orbit, as it is now, put in the playground to plan from. */
+  private fromSky(orbit: Orbit, label: string): void {
+    this.leaveSky();
+    this.maneuver = null;
+    this.jd0 = orbit.jd0;
+    this.time = 0;
+    this.planStart = 0;
+    // a real orbit drifts with the Earth's bulge
+    this.j2 = true;
+    this.skyLabel = label;
+    this.setOrbit(orbit);
+    this.orbitView?.setOrbit(this.orbit, true);
+    this.render();
+    this.resize();
+  }
+
+  /** the real satellite whose orbit the playground holds, for its facts' heading */
+  private skyLabel: string | null = null;
+
+  private modeSwitch(): HTMLElement {
+    const box = el('div', 'pg-modes');
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', t('sky.modes'));
+    for (const [mode, key] of [['orbit', 'sky.mode.orbit'], ['sky', 'sky.mode.sky']] as const) {
+      const b = button('pg-mode', t(key), () => this.setMode(mode));
+      b.setAttribute('aria-pressed', String(this.mode === mode));
+      box.append(b);
+    }
+    return box;
   }
 
   /**
@@ -253,6 +334,7 @@ export class OrbitPlayground {
   }
 
   private choosePreset(id: string): void {
+    this.skyLabel = null;
     if (id === HANDOFF) { this.loadHandoff(); this.orbitView?.setOrbit(this.orbit, true); this.render(); return; }
     if (id === CUSTOM) return;
     this.jd0 = julianDate(new Date());
@@ -267,6 +349,7 @@ export class OrbitPlayground {
 
   private setView(view: PgView): void {
     if (view === this.view) return;
+    if (this.mode === 'sky' && view !== '3d' && view !== 'track') return;
     this.view = view;
     if (view === 'porkchop') this.refreshPorkchop();
     this.render();
@@ -279,7 +362,8 @@ export class OrbitPlayground {
   }
 
   private resetClock(): void {
-    if (this.view === 'cannon') this.cannonClock = 0;
+    if (this.mode === 'sky') this.sky.now();
+    else if (this.view === 'cannon') this.cannonClock = 0;
     else this.time = 0;
   }
 
@@ -343,6 +427,7 @@ export class OrbitPlayground {
     this.raf = requestAnimationFrame((n) => this.frame(n));
     const dt = Math.min(0.1, Math.max(0, (now - this.last) / 1000));
     this.last = now;
+    if (this.mode === 'sky') { this.skyFrame(dt); return; }
     if (this.playing) {
       if (this.view === 'cannon') this.cannonClock += dt * this.warp;
       else this.time += dt * this.warp;
@@ -370,6 +455,18 @@ export class OrbitPlayground {
       this.spiralFactsTick = 1;
       if (this.view !== 'cannon') this.renderFacts();
     }
+    this.liveTick -= dt;
+    if (this.liveTick <= 0) {
+      this.liveTick = 0.2;
+      this.updateLive();
+    }
+  }
+
+  /** R02: a frame of the real satellites. */
+  private skyFrame(dt: number): void {
+    if (this.playing) this.sky.advance(dt * this.warp);
+    if (this.view === '3d' && this.orbitView) this.sky.draw3d(this.orbitView, dt);
+    else if (this.view === 'track') this.sky.drawTrack(this.track, dt);
     this.liveTick -= dt;
     if (this.liveTick <= 0) {
       this.liveTick = 0.2;
@@ -704,7 +801,8 @@ export class OrbitPlayground {
 
   private renderTabs(): void {
     this.tabs.setAttribute('aria-label', t('pg.views'));
-    this.tabs.replaceChildren(...VIEWS.filter((v) => v !== 'porkchop' || this.level === 'engineer').map((v) => {
+    const shown = VIEWS.filter((v) => (this.mode === 'sky' ? v === '3d' || v === 'track' : v !== 'porkchop' || this.level === 'engineer'));
+    this.tabs.replaceChildren(...shown.map((v) => {
       const b = button('pg-tab', '', () => this.setView(v));
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', String(v === this.view));
@@ -723,8 +821,9 @@ export class OrbitPlayground {
       return o;
     }));
     const reset = this.timebar.querySelector<HTMLButtonElement>('[data-role="reset"]')!;
-    reset.title = t('pg.reset');
-    reset.setAttribute('aria-label', t('pg.reset'));
+    const resetLabel = t(this.mode === 'sky' ? 'sky.now' : 'pg.reset');
+    reset.title = resetLabel;
+    reset.setAttribute('aria-label', resetLabel);
     this.syncTimebar();
   }
 
@@ -756,10 +855,13 @@ export class OrbitPlayground {
     const box = this.controls;
     box.replaceChildren();
     const head = el('div', 'pg-panel-head');
-    head.append(el('span', 'eyebrow', t('section.orbit')), el('h1', 'pg-title', t(this.view === 'cannon' ? 'pg.cannon.title' : 'pg.title')));
+    head.append(el('span', 'eyebrow', t('section.orbit')),
+      el('h1', 'pg-title', t(this.mode === 'sky' ? 'sky.title' : this.view === 'cannon' ? 'pg.cannon.title' : 'pg.title')));
     box.append(head);
     this.fields = {};
     this.presetSelect = null;
+    if (this.level !== 'watch') box.append(this.modeSwitch());
+    if (this.mode === 'sky') { box.append(this.sky.controls()); return; }
     if (this.view === 'cannon') { this.renderCannonControls(box); return; }
 
     const presetLabel = el('label', 'pg-preset');
@@ -941,6 +1043,7 @@ export class OrbitPlayground {
     this.live = {};
     // the Watch level has no side panels: its readouts are the tour card's
     if (this.level === 'watch') return;
+    if (this.mode === 'sky') { box.append(this.sky.facts()); this.appendComingNext(box); return; }
     if (this.view === 'cannon') { this.renderCannonFacts(box); this.appendComingNext(box); return; }
     if (this.plan && this.maneuver) box.append(planTable(this.maneuverHost, this.plan, this.maneuver, this.time));
     this.appsBox = this.appsSection();
@@ -948,6 +1051,8 @@ export class OrbitPlayground {
     const o = this.flownAt(this.time).orbit, f = orbitFacts(o, this.j2), engineer = this.level === 'engineer';
     const km = t('u.km'), kms = t('u.kms');
     box.append(el('h2', 'pg-facts-title', t('pg.facts')));
+    // R02: the orbit a real satellite was on, at the moment it was brought here
+    if (this.skyLabel && this.presetId === CUSTOM) box.append(el('p', 'pg-note', t('sky.fromSky', { name: this.skyLabel })));
     if (hitsEarth(o)) box.append(el('p', 'pg-warn', t('pg.crash')));
     const dl = el('dl', 'pg-dl');
     const row = (k: string, v: string): HTMLElement => {
@@ -1082,6 +1187,15 @@ export class OrbitPlayground {
 
   /** The readouts that move with the satellite, and the clock. */
   private updateLive(): void {
+    if (this.mode === 'sky') {
+      this.sky.updateLive();
+      const c = this.sky.clock(this.warp);
+      this.clock.textContent = c.live ? `● ${t('sky.live')}` : t('sky.notLive');
+      this.clock.classList.toggle('live', c.live);
+      this.date.textContent = c.time;
+      return;
+    }
+    this.clock.classList.remove('live');
     if (this.view === 'cannon') {
       this.clock.textContent = t('pg.cannon.clock', { time: clockText(this.cannonClock) });
       this.date.textContent = '';

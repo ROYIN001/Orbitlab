@@ -69,7 +69,7 @@ const RUNTIME_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
  * script, and a module it shared with the page would become a chunk it
  * imports. tests/pwa.test.ts holds the two lists together.
  */
-export const DATA_HOSTS: readonly string[] = ['services.swpc.noaa.gov'];
+export const DATA_HOSTS: readonly string[] = ['services.swpc.noaa.gov', 'celestrak.org'];
 
 export type Route = 'page' | 'precache' | 'runtime' | 'data' | 'network';
 

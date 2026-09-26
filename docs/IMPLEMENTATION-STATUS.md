@@ -33,8 +33,14 @@ parts:
 - Earth observation: a camera's swath, ground sample distance, how far apart the day's tracks
   are and how far tilting reaches.
 - Thailand's satellites: THEOS, THEOS-2, NAPA-1, NAPA-2 and the Thaicom fleet, from public
-  sources, each with its catalogue orbit to put in the playground. A flight's orbit arrives there through **Continue in Orbit** (S03). What
-the section will hold next is listed under the playground. **Build** is still an "in
+  sources, each with its catalogue orbit to put in the playground.
+
+A flight's orbit arrives there through **Continue in Orbit** (S03). **Real satellites** (R01–R02),
+the playground's other half, draws the satellites of a catalogue group where SGP4 puts them now:
+the space stations, Thailand's satellites, the navigation and weather satellites, and the debris
+of Fengyun-1C. The group is shown in 3-D and on the map, the one picked with its orbit, track and
+element set. A file of element sets can be read in the page. What the section will hold next is
+listed under the playground. **Build** is still an "in
 development" screen that lists what is coming, from the roadmap, and nothing more.
 
 - **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
@@ -251,8 +257,8 @@ Phase 2, real satellites and the military track, continues on the same branch:
 
 | Item | |
 |---|---|
-| R01 SGP4 | done: SGP4/SDP4 and the two-line element format, `src/orbit/sgp4.ts` and `src/orbit/tle.ts`. Every line of the AIAA 2006-6753 verification output is reproduced ([VALIDATION.md](VALIDATION.md) §6). Nothing on screen uses it yet; R02 brings the satellites |
-| R02 snapshots and the scheduled refresh | |
+| R01 SGP4 | done: SGP4/SDP4 and the two-line element format, `src/orbit/sgp4.ts` and `src/orbit/tle.ts`. Every line of the AIAA 2006-6753 verification output is reproduced ([VALIDATION.md](VALIDATION.md) §6) |
+| R02 snapshots and the scheduled refresh | done: **Real satellites** in the Orbit section, from a catalogue of CelesTrak's element sets (stations, Thailand's satellites, GNSS, weather, the Fengyun-1C debris). The catalogue is bundled (`public/data/satellites.json`), fetched online at most once in two hours, and refreshed daily by the deploy without committing. Files in TLE and every OMM form can be read in the page. Held to CelesTrak's six formats and to published orbits ([VALIDATION.md](VALIDATION.md) §6) |
 | R03 passes | |
 | R04 uncertainty from the element set's age | |
 | R05 space weather | |
@@ -272,8 +278,12 @@ Phase 2, real satellites and the military track, continues on the same branch:
   and a constant acceleration, and its propellant is budgeted as one burn of its Δv. A
   rendezvous target is always in the chaser's plane.
 - The applications' Thai satellites fly their catalogue orbit (as of 2026-09-26), not where they
-  are today: following real satellites from their element sets is Phase 2 (R01–R02). The link
-  budget's starting values are an example, not any satellite's.
+  are today; **Real satellites** (R02) shows where they are. The link budget's starting values
+  are an example, not any satellite's.
+- Real satellites (R02): TEME is taken as the program's inertial frame, and the Earth is turned
+  by mean sidereal time alone, with no UT1 − UTC or polar motion; that moves a point on the
+  ground by up to about 400 m, less than an element set's own error. They are not at the Watch
+  level yet. An imported file is kept only while the page is open.
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
 - The physics has been compared with flight data for eleven of the eighteen vehicles: Falcon 9
   against webcast telemetry of five flights, the others against published timelines

@@ -160,6 +160,6 @@ describe('the providers (S04)', () => {
   });
 
   it('names the hosts online mode reaches, for the service worker and the window', () => {
-    expect(DATA_HOSTS).toEqual(['services.swpc.noaa.gov']);
+    expect(DATA_HOSTS).toEqual(['services.swpc.noaa.gov', 'celestrak.org']);
   });
 });

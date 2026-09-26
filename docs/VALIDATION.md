@@ -26,6 +26,7 @@ Status on 2026-09-25:
 | Continue in orbit (O03) | A recorded Soyuz flight's hand-off; the rocket equation | The playground's orbit is the flight's; the budget is Tsiolkovsky's (§5), 2026-09-26 |
 | Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§5), 2026-09-26 |
 | SGP4/SDP4 (R01) | The verification of AIAA 2006-6753 (SGP4-VER.TLE, tcppver.out); CelesTrak's documented element set | Every line of the reference output reproduced (§6), 2026-09-26 |
+| Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 
 ## 1. Method
 
@@ -972,7 +973,7 @@ SMAD*. A dish's look angles are worked on the WGS-84 ellipsoid, "up" along its n
   differ the value is left out: THEOS-2's mass is 417 kg in one report and 425 kg in another.
   NAPA-2 re-entered on 2026-07-05, by the catalogue.
 
-## 6. Real satellites (R01–): SGP4 against its reference
+## 6. Real satellites (R01–R02): SGP4 against its reference, and the catalogue
 
 Real satellites are propagated from their element sets by SGP4 and SDP4
 (`src/orbit/sgp4.ts`, roadmap R01), the theory those element sets are fitted to. It is the
@@ -1012,11 +1013,48 @@ itself to against the same file. It is twenty times the output's printed precisi
   (under 0.9 s) and polar motion are left out. They can move a point on the ground by up to about
   400 m, less than an element set's own error, which is kilometres (R04).
 
+### The satellite catalogue and its formats (R02)
+
+The Orbit section's real satellites come from a dataset of CelesTrak's element sets
+(`src/provider/satellites.ts`): the space stations, Thailand's satellites, the four navigation
+constellations, the weather satellites and the debris of Fengyun-1C. It is bundled as a snapshot
+(`public/data/satellites.json`, fetched 2026-09-26) and, online, fetched from CelesTrak at most
+once in two hours. Element sets come in two families of formats: the two-line format, and the
+Orbit Mean-Elements Message (CCSDS 502.0-B-3) as JSON, CSV, XML and KVN. The OMM is the only one
+that holds the six-digit catalogue numbers given since 2026-07-11. Both are read, and so is a file
+the user brings (`src/orbit/omm.ts`, `src/orbit/tle.ts`). `tests/omm.test.ts`,
+`tests/satellite-catalogue.test.ts` and `tests/real-sky.test.ts` hold them.
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| the ISS's element set in CelesTrak's six formats (TLE, 2LE, JSON, CSV, XML, KVN), served 2026-09-26 | one element set | the four OMM forms give the same elements to the bit; the two-line forms agree to their printed digits | exact; 10⁻¹⁴ |
+| the same, propagated a day | one position | the OMM forms identical; the two-line forms within 10 m (their epoch is printed to 10⁻⁸ day, 0.86 ms) | 0; 10 m |
+| Space-Track's JSON (numbers as text) | CelesTrak's JSON | the same elements | exact |
+| a six-digit catalogue number | CelesTrak: TLEs cannot carry it | read from the OMM and propagated | — |
+| an SGP4-XP element set (ephemeris type 4) | a different theory | refused, and the reason named | — |
+| the ISS in the snapshot | 51.6°, about 420 km | 51.63°, 416 × 426 km | 0.5°; 380–440 km |
+| Thaicom 8 | 78.5° E (Thaicom) | over 78.5° E, on the equator, deep-space theory | 0.2° |
+| THEOS-2 | 621 km, 97.9° (eoPortal, §5) | 620 × 622 km, 97.91° | 610–635 km; 0.5° |
+| every GPS satellite in the snapshot | two revolutions a sidereal day | 717.9 ± 2 min | 2 min |
+| the point below a satellite | SGP4's own TEME to Earth-fixed turn | the playground's sidereal time gives the same point | 5 m |
+
+**Findings.**
+
+- CelesTrak's TLE queries return nothing for objects numbered 100 000 and above (its GP data
+  documentation, updated 2026-06-23). The snapshot and the online source therefore use the OMM
+  JSON, and the file import reads every OMM form.
+- CelesTrak refreshes its element sets every two hours and blocks addresses that fetch the same
+  file more often. Online, the answers (or a refusal) are kept for two hours, in the browser's
+  Cache Storage where it has one. A refusal is not asked again in that time. The bundled snapshot
+  is refreshed by the scheduled deploy, once a day.
+- Thaicom 7 is catalogued as AsiaSat 6, so a search by name misses it. The Thai group is asked for
+  by name and by that one number, then kept to the seven catalogue numbers of §5's list.
+
 ## 7. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
-npx vitest run tests/sgp4.test.ts                                                 # SGP4 against its reference, ~1 s
+npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts   # real satellites, ~2 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

@@ -43,6 +43,8 @@ export interface Dataset<T> {
   source: DatasetSource;
   /** online mode fell back to the snapshot: why */
   fallback?: string;
+  /** online data kept from an earlier fetch (a dataset with `minIntervalMs`): when they were fetched, ISO 8601 UTC */
+  fetched?: string;
 }
 
 export interface DataProvider {
@@ -102,25 +104,99 @@ export class OfflineProvider implements DataProvider {
   }
 }
 
+/**
+ * Online answers kept for a dataset that must not be asked for too often
+ * (`DatasetDef.minIntervalMs`): the body a URL answered, or its refusal
+ * (an HTTP status), and when.
+ */
+export interface RecentAnswers {
+  get(url: string): Promise<{ at: number; body?: unknown; status?: number } | null>;
+  put(url: string, entry: { at: number; body?: unknown; status?: number }): Promise<void>;
+}
+
+/** Kept for as long as the page is open. */
+export class MemoryRecent implements RecentAnswers {
+  private readonly map = new Map<string, { at: number; body?: unknown; status?: number }>();
+  async get(url: string) { return this.map.get(url) ?? null; }
+  async put(url: string, entry: { at: number; body?: unknown; status?: number }) { this.map.set(url, entry); }
+}
+
+/** The slice of the browser's Cache Storage `CacheStorageRecent` uses. */
+export interface RecentCaches {
+  open(name: string): Promise<{ match(url: string): Promise<{ json(): Promise<unknown> } | undefined>; put(url: string, response: Response): Promise<void> }>;
+}
+
+/**
+ * Kept across reloads in the browser's Cache Storage, where there is one (a
+ * secure page); where there is none, or it fails, in memory. Nothing in it
+ * leaves the machine.
+ */
+export class CacheStorageRecent implements RecentAnswers {
+  static readonly NAME = 'orbitlab-recent-answers';
+  private readonly memory = new MemoryRecent();
+  constructor(private readonly caches: RecentCaches | null) {}
+
+  async get(url: string) {
+    const kept = await this.memory.get(url);
+    if (kept || !this.caches) return kept;
+    try {
+      const hit = await (await this.caches.open(CacheStorageRecent.NAME)).match(url);
+      const entry = hit ? await hit.json() as { at?: unknown; body?: unknown; status?: unknown } : null;
+      if (!entry || typeof entry.at !== 'number') return null;
+      return { at: entry.at, body: entry.body, status: typeof entry.status === 'number' ? entry.status : undefined };
+    } catch { return null; }
+  }
+
+  async put(url: string, entry: { at: number; body?: unknown; status?: number }) {
+    await this.memory.put(url, entry);
+    if (!this.caches) return;
+    try {
+      await (await this.caches.open(CacheStorageRecent.NAME)).put(url, new Response(JSON.stringify(entry), { headers: { 'content-type': 'application/json' } }));
+    } catch { /* memory keeps it for this visit */ }
+  }
+}
+
 /** The sources themselves, with the snapshot behind them. */
 export class OnlineProvider implements DataProvider {
   readonly mode = 'online' as const;
-  constructor(private readonly offline: OfflineProvider, private readonly fetcher: Fetcher, private readonly timeoutMs = ONLINE_TIMEOUT_MS) {}
+  constructor(
+    private readonly offline: OfflineProvider, private readonly fetcher: Fetcher, private readonly timeoutMs = ONLINE_TIMEOUT_MS,
+    private readonly recent: RecentAnswers = new MemoryRecent(), private readonly now: () => number = () => Date.now(),
+  ) {}
 
   async load<K extends DatasetId>(id: K, signal?: AbortSignal): Promise<Dataset<DatasetTypes[K]>> {
     const def = DATASETS[id];
+    const interval = def.minIntervalMs ?? 0;
+    let oldest = Infinity;
     try {
       const { data, asOf } = await withTimeout(this.timeoutMs, signal, async (s) => {
         const answers = await Promise.all(def.online.urls.map(async (url) => {
+          const host = new URL(url).hostname;
+          if (interval) {
+            // asked too recently: the answer, or the refusal, of then
+            const kept = await this.recent.get(url);
+            if (kept && this.now() - kept.at < interval) {
+              if (kept.status !== undefined) throw new Error(`${host} answered ${kept.status}; not asked again before ${new Date(kept.at + interval).toISOString()}`);
+              oldest = Math.min(oldest, kept.at);
+              return kept.body;
+            }
+          }
           // past the browser's HTTP cache: online means the source's current answer
           const res = await this.fetcher(url, { signal: s, cache: 'no-cache' });
-          if (!res.ok) throw new Error(`${new URL(url).hostname} answered ${res.status}`);
-          return res.json();
+          if (!res.ok) {
+            if (interval) await this.recent.put(url, { at: this.now(), status: res.status });
+            throw new Error(`${host} answered ${res.status}`);
+          }
+          const body = await res.json();
+          if (interval) await this.recent.put(url, { at: this.now(), body });
+          return body;
         }));
         return def.online.parse(answers);
       });
       if (!def.valid(data)) throw new Error('the answer is not the dataset it should be');
-      return { id, data, asOf, from: 'online', source: def.source };
+      const set: Dataset<DatasetTypes[K]> = { id, data, asOf, from: 'online', source: def.source };
+      if (Number.isFinite(oldest)) set.fetched = new Date(oldest).toISOString();
+      return set;
     } catch (error) {
       if (signal?.aborted) throw error;
       const reason = error instanceof Error ? error.message : String(error);
@@ -129,8 +205,8 @@ export class OnlineProvider implements DataProvider {
   }
 }
 
-/** The provider for a mode. */
-export function createDataProvider(mode: DataMode, base: string, fetcher: Fetcher): DataProvider {
+/** The provider for a mode; `recent` keeps online answers across providers (one for the page's life). */
+export function createDataProvider(mode: DataMode, base: string, fetcher: Fetcher, recent?: RecentAnswers): DataProvider {
   const offline = new OfflineProvider(base, fetcher);
-  return mode === 'online' ? new OnlineProvider(offline, fetcher) : offline;
+  return mode === 'online' ? new OnlineProvider(offline, fetcher, ONLINE_TIMEOUT_MS, recent) : offline;
 }

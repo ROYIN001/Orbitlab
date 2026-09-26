@@ -165,8 +165,8 @@ applications are:
   The ground track draws the swath along the next revolution.
 - **Thailand's satellites.** THEOS, THEOS-2, NAPA-1, NAPA-2 and Thaicom 4, 6, 7 and 8, each with
   its operator, builder, launch, orbit, camera, identifiers and sources. **Show its orbit** puts
-  its catalogue orbit in the playground. That is its shape, not where it is today; following real
-  satellites is the next phase.
+  its catalogue orbit in the playground. That is its shape, not where it is today; to see where
+  it is now, use **Real satellites** (below).
 
 For Thaicom 8 from Bangkok, the dish points south-west (239.5°), 59.9° up. For THEOS-2, the
 10.3 km swath covers well under 1 % of the gap between two of the day's tracks, which is why the
@@ -180,6 +180,34 @@ dialog. At Watch, the flight's orbit is the first card, before the tour.
 
 The model is Kepler's orbit plus the secular drift of J2, nothing more: no drag and no Sun or
 Moon. [VALIDATION.md](VALIDATION.md) §5 holds it to real orbits.
+
+### Real satellites (Explore and Engineer)
+
+The switch at the top of the left panel changes between **Your orbit** and **Real satellites**.
+Real satellites are drawn where they are, from the element sets they are tracked by, propagated
+by SGP4, the theory those sets are made for. The clock starts at this moment and runs at the
+speed you choose; **⟲** brings it back to now, and **Live** shows while it is now.
+
+- **Group**: the space stations, Thailand's satellites, the navigation satellites (GPS, GLONASS,
+  Galileo, BeiDou), the weather satellites, or the debris of Fengyun-1C, destroyed by an
+  anti-satellite test in 2007. The group is drawn as points in 3-D and on the ground track.
+- **Search** by name, catalogue number or international designator, then pick a satellite. Its
+  orbit and its track are drawn. The right panel gives its catalogue number and designator, the
+  epoch of its element set and how old the set is, where it is now, its period, its mean perigee
+  and apogee, its inclination, and whether SGP4 or SDP4 (deep space) carries it. The Engineer
+  level adds the mean elements, the drag term B* and the position and velocity in TEME.
+- **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
+  Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
+  the two part company.
+- **Read a file of element sets** opens a file you have: TLE or 3LE, or OMM as JSON, CSV, XML or
+  KVN, from CelesTrak or from your own Space-Track account. It is read in the page and sent
+  nowhere. Whatever cannot be read is listed, line by line or set by set, with the reason.
+
+Offline (the default) the element sets are the snapshot bundled with this version, dated in the
+right panel. Online they come from CelesTrak, at most once in two hours, as CelesTrak asks, and
+from the snapshot whenever CelesTrak cannot be reached. A published site is rebuilt every day
+with a fresh snapshot. An element set is a few kilometres off at its epoch, and further as it
+ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its reference.
 
 ## 1. Set up a mission
 

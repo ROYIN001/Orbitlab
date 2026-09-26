@@ -227,7 +227,7 @@ describe('the element-set format (tle.ts)', () => {
   it('rejects a set whose lines are of two satellites, or broken, and says which', () => {
     expect(parseTle(ISS1, ISS2.replace('25544', '25545')).problems).toEqual([{ kind: 'mismatch' }]);
     expect(parseTle(ISS1.slice(0, 30), ISS2).elements).toBeNull();
-    expect(parseTle(ISS1, ISS2.replace('0006703', '00x6703')).problems[0]).toEqual({ kind: 'line2', detail: 'eccentricity' });
+    expect(parseTle(ISS1, ISS2.replace('0006703', '00x6703')).problems[0]).toEqual({ kind: 'line2', field: 'eccentricity' });
     const bad = parseTle(ISS1.slice(0, 68) + '3', ISS2, null, true);
     expect(bad.elements).toBeNull();
     expect(bad.problems).toEqual([{ kind: 'checksum', line: 1 }]);

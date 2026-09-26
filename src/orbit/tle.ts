@@ -51,8 +51,13 @@ export interface ElementSet {
   revnum: number;
 }
 
+/** A field of the format that could not be read ('format': the line is not one of the format's at all). */
+export type TleField =
+  | 'format' | 'satnum' | 'epoch' | 'ndot' | 'nddot' | 'bstar'
+  | 'inclination' | 'node' | 'eccentricity' | 'argp' | 'anomaly' | 'meanMotion';
+
 export type TleProblem =
-  | { kind: 'line1' | 'line2'; detail: string }
+  | { kind: 'line1' | 'line2'; field: TleField }
   | { kind: 'checksum'; line: 1 | 2 }
   | { kind: 'mismatch' };
 
@@ -187,14 +192,14 @@ export function parseTle(line1In: string, line2In: string, name: string | null =
   const line2 = line2In.replace(/\s+$/, '');
 
   if (!(line1.length >= 64 && line1.startsWith('1 ') && line1[23] === '.')) {
-    return { elements: null, problems: [{ kind: 'line1', detail: 'not a first line (columns 1–64)' }] };
+    return { elements: null, problems: [{ kind: 'line1', field: 'format' }] };
   }
   if (!(line2.length >= 63 && line2.startsWith('2 ') && line2[11] === '.' && line2[20] === '.' && line2[37] === '.' && line2[46] === '.')) {
-    return { elements: null, problems: [{ kind: 'line2', detail: 'not a second line (columns 1–63)' }] };
+    return { elements: null, problems: [{ kind: 'line2', field: 'format' }] };
   }
   const satnum = readSatnum(line1.slice(2, 7));
   const satnum2 = readSatnum(line2.slice(2, 7));
-  if (satnum === null) return { elements: null, problems: [{ kind: 'line1', detail: 'catalogue number (columns 3–7)' }] };
+  if (satnum === null) return { elements: null, problems: [{ kind: 'line1', field: 'satnum' }] };
   if (satnum !== satnum2) return { elements: null, problems: [{ kind: 'mismatch' }] };
 
   if (line1.length >= 69 && !checksumOk(line1)) problems.push({ kind: 'checksum', line: 1 });
@@ -208,9 +213,9 @@ export function parseTle(line1In: string, line2In: string, name: string | null =
   const nddot = readExponential(line1.slice(44, 52));
   const bstar = readExponential(line1.slice(53, 61));
   const elnum = line1.length >= 68 ? num(line1.slice(64, 68)) ?? 0 : 0;
-  const bad1 = [['epoch year', yy], ['epoch day', epochDays], ['first derivative of mean motion', ndot], ['second derivative', nddot], ['drag term', bstar]]
+  const bad1 = ([['epoch', yy], ['epoch', epochDays], ['ndot', ndot], ['nddot', nddot], ['bstar', bstar]] as [TleField, number | null][])
     .find(([, v]) => v === null);
-  if (bad1) return { elements: null, problems: [...problems, { kind: 'line1', detail: String(bad1[0]) }] };
+  if (bad1) return { elements: null, problems: [...problems, { kind: 'line1', field: bad1[0] }] };
 
   const inclo = num(line2.slice(8, 16));
   const nodeo = num(line2.slice(17, 25));
@@ -220,9 +225,9 @@ export function parseTle(line1In: string, line2In: string, name: string | null =
   const mo = num(line2.slice(43, 51));
   const noRevDay = num(line2.slice(52, 63));
   const revnum = num(line2.slice(63, 68)) ?? 0;
-  const bad2 = [['inclination', inclo], ['node', nodeo], ['eccentricity', ecco], ['argument of perigee', argpo], ['mean anomaly', mo], ['mean motion', noRevDay]]
+  const bad2 = ([['inclination', inclo], ['node', nodeo], ['eccentricity', ecco], ['argp', argpo], ['anomaly', mo], ['meanMotion', noRevDay]] as [TleField, number | null][])
     .find(([, v]) => v === null);
-  if (bad2) return { elements: null, problems: [...problems, { kind: 'line2', detail: String(bad2[0]) }] };
+  if (bad2) return { elements: null, problems: [...problems, { kind: 'line2', field: bad2[0] }] };
 
   // 1957–2056: the format's two-digit year
   const year = (yy as number) < 57 ? (yy as number) + 2000 : (yy as number) + 1900;
