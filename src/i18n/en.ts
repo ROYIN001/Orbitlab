@@ -1862,6 +1862,8 @@ export const en: Record<string, string> = {
   'lesson.page.back': 'Back to the simulator',
   'lesson.page.lessons': 'Lessons',
   'lesson.page.test': 'Placement test',
+  'assess.multiHint': 'Choose every answer that is right, then go on.',
+  'assess.orderHint': 'Click the items in order, first to last. Click one again to take it back.',
   'assess.photoCredit': 'Photo: {author} · {license} · Wikimedia Commons',
   'assess.photoCreditLater': 'Photo: Wikimedia Commons, free licence — its author is named in the review',
   'assess.axisTime': 't, s',

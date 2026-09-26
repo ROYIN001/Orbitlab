@@ -232,3 +232,9 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
   .lessons-page-body { padding: 12px 12px 40px; }
 }
 .assess-credit a { color: inherit; }
+.assess-hint { margin: -4px 0 10px !important; font-size: 12.5px !important; color: var(--lesson) !important; }
+.assess-item b { min-width: 1.4em; text-align: center; }
+.assess-item.sel b { color: var(--lesson-ink); background: var(--lesson); border-radius: 50%; }
+.assess-check b::before { content: '☐ '; font-weight: 400; }
+.assess-check.sel b::before { content: '☑ '; }
+.lesson-diagram { max-height: 440px; }

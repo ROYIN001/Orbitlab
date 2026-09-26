@@ -15,6 +15,7 @@ import { DOMAINS, type Domain } from '../src/lessons/types';
 import type { Answer, AssessmentAttempt, PreparedQuestion, Question } from '../src/lessons/assessment/types';
 import { VEHICLE_PHOTOS } from '../src/lessons/assessment/photos';
 import { readQuestion, type FileIssue } from '../src/lessons/lesson-file';
+import { DIAGRAM_IDS, diagramSvg } from '../src/lessons/assessment/diagrams';
 
 const CYRILLIC = /\p{Script=Cyrillic}/u;
 const THAI = /\p{Script=Thai}/u;
@@ -29,6 +30,16 @@ function answer(q: Question, p: PreparedQuestion, correct: boolean, confidence: 
     }
     case 'vehicle': return { id: q.id, value: correct ? p.vehicle! : p.vehicleOptions!.find((v) => v !== p.vehicle)!, confidence };
     case 'numeric': return { id: q.id, value: (numericExpected(q, p) ?? 0) * (correct ? 1.001 : 1.5), confidence };
+    case 'multi': {
+      const right = q.options.flatMap((o, i) => (o.correct ? [i] : []));
+      // wrong: the right ones and one more
+      const wrong = [...right, q.options.findIndex((o) => !o.correct)].sort((a, b) => a - b);
+      return { id: q.id, value: (correct ? right : wrong).join(','), confidence };
+    }
+    case 'order': {
+      const right = q.items.map((_, i) => i);
+      return { id: q.id, value: (correct ? right : [right[1], right[0], ...right.slice(2)]).join(','), confidence };
+    }
   }
 }
 
@@ -41,15 +52,38 @@ function attempt(seed: number, correctIn: (q: Question) => boolean, confidence: 
 }
 
 describe('the question bank', () => {
-  it('reads without a single issue: 104 questions, every text in three languages', () => {
+  it('reads without a single issue: 157 questions, at least 25 in every area', () => {
     expect(BANK_ISSUES).toEqual([]);
-    expect(BUILTIN_QUESTIONS.length).toBe(104);
-    expect(new Set(BUILTIN_QUESTIONS.map((q) => q.id)).size).toBe(104);
+    expect(BUILTIN_QUESTIONS.length).toBe(157);
+    expect(new Set(BUILTIN_QUESTIONS.map((q) => q.id)).size).toBe(157);
+    for (const d of DOMAINS) expect(BUILTIN_QUESTIONS.filter((q) => q.domain === d).length, `area ${d}`).toBeGreaterThanOrEqual(25);
+  });
+
+  it('asks in every kind: choices, calculations, vehicles, orderings, several answers, charts and diagrams', () => {
+    const types = new Set(BUILTIN_QUESTIONS.map((q) => q.type));
+    expect([...types].sort()).toEqual(['choice', 'multi', 'numeric', 'order', 'vehicle']);
+    const figures = new Set(BUILTIN_QUESTIONS.flatMap((q) => (q.figure ? [q.figure.kind] : [])));
+    expect([...figures].sort()).toEqual(['chart', 'diagram']);
+    // every diagram a question names is drawn, with the numbers a student may draw
+    for (const q of BUILTIN_QUESTIONS) {
+      if (q.figure?.kind !== 'diagram') continue;
+      expect(DIAGRAM_IDS, q.id).toContain(q.figure.id);
+      for (let seed = 1; seed <= 5; seed++) expect(diagramSvg(q.figure.id, prepareQuestion(q, rng(seed)).values)).toMatch(/^<svg[^]*<\/svg>$/);
+    }
+    // a multiple answer has two or more right and one or more wrong; an ordering is never shown already in order
+    for (const q of BUILTIN_QUESTIONS) {
+      if (q.type === 'multi') {
+        const right = q.options.filter((o) => o.correct).length;
+        expect(right >= 2 && right < q.options.length, q.id).toBe(true);
+      }
+      if (q.type === 'order') for (let seed = 1; seed <= 50; seed++) expect(prepareQuestion(q, rng(seed)).order!.every((v, i) => v === i), `${q.id} ${seed}`).toBe(false);
+    }
   });
 
   it('carries Russian in Cyrillic and Thai in Thai script in every prompt, option and explanation', () => {
     for (const q of BUILTIN_QUESTIONS) {
-      const texts = [q.prompt, q.explanation, ...(q.type === 'choice' ? q.options.flatMap((o) => [o.text, ...(o.misconception ? [o.misconception] : [])]) : [])];
+      const options = q.type === 'choice' || q.type === 'multi' ? q.options : [];
+      const texts = [q.prompt, q.explanation, ...options.flatMap((o) => [o.text, ...(o.misconception ? [o.misconception] : [])]), ...(q.type === 'order' ? q.items : [])];
       for (const t of texts) {
         // an option that is only a formula or a number reads the same in every language
         if (t.th === t.en) continue;
@@ -74,14 +108,17 @@ describe('the question bank', () => {
     const lessons = new Set(BUILTIN_LESSONS.map((l) => l.id));
     for (const q of BUILTIN_QUESTIONS) {
       for (const id of q.lessons ?? []) expect(lessons.has(id), `${q.id} → ${id}`).toBe(true);
-      if (q.kind === 'understanding' && q.type === 'choice') expect(q.options.some((o) => !o.correct && o.misconception), q.id).toBe(true);
+      if (q.kind === 'understanding' && (q.type === 'choice' || q.type === 'multi')) expect(q.options.some((o) => !o.correct && o.misconception), q.id).toBe(true);
+      // an ordering has no wrong option to name a misunderstanding: it asks for knowledge
+      if (q.type === 'order') expect(q.kind, q.id).toBe('knowledge');
     }
   });
 
   it('has an answer for every number a calculation can draw, and a placeholder in the prompt for each', () => {
     for (const q of BUILTIN_QUESTIONS) {
       if (q.type !== 'numeric') continue;
-      for (const p of q.params) for (const lang of ['en', 'ru', 'th'] as const) expect(q.prompt[lang], `${q.id} ${lang}`).toContain(`{${p.name}}`);
+      // a number drawn into a diagram is read off it, not printed in the prompt
+      if (q.figure?.kind !== 'diagram') for (const p of q.params) for (const lang of ['en', 'ru', 'th'] as const) expect(q.prompt[lang], `${q.id} ${lang}`).toContain(`{${p.name}}`);
       for (const corner of [0, 1]) {
         const values = Object.fromEntries(q.params.map((p) => [p.name, corner ? p.max : p.min]));
         const v = evaluate(q.answer, values);
@@ -225,6 +262,24 @@ describe('scoring', () => {
     expect(r.start).toBe('orbit-first');
   });
 
+  it('grades several answers only when exactly the right ones are chosen, and an ordering only in full', () => {
+    const multi = byId.get('o-multi-perigee-burn')! as Extract<Question, { type: 'multi' }>;
+    const p = prepareQuestion(multi, rng(3));
+    expect(gradeQuestion(multi, p, { id: multi.id, value: '0,1,2', confidence: 'sure' }).correct).toBe(true);
+    expect(gradeQuestion(multi, p, { id: multi.id, value: '2,1,0', confidence: 'sure' }).correct).toBe(true);
+    expect(gradeQuestion(multi, p, { id: multi.id, value: '0,1', confidence: 'sure' }).correct).toBe(false);
+    // a wrong option chosen with certainty names its misunderstanding
+    const wrong = gradeQuestion(multi, p, { id: multi.id, value: '0,1,2,3', confidence: 'sure' });
+    expect(wrong.misconception).toBe(true);
+    expect(wrong.misconceptionText?.en).toContain('where the engine fires');
+    const order = byId.get('o-order-period')! as Extract<Question, { type: 'order' }>;
+    const po = prepareQuestion(order, rng(3));
+    expect(gradeQuestion(order, po, { id: order.id, value: '0,1,2,3,4' }).correct).toBe(true);
+    expect(gradeQuestion(order, po, { id: order.id, value: '0,1,2,4,3' }).correct).toBe(false);
+    expect(gradeQuestion(order, po, { id: order.id, value: '0,1,2' }).correct).toBe(false);
+    expect(gradeQuestion(order, po, { id: order.id, value: null }).unknown).toBe(true);
+  });
+
   it('marks an area with a misconception no better than basic, however high its score', () => {
     expect(domainLevel(90, 1)).toBe('basic');
     expect(domainLevel(90, 0)).toBe('strong');
@@ -254,10 +309,18 @@ describe('a teacher\'s question', () => {
     expect(readQuestion({ ...base, type: 'numeric', params: [{ name: 'm', min: 1, max: 2, step: 1 }], answer: 'n * 2', unit: '', tolPct: 2 }, 'q', issues, new Set())).toBeNull();
     expect(readQuestion({ ...base, type: 'choice', options: [{ text: { en: 'a' }, correct: true }, { text: { en: 'b' }, correct: true }] }, 'q', issues, new Set())).toBeNull();
     expect(readQuestion({ ...base, type: 'choice', options: [{ text: { en: 'a' }, correct: true }, { text: { en: 'b' } }], figure: { kind: 'chart', dataset: 'nope', series: 'q' } }, 'q', issues, new Set())).toBeNull();
-    expect(issues.filter((i) => i.level === 'error').map((i) => i.code)).toEqual(['expression', 'invalid', 'invalid']);
+    // several answers: two or more right, one or more wrong; an ordering: three or more items; a diagram that exists
+    const opts = (right: number, n: number) => Array.from({ length: n }, (_, i) => ({ text: { en: `o${i}` }, ...(i < right ? { correct: true } : {}) }));
+    expect(readQuestion({ ...base, type: 'multi', options: opts(2, 4) }, 'q', issues, new Set())).not.toBeNull();
+    expect(readQuestion({ ...base, type: 'multi', options: opts(1, 4) }, 'q', issues, new Set())).toBeNull();
+    expect(readQuestion({ ...base, type: 'order', items: [{ en: 'a' }, { en: 'b' }, { en: 'c' }] }, 'q', issues, new Set())).not.toBeNull();
+    expect(readQuestion({ ...base, type: 'order', items: [{ en: 'a' }, { en: 'b' }] }, 'q', issues, new Set())).toBeNull();
+    expect(readQuestion({ ...base, type: 'choice', options: opts(1, 3), figure: { kind: 'diagram', id: 'hohmann' } }, 'q', issues, new Set())).not.toBeNull();
+    expect(readQuestion({ ...base, type: 'choice', options: opts(1, 3), figure: { kind: 'diagram', id: 'nope' } }, 'q', issues, new Set())).toBeNull();
+    expect(issues.filter((i) => i.level === 'error').map((i) => i.code)).toEqual(['expression', 'invalid', 'invalid', 'invalid', 'invalid', 'invalid']);
     // a teacher's question joins the bank without replacing a built-in one
     const custom = { ...BUILTIN_QUESTIONS[0], id: 'teacher-q', custom: true } as Question;
-    expect(questionBank([custom, BUILTIN_QUESTIONS[1]]).length).toBe(105);
+    expect(questionBank([custom, BUILTIN_QUESTIONS[1]]).length).toBe(158);
   });
 });
 

@@ -1842,6 +1842,8 @@ export const th: Record<string, string> = {
   'lesson.page.back': 'กลับไปที่โปรแกรมจำลอง',
   'lesson.page.lessons': 'บทเรียน',
   'lesson.page.test': 'แบบทดสอบวัดความรู้',
+  'assess.multiHint': 'เลือกทุกคำตอบที่ถูก แล้วไปต่อ',
+  'assess.orderHint': 'คลิกรายการตามลำดับจากแรกไปสุดท้าย คลิกซ้ำเพื่อยกเลิก',
   'assess.photoCredit': 'ภาพ: {author} · {license} · Wikimedia Commons',
   'assess.photoCreditLater': 'ภาพ: Wikimedia Commons สัญญาอนุญาตเสรี — ระบุชื่อผู้ถ่ายไว้ในหน้าเฉลย',
   'assess.axisTime': 't, วินาที',

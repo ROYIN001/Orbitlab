@@ -13,6 +13,7 @@ import { defaultMissionState } from './config';
 import { hookExists } from './hooks';
 import { MEASURE_IDS } from './measures';
 import { compileExpression } from './assessment/expression';
+import { DIAGRAM_IDS } from './assessment/diagrams';
 import { DOMAINS, LOCK_KEYS, type Criterion, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId } from './types';
 import type { ChoiceOption, Figure, FlightSeries, Question } from './assessment/types';
 import { VEHICLES } from '../data/vehicles';
@@ -171,7 +172,7 @@ const SERIES: readonly FlightSeries[] = ['alt', 'vInertial', 'q', 'gLoad', 'mass
 function readFigure(r: Reader, raw: unknown, where: string, datasets: ReadonlySet<string>): Figure | null {
   if (!isRecord(raw)) return r.error(where, 'invalid') || null;
   if (raw.kind === 'vehicle') return isStr(raw.vehicleId) && VEHICLES.some((v) => v.id === raw.vehicleId) ? { kind: 'vehicle', vehicleId: raw.vehicleId } : r.error(where, 'invalid', 'vehicleId') || null;
-  if (raw.kind === 'diagram') return isStr(raw.id) ? { kind: 'diagram', id: raw.id } : r.error(where, 'invalid', 'id') || null;
+  if (raw.kind === 'diagram') return isStr(raw.id) && DIAGRAM_IDS.includes(raw.id) ? { kind: 'diagram', id: raw.id } : r.error(where, 'invalid', 'id') || null;
   if (raw.kind === 'chart') {
     const compare = Array.isArray(raw.compare) ? raw.compare.filter(isStr) : undefined;
     if (!isStr(raw.dataset) || !datasets.has(raw.dataset) || !SERIES.includes(raw.series as FlightSeries)
@@ -179,6 +180,19 @@ function readFigure(r: Reader, raw: unknown, where: string, datasets: ReadonlySe
     return { kind: 'chart', dataset: raw.dataset, series: raw.series as FlightSeries, ...(compare?.length ? { compare } : {}), ...(isNum(raw.tMax) ? { tMax: raw.tMax } : {}) };
   }
   return r.error(where, 'invalid', 'kind') || null;
+}
+
+function readOptions(r: Reader, raw: unknown, at: string): ChoiceOption[] | null {
+  if (!Array.isArray(raw) || raw.length < 2) return r.error(`${at}.options`, 'missing') || null;
+  const options: ChoiceOption[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const o = raw[i];
+    const text = isRecord(o) ? r.text(o.text, `${at}.options[${i}]`) : null;
+    if (!text || !isRecord(o)) return null;
+    const misconception = o.misconception === undefined ? undefined : r.text(o.misconception, `${at}.options[${i}].misconception`) ?? undefined;
+    options.push({ text, ...(o.correct === true ? { correct: true } : {}), ...(misconception ? { misconception } : {}) });
+  }
+  return options;
 }
 
 /** Read one placement-test question. `datasets`: the recorded flights a chart may show. */
@@ -200,15 +214,8 @@ export function readQuestion(raw: unknown, where: string, issues: FileIssue[], d
   } as const;
   switch (raw.type) {
     case 'choice': {
-      if (!Array.isArray(raw.options) || raw.options.length < 2) return r.error(`${at}.options`, 'missing') || null;
-      const options: ChoiceOption[] = [];
-      for (let i = 0; i < raw.options.length; i++) {
-        const o = raw.options[i];
-        const text = isRecord(o) ? r.text(o.text, `${at}.options[${i}]`) : null;
-        if (!text || !isRecord(o)) return null;
-        const misconception = o.misconception === undefined ? undefined : r.text(o.misconception, `${at}.options[${i}].misconception`) ?? undefined;
-        options.push({ text, ...(o.correct === true ? { correct: true } : {}), ...(misconception ? { misconception } : {}) });
-      }
+      const options = readOptions(r, raw.options, at);
+      if (!options) return null;
       if (options.filter((o) => o.correct).length !== 1) return r.error(`${at}.options`, 'invalid', 'one correct') || null;
       const observe = raw.observe === undefined ? undefined : readFigure(r, raw.observe, `${at}.observe`, datasets) ?? null;
       if (observe === null) return null;
@@ -223,6 +230,23 @@ export function readQuestion(raw: unknown, where: string, issues: FileIssue[], d
       }
       try { compileExpression(raw.answer, params.map((p) => p.name)); } catch (err) { return r.error(`${at}.answer`, 'expression', (err as Error).message) || null; }
       return { ...base, type: 'numeric', params, answer: raw.answer, unit: typeof raw.unit === 'string' ? raw.unit : '', tolPct: raw.tolPct };
+    }
+    case 'multi': {
+      const options = readOptions(r, raw.options, at);
+      if (!options) return null;
+      const right = options.filter((o) => o.correct).length;
+      if (right < 2 || right === options.length) return r.error(`${at}.options`, 'invalid', 'two or more correct, one or more wrong') || null;
+      return { ...base, type: 'multi', options };
+    }
+    case 'order': {
+      if (!Array.isArray(raw.items) || raw.items.length < 3) return r.error(`${at}.items`, 'invalid', 'three or more') || null;
+      const items: LocalText[] = [];
+      for (let i = 0; i < raw.items.length; i++) {
+        const text = r.text(raw.items[i], `${at}.items[${i}]`);
+        if (!text) return null;
+        items.push(text);
+      }
+      return { ...base, type: 'order', items };
     }
     case 'vehicle': {
       const vehicles = Array.isArray(raw.vehicles) ? raw.vehicles.filter((v): v is string => isStr(v) && VEHICLES.some((x) => x.id === v)) : [];

@@ -68,6 +68,16 @@ export function prepareQuestion(q: Question, random: () => number): PreparedQues
       }
       return { id: q.id, values };
     }
+    case 'multi':
+      return { id: q.id, order: shuffle(q.options.map((_, i) => i), random) };
+    case 'order': {
+      // never shown already in order
+      const right = q.items.map((_, i) => i);
+      let order = shuffle(right, random);
+      for (let k = 0; k < 8 && order.every((v, i) => v === i); k++) order = shuffle(right, random);
+      if (order.every((v, i) => v === i)) order = [...right.slice(1), right[0]];
+      return { id: q.id, order };
+    }
     case 'vehicle': {
       const vehicle = pick(q.vehicles, random);
       const others = shuffle(q.vehicles.filter((v) => v !== vehicle), random).slice(0, 3);

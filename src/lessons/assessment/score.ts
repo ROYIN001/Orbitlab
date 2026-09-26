@@ -69,11 +69,26 @@ export function numericExpected(q: Question, prepared: PreparedQuestion): number
   return Number.isFinite(v) ? v : null;
 }
 
+/** The indices an order or multi answer holds (`2,0,1`), or null. */
+export function indexList(value: Answer['value']): number[] | null {
+  if (typeof value !== 'string' || !/^\d+(,\d+)*$/.test(value)) return null;
+  return value.split(',').map(Number);
+}
+
 export function isCorrect(q: Question, prepared: PreparedQuestion, answer: Answer | undefined): boolean {
   if (!answer || answer.value === null || answer.skipped) return false;
   switch (q.type) {
     case 'choice': return typeof answer.value === 'number' && !!q.options[answer.value]?.correct;
     case 'vehicle': return answer.value === prepared.vehicle;
+    case 'order': {
+      const put = indexList(answer.value);
+      return !!put && put.length === q.items.length && put.every((v, i) => v === i);
+    }
+    case 'multi': {
+      const chosen = indexList(answer.value);
+      const right = q.options.flatMap((o, i) => (o.correct ? [i] : []));
+      return !!chosen && chosen.length === right.length && [...chosen].sort((a, b) => a - b).every((v, i) => v === right[i]);
+    }
     case 'numeric': {
       const expected = numericExpected(q, prepared);
       const typed = typeof answer.value === 'number' ? answer.value : Number(answer.value);
@@ -87,7 +102,10 @@ export function gradeQuestion(q: Question, prepared: PreparedQuestion, answer: A
   const unknown = !answer || answer.value === null || !!answer.skipped;
   const misconception = !correct && !unknown && q.kind === 'understanding' && answer?.confidence === 'sure';
   const credit = correct ? (answer?.confidence === 'guess' ? GUESS_CREDIT : 1) : 0;
-  const option = q.type === 'choice' && typeof answer?.value === 'number' ? (q as ChoiceQuestion).options[answer.value] : undefined;
+  const option = q.type === 'choice' && typeof answer?.value === 'number' ? (q as ChoiceQuestion).options[answer.value]
+    // of several chosen, the first wrong one that names its misunderstanding
+    : q.type === 'multi' ? (indexList(answer?.value ?? null) ?? []).map((i) => q.options[i]).find((o) => o && !o.correct && o.misconception)
+    : undefined;
   const expected = numericExpected(q, prepared);
   return {
     id: q.id, domain: q.domain, level: q.level, skill: q.skill, correct, credit, unknown, misconception,

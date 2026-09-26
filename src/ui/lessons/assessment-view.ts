@@ -15,7 +15,8 @@ import { DATASET_IDS, FLIGHT_DATA, questionBank } from '../../lessons/assessment
 import { DOMAIN_ORDER, TEST_LENGTH, drawTest, newSeed, nextKind } from '../../lessons/assessment/draw';
 import { CHART_COLOURS, chartSvg, radarSvg } from '../../lessons/assessment/figures';
 import { SERIES_UNITS } from '../../lessons/assessment/flights';
-import { numericExpected, scoreAttempt, type AssessmentResult } from '../../lessons/assessment/score';
+import { indexList, numericExpected, scoreAttempt, type AssessmentResult } from '../../lessons/assessment/score';
+import { diagramSvg } from '../../lessons/assessment/diagrams';
 import type { Answer, AssessmentAttempt, Confidence, Figure, PreparedQuestion, Question } from '../../lessons/assessment/types';
 import { lessonNumber } from '../../lessons/catalog';
 import { localText, unitText } from '../../lessons/text';
@@ -72,6 +73,27 @@ export function renderAssessment(host: AssessmentHost, container: HTMLElement): 
   return view;
 }
 
+/** An answer as the review prints it. */
+function answerText(q: Question, value: number | string): string {
+  switch (q.type) {
+    case 'choice': return localText(q.options[value as number]?.text);
+    case 'vehicle': return vehicleById(String(value)).name;
+    case 'numeric': return `${num(Number(value))} ${unitText(q.unit)}`;
+    case 'multi': return (indexList(value) ?? []).map((i) => localText(q.options[i]?.text)).join('; ');
+    case 'order': return (indexList(value) ?? []).map((i) => localText(q.items[i])).join(' → ');
+  }
+}
+
+function rightAnswerText(q: Question, p: PreparedQuestion): string {
+  switch (q.type) {
+    case 'choice': return localText(q.options.find((o) => o.correct)?.text);
+    case 'vehicle': return vehicleById(p.vehicle!).name;
+    case 'numeric': return `${num(Number(numericExpected(q, p)?.toPrecision(4)))} ${unitText(q.unit)}`;
+    case 'multi': return q.options.filter((o) => o.correct).map((o) => localText(o.text)).join('; ');
+    case 'order': return q.items.map((x) => localText(x)).join(' → ');
+  }
+}
+
 /** A photograph's author and licence, as CC BY and CC BY-SA ask, linked to its page on Commons. */
 function photoCredit(credit: PhotoCredit): HTMLElement {
   const line = el('p', 'small assess-credit');
@@ -89,6 +111,8 @@ class AssessmentView {
   private index = 0;
   private picked: number | string | null | undefined = undefined;
   private confidence: Confidence | undefined;
+  /** empties a multiple choice or an order when "I don't know" is chosen */
+  private clearChoices: (() => void) | null = null;
 
   /** the screen showing, drawn again when the language changes */
   private redraw: () => void = () => undefined;
@@ -157,8 +181,14 @@ class AssessmentView {
 
   // ─── a question ──────────────────────────────────────────────────────────
 
-  private figure(f: Figure, legendKey?: string): HTMLElement | null {
+  private figure(f: Figure, legendKey?: string, values: Readonly<Record<string, number>> = {}): HTMLElement | null {
     const box = el('figure', 'assess-figure');
+    if (f.kind === 'diagram') {
+      const svgText = diagramSvg(f.id, values, (u) => unitText(u));
+      if (!svgText) return null;
+      box.innerHTML = svgText;
+      return box;
+    }
     if (f.kind === 'vehicle') {
       const img = el('img');
       img.src = `${base}lessons/vehicles/${f.vehicleId}.jpg`;
@@ -199,6 +229,7 @@ class AssessmentView {
     if (!q) { a.answers.push({ id: p.id, value: null, skipped: true }); this.index++; this.renderQuestion(); return; }
     this.picked = undefined;
     this.confidence = undefined;
+    this.clearChoices = null;
 
     const head = el('div', 'assess-head');
     head.append(el('span', 'lesson-eyebrow', `${t(`assess.kind.${a.kind}`)} · ${t('assess.areaLevel', { area: q.domain, name: t(`assess.domain.${q.domain}`), level: q.level })}`),
@@ -233,6 +264,58 @@ class AssessmentView {
     const letters = getLang() === 'th' ? ['ก', 'ข', 'ค', 'ง', 'จ', 'ฉ'] : getLang() === 'ru' ? ['а', 'б', 'в', 'г', 'д', 'е'] : ['a', 'b', 'c', 'd', 'e', 'f'];
     if (q.type === 'choice') (p.order ?? q.options.map((_, i) => i)).forEach((i, k) => option(localText(q.options[i].text), i, letters[k]));
     if (q.type === 'vehicle') (p.vehicleOptions ?? []).forEach((id, k) => option(vehicleById(id).name, id, letters[k]));
+    if (q.type === 'multi') {
+      options.setAttribute('role', 'group');
+      const chosen = new Set<number>();
+      left.append(el('p', 'assess-hint', t('assess.multiHint')));
+      (p.order ?? q.options.map((_, i) => i)).forEach((i, k) => {
+        const b = el('button', 'assess-option assess-check');
+        b.type = 'button';
+        b.setAttribute('role', 'checkbox');
+        b.setAttribute('aria-checked', 'false');
+        b.append(el('b', undefined, letters[k]), el('span', undefined, localText(q.options[i].text)));
+        b.addEventListener('click', () => {
+          if (chosen.has(i)) chosen.delete(i); else chosen.add(i);
+          b.classList.toggle('sel', chosen.has(i));
+          b.setAttribute('aria-checked', String(chosen.has(i)));
+          options.querySelector('.dont-know')?.classList.remove('sel');
+          this.picked = chosen.size ? [...chosen].sort((x, y) => x - y).join(',') : undefined;
+          next.disabled = !chosen.size;
+        });
+        options.append(b);
+      });
+      // "I don't know" clears the choices
+      this.clearChoices = () => { chosen.clear(); options.querySelectorAll('.assess-check').forEach((o) => { o.classList.remove('sel'); o.setAttribute('aria-checked', 'false'); }); };
+    }
+    if (q.type === 'order') {
+      options.setAttribute('role', 'group');
+      const put: number[] = [];
+      left.append(el('p', 'assess-hint', t('assess.orderHint')));
+      const buttons = new Map<number, HTMLButtonElement>();
+      const paint = (): void => {
+        for (const [i, b] of buttons) {
+          const at = put.indexOf(i);
+          b.classList.toggle('sel', at >= 0);
+          b.querySelector('b')!.textContent = at >= 0 ? String(at + 1) : '·';
+        }
+        options.querySelector('.dont-know')?.classList.remove('sel');
+        this.picked = put.length === q.items.length ? put.join(',') : undefined;
+        next.disabled = this.picked === undefined;
+      };
+      for (const i of p.order ?? q.items.map((_, k) => k)) {
+        const b = el('button', 'assess-option assess-item');
+        b.type = 'button';
+        b.append(el('b', undefined, '·'), el('span', undefined, localText(q.items[i])));
+        b.addEventListener('click', () => {
+          const at = put.indexOf(i);
+          if (at >= 0) put.splice(at, 1); else put.push(i);
+          paint();
+        });
+        buttons.set(i, b);
+        options.append(b);
+      }
+      this.clearChoices = () => { put.length = 0; paint(); this.picked = null; };
+    }
     if (q.type === 'numeric') {
       const row = el('label', 'assess-number');
       const input = el('input');
@@ -253,7 +336,7 @@ class AssessmentView {
       dk.type = 'button';
       dk.setAttribute('role', 'radio');
       dk.append(el('b', undefined, '?'), el('span', undefined, t('assess.dontKnow')));
-      dk.addEventListener('click', () => choose(null, dk));
+      dk.addEventListener('click', () => { this.clearChoices?.(); choose(null, dk); });
       options.append(dk);
     }
     left.append(options);
@@ -275,7 +358,7 @@ class AssessmentView {
     grid.append(left);
     const figure: Figure | undefined = q.type === 'vehicle' && p.vehicle ? { kind: 'vehicle', vehicleId: p.vehicle } : q.figure;
     if (figure) {
-      const fig = this.figure(figure);
+      const fig = this.figure(figure, undefined, p.values);
       if (fig) grid.append(fig);
     } else grid.classList.add('single');
     const skip = this.button(t('assess.skip'), () => { this.picked = null; this.confidence = undefined; this.answer(q, p, true); });
@@ -405,11 +488,8 @@ class AssessmentView {
       const ans = answers.get(p.id);
       const li = el('li', res?.correct ? 'right' : 'wrong');
       li.append(el('p', 'assess-review-q', `${res?.correct ? '✓' : '✗'} ${promptText(q, p)}`));
-      const yours = ans?.value === null || ans?.value === undefined ? t(ans?.skipped ? 'assess.skipped' : 'assess.dontKnow')
-        : q.type === 'choice' ? localText(q.options[ans.value as number]?.text)
-        : q.type === 'vehicle' ? vehicleById(String(ans.value)).name : `${num(Number(ans.value))} ${q.type === 'numeric' ? unitText(q.unit) : ''}`;
-      const right = q.type === 'choice' ? localText(q.options.find((o) => o.correct)?.text)
-        : q.type === 'vehicle' ? vehicleById(p.vehicle!).name : `${num(Number(numericExpected(q, p)?.toPrecision(4)))} ${unitText(q.unit)}`;
+      const yours = ans?.value === null || ans?.value === undefined ? t(ans?.skipped ? 'assess.skipped' : 'assess.dontKnow') : answerText(q, ans.value);
+      const right = rightAnswerText(q, p);
       li.append(el('p', undefined, t('assess.yours', { answer: yours })));
       if (!res?.correct) li.append(el('p', 'assess-review-right', t('assess.correct', { answer: right })));
       if (res?.misconception) {

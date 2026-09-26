@@ -1841,6 +1841,8 @@ export const ru: Record<string, string> = {
   'lesson.page.back': 'Вернуться в симулятор',
   'lesson.page.lessons': 'Уроки',
   'lesson.page.test': 'Входной тест',
+  'assess.multiHint': 'Выберите все верные ответы, затем продолжайте.',
+  'assess.orderHint': 'Нажимайте на пункты по порядку, от первого к последнему. Повторное нажатие отменяет выбор.',
   'assess.photoCredit': 'Фото: {author} · {license} · Wikimedia Commons',
   'assess.photoCreditLater': 'Фото: Wikimedia Commons, свободная лицензия — автор указан в разборе',
   'assess.axisTime': 't, с',

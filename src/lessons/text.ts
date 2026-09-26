@@ -20,6 +20,7 @@ const UNITS: Readonly<Record<string, Partial<Record<Lang, string>>>> = {
   'dB': { ru: 'дБ' },
   't': { ru: 'т', th: 'ตัน' },
   'kN': { ru: 'кН' },
+  'rad/s': { ru: 'рад/с' },
 };
 
 export function unitText(unit: string, lang: Lang = getLang()): string {

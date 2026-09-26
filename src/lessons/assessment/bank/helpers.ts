@@ -33,3 +33,20 @@ export const vehicle = (id: string, domain: number, level: number, skill: string
 /** The recorded flights' chart (`flights.json`). */
 export const chart = (dataset: string, series: string, compare?: string[], tMax?: number) =>
   ({ kind: 'chart', dataset, series, ...(compare ? { compare } : {}), ...(tMax ? { tMax } : {}) });
+
+/** Choose every right option: two or more are marked `correct`. */
+export const multi = (id: string, domain: number, level: number, kind: Kind, skill: string, prompt: Text,
+  options: ReturnType<typeof O>[], explanation: Text, extra: Extra = {}) =>
+  ({ id, domain, level, kind, skill, type: 'multi', prompt, options, explanation, ...extra });
+
+/** Put the items in order: they are written here in the right order. */
+export const order = (id: string, domain: number, level: number, kind: Kind, skill: string, prompt: Text,
+  items: Text[], explanation: Text, extra: Extra = {}) =>
+  ({ id, domain, level, kind, skill, type: 'order', prompt, items, explanation, ...extra });
+
+/** A diagram drawn for the question (`diagrams.ts`). */
+export const diagram = (id: string) => ({ kind: 'diagram', id });
+
+/** The four letters of a diagram's marks, as options in their own order; `right` is the correct one. */
+export const letters = (right: string, miss: Partial<Record<string, Text>> = {}, all = ['A', 'B', 'C', 'D']) =>
+  all.map((l) => O(T(l, l, l), l === right, miss[l]));

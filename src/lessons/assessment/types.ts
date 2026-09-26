@@ -20,9 +20,9 @@ export type QuestionKind = 'knowledge' | 'understanding';
 export type Figure =
   /** a series of a flight recorded from this simulator (`flights.json`) */
   | { kind: 'chart'; dataset: string; series: FlightSeries; compare?: string[]; tMax?: number }
-  /** a launch vehicle as the simulator draws it */
+  /** a photograph of a launch vehicle */
   | { kind: 'vehicle'; vehicleId: string }
-  /** a diagram drawn from data (`figures.ts`) */
+  /** a diagram drawn for the question (`diagrams.ts`), with the student's own numbers in it */
   | { kind: 'diagram'; id: string };
 
 export type FlightSeries = 'alt' | 'vInertial' | 'q' | 'gLoad' | 'mass' | 'thrust' | 'pitch' | 'dvRemaining';
@@ -85,12 +85,24 @@ export interface VehicleQuestion extends QuestionBase {
   vehicles: string[];
 }
 
-export type Question = ChoiceQuestion | NumericQuestion | VehicleQuestion;
+/** Put the items in order: the items are listed in the right order and shown shuffled. */
+export interface OrderQuestion extends QuestionBase {
+  type: 'order';
+  items: LocalText[];
+}
+
+/** Choose every option that is right: two or more are. */
+export interface MultiQuestion extends QuestionBase {
+  type: 'multi';
+  options: ChoiceOption[];
+}
+
+export type Question = ChoiceQuestion | NumericQuestion | VehicleQuestion | OrderQuestion | MultiQuestion;
 
 /** A question as one student sees it: the options shuffled, the numbers drawn. */
 export interface PreparedQuestion {
   id: string;
-  /** option indices into `question.options`, in the order shown */
+  /** option (or item) indices into `question.options` (`items`), in the order shown */
   order?: number[];
   /** drawn parameter values */
   values?: Record<string, number>;
@@ -103,7 +115,11 @@ export type Confidence = 'guess' | 'unsure' | 'sure';
 
 export interface Answer {
   id: string;
-  /** index into `question.options` (choice), the vehicle id (vehicle) or the number typed (numeric); null: "I don't know" or skipped */
+  /**
+   * index into `question.options` (choice), the vehicle id (vehicle), the
+   * number typed (numeric), the item indices in the order put (order: `2,0,1`)
+   * or the options chosen, ascending (multi: `0,3`); null: "I don't know" or skipped
+   */
   value: number | string | null;
   confidence?: Confidence;
   skipped?: boolean;
