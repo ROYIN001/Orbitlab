@@ -9,7 +9,8 @@
  *
  * For the one picked it adds its passes over a place (R03), how far off its
  * element set may be (R04) and its close approaches to everything loaded
- * (M01, src/orbit/screening.ts).
+ * (M01, src/orbit/screening.ts); for the group, when its satellites pass over
+ * a place (M02, src/orbit/overflights.ts).
  *
  * The logic is src/orbit/real-sky.ts, omm.ts, tle.ts and sgp4.ts; this is the
  * page's part, driven by the playground (src/ui/orbit/playground.ts), which
@@ -38,6 +39,7 @@ import { stationOf } from '../../orbit/applications-setup';
 import { footprintAngle } from '../../orbit/applications';
 import { GROWTH_PER_DAY, uncertaintyAt } from '../../orbit/uncertainty';
 import { screenInSlices, type Conjunction } from '../../orbit/screening';
+import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
 
 export interface SkyHost {
   level(): AppLevel;
@@ -59,15 +61,16 @@ const EVERY_FRAME = 3000;
 
 const SOURCE_KEY: Record<SkySourceId, string> = {
   stations: 'sky.group.stations', thai: 'sky.group.thai', gnss: 'sky.group.gnss', weather: 'sky.group.weather',
-  debris: 'sky.group.debris', imported: 'sky.group.imported',
+  imaging: 'sky.group.imaging', debris: 'sky.group.debris', imported: 'sky.group.imported',
 };
 const ABOUT_KEY: Record<SkySourceId, string> = {
   stations: 'sky.about.stations', thai: 'sky.about.thai', gnss: 'sky.about.gnss', weather: 'sky.about.weather',
-  debris: 'sky.about.debris', imported: 'sky.about.imported',
+  imaging: 'sky.about.imaging', debris: 'sky.about.debris', imported: 'sky.about.imported',
 };
 /** What a group's text rests on, beyond the catalogue itself. */
 const ABOUT_SOURCE: Partial<Record<SkySourceId, { title: string; url: string }>> = {
   debris: { title: 'NASA Orbital Debris Quarterly News 11-2 (April 2007)', url: 'https://orbitaldebris.jsc.nasa.gov/quarterly-news/pdfs/odqnv11i2.pdf' },
+  imaging: { title: 'Gunter\'s Space Page: Yaogan 1, 3, 10 (JB-5)', url: 'https://space.skyrocket.de/doc_sdat/yaogan-1.htm' },
 };
 
 /** SGP4's error codes, in words (src/orbit/sgp4.ts). */
@@ -110,6 +113,9 @@ export class RealSky {
   /** M01: the screening's settings, and the last one run (or running) */
   private conj = { within: 5e3, days: 3, radius: 10, open: false };
   private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; stop: boolean } | null = null;
+  /** M02: overflights of the place by the group on screen: the settings, and the last search */
+  private over = { minEl: 60 * Math.PI / 180, days: 1, daylight: false, open: false };
+  private overSearch: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Overflight[]; stop: boolean } | null = null;
 
   constructor(private readonly host: SkyHost) {}
 
@@ -293,6 +299,8 @@ export class RealSky {
       box.append(search, list);
     }
 
+    if (objs.length) box.append(this.overflightsBlock());
+
     // a file of one's own: read here, sent nowhere
     const imp = el('div', 'pg-sky-import');
     const input = el('input');
@@ -456,6 +464,111 @@ export class RealSky {
       link('Levit & Marshall, Adv. Space Res. 47, 2011', 'https://arxiv.org/abs/1002.2277'), '; ',
       link('Kelso, AAS 07-127, 2007', 'https://celestrak.org/publications/AAS/07-127/'), '.');
     box.append(src);
+    return box;
+  }
+
+  // ─── overflights (M02) ─────────────────────────────────────────────────────
+
+  private overKey(): string {
+    return `${this.source}|${this.place.station.lat}|${this.place.station.lon}|${this.over.minEl}|${this.over.days}`;
+  }
+
+  /** Every pass of the group on screen over the place, from the moment on screen, a few satellites at a time. */
+  private async findOverflights(): Promise<void> {
+    const run = { key: this.overKey(), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Overflight[], stop: false };
+    this.overSearch = run;
+    this.host.refresh();
+    const list = await overflightsInSlices(this.objects(), this.place.station, run.from, run.from + this.over.days, this.over.minEl, (f) => {
+      run.progress = f;
+      const s = document.querySelector('.pg-over-status');
+      if (s && this.overSearch === run) s.textContent = t('over.running', { p: Math.round(f * 100) });
+      return !run.stop && this.overSearch === run;
+    });
+    if (this.overSearch !== run) return;
+    run.state = list ? 'done' : 'stopped';
+    run.list = list ?? [];
+    this.host.refresh();
+  }
+
+  private overflightsBlock(): HTMLElement {
+    const box = el('details', 'pg-tool pg-over');
+    box.open = this.over.open;
+    box.addEventListener('toggle', () => { this.over.open = box.open; });
+    box.append(el('summary', undefined, t('over.title', { place: this.placeLabel() })), el('p', 'pg-tool-lead', t('over.lead')));
+    const run = this.overSearch && this.overSearch.key.startsWith(`${this.source}|`) ? this.overSearch : null;
+    box.append(stationPicker(t('pass.from'), this.place, () => this.place, (next) => {
+      this.place = next;
+      this.passes = null;
+      this.host.refresh();
+    }));
+    const row = el('div', 'pg-tool-row');
+    const choose = (label: string, options: [number, string][], value: number, set: (v: number) => void): HTMLElement => {
+      const l = el('label');
+      const s = el('select');
+      for (const [v, text] of options) { const opt = el('option', undefined, text); opt.value = String(v); s.append(opt); }
+      s.value = String(value);
+      s.addEventListener('change', () => { set(Number(s.value)); });
+      l.append(el('span', undefined, label), s);
+      return l;
+    };
+    row.append(
+      choose(t('over.minEl'), [30, 45, 60, 75].map((d) => [d, `${d}°`] as [number, string]), Math.round(this.over.minEl * 180 / Math.PI), (v) => { this.over.minEl = v * Math.PI / 180; }),
+      choose(t('conj.days'), [[1, t('conj.oneDay')], [3, t('life.days', { n: num(3) })]], this.over.days, (v) => { this.over.days = v; }),
+    );
+    box.append(row);
+    const day = el('label', 'pg-check');
+    const dayBox = el('input');
+    dayBox.type = 'checkbox';
+    dayBox.checked = this.over.daylight;
+    dayBox.addEventListener('change', () => { this.over.daylight = dayBox.checked; this.host.refresh(); });
+    day.append(dayBox, el('span', undefined, t('over.daylight')));
+    box.append(day);
+    const running = run?.state === 'running';
+    box.append(button('watch-btn', running ? t('over.stop') : t('over.run'), () => {
+      if (running && run) { run.stop = true; return; }
+      void this.findOverflights();
+    }));
+    const status = el('p', 'pg-tool-out pg-over-status');
+    status.setAttribute('role', 'status');
+    box.append(status);
+    if (running) status.textContent = t('over.running', { p: Math.round(run!.progress * 100) });
+    else if (run?.state === 'stopped') status.textContent = t('conj.stopped');
+    else if (run) {
+      const shown = run.list.filter((f) => !this.over.daylight || f.daylight);
+      status.textContent = shown.length ? t('over.found', { n: num(shown.length), from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('over.none');
+      if (shown.length) box.append(this.overflightList(shown));
+    }
+    box.append(el('p', 'pg-note', t('over.note')));
+    return box;
+  }
+
+  private overflightList(list: Overflight[]): HTMLElement {
+    const engineer = this.host.level() === 'engineer';
+    const deg = (x: number) => `${num(x * 180 / Math.PI, 0)}°`;
+    const ol = el('ol', 'pg-conj-list pg-over-list');
+    for (const f of list.slice(0, OVER_LIMIT)) {
+      const top = f.pass.top;
+      const li = el('li');
+      const head = el('div', 'pg-conj-head');
+      head.append(el('span', 'pg-sky-name', f.object.el.name ?? t('sky.unnamed')), el('span', 'pg-sky-num', String(f.object.el.satnum)));
+      li.append(head);
+      li.append(el('div', 'pg-conj-main', t('over.item', {
+        time: `${dayName(top.jd)} ${clockTime(top.jd)}`, el: deg(top.el), dir: compass(top.az), off: deg(f.offNadir),
+        light: t(f.daylight ? 'over.day' : 'over.night'), way: t(f.northbound ? 'over.north' : 'over.south'),
+      })));
+      if (engineer) {
+        const h = Math.floor(f.solarTime), m = Math.floor((f.solarTime - h) * 60);
+        li.append(el('div', 'pg-conj-more', t('over.more', {
+          km: num(f.groundRange / 1000, 0), lst: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+          s: num(uncertaintyAt(f.object, top.jd).timing, 1),
+        })));
+      }
+      ol.append(li);
+    }
+    const box = el('div');
+    box.append(ol);
+    if (list.length > OVER_LIMIT) box.append(el('p', 'pg-note', t('sky.more', { n: num(list.length - OVER_LIMIT) })));
+    box.append(el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].pass.top.jd) })));
     return box;
   }
 
@@ -707,6 +820,8 @@ export class RealSky {
 const PASS_LIMIT = 12;
 /** How many close approaches are listed, nearest first. */
 const CONJ_LIMIT = 20;
+/** How many overflights are listed, soonest first. */
+const OVER_LIMIT = 40;
 
 const SUPERSCRIPT: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
 /** A probability from its logarithm, as 2.7 × 10⁻⁵¹, however small. */

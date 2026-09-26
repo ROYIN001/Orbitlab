@@ -189,8 +189,16 @@ by SGP4, the theory those sets are made for. The clock starts at this moment and
 speed you choose; **⟲** brings it back to now, and **Live** shows while it is now.
 
 - **Group**: the space stations, Thailand's satellites, the navigation satellites (GPS, GLONASS,
-  Galileo, BeiDou), the weather satellites, or the debris of Fengyun-1C, destroyed by an
-  anti-satellite test in 2007. The group is drawn as points in 3-D and on the ground track.
+  Galileo, BeiDou), the weather satellites, the Earth-imaging satellites (civil, commercial, and
+  the military ones whose element sets are published), or the debris of Fengyun-1C, destroyed by
+  an anti-satellite test in 2007. The group is drawn as points in 3-D and on the ground track.
+- **Overflights of** a place, under the group's list: every pass of the group's satellites over a
+  city or your coordinates in the next 24 hours or 3 days whose highest point is at least the
+  elevation you choose (60° by default), soonest first: when, how high and in which direction,
+  the off-nadir angle a camera must look at to see the place, whether the place is in daylight
+  (optical cameras need it, radars do not) and whether the satellite is heading north or south.
+  Engineer adds the distance from the ground track, the local solar time and the timing
+  uncertainty. It is when the place *could* be seen, not that it is.
 - **Search** by name, catalogue number or international designator, then pick a satellite. Its
   orbit and its track are drawn. The right panel gives its catalogue number and designator, the
   epoch of its element set and how old the set is, where it is now, its period, its mean perigee

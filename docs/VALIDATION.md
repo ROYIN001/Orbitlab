@@ -29,6 +29,7 @@ Status on 2026-09-25:
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
+| Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
 | Close approaches (M01) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade (§7), 2026-09-26 |
 | Space weather in the lifetime (R05) | NRLMSISE-00 as ECSS-E-ST-10-04C tabulates it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | All seven within 25 % of their days in orbit with the measured Sun (+0.3 to −22 %); a fixed moderate Sun is off by −74 to +83 % (§6), 2026-09-26 |
 
@@ -1021,7 +1022,8 @@ itself to against the same file. It is twenty times the output's printed precisi
 
 The Orbit section's real satellites come from a dataset of CelesTrak's element sets
 (`src/provider/satellites.ts`): the space stations, Thailand's satellites, the four navigation
-constellations, the weather satellites and the debris of Fengyun-1C. It is bundled as a snapshot
+constellations, the weather satellites, the Earth-imaging satellites (CelesTrak's Earth Resources
+group, added for M02) and the debris of Fengyun-1C. It is bundled as a snapshot
 (`public/data/satellites.json`, fetched 2026-09-26) and, online, fetched from CelesTrak at most
 once in two hours. Element sets come in two families of formats: the two-line format, and the
 Orbit Mean-Elements Message (CCSDS 502.0-B-3) as JSON, CSV, XML and KVN. The OMM is the only one
@@ -1254,13 +1256,48 @@ The paper's Table 2 gives the probability each yields. The fixture is
 - SOCRATES's own 584 m cannot be reproduced here: it used the element sets of 10 February 2009,
   which are Space-Track data and are not redistributed.
 
+### Overflights of a place (M02)
+
+**Overflights of** a place (`src/orbit/overflights.ts`) lists every pass of a group's satellites
+over it whose highest point is above a chosen elevation, and for each the view from the satellite
+at that point: the off-nadir angle a camera must look at, the distance from the ground track,
+whether the place is in daylight, the local mean solar time and the heading. For it the catalogue
+gained a group, CelesTrak's Earth Resources set (167 satellites on 2026-09-26: civil and
+commercial imagers, radar satellites, and military ones whose element sets are published, such as
+China's Yaogan, "government remote sensing … likely also used as a military reconnaissance
+satellite", [Gunter's Space Page](https://space.skyrocket.de/doc_sdat/yaogan-1.htm)).
+
+`tests/overflights.test.ts` holds it to R03 and to published orbit design:
+
+- **The passes are R03's**: the Earth-imaging group over Bangkok for a day gives exactly the passes
+  R03 finds for each satellite, in time order (497 above 10°).
+- **The off-nadir angle** agrees with the triangle the satellite, the place and the Earth's centre
+  make, sin η = (|site| / |sat|) cos ε, to the rounding of a degree (the elevation is geodetic,
+  the triangle geocentric).
+- **Local times.** A sun-synchronous imager crosses the equator southbound at a fixed local time;
+  over a place off the equator and off the track the time moves by up to about 25 minutes at 60°
+  of elevation. The tolerance, 30 minutes either side of the published time, was fixed before the
+  comparison. Every overflight of Bangkok above 60° in 16 days from 2026-09-26 12:00 UTC:
+
+| satellite | published local time, descending node | by day, southbound | by night, northbound |
+| --- | --- | --- | --- |
+| Landsat 8 | 10:12 ± 5 min ([USGS](https://www.usgs.gov/landsat-missions/landsat-8-and-9-maneuvers)) | 5, at 10:08–10:32 | 4, at 21:54–22:12 |
+| Landsat 9 | 10:12 ± 5 min (USGS) | 5, at 10:08–10:32 | 4, at 21:54–22:12 |
+| Sentinel-2A, 2B, 2C | 10:30 ([ESA SentiWiki](https://sentiwiki.copernicus.eu/web/s2-mission)) | 5 each, at 10:26–10:47 | 5 each, at 22:09–22:29 |
+| THEOS-2 | 10:00–10:30 ([eoPortal](https://www.eoportal.org/satellite-missions/theos-2)) | 3, at 10:18–10:26 | 4, at 21:58–22:16 |
+
+Every one is by day when southbound and in the dark when northbound, as a morning orbit must be.
+THEOS-2 was added to the test after the first run, at the same tolerance. Landsat's reference was
+first written as 10:00 ± 15 minutes (Landsat 7's requirement) and corrected to the USGS figure for
+Landsat 8 and 9 before this was committed; the results are within the tolerance either way.
+
 ## 8. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
 npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
 npx vitest run tests/activity.test.ts tests/propagator.test.ts                   # the Sun's activity in the lifetime, ~5 s
-npx vitest run tests/conjunction.test.ts                                          # close approaches, ~3 s
+npx vitest run tests/conjunction.test.ts tests/overflights.test.ts               # close approaches, overflights, ~5 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

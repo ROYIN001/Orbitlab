@@ -170,8 +170,8 @@ examples ([docs/VALIDATION.md](docs/VALIDATION.md) §5). **Continue in Orbit** (
 and on the viewer's end card) puts the orbit a flight reached into the playground, with the
 spacecraft in it and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). **Real
 satellites**, beside the playground, draws the satellites of a group where they are now: the space
-stations, Thailand's satellites, GPS/GLONASS/Galileo/BeiDou, the weather satellites and the debris
-of Fengyun-1C. Their element sets come from CelesTrak and are propagated by SGP4/SDP4, the
+stations, Thailand's satellites, GPS/GLONASS/Galileo/BeiDou, the weather satellites, the
+Earth-imaging satellites and the debris of Fengyun-1C. Their element sets come from CelesTrak and are propagated by SGP4/SDP4, the
 reference implementation of AIAA 2006-6753, held to every line of its published verification
 (R01–R02, `src/orbit/sgp4.ts`, [docs/VALIDATION.md](docs/VALIDATION.md) §6). Your own TLE or OMM
 file can be read in the page too. For the satellite picked, it lists the next passes over a city
@@ -182,7 +182,9 @@ measured — GFZ's monthly record since 1947, then NOAA SWPC's latest months and
 it brings seven satellites of known shape down within 25 % of their re-entries on record (R05).
 **Close approaches** screens the catalogue against the satellite picked, with each approach's time,
 miss distance and an estimated probability of collision; the probability is held to the published
-figures of the Iridium 33–Cosmos 2251 collision (M01). Build is
+figures of the Iridium 33–Cosmos 2251 collision (M01). **Overflights** lists when the satellites of a
+group — the Earth-imaging ones, say — pass over a place, how high, at what off-nadir angle and
+whether in daylight; sun-synchronous imagers come over at their published local times (M02). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 

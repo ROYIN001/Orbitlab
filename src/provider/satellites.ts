@@ -4,9 +4,9 @@
  * them in the OMM keywords of CCSDS 502.0-B-3 (its "JSON" format,
  * https://celestrak.org/NORAD/documentation/gp-data-formats.php). The groups
  * are the roadmap's: the space stations, Thailand's satellites, the four
- * navigation constellations, the weather satellites, and a debris set — the
- * fragments of Fengyun-1C, destroyed by an anti-satellite test in 2007 and
- * still in orbit.
+ * navigation constellations, the weather satellites, the Earth-imaging
+ * satellites (M02's overflights), and a debris set — the fragments of
+ * Fengyun-1C, destroyed by an anti-satellite test in 2007 and still in orbit.
  *
  * Each group is kept as CelesTrak sends it, object for object and number for
  * number, checked here and turned into SGP4's elements by src/orbit/omm.ts
@@ -54,7 +54,7 @@ export interface OmmRecord {
   MEAN_MOTION_DDOT: number;
 }
 
-export type SatGroupId = 'stations' | 'thai' | 'gnss' | 'weather' | 'debris';
+export type SatGroupId = 'stations' | 'thai' | 'gnss' | 'weather' | 'imaging' | 'debris';
 
 /**
  * Thailand's satellites by catalogue number (src/data/thai-satellites.ts has
@@ -68,6 +68,8 @@ export const SAT_GROUPS: readonly { id: SatGroupId; queries: readonly string[]; 
   { id: 'thai', queries: ['NAME=THEOS', 'NAME=NAPA', 'NAME=THAICOM', 'CATNR=40141'], only: THAI_NORAD_IDS },
   { id: 'gnss', queries: ['GROUP=gnss'] },
   { id: 'weather', queries: ['GROUP=weather'] },
+  // M02: CelesTrak's Earth Resources group, the imagers of the public catalogue
+  { id: 'imaging', queries: ['GROUP=resource'] },
   { id: 'debris', queries: ['GROUP=fengyun-1c-debris'] },
 ];
 
