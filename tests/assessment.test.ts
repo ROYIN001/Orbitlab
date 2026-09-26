@@ -13,6 +13,7 @@ import { DOMAIN_PREREQUISITES, domainLevel, gradeQuestion, numericExpected, scor
 import { BUILTIN_LESSONS } from '../src/lessons/catalog';
 import { DOMAINS, type Domain } from '../src/lessons/types';
 import type { Answer, AssessmentAttempt, PreparedQuestion, Question } from '../src/lessons/assessment/types';
+import { VEHICLE_PHOTOS } from '../src/lessons/assessment/photos';
 import { readQuestion, type FileIssue } from '../src/lessons/lesson-file';
 
 const CYRILLIC = /\p{Script=Cyrillic}/u;
@@ -101,6 +102,12 @@ describe('the question bank', () => {
   it('has a picture of every vehicle a question can show', () => {
     const pictures = Object.keys(import.meta.glob('../public/lessons/vehicles/*.jpg')).map((p) => p.replace(/^.*\/(.+)\.jpg$/, '$1'));
     for (const q of BUILTIN_QUESTIONS) if (q.type === 'vehicle') for (const v of q.vehicles) expect(pictures, `${q.id}: ${v}`).toContain(v);
+    // every photograph is credited, and every credit has its photograph
+    expect(Object.keys(VEHICLE_PHOTOS).sort()).toEqual([...pictures].sort());
+    for (const [id, c] of Object.entries(VEHICLE_PHOTOS)) {
+      expect(c.source, id).toMatch(/^https:\/\/commons\.wikimedia\.org\/wiki\/File:/);
+      if (/^CC BY/.test(c.license)) expect(c.licenseUrl, id).toMatch(/^https:\/\/creativecommons\.org\//);
+    }
   });
 
   it('checks the numbers the charts are asked about: max-Q at about T+50 s, MECO later with an engine out', () => {

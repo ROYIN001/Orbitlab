@@ -197,3 +197,4 @@ dialog.assess-dialog { max-width: 1180px; }
   .assess-question, .assess-result { grid-template-columns: 1fr; }
   .lesson-btn .lesson-btn-label { display: none; }
 }
+.assess-credit a { color: inherit; }

@@ -10,6 +10,7 @@
  */
 import { getLang, t } from '../../i18n';
 import { vehicleById } from '../../data/vehicles';
+import { VEHICLE_PHOTOS, type PhotoCredit } from '../../lessons/assessment/photos';
 import { DATASET_IDS, FLIGHT_DATA, questionBank } from '../../lessons/assessment/bank';
 import { DOMAIN_ORDER, TEST_LENGTH, drawTest, newSeed, nextKind } from '../../lessons/assessment/draw';
 import { CHART_COLOURS, chartSvg, radarSvg } from '../../lessons/assessment/figures';
@@ -72,6 +73,18 @@ export function openAssessment(host: AssessmentHost): void {
   const view = new AssessmentView(host, d);
   view.start();
   if (!d.open) d.showModal();
+}
+
+/** A photograph's author and licence, as CC BY and CC BY-SA ask, linked to its page on Commons. */
+function photoCredit(credit: PhotoCredit): HTMLElement {
+  const line = el('p', 'small assess-credit');
+  const link = el('a');
+  link.href = credit.source;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = t('assess.photoCredit', { author: credit.author, license: credit.license });
+  line.append(link);
+  return line;
 }
 
 class AssessmentView {
@@ -150,6 +163,8 @@ class AssessmentView {
       img.src = `${base}lessons/vehicles/${f.vehicleId}.jpg`;
       img.alt = t('assess.vehicleAlt');
       box.append(img);
+      // the author and the licence would give the answer away (SpaceX, CALT…): named in the review
+      box.append(el('figcaption', 'assess-credit', t('assess.photoCreditLater')));
       return box;
     }
     if (f.kind === 'chart') {
@@ -397,6 +412,8 @@ class AssessmentView {
           : t('assess.misconceptionGeneric', { area: t(`assess.domain.${q.domain}`) })));
       }
       li.append(el('p', 'small', localText(q.explanation)));
+      const credit = q.type === 'vehicle' ? VEHICLE_PHOTOS[p.vehicle!] : undefined;
+      if (credit) li.append(photoCredit(credit));
       const lessons = (q.lessons ?? []).map((id) => this.host.lessons().find((l) => l.id === id)).filter((l): l is Lesson => !!l);
       if (lessons.length) li.append(el('p', 'small', t('assess.relatedLessons', { list: lessons.map((l) => `${lessonNumber(l)} ${localText(l.title)}`).join(', ') })));
       list.append(li);
