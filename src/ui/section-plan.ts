@@ -81,5 +81,11 @@ export const SECTION_PLANS: Readonly<Record<PlannedSection, SectionPlan>> = {
   },
 };
 
+/**
+ * The roadmap items already built (Phase 1 on): the Orbit section's own
+ * pages say what is still to come, and leave these out of that list.
+ */
+export const BUILT_ITEMS: ReadonlySet<string> = new Set(['O01']);
+
 export const isPlannedSection = (section: AppSection | null): section is PlannedSection =>
   section === 'orbit' || section === 'build';

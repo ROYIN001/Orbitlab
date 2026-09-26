@@ -104,7 +104,11 @@ export class HomeScreen {
     return card;
   }
 
-  /** A section being built: what it will be, and a look at the plan. */
+  /**
+   * A section being built: what it will be, and the way in — the Orbit
+   * section's playground (O01) now, the Build section's plan until its first
+   * item is built.
+   */
   private plannedCard(section: 'orbit' | 'build'): HTMLElement {
     const card = el('section', 'home-section planned');
     card.setAttribute('role', 'listitem');
@@ -112,7 +116,7 @@ export class HomeScreen {
     const orbit = section === 'orbit';
     this.sectionHead(card, orbit ? '⊕' : '⚙︎', t(orbit ? 'section.orbit' : 'section.build'),
       t(orbit ? 'home.section.orbitText' : 'home.section.buildText'), t('section.inDevelopment'));
-    const button = el('button', 'home-section-link', t('home.section.plan'));
+    const button = el('button', 'home-section-link', t(orbit ? 'home.section.orbitOpen' : 'home.section.plan'));
     button.type = 'button';
     button.dataset.homeFocus = section;
     button.addEventListener('click', () => this.host.go(route(section, 'explore')));

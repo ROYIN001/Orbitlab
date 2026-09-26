@@ -11,19 +11,19 @@ Orbitlab is being grown into one space program in three **sections**: **Launch**
 simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build** (designing a
 rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
 Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
-Orbit and Build are being built: today they show what is coming, level by level and in the order
-it will be built ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on them pretends to
-work. Everything below this section is about Launch.
+**Orbit** opens on its playground (section 0a below). Build is being built: today it shows what
+is coming, level by level and in the order it will be built
+([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on it pretends to work. Everything after
+section 0a is about Launch.
 
 - **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
   space station) straight away; under it are the three sections, Launch with its three ways
   in.
 
 Once a flight is in orbit, **Continue in Orbit** — under the telemetry panel, and on the viewer's
-end card — takes the orbit on screen to the Orbit section: its elements (a, e, i, Ω, ω, the
-perigee and apogee, the period), the spacecraft's mass and what is left of its own propellant,
-and the orbit lifetime analysis started from it. That is all the Orbit section does with it for
-now; the flight itself carries on in Launch.
+end card — puts the orbit on screen into the Orbit section's playground (section 0a), with the
+spacecraft's mass, what is left of its own propellant, and the orbit lifetime analysis started
+from it. The flight itself carries on in Launch.
 - **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
   and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
   each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's
@@ -71,6 +71,52 @@ network at all — the page, the physics and auto-tune workers and the Earth tex
 on the device, and the fonts too once they have loaded. When a new version is published, a note
 at the bottom of the page offers **Reload**; until you press it, the version you have keeps
 running.
+
+## 0a. The Orbit section: the orbit playground
+
+The Orbit section opens on one orbit and three ways of looking at it. The tabs over the picture
+switch between them:
+
+- **3-D**: the orbit about the Earth, which turns with the time of day and is lit by the Sun of
+  that moment. **P** and **A** mark the perigee and the apogee, and **☊** the ascending node,
+  where the orbit crosses the equator going north. Drag to turn the view; the wheel or a pinch
+  zooms; a double-click shows the whole orbit. An orbit drawn in red passes below the ground:
+  it would hit the Earth.
+- **Ground track**: the point under the satellite on a map, a revolution back as a dashed line
+  and the next ones solid, with the night side and the point under the Sun.
+- **Newton's cannon**: a cannon on a mountain above the air, firing sideways. Set the speed and
+  press **Fire**. Up to about 7.8 km/s the ball falls back, further round the Earth each time;
+  faster, it goes all the way round (an orbit); above the escape speed, about 11 km/s, it never
+  comes back.
+
+Under the picture are the clock, how fast it runs, and **⟲**, which goes back to the start.
+Space pauses and resumes.
+
+The three levels:
+
+- **Watch**: a tour in six steps, from Newton's cannon to the space station, a Molniya orbit, a
+  geostationary satellite standing over 78.5° E (the slot Thaicom's satellites use) and a
+  sun-synchronous orbit. **Next** and **Back** move between the steps; **Try it yourself** opens
+  Explore on the orbit on screen.
+- **Explore**: choose an orbit from the list, or set its perigee and apogee altitudes, its
+  inclination i, its node Ω and its argument of perigee ω with the sliders or the number boxes.
+  Dragging the perigee above the apogee takes the apogee along. **Earth's bulge (J2)** lets the
+  equatorial bulge turn the orbit's plane and perigee. **Kepler's second law** shades twelve
+  slices the satellite sweeps in equal times. The panel on the right gives the orbit's period,
+  speeds and altitudes, and Kepler's three laws with this orbit's own numbers.
+- **Engineer**: the classical elements themselves (a, e, i, Ω, ω and the mean anomaly M₀), and
+  the orbit's energy, angular momentum, the drift of the node and the perigee, the nodal
+  period, how far the track steps west each revolution, and the local time at the ascending
+  node. **Repeating ground track** finds the circular orbit whose track repeats after N
+  revolutions in D days. 143 revolutions in 10 days, sun-synchronous, gives 786 km: Sentinel-2's
+  orbit.
+
+After **Continue in Orbit** from a flight, the list says **From your launch** and the playground
+starts from where the flight was. **Orbit lifetime** runs the long-term analysis on it. At Watch,
+the flight's orbit is the first card, before the tour.
+
+The model is Kepler's orbit plus the secular drift of J2, nothing more: no drag and no Sun or
+Moon. [VALIDATION.md](VALIDATION.md) §4 holds it to real orbits.
 
 ## 1. Set up a mission
 

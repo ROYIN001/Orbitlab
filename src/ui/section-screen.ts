@@ -1,24 +1,22 @@
 /**
- * The Orbit and Build sections while they are being built (roadmap S01): an
- * honest screen that says what is coming, level by level and phase by phase,
+ * A section while it is being built (roadmap S01): an honest screen that
+ * says what is coming, level by level and phase by phase,
  * from docs/ROADMAP-PART2-3.md (`src/ui/section-plan.ts`), and leads back to
  * the launch simulator, which is what works today. No control on it pretends
- * to do something it does not.
+ * to do something it does not. Since O01 the Orbit section is its playground
+ * (src/ui/orbit/playground.ts), which took the orbit handed on from a flight
+ * (S03) with it; this screen is the Build section's.
  *
  * It is drawn over the live scene like the landing page, so a flight left
  * running in the launch section carries on underneath and is there on the
  * way back.
  */
-import { t, getLang } from '../i18n';
+import { t } from '../i18n';
 import { APP_LEVELS, route, type AppLevel, type AppRoute } from './app-mode';
 import { SECTION_PLANS, type PlannedSection } from './section-plan';
-import { handoffElements, type OrbitHandoff } from '../orbit/handoff';
-import { R_EARTH, RAD } from '../physics/constants';
 
 export interface SectionScreenHost {
   go(route: AppRoute): void;
-  /** S03: open the lifetime analysis (P07) on a handed-on orbit */
-  lifetime(handoff: OrbitHandoff, opener: HTMLElement | null): void;
 }
 
 const LEVEL_GLYPH: Record<AppLevel, string> = { watch: '▷', explore: '◎', engineer: '⌬' };
@@ -33,9 +31,6 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 export class SectionScreen {
   private section: PlannedSection = 'orbit';
   private level: AppLevel = 'explore';
-  /** S03: the orbit the launch section handed on, and why there is none when there is none */
-  private handoff: OrbitHandoff | null = null;
-  private handoffNote: string | null = null;
 
   constructor(private root: HTMLElement, private host: SectionScreenHost) {
     this.root.classList.add('section-screen');
@@ -52,57 +47,6 @@ export class SectionScreen {
 
   applyLanguage(): void {
     this.render();
-  }
-
-  /** S03: the orbit handed on from a flight ("Continue in Orbit"), or none, with the reason. */
-  setHandoff(handoff: OrbitHandoff | null, note: string | null = null): void {
-    this.handoff = handoff;
-    this.handoffNote = note;
-    this.render();
-  }
-
-  /**
-   * The received orbit, in the Orbit section: its elements, from the state
-   * vector itself (src/physics/orbital.ts), and the one analysis that already
-   * works on it, the orbit lifetime. Nothing else is offered: the playground
-   * and the planner that will take it from here are Phase 1's.
-   */
-  private handoffView(): HTMLElement {
-    const box = el('section', 'section-handoff');
-    box.setAttribute('aria-labelledby', 'section-handoff-title');
-    const title = el('h2', undefined, t('handoff.title'));
-    title.id = 'section-handoff-title';
-    box.append(el('span', 'eyebrow', t('handoff.eyebrow')), title);
-    const h = this.handoff;
-    if (!h) {
-      box.append(el('p', 'section-handoff-empty', this.handoffNote ?? t('handoff.none')));
-      return box;
-    }
-    box.append(el('p', 'section-handoff-label', h.label));
-    const e = handoffElements(h);
-    const n = (v: number, d: number) => v.toLocaleString(getLang(), { minimumFractionDigits: d, maximumFractionDigits: d });
-    const rows: [string, string][] = [
-      [t('handoff.a'), `${n(e.a / 1000, 1)} km`],
-      [t('handoff.e'), n(e.e, 5)],
-      [t('handoff.i'), `${n(e.i * RAD, 3)}°`],
-      [t('handoff.raan'), `${n(e.raan * RAD, 3)}°`],
-      [t('handoff.argp'), `${n(e.argp * RAD, 3)}°`],
-      [t('handoff.apsides'), `${n(e.periapsisAlt / 1000, 1)} × ${n(e.apoapsisAlt / 1000, 1)} km`],
-      [t('handoff.period'), `${n(e.period / 60, 2)} min`],
-      [t('handoff.mass'), `${n(h.spacecraft.mass, 0)} kg`],
-    ];
-    if (h.spacecraft.propulsion) rows.push([t('handoff.propellant'), `${n(h.spacecraft.propulsion.propellantMass, 0)} kg`]);
-    const dl = el('dl', 'section-handoff-elements');
-    for (const [k, v] of rows) dl.append(el('dt', undefined, k), el('dd', undefined, v));
-    box.append(dl);
-    box.append(el('p', 'section-handoff-note', t('handoff.note', { r: n(R_EARTH / 1000, 1) })));
-    const actions = el('div', 'section-actions');
-    const life = el('button', 'watch-btn primary', t('life.button'));
-    life.type = 'button';
-    life.addEventListener('click', () => this.host.lifetime(h, life));
-    actions.append(life);
-    box.append(actions);
-    return box;
   }
 
   private render(): void {
@@ -132,7 +76,6 @@ export class SectionScreen {
       levels.append(card);
     }
     inner.append(levels);
-    if (this.section === 'orbit') inner.append(this.handoffView());
 
     inner.append(el('h2', 'section-coming', t('section.coming')));
     for (const phase of plan.phases) {

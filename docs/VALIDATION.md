@@ -19,6 +19,7 @@ Status on 2026-09-25:
 | Falcon 9 Block 5 | Webcast telemetry of five flights, 2018–2019 | Compared in both flight models (§2); first-stage masses corrected |
 | Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos) | Compared in both flight models (§3) |
 | Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
+| Orbit playground (O01) | Published orbits: geostationary, GPS, Landsat WRS-2, Sentinel-2; closed forms | Kepler and first-order J2 held to them (§4), 2026-09-26 |
 
 ## 1. Method
 
@@ -533,9 +534,57 @@ six-DOF ascent comes out of max Q steeper than the flights, while the point-mass
 the published altitudes (Ariane 64: 87.1 km against 87 km at booster separation, 128.5 km
 against 127 km at the fairing).
 
-## 4. Re-running
+## 4. The orbit playground (O01): Kepler and J2 against published orbits
+
+The Orbit section's playground (roadmap O01, [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)) carries
+an orbit by Kepler's equation and, when asked, by the secular drift the Earth's oblateness gives
+the node, the perigee and the mean motion, to first order in J2 (Vallado, *Fundamentals of
+Astrodynamics and Applications*, §9.6). That is the whole model: no drag, no Sun or Moon, no
+higher harmonics. The long-term propagator of P07 is the tool for those. The model is held to
+closed forms and to the published figures of real orbits, in `tests/kepler.test.ts` and
+`tests/orbit-playground.test.ts`. The tolerances were fixed before the comparison.
+
+| quantity | reference | model | tolerance |
+| --- | --- | --- | --- |
+| geostationary radius, one turn per sidereal day | 42 164.2 km (closed form) | 42 164.2 km | 0.1 km |
+| drift of that radius under J2 | — | 0.0268°/day east | — |
+| mean semi-major axis that stands still under J2 | 42 166 km, a geostationary element set's | 42 166.3 km | 0.1 km |
+| GPS period at 26 560 km | 11 h 58 min, half a sidereal day | 717.9 min | 20 s of half a sidereal day |
+| Landsat WRS-2, 233 revolutions in 16 days: mean semi-major axis | 7 077.44 and 7 077.95 km, measured either side of Landsat 5's 1995 orbit correction (NASA, *Landsat Program Chronology*) | 7 077.72 km | ±0.5 km of that range |
+| Landsat WRS-2: inclination | 98.2096° (USGS calibration parameter file LT05CPF_19900101_19900331) | 98.1863° | 0.05° |
+| Landsat WRS-2: nodal period | 5 933.0472 s (the same file) | 5 933.047 s | 0.1 s |
+| Sentinel-2, 143 revolutions in 10 days: mean altitude | 786 km (ESA, SentiWiki "S2 Mission") | 786.1 km | 3 km |
+| Sentinel-2: inclination | 98.62° (the same page) | 98.54° | 0.1° |
+| sun-synchronous inclination at 600 km | 97.8° | 97.79° | 0.05° |
+| Molniya, 600 × 39 750 km at 63.4°: perigee drift | 0 at the critical inclination | < 0.01°/day | 0.01°/day |
+| first and second cosmic velocities at the surface | 7.905 and 11.18 km/s | 7.905, 11.18 km/s | 1 m/s, 10 m/s |
+| a slow cannon shot (100 m/s from 1 km) | range v√(2h/g), time √(2h/g) | both | 1 % |
+| a 45° lob at 300 m/s from the ground | range v²/g | — | 1 % |
+
+**Findings.**
+
+- Landsat's "705 km" is a nominal altitude. It is not a height above the equatorial radius:
+  the measured mean semi-major axis puts the orbit 699.6 km above it. The repeat condition
+  gives the measured axis, not 705 km, and the test holds it to the measured one.
+- The first-order J2 inclinations are 0.02° to 0.08° below the published ones. Second-order
+  terms and the mean-element definition an operator uses are both of that size. This is the
+  model's limit for the playground, and it is stated as such.
+- The local time of the ascending node is taken against the mean Sun (the Astronomical
+  Almanac's 280.460° + 0.9856474°/day), which is how a mission's LTAN is specified. The launch
+  planner's `raanFromLtan` (src/physics/mission.ts) aims at the true Sun instead. Over a year
+  the two differ by the equation of time, never more than 17 minutes
+  (`tests/orbit-playground.test.ts`). The built-in flights were left as they are.
+- The Watch tour's plain-language claims are each checked against the orbit the step shows, in
+  `tests/orbit-playground.test.ts`:
+  - the ISS "about an hour and a half, more than fifteen times a day, 7.7 km/s";
+  - Molniya "under an hour of its twelve in the south" (0.9 h);
+  - the geostationary satellite "over 78.5° E", holding within 0.05° for three days;
+  - the sun-synchronous orbit "10:30 heading north", holding within a minute for 180 days.
+
+## 5. Re-running
 
 ```sh
+npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts                # the orbit playground, ~2 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~3 min

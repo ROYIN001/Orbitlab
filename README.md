@@ -145,12 +145,24 @@ and level has its own address, `#/<section>/<level>` (`#/launch/watch`, `#/orbit
 plus `#/home` for the landing page, so it can be linked to and Back moves between them; the last
 section and level are remembered. The addresses from before the sections — `#/watch`,
 `#/explore`, `#/engineer` — open the launch section and are rewritten to the new form, and a
-mission link (`?m=…`) always opens in the launch workspace. Orbit and Build are being built:
-for now each shows, in all three languages, what it will hold and in what order, and nothing on
-them pretends to work. **Continue in Orbit** (under the telemetry panel, and on the viewer's end
-card) hands the orbit a flight reached to the Orbit section — its elements, the spacecraft in it
-and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). The cloud in the top bar
-switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
+mission link (`?m=…`) always opens in the launch workspace. **Orbit** opens on its playground
+(roadmap O01, `src/ui/orbit/`): an orbit by its elements, drawn in 3-D about the turning Earth,
+as its ground track, and as Newton's cannon:
+
+- **Watch** is a six-step narrated tour.
+- **Explore** sets the orbit by its perigee, apogee, i, Ω and ω, with Kepler's three laws in the
+  orbit's own numbers.
+- **Engineer** sets the classical elements, shows J2's drift of the node and the perigee, and
+  designs a repeating ground track.
+
+The model is Kepler plus first-order J2, held to the Landsat and Sentinel-2 orbits
+([docs/VALIDATION.md](docs/VALIDATION.md) §4). **Continue in Orbit** (under the telemetry panel,
+and on the viewer's end card) puts the orbit a flight reached into the playground, with the
+spacecraft in it and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). Build is
+still being built: it shows, in all three languages, what it will hold and in what order, and
+nothing on it pretends to work.
+
+The cloud in the top bar switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
 each dated, so `dist/` works on a network with no internet — and **online**, which fetches from
 the sources and falls back to the snapshot (roadmap S04, `src/provider/`).
 
@@ -317,9 +329,10 @@ src/render/     Three.js scene (floating origin, Earth shaders), rocket, debris,
 src/replay/     flight recorder, replay player, frame-backed simulation view, explosions
 src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map,
                 onboard overlay, timeline/event bar, dialogs, app modes, landing
-                page and launch viewer
+                page and launch viewer; src/ui/orbit/ the orbit playground
 src/i18n/       English, Russian and Thai dictionaries
-src/orbit/      the Orbit section: the hand-off from a flight (S03)
+src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground's presets,
+                rules and tour, the hand-off from a flight (S03)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
 src/design/     the user's designs, kept locally and as files (S05)
 src/mcp.ts      WebMCP tools

@@ -13,7 +13,7 @@ import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type Refer
 import { assessMissionResult } from './ui/result-content';
 import { enableChartExport } from './ui/chart-export';
 import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, saveStoredMission } from './config/mission-file';
-import { SceneManager, loadEarthTextures } from './render/scene';
+import { SceneManager, loadEarthTextures, type EarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
@@ -35,12 +35,14 @@ import { Timeline } from './ui/timeline';
 import { Narration } from './ui/narration';
 import { HomeScreen } from './ui/home';
 import './ui/modes.css';
+import './ui/orbit/playground.css';
 import { WatchView } from './ui/watch';
 import {
   HOME_ROUTE, experienceForMode, hashForRoute, initialRoute, launchMode, loadRoute, route, routeFromHash, sameRoute, saveRoute,
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
 } from './ui/app-mode';
 import { SectionScreen } from './ui/section-screen';
+import { OrbitPlayground } from './ui/orbit/playground';
 import { DataDialog } from './ui/data-dialog';
 import { applyWebFonts } from './ui/web-fonts';
 import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
@@ -200,8 +202,12 @@ class App {
   panel: SetupPanel;
   home: HomeScreen;
   watch: WatchView;
-  /** S01: the Orbit and Build sections while they are being built */
+  /** S01: the Build section while it is being built */
   private sectionScreen: SectionScreen;
+  /** O01: the Orbit section's playground */
+  private playground: OrbitPlayground;
+  /** the Earth's textures, loaded once for the launch scene and the playground's 3-D view */
+  private earthTextures: Promise<EarthTextures> | null = null;
   /** which section and level of the app is showing (src/ui/app-mode.ts) */
   route: AppRoute = HOME_ROUTE;
   /** the level last shown in any section, for the section links from the landing page */
@@ -412,10 +418,13 @@ class App {
       watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
       go: (r) => this.go(r),
     });
-    this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, {
+    this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
+    this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
       go: (r) => this.go(r),
       // S03: the hand-off's orbit, carried on for years (P07)
       lifetime: (h, opener) => this.lifetime.openFor(h, opener),
+      textures: () => (this.earthTextures ??= loadEarthTextures(base)),
+      mapUrl: `${base}textures/earth_atmos_2048.jpg`,
     });
     this.watch = new WatchView(document.getElementById('watch-ui')!, {
       start: (id) => this.startWatch(id),
@@ -517,6 +526,11 @@ class App {
     });
   }
 
+  /** O01: the Orbit section's playground is drawn over the whole scene, which need not be drawn under it. */
+  private get sceneCovered(): boolean {
+    return this.route.section === 'orbit';
+  }
+
   /** The landing page and the viewer: no workspace, the scene is the page. */
   get lean(): boolean {
     return this.mode === 'home' || this.mode === 'watch';
@@ -545,9 +559,14 @@ class App {
     document.body.dataset.section = next.section ?? 'home';
     saveRoute(next);
     this.syncNav();
-    const planned = isPlannedSection(next.section);
+    // O01: the Orbit section is its playground; the Build section is still its plan (S01)
+    const orbit = next.section === 'orbit';
+    const planned = isPlannedSection(next.section) && !orbit;
     document.getElementById('section-screen')!.hidden = !planned;
-    if (planned) this.sectionScreen.show(next.section as 'orbit' | 'build', next.mode as AppLevel);
+    if (planned) this.sectionScreen.show(next.section as 'build', next.mode as AppLevel);
+    document.getElementById('orbit-playground')!.hidden = !orbit;
+    if (orbit) this.playground.show(next.mode as AppLevel);
+    else this.playground.hide();
     const experience = experienceForMode(mode);
     if (experience) this.panel.setExperience(experience);
     this.rigidControls.setInspectorAvailable(mode === 'engineer');
@@ -645,7 +664,7 @@ class App {
   }
 
   async init(): Promise<void> {
-    const tex = await loadEarthTextures(base);
+    const tex = await (this.earthTextures ??= loadEarthTextures(base));
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
     // V02: `?sky=gradient` keeps the old sky, for comparison or a GPU the trial misjudges
@@ -716,7 +735,7 @@ class App {
    */
   continueInOrbit(): void {
     this.handoff = this.orbitHandoffNow();
-    this.sectionScreen.setHandoff(this.handoff, this.handoff ? null : t('life.notInOrbit'));
+    this.playground.setHandoff(this.handoff, this.handoff ? null : t('handoff.notInOrbit'));
     this.go(route('orbit', this.lastLevel()));
   }
 
@@ -887,6 +906,8 @@ class App {
    */
   private onKey(e: KeyboardEvent): void {
     if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
+    // O01: the Orbit section's playground has its own clock
+    if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
     // The landing page has no flight controls on it: Space must not launch the
     // rocket standing behind it, out of sight.
     if (this.mode === 'home') return;
@@ -967,6 +988,7 @@ class App {
     this.home.applyLanguage();
     this.watch.applyLanguage();
     this.sectionScreen.applyLanguage();
+    this.playground.applyLanguage();
     this.syncDataMode();
     if (this.dataDialog.el.open) this.dataDialog.applyLanguage();
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
@@ -1592,7 +1614,7 @@ class App {
     const scene = this.scene;
     const view = this.simView;
     if (!sim || !this.rocket || !this.pad || !view) {
-      scene.render();
+      if (!this.sceneCovered) scene.render();
       return;
     }
     // One frame snapshot drives every view this tick: the live head when the
@@ -1769,7 +1791,9 @@ class App {
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,
     // ground track, debris, event log — is the frame on screen.
-    if (this.camMode === 'map') {
+    if (this.sceneCovered) {
+      // the Orbit section's playground covers the scene: the flight flies on, undrawn
+    } else if (this.camMode === 'map') {
       this.map.draw(view.sim, sim.site.latitude, sim.site.longitude, Math.max(0, this.sbHeight));
     } else {
       scene.render();

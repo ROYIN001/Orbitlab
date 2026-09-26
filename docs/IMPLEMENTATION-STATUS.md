@@ -16,8 +16,12 @@ throughout.
 Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)):
 the top bar switches the section (Launch, Orbit, Build) and the level (Watch, Explore, Engineer),
 at `#/<section>/<level>`; the old `#/watch`, `#/explore` and `#/engineer` open Launch and are
-rewritten. Orbit and Build are "in development" screens that list what is coming, from the
-roadmap, and nothing more.
+rewritten. **Orbit** opens on its playground (O01): an orbit by its elements, in 3-D about the
+turning Earth, as its ground track, and Newton's cannon, with Kepler's three laws in numbers, the
+secular J2 drift, a repeat-ground-track design tool at the Engineer level and a narrated
+six-step tour at Watch. A flight's orbit arrives there through **Continue in Orbit** (S03). What
+the section will hold next is listed under the playground. **Build** is still an "in
+development" screen that lists what is coming, from the roadmap, and nothing more.
 
 - **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
   for every vehicle, which is the default, with each stage's chambers, steering, thrusters and
@@ -220,7 +224,22 @@ phases. Phase 0, the structure, is on branch `claude/eloquent-meitner-mvmno4`:
 | S04 data provider, online and offline | done |
 | S05 local design storage | done |
 
+Phase 1, the Orbit core, continues on the same branch:
+
+| Item | |
+|---|---|
+| O01 orbit playground | done: Kepler and first-order J2, held to the geostationary, GPS, Landsat WRS-2 and Sentinel-2 orbits ([VALIDATION.md](VALIDATION.md) §4) |
+| O02 maneuver planner | planned |
+| O03 continue in orbit | planned |
+| O04 applications | planned |
+
 ## Known limitations
+
+- The orbit playground (O01) carries an orbit by Kepler's equation and J2's secular drift to
+  first order, nothing more: no drag, no Sun or Moon, no higher harmonics, and its inclinations
+  for a repeat orbit come out 0.02° to 0.08° below the published ones
+  ([VALIDATION.md](VALIDATION.md) §4). For how an orbit decays, the lifetime analysis (P07) is
+  the tool. Its 3-D view needs WebGL; without it the ground track and Newton's cannon still work.
 
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
 - The physics has been compared with flight data for four vehicles only: Falcon 9 against webcast
