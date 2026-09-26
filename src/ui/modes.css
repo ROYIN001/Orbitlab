@@ -341,3 +341,25 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
   .watch-stat strong { font-size: 21px; }
   .watch-speed { padding: 6px 8px; }
 }
+
+/* ── S04: offline or online data ─────────────────────────────────────────── */
+
+/* the indicator: a cloud, struck through while offline (the default); the
+   label gives way with the other tools' labels, the tooltip keeps it */
+.data-mode-btn .data-glyph { flex: none; }
+.data-mode-btn[data-mode='online'] { color: var(--blue); }
+.data-mode-btn[data-mode='online'] .data-glyph-off { display: none; }
+.data-dialog { width: min(620px, calc(100vw - 32px)); }
+.data-modes { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; padding: 0; border: 0; }
+.data-mode-option {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--line2); background: var(--panel2); cursor: pointer;
+}
+.data-mode-option:has(input:checked) { border-color: var(--accent-line); background: rgba(22, 46, 45, 0.62); }
+.data-mode-option input { margin-top: 3px; accent-color: var(--accent); }
+.data-mode-option span { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.data-mode-option strong { font-size: 14px; color: var(--text); }
+.data-sets { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.data-sets li { display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.5; }
+.data-set-status, .data-set-summary { color: var(--muted); overflow-wrap: anywhere; }
+.data-set-status.warn { color: var(--warn); }

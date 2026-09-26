@@ -11,6 +11,8 @@ import {
   type CacheLike, type CachesLike, type PrecacheManifest, type SwScope,
 } from '../src/pwa/sw-core';
 import { SKIP_WAITING_MESSAGE } from '../src/pwa/register';
+import { DATA_CACHE, DATA_HOSTS } from '../src/pwa/sw-core';
+import { DATA_HOSTS as DATASET_HOSTS } from '../src/provider/datasets';
 import { PRECACHE_PLACEHOLDER, injectPrecacheManifest, precacheManifest, precacheable } from '../src/pwa/manifest';
 
 const SCOPE = 'https://example.github.io/Orbitlab/';
@@ -144,6 +146,32 @@ describe('service worker (U03)', () => {
     expect(await (await respond(sw, m, new Request(font), new Set())).text()).toBe('FONT');
   });
 
+  it('routes an online dataset network-first, and answers from its last copy when the network is gone (S04)', async () => {
+    const scope = new URL(SCOPE), pre = new Set<string>();
+    const kp = 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json';
+    expect(routeFor(new URL(kp), 'cors', scope, pre)).toBe('data');
+    // every host a dataset reads is one the worker keeps answers from
+    expect(DATASET_HOSTS.filter((h) => !DATA_HOSTS.includes(h))).toEqual([]);
+    const online = { on: true };
+    const server: Record<string, string> = { [kp]: '[1]' };
+    const sw = fakeScope(server, online);
+    const m = manifestOf(V1);
+    expect(await (await respond(sw, m, new Request(kp), pre)).text()).toBe('[1]');
+    // online, the source's new answer wins over the kept one
+    server[kp] = '[2]';
+    expect(await (await respond(sw, m, new Request(kp), pre)).text()).toBe('[2]');
+    online.on = false;
+    expect(await (await respond(sw, m, new Request(kp), pre)).text()).toBe('[2]');
+    expect(await sw.caches.keys()).toContain(DATA_CACHE);
+    // with no copy kept, the failure reaches the page, whose provider falls back on the snapshot
+    await expect(respond(sw, m, new Request('https://services.swpc.noaa.gov/json/other.json'), pre)).rejects.toThrow('offline');
+    // a refusal is passed on and not kept
+    online.on = true;
+    const missing = 'https://services.swpc.noaa.gov/json/missing.json';
+    expect((await respond(sw, m, new Request(missing), pre)).status).toBe(404);
+    expect(await (await sw.caches.open(DATA_CACHE)).match(missing)).toBeUndefined();
+  });
+
   it('agrees with the page on the message that moves a waiting version on', () => {
     expect(SKIP_WAITING_MESSAGE).toBe(SKIP_WAITING);
   });
@@ -186,6 +214,8 @@ describe('the build (U03)', () => {
       expect(urls).toContain(`textures/${f}`);
     }
     expect(urls).toEqual(expect.arrayContaining(['manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png']));
+    // S04: the offline mode's data snapshots are files of the build like any other
+    expect(urls).toContain('data/space-weather.json');
   }, 120_000);
 });
 

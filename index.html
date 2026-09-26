@@ -44,6 +44,11 @@
           </nav>
         </div>
         <div class="topbar-right">
+          <!-- S04: offline or online data (src/provider/), and every dataset's "data as of" -->
+          <button id="btn-data-mode" class="quiet-btn data-mode-btn" type="button" data-mode="offline">
+            <svg class="data-glyph" aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15.5h8.2a3.3 3.3 0 0 0 .5-6.6 4.6 4.6 0 0 0-8.9 1A2.8 2.8 0 0 0 6 15.5z"/><path class="data-glyph-off" d="M3 3l14 14"/></svg>
+            <span id="data-mode-label">Offline</span>
+          </button>
           <button id="btn-help" class="quiet-btn" type="button"></button>
           <button id="btn-physics" class="quiet-btn" type="button" data-i18n-aria-label="dlg.physics.button" data-i18n-title="dlg.physics.button">
             <span aria-hidden="true">ⓘ</span><span data-i18n="dlg.physics.button">Physics &amp; sources</span>

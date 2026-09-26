@@ -131,6 +131,7 @@ npm test           # physics, mission and tool tests (vitest)
 npm run test:heavy # the delivered-orbit matrix with wind (about 15 minutes)
 npm run typecheck  # tsc --noEmit
 npm run build      # typecheck, then a static site in dist/
+npm run snapshots  # refresh the bundled data snapshots in public/data/ (needs the network)
 ```
 
 Requires Node.js 20 or newer and a browser with WebGL 2.
@@ -148,7 +149,10 @@ mission link (`?m=…`) always opens in the launch workspace. Orbit and Build ar
 for now each shows, in all three languages, what it will hold and in what order, and nothing on
 them pretends to work. **Continue in Orbit** (under the telemetry panel, and on the viewer's end
 card) hands the orbit a flight reached to the Orbit section — its elements, the spacecraft in it
-and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`).
+and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). The cloud in the top bar
+switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
+each dated, so `dist/` works on a network with no internet — and **online**, which fetches from
+the sources and falls back to the snapshot (roadmap S04, `src/provider/`).
 
 The launch section's levels, with the landing page:
 

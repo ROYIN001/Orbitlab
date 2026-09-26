@@ -12,6 +12,13 @@
  * and are cached the first time they load; offline before that, the page
  * falls back on the system fonts.
  *
+ * The data snapshots the offline mode reads (`public/data/`, roadmap S04) are
+ * files of the build like any other, so they are precached with it. What the
+ * online mode fetches from its sources (`DATA_HOSTS`) goes to the network
+ * first, and its last answer is kept for when the network is gone — an app
+ * switched online and then taken offline still has the data it last saw,
+ * dated by their own "as of", before the snapshot's.
+ *
  * Written against the small slice of the service-worker API it uses, so the
  * whole of it runs under test with fakes (tests/pwa.test.ts). `sw.ts` is the
  * entry that hands it the real `self`.
@@ -45,6 +52,8 @@ export interface SwScope {
 
 export const PRECACHE_PREFIX = 'orbitlab-precache-';
 export const RUNTIME_CACHE = 'orbitlab-runtime';
+/** S04: the online datasets' last answers */
+export const DATA_CACHE = 'orbitlab-data';
 /** Where a precache keeps the manifest it was filled from, beside the files. */
 export const MANIFEST_KEY = '__precache-manifest.json';
 /** The message the page sends to move onto a waiting worker. */
@@ -54,14 +63,22 @@ export const precacheName = (version: string): string => `${PRECACHE_PREFIX}${ve
 
 /** Hosts whose responses are kept for offline use as they are fetched. */
 const RUNTIME_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+/**
+ * S04: the hosts the online datasets come from. Written out here rather than
+ * imported from src/provider/datasets.ts: the worker must stay one classic
+ * script, and a module it shared with the page would become a chunk it
+ * imports. tests/pwa.test.ts holds the two lists together.
+ */
+export const DATA_HOSTS: readonly string[] = ['services.swpc.noaa.gov'];
 
-export type Route = 'page' | 'precache' | 'runtime' | 'network';
+export type Route = 'page' | 'precache' | 'runtime' | 'data' | 'network';
 
 /**
  * How a GET is answered: the page itself (any navigation inside the scope,
  * whatever its query — a mission link carries one) from the precached
  * `index.html`; a precached file from the cache; a font by
- * stale-while-revalidate; everything else from the network.
+ * stale-while-revalidate; an online dataset network-first, from its last
+ * answer when the network fails (S04); everything else from the network.
  */
 export function routeFor(url: URL, mode: string, scope: URL, precached: ReadonlySet<string>): Route {
   if (url.origin === scope.origin && url.pathname.startsWith(scope.pathname)) {
@@ -70,7 +87,8 @@ export function routeFor(url: URL, mode: string, scope: URL, precached: Readonly
     if (precached.has(path)) return 'precache';
     return 'network';
   }
-  return RUNTIME_HOSTS.includes(url.hostname) ? 'runtime' : 'network';
+  if (RUNTIME_HOSTS.includes(url.hostname)) return 'runtime';
+  return DATA_HOSTS.includes(url.hostname) ? 'data' : 'network';
 }
 
 async function readManifest(cache: CacheLike, scope: URL): Promise<PrecacheManifest | null> {
@@ -161,6 +179,21 @@ export async function respond(scope: SwScope, manifest: PrecacheManifest, reques
     });
     if (hit) { fresh.catch(() => { /* offline: the cached copy stands */ }); return hit; }
     return fresh;
+  }
+  if (route === 'data') {
+    // Network first: online mode asked for the source's current answer. Its
+    // last good one stands in when the network fails; with none, the failure
+    // goes back to the page, whose provider falls back on the snapshot.
+    const cache = await scope.caches.open(DATA_CACHE);
+    try {
+      const response = await scope.fetch(request);
+      if (response.ok) await cache.put(request, response.clone());
+      return response;
+    } catch (error) {
+      const hit = await cache.match(request);
+      if (hit) return hit;
+      throw error;
+    }
   }
   return scope.fetch(request);
 }

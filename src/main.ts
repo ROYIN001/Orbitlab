@@ -41,6 +41,9 @@ import {
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
 } from './ui/app-mode';
 import { SectionScreen } from './ui/section-screen';
+import { DataDialog } from './ui/data-dialog';
+import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
+import { createDataProvider, type DataProvider } from './provider/data-provider';
 import { isPlannedSection } from './ui/section-plan';
 import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
@@ -298,6 +301,10 @@ class App {
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
   private physicsDialog: PhysicsDialog;
+  /** S04: offline (the default) or online, and where datasets come from under it */
+  private dataMode: DataMode = loadDataMode();
+  private dataProvider: DataProvider = createDataProvider(this.dataMode, document.baseURI, (url, init) => fetch(url, init));
+  private dataDialog!: DataDialog;
   private loopInspector: LoopInspector;
   /** G05: the Monte Carlo window, and the app's Monte Carlo runner (WebMCP's run_monte_carlo). */
   readonly monteCarlo: MonteCarloWindow;
@@ -430,6 +437,14 @@ class App {
         if (this.autoCamera && this.lastPhase === phase) this.setCamera(mode);
       },
     });
+    this.dataDialog = new DataDialog({
+      mode: () => this.dataMode,
+      setMode: (mode) => this.setDataMode(mode),
+      provider: () => this.dataProvider,
+    });
+    const dataBtn = document.getElementById('btn-data-mode') as HTMLButtonElement;
+    dataBtn.addEventListener('click', () => this.dataDialog.open(dataBtn));
+    this.syncDataMode();
     this.bindControls();
     this.observeSceneBottom();
     const stored = loadRoute();
@@ -444,6 +459,26 @@ class App {
       if (!sameRoute(next, this.route)) this.setRoute(next);
       this.canonicalizeHash();
     });
+  }
+
+  /** S04: switch offline/online, kept in this browser. */
+  private setDataMode(mode: DataMode): void {
+    this.dataMode = mode;
+    saveDataMode(mode);
+    this.dataProvider = createDataProvider(mode, document.baseURI, (url, init) => fetch(url, init));
+    this.syncDataMode();
+  }
+
+  /** S04: the top bar's indicator says which mode is on, in words for the screen reader and the tooltip. */
+  private syncDataMode(): void {
+    const btn = document.getElementById('btn-data-mode');
+    if (!btn) return;
+    btn.dataset.mode = this.dataMode;
+    const label = t(this.dataMode === 'online' ? 'data.mode.online' : 'data.mode.offline');
+    document.getElementById('data-mode-label')!.textContent = label;
+    const title = t('data.button', { mode: label });
+    btn.title = title;
+    btn.setAttribute('aria-label', title);
   }
 
   /** Rewrite the address to the route's canonical hash, in place. */
@@ -929,6 +964,8 @@ class App {
     this.home.applyLanguage();
     this.watch.applyLanguage();
     this.sectionScreen.applyLanguage();
+    this.syncDataMode();
+    if (this.dataDialog.el.open) this.dataDialog.applyLanguage();
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
     document.getElementById('controls')?.setAttribute('aria-label', t('a11y.playback'));
     // icon-only buttons take their accessible name from the same key as the tooltip

@@ -197,6 +197,17 @@ Public sources only, each cited. Spread over the phases above rather than a phas
   version; `parseHandoff` refuses anything not wholly sound. `src/orbit/` is where the Orbit
   section's modules live, and the propagator's import guard (tests/propagator.test.ts) lets them
   use it.
+- **Data, offline and online** (`src/provider/`, S04): a `DataProvider` loads a dataset by id; the
+  offline one reads `public/data/<dataset>.json` (a snapshot: format, version, the dataset's
+  data, its "as of" — the newest reading — and when it was fetched), the online one fetches the
+  sources with an 8 s timeout and falls back to the snapshot on any failure, saying why. A
+  dataset's parser is the same for the online answer and for `scripts/refresh-snapshots.ts`, which
+  writes the snapshot (`npm run snapshots`). The service worker precaches the snapshots with the
+  build and answers the online hosts network-first from their last answer. A baseline snapshot is
+  committed so a build with no network has data; R02's scheduled build refreshes it at build time
+  without committing. Checked on 2026-09-26 with curl: SWPC, CelesTrak's GP JSON and Launch
+  Library 2 all answer `access-control-allow-origin: *` — CelesTrak, which the planning could not
+  reach, can be read straight from the page.
 - **Everything a user makes is a file first**: missions (U01), designs (S05) and scenarios (T01)
   are versioned JSON documents that open offline, so the closed-intranet deployment loses
   nothing but the live data.
