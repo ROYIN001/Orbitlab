@@ -176,7 +176,8 @@ reference implementation of AIAA 2006-6753, held to every line of its published 
 (R01–R02, `src/orbit/sgp4.ts`, [docs/VALIDATION.md](docs/VALIDATION.md) §6). Your own TLE or OMM
 file can be read in the page too. For the satellite picked, it lists the next passes over a city
 or your own coordinates: rise, highest point and set, and whether it can be seen (R03, held to
-Skyfield to within a second). Build is
+Skyfield to within a second), and estimates how far off its element set may be as it ages (R04,
+from published studies of TLE accuracy). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 

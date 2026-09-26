@@ -203,6 +203,10 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   your sky is dark (the Sun 6° or more below the horizon). The first line counts down to the next
   pass. Times are your device's clock. The map draws the place, and the circle of ground from
   which the satellite is above that elevation.
+- **Position error (estimate)** says how far off the satellite may be: an element set does not
+  carry its own accuracy, so the page estimates it from published studies, from the kind of orbit
+  and the set's age. **How far off it may be** draws the band widening with that age and names the
+  studies. At the Engineer level each pass gives its timing uncertainty.
 - **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
   Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
   the two part company.
@@ -213,8 +217,9 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
 Offline (the default) the element sets are the snapshot bundled with this version, dated in the
 right panel. Online they come from CelesTrak, at most once in two hours, as CelesTrak asks, and
 from the snapshot whenever CelesTrak cannot be reached. A published site is rebuilt every day
-with a fresh snapshot. An element set is a few kilometres off at its epoch, and further as it
-ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its reference.
+with a fresh snapshot. An element set is a fraction of a kilometre to a few kilometres off at
+its epoch, and further as it ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its
+reference.
 
 ## 1. Set up a mission
 

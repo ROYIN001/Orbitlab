@@ -32,6 +32,7 @@ import { DARK_SKY, findPasses, lookFrom, type Look, type Pass } from '../../orbi
 import { compass, placeName, stationPicker, type StationChoice } from './applications-panel';
 import { stationOf } from '../../orbit/applications-setup';
 import { footprintAngle } from '../../orbit/applications';
+import { GROWTH_PER_DAY, uncertaintyAt } from '../../orbit/uncertainty';
 
 export interface SkyHost {
   level(): AppLevel;
@@ -96,7 +97,7 @@ export class RealSky {
   private stale = true;
   private framedKey: string | null = null;
   private lastGood: OrbitState | null = null;
-  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement; next?: HTMLElement } = {};
+  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement; next?: HTMLElement; error?: HTMLElement } = {};
   /** R03: where the passes are seen from, the lowest elevation that counts, and the passes found */
   private place: StationChoice = { stationId: 'bangkok', station: stationOf('bangkok')! };
   private minEl = 10 * Math.PI / 180;
@@ -358,6 +359,8 @@ export class RealSky {
     if (o.el.intldesg) row(t('sky.f.cospar'), cospar(o.el.intldesg));
     row(t('sky.f.epoch'), utc(new Date((o.el.jdEpoch + o.el.jdEpochFrac - 2440587.5) * 86400e3).toISOString()));
     this.live.age = row(t('sky.f.age'), '');
+    // R04: how far off it may be, as an estimate
+    this.live.error = row(t('unc.row'), '');
     this.live.alt = row(t('pg.f.altNow'), '');
     this.live.speed = row(t('pg.f.speedNow'), '');
     this.live.latlon = row(t('pg.f.latlon'), '');
@@ -378,6 +381,7 @@ export class RealSky {
       this.live.teme = row(t('sky.f.teme'), '');
     }
     box.append(dl);
+    box.append(this.uncertaintyBlock(o));
     const thai = THAI_SATELLITES.find((s) => s.norad === o.el.satnum);
     if (thai) box.append(el('p', 'pg-note', t(thai.aboutKey)));
     if (now.error === 0) box.append(this.passesSection(o));
@@ -389,6 +393,60 @@ export class RealSky {
       }
     }
     this.updateLive();
+    return box;
+  }
+
+  // ─── uncertainty (R04) ────────────────────────────────────────────────────
+
+  /**
+   * The estimate's band: ± the along-track error against the element set's
+   * age, from two days before its epoch to two weeks after, the moment on
+   * screen marked; and where the numbers come from.
+   */
+  private uncertaintyBlock(o: SkyObject): HTMLElement {
+    const box = el('details', 'pg-tool pg-unc');
+    box.append(el('summary', undefined, t('unc.title')));
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = 300, H = 120, pad = { l: 34, r: 8, t: 8, b: 22 };
+    const d0 = -2, d1 = 14;
+    const epoch = o.el.jdEpoch + o.el.jdEpochFrac;
+    const at = (d: number) => uncertaintyAt(o, epoch + d).sigma.along / 1000;
+    const top = at(d1) * 1.08;
+    const x = (d: number) => pad.l + ((d - d0) / (d1 - d0)) * (W - pad.l - pad.r);
+    const y = (v: number) => pad.t + (1 - (v + top) / (2 * top)) * (H - pad.t - pad.b);
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('class', 'pg-unc-chart');
+    svg.setAttribute('role', 'img');
+    const age = elementAge(o.el, this.jd);
+    svg.setAttribute('aria-label', t('unc.chartLabel', { km: num(at(Math.max(d0, Math.min(d1, age))), 1) }));
+    const node = (tag: string, attrs: Record<string, string | number>, text?: string) => {
+      const n = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+      if (text !== undefined) n.textContent = text;
+      svg.append(n);
+      return n;
+    };
+    const steps = 64, up: string[] = [], down: string[] = [];
+    for (let k = 0; k <= steps; k++) {
+      const d = d0 + (k / steps) * (d1 - d0), v = at(d);
+      up.push(`${x(d).toFixed(1)},${y(v).toFixed(1)}`);
+      down.unshift(`${x(d).toFixed(1)},${y(-v).toFixed(1)}`);
+    }
+    node('polygon', { points: [...up, ...down].join(' '), class: 'pg-unc-band' });
+    node('line', { x1: x(d0), x2: x(d1), y1: y(0), y2: y(0), class: 'pg-unc-axis' });
+    node('line', { x1: x(0), x2: x(0), y1: pad.t, y2: H - pad.b, class: 'pg-unc-epoch' });
+    if (age >= d0 && age <= d1) node('line', { x1: x(age), x2: x(age), y1: pad.t, y2: H - pad.b, class: 'pg-unc-now' });
+    for (const d of [0, 7, 14]) node('text', { x: x(d), y: H - 6, class: 'pg-unc-tick', 'text-anchor': 'middle' }, num(d));
+    node('text', { x: pad.l - 4, y: y(top / 1.08) + 4, class: 'pg-unc-tick', 'text-anchor': 'end' }, `±${num(top / 1.08, 0)}`);
+    box.append(svg, el('p', 'pg-unc-axes', t('unc.axes')));
+    const src = el('p', 'pg-note');
+    const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
+    src.append(t('unc.lead', { growth: num(GROWTH_PER_DAY / 1000, 1) }), ' ',
+      link('Flohrer, Krag & Klinkrad, AMOS 2008', 'https://amostech.com/TechnicalPapers/2008/Orbital_Debris/Flohrer.pdf'), '; ',
+      link('Levit & Marshall, Adv. Space Res. 47, 2011', 'https://arxiv.org/abs/1002.2277'), '; ',
+      link('Kelso, AAS 07-127, 2007', 'https://celestrak.org/publications/AAS/07-127/'), '.');
+    box.append(src);
     return box;
   }
 
@@ -473,7 +531,9 @@ export class RealSky {
       const row = el('tr');
       row.append(cell(p.rise, false), cell(p.top, true), cell(p.set, false));
       const seen = el('tr', 'pg-pass-seen');
-      const seenCell = el('td', undefined, visibility(p, o, this.place));
+      const seenText = visibility(p, o, this.place);
+      // R04, Engineer: how early or late the pass may come, from the set's age at that time
+      const seenCell = el('td', undefined, engineer ? `${seenText} · ${t('unc.passTiming', { s: num(uncertaintyAt(o, p.top.jd).timing, 1) })}` : seenText);
       seenCell.colSpan = 3;
       seen.classList.toggle('visible', !!p.visible);
       seen.append(seenCell);
@@ -503,6 +563,10 @@ export class RealSky {
     if (L.age) {
       L.age.textContent = age >= 0 ? span(age) : t('sky.ageBefore', { age: span(-age) });
       L.age.classList.toggle('warn', Math.abs(age) > 7 * 86400);
+    }
+    if (L.error) {
+      const u = uncertaintyAt(o, this.jd);
+      L.error.textContent = t('unc.value', { km: num(u.total / 1000, u.total < 10e3 ? 1 : 0), s: num(u.timing, u.timing < 10 ? 1 : 0) });
     }
     if (s.error !== 0) return;
     if (L.alt) L.alt.textContent = `${num(s.alt / 1000)} ${t('u.km')}`;

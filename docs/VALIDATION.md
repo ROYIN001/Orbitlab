@@ -26,6 +26,7 @@ Status on 2026-09-25:
 | Continue in orbit (O03) | A recorded Soyuz flight's hand-off; the rocket equation | The playground's orbit is the flight's; the budget is Tsiolkovsky's (§5), 2026-09-26 |
 | Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§5), 2026-09-26 |
 | SGP4/SDP4 (R01) | The verification of AIAA 2006-6753 (SGP4-VER.TLE, tcppver.out); CelesTrak's documented element set | Every line of the reference output reproduced (§6), 2026-09-26 |
+| Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 
@@ -974,7 +975,7 @@ SMAD*. A dish's look angles are worked on the WGS-84 ellipsoid, "up" along its n
   differ the value is left out: THEOS-2's mass is 417 kg in one report and 425 kg in another.
   NAPA-2 re-entered on 2026-07-05, by the catalogue.
 
-## 6. Real satellites (R01–R03): SGP4 against its reference, the catalogue, passes
+## 6. Real satellites (R01–R04): SGP4 against its reference, the catalogue, passes, uncertainty
 
 Real satellites are propagated from their element sets by SGP4 and SDP4
 (`src/orbit/sgp4.ts`, roadmap R01), the theory those element sets are fitted to. It is the
@@ -1083,11 +1084,44 @@ made them). The tolerances were set before the comparison.
 - A pass of half a day or more belongs to a high orbit (GPS, a geostationary satellite). Its
   visibility is not worked out: such a satellite is too faint to see with the eye.
 
+### How far off an element set may be (R04)
+
+An element set says nothing of its own accuracy (Kelso, "Validation of SGP4 and IS-GPS-200D
+Against GPS Precision Ephemerides", AAS 07-127, 2007). The page therefore shows an estimate
+(`src/orbit/uncertainty.ts`), labelled as such and built from two studies:
+
+- **At the epoch**, the standard deviations radial, along-track and cross-track that Flohrer, Krag
+  and Klinkrad found for the whole catalogue of 2008 January 1
+  ([AMOS 2008](https://amostech.com/TechnicalPapers/2008/Orbital_Debris/Flohrer.pdf)). They are
+  taken from Table 2, by eccentricity, perigee height and inclination: for the ISS 107, 308 and
+  169 m; for a sun-synchronous orbit like THEOS-2 115, 517 and 137 m; for GPS 71, 228 and 95 m;
+  for a geostationary orbit 357, 432 and 83 m. Where Table 2 has no entry, Table 1's average for
+  the regime is used.
+- **After the epoch**, a growth of 1.5 km a day, the typical figure Levit and Marshall measured
+  against laser-ranging ephemerides for four satellites from 800 to 19 100 km
+  ([Advances in Space Research 47, 2011](https://arxiv.org/abs/1002.2277)). It is put along the
+  track, where Kelso found the error dominant.
+
+`tests/uncertainty.test.ts` holds the model to those tables, cell by cell, and to that growth.
+
+**Findings and limits.**
+
+- Kelso found TLE errors biased, and not the same before and after the epoch; the band is
+  symmetric and unbiased. It shows how the error grows, not where the satellite really is.
+- Levit and Marshall report an instantaneous range error of 0.8 ± 0.3 km for their four
+  satellites, above Flohrer's standard deviations for such orbits (0.26 to 0.45 km). The band at
+  the epoch may be narrow by a factor of two or three.
+- Below about 500 km the air's drag, which depends on the Sun, makes the growth faster and less
+  regular. Satellites that manoeuvre (the ISS reboosts) break the estimate altogether. The page
+  says both.
+- Converted to time along the track, the errors are small for passes: a day-old ISS set is early
+  or late by about a quarter of a second.
+
 ## 7. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
-npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts   # real satellites, ~3 s
+npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

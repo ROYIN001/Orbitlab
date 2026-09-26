@@ -231,6 +231,16 @@
 .pg-sky-facts .pg-note.warn { color: var(--warn); }
 .pg-sky-facts .watch-btn { margin: 0 0 8px; }
 .pg-clock.live { color: #7ddba0; }
+/* R04: the estimate's band */
+.pg-unc { margin: 0 0 14px; }
+.pg-unc-chart { display: block; width: 100%; height: auto; margin: 4px 0 2px; }
+.pg-unc-band { fill: rgba(239, 164, 126, 0.28); stroke: rgba(239, 164, 126, 0.8); stroke-width: 1; }
+.pg-unc-axis { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
+.pg-unc-epoch { stroke: rgba(255, 255, 255, 0.25); stroke-dasharray: 3 3; }
+.pg-unc-now { stroke: #ffffff; stroke-width: 1.5; }
+.pg-unc-tick { fill: var(--muted); font-size: 10px; font-family: var(--sans); }
+.pg-unc-axes { margin: 0 0 8px; font-size: 11.5px; color: var(--muted); }
+.pg-unc .pg-note a { color: var(--accent); overflow-wrap: anywhere; }
 /* R03: the passes over a place */
 .pg-passes { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .pg-pass-next { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
