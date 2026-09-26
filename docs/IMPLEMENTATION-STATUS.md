@@ -162,7 +162,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 397 tests in 105 files, about 20 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 1 454 tests in 109 files, 15 to 20 minutes on four cores. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -261,7 +261,6 @@ Phase 1, the Orbit core, continues on the same branch:
 - The applications' Thai satellites fly their catalogue orbit (as of 2026-09-26), not where they
   are today: following real satellites from their element sets is Phase 2 (R01–R02). The link
   budget's starting values are an example, not any satellite's.
-
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
 - The physics has been compared with flight data for eleven of the eighteen vehicles: Falcon 9
   against webcast telemetry of five flights, the others against published timelines
