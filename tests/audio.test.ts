@@ -131,10 +131,34 @@ describe('launch broadcasts (V01)', () => {
     }
   });
 
-  it('bundles only the NASA broadcast, with its liftoff 60 s in', async () => {
+  it('bundles only NASA’s recordings: the Soyuz broadcast with its liftoff 60 s in, and Falcon 9’s pad', async () => {
     const { BUNDLED_SOUNDTRACKS } = await import('../src/audio/soundtrack');
-    expect(Object.keys(BUNDLED_SOUNDTRACKS)).toEqual(['soyuzIss']);
-    expect(BUNDLED_SOUNDTRACKS.soyuzIss).toMatchObject({ url: 'audio/soyuz-ms-27-nasa.mp3', t0: 60 });
+    expect(Object.keys(BUNDLED_SOUNDTRACKS)).toEqual(['soyuzIss', 'falcon9Bandwagon']);
+    expect(BUNDLED_SOUNDTRACKS.soyuzIss).toHaveLength(1);
+    expect(BUNDLED_SOUNDTRACKS.soyuzIss![0]).toMatchObject({ url: 'audio/soyuz-ms-27-nasa.mp3', t0: 60, voice: true });
+    expect(BUNDLED_SOUNDTRACKS.falcon9Bandwagon![0]).toMatchObject({ url: 'audio/falcon9-crew-12-pad-nasa.mp3', t0: 12, voice: false });
+    for (const list of Object.values(BUNDLED_SOUNDTRACKS)) for (const b of list!) expect(b.credit).toMatch(/public domain/);
+  });
+
+  it('plays the Soyuz broadcast in English and Thai, and on a page in Russian gives way to Russian launch control', async () => {
+    const { bundledFor } = await import('../src/audio/soundtrack');
+    expect(bundledFor('soyuzIss', 'en')?.url).toBe('audio/soyuz-ms-27-nasa.mp3');
+    expect(bundledFor('soyuzIss', 'th')?.url).toBe('audio/soyuz-ms-27-nasa.mp3');
+    expect(bundledFor('soyuzIss', 'ru')).toBeNull();
+    for (const l of ['en', 'ru', 'th'] as const) expect(bundledFor('falcon9Bandwagon', l)?.t0).toBe(12);
+    expect(bundledFor('starshipFlight5', 'en')).toBeNull();
+  });
+
+  it('ships every bundled recording and recorded call, credited', async () => {
+    const { BUNDLED_SOUNDTRACKS } = await import('../src/audio/soundtrack');
+    const { RU_CLIPS } = await import('../src/audio/callouts');
+    const files = Object.keys(import.meta.glob('../public/audio/**/*.mp3'));
+    const credits = Object.values(import.meta.glob('../public/audio/CREDITS.txt', { query: '?raw', import: 'default', eager: true }) as Record<string, string>)[0];
+    const urls = [...Object.values(BUNDLED_SOUNDTRACKS).flatMap((l) => l!.map((b) => b.url)), ...Object.values(RU_CLIPS)];
+    for (const u of urls) {
+      expect(files, u).toContain(`../public/${u}`);
+      expect(credits, u).toContain(u.replace('audio/', '').replace(/^ru-calls\/.*/, 'ru-calls/'));
+    }
   });
 
   it('reads the liftoff time of a recording as m:ss, h:mm:ss or seconds', async () => {

@@ -8,3 +8,31 @@ soyuz-ms-27-nasa.mp3
   the United States (NASA Images and Media Usage Guidelines); the broadcast
   carries the Roscosmos launch-control loop under NASA's commentary.
   T-0 (liftoff) is at 60.0 s in this file.
+
+ru-calls/*.mp3
+  Russian launch control's calls, cut from two recordings and levelled
+  (high-pass 140 Hz, loudness -18 LUFS, mono 64 kbit/s):
+  - kontakt-podyoma.mp3 ("Контакт подъёма есть"): the Ministry of Defence of
+    the Russian Federation, launch of a Soyuz-2.1b from the Plesetsk
+    cosmodrome, 16 March 2020 (mil.ru), CC BY 4.0. Wikimedia Commons:
+    File:Soyuz-2.1b launch from the Plesetsk cosmodrome (16-03-2020).webm,
+    33.0-35.6 s.
+  - t170.mp3, t180.mp3, t190.mp3 (the flight reports at T+170, 180 and 190 s),
+    orbit.mp3 ("…выведен на орбиту. Репортаж окончен."): the Presidential
+    Executive Office (kremlin.ru), first launch from the Vostochny
+    cosmodrome, Soyuz-2.1a, 28 April 2016, CC BY 4.0. Wikimedia Commons:
+    File:Президент России — 2016-04-28 — С космодрома Восточный произведён
+    запуск ракеты-носителя «Союз-2˙1а».webm, 73.35-75.95 s, 82.85-86.95 s,
+    93.4-97.75 s and 154.55-157.95 s.
+  Licence: https://creativecommons.org/licenses/by/4.0/
+
+falcon9-crew-12-pad-nasa.mp3
+  NASA's pad microphone ("Blast", the right channel of the Tech Feed / Blast
+  recording) at the launch of NASA's SpaceX Crew-12 on a Falcon 9 from Space
+  Launch Complex 40, Cape Canaveral Space Force Station, 13 February 2026:
+  162 s from T-12 s to T+150 s, mono, 64 kbit/s; no voice. Source: Wikimedia
+  Commons, File:NASA's SpaceX Crew-12 Live Launch Coverage - Tech Feed (L)
+  Blast (R) (KSC-20260213-AU-LMM01-0001-SpaceX Crew 12 Live Launch Coverage
+  Tech Feed Blast-M19013).mp3, 7329.6-7491.6 s, public domain (NASA). T-0
+  is at 12.0 s in this file, from the count on the left channel ("… two,
+  one, ignition, liftoff" at 7339.7-7343.5 s; ±0.5 s).

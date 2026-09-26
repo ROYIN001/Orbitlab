@@ -8,6 +8,8 @@ import { LifetimeDialog } from './ui/lifetime';
 import { spacecraftFor } from './physics/propagator/spacecraft';
 import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
 import { SoundtrackPanel } from './ui/soundtrack-panel';
+import { SoundMenu } from './ui/sound-menu';
+import { sliderGain } from './audio/mix';
 import { ComparePanel } from './ui/compare';
 import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type ReferenceFlight } from './replay/reference';
 import { assessMissionResult } from './ui/result-content';
@@ -243,6 +245,7 @@ class App {
   private lifetime = new LifetimeDialog();
   /** V01: a viewer launch's real broadcast, when there is one */
   readonly soundtrack = new SoundtrackPlayer();
+  private soundMenu: SoundMenu | null = null;
   private soundtrackPanel = new SoundtrackPanel((id) => { if (this.watchSoundtrackId === id) void this.loadSoundtrack(id); });
   /** the viewer launch whose soundtrack is loaded */
   private watchSoundtrackId: WatchMissionId | null = null;
@@ -564,10 +567,25 @@ class App {
     registerServiceWorker();
   }
 
+  private readonly rightScratch = new THREE.Vector3();
+  /** The camera's right hand in the scene's (ECI-aligned) axes, for the sound's stereo placement. */
+  private listenerRight(): { x: number; y: number; z: number } {
+    const r = this.rightScratch.setFromMatrixColumn(this.scene.camera.matrixWorld, 0).normalize();
+    return { x: r.x, y: r.y, z: r.z };
+  }
+
+  /** The sound menu's note: which language launch control speaks, or why it cannot. */
+  private soundStatus(): string {
+    const lang = t(this.audio.calloutLanguage === 'ru' ? 'snd.lang.ru' : 'snd.lang.en');
+    if (!this.audio.mix.callouts) return t('snd.mix.noteOff');
+    if (!this.audio.voice.available) return t('snd.mix.noVoice', { lang });
+    return t('snd.mix.note', { lang });
+  }
+
   /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
   private async loadSoundtrack(id: WatchMissionId): Promise<void> {
     this.watchSoundtrackId = id;
-    const track = await soundtrackFor(id, (name) => t('snd.mine', { name }));
+    const track = await soundtrackFor(id, getLang(), (name) => t('snd.mine', { name }));
     // a different flight may have started while the recording was being read
     if (this.watchSoundtrackId === id) this.soundtrack.set(track);
   }
@@ -726,6 +744,12 @@ class App {
       soundBtn.setAttribute('aria-pressed', String(this.audio.on));
     };
     soundBtn.addEventListener('click', () => { this.audio.toggle(); showSound(); });
+    // the mix: the rocket, the voices, launch control's calls
+    this.soundtrack.setVolume(sliderGain(this.audio.mix.voice));
+    this.soundMenu = new SoundMenu(document.getElementById('btn-sound-mix') as HTMLButtonElement, this.audio.mix, (m) => {
+      this.audio.setMix(m);
+      this.soundtrack.setVolume(sliderGain(this.audio.mix.voice));
+    }, () => this.soundStatus());
     for (const type of ['pointerdown', 'keydown'] as const) window.addEventListener(type, () => this.audio.sound.resumeOnGesture(), { capture: true });
     showSound();
     document.getElementById('lang-select')!.addEventListener('change', (e) => {
@@ -840,6 +864,10 @@ class App {
     this.viewport.setAttribute('aria-label', t('a11y.viewport'));
     this.warpSel?.setAttribute('aria-label', t('ctl.warp'));
     this.framesMenu?.applyLanguage();
+    // launch control's language follows the page's; so does a viewer launch's broadcast
+    this.audio.setLanguage(getLang());
+    this.soundMenu?.applyLanguage();
+    if (this.watchSoundtrackId) void this.loadSoundtrack(this.watchSoundtrackId);
     // both dialogs rebuild their body from the dictionaries when opened; an
     // open one has to be rebuilt now
     if (this.physicsDialog.isOpen) this.physicsDialog.applyLanguage();
@@ -1063,6 +1091,8 @@ class App {
       this.pad.dispose();
     }
     this.rocket = new RocketView(sim.vehicleSpec, sim.satellite, { humidity: SITE_HUMIDITY[sim.site.id] });
+    // its sound's character, and the language launch control calls it in
+    this.audio.setVehicle(sim.vehicleSpec);
     this.scene.scene.add(this.rocket.group);
     // V03: the smoke the flight leaves in the air, from its own recording
     if (this.trails) {
@@ -1624,9 +1654,12 @@ class App {
     this.audio.update({
       t: frame.t, frameAt: (x) => this.player.frameAt(x), events: this.recorder.events,
       listener: { x: cam.x + origin.x, y: cam.y + origin.y, z: cam.z + origin.z },
+      listenerRight: this.listenerRight(),
       warp: this.activeWarp, playing: this.camMode !== 'map' && (this.player.live ? this.playing : this.player.playing),
+      clockRunning: this.player.live ? this.playing : this.player.playing,
       onboard: this.camMode === 'onboard',
       suppressed: this.soundtrack.sounding,
+      voiceSuppressed: this.soundtrack.speaking,
     });
     this.soundtrack.update(frame.t, this.activeWarp, this.player.live ? this.playing : this.player.playing, this.audio.on);
     // The map and the onboard overlay still take a `Simulation` (they belong to

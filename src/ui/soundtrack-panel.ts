@@ -4,9 +4,10 @@
  * kept in this browser only, with the second of the recording at which the
  * rocket lifts off.
  */
-import { t } from '../i18n';
+import { t, getLang } from '../i18n';
 import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
-import { BUNDLED_SOUNDTRACKS, loadUserSoundtrack, removeUserSoundtrack, saveUserSoundtrack } from '../audio/soundtrack';
+import { VEHICLES } from '../data/vehicles';
+import { bundledFor, loadUserSoundtrack, removeUserSoundtrack, saveUserSoundtrack } from '../audio/soundtrack';
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
   const e = document.createElement(tag);
@@ -28,6 +29,15 @@ export function formatOffset(s: number): string {
   return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
 
+/** The listing's line for a launch with no recording of the user's: its bundled recording for the page's language, or the simulated sound. */
+function bundledStatus(id: WatchMissionId): string {
+  const b = bundledFor(id, getLang());
+  if (b) return t(b.statusKey, { flight: b.flight });
+  // a Russian rocket on a page in Russian: Russian launch control's calls
+  const vehicle = WATCH_MISSIONS.find((m) => m.id === id)?.vehicleId ?? '';
+  return getLang() === 'ru' && VEHICLES.find((v) => v.id === vehicle)?.country === 'RU' ? t('snd.ruCalls') : t('snd.synth');
+}
+
 export class SoundtrackPanel {
   constructor(private readonly onChange: (id: WatchMissionId) => void) {}
 
@@ -39,7 +49,10 @@ export class SoundtrackPanel {
       const row = el('div', 'watch-audio-row');
       row.dataset.mission = m.id;
       const name = el('strong', undefined, t(m.titleKey));
-      const status = el('span', 'watch-audio-status', BUNDLED_SOUNDTRACKS[m.id] ? t('snd.bundled', { flight: BUNDLED_SOUNDTRACKS[m.id]!.flight }) : t('snd.synth'));
+      const status = el('span', 'watch-audio-status');
+      // the line is cut short in the list: the whole of it on hover
+      const setStatus = (text: string) => { status.textContent = text; status.title = text; };
+      setStatus(bundledStatus(m.id));
       const add = el('button', 'watch-audio-btn', t('snd.add'));
       add.type = 'button';
       const input = el('input');
@@ -59,7 +72,7 @@ export class SoundtrackPanel {
       remove.hidden = true;
       void loadUserSoundtrack(m.id).then((mine) => {
         if (!mine) return;
-        status.textContent = t('snd.mine', { name: mine.name });
+        setStatus(t('snd.mine', { name: mine.name }));
         t0Input.value = formatOffset(mine.t0);
         remove.hidden = false;
       });
@@ -69,15 +82,15 @@ export class SoundtrackPanel {
         input.value = '';
         if (!file) return;
         const t0 = parseOffset(t0Input.value);
-        if (t0 === null) { status.textContent = t('snd.badT0'); return; }
+        if (t0 === null) { setStatus(t('snd.badT0')); return; }
         await saveUserSoundtrack(m.id, file, file.name, t0);
-        status.textContent = t('snd.mine', { name: file.name });
+        setStatus(t('snd.mine', { name: file.name }));
         remove.hidden = false;
         this.onChange(m.id);
       });
       remove.addEventListener('click', async () => {
         await removeUserSoundtrack(m.id);
-        status.textContent = BUNDLED_SOUNDTRACKS[m.id] ? t('snd.bundled', { flight: BUNDLED_SOUNDTRACKS[m.id]!.flight }) : t('snd.synth');
+        setStatus(bundledStatus(m.id));
         remove.hidden = true;
         this.onChange(m.id);
       });
