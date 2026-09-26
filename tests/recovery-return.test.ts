@@ -8,6 +8,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { flyWithReturns } from './return-harness';
+import { Simulation } from '../src/physics/simulation';
+import { lessonConfig } from '../src/lessons/config';
+import { missionDoc } from '../src/lessons/builtin/common';
 import { vehicleById } from '../src/data/vehicles';
 import { orbitById } from '../src/data/orbits';
 import { landingZoneById } from '../src/data/landing-zones';
@@ -21,6 +24,7 @@ import { add, dot, norm, normalize, scale, sub, v3 } from '../src/physics/vec3';
 import { DEG, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import { enuFrame, groundPositionEci, groundVelocityEci } from '../src/physics/orbital';
 import type { MissionConfig, RecoveryPlan } from '../src/types';
+import type { Debris } from '../src/physics/sim/types';
 
 const GMST0 = 1.234;
 const CAPE: ReturnTarget = { kind: 'pad', id: 'lz1', lat: 28.48575 * DEG, lon: -80.54294 * DEG, alt: 3, radius: 43 };
@@ -163,6 +167,26 @@ describe('point-mass returns', () => {
     while (sim.state.t < t0 + 300) sim.step(sim.suggestedDt());
     expect(Math.abs(distanceFromTarget(stage.r, target, sim.plan.gmst0, sim.state.t) - miss)).toBeLessThan(0.01);
     expect(norm(sub(stage.v, groundVelocityEci(stage.r)))).toBeLessThan(1e-6);
+  });
+
+  it('trims the boostback on the predicted miss, not on a wobble of the Δv still needed', { timeout: 240_000 }, () => {
+    // Lesson 5.1's flight to 500 km: with 10 and 11 t on top the trim used to
+    // stop at the first uptick of the Δv still needed, 40 m/s short, and the
+    // stage came down 216 and 42 m off the pad at 79 and 35 m/s.
+    for (const payloadMass of [10000, 11000]) {
+      const sim = new Simulation(lessonConfig(missionDoc({
+        vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass, orbitId: 'leo', boosterRecovery: true,
+        recoveryPlan: { core: { kind: 'landingZone', zoneId: 'lz1' } }, dynamics: { model: 'pointMass', wind: 'calm', seed: 20260919 },
+      })), { headless: true });
+      let stage: Debris | undefined;
+      while (!sim.done && sim.state.t < 1200) {
+        sim.step(sim.suggestedDt());
+        stage ??= sim.debris.find((d) => d.recovery?.target);
+        if (stage && !stage.alive) break;
+      }
+      expect(stage?.outcome, `${payloadMass} kg`).toBe('landed');
+      expect(stage!.recovery!.missDistance!).toBeLessThan(5);
+    }
   });
 
   it('flies Falcon Heavy\'s side boosters to LZ-1 and LZ-2 and its core to a drone ship (Arabsat-6A)', { timeout: 120_000 }, () => {

@@ -290,3 +290,22 @@ Tests: `tests/lessons-round2.test.ts` — a nominal flight, and a run of another
 lesson's check; `tests/heavy/lessons-sixdof.test.ts` — run 5 of set 1 flown alone passes, and its
 perigee is within 1 km of the Monte Carlo runner's own for that run (the window's number). Only
 5.3 (historical missions, C01) is still listed as coming.
+
+## The booster that missed LZ-1 (fixed 2026-09-26)
+
+Found while tuning lesson 5.1: in point-mass, Falcon 9's first stage flown back to LZ-1 from the
+lesson's 500 km mission came down 22–216 m off the pad at 18–79 m/s for 9.75, 10–11.25 and
+11.75 t on top, and landed for 8–9.5, 11.5 and 12 t. The fault was in the boostback. Its trim
+on the centre engine ended the moment the Δv still needed went up between two solutions. That
+number comes from a finite-difference Jacobian of a stepped descent prediction (landing-burn
+ignition tested every 0.25 s, the entry burn in steps), and it wobbles by a metre per second or
+two while the predicted miss itself falls smoothly. Where the trim's samples met a wobble, the
+burn stopped about 40 m/s short and the stage fell 4.5 km long. The entry burn and the landing
+burn's divert took out 3.5 km of that, which was not enough.
+
+The trim now ends when the predicted miss stops shrinking (`sim/debris.ts`, and the same in the
+six-DOF `rigid/debris-runtime.ts`; the solution memo carries the miss, `sim/types.ts`). All 17
+payloads from 8 to 12 t now land within 2 m. The flights that already landed do not change,
+because the new rule never fires in them. Goldens fly without recovery and are unchanged. The
+heavy Falcon Heavy returns and the six-DOF lessons pass. Test: `tests/recovery-return.test.ts`
+flies the lesson's mission with 10 and 11 t and expects the stage on the pad within 5 m.
