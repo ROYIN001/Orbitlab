@@ -1,5 +1,7 @@
 /**
- * The landing page: one button that plays a launch, and the three ways in.
+ * The landing page: one button that plays a launch, and the three parts of
+ * the program (roadmap S01) — Launch with its three ways in, and Orbit and
+ * Build, which say plainly that they are being built.
  *
  * It is drawn over the live scene — the featured vehicle standing on its pad
  * behind the text — so the first thing a visitor sees is the thing they are
@@ -7,17 +9,17 @@
  * pressing play.
  */
 import { t } from '../i18n';
-import type { AppMode } from './app-mode';
+import { route, type AppLevel, type AppRoute } from './app-mode';
 import { FEATURED_WATCH_MISSION, watchMissionById } from './watch-missions';
 
 export interface HomeHost {
   /** play the featured launch in the viewer */
   watchFeatured(): void;
-  /** open a mode */
-  go(mode: AppMode): void;
+  /** open a section at a level */
+  go(route: AppRoute): void;
 }
 
-interface ModeCard { mode: AppMode; icon: string; title: string; text: string }
+interface LevelEntry { level: AppLevel; icon: string; title: string; text: string }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -57,27 +59,64 @@ export class HomeScreen {
     play.addEventListener('click', () => this.host.watchFeatured());
     inner.append(play);
 
-    const cards: ModeCard[] = [
-      { mode: 'watch', icon: '▷', title: t('home.card.watch'), text: t('home.card.watchText') },
-      { mode: 'explore', icon: '◎', title: t('home.card.explore'), text: t('home.card.exploreText') },
-      { mode: 'engineer', icon: '⌬', title: t('home.card.engineer'), text: t('home.card.engineerText') },
-    ];
-    const list = el('div', 'home-modes');
-    list.setAttribute('role', 'list');
-    for (const card of cards) {
-      const button = el('button', 'mode-card');
-      button.type = 'button';
-      button.setAttribute('role', 'listitem');
-      button.dataset.mode = card.mode;
-      button.dataset.homeFocus = card.mode;
-      const icon = el('span', 'mode-card-icon', card.icon);
-      icon.setAttribute('aria-hidden', 'true');
-      button.append(icon, el('strong', undefined, card.title), el('span', 'mode-card-text', card.text));
-      button.addEventListener('click', () => this.host.go(card.mode));
-      list.append(button);
-    }
-    inner.append(el('p', 'home-more', t('home.more')), list);
+    const sections = el('div', 'home-sections');
+    sections.setAttribute('role', 'list');
+    sections.append(this.launchCard(), this.plannedCard('orbit'), this.plannedCard('build'));
+    inner.append(el('p', 'home-more', t('home.more')), sections);
     this.root.replaceChildren(inner);
     if (hadFocus) this.root.querySelector<HTMLElement>(`[data-home-focus="${hadFocus}"]`)?.focus({ preventScroll: true });
+  }
+
+  private sectionHead(card: HTMLElement, icon: string, name: string, text: string, badge?: string): void {
+    const head = el('div', 'home-section-head');
+    const glyph = el('span', 'mode-card-icon', icon);
+    glyph.setAttribute('aria-hidden', 'true');
+    const title = el('h2', undefined, name);
+    head.append(glyph, title);
+    if (badge) head.append(el('span', 'section-badge', badge));
+    card.append(head, el('p', 'home-section-text', text));
+  }
+
+  /** The launch simulator, which works today: its three levels, each a way in. */
+  private launchCard(): HTMLElement {
+    const card = el('section', 'home-section');
+    card.setAttribute('role', 'listitem');
+    card.dataset.section = 'launch';
+    this.sectionHead(card, '▲', t('section.launch'), t('home.section.launchText'));
+    const levels: LevelEntry[] = [
+      { level: 'watch', icon: '▷', title: t('home.card.watch'), text: t('home.card.watchText') },
+      { level: 'explore', icon: '◎', title: t('home.card.explore'), text: t('home.card.exploreText') },
+      { level: 'engineer', icon: '⌬', title: t('home.card.engineer'), text: t('home.card.engineerText') },
+    ];
+    const list = el('div', 'home-modes');
+    for (const entry of levels) {
+      const button = el('button', 'mode-card');
+      button.type = 'button';
+      button.dataset.mode = entry.level;
+      button.dataset.homeFocus = `launch-${entry.level}`;
+      const icon = el('span', 'mode-card-icon', entry.icon);
+      icon.setAttribute('aria-hidden', 'true');
+      button.append(icon, el('strong', undefined, entry.title), el('span', 'mode-card-text', entry.text));
+      button.addEventListener('click', () => this.host.go(route('launch', entry.level)));
+      list.append(button);
+    }
+    card.append(list);
+    return card;
+  }
+
+  /** A section being built: what it will be, and a look at the plan. */
+  private plannedCard(section: 'orbit' | 'build'): HTMLElement {
+    const card = el('section', 'home-section planned');
+    card.setAttribute('role', 'listitem');
+    card.dataset.section = section;
+    const orbit = section === 'orbit';
+    this.sectionHead(card, orbit ? '⊕' : '⚙︎', t(orbit ? 'section.orbit' : 'section.build'),
+      t(orbit ? 'home.section.orbitText' : 'home.section.buildText'), t('section.inDevelopment'));
+    const button = el('button', 'home-section-link', t('home.section.plan'));
+    button.type = 'button';
+    button.dataset.homeFocus = section;
+    button.addEventListener('click', () => this.host.go(route(section, 'explore')));
+    card.append(button);
+    return card;
   }
 }

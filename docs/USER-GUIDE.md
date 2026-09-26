@@ -5,12 +5,19 @@ you while it flies — written for a student rather than for a contributor. If y
 equations and the sources behind them, that is [docs/PHYSICS.md](PHYSICS.md); this guide
 sticks to what you see on screen and what it means.
 
-## 0. Four ways in
+## 0. Three sections, three levels
 
-The switch in the top bar picks how much of the simulator you see:
+Orbitlab is being grown into one space program in three **sections**: **Launch** (this
+simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build** (designing a
+rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
+Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
+Orbit and Build are being built: today they show what is coming, level by level and in the order
+it will be built ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on them pretends to
+work. Everything below this section is about Launch.
 
 - **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
-  space station) straight away.
+  space station) straight away; under it are the three sections, Launch with its three ways
+  in.
 - **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
   and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
   each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's
@@ -34,9 +41,13 @@ The switch in the top bar picks how much of the simulator you see:
   parameters stay folded away).
 - **Engineer** — the same workspace with every guidance parameter open.
 
-Switching mode never touches the flight: leave the viewer half-way up and the workspace
-shows the same launch with every instrument on it. Each mode has its own address
-(`#/watch` and so on), and the browser's Back button moves between them.
+Switching level or section never touches the flight: leave the viewer half-way up and the
+workspace shows the same launch with every instrument on it, and a flight left running while
+you look at Orbit is still flying when you come back. Every section and level has its own
+address — `#/launch/watch`, `#/orbit/explore`, `#/home` and so on — the browser's Back button
+moves between them, and the app reopens where you left it. The older addresses `#/watch`,
+`#/explore` and `#/engineer` still work: they open the launch section, and the address bar shows
+the new form.
 
 **Installing Orbitlab and using it offline.** The published site can be installed as an app
 (Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone

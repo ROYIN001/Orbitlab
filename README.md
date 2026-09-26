@@ -137,8 +137,18 @@ Requires Node.js 20 or newer and a browser with WebGL 2.
 
 ## Using the simulator
 
-The top bar switches between four modes, each with its own address so it can be linked
-to (`#/home`, `#/watch`, `#/explore`, `#/engineer`); the last one used is remembered.
+The app is organised on two axes (roadmap S01, [docs/ROADMAP-PART2-3.md](docs/ROADMAP-PART2-3.md)):
+three **sections** — **Launch** (this simulator), **Orbit** and **Build** — and in each of them
+three **levels**, Watch, Explore and Engineer. The top bar has a switch for each. Every section
+and level has its own address, `#/<section>/<level>` (`#/launch/watch`, `#/orbit/explore`, …)
+plus `#/home` for the landing page, so it can be linked to and Back moves between them; the last
+section and level are remembered. The addresses from before the sections — `#/watch`,
+`#/explore`, `#/engineer` — open the launch section and are rewritten to the new form, and a
+mission link (`?m=…`) always opens in the launch workspace. Orbit and Build are being built:
+for now each shows, in all three languages, what it will hold and in what order, and nothing on
+them pretends to work.
+
+The launch section's levels, with the landing page:
 
 - **Home** — the landing page over the live scene. One button plays a launch.
 - **Watch** — a launch viewer for people with no background in spaceflight: the scene

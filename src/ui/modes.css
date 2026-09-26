@@ -6,10 +6,18 @@
    untouched. The two lean modes — home and watch — hide the workspace around
    the viewport and give the whole window to the scene: nothing is rebuilt,
    the same canvas simply gets wider and the resize observer follows it.
+
+   Since roadmap S01, `body[data-mode]` is the LAUNCH simulator's mode, and
+   `body[data-section]` (home, launch, orbit, build) says which part of the app
+   is showing. The Orbit and Build sections cover the scene the way the landing
+   page does, so for them data-mode is `home` and every rule below that hides
+   the launch workspace applies unchanged.
    ========================================================================== */
 
-/* ── the mode switch in the top bar ──────────────────────────────────────── */
+/* ── the section and level switches in the top bar ──────────────────────── */
 
+/* the two switches sit side by side in the middle of the bar */
+.topbar-nav { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .mode-nav {
   display: flex; gap: 2px; padding: 3px;
   border: 1px solid var(--line2); border-radius: 9px; background: var(--panel3);
@@ -22,17 +30,44 @@
 .mode-nav a:hover { color: var(--text); }
 .mode-nav a[aria-current='page'] { background: var(--accent-weak); color: var(--accent); }
 .mode-glyph { font-size: 12px; line-height: 1; }
+/* the level switch is the quieter of the two: it changes the depth, not the subject */
+.level-nav { background: none; }
+.level-nav a[aria-current='page'] { background: var(--panel2); color: var(--text); }
 
 /* the "flight simulator 02" tag is workspace chrome, and the first thing to
    give way to the mode switch */
 body:not([data-mode='engineer']) .top-context { display: none; }
-@media (max-width: 1440px) { .top-context { display: none; } }
+@media (max-width: 1600px) { .top-context { display: none; } }
 /* then the labels of the workspace's top-bar tools (their names stay as the
-   tooltip and the accessible name); a Russian label wrapped onto two lines */
+   tooltip and the accessible name); a Russian label wrapped onto two lines.
+   Since S01 the bar carries two switches, and the order in which things give
+   way to them, measured in Russian — the longest labels — is: the tools'
+   labels and the language label; the labels of the levels not chosen; the
+   product name; the labels of the sections not chosen; and on a phone the
+   switches take a row of their own under the brand and the tools. Every
+   link keeps its name as its tooltip and accessible name. */
 .quiet-btn { white-space: nowrap; }
-@media (max-width: 1320px) {
+@media (max-width: 1600px) {
   .quiet-btn span:last-child { display: none; }
   .quiet-btn { padding: 7px; }
+  .lang > span { display: none; }
+}
+@media (max-width: 1440px) {
+  .level-nav a:not([aria-current='page']) span[data-i18n] { display: none; }
+}
+@media (max-width: 1180px) {
+  .brand-name { display: none; }
+}
+@media (max-width: 960px) {
+  .section-nav a:not([aria-current='page']) span[data-i18n] { display: none; }
+}
+@media (max-width: 860px) {
+  #topbar { height: auto; flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; }
+  .topbar-nav { order: 3; flex: 1 0 100%; justify-content: space-between; }
+}
+@media (max-width: 480px) {
+  /* the level is still marked, by its highlight; its name is the tooltip */
+  .level-nav a span[data-i18n] { display: none; }
 }
 
 /* ── lean modes: the scene is the page ───────────────────────────────────── */
@@ -71,7 +106,8 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
   overflow-y: auto;
   background: linear-gradient(90deg, rgba(6, 10, 16, 0.9) 0%, rgba(6, 10, 16, 0.66) 42%, rgba(6, 10, 16, 0.12) 74%, rgba(6, 10, 16, 0) 100%);
 }
-.home-inner { max-width: 640px; margin: auto 0; }
+.home-inner { max-width: 900px; margin: auto 0; }
+.home-inner > :is(.home-eyebrow, .home-title) { max-width: 640px; }
 .home-eyebrow { color: var(--accent); letter-spacing: 2.4px; }
 .home-title {
   margin: 10px 0 12px;
@@ -96,17 +132,74 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
 .home-play strong { font: 700 19px/1.25 var(--display); }
 .home-play small { font-size: 12.5px; opacity: 0.8; }
 .home-more { margin: 36px 0 10px; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
-.home-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.mode-card {
-  display: flex; flex-direction: column; gap: 6px; text-align: left;
+/* S01: the three sections, Launch first and widest — it is the one that works today */
+.home-sections { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 10px; }
+.home-section {
+  display: flex; flex-direction: column; gap: 8px;
   padding: 14px; border-radius: 12px;
   border: 1px solid rgba(103, 132, 138, 0.35); background: rgba(14, 22, 32, 0.74);
   backdrop-filter: blur(8px);
 }
+.home-section-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.home-section-head h2 { margin: 0; font: 600 17px/1.3 var(--display); }
+.home-section-text { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.home-modes { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.home-section-link {
+  margin-top: 4px; align-self: flex-start;
+  padding: 8px 12px; border-radius: 9px; font-size: 13px;
+  border: 1px solid var(--accent-line); color: var(--accent);
+}
+.home-section-link:hover { border-color: var(--accent); }
+/* "in development", on the home page and on the section's own screen */
+.section-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid rgba(239, 164, 126, 0.5); color: var(--warn);
+  font: 500 10.5px/1.4 var(--sans); letter-spacing: 0.8px; text-transform: uppercase;
+}
+.mode-card {
+  display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 8px; align-items: baseline; text-align: left;
+  padding: 9px 10px; border-radius: 10px;
+  border: 1px solid rgba(103, 132, 138, 0.3); background: rgba(22, 32, 44, 0.6);
+}
+.mode-card > .mode-card-icon { grid-row: span 2; }
 .mode-card:hover { border-color: var(--accent-line); background: rgba(22, 34, 44, 0.88); }
 .mode-card-icon { color: var(--accent); font-size: 18px; line-height: 1; }
-.mode-card strong { font: 600 15px/1.3 var(--display); }
+.mode-card strong { font: 600 14.5px/1.3 var(--display); }
 .mode-card-text { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+/* ── the Orbit and Build sections while they are being built (S01) ─────── */
+
+.section-screen {
+  position: absolute; inset: 0; z-index: 5;
+  overflow-y: auto;
+  padding: 40px clamp(20px, 5vw, 72px);
+  /* darker than the landing page's: this is a page to read, not a scene to look at */
+  background: linear-gradient(90deg, rgba(6, 10, 16, 0.96) 0%, rgba(6, 10, 16, 0.9) 55%, rgba(6, 10, 16, 0.74) 100%);
+}
+.section-inner { max-width: 880px; }
+.section-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; color: var(--accent); letter-spacing: 2.4px; }
+.section-title {
+  margin: 10px 0 12px;
+  font: 600 clamp(28px, 3.6vw, 46px)/1.1 var(--display); letter-spacing: -1px;
+}
+.section-lead { margin: 0 0 24px; max-width: 660px; font-size: 16px; line-height: 1.6; color: #c9d6e2; }
+.section-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.section-level {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px; border-radius: 12px;
+  border: 1px solid rgba(103, 132, 138, 0.35); background: rgba(14, 22, 32, 0.74);
+}
+.section-level[aria-current] { border-color: var(--accent-line); background: rgba(22, 46, 45, 0.62); }
+.section-level strong { font: 600 15px/1.3 var(--display); }
+.section-level .mode-glyph { color: var(--accent); }
+.section-level-text { font-size: 13px; line-height: 1.5; color: var(--muted); }
+.section-coming { margin: 32px 0 4px; font: 500 12px/1.4 var(--sans); letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+.section-phase h3 { margin: 18px 0 8px; font: 600 16px/1.3 var(--display); }
+.section-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.section-items li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; font-size: 13.5px; line-height: 1.55; color: #c9d6e2; }
+.section-item-id { font: 500 12px/1.75 var(--mono); color: var(--accent); }
+.section-note { margin: 26px 0 0; max-width: 660px; font-size: 12.5px; line-height: 1.55; color: var(--muted); overflow-wrap: anywhere; }
+.section-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 
 /* ── the launch viewer ───────────────────────────────────────────────────── */
 
@@ -215,8 +308,10 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
   .home-inner { margin: auto 0 0; }
   .home-lead { font-size: 15px; margin-bottom: 20px; }
   .home-more { margin-top: 22px; }
-  .home-modes { grid-template-columns: 1fr; }
-  .mode-card { padding: 11px 12px; }
+  .home-sections { grid-template-columns: 1fr; }
+  .section-screen { padding: 24px 16px; }
+  .section-levels { grid-template-columns: 1fr; }
+  .section-lead { font-size: 15px; }
   .watch-ui { padding: 12px; }
   .watch-say { font-size: 15.5px; }
   .watch-stats { gap: 18px; }
@@ -227,10 +322,7 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
   .watch-card h2 { font-size: 21px; }
 }
 @media (max-width: 640px) {
-  /* Room for the four modes: the name goes, and only the current mode keeps its label. */
-  .brand-name { display: none; }
   .mode-nav a { padding: 6px 9px; font-size: 12px; }
-  .mode-nav a:not([aria-current='page']) span[data-i18n] { display: none; }
   .watch-stats { width: 100%; justify-content: space-between; gap: 10px; }
   .watch-stat strong { font-size: 21px; }
   .watch-speed { padding: 6px 8px; }

@@ -36,7 +36,12 @@ import { Narration } from './ui/narration';
 import { HomeScreen } from './ui/home';
 import './ui/modes.css';
 import { WatchView } from './ui/watch';
-import { experienceForMode, hashForMode, initialMode, modeFromHash, saveMode, type AppMode } from './ui/app-mode';
+import {
+  HOME_ROUTE, experienceForMode, hashForRoute, initialRoute, launchMode, loadRoute, route, routeFromHash, sameRoute, saveRoute,
+  DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
+} from './ui/app-mode';
+import { SectionScreen } from './ui/section-screen';
+import { isPlannedSection } from './ui/section-plan';
 import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
@@ -191,8 +196,21 @@ class App {
   panel: SetupPanel;
   home: HomeScreen;
   watch: WatchView;
-  /** which face of the app is showing (src/ui/app-mode.ts) */
-  mode: AppMode = 'home';
+  /** S01: the Orbit and Build sections while they are being built */
+  private sectionScreen: SectionScreen;
+  /** which section and level of the app is showing (src/ui/app-mode.ts) */
+  route: AppRoute = HOME_ROUTE;
+  /** the level last shown in any section, for the section links from the landing page */
+  private levelMemory: AppLevel = DEFAULT_LEVEL;
+  /**
+   * The launch simulator's own face: its level in the launch section, and
+   * the landing page's everywhere else — another section covers the scene the
+   * way the landing page does, so nothing of the launch workspace is on screen
+   * or takes keys there (S01).
+   */
+  get mode(): AppMode {
+    return launchMode(this.route);
+  }
   /** The mission being flown: its simulation, its recording and their clock (src/session). */
   session: FlightSession | null = null;
   /**
@@ -375,19 +393,20 @@ class App {
       onLaunch: (cfg) => this.launch(cfg),
       onReset: () => this.reset(),
       onChange: (cfg) => { if (!this.playing) this.preview(cfg); },
-      onExperience: (experience) => this.go(experience === 'advanced' ? 'engineer' : 'explore'),
+      onExperience: (experience) => this.go(route('launch', experience === 'advanced' ? 'engineer' : 'explore')),
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig() });
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
-      watchFeatured: () => { this.go('watch'); this.startWatch(FEATURED_WATCH_MISSION); },
-      go: (mode) => this.go(mode),
+      watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
+      go: (r) => this.go(r),
     });
+    this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
     this.watch = new WatchView(document.getElementById('watch-ui')!, {
       start: (id) => this.startWatch(id),
       togglePlay: () => this.togglePlay(),
       setWarp: (warp) => this.setWarp(warp),
-      explore: () => this.go('explore'),
+      explore: () => this.go(route('launch', 'explore')),
       follow: (target) => { this.watchFollow = target; },
       pickerFooter: () => this.soundtrackPanel.render(),
     });
@@ -405,12 +424,50 @@ class App {
     });
     this.bindControls();
     this.observeSceneBottom();
-    this.setMode(initialMode(location.hash));
-    // Keep the address naming the mode, without adding a history entry for it.
-    if (location.hash !== hashForMode(this.mode)) history.replaceState(null, '', hashForMode(this.mode));
+    const stored = loadRoute();
+    if (stored && stored.section !== null) this.levelMemory = stored.mode;
+    this.setRoute(initialRoute(location.hash));
+    // Keep the address naming the route in its one canonical form — a pre-S01
+    // `#/watch` becomes `#/launch/watch` — without adding a history entry.
+    this.canonicalizeHash();
     window.addEventListener('hashchange', () => {
-      const mode = modeFromHash(location.hash);
-      if (mode && mode !== this.mode) this.setMode(mode);
+      const next = routeFromHash(location.hash, this.lastLevel());
+      if (!next) return; // an in-page anchor of the narrow layout
+      if (!sameRoute(next, this.route)) this.setRoute(next);
+      this.canonicalizeHash();
+    });
+  }
+
+  /** Rewrite the address to the route's canonical hash, in place. */
+  private canonicalizeHash(): void {
+    const hash = hashForRoute(this.route);
+    if (location.hash !== hash) history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
+  }
+
+  /** The level a section link opens at: the one showing, else the last one used. */
+  private lastLevel(): AppLevel {
+    return this.route.section !== null ? this.route.mode : this.levelMemory;
+  }
+
+  /**
+   * S01: point every section link at the level showing (or last used) and
+   * every level link at the section showing — the launch section's from the
+   * landing page, where those links always led — and mark the current ones.
+   */
+  private syncNav(): void {
+    const level = this.lastLevel();
+    const section: AppSection = this.route.section ?? 'launch';
+    document.querySelectorAll<HTMLAnchorElement>('#section-nav a').forEach((a) => {
+      const name = a.dataset.section as AppSection | 'home';
+      a.href = name === 'home' ? hashForRoute(HOME_ROUTE) : hashForRoute(route(name, level));
+      if (name === (this.route.section ?? 'home')) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
+      const mode = a.dataset.mode as AppLevel;
+      a.href = hashForRoute(route(section, mode));
+      if (this.route.section !== null && mode === this.route.mode) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
     });
   }
 
@@ -419,33 +476,39 @@ class App {
     return this.mode === 'home' || this.mode === 'watch';
   }
 
-  /** Navigate to a mode (a history entry, so Back returns to the last one). */
-  go(mode: AppMode): void {
-    if (location.hash === hashForMode(mode)) this.setMode(mode);
-    else location.hash = hashForMode(mode);
+  /** Navigate to a route (a history entry, so Back returns to the last one). */
+  go(next: AppRoute): void {
+    const hash = hashForRoute(next);
+    if (location.hash === hash) this.setRoute(next);
+    else location.hash = hash;
   }
 
   /**
-   * Show a mode. Only presentation changes: the mission, the flight and its
+   * Show a route. Only presentation changes: the mission, the flight and its
    * recording carry on underneath, so leaving the viewer for the workspace in
-   * the middle of a launch shows the same launch with every instrument on it.
+   * the middle of a launch shows the same launch with every instrument on it,
+   * and a flight left running while the Orbit section is open is still
+   * flying on the way back.
    */
-  private setMode(mode: AppMode): void {
+  private setRoute(next: AppRoute): void {
     const previous = this.mode;
-    this.mode = mode;
+    this.route = next;
+    if (next.section !== null) this.levelMemory = next.mode;
+    const mode = this.mode;
     document.body.dataset.mode = mode;
-    saveMode(mode);
+    document.body.dataset.section = next.section ?? 'home';
+    saveRoute(next);
+    this.syncNav();
+    const planned = isPlannedSection(next.section);
+    document.getElementById('section-screen')!.hidden = !planned;
+    if (planned) this.sectionScreen.show(next.section as 'orbit' | 'build', next.mode as AppLevel);
     const experience = experienceForMode(mode);
     if (experience) this.panel.setExperience(experience);
     this.rigidControls.setInspectorAvailable(mode === 'engineer');
     this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
     if (mode !== 'engineer') this.loopInspector.close();
     if (mode !== 'engineer') this.monteCarlo.close(); // G05: a running set flies on
-    document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
-      if (a.dataset.mode === mode) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
-    document.getElementById('home-screen')!.hidden = mode !== 'home';
+    document.getElementById('home-screen')!.hidden = next.section !== null;
     document.getElementById('watch-ui')!.hidden = mode !== 'watch';
     // The two faces fly different camera programmes; re-apply at once.
     this.lastPhase = null;
@@ -642,8 +705,9 @@ class App {
     url.searchParams.delete(MISSION_PARAM);
     let raw: unknown = null;
     try { raw = await decodeMissionParam(param); } catch { /* reported as unusable below */ }
-    if (this.lean) this.setMode('explore');
-    history.replaceState(null, '', `${url.pathname}${url.search}${hashForMode(this.mode)}`);
+    // a mission is the launch section's: a link that names another section or the viewer opens Explore
+    if (this.lean) this.setRoute(route('launch', 'explore'));
+    history.replaceState(null, '', `${url.pathname}${url.search}${hashForRoute(this.route)}`);
     const parsed = this.panel.share.apply(raw, 'link');
     if (!parsed.usable) this.preview(this.panel.getConfig());
     return true;
@@ -833,6 +897,7 @@ class App {
     this.timeline.applyStaticText();
     this.home.applyLanguage();
     this.watch.applyLanguage();
+    this.sectionScreen.applyLanguage();
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
     document.getElementById('controls')?.setAttribute('aria-label', t('a11y.playback'));
     // icon-only buttons take their accessible name from the same key as the tooltip

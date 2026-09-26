@@ -13,6 +13,12 @@ from a flight recording that can be replayed and scrubbed. Four modes — Home, 
 parameter, the six-DOF flight controls, telemetry and CSV export). English, Russian and Thai
 throughout.
 
+Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)):
+the top bar switches the section (Launch, Orbit, Build) and the level (Watch, Explore, Engineer),
+at `#/<section>/<level>`; the old `#/watch`, `#/explore` and `#/engineer` open Launch and are
+rewritten. Orbit and Build are "in development" screens that list what is coming, from the
+roadmap, and nothing more.
+
 - **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
   for every vehicle, which is the default, with each stage's chambers, steering, thrusters and
   tanks from its own data and aerodynamic tables built from each configuration's own layout
@@ -208,7 +214,7 @@ phases. Phase 0, the structure, is on branch `claude/eloquent-meitner-mvmno4`:
 
 | Item | |
 |---|---|
-| S01 section × level shell | |
+| S01 section × level shell | done |
 | S02 custom vehicles in a mission | |
 | S03 orbit hand-off | |
 | S04 data provider, online and offline | |

@@ -26,14 +26,23 @@
           <span data-i18n="app.tagline">FLIGHT SIMULATOR</span>
           <span class="version" aria-hidden="true">02</span>
         </div>
-        <!-- One app, four faces (src/ui/app-mode.ts). Plain links: the mode is
-             the URL hash, so each mode can be linked to and Back works. -->
-        <nav id="mode-nav" class="mode-nav" data-i18n-aria-label="mode.nav">
-          <a href="#/home" data-mode="home"><span class="mode-glyph" aria-hidden="true">⌂</span><span data-i18n="mode.home">Home</span></a>
-          <a href="#/watch" data-mode="watch"><span class="mode-glyph" aria-hidden="true">▷</span><span data-i18n="mode.watch">Watch</span></a>
-          <a href="#/explore" data-mode="explore"><span class="mode-glyph" aria-hidden="true">◎</span><span data-i18n="mode.explore">Explore</span></a>
-          <a href="#/engineer" data-mode="engineer"><span class="mode-glyph" aria-hidden="true">⌬</span><span data-i18n="mode.engineer">Engineer</span></a>
-        </nav>
+        <!-- One app, three sections at three levels (src/ui/app-mode.ts, roadmap
+             S01). Plain links: the route is the URL hash, so every face can be
+             linked to and Back works; main.ts keeps each link's hash pointing
+             at its section with the current level, and the other way round. -->
+        <div class="topbar-nav">
+          <nav id="section-nav" class="mode-nav section-nav" data-i18n-aria-label="section.nav">
+            <a href="#/home" data-section="home" data-i18n-title="mode.home"><span class="mode-glyph" aria-hidden="true">⌂</span><span data-i18n="mode.home">Home</span></a>
+            <a href="#/launch/explore" data-section="launch" data-i18n-title="section.launch"><span class="mode-glyph" aria-hidden="true">▲</span><span data-i18n="section.launch">Launch</span></a>
+            <a href="#/orbit/explore" data-section="orbit" data-i18n-title="section.orbit"><span class="mode-glyph" aria-hidden="true">⊕</span><span data-i18n="section.orbit">Orbit</span></a>
+            <a href="#/build/explore" data-section="build" data-i18n-title="section.build"><span class="mode-glyph" aria-hidden="true">⚙&#xFE0E;</span><span data-i18n="section.build">Build</span></a>
+          </nav>
+          <nav id="mode-nav" class="mode-nav level-nav" data-i18n-aria-label="mode.nav">
+            <a href="#/launch/watch" data-mode="watch" data-i18n-title="mode.watch"><span class="mode-glyph" aria-hidden="true">▷</span><span data-i18n="mode.watch">Watch</span></a>
+            <a href="#/launch/explore" data-mode="explore" data-i18n-title="mode.explore"><span class="mode-glyph" aria-hidden="true">◎</span><span data-i18n="mode.explore">Explore</span></a>
+            <a href="#/launch/engineer" data-mode="engineer" data-i18n-title="mode.engineer"><span class="mode-glyph" aria-hidden="true">⌬</span><span data-i18n="mode.engineer">Engineer</span></a>
+          </nav>
+        </div>
         <div class="topbar-right">
           <button id="btn-help" class="quiet-btn" type="button"></button>
           <button id="btn-physics" class="quiet-btn" type="button" data-i18n-aria-label="dlg.physics.button" data-i18n-title="dlg.physics.button">
@@ -112,6 +121,8 @@
                  viewport so that full screen takes them along. -->
             <div id="watch-ui" hidden></div>
             <section id="home-screen" hidden></section>
+            <!-- S01: the Orbit and Build sections, over the same scene -->
+            <section id="section-screen" hidden></section>
           </div>
 
           <section id="controls" class="panel playback">
