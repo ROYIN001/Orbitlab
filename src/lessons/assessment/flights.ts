@@ -65,3 +65,28 @@ export function seriesValue(s: { alt: number; vInertial: number; q: number; gLoa
   }
 }
 export { sig };
+
+/** A sample of the telemetry, as much of it as a chart reads. */
+export type ChartSample = Parameters<typeof seriesValue>[0] & { t: number };
+
+/**
+ * Telemetry resampled onto a fixed step from T+0 to `until`, in the charts'
+ * units, rounded to four figures (shared by the recorded flights and E05's
+ * worksheets, which chart the student's own flight).
+ */
+export function resampleTelemetry(samples: readonly ChartSample[], until: number, step: number, keys: readonly FlightSeries[]): Pick<FlightDataset, 't' | 'series'> {
+  const tel = samples.filter((s) => s.t >= 0);
+  const t: number[] = [];
+  const series: FlightDataset['series'] = {};
+  for (const key of keys) series[key] = [];
+  if (!tel.length) return { t, series };
+  let j = 0;
+  for (let time = 0; time <= Math.min(until, tel[tel.length - 1].t) + 1e-9; time += step) {
+    while (j < tel.length - 2 && tel[j + 1].t < time) j++;
+    const a = tel[j], b = tel[Math.min(j + 1, tel.length - 1)];
+    const u = b.t > a.t ? Math.min(1, Math.max(0, (time - a.t) / (b.t - a.t))) : 0;
+    t.push(sig(time));
+    for (const key of keys) series[key]!.push(sig(seriesValue(a, key) + (seriesValue(b, key) - seriesValue(a, key)) * u));
+  }
+  return { t, series };
+}
