@@ -42,6 +42,7 @@ import {
 } from './ui/app-mode';
 import { SectionScreen } from './ui/section-screen';
 import { DataDialog } from './ui/data-dialog';
+import { applyWebFonts } from './ui/web-fonts';
 import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
 import { createDataProvider, type DataProvider } from './provider/data-provider';
 import { isPlannedSection } from './ui/section-plan';
@@ -442,6 +443,7 @@ class App {
       setMode: (mode) => this.setDataMode(mode),
       provider: () => this.dataProvider,
     });
+    applyWebFonts(this.dataMode);
     const dataBtn = document.getElementById('btn-data-mode') as HTMLButtonElement;
     dataBtn.addEventListener('click', () => this.dataDialog.open(dataBtn));
     this.syncDataMode();
@@ -466,6 +468,7 @@ class App {
     this.dataMode = mode;
     saveDataMode(mode);
     this.dataProvider = createDataProvider(mode, document.baseURI, (url, init) => fetch(url, init));
+    applyWebFonts(mode);
     this.syncDataMode();
   }
 

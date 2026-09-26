@@ -230,14 +230,15 @@ the same way.
 
 ### Typography
 
-The interface asks Google Fonts for DM Sans (text), Space Grotesk (figures and headings)
-and Noto Sans Thai. They are a progressive enhancement, not a dependency: every family is
-declared with a system fallback stack (`system-ui`, `-apple-system`, `Segoe UI`, `Roboto`)
-and `display=swap`, so offline, behind a firewall or with remote fonts blocked the app
-renders in the platform's own UI font with the same metrics-driven layout. Nothing is
-measured in a way that assumes the web fonts loaded. They are deliberately not self-hosted
-in `public/`: three families at four weights each is about 900 kB of woff2 for a
-static-hosted demo.
+In online mode the interface asks Google Fonts for DM Sans (text), Space Grotesk (figures
+and headings) and Noto Sans Thai. Offline — the default — it does not ask (the owner's choice,
+2026-09-26; `src/ui/web-fonts.ts`), so a closed network sees no request leave the page. The
+fonts are a progressive enhancement, not a dependency: every family is declared with a system
+fallback stack (`system-ui`, `-apple-system`, `Segoe UI`, `Roboto`) and `display=swap`, so
+offline, behind a firewall or with remote fonts blocked the app renders in the platform's own
+UI font with the same metrics-driven layout. Nothing is measured in a way that assumes the web
+fonts loaded. They are deliberately not self-hosted in `public/`: three families at four
+weights each is about 900 kB of woff2 for a static-hosted demo.
 
 ## Physics
 
