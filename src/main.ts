@@ -55,6 +55,7 @@ import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
+import { LessonMode } from './ui/lessons/lesson-mode';
 import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
 import { EscapeView } from './render/escape';
@@ -183,6 +184,8 @@ class App {
   rigidControls: RigidControls;
   /** G07: the TORU hand controllers */
   toruControls!: ToruControls;
+  /** E03: lessons with set tasks and automatic grading, and the placement test */
+  lessons!: LessonMode;
   map: OrbitalMap;
   onboard: OnboardOverlay;
   timeline: Timeline;
@@ -379,6 +382,12 @@ class App {
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig() });
+    // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight
+    this.monteCarlo.onOpenRun = (dynamics) => {
+      const state = this.panel.missionState();
+      state.dynamics = dynamics;
+      this.goLive(); this.playing = false; this.panel.restoreMission(state);
+    };
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
       watchFeatured: () => { this.go('watch'); this.startWatch(FEATURED_WATCH_MISSION); },
       go: (mode) => this.go(mode),
@@ -405,6 +414,7 @@ class App {
     });
     this.bindControls();
     this.observeSceneBottom();
+    const startHash = location.hash; // E03: `#/lessons` is the lessons page, not a mode
     this.setMode(initialMode(location.hash));
     // Keep the address naming the mode, without adding a history entry for it.
     if (location.hash !== hashForMode(this.mode)) history.replaceState(null, '', hashForMode(this.mode));
@@ -412,6 +422,15 @@ class App {
       const mode = modeFromHash(location.hash);
       if (mode && mode !== this.mode) this.setMode(mode);
     });
+    // E03: a lesson loads its mission through the panel (previewed by its onChange) and grades the flight at the head
+    this.lessons = new LessonMode({
+      go: (mode) => this.go(mode),
+      loadMission: (state) => { this.goLive(); this.playing = false; this.panel.restoreMission(state); },
+      sim: () => this.sim,
+      panelRoot: document.getElementById('setup')!,
+      renderPanel: () => this.panel.render(),
+    });
+    this.lessons.openFromHash(startHash);
   }
 
   /** The landing page and the viewer: no workspace, the scene is the page. */
@@ -562,6 +581,7 @@ class App {
     }
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
+    this.lessons.openFromLink(); // E03: ?lesson=<id>
   }
 
   /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
@@ -754,6 +774,7 @@ class App {
    */
   private onKey(e: KeyboardEvent): void {
     if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
+    if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
     // The landing page has no flight controls on it: Space must not launch the
     // rocket standing behind it, out of sight.
     if (this.mode === 'home') return;
@@ -833,6 +854,7 @@ class App {
     this.timeline.applyStaticText();
     this.home.applyLanguage();
     this.watch.applyLanguage();
+    this.lessons?.applyLanguage(); // E03
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
     document.getElementById('controls')?.setAttribute('aria-label', t('a11y.playback'));
     // icon-only buttons take their accessible name from the same key as the tooltip
@@ -1286,6 +1308,7 @@ class App {
       this.rendezvousPlot.update(this.recorder.frames, this.shown);
       this.compare.update();
       this.result.update(this.simView.sim);
+      this.lessons.update(); // E03
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
       this.toruControls.update(this.shown, this.player.live, this.mode === 'engineer');

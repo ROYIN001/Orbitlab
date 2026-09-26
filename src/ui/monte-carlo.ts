@@ -20,6 +20,7 @@ import {
   type Ellipse, type GuidanceLaw, type InsertionTarget, type LawSummary, type MeasurePoint, type MonteCarloConfig, type MonteCarloRun, type OutputKey,
 } from '../physics/monte-carlo';
 import { MonteCarloJob } from '../physics/monte-carlo-job';
+import { dispersedRunMission } from '../physics/monte-carlo'; // P08
 import type { McpMonteCarloHost } from '../mcp';
 import './monte-carlo.css';
 
@@ -137,10 +138,12 @@ function padded(values: number[], frac = 0.08): [number, number] {
   return [lo - p, hi + p];
 }
 
-interface HoverPoint { x: number; y: number; text: string }
+interface HoverPoint { x: number; y: number; text: string; /** P08: the run a scatter point is */ run?: MonteCarloRun }
 
 export class MonteCarloWindow implements McpMonteCarloHost {
   readonly el: HTMLDialogElement;
+  /** P08: a run clicked on the scatter, opened as one dispersed flight (its dynamics) in the setup panel. */
+  onOpenRun?: (dynamics: NonNullable<MissionConfig['dynamics']>) => void;
   job: MonteCarloJob | null = null;
   private config: MonteCarloConfig = defaultMonteCarlo();
   /** the law the histograms and the sensitivity show */
@@ -220,6 +223,8 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     this.head.addEventListener('pointermove', (e) => this.moveDrag(e));
     this.head.addEventListener('pointerup', () => { this.drag = null; });
     this.head.addEventListener('pointercancel', () => { this.drag = null; });
+    // P08: a run on the scatter, clicked, flies on its own
+    this.scatter.addEventListener('click', (e) => this.openRun(e));
     for (const canvas of [this.scatter, ...Object.values(this.hists)]) {
       canvas.addEventListener('pointermove', (e) => this.showTip(canvas, e));
       canvas.addEventListener('pointerleave', () => { this.tooltip.hidden = true; });
@@ -527,7 +532,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
       g.fillStyle = LAW_COLOR[r.law]; g.fill();
       g.lineWidth = 2; g.strokeStyle = SURFACE; g.stroke();
       hover.push({ x: px, y: py, text: t('mc.tip.run', { n: r.index + 1, law: t(LAW_NAME[r.law]), pe: num(o.perigeeKm, 2), ap: num(o.apogeeKm, 2),
-        inc: num(o.inclinationDeg, 3), dv: num(o.dvLeft, 0) }) });
+        inc: num(o.inclinationDeg, 3), dv: num(o.dvLeft, 0) }) + (this.onOpenRun ? ` · ${t('mc.tip.open')}` : ''), run: r });
     }
     const tx = sx(f, target.perigeeKm), ty = sy(f, target.apogeeKm);
     g.strokeStyle = INK; g.lineWidth = 2;
@@ -617,6 +622,20 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     this.tooltip.hidden = false;
     this.tooltip.style.left = `${box.left - host.left + this.el.scrollLeft + best.x + 12}px`;
     this.tooltip.style.top = `${box.top - host.top + this.el.scrollTop + best.y - 10}px`;
+  }
+
+  /** P08: the run nearest the click (within the tooltip's reach), opened as one dispersed flight. */
+  private openRun(e: MouseEvent): void {
+    const job = this.job;
+    if (!job || !this.onOpenRun) return;
+    const box = this.scatter.getBoundingClientRect(), x = e.clientX - box.left, y = e.clientY - box.top;
+    let best: HoverPoint | null = null, bestD = 12;
+    for (const p of this.hover.get(this.scatter) ?? []) {
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (p.run && d < bestD) { bestD = d; best = p; }
+    }
+    if (!best?.run) return;
+    this.onOpenRun(dispersedRunMission(job.cfg, job.mc, best.run).dynamics!);
   }
 
   private startDrag(e: PointerEvent): void {

@@ -956,6 +956,28 @@ that caused it) and the flights to what they did when recorded (no more runs los
 target, the runs on target within bands); the losses themselves are left for the owner to
 decide on.
 
+## 2m. One dispersed flight (roadmap P08)
+
+A Monte Carlo run can be flown on its own, as any other flight: watched, replayed, charted,
+reported. The mission names it in its dynamics — `dispersion: { seed, run, settings? }`, the set's
+seed, the run's index (0-based; the window and the panel count from 1) and, when they are not
+the default ones, the set's dispersions — and the `Simulation` draws it with G05's own
+`drawDispersion`: the same stream (`runSeed(seed, run)`), the same order of draws, the same
+clipping at ±3σ. Run `n` flown alone is therefore run `n` of the set, to the bit: a test flies both
+and compares the state (`tests/dispersed-flight.test.ts`). A mission without `dispersion` takes
+the constructor's old path and flies exactly as before.
+
+What a run disperses depends on the model. In six-DOF, everything G05 draws: every stage's and
+strap-on group's thrust, specific impulse, propellant and dry mass, the air's density, a steady
+wind added to the mission's, the gusts' phase and — with the inertial navigation — a fresh
+realisation of the IMU. In point-mass the same draws are made in the same order, and the vehicle
+and the density are flown with them; point-mass has no wind and no IMU, so those draws are not
+flown. A run flown point-mass is thus a different flight from the set's six-DOF run with the same
+number: the same vehicle and air, a different model of the flight.
+
+Clicking a run on the Monte Carlo window's scatter puts it in the setup panel — the set's seed
+and the run's number, its guidance law, six-DOF (as the set flew it) — ready to launch.
+
 ## 3. Atmosphere and aerodynamics
 
 0–86 km: US Standard Atmosphere 1976 (seven layers with linear lapse rates, hydrostatic

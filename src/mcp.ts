@@ -51,6 +51,7 @@ import { CYCLE_LIMITS, EXPLICIT_LAWS, type ExplicitGuidanceRecord } from './phys
 import { elementsFromState } from './physics/orbital';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
+import { createLessonTools, type LessonToolsHost } from './lessons/mcp-tools';
 import { MONTE_CARLO_RUNS, OUTPUT_KEYS, validMonteCarloConfig, type MonteCarloConfig, type OutputStats, type PointSummary } from './physics/monte-carlo';
 import type { MonteCarloJob } from './physics/monte-carlo-job';
 import { cloneDispersions, DISPERSION_KEYS, DISPERSION_SIGMA_LIMITS, type DispersionSettings } from './physics/dispersion';
@@ -147,6 +148,8 @@ export interface McpAppHost {
   previousEvent(): void;
   preview(cfg: MissionConfig): void;
   launch(cfg: MissionConfig): void;
+  /** E03: the lessons and the placement test, when the app has them */
+  lessons?: LessonToolsHost;
   /** G05: the Monte Carlo set the window runs; absent, `run_monte_carlo` reports that none can run. */
   readonly monteCarlo?: McpMonteCarloHost;
 }
@@ -1383,6 +1386,7 @@ export function createMcpTools(host: McpAppHost): WebMcpTool[] {
     toolExportCsv(host),
     toolRunAttitudeTest(host),
     toolInjectControlFault(host),
+    ...(host.lessons ? createLessonTools(host.lessons) : []), // E03
     toolRunMonteCarlo(host),
   ];
 }
