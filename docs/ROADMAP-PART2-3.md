@@ -190,6 +190,13 @@ Public sources only, each cited. Spread over the phases above rather than a phas
   is in the next section.
 - **DOM-free cores, thin DOM parts**: the hand-off, the data provider, the design store and the
   route logic are plain modules with unit tests; the screens that show them are thin.
+- **The hand-off** (`src/orbit/handoff.ts`, S03): the state vector in the simulator's ECI frame and
+  its Julian date, the spacecraft (mass in orbit — a spacecraft that raised its own orbit is
+  lighter by what it burned —, the class's estimated area, C_D and C_R, its engine and the
+  propellant left), a label and the mission document it came from. JSON with a format and a
+  version; `parseHandoff` refuses anything not wholly sound. `src/orbit/` is where the Orbit
+  section's modules live, and the propagator's import guard (tests/propagator.test.ts) lets them
+  use it.
 - **Everything a user makes is a file first**: missions (U01), designs (S05) and scenarios (T01)
   are versioned JSON documents that open offline, so the closed-intranet deployment loses
   nothing but the live data.

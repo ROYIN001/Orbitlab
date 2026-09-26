@@ -146,7 +146,9 @@ section and level are remembered. The addresses from before the sections — `#/
 `#/explore`, `#/engineer` — open the launch section and are rewritten to the new form, and a
 mission link (`?m=…`) always opens in the launch workspace. Orbit and Build are being built:
 for now each shows, in all three languages, what it will hold and in what order, and nothing on
-them pretends to work.
+them pretends to work. **Continue in Orbit** (under the telemetry panel, and on the viewer's end
+card) hands the orbit a flight reached to the Orbit section — its elements, the spacecraft in it
+and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`).
 
 The launch section's levels, with the landing page:
 

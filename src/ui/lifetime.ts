@@ -13,7 +13,7 @@ import { runLifetimeJob } from '../physics/lifetime-job';
 import type { ForceModel, Spacecraft } from '../physics/propagator/forces';
 import type { PropagationResult } from '../physics/propagator/propagate';
 import type { SolarActivity } from '../physics/propagator/density';
-import type { V3 } from '../physics/propagator/ephemeris';
+import type { OrbitHandoff } from '../orbit/handoff';
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
   const e = document.createElement(tag);
@@ -22,8 +22,6 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return e;
 };
 
-/** Where the orbit starts: the state on screen, after insertion. */
-export interface LifetimeStart { r: V3; v: V3; jd: number; spacecraft: Spacecraft; label: string }
 
 const HORIZONS = [30, 365, 5 * 365, 25 * 365] as const;
 const RAD = 180 / Math.PI;
@@ -38,7 +36,8 @@ export function formatDuration(seconds: number): string {
 }
 
 export class LifetimeDialog extends Modal {
-  private start: LifetimeStart | null = null;
+  /** where the orbit starts: the state on screen, after insertion, handed on as the Orbit section gets it (S03) */
+  private start: OrbitHandoff | null = null;
   private forces: ForceModel = { j2: true, j3j4: true, drag: true, sun: true, moon: true, srp: true, activity: 'mean' };
   private method: 'mean' | 'cowell' = 'mean';
   private horizon: number = 25 * 365;
@@ -57,9 +56,10 @@ export class LifetimeDialog extends Modal {
   }
 
   /** Open on an orbit — or, with none (the flight is not in orbit yet), to say so. */
-  openFor(start: LifetimeStart | null, opener: HTMLElement | null): void {
+  openFor(start: OrbitHandoff | null, opener: HTMLElement | null): void {
     this.start = start;
-    this.spacecraft = start ? { ...start.spacecraft } : null;
+    // the analysis's own copy of what it reads, which the form edits
+    this.spacecraft = start ? { mass: start.spacecraft.mass, area: start.spacecraft.area, cd: start.spacecraft.cd, cr: start.spacecraft.cr } : null;
     this.result = null;
     this.message = start ? '' : t('life.notInOrbit');
     this.open(opener);

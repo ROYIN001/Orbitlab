@@ -135,10 +135,12 @@ export class TelemetryPanel {
   private frame: VisualFrame | null = null;
   private equationLevel: EquationLevel = 'explore';
 
-  constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null) {
+  constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null,
+    onOrbit: (() => void) | null = null) {
     this.root = root;
     this.onReport = onReport;
     this.onLifetime = onLifetime;
+    this.onOrbit = onOrbit;
     this.build();
   }
 
@@ -241,6 +243,14 @@ export class TelemetryPanel {
       life.id = 'btn-orbit-lifetime';
       life.addEventListener('click', () => this.onLifetime?.());
       r.append(life);
+    }
+    // S03: the orbit handed on to the Orbit section
+    if (this.onOrbit) {
+      const orbit = el('button', 'btn export-btn', t('handoff.continue')) as HTMLButtonElement;
+      orbit.type = 'button';
+      orbit.id = 'btn-continue-orbit';
+      orbit.addEventListener('click', () => this.onOrbit?.());
+      r.append(orbit);
     }
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
@@ -612,6 +622,8 @@ export class TelemetryPanel {
   onReport: (() => void) | null = null;
   /** P07: set by the app to offer the orbit-lifetime analysis. */
   onLifetime: (() => void) | null = null;
+  /** S03: set by the app to hand the orbit on to the Orbit section. */
+  onOrbit: (() => void) | null = null;
 
   /** U02: draw a reference flight on every chart, dashed (null: none). */
   setReference(ref: ReferenceFlight | null): void {

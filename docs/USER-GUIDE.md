@@ -18,6 +18,12 @@ work. Everything below this section is about Launch.
 - **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
   space station) straight away; under it are the three sections, Launch with its three ways
   in.
+
+Once a flight is in orbit, **Continue in Orbit** — under the telemetry panel, and on the viewer's
+end card — takes the orbit on screen to the Orbit section: its elements (a, e, i, Ω, ω, the
+perigee and apogee, the period), the spacecraft's mass and what is left of its own propellant,
+and the orbit lifetime analysis started from it. That is all the Orbit section does with it for
+now; the flight itself carries on in Launch.
 - **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
   and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
   each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's

@@ -26,6 +26,8 @@ export interface WatchHost {
   setWarp(warp: number): void;
   /** leave for the mission builder with the current mission loaded */
   explore(): void;
+  /** S03: hand the orbit reached on to the Orbit section */
+  continueInOrbit?(): void;
   /** point the camera at a stage flying home, or back at the rocket */
   follow(target: 'booster' | 'rocket'): void;
   /** V01: shown under the launches, the launch audio each one plays */
@@ -354,6 +356,8 @@ export class WatchView {
     const id = this.missionId;
     if (id) button('watch.end.again', 'watch-btn', () => this.host.start(id));
     button('watch.end.other', 'watch-btn', () => this.openPicker());
+    // S03: an orbit reached, or the station's, can be carried on in the Orbit section
+    if ((ending === 'orbit' || ending === 'docked') && this.host.continueInOrbit) button('handoff.continue', 'watch-btn', () => this.host.continueInOrbit?.());
     button('watch.end.explore', 'watch-btn link', () => this.host.explore());
     card.append(actions);
     card.hidden = false;

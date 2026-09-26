@@ -193,6 +193,20 @@ body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
 .section-level strong { font: 600 15px/1.3 var(--display); }
 .section-level .mode-glyph { color: var(--accent); }
 .section-level-text { font-size: 13px; line-height: 1.5; color: var(--muted); }
+/* S03: the orbit handed on from a flight */
+.section-handoff {
+  margin-top: 18px; padding: 16px 18px; border-radius: 12px;
+  border: 1px solid var(--accent-line); background: rgba(14, 30, 30, 0.72);
+}
+.section-handoff h2 { margin: 4px 0 6px; font: 600 19px/1.3 var(--display); }
+.section-handoff .eyebrow { color: var(--accent); }
+.section-handoff-label, .section-handoff-empty { margin: 0 0 10px; font-size: 14px; line-height: 1.55; color: #c9d6e2; }
+.section-handoff-elements {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px 18px; margin: 0;
+}
+.section-handoff-elements dt { font-size: 11.5px; letter-spacing: 0.4px; color: var(--muted); }
+.section-handoff-elements dd { margin: 1px 0 0; font: 500 15px/1.35 var(--display); font-variant-numeric: tabular-nums; }
+.section-handoff-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
 .section-coming { margin: 32px 0 4px; font: 500 12px/1.4 var(--sans); letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
 .section-phase h3 { margin: 18px 0 8px; font: 600 16px/1.3 var(--display); }
 .section-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }

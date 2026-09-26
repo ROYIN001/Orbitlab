@@ -5,7 +5,7 @@ import { downloadFlightReport } from './ui/report';
 import { LaunchAudio } from './audio/launch-audio';
 import { TwilightPlume } from './render/twilight-plume';
 import { LifetimeDialog } from './ui/lifetime';
-import { spacecraftFor } from './physics/propagator/spacecraft';
+import { handoffAvailable, handoffFromFlight, type OrbitHandoff } from './orbit/handoff';
 import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
 import { SoundtrackPanel } from './ui/soundtrack-panel';
 import { ComparePanel } from './ui/compare';
@@ -259,6 +259,8 @@ class App {
   readonly audio = new LaunchAudio();
   /** P07: the long-term orbit window */
   private lifetime = new LifetimeDialog();
+  /** S03: the orbit last handed to the Orbit section, in memory */
+  private handoff: OrbitHandoff | null = null;
   /** V01: a viewer launch's real broadcast, when there is one */
   readonly soundtrack = new SoundtrackPlayer();
   private soundtrackPanel = new SoundtrackPanel((id) => { if (this.watchSoundtrackId === id) void this.loadSoundtrack(id); });
@@ -373,7 +375,8 @@ class App {
     this.obCanvas = document.getElementById('onboard') as HTMLCanvasElement;
     // The telemetry panel first: it owns the slot the instrument card docks
     // into, and `Hud` reads its stored placement in its own constructor.
-    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport(), () => this.orbitLifetime());
+    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport(), () => this.orbitLifetime(),
+      () => this.continueInOrbit());
     this.compare = new ComparePanel({
       currentAsReference: () => this.currentAsReference(),
       current: () => this.tel.exportSource(),
@@ -401,12 +404,17 @@ class App {
       watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
       go: (r) => this.go(r),
     });
-    this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
+    this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, {
+      go: (r) => this.go(r),
+      // S03: the hand-off's orbit, carried on for years (P07)
+      lifetime: (h, opener) => this.lifetime.openFor(h, opener),
+    });
     this.watch = new WatchView(document.getElementById('watch-ui')!, {
       start: (id) => this.startWatch(id),
       togglePlay: () => this.togglePlay(),
       setWarp: (warp) => this.setWarp(warp),
       explore: () => this.go(route('launch', 'explore')),
+      continueInOrbit: () => this.continueInOrbit(),
       follow: (target) => { this.watchFollow = target; },
       pickerFooter: () => this.soundtrackPanel.render(),
     });
@@ -635,20 +643,43 @@ class App {
     if (this.watchSoundtrackId === id) this.soundtrack.set(track);
   }
 
-  /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
-  private orbitLifetime(): void {
+  /**
+   * S03: the orbit on screen as a hand-off (src/orbit/handoff.ts) — the state,
+   * the spacecraft that is in it, the mission it came from — or null while
+   * the flight is not in orbit.
+   */
+  private orbitHandoffNow(): OrbitHandoff | null {
     const f = this.shown, sim = this.sim;
-    const opener = document.getElementById('btn-orbit-lifetime');
-    const inOrbit = !!f && !!sim && f.status !== 'prelaunch' && f.elements.periapsisAlt > 100e3 && f.elements.e < 1;
-    if (!inOrbit) { this.lifetime.openFor(null, opener); return; }
+    if (!sim || !handoffAvailable(f)) return null;
     const sat = sim.satellite;
     const el = f.elements;
-    this.lifetime.openFor({
-      r: [f.r.x, f.r.y, f.r.z], v: [f.v.x, f.v.y, f.v.z], jd: f.jd,
-      spacecraft: spacecraftFor(sat.kind, sim.cfg.payloadMassOverride ?? sat.mass),
+    // a payload with an engine flies as the vehicle's last stage: its dry mass and what the frame says is left
+    const own = f.stages.find((st) => st.isSpacecraft);
+    const spec = own ? sim.vehicle.stages[own.index]?.spec : undefined;
+    return handoffFromFlight({
+      frame: f, satellite: sat, payloadMass: sim.cfg.payloadMassOverride ?? sat.mass,
+      spacecraftStage: own && spec ? { dryMass: spec.dryMass, propellant: own.propellantFraction * spec.propellantMass } : null,
+      vehicleName: sim.vehicleSpec.name,
+      mission: missionDocument(this.panel.missionState()),
       label: t('life.start', { sat: satelliteName(sat), pe: (el.periapsisAlt / 1000).toFixed(0), ap: (el.apoapsisAlt / 1000).toFixed(0),
         inc: (el.i * RAD).toFixed(1), t: f.t.toFixed(0) }),
-    }, opener);
+    });
+  }
+
+  /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
+  private orbitLifetime(): void {
+    this.lifetime.openFor(this.orbitHandoffNow(), document.getElementById('btn-orbit-lifetime'));
+  }
+
+  /**
+   * S03: "Continue in Orbit" — the orbit on screen handed to the Orbit
+   * section, at the level showing. The hand-off lives in memory; the flight
+   * carries on in the launch section, as it does behind any other screen.
+   */
+  continueInOrbit(): void {
+    this.handoff = this.orbitHandoffNow();
+    this.sectionScreen.setHandoff(this.handoff, this.handoff ? null : t('life.notInOrbit'));
+    this.go(route('orbit', this.lastLevel()));
   }
 
   /** U02: the flight on screen as a reference to compare later flights against. */
