@@ -645,6 +645,17 @@ WebMCP's `run_monte_carlo` starts (`action: "start"`, with the same settings), r
 the recorded sets found: Falcon 9 delivered to about a kilometre on every law, but even the
 minimal dispersions lose a few runs to the air's loads, and leave a few in the wrong plane.
 
+### One run on its own (P08)
+
+Any run of a set can be flown alone, watched and replayed like any flight. **Click a run on the
+scatter**: the setup panel gets the set's seed and the run's number (and its guidance law, in
+six-DOF, as the set flew it); launch it. Or open **Dispersed flight: one Monte Carlo run** in the
+Engineer mode's setup, tick it, and type a set seed and a run number: the section lists what that
+run drew — each stage's thrust, Isp, propellant and dry mass, the air's density, and in six-DOF the
+steady wind (and a fresh IMU with navigation on). It works in point-mass too, where the vehicle
+and the density are dispersed (point-mass has no wind or IMU). The run is part of the mission, so
+a mission file or link carries it and the flight report names it. Untick it to fly nominal again.
+
 ## 18. Lessons and the placement test
 
 The gold **Lessons** button in the top bar (and the fourth card on the landing page) opens the

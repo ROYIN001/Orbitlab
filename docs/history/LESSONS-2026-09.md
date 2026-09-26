@@ -236,3 +236,41 @@ stage flown back to LZ-1 lands with 8–9.5 t and with 11.5 t on top, but comes 
 pad with 10–11 t (`evt.stageImpact`). Lesson 5.1 asks for at least 9 t and its hints do not promise
 that heavier always fails. At T+90 s the six-DOF pitch loop is now dominated by a ±2° oscillation
 that is not the step, so the step test moved to T+65 s.
+
+## P08 — dispersed flights (the rest of it)
+
+### Where the code came from
+
+The rule: main if `DEFAULT_DISPERSIONS` is there, else `claude/dreamy-archimedes-r04m47` if main is
+its ancestor, else ask. When P08 began main had it (PR #19, G05), and main was merged in (above).
+
+### The owner's decisions (asked 2026-09-26)
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Models | **Six-DOF and point-mass.** |
+| 2 | Where | **A new section in the Engineer mode's setup panel.** |
+| 3 | 1σ | **The Monte Carlo set's** (`DEFAULT_DISPERSIONS`; a run opened from the window keeps the window's own). |
+| 4 | Monte Carlo window | **A click on a run opens it as one flight.** |
+
+### What was built
+
+- `src/physics/dispersed-flight.ts` (new): the mission's `dynamics.dispersion` (`{ seed, run,
+  settings? }`), its check, and `configuredDispersion` — G05's `drawDispersion`, nothing else.
+- Additions only elsewhere in the physics: the `Simulation` draws the named run when no
+  dispersion is passed (one expression); `validateDynamics` accepts it (one clause);
+  `dispersedRunMission` in `monte-carlo.ts` turns a run of a set into its mission. The random
+  order, `DEFAULT_DISPERSIONS` and `runSeed` are untouched (a test pins `runSeed`'s values).
+- `types.ts`: the optional `DynamicsConfig.dispersion`. `validation.ts`: the seed's and run's
+  limits. `panel.ts`: one line calling the new section, the section method, three imports.
+  `monte-carlo.ts` (UI): a click handler, the run on each hover point, `onOpenRun`. `main.ts`: four
+  lines wiring the click to the panel. `report.ts`: the run's row.
+- The dictionaries: a `// --- P08 ---` block (14 keys).
+
+### Tests
+
+`tests/dispersed-flight.test.ts` (5): the run named in a mission is the set's run — point-mass
+over 300 s and six-DOF (PEG) over 40 s compared to the bit; the nominal flight is untouched; a
+run other than the set's flies otherwise; the window's run carries its law, six-DOF and (only when
+not the default) the set's 1σ; the check refuses a run a set cannot have; a mission file carries
+the run.
