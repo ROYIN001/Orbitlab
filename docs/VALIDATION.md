@@ -249,7 +249,7 @@ for a drone ship (`recoveryReserve`) and 15 % to return to the pad (`returnReser
 lightest reserve in the set, Bangabandhu-1's to GTO, is where the model is furthest off
 (−27 %). This is a model assumption (a fixed reserve), stated in PHYSICS.md §8.1.
 
-**F5. The six-DOF model climbs higher between T+100 and T+140 s than the point-mass model and the
+**F5 (root cause found and fixed for six-DOF below, "Six-DOF pitch programme fitted"). The six-DOF model climbs higher between T+100 and T+140 s than the point-mass model and the
 flights.** At T+140 s it is 70–77 km against 53–70 km in the flights and 62–66 km in the
 point-mass model. Its MECO altitude is correspondingly higher. The six-DOF first stage flies an
 attitude loop with a real angle of attack and aerodynamic moments, and it comes out of the high-q
@@ -434,6 +434,99 @@ strap-ons alike, the way the tail-off already was (`VehicleModel.withinTank`). A
 the propellant load so the boundary falls anywhere inside a step. The six-DOF path splits its step
 at the boundary and was not affected.
 
+### Six-DOF pitch programme fitted (F5)
+
+**Root cause.** The two flight models get the same guidance. Up to about T+90 s both follow a
+gravity turn that starts from a 1.5° kick. When the dynamic pressure falls below about 12 kPa,
+the guidance blends into closed-loop steering, and that asks for a nearly horizontal attitude:
+13° above the horizon at T+110 s, while the vehicle is still climbing at 40 km.
+
+- **Point mass:** its angle-of-attack placard (2 100 Pa·rad / q, up to 60°) lets it fly that.
+- **Six-DOF:** the structural load relief holds the command within 15° of the relative wind
+  until q falls below 500 Pa, so it cannot, and the stack keeps climbing.
+
+The webcast data settle which is closer to the real vehicle, because the data set's `analysed`
+files give the flight-path angle (the angle of the Earth-relative velocity above the horizon):
+
+| flight-path angle, ° | T+40 | T+60 | T+80 | T+100 | T+120 | T+140 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **CRS-16, flight** | 81.6 | 73.7 | 69.1 | 61.9 | 53.8 | 45.2 |
+| point mass | 85 | 81 | 76 | 68 | 43 | 29 |
+| six-DOF, 1.5° kick | 86 | 83 | 79 | 72 | 58 | 47 |
+| six-DOF, 3.5° kick | 80 | 73 | 66 | 59 | 44 | 34 |
+| **Iridium NEXT 8, flight** | 80.2 | 73.3 | 62.9 | 51.2 | 43.3 | 35.0 |
+| point mass | 84 | 77 | 69 | 61 | 39 | 24 |
+| six-DOF, 1.5° kick | 84 | 77 | 69 | 61 | 46 | 34 |
+| six-DOF, 3.5° kick | 79 | 71 | 65 | 59 | 43 | 31 |
+| **GPS III SV01, flight** | 76.3 | 62.9 | 54.3 | 44.4 | 35.8 | 29.6 |
+| point mass | 84 | 82 | 76 | 68 | 43 | 25 |
+| six-DOF, 1.5° kick | 84 | 83 | 79 | 72 | 59 | 41 |
+| six-DOF, 3.5° kick | 79 | 73 | 66 | 59 | 44 | 31 |
+| **SSO-A, flight** (held out) | 90.0 | 82.8 | 71.4 | 65.9 | 61.6 | 57.8 |
+| point mass | 83 | 77 | 70 | 61 | 38 | 24 |
+| six-DOF, 1.5° kick | 82 | 77 | 70 | 61 | 46 | 33 |
+| six-DOF, 3.5° kick | 78 | 72 | 65 | 58 | 43 | 31 |
+| **Bangabandhu-1, flight** (held out) | 80.1 | 61.5 | 48.7 | 38.1 | 31.6 | 27.8 |
+| point mass | 83 | 81 | 75 | 67 | 42 | 26 |
+| six-DOF, 1.5° kick | 83 | 82 | 77 | 69 | 56 | 41 |
+| six-DOF, 3.5° kick | 79 | 73 | 66 | 59 | 44 | 32 |
+
+The model's angle is asin(climb rate / air-relative speed), measured over ±1 s. The flight's is
+the data set's own, derived from whole-kilometre altitudes, so take it as good to a degree or two.
+
+With the 1.5° kick both models are 4–20° too steep from T+40 to T+100 s. After that the point-mass
+model dives through the real angle: 24–29° at T+140 s against 30–58°. So its good altitude match
+(F9 in §3 notes that it tracks the published altitudes) is partly the unphysical dive cancelling a turn that
+is too slow. The six-DOF model cannot dive, and it arrived too high. The flights do not dive
+either: from T+100 s their path keeps coming down steadily.
+
+**What was fitted, and how it was judged.** Only one number: Falcon 9's six-DOF kick
+(`guidanceDefaultsSixDof: { kickAngle: 3.5 }` in `src/data/vehicles.ts`, the same mechanism
+Soyuz-2.1a already uses). The point-mass programme is unchanged.
+
+- **Sweep:** kick 1.5–5.5° and turn-rate limit 0.3–0.5 °/s, flown in six-DOF on the three "fit"
+  flights, CRS-16, Iridium NEXT 8 and GPS III SV01.
+- **Scored on:** the mean flight-path-angle error at the six times above, and the rows in
+  tolerance.
+- **Choice:** 3.5° with the 0.3 °/s limit unchanged was best on both scores. The mean error went
+  from 10.1° to 5.3°, and rows in tolerance from 33 to 36 of 41. 4.5° and 5.5° were as good on
+  rows and slightly worse on angle. A 0.5 °/s limit was worse, and one flight failed to reach
+  orbit.
+- **Held-out flights:** judged afterwards, and not used to choose. SSO-A and Bangabandhu-1
+  improved as well, the mean angle error from 14.8° to 12.5° and rows from 15 to 17 of 25.
+  Bangabandhu-1's real turn (a GTO flight) is still much faster than the model's single
+  programme, and SSO-A's much slower. One pitch programme per vehicle cannot follow per-mission
+  steering.
+
+Six-DOF rows in tolerance, all five flights: **48 → 53 of 66**. The disagreements left are listed
+in `tests/heavy/validation-falcon9.test.ts`. The point-mass rows are unchanged (49 of 66).
+
+**What else the change moved** (`npm test` green; the two long suites re-run separately):
+
+- **Golden fingerprints:** Falcon 9's six-DOF flight was re-recorded by 7834edd with only the two
+  data changes applied (masses and pitch programme). The current code with the flexible options
+  off still matches it bit for bit.
+- **Recovery landing:** the returning first stage of the six-DOF recovery reference lands at
+  T+474 s (it was T+538.7 s), so that test's convergence checkpoints moved inside the descent. The
+  step-size convergence is unchanged: sub-millimetre and sub-micro-degree.
+- **Load relief:** it now lets go at T+133.5 s with a swing of about 15° (it was 24°), because the
+  earlier turn leaves it less to hold back. The equations-panel sample and the explicit-guidance
+  test moved with it.
+- **The flexible autopilot tuner:** gains tuned at GM ≥ 2.5 dB over the first 60 s leave a slowly
+  growing mode from T+64 s, outside the part of the flight they were tuned on. The test now
+  tunes to 2 dB, which holds through T+90 s (PHYSICS.md §2g).
+
+### The throttle profile (F1, F2): nothing to apply
+
+MECO is still 4–10 % early and the early speed is off. The throttle bucket was swept on the fit
+flights in point mass: start and end q of 15–22 kPa, throttle 50–75 %. None beat the shipped
+22 kPa / 75 % (35 of 41 rows, 6.3 % mean speed error). Below 22 kPa the early ascent is far too
+slow (275 m/s at T+60 s against 318–359 m/s). The model's bucket is a q-limiter: it pins q at its
+start value, so its depth barely matters. The real vehicle throttles down for a fixed window
+(T+43–78 s in the events files) and then runs at full thrust. Expressing that needs a time-based
+throttle schedule in the model, and a source for its depth. Neither exists, so nothing was
+changed.
+
 ## 3. Soyuz-2.1a, Electron and Ariane 64: published timelines
 
 ### Sources
@@ -516,7 +609,12 @@ to T+538 s, 387 s. The model runs it from T+141 s to T+439 s, 298 s. With the mo
 about 7.7 kg/s), 298 s is exactly a burn to depletion. The real stage burns for longer, so it
 must carry more propellant (about 3 t at the same flow) or throttle below full thrust. Nothing
 reachable here says which. This is a vehicle-data finding, like F1, but unlike F1 no published
-stage mass exists to correct it (Rocket Lab does not publish them), so it is not applied. The
+stage mass exists to correct it (Rocket Lab does not publish them), so it is not applied.
+Rocket Lab's Payload User's Guide (v7.0, 2022) does not settle it either. It gives the second
+stage "approximately 2,000 kg of propellant" and "a burn time of approximately five minutes",
+and its own example profile runs the stage from L+162 s to L+535 s, 373 s. At the published
+25.8 kN and 343 s, 2 000 kg lasts 261 s at full thrust. The figures agree with each other only if
+the stage throttles to about 70 % on average, which the model does not do. The
 first stage is 4 % early, as PHYSICS.md §6a already records.
 
 **F8. Soyuz inserts into a 197 × 200 km orbit; the flight went to 200 × 242 km.** The model aims

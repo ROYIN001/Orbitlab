@@ -565,7 +565,7 @@ cannot reach the target, the standard guidance takes over again (and the event l
 
 In six-DOF flights with PEG or IGM the ascent load relief is also released at 4 °/s once the
 dynamic pressure falls below 500 Pa, where the standard flight releases it all at once and swings
-the stack by up to 24°.
+the stack by about 15° on Falcon 9.
 
 The attitude-loop inspector's **Guidance** tab (§9) charts the time and velocity to go, the pitch
 the law steers against the standard law's (and its yaw out of the target plane), and the orbit it
