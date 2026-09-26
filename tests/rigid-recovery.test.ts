@@ -51,7 +51,10 @@ describe('Falcon physical recovery acceptance', () => {
       if (!d) continue;
       const rc = d.recovery!, rigid = d.rigid!;
       const current: Sample = { t: sim.state.t, r: { ...d.r }, v: { ...d.v }, q: { ...rigid.attitudeQ } };
-      for (const t of [300, 400, 500]) if (previous && previous.t < t && current.t >= t) {
+      // Inside the returning flight, which touches down at T+474 s since Falcon 9's
+      // six-DOF pitch programme was fitted to webcast telemetry (docs/VALIDATION.md,
+      // F5); it came down at T+538.7 s before, and the checkpoints were 300/400/500.
+      for (const t of [250, 350, 450]) if (previous && previous.t < t && current.t >= t) {
         const fraction = (t - previous.t) / (current.t - previous.t);
         samples.push({ t, r: lerp(previous.r, current.r, fraction), v: lerp(previous.v, current.v, fraction),
           q: quatSlerp(previous.q, current.q, fraction) });

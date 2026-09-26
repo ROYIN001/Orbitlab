@@ -7,10 +7,11 @@ compared with measurements from those flights, using tolerances fixed before the
 Where the model and the flight disagree, the disagreement is recorded here with its most likely
 cause. It is not tuned away.
 
-The comparison was first made with nothing in `src/` changed (main @ 844ffca). It then led to one
-data change and one bug fix, both in §2 "Data change applied": Falcon 9's first stage now flies
-its published masses, and a propellant-conservation bug found along the way is fixed (F10).
-Nothing was fitted to the flights.
+The comparison was first made with nothing in `src/` changed (main @ 844ffca). It then led to two
+data changes and one bug fix, all in §2. Falcon 9's first stage now flies its published masses
+("Data change applied"), and a propellant-conservation bug found along the way is fixed (F10).
+Falcon 9's six-DOF pitch programme was fitted to three flights' flight-path angles and checked on
+two held-out flights ("Six-DOF pitch programme fitted"). That is the only fitted value.
 
 Status on 2026-09-25:
 
@@ -19,6 +20,7 @@ Status on 2026-09-25:
 | Falcon 9 Block 5 | Webcast telemetry of five flights, 2018–2019 | Compared in both flight models (§2); first-stage masses corrected |
 | Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos) | Compared in both flight models (§3) |
 | Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
+| Atlas V 551, PSLV-XL, H3, H-IIA 202, Vega-C, Proton-M, Falcon Heavy, Angara-A5 | ULA, ISRO, JAXA, Arianespace, ILS (primary); Spaceflight Now, RussianSpaceWeb (secondary) | Compared in both flight models (§4) |
 
 ## 1. Method
 
@@ -249,7 +251,7 @@ for a drone ship (`recoveryReserve`) and 15 % to return to the pad (`returnReser
 lightest reserve in the set, Bangabandhu-1's to GTO, is where the model is furthest off
 (−27 %). This is a model assumption (a fixed reserve), stated in PHYSICS.md §8.1.
 
-**F5. The six-DOF model climbs higher between T+100 and T+140 s than the point-mass model and the
+**F5 (root cause found and fixed for six-DOF below, "Six-DOF pitch programme fitted"). The six-DOF model climbs higher between T+100 and T+140 s than the point-mass model and the
 flights.** At T+140 s it is 70–77 km against 53–70 km in the flights and 62–66 km in the
 point-mass model. Its MECO altitude is correspondingly higher. The six-DOF first stage flies an
 attitude loop with a real angle of attack and aerodynamic moments, and it comes out of the high-q
@@ -434,6 +436,99 @@ strap-ons alike, the way the tail-off already was (`VehicleModel.withinTank`). A
 the propellant load so the boundary falls anywhere inside a step. The six-DOF path splits its step
 at the boundary and was not affected.
 
+### Six-DOF pitch programme fitted (F5)
+
+**Root cause.** The two flight models get the same guidance. Up to about T+90 s both follow a
+gravity turn that starts from a 1.5° kick. When the dynamic pressure falls below about 12 kPa,
+the guidance blends into closed-loop steering, and that asks for a nearly horizontal attitude:
+13° above the horizon at T+110 s, while the vehicle is still climbing at 40 km.
+
+- **Point mass:** its angle-of-attack placard (2 100 Pa·rad / q, up to 60°) lets it fly that.
+- **Six-DOF:** the structural load relief holds the command within 15° of the relative wind
+  until q falls below 500 Pa, so it cannot, and the stack keeps climbing.
+
+The webcast data settle which is closer to the real vehicle, because the data set's `analysed`
+files give the flight-path angle (the angle of the Earth-relative velocity above the horizon):
+
+| flight-path angle, ° | T+40 | T+60 | T+80 | T+100 | T+120 | T+140 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| **CRS-16, flight** | 81.6 | 73.7 | 69.1 | 61.9 | 53.8 | 45.2 |
+| point mass | 85 | 81 | 76 | 68 | 43 | 29 |
+| six-DOF, 1.5° kick | 86 | 83 | 79 | 72 | 58 | 47 |
+| six-DOF, 3.5° kick | 80 | 73 | 66 | 59 | 44 | 34 |
+| **Iridium NEXT 8, flight** | 80.2 | 73.3 | 62.9 | 51.2 | 43.3 | 35.0 |
+| point mass | 84 | 77 | 69 | 61 | 39 | 24 |
+| six-DOF, 1.5° kick | 84 | 77 | 69 | 61 | 46 | 34 |
+| six-DOF, 3.5° kick | 79 | 71 | 65 | 59 | 43 | 31 |
+| **GPS III SV01, flight** | 76.3 | 62.9 | 54.3 | 44.4 | 35.8 | 29.6 |
+| point mass | 84 | 82 | 76 | 68 | 43 | 25 |
+| six-DOF, 1.5° kick | 84 | 83 | 79 | 72 | 59 | 41 |
+| six-DOF, 3.5° kick | 79 | 73 | 66 | 59 | 44 | 31 |
+| **SSO-A, flight** (held out) | 90.0 | 82.8 | 71.4 | 65.9 | 61.6 | 57.8 |
+| point mass | 83 | 77 | 70 | 61 | 38 | 24 |
+| six-DOF, 1.5° kick | 82 | 77 | 70 | 61 | 46 | 33 |
+| six-DOF, 3.5° kick | 78 | 72 | 65 | 58 | 43 | 31 |
+| **Bangabandhu-1, flight** (held out) | 80.1 | 61.5 | 48.7 | 38.1 | 31.6 | 27.8 |
+| point mass | 83 | 81 | 75 | 67 | 42 | 26 |
+| six-DOF, 1.5° kick | 83 | 82 | 77 | 69 | 56 | 41 |
+| six-DOF, 3.5° kick | 79 | 73 | 66 | 59 | 44 | 32 |
+
+The model's angle is asin(climb rate / air-relative speed), measured over ±1 s. The flight's is
+the data set's own, derived from whole-kilometre altitudes, so take it as good to a degree or two.
+
+With the 1.5° kick both models are 4–20° too steep from T+40 to T+100 s. After that the point-mass
+model dives through the real angle: 24–29° at T+140 s against 30–58°. So its good altitude match
+(F9 in §3 notes that it tracks the published altitudes) is partly the unphysical dive cancelling a turn that
+is too slow. The six-DOF model cannot dive, and it arrived too high. The flights do not dive
+either: from T+100 s their path keeps coming down steadily.
+
+**What was fitted, and how it was judged.** Only one number: Falcon 9's six-DOF kick
+(`guidanceDefaultsSixDof: { kickAngle: 3.5 }` in `src/data/vehicles.ts`, the same mechanism
+Soyuz-2.1a already uses). The point-mass programme is unchanged.
+
+- **Sweep:** kick 1.5–5.5° and turn-rate limit 0.3–0.5 °/s, flown in six-DOF on the three "fit"
+  flights, CRS-16, Iridium NEXT 8 and GPS III SV01.
+- **Scored on:** the mean flight-path-angle error at the six times above, and the rows in
+  tolerance.
+- **Choice:** 3.5° with the 0.3 °/s limit unchanged was best on both scores. The mean error went
+  from 10.1° to 5.3°, and rows in tolerance from 33 to 36 of 41. 4.5° and 5.5° were as good on
+  rows and slightly worse on angle. A 0.5 °/s limit was worse, and one flight failed to reach
+  orbit.
+- **Held-out flights:** judged afterwards, and not used to choose. SSO-A and Bangabandhu-1
+  improved as well, the mean angle error from 14.8° to 12.5° and rows from 15 to 17 of 25.
+  Bangabandhu-1's real turn (a GTO flight) is still much faster than the model's single
+  programme, and SSO-A's much slower. One pitch programme per vehicle cannot follow per-mission
+  steering.
+
+Six-DOF rows in tolerance, all five flights: **48 → 53 of 66**. The disagreements left are listed
+in `tests/heavy/validation-falcon9.test.ts`. The point-mass rows are unchanged (49 of 66).
+
+**What else the change moved** (`npm test` green; the two long suites re-run separately):
+
+- **Golden fingerprints:** Falcon 9's six-DOF flight was re-recorded by 7834edd with only the two
+  data changes applied (masses and pitch programme). The current code with the flexible options
+  off still matches it bit for bit.
+- **Recovery landing:** the returning first stage of the six-DOF recovery reference lands at
+  T+474 s (it was T+538.7 s), so that test's convergence checkpoints moved inside the descent. The
+  step-size convergence is unchanged: sub-millimetre and sub-micro-degree.
+- **Load relief:** it now lets go at T+133.5 s with a swing of about 15° (it was 24°), because the
+  earlier turn leaves it less to hold back. The equations-panel sample and the explicit-guidance
+  test moved with it.
+- **The flexible autopilot tuner:** gains tuned at GM ≥ 2.5 dB over the first 60 s leave a slowly
+  growing mode from T+64 s, outside the part of the flight they were tuned on. The test now
+  tunes to 2 dB, which holds through T+90 s (PHYSICS.md §2g).
+
+### The throttle profile (F1, F2): nothing to apply
+
+MECO is still 4–10 % early and the early speed is off. The throttle bucket was swept on the fit
+flights in point mass: start and end q of 15–22 kPa, throttle 50–75 %. None beat the shipped
+22 kPa / 75 % (35 of 41 rows, 6.3 % mean speed error). Below 22 kPa the early ascent is far too
+slow (275 m/s at T+60 s against 318–359 m/s). The model's bucket is a q-limiter: it pins q at its
+start value, so its depth barely matters. The real vehicle throttles down for a fixed window
+(T+43–78 s in the events files) and then runs at full thrust. Expressing that needs a time-based
+throttle schedule in the model, and a source for its depth. Neither exists, so nothing was
+changed.
+
 ## 3. Soyuz-2.1a, Electron and Ariane 64: published timelines
 
 ### Sources
@@ -516,7 +611,12 @@ to T+538 s, 387 s. The model runs it from T+141 s to T+439 s, 298 s. With the mo
 about 7.7 kg/s), 298 s is exactly a burn to depletion. The real stage burns for longer, so it
 must carry more propellant (about 3 t at the same flow) or throttle below full thrust. Nothing
 reachable here says which. This is a vehicle-data finding, like F1, but unlike F1 no published
-stage mass exists to correct it (Rocket Lab does not publish them), so it is not applied. The
+stage mass exists to correct it (Rocket Lab does not publish them), so it is not applied.
+Rocket Lab's Payload User's Guide (v7.0, 2022) does not settle it either. It gives the second
+stage "approximately 2,000 kg of propellant" and "a burn time of approximately five minutes",
+and its own example profile runs the stage from L+162 s to L+535 s, 373 s. At the published
+25.8 kN and 343 s, 2 000 kg lasts 261 s at full thrust. The figures agree with each other only if
+the stage throttles to about 70 % on average, which the model does not do. The
 first stage is 4 % early, as PHYSICS.md §6a already records.
 
 **F8. Soyuz inserts into a 197 × 200 km orbit; the flight went to 200 × 242 km.** The model aims
@@ -533,12 +633,212 @@ six-DOF ascent comes out of max Q steeper than the flights, while the point-mass
 the published altitudes (Ariane 64: 87.1 km against 87 km at booster separation, 128.5 km
 against 127 km at the fairing).
 
-## 4. Re-running
+## 4. Eight more flights: published timelines
+
+Found 2026-09-26. Primary sources were used where one exists. Where the timeline was planned
+before flight, the table says so; only H-IIA F50's is as flown. The same tolerances apply. Speeds
+are graded only where the source states the frame, which here is PSLV's "inertial velocity".
+Soyuz-2.1b, Long March 2D, 3B/E and 5, Vulcan and Starship are not included. Either nothing
+reachable gave a flight-specific timeline with its payload, or the only source was third-hand.
+
+| flight | source | kind |
+| --- | --- | --- |
+| **Atlas V 551, Juno**, 2011-08-05, SLC-41, 3 625 kg | [ULA mission booklet](https://www.ulalaunch.com/docs/default-source/news-items/av_juno_mob.pdf); payload mass from Wikipedia | primary, planned. Juno went to Earth escape; the model flies its standard GTO from SLC-40, which does not change the first stage. |
+| **PSLV-XL C52 / EOS-04**, 2022-02-14, FLP, 1 735.6 kg to 529 km, 97.5° | [ISRO mission brochure](https://www.isro.gov.in/media_isro/pdf/Missions/pslv-c52-eos-04-v4.pdf), with altitudes and inertial velocities | primary, planned |
+| **H3-22S F3 / ALOS-4**, 2024-07-01, LP2, ~3 t to 613 km, 97.9° | [JAXA launch plan](https://www.jaxa.jp/press/2024/04/files/20240426-1_01.pdf), with altitudes; its speeds do not state a frame | primary, planned |
+| **H-IIA 202 F50 / GOSAT-GW**, 2025-06-29, ~2.6 t to 666 km, 97.03° | [JAXA/MHI flight results to MEXT](https://www.mext.go.jp/content/20250703-mxt_uchukai01-000043486_000002.pdf) | primary, **as flown** |
+| **Vega-C VV25 / Sentinel-1C**, 2024-12-05, Kourou, 2 286 kg to ~700 km, 98.19° | Arianespace/Avio launch kit (newsroom.arianespace.com, VV25) | primary, planned |
+| **Proton-M / Briz-M, Telstar 14R**, 2011-05-20, Baikonur 39, ~5 000 kg to GTO | [ILS mission overview](https://www.ilslaunch.com/wp-content/uploads/2018/09/T-14R-Mission-Overview-final.pdf) | primary, planned |
+| **Falcon Heavy, Arabsat-6A**, 2019-04-11, LC-39A, 6 465 kg | SpaceX timeline via [Spaceflight Now](https://spaceflightnow.com/2019/04/10/launch-timeline-for-falcon-heavys-second-flight/) | secondary, planned |
+| **Angara-A5 flight 2**, 2020-12-14, Plesetsk 35, 2 406 kg | [RussianSpaceWeb](http://www.russianspaceweb.com/angara5-flight2.html), cross-checked by Spaceflight Now | secondary, planned |
+
+The code is in `tests/validation/reference-data.ts`. The pinned disagreements are in
+`tests/validation/timelines.test.ts` (point mass) and `tests/heavy/validation-timelines.test.ts`
+(six-DOF). The point-mass model agrees on 39 of these 68 rows, the six-DOF model on 37.
+
+### Results
+
+**Atlas V 551 Juno (planned)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| maxQ time | s | 46.4 | 41.8 (−10 %) | 42.1 (−9 %) | ±4.6 |
+| srbSep time | s | 104.0 | 97.1 (−7 %) | 97.2 (−7 %) | ±10.4 |
+| fairing time | s | 204.9 | 156.7 (−24 %) ✗ | 151.2 (−26 %) ✗ | ±20.5 |
+| beco time | s | 267.2 | 250.2 (−6 %) | 250.7 (−6 %) | ±26.7 |
+| sep time | s | 273.2 | 253.2 (−7 %) | 253.7 (−7 %) | ±27.3 |
+| mes1 time | s | 283.2 | 263.2 (−7 %) | 263.7 (−7 %) | ±28.3 |
+
+**PSLV-XL C52 / EOS-04 (planned; speeds inertial)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| glSep time | s | 69.9 | 69.2 (−1 %) | 69.3 (−1 %) | ±7.0 |
+| glSep altitude | km | 26.9 | 35.0 (+30 %) ✗ | 35.1 (+30 %) ✗ | ±5.0 |
+| glSep speed | m/s | 1304 | 1234 (−5 %) | 1234 (−5 %) | ±135 |
+| alSep time | s | 92.0 | 94.2 (+2 %) | 94.3 (+2 %) | ±9.2 |
+| alSep altitude | km | 48.0 | 66.7 (+39 %) ✗ | 68.7 (+43 %) ✗ | ±8.2 |
+| alSep speed | m/s | 1866 | 1433 (−23 %) ✗ | 1581 (−15 %) ✗ | ±192 |
+| ps1Sep time | s | 109.7 | 107.3 (−2 %) | 107.4 (−2 %) | ±11.0 |
+| ps1Sep altitude | km | 68.9 | 83.0 (+20 %) ✗ | 87.9 (+28 %) ✗ | ±11.3 |
+| ps1Sep speed | m/s | 2143 | 1512 (−29 %) ✗ | 1604 (−25 %) ✗ | ±219 |
+| ps2Ign time | s | 109.9 | 108.3 (−1 %) | 108.4 (−1 %) | ±11.0 |
+| heatShield time | s | 150.3 | 121.6 (−19 %) ✗ | 115.8 (−23 %) ✗ | ±15.0 |
+| heatShield altitude | km | 115.5 | 99.7 (−14 %) | 99.7 (−14 %) | ±18.3 |
+| heatShield speed | m/s | 2381 | 1543 (−35 %) ✗✗ | 1586 (−33 %) ✗✗ | ±243 |
+| ps2Sep time | s | 262.5 | 257.1 (−2 %) | 257.3 (−2 %) | ±26.2 |
+| ps2Sep altitude | km | 237.0 | 208.7 (−12 %) | 235.5 (−1 %) | ±36.6 |
+| ps2Sep speed | m/s | 4033 | 4066 (+1 %) | 3902 (−3 %) | ±408 |
+| ps3Sep time | s | 493.6 | 386.4 (−22 %) ✗ | 386.8 (−22 %) ✗ | ±49.4 |
+| ps3Sep altitude | km | 450.7 | 245.9 (−45 %) ✗ | 280.7 (−38 %) ✗ | ±68.6 |
+| ps3Sep speed | m/s | 5815 | 6289 (+8 %) | 6033 (+4 %) | ±587 |
+| ps4Cutoff time | s | 1020.4 | 846.2 (−17 %) ✗ | 870.8 (−15 %) ✗ | ±102.0 |
+| ps4Cutoff altitude | km | 534.0 | 198.0 (−63 %) ✗✗ | 256.1 (−52 %) ✗✗ | ±81.1 |
+| ps4Cutoff speed | m/s | 7592 | 7878 (+4 %) | 7805 (+3 %) | ±764 |
+
+**H3-22S F3 / ALOS-4 (planned)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| srbSep time | s | 116.0 | 109.4 (−6 %) | 109.5 (−6 %) | ±11.6 |
+| srbSep altitude | km | 44.0 | 44.9 (+2 %) | 46.3 (+5 %) | ±7.6 |
+| fairing time | s | 210.0 | 201.6 (−4 %) | 176.1 (−16 %) ✗ | ±21.0 |
+| fairing altitude | km | 120.0 | 105.3 (−12 %) | 100.4 (−16 %) ✗ | ±19.0 |
+| meco time | s | 303.0 | 319.3 (+5 %) | 319.6 (+5 %) | ±30.3 |
+| meco altitude | km | 278.0 | 156.6 (−44 %) ✗ | 171.7 (−38 %) ✗ | ±42.7 |
+| stageSep time | s | 311.0 | 322.3 (+4 %) | 322.6 (+4 %) | ±31.1 |
+| stageSep altitude | km | 296.0 | 157.6 (−47 %) ✗✗ | 172.6 (−42 %) ✗ | ±45.4 |
+| seli1 time | s | 324.0 | 327.3 (+1 %) | 327.6 (+1 %) | ±32.4 |
+| seli1 altitude | km | 324.0 | 159.2 (−51 %) ✗✗ | 174.1 (−46 %) ✗✗ | ±49.6 |
+| seco1 time | s | 985.0 | 690.9 (−30 %) ✗ | 698.6 (−29 %) ✗ | ±98.5 |
+| seco1 altitude | km | 613.0 | 200.0 (−67 %) ✗✗ | 200.0 (−67 %) ✗✗ | ±93.0 |
+
+**H-IIA 202 F50 / GOSAT-GW (as flown)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| srbSep time | s | 124.0 | 107.1 (−14 %) ✗ | 107.1 (−14 %) ✗ | ±12.4 |
+| fairing time | s | 266.0 | 250.1 (−6 %) | 250.0 (−6 %) | ±26.6 |
+| meco time | s | 400.0 | 390.6 (−2 %) | 390.7 (−2 %) | ±40.0 |
+| stageSep time | s | 408.0 | 396.6 (−3 %) | 396.7 (−3 %) | ±40.8 |
+| seli time | s | 417.0 | 402.6 (−3 %) | 402.7 (−3 %) | ±41.7 |
+| seco time | s | 916.0 | 760.4 (−17 %) ✗ | 762.2 (−17 %) ✗ | ±91.6 |
+
+**Vega-C VV25 / Sentinel-1C (planned)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| p120Sep time | s | 142.0 | 135.8 (−4 %) | 135.9 (−4 %) | ±14.2 |
+| z40Sep time | s | 272.0 | 230.7 (−15 %) ✗ | 230.9 (−15 %) ✗ | ±27.2 |
+| fairing time | s | 304.0 | 220.2 (−28 %) ✗ | 220.0 (−28 %) ✗ | ±30.4 |
+| z9Sep time | s | 428.0 | 357.3 (−17 %) ✗ | 353.6 (−17 %) ✗ | ±42.8 |
+
+**Proton-M / Briz-M Telstar 14R (planned)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| maxQ time | s | 62.0 | 50.4 (−19 %) ✗ | 50.5 (−19 %) ✗ | ±6.2 |
+| sep12 time | s | 120.0 | 111.6 (−7 %) | 111.4 (−7 %) | ±12.0 |
+| sep23 time | s | 327.0 | 327.6 (0 %) | 327.7 (0 %) | ±32.7 |
+| fairing time | s | 347.0 | 174.6 (−50 %) ✗✗ | 151.0 (−56 %) ✗✗ | ±34.7 |
+| sep3b time | s | 582.0 | 572.6 (−2 %) | 572.9 (−2 %) | ±58.2 |
+
+**Falcon Heavy Arabsat-6A (planned)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| maxQ time | s | 69.0 | 51.3 (−26 %) ✗ | 51.2 (−26 %) ✗ | ±6.9 |
+| beco time | s | 150.0 | 122.7 (−18 %) ✗ | 122.7 (−18 %) ✗ | ±15.0 |
+| boosterSep time | s | 154.0 | 124.7 (−19 %) ✗ | 124.7 (−19 %) ✗ | ±15.4 |
+| meco time | s | 211.0 | 174.0 (−18 %) ✗ | 174.2 (−17 %) ✗ | ±21.1 |
+| stageSep time | s | 215.0 | 177.0 (−18 %) ✗ | 177.2 (−18 %) ✗ | ±21.5 |
+| ses1 time | s | 222.0 | 181.0 (−18 %) ✗ | 181.2 (−18 %) ✗ | ±22.2 |
+| fairing time | s | 247.0 | 180.2 (−27 %) ✗ | 147.3 (−40 %) ✗✗ | ±24.7 |
+| seco1 time | s | 528.0 | 509.0 (−4 %) | 510.5 (−3 %) | ±52.8 |
+
+**Angara-A5 flight 2 (planned)**
+
+| milestone | unit | published | point mass | six-DOF | tolerance |
+| --- | --- | ---: | ---: | ---: | ---: |
+| stage1Cutoff time | s | 206.0 | 201.9 (−2 %) | 202.0 (−2 %) | ±20.6 |
+| stage1Sep time | s | 209.0 | 202.9 (−3 %) | 203.0 (−3 %) | ±20.9 |
+| stage2Cutoff time | s | 323.0 | 330.6 (+2 %) | 330.8 (+2 %) | ±32.3 |
+| stage2Sep time | s | 326.0 | 331.6 (+2 %) | 331.8 (+2 %) | ±32.6 |
+| stage3Ign time | s | 328.0 | 332.6 (+1 %) | 332.8 (+1 %) | ±32.8 |
+| fairing time | s | 340.0 | 301.6 (−11 %) ✗ | 256.2 (−25 %) ✗ | ±34.0 |
+| stage3Cutoff time | s | 746.0 | 727.3 (−3 %) | 743.1 (0 %) | ±74.6 |
+| brizSep time | s | 748.0 | 730.6 (−2 %) | 746.3 (0 %) | ±74.8 |
+
+### Findings
+
+**What agrees.**
+
+- **Angara-A5:** every time except the fairing is within 3 %.
+- **Atlas V 551, Proton-M and H-IIA 202:** the staging times are within 7 % (Atlas V and Proton)
+  and 3 % (H-IIA, as flown).
+- **PSLV-XL:** the second-stage separation agrees in time, altitude and inertial speed.
+- **Falcon Heavy:** SECO-1 is within 4 %.
+
+**F11. Falcon Heavy's first stages cut off about 18 % early.** Side-booster cut-off comes at
+T+122.7 s against 150 s, and the core at T+174 s against 211 s, with everything after shifted
+the same way. Falcon Heavy's side boosters and core still fly the earlier Falcon 9 first-stage
+figures (395.7 t / 25.6 t), which F1 found burn short. The real core also throttles down while
+the side boosters burn, to last longer. The published Falcon 9 masses are a candidate for the
+side boosters, which are Falcon 9 first stages. They are not applied, because Falcon Heavy's core
+is a different stage with no published figures of its own.
+
+**F12. PSLV-XL's first stage delivers too little.** At first-stage separation the model is at
+1 512 m/s inertial against 2 143 m/s (−29 %), and 14 km higher. The deficit builds between T+70
+and T+92 s: 199 m/s gained against 562 m/s. The stage and strap-on masses agree with ISRO's
+brochure (139 t, 6 × 12.2 t), and so do the burn times. What differs is the thrust curve. The
+model flies every solid motor as a linear taper about its published mean (PHYSICS.md §10), and a
+steeply tapered S139 is weak exactly there. The second stage makes up the speed (4 066 m/s
+against 4 033 at its separation). The real flight then climbs to 451 km before the fourth stage
+lights; the model parks at 200 km, as in F6.
+
+**F13. H3 flies a far flatter first stage than JAXA's plan.** JAXA's plan reaches MECO at 278 km
+and 3.6 km/s (frame not stated). The model reaches 157 km and 5.9 km/s. The gap is much larger
+than any frame difference (about 0.4 km/s). The stage data agree with JAXA's table: 224.5 t,
+2 942 kN, SRB-3 134.4 t. The real first stage lofts steeply and spends the difference on
+gravity, and its second stage then burns for 661 s where the model's burns for 364 s. This is
+guidance, not propulsion.
+
+**F14. Fairing jettison is mostly early.** On a heating placard the model drops the fairing
+where the free-molecular heating falls to 1 135 W/m²:
+
+| vehicle | model, point mass / six-DOF | published |
+| --- | --- | --- |
+| Atlas V | 157 s / 151 s | 205 s |
+| Proton-M | 175 s / 151 s | 347 s (after second-stage separation) |
+| Angara-A5 | 302 s / 256 s | 340 s |
+| Falcon Heavy | 180 s / 147 s | 247 s |
+| H3, six-DOF only | 176 s | 210 s |
+
+The real vehicles hold theirs much longer. Two fixed jettison times (`fairing.sepTime`) also do
+not match these flights: Vega-C's 220 s against VV25's 304 s, and H-IIA's 250 s against F50's
+266 s (inside tolerance). The placard is one physical criterion standing in for each operator's
+own thermal and loads rules (PHYSICS.md §10). On these flights it drops the fairing 10–50 %
+early.
+
+**F15. Vega-C's second and third stages separate 15–17 % early**: T+231 s against 272 s, and
+T+357 s against 428 s. The first stage agrees (−4 %). The kit gives only separation times, so it
+cannot say whether the real stages burn longer or coast before separating.
+
+**F16. H-IIA's SRB-A separation comes at T+107 s against 124 s as flown (−14 %), and SECO at
+T+760 s against 916 s (−17 %).** MECO agrees within 2 %.
+
+Max Q is early on Proton-M (−19 %) and Falcon Heavy (−26 %), the same pattern as Falcon 9 (F3).
+Atlas V's max Q is inside its tolerance.
+
+None of these was fitted. Each is a single flight, so there is nothing to hold out, and fitting
+to one flight would turn the comparison into calibration.
+
+## 5. Re-running
 
 ```sh
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
-npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~3 min
+npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min
 ```
 
 When a test fails, its message prints the whole comparison table for that flight. If the change
