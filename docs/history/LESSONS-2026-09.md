@@ -274,3 +274,19 @@ over 300 s and six-DOF (PEG) over 40 s compared to the bit; the nominal flight i
 run other than the set's flies otherwise; the window's run carries its law, six-DOF and (only when
 not the default) the set's 1σ; the check refuses a run a set cannot have; a mission file carries
 the run.
+
+## Lesson 2.4 — Monte Carlo 3σ (written after G05 and P08)
+
+With G05 in main and P08 built, the last lesson of track 2 was written (asked 2026-09-26). The
+student flies a Monte Carlo set in the window (20 runs, seed 1), reads the spread and its 3σ
+ellipse, clicks the run whose perigee is farthest from the target and flies it on its own (P08),
+then types its perigee and its miss from the target. Graded: the flight is a run of the set
+seeded 1 (hook `dispersedRun`), it reaches orbit, and the two numbers match the flight's own
+(new measure `orbit.perigeeMiss`, ±1 km). The grader cannot know which run of the set is the
+farthest — that would mean flying the whole set — so any run of the set passes; the brief asks
+for the farthest because it is the one worth looking at.
+
+Tests: `tests/lessons-round2.test.ts` — a nominal flight, and a run of another set, fail the
+lesson's check; `tests/heavy/lessons-sixdof.test.ts` — run 5 of set 1 flown alone passes, and its
+perigee is within 1 km of the Monte Carlo runner's own for that run (the window's number). Only
+5.3 (historical missions, C01) is still listed as coming.

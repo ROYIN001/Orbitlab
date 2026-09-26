@@ -1830,6 +1830,7 @@ export const en: Record<string, string> = {
   'lesson.measure.loop.gmAtMaxQ': 'Pitch gain margin at max-Q',
   'lesson.measure.loop.wcAtMaxQ': 'Pitch crossover at max-Q',
   'lesson.measure.step.overshoot': 'Overshoot of the pitch step',
+  'lesson.measure.orbit.perigeeMiss': 'Perigee off the target',
   'lesson.measure.dock.hours': 'Launch to docking',
   'assess.title': 'Placement test',
   'assess.kind.pre': 'Placement test',

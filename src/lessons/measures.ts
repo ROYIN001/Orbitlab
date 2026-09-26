@@ -82,6 +82,8 @@ function lastPitchStep(flight: LessonFlight, at?: number): AttitudeTestRecord | 
 
 export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
   'orbit.perigee': { unit: 'km', over: 'final', digits: 1, read: (f) => finite(flightElements(f).periapsisAlt / 1e3) },
+  // P08: how far a dispersed run's perigee is from the target's (below it negative)
+  'orbit.perigeeMiss': { unit: 'km', over: 'final', digits: 1, read: (f) => finite((flightElements(f).periapsisAlt - f.plan.target.perigee) / 1e3) },
   'orbit.apogee': { unit: 'km', over: 'final', digits: 1, read: (f) => finite(flightElements(f).apoapsisAlt / 1e3) },
   'orbit.inclination': { unit: '°', over: 'final', digits: 2, read: (f) => finite(flightElements(f).i * RAD) },
   'orbit.raanError': {

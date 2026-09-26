@@ -1810,6 +1810,7 @@ export const th: Record<string, string> = {
   'lesson.measure.loop.gmAtMaxQ': 'เกนมาร์จินพิตช์ที่ max-Q',
   'lesson.measure.loop.wcAtMaxQ': 'ความถี่ครอสโอเวอร์พิตช์ที่ max-Q',
   'lesson.measure.step.overshoot': 'โอเวอร์ชูตของขั้นพิตช์',
+  'lesson.measure.orbit.perigeeMiss': 'จุดใกล้โลกห่างจากเป้าหมาย',
   'lesson.measure.dock.hours': 'จากปล่อยถึงเชื่อมต่อ',
   'assess.title': 'แบบทดสอบวัดพื้นฐาน',
   'assess.kind.pre': 'แบบทดสอบวัดพื้นฐาน',

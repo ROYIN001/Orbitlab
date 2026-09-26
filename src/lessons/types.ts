@@ -32,7 +32,7 @@ export type MeasureId =
   | 'orbit.perigee' | 'orbit.apogee' | 'orbit.inclination' | 'orbit.raanError' | 'orbit.period' | 'orbit.eccentricity'
   | 'orbit.semiMajorAxis' | 'maxQ' | 'maxQTime' | 'maxG' | 'dvLeft' | 'payload' | 'insertionTime'
   | 'loss.gravity' | 'loss.drag' | 'loss.steering' | 'burnDv' | 'orbit.speed' | 'abort.maxG' | 'abort.time'
-  | 'nav.positionError' | 'loop.pmAtMaxQ' | 'loop.gmAtMaxQ' | 'loop.wcAtMaxQ' | 'step.overshoot' | 'dock.hours';
+  | 'nav.positionError' | 'loop.pmAtMaxQ' | 'loop.gmAtMaxQ' | 'loop.wcAtMaxQ' | 'step.overshoot' | 'dock.hours' | 'orbit.perigeeMiss';
 
 /** A bound on a measure: a range, or a target and a tolerance around it. */
 export interface MeasureBound {

@@ -55,6 +55,15 @@ export const LESSON_HOOKS: Readonly<Record<string, LessonHook>> = {
     const nav = flight.cfg.dynamics?.navigation;
     return { state: nav && nav.gnss === false ? 'pass' : 'fail', value: null };
   },
+  /**
+   * The flight is a run of a Monte Carlo set (P08), of the set seeded `seed` when given: its
+   * vehicle and air dispersed as that run drew them. `value` is the run's number, 1-based.
+   */
+  dispersedRun(flight, params) {
+    const d = flight.cfg.dynamics?.dispersion;
+    const ok = !!d && (typeof params.seed !== 'number' || d.seed === params.seed);
+    return { state: ok ? 'pass' : 'fail', value: d ? d.run + 1 : null };
+  },
   /** The structure's bending was modelled: the flight met the mode the notch filter is for. */
   bendingOn(flight) {
     return { state: flight.cfg.dynamics?.flex?.bending ? 'pass' : 'fail', value: null };

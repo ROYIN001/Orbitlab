@@ -9,6 +9,9 @@ import { BUILTIN_LESSONS } from '../../src/lessons/catalog';
 import { lessonConfig } from '../../src/lessons/config';
 import { flightEnded, gradeLesson } from '../../src/lessons/grader';
 import { MEASURES } from '../../src/lessons/measures';
+import { flyRun } from '../../src/physics/monte-carlo';
+import { DEFAULT_DISPERSIONS, drawDispersion } from '../../src/physics/dispersion';
+import { vehicleById } from '../../src/data/vehicles';
 
 describe('lesson 3.2, a stuck gyro and the FDIR', () => {
   it('passes with the FDIR on', { timeout: 900_000 }, () => {
@@ -38,6 +41,17 @@ describe('round 2: the six-DOF lessons, solved', () => {
     const { lesson, sim } = flyLesson('guid-nav', (s) => { s.dynamics!.navigation = { grade: 'tactical', gnss: false }; });
     const grade = gradeLesson(lesson, sim);
     expect(grade.verdict, why(grade, sim)).toBe('pass');
+  });
+
+  it('2.4 Monte Carlo 3σ: run 5 of set 1 flown alone reaches orbit, and its perigee is the set\'s', { timeout: 1_800_000 }, () => {
+    const { lesson, sim } = flyLesson('guid-monte-carlo', (s) => { s.dynamics!.dispersion = { seed: 1, run: 4 }; });
+    const answers = exactAnswers(lesson, sim);
+    const grade = gradeLesson(lesson, sim, answers);
+    expect(grade.verdict, why(grade, sim)).toBe('pass');
+    // the window's number for the run: the same run, flown by the Monte Carlo runner
+    const run = flyRun(lessonConfig(lesson.mission), drawDispersion(vehicleById('falcon9'), DEFAULT_DISPERSIONS, 1, 4), 'standard');
+    expect(Math.abs(run.final!.perigeeKm - answers.perigee)).toBeLessThan(1);
+    expect(gradeLesson(lesson, sim, { ...answers, perigee: answers.perigee + 5 }).verdict).toBe('fail');
   });
 
   it('4.1 reading the loop: the crossover and the phase margin read at max-Q pass', { timeout: 900_000 }, () => {

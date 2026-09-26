@@ -3,7 +3,7 @@
  * explicit guidance saving an ascent an engine short, and inertial navigation
  * without satellites. 2.1 and 2.2 fly point-mass (tests/lessons.test.ts);
  * 2.3 flies six-DOF, its solution in tests/heavy/lessons-sixdof.test.ts.
- * 2.4 (Monte Carlo, G05) waits for its roadmap item and stays listed as coming.
+ * 2.4 takes a run out of a Monte Carlo set (G05) and flies it on its own (P08).
  */
 import { orbitById } from '../../data/orbits';
 import { DEFAULT_FAILURE } from '../../physics/defaults';
@@ -109,6 +109,42 @@ export const TRACK2: readonly unknown[] = [
       { en: 'Navigation (INS / GNSS) → IMU grade. The telemetry shows the position error as it grows.', ru: '«Навигация (БИНС / ГНСС)» → «Класс БИНС». Телеметрия показывает, как растёт ошибка положения.', th: 'การนำร่อง (INS / GNSS) → เกรดของ IMU ข้อมูลทางไกลแสดงความคลาดเคลื่อนตำแหน่งขณะที่โตขึ้น' },
       { en: 'A bias of 0.001 g held for 150 s alone gives ½·0.0098·150² ≈ 110 m; MEMS accelerometers are far worse than that.', ru: 'Одно лишь смещение 0,001 g за 150 с даёт ½·0,0098·150² ≈ 110 м; у МЭМС-акселерометров оно намного больше.', th: 'ไบแอส 0.001 g เพียงอย่างเดียวนาน 150 วินาทีให้ ½·0.0098·150² ≈ 110 ม. มาตรความเร่ง MEMS แย่กว่านั้นมาก' },
       { en: 'The tactical grade is enough; the navigation grade is better still — and dearer.', ru: 'Тактического класса достаточно; навигационный — ещё лучше, но и дороже.', th: 'เกรดยุทธวิธีเพียงพอ เกรดนำทางดียิ่งกว่า แต่แพงกว่าด้วย' },
+    ],
+  },
+  {
+    id: 'guid-monte-carlo', track: 2, order: 4, mode: 'engineer', domains: [4, 3], tags: ['G05', 'P08', '3σ'],
+    title: { en: 'Monte Carlo 3σ', ru: 'Метод Монте-Карло, 3σ', th: 'มอนติคาร์โล 3σ' },
+    brief: {
+      en: 'How accurately does Falcon 9 put 10 t into a 500 km orbit when its engines, masses and air are not exactly the book\'s? In the setup, open the Monte Carlo window and fly 20 runs with seed 1. Look at the spread and its 3σ ellipse; then click the run whose perigee lies farthest from the target to fly it on its own, fly it to the end, and type in its perigee and how far that is from the target\'s 500 km.',
+      ru: 'Насколько точно Falcon 9 выводит 10 т на орбиту 500 км, если тяга, массы и атмосфера не совпадают с расчётными? В настройках откройте окно Монте-Карло и выполните 20 прогонов с зерном 1. Посмотрите на разброс и эллипс 3σ; затем щёлкните прогон, перигей которого дальше всех от целевого, чтобы выполнить его отдельно, проведите полёт до конца и введите его перигей и отклонение от целевых 500 км.',
+      th: 'Falcon 9 ส่ง 10 ตันเข้าวงโคจร 500 กม. ได้แม่นยำเพียงใด เมื่อเครื่องยนต์ มวล และอากาศไม่ตรงกับค่าตามตำรา ในการตั้งค่า เปิดหน้าต่างมอนติคาร์โลแล้วบิน 20 รอบด้วยค่าเมล็ด 1 ดูการกระจายและวงรี 3σ จากนั้นคลิกรอบที่จุดใกล้โลกห่างจากเป้าหมายมากที่สุดเพื่อบินรอบนั้นเดี่ยว ๆ บินให้จบ แล้วพิมพ์จุดใกล้โลกของรอบนั้นและระยะที่ห่างจากเป้าหมาย 500 กม.',
+    },
+    debrief: {
+      en: 'Each run drew its own thrust, Isp, propellant and dry mass per stage, the air\'s density and wind: the spread of the orbits is the insertion\'s accuracy, and 3σ is what a launch contract quotes — about 99 % of flights inside the ellipse (98.9 % for two elements together). The run you flew alone is that run exactly: the same draws from the same stream, so any flight of the set can be watched, replayed and understood one at a time.',
+      ru: 'Каждый прогон выбрал свои тягу, удельный импульс, запас топлива и сухую массу ступеней, плотность воздуха и ветер: разброс орбит и есть точность выведения, а 3σ — то, что указывают в контракте на запуск: около 99 % полётов внутри эллипса (98,9 % для двух элементов вместе). Выполненный вами отдельно прогон — это в точности тот же прогон: те же случайные величины из того же потока, поэтому любой полёт набора можно посмотреть, воспроизвести и разобрать по отдельности.',
+      th: 'แต่ละรอบสุ่มแรงขับ Isp เชื้อเพลิง และมวลแห้งของแต่ละขั้น รวมทั้งความหนาแน่นอากาศและลมของตัวเอง การกระจายของวงโคจรคือความแม่นยำของการส่งเข้าวงโคจร และ 3σ คือค่าที่ระบุในสัญญาการส่งดาวเทียม ครอบคลุมราว 99% ของเที่ยวบินภายในวงรี (98.9% สำหรับสององค์ประกอบพร้อมกัน) รอบที่คุณบินเดี่ยวคือรอบเดียวกันทุกประการ ค่าสุ่มชุดเดียวกันจากลำดับเดียวกัน จึงดู เล่นซ้ำ และทำความเข้าใจเที่ยวบินใดในชุดทีละเที่ยวได้',
+    },
+    mission: missionDoc({ vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 10000, orbitId: 'leo', dynamics: { ...SIX_DOF } }),
+    locked: ['setup.vehicle', 'setup.site', 'setup.satellite', 'setup.payloadMass', 'setup.orbit', 'setup.failure', 'setup.dynamics.model', 'setup.guidance', 'setup.boosterRecovery'],
+    criteria: [
+      {
+        id: 'run', kind: 'hook', hook: 'dispersedRun', params: { seed: 1 },
+        label: { en: 'A run of the set seeded 1, flown on its own', ru: 'Прогон набора с зерном 1, выполненный отдельно', th: 'รอบหนึ่งของชุดค่าเมล็ด 1 ที่บินเดี่ยว' },
+      },
+      { id: 'orbit', kind: 'outcome', is: 'orbit' },
+      {
+        id: 'perigee', kind: 'answer', measure: 'orbit.perigee', tol: 1, unit: 'km',
+        prompt: { en: 'The perigee of your run (km)', ru: 'Перигей вашего прогона (км)', th: 'จุดใกล้โลกของรอบที่คุณบิน (กม.)' },
+      },
+      {
+        id: 'miss', kind: 'answer', measure: 'orbit.perigeeMiss', tol: 1, unit: 'km',
+        prompt: { en: 'How far it is from the target\'s perigee, below it negative (km)', ru: 'Отклонение от целевого перигея, вниз — со знаком минус (км)', th: 'ห่างจากจุดใกล้โลกเป้าหมายเท่าใด ถ้าต่ำกว่าให้ติดลบ (กม.)' },
+      },
+    ],
+    hints: [
+      { en: 'Setup → Monte Carlo: insertion accuracy → Open the Monte Carlo window. Runs 20, seed 1, the default dispersions; Start. It takes a few minutes.', ru: 'Настройка → «Монте-Карло: точность выведения» → открыть окно. 20 прогонов, зерно 1, разбросы по умолчанию; «Старт». Это займёт несколько минут.', th: 'การตั้งค่า → มอนติคาร์โล: ความแม่นยำการเข้าวงโคจร → เปิดหน้าต่าง ตั้ง 20 รอบ ค่าเมล็ด 1 และค่าการกระจายเริ่มต้น แล้วกดเริ่ม ใช้เวลาไม่กี่นาที' },
+      { en: 'On the scatter, perigee runs left to right: the point farthest from the + (the target) along it is the run. Its tooltip gives its perigee; a click puts it in the setup panel.', ru: 'На диаграмме перигей откладывается слева направо: нужный прогон — точка, дальше всех от «+» (цели) по этой оси. Подсказка показывает его перигей; щелчок переносит прогон в настройку.', th: 'บนกราฟ จุดใกล้โลกอยู่บนแกนแนวนอน รอบที่ต้องการคือจุดที่ห่างจากเครื่องหมาย + (เป้าหมาย) มากที่สุดตามแกนนั้น ป้ายข้อมูลแสดงจุดใกล้โลกของรอบนั้น และการคลิกจะนำรอบนั้นเข้าแผงตั้งค่า' },
+      { en: 'Launch it and let it fly to the end of the mission; the perigee is read there, the same way the window reads it.', ru: 'Запустите и доведите полёт до конца задачи; перигей определяется там же и так же, как в окне.', th: 'ปล่อยจรวดและปล่อยให้บินจนจบภารกิจ จุดใกล้โลกอ่านค่าที่นั่น ด้วยวิธีเดียวกับในหน้าต่าง' },
     ],
   },
 ];

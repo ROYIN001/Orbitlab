@@ -665,7 +665,7 @@ browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either c
 The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends.
 They are listed in five tracks — orbital mechanics, guidance and navigation, failures, attitude
 control, advanced missions — each with its number (1.1 … 5.3), a ✓ once passed and ● once tried.
-Seventeen are written; 2.4 (Monte Carlo) and 5.3 (historical missions) wait for their roadmap items (G05, C01) and are listed as *coming soon*.
+Eighteen are written; 5.3 (historical missions) waits for its roadmap item (C01) and is listed as *coming soon*.
 
 **A lesson.** Pick one: its mission is loaded into the setup panel, the app goes to the mode it
 needs (Explore or Engineer), and the settings it fixes are greyed out with a 🔒 — in lesson 1.2
@@ -691,6 +691,7 @@ which one.
 | 2.1 | Aerodynamic loads (Soyuz-2.1a) | the guidance (the acceleration limit) | peak q at most 25 kPa, the orbit reached, and the peak read (±1 kPa) |
 | 2.2 | PEG and IGM (Engineer) | the upper-stage guidance | 18.8 t to 500 km with an engine lost at T+80 s: the target orbit, explicit guidance engaged, 20 m/s left |
 | 2.3 | Inertial navigation without GNSS (Engineer, six-DOF) | the IMU grade | the position error within 500 m up to MECO, GNSS still off |
+| 2.4 | Monte Carlo 3σ (Engineer, six-DOF) | a Monte Carlo set, and the run you fly | a run of the set seeded 1 flown on its own to orbit, its perigee and its miss from the target read (±1 km) |
 | 3.1 | One engine out | the payload mass | the orbit with an engine lost at T+80 s, carrying at least 17.5 t |
 | 3.2 | A stuck gyro and the FDIR (Engineer, six-DOF) | the FDIR switch | the orbit, with IMU 1 voted out |
 | 3.3 | The crew's escape | nothing | the crew lands, and the peak load on them is read (±10 %) |

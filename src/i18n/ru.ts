@@ -1809,6 +1809,7 @@ export const ru: Record<string, string> = {
   'lesson.measure.loop.gmAtMaxQ': 'Запас по амплитуде (тангаж) на max-Q',
   'lesson.measure.loop.wcAtMaxQ': 'Частота среза (тангаж) на max-Q',
   'lesson.measure.step.overshoot': 'Перерегулирование по тангажу',
+  'lesson.measure.orbit.perigeeMiss': 'Отклонение перигея от целевого',
   'lesson.measure.dock.hours': 'От старта до стыковки',
   'assess.title': 'Входной тест',
   'assess.kind.pre': 'Входной тест',

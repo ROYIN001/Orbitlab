@@ -23,7 +23,7 @@ function readAll(raw: readonly unknown[]): Lesson[] {
   return out;
 }
 
-export const BUILTIN_LESSONS: readonly Lesson[] = readAll([...TRACK1, ...TRACK2, COMING[0], ...TRACK3, ...TRACK4, ...TRACK5, COMING[1]]);
+export const BUILTIN_LESSONS: readonly Lesson[] = readAll([...TRACK1, ...TRACK2, ...TRACK3, ...TRACK4, ...TRACK5, ...COMING]);
 
 export interface Track { id: number; title: LocalText; note: LocalText }
 

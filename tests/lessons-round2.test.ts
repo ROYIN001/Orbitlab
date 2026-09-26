@@ -74,6 +74,22 @@ describe('track 2, guidance and navigation', () => {
   });
 });
 
+describe('2.4 Monte Carlo 3σ', () => {
+  it('a nominal flight is not a run of the set, and the lesson fails', { timeout: 60_000 }, () => {
+    const l = lesson('guid-monte-carlo');
+    const sim = fly(l, undefined, 30, () => false);
+    const g = gradeLesson(l, sim, {}, true);
+    expect(g.criteria.find((c) => c.id === 'run')!.state).toBe('fail');
+    expect(g.verdict).toBe('fail');
+    // a run of another set is not the one asked for either
+    const other = lessonConfig(l.mission, (s) => { s.dynamics!.dispersion = { seed: 2, run: 4 }; });
+    expect(gradeLesson(l, { ...sim, cfg: other } as LessonFlight, {}, true).criteria.find((c) => c.id === 'run')!.state).toBe('fail');
+    const right = lessonConfig(l.mission, (s) => { s.dynamics!.dispersion = { seed: 1, run: 4 }; });
+    const graded = gradeLesson(l, { ...sim, cfg: right } as LessonFlight, {}, true).criteria.find((c) => c.id === 'run')!;
+    expect(graded).toMatchObject({ state: 'pass', value: 5 });
+  });
+});
+
 describe('track 4, attitude control', () => {
   it('4.1 reading the loop: numbers far from the inspector\'s fail', { timeout: 180_000 }, () => {
     const l = lesson('ctl-inspector');
