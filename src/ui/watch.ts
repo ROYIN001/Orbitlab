@@ -348,7 +348,9 @@ export class WatchView {
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
     } else if (ending === 'splashdown') {
-      const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
+      // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
+      const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');
+      const since = (down?.t ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
       // C01: a capsule, not a ship
       card.append(el('p', undefined, frame.abort?.kind === 'return'
         ? t('watch.end.capsuleSplashText', { time: fmtClock(since).replace(/^T\+/, ''), km: num(frame.downrange / 1000), g: num(frame.abort.maxG) })
