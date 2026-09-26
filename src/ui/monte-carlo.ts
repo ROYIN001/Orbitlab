@@ -9,7 +9,7 @@
  */
 import { onLangChange, t } from '../i18n';
 import type { MissionConfig } from '../types';
-import { vehicleById } from '../data/vehicles';
+import { missionVehicle } from '../data/vehicles';
 import { siteById } from '../data/sites';
 import { siteName } from './names';
 import {
@@ -433,7 +433,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     const laws = job?.laws ?? monteCarloLaws(cfg, { compareLaws: this.compareInput.checked });
     const km = (v: number | undefined) => (v === undefined ? '—' : num(v, 0));
     this.mission.textContent = t('mc.mission', {
-      vehicle: vehicleById(cfg.vehicleId).name, site: siteName(siteById(cfg.siteId)),
+      vehicle: missionVehicle(cfg).name, site: siteName(siteById(cfg.siteId)),
       pe: km(targets?.final.perigeeKm), ap: km(targets?.final.apogeeKm), inc: targets ? num(targets.final.inclinationDeg, 2) : '—',
       ipe: km(targets?.cutoff.perigeeKm), iap: km(targets?.cutoff.apogeeKm),
       laws: laws.map((l) => t(LAW_NAME[l])).join(', '),

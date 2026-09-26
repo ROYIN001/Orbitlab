@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import type { StageSpec, BoosterGroupSpec, VehicleSpec } from '../types';
 import { hash11 } from './noise';
+import { vehicleDataId } from '../data/vehicles';
 
 export { engineLayout, type EngineLayout, type NozzlePos } from '../data/engine-layout';
 
@@ -135,7 +136,8 @@ export function stageLivery(vehicle: VehicleSpec, stage: StageSpec): StageLivery
     bands: stage.accentColor ? [{ at: 0.92, h: 0.05, color: stage.accentColor }] : [],
     flag: FLAG_BY_COUNTRY[vehicle.country],
   };
-  const ov = OVERRIDES[`${vehicle.id}/${stage.id}`];
+  // a custom vehicle made from a catalogue one wears its livery (roadmap S02)
+  const ov = OVERRIDES[`${vehicleDataId(vehicle)}/${stage.id}`];
   return ov ? { ...base, ...ov } : base;
 }
 

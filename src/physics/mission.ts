@@ -6,6 +6,7 @@ import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../ty
 import type { SiteExtra } from '../data/sites';
 import { satelliteById } from '../data/satellites';
 import { rendezvousAvailable } from './rendezvous/profiles';
+import { vehicleDataId } from '../data/vehicles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
@@ -1076,7 +1077,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // Progress MS are, 200 × 242 km with the cut-off near perigee: the
   // spacecraft's own burns raise it to the station from there, and the
   // rendezvous profiles are timed from that orbit (docs/PHYSICS.md §9.2).
-  if (cfg.rendezvous && rendezvousAvailable(cfg.vehicleId, cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
+  if (cfg.rendezvous && rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
     && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
     insertionAltitude = RENDEZVOUS_INSERTION.perigee;
     insertionApoapsis = RENDEZVOUS_INSERTION.apogee;

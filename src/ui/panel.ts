@@ -32,7 +32,7 @@
  *   better.
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
-import { RATING_ORBITS, VEHICLES, vehicleById } from '../data/vehicles';
+import { RATING_ORBITS, VEHICLES, missionVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
@@ -92,6 +92,8 @@ export interface SetupCallbacks {
 interface SetupState {
   dynamics?: DynamicsConfig;
   vehicleId: string;
+  /** S02: a custom vehicle, from a mission file; its id is `vehicleId` */
+  vehicleSpec?: VehicleSpec;
   satelliteId: string;
   siteId: string;
   orbitId: string;
@@ -459,7 +461,7 @@ export class SetupPanel {
 
   /** The guidance that will be flown: the vehicle's own programme plus operator edits. */
   get guidance(): GuidanceParams {
-    return { ...guidanceForVehicle(vehicleById(this.state.vehicleId), undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
+    return { ...guidanceForVehicle(missionVehicle(this.state), undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
   }
 
   getConfig(): MissionConfig {
@@ -467,6 +469,7 @@ export class SetupPanel {
     const s = this.state;
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
+      ...(s.vehicleSpec ? { vehicleSpec: structuredClone(s.vehicleSpec) } : {}),
       launchTime: new Date(s.launchTime.getTime()), guidance: this.guidance, failure: { ...s.failure },
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
@@ -498,6 +501,7 @@ export class SetupPanel {
       case 'suborbital': return t('setup.validation.suborbital');
       case 'failureUnavailable': return t('setup.validation.failureUnavailable');
       case 'rendezvousUnavailable': return t('setup.validation.rendezvousUnavailable');
+      case 'vehicleSpec': return t('setup.validation.vehicleSpec');
     }
   }
 
@@ -610,7 +614,9 @@ export class SetupPanel {
     // nor its pad, nor its flight to the station
     this.state.padId = mission.padId;
     this.state.rendezvous = mission.rendezvous ? { ...mission.rendezvous } : undefined;
-    this.state.dynamics = defaultDynamics(this.state.vehicleId);
+    // and a catalogue vehicle's, unless it carries its own (S02)
+    this.state.vehicleSpec = mission.vehicleSpec ? structuredClone(mission.vehicleSpec) : undefined;
+    this.state.dynamics = defaultDynamics(missionVehicle(this.state));
     this.tuneMessage = '';
     this.applyExternalEdit();
     this.cb.onChange?.(this.getConfig());
@@ -634,6 +640,7 @@ export class SetupPanel {
     this.cancelTune();
     Object.assign(this.state, copyMission(mission));
     if (!mission.recoveryPlan) this.state.recoveryPlan = undefined;
+    if (!mission.vehicleSpec) this.state.vehicleSpec = undefined;
     if (!mission.dynamics) this.state.dynamics = undefined;
     // nor the last mission's pad or flight to the station: Vostok-1's Site 1
     // left on a Saturn V at LC-39A made the next lesson unlaunchable (C01)
@@ -659,7 +666,7 @@ export class SetupPanel {
   /** What an auto-tune result is valid for: change any of it and the tune is stale. */
   private missionSignature(): string {
     const s = this.state;
-    return JSON.stringify({ vehicle: s.vehicleId, site: s.siteId, orbit: s.orbit,
+    return JSON.stringify({ vehicle: s.vehicleId, custom: s.vehicleSpec, site: s.siteId, orbit: s.orbit,
       payload: s.payloadMass, satellite: s.satelliteId, launchTime: s.launchTime,
       failure: s.failure, recovery: s.boosterRecovery, plan: s.recoveryPlan, dynamics: s.dynamics });
   }
@@ -699,7 +706,7 @@ export class SetupPanel {
     inp.step = String(step);
     inp.setAttribute('aria-label', t(labelKey));
     const def = Object.values(GUIDANCE_FIELDS).find((f) => `setup.${f.key}` === labelKey);
-    const stored = def ? guidanceLimits(def.key, vehicleById(this.state.vehicleId)) : null;
+    const stored = def ? guidanceLimits(def.key, missionVehicle(this.state)) : null;
     const limits = def && stored
       ? { min: stored.min === undefined ? undefined : stored.min / def.scale, max: stored.max === undefined ? undefined : stored.max / def.scale }
       : fieldLimits(labelKey, this.state.orbit) ?? { min, max };
@@ -844,7 +851,7 @@ export class SetupPanel {
     root.dataset.experience = this.experience;
     this.fieldInputs.clear();
     root.replaceChildren();
-    const vehicle = vehicleById(s.vehicleId);
+    const vehicle = missionVehicle(s);
     if (!vehicle.sites.includes(s.siteId)) {
       s.siteId = vehicle.sites[0];
       this.siteReassigned = true;
@@ -871,8 +878,12 @@ export class SetupPanel {
     // ── 01 vehicle & site ───────────────────────────────────────────────────
     const s1 = this.el('section', 'config-section');
     s1.appendChild(this.sectionTitle('01', 'setup.step.vehicle'));
-    s1.appendChild(this.select('setup.vehicle', VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })), s.vehicleId, (v) => {
+    // S02: a custom vehicle (from a mission file) is offered beside the catalogue until another is picked
+    const custom = s.vehicleSpec ? [{ value: s.vehicleSpec.id, label: t('setup.vehicle.custom', { name: s.vehicleSpec.name }) }] : [];
+    s1.appendChild(this.select('setup.vehicle', [...custom, ...VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` }))], s.vehicleId, (v) => {
+      if (v === s.vehicleSpec?.id) return;
       s.vehicleId = v;
+      s.vehicleSpec = undefined;
       const flex = s.dynamics?.flex;
       const control = s.dynamics?.control;
       const navigation = s.dynamics?.navigation;
@@ -1184,7 +1195,7 @@ export class SetupPanel {
     if (s.failure.mode !== 'boosterCollision' && s.failure.mode !== 'stagingFailure') {
       fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = v; this.changed(); }, 5, -10, 2000));
     }
-    fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
+    fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;
   }
@@ -1216,7 +1227,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.flex.title')));
     const flex: FlexConfig = this.state.dynamics?.flex ?? {};
     const update = (patch: Partial<FlexConfig>, rebuild = false): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       const next: Record<string, unknown> = { ...(dynamics.flex ?? {}), ...patch };
       for (const key of Object.keys(next)) if (next[key] === undefined || next[key] === false) delete next[key];
       this.state.dynamics = { ...dynamics, ...(Object.keys(next).length ? { flex: next as FlexConfig } : {}) };
@@ -1270,7 +1281,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.control.title')));
     section.append(this.el('p', 'field-note', t('setup.control.note')));
     const update = (next: ControlConfig | undefined, rebuild = false): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { control: next } : {}) };
       if (!next) delete this.state.dynamics.control;
       if (rebuild) this.render();
@@ -1313,7 +1324,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.nav.title')));
     section.append(this.el('p', 'field-note', t('setup.nav.note')));
     const update = (next: NavigationConfig | undefined, rebuild = false): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { navigation: next } : {}) };
       if (!next) delete this.state.dynamics.navigation;
       if (rebuild) this.render();
@@ -1380,7 +1391,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.explicit.title')));
     section.append(this.el('p', 'field-note', t('setup.explicit.note')));
     const update = (next: ExplicitGuidanceConfig | undefined): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { explicitGuidance: next } : {}) };
       if (!next) delete this.state.dynamics.explicitGuidance;
       this.render();
@@ -1435,8 +1446,8 @@ export class SetupPanel {
       reset.addEventListener('click', () => update({ seed: config.seed, run: config.run }));
       section.append(reset);
     }
-    // what the run drew, as the flight flies it
-    const spec = vehicleById(this.state.vehicleId);
+    // what the run drew, as the flight flies it (S02: the mission's vehicle, custom ones included)
+    const spec = missionVehicle(this.state);
     const drawn = configuredDispersion(spec, config);
     const pct = (f: number) => `${f >= 1 ? '+' : '−'}${Math.abs((f - 1) * 100).toFixed(2)} %`;
     const list = this.el('ul', 'field-note dispersion-draws');
@@ -1481,7 +1492,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.faults.title')));
     section.append(this.el('p', 'field-note', t('setup.faults.note')));
     const update = (next: ControlFaultsConfig | undefined, rebuild = true): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { controlFaults: next } : {}) };
       if (!next) delete this.state.dynamics.controlFaults;
       if (rebuild) this.render();
@@ -1508,7 +1519,7 @@ export class SetupPanel {
     if (config.preset && CONTROL_FAULT_PRESETS[config.preset]) {
       section.append(this.el('p', 'field-note fault-preset-note', t(`setup.faults.presetNote.${config.preset}`)));
       const own = CONTROL_FAULT_PRESETS[config.preset].vehicleId;
-      if (own !== this.state.vehicleId) section.append(this.el('p', 'field-note warn', t('setup.faults.otherVehicle', { vehicle: vehicleById(own).name })));
+      if (own !== vehicleDataId(missionVehicle(this.state))) section.append(this.el('p', 'field-note warn', t('setup.faults.otherVehicle', { vehicle: vehicleById(own).name })));
     }
     // The FDIR.
     const fdirRow = this.el('label', 'checkbox'), fdirBox = this.el('input');
@@ -1517,7 +1528,7 @@ export class SetupPanel {
     fdirRow.append(fdirBox, this.el('span', undefined, t('setup.faults.fdir')));
     section.append(fdirRow, this.el('p', 'field-note', t('setup.faults.fdirNote')));
     // The failures.
-    const vehicle = vehicleById(this.state.vehicleId), navigation = !!this.state.dynamics?.navigation;
+    const vehicle = missionVehicle(this.state), navigation = !!this.state.dynamics?.navigation;
     config.faults.forEach((fault, index) => section.append(this.faultRow(fault, index, vehicle, navigation, (next) => {
       const faults = [...current().faults];
       if (next) faults[index] = next; else faults.splice(index, 1);
@@ -1589,7 +1600,7 @@ export class SetupPanel {
     field('setup.faults.kind', choice(kinds, fault.kind, (v) => change(defaultFault(v as ControlFaultKind, fault.time, fault.stage))));
     field('setup.faults.time', numberInput(fault.time, [0, 1e5], 1, (v) => set({ time: v })));
     field('setup.faults.stage', choice([{ value: '', label: t('setup.faults.stageAny') },
-      ...vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` }))],
+      ...vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle, st.id, st.name)}` }))],
     fault.stage === undefined ? '' : String(fault.stage), (v) => { const { stage: _s, ...rest } = fault; change(v === '' ? rest : { ...rest, stage: Number(v) }); }));
     const fields = FAULT_FIELDS[fault.kind];
     if (fields.includes('engine')) {
@@ -1630,6 +1641,7 @@ export class SetupPanel {
   private faultPresetVehicle(vehicleId: string): void {
     const s = this.state, kept = s.dynamics;
     s.vehicleId = vehicleId;
+    s.vehicleSpec = undefined;
     s.dynamics = defaultDynamics(vehicleId);
     for (const key of ['flex', 'control', 'navigation', 'controlFaults', 'explicitGuidance'] as const) if (kept?.[key]) (s.dynamics as unknown as Record<string, unknown>)[key] = kept[key];
     const spec = vehicleById(vehicleId);
@@ -1641,7 +1653,7 @@ export class SetupPanel {
   /** E04: take a tuning (the attitude-loop inspector's "use for the next launch"); undefined restores the defaults. */
   applyControl(control: ControlConfig | undefined): boolean {
     // Also while a flight runs: the setup then holds it for the next launch.
-    const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+    const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
     if (dynamics.model !== 'sixDof') return false;
     this.state.dynamics = { ...dynamics, ...(control ? { control } : {}) };
     if (!control) delete this.state.dynamics.control;
@@ -1702,7 +1714,7 @@ export class SetupPanel {
   /** A flight on to the station: a Soyuz MS to the ISS orbit (the rule `validateConfigInput` states). */
   private rendezvousAvailable(): boolean {
     const s = this.state;
-    return rendezvousAvailable(s.vehicleId, s.satelliteId, s.orbit);
+    return rendezvousAvailable(vehicleDataId(missionVehicle(s)), s.satelliteId, s.orbit);
   }
 
   /**
@@ -1798,7 +1810,7 @@ export class SetupPanel {
     }
     // One plan per refresh: both the info card and the feasibility verdict read
     // it, and planning twice per keystroke buys nothing.
-    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), vehicleById(this.state.vehicleId)); } catch { this.planCache = null; }
+    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), missionVehicle(this.state)); } catch { this.planCache = null; }
     this.refreshInsertionProbe();
     this.updateStats();
     this.updateWindows();
@@ -1816,7 +1828,7 @@ export class SetupPanel {
     const box = this.statsEl;
     if (!box) return;
     const s = this.state;
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s);
     const sat = satelliteById(s.satelliteId);
     const m0 = liftoffMass(spec, s.payloadMass);
     const T0 = liftoffThrust(spec);
@@ -1882,7 +1894,7 @@ export class SetupPanel {
     const box = this.infoEl;
     if (!box) return;
     const s = this.state;
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s);
     const site = siteById(s.siteId);
     const sat = satelliteById(s.satelliteId);
     const dv = idealDeltaV(spec, s.payloadMass);
@@ -1939,7 +1951,7 @@ export class SetupPanel {
       this.probedFor = '';
       return;
     }
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s);
     const capability = missionCapability(spec, satelliteById(s.satelliteId), s.payloadMass, plan);
     const { cap } = ratedPayload(spec, orbitClassOf(s.orbit));
     const marginal = capability.ascentShortfall > 0 || (cap > 0 && s.payloadMass >= cap * 0.9);
@@ -1966,7 +1978,7 @@ export class SetupPanel {
     const s = this.state;
     const site = siteById(s.siteId);
     return missionVerdict({
-      spec: vehicleById(s.vehicleId),
+      spec: missionVehicle(s),
       site,
       orbit: s.orbit,
       satellite: satelliteById(s.satelliteId),
@@ -2016,7 +2028,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.dynamics.title')));
     const d = this.state.dynamics ?? { model: 'pointMass', wind: 'calm', seed: 20260919 };
     const choices = [{ value: 'pointMass', label: t('setup.dynamics.pointMass') }];
-    if (supportsRigid(this.state.vehicleId)) choices.unshift({ value:'sixDof', label:t('setup.dynamics.sixDof') });
+    if (supportsRigid(missionVehicle(this.state))) choices.unshift({ value:'sixDof', label:t('setup.dynamics.sixDof') });
     section.append(this.select('setup.dynamics.model', choices, d.model, value => {
       const next = { ...(this.state.dynamics ?? d), model: value as DynamicsConfig['model'] };
       // Legacy flight hides weather controls. Preserve valid settings for a
@@ -2024,12 +2036,12 @@ export class SetupPanel {
       // editing controls disappear. Ordinary invalid UI drafts are discarded by render().
       if (value === 'pointMass') {
         if (!['calm', 'crosswind', 'shear'].includes(next.wind)) next.wind = 'calm';
-        if (!Number.isInteger(next.seed) || next.seed < 0 || next.seed > 0xffffffff) next.seed = defaultDynamics(this.state.vehicleId).seed;
+        if (!Number.isInteger(next.seed) || next.seed < 0 || next.seed > 0xffffffff) next.seed = defaultDynamics(missionVehicle(this.state)).seed;
       }
       this.state.dynamics = next;
       this.render(); this.changed();
     }));
-    section.append(this.el('p', 'field-note', t(supportsRigid(this.state.vehicleId) ? 'setup.dynamics.note' : 'setup.dynamics.unsupported')));
+    section.append(this.el('p', 'field-note', t(supportsRigid(missionVehicle(this.state)) ? 'setup.dynamics.note' : 'setup.dynamics.unsupported')));
     if (d.model === 'sixDof') {
       section.append(this.select('setup.dynamics.wind', [
         {value:'calm',label:t('setup.dynamics.calm')}, {value:'crosswind',label:t('setup.dynamics.crosswind')}, {value:'shear',label:t('setup.dynamics.shear')},

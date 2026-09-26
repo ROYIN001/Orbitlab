@@ -8,7 +8,7 @@
  */
 import { t, type Lang } from '../i18n';
 import { G0, MU_EARTH, R_EARTH } from '../physics/constants';
-import { vehicleById } from '../data/vehicles';
+import { missionVehicle } from '../data/vehicles';
 import { flightElements } from '../lessons/measures';
 import { unitText } from '../lessons/text';
 import { seriesValue, type ChartSample } from '../lessons/assessment/flights';
@@ -68,7 +68,7 @@ const drawTime = (c: Ctx, from: number, to: number, step = 10): number | null =>
 
 /** The first stage's own burn, when it flies alone (no strap-ons to share it). */
 function firstStage(c: Ctx) {
-  const spec = vehicleById(c.f.cfg.vehicleId);
+  const spec = missionVehicle(c.f.cfg); // S02: a custom vehicle's flight too
   const stage = spec.stages[0];
   const meco = eventTime(c.f, ['evt.meco']);
   if (!stage || stage.boosters?.length || meco === null || meco < 20) return null;

@@ -34,8 +34,10 @@ import { PanelLocks } from './locks';
 import './lessons.css';
 
 export interface LessonHost {
-  /** go to a workspace mode */
+  /** go to a workspace mode (of the launch section, S01) */
   go(mode: AppMode): void;
+  /** S01: back to the section and level the page was opened over; without it, `go` to the level */
+  back?(): void;
   /** replace the setup panel's mission and preview it */
   loadMission(state: MissionState): void;
   /** the mission's simulation (a main-thread mirror in worker mode) */
@@ -476,6 +478,7 @@ export class LessonMode implements LessonToolsHost {
 
   /** Back to the mode the page was opened over. */
   private closePage(): void {
+    if (this.host.back) { this.host.back(); return; }
     this.host.go((document.body.dataset.mode as AppMode | undefined) ?? 'explore');
   }
 

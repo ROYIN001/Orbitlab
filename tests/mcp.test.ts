@@ -10,7 +10,7 @@
  */
 import { describe, expect, it, beforeEach } from 'vitest';
 import { createMcpTools, registerMcpTools, type McpAppHost, type WebMcpTool } from '../src/mcp';
-import { vehicleById } from '../src/data/vehicles';
+import { missionVehicle, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
 import { orbitById } from '../src/data/orbits';
@@ -90,7 +90,7 @@ function makeFakeSim(cfg: MissionConfig): Simulation {
   };
   return {
     cfg,
-    vehicleSpec: vehicleById(cfg.vehicleId),
+    vehicleSpec: missionVehicle(cfg),
     site: siteById(cfg.siteId),
     satellite: satelliteById(cfg.satelliteId),
     telemetry: [sample, { ...sample, t: 1.5, alt: 40, vInertial: 12 }],
@@ -101,6 +101,7 @@ function makeFakeSim(cfg: MissionConfig): Simulation {
 interface FakePanelState {
   dynamics?: MissionConfig['dynamics'];
   vehicleId: string;
+  vehicleSpec?: MissionConfig['vehicleSpec'];
   satelliteId: string;
   siteId: string;
   orbitId: string;
@@ -154,8 +155,9 @@ class FakePanel {
     const s = this.state;
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
+      ...(s.vehicleSpec ? { vehicleSpec: structuredClone(s.vehicleSpec) } : {}),
       launchTime: new Date(s.launchTime.getTime()),
-      guidance: { ...guidanceForVehicle(vehicleById(s.vehicleId), undefined, s.dynamics?.model), ...s.guidanceOverrides },
+      guidance: { ...guidanceForVehicle(missionVehicle(s), undefined, s.dynamics?.model), ...s.guidanceOverrides },
       failure: { ...s.failure }, boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
       guidanceResolved: true,
@@ -165,7 +167,7 @@ class FakePanel {
   feasibility() {
     const s = this.state;
     const site = siteById(s.siteId);
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s);
     // Like `SetupPanel#refresh`: one plan per verdict, and null when the
     // planner rejects the configuration.
     let plan = null;
@@ -442,6 +444,24 @@ describe('configure_mission', () => {
   it('rejects an unknown vehicle with a clear, listing error', () => {
     expect(() => tool(tools, 'configure_mission').execute({ vehicleId: 'saturn-v' }))
       .toThrowError(/Unknown vehicleId "saturn-v"/);
+  });
+
+  it('keeps a custom vehicle a mission file brought in, and takes no new one (S02)', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9' });
+    const custom = { ...structuredClone(vehicleById('falcon9')), id: 'my-falcon', name: 'My Falcon', derivedFrom: 'falcon9' };
+    Object.assign(host.panel.state, { vehicleId: custom.id, vehicleSpec: custom });
+    // edits act on the custom vehicle, read through the one resolver
+    configure.execute({ payloadMassKg: 5000, failureStageIndex: 1 });
+    expect(host.panel.state.vehicleSpec).toEqual(custom);
+    // naming it keeps it; naming a catalogue vehicle replaces it
+    configure.execute({ vehicleId: 'my-falcon' });
+    expect(host.panel.state.vehicleSpec).toEqual(custom);
+    configure.execute({ vehicleId: 'electron' });
+    expect(host.panel.state.vehicleId).toBe('electron');
+    expect(host.panel.state.vehicleSpec).toBeUndefined();
+    // WebMCP does not accept a spec itself (the owner's choice, 2026-09-26): an id it does not know is refused
+    expect(() => configure.execute({ vehicleId: 'my-falcon' })).toThrowError(/Unknown vehicleId "my-falcon"/);
   });
 
   it('applies a valid configuration, re-renders the panel and previews it', () => {

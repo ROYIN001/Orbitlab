@@ -1,0 +1,33 @@
+{
+ "source": "Shepperd, R. W., \"Subsequent Assessment of the Collision between Iridium 33 and COSMOS 2251\", AMOS Conference 2023, §12 Appendix: key conjunction data for the 9th (JSpOC CSM created 2009-02-09T20:00:19), and Table 2 (simulated creation 2009-02-09 20:00:00). https://amostech.com/TechnicalPapers/2023/Conjunction-RPO/Shepperd.pdf",
+ "frame": "ITRF; covariances in each object's UVW (radial, in-track, cross-track), m²",
+ "hardBodyRadius": { "iridium33": 3.942, "cosmos2251": 16 },
+ "tca": "2009-02-10T16:55:59.798Z",
+ "iridium33": {
+  "r": [-2.961368970e+05, 2.139834382e+06, 6.813319413e+06],
+  "v": [-4.276033580e+02, -7.088663168e+03, 2.202742231e+03],
+  "cov": [[7.0410e+00, 7.2360e+00, -1.4500e+00], [7.2360e+00, 5.1140e+02, -1.1460e+00], [-1.4500e+00, -1.1460e+00, 1.6640e+01]]
+ },
+ "cosmos2251": {
+  "r": [-2.959592990e+05, 2.139972561e+06, 6.813343383e+06],
+  "v": [-6.985040501e+03, 2.011980267e+03, -9.328477630e+02],
+  "cov": [[2.3000e+01, 2.1600e+01, 5.3870e+00], [2.1600e+01, 3.2140e+02, 7.1100e-01], [5.3870e+00, 7.1100e-01, 2.5690e+01]]
+ },
+ "iridiumOrbitEstimate": {
+  "epoch": "2009-02-10T16:55:59.815508Z",
+  "r": [-2.961383471e+05, 2.139961754e+06, 6.813312007e+06],
+  "v": [-4.276694703e+02, -7.088558347e+03, 2.202963878e+03],
+  "cov": [[1.5785e+02, 2.1293e+03, 1.9844e+01], [2.1293e+03, 3.2898e+04, 2.4713e+02], [1.9844e+01, 2.4713e+02, 1.1811e+01]]
+ },
+ "iridiumAdjustedEstimate": {
+  "epoch": "2009-02-10T16:55:59.815508Z",
+  "r": [-2.961383472e+05, 2.139961752e+06, 6.813312008e+06],
+  "v": [-4.276694705e+02, -7.088558347e+03, 2.202963879e+03],
+  "cov": [[4.0000e+02, 0.0000e+00, 0.0000e+00], [0.0000e+00, 3.4172e+04, 0.0000e+00], [0.0000e+00, 0.0000e+00, 4.0000e+02]]
+ },
+ "table2Feb9": {
+  "JSpOC-JSpOC": { "chan": 4.9e-69, "elrod": 2.6e-51, "foster": 2.6e-51 },
+  "IridOD-JSpOC": { "chan": 3.7e-07, "elrod": 1.0e-03, "foster": 1.0e-03 },
+  "IridConstr-JSpOC": { "chan": 3.0e-02, "elrod": 3.3e-02, "foster": 3.3e-02 }
+ }
+}

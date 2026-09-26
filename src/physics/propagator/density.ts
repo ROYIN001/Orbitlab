@@ -1,23 +1,34 @@
 /**
- * The density of the upper atmosphere for long-term orbit decay (roadmap
- * P07): the Harris–Priester model as Montenbruck & Gill give it (*Satellite
- * Orbits*, §3.5.2, Table 3.8), 100–1000 km. It carries the diurnal bulge — the
- * air is densest a little after local noon, 30° east of the Sun, and
- * thinnest before dawn — which a static profile does not, and scales with
- * solar activity.
+ * The density of the upper atmosphere for long-term orbit decay (roadmap P07,
+ * R05), 100–1000 km: how much air there is on average at a height, and how it
+ * is spread around the Earth through the day.
  *
- * The table is for mean solar activity (F10.7 ≈ 150). The upper atmosphere
- * swells with the Sun's ultraviolet output, so at 500 km a quiet Sun leaves
- * several times less air than the mean and an active one several times more:
- * `SOLAR_ACTIVITY` takes that as ±0.45 decades of density above 500 km,
- * tapering to nothing at 120 km — a fit to the spread between the
- * CIRA-72/MSIS profiles at F10.7 = 70 and 250, good to a factor of two, which
- * is the honest accuracy of any lifetime prediction a solar cycle ahead.
+ * - **The level** is NRLMSISE-00's, averaged over the day and the seasons, as
+ *   ECSS tabulates it for three levels of solar and geomagnetic activity
+ *   (ECSS-E-ST-10-04C, 15 November 2008, Annex G, Tables G-1 to G-3: low,
+ *   moderate and high long-term; `ECSS_LEVELS` in activity.ts). Between them
+ *   and a little beyond, the logarithm of the density is interpolated in the
+ *   inverse of the exospheric temperature that the IPS relation gives for
+ *   F10.7 and Ap, T = 900 + 2.5 (F10.7 − 70) + 1.5 Ap K (IPS Radio and Space
+ *   Services, "Satellite Orbital Decay Calculations", Australian Bureau of
+ *   Meteorology) — the thermosphere's scale height grows with T, so log ρ
+ *   goes roughly as 1/T. Above 900 km, the last row's level carries the
+ *   Harris–Priester profile on.
+ * - **The spread** is Harris–Priester's, as Montenbruck & Gill give it
+ *   (*Satellite Orbits*, §3.5.2, Table 3.8): the diurnal bulge, densest a
+ *   little after local noon, 30° east of the Sun, thinnest before dawn —
+ *   its minimum-to-maximum ratio at each height, normalised so that its
+ *   average over the globe is the level above.
  *
- * Used by the long-term propagator only: the ascent keeps its own
- * atmosphere (src/physics/atmosphere.ts).
+ * The indices themselves — fixed at one of ECSS's levels, or measured and
+ * forecast month by month — are activity.ts's. Used by the long-term
+ * propagator only: the ascent keeps its own atmosphere
+ * (src/physics/atmosphere.ts). tests/activity.test.ts holds the model to the
+ * ECSS tables and its decay to satellites' published re-entry dates.
  */
 import type { V3 } from './ephemeris';
+import { R_EARTH } from '../constants';
+import { ECSS_LEVELS, type Indices } from './activity';
 
 /** Altitude, km; minimum and maximum density, g/km³ (1e-12 kg/m³). */
 const TABLE: readonly (readonly [number, number, number])[] = [
@@ -36,13 +47,22 @@ const TABLE: readonly (readonly [number, number, number])[] = [
   [960, 1.560e-3, 2.360e-2], [1000, 1.150e-3, 1.810e-2],
 ];
 
-export type SolarActivity = 'low' | 'mean' | 'high';
+/** WGS-84's flattening. */
+const FLATTENING = 1 / 298.257223563;
 
-/** Decades of density the Sun's activity adds (high) or takes away (low) at an altitude, km. */
-export function solarActivityDecades(altKm: number, activity: SolarActivity): number {
-  if (activity === 'mean') return 0;
-  const ramp = Math.max(0, Math.min(1, (altKm - 120) / 380));
-  return (activity === 'high' ? 0.45 : -0.45) * ramp;
+/**
+ * Height above the WGS-84 ellipsoid, km, of an ECI position, m: the distance
+ * less the ellipsoid's radius at the point's geocentric latitude,
+ * a (1 − f sin²φ), good to some tens of metres below 1000 km. Both tables are
+ * of height above the ellipsoid (Montenbruck & Gill evaluate Harris–Priester
+ * at the geodetic height); over a sphere of the equatorial radius, a
+ * satellite at 50° of latitude would read 12 km low and meet a third more
+ * air than there is.
+ */
+export function heightKm(r: V3): number {
+  const rn = Math.hypot(r[0], r[1], r[2]);
+  const s = r[2] / rn;
+  return (rn - R_EARTH * (1 - FLATTENING * s * s)) / 1000;
 }
 
 /** Exponential interpolation in the table: [ρ_min, ρ_max], kg/m³; zero above 1000 km, the top row below 100. */
@@ -61,12 +81,12 @@ export function harrisPriesterBounds(altKm: number): [number, number] {
 const BULGE_LAG = 30 * Math.PI / 180;
 
 /**
- * Density at an ECI position `r` (m) and altitude (km) with the Sun at
- * `sun` (ECI, any length): the table's minimum rising to its maximum as
- * cos^n of half the angle from the bulge's apex. n = 2 suits low
- * inclinations and 6 polar orbits (Montenbruck & Gill).
+ * Harris–Priester's own density (mean solar activity) at an ECI position `r`
+ * (m) and altitude (km) with the Sun at `sun` (ECI, any length): the table's
+ * minimum rising to its maximum as cos^n of half the angle from the bulge's
+ * apex. n = 2 suits low inclinations and 6 polar orbits (Montenbruck & Gill).
  */
-export function harrisPriesterDensity(r: V3, altKm: number, sun: V3, n = 4, activity: SolarActivity = 'mean'): number {
+export function harrisPriesterDensity(r: V3, altKm: number, sun: V3, n = 4): number {
   const [mn, mx] = harrisPriesterBounds(altKm);
   if (mx === 0) return 0;
   const ra = Math.atan2(sun[1], sun[0]) + BULGE_LAG;
@@ -76,11 +96,86 @@ export function harrisPriesterDensity(r: V3, altKm: number, sun: V3, n = 4, acti
   const rr = Math.hypot(r[0], r[1], r[2]);
   const cosPsi = (r[0] * eb[0] + r[1] * eb[1] + r[2] * eb[2]) / rr;
   const bulge = ((1 + cosPsi) / 2) ** (n / 2);
-  return (mn + (mx - mn) * bulge) * 10 ** solarActivityDecades(altKm, activity);
+  return mn + (mx - mn) * bulge;
 }
 
 /** The exponent for an inclination, rad: 2 at the equator to 6 at the pole. */
 export function bulgeExponent(inclination: number): number {
   const s = Math.abs(Math.sin(inclination));
   return 2 + 4 * s * s;
+}
+
+// ─── the level, from NRLMSISE-00 ────────────────────────────────────────────
+
+/**
+ * NRLMSISE-00's total density averaged over the day and the seasons, kg/m³,
+ * at ECSS's low, moderate and high long-term activity: altitude, km, then the
+ * three (ECSS-E-ST-10-04C, Annex G, Tables G-1 to G-3, the ρ column).
+ */
+const MSIS: readonly (readonly [number, number, number, number])[] = [
+  [100, 6.180e-07, 5.730e-07, 5.640e-07], [120, 1.880e-08, 2.030e-08, 2.220e-08],
+  [140, 3.080e-09, 3.440e-09, 3.930e-09], [160, 9.490e-10, 1.200e-09, 1.540e-09],
+  [180, 3.700e-10, 5.460e-10, 7.870e-10], [200, 1.630e-10, 2.840e-10, 4.570e-10],
+  [220, 7.800e-11, 1.610e-10, 2.860e-10], [240, 3.970e-11, 9.600e-11, 1.870e-10],
+  [260, 2.130e-11, 5.970e-11, 1.270e-10], [280, 1.180e-11, 3.830e-11, 8.870e-11],
+  [300, 6.800e-12, 2.520e-11, 6.310e-11], [320, 4.010e-12, 1.690e-11, 4.560e-11],
+  [340, 2.410e-12, 1.160e-11, 3.340e-11], [360, 1.470e-12, 7.990e-12, 2.470e-11],
+  [380, 9.140e-13, 5.600e-12, 1.850e-11], [400, 5.750e-13, 3.960e-12, 1.400e-11],
+  [420, 3.660e-13, 2.830e-12, 1.060e-11], [440, 2.350e-13, 2.030e-12, 8.130e-12],
+  [460, 1.530e-13, 1.470e-12, 6.260e-12], [480, 1.010e-13, 1.070e-12, 4.840e-12],
+  [500, 6.790e-14, 7.850e-13, 3.760e-12], [520, 4.630e-14, 5.780e-13, 2.940e-12],
+  [540, 3.210e-14, 4.290e-13, 2.310e-12], [560, 2.280e-14, 3.190e-13, 1.820e-12],
+  [580, 1.650e-14, 2.390e-13, 1.430e-12], [600, 1.230e-14, 1.800e-13, 1.140e-12],
+  [620, 9.370e-15, 1.360e-13, 9.060e-13], [640, 7.330e-15, 1.040e-13, 7.230e-13],
+  [660, 5.880e-15, 7.980e-14, 5.790e-13], [680, 4.830e-15, 6.160e-14, 4.650e-13],
+  [700, 4.040e-15, 4.800e-14, 3.750e-13], [720, 3.440e-15, 3.760e-14, 3.030e-13],
+  [740, 2.980e-15, 2.980e-14, 2.460e-13], [760, 2.610e-15, 2.380e-14, 2.000e-13],
+  [780, 2.310e-15, 1.920e-14, 1.630e-13], [800, 2.060e-15, 1.570e-14, 1.340e-13],
+  [820, 1.850e-15, 1.290e-14, 1.100e-13], [840, 1.670e-15, 1.070e-14, 9.060e-14],
+  [860, 1.510e-15, 9.030e-15, 7.500e-14], [880, 1.380e-15, 7.670e-15, 6.230e-14],
+  [900, 1.260e-15, 6.590e-15, 6.000e-14],
+];
+
+/** The IPS relation: the exospheric temperature, K, for F10.7 and Ap. */
+export function exosphericTemperature(i: Indices): number {
+  return 900 + 2.5 * (i.f107 - 70) + 1.5 * i.ap;
+}
+
+/** 1/T at ECSS's three levels: the nodes of the interpolation. */
+const X = [ECSS_LEVELS.low, ECSS_LEVELS.moderate, ECSS_LEVELS.high].map((l) => 1 / exosphericTemperature(l));
+
+/**
+ * NRLMSISE-00's density averaged over the day at `altKm` (held at 100 and
+ * 900 km beyond them) for the indices, kg/m³: exponential in altitude between
+ * the table's rows, log-linear in 1/T between (and on beyond) its levels.
+ */
+export function meanDensity(altKm: number, i: Indices): number {
+  const h = Math.max(100, Math.min(900, altKm));
+  const j = Math.min(MSIS.length - 2, Math.floor((h - 100) / 20));
+  const f = (h - MSIS[j][0]) / 20;
+  const lg = [1, 2, 3].map((c) => Math.log10(MSIS[j][c]) * (1 - f) + Math.log10(MSIS[j + 1][c]) * f);
+  // held within 600–2000 K: the relation's reach, and far past any month on record
+  const x = 1 / Math.max(600, Math.min(2000, exosphericTemperature(i)));
+  const out = x >= X[1]
+    ? lg[1] + ((lg[0] - lg[1]) * (x - X[1])) / (X[0] - X[1])
+    : lg[1] + ((lg[2] - lg[1]) * (X[1] - x)) / (X[1] - X[2]);
+  return 10 ** out;
+}
+
+/** Harris–Priester's density averaged over the globe at a height: the bulge's cos^n averages 1/(n/2 + 1). */
+function harrisPriesterMean(altKm: number, n: number): number {
+  const [mn, mx] = harrisPriesterBounds(altKm);
+  return mn + (mx - mn) / (n / 2 + 1);
+}
+
+/**
+ * The density the propagator uses, kg/m³: at an ECI position `r` (m) and
+ * altitude (km), the Sun at `sun`, bulge exponent `n`, for the indices —
+ * Harris–Priester's spread through the day at NRLMSISE-00's level.
+ */
+export function airDensity(r: V3, altKm: number, sun: V3, n: number, i: Indices): number {
+  const hp = harrisPriesterDensity(r, altKm, sun, n);
+  if (hp === 0) return 0;
+  const h = Math.max(100, Math.min(900, altKm));
+  return hp * (meanDensity(h, i) / harrisPriesterMean(h, n));
 }

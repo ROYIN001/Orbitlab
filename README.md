@@ -140,14 +140,73 @@ npm test           # physics, mission and tool tests (vitest)
 npm run test:heavy # the delivered-orbit matrix with wind (about 15 minutes)
 npm run typecheck  # tsc --noEmit
 npm run build      # typecheck, then a static site in dist/
+npm run snapshots  # refresh the bundled data snapshots in public/data/ (needs the network)
 ```
 
 Requires Node.js 20 or newer and a browser with WebGL 2.
 
 ## Using the simulator
 
-The top bar switches between four modes, each with its own address so it can be linked
-to (`#/home`, `#/watch`, `#/explore`, `#/engineer`); the last one used is remembered.
+The app is organised on two axes (roadmap S01, [docs/ROADMAP-PART2-3.md](docs/ROADMAP-PART2-3.md)):
+three **sections** — **Launch** (this simulator), **Orbit** and **Build** — and in each of them
+three **levels**, Watch, Explore and Engineer. The top bar has a switch for each. Every section
+and level has its own address, `#/<section>/<level>` (`#/launch/watch`, `#/orbit/explore`, …)
+plus `#/home` for the landing page, so it can be linked to and Back moves between them; the last
+section and level are remembered. The addresses from before the sections — `#/watch`,
+`#/explore`, `#/engineer` — open the launch section and are rewritten to the new form, and a
+mission link (`?m=…`) always opens in the launch workspace. **Orbit** opens on its playground
+(roadmap O01, `src/ui/orbit/`): an orbit by its elements, drawn in 3-D about the turning Earth,
+as its ground track, and as Newton's cannon:
+
+- **Watch** is a seven-step narrated tour.
+- **Explore** sets the orbit by its perigee, apogee, i, Ω and ω, with Kepler's three laws in the
+  orbit's own numbers.
+- **Engineer** sets the classical elements, shows J2's drift of the node and the perigee, and
+  designs a repeating ground track.
+
+Its maneuver planner (O02, `src/orbit/maneuvers.ts`) plans Hohmann and bi-elliptic transfers,
+plane changes, GTO→GEO, phasing, deorbit burns, Edelbaum's low-thrust spiral and the user's own
+prograde/normal/radial burns, draws each plan and flies it. At the Engineer level it adds a
+Lambert rendezvous chosen on a porkchop plot. With a spacecraft (the one a flight handed on, or
+one described by hand) every plan is budgeted against its own propellant by the rocket equation
+(O03, `src/orbit/budget.ts`). **What satellites do** (O04, `src/orbit/applications.ts`) points a
+dish at a geostationary satellite from a city or typed-in coordinates, and shows the footprint,
+the delay and the link budget. For Earth observation it gives a camera's swath, detail and reach.
+It also lists Thailand's satellites (THEOS, THEOS-2, the Royal Thai Air Force's NAPA-1 and NAPA-2,
+and Thaicom), each from public sources with its catalogue orbit. The model is Kepler plus first-order J2, held to
+the Landsat and Sentinel-2 orbits; the planner is held to Vallado's and Curtis's worked
+examples ([docs/VALIDATION.md](docs/VALIDATION.md) §5). **Continue in Orbit** (under the telemetry panel,
+and on the viewer's end card) puts the orbit a flight reached into the playground, with the
+spacecraft in it and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). **Real
+satellites**, beside the playground, draws the satellites of a group where they are now: the space
+stations, Thailand's satellites, GPS/GLONASS/Galileo/BeiDou, the weather satellites, the
+Earth-imaging satellites and the debris of Fengyun-1C. Their element sets come from CelesTrak and are propagated by SGP4/SDP4, the
+reference implementation of AIAA 2006-6753, held to every line of its published verification
+(R01–R02, `src/orbit/sgp4.ts`, [docs/VALIDATION.md](docs/VALIDATION.md) §6). Your own TLE or OMM
+file can be read in the page too. For the satellite picked, it lists the next passes over a city
+or your own coordinates: rise, highest point and set, and whether it can be seen (R03, held to
+Skyfield to within a second), and estimates how far off its element set may be as it ages (R04,
+from published studies of TLE accuracy). The orbit-lifetime analysis reads the Sun's activity as
+measured — GFZ's monthly record since 1947, then NOAA SWPC's latest months and forecast — and with
+it brings seven satellites of known shape down within 25 % of their re-entries on record (R05).
+**Close approaches** screens the catalogue against the satellite picked, with each approach's time,
+miss distance and an estimated probability of collision; the probability is held to the published
+figures of the Iridium 33–Cosmos 2251 collision (M01). **Overflights** lists when the satellites of a
+group — the Earth-imaging ones, say — pass over a place, how high, at what off-nadir angle and
+whether in daylight; sun-synchronous imagers come over at their published local times (M02).
+**When it will come down** predicts a low object's re-entry with the agencies' ±20 % window; its
+case study, the four Long March 5B core stages, came down inside their windows (M03). Build is
+still being built: it shows, in all three languages, what it will hold and in what order, and
+nothing on it pretends to work.
+
+The cloud in the top bar switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
+each dated, so `dist/` works on a network with no internet — and **online**, which fetches from
+the sources and falls back to the snapshot (roadmap S04, `src/provider/`). The snapshots are space
+weather (NOAA SWPC) and the satellite catalogue (CelesTrak, asked at most once in two hours). A
+baseline of each is committed; the deploy to GitHub Pages runs every day and builds with fresh
+ones, which it does not commit (R02).
+
+The launch section's levels, with the landing page:
 
 - **Home** — the landing page over the live scene. One button plays a launch.
 - **Watch** — a launch viewer for people with no background in spaceflight: the scene
@@ -223,14 +282,15 @@ the same way.
 
 ### Typography
 
-The interface asks Google Fonts for DM Sans (text), Space Grotesk (figures and headings)
-and Noto Sans Thai. They are a progressive enhancement, not a dependency: every family is
-declared with a system fallback stack (`system-ui`, `-apple-system`, `Segoe UI`, `Roboto`)
-and `display=swap`, so offline, behind a firewall or with remote fonts blocked the app
-renders in the platform's own UI font with the same metrics-driven layout. Nothing is
-measured in a way that assumes the web fonts loaded. They are deliberately not self-hosted
-in `public/`: three families at four weights each is about 900 kB of woff2 for a
-static-hosted demo.
+In online mode the interface asks Google Fonts for DM Sans (text), Space Grotesk (figures
+and headings) and Noto Sans Thai. Offline — the default — it does not ask (the owner's choice,
+2026-09-26; `src/ui/web-fonts.ts`), so a closed network sees no request leave the page. The
+fonts are a progressive enhancement, not a dependency: every family is declared with a system
+fallback stack (`system-ui`, `-apple-system`, `Segoe UI`, `Roboto`) and `display=swap`, so
+offline, behind a firewall or with remote fonts blocked the app renders in the platform's own
+UI font with the same metrics-driven layout. Nothing is measured in a way that assumes the web
+fonts loaded. They are deliberately not self-hosted in `public/`: three families at four
+weights each is about 900 kB of woff2 for a static-hosted demo.
 
 ## Physics
 
@@ -309,9 +369,18 @@ src/render/     Three.js scene (floating origin, Earth shaders), rocket, debris,
 src/replay/     flight recorder, replay player, frame-backed simulation view, explosions
 src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map,
                 onboard overlay, timeline/event bar, dialogs, app modes, landing
-                page and launch viewer
+                page and launch viewer; src/ui/orbit/ the orbit playground
 src/i18n/       English, Russian and Thai dictionaries
+src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground's presets,
+                rules and tour, maneuvers, Lambert and Edelbaum (O02), the propellant budget
+                (O03), what satellites do (O04), the hand-off (S03); SGP4/SDP4 and the
+                two-line element format for real satellites (R01)
+src/data/thai-satellites.ts  Thailand's satellites, each fact with its source (O04)
+src/provider/   offline and online data: the providers, datasets, snapshots (S04)
+src/design/     the user's designs, kept locally and as files (S05)
 src/mcp.ts      WebMCP tools
+public/data/    bundled data snapshots, each dated
+scripts/        snapshot refresh (npm run snapshots)
 tests/          vitest suites (unit tests and full missions to orbit)
 ```
 

@@ -22,7 +22,7 @@
 import type { MissionConfig, SatelliteSpec, VehicleSpec, GuidanceParams, DynamicsConfig } from '../types';
 import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
-import { vehicleById } from '../data/vehicles';
+import { missionVehicle } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
@@ -193,13 +193,15 @@ export class Simulation {
     // G05: a Monte Carlo run — the vehicle that flies and its air dispersed; the mission is planned on the nominal ones.
     // P08: or one run of a set named by the mission, drawn the same way (absent: the nominal flight, untouched).
     const dispersion = opts.dispersion
-      ?? (cfgIn.dynamics?.dispersion ? configuredDispersion(vehicleById(cfgIn.vehicleId), cfgIn.dynamics.dispersion) : undefined);
+      ?? (cfgIn.dynamics?.dispersion ? configuredDispersion(missionVehicle(cfgIn), cfgIn.dynamics.dispersion) : undefined);
     this.densityFactor = dispersion?.densityFactor;
     const integrationStepS = opts.rigidDt ?? opts.rigidOptions?.integrationStepS ?? 0.01;
     if (!(integrationStepS > 0 && integrationStepS <= 0.02)) throw new RangeError('Rigid timestep must be in (0, 0.02] s');
     this.rigidDt = 0.01;
+    // S02: a catalogue vehicle, or the custom one the mission carries inline
+    const vehicleSpec = missionVehicle(cfgIn);
     if (cfgIn.dynamics) {
-      if (!validateDynamics(cfgIn.dynamics, cfgIn.vehicleId)) throw new RangeError('Invalid dynamics configuration');
+      if (!validateDynamics(cfgIn.dynamics, vehicleSpec)) throw new RangeError('Invalid dynamics configuration');
       if (cfgIn.dynamics.model === 'sixDof') {
         // Slosh, bending and the notch filter fly on the vehicle only, never on its debris.
         const flex = resolveFlexOptions(cfgIn.dynamics.flex);
@@ -220,7 +222,7 @@ export class Simulation {
       }
     }
     this.site = siteById(cfgIn.siteId);
-    this.vehicleSpec = vehicleById(cfgIn.vehicleId);
+    this.vehicleSpec = vehicleSpec;
     // Per-vehicle guidance defaults fill in every parameter the caller left at
     // the library default, so the UI (and any caller that does not merge them
     // itself) flies each launcher with its own pitch program.

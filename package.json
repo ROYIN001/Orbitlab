@@ -12,7 +12,8 @@
     "test:heavy": "vitest run --config vitest.heavy.config.ts",
     "test:sixdof-fleet": "vitest run --config vitest.sixdof-fleet.config.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "snapshots": "node --experimental-strip-types scripts/refresh-snapshots.ts"
   },
   "dependencies": {
     "three": "0.186.0"

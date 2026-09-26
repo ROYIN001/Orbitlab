@@ -9,9 +9,7 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <meta name="theme-color" content="#080c13" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" />
+    <!-- The web fonts are added in online mode only (src/ui/web-fonts.ts, roadmap S04). -->
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
@@ -26,15 +24,29 @@
           <span data-i18n="app.tagline">FLIGHT SIMULATOR</span>
           <span class="version" aria-hidden="true">02</span>
         </div>
-        <!-- One app, four faces (src/ui/app-mode.ts). Plain links: the mode is
-             the URL hash, so each mode can be linked to and Back works. -->
-        <nav id="mode-nav" class="mode-nav" data-i18n-aria-label="mode.nav">
-          <a href="#/home" data-mode="home"><span class="mode-glyph" aria-hidden="true">⌂</span><span data-i18n="mode.home">Home</span></a>
-          <a href="#/watch" data-mode="watch"><span class="mode-glyph" aria-hidden="true">▷</span><span data-i18n="mode.watch">Watch</span></a>
-          <a href="#/explore" data-mode="explore"><span class="mode-glyph" aria-hidden="true">◎</span><span data-i18n="mode.explore">Explore</span></a>
-          <a href="#/engineer" data-mode="engineer"><span class="mode-glyph" aria-hidden="true">⌬</span><span data-i18n="mode.engineer">Engineer</span></a>
-        </nav>
+        <!-- One app, three sections at three levels (src/ui/app-mode.ts, roadmap
+             S01). Plain links: the route is the URL hash, so every face can be
+             linked to and Back works; main.ts keeps each link's hash pointing
+             at its section with the current level, and the other way round. -->
+        <div class="topbar-nav">
+          <nav id="section-nav" class="mode-nav section-nav" data-i18n-aria-label="section.nav">
+            <a href="#/home" data-section="home" data-i18n-title="mode.home"><span class="mode-glyph" aria-hidden="true">⌂</span><span data-i18n="mode.home">Home</span></a>
+            <a href="#/launch/explore" data-section="launch" data-i18n-title="section.launch"><span class="mode-glyph" aria-hidden="true">▲</span><span data-i18n="section.launch">Launch</span></a>
+            <a href="#/orbit/explore" data-section="orbit" data-i18n-title="section.orbit"><span class="mode-glyph" aria-hidden="true">⊕</span><span data-i18n="section.orbit">Orbit</span></a>
+            <a href="#/build/explore" data-section="build" data-i18n-title="section.build"><span class="mode-glyph" aria-hidden="true">⚙&#xFE0E;</span><span data-i18n="section.build">Build</span></a>
+          </nav>
+          <nav id="mode-nav" class="mode-nav level-nav" data-i18n-aria-label="mode.nav">
+            <a href="#/launch/watch" data-mode="watch" data-i18n-title="mode.watch"><span class="mode-glyph" aria-hidden="true">▷</span><span data-i18n="mode.watch">Watch</span></a>
+            <a href="#/launch/explore" data-mode="explore" data-i18n-title="mode.explore"><span class="mode-glyph" aria-hidden="true">◎</span><span data-i18n="mode.explore">Explore</span></a>
+            <a href="#/launch/engineer" data-mode="engineer" data-i18n-title="mode.engineer"><span class="mode-glyph" aria-hidden="true">⌬</span><span data-i18n="mode.engineer">Engineer</span></a>
+          </nav>
+        </div>
         <div class="topbar-right">
+          <!-- S04: offline or online data (src/provider/), and every dataset's "data as of" -->
+          <button id="btn-data-mode" class="quiet-btn data-mode-btn" type="button" data-mode="offline">
+            <svg class="data-glyph" aria-hidden="true" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15.5h8.2a3.3 3.3 0 0 0 .5-6.6 4.6 4.6 0 0 0-8.9 1A2.8 2.8 0 0 0 6 15.5z"/><path class="data-glyph-off" d="M3 3l14 14"/></svg>
+            <span id="data-mode-label">Offline</span>
+          </button>
           <button id="btn-help" class="quiet-btn" type="button"></button>
           <button id="btn-physics" class="quiet-btn" type="button" data-i18n-aria-label="dlg.physics.button" data-i18n-title="dlg.physics.button">
             <span aria-hidden="true">ⓘ</span><span data-i18n="dlg.physics.button">Physics &amp; sources</span>
@@ -112,6 +124,10 @@
                  viewport so that full screen takes them along. -->
             <div id="watch-ui" hidden></div>
             <section id="home-screen" hidden></section>
+            <!-- S01: the Build section's plan, over the same scene -->
+            <section id="section-screen" hidden></section>
+            <!-- O01: the Orbit section's playground (src/ui/orbit/playground.ts) -->
+            <section id="orbit-playground" hidden></section>
           </div>
 
           <section id="controls" class="panel playback">

@@ -21,6 +21,18 @@ Status on 2026-09-25:
 | Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos) | Compared in both flight models (§3) |
 | Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
 | Atlas V 551, PSLV-XL, H3, H-IIA 202, Vega-C, Proton-M, Falcon Heavy, Angara-A5 | ULA, ISRO, JAXA, Arianespace, ILS (primary); Spaceflight Now, RussianSpaceWeb (secondary) | Compared in both flight models (§4) |
+| Orbit playground (O01) | Published orbits: geostationary, GPS, Landsat WRS-2, Sentinel-2; closed forms | Kepler and first-order J2 held to them (§5), 2026-09-26 |
+| Maneuver planner (O02) | Vallado's and Curtis's worked examples; closed forms | Transfers and Lambert held to them (§5), 2026-09-26 |
+| Continue in orbit (O03) | A recorded Soyuz flight's hand-off; the rocket equation | The playground's orbit is the flight's; the budget is Tsiolkovsky's (§5), 2026-09-26 |
+| Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§5), 2026-09-26 |
+| SGP4/SDP4 (R01) | The verification of AIAA 2006-6753 (SGP4-VER.TLE, tcppver.out); CelesTrak's documented element set | Every line of the reference output reproduced (§6), 2026-09-26 |
+| Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
+| Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
+| Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
+| Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −1.4 to +18.9 % (§7), 2026-09-26 |
+| Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
+| Close approaches (M01) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade (§7), 2026-09-26 |
+| Space weather in the lifetime (R05) | NRLMSISE-00 as ECSS-E-ST-10-04C tabulates it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | All seven within 25 % of their days in orbit with the measured Sun (+0.3 to −22 %); a fixed moderate Sun is off by −74 to +83 % (§6), 2026-09-26 |
 
 ## 1. Method
 
@@ -833,9 +845,505 @@ Atlas V's max Q is inside its tolerance.
 None of these was fitted. Each is a single flight, so there is nothing to hold out, and fitting
 to one flight would turn the comparison into calibration.
 
-## 5. Re-running
+## 5. The Orbit section (O01–O04): orbits, maneuvers and applications against published data
+
+The Orbit section's playground (roadmap O01, [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)) carries
+an orbit by Kepler's equation and, when asked, by the secular drift the Earth's oblateness gives
+the node, the perigee and the mean motion, to first order in J2 (Vallado, *Fundamentals of
+Astrodynamics and Applications*, §9.6). That is the whole model: no drag, no Sun or Moon, no
+higher harmonics. The long-term propagator of P07 is the tool for those. The model is held to
+closed forms and to the published figures of real orbits, in `tests/kepler.test.ts` and
+`tests/orbit-playground.test.ts`. The tolerances were fixed before the comparison.
+
+| quantity | reference | model | tolerance |
+| --- | --- | --- | --- |
+| geostationary radius, one turn per sidereal day | 42 164.2 km (closed form) | 42 164.2 km | 0.1 km |
+| drift of that radius under J2 | — | 0.0268°/day east | — |
+| mean semi-major axis that stands still under J2 | 42 166 km, a geostationary element set's | 42 166.3 km | 0.1 km |
+| GPS period at 26 560 km | 11 h 58 min, half a sidereal day | 717.9 min | 20 s of half a sidereal day |
+| Landsat WRS-2, 233 revolutions in 16 days: mean semi-major axis | 7 077.44 and 7 077.95 km, measured either side of Landsat 5's 1995 orbit correction (NASA, *Landsat Program Chronology*) | 7 077.72 km | ±0.5 km of that range |
+| Landsat WRS-2: inclination | 98.2096° (USGS calibration parameter file LT05CPF_19900101_19900331) | 98.1863° | 0.05° |
+| Landsat WRS-2: nodal period | 5 933.0472 s (the same file) | 5 933.047 s | 0.1 s |
+| Sentinel-2, 143 revolutions in 10 days: mean altitude | 786 km (ESA, SentiWiki "S2 Mission") | 786.1 km | 3 km |
+| Sentinel-2: inclination | 98.62° (the same page) | 98.54° | 0.1° |
+| sun-synchronous inclination at 600 km | 97.8° | 97.79° | 0.05° |
+| Molniya, 600 × 39 750 km at 63.4°: perigee drift | 0 at the critical inclination | < 0.01°/day | 0.01°/day |
+| first and second cosmic velocities at the surface | 7.905 and 11.18 km/s | 7.905, 11.18 km/s | 1 m/s, 10 m/s |
+| a slow cannon shot (100 m/s from 1 km) | range v√(2h/g), time √(2h/g) | both | 1 % |
+| a 45° lob at 300 m/s from the ground | range v²/g | — | 1 % |
+
+**Findings.**
+
+- Landsat's "705 km" is a nominal altitude. It is not a height above the equatorial radius:
+  the measured mean semi-major axis puts the orbit 699.6 km above it. The repeat condition
+  gives the measured axis, not 705 km, and the test holds it to the measured one.
+- The first-order J2 inclinations are 0.02° to 0.08° below the published ones. Second-order
+  terms and the mean-element definition an operator uses are both of that size. This is the
+  model's limit for the playground, and it is stated as such.
+- The local time of the ascending node is taken against the mean Sun (the Astronomical
+  Almanac's 280.460° + 0.9856474°/day), which is how a mission's LTAN is specified. The launch
+  planner's `raanFromLtan` (src/physics/mission.ts) aims at the true Sun instead. Over a year
+  the two differ by the equation of time, never more than 17 minutes
+  (`tests/orbit-playground.test.ts`). The built-in flights were left as they are.
+- The Watch tour's plain-language claims are each checked against the orbit the step shows, in
+  `tests/orbit-playground.test.ts`:
+  - the ISS "about an hour and a half, more than fifteen times a day, 7.7 km/s";
+  - Molniya "under an hour of its twelve in the south" (0.9 h);
+  - the geostationary satellite "over 78.5° E", holding within 0.05° for three days;
+  - the sun-synchronous orbit "10:30 heading north", holding within a minute for 180 days.
+
+### The maneuver planner (O02)
+
+The planner (`src/orbit/maneuvers.ts`) builds every plan the way it would be flown. The orbit
+is carried to the burn, the burn is added to the velocity there, and the new orbit is read off
+the state. The closed forms sit beside the plans. The tests hold each plan to its closed form,
+and both to worked examples. Burns are impulsive: no finite-burn or gravity losses.
+`tests/maneuvers.test.ts` and `tests/maneuver-setup.test.ts` hold them.
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| Hohmann, 191.344 11 → 35 781.348 57 km | Vallado Example 6-1: Δv 2.457 038 + 1.478 187 = 3.935 224 km/s, 5.256 713 h | same, as closed form and as a plan flown | 10⁻⁵ km/s, 10⁻⁴ h |
+| bi-elliptic, 191.344 11 km via 503 873 km to 376 310 km | Vallado Example 6-2: Δv_a 3.156 233, Δv_b 0.677 358 km/s, 593.919 h | same | 10⁻⁵ km/s, 0.1 h |
+| where bi-elliptic beats Hohmann | radius ratio 11.94 with the far point at infinity; 15.58 for any far point | the crossings fall between 11.8 and 12.1, and between 15 and 16 | — |
+| Lambert, universal variables | Vallado Example 7-5; Curtis Example 5.2 | both velocities of each | 10⁻⁴ km/s, 10⁻³ km/s |
+| Lambert round trip, short and long way | Kepler propagation of the solution | lands on r₂ | 1 m, 1 mm/s |
+| plane change at a node | 2v sin(Δi/2) | same; burn at the equator, shape unchanged | 10⁻⁹ relative |
+| GTO 250 × 35 786 km at 28.5° → GEO, one burn | law of cosines: 1.833 km/s | same | 10⁻⁹ relative |
+| the same in three apogee burns | adds up to the one burn | same; perigee rising burn by burn, a revolution apart | 10⁻⁹ relative |
+| phasing 20° in 3 revolutions | meets a target 20° ahead | within 1 m and 1 mm/s | — |
+| deorbit from 400 km to a 50 km perigee | vis-viva | Δv; reaches 100 km at the time given | 10⁻⁶ m/s, 1 m |
+| Edelbaum's spiral | Δv = √(v₀² + v₁² − 2v₀v₁ cos(πΔi/2)); coplanar |v₀ − v₁| | reaches v₁ and Δi exactly as the Δv runs out | 10⁻⁹ relative |
+| a low-thrust plane change at constant radius | π/2 times the impulsive one | ratio π/2 | 10⁻³ |
+| porkchop between coplanar circles, 400 and 800 km | Hohmann is the cheapest two-burn transfer | grid minimum ≥ Hohmann, within 25 % of it | — |
+| a hyperbola (a transfer fast enough to escape) | two-body RK4, half-second steps | position, velocity | 1 m, 1 mm/s |
+
+**Findings.**
+
+- `propagateKepler` in src/physics/orbital.ts carries a hyperbola with a coarse fixed-step
+  integration: 5 km off after ten minutes. The playground carries hyperbolas with hyperbolic
+  Kepler instead, held to RK4. The launch simulator's function is left as it is: it does not
+  meet hyperbolas in flight.
+- `elementsFromState` leaves ω at 0 for an equatorial ellipse and measures ν from the perigee,
+  so the elements do not give the state back. The playground's `orbitFromState` puts the
+  perigee's longitude into ω instead, which the GTO→GEO plan needs after its plane change.
+- A rendezvous is planned against a target in the chaser's own plane, at a chosen height and
+  phase. A target in another plane (an ISS-like orbit from a Starlink-like one) costs over
+  12 km/s whatever the timing, which teaches nothing about rendezvous: a real one starts with
+  the launch into the target's plane.
+
+### Continue in orbit (O03)
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| the orbit a recorded Soyuz flight hands on | the flight's own state and elements at the hand-off | the playground's orbit gives back the state; perigee and apogee equal the flight's | 1 mm, 1 µm/s; 1 m |
+| 1 000 kg, Isp 300 s, Δv 1 km/s | rocket equation: 288.2 kg; a 400 N engine runs 2 119 s | same | 0.05 kg, 1 s |
+| three burns against one of their sum | Tsiolkovsky: the same propellant | same | 10⁻⁹ kg |
+| tanks that run dry | the plan short by its Δv beyond what the tanks hold | the burn where they run dry, and the shortfall | 10⁻⁶ m/s |
+
+`tests/budget.test.ts` and `tests/orbit-handoff.test.ts` hold them. A burn that lasts more
+than a tenth of an orbit is flagged. The plan treats it as an instant kick, which a burn that
+long only roughly is.
+
+### What satellites are for (O04)
+
+`src/orbit/applications.ts`, `tests/applications.test.ts`. The textbook formulas are those of
+Maral & Bousquet's *Satellite Communications Systems* and of *Space Mission Engineering: The New
+SMAD*. A dish's look angles are worked on the WGS-84 ellipsoid, "up" along its normal.
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| a dish under a geostationary satellite | straight up; range 35 786 km | same | 10⁻⁶°; 1 m |
+| a dish on the satellite's meridian | due south (due north below the equator) | same | 10⁻⁶° |
+| look angles anywhere, west and east | spherical closed form tan el = (cos γ − R/r)/sin γ | elevation within the ellipsoid's difference | 0.2° |
+| Bangkok (13.7563° N, 100.5018° E) to Thaicom 8 at 78.5° E | spherical closed form: el 59.88°, az 239.5° | 59.9°, 239.5° (south-west) | shown |
+| the edge of a geostationary satellite's view | 81.3° of arc; 42.4 % of the Earth | same; the footprint's edge is at the minimum elevation | 0.1°; 0.3° |
+| up and down beneath GEO | 238.7 ms; a question and its answer 477.5 ms | same | 0.1 ms |
+| free-space loss, 36 000 km at 4 GHz | 195.6 dB | same | 0.1 dB |
+| Boltzmann's constant | −228.6 dBW/(K·Hz) | same | 0.1 dB |
+| a 1.2 m dish at 12 GHz, 65 % | 41.7 dBi | same | 0.1 dB |
+| a camera's swath | 2h·tan(fov/2) for a narrow view; wider on a curved Earth; none past the horizon | same; inverts | 10⁻³ relative |
+| THEOS: 26-day repeat, 14 5/26 revolutions a day (eoPortal) | 822 km, 98.7° | 369/26 revolutions: 822.4 km, 98.70° | 1 km, 0.05° |
+| THEOS-2: 26-day repeat (eoPortal) | 621 km (eoPortal); 97.91° (CelesTrak) | 385/26 revolutions: 621.1 km, 97.87° | 1 km, 0.1° |
+
+**Findings.**
+
+- Both Thai Earth-observation satellites' published heights follow from their published 26-day
+  repeat cycles, by J2 alone. THEOS's 369 revolutions are also published; THEOS-2's 385 are the
+  one whole number that puts a 26-day repeat near 621 km.
+- THEOS-2's 10.3 km swath covers 0.4 % of the 2 630 km between the day's tracks over Bangkok,
+  and a tenth of its 104 km repeat grid. Tilting 45° reaches 658 km to each side. That is why
+  it tilts, and why the playground shows the track spacing and the reach rather than a "days to
+  cover" figure, which would mislead for a repeating orbit.
+- Thailand's satellites (`src/data/thai-satellites.ts`) are taken from public sources only, each
+  fact with its source; the orbits are CelesTrak's catalogue as read on 2026-09-26. Where sources
+  differ the value is left out: THEOS-2's mass is 417 kg in one report and 425 kg in another.
+  NAPA-2 re-entered on 2026-07-05, by the catalogue.
+
+## 6. Real satellites (R01–R05): SGP4 against its reference, the catalogue, passes, uncertainty, the Sun's activity
+
+Real satellites are propagated from their element sets by SGP4 and SDP4
+(`src/orbit/sgp4.ts`, roadmap R01), the theory those element sets are fitted to. It is the
+reference implementation of Vallado, Crawford, Hujsak and Kelso, "Revisiting Spacetrack Report
+#3" (AIAA 2006-6753, [CelesTrak](https://celestrak.org/publications/AIAA/2006-6753/)), carried
+over to TypeScript procedure for procedure. The paper verifies its code with 33 element sets
+chosen to exercise every branch: near-Earth drag, perigees under 156 and 98 km, the deep-space
+lunar–solar terms, the 12-hour and 24-hour resonances, the Lyddane choice at low inclination,
+integration backwards, and seven sets that must fail. `tests/sgp4.test.ts` runs them the way
+the paper's test driver does and compares the result with the paper's published output line by
+line. The fixtures and where they come from are in `tests/fixtures/sgp4/README.md`.
+
+| quantity | reference | model | tolerance |
+| --- | --- | --- | --- |
+| lines of output, set by set | tcppver.out: 33 sets, 700 lines | the same sets, the same number of lines each | exact |
+| errors | seven sets stop: codes 1, 1, 6, 6, 4, 3, 6 | the same sets stop at the same time with the same codes | exact |
+| position, 666 lines | printed to 10⁻⁸ km | worst 1.2 × 10⁻⁷ km (satellite 20413, 3½ years from its epoch); every other line under 3 × 10⁻⁸ km | 2 × 10⁻⁷ km |
+| velocity, 666 lines | printed to 10⁻⁹ km/s | worst 5 × 10⁻¹⁰ km/s | 2 × 10⁻⁷ km/s |
+| calendar date of each line | printed to 1 µs | within 21 µs (the reference dates from one Julian date in a double, which resolves 40 µs) | 0.1 ms |
+| the element-set format | CelesTrak's documented ISS set (checksums 7 and 7, every field) | every field; Alpha-5 numbers both ways | exact |
+| Greenwich mean sidereal time | Vallado Example 3-5: 152.578 787 810° at 1992-08-20 12:14 UT1 | same | 10⁻⁶° |
+
+The tolerance is the one the widely used Python port of the same code (`sgp4` on PyPI) holds
+itself to against the same file. It is twenty times the output's printed precision.
+
+**Findings.**
+
+- The deep-space resonance keeps its last integration step, as the reference does, so moving
+  forward in time costs one step, not all of them from the epoch. Stepped forward or run once,
+  it gives the same bits; going back before the last step restarts it from the epoch.
+- The two operation modes differ only in the sidereal time at the epoch and in angle handling
+  for deep-space orbits. A near-Earth set gives the same answer in both. The improved mode ('i')
+  is the default, as in the paper.
+- A Julian date held in one double resolves about 40 µs, which is a few millimetres of flight.
+  The element set's epoch is kept as a whole day and a fraction, as the reference keeps it.
+- TEME is turned to the Earth-fixed frame by Greenwich mean sidereal time alone. UT1 − UTC
+  (under 0.9 s) and polar motion are left out. They can move a point on the ground by up to about
+  400 m, less than an element set's own error, which is kilometres (R04).
+
+### The satellite catalogue and its formats (R02)
+
+The Orbit section's real satellites come from a dataset of CelesTrak's element sets
+(`src/provider/satellites.ts`): the space stations, Thailand's satellites, the four navigation
+constellations, the weather satellites, the Earth-imaging satellites (CelesTrak's Earth Resources
+group, added for M02) and the debris of Fengyun-1C. It is bundled as a snapshot
+(`public/data/satellites.json`, fetched 2026-09-26) and, online, fetched from CelesTrak at most
+once in two hours. Element sets come in two families of formats: the two-line format, and the
+Orbit Mean-Elements Message (CCSDS 502.0-B-3) as JSON, CSV, XML and KVN. The OMM is the only one
+that holds the six-digit catalogue numbers given since 2026-07-11. Both are read, and so is a file
+the user brings (`src/orbit/omm.ts`, `src/orbit/tle.ts`). `tests/omm.test.ts`,
+`tests/satellite-catalogue.test.ts` and `tests/real-sky.test.ts` hold them.
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| the ISS's element set in CelesTrak's six formats (TLE, 2LE, JSON, CSV, XML, KVN), served 2026-09-26 | one element set | the four OMM forms give the same elements to the bit; the two-line forms agree to their printed digits | exact; 10⁻¹⁴ |
+| the same, propagated a day | one position | the OMM forms identical; the two-line forms within 10 m (their epoch is printed to 10⁻⁸ day, 0.86 ms) | 0; 10 m |
+| Space-Track's JSON (numbers as text) | CelesTrak's JSON | the same elements | exact |
+| a six-digit catalogue number | CelesTrak: TLEs cannot carry it | read from the OMM and propagated | — |
+| an SGP4-XP element set (ephemeris type 4) | a different theory | refused, and the reason named | — |
+| the ISS in the snapshot | 51.6°, about 420 km | 51.63°, 416 × 426 km | 0.5°; 380–440 km |
+| Thaicom 8 | 78.5° E (Thaicom) | over 78.5° E, on the equator, deep-space theory | 0.2° |
+| THEOS-2 | 621 km, 97.9° (eoPortal, §5) | 620 × 622 km, 97.91° | 610–635 km; 0.5° |
+| every GPS satellite in the snapshot | two revolutions a sidereal day | 717.9 ± 2 min | 2 min |
+| the point below a satellite | SGP4's own TEME to Earth-fixed turn | the playground's sidereal time gives the same point | 5 m |
+
+**Findings.**
+
+- CelesTrak's TLE queries return nothing for objects numbered 100 000 and above (its GP data
+  documentation, updated 2026-06-23). The snapshot and the online source therefore use the OMM
+  JSON, and the file import reads every OMM form.
+- CelesTrak refreshes its element sets every two hours and blocks addresses that fetch the same
+  file more often. Online, the answers (or a refusal) are kept for two hours, in the browser's
+  Cache Storage where it has one. A refusal is not asked again in that time. The bundled snapshot
+  is refreshed by the scheduled deploy, once a day.
+- Thaicom 7 is catalogued as AsiaSat 6, so a search by name misses it. The Thai group is asked for
+  by name and by that one number, then kept to the seven catalogue numbers of §5's list.
+
+### Passes over a place (R03)
+
+A pass is found by sampling the elevation (every 1/60 of a revolution, at most a minute),
+refining each highest point by golden section and each rise and set by bisection
+(`src/orbit/passes.ts`). The look angles are O04's, on WGS-84. The Earth's shadow is a cylinder,
+and the sky counts as dark with the Sun 6° below the horizon. `tests/passes.test.ts` holds it to
+Skyfield 1.55 (JPL DE421, its own TEME-to-Earth transformation with UT1, its own event search). The
+comparison uses the same element sets: the ISS, THEOS-2 and a GPS satellite, over Bangkok and
+Saint Petersburg, three days each, 249 events (`tests/fixtures/passes/`, with the script that
+made them). The tolerances were set before the comparison.
+
+| quantity | model against Skyfield | tolerance |
+| --- | --- | --- |
+| the events, in order: rise, highest point(s), set | the same, all six cases | exact |
+| rise and set times | within 0.35 s | 2 s |
+| time of the highest point | within 0.11 s | 5 s |
+| elevation at every event | within 0.004° | 0.02° |
+| azimuth, as arc across the sky | within 0.003° | 0.02° |
+| range | within 43 m | 1 km |
+| the Sun's elevation at the place | within 0.005° | 0.05° |
+| the satellite sunlit or not, at every event | the same, 249 of 249 | exact |
+| the ISS into and out of the Earth's shadow (31 edges in a day) | on the same side 3 s either side of each | 3 s |
+
+**Findings.**
+
+- Leaving out UT1 − UTC and polar motion costs well under a second in the times of rise and set,
+  which is less than the element set's own error.
+- Elevations are geometric. Refraction lifts a satellite on the horizon by about half a degree,
+  so it is seen some seconds before its listed rise. The page says so.
+- A pass of half a day or more belongs to a high orbit (GPS, a geostationary satellite). Its
+  visibility is not worked out: such a satellite is too faint to see with the eye.
+
+### How far off an element set may be (R04)
+
+An element set says nothing of its own accuracy (Kelso, "Validation of SGP4 and IS-GPS-200D
+Against GPS Precision Ephemerides", AAS 07-127, 2007). The page therefore shows an estimate
+(`src/orbit/uncertainty.ts`), labelled as such and built from two studies:
+
+- **At the epoch**, the standard deviations radial, along-track and cross-track that Flohrer, Krag
+  and Klinkrad found for the whole catalogue of 2008 January 1
+  ([AMOS 2008](https://amostech.com/TechnicalPapers/2008/Orbital_Debris/Flohrer.pdf)). They are
+  taken from Table 2, by eccentricity, perigee height and inclination: for the ISS 107, 308 and
+  169 m; for a sun-synchronous orbit like THEOS-2 115, 517 and 137 m; for GPS 71, 228 and 95 m;
+  for a geostationary orbit 357, 432 and 83 m. Where Table 2 has no entry, Table 1's average for
+  the regime is used.
+- **After the epoch**, a growth of 1.5 km a day, the typical figure Levit and Marshall measured
+  against laser-ranging ephemerides for four satellites from 800 to 19 100 km
+  ([Advances in Space Research 47, 2011](https://arxiv.org/abs/1002.2277)). It is put along the
+  track, where Kelso found the error dominant.
+
+`tests/uncertainty.test.ts` holds the model to those tables, cell by cell, and to that growth.
+
+**Findings and limits.**
+
+- Kelso found TLE errors biased, and not the same before and after the epoch; the band is
+  symmetric and unbiased. It shows how the error grows, not where the satellite really is.
+- Levit and Marshall report an instantaneous range error of 0.8 ± 0.3 km for their four
+  satellites, above Flohrer's standard deviations for such orbits (0.26 to 0.45 km). The band at
+  the epoch may be narrow by a factor of two or three.
+- Below about 500 km the air's drag, which depends on the Sun, makes the growth faster and less
+  regular. Satellites that manoeuvre (the ISS reboosts) break the estimate altogether. The page
+  says both.
+- Converted to time along the track, the errors are small for passes: a day-old ISS set is early
+  or late by about a quarter of a second.
+
+### The Sun's activity in the lifetime (R05)
+
+The lifetime model's density (`src/physics/propagator/density.ts`) now reads the Sun's activity
+as measured, instead of one of three fixed levels:
+
+- **The level** is NRLMSISE-00's total density averaged over the day and the seasons, as ECSS
+  tabulates it for low, moderate and high long-term activity (F10.7 65, 140, 250; Ap 0, 15, 45;
+  [ECSS-E-ST-10-04C](https://ecss.nl/wp-content/uploads/standards/ecss-e/ECSS-E-ST-10-04C15November2008.pdf),
+  Annex G, Tables G-1 to G-3). Between and a little beyond them, the logarithm of the density is
+  interpolated in 1/T, with T the exospheric temperature of the IPS relation
+  T = 900 + 2.5 (F10.7 − 70) + 1.5 Ap
+  ([IPS, "Satellite Orbital Decay Calculations"](https://www.sws.bom.gov.au/Category/Educational/Space%20Weather/Space%20Weather%20Effects/SatelliteOrbitalDecayCalculations.pdf)).
+- **The spread through the day** is Harris–Priester's diurnal bulge (Montenbruck & Gill), scaled
+  so that its average over the globe is that level.
+- **The indices** (`src/physics/propagator/activity.ts`) are GFZ's monthly means of the observed
+  F10.7 and of Ap since 1947 (`src/data/solar-history.ts`,
+  [doi:10.5880/Kp.0001](https://doi.org/10.5880/Kp.0001), CC BY 4.0), then NOAA SWPC's monthly
+  flux, the last thirty days' flux and the last week's Ap from Kp (Bartels's table), then SWPC's
+  monthly forecast (expected, or the high or low side of its range) to its end, then the Sun
+  taken to repeat itself eleven years on. Where no Ap is measured it is 13, the mean daily Ap of
+  solar cycles 19 to 24. The space-weather dataset carries SWPC's months and forecast offline in
+  its snapshot and online from SWPC.
+
+The validation takes spheres, whose drag area does not depend on how they tumble. Each starts
+from its first element set (CelesTrak) as mean elements (`src/orbit/mean-state.ts`), with its
+published mass and diameter and C_D 2.2 (the app's value for a compact body), and is carried by
+the mean-element method with the series the app builds until its perigee is below 120 km. The
+tolerance, ±25 % of the days it actually spent in orbit, was fixed before the comparison.
+Sources are in `tests/fixtures/space-weather/README.md`.
+
+| sphere | mass, diameter | first set → re-entry (GCAT) | days in orbit | measured Sun | fixed moderate Sun |
+| --- | --- | --- | --- | --- | --- |
+| Starshine | 39 kg, 0.48 m | 1999-06-05 → 2000-02-18 | 258.2 | 223.9 (−13.3 %) | 289.5 (+12.1 %) |
+| Starshine 2 | 39 kg, 0.48 m | 2001-12-16 → 2002-04-26 | 130.8 | 131.2 (+0.3 %) | 239.6 (+83.1 %) |
+| Starshine 3 | 91 kg, 0.94 m | 2001-09-30 → 2003-01-21 | 478.2 | 386.0 (−19.3 %) | 755.6 (+58.0 %) |
+| ANDE MAA | 52.04 kg, 0.4826 m | 2006-12-22 → 2007-12-25 | 367.6 | 286.5 (−22.1 %) | 107.6 (−70.7 %) |
+| ANDE FCal | 62.70 kg, 0.4445 m | 2006-12-22 → 2008-05-25 | 519.5 | 412.2 (−20.7 %) | 151.4 (−70.9 %) |
+| ANDE-2 Pollux | 27.442 kg, 0.4826 m | 2009-07-31 → 2010-03-29 | 241.4 | 192.6 (−20.2 %) | 64.1 (−73.5 %) |
+| ANDE-2 Castor | 47.45 kg, 0.4826 m | 2009-07-31 → 2010-08-18 | 383.4 | 317.6 (−17.2 %) | 111.4 (−70.9 %) |
+
+`tests/activity.test.ts` holds each sphere to the tolerance, the density to the ECSS tables at
+the three levels (and its bulge to an average of one over the globe), and the series to the data
+it is built from.
+
+**Findings.**
+
+- **All seven are within 25 % with the Sun as measured**, from the solar maximum of 2000–2002
+  to the deep minimum of 2008–2009. A fixed moderate Sun gets the maximum's spheres down 1.6 to
+  1.8 times too late and the minimum's 3.4 times too early. That spread, not the model, was the
+  largest error of P07's fixed levels.
+- **The model is early for six of the seven, by 13 to 22 % (−16 % on average).** A density some
+  15–20 % too high, or a drag coefficient that high, would do it. NRLMSISE-00 is known to put
+  too much air in the thermosphere of the 2008 minimum (Emmert, Lean and Picone, "Record-low
+  thermospheric density during the 2008 solar minimum", GRL 37, L12102, 2010), which fits the
+  ANDE spheres of 2007–2010; for the Starshines at maximum there is no such account, and the two
+  causes are not separated here. Nothing was fitted to remove the bias.
+- **Heights above the ellipsoid, not a sphere.** Run first with P07's altitude over a sphere of
+  the equatorial radius, the spheres came down 12 to 35 % early, five of them outside the
+  tolerance. Both tables are of height above the ellipsoid (Montenbruck & Gill evaluate
+  Harris–Priester at the geodetic height): at 50° of latitude a sphere reads 12 km low, about a
+  third too much air. The density now takes the height above WGS-84 (`heightKm`), which is what
+  the tables mean; that correction was made once, for that reason, and the table above is its
+  result.
+- **The two methods agree to 7 %.** Starshine 2 carried by the full equations of motion, every
+  force on, comes down after 140.3 days against the mean method's 131.2 (and 130.8 on record);
+  the full equations start from the mean elements taken as osculating ones.
+- **Monthly means smooth out storms.** For lifetimes of months that costs little; for a
+  re-entry days away (M03) the daily indices matter, and a storm can move it by a day.
+- **Beyond NOAA's forecast the Sun is assumed.** The series repeats the last eleven years; a
+  lifetime of decades is an estimate, and the dialog offers the forecast's high and low sides to
+  show how far it can move.
+
+## 7. The military track (M01–M03): close approaches, overflights, re-entry
+
+### Close approaches (M01)
+
+**Real satellites** can screen the catalogue for close approaches to the satellite picked, as
+CelesTrak's SOCRATES does with the same public element sets (`src/orbit/screening.ts`). Every
+object whose band of heights overlaps the satellite's is carried beside it by SGP4. Each approach
+nearer than the limit is reported with its time, its miss distance (radial, along-track and
+cross-track at Engineer), the relative speed, and an estimated probability of collision.
+
+- **The search** (`src/orbit/conjunction.ts`) samples the range and refines each local minimum
+  by golden section to 0.1 ms. A sampled minimum farther than the limit plus v·step/2 cannot hide
+  an approach within the limit, and is not refined. Pairs whose bands of heights are farther apart
+  than the limit are not searched (Hoots, Crawford and Roehrich, 1984).
+- **The probability** is the two-dimensional one used in operations (Foster and Estes 1992;
+  Chan 2008): the combined position uncertainty, projected on the plane square to the relative
+  velocity, integrated over a circle of the pair's combined radius. It is summed in logarithms,
+  so that 10⁻⁵¹ is still a number. Each covariance is given in its object's radial, transverse and
+  normal axes, the normal along the angular momentum of the *inertial* orbit (CCSDS 508.0-B-1).
+- **The uncertainty** in the page is R04's estimate for each element set, and the combined radius
+  is the user's. The result is labelled as an estimate.
+
+`tests/conjunction.test.ts` holds it to:
+
+| check | reference | result | tolerance |
+| --- | --- | --- | --- |
+| two straight lines, 250 m apart at 7 km/s | closed form | TCA and miss exact | 0.01 s, 1 mm |
+| two circular orbits crossing at their nodes, 100 m apart | closed form | every node found; miss 100 m, all radial | 0.01 m; 1 m along/across |
+| a direct hit through a round uncertainty | 1 − exp(−R²/2σ²) | exact | 10⁻⁹ |
+| a round uncertainty off to one side, down to beyond 10⁻¹⁰⁰⁰ | Rice's integral, by Simpson's rule | agrees | 10⁻³ in log₁₀ |
+| the screening's coarse steps against a 10 s brute force | the same pairs (a DMSP satellite and 40 Fengyun-1C fragments, one day) | every approach found | 0.01 s, 0.1 m |
+| Iridium 33–Cosmos 2251: relative speed, crossing angle | 11.6 km/s, "nearly right angles" (Shepperd; Kelso) | 11.6 km/s, 102° | 0.05 km/s; 95–110° |
+| the same: TCA of the conjunction message | 16:55:59.798 UTC | found again by straight-line motion; miss 226.3 m | 2 ms |
+| the same: probability, the military's covariances | 2.6 × 10⁻⁵¹ (Shepperd, Table 2, 9 February) | 2.66 × 10⁻⁵¹ | 0.1 in log₁₀ |
+| the same: Iridium's orbit estimate and covariance | 1.0 × 10⁻³ | 9.28 × 10⁻⁴ | 0.1 in log₁₀ |
+| the same: Iridium's conservative covariance | 3.3 × 10⁻² | 3.23 × 10⁻² | 0.1 in log₁₀ |
+
+The conjunction data are the appendix of R. W. Shepperd, "Subsequent Assessment of the Collision
+between Iridium 33 and COSMOS 2251"
+([AMOS 2023](https://amostech.com/TechnicalPapers/2023/Conjunction-RPO/Shepperd.pdf)): both
+objects' states at the time of closest approach in the conjunction message of 9 February 2009,
+Iridium's own orbit estimate, the three covariances, and the hard-body radii (3.942 m and 16 m).
+The paper's Table 2 gives the probability each yields. The fixture is
+`tests/fixtures/conjunction/iridium33-cosmos2251.json`.
+
+**Findings.**
+
+- **The frame decides a tail probability.** With each object's axes taken from its Earth-fixed
+  velocity instead of its inertial one, the first case gives 10⁻⁵¹·⁹, more than a decade off; with
+  the inertial velocity, as CCSDS defines the axes, it gives 10⁻⁵⁰·⁶. The other two cases barely
+  move (their uncertainty is large).
+- **Two states must be at one time.** Iridium's estimate is at 16:55:59.8155 and the message's
+  secondary at 16:55:59.798. Left as they are, the 17.5 ms between them puts 128 m of Cosmos's own
+  motion into the miss, and the probability comes out two decades low. Carried to one time along
+  straight lines, as the paper does, they give the published values.
+- **Screening with element sets shows traffic, not collisions.** SOCRATES predicted this pair's
+  approach every day of the week before, at 117 m to 1.8 km (584 m on the day), and ranked it
+  152nd when they hit (Kelso, [AAS 09-368](https://celestrak.org/publications/AAS/09-368/)). The
+  page says so. The same data with the operator's covariance gave a probability of 1 in 30 on
+  the 9th.
+- SOCRATES's own 584 m cannot be reproduced here: it used the element sets of 10 February 2009,
+  which are Space-Track data and are not redistributed.
+
+### Overflights of a place (M02)
+
+**Overflights of** a place (`src/orbit/overflights.ts`) lists every pass of a group's satellites
+over it whose highest point is above a chosen elevation, and for each the view from the satellite
+at that point: the off-nadir angle a camera must look at, the distance from the ground track,
+whether the place is in daylight, the local mean solar time and the heading. For it the catalogue
+gained a group, CelesTrak's Earth Resources set (167 satellites on 2026-09-26: civil and
+commercial imagers, radar satellites, and military ones whose element sets are published, such as
+China's Yaogan, "government remote sensing … likely also used as a military reconnaissance
+satellite", [Gunter's Space Page](https://space.skyrocket.de/doc_sdat/yaogan-1.htm)).
+
+`tests/overflights.test.ts` holds it to R03 and to published orbit design:
+
+- **The passes are R03's**: the Earth-imaging group over Bangkok for a day gives exactly the passes
+  R03 finds for each satellite, in time order (497 above 10°).
+- **The off-nadir angle** agrees with the triangle the satellite, the place and the Earth's centre
+  make, sin η = (|site| / |sat|) cos ε, to the rounding of a degree (the elevation is geodetic,
+  the triangle geocentric).
+- **Local times.** A sun-synchronous imager crosses the equator southbound at a fixed local time;
+  over a place off the equator and off the track the time moves by up to about 25 minutes at 60°
+  of elevation. The tolerance, 30 minutes either side of the published time, was fixed before the
+  comparison. Every overflight of Bangkok above 60° in 16 days from 2026-09-26 12:00 UTC:
+
+| satellite | published local time, descending node | by day, southbound | by night, northbound |
+| --- | --- | --- | --- |
+| Landsat 8 | 10:12 ± 5 min ([USGS](https://www.usgs.gov/landsat-missions/landsat-8-and-9-maneuvers)) | 5, at 10:08–10:32 | 4, at 21:54–22:12 |
+| Landsat 9 | 10:12 ± 5 min (USGS) | 5, at 10:08–10:32 | 4, at 21:54–22:12 |
+| Sentinel-2A, 2B, 2C | 10:30 ([ESA SentiWiki](https://sentiwiki.copernicus.eu/web/s2-mission)) | 5 each, at 10:26–10:47 | 5 each, at 22:09–22:29 |
+| THEOS-2 | 10:00–10:30 ([eoPortal](https://www.eoportal.org/satellite-missions/theos-2)) | 3, at 10:18–10:26 | 4, at 21:58–22:16 |
+
+Every one is by day when southbound and in the dark when northbound, as a morning orbit must be.
+THEOS-2 was added to the test after the first run, at the same tolerance. Landsat's reference was
+first written as 10:00 ± 15 minutes (Landsat 7's requirement) and corrected to the USGS figure for
+Landsat 8 and 9 before this was committed; the results are within the tolerance either way.
+
+### Re-entry prediction (M03)
+
+For a satellite in a low orbit (perigee under 700 km), **When it will come down**
+(`src/orbit/reentry.ts`) carries its element set's mean orbit (`src/orbit/mean-state.ts`) down by
+the long-term propagator's mean elements, J2 and drag in the R05 density with the Sun as
+measured and forecast, until the perigee is under 120 km. The user gives the mass and mean
+cross-section, which an element set does not carry. The window is ±20 % of the time left, the
+convention of the agencies that make these predictions: ESA takes it as about two standard
+deviations and found its own predictions outside it in about 5 % of 15 campaigns
+([Klinkrad, "Methods and procedures for re-entry predictions at ESA", 2013](https://conference.sdo.esoc.esa.int/proceedings/sdc6/paper/148/SDC6-paper148.pdf)).
+It narrows as the time left does, with each later element set.
+
+The case study is the four Long March 5B core stages, 21.6 t each, left in orbit by their
+launches and fallen uncontrolled days later. Each is predicted from its first element set
+(CelesTrak) as a tumbling cylinder of GCAT's 31.7 × 5.0 m, whose mean cross-section is a quarter
+of its surface (Cauchy: 134.3 m²), C_D 2.2, the Sun as measured, against its re-entry as GCAT
+records it. The tolerance, the re-entry inside the ±20 % window, was fixed before the comparison.
+
+| stage (payload) | first element set | predicted | re-entry (GCAT) | error of the time left | ±20 % window | fixed moderate Sun |
+| --- | --- | --- | --- | --- | --- | --- |
+| Y1 (crew spacecraft test) | 2020-05-05 14:12 | 2020-05-11 13:31 | 2020-05-11 15:34 | −1.4 % | inside | −31.1 % |
+| Y2 (Tianhe) | 2021-04-29 09:08 | 2021-05-08 18:39 | 2021-05-09 02:14 | −3.2 % | inside | −34.6 % |
+| Y3 (Wentian) | 2022-07-24 14:45 | 2022-07-30 06:33 | 2022-07-30 16:51 | −7.0 % | inside | −16.6 % |
+| Y4 (Mengtian) | 2022-10-31 13:01 | 2022-11-05 03:35 | 2022-11-04 10:01 | +18.9 % | inside, 4.5 h from its edge | +10.7 % |
+
+Times are UTC. `tests/reentry.test.ts` holds each inside its window, the cross-section to
+Cauchy's formula, and the measured Sun's mean error (7.6 %) below the fixed Sun's (23 %).
+
+**Findings.**
+
+- **All four came down inside the window**, three of them within 7 % of the time left. That is
+  as good as ESA reports for half its own predictions (within ±6 %), with a size taken from a
+  catalogue rather than fitted to the tracking. Four cases are not a statistic.
+- **Y4 came down 18.9 % sooner than predicted**, near the window's edge. It flew in the most
+  active Sun of the four (monthly F10.7 133.5 in October 2022, against 69 for Y1 and 75 for Y2),
+  where a monthly mean hides most of the day-to-day swing. Its first element set is also the only
+  one with a drag term already fitted (B* 4.7 × 10⁻⁴). The fixed moderate Sun happened to do better for it alone; averaged over the four, the measured
+  Sun is three times nearer.
+- **The stages tumble, and their area is a guess.** A stage flying broadside (158.5 m²) would
+  come down about 15 % sooner than the tumbling average; one end-on (19.6 m²), far later. With the
+  area fitted to the stage's own decay, as the agencies do, the window can be trusted; with a
+  catalogue's size, it is an estimate, and the page says so.
+- **Daily storms are smoothed out.** The Sun is read month by month; a geomagnetic storm in the
+  last days would move a re-entry by hours.
+
+## 8. Re-running
 
 ```sh
+npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
+npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
+npx vitest run tests/activity.test.ts tests/propagator.test.ts                   # the Sun's activity in the lifetime, ~5 s
+npx vitest run tests/conjunction.test.ts tests/overflights.test.ts tests/reentry.test.ts   # the military track, ~6 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min
