@@ -56,9 +56,10 @@ moves between them, and the app reopens where you left it. The older addresses `
 the new form.
 
 **Offline or online data.** The cloud in the top bar says where Orbitlab's data come from, and
-opens the **Data sources** window. **Offline**, the default, sends nothing anywhere: the app uses
-the data bundled with it, each dated ("data as of …") — the right setting for a closed network,
-a classroom or no connection. **Online** fetches current data from the sources that publish them
+opens the **Data sources** window. **Offline**, the default, fetches no data from the internet:
+the app uses the data bundled with it, each dated ("data as of …") — the right setting for a
+closed network, a classroom or no connection. (The page still asks Google Fonts for its
+typefaces in either mode, and uses the system fonts when it cannot have them.) **Online** fetches current data from the sources that publish them
 and falls back to the bundled copy, saying why, whenever they cannot be reached. The window lists
 each dataset with its date and where it came from. Today there is one, the space weather (the
 solar flux F10.7 and the Kp index, from NOAA), and nothing in the simulation reads it yet.

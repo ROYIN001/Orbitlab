@@ -1,9 +1,11 @@
 /**
  * Offline or online (roadmap S04): whether the app may reach the internet
  * for data. The owner's choice (2026-09-26) makes offline the default — a
- * fresh install on a closed intranet or a classroom laptop sends nothing
- * anywhere until someone switches it — and the choice is the user's, kept
- * in this browser.
+ * fresh install on a closed intranet or a classroom laptop fetches no data
+ * from the internet until someone switches it — and the choice is the
+ * user's, kept in this browser. (The web fonts are another matter: the page
+ * asks Google Fonts for them in either mode and falls back on the system
+ * fonts without them, README "Typography".)
  *
  * Offline, datasets come from the snapshots bundled with the build, each
  * marked "data as of". Online, they are fetched from their sources and fall

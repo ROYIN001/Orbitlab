@@ -41,8 +41,9 @@ The owner's answers in the planning conversation, which every item below follows
    implementations are always there. **No accounts and no personal data** for now (Thai PDPA;
    many users are minors).
 3. **Online and offline are separate modes**, chosen by the user and shown in the top bar.
-   **Offline is the default** (owner, 2026-09-26): nothing leaves the machine until the user
-   switches to online.
+   **Offline is the default** (owner, 2026-09-26): no data are fetched from the internet until
+   the user switches to online. (The web fonts are asked for in either mode, as before; without
+   them the page uses the system fonts.)
    - Offline reads data snapshots bundled with the build, each marked "data as of …".
    - Online reads the live sources and falls back to the snapshot on any failure:
      - [CelesTrak](https://celestrak.org/NORAD/documentation/gp-data-formats.php) GP data as

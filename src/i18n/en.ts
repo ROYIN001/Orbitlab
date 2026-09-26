@@ -872,7 +872,7 @@ export const en: Record<string, string> = {
   'data.title': 'Data sources',
   'data.lead': 'Orbitlab works without the internet. Offline, it uses the data bundled with it, each dated. Online, it fetches current data from the published sources, and uses the bundled copy whenever they cannot be reached.',
   'data.offline.title': 'Offline — the default',
-  'data.offline.text': 'Nothing is sent anywhere. For a closed network, a classroom, or no connection at all.',
+  'data.offline.text': 'No data are fetched from the internet: the app uses what is bundled with it. For a closed network, a classroom, or no connection at all.',
   'data.online.title': 'Online',
   'data.online.text': 'The app asks {hosts} for current data. Nothing about you or your missions is sent.',
   'data.sets': 'Datasets',

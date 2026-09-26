@@ -121,6 +121,7 @@ export class DataDialog extends Modal {
 
   private spaceWeather(sw: SpaceWeather): string {
     const f = sw.f107[sw.f107.length - 1], k = sw.kp[sw.kp.length - 1];
-    return t('data.summary.spaceWeather', { flux: f.flux.toFixed(0), date: f.date, kp: k.kp.toFixed(2) });
+    const date = new Date(`${f.date}T12:00:00Z`).toLocaleDateString(getLang(), { dateStyle: 'medium', timeZone: 'UTC' });
+    return t('data.summary.spaceWeather', { flux: f.flux.toFixed(0), date, kp: k.kp.toFixed(2) });
   }
 }
