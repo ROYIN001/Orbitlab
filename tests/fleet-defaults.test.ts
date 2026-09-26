@@ -80,6 +80,9 @@ import {
 } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
 import type { MissionConfig } from '../src/types';
+import { BUILTIN_LESSONS } from '../src/lessons/catalog';
+import { lessonConfig } from '../src/lessons/config';
+import type { MissionState } from '../src/config/mission-file';
 import { RAD, DEG, R_EARTH, MU_EARTH } from '../src/physics/constants';
 import {
   LAUNCH_TIME, allCases, caseKey, flyCase, acceptanceFailures, insertionTime, insertionLimit,
@@ -90,11 +93,12 @@ import {
 
 /**
  * Vehicles whose every matrix row is excluded, and the real mission that is
- * flown instead. Both are single-shot stacks: no restartable stage anywhere, so
+ * flown instead. All four are single-shot stacks: no restartable stage anywhere, so
  * the orbit the ascent cuts off in is the final one, and the matrix's
  * 420-600 km circular presets flown with an INERT payload are not missions they
  * have. Flown with the payload class they really launch — a spacecraft with its
- * own propulsion — both complete.
+ * own propulsion — Soyuz-2.1a and Long March 2D complete; the two historical
+ * R-7s fly the orbits they really flew, which they reach directly.
  *
  * The map carries the flight itself, not the name of a test that claims to fly
  * it. `a fully excluded vehicle must have a dedicated mission that succeeds`
@@ -118,7 +122,26 @@ const DEDICATED_MISSIONS: Record<string, DedicatedMission> = {
     name: 'real missions › Long March 2D delivers a sun-synchronous remote-sensing satellite from Jiuquan',
     fly: () => flyLongMarch2D(650),
   },
+  // C01: the two R-7s fly the missions they flew, as lessons 5.3 and 5.4 set them
+  // up and solve them (tests/lessons-history.test.ts)
+  sputnik8k71ps: {
+    name: 'track 5, historical missions › 5.3 Sputnik-1',
+    fly: () => flyLesson('adv-history', (s) => { s.payloadMass = 83.6; }),
+  },
+  vostok8k72k: {
+    name: 'track 5, historical missions › 5.4 Vostok-1',
+    fly: () => flyLesson('adv-vostok', (s) => { s.orbit = { ...s.orbit, apogee: 327e3 }; }),
+  },
 };
+
+/** A built-in lesson's mission, with the student's edits, flown to its end. */
+function flyLesson(id: string, edit: (s: MissionState) => void): Simulation {
+  const l = BUILTIN_LESSONS.find((x) => x.id === id)!;
+  const sim = new Simulation(lessonConfig(l.mission, edit), { headless: true });
+  let guard = 0;
+  while (!sim.done && sim.state.t < 4000 && guard++ < 400000) sim.step(sim.suggestedDt());
+  return sim;
+}
 
 
 describe('fleet acceptance with default guidance', () => {

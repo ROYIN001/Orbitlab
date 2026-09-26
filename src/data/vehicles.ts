@@ -157,6 +157,27 @@ const LE5B: EngineSpec = { name: 'LE-5B', count: 1, thrustSL: 90 * kN, thrustVac
 const RAPTOR_SL_X33: EngineSpec = { name: 'Raptor 2', count: 33, thrustSL: 2300 * kN, thrustVac: 2500 * kN, ispSL: 327, ispVac: 347, minThrottle: 0.4 };
 const RAPTOR_SHIP: EngineSpec = { name: 'Raptor 2 / RVac', count: 6, thrustSL: 2000 * kN, thrustVac: 2400 * kN, ispSL: 320, ispVac: 365, minThrottle: 0.4 };
 
+// --- C01 historical vehicles. Published figures (astronautix.com, the
+// Saturn V Flight Manual SA-503 and the AS-506 launch vehicle flight
+// evaluation report); sea-level Isp taken as vacuum Isp × sea-level/vacuum
+// thrust, the ratio a fixed nozzle delivers.
+/** RD-107 (8D74PS) of the 1957 R-7 strap-ons: four chambers plus two verniers, fixed thrust. */
+const RD107_8D74PS: EngineSpec = { name: 'RD-107 (8D74PS)', count: 1, thrustSL: 813 * kN, thrustVac: 1000 * kN, ispSL: 248.8, ispVac: 306 };
+/** RD-108 (8D75PS) of the 1957 R-7 core. */
+const RD108_8D75PS: EngineSpec = { name: 'RD-108 (8D75PS)', count: 1, thrustSL: 745 * kN, thrustVac: 941 * kN, ispSL: 243.8, ispVac: 308 };
+/** RD-107 (8D74K) of Vostok-K's strap-ons. */
+const RD107_8D74K: EngineSpec = { name: 'RD-107 (8D74K)', count: 1, thrustSL: 821 * kN, thrustVac: 1000 * kN, ispSL: 257, ispVac: 313 };
+/** RD-108 (8D75K) of Vostok-K's core. */
+const RD108_8D75K: EngineSpec = { name: 'RD-108 (8D75K)', count: 1, thrustSL: 745 * kN, thrustVac: 941 * kN, ispSL: 249.4, ispVac: 315 };
+/** RD-0109 of Blok E: one fixed chamber, steered by four turbine-exhaust nozzles. */
+const RD0109: EngineSpec = { name: 'RD-0109', count: 1, thrustSL: 40 * kN, thrustVac: 54.5 * kN, ispSL: 240, ispVac: 323.5, vacuumOnly: true };
+/** F-1, five on the S-IC: 6 770 kN each at sea level, fixed thrust. */
+const F1_X5: EngineSpec = { name: 'F-1', count: 5, thrustSL: 6770 * kN, thrustVac: 7770 * kN, ispSL: 264.9, ispVac: 304 };
+/** J-2, five on the S-II. */
+const J2_X5: EngineSpec = { name: 'J-2', count: 5, thrustSL: 486 * kN, thrustVac: 1033 * kN, ispSL: 200, ispVac: 421, vacuumOnly: true };
+/** J-2, one on the S-IVB, which restarts for the translunar injection. */
+const J2: EngineSpec = { name: 'J-2', count: 1, thrustSL: 486 * kN, thrustVac: 1033 * kN, ispSL: 200, ispVac: 421, vacuumOnly: true };
+
 // ---------------------------------------------------------------- helpers
 const f9Booster = (id: string, name: string, count: number): BoosterGroupSpec => ({
   id, name, count, dryMass: 25600, propellantMass: 395700, engine: MERLIN1D,
@@ -826,6 +847,87 @@ export const VEHICLES: VehicleSpec[] = [
     // Very high T/W and a hot-staged ship; a shallow kick keeps max-Q inside the 35 kPa placard.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     notes: 'Fully reusable two-stage methalox system; hot-staged ship, integrated payload bay (no fairing).',
+  },
+  // ------------------------------------------------------------ C01: history
+  {
+    // The rocket that launched Sputnik-1 on 4 October 1957 from Site 1: the
+    // R-7 ICBM lightened for the job, four strap-ons and the core, nothing
+    // above it. The core itself went into orbit, 7.5 t of it, with PS-1 on its
+    // nose. 267 t at lift-off; boosters 43 t each, the core 97.5 t (90 t of it propellant: the load that puts it on the
+    // 215 × 939 km orbit it reached, 270 t in all against the 267 t quoted).
+    // http://www.astronautix.com/s/sputnik8k71ps.html
+    id: 'sputnik8k71ps', name: 'Sputnik (R-7 8K71PS)', country: 'SU', manufacturer: 'OKB-1 (Korolev)',
+    height: 29.2, payloadLEO: 500, payloadGTO: 0,
+    // PS-1's conical nose shroud, dropped when the core reached orbit.
+    fairing: { mass: 300, diameter: 2.95, length: 2.2, sepAltitude: 120e3, color: '#d9d9d2' },
+    stages: [
+      {
+        id: 'blokA', name: 'Blok A (core, RD-108)', dryMass: 7500, propellantMass: 90000, engine: RD108_8D75PS,
+        diameter: 2.95, length: 26, color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core',
+        boosters: [{
+          id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3500, propellantMass: 39500,
+          engine: RD107_8D74PS, diameter: 2.68, length: 19, sepDelay: 1, conicalTop: true, color: '#c9c7bd',
+        }],
+      },
+    ],
+    sites: ['baikonur'], maxQ: 45e3, maxAccel: 70,
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    // As a rigid body the 4° kick of Soyuz-2.1a leaves the one-stage stack
+    // at 211 × 771 km; 5° puts it on the 215 × 939 km orbit (measured, calm).
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 5, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'Sputnik-1, 4 October 1957: the R-7 with no upper stage, its core flown into a 215 × 939 km orbit.',
+  },
+  {
+    // Vostok-1, 12 April 1961, Site 1: the R-7 with Blok E on top, which put
+    // Gagarin's 4.7 t Vostok 3KA straight into a 181 × 327 km orbit. 287 t at
+    // lift-off. Blok E: 1.44 t dry, 7.78 t of propellant, RD-0109.
+    // http://www.astronautix.com/v/vostok8k72k.html
+    id: 'vostok8k72k', name: 'Vostok-K (8K72K)', country: 'SU', manufacturer: 'OKB-1 (Korolev)',
+    height: 38.4, payloadLEO: 4730, payloadGTO: 0,
+    // The shroud over the spacecraft's instrument section, dropped at T+156 s.
+    fairing: { mass: 800, diameter: 2.6, length: 5, sepAltitude: 100e3, sepTime: 156, color: '#d9d9d2' },
+    stages: [
+      {
+        id: 'blokA', name: 'Blok A (core, RD-108)', dryMass: 6800, propellantMass: 93000, engine: RD108_8D75K,
+        diameter: 2.95, length: 28, color: '#c9c7bd', accentColor: '#5a6b4c', profile: 'r7Core',
+        boosters: [{
+          id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3450, propellantMass: 39250,
+          engine: RD107_8D74K, diameter: 2.68, length: 19.8, sepDelay: 1, conicalTop: true, color: '#c9c7bd',
+        }],
+      },
+      { id: 'blokE', name: 'Blok E (RD-0109)', dryMass: 1440, propellantMass: 7780, engine: RD0109, diameter: 2.56, length: 3.1, sepDelay: 0, ignitionDelay: 0, color: '#c9c7bd', profile: 'r7Upper' },
+    ],
+    sites: ['baikonur'], maxQ: 45e3, maxAccel: 70,
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'Vostok-1, 12 April 1961: the R-7 with Blok E, inserting Vostok 3KA directly into a 181 × 327 km orbit.',
+  },
+  {
+    // Saturn V SA-506, Apollo 11, 16 July 1969, LC-39A: 2 938 t at lift-off.
+    // S-IC 135 t dry + 2 145 t; S-II 40 t dry (with its aft interstage) +
+    // 443 t; S-IVB 15.3 t dry (with the instrument unit) + 109 t. The S-IVB
+    // put the stack into a 186 km parking orbit and relit for the
+    // translunar injection. 118 t to a 185 km orbit.
+    // https://en.wikipedia.org/wiki/Saturn_V , AS-506 flight evaluation report
+    id: 'saturnv', name: 'Saturn V', country: 'US', manufacturer: 'Boeing / North American / Douglas (NASA MSFC)',
+    height: 110.6, payloadLEO: 118000, payloadGTO: 0,
+    // No fairing: the lunar module rides inside the spacecraft-LM adapter,
+    // part of the payload. The 4.2 t escape tower, dropped at T+197 s, is not
+    // modelled (a fairing narrower than the S-II below it is not a shape this
+    // model takes).
+    fairing: null,
+    stages: [
+      {
+        id: 'sic', name: 'S-IC (5× F-1)', dryMass: 135000, propellantMass: 2145000, engine: F1_X5,
+        diameter: 10.1, length: 42, fins: true, color: '#f4f4f4', accentColor: '#1a1a1a',
+      },
+      { id: 'sii', name: 'S-II (5× J-2)', dryMass: 40000, propellantMass: 443000, engine: J2_X5, diameter: 10.1, length: 24.9, sepDelay: 1, ignitionDelay: 2, color: '#f4f4f4', accentColor: '#1a1a1a' },
+      { id: 'sivb', name: 'S-IVB (J-2) + IU', dryMass: 15300, propellantMass: 109000, engine: J2, diameter: 6.6, length: 18.8, restartable: true, sepDelay: 1, ignitionDelay: 3, color: '#f4f4f4', accentColor: '#1a1a1a' },
+    ],
+    sites: ['ksc39a'], maxQ: 40e3, maxAccel: 45,
+    crewCapable: true,
+    guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    notes: 'Apollo 11, 16 July 1969: S-IC, S-II and a restartable S-IVB, which relit in orbit for the translunar injection.',
   },
 ];
 

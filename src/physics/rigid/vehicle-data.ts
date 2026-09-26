@@ -104,6 +104,11 @@ export const PROPELLANT_LOADS: Readonly<Record<string, PropellantLoad>> = {
   z9: { family: 'solid' },
   avum: { family: 'hypergolic', mixtureRatio: 2.0, oxidizerForward: true },
   // Long March
+  // C01: Vostok-K's Blok E, Saturn V
+  blokE: { family: 'kerolox', mixtureRatio: 2.5, oxidizerForward: true },
+  sic: { family: 'kerolox', mixtureRatio: 2.27, oxidizerForward: true },
+  sii: { family: 'hydrolox', mixtureRatio: 5.5, oxidizerForward: false },
+  sivb: { family: 'hydrolox', mixtureRatio: 5.5, oxidizerForward: false },
   cz2d1: { family: 'hypergolic', mixtureRatio: 2.1, oxidizerForward: true },
   cz2d2: { family: 'hypergolic', mixtureRatio: 2.1, oxidizerForward: true },
   cz3b1: { family: 'hypergolic', mixtureRatio: 2.1, oxidizerForward: true },
@@ -215,6 +220,13 @@ export const STAGE_STEERING: Readonly<Record<string, StageSteering>> = {
   e1: { gimbalDeg: 5, steer: 'tvc', estimated: true },
   e2: { gimbalDeg: 5, steer: 'tvc', estimated: true },
   curie: { gimbalDeg: 0, steer: 'tvc' },
+  // C01. Blok E's RD-0109 chamber is fixed; four turbine-exhaust nozzles
+  // steer it (E). Saturn V's outer four F-1 and J-2 gimbal ±6° / ±7°, the
+  // centre engine is fixed; the S-IVB's single J-2 gimbals ±7°.
+  blokE: { gimbalDeg: 0, steer: 'tvc', vernierFraction: 0.02, vernierDeg: 45, estimated: true },
+  sic: { gimbalDeg: 6, steer: 'tvc', steerable: 4 },
+  sii: { gimbalDeg: 7, steer: 'tvc', steerable: 4 },
+  sivb: { gimbalDeg: 7, steer: 'tvc' },
   // Starship: the inner 13 Raptors of 33, and the ship's three sea-level Raptors, gimbal
   superheavy: { gimbalDeg: 15, steer: 'tvc', steerable: 13 },
   ship: { gimbalDeg: 15, steer: 'tvc', steerable: 3 },
@@ -253,6 +265,9 @@ export const STAGE_RCS: Readonly<Record<string, StageRcs>> = {
   e2: { axes: 'all', forceN: 10, isp: 65, propellantKg: 10 },
   curie: { axes: 'all', forceN: 5, isp: 65, propellantKg: 3 },
   ship: { axes: 'all', forceN: 2000, isp: 65, propellantKg: 1000 },
+  // C01: the S-IVB's auxiliary propulsion system, two modules of 147 lbf
+  // hypergolic thrusters; the S-II rolls on its gimballed engines.
+  sivb: { axes: 'all', forceN: 650, isp: 280, propellantKg: 300 },
 };
 
 export interface ChamberGeometry {

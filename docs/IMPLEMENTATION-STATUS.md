@@ -6,7 +6,7 @@ right.
 
 ## What the app is
 
-A browser simulator of orbital launches: 18 launch vehicles from 16 launch sites (and four more in the site table, flown by no vehicle yet), flown by
+A browser simulator of orbital launches: 21 launch vehicles (three of them historical, roadmap C01) from 16 launch sites (and four more in the site table, flown by no vehicle yet), flown by
 closed-loop ascent guidance and a burn sequencer to the orbit a mission asks for, drawn in 3-D
 from a flight recording that can be replayed and scrubbed. Four modes — Home, Watch
 (ready-made launches with a director's camera), Explore and Engineer (every guidance

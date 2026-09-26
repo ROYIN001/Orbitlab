@@ -68,6 +68,20 @@ export function engineLayout(id: string, engine: EngineSpec, R: number, nozzleLe
       };
     case 'blokI':
       return { nozzles: ring(4, R * 0.42, R * 0.26, R * 0.66, Math.PI / 4), verniers: ring(4, R * 0.82, R * 0.07, R * 0.2), clusterRadius: R * 0.85 };
+    // --- Vostok-K's Blok E: the fixed RD-0109 chamber and its four steering nozzles
+    case 'blokE':
+      return { nozzles: [{ x: 0, z: 0, r: R * 0.36, len: R * 0.8 }], verniers: ring(4, R * 0.8, R * 0.06, R * 0.18, Math.PI / 4), clusterRadius: R * 0.55 };
+    // --- Saturn V: four outer engines on a cross, one in the middle (the ring
+    // first: its four are the ones that gimbal)
+    case 'sic': {
+      const r = R * 0.19, len = R * 0.56;
+      return { nozzles: [...ring(4, R * 0.5, r, len, Math.PI / 4), { x: 0, z: 0, r, len }], verniers: [], clusterRadius: R * 0.8 };
+    }
+    case 'sii': {
+      const r = R * 0.1, len = R * 0.3;
+      return { nozzles: [...ring(4, R * 0.36, r, len, Math.PI / 4), { x: 0, z: 0, r, len }], verniers: [], clusterRadius: R * 0.5 };
+    }
+    case 'sivb': return { nozzles: [{ x: 0, z: 0, r: R * 0.15, len: R * 0.62 }], verniers: [], clusterRadius: R * 0.25 };
     // --- Proton: six RD-276 around the core tank
     case 'p1': return { nozzles: ring(6, R * 0.62, R * 0.21, R * 0.5), verniers: [], clusterRadius: R * 0.85 };
     case 'p2': return { nozzles: ring(4, R * 0.46, R * 0.26, R * 0.66, Math.PI / 4), verniers: [], clusterRadius: R * 0.8 };

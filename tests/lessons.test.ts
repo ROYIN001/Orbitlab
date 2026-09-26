@@ -51,7 +51,7 @@ const THAI = /\p{Script=Thai}/u;
 describe('the built-in lessons', () => {
   it('read without a single issue, every text in all three languages', () => {
     expect(BUILTIN_ISSUES).toEqual([]);
-    expect(BUILTIN_LESSONS.length).toBe(19);
+    expect(BUILTIN_LESSONS.length).toBe(21);
   });
 
   it('carry Russian in Cyrillic and Thai in Thai script in every text', () => {
@@ -65,10 +65,10 @@ describe('the built-in lessons', () => {
     }
   });
 
-  it('are numbered 1.1 … 5.3 without a gap, eighteen written and the one waiting for its roadmap item listed as coming', () => {
+  it('are numbered 1.1 … 5.5 without a gap, all twenty-one written and none left coming', () => {
     const numbers = allLessons().map(lessonNumber);
-    expect(numbers).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5', '2.1', '2.2', '2.3', '2.4', '3.1', '3.2', '3.3', '4.1', '4.2', '4.3', '4.4', '5.1', '5.2', '5.3']);
-    expect(BUILTIN_LESSONS.filter((l) => l.comingSoon).map((l) => l.id)).toEqual(['adv-history']);
+    expect(numbers).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5', '2.1', '2.2', '2.3', '2.4', '3.1', '3.2', '3.3', '4.1', '4.2', '4.3', '4.4', '5.1', '5.2', '5.3', '5.4', '5.5']);
+    expect(BUILTIN_LESSONS.filter((l) => l.comingSoon).map((l) => l.id)).toEqual([]);
     for (const l of BUILTIN_LESSONS.filter((x) => !x.comingSoon)) {
       expect(l.hints.length, l.id).toBe(3);
       expect(l.criteria.length, l.id).toBeGreaterThan(0);

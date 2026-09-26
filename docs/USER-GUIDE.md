@@ -664,8 +664,8 @@ tabs — **Lessons** and **Placement test** — and **Back to the simulator** (o
 browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
 The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends.
 They are listed in five tracks — orbital mechanics, guidance and navigation, failures, attitude
-control, advanced missions — each with its number (1.1 … 5.3), a ✓ once passed and ● once tried.
-Eighteen are written; 5.3 (historical missions) waits for its roadmap item (C01) and is listed as *coming soon*.
+control, advanced missions — each with its number (1.1 … 5.5), a ✓ once passed and ● once tried.
+All twenty-one are written; the last three (5.3–5.5) fly the historical missions of roadmap C01.
 
 **A lesson.** Pick one: its mission is loaded into the setup panel, the app goes to the mode it
 needs (Explore or Engineer), and the settings it fixes are greyed out with a 🔒 — in lesson 1.2
@@ -701,6 +701,14 @@ which one.
 | 4.4 | Bending and the notch filter (Engineer, six-DOF) | the flexible-vehicle settings | through max-Q with the bending on and no breakup |
 | 5.1 | Bringing the booster home | the payload mass | at least 9 t to 500 km with the first stage on Landing Zone 1 |
 | 5.2 | Rendezvous and docking | the rendezvous profile | docked within 4 h of launch, and the time read (±0.1 h) |
+| 5.3 | Sputnik-1 (1957) | the payload mass | the 215 × 939 km orbit reached, and its period read (±0.2 min) |
+| 5.4 | Vostok-1 (1961) | the target orbit | the 181 × 327 km orbit Gagarin reached, and its period read (±0.2 min) |
+| 5.5 | Apollo 11: the way to the Moon (1969) | the target orbit | the S-IVB relit for the translunar injection (apogee past 300 000 km), and its Δv read (±3 %) |
+
+The three historical lessons fly the vehicles, pads and dates of the real flights: the R-7 of
+1957 from Gagarin's Start with no upper stage, Vostok-K with Blok E, and Saturn V from LC-39A.
+The Moon is not part of the flight model, so Apollo 11 ends at the injection: the S-IVB raises
+the apogee to the Moon's distance, and what the Moon's gravity does three days later is left out.
 
 **The placement test** is 25 questions in six areas — 1 the basics of spaceflight, 2 orbital
 mechanics, 3 rocket performance, 4 guidance and navigation, 5 attitude control, 6 failures and

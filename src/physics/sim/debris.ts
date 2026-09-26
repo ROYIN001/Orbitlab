@@ -270,7 +270,7 @@ export class DebrisTracker {
     const memo = rc.guidance;
     if (memo && t - memo.t < every - 1e-9) return memo;
     const c = boostbackCommand(this.descentState(d, t), this.descentModel(d), rc.target!, this.sim.plan.gmst0);
-    rc.guidance = { t, dir: c.dir, dvNeeded: c.dvNeeded, trim: memo?.trim ?? false, lateral: memo?.lateral };
+    rc.guidance = { t, dir: c.dir, dvNeeded: c.dvNeeded, miss: c.miss, trim: memo?.trim ?? false, lateral: memo?.lateral };
     return rc.guidance;
   }
 
@@ -314,10 +314,14 @@ export class DebrisTracker {
           break;
         }
         case 'boostback': {
-          const before = rc.guidance?.dvNeeded ?? Infinity;
+          // The trim ends once the predicted miss stops shrinking. The Δv still
+          // needed is no guide there: it comes from a finite-difference
+          // Jacobian of a stepped descent and wobbles by a metre per second
+          // or two, which once cut a boostback 40 m/s short (4.5 km long).
+          const before = rc.guidance?.miss ?? Infinity;
           const g = this.returnSolution(d, t, rc.guidance?.trim ? 0 : RETURN_REPLAN_S);
           const spent = rc.propellant <= rc.landingReserve;
-          if (g.dvNeeded < BOOSTBACK_DONE_DV || spent || (g.trim && g.dvNeeded > before + 1e-6)) {
+          if (g.dvNeeded < BOOSTBACK_DONE_DV || spent || (g.trim && (g.miss ?? 0) > before + 1)) {
             rc.phase = 'coast';
             rc.guidance = undefined;
             rc.burning = false;
