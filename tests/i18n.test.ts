@@ -173,6 +173,7 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^assess\.series\.[a-zA-Z]+$/, from: 'ui/lessons/assessment-view.ts figure: t(`assess.series.${f.series}`)' },
   { pattern: /^assess\.confidence\.(guess|unsure|sure)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.confidence.${c}`)' },
   { pattern: /^assess\.level\.(beginner|basic|strong)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.level.${s.level}`)' },
+  { pattern: /^ws\.format\.(html|docx)$/, from: 'ui/lessons/worksheet-view.ts: t(`ws.format.${k}`)' },
 ];
 
 /**

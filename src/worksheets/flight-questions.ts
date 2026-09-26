@@ -84,7 +84,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
     if (time === null || v === null) return null;
     return {
       kind: 'number', prompt: t('ws.fq.altAt', { t: time }), unit: unitText('km', c.lang),
-      answer: { text: `${fmt(c.lang, v, 1)} ${unitText('km', c.lang)}`, value: v, tolerance: `± ${fmt(c.lang, Math.max(2, v * 0.03), 1)}`, working: t('ws.fw.read', { t: time }) },
+      answer: { text: `${fmt(c.lang, v, 1)} ${unitText('km', c.lang)}`, value: v, tolerance: `± ${fmt(c.lang, Math.max(3, v * 0.05), 1)} ${unitText('km', c.lang)}`, working: t('ws.fw.read', { t: time }) },
     };
   },
   speedAt(c) {
@@ -93,7 +93,7 @@ const GENERATORS: Readonly<Record<string, Generator>> = {
     if (time === null || v === null) return null;
     return {
       kind: 'number', prompt: t('ws.fq.speedAt', { t: time }), unit: unitText('m/s', c.lang),
-      answer: { text: `${fmt(c.lang, v, 0)} ${unitText('m/s', c.lang)}`, value: v, tolerance: `± ${fmt(c.lang, Math.max(50, v * 0.03), 0)}`, working: t('ws.fw.read', { t: time }) },
+      answer: { text: `${fmt(c.lang, v, 0)} ${unitText('m/s', c.lang)}`, value: v, tolerance: `± ${fmt(c.lang, Math.max(100, v * 0.05), 0)} ${unitText('m/s', c.lang)}`, working: t('ws.fw.read', { t: time }) },
     };
   },
   maxQ(c) {

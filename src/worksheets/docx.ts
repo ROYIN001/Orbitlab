@@ -60,7 +60,7 @@ class Doc {
 }
 
 function table(rows: Array<[string, string]>): string {
-  const border = '<w:tblBorders><w:insideH w:val="single" w:sz="4" w:color="E5E7EB"/><w:bottom w:val="single" w:sz="4" w:color="E5E7EB"/></w:tblBorders>';
+  const border = '<w:tblBorders><w:bottom w:val="single" w:sz="4" w:color="E5E7EB"/><w:insideH w:val="single" w:sz="4" w:color="E5E7EB"/></w:tblBorders>';
   return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${border}</w:tblPr><w:tblGrid><w:gridCol w:w="3600"/><w:gridCol w:w="6000"/></w:tblGrid>`
     + rows.map(([a, b]) => `<w:tr><w:tc><w:tcPr><w:tcW w:w="3600" w:type="dxa"/></w:tcPr>${para(run(a, { size: 9.5, color: '374151' }), { after: 20 })}</w:tc>`
       + `<w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/></w:tcPr>${para(run(b, { size: 9.5 }), { after: 20 })}</w:tc></w:tr>`).join('')
@@ -113,7 +113,7 @@ function document(body: string): string {
     + `<w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="794" w:right="794" w:bottom="794" w:left="794" w:header="400" w:footer="400" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 }
 
-function pack(body: string, doc: Doc): Uint8Array {
+function pack(body: string, doc: Doc): Uint8Array<ArrayBuffer> {
   const enc = new TextEncoder();
   const types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
     + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
@@ -134,7 +134,7 @@ function pack(body: string, doc: Doc): Uint8Array {
 }
 
 /** The students' sheets in one document, each on a new page. No answers. */
-export function worksheetsDocx(sheets: readonly Worksheet[], pictureOf: PictureOf): Uint8Array {
+export function worksheetsDocx(sheets: readonly Worksheet[], pictureOf: PictureOf): Uint8Array<ArrayBuffer> {
   const doc = new Doc(pictureOf);
   const body = sheets.map((sheet) => {
     let n = 0;
@@ -152,7 +152,7 @@ export function worksheetsDocx(sheets: readonly Worksheet[], pictureOf: PictureO
 }
 
 /** The key: every student's answers, with tolerances and working. */
-export function answerKeyDocx(sheets: readonly Worksheet[]): Uint8Array {
+export function answerKeyDocx(sheets: readonly Worksheet[]): Uint8Array<ArrayBuffer> {
   const doc = new Doc(() => null);
   const body = sheets.map((sheet) => {
     let n = 0;

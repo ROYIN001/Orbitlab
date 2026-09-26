@@ -19,7 +19,7 @@ import type { Simulation } from '../../physics/simulation';
 import { missionDocument, type MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
-import { awaitingAnswers, flightStarted, gradeLesson, regradeAnswers } from '../../lessons/grader';
+import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers } from '../../lessons/grader';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
@@ -57,8 +57,10 @@ const STUDENT_KEY = 'orbitlab.student';
 /** The lessons page's addresses: not modes, so the app's own router leaves them alone. */
 export const LESSONS_HASH = '#/lessons';
 export const TEST_HASH = '#/lessons/test';
-type PageView = 'catalog' | 'test';
-const pageViewOf = (hash: string): PageView | null => hash === LESSONS_HASH ? 'catalog' : hash === TEST_HASH ? 'test' : null;
+export const WORKSHEETS_HASH = '#/lessons/worksheets';
+type PageView = 'catalog' | 'test' | 'worksheets';
+const pageViewOf = (hash: string): PageView | null =>
+  hash === LESSONS_HASH ? 'catalog' : hash === TEST_HASH ? 'test' : hash === WORKSHEETS_HASH ? 'worksheets' : null;
 
 /** The open lesson's state. */
 interface Active {
@@ -429,6 +431,7 @@ export class LessonMode implements LessonToolsHost {
       if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
     }
     button(t('lesson.strip.catalog'), () => this.openCatalog());
+    if (flown && g?.final) button(t('ws.stripButton'), () => this.navigate(WORKSHEETS_HASH));
     button(t('lesson.strip.link'), () => void this.copyLink(lesson));
     button(t('lesson.strip.exit'), () => this.exit());
     s.replaceChildren(head, crits, status, actions);
@@ -502,7 +505,8 @@ export class LessonMode implements LessonToolsHost {
     this.placePage();
     this.paintPageBar();
     if (view === 'catalog') this.renderCatalog();
-    else void this.showAssessment();
+    else if (view === 'test') void this.showAssessment();
+    else void this.showWorksheets();
     this.page.scrollTo(0, 0);
   }
 
@@ -519,7 +523,7 @@ export class LessonMode implements LessonToolsHost {
     back.addEventListener('click', () => this.closePage());
     const tabs = el('nav', 'lessons-page-tabs');
     tabs.setAttribute('aria-label', t('lesson.button'));
-    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH]] as const) {
+    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH], ['worksheets', 'ws.tab', WORKSHEETS_HASH]] as const) {
       const a = el('a', undefined, t(key));
       a.href = hash;
       if (this.pageView === view) a.setAttribute('aria-current', 'page');
@@ -648,6 +652,21 @@ export class LessonMode implements LessonToolsHost {
 
   private openAssessment(): void {
     this.navigate(TEST_HASH);
+  }
+
+  /** E05: the worksheets of the flight on screen (the open lesson's, or any mission's). */
+  private async showWorksheets(): Promise<void> {
+    const m = await import('./worksheet-view');
+    if (this.pageView !== 'worksheets') return;
+    this.assessmentView = m.renderWorksheets({
+      flight: () => {
+        const sim = this.host.sim();
+        if (!sim || !flightStarted(sim)) return null;
+        return { flight: sim, ended: flightEnded(this.active?.lesson ?? {}, sim) };
+      },
+      lesson: () => this.active?.lesson ?? null,
+      progress: () => this.progressData,
+    }, this.content);
   }
 
   private async showAssessment(): Promise<void> {

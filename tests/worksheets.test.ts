@@ -6,7 +6,6 @@
  * well-formed package.
  */
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { inflateRawSync, crc32 as zlibCrc32 } from 'zlib';
 import { setLang } from '../src/i18n';
 import { Simulation } from '../src/physics/simulation';
 import { G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
@@ -124,6 +123,9 @@ describe('a class\'s worksheets', () => {
       if (item.answer.working) expect(html).not.toContain(item.answer.working.slice(0, 40).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;'));
     }
     expect(key).toContain('Somchai');
+    // the event table does not give away what the questions ask: the peak q, the lift-off's T/W
+    expect(html).not.toContain('22.8 kPa');
+    expect(sheets[0].sections[1].table!.some(([, text]) => /max-Q|T\/W/i.test(text))).toBe(false);
     // charts drawn for print, with no script and nothing fetched
     expect(html).not.toMatch(/<script|https?:\/\/(?!www\.w3\.org)/);
     expect(html).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
@@ -141,6 +143,16 @@ describe('a class\'s worksheets', () => {
   });
 });
 
+/** CRC-32 bit by bit, independently of the writer's table. */
+function slowCrc(data: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of data) {
+    crc ^= byte;
+    for (let k = 0; k < 8; k++) crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 /** The entries of a stored zip, read independently of the writer, each checked against its CRC. */
 function unzip(bytes: Uint8Array): Map<string, Uint8Array> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -151,8 +163,9 @@ function unzip(bytes: Uint8Array): Map<string, Uint8Array> {
     const nameLen = view.getUint16(at + 26, true), extra = view.getUint16(at + 28, true);
     const name = new TextDecoder().decode(bytes.subarray(at + 30, at + 30 + nameLen));
     const raw = bytes.subarray(at + 30 + nameLen + extra, at + 30 + nameLen + extra + size);
-    const data = method === 8 ? new Uint8Array(inflateRawSync(raw)) : raw;
-    expect(zlibCrc32(data) >>> 0, name).toBe(crc);
+    expect(method, name).toBe(0);
+    const data = raw;
+    expect(slowCrc(data), name).toBe(crc);
     out.set(name, data);
     at += 30 + nameLen + extra + size;
   }
@@ -186,6 +199,18 @@ describe('the Word documents', () => {
     expect(wellFormed(new TextDecoder().decode(files.get('word/_rels/document.xml.rels')))).toBe(true);
     expect([...files.keys()].filter((n) => n.startsWith('word/media/'))).toHaveLength(pictures);
     expect(doc.match(/<w:br w:type="page"\/>/g)).toHaveLength(1);
+    // Word refuses a part whose children are out of the schema's order: borders, paragraph and run properties
+    const inOrder = (block: RegExp, order: string[]) => {
+      for (const m of doc.matchAll(block)) {
+        const seen = [...m[1].matchAll(/<w:(\w+)/g)].map((x) => order.indexOf(x[1])).filter((i) => i >= 0);
+        expect(seen, m[0].slice(0, 80)).toEqual([...seen].sort((a, b) => a - b));
+      }
+    };
+    inOrder(/<w:tblBorders>(.*?)<\/w:tblBorders>/g, ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']);
+    inOrder(/<w:pPr>(.*?)<\/w:pPr>/g, ['keepNext', 'pBdr', 'spacing', 'jc']);
+    inOrder(/<w:rPr>(.*?)<\/w:rPr>/g, ['rFonts', 'b', 'bCs', 'i', 'iCs', 'color', 'sz', 'szCs']);
+    // every table cell holds a paragraph
+    for (const m of doc.matchAll(/<w:tc>(.*?)<\/w:tc>/g)) expect(m[1]).toContain('<w:p>');
     expect(doc).toContain('Somchai');
     const key = new TextDecoder().decode(unzip(answerKeyDocx(sheets)).get('word/document.xml'));
     expect(wellFormed(key)).toBe(true);

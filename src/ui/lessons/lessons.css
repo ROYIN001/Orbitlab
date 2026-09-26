@@ -238,3 +238,14 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .assess-check b::before { content: '☐ '; font-weight: 400; }
 .assess-check.sel b::before { content: '☑ '; }
 .lesson-diagram { max-height: 440px; }
+
+/* ── E05: the worksheets tab ─────────────────────────────────────────── */
+.ws-source { padding: 10px 12px; margin: 8px 0 14px; border: 1px solid var(--lesson-line); border-radius: 10px; background: var(--lesson-weak); }
+.ws-what { margin: 2px 0 0 !important; font-weight: 600; color: var(--text) !important; }
+.ws-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
+.ws-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.ws-field.wide { grid-column: 1 / -1; }
+.ws-field textarea { min-height: 110px; font: 13px var(--sans); }
+.ws-areas { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text); }
+@media (max-width: 860px) { .ws-form { grid-template-columns: 1fr 1fr; } }
+.ws-field input, .ws-field select { height: 36px; }

@@ -21,7 +21,7 @@ export function crc32(data: Uint8Array): number {
 
 export interface ZipEntry { name: string; data: Uint8Array }
 
-export function zipStore(entries: readonly ZipEntry[]): Uint8Array {
+export function zipStore(entries: readonly ZipEntry[]): Uint8Array<ArrayBuffer> {
   const enc = new TextEncoder();
   const chunks: Uint8Array[] = [];
   const central: Uint8Array[] = [];
@@ -50,7 +50,7 @@ export function zipStore(entries: readonly ZipEntry[]): Uint8Array {
   end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
   end.setUint32(12, dirSize, true); end.setUint32(16, offset, true);
   const all = [...chunks, ...central, new Uint8Array(end.buffer)];
-  const out = new Uint8Array(all.reduce((n, c) => n + c.length, 0));
+  const out = new Uint8Array(new ArrayBuffer(all.reduce((n, c) => n + c.length, 0)));
   let at = 0;
   for (const c of all) { out.set(c, at); at += c.length; }
   return out;

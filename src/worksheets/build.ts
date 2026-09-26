@@ -52,7 +52,8 @@ export function worksheetSeed(student: string, classCode: string, source: string
 export const worksheetSource = (input: Pick<WorksheetInput, 'lesson' | 'flight'>): string =>
   input.lesson ? `lesson:${input.lesson.id}` : `mission:${input.flight.cfg.vehicleId}:${input.flight.cfg.siteId}:${input.flight.cfg.launchTime.toISOString()}`;
 
-const EVENT_KEYS = ['evt.liftoff', 'evt.maxQ', 'evt.boosterSep', 'evt.meco', 'evt.stageSep', 'evt.fairingSep', 'evt.seco', 'evt.parkingOrbit', 'evt.targetOrbit', 'evt.offTargetOrbit', 'evt.engineOut', 'evt.guidanceEngaged', 'evt.boosterLandedZone', 'evt.docked'];
+// max-Q and the lift-off's T/W are asked for, from the charts and the numbers: their events would give them away
+const EVENT_KEYS = ['evt.boosterSep', 'evt.meco', 'evt.stageSep', 'evt.fairingSep', 'evt.seco', 'evt.parkingOrbit', 'evt.targetOrbit', 'evt.offTargetOrbit', 'evt.engineOut', 'evt.guidanceEngaged', 'evt.boosterLandedZone', 'evt.docked'];
 
 /** The flight's charts over its ascent, drawn for print. */
 export function flightCharts(f: WsFlight, lang: Lang): WsFigure[] {
@@ -62,7 +63,7 @@ export function flightCharts(f: WsFlight, lang: Lang): WsFigure[] {
   const sampled = resampleTelemetry(f.telemetry, end, step, keys);
   const data: FlightData = { flight: { ...sampled, events: [] } };
   return keys.map((key) => ({
-    svg: chartSvg(data, ['flight'], key, { xLabel: t('assess.axisTime'), yLabel: `${t(`assess.series.${key}`)}, ${unitText(SERIES_UNITS[key], lang)}`, height: 220 }),
+    svg: chartSvg(data, ['flight'], key, { xLabel: t('assess.axisTime'), yLabel: `${t(`assess.series.${key}`)}, ${unitText(SERIES_UNITS[key], lang)}`, height: 260 }),
     caption: t(`assess.series.${key}`),
   }));
 }
