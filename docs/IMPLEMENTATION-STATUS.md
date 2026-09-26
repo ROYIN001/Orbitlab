@@ -168,7 +168,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 454 tests in 109 files, 15 to 20 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 1 633 tests in 126 files, 15 to 20 minutes on four cores. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -284,6 +284,17 @@ Phase 2, real satellites and the military track, continues on the same branch:
   by mean sidereal time alone, with no UT1 − UTC or polar motion; that moves a point on the
   ground by up to about 400 m, less than an element set's own error. They are not at the Watch
   level yet. An imported file is kept only while the page is open.
+- The lifetime model (R05) reads the Sun month by month, so a storm is smoothed out; beyond
+  NOAA's forecast (to 2030-12 in the bundled snapshot) the Sun is taken to repeat its last eleven
+  years. With the Sun as measured it brought seven spheres of known size down 0 to 22 % early.
+- Close approaches (M01) are screened with element sets, as SOCRATES does, and their probability
+  rests on R04's estimated uncertainty and a size the user gives: they show traffic worth a closer
+  look, not the collisions to come. The probability itself reproduces published values when given
+  real covariances.
+- Overflights (M02) count only satellites whose element sets are published, and are when a place
+  could be seen, not that it was imaged.
+- Re-entry (M03) takes the object's mass and cross-section from the user; the ±20 % window is the
+  agencies' convention, not this model's own measured error (four Long March 5B stages, all inside).
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
 - The physics has been compared with flight data for eleven of the eighteen vehicles: Falcon 9
   against webcast telemetry of five flights, the others against published timelines
