@@ -25,7 +25,15 @@ low-thrust spiral and the user's own burns. At the Engineer level it adds a Lamb
 chosen on a porkchop plot. Every plan is drawn and flown. With a spacecraft (the one a flight
 handed on, or one described by hand) each plan is budgeted against its tanks (O03): the
 propellant and the engine time of each burn, and how far short a plan is when they run dry. The
-lifetime analysis can be run on any orbit in the playground. A flight's orbit arrives there through **Continue in Orbit** (S03). What
+lifetime analysis can be run on any orbit in the playground. **What satellites do** (O04) has three
+parts:
+
+- Communications from GEO: where a dish points from a city or typed-in coordinates, the
+  footprint, the delay and, at the Engineer level, the link budget.
+- Earth observation: a camera's swath, ground sample distance, how far apart the day's tracks
+  are and how far tilting reaches.
+- Thailand's satellites: THEOS, THEOS-2, NAPA-1, NAPA-2 and the Thaicom fleet, from public
+  sources, each with its catalogue orbit to put in the playground. A flight's orbit arrives there through **Continue in Orbit** (S03). What
 the section will hold next is listed under the playground. **Build** is still an "in
 development" screen that lists what is coming, from the roadmap, and nothing more.
 
@@ -237,7 +245,7 @@ Phase 1, the Orbit core, continues on the same branch:
 | O01 orbit playground | done: Kepler and first-order J2, held to the geostationary, GPS, Landsat WRS-2 and Sentinel-2 orbits ([VALIDATION.md](VALIDATION.md) §4) |
 | O02 maneuver planner | done: every transfer held to Vallado's and Curtis's worked examples and to its closed form ([VALIDATION.md](VALIDATION.md) §4) |
 | O03 continue in orbit | done: a flight's orbit and spacecraft carry on in the playground; plans are budgeted against its own propellant by the rocket equation, and the lifetime analysis is open to any orbit there |
-| O04 applications | planned |
+| O04 applications | done: pointing a dish, coverage, delay and the link budget from GEO; a camera's swath, detail and reach from SSO; Thailand's satellites from public sources, each cited ([VALIDATION.md](VALIDATION.md) §4) |
 
 ## Known limitations
 
@@ -250,6 +258,9 @@ Phase 1, the Orbit core, continues on the same branch:
   than a tenth of an orbit is flagged as such. Edelbaum's spiral assumes near-circular orbits
   and a constant acceleration, and its propellant is budgeted as one burn of its Δv. A
   rendezvous target is always in the chaser's plane.
+- The applications' Thai satellites fly their catalogue orbit (as of 2026-09-26), not where they
+  are today: following real satellites from their element sets is Phase 2 (R01–R02). The link
+  budget's starting values are an example, not any satellite's.
 
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
 - The physics has been compared with flight data for four vehicles only: Falcon 9 against webcast

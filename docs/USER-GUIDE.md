@@ -148,6 +148,30 @@ The plan then gives each burn's propellant and how long its engine runs, the Δv
 what is burned and what is left. It says so when the tanks run dry, and in which burn. **Carry
 on from the new orbit** leaves the spacecraft lighter by what it burned.
 
+**What satellites do** (Explore and Engineer) turns the orbit into what it is for. Its three
+applications are:
+
+- **Communications from geostationary orbit.** Choose where the dish stands: a Thai city, St
+  Petersburg or Moscow, or coordinates you type in. What you type stays in the page; the browser
+  is never asked for your location. The playground then says where the dish points (azimuth and
+  elevation), how far away the satellite is, and how long a signal takes up and down, compared
+  with a satellite 550 km up. It also says how much of the Earth the satellite sees above the
+  lowest elevation you set. The ground track draws the station and that footprint. At the
+  Engineer level the link budget follows: path loss, dish gain, G/T, C/N₀ and Eb/N₀, from a
+  frequency, EIRP, dish, noise temperature, losses and data rate you choose.
+- **Earth observation.** A camera's swath and ground sample distance (or, at the Engineer
+  level, its focal length, pixel pitch and pixels), how far apart the day's tracks are, how much
+  of that gap the camera sees looking straight down, and how far tilting the satellite reaches.
+  The ground track draws the swath along the next revolution.
+- **Thailand's satellites.** THEOS, THEOS-2, NAPA-1, NAPA-2 and Thaicom 4, 6, 7 and 8, each with
+  its operator, builder, launch, orbit, camera, identifiers and sources. **Show its orbit** puts
+  its catalogue orbit in the playground. That is its shape, not where it is today; following real
+  satellites is the next phase.
+
+For Thaicom 8 from Bangkok, the dish points south-west (239.5°), 59.9° up. For THEOS-2, the
+10.3 km swath covers well under 1 % of the gap between two of the day's tracks, which is why the
+satellite tilts.
+
 After **Continue in Orbit** from a flight, the list says **From your launch** and the playground
 starts from where the flight was. **Orbit lifetime**, under the orbit's figures, runs the
 long-term analysis on whatever orbit the playground is showing. With a flight's spacecraft it

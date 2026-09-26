@@ -160,7 +160,11 @@ plane changes, GTO→GEO, phasing, deorbit burns, Edelbaum's low-thrust spiral a
 prograde/normal/radial burns, draws each plan and flies it. At the Engineer level it adds a
 Lambert rendezvous chosen on a porkchop plot. With a spacecraft (the one a flight handed on, or
 one described by hand) every plan is budgeted against its own propellant by the rocket equation
-(O03, `src/orbit/budget.ts`). The model is Kepler plus first-order J2, held to
+(O03, `src/orbit/budget.ts`). **What satellites do** (O04, `src/orbit/applications.ts`) points a
+dish at a geostationary satellite from a city or typed-in coordinates, and shows the footprint,
+the delay and the link budget. For Earth observation it gives a camera's swath, detail and reach.
+It also lists Thailand's satellites (THEOS, THEOS-2, the Royal Thai Air Force's NAPA-1 and NAPA-2,
+and Thaicom), each from public sources with its catalogue orbit. The model is Kepler plus first-order J2, held to
 the Landsat and Sentinel-2 orbits; the planner is held to Vallado's and Curtis's worked
 examples ([docs/VALIDATION.md](docs/VALIDATION.md) §4). **Continue in Orbit** (under the telemetry panel,
 and on the viewer's end card) puts the orbit a flight reached into the playground, with the
@@ -339,7 +343,8 @@ src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map
 src/i18n/       English, Russian and Thai dictionaries
 src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground's presets,
                 rules and tour, maneuvers, Lambert and Edelbaum (O02), the propellant budget
-                (O03), the hand-off (S03)
+                (O03), what satellites do (O04), the hand-off (S03)
+src/data/thai-satellites.ts  Thailand's satellites, each fact with its source (O04)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
 src/design/     the user's designs, kept locally and as files (S05)
 src/mcp.ts      WebMCP tools

@@ -22,6 +22,7 @@ Status on 2026-09-25:
 | Orbit playground (O01) | Published orbits: geostationary, GPS, Landsat WRS-2, Sentinel-2; closed forms | Kepler and first-order J2 held to them (§4), 2026-09-26 |
 | Maneuver planner (O02) | Vallado's and Curtis's worked examples; closed forms | Transfers and Lambert held to them (§4), 2026-09-26 |
 | Continue in orbit (O03) | A recorded Soyuz flight's hand-off; the rocket equation | The playground's orbit is the flight's; the budget is Tsiolkovsky's (§4), 2026-09-26 |
+| Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§4), 2026-09-26 |
 
 ## 1. Method
 
@@ -635,10 +636,45 @@ and both to worked examples. Burns are impulsive: no finite-burn or gravity loss
 than a tenth of an orbit is flagged. The plan treats it as an instant kick, which a burn that
 long only roughly is.
 
+### What satellites are for (O04)
+
+`src/orbit/applications.ts`, `tests/applications.test.ts`. The textbook formulas are those of
+Maral & Bousquet's *Satellite Communications Systems* and of *Space Mission Engineering: The New
+SMAD*. A dish's look angles are worked on the WGS-84 ellipsoid, "up" along its normal.
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| a dish under a geostationary satellite | straight up; range 35 786 km | same | 10⁻⁶°; 1 m |
+| a dish on the satellite's meridian | due south (due north below the equator) | same | 10⁻⁶° |
+| look angles anywhere, west and east | spherical closed form tan el = (cos γ − R/r)/sin γ | elevation within the ellipsoid's difference | 0.2° |
+| Bangkok (13.7563° N, 100.5018° E) to Thaicom 8 at 78.5° E | spherical closed form: el 59.88°, az 239.5° | 59.9°, 239.5° (south-west) | shown |
+| the edge of a geostationary satellite's view | 81.3° of arc; 42.4 % of the Earth | same; the footprint's edge is at the minimum elevation | 0.1°; 0.3° |
+| up and down beneath GEO | 238.7 ms; a question and its answer 477.5 ms | same | 0.1 ms |
+| free-space loss, 36 000 km at 4 GHz | 195.6 dB | same | 0.1 dB |
+| Boltzmann's constant | −228.6 dBW/(K·Hz) | same | 0.1 dB |
+| a 1.2 m dish at 12 GHz, 65 % | 41.7 dBi | same | 0.1 dB |
+| a camera's swath | 2h·tan(fov/2) for a narrow view; wider on a curved Earth; none past the horizon | same; inverts | 10⁻³ relative |
+| THEOS: 26-day repeat, 14 5/26 revolutions a day (eoPortal) | 822 km, 98.7° | 369/26 revolutions: 822.4 km, 98.70° | 1 km, 0.05° |
+| THEOS-2: 26-day repeat (eoPortal) | 621 km (eoPortal); 97.91° (CelesTrak) | 385/26 revolutions: 621.1 km, 97.87° | 1 km, 0.1° |
+
+**Findings.**
+
+- Both Thai Earth-observation satellites' published heights follow from their published 26-day
+  repeat cycles, by J2 alone. THEOS's 369 revolutions are also published; THEOS-2's 385 are the
+  one whole number that puts a 26-day repeat near 621 km.
+- THEOS-2's 10.3 km swath covers 0.4 % of the 2 630 km between the day's tracks over Bangkok,
+  and a tenth of its 104 km repeat grid. Tilting 45° reaches 658 km to each side. That is why
+  it tilts, and why the playground shows the track spacing and the reach rather than a "days to
+  cover" figure, which would mislead for a repeating orbit.
+- Thailand's satellites (`src/data/thai-satellites.ts`) are taken from public sources only, each
+  fact with its source; the orbits are CelesTrak's catalogue as read on 2026-09-26. Where sources
+  differ the value is left out: THEOS-2's mass is 417 kg in one report and 425 kg in another.
+  NAPA-2 re-entered on 2026-07-05, by the catalogue.
+
 ## 5. Re-running
 
 ```sh
-npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts   # the Orbit section, ~3 s
+npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~3 min

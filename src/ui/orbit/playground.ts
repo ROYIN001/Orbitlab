@@ -25,6 +25,7 @@ import { OrbitView } from '../../render/orbit-view';
 import { route, type AppLevel, type AppRoute } from '../app-mode';
 import { SECTION_PLANS, BUILT_ITEMS } from '../section-plan';
 import { hitsEarth, nodeLocalTime, orbitFacts, orbitFromState, stateAt, type Orbit, type OrbitState } from '../../orbit/kepler';
+import { footprintAngle } from '../../orbit/applications';
 import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
 import {
@@ -41,6 +42,10 @@ import { budgetFor, craftAfter, craftFromHandoff, defaultCraft, type Budget, typ
 import { handoffFromState } from '../../orbit/handoff';
 import { spacecraftFor } from '../../physics/propagator/spacecraft';
 import { MANEUVER_LIMITS } from '../../orbit/maneuver-setup';
+import { appsControls, appsResults, type AppsHost } from './applications-panel';
+import { commsReport, defaultApps, eoReport, thaiOrbit, type AppKind, type AppSettings } from '../../orbit/applications-setup';
+import { thaiSatelliteById } from '../../data/thai-satellites';
+import type { TrackOverlay } from './ground-track';
 import { PorkchopView, type PorkchopData } from './porkchop-view';
 import type { OrbitHandoff } from '../../orbit/handoff';
 import { GroundTrackView } from './ground-track';
@@ -111,6 +116,9 @@ export class OrbitPlayground {
   private craftSource: CraftSource = 'none';
   private ownCraft: Craft = defaultCraft();
   private launchCraft: Craft | null = null;
+  /** O04: the application chosen, and its results' place in the facts panel (refreshed as the satellite moves) */
+  private apps: AppSettings | null = null;
+  private appsBox: HTMLElement | null = null;
   /** the plan's segment on screen, to redraw the facts when a burn is made */
   private shownSegment = 0;
   private spiralFactsTick = 0;
@@ -350,7 +358,7 @@ export class OrbitPlayground {
         v.render();
       }
     } else if (this.view === 'track') {
-      this.track.draw((tt) => this.stateNow(tt), this.time, this.orbit.jd0 + this.time / 86400, orbitFacts(flown.orbit, this.j2).nodalPeriod);
+      this.track.draw((tt) => this.stateNow(tt), this.time, this.orbit.jd0 + this.time / 86400, orbitFacts(flown.orbit, this.j2).nodalPeriod, this.trackOverlay(flown.orbit));
     } else if (this.view === 'porkchop') {
       this.porkchopView.draw();
     } else {
@@ -576,6 +584,72 @@ export class OrbitPlayground {
     budget: () => this.budget,
   };
 
+  // ─── what satellites are for (O04) ─────────────────────────────────────────
+
+  /** The application's results for the orbit flown now, or null with none chosen. */
+  private appsSection(): HTMLElement | null {
+    const a = this.apps;
+    if (!a || this.level === 'watch') return null;
+    const s = this.stateNow(this.time);
+    const flown = this.flownAt(this.time).orbit;
+    const thai = a.thaiId ? thaiSatelliteById(a.thaiId) ?? null : null;
+    const ltan = nodeLocalTime(s.raan, this.orbit.jd0 + this.time / 86400);
+    return appsResults(this.appsHost, a, {
+      comms: a.kind === 'comms' ? commsReport(a, s) : null,
+      eo: a.kind === 'eo' ? eoReport(a, flown, s, this.j2, thai?.repeat?.revs ?? null, ltan) : null,
+      thai,
+    });
+  }
+
+  /** What the application draws on the ground track. */
+  private trackOverlay(flown: Orbit): TrackOverlay {
+    const a = this.apps;
+    if (!a) return {};
+    const station = a.kind === 'thai' ? undefined : { lat: a.station.lat, lon: a.station.lon };
+    if (a.kind === 'comms') {
+      const r = this.stateNow(this.time).r;
+      return { station, footprint: footprintAngle(Math.hypot(r.x, r.y, r.z), a.minElevation) };
+    }
+    if (a.kind === 'eo') return { station, swath: eoReport(a, flown, this.stateNow(this.time), this.j2, null, 0).swath };
+    return {};
+  }
+
+  private readonly appsHost: AppsHost = {
+    level: () => this.level,
+    apps: () => this.apps,
+    choose: (kind: AppKind | null) => {
+      // the station and the rest are kept from one application to another
+      this.apps = kind ? { ...(this.apps ?? defaultApps(kind)), kind } : null;
+      // looking at the ground: the map shows the station, the footprint and the swath
+      if (kind === 'comms' || kind === 'eo') this.view = 'track';
+      this.render();
+      this.resize();
+    },
+    change: (patch: Partial<AppSettings>) => {
+      if (!this.apps) return;
+      const before = this.apps;
+      this.apps = { ...before, ...patch };
+      this.renderFacts();
+      // a field appears or goes: a custom station's coordinates, the optics
+      if (patch.stationId !== undefined && (patch.stationId === 'custom') !== (before.stationId === 'custom')) this.renderControls();
+      if ('optics' in patch && !!patch.optics !== !!before.optics) this.renderControls();
+    },
+    showThai: (id: string) => {
+      const sat = thaiSatelliteById(id);
+      if (!sat || !this.apps) return;
+      this.apps = { ...this.apps, thaiId: id };
+      this.maneuver = null;
+      this.jd0 = julianDate(new Date());
+      this.time = 0;
+      this.planStart = 0;
+      // a low orbit is sun-synchronous only with the bulge turning it; a geostationary one stands still without
+      this.j2 = sat.orbit.kind === 'leo';
+      this.setOrbit(thaiOrbit(sat, this.jd0));
+      this.orbitView?.setOrbit(this.orbit, true);
+      this.render();
+    },
+  };
+
   /** O03: the spacecraft chosen for the budget, with an engine; null with none. */
   private get craft(): Craft | null {
     return this.craftSource === 'launch' ? this.launchCraft : this.craftSource === 'own' ? this.ownCraft : null;
@@ -731,6 +805,7 @@ export class OrbitPlayground {
     );
     box.append(toggles);
     box.append(maneuverControls(this.maneuverHost));
+    box.append(appsControls(this.appsHost));
     if (engineer) box.append(this.repeatTool());
     box.append(this.handoffBlock());
   }
@@ -868,6 +943,8 @@ export class OrbitPlayground {
     if (this.level === 'watch') return;
     if (this.view === 'cannon') { this.renderCannonFacts(box); this.appendComingNext(box); return; }
     if (this.plan && this.maneuver) box.append(planTable(this.maneuverHost, this.plan, this.maneuver, this.time));
+    this.appsBox = this.appsSection();
+    if (this.appsBox) box.append(this.appsBox);
     const o = this.flownAt(this.time).orbit, f = orbitFacts(o, this.j2), engineer = this.level === 'engineer';
     const km = t('u.km'), kms = t('u.kms');
     box.append(el('h2', 'pg-facts-title', t('pg.facts')));
@@ -1012,6 +1089,11 @@ export class OrbitPlayground {
     }
     const s = this.stateNow(this.time);
     const L = this.live;
+    // O04: the look angles and the camera follow the satellite
+    if (this.appsBox && this.apps && this.apps.kind !== 'thai') {
+      const fresh = this.appsSection();
+      if (fresh) { this.appsBox.replaceWith(fresh); this.appsBox = fresh; }
+    }
     const p = this.activePlan;
     const nextNote = this.facts.querySelector('.pg-plan-next');
     if (p && nextNote) {
