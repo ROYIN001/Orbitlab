@@ -606,7 +606,10 @@ is in [PHYSICS.md §9.2](PHYSICS.md).
 ## 17. Lessons and the placement test
 
 The gold **Lessons** button in the top bar (and the fourth card on the landing page) opens the
-catalogue: training missions with a goal and pass criteria, graded as soon as the flight ends.
+lessons page: a page of its own over the whole window below the top bar, like a mode, with two
+tabs — **Lessons** and **Placement test** — and **Back to the simulator** (or Esc, or the
+browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
+The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends.
 They are listed in five tracks — orbital mechanics, guidance and navigation, failures, attitude
 control, advanced missions — each with its number (1.1 … 5.3), a ✓ once passed and ● once tried.
 Tracks 1 and 3 are written; the others are listed as *coming soon*.
@@ -636,14 +639,23 @@ which one.
 | 3.2 | A stuck gyro and the FDIR (Engineer, six-DOF) | the FDIR switch | the orbit, with IMU 1 voted out |
 | 3.3 | The crew's escape | nothing | the crew lands, and the peak load on them is read (±10 %) |
 
-**The placement test** (in the catalogue) is 25 questions in six areas — the basics of spaceflight,
-orbital mechanics, rocket performance, guidance and navigation, attitude control, failures and
-safety — four or five from each, easy to hard, with no clock. The questions and the numbers in the
-calculations are drawn for you from a bank of 104, always to the same plan, so no two tests are
-alike but all are the same size and difficulty. Where a question is only knowledge it offers
-**I don't know**; where being sure of a wrong answer would matter it asks how sure you are. Some
-questions show a chart of a flight flown in this simulator; some ask you to predict what a change
-does and then show the two flights; one asks which vehicle a drawing shows. The result is a radar
+**The placement test** is 25 questions in six areas — 1 the basics of spaceflight, 2 orbital
+mechanics, 3 rocket performance, 4 guidance and navigation, 5 attitude control, 6 failures and
+safety — five from the basics and four from each of the others, easy to hard, with no clock. The
+questions and the numbers in the calculations are drawn for you from a bank of 157 (at least 25
+in every area), always to the same plan, so no two tests are alike but all are the same size and
+difficulty. Where a question is only knowledge it offers
+**I don't know**; where being sure of a wrong answer would matter it asks how sure you are. The
+questions come in several kinds: one answer of four; **several answers** (choose every right one);
+**put in order** (click the items first to last); a calculation; a value **read off a chart** of a
+flight flown in this simulator or off a **diagram** drawn with your own numbers (a ground track, a
+step response, a Bode plot); a diagram with lettered points (an orbit's apsides and nodes, the
+forces on a rocket, dispersed flights, three inertial units voting); **predict, then observe**,
+which shows the two flights after you answer; and **which vehicle is this?**, with a photograph of
+the real vehicle (from Wikimedia Commons, under free licences; the author is named in the answers,
+since it would give the answer away, and all are listed in `public/lessons/vehicles/CREDITS.txt`).
+The recommended start is always a lesson already written: the nearest one to the area you most
+need. The result is a radar
 of the six areas and a level for each (beginner, basic, proficient), your strengths, what to work
 on, your misconceptions — wrong answers you were sure of — and the recommended path through the
 lessons: which you can skip, which to go over, and a ★ where to start. Every lesson stays open
@@ -662,8 +674,10 @@ lesson-file.ts`). A lesson is a mission document (as a mission file holds it, U0
 it locks, its criteria — a measure within bounds (`maxQ`, `dvLeft`, `orbit.inclination`, …), the
 outcome, an event, a number the student works out from the flight, or a check written in code —
 its hints, and its texts in English, Russian and Thai (a missing language falls back to English).
-A question is a choice, a calculation whose answer is an arithmetic expression of its drawn
-numbers, or a vehicle to recognise, with its area, level and explanation. Anything that cannot be
+A question is a choice, several answers (`multi`), an ordering (`order`, its items in the right
+order), a calculation whose answer is an arithmetic expression of its drawn numbers, or a vehicle to
+recognise, with its area (1–6, as above), level and explanation, and optionally a chart of a
+recorded flight or one of the built-in diagrams (`src/lessons/assessment/diagrams.ts`). Anything that cannot be
 used is left out, and the catalogue says what and why. Over WebMCP, `list_lessons`,
 `start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
 the student and read how it is going — never the expected value of an answer.

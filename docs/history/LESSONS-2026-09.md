@@ -115,3 +115,17 @@ off-target orbit at 17.5 t).
 - In the browser (worker physics, Thai and Russian): lessons 1.1 and 1.4 flown to a pass
   through WebMCP at 1000×, 1.4 failed at 18 t, the locks greyed out, the placement test taken to
   its result.
+
+### Round 2 (asked 2026-09-26, after the owner saw round 1)
+
+The owner's feedback on round 1, and what was done about it:
+
+| Feedback | Done |
+|---|---|
+| Number the areas from the basics: 1 space basics, then 2–6 | Area 1 the basics, 2 orbits, 3 rockets, 4 guidance, 5 control, 6 failures, in the bank, the lessons' `domains`, the blueprint, the prerequisites and the dictionaries. |
+| At least 25 questions per area, with more kinds of question | 157 (26–27 per area). New kinds: several answers (`multi`), put in order (`order`), values read off a chart of a recorded flight, and diagrams drawn for the question (`diagrams.ts`: an orbit's apsides, a Hohmann transfer, the orbital plane and its nodes, the forces on a rocket, a ground track, step responses, a Bode plot, 3σ ellipses of dispersed flights, three IMUs voting, ascent trajectories) — a numeric diagram is drawn with the student's own numbers. |
+| The lessons as a page of their own, like a mode, not a window over the simulator | `#/lessons` and `#/lessons/test`: the whole window below the top bar, with tabs, *Back to the simulator*, Esc and the browser's Back; the language can be changed on it (the test's screen is redrawn). `main.ts`: the start address is kept, and the page owns the keyboard (two lines). |
+| The drawn rockets are not clear: use real photographs | 11 photographs from Wikimedia Commons, free licences only (public domain, CC0, CC BY, CC BY-SA), resized to 560 × 720 at most; the author and licence are shown in the answers (not beside the question: "SpaceX" or "CALT" would give it away) and listed in `public/lessons/vehicles/CREDITS.txt` and `src/lessons/assessment/photos.ts`. Ariane 6, H3 and PSLV had no good free photograph and left the question; Proton-M joined it. |
+| The test in all three languages | It always was (every text is checked in three scripts); the language could not be changed while the test's dialog was open. On the page it can, and the screenshots show it in English too. |
+| 2.ก: write tracks 2, 4, 5 now | See below. |
+| 3.ข: the recommended start must be a written lesson | The start is the nearest written lesson: chiefly about the area, then touching it, then touching what the area rests on. Tested over 40 seeds. |
