@@ -2138,8 +2138,9 @@ flown **downrange**, the original model above with no target, or **expended**. W
 every recovered body is flown downrange, unchanged. A plan changes the propellant reserve too: a
 body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for Falcon 9 and
 Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 12 %
-leaves Arabsat-6A's side boosters short of their boostback), a drone-ship or downrange body keeps
-`recoveryReserve`, and a body the plan expends, or leaves out, holds nothing back.
+leaves Arabsat-6A's side boosters short of their boostback), a downrange body keeps
+`recoveryReserve`, a drone-ship body `recoveryReserve` or, a lone first stage, what its return
+needs (`droneShipReserve`, §13.5), and a body the plan expends, or leaves out, holds nothing back.
 
 The plan is checked with the rest of the configuration (`validateConfigInput`): a landing zone has
 to be one the flight's site can reach, a pad or a drone ship's deck needs a stage with legs, and
@@ -2174,7 +2175,7 @@ The guidance is one piece, `src/physics/sim/return-guidance.ts`, shared by both 
   gives. The fixed 1.4 km/s it replaces left a lone Falcon 9 first stage off Demo-2's steep
   ascent (13 t to 51.6°) coming through 3 km at nearly 300 m/s sideways with 30 t unburnt, past
   what its landing burn could take off; it now lands on the deck at T+552 s in six-DOF (the real
-  booster at T+9:22, 562 s; NASA Demo-2 launch timeline) with 11 t left. Falcon Heavy's core
+  booster at T+9:22, 562 s; NASA Demo-2 launch timeline) with 7 t left. Falcon Heavy's core
   (Arabsat-6A) still lands (tests/heavy/falcon-heavy-returns.test.ts).
 - **Landing burn.** A constant deceleration to 2 m/s at the pad, lit at the drag-aware braking
   height, with the zero-effort-miss divert of Ebrahimi, Bahrami and Roshanian (2008) in the
@@ -2752,24 +2753,31 @@ the dockings):
 | Soyuz MS-25 | +2.9 (117.8) | +3.7 (153.33) | +6.8 (287.7) | +7.3 (525.93) | separation +5.2 (529.2); contact 2 d 02:37 against 2 d 02:26:39 |
 | ORBCOMM-2 | — | −14.7 (≈175) | −11.4 / −12.4 (≈140 / ≈144) | — | Max Q −34 (≈84); landing at LZ-1 −87 (≈604) |
 | Angara-A5 1L | −10.7 (213.7) | −89.1 (345.1) | +0.9 (330.9) | −16.5 (≈733) | URM-2 separation −18.6 (738.4) |
-| Demo-2 | — | — | −20.1 / −20.1 (153 / 156) | −11.1 (527) | Max Q −6.9 (58); landing on the ship −10 (562) |
+| Demo-2 | — | — | −16.0 / −16.0 (153 / 156) | −11.1 (527) | Max Q −6.9 (58); landing on the ship −9.5 (562); Dragon separation −185 (720) |
 | Hayabusa2 | +0.1 (107) | −1.0 (251) | −5.3 / −7.3 (396 / 404) | −48 (680) | — |
 
 The differences are the model's, and mostly known: the Soyuz-2.1a's accepted ascent runs about
-five seconds long throughout. Falcon 9 Block 5 stands in for the 2015 Full Thrust, and its
-default pitch programme with the 12 % drone-ship reserve cuts off the first stage 20 s early on
-Demo-2's heavy crewed ascent. Angara-A5 drops its fairing on the heating placard at 256 s, where
+five seconds long throughout. Falcon 9 Block 5 stands in for the 2015 Full Thrust, and even with
+the drone-ship reserve sized for the mission its default pitch programme cuts off the first stage
+16 s early on Demo-2's heavy crewed ascent; the model releases Dragon 15 s after cut-off, where
+the real stage coasted three minutes first. Angara-A5 drops its fairing on the heating placard at 256 s, where
 the real one kept it until after the core had gone (345 s). H-IIA's model flies a short second
 burn and circularises at apogee, where the real one cut off at 680 s into the parking orbit
 directly. The two dockings are the G07 profiles', copied from other flights (§9.2): the
 four-orbit one is Soyuz TMA-19M's 6 h 21 min, and MS-16 was planned for 6 h 11 min.
 
-*A limitation found here:* Demo-2 reaches its orbit in six-DOF, the default everywhere, with
-75 m/s to spare; in the point-mass model (a choice in Engineer) its second stage runs dry about
-100 m/s short. The first stage holds back a fixed 12 % of its propellant for any drone-ship
-return, 47.5 t, where this booster lands with 11 t of it unburnt; flown expended, the same
-ascent cuts off the first stage at T+152 s (the real one at 153 s) with nearly 1 km/s left.
-A reserve sized for each return, rather than one fraction for all, is left for later.
+*The drone-ship reserve, sized for the mission.* Found here: with the fixed 12 % every
+drone-ship return held back (47.5 t on Falcon 9), Demo-2's second stage ran dry 100 m/s short in
+the point-mass model, and the booster still landed with 11 t unburnt; flown expended, the same
+ascent cuts off the first stage at T+152 s (the real one at 153 s) with nearly 1 km/s left. A lone
+first stage bound for a drone ship now keeps what its return needs (`droneShipReserve`,
+src/physics/vehicle.ts): the landing burn's 800 m/s and an entry burn from its separation speed
+down to 550 m/s, the separation speed from the rocket equation over the mass the stage lifts less
+1.1 km/s of ascent losses (Falcon 9 on Demo-2: 2.95 km/s ideal, 1.85 km/s at separation), iterated
+because the reserve sets that speed — never more than the vehicle's `recoveryReserve`. Falcon 9
+keeps 9.1 % (15.6 t) to 9.8 % (nothing), Demo-2 9.25 %, and Demo-2 now reaches its orbit with
+173 m/s to spare in point-mass and 255 m/s in six-DOF, the booster on the deck with 7–11 t left.
+Falcon Heavy's core, separating from its side boosters' stack, keeps its 12 %.
 
 ## Glossary (EN / RU / TH)
 
