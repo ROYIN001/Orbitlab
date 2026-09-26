@@ -5,6 +5,11 @@
  * the Sun and the Moon, sunlight pressure — and see how the perigee and the
  * apogee fall and when the satellite comes down. An analysis beside the
  * flight: the flight and its verdict are not touched.
+ *
+ * R05: the Sun's activity is measured by default — GFZ's monthly history,
+ * then the space-weather dataset (offline its snapshot, online NOAA SWPC),
+ * then NOAA's forecast — or held at one of ECSS's levels; the result says
+ * which, and how far the measurements and the forecast reach.
  */
 import { Modal } from './dialogs';
 import { t, getLang } from '../i18n';
@@ -12,8 +17,10 @@ import { drawChart } from './charts';
 import { runLifetimeJob } from '../physics/lifetime-job';
 import type { ForceModel, Spacecraft } from '../physics/propagator/forces';
 import type { PropagationResult } from '../physics/propagator/propagate';
-import type { SolarActivity } from '../physics/propagator/density';
+import { ECSS_LEVELS, measuredActivity, type Activity, type EcssLevel, type ForecastSide } from '../physics/propagator/activity';
 import type { OrbitHandoff } from '../orbit/handoff';
+import type { DataProvider } from '../provider/data-provider';
+import type { SpaceWeather } from '../provider/space-weather';
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
   const e = document.createElement(tag);
@@ -24,6 +31,20 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 
 const HORIZONS = [30, 365, 5 * 365, 25 * 365] as const;
+
+/** R05: measured then forecast (NOAA's expected, high or low side), or one of ECSS's fixed levels. */
+export type ActivityChoice = 'measured' | 'measuredHigh' | 'measuredLow' | EcssLevel;
+const ACTIVITY_CHOICES: readonly ActivityChoice[] = ['measured', 'measuredHigh', 'measuredLow', 'low', 'moderate', 'high'];
+const ACTIVITY_KEY: Record<ActivityChoice, string> = {
+  measured: 'life.activity.measured', measuredHigh: 'life.activity.measuredHigh', measuredLow: 'life.activity.measuredLow',
+  low: 'life.activity.low', moderate: 'life.activity.moderate', high: 'life.activity.high',
+};
+const SIDE: Record<'measured' | 'measuredHigh' | 'measuredLow', ForecastSide> = { measured: 'expected', measuredHigh: 'high', measuredLow: 'low' };
+
+export interface LifetimeDeps {
+  /** the data mode's provider, for the space-weather dataset (R05) */
+  data(): DataProvider;
+}
 const RAD = 180 / Math.PI;
 
 /** Days, months or years, whichever reads best. */
@@ -38,7 +59,10 @@ export function formatDuration(seconds: number): string {
 export class LifetimeDialog extends Modal {
   /** where the orbit starts: the state on screen, after insertion, handed on as the Orbit section gets it (S03) */
   private start: OrbitHandoff | null = null;
-  private forces: ForceModel = { j2: true, j3j4: true, drag: true, sun: true, moon: true, srp: true, activity: 'mean' };
+  private forces: Omit<ForceModel, 'activity'> = { j2: true, j3j4: true, drag: true, sun: true, moon: true, srp: true };
+  private activity: ActivityChoice = 'measured';
+  /** what the last result's activity was, in words */
+  private activityNote = '';
   private method: 'mean' | 'cowell' = 'mean';
   private horizon: number = 25 * 365;
   private spacecraft: Spacecraft | null = null;
@@ -47,11 +71,14 @@ export class LifetimeDialog extends Modal {
   private progress = 0;
   private message = '';
 
-  constructor() {
+  private readonly deps: LifetimeDeps | null;
+
+  constructor(deps?: LifetimeDeps) {
     const dialog = document.createElement('dialog');
     dialog.className = 'dialog lifetime-dialog';
     (document.getElementById('app') ?? document.body).append(dialog);
     super(dialog);
+    this.deps = deps ?? null;
     dialog.addEventListener('close', () => this.running?.abort());
   }
 
@@ -110,8 +137,8 @@ export class LifetimeDialog extends Modal {
     };
     const settings = el('div', 'life-settings');
     settings.append(
-      select<SolarActivity>(t('life.activity'), [['low', t('life.activity.low')], ['mean', t('life.activity.mean')], ['high', t('life.activity.high')]],
-        this.forces.activity, (v) => { this.forces.activity = v; }),
+      select<ActivityChoice>(t('life.activity'), ACTIVITY_CHOICES.map((c) => [c, t(ACTIVITY_KEY[c])] as [ActivityChoice, string]),
+        this.activity, (v) => { this.activity = v; }),
       select<number>(t('life.horizon'), HORIZONS.map((d) => [d, formatDuration(d * 86400)] as [number, string]), this.horizon, (v) => { this.horizon = v; }),
       select<'mean' | 'cowell'>(t('life.method'), [['mean', t('life.method.mean')], ['cowell', t('life.method.cowell')]], this.method, (v) => { this.method = v; }),
     );
@@ -147,10 +174,11 @@ export class LifetimeDialog extends Modal {
     this.result = null;
     this.applyLanguage();
     try {
+      const activity = await this.activityFor(this.activity, ctl.signal);
       const result = await runLifetimeJob({
         r0: this.start.r, v0: this.start.v, jd0: this.start.jd,
         options: {
-          method: this.method, duration: this.horizon * 86400, forces: { ...this.forces }, spacecraft: { ...this.spacecraft },
+          method: this.method, duration: this.horizon * 86400, forces: { ...this.forces, activity }, spacecraft: { ...this.spacecraft },
           samples: 600, tolerance: 1e-9,
         },
       }, ctl.signal, (f) => {
@@ -168,6 +196,27 @@ export class LifetimeDialog extends Modal {
     }
   }
 
+  /** R05: the indices for the choice, and what they are in words (kept for the result). */
+  private async activityFor(choice: ActivityChoice, signal: AbortSignal): Promise<Activity> {
+    if (choice === 'low' || choice === 'moderate' || choice === 'high') {
+      const l = ECSS_LEVELS[choice];
+      this.activityNote = t('life.sw.fixed', { level: t(ACTIVITY_KEY[choice]) });
+      return l;
+    }
+    let sw: SpaceWeather | null = null, asOf = '';
+    try {
+      const set = await this.deps?.data().load('spaceWeather', signal);
+      if (set) { sw = set.data; asOf = set.asOf.slice(0, 10); }
+    } catch (e) {
+      if (signal.aborted) throw e;
+    }
+    const m = measuredActivity(sw, SIDE[choice]);
+    this.activityNote = m.forecastTo
+      ? t('life.sw.measured', { measured: m.measuredTo, forecast: m.forecastTo, repeat: m.repeatFrom, date: asOf })
+      : t('life.sw.history', { measured: m.measuredTo, repeat: m.repeatFrom });
+    return m.series;
+  }
+
   private resultView(res: PropagationResult): HTMLElement[] {
     const out: HTMLElement[] = [];
     const last = res.samples[res.samples.length - 1];
@@ -175,6 +224,7 @@ export class LifetimeDialog extends Modal {
       ? t('life.reentry', { time: formatDuration(res.lifetime) })
       : t('life.stays', { time: formatDuration(last.t), pe: (last.perigeeAlt / 1000).toFixed(0), ap: (last.apogeeAlt / 1000).toFixed(0) });
     out.push(el('p', 'life-verdict', verdict));
+    if (this.activityNote) out.push(el('p', 'field-note life-activity', this.activityNote));
     const days = res.samples.map((s) => s.t / 86400);
     const alt = el('canvas', 'chart life-chart');
     const plane = el('canvas', 'chart life-chart');

@@ -8,8 +8,9 @@
  *   the Earth's pear shape — slowly swings the eccentricity (the "frozen
  *   orbit" of an Earth-observation satellite sits where it balances J2);
  *   J4 refines both.
- * - **Drag** in an atmosphere turning with the Earth (Harris–Priester, with
- *   the diurnal bulge and solar activity): −½ ρ C_D (A/m) |v_r| v_r.
+ * - **Drag** in an atmosphere turning with the Earth (density.ts: NRLMSISE-00's
+ *   level for the Sun's activity, Harris–Priester's diurnal bulge; the
+ *   activity fixed, or measured and forecast, R05): −½ ρ C_D (A/m) |v_r| v_r.
  * - **The Sun and the Moon** as third bodies, direct pull less the pull on
  *   the Earth (the part that matters is their tide across the orbit).
  * - **Sunlight pressure** on a sphere ("cannonball"): P_⊙ C_R (A/m) (AU/d)²
@@ -20,7 +21,8 @@
  */
 import { MU_EARTH, OMEGA_EARTH, R_EARTH, J2_EARTH } from '../constants';
 import { AU, moonPosition, sunPosition, type V3 } from './ephemeris';
-import { harrisPriesterDensity, type SolarActivity } from './density';
+import { airDensity, heightKm } from './density';
+import { ECSS_LEVELS, indicesAt, type Activity } from './activity';
 
 export const J3_EARTH = -2.53265649e-6;
 export const J4_EARTH = -1.61962159e-6;
@@ -37,10 +39,11 @@ export interface ForceModel {
   sun: boolean;
   moon: boolean;
   srp: boolean;
-  activity: SolarActivity;
+  /** the Sun's and the geomagnetic field's activity, for the density (R05) */
+  activity: Activity;
 }
 
-export const ALL_FORCES: ForceModel = { j2: true, j3j4: true, drag: true, sun: true, moon: true, srp: true, activity: 'mean' };
+export const ALL_FORCES: ForceModel = { j2: true, j3j4: true, drag: true, sun: true, moon: true, srp: true, activity: ECSS_LEVELS.moderate };
 
 export interface Spacecraft {
   mass: number;
@@ -99,18 +102,15 @@ export function inShadow(r: V3, s: V3): boolean {
   return Math.hypot(px, py, pz) < R_EARTH;
 }
 
-/** Altitude over a sphere of the equatorial radius, km (the density table's convention). */
-const altitudeKm = (r: V3): number => (Math.hypot(r[0], r[1], r[2]) - R_EARTH) / 1000;
-
 /** Everything on the satellite at `r`, `v` (m, m/s) at Julian date `jd`, m/s². */
 export function acceleration(r: V3, v: V3, jd: number, f: ForceModel, sc: Spacecraft, bulgeN = 4): V3 {
   const a = gravityAcceleration(r, f.j2, f.j3j4);
   const needSun = f.sun || f.srp || f.drag;
   const sun = needSun ? sunPosition(jd) : null;
   if (f.drag) {
-    const alt = altitudeKm(r);
+    const alt = heightKm(r);
     if (alt < 1000) {
-      const rho = harrisPriesterDensity(r, alt, sun!, bulgeN, f.activity);
+      const rho = airDensity(r, alt, sun!, bulgeN, indicesAt(f.activity, jd));
       // air turning with the Earth: v_rel = v − ω × r
       const vr: V3 = [v[0] + OMEGA_EARTH * r[1], v[1] - OMEGA_EARTH * r[0], v[2]];
       const vm = Math.hypot(vr[0], vr[1], vr[2]);

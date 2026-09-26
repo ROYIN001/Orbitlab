@@ -29,6 +29,7 @@ Status on 2026-09-25:
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
+| Space weather in the lifetime (R05) | NRLMSISE-00 as ECSS-E-ST-10-04C tabulates it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | All seven within 25 % of their days in orbit with the measured Sun (+0.3 to −22 %); a fixed moderate Sun is off by −74 to +83 % (§6), 2026-09-26 |
 
 ## 1. Method
 
@@ -975,7 +976,7 @@ SMAD*. A dish's look angles are worked on the WGS-84 ellipsoid, "up" along its n
   differ the value is left out: THEOS-2's mass is 417 kg in one report and 425 kg in another.
   NAPA-2 re-entered on 2026-07-05, by the catalogue.
 
-## 6. Real satellites (R01–R04): SGP4 against its reference, the catalogue, passes, uncertainty
+## 6. Real satellites (R01–R05): SGP4 against its reference, the catalogue, passes, uncertainty, the Sun's activity
 
 Real satellites are propagated from their element sets by SGP4 and SDP4
 (`src/orbit/sgp4.ts`, roadmap R01), the theory those element sets are fitted to. It is the
@@ -1117,11 +1118,84 @@ Against GPS Precision Ephemerides", AAS 07-127, 2007). The page therefore shows 
 - Converted to time along the track, the errors are small for passes: a day-old ISS set is early
   or late by about a quarter of a second.
 
+### The Sun's activity in the lifetime (R05)
+
+The lifetime model's density (`src/physics/propagator/density.ts`) now reads the Sun's activity
+as measured, instead of one of three fixed levels:
+
+- **The level** is NRLMSISE-00's total density averaged over the day and the seasons, as ECSS
+  tabulates it for low, moderate and high long-term activity (F10.7 65, 140, 250; Ap 0, 15, 45;
+  [ECSS-E-ST-10-04C](https://ecss.nl/wp-content/uploads/standards/ecss-e/ECSS-E-ST-10-04C15November2008.pdf),
+  Annex G, Tables G-1 to G-3). Between and a little beyond them, the logarithm of the density is
+  interpolated in 1/T, with T the exospheric temperature of the IPS relation
+  T = 900 + 2.5 (F10.7 − 70) + 1.5 Ap
+  ([IPS, "Satellite Orbital Decay Calculations"](https://www.sws.bom.gov.au/Category/Educational/Space%20Weather/Space%20Weather%20Effects/SatelliteOrbitalDecayCalculations.pdf)).
+- **The spread through the day** is Harris–Priester's diurnal bulge (Montenbruck & Gill), scaled
+  so that its average over the globe is that level.
+- **The indices** (`src/physics/propagator/activity.ts`) are GFZ's monthly means of the observed
+  F10.7 and of Ap since 1947 (`src/data/solar-history.ts`,
+  [doi:10.5880/Kp.0001](https://doi.org/10.5880/Kp.0001), CC BY 4.0), then NOAA SWPC's monthly
+  flux, the last thirty days' flux and the last week's Ap from Kp (Bartels's table), then SWPC's
+  monthly forecast (expected, or the high or low side of its range) to its end, then the Sun
+  taken to repeat itself eleven years on. Where no Ap is measured it is 13, the mean daily Ap of
+  solar cycles 19 to 24. The space-weather dataset carries SWPC's months and forecast offline in
+  its snapshot and online from SWPC.
+
+The validation takes spheres, whose drag area does not depend on how they tumble. Each starts
+from its first element set (CelesTrak) as mean elements (`src/orbit/mean-state.ts`), with its
+published mass and diameter and C_D 2.2 (the app's value for a compact body), and is carried by
+the mean-element method with the series the app builds until its perigee is below 120 km. The
+tolerance, ±25 % of the days it actually spent in orbit, was fixed before the comparison.
+Sources are in `tests/fixtures/space-weather/README.md`.
+
+| sphere | mass, diameter | first set → re-entry (GCAT) | days in orbit | measured Sun | fixed moderate Sun |
+| --- | --- | --- | --- | --- | --- |
+| Starshine | 39 kg, 0.48 m | 1999-06-05 → 2000-02-18 | 258.2 | 223.9 (−13.3 %) | 289.5 (+12.1 %) |
+| Starshine 2 | 39 kg, 0.48 m | 2001-12-16 → 2002-04-26 | 130.8 | 131.2 (+0.3 %) | 239.6 (+83.1 %) |
+| Starshine 3 | 91 kg, 0.94 m | 2001-09-30 → 2003-01-21 | 478.2 | 386.0 (−19.3 %) | 755.6 (+58.0 %) |
+| ANDE MAA | 52.04 kg, 0.4826 m | 2006-12-22 → 2007-12-25 | 367.6 | 286.5 (−22.1 %) | 107.6 (−70.7 %) |
+| ANDE FCal | 62.70 kg, 0.4445 m | 2006-12-22 → 2008-05-25 | 519.5 | 412.2 (−20.7 %) | 151.4 (−70.9 %) |
+| ANDE-2 Pollux | 27.442 kg, 0.4826 m | 2009-07-31 → 2010-03-29 | 241.4 | 192.6 (−20.2 %) | 64.1 (−73.5 %) |
+| ANDE-2 Castor | 47.45 kg, 0.4826 m | 2009-07-31 → 2010-08-18 | 383.4 | 317.6 (−17.2 %) | 111.4 (−70.9 %) |
+
+`tests/activity.test.ts` holds each sphere to the tolerance, the density to the ECSS tables at
+the three levels (and its bulge to an average of one over the globe), and the series to the data
+it is built from.
+
+**Findings.**
+
+- **All seven are within 25 % with the Sun as measured**, from the solar maximum of 2000–2002
+  to the deep minimum of 2008–2009. A fixed moderate Sun gets the maximum's spheres down 1.6 to
+  1.8 times too late and the minimum's 3.4 times too early. That spread, not the model, was the
+  largest error of P07's fixed levels.
+- **The model is early for six of the seven, by 13 to 22 % (−16 % on average).** A density some
+  15–20 % too high, or a drag coefficient that high, would do it. NRLMSISE-00 is known to put
+  too much air in the thermosphere of the 2008 minimum (Emmert, Lean and Picone, "Record-low
+  thermospheric density during the 2008 solar minimum", GRL 37, L12102, 2010), which fits the
+  ANDE spheres of 2007–2010; for the Starshines at maximum there is no such account, and the two
+  causes are not separated here. Nothing was fitted to remove the bias.
+- **Heights above the ellipsoid, not a sphere.** Run first with P07's altitude over a sphere of
+  the equatorial radius, the spheres came down 12 to 35 % early, five of them outside the
+  tolerance. Both tables are of height above the ellipsoid (Montenbruck & Gill evaluate
+  Harris–Priester at the geodetic height): at 50° of latitude a sphere reads 12 km low, about a
+  third too much air. The density now takes the height above WGS-84 (`heightKm`), which is what
+  the tables mean; that correction was made once, for that reason, and the table above is its
+  result.
+- **The two methods agree to 7 %.** Starshine 2 carried by the full equations of motion, every
+  force on, comes down after 140.3 days against the mean method's 131.2 (and 130.8 on record);
+  the full equations start from the mean elements taken as osculating ones.
+- **Monthly means smooth out storms.** For lifetimes of months that costs little; for a
+  re-entry days away (M03) the daily indices matter, and a storm can move it by a day.
+- **Beyond NOAA's forecast the Sun is assumed.** The series repeats the last eleven years; a
+  lifetime of decades is an estimate, and the dialog offers the forecast's high and low sides to
+  show how far it can move.
+
 ## 7. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
 npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
+npx vitest run tests/activity.test.ts tests/propagator.test.ts                   # the Sun's activity in the lifetime, ~5 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

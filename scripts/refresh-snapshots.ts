@@ -18,7 +18,7 @@
  * reads the bundled ones).
  */
 import { writeFileSync } from 'node:fs';
-import { SWPC_F107_URL, SWPC_KP_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather.ts';
+import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather.ts';
 import { SATELLITE_URLS, parseCelestrakGp, validSatelliteCatalog } from '../src/provider/satellites.ts';
 
 class Refused extends Error {}
@@ -56,9 +56,11 @@ const REFRESHES: Refresh[] = [
     id: 'spaceWeather', file: 'space-weather.json', indent: 1,
     source: { name: 'NOAA Space Weather Prediction Center', url: 'https://www.swpc.noaa.gov/' },
     async fetch() {
-      const { data, asOf } = parseSwpc(await json(SWPC_F107_URL), await json(SWPC_KP_URL));
+      const [f107, kp, monthly, forecast] = await all([SWPC_F107_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, SWPC_FORECAST_URL]);
+      const { data, asOf } = parseSwpc(f107, kp, monthly, forecast);
       if (!validSpaceWeather(data)) throw new Error('the parsed data do not pass their own check');
-      return { data, asOf, summary: `${data.f107.length} days of F10.7, ${data.kp.length} Kp readings` };
+      const months = `${data.monthly[0].month}–${data.monthly.at(-1)!.month}`;
+      return { data, asOf, summary: `${data.f107.length} days of F10.7, ${data.kp.length} Kp readings, monthly F10.7 ${months}, forecast to ${data.forecast.at(-1)!.month}` };
     },
   },
   {

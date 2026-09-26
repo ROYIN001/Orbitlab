@@ -12,6 +12,7 @@ import { DEFAULT_FAILURE, DEFAULT_GUIDANCE } from '../src/physics/defaults';
 import { orbitById } from '../src/data/orbits';
 import { satelliteById } from '../src/data/satellites';
 import { propagate } from '../src/physics/propagator/propagate';
+import { ECSS_LEVELS } from '../src/physics/propagator/activity';
 import {
   HANDOFF_FORMAT, handoffAvailable, handoffElements, handoffFromFlight, handoffFromState, parseHandoff, type OrbitHandoff,
 } from '../src/orbit/handoff';
@@ -109,7 +110,7 @@ describe('orbit hand-off (S03)', () => {
   it('is what the lifetime analysis starts from', () => {
     const h = handoffAt(electron.sim, electron.frames.at(-1)!);
     const res = propagate(h.r, h.v, h.jd, { method: 'mean', duration: 30 * 86400,
-      forces: { j2: true, j3j4: false, drag: true, sun: false, moon: false, srp: false, activity: 'mean' }, spacecraft: h.spacecraft, samples: 20 });
+      forces: { j2: true, j3j4: false, drag: true, sun: false, moon: false, srp: false, activity: ECSS_LEVELS.moderate }, spacecraft: h.spacecraft, samples: 20 });
     expect(res.samples[0].perigeeAlt).toBeCloseTo(handoffElements(h).periapsisAlt, -3);
     expect(res.samples.at(-1)!.t).toBeCloseTo(30 * 86400, -3);
   });

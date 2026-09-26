@@ -267,8 +267,8 @@ class App {
   private readonly twilightPos = new THREE.Vector3();
   /** V01: the launch as the camera hears it */
   readonly audio = new LaunchAudio();
-  /** P07: the long-term orbit window */
-  private lifetime = new LifetimeDialog();
+  /** P07: the long-term orbit window; R05: its solar activity through the data mode chosen */
+  private lifetime = new LifetimeDialog({ data: () => this.dataProvider });
   /** S03: the orbit last handed to the Orbit section, in memory */
   private handoff: OrbitHandoff | null = null;
   /** V01: a viewer launch's real broadcast, when there is one */

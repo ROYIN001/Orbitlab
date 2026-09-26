@@ -177,7 +177,9 @@ reference implementation of AIAA 2006-6753, held to every line of its published 
 file can be read in the page too. For the satellite picked, it lists the next passes over a city
 or your own coordinates: rise, highest point and set, and whether it can be seen (R03, held to
 Skyfield to within a second), and estimates how far off its element set may be as it ages (R04,
-from published studies of TLE accuracy). Build is
+from published studies of TLE accuracy). The orbit-lifetime analysis reads the Sun's activity as
+measured — GFZ's monthly record since 1947, then NOAA SWPC's latest months and forecast — and with
+it brings seven satellites of known shape down within 25 % of their re-entries on record (R05). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 

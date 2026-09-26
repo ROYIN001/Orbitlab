@@ -11,8 +11,8 @@
  *
  * DOM-free: the fetch is passed in, so the whole of it runs under test with
  * fakes (tests/data-provider.test.ts), and a later intranet or cloud source is
- * one more implementation of the same interface. Nothing in the physics reads
- * a dataset yet.
+ * one more implementation of the same interface. The lifetime model reads the
+ * space weather through it (R05); the flight reads no dataset.
  */
 import type { DataMode } from './data-mode';
 import { DATASETS, type DatasetId, type DatasetSource, type DatasetTypes } from './datasets';

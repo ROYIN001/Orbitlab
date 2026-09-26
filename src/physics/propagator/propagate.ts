@@ -23,7 +23,8 @@
  */
 import { MU_EARTH, R_EARTH, J2_EARTH, OMEGA_EARTH } from '../constants';
 import { acceleration, type ForceModel, type Spacecraft } from './forces';
-import { bulgeExponent, harrisPriesterDensity } from './density';
+import { airDensity, bulgeExponent, heightKm } from './density';
+import { indicesAt } from './activity';
 import { sunPosition, type V3 } from './ephemeris';
 
 export const REENTRY_ALTITUDE = 120e3;
@@ -188,13 +189,14 @@ function cowell(r0: V3, v0: V3, jd0: number, o: PropagationOptions): Propagation
 function dragRates(el: Elements, jd: number, f: ForceModel, sc: Spacecraft, n: number): { da: number; de: number } {
   const mu = MU_EARTH, N = 36;
   const sun = sunPosition(jd);
+  const indices = indicesAt(f.activity, jd);
   let da = 0, de = 0;
   for (let k = 0; k < N; k++) {
     const E = (2 * Math.PI * (k + 0.5)) / N;
     const { r, v } = stateAt(el, E);
     const rn = Math.hypot(r[0], r[1], r[2]);
-    const alt = (rn - R_EARTH) / 1000;
-    const rho = harrisPriesterDensity(r, alt, sun, n, f.activity);
+    const alt = heightKm(r);
+    const rho = airDensity(r, alt, sun, n, indices);
     if (rho === 0) continue;
     const vr: V3 = [v[0] + OMEGA_EARTH * r[1], v[1] - OMEGA_EARTH * r[0], v[2]];
     const vm = Math.hypot(vr[0], vr[1], vr[2]);

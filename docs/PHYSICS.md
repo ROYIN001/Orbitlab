@@ -2684,13 +2684,19 @@ where drag and the third bodies are left out for both vehicles alike.
 - **Gravity**: the central term and the zonal harmonics J2 = 1.08263·10⁻³, J3 = −2.53266·10⁻⁶,
   J4 = −1.61962·10⁻⁶ (EGM96, unnormalised), as the gradient of the zonal potential (the test
   differentiates the potential numerically and requires the accelerations to match).
-- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth. ρ is Harris–Priester
-  (Montenbruck & Gill, *Satellite Orbits*, 2000, §3.5.2, Table 3.8, 100–1000 km): the table's
-  minimum rising to its maximum as cosⁿ(ψ/2) of the angle from the diurnal bulge, whose apex lags
-  the Sun by 30°; n goes from 2 at the equator to 6 in polar orbits. The table is for mean solar
-  activity; low and high activity take ∓0.45 decades of density above 500 km, tapering to none at
-  120 km (a fit to the spread of the CIRA/MSIS profiles between F10.7 = 70 and 250, good to a
-  factor of two).
+- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth, at the height above
+  the WGS-84 ellipsoid. ρ's level is NRLMSISE-00's total density averaged over the day and the
+  seasons, as ECSS tabulates it for low, moderate and high long-term activity (ECSS-E-ST-10-04C,
+  2008, Annex G, Tables G-1 to G-3; F10.7 65, 140, 250 and Ap 0, 15, 45), interpolated in log ρ
+  against 1/T, T = 900 + 2.5 (F10.7 − 70) + 1.5 Ap K the exospheric temperature of the IPS
+  relation (IPS Radio and Space Services, "Satellite Orbital Decay Calculations"). Its spread
+  through the day is Harris–Priester's (Montenbruck & Gill, *Satellite Orbits*, 2000, §3.5.2,
+  Table 3.8, 100–1000 km): the table's minimum rising to its maximum as cosⁿ(ψ/2) of the angle
+  from the diurnal bulge, whose apex lags the Sun by 30°, n from 2 at the equator to 6 in polar
+  orbits, normalised so that its average over the globe is the level. The indices (R05,
+  src/physics/propagator/activity.ts) are one of ECSS's levels, or measured month by month
+  (GFZ since 1947, then NOAA SWPC), then SWPC's forecast, then the Sun repeating itself eleven
+  years on; Ap where none is measured is 13, the mean of solar cycles 19–24.
 - **Sun and Moon**: third-body accelerations (the direct pull less the pull on the Earth), with
   the low-precision ephemerides of Montenbruck & Gill §3.3.2 (Sun to 0.1 %, Moon to a few hundred
   kilometres).
@@ -2706,10 +2712,13 @@ where drag and the third bodies are left out for both vehicles alike.
 Checked (tests/propagator.test.ts): J2's nodal regression against −3/2 n J2 (R/p)² cos i to
 0.1 %; a force-free orbit kept to a metre over five days; a space station at 420 km losing 1–6 km
 a month, with Cowell and the mean elements within 25 % of each other; a 1U CubeSat at 400 km
-down in 30 days to two years depending on the Sun (the model: 113, 211 and 397 days for high,
-mean and low activity); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
+down in a month to a few years depending on the Sun (the model: 74, 222 and 1208 days at ECSS's
+high, moderate and low levels); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
 Sun and the Moon (known: about 0.75–0.95°); and sunlight pressure raising a light satellite's
-eccentricity.
+eccentricity. tests/activity.test.ts holds the density to the ECSS tables and, with the Sun as
+measured, brings seven spheres of published mass and size (Starshine 1–3, the four ANDE spheres,
+1999–2010) down within 25 % of their days in orbit on record, 13–22 % early for six of them
+(VALIDATION.md §6).
 
 The payloads' cross-sections are estimates by class (src/physics/propagator/spacecraft.ts); the
 window lets them be changed, and the lifetime is inversely proportional to C_D A/m.

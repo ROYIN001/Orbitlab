@@ -1,7 +1,7 @@
 /**
  * The datasets the app can load (roadmap S04), each with its bundled
  * snapshot and, for online mode, where it comes from and how the answers
- * become the dataset: space weather (S04, for R05's density model) and the
+ * become the dataset: space weather (S04; R05's density model reads it) and the
  * satellite catalogue (R02); launches (Launch Library 2) will join them.
  *
  * Online sources, as checked on 2026-09-26: NOAA SWPC, CelesTrak's GP JSON
@@ -10,7 +10,7 @@
  * agreement forbids redistribution, so its data only ever come in as a file
  * the user imports.
  */
-import { SWPC_F107_URL, SWPC_KP_URL, parseSwpc, validSpaceWeather, type SpaceWeather } from './space-weather';
+import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather, type SpaceWeather } from './space-weather';
 import { SATELLITES_MIN_INTERVAL_MS, SATELLITE_URLS, parseCelestrakGp, validSatelliteCatalog, type SatelliteCatalog } from './satellites';
 
 export interface DatasetSource {
@@ -47,7 +47,10 @@ export const DATASETS: { readonly [K in DatasetId]: DatasetDef<DatasetTypes[K]> 
     id: 'spaceWeather',
     snapshot: 'data/space-weather.json',
     source: { name: 'NOAA Space Weather Prediction Center', url: 'https://www.swpc.noaa.gov/' },
-    online: { urls: [SWPC_F107_URL, SWPC_KP_URL], parse: ([f107, kp]) => parseSwpc(f107, kp) },
+    online: {
+      urls: [SWPC_F107_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, SWPC_FORECAST_URL],
+      parse: ([f107, kp, monthly, forecast]) => parseSwpc(f107, kp, monthly, forecast),
+    },
     valid: validSpaceWeather,
   },
   satellites: {

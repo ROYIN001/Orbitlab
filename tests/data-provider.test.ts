@@ -10,7 +10,7 @@ import {
   OfflineProvider, OnlineProvider, SNAPSHOT_FORMAT, createDataProvider, makeSnapshot, parseSnapshot, type Fetcher,
 } from '../src/provider/data-provider';
 import { DATASETS, DATA_HOSTS } from '../src/provider/datasets';
-import { SWPC_F107_URL, SWPC_KP_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather';
+import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather';
 
 const SNAPSHOT_FILE = import.meta.glob('../public/data/space-weather.json', { import: 'default', eager: true }) as Record<string, unknown>;
 const bundled = Object.values(SNAPSHOT_FILE)[0];
@@ -27,6 +27,17 @@ const KP = [
   { time_tag: '2026-09-26T06:00:00', Kp: 2.0, a_running: 7, station_count: 8 },
   { time_tag: '2026-09-26T09:00:00', Kp: 2.67, a_running: 12, station_count: 8 },
 ];
+/** R05: the solar-cycle products — monthly indices, −1 where SWPC has none, and the predicted cycle. */
+const MONTHLY = [
+  { 'time-tag': '1749-01', ssn: 96.7, smoothed_ssn: -1.0, 'f10.7': -1.0, 'smoothed_f10.7': -1.0 },
+  { 'time-tag': '2026-08', ssn: 76.0, smoothed_ssn: -1.0, 'f10.7': 116.22, 'smoothed_f10.7': -1.0 },
+  { 'time-tag': '2026-07', ssn: 97.5, smoothed_ssn: -1.0, 'f10.7': 136.01, 'smoothed_f10.7': -1.0 },
+];
+const FORECAST = [
+  { 'time-tag': '2026-10', 'predicted_f10.7': 131.4, 'high_f10.7': 140.0, 'low_f10.7': 124.3, 'high25_f10.7': 136.0, 'low25_f10.7': 127.9 },
+  { 'time-tag': '2026-11', 'predicted_f10.7': 129.8, 'high_f10.7': 138.9, 'low_f10.7': 122.4, 'high25_f10.7': 135.0, 'low25_f10.7': 126.1 },
+];
+const SWPC = { [SWPC_F107_URL]: F107, [SWPC_KP_URL]: KP, [SWPC_MONTHLY_URL]: MONTHLY, [SWPC_FORECAST_URL]: FORECAST };
 
 function memory(entries: Record<string, string> = {}): DataModeStore & { data: Map<string, string> } {
   const data = new Map(Object.entries(entries));
@@ -74,6 +85,10 @@ describe('the bundled snapshot (S04)', () => {
     expect(Date.parse(snap.asOf)).toBeLessThanOrEqual(Date.parse(snap.fetched));
     expect(snap.data.f107.length).toBeGreaterThanOrEqual(20);
     expect(snap.data.kp.length).toBeGreaterThanOrEqual(8);
+    // R05: SWPC's monthly flux from 2004-10, and its forecast past the newest month
+    expect(snap.data.monthly[0].month).toBe('2004-10');
+    expect(snap.data.forecast.at(-1)!.month > snap.data.monthly.at(-1)!.month).toBe(true);
+    for (const f of snap.data.forecast) expect(f.low <= f.f107 && f.f107 <= f.high, f.month).toBe(true);
     expect(snap.source.url).toMatch(/^https:\/\//);
     // the "as of" is its newest reading
     expect(snap.asOf).toBe(new Date(Math.max(Date.parse(snap.data.kp.at(-1)!.time), Date.parse(`${snap.data.f107.at(-1)!.date}T20:00:00Z`))).toISOString());
@@ -84,25 +99,38 @@ describe('the bundled snapshot (S04)', () => {
     expect(() => parseSnapshot({ ...snap, format: 'other' }, 'spaceWeather')).toThrow('not a snapshot');
     expect(() => parseSnapshot({ ...snap, version: 2 }, 'spaceWeather')).toThrow('snapshot version 2');
     expect(() => parseSnapshot({ ...snap, asOf: 'yesterday' }, 'spaceWeather')).toThrow('dates');
-    expect(() => parseSnapshot({ ...snap, data: { f107: [{ date: '2026-09-25', flux: NaN }], kp: snap.data.kp } }, 'spaceWeather')).toThrow('malformed');
+    expect(() => parseSnapshot({ ...snap, data: { ...snap.data, f107: [{ date: '2026-09-25', flux: NaN }] } }, 'spaceWeather')).toThrow('malformed');
+    // one from before R05, without the monthly flux and the forecast
+    expect(() => parseSnapshot({ ...snap, data: { f107: snap.data.f107, kp: snap.data.kp } }, 'spaceWeather')).toThrow('malformed');
   });
 });
 
 describe('space weather from SWPC (S04)', () => {
   it('keeps the noon F10.7 of each day and every Kp, oldest first, dated by the newest', () => {
-    const { data, asOf } = parseSwpc(F107, KP);
+    const { data, asOf } = parseSwpc(F107, KP, MONTHLY, FORECAST);
     expect(data.f107).toEqual([{ date: '2026-09-24', flux: 112 }, { date: '2026-09-25', flux: 105 }]);
     expect(data.kp).toEqual([{ time: '2026-09-26T06:00:00.000Z', kp: 2 }, { time: '2026-09-26T09:00:00.000Z', kp: 2.67 }]);
     expect(asOf).toBe('2026-09-26T09:00:00.000Z');
     expect(validSpaceWeather(data)).toBe(true);
   });
 
+  it('keeps the months with a flux, sorted, and the forecast with its range (R05)', () => {
+    const { data } = parseSwpc(F107, KP, MONTHLY, FORECAST);
+    expect(data.monthly).toEqual([{ month: '2026-07', f107: 136.01 }, { month: '2026-08', f107: 116.22 }]);
+    expect(data.forecast).toEqual([
+      { month: '2026-10', f107: 131.4, high: 140, low: 124.3 },
+      { month: '2026-11', f107: 129.8, high: 138.9, low: 122.4 },
+    ]);
+  });
+
   it('reads SWPC\'s older table layout too, and throws on anything else', () => {
     const table = [['time_tag', 'Kp', 'a_running'], ['2026-09-26 09:00:00.000', '2.67', '12']];
-    expect(parseSwpc(F107, table).data.kp).toEqual([{ time: '2026-09-26T09:00:00.000Z', kp: 2.67 }]);
-    expect(() => parseSwpc({ error: 'maintenance' }, KP)).toThrow();
-    expect(() => parseSwpc([], KP)).toThrow('no readings');
-    expect(() => parseSwpc(F107, [{ time_tag: 'soon', Kp: 3 }])).toThrow('no readings');
+    expect(parseSwpc(F107, table, MONTHLY, FORECAST).data.kp).toEqual([{ time: '2026-09-26T09:00:00.000Z', kp: 2.67 }]);
+    expect(() => parseSwpc({ error: 'maintenance' }, KP, MONTHLY, FORECAST)).toThrow();
+    expect(() => parseSwpc([], KP, MONTHLY, FORECAST)).toThrow('no readings');
+    expect(() => parseSwpc(F107, [{ time_tag: 'soon', Kp: 3 }], MONTHLY, FORECAST)).toThrow('no readings');
+    expect(() => parseSwpc(F107, KP, MONTHLY.slice(0, 1), FORECAST)).toThrow('no readings');
+    expect(() => parseSwpc(F107, KP, MONTHLY, [{ 'time-tag': '2026-10', 'predicted_f10.7': 131 }])).toThrow('no readings');
   });
 });
 
@@ -117,22 +145,22 @@ describe('the providers (S04)', () => {
   });
 
   it('online: reads the sources, into the same dataset the snapshot holds', async () => {
-    const net = fakeFetch({ [SNAP_URL]: bundled, [SWPC_F107_URL]: F107, [SWPC_KP_URL]: KP });
+    const net = fakeFetch({ [SNAP_URL]: bundled, ...SWPC });
     const provider = createDataProvider('online', BASE, net);
     expect(provider.mode).toBe('online');
     const set = await provider.load('spaceWeather');
     expect(set).toMatchObject({ from: 'online', asOf: '2026-09-26T09:00:00.000Z' });
     expect(set.fallback).toBeUndefined();
     expect(set.data.f107.at(-1)).toEqual({ date: '2026-09-25', flux: 105 });
-    expect(net.asked.sort()).toEqual([SWPC_F107_URL, SWPC_KP_URL].sort());
+    expect(net.asked.sort()).toEqual(Object.keys(SWPC).sort());
   });
 
   it('online: falls back to the snapshot on every failure, and says why', async () => {
     const cases: [string, Record<string, unknown>, RegExp][] = [
-      ['no network', { [SWPC_F107_URL]: null, [SWPC_KP_URL]: KP }, /Failed to fetch/],
-      ['a refusal', { [SWPC_KP_URL]: KP }, /services\.swpc\.noaa\.gov answered 404/],
-      ['a changed format', { [SWPC_F107_URL]: { error: 'down' }, [SWPC_KP_URL]: KP }, /not a list/],
-      ['a slow source', { [SWPC_F107_URL]: 'hang', [SWPC_KP_URL]: KP }, /no answer within 0\.05 s/],
+      ['no network', { ...SWPC, [SWPC_F107_URL]: null }, /Failed to fetch/],
+      ['a refusal', { ...SWPC, [SWPC_F107_URL]: undefined }, /services\.swpc\.noaa\.gov answered 404/],
+      ['a changed format', { ...SWPC, [SWPC_F107_URL]: { error: 'down' } }, /not a list/],
+      ['a slow source', { ...SWPC, [SWPC_F107_URL]: 'hang' }, /no answer within 0\.05 s/],
     ];
     for (const [what, answers, why] of cases) {
       const net = fakeFetch({ [SNAP_URL]: bundled, ...answers });
@@ -145,7 +173,7 @@ describe('the providers (S04)', () => {
   });
 
   it('online: stops when the caller does, without falling back', async () => {
-    const net = fakeFetch({ [SNAP_URL]: bundled, [SWPC_F107_URL]: 'hang', [SWPC_KP_URL]: 'hang' });
+    const net = fakeFetch({ [SNAP_URL]: bundled, ...Object.fromEntries(Object.keys(SWPC).map((u) => [u, 'hang'])) });
     const ctl = new AbortController();
     const pending = new OnlineProvider(new OfflineProvider(BASE, net), net, 10_000).load('spaceWeather', ctl.signal);
     ctl.abort(new Error('closed'));
@@ -154,7 +182,7 @@ describe('the providers (S04)', () => {
   });
 
   it('writes the snapshot the offline provider reads', () => {
-    const { data, asOf } = parseSwpc(F107, KP);
+    const { data, asOf } = parseSwpc(F107, KP, MONTHLY, FORECAST);
     const snap = makeSnapshot('spaceWeather', data, asOf, new Date('2026-09-26T13:00:00Z'));
     expect(parseSnapshot(JSON.parse(JSON.stringify(snap)), 'spaceWeather')).toEqual(snap);
   });
