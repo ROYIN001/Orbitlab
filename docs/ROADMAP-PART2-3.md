@@ -208,6 +208,13 @@ Public sources only, each cited. Spread over the phases above rather than a phas
   without committing. Checked on 2026-09-26 with curl: SWPC, CelesTrak's GP JSON and Launch
   Library 2 all answer `access-control-allow-origin: *` — CelesTrak, which the planning could not
   reach, can be read straight from the page.
+- **Designs** (`src/design/design-store.ts`, S05): `DesignStore` is asynchronous (`list`, `get`,
+  `save`, `remove`) so an intranet or cloud store can implement it later; `LocalDesignStore` keeps
+  designs in localStorage under one key and rejects a save it cannot keep (`unavailable`, `full`)
+  rather than losing someone's work. A design is checked by its kind's own check before it is kept
+  or read (a vehicle's is S02's), and leaves the browser as `<name>-<kind>.orbitlab.json`
+  (`orbitlab.design`, version 1), read back all or nothing — half a rocket is not a rocket.
+  No builder uses it yet; Phase 3's will.
 - **Everything a user makes is a file first**: missions (U01), designs (S05) and scenarios (T01)
   are versioned JSON documents that open offline, so the closed-intranet deployment loses
   nothing but the live data.

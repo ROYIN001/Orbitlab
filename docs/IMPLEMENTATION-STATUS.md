@@ -218,7 +218,7 @@ phases. Phase 0, the structure, is on branch `claude/eloquent-meitner-mvmno4`:
 | S02 custom vehicles in a mission | done |
 | S03 orbit hand-off | done |
 | S04 data provider, online and offline | done |
-| S05 local design storage | |
+| S05 local design storage | done |
 
 ## Known limitations
 

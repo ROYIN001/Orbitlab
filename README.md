@@ -318,7 +318,12 @@ src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map
                 onboard overlay, timeline/event bar, dialogs, app modes, landing
                 page and launch viewer
 src/i18n/       English, Russian and Thai dictionaries
+src/orbit/      the Orbit section: the hand-off from a flight (S03)
+src/provider/   offline and online data: the providers, datasets, snapshots (S04)
+src/design/     the user's designs, kept locally and as files (S05)
 src/mcp.ts      WebMCP tools
+public/data/    bundled data snapshots, each dated
+scripts/        snapshot refresh (npm run snapshots)
 tests/          vitest suites (unit tests and full missions to orbit)
 ```
 
