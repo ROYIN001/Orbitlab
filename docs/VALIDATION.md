@@ -21,6 +21,7 @@ Status on 2026-09-25:
 | Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
 | Orbit playground (O01) | Published orbits: geostationary, GPS, Landsat WRS-2, Sentinel-2; closed forms | Kepler and first-order J2 held to them (§4), 2026-09-26 |
 | Maneuver planner (O02) | Vallado's and Curtis's worked examples; closed forms | Transfers and Lambert held to them (§4), 2026-09-26 |
+| Continue in orbit (O03) | A recorded Soyuz flight's hand-off; the rocket equation | The playground's orbit is the flight's; the budget is Tsiolkovsky's (§4), 2026-09-26 |
 
 ## 1. Method
 
@@ -621,10 +622,23 @@ and both to worked examples. Burns are impulsive: no finite-burn or gravity loss
   12 km/s whatever the timing, which teaches nothing about rendezvous: a real one starts with
   the launch into the target's plane.
 
+### Continue in orbit (O03)
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| the orbit a recorded Soyuz flight hands on | the flight's own state and elements at the hand-off | the playground's orbit gives back the state; perigee and apogee equal the flight's | 1 mm, 1 µm/s; 1 m |
+| 1 000 kg, Isp 300 s, Δv 1 km/s | rocket equation: 288.2 kg; a 400 N engine runs 2 119 s | same | 0.05 kg, 1 s |
+| three burns against one of their sum | Tsiolkovsky: the same propellant | same | 10⁻⁹ kg |
+| tanks that run dry | the plan short by its Δv beyond what the tanks hold | the burn where they run dry, and the shortfall | 10⁻⁶ m/s |
+
+`tests/budget.test.ts` and `tests/orbit-handoff.test.ts` hold them. A burn that lasts more
+than a tenth of an orbit is flagged. The plan treats it as an instant kick, which a burn that
+long only roughly is.
+
 ## 5. Re-running
 
 ```sh
-npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts   # the Orbit section, ~3 s
+npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts   # the Orbit section, ~3 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~3 min

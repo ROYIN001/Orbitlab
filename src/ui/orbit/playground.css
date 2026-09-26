@@ -171,6 +171,11 @@
 .pg-plan-next:empty { display: none; }
 .pg-plan .pg-note { margin-bottom: 4px; }
 .pg-canvas-porkchop { cursor: crosshair; }
+/* O03: the spacecraft the plan is budgeted for, and what each burn costs it */
+.pg-craft { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pg-craft .pg-fields { margin-top: 4px; }
+.pg-burn-cost.short { color: var(--fail); }
+.pg-life-btn { margin: -4px 0 16px; }
 
 /* ── Watch: the view alone, the tour's card on it ─────────────────────────── */
 

@@ -122,6 +122,23 @@ export function handoffFromFlight(input: HandoffInput): OrbitHandoff {
   };
 }
 
+/**
+ * O03: a hand-off made in the Orbit section itself, for its tools that read
+ * one (the lifetime analysis): the playground's orbit as a state, with the
+ * spacecraft in it — the flight's, lighter by what the plans burned, or an
+ * estimate the user can change in the tool.
+ */
+export function handoffFromState(input: { r: { x: number; y: number; z: number }; v: { x: number; y: number; z: number }; jd: number;
+  spacecraft: HandoffSpacecraft; label: string }): OrbitHandoff {
+  return {
+    format: HANDOFF_FORMAT, version: HANDOFF_FORMAT_VERSION,
+    r: [input.r.x, input.r.y, input.r.z], v: [input.v.x, input.v.y, input.v.z], jd: input.jd,
+    spacecraft: { ...input.spacecraft, propulsion: input.spacecraft.propulsion ? { ...input.spacecraft.propulsion } : null },
+    label: input.label,
+    origin: { mission: null, vehicleName: '', missionTime: 0 },
+  };
+}
+
 /** The classical elements of the handed-on orbit (src/physics/orbital.ts). */
 export function handoffElements(h: Pick<OrbitHandoff, 'r' | 'v'>): OrbitalElements {
   return elementsFromState(v3(h.r[0], h.r[1], h.r[2]), v3(h.v[0], h.v[1], h.v[2]));

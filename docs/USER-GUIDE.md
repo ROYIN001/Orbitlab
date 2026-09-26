@@ -136,9 +136,23 @@ plans a transfer to a satellite in your orbit's plane, at a height and a phase y
 is the cheapest, the red one the transfer planned. Click a point to plan it instead. The tour
 at Watch has a step for Hohmann's transfer.
 
+**Spacecraft**, under the maneuver's numbers, says whose tanks the plan is paid from:
+
+- **None** shows the Δv alone.
+- **From your launch** uses the spacecraft a flight handed on, with what is left of its own
+  propellant.
+- **Your own** takes a mass, propellant, Isp and thrust. It starts as the catalogue's weather
+  satellite: 1 800 kg, 400 N, Isp 315 s.
+
+The plan then gives each burn's propellant and how long its engine runs, the Δv in the tanks,
+what is burned and what is left. It says so when the tanks run dry, and in which burn. **Carry
+on from the new orbit** leaves the spacecraft lighter by what it burned.
+
 After **Continue in Orbit** from a flight, the list says **From your launch** and the playground
-starts from where the flight was. **Orbit lifetime** runs the long-term analysis on it. At Watch,
-the flight's orbit is the first card, before the tour.
+starts from where the flight was. **Orbit lifetime**, under the orbit's figures, runs the
+long-term analysis on whatever orbit the playground is showing. With a flight's spacecraft it
+uses that spacecraft, as it is now; without one it starts from an estimate you can change in the
+dialog. At Watch, the flight's orbit is the first card, before the tour.
 
 The model is Kepler's orbit plus the secular drift of J2, nothing more: no drag and no Sun or
 Moon. [VALIDATION.md](VALIDATION.md) §4 holds it to real orbits.

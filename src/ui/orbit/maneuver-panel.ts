@@ -5,7 +5,7 @@
  * this only draws them and hands the user's changes back.
  */
 import { t } from '../../i18n';
-import { R_EARTH, RAD } from '../../physics/constants';
+import { MU_EARTH, R_EARTH, RAD } from '../../physics/constants';
 import { norm } from '../../physics/vec3';
 import type { AppLevel } from '../app-mode';
 import { linearScale, logScale } from '../../orbit/playground-model';
@@ -14,6 +14,10 @@ import {
   ENGINEER_KINDS, EXPLORE_KINDS, MANEUVER_LIMITS, MAX_NODES, type ManeuverSettings, type PlannerKind,
 } from '../../orbit/maneuver-setup';
 import { Field, button, clockText, deg, el, num, plain, span } from './dom';
+import type { Budget, Craft } from '../../orbit/budget';
+
+/** O03: whose tanks the plan is budgeted against. */
+export type CraftSource = 'none' | 'launch' | 'own';
 
 export interface ManeuverPanelHost {
   level(): AppLevel;
@@ -28,6 +32,11 @@ export interface ManeuverPanelHost {
   adopt(): void;
   /** Engineer: show the porkchop plot */
   showPorkchop(): void;
+  /** O03: the spacecraft the plan is budgeted for — which, your own, and the one from the flight (if it has an engine) */
+  craft(): { source: CraftSource; own: Craft; fromLaunch: Craft | null; launchHasNoEngine: boolean };
+  setCraft(source: CraftSource, own?: Partial<Craft>): void;
+  /** the plan against that spacecraft's tanks, or null with none chosen */
+  budget(): Budget | null;
 }
 
 const KIND_KEY: Record<PlannerKind, string> = {
@@ -129,6 +138,40 @@ export function maneuverControls(host: ManeuverPanelHost): HTMLElement {
   if (s.kind === 'rendezvous') {
     box.append(button('watch-btn pg-porkchop-btn', t('mv.pickPorkchop'), () => host.showPorkchop()), el('p', 'pg-tool-lead', t('pc.hint')));
   }
+  box.append(craftControls(host));
+  return box;
+}
+
+/** O03: the spacecraft whose tanks the plan is budgeted against. */
+function craftControls(host: ManeuverPanelHost): HTMLElement {
+  const c = host.craft();
+  const box = el('div', 'pg-craft');
+  const pick = el('label', 'pg-preset');
+  pick.append(el('span', undefined, t('mv.craft')));
+  const sel = el('select');
+  const opts: [CraftSource, string][] = [['none', t('mv.craft.none')]];
+  if (c.fromLaunch) opts.push(['launch', t('mv.craft.launch')]);
+  opts.push(['own', t('mv.craft.own')]);
+  sel.append(...opts.map(([v, label]) => { const o = el('option', undefined, label); o.value = v; return o; }));
+  sel.value = c.source;
+  sel.addEventListener('change', () => host.setCraft(sel.value as CraftSource));
+  pick.append(sel);
+  box.append(pick);
+  if (c.launchHasNoEngine) box.append(el('p', 'pg-tool-lead', t('mv.craft.noEngine')));
+  if (c.source === 'own') {
+    const fields = el('div', 'pg-fields');
+    const field = (label: string, unit: string, lo: number, hi: number, digits: number, key: keyof Craft) => {
+      const f = new Field(label, unit, linearScale(lo, hi), plain.show, plain.read, digits, { min: lo, max: hi }, (v) => host.setCraft('own', { [key]: v }));
+      f.set(c.own[key]);
+      fields.append(f.root);
+    };
+    const kg = t('u.kg');
+    field(t('mv.craft.mass'), kg, 10, 20_000, 0, 'mass');
+    field(t('mv.craft.propellant'), kg, 0, 15_000, 0, 'propellant');
+    field(t('mv.craft.isp'), t('u.s'), 50, 5000, 0, 'isp');
+    field(t('mv.craft.thrust'), t('u.N'), 0.01, 5000, 2, 'thrust');
+    box.append(fields);
+  }
   return box;
 }
 
@@ -189,6 +232,7 @@ function manualNodes(host: ManeuverPanelHost, s: ManeuverSettings, engineer: boo
 /** The plan: its burns, what they add up to, and where it ends. `now` is the clock, for "next burn in". */
 export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: ManeuverSettings, now: number): HTMLElement {
   const box = el('section', 'pg-plan');
+  const budget = 'burns' in plan ? host.budget() : null;
   box.append(el('h2', 'pg-facts-title', t('mv.planOf', { kind: kindName(s.kind) })));
   if (!('burns' in plan)) {
     box.append(el('p', 'pg-warn', planErrorText(plan)));
@@ -211,6 +255,13 @@ export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: Ma
         })));
       }
       li.append(what, el('b', 'pg-burn-dv', `${num(norm(b.dv) / 1000, 3)} ${kms}`));
+      const bb = budget?.burns[k];
+      if (bb) {
+        const dry = bb.short && bb.propellant <= 1e-9;
+        const cost = el('small', bb.short ? 'pg-burn-cost short' : 'pg-burn-cost',
+          dry ? t('mv.b.dry') : t('mv.b.burn', { kg: num(bb.propellant, 1), u: t('u.kg'), time: span(bb.duration) }));
+        what.append(cost);
+      }
       list.append(li);
     });
     box.append(list);
@@ -231,7 +282,26 @@ export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: Ma
     const r1 = plan.segments[0].orbit.a;
     row(t('mv.hohmannCompare'), `${num(hohmannDv(r1, R_EARTH + s.targetAlt).total / 1000, 3)} ${kms}`);
   }
+  if (budget) {
+    const kg = t('u.kg');
+    row(t('mv.b.available'), `${num(budget.available / 1000, 3)} ${kms}`);
+    row(t('mv.b.used'), `${num(budget.used, 1)} ${kg}`);
+    row(t('mv.b.left'), `${num(budget.left, 1)} ${kg}`);
+    if (plan.spiral && budget.burns[0]) row(t('mv.b.engineOn'), span(budget.burns[0].duration));
+  }
   box.append(dl);
+  if (budget && !budget.enough) {
+    const n = budget.burns.findIndex((b) => b.short) + 1;
+    box.append(el('p', 'pg-warn', t('mv.b.short', { dv: `${num(budget.shortfall, 0)} ${ms}`, n: String(Math.max(1, n)) })));
+  }
+  // a burn that lasts a good part of an orbit is not the impulse the plan assumes
+  if (budget && !plan.spiral) {
+    const long = budget.burns.findIndex((b, k) => {
+      const seg = plan.segments[k].orbit;
+      return seg.e < 1 && b.duration > 0.1 * 2 * Math.PI * Math.sqrt(seg.a ** 3 / MU_EARTH);
+    });
+    if (long >= 0) box.append(el('p', 'pg-note', t('mv.b.long', { n: String(long + 1), time: span(budget.burns[long].duration) })));
+  }
   const next = plan.burns.find((b) => b.t > now);
   const note = el('p', 'pg-note pg-plan-next');
   note.textContent = next ? t('mv.next', { time: span(next.t - now) }) : plan.arrival <= now ? t('mv.done') : '';

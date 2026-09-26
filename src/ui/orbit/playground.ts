@@ -36,7 +36,11 @@ import {
   defaultSettings, makePlan, porkchopAxes, porkchopMinimum, rendezvousTarget, type ManeuverSettings, type PlannerKind,
 } from '../../orbit/maneuver-setup';
 import type { OrbitGhost, OrbitMarker } from '../../render/orbit-view';
-import { maneuverControls, planTable, type ManeuverPanelHost } from './maneuver-panel';
+import { maneuverControls, planTable, type CraftSource, type ManeuverPanelHost } from './maneuver-panel';
+import { budgetFor, craftAfter, craftFromHandoff, defaultCraft, type Budget, type Craft } from '../../orbit/budget';
+import { handoffFromState } from '../../orbit/handoff';
+import { spacecraftFor } from '../../physics/propagator/spacecraft';
+import { MANEUVER_LIMITS } from '../../orbit/maneuver-setup';
 import { PorkchopView, type PorkchopData } from './porkchop-view';
 import type { OrbitHandoff } from '../../orbit/handoff';
 import { GroundTrackView } from './ground-track';
@@ -103,6 +107,10 @@ export class OrbitPlayground {
   private porkchopData: PorkchopData | null = null;
   private porkchopKey = '';
   private readonly porkchopView: PorkchopView;
+  /** O03: whose tanks the plans are budgeted against: none, the flight's spacecraft's, or one set by hand */
+  private craftSource: CraftSource = 'none';
+  private ownCraft: Craft = defaultCraft();
+  private launchCraft: Craft | null = null;
   /** the plan's segment on screen, to redraw the facts when a burn is made */
   private shownSegment = 0;
   private spiralFactsTick = 0;
@@ -205,6 +213,9 @@ export class OrbitPlayground {
     this.handoff = handoff;
     this.handoffNote = note;
     if (fresh) {
+      // O03: the spacecraft that flew, with what is left in its tanks
+      this.launchCraft = craftFromHandoff(handoff);
+      this.craftSource = this.launchCraft ? 'launch' : this.craftSource === 'launch' ? 'none' : this.craftSource;
       this.loadHandoff();
       this.tourIndex = -1;
     }
@@ -495,6 +506,12 @@ export class OrbitPlayground {
     settings: () => this.maneuver,
     choose: (kind: PlannerKind | null) => {
       this.maneuver = kind ? defaultSettings(kind, this.orbit) : null;
+      // O03: a spiral at the acceleration the spacecraft's own engine gives it
+      const craft = this.craft;
+      if (this.maneuver && kind === 'spiral' && craft && craft.thrust > 0) {
+        const L = MANEUVER_LIMITS.accel;
+        this.maneuver.accel = Math.min(L.max, Math.max(L.min, craft.thrust / craft.mass));
+      }
       this.planStart = this.time;
       if (kind === 'rendezvous') {
         // start from the cheapest transfer on the plot
@@ -527,6 +544,12 @@ export class OrbitPlayground {
     adopt: () => {
       const p = this.activePlan;
       if (!p) return;
+      // O03: the spacecraft carries on lighter by what the plan burned
+      const budget = this.budget;
+      if (budget) {
+        const after = craftAfter(budget);
+        if (this.craftSource === 'launch') this.launchCraft = after; else if (this.craftSource === 'own') this.ownCraft = after;
+      }
       const at = Math.max(this.time, p.arrival);
       const s = this.stateNow(at);
       this.maneuver = null;
@@ -538,7 +561,48 @@ export class OrbitPlayground {
       this.render();
     },
     showPorkchop: () => this.setView('porkchop'),
+    craft: () => ({
+      source: this.craftSource, own: this.ownCraft, fromLaunch: this.launchCraft,
+      launchHasNoEngine: !!this.handoff && !this.launchCraft,
+    }),
+    setCraft: (source: CraftSource, own?: Partial<Craft>) => {
+      const changedSource = source !== this.craftSource;
+      this.craftSource = source;
+      if (own) this.ownCraft = { ...this.ownCraft, ...own };
+      this.renderFacts();
+      // the own spacecraft's fields appear or go
+      if (changedSource) this.renderControls();
+    },
+    budget: () => this.budget,
   };
+
+  /** O03: the spacecraft chosen for the budget, with an engine; null with none. */
+  private get craft(): Craft | null {
+    return this.craftSource === 'launch' ? this.launchCraft : this.craftSource === 'own' ? this.ownCraft : null;
+  }
+
+  /** O03: the plan against the chosen spacecraft's tanks. */
+  private get budget(): Budget | null {
+    const p = this.activePlan, c = this.craft;
+    return p && c ? budgetFor(p, c) : null;
+  }
+
+  /**
+   * O03: the lifetime analysis (P07) on the orbit flown now, with the
+   * spacecraft in it — the flight's, lighter by what the plans burned, or,
+   * with none from a flight, an estimate the dialog lets the user change.
+   */
+  private openLifetime(opener: HTMLElement): void {
+    const s = this.stateNow(this.time);
+    const f = orbitFacts(this.flownAt(this.time).orbit, false);
+    const kind = this.handoff?.spacecraft.kind ?? 'science';
+    const mass = this.craft?.mass ?? this.handoff?.spacecraft.mass ?? 1000;
+    const base = this.handoff ? { ...this.handoff.spacecraft, mass } : { ...spacecraftFor(kind, mass), kind, propulsion: null };
+    this.host.lifetime(handoffFromState({
+      r: s.r, v: s.v, jd: this.orbit.jd0 + this.time / 86400, spacecraft: base,
+      label: t('pg.life.label', { pe: num(f.perigeeAlt / 1000), ap: num(f.apogeeAlt / 1000), i: num(this.flownAt(this.time).orbit.i * RAD, 1), u: t('u.km') }),
+    }), opener);
+  }
 
   // ─── the page ─────────────────────────────────────────────────────────────
 
@@ -756,9 +820,10 @@ export class OrbitPlayground {
     }
     box.append(el('p', 'pg-handoff-label', h.label));
     const dl = el('dl', 'pg-dl');
-    const kg = t('u.kg');
-    const rows: [string, string][] = [[t('handoff.mass'), `${num(h.spacecraft.mass)} ${kg}`]];
-    if (h.spacecraft.propulsion) rows.push([t('handoff.propellant'), `${num(h.spacecraft.propulsion.propellantMass)} ${kg}`]);
+    // O03: as it is now — lighter by whatever the plans flown from it burned
+    const kg = t('u.kg'), craft = this.launchCraft;
+    const rows: [string, string][] = [[t('handoff.mass'), `${num(craft?.mass ?? h.spacecraft.mass)} ${kg}`]];
+    if (craft) rows.push([t('handoff.propellant'), `${num(craft.propellant)} ${kg}`]);
     for (const [k, v] of rows) dl.append(el('dt', undefined, k), el('dd', undefined, v));
     box.append(dl);
     const actions = el('div', 'pg-actions');
@@ -833,6 +898,11 @@ export class OrbitPlayground {
     }
     box.append(dl);
     if (engineer && !this.j2) box.append(el('p', 'pg-note', t('pg.f.twoBody')));
+    // O03: how long this orbit lasts, for any orbit in the playground
+    if (!hitsEarth(o) && o.e < 1) {
+      const life = button('watch-btn pg-life-btn', t('life.button'), () => this.openLifetime(life));
+      box.append(life);
+    }
 
     // Kepler's three laws, each with this orbit's own numbers
     const laws = el('div', 'pg-laws');

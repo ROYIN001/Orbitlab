@@ -158,7 +158,9 @@ as its ground track, and as Newton's cannon:
 Its maneuver planner (O02, `src/orbit/maneuvers.ts`) plans Hohmann and bi-elliptic transfers,
 plane changes, GTO→GEO, phasing, deorbit burns, Edelbaum's low-thrust spiral and the user's own
 prograde/normal/radial burns, draws each plan and flies it. At the Engineer level it adds a
-Lambert rendezvous chosen on a porkchop plot. The model is Kepler plus first-order J2, held to
+Lambert rendezvous chosen on a porkchop plot. With a spacecraft (the one a flight handed on, or
+one described by hand) every plan is budgeted against its own propellant by the rocket equation
+(O03, `src/orbit/budget.ts`). The model is Kepler plus first-order J2, held to
 the Landsat and Sentinel-2 orbits; the planner is held to Vallado's and Curtis's worked
 examples ([docs/VALIDATION.md](docs/VALIDATION.md) §4). **Continue in Orbit** (under the telemetry panel,
 and on the viewer's end card) puts the orbit a flight reached into the playground, with the
@@ -336,7 +338,8 @@ src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map
                 page and launch viewer; src/ui/orbit/ the orbit playground
 src/i18n/       English, Russian and Thai dictionaries
 src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground's presets,
-                rules and tour, maneuvers, Lambert and Edelbaum (O02), the hand-off (S03)
+                rules and tour, maneuvers, Lambert and Edelbaum (O02), the propellant budget
+                (O03), the hand-off (S03)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
 src/design/     the user's designs, kept locally and as files (S05)
 src/mcp.ts      WebMCP tools

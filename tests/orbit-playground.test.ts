@@ -173,10 +173,11 @@ describe('the playground\'s sliders and rules (O01)', () => {
     expect(once.done).toBe(false);
   });
 
-  it('counts O01 and O02 as built, and only items the Orbit section plans', () => {
+  it('counts O01 to O03 as built, and only items the Orbit section plans', () => {
     const orbitItems = SECTION_PLANS.orbit.phases.flatMap((p) => p.items.map((i) => i.id));
     expect(BUILT_ITEMS.has('O01')).toBe(true);
     expect(BUILT_ITEMS.has('O02')).toBe(true);
+    expect(BUILT_ITEMS.has('O03')).toBe(true);
     for (const id of BUILT_ITEMS) expect(orbitItems).toContain(id);
   });
 });

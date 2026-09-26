@@ -13,9 +13,12 @@ import { orbitById } from '../src/data/orbits';
 import { satelliteById } from '../src/data/satellites';
 import { propagate } from '../src/physics/propagator/propagate';
 import {
-  HANDOFF_FORMAT, handoffAvailable, handoffElements, handoffFromFlight, parseHandoff, type OrbitHandoff,
+  HANDOFF_FORMAT, handoffAvailable, handoffElements, handoffFromFlight, handoffFromState, parseHandoff, type OrbitHandoff,
 } from '../src/orbit/handoff';
 import type { VisualFrame } from '../src/physics/frame';
+import { orbitFacts, stateAt } from '../src/orbit/kepler';
+import { handoffOrbit } from '../src/orbit/playground-model';
+import { craftFromHandoff, deltaVAvailable } from '../src/orbit/budget';
 import type { MissionConfig } from '../src/types';
 
 const LAUNCH = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
@@ -130,5 +133,38 @@ describe('orbit hand-off (S03)', () => {
     expect(bad((h) => { h.v = h.v.map((x: number) => x * 1.6); })).toBeNull();
     expect(parseHandoff(null)).toBeNull();
     expect(parseHandoff('orbit')).toBeNull();
+  });
+
+  it('continues in orbit (O03): the playground flies on from the flight\'s own state, with the spacecraft\'s own propellant', () => {
+    const f = soyuz.frames.at(-1)!;
+    const h = handoffAt(soyuz.sim, f);
+    const o = handoffOrbit(h);
+    // the orbit in the playground is the flight's at the hand-off: the same state, the same elements
+    const s = stateAt(o, 0, false);
+    expect(Math.hypot(s.r.x - f.r.x, s.r.y - f.r.y, s.r.z - f.r.z)).toBeLessThan(1e-3);
+    expect(Math.hypot(s.v.x - f.v.x, s.v.y - f.v.y, s.v.z - f.v.z)).toBeLessThan(1e-6);
+    const facts = orbitFacts(o, false);
+    expect(facts.perigeeAlt).toBeCloseTo(f.elements.periapsisAlt, 0);
+    expect(facts.apogeeAlt).toBeCloseTo(f.elements.apoapsisAlt, 0);
+    expect(o.jd0).toBe(f.jd);
+    // the crew spacecraft's engine and what is left in it, as a budget
+    const craft = craftFromHandoff(h)!;
+    expect(craft).not.toBeNull();
+    expect(craft.mass).toBeCloseTo(h.spacecraft.mass, 9);
+    expect(craft.isp).toBe(302);
+    expect(deltaVAvailable(craft)).toBeGreaterThan(0);
+    // the CubeSat dispenser has none
+    expect(craftFromHandoff(handoffAt(electron.sim, electron.frames.at(-1)!))).toBeNull();
+  });
+
+  it('is made from the playground\'s own orbit for its tools (O03), and reads back as sound', () => {
+    const f = soyuz.frames.at(-1)!;
+    const h = handoffFromState({
+      r: f.r, v: f.v, jd: f.jd, label: 'the playground\'s orbit',
+      spacecraft: { mass: 7000, area: 12, cd: 2.2, cr: 1.3, kind: 'crew', propulsion: { thrust: 3920, isp: 302, propellantMass: 300 } },
+    });
+    const back = parseHandoff(JSON.parse(JSON.stringify(h)));
+    expect(back).toEqual(h);
+    expect(handoffElements(h).a).toBeCloseTo(f.elements.a, 0);
   });
 });
