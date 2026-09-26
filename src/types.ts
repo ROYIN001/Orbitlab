@@ -412,6 +412,8 @@ export interface DynamicsConfig {
   controlFaults?: ControlFaultsConfig;
   /** PEG or IGM for the stages out of the atmosphere (roadmap G01). Absent: the standard ascent guidance, bit for bit. */
   explicitGuidance?: ExplicitGuidanceConfig;
+  /** P08: fly one run of a Monte Carlo set on its own, its vehicle and air dispersed (src/physics/dispersed-flight.ts). */
+  dispersion?: DispersedFlightConfig;
 }
 
 /**
@@ -528,4 +530,16 @@ export interface ExplicitGuidanceConfig {
   law: 'peg' | 'igm';
   /** guidance cycle, s (default 1) */
   cycleS?: number;
+}
+
+// --- P08 ---
+/**
+ * One dispersed flight (src/physics/dispersed-flight.ts): run `run` of the Monte Carlo set seeded
+ * `seed`, drawn exactly as G05 draws it, with the set's dispersions (the default set if absent).
+ */
+export interface DispersedFlightConfig {
+  seed: number;
+  /** the run's index in the set, 0-based (the Monte Carlo window shows it 1-based) */
+  run: number;
+  settings?: import('./physics/dispersion').DispersionSettings;
 }

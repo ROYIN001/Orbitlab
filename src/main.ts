@@ -66,6 +66,7 @@ import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
+import { LessonMode } from './ui/lessons/lesson-mode';
 import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
 import { EscapeView } from './render/escape';
@@ -194,6 +195,8 @@ class App {
   rigidControls: RigidControls;
   /** G07: the TORU hand controllers */
   toruControls!: ToruControls;
+  /** E03: lessons with set tasks and automatic grading, and the placement test */
+  lessons!: LessonMode;
   map: OrbitalMap;
   onboard: OnboardOverlay;
   timeline: Timeline;
@@ -416,6 +419,12 @@ class App {
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig() });
+    // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight
+    this.monteCarlo.onOpenRun = (dynamics) => {
+      const state = this.panel.missionState();
+      state.dynamics = dynamics;
+      this.goLive(); this.playing = false; this.panel.restoreMission(state);
+    };
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
       watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
       go: (r) => this.go(r),
@@ -462,6 +471,7 @@ class App {
     this.syncDataMode();
     this.bindControls();
     this.observeSceneBottom();
+    const startHash = location.hash; // E03: `#/lessons` is the lessons page, not a route
     const stored = loadRoute();
     if (stored && stored.section !== null) this.levelMemory = stored.mode;
     this.setRoute(initialRoute(location.hash));
@@ -474,6 +484,17 @@ class App {
       if (!sameRoute(next, this.route)) this.setRoute(next);
       this.canonicalizeHash();
     });
+    // E03: a lesson loads its mission through the panel (previewed by its onChange) and grades the flight at the head
+    this.lessons = new LessonMode({
+      // a lesson flies in the launch section; the page closes onto the route under it
+      go: (mode) => this.go(mode === 'home' ? HOME_ROUTE : route('launch', mode)),
+      back: () => this.go(this.route),
+      loadMission: (state) => { this.goLive(); this.playing = false; this.panel.restoreMission(state); },
+      sim: () => this.sim,
+      panelRoot: document.getElementById('setup')!,
+      renderPanel: () => this.panel.render(),
+    });
+    this.lessons.openFromHash(startHash);
   }
 
   /** S04: switch offline/online, kept in this browser. */
@@ -695,6 +716,7 @@ class App {
     }
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
+    this.lessons.openFromLink(); // E03: ?lesson=<id>
   }
 
   /** V01: load the broadcast (or the user's own recording) of a viewer launch. */
@@ -911,6 +933,7 @@ class App {
    */
   private onKey(e: KeyboardEvent): void {
     if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
+    if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
     // O01: the Orbit section's playground has its own clock
     if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
     // The landing page has no flight controls on it: Space must not launch the
@@ -996,6 +1019,7 @@ class App {
     this.playground.applyLanguage();
     this.syncDataMode();
     if (this.dataDialog.el.open) this.dataDialog.applyLanguage();
+    this.lessons?.applyLanguage(); // E03
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
     document.getElementById('controls')?.setAttribute('aria-label', t('a11y.playback'));
     // icon-only buttons take their accessible name from the same key as the tooltip
@@ -1449,6 +1473,7 @@ class App {
       this.rendezvousPlot.update(this.recorder.frames, this.shown);
       this.compare.update();
       this.result.update(this.simView.sim);
+      this.lessons.update(); // E03
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);
       this.toruControls.update(this.shown, this.player.live, this.mode === 'engineer');

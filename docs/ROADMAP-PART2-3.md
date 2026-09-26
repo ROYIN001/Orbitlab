@@ -233,6 +233,7 @@ a custom vehicle without one gets the generic behaviour.
 | What | Keyed by | A custom vehicle gets |
 |---|---|---|
 | Resolving the mission's vehicle: simulation, flight worker, auto-tuner, Monte Carlo job and workers, setup panel, WebMCP, narration | `vehicleById(cfg.vehicleId)` | `missionVehicle(cfg)`: the inline spec. The workers receive it inside the config (structured clone). |
+| Merged from `main` on 2026-09-26 (PR #22): the dispersed flight a mission names (P08) and its drawn values in the Engineer panel, a worksheet's questions and header from a flown flight (E05) | `vehicleById(cfg.vehicleId)` | `missionVehicle(cfg)`, as above. The lessons and the placement test name catalogue vehicles only, and keep `vehicleById`. |
 | Six-DOF available | `supportsRigid(id)`: catalogue membership | six-DOF: the rigid data are built from the spec itself. |
 | Six-DOF RCS installation (Falcon's, and `vegac:p120c`'s roll pair) | vehicle id + stage id | its origin's; else the generic installation by stage id. |
 | Six-DOF trim share (Soyuz-2.1a 0.65, others 0.35) | vehicle id | its origin's; else 0.35. |

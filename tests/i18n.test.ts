@@ -163,6 +163,17 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^setup\.faults\.(preset|presetNote|magnitude)\.[a-zA-Z0-9]+$/, from: 'ui/panel.ts faultsSection / faultRow' },
   // G01: the explicit guidance's laws.
   { pattern: /^setup\.explicit\.about\.(standard|peg|igm)$/, from: 'ui/panel.ts explicitGuidanceSection: t(`setup.explicit.about.${config.law}`)' },
+  // --- E03 --- lessons and the placement test
+  { pattern: /^lesson\.measure\.[a-zA-Z.]+$/, from: 'ui/lessons/lesson-mode.ts criterionLabel: t(`lesson.measure.${c.measure}`)' },
+  { pattern: /^lesson\.outcome\.(target|orbit|survived)$/, from: 'ui/lessons/lesson-mode.ts criterionLabel: t(`lesson.outcome.${c.is}`)' },
+  { pattern: /^lesson\.advice\.(start|skip|do|review)$/, from: 'ui/lessons/lesson-mode.ts, assessment-view.ts: t(`lesson.advice.${a}`)' },
+  { pattern: /^assess\.kind\.(pre|post)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.kind.${kind}`)' },
+  { pattern: /^assess\.domain(Short)?\.[1-6]$/, from: 'ui/lessons/assessment-view.ts: t(`assess.domain.${d}`)' },
+  { pattern: /^assess\.flight\.[a-z0-9-]+$/, from: 'ui/lessons/assessment-view.ts figure: t(`assess.flight.${id}`)' },
+  { pattern: /^assess\.series\.[a-zA-Z]+$/, from: 'ui/lessons/assessment-view.ts figure: t(`assess.series.${f.series}`)' },
+  { pattern: /^assess\.confidence\.(guess|unsure|sure)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.confidence.${c}`)' },
+  { pattern: /^assess\.level\.(beginner|basic|strong)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.level.${s.level}`)' },
+  { pattern: /^ws\.format\.(html|docx)$/, from: 'ui/lessons/worksheet-view.ts: t(`ws.format.${k}`)' },
   // G05: the Monte Carlo window's dispersions and states.
   { pattern: /^mc\.q\.(thrust|isp|propellant|dryMass|density|wind|imu)(\.about)?$/, from: 'ui/monte-carlo.ts chrome: t(`mc.q.${key}`), t(`mc.q.${key}.about`)' },
   { pattern: /^mc\.(progress|state)\.(running|done|stopped)$/, from: 'ui/monte-carlo.ts render: t(`mc.progress.${job.state}`), t(`mc.state.${job.state}`)' },

@@ -36,6 +36,7 @@ import { resolveNavigation } from './nav/config';
 import { resolveControlFaults, faultSeed, validControlFaultsConfig } from './rigid/fault-config';
 import { BREAKUP_Q_ALPHA_KPA_DEG } from './rigid/faults';
 import { dispersedVehicle, type FlightDispersion } from './dispersion';
+import { configuredDispersion } from './dispersed-flight';
 import { attitudeTestStub, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './rigid/attitude-test';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
@@ -190,7 +191,9 @@ export class Simulation {
     this.headless = opts.headless ?? false;
     this.recordEquations = opts.equations ?? true;
     // G05: a Monte Carlo run — the vehicle that flies and its air dispersed; the mission is planned on the nominal ones.
-    const dispersion = opts.dispersion;
+    // P08: or one run of a set named by the mission, drawn the same way (absent: the nominal flight, untouched).
+    const dispersion = opts.dispersion
+      ?? (cfgIn.dynamics?.dispersion ? configuredDispersion(missionVehicle(cfgIn), cfgIn.dynamics.dispersion) : undefined);
     this.densityFactor = dispersion?.densityFactor;
     const integrationStepS = opts.rigidDt ?? opts.rigidOptions?.integrationStepS ?? 0.01;
     if (!(integrationStepS > 0 && integrationStepS <= 0.02)) throw new RangeError('Rigid timestep must be in (0, 0.02] s');

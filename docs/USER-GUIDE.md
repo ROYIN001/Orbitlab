@@ -855,6 +855,122 @@ WebMCP's `run_monte_carlo` starts (`action: "start"`, with the same settings), r
 the recorded sets found: Falcon 9 delivered to about a kilometre on every law, but even the
 minimal dispersions lose a few runs to the air's loads, and leave a few in the wrong plane.
 
+### One run on its own (P08)
+
+Any run of a set can be flown alone, watched and replayed like any flight. **Click a run on the
+scatter**: the setup panel gets the set's seed and the run's number (and its guidance law, in
+six-DOF, as the set flew it); launch it. Or open **Dispersed flight: one Monte Carlo run** in the
+Engineer mode's setup, tick it, and type a set seed and a run number: the section lists what that
+run drew — each stage's thrust, Isp, propellant and dry mass, the air's density, and in six-DOF the
+steady wind (and a fresh IMU with navigation on). It works in point-mass too, where the vehicle
+and the density are dispersed (point-mass has no wind or IMU). The run is part of the mission, so
+a mission file or link carries it and the flight report names it. Untick it to fly nominal again.
+
+## 18. Lessons and the placement test
+
+The gold **Lessons** button in the top bar (and the fourth card on the landing page) opens the
+lessons page: a page of its own over the whole window below the top bar, like a mode, with two
+tabs — **Lessons** and **Placement test** — and **Back to the simulator** (or Esc, or the
+browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
+The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends.
+They are listed in five tracks — orbital mechanics, guidance and navigation, failures, attitude
+control, advanced missions — each with its number (1.1 … 5.3), a ✓ once passed and ● once tried.
+Eighteen are written; 5.3 (historical missions) waits for its roadmap item (C01) and is listed as *coming soon*.
+
+**A lesson.** Pick one: its mission is loaded into the setup panel, the app goes to the mode it
+needs (Explore or Engineer), and the settings it fixes are greyed out with a 🔒 — in lesson 1.2
+only the launch time may change, in 1.4 only the payload mass. A strip over the workspace holds
+the task, the criteria and the buttons. Launch; each criterion shows *waiting*, *so far ✓*
+(a bound that could still be broken), ✓ or ✗ — a peak such as q is failed the moment it is
+passed, everything else when the flight ends. Some lessons then ask for numbers you work out from
+your own flight (the period of the orbit you reached, the Δv of a burn, the peak load on the
+crew): type them in and **Check**. The grade is read from the recording's head, so scrubbing back
+through the replay never changes it. **Hint** reveals up to three hints, one at a time (the
+results file says how many you used); **Start again** puts the lesson's mission back; **Copy
+link** gives an address that opens the lesson (`?lesson=orbit-first`). A setting the lesson fixes
+that is changed anyway — by a mission link or over WebMCP — fails the flight, and the strip says
+which one.
+
+| | Lesson | What you change | Passed when |
+|---|---|---|---|
+| 1.1 | Your first orbit | nothing | the 500 km orbit is reached, and its period (±1 min) and speed (±0.05 km/s) are worked out |
+| 1.2 | Into the station's plane | the launch time | the ISS plane is reached directly: i within 0.1°, Ω within 0.5° |
+| 1.3 | A Hohmann transfer | nothing | the 2 000 km circle is reached, and the apogee burn's Δv (±5 %) and the period are worked out with vis-viva |
+| 1.4 | Payload and Δv | the payload mass | at least 17.5 t to 500 km with 150 m/s of Δv left |
+| 1.5 | Range safety and the launch site | the launch site | a site whose corridor licenses a polar launch, and the orbit |
+| 2.1 | Aerodynamic loads (Soyuz-2.1a) | the guidance (the acceleration limit) | peak q at most 25 kPa, the orbit reached, and the peak read (±1 kPa) |
+| 2.2 | PEG and IGM (Engineer) | the upper-stage guidance | 18.8 t to 500 km with an engine lost at T+80 s: the target orbit, explicit guidance engaged, 20 m/s left |
+| 2.3 | Inertial navigation without GNSS (Engineer, six-DOF) | the IMU grade | the position error within 500 m up to MECO, GNSS still off |
+| 2.4 | Monte Carlo 3σ (Engineer, six-DOF) | a Monte Carlo set, and the run you fly | a run of the set seeded 1 flown on its own to orbit, its perigee and its miss from the target read (±1 km) |
+| 3.1 | One engine out | the payload mass | the orbit with an engine lost at T+80 s, carrying at least 17.5 t |
+| 3.2 | A stuck gyro and the FDIR (Engineer, six-DOF) | the FDIR switch | the orbit, with IMU 1 voted out |
+| 3.3 | The crew's escape | nothing | the crew lands, and the peak load on them is read (±10 %) |
+| 4.1 | Reading the control loop (Engineer, six-DOF) | nothing | the pitch crossover and phase margin at max-Q read from the loop inspector (±10 %) |
+| 4.2 | Gains with margins (Engineer, six-DOF) | the pitch–yaw gains | at max-Q, a phase margin of 30° and a gain margin of 6 dB |
+| 4.3 | A step test in flight (Engineer, six-DOF) | the pitch–yaw gains, and the test you fly | a 2° pitch step flown before MECO overshoots by 6 % at most, and its overshoot is read (±5 points) |
+| 4.4 | Bending and the notch filter (Engineer, six-DOF) | the flexible-vehicle settings | through max-Q with the bending on and no breakup |
+| 5.1 | Bringing the booster home | the payload mass | at least 9 t to 500 km with the first stage on Landing Zone 1 |
+| 5.2 | Rendezvous and docking | the rendezvous profile | docked within 4 h of launch, and the time read (±0.1 h) |
+
+**The placement test** is 25 questions in six areas — 1 the basics of spaceflight, 2 orbital
+mechanics, 3 rocket performance, 4 guidance and navigation, 5 attitude control, 6 failures and
+safety — five from the basics and four from each of the others, easy to hard, with no clock. The
+questions and the numbers in the calculations are drawn for you from a bank of 157 (at least 25
+in every area), always to the same plan, so no two tests are alike but all are the same size and
+difficulty. Where a question is only knowledge it offers
+**I don't know**; where being sure of a wrong answer would matter it asks how sure you are. The
+questions come in several kinds: one answer of four; **several answers** (choose every right one);
+**put in order** (click the items first to last); a calculation; a value **read off a chart** of a
+flight flown in this simulator or off a **diagram** drawn with your own numbers (a ground track, a
+step response, a Bode plot); a diagram with lettered points (an orbit's apsides and nodes, the
+forces on a rocket, dispersed flights, three inertial units voting); **predict, then observe**,
+which shows the two flights after you answer; and **which vehicle is this?**, with a photograph of
+the real vehicle (from Wikimedia Commons, under free licences; the author is named in the answers,
+since it would give the answer away, and all are listed in `public/lessons/vehicles/CREDITS.txt`).
+The recommended start is always a lesson already written: the nearest one to the area you most
+need. The result is a radar
+of the six areas and a level for each (beginner, basic, proficient), your strengths, what to work
+on, your misconceptions — wrong answers you were sure of — and the recommended path through the
+lessons: which you can skip, which to go over, and a ★ where to start. Every lesson stays open
+whatever it says. **Answers and explanations** goes through every question. After the lessons,
+the **test after the lessons** asks different questions to the same plan, and the radar shows
+both.
+
+**Worksheets** (the third tab, `#/lessons/worksheets`, or **Worksheet** on a lesson's strip once
+its flight has ended) are printable sheets about a flight flown here — the open lesson's, or any
+mission on screen, flown to its end. A sheet has the mission, its key events, the flight's charts
+(altitude, speed, dynamic pressure, load factor, mass), questions worked from that flight — a value
+read off a chart at a time drawn for the student, the peak q and its time, the peak load, the first
+stage's burn time, the thrust-to-weight at lift-off, the first stage's ideal Δv and what the ascent
+lost of it, the period and perigee speed of the orbit reached — and questions from the placement
+test's bank in the areas you tick, with their diagrams and photographs. Type the class's names,
+one to a line, and a class code: each student gets their own numbers, drawn from the name and the
+code, so the same names and code always make the same sheets, in any language. **Download the
+worksheets** makes one file with a page for each student and no answers; **Download the answer
+key** makes a separate file with every student's answers, the tolerance that counts as right, and
+how each is worked out with the flight's own numbers. Either as HTML to print (Print → Save as PDF)
+or as a Word document to edit first. Values the questions ask for (max-Q, the lift-off T/W) are
+left out of the sheet's event table.
+
+**Keeping and handing in your work.** Progress and tests stay in this browser. **Export results**
+writes a `.orbitlab-results.json` file with your name (if you type it), each lesson's attempts,
+hints and graded flights, and your tests with their scores, sealed with a SHA-256 checksum that
+shows whether the file was edited after export (a check against accidents, not a signature).
+
+**Lessons of your own.** **Open lesson file…** reads a `.orbitlab-lesson.json` file: lessons and
+placement-test questions in the same format the built-in ones are written in (`src/lessons/
+lesson-file.ts`). A lesson is a mission document (as a mission file holds it, U01), the settings
+it locks, its criteria — a measure within bounds (`maxQ`, `dvLeft`, `orbit.inclination`, …), the
+outcome, an event, a number the student works out from the flight, or a check written in code —
+its hints, and its texts in English, Russian and Thai (a missing language falls back to English).
+A question is a choice, several answers (`multi`), an ordering (`order`, its items in the right
+order), a calculation whose answer is an arithmetic expression of its drawn numbers, or a vehicle to
+recognise, with its area (1–6, as above), level and explanation, and optionally a chart of a
+recorded flight or one of the built-in diagrams (`src/lessons/assessment/diagrams.ts`). Anything that cannot be
+used is left out, and the catalogue says what and why. Over WebMCP, `list_lessons`,
+`start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
+the student and read how it is going — never the expected value of an answer.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

@@ -4,6 +4,7 @@ import { validFlexConfig } from './flex';
 import { validControlConfig } from './control-config';
 import { validNavigationConfig } from '../nav/config';
 import { validControlFaultsConfig } from './fault-config';
+import { validDispersedFlight } from '../dispersed-flight';
 import { validExplicitGuidanceConfig } from '../explicit-guidance';
 
 export const RIGID_MODEL_VERSION = 'sixdof-1';
@@ -30,5 +31,7 @@ export function validateDynamics(value: unknown, vehicle: string | VehicleSpec):
     && (d.control === undefined || validControlConfig(d.control))
     && (d.navigation === undefined || validNavigationConfig(d.navigation))
     && (d.controlFaults === undefined || validControlFaultsConfig(d.controlFaults, { navigation: d.navigation !== undefined }))
-    && (d.explicitGuidance === undefined || validExplicitGuidanceConfig(d.explicitGuidance));
+    && (d.explicitGuidance === undefined || validExplicitGuidanceConfig(d.explicitGuidance))
+    // P08: one run of a Monte Carlo set, flown on its own
+    && (d.dispersion === undefined || validDispersedFlight(d.dispersion));
 }
