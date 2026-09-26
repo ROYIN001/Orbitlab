@@ -89,7 +89,7 @@ describe('Simulation rigid separation boundaries', () => {
     expect(sim.debris).toHaveLength(1);
     for (const axis of ['w', 'x', 'y', 'z'] as const) expect(sim.debris[0].rigid!.attitudeQ[axis]).toBeCloseTo(q[axis], 14);
     expect(sim.debris[0].rigid!.rcsPropellantKg).toBe(65);
-    expect(sim.debris[0].mass).toBe(25600 + 14000 - 35);
+    expect(sim.debris[0].mass).toBe(first.spec.dryMass + 14000 - 35);
     expect(boundary(sim).rigidDebris.get(sim.debris[0].id)!.runtime.integrationStepS).toBe(0.005);
   });
 

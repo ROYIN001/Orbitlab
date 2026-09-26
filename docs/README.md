@@ -10,6 +10,7 @@ Read in this order. Each document assumes the ones before it.
 | 4 | [SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md) | The gates the six-DOF model was accepted against and the results, dated. |
 | 5 | [SIXDOF-BROWSER-QA.md](SIXDOF-BROWSER-QA.md) | Browser checks of the six-DOF build: what was verified by hand, performance and memory limits. |
 | 6 | [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) | Where the project stands now: what is done, what is experimental, what is next, and how it is tested. |
+| 7 | [VALIDATION.md](VALIDATION.md) | The simulator against real flight data: Falcon 9 webcast telemetry of five flights and the published Soyuz-2.1a, Electron and Ariane 64 timelines, the tolerances, where it disagrees and why. |
 
 The repository's own [README](../README.md) covers installing, running and the source layout.
 

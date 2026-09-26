@@ -17,7 +17,8 @@ import { gravity, gravityJ2 } from '../gravity';
  * fairing halves all fell with 2–7× too little drag and landed too fast and
  * too far downrange.
  */
-export function pointMassAcceleration(thrustAccel: number, dir: Vec3, mass0: number, mdot: number, t0: number, area: number, useJ2: boolean, cd0?: number) {
+export function pointMassAcceleration(thrustAccel: number, dir: Vec3, mass0: number, mdot: number, t0: number, area: number, useJ2: boolean, cd0?: number,
+  densityFactor?: number) {
   return (t: number, r: Vec3, v: Vec3): Vec3 => {
     const rm = norm(r);
     const alt = rm - R_EARTH;
@@ -34,7 +35,9 @@ export function pointMassAcceleration(thrustAccel: number, dir: Vec3, mass0: num
       if (vAirMag > 0.1 && atm.rho > 0) {
         const mach = vAirMag / atm.a;
         const cd = cd0 === undefined ? dragCoefficient(mach) : tumblingDragCoefficient(cd0, mach);
-        const D = 0.5 * atm.rho * vAirMag * vAirMag * cd * area;
+        // G05: a Monte Carlo run's density factor; absent, the standard atmosphere.
+        const rho = densityFactor === undefined ? atm.rho : atm.rho * densityFactor;
+        const D = 0.5 * rho * vAirMag * vAirMag * cd * area;
         a = addScaled(a, vAir, -D / (m * vAirMag));
       }
     }
