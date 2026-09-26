@@ -9,7 +9,7 @@ import { missionDoc } from './common';
 
 export const TRACK3: readonly unknown[] = [
   {
-    id: 'fail-engine-out', track: 3, order: 1, mode: 'explore', domains: [5, 2], tags: ['failure', 'm_pl'],
+    id: 'fail-engine-out', track: 3, order: 1, mode: 'explore', domains: [6, 3], tags: ['failure', 'm_pl'],
     title: { en: 'One engine out', ru: 'Отказ одного двигателя', th: 'เครื่องยนต์ดับหนึ่งเครื่อง' },
     brief: {
       en: 'One of Falcon 9\'s nine first-stage engines will fail at T+80 s. The rocket can still reach orbit — the other eight burn longer and the guidance flies on — but not with 17.5 t on top. Take off as little payload as you must: reach the 500 km target orbit carrying at least 16 t. The failure is fixed; only the payload mass may be changed.',
@@ -38,7 +38,7 @@ export const TRACK3: readonly unknown[] = [
     ],
   },
   {
-    id: 'fail-gyro-fdir', track: 3, order: 2, mode: 'engineer', domains: [5, 4], tags: ['G08', 'FDIR'],
+    id: 'fail-gyro-fdir', track: 3, order: 2, mode: 'engineer', domains: [6, 5], tags: ['G08', 'FDIR'],
     title: { en: 'A stuck gyro and the FDIR', ru: 'Заклинивший ДУС и FDIR', th: 'ไจโรค้างกับ FDIR' },
     brief: {
       en: 'Falcon 9 flown as a rigid body under its autopilot. At T+30 s the rate gyros of inertial unit 1 will stick. Without fault detection the flight computer flies on unit 1 alone. Turn on the FDIR (Engineer mode, "Control-system failures") so that the three units vote, and reach the target orbit. The failure itself is fixed.',
@@ -66,7 +66,7 @@ export const TRACK3: readonly unknown[] = [
     ],
   },
   {
-    id: 'fail-abort', track: 3, order: 3, mode: 'explore', domains: [5], tags: ['G06', 'crew'],
+    id: 'fail-abort', track: 3, order: 3, mode: 'explore', domains: [6], tags: ['G06', 'crew'],
     title: { en: 'The crew\'s escape', ru: 'Спасение экипажа', th: 'การหนีภัยของลูกเรือ' },
     brief: {
       en: 'A crewed Soyuz. At T+60 s, near the maximum dynamic pressure, the flight director commands an abort: the escape tower pulls the head section off the rocket, the descent module falls free and comes down on its parachutes. Fly it until the crew is on the ground, then read the peak load factor on the crew during the escape and type it in.',

@@ -198,20 +198,30 @@ describe('scoring', () => {
     expect(gradeQuestion(q, p, { id: q.id, value: null }).unknown).toBe(true);
   });
 
-  it('starts a student strong in orbits and weak in control at the control lessons, and has them skip the orbit lessons', () => {
-    const r = scoreAttempt(attempt(9, (q) => q.domain !== 4), BUILTIN_QUESTIONS, BUILTIN_LESSONS);
-    expect(r.domains.find((d) => d.domain === 4)!.level).toBe('beginner');
-    expect(r.startDomain).toBe(4);
-    expect(r.start).toBe('ctl-inspector');
+  it('starts a student strong in orbits and weak in control at a written lesson on control, and has them skip the orbit lessons', () => {
+    const r = scoreAttempt(attempt(9, (q) => q.domain !== 5), BUILTIN_QUESTIONS, BUILTIN_LESSONS);
+    expect(r.domains.find((d) => d.domain === 5)!.level).toBe('beginner');
+    expect(r.startDomain).toBe(5);
+    const start = BUILTIN_LESSONS.find((l) => l.id === r.start)!;
+    expect(start.comingSoon).toBeFalsy();
+    expect(start.domains).toContain(5);
     expect(r.advice['orbit-first']).toBe('skip');
     expect(r.advice['ctl-margins']).toBe('review');
   });
 
+  it('never starts at a lesson still to be written', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      const r = scoreAttempt(attempt(seed, (q) => (q.id.length + seed) % 3 !== 0), BUILTIN_QUESTIONS, BUILTIN_LESSONS);
+      if (r.start) expect(BUILTIN_LESSONS.find((l) => l.id === r.start)!.comingSoon, `seed ${seed}`).toBeFalsy();
+    }
+  });
+
   it('sends a student weak in the basics and in orbits back to the foundations first', () => {
-    const r = scoreAttempt(attempt(9, (q) => q.domain !== 6 && q.domain !== 1 && q.domain !== 3), BUILTIN_QUESTIONS, BUILTIN_LESSONS);
-    // area 3 rests on area 1, which rests on area 6: the start is the basics' first lesson
-    expect(DOMAIN_PREREQUISITES[3]).toContain(1);
-    expect(r.startDomain).toBe(6);
+    const r = scoreAttempt(attempt(9, (q) => q.domain !== 1 && q.domain !== 2 && q.domain !== 4), BUILTIN_QUESTIONS, BUILTIN_LESSONS);
+    // area 4 rests on area 2, which rests on area 1: the start is the basics' first lesson
+    expect(DOMAIN_PREREQUISITES[4]).toContain(2);
+    expect(DOMAIN_PREREQUISITES[2]).toContain(1);
+    expect(r.startDomain).toBe(1);
     expect(r.start).toBe('orbit-first');
   });
 
@@ -253,5 +263,5 @@ describe('a teacher\'s question', () => {
 
 // the areas the recommendation walks through all have lessons or a fallback
 it('has lessons for every area but the basics, which start at the first lesson', () => {
-  for (const d of DOMAINS.filter((x) => x !== 6) as Domain[]) expect(BUILTIN_LESSONS.some((l) => l.domains.includes(d)), `area ${d}`).toBe(true);
+  for (const d of DOMAINS.filter((x) => x !== 1) as Domain[]) expect(BUILTIN_LESSONS.some((l) => l.domains.includes(d)), `area ${d}`).toBe(true);
 });

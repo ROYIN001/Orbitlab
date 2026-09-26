@@ -11,15 +11,15 @@ import type { AssessmentKind, Level, PreparedQuestion, Question } from './types'
 
 /** How many questions of each level each area gets: 4 × 5 areas + 5 for the basics = 25. */
 export const BLUEPRINT: Readonly<Record<Domain, readonly Level[]>> = {
-  6: [1, 1, 2, 2, 3],
-  1: [1, 2, 2, 3],
+  1: [1, 1, 2, 2, 3],
   2: [1, 2, 2, 3],
   3: [1, 2, 2, 3],
   4: [1, 2, 2, 3],
   5: [1, 2, 2, 3],
+  6: [1, 2, 2, 3],
 };
-/** The order the areas are asked in: the basics first, then the lessons' own order. */
-export const DOMAIN_ORDER: readonly Domain[] = [6, 1, 2, 3, 4, 5];
+/** The order the areas are asked in: the basics first, then the lessons' own order (area 2 is track 1's). */
+export const DOMAIN_ORDER: readonly Domain[] = [1, 2, 3, 4, 5, 6];
 export const TEST_LENGTH = DOMAINS.reduce((n, d) => n + BLUEPRINT[d].length, 0);
 
 /** A small, fast, seedable generator (mulberry32). */

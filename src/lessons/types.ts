@@ -68,6 +68,8 @@ export interface LessonMeta {
   domains: Domain[];
   /** a roadmap item or a tag shown on the card, e.g. `G08` */
   tags?: string[];
+  /** a built-in lesson that is only listed, not yet written */
+  comingSoon?: boolean;
 }
 
 export interface Lesson extends LessonMeta {
@@ -89,8 +91,6 @@ export interface Lesson extends LessonMeta {
    * an abort to the crew on the ground).
    */
   endEvent?: string;
-  /** a built-in lesson that is only listed, not yet written */
-  comingSoon?: boolean;
 }
 
 /**

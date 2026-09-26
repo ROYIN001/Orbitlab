@@ -21,7 +21,7 @@ export type LessonAdvice = 'skip' | 'do' | 'review';
  * only once what it rests on is there.
  */
 export const DOMAIN_PREREQUISITES: Readonly<Record<Domain, readonly Domain[]>> = {
-  6: [], 1: [6], 2: [6], 3: [1, 2], 4: [2], 5: [1, 2],
+  1: [], 2: [1], 3: [1], 4: [2, 3], 5: [3], 6: [2, 3],
 };
 
 export interface QuestionResult {
@@ -148,14 +148,17 @@ export function scoreAttempt(attempt: AssessmentAttempt, bank: readonly Question
   const weakest = [...DOMAINS].filter((d) => levelOf.get(d) !== 'strong')
     .sort((a, b) => rank[levelOf.get(a)!] - rank[levelOf.get(b)!] || pct.get(a)! - pct.get(b)! || DOMAIN_ORDER_INDEX[a] - DOMAIN_ORDER_INDEX[b])[0];
   const startDomain = weakest === undefined ? null : foundation(weakest);
-  // A lesson still to be written can be the start: the catalogue says it is coming.
+  // The start is a lesson already written: the nearest one to the area —
+  // chiefly about it, then touching it, then touching what it rests on.
   const ordered = [...lessons].sort(byOrder);
+  const open = ordered.filter((l) => !l.comingSoon && advice[l.id] !== 'skip');
+  const pick = (d: Domain): LessonMeta | undefined =>
+    open.find((l) => l.domains[0] === d) ?? open.find((l) => l.domains.includes(d))
+    ?? DOMAIN_PREREQUISITES[d].map((p) => open.find((l) => l.domains.includes(p))).find((l) => !!l);
   // the basics have no lessons of their own: the first lesson of all is where they are practised
-  // a lesson that is chiefly about the area comes before one that touches it
   const start = startDomain === null ? null
-    : (ordered.find((l) => l.domains[0] === startDomain && advice[l.id] !== 'skip')
-      ?? ordered.find((l) => l.domains.includes(startDomain) && advice[l.id] !== 'skip') ?? ordered[0] ?? null)?.id ?? null;
+    : (pick(startDomain) ?? open[0] ?? ordered.find((l) => !l.comingSoon) ?? null)?.id ?? null;
   return { percent, domains, questions, advice, start, startDomain };
 }
 
-const DOMAIN_ORDER_INDEX: Record<Domain, number> = { 6: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 };
+const DOMAIN_ORDER_INDEX: Record<Domain, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5 };

@@ -10,7 +10,7 @@ const km = 1000;
 
 export const TRACK1: readonly unknown[] = [
   {
-    id: 'orbit-first', track: 1, order: 1, mode: 'explore', domains: [1, 6], tags: ['hp ha', 'T'],
+    id: 'orbit-first', track: 1, order: 1, mode: 'explore', domains: [2, 1], tags: ['hp ha', 'T'],
     title: { en: 'Your first orbit', ru: 'Первая орбита', th: 'วงโคจรแรก' },
     brief: {
       en: 'Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed.',
@@ -42,7 +42,7 @@ export const TRACK1: readonly unknown[] = [
     ],
   },
   {
-    id: 'orbit-iss-plane', track: 1, order: 2, mode: 'explore', domains: [1], tags: ['i Ω', 'window'],
+    id: 'orbit-iss-plane', track: 1, order: 2, mode: 'explore', domains: [2], tags: ['i Ω', 'window'],
     title: { en: 'Into the station\'s plane', ru: 'В плоскость орбиты МКС', th: 'เข้าระนาบของสถานีอวกาศ' },
     brief: {
       en: 'Soyuz-2.1a stands at Baikonur with a crewed spacecraft for the space station, but the launch time on the panel is a bad one: the station\'s orbital plane is far from the pad. Choose the launch time so that the ascent puts the spacecraft straight into the station\'s plane — inclination 51.64° and the station\'s longitude of the ascending node Ω — and fly it. Only the launch time may be changed.',
@@ -68,7 +68,7 @@ export const TRACK1: readonly unknown[] = [
     ],
   },
   {
-    id: 'orbit-hohmann', track: 1, order: 3, mode: 'explore', domains: [1, 2], tags: ['vis-viva', 'Δv'],
+    id: 'orbit-hohmann', track: 1, order: 3, mode: 'explore', domains: [2, 3], tags: ['vis-viva', 'Δv'],
     title: { en: 'A Hohmann transfer', ru: 'Гомановский перелёт', th: 'การถ่ายโอนวงโคจรแบบโฮมันน์' },
     brief: {
       en: 'Falcon 9 carries 3 t to a circular orbit 2 000 km up. The ascent leaves the second stage in a 200 × 2 000 km ellipse — the first half of a Hohmann transfer — and it relights at apogee to make the orbit circular. Work out with the vis-viva equation how much Δv that apogee burn needs, fly the mission, and type in the burn\'s Δv and the period of the final orbit.',
@@ -104,7 +104,7 @@ export const TRACK1: readonly unknown[] = [
     ],
   },
   {
-    id: 'orbit-payload', track: 1, order: 4, mode: 'explore', domains: [2, 1], tags: ['m_pl', 'Δv'],
+    id: 'orbit-payload', track: 1, order: 4, mode: 'explore', domains: [3, 2], tags: ['m_pl', 'Δv'],
     title: { en: 'Payload and Δv', ru: 'Полезная нагрузка и Δv', th: 'น้ำหนักบรรทุกกับ Δv' },
     brief: {
       en: 'How much can Falcon 9 carry to a 500 km circular orbit? Set the payload mass so that the rocket reaches the target orbit carrying at least 16 t, with at least 150 m/s of Δv left in the second stage as a reserve. The panel starts at 18 t, which is too much. Only the payload mass may be changed.',
@@ -130,7 +130,7 @@ export const TRACK1: readonly unknown[] = [
     ],
   },
   {
-    id: 'orbit-range-safety', track: 1, order: 5, mode: 'explore', domains: [1, 5], tags: ['i', 'range'],
+    id: 'orbit-range-safety', track: 1, order: 5, mode: 'explore', domains: [2, 6], tags: ['i', 'range'],
     title: { en: 'Range safety and the launch site', ru: 'Коридор безопасности и выбор космодрома', th: 'ระเบียงความปลอดภัยและการเลือกฐานปล่อย' },
     brief: {
       en: 'A 5 t satellite must go into a polar orbit 800 km up (inclination 90°). From Cape Canaveral Falcon 9 would have to fly north along the populated coast, which the range does not license. Choose a launch site whose range-safety corridor allows a polar launch, and fly the mission. Only the launch site may be changed.',
