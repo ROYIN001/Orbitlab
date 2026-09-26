@@ -382,6 +382,12 @@ class App {
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig() });
+    // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight
+    this.monteCarlo.onOpenRun = (dynamics) => {
+      const state = this.panel.missionState();
+      state.dynamics = dynamics;
+      this.goLive(); this.playing = false; this.panel.restoreMission(state);
+    };
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
       watchFeatured: () => { this.go('watch'); this.startWatch(FEATURED_WATCH_MISSION); },
       go: (mode) => this.go(mode),

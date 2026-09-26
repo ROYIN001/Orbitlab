@@ -78,6 +78,8 @@ function setupRows(flight: ReportFlight, lang: Lang, guidanceEdited: boolean): [
     const flexOn = flex ? [flex.slosh ? t('setup.flex.slosh') : '', flex.bending ? t('setup.flex.bending') : '', flex.notch ? t('setup.flex.notch') : ''].filter(Boolean) : [];
     rows.push([t('setup.flex.title'), flexOn.length ? flexOn.join('; ') : t('report.off')]);
     rows.push([t('setup.control.title'), d.control ? t('report.custom') : t('report.default')]);
+    // P08: a dispersed flight names the Monte Carlo run it flies
+    if (d.dispersion) rows.push([t('setup.dispersion.title'), t('report.dispersionRun', { run: d.dispersion.run + 1, seed: d.dispersion.seed })]);
     const faults = d.controlFaults?.faults ?? [];
     rows.push([t('setup.faults.title'), faults.length
       ? `${faults.map((f) => `${faultKindName(f.kind)} ${t('report.at', { t: n(f.time) })}`).join('; ')}${d.controlFaults?.fdir ? ` · ${t('setup.faults.fdir')}` : ''}`

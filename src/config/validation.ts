@@ -73,6 +73,9 @@ export const NUMBER_FIELDS: Record<string, NumberLimits> = {
   [NAV_FIELD_KEYS.gnssOutageEnd]: { min: 0, max: 1e6 },
   // --- G01: the explicit guidance's cycle
   'setup.explicit.cycle': { min: 0.1, max: 4 },
+  // --- P08: a dispersed flight names a run of a Monte Carlo set (shown 1-based)
+  'setup.dispersion.seed': { min: 0, max: 0xffffffff, integer: true },
+  'setup.dispersion.run': { min: 1, max: 2000, integer: true },
 };
 
 /** Vehicle programmes are trusted data, not fresh user overrides. Extending a

@@ -69,6 +69,9 @@ import { faultKindName } from './fault-names';
 import type { ExplicitGuidanceConfig } from '../types';
 import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
 import { copyMission, type MissionState } from '../config/mission-file';
+import { configuredDispersion } from '../physics/dispersed-flight'; // P08
+import { propulsionElements } from '../physics/dispersion'; // P08
+import type { DispersedFlightConfig } from '../types'; // P08
 import { MissionShare } from './mission-share';
 
 export interface SetupCallbacks {
@@ -1048,6 +1051,7 @@ export class SetupPanel {
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.navigationSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.faultsSection());
     if (this.experience === 'advanced') s4.appendChild(this.explicitGuidanceSection());
+    if (this.experience === 'advanced') s4.appendChild(this.dispersedFlightSection()); // P08
     if (this.experience === 'advanced' && this.cb.onMonteCarlo) s4.appendChild(this.monteCarloSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
@@ -1389,6 +1393,60 @@ export class SetupPanel {
       section.append(this.number(EXPLICIT_FIELD_KEYS.cycleS, config.cycleS ?? 1, (value) => update({ ...config, cycleS: value }), 0.1));
       section.append(this.el('p', 'field-note', t('setup.explicit.engage')));
     }
+    return section;
+  }
+
+  // --- P08: one dispersed flight (Engineer mode) --------------------------------------
+  /**
+   * Fly this mission as one run of a Monte Carlo set: the set's seed and the run's number, the
+   * vehicle and air that run drew shown beside them. Off, the mission flies nominal.
+   */
+  private dispersedFlightSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'dispersion';
+    const config = this.state.dynamics?.dispersion;
+    if (config) section.open = true;
+    section.append(this.el('summary', undefined, t('setup.dispersion.title')));
+    section.append(this.el('p', 'field-note', t('setup.dispersion.note')));
+    const update = (next: DispersedFlightConfig | undefined): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { dispersion: next } : {}) };
+      if (!next) delete this.state.dynamics.dispersion;
+      this.render();
+      this.changed();
+    };
+    const row = this.el('label', 'checkbox'), box = this.el('input');
+    box.type = 'checkbox'; box.checked = !!config; box.disabled = this.running;
+    box.addEventListener('change', () => update(box.checked ? { seed: 1, run: 0 } : undefined));
+    row.append(box, this.el('span', undefined, t('setup.dispersion.on')));
+    section.append(row);
+    if (!config) return section;
+    section.append(this.number('setup.dispersion.seed', config.seed, (v) => update({ ...config, seed: v })));
+    section.append(this.number('setup.dispersion.run', config.run + 1, (v) => update({ ...config, run: v - 1 })));
+    if (config.settings) {
+      section.append(this.el('p', 'field-note', t('setup.dispersion.ownSet')));
+      const reset = this.el('button', 'quiet-btn', t('setup.dispersion.defaultSet'));
+      reset.type = 'button';
+      reset.disabled = this.running;
+      reset.addEventListener('click', () => update({ seed: config.seed, run: config.run }));
+      section.append(reset);
+    }
+    // what the run drew, as the flight flies it
+    const spec = vehicleById(this.state.vehicleId);
+    const drawn = configuredDispersion(spec, config);
+    const pct = (f: number) => `${f >= 1 ? '+' : '−'}${Math.abs((f - 1) * 100).toFixed(2)} %`;
+    const list = this.el('ul', 'field-note dispersion-draws');
+    for (const e of propulsionElements(spec)) {
+      const f = drawn.vehicle[e.id];
+      const name = e.kind === 'stage' ? spec.stages[e.stage].name : spec.stages[e.stage].boosters?.find((b) => b.id === e.id)?.name ?? e.id;
+      list.append(this.el('li', undefined, t('setup.dispersion.stage', { name, thrust: pct(f.thrust), isp: pct(f.isp), prop: pct(f.propellant), dry: pct(f.dryMass) })));
+    }
+    list.append(this.el('li', undefined, t('setup.dispersion.density', { density: pct(drawn.densityFactor) })));
+    if (this.state.dynamics?.model === 'sixDof') {
+      list.append(this.el('li', undefined, t('setup.dispersion.wind', { east: drawn.windENU.east.toFixed(1), north: drawn.windENU.north.toFixed(1) })));
+      if (this.state.dynamics.navigation) list.append(this.el('li', undefined, t('setup.dispersion.imu')));
+    } else list.append(this.el('li', undefined, t('setup.dispersion.pointMass')));
+    section.append(list);
     return section;
   }
 
