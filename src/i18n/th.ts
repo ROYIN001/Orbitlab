@@ -636,6 +636,7 @@ export const th: Record<string, string> = {
   'sat.cubesats.name': 'ชุดปล่อยคิวบ์แซตแบบร่วมเที่ยวบิน',
   'sat.starlink.name': 'ชุดดาวเทียม Starlink (60 × 260 กก.)',
   'sat.crew.name': 'ยานอวกาศมีมนุษย์ควบคุม',
+  'sat.crewDragon.name': 'ยานครูว์ดรากอน',
   'site.baikonur.name': 'ท่าอวกาศยานไบโคนูร์',
   'site.plesetsk.name': 'ท่าอวกาศยานเพลเซตสก์',
   'site.vostochny.name': 'ท่าอวกาศยานวอสตอชนี',
@@ -1240,6 +1241,9 @@ export const th: Record<string, string> = {
   'watch.mission.h2aHayabusa2': 'H-IIA ส่ง Hayabusa2 ออกเดินทาง',
   'watch.mission.h2aHayabusa2Blurb': '3 ธันวาคม 2014 ทาเนกาชิมะ: ยานเก็บตัวอย่างดาวเคราะห์น้อยสู่วงโคจรจอดรอสูง 250 กม. จำลองถึงวงโคจรจอดรอ ไม่รวมการจุดเครื่องยนต์ครั้งที่สองมุ่งหน้าสู่ Ryugu',
   'watch.payload.hayabusa2': 'ยาน Hayabusa2',
+  'watch.mission.falcon9Demo2': 'Demo-2 ลูกเรือชุดแรกของ Crew Dragon',
+  'watch.mission.falcon9Demo2Blurb': '30 พฤษภาคม 2020 ฐาน LC-39A: เฮอร์ลีย์และเบห์นเคนบน Crew Dragon ลูกเรือชุดแรกที่ขึ้นจากสหรัฐฯ นับตั้งแต่ปี 2011 ไม่มีครอบจมูกจรวด ตัวแคปซูลเป็นหัวจรวดเอง บูสเตอร์ลงจอดกลางทะเล',
+  'watch.payload.demo2': 'Crew Dragon Endeavour (เฮอร์ลีย์, เบห์นเคน)',
   // --- G03 ---
   'loop.button': 'ตัวตรวจลูปควบคุมท่าทาง',
   'loop.title': 'ตัวตรวจลูปควบคุมท่าทาง',

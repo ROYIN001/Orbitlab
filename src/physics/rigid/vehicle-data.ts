@@ -53,7 +53,7 @@ export function getRigidVehicleGeometry(spec: VehicleSpec): RigidVehicleGeometry
     });
   });
   return {
-    vehicleId: spec.id, length: layout.total + (spec.fairing?.length ?? 0),
+    vehicleId: spec.id, length: layout.total + (spec.fairing?.length ?? spec.exposedPayload?.length ?? 0),
     stageBases: layout.base.map((x) => v3(x, 0, 0)), stageHeights: [...layout.height],
     fairingBase: v3(layout.total, 0, 0), payloadBase: v3(layout.total + 0.5, 0, 0),
     boosters, estimated: true,

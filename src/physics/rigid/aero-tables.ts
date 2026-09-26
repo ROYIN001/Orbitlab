@@ -159,6 +159,8 @@ export interface AttachedStack {
   /** per stage, whether it is still part of the stack */
   stageAttached: readonly boolean[];
   fairingAttached: boolean;
+  /** the payload still on top — what matters for one flown in the open (`exposedPayload`) */
+  payloadAttached?: boolean;
   /** per booster group of the active stage */
   boosterGroups: readonly boolean[];
 }
@@ -201,6 +203,17 @@ export function ascentAeroTable(spec: VehicleSpec, attached: AttachedStack, refe
     nose = { area: circle(f.diameter), baseX: top, diameter: f.diameter };
     top += f.length;
     widest = Math.max(widest, f.diameter);
+  } else if (spec.exposedPayload && attached.payloadAttached !== false && lower !== null) {
+    // A payload flown in the open (Crew Dragon): its trunk and capsule are the
+    // nose — a widening onto it, then the capsule's cone, whose lift acts two
+    // thirds of the cone behind its tip, and the side area of the whole.
+    const p = spec.exposedPayload;
+    if (Math.abs(p.diameter - lower) > 0.05) terms.push({ area: circle(lower) - circle(p.diameter), x: top });
+    terms.push({ area: circle(p.diameter), x: top + p.length - CONE_CP * p.noseLength });
+    addPlanform(p.diameter * p.length * 0.8, top + p.length * 0.4);
+    nose = { area: circle(p.diameter), baseX: top, diameter: p.diameter };
+    top += p.length;
+    widest = Math.max(widest, p.diameter);
   } else if (lower !== null) {
     // A blunt top — the upper stage or the payload after the fairing has gone.
     terms.push({ area: circle(lower), x: top - 0.1 * lower });

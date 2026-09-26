@@ -117,6 +117,12 @@ export interface Debris {
     burning: boolean; landed: boolean;
     /** propellant held back for the landing burn, kg */
     landingReserve: number;
+    /**
+     * Airspeed a drone-ship stage's entry burn ends at, m/s: set when the ship
+     * is stationed, from the propellant the stage carries above its landing
+     * reserve (`DebrisManager.planReturn`). Absent, the fixed defaults.
+     */
+    entryTargetSpeed?: number;
     /** the landing burn has begun (its bang-bang throttling keeps the plume lit) */
     landingStarted?: boolean;
     /**

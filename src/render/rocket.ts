@@ -175,7 +175,7 @@ export class RocketView {
   /** V03: the condensation collar through Mach 1, at the fairing's shoulder (or a ship's) */
   private vapour: VapourCone | null = null;
   /** where the collar starts: above the fairing's base, or below the top of the stack */
-  private vapourAt: { onFairing: boolean; y: number } | null = null;
+  private vapourAt: { onFairing: boolean; onPayload?: boolean; y: number } | null = null;
   private readonly humidity: number;
   private readonly crewed: boolean;
   private satellite: SatelliteView;
@@ -224,6 +224,11 @@ export class RocketView {
     if (spec.fairing) {
       this.vapour = new VapourCone(spec.fairing.diameter / 2, spec.fairing.diameter * 1.7);
       this.vapourAt = { onFairing: true, y: spec.fairing.length * 0.52 };
+    } else if (spec.exposedPayload) {
+      // a payload flown in the open: the collar forms at its capsule's shoulder
+      const p = spec.exposedPayload;
+      this.vapour = new VapourCone(p.diameter / 2, p.diameter * 1.7);
+      this.vapourAt = { onFairing: false, onPayload: true, y: p.length - p.noseLength };
     } else if (last && !last.isSpacecraft) {
       this.vapour = new VapourCone(last.diameter / 2, last.diameter * 1.7);
       this.vapourAt = { onFairing: false, y: last.length * SHIP_NOSE_FRACTION };
@@ -368,7 +373,7 @@ export class RocketView {
     const seed = seedFromString(this.spec.id + spec.id);
     // A top stage flown without a fairing (Starship's ship) carries its payload
     // inside its own nose, so it has to close the stack itself.
-    const noseH = !this.spec.fairing && index === this.spec.stages.length - 1 ? spec.length * SHIP_NOSE_FRACTION : 0;
+    const noseH = !this.spec.fairing && !this.spec.exposedPayload && index === this.spec.stages.length - 1 ? spec.length * SHIP_NOSE_FRACTION : 0;
     const barrel = spec.length - noseH;
     const tex = bodyTexture(liv, spec.diameter, barrel, seed);
     this.textures.push(tex);
@@ -803,9 +808,9 @@ export class RocketView {
       this.crewedTop?.update(sinceLiftoff, this.fairingLength);
     }
     if (this.vapour && this.vapourAt) {
-      const on = this.vapourAt.onFairing ? frame.fairingAttached : true;
+      const on = this.vapourAt.onFairing ? frame.fairingAttached : this.vapourAt.onPayload ? !frame.payloadSeparated : true;
       const strength = on && frame.liftoff && !frame.abort && frame.thrust > 0 ? vapourStrength(frame.mach, frame.altitude, this.humidity) : 0;
-      this.vapour.group.position.y = this.vapourAt.onFairing ? top + this.vapourAt.y : top - this.vapourAt.y;
+      this.vapour.group.position.y = this.vapourAt.onFairing || this.vapourAt.onPayload ? top + this.vapourAt.y : top - this.vapourAt.y;
       this.vapour.update(strength, t, env.night);
     }
     // payload
@@ -821,9 +826,10 @@ export class RocketView {
       this.satellite.setDeploy(p);
       satG.visible = true;
     } else {
-      satG.position.y = top + this.satellite.height / 2 + 0.5;
+      // a payload flown in the open stands on the stage; one in a fairing half a metre up inside it
+      satG.position.y = top + this.satellite.height / 2 + (this.spec.exposedPayload ? 0 : 0.5);
       this.satellite.setDeploy(0);
-      satG.visible = !this.spec.fairing ? false : !frame.fairingAttached;
+      satG.visible = this.spec.exposedPayload ? true : !this.spec.fairing ? false : !frame.fairingAttached;
     }
   }
 

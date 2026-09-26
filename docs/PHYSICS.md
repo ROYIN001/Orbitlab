@@ -2166,8 +2166,16 @@ The guidance is one piece, `src/physics/sim/return-guidance.ts`, shared by both 
   boostback is finished, the prediction assumes the propellant it will leave (the rocket
   equation on the velocity it still needs), not a full tank for the entry burn.
 - **Entry burn.** A returning stage crosses 70 km slower than a downrange one, so its burn
-  waits armed until the airspeed is over its target (550 m/s for a return to the launch site,
-  1.4 km/s downrange) and leans up to 15° off retrograde to trim the landing point.
+  waits armed until the airspeed is over its target (550 m/s for a return to the launch site)
+  and leans up to 15° off retrograde to trim the landing point. A stage bound for a drone ship
+  (roadmap C01) spends what it carries above its landing reserve: the target is the airspeed at
+  70 km (from the stage's energy at separation) less three quarters of that propellant's ideal
+  Δv, held between 550 m/s and 1.4 km/s, and the ship is stationed on the descent that burn
+  gives. The fixed 1.4 km/s it replaces left a lone Falcon 9 first stage off Demo-2's steep
+  ascent (13 t to 51.6°) coming through 3 km at nearly 300 m/s sideways with 30 t unburnt, past
+  what its landing burn could take off; it now lands on the deck at T+552 s in six-DOF (the real
+  booster at T+9:22, 562 s; NASA Demo-2 launch timeline) with 11 t left. Falcon Heavy's core
+  (Arabsat-6A) still lands (tests/heavy/falcon-heavy-returns.test.ts).
 - **Landing burn.** A constant deceleration to 2 m/s at the pad, lit at the drag-aware braking
   height, with the zero-effort-miss divert of Ebrahimi, Bahrami and Roshanian (2008) in the
   horizontal plane, a = 6·Δr/t² − 4·v/t, leaning up to 20°.
@@ -2669,6 +2677,7 @@ is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's S
 | ORBCOMM-2 (F9 flight 20) | 2015-12-22 01:29:00 | Falcon 9, SLC-40; core to LZ-1 | 2,553 kg (11 × 172 kg + dispenser) | 613 × 657 km, 47.0° | GCAT; JSR 721 |
 | Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
 | Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
+| Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
 
 **13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
 regression, which six years back is tens of degrees out. Within 10 days of a historical flight
@@ -2699,6 +2708,30 @@ one flown — and MS-16, launched at its real second, reaches a plane 0.4° from
   Blok I orbits were 192 × 218 km and 193 × 218 km.
 - The pads of Plesetsk, Tanegashima and SLC-40 are the sites' own coordinates, within a few
   kilometres of the pads flown.
+
+**13.4 Crew Dragon: a payload flown in the open (Demo-2).** src/data/satellites.ts
+(`crewDragon`), `missionVehicle` in src/data/vehicles.ts, src/render/dragon.ts. Crew Dragon
+flies on top of Falcon 9 without a fairing, so the vehicle a mission flies (`missionVehicle`)
+is Falcon 9 with the fairing left off and an `exposedPayload` of 4.0 m diameter and 8.1 m
+length, the capsule the top 4.5 m of it (en.wikipedia, *SpaceX Dragon 2*; the trunk is
+3.7 m across, GCAT S46024). The simulation, the mass model, the aerodynamic table and the
+drawing all take that vehicle:
+
+- *Mass*: no 1,900 kg fairing to carry or drop; the payload is 13,055 kg — the capsule with
+  its propellant, about 10,755 kg, and the trunk, about 2,300 kg (GCAT S45623/S46024, both
+  marked as estimates there; Wikipedia gives 12,519 kg at launch). The rigid model carries it
+  as a 4.0 × 8.1 m cylinder standing on the second stage.
+- *Aerodynamics*: until separation the capsule is the nose — a widening from the 3.66 m stage
+  to 4.0 m, the capsule's cone with its lift two thirds of its 4.5 m behind the tip, and the
+  side area of the whole (`ascentAeroTable`); after separation the second stage's blunt top.
+  The frontal area is the capsule's, 12.6 m².
+- *Flight*: Demo-2 lifts off at 19:22:45 UTC on 30 May 2020 from LC-39A into the station's
+  measured plane (74.49°, §13.2), for 190 × 211 km at 51.6° (JSR 779; GCAT A09591 for the
+  second stage), the booster to the drone ship. Dragon's own flight to the station (Draco
+  thrusters, docking 19 h later) is not modelled: the flight ends at separation. The launch
+  escape (eight SuperDracos pushing the capsule off) is not modelled either.
+- *Drawing*: the dimensions above; the side-wall taper, the four SuperDraco pods, the four
+  windows, the trunk's half cover of solar cells and its four fins are drawn from photographs.
 
 ## Glossary (EN / RU / TH)
 

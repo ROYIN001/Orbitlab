@@ -23,7 +23,7 @@
  * P120C keeps 2 s: its separation gap was burn duration, not delay, and was
  * fixed by the B22 mean-thrust correction on the motor itself.
  */
-import type { VehicleSpec, EngineSpec, StageSpec, BoosterGroupSpec } from '../types';
+import type { VehicleSpec, EngineSpec, StageSpec, BoosterGroupSpec, SatelliteSpec } from '../types';
 
 const kN = 1000;
 
@@ -821,3 +821,20 @@ export const vehicleById = (id: string): VehicleSpec => {
   if (!v) throw new Error(`Unknown vehicle ${id}`);
   return v;
 };
+
+/**
+ * The vehicle as a mission flies it: the catalogue's, except that a payload
+ * flown in the open (Crew Dragon) takes the fairing's place, so the fairing is
+ * left off and the payload's own shape is the nose (roadmap C01).
+ */
+export function missionVehicle(id: string, sat: Pick<SatelliteSpec, 'exposed'>): VehicleSpec {
+  const v = vehicleById(id);
+  if (!sat.exposed) return v;
+  // one object per combination, so caches keyed by the spec (`stackLayout`) keep hitting
+  const { diameter, length, noseLength } = sat.exposed;
+  const key = `${id}|${diameter}|${length}|${noseLength}`;
+  let open = OPEN_TOP.get(key);
+  if (!open) OPEN_TOP.set(key, open = { ...v, fairing: null, exposedPayload: { diameter, length, noseLength } });
+  return open;
+}
+const OPEN_TOP = new Map<string, VehicleSpec>();

@@ -32,7 +32,7 @@
  *   better.
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
-import { RATING_ORBITS, VEHICLES, vehicleById } from '../data/vehicles';
+import { RATING_ORBITS, VEHICLES, missionVehicle, vehicleById } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
@@ -117,6 +117,9 @@ export interface Feasibility {
   text: string;
 }
 
+
+/** Whether `vehicleId` carries this payload (Crew Dragon flies on Falcon 9 only). */
+const carries = (vehicleId: string, sat: SatelliteSpec): boolean => !sat.carriers || sat.carriers.includes(vehicleId);
 
 function toDatetimeLocalUTC(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -913,6 +916,8 @@ export class SetupPanel {
       this.siteReassigned = false;
       if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
       if (!spec.recoverable) s.boosterRecovery = false;
+      // a payload this vehicle does not carry (Crew Dragon off Falcon 9) gives way to the generic crew ship
+      if (!carries(v, satelliteById(s.satelliteId))) { s.satelliteId = 'crew'; s.payloadMass = satelliteById('crew').mass; }
       s.recoveryPlan = undefined;
       s.padId = undefined;
       // only a ship that flies itself home can take a suborbital target
@@ -964,7 +969,7 @@ export class SetupPanel {
     // ── 02 payload ──────────────────────────────────────────────────────────
     const s2 = this.el('section', 'config-section');
     s2.appendChild(this.sectionTitle('02', 'setup.step.payload'));
-    s2.appendChild(this.select('setup.satellite', SATELLITES.map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
+    s2.appendChild(this.select('setup.satellite', SATELLITES.filter((x) => carries(s.vehicleId, x)).map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
       this.clearOrbitDrafts();
       this.clearFieldDrafts('setup.payloadMass');
       s.satelliteId = v;
@@ -1753,7 +1758,7 @@ export class SetupPanel {
     }
     // One plan per refresh: both the info card and the feasibility verdict read
     // it, and planning twice per keystroke buys nothing.
-    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), vehicleById(this.state.vehicleId)); } catch { this.planCache = null; }
+    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), missionVehicle(this.state.vehicleId, satelliteById(this.state.satelliteId))); } catch { this.planCache = null; }
     this.refreshInsertionProbe();
     this.updateStats();
     this.updateWindows();
@@ -1771,7 +1776,7 @@ export class SetupPanel {
     const box = this.statsEl;
     if (!box) return;
     const s = this.state;
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s.vehicleId, satelliteById(s.satelliteId));
     const sat = satelliteById(s.satelliteId);
     const m0 = liftoffMass(spec, s.payloadMass);
     const T0 = liftoffThrust(spec);
@@ -1837,7 +1842,7 @@ export class SetupPanel {
     const box = this.infoEl;
     if (!box) return;
     const s = this.state;
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s.vehicleId, satelliteById(s.satelliteId));
     const site = siteById(s.siteId);
     const sat = satelliteById(s.satelliteId);
     const dv = idealDeltaV(spec, s.payloadMass);
@@ -1894,7 +1899,7 @@ export class SetupPanel {
       this.probedFor = '';
       return;
     }
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s.vehicleId, satelliteById(s.satelliteId));
     const capability = missionCapability(spec, satelliteById(s.satelliteId), s.payloadMass, plan);
     const { cap } = ratedPayload(spec, orbitClassOf(s.orbit));
     const marginal = capability.ascentShortfall > 0 || (cap > 0 && s.payloadMass >= cap * 0.9);
@@ -1921,7 +1926,7 @@ export class SetupPanel {
     const s = this.state;
     const site = siteById(s.siteId);
     return missionVerdict({
-      spec: vehicleById(s.vehicleId),
+      spec: missionVehicle(s.vehicleId, satelliteById(s.satelliteId)),
       site,
       orbit: s.orbit,
       satellite: satelliteById(s.satelliteId),

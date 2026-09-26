@@ -239,7 +239,9 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     }
   }
   if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });
-  if (!SATELLITES.some((s) => s.id === state.satelliteId)) issues.push({ field: 'setup.satellite', code: 'selection' });
+  const satellite = SATELLITES.find((s) => s.id === state.satelliteId);
+  // a payload only some vehicles carry (Crew Dragon: Falcon 9)
+  if (!satellite || (satellite.carriers && !satellite.carriers.includes(state.vehicleId))) issues.push({ field: 'setup.satellite', code: 'selection' });
   if (!SITES.some((s) => s.id === state.siteId) || (spec && !spec.sites.includes(state.siteId))) issues.push({ field: 'setup.site', code: 'selection' });
   const orbit = state.orbit;
   // A suborbital test flight may carry nothing at all (Flight 5 did not).

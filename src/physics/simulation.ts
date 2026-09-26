@@ -22,7 +22,7 @@
 import type { MissionConfig, SatelliteSpec, VehicleSpec, GuidanceParams, DynamicsConfig } from '../types';
 import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
-import { vehicleById } from '../data/vehicles';
+import { missionVehicle } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
@@ -208,7 +208,7 @@ export class Simulation {
       }
     }
     this.site = siteById(cfgIn.siteId);
-    this.vehicleSpec = vehicleById(cfgIn.vehicleId);
+    this.vehicleSpec = missionVehicle(cfgIn.vehicleId, satelliteById(cfgIn.satelliteId));
     // Per-vehicle guidance defaults fill in every parameter the caller left at
     // the library default, so the UI (and any caller that does not merge them
     // itself) flies each launcher with its own pitch program.
@@ -1076,6 +1076,7 @@ export class Simulation {
         for (const booster of stage.boosters) if (booster.attached) radius = Math.max(radius, stage.spec.diameter / 2 + booster.spec.diameter);
       }
       if (this.vehicle.fairingAttached && this.vehicleSpec.fairing) radius = Math.max(radius, this.vehicleSpec.fairing.diameter / 2);
+      if (this.vehicle.payloadAttached && this.vehicleSpec.exposedPayload) radius = Math.max(radius, this.vehicleSpec.exposedPayload.diameter / 2);
       const contact = rigidContactMetrics({ r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody },
         { ...snapshot, cg: sub(snapshot.cg, snapshot.activeBase) }, snapshot.aero.referenceLength, radius, r => this.groundElevation(r));
       groundImpact = contact.clearance < -0.01;

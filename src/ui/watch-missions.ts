@@ -22,7 +22,7 @@ import type { FailureConfig, MissionConfig, OrbitSpec, RecoveryPlan } from '../t
 
 export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
   | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking'
-  | 'soyuzMs16' | 'soyuzMs25' | 'falcon9Orbcomm2' | 'angaraA5Flight1' | 'h2aHayabusa2';
+  | 'soyuzMs16' | 'soyuzMs25' | 'falcon9Orbcomm2' | 'angaraA5Flight1' | 'h2aHayabusa2' | 'falcon9Demo2';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -156,6 +156,15 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   { id: 'angaraA5Flight1', vehicleId: 'angaraa5', siteId: 'plesetsk', satelliteId: 'comsat', orbitId: 'geo', payloadMass: 2042,
     launchTime: '2014-12-23T05:57:00Z',
     titleKey: 'watch.mission.angaraA5Flight1', blurbKey: 'watch.mission.angaraA5Flight1Blurb', payloadKey: 'watch.payload.angaraDummy' },
+  // Crew Dragon Demo-2, 30 May 2020: the first crew launched from the United
+  // States since 2011, Crew Dragon "Endeavour" on top of Falcon 9 without a
+  // fairing, to 190 × 211 km in the station's plane (JSR 779); the booster to
+  // Of Course I Still Love You. Dragon flew itself to the station, docked 19 h
+  // later; the model's flight ends at separation.
+  { id: 'falcon9Demo2', vehicleId: 'falcon9', siteId: 'ksc39a', satelliteId: 'crewDragon', orbitId: 'iss', payloadMass: 13055,
+    orbit: { perigee: 190e3, apogee: 211e3 },
+    recoveryPlan: { core: { kind: 'droneShip' } }, launchTime: '2020-05-30T19:22:45Z',
+    titleKey: 'watch.mission.falcon9Demo2', blurbKey: 'watch.mission.falcon9Demo2Blurb', payloadKey: 'watch.payload.demo2' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a
   // 250 × 254 km parking orbit at 30.0°, below the pad's 30.4° latitude — a
   // yaw the model does not fly, so it aims at the lowest plane it can reach.

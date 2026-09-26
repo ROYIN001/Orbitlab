@@ -606,14 +606,17 @@ is in [PHYSICS.md §9.2](PHYSICS.md).
 ## 17. Historical missions
 
 Real flights, replayed on the day and at the second they flew: Soyuz MS-16 (the first crew on a
-Soyuz-2.1a, 2020), Soyuz MS-25 (2024), ORBCOMM-2 (the first Falcon 9 booster to land, 2015), the
+Soyuz-2.1a, 2020), Crew Dragon Demo-2 (2020), Soyuz MS-25 (2024), ORBCOMM-2 (the first Falcon 9 booster to land, 2015), the
 first Angara-A5 (2014) and H-IIA with Hayabusa2 (2014). In **Watch** they are under *From
 history* in the list of launches; in **Explore** and **Engineer** open *Historical missions* at
 the top of the setup panel, which fills the settings as flown — change anything, then launch.
 
 Because the date is the real one, the light is too: ORBCOMM-2 lifts off in the dark, as it did.
 For the two Soyuz flights the space station's orbit is the one measured that day, so the launch
-reaches its plane and the spacecraft flies on to dock as its crew did. Where the model differs
+reaches its plane and the spacecraft flies on to dock as its crew did. Demo-2 flies Crew Dragon
+the way it really goes up: on top of Falcon 9 with no fairing, the capsule itself the rocket's
+nose; the payload list offers **Crew Dragon** with Falcon 9 only, and the flight ends when it
+separates. Where the model differs
 from the flight — a later Falcon 9 standing in for the 2015 one, the Hayabusa2 flight ending in
 its parking orbit — is listed in [PHYSICS.md §13](PHYSICS.md).
 

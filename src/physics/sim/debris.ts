@@ -34,6 +34,18 @@ import { pointMassAcceleration } from './forces';
  */
 const ENTRY_BURN_TARGET_SPEED = 1400;
 
+/**
+ * Share of the ideal Δv above the landing reserve a drone-ship stage plans to
+ * take off in its entry burn: the rest covers the gravity lost while it burns
+ * and the propellant the stage turns round with.
+ */
+const ENTRY_DV_USE = 0.75;
+
+/** The airspeed a targeted return's entry burn ends at, m/s. */
+function entrySpeedOf(rc: NonNullable<Debris['recovery']>): number {
+  return rc.entryTargetSpeed ?? (rc.target && rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED);
+}
+
 /** Δv reserved for the landing burn, m/s (terminal velocity plus gravity losses). */
 const LANDING_BURN_DV = 800;
 
@@ -129,7 +141,7 @@ export class DebrisTracker {
       { stage: asStage, vehicleId: this.sim.cfg.vehicleId, consumed: this.sim.rigidRuntime!.consumed, engineFraction,
         withoutRcs: booster || undefined,
         returnGuidance: rc?.target ? { gmst0: this.sim.plan.gmst0, model: this.descentModel(d),
-          entryTargetSpeed: rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED } : undefined,
+          entryTargetSpeed: entrySpeedOf(rc) } : undefined,
         runtimeOptions: { massFlowModel: this.sim.rigidRuntime!.massFlowModel,
           controlGains: rc?.target ? RETURN_CONTROL_GAINS : this.sim.rigidRuntime!.controlGains, fuelAwareCoast: !!rc?.target || undefined,
           integrationStepS: this.sim.rigidRuntime!.integrationStepS, derivativeStepS: this.sim.rigidRuntime!.derivativeStepS } });
@@ -202,7 +214,7 @@ export class DebrisTracker {
       return {
         cd: d.cd, area: d.area, j2: true,
         entry: { thrustVac: 3 * e.thrustVac, thrustSL: 3 * e.thrustSL, mdot: (3 * e.thrustVac) / (G0 * e.ispVac),
-          targetSpeed: rc.target && rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED, reserve: rc.landingReserve },
+          targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve },
         landing: { thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: 1,
           level: RETURN_LANDING_LEVEL, vTouch: touchSpeed(rc.target), engines: () => 1 },
       };
@@ -212,7 +224,7 @@ export class DebrisTracker {
       cd: d.cd, area: d.area, j2: !!this.sim.rigidRuntime,
       entry: e ? {
         thrustVac: n * e.thrustVac, thrustSL: n * e.thrustSL, mdot: (n * e.thrustVac) / (G0 * e.ispVac),
-        targetSpeed: rc.target && rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED, reserve: rc.landingReserve,
+        targetSpeed: entrySpeedOf(rc), reserve: rc.landingReserve,
       } : undefined,
       landing: e ? {
         thrustVac: e.thrustVac, thrustSL: e.thrustSL, mdot: e.thrustVac / (G0 * e.ispVac), count: e.count,
@@ -240,6 +252,7 @@ export class DebrisTracker {
       rc.phase = 'flip';
       return;
     }
+    rc.entryTargetSpeed = this.droneShipEntrySpeed(d);
     const surface = 0;
     const p = predictDescent({ r: d.r, v: d.v, t: this.sim.state.t, mass: d.mass, propellant: rc.propellant },
       { ...this.descentModel(d) }, surface);
@@ -250,6 +263,32 @@ export class DebrisTracker {
     // turns on its centre engine first (rigid/debris-runtime.ts), and the
     // ship is stationed again on the trajectory that turn leaves it on.
     if (this.sim.rigidRuntime) rc.phase = 'flip';
+  }
+
+  /**
+   * How slow a stage bound for a drone ship comes out of its entry burn. A
+   * fixed 1.4 km/s left a Falcon 9 first stage off a steep, fast ascent (Crew
+   * Dragon Demo-2, a 13 t payload to 51.6°) falling through 3 km at nearly
+   * 300 m/s sideways with thirty tonnes unburnt, past what its landing burn
+   * can take off, and it hit the sea beside the ship. The burn now spends
+   * what the stage carries above its landing reserve — three quarters of that
+   * propellant's ideal Δv, the rest for gravity and the turn — down to at most
+   * the 550 m/s a stage flown back to the site ends at, and never ends above
+   * 1.4 km/s. The ship is stationed on the descent this burn gives.
+   */
+  private droneShipEntrySpeed(d: Debris): number {
+    const rc = d.recovery!, e = rc.engine;
+    if (!e) return ENTRY_BURN_TARGET_SPEED;
+    // airspeed at the top of the entry burn, from the energy now (the air
+    // above 70 km takes almost nothing off)
+    const rNow = norm(d.r), rTop = R_EARTH + ENTRY_BURN_CEILING;
+    const v2 = dot(d.v, d.v) + 2 * MU_EARTH * (1 / rTop - 1 / rNow);
+    const top = Math.max(0, Math.sqrt(Math.max(0, v2)) - OMEGA_EARTH * rTop * Math.cos(this.sim.site.latitude * DEG));
+    const propellant = returnPropellant(rc, d.mass, e.ispVac);
+    const spare = Math.max(0, propellant - rc.landingReserve);
+    const mass = d.mass - (rc.propellant - propellant);
+    const dv = ENTRY_DV_USE * e.ispVac * G0 * Math.log(mass / Math.max(1, mass - spare));
+    return Math.min(ENTRY_BURN_TARGET_SPEED, Math.max(RETURN_ENTRY_TARGET_SPEED, top - dv));
   }
 
   /** The stage as the prediction sees it, with the propellant it will carry into the entry burn (`returnPropellant`). */
@@ -344,7 +383,7 @@ export class DebrisTracker {
           dir = slerpLimited(d.dir, retro, RETURN_TURN_RATE * h);
           break;
         case 'entry': {
-          const targetSpeed = target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED;
+          const targetSpeed = entrySpeedOf(rc);
           const step = entryStep(rc.entryFlown ? 'burning' : 'armed', vDown > 0, alt, speed, rc.propellant,
             { targetSpeed, reserve: rc.landingReserve });
           if (step.burn) {

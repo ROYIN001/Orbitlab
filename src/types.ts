@@ -155,6 +155,13 @@ export interface VehicleSpec {
   fairing: FairingSpec | null;
   /** The launch escape system a crewed launch carries (roadmap G06): Soyuz's tower and fairing motors. */
   escapeSystem?: 'soyuz';
+  /**
+   * A payload flown in the open on top of the last stage instead of inside the
+   * fairing (Crew Dragon; roadmap C01): its outer shape, which is then the
+   * stack's nose. Never in the catalogue; set by `missionVehicle`, which also
+   * leaves the fairing off.
+   */
+  exposedPayload?: { diameter: number; length: number; noseLength: number };
   /** Serial stages in burn order (stage[0] is the first stage) */
   stages: StageSpec[];
   /** Launch site ids this vehicle can fly from */
@@ -247,7 +254,8 @@ export type SatelliteKind =
   | 'science'
   | 'cubesats'
   | 'starlink'
-  | 'crew';
+  | 'crew'
+  | 'crewDragon';
 
 export interface SatelliteSpec {
   id: string;
@@ -262,6 +270,14 @@ export interface SatelliteSpec {
   propulsion?: { thrust: number; isp: number; propellantFraction: number };
   /** Approximate body dimensions for visuals, m */
   size?: { width: number; height: number; depth: number };
+  /**
+   * Flies in the open, not in the fairing (Crew Dragon, roadmap C01): the
+   * outer diameter and length the launcher's nose becomes, and the length of
+   * its tapering top (the capsule).
+   */
+  exposed?: { diameter: number; length: number; noseLength: number };
+  /** The only vehicles that carry it, when not every one does */
+  carriers?: string[];
 }
 
 export interface GuidanceParams {

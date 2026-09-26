@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import type { SatelliteSpec } from '../types';
 import { clamp01, smoothstep } from './noise';
+import { buildCrewDragon } from './dragon';
 
 export interface SatelliteView {
   group: THREE.Group;
@@ -62,6 +63,7 @@ function solarWing(parent: THREE.Group, hinges: Hinge[], mats: { panel: THREE.Ma
 }
 
 export function buildSatellite(spec: SatelliteSpec): SatelliteView {
+  if (spec.kind === 'crewDragon') return buildCrewDragon();
   const g = new THREE.Group();
   const hinges: Hinge[] = [];
   const slides: Slide[] = [];

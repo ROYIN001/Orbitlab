@@ -433,6 +433,7 @@ export class VehicleModel {
     let maxD = 0;
     for (const st of this.stages) if (st.attached) maxD = Math.max(maxD, st.spec.diameter);
     if (this.fairingAttached && this.spec.fairing) maxD = Math.max(maxD, this.spec.fairing.diameter);
+    if (this.payloadAttached && this.spec.exposedPayload) maxD = Math.max(maxD, this.spec.exposedPayload.diameter);
     let area = Math.PI * (maxD / 2) ** 2;
     const act = this.active;
     if (act) {

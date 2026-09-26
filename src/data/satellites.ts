@@ -9,6 +9,13 @@ export const SATELLITES: SatelliteSpec[] = [
   { id: 'cubesats', kind: 'cubesats', name: 'CubeSat rideshare dispenser', mass: 300, typicalOrbit: 'sso', description: 'Rideshare dispenser releasing a cluster of small satellites. No propulsion of its own.', size: { width: 1, height: 1.2, depth: 1 } },
   { id: 'starlink', kind: 'starlink', name: 'Starlink batch (60 × 260 kg)', mass: 15600, typicalOrbit: 'starlink', description: 'Flat-packed stack of broadband satellites; the launcher upper stage performs the orbit raising.', size: { width: 3.5, height: 5, depth: 2.5 } },
   { id: 'crew', kind: 'crew', name: 'Crewed spacecraft', mass: 7150, typicalOrbit: 'iss', description: 'Crew capsule with service module (e.g. Soyuz MS, Crew Dragon). Raises its own orbit to the station with a 3.9 kN engine.', crewed: true, propulsion: { thrust: 3920, isp: 302, propellantFraction: 0.12 }, size: { width: 2.7, height: 7, depth: 2.7 } },
+  // Crew Dragon as Demo-2 flew it (roadmap C01): 13,055 kg — the capsule with
+  // its propellant, about 10,755 kg, and the trunk, about 2,300 kg (GCAT
+  // S45623, S46024; estimates). 4.0 m across, 8.1 m tall with the trunk, the
+  // capsule 4.5 m of it (en.wikipedia, SpaceX Dragon 2); flown
+  // on top of Falcon 9 without a fairing. It raises its own orbit with Dracos,
+  // which the model does not fly: the flight ends at separation.
+  { id: 'crewDragon', kind: 'crewDragon', name: 'Crew Dragon', mass: 13055, typicalOrbit: 'iss', description: 'SpaceX crew capsule and its trunk, flown on top of Falcon 9 without a fairing. Its own Draco thrusters take it on to the station.', crewed: true, size: { width: 4.0, height: 8.1, depth: 4.0 }, exposed: { diameter: 4.0, length: 8.1, noseLength: 4.5 }, carriers: ['falcon9'] },
 ];
 
 export const satelliteById = (id: string): SatelliteSpec => {

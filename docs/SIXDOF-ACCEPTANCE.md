@@ -543,3 +543,9 @@ docking with the station (G07), which changes the flight only for a mission that
 its insertion at 200 × 242 km, the hand-over at the cut-off, the steps after the docking; the
 fleet's missions carry no rendezvous, so every one flies the ascent it flew before:
 **161 of 161 passed** in 1 h 42 min on four cores, run alone.
+
+**The rigid fleet with C01 part 1.** `npm run test:sixdof-fleet` at commit 979e9e0: the
+historical missions on their real dates and the station's node regressed from the TLE-measured
+one within ten days of a historical flight to it (`issRaanAt`); the fleet's missions are all
+dated 2026, where the node is the one it was, so every case flies as before:
+**161 of 161 passed** in 2 h 16 min on four cores, run alone but for a ten-second unit test.

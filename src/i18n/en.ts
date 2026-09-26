@@ -656,6 +656,7 @@ export const en: Record<string, string> = {
   'sat.cubesats.name': 'CubeSat rideshare dispenser',
   'sat.starlink.name': 'Starlink batch (60 × 260 kg)',
   'sat.crew.name': 'Crewed spacecraft',
+  'sat.crewDragon.name': 'Crew Dragon',
   'site.baikonur.name': 'Baikonur Cosmodrome',
   'site.plesetsk.name': 'Plesetsk Cosmodrome',
   'site.vostochny.name': 'Vostochny Cosmodrome',
@@ -1260,6 +1261,9 @@ export const en: Record<string, string> = {
   'watch.mission.h2aHayabusa2': 'H-IIA: Hayabusa2 sets out',
   'watch.mission.h2aHayabusa2Blurb': '3 December 2014, Tanegashima: the asteroid sample-return probe to a 250 km parking orbit. Flown to the parking orbit; the restart towards Ryugu is not.',
   'watch.payload.hayabusa2': 'Hayabusa2',
+  'watch.mission.falcon9Demo2': "Demo-2: Crew Dragon's first crew",
+  'watch.mission.falcon9Demo2Blurb': "30 May 2020, LC-39A: Hurley and Behnken on Crew Dragon, the first crew launched from the US since 2011. No fairing: the capsule is the rocket's nose. The booster lands at sea.",
+  'watch.payload.demo2': 'Crew Dragon Endeavour (Hurley, Behnken)',
   // --- G03 ---
   'loop.button': 'Attitude-loop inspector',
   'loop.title': 'Attitude-loop inspector',

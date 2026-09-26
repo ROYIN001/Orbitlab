@@ -635,6 +635,7 @@ export const ru: Record<string, string> = {
   'sat.cubesats.name': 'Контейнер попутных кубсатов',
   'sat.starlink.name': 'Партия Starlink (60 × 260 кг)',
   'sat.crew.name': 'Пилотируемый корабль',
+  'sat.crewDragon.name': 'Корабль «Крю Дрэгон»',
   'site.baikonur.name': 'Космодром Байконур',
   'site.plesetsk.name': 'Космодром Плесецк',
   'site.vostochny.name': 'Космодром Восточный',
@@ -1239,6 +1240,9 @@ export const ru: Record<string, string> = {
   'watch.mission.h2aHayabusa2': 'H-IIA: старт «Хаябусы-2»',
   'watch.mission.h2aHayabusa2Blurb': '3 декабря 2014 г., Танэгасима: зонд за образцами астероида на опорную орбиту 250 км. Полёт — до опорной орбиты; повторное включение к Рюгу не моделируется.',
   'watch.payload.hayabusa2': '«Хаябуса-2»',
+  'watch.mission.falcon9Demo2': 'Demo-2: первый экипаж Crew Dragon',
+  'watch.mission.falcon9Demo2Blurb': '30 мая 2020 г., LC-39A: Хёрли и Бенкен на Crew Dragon — первый экипаж, стартовавший из США с 2011 года. Без обтекателя: капсула сама служит носом ракеты. Ступень садится в море.',
+  'watch.payload.demo2': 'Crew Dragon «Индевор» (Хёрли, Бенкен)',
   // --- G03 ---
   'loop.button': 'Инспектор контура стабилизации',
   'loop.title': 'Инспектор контура стабилизации',

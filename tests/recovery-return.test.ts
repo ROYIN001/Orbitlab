@@ -165,6 +165,21 @@ describe('point-mass returns', () => {
     expect(norm(sub(stage.v, groundVelocityEci(stage.r)))).toBeLessThan(1e-6);
   });
 
+  // C01: a lone Falcon 9 first stage to a drone ship, off a steep, fast ascent
+  // with a heavy payload (Demo-2's 13 t to 51.6°). With the old fixed 1.4 km/s
+  // entry burn it came through 3 km at ~300 m/s sideways with 30 t unburnt and
+  // hit the sea beside the ship.
+  it('flies Falcon 9\'s first stage to a drone ship off a heavy crewed ascent (Demo-2)', { timeout: 120_000 }, () => {
+    const sim = fly('falcon9', 13055, { ...orbitById('custom'), perigee: 190e3, apogee: 211e3, inclination: 51.64 }, { core: { kind: 'droneShip' } });
+    const stage = sim.debris.find((d) => d.recovery)!;
+    expect(stage.outcome).toBe('landed');
+    expect(stage.recovery!.missDistance!).toBeLessThan(stage.recovery!.target!.radius);
+    expect(sim.events.some((e) => e.key === 'evt.boosterLandedShip')).toBe(true);
+    // the entry burn now spends the propellant above the landing reserve
+    expect(stage.recovery!.entryTargetSpeed!).toBeLessThan(1400);
+    expect(stage.recovery!.propellant).toBeLessThan(0.5 * vehicleById('falcon9').stages[0].propellantMass * 0.12);
+  });
+
   it('flies Falcon Heavy\'s side boosters to LZ-1 and LZ-2 and its core to a drone ship (Arabsat-6A)', { timeout: 120_000 }, () => {
     const sim = fly('falconheavy', 6465, orbitById('gto'), {
       core: { kind: 'droneShip' }, boosters: [{ kind: 'landingZone', zoneId: 'lz1' }, { kind: 'landingZone', zoneId: 'lz2' }],

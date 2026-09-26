@@ -1783,6 +1783,7 @@ export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T exte
     for (const b of st.boosters ?? []) R = Math.max(R, st.diameter / 2 + b.diameter);
   }
   if (vehicle.fairing) R = Math.max(R, vehicle.fairing.diameter / 2);
+  if (vehicle.exposedPayload) R = Math.max(R, vehicle.exposedPayload.diameter / 2);
   const ctx: Ctx = { site, vehicle, H: vehicle.height, R, mat: matFn, geo: geoSink, pad: opts.padId ?? site.pads?.[0]?.id, azimuth: opts.azimuth ?? 0 };
   const biome = BIOMES[site.id] ?? BIOMES.cape;
   const build = (BUILDERS[site.id] ?? slc40Pad)(ctx);
