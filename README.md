@@ -179,7 +179,10 @@ or your own coordinates: rise, highest point and set, and whether it can be seen
 Skyfield to within a second), and estimates how far off its element set may be as it ages (R04,
 from published studies of TLE accuracy). The orbit-lifetime analysis reads the Sun's activity as
 measured — GFZ's monthly record since 1947, then NOAA SWPC's latest months and forecast — and with
-it brings seven satellites of known shape down within 25 % of their re-entries on record (R05). Build is
+it brings seven satellites of known shape down within 25 % of their re-entries on record (R05).
+**Close approaches** screens the catalogue against the satellite picked, with each approach's time,
+miss distance and an estimated probability of collision; the probability is held to the published
+figures of the Iridium 33–Cosmos 2251 collision (M01). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 

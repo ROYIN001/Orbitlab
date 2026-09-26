@@ -29,6 +29,7 @@ Status on 2026-09-25:
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
+| Close approaches (M01) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade (§7), 2026-09-26 |
 | Space weather in the lifetime (R05) | NRLMSISE-00 as ECSS-E-ST-10-04C tabulates it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | All seven within 25 % of their days in orbit with the measured Sun (+0.3 to −22 %); a fixed moderate Sun is off by −74 to +83 % (§6), 2026-09-26 |
 
 ## 1. Method
@@ -1190,12 +1191,76 @@ it is built from.
   lifetime of decades is an estimate, and the dialog offers the forecast's high and low sides to
   show how far it can move.
 
-## 7. Re-running
+## 7. The military track (M01–M03): close approaches, overflights, re-entry
+
+### Close approaches (M01)
+
+**Real satellites** can screen the catalogue for close approaches to the satellite picked, as
+CelesTrak's SOCRATES does with the same public element sets (`src/orbit/screening.ts`). Every
+object whose band of heights overlaps the satellite's is carried beside it by SGP4. Each approach
+nearer than the limit is reported with its time, its miss distance (radial, along-track and
+cross-track at Engineer), the relative speed, and an estimated probability of collision.
+
+- **The search** (`src/orbit/conjunction.ts`) samples the range and refines each local minimum
+  by golden section to 0.1 ms. A sampled minimum farther than the limit plus v·step/2 cannot hide
+  an approach within the limit, and is not refined. Pairs whose bands of heights are farther apart
+  than the limit are not searched (Hoots, Crawford and Roehrich, 1984).
+- **The probability** is the two-dimensional one used in operations (Foster and Estes 1992;
+  Chan 2008): the combined position uncertainty, projected on the plane square to the relative
+  velocity, integrated over a circle of the pair's combined radius. It is summed in logarithms,
+  so that 10⁻⁵¹ is still a number. Each covariance is given in its object's radial, transverse and
+  normal axes, the normal along the angular momentum of the *inertial* orbit (CCSDS 508.0-B-1).
+- **The uncertainty** in the page is R04's estimate for each element set, and the combined radius
+  is the user's. The result is labelled as an estimate.
+
+`tests/conjunction.test.ts` holds it to:
+
+| check | reference | result | tolerance |
+| --- | --- | --- | --- |
+| two straight lines, 250 m apart at 7 km/s | closed form | TCA and miss exact | 0.01 s, 1 mm |
+| two circular orbits crossing at their nodes, 100 m apart | closed form | every node found; miss 100 m, all radial | 0.01 m; 1 m along/across |
+| a direct hit through a round uncertainty | 1 − exp(−R²/2σ²) | exact | 10⁻⁹ |
+| a round uncertainty off to one side, down to beyond 10⁻¹⁰⁰⁰ | Rice's integral, by Simpson's rule | agrees | 10⁻³ in log₁₀ |
+| the screening's coarse steps against a 10 s brute force | the same pairs (a DMSP satellite and 40 Fengyun-1C fragments, one day) | every approach found | 0.01 s, 0.1 m |
+| Iridium 33–Cosmos 2251: relative speed, crossing angle | 11.6 km/s, "nearly right angles" (Shepperd; Kelso) | 11.6 km/s, 102° | 0.05 km/s; 95–110° |
+| the same: TCA of the conjunction message | 16:55:59.798 UTC | found again by straight-line motion; miss 226.3 m | 2 ms |
+| the same: probability, the military's covariances | 2.6 × 10⁻⁵¹ (Shepperd, Table 2, 9 February) | 2.66 × 10⁻⁵¹ | 0.1 in log₁₀ |
+| the same: Iridium's orbit estimate and covariance | 1.0 × 10⁻³ | 9.28 × 10⁻⁴ | 0.1 in log₁₀ |
+| the same: Iridium's conservative covariance | 3.3 × 10⁻² | 3.23 × 10⁻² | 0.1 in log₁₀ |
+
+The conjunction data are the appendix of R. W. Shepperd, "Subsequent Assessment of the Collision
+between Iridium 33 and COSMOS 2251"
+([AMOS 2023](https://amostech.com/TechnicalPapers/2023/Conjunction-RPO/Shepperd.pdf)): both
+objects' states at the time of closest approach in the conjunction message of 9 February 2009,
+Iridium's own orbit estimate, the three covariances, and the hard-body radii (3.942 m and 16 m).
+The paper's Table 2 gives the probability each yields. The fixture is
+`tests/fixtures/conjunction/iridium33-cosmos2251.json`.
+
+**Findings.**
+
+- **The frame decides a tail probability.** With each object's axes taken from its Earth-fixed
+  velocity instead of its inertial one, the first case gives 10⁻⁵¹·⁹, more than a decade off; with
+  the inertial velocity, as CCSDS defines the axes, it gives 10⁻⁵⁰·⁶. The other two cases barely
+  move (their uncertainty is large).
+- **Two states must be at one time.** Iridium's estimate is at 16:55:59.8155 and the message's
+  secondary at 16:55:59.798. Left as they are, the 17.5 ms between them puts 128 m of Cosmos's own
+  motion into the miss, and the probability comes out two decades low. Carried to one time along
+  straight lines, as the paper does, they give the published values.
+- **Screening with element sets shows traffic, not collisions.** SOCRATES predicted this pair's
+  approach every day of the week before, at 117 m to 1.8 km (584 m on the day), and ranked it
+  152nd when they hit (Kelso, [AAS 09-368](https://celestrak.org/publications/AAS/09-368/)). The
+  page says so. The same data with the operator's covariance gave a probability of 1 in 30 on
+  the 9th.
+- SOCRATES's own 584 m cannot be reproduced here: it used the element sets of 10 February 2009,
+  which are Space-Track data and are not redistributed.
+
+## 8. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
 npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
 npx vitest run tests/activity.test.ts tests/propagator.test.ts                   # the Sun's activity in the lifetime, ~5 s
+npx vitest run tests/conjunction.test.ts                                          # close approaches, ~3 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

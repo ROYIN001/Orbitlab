@@ -207,6 +207,13 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   carry its own accuracy, so the page estimates it from published studies, from the kind of orbit
   and the set's age. **How far off it may be** draws the band widening with that age and names the
   studies. At the Engineer level each pass gives its timing uncertainty.
+- **Close approaches** screens every object loaded — the catalogue's groups and a file you read —
+  against the satellite picked, for 24 hours, 3 or 7 days from the moment on screen: each pass
+  nearer than the limit you choose, when, how near, and an estimated probability of collision
+  from both element sets' estimated error and the size you give the pair. Engineer adds the miss
+  split radial, along-track and cross-track, the relative speed and each set's uncertainty. It is
+  what CelesTrak's SOCRATES does with the same data, and it shows traffic, not collisions: the
+  page recalls that Iridium 33 and Cosmos 2251 were 152nd on the list the day they collided.
 - **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
   Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
   the two part company.

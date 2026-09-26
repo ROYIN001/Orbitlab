@@ -7,6 +7,10 @@
  * element set says. The time is real: the clock starts at this moment and
  * runs at the playground's speed.
  *
+ * For the one picked it adds its passes over a place (R03), how far off its
+ * element set may be (R04) and its close approaches to everything loaded
+ * (M01, src/orbit/screening.ts).
+ *
  * The logic is src/orbit/real-sky.ts, omm.ts, tle.ts and sgp4.ts; this is the
  * page's part, driven by the playground (src/ui/orbit/playground.ts), which
  * lends it its views, its time bar and its two side panels.
@@ -33,6 +37,7 @@ import { compass, placeName, stationPicker, type StationChoice } from './applica
 import { stationOf } from '../../orbit/applications-setup';
 import { footprintAngle } from '../../orbit/applications';
 import { GROWTH_PER_DAY, uncertaintyAt } from '../../orbit/uncertainty';
+import { screenInSlices, type Conjunction } from '../../orbit/screening';
 
 export interface SkyHost {
   level(): AppLevel;
@@ -102,6 +107,9 @@ export class RealSky {
   private place: StationChoice = { stationId: 'bangkok', station: stationOf('bangkok')! };
   private minEl = 10 * Math.PI / 180;
   private passes: { key: string; list: Pass[]; from: number; until: number } | null = null;
+  /** M01: the screening's settings, and the last one run (or running) */
+  private conj = { within: 5e3, days: 3, radius: 10, open: false };
+  private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; stop: boolean } | null = null;
 
   constructor(private readonly host: SkyHost) {}
 
@@ -382,6 +390,7 @@ export class RealSky {
     }
     box.append(dl);
     box.append(this.uncertaintyBlock(o));
+    if (now.error === 0) box.append(this.approachesBlock(o));
     const thai = THAI_SATELLITES.find((s) => s.norad === o.el.satnum);
     if (thai) box.append(el('p', 'pg-note', t(thai.aboutKey)));
     if (now.error === 0) box.append(this.passesSection(o));
@@ -447,6 +456,117 @@ export class RealSky {
       link('Levit & Marshall, Adv. Space Res. 47, 2011', 'https://arxiv.org/abs/1002.2277'), '; ',
       link('Kelso, AAS 07-127, 2007', 'https://celestrak.org/publications/AAS/07-127/'), '.');
     box.append(src);
+    return box;
+  }
+
+  // ─── close approaches (M01) ────────────────────────────────────────────────
+
+  /** Every object loaded — the catalogue's groups and a file read — once each. */
+  private catalogue(): SkyObject[] {
+    const ids: SkySourceId[] = [...SAT_GROUPS.map((g) => g.id), ...(this.imported ? ['imported' as const] : [])];
+    return ids.flatMap((id) => this.objects(id));
+  }
+
+  private screeningKey(o: SkyObject): string {
+    return `${o.key}|${this.conj.within}|${this.conj.days}|${this.conj.radius}`;
+  }
+
+  /** Screen the catalogue for approaches to the satellite picked, from the moment on screen, a few objects at a time. */
+  private async runScreening(o: SkyObject): Promise<void> {
+    const run = { key: this.screeningKey(o), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Conjunction[], stop: false };
+    this.screening = run;
+    this.host.refreshFacts();
+    const list = await screenInSlices(o, this.catalogue(), run.from, run.from + this.conj.days, this.conj.within, this.conj.radius, (f) => {
+      run.progress = f;
+      const s = document.querySelector('.pg-conj-status');
+      if (s && this.screening === run) s.textContent = t('conj.running', { p: Math.round(f * 100) });
+      return !run.stop && this.screening === run;
+    });
+    if (this.screening !== run) return;
+    run.state = list ? 'done' : 'stopped';
+    run.list = list ?? [];
+    this.host.refreshFacts();
+  }
+
+  private approachesBlock(o: SkyObject): HTMLElement {
+    const box = el('details', 'pg-tool pg-conj');
+    box.open = this.conj.open;
+    box.addEventListener('toggle', () => { this.conj.open = box.open; });
+    box.append(el('summary', undefined, t('conj.title')), el('p', 'pg-tool-lead', t('conj.lead')));
+    const engineer = this.host.level() === 'engineer';
+    const run = this.screening && this.screening.key.startsWith(`${o.key}|`) ? this.screening : null;
+    const choose = (label: string, options: [number, string][], value: number, set: (v: number) => void): HTMLElement => {
+      const l = el('label');
+      const s = el('select');
+      for (const [v, text] of options) { const opt = el('option', undefined, text); opt.value = String(v); s.append(opt); }
+      s.value = String(value);
+      s.addEventListener('change', () => { set(Number(s.value)); });
+      l.append(el('span', undefined, label), s);
+      return l;
+    };
+    const row = el('div', 'pg-tool-row');
+    row.append(
+      choose(t('conj.within'), [1, 5, 10, 25].map((km) => [km * 1e3, `${num(km)} ${t('u.km')}`] as [number, string]), this.conj.within, (v) => { this.conj.within = v; }),
+      choose(t('conj.days'), [[1, t('conj.oneDay')], [3, t('life.days', { n: num(3) })], [7, t('life.days', { n: num(7) })]], this.conj.days, (v) => { this.conj.days = v; }),
+    );
+    const size = el('label');
+    const input = el('input');
+    input.type = 'number'; input.min = '0.1'; input.max = '200'; input.step = 'any';
+    input.value = String(this.conj.radius);
+    input.addEventListener('change', () => { const v = Number(input.value); if (Number.isFinite(v) && v > 0 && v <= 200) this.conj.radius = v; });
+    size.append(el('span', undefined, t('conj.radius')), input);
+    row.append(size);
+    box.append(row);
+    const running = run?.state === 'running';
+    box.append(button('watch-btn', running ? t('conj.stop') : t('conj.run'), () => {
+      if (running && run) { run.stop = true; return; }
+      void this.runScreening(o);
+    }));
+    const status = el('p', 'pg-tool-out pg-conj-status');
+    status.setAttribute('role', 'status');
+    box.append(status);
+    if (running) status.textContent = t('conj.running', { p: Math.round(run!.progress * 100) });
+    else if (run?.state === 'stopped') status.textContent = t('conj.stopped');
+    else if (run) {
+      const km = num(Number(run.key.split('|')[1]) / 1000);
+      status.textContent = run.list.length ? t('conj.found', { n: num(run.list.length), km, from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('conj.none', { km });
+      if (run.list.length) box.append(this.approachList(run.list, engineer));
+    }
+    const note = el('p', 'pg-note');
+    const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
+    note.append(t('conj.note'), ' ', link('Kelso, AAS 09-368, 2009', 'https://celestrak.org/publications/AAS/09-368/'), '.');
+    box.append(note);
+    if (engineer) {
+      const cs = el('p', 'pg-note');
+      cs.append(t('conj.case'), ' ', link('Shepperd, AMOS 2023', 'https://amostech.com/TechnicalPapers/2023/Conjunction-RPO/Shepperd.pdf'), '.');
+      box.append(cs);
+    }
+    return box;
+  }
+
+  private approachList(list: Conjunction[], engineer: boolean): HTMLElement {
+    const ol = el('ol', 'pg-conj-list');
+    for (const c of list.slice(0, CONJ_LIMIT)) {
+      const a = c.approach;
+      const li = el('li');
+      const head = el('div', 'pg-conj-head');
+      head.append(el('span', 'pg-sky-name', c.other.el.name ?? t('sky.unnamed')), el('span', 'pg-sky-num', String(c.other.el.satnum)));
+      li.append(head);
+      li.append(el('div', 'pg-conj-main', `${dayName(a.tca)} ${clockTime(a.tca)} · ${num(a.miss / 1000, 2)} ${t('u.km')} · ${t('conj.pc', { p: sci(c.probability.log10) })}`));
+      if (engineer) {
+        const m = (x: number) => `${num(x, 0)} ${t('u.m')}`;
+        li.append(el('div', 'pg-conj-more', t('conj.more', {
+          r: m(a.rtn.radial), tr: m(a.rtn.along), n: m(a.rtn.cross), v: num(a.speed / 1000, 1),
+          s1: num(Math.hypot(c.sigma.self.radial, c.sigma.self.along, c.sigma.self.cross) / 1000, 1),
+          s2: num(Math.hypot(c.sigma.other.radial, c.sigma.other.along, c.sigma.other.cross) / 1000, 1),
+        })));
+      }
+      ol.append(li);
+    }
+    const box = el('div');
+    box.append(ol);
+    if (list.length > CONJ_LIMIT) box.append(el('p', 'pg-note', t('sky.more', { n: num(list.length - CONJ_LIMIT) })));
+    box.append(el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].approach.tca) })));
     return box;
   }
 
@@ -585,6 +705,17 @@ export class RealSky {
 
 /** How many of the next three days' passes are listed. */
 const PASS_LIMIT = 12;
+/** How many close approaches are listed, nearest first. */
+const CONJ_LIMIT = 20;
+
+const SUPERSCRIPT: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+/** A probability from its logarithm, as 2.7 × 10⁻⁵¹, however small. */
+export function sci(log10: number): string {
+  if (log10 >= -2) return num(10 ** log10, 3);
+  let e = Math.floor(log10), m = 10 ** (log10 - e);
+  if (m >= 9.95) { m = 1; e += 1; }
+  return `${num(m, 1)} × 10${String(e).split('').map((ch) => SUPERSCRIPT[ch]).join('')}`;
+}
 
 const dateOf = (jd: number): Date => new Date((jd - 2440587.5) * 86400e3);
 /** A pass's time on the device's clock: 19:42:05. */
