@@ -563,3 +563,10 @@ fleet; the fleet's stages keep their reserves (their missions fly no lone stage 
 reserve no larger than the base one), so every case flies as before:
 **161 of 161 passed** in 1 h 43 min on four cores — alone but for `npm test` on one worker for its
 last 45 minutes.
+
+**The rigid fleet with C01 part 5.** `npm run test:sixdof-fleet` at commit 5e1222c: Mercury-Redstone 3
+— the capsule flown home by the escape flight's new `capsule` mode, a lobbed arc's cut-off on its
+apogee (only a flight whose satellite has a `descent`), `OrbitSpec.descending` (only when an orbit names
+it) and the generalised `capsuleConfiguration` (Soyuz's descent module unchanged); none of the fleet's
+missions carries any of them, so every case flies as before:
+**161 of 161 passed** in 1 h 56 min on four cores, run alone.
