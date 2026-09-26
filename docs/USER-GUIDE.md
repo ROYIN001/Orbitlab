@@ -179,7 +179,7 @@ uses that spacecraft, as it is now; without one it starts from an estimate you c
 dialog. At Watch, the flight's orbit is the first card, before the tour.
 
 The model is Kepler's orbit plus the secular drift of J2, nothing more: no drag and no Sun or
-Moon. [VALIDATION.md](VALIDATION.md) §4 holds it to real orbits.
+Moon. [VALIDATION.md](VALIDATION.md) §5 holds it to real orbits.
 
 ## 1. Set up a mission
 
@@ -708,7 +708,7 @@ cannot reach the target, the standard guidance takes over again (and the event l
 
 In six-DOF flights with PEG or IGM the ascent load relief is also released at 4 °/s once the
 dynamic pressure falls below 500 Pa, where the standard flight releases it all at once and swings
-the stack by up to 24°.
+the stack by about 15° on Falcon 9.
 
 The attitude-loop inspector's **Guidance** tab (§9) charts the time and velocity to go, the pitch
 the law steers against the standard law's (and its yaw out of the target plane), and the orbit it

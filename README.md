@@ -166,7 +166,7 @@ the delay and the link budget. For Earth observation it gives a camera's swath, 
 It also lists Thailand's satellites (THEOS, THEOS-2, the Royal Thai Air Force's NAPA-1 and NAPA-2,
 and Thaicom), each from public sources with its catalogue orbit. The model is Kepler plus first-order J2, held to
 the Landsat and Sentinel-2 orbits; the planner is held to Vallado's and Curtis's worked
-examples ([docs/VALIDATION.md](docs/VALIDATION.md) §4). **Continue in Orbit** (under the telemetry panel,
+examples ([docs/VALIDATION.md](docs/VALIDATION.md) §5). **Continue in Orbit** (under the telemetry panel,
 and on the viewer's end card) puts the orbit a flight reached into the playground, with the
 spacecraft in it and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and

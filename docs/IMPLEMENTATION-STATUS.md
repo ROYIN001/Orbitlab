@@ -242,17 +242,17 @@ Phase 1, the Orbit core, continues on the same branch:
 
 | Item | |
 |---|---|
-| O01 orbit playground | done: Kepler and first-order J2, held to the geostationary, GPS, Landsat WRS-2 and Sentinel-2 orbits ([VALIDATION.md](VALIDATION.md) §4) |
-| O02 maneuver planner | done: every transfer held to Vallado's and Curtis's worked examples and to its closed form ([VALIDATION.md](VALIDATION.md) §4) |
+| O01 orbit playground | done: Kepler and first-order J2, held to the geostationary, GPS, Landsat WRS-2 and Sentinel-2 orbits ([VALIDATION.md](VALIDATION.md) §5) |
+| O02 maneuver planner | done: every transfer held to Vallado's and Curtis's worked examples and to its closed form ([VALIDATION.md](VALIDATION.md) §5) |
 | O03 continue in orbit | done: a flight's orbit and spacecraft carry on in the playground; plans are budgeted against its own propellant by the rocket equation, and the lifetime analysis is open to any orbit there |
-| O04 applications | done: pointing a dish, coverage, delay and the link budget from GEO; a camera's swath, detail and reach from SSO; Thailand's satellites from public sources, each cited ([VALIDATION.md](VALIDATION.md) §4) |
+| O04 applications | done: pointing a dish, coverage, delay and the link budget from GEO; a camera's swath, detail and reach from SSO; Thailand's satellites from public sources, each cited ([VALIDATION.md](VALIDATION.md) §5) |
 
 ## Known limitations
 
 - The orbit playground (O01) carries an orbit by Kepler's equation and J2's secular drift to
   first order, nothing more: no drag, no Sun or Moon, no higher harmonics, and its inclinations
   for a repeat orbit come out 0.02° to 0.08° below the published ones
-  ([VALIDATION.md](VALIDATION.md) §4). For how an orbit decays, the lifetime analysis (P07) is
+  ([VALIDATION.md](VALIDATION.md) §5). For how an orbit decays, the lifetime analysis (P07) is
   the tool. Its 3-D view needs WebGL; without it the ground track and Newton's cannon still work.
 - The maneuver planner's burns are impulsive: no finite-burn or gravity losses. A burn longer
   than a tenth of an orbit is flagged as such. Edelbaum's spiral assumes near-circular orbits
@@ -263,10 +263,16 @@ Phase 1, the Orbit core, continues on the same branch:
   budget's starting values are an example, not any satellite's.
 
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
-- The physics has been compared with flight data for four vehicles only: Falcon 9 against webcast
-  telemetry of five flights, Soyuz-2.1a, Electron and Ariane 64 against published timelines
-  ([VALIDATION.md](VALIDATION.md)). No disagreement pointed at the equations. Falcon 9's first
-  stage now flies its published masses as a result. Electron's second stage still burns ~25 %
-  short, and the six-DOF ascent climbs higher than the flights after max Q on every vehicle
-  compared. The other fourteen vehicles are not compared; see "Assumptions and limitations" in
-  [PHYSICS.md](PHYSICS.md).
+- The physics has been compared with flight data for eleven of the eighteen vehicles: Falcon 9
+  against webcast telemetry of five flights, the others against published timelines
+  ([VALIDATION.md](VALIDATION.md)). No disagreement pointed at the equations. As a result,
+  Falcon 9's first stage flies its published masses and its six-DOF pitch programme is fitted to
+  the flights. Among what is left and recorded:
+  - Electron's second stage burns ~25 % short.
+  - Falcon Heavy's first stages cut off ~18 % early.
+  - PSLV-XL's first stage is 29 % slow at separation.
+  - H3's first stage flies far flatter than planned.
+  - Most fairings come off 10–50 % early.
+
+  Long March 2D, 3B/E and 5, Vulcan, Soyuz-2.1b and Starship are not compared; see
+  "Assumptions and limitations" in [PHYSICS.md](PHYSICS.md).

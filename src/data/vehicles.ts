@@ -415,6 +415,13 @@ export const VEHICLES: VehicleSpec[] = [
     recoverable: true, recoveryReserve: 0.12, returnReserve: 0.15, crewCapable: true,
     // Shallow kick and a slow pitch program put MECO near 65 km, which is what the published timeline implies.
     guidanceDefaults: { kickAngle: 1.5, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    // Flown as a rigid body the stack cannot make the point-mass program's late
+    // dive (the load relief holds it within 15° of the wind), so the 1.5° kick
+    // left it climbing too steeply: the flight-path angle 5-20° above five
+    // flights' webcast telemetry from T+40 s and ~10 km high by T+140 s. A 3.5°
+    // kick was fitted on CRS-16, Iridium NEXT 8 and GPS III SV01 and checked on
+    // SSO-A and Bangabandhu-1 (docs/VALIDATION.md, F5).
+    guidanceDefaultsSixDof: { kickAngle: 3.5 },
     notes: 'Partially reusable; enabling booster recovery reserves propellant for the boost-back/landing burns.',
   },
   {
