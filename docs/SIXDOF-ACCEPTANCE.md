@@ -555,3 +555,11 @@ flown without a fairing (`missionVehicle`, the exposed payload's nose in the aer
 and the drone-ship entry burn that spends the stage's spare propellant; the fleet's missions
 carry neither a crew Dragon nor a recovery plan, so every case flies as before:
 **161 of 161 passed** in 2 h 2 min on four cores, run alone.
+
+**The rigid fleet with C01 parts 3 and 4.** `npm run test:sixdof-fleet` at commit 2dbdb49: the
+flown comparison (UI only), a lone first stage's drone-ship reserve sized for its mission
+(`droneShipReserve`, 9dd195d), and the first R-7s as vehicles of historical flights, kept out of the
+fleet; the fleet's stages keep their reserves (their missions fly no lone stage to a ship, or a
+reserve no larger than the base one), so every case flies as before:
+**161 of 161 passed** in 1 h 43 min on four cores — alone but for `npm test` on one worker for its
+last 45 minutes.
