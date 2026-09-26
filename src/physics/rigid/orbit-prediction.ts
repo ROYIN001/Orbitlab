@@ -120,13 +120,18 @@ export interface PhysicalApsides {
  * anywhere from 501 to 515 km of apoapsis round one revolution — so a mission
  * judged on it passes or fails by where on the orbit its last burn ended.
  * Sampled at the forecast step and refined to the apsis on either side of each
- * extreme sample. Null when the path is unbound or reaches the surface.
+ * extreme sample. Null when the path is unbound, reaches the surface, or
+ * takes longer than the forecast budget to go round.
  */
 export function physicalApsides(initial: PointState, options: J2CoastOptions = {}): PhysicalApsides | null {
   const dt = checkedStep(initial, options);
   const energy = dot(initial.v, initial.v) / 2 - MU_EARTH / norm(initial.r);
   if (!(energy < 0)) return null;
   const period = 2 * Math.PI * Math.sqrt((-MU_EARTH / (2 * energy)) ** 3 / MU_EARTH);
+  // A revolution longer than the forecast budget (Apollo 11's translunar
+  // ellipse, ten days) is not sampled: the caller keeps the osculating
+  // apsides, which J2 barely moves that far out.
+  if (period > MAX_DURATION || Math.ceil(period / dt) > MAX_STEPS) return null;
   checkedDuration(period, dt);
   let state = copy(initial);
   // Each extreme sample keeps the state one step before it (the initial

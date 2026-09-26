@@ -66,9 +66,9 @@ describe('the lessons over WebMCP', () => {
 
   it('lists every lesson with the student\'s progress', () => {
     const out = tool(host(false), 'list_lessons').execute({}) as { lessons: Array<{ id: string; passed: boolean; written: boolean }> };
-    expect(out.lessons).toHaveLength(19);
+    expect(out.lessons).toHaveLength(21);
     expect(out.lessons[0]).toMatchObject({ id: 'orbit-first', passed: true, written: true });
-    expect(out.lessons.filter((l) => l.written)).toHaveLength(18);
+    expect(out.lessons.filter((l) => l.written)).toHaveLength(21);
   });
 
   it('opens a lesson, and never gives away an answer\'s expected value', () => {

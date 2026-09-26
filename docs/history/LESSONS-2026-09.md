@@ -309,3 +309,79 @@ payloads from 8 to 12 t now land within 2 m. The flights that already landed do 
 because the new rule never fires in them. Goldens fly without recovery and are unchanged. The
 heavy Falcon Heavy returns and the six-DOF lessons pass. Test: `tests/recovery-return.test.ts`
 flies the lesson's mission with 10 and 11 t and expects the stage on the pad within 5 m.
+
+## C01, historical missions, and lessons 5.3–5.5 (2026-09-26)
+
+Asked 2026-09-26. The design answers were:
+- 1.ก all three vehicles;
+- 2.ก one lesson per mission;
+- 3.ก the TLI as an apogee raise, with the Moon not modelled;
+- 4.ก Vostok 3KA as a new spacecraft with no engine, not drawn as Soyuz MS.
+
+This lifted the "no edits to `vehicles.ts`" rule for this item. The edits there are additive
+only: new engines and three vehicles at the end of `VEHICLES`, with no existing entry touched.
+
+**Vehicles** (`src/data/vehicles.ts`):
+- **Sputnik (R-7 8K71PS)**: core and strap-ons, nothing above them.
+- **Vostok-K (8K72K)**: adds Blok E.
+- **Saturn V**: S-IC, S-II and a restartable S-IVB.
+
+Masses and engines follow astronautix.com and the AS-506 report; the entries' comments give the
+figures. One figure was fitted rather than looked up: Sputnik's core load of 90 t. That is the
+load that reaches the 215 × 939 km orbit it flew. It puts the stack at 270 t against the 267 t
+quoted.
+
+**Payloads** (`satellites.ts`): `sputnik1` (83.6 kg), `vostok3ka` (4.73 t, no engine, so Blok E
+inserts it, as it did) and `apollo` (45.7 t, crewed, with no engine of its own in the model, so
+the S-IVB makes the injection).
+
+**Six-DOF**: `blokE`, `sic`, `sii` and `sivb` were added to the steering, loads and RCS tables
+and to `engine-layout.ts`, and Sputnik got a 5° six-DOF kick. The two R-7s share Soyuz-2.1a's
+trim allowance.
+
+The forecast of a ten-day ellipse threw a `RangeError` that ended the flight. It now returns
+null, and the sequencer keeps the osculating orbit (see `SIXDOF-VEHICLE-DATA.md`).
+
+**Lessons** (`track5.ts`; `coming.ts` is now empty). All three fly point-mass.
+
+| | Set up | Solution | Graded |
+|---|---|---|---|
+| 5.3 `adv-history` | Object D, 1 327 kg: runs dry, suborbital | PS-1, 83.6 kg | target reached, period ±0.2 min |
+| 5.4 `adv-vostok` | the planned 181 × 230 km | the 181 × 327 km Gagarin reached | apogee 315–340 km, perigee 170–195 km, period ±0.2 min |
+| 5.5 `adv-apollo` | the 186 km parking orbit | apogee 370 000 km: the S-IVB relights | apogee > 300 000 km, perigee 150–260 km, TLI Δv ±3 % (new measure `burnDv.raise`, which leaves out a trim planned after the injection) |
+
+The history questions in the placement bank (`b-sputnik`, `b-order-history`) now point to these
+lessons. The history lessons are chiefly about area 2, as 5.3 was when it was listed as coming.
+A student weak in the basics therefore still starts at 1.1.
+
+**A grader fix found on the way**: a lesson used to be graded at the cut-off event, with the
+engine still tailing off. On Sputnik's light core that last second put 110 km on the apogee:
+820 km at cut-off, 937 km once the thrust had gone. The period the student read from the panel
+(96.1 min) then failed against the 95.1 min the grade had frozen. `flightEnded` now waits for
+the simulation's own `done`, which already waits for the tail-off. A recorded flight, which has
+no `done`, is judged by its thrust instead. The other lessons pass unchanged.
+
+**Fleet matrix**: the two R-7s' leo and iss rows go under `ARCHITECTURE`. They are single-shot
+and carry an inert payload, so they insert at 200 × 420–500 km with Δv left, as Soyuz-2.1a
+does. Their dedicated missions are lessons 5.3 and 5.4 as solved. `saturnv/iss/90` goes under
+`BEYOND_CAPABILITY`: the S-IVB runs dry. Saturn V's other five rows fly.
+
+**Tests**:
+- `tests/lessons-history.test.ts`: each solution passes, each lesson as set up fails, and the
+  flights are checked against the record (booster separation, fairing, S-IC cut-off, TLI Δv).
+- `tests/heavy/history-sixdof.test.ts`: the three flights as rigid bodies.
+- `tests/rigid-orbit-prediction.test.ts`: the ten-day ellipse gives no forecast and no throw.
+
+What is not modelled:
+- the Moon;
+- the escape towers of Vostok and Apollo;
+- the R-7's staged core shut-down (preliminary and final commands);
+- Vostok-1's late Blok E cut-off as a failure. The lesson flies the orbit that resulted instead.
+
+**A panel fix found on the way**: `SetupPanel.restoreMission`, which a lesson start goes through,
+copied the new mission over the old one field by field. A mission with no pad and no station
+flight therefore kept the last one's. After lesson 5.4 (Site 1 at Baikonur), lesson 5.5 opened
+a Saturn V at LC-39A still carrying the pad `site1`, and the panel refused to launch it
+("correct the highlighted fields"). `restoreMission` now drops the pad and the flight to the
+station when the new mission has none, as `loadMission` already did. This was checked in the
+browser by starting 5.4 and then 5.5.

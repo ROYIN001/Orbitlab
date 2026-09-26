@@ -9,6 +9,10 @@ export const SATELLITES: SatelliteSpec[] = [
   { id: 'cubesats', kind: 'cubesats', name: 'CubeSat rideshare dispenser', mass: 300, typicalOrbit: 'sso', description: 'Rideshare dispenser releasing a cluster of small satellites. No propulsion of its own.', size: { width: 1, height: 1.2, depth: 1 } },
   { id: 'starlink', kind: 'starlink', name: 'Starlink batch (60 × 260 kg)', mass: 15600, typicalOrbit: 'starlink', description: 'Flat-packed stack of broadband satellites; the launcher upper stage performs the orbit raising.', size: { width: 3.5, height: 5, depth: 2.5 } },
   { id: 'crew', kind: 'crew', name: 'Crewed spacecraft', mass: 7150, typicalOrbit: 'iss', description: 'Crew capsule with service module (e.g. Soyuz MS, Crew Dragon). Raises its own orbit to the station with a 3.9 kN engine.', crewed: true, propulsion: { thrust: 3920, isp: 302, propellantFraction: 0.12 }, size: { width: 2.7, height: 7, depth: 2.7 } },
+  // C01: the payloads of the historical missions, as flown.
+  { id: 'sputnik1', kind: 'science', name: 'Sputnik-1 (PS-1)', mass: 83.6, typicalOrbit: 'leo', description: 'The first artificial satellite: a 58 cm polished sphere with four whip antennas and two radio transmitters. No propulsion.', size: { width: 0.58, height: 0.58, depth: 0.58 } },
+  { id: 'vostok3ka', kind: 'crew', name: 'Vostok 3KA', mass: 4730, typicalOrbit: 'leo', description: "Gagarin's Vostok: a 2.3 m descent sphere on an instrument module. Its TDU-1 engine only brought it home, so Blok E put it in orbit.", size: { width: 2.43, height: 4.4, depth: 2.43 } },
+  { id: 'apollo', kind: 'crew', name: 'Apollo CSM + LM', mass: 45700, typicalOrbit: 'leo', description: 'Apollo 11: command and service module, the lunar module and its adapter, 45.7 t. The S-IVB made the translunar injection; the service engine was kept for the Moon.', crewed: true, size: { width: 3.9, height: 11, depth: 3.9 } },
 ];
 
 export const satelliteById = (id: string): SatelliteSpec => {

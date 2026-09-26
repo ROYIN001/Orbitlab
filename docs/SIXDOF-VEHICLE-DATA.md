@@ -481,3 +481,34 @@ then 49 Hz; Soyuz-2.1b's Blok I with Fregat 45 Hz; H3's second stage 75 Hz), and
 16 Hz are faster than the 0.01 s step integrates and are carried quasi-statically (§2b).
 Large launchers' first modes are reported at 1–3 Hz (NASA SP-8036); Electron, 18 m long, is the
 stiff outlier here.
+
+## The historical vehicles (roadmap C01, 2026-09-26)
+
+Three vehicles for the historical lessons (5.3–5.5), each flown on the mission it really flew.
+
+- **Sputnik (R-7 8K71PS, 1957)** and **Vostok-K (8K72K, 1961)** reuse the Soyuz stage ids
+  `blokA` and `blokBVGD`. They therefore share the Soyuz chambers, verniers, oxidizer split and
+  steering, and differ only in masses and engines: RD-107/RD-108 in their 1957 and 1961 builds
+  (astronautix.com). Vostok-K's `blokE` is new. It has one fixed RD-0109 chamber, steered by four
+  turbine-exhaust nozzles taking 2 % of the thrust (E), and a kerolox load at a mixture ratio of
+  2.5 (E). Both fly Soyuz-2.1a's 65 % trim allowance (`R7_TRIM_SHARE_VEHICLES` in
+  `rigid/runtime.ts`), since they have the same core and strap-ons. As a rigid body, Sputnik
+  flies a 5° kick: with the 4° of Soyuz-2.1a it stopped at 211 × 771 km.
+- **Saturn V (SA-506, 1969)**: `sic` (5 F-1), `sii` (5 J-2) and `sivb` (1 J-2, restartable).
+  The outer four engines of each cluster gimbal (±6° F-1, ±7° J-2) and the centre engine is
+  fixed. The S-IVB's single J-2 gimbals ±7°, and its auxiliary propulsion system is a
+  three-axis RCS (`STAGE_RCS.sivb`, 650 N, Isp 280 s, 300 kg; E). Masses are from the AS-506
+  flight evaluation report. There is no fairing: the escape tower's 4.2 t, dropped at T+197 s,
+  is not modelled.
+- **The J2 forecast** (`physicalApsides`) does not forecast a revolution longer than its two-day
+  budget, and returns null for one. Apollo 11's translunar ellipse takes ten days, and it used to
+  throw a `RangeError` into the burn sequencer. The caller now keeps the osculating apsides,
+  which J2 barely moves that far out. Every orbit under two days is forecast as before.
+
+Measured, calm, six-DOF (`tests/heavy/history-sixdof.test.ts`):
+
+| Flight | Result | Real flight |
+|---|---|---|
+| Sputnik-1 | 214.8 × 937 km | 215 × 939 km |
+| Vostok-1 | 180.9 × 324 km osculating at cut-off; 343 km at the highest point of the J2 revolution, which the six-DOF verdict judges, so it is reported off target | 181 × 327 km |
+| Apollo 11 | 207 km parking orbit, TLI to 369 500 km | 186 km parking orbit, TLI |

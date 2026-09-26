@@ -16,7 +16,8 @@ tablet, and a single stack on a phone with the viewport first.
   (J2 oblateness in orbit), US Standard Atmosphere 1976 with an exponential upper
   atmosphere, Mach-dependent drag, pressure-dependent thrust and specific impulse,
   real staging tables, Earth-rotation velocity credit, RK4 integration.
-- **18 launch vehicles** from 16 launch sites — see [Fleet](#fleet) below. Parallel
+- **21 launch vehicles** from 16 launch sites, three of them historical (Sputnik's R-7, Vostok-K and
+  Saturn V) — see [Fleet](#fleet) below. Parallel
   boosters (including air-lit ones), hot staging, per-motor solid thrust profiles,
   throttle buckets at max-Q, acceleration limits, first-stage recovery with entry and
   landing burns — flown back with a boostback to Landing Zones 1 and 2, to a drone ship, or
@@ -92,6 +93,14 @@ not directly comparable vehicle-to-vehicle, since the reference orbit differs.
 | PSLV-XL | IN | 4 | Sriharikota | 3,800 kg | 1,425 kg | 1,750 kg |
 | Electron | NZ/US | 3 | Mahia, Wallops | 300 kg | – | 200 kg |
 | Starship (Super Heavy) | US | 2 | Starbase, Cape Canaveral | 100,000 kg | 27,000 kg | – |
+| Sputnik (R-7 8K71PS), 1957 | SU | 1 | Baikonur (Site 1) | 500 kg | – | – |
+| Vostok-K (8K72K), 1961 | SU | 2 | Baikonur (Site 1) | 4,730 kg | – | – |
+| Saturn V, 1969 | US | 3 | Kennedy LC-39A | 118,000 kg | – | – |
+
+The last three are the historical vehicles of roadmap C01, flown in lessons 5.3–5.5 on the
+missions they flew: Sputnik-1 to 215 × 939 km, Vostok-1 to 181 × 327 km, and Apollo 11's
+parking orbit and translunar injection (the Moon itself is not modelled; the injection is
+an apogee raise to 370 000 km).
 
 Falcon 9, Falcon Heavy and Starship also support **first-stage recovery** (reserves
 propellant for an entry and landing burn); Soyuz-2.1a, Falcon 9 and Starship support

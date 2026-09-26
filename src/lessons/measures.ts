@@ -179,6 +179,19 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
       return docked ? docked.t / 3600 : null;
     },
   },
+  // C01: the burn that raised the apoapsis on its own (Apollo 11's translunar
+  // injection), as the sequencer announced it; a trim planned after it, which
+  // `burnDv` would add in, is not counted
+  'burnDv.raise': {
+    unit: 'm/s', over: 'final', digits: 0,
+    read: (f) => {
+      const done = f.events.find((e) => e.key === 'evt.burnComplete' && e.params?.kind === 'raiseApoapsis');
+      if (!done) return null;
+      const scheduled = [...f.events].reverse().find((s) => s.key === 'evt.burnScheduled' && s.t <= done.t && s.params?.kind === 'raiseApoapsis');
+      const dv = Number(scheduled?.params?.dv);
+      return Number.isFinite(dv) ? dv : null;
+    },
+  },
 };
 
 export const MEASURE_IDS = Object.keys(MEASURES) as MeasureId[];

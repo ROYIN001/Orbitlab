@@ -635,6 +635,10 @@ export class SetupPanel {
     Object.assign(this.state, copyMission(mission));
     if (!mission.recoveryPlan) this.state.recoveryPlan = undefined;
     if (!mission.dynamics) this.state.dynamics = undefined;
+    // nor the last mission's pad or flight to the station: Vostok-1's Site 1
+    // left on a Saturn V at LC-39A made the next lesson unlaunchable (C01)
+    if (!mission.padId) this.state.padId = undefined;
+    if (!mission.rendezvous) this.state.rendezvous = undefined;
     this.tuneMessage = '';
     this.applyExternalEdit();
     this.cb.onChange?.(this.getConfig());

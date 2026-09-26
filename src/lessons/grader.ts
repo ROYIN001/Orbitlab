@@ -20,11 +20,35 @@ import type { Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, L
 /** Answers the student has typed, by criterion id. */
 export type LessonAnswers = Readonly<Record<string, number>>;
 
-/** Has the flight ended, for this lesson? */
+/**
+ * Thrust acceleration below which a shut-down engine's tail-off is spent, m/s².
+ * What is left of an exponential decay from there adds a·τ, a few mm/s.
+ */
+const TAILOFF_SPENT = 0.01;
+/** Longest a tail-off is waited for after the mission's result, s. */
+const TAILOFF_WAIT_S = 5;
+
+/**
+ * Has the flight ended, for this lesson?
+ *
+ * The mission's result is announced at cut-off, and the guidance cuts off
+ * early for the thrust the engine still gives while it dies away (a
+ * 0.25 s tail-off). On a light stack that last second is a large share of
+ * the orbit — Sputnik's core put 110 km on its apogee after the cut-off — so
+ * the orbit a lesson reads, and the one the student reads off the panel, is
+ * the one after the tail-off.
+ */
 export function flightEnded(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFlight): boolean {
   if (flight.state.status === 'failed') return true;
   if (lesson.endEvent) return flight.events.some((e) => e.key === lesson.endEvent);
-  return assessMissionResult({ ...flight, events: flight.events }) !== null;
+  if (assessMissionResult({ ...flight, events: flight.events }) === null) return false;
+  // A live flight says itself when the tail-off is over (`Simulation.done`);
+  // a recorded one is judged by its thrust.
+  const done = (flight as { readonly done?: unknown }).done;
+  if (typeof done === 'boolean') return done;
+  const end = gradingEnd(lesson, flight);
+  const s = flight.state;
+  return s.thrust / Math.max(1, s.mass) < TAILOFF_SPENT || (end !== null && s.t >= end + TAILOFF_WAIT_S);
 }
 
 /** The events that end a flight for grading, as the result card reads them. */

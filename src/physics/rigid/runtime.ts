@@ -121,6 +121,14 @@ export function validateRigidCommand(command: RigidCommand): void {
   }
 }
 
+/**
+ * The R-7s flown on Soyuz-2.1a's accepted trim allowance (see
+ * `ascentAngleLimit`): Soyuz-2.1a itself and the historical 8K71PS and 8K72K
+ * (C01), the same core and strap-ons with the same chambers and verniers.
+ * Soyuz-2.1b keeps the 35 % its own results were taken at.
+ */
+const R7_TRIM_SHARE_VEHICLES: ReadonlySet<string> = new Set(['soyuz21a', 'sputnik8k71ps', 'vostok8k72k']);
+
 export class RigidRuntime {
   command: RigidCommand = { mode: 'auto', rates: v3(), throttle: 1 };
   readonly consumed: Record<string, number> = {};
@@ -295,7 +303,7 @@ export class RigidRuntime {
   ascentAngleLimit(snapshot: RigidVehicleSnapshot, dynamicPressure: number, mach = 0): number {
     if (!Number.isFinite(dynamicPressure) || dynamicPressure < 0) throw new RangeError('Invalid dynamic pressure');
     const authority = this.authority(snapshot);
-    const trimShare = snapshot.geometry.vehicleId === 'soyuz21a' ? 0.65 : 0.35;
+    const trimShare = R7_TRIM_SHARE_VEHICLES.has(snapshot.geometry.vehicleId) ? 0.65 : 0.35;
     const margin = trimShare * Math.max(0, Math.min(authority.radius.y - Math.abs(authority.center.y), authority.radius.z - Math.abs(authority.center.z)));
     if (snapshot.aero.table) {
       // The tabulated moment is not proportional to sin α — the crossflow grows
