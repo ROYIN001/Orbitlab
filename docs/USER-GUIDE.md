@@ -603,6 +603,71 @@ the docking is called off. **Hand back to Kurs** lets it fly back to the station
 and in again. How the profiles, the approach and the contact limits compare with real flights
 is in [PHYSICS.md §9.2](PHYSICS.md).
 
+## 17. Lessons and the placement test
+
+The gold **Lessons** button in the top bar (and the fourth card on the landing page) opens the
+catalogue: training missions with a goal and pass criteria, graded as soon as the flight ends.
+They are listed in five tracks — orbital mechanics, guidance and navigation, failures, attitude
+control, advanced missions — each with its number (1.1 … 5.3), a ✓ once passed and ● once tried.
+Tracks 1 and 3 are written; the others are listed as *coming soon*.
+
+**A lesson.** Pick one: its mission is loaded into the setup panel, the app goes to the mode it
+needs (Explore or Engineer), and the settings it fixes are greyed out with a 🔒 — in lesson 1.2
+only the launch time may change, in 1.4 only the payload mass. A strip over the workspace holds
+the task, the criteria and the buttons. Launch; each criterion shows *waiting*, *so far ✓*
+(a bound that could still be broken), ✓ or ✗ — a peak such as q is failed the moment it is
+passed, everything else when the flight ends. Some lessons then ask for numbers you work out from
+your own flight (the period of the orbit you reached, the Δv of a burn, the peak load on the
+crew): type them in and **Check**. The grade is read from the recording's head, so scrubbing back
+through the replay never changes it. **Hint** reveals up to three hints, one at a time (the
+results file says how many you used); **Start again** puts the lesson's mission back; **Copy
+link** gives an address that opens the lesson (`?lesson=orbit-first`). A setting the lesson fixes
+that is changed anyway — by a mission link or over WebMCP — fails the flight, and the strip says
+which one.
+
+| | Lesson | What you change | Passed when |
+|---|---|---|---|
+| 1.1 | Your first orbit | nothing | the 500 km orbit is reached, and its period (±1 min) and speed (±0.05 km/s) are worked out |
+| 1.2 | Into the station's plane | the launch time | the ISS plane is reached directly: i within 0.1°, Ω within 0.5° |
+| 1.3 | A Hohmann transfer | nothing | the 2 000 km circle is reached, and the apogee burn's Δv (±5 %) and the period are worked out with vis-viva |
+| 1.4 | Payload and Δv | the payload mass | at least 16 t to 500 km with 150 m/s of Δv left |
+| 1.5 | Range safety and the launch site | the launch site | a site whose corridor licenses a polar launch, and the orbit |
+| 3.1 | One engine out | the payload mass | the orbit with an engine lost at T+80 s, carrying at least 16 t |
+| 3.2 | A stuck gyro and the FDIR (Engineer, six-DOF) | the FDIR switch | the orbit, with IMU 1 voted out |
+| 3.3 | The crew's escape | nothing | the crew lands, and the peak load on them is read (±10 %) |
+
+**The placement test** (in the catalogue) is 25 questions in six areas — the basics of spaceflight,
+orbital mechanics, rocket performance, guidance and navigation, attitude control, failures and
+safety — four or five from each, easy to hard, with no clock. The questions and the numbers in the
+calculations are drawn for you from a bank of 104, always to the same plan, so no two tests are
+alike but all are the same size and difficulty. Where a question is only knowledge it offers
+**I don't know**; where being sure of a wrong answer would matter it asks how sure you are. Some
+questions show a chart of a flight flown in this simulator; some ask you to predict what a change
+does and then show the two flights; one asks which vehicle a drawing shows. The result is a radar
+of the six areas and a level for each (beginner, basic, proficient), your strengths, what to work
+on, your misconceptions — wrong answers you were sure of — and the recommended path through the
+lessons: which you can skip, which to go over, and a ★ where to start. Every lesson stays open
+whatever it says. **Answers and explanations** goes through every question. After the lessons,
+the **test after the lessons** asks different questions to the same plan, and the radar shows
+both.
+
+**Keeping and handing in your work.** Progress and tests stay in this browser. **Export results**
+writes a `.orbitlab-results.json` file with your name (if you type it), each lesson's attempts,
+hints and graded flights, and your tests with their scores, sealed with a SHA-256 checksum that
+shows whether the file was edited after export (a check against accidents, not a signature).
+
+**Lessons of your own.** **Open lesson file…** reads a `.orbitlab-lesson.json` file: lessons and
+placement-test questions in the same format the built-in ones are written in (`src/lessons/
+lesson-file.ts`). A lesson is a mission document (as a mission file holds it, U01), the settings
+it locks, its criteria — a measure within bounds (`maxQ`, `dvLeft`, `orbit.inclination`, …), the
+outcome, an event, a number the student works out from the flight, or a check written in code —
+its hints, and its texts in English, Russian and Thai (a missing language falls back to English).
+A question is a choice, a calculation whose answer is an arithmetic expression of its drawn
+numbers, or a vehicle to recognise, with its area, level and explanation. Anything that cannot be
+used is left out, and the catalogue says what and why. Over WebMCP, `list_lessons`,
+`start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
+the student and read how it is going — never the expected value of an answer.
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

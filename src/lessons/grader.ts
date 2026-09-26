@@ -27,6 +27,18 @@ export function flightEnded(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFlig
   return assessMissionResult({ ...flight, events: flight.events }) !== null;
 }
 
+/** The events that end a flight for grading, as the result card reads them. */
+const COMPLETION_KEYS = ['evt.targetOrbit', 'evt.offTargetOrbit', 'evt.suborbitalTarget', 'evt.suborbitalOffTarget'];
+
+/** The mission time the flight ended for grading, or null while it has not. */
+export function gradingEnd(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFlight): number | null {
+  let t: number | null = null;
+  const keys = lesson.endEvent ? [lesson.endEvent] : COMPLETION_KEYS;
+  for (const e of flight.events) if (keys.includes(e.key) && (t === null || e.t < t)) t = e.t;
+  if (t === null && flight.state.status === 'failed') t = flight.state.t;
+  return t;
+}
+
 /** Did the flight leave the pad at all? A flight still on the pad is not graded. */
 export function flightStarted(flight: LessonFlight): boolean {
   return flight.state.t > 0 || flight.state.status !== 'prelaunch';
@@ -48,13 +60,13 @@ export function answerMatches(answer: number, expected: number, tol?: number, to
   return Math.abs(answer - expected) <= band + 1e-9;
 }
 
-function gradeCriterion(c: Criterion, flight: LessonFlight, final: boolean, answers: LessonAnswers): CriterionGrade {
+function gradeCriterion(c: Criterion, flight: LessonFlight, final: boolean, answers: LessonAnswers, end: number | undefined): CriterionGrade {
   const state = (s: CriterionState, value: number | null = null, expected?: number | null): CriterionGrade =>
     expected === undefined ? { id: c.id, state: s, value } : { id: c.id, state: s, value, expected };
   switch (c.kind) {
     case 'measure': {
       const def = MEASURES[c.measure];
-      const value = def.read(flight);
+      const value = def.read(flight, end);
       const target = c.target === 'mission' ? missionTarget(flight, c.measure) : c.target ?? null;
       if (def.over === 'history') {
         if (value !== null && !withinBound(value, c, target)) return state('fail', value);
@@ -79,7 +91,7 @@ function gradeCriterion(c: Criterion, flight: LessonFlight, final: boolean, answ
     }
     case 'answer': {
       if (!final) return state('pending');
-      const expected = MEASURES[c.measure].read(flight);
+      const expected = MEASURES[c.measure].read(flight, end);
       const typed = answers[c.id];
       if (typed === undefined || !Number.isFinite(typed)) return state('pending', null, expected);
       if (expected === null) return state('fail', typed, expected);
@@ -115,7 +127,9 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
         kept = near(a.perigee, b.perigee, 1) && near(a.apogee, b.apogee, 1) && a.raanMode === b.raanMode
           && (typeof a.inclination === 'number' && typeof b.inclination === 'number' ? near(a.inclination, b.inclination, 1e-6) : a.inclination === b.inclination)
           && near(a.argPerigee, b.argPerigee, 1e-6) && near(a.raan, b.raan, 1e-6) && near(a.ltan, b.ltan, 1e-6)
-          && !!a.suborbital === !!b.suborbital;
+          && !!a.suborbital === !!b.suborbital
+          // a flight on to the station ends somewhere else than the orbit
+          && same(cfg.rendezvous, m.rendezvous);
         break;
       }
       case 'setup.launchTime': kept = Math.abs(cfg.launchTime.getTime() - Date.parse(m.launchTime)) < 1000; break;
@@ -147,7 +161,8 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
  */
 export function gradeLesson(lesson: Lesson, flight: LessonFlight, answers: LessonAnswers = {}, finalOverride?: boolean): LessonGrade {
   const final = finalOverride ?? flightEnded(lesson, flight);
-  const criteria = lesson.criteria.map((c) => gradeCriterion(c, flight, final, answers));
+  const end = gradingEnd(lesson, flight) ?? undefined;
+  const criteria = lesson.criteria.map((c) => gradeCriterion(c, flight, final, answers, end));
   const lockBroken = brokenLocks(lesson, flight);
   const anyFail = lockBroken.length > 0 || criteria.some((c) => c.state === 'fail');
   const allPass = criteria.every((c) => c.state === 'pass');
@@ -156,6 +171,25 @@ export function gradeLesson(lesson: Lesson, flight: LessonFlight, answers: Lesso
     verdict: anyFail ? 'fail' : allPass && final ? 'pass' : 'open',
     criteria, lockBroken, t: flight.state.t,
   };
+}
+
+/**
+ * A grade taken when the flight ended, with the answers checked again as the
+ * student types them. The page keeps that grade rather than grading the head
+ * of a flight that coasts on (a node that precesses, a payload that
+ * separates): the lesson is judged at its end, however long it is watched.
+ */
+export function regradeAnswers(lesson: Lesson, frozen: LessonGrade, answers: LessonAnswers = {}): LessonGrade {
+  const criteria = frozen.criteria.map((g) => {
+    const c = lesson.criteria.find((x) => x.id === g.id);
+    if (c?.kind !== 'answer') return g;
+    const typed = answers[c.id];
+    if (typed === undefined || !Number.isFinite(typed)) return { ...g, state: 'pending' as const, value: null };
+    const ok = g.expected !== null && g.expected !== undefined && answerMatches(typed, g.expected, c.tol, c.tolPct);
+    return { ...g, state: ok ? 'pass' as const : 'fail' as const, value: typed };
+  });
+  const anyFail = frozen.lockBroken.length > 0 || criteria.some((c) => c.state === 'fail');
+  return { ...frozen, criteria, verdict: anyFail ? 'fail' : criteria.every((c) => c.state === 'pass') ? 'pass' : 'open' };
 }
 
 /** The answers a lesson still waits for, once the flight has ended. */

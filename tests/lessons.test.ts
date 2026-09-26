@@ -11,7 +11,7 @@ import { launchWindows } from '../src/physics/mission';
 import { siteById } from '../src/data/sites';
 import { BUILTIN_ISSUES, BUILTIN_LESSONS, allLessons, lessonNumber } from '../src/lessons/catalog';
 import { lessonConfig } from '../src/lessons/config';
-import { answerMatches, awaitingAnswers, brokenLocks, flightEnded, gradeLesson, type LessonAnswers } from '../src/lessons/grader';
+import { answerMatches, awaitingAnswers, brokenLocks, flightEnded, gradeLesson, regradeAnswers, type LessonAnswers } from '../src/lessons/grader';
 import { MEASURES } from '../src/lessons/measures';
 import { LESSON_FORMAT, lessonFileText, parseLessonFile, readLesson, type FileIssue } from '../src/lessons/lesson-file';
 import { localText } from '../src/lessons/text';
@@ -134,6 +134,17 @@ describe('each lesson, flown as solved and flown wrong', () => {
     expect(timid.criteria.find((c) => c.id === 'payload')!.state).toBe('fail');
   });
 
+  it('1.4 grades the same long after the insertion, when the payload has separated and the Δv shown is its own', () => {
+    const l = lesson('orbit-payload');
+    const sim = fly(l, (s) => { s.payloadMass = 16500; });
+    const atEnd = gradeLesson(l, sim);
+    const until = sim.state.t + 3600;
+    while (sim.state.t < until) sim.step(sim.suggestedDt());
+    expect(sim.events.some((e) => e.key === 'evt.payloadSep'), log(sim)).toBe(true);
+    expect(sim.telemetry[sim.telemetry.length - 1].dvRemaining).toBe(0);
+    expect(gradeLesson(l, sim)).toEqual({ ...atEnd, t: sim.state.t });
+  });
+
   it('1.5 range safety: Vandenberg passes; Cape Canaveral flies the orbit but is not licensed for it', () => {
     const l = lesson('orbit-range-safety');
     const solved = fly(l, (s) => { s.siteId = 'vandenberg'; });
@@ -204,6 +215,16 @@ describe('the grader', () => {
     expect(g.criteria[0].state).toBe('fail');
     expect(g.criteria[1].state).toBe('pending');
     expect(g.verdict).toBe('fail');
+  });
+
+  it('keeps the grade taken at the end, checking only the answers again', () => {
+    const l = lesson('orbit-first');
+    const sim = fly(l);
+    const frozen = gradeLesson(l, sim);
+    const exact = exactAnswers(l, sim);
+    expect(regradeAnswers(l, frozen, exact)).toEqual(gradeLesson(l, sim, exact));
+    expect(regradeAnswers(l, frozen, { ...exact, period: 80 }).verdict).toBe('fail');
+    expect(regradeAnswers(l, frozen, { period: exact.period }).verdict).toBe('open');
   });
 
   it('matches an answer within the larger of its absolute and relative tolerance', () => {

@@ -256,8 +256,9 @@ class AssessmentView {
       left.append(conf);
     }
     grid.append(left);
-    if (q.figure) {
-      const fig = this.figure(q.figure);
+    const figure: Figure | undefined = q.type === 'vehicle' && p.vehicle ? { kind: 'vehicle', vehicleId: p.vehicle } : q.figure;
+    if (figure) {
+      const fig = this.figure(figure);
       if (fig) grid.append(fig);
     } else grid.classList.add('single');
     const skip = this.button(t('assess.skip'), () => { this.picked = null; this.confidence = undefined; this.answer(q, p, true); });

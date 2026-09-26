@@ -22,7 +22,13 @@ export interface MeasureDef {
   over: 'history' | 'final';
   /** decimals to show */
   digits: number;
-  read(flight: LessonFlight): number | null;
+  /**
+   * `at`: the mission time the flight ended for grading. A value that goes on
+   * changing after it (the Δv left, once the payload separates and the
+   * spacecraft's own is shown) is read there, so a flight graded long after
+   * its insertion grades the same as one graded at it.
+   */
+  read(flight: LessonFlight, at?: number): number | null;
 }
 
 const finite = (v: number): number | null => (Number.isFinite(v) ? v : null);
@@ -79,7 +85,14 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
   'maxQ': { unit: 'kPa', over: 'history', digits: 1, read: (f) => Math.max(f.state.maxQ.value, peak(f, 'q')) / 1e3 },
   'maxQTime': { unit: 's', over: 'final', digits: 0, read: (f) => (f.state.maxQ.value > 0 ? f.state.maxQ.t : null) },
   'maxG': { unit: 'g', over: 'history', digits: 2, read: (f) => peak(f, 'gLoad') },
-  'dvLeft': { unit: 'm/s', over: 'final', digits: 0, read: (f) => (f.telemetry.length ? finite(f.telemetry[f.telemetry.length - 1].dvRemaining) : null) },
+  'dvLeft': {
+    unit: 'm/s', over: 'final', digits: 0,
+    read: (f, at) => {
+      let last = null as (typeof f.telemetry)[number] | null;
+      for (const s of f.telemetry) if (at === undefined || s.t <= at + 1e-6) last = s;
+      return last ? finite(last.dvRemaining) : null;
+    },
+  },
   'payload': {
     unit: 'kg', over: 'final', digits: 0,
     read: (f) => f.cfg.payloadMassOverride ?? satelliteById(f.cfg.satelliteId).mass,

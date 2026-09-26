@@ -15,7 +15,7 @@ import type { Simulation } from '../../physics/simulation';
 import { missionDocument, type MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
-import { awaitingAnswers, flightStarted, gradeLesson } from '../../lessons/grader';
+import { awaitingAnswers, flightStarted, gradeLesson, regradeAnswers } from '../../lessons/grader';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
@@ -62,6 +62,8 @@ interface Active {
   /** this flight's grade has been kept in the progress */
   recorded: boolean;
   grade: LessonGrade | null;
+  /** the grade taken when the flight ended: kept, with only the answers checked again */
+  frozen: LessonGrade | null;
 }
 
 export class LessonMode implements LessonToolsHost {
@@ -153,7 +155,7 @@ export class LessonMode implements LessonToolsHost {
     const lesson = this.catalogue().find((l) => l.id === id);
     if (!lesson) return { ok: false, reason: t('lesson.notFound', { id }) };
     if (lesson.comingSoon) return { ok: false, reason: t('lesson.comingSoon') };
-    this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null };
+    this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     lessonProgress(this.progressData, id);
     this.save();
     this.host.go(lesson.mode);
@@ -171,7 +173,7 @@ export class LessonMode implements LessonToolsHost {
   private restart(): void {
     if (!this.active) return;
     const lesson = this.active.lesson;
-    this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null };
+    this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.host.loadMission(missionStateOf(lesson.mission));
     this.locks.set(lesson.locked);
     this.lastStripKey = '';
@@ -188,6 +190,8 @@ export class LessonMode implements LessonToolsHost {
   }
 
   activeLesson() {
+    // read the flight now, not at the frame loop's last tick: a launch a moment ago is a new flight
+    this.update();
     const a = this.active;
     if (!a) return null;
     return { lesson: a.lesson, grade: a.grade, hintsShown: lessonProgress(this.progressData, a.lesson.id).hintsShown, awaiting: a.grade ? awaitingAnswers(a.lesson, a.grade) : [] };
@@ -217,6 +221,7 @@ export class LessonMode implements LessonToolsHost {
       a.counted = false;
       a.recorded = false;
       a.answers = {};
+      a.frozen = null;
     }
     if (!sim) { a.grade = null; this.paintStrip(); return; }
     const started = flightStarted(sim);
@@ -225,7 +230,11 @@ export class LessonMode implements LessonToolsHost {
       lessonProgress(this.progressData, a.lesson.id).attempts++;
       this.save();
     }
-    a.grade = gradeLesson(a.lesson, sim, a.answers);
+    if (a.frozen) a.grade = regradeAnswers(a.lesson, a.frozen, a.answers);
+    else {
+      a.grade = gradeLesson(a.lesson, sim, a.answers);
+      if (started && a.grade.final) a.frozen = a.grade;
+    }
     if (started && a.grade.final && !a.recorded && awaitingAnswers(a.lesson, a.grade).length === 0) this.record(a);
     this.paintStrip();
   }
