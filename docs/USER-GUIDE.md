@@ -672,6 +672,22 @@ whatever it says. **Answers and explanations** goes through every question. Afte
 the **test after the lessons** asks different questions to the same plan, and the radar shows
 both.
 
+**Worksheets** (the third tab, `#/lessons/worksheets`, or **Worksheet** on a lesson's strip once
+its flight has ended) are printable sheets about a flight flown here — the open lesson's, or any
+mission on screen, flown to its end. A sheet has the mission, its key events, the flight's charts
+(altitude, speed, dynamic pressure, load factor, mass), questions worked from that flight — a value
+read off a chart at a time drawn for the student, the peak q and its time, the peak load, the first
+stage's burn time, the thrust-to-weight at lift-off, the first stage's ideal Δv and what the ascent
+lost of it, the period and perigee speed of the orbit reached — and questions from the placement
+test's bank in the areas you tick, with their diagrams and photographs. Type the class's names,
+one to a line, and a class code: each student gets their own numbers, drawn from the name and the
+code, so the same names and code always make the same sheets, in any language. **Download the
+worksheets** makes one file with a page for each student and no answers; **Download the answer
+key** makes a separate file with every student's answers, the tolerance that counts as right, and
+how each is worked out with the flight's own numbers. Either as HTML to print (Print → Save as PDF)
+or as a Word document to edit first. Values the questions ask for (max-Q, the lift-off T/W) are
+left out of the sheet's event table.
+
 **Keeping and handing in your work.** Progress and tests stay in this browser. **Export results**
 writes a `.orbitlab-results.json` file with your name (if you type it), each lesson's attempts,
 hints and graded flights, and your tests with their scores, sealed with a SHA-256 checksum that

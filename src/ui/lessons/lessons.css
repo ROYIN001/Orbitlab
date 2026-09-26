@@ -249,3 +249,4 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .ws-areas { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text); }
 @media (max-width: 860px) { .ws-form { grid-template-columns: 1fr 1fr; } }
 .ws-field input, .ws-field select { height: 36px; }
+.ws-field input, .ws-field textarea { background: var(--panel2); color: var(--text); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 10px; }

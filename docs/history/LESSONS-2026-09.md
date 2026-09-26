@@ -162,3 +162,53 @@ itself, so lesson 5.2 asks for the profile rather than the time. In the browser 
 
 Tests: `tests/lessons-round2.test.ts` (8: every point-mass solution and wrong flight, every
 six-DOF wrong flight) and `tests/heavy/lessons-sixdof.test.ts` (the five six-DOF solutions).
+
+## E05 — worksheets
+
+### The owner's decisions (asked 2026-09-26)
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Format | **Both**: HTML laid out for A4 (Print → Save as PDF) and a Word document (.docx). |
+| 2 | Questions | **Both**: worked from the flight's own recorded data, and drawn from the placement test's bank. |
+| 3 | Answer key | **A separate file**, so the sheets can be handed out without it. |
+| 4 | Numbers | **Drawn per student from a seed** (the name and the class code). |
+| 5 | Link to E03 | **Both**: a worksheet for the open lesson (a button on its strip), and one for any mission the teacher flies. |
+
+### What was built
+
+- `src/worksheets/` (DOM-free): the model (`types.ts`); the questions worked from the flight
+  (`flight-questions.ts`: a chart read at a drawn time, the peak q and its time, the peak load, the
+  first stage's burn time, T/W at lift-off, the first stage's ideal Δv and its losses — only where
+  the first stage burns alone, not with strap-ons — the period and perigee speed of the orbit
+  reached; each left out when the flight did not do it); bank items (`bank-items.ts`: one per skill,
+  spread over the areas asked, predict-then-observe left out, diagrams drawn with the student's
+  numbers); the builder (`build.ts`: FNV-1a seed from name, class code and source); HTML
+  (`html.ts`) and Word (`docx.ts`, WordprocessingML written directly, stored in a zip by `zip.ts`
+  — no dependency) renderers; `print-svg.ts` recolours the dark-page charts and diagrams for paper.
+- `src/ui/lessons/worksheet-view.ts`: the third tab of the lessons page; the SVGs become PNG and the
+  photographs bytes for the Word file, and data URLs for the HTML file, so both are self-contained.
+- `resampleTelemetry` moved into `flights.ts`, shared by the recorded flights and the sheets'
+  charts (`flights.json` unchanged, its test passes).
+- The dictionaries: a `// --- E05 ---` block (52 keys); `tests/i18n.test.ts`: the `ws.format.*` family.
+
+### Found on the way
+
+- The lift-off telemetry sample falls a rounding error before T+0 (−2·10⁻¹⁴ s); reading "the mass
+  at lift-off" from samples with t ≥ 0 took the next one, 1.3 t lighter. The sheets read from
+  t ≥ −10⁻⁶.
+- The event table printed max-Q's value and the lift-off T/W, the answers to two questions: both
+  events are left out of the sheet.
+- LibreOffice in this container has no Writer module, so the .docx could not be opened here. The
+  test reads the package with its own unzip and a bit-by-bit CRC, checks every part is well-formed
+  XML, the schema's element order in borders, paragraph and run properties, a paragraph in every
+  table cell, and a picture for every figure; Python's `zipfile` and `xml.dom` read the files the
+  browser saved.
+
+### Tests
+
+`tests/worksheets.test.ts` (6): every flight answer against the telemetry and events it comes from
+(and the formulas the student is asked to use); no period or MECO question for a flight that did
+not get there; the same names and code make the same sheets, other names or codes other numbers;
+no answer on a sheet, every answer in the key, no script or network in the file; prompts in
+Russian and Thai; the Word package's structure.
