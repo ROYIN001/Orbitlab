@@ -58,6 +58,23 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+/** O02: an orbit of a plan drawn beside the one flown — a transfer, the orbit after it, a target's. */
+export interface OrbitGhost {
+  /** points along it, m, ECI */
+  points: { x: number; y: number; z: number }[];
+  color: number;
+  dashed?: boolean;
+  /** the line closes on itself (an ellipse) */
+  closed?: boolean;
+}
+
+/** O02: a numbered point of a plan: a burn. */
+export interface OrbitMarker {
+  position: { x: number; y: number; z: number };
+  label: string;
+  color: number;
+}
+
 export interface OrbitViewOptions {
   /** Kepler's second law: the equal-time sectors and the sweeping radius */
   sectors: boolean;
@@ -136,6 +153,13 @@ export class OrbitView {
   private pointers = new Map<number, { x: number; y: number }>();
   private pinch = 0;
   private readonly m = new THREE.Matrix4();
+  /** O02: the plan's other orbits, its burns, and a rendezvous target */
+  private readonly ghosts = new THREE.Group();
+  private readonly markers = new THREE.Group();
+  private readonly target: THREE.Mesh;
+  private size = { w: 1, h: 1 };
+  /** the farthest point of the plan's other orbits, m: framing takes them in too */
+  private ghostReach = 0;
 
   constructor(private readonly canvas: HTMLCanvasElement, textures: Promise<EarthTextures> | null) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -186,7 +210,9 @@ export class OrbitView {
     const aries = labelSprite('♈', '#ff8a8a');
     aries.position.set(RE * 1.95, 0, 0);
     this.axes.add(aries);
-    this.scene.add(this.node, this.nodeLabel, this.nodeLine, this.sat, this.radius, this.equator, this.normal, this.axes);
+    this.target = dot(0xc3a6ff, 1);
+    this.target.visible = false;
+    this.scene.add(this.node, this.nodeLabel, this.nodeLine, this.sat, this.radius, this.equator, this.normal, this.axes, this.ghosts, this.markers, this.target);
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     canvas.addEventListener('pointermove', (e) => this.onMove(e));
@@ -211,17 +237,68 @@ export class OrbitView {
   /** Back far enough to see the whole orbit. */
   frameOrbit(): void {
     if (!this.orbit) return;
-    const ra = this.orbit.a * (1 + Math.min(this.orbit.e, 0.97)) * S;
+    const ra = Math.max(this.orbit.a * (1 + Math.min(this.orbit.e, 0.97)), this.ghostReach) * S;
     this.dist = Math.max(RE * 3.2, ra * 3.1);
     this.el = 0.45;
   }
 
   resize(w: number, h: number): void {
     if (w <= 0 || h <= 0) return;
+    this.size = { w, h };
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.ellipseMat.resolution.set(w, h);
+    this.ghosts.traverse((o) => { if (o instanceof Line2) (o.material as LineMaterial).resolution.set(w, h); });
+  }
+
+  /** O02: the plan's other orbits (none to clear them). */
+  setGhosts(ghosts: readonly OrbitGhost[]): void {
+    for (const child of [...this.ghosts.children]) {
+      const line = child as Line2;
+      line.geometry.dispose();
+      (line.material as LineMaterial).dispose();
+      this.ghosts.remove(line);
+    }
+    this.ghostReach = 0;
+    for (const g of ghosts) {
+      if (g.points.length < 2) continue;
+      for (const p of g.points) this.ghostReach = Math.max(this.ghostReach, Math.hypot(p.x, p.y, p.z));
+      const pts: number[] = [];
+      for (const p of g.points) pts.push(p.x * S, p.y * S, p.z * S);
+      if (g.closed) pts.push(g.points[0].x * S, g.points[0].y * S, g.points[0].z * S);
+      const geo = new LineGeometry();
+      geo.setPositions(pts);
+      const mat = new LineMaterial({ color: g.color, linewidth: 1.6, worldUnits: false, dashed: !!g.dashed, dashSize: 0.9, gapSize: 0.6, transparent: true, opacity: 0.85 });
+      mat.resolution.set(this.size.w, this.size.h);
+      const line = new Line2(geo, mat);
+      line.computeLineDistances();
+      this.ghosts.add(line);
+    }
+  }
+
+  /** O02: the plan's burns, numbered. */
+  setMarkers(markers: readonly OrbitMarker[]): void {
+    for (const child of [...this.markers.children]) {
+      this.markers.remove(child);
+      child.traverse((o) => {
+        if (o instanceof THREE.Mesh) { o.geometry.dispose(); (o.material as THREE.Material).dispose(); }
+        if (o instanceof THREE.Sprite) { o.material.map?.dispose(); o.material.dispose(); }
+      });
+    }
+    for (const m of markers) {
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshBasicMaterial({ color: m.color }));
+      ball.position.set(m.position.x * S, m.position.y * S, m.position.z * S);
+      const label = labelSprite(m.label, `#${m.color.toString(16).padStart(6, '0')}`);
+      label.position.copy(ball.position);
+      this.markers.add(ball, label);
+    }
+  }
+
+  /** O02: the rendezvous target, where it is now (null: none). */
+  setTarget(position: { x: number; y: number; z: number } | null): void {
+    this.target.visible = !!position;
+    if (position) this.target.position.set(position.x * S, position.y * S, position.z * S);
   }
 
   private rebuildShape(o: Orbit): void {
@@ -299,7 +376,7 @@ export class OrbitView {
     this.nodeLine.computeLineDistances();
     this.nodeLabel.position.copy(this.node.position);
     this.node.visible = this.nodeLine.visible = this.nodeLabel.visible = Math.abs(si) > 1e-6;
-    const extent = Math.max(RE * 1.6, o.a * (1 + Math.min(o.e, 0.97)) * S * 1.15);
+    const extent = Math.max(RE * 1.6, Math.max(o.a * (1 + Math.min(o.e, 0.97)), this.ghostReach) * S * 1.15);
     this.equator.scale.setScalar(extent);
     this.normal.setDirection(new THREE.Vector3(sO * si, -cO * si, ci));
     this.normal.setLength(Math.max(RE * 1.8, extent * 0.45), 0.8, 0.45);
@@ -313,6 +390,8 @@ export class OrbitView {
     const px = this.dist * 0.0065;
     for (const m of [this.perigee, this.apogee, this.node]) m.scale.setScalar(px);
     this.sat.scale.setScalar(px * 1.15);
+    this.target.scale.setScalar(px * 1.1);
+    for (const m of this.markers.children) if (m instanceof THREE.Mesh) m.scale.setScalar(px * 0.8);
   }
 
   render(): void {

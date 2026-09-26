@@ -138,6 +138,40 @@
 .pg-next[open] summary { margin-bottom: 10px; }
 .pg-next .section-items li { font-size: 12.5px; }
 
+/* ── the maneuver planner (O02) ───────────────────────────────────────────── */
+
+.pg-maneuvers .pg-preset { margin: 4px 0 8px; }
+.pg-maneuvers .pg-fields { margin-top: 6px; }
+.pg-maneuvers .pg-porkchop-btn { margin-top: 12px; }
+.pg-nodes { list-style: none; margin: 6px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.pg-node { padding: 8px 10px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel3); }
+.pg-node-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pg-node-head strong {
+  display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(239, 164, 126, 0.18); color: var(--warn); font-size: 12px;
+}
+.pg-node-head select { height: 30px; font-size: 13px; }
+.pg-node-remove { flex: none; width: 28px; height: 28px; border-radius: 6px; font-size: 18px; line-height: 1; color: var(--muted); }
+.pg-node-remove:hover { color: var(--fail); background: var(--panel2); }
+.pg-plan { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.pg-burns { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pg-burns li {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: start; gap: 8px;
+  padding: 7px 8px; border-radius: 8px; background: var(--panel2); font-size: 12.5px;
+}
+.pg-burns li.done { opacity: 0.55; }
+.pg-burn-n {
+  display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(239, 164, 126, 0.18); color: var(--warn); font-size: 12px;
+}
+.pg-burn-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.4; }
+.pg-burn-what small { color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
+.pg-burn-dv { font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.4; }
+.pg-plan .pg-dl { margin-bottom: 8px; }
+.pg-plan-next:empty { display: none; }
+.pg-plan .pg-note { margin-bottom: 4px; }
+.pg-canvas-porkchop { cursor: crosshair; }
+
 /* ── Watch: the view alone, the tour's card on it ─────────────────────────── */
 
 .orbit-pg[data-level='watch'] .pg-grid { grid-template-columns: minmax(0, 1fr); padding: 0; gap: 0; }
@@ -183,7 +217,10 @@
 @media (max-width: 860px) {
   .orbit-pg { overflow-y: auto; }
   .pg-grid { display: flex; flex-direction: column; height: auto; min-height: 100%; padding: 8px; gap: 8px; }
-  .orbit-pg .pg-stage { order: -1; flex: none; position: static; height: auto; min-height: 0; }
+  .pg-stage { order: -1; flex: none; }
+  /* as specific as the tablet's rules above, which would otherwise win: nothing sticks, and the column stretches */
+  .orbit-pg:not([data-level='watch']) .pg-grid { align-items: stretch; }
+  .orbit-pg:not([data-level='watch']) .pg-stage { position: static; height: auto; min-height: 0; }
   .pg-area { flex: none; display: flex; flex-direction: column; }
   .pg-views { position: relative; height: min(58vh, 480px); }
   .pg-panel { overflow: visible; max-height: none; }

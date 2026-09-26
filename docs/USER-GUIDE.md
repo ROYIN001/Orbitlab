@@ -94,9 +94,9 @@ Space pauses and resumes.
 
 The three levels:
 
-- **Watch**: a tour in six steps, from Newton's cannon to the space station, a Molniya orbit, a
-  geostationary satellite standing over 78.5° E (the slot Thaicom's satellites use) and a
-  sun-synchronous orbit. **Next** and **Back** move between the steps; **Try it yourself** opens
+- **Watch**: a tour in seven steps, from Newton's cannon to the space station, Hohmann's
+  transfer to geostationary height, a Molniya orbit, a geostationary satellite standing over
+  78.5° E (the slot Thaicom's satellites use) and a sun-synchronous orbit. **Next** and **Back** move between the steps; **Try it yourself** opens
   Explore on the orbit on screen.
 - **Explore**: choose an orbit from the list, or set its perigee and apogee altitudes, its
   inclination i, its node Ω and its argument of perigee ω with the sliders or the number boxes.
@@ -110,6 +110,31 @@ The three levels:
   node. **Repeating ground track** finds the circular orbit whose track repeats after N
   revolutions in D days. 143 revolutions in 10 days, sun-synchronous, gives 786 km: Sentinel-2's
   orbit.
+
+**Maneuvers** (Explore and Engineer) plans a change of orbit from the one set above. Choose one
+and its numbers, and the plan appears on the right: each burn, where and when it is made
+(T+ on the clock) and how big it is, the total Δv, the transfer time and the orbit it ends on.
+The 3-D view draws the orbits of the plan as dashed lines and numbers the burns. Press play,
+and the satellite flies the plan, burn by burn.
+
+- **Hohmann transfer** and **Bi-elliptic transfer** go to a circle at the height you give.
+  The bi-elliptic plan also says what Hohmann would have cost.
+- **Plane change** turns the orbit's plane to the inclination you give, at the node farther
+  from the Earth.
+- **Circularise at apogee (GTO → GEO)** rounds the orbit off at apogee and turns it towards
+  the equator, in one burn or split over several apogees.
+- **Phasing** moves the satellite along its own orbit in a few revolutions.
+- **Deorbit burn** brings the perigee down, and says when the satellite reaches 100 km.
+- **Low-thrust spiral** is an electric thruster's slow climb, Edelbaum's way.
+- **Your own burns** takes up to five burns, each at a point of the orbit (now, perigee,
+  apogee, a node, or after a set time), with prograde, normal and radial parts.
+
+**Plan from now** starts the plan at the time on the clock, and **Carry on from the new orbit**
+makes the orbit at the end the playground's. At the Engineer level, **Rendezvous (Lambert)**
+plans a transfer to a satellite in your orbit's plane, at a height and a phase you choose. The
+**Porkchop** tab plots the total Δv of every departure time and time of flight: the white ring
+is the cheapest, the red one the transfer planned. Click a point to plan it instead. The tour
+at Watch has a step for Hohmann's transfer.
 
 After **Continue in Orbit** from a flight, the list says **From your launch** and the playground
 starts from where the flight was. **Orbit lifetime** runs the long-term analysis on it. At Watch,

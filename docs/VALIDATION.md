@@ -20,6 +20,7 @@ Status on 2026-09-25:
 | Soyuz-2.1a | Soyuz MS-25 as flown (RussianSpaceWeb, quoting Roskosmos) | Compared in both flight models (§3) |
 | Electron, Ariane 64 | Rocket Lab press kit, Arianespace launch kit (planned timelines) | Compared in both flight models (§3) |
 | Orbit playground (O01) | Published orbits: geostationary, GPS, Landsat WRS-2, Sentinel-2; closed forms | Kepler and first-order J2 held to them (§4), 2026-09-26 |
+| Maneuver planner (O02) | Vallado's and Curtis's worked examples; closed forms | Transfers and Lambert held to them (§4), 2026-09-26 |
 
 ## 1. Method
 
@@ -581,10 +582,49 @@ closed forms and to the published figures of real orbits, in `tests/kepler.test.
   - the geostationary satellite "over 78.5° E", holding within 0.05° for three days;
   - the sun-synchronous orbit "10:30 heading north", holding within a minute for 180 days.
 
+### The maneuver planner (O02)
+
+The planner (`src/orbit/maneuvers.ts`) builds every plan the way it would be flown. The orbit
+is carried to the burn, the burn is added to the velocity there, and the new orbit is read off
+the state. The closed forms sit beside the plans. The tests hold each plan to its closed form,
+and both to worked examples. Burns are impulsive: no finite-burn or gravity losses.
+`tests/maneuvers.test.ts` and `tests/maneuver-setup.test.ts` hold them.
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| Hohmann, 191.344 11 → 35 781.348 57 km | Vallado Example 6-1: Δv 2.457 038 + 1.478 187 = 3.935 224 km/s, 5.256 713 h | same, as closed form and as a plan flown | 10⁻⁵ km/s, 10⁻⁴ h |
+| bi-elliptic, 191.344 11 km via 503 873 km to 376 310 km | Vallado Example 6-2: Δv_a 3.156 233, Δv_b 0.677 358 km/s, 593.919 h | same | 10⁻⁵ km/s, 0.1 h |
+| where bi-elliptic beats Hohmann | radius ratio 11.94 with the far point at infinity; 15.58 for any far point | the crossings fall between 11.8 and 12.1, and between 15 and 16 | — |
+| Lambert, universal variables | Vallado Example 7-5; Curtis Example 5.2 | both velocities of each | 10⁻⁴ km/s, 10⁻³ km/s |
+| Lambert round trip, short and long way | Kepler propagation of the solution | lands on r₂ | 1 m, 1 mm/s |
+| plane change at a node | 2v sin(Δi/2) | same; burn at the equator, shape unchanged | 10⁻⁹ relative |
+| GTO 250 × 35 786 km at 28.5° → GEO, one burn | law of cosines: 1.833 km/s | same | 10⁻⁹ relative |
+| the same in three apogee burns | adds up to the one burn | same; perigee rising burn by burn, a revolution apart | 10⁻⁹ relative |
+| phasing 20° in 3 revolutions | meets a target 20° ahead | within 1 m and 1 mm/s | — |
+| deorbit from 400 km to a 50 km perigee | vis-viva | Δv; reaches 100 km at the time given | 10⁻⁶ m/s, 1 m |
+| Edelbaum's spiral | Δv = √(v₀² + v₁² − 2v₀v₁ cos(πΔi/2)); coplanar |v₀ − v₁| | reaches v₁ and Δi exactly as the Δv runs out | 10⁻⁹ relative |
+| a low-thrust plane change at constant radius | π/2 times the impulsive one | ratio π/2 | 10⁻³ |
+| porkchop between coplanar circles, 400 and 800 km | Hohmann is the cheapest two-burn transfer | grid minimum ≥ Hohmann, within 25 % of it | — |
+| a hyperbola (a transfer fast enough to escape) | two-body RK4, half-second steps | position, velocity | 1 m, 1 mm/s |
+
+**Findings.**
+
+- `propagateKepler` in src/physics/orbital.ts carries a hyperbola with a coarse fixed-step
+  integration: 5 km off after ten minutes. The playground carries hyperbolas with hyperbolic
+  Kepler instead, held to RK4. The launch simulator's function is left as it is: it does not
+  meet hyperbolas in flight.
+- `elementsFromState` leaves ω at 0 for an equatorial ellipse and measures ν from the perigee,
+  so the elements do not give the state back. The playground's `orbitFromState` puts the
+  perigee's longitude into ω instead, which the GTO→GEO plan needs after its plane change.
+- A rendezvous is planned against a target in the chaser's own plane, at a chosen height and
+  phase. A target in another plane (an ISS-like orbit from a Starlink-like one) costs over
+  12 km/s whatever the timing, which teaches nothing about rendezvous: a real one starts with
+  the launch into the target's plane.
+
 ## 5. Re-running
 
 ```sh
-npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts                # the orbit playground, ~2 s
+npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts   # the Orbit section, ~3 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~3 min

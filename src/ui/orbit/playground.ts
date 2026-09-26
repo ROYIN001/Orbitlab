@@ -18,22 +18,29 @@
  * Launch section carries on underneath.
  */
 import { t, getLang } from '../../i18n';
-import { DEG, MU_EARTH, R_EARTH, RAD } from '../../physics/constants';
+import { MU_EARTH, R_EARTH, RAD } from '../../physics/constants';
 import { julianDate } from '../../physics/orbital';
 import type { EarthTextures } from '../../render/scene';
 import { OrbitView } from '../../render/orbit-view';
 import { route, type AppLevel, type AppRoute } from '../app-mode';
 import { SECTION_PLANS, BUILT_ITEMS } from '../section-plan';
-import { formatDuration } from '../lifetime';
-import { hitsEarth, nodeLocalTime, orbitFacts, stateAt, type Orbit } from '../../orbit/kepler';
+import { hitsEarth, nodeLocalTime, orbitFacts, orbitFromState, stateAt, type Orbit, type OrbitState } from '../../orbit/kepler';
 import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
 import {
-  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, SLIDER_STEPS, handoffOrbit, linearScale, logScale,
+  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffOrbit, linearScale, logScale, orbitPath,
   repeatGroundTrack, tourSetup, withApsis, type SliderScale,
 } from '../../orbit/playground-model';
+import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
+import {
+  defaultSettings, makePlan, porkchopAxes, porkchopMinimum, rendezvousTarget, type ManeuverSettings, type PlannerKind,
+} from '../../orbit/maneuver-setup';
+import type { OrbitGhost, OrbitMarker } from '../../render/orbit-view';
+import { maneuverControls, planTable, type ManeuverPanelHost } from './maneuver-panel';
+import { PorkchopView, type PorkchopData } from './porkchop-view';
 import type { OrbitHandoff } from '../../orbit/handoff';
 import { GroundTrackView } from './ground-track';
+import { Field, altKm, button, clockText, deg, el, hhmm, km, num, plain, sci, span } from './dom';
 import { CannonView } from './cannon-view';
 
 export interface PlaygroundHost {
@@ -46,125 +53,26 @@ export interface PlaygroundHost {
   mapUrl: string;
 }
 
-const VIEWS: readonly TourView[] = ['3d', 'track', 'cannon'];
-const VIEW_GLYPH: Record<TourView, string> = { '3d': '◍', track: '⌇', cannon: '⤻' };
-const VIEW_KEY: Record<TourView, string> = { '3d': 'pg.view.3d', track: 'pg.view.track', cannon: 'pg.view.cannon' };
+/** The playground's views: the tour's three, and the Engineer's porkchop plot (O02). */
+type PgView = TourView | 'porkchop';
+const VIEWS: readonly PgView[] = ['3d', 'track', 'cannon', 'porkchop'];
+const VIEW_GLYPH: Record<PgView, string> = { '3d': '◍', track: '⌇', cannon: '⤻', porkchop: '▦' };
+const VIEW_KEY: Record<PgView, string> = { '3d': 'pg.view.3d', track: 'pg.view.track', cannon: 'pg.view.cannon', porkchop: 'pg.view.porkchop' };
+const VIEW_LABEL: Record<PgView, string> = {
+  '3d': 'pg.view.3dLabel', track: 'pg.view.trackLabel', cannon: 'pg.view.cannonLabel', porkchop: 'pg.view.porkchopLabel',
+};
+/** O02's colours: the orbit before, a transfer, the orbit after, a target; and the burns */
+const PLAN_COLORS = { start: 0x5f8f86, transfer: 0x6ec8ff, final: 0x7ddba0, target: 0xc3a6ff, burn: 0xefa47e };
 /** the preset select's entries that are not presets */
 const CUSTOM = 'custom', HANDOFF = 'handoff';
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function button(cls: string, text: string, onClick: () => void): HTMLButtonElement {
-  const b = el('button', cls, text);
-  b.type = 'button';
-  b.addEventListener('click', onClick);
-  return b;
-}
-
-const num = (v: number, d = 0): string => v.toLocaleString(getLang(), { minimumFractionDigits: d, maximumFractionDigits: d });
-const SUP: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
-/** 9.904 × 10⁻⁵ */
-function sci(v: number, d = 3): string {
-  if (v === 0) return '0';
-  const exp = Math.floor(Math.log10(Math.abs(v)));
-  return `${num(v / 10 ** exp, d)} × 10${String(exp).split('').map((c) => SUP[c] ?? c).join('')}`;
-}
-/** hours and minutes, 13:05 */
-const hhmm = (hours: number): string => {
-  const m = Math.round(hours * 60) % 1440;
-  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-};
-/** a span of orbit time: 1 h 32 min, 23 h 56 min, 58.3 s */
-function span(seconds: number): string {
-  if (seconds < 120) return t('pg.unit.s', { n: num(seconds, 1) });
-  const m = Math.round(seconds / 60);
-  if (m < 60) return t('pg.unit.min', { n: num(m) });
-  if (m < 48 * 60) return t('pg.unit.hmin', { h: num(Math.floor(m / 60)), m: num(m % 60) });
-  return formatDuration(seconds);
-}
-/** the playground clock: 2 d 03:14:15 */
-function clockText(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d ? `${t('pg.unit.days', { n: d })} ` : ''}${p(h)}:${p(m)}:${p(sec)}`;
-}
-
-/** A labelled slider with a number box beside it, both saying the same value. */
-class Field {
-  readonly root: HTMLElement;
-  private readonly range: HTMLInputElement;
-  private readonly box: HTMLInputElement;
-  private value = 0;
-
-  constructor(
-    label: string, private readonly unit: string, private readonly scale: SliderScale,
-    /** from SI to what is shown, and back */
-    private readonly show: (v: number) => number, private readonly read: (n: number) => number,
-    private readonly digits: number, limits: { min: number; max: number },
-    onInput: (v: number) => void,
-  ) {
-    this.root = el('div', 'pg-field');
-    const head = el('label', 'pg-field-head');
-    const name = el('span', 'pg-field-name', label);
-    this.box = el('input', 'pg-field-box');
-    this.box.type = 'number';
-    this.box.step = String(10 ** -digits);
-    this.box.min = String(show(limits.min));
-    this.box.max = String(show(limits.max));
-    this.box.inputMode = 'decimal';
-    const unitEl = el('span', 'pg-field-unit', unit);
-    head.append(name, this.box, unitEl);
-    this.range = el('input', 'pg-field-range');
-    this.range.type = 'range';
-    this.range.min = '0';
-    this.range.max = String(SLIDER_STEPS);
-    this.range.step = '1';
-    this.range.setAttribute('aria-label', label);
-    this.range.addEventListener('input', () => {
-      this.value = this.scale.toValue(Number(this.range.value));
-      this.box.value = this.format(this.value);
-      onInput(this.value);
-    });
-    this.box.addEventListener('change', () => {
-      const n = Number(this.box.value.replace(',', '.'));
-      if (!Number.isFinite(n)) { this.box.value = this.format(this.value); return; }
-      const v = Math.min(limits.max, Math.max(limits.min, this.read(n)));
-      this.set(v);
-      onInput(v);
-    });
-    this.root.append(head, this.range);
-  }
-
-  private format(v: number): string {
-    return this.show(v).toFixed(this.digits);
-  }
-
-  /** Show a value: the number box says it exactly, the slider as near as its range allows. */
-  set(v: number): void {
-    this.value = v;
-    this.range.value = String(this.scale.toPosition(v));
-    this.box.value = this.format(v);
-    this.range.setAttribute('aria-valuetext', `${this.format(v)} ${this.unit}`);
-  }
-}
-
-const km = { show: (v: number) => v / 1000, read: (n: number) => n * 1000 };
-const altKm = { show: (v: number) => (v - R_EARTH) / 1000, read: (n: number) => R_EARTH + n * 1000 };
-const deg = { show: (v: number) => v * RAD, read: (n: number) => n * DEG };
-const plain = { show: (v: number) => v, read: (n: number) => n };
 const angle = { min: 0, max: 2 * Math.PI };
 const incl = { min: 0, max: Math.PI };
 
 export class OrbitPlayground {
   private level: AppLevel = 'explore';
   private visible = false;
-  private view: TourView = '3d';
+  private view: PgView = '3d';
   private jd0 = julianDate(new Date());
   private orbit: Orbit = presetOrbit(PG_DEFAULT_PRESET, this.jd0);
   private presetId: string = PG_DEFAULT_PRESET;
@@ -186,6 +94,18 @@ export class OrbitPlayground {
   private orbitViewFailed = false;
   /** Engineer: the repeat-ground-track tool's inputs and its last answer */
   private rep = { revs: 143, days: 10, sso: true, open: false, note: '', warn: false };
+  /** O02: the maneuver chosen, when its plan starts (s after the orbit's epoch), and the plan it makes */
+  private maneuver: ManeuverSettings | null = null;
+  private planStart = 0;
+  private plan: Plan | PlanError | null = null;
+  /** O02: a rendezvous's target, and its porkchop plot (worked out when wanted) */
+  private target: Orbit | null = null;
+  private porkchopData: PorkchopData | null = null;
+  private porkchopKey = '';
+  private readonly porkchopView: PorkchopView;
+  /** the plan's segment on screen, to redraw the facts when a burn is made */
+  private shownSegment = 0;
+  private spiralFactsTick = 0;
   private readonly track: GroundTrackView;
   private readonly cannonView: CannonView;
   private raf = 0;
@@ -198,7 +118,7 @@ export class OrbitPlayground {
   private readonly stage = el('div', 'pg-stage');
   private readonly tabs = el('div', 'pg-tabs');
   private readonly views = el('div', 'pg-views');
-  private readonly canvases: Record<TourView, HTMLCanvasElement>;
+  private readonly canvases: Record<PgView, HTMLCanvasElement>;
   private readonly hint = el('p', 'pg-hint');
   private readonly tour = el('div', 'pg-tour');
   private readonly timebar = el('div', 'pg-timebar');
@@ -217,11 +137,13 @@ export class OrbitPlayground {
       '3d': el('canvas', 'pg-canvas pg-canvas-3d'),
       track: el('canvas', 'pg-canvas pg-canvas-track'),
       cannon: el('canvas', 'pg-canvas pg-canvas-cannon'),
+      porkchop: el('canvas', 'pg-canvas pg-canvas-porkchop'),
     };
     this.canvases['3d'].tabIndex = 0;
     this.track = new GroundTrackView(this.canvases.track, host.mapUrl);
     this.cannonView = new CannonView(this.canvases.cannon);
     this.cannonView.aim(this.cannon.altitude, this.cannon.elevation);
+    this.porkchopView = new PorkchopView(this.canvases.porkchop, (dep, tof) => this.pickTransfer(dep, tof));
     this.tabs.setAttribute('role', 'tablist');
     this.views.append(...VIEWS.map((v) => this.canvases[v]), this.hint);
     // the tour card is over the view on a wide screen and under it on a phone (playground.css)
@@ -248,6 +170,9 @@ export class OrbitPlayground {
   show(level: AppLevel): void {
     const entering = !this.visible || level !== this.level;
     if (level === 'watch' && (entering || this.level !== 'watch')) this.applyTourStep();
+    if (level !== 'engineer' && this.view === 'porkchop') this.view = '3d';
+    // Lambert's rendezvous is the Engineer's: the other levels have no control to clear it with
+    if (level !== 'engineer' && this.maneuver?.kind === 'rendezvous') { this.maneuver = null; this.replan(); }
     this.level = level;
     this.visible = true;
     this.root.dataset.level = level;
@@ -292,7 +217,9 @@ export class OrbitPlayground {
     this.jd0 = this.orbit.jd0;
     this.presetId = HANDOFF;
     this.time = 0;
+    this.planStart = 0;
     if (this.view === 'cannon') this.view = '3d';
+    this.replan();
   }
 
   // ─── the model ────────────────────────────────────────────────────────────
@@ -300,6 +227,7 @@ export class OrbitPlayground {
   private setOrbit(next: Orbit, presetId: string = CUSTOM): void {
     this.orbit = next;
     this.presetId = presetId;
+    this.replan();
     this.syncFields();
     this.renderFacts();
     this.renderPresetSelect();
@@ -310,6 +238,7 @@ export class OrbitPlayground {
     if (id === CUSTOM) return;
     this.jd0 = julianDate(new Date());
     this.time = 0;
+    this.planStart = 0;
     // a sun-synchronous orbit is one only with the Earth's bulge turning it
     if (id === 'sso') this.j2 = true;
     this.setOrbit(presetOrbit(id, this.jd0), id);
@@ -317,9 +246,10 @@ export class OrbitPlayground {
     this.render();
   }
 
-  private setView(view: TourView): void {
+  private setView(view: PgView): void {
     if (view === this.view) return;
     this.view = view;
+    if (view === 'porkchop') this.refreshPorkchop();
     this.render();
     this.resize();
   }
@@ -336,6 +266,7 @@ export class OrbitPlayground {
 
   private applyTourStep(): void {
     if (this.tourIndex === -1 && this.handoff) {
+      this.maneuver = null;
       this.loadHandoff();
       this.warp = PG_DEFAULT_WARP;
       this.playing = true;
@@ -355,8 +286,11 @@ export class OrbitPlayground {
       this.jd0 = setup.orbit.jd0;
       this.presetId = step.preset ?? CUSTOM;
       this.time = 0;
-      this.orbitView?.setOrbit(this.orbit, true);
     }
+    this.maneuver = setup.maneuver && setup.orbit ? { ...defaultSettings(setup.maneuver.kind, setup.orbit), ...setup.maneuver } : null;
+    this.planStart = 0;
+    this.replan();
+    if (setup.orbit) this.orbitView?.setOrbit(this.orbit, true);
     if (setup.cannon) {
       this.cannon = { speed: setup.cannon.speed, altitude: setup.cannon.altitude, elevation: 0 };
       this.cannonView.aim(this.cannon.altitude, 0);
@@ -394,18 +328,28 @@ export class OrbitPlayground {
       if (this.view === 'cannon') this.cannonClock += dt * this.warp;
       else this.time += dt * this.warp;
     }
+    const flown = this.flownAt(this.time);
     if (this.view === '3d') {
       const v = this.orbitView;
       if (v) {
         v.setOptions({ sectors: this.sectors, engineer: this.level === 'engineer', j2: this.j2 });
-        v.setOrbit(this.orbit);
-        v.update(this.time);
+        v.setOrbit(flown.orbit);
+        v.update(flown.local);
+        v.setTarget(this.target ? stateAt(this.target, this.time, this.j2).r : null);
         v.render();
       }
     } else if (this.view === 'track') {
-      this.track.draw(this.orbit, this.time, this.j2);
+      this.track.draw((tt) => this.stateNow(tt), this.time, this.orbit.jd0 + this.time / 86400, orbitFacts(flown.orbit, this.j2).nodalPeriod);
+    } else if (this.view === 'porkchop') {
+      this.porkchopView.draw();
     } else {
       this.cannonView.draw(this.cannonClock, dt);
+    }
+    // a burn made, or the spiral wound on: what the orbit is has changed
+    if (flown.index !== this.shownSegment || (flown.index < 0 && (this.spiralFactsTick -= dt) <= 0)) {
+      this.shownSegment = flown.index;
+      this.spiralFactsTick = 1;
+      if (this.view !== 'cannon') this.renderFacts();
     }
     this.liveTick -= dt;
     if (this.liveTick <= 0) {
@@ -429,6 +373,7 @@ export class OrbitPlayground {
     if (this.orbitView || this.orbitViewFailed) return;
     try {
       this.orbitView = new OrbitView(this.canvases['3d'], this.host.textures());
+      this.syncGhosts();
       this.orbitView.setOrbit(this.orbit, true);
       this.resize();
     } catch {
@@ -449,6 +394,152 @@ export class OrbitPlayground {
     this.setPlaying(!this.playing);
   }
 
+  // ─── the maneuver planner (O02) ───────────────────────────────────────────
+
+  private get activePlan(): Plan | null {
+    return this.plan && isPlan(this.plan) ? this.plan : null;
+  }
+
+  /** Where the satellite is at `t`: along the plan when there is one. */
+  private stateNow(t: number): OrbitState {
+    const p = this.activePlan;
+    return p ? stateOnPlan(p, t, this.j2) : stateAt(this.orbit, t, this.j2);
+  }
+
+  /** The orbit flown at `t`, the time along it, and which of the plan's segments it is (−1 while spiralling). */
+  private flownAt(t: number): { orbit: Orbit; local: number; index: number } {
+    const p = this.activePlan;
+    if (!p) return { orbit: this.orbit, local: t, index: 0 };
+    const sp = p.spiral;
+    if (sp && t > sp.t0 && t < sp.t0 + sp.duration) {
+      const s = stateOnPlan(p, t, this.j2);
+      return { orbit: orbitFromState(s.r, s.v, this.orbit.jd0 + t / 86400), local: 0, index: -1 };
+    }
+    let index = 0;
+    p.segments.forEach((seg, k) => { if (seg.t0 <= t) index = k; });
+    return { orbit: p.segments[index].orbit, local: t - p.segments[index].t0, index };
+  }
+
+  /** Plan again from the settings, the start orbit and the plan's start time. */
+  private replan(): void {
+    if (!this.maneuver) {
+      this.plan = null;
+      this.target = null;
+    } else {
+      this.plan = makePlan(this.maneuver, this.orbit, this.planStart, this.j2);
+      this.target = this.maneuver.kind === 'rendezvous' ? rendezvousTarget(this.maneuver, this.orbit) : null;
+    }
+    this.shownSegment = this.flownAt(this.time).index;
+    this.syncGhosts();
+    // the plot is some thousands of Lambert solutions: worked out again only while it is on screen
+    if (this.view === 'porkchop') this.refreshPorkchop();
+    else this.porkchopData = null;
+  }
+
+  /** The plan's other orbits and its burns, in the 3-D view. */
+  private syncGhosts(): void {
+    const v = this.orbitView;
+    if (!v) return;
+    const ghosts: OrbitGhost[] = [], markers: OrbitMarker[] = [];
+    const p = this.activePlan;
+    if (p) {
+      const last = p.segments.length - 1;
+      p.segments.forEach((seg, k) => {
+        const color = k === 0 ? PLAN_COLORS.start : k === last ? PLAN_COLORS.final : PLAN_COLORS.transfer;
+        ghosts.push({ points: orbitPath(seg.orbit), color, dashed: k > 0, closed: seg.orbit.e < 1 });
+      });
+      if (p.spiral) {
+        // the spiral as the circles it winds through
+        for (let k = 1; k < 8; k++) {
+          const s = stateOnPlan(p, p.spiral.t0 + (k / 8) * p.spiral.duration, this.j2);
+          ghosts.push({ points: orbitPath(orbitFromState(s.r, s.v, this.orbit.jd0), 128), color: PLAN_COLORS.transfer, dashed: true, closed: true });
+        }
+      }
+      p.burns.forEach((b, k) => markers.push({ position: stateOnPlan(p, b.t, this.j2).r, label: String(k + 1), color: PLAN_COLORS.burn }));
+    }
+    if (this.target) ghosts.push({ points: orbitPath(this.target), color: PLAN_COLORS.target, dashed: true, closed: true });
+    v.setGhosts(ghosts);
+    v.setMarkers(markers);
+  }
+
+  /** Work the porkchop plot out again when its inputs have changed (a rendezvous only). */
+  private refreshPorkchop(): void {
+    const m = this.maneuver;
+    if (!m || m.kind !== 'rendezvous' || !this.target) {
+      this.porkchopData = null;
+      this.porkchopView.set(null);
+      return;
+    }
+    const key = JSON.stringify([this.orbit, this.target, this.planStart, this.j2]);
+    if (key !== this.porkchopKey || !this.porkchopData) {
+      const { deps, tofs } = porkchopAxes(this.orbit, this.target);
+      const grid = porkchop(this.orbit, this.target, deps.map((d) => this.planStart + d), tofs, this.j2);
+      this.porkchopData = { deps, tofs, grid, chosen: null };
+      this.porkchopKey = key;
+    }
+    this.porkchopData = { ...this.porkchopData, chosen: { dep: m.dep, tof: m.tof } };
+    this.porkchopView.set(this.porkchopData);
+  }
+
+  /** A point of the porkchop plot chosen: plan that transfer. */
+  private pickTransfer(dep: number, tof: number): void {
+    if (!this.maneuver) return;
+    this.maneuver = { ...this.maneuver, dep, tof };
+    this.replan();
+    this.renderControls();
+    this.renderFacts();
+  }
+
+  private readonly maneuverHost: ManeuverPanelHost = {
+    level: () => this.level,
+    settings: () => this.maneuver,
+    choose: (kind: PlannerKind | null) => {
+      this.maneuver = kind ? defaultSettings(kind, this.orbit) : null;
+      this.planStart = this.time;
+      if (kind === 'rendezvous') {
+        // start from the cheapest transfer on the plot
+        this.replan();
+        this.refreshPorkchop();
+        const best = this.porkchopData ? porkchopMinimum(this.porkchopData.grid) : null;
+        if (best && this.porkchopData && this.maneuver) this.maneuver = { ...this.maneuver, dep: this.porkchopData.deps[best.i], tof: this.porkchopData.tofs[best.j] };
+      }
+      this.replan();
+      // stand back far enough to see the whole plan
+      this.orbitView?.frameOrbit();
+      this.renderControls();
+      this.renderFacts();
+    },
+    change: (patch: Partial<ManeuverSettings>) => {
+      const before = this.maneuver;
+      if (!before) return;
+      this.maneuver = { ...before, ...patch };
+      this.replan();
+      this.renderFacts();
+      // a burn added, taken away or moved to another kind of point changes which fields there are
+      const nodes = patch.nodes;
+      if (nodes && (nodes.length !== before.nodes.length || nodes.some((n, k) => n.point !== before.nodes[k]?.point))) this.renderControls();
+    },
+    replanNow: () => {
+      this.planStart = this.time;
+      this.replan();
+      this.renderFacts();
+    },
+    adopt: () => {
+      const p = this.activePlan;
+      if (!p) return;
+      const at = Math.max(this.time, p.arrival);
+      const s = this.stateNow(at);
+      this.maneuver = null;
+      this.time = 0;
+      this.planStart = 0;
+      this.setOrbit(orbitFromState(s.r, s.v, this.orbit.jd0 + at / 86400));
+      this.jd0 = this.orbit.jd0;
+      this.orbitView?.setOrbit(this.orbit, true);
+      this.render();
+    },
+    showPorkchop: () => this.setView('porkchop'),
+  };
+
   // ─── the page ─────────────────────────────────────────────────────────────
 
   private render(): void {
@@ -457,14 +548,16 @@ export class OrbitPlayground {
     this.root.setAttribute('aria-label', t('pg.title'));
     if (this.view === '3d') this.ensureOrbitView();
     this.renderTabs();
-    for (const v of VIEWS) this.canvases[v].hidden = v !== this.view || (v === '3d' && this.orbitViewFailed);
-    this.canvases['3d'].setAttribute('aria-label', t('pg.view.3dLabel'));
-    this.canvases.track.setAttribute('aria-label', t('pg.view.trackLabel'));
-    this.canvases.cannon.setAttribute('aria-label', t('pg.view.cannonLabel'));
-    for (const c of Object.values(this.canvases)) c.setAttribute('role', 'img');
-    this.hint.textContent = this.view === '3d' ? (this.orbitViewFailed ? t('pg.webgl') : t('pg.hint.3d')) : '';
-    this.hint.classList.toggle('warn', this.view === '3d' && this.orbitViewFailed);
-    this.hint.hidden = this.view !== '3d';
+    for (const v of VIEWS) {
+      this.canvases[v].hidden = v !== this.view || (v === '3d' && this.orbitViewFailed);
+      this.canvases[v].setAttribute('aria-label', t(VIEW_LABEL[v]));
+      this.canvases[v].setAttribute('role', 'img');
+    }
+    const noPorkchop = this.view === 'porkchop' && !this.porkchopData;
+    // over the porkchop plot the hint says only why it is empty; what it shows is said beside the rendezvous's settings
+    this.hint.textContent = this.view === '3d' ? (this.orbitViewFailed ? t('pg.webgl') : t('pg.hint.3d')) : noPorkchop ? t('pc.none') : '';
+    this.hint.classList.toggle('warn', (this.view === '3d' && this.orbitViewFailed) || noPorkchop);
+    this.hint.hidden = this.view !== '3d' && !noPorkchop;
     this.renderControls();
     this.renderFacts();
     this.renderTour();
@@ -473,7 +566,7 @@ export class OrbitPlayground {
 
   private renderTabs(): void {
     this.tabs.setAttribute('aria-label', t('pg.views'));
-    this.tabs.replaceChildren(...VIEWS.map((v) => {
+    this.tabs.replaceChildren(...VIEWS.filter((v) => v !== 'porkchop' || this.level === 'engineer').map((v) => {
       const b = button('pg-tab', '', () => this.setView(v));
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', String(v === this.view));
@@ -569,10 +662,11 @@ export class OrbitPlayground {
 
     const toggles = el('div', 'pg-toggles');
     toggles.append(
-      this.toggle(t('pg.j2'), this.j2, (on) => { this.j2 = on; this.renderFacts(); }, t('pg.j2.note')),
+      this.toggle(t('pg.j2'), this.j2, (on) => { this.j2 = on; this.replan(); this.renderFacts(); }, t('pg.j2.note')),
       this.toggle(t('pg.sectors'), this.sectors, (on) => { this.sectors = on; }, t('pg.sectors.note')),
     );
     box.append(toggles);
+    box.append(maneuverControls(this.maneuverHost));
     if (engineer) box.append(this.repeatTool());
     box.append(this.handoffBlock());
   }
@@ -708,7 +802,8 @@ export class OrbitPlayground {
     // the Watch level has no side panels: its readouts are the tour card's
     if (this.level === 'watch') return;
     if (this.view === 'cannon') { this.renderCannonFacts(box); this.appendComingNext(box); return; }
-    const o = this.orbit, f = orbitFacts(o, this.j2), engineer = this.level === 'engineer';
+    if (this.plan && this.maneuver) box.append(planTable(this.maneuverHost, this.plan, this.maneuver, this.time));
+    const o = this.flownAt(this.time).orbit, f = orbitFacts(o, this.j2), engineer = this.level === 'engineer';
     const km = t('u.km'), kms = t('u.kms');
     box.append(el('h2', 'pg-facts-title', t('pg.facts')));
     if (hitsEarth(o)) box.append(el('p', 'pg-warn', t('pg.crash')));
@@ -825,7 +920,7 @@ export class OrbitPlayground {
       };
       this.live.alt = stat(t('pg.f.altNow'));
       this.live.speed = stat(t('pg.f.speedNow'));
-      stat(t('pg.f.period')).textContent = span(orbitFacts(this.orbit, this.j2).period);
+      stat(t('pg.f.period')).textContent = span(orbitFacts(this.flownAt(this.time).orbit, this.j2).period);
       box.append(stats);
     }
     const nav = el('div', 'pg-tour-nav');
@@ -845,8 +940,14 @@ export class OrbitPlayground {
       this.date.textContent = '';
       return;
     }
-    const s = stateAt(this.orbit, this.time, this.j2);
+    const s = this.stateNow(this.time);
     const L = this.live;
+    const p = this.activePlan;
+    const nextNote = this.facts.querySelector('.pg-plan-next');
+    if (p && nextNote) {
+      const next = p.burns.find((b) => b.t > this.time);
+      nextNote.textContent = next ? t('mv.next', { time: span(next.t - this.time) }) : p.arrival <= this.time ? t('mv.done') : '';
+    }
     if (L.alt) L.alt.textContent = `${num(s.alt / 1000)} ${t('u.km')}`;
     if (L.speed) L.speed.textContent = `${num(Math.hypot(s.v.x, s.v.y, s.v.z) / 1000, 3)} ${t('u.kms')}`;
     if (L.nu) L.nu.textContent = `${num(s.nu * RAD, 1)}°`;

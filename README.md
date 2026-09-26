@@ -149,14 +149,18 @@ mission link (`?m=…`) always opens in the launch workspace. **Orbit** opens on
 (roadmap O01, `src/ui/orbit/`): an orbit by its elements, drawn in 3-D about the turning Earth,
 as its ground track, and as Newton's cannon:
 
-- **Watch** is a six-step narrated tour.
+- **Watch** is a seven-step narrated tour.
 - **Explore** sets the orbit by its perigee, apogee, i, Ω and ω, with Kepler's three laws in the
   orbit's own numbers.
 - **Engineer** sets the classical elements, shows J2's drift of the node and the perigee, and
   designs a repeating ground track.
 
-The model is Kepler plus first-order J2, held to the Landsat and Sentinel-2 orbits
-([docs/VALIDATION.md](docs/VALIDATION.md) §4). **Continue in Orbit** (under the telemetry panel,
+Its maneuver planner (O02, `src/orbit/maneuvers.ts`) plans Hohmann and bi-elliptic transfers,
+plane changes, GTO→GEO, phasing, deorbit burns, Edelbaum's low-thrust spiral and the user's own
+prograde/normal/radial burns, draws each plan and flies it. At the Engineer level it adds a
+Lambert rendezvous chosen on a porkchop plot. The model is Kepler plus first-order J2, held to
+the Landsat and Sentinel-2 orbits; the planner is held to Vallado's and Curtis's worked
+examples ([docs/VALIDATION.md](docs/VALIDATION.md) §4). **Continue in Orbit** (under the telemetry panel,
 and on the viewer's end card) puts the orbit a flight reached into the playground, with the
 spacecraft in it and the orbit-lifetime analysis (roadmap S03, `src/orbit/handoff.ts`). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
@@ -332,7 +336,7 @@ src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map
                 page and launch viewer; src/ui/orbit/ the orbit playground
 src/i18n/       English, Russian and Thai dictionaries
 src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground's presets,
-                rules and tour, the hand-off from a flight (S03)
+                rules and tour, maneuvers, Lambert and Edelbaum (O02), the hand-off (S03)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
 src/design/     the user's designs, kept locally and as files (S05)
 src/mcp.ts      WebMCP tools

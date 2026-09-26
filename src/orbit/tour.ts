@@ -10,6 +10,7 @@
  * dictionaries.
  */
 import { DEG } from '../physics/constants';
+import type { ManeuverSettings, PlannerKind } from './maneuver-setup';
 
 export type TourView = '3d' | 'track' | 'cannon';
 
@@ -32,12 +33,16 @@ export interface TourStep {
   sectors?: boolean;
   /** carry J2's drift */
   j2?: boolean;
+  /** O02: a maneuver planned from the start of the step */
+  maneuver?: Partial<ManeuverSettings> & { kind: PlannerKind };
 }
 
 export const TOUR: readonly TourStep[] = [
   { id: 'cannonFalls', titleKey: 'tour.cannonFalls.title', textKey: 'tour.cannonFalls.text', view: 'cannon', cannonSpeed: 4000, cannonAltitude: 100e3, warp: 60 },
   { id: 'cannonOrbits', titleKey: 'tour.cannonOrbits.title', textKey: 'tour.cannonOrbits.text', view: 'cannon', cannonSpeed: 7850, cannonAltitude: 100e3, warp: 300 },
   { id: 'iss', titleKey: 'tour.iss.title', textKey: 'tour.iss.text', view: '3d', preset: 'iss', warp: 300 },
+  // O02: two burns from a low orbit to geostationary height
+  { id: 'hohmann', titleKey: 'tour.hohmann.title', textKey: 'tour.hohmann.text', view: '3d', preset: 'leo', warp: 600, maneuver: { kind: 'hohmann', targetAlt: 35_786e3 } },
   { id: 'molniya', titleKey: 'tour.molniya.title', textKey: 'tour.molniya.text', view: '3d', preset: 'molniya', warp: 1800, sectors: true },
   // over 78.5° E, the orbital slot Thaicom's satellites use (roadmap O04 cites it)
   { id: 'geo', titleKey: 'tour.geo.title', textKey: 'tour.geo.text', view: 'track', preset: 'geo', lon: 78.5 * DEG, warp: 1800 },

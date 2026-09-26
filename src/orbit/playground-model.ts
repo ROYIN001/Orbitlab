@@ -10,15 +10,16 @@
  * part that puts it on screen, tests/orbit-playground.test.ts holds it here.
  */
 import { DEG, R_EARTH } from '../physics/constants';
-import { v3 } from '../physics/vec3';
-import { wrap2pi } from '../physics/orbital';
+import { v3, type Vec3 } from '../physics/vec3';
+import { stateFromElements, wrap2pi } from '../physics/orbital';
 import { apsidesToAE, orbitFromState, repeatOrbit, stateAt, type Orbit } from './kepler';
 import { presetOrbit } from './presets';
 import type { TourStep } from './tour';
+import type { ManeuverSettings, PlannerKind } from './maneuver-setup';
 import type { OrbitHandoff } from './handoff';
 
 /** The time warps the playground offers, orbit seconds per screen second. */
-export const PG_WARPS: readonly number[] = [1, 10, 60, 300, 600, 1800, 3600];
+export const PG_WARPS: readonly number[] = [1, 10, 60, 300, 600, 1800, 3600, 21_600, 86_400];
 export const PG_DEFAULT_WARP = 300;
 export const PG_DEFAULT_PRESET = 'iss';
 
@@ -94,6 +95,8 @@ export interface TourSetup {
   sectors: boolean;
   j2: boolean;
   cannon: { speed: number; altitude: number } | null;
+  /** O02: a maneuver planned from the start */
+  maneuver: (Partial<ManeuverSettings> & { kind: PlannerKind }) | null;
 }
 
 export function tourSetup(step: TourStep, jd0: number): TourSetup {
@@ -109,6 +112,7 @@ export function tourSetup(step: TourStep, jd0: number): TourSetup {
     sectors: step.sectors ?? false,
     j2: step.j2 ?? false,
     cannon: step.cannonSpeed !== undefined ? { speed: step.cannonSpeed, altitude: step.cannonAltitude ?? 100e3 } : null,
+    maneuver: step.maneuver ?? null,
   };
 }
 
@@ -129,4 +133,21 @@ export function repeatGroundTrack(revs: number, days: number, sso: boolean, i: n
   if (alt < REPEAT_SEARCH.min + 1e3 || alt > REPEAT_SEARCH.max - 1e3) return null;
   if (!Number.isFinite(res.i) || (sso && Math.abs(Math.cos(res.i)) >= 1 - 1e-9)) return null;
   return { a: res.a, e: 0, i: res.i, raan: 0, argp: 0, m0: 0, jd0: 0, found: true };
+}
+
+/**
+ * Points along an orbit for drawing, m, ECI: the whole ellipse, or the part
+ * of a hyperbola within twelve Earth radii (an escape planned by hand).
+ */
+export function orbitPath(o: Orbit, n = 256): Vec3[] {
+  const pts: Vec3[] = [];
+  if (o.e < 1) {
+    for (let k = 0; k < n; k++) pts.push(stateFromElements(o.a, o.e, o.i, o.raan, o.argp, (2 * Math.PI * k) / n).r);
+    return pts;
+  }
+  const p = o.a * (1 - o.e * o.e), far = 12 * R_EARTH;
+  const cosFar = (p / far - 1) / o.e;
+  const nuMax = Math.min(Math.acos(-1 / o.e) - 1e-3, cosFar >= -1 && cosFar <= 1 ? Math.acos(cosFar) : Math.PI);
+  for (let k = 0; k < n; k++) pts.push(stateFromElements(o.a, o.e, o.i, o.raan, o.argp, -nuMax + (2 * nuMax * k) / (n - 1)).r);
+  return pts;
 }

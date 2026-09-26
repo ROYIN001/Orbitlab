@@ -173,9 +173,10 @@ describe('the playground\'s sliders and rules (O01)', () => {
     expect(once.done).toBe(false);
   });
 
-  it('counts O01 as built, and only items the Orbit section plans', () => {
+  it('counts O01 and O02 as built, and only items the Orbit section plans', () => {
     const orbitItems = SECTION_PLANS.orbit.phases.flatMap((p) => p.items.map((i) => i.id));
     expect(BUILT_ITEMS.has('O01')).toBe(true);
+    expect(BUILT_ITEMS.has('O02')).toBe(true);
     for (const id of BUILT_ITEMS) expect(orbitItems).toContain(id);
   });
 });
@@ -185,7 +186,7 @@ describe('the Watch tour (O01)', () => {
   const setup = (id: string) => tourSetup(step(id), JD);
 
   it('has every step in the three languages, at a pace the time bar offers', () => {
-    expect(TOUR.length).toBe(6);
+    expect(TOUR.length).toBe(7);
     expect(new Set(TOUR.map((s) => s.id)).size).toBe(TOUR.length);
     for (const s of TOUR) {
       for (const [name, dict] of Object.entries({ en, ru, th })) {

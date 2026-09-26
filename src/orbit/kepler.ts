@@ -17,7 +17,7 @@ import { DEG, J2_EARTH, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../physics/consta
 import {
   elementsFromState, gmst, meanFromTrue, stateFromElements, sunSyncInclination, trueFromMean, wrap2pi, wrapPi,
 } from '../physics/orbital';
-import type { Vec3 } from '../physics/vec3';
+import { cross, scale, sub, type Vec3 } from '../physics/vec3';
 
 const TWO_PI = 2 * Math.PI;
 
@@ -42,10 +42,47 @@ export function apsidesToAE(perigeeAlt: number, apogeeAlt: number): { a: number;
   return { a: (rp + ra) / 2, e: (ra - rp) / (ra + rp) };
 }
 
-/** The orbit a state vector is on (osculating elements taken as the mean ones), at Julian date `jd`. */
+/**
+ * The orbit a state vector is on (osculating elements taken as the mean ones),
+ * at Julian date `jd`. An equatorial ellipse has no node for its perigee to
+ * be measured from: `elementsFromState` then leaves ω at 0 and measures ν
+ * from the perigee, so here the perigee's longitude goes into ω (Ω = 0), and
+ * the elements give back the state they came from — the orbit after a
+ * GTO→GEO plane change is one (O02).
+ */
 export function orbitFromState(r: Vec3, v: Vec3, jd: number): Orbit {
   const el = elementsFromState(r, v);
-  return { a: el.a, e: el.e, i: el.i, raan: el.raan, argp: el.argp, m0: el.e < 1 ? meanFromTrue(el.nu, el.e) : 0, jd0: jd };
+  let { raan, argp } = el;
+  const h = cross(r, v);
+  const hm = Math.hypot(h.x, h.y, h.z);
+  if (Math.hypot(h.x, h.y) <= 1e-10 * hm && el.e > 1e-10) {
+    // the eccentricity vector's longitude, measured the way the orbit turns (clockwise for a retrograde one)
+    const ev = sub(scale(cross(v, h), 1 / MU_EARTH), scale(r, 1 / Math.hypot(r.x, r.y, r.z)));
+    raan = 0;
+    argp = wrap2pi(h.z >= 0 ? Math.atan2(ev.y, ev.x) : -Math.atan2(ev.y, ev.x));
+  }
+  return { a: el.a, e: el.e, i: el.i, raan, argp, m0: el.e < 1 ? meanFromTrue(el.nu, el.e) : hyperbolicMeanFromTrue(el.nu, el.e), jd0: jd };
+}
+
+// ─── a hyperbola (a transfer fast enough to escape, O02) ────────────────────
+
+/** The hyperbolic mean anomaly e sinh H − H at true anomaly ν (e > 1). */
+export function hyperbolicMeanFromTrue(nu: number, e: number): number {
+  const nuW = wrapPi(nu);
+  const H = 2 * Math.atanh(Math.sqrt((e - 1) / (e + 1)) * Math.tan(nuW / 2));
+  return e * Math.sinh(H) - H;
+}
+
+/** The true anomaly at hyperbolic mean anomaly M (e > 1), by Newton on e sinh H − H = M. */
+export function hyperbolicTrueFromMean(M: number, e: number): number {
+  let H = Math.asinh(M / e);
+  for (let k = 0; k < 60; k++) {
+    const f = e * Math.sinh(H) - H - M, d = e * Math.cosh(H) - 1;
+    const step = f / d;
+    H -= step;
+    if (Math.abs(step) < 1e-14 * Math.max(1, Math.abs(H))) break;
+  }
+  return 2 * Math.atan(Math.sqrt((e + 1) / (e - 1)) * Math.tanh(H / 2));
 }
 
 /** Whether the orbit is a closed one that clears the ground. */
@@ -97,8 +134,15 @@ export interface OrbitState {
   alt: number;
 }
 
-/** Where the satellite is `t` seconds after the epoch. */
+/** Where the satellite is `t` seconds after the epoch (on a hyperbola, Kepler's alone). */
 export function stateAt(o: Orbit, t: number, j2: boolean): OrbitState {
+  if (o.e >= 1) {
+    const n = Math.sqrt(MU_EARTH / Math.abs(o.a) ** 3);
+    const nu = hyperbolicTrueFromMean(o.m0 + n * t, o.e);
+    const { r, v } = stateFromElements(o.a, o.e, o.i, o.raan, o.argp, nu);
+    const theta = gmst(o.jd0 + t / 86400), rm = Math.hypot(r.x, r.y, r.z);
+    return { t, r, v, nu, raan: o.raan, argp: o.argp, theta, lat: Math.asin(r.z / rm), lon: wrapPi(Math.atan2(r.y, r.x) - theta), alt: rm - R_EARTH };
+  }
   const rates = secularRates(o, j2);
   const raan = wrap2pi(o.raan + rates.raanDot * t), argp = wrap2pi(o.argp + rates.argpDot * t);
   const nu = trueFromMean(o.m0 + rates.meanMotion * t, o.e);

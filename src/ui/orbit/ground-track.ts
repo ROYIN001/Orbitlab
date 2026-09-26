@@ -12,7 +12,7 @@
 import { t } from '../../i18n';
 import { DEG, RAD } from '../../physics/constants';
 import { sunDirectionEci } from '../../physics/orbital';
-import { orbitFacts, stateAt, type Orbit } from '../../orbit/kepler';
+import type { OrbitState } from '../../orbit/kepler';
 
 /** How far behind and ahead the track is drawn, s: a revolution back, three on, never more than a day. */
 export function trackSpans(nodalPeriod: number): { past: number; future: number } {
@@ -31,8 +31,12 @@ export class GroundTrackView {
     img.src = imageUrl;
   }
 
-  /** Draw the orbit's track `time` seconds after its epoch. */
-  draw(o: Orbit, time: number, j2: boolean): void {
+  /**
+   * Draw the track around `time` (s after the orbit's epoch, Julian date
+   * `jd`): `stateOf` says where the satellite is at any time — on one orbit,
+   * or on a plan of several (O02) — and `period` how long a revolution takes.
+   */
+  draw(stateOf: (t: number) => OrbitState, time: number, jd: number, period: number): void {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
     if (W === 0 || H === 0) return;
@@ -78,8 +82,8 @@ export class GroundTrackView {
     { const [, y] = xy(0, 0); g.beginPath(); g.moveTo(ox, y); g.lineTo(ox + mw, y); g.stroke(); }
 
     // the night side, bounded by the terminator (as src/ui/map.ts draws it)
-    const now = stateAt(o, time, j2);
-    const sun = sunDirectionEci(o.jd0 + time / 86400);
+    const now = stateOf(time);
+    const sun = sunDirectionEci(jd);
     const subLat = Math.asin(sun.z);
     const subLon = wrapLon(Math.atan2(sun.y, sun.x) - now.theta);
     const tanDec = Math.abs(Math.tan(subLat)) < 1e-6 ? (subLat < 0 ? -1e-6 : 1e-6) : Math.tan(subLat);
@@ -97,11 +101,10 @@ export class GroundTrackView {
     g.fill();
 
     // the track: a revolution back, faint; the next ones, bright
-    const facts = orbitFacts(o, j2);
-    const span = trackSpans(facts.nodalPeriod);
-    const samples = (dt: number) => Math.max(120, Math.min(900, Math.round((dt / facts.nodalPeriod) * 240)));
-    this.track(g, o, j2, time - span.past, time, samples(span.past), xy, mw, COLORS.past, 1.5, [4, 4]);
-    this.track(g, o, j2, time, time + span.future, samples(span.future), xy, mw, COLORS.future, 2, []);
+    const span = trackSpans(period);
+    const samples = (dt: number) => Math.max(120, Math.min(900, Math.round((dt / period) * 240)));
+    this.track(g, stateOf, time - span.past, time, samples(span.past), xy, mw, COLORS.past, 1.5, [4, 4]);
+    this.track(g, stateOf, time, time + span.future, samples(span.future), xy, mw, COLORS.future, 2, []);
 
     // the point under the Sun, and the one under the satellite
     { const [x, y] = xy(subLat, subLon); g.fillStyle = COLORS.sun; g.beginPath(); g.arc(x, y, 4.5, 0, 2 * Math.PI); g.fill(); }
@@ -134,7 +137,7 @@ export class GroundTrackView {
     });
   }
 
-  private track(g: CanvasRenderingContext2D, o: Orbit, j2: boolean, t0: number, t1: number, n: number,
+  private track(g: CanvasRenderingContext2D, stateOf: (t: number) => OrbitState, t0: number, t1: number, n: number,
     xy: (lat: number, lon: number) => [number, number], mw: number, color: string, width: number, dash: number[]): void {
     g.strokeStyle = color;
     g.lineWidth = width;
@@ -142,7 +145,7 @@ export class GroundTrackView {
     g.beginPath();
     let prevX = NaN;
     for (let k = 0; k < n; k++) {
-      const s = stateAt(o, t0 + ((t1 - t0) * k) / (n - 1), j2);
+      const s = stateOf(t0 + ((t1 - t0) * k) / (n - 1));
       const [x, y] = xy(s.lat, s.lon);
       // across the date line the track leaves one edge and comes in at the other
       if (k === 0 || Math.abs(x - prevX) > mw / 2) g.moveTo(x, y); else g.lineTo(x, y);

@@ -181,7 +181,6 @@ const RESERVED: Record<string, string> = {
   // those call sites is the fix; deleting the keys would be the wrong half of
   // it. Raised as an open item by the wave-3 translation pass.
   'u.kN': 'unit symbols are not wired to their call sites yet',
-  'u.min': 'unit symbols are not wired to their call sites yet',
   'u.deg': 'unit symbols are not wired to their call sites yet',
   // The setup aside is announced with a11y.setupPanel and headed with
   // app.missionControl + app.buildMission; the old caption has no call site.

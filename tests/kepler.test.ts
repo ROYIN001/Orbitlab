@@ -60,6 +60,40 @@ describe('orbit elements (O01)', () => {
     expect(hitsEarth(apsidesToAE(-10e3, 400e3))).toBe(true);
   });
 
+  it('read an equatorial ellipse back to the state it came from, prograde and retrograde', () => {
+    for (const i of [0, Math.PI]) {
+      for (const argp of [0.4, 2.9]) {
+        const { r, v } = stateFromElements(24000e3, 0.6, i, 0, argp, 1.1);
+        const o = orbitFromState(r, v, JD);
+        const s = stateAt(o, 0, false);
+        expect(Math.hypot(s.r.x - r.x, s.r.y - r.y, s.r.z - r.z), `i ${i} ω ${argp}`).toBeLessThan(1e-3);
+        expect(Math.hypot(s.v.x - v.x, s.v.y - v.y, s.v.z - v.z)).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it('carry a hyperbola as a fine integration of two-body motion does', () => {
+    // the reference: RK4 in half-second steps (propagateKepler's own hyperbolic fallback is too coarse to test against)
+    const rk4 = (r0: { x: number; y: number; z: number }, v0: { x: number; y: number; z: number }, dt: number) => {
+      let y = [r0.x, r0.y, r0.z, v0.x, v0.y, v0.z];
+      const f = (s: number[]) => { const rr = Math.hypot(s[0], s[1], s[2]) ** 3; return [s[3], s[4], s[5], -MU_EARTH * s[0] / rr, -MU_EARTH * s[1] / rr, -MU_EARTH * s[2] / rr]; };
+      const n = Math.max(1, Math.ceil(Math.abs(dt) / 0.5)), h = dt / n;
+      for (let k = 0; k < n; k++) {
+        const k1 = f(y), k2 = f(y.map((v, j) => v + h / 2 * k1[j])), k3 = f(y.map((v, j) => v + h / 2 * k2[j])), k4 = f(y.map((v, j) => v + h * k3[j]));
+        y = y.map((v, j) => v + h / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]));
+      }
+      return { r: { x: y[0], y: y[1], z: y[2] }, v: { x: y[3], y: y[4], z: y[5] } };
+    };
+    const r = { x: 7000e3, y: 0, z: 0 }, v = { x: 0, y: 12.5e3, z: 1.5e3 };
+    const o = orbitFromState(r, v, JD);
+    expect(o.e).toBeGreaterThan(1);
+    for (const dt of [0, 600, 3600, -900]) {
+      const s = stateAt(o, dt, false), ref = rk4(r, v, dt);
+      expect(Math.hypot(s.r.x - ref.r.x, s.r.y - ref.r.y, s.r.z - ref.r.z), `${dt} s`).toBeLessThan(1);
+      expect(Math.hypot(s.v.x - ref.v.x, s.v.y - ref.v.y, s.v.z - ref.v.z)).toBeLessThan(1e-3);
+    }
+  });
+
   it('read an orbit off a state vector, epoch and all', () => {
     const o = orbit({ e: 0.2, a: 12000e3, argp: 1, raan: 2, m0: 0.7 });
     const s = stateAt(o, 0, false);
