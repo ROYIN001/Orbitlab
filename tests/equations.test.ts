@@ -76,7 +76,7 @@ describe('the equation record (roadmap E02)', () => {
 describe('the equations panel\'s numbers', () => {
   const sim = new Simulation(mission('sixDof'), { headless: true });
   const frames: { t: number; frame: VisualFrame; list: Equation[]; gost: Equation[] }[] = [];
-  const marks = [30, 62, 131.5, 200];
+  const marks = [30, 62, 135, 200];
   let k = 0;
   while (k < marks.length) {
     sim.step(sim.suggestedDt());
@@ -105,8 +105,9 @@ describe('the equations panel\'s numbers', () => {
   });
 
   it('says when a limiter, not the gain, sets the rate command', () => {
-    // T+131.5 s: the load relief switched off at T+130.5 s, and the stack slews at its rate limit
-    // until T+135.4 s (see G03; T+127.3 s before the published first-stage masses).
+    // T+135 s: the load relief switched off at T+133.5 s, and the stack slews at its rate limit
+    // until T+137.2 s (see G03). It was T+127.3 s before the published first-stage masses and
+    // T+130.5 s before the six-DOF pitch programme was fitted (docs/VALIDATION.md).
     const control = byId(frames[2].list, 'control');
     expect(control.check).toBeUndefined();
     expect(control.note).toBe('eq.note.rateLimited');

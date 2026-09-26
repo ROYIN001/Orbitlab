@@ -326,11 +326,12 @@ What it shows on Falcon 9 to LEO in the crosswind scenario:
 - From T+89 s guidance pitches the command away from the airflow (0.7° to 11° in four seconds)
   faster than the stack follows: the pitch error grows to 4.6° with the pitch rate held by its
   stopping distance, and the air's pitching moment reaches 2.4 MN·m at T+96 s.
-- At T+130.5 s the dynamic pressure falls through 500 Pa and the load relief, which had been
+- At T+133.5 s the dynamic pressure falls through 500 Pa and the load relief, which had been
   holding the command nearer the air than guidance asked, switches off in one step: the
-  attitude error jumps and the stack swings back at its 5°/s rate limit until T+135.4 s.
-  (Measured with Falcon 9's published first-stage masses; with the earlier ones it was T+127.3 s,
-  39° asked and 15° allowed, an error jumping from 0.4° to 24°.)
+  attitude error jumps by about 15° and the stack swings back at its 5°/s rate limit until
+  T+137.2 s. (Measured with Falcon 9's published first-stage masses and its fitted six-DOF
+  pitch programme, VALIDATION.md F5. Before the pitch programme it was T+130.5 s; before the
+  masses, T+127.3 s with 39° asked and 15° allowed and an error jumping from 0.4° to 24°.)
 - After staging the upper stage's roll authority is so small (an ε limit of 0.02°/s²) that its
   roll rate is held by the stopping distance.
 
@@ -508,10 +509,13 @@ What it finds on Falcon 9 (crosswind, over the first 55 s):
   mode. With Falcon 9's published first-stage masses (VALIDATION.md) the first bending mode is
   lower (1.61 Hz at T+25 s, where it was 1.72 Hz), and PM ≥ 40°, GM ≥ 4 dB can no longer be met
   either: over the gain grid the best is about 2.7 dB, limited from lift-off, and the tuner says
-  so. At PM ≥ 40°, GM ≥ 2.5 dB it gives K_θ 0.82, K_ω 1.64 s⁻¹. Flown again with them, the
-  linearised loop keeps GM ≥ 2.71 dB and PM ≥ 46.4° over the first 90 s, against 2.64 dB and
-  45.1° with the defaults, so the default flexible autopilot is already within 0.1 dB of what two
-  gains can do (tests/control-tuning.test.ts). With the earlier masses the tuner found K_θ 0.74,
+  so. The default flexible autopilot already comes within 0.1 dB of what two gains can do. With
+  the six-DOF pitch programme fitted to webcast telemetry (VALIDATION.md, F5), gains tuned at
+  PM ≥ 40°, GM ≥ 2.5 dB over the first 60 s (K_θ 0.82, K_ω 1.64 s⁻¹) leave a mode growing at
+  about 0.003/s from T+64 s, outside the flight they were tuned on, and tuned over 90 s nothing
+  at 2.5 dB is stable. At GM ≥ 2 dB it gives K_θ 0.88, K_ω 1.75 s⁻¹, and flown again to T+90 s
+  the loop is stable with GM ≥ 2.15 dB and PM ≥ 45.6° (tests/control-tuning.test.ts). The lesson
+  for the tuner is that it answers for the flight it was shown. With the earlier masses the tuner found K_θ 0.74,
   K_ω 1.49 s⁻¹ for GM ≥ 4 dB, and flown again they kept GM ≥ 4.1 dB and PM ≥ 48.8° (2.3 dB and
   40.3° with the defaults).
 - Without the feed-forward (w = 0) or at half of it, the rigid Falcon 9 still reaches orbit; a
@@ -778,7 +782,7 @@ Heavy's spent half its gas on the ripple the blend left and could not point its 
 once the dynamic pressure falls under 500 Pa the command is released from where the load relief
 held it at 4 °/s (under the stack's own 5 °/s) and, below 100 Pa, at the vacuum ascent's
 1 °/s. The standard flight releases it all at once at 500 Pa: on Falcon 9 the attitude error
-jumps from 0.4° to 24° (§2d, G03). A release at 1 °/s everywhere was tried and cost 93 m/s.
+jumps by about 15° (24° before its six-DOF pitch programme was fitted to flight data; §2d, G03). A release at 1 °/s everywhere was tried and cost 93 m/s.
 
 **What it does** (calm air, LEO insertion 200 × 500 km; tests/explicit-guidance.test.ts and
 tests/heavy/explicit-fleet-*.test.ts):
@@ -2763,10 +2767,14 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
   - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
     jettison **time** their operator publishes (§4). Neither is a model of the real decision,
     which is a heating placard evaluated against a specific fairing's thermal design.
-  - The physics has been compared with flight data for Falcon 9 (webcast telemetry of five
-    flights), Soyuz-2.1a, Electron and Ariane 64 (published timelines):
-    [VALIDATION.md](VALIDATION.md). Electron's second stage burns ~25 % short of its published
-    timeline, and no published stage mass exists to correct it.
+  - The physics has been compared with flight data for eleven vehicles: Falcon 9 (webcast
+    telemetry of five flights) and ten others against published timelines
+    ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
+    - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
+    - Falcon Heavy's first stages cut off ~18 % early.
+    - PSLV-XL's first stage is 29 % slow at separation, the cost of the linear solid-motor taper.
+    - H3's first stage flies far flatter than JAXA's plan.
+    - The heating placard drops most fairings 10–50 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.

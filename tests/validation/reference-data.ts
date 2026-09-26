@@ -182,12 +182,15 @@ export interface TimelineMilestone {
   /** m, where the source gives it */
   alt?: number;
   /**
-   * m/s, where the source gives it. Reported but not graded: none of these
-   * sources says whether its speed is inertial or relative to the Earth, and
-   * at the Soyuz's staging the two differ by ~0.3 km/s — more than the
-   * tolerance — so grading it would mean choosing the frame after the fact.
+   * m/s, where the source gives it. Graded only when the source states its
+   * frame (`vFrame`): most of these sources do not say whether their speed is
+   * inertial or relative to the Earth, and at the Soyuz's staging the two
+   * differ by ~0.3 km/s — more than the tolerance — so grading an unstated one
+   * would mean choosing the frame after the fact.
    */
   v?: number;
+  /** the frame the source states its speed in; absent, the speed is reported, not graded */
+  vFrame?: 'inertial';
 }
 
 export interface TimelineReference {
@@ -200,6 +203,8 @@ export interface TimelineReference {
   milestones: TimelineMilestone[];
   /** the initial orbit, where the source gives it, m */
   insertion?: { perigee: number; apogee: number };
+  /** s to keep flying after the first upper-stage cut-off, for a milestone that comes later (default 10) */
+  after?: number;
 }
 
 /**
@@ -281,4 +286,177 @@ export const ARIANE64_VA267: TimelineReference = {
   ],
 };
 
-export const TIMELINE_REFERENCES: readonly TimelineReference[] = [SOYUZ_MS25, ELECTRON_NTT, ARIANE64_VA267];
+/**
+ * Atlas V 551, Juno, 5 August 2011, SLC-41. Times from ULA's mission booklet
+ * (ulalaunch.com/docs/default-source/news-items/av_juno_mob.pdf), a planned
+ * sequence, primary. Juno's 3 625 kg launch mass is from Wikipedia
+ * (secondary); it went to Earth escape, which the model does not fly, so the
+ * stack flies its standard GTO from SLC-40 (1 km away): the first stage and
+ * the strap-ons do not depend on it.
+ */
+export const ATLASV_JUNO: TimelineReference = {
+  id: 'atlasJuno', name: 'Atlas V 551 Juno', date: '2011-08-05',
+  sources: 'ULA mission booklet (primary, planned); Wikipedia (payload mass)',
+  mission: { vehicleId: 'atlasv551', siteId: 'cape', satelliteId: 'science', orbitId: 'gto', payloadMass: 3625, launchTime: LAUNCH },
+  milestones: [
+    { id: 'maxQ', label: 'max Q', event: 'evt.maxQ', t: 46.4 },
+    { id: 'srbSep', label: 'SRB jettison', event: 'evt.boosterSep', t: 104.0 },
+    { id: 'fairing', label: 'payload fairing jettison', event: 'evt.fairingSep', t: 204.9 },
+    { id: 'beco', label: 'BECO', event: 'evt.meco', t: 267.2 },
+    { id: 'sep', label: 'Atlas/Centaur separation', event: 'evt.stageSep', nth: 1, t: 273.2 },
+    { id: 'mes1', label: 'Centaur first ignition (MES-1)', event: 'evt.ignition', afterEvent: 'evt.meco', t: 283.2 },
+  ],
+};
+
+/**
+ * PSLV-XL C52 / EOS-04, 14 February 2022, First Launch Pad: 1 710 kg EOS-04 +
+ * 17.5 kg INS-2TD + 8.1 kg INSPIREsat-1 to 529 km at 97.514°. Times, altitudes
+ * and INERTIAL velocities from ISRO's mission brochure
+ * (isro.gov.in/media_isro/pdf/Missions/pslv-c52-eos-04-v4.pdf), a planned
+ * "typical flight profile", primary. The date is from Wikipedia.
+ */
+export const PSLV_C52: TimelineReference = {
+  id: 'pslvC52', name: 'PSLV-XL C52 / EOS-04', date: '2022-02-14',
+  sources: 'ISRO mission brochure (primary, planned; velocities inertial)',
+  mission: { vehicleId: 'pslvxl', siteId: 'sriharikota', satelliteId: 'earthObs', orbitId: 'custom',
+    orbit: { perigee: 529e3, apogee: 529e3, inclination: 97.514, raanMode: 'free' }, payloadMass: 1710 + 17.5 + 8.1, launchTime: LAUNCH },
+  milestones: [
+    { id: 'glSep', label: 'ground-lit PSOM-XL separation', event: 'evt.boosterSep', nth: 1, t: 69.9, alt: 26.943e3, v: 1304.2, vFrame: 'inertial' },
+    { id: 'alSep', label: 'air-lit PSOM-XL separation', event: 'evt.boosterSep', nth: 2, t: 92.0, alt: 47.956e3, v: 1865.8, vFrame: 'inertial' },
+    { id: 'ps1Sep', label: 'PS1 separation', event: 'evt.stageSep', nth: 1, t: 109.68, alt: 68.937e3, v: 2143.3, vFrame: 'inertial' },
+    { id: 'ps2Ign', label: 'PS2 ignition', event: 'evt.ignition', afterEvent: 'evt.meco', t: 109.88 },
+    { id: 'heatShield', label: 'heat shield separation', event: 'evt.fairingSep', t: 150.28, alt: 115.505e3, v: 2380.9, vFrame: 'inertial' },
+    { id: 'ps2Sep', label: 'PS2 separation', event: 'evt.stageSep', nth: 2, t: 262.46, alt: 237.047e3, v: 4033.4, vFrame: 'inertial' },
+    { id: 'ps3Sep', label: 'PS3 separation', event: 'evt.stageSep', nth: 3, t: 493.60, alt: 450.692e3, v: 5815.1, vFrame: 'inertial' },
+    { id: 'ps4Cutoff', label: 'PS4 cut-off', event: 'evt.seco', t: 1020.36, alt: 533.967e3, v: 7592.0, vFrame: 'inertial' },
+  ],
+};
+
+/**
+ * H3-22S F3 / ALOS-4, 1 July 2024, Yoshinobu LP2: about 3 t to a 613 km,
+ * 97.9° sun-synchronous orbit. Times and altitudes from JAXA's launch plan
+ * (jaxa.jp/press/2024/04/files/20240426-1_01.pdf), planned, primary; its
+ * speeds (km/s, frame not stated) are reported only.
+ */
+export const H3_F3: TimelineReference = {
+  id: 'h3F3', name: 'H3-22S F3 / ALOS-4', date: '2024-07-01',
+  sources: 'JAXA launch plan (primary, planned)',
+  mission: { vehicleId: 'h3', siteId: 'tanegashima', satelliteId: 'earthObs', orbitId: 'custom',
+    orbit: { perigee: 613e3, apogee: 613e3, inclination: 97.9, raanMode: 'free' }, payloadMass: 3000, launchTime: LAUNCH },
+  milestones: [
+    { id: 'srbSep', label: 'SRB-3 separation', event: 'evt.boosterSep', t: 116, alt: 44e3, v: 1500 },
+    { id: 'fairing', label: 'fairing separation', event: 'evt.fairingSep', t: 210, alt: 120e3, v: 2100 },
+    { id: 'meco', label: 'MECO', event: 'evt.meco', t: 303, alt: 278e3, v: 3600 },
+    { id: 'stageSep', label: 'stage separation', event: 'evt.stageSep', nth: 1, t: 311, alt: 296e3, v: 3500 },
+    { id: 'seli1', label: 'second-stage ignition', event: 'evt.ignition', afterEvent: 'evt.meco', t: 324, alt: 324e3, v: 3500 },
+    { id: 'seco1', label: 'SECO-1', event: 'evt.seco', t: 985, alt: 613e3, v: 7500 },
+  ],
+};
+
+/**
+ * H-IIA 202 F50 / GOSAT-GW, 29 June 2025: about 2.6 t to 666 km at 97.03°.
+ * AS-FLOWN times from the JAXA/MHI results report to MEXT
+ * (mext.go.jp/content/20250703-mxt_uchukai01-000043486_000002.pdf), primary;
+ * mass and orbit from the JAXA press kit. The model flies this fairing on a
+ * fixed 250 s (`fairing.sepTime`), so that row is not independent.
+ */
+export const H2A_F50: TimelineReference = {
+  id: 'h2aF50', name: 'H-IIA 202 F50 / GOSAT-GW', date: '2025-06-29',
+  sources: 'JAXA/MHI flight results (primary, as flown); JAXA press kit (payload, orbit)',
+  mission: { vehicleId: 'h2a202', siteId: 'tanegashima', satelliteId: 'earthObs', orbitId: 'custom',
+    orbit: { perigee: 666e3, apogee: 666e3, inclination: 97.03, raanMode: 'free' }, payloadMass: 2600, launchTime: LAUNCH },
+  milestones: [
+    { id: 'srbSep', label: 'SRB-A separation', event: 'evt.boosterSep', t: 124 },
+    { id: 'fairing', label: 'fairing separation', event: 'evt.fairingSep', t: 266 },
+    { id: 'meco', label: 'MECO', event: 'evt.meco', t: 400 },
+    { id: 'stageSep', label: 'stage separation', event: 'evt.stageSep', nth: 1, t: 408 },
+    { id: 'seli', label: 'second-stage ignition', event: 'evt.ignition', afterEvent: 'evt.meco', t: 417 },
+    { id: 'seco', label: 'SECO', event: 'evt.seco', t: 916 },
+  ],
+};
+
+/**
+ * Vega-C VV25 / Sentinel-1C, 5 December 2024, Kourou: 2 286 kg total to a
+ * ~700 km, 98.19° sun-synchronous orbit. Times from the Arianespace/Avio
+ * launch kit (newsroom.arianespace.com, VV25), planned, primary. The model
+ * flies this fairing on a fixed 220 s (`fairing.sepTime`).
+ */
+export const VEGAC_VV25: TimelineReference = {
+  id: 'vegaVV25', name: 'Vega-C VV25 / Sentinel-1C', date: '2024-12-05',
+  sources: 'Arianespace/Avio launch kit (primary, planned)',
+  mission: { vehicleId: 'vegac', siteId: 'kourou', satelliteId: 'earthObs', orbitId: 'custom',
+    orbit: { perigee: 700e3, apogee: 700e3, inclination: 98.19, raanMode: 'free' }, payloadMass: 2286, launchTime: LAUNCH },
+  milestones: [
+    { id: 'p120Sep', label: 'P120C separation', event: 'evt.stageSep', nth: 1, t: 142 },
+    { id: 'z40Sep', label: 'Zefiro 40 separation', event: 'evt.stageSep', nth: 2, t: 272 },
+    { id: 'fairing', label: 'fairing separation', event: 'evt.fairingSep', t: 304 },
+    { id: 'z9Sep', label: 'Zefiro 9 separation', event: 'evt.stageSep', nth: 3, t: 428 },
+  ],
+};
+
+/**
+ * Proton-M / Briz-M, Telstar 14R, 20 May 2011, Baikonur Pad 39: separated mass
+ * ~5 000 kg, to GTO through a 173 km, 51.5° parking orbit. Ascent times from
+ * ILS's mission overview (ilslaunch.com, T-14R), planned, primary; the date is
+ * from Wikipedia.
+ */
+export const PROTON_T14R: TimelineReference = {
+  id: 'protonT14R', name: 'Proton-M / Briz-M Telstar 14R', date: '2011-05-20',
+  sources: 'ILS mission overview (primary, planned); Wikipedia (date)',
+  mission: { vehicleId: 'protonm', siteId: 'baikonur', satelliteId: 'comsat', orbitId: 'gto', payloadMass: 5000, launchTime: LAUNCH },
+  milestones: [
+    { id: 'maxQ', label: 'max Q', event: 'evt.maxQ', t: 62 },
+    { id: 'sep12', label: 'first/second stage separation', event: 'evt.stageSep', nth: 1, t: 120 },
+    { id: 'sep23', label: 'second/third stage separation', event: 'evt.stageSep', nth: 2, t: 327 },
+    { id: 'fairing', label: 'payload fairing jettison', event: 'evt.fairingSep', t: 347 },
+    { id: 'sep3b', label: 'third stage / Briz-M separation', event: 'evt.stageSep', nth: 3, t: 582 },
+  ],
+};
+
+/**
+ * Falcon Heavy, Arabsat-6A, 11 April 2019, LC-39A: 6 465 kg to a 200 ×
+ * 90 000 km, 23° transfer orbit. SpaceX's planned timeline as transcribed by
+ * Spaceflight Now (spaceflightnow.com/2019/04/10/launch-timeline-for-falcon-
+ * heavys-second-flight/), secondary. The model flies its standard GTO.
+ */
+export const FH_ARABSAT: TimelineReference = {
+  id: 'fhArabsat', name: 'Falcon Heavy Arabsat-6A', date: '2019-04-11',
+  sources: 'SpaceX timeline via Spaceflight Now (secondary, planned)',
+  mission: { vehicleId: 'falconheavy', siteId: 'ksc39a', satelliteId: 'comsat', orbitId: 'gto', payloadMass: 6465, launchTime: LAUNCH,
+    recoveryPlan: { core: { kind: 'droneShip' }, boosters: [{ kind: 'landingZone', zoneId: 'lz1' }, { kind: 'landingZone', zoneId: 'lz2' }] } },
+  milestones: [
+    { id: 'maxQ', label: 'max Q', event: 'evt.maxQ', t: 69 },
+    { id: 'beco', label: 'BECO', event: 'evt.boosterBurnout', t: 150 },
+    { id: 'boosterSep', label: 'side-booster separation', event: 'evt.boosterSep', t: 154 },
+    { id: 'meco', label: 'MECO', event: 'evt.meco', t: 211 },
+    { id: 'stageSep', label: 'stage separation', event: 'evt.stageSep', nth: 1, t: 215 },
+    { id: 'ses1', label: 'second-stage ignition', event: 'evt.ignition', afterEvent: 'evt.meco', t: 222 },
+    { id: 'fairing', label: 'fairing deploy', event: 'evt.fairingSep', t: 247 },
+    { id: 'seco1', label: 'SECO-1', event: 'evt.seco', t: 528 },
+  ],
+};
+
+/**
+ * Angara-A5 / Briz-M flight 2, 14 December 2020, Plesetsk Site 35: a 2 406 kg
+ * payload simulator. The planned timeline from Anatoly Zak's RussianSpaceWeb
+ * (russianspaceweb.com/angara5-flight2.html), secondary; Spaceflight Now
+ * confirms the Briz-M separation at T+12:28.
+ */
+export const ANGARA_F2: TimelineReference = {
+  id: 'angaraF2', name: 'Angara-A5 flight 2', date: '2020-12-14',
+  sources: 'RussianSpaceWeb (secondary, planned); Spaceflight Now (cross-check)',
+  mission: { vehicleId: 'angaraa5', siteId: 'plesetsk', satelliteId: 'comsat', orbitId: 'gto', payloadMass: 2406, launchTime: LAUNCH },
+  milestones: [
+    { id: 'stage1Cutoff', label: 'first-stage (URM-1 boosters) cut-off', event: 'evt.boosterBurnout', t: 206 },
+    { id: 'stage1Sep', label: 'first-stage separation', event: 'evt.boosterSep', t: 209 },
+    { id: 'stage2Cutoff', label: 'second-stage (core) cut-off', event: 'evt.meco', t: 323 },
+    { id: 'stage2Sep', label: 'second-stage separation', event: 'evt.stageSep', nth: 1, t: 326 },
+    { id: 'stage3Ign', label: 'third-stage ignition', event: 'evt.ignition', afterEvent: 'evt.meco', t: 328 },
+    { id: 'fairing', label: 'payload fairing jettison', event: 'evt.fairingSep', t: 340 },
+    { id: 'stage3Cutoff', label: 'third-stage cut-off', event: 'evt.seco', t: 746 },
+    { id: 'brizSep', label: 'Briz-M separation', event: 'evt.stageSep', nth: 2, t: 748 },
+  ],
+};
+
+export const TIMELINE_REFERENCES: readonly TimelineReference[] = [SOYUZ_MS25, ELECTRON_NTT, ARIANE64_VA267,
+  ATLASV_JUNO, PSLV_C52, H3_F3, H2A_F50, VEGAC_VV25, PROTON_T14R, FH_ARABSAT, ANGARA_F2];
