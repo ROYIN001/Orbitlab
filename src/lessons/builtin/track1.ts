@@ -107,26 +107,26 @@ export const TRACK1: readonly unknown[] = [
     id: 'orbit-payload', track: 1, order: 4, mode: 'explore', domains: [3, 2], tags: ['m_pl', 'Δv'],
     title: { en: 'Payload and Δv', ru: 'Полезная нагрузка и Δv', th: 'น้ำหนักบรรทุกกับ Δv' },
     brief: {
-      en: 'How much can Falcon 9 carry to a 500 km circular orbit? Set the payload mass so that the rocket reaches the target orbit carrying at least 16 t, with at least 150 m/s of Δv left in the second stage as a reserve. The panel starts at 18 t, which is too much. Only the payload mass may be changed.',
-      ru: 'Сколько Falcon 9 может вывести на круговую орбиту высотой 500 км? Задайте массу полезной нагрузки так, чтобы ракета вышла на целевую орбиту с нагрузкой не менее 16 т и с запасом характеристической скорости второй ступени не менее 150 м/с. На панели стоит 18 т — это слишком много. Изменять можно только массу полезной нагрузки.',
-      th: 'Falcon 9 นำน้ำหนักบรรทุกขึ้นสู่วงโคจรวงกลม 500 กม. ได้เท่าใด ให้ตั้งมวลน้ำหนักบรรทุกให้จรวดเข้าถึงวงโคจรเป้าหมายโดยบรรทุกไม่น้อยกว่า 16 ตัน และยังเหลือ Δv ในขั้นที่ 2 ไม่น้อยกว่า 150 ม./วินาทีเป็นส่วนสำรอง แผงตั้งค่าเริ่มที่ 18 ตันซึ่งมากเกินไป เปลี่ยนได้เฉพาะมวลน้ำหนักบรรทุกเท่านั้น',
+      en: 'How much can Falcon 9 carry to a 500 km circular orbit? Set the payload mass so that the rocket reaches the target orbit carrying at least 17.5 t, with at least 150 m/s of Δv left in the second stage as a reserve. The panel starts at 19.5 t, which is too much. Only the payload mass may be changed.',
+      ru: 'Сколько Falcon 9 может вывести на круговую орбиту высотой 500 км? Задайте массу полезной нагрузки так, чтобы ракета вышла на целевую орбиту с нагрузкой не менее 17,5 т и с запасом характеристической скорости второй ступени не менее 150 м/с. На панели стоит 19,5 т — это слишком много. Изменять можно только массу полезной нагрузки.',
+      th: 'Falcon 9 นำน้ำหนักบรรทุกขึ้นสู่วงโคจรวงกลม 500 กม. ได้เท่าใด ให้ตั้งมวลน้ำหนักบรรทุกให้จรวดเข้าถึงวงโคจรเป้าหมายโดยบรรทุกไม่น้อยกว่า 17.5 ตัน และยังเหลือ Δv ในขั้นที่ 2 ไม่น้อยกว่า 150 ม./วินาทีเป็นส่วนสำรอง แผงตั้งค่าเริ่มที่ 19.5 ตันซึ่งมากเกินไป เปลี่ยนได้เฉพาะมวลน้ำหนักบรรทุกเท่านั้น',
     },
     debrief: {
       en: 'The payload rides on the second stage all the way, so every kilogram enters its mass ratio in Tsiolkovsky\'s Δv = Isp·g0·ln(m0/mf). Here each tonne costs about 170 m/s. Real missions keep a reserve like this one for the dispersions of thrust, mass and wind.',
       ru: 'Полезная нагрузка летит на второй ступени до конца, поэтому каждый килограмм входит в её отношение масс в формуле Циолковского Δv = Iуд·g0·ln(m0/mк). Здесь каждая тонна стоит около 170 м/с. В реальных пусках такой запас оставляют на разброс тяги, масс и ветра.',
       th: 'น้ำหนักบรรทุกอยู่บนขั้นที่ 2 ตลอดทาง ทุกกิโลกรัมจึงเข้าไปในอัตราส่วนมวลของสมการซีออลคอฟสกี Δv = Isp·g0·ln(m0/mf) ในที่นี้ทุกหนึ่งตันทำให้เสีย Δv ประมาณ 170 ม./วินาที ภารกิจจริงเก็บส่วนสำรองแบบนี้ไว้รองรับความคลาดเคลื่อนของแรงขับ มวล และลม',
     },
-    mission: missionDoc({ vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 18000, orbitId: 'leo', dynamics: { model: 'pointMass', wind: 'calm', seed: 20260919 } }),
+    mission: missionDoc({ vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 19500, orbitId: 'leo', dynamics: { model: 'pointMass', wind: 'calm', seed: 20260919 } }),
     locked: ['setup.vehicle', 'setup.site', 'setup.satellite', 'setup.orbit', 'setup.failure', 'setup.dynamics.model', 'setup.guidance'],
     criteria: [
       { id: 'orbit', kind: 'outcome', is: 'target' },
-      { id: 'payload', kind: 'measure', measure: 'payload', min: 16000 },
+      { id: 'payload', kind: 'measure', measure: 'payload', min: 17500 },
       { id: 'reserve', kind: 'measure', measure: 'dvLeft', min: 150 },
     ],
     hints: [
       { en: 'Every kilogram of payload is carried by the second stage to orbit: it costs Δv through the logarithm of the mass ratio.', ru: 'Каждый килограмм нагрузки вторая ступень несёт до орбиты: он отнимает Δv через логарифм отношения масс.', th: 'ทุกกิโลกรัมของน้ำหนักบรรทุกถูกขั้นที่ 2 พาไปถึงวงโคจร จึงทำให้เสีย Δv ผ่านลอการิทึมของอัตราส่วนมวล' },
       { en: 'The telemetry panel\'s "Δv left" chart shows what the stage keeps after the orbit is reached.', ru: 'График «Остаток Δv» на панели телеметрии показывает запас ступени после выхода на орбиту.', th: 'กราฟ «Δv คงเหลือ» ในแผงโทรมาตรแสดงค่าที่ขั้นยังเหลืออยู่หลังเข้าวงโคจร' },
-      { en: 'Change the mass in steps of 500 kg and fly again; the answer lies between 16 and 17.5 t.', ru: 'Меняйте массу шагами по 500 кг и повторяйте полёт; ответ лежит между 16 и 17,5 т.', th: 'ปรับมวลทีละ 500 กก. แล้วบินใหม่ คำตอบอยู่ระหว่าง 16 ถึง 17.5 ตัน' },
+      { en: 'Change the mass in steps of 500 kg and fly again; the answer lies between 17.5 and 18.5 t.', ru: 'Меняйте массу шагами по 500 кг и повторяйте полёт; ответ лежит между 17,5 и 18,5 т.', th: 'ปรับมวลทีละ 500 กก. แล้วบินใหม่ คำตอบอยู่ระหว่าง 17.5 ถึง 18.5 ตัน' },
     ],
   },
   {

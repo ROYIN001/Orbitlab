@@ -105,15 +105,15 @@ describe('track 4, attitude control', () => {
 });
 
 describe('track 5, advanced missions', () => {
-  it('5.1 the booster home: 10 t reaches the orbit with the stage on LZ-1; 12 t falls short, 9 t is less than asked', { timeout: 120_000 }, () => {
+  it('5.1 the booster home: 9.5 t reaches the orbit with the stage on LZ-1; 12 t falls short, 8.5 t is less than asked', { timeout: 120_000 }, () => {
     const l = lesson('adv-landing');
-    const solved = fly(l, (s) => { s.payloadMass = 10000; });
+    const solved = fly(l, (s) => { s.payloadMass = 9500; });
     expect(solved.events.some((e) => e.key === 'evt.boosterLandedZone'), log(solved)).toBe(true);
     expect(graded(l, solved).verdict, graded(l, solved).detail).toBe('pass');
     const heavy = fly(l);
     expect(heavy.events.some((e) => e.key === 'evt.boosterLandedZone')).toBe(true);
     expect(gradeLesson(l, heavy).verdict).toBe('fail');
-    expect(gradeLesson(l, fly(l, (s) => { s.payloadMass = 9000; })).verdict).toBe('fail');
+    expect(gradeLesson(l, fly(l, (s) => { s.payloadMass = 8500; })).verdict).toBe('fail');
   });
 
   it('5.2 rendezvous and docking: the two-orbit profile docks in about 3.4 h; the two-day one is too slow', { timeout: 180_000 }, () => {

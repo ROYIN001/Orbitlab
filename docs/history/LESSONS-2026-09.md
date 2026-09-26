@@ -212,3 +212,27 @@ six-DOF wrong flight) and `tests/heavy/lessons-sixdof.test.ts` (the five six-DOF
 not get there; the same names and code make the same sheets, other names or codes other numbers;
 no answer on a sheet, every answer in the key, no script or network in the file; prompts in
 Russian and Thai; the Word package's structure.
+
+## Main merged in: G05 and Falcon 9's published masses (2026-09-26)
+
+Main moved on while this branch was open: G05 (Monte Carlo, with `DEFAULT_DISPERSIONS`, which P08
+builds on) and PR #18's flight-data validation, with Falcon 9's published first-stage masses. The
+merge kept both sides of every conflict (the dictionaries' blocks, `mcp.ts`, the i18n test, the
+guide — whose Monte Carlo section is §17, the lessons §18). Falcon 9 now lifts about 1.5 t more, and
+main's autopilot work damps the default loop much more; every lesson and recorded flight was
+measured again:
+
+| | Was | Now |
+|---|---|---|
+| 1.4 payload and Δv | at least 16 t, panel at 18 t | at least 17.5 t, panel at 19.5 t (18 t leaves 173 m/s, 18.5 t 93) |
+| 3.1 one engine out | at least 16 t, panel at 17.5 t | at least 17.5 t, panel at 19 t (18 t: target with 62 m/s; 19 t off target) |
+| 2.2 PEG and IGM | 17.8 t | 18.8 t (standard: off target; PEG 46 m/s left, IGM 44) |
+| 5.1 the booster home | at least 10 t | at least 9 t (9.5 t: target, the stage on LZ-1) |
+| 4.3 a step test | default gains 38 % at T+90 s, pass at 35 % with K_ω 6 | starts with K_θ 4 / K_ω 1.5: 12 % at T+65 s; pass at 6 % (the default gains: 0 %) |
+| `flights.json` | MECO T+151.7 s, max-Q 22.8 kPa | MECO T+157.1 s, max-Q 22.4 kPa (regenerated; the bank's explanations quoting them updated) |
+
+Found, not changed (physics is not this branch's to change): in point-mass, Falcon 9's first
+stage flown back to LZ-1 lands with 8–9.5 t and with 11.5 t on top, but comes down 42–216 m off the
+pad with 10–11 t (`evt.stageImpact`). Lesson 5.1 asks for at least 9 t and its hints do not promise
+that heavier always fails. At T+90 s the six-DOF pitch loop is now dominated by a ±2° oscillation
+that is not the step, so the step test moved to T+65 s.

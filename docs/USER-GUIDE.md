@@ -675,19 +675,19 @@ which one.
 | 1.1 | Your first orbit | nothing | the 500 km orbit is reached, and its period (±1 min) and speed (±0.05 km/s) are worked out |
 | 1.2 | Into the station's plane | the launch time | the ISS plane is reached directly: i within 0.1°, Ω within 0.5° |
 | 1.3 | A Hohmann transfer | nothing | the 2 000 km circle is reached, and the apogee burn's Δv (±5 %) and the period are worked out with vis-viva |
-| 1.4 | Payload and Δv | the payload mass | at least 16 t to 500 km with 150 m/s of Δv left |
+| 1.4 | Payload and Δv | the payload mass | at least 17.5 t to 500 km with 150 m/s of Δv left |
 | 1.5 | Range safety and the launch site | the launch site | a site whose corridor licenses a polar launch, and the orbit |
 | 2.1 | Aerodynamic loads (Soyuz-2.1a) | the guidance (the acceleration limit) | peak q at most 25 kPa, the orbit reached, and the peak read (±1 kPa) |
-| 2.2 | PEG and IGM (Engineer) | the upper-stage guidance | 17.8 t to 500 km with an engine lost at T+80 s: the target orbit, explicit guidance engaged, 20 m/s left |
+| 2.2 | PEG and IGM (Engineer) | the upper-stage guidance | 18.8 t to 500 km with an engine lost at T+80 s: the target orbit, explicit guidance engaged, 20 m/s left |
 | 2.3 | Inertial navigation without GNSS (Engineer, six-DOF) | the IMU grade | the position error within 500 m up to MECO, GNSS still off |
-| 3.1 | One engine out | the payload mass | the orbit with an engine lost at T+80 s, carrying at least 16 t |
+| 3.1 | One engine out | the payload mass | the orbit with an engine lost at T+80 s, carrying at least 17.5 t |
 | 3.2 | A stuck gyro and the FDIR (Engineer, six-DOF) | the FDIR switch | the orbit, with IMU 1 voted out |
 | 3.3 | The crew's escape | nothing | the crew lands, and the peak load on them is read (±10 %) |
 | 4.1 | Reading the control loop (Engineer, six-DOF) | nothing | the pitch crossover and phase margin at max-Q read from the loop inspector (±10 %) |
 | 4.2 | Gains with margins (Engineer, six-DOF) | the pitch–yaw gains | at max-Q, a phase margin of 30° and a gain margin of 6 dB |
-| 4.3 | A step test in flight (Engineer, six-DOF) | the pitch–yaw gains, and the test you fly | a 2° pitch step flown before MECO overshoots by 35 % at most, and its overshoot is read (±5 points) |
+| 4.3 | A step test in flight (Engineer, six-DOF) | the pitch–yaw gains, and the test you fly | a 2° pitch step flown before MECO overshoots by 6 % at most, and its overshoot is read (±5 points) |
 | 4.4 | Bending and the notch filter (Engineer, six-DOF) | the flexible-vehicle settings | through max-Q with the bending on and no breakup |
-| 5.1 | Bringing the booster home | the payload mass | at least 10 t to 500 km with the first stage on Landing Zone 1 |
+| 5.1 | Bringing the booster home | the payload mass | at least 9 t to 500 km with the first stage on Landing Zone 1 |
 | 5.2 | Rendezvous and docking | the rendezvous profile | docked within 4 h of launch, and the time read (±0.1 h) |
 
 **The placement test** is 25 questions in six areas — 1 the basics of spaceflight, 2 orbital

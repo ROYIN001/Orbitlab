@@ -12,9 +12,9 @@ export const TRACK3: readonly unknown[] = [
     id: 'fail-engine-out', track: 3, order: 1, mode: 'explore', domains: [6, 3], tags: ['failure', 'm_pl'],
     title: { en: 'One engine out', ru: 'Отказ одного двигателя', th: 'เครื่องยนต์ดับหนึ่งเครื่อง' },
     brief: {
-      en: 'One of Falcon 9\'s nine first-stage engines will fail at T+80 s. The rocket can still reach orbit — the other eight burn longer and the guidance flies on — but not with 17.5 t on top. Take off as little payload as you must: reach the 500 km target orbit carrying at least 16 t. The failure is fixed; only the payload mass may be changed.',
-      ru: 'Один из девяти двигателей первой ступени Falcon 9 откажет на T+80 с. Ракета всё ещё может выйти на орбиту — остальные восемь работают дольше, и система наведения продолжает полёт, — но не с 17,5 т нагрузки. Снимите столько нагрузки, сколько необходимо, и не больше: выйдите на целевую орбиту 500 км с нагрузкой не менее 16 т. Отказ задан; изменять можно только массу полезной нагрузки.',
-      th: 'เครื่องยนต์หนึ่งในเก้าเครื่องของขั้นที่ 1 ของ Falcon 9 จะดับที่ T+80 วินาที จรวดยังเข้าวงโคจรได้ เพราะอีกแปดเครื่องจะเผาไหม้นานขึ้นและระบบนำวิถียังบินต่อ แต่ไม่ใช่เมื่อบรรทุก 17.5 ตัน ให้ลดน้ำหนักบรรทุกเท่าที่จำเป็นเท่านั้น: เข้าวงโคจรเป้าหมาย 500 กม. โดยบรรทุกไม่น้อยกว่า 16 ตัน ความล้มเหลวถูกกำหนดไว้แล้ว เปลี่ยนได้เฉพาะมวลน้ำหนักบรรทุก',
+      en: 'One of Falcon 9\'s nine first-stage engines will fail at T+80 s. The rocket can still reach orbit — the other eight burn longer and the guidance flies on — but not with 19 t on top. Take off as little payload as you must: reach the 500 km target orbit carrying at least 17.5 t. The failure is fixed; only the payload mass may be changed.',
+      ru: 'Один из девяти двигателей первой ступени Falcon 9 откажет на T+80 с. Ракета всё ещё может выйти на орбиту — остальные восемь работают дольше, и система наведения продолжает полёт, — но не с 19 т нагрузки. Снимите столько нагрузки, сколько необходимо, и не больше: выйдите на целевую орбиту 500 км с нагрузкой не менее 17,5 т. Отказ задан; изменять можно только массу полезной нагрузки.',
+      th: 'เครื่องยนต์หนึ่งในเก้าเครื่องของขั้นที่ 1 ของ Falcon 9 จะดับที่ T+80 วินาที จรวดยังเข้าวงโคจรได้ เพราะอีกแปดเครื่องจะเผาไหม้นานขึ้นและระบบนำวิถียังบินต่อ แต่ไม่ใช่เมื่อบรรทุก 19 ตัน ให้ลดน้ำหนักบรรทุกเท่าที่จำเป็นเท่านั้น: เข้าวงโคจรเป้าหมาย 500 กม. โดยบรรทุกไม่น้อยกว่า 17.5 ตัน ความล้มเหลวถูกกำหนดไว้แล้ว เปลี่ยนได้เฉพาะมวลน้ำหนักบรรทุก',
     },
     debrief: {
       en: 'Engine-out capability: with eight engines of nine the first stage keeps all its propellant but has less thrust, so it burns longer and loses more to gravity. The loss shows as Δv the second stage no longer has — about 100 m/s here, which is why a little payload had to come off.',
@@ -22,14 +22,14 @@ export const TRACK3: readonly unknown[] = [
       th: 'ความสามารถรับมือเครื่องยนต์ดับ: เมื่อเหลือแปดในเก้าเครื่อง ขั้นที่ 1 ยังมีเชื้อเพลิงครบแต่แรงขับน้อยลง จึงเผาไหม้นานขึ้นและสูญเสียจากแรงโน้มถ่วงมากขึ้น การสูญเสียนี้ปรากฏเป็น Δv ที่ขั้นที่ 2 ไม่มีอีกต่อไป ในที่นี้ประมาณ 100 ม./วินาที จึงต้องลดน้ำหนักบรรทุกลงเล็กน้อย',
     },
     mission: missionDoc({
-      vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 17500, orbitId: 'leo',
+      vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 19000, orbitId: 'leo',
       failure: { ...DEFAULT_FAILURE, mode: 'engineOut', time: 80, stage: 0 },
       dynamics: { model: 'pointMass', wind: 'calm', seed: 20260919 },
     }),
     locked: ['setup.vehicle', 'setup.site', 'setup.satellite', 'setup.orbit', 'setup.failure', 'setup.dynamics.model', 'setup.guidance'],
     criteria: [
       { id: 'orbit', kind: 'outcome', is: 'target' },
-      { id: 'payload', kind: 'measure', measure: 'payload', min: 16000 },
+      { id: 'payload', kind: 'measure', measure: 'payload', min: 17500 },
     ],
     hints: [
       { en: 'With eight engines the first stage has the same propellant but less thrust: it burns longer and loses more to gravity.', ru: 'С восемью двигателями у первой ступени то же топливо, но меньше тяга: она работает дольше и больше теряет на гравитацию.', th: 'เมื่อเหลือแปดเครื่อง ขั้นที่ 1 มีเชื้อเพลิงเท่าเดิมแต่แรงขับน้อยลง จึงเผาไหม้นานขึ้นและเสียให้แรงโน้มถ่วงมากขึ้น' },

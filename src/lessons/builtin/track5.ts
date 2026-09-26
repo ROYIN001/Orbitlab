@@ -13,14 +13,14 @@ export const TRACK5: readonly unknown[] = [
     id: 'adv-landing', track: 5, order: 1, mode: 'explore', domains: [3, 4], tags: ['RTLS', 'LZ-1'],
     title: { en: 'Bringing the booster home', ru: 'Возвращение первой ступени', th: 'นำบูสเตอร์กลับ' },
     brief: {
-      en: 'Falcon 9 from Cape Canaveral to 500 km, its first stage flying back to Landing Zone 1. With 12 t on top the stage still lands, but the second stage cannot reach the target orbit: the propellant kept back for the boostback and the landing is missing from the ascent. Find the heaviest payload that reaches the target orbit with the stage back on LZ-1 — at least 10 t. Only the payload mass may change.',
-      ru: 'Falcon 9 с мыса Канаверал на высоту 500 км, первая ступень возвращается на площадку LZ-1. С 12 т ступень садится, но вторая ступень не выходит на целевую орбиту: топлива, оставленного на разворот и посадку, не хватает на выведении. Найдите наибольшую массу полезной нагрузки, при которой достигается целевая орбита и ступень садится на LZ-1, — не менее 10 т. Менять можно только массу полезной нагрузки.',
-      th: 'Falcon 9 จากแหลมคะแนเวอรัลไปที่ 500 กม. โดยขั้นที่หนึ่งบินกลับลงที่ Landing Zone 1 เมื่อบรรทุก 12 ตัน ขั้นแรกยังลงจอดได้ แต่ขั้นที่สองไปไม่ถึงวงโคจรเป้าหมาย เพราะเชื้อเพลิงที่สำรองไว้สำหรับบินกลับและลงจอดหายไปจากการไต่ระดับ จงหามวลสัมภาระที่มากที่สุดที่ยังเข้าวงโคจรเป้าหมายได้และขั้นแรกลงที่ LZ-1 อย่างน้อย 10 ตัน ปรับได้เฉพาะมวลสัมภาระ',
+      en: 'Falcon 9 from Cape Canaveral to 500 km, its first stage flying back to Landing Zone 1. With 12 t on top the stage still lands, but the second stage cannot reach the target orbit: the propellant kept back for the boostback and the landing is missing from the ascent. Carry at least 9 t to the target orbit with the stage back on LZ-1. Only the payload mass may change.',
+      ru: 'Falcon 9 с мыса Канаверал на высоту 500 км, первая ступень возвращается на площадку LZ-1. С 12 т ступень садится, но вторая ступень не выходит на целевую орбиту: топлива, оставленного на разворот и посадку, не хватает на выведении. Выведите на целевую орбиту не менее 9 т так, чтобы ступень села на LZ-1. Менять можно только массу полезной нагрузки.',
+      th: 'Falcon 9 จากแหลมคะแนเวอรัลไปที่ 500 กม. โดยขั้นที่หนึ่งบินกลับลงที่ Landing Zone 1 เมื่อบรรทุก 12 ตัน ขั้นแรกยังลงจอดได้ แต่ขั้นที่สองไปไม่ถึงวงโคจรเป้าหมาย เพราะเชื้อเพลิงที่สำรองไว้สำหรับบินกลับและลงจอดหายไปจากการไต่ระดับ จงนำสัมภาระอย่างน้อย 9 ตันเข้าสู่วงโคจรเป้าหมาย โดยให้ขั้นแรกลงที่ LZ-1 ปรับได้เฉพาะมวลสัมภาระ',
     },
     debrief: {
-      en: 'A return to the launch site costs the most: the stage must cancel its downrange speed and fly back, so it separates earlier and slower and keeps a large reserve. Here the ascent loses about a sixth of the payload an expendable Falcon 9 lifts to this orbit; a drone ship downrange costs much less, which is why heavy payloads land at sea.',
-      ru: 'Возвращение к месту старта обходится дороже всего: ступени нужно погасить скорость вдоль трассы и лететь обратно, поэтому она отделяется раньше и медленнее и оставляет большой резерв топлива. Здесь выведение теряет около шестой части нагрузки, которую одноразовый Falcon 9 выводит на эту орбиту; посадка на морскую платформу вдоль трассы обходится гораздо дешевле, поэтому тяжёлые нагрузки садятся в море.',
-      th: 'การบินกลับฐานปล่อยมีต้นทุนสูงที่สุด ขั้นแรกต้องหักล้างความเร็วตามแนวบินแล้วบินย้อนกลับ จึงแยกตัวเร็วกว่าและช้ากว่า และต้องสำรองเชื้อเพลิงไว้มาก ในที่นี้การไต่ระดับเสียสัมภาระไปราวหนึ่งในหกของที่ Falcon 9 แบบใช้ครั้งเดียวส่งได้ การลงบนเรือโดรนกลางทะเลเสียน้อยกว่ามาก สัมภาระหนักจึงลงจอดในทะเล',
+      en: 'A return to the launch site costs the most: the stage must cancel its downrange speed and fly back, so it separates earlier and slower and keeps a large reserve. Here Falcon 9 lifts about 19 t to this orbit expended and about 9–11 t with the stage coming back; a drone ship downrange costs much less, which is why heavy payloads land at sea.',
+      ru: 'Возвращение к месту старта обходится дороже всего: ступени нужно погасить скорость вдоль трассы и лететь обратно, поэтому она отделяется раньше и медленнее и оставляет большой резерв топлива. Здесь Falcon 9 без возвращения выводит на эту орбиту около 19 т, а с возвращением ступени — около 9–11 т; посадка на морскую платформу вдоль трассы обходится гораздо дешевле, поэтому тяжёлые нагрузки садятся в море.',
+      th: 'การบินกลับฐานปล่อยมีต้นทุนสูงที่สุด ขั้นแรกต้องหักล้างความเร็วตามแนวบินแล้วบินย้อนกลับ จึงแยกตัวเร็วกว่าและช้ากว่า และต้องสำรองเชื้อเพลิงไว้มาก ในที่นี้ Falcon 9 แบบไม่กู้คืนส่งได้ประมาณ 19 ตัน แต่เมื่อบินกลับได้ประมาณ 9–11 ตัน การลงบนเรือโดรนกลางทะเลเสียน้อยกว่ามาก สัมภาระหนักจึงลงจอดในทะเล',
     },
     mission: missionDoc({
       vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 12000, orbitId: 'leo',
@@ -33,12 +33,12 @@ export const TRACK5: readonly unknown[] = [
         label: { en: 'First stage on Landing Zone 1', ru: 'Первая ступень на LZ-1', th: 'ขั้นที่หนึ่งลงที่ Landing Zone 1' },
       },
       { id: 'orbit', kind: 'outcome', is: 'target' },
-      { id: 'payload', kind: 'measure', measure: 'payload', min: 10000 },
+      { id: 'payload', kind: 'measure', measure: 'payload', min: 9000 },
     ],
     hints: [
       { en: 'Watch the Δv left at insertion: with 12 t it runs out before the circularising burn.', ru: 'Следите за остатком Δv при выведении: с 12 т его не хватает на скругление орбиты.', th: 'ดู Δv ที่เหลือตอนเข้าวงโคจร เมื่อบรรทุก 12 ตัน Δv หมดก่อนการจุดปรับวงโคจรเป็นวงกลม' },
       { en: 'The stage lands whatever the payload: what the payload takes is the second stage\'s margin.', ru: 'Ступень садится при любой нагрузке: нагрузка «съедает» запас второй ступени.', th: 'ขั้นแรกลงจอดได้ไม่ว่าสัมภาระเท่าใด สิ่งที่สัมภาระกินไปคือค่าเผื่อของขั้นที่สอง' },
-      { en: 'Between 10 and 11 t it works; halve the gap until the orbit is just reached.', ru: 'Между 10 и 11 т всё получается; делите интервал пополам, пока орбита не будет достигаться на пределе.', th: 'ระหว่าง 10 ถึง 11 ตันใช้ได้ ลองแบ่งครึ่งช่วงไปเรื่อย ๆ จนเข้าวงโคจรได้พอดี' },
+      { en: 'Around 9–9.5 t both work: the orbit with Δv to spare, and the stage on the pad. Watch the event log for where the stage came down.', ru: 'Около 9–9,5 т получается и то и другое: орбита с запасом Δv и ступень на площадке. Где упала ступень, смотрите в журнале событий.', th: 'ประมาณ 9–9.5 ตันได้ทั้งสองอย่าง คือเข้าวงโคจรโดยมี Δv เหลือ และขั้นแรกลงบนแท่น ดูบันทึกเหตุการณ์ว่าขั้นแรกตกลงที่ใด' },
     ],
   },
   {

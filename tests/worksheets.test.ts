@@ -124,7 +124,7 @@ describe('a class\'s worksheets', () => {
     }
     expect(key).toContain('Somchai');
     // the event table does not give away what the questions ask: the peak q, the lift-off's T/W
-    expect(html).not.toContain('22.8 kPa');
+    expect(html).not.toContain(`${sim.events.find((e) => e.key === 'evt.maxQ')!.params!.q} kPa`);
     expect(sheets[0].sections[1].table!.some(([, text]) => /max-Q|T\/W/i.test(text))).toBe(false);
     // charts drawn for print, with no script and nothing fetched
     expect(html).not.toMatch(/<script|https?:\/\/(?!www\.w3\.org)/);

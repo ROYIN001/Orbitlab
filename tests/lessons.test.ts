@@ -124,19 +124,19 @@ describe('each lesson, flown as solved and flown wrong', () => {
     expect(gradeLesson(l, sim, { burn: wrongBurn, period }).verdict).toBe('fail');
   });
 
-  it('1.4 payload and Δv: 16.5 t passes; the 18 t the panel starts with, and a timid 15 t, fail', () => {
+  it('1.4 payload and Δv: 18 t passes; the 19.5 t the panel starts with, and a timid 17 t, fail', () => {
     const l = lesson('orbit-payload');
-    const solved = fly(l, (s) => { s.payloadMass = 16500; });
+    const solved = fly(l, (s) => { s.payloadMass = 18000; });
     expect(verdict(l, solved).verdict, verdict(l, solved).detail).toBe('pass');
     expect(gradeLesson(l, fly(l)).verdict).toBe('fail');
-    const timid = gradeLesson(l, fly(l, (s) => { s.payloadMass = 15000; }));
+    const timid = gradeLesson(l, fly(l, (s) => { s.payloadMass = 17000; }));
     expect(timid.verdict).toBe('fail');
     expect(timid.criteria.find((c) => c.id === 'payload')!.state).toBe('fail');
   });
 
   it('1.4 grades the same long after the insertion, when the payload has separated and the Δv shown is its own', () => {
     const l = lesson('orbit-payload');
-    const sim = fly(l, (s) => { s.payloadMass = 16500; });
+    const sim = fly(l, (s) => { s.payloadMass = 18000; });
     const atEnd = gradeLesson(l, sim);
     const until = sim.state.t + 3600;
     while (sim.state.t < until) sim.step(sim.suggestedDt());
@@ -154,13 +154,13 @@ describe('each lesson, flown as solved and flown wrong', () => {
     expect(cape.criteria.find((c) => c.id === 'licence')!.state).toBe('fail');
   });
 
-  it('3.1 one engine out: 16.5 t passes; 17.5 t does not reach the orbit, and 15 t is more than had to come off', () => {
+  it('3.1 one engine out: 18 t passes; 19 t does not reach the orbit, and 17 t is more than had to come off', () => {
     const l = lesson('fail-engine-out');
-    const solved = fly(l, (s) => { s.payloadMass = 16500; });
+    const solved = fly(l, (s) => { s.payloadMass = 18000; });
     expect(solved.events.some((e) => e.key === 'evt.engineOut')).toBe(true);
     expect(verdict(l, solved).verdict, verdict(l, solved).detail).toBe('pass');
     expect(gradeLesson(l, fly(l)).verdict).toBe('fail');
-    expect(gradeLesson(l, fly(l, (s) => { s.payloadMass = 15000; })).verdict).toBe('fail');
+    expect(gradeLesson(l, fly(l, (s) => { s.payloadMass = 17000; })).verdict).toBe('fail');
   });
 
   it('3.2 a stuck gyro: without the FDIR the vehicle breaks up, and the lesson fails', { timeout: 120_000 }, () => {

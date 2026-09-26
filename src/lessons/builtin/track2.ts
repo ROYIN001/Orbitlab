@@ -50,9 +50,9 @@ export const TRACK2: readonly unknown[] = [
     id: 'guid-peg', track: 2, order: 2, mode: 'engineer', domains: [4, 6], tags: ['G01', 'PEG', 'IGM'],
     title: { en: 'PEG and IGM', ru: 'PEG и IGM', th: 'PEG และ IGM' },
     brief: {
-      en: 'Falcon 9 carries 17.8 t to 500 km, and one of its first-stage engines will fail at T+80 s. With the standard guidance the second stage runs dry short of the target. Keep the failure and the payload; choose an explicit upper-stage guidance — PEG, the Space Shuttle\'s, or IGM, Saturn V\'s — and reach the target orbit.',
-      ru: 'Falcon 9 выводит 17,8 т на высоту 500 км, и на T+80 с откажет один из двигателей первой ступени. Со стандартным наведением вторая ступень вырабатывает топливо, не дойдя до цели. Отказ и полезная нагрузка остаются; выберите явное наведение верхней ступени — PEG («Спейс шаттл») или IGM (Saturn V) — и выйдите на целевую орбиту.',
-      th: 'Falcon 9 นำสัมภาระ 17.8 ตันไปที่ 500 กม. และเครื่องยนต์หนึ่งของขั้นที่หนึ่งจะดับที่ T+80 วินาที ด้วยการนำวิถีมาตรฐาน ขั้นที่สองจะหมดเชื้อเพลิงก่อนถึงเป้าหมาย คงความผิดปกติและสัมภาระไว้ แล้วเลือกการนำวิถีขั้นบนแบบชัดแจ้ง ได้แก่ PEG ของกระสวยอวกาศ หรือ IGM ของ Saturn V เพื่อเข้าสู่วงโคจรเป้าหมาย',
+      en: 'Falcon 9 carries 18.8 t to 500 km, and one of its first-stage engines will fail at T+80 s. With the standard guidance the second stage runs dry short of the target. Keep the failure and the payload; choose an explicit upper-stage guidance — PEG, the Space Shuttle\'s, or IGM, Saturn V\'s — and reach the target orbit.',
+      ru: 'Falcon 9 выводит 18,8 т на высоту 500 км, и на T+80 с откажет один из двигателей первой ступени. Со стандартным наведением вторая ступень вырабатывает топливо, не дойдя до цели. Отказ и полезная нагрузка остаются; выберите явное наведение верхней ступени — PEG («Спейс шаттл») или IGM (Saturn V) — и выйдите на целевую орбиту.',
+      th: 'Falcon 9 นำสัมภาระ 18.8 ตันไปที่ 500 กม. และเครื่องยนต์หนึ่งของขั้นที่หนึ่งจะดับที่ T+80 วินาที ด้วยการนำวิถีมาตรฐาน ขั้นที่สองจะหมดเชื้อเพลิงก่อนถึงเป้าหมาย คงความผิดปกติและสัมภาระไว้ แล้วเลือกการนำวิถีขั้นบนแบบชัดแจ้ง ได้แก่ PEG ของกระสวยอวกาศ หรือ IGM ของ Saturn V เพื่อเข้าสู่วงโคจรเป้าหมาย',
     },
     debrief: {
       en: 'An explicit law solves, every cycle, for the steering that reaches the cut-off state with the stages and propellant that are really left, and re-solves as they change. After the engine out it spends the second stage\'s propellant on exactly the orbit asked for: about 40 m/s left over, where the standard steering ran short. PEG carries the velocity still to gain from cycle to cycle; IGM solves in a frame at the predicted cut-off point.',
@@ -60,7 +60,7 @@ export const TRACK2: readonly unknown[] = [
       th: 'กฎการนำวิถีแบบชัดแจ้งคำนวณใหม่ทุกรอบว่าต้องบังคับทิศอย่างไรจึงจะไปถึงสภาวะ ณ เวลาดับเครื่องด้วยขั้นและเชื้อเพลิงที่เหลืออยู่จริง และคำนวณใหม่เมื่อสิ่งเหล่านี้เปลี่ยน หลังเครื่องยนต์ดับ จึงใช้เชื้อเพลิงของขั้นที่สองสำหรับวงโคจรที่ต้องการพอดี เหลือประมาณ 40 ม./วินาที ในขณะที่การบังคับทิศมาตรฐานเชื้อเพลิงไม่พอ PEG ส่งต่อความเร็วที่ยังต้องเพิ่มจากรอบหนึ่งไปอีกรอบ ส่วน IGM แก้ปัญหาในกรอบอ้างอิงที่จุดดับเครื่องที่คาดการณ์',
     },
     mission: missionDoc({
-      vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 17800, orbitId: 'leo',
+      vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 18800, orbitId: 'leo',
       failure: { ...DEFAULT_FAILURE, mode: 'engineOut', time: 80, stage: 0 }, dynamics: { ...POINT_MASS },
     }),
     locked: ['setup.vehicle', 'setup.site', 'setup.satellite', 'setup.payloadMass', 'setup.orbit', 'setup.failure', 'setup.dynamics.model'],

@@ -52,19 +52,20 @@ describe('round 2: the six-DOF lessons, solved', () => {
     expect(grade.verdict, why(grade, sim)).toBe('pass');
   });
 
-  it('4.3 a step test: the default gains overshoot past 35 %; a rate gain of 6 brings it under', { timeout: 900_000 }, () => {
+  it('4.3 a step test: the fast tuning overshoots past 6 %; the default gains hardly at all', { timeout: 900_000 }, () => {
     const step = (sim: Simulation) => {
-      if (sim.state.t >= 90 && !sim.events.some((e) => e.key === 'evt.attitudeTestStep')) {
+      if (sim.state.t >= 65 && !sim.events.some((e) => e.key === 'evt.attitudeTestStep')) {
         sim.startAttitudeTest({ axis: 'z', sign: 1, kind: 'step', amplitudeRad: 2 * Math.PI / 180, holdS: 8 });
       }
     };
     const asIs = flyLesson('ctl-step', undefined, step);
-    expect(MEASURES['step.overshoot'].read(asIs.sim)!).toBeGreaterThan(35);
+    expect(MEASURES['step.overshoot'].read(asIs.sim)!).toBeGreaterThan(6);
     expect(gradeLesson(asIs.lesson, asIs.sim, exactAnswers(asIs.lesson, asIs.sim)).verdict).toBe('fail');
+    const retuned = (s: Parameters<Parameters<typeof lessonConfig>[1] & object>[0]) => { s.dynamics!.control = { pitchYaw: { attitudeGain: 1.5, rateGain: 3 } }; };
     // no test flown: nothing to grade
-    const none = flyLesson('ctl-step', (s) => { s.dynamics!.control = { pitchYaw: { attitudeGain: 1.5, rateGain: 6 } }; });
+    const none = flyLesson('ctl-step', retuned);
     expect(gradeLesson(none.lesson, none.sim).verdict).toBe('fail');
-    const { lesson, sim } = flyLesson('ctl-step', (s) => { s.dynamics!.control = { pitchYaw: { attitudeGain: 1.5, rateGain: 6 } }; }, step);
+    const { lesson, sim } = flyLesson('ctl-step', retuned, step);
     const grade = gradeLesson(lesson, sim, exactAnswers(lesson, sim));
     expect(grade.verdict, why(grade, sim)).toBe('pass');
   });
