@@ -201,6 +201,19 @@ Eight of the "interesting" items are being done alongside them on branch
 | P07 long-term orbit perturbations | done |
 | V02 physically based sky | done |
 
+### Parts 2 and 3: Orbit and Build
+
+[ROADMAP-PART2-3.md](ROADMAP-PART2-3.md) (2026-09-26) plans the Orbit and Build sections in six
+phases. Phase 0, the structure, is on branch `claude/eloquent-meitner-mvmno4`:
+
+| Item | |
+|---|---|
+| S01 section × level shell | |
+| S02 custom vehicles in a mission | |
+| S03 orbit hand-off | |
+| S04 data provider, online and offline | |
+| S05 local design storage | |
+
 ## Known limitations
 
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
