@@ -247,6 +247,19 @@ Phase 1, the Orbit core, continues on the same branch:
 | O03 continue in orbit | done: a flight's orbit and spacecraft carry on in the playground; plans are budgeted against its own propellant by the rocket equation, and the lifetime analysis is open to any orbit there |
 | O04 applications | done: pointing a dish, coverage, delay and the link budget from GEO; a camera's swath, detail and reach from SSO; Thailand's satellites from public sources, each cited ([VALIDATION.md](VALIDATION.md) §5) |
 
+Phase 2, real satellites and the military track, continues on the same branch:
+
+| Item | |
+|---|---|
+| R01 SGP4 | done: SGP4/SDP4 and the two-line element format, `src/orbit/sgp4.ts` and `src/orbit/tle.ts`. Every line of the AIAA 2006-6753 verification output is reproduced ([VALIDATION.md](VALIDATION.md) §6). Nothing on screen uses it yet; R02 brings the satellites |
+| R02 snapshots and the scheduled refresh | |
+| R03 passes | |
+| R04 uncertainty from the element set's age | |
+| R05 space weather | |
+| M01 SSA and conjunctions | |
+| M02 overflight timing | |
+| M03 re-entry prediction | |
+
 ## Known limitations
 
 - The orbit playground (O01) carries an orbit by Kepler's equation and J2's secular drift to

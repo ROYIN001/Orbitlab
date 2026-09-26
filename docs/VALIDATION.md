@@ -25,6 +25,7 @@ Status on 2026-09-25:
 | Maneuver planner (O02) | Vallado's and Curtis's worked examples; closed forms | Transfers and Lambert held to them (§5), 2026-09-26 |
 | Continue in orbit (O03) | A recorded Soyuz flight's hand-off; the rocket equation | The playground's orbit is the flight's; the budget is Tsiolkovsky's (§5), 2026-09-26 |
 | Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§5), 2026-09-26 |
+| SGP4/SDP4 (R01) | The verification of AIAA 2006-6753 (SGP4-VER.TLE, tcppver.out); CelesTrak's documented element set | Every line of the reference output reproduced (§6), 2026-09-26 |
 
 ## 1. Method
 
@@ -971,10 +972,51 @@ SMAD*. A dish's look angles are worked on the WGS-84 ellipsoid, "up" along its n
   differ the value is left out: THEOS-2's mass is 417 kg in one report and 425 kg in another.
   NAPA-2 re-entered on 2026-07-05, by the catalogue.
 
-## 6. Re-running
+## 6. Real satellites (R01–): SGP4 against its reference
+
+Real satellites are propagated from their element sets by SGP4 and SDP4
+(`src/orbit/sgp4.ts`, roadmap R01), the theory those element sets are fitted to. It is the
+reference implementation of Vallado, Crawford, Hujsak and Kelso, "Revisiting Spacetrack Report
+#3" (AIAA 2006-6753, [CelesTrak](https://celestrak.org/publications/AIAA/2006-6753/)), carried
+over to TypeScript procedure for procedure. The paper verifies its code with 33 element sets
+chosen to exercise every branch: near-Earth drag, perigees under 156 and 98 km, the deep-space
+lunar–solar terms, the 12-hour and 24-hour resonances, the Lyddane choice at low inclination,
+integration backwards, and seven sets that must fail. `tests/sgp4.test.ts` runs them the way
+the paper's test driver does and compares the result with the paper's published output line by
+line. The fixtures and where they come from are in `tests/fixtures/sgp4/README.md`.
+
+| quantity | reference | model | tolerance |
+| --- | --- | --- | --- |
+| lines of output, set by set | tcppver.out: 33 sets, 700 lines | the same sets, the same number of lines each | exact |
+| errors | seven sets stop: codes 1, 1, 6, 6, 4, 3, 6 | the same sets stop at the same time with the same codes | exact |
+| position, 666 lines | printed to 10⁻⁸ km | worst 1.2 × 10⁻⁷ km (satellite 20413, 3½ years from its epoch); every other line under 3 × 10⁻⁸ km | 2 × 10⁻⁷ km |
+| velocity, 666 lines | printed to 10⁻⁹ km/s | worst 5 × 10⁻¹⁰ km/s | 2 × 10⁻⁷ km/s |
+| calendar date of each line | printed to 1 µs | within 21 µs (the reference dates from one Julian date in a double, which resolves 40 µs) | 0.1 ms |
+| the element-set format | CelesTrak's documented ISS set (checksums 7 and 7, every field) | every field; Alpha-5 numbers both ways | exact |
+| Greenwich mean sidereal time | Vallado Example 3-5: 152.578 787 810° at 1992-08-20 12:14 UT1 | same | 10⁻⁶° |
+
+The tolerance is the one the widely used Python port of the same code (`sgp4` on PyPI) holds
+itself to against the same file. It is twenty times the output's printed precision.
+
+**Findings.**
+
+- The deep-space resonance keeps its last integration step, as the reference does, so moving
+  forward in time costs one step, not all of them from the epoch. Stepped forward or run once,
+  it gives the same bits; going back before the last step restarts it from the epoch.
+- The two operation modes differ only in the sidereal time at the epoch and in angle handling
+  for deep-space orbits. A near-Earth set gives the same answer in both. The improved mode ('i')
+  is the default, as in the paper.
+- A Julian date held in one double resolves about 40 µs, which is a few millimetres of flight.
+  The element set's epoch is kept as a whole day and a fraction, as the reference keeps it.
+- TEME is turned to the Earth-fixed frame by Greenwich mean sidereal time alone. UT1 − UTC
+  (under 0.9 s) and polar motion are left out. They can move a point on the ground by up to about
+  400 m, less than an element set's own error, which is kilometres (R04).
+
+## 7. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
+npx vitest run tests/sgp4.test.ts                                                 # SGP4 against its reference, ~1 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

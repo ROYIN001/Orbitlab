@@ -343,7 +343,8 @@ src/ui/         setup panel, HUD, phase narration, telemetry charts, orbital map
 src/i18n/       English, Russian and Thai dictionaries
 src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground's presets,
                 rules and tour, maneuvers, Lambert and Edelbaum (O02), the propellant budget
-                (O03), what satellites do (O04), the hand-off (S03)
+                (O03), what satellites do (O04), the hand-off (S03); SGP4/SDP4 and the
+                two-line element format for real satellites (R01)
 src/data/thai-satellites.ts  Thailand's satellites, each fact with its source (O04)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
 src/design/     the user's designs, kept locally and as files (S05)
