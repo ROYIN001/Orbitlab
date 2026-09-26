@@ -26,6 +26,7 @@ Status on 2026-09-25:
 | Continue in orbit (O03) | A recorded Soyuz flight's hand-off; the rocket equation | The playground's orbit is the flight's; the budget is Tsiolkovsky's (§5), 2026-09-26 |
 | Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§5), 2026-09-26 |
 | SGP4/SDP4 (R01) | The verification of AIAA 2006-6753 (SGP4-VER.TLE, tcppver.out); CelesTrak's documented element set | Every line of the reference output reproduced (§6), 2026-09-26 |
+| Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 
 ## 1. Method
@@ -973,7 +974,7 @@ SMAD*. A dish's look angles are worked on the WGS-84 ellipsoid, "up" along its n
   differ the value is left out: THEOS-2's mass is 417 kg in one report and 425 kg in another.
   NAPA-2 re-entered on 2026-07-05, by the catalogue.
 
-## 6. Real satellites (R01–R02): SGP4 against its reference, and the catalogue
+## 6. Real satellites (R01–R03): SGP4 against its reference, the catalogue, passes
 
 Real satellites are propagated from their element sets by SGP4 and SDP4
 (`src/orbit/sgp4.ts`, roadmap R01), the theory those element sets are fitted to. It is the
@@ -1050,11 +1051,43 @@ the user brings (`src/orbit/omm.ts`, `src/orbit/tle.ts`). `tests/omm.test.ts`,
 - Thaicom 7 is catalogued as AsiaSat 6, so a search by name misses it. The Thai group is asked for
   by name and by that one number, then kept to the seven catalogue numbers of §5's list.
 
+### Passes over a place (R03)
+
+A pass is found by sampling the elevation (every 1/60 of a revolution, at most a minute),
+refining each highest point by golden section and each rise and set by bisection
+(`src/orbit/passes.ts`). The look angles are O04's, on WGS-84. The Earth's shadow is a cylinder,
+and the sky counts as dark with the Sun 6° below the horizon. `tests/passes.test.ts` holds it to
+Skyfield 1.55 (JPL DE421, its own TEME-to-Earth transformation with UT1, its own event search). The
+comparison uses the same element sets: the ISS, THEOS-2 and a GPS satellite, over Bangkok and
+Saint Petersburg, three days each, 249 events (`tests/fixtures/passes/`, with the script that
+made them). The tolerances were set before the comparison.
+
+| quantity | model against Skyfield | tolerance |
+| --- | --- | --- |
+| the events, in order: rise, highest point(s), set | the same, all six cases | exact |
+| rise and set times | within 0.35 s | 2 s |
+| time of the highest point | within 0.11 s | 5 s |
+| elevation at every event | within 0.004° | 0.02° |
+| azimuth, as arc across the sky | within 0.003° | 0.02° |
+| range | within 43 m | 1 km |
+| the Sun's elevation at the place | within 0.005° | 0.05° |
+| the satellite sunlit or not, at every event | the same, 249 of 249 | exact |
+| the ISS into and out of the Earth's shadow (31 edges in a day) | on the same side 3 s either side of each | 3 s |
+
+**Findings.**
+
+- Leaving out UT1 − UTC and polar motion costs well under a second in the times of rise and set,
+  which is less than the element set's own error.
+- Elevations are geometric. Refraction lifts a satellite on the horizon by about half a degree,
+  so it is seen some seconds before its listed rise. The page says so.
+- A pass of half a day or more belongs to a high orbit (GPS, a geostationary satellite). Its
+  visibility is not worked out: such a satellite is too faint to see with the eye.
+
 ## 7. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
-npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts   # real satellites, ~2 s
+npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts   # real satellites, ~3 s
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

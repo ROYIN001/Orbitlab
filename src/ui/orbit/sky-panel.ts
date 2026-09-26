@@ -28,6 +28,10 @@ import { THAI_SATELLITES } from '../../data/thai-satellites';
 import type { TleField } from '../../orbit/tle';
 import type { Sgp4Error } from '../../orbit/sgp4';
 import { button, el, num, span } from './dom';
+import { DARK_SKY, findPasses, lookFrom, type Look, type Pass } from '../../orbit/passes';
+import { compass, placeName, stationPicker, type StationChoice } from './applications-panel';
+import { stationOf } from '../../orbit/applications-setup';
+import { footprintAngle } from '../../orbit/applications';
 
 export interface SkyHost {
   level(): AppLevel;
@@ -92,7 +96,11 @@ export class RealSky {
   private stale = true;
   private framedKey: string | null = null;
   private lastGood: OrbitState | null = null;
-  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement } = {};
+  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement; next?: HTMLElement } = {};
+  /** R03: where the passes are seen from, the lowest elevation that counts, and the passes found */
+  private place: StationChoice = { stationId: 'bangkok', station: stationOf('bangkok')! };
+  private minEl = 10 * Math.PI / 180;
+  private passes: { key: string; list: Pass[]; from: number; until: number } | null = null;
 
   constructor(private readonly host: SkyHost) {}
 
@@ -197,6 +205,9 @@ export class RealSky {
     const stateOf = sel && now ? (tt: number) => this.stateAt(sel, jd + tt / 86400) ?? now : null;
     track.draw(stateOf, 0, jd, sel ? skyFacts(sel).period : 5400, {
       points: this.count ? { latlon: this.latlon, count: this.count, label: t(SOURCE_KEY[this.source]) } : undefined,
+      // R03: where the passes are seen from, and the ground the satellite is above the lowest elevation for
+      station: sel ? { lat: this.place.station.lat, lon: this.place.station.lon } : undefined,
+      footprint: sel && now ? Math.max(0, footprintAngle(Math.hypot(now.r.x, now.r.y, now.r.z), this.minEl)) : undefined,
     });
   }
 
@@ -369,6 +380,7 @@ export class RealSky {
     box.append(dl);
     const thai = THAI_SATELLITES.find((s) => s.norad === o.el.satnum);
     if (thai) box.append(el('p', 'pg-note', t(thai.aboutKey)));
+    if (now.error === 0) box.append(this.passesSection(o));
     if (now.error === 0) {
       const orbit = skyOrbit(o, this.jd);
       if (orbit) {
@@ -380,10 +392,112 @@ export class RealSky {
     return box;
   }
 
+  // ─── passes (R03) ─────────────────────────────────────────────────────────
+
+  /** The passes of the next three days from the moment on screen, found again when the place, the satellite or the first pass changes. */
+  private passList(o: SkyObject): Pass[] {
+    const key = `${o.key}|${this.place.station.lat}|${this.place.station.lon}|${this.minEl}`;
+    if (this.passes && this.passes.key === key && this.jd >= this.passes.from && this.jd < this.passes.until) return this.passes.list;
+    const list = findPasses(o, this.place.station, this.jd, this.jd + 3, this.minEl).slice(0, PASS_LIMIT);
+    // the list is good until its first pass is over (or, with none, for a day)
+    const first = list[0];
+    const until = first ? (first.set?.jd ?? this.jd + 3) : this.jd + 1;
+    this.passes = { key, list, from: this.jd, until };
+    return list;
+  }
+
+  /** The place's name, or its coordinates when they were typed in. */
+  private placeLabel(): string {
+    if (this.place.stationId !== 'custom') return placeName(this.place);
+    const { lat, lon } = this.place.station;
+    return `${num(Math.abs(lat * 180 / Math.PI), 4)}° ${lat >= 0 ? 'N' : 'S'}, ${num(Math.abs(lon * 180 / Math.PI), 4)}° ${lon >= 0 ? 'E' : 'W'}`;
+  }
+
+  private passesSection(o: SkyObject): HTMLElement {
+    const box = el('section', 'pg-passes');
+    box.append(el('h2', 'pg-facts-title', t('pass.title', { place: this.placeLabel() })));
+    box.append(stationPicker(t('pass.from'), this.place, () => this.place, (next) => {
+      const toggled = (next.stationId === 'custom') !== (this.place.stationId === 'custom');
+      this.place = next;
+      this.passes = null;
+      if (toggled) this.host.refreshFacts(); else this.refreshPasses(box, o);
+    }));
+    const mins = el('label', 'pg-preset');
+    mins.append(el('span', undefined, t('pass.minEl')));
+    const msel = el('select');
+    for (const d of [0, 10, 20, 30]) { const opt = el('option', undefined, `${d}°`); opt.value = String(d); msel.append(opt); }
+    msel.value = String(Math.round(this.minEl * 180 / Math.PI));
+    msel.addEventListener('change', () => { this.minEl = Number(msel.value) * Math.PI / 180; this.passes = null; this.refreshPasses(box, o); });
+    mins.append(msel);
+    box.append(mins);
+    box.append(this.passesTable(o));
+    return box;
+  }
+
+  private refreshPasses(box: HTMLElement, o: SkyObject): void {
+    box.querySelector('.pg-pass-results')?.replaceWith(this.passesTable(o));
+    box.querySelector('.pg-facts-title')!.textContent = t('pass.title', { place: this.placeLabel() });
+  }
+
+  private passesTable(o: SkyObject): HTMLElement {
+    const box = el('div', 'pg-pass-results');
+    const list = this.passList(o);
+    const engineer = this.host.level() === 'engineer';
+    const deg = (x: number) => `${num(x * 180 / Math.PI, 0)}°`;
+    if (!list.length) { box.append(el('p', 'pg-note', t('pass.none', { el: deg(this.minEl) }))); return box; }
+    if (list.length === 1 && !list[0].rise && !list[0].set) {
+      const top = list[0].top;
+      box.append(el('p', 'pg-note', t('pass.always', { el: deg(top.el), dir: compass(top.az) })));
+      return box;
+    }
+    this.live.next = el('p', 'pg-pass-next');
+    box.append(this.live.next);
+    const table = el('table', 'pg-pass-table');
+    const head = el('tr');
+    for (const k of ['pass.rise', 'pass.top', 'pass.set']) head.append(el('th', undefined, t(k)));
+    table.append(el('thead'), el('tbody'));
+    table.tHead!.append(head);
+    const cell = (l: Look | null, showEl: boolean): HTMLElement => {
+      const td = el('td');
+      if (!l) { td.textContent = '—'; return td; }
+      td.append(el('span', 'pg-pass-time', clockTime(l.jd)));
+      const where = showEl ? `${deg(l.el)} ${compass(l.az)}` : compass(l.az);
+      td.append(el('span', 'pg-pass-where', engineer ? `${where} · ${num(l.az * 180 / Math.PI, 0)}°` : where));
+      return td;
+    };
+    for (const p of list) {
+      const day = el('tr', 'pg-pass-day');
+      const dayCell = el('td', undefined, dayName((p.rise ?? p.top).jd));
+      dayCell.colSpan = 3;
+      day.append(dayCell);
+      const row = el('tr');
+      row.append(cell(p.rise, false), cell(p.top, true), cell(p.set, false));
+      const seen = el('tr', 'pg-pass-seen');
+      const seenCell = el('td', undefined, visibility(p, o, this.place));
+      seenCell.colSpan = 3;
+      seen.classList.toggle('visible', !!p.visible);
+      seen.append(seenCell);
+      table.tBodies[0].append(day, row, seen);
+    }
+    box.append(table, el('p', 'pg-note', t('pass.note', { zone: zoneName(this.jd) })));
+    return box;
+  }
+
   /** The readouts that move with the satellite. */
   updateLive(): void {
     const o = this.selected, L = this.live;
     if (!o) return;
+    // R03: the first pass is over: the list moves on
+    if (this.passes && this.jd >= this.passes.until && L.next) { this.passes = null; this.host.refreshFacts(); return; }
+    if (L.next && this.passes?.list.length) {
+      const p = this.passes.list[0];
+      const start = p.rise?.jd ?? this.jd;
+      if (this.jd < start) L.next.textContent = t('pass.next', { span: span((start - this.jd) * 86400) });
+      else {
+        const look = lookFrom(o, this.place.station, this.jd);
+        L.next.textContent = look ? t('pass.upNow', { el: `${num(look.el * 180 / Math.PI, 0)}°`, dir: compass(look.az) }) : '';
+      }
+    }
     const s = skyState(o, this.jd);
     const age = elementAge(o.el, this.jd) * 86400;
     if (L.age) {
@@ -403,6 +517,29 @@ export class RealSky {
     const live = warp === 1 && Math.abs(this.jd - julianDate(new Date())) * 86400 < 5;
     return { time: t('pg.utc', { date: d.toLocaleString(getLang(), { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }), live };
   }
+}
+
+/** How many of the next three days' passes are listed. */
+const PASS_LIMIT = 12;
+
+const dateOf = (jd: number): Date => new Date((jd - 2440587.5) * 86400e3);
+/** A pass's time on the device's clock: 19:42:05. */
+const clockTime = (jd: number): string => dateOf(jd).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const dayName = (jd: number): string => dateOf(jd).toLocaleDateString(getLang(), { weekday: 'long', day: 'numeric', month: 'long' });
+/** The device's time zone, as the date says it: GMT+7, UTC. */
+function zoneName(jd: number): string {
+  const part = new Intl.DateTimeFormat(getLang(), { timeZoneName: 'short' }).formatToParts(dateOf(jd)).find((x) => x.type === 'timeZoneName');
+  return part?.value ?? 'UTC';
+}
+
+/** Whether a pass can be seen, and when; or why not. */
+function visibility(p: Pass, o: SkyObject, place: StationChoice): string {
+  if (p.visible) return t('pass.visible', { from: clockTime(p.visible.from), to: clockTime(p.visible.to) });
+  // a high orbit's pass, half a day or more: too far to see
+  if (p.rise && p.set && p.set.jd - p.rise.jd >= 0.5) return t('pass.faint');
+  // not seen: the sky was light, or the satellite was in the Earth's shadow
+  const mid = lookFrom(o, place.station, p.top.jd);
+  return mid && mid.sunEl >= DARK_SKY ? t('pass.day') : t('pass.shadow');
 }
 
 /** "98067A" as the catalogue writes it: "1998-067A". */

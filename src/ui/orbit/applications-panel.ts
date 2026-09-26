@@ -12,6 +12,7 @@ import { linearScale, logScale } from '../../orbit/playground-model';
 import {
   APP_KINDS, STATIONS, stationOf, type AppKind, type AppSettings, type CommsReport, type EoReport,
 } from '../../orbit/applications-setup';
+import type { GroundStation } from '../../orbit/applications';
 import { THAI_SATELLITES, THAI_SATELLITES_AS_OF, type ThaiSatellite } from '../../data/thai-satellites';
 import { Field, button, deg, el, hhmm, num, plain } from './dom';
 
@@ -26,13 +27,13 @@ export interface AppsHost {
 
 const KIND_KEY: Record<AppKind, string> = { comms: 'use.kind.comms', eo: 'use.kind.eo', thai: 'use.kind.thai' };
 const ABOUT_KEY: Record<AppKind, string> = { comms: 'use.about.comms', eo: 'use.about.eo', thai: 'use.about.thai' };
-const STATION_KEY: Record<string, string> = {
+export const STATION_KEY: Record<string, string> = {
   bangkok: 'use.st.bangkok', chiangMai: 'use.st.chiangMai', hatYai: 'use.st.hatYai', ubon: 'use.st.ubon',
   stPetersburg: 'use.st.stPetersburg', moscow: 'use.st.moscow',
 };
 /** the eight points of the compass, from north, as i18n keys */
 const COMPASS = ['use.dir.n', 'use.dir.ne', 'use.dir.e', 'use.dir.se', 'use.dir.s', 'use.dir.sw', 'use.dir.w', 'use.dir.nw'];
-const compass = (az: number): string => t(COMPASS[Math.round(((az * RAD) % 360) / 45) % 8]);
+export const compass = (az: number): string => t(COMPASS[Math.round(((az * RAD) % 360) / 45) % 8]);
 
 export const stationName = (a: AppSettings): string => (a.stationId in STATION_KEY ? t(STATION_KEY[a.stationId]) : t('use.st.custom'));
 
@@ -122,39 +123,53 @@ export function appsControls(host: AppsHost): HTMLElement {
   return box;
 }
 
-/** Where the dish (or the observer) stands: a city, or coordinates typed in — never asked of the browser. */
-function stationControls(host: AppsHost, a: AppSettings): HTMLElement {
+/** A place to stand: one of `STATIONS` by its id, or 'custom' with the coordinates typed in. */
+export interface StationChoice { stationId: string; station: GroundStation }
+
+export const placeName = (c: StationChoice): string => (c.stationId in STATION_KEY ? t(STATION_KEY[c.stationId]) : t('use.st.custom'));
+
+/**
+ * Where the dish (or the observer) stands: a city, or coordinates typed in —
+ * never asked of the browser. `current` reads the choice as it is when a
+ * field changes (another field may have changed it since this was drawn).
+ */
+export function stationPicker(label: string, choice: StationChoice, current: () => StationChoice, change: (next: StationChoice) => void): HTMLElement {
   const box = el('div', 'pg-station');
   const pick = el('label', 'pg-preset');
-  pick.append(el('span', undefined, t('use.station')));
+  pick.append(el('span', undefined, label));
   const sel = el('select');
   sel.append(...[...STATIONS.map((s) => s.id), 'custom'].map((id) => {
     const o = el('option', undefined, id in STATION_KEY ? t(STATION_KEY[id]) : t('use.st.custom'));
     o.value = id;
     return o;
   }));
-  sel.value = a.stationId;
+  sel.value = choice.stationId;
   sel.addEventListener('change', () => {
     const st = stationOf(sel.value);
-    host.change(st ? { stationId: sel.value, station: st } : { stationId: 'custom' });
+    change(st ? { stationId: sel.value, station: st } : { stationId: 'custom', station: current().station });
   });
   pick.append(sel);
   box.append(pick);
-  if (a.stationId === 'custom') {
+  if (choice.stationId === 'custom') {
     const row = el('div', 'pg-tool-row');
-    const input = (label: string, value: number, min: number, max: number, set: (v: number) => void) => {
+    const input = (name: string, value: number, min: number, max: number, set: (v: number) => void) => {
       const wrap = el('label');
       const i = el('input');
       i.type = 'number'; i.min = String(min); i.max = String(max); i.step = '0.0001'; i.value = (value * RAD).toFixed(4);
       i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v)) set(Math.max(min, Math.min(max, v)) * DEG); });
-      wrap.append(el('span', undefined, label), i);
+      wrap.append(el('span', undefined, name), i);
       row.append(wrap);
     };
-    input(t('use.lat'), a.station.lat, -90, 90, (v) => host.change({ station: { ...(host.apps()?.station ?? a.station), lat: v } }));
-    input(t('use.lon'), a.station.lon, -180, 180, (v) => host.change({ station: { ...(host.apps()?.station ?? a.station), lon: v } }));
+    input(t('use.lat'), choice.station.lat, -90, 90, (v) => { const c = current(); change({ ...c, station: { ...c.station, lat: v } }); });
+    input(t('use.lon'), choice.station.lon, -180, 180, (v) => { const c = current(); change({ ...c, station: { ...c.station, lon: v } }); });
     box.append(row, el('p', 'pg-tool-lead', t('use.privacy')));
   }
   return box;
+}
+
+function stationControls(host: AppsHost, a: AppSettings): HTMLElement {
+  const now = (): StationChoice => { const x = host.apps() ?? a; return { stationId: x.stationId, station: x.station }; };
+  return stationPicker(t('use.station'), { stationId: a.stationId, station: a.station }, now, (next) => host.change(next));
 }
 
 /** What the application shows for the orbit flown now. */

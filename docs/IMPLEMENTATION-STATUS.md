@@ -259,7 +259,7 @@ Phase 2, real satellites and the military track, continues on the same branch:
 |---|---|
 | R01 SGP4 | done: SGP4/SDP4 and the two-line element format, `src/orbit/sgp4.ts` and `src/orbit/tle.ts`. Every line of the AIAA 2006-6753 verification output is reproduced ([VALIDATION.md](VALIDATION.md) §6) |
 | R02 snapshots and the scheduled refresh | done: **Real satellites** in the Orbit section, from a catalogue of CelesTrak's element sets (stations, Thailand's satellites, GNSS, weather, the Fengyun-1C debris). The catalogue is bundled (`public/data/satellites.json`), fetched online at most once in two hours, and refreshed daily by the deploy without committing. Files in TLE and every OMM form can be read in the page. Held to CelesTrak's six formats and to published orbits ([VALIDATION.md](VALIDATION.md) §6) |
-| R03 passes | |
+| R03 passes | done: the passes of the satellite picked over a place (a city, or coordinates typed in), for three days: rise, highest point and set, with directions and heights, and when it can be seen (sunlit, in a dark sky). Held to Skyfield: times within 0.35 s, angles within 0.004° ([VALIDATION.md](VALIDATION.md) §6) |
 | R04 uncertainty from the element set's age | |
 | R05 space weather | |
 | M01 SSA and conjunctions | |

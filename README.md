@@ -174,7 +174,9 @@ stations, Thailand's satellites, GPS/GLONASS/Galileo/BeiDou, the weather satelli
 of Fengyun-1C. Their element sets come from CelesTrak and are propagated by SGP4/SDP4, the
 reference implementation of AIAA 2006-6753, held to every line of its published verification
 (R01–R02, `src/orbit/sgp4.ts`, [docs/VALIDATION.md](docs/VALIDATION.md) §6). Your own TLE or OMM
-file can be read in the page too. Build is
+file can be read in the page too. For the satellite picked, it lists the next passes over a city
+or your own coordinates: rise, highest point and set, and whether it can be seen (R03, held to
+Skyfield to within a second). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 

@@ -196,6 +196,13 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   epoch of its element set and how old the set is, where it is now, its period, its mean perigee
   and apogee, its inclination, and whether SGP4 or SDP4 (deep space) carries it. The Engineer
   level adds the mean elements, the drag term B* and the position and velocity in TEME.
+- **Passes over** a place, under the satellite's figures: choose a city or type coordinates (they
+  stay in the page), and the lowest elevation that counts. The next three days' passes are
+  listed, each with when the satellite rises, is highest and sets, in which direction and how
+  high. Each pass also says whether you can see it: only when the satellite is in sunlight and
+  your sky is dark (the Sun 6° or more below the horizon). The first line counts down to the next
+  pass. Times are your device's clock. The map draws the place, and the circle of ground from
+  which the satellite is above that elevation.
 - **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
   Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
   the two part company.
