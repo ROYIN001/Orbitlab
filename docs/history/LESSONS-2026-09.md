@@ -129,3 +129,36 @@ The owner's feedback on round 1, and what was done about it:
 | The test in all three languages | It always was (every text is checked in three scripts); the language could not be changed while the test's dialog was open. On the page it can, and the screenshots show it in English too. |
 | 2.ก: write tracks 2, 4, 5 now | See below. |
 | 3.ข: the recommended start must be a written lesson | The start is the nearest written lesson: chiefly about the area, then touching it, then touching what the area rests on. Tested over 40 seeds. |
+
+### Lessons written in round 2
+
+Every threshold was measured first (the probes are not kept): what the default does, what the
+worked solution does, and where the answer turns.
+
+| | Lesson | Worked solution | Wrong flights |
+|---|---|---|---|
+| 2.1 | Aerodynamic loads (Soyuz-2.1a, point-mass) | acceleration limit 18 m/s²: q 23.6 kPa, orbit | as it is: 34.2 kPa; 15 m/s²: so slow that it is still low when fast — structural failure at T+142 s (q 46 kPa) |
+| 2.2 | PEG and IGM (Falcon 9, 17.8 t, engine out at T+80 s) | PEG: target, 42 m/s left; IGM: target, 39 m/s | the standard steering: off target, 2 m/s left |
+| 2.3 | Inertial navigation without GNSS (six-DOF) | tactical grade: 324 m at MECO | MEMS: 1.7 km at MECO (fails the moment it passes 500 m); GNSS back on breaks the lesson's check |
+| 4.1 | Reading the control loop (six-DOF) | the crossover (3.07 rad/s) and phase margin (46°) read at max-Q | 30 % off the crossover, 10° off the margin |
+| 4.2 | Gains with margins (six-DOF) | K_θ 1.5, K_ω 3: 46°, 36 dB | the lesson's 4 / 1.5: 17.8° (3 / 3 gives 29.7°, just short) |
+| 4.3 | A step test in flight (six-DOF) | K_ω 6, a 2° step at T+90 s: 30 % | the default gains: 38 %; no step flown |
+| 4.4 | Bending and the notch filter (six-DOF) | the filter on: through max-Q | no filter: bending breakup at T+6 s; the bending switched off breaks the lesson's check |
+| 5.1 | Bringing the booster home (point-mass) | 10 t: target, the stage on LZ-1 | 12 t: the stage lands but the orbit falls short; 9 t: under the 10 t asked |
+| 5.2 | Rendezvous and docking (point-mass) | two-orbit profile: docked in 3.44 h | the two-day profile: docked after two days |
+
+New measures (`measures.ts`): the navigation's position error (its peak so far), the pitch
+loop's phase margin, gain margin and crossover at max-Q (from the autopilot's own linear model,
+as the loop inspector shows it), the overshoot of the last pitch step flown (as the flight test
+measures it), and the time to docking. New hooks: `gnssOff`, `bendingOn`. Nothing in the physics
+was changed.
+
+Found on the way: in point-mass, the pitch kick, the pitch-over altitude and the loft move
+Soyuz's max-Q by 1 kPa at most — only the acceleration limit shapes it, which is why lesson 2.1
+uses it. The launch time of a flight to the station is resolved to the window by the setup
+itself, so lesson 5.2 asks for the profile rather than the time. In the browser (worker physics)
+2.2 was flown to a pass, 4.1's answers graded against the six-DOF linear model, and 2.3 failed at
+1.7 km with the MEMS unit, as in the tests.
+
+Tests: `tests/lessons-round2.test.ts` (8: every point-mass solution and wrong flight, every
+six-DOF wrong flight) and `tests/heavy/lessons-sixdof.test.ts` (the five six-DOF solutions).
