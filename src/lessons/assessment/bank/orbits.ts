@@ -154,7 +154,7 @@ export const ORBITS: readonly unknown[] = [
       O(T('The air over the steppe is denser', 'Воздух над степью плотнее', 'อากาศเหนือทุ่งหญ้าสเตปป์หนาแน่นกว่า')),
       O(T('The Earth turns faster at Baikonur\'s latitude', 'На широте Байконура Земля вращается быстрее', 'โลกหมุนเร็วกว่าที่ละติจูดของไบโคนูร์'), false,
         T('the ground moves faster away from the equator', 'поверхность движется быстрее вдали от экватора', 'พื้นผิวโลกเคลื่อนเร็วขึ้นเมื่อห่างจากเส้นศูนย์สูตร'))],
-    T('From 46° the transfer orbit is inclined at least 46°, and the plane change at apogee costs about 1.5 km/s more than Kourou\'s 5°. The ground at Baikonur also moves slower, 324 against 463 m/s.',
+    T('From 46° the transfer orbit is inclined at least 46°, and the plane change at apogee costs about 0.8 km/s more than Kourou\'s 5°. The ground at Baikonur also moves slower, 324 against 463 m/s.',
       'С широты 46° переходная орбита имеет наклонение не менее 46°, и поворот плоскости в апогее стоит примерно на 0,8 км/с больше, чем при 5° с Куру. К тому же поверхность на Байконуре движется медленнее: 324 против 463 м/с.',
       'จากละติจูด 46° วงโคจรถ่ายโอนจะเอียงอย่างน้อย 46° การเปลี่ยนระนาบที่จุดไกลโลกจึงใช้มากกว่าการปล่อยจากคูรูซึ่งเอียงเพียง 5° ราว 0.8 กม./วินาที อีกทั้งพื้นผิวที่ไบโคนูร์ยังเคลื่อนช้ากว่า คือ 324 เทียบกับ 463 ม./วินาที')),
   numeric('o-perigee-speed', 2, 3, K, 'orbit.visviva',
