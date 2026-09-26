@@ -54,8 +54,9 @@ The owner's answers in the planning conversation, which every item below follows
      - [Launch Library 2](https://thespacedevs.com/llapi) for upcoming and past launches.
        Rate-limited for anonymous use, so it is read sparingly and cached.
    - **Semi-live data without a server**: a scheduled GitHub Actions build fetches the snapshots
-     at build time and deploys them with the site. The data are *not* committed to the
-     repository.
+     at build time and deploys them with the site. What it fetches is *not* committed to the
+     repository; only a baseline snapshot is, so a build with no network has data (the owner,
+     2026-09-26).
    - **Space-Track is never bundled or fetched** (its user agreement forbids redistribution);
      a user who has an account may import a file they downloaded themselves.
 4. **Accuracy and realism first, then a game layer on top.** The game layer (constraints, scores,
@@ -205,7 +206,8 @@ Public sources only, each cited. Spread over the phases above rather than a phas
   dataset's parser is the same for the online answer and for `scripts/refresh-snapshots.ts`, which
   writes the snapshot (`npm run snapshots`). The service worker precaches the snapshots with the
   build and answers the online hosts network-first from their last answer. A baseline snapshot is
-  committed so a build with no network has data; R02's scheduled build refreshes it at build time
+  committed so a build with no network has data (the owner, 2026-09-26: it stays committed;
+  R02's element-set snapshot follows the same rule); R02's scheduled build refreshes it at build time
   without committing. Checked on 2026-09-26 with curl: SWPC, CelesTrak's GP JSON and Launch
   Library 2 all answer `access-control-allow-origin: *` — CelesTrak, which the planning could not
   reach, can be read straight from the page.
