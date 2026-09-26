@@ -358,3 +358,20 @@ export function monteCarloCsv(runs: readonly MonteCarloRun[], layout: readonly D
   ].join(','));
   return [head.join(','), ...rows].join('\n') + '\n';
 }
+
+/** The quantities a set disperses (P08 compares a set's with the default). */
+const DISPERSION_KEYS_ALL = Object.keys(DEFAULT_DISPERSIONS) as DispersionKey[];
+
+/**
+ * P08: the mission that flies run `run` of the set `mc` on its own — the run's model and law
+ * (`runMission`: six-DOF), and the run named in its dynamics, drawn exactly as the set drew it; the
+ * set's dispersions carried only when they are not the default ones.
+ */
+export function dispersedRunMission(cfg: MissionConfig, mc: Pick<MonteCarloConfig, 'seed' | 'dispersions'>, run: Pick<MonteCarloRun, 'index' | 'law'>): MissionConfig {
+  const mission = runMission(cfg, run.law);
+  const isDefault = DISPERSION_KEYS_ALL.every((k) => mc.dispersions[k].enabled === DEFAULT_DISPERSIONS[k].enabled && mc.dispersions[k].sigma === DEFAULT_DISPERSIONS[k].sigma);
+  return {
+    ...mission,
+    dynamics: { ...mission.dynamics!, dispersion: { seed: mc.seed, run: run.index, ...(isDefault ? {} : { settings: cloneDispersions(mc.dispersions) }) } },
+  };
+}
