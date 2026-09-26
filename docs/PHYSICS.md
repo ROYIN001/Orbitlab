@@ -2745,10 +2745,14 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
   - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
     jettison **time** their operator publishes (§4). Neither is a model of the real decision,
     which is a heating placard evaluated against a specific fairing's thermal design.
-  - The physics has been compared with flight data for Falcon 9 (webcast telemetry of five
-    flights), Soyuz-2.1a, Electron and Ariane 64 (published timelines):
-    [VALIDATION.md](VALIDATION.md). Electron's second stage burns ~25 % short of its published
-    timeline, and no published stage mass exists to correct it.
+  - The physics has been compared with flight data for eleven vehicles: Falcon 9 (webcast
+    telemetry of five flights) and ten others against published timelines
+    ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
+    - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
+    - Falcon Heavy's first stages cut off ~18 % early.
+    - PSLV-XL's first stage is 29 % slow at separation, the cost of the linear solid-motor taper.
+    - H3's first stage flies far flatter than JAXA's plan.
+    - The heating placard drops most fairings 10–50 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.

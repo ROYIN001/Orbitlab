@@ -204,10 +204,16 @@ Eight of the "interesting" items are being done alongside them on branch
 ## Known limitations
 
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
-- The physics has been compared with flight data for four vehicles only: Falcon 9 against webcast
-  telemetry of five flights, Soyuz-2.1a, Electron and Ariane 64 against published timelines
-  ([VALIDATION.md](VALIDATION.md)). No disagreement pointed at the equations. Falcon 9's first
-  stage now flies its published masses as a result. Electron's second stage still burns ~25 %
-  short, and the six-DOF ascent climbs higher than the flights after max Q on every vehicle
-  compared. The other fourteen vehicles are not compared; see "Assumptions and limitations" in
-  [PHYSICS.md](PHYSICS.md).
+- The physics has been compared with flight data for eleven of the eighteen vehicles: Falcon 9
+  against webcast telemetry of five flights, the others against published timelines
+  ([VALIDATION.md](VALIDATION.md)). No disagreement pointed at the equations. As a result,
+  Falcon 9's first stage flies its published masses and its six-DOF pitch programme is fitted to
+  the flights. Among what is left and recorded:
+  - Electron's second stage burns ~25 % short.
+  - Falcon Heavy's first stages cut off ~18 % early.
+  - PSLV-XL's first stage is 29 % slow at separation.
+  - H3's first stage flies far flatter than planned.
+  - Most fairings come off 10–50 % early.
+
+  Long March 2D, 3B/E and 5, Vulcan, Soyuz-2.1b and Starship are not compared; see
+  "Assumptions and limitations" in [PHYSICS.md](PHYSICS.md).

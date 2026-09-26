@@ -86,6 +86,7 @@ export function timelineRows(ref: TimelineReference, flown: FlownMission): Row[]
     const t = milestoneTime(m, flown);
     rows.push(row(`${ref.id}/${m.id}/time`, 'time', m.t, t));
     if (m.alt !== undefined) rows.push(row(`${ref.id}/${m.id}/altitude`, 'altitude', m.alt, t === undefined ? undefined : flown.at(t).alt));
+    if (m.v !== undefined && m.vFrame === 'inertial') rows.push(row(`${ref.id}/${m.id}/speed`, 'speed', m.v, t === undefined ? undefined : flown.at(t).vInertial));
   }
   if (ref.insertion) {
     // The apsides the simulator announces at the end of the ascent.
