@@ -8,6 +8,10 @@
  * recording's head: scrubbing back through a replay never changes a grade.
  * The lesson owns nothing of the app: it loads its mission through the setup
  * panel, sends the app to its mode, and greys out what it locks.
+ *
+ * The catalogue and the placement test are a page of their own over the whole
+ * window below the top bar (`#/lessons`, `#/lessons/test`), like a mode: the
+ * browser's Back leaves it, and opening a lesson goes to the workspace.
  */
 import { t, getLang } from '../../i18n';
 import type { AppMode } from '../app-mode';
@@ -50,6 +54,11 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 };
 
 const STUDENT_KEY = 'orbitlab.student';
+/** The lessons page's addresses: not modes, so the app's own router leaves them alone. */
+export const LESSONS_HASH = '#/lessons';
+export const TEST_HASH = '#/lessons/test';
+type PageView = 'catalog' | 'test';
+const pageViewOf = (hash: string): PageView | null => hash === LESSONS_HASH ? 'catalog' : hash === TEST_HASH ? 'test' : null;
 
 /** The open lesson's state. */
 interface Active {
@@ -72,8 +81,12 @@ export class LessonMode implements LessonToolsHost {
   private readonly locks: PanelLocks;
   private readonly button = el('button', 'quiet-btn lesson-btn');
   private readonly strip = el('section', 'lesson-strip');
-  private readonly dialog = el('dialog', 'dialog lesson-dialog');
-  private assessmentModule: Promise<typeof import('./assessment-dialog')> | null = null;
+  private readonly page = el('section', 'lessons-page');
+  private readonly pageBar = el('header', 'lessons-page-bar');
+  private readonly content = el('div', 'dialog-body lessons-page-body');
+  private pageView: PageView | null = null;
+  private assessmentView: { applyLanguage(): void } | null = null;
+  private assessmentModule: Promise<typeof import('./assessment-view')> | null = null;
   private notice: { level: 'ok' | 'warn' | 'error'; text: string; details: string[] } | null = null;
   private lastStripKey = '';
 
@@ -86,8 +99,15 @@ export class LessonMode implements LessonToolsHost {
     this.strip.hidden = true;
     this.strip.setAttribute('role', 'region');
     document.querySelector('main.workspace')?.before(this.strip);
-    document.body.append(this.dialog);
-    this.dialog.addEventListener('close', () => this.dialog.replaceChildren());
+    this.page.id = 'lessons-page';
+    this.page.hidden = true;
+    this.page.append(this.pageBar, this.content);
+    (document.getElementById('app') ?? document.body).append(this.page);
+    window.addEventListener('hashchange', () => this.route());
+    window.addEventListener('resize', () => this.placePage());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.pageView && !e.defaultPrevented) { e.preventDefault(); this.closePage(); }
+    });
     // The landing page's fourth card: the home screen rebuilds its cards, so it is put back whenever they are.
     const home = document.getElementById('home-screen');
     if (home) {
@@ -136,7 +156,7 @@ export class LessonMode implements LessonToolsHost {
     const icon = el('span', 'mode-card-icon', '✎');
     icon.setAttribute('aria-hidden', 'true');
     card.append(icon, el('strong', undefined, t('lesson.home.title')), el('span', 'mode-card-text', t('lesson.home.text')));
-    card.addEventListener('click', () => { this.host.go('explore'); this.openCatalog(); });
+    card.addEventListener('click', () => this.openCatalog());
     list.append(card);
   }
 
@@ -146,7 +166,9 @@ export class LessonMode implements LessonToolsHost {
     if (home) this.homeCard(home);
     this.lastStripKey = '';
     if (this.active) { this.locks.apply(); this.paintStrip(); }
-    if (this.dialog.open) this.renderCatalog();
+    if (this.pageView) this.paintPageBar();
+    if (this.pageView === 'catalog') this.renderCatalog();
+    this.assessmentView?.applyLanguage();
   }
 
   // ─── opening and leaving a lesson ────────────────────────────────────────
@@ -165,7 +187,6 @@ export class LessonMode implements LessonToolsHost {
     document.body.dataset.lesson = lesson.id;
     this.lastStripKey = '';
     this.update();
-    if (this.dialog.open) this.dialog.close();
     return { ok: true };
   }
 
@@ -432,11 +453,82 @@ export class LessonMode implements LessonToolsHost {
     setTimeout(() => note.remove(), 4000);
   }
 
-  // ─── the catalogue dialog ────────────────────────────────────────────────
+  // ─── the lessons page ────────────────────────────────────────────────────
 
   openCatalog(): void {
-    this.renderCatalog();
-    if (!this.dialog.open) this.dialog.showModal();
+    this.navigate(LESSONS_HASH);
+  }
+
+  /** The address the app opened at: the lessons page is kept, not turned into a mode. */
+  openFromHash(hash: string): void {
+    if (!pageViewOf(hash)) return;
+    history.replaceState(null, '', hash);
+    this.route();
+  }
+
+  private navigate(hash: string): void {
+    if (location.hash === hash) this.route();
+    else location.hash = hash;
+  }
+
+  /** Back to the mode the page was opened over. */
+  private closePage(): void {
+    this.host.go((document.body.dataset.mode as AppMode | undefined) ?? 'explore');
+  }
+
+  /** Show the page the address names, or leave it. */
+  private route(): void {
+    const view = pageViewOf(location.hash);
+    if (view === this.pageView) {
+      if (view === 'catalog') this.renderCatalog();
+      return;
+    }
+    this.pageView = view;
+    this.assessmentView = null;
+    const nav = document.querySelectorAll<HTMLAnchorElement>('#mode-nav a');
+    if (!view) {
+      this.page.hidden = true;
+      this.content.replaceChildren();
+      delete document.body.dataset.lessonsPage;
+      this.button.removeAttribute('aria-current');
+      // the mode under the page is the current one again
+      nav.forEach((a) => { if (a.dataset.mode === document.body.dataset.mode) a.setAttribute('aria-current', 'page'); });
+      return;
+    }
+    document.body.dataset.lessonsPage = view;
+    this.button.setAttribute('aria-current', 'page');
+    nav.forEach((a) => a.removeAttribute('aria-current'));
+    this.page.hidden = false;
+    this.placePage();
+    this.paintPageBar();
+    if (view === 'catalog') this.renderCatalog();
+    else void this.showAssessment();
+    this.page.scrollTo(0, 0);
+  }
+
+  /** Under the top bar, whatever its height in this layout. */
+  private placePage(): void {
+    if (this.page.hidden) return;
+    const bar = document.getElementById('topbar');
+    this.page.style.top = `${Math.max(0, Math.round(bar?.getBoundingClientRect().bottom ?? 0))}px`;
+  }
+
+  private paintPageBar(): void {
+    const back = el('button', 'lessons-page-back', `← ${t('lesson.page.back')}`);
+    back.type = 'button';
+    back.addEventListener('click', () => this.closePage());
+    const tabs = el('nav', 'lessons-page-tabs');
+    tabs.setAttribute('aria-label', t('lesson.button'));
+    for (const [view, key, hash] of [['catalog', 'lesson.page.lessons', LESSONS_HASH], ['test', 'lesson.page.test', TEST_HASH]] as const) {
+      const a = el('a', undefined, t(key));
+      a.href = hash;
+      if (this.pageView === view) a.setAttribute('aria-current', 'page');
+      tabs.append(a);
+    }
+    const title = el('span', 'lessons-page-title');
+    title.append(el('span', 'lesson-glyph', '✎'), document.createTextNode(` ${t('lesson.page.title')}`));
+    this.page.setAttribute('aria-label', t('lesson.page.title'));
+    this.pageBar.replaceChildren(title, tabs, back);
   }
 
   /** The latest finished test, scored against today's bank and lessons. */
@@ -447,8 +539,8 @@ export class LessonMode implements LessonToolsHost {
   /** Set once the assessment module has loaded (it holds the bank). */
   private assessmentSummary: (() => { kind: string; finishedAt?: string; result: AssessmentResult } | null) | null = null;
 
-  private loadAssessment(): Promise<typeof import('./assessment-dialog')> {
-    this.assessmentModule ??= import('./assessment-dialog').then((m) => {
+  private loadAssessment(): Promise<typeof import('./assessment-view')> {
+    this.assessmentModule ??= import('./assessment-view').then((m) => {
       this.assessmentSummary = () => m.latestResult(this.progressData, this.catalogue());
       return m;
     });
@@ -456,13 +548,7 @@ export class LessonMode implements LessonToolsHost {
   }
 
   private renderCatalog(): void {
-    const d = this.dialog;
-    d.setAttribute('aria-label', t('lesson.catalog.title'));
-    const close = el('button', 'dialog-close', '×');
-    close.type = 'button';
-    close.setAttribute('aria-label', t('lesson.close'));
-    close.addEventListener('click', () => d.close());
-    const body = el('div', 'dialog-body lesson-catalog');
+    const body = el('div', 'lesson-catalog');
     body.append(el('h2', undefined, t('lesson.catalog.title')), el('p', 'lead', t('lesson.catalog.lead')));
 
     const written = this.written();
@@ -512,14 +598,14 @@ export class LessonMode implements LessonToolsHost {
     const summary = this.assessmentResult();
     const startBtn = el('button', 'lesson-primary', t(summary ? 'lesson.catalog.assessResult' : 'lesson.catalog.assess'));
     startBtn.type = 'button';
-    startBtn.addEventListener('click', () => void this.openAssessment());
+    startBtn.addEventListener('click', () => this.openAssessment());
     if (summary) {
       const start = summary.result.start ? this.catalogue().find((l) => l.id === summary.result.start) : null;
       assess.append(el('p', undefined, t('lesson.catalog.assessDone', { percent: summary.result.percent, start: start ? `${lessonNumber(start)} ${localText(start.title)}` : '—' })));
     } else assess.append(el('p', undefined, t('lesson.catalog.assessLead')));
     assess.append(startBtn);
     body.append(assess);
-    if (!summary && !this.assessmentSummary) void this.loadAssessment().then(() => { if (this.dialog.open && this.assessmentResult()) this.renderCatalog(); });
+    if (!summary && !this.assessmentSummary) void this.loadAssessment().then(() => { if (this.pageView === 'catalog' && this.assessmentResult()) this.renderCatalog(); });
 
     // the tracks
     const grid = el('div', 'lesson-tracks');
@@ -557,20 +643,24 @@ export class LessonMode implements LessonToolsHost {
       grid.append(col);
     }
     body.append(grid);
-    d.replaceChildren(close, body);
+    this.content.replaceChildren(body);
   }
 
-  private async openAssessment(): Promise<void> {
+  private openAssessment(): void {
+    this.navigate(TEST_HASH);
+  }
+
+  private async showAssessment(): Promise<void> {
     const m = await this.loadAssessment();
-    this.dialog.close();
-    m.openAssessment({
+    if (this.pageView !== 'test') return;
+    this.assessmentView = m.renderAssessment({
       progress: () => this.progressData,
       save: () => this.save(),
       lessons: () => this.catalogue(),
       goToLesson: (id) => { this.startLesson(id); },
       exportResults: () => void this.exportResults(),
       back: () => this.openCatalog(),
-    });
+    }, this.content);
   }
 
   private async openFile(file: File): Promise<void> {

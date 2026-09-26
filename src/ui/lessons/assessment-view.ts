@@ -62,17 +62,14 @@ export function promptText(q: Question, p: PreparedQuestion): string {
   return text;
 }
 
-let dialog: HTMLDialogElement | null = null;
-
-export function openAssessment(host: AssessmentHost): void {
-  if (!dialog) {
-    dialog = el('dialog', 'dialog lesson-dialog assess-dialog');
-    document.body.append(dialog);
-  }
-  const d = dialog;
-  const view = new AssessmentView(host, d);
+/**
+ * Show the placement test in a container of the lessons page. The returned
+ * view redraws its screen in a new language.
+ */
+export function renderAssessment(host: AssessmentHost, container: HTMLElement): { applyLanguage(): void } {
+  const view = new AssessmentView(host, container);
   view.start();
-  if (!d.open) d.showModal();
+  return view;
 }
 
 /** A photograph's author and licence, as CC BY and CC BY-SA ask, linked to its page on Commons. */
@@ -93,7 +90,14 @@ class AssessmentView {
   private picked: number | string | null | undefined = undefined;
   private confidence: Confidence | undefined;
 
-  constructor(private readonly host: AssessmentHost, private readonly d: HTMLDialogElement) {}
+  /** the screen showing, drawn again when the language changes */
+  private redraw: () => void = () => undefined;
+
+  constructor(private readonly host: AssessmentHost, private readonly container: HTMLElement) {}
+
+  applyLanguage(): void {
+    this.redraw();
+  }
 
   private get bank(): Question[] { return bankFor(this.host.progress()); }
   private question(id: string): Question | undefined { return this.bank.find((q) => q.id === id); }
@@ -107,15 +111,11 @@ class AssessmentView {
   }
 
   private frame(...children: Node[]): void {
-    const close = el('button', 'dialog-close', '×');
-    close.type = 'button';
-    close.setAttribute('aria-label', t('lesson.close'));
-    close.addEventListener('click', () => this.d.close());
-    const body = el('div', 'dialog-body assess-body');
+    const body = el('div', 'assess-body');
     body.append(...children);
-    this.d.setAttribute('aria-label', t('assess.title'));
-    this.d.replaceChildren(close, body);
-    body.scrollTop = 0;
+    this.container.setAttribute('aria-label', t('assess.title'));
+    this.container.replaceChildren(body);
+    this.container.closest('.lessons-page')?.scrollTo(0, 0);
   }
 
   private buttonRow(...buttons: HTMLButtonElement[]): HTMLElement {
@@ -134,13 +134,14 @@ class AssessmentView {
   // ─── the introduction ────────────────────────────────────────────────────
 
   private renderIntro(): void {
+    this.redraw = () => this.renderIntro();
     const kind = nextKind(this.host.progress().assessments);
     const eyebrow = el('span', 'lesson-eyebrow', t(`assess.kind.${kind}`));
     const intro = el('p', 'lead', t(kind === 'pre' ? 'assess.intro' : 'assess.introPost', { n: TEST_LENGTH }));
     const areas = el('ul', 'assess-areas');
     for (const dmn of DOMAIN_ORDER) areas.append(el('li', undefined, `${dmn} · ${t(`assess.domain.${dmn}`)}`));
     this.frame(eyebrow, el('h2', undefined, t('assess.title')), intro, areas, el('p', 'small', t('assess.privacy')),
-      this.buttonRow(this.button(t('assess.back'), () => { this.d.close(); this.host.back(); }), this.button(t('assess.start'), () => this.begin(kind), true)));
+      this.buttonRow(this.button(t('assess.back'), () => this.host.back()), this.button(t('assess.start'), () => this.begin(kind), true)));
   }
 
   private begin(kind: 'pre' | 'post'): void {
@@ -190,6 +191,7 @@ class AssessmentView {
   }
 
   private renderQuestion(): void {
+    this.redraw = () => this.renderQuestion();
     const a = this.attempt!;
     if (this.index >= a.questions.length) { this.finish(); return; }
     const p = a.questions[this.index];
@@ -293,6 +295,7 @@ class AssessmentView {
 
   /** Predict, then observe: what the simulator did. */
   private renderObserve(q: Question & { type: 'choice' }): void {
+    this.redraw = () => this.renderObserve(q);
     const fig = this.figure(q.observe!, 'assess.observeCaption');
     fig?.classList.add('assess-figure-wide');
     this.frame(el('span', 'lesson-eyebrow', t('assess.observe')), el('h2', undefined, t('assess.observeTitle')),
@@ -310,6 +313,7 @@ class AssessmentView {
   // ─── the result ──────────────────────────────────────────────────────────
 
   private renderResult(): void {
+    this.redraw = () => this.renderResult();
     const progress = this.host.progress();
     const lessons = this.host.lessons();
     const done = progress.assessments.filter((x) => x.finishedAt);
@@ -364,7 +368,7 @@ class AssessmentView {
       chip.type = 'button';
       chip.title = `${localText(l.title)} — ${t(`lesson.advice.${advice ?? 'do'}`)}${l.comingSoon ? ` (${t('lesson.comingSoon')})` : ''}`;
       chip.disabled = !!l.comingSoon;
-      chip.addEventListener('click', () => { this.d.close(); this.host.goToLesson(l.id); });
+      chip.addEventListener('click', () => this.host.goToLesson(l.id));
       chips.append(chip);
     }
     path.append(chips, el('p', 'small', t('assess.pathLegend')));
@@ -378,7 +382,7 @@ class AssessmentView {
     ];
     if (start) {
       const go = this.button(start.comingSoon ? t('assess.goSoon', { n: lessonNumber(start) }) : t('assess.goTo', { n: lessonNumber(start), title: localText(start.title) }),
-        () => { this.d.close(); this.host.goToLesson(start.id); }, true);
+        () => this.host.goToLesson(start.id), true);
       go.disabled = !!start.comingSoon;
       buttons.push(go);
     }
@@ -390,6 +394,7 @@ class AssessmentView {
   }
 
   private renderReview(a: AssessmentAttempt): void {
+    this.redraw = () => this.renderReview(a);
     const list = el('ol', 'assess-review');
     const answers = new Map(a.answers.map((x) => [x.id, x]));
     const r = scoreAttempt(a, this.bank, this.host.lessons());

@@ -403,6 +403,7 @@ class App {
     });
     this.bindControls();
     this.observeSceneBottom();
+    const startHash = location.hash; // E03: `#/lessons` is the lessons page, not a mode
     this.setMode(initialMode(location.hash));
     // Keep the address naming the mode, without adding a history entry for it.
     if (location.hash !== hashForMode(this.mode)) history.replaceState(null, '', hashForMode(this.mode));
@@ -418,6 +419,7 @@ class App {
       panelRoot: document.getElementById('setup')!,
       renderPanel: () => this.panel.render(),
     });
+    this.lessons.openFromHash(startHash);
   }
 
   /** The landing page and the viewer: no workspace, the scene is the page. */
@@ -760,7 +762,7 @@ class App {
    */
   private onKey(e: KeyboardEvent): void {
     if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
-    if (document.querySelector('dialog.lesson-dialog[open]')) return; // E03: the lessons' dialogs own the keyboard
+    if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
     // The landing page has no flight controls on it: Space must not launch the
     // rocket standing behind it, out of sight.
     if (this.mode === 'home') return;

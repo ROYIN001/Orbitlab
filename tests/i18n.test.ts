@@ -166,13 +166,13 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   // --- E03 --- lessons and the placement test
   { pattern: /^lesson\.measure\.[a-zA-Z.]+$/, from: 'ui/lessons/lesson-mode.ts criterionLabel: t(`lesson.measure.${c.measure}`)' },
   { pattern: /^lesson\.outcome\.(target|orbit|survived)$/, from: 'ui/lessons/lesson-mode.ts criterionLabel: t(`lesson.outcome.${c.is}`)' },
-  { pattern: /^lesson\.advice\.(start|skip|do|review)$/, from: 'ui/lessons/lesson-mode.ts, assessment-dialog.ts: t(`lesson.advice.${a}`)' },
-  { pattern: /^assess\.kind\.(pre|post)$/, from: 'ui/lessons/assessment-dialog.ts: t(`assess.kind.${kind}`)' },
-  { pattern: /^assess\.domain(Short)?\.[1-6]$/, from: 'ui/lessons/assessment-dialog.ts: t(`assess.domain.${d}`)' },
-  { pattern: /^assess\.flight\.[a-z0-9-]+$/, from: 'ui/lessons/assessment-dialog.ts figure: t(`assess.flight.${id}`)' },
-  { pattern: /^assess\.series\.[a-zA-Z]+$/, from: 'ui/lessons/assessment-dialog.ts figure: t(`assess.series.${f.series}`)' },
-  { pattern: /^assess\.confidence\.(guess|unsure|sure)$/, from: 'ui/lessons/assessment-dialog.ts: t(`assess.confidence.${c}`)' },
-  { pattern: /^assess\.level\.(beginner|basic|strong)$/, from: 'ui/lessons/assessment-dialog.ts: t(`assess.level.${s.level}`)' },
+  { pattern: /^lesson\.advice\.(start|skip|do|review)$/, from: 'ui/lessons/lesson-mode.ts, assessment-view.ts: t(`lesson.advice.${a}`)' },
+  { pattern: /^assess\.kind\.(pre|post)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.kind.${kind}`)' },
+  { pattern: /^assess\.domain(Short)?\.[1-6]$/, from: 'ui/lessons/assessment-view.ts: t(`assess.domain.${d}`)' },
+  { pattern: /^assess\.flight\.[a-z0-9-]+$/, from: 'ui/lessons/assessment-view.ts figure: t(`assess.flight.${id}`)' },
+  { pattern: /^assess\.series\.[a-zA-Z]+$/, from: 'ui/lessons/assessment-view.ts figure: t(`assess.series.${f.series}`)' },
+  { pattern: /^assess\.confidence\.(guess|unsure|sure)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.confidence.${c}`)' },
+  { pattern: /^assess\.level\.(beginner|basic|strong)$/, from: 'ui/lessons/assessment-view.ts: t(`assess.level.${s.level}`)' },
 ];
 
 /**
