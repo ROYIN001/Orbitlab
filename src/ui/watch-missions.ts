@@ -23,7 +23,8 @@ import type { FlownRecord } from './flown';
 
 export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
   | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking'
-  | 'soyuzMs16' | 'soyuzMs25' | 'falcon9Orbcomm2' | 'angaraA5Flight1' | 'h2aHayabusa2' | 'falcon9Demo2';
+  | 'soyuzMs16' | 'soyuzMs25' | 'falcon9Orbcomm2' | 'angaraA5Flight1' | 'h2aHayabusa2' | 'falcon9Demo2'
+  | 'sputnik1' | 'vostok1';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -210,6 +211,27 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       { key: 'evt.seco', t: 527 }, { key: 'evt.boosterLandedShip', t: 562 }, { key: 'evt.payloadSep', t: 720 },
     ], orbit: { perigee: 190, apogee: 211, inclination: 51.6 } },
     titleKey: 'watch.mission.falcon9Demo2', blurbKey: 'watch.mission.falcon9Demo2Blurb', payloadKey: 'watch.payload.demo2' },
+  // Sputnik 1, 4 October 1957, from Site 1/5: PS-1 to 214 × 938 km at 65.1°
+  // (GCAT). The core itself reached orbit; the strap-ons fell away at
+  // T+116.38 s, the core cut off at T+295.4 s and PS-1 was pushed off with
+  // its nose cone at T+314.5 s (en.wikipedia, from the flight records).
+  { id: 'sputnik1', vehicleId: 'sputnik8k71ps', siteId: 'baikonur', satelliteId: 'ps1', orbitId: 'custom', payloadMass: 83.6, padId: 'site1',
+    orbit: { perigee: 214e3, apogee: 938e3, inclination: 65.1, argPerigee: 0, raanMode: 'free' }, launchTime: '1957-10-04T19:28:34Z',
+    flown: { events: [
+      { key: 'evt.boosterSep', t: 116.38 }, { key: 'evt.seco', t: 295.4 }, { key: 'evt.payloadSep', t: 314.5 },
+    ], orbit: { perigee: 214, apogee: 938, inclination: 65.1 } },
+    titleKey: 'watch.mission.sputnik1', blurbKey: 'watch.mission.sputnik1Blurb', payloadKey: 'watch.payload.sputnik1' },
+  // Vostok 1, 12 April 1961, from Site 1/5: Yuri Gagarin, once round the
+  // Earth, 168 × 314 km at 64.95° (GCAT; 181 × 327 km in the older figures).
+  // Strap-ons T+119 s, shroud T+156 s, Blok A off and Blok E lit T+300 s,
+  // Blok E off T+676 s (ESA).
+  { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok3ka', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
+    orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free' }, launchTime: '1961-04-12T06:07:00Z',
+    flown: { events: [
+      { key: 'evt.boosterSep', t: 119 }, { key: 'evt.fairingSep', t: 156 }, { key: 'evt.meco', t: 300 },
+      { key: 'evt.seco', t: 676 },
+    ], orbit: { perigee: 168, apogee: 314, inclination: 64.95 } },
+    titleKey: 'watch.mission.vostok1', blurbKey: 'watch.mission.vostok1Blurb', payloadKey: 'watch.payload.vostok1' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a
   // 250 × 254 km parking orbit at 30.0°, below the pad's 30.4° latitude — a
   // yaw the model does not fly, so it aims at the lowest plane it can reach.

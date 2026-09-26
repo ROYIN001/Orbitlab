@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { FEATURED_WATCH_MISSION, WATCH_MISSIONS, daylightLaunchTime, isHistorical, localSolarHour, watchMissionById, watchMissionSettings } from '../src/ui/watch-missions';
 import { validateConfigInput } from '../src/config/validation';
 import { Simulation } from '../src/physics/simulation';
-import { vehicleById } from '../src/data/vehicles';
+import { HISTORICAL_VEHICLES, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { orbitById } from '../src/data/orbits';
 import { guidanceForVehicle } from '../src/physics/defaults';
@@ -21,7 +21,7 @@ import { defaultDynamics } from '../src/physics/rigid/config';
 import { reachedOrbit } from '../src/ui/watch-logic';
 import { captureFrame } from '../src/physics/frame';
 import { en } from '../src/i18n/en';
-import { compareEvents } from '../src/ui/flown';
+import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
 
 const FROM = [new Date('2026-09-22T03:00:00Z'), new Date('2027-03-14T17:30:00Z')];
 
@@ -142,6 +142,14 @@ describe('viewer missions', () => {
         expect(row.sim, `${id} ${row.key}`).not.toBeNull();
       }
       if (row.delta !== null) expect(Math.abs(row.delta), `${id} ${row.key} ${row.n}`).toBeLessThan(Math.max(60, 0.3 * row.real));
+    }
+    // …and the vehicles of historical flights, flown only for them, reach the flown orbit
+    if (flown?.orbit && HISTORICAL_VEHICLES.some((v) => v.id === s.vehicleId)) {
+      // the reported orbit, or where the stage is now if the loop stopped before separation
+      const el = sim.state.elements;
+      const orbit = simPayloadOrbit(sim.events) ?? { perigee: el.periapsisAlt / 1000, apogee: el.apoapsisAlt / 1000 };
+      expect(Math.abs(orbit.perigee - flown.orbit.perigee), id).toBeLessThan(25);
+      expect(Math.abs(orbit.apogee - flown.orbit.apogee) / flown.orbit.apogee, id).toBeLessThan(0.15);
     }
   });
 });

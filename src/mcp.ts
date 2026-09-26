@@ -26,7 +26,7 @@ import type { Simulation, SimEvent } from './physics/simulation';
 import type { VisualFrame, StageFrame } from './physics/frame';
 import type { CameraMode } from './render/cameras';
 import type { Feasibility } from './ui/panel';
-import { VEHICLES, vehicleById } from './data/vehicles';
+import { ALL_VEHICLES, vehicleById } from './data/vehicles';
 import { SITES, siteById } from './data/sites';
 import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
@@ -343,7 +343,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
 
   if (input.vehicleId !== undefined) {
     const id = expectString(input.vehicleId, 'vehicleId');
-    if (!VEHICLES.some((v) => v.id === id)) throw new Error(`Unknown vehicleId "${id}". Valid ids: ${VEHICLES.map((v) => v.id).join(', ')}`);
+    if (!ALL_VEHICLES.some((v) => v.id === id)) throw new Error(`Unknown vehicleId "${id}". Valid ids: ${ALL_VEHICLES.map((v) => v.id).join(', ')}`);
     if (id !== state.vehicleId || !state.dynamics) state.dynamics = defaultDynamics(id);
     state.vehicleId = id;
     const spec = vehicleById(id);
@@ -632,7 +632,7 @@ function playbackState(host: McpAppHost): Record<string, unknown> {
 // ──────────────────────────────────────────────────────────── input schemas
 
 const CONFIG_PROPERTIES: Record<string, unknown> = {
-  vehicleId: { type: 'string', enum: VEHICLES.map((v) => v.id), description: 'Launch vehicle id.' },
+  vehicleId: { type: 'string', enum: ALL_VEHICLES.map((v) => v.id), description: 'Launch vehicle id.' },
   siteId: { type: 'string', enum: SITES.map((s) => s.id), description: 'Launch site id; must be one the vehicle flies from (see list_missions).' },
   satelliteId: { type: 'string', enum: SATELLITES.map((s) => s.id), description: 'Payload id. Sets payloadMassKg to its typical mass unless payloadMassKg is also given.' },
   orbitId: { type: 'string', enum: [...ORBIT_PRESETS.map((o) => o.id)], description: 'Orbit preset id, or "custom" together with the fields below.' },
@@ -801,7 +801,7 @@ function toolListMissions(): WebMcpTool {
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     execute: () => ({
-      vehicles: VEHICLES.map((v) => ({
+      vehicles: ALL_VEHICLES.map((v) => ({
         id: v.id, name: v.name, country: v.country, manufacturer: v.manufacturer,
         sites: v.sites, stageCount: v.stages.length,
         payloadLeoKg: v.payloadLEO, payloadGtoKg: v.payloadGTO, payloadSsoKg: v.payloadSSO ?? null,

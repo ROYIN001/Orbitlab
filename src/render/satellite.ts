@@ -234,6 +234,55 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       }
       break;
     }
+    case 'ps1': {
+      // Sputnik 1: a polished 0.58 m sphere, four whip aerials swept back
+      // (2.4 and 2.9 m) — folded along the core under the nose cone, then
+      // springing out to 35° from the axis once it is free.
+      const polished = new THREE.MeshStandardMaterial({ color: 0xdcdfe3, metalness: 0.95, roughness: 0.12 });
+      g.add(new THREE.Mesh(new THREE.SphereGeometry(w / 2, 32, 20), polished));
+      [2.4, 2.9, 2.4, 2.9].forEach((len, i) => {
+        const a = Math.PI / 4 + (i * Math.PI) / 2;
+        const pivot = new THREE.Group();
+        pivot.position.set(Math.cos(a) * w * 0.3, w * 0.3, Math.sin(a) * w * 0.3);
+        pivot.rotation.y = -a;
+        const whip = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, len, 6), polished);
+        whip.position.y = -len / 2;
+        pivot.add(whip);
+        g.add(pivot);
+        hinges.push({ pivot, axis: 'z', from: 0.08, to: 35 * Math.PI / 180, t0: 0.05, t1: 0.35 });
+      });
+      break;
+    }
+    case 'vostok': {
+      // Vostok 3KA: the 2.3 m descent sphere, covered in ablative (dark), with
+      // its hatch and window, on the instrument module — two cones base to
+      // base, 2.43 m across — and its antennas.
+      const ablative = new THREE.MeshStandardMaterial({ color: 0x6b6a66, roughness: 0.85, metalness: 0.05 });
+      const bottles = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.45, metalness: 0.5 });
+      const moduleH = 2.25, sphereR = 1.15;
+      const lower = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, 0.6, moduleH * 0.55, 28), bottles);
+      lower.position.y = -h / 2 + moduleH * 0.275;
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.9, w / 2, moduleH * 0.45, 28), dark);
+      upper.position.y = -h / 2 + moduleH * 0.55 + moduleH * 0.225;
+      g.add(lower, upper);
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(sphereR, 36, 24), ablative);
+      sphere.position.y = -h / 2 + moduleH + sphereR - 0.1;
+      g.add(sphere);
+      const glass = new THREE.MeshStandardMaterial({ color: 0x14171d, roughness: 0.1, metalness: 0.8 });
+      for (const [y, rz, size] of [[0.2, 0, 0.22], [-0.35, 1.9, 0.3]] as const) {
+        const port = new THREE.Mesh(new THREE.CircleGeometry(size, 20), glass);
+        port.position.set(Math.cos(rz) * (sphereR + 0.01), sphere.position.y + y, Math.sin(rz) * (sphereR + 0.01));
+        port.lookAt(port.position.x * 2, port.position.y, port.position.z * 2);
+        g.add(port);
+      }
+      for (let i = 0; i < 2; i++) {
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.4, 6), bottles);
+        mast.position.set((i ? 1 : -1) * 0.35, sphere.position.y + sphereR + 0.55, 0);
+        mast.rotation.z = (i ? -1 : 1) * 0.35;
+        g.add(mast);
+      }
+      break;
+    }
     case 'crew': {
       const capsule = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.22, w / 2, h * 0.45, 28), white);
       capsule.position.y = h * 0.28;

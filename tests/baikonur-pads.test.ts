@@ -38,11 +38,13 @@ const overPit = (pad: PadBuild, x: number, z: number, margin = 0) => (pad.holes 
 });
 
 describe("Baikonur's pads", () => {
-  it('fly the three aborts from Gagarin\'s Start and everything else from Site 31/6', () => {
+  it('fly the three aborts and the first R-7 flights from Gagarin\'s Start and everything else from Site 31/6', () => {
     const baikonur = siteById('baikonur');
     expect(baikonur.pads?.map((p) => p.id)).toEqual(['site31', 'site1']);
-    for (const id of ['soyuzMs10', 'soyuzT10', 'soyuz18a'] as const) expect(watchMissionSettings(id).padId).toBe('site1');
-    for (const m of WATCH_MISSIONS.filter((x) => !x.failure)) expect(watchMissionSettings(m.id).padId).toBeUndefined();
+    // G06's aborts, and (C01) Sputnik 1 and Vostok 1, which it was built for
+    const gagarin = ['soyuzMs10', 'soyuzT10', 'soyuz18a', 'sputnik1', 'vostok1'] as const;
+    for (const id of gagarin) expect(watchMissionSettings(id).padId).toBe('site1');
+    for (const m of WATCH_MISSIONS.filter((x) => !(gagarin as readonly string[]).includes(x.id))) expect(watchMissionSettings(m.id).padId).toBeUndefined();
     const base = { vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbit: { ...watchMissionSettings('soyuzIss').orbit },
       launchTime: new Date('2026-09-20T12:00:00Z'), payloadMass: 7150, guidanceOverrides: {}, failure: { mode: 'none' as const, time: 0, stage: 0 }, boosterRecovery: false };
     expect(validateConfigInput({ ...base, padId: 'site1' })).toEqual([]);

@@ -2,7 +2,7 @@
  * A valid but overweight or unreachable mission is still an experiment the
  * operator may launch. Only malformed or unsupported input is rejected here. */
 import type { FailureConfig, FailureMode, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from '../types';
-import { VEHICLES } from '../data/vehicles';
+import { ALL_VEHICLES } from '../data/vehicles';
 import { LANDING_ZONES } from '../data/landing-zones';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES } from '../data/sites';
@@ -210,7 +210,7 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     const issue = numericIssue(value, field, limits);
     if (issue) issues.push(issue);
   };
-  const spec = VEHICLES.find((v) => v.id === state.vehicleId);
+  const spec = ALL_VEHICLES.find((v) => v.id === state.vehicleId);
   if (state.padId !== undefined && !SITES.find((x) => x.id === state.siteId)?.pads?.some((p) => p.id === state.padId)) {
     issues.push({ field: 'setup.site', code: 'selection' });
   }

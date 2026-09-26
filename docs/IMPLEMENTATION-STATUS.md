@@ -138,7 +138,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 305 tests in 94 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1 316 tests in 95 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -180,7 +180,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
-| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–3 of 7 (below) |
+| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–4 of 7 (below) |
 | U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | done | | |
 | E02 live equations panel | done | | |
@@ -191,8 +191,10 @@ C01 historical missions is done in seven parts on branch `claude/c01-historical-
 ORBCOMM-2, Angara-A5 1L, Hayabusa2 — in Watch and in Explore/Engineer, with the station's
 measured node on those days ([PHYSICS.md §13](PHYSICS.md)) — done; (2) Crew Dragon and Demo-2, flown on Falcon 9 without a fairing, and a drone-ship entry burn that spends the stage's spare propellant (the lone Falcon 9 stage never landed on the ship before) — done;
 (3) each flight compared with the real one — the caption, a table under the result and on
-Watch's end card, the real events on the telemetry charts, and the dockings timed — done;
-(4) Vostok 1 and Sputnik 1 on new R-7 variants; (5) Mercury-Redstone 3; (6) Apollo 11 on
+Watch's end card, the real events on the telemetry charts, and the dockings timed; and a lone
+first stage's drone-ship reserve sized for its return, found on Demo-2 — done;
+(4) Sputnik 1 and Vostok 1 on the first R-7s (8K71PS, 8K72K), vehicles of historical flights
+kept out of the fleet matrix and held to their own flights — done; (5) Mercury-Redstone 3; (6) Apollo 11 on
 Saturn V; (7) the fleet acceptance and the documents.
 
 Twenty further items are kept for later, once these are done.

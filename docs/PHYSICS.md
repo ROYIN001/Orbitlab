@@ -2779,6 +2779,54 @@ keeps 9.1 % (15.6 t) to 9.8 % (nothing), Demo-2 9.25 %, and Demo-2 now reaches i
 173 m/s to spare in point-mass and 255 m/s in six-DOF, the booster on the deck with 7–11 t left.
 Falcon Heavy's core, separating from its side boosters' stack, keeps its 12 %.
 
+**13.6 The first R-7s: Sputnik 1 and Vostok 1.** `HISTORICAL_VEHICLES` in src/data/vehicles.ts;
+the spacecraft `ps1` and `vostok3ka` in src/data/satellites.ts. The vehicles of historical flights
+are kept out of the fleet's generic orbit matrix (tests/fleet-*.test.ts, `npm run
+test:sixdof-fleet`), which would ask a 1957 rocket for orbits it never flew; each is held instead to
+its own flight — point-mass in tests/historical-vehicles.test.ts, six-DOF as Watch flies it in
+tests/watch-missions.test.ts, both to the flown orbit — and to the data rules every vehicle keeps. They reuse the
+fleet's R-7 stage ids, so the strap-ons and the core are laid out, drawn and flown as a rigid body
+as Soyuz-2.1a's are: four main chambers and two verniers on each strap-on, four and four on the core.
+
+No primary document could be reached (roscosmos.ru and sputnik.rusarchives.ru refused the
+requests); the values are secondary, and where the sources disagree the table says which was
+taken. Zak is Anatoly Zak's russianspaceweb.com (*sputnik_lv*, *vostok_lv*, *vostok1*), astronautix
+is Mark Wade's astronautix.com (*vostok8k72k*), W is Wikipedia (en and ru), ESA is *The flight of
+Vostok 1* (esa.int).
+
+| | R-7 Sputnik (8K71PS) | Vostok-K (8K72K) |
+|---|---|---|
+| Strap-ons (each) | 42.0 t, 38.3 t propellant (Zak; W: 43.0 / 3.40 t dry) | 43.3 t, 3.71 t dry (astronautix) |
+| RD-107 | 8D74PS: 793 / 975 kN, 247.6 / 304.2 s (Zak) | 8D74-1959: 970 kN vac., 256 / 313 s (astronautix, W); 793 kN SL from the Isp ratio |
+| Core (Blok A) | 99.1 t, 91.8 t propellant, 28.0 m (Zak; W: 94.0 / 7.5 t, 26 m) | 100.4 t, 6.8 t dry, 28.75 m (astronautix; W ru) |
+| RD-108 | 8D75PS: 914 kN, 303.1 s vac. (Zak); sea level from W's 241 / 308 s ratio: 715 kN, 237.2 s | 8D75-1959: 912 kN vac., 248 / 315 s (astronautix, W en; W ru 941 kN) |
+| Blok E | — | 7,775 kg, 1,440 kg dry, 2.84 × 2.56 m (astronautix; Zak 1.34 t dry); RD-0109 54.52 kN, 323.5 s (W; astronautix 326 s), 365 s |
+| Nose | a 1.17 m cone over PS-1, released with it (W); its 1.0 m base and 40 kg estimated | the 0.8 t, 2.7 m shroud (Zak), off at T+156 s (ESA); its 6.8 m length from the 38.36 m stack, estimated |
+| Spacecraft | PS-1, 83.6 kg, 0.58 m sphere, four whips of 2.4 and 2.9 m (W) | Vostok 3KA, 4,725 kg: the 2.3 m descent sphere and the 2.43 × 2.25 m instrument module (W) |
+
+With these, the strap-ons of 8K71PS burn out at 117 s (flown 116.38 s) and its core at 298 s (295.4 s);
+Vostok-K's Blok E burns 368 s (365 s published).
+
+Flown from Gagarin's Start at their own second, model − flight, s, and the orbit reached:
+
+| Flight | Strap-ons | Shroud | Core cut-off | Last cut-off | Separation | Orbit, model (flown) |
+|---|---|---|---|---|---|---|
+| Sputnik 1, point-mass | −0.5 (116.38) | — | — | +7.9 (295.4) | +3.8 (314.5) | 214 × 937 km, 65.09° (214 × 938, 65.1°) |
+| Sputnik 1, six-DOF | −0.4 | — | — | +8.2 | +5.4 | 214 × 949 km, 65.09° |
+| Vostok 1, point-mass | +5.0 (119) | +0.1 (156) | +14.6 (300) | −18.3 (676) | — | 168 × 311 km, 64.95° (168 × 314, 64.95°) |
+| Vostok 1, six-DOF | +5.0 | ±0.0 | +14.8 | −23.3 | — | 168 × 311 km, 64.95° |
+
+Sputnik's core, the orbital stage itself, cuts off 8 s late on Zak's 91.8 t; the real one shut down
+about a second early (en.wikipedia). With no upper stage its cut-off orbit is final, so the pitch
+kick sets the apogee: 4° in point-mass and 5° as a rigid body reach the flown 938 km, where
+Soyuz's 3° and 4° leave it 130 and 510 km short. Vostok-K's core, on astronautix's 93.6 t, burns
+15 s longer than flown and Blok E, lit late, is 18–23 s early to the same orbit; the published
+over-burn of Blok E (a backup timer cut it off when the radio command did not come, and the
+apogee was some 90 km above the planned one) is flown to, not modelled. The R-7's engines did not throttle; `minThrottle`
+0.7 stands for the verniers' authority. RD-0109 steered by turbine exhaust through control nozzles
+of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad is Gagarin's Start
+(Site 1/5) for both.
+
 ## Glossary (EN / RU / TH)
 
 This table is the source of truth for `src/i18n/ru.ts` and `src/i18n/th.ts`, and

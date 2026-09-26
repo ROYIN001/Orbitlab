@@ -32,7 +32,7 @@
  *   better.
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
-import { RATING_ORBITS, VEHICLES, missionVehicle, vehicleById } from '../data/vehicles';
+import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, vehicleById } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
@@ -899,7 +899,11 @@ export class SetupPanel {
     // ── 01 vehicle & site ───────────────────────────────────────────────────
     const s1 = this.el('section', 'config-section');
     s1.appendChild(this.sectionTitle('01', 'setup.step.vehicle'));
-    s1.appendChild(this.select('setup.vehicle', VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })), s.vehicleId, (v) => {
+    s1.appendChild(this.select('setup.vehicle', [
+      ...VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })),
+      // C01: the vehicles of historical flights, after the fleet
+      ...HISTORICAL_VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country}) · ${t('setup.vehicle.historical')}` })),
+    ], s.vehicleId, (v) => {
       s.vehicleId = v;
       const flex = s.dynamics?.flex;
       const control = s.dynamics?.control;
@@ -948,7 +952,7 @@ export class SetupPanel {
       this.changed();
     });
     // Sites no vehicle flies from yet (roadmap C04), shown for what they are
-    const unflown = SITES.filter((x) => !VEHICLES.some((v) => v.sites.includes(x.id)));
+    const unflown = SITES.filter((x) => !ALL_VEHICLES.some((v) => v.sites.includes(x.id)));
     if (unflown.length) {
       const group = this.el('optgroup');
       group.label = t('setup.siteUnflown');

@@ -1,5 +1,5 @@
 import type { DynamicsConfig } from '../../types';
-import { VEHICLES } from '../../data/vehicles';
+import { ALL_VEHICLES } from '../../data/vehicles';
 import { validFlexConfig } from './flex';
 import { validControlConfig } from './control-config';
 import { validNavigationConfig } from '../nav/config';
@@ -11,7 +11,7 @@ export const RIGID_MODEL_VERSION = 'sixdof-1';
  * Every vehicle has six-DOF data (src/physics/rigid/vehicle-data.ts) and flies
  * as a rigid body unless the user chooses the point-mass model.
  */
-export const supportsRigid = (vehicleId: string): boolean => VEHICLES.some((v) => v.id === vehicleId);
+export const supportsRigid = (vehicleId: string): boolean => ALL_VEHICLES.some((v) => v.id === vehicleId);
 
 export function defaultDynamics(vehicleId: string): DynamicsConfig {
   return { model: supportsRigid(vehicleId) ? 'sixDof' : 'pointMass', wind: 'calm', seed: 20260919 };

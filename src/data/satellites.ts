@@ -16,6 +16,12 @@ export const SATELLITES: SatelliteSpec[] = [
   // on top of Falcon 9 without a fairing. It raises its own orbit with Dracos,
   // which the model does not fly: the flight ends at separation.
   { id: 'crewDragon', kind: 'crewDragon', name: 'Crew Dragon', mass: 13055, typicalOrbit: 'iss', description: 'SpaceX crew capsule and its trunk, flown on top of Falcon 9 without a fairing. Its own Draco thrusters take it on to the station.', crewed: true, size: { width: 4.0, height: 8.1, depth: 4.0 }, exposed: { diameter: 4.0, length: 8.1, noseLength: 4.5 }, carriers: ['falcon9'] },
+  // C01: the spacecraft of the first R-7 flights (docs/PHYSICS.md §13.6).
+  // PS-1: 83.6 kg, a 0.58 m sphere with four whip aerials of 2.4 and 2.9 m.
+  { id: 'ps1', kind: 'ps1', name: 'Sputnik 1 (PS-1)', mass: 83.6, typicalOrbit: 'custom', description: 'The first artificial satellite: a polished 58 cm sphere with four whip aerials and two radio transmitters.', size: { width: 0.58, height: 0.58, depth: 0.58 }, carriers: ['sputnik8k71ps'] },
+  // Vostok 3KA: 4,725 kg; the 2.3 m descent sphere (2,460 kg) on the
+  // 2.43 × 2.25 m instrument module. Its retro engine only brings it down.
+  { id: 'vostok3ka', kind: 'vostok', name: 'Vostok 3KA', mass: 4725, typicalOrbit: 'custom', description: 'The first crewed spacecraft: a 2.3 m descent sphere on an instrument module with the retro engine.', crewed: true, size: { width: 2.43, height: 4.4, depth: 2.43 }, carriers: ['vostokk'] },
 ];
 
 export const satelliteById = (id: string): SatelliteSpec => {

@@ -21,6 +21,8 @@ const AREA: Record<SatelliteKind, number> = {
   starlink: 20,   // the stack before it separates
   crew: 10,       // Soyuz MS with its two arrays
   crewDragon: 32, // 4.0 × 8.1 m capsule and trunk: a quarter of its 127 m² surface (a convex body's mean)
+  ps1: 0.26,      // Sputnik 1: a 0.58 m sphere (its four whips add next to nothing)
+  vostok: 6,      // Vostok 3KA: the 2.3 m sphere and the 2.43 × 2.25 m instrument module
 };
 
 export function spacecraftFor(kind: SatelliteKind, mass: number): Spacecraft {

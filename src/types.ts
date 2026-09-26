@@ -255,7 +255,9 @@ export type SatelliteKind =
   | 'cubesats'
   | 'starlink'
   | 'crew'
-  | 'crewDragon';
+  | 'crewDragon'
+  | 'ps1'
+  | 'vostok';
 
 export interface SatelliteSpec {
   id: string;

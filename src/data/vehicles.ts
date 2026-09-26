@@ -816,8 +816,87 @@ export const VEHICLES: VehicleSpec[] = [
   },
 ];
 
+// ── Roadmap C01: the vehicles of historical flights ─────────────────────────
+// Kept apart from the fleet (`VEHICLES`): each is flown to the one flight it is
+// here for and held to it (tests/historical-vehicles.test.ts), not put through
+// the fleet's generic orbit matrix, which asks of a 1957 rocket what it never
+// flew. The setup panel lists them after the fleet. Sources and the values
+// taken where they disagree: docs/PHYSICS.md §13.6.
+//
+// The R-7s reuse the fleet's R-7 stage ids (`blokBVGD`, `blokA`): the same
+// hardware family, drawn, laid out and flown as a rigid body the same way —
+// four main chambers and two verniers on each strap-on, four and four on the
+// core. Their 1957 and 1961 engines are older: the RD-107 and RD-108 below.
+
+/** RD-107 8D74PS and RD-108 8D75PS as flown on Sputnik 1 (Zak, russianspaceweb.com/sputnik_lv.html). */
+const RD107_1957: EngineSpec = { name: 'RD-107 (8D74PS)', count: 1, thrustSL: 793 * kN, thrustVac: 975 * kN, ispSL: 247.6, ispVac: 304.2, minThrottle: 0.7 };
+// The vacuum figures are Zak's; the sea level ones scale them by the ratio en.wikipedia gives (241 / 308 s).
+const RD108_1957: EngineSpec = { name: 'RD-108 (8D75PS)', count: 1, thrustSL: 715 * kN, thrustVac: 914 * kN, ispSL: 237.2, ispVac: 303.1, minThrottle: 0.7 };
+/** RD-107 8D74-1959 and RD-108 8D75-1959 as on Vostok-K (astronautix.com; en.wikipedia, Vostok-K). */
+const RD107_1959: EngineSpec = { name: 'RD-107 (8D74-1959)', count: 1, thrustSL: 793 * kN, thrustVac: 970 * kN, ispSL: 256, ispVac: 313, minThrottle: 0.7 };
+const RD108_1959: EngineSpec = { name: 'RD-108 (8D75-1959)', count: 1, thrustSL: 718 * kN, thrustVac: 912 * kN, ispSL: 248, ispVac: 315, minThrottle: 0.7 };
+/** RD-0109 of Blok E (en.wikipedia RD-0109, Blok E): 54.52 kN, 323.5 s, no verniers. */
+const RD0109: EngineSpec = { name: 'RD-0109', count: 1, thrustSL: 40 * kN, thrustVac: 54.52 * kN, ispSL: 240, ispVac: 323.5, vacuumOnly: true };
+
+export const HISTORICAL_VEHICLES: VehicleSpec[] = [
+  {
+    id: 'sputnik8k71ps', name: 'R-7 Sputnik (8K71PS)', country: 'SU', manufacturer: 'OKB-1',
+    // 29.167 m (Zak; ru.wikipedia); the core 28.0 m under a 1.17 m nose cone over PS-1.
+    height: 29.2, payloadLEO: 1327, payloadGTO: 0,
+    // A small cone over PS-1, released with it at T+314.5 s (en.wikipedia,
+    // Sputnik 1). Its base and mass are not published: sized to the core's
+    // top and estimated.
+    fairing: { mass: 40, diameter: 1.0, length: 1.17, sepAltitude: 150e3, sepTime: 314.5, color: '#d9d9d6' },
+    stages: [
+      // Zak: stage I 168.0 t with 153.2 t of propellant (38.3 t a block), the
+      // core 99.1 t with 91.8 t — which burn out at 117 s and 298 s on these
+      // engines, against 116.38 s and 295.4 s flown.
+      { id: 'blokA', name: 'Blok A (core)', dryMass: 7300, propellantMass: 91800, engine: RD108_1957,
+        diameter: 2.95, length: 28.0, color: '#d3d3cf', accentColor: '#6a6d70', profile: 'r7Core',
+        boosters: [{ id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3700, propellantMass: 38300,
+          engine: RD107_1957, diameter: 2.68, length: 19.2, sepDelay: 1, conicalTop: true, color: '#d3d3cf' }] },
+    ],
+    sites: ['baikonur'], maxQ: 45e3, maxAccel: 60,
+    // With no upper stage the core's cut-off orbit is final, so the kick sets
+    // the apogee: 3° leaves the point-mass flight 130 km short of the flown
+    // 938 km, 4° reaches 214 × 937 km; the rigid body, Soyuz's 4°, only
+    // 208 × 424 km, and 5° 214 × 949 km.
+    guidanceDefaults: { kickAngle: 4, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 5, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'The R-7 that launched Sputnik 1: four strap-ons and the core, no upper stage — the core itself reached orbit.',
+  },
+  {
+    id: 'vostokk', name: 'Vostok-K (8K72K)', country: 'SU', manufacturer: 'OKB-1',
+    // 38.36 m (ru.wikipedia; Zak), 287 t at liftoff.
+    height: 38.4, payloadLEO: 4725, payloadGTO: 0,
+    // The shroud over Vostok 3KA, 0.8 t and 2.7 m across (Zak), off at
+    // T+156 s (ESA, *The flight of Vostok 1*). Its length is the head of the
+    // 38.36 m stack less Blok A and Blok E: estimated.
+    fairing: { mass: 800, diameter: 2.7, length: 6.8, sepAltitude: 70e3, sepTime: 156, color: '#d9d9d6' },
+    stages: [
+      // astronautix: strap-ons 43.3 t (3.71 t dry), the core 100.4 t (6.8 t dry)
+      { id: 'blokA', name: 'Blok A (core)', dryMass: 6800, propellantMass: 93600, engine: RD108_1959,
+        diameter: 2.95, length: 28.75, color: '#d3d3cf', accentColor: '#6a6d70', profile: 'r7Core',
+        boosters: [{ id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3710, propellantMass: 39590,
+          engine: RD107_1959, diameter: 2.68, length: 19.8, sepDelay: 1, conicalTop: true, color: '#d3d3cf' }] },
+      // Blok E: 7,775 kg, 1,440 kg dry (astronautix), 2.84 × 2.56 m; lit
+      // through the truss before Blok A is let go.
+      { id: 'blokE', name: 'Blok E (RD-0109)', dryMass: 1440, propellantMass: 6335, engine: RD0109,
+        diameter: 2.56, length: 2.84, sepDelay: 0, ignitionDelay: 0, color: '#d3d3cf' },
+    ],
+    sites: ['baikonur'], maxQ: 45e3, maxAccel: 60,
+    crewCapable: true,
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'The R-7 that flew Gagarin: the Sputnik core and strap-ons with Blok E, a small third stage hot-staged through a truss.',
+  },
+];
+
+/** The fleet and the historical vehicles together: everything a mission can name. */
+export const ALL_VEHICLES: readonly VehicleSpec[] = [...VEHICLES, ...HISTORICAL_VEHICLES];
+
 export const vehicleById = (id: string): VehicleSpec => {
-  const v = VEHICLES.find((x) => x.id === id);
+  const v = ALL_VEHICLES.find((x) => x.id === id);
   if (!v) throw new Error(`Unknown vehicle ${id}`);
   return v;
 };

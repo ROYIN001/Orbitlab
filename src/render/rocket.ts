@@ -235,7 +235,7 @@ export class RocketView {
     }
     if (this.vapour) this.group.add(this.vapour.group);
     // a crewed R-7 carries a Soyuz MS (G07: its shape matters at the station's port)
-    this.satellite = this.crewed && spec.stages.some((st) => st.profile === 'r7Core') ? buildSoyuzMs() : buildSatellite(sat);
+    this.satellite = sat.kind === 'crew' && spec.stages.some((st) => st.profile === 'r7Core') ? buildSoyuzMs() : buildSatellite(sat);
     this.group.add(this.satellite.group);
     this.group.add(this.engineLight);
     this.height = total;
@@ -421,9 +421,10 @@ export class RocketView {
     // produced `stackHeight` inside `stackLayout`, so the drawn cone and the
     // stacking arithmetic cannot disagree.
     const interH = interstageHeight(spec.diameter, topDiameter);
-    if (r7Core && topDiameter !== null) {
+    if (r7Core && topDiameter !== null && index < this.spec.stages.length - 1) {
       // the open truss Blok I stands on, from inside Blok A's own length up to
-      // the next stage's base; its flame is seen through it at staging
+      // the next stage's base; its flame is seen through it at staging (a core
+      // flown as the last stage, Sputnik's, closes under its nose cone instead)
       const truss = new THREE.Mesh(r7TrussGeometry(r7CoreTop(r), spec.length - R7_TRUSS_INSIDE, spec.length + interH), this.mat('#4a4d52', 0.45, 0.55));
       truss.castShadow = true;
       g.add(truss);
@@ -688,7 +689,7 @@ export class RocketView {
     g.add(nose);
     // A crewed R-7 flies its escape tower on the fairing's nose and the
     // tower's lattice fins folded along the fairing.
-    if (this.crewed && spec.stages.some((st) => st.profile === 'r7Core')) {
+    if (this.crewed && spec.escapeSystem === 'soyuz') {
       const finMat = new THREE.MeshStandardMaterial({ map: gridFinTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5, color: 0x9a9da1 });
       this.materials.push(finMat);
       this.crewedTop = new CrewedTop(r, f.length, (c, metal, rough) => this.mat(c, metal, rough), finMat);

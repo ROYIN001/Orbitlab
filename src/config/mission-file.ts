@@ -9,7 +9,7 @@
  * mission is kept) with an issue naming the field, for the page to show.
  */
 import type { DynamicsConfig, FailureConfig, GuidanceParams, MissionConfig, OrbitSpec, RecoveryPlan } from '../types';
-import { VEHICLES } from '../data/vehicles';
+import { ALL_VEHICLES } from '../data/vehicles';
 import { SATELLITES } from '../data/satellites';
 import { ORBIT_PRESETS } from '../data/orbits';
 import { DEFAULT_FAILURE } from '../physics/defaults';
@@ -101,7 +101,7 @@ export function copyMission(state: MissionState): MissionState {
 
 /** The defaults a reset value falls back on, for this vehicle and satellite. */
 function vehicleDefaults(vehicleId: string) {
-  const spec = VEHICLES.find((v) => v.id === vehicleId);
+  const spec = ALL_VEHICLES.find((v) => v.id === vehicleId);
   return { spec, dynamics: defaultDynamics(vehicleId), site: spec?.sites[0] };
 }
 
