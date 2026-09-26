@@ -1314,6 +1314,53 @@ const slc40Pad: Builder = (ctx) => {
   };
 };
 
+/**
+ * Launch Complex 5, Cape Canaveral (C01: Mercury-Redstone 3): the rocket on a
+ * low pedestal with no hold-down arms, a slim umbilical mast beside it, the
+ * gantry with its White Room rolled back along its rails before the launch,
+ * and the domed blockhouse the flight was run from (NASA TM X-53107, §7.5;
+ * the dimensions are drawn from photographs, approximate).
+ */
+const lc5Pad: Builder = (ctx) => {
+  const g = new THREE.Group();
+  const H = ctx.H;
+  const apron = new THREE.Mesh(ctx.geo(new THREE.BoxGeometry(70, 1.5, 70)), ctx.mat(0xa9a79f, 0.05, 0.92));
+  apron.position.y = -0.75;
+  apron.receiveShadow = true;
+  g.add(apron);
+  // the pedestal the Redstone stood on, with its flame deflector below
+  const pedestal = new THREE.Mesh(ctx.geo(merged([
+    cyl(ctx.R + 1.2, ctx.R + 1.6, 2, 0, 1, 0, 16),
+    ...[0, 1, 2, 3].map((i) => { const a = (i / 4) * Math.PI * 2 + Math.PI / 4; return box(0.8, 2, 0.8, Math.cos(a) * (ctx.R + 1.4), 1, Math.sin(a) * (ctx.R + 1.4)); }),
+  ])), ctx.mat(0x6c7075, 0.45, 0.55));
+  pedestal.castShadow = true;
+  g.add(pedestal);
+  const deflector = new THREE.Mesh(ctx.geo(box(6, 1.2, 10, 0, 0.4, 5)), ctx.mat(0x4d5054, 0.4, 0.6));
+  g.add(deflector);
+  // the umbilical mast
+  const mast = new THREE.Mesh(ctx.geo(lattice(1.6, 1.6, H * 0.8, 10, 0.18)), ctx.mat(0x9c2d24, 0.3, 0.6));
+  mast.position.set(-(ctx.R + 4), 0, 0);
+  mast.castShadow = true;
+  g.add(mast);
+  // the service gantry, rolled back 60 m along its rails
+  const gantry = new THREE.Mesh(ctx.geo(merged([
+    lattice(9, 7, H * 1.25, 18, 0.45),
+    box(10, 3, 8, 0, H * 0.75, 0),
+  ])), ctx.mat(0xb8412f, 0.35, 0.6));
+  gantry.position.set(-62, 0, 0);
+  gantry.castShadow = true;
+  g.add(gantry);
+  g.add(new THREE.Mesh(ctx.geo(merged([box(1.2, 0.4, 90, -62, 0.2, 0), box(1.2, 0.4, 90, -69, 0.2, 0)].map((b) => b))), ctx.mat(0x6b6b6b, 0.3, 0.8)));
+  // the blockhouse: a concrete dome of the 1950s
+  const dome = new THREE.Mesh(ctx.geo(new THREE.SphereGeometry(14, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2)), ctx.mat(0xd2cfc4, 0.05, 0.9));
+  dome.scale.y = 0.55;
+  dome.position.set(120, 0, -110);
+  dome.castShadow = true;
+  g.add(dome);
+  for (const o of infrastructure(ctx, 240, 1)) g.add(o);
+  return { group: g, trenchAzimuth: 0, mouthRadius: 5, mountHeight: 2, animate() { /* the gantry went back hours before */ } };
+};
+
 /** Vandenberg SLC-4E: hillside pad, two masts, a rolled-back mobile shelter. */
 const slc4ePad: Builder = (ctx) => {
   const base = slc40Pad(ctx);
@@ -1769,7 +1816,7 @@ const mahiaPad: Builder = (ctx) => {
 
 const BUILDERS: Record<string, Builder> = {
   baikonur: baikonurPad, plesetsk: soyuzPad, vostochny: soyuzPad,
-  cape: slc40Pad, ksc39a: lc39aPad, vandenberg: slc4ePad, wallops: wallopsPad,
+  cape: (ctx) => (ctx.pad === 'lc5' ? lc5Pad(ctx) : slc40Pad(ctx)), ksc39a: lc39aPad, vandenberg: slc4ePad, wallops: wallopsPad,
   starbase: starbasePad, kourou: kourouPad, wenchang: wenchangPad,
   tanegashima: tanegashimaPad, sriharikota: sriharikotaPad, mahia: mahiaPad,
 };

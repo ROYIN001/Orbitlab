@@ -2679,6 +2679,7 @@ is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's S
 | Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
 | Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
 | Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
+| Mercury-Redstone 3 | 1961-05-05 14:34:13 | Mercury-Redstone, Cape LC-5 | 1,832.6 kg (Freedom 7 and its tower) | 187.5 km apogee, splashdown 487 km down range (§13.7) | NASA MR-3 postlaunch report; TM X-53107 |
 
 **13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
 regression, which six years back is tens of degrees out. Within 10 days of a historical flight
@@ -2826,6 +2827,57 @@ apogee was some 90 km above the planned one) is flown to, not modelled. The R-7'
 0.7 stands for the verniers' authority. RD-0109 steered by turbine exhaust through control nozzles
 of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad is Gagarin's Start
 (Site 1/5) for both.
+
+**13.7 Mercury-Redstone 3.** The vehicle `mercuryredstone` in `HISTORICAL_VEHICLES`, the spacecraft
+`mercury` in src/data/satellites.ts, the capsule's flight home `MERCURY_CAPSULE` in
+src/physics/rigid/escape.ts. Alan Shepard's Freedom 7, 5 May 1961, 14:34:13 UTC, from Launch Complex
+5 at the Cape (28.43944° N, 80.57333° W; drawn there, flown from the Cape site's own point 14 km
+north, as every pad is). Sources: NASA, *Postlaunch Report for Mercury-Redstone No. 3* (June 1961),
+PR; NASA TM X-53107, *The Mercury-Redstone Project* (1964), TM.
+
+| | Value | Source |
+|---|---|---|
+| Liftoff mass | 29,982 kg with the capsule | TM Table 8-1 |
+| Booster | 3,717 kg dry, 24,432 kg of alcohol, LOX, peroxide and residuals (the difference); 1.778 m across, 17.98 m | TM §4.2.1 |
+| A-7 as flown | 350.8 kN, 214.8 s at sea level (TM Table 8-1); 395.9 kN in vacuum (thisdayinaviation.com), 242.4 s from the same flow | TM, secondary |
+| Burn | 143.5 s planned, cut off at T+141.8 s; model 146.7 s from the tanks | PR |
+| Capsule | 1,832.6 kg with its tower, 1,295.1 kg after the tower and the separation, 1,169.8 kg without the retropack; 1.892 m shield | PR |
+| Retros | three, at T+5:14.1, 5:18.8, 5:23.6 (separation + 161.8, 166.5, 171.3 s), 1,000 lbf (4,448 N) each; burn 10 s (estimated); pack off at T+6:13.6 | PR |
+| Parachutes | 6 ft drogue at 21,000 ft (6.4 km, T+9:38.1); 63 ft ring-sail main, 290 m², at 10,600 ft (3.23 km, T+10:14.8) | PR |
+| Arc | separation at T+2:32.3, 74.3 km, 2,252 m/s inertial at 39.01° up; apogee 187.5 km; 487.3 km down range; splashdown T+15:22 at 27°13.7' N, 75°53' W | PR |
+
+The target is the conic through the flown separation state: 187.5 km apogee, perigee −6,214 km,
+inclination 30.55° — from the inertial heading, 101.6°; the Earth-fixed 105.2° gives 31.95°, and a
+splashdown 48 km too far south. `OrbitSpec.descending` makes the plan fly the southbound of the two
+launch solutions, as MR-3 did out of the Cape; without it the plane is flown north-east. The drag
+coefficients, the parachutes' reefing and the capsule's inertia are estimates.
+
+*What changed to fly it.* A lobbed arc is cut off far under 100 km, on its way up, the moment its
+apogee reaches the target's (`AscentMonitor.checkSuborbitalAscent`), and judged once; the capsule
+then rides the spent booster to its separation 10.5 s later (the flown interval) and is flown home by
+`EscapeFlight` in its new mode `capsule`: ballistic over the top, retros against the flight
+direction, the pack off, the heat shield first into the air, drogue, main, the water. The same
+rigid-body flight as a Soyuz abort's descent module (§8), with the capsule's own mass, size, CG
+(0.6 m above the shield's face, estimated), parachutes and retros; Soyuz's descent module is
+`SOYUZ_DESCENT`, with its values unchanged. The Redstone had no closed-loop guidance, only a tilt
+programme; the model flies its own gravity turn, whose pitch floor (3° kick, falling 0.34°/s) was
+set so that both models cut off on the flown arc.
+
+Model − flight, s, and the landing:
+
+| | Max-Q | Cut-off | Separation | 1st retro | Drogue | Main | Splashdown | Peak g | Down range | From the real splashdown |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Flown | 84 (28.1 kPa) | 141.8 | 152.3 | 314.1 | 578.1 | 614.8 | 922.0 | 11.0 | 487.3 km | — |
+| Point-mass | −10.2 (31.2 kPa) | −5.5 | −5.5 | −5.2 | −9.5 | −10.9 | −15.8 | 11.6 | 496 km | 11.9 km |
+| Six-DOF | −10.4 (30.9 kPa) | −5.6 | −5.6 | −5.6 | −9.8 | −11.2 | −16.1 | 11.3 | 490 km | 5.6 km |
+
+The model's Redstone burns out 5.5 s early on the same arc, and everything after is timed from the
+separation, so it follows. Max-Q comes 10 s early and 3 kPa higher: the gravity turn is steeper low
+down than the tilt programme. The parachute times are set by heights, so they depend on the fall, not
+the clock; the capsule comes down 16 s early because its drag after the main opens is estimated.
+Tested: point-mass in tests/historical-vehicles.test.ts, six-DOF in tests/heavy/mercury-redstone.test.ts
+(tests/mr3-harness.ts), each to the timeline above within 15–30 s, 11 ± 1.5 g, 487 ± 25 km and 25 km
+of the real splashdown.
 
 ## Glossary (EN / RU / TH)
 

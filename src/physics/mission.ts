@@ -348,15 +348,16 @@ export interface LaunchDirection {
  * - anything else is not licensed, and reports the solution closer to the
  *   window.
  */
-export function launchDirection(site: SiteExtra, inc: number, vOrbit = CORRIDOR_REFERENCE_SPEED): LaunchDirection {
+export function launchDirection(site: SiteExtra, inc: number, vOrbit = CORRIDOR_REFERENCE_SPEED, descending?: boolean): LaunchDirection {
   const lat = site.latitude * DEG;
-  const customary = inc > 75 * DEG ? site.descendingForPolar : false;
+  const customary = descending ?? (inc > 75 * DEG ? site.descendingForPolar : false);
   const solution = (descending: boolean) => {
     const azimuth = rotatingLaunchAzimuth(lat, inc, vOrbit, descending);
     return { descending, azimuth, ...(azimuth === null ? { excess: Infinity, edgeDeg: 0 } : windowExcess(site, azimuth)) };
   };
   const own = solution(customary), mirror = solution(!customary);
-  const chosen = mirror.excess < own.excess ? mirror : own;
+  // a solution the orbit names (`OrbitSpec.descending`) is flown, window permitting
+  const chosen = descending === undefined && mirror.excess < own.excess ? mirror : own;
   if (chosen.azimuth !== null && inc <= maxInclinationFor(site) + CORRIDOR_SLACK) {
     return { descending: chosen.descending, azimuthRotating: chosen.azimuth, doglegDeg: 0, allowed: true };
   }
@@ -978,7 +979,7 @@ export function canBurnAfterAscent(vehicle: VehicleSpec, satellite: SatelliteSpe
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   const { inc: ascentInclination } = ascentInclinationFor(target, site);
-  const direction = launchDirection(site, ascentInclination);
+  const direction = launchDirection(site, ascentInclination, undefined, cfg.orbit.descending);
   const descending = direction.descending;
   const lat = site.latitude * DEG;
   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;

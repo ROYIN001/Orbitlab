@@ -25,6 +25,8 @@ export type WatchBeat =
   // a launch abort (G06): what went wrong, the way out, the crew's way down
   | 'padFire' | 'boosterCollision' | 'stagingFailure' | 'abortTower' | 'abortFairing' | 'abortSeparation'
   | 'escapeCoast' | 'escapeCapsule' | 'escapeModules' | 'ballistic' | 'drogue' | 'mainChute' | 'mainDescent' | 'softLanding' | 'crewSafe'
+  // a capsule flown home from a suborbital flight (C01: Mercury-Redstone 3)
+  | 'capsuleCutoff' | 'capsuleSep' | 'capsuleArc' | 'retroFire' | 'capsuleEntry' | 'capsuleDrogue' | 'capsuleMain' | 'capsuleSplash'
   // a flight on to the station (G07)
   | 'rvPlan' | 'rvPhasing' | 'rvBurn' | 'rvApproach' | 'rvFlyaround' | 'rvStationkeeping' | 'rvFinal' | 'rvContact' | 'rvCapture' | 'rvDocked';
 
@@ -66,6 +68,14 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   abortFairing: { label: 'watch.beat.abortFairing', text: 'watch.say.abortFairing' },
   abortSeparation: { label: 'watch.beat.abortSeparation', text: 'watch.say.abortSeparation' },
   escapeCoast: { label: 'watch.beat.escapeCoast', text: 'watch.say.escapeCoast' },
+  capsuleCutoff: { label: 'watch.beat.capsuleCutoff', text: 'watch.say.capsuleCutoff' },
+  capsuleSep: { label: 'watch.beat.capsuleSep', text: 'watch.say.capsuleSep' },
+  capsuleArc: { label: 'watch.beat.capsuleArc', text: 'watch.say.capsuleArc' },
+  retroFire: { label: 'watch.beat.retroFire', text: 'watch.say.retroFire' },
+  capsuleEntry: { label: 'watch.beat.capsuleEntry', text: 'watch.say.capsuleEntry' },
+  capsuleDrogue: { label: 'watch.beat.drogue', text: 'watch.say.capsuleDrogue' },
+  capsuleMain: { label: 'watch.beat.capsuleMain', text: 'watch.say.capsuleMain' },
+  capsuleSplash: { label: 'watch.beat.splashdown', text: 'watch.say.capsuleSplash' },
   escapeCapsule: { label: 'watch.beat.escapeCapsule', text: 'watch.say.escapeCapsule' },
   escapeModules: { label: 'watch.beat.escapeCapsule', text: 'watch.say.escapeModules' },
   ballistic: { label: 'watch.beat.ballistic', text: 'watch.say.ballistic' },
@@ -105,6 +115,8 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
   { key: 'evt.boosterLandedShip', beat: 'boosterLandedShip', hold: 15 },
   { key: 'evt.boosterCaught', beat: 'boosterCaught', hold: 15 },
   { key: 'evt.suborbitalTarget', beat: 'suborbital', hold: 15 },
+  // C01: a capsule's separation on a suborbital flight (an orbital payload's has no beat of its own)
+  { key: 'evt.payloadSep', beat: 'capsuleSep', hold: 12 },
   // G06: an abort reads as it happens; the way out is picked by `evt.abort`'s mode
   { key: 'evt.padFire', beat: 'padFire', hold: 8 },
   { key: 'evt.boosterCollision', beat: 'boosterCollision', hold: 6 },
@@ -112,6 +124,7 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
   { key: 'evt.abort', beat: 'abortTower', hold: 12 },
   { key: 'evt.escapeCapsule', beat: 'escapeCapsule', hold: 10 },
   { key: 'evt.escapeDrogue', beat: 'drogue', hold: 12 },
+  { key: 'evt.retroFire', beat: 'retroFire', hold: 12 },
   { key: 'evt.escapeMain', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeMainLow', beat: 'mainChute', hold: 15 },
   { key: 'evt.escapeSoftLanding', beat: 'softLanding', hold: 10 },
@@ -122,6 +135,8 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
 const ABORT_BEATS: Record<string, WatchBeat> = { tower: 'abortTower', fairing: 'abortFairing', separation: 'abortSeparation' };
 /** Above this, a falling descent module is coasting or entering, not yet on its way to its parachutes, m. */
 const BALLISTIC_ALTITUDE = 15e3;
+/** Above this a capsule coming home is still on its arc, weightless; below it, entering the air (C01). */
+const CAPSULE_ARC_ALTITUDE = 80e3;
 const LONGEST_HOLD = Math.max(...EVENT_BEATS.map((b) => b.hold));
 /** Speed below which a ship coming home is falling belly first, m/s over the ground. */
 const BELLYFLOP_SPEED = 450;
@@ -155,6 +170,12 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
     if (frame.t - e.t > LONGEST_HOLD) break;
     for (const b of EVENT_BEATS) {
       if (b.key === e.key && frame.t - e.t <= b.hold) {
+        // C01: a capsule flight's cut-off, separation and parachutes are its own
+        const capsule = frame.abort?.kind === 'return';
+        if (b.key === 'evt.suborbitalTarget' && frame.status !== 'descent') return 'capsuleCutoff';
+        if (b.key === 'evt.payloadSep') { if (capsule) return 'capsuleSep'; continue; }
+        if (capsule && b.key === 'evt.escapeDrogue') return 'capsuleDrogue';
+        if (capsule && (b.key === 'evt.escapeMain' || b.key === 'evt.escapeMainLow')) return 'capsuleMain';
         if (b.key === 'evt.abort') return ABORT_BEATS[String(e.params?.mode)] ?? b.beat;
         if (b.key === 'evt.escapeCapsule') return capsuleBeat(frame);
         if (b.beat === 'boosterSep') return crossSeparation ? 'boosterSepCross' : solidBoosters ? 'boosterSepSolid' : 'boosterSep';
@@ -211,6 +232,13 @@ function capsuleBeat(frame: VisualFrame): WatchBeat {
 /** The escape between its events: pulling clear, falling, under a parachute, down. */
 function abortBeat(frame: VisualFrame): WatchBeat {
   const a = frame.abort!;
+  if (a.kind === 'return') {
+    // C01: the capsule coming home as planned
+    if (frame.status === 'landed' || a.phase === 'landed') return 'capsuleSplash';
+    if (a.phase === 'drogue') return 'capsuleDrogue';
+    if (a.phase === 'main') return 'capsuleMain';
+    return frame.altitude > CAPSULE_ARC_ALTITUDE ? 'capsuleArc' : 'capsuleEntry';
+  }
   if (frame.status === 'landed' || a.phase === 'landed') return 'crewSafe';
   switch (a.phase) {
     case 'escape':
@@ -353,8 +381,10 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
   // G06: after an abort, the end is the crew down and a few seconds more
   if (frame.abort) {
     if (frame.status !== 'landed') return null;
-    const down = [...events].reverse().find((e) => e.key === 'evt.escapeLanded' && e.t <= frame.t + 1e-6);
-    return down && frame.t - down.t >= RETURN_SETTLE ? 'crewSafe' : null;
+    // C01: a capsule home as planned ends in a splashdown
+    const planned = frame.abort.kind === 'return';
+    const down = [...events].reverse().find((e) => e.key === (planned ? 'evt.capsuleSplashdown' : 'evt.escapeLanded') && e.t <= frame.t + 1e-6);
+    return down && frame.t - down.t >= RETURN_SETTLE ? (planned ? 'splashdown' : 'crewSafe') : null;
   }
   if (frame.status === 'failed' || (frame.status === 'landed' && frame.note === 'shipLost')) return 'failed';
   const ending = frame.status === 'landed' ? 'splashdown' : reachedOrbit(frame, events) ? 'orbit' : null;

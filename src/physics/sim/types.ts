@@ -223,6 +223,11 @@ export interface SimState {
 
 /** A launch abort as the frame carries it (src/physics/sim/abort.ts). */
 export interface AbortState extends EscapeStatus {
+  /**
+   * An abort (G06), or a capsule separated on a suborbital flight and flown
+   * home as planned (C01: Mercury-Redstone 3). Absent: an abort.
+   */
+  kind?: 'abort' | 'return';
   /** event key of what set it off */
   cause: string;
   /** where and when the rocket was lost, for the drawing; absent for a commanded abort that leaves it flying */

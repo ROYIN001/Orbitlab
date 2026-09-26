@@ -636,7 +636,7 @@ const CONFIG_PROPERTIES: Record<string, unknown> = {
   siteId: { type: 'string', enum: SITES.map((s) => s.id), description: 'Launch site id; must be one the vehicle flies from (see list_missions).' },
   satelliteId: { type: 'string', enum: SATELLITES.map((s) => s.id), description: 'Payload id. Sets payloadMassKg to its typical mass unless payloadMassKg is also given.' },
   orbitId: { type: 'string', enum: [...ORBIT_PRESETS.map((o) => o.id)], description: 'Orbit preset id, or "custom" together with the fields below.' },
-  perigeeKm: { type: 'number', minimum: -1000, description: 'Custom orbit perigee altitude, km: at least 100 for an orbit, between -1000 and 0 for a suborbital flight. Setting this (or any other custom field) switches the orbit to "custom".' },
+  perigeeKm: { type: 'number', minimum: -6300, description: 'Custom orbit perigee altitude, km: at least 100 for an orbit, between -6300 and 0 for a suborbital flight. Setting this (or any other custom field) switches the orbit to "custom".' },
   suborbital: { type: 'boolean', description: 'A suborbital test flight (Starship only): the ship is cut off short of orbit on a path whose perigee is below the ground, and flies itself home to a splashdown, as on Flight 5 (perigee -15 km, apogee 213 km, 26.2°). Switches the orbit to "custom".' },
   apogeeKm: { type: 'number', minimum: 100, description: 'Custom orbit apogee altitude, km.' },
   inclinationDeg: { type: 'number', minimum: 0, maximum: 180, description: 'Custom orbit inclination, deg.' },

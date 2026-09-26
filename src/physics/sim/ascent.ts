@@ -6,6 +6,7 @@ import { MU_EARTH, R_EARTH, RAD } from '../constants';
 import { norm } from '../vec3';
 import type { OrbitalElements } from '../orbital';
 import { orbitResiduals, apsisTolerance, ORBIT_INSERTION_FLOOR } from '../mission';
+import { CAPSULE_SEPARATION_DELAY } from './abort';
 import type { Simulation } from '../simulation';
 import { ASCENT_MIN_PERIAPSIS, FAIRING_Q_LIMIT, SINGLE_SHOT_CUTOFF_BAND } from './constants';
 
@@ -27,6 +28,8 @@ export class AscentMonitor {
   structuralFailed = false;
   /** ascent max-Q peak is final (the vehicle is falling back through the air) */
   maxQLatched = false;
+  /** a suborbital cut-off has been judged (a capsule rides the stack on to its separation) */
+  suborbitalCut = false;
   sinkingSince = -1;
 
   /**
@@ -230,7 +233,12 @@ export class AscentMonitor {
    */
   private checkSuborbitalAscent(el: OrbitalElements, alt: number, vz: number): void {
     const target = this.sim.plan.target;
-    if (this.sim.state.liftoff && alt > 100e3 && el.e < 1 && el.periapsisAlt >= target.perigee) {
+    if (this.suborbitalCut) return;
+    // C01: a capsule lobbed on a short arc (Mercury-Redstone's 187 km) is cut
+    // off low on its way up, far under 100 km, the moment the arc reaches its
+    // apogee: its perigee, deep in the Earth, was passed long before.
+    const lobbed = !!this.sim.satellite.descent && el.e < 1 && el.apoapsisAlt >= target.apogee;
+    if (this.sim.state.liftoff && (lobbed || (alt > 100e3 && el.e < 1 && el.periapsisAlt >= target.perigee))) {
       this.sim.staging.cutoffAscentStage(this.sim.vehicle.active);
       this.finishSuborbital(el);
       return;
@@ -240,6 +248,7 @@ export class AscentMonitor {
 
   /** The suborbital target is reached (or missed): judge it and fly home. */
   finishSuborbital(el: OrbitalElements): void {
+    this.suborbitalCut = true;
     const hit = orbitResiduals(this.sim.plan.target, el, this.sim.raanWasReachable()).onTarget;
     for (const b of this.sim.plan.burns) b.done = true;
     this.sim.event(hit ? 'evt.suborbitalTarget' : 'evt.suborbitalOffTarget', hit ? 'success' : 'warn', {
@@ -248,6 +257,14 @@ export class AscentMonitor {
       // frame's own drift away from them as the ship falls back into the air.
       apAltM: el.apoapsisAlt, peAltM: el.periapsisAlt,
     });
+    // C01: a capsule flight separates its capsule and flies it home; a ship flies itself
+    if (this.sim.satellite.descent) {
+      this.sim.schedule(this.sim.state.t + CAPSULE_SEPARATION_DELAY, 'payloadSep', () => {
+        this.sim.staging.separatePayload(false);
+        this.sim.escape.beginReturn();
+      });
+      return;
+    }
     this.sim.shipDescent.start();
   }
 

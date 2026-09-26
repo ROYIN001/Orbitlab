@@ -606,7 +606,7 @@ is in [PHYSICS.md §9.2](PHYSICS.md).
 ## 17. Historical missions
 
 Real flights, replayed on the day and at the second they flew: Sputnik 1 (1957) and Yuri
-Gagarin's Vostok 1 (1961) on the first R-7s, Soyuz MS-16 (the first crew on a
+Gagarin's Vostok 1 (1961) on the first R-7s, Alan Shepard's Mercury-Redstone 3 (1961), Soyuz MS-16 (the first crew on a
 Soyuz-2.1a, 2020), Crew Dragon Demo-2 (2020), Soyuz MS-25 (2024), ORBCOMM-2 (the first Falcon 9 booster to land, 2015), the
 first Angara-A5 (2014) and H-IIA with Hayabusa2 (2014). In **Watch** they are under *From
 history* in the list of launches; in **Explore** and **Engineer** open *Historical missions* at
@@ -615,8 +615,18 @@ the top of the setup panel, which fills the settings as flown — change anythin
 The two R-7s of 1957 and 1961 are in the vehicle list too, after the fleet and marked
 *historical*: **R-7 Sputnik (8K71PS)**, whose core stage itself went into orbit, and **Vostok-K
 (8K72K)** with its small Blok E third stage; each carries its own spacecraft (Sputnik 1, the
-Vostok capsule) and flies from Gagarin's Start. Try them on other orbits if you like — they are
-tested on the flights they made.
+Vostok capsule) and flies from Gagarin's Start. **Mercury-Redstone** is there too, with the
+**Mercury capsule** under its escape tower, from Launch Complex 5 at the Cape. Try them on other
+orbits if you like — they are tested on the flights they made.
+
+Mercury-Redstone 3 never went into orbit: the Redstone burns for two and a half minutes and
+throws Freedom 7 on a 15-minute arc, 187 km up and 487 km down range. Ten seconds after the
+engine stops the capsule separates, turns its heat shield forward, fires its three retro-rockets
+over the top (a test: on this flight they were not needed to come down), drops the empty pack,
+and falls back into the air at 11 g; the drogue opens at 6.4 km, the big main parachute at 3.2 km,
+and it lands in the Atlantic. Watch follows it all the way to the water. In Explore and Engineer
+the setup keeps it a *suborbital* flight — the perigee is thousands of kilometres below the ground,
+which is how a short arc like this is written as an orbit.
 
 Because the date is the real one, the light is too: ORBCOMM-2 lifts off in the dark, as it did.
 For the two Soyuz flights the space station's orbit is the one measured that day, so the launch

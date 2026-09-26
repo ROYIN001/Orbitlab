@@ -92,7 +92,14 @@ export const SITES: SiteExtra[] = [
     ] },
   { id: 'plesetsk', name: 'Plesetsk Cosmodrome', country: 'RU', latitude: 62.925, longitude: 40.578, altitude: 100, minInclination: 62.8, maxInclination: 102.6, azimuthMin: 330, azimuthMax: 90, tz: 'UTC+3', descendingForPolar: false },
   { id: 'vostochny', name: 'Vostochny Cosmodrome', country: 'RU', latitude: 51.884, longitude: 128.334, altitude: 250, minInclination: 51.7, maxInclination: 100.9, azimuthMin: 340, azimuthMax: 95, tz: 'UTC+9', descendingForPolar: false },
-  { id: 'cape', name: 'Cape Canaveral SLC-40', country: 'US', latitude: 28.562, longitude: -80.577, altitude: 3, minInclination: 28.5, maxInclination: 57.6, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false },
+  { id: 'cape', name: 'Cape Canaveral SLC-40', country: 'US', latitude: 28.562, longitude: -80.577, altitude: 3, minInclination: 28.5, maxInclination: 57.6, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false,
+    // C01: Launch Complex 5, where Mercury-Redstone 3 flew from (en.wikipedia,
+    // Cape Canaveral Launch Complex 5; GCAT) — drawn there; the flight starts
+    // from the site's own point, 14 km north, as every pad's does.
+    pads: [
+      { id: 'slc40', name: 'SLC-40', latitude: 28.562, longitude: -80.577 },
+      { id: 'lc5', name: 'LC-5', latitude: 28.43944, longitude: -80.57333 },
+    ] },
   // Kennedy LC-39A, 6 km north of SLC-40 on the same coast and the same range
   // corridor. The pad stands on a hardstand some 15 m above the marsh; that
   // mound is drawn (src/render/pads.ts) but the site keeps the ground level,

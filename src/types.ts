@@ -243,6 +243,12 @@ export interface OrbitSpec {
    * return (`StageSpec.flaps`) is given one.
    */
   suborbital?: boolean;
+  /**
+   * Fly the southbound of the two launch solutions (descending node over the
+   * site) whatever the site's custom — Mercury-Redstone 3's 105° heading out
+   * of the Cape (C01). Absent: `launchDirection` chooses.
+   */
+  descending?: boolean;
   description: string;
 }
 
@@ -257,7 +263,8 @@ export type SatelliteKind =
   | 'crew'
   | 'crewDragon'
   | 'ps1'
-  | 'vostok';
+  | 'vostok'
+  | 'mercury';
 
 export interface SatelliteSpec {
   id: string;
@@ -280,6 +287,11 @@ export interface SatelliteSpec {
   exposed?: { diameter: number; length: number; noseLength: number };
   /** The only vehicles that carry it, when not every one does */
   carriers?: string[];
+  /**
+   * A capsule that comes home on its own parachutes from a suborbital flight
+   * (C01: Mercury), which lets a vehicle with no ship to fly home take one.
+   */
+  descent?: 'mercury';
 }
 
 export interface GuidanceParams {

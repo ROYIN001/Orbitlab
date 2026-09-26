@@ -349,7 +349,10 @@ export class WatchView {
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
     } else if (ending === 'splashdown') {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
-      card.append(el('p', undefined, t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
+      // C01: a capsule, not a ship
+      card.append(el('p', undefined, frame.abort?.kind === 'return'
+        ? t('watch.end.capsuleSplashText', { time: fmtClock(since).replace(/^T\+/, ''), km: num(frame.downrange / 1000), g: num(frame.abort.maxG) })
+        : t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
     } else if (success) {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
       const period = frame.elements.period;

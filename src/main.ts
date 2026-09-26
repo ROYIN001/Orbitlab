@@ -1079,6 +1079,10 @@ class App {
     if (sim.escape.fitted && fairing) {
       this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
       this.scene.scene.add(this.escapeView.group);
+    } else if (sim.satellite.descent) {
+      // C01: a capsule coming home from a suborbital flight (Mercury-Redstone 3)
+      this.escapeView = new EscapeView(1, 1, sim.satellite.descent);
+      this.scene.scene.add(this.escapeView.group);
     }
     if (this.stationView) {
       this.scene.scene.remove(this.stationView.group);

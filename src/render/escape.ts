@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import type { VisualFrame } from '../physics/frame';
-import { ESCAPE } from '../physics/rigid/escape';
+import { ESCAPE, MERCURY_CAPSULE, SOYUZ_DESCENT, type DescentCapsule } from '../physics/rigid/escape';
 import { ogiveProfile } from './liveries';
 import { Plume } from './plume';
 import { CrewedTop, FIN_CENTRE } from './soyuz';
@@ -90,12 +90,16 @@ export class EscapeView {
   private readonly materials: THREE.Material[] = [];
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly textures: THREE.Texture[] = [];
+  /** the capsule this view draws coming home (C01: Mercury as well as Soyuz) */
+  private readonly spec: DescentCapsule;
+  private readonly retroPack: THREE.Group;
+  private retroPlume: Plume | null = null;
 
   /**
    * @param fairingRadius the drawn fairing's radius, m
    * @param fairingLength the drawn fairing's length, m
    */
-  constructor(fairingRadius: number, fairingLength: number) {
+  constructor(fairingRadius: number, fairingLength: number, readonly capsuleId: DescentCapsule['id'] = 'soyuz') {
     const mat = (color: string, metal = 0.2, rough = 0.6) => {
       const m = new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough });
       this.materials.push(m);
@@ -177,22 +181,47 @@ export class EscapeView {
 
     // --- the descent module: +Y out of its heat shield, its body towards −Y
     const dm = ESCAPE.descentModule;
-    // from the hatch on top down to the shield's rim: a lathe faces outward with its profile rising in y
-    const bell = [[0, -dm.length], [0.36, -dm.length], [0.46, -2.1], [0.72, -1.8], [0.95, -1.2], [1.07, -0.6], [1.085, -0.15], [0.95, -0.02]] as const;
-    const body = new THREE.Mesh(geo(new THREE.LatheGeometry(bell.map(([r, y]) => new THREE.Vector2(r, y)), 32)), mat('#7c7a66', 0.1, 0.85));
+    const mercury = capsuleId === 'mercury';
+    this.spec = mercury ? MERCURY_CAPSULE : SOYUZ_DESCENT;
+    // from the hatch on top down to the shield's rim: a lathe faces outward with its profile rising in y.
+    // Mercury (C01): the 1.89 m shield, the conical crew cabin to 0.8 m, the
+    // recovery compartment and the antenna canister above it, in its dark
+    // corrugated shingles (NASA drawings; the profile is approximate).
+    const bell = mercury
+      ? [[0, -2.08], [0.2, -2.08], [0.24, -1.72], [0.36, -1.72], [0.4, -1.3], [0.53, -1.3], [0.93, -0.12], [0.946, -0.02]] as const
+      : [[0, -dm.length], [0.36, -dm.length], [0.46, -2.1], [0.72, -1.8], [0.95, -1.2], [1.07, -0.6], [1.085, -0.15], [0.95, -0.02]] as const;
+    const body = new THREE.Mesh(geo(new THREE.LatheGeometry(bell.map(([r, y]) => new THREE.Vector2(r, y)), 32)), mercury ? mat('#24262b', 0.35, 0.55) : mat('#7c7a66', 0.1, 0.85));
     this.capsule.add(body);
-    this.heatShield = new THREE.Mesh(geo(new THREE.SphereGeometry(2.235, 32, 6, 0, Math.PI * 2, 0, 0.5)), mat('#3b2d24', 0.05, 0.95));
+    const shieldR = mercury ? 2.0 : 2.235;
+    this.heatShield = new THREE.Mesh(geo(new THREE.SphereGeometry(shieldR, 32, 6, 0, Math.PI * 2, 0, Math.asin(Math.min(1, (this.spec.diameter / 2) / shieldR)))), mat('#3b2d24', 0.05, 0.95));
     // the shield is a spherical cap bulging out along +Y from the capsule's base
-    this.heatShield.position.y = 0.12 - 2.235;
+    this.heatShield.position.y = 0.12 - shieldR;
     this.capsule.add(this.heatShield);
+    // Mercury's retropack: three motors strapped over the shield's centre
+    this.retroPack = new THREE.Group();
+    if (mercury) {
+      const pack = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.4, 0.45, 0.35, 20)), mat('#b9bcc2', 0.6, 0.35));
+      pack.position.y = 0.3;
+      this.retroPack.add(pack);
+      for (let i = 0; i < 3; i++) {
+        const a = (i * 2 * Math.PI) / 3;
+        const motor = new THREE.Mesh(geo(new THREE.SphereGeometry(0.15, 12, 8)), mat('#8a8d93', 0.5, 0.4));
+        motor.position.set(Math.cos(a) * 0.22, 0.42, Math.sin(a) * 0.22);
+        this.retroPack.add(motor);
+      }
+      this.retroPlume = new Plume({ radius: 0.25, length: 3, kind: 'solid', seed: 0.3 });
+      this.retroPlume.group.position.y = 0.55;
+      this.retroPack.add(this.retroPlume.group);
+      this.capsule.add(this.retroPack);
+    }
     const stripeTex = stripes();
     this.textures.push(stripeTex);
     const canopyMat = new THREE.MeshStandardMaterial({ map: stripeTex, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
     this.materials.push(canopyMat);
     const lineMat = new THREE.LineBasicMaterial({ color: 0xd9d4c8, transparent: true, opacity: 0.8 });
     this.materials.push(lineMat);
-    this.drogue = new Canopy(Math.sqrt(ESCAPE.drogue.area / Math.PI), 16, canopyMat, lineMat);
-    this.main = new Canopy(Math.sqrt(ESCAPE.main.area / Math.PI), 38, canopyMat, lineMat);
+    this.drogue = new Canopy(Math.sqrt(this.spec.drogue.area / Math.PI), 16, canopyMat, lineMat);
+    this.main = new Canopy(Math.sqrt(this.spec.main.area / Math.PI), 38, canopyMat, lineMat);
     this.capsule.add(this.drogue.group, this.main.group);
     this.softPlume = new Plume({ radius: 0.6, length: 2.5, kind: 'solid', seed: 0.7 });
     // the soft-landing motors fire at the ground, beyond the heat shield's place
@@ -236,7 +265,10 @@ export class EscapeView {
     }
     if (a.body === 'capsule') {
       this.heatShield.visible = a.heatShield;
-      const apex = -ESCAPE.descentModule.length;
+      // the retropack stays on until it is jettisoned, a minute after the retros
+      this.retroPack.visible = !!this.spec.retro && tau < this.spec.retro.jettison;
+      this.retroPlume?.update(Math.min(1, a.motors.retro ?? 0), p, t);
+      const apex = -this.spec.length;
       this.drogue.update(a.drogue, apex);
       this.main.update(a.main, apex);
       this.softPlume.update(a.motors.softLanding, p, t);
@@ -247,7 +279,7 @@ export class EscapeView {
   size(frame: VisualFrame): number {
     const a = frame.abort;
     if (!a) return 0;
-    if (a.body === 'capsule') return a.main > 0.2 ? 32 : a.drogue > 0.2 ? 16 : 3;
+    if (a.body === 'capsule') return a.main > 0.2 ? 32 : a.drogue > 0.2 ? 16 : this.spec.length + 1;
     if (a.body === 'spacecraft') return ESCAPE.serviceModule.length + ESCAPE.descentModule.length + 2.6;
     return ESCAPE.fairing.length + (a.mode === 'tower' ? ESCAPE.tower.length : 0);
   }
@@ -257,6 +289,7 @@ export class EscapeView {
     for (const g of this.geometries) g.dispose();
     for (const x of this.textures) x.dispose();
     this.drogue.dispose(); this.main.dispose();
+    this.retroPlume?.dispose();
     this.crewedTop.dispose();
     for (const plume of [...this.mainPlumes, ...this.fairingPlumes, this.controlPlume, this.softPlume]) plume.dispose();
   }

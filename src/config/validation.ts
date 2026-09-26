@@ -136,10 +136,12 @@ export interface ConfigInput {
 
 /**
  * Lowest perigee a suborbital target may name, km: the trajectory has to come
- * back down, and a kilometre or so below the surface is where a real one aims
- * (Flight 5 flew 213 × −15 km), but not a dive into the core.
+ * back down, a kilometre or so below the surface for a ship flying itself home
+ * (Flight 5 flew 213 × −15 km), and far deeper for a ballistic flight — Mercury-
+ * Redstone 3's 187 × −6,214 km ellipse fell 487 km downrange (C01). No lower
+ * than a focus-side perigee, 6,300 km below the surface.
  */
-const SUBORBITAL_PERIGEE_MIN = -1000;
+const SUBORBITAL_PERIGEE_MIN = -6300;
 
 /**
  * The limits a numeric field has for this orbit: a suborbital target's
@@ -246,7 +248,7 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
   const orbit = state.orbit;
   // A suborbital test flight may carry nothing at all (Flight 5 did not).
   check(state.payloadMass, 'setup.payloadMass', fieldLimits('setup.payloadMass', orbit));
-  if (orbit.suborbital && spec && !flightHomeCapable(spec)) issues.push({ field: 'setup.perigee', code: 'suborbital' });
+  if (orbit.suborbital && spec && !flightHomeCapable(spec) && !satellite?.descent) issues.push({ field: 'setup.perigee', code: 'suborbital' });
   check(orbit.perigee / 1000, 'setup.perigee', fieldLimits('setup.perigee', orbit));
   check(orbit.apogee / 1000, 'setup.apogee', NUMBER_FIELDS['setup.apogee']);
   if (Number.isFinite(orbit.perigee) && Number.isFinite(orbit.apogee) && orbit.perigee > orbit.apogee) {
@@ -314,7 +316,7 @@ export function issueText(issue: ValidationIssue): string {
     case 'date': return `${issue.field} must be a valid ISO 8601 date-time`;
     case 'orbitOrder': return 'Custom orbit perigee must not exceed apogee';
     case 'selection': return `${issue.field} is not a valid selection`;
-    case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship)';
+    case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship), or a capsule that comes home on its parachutes (Mercury)';
     case 'failureUnavailable': return 'This vehicle cannot have that failure: a launch abort needs a crewed Soyuz, a strap-on collision strap-ons, a stage separation failure a second stage';
     case 'rendezvousUnavailable': return 'A flight to the station needs the crewed spacecraft on a Soyuz-2.1a and the ISS orbit';
   }

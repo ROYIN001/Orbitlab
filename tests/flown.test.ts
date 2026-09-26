@@ -42,6 +42,9 @@ describe('the real flight beside the model', () => {
     expect(simPayloadOrbit(EVENTS.filter((e) => e.key !== 'evt.payloadSep' && e.key !== 'evt.targetOrbit'))).toBeNull();
     // a target orbit wins over the parking orbit before it
     expect(simPayloadOrbit(EVENTS.filter((e) => !(e.key === 'evt.targetOrbit' && e.t === 720)))?.perigee).toBe(190);
+    // a suborbital arc is judged at its cut-off (Mercury-Redstone 3)
+    expect(simPayloadOrbit([ev(136, 'evt.suborbitalTarget', { pe: -6215, ap: 188, inc: 30.55 }), ev(147, 'evt.payloadSep')]))
+      .toEqual({ perigee: -6215, apogee: 188, inclination: 30.55 });
   });
 
   it('names the flown event just passed, for the viewer\'s caption', () => {

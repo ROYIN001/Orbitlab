@@ -107,17 +107,20 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       params.speed = frame.airspeed.toFixed(0);
       break;
     case 'abort':
-      titleKey = frame.abort ? ABORT_PHASE_KEYS[frame.abort.phase] : 'hud.status.abort';
-      detailKey = 'phase.detail.abort';
+      // C01: a capsule flying home from a suborbital flight is no abort
+      titleKey = frame.abort?.kind === 'return' && frame.abort.phase === 'fall' ? 'hud.capsule.fall'
+        : frame.abort ? ABORT_PHASE_KEYS[frame.abort.phase] : 'hud.status.abort';
+      detailKey = frame.abort?.kind === 'return' ? 'phase.detail.capsule' : 'phase.detail.abort';
       params.alt = (frame.altitude / 1000).toFixed(1);
       params.speed = frame.airspeed.toFixed(0);
       params.g = frame.gLoad.toFixed(1);
       break;
     case 'landed':
       if (frame.abort) {
-        // the crew's descent module, down after an abort
-        titleKey = 'hud.abort.landed';
-        detailKey = 'phase.detail.abortLanded';
+        // the crew's descent module, down after an abort — or a capsule home as planned (C01)
+        const planned = frame.abort.kind === 'return';
+        titleKey = planned ? 'hud.capsule.landed' : 'hud.abort.landed';
+        detailKey = planned ? 'phase.detail.capsuleLanded' : 'phase.detail.abortLanded';
         params.km = (frame.downrange / 1000).toFixed(1);
         params.g = frame.abort.maxG.toFixed(1);
         break;

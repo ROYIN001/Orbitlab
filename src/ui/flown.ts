@@ -82,7 +82,8 @@ export function compareEvents(record: FlownRecord, events: readonly SimEvent[]):
 /**
  * The orbit the simulation left its payload in: the last target orbit it
  * reported up to the payload's separation (the burns after it are the
- * spacecraft's own), else the last parking orbit. Before separation only a
+ * spacecraft's own) or the suborbital arc it was cut off on, else the last
+ * parking orbit. Before separation only a
  * target orbit counts — a parking orbit is a stop on the way, not where the
  * payload was left. km and degrees.
  */
@@ -92,7 +93,8 @@ export function simPayloadOrbit(events: readonly SimEvent[]): { perigee: number;
   for (const e of events) {
     if (sep !== undefined && e.t > sep + 1e-6) break;
     if (!e.params) continue;
-    if (e.key === 'evt.targetOrbit') target = e;
+    // a suborbital flight's arc (C01: Mercury-Redstone 3) is judged at its cut-off, as an orbit is
+    if (e.key === 'evt.targetOrbit' || e.key === 'evt.suborbitalTarget' || e.key === 'evt.suborbitalOffTarget') target = e;
     else if (e.key === 'evt.parkingOrbit') parking = e;
   }
   const best = target ?? (sep !== undefined ? parking : null);

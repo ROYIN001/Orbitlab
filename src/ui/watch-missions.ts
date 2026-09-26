@@ -24,7 +24,7 @@ import type { FlownRecord } from './flown';
 export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
   | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking'
   | 'soyuzMs16' | 'soyuzMs25' | 'falcon9Orbcomm2' | 'angaraA5Flight1' | 'h2aHayabusa2' | 'falcon9Demo2'
-  | 'sputnik1' | 'vostok1';
+  | 'sputnik1' | 'vostok1' | 'mr3';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -232,6 +232,17 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       { key: 'evt.seco', t: 676 },
     ], orbit: { perigee: 168, apogee: 314, inclination: 64.95 } },
     titleKey: 'watch.mission.vostok1', blurbKey: 'watch.mission.vostok1Blurb', payloadKey: 'watch.payload.vostok1' },
+  // Mercury-Redstone 3, 5 May 1961: Alan Shepard in Freedom 7, lobbed from
+  // LC-5 on azimuth 105° to a 187.5 km apogee and a splashdown 487 km
+  // downrange after 15 min 22 s. The arc is the conic through the flown
+  // separation state (74.3 km, 2,252 m/s inertial at 39.0° up): perigee
+  // −6,214 km. Postlaunch report (June 1961) and NASA TM X-53107.
+  { id: 'mr3', vehicleId: 'mercuryredstone', siteId: 'cape', satelliteId: 'mercury', orbitId: 'custom', payloadMass: 1832.6, padId: 'lc5',
+    orbit: { perigee: -6214e3, apogee: 187.5e3, inclination: 30.55, raanMode: 'free', suborbital: true, descending: true }, launchTime: '1961-05-05T14:34:13Z',
+    flown: { events: [
+      { key: 'evt.maxQ', t: 84 }, { key: 'evt.seco', t: 141.8 }, { key: 'evt.payloadSep', t: 152.3 },
+    ], orbit: { perigee: -6214, apogee: 187.5, inclination: 30.55, approx: true } },
+    titleKey: 'watch.mission.mr3', blurbKey: 'watch.mission.mr3Blurb', payloadKey: 'watch.payload.mr3' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a
   // 250 × 254 km parking orbit at 30.0°, below the pad's 30.4° latitude — a
   // yaw the model does not fly, so it aims at the lowest plane it can reach.

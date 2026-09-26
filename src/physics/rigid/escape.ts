@@ -37,7 +37,11 @@ import { integrateRigidStep, type RigidLoads, type RigidState } from './integrat
 import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatRotate, type Mat3 } from './math';
 import type { RigidTelemetry } from './telemetry';
 
-export type EscapeMode = 'tower' | 'fairing' | 'separation';
+/**
+ * `capsule` (roadmap C01) is no escape: a capsule separated on a suborbital
+ * flight, flown home as planned — Mercury-Redstone 3's Freedom 7.
+ */
+export type EscapeMode = 'tower' | 'fairing' | 'separation' | 'capsule';
 /**
  * The escape's progress: motors burning; coasting before the descent module
  * is free; the descent module falling; on its drogue; on its main parachute;
@@ -98,6 +102,63 @@ export const ESCAPE = {
   /** heat shield jettison after the main parachute is fully open, s */
   heatShieldDelay: 12,
 } as const;
+
+/**
+ * A capsule coming home on its parachutes: its size, its parachutes and what
+ * it fires on the way (roadmap C01). Soyuz's descent module (G06) is one; the
+ * Mercury capsule another.
+ */
+export interface DescentCapsule {
+  id: 'soyuz' | 'mercury';
+  /** mass, kg, as it falls free (with its heat shield and, until jettisoned, its retropack) */
+  mass: number;
+  diameter: number;
+  /** heat shield's face to the top, m */
+  length: number;
+  /** its CG above the heat shield's face, m */
+  cgAbove: number;
+  /** heat shield dropped under the main parachute, kg (0: kept) */
+  heatShield: number;
+  heatShieldDelay: number;
+  /** below this altitude, m, the main opens on a timer (a low abort) */
+  lowAltitude: number;
+  drogue: { area: number; cd: number; altitude: number; maxSpeed: number; inflation: number; duration: number };
+  main: { area: number; cd: number; altitude: number; reefed: number; reefS: number; inflation: number; lowDelay: number };
+  softLanding?: { height: number; thrust: number; burn: number };
+  /**
+   * Retro-rockets fired against the flight direction (Mercury's three), s
+   * after the flight's start, each `thrust` N for `burn` s, then the pack
+   * of `packMass` kg jettisoned at `jettison` s.
+   */
+  retro?: { starts: readonly number[]; thrust: number; burn: number; packMass: number; jettison: number };
+}
+
+/** Soyuz's descent module, as the escape flies it (G06). */
+export const SOYUZ_DESCENT: DescentCapsule = {
+  id: 'soyuz', mass: ESCAPE.descentModule.mass, diameter: ESCAPE.descentModule.diameter, length: ESCAPE.descentModule.length,
+  cgAbove: 0.9, heatShield: ESCAPE.descentModule.heatShield, heatShieldDelay: ESCAPE.heatShieldDelay,
+  lowAltitude: ESCAPE.lowAltitude, drogue: ESCAPE.drogue, main: ESCAPE.main, softLanding: ESCAPE.softLanding,
+};
+
+/**
+ * Freedom 7 (MR-3) from its separation (docs/PHYSICS.md §13.7): 1,295.1 kg
+ * with the retropack, 1,169.8 kg for the entry (NASA, *Postlaunch Report for
+ * Mercury-Redstone No. 3*, 1961); the 1.892 m heat shield; three 1,000 lbf
+ * retro-rockets at T+5:14.1, 5:18.8 and 5:23.6, each about 10 s, the pack off
+ * at T+6:13.6; the drogue at 21,000 ft (T+9:38), the 63 ft ring-sail main at
+ * 10,600 ft (T+10:15), about 30 ft/s at the water. The drag coefficients,
+ * the reefing and the burn time of the retros are estimates.
+ */
+export const MERCURY_CAPSULE: DescentCapsule = {
+  id: 'mercury', mass: 1295.1, diameter: 1.892, length: 2.08, cgAbove: 0.6, heatShield: 0, heatShieldDelay: 0,
+  lowAltitude: 0,
+  // a 6 ft ribbon drogue, stable through the transonic fall
+  drogue: { area: 2.6, cd: 0.55, altitude: 6400, maxSpeed: 400, inflation: 1.0, duration: 300 },
+  // 63 ft (19.2 m) ring-sail, 290 m², briefly reefed
+  main: { area: 290, cd: 0.75, altitude: 3230, reefed: 0.1, reefS: 4, inflation: 3, lowDelay: 1.0 },
+  // separation at T+2:32.3: the retros at +161.8, +166.5, +171.3 s, the pack at +221.3 s
+  retro: { starts: [161.8, 166.5, 171.3], thrust: 4448, burn: 10, packMass: 125.3, jettison: 221.3 },
+};
 
 const EARTH_RATE = v3(0, 0, OMEGA_EARTH);
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x));
@@ -216,15 +277,15 @@ export function spacecraftConfiguration(): EscapeConfiguration {
  * the heat shield's centre of curvature behind the CG, and symmetric, so it
  * flies without lift: a ballistic entry.
  */
-export function capsuleConfiguration(heatShield: boolean): EscapeConfiguration {
-  const dm = ESCAPE.descentModule;
-  const mass = dm.mass - (heatShield ? 0 : dm.heatShield);
-  const R = dm.diameter / 2;
-  // a bell 2.24 m tall with its CG 0.9 m above the heat shield's face
-  const ixx = 0.5 * mass * (0.75 * R) ** 2, iyy = mass * (3 * (0.75 * R) ** 2 + dm.length ** 2) / 12;
-  return { body: 'capsule', mass, cgX: 0, inertia: [ixx, 0, 0, 0, iyy, 0, 0, 0, iyy], bottomX: 0.9, topX: -(dm.length - 0.9), radius: R,
-    aero: { area: Math.PI * R * R, length: dm.diameter, cd: CAPSULE_CD, cnAlpha: 0.35, crossflowCd: 0.9, sideArea: dm.diameter * dm.length,
-      cpX: 0.9 - 2.235, damping: 0.6, rollDamping: 0.05 } };
+export function capsuleConfiguration(heatShield: boolean, capsule: DescentCapsule = SOYUZ_DESCENT, lessMass = 0): EscapeConfiguration {
+  const mass = capsule.mass - (heatShield ? 0 : capsule.heatShield) - lessMass;
+  const R = capsule.diameter / 2, h = capsule.cgAbove;
+  // a bell (Soyuz 2.24 m tall with its CG 0.9 m above the heat shield's face)
+  const ixx = 0.5 * mass * (0.75 * R) ** 2, iyy = mass * (3 * (0.75 * R) ** 2 + capsule.length ** 2) / 12;
+  // the pressure through the heat shield's centre of curvature, about 1.18 diameters behind its face
+  return { body: 'capsule', mass, cgX: 0, inertia: [ixx, 0, 0, 0, iyy, 0, 0, 0, iyy], bottomX: h, topX: -(capsule.length - h), radius: R,
+    aero: { area: Math.PI * R * R, length: capsule.diameter, cd: CAPSULE_CD, cnAlpha: 0.35, crossflowCd: 0.9, sideArea: capsule.diameter * capsule.length,
+      cpX: h - 1.03 * capsule.diameter, damping: 0.6, rollDamping: 0.05 } };
 }
 
 /** The descent module's riser point, capsule axes: its top. */
@@ -242,12 +303,14 @@ function canopy(area: number, cd: number, openedAt: number | undefined, inflatio
 /** What is burning and what is out, for the drawing and the events. */
 export interface EscapeStatus {
   mode: EscapeMode;
+  /** which capsule comes home (C01: Mercury as well as Soyuz) */
+  capsule: DescentCapsule['id'];
   phase: EscapePhase;
   body: EscapeBody;
   /** mission time of the abort command */
   t0: number;
   /** the tower's main motor, its control motor and the fairing's motors, 0–1 of their peak thrust */
-  motors: { main: number; control: number; fairing: number; softLanding: number };
+  motors: { main: number; control: number; fairing: number; softLanding: number; retro?: number };
   finsOpen: boolean;
   /** 0–1: how far each parachute is open */
   drogue: number;
@@ -299,18 +362,33 @@ export class EscapeFlight {
    * @param side unit vector, head-section body axes, the control motor pushes the tower's top towards
    */
   constructor(readonly mode: EscapeMode, state: RigidState, readonly t0: number, side: Vec3,
-    private readonly env: EscapeEnvironment, readonly onRelease: (what: 'head' | 'modules', state: RigidState, t: number) => void) {
+    private readonly env: EscapeEnvironment, readonly onRelease: (what: 'head' | 'modules', state: RigidState, t: number) => void,
+    readonly capsule: DescentCapsule = SOYUZ_DESCENT) {
     this.towerPropellant = mode === 'tower' ? ESCAPE.tower.propellant : 0;
-    this.fairingPropellant = mode === 'separation' ? 0 : ESCAPE.fairing.propellant;
+    this.fairingPropellant = mode === 'separation' || mode === 'capsule' ? 0 : ESCAPE.fairing.propellant;
     this.controlDir = normalize(v3(0, side.y, side.z));
-    this.config = mode === 'separation' ? spacecraftConfiguration() : headConfiguration(mode === 'tower', this.towerPropellant, this.fairingPropellant, false);
+    this.config = mode === 'capsule' ? capsuleConfiguration(true, capsule)
+      : mode === 'separation' ? spacecraftConfiguration() : headConfiguration(mode === 'tower', this.towerPropellant, this.fairingPropellant, false);
     this.state = { r: { ...state.r }, v: { ...state.v }, attitudeQ: { ...state.attitudeQ }, omegaBody: { ...state.omegaBody } };
     if (mode === 'separation') {
       // released on springs, away from the stage below
       this.state.v = addScaled(this.state.v, quatRotate(this.state.attitudeQ, v3(1, 0, 0)), ESCAPE.separationSpeed);
     }
-    this.status = { mode, phase: mode === 'separation' ? 'coast' : 'escape', body: this.config.body, t0,
-      motors: { main: 0, control: 0, fairing: 0, softLanding: 0 }, finsOpen: false, drogue: 0, main: 0, heatShield: true, maxG: 0, maxGT: t0 };
+    this.status = { mode, capsule: capsule.id, phase: mode === 'separation' ? 'coast' : mode === 'capsule' ? 'fall' : 'escape', body: this.config.body, t0,
+      motors: { main: 0, control: 0, fairing: 0, softLanding: 0, ...(capsule.retro ? { retro: 0 } : {}) }, finsOpen: false, drogue: 0, main: 0, heatShield: true, maxG: 0, maxGT: t0 };
+    if (mode === 'capsule') { this.freedAt = t0; this.freedAlt = norm(this.state.r) - R_EARTH; }
+  }
+
+  /** Whether the capsule's retro-rockets are firing at `t`, and how many. */
+  private retrosAt(t: number): number {
+    const rp = this.capsule.retro;
+    if (!rp) return 0;
+    const tau = t - this.t0;
+    return rp.starts.filter((s0) => tau >= s0 && tau < s0 + rp.burn).length;
+  }
+  /** The retropack still on (until its jettison). */
+  private get retroPackOn(): boolean {
+    return !!this.capsule.retro && this.lastT - this.t0 < this.capsule.retro.jettison;
   }
 
   /** Events raised since the last call. */
@@ -377,6 +455,11 @@ export class EscapeFlight {
   /** The events of the sequence, by time, altitude and speed. */
   private sequence(t: number): void {
     const tau = t - this.t0, s = this.status;
+    const rp = this.capsule.retro;
+    if (rp && this.retroFired < rp.starts.length && tau >= rp.starts[this.retroFired]) {
+      this.retroFired++;
+      this.events.push({ key: 'evt.retroFire', severity: 'info', params: { n: this.retroFired } });
+    }
     const alt = norm(this.state.r) - R_EARTH;
     const up = normalize(this.state.r);
     const vz = dot(this.state.v, up);
@@ -394,28 +477,28 @@ export class EscapeFlight {
       }
     }
     if ((s.body === 'head' || s.body === 'spacecraft') && s.phase === 'coast') {
-      const free = ESCAPE.capsuleFree[this.mode];
+      const free = ESCAPE.capsuleFree[this.mode as Exclude<EscapeMode, 'capsule'>];
       if (tau >= free || (this.mode === 'tower' && tau > 4 && vz <= 0)) this.freeCapsule(t);
     }
     if (s.body !== 'capsule') return;
     const airspeed = norm(this.airVelocity(this.state, t));
     if (s.phase === 'fall' && vz < 0) {
-      if (this.freedAlt < ESCAPE.lowAltitude) {
-        if (t - this.freedAt >= ESCAPE.main.lowDelay) this.openMain(t, alt, true);
-      } else if (alt < ESCAPE.drogue.altitude && airspeed < ESCAPE.drogue.maxSpeed) {
+      if (this.freedAlt < this.capsule.lowAltitude) {
+        if (t - this.freedAt >= this.capsule.main.lowDelay) this.openMain(t, alt, true);
+      } else if (alt < this.capsule.drogue.altitude && airspeed < this.capsule.drogue.maxSpeed) {
         this.drogueAt = t; s.phase = 'drogue';
         this.events.push({ key: 'evt.escapeDrogue', severity: 'info', params: { alt: Math.round(alt), speed: Math.round(airspeed) } });
       }
     }
-    if (s.phase === 'drogue' && (t - this.drogueAt! >= ESCAPE.drogue.duration || alt < ESCAPE.main.altitude)) this.openMain(t, alt, false);
+    if (s.phase === 'drogue' && (t - this.drogueAt! >= this.capsule.drogue.duration || alt < this.capsule.main.altitude)) this.openMain(t, alt, false);
     if (s.phase === 'main') {
-      if (this.mainFullAt === undefined && t - this.mainAt! >= ESCAPE.main.reefS + ESCAPE.main.inflation) this.mainFullAt = t;
-      if (s.heatShield && this.mainFullAt !== undefined && t - this.mainFullAt >= ESCAPE.heatShieldDelay) {
+      if (this.mainFullAt === undefined && t - this.mainAt! >= this.capsule.main.reefS + this.capsule.main.inflation) this.mainFullAt = t;
+      if (s.heatShield && this.capsule.heatShield > 0 && this.mainFullAt !== undefined && t - this.mainFullAt >= this.capsule.heatShieldDelay) {
         s.heatShield = false;
-        this.config = capsuleConfiguration(false);
+        this.config = capsuleConfiguration(false, this.capsule);
         this.events.push({ key: 'evt.escapeHeatShield', severity: 'info', params: { alt: Math.round(alt) } });
       }
-      if (this.softAt === undefined && this.height() <= ESCAPE.softLanding.height) {
+      if (this.capsule.softLanding && this.softAt === undefined && this.height() <= this.capsule.softLanding.height) {
         this.softAt = t;
         this.events.push({ key: 'evt.escapeSoftLanding', severity: 'info', params: { speed: +(-vz).toFixed(1) } });
       }
@@ -423,6 +506,7 @@ export class EscapeFlight {
   }
   private freedAt = 0;
   private freedAlt = 0;
+  private retroFired = 0;
 
   private openMain(t: number, alt: number, low: boolean): void {
     this.mainAt = t; this.drogueAt = undefined;
@@ -432,7 +516,7 @@ export class EscapeFlight {
 
   /** The descent module leaves the head section (or the spacecraft's other modules). */
   private freeCapsule(t: number): void {
-    const s = this.status, c = capsuleConfiguration(true);
+    const s = this.status, c = capsuleConfiguration(true, this.capsule);
     // the descent module's CG, 0.9 m above its heat shield's face, from the configuration's CG
     const offset = quatRotate(this.state.attitudeQ, v3(ESCAPE.descentModule.x0 + c.bottomX - this.config.cgX, 0, 0));
     const r = add(this.state.r, offset);
@@ -460,7 +544,9 @@ export class EscapeFlight {
     // the main parachute is released on the ground so it does not drag the module over
     s.drogue = 0; s.main = 0;
     this.drogueAt = undefined; this.mainAt = undefined;
-    this.events.push({ key: 'evt.escapeLanded', severity: 'success', params: { speed: +s.touchdownSpeed.toFixed(1), g: +s.maxG.toFixed(1) } });
+    // a Mercury capsule comes down in the sea at the end of a planned flight (C01)
+    this.events.push({ key: this.capsule.id === 'mercury' ? 'evt.capsuleSplashdown' : 'evt.escapeLanded', severity: 'success',
+      params: { speed: +s.touchdownSpeed.toFixed(1), g: +s.maxG.toFixed(1) } });
   }
 
   airVelocity(state: RigidState, t: number): Vec3 {
@@ -488,8 +574,9 @@ export class EscapeFlight {
         addForce(v3(motorThrust(f.thrust, f.rise, f.burn, f.tailOff, tau), 0, 0), f.nozzleX);
       }
     }
-    if (c.body === 'capsule' && this.softAt !== undefined && t - this.softAt <= ESCAPE.softLanding.burn) {
-      addForce(v3(-ESCAPE.softLanding.thrust, 0, 0), c.bottomX);
+    const soft = this.capsule.softLanding;
+    if (c.body === 'capsule' && soft && this.softAt !== undefined && t - this.softAt <= soft.burn) {
+      addForce(v3(-soft.thrust, 0, 0), c.bottomX);
     }
     // aerodynamics
     const alt = norm(st.r) - R_EARTH;
@@ -516,8 +603,9 @@ export class EscapeFlight {
     }
     // parachutes, pulling at the riser point against the air
     if (c.body === 'capsule' && speed > 1e-3) {
-      const drogue = canopy(ESCAPE.drogue.area, ESCAPE.drogue.cd, this.drogueAt, ESCAPE.drogue.inflation, t);
-      const main = canopy(ESCAPE.main.area, ESCAPE.main.cd, this.mainAt, ESCAPE.main.inflation, t, ESCAPE.main.reefed, ESCAPE.main.reefS);
+      const cp = this.capsule;
+      const drogue = canopy(cp.drogue.area, cp.drogue.cd, this.drogueAt, cp.drogue.inflation, t);
+      const main = canopy(cp.main.area, cp.main.cd, this.mainAt, cp.main.inflation, t, cp.main.reefed, cp.main.reefS);
       const cdA = drogue + main;
       if (cdA > 0) {
         const q = 0.5 * atm.rho * speed * speed;
@@ -526,12 +614,15 @@ export class EscapeFlight {
         const k = 0.5 * atm.rho * speed * cdA * 9;
         moment.y -= k * st.omegaBody.y; moment.z -= k * st.omegaBody.z; moment.x -= 0.05 * k * st.omegaBody.x;
       }
-      this.status.drogue = drogue / (ESCAPE.drogue.area * ESCAPE.drogue.cd);
-      this.status.main = main / (ESCAPE.main.area * ESCAPE.main.cd);
+      this.status.drogue = drogue / (cp.drogue.area * cp.drogue.cd);
+      this.status.main = main / (cp.main.area * cp.main.cd);
     }
     // resting on the ground is the owner's business; mass flow is quasi-steady
     this.windNow = this.env.wind(st.r, t);
-    const forceECI = quatRotate(st.attitudeQ, force);
+    let forceECI = quatRotate(st.attitudeQ, force);
+    // Mercury's retro-rockets, held against the flight path by the attitude control
+    const retros = c.body === 'capsule' ? this.retrosAt(t) : 0;
+    if (retros > 0 && speed > 1e-3) forceECI = addScaled(forceECI, normalize(st.v), -retros * this.capsule.retro!.thrust);
     this.lastSpecificForce = norm(force) / c.mass / G0;
     return { mass: c.mass, inertiaBody: c.inertia, forceECI, momentBody: moment, externalAccelerationECI: gravityJ2(st.r) };
   }
@@ -542,7 +633,15 @@ export class EscapeFlight {
     s.motors.main = s.body === 'head' && this.mode === 'tower' ? motorThrust(1, tw.rise, tw.burn, tw.tailOff, tau) : 0;
     s.motors.control = s.body === 'head' && this.mode === 'tower' && tau <= tw.controlBurn ? 1 : 0;
     s.motors.fairing = s.body === 'head' && this.mode === 'fairing' ? motorThrust(1, f.rise, f.burn, f.tailOff, tau) : 0;
-    s.motors.softLanding = this.softAt !== undefined && t - this.softAt <= ESCAPE.softLanding.burn ? 1 : 0;
+    s.motors.softLanding = this.capsule.softLanding && this.softAt !== undefined && t - this.softAt <= this.capsule.softLanding.burn ? 1 : 0;
+    if (this.capsule.retro) {
+      s.motors.retro = this.retrosAt(t);
+      // the retropack falls away once the retros are spent
+      if (this.config.body === 'capsule' && !this.retroPackOn && this.config.mass > this.capsule.mass - this.capsule.retro.packMass + 1e-6) {
+        this.config = capsuleConfiguration(true, this.capsule, this.capsule.retro.packMass);
+        this.events.push({ key: 'evt.retroPackOff', severity: 'info', params: { alt: Math.round((norm(this.state.r) - R_EARTH) / 1000) } });
+      }
+    }
     // re-evaluate the loads at the accepted state for the specific force
     this.loads(t, this.state);
     if (this.lastSpecificForce > s.maxG) { s.maxG = this.lastSpecificForce; s.maxGT = t; }

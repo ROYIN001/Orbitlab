@@ -2,7 +2,9 @@
  * The vehicles of historical flights (roadmap C01, src/data/vehicles.ts
  * `HISTORICAL_VEHICLES`): kept out of the fleet's generic orbit matrix, and
  * held instead to the data rules every vehicle keeps and to the one flight each
- * is here for, point-mass here and six-DOF in tests/heavy/historical-flights.test.ts.
+ * is here for, point-mass here; Mercury-Redstone 3 in six-DOF in
+ * tests/heavy/mercury-redstone.test.ts, and every historical flight's ascent
+ * in six-DOF in tests/watch-missions.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, VEHICLES, vehicleById } from '../src/data/vehicles';
@@ -15,6 +17,9 @@ import { supportsRigid } from '../src/physics/rigid/config';
 import { validateConfigInput } from '../src/config/validation';
 import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
 import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
+import { expectFlownMr3, flyMr3 } from './mr3-harness';
+import { captureFrame } from '../src/physics/frame';
+import { flightEnding, watchBeat } from '../src/ui/watch-logic';
 
 const burn = (propellant: number, thrustVac: number, ispVac: number) => propellant / (thrustVac / (G0 * ispVac));
 
@@ -49,11 +54,15 @@ describe('historical vehicles', () => {
     expect(burn(sputnik.stages[0].propellantMass, sputnik.stages[0].engine.thrustVac, sputnik.stages[0].engine.ispVac)).toBeLessThan(310);
     const e = vostok.stages[1];
     expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 365)).toBeLessThan(10);
+    // the Redstone: 143.5 s nominal (MR-3 cut off at 141.8)
+    const redstone = vehicleById('mercuryredstone').stages[0];
+    expect(Math.abs(burn(redstone.propellantMass, redstone.engine.thrustVac, redstone.engine.ispVac) - 143.5)).toBeLessThan(5);
   });
 
   it('carry their own spacecraft, and only they do', () => {
     expect(satelliteById('ps1').carriers).toEqual(['sputnik8k71ps']);
     expect(satelliteById('vostok3ka').carriers).toEqual(['vostokk']);
+    expect(satelliteById('mercury').carriers).toEqual(['mercuryredstone']);
     const s = watchMissionSettings('vostok1');
     expect(validateConfigInput(s)).toEqual([]);
     expect(validateConfigInput({ ...s, satelliteId: 'ps1' }).some((i) => i.field === 'setup.satellite')).toBe(true);
@@ -90,4 +99,37 @@ describe('the flights they are here for, point-mass', () => {
         expect(Math.abs(row.delta!), `${id} ${row.key}: ${log}`).toBeLessThan(Math.max(20, 0.1 * row.real));
       }
     });
+});
+
+describe('Mercury-Redstone 3, point-mass', () => {
+  it('lobs Freedom 7 to 187 km and brings it down in the Atlantic under its parachutes, as flown', { timeout: 300_000 }, () => {
+    expectFlownMr3(flyMr3('pointMass'));
+  });
+});
+
+describe('Mercury-Redstone 3 in the viewer', () => {
+  it('tells the flight beat by beat, from the cut-off to the water, and ends on the splashdown', { timeout: 300_000 }, () => {
+    const s = watchMissionSettings('mr3');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    const beats: string[] = [];
+    let ending: string | null = null;
+    while (!sim.isFailed() && sim.state.t < 1200 && !ending) {
+      sim.step(sim.suggestedDt());
+      const frame = captureFrame(sim);
+      const beat = watchBeat(frame, sim.events);
+      if (beats[beats.length - 1] !== beat) beats.push(beat);
+      ending = flightEnding(frame, sim.events);
+    }
+    for (const b of ['capsuleCutoff', 'capsuleSep', 'capsuleArc', 'retroFire', 'capsuleEntry', 'capsuleDrogue', 'capsuleMain', 'capsuleSplash']) {
+      expect(beats, beats.join(' ')).toContain(b);
+    }
+    // in the order they were flown
+    const order = ['capsuleCutoff', 'capsuleSep', 'retroFire', 'capsuleEntry', 'capsuleDrogue', 'capsuleMain', 'capsuleSplash'].map((b) => beats.indexOf(b));
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(ending).toBe('splashdown');
+  });
 });

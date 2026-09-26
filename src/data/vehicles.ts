@@ -836,6 +836,8 @@ const RD108_1957: EngineSpec = { name: 'RD-108 (8D75PS)', count: 1, thrustSL: 71
 const RD107_1959: EngineSpec = { name: 'RD-107 (8D74-1959)', count: 1, thrustSL: 793 * kN, thrustVac: 970 * kN, ispSL: 256, ispVac: 313, minThrottle: 0.7 };
 const RD108_1959: EngineSpec = { name: 'RD-108 (8D75-1959)', count: 1, thrustSL: 718 * kN, thrustVac: 912 * kN, ispSL: 248, ispVac: 315, minThrottle: 0.7 };
 /** RD-0109 of Blok E (en.wikipedia RD-0109, Blok E): 54.52 kN, 323.5 s, no verniers. */
+/** Rocketdyne A-7 of the Mercury-Redstone as flown on MR-3 (NASA TM X-53107, Table 8-1; vacuum thrust from thisdayinaviation.com). */
+const A7_REDSTONE: EngineSpec = { name: 'Rocketdyne A-7', count: 1, thrustSL: 350.8 * kN, thrustVac: 395.9 * kN, ispSL: 214.8, ispVac: 242.4 };
 const RD0109: EngineSpec = { name: 'RD-0109', count: 1, thrustSL: 40 * kN, thrustVac: 54.52 * kN, ispSL: 240, ispVac: 323.5, vacuumOnly: true };
 
 export const HISTORICAL_VEHICLES: VehicleSpec[] = [
@@ -889,6 +891,28 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
     notes: 'The R-7 that flew Gagarin: the Sputnik core and strap-ons with Blok E, a small third stage hot-staged through a truss.',
+  },
+  {
+    id: 'mercuryredstone', name: 'Mercury-Redstone (MRLV)', country: 'US', manufacturer: 'Chrysler / ABMA',
+    // 83.38 ft (25.41 m) with the capsule and its tower; the booster 59.0 ft,
+    // 70 in across (NASA TM X-53107, *The Mercury-Redstone Project*, 1964).
+    height: 25.4, payloadLEO: 0, payloadGTO: 0,
+    // no fairing: the capsule and its escape tower are the nose
+    fairing: null,
+    stages: [
+      // MR-3's booster: 29,982 kg at liftoff with Freedom 7 (1,832.6 kg), 3,717 kg
+      // dry (TM X-53107, Table 8-1 and §4.2.1), so 24,432 kg of alcohol, LOX,
+      // peroxide and residuals. The A-7 as flown on MR-3: 78,860 lbf, 214.8 s at
+      // sea level (Table 8-1); 89,000 lbf in vacuum (thisdayinaviation), 242.4 s
+      // from the same flow. Graphite jet vanes and air rudders on its four fins.
+      { id: 'redstone', name: 'Redstone (A-7)', dryMass: 3717, propellantMass: 24432, engine: A7_REDSTONE,
+        diameter: 1.778, length: 17.98, fins: true, color: '#f0f0ee', accentColor: '#1d1d1f' },
+    ],
+    sites: ['cape'], maxQ: 45e3, maxAccel: 80,
+    crewCapable: true,
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.34, pitchMax: 50, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3, kickDuration: 12, maxTurnRate: 0.34 },
+    notes: 'The Redstone missile lengthened for the Mercury capsule: one alcohol/LOX engine, jet vanes and fins, 141 s of burn — enough to throw a capsule 187 km up and 487 km down range.',
   },
 ];
 
