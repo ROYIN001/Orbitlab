@@ -47,6 +47,18 @@ export const LESSON_HOOKS: Readonly<Record<string, LessonHook>> = {
     const ok = inclinationCorridor(flight.site, flight.plan.target.inclination) === 'ok';
     return { state: ok ? 'pass' : 'fail', value: null };
   },
+  /**
+   * The flight had no satellite navigation: the navigation ran on its
+   * inertial unit alone (the lesson's failure the student may not undo).
+   */
+  gnssOff(flight) {
+    const nav = flight.cfg.dynamics?.navigation;
+    return { state: nav && nav.gnss === false ? 'pass' : 'fail', value: null };
+  },
+  /** The structure's bending was modelled: the flight met the mode the notch filter is for. */
+  bendingOn(flight) {
+    return { state: flight.cfg.dynamics?.flex?.bending ? 'pass' : 'fail', value: null };
+  },
 };
 
 export const hookExists = (id: string): boolean => Object.prototype.hasOwnProperty.call(LESSON_HOOKS, id);

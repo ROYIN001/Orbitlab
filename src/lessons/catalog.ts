@@ -4,7 +4,10 @@
  */
 import { readLesson, type FileIssue } from './lesson-file';
 import { TRACK1 } from './builtin/track1';
+import { TRACK2 } from './builtin/track2';
 import { TRACK3 } from './builtin/track3';
+import { TRACK4 } from './builtin/track4';
+import { TRACK5 } from './builtin/track5';
 import { COMING } from './builtin/coming';
 import type { Lesson, LocalText } from './types';
 
@@ -20,7 +23,7 @@ function readAll(raw: readonly unknown[]): Lesson[] {
   return out;
 }
 
-export const BUILTIN_LESSONS: readonly Lesson[] = readAll([...TRACK1, ...COMING.slice(0, 4), ...TRACK3, ...COMING.slice(4)]);
+export const BUILTIN_LESSONS: readonly Lesson[] = readAll([...TRACK1, ...TRACK2, COMING[0], ...TRACK3, ...TRACK4, ...TRACK5, COMING[1]]);
 
 export interface Track { id: number; title: LocalText; note: LocalText }
 

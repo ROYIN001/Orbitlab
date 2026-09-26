@@ -11,6 +11,8 @@ import { physicalApsides } from '../physics/rigid/orbit-prediction';
 import { satelliteById } from '../data/satellites';
 import type { LessonFlight, MeasureId } from './types';
 import { unitText } from './text';
+import { linearModelAt } from '../physics/rigid/linear';
+import { pulseMetrics, type AttitudeTestRecord } from '../physics/rigid/attitude-test';
 
 export interface MeasureDef {
   /** the unit it is given in (a symbol, the same in every language) */
@@ -59,6 +61,23 @@ function firstEvent(flight: LessonFlight, keys: readonly string[]): number | nul
   let t: number | null = null;
   for (const e of flight.events) if (keys.includes(e.key) && (t === null || e.t < t)) t = e.t;
   return t;
+}
+
+/** The pitch plane's margins from the autopilot's linear model at max-Q (six-DOF only). */
+function pitchMarginsAtMaxQ(flight: LessonFlight) {
+  if (flight.cfg.dynamics?.model !== 'sixDof' || !(flight.state.maxQ.value > 0)) return null;
+  return linearModelAt(flight.telemetry, flight.state.maxQ.t)?.margins.z ?? null;
+}
+
+/** The last finished attitude step test on the pitch axis, up to `at`. */
+function lastPitchStep(flight: LessonFlight, at?: number): AttitudeTestRecord | null {
+  for (let i = flight.telemetry.length - 1; i >= 0; i--) {
+    const s = flight.telemetry[i];
+    if (at !== undefined && s.t > at + 1e-6) continue;
+    const test = s.rigid?.attitudeTest;
+    if (test?.done && !test.aborted && test.spec.axis === 'z' && test.spec.kind === 'step') return test;
+  }
+  return null;
 }
 
 export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
@@ -126,6 +145,36 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
       let max = 0;
       for (const s of f.telemetry) if (s.t >= t0 && s.gLoad > max) max = s.gLoad;
       return max;
+    },
+  },
+  'nav.positionError': {
+    // the navigation's position error (true minus estimate), its peak over the flight so far
+    unit: 'm', over: 'history', digits: 0,
+    read: (f, at) => {
+      let max: number | null = null;
+      for (const s of f.telemetry) {
+        if (at !== undefined && s.t > at + 1e-6) break;
+        const e = s.rigid?.navigation?.positionError;
+        if (e) max = Math.max(max ?? 0, Math.hypot(e.x, e.y, e.z));
+      }
+      return max;
+    },
+  },
+  'loop.pmAtMaxQ': { unit: '°', over: 'final', digits: 1, read: (f) => finite(pitchMarginsAtMaxQ(f)?.pmDeg ?? NaN) },
+  'loop.gmAtMaxQ': { unit: 'dB', over: 'final', digits: 1, read: (f) => finite(pitchMarginsAtMaxQ(f)?.gmDb ?? NaN) },
+  'loop.wcAtMaxQ': { unit: 'rad/s', over: 'final', digits: 2, read: (f) => finite(pitchMarginsAtMaxQ(f)?.wcRadS ?? NaN) },
+  'step.overshoot': {
+    unit: '%', over: 'final', digits: 1,
+    read: (f, at) => {
+      const test = lastPitchStep(f, at);
+      return test ? finite(pulseMetrics(test.t, test.response, test.spec).overshootPct) : null;
+    },
+  },
+  'dock.hours': {
+    unit: 'h', over: 'final', digits: 2,
+    read: (f) => {
+      const docked = f.events.find((e) => e.key === 'evt.docked');
+      return docked ? docked.t / 3600 : null;
     },
   },
 };

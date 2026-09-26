@@ -65,10 +65,10 @@ describe('the built-in lessons', () => {
     }
   });
 
-  it('are numbered 1.1 … 5.3 without a gap, eight of them written and the rest listed as coming', () => {
+  it('are numbered 1.1 … 5.3 without a gap, seventeen written and the two waiting for their roadmap items listed as coming', () => {
     const numbers = allLessons().map(lessonNumber);
     expect(numbers).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5', '2.1', '2.2', '2.3', '2.4', '3.1', '3.2', '3.3', '4.1', '4.2', '4.3', '4.4', '5.1', '5.2', '5.3']);
-    expect(BUILTIN_LESSONS.filter((l) => !l.comingSoon).map(lessonNumber)).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5', '3.1', '3.2', '3.3']);
+    expect(BUILTIN_LESSONS.filter((l) => l.comingSoon).map((l) => l.id)).toEqual(['guid-monte-carlo', 'adv-history']);
     for (const l of BUILTIN_LESSONS.filter((x) => !x.comingSoon)) {
       expect(l.hints.length, l.id).toBe(3);
       expect(l.criteria.length, l.id).toBeGreaterThan(0);

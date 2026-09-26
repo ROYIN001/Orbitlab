@@ -21,6 +21,8 @@ const UNITS: Readonly<Record<string, Partial<Record<Lang, string>>>> = {
   't': { ru: 'т', th: 'ตัน' },
   'kN': { ru: 'кН' },
   'rad/s': { ru: 'рад/с' },
+  'm': { ru: 'м', th: 'ม.' },
+  'h': { ru: 'ч', th: 'ชม.' },
 };
 
 export function unitText(unit: string, lang: Lang = getLang()): string {
