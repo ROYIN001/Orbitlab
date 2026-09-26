@@ -16,6 +16,7 @@ import { buildSatellite, type SatelliteView } from './satellite';
 import { Plume, type PlumeKind } from './plume';
 import { bellGeometry, bodyTexture, boosterLivery, engineLayout, ogiveProfile, stageLivery, type EngineLayout, type NozzlePos } from './liveries';
 import { clamp01, seedFromString } from './noise';
+import { vehicleDataId } from '../data/vehicles';
 import { disposeObject } from './dispose';
 import type { RigidTelemetry } from '../physics/rigid/telemetry';
 import { buildShipFlaps, foldShipFlaps, SHIP_NOSE_FRACTION, tangentOgiveProfile, type FlapVisual } from './ship';
@@ -365,7 +366,7 @@ export class RocketView {
     const g = new THREE.Group();
     const r = spec.diameter / 2;
     const liv = stageLivery(this.spec, spec);
-    const seed = seedFromString(this.spec.id + spec.id);
+    const seed = seedFromString(vehicleDataId(this.spec) + spec.id);
     // A top stage flown without a fairing (Starship's ship) carries its payload
     // inside its own nose, so it has to close the stack itself.
     const noseH = !this.spec.fairing && index === this.spec.stages.length - 1 ? spec.length * SHIP_NOSE_FRACTION : 0;
@@ -452,7 +453,7 @@ export class RocketView {
     }
     if (spec.fins) this.addFins(g, r);
 
-    const kind = plumeKindFor(spec.engine, this.spec.id);
+    const kind = plumeKindFor(spec.engine, vehicleDataId(this.spec));
     const plume = new Plume({ radius: layout.clusterRadius, length: Math.max(8, layout.clusterRadius * 13), kind, seed });
     plume.group.position.y = -bellLength;
     g.add(plume.group);
@@ -581,7 +582,7 @@ export class RocketView {
     }
     const layout = engineLayout(spec.id, spec.engine, r);
     const { glow, bellLength, engines } = this.engines(g, layout, false, ownerId, spec.id);
-    const kind = plumeKindFor(spec.engine, this.spec.id);
+    const kind = plumeKindFor(spec.engine, vehicleDataId(this.spec));
     const plume = new Plume({ radius: layout.clusterRadius, length: Math.max(6, layout.clusterRadius * 13), kind, seed: seed + 0.11 });
     plume.group.position.y = -bellLength;
     g.add(plume.group);

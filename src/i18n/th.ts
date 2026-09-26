@@ -728,6 +728,9 @@ export const th: Record<string, string> = {
   'setup.validation.suborbital': 'เป้าหมายแบบ suborbital ต้องใช้จรวดที่ขั้นบนบินกลับลงมาเองได้ เช่น Starship',
   'setup.validation.failureUnavailable': 'จรวดลำนี้เกิดความขัดข้องแบบนี้ไม่ได้: การยกเลิกการปล่อยต้องเป็น Soyuz ที่มีลูกเรือ การชนของจรวดเสริมต้องมีจรวดเสริม',
   'setup.validation.rendezvousUnavailable': 'การบินไปสถานีอวกาศต้องใช้ยานอวกาศมีลูกเรือ (Soyuz MS) บนจรวด Soyuz-2.1a และวงโคจรของ ISS',
+  // S02: a custom vehicle from a mission file (ui/panel.ts)
+  'setup.validation.vehicleSpec': 'จรวดที่กำหนดเองในภารกิจนี้ไม่ถูกต้อง จึงบินไม่ได้',
+  'setup.vehicle.custom': '{name} — จรวดที่กำหนดเอง',
   'setup.quickstart.title': 'เริ่มต้นอย่างรวดเร็ว',
   'setup.quickstart.note': 'เลือกภารกิจเพื่อเติมค่าตั้งต้น ตรวจสอบการตั้งค่าแล้วกดเริ่มปล่อยจรวด',
   'setup.quickstart.leo': 'เที่ยวบินแรก · วงโคจรต่ำ',

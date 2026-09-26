@@ -185,9 +185,48 @@ Public sources only, each cited. Spread over the phases above rather than a phas
   The hash is the source of truth. A legacy hash is rewritten with `history.replaceState`, so it
   adds no history entry.
 - **One vehicle resolver**: a mission's vehicle comes from its inline spec when it has one, else
-  from the catalogue by id. Nothing else in the code looks a mission's vehicle up by id.
+  from the catalogue by id (`missionVehicle`, `src/data/vehicles.ts`). Nothing else in the code
+  looks a mission's vehicle up by id. What S02 found keyed off the vehicle id or an engine name
+  is in the next section.
 - **DOM-free cores, thin DOM parts**: the hand-off, the data provider, the design store and the
   route logic are plain modules with unit tests; the screens that show them are thin.
 - **Everything a user makes is a file first**: missions (U01), designs (S05) and scenarios (T01)
   are versioned JSON documents that open offline, so the closed-intranet deployment loses
   nothing but the live data.
+
+## S02: what keys off a vehicle id
+
+A custom vehicle (`MissionConfig.vehicleSpec`) has an id no catalogue vehicle has. Everything the
+code looked up by vehicle id was found and given a rule, listed here so nothing is papered over.
+`VehicleSpec.derivedFrom` names the catalogue vehicle a custom one was made from (a copy, or a D02
+remix); `vehicleDataId(spec)` is that id, or the vehicle's own. "Origin" below means that vehicle;
+a custom vehicle without one gets the generic behaviour.
+
+| What | Keyed by | A custom vehicle gets |
+|---|---|---|
+| Resolving the mission's vehicle: simulation, flight worker, auto-tuner, Monte Carlo job and workers, setup panel, WebMCP, narration | `vehicleById(cfg.vehicleId)` | `missionVehicle(cfg)`: the inline spec. The workers receive it inside the config (structured clone). |
+| Six-DOF available | `supportsRigid(id)`: catalogue membership | six-DOF: the rigid data are built from the spec itself. |
+| Six-DOF RCS installation (Falcon's, and `vegac:p120c`'s roll pair) | vehicle id + stage id | its origin's; else the generic installation by stage id. |
+| Six-DOF trim share (Soyuz-2.1a 0.65, others 0.35) | vehicle id | its origin's; else 0.35. |
+| Six-DOF stages that can fly home (`RIGID_RECOVERABLE`) | vehicle id + stage id | its origin's; else none in six-DOF (point-mass recovery follows `recoverable`, a spec field). |
+| Flexible body: launcher stages, solid propellant | catalogue lookup by id, cached per id | read from the spec itself (`RigidVehicleGeometry.launcherStageIds`, `solidPropellantIds`). The per-id cache would have gone stale across two custom vehicles with one id in the same worker; the lists now travel with the geometry. |
+| Flight to the station (G07) | `vehicleId === 'soyuz21a'` | available when its origin is Soyuz-2.1a. |
+| Launch escape (G06) | `escapeSystem`, a spec field | allowed only on a vehicle derived from one that has it. |
+| Random failure's seed | launch time + vehicle id | its own id: a different vehicle draws a different failure. The one thing a copy does not share. |
+| Livery, texture seed, plume colour (Proton/Angara hypergolics) | vehicle id | its origin's; else the stage's own colours and the engine's propellant. |
+| Localized stage names | `stage.<vehicle>.<stage>.name` | its origin's translation for a part it did not rename; else the name in the spec. |
+| Vehicle notes and manufacturer | `vehicle.<id>.notes` | the text in the spec, untranslated: it is the designer's. |
+| Rated-orbit line in the setup panel | `RATING_ORBITS[id]` | none. |
+| Pads (the R-7 pads at Baikonur) | the first stage's `profile`, a spec field | follows the spec. |
+| Engine layout (nozzle pattern) | stage id | the catalogue stage's pattern when it keeps a catalogue stage id, else a generic ring from the engine count. **Open for D03:** a custom stage that keeps `s1` but changes its engine count keeps the nine-engine octaweb. |
+| Propellant family and mixture ratio | stage id | as the engine layout: by stage id, else the model's default. |
+| Exhaust colour (Merlin gas generator) | engine name | follows the spec's engine name. |
+| Fault presets (G08) | a catalogue vehicle each | offered as before; one that belongs to another vehicle says so. |
+
+Checked by tests/custom-vehicle.test.ts and its two six-DOF companions: a deep copy of Falcon 9
+and of Soyuz-2.1a under a new id flies a recording identical to the catalogue vehicle's, point
+mass and six-DOF, to the end of the mission, and through the flight worker's transport; only the
+recorded vehicle name differs when the copy is renamed. A mission file's version 2 carries the
+spec (tests/mission-file.test.ts); `src/config/vehicle-spec.ts` bounds-checks it, and every
+catalogue vehicle passes those bounds. WebMCP's `configure_mission` takes no spec (the owner,
+2026-09-26) but keeps one the mission already carries.

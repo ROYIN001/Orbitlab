@@ -55,7 +55,7 @@ import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
 import { add, normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
-import { vehicleById } from './data/vehicles';
+import { missionVehicle } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
@@ -924,7 +924,7 @@ class App {
     const cfg = this.panel.state;
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
-    this.narration.setMission(vehicleById(cfg.vehicleId).name,
+    this.narration.setMission(missionVehicle(cfg).name,
       this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(satelliteById(cfg.satelliteId)));
   }
 
@@ -1331,7 +1331,7 @@ class App {
       if (this.mode === 'watch') {
         this.watch.update(this.shown, this.recorder.events, {
           playing: this.playing && this.player.live,
-          vehicleId: sim?.vehicleSpec.id ?? '',
+          vehicle: sim?.vehicleSpec ?? null,
           follow: {
             available: !!this.shown?.debris.some((d) => d.alive && d.recovery?.target),
             booster: this.focusDebrisId !== null,

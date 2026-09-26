@@ -748,6 +748,9 @@ export const en: Record<string, string> = {
   'setup.validation.suborbital': 'A suborbital target needs a vehicle whose upper stage flies itself home, such as Starship.',
   'setup.validation.failureUnavailable': 'This vehicle cannot have this failure: a launch abort needs a crewed Soyuz, a strap-on collision strap-ons.',
   'setup.validation.rendezvousUnavailable': 'A flight to the station needs the crewed spacecraft (Soyuz MS) on a Soyuz-2.1a and the ISS orbit.',
+  // S02: a custom vehicle from a mission file (ui/panel.ts)
+  'setup.validation.vehicleSpec': 'The custom vehicle in this mission is not valid, so it cannot fly.',
+  'setup.vehicle.custom': '{name} — custom vehicle',
   'setup.quickstart.title': 'Quick start',
   'setup.quickstart.note': 'Choose a starting mission to fill the settings. Review it, then press Launch.',
   'setup.quickstart.leo': 'First flight · low Earth orbit',

@@ -26,7 +26,7 @@ import type { Simulation, SimEvent } from './physics/simulation';
 import type { VisualFrame, StageFrame } from './physics/frame';
 import type { CameraMode } from './render/cameras';
 import type { Feasibility } from './ui/panel';
-import { VEHICLES, vehicleById } from './data/vehicles';
+import { VEHICLES, missionVehicle, vehicleById } from './data/vehicles';
 import { SITES, siteById } from './data/sites';
 import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
@@ -66,6 +66,8 @@ const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
 interface McpPanelState {
   dynamics?: import('./types').DynamicsConfig;
   vehicleId: string;
+  /** S02: the custom vehicle a mission file brought in, when there is one */
+  vehicleSpec?: VehicleSpec;
   satelliteId: string;
   siteId: string;
   orbitId: string;
@@ -356,9 +358,13 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   // "site was reassigned" warning the panel itself would show for this edit.
   let siteReassigned = false;
 
-  if (input.vehicleId !== undefined) {
+  // S02: WebMCP names catalogue vehicles only (the owner's choice, 2026-09-26); a custom
+  // vehicle the mission already carries, from a mission file, may be named to keep it.
+  const keepCustom = input.vehicleId !== undefined && !!state.vehicleSpec && input.vehicleId === state.vehicleId;
+  if (input.vehicleId !== undefined && !keepCustom) {
     const id = expectString(input.vehicleId, 'vehicleId');
     if (!VEHICLES.some((v) => v.id === id)) throw new Error(`Unknown vehicleId "${id}". Valid ids: ${VEHICLES.map((v) => v.id).join(', ')}`);
+    state.vehicleSpec = undefined;
     if (id !== state.vehicleId || !state.dynamics) state.dynamics = defaultDynamics(id);
     state.vehicleId = id;
     const spec = vehicleById(id);
@@ -378,7 +384,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   if (input.siteId !== undefined) {
     const id = expectString(input.siteId, 'siteId');
     if (!SITES.some((s) => s.id === id)) throw new Error(`Unknown siteId "${id}". Valid ids: ${SITES.map((s) => s.id).join(', ')}`);
-    const spec = vehicleById(state.vehicleId);
+    const spec = missionVehicle(state);
     if (!spec.sites.includes(id)) throw new Error(`${spec.name} does not fly from "${id}". Valid sites for this vehicle: ${spec.sites.join(', ')}`);
     if (id !== live.siteId) state.recoveryPlan = undefined;
     state.siteId = id;
@@ -404,7 +410,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   }
   if (input.boosterRecovery !== undefined) {
     if (typeof input.boosterRecovery !== 'boolean') throw new Error('"boosterRecovery" must be a boolean');
-    const spec = vehicleById(state.vehicleId);
+    const spec = missionVehicle(state);
     if (input.boosterRecovery && !spec.recoverable) throw new Error(`${spec.name} has no first-stage recovery option`);
     state.boosterRecovery = input.boosterRecovery;
   }
@@ -412,8 +418,8 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     // null clears it; the plan itself is checked against the vehicle and the
     // site by `assertConfigInput` below
     state.recoveryPlan = input.recoveryPlan === null ? undefined : parseRecoveryPlan(input.recoveryPlan);
-    if (state.recoveryPlan && !vehicleById(state.vehicleId).recoverable) {
-      throw new Error(`${vehicleById(state.vehicleId).name} has no first-stage recovery option`);
+    if (state.recoveryPlan && !missionVehicle(state).recoverable) {
+      throw new Error(`${missionVehicle(state).name} has no first-stage recovery option`);
     }
   }
   if (input.failureMode !== undefined) {
@@ -429,7 +435,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     state.failure = { ...state.failure, time: v };
   }
   if (input.failureStageIndex !== undefined) {
-    const spec = vehicleById(state.vehicleId);
+    const spec = missionVehicle(state);
     const v = expectNumber(input.failureStageIndex, 'failureStageIndex');
     if (!Number.isInteger(v) || v < 0 || v >= spec.stages.length) {
       throw new Error(`"failureStageIndex" must be an integer between 0 and ${spec.stages.length - 1} for ${spec.name}`);
@@ -437,7 +443,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     state.failure = { ...state.failure, stage: v };
   }
   if (input.guidance !== undefined) {
-    state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, vehicleById(state.vehicleId)) };
+    state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, missionVehicle(state)) };
   }
   // --- P05: a vehicle, physics or wind edit keeps the flexible-body settings already chosen.
   const priorFlex = live.dynamics?.flex;
@@ -457,31 +463,31 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   const priorNavigation = live.dynamics?.navigation;
   if (priorNavigation && state.dynamics && !state.dynamics.navigation) state.dynamics = { ...state.dynamics, navigation: priorNavigation };
   if (input.navigation !== undefined) {
-    const { navigation: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { navigation: previous, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeNavigation(previous, input.navigation) };
   }
   // --- G01: and the explicit guidance.
   const priorExplicit = live.dynamics?.explicitGuidance;
   if (priorExplicit && state.dynamics && !state.dynamics.explicitGuidance) state.dynamics = { ...state.dynamics, explicitGuidance: priorExplicit };
   if (input.explicitGuidance !== undefined) {
-    const { explicitGuidance: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { explicitGuidance: previous, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeExplicitGuidance(previous, input.explicitGuidance) };
   }
   // --- G08: and the failures.
   const priorFaults = live.dynamics?.controlFaults;
   if (priorFaults && state.dynamics && !state.dynamics.controlFaults) state.dynamics = { ...state.dynamics, controlFaults: priorFaults };
   if (input.controlFaults !== undefined) {
-    const { controlFaults: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { controlFaults: previous, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeControlFaults(previous, input.controlFaults) };
   }
   if (input.control !== undefined) {
-    const { control: _, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { control: _, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeControl(state.dynamics?.control, input.control) };
   }
   if (input.flex !== undefined) {
     // Merged into what is set: a field given as null goes back to its default.
     if (!input.flex || typeof input.flex !== 'object' || Array.isArray(input.flex)) throw new Error('"flex" must be an object');
-    const current = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const current = state.dynamics ?? defaultDynamics(missionVehicle(state));
     const flex: Record<string, unknown> = { ...(current.flex ?? {}) };
     for (const [key, value] of Object.entries(input.flex as Record<string, unknown>)) {
       if (!FLEX_KEYS.includes(key)) throw new Error(`Unknown flex field "${key}"`);
@@ -503,6 +509,8 @@ function summarizeConfig(cfg: MissionConfig): Record<string, unknown> {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   return {
     vehicleId: cfg.vehicleId,
+    /** S02: the mission flies a custom vehicle from a mission file */
+    customVehicle: cfg.vehicleSpec ? { name: cfg.vehicleSpec.name, derivedFrom: cfg.vehicleSpec.derivedFrom ?? null } : null,
     satelliteId: cfg.satelliteId,
     siteId: cfg.siteId,
     payloadMassKg: cfg.payloadMassOverride ?? null,

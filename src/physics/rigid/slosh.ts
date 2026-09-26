@@ -72,8 +72,18 @@ export interface SloshTank {
 export const SLOSH_MIN_DEPTH_PER_RADIUS = 0.05;
 
 const solidIds = new Map<string, Set<string>>();
-/** Stage and strap-on ids of a vehicle whose propellant is a solid grain. */
-function solidPropellant(vehicleId: string): Set<string> {
+const ownSolidIds = new WeakMap<readonly string[], Set<string>>();
+/**
+ * Stage and strap-on ids of a vehicle whose propellant is a solid grain: the
+ * list its geometry carries (S02, `RigidVehicleGeometry.solidPropellantIds`),
+ * else the catalogue vehicle's.
+ */
+function solidPropellant(vehicleId: string, own?: readonly string[]): Set<string> {
+  if (own) {
+    let known = ownSolidIds.get(own);
+    if (!known) ownSolidIds.set(own, known = new Set(own));
+    return known;
+  }
   let ids = solidIds.get(vehicleId);
   if (!ids) {
     ids = new Set<string>();
@@ -92,8 +102,8 @@ function solidPropellant(vehicleId: string): Set<string> {
  * The sloshing tanks of a mass model. A liquid is a uniform solid cylinder along
  * the body axis: I_x = m a²/2 and I_t = m(a²/4 + h²/12) give its radius and depth.
  */
-export function sloshTanks(components: readonly MassComponent[], vehicleId: string): SloshTank[] {
-  const solid = solidPropellant(vehicleId);
+export function sloshTanks(components: readonly MassComponent[], vehicleId: string, solidIds?: readonly string[]): SloshTank[] {
+  const solid = solidPropellant(vehicleId, solidIds);
   const tanks: SloshTank[] = [];
   for (const part of components) {
     if ((part.kind !== 'fuel' && part.kind !== 'oxidizer') || !(part.mass > 0)) continue;

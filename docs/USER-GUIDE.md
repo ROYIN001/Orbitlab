@@ -96,6 +96,14 @@ not fly from) goes back to its default, the rest of the mission is kept, and a n
 buttons lists what was reset. The file carries a format version, so a file from a later
 Orbitlab still opens as far as this one understands it, and says so.
 
+Since version 2 a file can also carry a **vehicle of its own** — a custom rocket, the start of
+the Build section ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), S02). There is no builder on screen
+yet; a file (or a link) that carries one opens with the vehicle listed first in the vehicle menu
+as "*name* — custom vehicle", and it flies like any other. Every figure in it is checked before it
+flies — masses and sizes above zero, engine figures a chemical engine can have, at most six
+stages, strap-ons on the first stage only — and a vehicle that fails the check is not flown: the
+note names the vehicle as reset. Picking a catalogue vehicle from the menu drops the custom one.
+
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
 program**, which flies the ascent headlessly over a grid of values and keeps the one with

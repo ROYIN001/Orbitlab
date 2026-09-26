@@ -8,7 +8,7 @@
  * WebMCP, and a value it rejects goes back to its default (the rest of the
  * mission is kept) with an issue naming the field, for the page to show.
  */
-import type { DynamicsConfig, FailureConfig, GuidanceParams, MissionConfig, OrbitSpec, RecoveryPlan } from '../types';
+import type { DynamicsConfig, FailureConfig, GuidanceParams, MissionConfig, OrbitSpec, RecoveryPlan, VehicleSpec } from '../types';
 import { VEHICLES } from '../data/vehicles';
 import { SATELLITES } from '../data/satellites';
 import { ORBIT_PRESETS } from '../data/orbits';
@@ -22,8 +22,14 @@ export const MISSION_FORMAT = 'orbitlab.mission';
  * The version of the layout below. Raise it when a field changes meaning, and
  * teach `upgrade` to read the old one; a field that is only added needs no new
  * version, since a document without it takes the default.
+ *
+ * Version 2 (roadmap S02) may carry the mission's vehicle inline
+ * (`mission.vehicleSpec`). That is more than an added field: with it,
+ * `vehicleId` names a vehicle no catalogue has, and a version-1 reader would
+ * fly something else — so the version says a reader has to understand it, and
+ * an older Orbitlab reports the file as newer than itself.
  */
-export const MISSION_FORMAT_VERSION = 1;
+export const MISSION_FORMAT_VERSION = 2;
 
 /** The setup panel's mission: `ConfigInput` plus which orbit preset it started from. */
 export type MissionState = ConfigInput & { orbitId: string };
@@ -33,6 +39,8 @@ export interface MissionDocument {
   version: number;
   mission: {
     vehicleId: string; satelliteId: string; siteId: string;
+    /** a custom vehicle, whose id is `vehicleId` (version 2, S02) */
+    vehicleSpec?: VehicleSpec;
     orbitId: string; orbit: OrbitSpec;
     /** ISO 8601, UTC */
     launchTime: string;
@@ -77,6 +85,7 @@ export function missionDocument(state: MissionState): MissionDocument {
     version: MISSION_FORMAT_VERSION,
     mission: {
       vehicleId: state.vehicleId, satelliteId: state.satelliteId, siteId: state.siteId,
+      ...(state.vehicleSpec ? { vehicleSpec: clone(state.vehicleSpec) } : {}),
       orbitId: state.orbitId, orbit: clone(state.orbit),
       launchTime: state.launchTime.toISOString(),
       payloadMass: state.payloadMass,
@@ -99,10 +108,10 @@ export function copyMission(state: MissionState): MissionState {
   } as MissionState;
 }
 
-/** The defaults a reset value falls back on, for this vehicle and satellite. */
-function vehicleDefaults(vehicleId: string) {
-  const spec = VEHICLES.find((v) => v.id === vehicleId);
-  return { spec, dynamics: defaultDynamics(vehicleId), site: spec?.sites[0] };
+/** The defaults a reset value falls back on, for this mission's vehicle — a custom one included (S02). */
+function vehicleDefaults(state: Pick<MissionState, 'vehicleId' | 'vehicleSpec'>) {
+  const spec = state.vehicleSpec?.id === state.vehicleId ? state.vehicleSpec : VEHICLES.find((v) => v.id === state.vehicleId);
+  return { spec, dynamics: spec ? defaultDynamics(spec) : defaultDynamics(state.vehicleId), site: spec?.sites[0] };
 }
 
 /**
@@ -118,10 +127,16 @@ function overlay(m: Record<string, unknown>, fallback: MissionState, issues: Mis
     else issues.push({ field, code: 'selection' });
   };
   str('vehicleId', 'setup.vehicle');
-  const vehicleChanged = out.vehicleId !== fallback.vehicleId;
+  // S02: a document that names its vehicle carries its custom spec too, or flies a catalogue one
+  if (m.vehicleSpec !== undefined) {
+    if (isRecord(m.vehicleSpec)) out.vehicleSpec = clone(m.vehicleSpec) as unknown as VehicleSpec;
+    else issues.push({ field: 'setup.vehicle', code: 'vehicleSpec' });
+  } else if (m.vehicleId !== undefined) out.vehicleSpec = undefined;
+  const vehicleChanged = out.vehicleId !== fallback.vehicleId
+    || JSON.stringify(out.vehicleSpec ?? null) !== JSON.stringify(fallback.vehicleSpec ?? null);
   // A different vehicle starts from its own defaults, not the fallback's.
   if (vehicleChanged) {
-    const d = vehicleDefaults(out.vehicleId);
+    const d = vehicleDefaults(out);
     out.dynamics = d.dynamics;
     if (d.site) out.siteId = d.site;
     out.guidanceOverrides = {};
@@ -181,10 +196,12 @@ function resetOrbit(state: MissionState, fallback: MissionState): void {
 
 /** Put the part of the mission an issue's field belongs to back to its default. */
 function reset(state: MissionState, field: string, fallback: MissionState): void {
-  const d = vehicleDefaults(state.vehicleId);
+  const d = vehicleDefaults(state);
   const dynamics = (): DynamicsConfig => (state.dynamics ??= d.dynamics);
   if (field === 'setup.vehicle') {
     Object.assign(state, copyMission(fallback));
+    // Object.assign keeps what the fallback lacks: a custom vehicle must not outlive a reset to a catalogue one
+    if (!fallback.vehicleSpec) state.vehicleSpec = undefined;
     return;
   }
   if (field === 'setup.site') { if (d.site) state.siteId = d.site; state.recoveryPlan = undefined; state.padId = undefined; return; }
@@ -229,8 +246,17 @@ function reset(state: MissionState, field: string, fallback: MissionState): void
   state.dynamics = d.dynamics;
 }
 
-/** A document in an older layout, brought to the current one (none yet: version 1 is the first). */
+/**
+ * A document in an older layout, brought to the current one. Version 1 is
+ * version 2 without a custom vehicle: its `vehicleId` always names a catalogue
+ * vehicle, so a `vehicleSpec` found in one was not written by Orbitlab and is
+ * not read.
+ */
 function upgrade(doc: Record<string, unknown>): Record<string, unknown> {
+  if (doc.version === 1 && isRecord(doc.mission) && 'vehicleSpec' in doc.mission) {
+    const { vehicleSpec: _ignored, ...mission } = doc.mission;
+    return { ...doc, mission };
+  }
   return doc;
 }
 

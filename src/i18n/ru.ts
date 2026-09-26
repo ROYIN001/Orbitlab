@@ -727,6 +727,9 @@ export const ru: Record<string, string> = {
   'setup.validation.suborbital': 'Для суборбитальной цели нужна ракета, верхняя ступень которой сама возвращается на Землю, например Starship.',
   'setup.validation.failureUnavailable': 'У этого носителя не может быть такого отказа: для аварийного спасения нужен пилотируемый «Союз», для удара бокового блока — боковые блоки.',
   'setup.validation.rendezvousUnavailable': 'Для полёта к станции нужен пилотируемый корабль («Союз МС») на «Союзе-2.1а» и орбита МКС.',
+  // S02: a custom vehicle from a mission file (ui/panel.ts)
+  'setup.validation.vehicleSpec': 'Собственная ракета в этой миссии задана с ошибками, поэтому полететь не может.',
+  'setup.vehicle.custom': '{name} — собственная ракета',
   'setup.quickstart.title': 'Быстрый старт',
   'setup.quickstart.note': 'Выберите миссию для заполнения настроек. Проверьте их и нажмите «Пуск».',
   'setup.quickstart.leo': 'Первый полёт · низкая орбита',

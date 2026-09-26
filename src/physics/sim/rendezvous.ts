@@ -23,6 +23,7 @@ import { quatFromMatrix, quatInverseRotate, quatMultiply, quatRotate, type Mat3,
 import { targetAttitude } from '../rigid/runtime';
 import type { RigidTelemetry } from '../rigid/telemetry';
 import { AIM_POINT, APPROACH, PROFILES, SPACECRAFT, rendezvousAvailable, type RendezvousProfileId } from '../rendezvous/profiles';
+import { vehicleDataId } from '../../data/vehicles';
 import { PORTS, type PortId } from '../rendezvous/ports';
 import { brakeImpulse, leadAngle, planRendezvous, posigrade, raiseImpulse, type BurnId, type RendezvousPlan } from '../rendezvous/plan';
 import { STATION_RADIUS, fromLvlh, lvlhFrame, toLvlh, type PointState } from '../rendezvous/station';
@@ -109,7 +110,7 @@ export class Rendezvous {
   /** This mission flies to the station. */
   get enabled(): boolean {
     const cfg = this.sim.cfg.rendezvous;
-    return !!cfg && rendezvousAvailable(this.sim.cfg.vehicleId, this.sim.cfg.satelliteId, this.sim.cfg.orbit);
+    return !!cfg && rendezvousAvailable(vehicleDataId(this.sim.vehicleSpec), this.sim.cfg.satelliteId, this.sim.cfg.orbit);
   }
   get profile(): RendezvousProfileId { return this.sim.cfg.rendezvous?.profile ?? 'twoOrbit'; }
   get port(): PortId { return this.sim.cfg.rendezvous?.port ?? 'rassvet'; }

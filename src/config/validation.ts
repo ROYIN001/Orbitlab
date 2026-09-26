@@ -2,7 +2,8 @@
  * A valid but overweight or unreachable mission is still an experiment the
  * operator may launch. Only malformed or unsupported input is rejected here. */
 import type { FailureConfig, FailureMode, GuidanceParams, OrbitSpec, RecoveryMode, RecoveryPlan, VehicleSpec } from '../types';
-import { VEHICLES } from '../data/vehicles';
+import { VEHICLES, vehicleDataId } from '../data/vehicles';
+import { vehicleSpecProblems, vehicleSpecText } from './vehicle-spec';
 import { LANDING_ZONES } from '../data/landing-zones';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES } from '../data/sites';
@@ -24,8 +25,10 @@ export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'in
   /** a failure the vehicle cannot have: an abort without an escape system, a strap-on collision without strap-ons */
   | 'failureUnavailable'
   /** a rendezvous needs the station's orbit and a spacecraft with its own engine */
-  | 'rendezvousUnavailable';
-export interface ValidationIssue { field: string; code: ValidationCode; limit?: number }
+  | 'rendezvousUnavailable'
+  /** S02: the mission's custom vehicle is malformed (`detail` says where and how) */
+  | 'vehicleSpec';
+export interface ValidationIssue { field: string; code: ValidationCode; limit?: number; detail?: string }
 
 /** Bounds are in the stored SI/degree units; UI and WebMCP convert at the edge. */
 export const GUIDANCE_FIELDS: Record<string, { key: keyof GuidanceParams; scale: number; range: [number, number] }> = {
@@ -124,6 +127,8 @@ export function parseUtcDateTime(raw: string, requireZone = false): Date | null 
 export interface ConfigInput {
   dynamics?: DynamicsConfig;
   vehicleId: string; satelliteId: string; siteId: string;
+  /** S02: a custom vehicle, inline; its id is `vehicleId` (`MissionConfig.vehicleSpec`) */
+  vehicleSpec?: VehicleSpec;
   orbit: OrbitSpec; launchTime: Date; payloadMass: number;
   guidanceOverrides: Partial<GuidanceParams>; failure: FailureConfig; boosterRecovery: boolean;
   /** where each recovered stage is flown back to (`boosterRecovery` has to be on for it to fly) */
@@ -210,20 +215,29 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
     const issue = numericIssue(value, field, limits);
     if (issue) issues.push(issue);
   };
-  const spec = VEHICLES.find((v) => v.id === state.vehicleId);
+  // S02: a custom vehicle is checked in full before anything below reads it
+  let spec: VehicleSpec | undefined;
+  if (state.vehicleSpec !== undefined) {
+    const problems = vehicleSpecProblems(state.vehicleSpec);
+    const custom = state.vehicleSpec as Partial<VehicleSpec> | null;
+    if (!problems.length && custom?.id !== state.vehicleId) problems.push({ path: 'id', message: `is "${String(custom?.id)}", but the mission names vehicle "${state.vehicleId}"` });
+    if (problems.length) issues.push({ field: 'setup.vehicle', code: 'vehicleSpec', detail: vehicleSpecText(problems) });
+    else spec = state.vehicleSpec;
+  } else spec = VEHICLES.find((v) => v.id === state.vehicleId);
   if (state.padId !== undefined && !SITES.find((x) => x.id === state.siteId)?.pads?.some((p) => p.id === state.padId)) {
     issues.push({ field: 'setup.site', code: 'selection' });
   }
   if (state.rendezvous !== undefined) {
     const rv = state.rendezvous;
     if (!rv || !PROFILE_IDS.includes(rv.profile) || (rv.port !== undefined && !PORT_IDS.includes(rv.port))) issues.push({ field: 'setup.rendezvous', code: 'selection' });
-    else if (!rendezvousAvailable(state.vehicleId, state.satelliteId, state.orbit)) issues.push({ field: 'setup.rendezvous', code: 'rendezvousUnavailable' });
+    else if (!spec || !rendezvousAvailable(vehicleDataId(spec), state.satelliteId, state.orbit)) issues.push({ field: 'setup.rendezvous', code: 'rendezvousUnavailable' });
   }
   if (state.dynamics !== undefined) {
     const d = state.dynamics;
     if (!d || typeof d !== 'object' || Array.isArray(d)) issues.push({ field: 'setup.dynamics.model', code: 'selection' });
     else {
-      if (d.model !== 'pointMass' && !(d.model === 'sixDof' && supportsRigid(state.vehicleId))) {
+      // a custom vehicle has six-DOF data whatever else is wrong with it; that is reported once, above
+      if (d.model !== 'pointMass' && !(d.model === 'sixDof' && (spec ? supportsRigid(spec) : state.vehicleSpec !== undefined))) {
         issues.push({ field: 'setup.dynamics.model', code: 'selection' });
       }
       if (!['calm', 'crosswind', 'shear'].includes(d.wind)) issues.push({ field: 'setup.dynamics.wind', code: 'selection' });
@@ -238,7 +252,7 @@ export function validateConfigInput(state: ConfigInput): ValidationIssue[] {
         .map(({ field, value, limits }): ValidationIssue => (limits ? numericIssue(value, field, { min: limits[0], max: limits[1] }) : null) ?? { field, code: 'selection' }));
     }
   }
-  if (!spec) issues.push({ field: 'setup.vehicle', code: 'selection' });
+  if (!spec && state.vehicleSpec === undefined) issues.push({ field: 'setup.vehicle', code: 'selection' });
   if (!SATELLITES.some((s) => s.id === state.satelliteId)) issues.push({ field: 'setup.satellite', code: 'selection' });
   if (!SITES.some((s) => s.id === state.siteId) || (spec && !spec.sites.includes(state.siteId))) issues.push({ field: 'setup.site', code: 'selection' });
   const orbit = state.orbit;
@@ -315,6 +329,7 @@ export function issueText(issue: ValidationIssue): string {
     case 'suborbital': return 'A suborbital target needs a vehicle whose upper stage flies itself home (Starship)';
     case 'failureUnavailable': return 'This vehicle cannot have that failure: a launch abort needs a crewed Soyuz, a strap-on collision strap-ons, a stage separation failure a second stage';
     case 'rendezvousUnavailable': return 'A flight to the station needs the crewed spacecraft on a Soyuz-2.1a and the ISS orbit';
+    case 'vehicleSpec': return `The custom vehicle is not valid: ${issue.detail ?? 'malformed'}`;
   }
 }
 

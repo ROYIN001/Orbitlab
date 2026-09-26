@@ -11,8 +11,9 @@
  */
 import { getLang, t } from '../i18n';
 import type { VisualFrame } from '../physics/frame';
+import type { VehicleSpec } from '../types';
 import type { SimEvent } from '../physics/simulation';
-import { vehicleById } from '../data/vehicles';
+import { vehicleById, vehicleDataId } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
 import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
@@ -39,8 +40,8 @@ const SPEEDS: readonly WatchSpeed[] = ['auto', 1, 5, 25, 100];
 interface UpdateState {
   /** the live flight is advancing */
   playing: boolean;
-  /** the vehicle the frame belongs to */
-  vehicleId: string;
+  /** the vehicle the frame belongs to (a custom one included, roadmap S02) */
+  vehicle: VehicleSpec | null;
   /** a stage flown home is in the frame, and whether the camera is on it */
   follow?: { available: boolean; booster: boolean };
   /**
@@ -239,23 +240,21 @@ export class WatchView {
     }
   }
 
-  /** V03: whether a vehicle's strap-ons are solid motors (cached by id). */
-  private solidBoosters(vehicleId: string): boolean {
-    if (this.solidFor?.id !== vehicleId) {
-      let spec: ReturnType<typeof vehicleById> | undefined;
-      try { spec = vehicleById(vehicleId); } catch { spec = undefined; }
-      this.solidFor = { id: vehicleId, solid: !!spec?.stages.some((st) => (st.boosters ?? []).some((b) => exhaustKind(b) === 'solid')) };
+  /** V03: whether a vehicle's strap-ons are solid motors (cached by spec). */
+  private solidBoosters(spec: VehicleSpec | null): boolean {
+    if (this.solidFor?.spec !== spec) {
+      this.solidFor = { spec, solid: !!spec?.stages.some((st) => (st.boosters ?? []).some((b) => exhaustKind(b) === 'solid')) };
     }
     return this.solidFor.solid;
   }
-  private solidFor?: { id: string; solid: boolean };
+  private solidFor?: { spec: VehicleSpec | null; solid: boolean };
 
   /** Called at the HUD's 10 Hz with the frame on screen. */
   update(frame: VisualFrame | null, events: readonly SimEvent[], state: UpdateState): void {
     this.lastFrame = frame;
     // Four strap-ons leaving together is the Soyuz "Korolev cross".
-    const cross = state.vehicleId.startsWith('soyuz');
-    const beat = watchBeat(frame, events, cross, this.solidBoosters(state.vehicleId));
+    const cross = !!state.vehicle && vehicleDataId(state.vehicle).startsWith('soyuz');
+    const beat = watchBeat(frame, events, cross, this.solidBoosters(state.vehicle));
     this.beat = beat;
     const copy = WATCH_BEATS[beat];
     const label = t(copy.label);
