@@ -1443,7 +1443,7 @@ export class SetupPanel {
     }
     list.append(this.el('li', undefined, t('setup.dispersion.density', { density: pct(drawn.densityFactor) })));
     if (this.state.dynamics?.model === 'sixDof') {
-      list.append(this.el('li', undefined, t('setup.dispersion.wind', { east: drawn.windENU.east.toFixed(1), north: drawn.windENU.north.toFixed(1) })));
+      list.append(this.el('li', undefined, t('setup.dispersion.wind', { east: drawn.windENU.east.toFixed(1).replace('-', '−'), north: drawn.windENU.north.toFixed(1).replace('-', '−') })));
       if (this.state.dynamics.navigation) list.append(this.el('li', undefined, t('setup.dispersion.imu')));
     } else list.append(this.el('li', undefined, t('setup.dispersion.pointMass')));
     section.append(list);
