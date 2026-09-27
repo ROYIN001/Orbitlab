@@ -9,7 +9,8 @@ import { Simulation } from '../src/physics/simulation';
 import { BUILTIN_LESSONS } from '../src/lessons/catalog';
 import { defaultMissionState, lessonConfig, missionConfigFromState } from '../src/lessons/config';
 import { flightEnded, gradeLesson, type LessonAnswers } from '../src/lessons/grader';
-import { MEASURES } from '../src/lessons/measures';
+import { GRADED_STEP, MEASURES } from '../src/lessons/measures';
+import type { AttitudeTestRecord } from '../src/physics/rigid/attitude-test';
 import { parseMissionDocument, type MissionState } from '../src/config/mission-file';
 import { emptyProgress, flownMission, loadProgress, recordGrade, saveProgress } from '../src/lessons/progress';
 import type { Lesson, LessonFlight } from '../src/lessons/types';
@@ -128,6 +129,46 @@ describe('track 4, attitude control', () => {
     const sim = fly(l, undefined, 200);
     expect(MEASURES['loop.pmAtMaxQ'].read(sim)!).toBeLessThan(30);
     expect(gradeLesson(l, sim).verdict).toBe('fail');
+  });
+
+  it('4.3 a step test: only a step begun in the window after max-Q is graded (audit 2026-09-27 A12)', () => {
+    const l = lesson('ctl-step');
+    const shell = new Simulation(lessonConfig(l.mission), { headless: true });
+    const amp = 2 * Math.PI / 180;
+    // a finished pitch step begun at `startS`, whose response peaks at `peak` × the command
+    const step = (startS: number, peak: number, holdS = 8): AttitudeTestRecord => {
+      const t = Array.from({ length: holdS + 6 }, (_, i) => i);
+      return {
+        spec: { axis: 'z', sign: 1, kind: 'step', amplitudeRad: amp, holdS }, startS, t, command: t.map(() => amp),
+        response: t.map((x) => (x === 0 ? 0 : x === 1 ? 0.6 * amp : x === 2 ? peak * amp : amp)), limits: t.map(() => 0), baselineRad: 0, done: true,
+      };
+    };
+    // the flight: max-Q at T+53 s, MECO at T+157 s, the steps' records on the telemetry when each finished
+    const flight = (...tests: AttitudeTestRecord[]): LessonFlight => ({
+      ...shell,
+      state: { ...shell.state, t: 157, status: 'coast', maxQ: { value: 30e3, t: 53 } },
+      events: [{ t: 157, key: 'evt.meco', severity: 'info' }],
+      telemetry: tests.map((x) => ({ ...shell.telemetry[0], t: x.startS + x.t[x.t.length - 1], rigid: { attitudeTest: x } })),
+    } as unknown as LessonFlight);
+    const overshoot = (f: LessonFlight) => gradeLesson(l, f, {}, true).criteria.find((c) => c.id === 'overshoot')!;
+    // at T+20 s, before max-Q: not graded, however little it overshoots
+    const early = flight(step(20, 1.01));
+    expect(MEASURES['step.overshoot'].read(early, 157)).toBeNull();
+    expect(overshoot(early)).toMatchObject({ state: 'fail', value: null });
+    // at T+65 s: graded as before
+    const inWindow = flight(step(65, 1.04));
+    expect(overshoot(inWindow).state).toBe('pass');
+    expect(overshoot(inWindow).value).toBeCloseTo(4, 6);
+    expect(overshoot(flight(step(65, 1.12))).state).toBe('fail');
+    // a later step, after the window, does not replace the one in it
+    expect(overshoot(flight(step(65, 1.12), step(53 + GRADED_STEP.afterMaxQS + 20, 1.01)))).toMatchObject({ state: 'fail' });
+    expect(overshoot(flight(step(65, 1.12), step(53 + GRADED_STEP.afterMaxQS + 20, 1.01))).value).toBeCloseTo(12, 6);
+    // held too briefly to settle: not graded
+    expect(overshoot(flight(step(65, 1.04, GRADED_STEP.minHoldS - 2))).value).toBeNull();
+    // the window's edges: at max-Q and 30 s after it
+    expect(overshoot(flight(step(53, 1.04))).state).toBe('pass');
+    expect(overshoot(flight(step(53 + GRADED_STEP.afterMaxQS, 1.04))).state).toBe('pass');
+    expect(overshoot(flight(step(53 + GRADED_STEP.afterMaxQS + 1, 1.04))).value).toBeNull();
   });
 
   it('4.4 bending and the notch filter: with no filter the vehicle breaks up in seconds', { timeout: 120_000 }, () => {

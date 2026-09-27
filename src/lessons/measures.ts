@@ -69,13 +69,26 @@ function pitchMarginsAtMaxQ(flight: LessonFlight) {
   return linearModelAt(flight.telemetry, flight.state.maxQ.t)?.margins.z ?? null;
 }
 
-/** The last finished attitude step test on the pitch axis, up to `at`. */
-function lastPitchStep(flight: LessonFlight, at?: number): AttitudeTestRecord | null {
+/**
+ * Which pitch step `step.overshoot` grades (audit 2026-09-27 A12): one begun
+ * after the flight's max-Q and at most `afterMaxQS` later, with its offset
+ * held at least `minHoldS`. A step anywhere before the end of the flight used
+ * to count, so a test flown in thin air long after max-Q, or in the first
+ * seconds, graded as well as the one the lesson asks for.
+ */
+export const GRADED_STEP = { afterMaxQS: 30, minHoldS: 5 } as const;
+
+/** The last finished pitch step test up to `at` that began in the window after max-Q (`GRADED_STEP`). */
+export function gradedPitchStep(flight: LessonFlight, at?: number): AttitudeTestRecord | null {
+  const q = flight.state.maxQ;
+  if (!(q.value > 0)) return null;
   for (let i = flight.telemetry.length - 1; i >= 0; i--) {
     const s = flight.telemetry[i];
     if (at !== undefined && s.t > at + 1e-6) continue;
     const test = s.rigid?.attitudeTest;
-    if (test?.done && !test.aborted && test.spec.axis === 'z' && test.spec.kind === 'step') return test;
+    if (!test?.done || test.aborted || test.spec.axis !== 'z' || test.spec.kind !== 'step') continue;
+    const inWindow = test.startS >= q.t - 1e-6 && test.startS <= q.t + GRADED_STEP.afterMaxQS + 1e-6;
+    if (inWindow && test.spec.holdS >= GRADED_STEP.minHoldS - 1e-9) return test;
   }
   return null;
 }
@@ -168,7 +181,7 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
   'step.overshoot': {
     unit: '%', over: 'final', digits: 1,
     read: (f, at) => {
-      const test = lastPitchStep(f, at);
+      const test = gradedPitchStep(f, at);
       return test ? finite(pulseMetrics(test.t, test.response, test.spec).overshootPct) : null;
     },
   },
