@@ -79,6 +79,8 @@ export class RigidControls {
   update(value:RigidTelemetry|undefined,live:boolean):void {this.last=value;this.live=live;this.host.hidden=!value;this.refresh();}
   private refresh():void {
     const copy=COPY[getLang()];
+    // Explore shows the panel only while the flight is under manual command (modes.css)
+    this.host.setAttribute('data-command',this.last?.controlMode??this.command.mode);
     for(const control of this.controls) control.disabled=!this.live || !this.last || (control.tagName!=='SELECT' && this.command.mode!=='manual');
     if(!this.last)return;
     const recorded=this.last;

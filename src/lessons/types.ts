@@ -27,6 +27,13 @@ export const LOCK_KEYS: readonly LockKey[] = [
   'setup.failure', 'setup.dynamics.model', 'setup.guidance', 'setup.boosterRecovery', 'setup.faults',
 ];
 
+/**
+ * A setting the Explore level keeps computed (src/ui/explore.ts) that a
+ * lesson opening in Explore asks the student to change, and so shows.
+ */
+export type RevealKey = 'setup.guidance';
+export const REVEAL_KEYS: readonly RevealKey[] = ['setup.guidance'];
+
 /** A number read from the flight (see `measures.ts`). */
 export type MeasureId =
   | 'orbit.perigee' | 'orbit.apogee' | 'orbit.inclination' | 'orbit.raanError' | 'orbit.period' | 'orbit.eccentricity'
@@ -84,6 +91,8 @@ export interface Lesson extends LessonMeta {
   mission: MissionDocument;
   /** the settings the student may not change */
   locked: LockKey[];
+  /** computed settings the lesson asks the student to change, shown in Explore */
+  reveal?: RevealKey[];
   criteria: Criterion[];
   /** revealed one at a time */
   hints: LocalText[];

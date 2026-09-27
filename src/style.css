@@ -216,11 +216,18 @@ details[open] summary { margin-bottom: 4px; }
 .share-notice p { margin: 0; }
 .share-notice ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); }
 .share-notice-close { position: absolute; top: 4px; right: 6px; font-size: 16px; line-height: 1; color: var(--muted); }
-.experience-section .experience-label { margin-top: 0; }
-.experience-glossary { padding-top: 6px; border-top: 1px solid var(--line); }
-#setup[data-experience="learning"] .guidance-parameters:not([data-invalid="true"]) { display: none; }
-#setup[data-experience="advanced"] .guidance-reveal { display: none; }
-.guidance-reveal { margin: 8px 0; }
+/* Explore computes the guidance and shows it (src/ui/explore.ts). Its fields
+   and the auto-tuner are built at both levels and stay folded away in Explore
+   unless one of them is invalid, or a lesson asks the student to change them
+   (`reveal`, src/lessons/types.ts). */
+#setup[data-experience="learning"] .guidance-parameters:not([data-invalid="true"]),
+#setup[data-experience="learning"] .guidance-tools { display: none; }
+body[data-lesson-reveal~="setup.guidance"] #setup[data-experience="learning"] :is(.guidance-parameters, .guidance-tools) { display: block; }
+.auto-guidance { margin: 10px 0 0; }
+.auto-guidance .adjusted .v { color: var(--warn); }
+.auto-guidance .model { flex-direction: column; gap: 0; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }
+.auto-guidance .model .v { font-family: var(--sans); text-align: left; color: var(--text); }
+.auto-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
 .section-title { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
 .section-title h2 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 0.1px; }
 .step-number {
@@ -774,6 +781,18 @@ details[open] summary { margin-bottom: 4px; }
 .range-toggle button { padding: 4px 9px; border-radius: 5px; font-size: 11px; color: #a7b5c7; white-space: nowrap; }
 .range-toggle button.active { background: var(--accent-weak); color: var(--accent); }
 .chart-note { margin: 12px 0 0; font-size: 11px; color: var(--warn); }
+/* Explore: one chart at a time, picked from a row of its names (ui/telemetry.ts) */
+.chart-picker { display: none; }
+#telemetry.simple-charts .chart-picker { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 0; }
+#telemetry.view-equations .chart-picker { display: none; }
+.chart-picker button {
+  border: 1px solid var(--line2); border-radius: 6px;
+  font-size: 11.5px; padding: 5px 9px; color: #a7b5c7;
+}
+.chart-picker button:hover { color: var(--text); border-color: var(--accent-line); }
+.chart-picker button[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent); border-color: var(--accent-line); }
+#telemetry.simple-charts canvas.chart[data-chart]:not(.picked) { display: none; }
+#telemetry.simple-charts canvas.chart.picked { height: 190px; }
 .chart {
   width: 100%; height: 118px; display: block;
   background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; margin: 10px 0 0;

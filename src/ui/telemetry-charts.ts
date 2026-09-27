@@ -20,6 +20,20 @@ export const ORBIT_MARKERS = ['evt.parkingOrbit', 'evt.burnStart', 'evt.burnComp
 
 export const CHART_IDS = ['altitude', 'velocity', 'q', 'g', 'apsides', 'dv', 'pitch', 'mass'] as const;
 export type ChartId = (typeof CHART_IDS)[number];
+
+/**
+ * The charts the Explore level offers, one on screen at a time: every
+ * quantity its lessons read (q in 2.1, the load factor in 3.3, Δv left in
+ * 1.4) and the apsides the orbit is made of. The pitch programme and the mass
+ * are the Engineer level's.
+ */
+export const EXPLORE_CHART_IDS = ['altitude', 'velocity', 'q', 'g', 'apsides', 'dv'] as const satisfies readonly ChartId[];
+export type ExploreChartId = (typeof EXPLORE_CHART_IDS)[number];
+/** Dictionary key for each chart's short name, on the Explore level's chart picker. */
+export const EXPLORE_CHART_LABELS: Record<ExploreChartId, string> = {
+  altitude: 'tel.pick.altitude', velocity: 'tel.pick.velocity', q: 'tel.pick.q', g: 'tel.pick.g',
+  apsides: 'tel.pick.apsides', dv: 'tel.pick.dv',
+};
 /** Dictionary key for each chart's title, so `reset()` can redraw them empty. */
 const CHART_TITLES: Record<ChartId, string> = {
   altitude: 'tel.altitude', velocity: 'tel.velocity', q: 'tel.q', g: 'tel.g',

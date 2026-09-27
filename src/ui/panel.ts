@@ -52,6 +52,7 @@ import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHo
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
+import { ENGINEER_SETTING_TITLE, autoGuidanceRows, engineerSettings, hasAdjustments, withoutEngineerSettings } from './explore';
 import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
 import { SHIP_RETURN_VERIFIED_PAYLOAD } from '../physics/sim/ship-descent';
 import type { DynamicsConfig } from '../types';
@@ -79,9 +80,9 @@ export interface SetupCallbacks {
   onReset: () => void;
   onChange?: (cfg: MissionConfig) => void;
   /**
-   * The user asked for the other layout from inside the panel (its mode
-   * select, or "Show advanced guidance parameters"). The app owns the mode —
-   * it is also in the URL and the top bar — so the panel reports the request
+   * The user asked for the other layout from inside the panel ("Adjust in the
+   * Engineer mode" under Explore's computed guidance). The app owns the mode —
+   * it is in the URL and the top bar — so the panel reports the request
    * instead of switching itself.
    */
   onExperience?: (mode: ExperienceMode) => void;
@@ -139,6 +140,12 @@ function num(v: number, digits = 0): string {
   } catch {
     return v.toFixed(digits);
   }
+}
+
+/** The fewest decimals (up to two) that print a value exactly: 1.5, 0.45, 4. */
+function decimals(v: number): number {
+  for (let d = 0; d < 2; d++) if (Math.abs(Math.round(v * 10 ** d) - v * 10 ** d) < 1e-9) return d;
+  return 2;
 }
 
 const orbitName = (o: OrbitSpec): string => localized(`orbit.${o.id}.name`, o.name);
@@ -775,29 +782,6 @@ export class SetupPanel {
     return section;
   }
 
-  private experienceSection(): HTMLElement {
-    const section = this.el('section', 'config-section experience-section');
-    const label = this.el('label', 'field experience-label');
-    label.append(this.el('span', undefined, t('setup.mode.label')));
-    const select = this.el('select');
-    select.id = 'experience-mode';
-    select.setAttribute('aria-label', t('setup.mode.label'));
-    for (const [value, text] of [['learning', t('setup.mode.learning')], ['advanced', t('setup.mode.advanced')]]) {
-      const option = this.el('option', undefined, text);
-      option.value = value;
-      option.selected = this.experience === value;
-      select.append(option);
-    }
-    select.addEventListener('change', () => {
-      const mode = select.value as ExperienceMode;
-      if (this.cb.onExperience) this.cb.onExperience(mode); else this.setExperience(mode);
-    });
-    label.append(select);
-    section.append(label, this.el('p', 'field-note', t(this.experience === 'learning' ? 'setup.mode.learningNote' : 'setup.mode.advancedNote')));
-    if (this.experience === 'learning') section.append(this.el('p', 'field-note experience-glossary', t('setup.mode.glossary')));
-    return section;
-  }
-
   private statCell(label: string, value: string, unit?: string): HTMLElement {
     const cell = this.el('div');
     cell.appendChild(this.el('small', undefined, label));
@@ -870,7 +854,8 @@ export class SetupPanel {
 
     const scroll = this.el('div', 'setup-scroll');
     root.appendChild(scroll);
-    scroll.appendChild(this.experienceSection());
+    // The level itself is chosen in the top bar only (src/ui/app-mode.ts): the
+    // panel used to carry a second switch for it, which did the same thing.
     if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
     scroll.appendChild(this.quickstartSection());
     scroll.appendChild(this.share.section());
@@ -1003,15 +988,21 @@ export class SetupPanel {
     // inclination, and rebuilding the panel here destroyed the field the
     // operator had just typed into and dropped focus to the body.
     orbitRow2.appendChild(this.number('setup.inclination', target.inclination * RAD, (v) => { this.customise(); s.orbit.inclination = v; this.changed(); }, 0.1, 0, 180));
-    orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = v; this.changed(); }, 1, 0, 360));
+    // Explore keeps the orbit's geometry — ω, the RAAN mode, the LTAN — as the
+    // preset sets it (src/ui/explore.ts); the Engineer level edits it.
+    const learning = this.experience === 'learning';
+    if (!learning) orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = v; this.changed(); }, 1, 0, 360));
     s3.appendChild(orbitRow2);
+    if (learning) s3.appendChild(this.el('p', 'field-note orbit-glossary', t('setup.glossary')));
     if (flightHomeCapable(vehicle)) s3.appendChild(this.suborbitalOption());
-    s3.appendChild(this.select('setup.raanMode', [
-      { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
-      { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
-    ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
-    if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
-    if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+    if (!learning) {
+      s3.appendChild(this.select('setup.raanMode', [
+        { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
+        { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
+      ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
+      if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
+      if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+    }
     if (this.rendezvousAvailable()) s3.appendChild(this.rendezvousOption());
 
     const timeLab = this.el('label', 'field');
@@ -1060,7 +1051,8 @@ export class SetupPanel {
 
     // ── collapsible: guidance / failure / options ───────────────────────────
     const s4 = this.el('section', 'config-section');
-    s4.appendChild(this.dynamicsSection());
+    const dynamics = this.dynamicsSection();
+    if (dynamics) s4.appendChild(dynamics);
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.flexSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.controlSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.navigationSection());
@@ -1128,7 +1120,8 @@ export class SetupPanel {
   private guidanceSection(): HTMLElement {
     const gd = this.el('details');
     gd.dataset.section = 'guidance';
-    gd.appendChild(this.el('summary', undefined, t('setup.guidance')));
+    const learning = this.experience === 'learning';
+    gd.appendChild(this.el('summary', undefined, t(learning ? 'setup.auto.title' : 'setup.guidance')));
     const g = this.guidance;
     const set = (k: keyof GuidanceParams, v: number): void => {
       this.state.guidanceOverrides[k] = v;
@@ -1136,15 +1129,14 @@ export class SetupPanel {
       this.tunedFor = this.missionSignature();
       this.changed();
     };
-    gd.appendChild(this.el('p', 'field-note', t('setup.guidanceNote')));
+    if (learning) {
+      gd.open = true;
+      this.computedGuidance(gd);
+    } else gd.appendChild(this.el('p', 'field-note', t('setup.guidanceNote')));
+    // Built at both levels: Explore keeps them folded away (style.css) unless
+    // one is invalid or a lesson asks the student to change the guidance.
     const parameters = this.el('div', 'guidance-parameters');
     gd.append(parameters);
-    const reveal = this.el('button', 'btn guidance-reveal', t('setup.mode.reveal'));
-    reveal.type = 'button';
-    reveal.addEventListener('click', () => {
-      if (this.cb.onExperience) this.cb.onExperience('advanced'); else this.setExperience('advanced');
-    });
-    gd.append(reveal);
     const r1 = this.el('div', 'row');
     r1.appendChild(this.number('setup.kickAngle', g.kickAngle, (v) => set('kickAngle', v), 0.5, 0, 45));
     r1.appendChild(this.number('setup.maxTurnRate', g.maxTurnRate, (v) => set('maxTurnRate', v), 0.05, 0.1, 3));
@@ -1166,6 +1158,7 @@ export class SetupPanel {
     r5.appendChild(this.number('setup.maxAccel', g.maxAccel, (v) => set('maxAccel', v), 1, 0, 100));
     parameters.appendChild(r5);
     parameters.appendChild(this.number('setup.parkingAltitude', g.parkingAltitude / 1000, (v) => set('parkingAltitude', v * 1000), 10, 0, 2000));
+    const tools = this.el('div', 'guidance-tools');
     const tuneBtn = this.el('button', 'btn', this.tuning ? t('setup.tune.cancel') : t('setup.autotune'));
     tuneBtn.type = 'button';
     tuneBtn.dataset.action = 'autotune';
@@ -1174,12 +1167,66 @@ export class SetupPanel {
       if (this.tuning) { this.cancelTune(); this.render(); }
       else void this.autotune();
     });
-    gd.appendChild(tuneBtn);
-    gd.appendChild(this.el('p', 'field-note', t('setup.autotuneScope')));
+    tools.appendChild(tuneBtn);
+    tools.appendChild(this.el('p', 'field-note', t('setup.autotuneScope')));
     const tuneMsg = this.el('div', 'progress', this.tuneMessage);
     tuneMsg.id = 'tune-msg';
-    gd.appendChild(tuneMsg);
+    tools.appendChild(tuneMsg);
+    gd.appendChild(tools);
     return gd;
+  }
+
+  /**
+   * Explore's guidance: the values the vehicle flies, computed and shown
+   * rather than asked for (src/ui/explore.ts), with what the Engineer level
+   * has changed of them — still flown here, since a level never touches the
+   * mission — and the way back to the precomputed set.
+   */
+  private computedGuidance(gd: HTMLElement): void {
+    const s = this.state;
+    const vehicle = missionVehicle(s);
+    gd.append(this.el('p', 'field-note', t(s.vehicleSpec ? 'setup.auto.noteCustom' : 'setup.auto.note', { vehicle: vehicle.name })));
+    const box = this.el('div', 'info auto-guidance');
+    const line = (key: string, value: string, cls?: string): void => {
+      const row = this.el('div', cls);
+      row.append(this.el('span', 'k', key), this.el('span', 'v', value));
+      box.append(row);
+    };
+    line(t('setup.dynamics.title'), t(s.dynamics?.model === 'sixDof' ? 'setup.dynamics.sixDof' : 'setup.dynamics.pointMass'), 'model');
+    for (const row of autoGuidanceRows(this.guidance, s.guidanceOverrides)) {
+      line(t(`setup.${row.key}`), `${row.adjusted ? '✎ ' : ''}${num(row.value, decimals(row.value))}`, row.adjusted ? 'adjusted' : undefined);
+    }
+    gd.append(box);
+    if (Object.keys(s.guidanceOverrides).length > 0) gd.append(this.el('p', 'field-note warn', t('setup.auto.adjusted')));
+    const engineer = engineerSettings(s.dynamics);
+    if (engineer.length > 0) {
+      gd.append(this.el('p', 'field-note warn', t('setup.auto.engineer', { list: engineer.map((key) => t(ENGINEER_SETTING_TITLE[key])).join(' · ') })));
+    }
+    const actions = this.el('div', 'auto-actions');
+    if (hasAdjustments(s.guidanceOverrides, s.dynamics)) {
+      const reset = this.el('button', 'btn', t('setup.auto.reset'));
+      reset.type = 'button';
+      reset.disabled = this.running;
+      reset.addEventListener('click', () => {
+        if (this.running) return;
+        this.cancelTune();
+        this.clearFieldDrafts(...Object.values(GUIDANCE_FIELDS).map((f) => `setup.${f.key}`));
+        s.guidanceOverrides = {};
+        if (s.dynamics) s.dynamics = withoutEngineerSettings(s.dynamics);
+        this.tuneMessage = '';
+        this.tunedFor = this.missionSignature();
+        this.render();
+        this.changed();
+      });
+      actions.append(reset);
+    }
+    const engineerBtn = this.el('button', 'btn', t('setup.auto.open'));
+    engineerBtn.type = 'button';
+    engineerBtn.addEventListener('click', () => {
+      if (this.cb.onExperience) this.cb.onExperience('advanced'); else this.setExperience('advanced');
+    });
+    actions.append(engineerBtn);
+    gd.append(actions);
   }
 
   private failureSection(vehicle: VehicleSpec): HTMLElement {
@@ -1680,7 +1727,12 @@ export class SetupPanel {
     chk.appendChild(cb);
     chk.appendChild(this.el('span', undefined, t('setup.boosterRecovery')));
     od.appendChild(chk);
-    if (vehicle.recoverable && s.boosterRecovery) od.appendChild(this.recoveryChoices(vehicle));
+    // Explore flies each stage home the vehicle's own way; a prepared mission's
+    // landing places are still flown, and named.
+    if (vehicle.recoverable && s.boosterRecovery) {
+      if (this.experience === 'advanced') od.appendChild(this.recoveryChoices(vehicle));
+      else if (s.recoveryPlan) od.appendChild(this.el('p', 'field-note', this.recoveryPlanText(vehicle, s.recoveryPlan)));
+    }
     if (vehicle.recoverable && s.dynamics?.model === 'sixDof') od.appendChild(this.el('p', 'field-note', t('setup.recoveryRigidNote')));
     return od;
   }
@@ -1784,6 +1836,24 @@ export class SetupPanel {
     }
     if (zones.some((z) => z.kind === 'pad')) box.appendChild(this.el('p', 'field-note', t('setup.recovery.note')));
     return box;
+  }
+
+  /** A recovery plan in words, one clause per stage, as the Engineer level's choices name them. */
+  private recoveryPlanText(vehicle: VehicleSpec, plan: RecoveryPlan): string {
+    const zones = landingZonesForSite(this.state.siteId);
+    const where = (mode: RecoveryMode | undefined): string => {
+      if (!mode) return t('setup.recovery.expended');
+      if (mode.kind === 'landingZone') {
+        const zone = zones.find((z) => z.id === mode.zoneId);
+        return zone ? zoneName(zone) : mode.zoneId;
+      }
+      return t(`setup.recovery.${mode.kind}`);
+    };
+    const strapOns = (vehicle.stages[0].boosters ?? []).filter((b) => b.engine.count > 1).reduce((n, b) => n + b.count, 0);
+    return [
+      `${t('setup.recovery.core')}: ${where(plan.core)}`,
+      ...Array.from({ length: strapOns }, (_, k) => `${t('setup.recovery.booster', { n: k + 1 })}: ${where(plan.boosters?.[k])}`),
+    ].join(' · ');
   }
 
   private customise(): void {
@@ -2021,12 +2091,23 @@ export class SetupPanel {
     if (button) button.textContent = t('setup.autotune');
   }
 
-  private dynamicsSection(): HTMLElement {
+  private dynamicsSection(): HTMLElement | null {
     const section = this.el('details');
     section.dataset.section = 'dynamics';
     section.open = true;
-    section.append(this.el('summary', undefined, t('setup.dynamics.title')));
     const d = this.state.dynamics ?? { model: 'pointMass', wind: 'calm', seed: 20260919 };
+    if (this.experience === 'learning') {
+      // Explore: the model is the vehicle's own (named in the computed
+      // guidance) and the seed is fixed; the weather is the choice left, and
+      // only a six-DOF flight feels the wind.
+      if (d.model !== 'sixDof') return null;
+      section.append(this.el('summary', undefined, t('setup.weather')));
+      section.append(this.select('setup.dynamics.wind', [
+        { value: 'calm', label: t('setup.dynamics.calm') }, { value: 'crosswind', label: t('setup.dynamics.crosswind') }, { value: 'shear', label: t('setup.dynamics.shear') },
+      ], d.wind, (value) => { this.state.dynamics = { ...(this.state.dynamics ?? d), wind: value as DynamicsConfig['wind'] }; this.changed(); }));
+      return section;
+    }
+    section.append(this.el('summary', undefined, t('setup.dynamics.title')));
     const choices = [{ value: 'pointMass', label: t('setup.dynamics.pointMass') }];
     if (supportsRigid(missionVehicle(this.state))) choices.unshift({ value:'sixDof', label:t('setup.dynamics.sixDof') });
     section.append(this.select('setup.dynamics.model', choices, d.model, value => {

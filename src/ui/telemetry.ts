@@ -44,7 +44,7 @@ import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
 import type { VisualFrame } from '../physics/frame';
 import { downloadBlob } from './download';
-import { ASCENT_MARKERS, CHART_IDS, ORBIT_MARKERS, chartTitle, referenceSeries } from './telemetry-charts';
+import { ASCENT_MARKERS, CHART_IDS, EXPLORE_CHART_IDS, EXPLORE_CHART_LABELS, ORBIT_MARKERS, chartTitle, referenceSeries, type ExploreChartId } from './telemetry-charts';
 import { referenceWindow, type ReferenceFlight } from '../replay/reference';
 
 type Range = 'mission' | 'ascent';
@@ -134,6 +134,9 @@ export class TelemetryPanel {
   private viewBtns: HTMLButtonElement[] = [];
   private frame: VisualFrame | null = null;
   private equationLevel: EquationLevel = 'explore';
+  /** Explore: the one chart on screen, picked from `EXPLORE_CHART_IDS` */
+  private picked: ExploreChartId = 'altitude';
+  private pickBtns: HTMLButtonElement[] = [];
 
   constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null,
     onOrbit: (() => void) | null = null) {
@@ -184,6 +187,20 @@ export class TelemetryPanel {
     }
     r.append(views);
     r.classList.toggle('view-equations', this.viewMode === 'equations');
+    // Explore: one chart at a time, picked here (style.css hides the rest)
+    r.classList.toggle('simple-charts', this.equationLevel === 'explore');
+    const picker = el('div', 'chart-picker');
+    picker.setAttribute('role', 'group');
+    picker.setAttribute('aria-label', t('tel.pick'));
+    this.pickBtns = [];
+    for (const id of EXPLORE_CHART_IDS) {
+      const b = el('button', undefined, t(EXPLORE_CHART_LABELS[id])) as HTMLButtonElement;
+      b.type = 'button';
+      b.dataset.chart = id;
+      b.addEventListener('click', () => this.pick(id));
+      picker.append(b);
+      this.pickBtns.push(b);
+    }
     // First block under the heading: the docked instrument card, when the user
     // has put it there. Empty (and collapsed by `:empty` in style.css) when the
     // card is floating over the picture.
@@ -192,9 +209,11 @@ export class TelemetryPanel {
     r.append(this.equations.root);
     this.note = el('p', 'chart-note hidden');
     r.append(this.note);
+    r.append(picker);
     for (const id of CHART_IDS) {
       const c = document.createElement('canvas');
       c.className = 'chart';
+      c.dataset.chart = id;
       r.append(c);
       this.charts[id] = c;
       c.setAttribute('role', 'img');
@@ -203,6 +222,7 @@ export class TelemetryPanel {
     for (const id of FLEX_CHART_IDS) {
       const c = document.createElement('canvas');
       c.className = 'chart hidden';
+      c.dataset.chart = id;
       r.append(c);
       this.charts[id] = c;
       c.setAttribute('role', 'img');
@@ -254,7 +274,20 @@ export class TelemetryPanel {
     }
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
+    this.markPicked();
     if (this.view) this.update(this.view, this.cursor);
+  }
+
+  /** Explore: show one chart, and draw it now rather than at the next tick. */
+  private pick(id: ExploreChartId): void {
+    this.picked = id;
+    this.markPicked();
+    if (this.view) this.update(this.view, this.cursor);
+  }
+
+  private markPicked(): void {
+    for (const b of this.pickBtns) b.setAttribute('aria-pressed', String(b.dataset.chart === this.picked));
+    for (const id of CHART_IDS) this.charts[id].classList.toggle('picked', id === this.picked);
   }
 
   /**
@@ -296,11 +329,14 @@ export class TelemetryPanel {
     else this.equations.update(null, null, this.equationLevel, getLang());
   }
 
-  /** E02: the Explore mode's equations or the Engineer mode's fuller set. */
+  /** E02: the Explore mode's equations or the Engineer mode's fuller set — and its charts: Explore's one at a time. */
   setEquationLevel(level: EquationLevel): void {
     if (level === this.equationLevel) return;
     this.equationLevel = level;
+    // the level's chart set too: Explore shows the one picked, Engineer all of them
+    this.root.classList.toggle('simple-charts', level === 'explore');
     if (this.viewMode === 'equations') this.setView('equations');
+    else if (this.view) this.update(this.view, this.cursor);
   }
 
   private setRange(mode: Range): void {

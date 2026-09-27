@@ -32,6 +32,8 @@ export const TRACK2: readonly unknown[] = [
       orbit: { ...orbitById('leo'), perigee: 200 * km, apogee: 450 * km }, dynamics: { ...POINT_MASS },
     }),
     locked: ['setup.vehicle', 'setup.site', 'setup.satellite', 'setup.payloadMass', 'setup.orbit', 'setup.failure', 'setup.dynamics.model'],
+    // the acceleration limit is Explore's to show here: the lesson is about changing it
+    reveal: ['setup.guidance'],
     criteria: [
       { id: 'q', kind: 'measure', measure: 'maxQ', max: 25 },
       { id: 'orbit', kind: 'outcome', is: 'orbit' },

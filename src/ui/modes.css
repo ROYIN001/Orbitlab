@@ -95,6 +95,14 @@ body[data-mode='watch'] :is(.camera-tabs, #btn-glow, #btn-frames, .frames-menu, 
 body:not([data-mode='engineer']) #btn-abort { display: none !important; }
 body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
 
+/* ── the Explore level ───────────────────────────────────────────────────── */
+
+/* The 6-DOF flight controls are the Engineer level's. Explore shows them only
+   while the flight is under manual command — set at the Engineer level, which
+   never touches the flight when it is left — so the way back to the autopilot
+   is always on screen. */
+body[data-mode='explore'] #rigid-controls:not([data-command='manual']) { display: none !important; }
+
 /* ── the landing page ────────────────────────────────────────────────────── */
 
 .home-screen {
