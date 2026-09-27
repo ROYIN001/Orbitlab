@@ -1378,6 +1378,7 @@ export const en: Record<string, string> = {
   'reentry.case.lead': 'Four 21.6-tonne core stages reached orbit with their payloads and fell uncontrolled days later. Each is predicted here from its first element set, as a tumbling cylinder of 31.7 × 5.0 m (a mean cross-section of 134 m²), C_D 2.2, against its re-entry as recorded.',
   'reentry.case.run': 'Predict the four',
   'reentry.case.row': 'From {from}: predicted {pred}, came down {actual} ({err} % of the time)',
+  'reentry.case.rowOpen': 'From {from}: predicted {pred}, came down {actual} (the error is yours to work out in the lesson)',
   'reentry.case.inside': 'Inside the window, {from} to {to}.',
   'reentry.case.outside': 'Outside the window, {from} to {to}.',
   'reentry.case.source': 'Element sets: CelesTrak\'s first of each launch. Size, mass and re-entry: GCAT (J. McDowell).',

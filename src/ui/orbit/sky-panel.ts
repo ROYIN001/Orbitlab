@@ -56,7 +56,7 @@ import { ballisticFromDecayRate, craftOfB } from '../../orbit/ballistic';
 import { NAPA2 } from '../../data/napa2';
 import type { ElementSet } from '../../orbit/tle';
 import { CASE_IDS, caseWorksheet, type CaseId, type CaseSource } from '../../worksheets/cases';
-import { CASE_FOCUS, caseAnswersShown, type CaseLessonState } from '../../worksheets/case-ids';
+import { CASE_FOCUS, caseAnswersShown, caseStudyErrorShown, type CaseLessonState } from '../../worksheets/case-ids';
 import { answerKeyHtml, worksheetsHtml } from '../../worksheets/html';
 import { downloadBlob } from '../download';
 import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
@@ -983,9 +983,11 @@ export class RealSky {
       if (c.p.jd === null) { li.append(el('div', 'pg-conj-main', t('reentry.stays'))); ol.append(li); continue; }
       const err = ((c.p.jd - c.p.from) / (c.actual - c.p.from) - 1) * 100;
       const inside = c.actual >= c.p.window![0] && c.actual <= c.p.window![1];
-      li.append(el('div', 'pg-conj-main', t('reentry.case.row', {
-        from: utcTime(c.p.from), pred: utcTime(c.p.jd), actual: utcTime(c.actual), err: `${err >= 0 ? '+' : '−'}${num(Math.abs(err), 1)}`,
-      })));
+      const times = { from: utcTime(c.p.from), pred: utcTime(c.p.jd), actual: utcTime(c.actual) };
+      // E03 6.2: the stage of Tianhe's error is the open lesson's to work out, until it is answered
+      li.append(el('div', 'pg-conj-main', caseStudyErrorShown(c.name, this.lessonCase)
+        ? t('reentry.case.row', { ...times, err: `${err >= 0 ? '+' : '−'}${num(Math.abs(err), 1)}` })
+        : t('reentry.case.rowOpen', times)));
       li.append(el('div', 'pg-conj-more', t(inside ? 'reentry.case.inside' : 'reentry.case.outside', { from: utcTime(c.p.window![0]), to: utcTime(c.p.window![1]) })));
       ol.append(li);
     }

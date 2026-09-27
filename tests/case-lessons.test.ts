@@ -14,7 +14,8 @@ import { LESSON_FORMAT, lessonFileText, parseLessonFile, readCaseLesson, type Fi
 import { emptyProgress, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
 import { createLessonTools, type LessonToolsHost } from '../src/lessons/mcp-tools';
 import { isCaseLesson, type CaseKey, type CaseLesson, type LessonGrade } from '../src/lessons/types';
-import { CASE_FOCUS, CASE_IDS, CASE_ITEM_IDS, caseAnswersShown } from '../src/worksheets/case-ids';
+import { CASE_FOCUS, CASE_IDS, CASE_ITEM_IDS, CZ5B_CASE_STAGE, caseAnswersShown, caseStudyErrorShown } from '../src/worksheets/case-ids';
+import { CZ5B_STAGES } from '../src/data/cz5b';
 import { caseKey, caseWorksheet } from '../src/worksheets/cases';
 import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
 import HISTORY from '../src/data/solar-daily.json';
@@ -245,6 +246,18 @@ describe('where a case lesson opens', () => {
     expect(caseAnswersShown({ case: 'cz5b', answersOpen: false }, 'cz5b')).toBe(false);
     expect(caseAnswersShown({ case: 'cz5b', answersOpen: false }, 'iridium')).toBe(true);
     expect(caseAnswersShown({ case: 'cz5b', answersOpen: true }, 'cz5b')).toBe(true);
+  });
+
+  // the re-entry case study printed the stage of Tianhe's prediction error to 0.1 %: lesson 6.2's "error" answer, on screen
+  it('keeps the stage of Tianhe\'s prediction error out of the re-entry case study while lesson 6.2 is unanswered', () => {
+    expect(lesson('case-cz5b').criteria.map((c) => c.item)).toContain('error');
+    expect(CZ5B_STAGES.map((s) => s.name)).toContain(CZ5B_CASE_STAGE);
+    const open = { case: 'cz5b' as const, answersOpen: false };
+    expect(caseStudyErrorShown(CZ5B_CASE_STAGE, open)).toBe(false);
+    for (const s of CZ5B_STAGES.filter((x) => x.name !== CZ5B_CASE_STAGE)) expect(caseStudyErrorShown(s.name, open), s.name).toBe(true);
+    expect(caseStudyErrorShown(CZ5B_CASE_STAGE, { ...open, answersOpen: true })).toBe(true);
+    expect(caseStudyErrorShown(CZ5B_CASE_STAGE, { case: 'theos2', answersOpen: false })).toBe(true);
+    expect(caseStudyErrorShown(CZ5B_CASE_STAGE, null)).toBe(true);
   });
 
   it('grades from nothing that propagates: the grader and the case names import no propagator', () => {

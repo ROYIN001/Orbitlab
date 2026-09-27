@@ -58,3 +58,13 @@ export interface CaseLessonState {
 export function caseAnswersShown(open: CaseLessonState | null, id: CaseId): boolean {
   return !open || open.case !== id || open.answersOpen;
 }
+
+/**
+ * Whether the re-entry case study may print a stage's prediction error. For
+ * the stage of Tianhe that error, to 0.1 %, is the answer lesson 6.2 asks
+ * for (the sheet's "error"), so it waits like the key (`caseAnswersShown`);
+ * the other stages' errors are not asked and are shown.
+ */
+export function caseStudyErrorShown(stage: string, open: CaseLessonState | null): boolean {
+  return stage !== CZ5B_CASE_STAGE || caseAnswersShown(open, 'cz5b');
+}
