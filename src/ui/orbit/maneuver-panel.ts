@@ -8,7 +8,7 @@ import { t } from '../../i18n';
 import { MU_EARTH, R_EARTH, RAD } from '../../physics/constants';
 import { norm } from '../../physics/vec3';
 import type { AppLevel } from '../app-mode';
-import { linearScale, logScale } from '../../orbit/playground-model';
+import { linearScale, logScale, type SliderScale } from '../../orbit/playground-model';
 import { hohmannDv, type BurnPoint, type ManualNode, type Plan, type PlanError } from '../../orbit/maneuvers';
 import {
   ENGINEER_KINDS, EXPLORE_KINDS, MANEUVER_LIMITS, MAX_NODES, type ManeuverSettings, type PlannerKind,
@@ -187,27 +187,34 @@ function craftControls(host: ManeuverPanelHost): HTMLElement {
   };
   if (c.source === 'own') {
     const fields = el('div', 'pg-fields');
-    const field = (label: string, unit: string, limits: { min: number; max: number }, digits: number, key: keyof Craft): HTMLElement => {
-      const f = new Field(label, unit, linearScale(limits.min, limits.max), plain.show, plain.read, digits, limits, (v) => {
-        host.setCraft('own', { [key]: v });
-        if (key === 'mass') propellant();
+    const own = () => host.craft().own;
+    const field = (label: string, unit: string, scale: SliderScale, limits: { min: number; max: number }, digits: number, key: keyof Craft): Field => {
+      const f = new Field(label, unit, scale, plain.show, plain.read, digits, limits, (v) => {
+        // the source as it is now: a box still being typed in sends its change on blur, after another spacecraft may have been chosen
+        host.setCraft(host.craft().source, { [key]: v });
+        if (key === 'mass') followMass();
         showProblem();
       });
-      f.set(host.craft().own[key]);
+      f.set(own()[key]);
       roots[key] = f.root;
-      return f.root;
+      fields.append(f.root);
+      return f;
     };
     const kg = t('u.kg'), L = CRAFT_LIMITS;
-    // the propellant's slider ends below the mass as it is now (A2): it is made again when the mass changes
-    const propellant = (): void => {
-      const old = roots.propellant;
-      const next = field(t('mv.craft.propellant'), kg, { min: L.propellant.min, max: maxPropellant(host.craft().own.mass) }, 0, 'propellant');
-      if (old) old.replaceWith(next);
-      else fields.append(next);
+    // the propellant's slider and number box end below the mass as it is now (A2): read when used, not when drawn
+    const propMax = { min: L.propellant.min, get max() { return maxPropellant(own().mass); } };
+    const propScale: SliderScale = {
+      toValue: (p) => linearScale(propMax.min, propMax.max).toValue(p),
+      toPosition: (v) => linearScale(propMax.min, propMax.max).toPosition(v),
     };
-    fields.append(field(t('mv.craft.mass'), kg, L.mass, 0, 'mass'));
-    propellant();
-    fields.append(field(t('mv.craft.isp'), t('u.s'), L.isp, 0, 'isp'), field(t('mv.craft.thrust'), t('u.N'), L.thrust, 2, 'thrust'));
+    field(t('mv.craft.mass'), kg, linearScale(L.mass.min, L.mass.max), L.mass, 0, 'mass');
+    const prop = field(t('mv.craft.propellant'), kg, propScale, propMax, 0, 'propellant');
+    field(t('mv.craft.isp'), t('u.s'), linearScale(L.isp.min, L.isp.max), L.isp, 0, 'isp');
+    field(t('mv.craft.thrust'), t('u.N'), linearScale(L.thrust.min, L.thrust.max), L.thrust, 2, 'thrust');
+    const followMass = (): void => {
+      prop.set(own().propellant);
+      roots.propellant?.querySelector('.pg-field-box')?.setAttribute('max', String(propMax.max));
+    };
     box.append(fields);
   }
   box.append(problem);
