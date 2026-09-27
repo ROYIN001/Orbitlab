@@ -2377,6 +2377,9 @@ export const th: Record<string, string> = {
   'lesson.catalog.progress': 'ผ่านแล้ว {passed} จาก {total}',
   'lesson.catalog.openFile': 'เปิดไฟล์บทเรียน…',
   'lesson.catalog.export': 'ส่งออกผลการเรียน',
+  // audit 2026-09-27 A19: whether the progress is kept
+  'lesson.save.saved': 'บันทึกความก้าวหน้าในเบราว์เซอร์นี้แล้ว',
+  'lesson.save.failed': 'บันทึกความก้าวหน้าไม่ได้ เบราว์เซอร์นี้ไม่เก็บข้อมูลไว้ (หน้าต่างส่วนตัว หรือพื้นที่เต็ม) ส่งออกผลการเรียนก่อนปิดหน้า ไฟล์นี้เป็นบันทึกผลการเรียน ใช้กู้คืนความก้าวหน้าไม่ได้',
   'lesson.catalog.student': 'ชื่อของคุณ สำหรับไฟล์ผลการเรียน',
   'lesson.catalog.assess': 'ทำแบบทดสอบวัดพื้นฐาน',
   'lesson.catalog.assessResult': 'ผลแบบทดสอบวัดพื้นฐาน',

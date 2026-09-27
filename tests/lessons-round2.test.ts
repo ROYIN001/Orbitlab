@@ -42,7 +42,7 @@ function expectRecordedAsFlown(l: Lesson, sim: Simulation): void {
   const progress = emptyProgress();
   const g = gradeLesson(l, sim, exact(l, sim));
   recordGrade(progress, { lessonId: l.id, at: 'now', verdict: g.verdict, criteria: g.criteria, answers: {}, hintsShown: 0, mission: flownMission(sim.cfg) });
-  saveProgress(progress, store);
+  expect(saveProgress(progress, store)).toBe(true);
   const doc = loadProgress(store).lessons[l.id].last!.mission;
   const parsed = parseMissionDocument(doc, defaultMissionState());
   expect(parsed.issues).toEqual([]);

@@ -2376,6 +2376,9 @@ export const ru: Record<string, string> = {
   'lesson.catalog.progress': 'Зачтено {passed} из {total}',
   'lesson.catalog.openFile': 'Открыть файл уроков…',
   'lesson.catalog.export': 'Экспорт результатов',
+  // audit 2026-09-27 A19: whether the progress is kept
+  'lesson.save.saved': 'Прогресс сохранён в этом браузере.',
+  'lesson.save.failed': 'Прогресс не сохранён: браузер его не хранит (приватное окно или нет места). Экспортируйте результаты, прежде чем закрыть страницу. Файл — это запись ваших результатов; восстановить из него прогресс нельзя.',
   'lesson.catalog.student': 'Ваше имя для файла результатов',
   'lesson.catalog.assess': 'Пройти входной тест',
   'lesson.catalog.assessResult': 'Результат входного теста',

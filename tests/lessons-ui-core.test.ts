@@ -56,6 +56,20 @@ describe('progress and the results file', () => {
     expect(flownMission({ ...cfg, payloadMassOverride: undefined }).mission.payloadMass).toBeGreaterThan(0);
   });
 
+  it('says whether the progress was kept: a store that throws is reported, not swallowed (audit 2026-09-27 A19)', () => {
+    const p = emptyProgress();
+    p.lessons['orbit-first'] = { attempts: 1, hintsShown: 0, passed: false };
+    const store = memory();
+    expect(saveProgress(p, store)).toBe(true);
+    expect(loadProgress(store).lessons['orbit-first'].attempts).toBe(1);
+    // a private window that refuses storage, or storage that is full
+    const refusing: KeyValueStore = { getItem: () => null, setItem: () => { throw new DOMException('quota', 'QuotaExceededError'); } };
+    expect(saveProgress(p, refusing)).toBe(false);
+    const denied: KeyValueStore = { getItem: () => { throw new DOMException('denied', 'SecurityError'); }, setItem: () => { throw new DOMException('denied', 'SecurityError'); } };
+    expect(saveProgress(p, denied)).toBe(false);
+    expect(loadProgress(denied)).toEqual(emptyProgress());
+  });
+
   it('writes a results file whose checksum shows an edit', async () => {
     const p = emptyProgress();
     p.lessons['orbit-first'] = { attempts: 2, hintsShown: 0, passed: true };

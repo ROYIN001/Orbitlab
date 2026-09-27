@@ -92,6 +92,8 @@ export class LessonMode implements LessonToolsHost {
   private assessmentView: { applyLanguage(): void } | null = null;
   private assessmentModule: Promise<typeof import('./assessment-view')> | null = null;
   private notice: { level: 'ok' | 'warn' | 'error'; text: string; details: string[] } | null = null;
+  /** whether the last save reached the browser's storage; null before the first (audit 2026-09-27 A19) */
+  private saved: boolean | null = null;
   private lastStripKey = '';
 
   constructor(private readonly host: LessonHost) {
@@ -132,8 +134,19 @@ export class LessonMode implements LessonToolsHost {
   }
 
   private save(): void {
-    saveProgress(this.progressData);
+    const saved = saveProgress(this.progressData);
+    const changed = saved !== this.saved;
+    this.saved = saved;
     this.paintButton();
+    if (changed && this.pageView === 'catalog') this.renderCatalog();
+  }
+
+  /** Whether the progress is being kept, in a line the strip and the catalogue show (audit 2026-09-27 A19). */
+  private saveNote(tag: 'p' | 'span'): HTMLElement | null {
+    if (this.saved === null) return null;
+    const note = el(tag, this.saved ? 'lesson-note lesson-save' : 'lesson-note fail lesson-save', t(this.saved ? 'lesson.save.saved' : 'lesson.save.failed'));
+    note.dataset.saved = String(this.saved);
+    return note;
   }
 
   private written(): Lesson[] {
@@ -359,7 +372,7 @@ export class LessonMode implements LessonToolsHost {
     const g = a.grade;
     const flown = !!a.sim && flightStarted(a.sim);
     const hints = lessonProgress(this.progressData, a.lesson.id).hintsShown;
-    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3))]), hints, a.answers]);
+    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3))]), hints, a.answers, a.recorded, this.saved]);
     if (key === this.lastStripKey) return;
     // keep what the student is typing
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement;
@@ -412,6 +425,9 @@ export class LessonMode implements LessonToolsHost {
       status.append(el('p', 'lesson-note pass', t('lesson.strip.pass')));
       if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
     } else if (flown && g?.final && g.verdict === 'fail') status.append(el('p', 'lesson-note fail', t('lesson.strip.fail')));
+    // once this flight's grade is kept, or whenever nothing can be
+    const saveNote = a.recorded || this.saved === false ? this.saveNote('p') : null;
+    if (saveNote) status.append(saveNote);
 
     const actions = el('div', 'lesson-actions');
     const button = (label: string, fn: () => void, cls = ''): HTMLButtonElement => {
@@ -574,6 +590,8 @@ export class LessonMode implements LessonToolsHost {
     exp.type = 'button';
     exp.addEventListener('click', () => void this.exportResults());
     bar.append(open, exp, fileInput);
+    const saveNote = this.saveNote('span');
+    if (saveNote) bar.append(saveNote);
     body.append(bar);
 
     const nameRow = el('label', 'lesson-student');

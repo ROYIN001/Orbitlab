@@ -97,8 +97,19 @@ export function loadProgress(store?: KeyValueStore): ProgressData {
   }
 }
 
-export function saveProgress(data: ProgressData, store?: KeyValueStore): void {
-  try { (store ?? localStorage).setItem(PROGRESS_STORAGE_KEY, JSON.stringify(data)); } catch { /* storage is optional: progress lasts the tab */ }
+/**
+ * Keep the progress in the browser's storage. Storage is optional — without
+ * it the progress lasts the tab — but the page has to say so (audit
+ * 2026-09-27 A19), so this returns whether it was kept: false in a private
+ * window that refuses storage, or when the storage is full.
+ */
+export function saveProgress(data: ProgressData, store?: KeyValueStore): boolean {
+  try {
+    (store ?? localStorage).setItem(PROGRESS_STORAGE_KEY, JSON.stringify(data));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function lessonProgress(data: ProgressData, id: string): LessonProgress {
