@@ -16,7 +16,11 @@
  *   of at least 20 so predicted. Missed: only 14 first sets carry a decay
  *   rate that gives a B, and 7 of the 13 predicted came down inside. The
  *   stages' mass is GCAT's dry mass since the P2.5 fix-up (it was the mass at
- *   insertion); the counts the size arm found are recorded with both.
+ *   insertion); the counts the size arm found are recorded with both. A
+ *   screen written after the results (the first set not the stage's, a stage
+ *   built to fire after its payloads are away, an eccentric perigee lowered
+ *   by more than drag can) is applied to all 66 and reported beside the
+ *   unscreened counts, which stay the result of record.
  * - **NAPA-2** (src/data/napa2.ts): its lifetime from its first element set
  *   within 25 %, as a tumbling box of its published size and mass (met,
  *   +8 %) and with B fitted to that set's decay (missed, −28 %).
@@ -31,6 +35,9 @@ import { ECCENTRIC, WINDOW_FRACTION, predictReentry, tumblingBoxArea, tumblingCy
 import { NAPA2 } from '../src/data/napa2';
 import { predictFromRequest } from '../src/orbit/reentry-job';
 import { elementsFromRecord } from '../src/orbit/omm';
+import { meanStart } from '../src/orbit/mean-state';
+import { R_EARTH } from '../src/physics/constants';
+import type { ElementSet } from '../src/orbit/tle';
 import type { OmmRecord } from '../src/provider/satellites';
 
 const measured = measuredActivity(HISTORY as SolarDaily, null).series;
@@ -77,10 +84,21 @@ describe('the prediction a page asks its worker for (P2.5)', () => {
 
 describe('the rocket stages of 2023–2025, from their first element sets (P2.5)', () => {
   const list = stages.stages.map((s) => ({ s, el: elementsFromRecord(s.elements as OmmRecord), actual: jdOf(s.reentry) }));
+  // each arm is run once and read by the tests below (vitest runs a file's tests in order)
+  let fitRuns: ReturnType<typeof fitArm> | null = null;
+  let sizeRuns: ReturnType<typeof sizeArm> | null = null;
+  const fitArm = () => list.map((x) => ({ ...x, b: ballisticFromDecayRate(x.el, measured) })).filter((x) => x.b !== null)
+    .map((x) => ({ ...x, p: predictReentry(x.el, craftOfB(x.b!), measured, 400) }));
+  const sizeArm = () => list.filter((x) => x.s.mass && x.s.length && x.s.diameter).map((x) => ({
+    ...x, eccentric: x.s.elements.ECCENTRICITY >= ECCENTRIC,
+    p: predictReentry(x.el, { mass: x.s.mass!, area: tumblingCylinderArea(x.s.length!, x.s.diameter!), cd: 2.2 }, measured, 400),
+  }));
+  const fits = () => (fitRuns ??= fitArm());
+  const sizes = () => (sizeRuns ??= sizeArm());
 
   it('fits B to the first set\'s decay rate where it carries one: the finding', () => {
-    const fitted = list.map((x) => ({ ...x, b: ballisticFromDecayRate(x.el, measured) })).filter((x) => x.b !== null);
-    const predicted = fitted.map((x) => ({ ...x, p: predictReentry(x.el, craftOfB(x.b!), measured, 400) })).filter((x) => x.p.jd !== null);
+    const fitted = fits();
+    const predicted = fitted.filter((x) => x.p.jd !== null);
     // fixed before: at least 20 predicted, 70 % inside; found: 14 fitted, 13 predicted, 7 inside
     expect(fitted.length).toBe(14);
     expect(predicted.length).toBe(13);
@@ -89,10 +107,7 @@ describe('the rocket stages of 2023–2025, from their first element sets (P2.5)
   }, 300_000);
 
   it('predicts them as tumbling cylinders of GCAT\'s size and mass, transfer orbits with the Sun and the Moon', () => {
-    const res = list.filter((x) => x.s.mass && x.s.length && x.s.diameter).map((x) => ({
-      ...x, eccentric: x.s.elements.ECCENTRICITY >= ECCENTRIC,
-      p: predictReentry(x.el, { mass: x.s.mass!, area: tumblingCylinderArea(x.s.length!, x.s.diameter!), cd: 2.2 }, measured, 400),
-    }));
+    const res = sizes();
     expect(res.length).toBe(66);
     // the mass is GCAT's DryMass, the mass after the active life, where it gives one (P2.5 fix-up):
     // until 2026-09-27 the fixture read GCAT's Mass, the mass at insertion, which differs for the four
@@ -110,6 +125,90 @@ describe('the rocket stages of 2023–2025, from their first element sets (P2.5)
     // which leave the Sun and the Moon out, 5 stayed up past 400 days
     expect(transfer.filter((x) => x.p.jd !== null && Math.abs((x.p.jd - x.p.from) / (x.actual - x.p.from) - 1) < 0.25).length).toBe(5);
     expect(transfer.filter((x) => x.p.jd === null).map((x) => x.s.name)).toEqual(['H3 F4 Stage 2']);
+  }, 600_000);
+
+  /*
+   * A screen over all 66 for cases that are not a natural decay from the orbit
+   * of the first set (P2.5 fix-up). Its rules were written AFTER the results
+   * above were seen, prompted by the worst misses; they are general, computed
+   * from the fixture (GCAT's own catalogued orbit, bus and motor, and the
+   * first set), and applied to every stage, and the unscreened counts above
+   * stay the result of record. Each rule, with its physical reason:
+   *
+   * (a) The first set is not the stage's: its mean perigee differs from GCAT's
+   *     catalogued perigee by more than 25 km while GCAT's orbit is dated within
+   *     3 days of the set's epoch. Drag cannot move a perigee of 150–350 km by
+   *     25 km in 3 days without bringing the stage down, and the mean (Kozai)
+   *     and catalogued conventions differ by a few km only. Prompted by
+   *     Electron 43 stage 2, whose first set is the payload stack's 515 × 537 km
+   *     where GCAT puts the stage at 179 × 527 km.
+   * (b) A stage built to fire after deploying its payloads, so that its orbit
+   *     can change after the first set: by GCAT's `Motor`, each engine with its
+   *     source (`POST_DEPLOYMENT_BURN`).
+   * (c) An eccentric orbit (e ≥ `ECCENTRIC`) whose GCAT orbit, dated after the
+   *     set, has its perigee more than 30 km below the first set's. On such an
+   *     orbit drag takes the apogee down far faster than the perigee, which
+   *     hardly moves until the orbit is nearly circular (D. King-Hele, Satellite
+   *     Orbits in an Atmosphere, 1987), so a perigee lowered that far was a burn
+   *     or venting, not decay. (The Sun and the Moon move such a perigee too,
+   *     and the model carries them; for the two stages the rule catches, Cowell
+   *     with them keeps the perigee within some 10 km of the first set's over
+   *     those weeks — the P2.5 fix-up's diagnosis, VALIDATION.md §7.)
+   */
+  const POST_DEPLOYMENT_BURN: Record<string, string> = {
+    // Rocket Lab, Electron Payload User Guide 8.0, pp. 17–19: the kick stage's sequence ends with
+    // "Final engine burn to lower Kick Stage altitude and accelerate deorbiting"
+    Curie: 'Rocket Lab Electron Payload User Guide 8.0',
+  };
+  const meanPerigeeKm = (el: ElementSet, e: number): number => (meanStart(el).a * (1 - e) - R_EARTH) / 1000;
+  const screen = (x: (typeof list)[number]): string[] => {
+    const e = x.s.elements.ECCENTRICITY;
+    const per = meanPerigeeKm(x.el, e);
+    const g = x.s.gcat.orbit;
+    const dated = g.date === null ? null : jdOf(`${g.date}T12:00:00Z`) - (x.el.jdEpoch + x.el.jdEpochFrac);
+    const why: string[] = [];
+    if (g.perigee !== null && dated !== null && Math.abs(per - g.perigee) > 25 && Math.abs(dated) <= 3) why.push('a');
+    if (x.s.gcat.motor in POST_DEPLOYMENT_BURN) why.push('b');
+    if (e >= ECCENTRIC && g.perigee !== null && dated !== null && dated > 0 && per - g.perigee > 30) why.push('c');
+    return why;
+  };
+
+  it('screens out, by rules made after the results, the stages whose first set is not a natural decay\'s start', () => {
+    const caught = list.map((x) => ({ name: x.s.name, why: screen(x) })).filter((x) => x.why.length > 0);
+    // found: each rule's catch. (a) also catches Electron 77 stage 2, whose first set (rev 13) decays
+    // as its 177-km perigee should — both arms bring it down inside — against GCAT's 263 km: there
+    // GCAT's orbit looks the odd one, and the rule excludes a good case. The rule is kept as written.
+    expect(caught).toEqual([
+      { name: 'Electron 43 Stage 2', why: ['a'] },
+      { name: 'H3 F4 Stage 2', why: ['c'] },
+      { name: 'Electron 67 Kick Stage', why: ['b'] },
+      { name: 'CZ-7A Y13 Stage 3', why: ['c'] },
+      { name: 'Electron 77 Stage 2', why: ['a'] },
+    ]);
+    const kept = (x: (typeof list)[number]): boolean => screen(x).length === 0;
+    // the size arm, screened, beside the unscreened 33 of 66 (29 of 58, 4 of 8)
+    const size = sizes().filter(kept);
+    expect(size.length).toBe(61);
+    expect(size.filter((x) => inside(x.p, x.actual)).length).toBe(32);
+    expect(size.filter((x) => !x.eccentric).length).toBe(55);
+    expect(size.filter((x) => !x.eccentric && inside(x.p, x.actual)).length).toBe(28);
+    expect(size.filter((x) => x.eccentric && inside(x.p, x.actual)).length).toBe(4);
+    // the fitted arm, screened, beside the unscreened 7 inside of 13 predicted (14 fitted)
+    const fit = fits().filter(kept);
+    expect(fit.length).toBe(12);
+    expect(fit.filter((x) => x.p.jd !== null).length).toBe(12);
+    expect(fit.filter((x) => inside(x.p, x.actual)).length).toBe(6);
+  }, 600_000);
+
+  it('splits the size arm by whether GCAT\'s mass is its own estimate: the finding', () => {
+    // GCAT's "?" flag: "an estimate, hopefully good to about 20 percent"; the split is reported, nothing
+    // refitted. Found: 26 of the 43 estimated masses inside, 7 of the 23 unflagged (the Soyuz Blok-I and
+    // the Long March 2F stage 2 among them, early by 10 to 65 %)
+    const res = sizes();
+    const estimate = res.filter((x) => x.s.gcat[x.s.massFrom === 'DryMass' ? 'dryFlag' : 'massFlag'] === '?');
+    const other = res.filter((x) => !estimate.includes(x));
+    expect([estimate.length, estimate.filter((x) => inside(x.p, x.actual)).length]).toEqual([43, 26]);
+    expect([other.length, other.filter((x) => inside(x.p, x.actual)).length]).toEqual([23, 7]);
   }, 600_000);
 });
 

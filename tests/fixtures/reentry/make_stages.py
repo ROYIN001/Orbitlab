@@ -25,8 +25,9 @@ differ for four stages, the Long March third stages (8 400 kg against
 
 GCAT's own catalogued orbit of each stage (`gcat.orbit`: `Perigee` and
 `Apogee` in km, `Inc` in degrees, dated `ODate`) goes with it, so that a
-first set can be checked against the object it is said to describe
-(tests/ballistic.test.ts, the screen).
+first set can be checked against the object it is said to describe, and
+GCAT's `Bus` and `Motor`, so that a stage built to fire after its payloads
+are away can be told (tests/ballistic.test.ts, the screen).
 
     python3 make_stages.py satcat.tsv first/ > stages.json
 """
@@ -79,6 +80,7 @@ for r in rows:
              'mass': dry if dry else mass, 'massFrom': 'DryMass' if dry else 'Mass',
              'length': num(r['Length']), 'diameter': num(r['Diameter']),
              'gcat': {'mass': mass, 'massFlag': r['MassFlag'], 'dryMass': dry, 'dryFlag': r['DryFlag'],
+                      'bus': r['Bus'], 'motor': r['Motor'],
                       'orbit': {'date': od.strftime('%Y-%m-%d') if od else None,
                                 'perigee': num(r['Perigee']), 'apogee': num(r['Apogee']), 'inc': num(r['Inc'])}}}
     if first is None:

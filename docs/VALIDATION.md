@@ -1556,6 +1556,53 @@ set's decay rate, 70 % of them inside the ±20 % window.
 | GCAT's dry mass and size, a tumbling cylinder, C_D 2.2 | 33 of 66: 29 of 58 near-circular orbits, 4 of 8 transfer orbits |
 | the same, before P2.5 (mean elements for every orbit) | 29 of 66: none of the 8 transfer orbits |
 
+**A screen, written after the results (P2.5 fix-up).** Some misses are not natural decays from the
+orbit of the first set. Excluding them one by one, after seeing them, would be choosing the data;
+so three general rules, computed from the fixture for all 66 (GCAT's catalogued orbit, bus and
+motor against the first set's mean elements), are applied, and their counts are reported beside
+the unscreened ones, which stay the result of record. The rules were made after the results, and
+the thresholds (25 km, 3 days, 30 km) were set with the worst misses in view.
+
+- **(a) The first set is not the stage's**: its mean perigee differs from GCAT's catalogued perigee
+  by more than 25 km while GCAT's orbit is dated within 3 days of the set's epoch. Drag cannot move
+  a perigee of 150–350 km by 25 km in 3 days without bringing the stage down, and the two
+  conventions (a set's mean elements, GCAT's heights) differ by a few kilometres. Prompted by
+  Electron 43 stage 2, whose first set (515 × 537 km) is the payload stack's; GCAT puts the stage at
+  179 × 527 km. It also catches Electron 77 stage 2 (first set 177 km, GCAT 263 km), whose first set
+  (rev 13) decays as its perigee should and which both arms bring down inside: there GCAT's orbit
+  looks the odd one, and the rule excludes a good case. The rule is kept as written.
+- **(b) A stage built to fire after deploying its payloads**, so that its orbit can change after the
+  first set, by GCAT's `Motor`: Electron's kick stage (Curie), whose sequence ends with a "Final
+  engine burn to lower Kick Stage altitude and accelerate deorbiting" ([Rocket Lab, Electron Payload
+  User Guide 8.0](https://rocketlabcorp.com/assets/Rocket-Lab-Electron-Payload-User-Guide-8.0.pdf),
+  pp. 17–19). It catches the Electron 67 kick stage, 647 % late: down in 5 days from 235 × 605 km,
+  which its published 40 kg and 1.2 m cannot do even flying flat-face-on. Other upper stages lowered
+  their perigee after deployment (the Long March 4B third stages, Gushenxing-1, Kuaizhou-1A,
+  Jielong-3: GCAT's orbits against their payloads'), but before their first set, whose perigee
+  already agrees with GCAT's; their decay from it is natural, and they stay.
+- **(c) An eccentric orbit (e ≥ 0.1) whose GCAT orbit, dated after the set, has its perigee more
+  than 30 km below the first set's.** On such an orbit drag takes the apogee down far faster than the
+  perigee, which hardly moves until the orbit is nearly circular (D. King-Hele, *Satellite Orbits in
+  an Atmosphere*, 1987), so a perigee lowered that far was a burn or venting, not decay. The Sun and
+  the Moon move such a perigee too, and the model carries them: Cowell with J2–J4, the Sun and the
+  Moon keeps both stages the rule catches within some 10 km of their first sets' perigees over those
+  weeks, and SGP4/SDP4's analytic terms within 20 km (the P2.5 fix-up's diagnosis). It catches H3 F4 stage 2 (first set 351 km; GCAT 135 × 33 801 km
+  62 days later) and the Long March 7A Y13 third stage (174 km; GCAT 104 × 6 127 km 9 days later).
+  Neither burn nor venting is published: JAXA says F4 made no third ignition, and the first set was
+  taken during its five-hour coast experiment; nothing was found for the Long March 7A Y13.
+
+| predicted from the first element set | unscreened | screened (61 of 66) |
+| --- | --- | --- |
+| B fitted to the set's decay rate | 7 inside of 13 predicted (14 fitted) | 6 inside of 12 predicted (12 fitted) |
+| GCAT's dry mass and size | 33 of 66 | 32 of 61 |
+| — near-circular orbits | 29 of 58 | 28 of 55 |
+| — transfer orbits | 4 of 8 | 4 of 6 |
+
+Split by GCAT's mass flag (nothing refitted): 26 of the 43 stages whose dry mass is GCAT's own
+estimate ("?", "hopefully good to about 20 percent") come down inside, and 7 of the 23 whose mass is
+not flagged — the Soyuz Blok-I and Long March 2F second stages, whose masses agree with published
+dry masses, are among the latter.
+
 **Findings.**
 
 - **The fixed criterion was missed.** A first element set is made from the first days of
