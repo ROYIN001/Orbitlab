@@ -499,6 +499,10 @@ class App {
     this.lessons = new LessonMode({
       // a lesson flies in the launch section; the page closes onto the route under it
       go: (mode) => this.go(mode === 'home' ? HOME_ROUTE : route('launch', mode)),
+      // a case lesson (track 6) works in the Orbit section's Real satellites
+      openCase: (id, level) => { this.go(route('orbit', level)); this.playground.openCase(id); },
+      caseInput: () => this.playground.caseInput(),
+      lessonCase: (state) => this.playground.lessonCase(state),
       back: () => this.go(this.route),
       loadMission: (state) => { this.goLive(); this.playing = false; this.panel.restoreMission(state); },
       sim: () => this.sim,

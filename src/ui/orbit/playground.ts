@@ -53,6 +53,8 @@ import { GroundTrackView } from './ground-track';
 import { Field, altKm, button, clockText, deg, el, hhmm, km, num, plain, sci, span } from './dom';
 import { CannonView } from './cannon-view';
 import { RealSky } from './sky-panel';
+import { CASE_FOCUS, type CaseId, type CaseLessonState } from '../../worksheets/case-ids';
+import type { CaseSource } from '../../worksheets/cases';
 import type { DataProvider } from '../../provider/data-provider';
 
 export interface PlaygroundHost {
@@ -382,19 +384,50 @@ export class OrbitPlayground {
     return this.tourIndex >= TOUR.length ? SKY_TOUR[this.tourIndex - TOUR.length] ?? null : null;
   }
 
+  /** Into the real satellites, now, for a tour step or a case lesson: the playground's own drawing put aside. */
+  private enterSkyNow(): void {
+    if (this.mode !== 'sky') {
+      this.mode = 'sky';
+      this.orbitWarp = this.warp;
+      this.orbitView?.setGhosts([]);
+      this.orbitView?.setMarkers([]);
+      this.orbitView?.setTarget(null);
+      this.sky.forgetViews();
+    }
+    this.skyEntered = true;
+    this.sky.now();
+  }
+
+  /**
+   * A case lesson (E03 track 6): Real satellites, at the case's satellite,
+   * view and tool (src/worksheets/case-ids.ts), in real time. The level is
+   * the route's (Explore or Engineer: the Watch level is the tour).
+   */
+  openCase(id: CaseId): void {
+    const f = CASE_FOCUS[id];
+    this.enterSkyNow();
+    this.sky.focusCase(id);
+    this.view = f.view;
+    this.warp = 1;
+    this.playing = true;
+    this.render();
+    this.resize();
+  }
+
+  /** The data a case sheet is worked from, as Real satellites has them once its catalogue is in. */
+  caseInput(): Promise<CaseSource> {
+    return this.sky.caseInput();
+  }
+
+  /** The case lesson open now, if any (its answer key waits until it is answered). */
+  lessonCase(state: CaseLessonState | null): void {
+    this.sky.setLessonCase(state);
+  }
+
   private applyTourStep(): void {
     const sky = this.skyStep();
     if (sky) {
-      if (this.mode !== 'sky') {
-        this.mode = 'sky';
-        this.orbitWarp = this.warp;
-        this.orbitView?.setGhosts([]);
-        this.orbitView?.setMarkers([]);
-        this.orbitView?.setTarget(null);
-        this.sky.forgetViews();
-      }
-      this.skyEntered = true;
-      this.sky.now();
+      this.enterSkyNow();
       this.sky.showForTour(sky.group, sky.satnum);
       this.view = sky.view;
       this.warp = sky.warp;

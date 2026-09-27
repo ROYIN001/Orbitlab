@@ -12,7 +12,9 @@
  * (M01, src/orbit/screening.ts); for the group, when its satellites pass over
  * a place (M02, src/orbit/overflights.ts); for a low one, when it will come
  * down, and the Long March 5B core stages as the case study (M03,
- * src/orbit/reentry.ts).
+ * src/orbit/reentry.ts). A case lesson (E03 track 6) opens it at the case's
+ * tool (`focusCase`) and reads the data it freezes from here (`caseInput`);
+ * while it is open, that case's answer key waits until it is answered.
  *
  * The logic is src/orbit/real-sky.ts, omm.ts, tle.ts and sgp4.ts; this is the
  * page's part, driven by the playground (src/ui/orbit/playground.ts), which
@@ -48,12 +50,13 @@ import { encounterPlane, encounterPlaneSvg } from '../../orbit/encounter-plane';
 import { rtnAxes, rtnToFrame, type Mat3 } from '../../orbit/conjunction';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
 import { canImage, reachEdges, sensorFor, type ImagingVerdict, type Sensor } from '../../orbit/sensors';
-import { ECCENTRIC, predictReentry, tumblingBoxArea, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
+import { ECCENTRIC, predictReentry, REENTRY_BELOW, tumblingBoxArea, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
 import { runReentryJob, type DragFrom } from '../../orbit/reentry-job';
 import { ballisticFromDecayRate, craftOfB } from '../../orbit/ballistic';
 import { NAPA2 } from '../../data/napa2';
 import type { ElementSet } from '../../orbit/tle';
-import { CASE_IDS, caseWorksheet, type CaseId } from '../../worksheets/cases';
+import { CASE_IDS, caseWorksheet, type CaseId, type CaseSource } from '../../worksheets/cases';
+import { CASE_FOCUS, caseAnswersShown, type CaseLessonState } from '../../worksheets/case-ids';
 import { answerKeyHtml, worksheetsHtml } from '../../worksheets/html';
 import { downloadBlob } from '../download';
 import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
@@ -157,17 +160,66 @@ export class RealSky {
 
   constructor(private readonly host: SkyHost) {}
 
+  /** waiting for the catalogue to be in, or to have failed (`ready`) */
+  private waiting: Array<() => void> = [];
+
   /** Load the catalogue (once; again after the data mode changes). */
   load(): void {
     if (this.status.state === 'loading' || this.status.state === 'ready') return;
     this.status = { state: 'loading' };
+    const settled = () => { const w = this.waiting; this.waiting = []; for (const f of w) f(); };
     // P2.5: the Earth's orientation, for placing the satellites over the ground; without it UT1 is taken for UTC
     const eop = this.host.provider().load('earthOrientation').then((set) => set.data, () => null);
     loadStandardMagnitudes().then((m) => { this.magnitudes = m; }, () => { this.magnitudes = null; });
     this.host.provider().load('satellites').then(
-      async (set) => { setEarthOrientation(await eop); this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); },
-      (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); },
+      async (set) => { setEarthOrientation(await eop); this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); settled(); },
+      (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); settled(); },
     );
+  }
+
+  /** The catalogue is in, or could not be had: loaded first if it is not. */
+  ready(): Promise<void> {
+    this.load();
+    if (this.status.state === 'ready' || this.status.state === 'failed') return Promise.resolve();
+    return new Promise((resolve) => this.waiting.push(resolve));
+  }
+
+  /**
+   * The data a case sheet is worked from as they are now (P2.5): the Sun's
+   * activity, and THEOS-2's element set from the catalogue once it is in. A
+   * case lesson takes them once, when it opens, and keeps them.
+   */
+  async caseInput(): Promise<CaseSource> {
+    // a catalogue that could not be loaded is asked for again
+    if (this.status.state === 'failed') this.status = { state: 'idle' };
+    await this.ready();
+    const { series, to } = await this.sun();
+    const theos2 = this.objects('thai').find((o) => o.el.satnum === THEOS2_NORAD)?.el ?? null;
+    return { activity: series, theos2, activityTo: to };
+  }
+
+  /**
+   * A case lesson opens here (E03 track 6): the case's group, its satellite
+   * picked, the tool the case is about opened, and the case chosen in the
+   * case sheets' block. Nothing is run for the student (src/worksheets/case-ids.ts).
+   */
+  focusCase(id: CaseId): void {
+    const f = CASE_FOCUS[id];
+    this.showForTour(f.group, f.satnum);
+    if (id === 'theos2') { this.place = { stationId: 'bangkok', station: stationOf('bangkok')! }; this.passes = null; }
+    this.over.open = f.open === 'over';
+    this.reentry.open = f.open === 'reentry';
+    this.conj.open = f.open === 'conj';
+    this.caseChoice = id;
+    this.casesOpen = true;
+  }
+
+  /** The case lesson open now, if any: its case's answer key waits until the lesson is answered. */
+  private lessonCase: CaseLessonState | null = null;
+
+  setLessonCase(state: CaseLessonState | null): void {
+    this.lessonCase = state;
+    this.host.refresh();
   }
 
   /** The data mode changed: the catalogue is loaded again from the new provider when next shown. */
@@ -743,11 +795,14 @@ export class RealSky {
   // ─── re-entry (M03) ────────────────────────────────────────────────────────
 
   /** The Sun's activity as measured and forecast, from the space-weather dataset of the data mode chosen (R05); GFZ's months alone without it. */
-  private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string }> {
+  private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string; to: string }> {
     let sw: SpaceWeather | null = null;
     try { sw = (await this.host.provider().load('spaceWeather')).data; } catch { sw = null; }
     const m = measuredActivity(await loadSolarDaily(), sw);
-    return { series: m.series, note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }) };
+    return {
+      series: m.series, to: m.forecastTo ?? m.measuredTo,
+      note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }),
+    };
   }
 
   /** The object's element sets: a history read from a file has several of one satellite, which the drag can be fitted to (P2.5). */
@@ -1131,32 +1186,39 @@ export class RealSky {
   // ─── worksheets from real cases (P2.5) ──────────────────────────────────────
 
   private caseChoice: CaseId = 'iridium';
+  private casesOpen = false;
 
   /** A sheet and its answer key for a case from the record, in the language on screen. */
   private caseSheetsBlock(): HTMLElement {
     const box = el('details', 'pg-tool pg-cases');
+    box.open = this.casesOpen;
+    box.addEventListener('toggle', () => { this.casesOpen = box.open; });
     box.append(el('summary', undefined, t('cases.title')), el('p', 'pg-tool-lead', t('cases.lead')));
     const pick = el('label');
     const sel = el('select');
     const NAME: Record<CaseId, string> = { iridium: t('cases.iridium'), cz5b: t('cases.cz5b'), theos2: t('cases.theos2') };
     for (const id of CASE_IDS) { const o = el('option', undefined, NAME[id]); o.value = id; sel.append(o); }
     sel.value = this.caseChoice;
-    sel.addEventListener('change', () => { this.caseChoice = sel.value as CaseId; });
+    sel.addEventListener('change', () => { this.caseChoice = sel.value as CaseId; this.host.refresh(); });
     pick.append(el('span', undefined, t('cases.pick')), sel);
     const out = el('p', 'pg-note');
     out.setAttribute('role', 'status');
     const make = async (key: boolean): Promise<void> => {
-      const { series } = await this.sun();
-      const theos = this.objects('thai').find((o) => o.el.satnum === 58016)?.el ?? null;
-      const sheet = caseWorksheet(this.caseChoice, { lang: getLang(), generatedAt: new Date(), activity: series, theos2: theos });
+      const sheet = caseWorksheet(this.caseChoice, { ...await this.caseInput(), lang: getLang(), generatedAt: new Date() });
       if (!sheet) { out.textContent = t('cases.noData'); return; }
       const html = key ? answerKeyHtml([sheet]) : worksheetsHtml([sheet]);
       downloadBlob(new Blob([html], { type: 'text/html' }), `orbitlab-case-${this.caseChoice}${key ? '-key' : ''}-${getLang()}.html`);
       out.textContent = t('cases.done');
     };
     const row = el('div', 'pg-tool-row');
-    row.append(button('watch-btn', t('cases.sheet'), () => { void make(false); }), button('watch-btn', t('cases.key'), () => { void make(true); }));
-    box.append(pick, row, out, el('p', 'pg-note', t('cases.note')));
+    const keyBtn = button('watch-btn', t('cases.key'), () => { void make(true); });
+    // E03 track 6: the case's own lesson is open and not yet answered
+    const keyOpen = caseAnswersShown(this.lessonCase, this.caseChoice);
+    keyBtn.disabled = !keyOpen;
+    row.append(button('watch-btn', t('cases.sheet'), () => { void make(false); }), keyBtn);
+    box.append(pick, row, out);
+    if (!keyOpen) box.append(el('p', 'pg-note', t('cases.keyLater')));
+    box.append(el('p', 'pg-note', t('cases.note')));
     return box;
   }
 
@@ -1373,8 +1435,8 @@ const VERDICT_KEY: Record<ImagingVerdict['reason'], string> = {
 };
 /** The verdict on an overflight's instrument, where its figures are published. */
 const verdictOf = (f: Overflight): ImagingVerdict | null => { const s = sensorFor(f.object.el.satnum); return s ? canImage(s, f) : null; };
-/** A re-entry is predicted for an orbit whose perigee is below this, m: higher, it is years away and the lifetime analysis is the tool. */
-const REENTRY_BELOW = 700e3;
+/** THEOS-2's catalogue number: its element set is the THEOS-2 case's data (P2.5). */
+const THEOS2_NORAD = 58016;
 
 const SUPERSCRIPT: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
 /** A probability from its logarithm, as 2.7 × 10⁻⁵¹, however small. */

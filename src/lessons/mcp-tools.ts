@@ -3,23 +3,24 @@
  * the lessons, open one for the student and read how the flight is being
  * graded, and read the placement test's result — to explain, not to answer:
  * nothing here types an answer or changes a locked setting. DOM-free, like
- * `createMcpTools`.
+ * `createMcpTools`. A case lesson (track 6) is listed and opened the same
+ * way; its questions are given in English, never their answers.
  */
 import { en } from '../i18n/en';
 import type { AssessmentResult } from './assessment/score';
-import { DOMAINS, type LessonGrade, type Lesson } from './types';
+import { DOMAINS, isCaseLesson, type CaseLesson, type CatalogLesson, type LessonGrade, type Lesson } from './types';
 import type { ProgressData } from './progress';
 import { lessonNumber } from './catalog';
 import { MEASURES } from './measures';
 
 export interface LessonToolsHost {
   /** the catalogue: built-in lessons and any a teacher's file added */
-  catalogue(): Lesson[];
+  catalogue(): CatalogLesson[];
   progress(): ProgressData;
   /** open a lesson (its mission, its mode, its locks); false with a reason when it cannot be */
   startLesson(id: string): { ok: true } | { ok: false; reason: string };
   /** the lesson open now, and its flight's grade so far */
-  activeLesson(): { lesson: Lesson; grade: LessonGrade | null; hintsShown: number; awaiting: string[] } | null;
+  activeLesson(): { lesson: CatalogLesson; grade: LessonGrade | null; hintsShown: number; awaiting: string[] } | null;
   /** the latest finished placement test or post-test, scored */
   assessmentResult(): { kind: string; finishedAt?: string; result: AssessmentResult } | null;
 }
@@ -42,7 +43,20 @@ const record = (v: unknown): Record<string, unknown> => (v && typeof v === 'obje
  */
 export const AREAS_TEXT = DOMAINS.map((d) => `${d} ${en[`assess.domain.${d}`].toLowerCase()}`).join(', ');
 
-function criterionOut(lesson: Lesson, grade: LessonGrade | null) {
+/** A case lesson's questions, as the English sheet asks them; the grade's expected values are left out. */
+function caseCriterionOut(lesson: CaseLesson, grade: LessonGrade | null) {
+  return lesson.criteria.map((c) => ({
+    id: c.id, kind: c.kind, item: c.item, question: en[`wsc.${lesson.case}.q.${c.item}`] ?? c.item,
+    state: grade?.criteria.find((x) => x.id === c.id)?.state ?? 'pending',
+  }));
+}
+
+function criterionOut(lesson: CatalogLesson, grade: LessonGrade | null) {
+  if (isCaseLesson(lesson)) return caseCriterionOut(lesson, grade);
+  return flightCriterionOut(lesson, grade);
+}
+
+function flightCriterionOut(lesson: Lesson, grade: LessonGrade | null) {
   return lesson.criteria.map((c) => {
     const g = grade?.criteria.find((x) => x.id === c.id);
     const unit = c.kind === 'measure' || c.kind === 'answer' ? MEASURES[c.measure].unit : undefined;
@@ -65,14 +79,14 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
   return [
     {
       name: 'list_lessons', title: 'List lessons',
-      description: `Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (${AREAS_TEXT}), whether they are written yet, and the student's progress.`,
+      description: `Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (${AREAS_TEXT}), whether they are written yet, and the student's progress. A flight lesson is flown; a case lesson (track 6) is a case from the record worked from its data in the Orbit section.`,
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       execute: () => {
         const progress = host.progress();
         return {
           lessons: host.catalogue().map((l) => ({
-            id: l.id, number: lessonNumber(l), title: l.title.en, track: l.track, mode: l.mode, areas: l.domains, tags: l.tags ?? [],
+            id: l.id, kind: isCaseLesson(l) ? 'case' : 'flight', number: lessonNumber(l), title: l.title.en, track: l.track, mode: l.mode, areas: l.domains, tags: l.tags ?? [],
             written: !l.comingSoon, passed: !!progress.lessons[l.id]?.passed, attempts: progress.lessons[l.id]?.attempts ?? 0,
           })),
         };
@@ -80,7 +94,7 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
     },
     {
       name: 'start_lesson', title: 'Start a lesson',
-      description: 'Open a lesson for the student: its mission is loaded into the setup panel, the app goes to the lesson\'s mode, and the settings the lesson locks are greyed out. Does not launch. Returns the task and the criteria.',
+      description: 'Open a lesson for the student: its mission is loaded into the setup panel, the app goes to the lesson\'s mode, and the settings the lesson locks are greyed out. Does not launch. For a case lesson (track 6), the Orbit section\'s Real satellites opens at the case\'s tool instead, and the student answers the case sheet\'s questions. Returns the task and the criteria.',
       inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'The lesson id, from list_lessons.' } }, required: ['id'], additionalProperties: false },
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
       execute: (input) => {
@@ -89,12 +103,13 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
         const started = host.startLesson(id);
         if (!started.ok) return started;
         const lesson = host.activeLesson()!.lesson;
-        return { ok: true, id: lesson.id, number: lessonNumber(lesson), title: lesson.title.en, task: lesson.brief.en, mode: lesson.mode, locked: lesson.locked, criteria: criterionOut(lesson, null), hints: lesson.hints.length };
+        const where = isCaseLesson(lesson) ? { kind: 'case', case: lesson.case, section: 'orbit', locked: [] } : { kind: 'flight', section: 'launch', locked: lesson.locked };
+        return { ok: true, id: lesson.id, number: lessonNumber(lesson), title: lesson.title.en, task: lesson.brief.en, mode: lesson.mode, ...where, criteria: criterionOut(lesson, null), hints: lesson.hints.length };
       },
     },
     {
       name: 'get_lesson_result', title: 'Read the lesson\'s grade',
-      description: 'The lesson open now and how its flight is graded so far: each criterion\'s state (pending, passing, pass, fail) and measured value, the settings the flight did not keep, the answers still awaited and the hints shown. The expected value of an answer is not given: it is the student\'s to work out. Safe with no lesson open.',
+      description: 'The lesson open now and how its flight is graded so far: each criterion\'s state (pending, passing, pass, fail) and measured value, the settings the flight did not keep, the answers still awaited and the hints shown. The expected value of an answer is not given: it is the student\'s to work out. A case lesson has no flight: its answers are awaited from the start. Safe with no lesson open.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       execute: () => {

@@ -62,6 +62,14 @@ export const tumblingBoxArea = ([x, y, z]: readonly [number, number, number]): n
 export const ECCENTRIC = 0.1;
 
 /**
+ * A re-entry is predicted for an orbit whose mean perigee is below this, m:
+ * higher, it is years away and the lifetime analysis (P07) is the tool. The
+ * Orbit section draws the re-entry tool only below it — which a case lesson
+ * that opens the tool relies on (tests/case-lessons.test.ts).
+ */
+export const REENTRY_BELOW = 700e3;
+
+/**
  * The run that predicts the re-entry of the object an element set
  * describes, looking up to `horizonDays` ahead: a near-circular orbit by the
  * mean elements, in well under a second; an eccentric one (`ECCENTRIC`) by

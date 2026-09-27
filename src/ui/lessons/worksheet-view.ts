@@ -5,12 +5,16 @@
  * as HTML to print or as a Word document. The sheets are built by
  * `src/worksheets/`; this view gathers the form, turns the SVG pictures into
  * PNG and the photographs into bytes for the files, and saves them.
+ *
+ * With a case lesson open (track 6), the tab also offers that case's sheet
+ * and key, built from the data the lesson froze: the same for every student,
+ * and the key only once the lesson has nothing left to give away.
  */
 import { getLang, t } from '../../i18n';
 import { missionVehicle } from '../../data/vehicles';
 import { siteById } from '../../data/sites';
 import { questionBank, FLIGHT_DATA } from '../../lessons/assessment/bank';
-import { DOMAINS, type Domain, type Lesson } from '../../lessons/types';
+import { DOMAINS, type CaseLesson, type Domain, type Lesson } from '../../lessons/types';
 import { lessonNumber } from '../../lessons/catalog';
 import { localText } from '../../lessons/text';
 import { buildClass, worksheetSource } from '../../worksheets/build';
@@ -26,8 +30,10 @@ import { downloadBlob } from '../download';
 export interface WorksheetHost {
   /** the flight on screen, and whether it has ended (the answers need all of it) */
   flight(): { flight: WsFlight; ended: boolean } | null;
-  /** the lesson open now, if any */
+  /** the lesson the flight on screen goes with, if any */
   lesson(): Lesson | null;
+  /** the case lesson open now: its sheet (null while its data are read) and whether its key may be had yet */
+  caseLesson?(): { lesson: CaseLesson; sheet: Worksheet | null; keyOpen: boolean } | null;
   progress(): ProgressData;
 }
 
@@ -116,9 +122,10 @@ class WorksheetView {
     return `orbitlab-${kind}-${source}-${code}-${sheets[0].lang}.${ext}`;
   }
 
-  private async make(kind: 'worksheets' | 'key'): Promise<void> {
-    const sheets = this.sheets();
-    if (!sheets) return;
+  private async make(kind: 'worksheets' | 'key', of: 'flight' | 'case' = 'flight'): Promise<void> {
+    const c = of === 'case' ? this.host.caseLesson?.() ?? null : null;
+    const sheets = c ? (c.sheet ? [c.sheet] : null) : this.sheets();
+    if (!sheets || (c && kind === 'key' && !c.keyOpen)) return;
     const docx = this.form.format === 'docx';
     let blob: Blob;
     if (kind === 'key') {
@@ -140,7 +147,7 @@ class WorksheetView {
         blob = new Blob([worksheetsHtml(sheets, images)], { type: 'text/html' });
       }
     }
-    const name = this.fileName(kind, sheets, docx ? 'docx' : 'html');
+    const name = c ? `orbitlab-case-${c.lesson.case}${kind === 'key' ? '-key' : ''}-${sheets[0].lang}.${docx ? 'docx' : 'html'}` : this.fileName(kind, sheets, docx ? 'docx' : 'html');
     downloadBlob(blob, name);
     this.status = t('ws.made', { file: name });
     this.render();
@@ -149,6 +156,8 @@ class WorksheetView {
   render(): void {
     const body = el('div', 'ws-page');
     body.append(el('h2', undefined, t('ws.tab')), el('p', 'lead', t('ws.page.lead')));
+    const c = this.host.caseLesson?.() ?? null;
+    if (c) body.append(this.caseBlock(c));
     // the flight
     const src = el('div', 'ws-source');
     src.append(el('span', 'lesson-eyebrow', t('ws.source')));
@@ -212,6 +221,27 @@ class WorksheetView {
     body.append(el('p', 'small', t('ws.languageNote')), actions);
     if (this.status) body.append(el('p', 'lesson-note ok', this.status));
     this.container.replaceChildren(body);
+  }
+
+  /** The open case lesson's sheet and key: no names, no class code, one sheet for all (in the format chosen below). */
+  private caseBlock(c: { lesson: CaseLesson; sheet: Worksheet | null; keyOpen: boolean }): HTMLElement {
+    const box = el('div', 'ws-source ws-case');
+    box.append(el('span', 'lesson-eyebrow', t('cases.title')), el('p', 'ws-what', t('ws.source.case', { n: lessonNumber(c.lesson), title: localText(c.lesson.title) })));
+    box.append(el('p', 'small', t('ws.case.lead')));
+    if (!c.sheet) box.append(el('p', 'lesson-note', t('lesson.strip.caseLoading')));
+    const actions = el('div', 'assess-actions ws-actions');
+    const button = (label: string, kind: 'worksheets' | 'key', enabled: boolean, primary: boolean) => {
+      const b = el('button', primary ? 'lesson-primary' : '', label);
+      b.type = 'button';
+      b.disabled = !enabled;
+      b.addEventListener('click', () => void this.make(kind, 'case'));
+      actions.append(b);
+    };
+    button(t('ws.makeKey'), 'key', !!c.sheet && c.keyOpen, false);
+    button(t('ws.makeSheets'), 'worksheets', !!c.sheet, true);
+    box.append(actions);
+    if (!c.keyOpen) box.append(el('p', 'lesson-note', t('cases.keyLater')));
+    return box;
   }
 }
 

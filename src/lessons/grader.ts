@@ -15,7 +15,7 @@ import { defaultDynamics } from '../physics/rigid/config';
 import { vehicleById } from '../data/vehicles';
 import { LESSON_HOOKS } from './hooks';
 import { MEASURES, missionTarget } from './measures';
-import type { Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
+import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
 
 /** Answers the student has typed, by criterion id. */
 export type LessonAnswers = Readonly<Record<string, number>>;
@@ -236,8 +236,9 @@ export function regradeAnswers(lesson: Lesson, frozen: LessonGrade, answers: Les
   return { ...frozen, criteria, verdict: anyFail ? 'fail' : criteria.every((c) => c.state === 'pass') ? 'pass' : 'open' };
 }
 
-/** The answers a lesson still waits for, once the flight has ended. */
-export function awaitingAnswers(lesson: Lesson, grade: LessonGrade): string[] {
+/** The answers a lesson still waits for, once the flight has ended (a case lesson's, from the start). */
+export function awaitingAnswers(lesson: CatalogLesson, grade: LessonGrade): string[] {
   if (!grade.final) return [];
-  return lesson.criteria.filter((c) => c.kind === 'answer' && grade.criteria.find((g) => g.id === c.id)?.state === 'pending').map((c) => c.id);
+  const typed: ReadonlyArray<{ id: string; kind: string }> = lesson.criteria;
+  return typed.filter((c) => (c.kind === 'answer' || c.kind === 'case') && grade.criteria.find((g) => g.id === c.id)?.state === 'pending').map((c) => c.id);
 }

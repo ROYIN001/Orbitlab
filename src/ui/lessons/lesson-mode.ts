@@ -9,6 +9,12 @@
  * The lesson owns nothing of the app: it loads its mission through the setup
  * panel, sends the app to its mode, and greys out what it locks.
  *
+ * A case lesson (track 6, P2.5's cases from the record) flies nothing: it
+ * opens the Orbit section's Real satellites at the case's tool, freezes the
+ * data the case is worked from (THEOS-2's element set, the Sun's activity),
+ * builds the case sheet from them and grades the typed answers by that
+ * sheet's own key (`src/lessons/case-grader.ts`).
+ *
  * The catalogue and the placement test are a page of their own over the whole
  * window below the top bar (`#/lessons`, `#/lessons/test`), like a mode: the
  * browser's Back leaves it, and opening a lesson goes to the workspace.
@@ -20,13 +26,18 @@ import { missionDocument, type MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
+import { gradeCaseLesson } from '../../lessons/case-grader';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import {
   RESULTS_FILE_EXTENSION, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
-import type { Criterion, CriterionGrade, Lesson, LessonGrade } from '../../lessons/types';
+import { isCaseLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
+import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
+import { letterOf } from '../../worksheets/bank-items';
+import type { CaseId, CaseLessonState } from '../../worksheets/case-ids';
+import type { Worksheet } from '../../worksheets/types';
 import type { LessonToolsHost } from '../../lessons/mcp-tools';
 import type { AssessmentResult } from '../../lessons/assessment/score';
 import { downloadBlob } from '../download';
@@ -46,6 +57,12 @@ export interface LessonHost {
   panelRoot: HTMLElement;
   /** re-render the setup panel (to lift the locks) */
   renderPanel(): void;
+  /** a case lesson: the Orbit section's Real satellites, at a level, opened at the case's tool */
+  openCase?(id: CaseId, level: 'explore' | 'engineer'): void;
+  /** the data a case sheet is worked from, as the Orbit section has them once its catalogue is in */
+  caseInput?(): Promise<CaseSource>;
+  /** the case lesson open now, or none: the Orbit section keeps that case's answers out of sight until it is answered */
+  lessonCase?(state: CaseLessonState | null): void;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
@@ -64,9 +81,23 @@ type PageView = 'catalog' | 'test' | 'worksheets';
 const pageViewOf = (hash: string): PageView | null =>
   hash === LESSONS_HASH ? 'catalog' : hash === TEST_HASH ? 'test' : hash === WORKSHEETS_HASH ? 'worksheets' : null;
 
+/** A case lesson's own state: its data, frozen when it opened, and the sheet and key built from them. */
+interface CaseState {
+  source: CaseSource | null;
+  /** why the data could not be had, if they could not */
+  failed: string | null;
+  /** the sheet in the language on screen */
+  sheet: Worksheet | null;
+  /** the sheet's key, taken from the first sheet built: a change of language never changes a grade */
+  key: CaseKey | null;
+  openedAt: Date;
+  /** "The data" is open (it is, until the student closes it) */
+  dataOpen: boolean;
+}
+
 /** The open lesson's state. */
 interface Active {
-  lesson: Lesson;
+  lesson: CatalogLesson;
   answers: Record<string, number>;
   /** the simulation the grade was last read from: a new one is a new flight */
   sim: Simulation | null;
@@ -77,6 +108,8 @@ interface Active {
   grade: LessonGrade | null;
   /** the grade taken when the flight ended: kept, with only the answers checked again */
   frozen: LessonGrade | null;
+  /** a case lesson's (no flight: `sim` and `frozen` stay empty) */
+  case?: CaseState;
 }
 
 export class LessonMode implements LessonToolsHost {
@@ -93,6 +126,8 @@ export class LessonMode implements LessonToolsHost {
   private assessmentModule: Promise<typeof import('./assessment-view')> | null = null;
   private notice: { level: 'ok' | 'warn' | 'error'; text: string; details: string[] } | null = null;
   private lastStripKey = '';
+  /** what the Orbit section was last told of the case lesson open */
+  private orbitKey = 'null';
 
   constructor(private readonly host: LessonHost) {
     this.locks = new PanelLocks(host.panelRoot);
@@ -123,7 +158,7 @@ export class LessonMode implements LessonToolsHost {
 
   // ─── the catalogue and progress ──────────────────────────────────────────
 
-  catalogue(): Lesson[] {
+  catalogue(): CatalogLesson[] {
     return allLessons(this.progressData.customLessons);
   }
 
@@ -136,7 +171,7 @@ export class LessonMode implements LessonToolsHost {
     this.paintButton();
   }
 
-  private written(): Lesson[] {
+  private written(): CatalogLesson[] {
     return this.catalogue().filter((l) => !l.comingSoon);
   }
 
@@ -181,7 +216,9 @@ export class LessonMode implements LessonToolsHost {
     const lesson = this.catalogue().find((l) => l.id === id);
     if (!lesson) return { ok: false, reason: t('lesson.notFound', { id }) };
     if (lesson.comingSoon) return { ok: false, reason: t('lesson.comingSoon') };
+    if (isCaseLesson(lesson)) return this.startCase(lesson);
     this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
+    this.tellOrbit();
     lessonProgress(this.progressData, id);
     this.save();
     this.host.go(lesson.mode);
@@ -197,10 +234,102 @@ export class LessonMode implements LessonToolsHost {
     return { ok: true };
   }
 
-  /** Put the lesson's mission back as it started (a new flight, same lesson). */
+  /**
+   * A case lesson: Real satellites at the case's tool, and the case's data
+   * fixed now, once — the sheet shown, the sheet printed, its key and every
+   * grade are worked from them, however the catalogue on screen or the Sun's
+   * forecast changes while the lesson is open.
+   */
+  private startCase(lesson: CaseLesson): { ok: true } {
+    const state: CaseState = { source: null, failed: null, sheet: null, key: null, openedAt: new Date(), dataOpen: true };
+    const a: Active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null, case: state };
+    this.active = a;
+    lessonProgress(this.progressData, lesson.id);
+    this.save();
+    // nothing is flown: a flight lesson's locks are lifted
+    this.locks.set([]);
+    this.host.renderPanel();
+    delete document.body.dataset.lessonReveal;
+    document.body.dataset.lesson = lesson.id;
+    this.strip.hidden = false;
+    this.host.openCase?.(lesson.case, lesson.mode);
+    this.tellOrbit();
+    this.lastStripKey = '';
+    this.paintStrip();
+    this.readCase(a);
+    return { ok: true };
+  }
+
+  /** Take the case's data from the Orbit section, once (again only when they could not be had). */
+  private readCase(a: Active): void {
+    const state = a.case;
+    if (!state) return;
+    state.failed = null;
+    const source = this.host.caseInput ? this.host.caseInput() : Promise.reject(new Error('Orbit section'));
+    source.then((s) => {
+      if (this.active !== a) return;
+      state.source = s;
+      this.buildCase(a);
+      this.lastStripKey = '';
+      this.gradeCase(false);
+    }, (err: unknown) => {
+      if (this.active !== a) return;
+      state.failed = `${t('lesson.strip.caseFailed', { reason: err instanceof Error ? err.message : String(err) })} ${t('lesson.strip.caseRetry')}`;
+      this.lastStripKey = '';
+      this.paintStrip();
+    });
+  }
+
+  /** The case's sheet in the language on screen, from the frozen data; the key is the first sheet's. */
+  private buildCase(a: Active): void {
+    const c = a.case;
+    if (!c?.source || !isCaseLesson(a.lesson)) return;
+    const sheet = caseWorksheet(a.lesson.case, { ...c.source, lang: getLang(), generatedAt: c.openedAt });
+    // THEOS-2's set is not in the catalogue (it could not be loaded, or a file of one's own is on screen)
+    if (!sheet) { c.source = null; c.failed = `${t('cases.noData')} ${t('lesson.strip.caseRetry')}`; return; }
+    c.sheet = sheet;
+    c.key ??= caseKey(sheet);
+  }
+
+  /** Grade a case lesson's answers; `record` after the student acted (a check, the answers shown), not merely on opening. */
+  private gradeCase(record: boolean): void {
+    const a = this.active;
+    if (!a?.case || !isCaseLesson(a.lesson)) return;
+    a.grade = a.case.key ? gradeCaseLesson(a.lesson, a.case.key, a.answers, this.revealedOf(a.lesson.id)) : null;
+    if (record && a.grade && !a.recorded && awaitingAnswers(a.lesson, a.grade).length === 0) this.recordCase(a);
+    this.tellOrbit();
+    this.paintStrip();
+  }
+
+  /** Whether the open case lesson has nothing left to give away: passed, or its answers shown. */
+  private caseAnswersOpen(a: Active | null): boolean {
+    return !!a?.grade && (a.grade.verdict === 'pass' || a.grade.criteria.some((c) => c.revealed));
+  }
+
+  /** Tell the Orbit section which case lesson is open, if any, and whether its answers may be shown there yet. */
+  private tellOrbit(): void {
+    const a = this.active;
+    const state: CaseLessonState | null = a && isCaseLesson(a.lesson) ? { case: a.lesson.case, answersOpen: this.caseAnswersOpen(a) } : null;
+    const key = JSON.stringify(state);
+    if (key === this.orbitKey) return;
+    this.orbitKey = key;
+    this.host.lessonCase?.(state);
+  }
+
+  /** Put the lesson's mission back as it started (a new flight, same lesson); a case lesson's answers are cleared. */
   private restart(): void {
     if (!this.active) return;
     const lesson = this.active.lesson;
+    if (isCaseLesson(lesson)) {
+      const a = this.active;
+      a.answers = {};
+      a.recorded = false;
+      this.lastStripKey = '';
+      // data that could not be had are asked for again; data had are kept, frozen
+      if (a.case && !a.case.source) { this.host.openCase?.(lesson.case, lesson.mode); this.readCase(a); }
+      this.gradeCase(false);
+      return;
+    }
     this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.host.loadMission(missionStateOf(lesson.mission));
     this.locks.set(lesson.locked);
@@ -216,6 +345,7 @@ export class LessonMode implements LessonToolsHost {
     this.strip.replaceChildren();
     delete document.body.dataset.lesson;
     delete document.body.dataset.lessonReveal;
+    this.tellOrbit();
   }
 
   activeLesson() {
@@ -243,6 +373,9 @@ export class LessonMode implements LessonToolsHost {
   update(): void {
     const a = this.active;
     if (!a) return;
+    // a case lesson has no flight: one flying on in the Launch section is not its business (nor are its answers cleared by it)
+    if (isCaseLesson(a.lesson)) return;
+    const lesson = a.lesson;
     const sim = this.host.sim();
     if (sim !== a.sim) {
       // a new flight: a preview after an edit, or a launch
@@ -259,13 +392,13 @@ export class LessonMode implements LessonToolsHost {
       lessonProgress(this.progressData, a.lesson.id).attempts++;
       this.save();
     }
-    const revealed = this.revealedOf(a.lesson.id);
-    if (a.frozen) a.grade = regradeAnswers(a.lesson, a.frozen, a.answers, revealed);
+    const revealed = this.revealedOf(lesson.id);
+    if (a.frozen) a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed);
     else {
-      a.grade = gradeLesson(a.lesson, sim, a.answers);
-      if (started && a.grade.final) { a.frozen = a.grade; a.grade = regradeAnswers(a.lesson, a.frozen, a.answers, revealed); }
+      a.grade = gradeLesson(lesson, sim, a.answers);
+      if (started && a.grade.final) { a.frozen = a.grade; a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed); }
     }
-    if (started && a.grade.final && !a.recorded && awaitingAnswers(a.lesson, a.grade).length === 0) this.record(a);
+    if (started && a.grade.final && !a.recorded && awaitingAnswers(lesson, a.grade).length === 0) this.record(a, lesson);
     this.paintStrip();
   }
 
@@ -274,7 +407,7 @@ export class LessonMode implements LessonToolsHost {
     return this.progressData.lessons[id]?.revealed ?? {};
   }
 
-  private record(a: Active): void {
+  private record(a: Active, lesson: Lesson): void {
     if (!a.grade || !a.sim) return;
     a.recorded = true;
     const revealed = a.grade.criteria.filter((c) => c.revealed).map((c) => c.id);
@@ -283,7 +416,7 @@ export class LessonMode implements LessonToolsHost {
     const state: MissionState = {
       vehicleId: cfg.vehicleId, satelliteId: cfg.satelliteId, siteId: cfg.siteId, orbitId: 'custom', orbit: { ...cfg.orbit },
       launchTime: new Date(cfg.launchTime.getTime()), guidanceOverrides: {}, failure: { ...cfg.failure }, boosterRecovery: cfg.boosterRecovery,
-      payloadMass: cfg.payloadMassOverride ?? a.lesson.mission.mission.payloadMass,
+      payloadMass: cfg.payloadMassOverride ?? lesson.mission.mission.payloadMass,
       ...(cfg.recoveryPlan ? { recoveryPlan: structuredClone(cfg.recoveryPlan) } : {}),
       ...(cfg.dynamics ? { dynamics: structuredClone(cfg.dynamics) } : {}),
     };
@@ -294,15 +427,41 @@ export class LessonMode implements LessonToolsHost {
     this.save();
   }
 
-  private submitAnswers(inputs: Map<string, HTMLInputElement>): void {
+  /** A case lesson's check, kept: its answers, the data they were worked from, and what was shown. */
+  private recordCase(a: Active): void {
+    if (!a.grade || !a.case || !isCaseLesson(a.lesson)) return;
+    a.recorded = true;
+    const p = lessonProgress(this.progressData, a.lesson.id);
+    const revealed = a.grade.criteria.filter((c) => c.revealed).map((c) => c.id);
+    const s = a.case.source;
+    const epoch = a.lesson.case === 'theos2' && s?.theos2 ? new Date((s.theos2.jdEpoch + s.theos2.jdEpochFrac - 2440587.5) * 86400e3).toISOString() : null;
+    recordGrade(this.progressData, {
+      lessonId: a.lesson.id, at: new Date().toISOString(), verdict: a.grade.verdict, criteria: a.grade.criteria,
+      answers: { ...a.answers }, hintsShown: p.hintsShown,
+      caseData: { case: a.lesson.case, ...(epoch ? { theos2Epoch: epoch } : {}), ...(a.lesson.case === 'cz5b' && s?.activityTo ? { activityTo: s.activityTo } : {}) },
+      ...(revealed.length ? { revealed } : {}),
+    });
+    this.save();
+  }
+
+  /** The answers typed (by criterion id, each read as its input has it: a number, or a choice's index). */
+  private submitAnswers(inputs: Map<string, () => string>): void {
     const a = this.active;
     if (!a) return;
-    for (const [id, input] of inputs) {
-      const v = Number(input.value.replace(',', '.'));
-      if (input.value.trim() !== '' && Number.isFinite(v)) a.answers[id] = v;
+    let typed = false;
+    for (const [id, read] of inputs) {
+      const raw = read();
+      const v = Number(raw.replace(',', '.'));
+      if (raw.trim() !== '' && Number.isFinite(v)) { a.answers[id] = v; typed = true; }
     }
     a.recorded = false;
     this.lastStripKey = '';
+    if (isCaseLesson(a.lesson)) {
+      // a case lesson's attempts are its checks
+      if (typed) { lessonProgress(this.progressData, a.lesson.id).attempts++; this.save(); }
+      this.gradeCase(true);
+      return;
+    }
     this.update();
   }
 
@@ -315,16 +474,18 @@ export class LessonMode implements LessonToolsHost {
     const a = this.active;
     if (!a?.grade?.final) return;
     const shown: Record<string, number> = {};
+    const criteria: ReadonlyArray<{ id: string; kind: string }> = a.lesson.criteria;
     for (const g of a.grade.criteria) {
-      const c = a.lesson.criteria.find((x) => x.id === g.id);
-      if (c?.kind === 'answer' && g.state !== 'pass' && !g.revealed && typeof g.expected === 'number' && Number.isFinite(g.expected)) shown[g.id] = g.expected;
+      const kind = criteria.find((x) => x.id === g.id)?.kind;
+      if ((kind === 'answer' || kind === 'case') && g.state !== 'pass' && !g.revealed && typeof g.expected === 'number' && Number.isFinite(g.expected)) shown[g.id] = g.expected;
     }
     if (!Object.keys(shown).length) return;
     recordRevealed(this.progressData, a.lesson.id, shown);
     a.recorded = false;
     this.save();
     this.lastStripKey = '';
-    this.update();
+    if (isCaseLesson(a.lesson)) this.gradeCase(true);
+    else this.update();
   }
 
   private showHint(): void {
@@ -388,9 +549,35 @@ export class LessonMode implements LessonToolsHost {
     return chip;
   }
 
+  /** The strip's head: the lesson's number and track, its title and task, and the hints shown. */
+  private stripHead(lesson: CatalogLesson, hints: number): HTMLElement {
+    const track = TRACKS.find((x) => x.id === lesson.track);
+    this.strip.setAttribute('aria-label', `${t('lesson.button')} ${lessonNumber(lesson)}`);
+    const head = el('div', 'lesson-strip-head');
+    head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: track ? localText(track.title) : '' })),
+      el('h2', undefined, localText(lesson.title)), el('p', 'lesson-brief', localText(lesson.brief)));
+    for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${localText(lesson.hints[i])}`));
+    return head;
+  }
+
+  /** The strip's buttons, and a way to add one. */
+  private actionBar(): { actions: HTMLElement; button: (label: string, fn: () => void, cls?: string) => HTMLButtonElement } {
+    const actions = el('div', 'lesson-actions');
+    const button = (label: string, fn: () => void, cls = ''): HTMLButtonElement => {
+      const b = el('button', cls, label);
+      b.type = 'button';
+      b.addEventListener('click', fn);
+      actions.append(b);
+      return b;
+    };
+    return { actions, button };
+  }
+
   private paintStrip(): void {
     const a = this.active;
     if (!a) return;
+    this.strip.classList.toggle('case', isCaseLesson(a.lesson));
+    if (isCaseLesson(a.lesson)) { this.paintCase(a, a.lesson); return; }
     const lang = getLang();
     const g = a.grade;
     const flown = !!a.sim && flightStarted(a.sim);
@@ -402,13 +589,8 @@ export class LessonMode implements LessonToolsHost {
     if (typing && g?.final) return;
     this.lastStripKey = key;
     const lesson = a.lesson;
-    const track = TRACKS.find((x) => x.id === lesson.track);
     const s = this.strip;
-    s.setAttribute('aria-label', `${t('lesson.button')} ${lessonNumber(lesson)}`);
-    const head = el('div', 'lesson-strip-head');
-    head.append(el('span', 'lesson-eyebrow', t('lesson.strip.eyebrow', { n: lessonNumber(lesson), track: track ? localText(track.title) : '' })),
-      el('h2', undefined, localText(lesson.title)), el('p', 'lesson-brief', localText(lesson.brief)));
-    for (let i = 0; i < hints; i++) head.append(el('p', 'lesson-hint', `💡 ${localText(lesson.hints[i])}`));
+    const head = this.stripHead(lesson, hints);
 
     const crits = el('div', 'lesson-crits');
     for (const c of lesson.criteria) if (c.kind !== 'answer') crits.append(this.chip(c, g?.criteria.find((x) => x.id === c.id), flown));
@@ -423,7 +605,7 @@ export class LessonMode implements LessonToolsHost {
     if (flown && g?.final && answerCrits.length) {
       const form = el('form', 'lesson-answers');
       form.append(el('p', 'lesson-note', t('lesson.strip.answers')));
-      const inputs = new Map<string, HTMLInputElement>();
+      const inputs = new Map<string, () => string>();
       for (const c of answerCrits) {
         const cg = g.criteria.find((x) => x.id === c.id);
         const row = el('label', `lesson-answer ${cg?.state ?? 'pending'}`);
@@ -433,7 +615,7 @@ export class LessonMode implements LessonToolsHost {
         input.value = a.answers[c.id] !== undefined ? String(a.answers[c.id]) : '';
         input.setAttribute('aria-label', localText(c.prompt));
         input.disabled = !!cg?.revealed;
-        inputs.set(c.id, input);
+        inputs.set(c.id, () => input.value);
         // a wrong answer is only marked: the value is shown only when asked for, and then no longer counts
         const verdict = cg?.state === 'pass' ? '✓' : cg?.revealed
           ? `✗ ${t('lesson.strip.expected', { value: formatMeasure(c.measure, cg.expected ?? null) })}` : cg?.state === 'fail' ? '✗' : '';
@@ -465,14 +647,7 @@ export class LessonMode implements LessonToolsHost {
       status.append(el('p', 'lesson-note fail', t(key)));
     }
 
-    const actions = el('div', 'lesson-actions');
-    const button = (label: string, fn: () => void, cls = ''): HTMLButtonElement => {
-      const b = el('button', cls, label);
-      b.type = 'button';
-      b.addEventListener('click', fn);
-      actions.append(b);
-      return b;
-    };
+    const { actions, button } = this.actionBar();
     const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.strip.restart'), () => this.restart());
@@ -487,13 +662,156 @@ export class LessonMode implements LessonToolsHost {
     s.replaceChildren(head, crits, status, actions);
   }
 
-  private nextLesson(lesson: Lesson): Lesson | null {
+  /**
+   * A case lesson's strip: the case's data as its sheet gives them, its
+   * questions to answer (numbers typed, a choice picked), a ✗ on a wrong
+   * answer and no more, and after a pass — or once the answers are shown —
+   * each answer with its working.
+   */
+  private paintCase(a: Active, lesson: CaseLesson): void {
+    const c = a.case!;
+    // another language: the sheet's words again, from the same frozen data (the key stays the first one's)
+    if (c.sheet && c.sheet.lang !== getLang()) this.buildCase(a);
+    const g = a.grade;
+    const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
+    const key = JSON.stringify([getLang(), lesson.id, !!c.sheet, c.failed, g?.verdict, g?.criteria.map((x) => [x.state, x.value, !!x.revealed]), hints, a.answers]);
+    if (key === this.lastStripKey) return;
+    const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
+    if (typing && this.lastStripKey) return;
+    this.lastStripKey = key;
+    const head = this.stripHead(lesson, hints);
+    const status = el('div', 'lesson-status');
+    if (c.failed) status.append(el('p', 'lesson-note fail', c.failed));
+    else if (!c.sheet) status.append(el('p', 'lesson-note', t('lesson.strip.caseLoading')));
+    if (c.sheet && g) {
+      status.append(this.caseData(c, c.sheet), this.caseForm(a, lesson, c.sheet, g));
+      if (g.verdict === 'pass') {
+        status.append(el('p', 'lesson-note pass', t('lesson.strip.pass')));
+        if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
+      } else if (g.verdict === 'fail') {
+        status.append(el('p', 'lesson-note fail', t(g.criteria.some((x) => x.revealed) ? 'lesson.strip.revealed' : 'lesson.strip.answersWrong')));
+      }
+    }
+    const { actions, button } = this.actionBar();
+    const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
+    hintBtn.disabled = hints >= lesson.hints.length;
+    button(t('lesson.strip.restart'), () => this.restart());
+    if (g?.verdict === 'pass') {
+      const next = this.nextLesson(lesson);
+      if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
+    }
+    button(t('lesson.strip.catalog'), () => this.openCatalog());
+    button(t('lesson.strip.caseTool'), () => this.host.openCase?.(lesson.case, lesson.mode));
+    button(t('ws.stripButton'), () => this.navigate(WORKSHEETS_HASH));
+    button(t('lesson.strip.link'), () => void this.copyLink(lesson));
+    button(t('lesson.strip.exit'), () => this.exit());
+    this.strip.replaceChildren(head, status, actions);
+  }
+
+  /** "The data": the case sheet's table and figure, as the student works from them. */
+  private caseData(c: CaseState, sheet: Worksheet): HTMLElement {
+    const box = el('details', 'lesson-case-data');
+    box.open = c.dataOpen;
+    box.addEventListener('toggle', () => { c.dataOpen = box.open; });
+    const data = sheet.sections[0];
+    box.append(el('summary', undefined, data.title));
+    if (data.intro) box.append(el('p', 'lesson-note', data.intro));
+    const table = el('table', 'lesson-case-table');
+    const body = el('tbody');
+    for (const [k, v] of data.table ?? []) {
+      const tr = el('tr');
+      tr.append(el('th', undefined, k), el('td', undefined, v));
+      body.append(tr);
+    }
+    table.append(body);
+    box.append(table);
+    for (const f of data.figures ?? []) {
+      if (!f.svg) continue;
+      const fig = el('figure', 'lesson-case-figure');
+      const holder = el('div');
+      // the sheet's own drawing (src/orbit/encounter-plane.ts), its labels escaped there
+      holder.innerHTML = f.svg;
+      fig.append(holder);
+      if (f.caption) fig.append(el('figcaption', 'lesson-note', f.caption));
+      box.append(fig);
+    }
+    return box;
+  }
+
+  /** The case's questions: a number typed with its unit, a choice picked from the sheet's lettered options. */
+  private caseForm(a: Active, lesson: CaseLesson, sheet: Worksheet, g: LessonGrade): HTMLElement {
+    const form = el('form', 'lesson-answers lesson-case-answers');
+    form.append(el('p', 'lesson-note', t('lesson.strip.caseAnswers')));
+    const questions = sheet.sections[1];
+    if (questions?.intro) form.append(el('p', 'lesson-note', questions.intro));
+    const items = sheet.sections.flatMap((s) => s.items);
+    const inputs = new Map<string, () => string>();
+    let hidden = 0;
+    for (const crit of lesson.criteria) {
+      const item = items.find((i) => i.id === crit.item);
+      if (!item) continue;
+      const cg = g.criteria.find((x) => x.id === crit.id);
+      const prompt = crit.label ? localText(crit.label) : item.prompt;
+      const row = el('div', `lesson-answer lesson-case-item ${cg?.state ?? 'pending'}`);
+      row.append(el('span', 'lesson-case-prompt', prompt));
+      if (item.kind === 'choice') {
+        const group = el('div', 'lesson-case-options');
+        group.setAttribute('role', 'radiogroup');
+        group.setAttribute('aria-label', prompt);
+        (item.options ?? []).forEach((text, k) => {
+          const label = el('label', 'lesson-case-option');
+          const radio = el('input');
+          radio.type = 'radio';
+          radio.name = `case-${crit.id}`;
+          radio.value = String(k);
+          radio.checked = a.answers[crit.id] === k;
+          radio.disabled = !!cg?.revealed;
+          label.append(radio, document.createTextNode(` ${letterOf(sheet.lang, k)}) ${text}`));
+          group.append(label);
+        });
+        inputs.set(crit.id, () => group.querySelector<HTMLInputElement>('input:checked')?.value ?? '');
+        row.append(group);
+      } else {
+        const field = el('span', 'lesson-case-field');
+        const input = el('input');
+        input.type = 'text';
+        input.inputMode = 'decimal';
+        input.value = a.answers[crit.id] !== undefined ? String(a.answers[crit.id]) : '';
+        input.setAttribute('aria-label', prompt);
+        input.disabled = !!cg?.revealed;
+        inputs.set(crit.id, () => input.value);
+        field.append(input);
+        if (item.unit) field.append(el('span', 'lesson-case-unit', item.unit));
+        row.append(field);
+      }
+      // wrong is only marked; the answer and its working come with a pass, or when asked for (and then do not count)
+      row.append(el('span', 'lesson-answer-mark', cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : ''));
+      if (cg?.state === 'pass' || cg?.revealed) {
+        const tol = item.answer.tolerance ? ` (${item.answer.tolerance})` : '';
+        row.append(el('p', 'lesson-case-working', `${item.answer.text}${tol}${item.answer.working ? ` — ${item.answer.working}` : ''}`));
+      } else hidden++;
+      form.append(row);
+    }
+    const check = el('button', 'lesson-primary', t('lesson.strip.check'));
+    check.type = 'submit';
+    form.append(check);
+    if (hidden) {
+      const reveal = el('button', undefined, t('lesson.strip.reveal'));
+      reveal.type = 'button';
+      reveal.addEventListener('click', () => this.revealAnswers());
+      form.append(reveal);
+    }
+    form.addEventListener('submit', (e) => { e.preventDefault(); this.submitAnswers(inputs); });
+    return form;
+  }
+
+  private nextLesson(lesson: CatalogLesson): CatalogLesson | null {
     const written = this.written();
     const i = written.findIndex((l) => l.id === lesson.id);
     return i >= 0 && i + 1 < written.length ? written[i + 1] : null;
   }
 
-  private async copyLink(lesson: Lesson): Promise<void> {
+  private async copyLink(lesson: CatalogLesson): Promise<void> {
     const url = new URL(location.href);
     url.search = '';
     url.searchParams.set('lesson', lesson.id);
@@ -713,11 +1031,26 @@ export class LessonMode implements LessonToolsHost {
       flight: () => {
         const sim = this.host.sim();
         if (!sim || !flightStarted(sim)) return null;
-        return { flight: sim, ended: flightEnded(this.active?.lesson ?? {}, sim) };
+        return { flight: sim, ended: flightEnded(this.flightLesson() ?? {}, sim) };
       },
-      lesson: () => this.active?.lesson ?? null,
+      lesson: () => this.flightLesson(),
+      caseLesson: () => this.caseSheet(),
       progress: () => this.progressData,
     }, this.content);
+  }
+
+  /** The open lesson, when it is a flight lesson. */
+  private flightLesson(): Lesson | null {
+    const l = this.active?.lesson;
+    return l && !isCaseLesson(l) ? l : null;
+  }
+
+  /** The open case lesson's sheet, from its frozen data, in the language on screen; the key only once it gives nothing away. */
+  private caseSheet(): { lesson: CaseLesson; sheet: Worksheet | null; keyOpen: boolean } | null {
+    const a = this.active;
+    if (!a?.case || !isCaseLesson(a.lesson)) return null;
+    if (a.case.sheet && a.case.sheet.lang !== getLang()) this.buildCase(a);
+    return { lesson: a.lesson, sheet: a.case.sheet, keyOpen: this.caseAnswersOpen(a) };
   }
 
   private async showAssessment(): Promise<void> {

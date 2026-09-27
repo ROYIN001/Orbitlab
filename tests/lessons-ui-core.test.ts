@@ -105,10 +105,12 @@ describe('the lessons over WebMCP', () => {
   const tool = (h: LessonToolsHost, name: string) => createLessonTools(h).find((t) => t.name === name)!;
 
   it('lists every lesson with the student\'s progress', () => {
-    const out = tool(host(false), 'list_lessons').execute({}) as { lessons: Array<{ id: string; passed: boolean; written: boolean }> };
-    expect(out.lessons).toHaveLength(21);
-    expect(out.lessons[0]).toMatchObject({ id: 'orbit-first', passed: true, written: true });
-    expect(out.lessons.filter((l) => l.written)).toHaveLength(21);
+    const out = tool(host(false), 'list_lessons').execute({}) as { lessons: Array<{ id: string; passed: boolean; written: boolean; kind: string }> };
+    // twenty-one flight lessons and the three case lessons of track 6
+    expect(out.lessons).toHaveLength(24);
+    expect(out.lessons[0]).toMatchObject({ id: 'orbit-first', kind: 'flight', passed: true, written: true });
+    expect(out.lessons.filter((l) => l.written)).toHaveLength(24);
+    expect(out.lessons.filter((l) => l.kind === 'case')).toHaveLength(3);
   });
 
   // it once read "1 orbital mechanics, … 5 failures and safety, 6 basics": one off, so an attitude-control lesson (area 5) read as failures

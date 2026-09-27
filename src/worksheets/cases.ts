@@ -6,11 +6,11 @@
  * uncontrolled re-entry (2021), and THEOS-2's sun-synchronous orbit over
  * Bangkok.
  *
- * The app's lessons are graded launches (src/lessons/types.ts: a mission
- * flown and read); these cases are no launch, so they come as case sheets
- * from the Orbit section, rendered by the same HTML as E05's worksheets
- * (src/worksheets/html.ts). Every answer is computed here, from the data the
- * sheet prints, and the working says how.
+ * The sheets come from the Orbit section, rendered by the same HTML as
+ * E05's worksheets (src/worksheets/html.ts), and each case is also a graded
+ * lesson (E03, track 6: src/lessons/builtin/track6.ts), graded by the key
+ * read off its sheet (`caseKey`). Every answer is computed here, from the
+ * data the sheet prints, and the working says how.
  *
  * DOM-free; tests/case-worksheets.test.ts.
  */
@@ -36,13 +36,19 @@ import type { WsItem, Worksheet } from './types';
 
 export { CASE_IDS, type CaseId } from './case-ids';
 
-export interface CaseInput {
-  lang: Lang;
-  generatedAt: Date;
+/** The data a case sheet is worked from that change with time; a case lesson freezes them when it opens. */
+export interface CaseSource {
   /** the Sun's activity the re-entry is predicted with (R05) */
   activity: Activity;
   /** THEOS-2's element set, as the catalogue on screen has it */
   theos2: ElementSet | null;
+  /** the last day of that activity measured or forecast, for the record */
+  activityTo?: string;
+}
+
+export interface CaseInput extends CaseSource {
+  lang: Lang;
+  generatedAt: Date;
 }
 
 const DEG = Math.PI / 180;
