@@ -1553,7 +1553,7 @@ set's decay rate, 70 % of them inside the ±20 % window.
 | predicted from the first element set | inside the ±20 % window |
 | --- | --- |
 | B fitted to the set's decay rate | 7 of 13 (only 14 of 66 first sets carry a usable ṅ) |
-| GCAT's mass and size, a tumbling cylinder, C_D 2.2 | 33 of 66: 29 of 58 near-circular orbits, 4 of 8 transfer orbits |
+| GCAT's dry mass and size, a tumbling cylinder, C_D 2.2 | 33 of 66: 29 of 58 near-circular orbits, 4 of 8 transfer orbits |
 | the same, before P2.5 (mean elements for every orbit) | 29 of 66: none of the 8 transfer orbits |
 
 **Findings.**
@@ -1575,10 +1575,21 @@ set's decay rate, 70 % of them inside the ±20 % window.
   without the Sun and the Moon, all eight stayed up. Their pull moves such a perigee by tens of
   kilometres in weeks, and that sets the day. Since P2.5 an orbit of eccentricity 0.1 or more is
   carried by Cowell from SGP4's state at the epoch, with J2–J4, the Sun and the Moon, until it is
-  down: six of the eight come down within 22 % of the day (Falcon 9's two within 2 %, the Long
-  March 3C's within 1 %), four inside the window; H3 F4's and the Long March 7A Y13's stay up past
-  400 days. This change was made after the first run showed the failure; the circular orbits'
-  predictions are unchanged by it.
+  down: five of the eight come down within 25 % of the day (Falcon 9's two within 2 %, the Long
+  March 3C's within 5 %), four inside the window; H3 F4's stays up past 400 days and the Long
+  March 7A Y13's comes down nine times too late. This change was made after the first run showed
+  the failure; the circular orbits' predictions are unchanged by it.
+- **The mass column was corrected (P2.5 fix-up).** Until 2026-09-27 the fixture read GCAT's `Mass`,
+  which for a stage is its mass at orbital insertion; GCAT gives `DryMass` as "a reasonable proxy for
+  the mass of the object after its active lifetime" ([GCAT's columns](https://planet4589.org/space/gcat/web/cat/cols.html)),
+  which is what a spent stage falls with. `make_stages.py` now takes `DryMass` where GCAT gives one,
+  else `Mass`, and keeps both with their flags. They differ for four stages, the Long March third
+  stages in transfer orbits (8 400 kg against 2 800 kg, both flagged "?", an estimate); the published
+  empty mass of the Long March 7A third stage is 2 800 kg ([Wikipedia](https://en.wikipedia.org/wiki/Long_March_7A)).
+  The counts inside the window are unchanged (33 of 66; 4 of 8 transfer orbits); within 25 % of
+  the day the transfer orbits went from 6 of 8 to 5 (the Long March 7A Y6 from −22 % to −27 %, the
+  Long March 3C from 0 % to −5 %), and the Long March 7A Y13, which stayed up past 400 days at
+  8 400 kg, comes down at 2 800 kg 858 % late.
 
 **Re-entries predicted the agencies' way: the test fixed before it runs (P2.5, 2026-09-27).**
 A first element set is made from days of tracking, and the test above asks more of it than the

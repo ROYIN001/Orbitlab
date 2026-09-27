@@ -14,7 +14,9 @@
  *   150 days after launch — 66): fixed before, at least 70 % inside the ±20 %
  *   window predicted from the first element set with B from its decay rate,
  *   of at least 20 so predicted. Missed: only 14 first sets carry a decay
- *   rate that gives a B, and 7 of the 13 predicted came down inside.
+ *   rate that gives a B, and 7 of the 13 predicted came down inside. The
+ *   stages' mass is GCAT's dry mass since the P2.5 fix-up (it was the mass at
+ *   insertion); the counts the size arm found are recorded with both.
  * - **NAPA-2** (src/data/napa2.ts): its lifetime from its first element set
  *   within 25 %, as a tumbling box of its published size and mass (met,
  *   +8 %) and with B fitted to that set's decay (missed, −28 %).
@@ -92,13 +94,22 @@ describe('the rocket stages of 2023–2025, from their first element sets (P2.5)
       p: predictReentry(x.el, { mass: x.s.mass!, area: tumblingCylinderArea(x.s.length!, x.s.diameter!), cd: 2.2 }, measured, 400),
     }));
     expect(res.length).toBe(66);
-    // found, and recorded after the run: 33 of 66 inside the window, 29 of 58 near-circular, 4 of 8 transfer orbits
+    // the mass is GCAT's DryMass, the mass after the active life, where it gives one (P2.5 fix-up):
+    // until 2026-09-27 the fixture read GCAT's Mass, the mass at insertion, which differs for the four
+    // Long March third stages (8 400 kg against 2 800 kg), all four in transfer orbits
+    expect(stages.stages.filter((s) => s.massFrom === 'DryMass' && s.gcat.mass !== s.gcat.dryMass).length).toBe(4);
+    // found, and recorded after the run: 33 of 66 inside the window, 29 of 58 near-circular, 4 of 8
+    // transfer orbits — the same counts with either mass column
     expect(res.filter((x) => inside(x.p, x.actual)).length).toBe(33);
     const transfer = res.filter((x) => x.eccentric);
     expect(transfer.length).toBe(8);
     expect(transfer.filter((x) => inside(x.p, x.actual)).length).toBe(4);
-    // 6 of the 8 within 25 % of the day; with the mean elements, which leave the Sun and the Moon out, 5 stayed up past 400 days
-    expect(transfer.filter((x) => x.p.jd !== null && Math.abs((x.p.jd - x.p.from) / (x.actual - x.p.from) - 1) < 0.25).length).toBe(6);
+    // within 25 % of the day: 5 of the 8 with the dry mass, 6 with the mass at insertion (the Long March
+    // 7A Y6 goes from −22 % to −27 %); the Long March 7A Y13, which stayed up past 400 days at 8 400 kg,
+    // comes down at 2 800 kg, nine times too late; H3 F4 stays up with either. With the mean elements,
+    // which leave the Sun and the Moon out, 5 stayed up past 400 days
+    expect(transfer.filter((x) => x.p.jd !== null && Math.abs((x.p.jd - x.p.from) / (x.actual - x.p.from) - 1) < 0.25).length).toBe(5);
+    expect(transfer.filter((x) => x.p.jd === null).map((x) => x.s.name)).toEqual(['H3 F4 Stage 2']);
   }, 600_000);
 });
 

@@ -1,5 +1,6 @@
 {
  "selection": "GCAT rocket stages re-entered 2023-2025 (status R, dated to the minute), 5-150 days after launch; first element set from CelesTrak gp-first",
+ "mass": "GCAT DryMass where given (the mass after the active life), else Mass (at insertion); both kept under gcat with their flags ('?' an estimate)",
  "stages": [
   {
    "name": "Electron 31 Stage 2",
@@ -7,8 +8,21 @@
    "launch": "2022-127",
    "reentry": "2023-02-27T13:53Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2022-10-08",
+     "perigee": 279.0,
+     "apogee": 767.0,
+     "inc": 98.34
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2022-127C",
@@ -35,8 +49,21 @@
    "launch": "2022-176",
    "reentry": "2023-02-16T19:27Z",
    "mass": 1000.0,
+   "massFrom": "DryMass",
    "length": 6.9,
    "diameter": 2.9,
+   "gcat": {
+    "mass": 1000.0,
+    "massFlag": "?",
+    "dryMass": 1000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2022-12-27",
+     "perigee": 239.0,
+     "apogee": 483.0,
+     "inc": 97.23
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-4B R/B",
     "OBJECT_ID": "2022-176B",
@@ -63,8 +90,21 @@
    "launch": "2023-005",
    "reentry": "2023-02-07T22:23Z",
    "mass": 3800.0,
+   "massFrom": "DryMass",
    "length": 8.4,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 3800.0,
+    "massFlag": "?",
+    "dryMass": 3800.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-01-14",
+     "perigee": 211.0,
+     "apogee": 475.0,
+     "inc": 28.5
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2D R/B",
     "OBJECT_ID": "2023-005B",
@@ -91,8 +131,21 @@
    "launch": "2023-011",
    "reentry": "2023-05-27T09:09Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-01-26",
+     "perigee": 328.0,
+     "apogee": 557.0,
+     "inc": 40.49
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2023-011E",
@@ -119,8 +172,21 @@
    "launch": "2023-045",
    "reentry": "2023-07-03T22:59Z",
    "mass": 2350.0,
+   "massFrom": "DryMass",
    "length": 6.7,
    "diameter": 2.7,
+   "gcat": {
+    "mass": 2350.0,
+    "massFlag": "",
+    "dryMass": 2350.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-03-30",
+     "perigee": 325.0,
+     "apogee": 343.0,
+     "inc": 96.47
+    }
+   },
    "elements": {
     "OBJECT_NAME": "SL-4 R/B",
     "OBJECT_ID": "2023-045B",
@@ -147,8 +213,21 @@
    "launch": "2023-063",
    "reentry": "2023-05-21T05:57Z",
    "mass": 6000.0,
+   "massFrom": "DryMass",
    "length": 11.5,
    "diameter": 3.35,
+   "gcat": {
+    "mass": 6000.0,
+    "massFlag": "",
+    "dryMass": 6000.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-05-10",
+     "perigee": 199.0,
+     "apogee": 317.0,
+     "inc": 41.48
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-7 R/B",
     "OBJECT_ID": "2023-063B",
@@ -175,8 +254,21 @@
    "launch": "2023-077",
    "reentry": "2023-06-12T17:28Z",
    "mass": 5500.0,
+   "massFrom": "DryMass",
    "length": 15.5,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 5500.0,
+    "massFlag": "",
+    "dryMass": 5500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-05-30",
+     "perigee": 189.0,
+     "apogee": 534.0,
+     "inc": 41.56
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2F R/B",
     "OBJECT_ID": "2023-077F",
@@ -203,8 +295,21 @@
    "launch": "2023-098",
    "reentry": "2023-11-15T09:43Z",
    "mass": 4400.0,
+   "massFrom": "DryMass",
    "length": 13.3,
    "diameter": 4.0,
+   "gcat": {
+    "mass": 4400.0,
+    "massFlag": "",
+    "dryMass": 4400.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-09-12",
+     "perigee": 126.0,
+     "apogee": 34041.0,
+     "inc": 21.26
+    }
+   },
    "elements": {
     "OBJECT_NAME": "GSLV R/B",
     "OBJECT_ID": "2023-098B",
@@ -231,8 +336,21 @@
    "launch": "2023-100",
    "reentry": "2023-08-03T18:46Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-07-18",
+     "perigee": 200.0,
+     "apogee": 579.0,
+     "inc": 99.44
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2023-100J",
@@ -259,8 +377,21 @@
    "launch": "2023-112",
    "reentry": "2023-09-21T11:40Z",
    "mass": 4000.0,
+   "massFrom": "DryMass",
    "length": 12.6,
    "diameter": 3.6,
+   "gcat": {
+    "mass": 4000.0,
+    "massFlag": "?",
+    "dryMass": 4000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-08-29",
+     "perigee": 120.0,
+     "apogee": 55667.0,
+     "inc": 24.45
+    }
+   },
    "elements": {
     "OBJECT_NAME": "FALCON 9 R/B",
     "OBJECT_ID": "2023-112B",
@@ -286,9 +417,22 @@
    "norad": 57625,
    "launch": "2023-120",
    "reentry": "2023-10-30T03:16Z",
-   "mass": 8400.0,
+   "mass": 2800.0,
+   "massFrom": "DryMass",
    "length": 12.4,
    "diameter": 3.0,
+   "gcat": {
+    "mass": 8400.0,
+    "massFlag": "?",
+    "dryMass": 2800.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-09-12",
+     "perigee": 129.0,
+     "apogee": 33702.0,
+     "inc": 28.48
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-3B R/B",
     "OBJECT_ID": "2023-120B",
@@ -315,8 +459,21 @@
    "launch": "2023-126",
    "reentry": "2023-09-11T03:26Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-08-24",
+     "perigee": 180.0,
+     "apogee": 657.0,
+     "inc": 53.01
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2023-126C",
@@ -343,8 +500,21 @@
    "launch": "2023-135",
    "reentry": "2023-09-25T06:01Z",
    "mass": 150.0,
+   "massFrom": "DryMass",
    "length": 2.0,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 150.0,
+    "massFlag": "?",
+    "dryMass": 150.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-09-06",
+     "perigee": 163.0,
+     "apogee": 820.0,
+     "inc": 49.93
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CERES-1 R/B",
     "OBJECT_ID": "2023-135E",
@@ -371,8 +541,21 @@
    "launch": "2023-164",
    "reentry": "2023-11-03T03:06Z",
    "mass": 5500.0,
+   "massFrom": "DryMass",
    "length": 15.5,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 5500.0,
+    "massFlag": "",
+    "dryMass": 5500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-10-26",
+     "perigee": 194.0,
+     "apogee": 344.0,
+     "inc": 41.48
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2F R/B",
     "OBJECT_ID": "2023-164B",
@@ -398,9 +581,22 @@
    "norad": 58205,
    "launch": "2023-169",
    "reentry": "2024-01-14T05:46Z",
-   "mass": 8400.0,
+   "mass": 2800.0,
+   "massFrom": "DryMass",
    "length": 12.4,
    "diameter": 3.0,
+   "gcat": {
+    "mass": 8400.0,
+    "massFlag": "?",
+    "dryMass": 2800.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-12-13",
+     "perigee": 135.0,
+     "apogee": 26401.0,
+     "inc": 16.66
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-7A R/B",
     "OBJECT_ID": "2023-169B",
@@ -427,8 +623,21 @@
    "launch": "2023-182",
    "reentry": "2024-03-02T19:26Z",
    "mass": 2350.0,
+   "massFrom": "DryMass",
    "length": 6.7,
    "diameter": 2.7,
+   "gcat": {
+    "mass": 2350.0,
+    "massFlag": "",
+    "dryMass": 2350.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-11-26",
+     "perigee": 301.0,
+     "apogee": 318.0,
+     "inc": 96.63
+    }
+   },
    "elements": {
     "OBJECT_NAME": "SL-4 R/B",
     "OBJECT_ID": "2023-182B",
@@ -455,8 +664,21 @@
    "launch": "2023-195",
    "reentry": "2024-03-10T14:30Z",
    "mass": 5500.0,
+   "massFrom": "DryMass",
    "length": 15.5,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 5500.0,
+    "massFlag": "",
+    "dryMass": 5500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-12-14",
+     "perigee": 329.0,
+     "apogee": 347.0,
+     "inc": 49.99
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2F R/B",
     "OBJECT_ID": "2023-195B",
@@ -483,8 +705,21 @@
    "launch": "2023-202",
    "reentry": "2024-01-19T13:56Z",
    "mass": 909.0,
+   "massFrom": "DryMass",
    "length": 5.8,
    "diameter": 1.8,
+   "gcat": {
+    "mass": 909.0,
+    "massFlag": "",
+    "dryMass": 909.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-12-22",
+     "perigee": 215.0,
+     "apogee": 523.0,
+     "inc": 140.02
+    }
+   },
    "elements": {
     "OBJECT_NAME": "FIREFLY ALPHA R/B",
     "OBJECT_ID": "2023-202B",
@@ -511,8 +746,21 @@
    "launch": "2023-205",
    "reentry": "2024-02-14T01:33Z",
    "mass": 50.0,
+   "massFrom": "DryMass",
    "length": 1.0,
    "diameter": 0.5,
+   "gcat": {
+    "mass": 50.0,
+    "massFlag": "?",
+    "dryMass": 50.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-12-25",
+     "perigee": 228.0,
+     "apogee": 543.0,
+     "inc": 97.41
+    }
+   },
    "elements": {
     "OBJECT_NAME": "KZ-1A R/B",
     "OBJECT_ID": "2023-205E",
@@ -539,8 +787,21 @@
    "launch": "2023-209",
    "reentry": "2024-05-03T18:25Z",
    "mass": 2350.0,
+   "massFrom": "DryMass",
    "length": 6.7,
    "diameter": 2.7,
+   "gcat": {
+    "mass": 2350.0,
+    "massFlag": "",
+    "dryMass": 2350.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2023-12-27",
+     "perigee": 349.0,
+     "apogee": 356.0,
+     "inc": 96.77
+    }
+   },
    "elements": {
     "OBJECT_NAME": "SL-4 R/B",
     "OBJECT_ID": "2023-209B",
@@ -567,8 +828,21 @@
    "launch": "2023-208",
    "reentry": "2024-01-04T06:52Z",
    "mass": 50.0,
+   "massFrom": "DryMass",
    "length": 1.0,
    "diameter": 0.5,
+   "gcat": {
+    "mass": 50.0,
+    "massFlag": "?",
+    "dryMass": 50.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2023-12-27",
+     "perigee": 157.0,
+     "apogee": 545.0,
+     "inc": 97.37
+    }
+   },
    "elements": {
     "OBJECT_NAME": "KZ-1A R/B",
     "OBJECT_ID": "2023-208E",
@@ -595,8 +869,21 @@
    "launch": "2024-013",
    "reentry": "2024-01-27T21:02Z",
    "mass": 6000.0,
+   "massFrom": "DryMass",
    "length": 11.5,
    "diameter": 3.35,
+   "gcat": {
+    "mass": 6000.0,
+    "massFlag": "",
+    "dryMass": 6000.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2024-01-17",
+     "perigee": 200.0,
+     "apogee": 324.0,
+     "inc": 41.47
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-7 R/B",
     "OBJECT_ID": "2024-013B",
@@ -623,8 +910,21 @@
    "launch": "2024-022",
    "reentry": "2024-02-09T23:12Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-01-31",
+     "perigee": 179.0,
+     "apogee": 527.0,
+     "inc": 97.49
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-022F",
@@ -651,8 +951,21 @@
    "launch": "2024-026",
    "reentry": "2024-06-10T15:13Z",
    "mass": 2350.0,
+   "massFrom": "DryMass",
    "length": 6.7,
    "diameter": 2.7,
+   "gcat": {
+    "mass": 2350.0,
+    "massFlag": "",
+    "dryMass": 2350.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2024-02-09",
+     "perigee": 348.0,
+     "apogee": 358.0,
+     "inc": 96.76
+    }
+   },
    "elements": {
     "OBJECT_NAME": "SL-4 R/B",
     "OBJECT_ID": "2024-026B",
@@ -679,8 +992,21 @@
    "launch": "2024-047",
    "reentry": "2024-03-21T08:10Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-03-14",
+     "perigee": 175.0,
+     "apogee": 532.0,
+     "inc": 97.56
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-047C",
@@ -707,8 +1033,21 @@
    "launch": "2024-048",
    "reentry": "2024-03-30T02:32Z",
    "mass": 3800.0,
+   "massFrom": "DryMass",
    "length": 8.4,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 3800.0,
+    "massFlag": "?",
+    "dryMass": 3800.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-03-15",
+     "perigee": 140.0,
+     "apogee": 1165.0,
+     "inc": 28.5
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2C R/B",
     "OBJECT_ID": "2024-048B",
@@ -735,8 +1074,21 @@
    "launch": "2024-053",
    "reentry": "2024-06-10T12:34Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-05-30",
+     "perigee": 253.0,
+     "apogee": 321.0,
+     "inc": 50.08
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-053F",
@@ -763,8 +1115,21 @@
    "launch": "2024-061",
    "reentry": "2024-07-03T16:01Z",
    "mass": 2710.0,
+   "massFrom": "DryMass",
    "length": 6.7,
    "diameter": 2.7,
+   "gcat": {
+    "mass": 2710.0,
+    "massFlag": "",
+    "dryMass": 2710.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2024-03-31",
+     "perigee": 286.0,
+     "apogee": 463.0,
+     "inc": 97.2
+    }
+   },
    "elements": {
     "OBJECT_NAME": "SL-4 R/B",
     "OBJECT_ID": "2024-061B",
@@ -791,8 +1156,21 @@
    "launch": "2024-078",
    "reentry": "2024-05-06T12:56Z",
    "mass": 5500.0,
+   "massFrom": "DryMass",
    "length": 15.5,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 5500.0,
+    "massFlag": "",
+    "dryMass": 5500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2024-04-26",
+     "perigee": 196.0,
+     "apogee": 336.0,
+     "inc": 41.47
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2F R/B",
     "OBJECT_ID": "2024-078B",
@@ -819,8 +1197,21 @@
    "launch": "2024-099",
    "reentry": "2024-06-10T11:07Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-05-25",
+     "perigee": 199.0,
+     "apogee": 531.0,
+     "inc": 97.49
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-099B",
@@ -847,8 +1238,21 @@
    "launch": "2024-114",
    "reentry": "2024-07-09T12:20Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-06-21",
+     "perigee": 195.0,
+     "apogee": 626.0,
+     "inc": 98.05
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-114B",
@@ -875,8 +1279,21 @@
    "launch": "2024-116",
    "reentry": "2024-08-04T23:59Z",
    "mass": 3800.0,
+   "massFrom": "DryMass",
    "length": 8.4,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 3800.0,
+    "massFlag": "?",
+    "dryMass": 3800.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-06-22",
+     "perigee": 212.0,
+     "apogee": 626.0,
+     "inc": 28.05
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2C R/B",
     "OBJECT_ID": "2024-116C",
@@ -903,8 +1320,21 @@
    "launch": "2024-130",
    "reentry": "2024-08-23T04:59Z",
    "mass": 1000.0,
+   "massFrom": "DryMass",
    "length": 6.9,
    "diameter": 2.9,
+   "gcat": {
+    "mass": 1000.0,
+    "massFlag": "?",
+    "dryMass": 1000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-07-19",
+     "perigee": 228.0,
+     "apogee": 490.0,
+     "inc": 97.43
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-4B R/B",
     "OBJECT_ID": "2024-130B",
@@ -931,8 +1361,21 @@
    "launch": "2024-137",
    "reentry": "2024-08-14T18:25Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-08-03",
+     "perigee": 200.0,
+     "apogee": 498.0,
+     "inc": 42.96
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-137C",
@@ -959,8 +1402,21 @@
    "launch": "2024-142",
    "reentry": "2024-08-23T21:17Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-08-12",
+     "perigee": 180.0,
+     "apogee": 614.0,
+     "inc": 53.01
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-142C",
@@ -987,8 +1443,21 @@
    "launch": "2024-148",
    "reentry": "2024-12-20T03:27Z",
    "mass": 1000.0,
+   "massFrom": "DryMass",
    "length": 6.9,
    "diameter": 2.9,
+   "gcat": {
+    "mass": 1000.0,
+    "massFlag": "?",
+    "dryMass": 1000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-08-16",
+     "perigee": 327.0,
+     "apogee": 499.0,
+     "inc": 35.01
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-4B R/B",
     "OBJECT_ID": "2024-148K",
@@ -1015,8 +1484,21 @@
    "launch": "2024-153",
    "reentry": "2024-12-23T03:58Z",
    "mass": 150.0,
+   "massFrom": "DryMass",
    "length": 2.0,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 150.0,
+    "massFlag": "?",
+    "dryMass": 150.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-08-29",
+     "perigee": 298.0,
+     "apogee": 540.0,
+     "inc": 97.64
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CERES-1 R/B",
     "OBJECT_ID": "2024-153G",
@@ -1043,8 +1525,21 @@
    "launch": "2024-177",
    "reentry": "2024-11-10T16:40Z",
    "mass": 4006.0,
+   "massFrom": "DryMass",
    "length": 8.0,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 4006.0,
+    "massFlag": "",
+    "dryMass": 4006.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2024-09-27",
+     "perigee": 321.0,
+     "apogee": 339.0,
+     "inc": 41.6
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2D R/B",
     "OBJECT_ID": "2024-177B",
@@ -1071,8 +1566,21 @@
    "launch": "2024-198",
    "reentry": "2025-03-20T22:05Z",
    "mass": 2500.0,
+   "massFrom": "DryMass",
    "length": 12.0,
    "diameter": 5.2,
+   "gcat": {
+    "mass": 2500.0,
+    "massFlag": "",
+    "dryMass": 2500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2025-01-05",
+     "perigee": 135.0,
+     "apogee": 33801.0,
+     "inc": 24.4
+    }
+   },
    "elements": {
     "OBJECT_NAME": "H-3 R/B",
     "OBJECT_ID": "2024-198B",
@@ -1099,8 +1607,21 @@
    "launch": "2024-201",
    "reentry": "2024-11-24T01:14Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-11-05",
+     "perigee": 200.0,
+     "apogee": 646.0,
+     "inc": 97.92
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-201C",
@@ -1127,8 +1648,21 @@
    "launch": "2024-211",
    "reentry": "2024-11-24T13:42Z",
    "mass": 6000.0,
+   "massFrom": "DryMass",
    "length": 11.5,
    "diameter": 3.35,
+   "gcat": {
+    "mass": 6000.0,
+    "massFlag": "",
+    "dryMass": 6000.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2024-11-15",
+     "perigee": 201.0,
+     "apogee": 334.0,
+     "inc": 41.47
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-7 R/B",
     "OBJECT_ID": "2024-211B",
@@ -1155,8 +1689,21 @@
    "launch": "2024-214",
    "reentry": "2025-04-14T01:40Z",
    "mass": 4000.0,
+   "massFrom": "DryMass",
    "length": 12.6,
    "diameter": 3.6,
+   "gcat": {
+    "mass": 4000.0,
+    "massFlag": "?",
+    "dryMass": 4000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-01-18",
+     "perigee": 209.0,
+     "apogee": 59130.0,
+     "inc": 27.72
+    }
+   },
    "elements": {
     "OBJECT_NAME": "FALCON 9 R/B",
     "OBJECT_ID": "2024-214B",
@@ -1183,8 +1730,21 @@
    "launch": "2024-219",
    "reentry": "2024-12-07T20:49Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-11-25",
+     "perigee": 184.0,
+     "apogee": 626.0,
+     "inc": 97.96
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-219G",
@@ -1211,8 +1771,21 @@
    "launch": "2024-221",
    "reentry": "2024-12-24T10:50Z",
    "mass": 5000.0,
+   "massFrom": "DryMass",
    "length": 12.0,
    "diameter": 3.4,
+   "gcat": {
+    "mass": 5000.0,
+    "massFlag": "?",
+    "dryMass": 5000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-11-27",
+     "perigee": 186.0,
+     "apogee": 626.0,
+     "inc": 49.93
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ZHUQUE-2E R/B",
     "OBJECT_ID": "2024-221C",
@@ -1239,8 +1812,21 @@
    "launch": "2024-248",
    "reentry": "2024-12-29T21:35Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2024-12-23",
+     "perigee": 175.0,
+     "apogee": 507.0,
+     "inc": 97.54
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2024-248C",
@@ -1267,8 +1853,21 @@
    "launch": "2024-250",
    "reentry": "2025-03-19T15:36Z",
    "mass": 2710.0,
+   "massFrom": "DryMass",
    "length": 6.7,
    "diameter": 2.7,
+   "gcat": {
+    "mass": 2710.0,
+    "massFlag": "",
+    "dryMass": 2710.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2024-12-25",
+     "perigee": 285.0,
+     "apogee": 465.0,
+     "inc": 97.26
+    }
+   },
    "elements": {
     "OBJECT_NAME": "SL-4 R/B",
     "OBJECT_ID": "2024-250B",
@@ -1295,8 +1894,21 @@
    "launch": "2025-007",
    "reentry": "2025-02-27T03:41Z",
    "mass": 500.0,
+   "massFrom": "DryMass",
    "length": 1.5,
    "diameter": 1.5,
+   "gcat": {
+    "mass": 500.0,
+    "massFlag": "?",
+    "dryMass": 500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2025-01-16",
+     "perigee": 215.0,
+     "apogee": 639.0,
+     "inc": 54.95
+    }
+   },
    "elements": {
     "OBJECT_NAME": "JIELONG-3 R/B",
     "OBJECT_ID": "2025-007M",
@@ -1323,8 +1935,21 @@
    "launch": "2025-022",
    "reentry": "2025-02-19T03:43Z",
    "mass": 4000.0,
+   "massFrom": "DryMass",
    "length": 12.6,
    "diameter": 3.6,
+   "gcat": {
+    "mass": 4000.0,
+    "massFlag": "?",
+    "dryMass": 4000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-02-02",
+     "perigee": 278.0,
+     "apogee": 293.0,
+     "inc": 53.15
+    }
+   },
    "elements": {
     "OBJECT_NAME": "FALCON 9 R/B",
     "OBJECT_ID": "2025-022Y",
@@ -1351,8 +1976,21 @@
    "launch": "2025-028",
    "reentry": "2025-02-21T01:06Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-02-09",
+     "perigee": 181.0,
+     "apogee": 635.0,
+     "inc": 97.96
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-028F",
@@ -1379,8 +2017,21 @@
    "launch": "2025-033",
    "reentry": "2025-02-26T02:50Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-02-19",
+     "perigee": 175.0,
+     "apogee": 474.0,
+     "inc": 59.0
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-033C",
@@ -1407,8 +2058,21 @@
    "launch": "2025-050",
    "reentry": "2025-04-09T18:30Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-03-15",
+     "perigee": 238.0,
+     "apogee": 572.0,
+     "inc": 42.0
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-050B",
@@ -1435,8 +2099,21 @@
    "launch": "2025-082",
    "reentry": "2025-05-03T01:28Z",
    "mass": 5500.0,
+   "massFrom": "DryMass",
    "length": 15.5,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 5500.0,
+    "massFlag": "",
+    "dryMass": 5500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2025-04-24",
+     "perigee": 192.0,
+     "apogee": 342.0,
+     "inc": 41.46
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2F R/B",
     "OBJECT_ID": "2025-082B",
@@ -1462,9 +2139,22 @@
    "norad": 63925,
    "launch": "2025-097",
    "reentry": "2025-09-07T09:08Z",
-   "mass": 8400.0,
+   "mass": 2800.0,
+   "massFrom": "DryMass",
    "length": 12.4,
    "diameter": 3.0,
+   "gcat": {
+    "mass": 8400.0,
+    "massFlag": "?",
+    "dryMass": 2800.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-06-12",
+     "perigee": 121.0,
+     "apogee": 33815.0,
+     "inc": 28.62
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-3C R/B",
     "OBJECT_ID": "2025-097B",
@@ -1491,8 +2181,21 @@
    "launch": "2025-103",
    "reentry": "2025-06-05T17:08Z",
    "mass": 5000.0,
+   "massFrom": "DryMass",
    "length": 12.0,
    "diameter": 3.4,
+   "gcat": {
+    "mass": 5000.0,
+    "massFlag": "?",
+    "dryMass": 5000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-05-17",
+     "perigee": 174.0,
+     "apogee": 603.0,
+     "inc": 96.12
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ZHUQUE-2E R/B",
     "OBJECT_ID": "2025-103G",
@@ -1519,8 +2222,21 @@
    "launch": "2025-104",
    "reentry": "2025-06-26T10:04Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-05-20",
+     "perigee": 229.0,
+     "apogee": 604.0,
+     "inc": 41.94
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-104B",
@@ -1547,8 +2263,21 @@
    "launch": "2025-118",
    "reentry": "2025-06-11T23:26Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-06-03",
+     "perigee": 199.0,
+     "apogee": 471.0,
+     "inc": 58.94
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-118C",
@@ -1575,8 +2304,21 @@
    "launch": "2025-138",
    "reentry": "2025-07-01T21:59Z",
    "mass": 50.0,
+   "massFrom": "DryMass",
    "length": 0.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 50.0,
+    "massFlag": "?",
+    "dryMass": 50.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-06-26",
+     "perigee": 235.0,
+     "apogee": 605.0,
+     "inc": 97.44
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON KICK STAGE R/B",
     "OBJECT_ID": "2025-138E",
@@ -1603,8 +2345,21 @@
    "launch": "2025-140",
    "reentry": "2025-07-13T13:07Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-06-28",
+     "perigee": 178.0,
+     "apogee": 653.0,
+     "inc": 95.99
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-140C",
@@ -1631,8 +2386,21 @@
    "launch": "2025-149",
    "reentry": "2025-07-29T03:51Z",
    "mass": 6000.0,
+   "massFrom": "DryMass",
    "length": 11.5,
    "diameter": 3.35,
+   "gcat": {
+    "mass": 6000.0,
+    "massFlag": "",
+    "dryMass": 6000.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2025-07-15",
+     "perigee": 202.0,
+     "apogee": 340.0,
+     "inc": 41.47
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-7 R/B",
     "OBJECT_ID": "2025-149B",
@@ -1659,8 +2427,21 @@
    "launch": "2025-169",
    "reentry": "2025-09-05T18:48Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-08-08",
+     "perigee": 222.0,
+     "apogee": 571.0,
+     "inc": 42.04
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-169C",
@@ -1687,8 +2468,21 @@
    "launch": "2025-180",
    "reentry": "2025-11-16T02:59Z",
    "mass": 500.0,
+   "massFrom": "DryMass",
    "length": 1.5,
    "diameter": 1.5,
+   "gcat": {
+    "mass": 500.0,
+    "massFlag": "?",
+    "dryMass": 500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2025-08-19",
+     "perigee": 260.0,
+     "apogee": 552.0,
+     "inc": 97.58
+    }
+   },
    "elements": {
     "OBJECT_NAME": "LIJIAN-1 R/B",
     "OBJECT_ID": "2025-180F",
@@ -1715,8 +2509,21 @@
    "launch": "2025-246",
    "reentry": "2025-11-12T03:25Z",
    "mass": 5500.0,
+   "massFrom": "DryMass",
    "length": 15.5,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 5500.0,
+    "massFlag": "",
+    "dryMass": 5500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2025-10-31",
+     "perigee": 196.0,
+     "apogee": 337.0,
+     "inc": 41.47
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2F R/B",
     "OBJECT_ID": "2025-246B",
@@ -1742,9 +2549,22 @@
    "norad": 66314,
    "launch": "2025-250",
    "reentry": "2025-12-11T20:09Z",
-   "mass": 8400.0,
+   "mass": 2800.0,
+   "massFrom": "DryMass",
    "length": 12.4,
    "diameter": 3.0,
+   "gcat": {
+    "mass": 8400.0,
+    "massFlag": "?",
+    "dryMass": 2800.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-11-12",
+     "perigee": 104.0,
+     "apogee": 6127.0,
+     "inc": 19.91
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-7A R/B",
     "OBJECT_ID": "2025-250B",
@@ -1771,8 +2591,21 @@
    "launch": "2025-272",
    "reentry": "2025-12-07T16:21Z",
    "mass": 5500.0,
+   "massFrom": "DryMass",
    "length": 15.5,
    "diameter": 3.3,
+   "gcat": {
+    "mass": 5500.0,
+    "massFlag": "",
+    "dryMass": 5500.0,
+    "dryFlag": "",
+    "orbit": {
+     "date": "2025-11-25",
+     "perigee": 196.0,
+     "apogee": 349.0,
+     "inc": 41.47
+    }
+   },
    "elements": {
     "OBJECT_NAME": "CZ-2F R/B",
     "OBJECT_ID": "2025-272B",
@@ -1799,8 +2632,21 @@
    "launch": "2025-296",
    "reentry": "2025-12-25T17:18Z",
    "mass": 1000.0,
+   "massFrom": "DryMass",
    "length": 2.5,
    "diameter": 2.2,
+   "gcat": {
+    "mass": 1000.0,
+    "massFlag": "?",
+    "dryMass": 1000.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-12-13",
+     "perigee": 139.0,
+     "apogee": 1366.0,
+     "inc": 41.34
+    }
+   },
    "elements": {
     "OBJECT_NAME": "KZ-11 R/B",
     "OBJECT_ID": "2025-296C",
@@ -1827,8 +2673,21 @@
    "launch": "2025-297",
    "reentry": "2025-12-24T14:31Z",
    "mass": 250.0,
+   "massFrom": "DryMass",
    "length": 2.4,
    "diameter": 1.2,
+   "gcat": {
+    "mass": 250.0,
+    "massFlag": "?",
+    "dryMass": 250.0,
+    "dryFlag": "?",
+    "orbit": {
+     "date": "2025-12-14",
+     "perigee": 263.0,
+     "apogee": 547.0,
+     "inc": 97.48
+    }
+   },
    "elements": {
     "OBJECT_NAME": "ELECTRON R/B",
     "OBJECT_ID": "2025-297A",

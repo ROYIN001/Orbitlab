@@ -51,9 +51,13 @@ set, its mass and diameter as published, and the date it re-entered.
 ## `../reentry/stages.json` (P2.5)
 
 Every rocket stage GCAT has re-entering uncontrolled (status R), dated to the minute, between
-2023-01-01 and 2025-12-31, 5 to 150 days after its launch: 66, with GCAT's name, mass, length and
+2023-01-01 and 2025-12-31, 5 to 150 days after its launch: 66, with GCAT's name, length and
 diameter, the re-entry, and CelesTrak's first element set of its launch (one request per launch,
-fetched 2026-09-27). The selection was fixed before any prediction; `make_stages.py` makes the
+fetched 2026-09-27). The mass is GCAT's `DryMass` ("a reasonable proxy for the mass of the object
+after its active lifetime") where GCAT gives one, else its `Mass` (at insertion); until 2026-09-27
+it was `Mass`, which differs for the four Long March third stages (8 400 kg against 2 800 kg). Both
+are kept under `gcat` with their flags ("?", GCAT's estimate), with GCAT's catalogued orbit
+(`Perigee`, `Apogee`, `Inc`, dated `ODate`). The selection was fixed before any prediction; `make_stages.py` makes the
 file from GCAT's `satcat.tsv` and the fetched sets:
 
 ```sh

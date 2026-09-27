@@ -57,7 +57,7 @@ export const tumblingBoxArea = ([x, y, z]: readonly [number, number, number]): n
  * kilometres over weeks by their pull, and that, more than anything, sets
  * when it comes down: with the mean elements, which leave them out, not one of
  * the eight transfer-orbit stages of 2023–2025 came down within 400 days;
- * with them, six came down within 22 % of the day (tests/ballistic.test.ts).
+ * with them, five came down within 25 % of the day (tests/ballistic.test.ts).
  */
 export const ECCENTRIC = 0.1;
 
