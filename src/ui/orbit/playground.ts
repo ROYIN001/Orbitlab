@@ -29,7 +29,7 @@ import { footprintAngle } from '../../orbit/applications';
 import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
 import {
-  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffOrbit, linearScale, logScale, orbitPath,
+  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffEntry, handoffOrbit, linearScale, logScale, orbitPath,
   repeatGroundTrack, tourSetup, withApsis, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
@@ -302,10 +302,17 @@ export class OrbitPlayground {
     this.handoff = handoff;
     this.handoffNote = note;
     if (fresh) {
+      // audit 2026-09-27 A6: out of the real satellites, if the playground was left on them, and nothing kept about another satellite
+      const entry = handoffEntry({ mode: this.mode, apps: this.apps });
+      if (entry.leaveSky) this.leaveSky();
+      this.apps = entry.apps;
+      this.skyLabel = entry.skyLabel;
       // O03: the spacecraft that flew, with what is left in its tanks
       this.launchCraft = craftFromHandoff(handoff);
       this.craftSource = this.launchCraft ? 'launch' : this.craftSource === 'launch' ? 'none' : this.craftSource;
       this.loadHandoff();
+      // framed on the new orbit, as "Show this orbit" does
+      this.orbitView?.setOrbit(this.orbit, true);
       this.tourIndex = -1;
     }
     this.render();
