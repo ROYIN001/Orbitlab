@@ -39,3 +39,27 @@ export function gradeCaseLesson(lesson: CaseLesson, key: CaseKey, answers: Lesso
     criteria, lockBroken: [], t: 0,
   };
 }
+
+/**
+ * Whether a case lesson has nothing left to give away: passed (now, or on an
+ * earlier visit: `passedBefore`), or its answers shown. Until then the Orbit
+ * section keeps that case's answer key, and the stage of Tianhe's error,
+ * out of sight (src/worksheets/case-ids.ts `caseAnswersShown`).
+ */
+export function caseAnswersOpen(grade: LessonGrade | null, passedBefore = false): boolean {
+  return passedBefore || (!!grade && (grade.verdict === 'pass' || grade.criteria.some((c) => c.revealed)));
+}
+
+/**
+ * Whether a question's answer and its working may be shown on the strip: a
+ * question whose answer was shown, and a right one only once the whole
+ * lesson is open (`caseAnswersOpen` on this grade). A working names numbers
+ * of its own, and one may be another question's answer — the Iridium sheet's
+ * relative speed is worked "for both 226 m apart", the miss asked before it
+ * — so a question got right early shows only its ✓.
+ */
+export function caseWorkingShown(grade: LessonGrade, id: string): boolean {
+  const g = grade.criteria.find((c) => c.id === id);
+  if (!g) return false;
+  return g.revealed === true || (g.state === 'pass' && caseAnswersOpen(grade));
+}

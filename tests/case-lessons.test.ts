@@ -8,7 +8,7 @@
  */
 import { afterAll, describe, expect, it } from 'vitest';
 import { BUILTIN_CASE_LESSONS, BUILTIN_ISSUES, BUILTIN_LESSONS, allLessons, lessonNumber } from '../src/lessons/catalog';
-import { gradeCaseLesson } from '../src/lessons/case-grader';
+import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../src/lessons/case-grader';
 import { awaitingAnswers } from '../src/lessons/grader';
 import { LESSON_FORMAT, lessonFileText, parseLessonFile, readCaseLesson, type FileIssue } from '../src/lessons/lesson-file';
 import { emptyProgress, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
@@ -128,6 +128,30 @@ describe('the case grader', () => {
     expect(g.verdict).toBe('fail');
     expect(g.criteria.filter((c) => c.revealed).map((c) => c.id)).toEqual(['j2', 'why']);
     expect(g.criteria.find((c) => c.id === 'height')!.state).toBe('pass');
+  });
+
+  // the strip once showed each question's working as soon as it was right, and the Iridium speed's names the miss
+  it('shows a right answer\'s working only once the whole lesson is passed or its answers shown', () => {
+    const l = lesson('case-iridium');
+    const sheet = sheetOf(l);
+    const key = caseKey(sheet);
+    const speed = sheet.sections[1].items.find((i) => i.id === 'speed')!;
+    expect(speed.answer.working).toContain(key.miss.value.toFixed(0));
+    const early = gradeCaseLesson(l, key, { speed: key.speed.value });
+    expect(early.criteria.find((c) => c.id === 'speed')!.state).toBe('pass');
+    expect(caseWorkingShown(early, 'speed')).toBe(false);
+    expect(caseAnswersOpen(early)).toBe(false);
+    const passed = gradeCaseLesson(l, key, exact(l, key));
+    expect(l.criteria.every((c) => caseWorkingShown(passed, c.id))).toBe(true);
+    // shown: every question's answer and working, the one got right before included
+    const p = emptyProgress();
+    recordRevealed(p, l.id, Object.fromEntries(l.criteria.filter((c) => c.item !== 'speed').map((c) => [c.id, key[c.item].value])));
+    const shown = gradeCaseLesson(l, key, { speed: key.speed.value }, lessonProgress(p, l.id).revealed);
+    expect(caseAnswersOpen(shown)).toBe(true);
+    expect(l.criteria.every((c) => caseWorkingShown(shown, c.id))).toBe(true);
+    // a lesson passed on an earlier visit has nothing left to give away, even with the answers cleared
+    expect(caseAnswersOpen(gradeCaseLesson(l, key, {}), true)).toBe(true);
+    expect(caseAnswersOpen(null)).toBe(false);
   });
 
   it('grades by the key frozen when the lesson opened, not by a newer element set', () => {

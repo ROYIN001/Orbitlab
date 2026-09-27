@@ -26,7 +26,7 @@ import { missionDocument, type MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
-import { gradeCaseLesson } from '../../lessons/case-grader';
+import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
 import { FlightLessons } from '../../lessons/flight-lessons';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
@@ -275,6 +275,8 @@ export class LessonMode implements LessonToolsHost {
       this.buildCase(a);
       this.lastStripKey = '';
       this.gradeCase(false);
+      // the Worksheets tab, if it is open, offers the case's sheet now that it can be made
+      if (this.pageView === 'worksheets') this.assessmentView?.applyLanguage();
     }, (err: unknown) => {
       if (this.active !== a) return;
       state.failed = `${t('lesson.strip.caseFailed', { reason: err instanceof Error ? err.message : String(err) })} ${t('lesson.strip.caseRetry')}`;
@@ -304,9 +306,9 @@ export class LessonMode implements LessonToolsHost {
     this.paintStrip();
   }
 
-  /** Whether the open case lesson has nothing left to give away: passed, or its answers shown. */
+  /** Whether the open case lesson has nothing left to give away: passed (now or before), or its answers shown. */
   private caseAnswersOpen(a: Active | null): boolean {
-    return !!a?.grade && (a.grade.verdict === 'pass' || a.grade.criteria.some((c) => c.revealed));
+    return !!a && caseAnswersOpen(a.grade, !!this.progressData.lessons[a.lesson.id]?.passed);
   }
 
   /** Tell the Orbit section which case lesson is open, if any, and whether its answers may be shown there yet. */
@@ -454,8 +456,9 @@ export class LessonMode implements LessonToolsHost {
     if (!a) return;
     let typed = false;
     for (const [id, read] of inputs) {
-      const raw = read();
-      const v = Number(raw.replace(',', '.'));
+      // a decimal comma (Russian), and a minus sign as the key prints it
+      const raw = read().replace(',', '.').replace(/[−–]/g, '-');
+      const v = Number(raw);
       if (raw.trim() !== '' && Number.isFinite(v)) { a.answers[id] = v; typed = true; }
     }
     a.recorded = false;
@@ -791,12 +794,13 @@ export class LessonMode implements LessonToolsHost {
         if (item.unit) field.append(el('span', 'lesson-case-unit', item.unit));
         row.append(field);
       }
-      // wrong is only marked; the answer and its working come with a pass, or when asked for (and then do not count)
+      // wrong is only marked; the answer and its working come with the lesson passed, or when asked for (and then do not count)
       row.append(el('span', 'lesson-answer-mark', cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : ''));
-      if (cg?.state === 'pass' || cg?.revealed) {
+      if (caseWorkingShown(g, crit.id)) {
         const tol = item.answer.tolerance ? ` (${item.answer.tolerance})` : '';
         row.append(el('p', 'lesson-case-working', `${item.answer.text}${tol}${item.answer.working ? ` — ${item.answer.working}` : ''}`));
-      } else hidden++;
+      }
+      if (cg && cg.state !== 'pass' && !cg.revealed) hidden++;
       form.append(row);
     }
     const check = el('button', 'lesson-primary', t('lesson.strip.check'));
