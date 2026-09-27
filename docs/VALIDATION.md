@@ -1537,10 +1537,37 @@ Gaofen, …), a radar's incidence angles and, where a source says so, the side i
 `src/orbit/sensors.ts` judges each overflight at its highest point: a camera needs daylight and the
 place inside its swath or within its off-nadir limit; a radar needs the place on its side and the
 incidence (90° less the elevation there) within its band. Where an agile satellite's limit is not
-published (Cartosat-3, Cartosat-2C, CO3D) it is not judged, and the three the operators have
-retired but the catalogue still lists (SPOT 7, COSMO-SkyMed 1 and 3, by eoPortal) are marked so.
-Where sources disagree the operator's figure is used and the other noted in the table (the Maxar
-angles, for one, are the tasking limits, not what the satellites can turn to).
+published it would not be judged (the path is kept and tested with a made-up entry), but every
+agile satellite in the table now has one; the three the operators have retired but the catalogue
+still lists (SPOT 7, COSMO-SkyMed 1 and 3, by eoPortal) are marked so. Where sources disagree the
+operator's figure is used and the other noted in the table (the Maxar angles, for one, are the
+tasking limits, not what the satellites can turn to).
+
+Three agile satellites were first entered unjudged and were given limits in the P2.5 fix-up
+(2026-09-27). Where the along- and across-track limits differ the across-track one is used: a pass
+is judged at its highest point, where the place is square to the track and the satellite rolls to
+see it.
+
+- **Cartosat-3**: its operator's figures, from NRSC's
+  [brochure](https://www.nrsc.gov.in/nrscnew/assets/pdf/announcements/C3_BROCHURE_JAN2021_modified.pdf):
+  "The satellite is capable of steering up to +45° and +26 ° along and across the track
+  respectively", so 26°; and 0.28 m and a ~17 km swath, as distributed, where the table had the
+  design figures of eoPortal and Gunter's Space Page (0.25 m, 16 km).
+- **Cartosat-2C**: ISRO gives no angle for it, only that it "is similar to the earlier Cartosat-2, 2A
+  and 2B". The series' figure is ISRO's for
+  [Cartosat-2B](https://www.isro.gov.in/CARTOSAT_2B.html), "steerable up to ± 26o along as well as
+  across track", so 26°. The sources disagree: eoPortal's Cartosat-2D page says "off-nadir angles of
+  up to 45 degrees", as eoPortal and a Department of Space paper (Radhadevi et al.) say for the first
+  Cartosat-2, and eoPortal's 2E page gives ±45° along the track and ±26° across; the operator's
+  figure is used. The "field of regard of 400 km" the table used to cite is WMO OSCAR's text, which
+  OSCAR gives for Cartosat-3's camera too.
+- **CO3D**: no operator publishes how far it can turn. The one angle published is a planning limit,
+  in CNES's paper written before launch (Lebègue, Cazala-Hourcade, Languille, Artigues, Melet,
+  ["CO3D, a worldwide one-meter accuracy DEM for 2025"](https://doi.org/10.5194/isprs-archives-XLIII-B1-2020-299-2020),
+  ISPRS Archives XLIII-B1-2020, 299–304): "the CO3D acquisition plan limits roll angles to 15° and
+  pitch angles to 20° for each satellite of a stereo pair". It is used as 15°, labelled a planning
+  limit as the Maxar and SkySat tasking limits are: the 3D mission's, not what the satellites can
+  turn to.
 
 `tests/sensors.test.ts`:
 
@@ -1558,6 +1585,9 @@ angles, for one, are the tasking limits, not what the satellites can turn to).
   incidence, 29.1° to 46.0° from 693 km, reaches 344 to 617 km to the right of the track on a
   sphere, 273 km across for its published 250 km (held to 10 %, worked out before the test was
   written); a fixed camera's edges are its swath's, an agile one's its pointing reach either side.
+- **The three limits found later**: Cartosat-3 and Cartosat-2C are judged against 26° and the four
+  CO3D against 15°, and their reach either side from 505 and 502 km (NRSC's and CNES's altitudes)
+  is 248.7 and 134.9 km, worked out on a sphere before the test was written and held to 1 km.
 - **Revisits as the missions publish them.** The tolerance — at least one image possible in the
   published period, from 2026-09-26 12:00 UTC — was fixed before the run:
 
