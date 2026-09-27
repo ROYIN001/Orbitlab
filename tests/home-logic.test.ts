@@ -12,6 +12,7 @@ describe('parseVariant', () => {
   it('reads the letter of a prototype, whatever its case, and nothing else', () => {
     expect(parseVariant('b')).toBe('b');
     expect(parseVariant(' I ')).toBe('i');
+    expect(parseVariant('j')).toBe('j');
     // C and E were tried and set aside: an old link to them opens the default
     expect(parseVariant('c')).toBeNull();
     expect(parseVariant('e')).toBeNull();

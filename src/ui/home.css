@@ -279,6 +279,15 @@
 .home-sat-label.arc { color: var(--accent); font-weight: 700; }
 .home-sat-label.arc::before { background: var(--accent); box-shadow: 0 0 0 3px rgba(139, 229, 205, 0.25), 0 0 14px rgba(139, 229, 205, 0.9); }
 
+
+/* ── J: out to the space station ── */
+.home-chapter .home-sections { grid-template-columns: 1fr; gap: 8px; }
+.home-chapter .home-section { padding: 12px 14px; }
+.home-chapter .home-section-text { font-size: 12.5px; }
+.home-iss-next { margin: 0 0 14px; font-size: 13.5px; color: #dbe5ee; }
+.home-iss-next:empty { display: none; }
+.home-screen[data-variant='j'] .home-chapter:not(.home-hero) .home-chapter-card { max-width: 540px; }
+
 /* ── narrow screens: the text at the foot of the first screen, the picture above it ── */
 @media (max-width: 860px) {
   .home-hero-inner { margin: auto 0 0; }

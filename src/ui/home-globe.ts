@@ -49,6 +49,8 @@ export class HomeGlobe {
   catalogue: { asOf: string; count: number } | null = null;
   /** the labels go here (the page's overlay) */
   labelHost: HTMLElement | null = null;
+  /** the catalogue drawn as points (J draws only the space station) */
+  points = true;
   /** the orbit drawn with its satellite, if any */
   private drawn: Orbit | null = null;
   private xyz = new Float32Array(0);
@@ -109,6 +111,7 @@ export class HomeGlobe {
     for (const l of this.labels.values()) l.node.remove();
     this.labels.clear();
     this.setOpacity(1);
+    this.points = true;
     this.warp = 60;
     this.jd = julianDate(new Date());
   }
@@ -204,7 +207,8 @@ export class HomeGlobe {
     this.cam.dist = damp(this.cam.dist, this.aimed.dist, k, dt);
     this.view.setView(this.cam.az, this.cam.el, this.cam.dist);
     this.view.shiftPicture(shift.x, shift.y);
-    if (this.sky.length) this.view.setPoints(this.xyz, skyPositions(this.sky, this.jd, this.xyz, this.latlon), 0x8fc4ff);
+    if (this.sky.length && this.points) this.view.setPoints(this.xyz, skyPositions(this.sky, this.jd, this.xyz, this.latlon), 0x8fc4ff);
+    else this.view.setPoints(null);
     // the drawn orbit's own clock is seconds from its epoch; without one, the Earth turns at `jd`
     const o = this.drawn;
     if (o) this.view.update((this.jd - o.jd0) * 86400);

@@ -9,7 +9,7 @@
  * scrolling (the scene no longer takes the wheel, src/render/cameras.ts).
  *
  * PROTOTYPE: several backgrounds for the same page, switched from a bar at
- * the foot of it (or `?home=a`, `b`, `d`, `f`, `g`, `h`, `i`), to be compared
+ * the foot of it (or `?home=a`, `b`, `d`, `f`, `g`, `h`, `i`, `j`), to be compared
  * before one is kept — see src/ui/home-logic.ts for what each is, and
  * src/ui/home-stage.ts for the scene behind them. Nothing here needs to be
  * understood before pressing play.
@@ -52,7 +52,9 @@ interface Chapter {
   tag?: string;
   title?: string;
   text?: string;
-  body: 'hero' | 'modes' | 'facts' | 'lessons' | 'orbit' | 'build' | 'next' | 'end' | 'globe';
+  body: 'hero' | 'modes' | 'facts' | 'lessons' | 'orbit' | 'build' | 'next' | 'end' | 'globe' | 'program' | 'iss';
+  /** the page is scrolled into the globe from the chapter before this one to this one */
+  globe?: boolean;
 }
 
 const CHAPTERS_B: readonly Chapter[] = [
@@ -73,12 +75,26 @@ const CHAPTERS_F: readonly Chapter[] = [
   { t: 122, tag: 'home.b.boosters', title: 'home.b.lessonsTitle', text: 'lesson.home.text', body: 'lessons' },
   { t: 296, tag: 'home.b.staging', title: 'home.b.buildTitle', text: 'home.section.buildText', body: 'build' },
   { t: 540, tag: 'home.b.orbit', title: 'home.b.endTitle', text: 'home.f.orbitText', body: 'next' },
-  { t: 540, tag: 'home.f.sky', title: 'home.f.globeTitle', text: 'home.f.globeText', body: 'globe' },
+  { t: 540, tag: 'home.f.sky', title: 'home.f.globeTitle', text: 'home.f.globeText', body: 'globe', globe: true },
+];
+
+/**
+ * J: B's scroll with none of its readouts or launch steps — the page's own
+ * chapters over the rocket climbing to the edge of space — and at the end
+ * the globe, with the International Space Station the Soyuz is flying to.
+ */
+const CHAPTERS_J: readonly Chapter[] = [
+  { t: -8, body: 'hero' },
+  { t: 25, title: 'home.paths.title', text: 'home.paths.lead', body: 'modes' },
+  { t: 80, title: 'home.facts.title', text: 'home.b.physicsText', body: 'facts' },
+  { t: 150, title: 'home.more', body: 'program' },
+  { t: 165, title: 'home.j.issTitle', text: 'home.j.issText', body: 'iss', globe: true },
 ];
 
 const LIGHT_KEYS: Record<PadLight, string> = { day: 'home.a.day', dusk: 'home.a.dusk', night: 'home.a.night' };
 const PROTO_KEYS: Record<HomeVariant, string> = {
   a: 'home.proto.a', b: 'home.proto.b', d: 'home.proto.d', f: 'home.proto.f', g: 'home.proto.g', h: 'home.proto.h', i: 'home.proto.i',
+  j: 'home.proto.j',
 };
 const SECTION_KEYS = { launch: 'section.launch', orbit: 'section.orbit', build: 'section.build' } as const;
 /** G: the place last picked, kept in this browser */
@@ -172,7 +188,7 @@ export class HomeScreen {
     this.root.dataset.variant = v;
     this.root.classList.remove('globe-on');
     const scroller = el('div', 'home-scroll');
-    if (isJourney(v)) scroller.append(...this.chapters(v === 'b' ? CHAPTERS_B : CHAPTERS_F));
+    if (isJourney(v)) scroller.append(...this.chapters(v === 'b' ? CHAPTERS_B : v === 'j' ? CHAPTERS_J : CHAPTERS_F));
     else scroller.append(this.hero(), this.paths(), this.facts(), this.program());
     scroller.addEventListener('scroll', () => this.measure(), { passive: true });
     this.scroller = scroller;
@@ -182,7 +198,8 @@ export class HomeScreen {
     overlay.append(labels);
     this.stage.setLabelHost(labels);
     this.readout = null;
-    if (isJourney(v)) overlay.append(this.flightReadout());
+    // J has no readouts at all: the flight is the picture behind the page, not its subject
+    if (isJourney(v) && v !== 'j') overlay.append(this.flightReadout());
     if (v === 'd' || v === 'f' || v === 'i') overlay.append(this.globeLegend(v));
     if (v === 'h') overlay.append(this.arcCard());
     this.countdown = v === 'i' ? el('div', 'home-countdown') : null;
@@ -498,11 +515,12 @@ export class HomeScreen {
         hero.dataset.t = String(ch.t);
         return hero;
       }
-      const section = el('section', `home-chapter ${ch.body}`);
+      const section = el('section', `home-chapter ${ch.body}${ch.globe ? ' globe' : ''}`);
       section.dataset.t = String(ch.t);
       const card = el('div', 'home-chapter-card');
-      const tag = ch.body === 'globe' ? t(ch.tag!) : `${clock(ch.t)} · ${t(ch.tag!)}`;
-      card.append(el('span', 'home-chapter-tag', tag), el('h2', 'home-block-title', t(ch.title!)), el('p', 'home-block-lead', t(ch.text!)));
+      if (ch.tag) card.append(el('span', 'home-chapter-tag', ch.body === 'globe' ? t(ch.tag) : `${clock(ch.t)} · ${t(ch.tag)}`));
+      card.append(el('h2', 'home-block-title', t(ch.title!)));
+      if (ch.text) card.append(el('p', 'home-block-lead', t(ch.text)));
       const link = (label: string, go: () => void, primary = false): HTMLButtonElement => {
         const b = el('button', primary ? 'home-section-link primary' : 'home-section-link', label);
         b.type = 'button';
@@ -518,6 +536,16 @@ export class HomeScreen {
       if (ch.body === 'build') card.append(link(t('home.section.plan'), () => this.host.go(route('build', 'explore'))));
       if (ch.body === 'end') card.append(row(link(t('home.play'), () => this.host.watch(FEATURED_WATCH_MISSION), true), link(t('home.card.explore'), () => this.host.go(route('launch', 'explore')))));
       if (ch.body === 'globe') card.append(row(link(t('home.section.orbitOpen'), () => this.host.go(route('orbit', 'explore')), true), link(t('home.play'), () => this.host.watch(FEATURED_WATCH_MISSION))));
+      if (ch.body === 'program') {
+        const list = el('div', 'home-sections');
+        list.setAttribute('role', 'list');
+        list.append(this.sectionCard('launch'), this.sectionCard('orbit'), this.sectionCard('build'));
+        card.append(list);
+      }
+      if (ch.body === 'iss') {
+        this.issLine = el('p', 'home-iss-next');
+        card.append(this.issLine, row(link(t('home.play'), () => this.host.watch(FEATURED_WATCH_MISSION), true), link(t('home.section.orbitOpen'), () => this.host.go(route('orbit', 'explore')))));
+      }
       section.append(card);
       return section;
     });
@@ -538,6 +566,7 @@ export class HomeScreen {
     const anchors: ScrollAnchor[] = chapters.map((c) => ({ top: Math.min(c.offsetTop, max), t: Number(c.dataset.t) }));
     let globe = 0;
     const g = chapters.findIndex((c) => c.classList.contains('globe'));
+    this.root.classList.toggle('globe-end', g > 0);
     if (g > 0) {
       const from = anchors[g - 1].top, to = anchors[g].top;
       globe = to > from ? Math.max(0, Math.min(1, (s.scrollTop - from) / (to - from))) : s.scrollTop >= to ? 1 : 0;
@@ -584,6 +613,28 @@ export class HomeScreen {
     return root;
   }
   private legendNote: HTMLElement | null = null;
+  /** J: the station's next pass over the visitor's city, in the last chapter */
+  private issLine: HTMLElement | null = null;
+
+  /** J: "next over Bangkok: rises tomorrow at 10:25", once it is worked out. */
+  private paintIssLine(): void {
+    const line = this.issLine;
+    const p = this.stage.issNext;
+    if (!line?.isConnected || !p?.rise) { if (line) line.textContent = ''; return; }
+    const zone = STATION_ZONES[this.stage.city] ?? 'UTC';
+    const fmt = (jd: number, withDay = false): string => {
+      try {
+        return new Intl.DateTimeFormat(getLang(), { hour: '2-digit', minute: '2-digit', timeZone: zone, ...(withDay ? { weekday: 'short' } : {}) })
+          .format(new Date((jd - 2440587.5) * 86400e3));
+      } catch { return ''; }
+    };
+    const now = 2440587.5 + Date.now() / 86400e3;
+    const minutes = (p.rise.jd - now) * 1440;
+    const when = minutes < 90 ? t('home.g.inMin', { n: num(Math.max(1, Math.round(minutes))) })
+      : fmt(p.rise.jd, true).slice(0, 3) === fmt(now, true).slice(0, 3) ? t('home.g.at', { time: fmt(p.rise.jd) }) : t('home.g.tomorrow', { time: fmt(p.rise.jd) });
+    const text = t('home.j.next', { city: t(STATION_KEY[this.stage.city] ?? 'use.st.bangkok'), when }) + (p.visible ? ` · ${t('home.g.eye')}` : '');
+    if (line.textContent !== text) line.textContent = text;
+  }
 
   /** H: the launch being drawn, and the ones before it. */
   private arcCard(): HTMLElement {
@@ -632,6 +683,7 @@ export class HomeScreen {
     if (v === 'i' && this.countdown?.classList.contains('liftoff') && performance.now() > this.liftoffUntil) this.countdown.classList.remove('on', 'liftoff');
     // the page was shown after it was built, or its height moved: read the chapters again
     if (isJourney(v)) this.measure();
+    if (v === 'j') this.paintIssLine();
     if (!r || !frame || !isJourney(v)) return;
     if (r.name) r.name.textContent = this.host.vehicleName();
     if (r.clock) r.clock.textContent = clock(frame.t);

@@ -10,16 +10,20 @@
  * G  the globe turned to the visitor's city: what is above it now, and what comes over next
  * H  D's globe with the viewer's launches drawn on it, one after another, as the simulator flies them
  * I  F, launched by the visitor: the first screen's button is held down to count down and lift off
+ * J  B's scroll with no readouts and no launch steps — the page's own chapters over the rocket
+ *    climbing to the edge of space — ending on the globe with the International Space Station
  *
  * (C, the first seconds of the launch looped, and E, a line-up of rockets to
  * scale, were tried and set aside, 2026-09-27.)
  */
 import { gmst, julianDate, sunDirectionEci } from '../physics/orbital';
 
-export type HomeVariant = 'a' | 'b' | 'd' | 'f' | 'g' | 'h' | 'i';
-export const HOME_VARIANTS: readonly HomeVariant[] = ['a', 'b', 'd', 'f', 'g', 'h', 'i'];
+export type HomeVariant = 'a' | 'b' | 'd' | 'f' | 'g' | 'h' | 'i' | 'j';
+export const HOME_VARIANTS: readonly HomeVariant[] = ['a', 'b', 'd', 'f', 'g', 'h', 'i', 'j'];
 /** the variants whose page is a flight in chapters, read by scrolling */
-export const isJourney = (v: HomeVariant): boolean => v === 'b' || v === 'f' || v === 'i';
+export const isJourney = (v: HomeVariant): boolean => v === 'b' || v === 'f' || v === 'i' || v === 'j';
+/** the variants that end on the globe */
+export const endsOnGlobe = (v: HomeVariant): boolean => v === 'f' || v === 'i' || v === 'j';
 /** the variants whose picture is the globe (F's only at its end) */
 export const isGlobe = (v: HomeVariant): boolean => v === 'd' || v === 'g' || v === 'h';
 /** `?home=b` opens the page on a prototype; the choice is kept in this browser */
@@ -94,6 +98,13 @@ export function timeAtScroll(anchors: readonly ScrollAnchor[], scroll: number): 
  */
 export const SCROLL_FLIGHT_END = 570;
 export const SCROLL_FLIGHT_ENOUGH = 548;
+/**
+ * J: the flight is only flown to the edge of space (the fairing goes at
+ * T+157 s, 100 km up), where the globe takes over: computed ahead to
+ * `J_FLIGHT_END`, shown up to `J_FLIGHT_TOP`.
+ */
+export const J_FLIGHT_END = 185;
+export const J_FLIGHT_TOP = 165;
 /**
  * I: the mission time the flight starts from when the button has been held:
  * the engines already lit (ignition is at T−2.5 s), so the rocket rises a
