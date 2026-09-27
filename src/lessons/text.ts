@@ -23,6 +23,11 @@ const UNITS: Readonly<Record<string, Partial<Record<Lang, string>>>> = {
   'rad/s': { ru: 'рад/с' },
   'm': { ru: 'м', th: 'ม.' },
   'h': { ru: 'ч', th: 'ชม.' },
+  // the case sheets from the record (P2.5): a stage's cross-section, its ballistic coefficient, a plane's turn a day
+  'm²': { ru: 'м²', th: 'ตร.ม.' },
+  'm²/kg': { ru: 'м²/кг', th: 'ตร.ม./กก.' },
+  '°/d': { ru: '°/сут', th: '°/วัน' },
+  'km³/s²': { ru: 'км³/с²', th: 'กม.³/วินาที²' },
 };
 
 export function unitText(unit: string, lang: Lang = getLang()): string {

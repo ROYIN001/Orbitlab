@@ -27,6 +27,7 @@ import { elementsFromRecord } from '../orbit/omm';
 import { meanStart } from '../orbit/mean-state';
 import { groundReach, sensorFor } from '../orbit/sensors';
 import type { ElementSet } from '../orbit/tle';
+import { unitText } from '../lessons/text';
 import { fmt } from './flight-questions';
 import type { WsItem, Worksheet } from './types';
 
@@ -46,11 +47,16 @@ const DEG = Math.PI / 180;
 const jdOf = (iso: string): number => Date.parse(iso) / 86400000 + 2440587.5;
 const utc = (iso: string): string => `${iso.slice(0, 16).replace('T', ' ')} UTC`;
 
-/** A number item: the prompt, the answer to `digits`, its tolerance and working. */
+/**
+ * A number item: the prompt, the answer to `digits`, its tolerance and working.
+ * `unit` is the SI symbol; the sheet and its key print it as the reader's
+ * language writes it (src/lessons/text.ts), as the flight sheets do.
+ */
 function num(lang: Lang, prompt: string, unit: string, value: number, digits: number, tol: number, working: string): WsItem {
+  const u = unitText(unit, lang);
   return {
-    kind: 'number', prompt, unit,
-    answer: { text: `${fmt(lang, value, digits)} ${unit}`.trim(), value, tolerance: `± ${fmt(lang, tol, digits)} ${unit}`.trim(), working },
+    kind: 'number', prompt, unit: u,
+    answer: { text: `${fmt(lang, value, digits)} ${u}`.trim(), value, tolerance: `± ${fmt(lang, tol, digits)} ${u}`.trim(), working },
   };
 }
 
@@ -92,6 +98,7 @@ export function iridiumNumbers(): { miss: number; speed: number; angle: number; 
 function iridiumSheet(lang: Lang): Omit<Worksheet, 'lang' | 'generatedAt'> {
   const f = IRIDIUM, n = iridiumNumbers();
   const km = (x: number) => fmt(lang, x / 1000, 3), kms = (x: number) => fmt(lang, x / 1000, 4);
+  const u = (unit: string) => unitText(unit, lang);
   const plane = (() => {
     const s = (o: { r: number[]; v: number[] }): PosVel => ({ r: v3(o.r[0], o.r[1], o.r[2]), v: v3(o.v[0], o.v[1], o.v[2]) });
     const c = (o: { r: number[]; v: number[]; cov: number[][] }): Mat3 => rtnToFrame(o.cov as Mat3, rtnAxes(inertialVelocity(s(o))));
@@ -106,12 +113,12 @@ function iridiumSheet(lang: Lang): Omit<Worksheet, 'lang' | 'generatedAt'> {
         title: t('wsc.data'), intro: t('wsc.iridium.intro'),
         table: [
           [t('wsc.iridium.tca'), utc(f.tca)],
-          [t('wsc.iridium.r1'), `(${f.iridium33.r.map(km).join('; ')}) km`],
-          [t('wsc.iridium.v1'), `(${f.iridium33.v.map(kms).join('; ')}) km/s`],
-          [t('wsc.iridium.r2'), `(${f.cosmos2251.r.map(km).join('; ')}) km`],
-          [t('wsc.iridium.v2'), `(${f.cosmos2251.v.map(kms).join('; ')}) km/s`],
-          [t('wsc.iridium.radii'), `${fmt(lang, f.hardBodyRadius.iridium33, 3)} m; ${fmt(lang, f.hardBodyRadius.cosmos2251, 0)} m`],
-          [t('wsc.iridium.sigmas'), `${fmt(lang, n.sigma[0], 1)} m; ${fmt(lang, n.sigma[1], 1)} m; ${fmt(lang, n.majorFromMiss, 1)}°`],
+          [t('wsc.iridium.r1'), `(${f.iridium33.r.map(km).join('; ')}) ${u('km')}`],
+          [t('wsc.iridium.v1'), `(${f.iridium33.v.map(kms).join('; ')}) ${u('km/s')}`],
+          [t('wsc.iridium.r2'), `(${f.cosmos2251.r.map(km).join('; ')}) ${u('km')}`],
+          [t('wsc.iridium.v2'), `(${f.cosmos2251.v.map(kms).join('; ')}) ${u('km/s')}`],
+          [t('wsc.iridium.radii'), `${fmt(lang, f.hardBodyRadius.iridium33, 3)} ${u('m')}; ${fmt(lang, f.hardBodyRadius.cosmos2251, 0)} ${u('m')}`],
+          [t('wsc.iridium.sigmas'), `${fmt(lang, n.sigma[0], 1)} ${u('m')}; ${fmt(lang, n.sigma[1], 1)} ${u('m')}; ${fmt(lang, n.majorFromMiss, 1)}°`],
           [t('wsc.iridium.published'), `JSpOC: ${f.table2Feb9['JSpOC-JSpOC'].foster.toExponential(1)}; Iridium: ${f.table2Feb9['IridConstr-JSpOC'].foster}`],
         ],
         figures: [{ svg: encounterPlaneSvg(plane, { first: 'Iridium 33', second: 'Cosmos 2251', scale: t('conj.planeScale') }, 280, true), caption: t('wsc.iridium.figure') }],
@@ -156,6 +163,7 @@ function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'ge
   const early = n.left * (1 - WINDOW_FRACTION), late = n.left * (1 + WINDOW_FRACTION);
   const err = (n.left / n.actual - 1) * 100;
   const broadsideLeft = n.left * (n.area / n.broadside);
+  const u = (unit: string) => unitText(unit, lang);
   return {
     title: t('wsc.cz5b.title'), subtitle: t('wsc.cz5b.subtitle'), student: '', code: 'CASE-CZ5B', seed: 0,
     sections: [
@@ -163,8 +171,8 @@ function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'ge
         title: t('wsc.data'), intro: t('wsc.cz5b.intro'),
         table: [
           [t('wsc.cz5b.epoch'), utc(n.epoch)],
-          [t('wsc.cz5b.orbit'), `${fmt(lang, n.hp, 0)} × ${fmt(lang, n.ha, 0)} km, ${fmt(lang, s.elements.INCLINATION, 1)}°`],
-          [t('wsc.cz5b.body'), `${fmt(lang, s.mass, 0)} kg; ${fmt(lang, s.length, 1)} × ${fmt(lang, s.diameter, 1)} m; C_D 2.2`],
+          [t('wsc.cz5b.orbit'), `${fmt(lang, n.hp, 0)} × ${fmt(lang, n.ha, 0)} ${u('km')}, ${fmt(lang, s.elements.INCLINATION, 1)}°`],
+          [t('wsc.cz5b.body'), `${fmt(lang, s.mass, 0)} ${u('kg')}; ${fmt(lang, s.length, 1)} × ${fmt(lang, s.diameter, 1)} ${u('m')}; C_D ${fmt(lang, 2.2, 1)}`],
           [t('wsc.cz5b.predicted'), t('wsc.cz5b.predictedValue', { days: fmt(lang, n.left, 2) })],
           [t('wsc.cz5b.actual'), utc(s.reentry)],
         ],
@@ -203,6 +211,7 @@ export function theos2Numbers(el: ElementSet): { a: number; e: number; i: number
 function theos2Sheet(lang: Lang, el: ElementSet): Omit<Worksheet, 'lang' | 'generatedAt'> {
   const n = theos2Numbers(el);
   const epoch = new Date((el.jdEpoch + el.jdEpochFrac - 2440587.5) * 86400e3).toISOString();
+  const u = (unit: string) => unitText(unit, lang);
   return {
     title: t('wsc.theos2.title'), subtitle: t('wsc.theos2.subtitle'), student: '', code: 'CASE-THEOS2', seed: 0,
     sections: [
@@ -210,10 +219,10 @@ function theos2Sheet(lang: Lang, el: ElementSet): Omit<Worksheet, 'lang' | 'gene
         title: t('wsc.data'), intro: t('wsc.theos2.intro'),
         table: [
           [t('wsc.theos2.set'), utc(epoch)],
-          [t('wsc.theos2.orbit'), `a = ${fmt(lang, n.a / 1000, 1)} km, e = ${fmt(lang, n.e, 4)}, i = ${fmt(lang, n.i, 2)}°`],
+          [t('wsc.theos2.orbit'), `a = ${fmt(lang, n.a / 1000, 1)} ${u('km')}, e = ${fmt(lang, n.e, 4)}, i = ${fmt(lang, n.i, 2)}°`],
           [t('wsc.theos2.published'), t('wsc.theos2.publishedValue')],
-          [t('wsc.theos2.bangkok'), '13.756° N, 100.502° E'],
-          [t('wsc.theos2.constants'), 'J₂ = 1.08263 × 10⁻³; R = 6 378.137 km; μ = 398 600.4 km³/s²; R_mean = 6 371 km'],
+          [t('wsc.theos2.bangkok'), `${fmt(lang, 13.756, 3)}° N, ${fmt(lang, 100.502, 3)}° E`],
+          [t('wsc.theos2.constants'), `J₂ = ${fmt(lang, 1.08263, 5)} × 10⁻³; R = ${fmt(lang, 6378.137, 3)} ${u('km')}; μ = ${fmt(lang, 398600.4, 1)} ${u('km³/s²')}; R_mean = ${fmt(lang, 6371, 0)} ${u('km')}`],
         ],
         items: [],
       },

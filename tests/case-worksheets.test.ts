@@ -88,6 +88,24 @@ describe('the case sheets (P2.5)', () => {
     }
   }, 60_000);
 
+  // the Russian and Thai sheets once printed "226 m (± 5 m)" and "0,9856 °/d" after prompts in their own script
+  it.each(['ru', 'th'] as const)('%s: the units on the sheet, in its key and in its tables are the language\'s own', (lang) => {
+    withLang(lang);
+    const latinUnit = /(^|[\s(;])(m|km|kg|h|km\/s|m²|m²\/kg|°\/d|km³\/s²)(?=$|[\s);,])/;
+    for (const id of CASE_IDS) {
+      const sheet = caseWorksheet(id, { lang, generatedAt: at, activity, theos2 })!;
+      for (const i of sheet.sections.flatMap((s) => s.items)) {
+        if (i.kind !== 'number') continue;
+        expect(i.unit ?? '', `${id}: ${i.prompt}`).not.toMatch(/[A-Za-z]/);
+        expect(i.answer.text, `${id}: ${i.prompt}`).not.toMatch(/[A-Za-z]/);
+        expect(i.answer.tolerance ?? '', `${id}: ${i.prompt}`).not.toMatch(/[A-Za-z]/);
+      }
+      for (const [, value] of sheet.sections.flatMap((s) => s.table ?? [])) expect(value, `${id}: ${value}`).not.toMatch(latinUnit);
+    }
+    const key = answerKeyHtml([caseWorksheet('theos2', { lang, generatedAt: at, activity, theos2 })!]);
+    expect(key).toContain(lang === 'ru' ? '°/сут' : '°/วัน');
+  });
+
   it('asks for THEOS-2\'s set, and makes no sheet without it', () => {
     expect(caseWorksheet('theos2', { lang: 'en', generatedAt: at, activity, theos2: null })).toBeNull();
   });
