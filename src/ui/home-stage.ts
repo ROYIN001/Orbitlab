@@ -1,247 +1,106 @@
 /**
- * The landing page's background for each prototype (src/ui/home-logic.ts):
- * what the launch scene — or the globe over it — shows behind the page, and
- * how it moves.
+ * What the landing page (src/ui/home.ts) shows behind itself, and how it
+ * moves: the launch scene first — the vehicle on its pad, the camera walking
+ * slowly round it — then, under the page's starry sky, nothing (the scene is
+ * not drawn where it cannot be seen), and at the page's end the globe
+ * (src/ui/home-globe.ts) with the International Space Station going round it.
  *
- * The page itself (src/ui/home.ts) is DOM; this is the director standing
- * behind it. It is handed the app's controls as closures (`HomeStageHost`),
- * sets its variant up on the first animation frame the landing page is shown
- * with a scene to show it in, runs it frame by frame, and puts the scene back
- * the way the rest of the app expects it when the page is left.
+ * The page itself is DOM; this is the director standing behind it. It is
+ * handed the app's controls as closures (`HomeStageHost`), runs frame by
+ * frame while the page is on screen, and puts the scene back the way the rest
+ * of the app expects it when the page is left. It never changes the mission:
+ * the app opens the landing page on the featured launch standing on its pad,
+ * and a flight someone left for the landing page carries on underneath it.
  *
- * B, F and I fly the featured launch for real behind the page, ahead at full
- * speed, and move the replay cursor to wherever the scroll position (or, in
- * I, the launch the visitor set off) says. D, G and H cover the launch scene
- * with the globe (src/ui/home-globe.ts); F and I fade it in at their end. H
- * flies the viewer's launches one after another, unseen, to draw them on it.
+ * It also works out the station's passes over the visitor's city — the next
+ * one, and the next that can be seen with the naked eye — for the page's last
+ * chapter to tell.
  */
 import type * as THREE from 'three';
 import type { CameraController } from '../render/cameras';
 import type { EarthTextures } from '../render/scene';
-import type { VisualFrame } from '../physics/frame';
-import type { Vec3 } from '../physics/vec3';
-import { damp } from '../render/noise';
-import { siteById } from '../data/sites';
-import { vehicleById } from '../data/vehicles';
-import { t } from '../i18n';
-import { gmst, julianDate } from '../physics/orbital';
-import { skyOrbit, skyState, type SkyObject } from '../orbit/real-sky';
-import { orbitFromState, stateAt, type Orbit } from '../orbit/kepler';
-import { findPasses, lookFrom, type Pass } from '../orbit/passes';
-import { eciToEcef, geodeticToEcef, type GroundStation } from '../orbit/applications';
+import { julianDate } from '../physics/orbital';
+import { findPasses, lookFrom, type Look, type Pass } from '../orbit/passes';
+import type { GroundStation } from '../orbit/applications';
 import { STATIONS } from '../orbit/applications-setup';
 import type { SatelliteCatalog } from '../provider/satellites';
-import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './watch-missions';
-import { HomeGlobe, THEOS2_NORAD, toInertial } from './home-globe';
-import {
-  HOLD_LAUNCH_FROM, J_FLIGHT_END, J_FLIGHT_TOP, PAD_LIGHT_SUN, SCROLL_FLIGHT_END, SCROLL_FLIGHT_ENOUGH, endsOnGlobe, eveningAt, isGlobe, isJourney, launchedTime,
-  pictureShift, skyRingAngle, stationForZone,
-  type HomeVariant, type PadLight,
-} from './home-logic';
+import { HomeGlobe } from './home-globe';
+import { PASS_DAYS, nextPasses, pictureShift, stationForZone } from './home-logic';
 
 export interface HomeStageHost {
-  /** a viewer launch standing on its pad, paused, the cursor live (its launch time moved when given) */
-  previewWatch(id: WatchMissionId, launchTime?: Date): void;
-  /** the mission on screen starts flying, at 1× */
-  fly(): void;
-  /** fly on at full speed to mission time `t` */
-  fastForward(t: number): void;
-  /** stop the live flight where it is */
-  halt(): void;
-  /** the cursor to mission time `t`, replaying, still */
-  seekStill(t: number): void;
-  /** counts every mission previewed, so the stage can tell its own flight from the next one */
-  flightNo(): number;
-  headTime(): number;
-  /** the recording so far */
-  frames(): readonly VisualFrame[];
-  frame(): VisualFrame | null;
   readonly cams: CameraController;
   /** the launch scene's camera, null before the scene is built */
   camera(): THREE.PerspectiveCamera | null;
   readonly viewport: HTMLElement;
-  /** stop (or resume) drawing the launch scene: the globe covers it */
+  /** stop (or resume) drawing the launch scene: the page's sky or its globe covers it */
   coverScene(on: boolean): void;
   textures(): Promise<EarthTextures>;
-  satellites(): Promise<{ data: SatelliteCatalog; asOf: string }>;
+  satellites(): Promise<{ data: SatelliteCatalog }>;
 }
 
-/** G: a satellite in the list of what comes over next. */
-export interface PassRow {
-  norad: number;
-  /** i18n key of its name for the stations, else its name */
-  name: string;
-  station: boolean;
-  /** the next pass above 10° that has not ended, or null for none in the next day */
-  pass: Pass | null;
-  /** above 10° now */
-  upNow: boolean;
-  /** never sets over the day (a geostationary satellite): where it stands, rad */
-  fixed: { az: number; el: number } | null;
+/** A pass counts from this high above the horizon, rad: lower, buildings and haze hide it */
+const MIN_PASS_EL = 10 * Math.PI / 180;
+/** how far the globe's camera stands behind the station round the Earth, rad: the station off to one side of the Earth's middle, on the near side */
+const ISS_LEAD = 0.45;
+/** the passes are worked out again this often, days of the wall's time */
+const PASSES_EVERY = 10 / 1440;
+
+/** The visitor asked their system for less motion. */
+export function reducedMotion(): boolean {
+  try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
 }
-
-/** H: the ascent being drawn. */
-export interface ArcNow {
-  mission: WatchMissionId;
-  /** mission time and height above the ground at its head, s and m */
-  t: number;
-  alt: number;
-  /** still being flown */
-  computing: boolean;
-}
-
-/** G: the satellites listed, in this order */
-const G_LIST: readonly { norad: number; name: string; station: boolean }[] = [
-  { norad: 25544, name: 'home.g.iss', station: true },
-  { norad: 48274, name: 'home.g.css', station: true },
-  { norad: THEOS2_NORAD, name: 'THEOS-2', station: false },
-  { norad: 46320, name: 'NAPA-1', station: false },
-  { norad: 33396, name: 'THEOS', station: false },
-  { norad: 41552, name: 'THAICOM 8', station: false },
-];
-/** G: a pass counts from this high above the horizon, rad */
-const G_MIN_EL = 10 * Math.PI / 180;
-
-/** H: the launches drawn, in turn */
-export const H_MISSIONS: readonly WatchMissionId[] = ['soyuzIss', 'falcon9Bandwagon', 'ariane6AmazonLeo', 'electronSso', 'falconHeavyArabsat'];
-/** H: each is flown to this mission time, s, and drawn this many times faster than it flew */
-const H_END = 600;
-const H_REVEAL = 45;
-
-/** F and I: the moment the flight has reached orbit and the globe takes over, s */
-const JOURNEY_ORBIT = 540;
-
-const ACCENT = 0x8be5cd, GOLD = 0xffd27a, WHITE = 0xe7edf4;
-
-/** H: a launch's path over the ground — Earth-fixed points (m), and the mission time and height of each. */
-interface Arc { points: Vec3[]; t: number[]; alt: number[] }
 
 export class HomeStage {
-  variant: HomeVariant = 'a';
-  /** the variant whose background is set up, null when it has to be (re)built */
-  private built: HomeVariant | null = null;
-  /** A: the pad's light */
-  light: PadLight = 'day';
-  /** the flight the stage set up (`flightNo`), so a flight someone else started is left alone */
-  private ownFlight = -1;
-  /** the stage's flight has moved off the pad: leaving puts the pad back */
-  private flown = false;
-  /** B, F, I: the mission time the scroll position asks for, and the one shown, eased towards it */
-  private scrollTime = -8;
-  private shownTime = -8;
-  /** F, I, J, K: how far the page has scrolled into its globe, 0 to 1 */
+  /** the scene is set up for the page (undone when the page is left) */
+  private built = false;
+  /** how far the page has scrolled into its globe, and how much of the scene its sky covers, 0 to 1 */
   private globeBlend = 0;
-  /** K: how much of the scene the page's starry sky covers, 0 to 1 */
   private covered = 0;
-  /** I: launched by the visitor, and the flight's own clock since */
-  launched = false;
-  private liveClock = -10;
   /** seconds on the page, for the slow moves */
   private clock = 0;
   private shiftKey = '';
   private globe: HomeGlobe | null = null;
-  /** the page's overlay, where the globe's names go (the page is rebuilt on a language change) */
+  /** the page's overlay, where the station's name goes (the page is rebuilt on a language change) */
   private labels: HTMLElement | null = null;
-  /** F, I: the globe's end is set up, and the orbit flown */
-  private journeyGlobe = false;
-  private flownOrbit: Orbit | null = null;
-  /** G: where the visitor stands, the list, how many are up, when they were last worked out */
+  private issName = '';
+  /** the city the passes are worked out for */
   city = stationForZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-  rows: PassRow[] = [];
-  above: number | null = null;
-  private rowsAt = -1e9;
-  private issPathAt = -1e9;
-  private issPath: ReturnType<HomeGlobe['line']> | null = null;
-  // H
-  private arcs = new Map<WatchMissionId, Arc>();
-  private arcIndex = 0;
-  private arcLine: ReturnType<HomeGlobe['line']> | null = null;
-  private arcLines: ReturnType<HomeGlobe['line']>[] = [];
-  private arcHead: ReturnType<HomeGlobe['dot']> | null = null;
-  private arcBuiltWith = 0;
-  private arcBuiltAt = 0;
-  private revealT = 0;
-  private holdUntil = 0;
-  arcNow: ArcNow | null = null;
-  // J: the space station on the globe, and its next pass over the visitor's city
-  private iss: SkyObject | null = null;
-  private issOrbit: Orbit | null = null;
-  private issOrbitJd = -1e9;
-  /** J: where the rocket had got to when the globe took over, Earth-fixed, m */
-  private rocketAt: Vec3 | null = null;
+  /** the passes have been worked out (with the station found in the catalogue or not) */
+  worked = false;
+  /** the station's next pass over the city */
   issNext: Pass | null = null;
+  /** its next pass that can be seen with the naked eye: where it comes into sight and leaves it, and how high it gets meanwhile (rad) */
+  issSeen: { from: Look; to: Look; top: number } | null = null;
+  /** when the passes were last worked out, Julian date */
+  private passesAt = -1e9;
+  /** the globe's camera has found the station and follows it */
+  private following = false;
 
   constructor(private readonly host: HomeStageHost) {}
 
-  /** B, F, I: the flight is read to orbit; J only to the edge of space. */
-  private get flightTop(): number {
-    return this.variant === 'j' ? J_FLIGHT_TOP : JOURNEY_ORBIT;
-  }
-  /** once the recording holds this much, the flight is stopped */
-  private get flightEnough(): number {
-    return this.variant === 'j' ? J_FLIGHT_TOP + 5 : SCROLL_FLIGHT_ENOUGH;
-  }
-
-  setVariant(v: HomeVariant): void {
-    if (v === this.variant) return;
-    this.variant = v;
-    this.built = null;
-  }
-
-  /** A: relight the pad. */
-  setLight(light: PadLight): void {
-    this.light = light;
-    if (this.built === 'a') this.built = null;
-  }
-
-  /** B, F, I: the page was scrolled to mission time `time`, and `globe` of the way into its globe (K: `covered` by its sky). */
-  setScroll(time: number, globe = 0, covered = 0): void {
-    this.scrollTime = time;
+  /** The page was scrolled `globe` of the way into its globe, with `covered` of the scene under its sky. */
+  setScroll(globe: number, covered: number): void {
     this.globeBlend = globe;
     this.covered = covered;
   }
 
-  /** G: stand somewhere else. */
+  /** The station's name goes on the page's overlay, in the page's language. */
+  setLabelHost(el: HTMLElement | null, issName: string): void {
+    this.labels = el;
+    this.issName = issName;
+    if (this.globe) { this.globe.labelHost = el; this.globe.setName(issName); }
+  }
+
+  /** Work the passes out for another city. */
   setCity(id: string): void {
     this.city = id;
-    if (this.built === 'g') this.built = null;
+    if (this.globe?.iss) this.workOutPasses();
   }
 
-  /** I: the button was held long enough. */
-  launch(): void {
-    if (this.variant !== 'i' || this.launched) return;
-    this.launched = true;
-    this.liveClock = HOLD_LAUNCH_FROM;
-    // straight to it, not eased there from the pad: the count said now
-    this.shownTime = HOLD_LAUNCH_FROM;
-  }
-
-  /** The globe's names go on the page's overlay. */
-  setLabelHost(el: HTMLElement | null): void {
-    this.labels = el;
-    if (this.globe) this.globe.labelHost = el;
-  }
-
-  /** B, F, I: the flight is not yet computed as far as the page asks (the mission time it has reached, else null). */
-  computing(): number | null {
-    if (!isJourney(this.variant) || this.built !== this.variant) return null;
-    const head = this.host.headTime();
-    return head < Math.min(this.wantedTime(), this.flightTop) - 0.5 && head < this.flightEnough ? head : null;
-  }
-
-  get catalogue(): { asOf: string; count: number } | null {
-    return this.globe?.catalogue ?? null;
-  }
-
-  /** G: the place it stands at */
+  /** The city the passes are for. */
   get station(): GroundStation {
     const s = STATIONS.find((x) => x.id === this.city) ?? STATIONS[0];
     return { lat: s.lat * Math.PI / 180, lon: s.lon * Math.PI / 180, h: 0 };
-  }
-
-  /** the globe's moment (G's is now) */
-  get jd(): number {
-    return this.globe?.jd ?? julianDate(new Date());
   }
 
   /** Each animation frame the landing page is on screen, before the scene is drawn. */
@@ -249,28 +108,28 @@ export class HomeStage {
     const camera = this.host.camera();
     if (!camera) return; // the scene is not built yet
     this.clock += dt;
-    if (this.built !== this.variant) this.build();
-    const v = this.variant;
+    const cams = this.host.cams;
+    const still = reducedMotion();
+    if (!this.built) {
+      this.built = true;
+      // the vehicle filmed from a little round from the viewer's side; on a
+      // narrow screen the picture is the space above the text, so stand back
+      // until the whole stack fits in it
+      cams.az = 1.25; cams.userEl = 0.07; cams.zoom = this.host.viewport.clientWidth < 860 ? 1.68 : 1.05;
+    }
     const w = this.host.viewport.clientWidth, h = this.host.viewport.clientHeight;
-    if (this.globe) this.globe.labelHost = this.labels;
-    if (v === 'd') { this.updateD(dt, w, h); return; }
-    if (v === 'g') { this.updateG(dt, w, h); return; }
-    if (v === 'h') { this.updateH(dt, w, h); return; }
-    const shift = pictureShift(w, h, v);
+    const shift = pictureShift(w, h, 'pad');
     const key = `${w}x${h}:${shift.x}:${shift.y}`;
     if (key !== this.shiftKey || !camera.view) {
       this.shiftKey = key;
       camera.setViewOffset(w, h, -shift.x * w, -shift.y * h, w, h);
     }
-    if (v === 'a' || v === 'k') {
+    if (!still) {
       // a slow walk round the pad, the camera breathing up and down a little
-      this.host.cams.az += dt * (v === 'k' ? 0.03 : 0.045);
-      this.host.cams.userEl = 0.07 + 0.05 * Math.sin(this.clock * 0.13);
-      if (v === 'k') this.updateIssEnd(dt, w, h);
-      return;
+      cams.az += dt * 0.03;
+      cams.userEl = 0.07 + 0.05 * Math.sin(this.clock * 0.13);
     }
-    this.updateFlight(dt);
-    if (endsOnGlobe(v)) this.updateJourneyGlobe(dt, w, h);
+    this.updateGlobe(dt, w, h, still);
   }
 
   /** The landing page was left: the scene back to how the rest of the app uses it. */
@@ -278,418 +137,65 @@ export class HomeStage {
     const camera = this.host.camera();
     if (camera) { camera.clearViewOffset(); camera.updateProjectionMatrix(); }
     this.shiftKey = '';
-    const cams = this.host.cams;
-    cams.az = 0.9; cams.userEl = 0; cams.zoom = 1;
+    if (this.built) {
+      const cams = this.host.cams;
+      cams.az = 0.9; cams.userEl = 0; cams.zoom = 1;
+    }
     this.host.coverScene(false);
     this.globe?.show(false);
-    // a flight flown behind the page is not left half-way for the workspace:
-    // unless something else has started a flight of its own since, the
-    // featured launch goes back on its pad (and onto it in the first place
-    // when the globe was all the page ever showed)
-    if (camera && ((this.flown && this.host.flightNo() === this.ownFlight) || !this.host.frame())) {
-      this.host.halt();
-      this.host.previewWatch(FEATURED_WATCH_MISSION);
-    }
-    this.flown = false;
-    this.built = null;
+    this.built = false;
   }
 
-  private build(): void {
-    const v = this.variant;
-    this.built = v;
-    this.flown = false;
-    this.launched = false;
-    this.liveClock = -10;
-    this.journeyGlobe = false;
-    this.globeBlend = 0;
-    this.arcNow = null;
-    this.arcLine = null; this.arcLines = []; this.arcHead = null; this.issPath = null;
-    this.host.coverScene(isGlobe(v));
-    const cams = this.host.cams;
-    cams.az = 0.9; cams.userEl = 0; cams.zoom = 1;
-    if (this.globe) { this.globe.reset(); this.globe.show(isGlobe(v)); }
-    if (isGlobe(v)) {
-      this.host.halt();
-      const globe = this.ensureGlobe();
-      globe.show(true);
-      if (v === 'd') this.buildD(globe);
-      if (v === 'g') this.buildG(globe);
-      if (v === 'h') this.buildH(globe);
-      return;
-    }
-    this.host.previewWatch(FEATURED_WATCH_MISSION, v === 'a' ? this.lightTime() : undefined);
-    this.ownFlight = this.host.flightNo();
-    // A's (and K's) Soyuz is filmed from a little round from the viewer's side
-    if (v === 'a' || v === 'k') { cams.az = 1.25; cams.zoom = 1.05; }
-    // on a narrow screen the picture is the space above the text: stand back so the whole stack fits in it
-    if (this.host.viewport.clientWidth < 860) cams.zoom *= 1.6;
-    if (isJourney(v)) {
-      this.host.fly();
-      this.host.fastForward(v === 'j' ? J_FLIGHT_END : SCROLL_FLIGHT_END);
-      this.flown = true;
-      this.shownTime = v === 'i' ? -10 : this.scrollTime;
-    }
-  }
-
-  private ensureGlobe(): HomeGlobe {
-    this.globe ??= new HomeGlobe(this.host.viewport, this.host.textures(), () => this.host.satellites());
-    this.globe.labelHost = this.labels;
-    return this.globe;
-  }
-
-  /** A: the featured launch's time moved to the evening light asked for (its own daylight time for the day). */
-  private lightTime(): Date | undefined {
-    if (this.light === 'day') return undefined;
-    const site = siteById(watchMissionById(FEATURED_WATCH_MISSION)!.siteId);
-    const base = watchMissionSettings(FEATURED_WATCH_MISSION).launchTime as Date;
-    return eveningAt(base, site.latitude, site.longitude, PAD_LIGHT_SUN[this.light]);
-  }
-
-  // ─── B, F, I: the flight read by scrolling ─────────────────────────────────
-
-  /** The mission time the page asks for now. */
-  private wantedTime(): number {
-    if (this.variant !== 'i') return this.scrollTime;
-    return this.launched ? launchedTime(this.liveClock, this.scrollTime) : -10;
-  }
-
-  /** The cursor eased towards the page's moment, never past what has been computed. */
-  private updateFlight(dt: number): void {
-    if (this.host.flightNo() !== this.ownFlight) return;
-    const head = this.host.headTime();
-    if (head >= this.flightEnough) this.host.halt();
-    if (this.variant === 'i') {
-      // scrolling past the first screen sets the rocket off too
-      if (!this.launched && this.scrollTime > HOLD_LAUNCH_FROM) this.launch();
-      // once off, it flies on in real time, and as far ahead as the page is scrolled
-      if (this.launched) this.liveClock = Math.min(JOURNEY_ORBIT, launchedTime(Math.min(this.liveClock + dt, head), Math.min(this.scrollTime, JOURNEY_ORBIT)));
-    }
-    const target = Math.min(this.wantedTime(), this.flightTop, head - 0.05);
-    // eased: a turn of the wheel is a smooth stretch of flight, not a jump (a launch in real time is followed as it is)
-    const following = this.variant === 'i' && this.launched && Math.abs(target - this.shownTime) < 0.5;
-    this.shownTime = following ? target : damp(this.shownTime, target, 2.6, dt);
-    if (Math.abs(this.shownTime - target) < 0.02) this.shownTime = target;
-    this.host.seekStill(this.shownTime);
-  }
-
-  /**
-   * F, I, J: at the flight's last moment the globe fades in over the scene as
-   * the page is scrolled into it, the camera pulling back from the spacecraft
-   * (J: from the rocket at the edge of space, out to the space station's orbit).
-   */
-  private updateJourneyGlobe(dt: number, w: number, h: number): void {
-    const p = this.globeBlend;
-    if (p <= 0 || this.host.headTime() < this.flightTop) {
-      this.globe?.show(false);
-      this.host.coverScene(false);
-      return;
-    }
-    const globe = this.ensureGlobe();
-    if (!this.journeyGlobe) { if (this.variant === 'j') this.buildIssGlobe(globe); else this.buildJourneyGlobe(globe); }
-    globe.show(true);
-    globe.setOpacity(Math.min(1, p * 1.6));
-    this.host.coverScene(p >= 0.99);
-    const e = p * p * (3 - 2 * p);
-    if (this.variant === 'j') { this.aimIssGlobe(globe, e, w); globe.frame(dt, w, h, pictureShift(w, h, 'd')); return; }
-    const craft = this.flownState(globe);
-    // from just above the spacecraft, looking down past it at the Earth, out to the whole sky of satellites
-    const near = craft ? { az: Math.atan2(craft.y, craft.x), el: Math.asin(craft.z / Math.hypot(craft.x, craft.y, craft.z)) } : { az: globe.camAz, el: 0.3 };
-    globe.aim(near.az + 0.35 * e, near.el + (0.32 - near.el) * e, 8.2 + (w >= 860 ? 27.8 : 16) * e, true);
-    globe.frame(dt, w, h, pictureShift(w, h, 'd'));
-  }
-
-  /** Where the spacecraft flown is at the globe's moment, m, inertial. */
-  private flownState(globe: HomeGlobe): Vec3 | null {
-    const o = this.flownOrbit;
-    return o ? stateAt(o, (globe.jd - o.jd0) * 86400, false).r : null;
-  }
-
-  private buildJourneyGlobe(globe: HomeGlobe): void {
-    this.journeyGlobe = true;
-    globe.reset();
-    const frames = this.host.frames();
-    const end = [...frames].reverse().find((f) => f.t <= JOURNEY_ORBIT) ?? frames[frames.length - 1];
-    if (!end) return;
-    globe.jd = end.jd;
-    this.flownOrbit = orbitFromState(end.r, end.v, end.jd);
-    globe.setDrawn(this.flownOrbit);
-    // the ascent, over the ground it flew over
-    const path = frames.filter((f) => f.liftoff && f.t <= JOURNEY_ORBIT).filter((_, k) => k % 3 === 0).map((f) => eciToEcef(f.r, gmst(f.jd)));
-    if (path.length > 1) globe.line(path, WHITE, { width: 2, opacity: 0.85 });
-    globe.label('flown', t('home.f.yours'), 'drawn', () => this.flownState(globe));
-    globe.whenLoaded(() => {
-      if (this.built === this.variant && isJourney(this.variant)) globe.labelThai(t('home.d.napa'));
-    });
-  }
-
-  // ─── J: out to the space station ──────────────────────────────────────────
-
-  /** The globe as J ends on it: now, the station and its orbit, the rocket's climb from its pad — and nothing else. */
-  private buildIssGlobe(globe: HomeGlobe): void {
-    this.journeyGlobe = true;
-    globe.reset();
-    globe.points = false;
-    globe.warp = 60;
-    globe.jd = julianDate(new Date());
-    const top = this.flightTop;
-    const path = this.host.frames().filter((f) => f.liftoff && f.t <= top).filter((_, k) => k % 2 === 0).map((f) => eciToEcef(f.r, gmst(f.jd)));
-    this.rocketAt = path[path.length - 1] ?? null;
-    if (path.length > 1) globe.line(path, WHITE, { width: 2, opacity: 0.8 });
-    this.issOrbitJd = -1e9;
-    this.issNext = null;
-    globe.whenLoaded(() => {
-      if (this.built !== 'j') return;
-      this.iss = globe.byNorad(25544) ?? null;
-      if (!this.iss) return;
-      this.refreshIssOrbit(globe);
-      globe.label('iss', t('home.g.iss'), 'station', () => (this.issOrbit ? stateAt(this.issOrbit, (globe.jd - this.issOrbit.jd0) * 86400, false).r : null));
-      const jd = julianDate(new Date());
-      this.issNext = findPasses(this.iss, this.station, jd, jd + 2, G_MIN_EL).find((p) => !p.set || p.set.jd > jd) ?? null;
-    });
-  }
-
-  /** J: the station's osculating orbit, taken again every half hour of the globe's time so the drawing keeps to SGP4's. */
-  private refreshIssOrbit(globe: HomeGlobe): void {
-    if (!this.iss || Math.abs(globe.jd - this.issOrbitJd) < 30 / 1440) return;
-    this.issOrbitJd = globe.jd;
-    this.issOrbit = skyOrbit(this.iss, globe.jd);
-    globe.setDrawn(this.issOrbit);
-  }
-
-  /** J: from just above the rocket, out to the whole Earth turned to the visitor's city, the station going round it. */
-  private aimIssGlobe(globe: HomeGlobe, e: number, w: number): void {
-    this.refreshIssOrbit(globe);
-    const theta = globe.theta;
-    const r = this.rocketAt ? toInertial(this.rocketAt, theta) : null;
-    const near = r ? { az: Math.atan2(r.y, r.x), el: Math.asin(r.z / Math.hypot(r.x, r.y, r.z)) } : { az: globe.camAz, el: 0.3 };
-    const st = this.station;
-    const far = { az: st.lon + theta, el: st.lat * 0.6 + 0.12 };
-    const turn = Math.atan2(Math.sin(far.az - near.az), Math.cos(far.az - near.az));
-    globe.aim(near.az + turn * e, near.el + (far.el - near.el) * e, 7.4 + ((w >= 860 ? 21 : 17) - 7.4) * e, true);
-  }
-
-  // ─── K: D's globe with only the space station ─────────────────────────────
-
-  /** K: the globe fades in over the page's sky at its end, as D's, the station alone on it. */
-  private updateIssEnd(dt: number, w: number, h: number): void {
+  /** The globe fades in over the page's sky at its end, turning slowly, the station alone on it. */
+  private updateGlobe(dt: number, w: number, h: number, still: boolean): void {
     const p = this.globeBlend;
     // under the sky or the globe the launch scene need not be drawn
     this.host.coverScene(p >= 0.99 || this.covered >= 0.99);
     if (p <= 0) { this.globe?.show(false); return; }
-    const globe = this.ensureGlobe();
-    if (!this.journeyGlobe) {
-      this.journeyGlobe = true;
+    if (!this.globe) {
+      const globe = this.globe = new HomeGlobe(this.host.viewport, this.host.textures(), () => this.host.satellites());
+      globe.labelHost = this.labels;
+      globe.setName(this.issName);
       globe.reset();
-      globe.points = false;
-      globe.warp = 60;
-      globe.jd = julianDate(new Date());
-      globe.aim(-2.2, 0.32, 44, true);
-      this.issOrbitJd = -1e9;
-      this.issNext = null;
-      globe.whenLoaded(() => {
-        if (this.built !== 'k') return;
-        this.iss = globe.byNorad(25544) ?? null;
-        if (!this.iss) return;
-        this.refreshIssOrbit(globe);
-        globe.label('iss', t('home.g.iss'), 'station iss', () => (this.issOrbit ? stateAt(this.issOrbit, (globe.jd - this.issOrbit.jd0) * 86400, false).r : null));
-        const jd = julianDate(new Date());
-        this.issNext = findPasses(this.iss, this.station, jd, jd + 2, G_MIN_EL).find((q) => !q.set || q.set.jd > jd) ?? null;
-      });
+      // the catalogue in: the passes, or none to tell of when the station is not in it
+      globe.whenLoaded(() => { this.workOutPasses(); this.worked = true; });
     }
+    const globe = this.globe;
+    // with less motion asked for, the Earth turns at its own pace and the camera stands still
+    globe.warp = still ? 1 : 60;
     globe.show(true);
     globe.setOpacity(Math.min(1, p * 1.4));
-    this.refreshIssOrbit(globe);
     const e = p * p * (3 - 2 * p);
-    // D's slow turn, the camera coming in a little as the page arrives
-    globe.aim(globe.camAz + dt * 0.012, 0.32, (w >= 860 ? 36 : 24) + 8 * (1 - e), true);
-    globe.frame(dt, w, h, pictureShift(w, h, 'd'));
+    const dist = (w >= 860 ? 36 : 24) + 8 * (1 - e);
+    // the camera keeps the station in sight, a little behind it, the Earth turning under them both;
+    // before its orbit is in, D's slow turn
+    const r = globe.issAt;
+    if (r) {
+      const az = Math.atan2(r.y, r.x) - ISS_LEAD, lat = Math.asin(r.z / Math.hypot(r.x, r.y, r.z));
+      globe.aim(az, 0.2 + 0.5 * lat, dist, !this.following);
+      this.following = true;
+    } else globe.aim(globe.camAz + (still ? 0 : dt * 0.012), 0.32, dist, true);
+    globe.frame(dt, w, h, pictureShift(w, h, 'globe'));
+    const now = julianDate(new Date());
+    // a pass told of is over: the next one
+    const ended = (this.issNext?.set ? this.issNext.set.jd < now : false) || (this.issSeen ? this.issSeen.to.jd < now : false);
+    if (globe.iss && (now - this.passesAt > PASSES_EVERY || ended)) this.workOutPasses();
   }
 
-  // ─── D: the globe with the real satellites ────────────────────────────────
-
-  private buildD(globe: HomeGlobe): void {
-    globe.warp = 60;
-    globe.aim(-2.2, 0.32, 36, true);
-    globe.whenLoaded(() => {
-      if (this.built !== 'd') return;
-      const theos2 = globe.byNorad(THEOS2_NORAD);
-      globe.setDrawn(theos2 ? skyOrbit(theos2, globe.jd) : null);
-      globe.labelThai(t('home.d.napa'));
-    });
-  }
-
-  private updateD(dt: number, w: number, h: number): void {
-    const globe = this.globe;
-    if (!globe) return;
-    // (a portrait canvas stands back by its own aspect already, src/render/orbit-view.ts)
-    globe.aim(globe.camAz + dt * 0.012, 0.32, w >= 860 ? 36 : 24, true);
-    globe.frame(dt, w, h, pictureShift(w, h, 'd'));
-  }
-
-  // ─── G: over the visitor's city, now ──────────────────────────────────────
-
-  private buildG(globe: HomeGlobe): void {
-    globe.warp = 1;
-    globe.jd = julianDate(new Date());
-    const st = this.station;
-    globe.aim(st.lon + gmst(globe.jd), st.lat * 0.85, 30, true);
-    // the city, and the ring within which a satellite 500 km up stands 10° or more above its horizon
-    const at = geodeticToEcef(st);
-    const up = normalize(at);
-    globe.dot(GOLD, 1.3).move(scale(up, 6371e3 * 1.004));
-    const east = normalize({ x: -up.y, y: up.x, z: 0 });
-    const north = cross(up, east);
-    const lambda = skyRingAngle(500e3, G_MIN_EL);
-    const ring: Vec3[] = [];
-    for (let k = 0; k <= 96; k++) {
-      const phi = k / 96 * 2 * Math.PI;
-      const d = add(scale(up, Math.cos(lambda)), scale(add(scale(east, Math.cos(phi)), scale(north, Math.sin(phi))), Math.sin(lambda)));
-      ring.push(scale(d, 6371e3 * 1.004));
-    }
-    globe.line(ring, GOLD, { width: 1.6, dashed: true, opacity: 0.9 });
-    this.rows = [];
-    this.above = null;
-    this.rowsAt = -1e9;
-    this.issPathAt = -1e9;
-    globe.whenLoaded(() => {
-      if (this.built !== 'g') return;
-      globe.labelThai(t('home.d.napa'));
-      for (const s of G_LIST.filter((x) => x.station)) {
-        const obj = globe.byNorad(s.norad);
-        if (obj) globe.label(`st:${s.norad}`, t(s.name), 'station', () => { const r = skyState(obj, globe.jd); return r.error === 0 ? r.r : null; });
-      }
-    });
-  }
-
-  private updateG(dt: number, w: number, h: number): void {
-    const globe = this.globe;
-    if (!globe) return;
-    const st = this.station;
-    // the city stays facing the camera as the Earth turns under it
-    globe.aim(st.lon + gmst(globe.jd) + 0.08 * Math.sin(this.clock * 0.05), st.lat * 0.85, w >= 860 ? 19.5 : 12);
-    if (globe.sky.length && this.clock - this.rowsAt > 20) { this.rowsAt = this.clock; this.workOutPasses(globe); }
-    if (globe.sky.length && this.clock - this.issPathAt > 60) { this.issPathAt = this.clock; this.drawIssPath(globe); }
-    globe.frame(dt, w, h, pictureShift(w, h, 'g'));
-  }
-
-  /** G: the next pass of each satellite listed, and how many of the catalogue are above the horizon now. */
-  private workOutPasses(globe: HomeGlobe): void {
-    const st = this.station, jd = globe.jd;
-    this.rows = G_LIST.flatMap((s) => {
-      const obj = globe.byNorad(s.norad);
-      if (!obj) return [];
-      const pass = findPasses(obj, st, jd, jd + 1, G_MIN_EL).find((p) => !p.set || p.set.jd > jd) ?? null;
-      const upNow = !!pass && (!pass.rise || pass.rise.jd <= jd);
-      const fixed = pass && !pass.rise && !pass.set ? { az: pass.top.az, el: pass.top.el } : null;
-      return [{ norad: s.norad, name: s.name, station: s.station, pass, upNow, fixed }];
-    });
-    let n = 0;
-    for (const o of globe.sky) { const look = lookFrom(o, st, jd); if (look && look.el > 0) n++; }
-    this.above = n;
-  }
-
-  /** G: the space station's next orbit, over the ground. */
-  private drawIssPath(globe: HomeGlobe): void {
-    const iss = globe.byNorad(25544);
+  /** The station's passes over the city for the next few days: the next, and the next to be seen. */
+  private workOutPasses(): void {
+    const iss = this.globe?.iss;
+    const now = julianDate(new Date());
+    this.passesAt = now;
     if (!iss) return;
-    const pts: Vec3[] = [];
-    for (let k = 0; k <= 96; k++) {
-      const jd = globe.jd + k / 1440;
-      const s = skyState(iss, jd);
-      if (s.error === 0) pts.push(eciToEcef(s.r, gmst(jd)));
-    }
-    if (this.issPath) globe.dropLine(this.issPath);
-    this.issPath = pts.length > 1 ? globe.line(pts, WHITE, { width: 1.4, dashed: true, opacity: 0.7 }) : null;
-  }
-
-  // ─── H: the launches drawn on the globe ───────────────────────────────────
-
-  private buildH(globe: HomeGlobe): void {
-    globe.warp = 30;
-    this.arcIndex = 0;
-    this.startArc(globe);
-    globe.whenLoaded(() => { if (this.built === 'h') globe.labelThai(t('home.d.napa')); });
-  }
-
-  private startArc(globe: HomeGlobe): void {
-    const id = H_MISSIONS[this.arcIndex % H_MISSIONS.length];
-    this.revealT = 0;
-    this.holdUntil = 0;
-    // the arcs before stay, fainter, the oldest going
-    if (this.arcLine) { this.arcLine.setOpacity(0.3); this.arcLines.push(this.arcLine); this.arcLine = null; }
-    while (this.arcLines.length > 3) globe.dropLine(this.arcLines.shift()!);
-    this.arcBuiltWith = 0;
-    this.arcHead ??= globe.dot(ACCENT, 1.1);
-    const m = watchMissionById(id)!;
-    const site = siteById(m.siteId);
-    globe.aim(site.longitude * Math.PI / 180 + gmst(globe.jd), site.latitude * Math.PI / 180 * 0.8, this.host.viewport.clientWidth >= 860 ? 24 : 18);
-    const known = this.arcs.has(id);
-    if (!known) {
-      // flown unseen behind the globe, as fast as the machine allows
-      this.host.previewWatch(id);
-      this.ownFlight = this.host.flightNo();
-      this.host.fly();
-      this.host.fastForward(H_END);
-      this.flown = true;
-      this.arcs.set(id, { points: [], t: [], alt: [] });
-    }
-    this.arcNow = { mission: id, t: 0, alt: 0, computing: !known };
-    globe.label('arc', vehicleById(m.vehicleId).name.replace(/\s*\(.*\)$/, '').replace(' Block 5', ''), 'arc', () => null);
-  }
-
-  /** H: the arc so far, from the recording; true once it has all been flown. */
-  private collectArc(arc: Arc): boolean {
-    if (this.host.flightNo() !== this.ownFlight) return true;
-    const frames = this.host.frames();
-    const last = arc.t.length ? arc.t[arc.t.length - 1] : -1;
-    for (const f of frames) {
-      if (!f.liftoff || f.t <= last + 2 || f.t > H_END) continue;
-      arc.points.push(eciToEcef(f.r, gmst(f.jd)));
-      arc.t.push(f.t);
-      arc.alt.push(f.altitudeAGL);
-    }
-    const done = this.host.headTime() >= H_END - 1 || frames[frames.length - 1]?.status === 'failed';
-    if (done) this.host.halt();
-    return done;
-  }
-
-  private updateH(dt: number, w: number, h: number): void {
-    const globe = this.globe;
-    const now = this.arcNow;
-    if (!globe || !now) return;
-    const arc = this.arcs.get(now.mission)!;
-    if (now.computing) now.computing = !this.collectArc(arc);
-    const lastT = arc.t.length ? arc.t[arc.t.length - 1] : 0;
-    this.revealT = Math.min(this.revealT + dt * H_REVEAL, lastT);
-    let n = 0;
-    while (n < arc.t.length && arc.t[n] <= this.revealT) n++;
-    // the line is rebuilt as the recording grows (a few times a second), and shown up to its head
-    const grown = arc.points.length !== this.arcBuiltWith;
-    if (arc.points.length > 1 && (!this.arcLine || (grown && (!now.computing || this.clock - this.arcBuiltAt > 0.3)))) {
-      if (this.arcLine) globe.dropLine(this.arcLine);
-      this.arcLine = globe.line(arc.points, ACCENT, { width: 2.6 });
-      this.arcBuiltWith = arc.points.length;
-      this.arcBuiltAt = this.clock;
-    }
-    this.arcLine?.setShown(n);
-    const head = n > 0 ? arc.points[n - 1] : null;
-    this.arcHead?.setVisible(!!head);
-    if (head) {
-      this.arcHead?.move(head);
-      now.t = arc.t[n - 1];
-      now.alt = arc.alt[n - 1];
-    }
-    globe.label('arc', globe.labelText('arc'), 'arc', () => (head ? toInertial(head, globe.theta) : null));
-    // drawn to its end: a moment on it, then the next launch
-    if (!now.computing && arc.t.length > 0 && n >= arc.t.length) {
-      if (!this.holdUntil) this.holdUntil = this.clock + 2.5;
-      else if (this.clock >= this.holdUntil) { this.arcIndex++; this.startArc(globe); }
-    }
-    globe.frame(dt, w, h, pictureShift(w, h, 'h'));
+    const st = this.station;
+    const { next, seen } = nextPasses(findPasses(iss, st, now, now + PASS_DAYS, MIN_PASS_EL), now);
+    this.issNext = next;
+    const from = seen?.visible ? lookFrom(iss, st, seen.visible.from) : null;
+    const to = seen?.visible ? lookFrom(iss, st, seen.visible.to) : null;
+    // the pass's highest point, if it is seen then; else the higher end of the stretch it is seen for
+    const top = seen && from && to ? (seen.top.jd >= from.jd && seen.top.jd <= to.jd ? seen.top.el : Math.max(from.el, to.el)) : 0;
+    this.issSeen = from && to ? { from, to, top } : null;
+    this.worked = true;
   }
 }
-
-const scale = (a: Vec3, k: number): Vec3 => ({ x: a.x * k, y: a.y * k, z: a.z * k });
-const add = (a: Vec3, b: Vec3): Vec3 => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
-const cross = (a: Vec3, b: Vec3): Vec3 => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
-const normalize = (a: Vec3): Vec3 => scale(a, 1 / (Math.hypot(a.x, a.y, a.z) || 1));

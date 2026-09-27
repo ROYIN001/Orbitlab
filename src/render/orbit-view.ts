@@ -68,22 +68,6 @@ export interface OrbitGhost {
   closed?: boolean;
 }
 
-/** The home page: a line on or above the ground that turns with the Earth (src/ui/home-globe.ts). */
-export interface GroundLine {
-  /** draw only the first `count` points of it */
-  setShown(count: number): void;
-  setOpacity(opacity: number): void;
-  remove(): void;
-}
-
-/** The home page: a point that turns with the Earth, kept the same size on screen. */
-export interface GroundDot {
-  /** where it is, Earth-fixed, m */
-  move(p: { x: number; y: number; z: number }): void;
-  setVisible(on: boolean): void;
-  remove(): void;
-}
-
 /** O02: a numbered point of a plan: a burn. */
 export interface OrbitMarker {
   position: { x: number; y: number; z: number };
@@ -175,9 +159,6 @@ export class OrbitView {
   private readonly ghosts = new THREE.Group();
   private readonly markers = new THREE.Group();
   private readonly target: THREE.Mesh;
-  /** the home page's lines and points fixed to the ground: turned with the Earth, about its axis only */
-  private readonly ground = new THREE.Group();
-  private readonly groundDots = new Set<THREE.Mesh>();
   private size = { w: 1, h: 1 };
   /** the picture's shift off centre, fractions of its size (see `shiftPicture`) */
   private shift = { x: 0, y: 0 };
@@ -240,7 +221,7 @@ export class OrbitView {
     this.axes.add(aries);
     this.target = dot(0xc3a6ff, 1);
     this.target.visible = false;
-    this.scene.add(this.node, this.nodeLabel, this.nodeLine, this.sat, this.radius, this.equator, this.normal, this.axes, this.ghosts, this.markers, this.target, this.ground);
+    this.scene.add(this.node, this.nodeLabel, this.nodeLine, this.sat, this.radius, this.equator, this.normal, this.axes, this.ghosts, this.markers, this.target);
 
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
     canvas.addEventListener('pointermove', (e) => this.onMove(e));
@@ -323,39 +304,6 @@ export class OrbitView {
     this.camera.updateProjectionMatrix();
     this.ellipseMat.resolution.set(w, h);
     this.ghosts.traverse((o) => { if (o instanceof Line2) (o.material as LineMaterial).resolution.set(w, h); });
-    this.ground.traverse((o) => { if (o instanceof Line2) (o.material as LineMaterial).resolution.set(w, h); });
-  }
-
-  /** The home page: a line fixed to the ground, points Earth-fixed (m, x to Greenwich, z to the north pole). */
-  addGroundLine(points: readonly { x: number; y: number; z: number }[], color: number, opts: { width?: number; dashed?: boolean; opacity?: number } = {}): GroundLine {
-    const pos: number[] = [];
-    for (const p of points) pos.push(p.x * S, p.y * S, p.z * S);
-    const geo = new LineGeometry();
-    geo.setPositions(pos.length >= 6 ? pos : [0, 0, 0, 0, 0, 0]);
-    const mat = new LineMaterial({ color, linewidth: opts.width ?? 2, worldUnits: false, dashed: !!opts.dashed, dashSize: 0.5, gapSize: 0.35,
-      transparent: true, opacity: opts.opacity ?? 1, depthWrite: false });
-    mat.resolution.set(this.size.w, this.size.h);
-    const line = new Line2(geo, mat);
-    line.computeLineDistances();
-    this.ground.add(line);
-    return {
-      setShown: (count) => { geo.instanceCount = Math.max(0, Math.min(points.length, Math.floor(count)) - 1); },
-      setOpacity: (opacity) => { mat.opacity = opacity; line.visible = opacity > 0.01; },
-      remove: () => { this.ground.remove(line); geo.dispose(); mat.dispose(); },
-    };
-  }
-
-  /** The home page: a point fixed to the ground (or riding along a line), `size` its radius on screen, about in px. */
-  addGroundDot(color: number, size = 1): GroundDot {
-    const dot = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), new THREE.MeshBasicMaterial({ color }));
-    dot.userData.size = size;
-    this.ground.add(dot);
-    this.groundDots.add(dot);
-    return {
-      move: (p) => { dot.position.set(p.x * S, p.y * S, p.z * S); },
-      setVisible: (on) => { dot.visible = on; },
-      remove: () => { this.ground.remove(dot); this.groundDots.delete(dot); dot.geometry.dispose(); (dot.material as THREE.Material).dispose(); },
-    };
   }
 
   /** O02: the plan's other orbits (none to clear them). */
@@ -512,13 +460,11 @@ export class OrbitView {
   private turnEarth(theta: number, jd: number): void {
     this.earth.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), theta)
       .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
-    this.ground.quaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), theta);
-    for (const dot of this.groundDots) dot.scale.setScalar(this.dist * 0.0065 * (dot.userData.size as number));
     const sun = sunDirectionEci(jd);
     (this.earthMat.uniforms.sunDir.value as THREE.Vector3).set(sun.x, sun.y, sun.z);
   }
 
-  /** The home page's background (prototype D): where the camera stands about the Earth's centre. */
+  /** The home page's globe (src/ui/home-globe.ts): where the camera stands about the Earth's centre. */
   setView(az: number, el: number, dist: number): void {
     this.az = az; this.el = el; this.dist = dist;
   }

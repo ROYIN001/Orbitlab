@@ -13,13 +13,15 @@
     "test:sixdof-fleet": "vitest run --config vitest.sixdof-fleet.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "snapshots": "node --experimental-strip-types scripts/refresh-snapshots.ts"
+    "snapshots": "node --experimental-strip-types scripts/refresh-snapshots.ts",
+    "shots": "node --experimental-strip-types scripts/shots.ts"
   },
   "dependencies": {
     "three": "0.186.0"
   },
   "devDependencies": {
     "@types/three": "0.186.0",
+    "playwright-core": "1.63.0",
     "typescript": "7.0.2",
     "vite": "8.3.0",
     "vitest": "5.0.1"

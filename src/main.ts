@@ -206,9 +206,9 @@ class App {
   cams = new CameraController();
   panel: SetupPanel;
   home: HomeScreen;
-  /** PROTOTYPE: what the landing page shows behind itself, in each of its five variants */
+  /** what the landing page shows behind itself: the vehicle on its pad, then its starry sky and its globe */
   homeStage: HomeStage;
-  /** the landing page draws a globe of its own over the launch scene (prototype D) */
+  /** the landing page's sky or its globe covers the launch scene */
   private homeCovers = false;
   watch: WatchView;
   /** S01: the Build section while it is being built */
@@ -436,23 +436,6 @@ class App {
       this.goLive(); this.playing = false; this.panel.restoreMission(state);
     };
     this.homeStage = new HomeStage({
-      previewWatch: (id, launchTime) => {
-        this.goLive();
-        this.playing = false;
-        const settings = watchMissionSettings(id);
-        if (launchTime) settings.launchTime = launchTime;
-        this.panel.loadMission(settings);
-        this.watchPayloadKey = watchMissionById(id)?.payloadKey ?? null;
-        this.updateMissionName();
-      },
-      fly: () => { this.warp = 1; this.playing = true; this.panel.setRunning(true); this.updatePlayButton(); },
-      fastForward: (t) => { this.fastForwardTo = t; },
-      halt: () => { this.playing = false; this.fastForwardTo = null; this.updatePlayButton(); },
-      seekStill: (t) => { this.seek(t); this.player.playing = false; },
-      flightNo: () => this.flightNo,
-      headTime: () => this.recorder.headTime,
-      frames: () => this.recorder.frames,
-      frame: () => this.shown,
       cams: this.cams,
       camera: () => (this.scene ? this.scene.camera : null),
       viewport: this.viewport,
@@ -464,7 +447,6 @@ class App {
       watch: (id) => { this.go(route('launch', 'watch')); this.startWatch(id); },
       go: (r) => this.go(r),
       openLessons: () => this.lessons.openCatalog(),
-      vehicleName: () => missionVehicle(this.panel.state).name,
     }, this.homeStage);
     this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
     this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
@@ -753,7 +735,6 @@ class App {
     // page and the viewer open on the featured launch standing on its pad in
     // daylight, and the workspace on the mission it held when it was closed.
     if (await this.openMissionLink()) { /* previewed by the panel */ }
-    else if (this.mode === 'home') { /* the landing page's background sets its own mission up (src/ui/home-stage.ts) */ }
     else if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
     else {
       const stored = loadStoredMission();
@@ -1498,7 +1479,7 @@ class App {
         playing: replaying ? this.player.playing : this.playing,
         armed: !!sim,
       });
-      if (this.mode === 'home') this.home.tick(this.shown);
+      if (this.mode === 'home') this.home.tick();
       if (this.mode === 'watch') {
         this.watch.update(this.shown, this.recorder.events, {
           playing: this.playing && this.player.live,
