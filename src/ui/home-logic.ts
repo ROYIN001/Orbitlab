@@ -1,18 +1,27 @@
 /**
- * The landing page's prototypes (five backgrounds for the same page, to be
+ * The landing page's prototypes (backgrounds for the same page, to be
  * compared before one is kept): which one is showing, and the small pieces of
  * arithmetic they share. DOM-free: tests/home-logic.test.ts holds it.
  *
  * A  the vehicle on its pad, filmed: a slow camera move and the pad's light
  * B  scrolling the page flies the launch, a chapter of the page per event
- * C  the first seconds of the launch, over and over, behind the page
  * D  the Earth with the real satellites where they are now, the Thai ones named
- * E  a line-up of the viewer's rockets to scale; the one picked stands on its pad
+ * F  B's flight, then the camera pulls back to D's globe: the orbit flown among the real satellites
+ * G  the globe turned to the visitor's city: what is above it now, and what comes over next
+ * H  D's globe with the viewer's launches drawn on it, one after another, as the simulator flies them
+ * I  F, launched by the visitor: the first screen's button is held down to count down and lift off
+ *
+ * (C, the first seconds of the launch looped, and E, a line-up of rockets to
+ * scale, were tried and set aside, 2026-09-27.)
  */
 import { gmst, julianDate, sunDirectionEci } from '../physics/orbital';
 
-export type HomeVariant = 'a' | 'b' | 'c' | 'd' | 'e';
-export const HOME_VARIANTS: readonly HomeVariant[] = ['a', 'b', 'c', 'd', 'e'];
+export type HomeVariant = 'a' | 'b' | 'd' | 'f' | 'g' | 'h' | 'i';
+export const HOME_VARIANTS: readonly HomeVariant[] = ['a', 'b', 'd', 'f', 'g', 'h', 'i'];
+/** the variants whose page is a flight in chapters, read by scrolling */
+export const isJourney = (v: HomeVariant): boolean => v === 'b' || v === 'f' || v === 'i';
+/** the variants whose picture is the globe (F's only at its end) */
+export const isGlobe = (v: HomeVariant): boolean => v === 'd' || v === 'g' || v === 'h';
 /** `?home=b` opens the page on a prototype; the choice is kept in this browser */
 export const HOME_VARIANT_PARAM = 'home';
 export const HOME_VARIANT_STORAGE_KEY = 'orbitlab.homeVariant';
@@ -85,9 +94,39 @@ export function timeAtScroll(anchors: readonly ScrollAnchor[], scroll: number): 
  */
 export const SCROLL_FLIGHT_END = 570;
 export const SCROLL_FLIGHT_ENOUGH = 548;
-/** C: the stretch of the launch played over and over, mission time, s (ignition is at T−2.5 s). */
-export const LOOP_START = -6;
-export const LOOP_END = 24;
+/** I: the mission time the flight starts from when the button has been held (ignition is at T−2.5 s). */
+export const HOLD_LAUNCH_FROM = -3;
+/** I: how long the button is held to launch, s */
+export const HOLD_SECONDS = 3;
+
+/**
+ * I: the moment shown, once launched — the flight runs on in real time from
+ * the launch, and scrolling ahead of it takes it there and on from there;
+ * scrolling back does not turn it back (a rocket is not un-launched).
+ */
+export function launchedTime(clock: number, scrollTime: number): number {
+  return Math.max(clock, scrollTime);
+}
+
+/**
+ * G: how far round the Earth from a place, rad, a satellite at `altitude`
+ * (m) can be and still stand `minElevation` (rad) above the place's
+ * horizon — the radius of the ring drawn round it.
+ */
+export function skyRingAngle(altitude: number, minElevation: number, earthRadius = 6371e3): number {
+  return Math.acos(earthRadius / (earthRadius + altitude) * Math.cos(minElevation)) - minElevation;
+}
+
+/** G: the places a visitor can stand (src/orbit/applications-setup.ts STATIONS), each with the time zone its clocks keep. */
+export const STATION_ZONES: Record<string, string> = {
+  bangkok: 'Asia/Bangkok', chiangMai: 'Asia/Bangkok', hatYai: 'Asia/Bangkok', ubon: 'Asia/Bangkok',
+  stPetersburg: 'Europe/Moscow', moscow: 'Europe/Moscow',
+};
+
+/** G: the place to start from, guessed from the browser's time zone (nothing is asked of it): Moscow's zone, Moscow; anything else, Bangkok. */
+export function stationForZone(zone: string | undefined): string {
+  return zone === 'Europe/Moscow' ? 'moscow' : 'bangkok';
+}
 
 /**
  * Where the subject of the picture goes, as a shift off the middle in
@@ -95,6 +134,6 @@ export const LOOP_END = 24;
  * a wide screen, above it on a narrow one, where the text sits at the bottom.
  */
 export function pictureShift(width: number, height: number, variant: HomeVariant): { x: number; y: number } {
-  if (width >= 860) return { x: variant === 'd' ? 0.2 : 0.24, y: 0 };
+  if (width >= 860) return { x: isGlobe(variant) ? 0.2 : 0.24, y: 0 };
   return { x: 0, y: height > width ? -0.2 : -0.1 };
 }

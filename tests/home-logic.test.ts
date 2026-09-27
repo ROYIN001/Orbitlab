@@ -4,13 +4,17 @@
  * where the picture's subject goes.
  */
 import { describe, expect, it } from 'vitest';
-import { eveningAt, parseVariant, pictureShift, sunElevation, timeAtScroll } from '../src/ui/home-logic';
+import {
+  eveningAt, launchedTime, parseVariant, pictureShift, skyRingAngle, stationForZone, sunElevation, timeAtScroll,
+} from '../src/ui/home-logic';
 
 describe('parseVariant', () => {
-  it('reads a letter of the five, whatever its case, and nothing else', () => {
+  it('reads the letter of a prototype, whatever its case, and nothing else', () => {
     expect(parseVariant('b')).toBe('b');
-    expect(parseVariant(' E ')).toBe('e');
-    expect(parseVariant('f')).toBeNull();
+    expect(parseVariant(' I ')).toBe('i');
+    // C and E were tried and set aside: an old link to them opens the default
+    expect(parseVariant('c')).toBeNull();
+    expect(parseVariant('e')).toBeNull();
     expect(parseVariant('')).toBeNull();
     expect(parseVariant(null)).toBeNull();
   });
@@ -68,6 +72,31 @@ describe('pictureShift', () => {
   it('puts the subject right of the text on a wide screen and above it on a narrow one', () => {
     expect(pictureShift(1600, 900, 'a').x).toBeGreaterThan(0);
     expect(pictureShift(1600, 900, 'a').y).toBe(0);
-    expect(pictureShift(390, 844, 'c')).toEqual({ x: 0, y: -0.2 });
+    expect(pictureShift(390, 844, 'i')).toEqual({ x: 0, y: -0.2 });
+    // the globe sits a little nearer the middle than the rocket
+    expect(pictureShift(1600, 900, 'g').x).toBeLessThan(pictureShift(1600, 900, 'f').x);
+  });
+});
+
+describe('I: the launch the visitor set off', () => {
+  it('runs on in real time, goes ahead with the scroll, and does not come back with it', () => {
+    expect(launchedTime(12, -8)).toBe(12);
+    expect(launchedTime(12, 60)).toBe(60);
+  });
+});
+
+describe('G: over the visitor\'s city', () => {
+  it('draws the ring where a satellite 500 km up stands 10° above the horizon about 14° round the Earth', () => {
+    const deg = skyRingAngle(500e3, 10 * Math.PI / 180) * 180 / Math.PI;
+    expect(deg).toBeGreaterThan(13.5);
+    expect(deg).toBeLessThan(14.5);
+    // on the horizon itself the ring is the tangent's: acos(R / (R + h))
+    expect(skyRingAngle(500e3, 0)).toBeCloseTo(Math.acos(6371 / 6871), 9);
+  });
+
+  it('starts from Moscow in Moscow\'s time zone and from Bangkok anywhere else', () => {
+    expect(stationForZone('Europe/Moscow')).toBe('moscow');
+    expect(stationForZone('Asia/Bangkok')).toBe('bangkok');
+    expect(stationForZone(undefined)).toBe('bangkok');
   });
 });
