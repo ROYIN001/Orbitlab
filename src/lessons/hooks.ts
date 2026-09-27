@@ -58,6 +58,11 @@ export const LESSON_HOOKS: Readonly<Record<string, LessonHook>> = {
   /**
    * The flight is a run of a Monte Carlo set (P08), of the set seeded `seed` when given: its
    * vehicle and air dispersed as that run drew them. `value` is the run's number, 1-based.
+   *
+   * Only the run's seed is checked: not that a set of 20 was flown, nor that
+   * the run is the one farthest from the target. Lesson 2.4's brief says so
+   * (audit 2026-09-27 A12). TODO(audit 2026-09-27 S4c): grade the choice
+   * from evidence the Monte Carlo window records of the set it flew.
    */
   dispersedRun(flight, params) {
     const d = flight.cfg.dynamics?.dispersion;
