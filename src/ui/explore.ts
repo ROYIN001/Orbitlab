@@ -25,7 +25,9 @@
  * offers the way back to the precomputed values; these functions are what it
  * reads to do that.
  */
-import type { DynamicsConfig, GuidanceParams } from '../types';
+import type { DynamicsConfig, FailureConfig, FailureMode, GuidanceParams } from '../types';
+import type { TelemetrySample } from '../physics/sim/types';
+import type { MissionResultModel, ResultCause, ResultOutcome } from './result-content';
 
 /**
  * The guidance values Explore shows, as the setup panel's own field keys, in
@@ -95,6 +97,82 @@ export function withoutEngineerSettings(dynamics: DynamicsConfig): DynamicsConfi
 /** Whether anything flown differs from what Explore would compute. */
 export function hasAdjustments(overrides: Partial<GuidanceParams>, dynamics: DynamicsConfig | undefined): boolean {
   return Object.keys(overrides).length > 0 || engineerSettings(dynamics).length > 0;
+}
+
+// ─── challenges ────────────────────────────────────────────────────────────
+
+/**
+ * Explore's failure scenarios, as challenges: each with the moment it is set
+ * for, so the student picks what goes wrong and not when. The times are the
+ * ones the lessons and the viewer's launches fly — an engine out at T+80 s
+ * (lessons 2.2 and 3.1), the abort at T+60 s (3.3), the pad fire six seconds
+ * before liftoff (Soyuz T-10-1) — and the separation failures are set off by
+ * their separations, whatever the time says (src/physics/sim/failures.ts).
+ */
+export const CHALLENGE_PRESETS: Record<Exclude<FailureMode, 'none'>, { time: number; stage: number }> = {
+  engineOut: { time: 80, stage: 0 },
+  thrustLoss: { time: 100, stage: 0 },
+  prematureSep: { time: 90, stage: 0 },
+  fairingStuck: { time: 60, stage: 0 },
+  rangeSafety: { time: 70, stage: 0 },
+  launchAbort: { time: 60, stage: 0 },
+  padFire: { time: -6, stage: 0 },
+  boosterCollision: { time: 0, stage: 0 },
+  stagingFailure: { time: 0, stage: 0 },
+  random: { time: 60, stage: 0 },
+};
+
+/** Dictionary key of what each challenge does, in a sentence. */
+export const CHALLENGE_TEXT: Record<FailureMode, string> = {
+  none: 'setup.challenge.none', engineOut: 'setup.challenge.engineOut', thrustLoss: 'setup.challenge.thrustLoss',
+  prematureSep: 'setup.challenge.prematureSep', fairingStuck: 'setup.challenge.fairingStuck', rangeSafety: 'setup.challenge.rangeSafety',
+  launchAbort: 'setup.challenge.launchAbort', padFire: 'setup.challenge.padFire', boosterCollision: 'setup.challenge.boosterCollision',
+  stagingFailure: 'setup.challenge.stagingFailure', random: 'setup.challenge.random',
+};
+
+/** When a failure strikes: at its time, at a separation, or not at a moment at all. */
+export function challengeTiming(failure: FailureConfig): 'time' | 'separation' | 'strapOns' | 'none' {
+  switch (failure.mode) {
+    case 'none': case 'fairingStuck': case 'random': return 'none';
+    case 'boosterCollision': return 'strapOns';
+    case 'stagingFailure': return 'separation';
+    default: return 'time';
+  }
+}
+
+// ─── the flight's debrief ──────────────────────────────────────────────────
+
+/** Where the ascent's Δv went, from the flight's own loss book-keeping. */
+export interface DebriefLoss { key: 'gravity' | 'drag' | 'steering'; dv: number; share: number }
+
+export interface DebriefModel {
+  outcome: ResultOutcome;
+  cause: ResultCause;
+  /** Δv left when the outcome was recorded, and at liftoff, m/s */
+  dvLeft: number | null;
+  dvStart: number | null;
+  losses: DebriefLoss[];
+}
+
+/**
+ * The Explore level's card at the end of a flight: the outcome and its cause
+ * (src/ui/result-content.ts, the same assessment the result panel shows), the
+ * Δv left, and the three losses as shares of their sum.
+ */
+export function debriefModel(result: MissionResultModel,
+  losses: { gravity: number; drag: number; steering: number },
+  telemetry: readonly Pick<TelemetrySample, 't' | 'dvRemaining'>[]): DebriefModel {
+  const upTo = telemetry.filter((s) => s.t <= result.outcomeTime + 1e-6);
+  const last = upTo[upTo.length - 1] ?? telemetry[telemetry.length - 1];
+  const keys = ['gravity', 'drag', 'steering'] as const;
+  const total = keys.reduce((sum, k) => sum + Math.max(0, losses[k]), 0);
+  return {
+    outcome: result.outcome,
+    cause: result.cause,
+    dvLeft: last && Number.isFinite(last.dvRemaining) ? last.dvRemaining : null,
+    dvStart: telemetry[0] && Number.isFinite(telemetry[0].dvRemaining) ? telemetry[0].dvRemaining : null,
+    losses: keys.map((key) => ({ key, dv: Math.max(0, losses[key]), share: total > 0 ? Math.max(0, losses[key]) / total : 0 })),
+  };
 }
 
 // ─── the verdict's payload fix ─────────────────────────────────────────────

@@ -20,7 +20,7 @@ function selectors(key: LockKey): string[] {
     case 'setup.payloadMass': return [label('setup.payloadMass')];
     case 'setup.orbit': return ['.orbit-presets button', ...['setup.perigee', 'setup.apogee', 'setup.inclination', 'setup.argPerigee', 'setup.raanMode', 'setup.raan', 'setup.ltan', 'setup.rendezvous', 'setup.rendezvousPort'].map(label)];
     case 'setup.launchTime': return [label('setup.launchTime'), '#launch-windows button'];
-    case 'setup.failure': return ['details[data-section="failure"] select', 'details[data-section="failure"] input'];
+    case 'setup.failure': return ['details[data-section="failure"] select', 'details[data-section="failure"] input', 'details[data-section="failure"] button'];
     case 'setup.dynamics.model': return [label('setup.dynamics.model')];
     case 'setup.guidance': return ['details[data-section="guidance"] input', 'details[data-section="guidance"] button', 'details[data-section="explicit"] select', 'details[data-section="explicit"] input'];
     case 'setup.boosterRecovery': return ['details[data-section="options"] input', 'details[data-section="options"] select'];

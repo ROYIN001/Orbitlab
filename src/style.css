@@ -264,6 +264,30 @@ body[data-lesson-reveal~="setup.guidance"] #setup[data-experience="learning"] :i
 .vehicle-card:hover:not(:disabled) { border-color: var(--accent-line); }
 .vehicle-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-weak); }
 
+/* Explore's failure scenarios, as challenges set for their moment */
+/* a list of names; the one chosen says what it does (the others say it as their tooltip) */
+.challenge-cards { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 0; }
+.challenge-card {
+  display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left;
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line2); background: var(--panel3);
+}
+.challenge-card strong { font-size: 12.5px; font-weight: 500; line-height: 1.35; }
+.challenge-card span { font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.challenge-card:not([aria-pressed="true"]) span { display: none; }
+.challenge-card[aria-pressed="true"] strong { font-weight: 600; }
+.challenge-card:hover:not(:disabled) { border-color: var(--accent-line); }
+.challenge-card[aria-pressed="true"] { border-color: var(--warn); background: rgba(239, 164, 126, 0.08); }
+.challenge-card[data-failure="none"][aria-pressed="true"] { border-color: var(--accent); background: var(--accent-weak); }
+.challenge-when { color: var(--warn); }
+
+/* Explore, while the rocket flies: what is flying, in place of the set-up */
+#setup:not([data-running="true"]) .flight-summary { display: none; }
+#setup[data-experience="learning"][data-running="true"] :is(.explore-steps, .explore-step, .status-note, .verdict-fixes) { display: none; }
+.flight-summary h2 { margin: 0 0 10px; font-size: 14px; }
+.flight-summary .info { margin-top: 0; }
+.flight-summary .info .v { font-family: var(--sans); }
+.flight-summary .info .k { white-space: nowrap; }
+
 /* the payload against the vehicle's rating; the tick is the 90 % the verdict calls tight */
 .payload-meter { margin: 12px 0 0; }
 .payload-meter .field-note { margin-top: 6px; }
@@ -838,6 +862,22 @@ body[data-lesson] .verdict-fixes { display: none; }
 .range-toggle button { padding: 4px 9px; border-radius: 5px; font-size: 11px; color: #a7b5c7; white-space: nowrap; }
 .range-toggle button.active { background: var(--accent-weak); color: var(--accent); }
 .chart-note { margin: 12px 0 0; font-size: 11px; color: var(--warn); }
+/* Explore: the flight against its target orbit, above the charts (ui/telemetry.ts) */
+.tel-progress { display: none; }
+#telemetry.simple-charts .tel-progress { display: block; }
+#telemetry.view-equations .tel-progress { display: none; }
+.tel-progress h3.section { margin-top: 14px; }
+.tel-progress-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline;
+  margin: 0 0 8px; font-size: 12px;
+}
+.tel-progress-row .k { color: var(--muted); }
+.tel-progress-row .v { font-family: var(--mono); font-size: 11.5px; text-align: right; }
+.tel-progress-bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: #2c3745; overflow: hidden; }
+.tel-progress-bar[hidden] { display: none; }
+.tel-progress-bar span { display: block; height: 100%; width: 0; background: var(--blue); transition: width 0.4s ease; }
+.tel-progress-row:last-child .tel-progress-bar span { background: #c3a6ff; }
+
 /* Explore: one chart at a time, picked from a row of its names (ui/telemetry.ts) */
 .chart-picker { display: none; }
 #telemetry.simple-charts .chart-picker { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 0; }

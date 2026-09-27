@@ -43,9 +43,57 @@ from it. The flight itself carries on in Launch.
   rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship is
   down in the water, a card offers to keep watching, watch again, pick another launch, or plan a
   mission of your own.
-- **Explore** — everything below this line, in the learning layout (the advanced guidance
-  parameters stay folded away).
-- **Engineer** — the same workspace with every guidance parameter open.
+- **Explore** — the mission builder below, lighter: the same simulation and the same
+  physics as Engineer, with the settings an engineer tunes computed and shown instead of
+  asked for (see **Explore** below).
+- **Engineer** — the whole workspace, with every guidance parameter open.
+
+**Explore.** The level is chosen in the top bar only. A mission is set up in three steps,
+one on screen at a time, with tabs to move between them — **Rocket**, **Payload**, **Orbit**:
+
+1. **Rocket** — the quick starts, then the vehicles as cards, each with what it lifts to low
+   orbit on a logarithmic bar (Electron's 300 kg to Saturn V's 118 t), the launch site, and
+   whether the first stage comes home.
+2. **Payload** — what is flown and its mass, drawn against the vehicle's rating for the
+   orbit's class, with a tick at the 90 % the verdict calls tight.
+3. **Orbit** — the presets and the perigee, apogee and inclination. Picking a plane that has
+   to be launched into at its time (the ISS's, a sun-synchronous one) sets the next launch
+   window. The argument of perigee, the RAAN mode and the LTAN come with the preset. Below:
+   the weather (calm, crosswind or wind shear, for a six-DOF flight), the guidance, and the
+   challenges.
+
+The verdict above **Launch** is a light — ready, flyable with a caution, not flyable as set —
+and under it the change that answers it, one press each: the next launch window, another
+site whose range-safety corridor reaches the plane (or an inclination this one can fly),
+the heaviest payload the verdict passes (found by bisection, the insertion flown where the
+budget calls it marginal), and for a stack that the flown insertion probe says does not
+reach orbit, the auto-tuner. None is offered during a lesson.
+
+The **guidance** is the vehicle's own pitch programme — the pitch-over altitude, the kick and
+its duration, the pitch-program rate, the gravity-turn ceiling, the loft — the one
+`tests/fleet-defaults.test.ts` and the six-DOF fleet fly to every reference orbit each vehicle
+can reach (LEO, the ISS plane, SSO, GTO, at 25, 50 and 90 % of the rated payload) with no
+tuning; the closed-loop limits are the vehicle's and the parking orbit the planner's. The card
+shows the values flown. Anything changed at the Engineer level — a guidance value, the
+auto-tuner's result, the flexible body, the autopilot, navigation, control failures, PEG or
+IGM, a dispersed flight — is still flown in Explore, since a level never touches the mission:
+the card marks it (✎), names it, and **Back to the computed values** removes it. A lesson
+that asks the student to change the guidance (2.1, the acceleration limit) shows its fields.
+
+The **challenges** are the failure scenarios, each set for its moment: an engine out at T+80 s,
+a thrust loss at T+100 s, a premature separation at T+90 s, a range-safety destruct at T+70 s,
+a launch abort at T+60 s, the pad fire six seconds before liftoff; the separation failures
+strike at their separations. The Engineer level sets the moment and the stage itself.
+
+In flight, the set-up gives way to a summary of what is flying (**New mission** brings the
+set-up back); the telemetry panel starts with the flight against its target orbit —
+apoapsis and periapsis against the target's, the inclination, the Δv left — and shows one
+chart at a time (altitude, speed, dynamic pressure, acceleration, the apsides, Δv left); the
+6-DOF manual controls appear only while a flight is under manual command. A moment after the
+flight's outcome a card says what happened and why, the orbit reached against the target, the
+Δv left and where the ascent's went (gravity, drag, steering), and the next step, and offers to
+fly again, to keep watching (it folds into a tab), to carry the orbit on into Orbit, and every
+number at the Engineer level. The result table under the controls is the Engineer level's.
 
 Switching level or section never touches the flight: leave the viewer half-way up and the
 workspace shows the same launch with every instrument on it, and a flight left running while

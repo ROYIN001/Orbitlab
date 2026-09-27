@@ -36,7 +36,7 @@ import { getLang, t } from '../i18n';
 import { fmtTime } from './hud';
 import { eventLabel } from './phase';
 import { localizeEventParams, stageNameByLabel } from './names';
-import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
+import { OMEGA_EARTH, R_EARTH, DEG, RAD } from '../physics/constants';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { TelemetrySample } from '../physics/sim/types';
 import { symbolText } from './notation';
@@ -134,6 +134,8 @@ export class TelemetryPanel {
   private viewBtns: HTMLButtonElement[] = [];
   private frame: VisualFrame | null = null;
   private equationLevel: EquationLevel = 'explore';
+  /** Explore: the flight against its target orbit, drawn above the charts (see `drawProgress`) */
+  private progressRows: { value: HTMLElement; fill: HTMLElement; bar: HTMLElement }[] = [];
   /** Explore: the one chart on screen, picked from `EXPLORE_CHART_IDS` */
   private picked: ExploreChartId = 'altitude';
   private pickBtns: HTMLButtonElement[] = [];
@@ -187,8 +189,23 @@ export class TelemetryPanel {
     }
     r.append(views);
     r.classList.toggle('view-equations', this.viewMode === 'equations');
-    // Explore: one chart at a time, picked here (style.css hides the rest)
+    // Explore: the flight against its target, then one chart at a time, picked here (style.css hides the rest)
     r.classList.toggle('simple-charts', this.equationLevel === 'explore');
+    const progress = el('section', 'tel-progress');
+    progress.setAttribute('aria-label', t('tel.progress'));
+    progress.append(el('h3', 'section', t('tel.progress')));
+    this.progressRows = [];
+    for (const key of ['tel.chart.apogee', 'tel.chart.perigee', 'tel.progress.inclination', 'tel.pick.dv']) {
+      const row = el('div', 'tel-progress-row');
+      const value = el('span', 'v', '—');
+      const bar = el('div', 'tel-progress-bar');
+      const fill = el('span');
+      bar.append(fill);
+      row.append(el('span', 'k', t(key)), value, bar);
+      progress.append(row);
+      this.progressRows.push({ value, fill, bar });
+    }
+    r.append(progress);
     const picker = el('div', 'chart-picker');
     picker.setAttribute('role', 'group');
     picker.setAttribute('aria-label', t('tel.pick'));
@@ -276,6 +293,34 @@ export class TelemetryPanel {
     this.shownEventItems.length = 0;
     this.markPicked();
     if (this.view) this.update(this.view, this.cursor);
+  }
+
+  /**
+   * Explore: the flight against its target orbit at the displayed instant —
+   * apoapsis and periapsis as shares of the target's, the inclination beside
+   * the target's, and the Δv left as a share of the Δv at liftoff. Frame-backed
+   * like every other line of the panel, so it rewinds with the timeline.
+   */
+  private drawProgress(view: Simulation, tel: readonly TelemetrySample[]): void {
+    if (!this.progressRows.length) return;
+    const target = view.plan.target;
+    const last = tel.length ? tel[tel.length - 1] : null;
+    const km = (m: number): string => Math.round(m / 1000).toLocaleString(getLang());
+    const set = (i: number, text: string, share: number | null): void => {
+      const row = this.progressRows[i];
+      if (row.value.textContent !== text) row.value.textContent = text;
+      row.bar.hidden = share === null;
+      if (share !== null) row.fill.style.width = `${(Math.min(1, Math.max(0, share)) * 100).toFixed(1)}%`;
+    };
+    const ap = last && last.ap > 0 && last.ap < 5e7 ? last.ap : null;
+    const pe = last && last.pe > -2000e3 ? last.pe : null;
+    set(0, `${ap === null ? '—' : km(ap)} / ${km(target.apogee)} km`, ap === null ? 0 : ap / Math.max(1, target.apogee));
+    // a suborbital target's periapsis is below the ground: there is no share of it to fill
+    set(1, `${pe === null ? '—' : km(pe)} / ${km(target.perigee)} km`, target.perigee > 0 ? (pe === null ? 0 : pe / target.perigee) : null);
+    set(2, `${last ? (view.state.elements.i * RAD).toFixed(1) : '—'}° / ${(target.inclination * RAD).toFixed(1)}°`, null);
+    const dv0 = tel.length ? tel[0].dvRemaining : NaN;
+    const dv = last ? last.dvRemaining : NaN;
+    set(3, Number.isFinite(dv) ? `${Math.round(dv).toLocaleString(getLang())} m/s` : '—', Number.isFinite(dv) && dv0 > 0 ? dv / dv0 : 0);
   }
 
   /** Explore: show one chart, and draw it now rather than at the next tick. */
@@ -382,6 +427,7 @@ export class TelemetryPanel {
       drawChart(this.charts[id], [], { title: chartTitle(id), xMin: -10, xMax: 60, timeAxis: true, xLabel: t('tel.xAxis') });
     }
     for (const id of FLEX_CHART_IDS) this.charts[id].classList.add('hidden');
+    for (const row of this.progressRows) { row.value.textContent = '—'; row.fill.style.width = '0%'; }
     this.view = null;
     this.live = null;
   }
@@ -407,6 +453,7 @@ export class TelemetryPanel {
     // that had been taken by the displayed instant.
     const tel = view.telemetry;
     const events = view.events;
+    this.drawProgress(view, tel);
     // Drawn even with no samples yet: eight empty framed charts with their
     // titles read as "nothing has happened", eight blank canvases read as broken.
     let ascentEnd: number | undefined;

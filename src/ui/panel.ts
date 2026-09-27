@@ -52,7 +52,10 @@ import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHo
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
-import { ENGINEER_SETTING_TITLE, autoGuidanceRows, engineerSettings, hasAdjustments, heaviestPassing, withoutEngineerSettings } from './explore';
+import {
+  CHALLENGE_PRESETS, CHALLENGE_TEXT, ENGINEER_SETTING_TITLE, autoGuidanceRows, challengeTiming, engineerSettings, hasAdjustments,
+  heaviestPassing, withoutEngineerSettings,
+} from './explore';
 import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
 import { SHIP_RETURN_VERIFIED_PAYLOAD } from '../physics/sim/ship-descent';
 import type { DynamicsConfig } from '../types';
@@ -614,6 +617,16 @@ export class SetupPanel {
     this.clearFieldDrafts('setup.perigee', 'setup.apogee', 'setup.inclination', 'setup.argPerigee', 'setup.raan', 'setup.ltan');
   }
 
+  /** New mission: the rocket back on the pad and the set-up open again (the Explore debrief's "fly again" too). */
+  backToSetup(): void {
+    this.cancelTune();
+    this.fieldDrafts.clear();
+    this.inputIssues.clear();
+    this.running = false;
+    this.render();
+    this.cb.onReset();
+  }
+
   setRunning(r: boolean): void {
     if (r) this.cancelTune();
     this.running = r;
@@ -926,6 +939,9 @@ export class SetupPanel {
       return pane;
     }) : null;
     const into = (n: 1 | 2 | 3): HTMLElement => steps ? steps[n - 1] : scroll;
+    // Explore, while the rocket flies: the steps give way to what is flying (style.css)
+    root.dataset.running = String(this.running);
+    if (learning) scroll.prepend(this.flightSummary(vehicle));
     // The level itself is chosen in the top bar only (src/ui/app-mode.ts): the
     // panel used to carry a second switch for it, which did the same thing.
     if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
@@ -1159,15 +1175,7 @@ export class SetupPanel {
     area.appendChild(launch);
     const reset = this.el('button', 'ghost-button', t('setup.reset'));
     reset.type = 'button';
-    reset.addEventListener('click', () => {
-      this.cancelTune();
-      this.fieldDrafts.clear();
-      this.inputIssues.clear();
-      this.running = false;
-      this.step = 1;
-      this.render();
-      this.cb.onReset();
-    });
+    reset.addEventListener('click', () => { this.step = 1; this.backToSetup(); });
     area.appendChild(reset);
     area.appendChild(this.el('p', 'launch-note', t('setup.launchNote')));
     root.appendChild(area);
@@ -1248,8 +1256,13 @@ export class SetupPanel {
     return launchWindows(s.orbit, siteById(s.siteId), new Date(s.launchTime.getTime() - 60e3), 1)[0]?.time ?? null;
   }
 
-  /** Explore: launch at the next window of the plane just chosen (the ISS's, a sun-synchronous one). */
+  /**
+   * Explore: launch at the next window of the plane just chosen (the ISS's, a
+   * sun-synchronous one). Not in a lesson: 5.4 and 5.5 fix the launch time
+   * and leave the orbit free, and a moved launch time would break the lock.
+   */
   private snapToWindow(): void {
+    if (document.body.dataset.lesson) return;
     const w = this.nextWindow();
     if (!w) return;
     this.clearFieldDrafts('setup.launchTime');
@@ -1478,7 +1491,8 @@ export class SetupPanel {
       this.changed();
     };
     if (learning) {
-      gd.open = true;
+      // folded unless something flown differs from what is computed
+      gd.open = hasAdjustments(this.state.guidanceOverrides, this.state.dynamics);
       this.computedGuidance(gd);
     } else gd.appendChild(this.el('p', 'field-note', t('setup.guidanceNote')));
     // Built at both levels: Explore keeps them folded away (style.css) unless
@@ -1578,6 +1592,7 @@ export class SetupPanel {
   }
 
   private failureSection(vehicle: VehicleSpec): HTMLElement {
+    if (this.experience === 'learning') return this.challengeSection(vehicle);
     const s = this.state;
     const fd = this.el('details');
     fd.dataset.section = 'failure';
@@ -1593,6 +1608,85 @@ export class SetupPanel {
     fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;
+  }
+
+  /**
+   * Explore's failure scenarios, as challenges: pick what goes wrong, and it
+   * goes wrong at the moment it is set for (`CHALLENGE_PRESETS`). The
+   * Engineer level sets the moment and the stage itself; a scenario set
+   * there is kept here, and its own moment is the one shown.
+   */
+  private challengeSection(vehicle: VehicleSpec): HTMLElement {
+    const s = this.state;
+    const fd = this.el('details');
+    fd.dataset.section = 'failure';
+    fd.open = true;
+    fd.append(this.el('summary', undefined, t('setup.challenge.title')), this.el('p', 'field-note', t('setup.challenge.note')));
+    const box = this.el('div', 'challenge-cards');
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', t('setup.challenge.title'));
+    // only the failures this vehicle and payload can have (a launch abort needs an escape system)
+    for (const mode of FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, s.satelliteId))) {
+      const b = this.el('button', 'challenge-card');
+      b.type = 'button';
+      b.dataset.failure = mode;
+      b.setAttribute('aria-pressed', String(s.failure.mode === mode));
+      b.disabled = this.running;
+      b.append(this.el('strong', undefined, t(`setup.fail.${mode}`)), this.el('span', undefined, t(CHALLENGE_TEXT[mode])));
+      b.title = t(CHALLENGE_TEXT[mode]);
+      b.addEventListener('click', () => {
+        if (this.running || s.failure.mode === mode) return;
+        const preset = mode === 'none' ? DEFAULT_FAILURE : CHALLENGE_PRESETS[mode];
+        s.failure = { mode, time: preset.time, stage: Math.min(preset.stage, vehicle.stages.length - 1) };
+        this.render();
+        this.changed();
+      });
+      box.append(b);
+    }
+    fd.append(box);
+    const when = this.challengeWhen(vehicle);
+    if (when) fd.append(this.el('p', 'field-note challenge-when', when));
+    return fd;
+  }
+
+  /** When the chosen challenge strikes, in words: its time and stage, its separation, or nothing. */
+  private challengeWhen(vehicle: VehicleSpec): string {
+    const f = this.state.failure;
+    const index = Math.min(f.stage, vehicle.stages.length - 1);
+    const st = vehicle.stages[index];
+    const stage = `${index + 1}: ${stageName(vehicle, st.id, st.name)}`;
+    switch (challengeTiming(f)) {
+      case 'time': return t('setup.challenge.at', { time: f.time < 0 ? `−${num(-f.time)}` : `+${num(f.time)}`, stage });
+      case 'separation': return t('setup.challenge.atSeparation', { stage });
+      case 'strapOns': return t('setup.challenge.atStrapOns');
+      default: return '';
+    }
+  }
+
+  /**
+   * Explore, while the rocket flies: what is flying, in place of the set-up
+   * it can no longer change. New mission brings the set-up back.
+   */
+  private flightSummary(vehicle: VehicleSpec): HTMLElement {
+    const s = this.state;
+    const section = this.el('section', 'config-section flight-summary');
+    section.append(this.el('h2', undefined, t('setup.flying.title')));
+    const box = this.el('div', 'info');
+    const row = (key: string, value: string): void => {
+      const line = this.el('div');
+      line.append(this.el('span', 'k', key), this.el('span', 'v', value));
+      box.append(line);
+    };
+    const site = siteById(s.siteId);
+    const target = resolveTarget(s.orbit, site, s.launchTime);
+    row(t('setup.tab.vehicle'), vehicle.name);
+    row(t('setup.site'), siteName(site));
+    row(t('setup.tab.payload'), `${satelliteName(satelliteById(s.satelliteId))} · ${num(s.payloadMass)} kg`);
+    row(t('setup.tab.orbit'), `${num(Math.round(s.orbit.perigee / 1000))} × ${num(Math.round(s.orbit.apogee / 1000))} km · ${(target.inclination * RAD).toFixed(1)}°`);
+    if (s.failure.mode !== 'none') row(t('setup.challenge.title'), t(`setup.fail.${s.failure.mode}`));
+    if (s.dynamics?.model === 'sixDof') row(t('setup.weather'), t(`setup.dynamics.${s.dynamics.wind}`));
+    section.append(box, this.el('p', 'field-note', t('setup.flying.note')));
+    return section;
   }
 
   // --- U07: the flight-dynamics notation (Engineer mode) -------------------------

@@ -4,7 +4,12 @@
  * can be undone, and a lesson can still ask for the guidance to be shown.
  */
 import { describe, expect, it } from 'vitest';
-import { AUTO_GUIDANCE_FIELDS, autoGuidanceRows, engineerSettings, hasAdjustments, heaviestPassing, withoutEngineerSettings } from '../src/ui/explore';
+import {
+  AUTO_GUIDANCE_FIELDS, CHALLENGE_PRESETS, CHALLENGE_TEXT, autoGuidanceRows, challengeTiming, debriefModel, engineerSettings,
+  hasAdjustments, heaviestPassing, withoutEngineerSettings,
+} from '../src/ui/explore';
+import { FAILURE_MODES, NUMBER_FIELDS, validateConfigInput } from '../src/config/validation';
+import type { MissionResultModel } from '../src/ui/result-content';
 import { guidanceForVehicle } from '../src/physics/defaults';
 import { Simulation } from '../src/physics/simulation';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
@@ -162,5 +167,63 @@ describe('the pre-flight light and its fixes', () => {
     for (const share of shares) { expect(share).toBeGreaterThan(0); expect(share).toBeLessThanOrEqual(1); }
     expect(liftShare(vehicleById('electron').payloadLEO)).toBeLessThan(liftShare(vehicleById('falcon9').payloadLEO));
     expect(liftShare(vehicleById('falcon9').payloadLEO)).toBeLessThan(liftShare(vehicleById('saturnv').payloadLEO));
+  });
+});
+
+describe('challenges', () => {
+  it('has a moment and a sentence for every failure scenario, each one a mission can be set to', () => {
+    const limits = NUMBER_FIELDS['setup.failureTime'];
+    for (const mode of FAILURE_MODES) {
+      expect(CHALLENGE_TEXT[mode], mode).toMatch(/^setup\.challenge\./);
+      if (mode === 'none') continue;
+      const preset = CHALLENGE_PRESETS[mode];
+      expect(preset.time, mode).toBeGreaterThanOrEqual(limits.min!);
+      expect(preset.time, mode).toBeLessThanOrEqual(limits.max!);
+      const soyuz = vehicleById('soyuz21a');
+      const state = { vehicleId: 'soyuz21a', satelliteId: 'crew', siteId: 'baikonur', orbitId: 'iss', orbit: { ...orbitById('iss') },
+        launchTime: new Date('2026-09-27T00:00:00Z'), guidanceOverrides: {}, boosterRecovery: false, payloadMass: 7150,
+        failure: { mode, ...preset, stage: Math.min(preset.stage, soyuz.stages.length - 1) } };
+      expect(validateConfigInput(state).filter((i) => i.field.startsWith('setup.failure')), mode).toEqual([]);
+    }
+  });
+
+  it('flies the engine out and the abort at the moments the lessons fly them', () => {
+    expect(CHALLENGE_PRESETS.engineOut).toEqual({ time: 80, stage: 0 });
+    expect(CHALLENGE_PRESETS.launchAbort).toEqual({ time: 60, stage: 0 });
+    const lessonTimes = BUILTIN_LESSONS.flatMap((l) => {
+      const f = l.mission.mission.failure;
+      return f && f.mode !== 'none' ? [[f.mode, f.time] as const] : [];
+    });
+    for (const [mode, time] of lessonTimes) if (mode === 'engineOut' || mode === 'launchAbort') expect(CHALLENGE_PRESETS[mode].time).toBe(time);
+  });
+
+  it('says a separation failure strikes at its separation, and a fairing or a random one at no set moment', () => {
+    expect(challengeTiming({ mode: 'engineOut', time: 80, stage: 0 })).toBe('time');
+    expect(challengeTiming({ mode: 'padFire', time: -6, stage: 0 })).toBe('time');
+    expect(challengeTiming({ mode: 'stagingFailure', time: 0, stage: 0 })).toBe('separation');
+    expect(challengeTiming({ mode: 'boosterCollision', time: 0, stage: 0 })).toBe('strapOns');
+    for (const mode of ['none', 'fairingStuck', 'random'] as const) expect(challengeTiming({ mode, time: 60, stage: 0 })).toBe('none');
+  });
+});
+
+describe('the debrief', () => {
+  const result = (outcome: 'target' | 'failed', outcomeTime: number): MissionResultModel => ({
+    outcome, cause: outcome === 'target' ? 'target' : 'range', displayedTime: outcomeTime + 50, outcomeTime, reviewTime: outcomeTime,
+    metrics: [], recovery: 'notRequested', payloadSeparated: false, issPlaneOnly: false, aeroWarnings: [],
+  });
+  const telemetry = [{ t: -10, dvRemaining: 9000 }, { t: 100, dvRemaining: 6000 }, { t: 500, dvRemaining: 400 }, { t: 600, dvRemaining: 0 }];
+
+  it('reads the Δv left at the outcome, not after it, against the Δv at liftoff', () => {
+    const m = debriefModel(result('target', 500), { gravity: 1000, drag: 30, steering: 900 }, telemetry);
+    expect(m.dvLeft).toBe(400);
+    expect(m.dvStart).toBe(9000);
+    expect(debriefModel(result('failed', 150), { gravity: 0, drag: 0, steering: 0 }, telemetry).dvLeft).toBe(6000);
+  });
+
+  it('gives each loss its share of the three, and no share of nothing', () => {
+    const m = debriefModel(result('target', 500), { gravity: 1000, drag: 0, steering: 1000 }, telemetry);
+    expect(m.losses.map((l) => [l.key, l.share])).toEqual([['gravity', 0.5], ['drag', 0], ['steering', 0.5]]);
+    const none = debriefModel(result('failed', 0), { gravity: 0, drag: 0, steering: 0 }, telemetry);
+    expect(none.losses.every((l) => l.share === 0)).toBe(true);
   });
 });

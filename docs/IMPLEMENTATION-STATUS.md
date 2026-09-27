@@ -9,9 +9,11 @@ right.
 A browser simulator of orbital launches: 21 launch vehicles (three of them historical, roadmap C01) from 16 launch sites (and four more in the site table, flown by no vehicle yet), flown by
 closed-loop ascent guidance and a burn sequencer to the orbit a mission asks for, drawn in 3-D
 from a flight recording that can be replayed and scrubbed. Four modes — Home, Watch
-(ready-made launches with a director's camera), Explore and Engineer (every guidance
-parameter, the six-DOF flight controls, telemetry and CSV export). English, Russian and Thai
-throughout.
+(ready-made launches with a director's camera), Explore (the same physics, set up in three
+steps under a pre-flight light, with the guidance computed and shown rather than asked for,
+failures as challenges, and a card at the end of the flight; `src/ui/explore.ts`) and Engineer
+(every guidance parameter, the six-DOF flight controls, telemetry and CSV export). English,
+Russian and Thai throughout.
 
 Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)):
 the top bar switches the section (Launch, Orbit, Build) and the level (Watch, Explore, Engineer),
