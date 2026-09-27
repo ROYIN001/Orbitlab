@@ -65,7 +65,8 @@
 ## ผลรวม
 
 - `npm run typecheck`: ผ่าน
-- `npm test`: ดูหัวข้อถัดไป
+- `npm test` ที่ `e8d7d3a`: 128 ไฟล์ 1 673 เทสต์ ผ่านทั้งหมด (16 นาที)
+- `tests/heavy/lessons-sixdof.test.ts` เฉพาะ 4.3: ผ่าน 39 s
 - `tests/probe/` ใช้ชั่วคราวเพื่อวัดเวลา max-Q แล้วลบแล้ว
 
 ## วิธีตรวจรับ
