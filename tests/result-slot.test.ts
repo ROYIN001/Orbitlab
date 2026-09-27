@@ -5,6 +5,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import { changedKeys, deepEqual, frozenCopy, Latest, positiveNumber, ResultSlot } from '../src/ui/result-slot';
+import { RealSky } from '../src/ui/orbit/sky-panel';
+import { parseSnapshot, type Dataset, type DataProvider } from '../src/provider/data-provider';
+import type { DatasetId, DatasetTypes } from '../src/provider/datasets';
+import type { SatelliteCatalog } from '../src/provider/satellites';
+import { skyObjects } from '../src/orbit/real-sky';
+import { elementsFromRecord } from '../src/orbit/omm';
+import { stationOf } from '../src/orbit/applications-setup';
+import { predictReentry } from '../src/orbit/reentry';
+import { measuredActivity } from '../src/physics/propagator/activity';
 
 type Over = { place: string; lat: number; minEl: number; days: number; data: string; groups: string[] };
 const bangkok: Over = { place: 'Bangkok', lat: 0.2427, minEl: 60, days: 1, data: 'snapshot|2026-09-26T16:10:54Z', groups: ['stations'] };
@@ -70,10 +79,19 @@ describe('ResultSlot', () => {
     expect(s.accept(second, ['again'])).toBe(false);
   });
 
-  it('stops, fails and clears', () => {
+  it('stops when asked, fails and clears', () => {
     const s = slot();
     let gen = s.start(bangkok);
+    expect(s.report(gen, 0.2)).toBe(true);
+    s.requestStop();
+    expect(s.report(gen, 0.3)).toBe(false);
+    expect(s.progress).toBe(0.2);
     expect(s.stop(gen)).toBe(true);
+    // a stop asked of one run is not carried to the next
+    const next = s.start(bangkok);
+    expect(s.report(next, 0.1)).toBe(true);
+    expect(s.stop(next)).toBe(true);
+    gen = next;
     expect(s.state).toBe('stopped');
     expect(s.status(bangkok)).toBe('fresh');
     gen = s.start(bangkok);
@@ -132,3 +150,156 @@ describe('plain-data helpers', () => {
     expect(l.isLatest(b)).toBe(true);
   });
 });
+
+// ─── the real-satellite page's results, at model level (A4, A14, A15) ──────────
+
+const SNAP = Object.values(import.meta.glob('../public/data/satellites.json', { import: 'default', eager: true }) as Record<string, unknown>)[0];
+const catalogue = parseSnapshot(SNAP, 'satellites');
+const setOf = (from: 'snapshot' | 'online', asOf: string): Dataset<SatelliteCatalog> =>
+  ({ id: 'satellites', data: catalogue.data, asOf, from, source: catalogue.source });
+const OFFLINE = setOf('snapshot', catalogue.asOf);
+const ONLINE = setOf('online', '2026-09-27T08:00:00.000Z');
+
+/** A promise and the hands that settle it: a provider that answers when the test says. */
+function later<T>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: unknown) => void } {
+  let resolve!: (v: T) => void, reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+/** Let the promise callbacks run. */
+const settle = () => new Promise((r) => setTimeout(r, 0));
+
+class SlowProvider implements DataProvider {
+  readonly asked: { id: string; answer: ReturnType<typeof later<Dataset<unknown>>> }[] = [];
+  constructor(readonly mode: 'online' | 'offline') {}
+  load<K extends DatasetId>(id: K): Promise<Dataset<DatasetTypes[K]>> {
+    const answer = later<Dataset<unknown>>();
+    this.asked.push({ id, answer });
+    return answer.promise as Promise<Dataset<DatasetTypes[K]>>;
+  }
+  answer(id: string, v: Dataset<unknown>): void { this.asked.find((a) => a.id === id)!.answer.resolve(v); }
+  refuse(id: string, e: unknown): void { this.asked.find((a) => a.id === id)!.answer.reject(e); }
+}
+
+function skyWith(first: DataProvider): { sky: RealSky; use: (p: DataProvider) => void } {
+  let provider = first;
+  const sky = new RealSky({ level: () => 'explore', provider: () => provider, refresh: () => {}, refreshFacts: () => {}, toPlayground: () => {} });
+  return { sky, use: (p) => { provider = p; } };
+}
+
+describe('RealSky: only the latest data mode\'s catalogue is taken (A14)', () => {
+  it('Online still loading, then Offline: Offline\'s answer stays, however late Online\'s comes', async () => {
+    const online = new SlowProvider('online'), offline = new SlowProvider('offline');
+    const { sky, use } = skyWith(online);
+    sky.load();
+    use(offline);
+    sky.reset();
+    sky.load();
+    offline.answer('satellites', OFFLINE);
+    await settle();
+    expect(sky.dataset).toBe(OFFLINE);
+    online.answer('satellites', ONLINE);
+    await settle();
+    expect(sky.dataset).toBe(OFFLINE);
+  });
+
+  it('nor does a late failure of the earlier mode replace the later one\'s answer', async () => {
+    const online = new SlowProvider('online'), offline = new SlowProvider('offline');
+    const { sky, use } = skyWith(online);
+    sky.load();
+    use(offline);
+    sky.reset();
+    sky.load();
+    online.refuse('satellites', new Error('no answer within 8 s'));
+    await settle();
+    offline.answer('satellites', OFFLINE);
+    await settle();
+    expect(sky.dataset).toBe(OFFLINE);
+  });
+});
+
+describe('RealSky: results keep what they were found from (A4, A14, A15)', () => {
+  const jd0 = Date.parse(catalogue.asOf) / 86400000 + 2440587.5;
+  const DEG = Math.PI / 180;
+
+  async function loaded(set: Dataset<SatelliteCatalog>, mode: 'online' | 'offline' = 'offline') {
+    const p = new SlowProvider(mode);
+    const made = skyWith(p);
+    made.sky.jd = jd0;
+    made.sky.load();
+    p.answer('satellites', set);
+    await settle();
+    return { ...made, provider: p };
+  }
+
+  it('overflights: fresh for the search run, stale for another city, elevation, time or element sets', async () => {
+    const { sky, use } = await loaded(OFFLINE);
+    await sky.findOverflights();
+    const slot = sky.results.over;
+    expect(slot.state).toBe('done');
+    expect(slot.inputs!.stationId).toBe('bangkok');
+    expect(slot.status(sky.overInputs())).toBe('fresh');
+    // A4: Moscow is chosen after the search
+    const moscow = stationOf('moscow') ?? { lat: 55.75 * DEG, lon: 37.62 * DEG, alt: 0 };
+    const page = sky as unknown as { place: { stationId: string; station: typeof moscow }; over: { minEl: number; days: number } };
+    page.place = { stationId: 'moscow', station: moscow };
+    expect(slot.status(sky.overInputs())).toBe('stale');
+    expect(slot.changed(sky.overInputs()).sort()).toEqual(['lat', 'lon', 'stationId']);
+    expect(slot.inputs!.stationId).toBe('bangkok');
+    page.place = { stationId: 'bangkok', station: stationOf('bangkok')! };
+    expect(slot.status(sky.overInputs())).toBe('fresh');
+    page.over.minEl = 45 * DEG;
+    expect(slot.status(sky.overInputs())).toBe('stale');
+    page.over.minEl = 60 * DEG;
+    page.over.days = 3;
+    expect(slot.status(sky.overInputs())).toBe('stale');
+    page.over.days = 1;
+    // A14: newer element sets arrive for the same group
+    const online = new SlowProvider('online');
+    use(online);
+    sky.reset();
+    sky.load();
+    online.answer('satellites', ONLINE);
+    await settle();
+    expect(sky.dataset).toBe(ONLINE);
+    expect(slot.status(sky.overInputs())).toBe('stale');
+    expect(slot.changed(sky.overInputs())).toEqual(['data']);
+  });
+
+  it('re-entry: a mass typed in while the space weather loads is not the one used, and makes the answer stale (A15)', async () => {
+    const { sky, provider } = await loaded(OFFLINE);
+    const objects = skyObjects(catalogue.data.groups.find((g) => g.id === 'stations')!.sets.map(elementsFromRecord), 'stations');
+    const o = objects.find((x) => x.el.satnum === 25544)!;
+    const pending = sky.runReentry(o);
+    expect(sky.results.reentry.state).toBe('running');
+    sky.reentry.mass = 450000;
+    const withFallback = { id: 'spaceWeather', data: null, asOf: '2026-09-26T00:00:00.000Z', from: 'snapshot', source: { name: 'NOAA SWPC', url: '' }, fallback: 'no answer within 8 s' } as unknown as Dataset<unknown>;
+    provider.answer('spaceWeather', withFallback);
+    await pending;
+    const slot = sky.results.reentry;
+    expect(slot.state).toBe('done');
+    expect(slot.inputs!.mass).toBe(1000);
+    const expected = predictReentry(o.el, { mass: 1000, area: 5, cd: 2.2 }, measuredActivity(null).series);
+    expect(slot.result!.reentry).toEqual(expected);
+    expect(slot.status(sky.reentryInputs(o))).toBe('stale');
+    expect(slot.changed(sky.reentryInputs(o))).toEqual(['mass']);
+    // where its space weather came from is kept with it
+    expect(slot.result!.sun).toMatchObject({ asOf: '2026-09-26T00:00:00.000Z', from: 'snapshot', fallback: 'no answer within 8 s' });
+    sky.reentry.mass = 1000;
+    expect(slot.status(sky.reentryInputs(o))).toBe('fresh');
+  });
+
+  it('re-entry: a second run started while the first waits is the one kept', async () => {
+    const { sky, provider } = await loaded(OFFLINE);
+    const objects = skyObjects(catalogue.data.groups.find((g) => g.id === 'stations')!.sets.map(elementsFromRecord), 'stations');
+    const o = objects.find((x) => x.el.satnum === 25544)!;
+    const first = sky.runReentry(o);
+    sky.reentry.mass = 2000;
+    const second = sky.runReentry(o);
+    for (const a of provider.asked.filter((x) => x.id === 'spaceWeather')) a.answer.reject(new Error('offline'));
+    await Promise.all([first, second]);
+    expect(sky.results.reentry.inputs!.mass).toBe(2000);
+    expect(sky.results.reentry.status(sky.reentryInputs(o))).toBe('fresh');
+  });
+});
+

@@ -22,7 +22,9 @@ export type SlotState = 'idle' | 'running' | 'done' | 'stopped' | 'failed';
 export type Freshness = 'fresh' | 'stale' | 'none';
 
 /** Plain data: what a slot's inputs may be made of. */
-type Plain = null | undefined | boolean | number | string | readonly Plain[] | { readonly [k: string]: Plain };
+export type Plain = null | undefined | boolean | number | string | readonly Plain[] | { readonly [k: string]: Plain };
+/** A slot's inputs: a record of plain data. */
+export type SlotInputs = { readonly [k: string]: Plain };
 
 /** A deep copy of plain data (numbers, strings, booleans, arrays and plain objects), frozen all the way down. */
 export function frozenCopy<T>(value: T): Readonly<T> {
@@ -53,7 +55,7 @@ export function changedKeys<I extends object>(was: I, now: I): (keyof I)[] {
   return [...keys].filter((k) => !deepEqual(was[k], now[k]));
 }
 
-export class ResultSlot<I extends { readonly [k: string]: Plain }, R> {
+export class ResultSlot<I extends SlotInputs, R> {
   private gen = 0;
   private _inputs: Readonly<I> | null = null;
   private _result: R | null = null;
@@ -61,6 +63,7 @@ export class ResultSlot<I extends { readonly [k: string]: Plain }, R> {
   private _startedAt: number | null = null;
   private _progress = 0;
   private _reason = '';
+  private stopAsked = -1;
 
   /** @param describer the inputs in words, one part each ("Bangkok", "≥ 60°", "24 hours") */
   constructor(private readonly describer: (inputs: Readonly<I>) => string[] = () => []) {}
@@ -92,9 +95,14 @@ export class ResultSlot<I extends { readonly [k: string]: Plain }, R> {
     return gen === this.gen;
   }
 
-  /** The run `gen` has got this far (0–1); false when it is no longer the slot's (the caller can stop). */
+  /** Ask the run in progress to stop: its next report() says so. */
+  requestStop(): void {
+    if (this._state === 'running') this.stopAsked = this.gen;
+  }
+
+  /** The run `gen` has got this far (0–1); false when it is to stop — no longer the slot's, or asked to. */
   report(gen: number, fraction: number): boolean {
-    if (gen !== this.gen || this._state !== 'running') return false;
+    if (gen !== this.gen || this._state !== 'running' || this.stopAsked === gen) return false;
     this._progress = fraction;
     return true;
   }
