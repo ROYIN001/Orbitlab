@@ -48,7 +48,11 @@ import { encounterPlane, encounterPlaneSvg } from '../../orbit/encounter-plane';
 import { rtnAxes, rtnToFrame, type Mat3 } from '../../orbit/conjunction';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
 import { canImage, sensorFor, type ImagingVerdict, type Sensor } from '../../orbit/sensors';
-import { predictReentry, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
+import { ECCENTRIC, predictReentry, tumblingBoxArea, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
+import { runReentryJob, type DragFrom } from '../../orbit/reentry-job';
+import { ballisticFromDecayRate, craftOfB } from '../../orbit/ballistic';
+import { NAPA2 } from '../../data/napa2';
+import type { ElementSet } from '../../orbit/tle';
 import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
 import { setEarthOrientation } from '../../orbit/earth-orientation';
 import { CZ5B_STAGES } from '../../data/cz5b';
@@ -137,8 +141,9 @@ export class RealSky {
   private over = { minEl: 30 * Math.PI / 180, days: 1, daylight: false, canOnly: false, open: false };
   private overSearch: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Overflight[]; stop: boolean } | null = null;
   /** M03: the object's mass and size for the re-entry prediction, the last prediction, and the case study's */
-  private reentry = { mass: 1000, area: 5, cd: 2.2, open: false };
-  private reentryResult: { key: string; state: 'running' | 'done'; result: Reentry | null; sun: string } | null = null;
+  private reentry = { mass: 1000, area: 5, cd: 2.2, from: 'decay' as DragFrom, open: false };
+  private reentryResult: { key: string; state: 'running' | 'done' | 'failed'; result: Reentry | null; b: number | null; from: DragFrom; sun: string; progress: number; abort: AbortController } | null = null;
+  private napaCase: { box: Reentry; fitted: Reentry | null; b: number | null; actual: number } | null = null;
   private caseStudy: { name: string; missionKey: string; p: Reentry; actual: number }[] | null = null;
 
   constructor(private readonly host: SkyHost) {}
@@ -671,15 +676,60 @@ export class RealSky {
     return { series: m.series, note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }) };
   }
 
+  /** The object's element sets: a history read from a file has several of one satellite, which the drag can be fitted to (P2.5). */
+  private setsOf(o: SkyObject): ElementSet[] {
+    if (o.source !== 'imported' || !this.imported) return [o.el];
+    const same = this.imported.result.sets.filter((x) => x.satnum === o.el.satnum);
+    return same.length ? same : [o.el];
+  }
+
+  /** The ways the drag can be had for this object, the best first (P2.5). */
+  private dragChoices(o: SkyObject): DragFrom[] {
+    const sets = this.setsOf(o);
+    const epochs = sets.map((x) => x.jdEpoch + x.jdEpochFrac);
+    const out: DragFrom[] = [];
+    if (sets.length >= 2 && Math.max(...epochs) - Math.min(...epochs) >= 1) out.push('history');
+    if (o.el.ndot > 0) out.push('decay');
+    out.push('size');
+    return out;
+  }
+
   private async runReentry(o: SkyObject): Promise<void> {
-    const key = `${o.key}|${this.reentry.mass}|${this.reentry.area}|${this.reentry.cd}`;
-    this.reentryResult = { key, state: 'running', result: null, sun: '' };
+    this.reentryResult?.abort.abort();
+    const choices = this.dragChoices(o);
+    const from = choices.includes(this.reentry.from) ? this.reentry.from : choices[0];
+    const key = `${o.key}|${from}|${this.reentry.mass}|${this.reentry.area}|${this.reentry.cd}`;
+    const run = { key, state: 'running' as const, result: null, b: null, from, sun: '', progress: 0, abort: new AbortController() };
+    this.reentryResult = run;
     this.host.refreshFacts();
     const { series, note } = await this.sun();
-    // the mean elements run a year in well under a second: no slices needed
-    const result = predictReentry(o.el, { mass: this.reentry.mass, area: this.reentry.area, cd: this.reentry.cd }, series);
-    if (this.reentryResult?.key !== key) return;
-    this.reentryResult = { key, state: 'done', result, sun: note };
+    try {
+      const answer = await runReentryJob(
+        { sets: this.setsOf(o), from, craft: { mass: this.reentry.mass, area: this.reentry.area, cd: this.reentry.cd }, activity: series, horizonDays: 365 },
+        run.abort.signal, (f) => {
+          run.progress = f;
+          const out = document.querySelector('.pg-reentry-status');
+          if (out && this.reentryResult === run) out.textContent = `${t('reentry.running')} ${Math.round(f * 100)} %`;
+        });
+      if (this.reentryResult !== run) return;
+      this.reentryResult = { ...run, state: answer.reentry ? 'done' : 'failed', result: answer.reentry, b: answer.b, sun: note };
+    } catch {
+      if (this.reentryResult !== run) return;
+      this.reentryResult = null;
+    }
+    this.host.refreshFacts();
+  }
+
+  /** NAPA-2 from its first element set, as a tumbling box and with B fitted to the set's decay (P2.5). */
+  private async runNapaCase(): Promise<void> {
+    const { series } = await this.sun();
+    const el = elementsFromRecord(NAPA2.elements);
+    const b = ballisticFromDecayRate(el, series);
+    this.napaCase = {
+      box: predictReentry(el, { mass: NAPA2.mass, area: tumblingBoxArea(NAPA2.size), cd: 2.2 }, series, 3000),
+      fitted: b === null ? null : predictReentry(el, craftOfB(b), series, 3000),
+      b, actual: Date.parse(`${NAPA2.decay}T12:00:00Z`) / 86400000 + 2440587.5,
+    };
     this.host.refreshFacts();
   }
 
@@ -698,27 +748,48 @@ export class RealSky {
     box.open = this.reentry.open;
     box.addEventListener('toggle', () => { this.reentry.open = box.open; });
     box.append(el('summary', undefined, t('reentry.title')), el('p', 'pg-tool-lead', t('reentry.lead')));
-    const row = el('div', 'pg-tool-row');
-    const field = (label: string, value: number, set: (v: number) => void): HTMLElement => {
-      const l = el('label');
-      const i = el('input');
-      i.type = 'number'; i.min = '0'; i.step = 'any'; i.value = String(value);
-      i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v) && v > 0) set(v); });
-      l.append(el('span', undefined, label), i);
-      return l;
+    // P2.5: the drag fitted to the object's own decay, as the agencies do, or from a mass and size given
+    const choices = this.dragChoices(o);
+    const from = choices.includes(this.reentry.from) ? this.reentry.from : choices[0];
+    const pick = el('label');
+    const sel = el('select');
+    const WORDS: Record<DragFrom, string> = {
+      history: t('reentry.fromHistory', { n: num(this.setsOf(o).length) }), decay: t('reentry.fromDecay'), size: t('reentry.fromSize'),
     };
-    row.append(
-      field(t('life.mass'), this.reentry.mass, (v) => { this.reentry.mass = v; }),
-      field(t('life.area'), this.reentry.area, (v) => { this.reentry.area = v; }),
-      field(t('life.cd'), this.reentry.cd, (v) => { this.reentry.cd = v; }),
-    );
-    box.append(row);
+    for (const k of choices) { const opt = el('option', undefined, WORDS[k]); opt.value = k; sel.append(opt); }
+    sel.value = from;
+    sel.addEventListener('change', () => { this.reentry.from = sel.value as DragFrom; this.host.refreshFacts(); });
+    pick.append(el('span', undefined, t('reentry.dragFrom')), sel);
+    box.append(pick);
+    if (from === 'size') {
+      const row = el('div', 'pg-tool-row');
+      const field = (label: string, value: number, set: (v: number) => void): HTMLElement => {
+        const l = el('label');
+        const i = el('input');
+        i.type = 'number'; i.min = '0'; i.step = 'any'; i.value = String(value);
+        i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v) && v > 0) set(v); });
+        l.append(el('span', undefined, label), i);
+        return l;
+      };
+      row.append(
+        field(t('life.mass'), this.reentry.mass, (v) => { this.reentry.mass = v; }),
+        field(t('life.area'), this.reentry.area, (v) => { this.reentry.area = v; }),
+        field(t('life.cd'), this.reentry.cd, (v) => { this.reentry.cd = v; }),
+      );
+      box.append(row);
+    } else box.append(el('p', 'pg-note', t(from === 'history' ? 'reentry.historyNote' : 'reentry.decayNote')));
+    if (o.sat.ecco >= ECCENTRIC) box.append(el('p', 'pg-note', t('reentry.eccentric')));
     const mine = this.reentryResult && this.reentryResult.key.startsWith(`${o.key}|`) ? this.reentryResult : null;
-    box.append(button('watch-btn', t('reentry.run'), () => { void this.runReentry(o); }));
-    const out = el('p', 'pg-tool-out');
+    const running = mine?.state === 'running';
+    box.append(button('watch-btn', running ? t('reentry.stop') : t('reentry.run'), () => {
+      if (running && mine) { mine.abort.abort(); this.reentryResult = null; this.host.refreshFacts(); return; }
+      void this.runReentry(o);
+    }));
+    const out = el('p', 'pg-tool-out pg-reentry-status');
     out.setAttribute('role', 'status');
     box.append(out);
-    if (mine?.state === 'running') out.textContent = t('reentry.running');
+    if (running) out.textContent = `${t('reentry.running')} ${Math.round(mine!.progress * 100)} %`;
+    else if (mine?.state === 'failed') out.textContent = t('reentry.noFit');
     else if (mine?.result) {
       const r = mine.result;
       if (r.jd === null) out.textContent = t('reentry.stays');
@@ -727,13 +798,40 @@ export class RealSky {
           date: fullDate(r.jd), from: fullDate(r.window![0]), to: fullDate(r.window![1]), days: num(r.jd - r.from, 1), pct: num(WINDOW_FRACTION * 100),
         });
       }
+      if (mine.b !== null) box.append(el('p', 'pg-note', t(mine.from === 'size' ? 'reentry.bGiven' : 'reentry.bFitted', { b: bText(mine.b) })));
       box.append(el('p', 'pg-note', mine.sun));
     }
     const note = el('p', 'pg-note');
     const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
     note.append(t('reentry.note'), ' ', link('Klinkrad, ESA, 2013', 'https://conference.sdo.esoc.esa.int/proceedings/sdc6/paper/148/SDC6-paper148.pdf'), '.');
     box.append(note);
-    box.append(this.caseStudyBlock());
+    box.append(this.caseStudyBlock(), this.napaCaseBlock());
+    return box;
+  }
+
+  /** NAPA-2: a Thai satellite's five years, predicted from its first element set two ways (P2.5). */
+  private napaCaseBlock(): HTMLElement {
+    const box = el('div', 'pg-reentry-case');
+    box.append(el('h3', 'pg-case-title', t('reentry.napa.title')), el('p', 'pg-tool-lead', t('reentry.napa.lead')));
+    const c = this.napaCase;
+    if (!c) {
+      box.append(button('watch-btn', t('reentry.napa.run'), () => { void this.runNapaCase(); }));
+      return box;
+    }
+    const day = (jd: number) => dateOf(jd).toISOString().slice(0, 10);
+    const err = (p: Reentry) => { const x = ((p.jd! - p.from) / (c.actual - p.from) - 1) * 100; return `${x >= 0 ? '+' : '−'}${num(Math.abs(x), 0)}`; };
+    const ol = el('ol', 'pg-conj-list');
+    const row = (label: string, p: Reentry | null) => {
+      const li = el('li');
+      li.append(el('div', 'pg-conj-head', label));
+      li.append(el('div', 'pg-conj-main', p && p.jd !== null
+        ? t('reentry.napa.row', { pred: day(p.jd), err: err(p), inside: t(c.actual >= p.window![0] && c.actual <= p.window![1] ? 'reentry.napa.in' : 'reentry.napa.out') })
+        : t('reentry.stays')));
+      ol.append(li);
+    };
+    row(t('reentry.napa.box', { b: bText((2.2 * tumblingBoxArea(NAPA2.size)) / NAPA2.mass) }), c.box);
+    if (c.b !== null) row(t('reentry.napa.fitted', { b: bText(c.b) }), c.fitted);
+    box.append(ol, el('p', 'pg-tool-out', t('reentry.napa.actual', { date: NAPA2.decay, days: num(c.actual - c.box.from, 0) })), el('p', 'pg-note', t('reentry.napa.lesson')), el('p', 'pg-note', t('reentry.napa.source')));
     return box;
   }
 
@@ -1133,6 +1231,8 @@ const dateOf = (jd: number): Date => new Date((jd - 2440587.5) * 86400e3);
 const clockTime = (jd: number): string => dateOf(jd).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const dayName = (jd: number): string => dateOf(jd).toLocaleDateString(getLang(), { weekday: 'long', day: 'numeric', month: 'long' });
 /** A date months away, with its year, on the device's clock. */
+/** A ballistic coefficient, m²/kg, to three figures. */
+const bText = (b: number): string => `${num(b, b < 0.01 ? 4 : 3)} ${t('u.m2kg')}`;
 const fullDate = (jd: number): string => dateOf(jd).toLocaleString(getLang(), { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 /** The device's time zone, as the date says it: GMT+7, UTC. */
 function zoneName(jd: number): string {

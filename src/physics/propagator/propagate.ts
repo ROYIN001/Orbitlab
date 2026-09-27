@@ -74,6 +74,12 @@ export interface PropagationOptions {
   tolerance?: number;
   /** called now and then with the fraction done; return false to stop */
   onProgress?: (fraction: number) => boolean | void;
+  /**
+   * Cowell: stop only when the object itself is down to half the re-entry
+   * altitude, not when an orbit's perigee is under it (P2.5): an eccentric
+   * orbit carries its perigee through the upper air for weeks before it falls.
+   */
+  untilDown?: boolean;
 }
 
 // ─── elements ───────────────────────────────────────────────────────────────
@@ -178,7 +184,7 @@ function cowell(r0: V3, v0: V3, jd0: number, o: PropagationOptions): Propagation
       const el = elementsOf([y[0], y[1], y[2]], [y[3], y[4], y[5]]);
       samples.push(sample(t, el));
       nextSample += every;
-      if (el.a * (1 - el.e) - R_EARTH < REENTRY_ALTITUDE) { lifetime = t; break; }
+      if (!o.untilDown && el.a * (1 - el.e) - R_EARTH < REENTRY_ALTITUDE) { lifetime = t; break; }
     }
     if (o.onProgress && t / o.duration - lastProgress > 0.01) {
       lastProgress = t / o.duration;

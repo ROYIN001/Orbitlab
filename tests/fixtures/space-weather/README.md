@@ -43,3 +43,19 @@ set, its mass and diameter as published, and the date it re-entered.
 - **Re-entry**: GCAT, Jonathan McDowell's General Catalog of Artificial Space Objects
   (<https://planet4589.org/space/gcat/>, `satcat.tsv` of 2026-09-24), the `DDate` column. Starshine
   2's is "2002 Apr 26 1115?", taken as the day.
+- **Last element sets** (P2.5, `last`): CelesTrak's last element set of each, fetched on
+  2026-09-27 from `https://celestrak.org/NORAD/elements/gp-last.php?INTDES=<launch>&FORMAT=json`,
+  one request per launch; each is from the day of the re-entry, some 140 km up. With the first set
+  they give the ballistic coefficient fitted to two sets (`tests/ballistic.test.ts`).
+
+## `../reentry/stages.json` (P2.5)
+
+Every rocket stage GCAT has re-entering uncontrolled (status R), dated to the minute, between
+2023-01-01 and 2025-12-31, 5 to 150 days after its launch: 66, with GCAT's name, mass, length and
+diameter, the re-entry, and CelesTrak's first element set of its launch (one request per launch,
+fetched 2026-09-27). The selection was fixed before any prediction; `make_stages.py` makes the
+file from GCAT's `satcat.tsv` and the fetched sets:
+
+```sh
+python3 ../reentry/make_stages.py satcat.tsv first/ > ../reentry/stages.json
+```

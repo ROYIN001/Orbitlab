@@ -253,12 +253,18 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   Engineer adds the distance from the ground track, the local solar time, the timing
   uncertainty and a link to the instrument's source. It is when the place *could* be seen, not
   that it is: that takes the operator's tasking and, for a camera, a clear sky.
-- **When it will come down**, for a satellite whose perigee is under 700 km: give the object's mass
-  and mean cross-section (an element set does not carry them) and C_D, and its orbit is carried
+- **When it will come down**, for a satellite whose perigee is under 700 km: its orbit is carried
   down with the Sun as measured and forecast to a predicted re-entry, with the window of ±20 % of
-  the time left that the agencies use. More than a year away, the orbit lifetime analysis is the
-  tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
-  their first element sets and sets each prediction beside the re-entry on record.
+  the time left that the agencies use. The drag comes, as you choose, from the object's own decay,
+  fitted as the agencies fit it to the tracking — to the decay rate its element set carries, or,
+  for an object read from a file with several of its sets (a history you downloaded), to how far
+  it fell between the first and the last — or from a mass, mean cross-section and C_D you give.
+  An eccentric orbit, a stage left in a transfer orbit, is carried step by step with the Sun's and
+  the Moon's pull, which takes some seconds. More than a year away, the orbit lifetime analysis is
+  the tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
+  their first element sets and sets each prediction beside the re-entry on record; **Case study:
+  NAPA-2** predicts the Royal Thai Air Force's CubeSat five years ahead from its first element set,
+  by its size and with the drag fitted, beside the day it came down.
 - **Search** by name, catalogue number or international designator, then pick a satellite. Its
   orbit and its track are drawn. The right panel gives its catalogue number and designator, the
   epoch of its element set and how old the set is, where it is now, its period, its mean perigee

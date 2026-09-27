@@ -29,7 +29,7 @@ Status on 2026-09-27:
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03, P2.5) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places; Skyfield's refraction | Every event found; times within 0.34 s, angles within 0.005°; refraction within 0.07′ (§6), 2026-09-27 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
-| Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −4.1 to +16.6 % (§7), 2026-09-27 |
+| Re-entry prediction (M03, P2.5) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013); seven spheres' known C_D A/m; 66 rocket stages of 2023–2025 and NAPA-2 (GCAT) | All four Long March 5B inside the window; B fitted to two sets within 30 % for all seven spheres; the 66 stages 33 inside from their first sets, below the 70 % fixed before (a finding); NAPA-2 +8 % by its size, −28 % with B from its first set's decay (§7), 2026-09-27 |
 | Overflights (M02, P2.5) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal); published swaths, fields of view and revisit periods (USGS, ESA, NASA) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time; swaths from fields of view within 2 %; Landsat, Sentinel-2 and Sentinel-1 can image Bangkok within their published revisit periods (§7), 2026-09-27 |
 | Close approaches (M01, P2.5) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023); NASA CARA's test conjunctions as messages (Alfano 2009; Omitron) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade; CARA's twelve within 0.12 % (§7), 2026-09-27 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
@@ -1488,6 +1488,92 @@ each inside its window, the cross-section to Cauchy's formula, and the measured 
 - **A storm is its day's Ap.** The indices are daily since P2.5; within a day the peak of a storm's
   3-hour ap is averaged in (NRLMSISE-00's storm mode, which reads the ap history, is not used), which
   can move a re-entry by an hour or two.
+
+#### The drag fitted to the tracking, and 66 more stages (P2.5)
+
+The agencies do not guess the area: they fit the ballistic coefficient B = C_D A/m to the
+object's own decay in the tracking, which takes in the density model's error along with the
+object's shape and attitude (Klinkrad 2013). `src/orbit/ballistic.ts` fits it two ways, and
+**When it will come down** offers whichever the element sets allow, beside the mass and size
+given by hand:
+
+- **to a history of element sets** read from a file (Space-Track's history of an object, say, which
+  the user downloads; nothing is fetched): B such that the orbit carried from the earliest set falls
+  to the latest set's mean semi-major axis by its epoch, found by regula falsi on log B on the time
+  to fall, which shortens steadily as B grows. The prediction then starts from the latest set.
+- **to one set's decay rate**: the set carries ṅ, its maker's fit of the decay; the semi-major axis
+  falls as ȧ = −(2/3)(a/n)ṅ, the mean-element drag rate at the epoch is proportional to B, and so B
+  follows at once. A set with ṅ ≤ 0 gives nothing.
+
+A prediction with a fitted B, or an eccentric one (below), runs in a Web Worker
+(`src/orbit/reentry-job.ts`). `tests/ballistic.test.ts`; the sources of its data are in
+`tests/fixtures/space-weather/README.md` and `tests/fixtures/reentry/make_stages.py`.
+
+**Two sets of each sphere.** Each sphere's first and last element sets (CelesTrak, the last within
+hours of its re-entry): B within 30 % of its known C_D A/m, fixed before. Met:
+
+| sphere | known C_D A/m, m²/kg | fitted to first and last sets |
+| --- | --- | --- |
+| Starshine | 0.01021 | 0.00937 (−8.2 %) |
+| Starshine 2 | 0.01021 | 0.01037 (+1.6 %) |
+| Starshine 3 | 0.01678 | 0.01426 (−15.0 %) |
+| ANDE MAA | 0.00773 | 0.00596 (−23.0 %) |
+| ANDE FCal | 0.00545 | 0.00416 (−23.5 %) |
+| ANDE-2 Pollux | 0.01466 | 0.01081 (−26.3 %) |
+| ANDE-2 Castor | 0.00848 | 0.00680 (−19.8 %) |
+
+The fitted B is short by what the model's air is too thick (§6: the same spheres come down 8 to
+23 % early with their true B), which is the point of fitting it: carried with it, each comes down on
+its day. Starshine 2 from its last set, with B fitted to both, comes down within a day of GCAT's
+date (fixed before, met).
+
+**The rocket stages of 2023–2025.** The selection, fixed before any prediction: every rocket stage
+in GCAT (satcat of 2026-09-24) re-entered uncontrolled (status R), dated to the minute, between
+2023-01-01 and 2025-12-31, 5 to 150 days after its launch — 66, each with its first element set
+(CelesTrak, one request per launch). Fixed before: at least 20 predicted with B from the first
+set's decay rate, 70 % of them inside the ±20 % window.
+
+| predicted from the first element set | inside the ±20 % window |
+| --- | --- |
+| B fitted to the set's decay rate | 7 of 13 (only 14 of 66 first sets carry a usable ṅ) |
+| GCAT's mass and size, a tumbling cylinder, C_D 2.2 | 33 of 66: 29 of 58 near-circular orbits, 4 of 8 transfer orbits |
+| the same, before P2.5 (mean elements for every orbit) | 29 of 66: none of the 8 transfer orbits |
+
+**Findings.**
+
+- **The fixed criterion was missed.** A first element set is made from the first days of
+  tracking: 52 of the 66 carry no decay that gives a B, and the fits from the other 14 range from
+  0.06 to 7.6 times the B of the stage's catalogued size (for a transfer orbit the mean drag rate
+  at the epoch is a poor measure of B). Predicted from their first sets, half the stages come
+  down inside the window, whichever way the drag is had; the median error of the time left is 19 %.
+  The agencies' 5 % outside comes from refitting with every later set, which this test does not do.
+  The test records the counts found.
+- **The stages of one kind err one way.** The Soyuz Blok-I stages come down 18 to 65 % early, the
+  Long March 4B third stages 66 to 71 % early, as if GCAT's mass (2 350 kg, 1 000 kg) were short of
+  what flew: propellant left in them would do it. Nothing was fitted to them.
+- **A transfer orbit is the Sun's and the Moon's.** Eight stages were left in transfer orbits
+  (eccentricity 0.36 to 0.82, perigee 112 to 171 km). With the mean elements, which leave out the
+  Sun and the Moon, five stayed up past 400 days, one came down three times too late, and the two
+  whose first perigee was already under 120 km were declared down at once; carried by Cowell
+  without the Sun and the Moon, all eight stayed up. Their pull moves such a perigee by tens of
+  kilometres in weeks, and that sets the day. Since P2.5 an orbit of eccentricity 0.1 or more is
+  carried by Cowell from SGP4's state at the epoch, with J2–J4, the Sun and the Moon, until it is
+  down: six of the eight come down within 22 % of the day (Falcon 9's two within 2 %, the Long
+  March 3C's within 1 %), four inside the window; H3 F4's and the Long March 7A Y13's stay up past
+  400 days. This change was made after the first run showed the failure; the circular orbits'
+  predictions are unchanged by it.
+
+**NAPA-2** (`src/data/napa2.ts`), the Royal Thai Air Force's 6U CubeSat of 10 kg, launched
+2021-06-30 and re-entered 2026-07-05 (GCAT; 20 × 10 × 34.05 cm, Janes). From its first element set
+(2021-07-25), 1 806 days before, fixed before: within 25 %.
+
+| drag | C_D A/m, m²/kg | predicted | error of the time |
+| --- | --- | --- | --- |
+| a tumbling box of its size, C_D 2.2 | 0.0134 | 2026-11-27 | +8.0 % (met) |
+| fitted to the first set's decay rate | 0.0197 | 2025-02-17 | −27.9 % (missed) |
+
+The first set's decay rate came from its first week of tracking, in the quiet Sun of mid-2021;
+over five years any error in it is multiplied. The test records the −28 %.
 
 ## 8. Re-running
 
