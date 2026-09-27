@@ -54,17 +54,62 @@ export interface Budget {
 /** The exhaust speed Isp·g₀, m/s. */
 export const exhaustSpeed = (isp: number): number => isp * G0;
 
-/** What a spacecraft's tanks hold as Δv: Isp·g₀·ln(m / (m − propellant)), m/s. */
-export function deltaVAvailable(c: Pick<Craft, 'mass' | 'propellant' | 'isp'>): number {
-  const dry = c.mass - Math.max(0, Math.min(c.propellant, c.mass));
-  return dry > 0 ? exhaustSpeed(c.isp) * Math.log(c.mass / dry) : Infinity;
+/**
+ * What is wrong with a spacecraft, or null when it can be budgeted (audit
+ * 2026-09-27 A2): a mass above zero, propellant from none to less than that
+ * mass — the tanks are part of the spacecraft, so something is always left
+ * when they are dry — and an engine with an Isp and a thrust. The first
+ * problem found, in the order of the fields.
+ */
+export type CraftProblem = 'mass' | 'propellant' | 'propellantOverMass' | 'isp' | 'thrust';
+
+export function craftProblem(c: Craft): CraftProblem | null {
+  if (!(Number.isFinite(c.mass) && c.mass > 0)) return 'mass';
+  if (!(Number.isFinite(c.propellant) && c.propellant >= 0)) return 'propellant';
+  if (!(c.propellant < c.mass)) return 'propellantOverMass';
+  if (!(Number.isFinite(c.isp) && c.isp > 0)) return 'isp';
+  if (!(Number.isFinite(c.thrust) && c.thrust > 0)) return 'thrust';
+  return null;
+}
+
+/** The ranges of the own spacecraft's fields (O03), SI. */
+export const CRAFT_LIMITS = {
+  mass: { min: 10, max: 20_000 },
+  propellant: { min: 0, max: 15_000 },
+  isp: { min: 50, max: 5000 },
+  thrust: { min: 0.01, max: 5000 },
+} as const;
+
+/**
+ * The most propellant a spacecraft of `mass` may be set to carry (audit
+ * 2026-09-27 A2): the field's range, and 1 kg below the mass, so that the
+ * slider's far end is still a spacecraft.
+ */
+export const maxPropellant = (mass: number): number =>
+  Math.max(CRAFT_LIMITS.propellant.min, Math.min(CRAFT_LIMITS.propellant.max, mass - 1));
+
+function check(c: Craft): void {
+  const p = craftProblem(c);
+  if (p) throw new RangeError(`not a spacecraft to budget (${p}): ${JSON.stringify(c)}`);
+}
+
+/**
+ * What a spacecraft's tanks hold as Δv: Isp·g₀·ln(m / (m − propellant)), m/s.
+ * Always finite: a craft craftProblem() rejects is thrown out (audit
+ * 2026-09-27 A2 — more propellant than mass once made this Infinity).
+ */
+export function deltaVAvailable(c: Craft): number {
+  check(c);
+  return exhaustSpeed(c.isp) * Math.log(c.mass / (c.mass - c.propellant));
 }
 
 /**
  * The budget of `plan` for `craft`. A spiral (Edelbaum) is one long burn of
- * the plan's whole Δv; impulsive plans are their burns in turn.
+ * the plan's whole Δv; impulsive plans are their burns in turn. The craft
+ * must pass craftProblem() (it throws otherwise, audit 2026-09-27 A2).
  */
 export function budgetFor(plan: Pick<Plan, 'burns' | 'spiral' | 'totalDv'>, craft: Craft): Budget {
+  check(craft);
   const ve = exhaustSpeed(craft.isp), mdot = craft.thrust / ve;
   const dvs = plan.spiral ? [plan.totalDv] : plan.burns.map((b) => norm(b.dv));
   let mass = craft.mass, tank = craft.propellant, used = 0, dry = false;

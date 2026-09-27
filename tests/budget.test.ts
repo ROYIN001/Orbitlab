@@ -7,7 +7,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { G0, R_EARTH } from '../src/physics/constants';
-import { budgetFor, craftAfter, craftFromHandoff, defaultCraft, deltaVAvailable, exhaustSpeed } from '../src/orbit/budget';
+import {
+  CRAFT_LIMITS, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, deltaVAvailable, exhaustSpeed, maxPropellant, type Craft,
+} from '../src/orbit/budget';
 import { hohmann, isPlan, spiral, type Plan } from '../src/orbit/maneuvers';
 import { v3 } from '../src/physics/vec3';
 
@@ -76,5 +78,62 @@ describe('the propellant budget (O03)', () => {
     const withEngine = { spacecraft: { mass: 7150, area: 10, cd: 2.2, cr: 1.3, kind: 'crew' as const, propulsion: { thrust: 3920, isp: 302, propellantMass: 500 } } };
     expect(craftFromHandoff(withEngine)).toEqual({ mass: 7150, propellant: 500, isp: 302, thrust: 3920 });
     expect(craftFromHandoff({ spacecraft: { ...withEngine.spacecraft, propulsion: null } })).toBeNull();
+  });
+});
+
+describe('a spacecraft that cannot be one (audit 2026-09-27 A2)', () => {
+  // orbit-review.md 2: two burns of 3 500 m/s in all, for 100 kg with 1 000 kg of propellant, came out Infinity and "enough"
+  const review = { mass: 100, propellant: 1000, isp: 315, thrust: 400 };
+
+  it('is found before it is budgeted: propellant must be less than the mass', () => {
+    expect(craftProblem(review)).toBe('propellantOverMass');
+    // the browser repro: 101 kg with 1 001 kg
+    expect(craftProblem({ ...review, mass: 101, propellant: 1001 })).toBe('propellantOverMass');
+    // tanks that are the whole spacecraft leave nothing when dry
+    expect(craftProblem({ ...review, propellant: 100 })).toBe('propellantOverMass');
+    expect(craftProblem({ ...review, propellant: 99.9 })).toBeNull();
+    expect(craftProblem({ ...review, propellant: 0 })).toBeNull();
+    expect(craftProblem({ ...review, propellant: -1 })).toBe('propellant');
+    expect(craftProblem({ ...review, mass: 0, propellant: 0 })).toBe('mass');
+    expect(craftProblem({ ...review, mass: Number.NaN })).toBe('mass');
+    expect(craftProblem({ ...review, propellant: 10, isp: 0 })).toBe('isp');
+    expect(craftProblem({ ...review, propellant: 10, thrust: 0 })).toBe('thrust');
+    expect(craftProblem({ ...review, propellant: 10, thrust: Infinity })).toBe('thrust');
+    expect(craftProblem(defaultCraft())).toBeNull();
+  });
+
+  it('is never given an infinite or undefined Δv: it is refused instead', () => {
+    expect(() => deltaVAvailable(review)).toThrow(RangeError);
+    expect(() => budgetFor(burns(1500, 2000), review)).toThrow(RangeError);
+    expect(() => deltaVAvailable({ ...review, propellant: 100 })).toThrow(RangeError);
+  });
+
+  it('gives finite numbers for every spacecraft it accepts, and never more propellant than mass', () => {
+    const cases: Craft[] = [
+      { ...review, propellant: 99 }, { ...review, propellant: 0 }, { ...review, propellant: 99.999 },
+      { mass: 10, propellant: maxPropellant(10), isp: 50, thrust: 0.01 },
+      { mass: 20_000, propellant: maxPropellant(20_000), isp: 5000, thrust: 5000 },
+    ];
+    for (const craft of cases) {
+      expect(craftProblem(craft)).toBeNull();
+      expect(Number.isFinite(deltaVAvailable(craft))).toBe(true);
+      const b = budgetFor(burns(1500, 2000), craft);
+      for (const x of [b.available, b.used, b.left, b.shortfall, ...b.burns.flatMap((k) => [k.propellant, k.massBefore, k.massAfter, k.duration])]) {
+        expect(Number.isFinite(x)).toBe(true);
+      }
+      const after = craftAfter(b);
+      expect(after.propellant).toBeLessThan(after.mass);
+      expect(craftProblem(after)).toBeNull();
+    }
+  });
+
+  it('offers a propellant slider that ends below the mass', () => {
+    for (const mass of [CRAFT_LIMITS.mass.min, 101, 1800, CRAFT_LIMITS.mass.max]) {
+      const hi = maxPropellant(mass);
+      expect(hi).toBeLessThan(mass);
+      expect(hi).toBeLessThanOrEqual(CRAFT_LIMITS.propellant.max);
+      expect(craftProblem({ mass, propellant: hi, isp: 315, thrust: 400 })).toBeNull();
+    }
+    expect(maxPropellant(101)).toBe(100);
   });
 });

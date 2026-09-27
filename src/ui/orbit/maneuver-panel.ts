@@ -14,7 +14,7 @@ import {
   ENGINEER_KINDS, EXPLORE_KINDS, MANEUVER_LIMITS, MAX_NODES, type ManeuverSettings, type PlannerKind,
 } from '../../orbit/maneuver-setup';
 import { Field, button, clockText, deg, el, num, plain, span } from './dom';
-import type { Budget, Craft } from '../../orbit/budget';
+import { CRAFT_LIMITS, craftProblem, maxPropellant, type Budget, type Craft, type CraftProblem } from '../../orbit/budget';
 
 /** O03: whose tanks the plan is budgeted against. */
 export type CraftSource = 'none' | 'launch' | 'own';
@@ -32,8 +32,11 @@ export interface ManeuverPanelHost {
   adopt(): void;
   /** Engineer: show the porkchop plot */
   showPorkchop(): void;
-  /** O03: the spacecraft the plan is budgeted for — which, your own, and the one from the flight (if it has an engine) */
-  craft(): { source: CraftSource; own: Craft; fromLaunch: Craft | null; launchHasNoEngine: boolean };
+  /**
+   * O03: the spacecraft the plan is budgeted for — which, your own, the one
+   * from the flight (if it has an engine), and the one chosen (null for none)
+   */
+  craft(): { source: CraftSource; own: Craft; fromLaunch: Craft | null; launchHasNoEngine: boolean; chosen: Craft | null };
   setCraft(source: CraftSource, own?: Partial<Craft>): void;
   /** the plan against that spacecraft's tanks, or null with none chosen */
   budget(): Budget | null;
@@ -142,6 +145,14 @@ export function maneuverControls(host: ManeuverPanelHost): HTMLElement {
   return box;
 }
 
+const CRAFT_PROBLEM_KEY: Record<CraftProblem, string> = {
+  mass: 'mv.craft.err.mass', propellant: 'mv.craft.err.propellant', propellantOverMass: 'mv.craft.err.overMass',
+  isp: 'mv.craft.err.isp', thrust: 'mv.craft.err.thrust',
+};
+/** audit 2026-09-27 A2: what is wrong with a spacecraft, in words. */
+export const craftProblemText = (p: CraftProblem, c: Craft): string =>
+  t(CRAFT_PROBLEM_KEY[p], { mass: num(c.mass), u: t('u.kg') });
+
 /** O03: the spacecraft whose tanks the plan is budgeted against. */
 function craftControls(host: ManeuverPanelHost): HTMLElement {
   const c = host.craft();
@@ -158,20 +169,47 @@ function craftControls(host: ManeuverPanelHost): HTMLElement {
   pick.append(sel);
   box.append(pick);
   if (c.launchHasNoEngine) box.append(el('p', 'pg-tool-lead', t('mv.craft.noEngine')));
+  // audit 2026-09-27 A2: a spacecraft that cannot be one (more propellant than mass) is said so, and has no budget
+  const problem = el('p', 'pg-warn pg-craft-problem');
+  problem.setAttribute('aria-live', 'polite');
+  const roots: Partial<Record<keyof Craft, HTMLElement>> = {};
+  const showProblem = (): void => {
+    const craft = host.craft().chosen;
+    const p = craft ? craftProblem(craft) : null;
+    problem.textContent = p && craft ? craftProblemText(p, craft) : '';
+    problem.hidden = !p;
+    const bad: keyof Craft | null = p === 'propellantOverMass' ? 'propellant' : p;
+    for (const [key, root] of Object.entries(roots) as [keyof Craft, HTMLElement][]) {
+      root.querySelector('.pg-field-box')?.setAttribute('aria-invalid', String(key === bad));
+    }
+  };
   if (c.source === 'own') {
     const fields = el('div', 'pg-fields');
-    const field = (label: string, unit: string, lo: number, hi: number, digits: number, key: keyof Craft) => {
-      const f = new Field(label, unit, linearScale(lo, hi), plain.show, plain.read, digits, { min: lo, max: hi }, (v) => host.setCraft('own', { [key]: v }));
-      f.set(c.own[key]);
-      fields.append(f.root);
+    const field = (label: string, unit: string, limits: { min: number; max: number }, digits: number, key: keyof Craft): HTMLElement => {
+      const f = new Field(label, unit, linearScale(limits.min, limits.max), plain.show, plain.read, digits, limits, (v) => {
+        host.setCraft('own', { [key]: v });
+        if (key === 'mass') propellant();
+        showProblem();
+      });
+      f.set(host.craft().own[key]);
+      roots[key] = f.root;
+      return f.root;
     };
-    const kg = t('u.kg');
-    field(t('mv.craft.mass'), kg, 10, 20_000, 0, 'mass');
-    field(t('mv.craft.propellant'), kg, 0, 15_000, 0, 'propellant');
-    field(t('mv.craft.isp'), t('u.s'), 50, 5000, 0, 'isp');
-    field(t('mv.craft.thrust'), t('u.N'), 0.01, 5000, 2, 'thrust');
+    const kg = t('u.kg'), L = CRAFT_LIMITS;
+    // the propellant's slider ends below the mass as it is now (A2): it is made again when the mass changes
+    const propellant = (): void => {
+      const old = roots.propellant;
+      const next = field(t('mv.craft.propellant'), kg, { min: L.propellant.min, max: maxPropellant(host.craft().own.mass) }, 0, 'propellant');
+      if (old) old.replaceWith(next);
+      else fields.append(next);
+    };
+    fields.append(field(t('mv.craft.mass'), kg, L.mass, 0, 'mass'));
+    propellant();
+    fields.append(field(t('mv.craft.isp'), t('u.s'), L.isp, 0, 'isp'), field(t('mv.craft.thrust'), t('u.N'), L.thrust, 2, 'thrust'));
     box.append(fields);
   }
+  box.append(problem);
+  showProblem();
   return box;
 }
 
@@ -233,6 +271,8 @@ function manualNodes(host: ManeuverPanelHost, s: ManeuverSettings, engineer: boo
 export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: ManeuverSettings, now: number): HTMLElement {
   const box = el('section', 'pg-plan');
   const budget = 'burns' in plan ? host.budget() : null;
+  // audit 2026-09-27 A2: a spacecraft that cannot be one has no budget, and no orbit to carry on from
+  const chosen = host.craft().chosen, badCraft = !!chosen && !!craftProblem(chosen);
   box.append(el('h2', 'pg-facts-title', t('mv.planOf', { kind: kindName(s.kind) })));
   if (!('burns' in plan)) {
     box.append(el('p', 'pg-warn', planErrorText(plan)));
@@ -290,6 +330,7 @@ export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: Ma
     if (plan.spiral && budget.burns[0]) row(t('mv.b.engineOn'), span(budget.burns[0].duration));
   }
   box.append(dl);
+  if (badCraft) box.append(el('p', 'pg-warn', t('mv.b.badCraft')));
   if (budget && !budget.enough) {
     const n = budget.burns.findIndex((b) => b.short) + 1;
     box.append(el('p', 'pg-warn', t('mv.b.short', { dv: `${num(budget.shortfall, 0)} ${ms}`, n: String(Math.max(1, n)) })));
@@ -305,7 +346,7 @@ export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: Ma
   const next = plan.burns.find((b) => b.t > now);
   const note = el('p', 'pg-note pg-plan-next');
   note.textContent = next ? t('mv.next', { time: span(next.t - now) }) : plan.arrival <= now ? t('mv.done') : '';
-  box.append(note, actions(host, plan.arrival <= now || plan.burns.length > 0));
+  box.append(note, actions(host, !badCraft && (plan.arrival <= now || plan.burns.length > 0)));
   return box;
 }
 

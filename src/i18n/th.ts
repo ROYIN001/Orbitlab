@@ -1022,6 +1022,12 @@ export const th: Record<string, string> = {
   'mv.craft.propellant': 'เชื้อเพลิง',
   'mv.craft.isp': 'แรงดลจำเพาะ Isp',
   'mv.craft.thrust': 'แรงขับของเครื่องยนต์',
+  'mv.craft.err.mass': 'มวลต้องมากกว่าศูนย์',
+  'mv.craft.err.propellant': 'เชื้อเพลิงต้องไม่น้อยกว่าศูนย์',
+  'mv.craft.err.overMass': 'เชื้อเพลิงเป็นส่วนหนึ่งของมวลยาน จึงต้องน้อยกว่า {mass} {u}',
+  'mv.craft.err.isp': 'แรงดลจำเพาะต้องมากกว่าศูนย์',
+  'mv.craft.err.thrust': 'แรงขับของเครื่องยนต์ต้องมากกว่าศูนย์',
+  'mv.b.badCraft': 'ยังคำนวณงบเชื้อเพลิงไม่ได้ เพราะค่าของยานเป็นไปไม่ได้ ให้แก้ค่าในหัวข้อยานอวกาศก่อน',
   'mv.b.burn': 'เชื้อเพลิง {kg} {u} เครื่องยนต์ทำงาน {time}',
   'mv.b.dry': 'ไม่เหลือเชื้อเพลิงสำหรับการจุดครั้งนี้',
   // O04: what satellites are for (src/ui/orbit/applications-panel.ts, src/data/thai-satellites.ts)

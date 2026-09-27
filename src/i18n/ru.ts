@@ -1021,6 +1021,12 @@ export const ru: Record<string, string> = {
   'mv.craft.propellant': 'Топливо',
   'mv.craft.isp': 'Удельный импульс Isp',
   'mv.craft.thrust': 'Тяга двигателя',
+  'mv.craft.err.mass': 'Масса должна быть больше нуля.',
+  'mv.craft.err.propellant': 'Топлива не может быть меньше нуля.',
+  'mv.craft.err.overMass': 'Топливо входит в массу аппарата: его должно быть меньше {mass} {u}.',
+  'mv.craft.err.isp': 'Удельный импульс должен быть больше нуля.',
+  'mv.craft.err.thrust': 'Тяга двигателя должна быть больше нуля.',
+  'mv.b.badCraft': 'Бюджета нет: такие параметры аппарата невозможны. Исправьте их в разделе «Космический аппарат».',
   'mv.b.burn': '{kg} {u} топлива, двигатель работает {time}',
   'mv.b.dry': 'на него топлива не осталось',
   // O04: what satellites are for (src/ui/orbit/applications-panel.ts, src/data/thai-satellites.ts)

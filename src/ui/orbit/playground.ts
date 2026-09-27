@@ -38,7 +38,7 @@ import {
 } from '../../orbit/maneuver-setup';
 import type { OrbitGhost, OrbitMarker } from '../../render/orbit-view';
 import { maneuverControls, planTable, type CraftSource, type ManeuverPanelHost } from './maneuver-panel';
-import { budgetFor, craftAfter, craftFromHandoff, defaultCraft, type Budget, type Craft } from '../../orbit/budget';
+import { budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, type Budget, type Craft } from '../../orbit/budget';
 import { handoffFromState } from '../../orbit/handoff';
 import { spacecraftFor } from '../../physics/propagator/spacecraft';
 import { MANEUVER_LIMITS } from '../../orbit/maneuver-setup';
@@ -648,7 +648,8 @@ export class OrbitPlayground {
     },
     adopt: () => {
       const p = this.activePlan;
-      if (!p) return;
+      // audit 2026-09-27 A2: no orbit to carry on from for a spacecraft that cannot be one
+      if (!p || (this.craft && craftProblem(this.craft))) return;
       // O03: the spacecraft carries on lighter by what the plan burned
       const budget = this.budget;
       if (budget) {
@@ -668,7 +669,7 @@ export class OrbitPlayground {
     showPorkchop: () => this.setView('porkchop'),
     craft: () => ({
       source: this.craftSource, own: this.ownCraft, fromLaunch: this.launchCraft,
-      launchHasNoEngine: !!this.handoff && !this.launchCraft,
+      launchHasNoEngine: !!this.handoff && !this.launchCraft, chosen: this.craft,
     }),
     setCraft: (source: CraftSource, own?: Partial<Craft>) => {
       const changedSource = source !== this.craftSource;
@@ -752,10 +753,10 @@ export class OrbitPlayground {
     return this.craftSource === 'launch' ? this.launchCraft : this.craftSource === 'own' ? this.ownCraft : null;
   }
 
-  /** O03: the plan against the chosen spacecraft's tanks. */
+  /** O03: the plan against the chosen spacecraft's tanks; none for a spacecraft that cannot be one (audit 2026-09-27 A2). */
   private get budget(): Budget | null {
     const p = this.activePlan, c = this.craft;
-    return p && c ? budgetFor(p, c) : null;
+    return p && c && !craftProblem(c) ? budgetFor(p, c) : null;
   }
 
   /**

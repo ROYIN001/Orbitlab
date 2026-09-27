@@ -1042,6 +1042,12 @@ export const en: Record<string, string> = {
   'mv.craft.propellant': 'Propellant',
   'mv.craft.isp': 'Specific impulse Isp',
   'mv.craft.thrust': 'Engine thrust',
+  'mv.craft.err.mass': 'The mass must be more than zero.',
+  'mv.craft.err.propellant': 'The propellant cannot be less than zero.',
+  'mv.craft.err.overMass': 'The propellant is part of the spacecraft\'s mass: it must be less than {mass} {u}.',
+  'mv.craft.err.isp': 'The specific impulse must be more than zero.',
+  'mv.craft.err.thrust': 'The engine\'s thrust must be more than zero.',
+  'mv.b.badCraft': 'No budget: the spacecraft\'s numbers are not possible. Correct them under Spacecraft.',
   'mv.b.burn': '{kg} {u} of propellant, the engine on for {time}',
   'mv.b.dry': 'no propellant left for it',
   // O04: what satellites are for (src/ui/orbit/applications-panel.ts, src/data/thai-satellites.ts)
