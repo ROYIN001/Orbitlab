@@ -460,6 +460,9 @@ export class LessonMode implements LessonToolsHost {
     }
     a.recorded = false;
     this.lastStripKey = '';
+    // Enter in an answer submits: the strip is drawn again with the marks, not held for the typing
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && this.strip.contains(focused)) focused.blur();
     if (isCaseLesson(a.lesson)) {
       // a case lesson's attempts are its checks
       if (typed) { lessonProgress(this.progressData, a.lesson.id).attempts++; this.save(); }
