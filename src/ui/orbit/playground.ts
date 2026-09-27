@@ -38,7 +38,7 @@ import {
 } from '../../orbit/maneuver-setup';
 import type { OrbitGhost, OrbitMarker } from '../../render/orbit-view';
 import { maneuverControls, planTable, type CraftSource, type ManeuverPanelHost } from './maneuver-panel';
-import { budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, type Budget, type Craft } from '../../orbit/budget';
+import { adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, type Budget, type Craft } from '../../orbit/budget';
 import { handoffFromState } from '../../orbit/handoff';
 import { spacecraftFor } from '../../physics/propagator/spacecraft';
 import { MANEUVER_LIMITS } from '../../orbit/maneuver-setup';
@@ -648,8 +648,8 @@ export class OrbitPlayground {
     },
     adopt: () => {
       const p = this.activePlan;
-      // audit 2026-09-27 A2: no orbit to carry on from for a spacecraft that cannot be one
-      if (!p || (this.craft && craftProblem(this.craft))) return;
+      // audit 2026-09-27 A2, A3: no orbit to carry on from for a spacecraft that cannot be one, or cannot fly the plan
+      if (!p || adoptBlock(p, this.time, this.craft)) return;
       // O03: the spacecraft carries on lighter by what the plan burned
       const budget = this.budget;
       if (budget) {

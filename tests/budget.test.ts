@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { G0, R_EARTH } from '../src/physics/constants';
 import {
-  CRAFT_LIMITS, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, deltaVAvailable, exhaustSpeed, maxPropellant, type Craft,
+  CRAFT_LIMITS, adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, deltaVAvailable, exhaustSpeed, maxPropellant, type Craft,
 } from '../src/orbit/budget';
 import { hohmann, isPlan, spiral, type Plan } from '../src/orbit/maneuvers';
 import { v3 } from '../src/physics/vec3';
@@ -135,5 +135,39 @@ describe('a spacecraft that cannot be one (audit 2026-09-27 A2)', () => {
       expect(craftProblem({ mass, propellant: hi, isp: 315, thrust: 400 })).toBeNull();
     }
     expect(maxPropellant(101)).toBe(100);
+  });
+});
+
+describe('carrying on from a plan the tanks cannot fly (audit 2026-09-27 A3)', () => {
+  // orbit-review.md 3: Hohmann from a low orbit, own spacecraft with no propellant — it still carried on to 35 786 × 35 786 km
+  const leo = { a: R_EARTH + 500e3, e: 0, i: 0.5, raan: 0, argp: 0, m0: 0, jd0: 2461309.5 };
+  const plan = hohmann(leo, 0, 35_786e3, false);
+  if (!isPlan(plan)) throw new Error('hohmann');
+  const dry: Craft = { ...defaultCraft(), propellant: 0 };
+
+  it('does not carry on a spacecraft whose tanks run dry', () => {
+    expect(budgetFor(plan, dry).enough).toBe(false);
+    expect(adoptBlock(plan, 0, dry)).toBe('fuel');
+    expect(adoptBlock(plan, plan.arrival + 1, dry)).toBe('fuel');
+    // a geostationary bus's own tanks are short of a Hohmann from LEO too
+    expect(adoptBlock(plan, 0, defaultCraft())).toBe('fuel');
+  });
+
+  it('carries on a spacecraft that can fly the plan, and the ideal plan with no spacecraft', () => {
+    const big: Craft = { mass: 10_000, propellant: 8000, isp: 320, thrust: 20_000 };
+    expect(budgetFor(plan, big).enough).toBe(true);
+    expect(adoptBlock(plan, 0, big)).toBeNull();
+    expect(adoptBlock(plan, 0, null)).toBeNull();
+  });
+
+  it('does not carry on a spacecraft that cannot be one (A2)', () => {
+    expect(adoptBlock(plan, 0, { mass: 100, propellant: 1000, isp: 315, thrust: 400 })).toBe('craft');
+  });
+
+  it('has nothing to carry on from before a burnless plan ends, whatever the spacecraft', () => {
+    const running = { burns: [], totalDv: 0, arrival: 100 };
+    expect(adoptBlock(running, 50, null)).toBe('notYet');
+    expect(adoptBlock(running, 50, dry)).toBe('notYet');
+    expect(adoptBlock(running, 100, null)).toBeNull();
   });
 });

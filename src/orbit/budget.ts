@@ -127,6 +127,26 @@ export function budgetFor(plan: Pick<Plan, 'burns' | 'spiral' | 'totalDv'>, craf
   return { craft, available, burns, used, left: Math.max(0, craft.propellant - used), enough, shortfall: enough ? 0 : Math.max(0, total - available) };
 }
 
+/**
+ * Why a plan's final orbit may not be carried on from ("Carry on from the
+ * new orbit"), or null when it may (audit 2026-09-27 A3):
+ * - 'notYet': nothing to carry on from yet — no burn, and the plan still
+ *   running (a spiral under way);
+ * - 'craft': the chosen spacecraft cannot be one (craftProblem, A2);
+ * - 'fuel': its tanks run dry before the plan is flown, so the orbit at the
+ *   end is the ideal plan's, not one this spacecraft gets to.
+ * With no spacecraft chosen (Δv only) the ideal plan is what was asked for,
+ * and it may be carried on from, as before.
+ */
+export type AdoptBlock = 'notYet' | 'craft' | 'fuel';
+
+export function adoptBlock(plan: Pick<Plan, 'burns' | 'spiral' | 'totalDv' | 'arrival'>, now: number, craft: Craft | null): AdoptBlock | null {
+  if (plan.arrival > now && plan.burns.length === 0) return 'notYet';
+  if (!craft) return null;
+  if (craftProblem(craft)) return 'craft';
+  return budgetFor(plan, craft).enough ? null : 'fuel';
+}
+
 /** The spacecraft after a plan flown: lighter by what it burned. */
 export function craftAfter(b: Budget): Craft {
   return { ...b.craft, mass: b.craft.mass - b.used, propellant: b.left };

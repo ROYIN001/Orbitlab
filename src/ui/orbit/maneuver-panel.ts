@@ -14,7 +14,9 @@ import {
   ENGINEER_KINDS, EXPLORE_KINDS, MANEUVER_LIMITS, MAX_NODES, type ManeuverSettings, type PlannerKind,
 } from '../../orbit/maneuver-setup';
 import { Field, button, clockText, deg, el, num, plain, span } from './dom';
-import { CRAFT_LIMITS, craftProblem, maxPropellant, type Budget, type Craft, type CraftProblem } from '../../orbit/budget';
+import {
+  CRAFT_LIMITS, adoptBlock, craftProblem, maxPropellant, type AdoptBlock, type Budget, type Craft, type CraftProblem,
+} from '../../orbit/budget';
 
 /** O03: whose tanks the plan is budgeted against. */
 export type CraftSource = 'none' | 'launch' | 'own';
@@ -276,9 +278,12 @@ export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: Ma
   box.append(el('h2', 'pg-facts-title', t('mv.planOf', { kind: kindName(s.kind) })));
   if (!('burns' in plan)) {
     box.append(el('p', 'pg-warn', planErrorText(plan)));
-    box.append(actions(host, false));
+    box.append(actions(host, 'notYet'));
     return box;
   }
+  // audit 2026-09-27 A3: a plan the spacecraft's tanks cannot fly is shown as the ideal one, and not carried on from
+  const block = adoptBlock(plan, now, chosen);
+  if (budget && !budget.enough) box.append(el('p', 'pg-note pg-ideal', t('mv.b.ideal')));
   const engineer = host.level() === 'engineer';
   const kms = t('u.kms'), ms = t('u.ms');
   if (plan.burns.length) {
@@ -346,14 +351,28 @@ export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: Ma
   const next = plan.burns.find((b) => b.t > now);
   const note = el('p', 'pg-note pg-plan-next');
   note.textContent = next ? t('mv.next', { time: span(next.t - now) }) : plan.arrival <= now ? t('mv.done') : '';
-  box.append(note, actions(host, !badCraft && (plan.arrival <= now || plan.burns.length > 0)));
+  box.append(note, actions(host, block));
   return box;
 }
 
-function actions(host: ManeuverPanelHost, canAdopt: boolean): HTMLElement {
+const ADOPT_BLOCK_KEY: Record<Exclude<AdoptBlock, 'notYet'>, string> = { craft: 'mv.adopt.craft', fuel: 'mv.adopt.fuel' };
+
+/** The plan's buttons: "Carry on" as `block` allows — offered, shown off with the reason (A3), or not yet there. */
+function actions(host: ManeuverPanelHost, block: AdoptBlock | null): DocumentFragment {
+  const out = document.createDocumentFragment();
   const row = el('div', 'pg-actions');
+  out.append(row);
   row.append(button('watch-btn', t('mv.fromNow'), () => host.replanNow()));
-  if (canAdopt) row.append(button('watch-btn', t('mv.adopt'), () => host.adopt()));
+  if (block !== 'notYet') {
+    const adopt = button('watch-btn', t('mv.adopt'), () => host.adopt());
+    row.append(adopt);
+    if (block) {
+      const why = t(ADOPT_BLOCK_KEY[block]);
+      adopt.disabled = true;
+      adopt.title = why;
+      out.append(el('p', 'pg-note pg-adopt-why', why));
+    }
+  }
   row.append(button('watch-btn link', t('mv.clear'), () => host.choose(null)));
-  return row;
+  return out;
 }
