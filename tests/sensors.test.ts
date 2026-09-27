@@ -12,8 +12,6 @@ import { describe, expect, it } from 'vitest';
 import { SENSORS } from '../src/data/sensors';
 import { canImage, groundAtIncidence, groundReach, reachEdges, sensorFor, sensorOf, type Sensor } from '../src/orbit/sensors';
 
-/** An agile camera whose limit is not published: no entry is one now, but the path stays for the next such satellite. */
-const unpublished: Sensor = sensorOf({ name: 'agile, limit unpublished', norad: [0], kind: 'optical', instrument: 'test', swathKm: 10, lookMaxDeg: null, resolutionM: 1, sources: ['https://example.org/'] });
 import { overflights, type Overflight } from '../src/orbit/overflights';
 import { skyObjects, type SkyObject } from '../src/orbit/real-sky';
 import { elementsFromRecord } from '../src/orbit/omm';
@@ -28,6 +26,9 @@ const snap = parseSnapshot(Object.values(SNAPSHOT_FILE)[0], 'satellites');
 const group = (id: 'imaging' | 'thai') => skyObjects(snap.data.groups.find((g) => g.id === id)!.sets.map(elementsFromRecord), id);
 // THEOS-2 is in the Thai group only
 const imaging = [...group('imaging'), ...group('thai')];
+
+/** An agile camera whose limit is not published: no entry is one now, but the path stays for the next such satellite. */
+const unpublished: Sensor = sensorOf({ name: 'agile, limit unpublished', norad: [0], kind: 'optical', instrument: 'test', swathKm: 10, lookMaxDeg: null, resolutionM: 1, sources: ['https://example.org/'] });
 const bangkok = stationOf('bangkok')!;
 const jd0 = Date.parse('2026-09-26T12:00:00Z') / 86400000 + 2440587.5;
 const DEG = Math.PI / 180;
@@ -123,8 +124,9 @@ describe('whether an instrument can image the place (P2.5)', () => {
 
 describe('the agile imagers whose limits were found later (P2.5)', () => {
   // Cartosat-3: NRSC's 26° across the track; Cartosat-2C: ISRO's 26° for the series (Cartosat-2B); CO3D: the CNES
-  // acquisition plan's 15° of roll. Their reach at the altitudes NRSC and CNES give, 505 and 502 km, was worked out
-  // on a sphere before this test was written (248.7 and 134.9 km) and is held to 1 km.
+  // acquisition plan's 15° of roll. Their reach at the altitudes the operators give (505 km, NRSC for Cartosat-3 and
+  // ISRO's PSLV-C34 page for 2C; 502 km, CNES) was worked out on a sphere before this test was written (248.7 and
+  // 134.9 km) and is held to 1 km.
   const DATA: [number, string, number, number, number][] = [
     [44804, 'Cartosat-3', 26, 505e3, 248.7e3],
     [41599, 'Cartosat-2C', 26, 505e3, 248.7e3],
@@ -147,6 +149,11 @@ describe('the agile imagers whose limits were found later (P2.5)', () => {
     const s = sensorFor(44804)!;
     expect(s.resolution).toBe(0.28);
     expect(s.swath).toBe(17e3);
+  });
+
+  it('lists first the page that gives the Cartosats\' angle, the one the Engineer level\'s source link opens', () => {
+    expect(sensorFor(44804)!.sources[0]).toMatch(/nrsc\.gov\.in/);
+    expect(sensorFor(41599)!.sources[0]).toBe('https://www.isro.gov.in/CARTOSAT_2B.html');
   });
 });
 

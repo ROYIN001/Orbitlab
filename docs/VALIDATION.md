@@ -1558,8 +1558,10 @@ see it.
   [Cartosat-2B](https://www.isro.gov.in/CARTOSAT_2B.html), "steerable up to ± 26o along as well as
   across track", so 26°. The sources disagree: eoPortal's Cartosat-2D page says "off-nadir angles of
   up to 45 degrees", as eoPortal and a Department of Space paper (Radhadevi et al.) say for the first
-  Cartosat-2, and eoPortal's 2E page gives ±45° along the track and ±26° across; the operator's
-  figure is used. The "field of regard of 400 km" the table used to cite is WMO OSCAR's text, which
+  Cartosat-2 and eoPortal for 2B itself ("up to ±45° along-track and cross-track", against ISRO's
+  ±26°), and eoPortal's 2E page gives ±45° along the track and ±26° across; the operator's figure is
+  used, and ISRO's 2B page is the entry's first source, the one the Engineer level's "source" link
+  opens. The "field of regard of 400 km" the table used to cite is WMO OSCAR's text, which
   OSCAR gives for Cartosat-3's camera too.
 - **CO3D**: no operator publishes how far it can turn. The one angle published is a planning limit,
   in CNES's paper written before launch (Lebègue, Cazala-Hourcade, Languille, Artigues, Melet,
@@ -1586,8 +1588,9 @@ see it.
   sphere, 273 km across for its published 250 km (held to 10 %, worked out before the test was
   written); a fixed camera's edges are its swath's, an agile one's its pointing reach either side.
 - **The three limits found later**: Cartosat-3 and Cartosat-2C are judged against 26° and the four
-  CO3D against 15°, and their reach either side from 505 and 502 km (NRSC's and CNES's altitudes)
-  is 248.7 and 134.9 km, worked out on a sphere before the test was written and held to 1 km.
+  CO3D against 15°, and their reach either side from 505 and 502 km (the altitudes NRSC and ISRO
+  give for the Cartosats, CNES for CO3D) is 248.7 and 134.9 km, worked out on a sphere before the
+  test was written and held to 1 km.
 - **Revisits as the missions publish them.** The tolerance — at least one image possible in the
   published period, from 2026-09-26 12:00 UTC — was fixed before the run:
 

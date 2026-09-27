@@ -117,10 +117,11 @@ export const SENSORS: readonly SensorSpec[] = [
   // swath and resolution: its identical sister Cartosat-2D's. ISRO gives no angle for 2C, only that it "is similar to the earlier
   // Cartosat-2, 2A and 2B"; 26° is the series' figure, ISRO's for 2B: "steerable up to ± 26o along as well as across track".
   // eoPortal's 2D page says 45° ("off-nadir angles of up to 45 degrees"), as eoPortal and a Department of Space paper
-  // (Radhadevi et al.) say for the first Cartosat-2 (2007); eoPortal's 2E page gives ±45° along the track and ±26° across.
-  // The operator's figure is used. The "field of regard of 400 km" on eoPortal's 2D page is WMO OSCAR's text, which OSCAR
-  // gives for Cartosat-3's camera too
-  { name: 'Cartosat-2C', norad: [41599], kind: 'optical', instrument: 'PAN', swathKm: 9.6, lookMaxDeg: 26, resolutionM: 0.65, sources: [EOPORTAL('cartosat-2d'), 'https://www.isro.gov.in/CARTOSAT_2B.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC34.html'] },
+  // (Radhadevi et al.) say for the first Cartosat-2 (2007) and eoPortal for 2B itself (±45° along and across, against
+  // ISRO's ±26°); eoPortal's 2E page gives ±45° along the track and ±26° across. The operator's figure is used, and its
+  // page comes first, so the source a user opens gives the angle the pass is judged by. The "field of regard of 400 km"
+  // on eoPortal's 2D page is WMO OSCAR's text, which OSCAR gives for Cartosat-3's camera too
+  { name: 'Cartosat-2C', norad: [41599], kind: 'optical', instrument: 'PAN', swathKm: 9.6, lookMaxDeg: 26, resolutionM: 0.65, sources: ['https://www.isro.gov.in/CARTOSAT_2B.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC34.html', EOPORTAL('cartosat-2d')] },
   // roll about 25° normally, 35° at most
   { name: 'Gaofen-1', norad: [39150], kind: 'optical', instrument: 'PMC', swathKm: 69, lookMaxDeg: 35, resolutionM: 2, sources: [EOPORTAL('gaofen-1')] },
   { name: 'Gaofen-2', norad: [40118], kind: 'optical', instrument: 'PMC-2', swathKm: 45, lookMaxDeg: 35, resolutionM: 0.8, sources: [EOPORTAL('gaofen-2')] },
