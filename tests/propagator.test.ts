@@ -193,9 +193,10 @@ describe('the flight is untouched (P07)', () => {
     const users = Object.entries(src)
       .filter(([path, text]) => !path.includes('/propagator/') && /from ['"][^'"]*propagator\//.test(text))
       .map(([path]) => path.replace('../src/', ''));
-    // the lifetime window, its worker, the app wiring that opens it, and the Orbit section (S03)
+    // the lifetime window, its worker, the app wiring that opens it, the Orbit section (S03), and the
+    // worksheets from real cases, which predict a re-entry (P2.5)
     const allowed = (p: string) => p.startsWith('ui/') || p.startsWith('orbit/') || p === 'main.ts'
-      || p === 'physics/lifetime.worker.ts' || p === 'physics/lifetime-job.ts';
+      || p === 'physics/lifetime.worker.ts' || p === 'physics/lifetime-job.ts' || p === 'worksheets/cases.ts';
     expect(users.filter((p) => !allowed(p))).toEqual([]);
     expect(users.some((p) => p.startsWith('physics/sim/') || p.startsWith('physics/rigid/') || p === 'physics/simulation.ts')).toBe(false);
   });
