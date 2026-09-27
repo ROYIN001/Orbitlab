@@ -27,7 +27,7 @@ export const catalogue: SkyObject[] = snap.data.groups.flatMap((g) => skyObjects
 export const JD0 = Date.parse('2026-09-26T12:00:00Z') / 86400000 + 2440587.5;
 
 /** A constructed element set (not a real object's): the orbits the snapshot has none of. */
-const made = (norad: number, name: string, fields: Partial<OmmRecord>): SkyObject => skyObjects([elementsFromRecord({
+export const made = (norad: number, name: string, fields: Partial<OmmRecord>): SkyObject => skyObjects([elementsFromRecord({
   OBJECT_NAME: name, OBJECT_ID: '2026-000A', EPOCH: '2026-09-26T00:00:00.000000', MEAN_MOTION: 15, ECCENTRICITY: 0.001,
   INCLINATION: 50, RA_OF_ASC_NODE: 100, ARG_OF_PERICENTER: 90, MEAN_ANOMALY: 0, EPHEMERIS_TYPE: 0,
   CLASSIFICATION_TYPE: 'U', NORAD_CAT_ID: norad, ELEMENT_SET_NO: 999, REV_AT_EPOCH: 1, BSTAR: 0, MEAN_MOTION_DOT: 0,

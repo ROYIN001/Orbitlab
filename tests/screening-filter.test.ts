@@ -17,7 +17,7 @@ import { v3 } from '../src/physics/vec3';
 import { filterBounds, meanArgumentOfLatitude, meanNode, pairWindows, radiusBand, radiusOver } from '../src/orbit/screening-filter';
 import { bandsOverlap, candidates, screen, screenInSlices, type FilterStats } from '../src/orbit/screening';
 import { minutesSinceEpoch, sgp4 } from '../src/orbit/sgp4';
-import { catalogue, compareScreenings, JD0, PRIMARIES } from './screening-cases';
+import { catalogue, compareScreenings, JD0, made, PRIMARIES } from './screening-cases';
 
 const wrap = (x: number): number => x - 2 * Math.PI * Math.round(x / (2 * Math.PI));
 
@@ -106,6 +106,18 @@ describe('the time filter\'s bounds, against SGP4 itself (M01, P2.5)', () => {
     expect(filterBounds(falling, JD0, JD0 + 7).usable).toBe(false);
     // over its first day, before it comes down, SGP4's band is given
     expect(Array.isArray(radiusBand(falling, JD0, JD0 + 1))).toBe(true);
+  });
+
+  it('takes a near-Earth object whose band cannot be bounded to be anywhere', () => {
+    // constructed: 159 km × 10 900 km, B* −0.005, screened a month after its epoch: SGP4's drift of e over the
+    // window may take it past 0.5, so no band is given, and its epoch's perigee and apogee say nothing of it then
+    const drifting = made(99007, 'DRIFTING (CONSTRUCTED)', { MEAN_MOTION: 6.7, ECCENTRICITY: 0.45, BSTAR: -5e-3 });
+    const geo = PRIMARIES.geo().self;
+    expect(drifting.sat.method).toBe('n');
+    expect(radiusBand(drifting, JD0 + 30, JD0 + 37)).toBeNull();
+    expect(bandsOverlap(geo, drifting, 5e3), 'the epoch\'s perigee and apogee, 30 km either way').toBe(false);
+    expect(bandsOverlap(geo, drifting, 5e3, JD0 + 30, JD0 + 37)).toBe(true);
+    expect(candidates(geo, [drifting], 5e3, JD0 + 30, JD0 + 37)).toEqual([drifting]);
   });
 
   it('sends deep-space objects (SDP4) to the full search', () => {

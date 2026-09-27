@@ -24,8 +24,8 @@
  * come within the limit at all: near the line where their planes cross,
  * both at the same end of it at once, at heights that can meet. Only those
  * stretches are searched, on the same samples the whole search would take
- * there, so the answer is the whole search's to the last bit, some twenty to
- * forty times sooner for a satellite in the crowded band at 700 km
+ * there, so the answer is the whole search's to the last bit, some twenty-five
+ * to thirty-five times sooner for a satellite in the crowded band at 700 km
  * (docs/VALIDATION.md §7). Pairs the filter cannot vouch for — deep space,
  * nearly coplanar, coming down within the window — are searched whole. The
  * whole search stays callable (`{ filter: false }`): it is the reference the
@@ -56,13 +56,18 @@ export function ephemerisOf(o: SkyObject): Ephemeris {
 /**
  * An object's band of radii, m from the Earth's centre: SGP4's own over the
  * window where it can be given, else perigee to apogee at the epoch — from the
- * ground up for an object SGP4 brings down within the window.
+ * ground up for a near-Earth object SGP4 brings down within the window;
+ * everywhere for a near-Earth one whose band over the window cannot be given
+ * at all (its drag is then not bounded, so nothing says where it goes).
  */
 function band(o: SkyObject, jd0?: number, jd1?: number): { lo: number; hi: number; sgp4: boolean } {
-  const b = jd0 !== undefined && jd1 !== undefined ? radiusBand(o, jd0, jd1) : null;
+  const windowed = jd0 !== undefined && jd1 !== undefined;
+  const b = windowed ? radiusBand(o, jd0, jd1) : null;
   if (Array.isArray(b)) return { lo: b[0], hi: b[1], sgp4: true };
   const f = skyFacts(o), re = o.sat.radiusearthkm * 1e3;
-  return { lo: b === 'down' ? re : re + f.perigeeAlt, hi: re + f.apogeeAlt, sgp4: false };
+  // (a near-Earth eccentricity of 0.5 would put the perigee under the ground: only drag unbounded over the window gets here)
+  const unbounded = b === null && windowed && o.sat.method !== 'd';
+  return { lo: b === 'down' || unbounded ? re : re + f.perigeeAlt, hi: unbounded ? Infinity : re + f.apogeeAlt, sgp4: false };
 }
 
 /**
@@ -74,7 +79,10 @@ function band(o: SkyObject, jd0?: number, jd1?: number): { lo: number; hi: numbe
  * epoch with 30 km either way do not — SGP4 takes the fastest-decaying
  * objects of a catalogue up to 346 km below their perigee within a week (the
  * P2.5 diagnosis). A deep-space object keeps its perigee and apogee and the
- * 30 km margin.
+ * 30 km margin. A near-Earth one whose band `radiusBand` cannot give (an
+ * eccentricity that may reach 0.5, or short-period terms out of the bounds'
+ * reach) is taken to be anywhere, and searched against every primary:
+ * neither catalogue tested has one.
  */
 export function bandsOverlap(a: SkyObject, b: SkyObject, within: number, jd0?: number, jd1?: number): boolean {
   const ba = band(a, jd0, jd1), bb = band(b, jd0, jd1);

@@ -4,7 +4,7 @@
  * the screening distance D of each other. Only those stretches are then
  * searched (src/orbit/conjunction.ts, `closeApproaches` with windows); a
  * satellite at 700 km is screened against 30 000 objects over three days in
- * about half a second on this build machine instead of some twenty
+ * about half a second on this build machine instead of some eighteen
  * (docs/VALIDATION.md §7).
  *
  * It is a time filter in the manner of Hoots, Crawford and Roehrich
@@ -76,13 +76,15 @@
  *
  * Δu and ε are then taken 1.25 times, for rounding and the second-order
  * terms the derivation drops (of order ε², some 10⁻⁶ rad). The factor is
- * needed: both bounds are reached. Over 2.8 million SGP4 states of the
- * 28 000 near-Earth objects of the 30 000-object load, across a week, the
- * largest along-track and tilt came to 0.999 and 1.000 of the unscaled
- * bounds (0.80 of the scaled ones). The radius bounds hold with no factor:
- * SGP4 came within 0.06 km of the whole-orbit bound and 0.1 m of a pass's,
- * never outside (tests/screening-filter.test.ts holds the bundled catalogue
- * to all of them).
+ * needed: both bounds are reached. In a one-off check of 2.8 million SGP4
+ * states (the 28 000 near-Earth objects of the synthetic 30 000-object load,
+ * at random times across a week; not part of the suite), the largest
+ * along-track and tilt came to 0.999 and 1.000 of the unscaled bounds (0.80
+ * of the scaled ones), and the bundled catalogue in the suite reaches 0.80
+ * too. The radius bounds hold with no factor: in that check SGP4 came within
+ * 0.06 km of the whole-orbit bound and 0.1 m of a pass's, never outside
+ * (tests/screening-filter.test.ts holds the bundled catalogue to all of
+ * them).
  *
  * **The windows** (`pairWindows`). Let ĥ be a mean plane's normal and n̂ the
  * direction of ĥ_p × ĥ_q, sin I = |ĥ_p × ĥ_q| (I the angle between the
