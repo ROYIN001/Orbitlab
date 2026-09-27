@@ -1580,6 +1580,24 @@ set's decay rate, 70 % of them inside the ±20 % window.
   400 days. This change was made after the first run showed the failure; the circular orbits'
   predictions are unchanged by it.
 
+**Re-entries predicted the agencies' way: the test fixed before it runs (P2.5, 2026-09-27).**
+A first element set is made from days of tracking, and the test above asks more of it than the
+agencies do: they refit the drag with every new set. This test does as they do, on element-set
+histories from J. McDowell's archive ([planet4589.org/space/elements](https://planet4589.org/space/ele.html)),
+whose sets of NORAD origin before 2004 were distributed without restriction; the owner agreed on
+2026-09-27 that the sets used be bundled, with attribution. Fixed before any prediction:
+
+- **The objects.** From GCAT, payloads and rocket stages (not debris) that re-entered uncontrolled
+  (status R) between 1985-01-01 and 2004-06-30 and whose history holds sets of NORAD origin at every
+  lead time below; sorted by catalogue number, 100 taken at even steps (all, if fewer).
+- **The predictions.** For each lead time L of 30, 10 and 5 days: the set of NORAD origin nearest
+  to L days before re-entry (within a day of it), and a second set nearest to 7 days before that one
+  (4 to 12 days before); B fitted to the two (`ballisticFromSets`), the prediction carried from the
+  later set with the Sun as measured (GFZ), by the mean elements, or by Cowell with the Sun and the
+  Moon for an eccentric orbit, as the app does. The re-entry is GCAT's `DDate`, noon for a day.
+- **The criteria.** Inside the ±20 % window: at least 80 % of the objects at 5 and at 10 days,
+  at least 70 % at 30 days.
+
 **NAPA-2** (`src/data/napa2.ts`), the Royal Thai Air Force's 6U CubeSat of 10 kg, launched
 2021-06-30 and re-entered 2026-07-05 (GCAT; 20 × 10 × 34.05 cm, Janes). From its first element set
 (2021-07-25), 1 806 days before, fixed before: within 25 %.
