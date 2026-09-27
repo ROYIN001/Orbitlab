@@ -97,7 +97,7 @@ const PROTO_KEYS: Record<HomeVariant, string> = {
   j: 'home.proto.j', k: 'home.proto.k',
 };
 
-/** K: the program shown off, one of the app's own screens a chapter (public/home/*.webp, taken from the app itself) */
+/** K: the program shown off, one of the app's own screens a chapter (public/home/<id>.<lang>.webp, taken from the app itself in en, ru and th) */
 interface Feature { id: string; who?: string; title: string; text: string; cta: string }
 const FEATURES: readonly Feature[] = [
   { id: 'watch', who: 'home.for.watch', title: 'home.k.watchTitle', text: 'home.card.watchText', cta: 'home.play' },
@@ -665,7 +665,8 @@ export class HomeScreen {
       bar.setAttribute('aria-hidden', 'true');
       bar.append(el('i'), el('i'), el('i'));
       const img = el('img');
-      img.src = new URL(`home/${f.id}.webp`, base).href;
+      // the screen in the language the page is in (taken from the app in each of the three)
+      img.src = new URL(`home/${f.id}.${getLang()}.webp`, base).href;
       img.alt = t(f.title);
       img.loading = 'lazy';
       img.decoding = 'async';

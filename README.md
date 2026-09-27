@@ -217,8 +217,8 @@ The launch section's levels, with the landing page:
   city now and what comes over next, H the launches drawn on the globe as the simulator flies
   them, I F set off by holding a button down, J B's scroll with no readouts or launch steps,
   ending on the globe with the International Space Station, K the program shown off a screen at
-  a time over a starry sky (`public/home/`, taken from the app itself), ending on D's globe with
-  only the space station on it (`src/ui/home-logic.ts`).
+  a time over a starry sky (`public/home/`, taken from the app itself in each of its three
+  languages), ending on D's globe with only the space station on it (`src/ui/home-logic.ts`).
 - **Watch** — a launch viewer for people with no background in spaceflight: the scene
   fills the window, three big numbers (mission time, altitude in km, speed over the
   ground in km/h) and one plain-language sentence about what the rocket is doing now.
