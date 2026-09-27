@@ -1,18 +1,18 @@
-# Space weather and re-entries on record (R05)
+# Space weather and re-entries on record (R05, P2.5)
 
-## `make_solar_history.py` → `src/data/solar-history.ts`
+## `make_solar_daily.py` → `src/data/solar-daily.json`
 
-The monthly means of the observed F10.7 and of the daily Ap from GFZ's file of the indices,
-fetched on 2026-09-26 from <https://kp.gfz.de/app/files/Kp_ap_Ap_SN_F107_since_1932.txt>
-(last day 2026-09-25, so the table ends with 2026-08). Licence CC BY 4.0 (the sunspot numbers in
-the same file, CC BY-NC 4.0, are not used). Cite: Matzka, J., Bronkalla, O., Tornow, K., Elger,
-K. and Stolle, C. (2021), *Geomagnetic Kp index*, V. 1.0, GFZ Data Services,
-<https://doi.org/10.5880/Kp.0001>; the flux is the Dominion Radio Astrophysical Observatory's
-(Tapping 2013, <https://doi.org/10.1002/swe.20064>).
+The daily observed F10.7 and the daily Ap from 1954-01-01, from GFZ's file of the indices, fetched
+on 2026-09-26 from <https://kp.gfz.de/app/files/Kp_ap_Ap_SN_F107_since_1932.txt> (last day
+2026-09-25). Licence CC BY 4.0 (the sunspot numbers in the same file, CC BY-NC 4.0, are not used).
+Cite: Matzka, J., Bronkalla, O., Tornow, K., Elger, K. and Stolle, C. (2021), *Geomagnetic Kp
+index*, V. 1.0, GFZ Data Services, <https://doi.org/10.5880/Kp.0001>; the flux is the Dominion
+Radio Astrophysical Observatory's (Tapping 2013, <https://doi.org/10.1002/swe.20064>). The 171
+days without a flux (most before 1960) take the straight line between their neighbours.
 
 ```sh
 curl -O https://kp.gfz.de/app/files/Kp_ap_Ap_SN_F107_since_1932.txt
-python3 make_solar_history.py Kp_ap_Ap_SN_F107_since_1932.txt > ../../../src/data/solar-history.ts
+python3 make_solar_daily.py Kp_ap_Ap_SN_F107_since_1932.txt > ../../../src/data/solar-daily.json
 ```
 
 ## `spheres.json`

@@ -13,7 +13,7 @@ data changes and one bug fix, all in §2. Falcon 9's first stage now flies its p
 Falcon 9's six-DOF pitch programme was fitted to three flights' flight-path angles and checked on
 two held-out flights ("Six-DOF pitch programme fitted"). That is the only fitted value.
 
-Status on 2026-09-25:
+Status on 2026-09-27:
 
 | vehicle | reference | state |
 | --- | --- | --- |
@@ -29,10 +29,10 @@ Status on 2026-09-25:
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
-| Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −1.4 to +18.9 % (§7), 2026-09-26 |
+| Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −4.1 to +16.6 % (§7), 2026-09-27 |
 | Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
 | Close approaches (M01) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade (§7), 2026-09-26 |
-| Space weather in the lifetime (R05) | NRLMSISE-00 as ECSS-E-ST-10-04C tabulates it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | All seven within 25 % of their days in orbit with the measured Sun (+0.3 to −22 %); a fixed moderate Sun is off by −74 to +83 % (§6), 2026-09-26 |
+| Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
 
 ## 1. Method
 
@@ -1122,77 +1122,103 @@ Against GPS Precision Ephemerides", AAS 07-127, 2007). The page therefore shows 
 - Converted to time along the track, the errors are small for passes: a day-old ISS set is early
   or late by about a quarter of a second.
 
-### The Sun's activity in the lifetime (R05)
+### The Sun's activity in the lifetime (R05, P2.5)
 
-The lifetime model's density (`src/physics/propagator/density.ts`) now reads the Sun's activity
-as measured, instead of one of three fixed levels:
+The lifetime model's density is NRLMSISE-00 itself (P2.5), at the satellite's place and time and
+for each day's solar and geomagnetic indices:
 
-- **The level** is NRLMSISE-00's total density averaged over the day and the seasons, as ECSS
-  tabulates it for low, moderate and high long-term activity (F10.7 65, 140, 250; Ap 0, 15, 45;
-  [ECSS-E-ST-10-04C](https://ecss.nl/wp-content/uploads/standards/ecss-e/ECSS-E-ST-10-04C15November2008.pdf),
-  Annex G, Tables G-1 to G-3). Between and a little beyond them, the logarithm of the density is
-  interpolated in 1/T, with T the exospheric temperature of the IPS relation
-  T = 900 + 2.5 (F10.7 − 70) + 1.5 Ap
-  ([IPS, "Satellite Orbital Decay Calculations"](https://www.sws.bom.gov.au/Category/Educational/Space%20Weather/Space%20Weather%20Effects/SatelliteOrbitalDecayCalculations.pdf)).
-- **The spread through the day** is Harris–Priester's diurnal bulge (Montenbruck & Gill), scaled
-  so that its average over the globe is that level.
-- **The indices** (`src/physics/propagator/activity.ts`) are GFZ's monthly means of the observed
-  F10.7 and of Ap since 1947 (`src/data/solar-history.ts`,
+- **The model** (`src/physics/propagator/msis.ts`) is a line-by-line port of the C release of
+  NRLMSISE-00 (D. Brodowski, 2004, in the public domain; U.S. Government material from NRL's
+  Fortran): GTD7, and GTD7D, whose mass density counts the anomalous oxygen, for the drag. It is
+  the model ECSS-E-ST-10-04C names for orbit decay, and ECSS puts its uncertainty in mean
+  conditions at about 15 % (Annex G.5). Until P2.5 the density was its day-and-season average at
+  the height (ECSS's Tables G-1 to G-3), interpolated between the three activity levels by the IPS
+  relation and spread through the day by Harris–Priester's bulge.
+- **The indices** (`src/physics/propagator/activity.ts`) are what the model reads for a day: the
+  previous day's observed F10.7, its 81-day mean centred on the day, and the day's Ap. They are
+  GFZ's daily values since 1954 (`src/data/solar-daily.json`,
   [doi:10.5880/Kp.0001](https://doi.org/10.5880/Kp.0001), CC BY 4.0), then NOAA SWPC's monthly
   flux, the last thirty days' flux and the last week's Ap from Kp (Bartels's table), then SWPC's
-  monthly forecast (expected, or the high or low side of its range) to its end, then the Sun
-  taken to repeat itself eleven years on. Where no Ap is measured it is 13, the mean daily Ap of
-  solar cycles 19 to 24. The space-weather dataset carries SWPC's months and forecast offline in
-  its snapshot and online from SWPC.
+  monthly forecast (expected, or the high or low side of its range) to its end. Beyond it the Sun
+  is the mean of solar cycles 19 to 24, month by month from their minima
+  ([SILSO](https://www.sidc.be/SILSO/cyclesminmax)), with its spread across the six cycles for
+  the high and low sides, taken to repeat from cycle 25's minimum (2019-12). Where no Ap is
+  measured it is the same mean cycle's. Until P2.5 the series was monthly, the Sun beyond the
+  forecast repeated its last eleven years, and the Ap was a constant 13.
+- **The average over a revolution** (`src/physics/propagator/propagate.ts`) splits an eccentric
+  orbit's revolution where the height is 300 km above the perigee's, with 24 points about the
+  perigee and 12 over the rest, and takes the drag's rates over steps of up to five days (each
+  losing at most 0.5 % of the height left), reading the indices' mean over a step longer than a
+  day.
 
-The validation takes spheres, whose drag area does not depend on how they tumble. Each starts
-from its first element set (CelesTrak) as mean elements (`src/orbit/mean-state.ts`), with its
-published mass and diameter and C_D 2.2 (the app's value for a compact body), and is carried by
-the mean-element method with the series the app builds until its perigee is below 120 km. The
-tolerance, ±25 % of the days it actually spent in orbit, was fixed before the comparison.
-Sources are in `tests/fixtures/space-weather/README.md`.
+`tests/msis.test.ts` holds the port to the model's own reference: the seventeen test cases of the
+distribution (the C release's DOCUMENTATION, §7, the same as NRL's Fortran package) within
+2 × 10⁻⁶ of every printed output, and 400 random points from the ground to 1000 km run through NRL's
+Fortran itself (pymsis 0.13.0, `tests/fixtures/msis/`) within 10⁻⁴, the Fortran working in
+single precision. The tolerances were fixed before the comparison.
 
-| sphere | mass, diameter | first set → re-entry (GCAT) | days in orbit | measured Sun | fixed moderate Sun |
-| --- | --- | --- | --- | --- | --- |
-| Starshine | 39 kg, 0.48 m | 1999-06-05 → 2000-02-18 | 258.2 | 223.9 (−13.3 %) | 289.5 (+12.1 %) |
-| Starshine 2 | 39 kg, 0.48 m | 2001-12-16 → 2002-04-26 | 130.8 | 131.2 (+0.3 %) | 239.6 (+83.1 %) |
-| Starshine 3 | 91 kg, 0.94 m | 2001-09-30 → 2003-01-21 | 478.2 | 386.0 (−19.3 %) | 755.6 (+58.0 %) |
-| ANDE MAA | 52.04 kg, 0.4826 m | 2006-12-22 → 2007-12-25 | 367.6 | 286.5 (−22.1 %) | 107.6 (−70.7 %) |
-| ANDE FCal | 62.70 kg, 0.4445 m | 2006-12-22 → 2008-05-25 | 519.5 | 412.2 (−20.7 %) | 151.4 (−70.9 %) |
-| ANDE-2 Pollux | 27.442 kg, 0.4826 m | 2009-07-31 → 2010-03-29 | 241.4 | 192.6 (−20.2 %) | 64.1 (−73.5 %) |
-| ANDE-2 Castor | 47.45 kg, 0.4826 m | 2009-07-31 → 2010-08-18 | 383.4 | 317.6 (−17.2 %) | 111.4 (−70.9 %) |
+| check | reference | model | tolerance |
+| --- | --- | --- | --- |
+| the distribution's 17 test cases: nine densities and two temperatures each | printed to seven figures | every one within 2 × 10⁻⁶ | 2 × 10⁻⁶ |
+| 400 random points, 0–1000 km, quiet to stormy, a quarter with the 3-hour ap history | NRL's Fortran (single precision) | mass density within 1.3 × 10⁻⁵; every species within 8 × 10⁻⁵ | 10⁻⁴ |
+| the equatorial mean over the day and the months, at ECSS's three levels, 200, 400 and 700 km | ECSS-E-ST-10-04C Tables G-1 to G-3 ("at equatorial latitude … averaged over diurnal and seasonal variations") | within 0.3 %, all nine | 10 % |
+| the drag average over a revolution of a transfer orbit, perigee 200 km | 20 000 even points of eccentric anomaly | within 0.1 % | 3 % |
 
-`tests/activity.test.ts` holds each sphere to the tolerance, the density to the ECSS tables at
-the three levels (and its bulge to an average of one over the globe), and the series to the data
-it is built from.
+The first run against the Fortran broke its bound only for species at densities below one particle
+per cubic metre: anomalous oxygen under 115 km (10⁻³² to 10⁻²⁸ m⁻³, up to 5 %) and hydrogen at 74
+km (4 × 10⁻⁵ m⁻³, 1.2 × 10⁻⁴), where single precision runs out. Those are held only to staying
+below one; the finding is the test's comment.
+
+The validation of the decay takes spheres, whose drag area does not depend on how they tumble.
+Each starts from its first element set (CelesTrak) as mean elements (`src/orbit/mean-state.ts`),
+with its published mass and diameter and C_D 2.2, and is carried by the mean-element method with
+the series the app builds until its perigee is below 120 km. The tolerance, ±25 % of the days it
+actually spent in orbit, was fixed before R05's comparison and kept. Sources are in
+`tests/fixtures/space-weather/README.md`.
+
+| sphere | mass, diameter | first set → re-entry (GCAT) | days in orbit | P2.5: NRLMSISE-00, daily indices | R05: ECSS's averages, monthly indices | fixed moderate Sun (P2.5) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Starshine | 39 kg, 0.48 m | 1999-06-05 → 2000-02-18 | 258.2 | 238.4 (−7.7 %) | 223.9 (−13.3 %) | 306.2 (+18.6 %) |
+| Starshine 2 | 39 kg, 0.48 m | 2001-12-16 → 2002-04-26 | 130.8 | 132.8 (+1.5 %) | 131.2 (+0.3 %) | 258.7 (+97.7 %) |
+| Starshine 3 | 91 kg, 0.94 m | 2001-09-30 → 2003-01-21 | 478.2 | 385.7 (−19.4 %) | 386.0 (−19.3 %) | 774.6 (+62.0 %) |
+| ANDE MAA | 52.04 kg, 0.4826 m | 2006-12-22 → 2007-12-25 | 367.6 | 286.9 (−22.0 %) | 286.5 (−22.1 %) | 109.5 (−70.2 %) |
+| ANDE FCal | 62.70 kg, 0.4445 m | 2006-12-22 → 2008-05-25 | 519.5 | 399.2 (−23.2 %) | 412.2 (−20.7 %) | 152.7 (−70.6 %) |
+| ANDE-2 Pollux | 27.442 kg, 0.4826 m | 2009-07-31 → 2010-03-29 | 241.4 | 186.4 (−22.8 %) | 192.6 (−20.2 %) | 68.3 (−71.7 %) |
+| ANDE-2 Castor | 47.45 kg, 0.4826 m | 2009-07-31 → 2010-08-18 | 383.4 | 300.1 (−21.7 %) | 317.6 (−17.2 %) | 111.3 (−71.0 %) |
+
+`tests/activity.test.ts` holds each sphere to the tolerance, the density to ECSS's tables, the place
+and time the model is asked about, and the series to the data it is built from.
 
 **Findings.**
 
-- **All seven are within 25 % with the Sun as measured**, from the solar maximum of 2000–2002
-  to the deep minimum of 2008–2009. A fixed moderate Sun gets the maximum's spheres down 1.6 to
-  1.8 times too late and the minimum's 3.4 times too early. That spread, not the model, was the
-  largest error of P07's fixed levels.
-- **The model is early for six of the seven, by 13 to 22 % (−16 % on average).** A density some
-  15–20 % too high, or a drag coefficient that high, would do it. NRLMSISE-00 is known to put
-  too much air in the thermosphere of the 2008 minimum (Emmert, Lean and Picone, "Record-low
-  thermospheric density during the 2008 solar minimum", GRL 37, L12102, 2010), which fits the
-  ANDE spheres of 2007–2010; for the Starshines at maximum there is no such account, and the two
-  causes are not separated here. Nothing was fitted to remove the bias.
-- **Heights above the ellipsoid, not a sphere.** Run first with P07's altitude over a sphere of
-  the equatorial radius, the spheres came down 12 to 35 % early, five of them outside the
-  tolerance. Both tables are of height above the ellipsoid (Montenbruck & Gill evaluate
-  Harris–Priester at the geodetic height): at 50° of latitude a sphere reads 12 km low, about a
-  third too much air. The density now takes the height above WGS-84 (`heightKm`), which is what
-  the tables mean; that correction was made once, for that reason, and the table above is its
-  result.
+- **All seven are within 25 % with the Sun as measured**, from the solar maximum of 2000–2002 to
+  the deep minimum of 2008–2009; a fixed moderate Sun gets the maximum's spheres down 1.2 to 2 times
+  too late and the minimum's 3.4 times too early.
+- **The full model did not remove the early bias.** Six of the seven are still early, by 8 to
+  23 % (−16 % on average, as with R05's averages): the day-to-day indices, the season and the
+  latitude move single spheres by a few per cent either way, not the whole. The bias is the
+  model's own in those years. NRLMSISE-00 puts too much air in the thermosphere of the 2008
+  minimum (Emmert, Lean and Picone, "Record-low thermospheric density during the 2008 solar
+  minimum", GRL 37, L12102, 2010), which fits the four ANDE spheres of 2007–2010, and 15 % is the
+  uncertainty ECSS itself gives the model. A density some 20 % too high, or a drag coefficient that
+  high, would do it; the two are not separated here, and nothing was fitted to remove it.
+- **The model's averages are ECSS's to 0.3 %.** Averaged at the equator over the hours and the
+  months, the port gives ECSS's tabulated densities at all three levels and heights: the tables
+  were made from this model that way, and so R05's first-order model was sound.
+- **An eccentric orbit's drag was undersampled before P2.5.** R05 averaged the drag over 36 even
+  points of eccentric anomaly: for a transfer orbit with a 200 km perigee that finds 57 % of the
+  decay rate, the air being met over a few degrees about the perigee, so a transfer orbit's
+  lifetime came out nearly twice too long. The split average finds it within 0.1 %.
 - **The two methods agree to 7 %.** Starshine 2 carried by the full equations of motion, every
-  force on, comes down after 140.3 days against the mean method's 131.2 (and 130.8 on record);
-  the full equations start from the mean elements taken as osculating ones.
-- **Monthly means smooth out storms.** For lifetimes of months that costs little; for a
-  re-entry days away (M03) the daily indices matter, and a storm can move it by a day.
-- **Beyond NOAA's forecast the Sun is assumed.** The series repeats the last eleven years; a
-  lifetime of decades is an estimate, and the dialog offers the forecast's high and low sides to
-  show how far it can move.
+  force on and NRLMSISE-00 at every point, comes down after 142.6 days against the mean method's
+  132.8 (and 130.8 on record); the full equations start from the mean elements taken as
+  osculating ones. R05's density gave 140.3 and 131.2.
+- **Steps.** Up to a day, the spheres come down within 0.4 % of their six-hour-step days; up to five
+  days (with the indices' mean over the step) within 0.8 %, and a century at 700 km takes some 3 s
+  instead of 7.
+- **Beyond NOAA's forecast the Sun is the mean cycle.** A lifetime of decades is an estimate; the
+  dialog offers the forecast's high and low sides, and beyond it the mean cycle's spread across
+  the six cycles, to show how far it can move.
 
 ## 7. The military track (M01–M03): close approaches, overflights, re-entry
 
@@ -1312,30 +1338,33 @@ records it. The tolerance, the re-entry inside the ±20 % window, was fixed befo
 
 | stage (payload) | first element set | predicted | re-entry (GCAT) | error of the time left | ±20 % window | fixed moderate Sun |
 | --- | --- | --- | --- | --- | --- | --- |
-| Y1 (crew spacecraft test) | 2020-05-05 14:12 | 2020-05-11 13:31 | 2020-05-11 15:34 | −1.4 % | inside | −31.1 % |
-| Y2 (Tianhe) | 2021-04-29 09:08 | 2021-05-08 18:39 | 2021-05-09 02:14 | −3.2 % | inside | −34.6 % |
-| Y3 (Wentian) | 2022-07-24 14:45 | 2022-07-30 06:33 | 2022-07-30 16:51 | −7.0 % | inside | −16.6 % |
-| Y4 (Mengtian) | 2022-10-31 13:01 | 2022-11-05 03:35 | 2022-11-04 10:01 | +18.9 % | inside, 4.5 h from its edge | +10.7 % |
+| Y1 (crew spacecraft test) | 2020-05-05 14:12 | 2020-05-11 17:13 | 2020-05-11 15:34 | +1.1 % | inside | −28.5 % |
+| Y2 (Tianhe) | 2021-04-29 09:08 | 2021-05-08 16:45 | 2021-05-09 02:14 | −4.1 % | inside | −35.5 % |
+| Y3 (Wentian) | 2022-07-24 14:45 | 2022-07-31 17:08 | 2022-07-30 16:51 | +16.6 % | inside, 9.8 h from its edge | +0.2 % |
+| Y4 (Mengtian) | 2022-10-31 13:01 | 2022-11-04 16:20 | 2022-11-04 10:01 | +6.8 % | inside | +2.3 % |
 
-Times are UTC. `tests/reentry.test.ts` holds each inside its window, the cross-section to
-Cauchy's formula, and the measured Sun's mean error (7.6 %) below the fixed Sun's (23 %).
+Times are UTC, with P2.5's density (NRLMSISE-00, daily indices). With R05's day-averaged density and
+monthly indices they were −1.4, −3.2, −7.0 and +18.9 % (mean 7.6 %). `tests/reentry.test.ts` holds
+each inside its window, the cross-section to Cauchy's formula, and the measured Sun's mean error
+(7.2 %) below the fixed Sun's (16.6 %).
 
 **Findings.**
 
 - **All four came down inside the window**, three of them within 7 % of the time left. That is
   as good as ESA reports for half its own predictions (within ±6 %), with a size taken from a
   catalogue rather than fitted to the tracking. Four cases are not a statistic.
-- **Y4 came down 18.9 % sooner than predicted**, near the window's edge. It flew in the most
-  active Sun of the four (monthly F10.7 133.5 in October 2022, against 69 for Y1 and 75 for Y2),
-  where a monthly mean hides most of the day-to-day swing. Its first element set is also the only
-  one with a drag term already fitted (B* 4.7 × 10⁻⁴). The fixed moderate Sun happened to do better for it alone; averaged over the four, the measured
-  Sun is three times nearer.
+- **The daily indices moved the stages both ways.** Y4, which flew in the most active Sun of the
+  four and was predicted 18.9 % late with monthly means, is now 6.8 % late; Y3 went from 7.0 %
+  early to 16.6 % late, 9.8 hours from its window's edge. Averaged, the error is the same (7.2 % against
+  7.6 %). The fixed moderate Sun happens to do well for the two stages of 2022, whose Sun was
+  moderate, and badly for the two of the quiet Sun.
 - **The stages tumble, and their area is a guess.** A stage flying broadside (158.5 m²) would
   come down about 15 % sooner than the tumbling average; one end-on (19.6 m²), far later. With the
   area fitted to the stage's own decay, as the agencies do, the window can be trusted; with a
   catalogue's size, it is an estimate, and the page says so.
-- **Daily storms are smoothed out.** The Sun is read month by month; a geomagnetic storm in the
-  last days would move a re-entry by hours.
+- **A storm is its day's Ap.** The indices are daily since P2.5; within a day the peak of a storm's
+  3-hour ap is averaged in (NRLMSISE-00's storm mode, which reads the ap history, is not used), which
+  can move a re-entry by an hour or two.
 
 ## 8. Re-running
 

@@ -12,22 +12,32 @@
  *   position error. Every force, every short-period wobble. Some hundreds of
  *   steps an orbit, so for months rather than decades.
  * - **Mean elements** (`method: 'mean'`): the orbit's mean elements carried
- *   in steps of hours by their averaged rates — J2's secular turn of the
- *   node and the perigee, and drag's loss of energy and eccentricity found
- *   by averaging the drag over one revolution (Gauss's equations, 36 points
- *   in eccentric anomaly). Sun, Moon and sunlight are left out. Decades in a
- *   second: the answer to "how long will it stay up?".
+ *   in steps of up to a day by their averaged rates — J2's secular turn of
+ *   the node and the perigee, and drag's loss of energy and eccentricity
+ *   found by averaging the drag over one revolution (Gauss's equations, 24
+ *   points in eccentric anomaly, 36 for an eccentric orbit, most of them
+ *   near its perigee). Sun, Moon and sunlight are left out. Decades in
+ *   seconds: the answer to "how long will it stay up?".
  *
  * Both stop when the perigee is below `REENTRY_ALTITUDE`, where a satellite
  * is lost within a revolution or two.
  */
 import { MU_EARTH, R_EARTH, J2_EARTH, OMEGA_EARTH } from '../constants';
 import { acceleration, type ForceModel, type Spacecraft } from './forces';
-import { airDensity, bulgeExponent, heightKm } from './density';
-import { indicesAt } from './activity';
-import { sunPosition, type V3 } from './ephemeris';
+import { airDensity } from './density';
+import { indicesAt, indicesOver, type Indices } from './activity';
+import type { V3 } from './ephemeris';
 
 export const REENTRY_ALTITUDE = 120e3;
+
+/**
+ * The mean-element method's longest step, s: five days, over which the drag
+ * reads the indices' mean. Where the air is thick the step is far shorter —
+ * each loses at most 0.5 % of the height left above the re-entry line — so
+ * five-day steps are taken only high up, where the decay is a kilometre a
+ * year and a century's run would otherwise take tens of thousands of steps.
+ */
+const STEP_MAX = 5 * 86400;
 
 export interface OrbitSample {
   /** seconds since the start */
@@ -95,7 +105,7 @@ export function elementsOf(r: V3, v: V3): Elements {
 }
 
 /** Position and velocity on an orbit at eccentric anomaly E. */
-function stateAt(el: Elements, E: number): { r: V3; v: V3 } {
+export function stateAt(el: Elements, E: number): { r: V3; v: V3 } {
   const { a, e, i, raan, argp } = el;
   const mu = MU_EARTH;
   const cE = Math.cos(E), sE = Math.sin(E), q = Math.sqrt(1 - e * e);
@@ -135,9 +145,8 @@ const B4 = [5179 / 57600, 0, 7571 / 16695, 393 / 640, -92097 / 339200, 187 / 210
 
 function cowell(r0: V3, v0: V3, jd0: number, o: PropagationOptions): PropagationResult {
   const f = o.forces, sc = o.spacecraft;
-  const n = bulgeExponent(elementsOf(r0, v0).i);
   const deriv = (t: number, y: number[]): number[] => {
-    const a = acceleration([y[0], y[1], y[2]], [y[3], y[4], y[5]], jd0 + t / 86400, f, sc, n);
+    const a = acceleration([y[0], y[1], y[2]], [y[3], y[4], y[5]], jd0 + t / 86400, f, sc);
     return [y[3], y[4], y[5], a[0], a[1], a[2]];
   };
   let y = [...r0, ...v0];
@@ -183,34 +192,52 @@ function cowell(r0: V3, v0: V3, jd0: number, o: PropagationOptions): Propagation
 
 /**
  * Averaged drag rates of a and e over one revolution, by Gauss's equations
- * with the drag along the air-relative velocity, sampled at 36 points of
- * eccentric anomaly (weighted by r/a, which turns them into mean anomaly).
+ * with the drag along the air-relative velocity, sampled in eccentric anomaly
+ * (weighted by r/a, which turns them into mean anomaly).
+ *
+ * The air is all near the perigee of an eccentric orbit: in a transfer orbit
+ * it is met over a few degrees of the revolution, which evenly spaced points
+ * would step over. So the revolution is split where the height is some 300 km
+ * above the perigee's (six scale heights and more), 24 points go into the arc
+ * about the perigee and 12 into the rest; a near-circular orbit, whose height
+ * varies less than that, is one arc of 24.
  */
-function dragRates(el: Elements, jd: number, f: ForceModel, sc: Spacecraft, n: number): { da: number; de: number } {
-  const mu = MU_EARTH, N = 36;
-  const sun = sunPosition(jd);
-  const indices = indicesAt(f.activity, jd);
+const PERIGEE_ARC_HEIGHT = 300e3;
+
+export function dragRates(el: Elements, jd: number, f: ForceModel, sc: Spacecraft, indices: Indices = indicesAt(f.activity, jd)): { da: number; de: number } {
+  const mu = MU_EARTH;
   let da = 0, de = 0;
-  for (let k = 0; k < N; k++) {
-    const E = (2 * Math.PI * (k + 0.5)) / N;
-    const { r, v } = stateAt(el, E);
-    const rn = Math.hypot(r[0], r[1], r[2]);
-    const alt = heightKm(r);
-    const rho = airDensity(r, alt, sun, n, indices);
-    if (rho === 0) continue;
-    const vr: V3 = [v[0] + OMEGA_EARTH * r[1], v[1] - OMEGA_EARTH * r[0], v[2]];
-    const vm = Math.hypot(vr[0], vr[1], vr[2]);
-    const kd = -0.5 * rho * sc.cd * (sc.area / sc.mass) * vm;
-    const ad: V3 = [kd * vr[0], kd * vr[1], kd * vr[2]];
-    const w = rn / el.a / N;
-    // da/dt = 2 a² / μ · (v · a_d)
-    da += w * ((2 * el.a * el.a) / mu) * (v[0] * ad[0] + v[1] * ad[1] + v[2] * ad[2]);
-    // de/dt = 2 (e + cos ν) a_t / v for a force along the velocity
-    const vn = Math.hypot(v[0], v[1], v[2]);
-    const at = (v[0] * ad[0] + v[1] * ad[1] + v[2] * ad[2]) / vn;
-    const cE = Math.cos(E);
-    const cosNu = (cE - el.e) / (1 - el.e * cE);
-    de += w * ((2 * (el.e + cosNu)) / vn) * at;
+  const arc = (from: number, to: number, n: number): void => {
+    const dE = (to - from) / n;
+    for (let k = 0; k < n; k++) {
+      const E = from + dE * (k + 0.5);
+      const { r, v } = stateAt(el, E);
+      const rn = Math.hypot(r[0], r[1], r[2]);
+      const rho = airDensity(r, jd, indices);
+      if (rho === 0) continue;
+      const vr: V3 = [v[0] + OMEGA_EARTH * r[1], v[1] - OMEGA_EARTH * r[0], v[2]];
+      const vm = Math.hypot(vr[0], vr[1], vr[2]);
+      const kd = -0.5 * rho * sc.cd * (sc.area / sc.mass) * vm;
+      const ad: V3 = [kd * vr[0], kd * vr[1], kd * vr[2]];
+      // the arc's share of the revolution in mean anomaly: dM = (r/a) dE
+      const w = (rn / el.a) * (dE / (2 * Math.PI));
+      // da/dt = 2 a² / μ · (v · a_d)
+      da += w * ((2 * el.a * el.a) / mu) * (v[0] * ad[0] + v[1] * ad[1] + v[2] * ad[2]);
+      // de/dt = 2 (e + cos ν) a_t / v for a force along the velocity
+      const vn = Math.hypot(v[0], v[1], v[2]);
+      const at = (v[0] * ad[0] + v[1] * ad[1] + v[2] * ad[2]) / vn;
+      const cE = Math.cos(E);
+      const cosNu = (cE - el.e) / (1 - el.e * cE);
+      de += w * ((2 * (el.e + cosNu)) / vn) * at;
+    }
+  };
+  // the height above the perigee's is a e (1 − cos E)
+  const ae = el.a * el.e;
+  if (ae * 2 <= PERIGEE_ARC_HEIGHT) arc(0, 2 * Math.PI, 24);
+  else {
+    const Ec = Math.acos(1 - PERIGEE_ARC_HEIGHT / ae);
+    arc(-Ec, Ec, 24);
+    arc(Ec, 2 * Math.PI - Ec, 12);
   }
   return { da, de };
 }
@@ -218,7 +245,6 @@ function dragRates(el: Elements, jd: number, f: ForceModel, sc: Spacecraft, n: n
 function meanElements(r0: V3, v0: V3, jd0: number, o: PropagationOptions): PropagationResult {
   const f = o.forces, sc = o.spacecraft;
   let el = elementsOf(r0, v0);
-  const n = bulgeExponent(el.i);
   const every = o.duration / (o.samples ?? 600);
   const samples: OrbitSample[] = [sample(0, el)];
   let t = 0, steps = 0, nextSample = every, lifetime: number | null = null, lastProgress = 0;
@@ -227,11 +253,17 @@ function meanElements(r0: V3, v0: V3, jd0: number, o: PropagationOptions): Propa
     const j2 = f.j2 ? 1.5 * J2_EARTH * (R_EARTH / p) ** 2 * nMean : 0;
     const dRaan = -j2 * Math.cos(el.i);
     const dArgp = j2 * (2 - 2.5 * Math.sin(el.i) ** 2);
-    const drag = f.drag ? dragRates(el, jd0 + t / 86400, f, sc, n) : { da: 0, de: 0 };
+    const jd = jd0 + t / 86400;
+    let drag = f.drag ? dragRates(el, jd, f, sc) : { da: 0, de: 0 };
     // a step that loses at most 0.5 % of the height above the reentry line
     const margin = el.a * (1 - el.e) - R_EARTH - REENTRY_ALTITUDE + 1000;
-    let h = Math.min(6 * 3600, o.duration - t);
+    let h = Math.min(STEP_MAX, o.duration - t);
     if (drag.da < 0) h = Math.max(60, Math.min(h, (0.005 * margin) / -drag.da));
+    // a step of more than a day reads the indices' mean over it, not its first day's
+    if (f.drag && h > 86400) {
+      drag = dragRates(el, jd, f, sc, indicesOver(f.activity, jd, jd + h / 86400));
+      if (drag.da < 0) h = Math.max(60, Math.min(h, (0.005 * margin) / -drag.da));
+    }
     el = {
       ...el,
       a: el.a + drag.da * h,

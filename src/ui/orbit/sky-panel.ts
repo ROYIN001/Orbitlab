@@ -43,7 +43,7 @@ import { GROWTH_PER_DAY, uncertaintyAt } from '../../orbit/uncertainty';
 import { screenInSlices, type Conjunction } from '../../orbit/screening';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
 import { predictReentry, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
-import { measuredActivity } from '../../physics/propagator/activity';
+import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
 import { CZ5B_STAGES } from '../../data/cz5b';
 import type { SpaceWeather } from '../../provider/space-weather';
 
@@ -590,7 +590,7 @@ export class RealSky {
   private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string }> {
     let sw: SpaceWeather | null = null;
     try { sw = (await this.host.provider().load('spaceWeather')).data; } catch { sw = null; }
-    const m = measuredActivity(sw);
+    const m = measuredActivity(await loadSolarDaily(), sw);
     return { series: m.series, note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }) };
   }
 

@@ -587,14 +587,16 @@ under the forces that act after the launch, each of which can be switched off to
 the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
 works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
 the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
-and the pressure of sunlight. The Sun's activity, which sets how much air there is, is taken as
-measured by default: month by month from 1947 (GFZ), then NOAA's latest months and its forecast,
-then the Sun repeating its last eleven years — the result says how far each reaches, and the data
-mode decides whether NOAA's figures are the bundled ones or fetched now. The forecast's high and
-low sides show how much the answer can move; ECSS's fixed quiet, moderate and active levels are
-there for a what-if (at 400 km a CubeSat lasts about two and a half months with an active Sun
-and over three years with a quiet one). With the measured Sun, seven satellites of known shape
-came down within 25 % of their dates on record. The *mean elements* method
+and the pressure of sunlight. The air is NRLMSISE-00's, the model the European space standards
+name for orbit decay, at the satellite's height, latitude and local time. The Sun's activity,
+which sets how much air there is, is taken as measured by default: day by day from 1954 (GFZ),
+then NOAA's latest months and days and its forecast, then the mean of the last six solar cycles —
+the result says how far each reaches, and the data mode decides whether NOAA's figures are the
+bundled ones or fetched now. The forecast's high and low sides show how much the answer can move;
+ECSS's fixed quiet, moderate and active levels are there for a what-if (at 400 km a CubeSat lasts
+some ten weeks with an active Sun and three and a half years with a quiet one). With
+the measured Sun, seven satellites of known shape came down within 25 % of their dates on record,
+usually a little early. The *mean elements* method
 covers decades in a moment with J2 and drag; the *full equations* include every force but are
 slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
 payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
