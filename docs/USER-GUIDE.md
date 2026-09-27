@@ -989,7 +989,9 @@ your own flight (the period of the orbit you reached, the Δv of a burn, the pea
 crew): type them in and **Check**. A wrong answer is only marked ✗, and can be worked again;
 **Show the answers** gives the values, but the attempt is then recorded as not passed, and a
 number once shown never counts as a pass in this browser (a lesson flies the same flight again, so
-the same number would do). The grades are formative: a worksheet's answer key is on the same
+the same number would do): a lesson whose answers come out the same on every flight can then no
+longer be passed here, as the button's tooltip (and the strip, after a wrong answer) warns. The
+grades are formative: a worksheet's answer key is on the same
 device. The grade is read from the recording's head, so scrubbing back through the replay never
 changes it. **Hint** reveals up to three hints, one at a time (the
 results file says how many you used); **Start again** puts the lesson's mission back; **Copy

@@ -642,6 +642,8 @@ export class LessonMode implements LessonToolsHost {
       if (hidden.length) {
         const reveal = el('button', undefined, t('lesson.strip.reveal'));
         reveal.type = 'button';
+        // what showing costs, before it is paid
+        reveal.title = t('lesson.strip.revealTitle');
         reveal.addEventListener('click', () => this.revealAnswers());
         form.append(reveal);
       }
@@ -809,6 +811,7 @@ export class LessonMode implements LessonToolsHost {
     if (hidden) {
       const reveal = el('button', undefined, t('lesson.strip.reveal'));
       reveal.type = 'button';
+      reveal.title = t('lesson.strip.revealTitle');
       reveal.addEventListener('click', () => this.revealAnswers());
       form.append(reveal);
     }
