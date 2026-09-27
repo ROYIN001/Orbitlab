@@ -34,6 +34,11 @@ const MODE_TEXT: Record<DataMode, readonly [string, string]> = {
   online: ['data.online.title', 'data.online.text'],
 };
 
+/** The catalogue's groups by name, for a part kept from the snapshot (P2.5). */
+const GROUP_KEY: Record<string, string> = {
+  stations: 'sky.group.stations', thai: 'sky.group.thai', gnss: 'sky.group.gnss', weather: 'sky.group.weather', imaging: 'sky.group.imaging', debris: 'sky.group.debris',
+};
+
 export class DataDialog extends Modal {
   private loaded = new Map<DatasetId, Loaded>();
   private loading: AbortController | null = null;
@@ -113,6 +118,7 @@ export class DataDialog extends Modal {
         if (id === 'satellites') li.append(el('span', 'data-set-summary', this.satellites(set.data as SatelliteCatalog)));
         if (id === 'earthOrientation') li.append(el('span', 'data-set-summary', this.earthOrientation(set.data as EarthOrientation)));
         if (set.fallback) li.append(el('span', 'data-set-status warn', t('data.fallback', { reason: set.fallback })));
+        if (set.partial) li.append(el('span', 'data-set-status warn', t('data.partial', { parts: set.partial.parts.map((p) => t(GROUP_KEY[p] ?? p)).join(', '), reason: set.partial.reason })));
       }
       list.append(li);
     }

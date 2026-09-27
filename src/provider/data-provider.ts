@@ -43,6 +43,8 @@ export interface Dataset<T> {
   source: DatasetSource;
   /** online mode fell back to the snapshot: why */
   fallback?: string;
+  /** online, but some parts are the snapshot's because their answers failed (P2.5): which, and why */
+  partial?: { parts: string[]; reason: string };
   /** online data kept from an earlier fetch (a dataset with `minIntervalMs`): when they were fetched, ISO 8601 UTC */
   fetched?: string;
 }
@@ -156,6 +158,9 @@ export class CacheStorageRecent implements RecentAnswers {
   }
 }
 
+/** A source's refusal to answer (P2.5): the rest of its questions are not asked. */
+class Refusal extends Error {}
+
 /** The sources themselves, with the snapshot behind them. */
 export class OnlineProvider implements DataProvider {
   readonly mode = 'online' as const;
@@ -172,25 +177,35 @@ export class OnlineProvider implements DataProvider {
     const interval = def.minIntervalMs ?? 0;
     let oldest = Infinity;
     try {
-      const { data, asOf } = await withTimeout(this.timeoutMs, signal, async (s) => {
+      const { data, asOf, partial } = await withTimeout(this.timeoutMs, signal, async (s): Promise<{ data: DatasetTypes[K]; asOf: string; partial?: Dataset<DatasetTypes[K]>['partial'] }> => {
         // one question at a time to each host (P2.5: CelesTrak, asked for nine lists at once, answered some
         // without the header that lets a page read them); different hosts at once
         const queue = new Map<string, Promise<unknown>>();
+        // a host that refused (403, 429, or a refusal kept from before) is asked nothing more this time
+        const refused = new Map<string, unknown>();
         const inTurn = <T>(url: string, ask: () => Promise<T>): Promise<T> => {
           const host = new URL(url).hostname;
-          // stopped meanwhile: the rest are not asked
-          const go = (): Promise<T> => (s.aborted ? Promise.reject(s.reason) : ask());
+          // stopped meanwhile, or refused: the rest are not asked
+          const go = (): Promise<T> => (s.aborted ? Promise.reject(s.reason) : refused.has(host) ? Promise.reject(refused.get(host))
+            : ask().catch((e: unknown) => { if (e instanceof Refusal) refused.set(host, e); throw e; }));
           const turn = (queue.get(host) ?? Promise.resolve()).then(go, go);
           queue.set(host, turn.catch(() => undefined));
           return turn;
         };
-        const answers = await Promise.all(online.urls.map((url) => inTurn(url, async () => {
+        // P2.5: where the dataset can put its snapshot's part in place of a failed answer, one failure is not all
+        const failure: { first: string | null } = { first: null };
+        const ask = (url: string, fn: () => Promise<unknown>): Promise<unknown> => (!online.merge ? inTurn(url, fn) : inTurn(url, fn).catch((e: unknown) => {
+          if (s.aborted) throw e;
+          failure.first ??= e instanceof Error ? e.message : String(e);
+          return null;
+        }));
+        const answers = await Promise.all(online.urls.map((url) => ask(url, async () => {
           const host = new URL(url).hostname;
           if (interval) {
             // asked too recently: the answer, or the refusal, of then
             const kept = await this.recent.get(url);
             if (kept && this.now() - kept.at < interval) {
-              if (kept.status !== undefined) throw new Error(`${host} answered ${kept.status}; not asked again before ${new Date(kept.at + interval).toISOString()}`);
+              if (kept.status !== undefined) throw new Refusal(`${host} answered ${kept.status}; not asked again before ${new Date(kept.at + interval).toISOString()}`);
               oldest = Math.min(oldest, kept.at);
               return kept.body;
             }
@@ -199,16 +214,22 @@ export class OnlineProvider implements DataProvider {
           const res = await this.fetcher(url, { signal: s, cache: 'no-cache' });
           if (!res.ok) {
             if (interval) await this.recent.put(url, { at: this.now(), status: res.status });
-            throw new Error(`${host} answered ${res.status}`);
+            const message = `${host} answered ${res.status}`;
+            throw res.status === 403 || res.status === 429 ? new Refusal(message) : new Error(message);
           }
           const body = await res.json();
           if (interval) await this.recent.put(url, { at: this.now(), body });
           return body;
         })));
-        return online.parse(answers);
+        if (failure.first === null || !online.merge) return online.parse(answers);
+        if (answers.every((a) => a === null)) throw new Error(failure.first);
+        const snap = await this.offline.load(id, s);
+        const merged = online.merge(answers, snap.data);
+        return { data: merged.data, asOf: merged.asOf, partial: { parts: merged.parts, reason: failure.first } };
       });
       if (!def.valid(data)) throw new Error('the answer is not the dataset it should be');
       const set: Dataset<DatasetTypes[K]> = { id, data, asOf, from: 'online', source: def.source };
+      if (partial) set.partial = partial;
       if (Number.isFinite(oldest)) set.fetched = new Date(oldest).toISOString();
       return set;
     } catch (error) {

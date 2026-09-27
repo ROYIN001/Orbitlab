@@ -118,22 +118,51 @@ export function parseCelestrakGp(answers: unknown[]): { data: SatelliteCatalog; 
   if (answers.length !== SATELLITE_URLS.length) throw new Error(`${answers.length} answers for ${SATELLITE_URLS.length} queries`);
   let k = 0, newest = -Infinity;
   const groups = SAT_GROUPS.map((g) => {
-    const byId = new Map<number, OmmRecord>();
-    for (let q = 0; q < g.queries.length; q++) {
-      const answer = answers[k++];
-      if (!Array.isArray(answer)) throw new Error(`${g.id}: not a list of element sets`);
-      for (const r of answer) {
-        if (!validOmm(r)) throw new Error(`${g.id}: an element set without its keywords`);
-        if (g.only && !g.only.includes(r.NORAD_CAT_ID)) continue;
-        byId.set(r.NORAD_CAT_ID, pick(r));
-      }
-    }
-    const sets = [...byId.values()].sort((a, b) => a.NORAD_CAT_ID - b.NORAD_CAT_ID);
-    if (!sets.length) throw new Error(`${g.id}: no element sets`);
-    for (const s of sets) newest = Math.max(newest, Date.parse(`${s.EPOCH}Z`));
-    return { id: g.id, sets };
+    const one = parseCelestrakGroup(g, answers.slice(k, k + g.queries.length));
+    k += g.queries.length;
+    for (const s of one.sets) newest = Math.max(newest, Date.parse(`${s.EPOCH}Z`));
+    return one;
   });
   return { data: { groups }, asOf: new Date(newest).toISOString() };
+}
+
+/** One group from its queries' answers: each object once, by catalogue number; throws as `parseCelestrakGp` does. */
+function parseCelestrakGroup(g: (typeof SAT_GROUPS)[number], answers: readonly unknown[]): { id: SatGroupId; sets: OmmRecord[] } {
+  const byId = new Map<number, OmmRecord>();
+  for (const answer of answers) {
+    if (!Array.isArray(answer)) throw new Error(`${g.id}: not a list of element sets`);
+    for (const r of answer) {
+      if (!validOmm(r)) throw new Error(`${g.id}: an element set without its keywords`);
+      if (g.only && !g.only.includes(r.NORAD_CAT_ID)) continue;
+      byId.set(r.NORAD_CAT_ID, pick(r));
+    }
+  }
+  const sets = [...byId.values()].sort((a, b) => a.NORAD_CAT_ID - b.NORAD_CAT_ID);
+  if (!sets.length) throw new Error(`${g.id}: no element sets`);
+  return { id: g.id, sets };
+}
+
+/**
+ * The catalogue from the answers that came (P2.5): a group any of whose
+ * answers failed (null) keeps the snapshot's sets, and says so. The "data as
+ * of" is the newest set of the groups fetched.
+ */
+export function mergeCelestrakGp(answers: readonly unknown[], snapshot: SatelliteCatalog): { data: SatelliteCatalog; asOf: string; parts: string[] } {
+  if (answers.length !== SATELLITE_URLS.length) throw new Error(`${answers.length} answers for ${SATELLITE_URLS.length} queries`);
+  let k = 0, newest = -Infinity;
+  const parts: string[] = [];
+  const groups = SAT_GROUPS.map((g, gi) => {
+    const mine = answers.slice(k, k + g.queries.length);
+    k += g.queries.length;
+    if (mine.some((a) => a === null)) {
+      parts.push(g.id);
+      return snapshot.groups[gi];
+    }
+    const one = parseCelestrakGroup(g, mine);
+    for (const s of one.sets) newest = Math.max(newest, Date.parse(`${s.EPOCH}Z`));
+    return one;
+  });
+  return { data: { groups }, asOf: new Date(newest).toISOString(), parts };
 }
 
 /** The OMM keywords SGP4 uses, and no others (CelesTrak sends no others; a copy keeps the snapshot to them). */

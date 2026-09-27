@@ -1455,6 +1455,7 @@ export const en: Record<string, string> = {
   'data.from.snapshot': 'bundled with this version of Orbitlab',
   'data.from.online': 'fetched now from {source}',
   'data.fallback': 'The online source could not be used ({reason}), so these are the bundled data.',
+  'data.partial': 'Some lists could not be read ({reason}): {parts} from the bundled data, the rest fetched now.',
   'data.failed': 'Could not be loaded: {reason}',
   'data.summary.spaceWeather': 'Latest: F10.7 {flux} sfu on {date} · Kp {kp}',
   'data.set.satellites': 'The satellite catalogue: element sets of the space stations, Thailand\'s satellites, the navigation, weather and Earth-imaging satellites, and a debris cloud',

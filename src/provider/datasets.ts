@@ -13,7 +13,7 @@
  * the user imports.
  */
 import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather, type SpaceWeather } from './space-weather';
-import { SATELLITES_MIN_INTERVAL_MS, SATELLITE_URLS, parseCelestrakGp, validSatelliteCatalog, type SatelliteCatalog } from './satellites';
+import { SATELLITES_MIN_INTERVAL_MS, SATELLITE_URLS, mergeCelestrakGp, parseCelestrakGp, validSatelliteCatalog, type SatelliteCatalog } from './satellites';
 import { validEarthOrientation, type EarthOrientation } from './earth-orientation';
 
 export interface DatasetSource {
@@ -33,7 +33,16 @@ export interface DatasetDef<T> {
    * become the dataset and its "data as of"; null for a dataset whose source a
    * browser cannot read, which comes from its snapshot in either mode
    */
-  online: { urls: readonly string[]; parse(answers: unknown[]): { data: T; asOf: string } } | null;
+  online: {
+    urls: readonly string[];
+    parse(answers: unknown[]): { data: T; asOf: string };
+    /**
+     * P2.5: the dataset from the answers that came, with the snapshot's part
+     * for each that failed (null) — which parts those are; absent: one failed
+     * answer is the whole snapshot
+     */
+    merge?(answers: readonly unknown[], snapshot: T): { data: T; asOf: string; parts: string[] };
+  } | null;
   /** the dataset's data, from whichever side it came: checked, never trusted */
   valid(data: unknown): data is T;
   /**
@@ -65,7 +74,7 @@ export const DATASETS: { readonly [K in DatasetId]: DatasetDef<DatasetTypes[K]> 
     id: 'satellites',
     snapshot: 'data/satellites.json',
     source: { name: 'CelesTrak', url: 'https://celestrak.org/NORAD/elements/' },
-    online: { urls: SATELLITE_URLS, parse: parseCelestrakGp },
+    online: { urls: SATELLITE_URLS, parse: parseCelestrakGp, merge: mergeCelestrakGp },
     valid: validSatelliteCatalog,
     minIntervalMs: SATELLITES_MIN_INTERVAL_MS,
   },

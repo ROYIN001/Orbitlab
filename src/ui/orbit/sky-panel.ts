@@ -479,6 +479,7 @@ export class RealSky {
         : set.fetched ? t('data.from.onlineKept', { source: set.source.name, date: utc(set.fetched) }) : t('data.from.online', { source: set.source.name });
       box.append(el('p', 'pg-note', `${t('sky.asOf', { date: utc(set.asOf) })} · ${from}`));
       if (set.fallback) box.append(el('p', 'pg-note warn', t('data.fallback', { reason: set.fallback })));
+      if (set.partial) box.append(el('p', 'pg-note warn', t('data.partial', { parts: set.partial.parts.map((id) => t(SOURCE_KEY[id as SkySourceId])).join(', '), reason: set.partial.reason })));
     }
     const o = this.selected;
     box.append(el('h2', 'pg-facts-title', o ? (o.el.name ?? t('sky.unnamed')) : t('sky.facts')));

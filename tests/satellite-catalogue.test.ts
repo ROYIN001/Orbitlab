@@ -168,6 +168,32 @@ describe('CelesTrak asked at most once in two hours (R02)', () => {
     expect(second.fallback).toMatch(/not asked again before 2026-09-26T14:00:00\.000Z/);
   });
 
+  it('keeps the snapshot\'s group where one list could not be read, and says which (P2.5)', async () => {
+    const answers = answersFor();
+    // a page cannot read an answer without the cross-origin header: fetch throws
+    const net = (async (url: string) => {
+      if (url === SATELLITE_URLS[0]) throw new TypeError('Failed to fetch');
+      return fakeFetch({ ...answers, [SNAP_URL]: bundled })(url, { signal: new AbortController().signal });
+    }) as unknown as Fetcher;
+    const set = await new OnlineProvider(new OfflineProvider(BASE, net), net, 1000, new MemoryRecent()).load('satellites');
+    expect(set.from).toBe('online');
+    expect(set.partial).toEqual({ parts: ['stations'], reason: 'Failed to fetch' });
+    expect(set.data.groups[0]).toEqual(snap.data.groups[0]);
+    expect(set.data.groups.find((g) => g.id === 'thai')!.sets.map((r) => r.NORAD_CAT_ID)).toEqual([58016]);
+    expect(DATASETS.satellites.valid(set.data)).toBe(true);
+  });
+
+  it('asks nothing more of a host once it refuses (P2.5)', async () => {
+    const answers = { ...answersFor(), [SATELLITE_URLS[2]]: 403, [SNAP_URL]: bundled };
+    const net = fakeFetch(answers);
+    const set = await new OnlineProvider(new OfflineProvider(BASE, net), net, 1000, new MemoryRecent()).load('satellites');
+    expect(net.asked.filter((u) => u.startsWith('https://celestrak.org/'))).toEqual(SATELLITE_URLS.slice(0, 3));
+    // what came before the refusal is used; the rest is the snapshot's
+    expect(set.from).toBe('online');
+    expect(set.partial!.reason).toMatch(/celestrak\.org answered 403/);
+    expect(set.partial!.parts).toEqual(SAT_GROUPS.slice(1).map((g) => g.id));
+  });
+
   it('keeps the answers across reloads in the browser\'s Cache Storage, and in memory without one', async () => {
     const store = new Map<string, string>();
     const caches: RecentCaches = {

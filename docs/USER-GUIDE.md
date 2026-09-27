@@ -109,8 +109,10 @@ uses the data bundled with it, each dated ("data as of …"), and the platform's
 right setting for a closed network, a classroom or no connection. Online also loads the
 interface's web fonts. **Online** fetches current data from the sources that publish them
 and falls back to the bundled copy, saying why, whenever they cannot be reached. The window lists
-each dataset with its date and where it came from. Today there is one, the space weather (the
-solar flux F10.7 and the Kp index, from NOAA), and nothing in the simulation reads it yet.
+each dataset with its date and where it came from: the space weather (the solar flux F10.7 and
+the Kp index, from NOAA), which the orbit lifetime and re-entry read; the satellite catalogue
+(CelesTrak); and the Earth's orientation (the IERS), which is always the bundled copy because the
+IERS cannot be read from a page.
 
 **Installing Orbitlab and using it offline.** The published site can be installed as an app
 (Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
@@ -328,8 +330,9 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   nowhere. Whatever cannot be read is listed, line by line or set by set, with the reason.
 
 Offline (the default) the element sets are the snapshot bundled with this version, dated in the
-right panel. Online they come from CelesTrak, at most once in two hours, as CelesTrak asks, and
-from the snapshot whenever CelesTrak cannot be reached. A published site is rebuilt every day
+right panel. Online they come from CelesTrak, at most once in two hours and one list at a time,
+as CelesTrak asks, and from the snapshot whenever CelesTrak cannot be reached; a list that cannot
+be read keeps its own group from the snapshot, and the panel says which. A published site is rebuilt every day
 with a fresh snapshot. An element set is a fraction of a kilometre to a few kilometres off at
 its epoch, and further as it ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its
 reference.

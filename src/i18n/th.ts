@@ -1435,6 +1435,7 @@ export const th: Record<string, string> = {
   'data.from.snapshot': 'มาพร้อมกับ Orbitlab รุ่นนี้',
   'data.from.online': 'ดึงมาจาก {source} เมื่อสักครู่',
   'data.fallback': 'ใช้แหล่งข้อมูลออนไลน์ไม่ได้ ({reason}) จึงแสดงข้อมูลที่มาพร้อมแอปแทน',
+  'data.partial': 'อ่านบางรายการไม่ได้ ({reason}): {parts} ใช้ข้อมูลที่มากับแอป ส่วนที่เหลือดึงมาใหม่',
   'data.failed': 'โหลดไม่ได้: {reason}',
   'data.summary.spaceWeather': 'ล่าสุด: F10.7 {flux} sfu เมื่อ {date} · Kp {kp}',
   'data.set.satellites': 'แคตตาล็อกดาวเทียม: ชุดค่าองค์ประกอบวงโคจรของสถานีอวกาศ ดาวเทียมของไทย ดาวเทียมนำทาง ดาวเทียมอุตุนิยมวิทยาและดาวเทียมถ่ายภาพโลก และกลุ่มขยะอวกาศ',
