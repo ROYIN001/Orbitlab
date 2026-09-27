@@ -5,8 +5,9 @@
  * nothing here types an answer or changes a locked setting. DOM-free, like
  * `createMcpTools`.
  */
+import { en } from '../i18n/en';
 import type { AssessmentResult } from './assessment/score';
-import type { LessonGrade, Lesson } from './types';
+import { DOMAINS, type LessonGrade, type Lesson } from './types';
 import type { ProgressData } from './progress';
 import { lessonNumber } from './catalog';
 import { MEASURES } from './measures';
@@ -34,6 +35,13 @@ interface Tool {
 
 const record = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {});
 
+/**
+ * The six areas as the lessons' `domains` number them, in the placement
+ * test's own English words (assess.domain.1–6), so the list an assistant
+ * reads cannot drift from the one the student sees.
+ */
+export const AREAS_TEXT = DOMAINS.map((d) => `${d} ${en[`assess.domain.${d}`].toLowerCase()}`).join(', ');
+
 function criterionOut(lesson: Lesson, grade: LessonGrade | null) {
   return lesson.criteria.map((c) => {
     const g = grade?.criteria.find((x) => x.id === c.id);
@@ -57,7 +65,7 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
   return [
     {
       name: 'list_lessons', title: 'List lessons',
-      description: 'Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (1 orbital mechanics, 2 rocket performance, 3 guidance and navigation, 4 attitude control, 5 failures and safety, 6 basics), whether they are written yet, and the student\'s progress.',
+      description: `Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (${AREAS_TEXT}), whether they are written yet, and the student's progress.`,
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       execute: () => {

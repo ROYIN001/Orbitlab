@@ -71,6 +71,16 @@ describe('the lessons over WebMCP', () => {
     expect(out.lessons.filter((l) => l.written)).toHaveLength(21);
   });
 
+  // it once read "1 orbital mechanics, … 5 failures and safety, 6 basics": one off, so an attitude-control lesson (area 5) read as failures
+  it('names the six areas as the lessons number them', () => {
+    const description = tool(host(false), 'list_lessons').description;
+    expect(description).toContain('(1 space basics, 2 orbital mechanics, 3 rocket performance and the atmosphere, 4 guidance and navigation, 5 attitude control, 6 failures and safety)');
+    const areas = (id: string) => BUILTIN_LESSONS.find((l) => l.id === id)!.domains;
+    expect(areas('orbit-first')[0]).toBe(2); // orbital mechanics
+    expect(areas('ctl-inspector')).toContain(5); // attitude control
+    expect(areas('fail-engine-out')[0]).toBe(6); // failures and safety
+  });
+
   it('opens a lesson, and never gives away an answer\'s expected value', () => {
     const h = host(true);
     const started = tool(h, 'start_lesson').execute({ id: 'orbit-first' }) as { ok: boolean; criteria: unknown[] };
