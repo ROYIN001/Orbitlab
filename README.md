@@ -208,7 +208,12 @@ ones, which it does not commit (R02).
 
 The launch section's levels, with the landing page:
 
-- **Home** — the landing page over the live scene. One button plays a launch.
+- **Home** — the landing page over the live scene. One button plays a launch; the ways in and
+  the three sections are below it, reached by scrolling (the scene behind no longer takes the
+  wheel). PROTOTYPE, to be decided: five backgrounds for it, switched from the bar at its foot
+  or with `?home=a` … `?home=e` — A the pad filmed (day, dusk or night), B the page scrolled as
+  the flight, C the first seconds of the launch looped, D the Earth with the real satellites
+  and the Thai ones named, E the rockets side by side to scale (`src/ui/home-logic.ts`).
 - **Watch** — a launch viewer for people with no background in spaceflight: the scene
   fills the window, three big numbers (mission time, altitude in km, speed over the
   ground in km/h) and one plain-language sentence about what the rocket is doing now.

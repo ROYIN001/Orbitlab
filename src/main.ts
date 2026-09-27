@@ -35,6 +35,7 @@ import { OnboardOverlay } from './ui/onboard';
 import { Timeline } from './ui/timeline';
 import { Narration } from './ui/narration';
 import { HomeScreen } from './ui/home';
+import { HomeStage } from './ui/home-stage';
 import './ui/modes.css';
 import './ui/orbit/playground.css';
 import { WatchView } from './ui/watch';
@@ -205,6 +206,10 @@ class App {
   cams = new CameraController();
   panel: SetupPanel;
   home: HomeScreen;
+  /** PROTOTYPE: what the landing page shows behind itself, in each of its five variants */
+  homeStage: HomeStage;
+  /** the landing page draws a globe of its own over the launch scene (prototype D) */
+  private homeCovers = false;
   watch: WatchView;
   /** S01: the Build section while it is being built */
   private sectionScreen: SectionScreen;
@@ -430,10 +435,39 @@ class App {
       state.dynamics = dynamics;
       this.goLive(); this.playing = false; this.panel.restoreMission(state);
     };
-    this.home = new HomeScreen(document.getElementById('home-screen')!, {
-      watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
-      go: (r) => this.go(r),
+    this.homeStage = new HomeStage({
+      previewWatch: (id, launchTime) => {
+        this.goLive();
+        this.playing = false;
+        const settings = watchMissionSettings(id);
+        if (launchTime) settings.launchTime = launchTime;
+        this.panel.loadMission(settings);
+        this.watchPayloadKey = watchMissionById(id)?.payloadKey ?? null;
+        this.updateMissionName();
+      },
+      fly: () => { this.warp = 1; this.playing = true; this.panel.setRunning(true); this.updatePlayButton(); },
+      fastForward: (t) => { this.fastForwardTo = t; },
+      halt: () => { this.playing = false; this.fastForwardTo = null; this.updatePlayButton(); },
+      seekStill: (t) => { this.seek(t); this.player.playing = false; },
+      playReplay: () => { this.replayWarp = 1; this.player.playing = true; },
+      flightNo: () => this.flightNo,
+      headTime: () => this.recorder.headTime,
+      cursor: () => this.player.cursor,
+      live: () => this.player.live,
+      frame: () => this.shown,
+      cams: this.cams,
+      camera: () => (this.scene ? this.scene.camera : null),
+      viewport: this.viewport,
+      coverScene: (on) => { this.homeCovers = on; },
+      textures: () => (this.earthTextures ??= loadEarthTextures(base)),
+      satellites: () => this.dataProvider.load('satellites'),
     });
+    this.home = new HomeScreen(document.getElementById('home-screen')!, {
+      watch: (id) => { this.go(route('launch', 'watch')); this.startWatch(id); },
+      go: (r) => this.go(r),
+      openLessons: () => this.lessons.openCatalog(),
+      vehicleName: () => missionVehicle(this.panel.state).name,
+    }, this.homeStage);
     this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
     this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
       go: (r) => this.go(r),
@@ -565,7 +599,7 @@ class App {
 
   /** O01: the Orbit section's playground is drawn over the whole scene, which need not be drawn under it. */
   private get sceneCovered(): boolean {
-    return this.route.section === 'orbit';
+    return this.route.section === 'orbit' || (this.mode === 'home' && this.homeCovers);
   }
 
   /** The landing page and the viewer: no workspace, the scene is the page. */
@@ -612,6 +646,7 @@ class App {
     if (mode !== 'explore') this.debrief.close();
     if (mode !== 'engineer') this.monteCarlo.close(); // G05: a running set flies on
     document.getElementById('home-screen')!.hidden = next.section !== null;
+    if (previous === 'home' && mode !== 'home') this.homeStage.leave();
     document.getElementById('watch-ui')!.hidden = mode !== 'watch';
     // The two faces fly different camera programmes; re-apply at once.
     this.lastPhase = null;
@@ -720,6 +755,7 @@ class App {
     // page and the viewer open on the featured launch standing on its pad in
     // daylight, and the workspace on the mission it held when it was closed.
     if (await this.openMissionLink()) { /* previewed by the panel */ }
+    else if (this.mode === 'home') { /* the landing page's background sets its own mission up (src/ui/home-stage.ts) */ }
     else if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
     else {
       const stored = loadStoredMission();
@@ -1449,6 +1485,7 @@ class App {
     }
     // The replay cursor runs on its own clock; warp > 1 skips through frames.
     if (sim && !this.player.live && this.player.playing) this.player.advanceCursor(dtReal * this.replayWarp);
+    if (this.mode === 'home') this.homeStage.update(dtReal);
     this.updateVisuals(dtReal);
     this.hudTimer += dtReal;
     if (this.hudTimer > 0.1) {
@@ -1463,6 +1500,7 @@ class App {
         playing: replaying ? this.player.playing : this.playing,
         armed: !!sim,
       });
+      if (this.mode === 'home') this.home.tick(this.shown);
       if (this.mode === 'watch') {
         this.watch.update(this.shown, this.recorder.events, {
           playing: this.playing && this.player.live,
