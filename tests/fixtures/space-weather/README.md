@@ -63,3 +63,30 @@ file from GCAT's `satcat.tsv` and the fetched sets:
 ```sh
 python3 ../reentry/make_stages.py satcat.tsv first/ > ../reentry/stages.json
 ```
+
+## `../reentry/agencies.json` (P2.5 fix-up)
+
+Re-entries predicted the agencies' way (`tests/heavy/reentry-agencies.test.ts`), with the selection,
+the method and the criteria fixed in `docs/VALIDATION.md` §7 before any prediction (commit
+edc9b49). `make_agencies.py` applies the selection and bundles only the sets used: for each object
+and each lead time of 30, 10 and 5 days, two element sets (the one nearest to the lead time before
+the re-entry, within a day, and the one nearest to a week before it, 4 to 12 days), as the archive
+gives their three lines, with GCAT's `DDate`.
+
+- **Objects and re-entries**: GCAT, `satcat.tsv` of 2026-09-24 — payloads and rocket stages
+  (`Type` "P…" or "R…"), status R, `DDate` from 1985-01-01 to 2004-06-30, to the minute where GCAT
+  gives the time, noon for a day. Cite: McDowell, J., *General Catalog of Artificial Space Objects*,
+  <https://planet4589.org/space/gcat>, CC BY 4.0.
+- **Element sets**: J. McDowell's archive of historical element sets
+  (<https://planet4589.org/space/ele.html>, one file per object under
+  `https://planet4589.org/space/elements/NNN00/SNNNNN`, format
+  <https://planet4589.org/space/xtle.html>), fetched 2026-09-27, one request a second, only for the
+  objects the selection names. Only sets whose line 3 gives the origin `NOR` are used: "NORAD and
+  its successors up to 2004, prior to the redistribution restrictions"; the archive's US-government
+  sets "were obtained from other public sources, or else from the GSFC OIG site under agreements
+  that did not restrict redistribution of the data". The owner approved bundling the sets used, with
+  this attribution, on 2026-09-27. No set from CelesTrak or Space-Track is used.
+
+```sh
+python3 ../reentry/make_agencies.py satcat.tsv mcd/ > ../reentry/agencies.json   # fetches what mcd/ lacks
+```

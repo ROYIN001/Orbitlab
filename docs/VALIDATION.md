@@ -1677,6 +1677,7 @@ npx vitest run tests/activity.test.ts tests/propagator.test.ts                  
 npx vitest run tests/conjunction.test.ts tests/overflights.test.ts tests/reentry.test.ts   # the military track, ~6 s
 npx vitest run tests/msis.test.ts tests/earth-orientation.test.ts tests/cdm.test.ts tests/sensors.test.ts tests/case-worksheets.test.ts   # P2.5, ~10 s
 npx vitest run tests/ballistic.test.ts                                           # P2.5: the fitted drag, 66 stages, NAPA-2, ~2 min
+npx vitest run --config vitest.heavy.config.ts tests/heavy/reentry-agencies.test.ts   # P2.5: re-entries the agencies' way, 100 objects
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

@@ -30,7 +30,7 @@ import spheres from './fixtures/space-weather/spheres.json';
 import stages from './fixtures/reentry/stages.json';
 import HISTORY from '../src/data/solar-daily.json';
 import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
-import { ballisticFromDecayRate, ballisticFromSets, craftOfB } from '../src/orbit/ballistic';
+import { B_RANGE, ballisticFromDecayRate, ballisticFromSets, craftOfB } from '../src/orbit/ballistic';
 import { ECCENTRIC, WINDOW_FRACTION, predictReentry, tumblingBoxArea, tumblingCylinderArea, type Reentry } from '../src/orbit/reentry';
 import { NAPA2 } from '../src/data/napa2';
 import { predictFromRequest } from '../src/orbit/reentry-job';
@@ -39,6 +39,7 @@ import { meanStart } from '../src/orbit/mean-state';
 import { R_EARTH } from '../src/physics/constants';
 import type { ElementSet } from '../src/orbit/tle';
 import type { OmmRecord } from '../src/provider/satellites';
+import { AGENCY_OBJECTS, LEADS, epochOf, predictAgencyWay, readSet, type BundledSet, type Lead } from './fixtures/reentry/agencies';
 
 const measured = measuredActivity(HISTORY as SolarDaily, null).series;
 const jdOf = (iso: string): number => Date.parse(iso) / 86400000 + 2440587.5;
@@ -209,6 +210,44 @@ describe('the rocket stages of 2023–2025, from their first element sets (P2.5)
     const other = res.filter((x) => !estimate.includes(x));
     expect([estimate.length, estimate.filter((x) => inside(x.p, x.actual)).length]).toEqual([43, 26]);
     expect([other.length, other.filter((x) => inside(x.p, x.actual)).length]).toEqual([23, 7]);
+  }, 600_000);
+});
+
+describe('re-entries the agencies\' way: the pipeline, on the first five objects (P2.5)', () => {
+  // tests/heavy/reentry-agencies.test.ts holds all 100 to the criteria fixed in VALIDATION.md §7;
+  // this checks only that the fixture is as selected and that the method runs on it
+  it('bundles two readable sets of NORAD origin per lead time, as the selection says', () => {
+    for (const o of AGENCY_OBJECTS) {
+      for (const lead of LEADS) {
+        const pair = (o.sets as Record<Lead, BundledSet[]>)[lead];
+        expect(pair.length).toBe(2);
+        for (const s of pair) {
+          expect(s.line3.slice(14, 20).trim(), `${o.norad} ${lead} d`).toBe('NOR');
+          // the builder's epoch and the app's reader agree
+          expect(Math.abs(epochOf(readSet(s)) - jdOf(s.epoch)) * 86400).toBeLessThan(1);
+        }
+        const [earlier, later] = pair.map(readSet).map(epochOf);
+        expect(Math.abs(jdOf(o.reentry) - Number(lead) - later)).toBeLessThanOrEqual(1);
+        expect(later - earlier).toBeGreaterThanOrEqual(4);
+        expect(later - earlier).toBeLessThanOrEqual(12);
+      }
+    }
+  });
+
+  it.each(AGENCY_OBJECTS.slice(0, 5).map((o) => [`${o.norad} ${o.name}`, o] as const))('%s: fits B and predicts from the later set', (_, o) => {
+    for (const lead of LEADS) {
+      const p = predictAgencyWay(o, lead);
+      const later = epochOf(readSet((o.sets as Record<Lead, BundledSet[]>)[lead][1]));
+      expect(p.from).toBeCloseTo(later, 9);
+      if (p.b !== null) {
+        expect(p.b).toBeGreaterThanOrEqual(B_RANGE[0]);
+        expect(p.b).toBeLessThanOrEqual(B_RANGE[1]);
+      }
+      if (p.jd !== null) {
+        expect(p.jd).toBeGreaterThan(p.from);
+        expect(Number.isFinite(p.error!)).toBe(true);
+      }
+    }
   }, 600_000);
 });
 
