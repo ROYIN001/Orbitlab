@@ -8,10 +8,12 @@
  * The satellite is where SGP4 puts it (src/orbit/real-sky.ts), turned into
  * the Earth-fixed frame by the sidereal time of UT1 and the pole's wander
  * (src/orbit/earth-orientation.ts, P2.5); a dish's look angles are
- * src/orbit/applications.ts's, on the WGS-84 ellipsoid. Heights
- * are geometric, without refraction, as an almanac prints them: near the
- * horizon the air lifts a satellite by about half a degree, so it is seen a
- * few seconds before its listed rise.
+ * src/orbit/applications.ts's, on the WGS-84 ellipsoid. Heights are
+ * geometric unless the search is asked for the air's refraction
+ * (src/orbit/visibility.ts, P2.5): then a pass rises and sets at the horizon
+ * one sees, the air lifting a satellite there by about half a degree, a few
+ * seconds before and after the geometric one. How bright a pass is, where
+ * the satellite has a standard magnitude, is `brightest`'s.
  *
  * The search samples the elevation finely enough not to step over a pass
  * (1/60 of a revolution, never more than a minute), refines each highest
@@ -26,8 +28,9 @@
 import { R_EARTH } from '../physics/constants';
 import { sunDirectionEci } from '../physics/orbital';
 import { v3, type Vec3 } from '../physics/vec3';
-import { lookAngles, type GroundStation } from './applications';
+import { geodeticToEcef, lookAngles, type GroundStation } from './applications';
 import { temeToItrf } from './earth-orientation';
+import { phaseAngle, refraction, visualMagnitude } from './visibility';
 import { minutesSinceEpoch, sgp4 } from './sgp4';
 import { skyFacts, type SkyObject } from './real-sky';
 
@@ -82,10 +85,12 @@ export function lookFrom(o: SkyObject, st: GroundStation, jd: number): Look | nu
   return { jd, az: la.azimuth, el: la.elevation, range: la.range, sunlit: inSunlight(r, jd), sunEl: sunElevation(st, jd) };
 }
 
-/** The elevation alone, for the search (−π/2 where SGP4 gives nothing). */
-function elevation(o: SkyObject, st: GroundStation, jd: number): number {
+/** The elevation alone, for the search (−π/2 where SGP4 gives nothing); as seen, with refraction, when asked. */
+function elevation(o: SkyObject, st: GroundStation, jd: number, refract: boolean): number {
   const r = positionAt(o, jd);
-  return r ? lookAngles(st, temeToItrf(r, jd)).elevation : -Math.PI / 2;
+  if (!r) return -Math.PI / 2;
+  const el = lookAngles(st, temeToItrf(r, jd)).elevation;
+  return refract ? el + refraction(el) : el;
 }
 
 export interface Pass {
@@ -126,12 +131,13 @@ function crossing(f: (jd: number) => number, level: number, a: number, b: number
 
 /**
  * Every pass of the satellite over `st` between Julian dates `jd0` and `jd1`
- * above `minEl` (rad; 0 is the geometric horizon). A satellite that never
- * sets over the window — a geostationary one — gives one pass with neither
- * rise nor set; one that never rises gives none.
+ * above `minEl` (rad; 0 is the horizon), the elevation geometric or, with
+ * `refraction`, as seen. A satellite that never sets over the window — a
+ * geostationary one — gives one pass with neither rise nor set; one that
+ * never rises gives none.
  */
-export function findPasses(o: SkyObject, st: GroundStation, jd0: number, jd1: number, minEl = 0): Pass[] {
-  const f = (jd: number) => elevation(o, st, jd);
+export function findPasses(o: SkyObject, st: GroundStation, jd0: number, jd1: number, minEl = 0, opts: { refraction?: boolean } = {}): Pass[] {
+  const f = (jd: number) => elevation(o, st, jd, !!opts.refraction);
   const step = Math.min(60, skyFacts(o).period / 60) / 86400;
   const n = Math.ceil((jd1 - jd0) / step);
   const ts: number[] = [], es: number[] = [];
@@ -177,6 +183,36 @@ export function findPasses(o: SkyObject, st: GroundStation, jd0: number, jd1: nu
       culminations, top, visible: b - a < 0.5 ? visibleWithin(o, st, a, b) : null,
     };
   });
+}
+
+/**
+ * The satellite's magnitude seen from `st` at `jd` for its standard
+ * magnitude (fully lit at 1000 km): null when it is in the Earth's shadow.
+ */
+export function magnitudeAt(o: SkyObject, st: GroundStation, jd: number, standard: number): number | null {
+  const r = positionAt(o, jd);
+  if (!r || !inSunlight(r, jd)) return null;
+  const sat = temeToItrf(r, jd), site = geodeticToEcef(st);
+  const s = sunDirectionEci(jd);
+  // the Sun's direction turned with the Earth, as a far point
+  const far = 1.496e11, sun = temeToItrf(v3(s.x * far, s.y * far, s.z * far), jd);
+  const sn = Math.hypot(sun.x, sun.y, sun.z);
+  const range = Math.hypot(site.x - sat.x, site.y - sat.y, site.z - sat.z);
+  return visualMagnitude(standard, range, phaseAngle(sat, site, v3(sun.x / sn, sun.y / sn, sun.z / sn)));
+}
+
+/** The brightest moment of a pass's visible stretch, sampled every 10 s, for a standard magnitude; null when it is never seen. */
+export function brightest(o: SkyObject, st: GroundStation, p: Pass, standard: number): { jd: number; magnitude: number } | null {
+  if (!p.visible) return null;
+  let best: { jd: number; magnitude: number } | null = null;
+  const { from, to } = p.visible;
+  const n = Math.max(2, Math.ceil((to - from) * 86400 / 10));
+  for (let k = 0; k <= n; k++) {
+    const jd = from + ((to - from) * k) / n;
+    const m = magnitudeAt(o, st, jd, standard);
+    if (m !== null && (!best || m < best.magnitude)) best = { jd, magnitude: m };
+  }
+  return best;
 }
 
 /** The first stretch, between `a` and `b`, when the satellite is sunlit and the observer's sky is dark. */

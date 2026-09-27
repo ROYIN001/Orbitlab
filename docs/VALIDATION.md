@@ -27,7 +27,7 @@ Status on 2026-09-27:
 | Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§5), 2026-09-26 |
 | SGP4/SDP4 (R01) | The verification of AIAA 2006-6753 (SGP4-VER.TLE, tcppver.out); CelesTrak's documented element set | Every line of the reference output reproduced (§6), 2026-09-26 |
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
-| Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.34 s, angles within 0.005° (§6), 2026-09-27 |
+| Passes (R03, P2.5) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places; Skyfield's refraction | Every event found; times within 0.34 s, angles within 0.005°; refraction within 0.07′ (§6), 2026-09-27 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 | Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −4.1 to +16.6 % (§7), 2026-09-27 |
 | Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
@@ -1115,10 +1115,32 @@ made them). The tolerances were set before the comparison.
 - The figures are with the IERS's UT1 and pole (P2.5); with UTC for UT1, as first compared, they
   were 0.35 s, 0.11 s, 0.004°, 0.003° and 43 m. The small change is Skyfield's own prediction of
   UT1 for these dates (above).
-- Elevations are geometric. Refraction lifts a satellite on the horizon by about half a degree,
-  so it is seen some seconds before its listed rise. The page says so.
+- The comparison is of geometric elevations, as Skyfield's fixture has them; the page shows them as
+  seen, with the air's refraction (P2.5, below).
 - A pass of half a day or more belongs to a high orbit (GPS, a geostationary satellite). Its
   visibility is not worked out: such a satellite is too faint to see with the eye.
+
+### Passes as they are seen (P2.5)
+
+The page lists passes as an observer sees them (`src/orbit/visibility.ts`, `findPasses` with
+refraction): the air lifts a satellite by Sæmundsson's refraction, R = 1.02′ / tan(h + 10.3/(h +
+5.11)) at 1010 hPa and 10 °C (J. Meeus, *Astronomical Algorithms*, 2nd ed., eq. 16.4), so a pass
+rises and sets at the horizon one sees. Its brightness is estimated from the satellite's standard
+magnitude, fully lit at 1000 km, in M. McCants's Quicksat table of observers' estimates
+(`src/data/standard-magnitudes.json`, the file of 2020-09-14, 3166 satellites), with the lit
+fraction of a sphere as the phase law: m = m₀ + 5 log₁₀(d / 1000 km) − 2.5 log₁₀((1 + cos φ)/2).
+`tests/visibility.test.ts` holds them. The refraction's tolerance, 0.005°, was fixed before the
+comparison.
+
+| check | reference | model | tolerance |
+| --- | --- | --- | --- |
+| the apparent elevation of 17 true ones, −0.5° to 89°, at 10 °C, 1010 hPa | Skyfield 1.55 (`earthlib.refract`: Bennett's formula solved for the apparent altitude) | within 0.066′, at the horizon | 0.005° (0.3′) |
+| half lit against fully lit | the 0.8 magnitude between Molczan's and McCants's conventions | 0.753 | — |
+| the ISS's rises and sets over Bangkok, three days | geometric ones | 1 to 39 s sooner and later, a grazing pass the most | 1–120 s |
+
+**Findings.** McCants's table has not been updated since 2020, so satellites launched since have no
+standard magnitude, and the page gives them none rather than a guess. The phase law is the
+observers' simple one; a satellite's panels catching the Sun flare brighter than any of it.
 
 ### How far off an element set may be (R04)
 

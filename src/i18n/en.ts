@@ -1245,7 +1245,8 @@ export const en: Record<string, string> = {
   'pass.day': 'Not to be seen: the sky is light',
   'pass.shadow': 'Not to be seen: in the Earth\'s shadow',
   'pass.faint': 'Too far to see with the eye',
-  'pass.note': 'Times are your device\'s ({zone}). Heights are geometric, without the air\'s refraction, which lifts a satellite on the horizon by about half a degree. A satellite can be seen when it is in sunlight and the Sun is 6° or more below your horizon.',
+  'pass.note': 'Times are your device\'s ({zone}). Heights are as seen: the air\'s refraction lifts a satellite on the horizon by about half a degree, so it rises a few seconds sooner than it would without air. A satellite can be seen when it is in sunlight and the Sun is 6° or more below your horizon. Brightness is a magnitude (smaller is brighter; the brightest stars are about 0 to 1), estimated from the satellite\'s standard magnitude in M. McCants\'s table of observers\' estimates, for the satellites it lists; panels catching the Sun can flare brighter.',
+  'pass.bright': 'brightest about magnitude {mag}',
   // R04: the uncertainty of an element set (src/orbit/uncertainty.ts)
   'unc.row': 'Position error (estimate)',
   'unc.value': 'about {km} km, ±{s} s along the track',

@@ -261,9 +261,10 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
 - **Passes over** a place, under the satellite's figures: choose a city or type coordinates (they
   stay in the page), and the lowest elevation that counts. The next three days' passes are
   listed, each with when the satellite rises, is highest and sets, in which direction and how
-  high. Each pass also says whether you can see it: only when the satellite is in sunlight and
-  your sky is dark (the Sun 6° or more below the horizon). The first line counts down to the next
-  pass. Times are your device's clock. The map draws the place, and the circle of ground from
+  high as you see it (the air's refraction included). Each pass also says whether you can see it:
+  only when the satellite is in sunlight and your sky is dark (the Sun 6° or more below the
+  horizon), and, for a satellite with a standard magnitude, about how bright it gets (a magnitude:
+  smaller is brighter). The first line counts down to the next pass. Times are your device's clock. The map draws the place, and the circle of ground from
   which the satellite is above that elevation.
 - **Position error (estimate)** says how far off the satellite may be: an element set does not
   carry its own accuracy, so the page estimates it from published studies, from the kind of orbit

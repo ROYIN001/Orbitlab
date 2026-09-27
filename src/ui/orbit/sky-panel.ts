@@ -35,7 +35,8 @@ import { THAI_SATELLITES } from '../../data/thai-satellites';
 import type { TleField } from '../../orbit/tle';
 import type { Sgp4Error } from '../../orbit/sgp4';
 import { button, el, num, span } from './dom';
-import { DARK_SKY, findPasses, lookFrom, type Look, type Pass } from '../../orbit/passes';
+import { brightest, DARK_SKY, findPasses, lookFrom, type Look, type Pass } from '../../orbit/passes';
+import { apparentElevation, loadStandardMagnitudes, type StandardMagnitudes } from '../../orbit/visibility';
 import { compass, placeName, stationPicker, type StationChoice } from './applications-panel';
 import { stationOf } from '../../orbit/applications-setup';
 import { footprintAngle } from '../../orbit/applications';
@@ -117,6 +118,8 @@ export class RealSky {
   private place: StationChoice = { stationId: 'bangkok', station: stationOf('bangkok')! };
   private minEl = 10 * Math.PI / 180;
   private passes: { key: string; list: Pass[]; from: number; until: number } | null = null;
+  /** P2.5: the satellites' standard magnitudes (McCants), for how bright a pass is */
+  private magnitudes: StandardMagnitudes | null = null;
   /** M01: the screening's settings, and the last one run (or running) */
   private conj = { within: 5e3, days: 3, radius: 10, open: false };
   private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; stop: boolean } | null = null;
@@ -136,6 +139,7 @@ export class RealSky {
     this.status = { state: 'loading' };
     // P2.5: the Earth's orientation, for placing the satellites over the ground; without it UT1 is taken for UTC
     const eop = this.host.provider().load('earthOrientation').then((set) => set.data, () => null);
+    loadStandardMagnitudes().then((m) => { this.magnitudes = m; }, () => { this.magnitudes = null; });
     this.host.provider().load('satellites').then(
       async (set) => { setEarthOrientation(await eop); this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); },
       (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); },
@@ -809,7 +813,8 @@ export class RealSky {
   private passList(o: SkyObject): Pass[] {
     const key = `${o.key}|${this.place.station.lat}|${this.place.station.lon}|${this.minEl}`;
     if (this.passes && this.passes.key === key && this.jd >= this.passes.from && this.jd < this.passes.until) return this.passes.list;
-    const list = findPasses(o, this.place.station, this.jd, this.jd + 3, this.minEl).slice(0, PASS_LIMIT);
+    // P2.5: as seen, the air's refraction included
+    const list = findPasses(o, this.place.station, this.jd, this.jd + 3, this.minEl, { refraction: true }).slice(0, PASS_LIMIT);
     // the list is good until its first pass is over (or, with none, for a day)
     const first = list[0];
     const until = first ? (first.set?.jd ?? this.jd + 3) : this.jd + 1;
@@ -858,7 +863,7 @@ export class RealSky {
     if (!list.length) { box.append(el('p', 'pg-note', t('pass.none', { el: deg(this.minEl) }))); return box; }
     if (list.length === 1 && !list[0].rise && !list[0].set) {
       const top = list[0].top;
-      box.append(el('p', 'pg-note', t('pass.always', { el: deg(top.el), dir: compass(top.az) })));
+      box.append(el('p', 'pg-note', t('pass.always', { el: deg(apparentElevation(top.el)), dir: compass(top.az) })));
       return box;
     }
     this.live.next = el('p', 'pg-pass-next');
@@ -872,7 +877,7 @@ export class RealSky {
       const td = el('td');
       if (!l) { td.textContent = '—'; return td; }
       td.append(el('span', 'pg-pass-time', clockTime(l.jd)));
-      const where = showEl ? `${deg(l.el)} ${compass(l.az)}` : compass(l.az);
+      const where = showEl ? `${deg(apparentElevation(l.el))} ${compass(l.az)}` : compass(l.az);
       td.append(el('span', 'pg-pass-where', engineer ? `${where} · ${num(l.az * 180 / Math.PI, 0)}°` : where));
       return td;
     };
@@ -884,7 +889,11 @@ export class RealSky {
       const row = el('tr');
       row.append(cell(p.rise, false), cell(p.top, true), cell(p.set, false));
       const seen = el('tr', 'pg-pass-seen');
-      const seenText = visibility(p, o, this.place);
+      let seenText = visibility(p, o, this.place);
+      // P2.5: how bright, for a satellite with a standard magnitude
+      const standard = this.magnitudes?.[String(o.el.satnum)];
+      const bright = standard !== undefined ? brightest(o, this.place.station, p, standard) : null;
+      if (bright) seenText += ` · ${t('pass.bright', { mag: num(bright.magnitude, 1) })}`;
       // R04, Engineer: how early or late the pass may come, from the set's age at that time
       const seenCell = el('td', undefined, engineer ? `${seenText} · ${t('unc.passTiming', { s: num(uncertaintyAt(o, p.top.jd).timing, 1) })}` : seenText);
       seenCell.colSpan = 3;
@@ -908,7 +917,7 @@ export class RealSky {
       if (this.jd < start) L.next.textContent = t('pass.next', { span: span((start - this.jd) * 86400) });
       else {
         const look = lookFrom(o, this.place.station, this.jd);
-        L.next.textContent = look ? t('pass.upNow', { el: `${num(look.el * 180 / Math.PI, 0)}°`, dir: compass(look.az) }) : '';
+        L.next.textContent = look ? t('pass.upNow', { el: `${num(apparentElevation(look.el) * 180 / Math.PI, 0)}°`, dir: compass(look.az) }) : '';
       }
     }
     const s = skyState(o, this.jd);
