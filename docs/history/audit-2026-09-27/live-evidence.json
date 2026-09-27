@@ -1,0 +1,279 @@
+{
+  "revision": "c03f163d4d9d93a7ac361b85b9e285730041d465",
+  "date": "2026-09-27",
+  "bandwagonEvents": {
+    "hasMission": true,
+    "count": 24,
+    "totalCount": 24,
+    "events": [
+      {
+        "timeS": -2.50000000000016,
+        "key": "evt.ignition",
+        "severity": "major",
+        "params": {
+          "stage": "First stage (9× Merlin 1D)"
+        }
+      },
+      {
+        "timeS": 0.009999999999831111,
+        "key": "evt.liftoff",
+        "severity": "major",
+        "params": {
+          "twr": 1.43
+        }
+      },
+      {
+        "timeS": 52.71999999999791,
+        "key": "evt.maxQ",
+        "severity": "info",
+        "params": {
+          "q": 23,
+          "alt": 7.5
+        }
+      },
+      {
+        "timeS": 133.70502261099395,
+        "key": "evt.meco",
+        "severity": "major",
+        "params": {
+          "stage": "First stage (9× Merlin 1D)",
+          "n": 1
+        }
+      },
+      {
+        "timeS": 133.71502261099394,
+        "key": "evt.aeroEnvelopeExceeded",
+        "severity": "warn",
+        "params": {
+          "scope": "vehicle",
+          "name": "First stage (9× Merlin 1D)",
+          "bodyId": "vehicle",
+          "configurationId": "fairing|payload|s1.equipment|s1.fuel|s1.oxidizer|s1.rcs|s1.structure|s2.equipment|s2.fuel|s2.oxidizer|s2.rcs|s2.structure",
+          "modelVersion": "sixdof-1",
+          "angleOfAttackRad": -0.020951852643050675,
+          "sideslipRad": -0.26119117151430976
+        }
+      },
+      {
+        "timeS": 136.70502261099122,
+        "key": "evt.stageSep",
+        "severity": "success",
+        "params": {
+          "stage": "First stage (9× Merlin 1D)",
+          "n": 1,
+          "alt": 63,
+          "speed": 2016
+        }
+      },
+      {
+        "timeS": 136.70502261099122,
+        "key": "evt.debrisSeparated",
+        "severity": "info",
+        "params": {
+          "scope": "debris",
+          "name": "First stage (9× Merlin 1D)",
+          "bodyId": "debris.1",
+          "configurationId": "s1.equipment|s1.fuel|s1.oxidizer|s1.rcs|s1.structure",
+          "modelVersion": "sixdof-1",
+          "angleOfAttackRad": -0.03367590429736305,
+          "sideslipRad": -0.32387280720341116
+        }
+      },
+      {
+        "timeS": 140.70502261098758,
+        "key": "evt.ignition",
+        "severity": "major",
+        "params": {
+          "stage": "Second stage (Merlin Vacuum)"
+        }
+      },
+      {
+        "timeS": 156.8450226109729,
+        "key": "evt.boostbackStart",
+        "severity": "info",
+        "params": {
+          "name": "First stage (9× Merlin 1D)"
+        }
+      },
+      {
+        "timeS": 185.15502261094716,
+        "key": "evt.fairingSep",
+        "severity": "success",
+        "params": {
+          "alt": 103
+        }
+      },
+      {
+        "timeS": 188.82502261094382,
+        "key": "evt.debrisSeparated",
+        "severity": "info",
+        "params": {
+          "scope": "debris",
+          "name": "fairing",
+          "bodyId": "debris.2",
+          "configurationId": "fairing",
+          "modelVersion": "sixdof-1",
+          "angleOfAttackRad": -0.08705591251697758,
+          "sideslipRad": 0.2472789450999844
+        }
+      },
+      {
+        "timeS": 189.08502261094358,
+        "key": "evt.debrisSeparated",
+        "severity": "info",
+        "params": {
+          "scope": "debris",
+          "name": "fairing",
+          "bodyId": "debris.3",
+          "configurationId": "fairing",
+          "modelVersion": "sixdof-1",
+          "angleOfAttackRad": -0.08710927855683673,
+          "sideslipRad": 0.24724373326773116
+        }
+      },
+      {
+        "timeS": 201.7150226109321,
+        "key": "evt.boostbackEnd",
+        "severity": "info",
+        "params": {
+          "name": "First stage (9× Merlin 1D)"
+        }
+      },
+      {
+        "timeS": 333.41502261081234,
+        "key": "evt.entryBurnStart",
+        "severity": "info",
+        "params": {
+          "name": "First stage (9× Merlin 1D)"
+        }
+      },
+      {
+        "timeS": 444.6050226107112,
+        "key": "evt.landingBurnStart",
+        "severity": "info",
+        "params": {
+          "name": "First stage (9× Merlin 1D)"
+        }
+      },
+      {
+        "timeS": 461.5750226106958,
+        "key": "evt.boosterLandedZone",
+        "severity": "success",
+        "params": {
+          "name": "First stage (9× Merlin 1D)",
+          "speed": 2.9261260225505157,
+          "tiltDeg": 0.20531463427713195,
+          "verticalSpeed": -2.925688233778191,
+          "horizontalSpeed": 0.050614805928215,
+          "zone": "LZ-1",
+          "miss": 2,
+          "lat": 28.49,
+          "lon": -80.54
+        }
+      },
+      {
+        "timeS": 479.85502261067916,
+        "key": "evt.seco",
+        "severity": "major",
+        "params": {
+          "stage": "Second stage (Merlin Vacuum)"
+        }
+      },
+      {
+        "timeS": 479.85502261067916,
+        "key": "evt.parkingOrbit",
+        "severity": "success",
+        "params": {
+          "ap": 588,
+          "pe": 200,
+          "inc": 45.4,
+          "dv": 3771
+        }
+      },
+      {
+        "timeS": 481.105022610678,
+        "key": "evt.burnScheduled",
+        "severity": "info",
+        "params": {
+          "kind": "shapeAtApoapsis",
+          "dv": 110,
+          "tgo": 2753,
+          "dur": 2
+        }
+      },
+      {
+        "timeS": 3234.1900389379,
+        "key": "evt.ignition",
+        "severity": "major",
+        "params": {
+          "stage": "Second stage (Merlin Vacuum)"
+        }
+      },
+      {
+        "timeS": 3234.1900389379,
+        "key": "evt.burnStart",
+        "severity": "major",
+        "params": {
+          "kind": "shapeAtApoapsis",
+          "stage": "Second stage (Merlin Vacuum)"
+        }
+      },
+      {
+        "timeS": 3236.9000389379594,
+        "key": "evt.burnComplete",
+        "severity": "success",
+        "params": {
+          "kind": "shapeAtApoapsis",
+          "ap": 596,
+          "pe": 586,
+          "inc": 45.4
+        }
+      },
+      {
+        "timeS": 3238.1500389379594,
+        "key": "evt.targetOrbit",
+        "severity": "success",
+        "params": {
+          "ap": 595,
+          "pe": 586,
+          "inc": 45.4,
+          "raan": 196.5,
+          "period": 97,
+          "dv": 3649,
+          "apAltM": 594794.6546320794,
+          "peAltM": 586112.3831728492
+        }
+      },
+      {
+        "timeS": 3253.1500389379594,
+        "key": "evt.payloadSep",
+        "severity": "success",
+        "params": {
+          "name": "CubeSat rideshare dispenser",
+          "satId": "cubesats"
+        }
+      }
+    ]
+  },
+  "monteCarlo": {
+    "state": "stopped",
+    "completed": 1,
+    "total": 20
+  },
+  "csv": {
+    "ok": true,
+    "filename": "orbitlab_falcon9_leo.csv",
+    "bytes": 1308674
+  },
+  "assessmentFlow": {
+    "submitted": 1,
+    "skipped": 24,
+    "lesson11Passed": true
+  },
+  "desktopWidth": 1282,
+  "mobileViewport": {
+    "width": 390,
+    "height": 844
+  },
+  "note": "Observed test results only; not a fleet or complete lesson acceptance test."
+}
