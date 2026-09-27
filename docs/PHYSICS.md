@@ -1917,6 +1917,9 @@ top of the search, 115 % of the rating); the others date from the previous wave:
 | Electron | > 0.30 t | > 0.30 t | 0.2 t / 0.30 t | — |
 | Starship | > 100 t | > 100 t | — | 21.2 t / 27 t |
 
+The Falcon 9 and Falcon Heavy rows predate the published first-stage masses
+([VALIDATION.md](VALIDATION.md), F1 and F11) and have not been re-measured since.
+
 "The largest payload that passes the acceptance criteria" is not the same thing as "the largest
 payload delivered": a flight can reach a perfectly good orbit and still miss the criteria on
 apsis accuracy or on the mission clock.
@@ -2308,7 +2311,8 @@ every recovered body is flown downrange, unchanged. A plan changes the propellan
 body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for Falcon 9 and
 Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 15 %
 touches down with 13.0 t to spare, measured with Falcon 9's published first-stage masses; 12 %
-leaves Arabsat-6A's side boosters short of their boostback), a drone-ship or downrange body keeps
+leaves Arabsat-6A's side boosters short of their boostback, and 13 % lands them 7 m off,
+measured with the same published masses on all three cores), a drone-ship or downrange body keeps
 `recoveryReserve`, and a body the plan expends, or leaves out, holds nothing back.
 
 The plan is checked with the rest of the configuration (`validateConfigInput`): a landing zone has
@@ -2402,16 +2406,18 @@ tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 |---|---|---|---|
 | Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.2 m |
 | | six-DOF | first stage → LZ-1 | 1.6 m |
-| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.0 m, 0.0 m |
-| | | core → drone ship, ~930 km downrange | 0.0 m |
-| | six-DOF | side boosters → LZ-1, LZ-2 | 0.8 m, 0.8 m |
-| | | core → drone ship | 0.7 m |
+| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.3 m, 0.2 m |
+| | | core → drone ship, ~930 km downrange | 2.1 m |
+| | six-DOF | side boosters → LZ-1, LZ-2 | 1.7 m, 1.6 m |
+| | | core → drone ship | 1.6 m |
 | Starship (15.6 t, 500 km) | point mass | Super Heavy → tower | 0.0 m, caught |
 | | six-DOF | Super Heavy → tower | 0.3 m, caught at 2.4 m/s down, 0.45 m/s across, 0.5° |
 
 The Falcon 9 rows were re-measured on 2026-09-25 with the published first-stage masses
 (VALIDATION.md). The rows they replace (0.0 m and 0.8 m) were already out of date: with the
 earlier masses the same harness now gives 0.7 m and 1.5 m.
+The Falcon Heavy rows were re-measured on 2026-09-27 with the same masses on its three cores
+and Falcon 9's max-Q bucket (VALIDATION.md, F11).
 
 The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
 real flight.
@@ -2780,7 +2786,8 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     telemetry of five flights) and ten others against published timelines
     ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
     - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
-    - Falcon Heavy's first stages cut off ~18 % early.
+    - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
+      published.
     - PSLV-XL's first stage is 29 % slow at separation, the cost of the linear solid-motor taper.
     - H3's first stage flies far flatter than JAXA's plan.
     - The heating placard drops most fairings 10–50 % early.

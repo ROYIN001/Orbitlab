@@ -304,7 +304,8 @@ Phase 2, real satellites and the military track, continues on the same branch:
   Falcon 9's first stage flies its published masses and its six-DOF pitch programme is fitted to
   the flights. Among what is left and recorded:
   - Electron's second stage burns ~25 % short.
-  - Falcon Heavy's first stages cut off ~18 % early.
+  - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
+    published.
   - PSLV-XL's first stage is 29 % slow at separation.
   - H3's first stage flies far flatter than planned.
   - Most fairings come off 10–50 % early.
