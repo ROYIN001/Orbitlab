@@ -28,7 +28,8 @@ export type ValidationCode = 'required' | 'number' | 'minimum' | 'maximum' | 'in
 export interface ValidationIssue { field: string; code: ValidationCode; limit?: number }
 
 /** Bounds are in the stored SI/degree units; UI and WebMCP convert at the edge. */
-export const GUIDANCE_FIELDS: Record<string, { key: keyof GuidanceParams; scale: number; range: [number, number] }> = {
+// `closedLoopStart` (C01) is a vehicle's own figure, not a setting: it is not offered here
+export const GUIDANCE_FIELDS: Record<string, { key: Exclude<keyof GuidanceParams, 'closedLoopStart'>; scale: number; range: [number, number] }> = {
   pitchOverAltitudeM: { key: 'pitchOverAltitude', scale: 1, range: [20, 5000] },
   kickAngleDeg: { key: 'kickAngle', scale: 1, range: [0, 45] },
   kickDurationS: { key: 'kickDuration', scale: 1, range: [1, 60] },

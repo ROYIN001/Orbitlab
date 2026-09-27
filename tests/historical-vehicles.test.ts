@@ -78,7 +78,7 @@ describe('historical vehicles', () => {
 const fly = (id: WatchMissionId) => {
   const s = watchMissionSettings(id);
   const sim = new Simulation({
-    vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime,
+    vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
     payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
     failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
   }, { headless: true });
@@ -144,7 +144,7 @@ describe('Apollo 11, point-mass', () => {
   it('shuts the centre engines down, drops the interstage ring and the tower, and shifts the S-II\'s mixture on the flown timeline', { timeout: 300_000 }, () => {
     const s = watchMissionSettings('apollo11');
     const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime,
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
       payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
       failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
     }, { headless: true });
@@ -161,8 +161,12 @@ describe('Apollo 11, point-mass', () => {
     expect(sim.vehicle.stages[1].spec.dryMass).toBe(vehicleById('saturnv').stages[1].dryMass - 4591);
     massAt(200);
     expect(sim.vehicle.jettisoned.tower).toBe(true);
+    // the gravity turn flown across the staging to T+204.1 s, as the tilt programme held until the iterative guidance
+    expect(sim.state.ascentPhase).toBe('gravityTurn');
     expect(payload0 - sim.vehicle.payloadMass).toBe(4042);
     // the S-II after its mixture shift: 770.7 kN an engine, four of them
+    massAt(210);
+    expect(sim.state.ascentPhase).toBe('closedLoop');
     massAt(500);
     expect(sim.vehicle.stages[1].spec.engine.thrustVac).toBeCloseTo(770.7e3, 3);
     expect(sim.vehicle.stages[1].engineFraction).toBeCloseTo(0.8, 9);
@@ -173,5 +177,10 @@ describe('Apollo 11, point-mass', () => {
     expect(Math.abs(at('evt.towerJettison')! - 197.9)).toBeLessThan(1.5);
     // the vehicle's own spec is never touched
     expect(vehicleById('saturnv').stages[1].engine.thrustVac).toBe(1028.3e3);
+    // and Apollo stays on the S-IVB in the parking orbit
+    massAt(740);
+    expect(sim.events.some((e) => e.key === 'evt.targetOrbit')).toBe(true);
+    expect(sim.state.payloadSeparated).toBe(false);
+    expect(sim.events.some((e) => e.key === 'evt.payloadSep')).toBe(false);
   });
 });

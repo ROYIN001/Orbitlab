@@ -239,7 +239,9 @@ export class AscentGuidance {
     // Hand over to closed-loop steering once the angle-of-attack budget is wide
     // enough for the command to be followed (q below ~4 kPa), or at the
     // altitude ceiling as a fallback.
-    if (this.phase === 'gravityTurn' && ((inp.q < 4000 && inp.altitude > 25e3 && inp.t > 30) || inp.altitude >= p.gravityTurnEnd)) {
+    const fixedHandover = p.closedLoopStart !== undefined;
+    if (this.phase === 'gravityTurn' && (fixedHandover ? inp.t >= p.closedLoopStart!
+      : (inp.q < 4000 && inp.altitude > 25e3 && inp.t > 30) || inp.altitude >= p.gravityTurnEnd)) {
       this.phase = 'closedLoop';
     }
 
@@ -473,7 +475,8 @@ export class AscentGuidance {
         // Blend toward the closed-loop command as the atmosphere thins out.
         const wQ = inp.t > 30 && inp.altitude > 20e3 ? smoothstep((12000 - inp.q) / 8000) : 0;
         const blendWidth = 20e3;
-        const w = Math.max(wQ, smoothstep((inp.altitude - (p.gravityTurnEnd - blendWidth)) / blendWidth));
+        // a hand-over fixed in time (`closedLoopStart`) is not blended in early
+        const w = fixedHandover ? 0 : Math.max(wQ, smoothstep((inp.altitude - (p.gravityTurnEnd - blendWidth)) / blendWidth));
         if (w > 0) {
           const cl = closedLoopDir();
           dir = normalize(add(scale(vDir, 1 - w), scale(cl, w)));

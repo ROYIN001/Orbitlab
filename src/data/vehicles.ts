@@ -966,7 +966,7 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     ],
     sites: ['ksc39a'], maxQ: 45e3, maxAccel: 40,
     crewCapable: true,
-    guidanceDefaults: { kickAngle: 3.5, maxTurnRate: 0.5, pitchMax: 40, loftAltitude: 0 },
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.5, pitchMax: 40, loftAltitude: 0, closedLoopStart: 204.1 },
     guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3, kickDuration: 12, maxTurnRate: 0.5 },
     notes: 'The Moon rocket: five F-1s, five J-2s and one restartable J-2 on three stages, 2,938 t at ignition. Apollo 11\'s flew on 16 July 1969.',
   },

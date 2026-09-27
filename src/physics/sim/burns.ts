@@ -779,7 +779,7 @@ export class BurnSequencer {
     });
     const st = this.sim.vehicle.active;
     if (st) this.sim.vehicle.cutoffStage(st, s.t);
-    if (!s.payloadSeparated) this.sim.schedule(s.t + 15, 'payloadSep', () => this.sim.staging.separatePayload(false));
+    if (!s.payloadSeparated && !this.sim.satellite.staysAttached) this.sim.schedule(s.t + 15, 'payloadSep', () => this.sim.staging.separatePayload(false));
   }
 
   /**

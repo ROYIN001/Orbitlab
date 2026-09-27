@@ -26,6 +26,8 @@ export function expectFlownMr3(sim: Simulation): void {
   expect(sim.isFailed(), log).toBe(false);
   expect(sim.state.status).toBe('landed');
   expect(sim.state.abort?.kind).toBe('return');
+  // flown from Launch Complex 5 itself, 14 km south of the Cape's own point
+  expect(sim.site.latitude).toBe(28.43944);
   const at = (key: string) => sim.events.find((e) => e.key === key);
   expect(at('evt.suborbitalTarget'), log).toBeDefined();
   // three retros from 314 s, drogue 578 s, main 615 s, splashdown 922 s

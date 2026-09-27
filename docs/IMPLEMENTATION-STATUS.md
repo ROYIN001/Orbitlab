@@ -94,7 +94,7 @@ throughout.
 
 | | Site 1/5, Gagarin's Start | Site 31/6 | Source |
 |---|---|---|---|
-| Position | 45.920°N 63.342°E | 45.996°N 63.564°E | en.wikipedia (drawn at the site's own point) |
+| Position | 45.920°N 63.342°E | 45.996°N 63.564°E | en.wikipedia (drawn at the site's own point; a mission that names the pad, flown from it — C01) |
 | Pit | 250 m long, 100 m wide, 45 m deep | 135 × 32 m, 24 m deep | Site 1: Roscosmos, elementy (50 m deep in Техника—молодёжи 1991); Site 31: "scaled down", at least 20 m deep where the service cabin fell in 2025 (Habr, iXBT); its length and width are estimates |
 | Direction the pit runs | 300° | 250° | estimates: no source gives them |
 | Launch table opening | 15 m | 15 m | ESA, on the Kourou copy of the Baikonur design |
@@ -196,7 +196,7 @@ first stage's drone-ship reserve sized for its return, found on Demo-2 — done;
 (4) Sputnik 1 and Vostok 1 on the first R-7s (8K71PS, 8K72K), vehicles of historical flights
 kept out of the fleet matrix and held to their own flights — done; (5) Mercury-Redstone 3 from LC-5,
 the Mercury capsule flown home on its own after a suborbital cut-off (retros, drogue, main,
-splashdown), within 12 km of Freedom 7's splashdown in both models — done; (6) Apollo 11 on
+splashdown), within 11–16 km of Freedom 7's splashdown in both models, flown from LC-5 itself — done; (6) Apollo 11 on
 Saturn V, the whole mission to the Moon and back, in seven steps: (6a) the Saturn V to the parking
 orbit, with planned engine shutdowns, the mixture shift and the jettisons, LC-39A as in 1969 — done;
 (6b) the S-IVB's restart for the Moon and the LM's extraction; (6c) the Moon in the model; (6d) lunar

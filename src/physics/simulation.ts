@@ -207,7 +207,12 @@ export class Simulation {
         this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...faulted, flex } : faulted);
       }
     }
-    this.site = siteById(cfgIn.siteId);
+    // C01: a mission that names its pad (`padId`) flies from the pad itself — LC-5,
+    // 14 km south of the Cape's point; Gagarin's Start, 6 km from Baikonur's —
+    // and is planned from there; without one, from the site's own point
+    const site = siteById(cfgIn.siteId);
+    const pad = cfgIn.padId ? site.pads?.find((p) => p.id === cfgIn.padId) : undefined;
+    this.site = pad ? { ...site, latitude: pad.latitude, longitude: pad.longitude } : site;
     this.vehicleSpec = missionVehicle(cfgIn.vehicleId, satelliteById(cfgIn.satelliteId));
     // Per-vehicle guidance defaults fill in every parameter the caller left at
     // the library default, so the UI (and any caller that does not merge them

@@ -88,7 +88,7 @@ describe('viewer missions', () => {
     const s = watchMissionSettings(id, FROM[0]);
     const dynamics = defaultDynamics(s.vehicleId);
     const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit,
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
       launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
       guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
       failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,
@@ -104,7 +104,7 @@ describe('viewer missions', () => {
     const s = watchMissionSettings(id, FROM[0]);
     const dynamics = defaultDynamics(s.vehicleId);
     const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit,
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
       launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
       guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
       failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,

@@ -236,9 +236,10 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // LC-5 on azimuth 105° to a 187.5 km apogee and a splashdown 487 km
   // downrange after 15 min 22 s. The arc is the conic through the flown
   // separation state (74.3 km, 2,252 m/s inertial at 39.0° up): perigee
-  // −6,214 km. Postlaunch report (June 1961) and NASA TM X-53107.
+  // −6,214 km; the plane between the flown heading and the recovery point
+  // (docs/PHYSICS.md §13.7). Postlaunch report (June 1961) and NASA TM X-53107.
   { id: 'mr3', vehicleId: 'mercuryredstone', siteId: 'cape', satelliteId: 'mercury', orbitId: 'custom', payloadMass: 1832.6, padId: 'lc5',
-    orbit: { perigee: -6214e3, apogee: 187.5e3, inclination: 30.55, raanMode: 'free', suborbital: true, descending: true }, launchTime: '1961-05-05T14:34:13Z',
+    orbit: { perigee: -6214e3, apogee: 187.5e3, inclination: 30.3, raanMode: 'free', suborbital: true, descending: true }, launchTime: '1961-05-05T14:34:13Z',
     flown: { events: [
       { key: 'evt.maxQ', t: 84 }, { key: 'evt.seco', t: 141.8 }, { key: 'evt.payloadSep', t: 152.3 },
     ], orbit: { perigee: -6214, apogee: 187.5, inclination: 30.55, approx: true } },

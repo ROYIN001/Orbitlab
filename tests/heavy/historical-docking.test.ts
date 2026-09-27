@@ -26,7 +26,7 @@ describe('historical flights to the station', () => {
   it.each(['soyuzMs16', 'soyuzMs25'] as WatchMissionId[])('%s docks close to the real docking', { timeout: 900_000 }, (id) => {
     const s = watchMissionSettings(id);
     const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime,
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
       payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
       failure: s.failure, boosterRecovery: false, rendezvous: s.rendezvous, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
     }, { headless: true });

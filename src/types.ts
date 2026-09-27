@@ -317,6 +317,12 @@ export interface SatelliteSpec {
    * (C01: Mercury), which lets a vehicle with no ship to fly home take one.
    */
   descent?: 'mercury';
+  /**
+   * Rides the last stage into orbit and stays on it: the Apollo spacecraft
+   * stayed on the S-IVB through the parking orbit (C01), where every other
+   * payload is let go 15 s after the target orbit is reached.
+   */
+  staysAttached?: boolean;
 }
 
 export interface GuidanceParams {
@@ -328,6 +334,14 @@ export interface GuidanceParams {
   kickDuration: number;
   /** Altitude at which zero-AoA gravity turn hands over to closed-loop guidance, m */
   gravityTurnEnd: number;
+  /**
+   * Mission time, s, the gravity turn is flown to whatever the dynamic pressure
+   * and altitude, across staging, before closed-loop guidance takes over (C01:
+   * the Saturn V, whose tilt programme froze at the S-IC's cut-off and whose
+   * iterative guidance took over at T+204.1 s). Absent: the hand-over is at
+   * thin air (`AscentGuidance`) or `gravityTurnEnd`, the rule for every other vehicle.
+   */
+  closedLoopStart?: number;
   /** Target altitude for the initial (parking) orbit, m */
   parkingAltitude: number;
   /** Closed-loop planning horizon cap, s (limits lofting for weak upper stages) */

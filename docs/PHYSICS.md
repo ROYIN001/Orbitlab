@@ -2832,8 +2832,8 @@ of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad i
 **13.7 Mercury-Redstone 3.** The vehicle `mercuryredstone` in `HISTORICAL_VEHICLES`, the spacecraft
 `mercury` in src/data/satellites.ts, the capsule's flight home `MERCURY_CAPSULE` in
 src/physics/rigid/escape.ts. Alan Shepard's Freedom 7, 5 May 1961, 14:34:13 UTC, from Launch Complex
-5 at the Cape (28.43944° N, 80.57333° W; drawn there, flown from the Cape site's own point 14 km
-north, as every pad is). Sources: NASA, *Postlaunch Report for Mercury-Redstone No. 3* (June 1961),
+5 at the Cape (28.43944° N, 80.57333° W, 14 km south of the Cape site's point: a mission that
+names its pad, `padId`, flies from the pad's own point). Sources: NASA, *Postlaunch Report for Mercury-Redstone No. 3* (June 1961),
 PR; NASA TM X-53107, *The Mercury-Redstone Project* (1964), TM.
 
 | | Value | Source |
@@ -2847,9 +2847,13 @@ PR; NASA TM X-53107, *The Mercury-Redstone Project* (1964), TM.
 | Parachutes | 6 ft drogue at 21,000 ft (6.4 km, T+9:38.1); 63 ft ring-sail main, 290 m², at 10,600 ft (3.23 km, T+10:14.8) | PR |
 | Arc | separation at T+2:32.3, 74.3 km, 2,252 m/s inertial at 39.01° up; apogee 187.5 km; 487.3 km down range; splashdown T+15:22 at 27°13.7' N, 75°53' W | PR |
 
-The target is the conic through the flown separation state: 187.5 km apogee, perigee −6,214 km,
-inclination 30.55° — from the inertial heading, 101.6°; the Earth-fixed 105.2° gives 31.95°, and a
-splashdown 48 km too far south. `OrbitSpec.descending` makes the plan fly the southbound of the two
+The target is the conic through the flown separation state: 187.5 km apogee, perigee −6,214 km.
+The flown heading, 105.2° Earth-fixed at the separation, is an inclination of 30.55° taken as inertial
+(101.6°) — but the model's arc, flown from LC-5, then curves on to land 17–21 km south of the
+recovery point. The report's splashdown point is itself 7 km short of its 487.3 km range (a
+great circle from LC-5 of 480.4 km, bearing 105.17°), so the two cannot both be met; the target's
+inclination is **30.3°**, between them: the separation heading 104.8° (0.4° off the flown), the
+splashdown 11–16 km from the recovery point, 490–496 km down range. `OrbitSpec.descending` makes the plan fly the southbound of the two
 launch solutions, as MR-3 did out of the Cape; without it the plane is flown north-east. The drag
 coefficients, the parachutes' reefing and the capsule's inertia are estimates.
 
@@ -2869,8 +2873,8 @@ Model − flight, s, and the landing:
 | | Max-Q | Cut-off | Separation | 1st retro | Drogue | Main | Splashdown | Peak g | Down range | From the real splashdown |
 |---|---|---|---|---|---|---|---|---|---|---|
 | Flown | 84 (28.1 kPa) | 141.8 | 152.3 | 314.1 | 578.1 | 614.8 | 922.0 | 11.0 | 487.3 km | — |
-| Point-mass | −10.2 (31.2 kPa) | −5.5 | −5.5 | −5.2 | −9.5 | −10.9 | −15.8 | 11.6 | 496 km | 11.9 km |
-| Six-DOF | −10.4 (30.9 kPa) | −5.6 | −5.6 | −5.6 | −9.8 | −11.2 | −16.1 | 11.3 | 490 km | 5.6 km |
+| Point-mass | −10.2 (31.2 kPa) | −5.5 | −5.5 | −5.2 | −9.5 | −10.9 | −15.8 | 11.6 | 496 km | 16.4 km |
+| Six-DOF | −10.4 (30.9 kPa) | −5.6 | −5.6 | −5.6 | −9.8 | −11.2 | −16.1 | 11.3 | 490 km | 11.4 km |
 
 The model's Redstone burns out 5.5 s early on the same arc, and everything after is timed from the
 separation, so it follows. Max-Q comes 10 s early and 3 kPa higher: the gravity turn is steeper low
@@ -2915,11 +2919,16 @@ shutdown and four to the LOX's end at T+161.63 s, the 28.4 t left over is carrie
 73 t burned on the pad before that is left out, so the stack weighs 2,838 t at liftoff, about what
 flew (2,938 t at ignition), and 825 t at the S-IC's cut-off (827.3 t flown); the S-II's is 2.6 t over what the published
 flows burn to T+548.22 s (the thrust build-up from ESC to mainstage, 3 s flown, is not modelled), taken
-from its residual. The ullage-motor propellant rides with the ring until it drops. The rocket leaves
-from the site's point with the Earth's rotation, not its flown liftoff at T+0.63 s. The model flies
-its own gravity turn and closed-loop steering, not the Saturn V's time-based tilt programme and
-iterative guidance mode (from T+204.1 s); the kick (3.5° at 0.5°/s) was set so that the S-IC hands
-over at the flown speed. The launch escape tower, the SLA and the CSM are drawn from the flight
+from its residual. The ullage-motor propellant rides with the ring until it drops. The clock's zero is range zero; the
+flown liftoff, T+0.63 s, is not modelled. The model flies a gravity turn where the Saturn V flew a
+time-based tilt programme, frozen at the S-IC's cut-off: along the air-relative velocity, its kick
+(3° at 0.5°/s) set so that the S-IC hands over at the flown state; and from T+204.1 s, as the
+Saturn V's iterative guidance mode did, its own closed-loop steering. The hand-over time is new in
+the guidance (`GuidanceParams.closedLoopStart`): without it every vehicle's gravity turn hands over
+in thin air (q under 4 kPa, above 25 km), which for the Saturn V is 115 s into the S-IC's burn — it
+flattened the S-IC, put it 6 km low at its cut-off and had the S-II climb at a 20° angle of attack
+just after staging. The Apollo spacecraft stays on the S-IVB in the parking orbit
+(`SatelliteSpec.staysAttached`), as it did until after the translunar injection. The launch escape tower, the SLA and the CSM are drawn from the flight
 manual's proportions; the tower's colour is a guess.
 
 Model − flight, s:
@@ -2927,16 +2936,19 @@ Model − flight, s:
 | | Max-Q | CECO | OECO | Sep. | Ring | Tower | S-II CECO | Mixture | S-II cut-off | Sep. | S-IVB cut-off | Orbit, km |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Flown | 83.0 (35.2 kPa) | 135.20 | 161.63 | 162.30 | 192.3 | 197.9 | 460.62 | ≈ 498 | 548.22 | 549.00 | 699.33 | 183.2 × 186.0 |
-| Point-mass | −6.1 (36.8 kPa) | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | +0.1 | ±0.0 | +9.2 | 180 × 183 |
-| Six-DOF | −6.1 (38.0 kPa) | ±0.0 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.5 | +0.4 | +13.2 | 174 × 183 |
+| Point-mass | −6.3 (35.7 kPa) | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | +0.1 | ±0.0 | −2.2 | 180 × 183 |
+| Six-DOF | −6.1 (38.0 kPa) | ±0.0 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.5 | +0.4 | +6.1 | 174 × 183 |
 
-Everything the stages do on their own clocks happens on time. What the guidance decides does not: the
-S-IC, turned over sooner than the tilt programme turned it, passes max-Q 6 s early and hands over 6 km
-low (60 against 66.1 km) though at the flown speed (2,803 against 2,764 m/s), and the S-II, which has
-to climb from there, reaches its cut-off 13 km lower (174 against 187.3 km) and 40–65 m/s slower, which
-the S-IVB makes up in 9–13 s more burn. In six-DOF the S-II's pitch-up just after staging, at 0.5 kPa,
-takes the stack past the aerodynamic table's 15° (a disclosure, `evt.aeroEnvelopeExceeded`, not a
-load: the flown vehicle held its attitude until T+204 s).
+The stages' own clocks keep the flown times. The S-IC hands over at 69 km and 2,753 m/s point-mass,
+66 km and 2,791 m/s six-DOF (66.1 km and 2,764 m/s flown), and the S-II at 186 and 183 km, 6,946 and
+6,894 m/s (187.3 km and 6,910 m/s); the S-IVB then cuts off 2 s early and 6 s late. Max-Q, 35.7 and 38 kPa
+against 35.2, comes 6 s early whatever the kick: the flown peak was broad and flat, and where on it the
+maximum falls moves with the day's air, which the model's standard atmosphere is not. The orbits are
+3–9 km under the flown perigee, inside the model's acceptance band. In six-DOF the S-II's closed-loop
+steering takes its angle of attack past the aerodynamic table's 15° at T+218 s, 108 km up, where the
+dynamic pressure is under 1 Pa: the disclosure every six-DOF flight in the fleet makes once where its
+steering leaves the table in thin air (`evt.aeroEnvelopeExceeded`; Soyuz at T+124 s, Falcon 9 at
+T+123 s, H-IIA at T+104 s), not a load.
 
 ## Glossary (EN / RU / TH)
 
