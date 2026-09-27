@@ -30,7 +30,7 @@ import { downloadBlob } from '../download';
 export interface WorksheetHost {
   /** the flight on screen, and whether it has ended (the answers need all of it) */
   flight(): { flight: WsFlight; ended: boolean } | null;
-  /** the lesson the flight on screen goes with, if any */
+  /** the lesson the flight on screen was flown in, if any (not merely the one open now) */
   lesson(): Lesson | null;
   /** the case lesson open now: its sheet (null while its data are read) and whether its key may be had yet */
   caseLesson?(): { lesson: CaseLesson; sheet: Worksheet | null; keyOpen: boolean } | null;

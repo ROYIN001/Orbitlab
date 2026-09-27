@@ -27,6 +27,7 @@ import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
 import { gradeCaseLesson } from '../../lessons/case-grader';
+import { FlightLessons } from '../../lessons/flight-lessons';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
@@ -128,6 +129,8 @@ export class LessonMode implements LessonToolsHost {
   private lastStripKey = '';
   /** what the Orbit section was last told of the case lesson open */
   private orbitKey = 'null';
+  /** E05: the lesson each flight was flown in, for its worksheet's title */
+  private readonly flights = new FlightLessons<Simulation, Lesson>();
 
   constructor(private readonly host: LessonHost) {
     this.locks = new PanelLocks(host.panelRoot);
@@ -389,6 +392,7 @@ export class LessonMode implements LessonToolsHost {
     const started = flightStarted(sim);
     if (started && !a.counted) {
       a.counted = true;
+      this.flights.claim(sim, lesson);
       lessonProgress(this.progressData, a.lesson.id).attempts++;
       this.save();
     }
@@ -1031,18 +1035,13 @@ export class LessonMode implements LessonToolsHost {
       flight: () => {
         const sim = this.host.sim();
         if (!sim || !flightStarted(sim)) return null;
-        return { flight: sim, ended: flightEnded(this.flightLesson() ?? {}, sim) };
+        return { flight: sim, ended: flightEnded(this.flights.lessonOf(sim) ?? {}, sim) };
       },
-      lesson: () => this.flightLesson(),
+      // the lesson the flight on screen was flown in, not the one open now (a case lesson, another flight's)
+      lesson: () => this.flights.lessonOf(this.host.sim()),
       caseLesson: () => this.caseSheet(),
       progress: () => this.progressData,
     }, this.content);
-  }
-
-  /** The open lesson, when it is a flight lesson. */
-  private flightLesson(): Lesson | null {
-    const l = this.active?.lesson;
-    return l && !isCaseLesson(l) ? l : null;
   }
 
   /** The open case lesson's sheet, from its frozen data, in the language on screen; the key only once it gives nothing away. */

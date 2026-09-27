@@ -6,6 +6,9 @@
 import { describe, expect, it } from 'vitest';
 import { emptyProgress, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
 import { awaitingAnswers, regradeAnswers } from '../src/lessons/grader';
+import { FlightLessons } from '../src/lessons/flight-lessons';
+import { worksheetSource } from '../src/worksheets/build';
+import type { WsFlight } from '../src/worksheets/flight-questions';
 import { createLessonTools, type LessonToolsHost } from '../src/lessons/mcp-tools';
 import { BUILTIN_LESSONS, allLessons } from '../src/lessons/catalog';
 import { chartSvg, niceStep, radarSvg } from '../src/lessons/assessment/figures';
@@ -85,6 +88,25 @@ describe('an answer shown to the student', () => {
     const store = memory();
     saveProgress(p, store);
     expect(loadProgress(store).lessons['orbit-first'].revealed).toEqual({ period: [94.6] });
+  });
+});
+
+// E05: the Worksheets tab titled a flight's sheet with whatever lesson was open, a case lesson opened afterwards included
+describe('the lesson a flight belongs to', () => {
+  it('is the one it was flown in, whatever is open when its sheet is made, and none for a flight flown outside a lesson', () => {
+    const owners = new FlightLessons<WsFlight, typeof BUILTIN_LESSONS[number]>();
+    const flight = (siteId: string) => ({ cfg: { vehicleId: 'falcon9', siteId, launchTime: new Date('2026-09-15T12:00:00Z') } }) as unknown as WsFlight;
+    const inLesson = flight('cape'), outside = flight('baikonur');
+    const first = BUILTIN_LESSONS[0], second = BUILTIN_LESSONS[1];
+    owners.claim(inLesson, first);
+    // opening another lesson later does not take the flight over
+    owners.claim(inLesson, second);
+    expect(owners.lessonOf(inLesson)).toBe(first);
+    expect(owners.lessonOf(outside)).toBeNull();
+    expect(owners.lessonOf(null)).toBeNull();
+    // the sheet's source, which titles it and seeds the students' numbers, follows
+    expect(worksheetSource({ lesson: owners.lessonOf(inLesson) ?? undefined, flight: inLesson })).toBe(`lesson:${first.id}`);
+    expect(worksheetSource({ lesson: owners.lessonOf(outside) ?? undefined, flight: outside })).toBe('mission:falcon9:baikonur:2026-09-15T12:00:00.000Z');
   });
 });
 
