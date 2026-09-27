@@ -30,7 +30,7 @@ import {
 } from '../../orbit/real-sky';
 import type { Orbit, OrbitState } from '../../orbit/kepler';
 import type { OrbitView } from '../../render/orbit-view';
-import type { GroundTrackView } from './ground-track';
+import { alongside, type GroundTrackView, type TrackOverlay, type TrackPath } from './ground-track';
 import { THAI_SATELLITES } from '../../data/thai-satellites';
 import type { TleField } from '../../orbit/tle';
 import type { Sgp4Error } from '../../orbit/sgp4';
@@ -47,7 +47,7 @@ import { cdmCovariances, cdmProbability, parseCdm, type ConjunctionMessage } fro
 import { encounterPlane, encounterPlaneSvg } from '../../orbit/encounter-plane';
 import { rtnAxes, rtnToFrame, type Mat3 } from '../../orbit/conjunction';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
-import { canImage, sensorFor, type ImagingVerdict, type Sensor } from '../../orbit/sensors';
+import { canImage, reachEdges, sensorFor, type ImagingVerdict, type Sensor } from '../../orbit/sensors';
 import { ECCENTRIC, predictReentry, tumblingBoxArea, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
 import { runReentryJob, type DragFrom } from '../../orbit/reentry-job';
 import { ballisticFromDecayRate, craftOfB } from '../../orbit/ballistic';
@@ -67,6 +67,8 @@ export interface SkyHost {
   refreshFacts(): void;
   /** put an orbit in the playground (the picked satellite's, now) */
   toPlayground(orbit: Orbit, label: string): void;
+  /** P2.5: show the map (the ground track), for what is drawn on it */
+  showMap?(): void;
 }
 
 /** A file larger than this is not read: a whole catalogue is a few MB. */
@@ -134,6 +136,10 @@ export class RealSky {
   private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; abort: AbortController } | null = null;
   /** P2.5: the close approach shown in the views and with its encounter plane */
   private shownApproach: Conjunction | null = null;
+  /** P2.5: the overflight drawn on the map, with its instrument's reach */
+  private shownOverflight: Overflight | null = null;
+  /** P2.5: the map's lines for what is shown, kept while it stays the same */
+  private mapCache: { key: string; overlay: Pick<TrackOverlay, 'paths' | 'band' | 'marks'> } | null = null;
   private focus3dKey = '';
   /** P2.5: a conjunction data message read from a file, and the combined radius used with it */
   private cdm: { file: string; msg: ConjunctionMessage | null; error: string | null; radius: number } | null = null;
@@ -279,11 +285,59 @@ export class RealSky {
     const now = sel ? this.stateAt(sel, jd) : null;
     const stateOf = sel && now ? (tt: number) => this.stateAt(sel, jd + tt / 86400) ?? now : null;
     track.draw(stateOf, 0, jd, sel ? skyFacts(sel).period : 5400, {
+      ...this.mapOverlay(sel),
       points: this.count ? { latlon: this.latlon, count: this.count, label: t(SOURCE_KEY[this.source]) } : undefined,
       // R03: where the passes are seen from, and the ground the satellite is above the lowest elevation for
       station: sel ? { lat: this.place.station.lat, lon: this.place.station.lon } : undefined,
       footprint: sel && now ? Math.max(0, footprintAngle(Math.hypot(now.r.x, now.r.y, now.r.z), this.minEl)) : undefined,
     });
+  }
+
+  /**
+   * What the map adds for what is shown (P2.5): an overflight's pass with the
+   * edges of the ground its instrument can reach; the ground a re-entry may
+   * come down on (the track over the window when it is two days or less, the
+   * band of latitudes the orbit covers when it is longer); the point below a
+   * close approach.
+   */
+  private mapOverlay(sel: SkyObject | null): Pick<TrackOverlay, 'paths' | 'band' | 'marks'> {
+    const f = sel && this.shownOverflight?.object.key === sel.key ? this.shownOverflight : null;
+    const r = sel && this.reentryResult?.state === 'done' && this.reentryResult.result?.window && this.reentryResult.key.startsWith(`${sel.key}|`) ? this.reentryResult.result : null;
+    const c = sel && this.screening?.key.startsWith(`${sel.key}|`) ? this.shownApproach : null;
+    const key = `${sel?.key}|${f?.pass.top.jd}|${r?.jd}|${c?.approach.tca}|${getLang()}`;
+    if (this.mapCache?.key === key) return this.mapCache.overlay;
+    const ground = (o: SkyObject, jd0: number, jd1: number, step: number): { lat: number; lon: number }[] => {
+      const pts: { lat: number; lon: number }[] = [];
+      for (let jd = jd0; jd <= jd1; jd += step / 86400) { const s = skyState(o, jd); if (s.error === 0) pts.push({ lat: s.lat, lon: s.lon }); }
+      return pts;
+    };
+    const paths: TrackPath[] = [], marks: NonNullable<TrackOverlay['marks']> = [];
+    let band: TrackOverlay['band'];
+    if (f && sel) {
+      const pts = ground(sel, f.pass.top.jd - 8 / 1440, f.pass.top.jd + 8 / 1440, 10);
+      paths.push({ pts, color: '#ffffff', width: 2, label: t('map.pass') });
+      const sensor = sensorFor(sel.el.satnum);
+      const top = skyState(sel, f.pass.top.jd);
+      if (sensor && top.error === 0) {
+        for (const d of reachEdges(sensor, top.alt)) paths.push({ pts: alongside(pts, d), color: '#7ddba0', width: 1.4, dash: [5, 3], label: t('map.reach') });
+      }
+    }
+    if (r && sel && r.window) {
+      if (r.window[1] - r.window[0] <= 2) {
+        paths.push({ pts: ground(sel, r.window[0], r.window[1], 60), color: 'rgba(255, 110, 90, 0.8)', width: 2.5, label: t('map.reentryTrack') });
+      } else {
+        const i = Math.min(sel.sat.inclo, Math.PI - sel.sat.inclo);
+        band = { from: -i, to: i, color: '#ff6e5a', label: t('map.reentryBand', { lat: num((i * 180) / Math.PI, 1) }) };
+      }
+    }
+    if (c && sel) {
+      const s = skyState(sel, c.approach.tca);
+      if (s.error === 0) marks.push({ lat: s.lat, lon: s.lon, label: t('map.tca'), color: '#ffd28a' });
+      paths.push({ pts: ground(c.other, c.approach.tca - 10 / 1440, c.approach.tca + 10 / 1440, 15), color: '#ff8a65', width: 1.6, dash: [6, 3], label: t('map.other') });
+    }
+    const overlay = { paths, band, marks };
+    this.mapCache = { key, overlay };
+    return overlay;
   }
 
   /** The group's points, moved to the moment on screen: every frame, or four times a second for a large group. */
@@ -538,6 +592,7 @@ export class RealSky {
   /** Every pass of the group on screen over the place, from the moment on screen, a few satellites at a time. */
   private async findOverflights(): Promise<void> {
     const run = { key: this.overKey(), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Overflight[], stop: false };
+    this.shownOverflight = null;
     this.overSearch = run;
     this.host.refresh();
     const list = await overflightsInSlices(this.objects(), this.place.station, run.from, run.from + this.over.days, this.over.minEl, (f) => {
@@ -628,6 +683,19 @@ export class RealSky {
       })));
       const sensor = sensorFor(f.object.el.satnum);
       if (sensor) li.append(this.sensorLine(sensor, f, engineer));
+      // P2.5: the pass on the map, with what the instrument reaches
+      const shown = this.shownOverflight === f;
+      li.classList.toggle('shown', shown);
+      li.append(button('watch-btn link', shown ? t('over.hideMap') : t('over.showMap'), () => {
+        this.shownOverflight = shown ? null : f;
+        if (!shown) {
+          this.jd = top.jd - 2 / 1440;
+          this.stale = true;
+          if (this.selectedKey !== f.object.key) this.select(f.object.key);
+          this.host.showMap?.();
+        }
+        this.host.refreshFacts();
+      }));
       if (engineer) {
         const h = Math.floor(f.solarTime), m = Math.floor((f.solarTime - h) * 60);
         li.append(el('div', 'pg-conj-more', t('over.more', {

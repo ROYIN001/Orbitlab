@@ -178,6 +178,8 @@ export class OrbitPlayground {
       refresh: () => { if (this.mode === 'sky') { this.renderControls(); this.renderFacts(); } },
       refreshFacts: () => { if (this.mode === 'sky') this.renderFacts(); },
       toPlayground: (orbit, label) => this.fromSky(orbit, label),
+      // on a phone the view is above the panel: bring it into sight
+      showMap: () => { this.setView('track'); this.views.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); },
     });
     this.tabs.setAttribute('role', 'tablist');
     this.views.append(...VIEWS.map((v) => this.canvases[v]), this.hint);

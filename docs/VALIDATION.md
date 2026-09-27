@@ -1429,6 +1429,10 @@ angles, for one, are the tasking limits, not what the satellites can turn to).
   the place is on agrees with its longitude against the point below the satellite and the heading
   (every pass more than 100 km off the track), and the incidence agrees with the off-nadir angle by
   the sine rule on a sphere, within 0.5°.
+- **The ground an instrument reaches**, drawn on the map (`reachEdges`): Sentinel-1's band of
+  incidence, 29.1° to 46.0° from 693 km, reaches 344 to 617 km to the right of the track on a
+  sphere, 273 km across for its published 250 km (held to 10 %, worked out before the test was
+  written); a fixed camera's edges are its swath's, an agile one's its pointing reach either side.
 - **Revisits as the missions publish them.** The tolerance — at least one image possible in the
   published period, from 2026-09-26 12:00 UTC — was fixed before the run:
 

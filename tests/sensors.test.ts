@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { SENSORS } from '../src/data/sensors';
-import { canImage, groundReach, sensorFor, sensorOf, type Sensor } from '../src/orbit/sensors';
+import { canImage, groundAtIncidence, groundReach, reachEdges, sensorFor, sensorOf, type Sensor } from '../src/orbit/sensors';
 import { overflights, type Overflight } from '../src/orbit/overflights';
 import { skyObjects, type SkyObject } from '../src/orbit/real-sky';
 import { elementsFromRecord } from '../src/orbit/omm';
@@ -60,6 +60,26 @@ describe('the instruments\' table (P2.5)', () => {
     expect(Math.abs((far + near) / 1270e3 - 1)).toBeLessThan(0.02);
     const olci = sensorFor(41335)!;
     expect(Math.abs(olci.shift - (far - near) / 2)).toBeLessThan(5e3);
+  });
+});
+
+describe('the ground an instrument reaches, for the map (P2.5)', () => {
+  it('spans Sentinel-1\'s interferometric swath with its band of incidence', () => {
+    // 29.1°–46.0° from 693 km: 344 to 617 km to the right, 273 km for the published 250 km — worked out
+    // on a sphere before this test was written, and held to 10 %
+    const [near, far] = reachEdges(sensorFor(39634)!, 693e3);
+    expect(near).toBeGreaterThan(0);
+    expect(Math.abs((far - near) / 250e3 - 1)).toBeLessThan(0.1);
+    expect(groundAtIncidence(0, 693e3)).toBe(0);
+  });
+
+  it('puts a fixed camera\'s edges at its swath, an agile one\'s at its reach, and a radar of unknown side on both', () => {
+    expect(reachEdges(sensorFor(39084)!, 705e3)).toEqual([-92.5e3, 92.5e3]);
+    const [l, r] = reachEdges(sensorFor(38012)!, 694e3);
+    expect(r).toBeCloseTo(groundReach((47 * Math.PI) / 180, 694e3), 6);
+    expect(l).toBe(-r);
+    expect(reachEdges(sensorFor(32382)!, 798e3)).toHaveLength(4);
+    expect(reachEdges(sensorFor(44804)!, 509e3)).toEqual([]);
   });
 });
 

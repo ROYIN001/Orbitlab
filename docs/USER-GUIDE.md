@@ -249,7 +249,10 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   instrument can make of it: a camera needs daylight and the place inside its swath (Landsat,
   Sentinel-2) or within the angle it can turn to (Pléiades, WorldView, THEOS-2); a radar
   (Sentinel-1, COSMO-SkyMed, ALOS) sees by night and through cloud, but only to its side and within
-  its band of incidence angles. **Only when its instrument can image the place** keeps just those.
+  its band of incidence angles. **Only when its instrument can image the place** keeps just those,
+  and **Show on the map** under a pass picks the satellite, sets the clock two minutes before and
+  draws the pass on the ground track with the edges of the ground its instrument can reach: a
+  camera's swath or pointing reach either side, a radar's band on its side.
   Engineer adds the distance from the ground track, the local solar time, the timing
   uncertainty and a link to the instrument's source. It is when the place *could* be seen, not
   that it is: that takes the operator's tasking and, for a camera, a clear sky.
@@ -260,7 +263,9 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   for an object read from a file with several of its sets (a history you downloaded), to how far
   it fell between the first and the last — or from a mass, mean cross-section and C_D you give.
   An eccentric orbit, a stage left in a transfer orbit, is carried step by step with the Sun's and
-  the Moon's pull, which takes some seconds. More than a year away, the orbit lifetime analysis is
+  the Moon's pull, which takes some seconds. The ground track then shows where it may come down:
+  its track through the window when the window is two days or less, and otherwise the band of
+  latitudes its orbit covers (a satellite can fall anywhere under its orbit). More than a year away, the orbit lifetime analysis is
   the tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
   their first element sets and sets each prediction beside the re-entry on record; **Case study:
   NAPA-2** predicts the Royal Thai Air Force's CubeSat five years ahead from its first element set,
@@ -292,7 +297,8 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   screening runs off the page's own thread, so a whole catalogue read from a file (some 30 000
   objects) can be screened while the page stays usable, and stopped. **Show it** under an approach
   moves the clock to five minutes before it, draws the other object's orbit and the meeting point
-  in 3-D, and the *encounter plane*: the other object at its miss distance with the pair's
+  in 3-D, the point below the meeting and the other object's track on the ground track, and the
+  *encounter plane*: the other object at its miss distance with the pair's
   combined size round it, and the combined position uncertainty as ellipses — the probability is
   the share of the uncertainty inside the circle. A probability smaller than 10⁻¹⁰ is shown as
   *below 10⁻¹⁰*: the numbers do not carry a precision finer than that.

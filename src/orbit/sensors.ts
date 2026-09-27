@@ -82,6 +82,33 @@ export function groundReach(offNadir: number, altitude: number): number {
   return s >= 1 ? NaN : (Math.asin(s) - offNadir) * R_MEAN;
 }
 
+/** The ground distance from the point below a satellite at `altitude` (m) to where its beam meets the ground at `incidence` (rad), m. */
+export function groundAtIncidence(incidence: number, altitude: number): number {
+  const offNadir = Math.asin((R_MEAN / (R_MEAN + altitude)) * Math.sin(incidence));
+  return (incidence - offNadir) * R_MEAN;
+}
+
+/**
+ * The edges of the ground the instrument can reach from a satellite at
+ * `altitude`, m across the track, positive to its right (P2.5, for the map):
+ * a fixed camera's swath, an agile one's reach either side, a radar's band of
+ * incidence on its side (or both, where its side is not published). Empty
+ * where its limit is not published.
+ */
+export function reachEdges(s: Sensor, altitude: number): number[] {
+  if (s.kind === 'optical') {
+    if (s.lookMax === null) return [];
+    if (s.lookMax === 0) return [s.shift - s.swath / 2, s.shift + s.swath / 2];
+    const d = groundReach(s.lookMax, altitude);
+    return Number.isFinite(d) ? [-d, d] : [];
+  }
+  const [lo, hi] = s.incidence ?? [0, 0];
+  const near = groundAtIncidence(lo, altitude), far = groundAtIncidence(hi, altitude);
+  if (s.side === 'right') return [near, far];
+  if (s.side === 'left') return [-far, -near];
+  return [-far, -near, near, far];
+}
+
 export type ImagingVerdict =
   | { can: true; reason: 'swath' | 'agile' | 'sar' }
   | { can: false; reason: 'retired' | 'dark' | 'outsideSwath' | 'tooFarOff' | 'incidence' | 'wrongSide' }
