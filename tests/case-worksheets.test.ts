@@ -108,6 +108,18 @@ describe('the case sheets (P2.5)', () => {
     expect(key).toContain(lang === 'ru' ? '°/сут' : '°/วัน');
   });
 
+  // the Iridium sheet printed "2.6e-51" and a Russian "0.033"; the Russian C_x·A/m question sat under a table giving "C_D 2,2"
+  it.each(langs)('%s: the data tables write their numbers and symbols as the language does', (lang) => {
+    withLang(lang);
+    const row = (id: typeof CASE_IDS[number], i: number) => caseWorksheet(id, { lang, generatedAt: at, activity, theos2 })!.sections[0].table![i][1];
+    const published = row('iridium', 7);
+    expect(published).toContain('× 10⁻⁵¹');
+    expect(published).not.toMatch(/\de-/);
+    expect(published).toContain(lang === 'ru' ? '0,033' : '0.033');
+    const body = row('cz5b', 2);
+    expect(body).toContain(lang === 'ru' ? 'C_x 2,2' : 'C_D 2.2');
+  });
+
   // E03 track 6: the case lessons are graded by this key, so it must be the sheet's own and the same in every language
   it.each(CASE_IDS)('%s: every question has its id and a number\'s tolerance or a choice\'s option, and the key is the same in every language', (id) => {
     const keys = langs.map((lang) => {

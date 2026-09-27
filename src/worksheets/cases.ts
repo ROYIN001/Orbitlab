@@ -54,6 +54,14 @@ export interface CaseInput extends CaseSource {
 const DEG = Math.PI / 180;
 const jdOf = (iso: string): number => Date.parse(iso) / 86400000 + 2440587.5;
 const utc = (iso: string): string => `${iso.slice(0, 16).replace('T', ' ')} UTC`;
+const SUPERSCRIPT: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+/** A small probability as the page writes one, 2.6 × 10⁻⁵¹, with the language's decimal sign. */
+const sci = (lang: Lang, v: number): string => {
+  const e = Math.floor(Math.log10(Math.abs(v)));
+  return `${fmt(lang, v / 10 ** e, 1)} × 10${String(e).replace(/./g, (c) => SUPERSCRIPT[c] ?? c)}`;
+};
+/** The drag coefficient's symbol: C_x in Russian, as the rest of the app writes it there (GOST). */
+const cdSymbol = (lang: Lang): string => (lang === 'ru' ? 'C_x' : 'C_D');
 
 /**
  * A number item: the prompt, the answer to `digits`, its tolerance and working.
@@ -127,7 +135,7 @@ function iridiumSheet(lang: Lang): Omit<Worksheet, 'lang' | 'generatedAt'> {
           [t('wsc.iridium.v2'), `(${f.cosmos2251.v.map(kms).join('; ')}) ${u('km/s')}`],
           [t('wsc.iridium.radii'), `${fmt(lang, f.hardBodyRadius.iridium33, 3)} ${u('m')}; ${fmt(lang, f.hardBodyRadius.cosmos2251, 0)} ${u('m')}`],
           [t('wsc.iridium.sigmas'), `${fmt(lang, n.sigma[0], 1)} ${u('m')}; ${fmt(lang, n.sigma[1], 1)} ${u('m')}; ${fmt(lang, n.majorFromMiss, 1)}°`],
-          [t('wsc.iridium.published'), `JSpOC: ${f.table2Feb9['JSpOC-JSpOC'].foster.toExponential(1)}; Iridium: ${f.table2Feb9['IridConstr-JSpOC'].foster}`],
+          [t('wsc.iridium.published'), `JSpOC: ${sci(lang, f.table2Feb9['JSpOC-JSpOC'].foster)}; Iridium: ${fmt(lang, f.table2Feb9['IridConstr-JSpOC'].foster, 3)}`],
         ],
         figures: [{ svg: encounterPlaneSvg(plane, { first: 'Iridium 33', second: 'Cosmos 2251', scale: t('conj.planeScale') }, 280, true), caption: t('wsc.iridium.figure') }],
         items: [],
@@ -192,7 +200,7 @@ function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'ge
         table: [
           [t('wsc.cz5b.epoch'), utc(n.epoch)],
           [t('wsc.cz5b.orbit'), `${fmt(lang, n.hp, 0)} × ${fmt(lang, n.ha, 0)} ${u('km')}, ${fmt(lang, s.elements.INCLINATION, 1)}°`],
-          [t('wsc.cz5b.body'), `${fmt(lang, s.mass, 0)} ${u('kg')}; ${fmt(lang, s.length, 1)} × ${fmt(lang, s.diameter, 1)} ${u('m')}; C_D ${fmt(lang, 2.2, 1)}`],
+          [t('wsc.cz5b.body'), `${fmt(lang, s.mass, 0)} ${u('kg')}; ${fmt(lang, s.length, 1)} × ${fmt(lang, s.diameter, 1)} ${u('m')}; ${cdSymbol(lang)} ${fmt(lang, 2.2, 1)}`],
           [t('wsc.cz5b.predicted'), t('wsc.cz5b.predictedValue', { days: fmt(lang, n.left, 2) })],
           [t('wsc.cz5b.actual'), utc(s.reentry)],
         ],
