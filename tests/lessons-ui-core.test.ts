@@ -4,7 +4,8 @@
  * charts and the radar as SVG text, and unit symbols in each language.
  */
 import { describe, expect, it } from 'vitest';
-import { emptyProgress, loadProgress, recordGrade, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { emptyProgress, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { awaitingAnswers, regradeAnswers } from '../src/lessons/grader';
 import { createLessonTools, type LessonToolsHost } from '../src/lessons/mcp-tools';
 import { BUILTIN_LESSONS, allLessons } from '../src/lessons/catalog';
 import { chartSvg, niceStep, radarSvg } from '../src/lessons/assessment/figures';
@@ -45,6 +46,45 @@ describe('progress and the results file', () => {
     edited.progress.lessons['orbit-first'].attempts = 1;
     expect(await verifyResults(edited)).toBe(false);
     expect(file.progress).not.toHaveProperty('customLessons');
+  });
+});
+
+// E03: the strip once printed the expected value after a wrong answer, and typing it in then passed
+describe('an answer shown to the student', () => {
+  const lesson = BUILTIN_LESSONS.find((l) => l.id === 'orbit-first')!;
+  // the grade taken when lesson 1.1's flight ended: the orbit reached, the two answers awaited
+  const frozen: LessonGrade = { lessonId: 'orbit-first', final: true, verdict: 'open', lockBroken: [], t: 900,
+    criteria: [{ id: 'orbit', state: 'pass', value: null }, { id: 'period', state: 'pending', value: null, expected: 94.6 }, { id: 'speed', state: 'pending', value: null, expected: 7.61 }] };
+
+  it('is only marked wrong, and a right answer after a wrong one still passes', () => {
+    const wrong = regradeAnswers(lesson, frozen, { period: 90, speed: 7.61 });
+    expect(wrong.verdict).toBe('fail');
+    expect(wrong.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'fail', value: 90 });
+    expect(wrong.criteria.some((c) => c.revealed)).toBe(false);
+    expect(regradeAnswers(lesson, frozen, { period: 94.6, speed: 7.61 }).verdict).toBe('pass');
+  });
+
+  it('once shown, never passes: not on this flight, not on the same flight flown again', () => {
+    const p = emptyProgress();
+    recordRevealed(p, 'orbit-first', { period: 94.6 });
+    const revealed = lessonProgress(p, 'orbit-first').revealed!;
+    // the value shown, typed in: recorded as not passed, and marked as shown
+    const typed = regradeAnswers(lesson, frozen, { period: 94.6, speed: 7.61 }, revealed);
+    expect(typed.verdict).toBe('fail');
+    expect(typed.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'fail', revealed: true });
+    expect(typed.criteria.find((c) => c.id === 'speed')).toMatchObject({ state: 'pass' });
+    // shown before anything is typed: it is decided at once, so the attempt is recorded
+    const untyped = regradeAnswers(lesson, frozen, {}, revealed);
+    expect(untyped.criteria.find((c) => c.id === 'period')!.state).toBe('fail');
+    expect(awaitingAnswers(lesson, untyped)).toEqual(['speed']);
+    // a flight whose answer is another number (a different orbit) can still pass
+    const other: LessonGrade = { ...frozen, criteria: frozen.criteria.map((c) => (c.id === 'period' ? { ...c, expected: 101.3 } : c)) };
+    expect(regradeAnswers(lesson, other, { period: 101.3, speed: 7.61 }, revealed).verdict).toBe('pass');
+    // kept through storage, the number once
+    recordRevealed(p, 'orbit-first', { period: 94.6, speed: Number.NaN });
+    const store = memory();
+    saveProgress(p, store);
+    expect(loadProgress(store).lessons['orbit-first'].revealed).toEqual({ period: [94.6] });
   });
 });
 

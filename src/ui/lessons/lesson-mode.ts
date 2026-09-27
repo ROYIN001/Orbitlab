@@ -19,12 +19,12 @@ import type { Simulation } from '../../physics/simulation';
 import { missionDocument, type MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
-import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers } from '../../lessons/grader';
+import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import {
-  RESULTS_FILE_EXTENSION, loadProgress, lessonProgress, recordGrade, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
 import type { Criterion, CriterionGrade, Lesson, LessonGrade } from '../../lessons/types';
 import type { LessonToolsHost } from '../../lessons/mcp-tools';
@@ -259,18 +259,25 @@ export class LessonMode implements LessonToolsHost {
       lessonProgress(this.progressData, a.lesson.id).attempts++;
       this.save();
     }
-    if (a.frozen) a.grade = regradeAnswers(a.lesson, a.frozen, a.answers);
+    const revealed = this.revealedOf(a.lesson.id);
+    if (a.frozen) a.grade = regradeAnswers(a.lesson, a.frozen, a.answers, revealed);
     else {
       a.grade = gradeLesson(a.lesson, sim, a.answers);
-      if (started && a.grade.final) a.frozen = a.grade;
+      if (started && a.grade.final) { a.frozen = a.grade; a.grade = regradeAnswers(a.lesson, a.frozen, a.answers, revealed); }
     }
     if (started && a.grade.final && !a.recorded && awaitingAnswers(a.lesson, a.grade).length === 0) this.record(a);
     this.paintStrip();
   }
 
+  /** The expected values this lesson has shown the student, over all their attempts. */
+  private revealedOf(id: string): RevealedAnswers {
+    return this.progressData.lessons[id]?.revealed ?? {};
+  }
+
   private record(a: Active): void {
     if (!a.grade || !a.sim) return;
     a.recorded = true;
+    const revealed = a.grade.criteria.filter((c) => c.revealed).map((c) => c.id);
     const p = lessonProgress(this.progressData, a.lesson.id);
     const cfg = a.sim.cfg;
     const state: MissionState = {
@@ -282,7 +289,7 @@ export class LessonMode implements LessonToolsHost {
     };
     recordGrade(this.progressData, {
       lessonId: a.lesson.id, at: new Date().toISOString(), verdict: a.grade.verdict, criteria: a.grade.criteria,
-      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: missionDocument(state),
+      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: missionDocument(state), ...(revealed.length ? { revealed } : {}),
     });
     this.save();
   }
@@ -295,6 +302,27 @@ export class LessonMode implements LessonToolsHost {
       if (input.value.trim() !== '' && Number.isFinite(v)) a.answers[id] = v;
     }
     a.recorded = false;
+    this.lastStripKey = '';
+    this.update();
+  }
+
+  /**
+   * "Show the answers": the expected values of the answers not yet right are
+   * shown, and kept, so this attempt is recorded as not passed on them and
+   * none of those numbers passes later (a lesson flies the same flight again).
+   */
+  private revealAnswers(): void {
+    const a = this.active;
+    if (!a?.grade?.final) return;
+    const shown: Record<string, number> = {};
+    for (const g of a.grade.criteria) {
+      const c = a.lesson.criteria.find((x) => x.id === g.id);
+      if (c?.kind === 'answer' && g.state !== 'pass' && !g.revealed && typeof g.expected === 'number' && Number.isFinite(g.expected)) shown[g.id] = g.expected;
+    }
+    if (!Object.keys(shown).length) return;
+    recordRevealed(this.progressData, a.lesson.id, shown);
+    a.recorded = false;
+    this.save();
     this.lastStripKey = '';
     this.update();
   }
@@ -367,7 +395,7 @@ export class LessonMode implements LessonToolsHost {
     const g = a.grade;
     const flown = !!a.sim && flightStarted(a.sim);
     const hints = lessonProgress(this.progressData, a.lesson.id).hintsShown;
-    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3))]), hints, a.answers]);
+    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3)), !!c.revealed]), hints, a.answers]);
     if (key === this.lastStripKey) return;
     // keep what the student is typing
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement;
@@ -404,22 +432,38 @@ export class LessonMode implements LessonToolsHost {
         input.inputMode = 'decimal';
         input.value = a.answers[c.id] !== undefined ? String(a.answers[c.id]) : '';
         input.setAttribute('aria-label', localText(c.prompt));
+        input.disabled = !!cg?.revealed;
         inputs.set(c.id, input);
-        const verdict = cg?.state === 'pass' ? '✓' : cg?.state === 'fail'
-          ? `✗ ${t('lesson.strip.expected', { value: formatMeasure(c.measure, cg.expected ?? null) })}` : '';
+        // a wrong answer is only marked: the value is shown only when asked for, and then no longer counts
+        const verdict = cg?.state === 'pass' ? '✓' : cg?.revealed
+          ? `✗ ${t('lesson.strip.expected', { value: formatMeasure(c.measure, cg.expected ?? null) })}` : cg?.state === 'fail' ? '✗' : '';
         row.append(el('span', undefined, localText(c.prompt)), input, el('span', 'lesson-answer-mark', verdict));
         form.append(row);
       }
       const check = el('button', 'lesson-primary', t('lesson.strip.check'));
       check.type = 'submit';
       form.append(check);
+      const hidden = answerCrits.filter((c) => {
+        const cg = g.criteria.find((x) => x.id === c.id);
+        return cg && cg.state !== 'pass' && !cg.revealed && typeof cg.expected === 'number' && Number.isFinite(cg.expected);
+      });
+      if (hidden.length) {
+        const reveal = el('button', undefined, t('lesson.strip.reveal'));
+        reveal.type = 'button';
+        reveal.addEventListener('click', () => this.revealAnswers());
+        form.append(reveal);
+      }
       form.addEventListener('submit', (e) => { e.preventDefault(); this.submitAnswers(inputs); });
       status.append(form);
     }
     if (flown && g?.final && g.verdict === 'pass') {
       status.append(el('p', 'lesson-note pass', t('lesson.strip.pass')));
       if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
-    } else if (flown && g?.final && g.verdict === 'fail') status.append(el('p', 'lesson-note fail', t('lesson.strip.fail')));
+    } else if (flown && g?.final && g.verdict === 'fail') {
+      const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
+      const key = g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.strip.fail';
+      status.append(el('p', 'lesson-note fail', t(key)));
+    }
 
     const actions = el('div', 'lesson-actions');
     const button = (label: string, fn: () => void, cls = ''): HTMLButtonElement => {

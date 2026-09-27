@@ -119,6 +119,11 @@ export interface CriterionGrade {
   value: number | null;
   /** the value the answer is checked against; absent before the flight ends */
   expected?: number | null;
+  /**
+   * The answer was shown to the student (the strip's "Show the answers")
+   * before it was right: it cannot pass, whatever is typed after.
+   */
+  revealed?: boolean;
 }
 
 export interface LessonGrade {

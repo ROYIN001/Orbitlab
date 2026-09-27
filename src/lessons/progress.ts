@@ -25,6 +25,8 @@ export interface LessonRecord {
   hintsShown: number;
   /** the mission as it was flown */
   mission: MissionDocument;
+  /** the answers shown to the student in this attempt, by criterion id: the attempt did not pass on them */
+  revealed?: string[];
 }
 
 export interface LessonProgress {
@@ -37,6 +39,11 @@ export interface LessonProgress {
   passedRecord?: LessonRecord;
   /** the last flight graded */
   last?: LessonRecord;
+  /**
+   * Expected values shown with "Show the answers", by criterion id: a number
+   * shown is never a pass again (src/lessons/grader.ts `RevealedAnswers`).
+   */
+  revealed?: Record<string, number[]>;
 }
 
 export interface ProgressData {
@@ -84,6 +91,17 @@ export function recordGrade(data: ProgressData, record: LessonRecord & { lessonI
   const p = lessonProgress(data, lessonId);
   p.last = rec;
   if (rec.verdict === 'pass' && !p.passed) { p.passed = true; p.passedRecord = rec; }
+}
+
+/** Keep the expected values shown to the student, so none of them passes later. */
+export function recordRevealed(data: ProgressData, lessonId: string, shown: Readonly<Record<string, number>>): void {
+  const p = lessonProgress(data, lessonId);
+  const kept = (p.revealed ??= {});
+  for (const [id, v] of Object.entries(shown)) {
+    if (!Number.isFinite(v)) continue;
+    const list = (kept[id] ??= []);
+    if (!list.includes(v)) list.push(v);
+  }
 }
 
 async function sha256(text: string): Promise<string> {
