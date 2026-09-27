@@ -2950,6 +2950,56 @@ dynamic pressure is under 1 Pa: the disclosure every six-DOF flight in the fleet
 steering leaves the table in thin air (`evt.aeroEnvelopeExceeded`; Soyuz at T+124 s, Falcon 9 at
 T+123 s, H-IIA at T+104 s), not a load.
 
+**13.9 Apollo 11 from the parking orbit to the translunar coast (part 6b).** `ApolloFlight` in
+src/physics/sim/apollo.ts; the mission's `OrbitSpec.injection`. Sources: the Saturn V flight evaluation
+report MPR-SAT-FE-69-9 (FER), the Apollo 11 Mission Report MSC-00171 (MR), and R. Orloff, *Apollo by the
+Numbers*, NASA SP-2000-4029 (ORL); JPL Horizons for the Moon, from part 6c.
+
+| | Value | Source |
+|---|---|---|
+| S-IVB restart | TLI ignition (start tank discharge valve open) T+2:44:16.20, 9,856.2 s | FER; ORL p.115; MR Table 3-I |
+| Second burn | 894.4 kN, 428.7 s at STDV +172 s; 346.9 s; cut-off 10,203.07 s by guidance velocity cut-off; cut-off impulse 239,061 N·s | FER §7.7–7.8, Table 7-2 |
+| TLI cut-off state | 320.9 km, 10,841.0 m/s space-fixed, flight-path angle 6.913°; eccentricity 0.97537, C3 −1.4875 km²/s², inclination 31.386°, descending node 121.850° | FER Table 4-6 |
+| Parking orbit at insertion | inclination 32.521°, descending node 123.088° | FER Table 4-5 |
+| Stack mass | 134,046 kg at the restart, 63,189 kg at cut-off | FER Tables 20-7, 20-8 |
+| Transposition | SLA panels open 3:15:23.0 (ORL); CSM separation 3:17:04.6, docking 3:24:03.1 (MR Table 3-I) | ORL p.116; MR |
+| Ejection | the CSM and LM out of the S-IVB 4:16:59.1 (MR; ORL 4:17:03.0), 0.7 ft/s | MR §7.4.2; ORL p.116 |
+
+*The flight.* When the ascent reaches the parking orbit, `ApolloFlight` takes the stack over: a point
+under J2 with its attitude set, in both dynamics models, as the far phases of a rendezvous are (§9.2).
+At the flown time it relights the S-IVB (at the second burn's 894.4 kN) and steers by velocity to be
+gained onto the flown conic: its energy (C3), eccentricity and plane, the plane taken from the parking
+orbit's at insertion shifted as the flown one was (−1.135° in inclination, −1.238° at the node — the
+nodal regression between the two, 0.8°, is in both the flown and the modelled orbits); where the conic
+has no velocity at the stack's radius (under its perigee) the wanted velocity is horizontal. It cuts
+off when the energy, the engine's tail-off counted, is the conic's; the step shrinks to a hundredth of
+a second as the speed still to gain comes to a few steps' worth (at the end of the burn the stage gains
+14 m/s² and a 0.2 s step overshoots the energy by 3 m/s). The argument of perigee is not aimed at: it
+follows from the flown time of the burn, as it did.
+
+The transposition — the adapter's panels, the CSM backing 30 m off, turning round, docking with the LM
+in the S-IVB — moves the spacecraft tens of metres from the stage and its orbit by less than a metre
+per second, so it is flown as events at the flown times and drawn (src/render/apollo.ts: 100 s to back
+off, 100 s to turn, the rest of the seven minutes to close); the CSM and LM leave the S-IVB as a body of
+their own at the ejection, when the stage becomes debris behind them.
+
+Model − flight, and the conic:
+
+| | Restart | TLI cut-off | C3, km²/s² | Eccentricity | Inclination | Panels, separation, docking, ejection |
+|---|---|---|---|---|---|---|
+| Flown | 9,856.2 | 10,203.03 | −1.4875 | 0.97537 | 31.386° | 11,723.0 · 11,824.6 · 12,243.1 · 15,419.1 |
+| Point-mass | ±0.0 | −5.2 | −1.486 | 0.97539 | 31.355° | ±0.0 each |
+| Six-DOF | ±0.0 | −9.0 | −1.485 | 0.97541 | 31.351° | ±0.0 each |
+
+The burn is 5–9 s short of the flown 346.9 s: the stack is 1.7 t heavier at the restart than flown
+(135.75 against 134.05 t — the hydrogen vented and the ullage motors' propellant between the burns are
+not modelled) yet reaches the flown energy sooner, because the model's J-2 comes to full thrust at once
+where the flown one took its start sequence (and its mixture ratio, 5.0 then 4.5, the PU system's; the
+model flies the average 894.4 kN throughout). The plane is 0.03° under the flown: the parking orbit's
+node and inclination at the model's insertion are carried, not the flown ones. The Mission Report's
+"injection" state, 10 s after the cut-off (180.6 n mi, 35,545.6 ft/s, 7.367°, e 0.97696), is a later
+point on the same conic, not a different one.
+
 ## Glossary (EN / RU / TH)
 
 This table is the source of truth for `src/i18n/ru.ts` and `src/i18n/th.ts`, and

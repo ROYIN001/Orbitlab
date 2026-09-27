@@ -624,8 +624,12 @@ orbits if you like — they are tested on the flights they made.
 rises. Watch the S-IC's centre engine stop at 2:15 (the other four keep going to 2:42), the ring
 between the first two stages fall away half a minute after the S-II lights, the escape tower
 leave six seconds later, the S-II's centre engine stop at 7:41 and its other four throttle back
-at 8:18 as the mixture shifts, and the S-IVB put Apollo into its 186 km parking orbit. So far the
-flight ends there; the journey to the Moon and back is being added.
+at 8:18 as the mixture shifts, and the S-IVB put Apollo into its 186 km parking orbit. Two and a half hours later — at 100× it takes a minute
+and a half — the S-IVB relights over the Pacific for the six-minute translunar injection, and the
+camera comes in close for the transposition: the adapter's four panels spring open, Columbia backs
+away, turns round and docks with Eagle, and an hour later pulls it out of the S-IVB. So far the
+flight ends there, on the way to the Moon; the Moon itself and the rest of the journey are being
+added.
 
 Mercury-Redstone 3 never went into orbit: the Redstone burns for two and a half minutes and
 throws Freedom 7 on a 15-minute arc, 187 km up and 487 km down range. Ten seconds after the

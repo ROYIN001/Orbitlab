@@ -249,12 +249,22 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // (FER MPR-SAT-FE-69-9; docs/PHYSICS.md §13.8). The flight goes on from
   // there — the S-IVB's restart for the Moon — in the parts that follow.
   { id: 'apollo11', vehicleId: 'saturnv', siteId: 'ksc39a', satelliteId: 'apollo', orbitId: 'custom', payloadMass: 49735,
-    orbit: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, argPerigee: 0, raanMode: 'free' }, launchTime: '1969-07-16T13:32:00Z',
+    orbit: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, argPerigee: 0, raanMode: 'free',
+      // the translunar injection: the S-IVB relit at T+2:44:16.2 at 894.4 kN (FER), onto C3 −1.4875 km²/s²,
+      // e 0.97537, the plane 1.135° less inclined and its node 1.238° west of the parking orbit's (FER Table 4-6)
+      injection: { time: 9856.2, c3: -1487528, eccentricity: 0.97537, inclinationShift: -1.135, nodeShift: -1.238, thrustVac: 894.4e3,
+        // the SLA's panels at 3:15:23.0 (Orloff); the CSM's separation at 3:17:04.6, docking at 3:24:03.1 and the
+        // ejection from the S-IVB at 4:16:59.1 (Apollo 11 Mission Report MSC-00171, Table 3-I)
+        sequence: { panels: 11723.0, separation: 11824.6, docking: 12243.1, extraction: 15419.1 } } },
+    launchTime: '1969-07-16T13:32:00Z',
     flown: { events: [
       { key: 'evt.maxQ', t: 83.0 }, { key: 'evt.ceco', t: 135.20 }, { key: 'evt.meco', t: 161.63 }, { key: 'evt.stageSep', t: 162.30 },
       { key: 'evt.interstageSep', t: 192.3 }, { key: 'evt.towerJettison', t: 197.9 }, { key: 'evt.ceco', n: 2, t: 460.62 },
       { key: 'evt.mixtureShift', t: 498.0, approx: true }, { key: 'evt.stageCutoff', t: 548.22 }, { key: 'evt.stageSep', n: 2, t: 549.00 },
       { key: 'evt.seco', t: 699.33 },
+      // the restart and the translunar injection (FER), the transposition (Orloff; Mission Report Table 3-I)
+      { key: 'evt.ignition', n: 4, t: 9856.2 }, { key: 'evt.tli', t: 10203.03 }, { key: 'evt.slaPanels', t: 11723.0 },
+      { key: 'evt.csmSeparation', t: 11824.6 }, { key: 'evt.csmDocked', t: 12243.1 }, { key: 'evt.lmExtraction', t: 15419.1 },
     ], orbit: { perigee: 183.2, apogee: 186.0, inclination: 32.521 } },
     titleKey: 'watch.mission.apollo11', blurbKey: 'watch.mission.apollo11Blurb', payloadKey: 'watch.payload.apollo11' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a

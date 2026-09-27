@@ -28,7 +28,9 @@ export type WatchBeat =
   // a capsule flown home from a suborbital flight (C01: Mercury-Redstone 3)
   | 'capsuleCutoff' | 'capsuleSep' | 'capsuleArc' | 'retroFire' | 'capsuleEntry' | 'capsuleDrogue' | 'capsuleMain' | 'capsuleSplash'
   // a flight on to the station (G07)
-  | 'rvPlan' | 'rvPhasing' | 'rvBurn' | 'rvApproach' | 'rvFlyaround' | 'rvStationkeeping' | 'rvFinal' | 'rvContact' | 'rvCapture' | 'rvDocked';
+  | 'rvPlan' | 'rvPhasing' | 'rvBurn' | 'rvApproach' | 'rvFlyaround' | 'rvStationkeeping' | 'rvFinal' | 'rvContact' | 'rvCapture' | 'rvDocked'
+  // Apollo from its parking orbit (C01): the restart for the Moon, the transposition, the extraction
+  | 'apolloParking' | 'tliBurn' | 'tliDone' | 'transposition' | 'apolloDocked' | 'extraction' | 'translunarCoast';
 
 /** Label and sentence of each beat. Literal keys, so the i18n suite sees their call sites. */
 export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
@@ -69,6 +71,13 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   abortSeparation: { label: 'watch.beat.abortSeparation', text: 'watch.say.abortSeparation' },
   escapeCoast: { label: 'watch.beat.escapeCoast', text: 'watch.say.escapeCoast' },
   capsuleCutoff: { label: 'watch.beat.capsuleCutoff', text: 'watch.say.capsuleCutoff' },
+  apolloParking: { label: 'watch.beat.apolloParking', text: 'watch.say.apolloParking' },
+  tliBurn: { label: 'watch.beat.tliBurn', text: 'watch.say.tliBurn' },
+  tliDone: { label: 'watch.beat.tliDone', text: 'watch.say.tliDone' },
+  transposition: { label: 'watch.beat.transposition', text: 'watch.say.transposition' },
+  apolloDocked: { label: 'watch.beat.apolloDocked', text: 'watch.say.apolloDocked' },
+  extraction: { label: 'watch.beat.extraction', text: 'watch.say.extraction' },
+  translunarCoast: { label: 'watch.beat.translunarCoast', text: 'watch.say.translunarCoast' },
   capsuleSep: { label: 'watch.beat.capsuleSep', text: 'watch.say.capsuleSep' },
   capsuleArc: { label: 'watch.beat.capsuleArc', text: 'watch.say.capsuleArc' },
   retroFire: { label: 'watch.beat.retroFire', text: 'watch.say.retroFire' },
@@ -130,6 +139,12 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
   { key: 'evt.escapeSoftLanding', beat: 'softLanding', hold: 10 },
   // G07: the plan is read out after the separation; the contact is its own moment
   { key: 'evt.rendezvousPlan', beat: 'rvPlan', hold: 20 },
+  // C01: Apollo's injection for the Moon, and the minutes after it
+  { key: 'evt.tli', beat: 'tliDone', hold: 25 },
+  { key: 'evt.slaPanels', beat: 'transposition', hold: 100 },
+  { key: 'evt.csmSeparation', beat: 'transposition', hold: 60 },
+  { key: 'evt.csmDocked', beat: 'apolloDocked', hold: 30 },
+  { key: 'evt.lmExtraction', beat: 'extraction', hold: 40 },
   { key: 'evt.contact', beat: 'rvContact', hold: 20 },
 ];
 const ABORT_BEATS: Record<string, WatchBeat> = { tower: 'abortTower', fairing: 'abortFairing', separation: 'abortSeparation' };
@@ -185,6 +200,7 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
   }
   if (frame.abort) return abortBeat(frame);
   if (frame.rendezvous) return rendezvousBeat(frame);
+  if (frame.apollo) return apolloBeat(frame);
   switch (frame.status) {
     case 'ascent': {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
@@ -206,6 +222,17 @@ export function watchBeat(frame: VisualFrame | null, events: readonly SimEvent[]
       }
     case 'landed': return frame.note === 'shipLost' ? 'failed' : 'splashdown';
     default: return frame.payloadSeparated ? 'deployed' : 'orbit';
+  }
+}
+
+/** Apollo between its events (C01): in the parking orbit, burning for the Moon, on its way. */
+function apolloBeat(frame: VisualFrame): WatchBeat {
+  switch (frame.apollo!.phase) {
+    case 'parking': return 'apolloParking';
+    case 'tli': return 'tliBurn';
+    case 'transposition': return 'transposition';
+    case 'docked': return 'apolloDocked';
+    default: return 'translunarCoast';
   }
 }
 
@@ -330,6 +357,18 @@ function beatWarp(frame: VisualFrame, beat: WatchBeat): number {
     case 'rvCapture':
     case 'rvDocked':
       return 25;
+    // C01: two and a half hours of parking orbit go by quickly, the last minute before the restart and
+    // the burn at a pace to follow; the transposition's minutes slowly, the hour docked quickly
+    case 'apolloParking': {
+      const tli = frame.apollo?.tliTime;
+      return tli !== undefined && tli - frame.t < 60 ? 5 : 100;
+    }
+    case 'tliBurn':
+    case 'transposition':
+      return 10;
+    case 'apolloDocked':
+    case 'translunarCoast':
+      return 100;
     default:
       return 1;
   }
@@ -360,7 +399,7 @@ export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEven
 }
 
 /** How a flight on screen ends. */
-export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'failed';
+export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'translunar' | 'failed';
 
 /**
  * How the flight on screen has ended, if it has: in orbit, with a splashdown
@@ -377,6 +416,12 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
   if (rv) {
     if (rv.phase === 'docked') return rv.dockedAt !== undefined && frame.t - rv.dockedAt >= RETURN_SETTLE ? 'docked' : null;
     return rv.phase === 'aborted' ? 'orbit' : null;
+  }
+  // C01: Apollo's part of the flight so far ends a minute after the CSM and LM are out of the S-IVB
+  if (frame.apollo) {
+    if (frame.status === 'failed') return 'failed';
+    const q = frame.apollo.sequence;
+    return frame.apollo.phase === 'extracted' && q && frame.t - q.extraction >= 60 ? 'translunar' : null;
   }
   // G06: after an abort, the end is the crew down and a few seconds more
   if (frame.abort) {

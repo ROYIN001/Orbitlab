@@ -126,6 +126,11 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
   // entry interface to the water.
   if (frame.status === 'descent') return frame.descentPhase === 'coast' ? 'coast' : 'descent';
   if (frame.status === 'landed') return 'descent';
+  // C01: Apollo's burn for the Moon from space; its transposition, docking and extraction from beside the stack
+  const ap = frame.apollo;
+  if (ap?.phase === 'tli') return 'burn';
+  if (ap && (ap.phase === 'transposition' || ap.phase === 'docked' || ap.phase === 'extracted'
+    || (ap.phase === 'translunar' && ap.sequence && frame.t >= ap.sequence.panels - 20))) return 'proximity';
   // G07: close to the station, from the automatic approach on
   const rv = frame.rendezvous;
   if (rv && rv.range < NEAR_STATION && rv.phase !== 'separation' && rv.phase !== 'coast' && rv.phase !== 'burn') return 'proximity';

@@ -100,7 +100,8 @@ describe('the flights they are here for, point-mass', () => {
       expect(Math.abs(orbit!.perigee - m.flown!.orbit!.perigee), log).toBeLessThan(25);
       expect(Math.abs(orbit!.apogee - m.flown!.orbit!.apogee) / m.flown!.orbit!.apogee, log).toBeLessThan(0.15);
       expect(Math.abs(orbit!.inclination - m.flown!.orbit!.inclination)).toBeLessThan(0.3);
-      for (const row of compareEvents(m.flown!, sim.events)) {
+      // up to where this flight stops (Apollo's flight on from its parking orbit is below)
+      for (const row of compareEvents(m.flown!, sim.events).filter((r) => r.real <= sim.state.t)) {
         expect(row.sim, `${id} ${row.key}`).not.toBeNull();
         expect(Math.abs(row.delta!), `${id} ${row.key}: ${log}`).toBeLessThan(Math.max(20, 0.1 * row.real));
       }
@@ -182,5 +183,35 @@ describe('Apollo 11, point-mass', () => {
     expect(sim.events.some((e) => e.key === 'evt.targetOrbit')).toBe(true);
     expect(sim.state.payloadSeparated).toBe(false);
     expect(sim.events.some((e) => e.key === 'evt.payloadSep')).toBe(false);
+  });
+});
+
+describe('Apollo 11 from its parking orbit, point-mass', () => {
+  it('relights the S-IVB for the Moon on time, reaches the flown conic, and docks and pulls the LM out on the flown timeline', { timeout: 300_000 }, () => {
+    const s = watchMissionSettings('apollo11');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    while (!sim.isFailed() && sim.state.t < 15500) sim.step(sim.suggestedDt());
+    const log = sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
+    expect(sim.isFailed(), log).toBe(false);
+    const tli = sim.events.find((e) => e.key === 'evt.tli');
+    expect(tli, log).toBeDefined();
+    // FER Table 4-6: C3 −1.4875 km²/s², eccentricity 0.97537, inclination 31.386° at the cut-off (T+10,203.0 s)
+    expect(Math.abs(Number(tli!.params!.c3) + 1.4875)).toBeLessThan(0.01);
+    expect(Math.abs(Number(tli!.params!.e) - 0.97537)).toBeLessThan(0.0005);
+    expect(Math.abs(Number(tli!.params!.inc) - 31.386)).toBeLessThan(0.1);
+    expect(Math.abs(tli!.t - 10203.03)).toBeLessThan(15);
+    const m = WATCH_MISSIONS.find((x) => x.id === 'apollo11')!;
+    for (const row of compareEvents(m.flown!, sim.events).filter((r) => r.real > 9000)) {
+      expect(row.sim, `${row.key}: ${log}`).not.toBeNull();
+      expect(Math.abs(row.delta!), `${row.key}`).toBeLessThan(15);
+    }
+    // the CSM and LM on their own, the S-IVB left behind
+    expect(sim.state.payloadSeparated).toBe(true);
+    expect(sim.apollo.phase).toBe('extracted');
+    expect(sim.state.elements.e).toBeGreaterThan(0.97);
   });
 });

@@ -241,6 +241,23 @@ export interface LaunchSiteSpec {
 
 export type OrbitKind = 'circular' | 'elliptical';
 
+/** A transfer burn flown from the parking orbit at a set time, onto a given conic (C01). */
+export interface InjectionSpec {
+  /** mission time of the restart, s */
+  time: number;
+  /** vis-viva energy of the conic, v² − 2μ/r, m²/s² */
+  c3: number;
+  eccentricity: number;
+  /** the conic's plane against the parking orbit's at its insertion: inclination and node, deg */
+  inclinationShift: number;
+  nodeShift: number;
+  /** the restarted engine's operating point, each, when it differs from the first burn's */
+  thrustVac?: number;
+  ispVac?: number;
+  /** what the spacecraft does after it, mission times, s (Apollo: separation, docking, extraction) */
+  sequence?: { panels: number; separation: number; docking: number; extraction: number };
+}
+
 export interface OrbitSpec {
   id: string;
   name: string;
@@ -273,6 +290,12 @@ export interface OrbitSpec {
    * of the Cape (C01). Absent: `launchDirection` chooses.
    */
   descending?: boolean;
+  /**
+   * An injection from this orbit, which is then a parking orbit (C01: Apollo's
+   * translunar injection): the last stage relit at `time` and flown onto the
+   * conic the flight left on (`src/physics/sim/apollo.ts`).
+   */
+  injection?: InjectionSpec;
   description: string;
 }
 

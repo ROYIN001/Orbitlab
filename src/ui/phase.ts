@@ -94,6 +94,17 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
         detailKey = `phase.detail.rv.${frame.rendezvous.phase}`;
         break;
       }
+      if (frame.apollo) {
+        // C01: Apollo from its parking orbit
+        titleKey = `hud.apollo.${frame.apollo.phase}`;
+        detailKey = `phase.detail.apollo.${frame.apollo.phase}`;
+        params.ap = fmtAlt(frame.elements.apoapsisAlt);
+        params.pe = fmtAlt(frame.elements.periapsisAlt);
+        params.tgo = fmtClockShort(Math.max(0, frame.apollo.tliTime - frame.t));
+        params.speed = Math.round(frame.speed).toString();
+        params.alt = Math.round(frame.altitude / 1000).toString();
+        break;
+      }
       titleKey = 'hud.status.orbit';
       detailKey = frame.payloadSeparated ? 'phase.detail.deployed' : 'phase.detail.orbit';
       params.ap = fmtAlt(frame.elements.apoapsisAlt);
@@ -187,6 +198,13 @@ function fmtDuration(s: number): string {
 /** A burn is scheduled and still ahead of this frame. */
 export function hasNextBurn(frame: VisualFrame): boolean {
   return frame.nextBurnTime > 0 && frame.nextBurnTime > frame.t;
+}
+
+/** A countdown as h:mm:ss (m:ss under an hour). */
+function fmtClockShort(s: number): string {
+  const total = Math.round(s), h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sec = total % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
 }
 
 function fmtAlt(m: number): string {

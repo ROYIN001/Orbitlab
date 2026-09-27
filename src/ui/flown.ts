@@ -11,7 +11,8 @@ import type { SimEvent } from '../physics/sim/types';
 
 /** The simulation's events a flown one is matched to. */
 export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.interstageSep' | 'evt.towerJettison' | 'evt.boosterSep' | 'evt.fairingSep' | 'evt.meco' | 'evt.stageCutoff' | 'evt.stageSep' | 'evt.seco'
-  | 'evt.payloadSep' | 'evt.boosterLandedZone' | 'evt.boosterLandedShip' | 'evt.contact';
+  | 'evt.payloadSep' | 'evt.boosterLandedZone' | 'evt.boosterLandedShip' | 'evt.contact'
+  | 'evt.ignition' | 'evt.tli' | 'evt.slaPanels' | 'evt.csmSeparation' | 'evt.csmDocked' | 'evt.lmExtraction';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -55,6 +56,12 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.boosterLandedZone': 'tl.evt.boosterLandedZone',
   'evt.boosterLandedShip': 'tl.evt.boosterLandedShip',
   'evt.contact': 'flown.docked',
+  'evt.ignition': 'tl.evt.ignition',
+  'evt.tli': 'tl.evt.tli',
+  'evt.slaPanels': 'tl.evt.slaPanels',
+  'evt.csmSeparation': 'tl.evt.csmSeparation',
+  'evt.csmDocked': 'tl.evt.csmDocked',
+  'evt.lmExtraction': 'tl.evt.lmExtraction',
 };
 
 export interface FlownRow {

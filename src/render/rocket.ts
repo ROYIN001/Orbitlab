@@ -836,12 +836,14 @@ export class RocketView {
       satG.position.y = this.satellite.height / 2;
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
       this.satellite.setDeploy(p);
+      this.satellite.setApollo?.(frame.apollo, frame.t, true);
       satG.visible = true;
     } else {
       // a payload flown in the open stands on the stage; one in a fairing half a metre up inside it
       satG.position.y = top + this.satellite.height / 2 + (this.spec.exposedPayload ? 0 : 0.5);
       this.satellite.setDeploy(0);
       this.satellite.setJettisoned?.(frame.jettisoned);
+      this.satellite.setApollo?.(frame.apollo, frame.t, false);
       satG.visible = this.spec.exposedPayload ? true : !this.spec.fairing ? false : !frame.fairingAttached;
     }
   }

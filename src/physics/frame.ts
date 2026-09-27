@@ -27,6 +27,7 @@
 import type { Simulation, SimStatus, DescentPhase, Debris, DebrisVisual, Losses } from './simulation';
 import type { AbortState } from './sim/types';
 import type { RendezvousState } from './sim/rendezvous';
+import type { ApolloState } from './sim/apollo';
 import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
@@ -206,6 +207,8 @@ export interface VisualFrame {
   activeStageIndex: number;
   fairingAttached: boolean;
   payloadSeparated: boolean;
+  /** C01: Apollo's flight from the parking orbit */
+  apollo?: ApolloState;
   /** C01: parts dropped on the way up (`StageSpec.jettisons`) — the Saturn V's interstage ring and escape tower */
   jettisoned?: { interstage: boolean; tower: boolean };
   destroyed: boolean;
@@ -503,6 +506,7 @@ export function captureFrame(sim: Simulation): VisualFrame {
     fairingAttached: sim.vehicle.fairingAttached,
     payloadSeparated: s.payloadSeparated,
     ...(sim.vehicle.jettisoned.interstage || sim.vehicle.jettisoned.tower ? { jettisoned: { ...sim.vehicle.jettisoned } } : {}),
+    ...(sim.apollo.active ? { apollo: sim.apollo.frame() } : {}),
     destroyed: s.destroyed,
     liftoff: s.liftoff,
     debris,

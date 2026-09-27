@@ -63,6 +63,7 @@ import { LaunchEscape } from './sim/abort';
 import { Rendezvous, type ToruCommand } from './sim/rendezvous';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
+import { APOLLO_COAST_STEP_S, ApolloFlight, TLI_STEP_S } from './sim/apollo';
 import { RIGID_ASCENT_COMMAND_RATE, RIGID_STEERING_FREEZE_S, TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
 import type { Debris, EventSeverity, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
 
@@ -170,6 +171,8 @@ export class Simulation {
   readonly escape = new LaunchEscape(this);
   /** G07: the flight on to the station, from the spacecraft's separation */
   readonly rendezvous = new Rendezvous(this);
+  /** @internal C01: Apollo's flight from the parking orbit */
+  readonly apollo = new ApolloFlight(this);
   /** The six-DOF steering held through a burn's last seconds (RIGID_STEERING_FREEZE_S). */
   private frozenCommand: Vec3 | null = null;
   /** The six-DOF vacuum-ascent command, rate-limited (RIGID_ASCENT_COMMAND_RATE). */
@@ -630,7 +633,8 @@ export class Simulation {
       // step costs no accuracy; it only has to stay short enough to resolve the
       // scheduled burn, which the pending-action clamp below takes care of.
       case 'coast': dt = s.altitude > 2000e3 ? 60 : s.altitude > 140e3 ? 10 : 0.5; break;
-      case 'orbit': dt = Math.min(30, Math.max(1, (s.elements.period || 5400) / 300)); break;
+      case 'orbit': dt = this.apollo.active ? (this.apollo.burning ? this.apollo.burnStep() : this.vehicle.inTransient(s.t) ? TLI_STEP_S : APOLLO_COAST_STEP_S)
+        : Math.min(30, Math.max(1, (s.elements.period || 5400) / 300)); break;
       case 'descent': {
         // Kepler above the air; the entry resolved at its speed; the flip and
         // the landing burn finely.
@@ -712,6 +716,8 @@ export class Simulation {
     if (s.status === 'prelaunch') this.stepPrelaunch(dt);
     // G07: docked (or kept by the station after a docking called off), the rendezvous still flies the spacecraft
     else if (s.status === 'orbit' && this.rendezvous.holding) this.rendezvous.step(dt);
+    // C01: Apollo flies itself from the parking orbit on
+    else if (s.status === 'orbit' && this.apollo.active) this.apollo.step(dt);
     else if (s.status === 'orbit' && !this.vehicle.inTransient(s.t)) this.stepOrbit(dt);
     else if (s.status === 'landed') this.stepLanded(dt);
     else if (s.status === 'abort') this.escape.step(dt);
