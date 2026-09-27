@@ -95,6 +95,50 @@ body[data-mode='watch'] :is(.camera-tabs, #btn-glow, #btn-frames, .frames-menu, 
 body:not([data-mode='engineer']) #btn-abort { display: none !important; }
 body[data-mode='watch'] .scene-mid { justify-content: flex-end; }
 
+/* ── the Explore level ───────────────────────────────────────────────────── */
+
+/* The 6-DOF flight controls are the Engineer level's. Explore shows them only
+   while the flight is under manual command — set at the Engineer level, which
+   never touches the flight when it is left — so the way back to the autopilot
+   is always on screen. */
+body[data-mode='explore'] #rigid-controls:not([data-command='manual']) { display: none !important; }
+
+/* The card at the end of a flight (src/ui/explore-debrief.ts): the viewer's
+   card, over the same picture, with the flight's numbers in it. */
+#explore-debrief { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+#explore-debrief[hidden] { display: none; }
+.watch-card.explore-debrief-card { width: min(580px, calc(100% - 32px)); text-align: left; }
+.watch-card.explore-debrief-card h2 { font-size: 20px; }
+.watch-end.explore-debrief-card.offTarget .eyebrow { color: var(--warn); }
+.explore-debrief-tab {
+  position: absolute; left: 50%; top: 14px; transform: translateX(-50%); pointer-events: auto;
+  padding: 7px 14px; border-radius: 999px; font-size: 13px;
+  background: rgba(10, 16, 24, 0.9); border: 1px solid var(--accent-line); color: var(--accent);
+}
+.explore-debrief-tab:hover { border-color: var(--accent); }
+/* the card says what the result table under the controls says, so Explore
+   keeps the picture instead; a lesson has no card, and keeps the table */
+body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !important; }
+.debrief-metrics { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; margin: 12px 0 0; font-size: 13.5px; }
+.debrief-metrics dt { color: var(--muted); }
+.debrief-metrics dd { margin: 0; font-family: var(--mono); }
+.debrief-metrics dd small { font-family: var(--sans); color: var(--muted); }
+.debrief-metrics dd.outside { color: var(--warn); }
+.debrief-losses h3 { margin: 14px 0 6px; font: 600 11px var(--sans); letter-spacing: 1.2px; text-transform: uppercase; color: var(--accent); }
+.debrief-loss { display: grid; grid-template-columns: minmax(0, 13em) minmax(0, 1fr) auto; gap: 10px; align-items: center; margin: 3px 0; font-size: 12.5px; }
+.debrief-loss .k { color: var(--muted); }
+.debrief-loss .v { font-family: var(--mono); font-size: 12px; }
+.debrief-loss-bar { position: relative; height: 6px; border-radius: 3px; background: #2c3745; overflow: hidden; }
+.debrief-loss-bar::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: calc(var(--share, 0) * 100%); background: var(--warn); opacity: 0.8;
+}
+.explore-debrief-card .watch-end-actions { justify-content: flex-start; }
+@media (max-width: 640px) {
+  .debrief-loss { grid-template-columns: minmax(0, 1fr) auto; }
+  .debrief-loss-bar { grid-column: 1 / -1; grid-row: 2; }
+}
+
 /* ── the landing page ────────────────────────────────────────────────────── */
 
 .home-screen {

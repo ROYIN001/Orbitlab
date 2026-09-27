@@ -189,6 +189,9 @@ export class LessonMode implements LessonToolsHost {
     this.locks.set(lesson.locked);
     this.strip.hidden = false;
     document.body.dataset.lesson = lesson.id;
+    // what Explore keeps computed and this lesson asks the student to change (style.css)
+    if (lesson.reveal?.length) document.body.dataset.lessonReveal = lesson.reveal.join(' ');
+    else delete document.body.dataset.lessonReveal;
     this.lastStripKey = '';
     this.update();
     return { ok: true };
@@ -212,6 +215,7 @@ export class LessonMode implements LessonToolsHost {
     this.strip.hidden = true;
     this.strip.replaceChildren();
     delete document.body.dataset.lesson;
+    delete document.body.dataset.lessonReveal;
   }
 
   activeLesson() {

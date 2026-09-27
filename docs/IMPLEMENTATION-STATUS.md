@@ -9,9 +9,11 @@ right.
 A browser simulator of orbital launches: 21 launch vehicles (three of them historical, roadmap C01) from 16 launch sites (and four more in the site table, flown by no vehicle yet), flown by
 closed-loop ascent guidance and a burn sequencer to the orbit a mission asks for, drawn in 3-D
 from a flight recording that can be replayed and scrubbed. Four modes — Home, Watch
-(ready-made launches with a director's camera), Explore and Engineer (every guidance
-parameter, the six-DOF flight controls, telemetry and CSV export). English, Russian and Thai
-throughout.
+(ready-made launches with a director's camera), Explore (the same physics, set up in three
+steps under a pre-flight light, with the guidance computed and shown rather than asked for,
+failures as challenges, and a card at the end of the flight; `src/ui/explore.ts`) and Engineer
+(every guidance parameter, the six-DOF flight controls, telemetry and CSV export). English,
+Russian and Thai throughout.
 
 Since S01 this is the **Launch** section of three ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)):
 the top bar switches the section (Launch, Orbit, Build) and the level (Watch, Explore, Engineer),
@@ -168,7 +170,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 633 tests in 126 files, 15 to 20 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 1 670 tests in 128 files, 20 to 30 minutes on four cores. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target

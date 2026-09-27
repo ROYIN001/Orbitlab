@@ -216,11 +216,87 @@ details[open] summary { margin-bottom: 4px; }
 .share-notice p { margin: 0; }
 .share-notice ul { margin: 4px 0 0; padding-left: 18px; color: var(--muted); }
 .share-notice-close { position: absolute; top: 4px; right: 6px; font-size: 16px; line-height: 1; color: var(--muted); }
-.experience-section .experience-label { margin-top: 0; }
-.experience-glossary { padding-top: 6px; border-top: 1px solid var(--line); }
-#setup[data-experience="learning"] .guidance-parameters:not([data-invalid="true"]) { display: none; }
-#setup[data-experience="advanced"] .guidance-reveal { display: none; }
-.guidance-reveal { margin: 8px 0; }
+/* Explore computes the guidance and shows it (src/ui/explore.ts). Its fields
+   and the auto-tuner are built at both levels and stay folded away in Explore
+   unless one of them is invalid, or a lesson asks the student to change them
+   (`reveal`, src/lessons/types.ts). */
+#setup[data-experience="learning"] .guidance-parameters:not([data-invalid="true"]),
+#setup[data-experience="learning"] .guidance-tools { display: none; }
+body[data-lesson-reveal~="setup.guidance"] #setup[data-experience="learning"] :is(.guidance-parameters, .guidance-tools) { display: block; }
+.auto-guidance { margin: 10px 0 0; }
+.auto-guidance .adjusted .v { color: var(--warn); }
+.auto-guidance .model { flex-direction: column; gap: 0; padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--line); }
+.auto-guidance .model .v { font-family: var(--sans); text-align: left; color: var(--text); }
+.auto-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+
+/* Explore sets a mission up in three steps, one on screen at a time (ui/panel.ts) */
+.explore-steps {
+  flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+}
+.explore-step-tab {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0;
+  padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line2);
+  font-size: 12.5px; line-height: 1.3; color: #a7b5c7; text-align: left;
+}
+.explore-step-tab small { font: 11px var(--display); color: var(--dim); }
+.explore-step-tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.explore-step-tab:hover { color: var(--text); border-color: var(--accent-line); }
+.explore-step-tab[aria-current="step"] { background: var(--accent-weak); border-color: var(--accent-line); color: var(--accent); }
+.explore-step-tab[aria-current="step"] small { color: var(--accent); }
+.explore-step-tab[data-invalid="true"] { border-color: var(--fail); }
+.step-nav { display: flex; gap: 8px; padding: 14px 18px 18px; }
+.step-nav .next { margin-left: auto; border-color: var(--accent-line); color: var(--accent); }
+
+.vehicle-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 12px 0 4px; }
+.vehicle-card {
+  display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left;
+  padding: 8px 9px; border-radius: 8px; border: 1px solid var(--line2); background: var(--panel2);
+}
+.vehicle-card strong { font-size: 12.5px; line-height: 1.3; }
+.vehicle-card-meta, .vehicle-card-lift { font-size: 10.5px; color: var(--muted); }
+/* what it lifts to low orbit, on a log scale from 100 kg to 150 t */
+.vehicle-card-bar { position: relative; height: 4px; margin: 2px 0 0; border-radius: 2px; background: #2c3745; overflow: hidden; }
+.vehicle-card-bar::after {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: calc(var(--share, 0) * 100%); background: var(--accent); opacity: 0.75;
+}
+.vehicle-card:hover:not(:disabled) { border-color: var(--accent-line); }
+.vehicle-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-weak); }
+
+/* Explore's failure scenarios, as challenges set for their moment */
+/* a list of names; the one chosen says what it does (the others say it as their tooltip) */
+.challenge-cards { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 0; }
+.challenge-card {
+  display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: left;
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line2); background: var(--panel3);
+}
+.challenge-card strong { font-size: 12.5px; font-weight: 500; line-height: 1.35; }
+.challenge-card span { font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.challenge-card:not([aria-pressed="true"]) span { display: none; }
+.challenge-card[aria-pressed="true"] strong { font-weight: 600; }
+.challenge-card:hover:not(:disabled) { border-color: var(--accent-line); }
+.challenge-card[aria-pressed="true"] { border-color: var(--warn); background: rgba(239, 164, 126, 0.08); }
+.challenge-card[data-failure="none"][aria-pressed="true"] { border-color: var(--accent); background: var(--accent-weak); }
+.challenge-when { color: var(--warn); }
+
+/* Explore, while the rocket flies: what is flying, in place of the set-up */
+#setup:not([data-running="true"]) .flight-summary { display: none; }
+#setup[data-experience="learning"][data-running="true"] :is(.explore-steps, .explore-step, .status-note, .verdict-fixes) { display: none; }
+.flight-summary h2 { margin: 0 0 10px; font-size: 14px; }
+.flight-summary .info { margin-top: 0; }
+.flight-summary .info .v { font-family: var(--sans); }
+.flight-summary .info .k { white-space: nowrap; }
+
+/* the payload against the vehicle's rating; the tick is the 90 % the verdict calls tight */
+.payload-meter { margin: 12px 0 0; }
+.payload-meter .field-note { margin-top: 6px; }
+.payload-bar { position: relative; height: 8px; border-radius: 4px; background: #2c3745; overflow: hidden; }
+.payload-bar span { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ok); }
+.payload-bar::after { content: ''; position: absolute; top: 0; bottom: 0; left: 90%; width: 1px; background: var(--muted); }
+.payload-meter[data-level="warn"] .payload-bar span { background: var(--warn); }
+.payload-meter[data-level="fail"] .payload-bar span { background: var(--fail); }
+.payload-meter[data-level="fail"] .field-note { color: var(--fail); }
 .section-title { display: flex; align-items: center; gap: 9px; margin-bottom: 4px; }
 .section-title h2 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 0.1px; }
 .step-number {
@@ -281,6 +357,18 @@ details[open] summary { margin-bottom: 4px; }
 .status-note.warn .status-dot { background: var(--warn); }
 .status-note.fail { color: var(--fail); }
 .status-note.fail .status-dot { background: var(--fail); }
+/* Explore: the verdict as a light with a title, and under it the changes that answer it */
+.status-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.status-title { font: 600 14px/1.35 var(--display); }
+#setup[data-experience="learning"] .status-note .status-dot { width: 11px; height: 11px; margin-top: 4px; flex: none; box-shadow: 0 0 10px currentColor; }
+#setup[data-experience="learning"] .status-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden; }
+#setup[data-experience="learning"] .launch-note { display: none; }
+.verdict-fixes { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 10px; }
+.verdict-fixes:empty { display: none; }
+.verdict-fixes .btn { font-size: 12px; padding: 6px 10px; border-color: var(--accent-line); color: var(--accent); }
+.verdict-fixes :is(.field-note, .progress) { width: 100%; margin: 0; }
+/* in a lesson, finding the change is the exercise */
+body[data-lesson] .verdict-fixes { display: none; }
 .launch-button {
   display: flex; width: 100%; align-items: center; justify-content: center; gap: 10px;
   background: var(--accent); color: #11251f; border-radius: 8px;
@@ -774,6 +862,34 @@ details[open] summary { margin-bottom: 4px; }
 .range-toggle button { padding: 4px 9px; border-radius: 5px; font-size: 11px; color: #a7b5c7; white-space: nowrap; }
 .range-toggle button.active { background: var(--accent-weak); color: var(--accent); }
 .chart-note { margin: 12px 0 0; font-size: 11px; color: var(--warn); }
+/* Explore: the flight against its target orbit, above the charts (ui/telemetry.ts) */
+.tel-progress { display: none; }
+#telemetry.simple-charts .tel-progress { display: block; }
+#telemetry.view-equations .tel-progress { display: none; }
+.tel-progress h3.section { margin-top: 14px; }
+.tel-progress-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline;
+  margin: 0 0 8px; font-size: 12px;
+}
+.tel-progress-row .k { color: var(--muted); }
+.tel-progress-row .v { font-family: var(--mono); font-size: 11.5px; text-align: right; }
+.tel-progress-bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: #2c3745; overflow: hidden; }
+.tel-progress-bar[hidden] { display: none; }
+.tel-progress-bar span { display: block; height: 100%; width: 0; background: var(--blue); transition: width 0.4s ease; }
+.tel-progress-row:last-child .tel-progress-bar span { background: #c3a6ff; }
+
+/* Explore: one chart at a time, picked from a row of its names (ui/telemetry.ts) */
+.chart-picker { display: none; }
+#telemetry.simple-charts .chart-picker { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 0; }
+#telemetry.view-equations .chart-picker { display: none; }
+.chart-picker button {
+  border: 1px solid var(--line2); border-radius: 6px;
+  font-size: 11.5px; padding: 5px 9px; color: #a7b5c7;
+}
+.chart-picker button:hover { color: var(--text); border-color: var(--accent-line); }
+.chart-picker button[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent); border-color: var(--accent-line); }
+#telemetry.simple-charts canvas.chart[data-chart]:not(.picked) { display: none; }
+#telemetry.simple-charts canvas.chart.picked { height: 190px; }
 .chart {
   width: 100%; height: 118px; display: block;
   background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; margin: 10px 0 0;

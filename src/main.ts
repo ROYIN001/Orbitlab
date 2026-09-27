@@ -23,6 +23,7 @@ import { RecoverySceneryView } from './render/recovery';
 import { CameraController, type CameraMode, type CamPhase } from './render/cameras';
 import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
+import { ExploreDebrief } from './ui/explore-debrief';
 import { MissionResult } from './ui/mission-result';
 import { RigidControls } from './ui/rigid-controls';
 import { LoopInspector } from './ui/loop-inspector';
@@ -303,6 +304,10 @@ class App {
   lastFrame = performance.now();
   hudTimer = 0;
   telTimer = 0;
+  /** numbers each flight previewed, so Explore's end-of-flight card is offered once per flight */
+  private flightNo = 0;
+  /** Explore's card at the end of a flight (src/ui/explore-debrief.ts) */
+  private debrief!: ExploreDebrief;
   explosion = new ExplosionEffect();
   /** V03: exhaust trails */
   private trails: ExhaustTrails | null = null;
@@ -438,6 +443,12 @@ class App {
       mapUrl: `${base}textures/earth_atmos_2048.jpg`,
       // R02: the satellite catalogue comes through the data mode chosen
       data: () => this.dataProvider,
+    });
+    this.debrief = new ExploreDebrief(document.getElementById('explore-debrief')!, {
+      // "fly again": the rocket back on the pad and the set-up open, as New mission does
+      again: () => { this.goLive(); this.panel.backToSetup(); },
+      engineer: () => this.go(route('launch', 'engineer')),
+      orbit: () => this.continueInOrbit(),
     });
     this.watch = new WatchView(document.getElementById('watch-ui')!, {
       start: (id) => this.startWatch(id),
@@ -598,6 +609,7 @@ class App {
     this.rigidControls.setInspectorAvailable(mode === 'engineer');
     this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
     if (mode !== 'engineer') this.loopInspector.close();
+    if (mode !== 'explore') this.debrief.close();
     if (mode !== 'engineer') this.monteCarlo.close(); // G05: a running set flies on
     document.getElementById('home-screen')!.hidden = next.section !== null;
     document.getElementById('watch-ui')!.hidden = mode !== 'watch';
@@ -1156,6 +1168,7 @@ class App {
 
   /** Build a paused simulation so the vehicle is shown on the pad. */
   preview(cfg: MissionConfig): void {
+    this.flightNo++;
     this.audio.reset();
     // every new flight drops the broadcast; `startWatch` puts its own back after launching
     this.soundtrack.set(null);
@@ -1473,6 +1486,10 @@ class App {
       this.rendezvousPlot.update(this.recorder.frames, this.shown);
       this.compare.update();
       this.result.update(this.simView.sim);
+      // Explore: a card a moment after the live flight's outcome; a lesson grades in its own strip
+      const cfg = this.panel.state;
+      this.debrief.update(this.flightNo, this.simView.sim, this.player.live, this.mode === 'explore' && !document.body.dataset.lesson,
+        `${missionVehicle(cfg).name} · ${satelliteName(satelliteById(cfg.satelliteId))}`, performance.now());
       this.lessons.update(); // E03
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);

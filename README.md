@@ -220,7 +220,16 @@ The launch section's levels, with the landing page:
   the ground — each flown to its target, and every stage it flies home landed, by
   `tests/watch-missions.test.ts`; the camera follows a returning stage for its landing,
   and the flight ends on a card that offers another launch or the mission builder.
-- **Explore** — the mission builder below in its learning layout.
+- **Explore** — the mission builder, lighter, flying the same physics (`src/ui/explore.ts`).
+  A mission is set up in three steps — the rocket (cards with what each lifts), the payload
+  (against the vehicle's rating), the orbit — under a pre-flight light that offers the change
+  its verdict points to: the next launch window, a site whose corridor reaches the plane, the
+  heaviest payload the verdict passes. Guidance is computed, not asked for: the vehicle's own
+  pitch programme, the one the fleet tests fly to every reference orbit it can reach, shown
+  read-only, with anything the Engineer level changed still flown, marked and undoable. The
+  failure scenarios are challenges set for their moment. In flight the set-up gives way to
+  what is flying, the telemetry panel to the flight against its target orbit and one chart at
+  a time, and a card at the end says what happened, where the Δv went and what to try next.
 - **Engineer** — the full workspace with every guidance parameter.
 
 The mission builder:

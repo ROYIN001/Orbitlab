@@ -14,7 +14,7 @@ import { hookExists } from './hooks';
 import { MEASURE_IDS } from './measures';
 import { compileExpression } from './assessment/expression';
 import { DIAGRAM_IDS } from './assessment/diagrams';
-import { DOMAINS, LOCK_KEYS, type Criterion, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId } from './types';
+import { DOMAINS, LOCK_KEYS, REVEAL_KEYS, type Criterion, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId, type RevealKey } from './types';
 import type { ChoiceOption, Figure, FlightSeries, Question } from './assessment/types';
 import { VEHICLES } from '../data/vehicles';
 
@@ -144,6 +144,8 @@ export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Le
   }
   const locked = Array.isArray(raw.locked) ? raw.locked.filter((k): k is LockKey => LOCK_KEYS.includes(k as LockKey)) : [];
   if (Array.isArray(raw.locked) && locked.length !== raw.locked.length) r.warn(`${at}.locked`, 'invalid');
+  const reveal = Array.isArray(raw.reveal) ? raw.reveal.filter((k): k is RevealKey => REVEAL_KEYS.includes(k as RevealKey)) : [];
+  if (Array.isArray(raw.reveal) && reveal.length !== raw.reveal.length) r.warn(`${at}.reveal`, 'invalid');
   if (!Array.isArray(raw.criteria) || (!raw.criteria.length && !comingSoon)) return r.error(`${at}.criteria`, 'missing') || null;
   const criteria: Criterion[] = [];
   const ids = new Set<string>();
@@ -161,7 +163,7 @@ export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Le
   }
   return {
     id: raw.id, track, order, mode, domains, ...(tags?.length ? { tags } : {}),
-    title, brief, ...(debrief ? { debrief } : {}), mission, locked, criteria, hints,
+    title, brief, ...(debrief ? { debrief } : {}), mission, locked, ...(reveal.length ? { reveal } : {}), criteria, hints,
     ...(isStr(raw.endEvent) ? { endEvent: raw.endEvent } : {}),
     ...(comingSoon ? { comingSoon } : {}),
   };
