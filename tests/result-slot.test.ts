@@ -14,6 +14,8 @@ import { elementsFromRecord } from '../src/orbit/omm';
 import { stationOf } from '../src/orbit/applications-setup';
 import { predictReentry } from '../src/orbit/reentry';
 import { measuredActivity } from '../src/physics/propagator/activity';
+import { describeLifetime, type LifetimeInputs } from '../src/ui/lifetime';
+import { getLang } from '../src/i18n';
 
 type Over = { place: string; lat: number; minEl: number; days: number; data: string; groups: string[] };
 const bangkok: Over = { place: 'Bangkok', lat: 0.2427, minEl: 60, days: 1, data: 'snapshot|2026-09-26T16:10:54Z', groups: ['stations'] };
@@ -303,3 +305,32 @@ describe('RealSky: results keep what they were found from (A4, A14, A15)', () =>
   });
 });
 
+describe('orbit lifetime: the result is shown with what it was made from (A5)', () => {
+  const inputs: LifetimeInputs = {
+    start: 2461310.2, forces: { j2: true, j3j4: true, drag: true, sun: true, moon: true, srp: true },
+    activity: 'measured', method: 'mean', horizon: 25 * 365, mass: 101, area: 2, cd: 2.2, cr: 1.3,
+  };
+
+  it('a lifetime of a 101 kg satellite is stale under 10 001 kg, and under any other change of the form', () => {
+    const s = new ResultSlot<LifetimeInputs, string>(describeLifetime);
+    const gen = s.start(inputs);
+    s.accept(gen, '3.0 years');
+    expect(s.status(inputs)).toBe('fresh');
+    expect(s.status({ ...inputs, mass: 10001 })).toBe('stale');
+    expect(s.status({ ...inputs, forces: { ...inputs.forces, drag: false } })).toBe('stale');
+    expect(s.status({ ...inputs, activity: 'high' })).toBe('stale');
+    expect(s.status({ ...inputs, method: 'cowell' })).toBe('stale');
+    expect(s.status({ ...inputs, horizon: 365 })).toBe('stale');
+    expect(s.status({ ...inputs, cr: 1.5 })).toBe('stale');
+    expect(s.changed({ ...inputs, mass: 10001 })).toEqual(['mass']);
+  });
+
+  it('names every input of the run', () => {
+    expect(getLang()).toBe('en');
+    const words = new ResultSlot<LifetimeInputs, string>(describeLifetime);
+    words.start({ ...inputs, forces: { ...inputs.forces, sun: false, moon: false } });
+    const d = words.describe();
+    for (const part of ['101 kg', '2 m²', 'C_D 2.2', 'C_R 1.3', 'Oblateness (J2)', 'Atmospheric drag', 'Mean elements', '25.0 years', 'Measured, then NOAA']) expect(d).toContain(part);
+    expect(d).not.toContain('The Moon');
+  });
+});

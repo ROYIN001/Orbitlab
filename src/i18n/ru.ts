@@ -1303,6 +1303,7 @@ export const ru: Record<string, string> = {
   'result.radius': 'радиус {v} м',
   'result.sw': 'Космическая погода на {date}',
   'result.invalid': 'Введите число больше нуля.',
+  'result.fixFirst': 'Исправьте отмеченные значения, чтобы запустить расчёт.',
   'mv.b.available': 'Запас Δv в баках',
   'mv.b.used': 'Израсходовано топлива',
   'mv.b.left': 'Осталось в баках',

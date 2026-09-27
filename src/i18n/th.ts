@@ -1304,6 +1304,7 @@ export const th: Record<string, string> = {
   'result.radius': 'รัศมี {v} ม.',
   'result.sw': 'ข้อมูลสภาพอวกาศ ณ {date}',
   'result.invalid': 'ใส่ตัวเลขที่มากกว่าศูนย์',
+  'result.fixFirst': 'แก้ค่าที่ทำเครื่องหมายไว้ก่อนจึงจะคำนวณได้',
   'mv.b.available': 'Δv ที่มีในถัง',
   'mv.b.used': 'เชื้อเพลิงที่ใช้ไป',
   'mv.b.left': 'เหลือในถัง',

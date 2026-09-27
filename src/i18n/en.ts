@@ -1324,6 +1324,7 @@ export const en: Record<string, string> = {
   'result.radius': 'radius {v} m',
   'result.sw': 'Space weather as of {date}',
   'result.invalid': 'Enter a number greater than zero.',
+  'result.fixFirst': 'Correct the values marked to run.',
   'mv.b.available': 'Δv in the tanks',
   'mv.b.used': 'Propellant burned',
   'mv.b.left': 'Left in the tanks',
