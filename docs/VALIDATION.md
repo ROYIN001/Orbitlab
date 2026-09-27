@@ -1254,7 +1254,9 @@ and time the model is asked about, and the series to the data it is built from.
   minimum (Emmert, Lean and Picone, "Record-low thermospheric density during the 2008 solar
   minimum", GRL 37, L12102, 2010), which fits the four ANDE spheres of 2007–2010, and 15 % is the
   uncertainty ECSS itself gives the model. A density some 20 % too high, or a drag coefficient that
-  high, would do it; the two are not separated here, and nothing was fitted to remove it.
+  high, would do it; the two are not separated here, and nothing was fitted to remove it. (The
+  P2.5 fix-up's diagnosis puts it on the density: see §7, M03, "The model's early bias is
+  NRLMSISE-00's own".)
 - **The model's averages are ECSS's to 0.3 %.** Averaged at the equator over the hours and the
   months, the port gives ECSS's tabulated densities at all three levels and heights: the tables
   were made from this model that way, and so R05's first-order model was sound.
@@ -1622,8 +1624,9 @@ dry masses, are among the latter.
 - **The stages of one kind err one way.** The Soyuz Blok-I stages come down 18 to 65 % early, the
   Long March 2F second stages 10 to 46 % early and the Long March 4B third stages 66 to 71 % early,
   as if they flew heavier (or with less area) than GCAT's figures. For the first two GCAT's dry mass
-  agrees with the published one (Blok-I 2 350 kg against 2 355 kg in Arianespace's Soyuz CSG User's
-  Manual, 2012; Long March 2F stage 2, 5 500 kg against 5 500 kg empty in
+  mostly agrees with the published one (four of the six Blok-I at 2 350 kg against 2 355 kg in
+  Arianespace's Soyuz CSG User's Manual, 2012, the other two, of Soyuz-2-1b No. 067, at 2 710 kg;
+  Long March 2F stage 2, 5 500 kg against 5 500 kg empty in
   [Wikipedia](https://en.wikipedia.org/wiki/Long_March_2F)); the Long March 4B's 1 000 kg is GCAT's own
   estimate ("?"), and no published dry mass was found. Propellant left in a stage would do it, but no
   source says so, and the Long March 4B third stage has a system to vent what is left (Chinese
@@ -1650,8 +1653,8 @@ dry masses, are among the latter.
   perigee to some 160 km (H3 F4, about 20 m/s at apogee) or 130 km (Long March 7A Y13, about
   11 m/s) at the first apogee brings each down within 8 % of its day and puts the Long March 7A
   Y13's apogee on GCAT's mid-life orbit within 25 km — a diagnosis run, not a fit adopted.
-- **The model's early bias is NRLMSISE-00's own.** The seven spheres of §6 come down 8 to 23 %
-  early; to land on their days each needs NRLMSISE-00's density times 0.92, 1.02, 0.85, 0.78, 0.77,
+- **The model's early bias is NRLMSISE-00's own.** Six of the seven spheres of §6 come down 8 to
+  23 % early and Starshine 2 1.5 % late (−16 % on average); to land on their days each needs NRLMSISE-00's density times 0.92, 1.02, 0.85, 0.78, 0.77,
   0.74 and 0.80, which is what the B fitted to two sets gives (above), so the whole bias acts as one
   factor on density × C_D. The literature finds the same: densities 10–30 % below expectation in
   2007–2009 (Emmert, Lean and Picone, GRL 37, L12102, 2010), mean NRLMSISE-00 scale factors of 0.74
@@ -1723,9 +1726,10 @@ error lies between −16.7 % and +25 %.
   - *The method fits no B to an eccentric orbit in its last weeks.* 7 or 8 objects at each lead
     time get no B and count as outside: all in eccentric orbits (Molniya, Blok-L and Blok-ML, Blok
     DM-2, H-II, Ariane H10 and Centaur upper stages; e ≥ 0.1) but Kosmos-2244 at 30 days. A
-    diagnosis run after the result shows why: in most of them the earlier set's mean perigee is
-    already at or under 120 km — the height at which the mean-element propagator counts an orbit
-    as down — while the object keeps flying for weeks, losing apogee at each pass; so
+    diagnosis run after the result shows why: of the 22 eccentric cases with no B (over the three
+    lead times), in all but one (the Ariane H10 at 10 days, 187 km) the earlier set's mean perigee
+    is already at or under 120 km — the height at which the mean-element propagator counts an
+    orbit as down — while the object keeps flying for weeks, losing apogee at each pass; so
     `ballisticFromSets`, which carries the orbit by the mean elements, ends its own run at its start
     and no B brackets the fall. (Kosmos-2244's two sets at 30 days put its perigee 167 km lower in
     seven days, which no B up to 1 m²/kg does.) Of the objects in eccentric orbits none came down

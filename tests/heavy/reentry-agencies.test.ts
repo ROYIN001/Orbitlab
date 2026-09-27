@@ -12,7 +12,8 @@
  *   at least 70 % at 30 days. An object with no B fitted, or whose prediction
  *   stays up past the horizon, is not inside.
  *
- * Reported beside the criteria, fixed with them before the run: per lead time
+ * Reported beside the criteria, and chosen when this test was written (after
+ * the pre-registration, before the run), not criteria: per lead time
  * the fraction inside, and over the objects predicted, the median of the error
  * of the time left, its interquartile range (25th to 75th percentile) and the
  * median of its size. Some ten minutes; `npm run test:heavy` (with
