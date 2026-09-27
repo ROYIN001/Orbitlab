@@ -1,11 +1,12 @@
 /**
  * The screening for close approaches (roadmap M01) off the main thread
  * (P2.5): with a whole catalogue imported — some 30 000 objects — the search
- * takes tens of seconds, which a page must not spend on its own thread. The
- * element sets go to a Web Worker, which makes them ready for SGP4 again and
- * screens them (src/orbit/screening.ts); the approaches come back by index.
- * Where no module worker is to be had, the same runs here, a few objects at a
- * time between frames.
+ * took tens of seconds before its time filter (src/orbit/screening-filter.ts)
+ * and can still take a second or more, which a page must not spend on its own
+ * thread. The element sets go to a Web Worker, which makes them ready for SGP4
+ * again and screens them (src/orbit/screening.ts); the approaches come back by
+ * index. Where no module worker is to be had, the same runs here, a few
+ * objects at a time between frames.
  */
 import { screenInSlices, type Conjunction } from './screening';
 import { skyObjects, type SkyObject } from './real-sky';
