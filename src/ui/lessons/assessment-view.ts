@@ -344,7 +344,8 @@ class AssessmentView {
         showChecked(b, () => d.confidence === c);
         conf.append(b);
       }
-      left.append(conf);
+      // what the choice does to the score, said before it is made (audit 2026-09-27 A13)
+      left.append(conf, el('p', 'assess-conf-note', t('assess.confidenceNote')));
     }
     grid.append(left);
     const figure: Figure | undefined = q.type === 'vehicle' && p.vehicle ? { kind: 'vehicle', vehicleId: p.vehicle } : q.figure;
@@ -425,7 +426,12 @@ class AssessmentView {
       const fill = el('i', s.level);
       fill.style.width = `${s.percent}%`;
       meter.append(fill);
-      row.append(el('span', undefined, `${dmn} ${t(`assess.domain.${dmn}`)}`), meter, el('span', 'assess-pct', `${s.percent} %`), el('span', `assess-level ${s.level}`, t(`assess.level.${s.level}`)));
+      // the count behind the percentage, and the misconceptions that cap the level (audit 2026-09-27 A13)
+      const label = el('div', 'assess-bar-name');
+      label.append(el('span', undefined, `${dmn} ${t(`assess.domain.${dmn}`)}`),
+        el('span', 'assess-count', [t('assess.correctOf', { correct: s.correct, total: s.asked }),
+          ...(s.misconceptions ? [t('assess.misconceptionCount', { n: s.misconceptions })] : [])].join(' · ')));
+      row.append(label, meter, el('span', 'assess-pct', `${s.percent} %`), el('span', `assess-level ${s.level}`, t(`assess.level.${s.level}`)));
       bars.append(row);
     }
     const left = el('div');
@@ -479,8 +485,12 @@ class AssessmentView {
     const grid = el('div', 'assess-result');
     grid.append(left, right);
     const headline = start ? t('assess.headline', { percent: r.percent, area: name(r.startDomain!) }) : t('assess.headlineAll', { percent: r.percent });
+    // what the percentage is made of: the right answers out of those asked, and why the two differ (audit 2026-09-27 A13)
+    const summary = el('p', 'assess-summary', t('assess.summary', {
+      correct: r.questions.filter((x) => x.correct).length, total: r.questions.length, n: r.questions.filter((x) => x.misconception).length,
+    }));
     this.frame(el('span', 'lesson-eyebrow', `${t(`assess.kind.${last.kind}`)} · ${new Date(last.finishedAt!).toLocaleDateString(getLang())}`),
-      el('h2', undefined, headline), grid, this.buttonRow(...buttons));
+      el('h2', undefined, headline), summary, el('p', 'small assess-summary-note', t('assess.scoreNote')), grid, this.buttonRow(...buttons));
   }
 
   private renderReview(a: AssessmentAttempt): void {

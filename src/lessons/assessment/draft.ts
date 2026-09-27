@@ -7,6 +7,10 @@
  * ids and the typed text, never a label, so nothing in it depends on the
  * language. Nothing here touches the attempt: an answer is recorded only when
  * the student goes on (`draftAnswer`), and the draft is then dropped.
+ *
+ * It also decides when the student may go on (audit 2026-09-27 A13): a
+ * question of understanding needs a confidence as well as an answer, so the
+ * same answer can never score differently because no confidence was chosen.
  */
 import type { Answer, Confidence, Question } from './types';
 
@@ -114,21 +118,22 @@ export function needsConfidence(q: Question, value: Answer['value'] | undefined)
   return q.kind === 'understanding' && value !== null && value !== undefined;
 }
 
-/** Whether "Next" can be pressed: there is an answer. */
+/** Whether "Next" can be pressed: an answer, and a confidence where one is asked. */
 export function canSubmit(q: Question, d: QuestionDraft): boolean {
-  return draftValue(q, d) !== undefined;
+  const value = draftValue(q, d);
+  return value !== undefined && (!needsConfidence(q, value) || d.confidence !== undefined);
 }
 
 /**
  * The answer to record. Skipped, it records nothing chosen and no confidence.
- * A confidence goes only with an answer to a question of understanding; none
- * chosen is recorded as "unsure", as before.
+ * A confidence goes only with an answer to a question of understanding —
+ * `canSubmit` has made sure there is one (audit 2026-09-27 A13).
  */
 export function draftAnswer(q: Question, d: QuestionDraft, skipped = false): Answer {
   const value = skipped ? null : draftValue(q, d) ?? null;
   return {
     id: q.id, value,
     ...(skipped ? { skipped: true } : {}),
-    ...(needsConfidence(q, value) ? { confidence: d.confidence ?? 'unsure' } : {}),
+    ...(needsConfidence(q, value) && d.confidence ? { confidence: d.confidence } : {}),
   };
 }
