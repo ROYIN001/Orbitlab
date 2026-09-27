@@ -7,10 +7,11 @@
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
 import { BUILTIN_LESSONS } from '../src/lessons/catalog';
-import { lessonConfig } from '../src/lessons/config';
+import { defaultMissionState, lessonConfig, missionConfigFromState } from '../src/lessons/config';
 import { flightEnded, gradeLesson, type LessonAnswers } from '../src/lessons/grader';
 import { MEASURES } from '../src/lessons/measures';
-import type { MissionState } from '../src/config/mission-file';
+import { parseMissionDocument, type MissionState } from '../src/config/mission-file';
+import { emptyProgress, flownMission, loadProgress, recordGrade, saveProgress } from '../src/lessons/progress';
 import type { Lesson, LessonFlight } from '../src/lessons/types';
 
 const lesson = (id: string): Lesson => BUILTIN_LESSONS.find((x) => x.id === id)!;
@@ -30,6 +31,23 @@ const graded = (l: Lesson, sim: Simulation, answers?: LessonAnswers) => {
   const g = gradeLesson(l, sim, answers ?? exact(l, sim));
   return { verdict: g.verdict, detail: JSON.stringify(g) + '\n' + log(sim) };
 };
+/**
+ * Audit 2026-09-27 A11: the flight's record, kept in storage and read back as
+ * a mission document, flies the configuration that was flown.
+ */
+function expectRecordedAsFlown(l: Lesson, sim: Simulation): void {
+  const data = new Map<string, string>();
+  const store = { getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => { data.set(k, v); } };
+  const progress = emptyProgress();
+  const g = gradeLesson(l, sim, exact(l, sim));
+  recordGrade(progress, { lessonId: l.id, at: 'now', verdict: g.verdict, criteria: g.criteria, answers: {}, hintsShown: 0, mission: flownMission(sim.cfg) });
+  saveProgress(progress, store);
+  const doc = loadProgress(store).lessons[l.id].last!.mission;
+  const parsed = parseMissionDocument(doc, defaultMissionState());
+  expect(parsed.issues).toEqual([]);
+  expect(missionConfigFromState(parsed.state)).toEqual(sim.cfg);
+}
+
 /** A six-DOF wrong flight stops as soon as its grade has failed. */
 const failed = (l: Lesson) => (sim: Simulation) => gradeLesson(l, sim).verdict === 'fail';
 
@@ -39,6 +57,9 @@ describe('track 2, guidance and navigation', () => {
     const solved = fly(l, (s) => { s.guidanceOverrides = { maxAccel: 18 }; });
     expect(MEASURES.maxQ.read(solved)).toBeLessThan(25);
     expect(graded(l, solved).verdict, graded(l, solved).detail).toBe('pass');
+    // the acceleration limit the student set goes into the results (audit 2026-09-27 A11)
+    expect(solved.cfg.guidance.maxAccel).toBe(18);
+    expectRecordedAsFlown(l, solved);
     // flown as it is, about 34 kPa
     const asIs = fly(l);
     expect(MEASURES.maxQ.read(asIs)).toBeGreaterThan(30);
@@ -140,6 +161,9 @@ describe('track 5, advanced missions', () => {
     expect(hours).toBeLessThan(4);
     expect(graded(l, fast).verdict, graded(l, fast).detail).toBe('pass');
     expect(gradeLesson(l, fast, { hours: hours + 0.5 }).verdict).toBe('fail');
+    // the profile the student chose goes into the results (audit 2026-09-27 A11)
+    expect(fast.cfg.rendezvous?.profile).toBe('twoOrbit');
+    expectRecordedAsFlown(l, fast);
     const slow = fly(l, undefined, 60 * 3600);
     expect(MEASURES['dock.hours'].read(slow)!, log(slow)).toBeGreaterThan(24);
     expect(gradeLesson(l, slow).verdict).toBe('fail');

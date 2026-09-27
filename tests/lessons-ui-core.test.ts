@@ -4,7 +4,10 @@
  * charts and the radar as SVG text, and unit symbols in each language.
  */
 import { describe, expect, it } from 'vitest';
-import { emptyProgress, loadProgress, recordGrade, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { emptyProgress, flownMission, loadProgress, recordGrade, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { parseMissionDocument } from '../src/config/mission-file';
+import { defaultMissionState, lessonConfig, missionConfigFromState } from '../src/lessons/config';
+import { Simulation } from '../src/physics/simulation';
 import { createLessonTools, type LessonToolsHost } from '../src/lessons/mcp-tools';
 import { BUILTIN_LESSONS, allLessons } from '../src/lessons/catalog';
 import { chartSvg, niceStep, radarSvg } from '../src/lessons/assessment/figures';
@@ -33,6 +36,24 @@ describe('progress and the results file', () => {
     expect(loadProgress(memory())).toEqual(emptyProgress());
     const broken = memory(); broken.setItem('orbitlab.lessons', '{nope');
     expect(loadProgress(broken)).toEqual(emptyProgress());
+  });
+
+  it('keeps the mission as flown: every lesson\'s configuration reads back unchanged (audit 2026-09-27 A11)', () => {
+    for (const lesson of BUILTIN_LESSONS.filter((l) => !l.comingSoon)) {
+      // the guidance changed, the docking profile, the pad: what a student's edits and the lessons touch
+      const cfg = new Simulation(lessonConfig(lesson.mission, (s) => {
+        s.guidanceOverrides = { ...s.guidanceOverrides, maxAccel: 21 };
+        if (s.rendezvous) s.rendezvous = { ...s.rendezvous, profile: 'twoOrbit' };
+      }), { headless: true }).cfg;
+      const doc = JSON.parse(JSON.stringify(flownMission(cfg)));
+      const parsed = parseMissionDocument(doc, defaultMissionState());
+      expect(parsed.issues, lesson.id).toEqual([]);
+      expect(missionConfigFromState(parsed.state), lesson.id).toEqual(cfg);
+      expect(doc.mission.guidanceOverrides.maxAccel, lesson.id).toBe(21);
+    }
+    // the payload flown when the mission gives no override: the satellite's own
+    const cfg = lessonConfig(BUILTIN_LESSONS[0].mission);
+    expect(flownMission({ ...cfg, payloadMassOverride: undefined }).mission.payloadMass).toBeGreaterThan(0);
   });
 
   it('writes a results file whose checksum shows an edit', async () => {

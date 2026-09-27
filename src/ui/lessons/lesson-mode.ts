@@ -16,7 +16,7 @@
 import { t, getLang } from '../../i18n';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
-import { missionDocument, type MissionState } from '../../config/mission-file';
+import type { MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers } from '../../lessons/grader';
@@ -24,7 +24,7 @@ import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import {
-  RESULTS_FILE_EXTENSION, loadProgress, lessonProgress, recordGrade, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, flownMission, loadProgress, lessonProgress, recordGrade, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
 import type { Criterion, CriterionGrade, Lesson, LessonGrade } from '../../lessons/types';
 import type { LessonToolsHost } from '../../lessons/mcp-tools';
@@ -272,17 +272,9 @@ export class LessonMode implements LessonToolsHost {
     if (!a.grade || !a.sim) return;
     a.recorded = true;
     const p = lessonProgress(this.progressData, a.lesson.id);
-    const cfg = a.sim.cfg;
-    const state: MissionState = {
-      vehicleId: cfg.vehicleId, satelliteId: cfg.satelliteId, siteId: cfg.siteId, orbitId: 'custom', orbit: { ...cfg.orbit },
-      launchTime: new Date(cfg.launchTime.getTime()), guidanceOverrides: {}, failure: { ...cfg.failure }, boosterRecovery: cfg.boosterRecovery,
-      payloadMass: cfg.payloadMassOverride ?? a.lesson.mission.mission.payloadMass,
-      ...(cfg.recoveryPlan ? { recoveryPlan: structuredClone(cfg.recoveryPlan) } : {}),
-      ...(cfg.dynamics ? { dynamics: structuredClone(cfg.dynamics) } : {}),
-    };
     recordGrade(this.progressData, {
       lessonId: a.lesson.id, at: new Date().toISOString(), verdict: a.grade.verdict, criteria: a.grade.criteria,
-      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: missionDocument(state),
+      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: flownMission(a.sim.cfg),
     });
     this.save();
   }

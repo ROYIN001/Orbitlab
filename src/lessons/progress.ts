@@ -6,7 +6,9 @@
  * The results file carries a SHA-256 checksum of its contents. It shows a file
  * was not edited by accident; it is not a signature, and does not claim to be.
  */
-import type { MissionDocument } from '../config/mission-file';
+import { missionDocument, type MissionDocument, type MissionState } from '../config/mission-file';
+import { satelliteById } from '../data/satellites';
+import type { MissionConfig } from '../types';
 import type { AssessmentAttempt, Question } from './assessment/types';
 import type { CriterionGrade, Lesson, LessonGrade } from './types';
 
@@ -46,6 +48,31 @@ export interface ProgressData {
   /** a teacher's lessons and questions, opened from a file and kept */
   customLessons: Lesson[];
   customQuestions: Question[];
+}
+
+/**
+ * The mission a lesson's flight flew, as a document (audit 2026-09-27 A11):
+ * what the simulation was given, not the lesson's mission with the student's
+ * edits dropped. `cfg.guidance` is the guidance already merged with the
+ * vehicle's defaults, and is kept whole, so the document flies the same
+ * guidance even if a later Orbitlab changes those defaults. The docking
+ * profile, the pad and a custom vehicle go with it.
+ */
+export function flownMission(cfg: MissionConfig): MissionDocument {
+  const state: MissionState = {
+    vehicleId: cfg.vehicleId, satelliteId: cfg.satelliteId, siteId: cfg.siteId, orbitId: 'custom', orbit: { ...cfg.orbit },
+    launchTime: new Date(cfg.launchTime.getTime()), guidanceOverrides: { ...cfg.guidance }, failure: { ...cfg.failure },
+    boosterRecovery: cfg.boosterRecovery,
+    // what the simulation flew: the override, else the payload's own mass
+    payloadMass: cfg.payloadMassOverride ?? satelliteById(cfg.satelliteId).mass,
+    ...(cfg.vehicleSpec ? { vehicleSpec: cfg.vehicleSpec } : {}),
+    ...(cfg.recoveryPlan ? { recoveryPlan: cfg.recoveryPlan } : {}),
+    ...(cfg.dynamics ? { dynamics: cfg.dynamics } : {}),
+    ...(cfg.padId ? { padId: cfg.padId } : {}),
+    ...(cfg.rendezvous ? { rendezvous: cfg.rendezvous } : {}),
+  };
+  // the document copies every nested object: nothing is shared with the flight
+  return missionDocument(state);
 }
 
 export const emptyProgress = (): ProgressData => ({ version: 1, lessons: {}, assessments: [], customLessons: [], customQuestions: [] });
