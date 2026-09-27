@@ -95,7 +95,7 @@ export function worksheetsHtml(sheets: readonly Worksheet[], images: ImageSource
       n += s.items.length;
       return `${html}</section>`;
     }).join('');
-    return `<article>${head(sheet, false)}${sections}<footer>${esc(t('ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) }))}</footer></article>`;
+    return `<article>${head(sheet, false)}${sections}<footer>${esc((sheet.footer ?? t('ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) })))}</footer></article>`;
   });
   return doc(sheets[0]?.title ?? 'Orbitlab', sheets[0]?.lang ?? 'en', articles.join('\n'));
 }

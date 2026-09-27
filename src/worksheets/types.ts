@@ -57,4 +57,6 @@ export interface Worksheet {
   seed: number;
   generatedAt: Date;
   sections: WsSection[];
+  /** the line at the foot of the sheet, where it is not the flight's (P2.5: a case from the record) */
+  footer?: string;
 }

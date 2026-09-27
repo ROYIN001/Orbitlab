@@ -70,7 +70,14 @@ const esc = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;'
  * or the 3σ ellipse; a combined radius too small to see is drawn as a ring
  * of a few pixels, and says so by its dashed edge.
  */
-export function encounterPlaneSvg(p: EncounterPlane, labels: PlaneLabels, size = 280): string {
+/** The page's colours, dark, and paper's (P2.5: the case worksheets); the ellipses' blue is recoloured by the worksheets' own print pass. */
+const INK = {
+  screen: { ground: '#05080d', axis: 'rgba(255,255,255,0.12)', first: '#ffffff', text: '#b8c5d3', second: '#ff8a65', secondText: '#ffb199' },
+  paper: { ground: '#ffffff', axis: '#d1d5db', first: '#111827', text: '#374151', second: '#ea580c', secondText: '#c2410c' },
+};
+
+export function encounterPlaneSvg(p: EncounterPlane, labels: PlaneLabels, size = 280, paper = false): string {
+  const c = paper ? INK.paper : INK.screen;
   const reach = Math.max(Math.hypot(p.miss.x, p.miss.y) * 1.25, 3.3 * p.sigma[0], p.radius * 3);
   const k = (size / 2 - 14) / reach;
   const cx = size / 2, cy = size / 2;
@@ -82,17 +89,17 @@ export function encounterPlaneSvg(p: EncounterPlane, labels: PlaneLabels, size =
   const raw = reach / 2, mag = 10 ** Math.floor(Math.log10(raw)), bar = [1, 2, 5, 10].map((m) => m * mag).filter((v) => v <= raw).pop() ?? mag;
   const barText = bar >= 1000 ? `${bar / 1000} km` : `${bar} m`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" font-family="system-ui, sans-serif" font-size="11">`
-    + `<rect width="${size}" height="${size}" fill="#05080d"/>`
-    + `<line x1="${cx}" y1="8" x2="${cx}" y2="${size - 8}" stroke="rgba(255,255,255,0.12)"/><line x1="8" y1="${cy}" x2="${size - 8}" y2="${cy}" stroke="rgba(255,255,255,0.12)"/>`
+    + `<rect width="${size}" height="${size}" fill="${c.ground}"/>`
+    + `<line x1="${cx}" y1="8" x2="${cx}" y2="${size - 8}" stroke="${c.axis}"/><line x1="8" y1="${cy}" x2="${size - 8}" y2="${cy}" stroke="${c.axis}"/>`
     + ell(3, ' stroke-dasharray="4 3" opacity="0.7"') + ell(1, '')
     + `<text x="${(cx + 3 * p.sigma[0] * k * Math.cos(-p.angle) + 4).toFixed(1)}" y="${(cy + 3 * p.sigma[0] * k * Math.sin(-p.angle) - 4).toFixed(1)}" fill="#6ec8ff">3σ</text>`
-    + `<circle cx="${cx}" cy="${cy}" r="3.5" fill="#ffffff"/><text x="${cx + 6}" y="${cy + 14}" fill="#b8c5d3">${esc(labels.first)}</text>`
-    + `<circle cx="${px(p.miss.x).toFixed(2)}" cy="${py(p.miss.y).toFixed(2)}" r="${Math.max(3, rpx).toFixed(2)}" fill="rgba(255,138,101,0.35)" stroke="#ff8a65" stroke-width="1.4"${tiny ? ' stroke-dasharray="2 2"' : ''}/>`
+    + `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${c.first}"/><text x="${cx + 6}" y="${cy + 14}" fill="${c.text}">${esc(labels.first)}</text>`
+    + `<circle cx="${px(p.miss.x).toFixed(2)}" cy="${py(p.miss.y).toFixed(2)}" r="${Math.max(3, rpx).toFixed(2)}" fill="rgba(255,138,101,0.35)" stroke="${c.second}" stroke-width="1.4"${tiny ? ' stroke-dasharray="2 2"' : ''}/>`
     // the second object's name beside it, or above and to its left near the right edge
     + (px(p.miss.x) > size * 0.6
-      ? `<text x="${(px(p.miss.x) + Math.max(3, rpx)).toFixed(1)}" y="${(py(p.miss.y) - Math.max(3, rpx) - 6).toFixed(1)}" text-anchor="end" fill="#ffb199">${esc(labels.second)}</text>`
-      : `<text x="${(px(p.miss.x) + Math.max(3, rpx) + 4).toFixed(1)}" y="${(py(p.miss.y) - 4).toFixed(1)}" fill="#ffb199">${esc(labels.second)}</text>`)
-    + `<line x1="12" y1="${size - 14}" x2="${(12 + bar * k).toFixed(1)}" y2="${size - 14}" stroke="#b8c5d3" stroke-width="2"/><text x="12" y="${size - 20}" fill="#b8c5d3">${esc(barText)}</text>`
-    + `<text x="${size - 12}" y="18" text-anchor="end" fill="#b8c5d3">${esc(labels.scale)}</text>`
+      ? `<text x="${(px(p.miss.x) + Math.max(3, rpx)).toFixed(1)}" y="${(py(p.miss.y) - Math.max(3, rpx) - 6).toFixed(1)}" text-anchor="end" fill="${c.secondText}">${esc(labels.second)}</text>`
+      : `<text x="${(px(p.miss.x) + Math.max(3, rpx) + 4).toFixed(1)}" y="${(py(p.miss.y) - 4).toFixed(1)}" fill="${c.secondText}">${esc(labels.second)}</text>`)
+    + `<line x1="12" y1="${size - 14}" x2="${(12 + bar * k).toFixed(1)}" y2="${size - 14}" stroke="${c.text}" stroke-width="2"/><text x="12" y="${size - 20}" fill="${c.text}">${esc(barText)}</text>`
+    + `<text x="${size - 12}" y="18" text-anchor="end" fill="${c.text}">${esc(labels.scale)}</text>`
     + '</svg>';
 }

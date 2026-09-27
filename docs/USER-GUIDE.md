@@ -274,6 +274,14 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   their first element sets and sets each prediction beside the re-entry on record; **Case study:
   NAPA-2** predicts the Royal Thai Air Force's CubeSat five years ahead from its first element set,
   by its size and with the drag fitted, beside the day it came down.
+- **Worksheets from real cases**, under the group's list: a printable sheet of questions and,
+  apart, its answer key with the working, on a case from the record — the collision of Iridium 33
+  and Cosmos 2251 (the conjunction message's data, its encounter plane, the miss in standard
+  deviations, why 10⁻⁵¹ was wrong), the Long March 5B stage that launched Tianhe (Cauchy's area,
+  C_D·A/m, the ±20 % window against the day it fell) and THEOS-2 over Bangkok (the J₂ turn that
+  makes an orbit sun-synchronous, how far it sees tilted 45°, the local time it passes). Each is
+  made in the page in the language on screen, as HTML to open and print. The lessons (§18) are
+  launches, flown and graded; these cases are not launches, so they come as sheets.
 - **Search** by name, catalogue number or international designator, then pick a satellite. Its
   orbit and its track are drawn. The right panel gives its catalogue number and designator, the
   epoch of its element set and how old the set is, where it is now, its period, its mean perigee

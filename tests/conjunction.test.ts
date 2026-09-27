@@ -7,7 +7,7 @@
  * was fixed before the comparison.
  */
 import { describe, expect, it } from 'vitest';
-import fixture from './fixtures/conjunction/iridium33-cosmos2251.json';
+import fixture from '../src/data/iridium33-cosmos2251.json';
 import { encounterPlane, encounterPlaneSvg } from '../src/orbit/encounter-plane';
 import { runScreeningJob } from '../src/orbit/screening-job';
 import {

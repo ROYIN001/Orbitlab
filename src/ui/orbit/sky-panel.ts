@@ -53,6 +53,9 @@ import { runReentryJob, type DragFrom } from '../../orbit/reentry-job';
 import { ballisticFromDecayRate, craftOfB } from '../../orbit/ballistic';
 import { NAPA2 } from '../../data/napa2';
 import type { ElementSet } from '../../orbit/tle';
+import { CASE_IDS, caseWorksheet, type CaseId } from '../../worksheets/cases';
+import { answerKeyHtml, worksheetsHtml } from '../../worksheets/html';
+import { downloadBlob } from '../download';
 import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
 import { setEarthOrientation } from '../../orbit/earth-orientation';
 import { CZ5B_STAGES } from '../../data/cz5b';
@@ -415,6 +418,7 @@ export class RealSky {
     }
 
     if (objs.length) box.append(this.overflightsBlock());
+    if (this.status.state === 'ready') box.append(this.caseSheetsBlock());
 
     // a file of one's own: read here, sent nowhere
     const imp = el('div', 'pg-sky-import');
@@ -1120,6 +1124,38 @@ export class RealSky {
     box.append(ol);
     if (list.length > CONJ_LIMIT) box.append(el('p', 'pg-note', t('sky.more', { n: num(list.length - CONJ_LIMIT) })));
     box.append(el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].approach.tca) })));
+    return box;
+  }
+
+  // ─── worksheets from real cases (P2.5) ──────────────────────────────────────
+
+  private caseChoice: CaseId = 'iridium';
+
+  /** A sheet and its answer key for a case from the record, in the language on screen. */
+  private caseSheetsBlock(): HTMLElement {
+    const box = el('details', 'pg-tool pg-cases');
+    box.append(el('summary', undefined, t('cases.title')), el('p', 'pg-tool-lead', t('cases.lead')));
+    const pick = el('label');
+    const sel = el('select');
+    const NAME: Record<CaseId, string> = { iridium: t('cases.iridium'), cz5b: t('cases.cz5b'), theos2: t('cases.theos2') };
+    for (const id of CASE_IDS) { const o = el('option', undefined, NAME[id]); o.value = id; sel.append(o); }
+    sel.value = this.caseChoice;
+    sel.addEventListener('change', () => { this.caseChoice = sel.value as CaseId; });
+    pick.append(el('span', undefined, t('cases.pick')), sel);
+    const out = el('p', 'pg-note');
+    out.setAttribute('role', 'status');
+    const make = async (key: boolean): Promise<void> => {
+      const { series } = await this.sun();
+      const theos = this.objects('thai').find((o) => o.el.satnum === 58016)?.el ?? null;
+      const sheet = caseWorksheet(this.caseChoice, { lang: getLang(), generatedAt: new Date(), activity: series, theos2: theos });
+      if (!sheet) { out.textContent = t('cases.noData'); return; }
+      const html = key ? answerKeyHtml([sheet]) : worksheetsHtml([sheet]);
+      downloadBlob(new Blob([html], { type: 'text/html' }), `orbitlab-case-${this.caseChoice}${key ? '-key' : ''}-${getLang()}.html`);
+      out.textContent = t('cases.done');
+    };
+    const row = el('div', 'pg-tool-row');
+    row.append(button('watch-btn', t('cases.sheet'), () => { void make(false); }), button('watch-btn', t('cases.key'), () => { void make(true); }));
+    box.append(pick, row, out, el('p', 'pg-note', t('cases.note')));
     return box;
   }
 

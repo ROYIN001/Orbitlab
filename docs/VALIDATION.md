@@ -1316,7 +1316,7 @@ between Iridium 33 and COSMOS 2251"
 objects' states at the time of closest approach in the conjunction message of 9 February 2009,
 Iridium's own orbit estimate, the three covariances, and the hard-body radii (3.942 m and 16 m).
 The paper's Table 2 gives the probability each yields. The fixture is
-`tests/fixtures/conjunction/iridium33-cosmos2251.json`.
+`src/data/iridium33-cosmos2251.json` (the case worksheet reads it too).
 
 **Findings.**
 
