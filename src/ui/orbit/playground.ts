@@ -249,6 +249,11 @@ export class OrbitPlayground {
     this.playing = true;
     if (!this.skyEntered) { this.sky.now(); this.skyEntered = true; }
     if (this.view !== '3d' && this.view !== 'track') this.view = '3d';
+    // the playground's plan is not the real satellites': they draw their own (P2.5)
+    this.orbitView?.setGhosts([]);
+    this.orbitView?.setMarkers([]);
+    this.orbitView?.setTarget(null);
+    this.sky.forgetViews();
     this.render();
     this.resize();
   }
@@ -258,6 +263,7 @@ export class OrbitPlayground {
     this.warp = this.orbitWarp;
     this.orbitView?.setPoints(null);
     this.orbitView?.setOrbit(this.orbit, true);
+    this.syncGhosts();
   }
 
   /** A real satellite's orbit, as it is now, put in the playground to plan from. */

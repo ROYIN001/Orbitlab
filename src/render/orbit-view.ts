@@ -88,19 +88,24 @@ export interface OrbitViewOptions {
 const COLORS = { orbit: 0x8be5cd, crash: 0xff6b6b, perigee: 0xefa47e, apogee: 0x6ec8ff, node: 0xc3a6ff, sat: 0xffffff, sectorA: 0x8be5cd, sectorB: 0x6ec8ff };
 
 function labelSprite(text: string, color: string): THREE.Sprite {
+  const font = '600 38px system-ui, sans-serif';
   const c = document.createElement('canvas');
-  c.width = 64; c.height = 64;
+  const g0 = c.getContext('2d')!;
+  g0.font = font;
+  // a word (P2.5: "closest") is as wide as it needs; a symbol keeps its square
+  const w = Math.max(64, Math.ceil(g0.measureText(text).width) + 16);
+  c.width = w; c.height = 64;
   const g = c.getContext('2d')!;
-  g.font = '600 38px system-ui, sans-serif';
+  g.font = font;
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.lineWidth = 6; g.strokeStyle = 'rgba(5,8,13,0.9)';
-  g.strokeText(text, 32, 34);
+  g.strokeText(text, w / 2, 34);
   g.fillStyle = color;
-  g.fillText(text, 32, 34);
+  g.fillText(text, w / 2, 34);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false }));
-  sprite.scale.set(0.045, 0.045, 1);
+  sprite.scale.set((0.045 * w) / 64, 0.045, 1);
   // drawn just above the point it names
   sprite.center.set(0.5, -0.25);
   sprite.renderOrder = 10;

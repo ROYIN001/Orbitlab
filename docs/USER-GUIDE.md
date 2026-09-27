@@ -276,7 +276,20 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   from both element sets' estimated error and the size you give the pair. Engineer adds the miss
   split radial, along-track and cross-track, the relative speed and each set's uncertainty. It is
   what CelesTrak's SOCRATES does with the same data, and it shows traffic, not collisions: the
-  page recalls that Iridium 33 and Cosmos 2251 were 152nd on the list the day they collided.
+  page recalls that Iridium 33 and Cosmos 2251 were 152nd on the list the day they collided. The
+  screening runs off the page's own thread, so a whole catalogue read from a file (some 30 000
+  objects) can be screened while the page stays usable, and stopped. **Show it** under an approach
+  moves the clock to five minutes before it, draws the other object's orbit and the meeting point
+  in 3-D, and the *encounter plane*: the other object at its miss distance with the pair's
+  combined size round it, and the combined position uncertainty as ellipses — the probability is
+  the share of the uncertainty inside the circle. A probability smaller than 10⁻¹⁰ is shown as
+  *below 10⁻¹⁰*: the numbers do not carry a precision finer than that.
+- **A conjunction data message**, under the screening: an operator is warned of an approach to its
+  satellite by such a message (CCSDS 508.0-B-1, from the combined space operations centre through
+  Space-Track), which carries each object's position uncertainty from the tracking. Read one in its
+  text form (KVN) and the page gives the probability from the message's own uncertainties, with its
+  encounter plane, beside the probability the message states. The file is read in the page and
+  sent nowhere.
 - **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
   Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
   the two part company.

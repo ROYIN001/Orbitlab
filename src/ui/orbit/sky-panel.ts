@@ -41,7 +41,11 @@ import { compass, placeName, stationPicker, type StationChoice } from './applica
 import { stationOf } from '../../orbit/applications-setup';
 import { footprintAngle } from '../../orbit/applications';
 import { GROWTH_PER_DAY, uncertaintyAt } from '../../orbit/uncertainty';
-import { screenInSlices, type Conjunction } from '../../orbit/screening';
+import { ephemerisOf, type Conjunction } from '../../orbit/screening';
+import { runScreeningJob } from '../../orbit/screening-job';
+import { cdmCovariances, cdmProbability, parseCdm, type ConjunctionMessage } from '../../orbit/cdm';
+import { encounterPlane, encounterPlaneSvg } from '../../orbit/encounter-plane';
+import { rtnAxes, rtnToFrame, type Mat3 } from '../../orbit/conjunction';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
 import { predictReentry, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
 import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
@@ -122,7 +126,12 @@ export class RealSky {
   private magnitudes: StandardMagnitudes | null = null;
   /** M01: the screening's settings, and the last one run (or running) */
   private conj = { within: 5e3, days: 3, radius: 10, open: false };
-  private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; stop: boolean } | null = null;
+  private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; abort: AbortController } | null = null;
+  /** P2.5: the close approach shown in the views and with its encounter plane */
+  private shownApproach: Conjunction | null = null;
+  private focus3dKey = '';
+  /** P2.5: a conjunction data message read from a file, and the combined radius used with it */
+  private cdm: { file: string; msg: ConjunctionMessage | null; error: string | null; radius: number } | null = null;
   /** M02: overflights of the place by the group on screen: the settings, and the last search */
   private over = { minEl: 60 * Math.PI / 180, days: 1, daylight: false, open: false };
   private overSearch: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Overflight[]; stop: boolean } | null = null;
@@ -218,6 +227,7 @@ export class RealSky {
     view.setBareTime(this.jd);
     view.setPoints(this.count ? this.xyz : null, this.count);
     view.setOrbit(orbit);
+    this.drawFocus3d(view, sel);
     // a new satellite or group: the camera stands back to see it (its orbit, or the whole group)
     const key = `${this.source}|${sel?.key ?? ''}`;
     if (key !== this.framedKey && (orbit || this.count)) {
@@ -226,6 +236,33 @@ export class RealSky {
     }
     view.update(0);
     view.render();
+  }
+
+  /** The views were cleared (the playground's own drawing came and went): draw the focus again. */
+  forgetViews(): void {
+    this.focus3dKey = '';
+  }
+
+  /** What the 3-D view shows of the approach picked (P2.5): the other object's orbit about the closest approach, where they meet, where it is now. */
+  private drawFocus3d(view: OrbitView, sel: SkyObject | null): void {
+    const c = sel && this.screening?.key.startsWith(`${sel.key}|`) ? this.shownApproach : null;
+    const key = c ? `${c.other.key}|${c.approach.tca}` : '';
+    if (key !== this.focus3dKey) {
+      this.focus3dKey = key;
+      if (!c) { view.setGhosts([]); view.setMarkers([]); }
+      else {
+        const eph = ephemerisOf(c.other), period = skyFacts(c.other).period / 86400;
+        const points: { x: number; y: number; z: number }[] = [];
+        for (let k = 0; k <= 240; k++) {
+          const s = eph(c.approach.tca + period * (k / 240 - 0.5));
+          if (s) points.push(s.r);
+        }
+        view.setGhosts([{ points, color: 0xff8a65 }]);
+        view.setMarkers([{ position: c.approach.a.r, label: t('conj.tcaMark'), color: 0xffd28a }]);
+      }
+    }
+    const now = c ? ephemerisOf(c.other)(this.jd) : null;
+    view.setTarget(now ? now.r : null);
   }
 
   /** One frame of the map. */
@@ -708,17 +745,21 @@ export class RealSky {
     return `${o.key}|${this.conj.within}|${this.conj.days}|${this.conj.radius}`;
   }
 
-  /** Screen the catalogue for approaches to the satellite picked, from the moment on screen, a few objects at a time. */
+  /** Screen the catalogue for approaches to the satellite picked, from the moment on screen, in a worker (P2.5). */
   private async runScreening(o: SkyObject): Promise<void> {
-    const run = { key: this.screeningKey(o), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Conjunction[], stop: false };
+    const abort = new AbortController();
+    const run = { key: this.screeningKey(o), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Conjunction[], abort };
     this.screening = run;
+    this.shownApproach = null;
     this.host.refreshFacts();
-    const list = await screenInSlices(o, this.catalogue(), run.from, run.from + this.conj.days, this.conj.within, this.conj.radius, (f) => {
-      run.progress = f;
-      const s = document.querySelector('.pg-conj-status');
-      if (s && this.screening === run) s.textContent = t('conj.running', { p: Math.round(f * 100) });
-      return !run.stop && this.screening === run;
-    });
+    let list: Conjunction[] | null = null;
+    try {
+      list = await runScreeningJob(o, this.catalogue().filter((x) => x !== o), run.from, run.from + this.conj.days, this.conj.within, this.conj.radius, abort.signal, (f) => {
+        run.progress = f;
+        const st = document.querySelector('.pg-conj-status');
+        if (st && this.screening === run) st.textContent = t('conj.running', { p: Math.round(f * 100) });
+      });
+    } catch { list = null; }
     if (this.screening !== run) return;
     run.state = list ? 'done' : 'stopped';
     run.list = list ?? [];
@@ -756,7 +797,7 @@ export class RealSky {
     box.append(row);
     const running = run?.state === 'running';
     box.append(button('watch-btn', running ? t('conj.stop') : t('conj.run'), () => {
-      if (running && run) { run.stop = true; return; }
+      if (running && run) { run.abort.abort(); return; }
       void this.runScreening(o);
     }));
     const status = el('p', 'pg-tool-out pg-conj-status');
@@ -767,7 +808,7 @@ export class RealSky {
     else if (run) {
       const km = num(Number(run.key.split('|')[1]) / 1000);
       status.textContent = run.list.length ? t('conj.found', { n: num(run.list.length), km, from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('conj.none', { km });
-      if (run.list.length) box.append(this.approachList(run.list, engineer));
+      if (run.list.length) box.append(this.approachList(o, run.list, engineer));
     }
     const note = el('p', 'pg-note');
     const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
@@ -778,10 +819,72 @@ export class RealSky {
       cs.append(t('conj.case'), ' ', link('Shepperd, AMOS 2023', 'https://amostech.com/TechnicalPapers/2023/Conjunction-RPO/Shepperd.pdf'), '.');
       box.append(cs);
     }
+    box.append(this.cdmBlock());
     return box;
   }
 
-  private approachList(list: Conjunction[], engineer: boolean): HTMLElement {
+  /** P2.5: a conjunction data message from a file: the operators' own probability, from the message's covariances. */
+  private cdmBlock(): HTMLElement {
+    const box = el('div', 'pg-cdm');
+    box.append(el('h3', 'pg-case-title', t('cdm.title')), el('p', 'pg-tool-lead', t('cdm.lead')));
+    const pick = el('label', 'pg-file');
+    const input = el('input');
+    input.type = 'file';
+    input.accept = '.cdm,.txt,.kvn,text/plain';
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { this.cdm = { file: file.name, msg: null, error: t('cdm.tooBig'), radius: 10 }; this.host.refreshFacts(); return; }
+      void file.text().then((text) => {
+        try {
+          const msg = parseCdm(text);
+          this.cdm = { file: file.name, msg, error: null, radius: msg.hbr ?? this.cdm?.radius ?? 10 };
+        } catch (e) {
+          this.cdm = { file: file.name, msg: null, error: e instanceof Error ? e.message : String(e), radius: 10 };
+        }
+        this.host.refreshFacts();
+      });
+    });
+    pick.append(el('span', undefined, t('cdm.read')), input);
+    box.append(pick);
+    const c = this.cdm;
+    if (!c) return box;
+    if (c.error || !c.msg) { box.append(el('p', 'pg-warn', t('cdm.error', { file: c.file, reason: c.error ?? '' }))); return box; }
+    const m = c.msg;
+    const [a, b] = m.objects;
+    const name = (x: typeof a) => [x.name, x.designator].filter(Boolean).join(' · ') || x.role;
+    box.append(el('p', 'pg-cdm-objects', t('cdm.objects', { a: name(a), b: name(b), from: m.originator ?? '—' })));
+    // the combined radius: the message's comment, or the user's
+    const size = el('label');
+    const r = el('input');
+    r.type = 'number'; r.min = '0.1'; r.max = '200'; r.step = 'any'; r.value = String(c.radius);
+    r.addEventListener('change', () => { const v = Number(r.value); if (Number.isFinite(v) && v > 0 && v <= 200) { c.radius = v; this.host.refreshFacts(); } });
+    size.append(el('span', undefined, t(m.hbr !== null ? 'cdm.radiusGiven' : 'conj.radius')), r);
+    box.append(size);
+    const p = cdmProbability(m, c.radius);
+    const rel = Math.hypot(b.state.v.x - a.state.v.x, b.state.v.y - a.state.v.y, b.state.v.z - a.state.v.z);
+    const miss = Math.hypot(b.state.r.x - a.state.r.x, b.state.r.y - a.state.r.y, b.state.r.z - a.state.r.z);
+    box.append(el('p', 'pg-tool-out', t('cdm.result', {
+      tca: `${dayName(m.tca)} ${clockTime(m.tca)}`, miss: num(miss, 0), p: tinyPc(p.log10) ? t('conj.pcBelow') : sci(p.log10),
+      v: rel >= 1000 ? `${num(rel / 1000, 2)} ${t('u.kms')}` : `${num(rel, rel < 1 ? 3 : 1)} ${t('u.ms')}`,
+    })));
+    if (m.pc !== null) box.append(el('p', 'pg-note', t('cdm.theirs', { p: m.pc > 0 && !tinyPc(Math.log10(m.pc)) ? sci(Math.log10(m.pc)) : t('conj.pcBelow'), method: m.pcMethod ?? '—' })));
+    const [covA, covB] = cdmCovariances(m);
+    box.append(this.planeFigure(encounterPlane(a.state, covA, b.state, covB, c.radius), name(a), name(b), false));
+    return box;
+  }
+
+  /** The encounter plane, drawn (P2.5); `shown`: the approach is also in the views. */
+  private planeFigure(plane: ReturnType<typeof encounterPlane>, first: string, second: string, shown: boolean): HTMLElement {
+    const fig = el('figure', 'pg-plane');
+    const holder = el('div', 'pg-plane-svg');
+    holder.innerHTML = encounterPlaneSvg(plane, { first, second, scale: t('conj.planeScale') });
+    const words = { miss: num(Math.hypot(plane.miss.x, plane.miss.y), 0), s1: num(plane.sigma[0], 0), s2: num(plane.sigma[1], 0), r: num(plane.radius, 1) };
+    fig.append(holder, el('figcaption', 'pg-note', `${t('conj.planeNote', words)}${shown ? ` ${t('conj.planeShown')}` : ''}`));
+    return fig;
+  }
+
+  private approachList(self: SkyObject, list: Conjunction[], engineer: boolean): HTMLElement {
     const ol = el('ol', 'pg-conj-list');
     for (const c of list.slice(0, CONJ_LIMIT)) {
       const a = c.approach;
@@ -789,7 +892,7 @@ export class RealSky {
       const head = el('div', 'pg-conj-head');
       head.append(el('span', 'pg-sky-name', c.other.el.name ?? t('sky.unnamed')), el('span', 'pg-sky-num', String(c.other.el.satnum)));
       li.append(head);
-      li.append(el('div', 'pg-conj-main', `${dayName(a.tca)} ${clockTime(a.tca)} · ${num(a.miss / 1000, 2)} ${t('u.km')} · ${t('conj.pc', { p: sci(c.probability.log10) })}`));
+      li.append(el('div', 'pg-conj-main', `${dayName(a.tca)} ${clockTime(a.tca)} · ${num(a.miss / 1000, 2)} ${t('u.km')} · ${tinyPc(c.probability.log10) ? t('conj.pcTiny') : t('conj.pc', { p: sci(c.probability.log10) })}`));
       if (engineer) {
         const m = (x: number) => `${num(x, 0)} ${t('u.m')}`;
         li.append(el('div', 'pg-conj-more', t('conj.more', {
@@ -797,6 +900,19 @@ export class RealSky {
           s1: num(Math.hypot(c.sigma.self.radial, c.sigma.self.along, c.sigma.self.cross) / 1000, 1),
           s2: num(Math.hypot(c.sigma.other.radial, c.sigma.other.along, c.sigma.other.cross) / 1000, 1),
         })));
+      }
+      // P2.5: shown in the views, at its moment, with its encounter plane
+      const shown = this.shownApproach === c;
+      li.classList.toggle('shown', shown);
+      li.append(button('watch-btn link', shown ? t('conj.hide') : t('conj.show'), () => {
+        this.shownApproach = shown ? null : c;
+        if (!shown) { this.jd = a.tca - 5 / 1440; this.stale = true; }
+        this.host.refreshFacts();
+      }));
+      if (shown) {
+        const diag = (sg: { radial: number; along: number; cross: number }): Mat3 => [[sg.radial ** 2, 0, 0], [0, sg.along ** 2, 0], [0, 0, sg.cross ** 2]];
+        const plane = encounterPlane(a.a, rtnToFrame(diag(c.sigma.self), rtnAxes(a.a)), a.b, rtnToFrame(diag(c.sigma.other), rtnAxes(a.b)), this.conj.radius);
+        li.append(this.planeFigure(plane, self.el.name ?? String(self.el.satnum), c.other.el.name ?? String(c.other.el.satnum), true));
       }
       ol.append(li);
     }
@@ -962,6 +1078,15 @@ export function sci(log10: number): string {
   if (m >= 9.95) { m = 1; e += 1; }
   return `${num(m, 1)} × 10${String(e).split('').map((ch) => SUPERSCRIPT[ch]).join('')}`;
 }
+
+/**
+ * Below this a probability of collision is shown as "below 10⁻¹⁰" (P2.5):
+ * it comes from a Gaussian's tail many standard deviations out, and the real
+ * errors of an element set are not Gaussian that far out, so 9 × 10⁻⁶¹⁸ would
+ * be a precision the numbers do not have.
+ */
+const PC_FLOOR = -10;
+const tinyPc = (log10: number): boolean => log10 < PC_FLOOR;
 
 const dateOf = (jd: number): Date => new Date((jd - 2440587.5) * 86400e3);
 /** A pass's time on the device's clock: 19:42:05. */

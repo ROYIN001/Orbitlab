@@ -31,7 +31,7 @@ Status on 2026-09-27:
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 | Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −4.1 to +16.6 % (§7), 2026-09-27 |
 | Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
-| Close approaches (M01) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade (§7), 2026-09-26 |
+| Close approaches (M01, P2.5) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023); NASA CARA's test conjunctions as messages (Alfano 2009; Omitron) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade; CARA's twelve within 0.12 % (§7), 2026-09-27 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
 | The Earth's orientation (P2.5) | Vallado et al., AIAA 2006-6753, Appendix C: TEME to ITRF with UT1 − UTC and polar motion; the IERS's finals2000A | The paper's Earth-fixed position within 71 mm (262 m before) (§6), 2026-09-27 |
 
@@ -1335,6 +1335,35 @@ The paper's Table 2 gives the probability each yields. The fixture is
   the 9th.
 - SOCRATES's own 584 m cannot be reproduced here: it used the element sets of 10 February 2009,
   which are Space-Track data and are not redistributed.
+
+### Conjunction data messages (P2.5)
+
+An operator is warned of a close approach by a conjunction data message (CCSDS 508.0-B-1): the
+time of closest approach, both objects' states at it and each one's position covariance from the
+orbit determination behind it. **Close approaches** reads one in KVN from a file the user brings
+(`src/orbit/cdm.ts`; nothing leaves the page) and computes the two-dimensional probability from the
+message's own covariances, each object's axes from its inertial velocity (an ITRF state has the
+Earth's turning added back). The combined radius comes from a `COMMENT HBR` line where there is one,
+otherwise from the user. `tests/cdm.test.ts` holds it to NASA CARA's test conjunctions
+([CARA Analysis Tools](https://github.com/nasa/CARA_Analysis_Tools), NASA Open Source Agreement;
+the numbers only, in `tests/fixtures/conjunction/cara-cases.json`, with the script that read them):
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| Alfano's eleven test conjunctions (Alfano, AAS 09-233, 2009), each written as a message and read back | the probabilities CARA's unit test holds its Pc2D_Foster to, 1.58 × 10⁻⁴ to 0.29 | ten within 0.03 %; case 4 within 0.12 % | 0.5 % |
+| Omitron's case 1 (states and covariances inertial, 20 m) | 2.706 × 10⁻⁵ | 2.706 × 10⁻⁵ (0.0003 %) | 0.1 % |
+| the same encounter written in ITRF | the EME2000 probability | the same to 10⁻³ in log₁₀ | 10⁻³ |
+
+**Findings.** CARA's own test holds its method to 0.1 %. Ten of the eleven are well inside that; case
+4, a miss of 134 m that is nine standard deviations of the smaller axis, is 0.12 % off, where the
+last digits of the quadrature count. The bound of 0.5 % was set after that first run, and so this
+says. With a message the probability is the operators' own; with public element sets (above) it is
+an estimate from the sets' rough uncertainty.
+
+Below 10⁻¹⁰ the page gives no number but "below 10⁻¹⁰": such a value is the tail of a Gaussian
+many standard deviations out (a 25 km miss against a 157 m standard deviation gives 10⁻⁶¹⁸), and
+neither element sets' nor tracking errors are Gaussian that far out. The tests still check the
+computed logarithm itself.
 
 ### Overflights of a place (M02)
 

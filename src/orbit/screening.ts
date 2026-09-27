@@ -13,8 +13,13 @@
  * 152nd among the week's predicted approaches when they hit. The screening
  * shows how often objects pass close, not which pass will be a collision.
  *
+ * One sampling step serves every pair of a screening, so that the satellite
+ * screened is carried by SGP4 once for the whole catalogue (P2.5; with a
+ * catalogue of 30 000 imported, that is half the work).
+ *
  * DOM-free; the work is cut into slices (`screenInSlices`) so that a page can
- * stay responsive and stop it. tests/conjunction.test.ts.
+ * stay responsive and stop it, and src/orbit/screening-job.ts runs it in a
+ * worker. tests/conjunction.test.ts.
  */
 import { v3 } from '../physics/vec3';
 import { closeApproaches, collisionProbability, rtnAxes, rtnToFrame, type Approach, type Ephemeris, type Mat3, type Probability } from './conjunction';
@@ -51,10 +56,28 @@ export interface Conjunction {
   probability: Probability;
 }
 
-/** One pair's approaches in the window, with their estimated probabilities. */
-export function screenPair(self: SkyObject, other: SkyObject, jd0: number, jd1: number, within: number, radius: number): Conjunction[] {
-  const step = Math.min(300, skyFacts(self).period / 20, skyFacts(other).period / 20);
-  return closeApproaches(ephemerisOf(self), ephemerisOf(other), jd0, jd1, within, step).map((approach) => {
+/**
+ * An ephemeris that keeps what it computed, for the object screened against
+ * a whole catalogue (P2.5): on a step shared by every pair its samples are
+ * the same times each time, and SGP4 is run for them once.
+ */
+export function cachedEphemeris(o: SkyObject): Ephemeris {
+  const base = ephemerisOf(o), kept = new Map<number, ReturnType<Ephemeris>>();
+  return (jd) => {
+    let s = kept.get(jd);
+    if (s === undefined) {
+      s = base(jd);
+      if (kept.size > 100_000) kept.clear();
+      kept.set(jd, s);
+    }
+    return s;
+  };
+}
+
+/** One pair's approaches in the window, with their estimated probabilities; `selfEph` and `step` shared across a screening. */
+export function screenPair(self: SkyObject, other: SkyObject, jd0: number, jd1: number, within: number, radius: number,
+  selfEph: Ephemeris = ephemerisOf(self), step = Math.min(300, skyFacts(self).period / 20, skyFacts(other).period / 20)): Conjunction[] {
+  return closeApproaches(selfEph, ephemerisOf(other), jd0, jd1, within, step).map((approach) => {
     const sa = uncertaintyAt(self, approach.tca).sigma, sb = uncertaintyAt(other, approach.tca).sigma;
     const probability = collisionProbability(approach.a, rtnToFrame(diag(sa), rtnAxes(approach.a)), approach.b, rtnToFrame(diag(sb), rtnAxes(approach.b)), radius);
     return { other, approach, sigma: { self: sa, other: sb }, probability };
@@ -73,9 +96,18 @@ export function candidates(self: SkyObject, catalogue: readonly SkyObject[], wit
   return out;
 }
 
+/** One sampling step for the whole screening: a twentieth of the shortest period among the pairs, at most five minutes. */
+function commonStep(self: SkyObject, list: readonly SkyObject[]): number {
+  let shortest = skyFacts(self).period;
+  for (const o of list) shortest = Math.min(shortest, skyFacts(o).period);
+  return Math.min(300, shortest / 20);
+}
+
 /** Every approach to `self` from the catalogue in the window, nearest first. */
 export function screen(self: SkyObject, catalogue: readonly SkyObject[], jd0: number, jd1: number, within: number, radius: number): Conjunction[] {
-  return candidates(self, catalogue, within).flatMap((o) => screenPair(self, o, jd0, jd1, within, radius))
+  const list = candidates(self, catalogue, within);
+  const eph = cachedEphemeris(self), step = commonStep(self, list);
+  return list.flatMap((o) => screenPair(self, o, jd0, jd1, within, radius, eph, step))
     .sort((p, q) => p.approach.miss - q.approach.miss);
 }
 
@@ -90,10 +122,11 @@ export async function screenInSlices(
   onProgress: (fraction: number) => boolean | void, yieldTo: () => Promise<void> = () => new Promise((r) => setTimeout(r, 0)),
 ): Promise<Conjunction[] | null> {
   const list = candidates(self, catalogue, within);
+  const eph = cachedEphemeris(self), step = commonStep(self, list);
   const found: Conjunction[] = [];
   let last = performance.now();
   for (let k = 0; k < list.length; k++) {
-    found.push(...screenPair(self, list[k], jd0, jd1, within, radius));
+    found.push(...screenPair(self, list[k], jd0, jd1, within, radius, eph, step));
     if (performance.now() - last > 40) {
       if (onProgress((k + 1) / list.length) === false) return null;
       await yieldTo();
