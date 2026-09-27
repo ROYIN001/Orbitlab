@@ -343,6 +343,7 @@ export class RealSky {
   /** The group's points, moved to the moment on screen: every frame, or four times a second for a large group. */
   private tick(realSeconds: number): void {
     if (this.status.state === 'idle') this.load();
+    this.pickForTour();
     const objs = this.objects();
     this.pointsClock += realSeconds;
     if (objs.length > EVERY_FRAME && !this.stale && this.pointsClock < 0.25) return;
@@ -1119,6 +1120,68 @@ export class RealSky {
     box.append(ol);
     if (list.length > CONJ_LIMIT) box.append(el('p', 'pg-note', t('sky.more', { n: num(list.length - CONJ_LIMIT) })));
     box.append(el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].approach.tca) })));
+    return box;
+  }
+
+  // ─── the Watch tour (P2.5) ─────────────────────────────────────────────────
+
+  /** the satellite a tour step wants picked, by catalogue number, until the catalogue is in (null: none; undefined: nothing waiting) */
+  private tourPick: number | null | undefined = undefined;
+
+  /** The Watch tour (src/orbit/sky-tour.ts): a group on screen and, in it, a satellite by its catalogue number. */
+  showForTour(source: SkySourceId, satnum?: number): void {
+    this.load();
+    this.source = source;
+    this.query = '';
+    this.stale = true;
+    this.framedKey = null;
+    this.selectedKey = null;
+    this.shownApproach = null;
+    this.shownOverflight = null;
+    this.tourPick = satnum ?? null;
+    this.pickForTour();
+  }
+
+  private pickForTour(): void {
+    if (this.tourPick === undefined) return;
+    const objs = this.objects();
+    if (!objs.length) return;
+    const pick = this.tourPick;
+    this.tourPick = undefined;
+    this.selectedKey = pick === null ? null : objs.find((o) => o.el.satnum === pick)?.key ?? null;
+    this.host.refresh();
+  }
+
+  /** The tour card's readouts: the picked satellite's height and speed now, and its period; null with none picked. */
+  liveNow(): { alt: number; speed: number; period: number } | null {
+    const o = this.selected;
+    if (!o) return null;
+    const s = skyState(o, this.jd);
+    return s.error === 0 ? { alt: s.alt, speed: Math.hypot(s.v.x, s.v.y, s.v.z), period: skyFacts(o).period } : null;
+  }
+
+  /** What a tour step's card adds: the next passes over the place, or the Long March 5B stages' re-entries. */
+  tourExtra(show: 'passes' | 'reentryCase'): HTMLElement | null {
+    const box = el('div', 'pg-tour-extra');
+    if (show === 'reentryCase') {
+      const ul = el('ul', 'pg-tour-list');
+      for (const s of CZ5B_STAGES) ul.append(el('li', undefined, t('skytour.reentry.row', { name: s.name, date: s.reentry.slice(0, 10) })));
+      box.append(ul, el('p', 'pg-note', t('reentry.case.source')));
+      return box;
+    }
+    const o = this.selected;
+    if (!o) return null;
+    const list = this.passList(o).slice(0, 3);
+    box.append(el('h3', 'pg-tour-extra-title', t('pass.title', { place: this.placeLabel() })));
+    if (!list.length) { box.append(el('p', 'pg-note', t('pass.none', { el: `${num(this.minEl * 180 / Math.PI, 0)}°` }))); return box; }
+    const ul = el('ul', 'pg-tour-list');
+    for (const p of list) {
+      ul.append(el('li', p.visible ? 'visible' : undefined, t('skytour.passRow', {
+        time: `${dayName(p.top.jd)} ${clockTime(p.top.jd)}`, el: `${num(apparentElevation(p.top.el) * 180 / Math.PI, 0)}°`, dir: compass(p.top.az),
+        seen: visibility(p, o, this.place),
+      })));
+    }
+    box.append(ul, el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].top.jd) })));
     return box;
   }
 

@@ -144,7 +144,11 @@ The three levels:
 
 - **Watch**: a tour in seven steps, from Newton's cannon to the space station, Hohmann's
   transfer to geostationary height, a Molniya orbit, a geostationary satellite standing over
-  78.5° E (the slot Thaicom's satellites use) and a sun-synchronous orbit. **Next** and **Back** move between the steps; **Try it yourself** opens
+  78.5° E (the slot Thaicom's satellites use) and a sun-synchronous orbit; then eight steps with
+  the real satellites of the bundled catalogue, where they are now: the space station and its next
+  passes over the place, THEOS-2 on its sun-synchronous track, the navigation and weather
+  satellites, the Earth-imaging satellites, the debris of Fengyun-1C, and the Long March 5B stages
+  that fell uncontrolled. **Next** and **Back** move between the steps; **Try it yourself** opens
   Explore on the orbit on screen.
 - **Explore**: choose an orbit from the list, or set its perigee and apogee altitudes, its
   inclination i, its node Ω and its argument of perigee ω with the sliders or the number boxes.
