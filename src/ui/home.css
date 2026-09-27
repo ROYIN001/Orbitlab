@@ -305,6 +305,7 @@
   display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr); align-items: center; gap: 48px;
   padding: 48px clamp(20px, 5vw, 72px);
 }
+.home-feature.flip { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr); }
 .home-feature.flip .home-feature-text { order: 2; }
 .home-feature-text {
   max-width: 460px;
@@ -375,7 +376,8 @@
   .home-screen[data-variant='g'] .home-hero { padding-top: 42vh; }
   .home-feature, .home-feature.flip { grid-template-columns: 1fr; gap: 22px; padding: 36px 16px; min-height: 0; }
   .home-feature .home-shot { order: 1; }
-  .home-feature .home-feature-text, .home-feature.flip .home-feature-text { order: 2; }
+  .home-feature .home-feature-text, .home-feature.flip { grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr); }
+.home-feature.flip .home-feature-text { order: 2; }
   .home-g-row { grid-template-columns: minmax(0, 1fr); }
   .home-hold { padding-right: 20px; }
   .home-sat-label.napa::after { max-width: 150px; }
