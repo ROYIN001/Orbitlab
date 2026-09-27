@@ -570,3 +570,12 @@ apogee (only a flight whose satellite has a `descent`), `OrbitSpec.descending` (
 it) and the generalised `capsuleConfiguration` (Soyuz's descent module unchanged); none of the fleet's
 missions carries any of them, so every case flies as before:
 **161 of 161 passed** in 1 h 56 min on four cores, run alone.
+
+**The rigid fleet with C01 part 6a and its fixes.** `npm run test:sixdof-fleet` at commit 57178c0
+(which carries 6b3dcb6, part 6a, whose own run was stopped for these fixes): planned engine events
+(`StageSpec.engineEvents`) and jettisons (`StageSpec.jettisons`), a gravity turn held to a set time
+(`GuidanceParams.closedLoopStart`), a payload that stays on its stage (`SatelliteSpec.staysAttached`)
+and a mission flown from the pad it names (`padId`); the fleet's vehicles and missions use none of
+them, so every case flies as before: **161 of 161 passed** in 1 h 42 min on four cores, run alone.
+The heavy tests the pad change touches — Mercury-Redstone 3 in six-DOF, the Soyuz aborts from
+Gagarin's Start, the historical dockings — pass too (5 of 5).
