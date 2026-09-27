@@ -193,6 +193,8 @@ export class HomeStage {
     if (this.variant !== 'i' || this.launched) return;
     this.launched = true;
     this.liveClock = HOLD_LAUNCH_FROM;
+    // straight to it, not eased there from the pad: the count said now
+    this.shownTime = HOLD_LAUNCH_FROM;
   }
 
   /** The globe's names go on the page's overlay. */

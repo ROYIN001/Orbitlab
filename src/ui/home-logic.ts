@@ -94,8 +94,12 @@ export function timeAtScroll(anchors: readonly ScrollAnchor[], scroll: number): 
  */
 export const SCROLL_FLIGHT_END = 570;
 export const SCROLL_FLIGHT_ENOUGH = 548;
-/** I: the mission time the flight starts from when the button has been held (ignition is at T−2.5 s). */
-export const HOLD_LAUNCH_FROM = -3;
+/**
+ * I: the mission time the flight starts from when the button has been held:
+ * the engines already lit (ignition is at T−2.5 s), so the rocket rises a
+ * moment after the count reaches zero, while "Liftoff!" is still on screen.
+ */
+export const HOLD_LAUNCH_FROM = -1.2;
 /** I: how long the button is held to launch, s */
 export const HOLD_SECONDS = 3;
 
