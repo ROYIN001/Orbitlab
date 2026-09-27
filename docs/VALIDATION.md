@@ -1312,6 +1312,32 @@ cross-track at Engineer), the relative speed, and an estimated probability of co
 | the same: Iridium's orbit estimate and covariance | 1.0 × 10⁻³ | 9.28 × 10⁻⁴ | 0.1 in log₁₀ |
 | the same: Iridium's conservative covariance | 3.3 × 10⁻² | 3.23 × 10⁻² | 0.1 in log₁₀ |
 
+**The time filter (P2.5): its test, fixed before it runs.** A time filter
+(`src/orbit/screening-filter.ts`) is to choose the stretches of the window in which each pair is
+searched. It must not change the answer. Its test is recorded here before the filter is compared
+with anything:
+
+- **Primaries**, each screened against the bundled catalogue (every group, 2 409 sets):
+  - the ISS;
+  - a 700 km sun-synchronous satellite (Landsat 8);
+  - a 1 200 km orbit (Yaogan-22);
+  - a geostationary satellite (Thaicom 8);
+  - a decaying object (the snapshot's lowest, at 270 km);
+  - a Fengyun-1C fragment on an eccentric orbit with heavy drag (786 × 3 105 km).
+  - Constructed element sets, because the snapshot has none of these: a Molniya orbit, a
+    geostationary transfer orbit, a transfer from 400 to 1 200 km, and an object that re-enters
+    within the window.
+- **Runs:** windows of 1, 3 and 7 days, limits of 1, 5 and 25 km, each screened with the filter
+  and with the full search it replaces. The full search stays callable as the reference.
+- **Passing** means the same approaches: the same objects, each TCA within 1 ms and each miss
+  within 1 mm. None may be dropped and none added. A failure is recorded as a failure.
+- **The bounds** the filter rests on are held to SGP4 itself. Take every near-Earth object of
+  the catalogue at 40 times across a week. Its radius, its argument of latitude and its distance
+  from its mean plane must all stay inside what the filter assumes, with none outside.
+
+Every `npm test` runs part of it: every primary for one day, and three primaries over a week.
+`npm run test:heavy` runs the whole sweep.
+
 The conjunction data are the appendix of R. W. Shepperd, "Subsequent Assessment of the Collision
 between Iridium 33 and COSMOS 2251"
 ([AMOS 2023](https://amostech.com/TechnicalPapers/2023/Conjunction-RPO/Shepperd.pdf)): both
