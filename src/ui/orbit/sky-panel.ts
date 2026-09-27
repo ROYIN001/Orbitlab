@@ -47,6 +47,7 @@ import { cdmCovariances, cdmProbability, parseCdm, type ConjunctionMessage } fro
 import { encounterPlane, encounterPlaneSvg } from '../../orbit/encounter-plane';
 import { rtnAxes, rtnToFrame, type Mat3 } from '../../orbit/conjunction';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
+import { canImage, sensorFor, type ImagingVerdict, type Sensor } from '../../orbit/sensors';
 import { predictReentry, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
 import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
 import { setEarthOrientation } from '../../orbit/earth-orientation';
@@ -133,7 +134,7 @@ export class RealSky {
   /** P2.5: a conjunction data message read from a file, and the combined radius used with it */
   private cdm: { file: string; msg: ConjunctionMessage | null; error: string | null; radius: number } | null = null;
   /** M02: overflights of the place by the group on screen: the settings, and the last search */
-  private over = { minEl: 60 * Math.PI / 180, days: 1, daylight: false, open: false };
+  private over = { minEl: 30 * Math.PI / 180, days: 1, daylight: false, canOnly: false, open: false };
   private overSearch: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Overflight[]; stop: boolean } | null = null;
   /** M03: the object's mass and size for the re-entry prediction, the last prediction, and the case study's */
   private reentry = { mass: 1000, area: 5, cd: 2.2, open: false };
@@ -568,7 +569,8 @@ export class RealSky {
       return l;
     };
     row.append(
-      choose(t('over.minEl'), [30, 45, 60, 75].map((d) => [d, `${d}°`] as [number, string]), Math.round(this.over.minEl * 180 / Math.PI), (v) => { this.over.minEl = v * Math.PI / 180; }),
+      // P2.5: lower too, where a wide swath or a radar's shallow incidence reaches
+      choose(t('over.minEl'), [15, 30, 45, 60, 75].map((d) => [d, `${d}°`] as [number, string]), Math.round(this.over.minEl * 180 / Math.PI), (v) => { this.over.minEl = v * Math.PI / 180; }),
       choose(t('conj.days'), [[1, t('conj.oneDay')], [3, t('life.days', { n: num(3) })]], this.over.days, (v) => { this.over.days = v; }),
     );
     box.append(row);
@@ -579,6 +581,13 @@ export class RealSky {
     dayBox.addEventListener('change', () => { this.over.daylight = dayBox.checked; this.host.refresh(); });
     day.append(dayBox, el('span', undefined, t('over.daylight')));
     box.append(day);
+    const can = el('label', 'pg-check');
+    const canBox = el('input');
+    canBox.type = 'checkbox';
+    canBox.checked = this.over.canOnly;
+    canBox.addEventListener('change', () => { this.over.canOnly = canBox.checked; this.host.refresh(); });
+    can.append(canBox, el('span', undefined, t('over.canOnly')));
+    box.append(can);
     const running = run?.state === 'running';
     box.append(button('watch-btn', running ? t('over.stop') : t('over.run'), () => {
       if (running && run) { run.stop = true; return; }
@@ -590,11 +599,11 @@ export class RealSky {
     if (running) status.textContent = t('over.running', { p: Math.round(run!.progress * 100) });
     else if (run?.state === 'stopped') status.textContent = t('conj.stopped');
     else if (run) {
-      const shown = run.list.filter((f) => !this.over.daylight || f.daylight);
+      const shown = run.list.filter((f) => (!this.over.daylight || f.daylight) && (!this.over.canOnly || verdictOf(f)?.can === true));
       status.textContent = shown.length ? t('over.found', { n: num(shown.length), from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('over.none');
       if (shown.length) box.append(this.overflightList(shown));
     }
-    box.append(el('p', 'pg-note', t('over.note')));
+    box.append(el('p', 'pg-note', t('over.note')), el('p', 'pg-note', t('over.sensorNote')));
     return box;
   }
 
@@ -612,6 +621,8 @@ export class RealSky {
         time: `${dayName(top.jd)} ${clockTime(top.jd)}`, el: deg(top.el), dir: compass(top.az), off: deg(f.offNadir),
         light: t(f.daylight ? 'over.day' : 'over.night'), way: t(f.northbound ? 'over.north' : 'over.south'),
       })));
+      const sensor = sensorFor(f.object.el.satnum);
+      if (sensor) li.append(this.sensorLine(sensor, f, engineer));
       if (engineer) {
         const h = Math.floor(f.solarTime), m = Math.floor((f.solarTime - h) * 60);
         li.append(el('div', 'pg-conj-more', t('over.more', {
@@ -625,6 +636,28 @@ export class RealSky {
     box.append(ol);
     if (list.length > OVER_LIMIT) box.append(el('p', 'pg-note', t('sky.more', { n: num(list.length - OVER_LIMIT) })));
     box.append(el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].pass.top.jd) })));
+    return box;
+  }
+
+  /** What the satellite's instrument can make of the place on this pass (P2.5). */
+  private sensorLine(s: Sensor, f: Overflight, engineer: boolean): HTMLElement {
+    const deg = (x: number) => `${num(x * 180 / Math.PI, 0)}°`;
+    const v = canImage(s, f);
+    const box = el('div', `pg-sensor ${v.can === true ? 'yes' : v.can === false ? 'no' : 'unknown'}`);
+    const res = s.resolution < 1 ? num(s.resolution, 2) : num(s.resolution, s.resolution < 10 ? 1 : 0);
+    const what = el('span', 'pg-sensor-what', t('sensor.line', { instrument: s.instrument, kind: t(s.kind === 'sar' ? 'sensor.sar' : 'sensor.optical'), res }));
+    if (engineer && s.sources[0]) {
+      const a = el('a', undefined, t('sensor.source'));
+      a.href = s.sources[0]; a.target = '_blank'; a.rel = 'noopener';
+      what.append(' · ', a);
+    }
+    const [lo, hi] = s.incidence ?? [0, 0];
+    const words = {
+      swath: num(s.swath / 1000, s.swath < 20e3 ? 1 : 0), km: num(f.groundRange / 1000, 0), off: deg(f.offNadir), max: deg(s.lookMax ?? 0),
+      inc: deg(f.incidence), lo: deg(lo), hi: deg(hi), date: s.retired ?? '',
+      side: t(f.side === 'left' ? 'sensor.left' : 'sensor.right'), look: t(s.side === 'left' ? 'sensor.left' : 'sensor.right'),
+    };
+    box.append(what, el('span', 'pg-sensor-verdict', t(VERDICT_KEY[v.reason], words)));
     return box;
   }
 
@@ -1067,6 +1100,13 @@ const PASS_LIMIT = 12;
 const CONJ_LIMIT = 20;
 /** How many overflights are listed, soonest first. */
 const OVER_LIMIT = 40;
+/** What each verdict on an instrument says (P2.5). */
+const VERDICT_KEY: Record<ImagingVerdict['reason'], string> = {
+  swath: 'sensor.swath', agile: 'sensor.agile', sar: 'sensor.sarYes', retired: 'sensor.retired', dark: 'sensor.dark',
+  outsideSwath: 'sensor.outsideSwath', tooFarOff: 'sensor.tooFarOff', incidence: 'sensor.incidence', wrongSide: 'sensor.wrongSide', noLimit: 'sensor.noLimit',
+};
+/** The verdict on an overflight's instrument, where its figures are published. */
+const verdictOf = (f: Overflight): ImagingVerdict | null => { const s = sensorFor(f.object.el.satnum); return s ? canImage(s, f) : null; };
 /** A re-entry is predicted for an orbit whose perigee is below this, m: higher, it is years away and the lifetime analysis is the tool. */
 const REENTRY_BELOW = 700e3;
 

@@ -260,6 +260,12 @@
 .pg-conj-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--text); }
 .pg-conj-main { color: #c9d6e2; overflow-wrap: anywhere; }
 .pg-conj-more { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pg-sensor { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.15); font-size: 12px; overflow-wrap: anywhere; }
+.pg-sensor-what { color: var(--muted); }
+.pg-sensor.yes { border-left-color: #6fd6a8; }
+.pg-sensor.yes .pg-sensor-verdict { color: #8fe3bd; }
+.pg-sensor.no .pg-sensor-verdict { color: #c9a58e; }
+.pg-sensor.unknown .pg-sensor-verdict { color: var(--muted); }
 /* R03: the passes over a place */
 .pg-passes { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .pg-pass-next { margin: 0 0 8px; font-size: 13px; color: var(--accent); }

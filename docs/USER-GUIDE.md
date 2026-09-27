@@ -242,11 +242,17 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   an anti-satellite test in 2007. The group is drawn as points in 3-D and on the ground track.
 - **Overflights of** a place, under the group's list: every pass of the group's satellites over a
   city or your coordinates in the next 24 hours or 3 days whose highest point is at least the
-  elevation you choose (60° by default), soonest first: when, how high and in which direction,
+  elevation you choose (30° by default), soonest first: when, how high and in which direction,
   the off-nadir angle a camera must look at to see the place, whether the place is in daylight
   (optical cameras need it, radars do not) and whether the satellite is heading north or south.
-  Engineer adds the distance from the ground track, the local solar time and the timing
-  uncertainty. It is when the place *could* be seen, not that it is.
+  For 51 imaging satellites whose instruments are published, each pass also says what the
+  instrument can make of it: a camera needs daylight and the place inside its swath (Landsat,
+  Sentinel-2) or within the angle it can turn to (Pléiades, WorldView, THEOS-2); a radar
+  (Sentinel-1, COSMO-SkyMed, ALOS) sees by night and through cloud, but only to its side and within
+  its band of incidence angles. **Only when its instrument can image the place** keeps just those.
+  Engineer adds the distance from the ground track, the local solar time, the timing
+  uncertainty and a link to the instrument's source. It is when the place *could* be seen, not
+  that it is: that takes the operator's tasking and, for a camera, a clear sky.
 - **When it will come down**, for a satellite whose perigee is under 700 km: give the object's mass
   and mean cross-section (an element set does not carry them) and C_D, and its orbit is carried
   down with the Sun as measured and forecast to a predicted re-entry, with the window of ±20 % of

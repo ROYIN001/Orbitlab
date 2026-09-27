@@ -30,7 +30,7 @@ Status on 2026-09-27:
 | Passes (R03, P2.5) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places; Skyfield's refraction | Every event found; times within 0.34 s, angles within 0.005°; refraction within 0.07′ (§6), 2026-09-27 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 | Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −4.1 to +16.6 % (§7), 2026-09-27 |
-| Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
+| Overflights (M02, P2.5) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal); published swaths, fields of view and revisit periods (USGS, ESA, NASA) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time; swaths from fields of view within 2 %; Landsat, Sentinel-2 and Sentinel-1 can image Bangkok within their published revisit periods (§7), 2026-09-27 |
 | Close approaches (M01, P2.5) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023); NASA CARA's test conjunctions as messages (Alfano 2009; Omitron) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade; CARA's twelve within 0.12 % (§7), 2026-09-27 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
 | The Earth's orientation (P2.5) | Vallado et al., AIAA 2006-6753, Appendix C: TEME to ITRF with UT1 − UTC and polar motion; the IERS's finals2000A | The paper's Earth-fixed position within 71 mm (262 m before) (§6), 2026-09-27 |
@@ -1399,6 +1399,47 @@ Every one is by day when southbound and in the dark when northbound, as a mornin
 THEOS-2 was added to the test after the first run, at the same tolerance. Landsat's reference was
 first written as 10:00 ± 15 minutes (Landsat 7's requirement) and corrected to the USGS figure for
 Landsat 8 and 9 before this was committed; the results are within the tolerance either way.
+
+#### What the instrument can image (P2.5)
+
+An overflight is not an image: that depends on the instrument. `src/data/sensors.ts` holds the
+published geometry of the instruments on 51 of the catalogue's satellites (39 entries, satellites of one design sharing one), each
+with its sources: a fixed camera's swath (Landsat's OLI, Sentinel-2's MSI, MODIS, Sentinel-3's
+OLCI), an agile camera's largest off-nadir angle (Pléiades, WorldView, THEOS and THEOS-2, the
+Gaofen, …), a radar's incidence angles and, where a source says so, the side it looks to
+(Sentinel-1 to the right, ESA's
+[instrument description](https://sentinel.esa.int/web/sentinel/technical-guides/sentinel-1-sar/sar-instrument/description)).
+`src/orbit/sensors.ts` judges each overflight at its highest point: a camera needs daylight and the
+place inside its swath or within its off-nadir limit; a radar needs the place on its side and the
+incidence (90° less the elevation there) within its band. Where an agile satellite's limit is not
+published (Cartosat-3, Cartosat-2C, CO3D) it is not judged, and the three the operators have
+retired but the catalogue still lists (SPOT 7, COSMO-SkyMed 1 and 3, by eoPortal) are marked so.
+Where sources disagree the operator's figure is used and the other noted in the table (the Maxar
+angles, for one, are the tasking limits, not what the satellites can turn to).
+
+`tests/sensors.test.ts`:
+
+- **The swaths follow from the fields of view**: 2 × the ground reach of half the field of view at
+  the orbit's height, asin((R + h)/R · sin η) − η on a sphere, gives MODIS's 2 330 km (±55° at
+  705 km), OLI's 185 km (15° at 705 km) and MSI's 290 km (20.6° at 786 km, 286 km) within 2 %;
+  OLCI's 68.5° field turned 12.6° from the Sun gives 1 274 km for its published 1 270 km, reaching
+  947 km to one side and 327 km to the other. The 2 % was set after Sentinel-2's figure had been
+  worked out while the table was built.
+- **The side and incidence of each overflight**: for the near-polar imagers over Bangkok the side
+  the place is on agrees with its longitude against the point below the satellite and the heading
+  (every pass more than 100 km off the track), and the incidence agrees with the off-nadir angle by
+  the sine rule on a sphere, within 0.5°.
+- **Revisits as the missions publish them.** The tolerance — at least one image possible in the
+  published period, from 2026-09-26 12:00 UTC — was fixed before the run:
+
+| satellite | published | images of Bangkok possible |
+| --- | --- | --- |
+| Landsat 8 | "crossing every point on Earth once every 16 days" ([USGS](https://www.usgs.gov/landsat-missions/landsat-8)) | 1 in 16 days: 2026-10-01 03:37 UTC, 10 km from the track |
+| Landsat 9 | the same | 1 in 16 days: 2026-10-09 03:38 UTC, eight days after Landsat 8, as the pair is phased |
+| Sentinel-2A, 2B, 2C | "The revisit frequency of each single satellite is 10 days" ([ESA](https://sentiwiki.copernicus.eu/web/s2-mission)) | 1 each in 10 days: 09-29, 10-02 and 09-27, at 03:54 UTC, 52 km from the track |
+| Sentinel-1A | "a 12 day repeat cycle" (ESA) | 2 in 12 days, both before dawn going south with Bangkok to the right, at incidences of 41° and 32° |
+
+The tests say nothing of tasking or cloud: an image possible is not an image taken.
 
 ### Re-entry prediction (M03)
 
