@@ -13,6 +13,7 @@ describe('parseVariant', () => {
     expect(parseVariant('b')).toBe('b');
     expect(parseVariant(' I ')).toBe('i');
     expect(parseVariant('j')).toBe('j');
+    expect(parseVariant('k')).toBe('k');
     // C and E were tried and set aside: an old link to them opens the default
     expect(parseVariant('c')).toBeNull();
     expect(parseVariant('e')).toBeNull();

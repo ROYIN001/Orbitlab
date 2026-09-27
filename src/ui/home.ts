@@ -9,7 +9,7 @@
  * scrolling (the scene no longer takes the wheel, src/render/cameras.ts).
  *
  * PROTOTYPE: several backgrounds for the same page, switched from a bar at
- * the foot of it (or `?home=a`, `b`, `d`, `f`, `g`, `h`, `i`, `j`), to be compared
+ * the foot of it (or `?home=a`, `b`, `d`, `f`, `g`, `h`, `i`, `j`, `k`), to be compared
  * before one is kept — see src/ui/home-logic.ts for what each is, and
  * src/ui/home-stage.ts for the scene behind them. Nothing here needs to be
  * understood before pressing play.
@@ -94,8 +94,30 @@ const CHAPTERS_J: readonly Chapter[] = [
 const LIGHT_KEYS: Record<PadLight, string> = { day: 'home.a.day', dusk: 'home.a.dusk', night: 'home.a.night' };
 const PROTO_KEYS: Record<HomeVariant, string> = {
   a: 'home.proto.a', b: 'home.proto.b', d: 'home.proto.d', f: 'home.proto.f', g: 'home.proto.g', h: 'home.proto.h', i: 'home.proto.i',
-  j: 'home.proto.j',
+  j: 'home.proto.j', k: 'home.proto.k',
 };
+
+/** K: the program shown off, one of the app's own screens a chapter (public/home/*.webp, taken from the app itself) */
+interface Feature { id: string; who?: string; title: string; text: string; cta: string }
+const FEATURES: readonly Feature[] = [
+  { id: 'watch', who: 'home.for.watch', title: 'home.k.watchTitle', text: 'home.card.watchText', cta: 'home.play' },
+  { id: 'explore', who: 'home.for.explore', title: 'home.k.exploreTitle', text: 'home.card.exploreText', cta: 'home.card.explore' },
+  { id: 'engineer', who: 'home.for.engineer', title: 'home.k.engineerTitle', text: 'home.card.engineerText', cta: 'home.k.engineerGo' },
+  { id: 'lessons', title: 'home.k.lessonsTitle', text: 'lesson.home.text', cta: 'home.hero.lessons' },
+  { id: 'orbit', title: 'home.k.orbitTitle', text: 'home.section.orbitText', cta: 'home.section.orbitOpen' },
+];
+
+/** K: a sky of stars, drawn once as an SVG tile (a fixed seed: the same sky on every visit). */
+function starTile(): string {
+  let seed = 11;
+  const rnd = (): number => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  let dots = '';
+  for (let k = 0; k < 90; k++) {
+    const r = rnd() < 0.08 ? 1.3 : rnd() < 0.3 ? 0.9 : 0.6;
+    dots += `<circle cx="${(rnd() * 600).toFixed(1)}" cy="${(rnd() * 600).toFixed(1)}" r="${r}" fill="#fff" fill-opacity="${(0.25 + rnd() * 0.6).toFixed(2)}"/>`;
+  }
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'>${dots}</svg>`)}")`;
+}
 const SECTION_KEYS = { launch: 'section.launch', orbit: 'section.orbit', build: 'section.build' } as const;
 /** G: the place last picked, kept in this browser */
 const CITY_STORAGE_KEY = 'orbitlab.homeCity';
@@ -189,8 +211,9 @@ export class HomeScreen {
     this.root.classList.remove('globe-on');
     const scroller = el('div', 'home-scroll');
     if (isJourney(v)) scroller.append(...this.chapters(v === 'b' ? CHAPTERS_B : v === 'j' ? CHAPTERS_J : CHAPTERS_F));
+    else if (v === 'k') scroller.append(...this.showcase());
     else scroller.append(this.hero(), this.paths(), this.facts(), this.program());
-    scroller.addEventListener('scroll', () => this.measure(), { passive: true });
+    scroller.addEventListener('scroll', () => { this.measure(); this.measureShowcase(); }, { passive: true });
     this.scroller = scroller;
     const overlay = el('div', 'home-overlay');
     overlay.setAttribute('aria-hidden', 'true');
@@ -204,11 +227,15 @@ export class HomeScreen {
     if (v === 'h') overlay.append(this.arcCard());
     this.countdown = v === 'i' ? el('div', 'home-countdown') : null;
     if (this.countdown) overlay.append(this.countdown);
-    this.root.replaceChildren(scroller, overlay, this.switcher());
+    // K: the starry sky between the first screen and the globe, under the page and over the scene
+    this.sky = v === 'k' ? el('div', 'home-sky') : null;
+    if (this.sky) { this.sky.setAttribute('aria-hidden', 'true'); this.sky.style.setProperty('--stars', starTile()); }
+    this.root.replaceChildren(...(this.sky ? [this.sky] : []), scroller, overlay, this.switcher());
     this.root.setAttribute('aria-labelledby', 'home-title');
     scroller.scrollTop = kept;
     this.gShownAt = -1;
     this.measure();
+    this.measureShowcase();
     if (hadFocus) this.root.querySelector<HTMLElement>(`[data-home-focus="${hadFocus}"]`)?.focus({ preventScroll: true });
   }
 
@@ -613,8 +640,90 @@ export class HomeScreen {
     return root;
   }
   private legendNote: HTMLElement | null = null;
-  /** J: the station's next pass over the visitor's city, in the last chapter */
+  /** J, K: the station's next pass over the visitor's city, in the last chapter */
   private issLine: HTMLElement | null = null;
+  /** K: the sky layer */
+  private sky: HTMLElement | null = null;
+
+  // ─── K: the program shown off ────────────────────────────────────────────
+
+  private showcase(): HTMLElement[] {
+    const base = document.baseURI;
+    const features = FEATURES.map((f, k) => {
+      const section = el('section', `home-feature${k % 2 ? ' flip' : ''}`);
+      section.dataset.feature = f.id;
+      const card = el('div', 'home-feature-text');
+      if (f.who) card.append(el('span', 'mode-card-who', t(f.who)));
+      card.append(el('h2', 'home-feature-title', t(f.title)), el('p', 'home-block-lead', t(f.text)));
+      const go = el('button', 'home-section-link primary', t(f.cta));
+      go.type = 'button';
+      go.dataset.homeFocus = `feature-${f.id}`;
+      go.addEventListener('click', () => this.featureGo(f.id));
+      card.append(go);
+      const frame = el('div', 'home-shot');
+      const bar = el('div', 'home-shot-bar');
+      bar.setAttribute('aria-hidden', 'true');
+      bar.append(el('i'), el('i'), el('i'));
+      const img = el('img');
+      img.src = new URL(`home/${f.id}.webp`, base).href;
+      img.alt = t(f.title);
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.width = 1280;
+      img.height = 800;
+      frame.append(bar, img);
+      section.append(card, frame);
+      return section;
+    });
+    const end = el('section', 'home-chapter home-feature-end globe');
+    const card = el('div', 'home-chapter-card');
+    this.issLine = el('p', 'home-iss-next');
+    const row = el('div', 'home-actions');
+    const watch = el('button', 'home-section-link primary', t('home.play'));
+    watch.type = 'button';
+    watch.dataset.homeFocus = 'end-watch';
+    watch.addEventListener('click', () => this.host.watch(FEATURED_WATCH_MISSION));
+    const orbit = el('button', 'home-section-link', t('home.section.orbitOpen'));
+    orbit.type = 'button';
+    orbit.dataset.homeFocus = 'end-orbit';
+    orbit.addEventListener('click', () => this.host.go(route('orbit', 'explore')));
+    row.append(watch, orbit);
+    card.append(el('h2', 'home-block-title', t('home.k.issTitle')), el('p', 'home-block-lead', t('home.k.issText')), this.issLine, row);
+    end.append(card);
+    return [this.hero(), ...features, end];
+  }
+
+  private featureGo(id: string): void {
+    if (id === 'watch') this.host.watch(FEATURED_WATCH_MISSION);
+    else if (id === 'lessons') this.host.openLessons();
+    else if (id === 'orbit') this.host.go(route('orbit', 'explore'));
+    else this.host.go(route('launch', id as AppLevel));
+  }
+
+  /**
+   * K: how far each screen is from the middle of the window (it swings in and
+   * settles as it gets there), how much of the scene the sky covers (none on
+   * the first screen, all of it past it), and how far into the globe the page is.
+   */
+  private measureShowcase(): void {
+    const s = this.scroller;
+    if (!s || this.variant !== 'k' || s.clientHeight === 0) return;
+    const h = s.clientHeight, top = s.scrollTop, mid = top + h / 2;
+    for (const f of s.querySelectorAll<HTMLElement>('.home-feature')) {
+      const q = Math.max(-1, Math.min(1, (f.offsetTop + f.offsetHeight / 2 - mid) / h));
+      f.style.setProperty('--q', q.toFixed(3));
+      f.style.setProperty('--qa', Math.abs(q).toFixed(3));
+    }
+    const end = s.querySelector<HTMLElement>('.home-feature-end');
+    const max = Math.max(0, s.scrollHeight - h);
+    const endTop = end ? Math.min(end.offsetTop, max) : max;
+    const from = Math.max(0, endTop - h * 0.8);
+    const globe = endTop > from ? Math.max(0, Math.min(1, (top - from) / (endTop - from))) : 1;
+    const covered = Math.min(1, top / (h * 0.6));
+    if (this.sky) this.sky.style.opacity = Math.min(covered, 1 - globe).toFixed(3);
+    this.stage.setScroll(0, globe, covered);
+    this.root.classList.toggle('globe-on', globe > 0.5);
+  }
 
   /** J: "next over Bangkok: rises tomorrow at 10:25", once it is worked out. */
   private paintIssLine(): void {
@@ -683,7 +792,8 @@ export class HomeScreen {
     if (v === 'i' && this.countdown?.classList.contains('liftoff') && performance.now() > this.liftoffUntil) this.countdown.classList.remove('on', 'liftoff');
     // the page was shown after it was built, or its height moved: read the chapters again
     if (isJourney(v)) this.measure();
-    if (v === 'j') this.paintIssLine();
+    if (v === 'k') this.measureShowcase();
+    if (v === 'j' || v === 'k') this.paintIssLine();
     if (!r || !frame || !isJourney(v)) return;
     if (r.name) r.name.textContent = this.host.vehicleName();
     if (r.clock) r.clock.textContent = clock(frame.t);

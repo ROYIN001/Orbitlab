@@ -129,8 +129,10 @@ export class HomeStage {
   /** B, F, I: the mission time the scroll position asks for, and the one shown, eased towards it */
   private scrollTime = -8;
   private shownTime = -8;
-  /** F, I: how far the page has scrolled into its globe, 0 to 1 */
+  /** F, I, J, K: how far the page has scrolled into its globe, 0 to 1 */
   private globeBlend = 0;
+  /** K: how much of the scene the page's starry sky covers, 0 to 1 */
+  private covered = 0;
   /** I: launched by the visitor, and the flight's own clock since */
   launched = false;
   private liveClock = -10;
@@ -192,10 +194,11 @@ export class HomeStage {
     if (this.built === 'a') this.built = null;
   }
 
-  /** B, F, I: the page was scrolled to mission time `time`, and `globe` of the way into its globe. */
-  setScroll(time: number, globe = 0): void {
+  /** B, F, I: the page was scrolled to mission time `time`, and `globe` of the way into its globe (K: `covered` by its sky). */
+  setScroll(time: number, globe = 0, covered = 0): void {
     this.scrollTime = time;
     this.globeBlend = globe;
+    this.covered = covered;
   }
 
   /** G: stand somewhere else. */
@@ -259,10 +262,11 @@ export class HomeStage {
       this.shiftKey = key;
       camera.setViewOffset(w, h, -shift.x * w, -shift.y * h, w, h);
     }
-    if (v === 'a') {
+    if (v === 'a' || v === 'k') {
       // a slow walk round the pad, the camera breathing up and down a little
-      this.host.cams.az += dt * 0.045;
+      this.host.cams.az += dt * (v === 'k' ? 0.03 : 0.045);
       this.host.cams.userEl = 0.07 + 0.05 * Math.sin(this.clock * 0.13);
+      if (v === 'k') this.updateIssEnd(dt, w, h);
       return;
     }
     this.updateFlight(dt);
@@ -315,8 +319,8 @@ export class HomeStage {
     }
     this.host.previewWatch(FEATURED_WATCH_MISSION, v === 'a' ? this.lightTime() : undefined);
     this.ownFlight = this.host.flightNo();
-    // A's Soyuz is filmed from a little round from the viewer's side
-    if (v === 'a') { cams.az = 1.25; cams.zoom = 1.05; }
+    // A's (and K's) Soyuz is filmed from a little round from the viewer's side
+    if (v === 'a' || v === 'k') { cams.az = 1.25; cams.zoom = 1.05; }
     // on a narrow screen the picture is the space above the text: stand back so the whole stack fits in it
     if (this.host.viewport.clientWidth < 860) cams.zoom *= 1.6;
     if (isJourney(v)) {
@@ -446,7 +450,7 @@ export class HomeStage {
 
   /** J: the station's osculating orbit, taken again every half hour of the globe's time so the drawing keeps to SGP4's. */
   private refreshIssOrbit(globe: HomeGlobe): void {
-    if (!this.iss || globe.jd - this.issOrbitJd < 30 / 1440) return;
+    if (!this.iss || Math.abs(globe.jd - this.issOrbitJd) < 30 / 1440) return;
     this.issOrbitJd = globe.jd;
     this.issOrbit = skyOrbit(this.iss, globe.jd);
     globe.setDrawn(this.issOrbit);
@@ -462,6 +466,43 @@ export class HomeStage {
     const far = { az: st.lon + theta, el: st.lat * 0.6 + 0.12 };
     const turn = Math.atan2(Math.sin(far.az - near.az), Math.cos(far.az - near.az));
     globe.aim(near.az + turn * e, near.el + (far.el - near.el) * e, 7.4 + ((w >= 860 ? 21 : 17) - 7.4) * e, true);
+  }
+
+  // ─── K: D's globe with only the space station ─────────────────────────────
+
+  /** K: the globe fades in over the page's sky at its end, as D's, the station alone on it. */
+  private updateIssEnd(dt: number, w: number, h: number): void {
+    const p = this.globeBlend;
+    // under the sky or the globe the launch scene need not be drawn
+    this.host.coverScene(p >= 0.99 || this.covered >= 0.99);
+    if (p <= 0) { this.globe?.show(false); return; }
+    const globe = this.ensureGlobe();
+    if (!this.journeyGlobe) {
+      this.journeyGlobe = true;
+      globe.reset();
+      globe.points = false;
+      globe.warp = 60;
+      globe.jd = julianDate(new Date());
+      globe.aim(-2.2, 0.32, 44, true);
+      this.issOrbitJd = -1e9;
+      this.issNext = null;
+      globe.whenLoaded(() => {
+        if (this.built !== 'k') return;
+        this.iss = globe.byNorad(25544) ?? null;
+        if (!this.iss) return;
+        this.refreshIssOrbit(globe);
+        globe.label('iss', t('home.g.iss'), 'station iss', () => (this.issOrbit ? stateAt(this.issOrbit, (globe.jd - this.issOrbit.jd0) * 86400, false).r : null));
+        const jd = julianDate(new Date());
+        this.issNext = findPasses(this.iss, this.station, jd, jd + 2, G_MIN_EL).find((q) => !q.set || q.set.jd > jd) ?? null;
+      });
+    }
+    globe.show(true);
+    globe.setOpacity(Math.min(1, p * 1.4));
+    this.refreshIssOrbit(globe);
+    const e = p * p * (3 - 2 * p);
+    // D's slow turn, the camera coming in a little as the page arrives
+    globe.aim(globe.camAz + dt * 0.012, 0.32, (w >= 860 ? 36 : 24) + 8 * (1 - e), true);
+    globe.frame(dt, w, h, pictureShift(w, h, 'd'));
   }
 
   // ─── D: the globe with the real satellites ────────────────────────────────

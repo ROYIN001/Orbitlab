@@ -12,14 +12,16 @@
  * I  F, launched by the visitor: the first screen's button is held down to count down and lift off
  * J  B's scroll with no readouts and no launch steps — the page's own chapters over the rocket
  *    climbing to the edge of space — ending on the globe with the International Space Station
+ * K  the rocket on its pad, then the program shown off a chapter at a time (the app's own
+ *    screens, over a starry sky), ending on D's globe with only the space station on it
  *
  * (C, the first seconds of the launch looped, and E, a line-up of rockets to
  * scale, were tried and set aside, 2026-09-27.)
  */
 import { gmst, julianDate, sunDirectionEci } from '../physics/orbital';
 
-export type HomeVariant = 'a' | 'b' | 'd' | 'f' | 'g' | 'h' | 'i' | 'j';
-export const HOME_VARIANTS: readonly HomeVariant[] = ['a', 'b', 'd', 'f', 'g', 'h', 'i', 'j'];
+export type HomeVariant = 'a' | 'b' | 'd' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k';
+export const HOME_VARIANTS: readonly HomeVariant[] = ['a', 'b', 'd', 'f', 'g', 'h', 'i', 'j', 'k'];
 /** the variants whose page is a flight in chapters, read by scrolling */
 export const isJourney = (v: HomeVariant): boolean => v === 'b' || v === 'f' || v === 'i' || v === 'j';
 /** the variants that end on the globe */
