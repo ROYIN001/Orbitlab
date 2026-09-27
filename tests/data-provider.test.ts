@@ -172,6 +172,21 @@ describe('the providers (S04)', () => {
     }
   });
 
+  it('online: asks one host one question at a time (P2.5)', async () => {
+    const answers: Record<string, unknown> = { ...SWPC };
+    let inFlight = 0, most = 0;
+    const net = (async (url: string, init: { signal: AbortSignal }) => {
+      inFlight++;
+      most = Math.max(most, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return fakeFetch(answers)(url, init);
+    }) as Fetcher;
+    const set = await new OnlineProvider(new OfflineProvider(BASE, net), net, 10_000).load('spaceWeather');
+    expect(set.from).toBe('online');
+    expect(most).toBe(1);
+  });
+
   it('online: stops when the caller does, without falling back', async () => {
     const net = fakeFetch({ [SNAP_URL]: bundled, ...Object.fromEntries(Object.keys(SWPC).map((u) => [u, 'hang'])) });
     const ctl = new AbortController();

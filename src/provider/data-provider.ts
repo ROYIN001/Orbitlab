@@ -173,7 +173,18 @@ export class OnlineProvider implements DataProvider {
     let oldest = Infinity;
     try {
       const { data, asOf } = await withTimeout(this.timeoutMs, signal, async (s) => {
-        const answers = await Promise.all(online.urls.map(async (url) => {
+        // one question at a time to each host (P2.5: CelesTrak, asked for nine lists at once, answered some
+        // without the header that lets a page read them); different hosts at once
+        const queue = new Map<string, Promise<unknown>>();
+        const inTurn = <T>(url: string, ask: () => Promise<T>): Promise<T> => {
+          const host = new URL(url).hostname;
+          // stopped meanwhile: the rest are not asked
+          const go = (): Promise<T> => (s.aborted ? Promise.reject(s.reason) : ask());
+          const turn = (queue.get(host) ?? Promise.resolve()).then(go, go);
+          queue.set(host, turn.catch(() => undefined));
+          return turn;
+        };
+        const answers = await Promise.all(online.urls.map((url) => inTurn(url, async () => {
           const host = new URL(url).hostname;
           if (interval) {
             // asked too recently: the answer, or the refusal, of then
@@ -193,7 +204,7 @@ export class OnlineProvider implements DataProvider {
           const body = await res.json();
           if (interval) await this.recent.put(url, { at: this.now(), body });
           return body;
-        }));
+        })));
         return online.parse(answers);
       });
       if (!def.valid(data)) throw new Error('the answer is not the dataset it should be');
