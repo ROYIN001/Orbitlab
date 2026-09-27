@@ -1292,8 +1292,9 @@ cross-track at Engineer), the relative speed, and an estimated probability of co
   object's band is the one SGP4's radius stays in over the window. The band used before, perigee
   to apogee at the epoch with 30 km either way, misses an object that is coming down: SGP4 takes
   the fastest-decaying objects of a catalogue up to 346 km below their perigee within a week. An
-  object that SGP4 brings down within the window is taken from the ground up. Deep-space objects
-  keep the old band.
+  object that SGP4 brings down within the window is taken from the ground up. A near-Earth object
+  whose band cannot be bounded over the window is taken to be at any height (neither catalogue
+  below has one). Deep-space objects keep the old band.
 - **The time filter** (P2.5, `src/orbit/screening-filter.ts`) says, for each pair, when the two
   can come within the limit at all. Only those stretches are searched.
   - It is Hoots' time filter written on SGP4's own terms. It follows SGP4's secular and drag
@@ -1362,7 +1363,10 @@ with anything:
 Every `npm test` runs part of it: every primary for one day, and three primaries over a week.
 `npm run test:heavy` runs the whole sweep.
 
-**Result.** The test passed as it was written.
+**Result.** The criterion held in every run: no approach was dropped and none added. The filter
+was changed after the first runs (the radial test at each pass, and the handling of objects that
+come down), and two primaries were added; the whole sweep was then run again on the final code,
+in review, with the same result.
 
 - **The sweep.** All 108 runs gave the full search's approaches, 591 in all, with none dropped and
   none added. The criterion allows 1 ms and 1 mm. Where they were compared exactly, the times and
@@ -1376,15 +1380,23 @@ Every `npm test` runs part of it: every primary for one day, and three primaries
   another of the filter's checks. This leaves out the object that comes down within a week
   (constructed, B* 0.05): over that week all its pairs are searched whole.
   - Deep-space primaries have every pair searched whole: the geostationary one, the Molniya and
-    the transfer orbit. For them the filter changes nothing.
+    the geostationary transfer orbit. For them the filter changes nothing.
 - **The bounds.** Every state stayed inside them. They are tight, which is why Δu and ε are
-  taken 1.25 times. Over 2.8 million states of the 28 000 near-Earth objects of the 30 000-object
-  load below:
+  taken 1.25 times: the suite's own check (the table above) reaches 0.80 of the scaled bounds,
+  that is, the unscaled ones. A one-off check, not part of the suite, took 2.8 million states of
+  the 28 000 near-Earth objects of the 30 000-object load below, at random times across a week:
   - the along-track angle and the tilt reached 0.999 and 1.000 of the unscaled bounds;
   - SGP4's radius came within 0.06 km of the whole-orbit bound and within 0.1 m of a pass's bound.
 - **A guard that failed.** One check written before the first run, that more than half the pairs
   of a 700 km satellite need no search at all, failed on that run (46 % over three days). It was
   left as written. It passes since the radial test at each pass was added.
+- **A wider check, in review.** Two sweeps beyond the test above, run once and not part of the
+  suite, found no difference either:
+  - 60 near-Earth primaries drawn at random from the bundled catalogue, two days at 25 km, against
+    a search of every pair with no band test at all (so the new band is checked too): the same
+    1 404 approaches;
+  - 15 near-Earth primaries drawn at random from the 30 000-object load, two days at 25 km, with
+    and without the filter: the same 4 552 approaches, to the last bit.
 
 The conjunction data are the appendix of R. W. Shepperd, "Subsequent Assessment of the Collision
 between Iridium 33 and COSMOS 2251"
@@ -1455,17 +1467,18 @@ slow-down does not reach a worker (the 700 km run took 27 s at both speeds), so 
 cores are slower than this machine's, would take longer.
 
 With the time filter it was timed in Node 22 on this build machine: one core of a 4-vCPU Intel
-Xeon at 2.1 GHz, the best of three runs. The load is the same 30 000-object file as above. It is
-synthetic: 3 104 real element sets, and copies of them turned to other nodes and other places in
-their orbits. The start is 2026-09-27 12:00 UTC and the limit 5 km. Every run with the filter gave
-the same approaches as the full search, to the last bit.
+Xeon at 2.1 GHz, each figure the best of three runs. The machine was shared (a load of about four),
+so two such sets of runs differ by up to 15 %; the table is the later one. The load is the same
+30 000-object file as above. It is synthetic: 3 104 real element sets, and copies of them turned
+to other nodes and other places in their orbits. The start is 2026-09-27 12:00 UTC and the limit
+5 km. Every run with the filter gave the same approaches as the full search, to the last bit.
 
 | primary | window | pairs searched | full search | with the filter | faster | worker's whole job |
 | --- | --- | --- | --- | --- | --- | --- |
-| ISS, 416 × 426 km | 1 day | 581 | 0.26 s | 0.03 s | 8× | 0.21 s |
-| ISS | 3 days | 590 | 0.85 s | 0.05 s | 16× | 0.34 s |
-| Landsat 8, 699 × 701 km | 1 day | 10 412 | 5.5 s | 0.22 s | 25× | 0.37 s |
-| Landsat 8 | 3 days | 10 422 | 17.8 s | 0.49 s | 36× | 0.66 s |
+| ISS, 416 × 426 km | 1 day | 581 | 0.23 s | 0.03 s | 7× | 0.17 s |
+| ISS | 3 days | 590 | 0.83 s | 0.05 s | 17× | 0.16 s |
+| Landsat 8, 699 × 701 km | 1 day | 10 412 | 5.6 s | 0.23 s | 25× | 0.34 s |
+| Landsat 8 | 3 days | 10 422 | 18.5 s | 0.55 s | 34× | 0.69 s |
 
 - **Pairs searched** are those whose SGP4 bands overlap.
 - **The worker's whole job** is `screenSets`: it makes the 30 000 sets ready for SGP4 again, then
@@ -1861,12 +1874,14 @@ npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuve
 npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
 npx vitest run tests/activity.test.ts tests/propagator.test.ts                   # the Sun's activity in the lifetime, ~5 s
 npx vitest run tests/conjunction.test.ts tests/overflights.test.ts tests/reentry.test.ts   # the military track, ~6 s
+npx vitest run tests/screening-filter.test.ts                                    # P2.5: the screening's time filter, ~30 s
 npx vitest run tests/msis.test.ts tests/earth-orientation.test.ts tests/cdm.test.ts tests/sensors.test.ts tests/case-worksheets.test.ts   # P2.5, ~10 s
 npx vitest run tests/ballistic.test.ts                                           # P2.5: the fitted drag, 66 stages, NAPA-2, ~2 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/reentry-agencies.test.ts   # P2.5: re-entries the agencies' way, 100 objects
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min
+npx vitest run --config vitest.heavy.config.ts tests/heavy/screening-filter.test.ts     # the time filter's whole sweep, ~4 min
 ```
 
 When a test fails, its message prints the whole comparison table for that flight. If the change
