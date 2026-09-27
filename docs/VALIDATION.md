@@ -1288,7 +1288,28 @@ cross-track at Engineer), the relative speed, and an estimated probability of co
 - **The search** (`src/orbit/conjunction.ts`) samples the range and refines each local minimum
   by golden section to 0.1 ms. A sampled minimum farther than the limit plus v·step/2 cannot hide
   an approach within the limit, and is not refined. Pairs whose bands of heights are farther apart
-  than the limit are not searched (Hoots, Crawford and Roehrich, 1984).
+  than the limit are not searched (Hoots, Crawford and Roehrich, 1984). Since P2.5 a near-Earth
+  object's band is the one SGP4's radius stays in over the window. The band used before, perigee
+  to apogee at the epoch with 30 km either way, misses an object that is coming down: SGP4 takes
+  the fastest-decaying objects of a catalogue up to 346 km below their perigee within a week. An
+  object that SGP4 brings down within the window is taken from the ground up. Deep-space objects
+  keep the old band.
+- **The time filter** (P2.5, `src/orbit/screening-filter.ts`) says, for each pair, when the two
+  can come within the limit at all. Only those stretches are searched.
+  - It is Hoots' time filter written on SGP4's own terms. It follows SGP4's secular and drag
+    polynomials: the mean argument of latitude, the node, a and e.
+  - It bounds every periodic term SGP4 adds, from SGP4's own formula (Spacetrack Report #3;
+    Vallado et al., AIAA 2006-6753): the radius, the angle along the track and the tilt of the
+    plane. Nothing is fitted to a catalogue. The published filters reach zero misses only with
+    pads fitted to their test catalogues: 30 km and 10 s (Woodburn et al., AAS 09-372), 10.7 km
+    (Rivero et al., arXiv 2309.02379).
+  - At each pass of the primary through the line where the planes cross, the other object's pass
+    is found. A window is kept only if the two radii at that pass can meet.
+  - The search then takes the same samples the whole search takes there, so an approach found in
+    a window is the whole search's own, to the last bit.
+  - Deep-space objects, pairs whose planes are within 3° of each other, and objects that SGP4
+    brings down within the window go to the whole search.
+  - The whole search stays callable as the reference.
 - **The probability** is the two-dimensional one used in operations (Foster and Estes 1992;
   Chan 2008): the combined position uncertainty, projected on the plane square to the relative
   velocity, integrated over a circle of the pair's combined radius. It is summed in logarithms,
@@ -1306,13 +1327,16 @@ cross-track at Engineer), the relative speed, and an estimated probability of co
 | a direct hit through a round uncertainty | 1 − exp(−R²/2σ²) | exact | 10⁻⁹ |
 | a round uncertainty off to one side, down to beyond 10⁻¹⁰⁰⁰ | Rice's integral, by Simpson's rule | agrees | 10⁻³ in log₁₀ |
 | the screening's coarse steps against a 10 s brute force | the same pairs (a DMSP satellite and 40 Fengyun-1C fragments, one day) | every approach found | 0.01 s, 0.1 m |
+| the time filter's bounds: every near-Earth object of the bundled catalogue at 40 times across a week (88 450 states) | SGP4's own radius, argument of latitude and plane | none outside; the largest along-track and tilt 0.80 of the bounds | none outside |
+| the radius at a pass: the same objects, stretches of 10 s to 10 min (132 675 states) | SGP4's own radius | none outside | none outside |
+| the filtered screening: 12 primaries × 1, 3, 7 days × 1, 5, 25 km (108 runs, 591 approaches) | the full search | the same 591, none dropped, none added | same objects; TCA 1 ms, miss 1 mm |
 | Iridium 33–Cosmos 2251: relative speed, crossing angle | 11.6 km/s, "nearly right angles" (Shepperd; Kelso) | 11.6 km/s, 102° | 0.05 km/s; 95–110° |
 | the same: TCA of the conjunction message | 16:55:59.798 UTC | found again by straight-line motion; miss 226.3 m | 2 ms |
 | the same: probability, the military's covariances | 2.6 × 10⁻⁵¹ (Shepperd, Table 2, 9 February) | 2.66 × 10⁻⁵¹ | 0.1 in log₁₀ |
 | the same: Iridium's orbit estimate and covariance | 1.0 × 10⁻³ | 9.28 × 10⁻⁴ | 0.1 in log₁₀ |
 | the same: Iridium's conservative covariance | 3.3 × 10⁻² | 3.23 × 10⁻² | 0.1 in log₁₀ |
 
-**The time filter (P2.5): its test, fixed before it runs.** A time filter
+**The time filter (P2.5): its test, fixed before it ran.** A time filter
 (`src/orbit/screening-filter.ts`) is to choose the stretches of the window in which each pair is
 searched. It must not change the answer. Its test is recorded here before the filter is compared
 with anything:
@@ -1337,6 +1361,30 @@ with anything:
 
 Every `npm test` runs part of it: every primary for one day, and three primaries over a week.
 `npm run test:heavy` runs the whole sweep.
+
+**Result.** The test passed as it was written.
+
+- **The sweep.** All 108 runs gave the full search's approaches, 591 in all, with none dropped and
+  none added. The criterion allows 1 ms and 1 mm. Where they were compared exactly, the times and
+  misses were equal to the last bit: in one run of the regular suite and in the 30 000-object runs
+  below. The filtered search takes the very samples the full search takes, so this is expected.
+- **Primaries added.** Two constructed primaries were added to the ten above: a second object that
+  comes down within the window (156 × 701 km, with SGP4's simplified drag), and an object at
+  481 × 495 km that SGP4 brings below 400 km within the week.
+- **Pairs sent to the whole search.** Over the sweep's near-Earth primaries, 2 764 of 66 106
+  pairs went to the whole search: pairs whose planes are within 3° of each other, or that failed
+  another of the filter's checks. This leaves out the object that comes down within a week
+  (constructed, B* 0.05): over that week all its pairs are searched whole.
+  - Deep-space primaries have every pair searched whole: the geostationary one, the Molniya and
+    the transfer orbit. For them the filter changes nothing.
+- **The bounds.** Every state stayed inside them. They are tight, which is why Δu and ε are
+  taken 1.25 times. Over 2.8 million states of the 28 000 near-Earth objects of the 30 000-object
+  load below:
+  - the along-track angle and the tilt reached 0.999 and 1.000 of the unscaled bounds;
+  - SGP4's radius came within 0.06 km of the whole-orbit bound and within 0.1 m of a pass's bound.
+- **A guard that failed.** One check written before the first run, that more than half the pairs
+  of a 700 km satellite need no search at all, failed on that run (46 % over three days). It was
+  left as written. It passes since the radial test at each pass was added.
 
 The conjunction data are the appendix of R. W. Shepperd, "Subsequent Assessment of the Collision
 between Iridium 33 and COSMOS 2251"
@@ -1393,8 +1441,9 @@ many standard deviations out (a 25 km miss against a 157 m standard deviation gi
 neither element sets' nor tracking errors are Gaussian that far out. The tests still check the
 computed logarithm itself.
 
-**A whole catalogue, timed (P2.5).** Screened in a Web Worker, measured in Chromium at a phone's
-size (375 × 812) on this build machine, with a catalogue of 30 000 objects read from a file: the
+**A whole catalogue, timed (P2.5).** Before the time filter: screened in a Web Worker, measured
+in Chromium at a phone's size (375 × 812) on this build machine, with a catalogue of 30 000
+objects read from a file: the
 3 104 real element sets at hand (the bundled groups and CelesTrak's Cosmos 2251, Iridium 33 and
 Cosmos 1408 debris) and copies of them turned to other nodes and places in their orbits, a
 synthetic load labelled as such. Reading the file took 2 s (4 s with the page's CPU slowed four
@@ -1403,8 +1452,30 @@ against a satellite at 700 km, in the crowded band, 27 s either way. The page ke
 throughout: its frames came every 117 ms at the median (183 ms slowed), against 83 ms (133 ms)
 at rest — software WebGL in this machine sets that pace, not the screening. Chromium's CPU
 slow-down does not reach a worker (the 700 km run took 27 s at both speeds), so a phone, whose
-cores are slower than this machine's, would take longer: some one to two minutes for the crowded
-band is an estimate, not a measurement.
+cores are slower than this machine's, would take longer.
+
+With the time filter it was timed in Node 22 on this build machine: one core of a 4-vCPU Intel
+Xeon at 2.1 GHz, the best of three runs. The load is the same 30 000-object file as above. It is
+synthetic: 3 104 real element sets, and copies of them turned to other nodes and other places in
+their orbits. The start is 2026-09-27 12:00 UTC and the limit 5 km. Every run with the filter gave
+the same approaches as the full search, to the last bit.
+
+| primary | window | pairs searched | full search | with the filter | faster | worker's whole job |
+| --- | --- | --- | --- | --- | --- | --- |
+| ISS, 416 × 426 km | 1 day | 581 | 0.26 s | 0.03 s | 8× | 0.21 s |
+| ISS | 3 days | 590 | 0.85 s | 0.05 s | 16× | 0.34 s |
+| Landsat 8, 699 × 701 km | 1 day | 10 412 | 5.5 s | 0.22 s | 25× | 0.37 s |
+| Landsat 8 | 3 days | 10 422 | 17.8 s | 0.49 s | 36× | 0.66 s |
+
+- **Pairs searched** are those whose SGP4 bands overlap.
+- **The worker's whole job** is `screenSets`: it makes the 30 000 sets ready for SGP4 again, then
+  screens them with the filter. It does not include the browser's copy of the sets to the worker.
+- **Where the rest of the time goes** (Landsat 8, three days, timed stage by stage):
+  - the filter's own work, pass by pass, about 0.3 s;
+  - the 132 pairs whose planes are within 3° of each other, searched whole, 0.13 to 0.23 s.
+
+A phone's core is slower than this machine's, and Chromium cannot slow a worker. The times on
+phones are measured separately; none are claimed here.
 
 ### Overflights of a place (M02)
 

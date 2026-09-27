@@ -185,12 +185,12 @@ moves only with the physics' wind; the calm default leaves it where it was made.
   recording (tests/session.test.ts).
 
 `npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
-model, and Soyuz MS-10's and 18a's aborts flown to the crew on the ground (tests/heavy/, about
-15 minutes). `npm run test:sixdof-fleet` flies the fleet matrix as
-rigid bodies: its 126 accepted cases, each vehicle's first case in crosswind and shear, and Long
-March 2D's real mission — 161 cases, about 2 h 40 min on four cores
-([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and `npm run build` complete the
-gate.
+model, Soyuz MS-10's and 18a's aborts flown to the crew on the ground, and the screening's time
+filter against the full search over its whole sweep (tests/heavy/, about 20 minutes).
+`npm run test:sixdof-fleet` flies the fleet matrix as rigid bodies: its 126 accepted cases, each
+vehicle's first case in crosswind and shear, and Long March 2D's real mission — 161 cases, about
+2 h 40 min on four cores ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and
+`npm run build` complete the gate.
 
 ## Roadmap
 
@@ -275,7 +275,7 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
 | NRLMSISE-00 and daily indices | done: the density is the full NRLMSISE-00 (a port of Brodowski's public-domain C, held to the Fortran and to pymsis), at the place and hour, with the day's F10.7, its 81-day mean and the day's Ap (GFZ, since 1954), then SWPC's forecast; the orbit is carried in steps of five days with the step's mean indices. Seven spheres within 25 %, six still 8–23 % early ([VALIDATION.md](VALIDATION.md) §6) |
 | UT1 − UTC and polar motion | done: TEME is turned into the Earth-fixed frame by the sidereal time of UT1 and the pole's wander (IERS finals2000A, bundled, refreshed by the deploy); held to Vallado et al.'s example ([VALIDATION.md](VALIDATION.md) §6) |
 | Passes as they are seen | done: the air's refraction lifts a low satellite (Sæmundsson), and a pass carries its brightness from the satellite's standard magnitude and phase ([VALIDATION.md](VALIDATION.md) §6) |
-| M01: messages, a whole catalogue, the encounter plane | done: a conjunction data message (CCSDS 508.0-B-1, KVN) read from a file gives the probability from its own covariances, held to NASA CARA's twelve test conjunctions; the screening runs in a Web Worker, so a catalogue of 30 000 objects read from a file is screened with the page in use; **Show it** draws the other object's orbit and the meeting in 3-D and on the map, and the encounter plane; a probability under 10⁻¹⁰ is said to be so ([VALIDATION.md](VALIDATION.md) §7) |
+| M01: messages, a whole catalogue, the encounter plane | done: a conjunction data message (CCSDS 508.0-B-1, KVN) read from a file gives the probability from its own covariances, held to NASA CARA's twelve test conjunctions; the screening runs in a Web Worker, so a catalogue of 30 000 objects read from a file is screened with the page in use; a time filter written on SGP4's own terms searches each pair only where it can meet, giving exactly the full search's approaches 8 to 36 times sooner, and a near-Earth object's height band is now SGP4's own, which an object coming down no longer leaves; **Show it** draws the other object's orbit and the meeting in 3-D and on the map, and the encounter plane; a probability under 10⁻¹⁰ is said to be so ([VALIDATION.md](VALIDATION.md) §7) |
 | M02: what the instrument can see | done: the published geometry of the instruments on 51 imaging satellites, each sourced — a fixed camera's swath, an agile one's pointing limit, a radar's incidence band and side — judges each overflight; **Show on the map** draws the pass and the ground the instrument reaches. Swaths held to their fields of view, and Landsat, Sentinel-2 and Sentinel-1 to their published revisits ([VALIDATION.md](VALIDATION.md) §7) |
 | M03: the drag fitted, transfer orbits, more cases | done: the ballistic coefficient fitted to the element set's decay rate or to a history of sets read from a file (seven spheres within 30 % of their known C_D A/m); an eccentric orbit carried by Cowell with the Sun and the Moon; 66 rocket stages of 2023–2025 and NAPA-2 as new cases (a finding: from first sets, half come down inside the window, 33 of 66; the criterion fixed before, on B from the first set's decay, was missed and could not have been met, only 14 first sets giving a B); the stages' mass is GCAT's dry mass since the fix-up, and a screen written after the results (a first set not the stage's, a kick stage built to fire after deployment, an eccentric perigee lowered more than drag can) is reported beside the unscreened counts (32 of 61); where it may come down drawn on the map. The test fixed before it ran, the agencies' way (B fitted to two NORAD sets a week apart, 100 re-entries of 1985–2004 from J. McDowell's archive): 81 % inside at 30 days and 85 % at 10 (met), 79 % at 5 days (missed by one object; median error under 2 % at each) ([VALIDATION.md](VALIDATION.md) §7) |
 | Real satellites at the Watch level | done: the Watch tour goes on to eight steps with the real catalogue: the station and its passes, THEOS-2, the navigation and weather satellites, the imagers, the Fengyun-1C debris and the Long March 5B re-entries |
@@ -307,10 +307,13 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
 - Close approaches (M01) are screened with element sets, as SOCRATES does, and their probability
   rests on R04's estimated uncertainty and a size the user gives: they show traffic worth a closer
   look, not the collisions to come. With a conjunction data message the probability is the
-  operators' own. Screening a satellite in the crowded 700–800 km band against 30 000 objects
-  took 27 s in the worker on this build machine's core, the page drawing throughout; a phone's
-  slower core would take longer (estimated one to two minutes, not measured: Chromium's CPU
-  slow-down does not reach a worker).
+  operators' own. A satellite at 700 km, in the crowded band, screened against 30 000 objects
+  over three days at 5 km took 0.49 s with the time filter and 17.8 s without, in Node on one
+  core of this build machine. The whole worker job took 0.66 s. The load is synthetic: 3 104 real
+  sets and copies of them turned to other nodes and anomalies. Deep-space primaries (GEO, Molniya,
+  transfer orbits) and near-coplanar pairs are still searched whole. A phone's slower core takes
+  longer; Chromium's CPU slow-down does not reach a worker, so those times are measured separately
+  and none are claimed here.
 - Overflights (M02) count only satellites whose element sets are published, and are when a place
   could be seen, not that it was imaged. The instruments' limits are the published ones (for the
   Maxar satellites, the tasking limits); three agile satellites publish none and are not judged.
