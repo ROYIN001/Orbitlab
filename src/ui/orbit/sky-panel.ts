@@ -114,7 +114,9 @@ export class RealSky {
   private stale = true;
   private framedKey: string | null = null;
   private lastGood: OrbitState | null = null;
-  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement; next?: HTMLElement; error?: HTMLElement } = {};
+  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement; next?: HTMLElement; error?: HTMLElement; state?: HTMLElement } = {};
+  /** A16: whether the facts on screen were drawn for a moment SGP4 could not place the satellite at */
+  private shownFailed = false;
   /** R03: where the passes are seen from, the lowest elevation that counts, and the passes found (until `until`, a Julian date) */
   private place: StationChoice = { stationId: 'bangkok', station: stationOf('bangkok')! };
   private minEl = 10 * Math.PI / 180;
@@ -242,7 +244,7 @@ export class RealSky {
     this.host.refresh();
   }
 
-  /** Where the picked satellite is at `jd`: SGP4's answer, or the last one it gave where it gives none. */
+  /** Where the picked satellite is at `jd`: SGP4's answer, or the last one it gave where it gives none — for drawing its track only (A16). */
   private stateAt(o: SkyObject, jd: number): OrbitState | null {
     const s = skyState(o, jd);
     if (s.error === 0) { this.lastGood = s; return s; }
@@ -274,13 +276,18 @@ export class RealSky {
     this.tick(realSeconds);
     const sel = this.selected;
     const jd = this.jd;
-    const now = sel ? this.stateAt(sel, jd) : null;
+    const cur = sel ? skyState(sel, jd) : null;
+    if (cur && cur.error === 0) this.lastGood = cur;
+    // A16: no position now: the track is drawn to the last one SGP4 gave, and the map says so
+    const failed = !!cur && cur.error !== 0;
+    const now = cur && !failed ? cur : failed ? this.lastGood : null;
     const stateOf = sel && now ? (tt: number) => this.stateAt(sel, jd + tt / 86400) ?? now : null;
     track.draw(stateOf, 0, jd, sel ? skyFacts(sel).period : 5400, {
       points: this.count ? { latlon: this.latlon, count: this.count, label: t(SOURCE_KEY[this.source]) } : undefined,
       // R03: where the passes are seen from, and the ground the satellite is above the lowest elevation for
       station: sel ? { lat: this.place.station.lat, lon: this.place.station.lon } : undefined,
-      footprint: sel && now ? Math.max(0, footprintAngle(Math.hypot(now.r.x, now.r.y, now.r.z), this.minEl)) : undefined,
+      footprint: sel && now && !failed ? Math.max(0, footprintAngle(Math.hypot(now.r.x, now.r.y, now.r.z), this.minEl)) : undefined,
+      nowLabel: failed ? t('sky.track.lastGood') : undefined,
     });
   }
 
@@ -429,7 +436,12 @@ export class RealSky {
     const dl = el('dl', 'pg-dl');
     const row = (k: string, v: string): HTMLElement => { const dd = el('dd', undefined, v); dl.append(el('dt', undefined, k), dd); return dd; };
     const now = skyState(o, this.jd);
-    if (now.error !== 0) box.append(el('p', 'pg-warn', t('sky.error', { why: t(ERROR_KEY[now.error]) })));
+    // A16: whether SGP4 can place it now, kept up to date by updateLive() as the clock runs
+    this.shownFailed = now.error !== 0;
+    this.live.state = el('p', 'pg-warn pg-sky-state');
+    this.live.state.setAttribute('role', 'status');
+    this.live.state.hidden = true;
+    box.append(this.live.state);
     row(t('sky.f.norad'), String(o.el.satnum));
     if (o.el.intldesg) row(t('sky.f.cospar'), cospar(o.el.intldesg));
     row(t('sky.f.epoch'), utc(new Date((o.el.jdEpoch + o.el.jdEpochFrac - 2440587.5) * 86400e3).toISOString()));
@@ -1049,6 +1061,9 @@ export class RealSky {
   updateLive(): void {
     const o = this.selected, L = this.live;
     if (!o) return;
+    const s = skyState(o, this.jd);
+    // A16: SGP4 has started or stopped failing since the facts were drawn: what they offer depends on it
+    if ((s.error !== 0) !== this.shownFailed) { this.host.refreshFacts(); return; }
     // R03: the first pass is over: the list moves on
     const passes = this.results.passes.result;
     if (passes && this.jd >= passes.until && L.next) { this.host.refreshFacts(); return; }
@@ -1061,7 +1076,6 @@ export class RealSky {
         L.next.textContent = look ? t('pass.upNow', { el: `${num(look.el * 180 / Math.PI, 0)}°`, dir: compass(look.az) }) : '';
       }
     }
-    const s = skyState(o, this.jd);
     const age = elementAge(o.el, this.jd) * 86400;
     if (L.age) {
       L.age.textContent = age >= 0 ? span(age) : t('sky.ageBefore', { age: span(-age) });
@@ -1071,7 +1085,15 @@ export class RealSky {
       const u = uncertaintyAt(o, this.jd);
       L.error.textContent = t('unc.value', { km: num(u.total / 1000, u.total < 10e3 ? 1 : 0), s: num(u.timing, u.timing < 10 ? 1 : 0) });
     }
-    if (s.error !== 0) return;
+    // A16: no position at this moment: every readout of it says so, not the last one it had
+    if (L.state) {
+      L.state.hidden = s.error === 0;
+      L.state.textContent = s.error === 0 ? '' : `${t('sky.error', { why: t(ERROR_KEY[s.error]) })} ${t('sky.unavailable')}`;
+    }
+    if (s.error !== 0) {
+      for (const cell of [L.alt, L.speed, L.latlon, L.teme]) if (cell) cell.textContent = '—';
+      return;
+    }
     if (L.alt) L.alt.textContent = `${num(s.alt / 1000)} ${t('u.km')}`;
     if (L.speed) L.speed.textContent = `${num(Math.hypot(s.v.x, s.v.y, s.v.z) / 1000, 3)} ${t('u.kms')}`;
     if (L.latlon) L.latlon.textContent = `${num(Math.abs(s.lat * RAD), 2)}° ${s.lat >= 0 ? 'N' : 'S'} · ${num(Math.abs(s.lon * RAD), 2)}° ${s.lon >= 0 ? 'E' : 'W'}`;

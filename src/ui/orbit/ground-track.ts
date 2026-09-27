@@ -25,6 +25,8 @@ export interface TrackOverlay {
   swath?: number;
   /** R02: a catalogue group's satellites, the points below them (rad, latitude then longitude, `count` pairs), named in the legend */
   points?: { latlon: Float32Array; count: number; label: string };
+  /** the satellite's marker in the legend, when it is not where the satellite is now (audit 2026-09-27 A16: the last position SGP4 could give) */
+  nowLabel?: string;
 }
 
 /** The point `d` m from (lat, lon) along bearing `b` on the sphere, rad. */
@@ -75,7 +77,7 @@ export class GroundTrackView {
     // the legend's entries, in as many lines as the width needs; over the map (under it, a card could cover it)
     g.font = '12px system-ui, sans-serif';
     const items: [string, string, number[]][] = stateOf ? [
-      [COLORS.sat, t('pg.track.now'), []], [COLORS.future, t('pg.track.next'), []],
+      [COLORS.sat, overlay.nowLabel ?? t('pg.track.now'), []], [COLORS.future, t('pg.track.next'), []],
       [COLORS.past, t('pg.track.past'), [4, 4]], [COLORS.sun, t('pg.track.sun'), []],
     ] : [[COLORS.sun, t('pg.track.sun'), []]];
     if (overlay.points) items.push([COLORS.points, overlay.points.label, []]);

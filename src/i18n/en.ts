@@ -1208,6 +1208,8 @@ export const en: Record<string, string> = {
   'sky.err.4': 'its orbit has no semi-latus rectum left',
   'sky.err.5': 'its elements put it below the ground at the epoch',
   'sky.err.6': 'it has decayed — its orbit is inside the Earth',
+  'sky.unavailable': 'Its height, speed and position at this moment are not available.',
+  'sky.track.lastGood': 'Last position SGP4 could give',
   'sky.f.norad': 'Catalogue number',
   'sky.f.cospar': 'International designator',
   'sky.f.epoch': 'Element set epoch',
