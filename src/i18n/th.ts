@@ -2499,7 +2499,7 @@ export const th: Record<string, string> = {
   'lesson.strip.expected': 'จากเที่ยวบินได้ {value}',
   'lesson.strip.check': 'ตรวจคำตอบ',
   'lesson.strip.reveal': 'ดูเฉลย',
-  'lesson.strip.revealed': 'แสดงเฉลยแล้ว: ความพยายามครั้งนี้บันทึกว่าไม่ผ่าน และตัวเลขที่เคยแสดงแล้วจะไม่นับเป็นคำตอบที่ผ่านอีก',
+  'lesson.strip.revealed': 'แสดงเฉลยแล้ว: รอบนี้จึงบันทึกว่าไม่ผ่าน และตัวเลขที่แสดงไปแล้วจะไม่นับเป็นคำตอบที่ถูกอีก',
   'lesson.strip.answersWrong': 'คำตอบที่มีเครื่องหมาย ✗ ยังไม่ถูกต้อง ให้คำนวณใหม่แล้วกด «ตรวจคำตอบ» หรือกดดูเฉลย',
   'lesson.strip.caseLoading': 'กำลังอ่านข้อมูลของกรณีจากส่วนวงโคจร…',
   'lesson.strip.caseFailed': 'อ่านข้อมูลของกรณีไม่ได้ ({reason})',
