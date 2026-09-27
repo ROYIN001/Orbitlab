@@ -1365,6 +1365,19 @@ many standard deviations out (a 25 km miss against a 157 m standard deviation gi
 neither element sets' nor tracking errors are Gaussian that far out. The tests still check the
 computed logarithm itself.
 
+**A whole catalogue, timed (P2.5).** Screened in a Web Worker, measured in Chromium at a phone's
+size (375 × 812) on this build machine, with a catalogue of 30 000 objects read from a file: the
+3 104 real element sets at hand (the bundled groups and CelesTrak's Cosmos 2251, Iridium 33 and
+Cosmos 1408 debris) and copies of them turned to other nodes and places in their orbits, a
+synthetic load labelled as such. Reading the file took 2 s (4 s with the page's CPU slowed four
+times). Against the ISS, whose height band few objects share, the screening took 3 s (4 s slowed);
+against a satellite at 700 km, in the crowded band, 27 s either way. The page kept drawing
+throughout: its frames came every 117 ms at the median (183 ms slowed), against 83 ms (133 ms)
+at rest — software WebGL in this machine sets that pace, not the screening. Chromium's CPU
+slow-down does not reach a worker (the 700 km run took 27 s at both speeds), so a phone, whose
+cores are slower than this machine's, would take longer: some one to two minutes for the crowded
+band is an estimate, not a measurement.
+
 ### Overflights of a place (M02)
 
 **Overflights of** a place (`src/orbit/overflights.ts`) lists every pass of a group's satellites
@@ -1586,6 +1599,8 @@ npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuve
 npx vitest run tests/sgp4.test.ts tests/omm.test.ts tests/real-sky.test.ts tests/satellite-catalogue.test.ts tests/passes.test.ts tests/uncertainty.test.ts   # real satellites, ~3 s
 npx vitest run tests/activity.test.ts tests/propagator.test.ts                   # the Sun's activity in the lifetime, ~5 s
 npx vitest run tests/conjunction.test.ts tests/overflights.test.ts tests/reentry.test.ts   # the military track, ~6 s
+npx vitest run tests/msis.test.ts tests/earth-orientation.test.ts tests/cdm.test.ts tests/sensors.test.ts tests/case-worksheets.test.ts   # P2.5, ~10 s
+npx vitest run tests/ballistic.test.ts                                           # P2.5: the fitted drag, 66 stages, NAPA-2, ~2 min
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

@@ -268,6 +268,20 @@ Phase 2, real satellites and the military track, continues on the same branch:
 | M02 overflight timing | done: **Overflights of** a place in Real satellites lists every pass of the group's satellites (a new group, the Earth-imaging satellites of CelesTrak's Earth Resources set) whose highest point is above a chosen elevation: time, height and direction, off-nadir angle, daylight, heading; at Engineer the distance from the track, the local solar time and the timing uncertainty. The passes are R03's; the daytime overflights of Landsat 8 and 9, Sentinel-2A/B/C and THEOS-2 over Bangkok fall at their published local times ([VALIDATION.md](VALIDATION.md) §7) |
 | M03 re-entry prediction | done: **When it will come down**, for a satellite with a perigee under 700 km: its element set's mean orbit carried down by the mean-element propagator with the Sun as measured (R05), with the mass and cross-section the user gives, and the agencies' ±20 % window of the time left. The case study, the four Long March 5B core stages predicted from their first element sets, all came down inside their windows (errors −1.4 to +18.9 %) ([VALIDATION.md](VALIDATION.md) §7) |
 
+Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same branch:
+
+| Item | |
+|---|---|
+| NRLMSISE-00 and daily indices | done: the density is the full NRLMSISE-00 (a port of Brodowski's public-domain C, held to the Fortran and to pymsis), at the place and hour, with the day's F10.7, its 81-day mean and the day's Ap (GFZ, since 1954), then SWPC's forecast; the orbit is carried in steps of five days with the step's mean indices. Seven spheres within 25 %, six still 8–23 % early ([VALIDATION.md](VALIDATION.md) §6) |
+| UT1 − UTC and polar motion | done: TEME is turned into the Earth-fixed frame by the sidereal time of UT1 and the pole's wander (IERS finals2000A, bundled, refreshed by the deploy); held to Vallado et al.'s example ([VALIDATION.md](VALIDATION.md) §6) |
+| Passes as they are seen | done: the air's refraction lifts a low satellite (Sæmundsson), and a pass carries its brightness from the satellite's standard magnitude and phase ([VALIDATION.md](VALIDATION.md) §6) |
+| M01: messages, a whole catalogue, the encounter plane | done: a conjunction data message (CCSDS 508.0-B-1, KVN) read from a file gives the probability from its own covariances, held to NASA CARA's twelve test conjunctions; the screening runs in a Web Worker, so a catalogue of 30 000 objects read from a file is screened with the page in use; **Show it** draws the other object's orbit and the meeting in 3-D and on the map, and the encounter plane; a probability under 10⁻¹⁰ is said to be so ([VALIDATION.md](VALIDATION.md) §7) |
+| M02: what the instrument can see | done: the published geometry of the instruments on 51 imaging satellites, each sourced — a fixed camera's swath, an agile one's pointing limit, a radar's incidence band and side — judges each overflight; **Show on the map** draws the pass and the ground the instrument reaches. Swaths held to their fields of view, and Landsat, Sentinel-2 and Sentinel-1 to their published revisits ([VALIDATION.md](VALIDATION.md) §7) |
+| M03: the drag fitted, transfer orbits, more cases | done: the ballistic coefficient fitted to the element set's decay rate or to a history of sets read from a file (seven spheres within 30 % of their known C_D A/m); an eccentric orbit carried by Cowell with the Sun and the Moon; 66 rocket stages of 2023–2025 and NAPA-2 as new cases (a finding: from first sets, half come down inside the window); where it may come down drawn on the map ([VALIDATION.md](VALIDATION.md) §7) |
+| Real satellites at the Watch level | done: the Watch tour goes on to eight steps with the real catalogue: the station and its passes, THEOS-2, the navigation and weather satellites, the imagers, the Fengyun-1C debris and the Long March 5B re-entries |
+| Worksheets from real cases | done: a sheet and its answer key for the Iridium 33–Cosmos 2251 collision, the Long March 5B stage of Tianhe and THEOS-2 over Bangkok, worked with the published data and this app's physics, in three languages |
+| Checks in a real browser, and the daily refresh | done: online mode in Chromium through a proxy (NOAA's answers read; CelesTrak's lists, asked all at once, partly refused to the page, so they are now asked one at a time), and a 30 000-object screening with the CPU slowed fourfold (below). The deploy's refresh step ran on the builds of 27 September (fresh CelesTrak and SWPC data at 13:02 UTC); its first scheduled run is due at 03:17 UTC on 28 September |
+
 ## Known limitations
 
 - The orbit playground (O01) carries an orbit by Kepler's equation and J2's secular drift to
@@ -282,21 +296,30 @@ Phase 2, real satellites and the military track, continues on the same branch:
 - The applications' Thai satellites fly their catalogue orbit (as of 2026-09-26), not where they
   are today; **Real satellites** (R02) shows where they are. The link budget's starting values
   are an example, not any satellite's.
-- Real satellites (R02): TEME is taken as the program's inertial frame, and the Earth is turned
-  by mean sidereal time alone, with no UT1 − UTC or polar motion; that moves a point on the
-  ground by up to about 400 m, less than an element set's own error. They are not at the Watch
-  level yet. An imported file is kept only while the page is open.
-- The lifetime model (R05) reads the Sun month by month, so a storm is smoothed out; beyond
-  NOAA's forecast (to 2030-12 in the bundled snapshot) the Sun is taken to repeat its last eleven
-  years. With the Sun as measured it brought seven spheres of known size down 0 to 22 % early.
+- Real satellites (R02): TEME is taken as the program's inertial frame for the orbits; the
+  Earth is turned by UT1 and the pole since P2.5, from the bundled IERS data (not fetched by the
+  page: the IERS cannot be read from a browser). An imported file is kept only while the page is
+  open.
+- The lifetime model (R05, P2.5) reads the Sun day by day, but a storm's 3-hour peaks are averaged
+  into its day (NRLMSISE-00's storm mode is not used); beyond SWPC's forecast the Sun follows the
+  mean of cycles 19–24 from the last minimum. With the Sun as measured six of seven spheres of
+  known size still come down 8 to 23 % early: the model's own bias in those years, not fitted away.
 - Close approaches (M01) are screened with element sets, as SOCRATES does, and their probability
   rests on R04's estimated uncertainty and a size the user gives: they show traffic worth a closer
-  look, not the collisions to come. The probability itself reproduces published values when given
-  real covariances.
+  look, not the collisions to come. With a conjunction data message the probability is the
+  operators' own. Screening a satellite in the crowded 700–800 km band against 30 000 objects
+  took 27 s in the worker on this build machine's core, the page drawing throughout; a phone's
+  slower core would take longer (estimated one to two minutes, not measured: Chromium's CPU
+  slow-down does not reach a worker).
 - Overflights (M02) count only satellites whose element sets are published, and are when a place
-  could be seen, not that it was imaged.
-- Re-entry (M03) takes the object's mass and cross-section from the user; the ±20 % window is the
-  agencies' convention, not this model's own measured error (four Long March 5B stages, all inside).
+  could be seen, not that it was imaged. The instruments' limits are the published ones (for the
+  Maxar satellites, the tasking limits); three agile satellites publish none and are not judged.
+- Re-entry (M03): predicted from one element set, as here, half of 66 rocket stages came down
+  inside the ±20 % window, below the 70 % fixed before; the agencies refit the drag with every new
+  set. A transfer orbit is carried by Cowell with the Sun and the Moon, which takes seconds; two of
+  eight such stages were not brought down within 400 days.
+- The lessons are graded launches; the real cases (Iridium–Cosmos, Long March 5B, THEOS-2) are
+  worksheets from the Orbit section, not graded lessons.
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
 - The physics has been compared with flight data for eleven of the eighteen vehicles: Falcon 9
   against webcast telemetry of five flights, the others against published timelines

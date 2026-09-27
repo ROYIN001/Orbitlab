@@ -128,6 +128,19 @@ The ground the other phases stand on. No new physics.
 | **M02** overflight timing | When the imaging satellites of the public catalogue pass over a place, and at what elevation — the public-source planning question of when a site is overflown. | Against R03's passes. |
 | **M03** re-entry prediction | An uncontrolled re-entry predicted from the element sets and the density model, with the window widening honestly; case study: the Long March 5B core stages. | Predictions against the published re-entry times, cited. |
 
+### Phase 2.5: the physics made finer, the gaps closed
+
+Added after Phase 2, before Phase 3, at the owner's request: the thermosphere as NRLMSISE-00 with
+daily indices; UT1 − UTC and polar motion from the IERS; refraction and brightness for passes;
+conjunction data messages (CCSDS 508.0-B-1) held to NASA CARA's test cases, whole-catalogue
+screening in a worker, the encounter plane; each imaging satellite's published instrument geometry
+(swath, pointing limit, radar incidence and side) held to published fields of view and revisits;
+the ballistic coefficient fitted to the tracking, transfer orbits with the Sun and the Moon, 66
+rocket stages and NAPA-2 as re-entry cases; conjunctions, overflights and re-entries on the map;
+the Watch tour on real satellites; worksheets from real cases; checks in a real browser, online and
+with a slowed CPU. What each met and missed is in [VALIDATION.md](VALIDATION.md) §6–7 and
+[IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
+
 ## Phase 3: Rocket builder
 
 | Item | What | Validation |

@@ -195,7 +195,15 @@ figures of the Iridium 33–Cosmos 2251 collision (M01). **Overflights** lists w
 group — the Earth-imaging ones, say — pass over a place, how high, at what off-nadir angle and
 whether in daylight; sun-synchronous imagers come over at their published local times (M02).
 **When it will come down** predicts a low object's re-entry with the agencies' ±20 % window; its
-case study, the four Long March 5B core stages, came down inside their windows (M03). Build is
+case study, the four Long March 5B core stages, came down inside their windows (M03).
+Phase 2.5 made this finer: the density is the full NRLMSISE-00 with the day's indices, the Earth
+is turned by UT1 and the pole (IERS), passes carry refraction and brightness, a conjunction data
+message can be read (held to NASA CARA's test cases) and a whole catalogue screened off the page's
+thread, each imaging satellite's instrument judges whether it can image the place, the drag of a
+re-entry can be fitted to the object's own decay and a transfer orbit is carried with the Sun and
+the Moon (66 rocket stages of 2023–2025 and NAPA-2 as cases), the Watch tour goes on to the real
+satellites, and three real cases come as worksheets with answer keys
+([docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 
