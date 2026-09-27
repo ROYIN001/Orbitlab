@@ -28,11 +28,12 @@ import { meanStart } from '../orbit/mean-state';
 import { groundReach, sensorFor } from '../orbit/sensors';
 import type { ElementSet } from '../orbit/tle';
 import { unitText } from '../lessons/text';
+import type { CaseKey } from '../lessons/types';
+import { CZ5B_CASE_STAGE, type CaseId } from './case-ids';
 import { fmt } from './flight-questions';
 import type { WsItem, Worksheet } from './types';
 
-export type CaseId = 'iridium' | 'cz5b' | 'theos2';
-export const CASE_IDS: readonly CaseId[] = ['iridium', 'cz5b', 'theos2'];
+export { CASE_IDS, type CaseId } from './case-ids';
 
 export interface CaseInput {
   lang: Lang;
@@ -52,18 +53,18 @@ const utc = (iso: string): string => `${iso.slice(0, 16).replace('T', ' ')} UTC`
  * `unit` is the SI symbol; the sheet and its key print it as the reader's
  * language writes it (src/lessons/text.ts), as the flight sheets do.
  */
-function num(lang: Lang, prompt: string, unit: string, value: number, digits: number, tol: number, working: string): WsItem {
+function num(lang: Lang, id: string, prompt: string, unit: string, value: number, digits: number, tol: number, working: string): WsItem {
   const u = unitText(unit, lang);
   return {
-    kind: 'number', prompt, unit: u,
-    answer: { text: `${fmt(lang, value, digits)} ${u}`.trim(), value, tolerance: `± ${fmt(lang, tol, digits)} ${u}`.trim(), working },
+    kind: 'number', id, prompt, unit: u,
+    answer: { text: `${fmt(lang, value, digits)} ${u}`.trim(), value, tolerance: `± ${fmt(lang, tol, digits)} ${u}`.trim(), tol, working },
   };
 }
 
 /** A choice item: the right answer put in place `at` among the wrong ones; the key names its letter. */
-function choice(prompt: string, right: string, wrong: string[], at: number): WsItem {
+function choice(id: string, prompt: string, right: string, wrong: string[], at: number): WsItem {
   const options = [...wrong.slice(0, at), right, ...wrong.slice(at)];
-  return { kind: 'choice', prompt, options, answer: { text: `${String.fromCharCode(97 + at)}) ${right}` } };
+  return { kind: 'choice', id, prompt, options, answer: { text: `${String.fromCharCode(97 + at)}) ${right}`, index: at } };
 }
 
 // ─── Iridium 33 and Cosmos 2251 ───────────────────────────────────────────────
@@ -127,14 +128,14 @@ function iridiumSheet(lang: Lang): Omit<Worksheet, 'lang' | 'generatedAt'> {
       {
         title: t('wsc.questions'), intro: t('wsc.iridium.qIntro'),
         items: [
-          num(lang, t('wsc.iridium.q.miss'), 'm', n.miss, 0, 5, t('wsc.iridium.w.miss')),
-          num(lang, t('wsc.iridium.q.speed'), 'km/s', n.speed / 1000, 2, 0.05, t('wsc.iridium.w.speed')),
-          num(lang, t('wsc.iridium.q.angle'), '°', n.angle, 0, 2, t('wsc.iridium.w.angle')),
-          num(lang, t('wsc.iridium.q.radius'), 'm', n.radius, 1, 0.1, t('wsc.iridium.w.radius')),
-          num(lang, t('wsc.iridium.q.sigma'), 'm', n.sigmaMiss, 1, Math.max(0.5, n.sigmaMiss * 0.05), t('wsc.iridium.w.sigma')),
-          num(lang, t('wsc.iridium.q.nsigma'), '', nSigma, 0, Math.max(1, nSigma * 0.05), t('wsc.iridium.w.nsigma')),
-          choice(t('wsc.iridium.q.why'), t('wsc.iridium.why.right'), [t('wsc.iridium.why.b'), t('wsc.iridium.why.c'), t('wsc.iridium.why.d')], 2),
-          num(lang, t('wsc.iridium.q.times'), '', n.pcCautious / 1e-4, 0, 30, t('wsc.iridium.w.times', { p: fmt(lang, n.pcCautious, 3) })),
+          num(lang, 'miss', t('wsc.iridium.q.miss'), 'm', n.miss, 0, 5, t('wsc.iridium.w.miss')),
+          num(lang, 'speed', t('wsc.iridium.q.speed'), 'km/s', n.speed / 1000, 2, 0.05, t('wsc.iridium.w.speed')),
+          num(lang, 'angle', t('wsc.iridium.q.angle'), '°', n.angle, 0, 2, t('wsc.iridium.w.angle')),
+          num(lang, 'radius', t('wsc.iridium.q.radius'), 'm', n.radius, 1, 0.1, t('wsc.iridium.w.radius')),
+          num(lang, 'sigma', t('wsc.iridium.q.sigma'), 'm', n.sigmaMiss, 1, Math.max(0.5, n.sigmaMiss * 0.05), t('wsc.iridium.w.sigma')),
+          num(lang, 'nsigma', t('wsc.iridium.q.nsigma'), '', nSigma, 0, Math.max(1, nSigma * 0.05), t('wsc.iridium.w.nsigma')),
+          choice('why', t('wsc.iridium.q.why'), t('wsc.iridium.why.right'), [t('wsc.iridium.why.b'), t('wsc.iridium.why.c'), t('wsc.iridium.why.d')], 2),
+          num(lang, 'times', t('wsc.iridium.q.times'), '', n.pcCautious / 1e-4, 0, 30, t('wsc.iridium.w.times', { p: fmt(lang, n.pcCautious, 3) })),
         ],
       },
     ],
@@ -143,9 +144,21 @@ function iridiumSheet(lang: Lang): Omit<Worksheet, 'lang' | 'generatedAt'> {
 
 // ─── the Long March 5B core stage that launched Tianhe ─────────────────────────
 
+type Cz5bNumbers = { area: number; b: number; left: number; actual: number; broadside: number; hp: number; ha: number; epoch: string };
+/** One re-entry prediction takes some 0.4 s: a sheet built again (another language, the key) with the same Sun reuses it. */
+const cz5bMemo = new WeakMap<Activity, Cz5bNumbers>();
+
 /** The case's numbers: the stage that launched Tianhe (Y2), from its first element set, with the Sun as measured. */
-export function cz5bNumbers(activity: Activity): { area: number; b: number; left: number; actual: number; broadside: number; hp: number; ha: number; epoch: string } {
-  const s = CZ5B_STAGES.find((x) => x.name === 'CZ-5B Y2')!;
+export function cz5bNumbers(activity: Activity): Cz5bNumbers {
+  const kept = cz5bMemo.get(activity);
+  if (kept) return kept;
+  const n = cz5bWorked(activity);
+  cz5bMemo.set(activity, n);
+  return n;
+}
+
+function cz5bWorked(activity: Activity): Cz5bNumbers {
+  const s = CZ5B_STAGES.find((x) => x.name === CZ5B_CASE_STAGE)!;
   const el = elementsFromRecord(s.elements);
   const area = tumblingCylinderArea(s.length, s.diameter);
   const p = predictReentry(el, { mass: s.mass, area, cd: 2.2 }, activity);
@@ -158,7 +171,7 @@ export function cz5bNumbers(activity: Activity): { area: number; b: number; left
 }
 
 function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'generatedAt'> {
-  const s = CZ5B_STAGES.find((x) => x.name === 'CZ-5B Y2')!;
+  const s = CZ5B_STAGES.find((x) => x.name === CZ5B_CASE_STAGE)!;
   const n = cz5bNumbers(activity);
   const early = n.left * (1 - WINDOW_FRACTION), late = n.left * (1 + WINDOW_FRACTION);
   const err = (n.left / n.actual - 1) * 100;
@@ -181,14 +194,14 @@ function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'ge
       {
         title: t('wsc.questions'), intro: t('wsc.cz5b.qIntro'),
         items: [
-          num(lang, t('wsc.cz5b.q.area'), 'm²', n.area, 1, 1, t('wsc.cz5b.w.area')),
-          num(lang, t('wsc.cz5b.q.b'), 'm²/kg', n.b, 5, 0.0003, t('wsc.cz5b.w.b')),
-          num(lang, t('wsc.cz5b.q.early'), t('wsc.days'), early, 2, 0.05, t('wsc.cz5b.w.window')),
-          num(lang, t('wsc.cz5b.q.late'), t('wsc.days'), late, 2, 0.05, t('wsc.cz5b.w.window')),
-          num(lang, t('wsc.cz5b.q.actual'), t('wsc.days'), n.actual, 2, 0.05, t('wsc.cz5b.w.actual')),
-          num(lang, t('wsc.cz5b.q.error'), '%', err, 1, 1, t('wsc.cz5b.w.error')),
-          num(lang, t('wsc.cz5b.q.broadside'), t('wsc.days'), broadsideLeft, 1, 0.5, t('wsc.cz5b.w.broadside', { a: fmt(lang, n.broadside, 1) })),
-          choice(t('wsc.cz5b.q.why'), t('wsc.cz5b.why.right'), [t('wsc.cz5b.why.b'), t('wsc.cz5b.why.c'), t('wsc.cz5b.why.d')], 1),
+          num(lang, 'area', t('wsc.cz5b.q.area'), 'm²', n.area, 1, 1, t('wsc.cz5b.w.area')),
+          num(lang, 'b', t('wsc.cz5b.q.b'), 'm²/kg', n.b, 5, 0.0003, t('wsc.cz5b.w.b')),
+          num(lang, 'early', t('wsc.cz5b.q.early'), t('wsc.days'), early, 2, 0.05, t('wsc.cz5b.w.window')),
+          num(lang, 'late', t('wsc.cz5b.q.late'), t('wsc.days'), late, 2, 0.05, t('wsc.cz5b.w.window')),
+          num(lang, 'actual', t('wsc.cz5b.q.actual'), t('wsc.days'), n.actual, 2, 0.05, t('wsc.cz5b.w.actual')),
+          num(lang, 'error', t('wsc.cz5b.q.error'), '%', err, 1, 1, t('wsc.cz5b.w.error')),
+          num(lang, 'broadside', t('wsc.cz5b.q.broadside'), t('wsc.days'), broadsideLeft, 1, 0.5, t('wsc.cz5b.w.broadside', { a: fmt(lang, n.broadside, 1) })),
+          choice('why', t('wsc.cz5b.q.why'), t('wsc.cz5b.why.right'), [t('wsc.cz5b.why.b'), t('wsc.cz5b.why.c'), t('wsc.cz5b.why.d')], 1),
         ],
       },
     ],
@@ -229,12 +242,12 @@ function theos2Sheet(lang: Lang, el: ElementSet): Omit<Worksheet, 'lang' | 'gene
       {
         title: t('wsc.questions'), intro: t('wsc.theos2.qIntro'),
         items: [
-          num(lang, t('wsc.theos2.q.required'), '°/d', n.required, 4, 0.0005, t('wsc.theos2.w.required')),
-          num(lang, t('wsc.theos2.q.j2'), '°/d', n.j2, 3, 0.01, t('wsc.theos2.w.j2')),
-          num(lang, t('wsc.theos2.q.height'), 'km', n.h / 1000, 0, 2, t('wsc.theos2.w.height')),
-          num(lang, t('wsc.theos2.q.reach'), 'km', n.reach / 1000, 0, 10, t('wsc.theos2.w.reach')),
-          num(lang, t('wsc.theos2.q.lst'), 'h', n.lst, 2, 0.02, t('wsc.theos2.w.lst')),
-          choice(t('wsc.theos2.q.why'), t('wsc.theos2.why.right'), [t('wsc.theos2.why.b'), t('wsc.theos2.why.c'), t('wsc.theos2.why.d')], 3),
+          num(lang, 'required', t('wsc.theos2.q.required'), '°/d', n.required, 4, 0.0005, t('wsc.theos2.w.required')),
+          num(lang, 'j2', t('wsc.theos2.q.j2'), '°/d', n.j2, 3, 0.01, t('wsc.theos2.w.j2')),
+          num(lang, 'height', t('wsc.theos2.q.height'), 'km', n.h / 1000, 0, 2, t('wsc.theos2.w.height')),
+          num(lang, 'reach', t('wsc.theos2.q.reach'), 'km', n.reach / 1000, 0, 10, t('wsc.theos2.w.reach')),
+          num(lang, 'lst', t('wsc.theos2.q.lst'), 'h', n.lst, 2, 0.02, t('wsc.theos2.w.lst')),
+          choice('why', t('wsc.theos2.q.why'), t('wsc.theos2.why.right'), [t('wsc.theos2.why.b'), t('wsc.theos2.why.c'), t('wsc.theos2.why.d')], 3),
         ],
       },
     ],
@@ -247,4 +260,19 @@ export function caseWorksheet(id: CaseId, input: CaseInput): Worksheet | null {
     : id === 'cz5b' ? cz5bSheet(input.lang, input.activity)
       : input.theos2 ? theos2Sheet(input.lang, input.theos2) : null;
   return body && { ...body, lang: input.lang, generatedAt: input.generatedAt, footer: t('wsc.footer', { date: input.generatedAt.toISOString().slice(0, 10) }) };
+}
+
+/**
+ * A case sheet's answer key as data: by question id, the value and the
+ * tolerance the printed key gives (a choice: its option's index). The case
+ * lessons are graded with it, so a lesson and the sheet cannot disagree.
+ */
+export function caseKey(sheet: Worksheet): CaseKey {
+  const key: Record<string, CaseKey[string]> = {};
+  for (const item of sheet.sections.flatMap((s) => s.items)) {
+    if (!item.id) continue;
+    if (item.kind === 'choice' && item.answer.index !== undefined) key[item.id] = { kind: 'choice', value: item.answer.index, tol: 0 };
+    else if (item.kind === 'number' && item.answer.value !== undefined) key[item.id] = { kind: 'number', value: item.answer.value, tol: item.answer.tol ?? 0 };
+  }
+  return key;
 }

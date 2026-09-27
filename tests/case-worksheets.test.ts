@@ -5,7 +5,8 @@
  * their own script (as tests/worksheets.test.ts asks of the flight sheets).
  */
 import { afterAll, describe, expect, it } from 'vitest';
-import { CASE_IDS, caseWorksheet, cz5bNumbers, iridiumNumbers, theos2Numbers } from '../src/worksheets/cases';
+import { CASE_IDS, caseKey, caseWorksheet, cz5bNumbers, iridiumNumbers, theos2Numbers } from '../src/worksheets/cases';
+import { CASE_CHOICE_ITEMS, CASE_ITEM_IDS } from '../src/worksheets/case-ids';
 import { answerKeyHtml, worksheetsHtml } from '../src/worksheets/html';
 import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
 import HISTORY from '../src/data/solar-daily.json';
@@ -104,6 +105,46 @@ describe('the case sheets (P2.5)', () => {
     }
     const key = answerKeyHtml([caseWorksheet('theos2', { lang, generatedAt: at, activity, theos2 })!]);
     expect(key).toContain(lang === 'ru' ? '°/сут' : '°/วัน');
+  });
+
+  // E03 track 6: the case lessons are graded by this key, so it must be the sheet's own and the same in every language
+  it.each(CASE_IDS)('%s: every question has its id and a number\'s tolerance or a choice\'s option, and the key is the same in every language', (id) => {
+    const keys = langs.map((lang) => {
+      withLang(lang);
+      const sheet = caseWorksheet(id, { lang, generatedAt: at, activity, theos2 })!;
+      const items = sheet.sections.flatMap((s) => s.items);
+      expect(items.map((i) => i.id)).toEqual(CASE_ITEM_IDS[id]);
+      expect(sheet.sections[1].items.map((i) => i.id)).toEqual(CASE_ITEM_IDS[id]);
+      for (const i of items) {
+        if (i.kind === 'choice') {
+          expect(CASE_CHOICE_ITEMS).toContain(i.id);
+          expect(i.answer.text.slice(0, 1)).toBe(String.fromCharCode(97 + i.answer.index!));
+        } else {
+          expect(CASE_CHOICE_ITEMS).not.toContain(i.id);
+          expect(Number.isFinite(i.answer.tol), i.id).toBe(true);
+          expect(i.answer.tol!).toBeGreaterThan(0);
+        }
+      }
+      return caseKey(sheet);
+    });
+    expect(keys[1]).toEqual(keys[0]);
+    expect(keys[2]).toEqual(keys[0]);
+    expect(Object.keys(keys[0])).toEqual(CASE_ITEM_IDS[id]);
+  }, 60_000);
+
+  it('keys the numbers the sheet works out', () => {
+    withLang('en');
+    const key = (id: typeof CASE_IDS[number]) => caseKey(caseWorksheet(id, { lang: 'en', generatedAt: at, activity, theos2 })!);
+    const n = iridiumNumbers();
+    expect(key('iridium').miss).toEqual({ kind: 'number', value: n.miss, tol: 5 });
+    expect(key('iridium').why).toEqual({ kind: 'choice', value: 2, tol: 0 });
+    const c = cz5bNumbers(activity);
+    expect(key('cz5b').actual).toEqual({ kind: 'number', value: c.actual, tol: 0.05 });
+    expect(key('cz5b').error.value).toBeCloseTo((c.left / c.actual - 1) * 100, 9);
+    expect(key('theos2').j2).toEqual({ kind: 'number', value: theos2Numbers(theos2).j2, tol: 0.01 });
+    expect(key('theos2').why.value).toBe(3);
+    // the re-entry is predicted once for a Sun, however many sheets are built with it
+    expect(cz5bNumbers(activity)).toBe(c);
   });
 
   it('asks for THEOS-2\'s set, and makes no sheet without it', () => {

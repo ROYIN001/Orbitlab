@@ -126,6 +126,15 @@ export interface CriterionGrade {
   revealed?: boolean;
 }
 
+/**
+ * A case sheet's answer key as data (P2.5, graded as lessons in track 6): by
+ * question id, the value and the tolerance that counts as right; for a
+ * choice, the right option's index and no tolerance. Read off the sheet
+ * itself (src/worksheets/cases.ts `caseKey`), so the lesson and the printed
+ * key are the same computation.
+ */
+export type CaseKey = Readonly<Record<string, { kind: 'number' | 'choice'; value: number; tol: number }>>;
+
 export interface LessonGrade {
   lessonId: string;
   /** the flight has ended for grading */
