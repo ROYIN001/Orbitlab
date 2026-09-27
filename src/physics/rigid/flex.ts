@@ -181,7 +181,16 @@ export function solveDense(A: number[][], b: number[]): number[] {
 }
 
 const launcherStages = new Map<string, Set<string>>();
-function launcherStageIds(vehicleId: string): Set<string> {
+const ownLauncherStages = new WeakMap<readonly string[], Set<string>>();
+/** The launcher's stages: the geometry's own list (S02), else the catalogue vehicle's. */
+function launcherStageIds(geometry: RigidVehicleSnapshot['geometry']): Set<string> {
+  const own = geometry.launcherStageIds;
+  if (own) {
+    let ids = ownLauncherStages.get(own);
+    if (!ids) ownLauncherStages.set(own, ids = new Set(own));
+    return ids;
+  }
+  const vehicleId = geometry.vehicleId;
   let ids = launcherStages.get(vehicleId);
   if (!ids) {
     ids = new Set<string>();
@@ -193,7 +202,7 @@ function launcherStageIds(vehicleId: string): Set<string> {
 
 /** The instrument bay: the forward end of the uppermost launcher stage still attached. */
 export function instrumentBayStation(snapshot: RigidVehicleSnapshot): number {
-  const launchers = launcherStageIds(snapshot.geometry.vehicleId);
+  const launchers = launcherStageIds(snapshot.geometry);
   let top = -Infinity;
   for (const part of snapshot.components) {
     if (part.kind !== 'structure' || !launchers.has(part.ownerId)) continue;
@@ -242,7 +251,7 @@ export class FlexBody {
     const axialAccel = (thrust + aeroForceBody.x) / start.mass;
     const active = this.options.slosh && axialAccel >= SLOSH_MIN_ACCEL;
     if (!active) this.tanks.clear();
-    const tanks = active ? sloshTanks(start.components, start.geometry.vehicleId) : [];
+    const tanks = active ? sloshTanks(start.components, start.geometry.vehicleId, start.geometry.solidPropellantIds) : [];
     const ids = new Set(tanks.map((tank) => tank.id));
     for (const id of [...this.tanks.keys()]) if (!ids.has(id)) this.tanks.delete(id);
     if (active !== this.sloshActive) this.modeKey = '';
@@ -391,7 +400,7 @@ export class FlexBody {
     // Slosh masses and the rigid remainder.
     let stageTanks = this.tanksBySnapshot.get(snapshot);
     if (!stageTanks) {
-      stageTanks = context.tanks.length ? sloshTanks(snapshot.components, snapshot.geometry.vehicleId) : [];
+      stageTanks = context.tanks.length ? sloshTanks(snapshot.components, snapshot.geometry.vehicleId, snapshot.geometry.solidPropellantIds) : [];
       this.tanksBySnapshot.set(snapshot, stageTanks);
     }
     const tanks = context.tanks.map((start, i) => {

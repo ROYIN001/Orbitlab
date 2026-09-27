@@ -22,6 +22,7 @@ import { t } from '../i18n';
 import type { SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
 import { SATELLITES } from '../data/satellites';
+import { VEHICLES, vehicleDataId } from '../data/vehicles';
 import type { LandingZoneSpec } from '../data/landing-zones';
 import { RAD } from '../physics/constants';
 import { aeroAngles, getNotation } from './notation';
@@ -40,8 +41,21 @@ export const siteName = (s: SiteExtra): string => localized(`site.${s.id}.name`,
 export const zoneName = (z: LandingZoneSpec): string => localized(`zone.${z.id}.name`, z.name);
 
 /** A stage or booster group of `vehicle`, by its id. */
-export const stageName = (vehicleId: string, stageId: string, fallback: string): string =>
-  localized(`stage.${vehicleId}.${stageId}.name`, fallback);
+/**
+ * A stage's or strap-on group's name in the interface language. A custom
+ * vehicle (roadmap S02) made from a catalogue one borrows that vehicle's
+ * translation only for a part it has not renamed; any other custom part keeps
+ * the name its designer gave it.
+ */
+export function stageName(vehicle: VehicleSpec, stageId: string, fallback: string): string {
+  const dataId = vehicleDataId(vehicle);
+  if (dataId !== vehicle.id) {
+    const origin = VEHICLES.find((v) => v.id === dataId);
+    const part = origin?.stages.flatMap((st) => [st, ...(st.boosters ?? [])]).find((x) => x.id === stageId);
+    if (!part || part.name !== fallback) return fallback;
+  }
+  return localized(`stage.${dataId}.${stageId}.name`, fallback);
+}
 
 /**
  * A stage or booster group of `vehicle`, by the English name the physics
@@ -179,9 +193,9 @@ export function stageNameByLabel(vehicle: VehicleSpec | null, name: string): str
   if (name === 'modules') return t('abort.part.modules');
   if (!vehicle) return name;
   for (const st of vehicle.stages) {
-    if (st.name === name) return stageName(vehicle.id, st.id, name);
+    if (st.name === name) return stageName(vehicle, st.id, name);
     if (!st.boosters) continue;
-    for (const b of st.boosters) if (b.name === name) return stageName(vehicle.id, b.id, name);
+    for (const b of st.boosters) if (b.name === name) return stageName(vehicle, b.id, name);
   }
   return name;
 }

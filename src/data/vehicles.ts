@@ -936,3 +936,27 @@ export const vehicleById = (id: string): VehicleSpec => {
   if (!v) throw new Error(`Unknown vehicle ${id}`);
   return v;
 };
+
+/** A vehicle of the catalogue above (as against a custom one, roadmap S02). */
+export const isCatalogueVehicle = (id: string): boolean => VEHICLES.some((x) => x.id === id);
+
+/**
+ * The vehicle a mission flies (roadmap S02): its inline spec when it carries a
+ * custom vehicle, else the catalogue's. The one way to resolve a mission's
+ * vehicle — the simulation, the flight worker, the auto-tuner and the Monte
+ * Carlo workers (which get the spec inside the config they are sent), the
+ * setup panel and WebMCP all come through here.
+ */
+export function missionVehicle(cfg: { vehicleId: string; vehicleSpec?: VehicleSpec }): VehicleSpec {
+  if (!cfg.vehicleSpec) return vehicleById(cfg.vehicleId);
+  if (cfg.vehicleSpec.id !== cfg.vehicleId) throw new Error(`The mission's vehicle ${cfg.vehicleId} is not its custom vehicle ${cfg.vehicleSpec.id}`);
+  return cfg.vehicleSpec;
+}
+
+/**
+ * The id a vehicle's id-keyed data are looked up by (roadmap S02): its own,
+ * or, for a custom vehicle made from a catalogue one, that vehicle's
+ * (`VehicleSpec.derivedFrom`). A custom vehicle with no origin keys nothing
+ * and gets the generic behaviour.
+ */
+export const vehicleDataId = (spec: VehicleSpec): string => spec.derivedFrom ?? spec.id;

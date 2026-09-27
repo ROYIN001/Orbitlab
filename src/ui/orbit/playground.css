@@ -1,0 +1,337 @@
+/* ==========================================================================
+   The Orbit section's playground (roadmap O01, src/ui/orbit/playground.ts).
+
+   Drawn over the launch scene like the landing page — in the Orbit section
+   `body[data-mode]` is `home`, so the launch workspace around the viewport is
+   already hidden — and opaque, so the scene under it is not drawn at all.
+   Three columns on a wide screen: the orbit's controls, the view, what the
+   orbit is. On a phone one column that scrolls, the view first. The Watch
+   level is the view alone with the tour's card on it.
+   ========================================================================== */
+
+.orbit-pg {
+  position: absolute; inset: 0; z-index: 5;
+  background: var(--bg);
+  overflow: hidden;
+}
+.pg-grid {
+  display: grid; height: 100%;
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(260px, 330px);
+  gap: 10px; padding: 10px;
+}
+.pg-panel {
+  min-height: 0; overflow-y: auto;
+  padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+
+/* ── the view ─────────────────────────────────────────────────────────────── */
+
+.pg-stage {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  border: 1px solid var(--line); border-radius: var(--radius); background: #05080d; overflow: hidden;
+}
+.pg-tabs { display: flex; gap: 2px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--panel3); overflow-x: auto; }
+.pg-tab {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 6px 12px; border-radius: 6px; font-size: 13px; color: #a9b7c8; white-space: nowrap;
+}
+.pg-tab:hover { color: var(--text); }
+.pg-tab[aria-selected='true'] { background: var(--accent-weak); color: var(--accent); }
+.pg-tab-glyph { font-size: 13px; line-height: 1; }
+.pg-area { position: relative; flex: 1; min-height: 0; }
+.pg-views { position: absolute; inset: 0; }
+.pg-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pg-canvas[hidden] { display: none; }
+/* the 3-D view takes drags and pinches; the flat drawings leave the page to scroll */
+.pg-canvas-3d { touch-action: none; cursor: grab; }
+.pg-canvas-3d:active { cursor: grabbing; }
+.pg-canvas:focus-visible { outline: 2px solid var(--accent-line); outline-offset: -2px; }
+.pg-hint {
+  position: absolute; left: 12px; bottom: 10px; margin: 0; max-width: calc(100% - 24px);
+  font-size: 12px; color: var(--muted); pointer-events: none; text-shadow: 0 1px 6px #000;
+}
+.pg-hint[hidden] { display: none; }
+.pg-hint.warn { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, -50%); max-width: 420px; text-align: center; font-size: 14px; color: var(--warn); }
+.pg-timebar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  padding: 8px 10px; border-top: 1px solid var(--line); background: var(--panel3);
+}
+.pg-play {
+  display: grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #e8f3f1; color: #0b1a1d; font-size: 12px; letter-spacing: -1px;
+}
+.pg-play:hover { filter: brightness(1.08); }
+.pg-timebar select.pg-warp { width: auto; height: 34px; }
+.pg-reset {
+  display: grid; place-items: center; flex: none;
+  width: 34px; height: 34px; border-radius: 7px; border: 1px solid var(--line2); font-size: 16px; color: #c9d6e2;
+}
+.pg-reset:hover { border-color: var(--accent-line); color: var(--text); }
+.pg-readout { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-left: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pg-clock { font-family: var(--mono); color: var(--text); }
+.pg-date { color: var(--muted); }
+
+/* ── the controls ─────────────────────────────────────────────────────────── */
+
+.pg-panel-head .eyebrow { color: var(--accent); letter-spacing: 2px; }
+.pg-title { margin: 4px 0 12px; font: 600 20px/1.25 var(--display); letter-spacing: -0.3px; }
+.pg-lead { margin: 0 0 14px; font-size: 13.5px; line-height: 1.55; color: #c9d6e2; }
+.pg-preset { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; font-size: 12.5px; color: var(--muted); }
+.pg-fields { display: flex; flex-direction: column; gap: 12px; }
+.pg-field-head { display: grid; grid-template-columns: minmax(0, 1fr) 92px 2.4em; align-items: center; gap: 6px; font-size: 12.5px; }
+.pg-field-name { color: #c9d6e2; line-height: 1.35; }
+.pg-field-head input.pg-field-box { height: 30px; padding: 0 6px; font-size: 13px; text-align: right; }
+.pg-field-unit { font-size: 12px; color: var(--muted); }
+.pg-field-range { width: 100%; margin: 6px 0 0; accent-color: var(--accent); }
+.pg-toggles { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.pg-toggle { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; cursor: pointer; }
+.pg-toggle input { flex: none; margin-top: 3px; accent-color: var(--accent); }
+.pg-toggle-text { display: flex; flex-direction: column; gap: 2px; }
+.pg-toggle small { font-size: 12px; line-height: 1.45; color: var(--muted); }
+.pg-tool { margin-top: 16px; padding: 8px 12px; border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); }
+.pg-tool summary { cursor: pointer; font-size: 13.5px; font-weight: 600; }
+.pg-tool[open] summary { margin-bottom: 6px; }
+.pg-tool-lead { margin: 0 0 8px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.pg-tool-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.pg-tool-row label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.pg-tool-row input { height: 32px; }
+.pg-tool .watch-btn { margin-top: 10px; }
+.pg-tool-out { margin: 8px 0 2px; font-size: 12.5px; line-height: 1.5; color: #c9d6e2; }
+.pg-tool-out:empty { display: none; }
+.pg-tool-out.warn { color: var(--warn); }
+.pg-handoff {
+  margin-top: 16px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--accent-line); background: rgba(14, 30, 30, 0.72);
+}
+.pg-handoff .eyebrow { color: var(--accent); letter-spacing: 1.6px; }
+.pg-handoff-label, .pg-handoff-empty { margin: 6px 0 8px; font-size: 13px; line-height: 1.5; color: #c9d6e2; }
+.pg-handoff .pg-dl { margin-bottom: 0; }
+.pg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.pg-actions .watch-btn { padding: 8px 14px; font-size: 13px; }
+
+/* ── what the orbit is ────────────────────────────────────────────────────── */
+
+.pg-facts-title { margin: 0 0 10px; font: 500 12px/1.4 var(--sans); letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+.pg-dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; margin: 0 0 16px; font-size: 13px; }
+.pg-dl dt { color: var(--muted); line-height: 1.4; }
+.pg-dl dd { margin: 0; text-align: right; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pg-warn {
+  margin: 0 0 12px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid rgba(255, 107, 107, 0.45); background: rgba(60, 16, 20, 0.5);
+  font-size: 13px; line-height: 1.5; color: #ffc4c4;
+}
+.pg-note { margin: 0 0 16px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.pg-laws { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.pg-law { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); }
+.pg-law h3 { margin: 0 0 4px; font: 600 13.5px/1.3 var(--display); }
+.pg-law p { margin: 0; font-size: 12.5px; line-height: 1.55; color: #c9d6e2; overflow-wrap: anywhere; }
+.pg-outcome {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; border-left: 3px solid var(--line2);
+  background: var(--panel2); font-size: 14px; line-height: 1.55;
+}
+.pg-outcome[data-outcome='impact'] { border-left-color: var(--warn); }
+.pg-outcome[data-outcome='orbit'] { border-left-color: var(--accent); }
+.pg-outcome[data-outcome='escape'] { border-left-color: #c3a6ff; }
+.pg-next { margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.pg-next summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.pg-next[open] summary { margin-bottom: 10px; }
+.pg-next .section-items li { font-size: 12.5px; }
+
+/* ── the maneuver planner (O02) ───────────────────────────────────────────── */
+
+.pg-maneuvers .pg-preset { margin: 4px 0 8px; }
+.pg-maneuvers .pg-fields { margin-top: 6px; }
+.pg-maneuvers .pg-porkchop-btn { margin-top: 12px; }
+.pg-nodes { list-style: none; margin: 6px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.pg-node { padding: 8px 10px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel3); }
+.pg-node-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pg-node-head strong {
+  display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(239, 164, 126, 0.18); color: var(--warn); font-size: 12px;
+}
+.pg-node-head select { height: 30px; font-size: 13px; }
+.pg-node-remove { flex: none; width: 28px; height: 28px; border-radius: 6px; font-size: 18px; line-height: 1; color: var(--muted); }
+.pg-node-remove:hover { color: var(--fail); background: var(--panel2); }
+.pg-plan { margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.pg-burns { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pg-burns li {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: start; gap: 8px;
+  padding: 7px 8px; border-radius: 8px; background: var(--panel2); font-size: 12.5px;
+}
+.pg-burns li.done { opacity: 0.55; }
+.pg-burn-n {
+  display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(239, 164, 126, 0.18); color: var(--warn); font-size: 12px;
+}
+.pg-burn-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; line-height: 1.4; }
+.pg-burn-what small { color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
+.pg-burn-dv { font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.4; }
+.pg-plan .pg-dl { margin-bottom: 8px; }
+.pg-plan-next:empty { display: none; }
+.pg-plan .pg-note { margin-bottom: 4px; }
+.pg-canvas-porkchop { cursor: crosshair; }
+/* O03: the spacecraft the plan is budgeted for, and what each burn costs it */
+.pg-craft { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pg-craft .pg-fields { margin-top: 4px; }
+.pg-burn-cost.short { color: var(--fail); }
+.pg-life-btn { margin: -4px 0 16px; }
+
+/* ── what satellites are for (O04) ───────────────────────────────────────── */
+
+.pg-apps .pg-preset { margin: 4px 0 8px; }
+.pg-station { margin-bottom: 8px; }
+.pg-thai { list-style: none; margin: 6px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pg-thai li {
+  display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel3); font-size: 12.5px;
+}
+.pg-thai li.current { border-color: var(--accent-line); }
+.pg-thai-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pg-thai-kind, .pg-thai-op { color: var(--muted); font-size: 12px; }
+.pg-thai-down { color: var(--warn); font-size: 12px; }
+.pg-thai .watch-btn { align-self: flex-start; margin-top: 4px; padding: 6px 12px; font-size: 12.5px; }
+.pg-sub { margin: 10px 0 6px; font: 600 13.5px/1.3 var(--display); }
+/* the applications' values are sentences as often as numbers: two columns that both wrap */
+.pg-apps-results .pg-dl { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.pg-apps-results .pg-dl dd { white-space: normal; overflow-wrap: anywhere; }
+.pg-sources { margin: 0 0 8px; padding-left: 18px; font-size: 12.5px; line-height: 1.6; }
+.pg-sources a { color: var(--accent); overflow-wrap: anywhere; }
+
+/* ── real satellites (R02) ───────────────────────────────────────────────── */
+
+.pg-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin: 0 0 14px; padding: 3px; border-radius: 9px; background: var(--panel3); border: 1px solid var(--line); }
+.pg-mode { padding: 7px 8px; border-radius: 7px; font-size: 13px; color: #a9b7c8; line-height: 1.25; }
+.pg-mode:hover { color: var(--text); }
+.pg-mode[aria-pressed='true'] { background: var(--accent-weak); color: var(--accent); }
+.pg-sky .pg-tool-lead a { color: var(--accent); overflow-wrap: anywhere; }
+.pg-sky-search { width: 100%; height: 34px; margin: 2px 0 8px; }
+.pg-sky-list {
+  list-style: none; margin: 0 0 14px; padding: 4px; max-height: 320px; overflow-y: auto;
+  border: 1px solid var(--line); border-radius: 9px; background: var(--panel3);
+}
+.pg-sky-list .pg-note { margin: 6px 8px; }
+.pg-sky-item {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%;
+  padding: 6px 8px; border-radius: 6px; text-align: left; font-size: 13px; color: #c9d6e2;
+}
+.pg-sky-item:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); }
+.pg-sky-item[aria-pressed='true'] { background: var(--accent-weak); color: var(--accent); }
+.pg-sky-name { min-width: 0; overflow-wrap: anywhere; }
+.pg-sky-num { flex: none; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.pg-sky-import { padding-top: 12px; border-top: 1px solid var(--line); }
+.pg-sky-import .pg-note { margin: 8px 0 0; }
+.pg-sky-report { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: #c9d6e2; }
+.pg-sky-report p { margin: 0 0 6px; }
+.pg-sky-problems { margin: 0; padding-left: 18px; color: var(--muted); overflow-wrap: anywhere; }
+/* an epoch, a designator, a theory: values that are words as often as numbers, so both columns wrap */
+.pg-sky-facts .pg-dl { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.pg-sky-facts .pg-dl dd { white-space: normal; overflow-wrap: anywhere; }
+.pg-sky-facts .pg-dl dd.warn { color: var(--warn); }
+.pg-sky-facts .pg-note.warn { color: var(--warn); }
+.pg-sky-facts .watch-btn { margin: 0 0 8px; }
+.pg-clock.live { color: #7ddba0; }
+/* R04: the estimate's band */
+.pg-unc { margin: 0 0 14px; }
+.pg-unc-chart { display: block; width: 100%; height: auto; margin: 4px 0 2px; }
+.pg-unc-band { fill: rgba(239, 164, 126, 0.28); stroke: rgba(239, 164, 126, 0.8); stroke-width: 1; }
+.pg-unc-axis { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
+.pg-unc-epoch { stroke: rgba(255, 255, 255, 0.25); stroke-dasharray: 3 3; }
+.pg-unc-now { stroke: #ffffff; stroke-width: 1.5; }
+.pg-unc-tick { fill: var(--muted); font-size: 10px; font-family: var(--sans); }
+.pg-unc-axes { margin: 0 0 8px; font-size: 11.5px; color: var(--muted); }
+.pg-unc .pg-note a { color: var(--accent); overflow-wrap: anywhere; }
+/* M03: re-entry, and the Long March 5B case study */
+.pg-reentry { margin: 0 0 14px; }
+.pg-reentry .pg-tool-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pg-reentry .pg-note a { color: var(--accent); overflow-wrap: anywhere; }
+.pg-reentry-case { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pg-case-title { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--text); }
+/* M02: overflights of a place */
+.pg-over { margin: 0 0 14px; }
+.pg-over .pg-tool-row select { height: 32px; min-width: 0; }
+.pg-check { display: flex; align-items: center; gap: 8px; margin: 2px 0 4px; font-size: 12.5px; color: #c9d6e2; }
+/* M01: close approaches */
+.pg-conj { margin: 0 0 14px; }
+.pg-conj .pg-tool-row select { height: 32px; min-width: 0; }
+.pg-conj .pg-note a { color: var(--accent); overflow-wrap: anywhere; }
+.pg-conj-list { list-style: none; margin: 8px 0; padding: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.pg-conj-list li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.pg-conj-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--text); }
+.pg-conj-main { color: #c9d6e2; overflow-wrap: anywhere; }
+.pg-conj-more { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+/* R03: the passes over a place */
+.pg-passes { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.pg-pass-next { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
+.pg-pass-table { width: 100%; border-collapse: collapse; margin: 0 0 10px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.pg-pass-table th { padding: 4px 4px 6px; text-align: left; font-weight: 500; color: var(--muted); border-bottom: 1px solid var(--line); }
+.pg-pass-table td { padding: 3px 4px; vertical-align: top; }
+.pg-pass-day td { padding-top: 10px; color: #c9d6e2; font-weight: 600; }
+.pg-pass-time { display: block; color: var(--text); }
+.pg-pass-where { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pg-pass-seen td { padding-bottom: 6px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
+.pg-pass-seen.visible td { color: #7ddba0; }
+
+/* ── Watch: the view alone, the tour's card on it ─────────────────────────── */
+
+.orbit-pg[data-level='watch'] .pg-grid { grid-template-columns: minmax(0, 1fr); padding: 0; gap: 0; }
+.orbit-pg[data-level='watch'] .pg-panel { display: none; }
+.orbit-pg[data-level='watch'] .pg-stage { border: 0; border-radius: 0; }
+.orbit-pg[data-level='watch'] .pg-hint:not(.warn) { top: 10px; right: 12px; bottom: auto; left: auto; text-align: right; }
+.pg-tour {
+  position: absolute; left: 16px; bottom: 16px; z-index: 1;
+  width: min(560px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto;
+  padding: 16px 18px 18px; border-radius: 14px;
+  background: rgba(10, 16, 24, 0.88); border: 1px solid var(--line2);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45); backdrop-filter: blur(10px);
+}
+.pg-tour[hidden] { display: none; }
+.pg-tour-step { color: var(--accent); letter-spacing: 1.8px; }
+.pg-tour h2 { margin: 4px 0 6px; font: 600 22px/1.2 var(--display); letter-spacing: -0.3px; }
+.pg-tour-text { margin: 0; font-size: 15px; line-height: 1.55; color: #dce6ee; }
+.pg-tour .pg-outcome { margin: 12px 0 0; font-size: 13.5px; }
+.pg-tour-stats { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 12px; }
+.pg-tour-stat small { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: #9fb2c4; }
+.pg-tour-stat strong { display: block; margin-top: 2px; font: 600 22px/1.15 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pg-tour-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.pg-tour-nav .watch-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── narrower screens ─────────────────────────────────────────────────────── */
+
+/* the facts go under the controls before the view gets narrow: the two
+   scroll together as one column, and the view stays beside them */
+@media (max-width: 1180px) {
+  .orbit-pg:not([data-level='watch']) { overflow-y: auto; }
+  .orbit-pg:not([data-level='watch']) .pg-grid {
+    height: auto; min-height: 100%; align-items: start;
+    grid-template-columns: minmax(250px, 290px) minmax(0, 1fr); grid-template-rows: auto 1fr;
+  }
+  .orbit-pg:not([data-level='watch']) .pg-stage {
+    grid-row: 1 / span 2; grid-column: 2;
+    position: sticky; top: 10px; height: calc(100dvh - 90px); min-height: 360px;
+  }
+  .pg-controls { grid-row: 1; grid-column: 1; overflow: visible; }
+  .pg-facts { grid-row: 2; grid-column: 1; overflow: visible; }
+}
+/* a phone: one column that scrolls, the view first */
+@media (max-width: 860px) {
+  .orbit-pg { overflow-y: auto; }
+  .pg-grid { display: flex; flex-direction: column; height: auto; min-height: 100%; padding: 8px; gap: 8px; }
+  .pg-stage { order: -1; flex: none; }
+  /* as specific as the tablet's rules above, which would otherwise win: nothing sticks, and the column stretches */
+  .orbit-pg:not([data-level='watch']) .pg-grid { align-items: stretch; }
+  .orbit-pg:not([data-level='watch']) .pg-stage { position: static; height: auto; min-height: 0; }
+  .pg-area { flex: none; display: flex; flex-direction: column; }
+  .pg-views { position: relative; height: min(58vh, 480px); }
+  .pg-panel { overflow: visible; max-height: none; }
+  .pg-facts { max-height: none; }
+  .orbit-pg[data-level='watch'] .pg-grid { padding: 0; }
+  .orbit-pg[data-level='watch'] .pg-views { height: min(52vh, 440px); }
+  .pg-tour {
+    position: static; width: auto; max-height: none; overflow: visible;
+    border-radius: 0; border-width: 1px 0 0; box-shadow: none; backdrop-filter: none; background: var(--panel);
+  }
+  .pg-tour h2 { font-size: 19px; }
+  .pg-tour-text { font-size: 14.5px; }
+  .pg-tour-stat strong { font-size: 19px; }
+}

@@ -7,7 +7,7 @@
  * PNG and the photographs into bytes for the files, and saves them.
  */
 import { getLang, t } from '../../i18n';
-import { vehicleById } from '../../data/vehicles';
+import { missionVehicle } from '../../data/vehicles';
 import { siteById } from '../../data/sites';
 import { questionBank, FLIGHT_DATA } from '../../lessons/assessment/bank';
 import { DOMAINS, type Domain, type Lesson } from '../../lessons/types';
@@ -155,7 +155,7 @@ class WorksheetView {
     const f = this.host.flight(), lesson = this.host.lesson();
     const cfg = f?.flight.cfg;
     const what = lesson ? t('ws.source.lesson', { n: lessonNumber(lesson), title: localText(lesson.title) })
-      : cfg ? t('ws.source.mission', { vehicle: vehicleById(cfg.vehicleId).name, site: siteName(siteById(cfg.siteId)) }) : '';
+      : cfg ? t('ws.source.mission', { vehicle: missionVehicle(cfg).name, site: siteName(siteById(cfg.siteId)) }) : '';
     if (what) src.append(el('p', 'ws-what', what));
     if (!f?.ended) src.append(el('p', 'lesson-note fail', t('ws.source.none')));
     body.append(src);

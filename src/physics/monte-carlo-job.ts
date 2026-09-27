@@ -5,7 +5,7 @@
  * tool both read.
  */
 import type { MissionConfig, VehicleSpec } from '../types';
-import { vehicleById } from '../data/vehicles';
+import { missionVehicle } from '../data/vehicles';
 import {
   drawLayout, missionTargetsOf, monteCarloCsv, monteCarloLaws, summarizeMonteCarlo,
   type DrawSlot, type GuidanceLaw, type InsertionTarget, type MeasurePoint, type MonteCarloConfig, type MonteCarloRun, type MonteCarloSummary,
@@ -52,7 +52,7 @@ export class MonteCarloJob {
   constructor(readonly cfg: MissionConfig, readonly mc: MonteCarloConfig, private readonly options: {
     workers?: number; createWorker?: () => MonteCarloWorker; onChange?: (job: MonteCarloJob) => void; now?: () => number;
   } = {}) {
-    this.spec = vehicleById(cfg.vehicleId);
+    this.spec = missionVehicle(cfg);
     this.layout = drawLayout(this.spec);
     if (cfg.orbit.suborbital) throw new Error('A Monte Carlo set reads orbits: a suborbital target has none.');
     this.targets = missionTargetsOf(cfg);

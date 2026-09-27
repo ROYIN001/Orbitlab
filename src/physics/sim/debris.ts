@@ -15,6 +15,7 @@ import {
   predictDescent, type DescentModel, type DescentState, type EntryState, type ReturnTarget,
 } from './return-guidance';
 import type { RigidVehicleSnapshot } from '../rigid/mass';
+import { vehicleDataId } from '../../data/vehicles';
 import type { PartitionedRigidBody } from '../rigid/partition';
 import { createRigidDebris, RETURN_CONTROL_GAINS, RETURN_LANDING_LEVEL, returnPropellant, zoneLabel, type RigidDebrisRuntime } from '../rigid/debris-runtime';
 import { rk4Step } from '../integrator';
@@ -126,7 +127,7 @@ export class DebrisTracker {
       : stage as StageSpec | undefined;
     const rc = d.recovery;
     const runtime = createRigidDebris(d, body, this.sim.cfg.dynamics!, parent,
-      { stage: asStage, vehicleId: this.sim.cfg.vehicleId, consumed: this.sim.rigidRuntime!.consumed, engineFraction,
+      { stage: asStage, vehicleId: vehicleDataId(this.sim.vehicleSpec), consumed: this.sim.rigidRuntime!.consumed, engineFraction,
         withoutRcs: booster || undefined,
         returnGuidance: rc?.target ? { gmst0: this.sim.plan.gmst0, model: this.descentModel(d),
           entryTargetSpeed: rc.target.kind !== 'droneShip' ? RETURN_ENTRY_TARGET_SPEED : ENTRY_BURN_TARGET_SPEED } : undefined,

@@ -7,12 +7,13 @@ import { describe, expect, it } from 'vitest';
 import { propagate, elementsOf } from '../src/physics/propagator/propagate';
 import { ALL_FORCES, J3_EARTH, J4_EARTH, gravityAcceleration, inShadow, type ForceModel } from '../src/physics/propagator/forces';
 import { moonPosition, sunPosition, AU, type V3 } from '../src/physics/propagator/ephemeris';
-import { harrisPriesterBounds, harrisPriesterDensity, solarActivityDecades } from '../src/physics/propagator/density';
+import { harrisPriesterBounds, harrisPriesterDensity } from '../src/physics/propagator/density';
+import { ECSS_LEVELS, type EcssLevel } from '../src/physics/propagator/activity';
 import { J2_EARTH, MU_EARTH, R_EARTH } from '../src/physics/constants';
 
 const DEG = Math.PI / 180;
 const JD = 2461310.5; // 2026-09-25
-const NONE: ForceModel = { j2: false, j3j4: false, drag: false, sun: false, moon: false, srp: false, activity: 'mean' };
+const NONE: ForceModel = { j2: false, j3j4: false, drag: false, sun: false, moon: false, srp: false, activity: ECSS_LEVELS.moderate };
 
 function circular(alt: number, incDeg: number): { r: V3; v: V3 } {
   const r = R_EARTH + alt, v = Math.sqrt(MU_EARTH / r), i = incDeg * DEG;
@@ -68,7 +69,7 @@ describe('forces (P07)', () => {
     expect(inShadow([-7e6, 7e6, 0], sun)).toBe(false);
   });
 
-  it('reads the Harris–Priester table, with its bulge and the Sun’s activity', () => {
+  it('reads the Harris–Priester table, with its bulge', () => {
     const [mn, mx] = harrisPriesterBounds(400);
     expect(mn).toBeCloseTo(2.249e-12, 15);
     expect(mx).toBeCloseTo(7.492e-12, 15);
@@ -80,8 +81,6 @@ describe('forces (P07)', () => {
     const night = harrisPriesterDensity([-r * Math.cos(30 * DEG), -r * Math.sin(30 * DEG), 0], 400, sun, 4);
     expect(apex).toBeCloseTo(mx, 15);
     expect(night).toBeCloseTo(mn, 15);
-    expect(solarActivityDecades(120, 'high')).toBe(0);
-    expect(solarActivityDecades(700, 'low')).toBeCloseTo(-0.45, 9);
   });
 });
 
@@ -129,16 +128,18 @@ describe('propagation (P07)', () => {
     expect(cowLoss / meanOver29).toBeLessThan(1.25);
   }, 60_000);
 
-  it('brings a CubeSat down from 400 km within months to about a year, sooner when the Sun is active', () => {
+  // R05: at ECSS's fixed levels; the measured Sun is tests/activity.test.ts's, against re-entries on record
+  it('brings a CubeSat down from 400 km within months when the Sun is active, a few years when it is quiet', () => {
     const { r, v } = circular(400e3, 51.6);
-    const life = (activity: 'low' | 'mean' | 'high') => propagate(r, v, JD, {
-      method: 'mean', duration: 5 * 365 * 86400, forces: { ...ALL_FORCES, activity }, spacecraft: { mass: 1.33, area: 0.01, cd: 2.2, cr: 1.3 },
+    const life = (level: EcssLevel) => propagate(r, v, JD, {
+      method: 'mean', duration: 5 * 365 * 86400, forces: { ...ALL_FORCES, activity: ECSS_LEVELS[level] }, spacecraft: { mass: 1.33, area: 0.01, cd: 2.2, cr: 1.3 },
     }).lifetime! / 86400;
-    const [lo, mid, hi] = [life('low'), life('mean'), life('high')];
+    const [lo, mid, hi] = [life('low'), life('moderate'), life('high')];
     expect(hi).toBeLessThan(mid);
     expect(mid).toBeLessThan(lo);
     expect(hi).toBeGreaterThan(30);
-    expect(lo).toBeLessThan(730);
+    expect(hi).toBeLessThan(365);
+    expect(lo).toBeLessThan(4 * 365);
   });
 
   it('tilts a geostationary orbit by the Sun and the Moon at about 0.9° a year', () => {
@@ -170,8 +171,9 @@ describe('the flight is untouched (P07)', () => {
     const users = Object.entries(src)
       .filter(([path, text]) => !path.includes('/propagator/') && /from ['"][^'"]*propagator\//.test(text))
       .map(([path]) => path.replace('../src/', ''));
-    // the lifetime window, its worker, and the app wiring that opens it
-    const allowed = (p: string) => p.startsWith('ui/') || p === 'main.ts' || p === 'physics/lifetime.worker.ts' || p === 'physics/lifetime-job.ts';
+    // the lifetime window, its worker, the app wiring that opens it, and the Orbit section (S03)
+    const allowed = (p: string) => p.startsWith('ui/') || p.startsWith('orbit/') || p === 'main.ts'
+      || p === 'physics/lifetime.worker.ts' || p === 'physics/lifetime-job.ts';
     expect(users.filter((p) => !allowed(p))).toEqual([]);
     expect(users.some((p) => p.startsWith('physics/sim/') || p.startsWith('physics/rigid/') || p === 'physics/simulation.ts')).toBe(false);
   });

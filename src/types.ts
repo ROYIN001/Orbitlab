@@ -190,6 +190,16 @@ export interface VehicleSpec {
   /** Crewed launches supported */
   crewCapable?: boolean;
   notes?: string;
+  /**
+   * S02: a custom vehicle's origin, the id of the catalogue vehicle it was
+   * made from (a copy, or a remix in roadmap D02). What a spec does not carry
+   * and the code looks up by vehicle id — the six-DOF tables of that hardware
+   * (its RCS installation, its trim share, which of its stages fly home), the
+   * flight to the station, the drawing's livery and plume, the localized stage
+   * names — are that vehicle's (`vehicleDataId`). Absent, a custom vehicle gets
+   * the generic behaviour there. Catalogue vehicles never set it.
+   */
+  derivedFrom?: string;
 }
 
 export interface LaunchSiteSpec {
@@ -319,6 +329,13 @@ export interface MissionConfig {
   /** Explicit model selection; absent means the legacy point-mass API. */
   dynamics?: DynamicsConfig;
   vehicleId: string;
+  /**
+   * S02: a custom vehicle, carried inline: its `id` is `vehicleId`, which no
+   * catalogue vehicle has. Absent, `vehicleId` names a catalogue vehicle.
+   * Resolve a mission's vehicle with `missionVehicle` (src/data/vehicles.ts),
+   * never with `vehicleById(cfg.vehicleId)`.
+   */
+  vehicleSpec?: VehicleSpec;
   satelliteId: string;
   siteId: string;
   orbit: OrbitSpec;

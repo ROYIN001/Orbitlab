@@ -141,6 +141,8 @@ export const APPROACH = {
  * Whether a mission can fly on to the station (roadmap G07): a Soyuz MS — the
  * crewed spacecraft on a Soyuz-2.1a, the one pairing whose spacecraft, docking
  * system and profiles the rendezvous models — launched into the ISS orbit.
+ * `vehicleId` is the vehicle's data id (`vehicleDataId`): a custom vehicle made
+ * from a Soyuz-2.1a flies there too (S02).
  */
 export function rendezvousAvailable(vehicleId: string, satelliteId: string, orbit: Pick<OrbitSpec, 'raanMode' | 'suborbital'>): boolean {
   const sat = SATELLITES.find((x) => x.id === satelliteId);

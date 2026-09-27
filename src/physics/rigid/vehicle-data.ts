@@ -7,6 +7,7 @@ import type { Vec3 } from '../vec3';
 import { add, cross, normalize, v3 } from '../vec3';
 import { stackLayout } from '../frame';
 import { engineLayout } from '../../data/engine-layout';
+import { vehicleDataId } from '../../data/vehicles';
 
 export const RIGID_DATA_REVISION = 'estimated-components-2026-09-19-v1';
 export const RIGID_DATA_ASSUMPTIONS = [
@@ -21,8 +22,20 @@ export interface BoosterPlacement {
   baseBody: Vec3; rotationAboutX: number;
 }
 export interface RigidVehicleGeometry {
+  /**
+   * The id the vehicle's id-keyed tables are read by: its own, or a custom
+   * vehicle's catalogue origin (`vehicleDataId`, roadmap S02).
+   */
   vehicleId: string; length: number; stageBases: Vec3[]; stageHeights: number[];
   fairingBase: Vec3; payloadBase: Vec3; boosters: BoosterPlacement[];
+  /**
+   * S02: the launcher's own stages (not the spacecraft's), and the stages and
+   * strap-on groups whose propellant is a solid grain — read from the spec
+   * itself, so a custom vehicle's are its own. Absent on a detached stage and
+   * a synthetic test body, which look them up by `vehicleId`.
+   */
+  launcherStageIds?: readonly string[];
+  solidPropellantIds?: readonly string[];
   estimated: true;
 }
 
@@ -52,12 +65,28 @@ export function getRigidVehicleGeometry(spec: VehicleSpec): RigidVehicleGeometry
       }
     });
   });
+  const { launcherStageIds, solidPropellantIds } = stageRoles(spec);
   return {
-    vehicleId: spec.id, length: layout.total + (spec.fairing?.length ?? 0),
+    vehicleId: vehicleDataId(spec), length: layout.total + (spec.fairing?.length ?? 0),
     stageBases: layout.base.map((x) => v3(x, 0, 0)), stageHeights: [...layout.height],
     fairingBase: v3(layout.total, 0, 0), payloadBase: v3(layout.total + 0.5, 0, 0),
-    boosters, estimated: true,
+    boosters, launcherStageIds, solidPropellantIds, estimated: true,
   };
+}
+
+const ROLES = new WeakMap<VehicleSpec, { launcherStageIds: readonly string[]; solidPropellantIds: readonly string[] }>();
+/** The launcher's stages and the solid ones, once per spec: the lists are the flex model's cache keys. */
+function stageRoles(spec: VehicleSpec): { launcherStageIds: readonly string[]; solidPropellantIds: readonly string[] } {
+  let roles = ROLES.get(spec);
+  if (!roles) {
+    roles = {
+      launcherStageIds: spec.stages.filter((stage) => !stage.isSpacecraft).map((stage) => stage.id),
+      solidPropellantIds: spec.stages.flatMap((stage) => [...(stage.engine.solid ? [stage.id] : []),
+        ...(stage.boosters ?? []).filter((booster) => booster.engine.solid).map((booster) => booster.id)]),
+    };
+    ROLES.set(spec, roles);
+  }
+  return roles;
 }
 
 /**

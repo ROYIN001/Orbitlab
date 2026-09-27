@@ -5,7 +5,7 @@ import { downloadFlightReport } from './ui/report';
 import { LaunchAudio } from './audio/launch-audio';
 import { TwilightPlume } from './render/twilight-plume';
 import { LifetimeDialog } from './ui/lifetime';
-import { spacecraftFor } from './physics/propagator/spacecraft';
+import { handoffAvailable, handoffFromFlight, type OrbitHandoff } from './orbit/handoff';
 import { SoundtrackPlayer, soundtrackFor } from './audio/soundtrack';
 import { SoundtrackPanel } from './ui/soundtrack-panel';
 import { ComparePanel } from './ui/compare';
@@ -13,7 +13,7 @@ import { REFERENCE_PATH_POINTS, alignTrajectory, referenceFromFlight, type Refer
 import { assessMissionResult } from './ui/result-content';
 import { enableChartExport } from './ui/chart-export';
 import { MISSION_PARAM, decodeMissionParam, loadStoredMission, missionDocument, saveStoredMission } from './config/mission-file';
-import { SceneManager, loadEarthTextures } from './render/scene';
+import { SceneManager, loadEarthTextures, type EarthTextures } from './render/scene';
 import { dayFactorAt } from './render/sky';
 import { RocketView } from './render/rocket';
 import { DebrisView } from './render/debris';
@@ -35,8 +35,19 @@ import { Timeline } from './ui/timeline';
 import { Narration } from './ui/narration';
 import { HomeScreen } from './ui/home';
 import './ui/modes.css';
+import './ui/orbit/playground.css';
 import { WatchView } from './ui/watch';
-import { experienceForMode, hashForMode, initialMode, modeFromHash, saveMode, type AppMode } from './ui/app-mode';
+import {
+  HOME_ROUTE, experienceForMode, hashForRoute, initialRoute, launchMode, loadRoute, route, routeFromHash, sameRoute, saveRoute,
+  DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
+} from './ui/app-mode';
+import { SectionScreen } from './ui/section-screen';
+import { OrbitPlayground } from './ui/orbit/playground';
+import { DataDialog } from './ui/data-dialog';
+import { applyWebFonts } from './ui/web-fonts';
+import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
+import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
+import { isPlannedSection } from './ui/section-plan';
 import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
@@ -50,7 +61,7 @@ import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
 import { add, normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
-import { vehicleById } from './data/vehicles';
+import { missionVehicle } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
@@ -194,8 +205,25 @@ class App {
   panel: SetupPanel;
   home: HomeScreen;
   watch: WatchView;
-  /** which face of the app is showing (src/ui/app-mode.ts) */
-  mode: AppMode = 'home';
+  /** S01: the Build section while it is being built */
+  private sectionScreen: SectionScreen;
+  /** O01: the Orbit section's playground */
+  private playground: OrbitPlayground;
+  /** the Earth's textures, loaded once for the launch scene and the playground's 3-D view */
+  private earthTextures: Promise<EarthTextures> | null = null;
+  /** which section and level of the app is showing (src/ui/app-mode.ts) */
+  route: AppRoute = HOME_ROUTE;
+  /** the level last shown in any section, for the section links from the landing page */
+  private levelMemory: AppLevel = DEFAULT_LEVEL;
+  /**
+   * The launch simulator's own face: its level in the launch section, and
+   * the landing page's everywhere else — another section covers the scene the
+   * way the landing page does, so nothing of the launch workspace is on screen
+   * or takes keys there (S01).
+   */
+  get mode(): AppMode {
+    return launchMode(this.route);
+  }
   /** The mission being flown: its simulation, its recording and their clock (src/session). */
   session: FlightSession | null = null;
   /**
@@ -242,8 +270,10 @@ class App {
   private readonly twilightPos = new THREE.Vector3();
   /** V01: the launch as the camera hears it */
   readonly audio = new LaunchAudio();
-  /** P07: the long-term orbit window */
-  private lifetime = new LifetimeDialog();
+  /** P07: the long-term orbit window; R05: its solar activity through the data mode chosen */
+  private lifetime = new LifetimeDialog({ data: () => this.dataProvider });
+  /** S03: the orbit last handed to the Orbit section, in memory */
+  private handoff: OrbitHandoff | null = null;
   /** V01: a viewer launch's real broadcast, when there is one */
   readonly soundtrack = new SoundtrackPlayer();
   private soundtrackPanel = new SoundtrackPanel((id) => { if (this.watchSoundtrackId === id) void this.loadSoundtrack(id); });
@@ -281,6 +311,12 @@ class App {
   mapCanvas: HTMLCanvasElement;
   obCanvas: HTMLCanvasElement;
   private physicsDialog: PhysicsDialog;
+  /** S04: offline (the default) or online, and where datasets come from under it */
+  private dataMode: DataMode = loadDataMode();
+  /** R02: online answers kept so a source is not asked more often than it allows (CelesTrak: every two hours) */
+  private readonly recentAnswers = new CacheStorageRecent(typeof caches !== 'undefined' ? caches as unknown as RecentCaches : null);
+  private dataProvider: DataProvider = createDataProvider(this.dataMode, document.baseURI, (url, init) => fetch(url, init), this.recentAnswers);
+  private dataDialog!: DataDialog;
   private loopInspector: LoopInspector;
   /** G05: the Monte Carlo window, and the app's Monte Carlo runner (WebMCP's run_monte_carlo). */
   readonly monteCarlo: MonteCarloWindow;
@@ -358,7 +394,8 @@ class App {
     this.obCanvas = document.getElementById('onboard') as HTMLCanvasElement;
     // The telemetry panel first: it owns the slot the instrument card docks
     // into, and `Hud` reads its stored placement in its own constructor.
-    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport(), () => this.orbitLifetime());
+    this.tel = new TelemetryPanel(document.getElementById('telemetry')!, () => void this.flightReport(), () => this.orbitLifetime(),
+      () => this.continueInOrbit());
     this.compare = new ComparePanel({
       currentAsReference: () => this.currentAsReference(),
       current: () => this.tel.exportSource(),
@@ -378,7 +415,7 @@ class App {
       onLaunch: (cfg) => this.launch(cfg),
       onReset: () => this.reset(),
       onChange: (cfg) => { if (!this.playing) this.preview(cfg); },
-      onExperience: (experience) => this.go(experience === 'advanced' ? 'engineer' : 'explore'),
+      onExperience: (experience) => this.go(route('launch', experience === 'advanced' ? 'engineer' : 'explore')),
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
     });
     this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig() });
@@ -389,14 +426,25 @@ class App {
       this.goLive(); this.playing = false; this.panel.restoreMission(state);
     };
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
-      watchFeatured: () => { this.go('watch'); this.startWatch(FEATURED_WATCH_MISSION); },
-      go: (mode) => this.go(mode),
+      watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
+      go: (r) => this.go(r),
+    });
+    this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
+    this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
+      go: (r) => this.go(r),
+      // S03: the hand-off's orbit, carried on for years (P07)
+      lifetime: (h, opener) => this.lifetime.openFor(h, opener),
+      textures: () => (this.earthTextures ??= loadEarthTextures(base)),
+      mapUrl: `${base}textures/earth_atmos_2048.jpg`,
+      // R02: the satellite catalogue comes through the data mode chosen
+      data: () => this.dataProvider,
     });
     this.watch = new WatchView(document.getElementById('watch-ui')!, {
       start: (id) => this.startWatch(id),
       togglePlay: () => this.togglePlay(),
       setWarp: (warp) => this.setWarp(warp),
-      explore: () => this.go('explore'),
+      explore: () => this.go(route('launch', 'explore')),
+      continueInOrbit: () => this.continueInOrbit(),
       follow: (target) => { this.watchFollow = target; },
       pickerFooter: () => this.soundtrackPanel.render(),
     });
@@ -412,19 +460,35 @@ class App {
         if (this.autoCamera && this.lastPhase === phase) this.setCamera(mode);
       },
     });
+    this.dataDialog = new DataDialog({
+      mode: () => this.dataMode,
+      setMode: (mode) => this.setDataMode(mode),
+      provider: () => this.dataProvider,
+    });
+    applyWebFonts(this.dataMode);
+    const dataBtn = document.getElementById('btn-data-mode') as HTMLButtonElement;
+    dataBtn.addEventListener('click', () => this.dataDialog.open(dataBtn));
+    this.syncDataMode();
     this.bindControls();
     this.observeSceneBottom();
-    const startHash = location.hash; // E03: `#/lessons` is the lessons page, not a mode
-    this.setMode(initialMode(location.hash));
-    // Keep the address naming the mode, without adding a history entry for it.
-    if (location.hash !== hashForMode(this.mode)) history.replaceState(null, '', hashForMode(this.mode));
+    const startHash = location.hash; // E03: `#/lessons` is the lessons page, not a route
+    const stored = loadRoute();
+    if (stored && stored.section !== null) this.levelMemory = stored.mode;
+    this.setRoute(initialRoute(location.hash));
+    // Keep the address naming the route in its one canonical form — a pre-S01
+    // `#/watch` becomes `#/launch/watch` — without adding a history entry.
+    this.canonicalizeHash();
     window.addEventListener('hashchange', () => {
-      const mode = modeFromHash(location.hash);
-      if (mode && mode !== this.mode) this.setMode(mode);
+      const next = routeFromHash(location.hash, this.lastLevel());
+      if (!next) return; // an in-page anchor of the narrow layout
+      if (!sameRoute(next, this.route)) this.setRoute(next);
+      this.canonicalizeHash();
     });
     // E03: a lesson loads its mission through the panel (previewed by its onChange) and grades the flight at the head
     this.lessons = new LessonMode({
-      go: (mode) => this.go(mode),
+      // a lesson flies in the launch section; the page closes onto the route under it
+      go: (mode) => this.go(mode === 'home' ? HOME_ROUTE : route('launch', mode)),
+      back: () => this.go(this.route),
       loadMission: (state) => { this.goLive(); this.playing = false; this.panel.restoreMission(state); },
       sim: () => this.sim,
       panelRoot: document.getElementById('setup')!,
@@ -433,38 +497,109 @@ class App {
     this.lessons.openFromHash(startHash);
   }
 
+  /** S04: switch offline/online, kept in this browser. */
+  private setDataMode(mode: DataMode): void {
+    this.dataMode = mode;
+    saveDataMode(mode);
+    this.dataProvider = createDataProvider(mode, document.baseURI, (url, init) => fetch(url, init), this.recentAnswers);
+    this.playground?.dataChanged();
+    applyWebFonts(mode);
+    this.syncDataMode();
+  }
+
+  /** S04: the top bar's indicator says which mode is on, in words for the screen reader and the tooltip. */
+  private syncDataMode(): void {
+    const btn = document.getElementById('btn-data-mode');
+    if (!btn) return;
+    btn.dataset.mode = this.dataMode;
+    const label = t(this.dataMode === 'online' ? 'data.mode.online' : 'data.mode.offline');
+    document.getElementById('data-mode-label')!.textContent = label;
+    const title = t('data.button', { mode: label });
+    btn.title = title;
+    btn.setAttribute('aria-label', title);
+  }
+
+  /** Rewrite the address to the route's canonical hash, in place. */
+  private canonicalizeHash(): void {
+    const hash = hashForRoute(this.route);
+    if (location.hash !== hash) history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
+  }
+
+  /** The level a section link opens at: the one showing, else the last one used. */
+  private lastLevel(): AppLevel {
+    return this.route.section !== null ? this.route.mode : this.levelMemory;
+  }
+
+  /**
+   * S01: point every section link at the level showing (or last used) and
+   * every level link at the section showing — the launch section's from the
+   * landing page, where those links always led — and mark the current ones.
+   */
+  private syncNav(): void {
+    const level = this.lastLevel();
+    const section: AppSection = this.route.section ?? 'launch';
+    document.querySelectorAll<HTMLAnchorElement>('#section-nav a').forEach((a) => {
+      const name = a.dataset.section as AppSection | 'home';
+      a.href = name === 'home' ? hashForRoute(HOME_ROUTE) : hashForRoute(route(name, level));
+      if (name === (this.route.section ?? 'home')) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
+      const mode = a.dataset.mode as AppLevel;
+      a.href = hashForRoute(route(section, mode));
+      if (this.route.section !== null && mode === this.route.mode) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+  }
+
+  /** O01: the Orbit section's playground is drawn over the whole scene, which need not be drawn under it. */
+  private get sceneCovered(): boolean {
+    return this.route.section === 'orbit';
+  }
+
   /** The landing page and the viewer: no workspace, the scene is the page. */
   get lean(): boolean {
     return this.mode === 'home' || this.mode === 'watch';
   }
 
-  /** Navigate to a mode (a history entry, so Back returns to the last one). */
-  go(mode: AppMode): void {
-    if (location.hash === hashForMode(mode)) this.setMode(mode);
-    else location.hash = hashForMode(mode);
+  /** Navigate to a route (a history entry, so Back returns to the last one). */
+  go(next: AppRoute): void {
+    const hash = hashForRoute(next);
+    if (location.hash === hash) this.setRoute(next);
+    else location.hash = hash;
   }
 
   /**
-   * Show a mode. Only presentation changes: the mission, the flight and its
+   * Show a route. Only presentation changes: the mission, the flight and its
    * recording carry on underneath, so leaving the viewer for the workspace in
-   * the middle of a launch shows the same launch with every instrument on it.
+   * the middle of a launch shows the same launch with every instrument on it,
+   * and a flight left running while the Orbit section is open is still
+   * flying on the way back.
    */
-  private setMode(mode: AppMode): void {
+  private setRoute(next: AppRoute): void {
     const previous = this.mode;
-    this.mode = mode;
+    this.route = next;
+    if (next.section !== null) this.levelMemory = next.mode;
+    const mode = this.mode;
     document.body.dataset.mode = mode;
-    saveMode(mode);
+    document.body.dataset.section = next.section ?? 'home';
+    saveRoute(next);
+    this.syncNav();
+    // O01: the Orbit section is its playground; the Build section is still its plan (S01)
+    const orbit = next.section === 'orbit';
+    const planned = isPlannedSection(next.section) && !orbit;
+    document.getElementById('section-screen')!.hidden = !planned;
+    if (planned) this.sectionScreen.show(next.section as 'build', next.mode as AppLevel);
+    document.getElementById('orbit-playground')!.hidden = !orbit;
+    if (orbit) this.playground.show(next.mode as AppLevel);
+    else this.playground.hide();
     const experience = experienceForMode(mode);
     if (experience) this.panel.setExperience(experience);
     this.rigidControls.setInspectorAvailable(mode === 'engineer');
     this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
     if (mode !== 'engineer') this.loopInspector.close();
     if (mode !== 'engineer') this.monteCarlo.close(); // G05: a running set flies on
-    document.querySelectorAll<HTMLAnchorElement>('#mode-nav a').forEach((a) => {
-      if (a.dataset.mode === mode) a.setAttribute('aria-current', 'page');
-      else a.removeAttribute('aria-current');
-    });
-    document.getElementById('home-screen')!.hidden = mode !== 'home';
+    document.getElementById('home-screen')!.hidden = next.section !== null;
     document.getElementById('watch-ui')!.hidden = mode !== 'watch';
     // The two faces fly different camera programmes; re-apply at once.
     this.lastPhase = null;
@@ -555,7 +690,7 @@ class App {
   }
 
   async init(): Promise<void> {
-    const tex = await loadEarthTextures(base);
+    const tex = await (this.earthTextures ??= loadEarthTextures(base));
     this.scene = new SceneManager(this.glCanvas, tex);
     this.restoreGlow();
     // V02: `?sky=gradient` keeps the old sky, for comparison or a GPU the trial misjudges
@@ -592,20 +727,43 @@ class App {
     if (this.watchSoundtrackId === id) this.soundtrack.set(track);
   }
 
-  /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
-  private orbitLifetime(): void {
+  /**
+   * S03: the orbit on screen as a hand-off (src/orbit/handoff.ts) — the state,
+   * the spacecraft that is in it, the mission it came from — or null while
+   * the flight is not in orbit.
+   */
+  private orbitHandoffNow(): OrbitHandoff | null {
     const f = this.shown, sim = this.sim;
-    const opener = document.getElementById('btn-orbit-lifetime');
-    const inOrbit = !!f && !!sim && f.status !== 'prelaunch' && f.elements.periapsisAlt > 100e3 && f.elements.e < 1;
-    if (!inOrbit) { this.lifetime.openFor(null, opener); return; }
+    if (!sim || !handoffAvailable(f)) return null;
     const sat = sim.satellite;
     const el = f.elements;
-    this.lifetime.openFor({
-      r: [f.r.x, f.r.y, f.r.z], v: [f.v.x, f.v.y, f.v.z], jd: f.jd,
-      spacecraft: spacecraftFor(sat.kind, sim.cfg.payloadMassOverride ?? sat.mass),
+    // a payload with an engine flies as the vehicle's last stage: its dry mass and what the frame says is left
+    const own = f.stages.find((st) => st.isSpacecraft);
+    const spec = own ? sim.vehicle.stages[own.index]?.spec : undefined;
+    return handoffFromFlight({
+      frame: f, satellite: sat, payloadMass: sim.cfg.payloadMassOverride ?? sat.mass,
+      spacecraftStage: own && spec ? { dryMass: spec.dryMass, propellant: own.propellantFraction * spec.propellantMass } : null,
+      vehicleName: sim.vehicleSpec.name,
+      mission: missionDocument(this.panel.missionState()),
       label: t('life.start', { sat: satelliteName(sat), pe: (el.periapsisAlt / 1000).toFixed(0), ap: (el.apoapsisAlt / 1000).toFixed(0),
         inc: (el.i * RAD).toFixed(1), t: f.t.toFixed(0) }),
-    }, opener);
+    });
+  }
+
+  /** P07: the orbit on screen, carried on for years in the lifetime dialog. */
+  private orbitLifetime(): void {
+    this.lifetime.openFor(this.orbitHandoffNow(), document.getElementById('btn-orbit-lifetime'));
+  }
+
+  /**
+   * S03: "Continue in Orbit" — the orbit on screen handed to the Orbit
+   * section, at the level showing. The hand-off lives in memory; the flight
+   * carries on in the launch section, as it does behind any other screen.
+   */
+  continueInOrbit(): void {
+    this.handoff = this.orbitHandoffNow();
+    this.playground.setHandoff(this.handoff, this.handoff ? null : t('handoff.notInOrbit'));
+    this.go(route('orbit', this.lastLevel()));
   }
 
   /** U02: the flight on screen as a reference to compare later flights against. */
@@ -662,8 +820,9 @@ class App {
     url.searchParams.delete(MISSION_PARAM);
     let raw: unknown = null;
     try { raw = await decodeMissionParam(param); } catch { /* reported as unusable below */ }
-    if (this.lean) this.setMode('explore');
-    history.replaceState(null, '', `${url.pathname}${url.search}${hashForMode(this.mode)}`);
+    // a mission is the launch section's: a link that names another section or the viewer opens Explore
+    if (this.lean) this.setRoute(route('launch', 'explore'));
+    history.replaceState(null, '', `${url.pathname}${url.search}${hashForRoute(this.route)}`);
     const parsed = this.panel.share.apply(raw, 'link');
     if (!parsed.usable) this.preview(this.panel.getConfig());
     return true;
@@ -775,6 +934,8 @@ class App {
   private onKey(e: KeyboardEvent): void {
     if (this.physicsDialog.isOpen || this.cameraDialog.isOpen) return;
     if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
+    // O01: the Orbit section's playground has its own clock
+    if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
     // The landing page has no flight controls on it: Space must not launch the
     // rocket standing behind it, out of sight.
     if (this.mode === 'home') return;
@@ -854,6 +1015,10 @@ class App {
     this.timeline.applyStaticText();
     this.home.applyLanguage();
     this.watch.applyLanguage();
+    this.sectionScreen.applyLanguage();
+    this.playground.applyLanguage();
+    this.syncDataMode();
+    if (this.dataDialog.el.open) this.dataDialog.applyLanguage();
     this.lessons?.applyLanguage(); // E03
     document.getElementById('camera-tabs')?.setAttribute('aria-label', t('a11y.cameraGroup'));
     document.getElementById('controls')?.setAttribute('aria-label', t('a11y.playback'));
@@ -881,7 +1046,7 @@ class App {
     const cfg = this.panel.state;
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
-    this.narration.setMission(vehicleById(cfg.vehicleId).name,
+    this.narration.setMission(missionVehicle(cfg).name,
       this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(satelliteById(cfg.satelliteId)));
   }
 
@@ -1288,7 +1453,7 @@ class App {
       if (this.mode === 'watch') {
         this.watch.update(this.shown, this.recorder.events, {
           playing: this.playing && this.player.live,
-          vehicleId: sim?.vehicleSpec.id ?? '',
+          vehicle: sim?.vehicleSpec ?? null,
           follow: {
             available: !!this.shown?.debris.some((d) => d.alive && d.recovery?.target),
             booster: this.focusDebrisId !== null,
@@ -1479,7 +1644,7 @@ class App {
     const scene = this.scene;
     const view = this.simView;
     if (!sim || !this.rocket || !this.pad || !view) {
-      scene.render();
+      if (!this.sceneCovered) scene.render();
       return;
     }
     // One frame snapshot drives every view this tick: the live head when the
@@ -1656,7 +1821,9 @@ class App {
     // another wave), so they are handed a frame-backed view of this mission
     // rather than the live object: everything they read — clock, state vector,
     // ground track, debris, event log — is the frame on screen.
-    if (this.camMode === 'map') {
+    if (this.sceneCovered) {
+      // the Orbit section's playground covers the scene: the flight flies on, undrawn
+    } else if (this.camMode === 'map') {
       this.map.draw(view.sim, sim.site.latitude, sim.site.longitude, Math.max(0, this.sbHeight));
     } else {
       scene.render();

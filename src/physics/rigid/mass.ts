@@ -286,7 +286,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     if (firstAttached) { activeBase = base; firstAttached = false; }
     diameter = Math.max(diameter, st.spec.diameter);
     highest = Math.max(highest, base.x + st.spec.length);
-    const reservoir = rcsGeometry(vehicle.spec.id, st.spec, base);
+    const reservoir = rcsGeometry(geometry.vehicleId, st.spec, base);
     rcs.push(reservoir);
     const consumed = op.rcsConsumedKgByStage?.[st.spec.id] ?? 0;
     // A core that has been shut down still thrusts through its tail-off; the

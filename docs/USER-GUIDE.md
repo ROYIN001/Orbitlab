@@ -5,12 +5,25 @@ you while it flies — written for a student rather than for a contributor. If y
 equations and the sources behind them, that is [docs/PHYSICS.md](PHYSICS.md); this guide
 sticks to what you see on screen and what it means.
 
-## 0. Four ways in
+## 0. Three sections, three levels
 
-The switch in the top bar picks how much of the simulator you see:
+Orbitlab is being grown into one space program in three **sections**: **Launch** (this
+simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build** (designing a
+rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
+Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
+**Orbit** opens on its playground (section 0a below). Build is being built: today it shows what
+is coming, level by level and in the order it will be built
+([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on it pretends to work. Everything after
+section 0a is about Launch.
 
 - **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
-  space station) straight away.
+  space station) straight away; under it are the three sections, Launch with its three ways
+  in.
+
+Once a flight is in orbit, **Continue in Orbit** — under the telemetry panel, and on the viewer's
+end card — puts the orbit on screen into the Orbit section's playground (section 0a), with the
+spacecraft's mass, what is left of its own propellant, and the orbit lifetime analysis started
+from it. The flight itself carries on in Launch.
 - **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
   and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
   each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's
@@ -34,9 +47,22 @@ The switch in the top bar picks how much of the simulator you see:
   parameters stay folded away).
 - **Engineer** — the same workspace with every guidance parameter open.
 
-Switching mode never touches the flight: leave the viewer half-way up and the workspace
-shows the same launch with every instrument on it. Each mode has its own address
-(`#/watch` and so on), and the browser's Back button moves between them.
+Switching level or section never touches the flight: leave the viewer half-way up and the
+workspace shows the same launch with every instrument on it, and a flight left running while
+you look at Orbit is still flying when you come back. Every section and level has its own
+address — `#/launch/watch`, `#/orbit/explore`, `#/home` and so on — the browser's Back button
+moves between them, and the app reopens where you left it. The older addresses `#/watch`,
+`#/explore` and `#/engineer` still work: they open the launch section, and the address bar shows
+the new form.
+
+**Offline or online data.** The cloud in the top bar says where Orbitlab's data come from, and
+opens the **Data sources** window. **Offline**, the default, sends no request outside: the app
+uses the data bundled with it, each dated ("data as of …"), and the platform's own fonts — the
+right setting for a closed network, a classroom or no connection. Online also loads the
+interface's web fonts. **Online** fetches current data from the sources that publish them
+and falls back to the bundled copy, saying why, whenever they cannot be reached. The window lists
+each dataset with its date and where it came from. Today there is one, the space weather (the
+solar flux F10.7 and the Kp index, from NOAA), and nothing in the simulation reads it yet.
 
 **Installing Orbitlab and using it offline.** The published site can be installed as an app
 (Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
@@ -45,6 +71,176 @@ network at all — the page, the physics and auto-tune workers and the Earth tex
 on the device, and the fonts too once they have loaded. When a new version is published, a note
 at the bottom of the page offers **Reload**; until you press it, the version you have keeps
 running.
+
+## 0a. The Orbit section: the orbit playground
+
+The Orbit section opens on one orbit and three ways of looking at it. The tabs over the picture
+switch between them:
+
+- **3-D**: the orbit about the Earth, which turns with the time of day and is lit by the Sun of
+  that moment. **P** and **A** mark the perigee and the apogee, and **☊** the ascending node,
+  where the orbit crosses the equator going north. Drag to turn the view; the wheel or a pinch
+  zooms; a double-click shows the whole orbit. An orbit drawn in red passes below the ground:
+  it would hit the Earth.
+- **Ground track**: the point under the satellite on a map, a revolution back as a dashed line
+  and the next ones solid, with the night side and the point under the Sun.
+- **Newton's cannon**: a cannon on a mountain above the air, firing sideways. Set the speed and
+  press **Fire**. Up to about 7.8 km/s the ball falls back, further round the Earth each time;
+  faster, it goes all the way round (an orbit); above the escape speed, about 11 km/s, it never
+  comes back.
+
+Under the picture are the clock, how fast it runs, and **⟲**, which goes back to the start.
+Space pauses and resumes.
+
+The three levels:
+
+- **Watch**: a tour in seven steps, from Newton's cannon to the space station, Hohmann's
+  transfer to geostationary height, a Molniya orbit, a geostationary satellite standing over
+  78.5° E (the slot Thaicom's satellites use) and a sun-synchronous orbit. **Next** and **Back** move between the steps; **Try it yourself** opens
+  Explore on the orbit on screen.
+- **Explore**: choose an orbit from the list, or set its perigee and apogee altitudes, its
+  inclination i, its node Ω and its argument of perigee ω with the sliders or the number boxes.
+  Dragging the perigee above the apogee takes the apogee along. **Earth's bulge (J2)** lets the
+  equatorial bulge turn the orbit's plane and perigee. **Kepler's second law** shades twelve
+  slices the satellite sweeps in equal times. The panel on the right gives the orbit's period,
+  speeds and altitudes, and Kepler's three laws with this orbit's own numbers.
+- **Engineer**: the classical elements themselves (a, e, i, Ω, ω and the mean anomaly M₀), and
+  the orbit's energy, angular momentum, the drift of the node and the perigee, the nodal
+  period, how far the track steps west each revolution, and the local time at the ascending
+  node. **Repeating ground track** finds the circular orbit whose track repeats after N
+  revolutions in D days. 143 revolutions in 10 days, sun-synchronous, gives 786 km: Sentinel-2's
+  orbit.
+
+**Maneuvers** (Explore and Engineer) plans a change of orbit from the one set above. Choose one
+and its numbers, and the plan appears on the right: each burn, where and when it is made
+(T+ on the clock) and how big it is, the total Δv, the transfer time and the orbit it ends on.
+The 3-D view draws the orbits of the plan as dashed lines and numbers the burns. Press play,
+and the satellite flies the plan, burn by burn.
+
+- **Hohmann transfer** and **Bi-elliptic transfer** go to a circle at the height you give.
+  The bi-elliptic plan also says what Hohmann would have cost.
+- **Plane change** turns the orbit's plane to the inclination you give, at the node farther
+  from the Earth.
+- **Circularise at apogee (GTO → GEO)** rounds the orbit off at apogee and turns it towards
+  the equator, in one burn or split over several apogees.
+- **Phasing** moves the satellite along its own orbit in a few revolutions.
+- **Deorbit burn** brings the perigee down, and says when the satellite reaches 100 km.
+- **Low-thrust spiral** is an electric thruster's slow climb, Edelbaum's way.
+- **Your own burns** takes up to five burns, each at a point of the orbit (now, perigee,
+  apogee, a node, or after a set time), with prograde, normal and radial parts.
+
+**Plan from now** starts the plan at the time on the clock, and **Carry on from the new orbit**
+makes the orbit at the end the playground's. At the Engineer level, **Rendezvous (Lambert)**
+plans a transfer to a satellite in your orbit's plane, at a height and a phase you choose. The
+**Porkchop** tab plots the total Δv of every departure time and time of flight: the white ring
+is the cheapest, the red one the transfer planned. Click a point to plan it instead. The tour
+at Watch has a step for Hohmann's transfer.
+
+**Spacecraft**, under the maneuver's numbers, says whose tanks the plan is paid from:
+
+- **None** shows the Δv alone.
+- **From your launch** uses the spacecraft a flight handed on, with what is left of its own
+  propellant.
+- **Your own** takes a mass, propellant, Isp and thrust. It starts as the catalogue's weather
+  satellite: 1 800 kg, 400 N, Isp 315 s.
+
+The plan then gives each burn's propellant and how long its engine runs, the Δv in the tanks,
+what is burned and what is left. It says so when the tanks run dry, and in which burn. **Carry
+on from the new orbit** leaves the spacecraft lighter by what it burned.
+
+**What satellites do** (Explore and Engineer) turns the orbit into what it is for. Its three
+applications are:
+
+- **Communications from geostationary orbit.** Choose where the dish stands: a Thai city, St
+  Petersburg or Moscow, or coordinates you type in. What you type stays in the page; the browser
+  is never asked for your location. The playground then says where the dish points (azimuth and
+  elevation), how far away the satellite is, and how long a signal takes up and down, compared
+  with a satellite 550 km up. It also says how much of the Earth the satellite sees above the
+  lowest elevation you set. The ground track draws the station and that footprint. At the
+  Engineer level the link budget follows: path loss, dish gain, G/T, C/N₀ and Eb/N₀, from a
+  frequency, EIRP, dish, noise temperature, losses and data rate you choose.
+- **Earth observation.** A camera's swath and ground sample distance (or, at the Engineer
+  level, its focal length, pixel pitch and pixels), how far apart the day's tracks are, how much
+  of that gap the camera sees looking straight down, and how far tilting the satellite reaches.
+  The ground track draws the swath along the next revolution.
+- **Thailand's satellites.** THEOS, THEOS-2, NAPA-1, NAPA-2 and Thaicom 4, 6, 7 and 8, each with
+  its operator, builder, launch, orbit, camera, identifiers and sources. **Show its orbit** puts
+  its catalogue orbit in the playground. That is its shape, not where it is today; to see where
+  it is now, use **Real satellites** (below).
+
+For Thaicom 8 from Bangkok, the dish points south-west (239.5°), 59.9° up. For THEOS-2, the
+10.3 km swath covers well under 1 % of the gap between two of the day's tracks, which is why the
+satellite tilts.
+
+After **Continue in Orbit** from a flight, the list says **From your launch** and the playground
+starts from where the flight was. **Orbit lifetime**, under the orbit's figures, runs the
+long-term analysis on whatever orbit the playground is showing. With a flight's spacecraft it
+uses that spacecraft, as it is now; without one it starts from an estimate you can change in the
+dialog. At Watch, the flight's orbit is the first card, before the tour.
+
+The model is Kepler's orbit plus the secular drift of J2, nothing more: no drag and no Sun or
+Moon. [VALIDATION.md](VALIDATION.md) §5 holds it to real orbits.
+
+### Real satellites (Explore and Engineer)
+
+The switch at the top of the left panel changes between **Your orbit** and **Real satellites**.
+Real satellites are drawn where they are, from the element sets they are tracked by, propagated
+by SGP4, the theory those sets are made for. The clock starts at this moment and runs at the
+speed you choose; **⟲** brings it back to now, and **Live** shows while it is now.
+
+- **Group**: the space stations, Thailand's satellites, the navigation satellites (GPS, GLONASS,
+  Galileo, BeiDou), the weather satellites, the Earth-imaging satellites (civil, commercial, and
+  the military ones whose element sets are published), or the debris of Fengyun-1C, destroyed by
+  an anti-satellite test in 2007. The group is drawn as points in 3-D and on the ground track.
+- **Overflights of** a place, under the group's list: every pass of the group's satellites over a
+  city or your coordinates in the next 24 hours or 3 days whose highest point is at least the
+  elevation you choose (60° by default), soonest first: when, how high and in which direction,
+  the off-nadir angle a camera must look at to see the place, whether the place is in daylight
+  (optical cameras need it, radars do not) and whether the satellite is heading north or south.
+  Engineer adds the distance from the ground track, the local solar time and the timing
+  uncertainty. It is when the place *could* be seen, not that it is.
+- **When it will come down**, for a satellite whose perigee is under 700 km: give the object's mass
+  and mean cross-section (an element set does not carry them) and C_D, and its orbit is carried
+  down with the Sun as measured and forecast to a predicted re-entry, with the window of ±20 % of
+  the time left that the agencies use. More than a year away, the orbit lifetime analysis is the
+  tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
+  their first element sets and sets each prediction beside the re-entry on record.
+- **Search** by name, catalogue number or international designator, then pick a satellite. Its
+  orbit and its track are drawn. The right panel gives its catalogue number and designator, the
+  epoch of its element set and how old the set is, where it is now, its period, its mean perigee
+  and apogee, its inclination, and whether SGP4 or SDP4 (deep space) carries it. The Engineer
+  level adds the mean elements, the drag term B* and the position and velocity in TEME.
+- **Passes over** a place, under the satellite's figures: choose a city or type coordinates (they
+  stay in the page), and the lowest elevation that counts. The next three days' passes are
+  listed, each with when the satellite rises, is highest and sets, in which direction and how
+  high. Each pass also says whether you can see it: only when the satellite is in sunlight and
+  your sky is dark (the Sun 6° or more below the horizon). The first line counts down to the next
+  pass. Times are your device's clock. The map draws the place, and the circle of ground from
+  which the satellite is above that elevation.
+- **Position error (estimate)** says how far off the satellite may be: an element set does not
+  carry its own accuracy, so the page estimates it from published studies, from the kind of orbit
+  and the set's age. **How far off it may be** draws the band widening with that age and names the
+  studies. At the Engineer level each pass gives its timing uncertainty.
+- **Close approaches** screens every object loaded — the catalogue's groups and a file you read —
+  against the satellite picked, for 24 hours, 3 or 7 days from the moment on screen: each pass
+  nearer than the limit you choose, when, how near, and an estimated probability of collision
+  from both element sets' estimated error and the size you give the pair. Engineer adds the miss
+  split radial, along-track and cross-track, the relative speed and each set's uncertainty. It is
+  what CelesTrak's SOCRATES does with the same data, and it shows traffic, not collisions: the
+  page recalls that Iridium 33 and Cosmos 2251 were 152nd on the list the day they collided.
+- **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
+  Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
+  the two part company.
+- **Read a file of element sets** opens a file you have: TLE or 3LE, or OMM as JSON, CSV, XML or
+  KVN, from CelesTrak or from your own Space-Track account. It is read in the page and sent
+  nowhere. Whatever cannot be read is listed, line by line or set by set, with the reason.
+
+Offline (the default) the element sets are the snapshot bundled with this version, dated in the
+right panel. Online they come from CelesTrak, at most once in two hours, as CelesTrak asks, and
+from the snapshot whenever CelesTrak cannot be reached. A published site is rebuilt every day
+with a fresh snapshot. An element set is a fraction of a kilometre to a few kilometres off at
+its epoch, and further as it ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its
+reference.
 
 ## 1. Set up a mission
 
@@ -84,6 +280,14 @@ that cannot be used (a perigee above the apogee, a gain out of range, a site the
 not fly from) goes back to its default, the rest of the mission is kept, and a note under the
 buttons lists what was reset. The file carries a format version, so a file from a later
 Orbitlab still opens as far as this one understands it, and says so.
+
+Since version 2 a file can also carry a **vehicle of its own** — a custom rocket, the start of
+the Build section ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), S02). There is no builder on screen
+yet; a file (or a link) that carries one opens with the vehicle listed first in the vehicle menu
+as "*name* — custom vehicle", and it flies like any other. Every figure in it is checked before it
+flies — masses and sizes above zero, engine figures a chemical engine can have, at most six
+stages, strap-ons on the first stage only — and a vehicle that fails the check is not flown: the
+note names the vehicle as reset. Picking a catalogue vehicle from the menu drops the custom one.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
@@ -335,8 +539,14 @@ under the forces that act after the launch, each of which can be switched off to
 the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
 works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
 the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
-and the pressure of sunlight. Choose low, mean or high solar activity: at 400 km a CubeSat lasts
-about four months at solar maximum and over a year at solar minimum. The *mean elements* method
+and the pressure of sunlight. The Sun's activity, which sets how much air there is, is taken as
+measured by default: month by month from 1947 (GFZ), then NOAA's latest months and its forecast,
+then the Sun repeating its last eleven years — the result says how far each reaches, and the data
+mode decides whether NOAA's figures are the bundled ones or fetched now. The forecast's high and
+low sides show how much the answer can move; ECSS's fixed quiet, moderate and active levels are
+there for a what-if (at 400 km a CubeSat lasts about two and a half months with an active Sun
+and over three years with a quiet one). With the measured Sun, seven satellites of known shape
+came down within 25 % of their dates on record. The *mean elements* method
 covers decades in a moment with J2 and drag; the *full equations* include every force but are
 slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
 payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
