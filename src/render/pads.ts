@@ -1495,6 +1495,92 @@ const lc39aPad: Builder = (ctx) => {
   };
 };
 
+/**
+ * LC-39A as it was in 1969, for the Saturn V (C01): the same octagonal hardstand,
+ * and on it the Mobile Launcher — a 49 × 41 m platform 7.6 m deep over the flame
+ * trench, the rocket standing on its hold-down arms, and beside it the red
+ * launch umbilical tower, 121 m above the deck, with its hammerhead crane and
+ * nine swing arms to the stages and the spacecraft, which swing clear as the
+ * rocket rises (Saturn V Flight Manual SA-506; KSC fact sheets). Proportions
+ * approximate.
+ */
+const lc39a1969Pad: Builder = (ctx) => {
+  const g = new THREE.Group();
+  const H = ctx.H, top = LC39A_MOUND, deckH = 7.6;
+  const concrete = ctx.mat(0xa4a298, 0.05, 0.92);
+  const mound = new THREE.CylinderGeometry(80, 122, top, 8, 1);
+  mound.rotateY(Math.PI / 8);
+  mound.translate(0, top / 2, 0);
+  const rampLen = 120, slope = Math.atan2(top, rampLen);
+  const ramp = new THREE.BoxGeometry(rampLen / Math.cos(slope), 1.6, 40);
+  ramp.rotateZ(slope);
+  ramp.translate(-72 - rampLen / 2, top / 2 - 0.6, 0);
+  const hard = new THREE.Mesh(ctx.geo(merged([mound, ramp])), concrete);
+  hard.receiveShadow = true;
+  hard.castShadow = true;
+  g.add(hard);
+  const pad = new THREE.Group();
+  pad.position.y = top;
+  g.add(pad);
+  for (const o of [...flameTrench(ctx, 18, 70, 12, 0), ...flameTrench(ctx, 18, 70, 12, Math.PI)]) pad.add(o);
+  // the platform on its six pedestals, with the 14 m square exhaust hole under the rocket
+  const grey = ctx.mat(0x7d8084, 0.4, 0.6);
+  const platform = new THREE.Mesh(ctx.geo(merged([
+    box(49, deckH, 13.5, 0, 6 + deckH / 2, -13.75), box(49, deckH, 13.5, 0, 6 + deckH / 2, 13.75),
+    box(17.5, deckH, 14, -15.75, 6 + deckH / 2, 0), box(17.5, deckH, 14, 15.75, 6 + deckH / 2, 0),
+    ...[-18, 0, 18].flatMap((x) => [box(3, 6, 3, x, 3, -14), box(3, 6, 3, x, 3, 14)]),
+  ])), grey);
+  platform.castShadow = true;
+  platform.receiveShadow = true;
+  pad.add(platform);
+  const deckY = 6 + deckH;
+  // four hold-down arms at the S-IC's base
+  const arms = new THREE.Mesh(ctx.geo(merged([0, 1, 2, 3].map((i) => {
+    const a = (i / 4) * Math.PI * 2;
+    return box(2.4, 2.2, 2.4, Math.cos(a) * (ctx.R + 0.6), deckY + 1.1, Math.sin(a) * (ctx.R + 0.6));
+  }))), ctx.mat(0x55595e, 0.5, 0.5));
+  pad.add(arms);
+  // the umbilical tower on the platform's edge
+  const red = 0xb33a26;
+  const lutH = 121, lutX = 0, lutZ = ctx.R + 17;
+  const lut = new THREE.Mesh(ctx.geo(merged([
+    lattice(12.2, 12.2, lutH, 28, 0.9),
+    box(13, 1.2, 13, 0, lutH, 0),
+    // the hammerhead crane
+    box(4, 3, 30, 0, lutH + 3, -5),
+  ])), ctx.mat(red, 0.35, 0.6));
+  lut.position.set(lutX, deckY, lutZ);
+  lut.castShadow = true;
+  pad.add(lut);
+  // swing arms: from the S-IC intertank to the command module's access arm
+  const heights = [18, 28, 40, 55, 62, 77, 87, 97, 102].map((y) => Math.min(y, H - 6));
+  const swings: THREE.Group[] = [];
+  const armLen = lutZ - 6.1 - ctx.R - 0.8;
+  heights.forEach((y, i) => {
+    const arm = hingedArm(ctx, armLen, i === heights.length - 1 ? 2.4 : 1.8, red, true);
+    arm.position.set(lutX + 4.5, deckY + y, lutZ - 6.1);
+    arm.rotation.y = Math.PI / 2;
+    pad.add(arm);
+    swings.push(arm);
+  });
+  g.add(tankFarm(ctx, 190, 150, 2, 9, 16));
+  g.add(tankFarm(ctx, -170, 190, 2, 7, 12));
+  for (const o of infrastructure(ctx, 270, -1)) g.add(o);
+  return {
+    group: g,
+    trenchAzimuth: 0,
+    mouthRadius: 16,
+    mountHeight: top + deckY,
+    animate(t) {
+      // the command module's arm is back at T−5 min; the rest swing clear at liftoff
+      swings.forEach((arm, i) => {
+        const away = i === swings.length - 1 ? 1 : smoothstep(-1, 5, t);
+        arm.rotation.y = Math.PI / 2 - away * 1.25;
+      });
+    },
+  };
+};
+
 /** Wallops LC-2: small pad on flat coast. */
 const wallopsPad: Builder = (ctx) => {
   const g = new THREE.Group();
@@ -1816,7 +1902,7 @@ const mahiaPad: Builder = (ctx) => {
 
 const BUILDERS: Record<string, Builder> = {
   baikonur: baikonurPad, plesetsk: soyuzPad, vostochny: soyuzPad,
-  cape: (ctx) => (ctx.pad === 'lc5' ? lc5Pad(ctx) : slc40Pad(ctx)), ksc39a: lc39aPad, vandenberg: slc4ePad, wallops: wallopsPad,
+  cape: (ctx) => (ctx.pad === 'lc5' ? lc5Pad(ctx) : slc40Pad(ctx)), ksc39a: (ctx) => (ctx.vehicle.id === 'saturnv' ? lc39a1969Pad(ctx) : lc39aPad(ctx)), vandenberg: slc4ePad, wallops: wallopsPad,
   starbase: starbasePad, kourou: kourouPad, wenchang: wenchangPad,
   tanegashima: tanegashimaPad, sriharikota: sriharikotaPad, mahia: mahiaPad,
 };

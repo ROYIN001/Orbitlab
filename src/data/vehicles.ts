@@ -838,6 +838,20 @@ const RD108_1959: EngineSpec = { name: 'RD-108 (8D75-1959)', count: 1, thrustSL:
 /** RD-0109 of Blok E (en.wikipedia RD-0109, Blok E): 54.52 kN, 323.5 s, no verniers. */
 /** Rocketdyne A-7 of the Mercury-Redstone as flown on MR-3 (NASA TM X-53107, Table 8-1; vacuum thrust from thisdayinaviation.com). */
 const A7_REDSTONE: EngineSpec = { name: 'Rocketdyne A-7', count: 1, thrustSL: 350.8 * kN, thrustVac: 395.9 * kN, ispSL: 214.8, ispVac: 242.4 };
+/**
+ * Saturn V AS-506 (Apollo 11), from the flight evaluation report MPR-SAT-FE-69-9
+ * (FER) and NASA SP-4029. F-1: 6,719 kN and 264.5 s at sea level, the flight's
+ * average (FER); its 304 s in vacuum (en.wikipedia) with the same flow, 2,590 kg/s.
+ */
+const F1_AS506: EngineSpec = { name: 'Rocketdyne F-1', count: 5, thrustSL: 6719 * kN, thrustVac: 7722 * kN, ispSL: 264.5, ispVac: 304 };
+/**
+ * The S-II's five J-2s at the high mixture ratio (5.5): 5,141.5 kN for the stage
+ * and 423.2 s at ESC +61 s (FER §6.3). The J-2 never ran at sea level; its
+ * sea-level pair is a placeholder (`vacuumOnly`).
+ */
+const J2_SII: EngineSpec = { name: 'Rocketdyne J-2', count: 5, thrustSL: 486 * kN, thrustVac: 1028.3 * kN, ispSL: 200, ispVac: 423.2, vacuumOnly: true };
+/** The S-IVB's J-2, first burn: 901.2 kN, 428.7 s (FER). */
+const J2_SIVB: EngineSpec = { name: 'Rocketdyne J-2', count: 1, thrustSL: 426 * kN, thrustVac: 901.2 * kN, ispSL: 200, ispVac: 428.7, vacuumOnly: true };
 const RD0109: EngineSpec = { name: 'RD-0109', count: 1, thrustSL: 40 * kN, thrustVac: 54.52 * kN, ispSL: 240, ispVac: 323.5, vacuumOnly: true };
 
 export const HISTORICAL_VEHICLES: VehicleSpec[] = [
@@ -913,6 +927,48 @@ export const HISTORICAL_VEHICLES: VehicleSpec[] = [
     guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.34, pitchMax: 50, loftAltitude: 0 },
     guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3, kickDuration: 12, maxTurnRate: 0.34 },
     notes: 'The Redstone missile lengthened for the Mercury capsule: one alcohol/LOX engine, jet vanes and fins, 141 s of burn — enough to throw a capsule 187 km up and 487 km down range.',
+  },
+  {
+    id: 'saturnv', name: 'Saturn V (AS-506)', country: 'US', manufacturer: 'Boeing / North American / Douglas / IBM',
+    // 110.6 m with the Apollo spacecraft and its escape tower (SP-4029).
+    height: 110.6, payloadLEO: 140000, payloadGTO: 0,
+    // no fairing: the Apollo spacecraft, its adapter and the escape tower are the nose
+    fairing: null,
+    stages: [
+      // S-IC (FER Table 20-9, SP-4029 Table 23): 130,423 kg dry, 2,145,798 kg of
+      // RP-1 and LOX, 2,468 kg of other fluids; the interstage's small ring (614 kg)
+      // stays with it, and 28.4 t of propellant was left at the separation — all
+      // carried here as dry mass. The propellant is what the five F-1s burn from
+      // ignition, 2.5 s before liftoff here, to the LOX running out at T+161.63 s,
+      // the centre engine shut down at T+135.20 s to hold the acceleration under 4 g.
+      { id: 'sic', name: 'S-IC', dryMass: 152250, propellantMass: 2053900, engine: F1_AS506,
+        diameter: 10.06, length: 42.06, fins: true, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 5.8,
+        engineEvents: [{ t: 137.7, shutdown: [4] }] },
+      // S-II: 36,158 kg dry, 443,236 kg of LOX and LH2, 572 kg other; the S-II/S-IVB
+      // interstage (3,663 kg) goes with it, and the S-IC/S-II aft interstage ring
+      // (3,982 kg, with its 609 kg of spent ullage-motor propellant) until it is
+      // dropped 30 s into the burn (T+192.3 s, "second-plane separation"); 3.3 t
+      // left at the cut-off. Engine start command 0.74 s after the separation
+      // (T+163.04 s); the centre engine off at ESC +297.58 s against pogo; the
+      // mixture ratio shifted to 4.3 at about ESC +335 s: 3,082.8 kN on four
+      // engines (FER §6.3), at 427 s (the J-2's rating at that ratio; estimated).
+      { id: 'sii', name: 'S-II', dryMass: 45654, propellantMass: 442530, engine: J2_SII,
+        diameter: 10.06, length: 24.84, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 3.4, sepDelay: 0.67, ignitionDelay: 0.74,
+        engineEvents: [{ t: 297.58, shutdown: [4] }, { t: 335, mixture: { thrustVac: 770.7 * kN, thrustSL: 364 * kN, ispVac: 427, ispSL: 200 } }],
+        // the aft interstage ring, then the escape tower (T+197.9 s)
+        jettisons: [{ t: 29.26, mass: 4591, part: 'interstage' }, { t: 34.86, mass: 4042, part: 'tower' }] },
+      // S-IVB with the instrument unit: 11,273 kg dry, 751 kg other, IU 1,939 kg;
+      // 107,095 kg of LOX and LH2, of which the two burns use 105.3 t (FER). Start
+      // command 3.2 s after the separation (T+552.2 s). Restarts for the
+      // translunar injection.
+      { id: 'sivb', name: 'S-IVB', dryMass: 15758, propellantMass: 105300, engine: J2_SIVB, restartable: true,
+        diameter: 6.604, length: 18.77, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 3.4, sepDelay: 0.78, ignitionDelay: 3.2 },
+    ],
+    sites: ['ksc39a'], maxQ: 45e3, maxAccel: 40,
+    crewCapable: true,
+    guidanceDefaults: { kickAngle: 3.5, maxTurnRate: 0.5, pitchMax: 40, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'The Moon rocket: five F-1s, five J-2s and one restartable J-2 on three stages, 2,938 t at ignition. Apollo 11\'s flew on 16 July 1969.',
   },
 ];
 

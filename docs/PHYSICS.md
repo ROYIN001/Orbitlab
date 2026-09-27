@@ -2679,6 +2679,7 @@ is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's S
 | Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
 | Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
 | Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
+| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8) | FER MPR-SAT-FE-69-9; SP-4029 |
 | Mercury-Redstone 3 | 1961-05-05 14:34:13 | Mercury-Redstone, Cape LC-5 | 1,832.6 kg (Freedom 7 and its tower) | 187.5 km apogee, splashdown 487 km down range (§13.7) | NASA MR-3 postlaunch report; TM X-53107 |
 
 **13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
@@ -2878,6 +2879,64 @@ the clock; the capsule comes down 16 s early because its drag after the main ope
 Tested: point-mass in tests/historical-vehicles.test.ts, six-DOF in tests/heavy/mercury-redstone.test.ts
 (tests/mr3-harness.ts), each to the timeline above within 15–30 s, 11 ± 1.5 g, 487 ± 25 km and 25 km
 of the real splashdown.
+
+**13.8 Apollo 11 on the Saturn V, launch to parking orbit (part 6a).** The vehicle `saturnv` in
+`HISTORICAL_VEHICLES`, the spacecraft `apollo` in src/data/satellites.ts. 16 July 1969, range zero
+13:32:00 UTC, LC-39A, azimuth 72.058°. Sources: the Saturn V flight evaluation report for AS-506,
+MPR-SAT-FE-69-9 (FER), and NASA SP-4029 (*Saturn V Launch Vehicle Flight Evaluation* summary tables).
+The mission from the parking orbit on — the S-IVB's restart for the Moon, the spacecraft's own
+flight to the Moon and back — is flown in the parts that follow.
+
+| | Value | Source |
+|---|---|---|
+| S-IC | 130,423 kg dry, 2,145,798 kg RP-1 and LOX, 2,468 kg other; 28.4 t left at separation | FER Table 20-9; SP-4029 Table 23 |
+| F-1 | 6,719 kN, 264.5 s at sea level (flight average); 304 s in vacuum (en.wikipedia) with the same flow → 7,722 kN | FER; secondary |
+| S-II | 36,158 kg dry, 443,236 kg LOX and LH2, 572 kg other; 3.3 t left at cut-off | FER |
+| J-2, S-II | 5,141.5 kN for the stage and 423.2 s at ESC +61 s (mixture ratio 5.5) | FER §6.3 |
+| S-II mixture shift | at ESC +335 s: 3,082.8 kN on four engines (770.7 kN each); 427 s (the J-2's rating at ratio 4.3–4.5; **estimated**) | FER §6.3 |
+| S-IC/S-II interstage | 5,206 kg: 614 kg stays with the S-IC; the 3,982 kg ring, with its 609 kg of ullage-motor propellant, dropped at T+192.3 s | FER |
+| S-II/S-IVB interstage | 3,663 kg, with the S-II | FER |
+| S-IVB, IU | 11,273 kg dry, 751 kg other, IU 1,939 kg; 107,095 kg LOX and LH2; J-2 901.2 kN, 428.7 s (first burn) | FER |
+| Spacecraft | CSM 28,806 kg, LM 15,095 kg, SLA 1,792 kg, escape tower 4,042 kg (off at T+197.9 s) = 49,735 kg | SP-4029 |
+| Times | CECO 135.20; OECO 161.63; separation 162.30; S-II start command 163.04; CECO ESC +297.58 (460.62); S-II cut-off 548.22, separation 549.00; S-IVB start 552.2; cut-off 699.33; insertion 709.33 | FER |
+| Orbit | 183.2 × 186.0 km, 32.521° | FER |
+
+*New in the model.* `StageSpec.engineEvents` are planned changes in a stage's engines during its burn, s
+after its first ignition: an engine shut down early (the centre engines of the S-IC and S-II, index 4
+of the layout, which the six-DOF budget loses as it loses an engine the FDIR shuts down, §2j) or a new
+operating point for every engine (the S-II's mixture shift), which replaces the stage's engine
+where every consumer reads it — point mass, six-DOF mass model, guidance. `StageSpec.jettisons` drop a
+mass during the burn: an `interstage` off the stage's dry mass, a `tower` off the payload's. Events
+`evt.ceco`, `evt.mixtureShift`, `evt.interstageSep`, `evt.towerJettison`.
+
+*Approximations.* The propellant loads are what the stages burn in the model, their totals kept: the
+S-IC's is what five F-1s burn from ignition (T−2.5 s here; T−8.9 s flown) to its centre engine's
+shutdown and four to the LOX's end at T+161.63 s, the 28.4 t left over is carried as dry mass, and the
+73 t burned on the pad before that is left out, so the stack weighs 2,838 t at liftoff, about what
+flew (2,938 t at ignition), and 825 t at the S-IC's cut-off (827.3 t flown); the S-II's is 2.6 t over what the published
+flows burn to T+548.22 s (the thrust build-up from ESC to mainstage, 3 s flown, is not modelled), taken
+from its residual. The ullage-motor propellant rides with the ring until it drops. The rocket leaves
+from the site's point with the Earth's rotation, not its flown liftoff at T+0.63 s. The model flies
+its own gravity turn and closed-loop steering, not the Saturn V's time-based tilt programme and
+iterative guidance mode (from T+204.1 s); the kick (3.5° at 0.5°/s) was set so that the S-IC hands
+over at the flown speed. The launch escape tower, the SLA and the CSM are drawn from the flight
+manual's proportions; the tower's colour is a guess.
+
+Model − flight, s:
+
+| | Max-Q | CECO | OECO | Sep. | Ring | Tower | S-II CECO | Mixture | S-II cut-off | Sep. | S-IVB cut-off | Orbit, km |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Flown | 83.0 (35.2 kPa) | 135.20 | 161.63 | 162.30 | 192.3 | 197.9 | 460.62 | ≈ 498 | 548.22 | 549.00 | 699.33 | 183.2 × 186.0 |
+| Point-mass | −6.1 (36.8 kPa) | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | +0.1 | ±0.0 | +9.2 | 180 × 183 |
+| Six-DOF | −6.1 (38.0 kPa) | ±0.0 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.5 | +0.4 | +13.2 | 174 × 183 |
+
+Everything the stages do on their own clocks happens on time. What the guidance decides does not: the
+S-IC, turned over sooner than the tilt programme turned it, passes max-Q 6 s early and hands over 6 km
+low (60 against 66.1 km) though at the flown speed (2,803 against 2,764 m/s), and the S-II, which has
+to climb from there, reaches its cut-off 13 km lower (174 against 187.3 km) and 40–65 m/s slower, which
+the S-IVB makes up in 9–13 s more burn. In six-DOF the S-II's pitch-up just after staging, at 0.5 kPa,
+takes the stack past the aerodynamic table's 15° (a disclosure, `evt.aeroEnvelopeExceeded`, not a
+load: the flown vehicle held its attitude until T+204 s).
 
 ## Glossary (EN / RU / TH)
 

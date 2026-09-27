@@ -89,6 +89,11 @@ export const PROPELLANT_LOADS: Readonly<Record<string, PropellantLoad>> = {
   urm1core: { family: 'kerolox', mixtureRatio: 2.6, oxidizerForward: true },
   urm1: { family: 'kerolox', mixtureRatio: 2.6, oxidizerForward: true },
   urm2: { family: 'kerolox', mixtureRatio: 2.6, oxidizerForward: true },
+  // Saturn V (C01), from AS-506's loads (FER Table 20-9): the S-IC's LOX tank over
+  // its RP-1, the S-II's and S-IVB's LOX tanks under their hydrogen
+  sic: { family: 'kerolox', mixtureRatio: 2.32, oxidizerForward: true },
+  sii: { family: 'hydrolox', mixtureRatio: 5.18, oxidizerForward: false },
+  sivb: { family: 'hydrolox', mixtureRatio: 4.41, oxidizerForward: false },
   // Atlas V / Vulcan
   ccb: { family: 'kerolox', mixtureRatio: 2.72, oxidizerForward: true },
   gem63: { family: 'solid' },
@@ -171,6 +176,11 @@ export const STAGE_STEERING: Readonly<Record<string, StageSteering>> = {
   // the four small nozzles drawn on the core are its turbine-exhaust roll nozzles
   urm1core: { gimbalDeg: 8, steer: 'tvc', vernierFraction: 0.004, vernierDeg: 30, estimated: true },
   urm2: { gimbalDeg: 4, steer: 'tvc', estimated: true },
+  // Saturn V (C01): the four outboard F-1s gimbal ±6°, the four outboard J-2s of the
+  // S-II ±7°, the centre engines are fixed (SP-4029; Saturn V Flight Manual SA-506)
+  sic: { gimbalDeg: 6, steer: 'tvc', steerable: 4 },
+  sii: { gimbalDeg: 7, steer: 'tvc', steerable: 4 },
+  sivb: { gimbalDeg: 7, steer: 'tvc' },
   // Atlas V / Vulcan
   ccb: { gimbalDeg: 8, steer: 'tvc' },
   gem63: { gimbalDeg: 0, steer: 'tvc' },

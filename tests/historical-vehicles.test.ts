@@ -54,6 +54,11 @@ describe('historical vehicles', () => {
     expect(burn(sputnik.stages[0].propellantMass, sputnik.stages[0].engine.thrustVac, sputnik.stages[0].engine.ispVac)).toBeLessThan(310);
     const e = vostok.stages[1];
     expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 365)).toBeLessThan(10);
+    // the S-IC: five F-1s from ignition 2.5 s before liftoff to the centre engine's
+    // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506)
+    const sic = vehicleById('saturnv').stages[0];
+    const flow = sic.engine.thrustVac / (G0 * sic.engine.ispVac);
+    expect(Math.abs(sic.propellantMass / flow - (137.7 * 5 + (161.63 - 135.2) * 4)) / 5).toBeLessThan(2);
     // the Redstone: 143.5 s nominal (MR-3 cut off at 141.8)
     const redstone = vehicleById('mercuryredstone').stages[0];
     expect(Math.abs(burn(redstone.propellantMass, redstone.engine.thrustVac, redstone.engine.ispVac) - 143.5)).toBeLessThan(5);
@@ -63,6 +68,7 @@ describe('historical vehicles', () => {
     expect(satelliteById('ps1').carriers).toEqual(['sputnik8k71ps']);
     expect(satelliteById('vostok3ka').carriers).toEqual(['vostokk']);
     expect(satelliteById('mercury').carriers).toEqual(['mercuryredstone']);
+    expect(satelliteById('apollo').carriers).toEqual(['saturnv']);
     const s = watchMissionSettings('vostok1');
     expect(validateConfigInput(s)).toEqual([]);
     expect(validateConfigInput({ ...s, satelliteId: 'ps1' }).some((i) => i.field === 'setup.satellite')).toBe(true);
@@ -131,5 +137,41 @@ describe('Mercury-Redstone 3 in the viewer', () => {
     const order = ['capsuleCutoff', 'capsuleSep', 'retroFire', 'capsuleEntry', 'capsuleDrogue', 'capsuleMain', 'capsuleSplash'].map((b) => beats.indexOf(b));
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(ending).toBe('splashdown');
+  });
+});
+
+describe('Apollo 11, point-mass', () => {
+  it('shuts the centre engines down, drops the interstage ring and the tower, and shifts the S-II\'s mixture on the flown timeline', { timeout: 300_000 }, () => {
+    const s = watchMissionSettings('apollo11');
+    const sim = new Simulation({
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime,
+      payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+      failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+    }, { headless: true });
+    const massAt = (t: number) => { while (sim.state.t < t && !sim.isFailed()) sim.step(sim.suggestedDt()); return sim.vehicle.totalMass(); };
+    // the S-IC's centre engine: four of five running after T+135.2 s
+    massAt(136);
+    const sic = sim.vehicle.stages[0];
+    expect(sic.shutEngines).toEqual([4]);
+    expect(sic.engineFraction).toBeCloseTo(0.8, 9);
+    // the ring off the S-II's dry mass, then the tower off the payload
+    const payload0 = sim.vehicle.payloadMass;
+    massAt(195);
+    expect(sim.vehicle.jettisoned).toEqual({ interstage: true, tower: false });
+    expect(sim.vehicle.stages[1].spec.dryMass).toBe(vehicleById('saturnv').stages[1].dryMass - 4591);
+    massAt(200);
+    expect(sim.vehicle.jettisoned.tower).toBe(true);
+    expect(payload0 - sim.vehicle.payloadMass).toBe(4042);
+    // the S-II after its mixture shift: 770.7 kN an engine, four of them
+    massAt(500);
+    expect(sim.vehicle.stages[1].spec.engine.thrustVac).toBeCloseTo(770.7e3, 3);
+    expect(sim.vehicle.stages[1].engineFraction).toBeCloseTo(0.8, 9);
+    const at = (key: string, n = 1) => sim.events.filter((e) => e.key === key)[n - 1]?.t;
+    expect(Math.abs(at('evt.ceco')! - 135.2)).toBeLessThan(0.2);
+    expect(Math.abs(at('evt.ceco', 2)! - 460.62)).toBeLessThan(1.5);
+    expect(Math.abs(at('evt.interstageSep')! - 192.3)).toBeLessThan(1.5);
+    expect(Math.abs(at('evt.towerJettison')! - 197.9)).toBeLessThan(1.5);
+    // the vehicle's own spec is never touched
+    expect(vehicleById('saturnv').stages[1].engine.thrustVac).toBe(1028.3e3);
   });
 });

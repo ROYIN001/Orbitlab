@@ -35,6 +35,10 @@ export interface StageState {
   engineFraction: number;
   /** G08: the engines the FDIR shut down, by engine index; they are the first of the share `engineFraction` lost */
   shutEngines?: number[];
+  /** C01: how many of the stage's `engineEvents` have happened */
+  engineEventsDone?: number;
+  /** C01: how many of the stage's `jettisons` have happened */
+  jettisonsDone?: number;
   boosters: BoosterState[];
   /** mission time of first ignition */
   ignitionTime: number;
@@ -360,6 +364,8 @@ export class VehicleModel {
   fairingAttached: boolean;
   payloadMass: number;
   payloadAttached = true;
+  /** C01: the parts `StageSpec.jettisons` has dropped so far */
+  jettisoned = { interstage: false, tower: false };
   activeIndex = 0;
   /** first-stage (core) propellant fraction reserved for recovery */
   recoveryReserve: number;

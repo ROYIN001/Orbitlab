@@ -606,7 +606,7 @@ is in [PHYSICS.md §9.2](PHYSICS.md).
 ## 17. Historical missions
 
 Real flights, replayed on the day and at the second they flew: Sputnik 1 (1957) and Yuri
-Gagarin's Vostok 1 (1961) on the first R-7s, Alan Shepard's Mercury-Redstone 3 (1961), Soyuz MS-16 (the first crew on a
+Gagarin's Vostok 1 (1961) on the first R-7s, Alan Shepard's Mercury-Redstone 3 (1961), Apollo 11 on the Saturn V (1969), Soyuz MS-16 (the first crew on a
 Soyuz-2.1a, 2020), Crew Dragon Demo-2 (2020), Soyuz MS-25 (2024), ORBCOMM-2 (the first Falcon 9 booster to land, 2015), the
 first Angara-A5 (2014) and H-IIA with Hayabusa2 (2014). In **Watch** they are under *From
 history* in the list of launches; in **Explore** and **Engineer** open *Historical missions* at
@@ -618,6 +618,14 @@ The two R-7s of 1957 and 1961 are in the vehicle list too, after the fleet and m
 Vostok capsule) and flies from Gagarin's Start. **Mercury-Redstone** is there too, with the
 **Mercury capsule** under its escape tower, from Launch Complex 5 at the Cape. Try them on other
 orbits if you like — they are tested on the flights they made.
+
+**Saturn V** is in the list too, with **Apollo CSM and LM** on top, from LC-39A as it stood in
+1969 — the Mobile Launcher and its red umbilical tower, whose arms swing away as the rocket
+rises. Watch the S-IC's centre engine stop at 2:15 (the other four keep going to 2:42), the ring
+between the first two stages fall away half a minute after the S-II lights, the escape tower
+leave six seconds later, the S-II's centre engine stop at 7:41 and its other four throttle back
+at 8:18 as the mixture shifts, and the S-IVB put Apollo into its 186 km parking orbit. So far the
+flight ends there; the journey to the Moon and back is being added.
 
 Mercury-Redstone 3 never went into orbit: the Redstone burns for two and a half minutes and
 throws Freedom 7 on a 15-minute arc, 187 km up and 487 km down range. Ten seconds after the

@@ -27,6 +27,7 @@ export const SATELLITES: SatelliteSpec[] = [
   // No. 3*, 1961). Flown on the stack as it stood; it comes home on its own
   // parachutes (`MERCURY_CAPSULE`, src/physics/rigid/escape.ts).
   { id: 'mercury', kind: 'mercury', name: 'Mercury capsule', mass: 1832.6, typicalOrbit: 'custom', description: 'The first American crewed spacecraft: a one-man capsule under a solid-rocket escape tower, landing in the sea on parachutes.', crewed: true, size: { width: 1.892, height: 7.9, depth: 1.892 }, exposed: { diameter: 1.892, length: 7.9, noseLength: 7.9 }, carriers: ['mercuryredstone'], descent: 'mercury' },
+  { id: 'apollo', kind: 'apollo', name: 'Apollo CSM and LM', mass: 49735, typicalOrbit: 'custom', description: 'Apollo 11: Columbia, the command and service module, and Eagle, the lunar module folded in its adapter under the escape tower — 49.7 t on top of the Saturn V.', crewed: true, size: { width: 6.604, height: 24.93, depth: 6.604 }, exposed: { diameter: 6.604, length: 24.93, noseLength: 24.93 }, carriers: ['saturnv'] },
 ];
 
 export const satelliteById = (id: string): SatelliteSpec => {

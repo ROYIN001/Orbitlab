@@ -24,6 +24,7 @@ const AREA: Record<SatelliteKind, number> = {
   ps1: 0.26,      // Sputnik 1: a 0.58 m sphere (its four whips add next to nothing)
   vostok: 6,      // Vostok 3KA: the 2.3 m sphere and the 2.43 × 2.25 m instrument module
   mercury: 2.8,   // the Mercury capsule, 1.89 m across and 2.1 m long
+  apollo: 68,     // CSM, and the LM in its adapter: a quarter of their 270 m² surface
 };
 
 export function spacecraftFor(kind: SatelliteKind, mass: number): Spacecraft {

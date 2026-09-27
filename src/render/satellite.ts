@@ -14,6 +14,8 @@ export interface SatelliteView {
   height: number;
   /** @param p deployment progress 0 (stowed) .. 1 (fully deployed) */
   setDeploy(p: number): void;
+  /** C01: the parts dropped on the way up (the Apollo escape tower) */
+  setJettisoned?(j: { tower: boolean } | undefined): void;
 }
 
 interface Hinge {
@@ -69,6 +71,8 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
   const slides: Slide[] = [];
   /** parts gone the moment deployment starts (Mercury's escape tower) */
   const shed: THREE.Object3D[] = [];
+  /** parts gone once the stack has dropped its tower (Apollo's) */
+  const towerParts: THREE.Object3D[] = [];
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4b048, metalness: 0.55, roughness: 0.35 });
   const foil = new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.8, roughness: 0.25 });
   const white = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.6, metalness: 0.05 });
@@ -330,6 +334,50 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       shed.push(tower);
       break;
     }
+    case 'apollo': {
+      // Apollo on the Saturn V (C01), from the instrument unit up: the spacecraft/LM
+      // adapter (SLA), a 8.5 m cone from the S-IVB's 6.6 m to the service module's
+      // 3.9 m with the lunar module folded inside; the service module; the command
+      // module under its boost protective cover; the escape tower — a four-legged
+      // truss, the solid motor and the canard section with its Q-ball nose.
+      // Proportions from the Saturn V flight manual (approximate).
+      const base = -h / 2, slaH = 8.53, smH = 3.94, cmH = 3.5;
+      const panel = new THREE.MeshStandardMaterial({ color: 0xdcdcd8, roughness: 0.55, metalness: 0.25 });
+      const sla = new THREE.Mesh(new THREE.CylinderGeometry(1.956, w / 2, slaH, 40, 1, true), panel);
+      sla.position.y = base + slaH / 2;
+      const sm = new THREE.Mesh(new THREE.CylinderGeometry(1.956, 1.956, smH, 40), new THREE.MeshStandardMaterial({ color: 0xc9ccd1, roughness: 0.35, metalness: 0.7 }));
+      sm.position.y = base + slaH + smH / 2;
+      const bpc = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 1.956, cmH, 40), white);
+      bpc.position.y = base + slaH + smH + cmH / 2;
+      g.add(sla, sm, bpc);
+      // black radiator panels round the service module's top
+      const rad = new THREE.Mesh(new THREE.CylinderGeometry(1.962, 1.962, 0.9, 40, 1, true), new THREE.MeshStandardMaterial({ color: 0x2a2b2e, roughness: 0.6 }));
+      rad.position.y = base + slaH + smH - 0.6;
+      g.add(rad);
+      const tower = new THREE.Group();
+      const t0 = base + slaH + smH + cmH, legs = 3.0, rBot = 0.95, rTop = 0.33;
+      const red = new THREE.MeshStandardMaterial({ color: 0xb8371f, roughness: 0.6 });
+      for (let i = 0; i < 4; i++) {
+        const a = Math.PI / 4 + (i * Math.PI) / 2;
+        const x0 = Math.cos(a) * rBot, z0 = Math.sin(a) * rBot, x1 = Math.cos(a) * rTop, z1 = Math.sin(a) * rTop;
+        const len = Math.hypot(x1 - x0, legs, z1 - z0);
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, len, 6), red);
+        leg.position.set((x0 + x1) / 2, t0 - 0.2 + legs / 2, (z0 + z1) / 2);
+        leg.lookAt(x1, t0 - 0.2 + legs, z1);
+        leg.rotateX(Math.PI / 2);
+        tower.add(leg);
+      }
+      const motorH = 4.7, motorY = t0 - 0.2 + legs + motorH / 2;
+      const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, motorH, 20), white);
+      motor.position.y = motorY;
+      const canard = new THREE.Mesh(new THREE.ConeGeometry(0.33, h / 2 - (motorY + motorH / 2), 20), white);
+      canard.position.y = (motorY + motorH / 2 + h / 2) / 2;
+      tower.add(motor, canard);
+      g.add(tower);
+      shed.push(tower);
+      towerParts.push(tower);
+      break;
+    }
     case 'crew': {
       const capsule = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.22, w / 2, h * 0.45, 28), white);
       capsule.position.y = h * 0.28;
@@ -363,5 +411,8 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
     }
   };
   setDeploy(0);
-  return { group: g, height: h, setDeploy };
+  const setJettisoned = (j: { tower: boolean } | undefined): void => {
+    for (const o of towerParts) o.visible = !j?.tower;
+  };
+  return { group: g, height: h, setDeploy, ...(towerParts.length ? { setJettisoned } : {}) };
 }

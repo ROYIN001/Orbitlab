@@ -106,6 +106,12 @@ export function engineLayout(id: string, engine: EngineSpec, R: number, nozzleLe
     // --- solid strap-ons: one nozzle each
     case 'gem63': case 'gem63xl': case 'p120c': case 'srb3': case 'psomg': case 'psoma':
       return { nozzles: [{ x: 0, z: 0, r: R * 0.62, len: R * 1.1 }], verniers: [], clusterRadius: R * 0.75 };
+    // --- Saturn V (C01): five F-1s and five J-2s in a cross — the four outboard
+    // engines first, the centre one (index 4, the one each stage shuts down early)
+    // last — then one J-2 on the S-IVB
+    case 'sic': return { nozzles: [...ring(4, R * 0.78, 1.88, 5.8, Math.PI / 4), { x: 0, z: 0, r: 1.88, len: 5.8 }], verniers: [], clusterRadius: R * 1.1 };
+    case 'sii': return { nozzles: [...ring(4, R * 0.54, 0.99, 3.4, Math.PI / 4), { x: 0, z: 0, r: 0.99, len: 3.4 }], verniers: [], clusterRadius: R * 0.8 };
+    case 'sivb': return { nozzles: [{ x: 0, z: 0, r: 0.99, len: 3.4 }], verniers: [], clusterRadius: 1.2 };
     case 'urm1': return { nozzles: [{ x: 0, z: 0, r: R * 0.55, len: R * 1.1 }], verniers: [], clusterRadius: R * 0.65 };
     case 'urm1core': return { nozzles: [{ x: 0, z: 0, r: R * 0.55, len: R * 1.1 }], verniers: ring(4, R * 0.8, R * 0.07, R * 0.2), clusterRadius: R * 0.65 };
     case 'k3': return { nozzles: ring(2, R * 0.36, R * 0.28, R * 0.8), verniers: [], clusterRadius: R * 0.68 };

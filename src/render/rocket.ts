@@ -107,6 +107,8 @@ interface StagePart {
   boosters: BoosterSet[];
   /** Starship's flaps, folded on the recorded deflections */
   flaps: FlapVisual[];
+  /** C01: the Saturn V's S-IC/S-II interstage ring round the S-II's engines, dropped 30 s into its burn */
+  ring?: THREE.Mesh;
   /** frost on the oxygen tank (the R-7's Blok A) */
   frost: FrostCoat | null;
   /** Blok I's aft skirt, shed after Blok A has gone */
@@ -510,7 +512,15 @@ export class RocketView {
       boosters.push({ spec: b, units, frameIndex: -1 });
     }
 
-    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters, flaps, frost, skirt };
+    let ring: THREE.Mesh | undefined;
+    if (spec.jettisons?.some((j) => j.part === 'interstage')) {
+      const ringH = bellLength + 0.4;
+      ring = new THREE.Mesh(new THREE.CylinderGeometry(r, r, ringH, 40, 1, true), bodyMat);
+      ring.position.y = -ringH / 2;
+      g.add(ring);
+    }
+    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters, flaps, frost, skirt,
+      ...(ring ? { ring } : {}) };
   }
 
   /**
@@ -723,6 +733,7 @@ export class RocketView {
       if (part.flaps.length) foldShipFlaps(part.flaps, frame.rigid);
       part.frost?.update(sinceLiftoff);
       part.skirt?.update(sinceFirstSep);
+      if (part.ring) part.ring.visible = !frame.jettisoned?.interstage;
       part.group.position.y = y;
       const burning = sf.burning;
       // The *effective* core throttle, not the guidance command: Angara's core
@@ -830,6 +841,7 @@ export class RocketView {
       // a payload flown in the open stands on the stage; one in a fairing half a metre up inside it
       satG.position.y = top + this.satellite.height / 2 + (this.spec.exposedPayload ? 0 : 0.5);
       this.satellite.setDeploy(0);
+      this.satellite.setJettisoned?.(frame.jettisoned);
       satG.visible = this.spec.exposedPayload ? true : !this.spec.fairing ? false : !frame.fairingAttached;
     }
   }

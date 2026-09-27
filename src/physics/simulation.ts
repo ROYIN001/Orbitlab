@@ -372,6 +372,53 @@ export class Simulation {
     }
   }
   /**
+   * C01: the active stage's planned engine events that are due (`StageSpec.engineEvents`): an
+   * engine shut down as the FDIR shuts one (`shutEngines`, so the six-DOF budget loses that
+   * chamber and the others steer on), or a new operating point for every engine — the stage's
+   * spec is replaced by one with the shifted engine, which the point mass, the six-DOF mass model
+   * and the guidance all read. And the parts the stage drops on its way (`StageSpec.jettisons`).
+   */
+  private engineSchedule(): void {
+    const st = this.vehicle.active, events = st?.spec.engineEvents ?? [];
+    if (!st || (!events.length && !st.spec.jettisons?.length) || !st.ignited || st.cutoff || st.burnedOut) return;
+    const since = this.state.t - st.ignitionTime;
+    let done = st.engineEventsDone ?? 0;
+    while (done < events.length && events[done].t <= since + 1e-9) {
+      const e = events[done++];
+      const at = st.ignitionTime + e.t;
+      if (e.shutdown?.length) {
+        const n = st.spec.engine.count;
+        for (const i of e.shutdown) {
+          if (st.shutEngines?.includes(i)) continue;
+          st.shutEngines = [...(st.shutEngines ?? []), i];
+          st.engineFraction = Math.max(0, st.engineFraction - 1 / n);
+        }
+        this.event('evt.ceco', 'info', { ...this.stageParams(st), n: Math.round(n * st.engineFraction), total: n }, at);
+      }
+      if (e.mixture) {
+        st.spec = { ...st.spec, engine: { ...st.spec.engine, ...e.mixture } };
+        this.event('evt.mixtureShift', 'info', { ...this.stageParams(st) }, at);
+      }
+    }
+    st.engineEventsDone = done;
+    const drops = st.spec.jettisons;
+    let dropped = st.jettisonsDone ?? 0;
+    while (drops && dropped < drops.length && drops[dropped].t <= since + 1e-9) {
+      const j = drops[dropped++];
+      if (j.part === 'interstage') {
+        st.spec = { ...st.spec, dryMass: st.spec.dryMass - j.mass };
+        this.vehicle.jettisoned.interstage = true;
+        this.event('evt.interstageSep', 'success', { ...this.stageParams(st) }, st.ignitionTime + j.t);
+      } else {
+        this.vehicle.payloadMass = Math.max(0, this.vehicle.payloadMass - j.mass);
+        this.vehicle.jettisoned.tower = true;
+        this.event('evt.towerJettison', 'success', {}, st.ignitionTime + j.t);
+      }
+    }
+    st.jettisonsDone = dropped;
+  }
+
+  /**
    * G08: a failure of the control system from now on (or at its time, if later). A flight that
    * carries no failures takes them from here, with the FDIR as `fdir` says (off by default); `fdir`
    * also switches it on a flight that does. Six-DOF and flying; otherwise the reason it cannot.
@@ -735,6 +782,7 @@ export class Simulation {
   /** @internal */
   stepFlight(dt: number): number {
     const s = this.state;
+    this.engineSchedule();
     const rm = norm(s.r);
     const alt = rm - R_EARTH;
     const atm = atmosphere(alt);

@@ -66,6 +66,21 @@ export interface BoosterGroupSpec {
   baseOffset?: number;
 }
 
+/**
+ * A planned change in a stage's engines partway through its burn (roadmap
+ * C01: the Saturn V), s after the stage's first ignition: engines shut down
+ * early — the centre engine of the S-IC and the S-II, cut off to hold the
+ * acceleration down — or a shift of the mixture ratio that trades thrust for
+ * specific impulse, as the S-II's J-2s flew from about T+498 s.
+ */
+export interface EngineEvent {
+  t: number;
+  /** engines shut down, by their index in the stage's layout (src/data/engine-layout.ts) */
+  shutdown?: number[];
+  /** a new operating point per engine: vacuum and sea-level thrust, N, and specific impulse, s */
+  mixture?: { thrustVac: number; thrustSL: number; ispVac: number; ispSL: number };
+}
+
 export interface StageSpec {
   id: string;
   name: string;
@@ -101,6 +116,15 @@ export interface StageSpec {
   nozzleLength?: number;
   /** Synthetic stage representing the spacecraft's own propulsion */
   isSpacecraft?: boolean;
+  /** planned engine shutdowns and mixture shifts during the burn, in time order (C01) */
+  engineEvents?: EngineEvent[];
+  /**
+   * Parts dropped during this stage's burn, s after its first ignition, in time
+   * order (C01: the Saturn V's S-II aft interstage ring, off 28 s into the S-II's
+   * burn, and the Apollo escape tower six seconds later): an `interstage` comes
+   * off this stage's dry mass, a `tower` off the payload's.
+   */
+  jettisons?: { t: number; mass: number; part: 'interstage' | 'tower' }[];
 }
 
 export interface FairingSpec {
@@ -264,7 +288,8 @@ export type SatelliteKind =
   | 'crewDragon'
   | 'ps1'
   | 'vostok'
-  | 'mercury';
+  | 'mercury'
+  | 'apollo';
 
 export interface SatelliteSpec {
   id: string;

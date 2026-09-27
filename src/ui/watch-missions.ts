@@ -24,7 +24,7 @@ import type { FlownRecord } from './flown';
 export type WatchMissionId = 'soyuzIss' | 'falcon9Bandwagon' | 'starshipFlight5' | 'falconHeavyArabsat' | 'ariane6AmazonLeo' | 'electronSso'
   | 'soyuzMs10' | 'soyuzT10' | 'soyuz18a' | 'soyuzMsDocking'
   | 'soyuzMs16' | 'soyuzMs25' | 'falcon9Orbcomm2' | 'angaraA5Flight1' | 'h2aHayabusa2' | 'falcon9Demo2'
-  | 'sputnik1' | 'vostok1' | 'mr3';
+  | 'sputnik1' | 'vostok1' | 'mr3' | 'apollo11';
 
 export interface WatchMission {
   id: WatchMissionId;
@@ -243,6 +243,19 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       { key: 'evt.maxQ', t: 84 }, { key: 'evt.seco', t: 141.8 }, { key: 'evt.payloadSep', t: 152.3 },
     ], orbit: { perigee: -6214, apogee: 187.5, inclination: 30.55, approx: true } },
     titleKey: 'watch.mission.mr3', blurbKey: 'watch.mission.mr3Blurb', payloadKey: 'watch.payload.mr3' },
+  // Apollo 11, 16 July 1969, 13:32:00 UTC (range zero) from LC-39A: the Saturn V
+  // AS-506 on azimuth 72.058° into a 183.2 × 186.0 km parking orbit at 32.521°
+  // (FER MPR-SAT-FE-69-9; docs/PHYSICS.md §13.8). The flight goes on from
+  // there — the S-IVB's restart for the Moon — in the parts that follow.
+  { id: 'apollo11', vehicleId: 'saturnv', siteId: 'ksc39a', satelliteId: 'apollo', orbitId: 'custom', payloadMass: 49735,
+    orbit: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, argPerigee: 0, raanMode: 'free' }, launchTime: '1969-07-16T13:32:00Z',
+    flown: { events: [
+      { key: 'evt.maxQ', t: 83.0 }, { key: 'evt.ceco', t: 135.20 }, { key: 'evt.meco', t: 161.63 }, { key: 'evt.stageSep', t: 162.30 },
+      { key: 'evt.interstageSep', t: 192.3 }, { key: 'evt.towerJettison', t: 197.9 }, { key: 'evt.ceco', n: 2, t: 460.62 },
+      { key: 'evt.mixtureShift', t: 498.0, approx: true }, { key: 'evt.stageCutoff', t: 548.22 }, { key: 'evt.stageSep', n: 2, t: 549.00 },
+      { key: 'evt.seco', t: 699.33 },
+    ], orbit: { perigee: 183.2, apogee: 186.0, inclination: 32.521 } },
+    titleKey: 'watch.mission.apollo11', blurbKey: 'watch.mission.apollo11Blurb', payloadKey: 'watch.payload.apollo11' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a
   // 250 × 254 km parking orbit at 30.0°, below the pad's 30.4° latitude — a
   // yaw the model does not fly, so it aims at the lowest plane it can reach.
