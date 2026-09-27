@@ -96,3 +96,23 @@ export function withoutEngineerSettings(dynamics: DynamicsConfig): DynamicsConfi
 export function hasAdjustments(overrides: Partial<GuidanceParams>, dynamics: DynamicsConfig | undefined): boolean {
   return Object.keys(overrides).length > 0 || engineerSettings(dynamics).length > 0;
 }
+
+// ─── the verdict's payload fix ─────────────────────────────────────────────
+
+/**
+ * The heaviest payload, in whole `step`s up to `current`, that `passes` —
+ * found by bisection, since a lighter payload is never harder to fly — or
+ * null when not even one step does (the orbit or the site is what stops the
+ * mission, not the mass).
+ */
+export function heaviestPassing(current: number, step: number, passes: (mass: number) => boolean): number | null {
+  let hi = Math.floor(current / step);
+  if (hi < 1 || !passes(step)) return null;
+  let lo = 1;
+  if (passes(hi * step)) return hi * step;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (passes(mid * step)) lo = mid; else hi = mid;
+  }
+  return lo * step;
+}

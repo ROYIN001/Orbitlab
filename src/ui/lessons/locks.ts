@@ -14,7 +14,7 @@ import type { LockKey } from '../../lessons/types';
 function selectors(key: LockKey): string[] {
   const label = (k: string) => `[aria-label="${CSS.escape(t(k))}"]`;
   switch (key) {
-    case 'setup.vehicle': return [label('setup.vehicle')];
+    case 'setup.vehicle': return [label('setup.vehicle'), '.vehicle-cards button'];
     case 'setup.site': return [label('setup.site')];
     case 'setup.satellite': return [label('setup.satellite')];
     case 'setup.payloadMass': return [label('setup.payloadMass')];

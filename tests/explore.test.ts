@@ -4,7 +4,7 @@
  * can be undone, and a lesson can still ask for the guidance to be shown.
  */
 import { describe, expect, it } from 'vitest';
-import { AUTO_GUIDANCE_FIELDS, autoGuidanceRows, engineerSettings, hasAdjustments, withoutEngineerSettings } from '../src/ui/explore';
+import { AUTO_GUIDANCE_FIELDS, autoGuidanceRows, engineerSettings, hasAdjustments, heaviestPassing, withoutEngineerSettings } from '../src/ui/explore';
 import { guidanceForVehicle } from '../src/physics/defaults';
 import { Simulation } from '../src/physics/simulation';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
@@ -12,7 +12,15 @@ import { BUILTIN_LESSONS } from '../src/lessons/catalog';
 import { lessonFileText, readLesson, type FileIssue } from '../src/lessons/lesson-file';
 import { EXPLORE_CHART_IDS, CHART_IDS } from '../src/ui/telemetry-charts';
 import { rigidMission } from './rigid-harness';
-import type { DynamicsConfig } from '../src/types';
+import type { DynamicsConfig, MissionConfig } from '../src/types';
+import { liftShare, marginalMission, missionVerdict, payloadStep } from '../src/ui/panel';
+import { siteById } from '../src/data/sites';
+import { satelliteById } from '../src/data/satellites';
+import { orbitById } from '../src/data/orbits';
+import { launchWindows, planMission, resolveTarget } from '../src/physics/mission';
+import { probeInsertion } from '../src/physics/autotune';
+import { DEFAULT_FAILURE } from '../src/physics/defaults';
+import { RAD } from '../src/physics/constants';
 
 describe('computed guidance', () => {
   it('shows the pitch programme the simulation flies, in the units of the fields it replaces', () => {
@@ -99,5 +107,60 @@ describe('lessons in Explore', () => {
     // 1.4 reads Δv left, 2.1 the dynamic pressure, 3.3 the load factor
     for (const id of ['dv', 'q', 'g'] as const) expect(EXPLORE_CHART_IDS).toContain(id);
     for (const id of EXPLORE_CHART_IDS) expect(CHART_IDS).toContain(id);
+  });
+});
+
+describe('the pre-flight light and its fixes', () => {
+  const soyuz = vehicleById('soyuz21a');
+  const baikonur = siteById('baikonur');
+  const iss = orbitById('iss');
+  const crew = satelliteById('crew');
+  const launchTime = launchWindows(iss, baikonur, new Date('2026-09-27T00:00:00Z'), 1)[0].time;
+  const config = (payloadMass: number, at = launchTime): MissionConfig => ({
+    vehicleId: 'soyuz21a', siteId: 'baikonur', satelliteId: 'crew', orbit: { ...iss }, launchTime: at,
+    guidance: guidanceForVehicle(soyuz), guidanceResolved: true, failure: { ...DEFAULT_FAILURE },
+    boosterRecovery: false, payloadMassOverride: payloadMass,
+  });
+  /** The verdict as the panel reaches it: the plan, and the insertion flown when the budget calls it marginal. */
+  const verdict = (payloadMass: number, at = launchTime) => {
+    const cfg = config(payloadMass, at);
+    const plan = planMission(cfg, baikonur, soyuz);
+    const insertion = marginalMission(soyuz, crew, payloadMass, plan, iss)
+      ? probeInsertion({ ...cfg, dynamics: { model: 'pointMass', wind: 'calm', seed: 20260919 } }) : null;
+    return missionVerdict({ spec: soyuz, site: baikonur, orbit: iss, satellite: crew, payloadMass,
+      inclinationDeg: resolveTarget(iss, baikonur, at).inclination * RAD, plan, insertion, failureMode: 'none', siteReassigned: false });
+  };
+
+  it('names the cause of each verdict, and says when the launch misses its window', () => {
+    expect(verdict(5000)).toMatchObject({ level: 'ok', cause: 'ready', offWindow: false });
+    expect(verdict(7150)).toMatchObject({ level: 'warn', cause: 'margin' });
+    expect(verdict(9500)).toMatchObject({ level: 'fail', cause: 'overCapacity' });
+    const late = verdict(5000, new Date(launchTime.getTime() + 5 * 3600e3));
+    expect(late).toMatchObject({ level: 'warn', cause: 'ready', offWindow: true });
+  });
+
+  it('lightens an overloaded Soyuz to the heaviest payload its verdict passes, and no further', () => {
+    const passes = (m: number) => verdict(m).level !== 'fail';
+    const mass = heaviestPassing(9500, payloadStep(soyuz), passes);
+    expect(mass).not.toBeNull();
+    expect(passes(mass!)).toBe(true);
+    expect(passes(mass! + payloadStep(soyuz))).toBe(false);
+    expect(mass!).toBeLessThanOrEqual(soyuz.payloadLEO);
+  });
+
+  it('bisects to the last passing step, and gives up when not even one step passes', () => {
+    const calls: number[] = [];
+    expect(heaviestPassing(10_000, 100, (m) => { calls.push(m); return m <= 4321; })).toBe(4300);
+    expect(calls.length).toBeLessThan(12);
+    expect(heaviestPassing(10_000, 100, () => false)).toBeNull();
+    expect(heaviestPassing(50, 100, () => true)).toBeNull();
+    expect(heaviestPassing(800, 100, () => true)).toBe(800);
+  });
+
+  it('draws what each vehicle lifts on a scale where Electron and Saturn V both fit', () => {
+    const shares = VEHICLES.map((v) => liftShare(v.payloadLEO));
+    for (const share of shares) { expect(share).toBeGreaterThan(0); expect(share).toBeLessThanOrEqual(1); }
+    expect(liftShare(vehicleById('electron').payloadLEO)).toBeLessThan(liftShare(vehicleById('falcon9').payloadLEO));
+    expect(liftShare(vehicleById('falcon9').payloadLEO)).toBeLessThan(liftShare(vehicleById('saturnv').payloadLEO));
   });
 });
