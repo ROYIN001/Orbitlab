@@ -17,9 +17,9 @@
  * DOM-free; tests/overflights.test.ts holds it to R03's passes and to the
  * published local times of sun-synchronous imagers.
  */
-import { gmst } from '../physics/orbital';
 import { v3, type Vec3 } from '../physics/vec3';
-import { eciToEcef, geodeticToEcef, type GroundStation } from './applications';
+import { geodeticToEcef, type GroundStation } from './applications';
+import { temeToItrf } from './earth-orientation';
 import { findPasses, sunElevation, type Pass } from './passes';
 import type { SkyObject } from './real-sky';
 import { minutesSinceEpoch, sgp4 } from './sgp4';
@@ -49,7 +49,7 @@ const R_MEAN = 6371e3;
 export function overflightOf(o: SkyObject, st: GroundStation, pass: Pass): Overflight | null {
   const jd = pass.top.jd;
   if (sgp4(o.sat, minutesSinceEpoch(o.sat, jd), R, V) !== 0) return null;
-  const sat = eciToEcef(v3(R[0] * 1e3, R[1] * 1e3, R[2] * 1e3), gmst(jd));
+  const sat = temeToItrf(v3(R[0] * 1e3, R[1] * 1e3, R[2] * 1e3), jd);
   const site = geodeticToEcef(st);
   const down = v3(-sat.x, -sat.y, -sat.z), toSite = v3(site.x - sat.x, site.y - sat.y, site.z - sat.z);
   const utcHours = (((jd - 0.5) % 1) + 1) % 1 * 24;

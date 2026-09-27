@@ -44,6 +44,7 @@ import { screenInSlices, type Conjunction } from '../../orbit/screening';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
 import { predictReentry, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
 import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
+import { setEarthOrientation } from '../../orbit/earth-orientation';
 import { CZ5B_STAGES } from '../../data/cz5b';
 import type { SpaceWeather } from '../../provider/space-weather';
 
@@ -133,8 +134,10 @@ export class RealSky {
   load(): void {
     if (this.status.state === 'loading' || this.status.state === 'ready') return;
     this.status = { state: 'loading' };
+    // P2.5: the Earth's orientation, for placing the satellites over the ground; without it UT1 is taken for UTC
+    const eop = this.host.provider().load('earthOrientation').then((set) => set.data, () => null);
     this.host.provider().load('satellites').then(
-      (set) => { this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); },
+      async (set) => { setEarthOrientation(await eop); this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); },
       (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); },
     );
   }

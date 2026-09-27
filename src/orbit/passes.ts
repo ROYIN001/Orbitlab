@@ -5,8 +5,10 @@
  * the observer stands is dark. The place is entered by hand or picked from a
  * list, and never leaves the page.
  *
- * The satellite is where SGP4 puts it (src/orbit/real-sky.ts); a dish's look
- * angles are src/orbit/applications.ts's, on the WGS-84 ellipsoid. Heights
+ * The satellite is where SGP4 puts it (src/orbit/real-sky.ts), turned into
+ * the Earth-fixed frame by the sidereal time of UT1 and the pole's wander
+ * (src/orbit/earth-orientation.ts, P2.5); a dish's look angles are
+ * src/orbit/applications.ts's, on the WGS-84 ellipsoid. Heights
  * are geometric, without refraction, as an almanac prints them: near the
  * horizon the air lifts a satellite by about half a degree, so it is seen a
  * few seconds before its listed rise.
@@ -22,9 +24,10 @@
  * element sets.
  */
 import { R_EARTH } from '../physics/constants';
-import { gmst, sunDirectionEci } from '../physics/orbital';
+import { sunDirectionEci } from '../physics/orbital';
 import { v3, type Vec3 } from '../physics/vec3';
-import { eciToEcef, lookAngles, type GroundStation } from './applications';
+import { lookAngles, type GroundStation } from './applications';
+import { temeToItrf } from './earth-orientation';
 import { minutesSinceEpoch, sgp4 } from './sgp4';
 import { skyFacts, type SkyObject } from './real-sky';
 
@@ -68,21 +71,21 @@ export function sunElevation(st: GroundStation, jd: number): number {
   const s = sunDirectionEci(jd);
   // the Sun's direction, far enough that the station's offset from the centre does not matter
   const far = 1.496e11;
-  return lookAngles(st, eciToEcef(v3(s.x * far, s.y * far, s.z * far), gmst(jd))).elevation;
+  return lookAngles(st, temeToItrf(v3(s.x * far, s.y * far, s.z * far), jd)).elevation;
 }
 
 /** What an observer at `st` sees of the satellite at `jd`; null where SGP4 cannot place it. */
 export function lookFrom(o: SkyObject, st: GroundStation, jd: number): Look | null {
   const r = positionAt(o, jd);
   if (!r) return null;
-  const la = lookAngles(st, eciToEcef(r, gmst(jd)));
+  const la = lookAngles(st, temeToItrf(r, jd));
   return { jd, az: la.azimuth, el: la.elevation, range: la.range, sunlit: inSunlight(r, jd), sunEl: sunElevation(st, jd) };
 }
 
 /** The elevation alone, for the search (−π/2 where SGP4 gives nothing). */
 function elevation(o: SkyObject, st: GroundStation, jd: number): number {
   const r = positionAt(o, jd);
-  return r ? lookAngles(st, eciToEcef(r, gmst(jd))).elevation : -Math.PI / 2;
+  return r ? lookAngles(st, temeToItrf(r, jd)).elevation : -Math.PI / 2;
 }
 
 export interface Pass {

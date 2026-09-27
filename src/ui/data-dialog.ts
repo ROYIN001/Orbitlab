@@ -11,6 +11,7 @@ import { DATA_HOSTS, DATASET_IDS, type DatasetId } from '../provider/datasets';
 import type { DataProvider, Dataset } from '../provider/data-provider';
 import type { SpaceWeather } from '../provider/space-weather';
 import type { SatelliteCatalog } from '../provider/satellites';
+import type { EarthOrientation } from '../provider/earth-orientation';
 
 export interface DataDialogHost {
   mode(): DataMode;
@@ -27,7 +28,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 
 type Loaded = { state: 'loading' } | { state: 'done'; set: Dataset<unknown> } | { state: 'failed'; reason: string };
 
-const SET_NAME: Record<DatasetId, string> = { spaceWeather: 'data.set.spaceWeather', satellites: 'data.set.satellites' };
+const SET_NAME: Record<DatasetId, string> = { spaceWeather: 'data.set.spaceWeather', satellites: 'data.set.satellites', earthOrientation: 'data.set.earthOrientation' };
 const MODE_TEXT: Record<DataMode, readonly [string, string]> = {
   offline: ['data.offline.title', 'data.offline.text'],
   online: ['data.online.title', 'data.online.text'],
@@ -110,6 +111,7 @@ export class DataDialog extends Modal {
         li.append(el('span', 'data-set-status', `${t('data.asOf', { date: this.date(set.asOf) })} · ${from}`));
         if (id === 'spaceWeather') li.append(el('span', 'data-set-summary', this.spaceWeather(set.data as SpaceWeather)));
         if (id === 'satellites') li.append(el('span', 'data-set-summary', this.satellites(set.data as SatelliteCatalog)));
+        if (id === 'earthOrientation') li.append(el('span', 'data-set-summary', this.earthOrientation(set.data as EarthOrientation)));
         if (set.fallback) li.append(el('span', 'data-set-status warn', t('data.fallback', { reason: set.fallback })));
       }
       list.append(li);
@@ -124,6 +126,13 @@ export class DataDialog extends Modal {
 
   private satellites(c: SatelliteCatalog): string {
     return t('data.summary.satellites', { n: c.groups.reduce((n, g) => n + g.sets.length, 0).toLocaleString(getLang()), groups: c.groups.length });
+  }
+
+  private earthOrientation(e: EarthOrientation): string {
+    const k = Math.round((Date.parse(`${e.predictedFrom}T00:00:00Z`) - Date.parse(`${e.from}T00:00:00Z`)) / 86400000) - 1;
+    const day = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString(getLang(), { dateStyle: 'medium', timeZone: 'UTC' });
+    const last = new Date(Date.parse(`${e.from}T00:00:00Z`) + (e.dut1.length - 1) * 86400000).toISOString().slice(0, 10);
+    return t('data.summary.earthOrientation', { dut1: (e.dut1[Math.max(0, k)] * 1000).toFixed(0), date: day(new Date(Date.parse(`${e.from}T00:00:00Z`) + Math.max(0, k) * 86400000).toISOString().slice(0, 10)), until: day(last) });
   }
 
   private spaceWeather(sw: SpaceWeather): string {

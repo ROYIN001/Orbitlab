@@ -1,7 +1,7 @@
 /**
  * Fetch the data snapshots the app bundles for offline use (roadmap S04),
- * into public/data/: space weather from NOAA SWPC, and the satellite
- * catalogue from CelesTrak (R02). Run by hand (`npm run snapshots`), and by
+ * into public/data/: space weather from NOAA SWPC, the satellite catalogue
+ * from CelesTrak (R02), and the Earth's orientation from the IERS (P2.5). Run by hand (`npm run snapshots`), and by
  * the scheduled deploy (.github/workflows/deploy.yml), which builds the site
  * with what it fetched and never commits it.
  *
@@ -12,23 +12,28 @@
  * printed, a kept one as a GitHub Actions warning.
  *
  * Node 22.6 or newer, which runs TypeScript with its types stripped: this file
- * imports only src/provider/space-weather.ts and src/provider/satellites.ts,
- * which are self-contained for that reason. The files it writes are what
+ * imports only src/provider/space-weather.ts, src/provider/satellites.ts and
+ * src/provider/earth-orientation.ts, which are self-contained for that reason. The files it writes are what
  * src/provider/data-provider.ts `parseSnapshot` reads (tests/data-provider.test.ts
  * reads the bundled ones).
  */
 import { writeFileSync } from 'node:fs';
 import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather.ts';
 import { SATELLITE_URLS, parseCelestrakGp, validSatelliteCatalog } from '../src/provider/satellites.ts';
+import { IERS_FINALS_URL, parseIersFinals, validEarthOrientation } from '../src/provider/earth-orientation.ts';
 
 class Refused extends Error {}
 
 async function json(url: string): Promise<unknown> {
+  return JSON.parse(await text(url));
+}
+
+async function text(url: string): Promise<string> {
   for (let attempt = 1; ; attempt++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(60_000) });
       if (!res.ok) throw new Refused(`${url} answered ${res.status}`);
-      return await res.json();
+      return await res.text();
     } catch (error) {
       if (error instanceof Refused || attempt === 3) throw error;
       await new Promise((r) => setTimeout(r, 5000 * attempt));
@@ -70,6 +75,15 @@ const REFRESHES: Refresh[] = [
       const { data, asOf } = parseCelestrakGp(await all(SATELLITE_URLS));
       if (!validSatelliteCatalog(data)) throw new Error('the parsed data do not pass their own check');
       return { data, asOf, summary: data.groups.map((g) => `${g.id} ${g.sets.length}`).join(', ') };
+    },
+  },
+  {
+    id: 'earthOrientation', file: 'earth-orientation.json',
+    source: { name: 'IERS Earth Orientation Center, Bulletin A (finals2000A)', url: 'https://datacenter.iers.org/' },
+    async fetch() {
+      const { data, asOf } = parseIersFinals(await text(IERS_FINALS_URL));
+      if (!validEarthOrientation(data)) throw new Error('the parsed data do not pass their own check');
+      return { data, asOf, summary: `${data.dut1.length} days from ${data.from}, predicted from ${data.predictedFrom}` };
     },
   },
 ];

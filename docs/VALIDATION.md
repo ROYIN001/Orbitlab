@@ -27,12 +27,13 @@ Status on 2026-09-27:
 | Applications (O04) | Closed forms; THEOS and THEOS-2 as published (eoPortal); the satellite catalogue (CelesTrak) | Pointing, coverage, delay, link budget, swath held to them (§5), 2026-09-26 |
 | SGP4/SDP4 (R01) | The verification of AIAA 2006-6753 (SGP4-VER.TLE, tcppver.out); CelesTrak's documented element set | Every line of the reference output reproduced (§6), 2026-09-26 |
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
-| Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.35 s, angles within 0.004° (§6), 2026-09-26 |
+| Passes (R03) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places | Every event found; times within 0.34 s, angles within 0.005° (§6), 2026-09-27 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 | Re-entry prediction (M03) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013) | All four inside the ±20 % window predicted from their first element sets; errors −4.1 to +16.6 % (§7), 2026-09-27 |
 | Overflights (M02) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time (§7), 2026-09-26 |
 | Close approaches (M01) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade (§7), 2026-09-26 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
+| The Earth's orientation (P2.5) | Vallado et al., AIAA 2006-6753, Appendix C: TEME to ITRF with UT1 − UTC and polar motion; the IERS's finals2000A | The paper's Earth-fixed position within 71 mm (262 m before) (§6), 2026-09-27 |
 
 ## 1. Method
 
@@ -1015,9 +1016,38 @@ itself to against the same file. It is twenty times the output's printed precisi
   is the default, as in the paper.
 - A Julian date held in one double resolves about 40 µs, which is a few millimetres of flight.
   The element set's epoch is kept as a whole day and a fraction, as the reference keeps it.
-- TEME is turned to the Earth-fixed frame by Greenwich mean sidereal time alone. UT1 − UTC
-  (under 0.9 s) and polar motion are left out. They can move a point on the ground by up to about
-  400 m, less than an element set's own error, which is kilometres (R04).
+- TEME is turned to the Earth-fixed frame by the Greenwich mean sidereal time of UT1, then the
+  pole's wander, from the IERS (P2.5, below). Until P2.5 UTC stood in for UT1 and the pole was left
+  alone: that moved a point by up to about 400 m, less than an element set's own error, which is
+  kilometres (R04), but for no reason the data could not remove.
+
+### The Earth's orientation (P2.5)
+
+SGP4's TEME turns into the Earth-fixed frame by the sidereal time of UT1 and then by the polar
+motion (Vallado et al., AIAA 2006-6753, Appendix C). UT1 − UTC and the pole's x_p, y_p are the
+IERS's, day by day from 2019 with Bulletin A's predictions a year ahead (`finals2000A`,
+[IERS data centre](https://datacenter.iers.org/)), bundled as a snapshot
+(`public/data/earth-orientation.json`) that the scheduled build refreshes. The IERS sends no
+cross-origin header, so a browser cannot fetch it: the snapshot is used in both data modes
+(`src/provider/earth-orientation.ts`, `src/orbit/earth-orientation.ts`,
+`tests/earth-orientation.test.ts`). The tolerance, a metre, was fixed before the comparison.
+
+| case | reference | model | tolerance |
+| --- | --- | --- | --- |
+| the paper's example: 2004-04-06 07:51:28.386 UTC, ΔUT1 −0.439 961 s, x_p −0.140 682″, y_p 0.333 309″ | r_ITRF = (−1033.479 383 00, 7901.295 275 40, 6380.356 595 80) km from r_TEME = (5094.180 107 20, 6127.644 705 20, 6380.344 532 70) km | 71 mm from it | 1 m |
+| the same without the pole's wander | — | 16.4 m off | — |
+| the same with UTC for UT1 as well, as before P2.5 | — | 262 m off | — |
+| a leap second between two days | the day keeps its own UT1 − UTC to midnight | so | exact |
+
+**Findings.**
+
+- In 2026 UT1 − UTC is small (−0.018 s at the end of September), so the change moves today's
+  satellites by only some 8 m over the ground; it was 0.44 s in the paper's example and has been up
+  to 0.9 s.
+- Skyfield's built-in timescale (1.55) predicts UT1 − UTC for the R03 fixtures' dates from its own
+  release, +0.095 s against the IERS's measured −0.018 s. With the IERS values the model moves
+  some 55 m from Skyfield: the R03 comparison below is now within 0.34 s and 0.005° rather than
+  0.35 s and 0.004°. Skyfield is the one extrapolating there.
 
 ### The satellite catalogue and its formats (R02)
 
@@ -1071,19 +1101,20 @@ made them). The tolerances were set before the comparison.
 | quantity | model against Skyfield | tolerance |
 | --- | --- | --- |
 | the events, in order: rise, highest point(s), set | the same, all six cases | exact |
-| rise and set times | within 0.35 s | 2 s |
+| rise and set times | within 0.34 s | 2 s |
 | time of the highest point | within 0.11 s | 5 s |
-| elevation at every event | within 0.004° | 0.02° |
-| azimuth, as arc across the sky | within 0.003° | 0.02° |
-| range | within 43 m | 1 km |
+| elevation at every event | within 0.005° | 0.02° |
+| azimuth, as arc across the sky | within 0.004° | 0.02° |
+| range | within 53 m | 1 km |
 | the Sun's elevation at the place | within 0.005° | 0.05° |
 | the satellite sunlit or not, at every event | the same, 249 of 249 | exact |
 | the ISS into and out of the Earth's shadow (31 edges in a day) | on the same side 3 s either side of each | 3 s |
 
 **Findings.**
 
-- Leaving out UT1 − UTC and polar motion costs well under a second in the times of rise and set,
-  which is less than the element set's own error.
+- The figures are with the IERS's UT1 and pole (P2.5); with UTC for UT1, as first compared, they
+  were 0.35 s, 0.11 s, 0.004°, 0.003° and 43 m. The small change is Skyfield's own prediction of
+  UT1 for these dates (above).
 - Elevations are geometric. Refraction lifts a satellite on the horizon by about half a degree,
   so it is seen some seconds before its listed rise. The page says so.
 - A pass of half a day or more belongs to a high orbit (GPS, a geostationary satellite). Its

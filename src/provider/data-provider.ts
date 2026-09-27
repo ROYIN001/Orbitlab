@@ -166,11 +166,14 @@ export class OnlineProvider implements DataProvider {
 
   async load<K extends DatasetId>(id: K, signal?: AbortSignal): Promise<Dataset<DatasetTypes[K]>> {
     const def = DATASETS[id];
+    // a dataset no browser can fetch is its snapshot in either mode
+    if (!def.online) return this.offline.load(id, signal);
+    const online = def.online;
     const interval = def.minIntervalMs ?? 0;
     let oldest = Infinity;
     try {
       const { data, asOf } = await withTimeout(this.timeoutMs, signal, async (s) => {
-        const answers = await Promise.all(def.online.urls.map(async (url) => {
+        const answers = await Promise.all(online.urls.map(async (url) => {
           const host = new URL(url).hostname;
           if (interval) {
             // asked too recently: the answer, or the refusal, of then
@@ -191,7 +194,7 @@ export class OnlineProvider implements DataProvider {
           if (interval) await this.recent.put(url, { at: this.now(), body });
           return body;
         }));
-        return def.online.parse(answers);
+        return online.parse(answers);
       });
       if (!def.valid(data)) throw new Error('the answer is not the dataset it should be');
       const set: Dataset<DatasetTypes[K]> = { id, data, asOf, from: 'online', source: def.source };
