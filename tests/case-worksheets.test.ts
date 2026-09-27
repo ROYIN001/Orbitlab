@@ -7,6 +7,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { CASE_IDS, caseKey, caseWorksheet, cz5bNumbers, iridiumNumbers, theos2Numbers } from '../src/worksheets/cases';
 import { CASE_CHOICE_ITEMS, CASE_ITEM_IDS } from '../src/worksheets/case-ids';
+import { letterOf } from '../src/worksheets/bank-items';
 import { answerKeyHtml, worksheetsHtml } from '../src/worksheets/html';
 import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
 import HISTORY from '../src/data/solar-daily.json';
@@ -118,7 +119,8 @@ describe('the case sheets (P2.5)', () => {
       for (const i of items) {
         if (i.kind === 'choice') {
           expect(CASE_CHOICE_ITEMS).toContain(i.id);
-          expect(i.answer.text.slice(0, 1)).toBe(String.fromCharCode(97 + i.answer.index!));
+          // the key names the option by the letter the sheet prints beside it (it once said "c)" beside "в)")
+          expect(i.answer.text.startsWith(`${letterOf(lang, i.answer.index!)}) `), i.answer.text).toBe(true);
         } else {
           expect(CASE_CHOICE_ITEMS).not.toContain(i.id);
           expect(Number.isFinite(i.answer.tol), i.id).toBe(true);

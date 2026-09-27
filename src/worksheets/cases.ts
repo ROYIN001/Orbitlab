@@ -31,6 +31,7 @@ import { unitText } from '../lessons/text';
 import type { CaseKey } from '../lessons/types';
 import { CZ5B_CASE_STAGE, type CaseId } from './case-ids';
 import { fmt } from './flight-questions';
+import { letterOf } from './bank-items';
 import type { WsItem, Worksheet } from './types';
 
 export { CASE_IDS, type CaseId } from './case-ids';
@@ -61,10 +62,10 @@ function num(lang: Lang, id: string, prompt: string, unit: string, value: number
   };
 }
 
-/** A choice item: the right answer put in place `at` among the wrong ones; the key names its letter. */
-function choice(id: string, prompt: string, right: string, wrong: string[], at: number): WsItem {
+/** A choice item: the right answer put in place `at` among the wrong ones; the key names its letter, as the sheet letters it (а, б, в in Russian; ก, ข, ค in Thai). */
+function choice(lang: Lang, id: string, prompt: string, right: string, wrong: string[], at: number): WsItem {
   const options = [...wrong.slice(0, at), right, ...wrong.slice(at)];
-  return { kind: 'choice', id, prompt, options, answer: { text: `${String.fromCharCode(97 + at)}) ${right}`, index: at } };
+  return { kind: 'choice', id, prompt, options, answer: { text: `${letterOf(lang, at)}) ${right}`, index: at } };
 }
 
 // ─── Iridium 33 and Cosmos 2251 ───────────────────────────────────────────────
@@ -134,7 +135,7 @@ function iridiumSheet(lang: Lang): Omit<Worksheet, 'lang' | 'generatedAt'> {
           num(lang, 'radius', t('wsc.iridium.q.radius'), 'm', n.radius, 1, 0.1, t('wsc.iridium.w.radius')),
           num(lang, 'sigma', t('wsc.iridium.q.sigma'), 'm', n.sigmaMiss, 1, Math.max(0.5, n.sigmaMiss * 0.05), t('wsc.iridium.w.sigma')),
           num(lang, 'nsigma', t('wsc.iridium.q.nsigma'), '', nSigma, 0, Math.max(1, nSigma * 0.05), t('wsc.iridium.w.nsigma')),
-          choice('why', t('wsc.iridium.q.why'), t('wsc.iridium.why.right'), [t('wsc.iridium.why.b'), t('wsc.iridium.why.c'), t('wsc.iridium.why.d')], 2),
+          choice(lang, 'why', t('wsc.iridium.q.why'), t('wsc.iridium.why.right'), [t('wsc.iridium.why.b'), t('wsc.iridium.why.c'), t('wsc.iridium.why.d')], 2),
           num(lang, 'times', t('wsc.iridium.q.times'), '', n.pcCautious / 1e-4, 0, 30, t('wsc.iridium.w.times', { p: fmt(lang, n.pcCautious, 3) })),
         ],
       },
@@ -201,7 +202,7 @@ function cz5bSheet(lang: Lang, activity: Activity): Omit<Worksheet, 'lang' | 'ge
           num(lang, 'actual', t('wsc.cz5b.q.actual'), t('wsc.days'), n.actual, 2, 0.05, t('wsc.cz5b.w.actual')),
           num(lang, 'error', t('wsc.cz5b.q.error'), '%', err, 1, 1, t('wsc.cz5b.w.error')),
           num(lang, 'broadside', t('wsc.cz5b.q.broadside'), t('wsc.days'), broadsideLeft, 1, 0.5, t('wsc.cz5b.w.broadside', { a: fmt(lang, n.broadside, 1) })),
-          choice('why', t('wsc.cz5b.q.why'), t('wsc.cz5b.why.right'), [t('wsc.cz5b.why.b'), t('wsc.cz5b.why.c'), t('wsc.cz5b.why.d')], 1),
+          choice(lang, 'why', t('wsc.cz5b.q.why'), t('wsc.cz5b.why.right'), [t('wsc.cz5b.why.b'), t('wsc.cz5b.why.c'), t('wsc.cz5b.why.d')], 1),
         ],
       },
     ],
@@ -247,7 +248,7 @@ function theos2Sheet(lang: Lang, el: ElementSet): Omit<Worksheet, 'lang' | 'gene
           num(lang, 'height', t('wsc.theos2.q.height'), 'km', n.h / 1000, 0, 2, t('wsc.theos2.w.height')),
           num(lang, 'reach', t('wsc.theos2.q.reach'), 'km', n.reach / 1000, 0, 10, t('wsc.theos2.w.reach')),
           num(lang, 'lst', t('wsc.theos2.q.lst'), 'h', n.lst, 2, 0.02, t('wsc.theos2.w.lst')),
-          choice('why', t('wsc.theos2.q.why'), t('wsc.theos2.why.right'), [t('wsc.theos2.why.b'), t('wsc.theos2.why.c'), t('wsc.theos2.why.d')], 3),
+          choice(lang, 'why', t('wsc.theos2.q.why'), t('wsc.theos2.why.right'), [t('wsc.theos2.why.b'), t('wsc.theos2.why.c'), t('wsc.theos2.why.d')], 3),
         ],
       },
     ],
