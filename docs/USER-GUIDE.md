@@ -282,8 +282,10 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   deviations, why 10⁻⁵¹ was wrong), the Long March 5B stage that launched Tianhe (Cauchy's area,
   C_D·A/m, the ±20 % window against the day it fell) and THEOS-2 over Bangkok (the J₂ turn that
   makes an orbit sun-synchronous, how far it sees tilted 45°, the local time it passes). Each is
-  made in the page in the language on screen, as HTML to open and print. The lessons (§18) are
-  launches, flown and graded; these cases are not launches, so they come as sheets.
+  made in the page in the language on screen, as HTML to open and print, its units and option
+  letters in that language's own script. Each case is also a graded lesson (§18, lessons
+  6.1–6.3): while a case's lesson is open and not yet passed, its answer key here waits, and the
+  Long March 5B case study leaves out the error of the stage of Tianhe, which lesson 6.2 asks for.
 - **Search** by name, catalogue number or international designator, then pick a satellite. Its
   orbit and its track are drawn. The right panel gives its catalogue number and designator, the
   epoch of its element set and how old the set is, where it is now, its period, its mean perigee
@@ -969,10 +971,13 @@ The gold **Lessons** button in the top bar (and the fourth card on the landing p
 lessons page: a page of its own over the whole window below the top bar, like a mode, with two
 tabs — **Lessons** and **Placement test** — and **Back to the simulator** (or Esc, or the
 browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
-The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends.
-They are listed in five tracks — orbital mechanics, guidance and navigation, failures, attitude
-control, advanced missions — each with its number (1.1 … 5.5), a ✓ once passed and ● once tried.
-All twenty-one are written; the last three (5.3–5.5) fly the historical missions of roadmap C01.
+The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends,
+and three cases from the record, worked from their data. They are listed in six tracks — orbital
+mechanics, guidance and navigation, failures, attitude control, advanced missions, real cases —
+each with its number (1.1 … 6.3), a ✓ once passed and ● once tried. All twenty-four are written:
+5.3–5.5 fly the historical missions of roadmap C01, and 6.1–6.3 are P2.5's cases, worked in the
+Orbit section rather than flown. Track 6 is the built-in cases': a teacher's lesson put there shares
+their numbers.
 
 **A lesson.** Pick one: its mission is loaded into the setup panel, the app goes to the mode it
 needs (Explore or Engineer), and the settings it fixes are greyed out with a 🔒 — in lesson 1.2
@@ -981,8 +986,12 @@ the task, the criteria and the buttons. Launch; each criterion shows *waiting*, 
 (a bound that could still be broken), ✓ or ✗ — a peak such as q is failed the moment it is
 passed, everything else when the flight ends. Some lessons then ask for numbers you work out from
 your own flight (the period of the orbit you reached, the Δv of a burn, the peak load on the
-crew): type them in and **Check**. The grade is read from the recording's head, so scrubbing back
-through the replay never changes it. **Hint** reveals up to three hints, one at a time (the
+crew): type them in and **Check**. A wrong answer is only marked ✗, and can be worked again;
+**Show the answers** gives the values, but the attempt is then recorded as not passed, and a
+number once shown never counts as a pass in this browser (a lesson flies the same flight again, so
+the same number would do). The grades are formative: a worksheet's answer key is on the same
+device. The grade is read from the recording's head, so scrubbing back through the replay never
+changes it. **Hint** reveals up to three hints, one at a time (the
 results file says how many you used); **Start again** puts the lesson's mission back; **Copy
 link** gives an address that opens the lesson (`?lesson=orbit-first`). A setting the lesson fixes
 that is changed anyway — by a mission link or over WebMCP — fails the flight, and the strip says
@@ -1011,11 +1020,29 @@ which one.
 | 5.3 | Sputnik-1 (1957) | the payload mass | the 215 × 939 km orbit reached, and its period read (±0.2 min) |
 | 5.4 | Vostok-1 (1961) | the target orbit | the 181 × 327 km orbit Gagarin reached, and its period read (±0.2 min) |
 | 5.5 | Apollo 11: the way to the Moon (1969) | the target orbit | the S-IVB relit for the translunar injection (apogee past 300 000 km), and its Δv read (±3 %) |
+| 6.1 | THEOS-2 over Bangkok (Orbit section) | — worked from the data | the turn a sun-synchronous plane needs (±0.0005 °/day) and J₂'s (±0.01 °/day), the mean height (±2 km), the reach tilted 45° (±10 km), the local time over Bangkok (±0.02 h), and why a camera satellite flies such an orbit |
+| 6.2 | The Long March 5B stage of Tianhe (Orbit section) | — worked from the data | the tumbling cross-section (±1 m²) and C_D·A/m (±0.0003 m²/kg), the ±20 % window's two ends and the time actually left (±0.05 day each), the prediction's error (±1 point), the time broadside (±0.5 day), and why a window is given |
+| 6.3 | Iridium 33 and Cosmos 2251 (Engineer, Orbit section) | — worked from the data | the miss (±5 m), the speed (±0.05 km/s) and angle (±2°) of the meeting, the combined radius (±0.1 m), σ along the miss (±5 %, at least 0.5 m) and the miss in σ (±5 %, at least 1), the cautious probability against 1 in 10 000 (±30 times), and why 10⁻⁵¹ was wrong |
 
 The three historical lessons fly the vehicles, pads and dates of the real flights: the R-7 of
 1957 from Gagarin's Start with no upper stage, Vostok-K with Blok E, and Saturn V from LC-39A.
 The Moon is not part of the flight model, so Apollo 11 ends at the injection: the S-IVB raises
 the apogee to the Moon's distance, and what the Moon's gravity does three days later is left out.
+
+**A case lesson** (6.1–6.3) flies nothing. It opens the Orbit section's **Real satellites** at the
+case's satellite and tool — THEOS-2 with its overflights of Bangkok; the station, with the re-entry
+tool and its Long March 5B case study; the station, with the close approaches — at the lesson's
+level. The strip holds **The data**, the case sheet's own table (with the encounter plane for
+Iridium–Cosmos), and the sheet's questions: numbers to type, with their units, and one answer to
+choose. They are graded by the case sheet's key, with its tolerances (the table above), so the
+lesson and the printed key cannot disagree. The data are fixed when the lesson opens — THEOS-2's
+element set as the catalogue on screen has it, and the Sun's activity the re-entry is predicted with
+— so the table, the key and the grade stay together however the catalogue or the forecast changes
+meanwhile; the results file says which set and which forecast were used, and each **Check** counts
+as an attempt. After a pass (or once the answers are shown) each answer comes with its working, and
+the answer key and the Tianhe stage's error open in the Orbit section. **Show the tool** goes back to
+the case's tool; **Worksheet** makes the case's sheet, and its key once it gives nothing away. If
+the data cannot be read (the catalogue did not load), **Start again** reads them again.
 
 **The placement test** is 25 questions in six areas — 1 the basics of spaceflight, 2 orbital
 mechanics, 3 rocket performance, 4 guidance and navigation, 5 attitude control, 6 failures and
@@ -1055,7 +1082,9 @@ worksheets** makes one file with a page for each student and no answers; **Downl
 key** makes a separate file with every student's answers, the tolerance that counts as right, and
 how each is worked out with the flight's own numbers. Either as HTML to print (Print → Save as PDF)
 or as a Word document to edit first. Values the questions ask for (max-Q, the lift-off T/W) are
-left out of the sheet's event table.
+left out of the sheet's event table. A flight's sheet goes with the lesson the flight was flown in,
+or with none — not with whatever lesson is open when the sheet is made. With a case lesson open, the
+tab also offers that case's sheet and key, one for the whole class, from the data the lesson froze.
 
 **Keeping and handing in your work.** Progress and tests stay in this browser. **Export results**
 writes a `.orbitlab-results.json` file with your name (if you type it), each lesson's attempts,
@@ -1068,13 +1097,17 @@ lesson-file.ts`). A lesson is a mission document (as a mission file holds it, U0
 it locks, its criteria — a measure within bounds (`maxQ`, `dvLeft`, `orbit.inclination`, …), the
 outcome, an event, a number the student works out from the flight, or a check written in code —
 its hints, and its texts in English, Russian and Thai (a missing language falls back to English).
+A case lesson (`"kind": "case"`, with `"case"` one of `theos2`, `cz5b`, `iridium`) has no mission:
+its criteria name the case sheet's questions (`"item"`, as `src/worksheets/case-ids.ts` lists them),
+each optionally with a tolerance of its own for a number. A file that holds one is written as
+version 2; a file of flight lessons alone is still version 1, so an older copy of the app reads it.
 A question is a choice, several answers (`multi`), an ordering (`order`, its items in the right
 order), a calculation whose answer is an arithmetic expression of its drawn numbers, or a vehicle to
 recognise, with its area (1–6, as above), level and explanation, and optionally a chart of a
 recorded flight or one of the built-in diagrams (`src/lessons/assessment/diagrams.ts`). Anything that cannot be
 used is left out, and the catalogue says what and why. Over WebMCP, `list_lessons`,
 `start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
-the student and read how it is going — never the expected value of an answer.
+the student (a case lesson too) and read how it is going — never the expected value of an answer.
 
 ## Glossary
 

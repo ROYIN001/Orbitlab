@@ -202,7 +202,7 @@ message can be read (held to NASA CARA's test cases) and a whole catalogue scree
 thread, each imaging satellite's instrument judges whether it can image the place, the drag of a
 re-entry can be fitted to the object's own decay and a transfer orbit is carried with the Sun and
 the Moon (66 rocket stages of 2023–2025 and NAPA-2 as cases), the Watch tour goes on to the real
-satellites, and three real cases come as worksheets with answer keys
+satellites, and three real cases come as worksheets with answer keys and as graded lessons
 ([docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
