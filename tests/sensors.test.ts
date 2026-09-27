@@ -11,6 +11,9 @@
 import { describe, expect, it } from 'vitest';
 import { SENSORS } from '../src/data/sensors';
 import { canImage, groundAtIncidence, groundReach, reachEdges, sensorFor, sensorOf, type Sensor } from '../src/orbit/sensors';
+
+/** An agile camera whose limit is not published: no entry is one now, but the path stays for the next such satellite. */
+const unpublished: Sensor = sensorOf({ name: 'agile, limit unpublished', norad: [0], kind: 'optical', instrument: 'test', swathKm: 10, lookMaxDeg: null, resolutionM: 1, sources: ['https://example.org/'] });
 import { overflights, type Overflight } from '../src/orbit/overflights';
 import { skyObjects, type SkyObject } from '../src/orbit/real-sky';
 import { elementsFromRecord } from '../src/orbit/omm';
@@ -79,7 +82,7 @@ describe('the ground an instrument reaches, for the map (P2.5)', () => {
     expect(r).toBeCloseTo(groundReach((47 * Math.PI) / 180, 694e3), 6);
     expect(l).toBe(-r);
     expect(reachEdges(sensorFor(32382)!, 798e3)).toHaveLength(4);
-    expect(reachEdges(sensorFor(44804)!, 509e3)).toEqual([]);
+    expect(reachEdges(unpublished, 509e3)).toEqual([]);
   });
 });
 
@@ -111,9 +114,39 @@ describe('whether an instrument can image the place (P2.5)', () => {
   });
 
   it('does not judge where the limit is not published, and knows the retired', () => {
-    expect(canImage(sensorFor(44804)!, flight({})).can).toBeNull();
+    expect(canImage(unpublished, flight({}))).toEqual({ can: null, reason: 'noLimit' });
+    expect(canImage(unpublished, flight({ daylight: false }))).toEqual({ can: false, reason: 'dark' });
     expect(canImage(sensorFor(40053)!, flight({}))).toEqual({ can: false, reason: 'retired' });
     expect(canImage(sensorFor(33412)!, flight({ incidence: 30 * DEG }))).toEqual({ can: false, reason: 'retired' });
+  });
+});
+
+describe('the agile imagers whose limits were found later (P2.5)', () => {
+  // Cartosat-3: NRSC's 26° across the track; Cartosat-2C: ISRO's 26° for the series (Cartosat-2B); CO3D: the CNES
+  // acquisition plan's 15° of roll. Their reach at the altitudes NRSC and CNES give, 505 and 502 km, was worked out
+  // on a sphere before this test was written (248.7 and 134.9 km) and is held to 1 km.
+  const DATA: [number, string, number, number, number][] = [
+    [44804, 'Cartosat-3', 26, 505e3, 248.7e3],
+    [41599, 'Cartosat-2C', 26, 505e3, 248.7e3],
+    [64900, 'CO3D 1', 15, 502e3, 134.9e3],
+    [64903, 'CO3D 4', 15, 502e3, 134.9e3],
+  ];
+
+  it.each(DATA)('%s (%s) is judged against %s° off nadir', (norad, _, max, h, reach) => {
+    const s = sensorFor(norad)!;
+    expect(s.lookMax).toBeCloseTo(max * DEG, 12);
+    expect(canImage(s, flight({ offNadir: (max - 0.5) * DEG }))).toEqual({ can: true, reason: 'agile' });
+    expect(canImage(s, flight({ offNadir: (max + 0.5) * DEG }))).toEqual({ can: false, reason: 'tooFarOff' });
+    const [l, r] = reachEdges(s, h);
+    expect(Math.abs(r - reach)).toBeLessThan(1e3);
+    expect(l).toBe(-r);
+  });
+
+  it('takes Cartosat-3\'s resolution and swath from its operator', () => {
+    // NRSC: "Ground Sampling Distance (GSD) 0.28 m ... Swath ~17 Km"
+    const s = sensorFor(44804)!;
+    expect(s.resolution).toBe(0.28);
+    expect(s.swath).toBe(17e3);
   });
 });
 

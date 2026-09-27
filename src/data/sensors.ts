@@ -14,7 +14,13 @@
  *   agile but no angle is published (it is then not judged). For the Maxar
  *   (Vantor) satellites and SkySat it is the operator's tasking limit, not
  *   what the satellite could turn to: eoPortal gives ±40° for WorldView-1/2
- *   and ±60° for GeoEye-1 as body-pointing limits.
+ *   and ±60° for GeoEye-1 as body-pointing limits. For CO3D it is likewise a
+ *   planning limit, its mission's acquisition plan, and for Cartosat-2C the
+ *   figure its operator gives for the Cartosat-2 series. Where the along- and
+ *   across-track limits differ it is the across-track one: src/orbit/sensors.ts
+ *   judges a pass at its highest point, where the place is square to the
+ *   track: the satellite rolls to see it there, and the along-track limit
+ *   decides only how early or late in the pass it could.
  * - `incidenceDeg`, radar: the incidence angles of the mode given, at the
  *   ground between the vertical and the beam.
  * - `side`, radar: the side of the track it looks to, only where a source
@@ -62,6 +68,9 @@ const VANTOR_SHEET = 'https://satpalda.co/wp-content/uploads/2025/12/Vantor-Cons
 const MAXAR_TASKING = 'https://pro-docs.maxar.com/en-us/Tasking/Tasking_requests_EO.htm';
 const CSK = 'https://www.asi.it/wp-content/uploads/2019/08/COSMO-SkyMed-Mission-and-Products-Description_rev3-1.pdf';
 const EOPORTAL = (id: string) => `https://www.eoportal.org/satellite-missions/${id}`;
+const NRSC_C3 = 'https://www.nrsc.gov.in/nrscnew/assets/pdf/announcements/C3_BROCHURE_JAN2021_modified.pdf';
+/** Lebègue, Cazala-Hourcade, Languille, Artigues, Melet (CNES), "CO3D, a worldwide one-meter accuracy DEM for 2025", ISPRS Archives XLIII-B1-2020, 299–304 */
+const CO3D_ISPRS = 'https://doi.org/10.5194/isprs-archives-XLIII-B1-2020-299-2020';
 
 export const SENSORS: readonly SensorSpec[] = [
   // ─── optical, fixed to look straight down ───
@@ -100,18 +109,28 @@ export const SENSORS: readonly SensorSpec[] = [
   // eoPortal 15 km, elsewhere 16.8 km; roll ±45°, pitch ±30°
   { name: 'KOMPSAT-3', norad: [38338], kind: 'optical', instrument: 'AEISS', swathKm: 15, lookMaxDeg: 45, resolutionM: 0.7, sources: [EOPORTAL('kompsat-3')] },
   { name: 'KOMPSAT-3A', norad: [40536], kind: 'optical', instrument: 'AEISS-A', swathKm: 12, lookMaxDeg: 45, resolutionM: 0.55, sources: [EOPORTAL('kompsat-3a'), 'https://pmc.ncbi.nlm.nih.gov/articles/PMC5087559/'] },
-  // agile ("rapid fore-aft and cross-track steering"), no angle published
-  { name: 'Cartosat-3', norad: [44804], kind: 'optical', instrument: 'PAN', swathKm: 16, lookMaxDeg: null, resolutionM: 0.25, sources: [EOPORTAL('cartosat-3'), 'https://www.isro.gov.in/Cartosat_3.html'] },
-  // the figures of its identical sister, Cartosat-2D; its reach is given as a 400 km field of regard, not an angle
-  { name: 'Cartosat-2C', norad: [41599], kind: 'optical', instrument: 'PAN', swathKm: 9.6, lookMaxDeg: null, resolutionM: 0.65, sources: [EOPORTAL('cartosat-2d')] },
+  // NRSC, ISRO's data centre: "a resolution of 0.28m ... a nominal swath of ~17 Km. The satellite is capable of steering up to
+  // +45° and +26 ° along and across the track respectively" (its specification sheet: 0.28 m, 17 × 17 km). 26° is the
+  // across-track limit, the one a pass is judged by at its highest point. eoPortal and Gunter's Space Page: 0.25 m and 16 km,
+  // the design figures
+  { name: 'Cartosat-3', norad: [44804], kind: 'optical', instrument: 'PAN', swathKm: 17, lookMaxDeg: 26, resolutionM: 0.28, sources: [NRSC_C3, 'https://bhoonidhi.nrsc.gov.in/bhoonidhi_resources/help/sampleprods/Cartosat-3/C3-Specs.pdf', EOPORTAL('cartosat-3'), 'https://www.isro.gov.in/Cartosat_3.html'] },
+  // swath and resolution: its identical sister Cartosat-2D's. ISRO gives no angle for 2C, only that it "is similar to the earlier
+  // Cartosat-2, 2A and 2B"; 26° is the series' figure, ISRO's for 2B: "steerable up to ± 26o along as well as across track".
+  // eoPortal's 2D page says 45° ("off-nadir angles of up to 45 degrees"), as eoPortal and a Department of Space paper
+  // (Radhadevi et al.) say for the first Cartosat-2 (2007); eoPortal's 2E page gives ±45° along the track and ±26° across.
+  // The operator's figure is used. The "field of regard of 400 km" on eoPortal's 2D page is WMO OSCAR's text, which OSCAR
+  // gives for Cartosat-3's camera too
+  { name: 'Cartosat-2C', norad: [41599], kind: 'optical', instrument: 'PAN', swathKm: 9.6, lookMaxDeg: 26, resolutionM: 0.65, sources: [EOPORTAL('cartosat-2d'), 'https://www.isro.gov.in/CARTOSAT_2B.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC34.html'] },
   // roll about 25° normally, 35° at most
   { name: 'Gaofen-1', norad: [39150], kind: 'optical', instrument: 'PMC', swathKm: 69, lookMaxDeg: 35, resolutionM: 2, sources: [EOPORTAL('gaofen-1')] },
   { name: 'Gaofen-2', norad: [40118], kind: 'optical', instrument: 'PMC-2', swathKm: 45, lookMaxDeg: 35, resolutionM: 0.8, sources: [EOPORTAL('gaofen-2')] },
   { name: 'Deimos-2', norad: [40013], kind: 'optical', instrument: 'HiRAS', swathKm: 12, lookMaxDeg: 45, resolutionM: 1, sources: [EOPORTAL('deimos-2-geosat-2')] },
   { name: 'VNREDSat-1', norad: [39160], kind: 'optical', instrument: 'NAOMI', swathKm: 17.5, lookMaxDeg: 30, resolutionM: 2.5, sources: [EOPORTAL('vnredsat-1')] },
   { name: 'FORMOSAT-5', norad: [42920], kind: 'optical', instrument: 'RSI', swathKm: 24, lookMaxDeg: 45, resolutionM: 2, sources: [EOPORTAL('formosat-5')] },
-  // step and stare: 7 km frames, strips of 14 to 28 km; agile, no angle published
-  { name: 'CO3D', norad: [64900, 64901, 64902, 64903], kind: 'optical', instrument: 'CO3D', swathKm: 7, lookMaxDeg: null, resolutionM: 0.5, sources: [EOPORTAL('co3d-constellation'), 'https://cnes.fr/en/projects/co3d'] },
+  // step and stare: 7 km frames, strips of 14 to 28 km. No operator publishes how far it can turn; 15° is a planning limit, from
+  // the CNES paper of 2020 (before launch): "the CO3D acquisition plan limits roll angles to 15° and pitch angles to 20° for each
+  // satellite of a stereo pair" (Lebègue et al., ISPRS Archives XLIII-B1-2020, 299–304): the 3D mission's limit, not what the satellites can turn to
+  { name: 'CO3D', norad: [64900, 64901, 64902, 64903], kind: 'optical', instrument: 'CO3D', swathKm: 7, lookMaxDeg: 15, resolutionM: 0.5, sources: [EOPORTAL('co3d-constellation'), 'https://cnes.fr/en/projects/co3d', CO3D_ISPRS] },
 
   // ─── radar ───
   // interferometric wide swath, its main mode over land; "The SENTINEL-1 C-band radar antenna beam illuminates the ground to the right side of the satellite"
