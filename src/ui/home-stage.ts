@@ -95,6 +95,8 @@ export class HomeStage {
   private looping = false;
   /** seconds on the page, for the slow moves */
   private clock = 0;
+  /** the camera's zoom as the variant set it up, which E's slow push in and out is about */
+  private baseZoom = 1;
   private shiftKey = '';
   // D
   private globe: OrbitView | null = null;
@@ -166,8 +168,10 @@ export class HomeStage {
     }
     const cams = this.host.cams;
     if (this.variant === 'a' || this.variant === 'e') {
-      // a slow walk round the pad, the camera breathing up and down a little
-      cams.az += dt * 0.045;
+      // A: a slow walk round the pad. E: the viewer's own angle, which is clear of every pad's
+      // gantry (Kourou's is a building), and a slow push in and out instead. Both breathe up and down a little.
+      if (this.variant === 'a') cams.az += dt * 0.045;
+      else { cams.az = 0.9; cams.zoom = this.baseZoom * (1 + 0.05 * Math.sin(this.clock * 0.1)); }
       cams.userEl = 0.07 + 0.05 * Math.sin(this.clock * 0.13);
     } else if (this.variant === 'c') this.updateLoop();
     else if (this.variant === 'b') this.updateScroll(dt);
@@ -212,9 +216,12 @@ export class HomeStage {
     }
     this.host.previewWatch(v === 'e' ? this.mission : FEATURED_WATCH_MISSION, v === 'a' ? this.lightTime() : undefined);
     this.ownFlight = this.host.flightNo();
-    if (v === 'a' || v === 'e') { cams.az = 1.25; cams.zoom = 1.05; }
+    // A's Soyuz is filmed from a little round from the viewer's side; E keeps the viewer's own angle, clear of every pad's gantry
+    if (v === 'a') { cams.az = 1.25; cams.zoom = 1.05; }
+    if (v === 'e') cams.zoom = 1.05;
     // on a narrow screen the picture is the space above the text: stand back so the whole stack fits in it
     if (this.host.viewport.clientWidth < 860) cams.zoom *= 1.6;
+    this.baseZoom = cams.zoom;
     if (v === 'b' || v === 'c') {
       this.host.fly();
       this.flown = true;
