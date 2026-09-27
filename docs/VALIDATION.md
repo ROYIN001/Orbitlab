@@ -1656,6 +1656,48 @@ whose sets of NORAD origin before 2004 were distributed without restriction; the
 - **The criteria.** Inside the ±20 % window: at least 80 % of the objects at 5 and at 10 days,
   at least 70 % at 30 days.
 
+**The result (first run, 2026-09-27).** `tests/fixtures/reentry/make_agencies.py` applied the
+selection: of the 1 893 objects GCAT has re-entering in those dates (and 13 more dated only to the
+month or year, which give no lead time), 12 have no file in the archive and 1 314 lack a NORAD set
+at some lead time; 567 qualify, and 100 were taken. 53 are payloads and 47 rocket stages, 1985 to
+2004; 97 re-entries are dated to the day, 3 to the minute; none of the 600 sets used carries a
+problem flag. The fixture and `tests/heavy/reentry-agencies.test.ts` were committed before the
+test first ran. The error is that of the time left, (predicted − from)/(actual − from) − 1, over the
+objects predicted; the window is ±20 % of the predicted time left, so an object is inside when its
+error lies between −16.7 % and +25 %.
+
+| lead time | inside the ±20 % window | criterion | median error | interquartile range | median \|error\| | no B fitted |
+| --- | --- | --- | --- | --- | --- | --- |
+| 30 days | 81 of 100 | ≥ 70 %: **met** | +0.4 % | −6.2 to +7.2 % | 6.6 % | 7 |
+| 10 days | 85 of 100 | ≥ 80 %: **met** | −1.5 % | −7.2 to +6.9 % | 7.2 % | 8 |
+| 5 days | 79 of 100 | ≥ 80 %: **missed** | −0.8 % | −9.2 to +8.4 % | 8.9 % | 8 |
+
+**Findings.**
+
+- **Two criteria met, one missed by one object.** At 5 days 79 of 100 came down inside, against the
+  80 fixed. The selection, the method and the criteria are as fixed; the test records the counts.
+- **Why the 5-day one fell short.** Two things, both found after the run and neither changed:
+  - *The method fits no B to an eccentric orbit in its last weeks.* 7 or 8 objects at each lead
+    time get no B and count as outside: all in eccentric orbits (Molniya, Blok-L and Blok-ML, Blok
+    DM-2, H-II, Ariane H10 and Centaur upper stages; e ≥ 0.1) but Kosmos-2244 at 30 days. A
+    diagnosis run after the result shows why: in most of them the earlier set's mean perigee is
+    already at or under 120 km — the height at which the mean-element propagator counts an orbit
+    as down — while the object keeps flying for weeks, losing apogee at each pass; so
+    `ballisticFromSets`, which carries the orbit by the mean elements, ends its own run at its start
+    and no B brackets the fall. (Kosmos-2244's two sets at 30 days put its perigee 167 km lower in
+    seven days, which no B up to 1 m²/kg does.) Of the objects in eccentric orbits none came down
+    inside at 5 or 10 days (0 of 9) and 2 of 11 at 30 days; of the near-circular ones, 79 of 91
+    (87 %) at 5 days, 85 of 91 (93 %) at 10 days and 79 of 89 (89 %) at 30 days — a breakdown made
+    after the run, not a criterion.
+  - *The re-entry is known to a day.* 97 of the 100 dates are GCAT's day, taken at noon; half a day
+    is 10 % of a 5-day lead, half the window, against 1.7 % of a 30-day one; the interquartile
+    range of the error widens from 13 points at 30 days to 18 at 5.
+- **Where it works, it is near the agencies'.** The median error is under 2 % at every lead time,
+  and half of the predictions are within 6.6 to 8.9 % of the time left; ESA's campaign predictions
+  were "within ±6 % … for about 50 %" and "±10 % for about 75 %" of cases (Klinkrad 2013), with
+  many orbit states from several agencies. Here the drag is fitted to two NORAD sets a week apart,
+  with the Sun as measured.
+
 **NAPA-2** (`src/data/napa2.ts`), the Royal Thai Air Force's 6U CubeSat of 10 kg, launched
 2021-06-30 and re-entered 2026-07-05 (GCAT; 20 × 10 × 34.05 cm, Janes). From its first element set
 (2021-07-25), 1 806 days before, fixed before: within 25 %.
