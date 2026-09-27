@@ -29,7 +29,7 @@ Status on 2026-09-27:
 | Uncertainty of an element set (R04) | Flohrer et al. 2008 (Tables 1–2); Levit & Marshall 2011 (1.5 km/day); Kelso 2007 | The estimate is those studies' numbers, stated as an estimate (§6), 2026-09-26 |
 | Passes (R03, P2.5) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places; Skyfield's refraction | Every event found; times within 0.34 s, angles within 0.005°; refraction within 0.07′ (§6), 2026-09-27 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
-| Re-entry prediction (M03, P2.5) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013); seven spheres' known C_D A/m; 66 rocket stages of 2023–2025 and NAPA-2 (GCAT) | All four Long March 5B inside the window; B fitted to two sets within 30 % for all seven spheres; the 66 stages 33 inside from their first sets, below the 70 % fixed before (a finding); NAPA-2 +8 % by its size, −28 % with B from its first set's decay (§7), 2026-09-27 |
+| Re-entry prediction (M03, P2.5) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013); seven spheres' known C_D A/m; 66 rocket stages of 2023–2025 and NAPA-2 (GCAT); 100 re-entries of 1985–2004 (GCAT) with NORAD's element sets (J. McDowell's archive) | All four Long March 5B inside the window; B fitted to two sets within 30 % for all seven spheres; the 66 stages 33 inside from their first sets, the criterion fixed before missed (a finding), 32 of 61 after a screen written after the results; the agencies' way, B fitted to two sets a week apart: 81 % inside at 30 days and 85 % at 10 (met), 79 % at 5 days (missed, 80 % fixed); NAPA-2 +8 % by its size, −28 % with B from its first set's decay (§7), 2026-09-27 |
 | Overflights (M02, P2.5) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal); published swaths, fields of view and revisit periods (USGS, ESA, NASA) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time; swaths from fields of view within 2 %; Landsat, Sentinel-2 and Sentinel-1 can image Bangkok within their published revisit periods (§7), 2026-09-27 |
 | Close approaches (M01, P2.5) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023); NASA CARA's test conjunctions as messages (Alfano 2009; Omitron) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade; CARA's twelve within 0.12 % (§7), 2026-09-27 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
@@ -1552,7 +1552,7 @@ set's decay rate, 70 % of them inside the ±20 % window.
 
 | predicted from the first element set | inside the ±20 % window |
 | --- | --- |
-| B fitted to the set's decay rate | 7 of 13 (only 14 of 66 first sets carry a usable ṅ) |
+| B fitted to the set's decay rate | 7 inside of 13 predicted (only 14 of 66 first sets give a B) |
 | GCAT's dry mass and size, a tumbling cylinder, C_D 2.2 | 33 of 66: 29 of 58 near-circular orbits, 4 of 8 transfer orbits |
 | the same, before P2.5 (mean elements for every orbit) | 29 of 66: none of the 8 transfer orbits |
 
@@ -1605,18 +1605,34 @@ dry masses, are among the latter.
 
 **Findings.**
 
-- **The fixed criterion was missed.** A first element set is made from the first days of
-  tracking: 52 of the 66 carry no decay that gives a B, and the fits from the other 14 range from
-  0.06 to 7.6 times the B of the stage's catalogued size (for a transfer orbit the mean drag rate
-  at the epoch is a poor measure of B). Predicted from their first sets, half the stages come
-  down inside the window, whichever way the drag is had; the median error of the time left is 19 %.
-  The agencies' 5 % outside comes from refitting with every later set, which this test does not do.
-  The test records the counts found.
+- **The fixed criterion was missed, and could not have been met.** It asked for at least 20
+  predictions with B from the first set's decay rate, 70 % of them inside. A first element set is
+  made from the first days of tracking, often 0 to 10 revolutions after launch: 52 of the 66 carry
+  no decay that gives a B, so only 14 could be fitted — fewer than the 20 asked for, whatever the
+  model — and 7 of the 13 predicted (54 %) came down inside. The fits range from 0.06 to 7.6 times
+  the B of the stage's catalogued size (for a transfer orbit the mean drag rate at the epoch is a
+  poor measure of B). It stays recorded as missed on both counts; nothing was changed to meet it.
+  Predicted from their first sets, half the stages come down inside the window, whichever way the
+  drag is had; the median error of the time left is 19 %. No published hit rate exists for
+  predictions from a single first set with a catalogued size to set this against: the agencies'
+  90–95 % inside ±20 % (Klinkrad 2013; Pardini and Anselmo, J. Space Safety Eng. 5, 2018) are
+  campaign predictions in the last one to two weeks, with the drag refitted to every new set from
+  several sources. The test that asks what they ask, with the drag fitted to later sets, is the
+  agencies'-way test below, fixed before it ran.
 - **The stages of one kind err one way.** The Soyuz Blok-I stages come down 18 to 65 % early, the
-  Long March 4B third stages 66 to 71 % early, as if GCAT's mass (2 350 kg, 1 000 kg) were short of
-  what flew: propellant left in them would do it. Nothing was fitted to them.
+  Long March 2F second stages 10 to 46 % early and the Long March 4B third stages 66 to 71 % early,
+  as if they flew heavier (or with less area) than GCAT's figures. For the first two GCAT's dry mass
+  agrees with the published one (Blok-I 2 350 kg against 2 355 kg in Arianespace's Soyuz CSG User's
+  Manual, 2012; Long March 2F stage 2, 5 500 kg against 5 500 kg empty in
+  [Wikipedia](https://en.wikipedia.org/wiki/Long_March_2F)); the Long March 4B's 1 000 kg is GCAT's own
+  estimate ("?"), and no published dry mass was found. Propellant left in a stage would do it, but no
+  source says so, and the Long March 4B third stage has a system to vent what is left (Chinese
+  Wikipedia, "长征四号乙运载火箭"). The Long March 7 second stages, in the same orbits as the 2F's,
+  come down inside every time. Nothing was fitted to them.
 - **A transfer orbit is the Sun's and the Moon's.** Eight stages were left in transfer orbits
-  (eccentricity 0.36 to 0.82, perigee 112 to 171 km). With the mean elements, which leave out the
+  (eccentricity 0.36 to 0.82; the first sets' mean perigees 114 to 174 km for six of them, 213 km
+  for Falcon 9-402 and 351 km for H3 F4 — until the P2.5 fix-up this said "112 to 171 km" for all
+  eight, which was wrong). With the mean elements, which leave out the
   Sun and the Moon, five stayed up past 400 days, one came down three times too late, and the two
   whose first perigee was already under 120 km were declared down at once; carried by Cowell
   without the Sun and the Moon, all eight stayed up. Their pull moves such a perigee by tens of
@@ -1625,7 +1641,34 @@ dry masses, are among the latter.
   down: five of the eight come down within 25 % of the day (Falcon 9's two within 2 %, the Long
   March 3C's within 5 %), four inside the window; H3 F4's stays up past 400 days and the Long
   March 7A Y13's comes down nine times too late. This change was made after the first run showed
-  the failure; the circular orbits' predictions are unchanged by it.
+  the failure; the circular orbits' predictions are unchanged by it. Those two are not natural
+  decays from their first sets' orbits (the screen's rule (c) above): GCAT's later orbits put their
+  perigees 216 and 70 km lower within 62 and 9 days, where Cowell with J2–J4, the Sun and the Moon,
+  and SGP4/SDP4 too, hold them within some 20 km of the first sets'. A burn, venting or a bad first
+  set would do it; no source for either stage was found (JAXA says F4 made no third ignition; its
+  first set was taken during the five-hour coast experiment after separation). Lowering the
+  perigee to some 160 km (H3 F4, about 20 m/s at apogee) or 130 km (Long March 7A Y13, about
+  11 m/s) at the first apogee brings each down within 8 % of its day and puts the Long March 7A
+  Y13's apogee on GCAT's mid-life orbit within 25 km — a diagnosis run, not a fit adopted.
+- **The model's early bias is NRLMSISE-00's own.** The seven spheres of §6 come down 8 to 23 %
+  early; to land on their days each needs NRLMSISE-00's density times 0.92, 1.02, 0.85, 0.78, 0.77,
+  0.74 and 0.80, which is what the B fitted to two sets gives (above), so the whole bias acts as one
+  factor on density × C_D. The literature finds the same: densities 10–30 % below expectation in
+  2007–2009 (Emmert, Lean and Picone, GRL 37, L12102, 2010), mean NRLMSISE-00 scale factors of 0.74
+  to 0.95 for 2006–2010 (Zeitler et al., 2021). A physical C_D cannot explain it (Sentman's sphere
+  formula gives 2.11–2.13 with full accommodation, which would lengthen the lifetimes by only 3–4 %,
+  and more with less accommodation, which would shorten them). With NRL's Fortran run from pymsis in
+  a scratch diagnosis (not the app), NRLMSIS 2.0/2.1 would bring the spheres from −16 % to about −5 %
+  on average — an estimate — and would not help the stages (by a simplified model, inside the
+  window would fall from about 30 of 57 near-circular stages to about 24). The only better model
+  that could legally be ported is NRLMSIS 2.1: JB2008's licence forbids translating the code or
+  adapting its index files (Space Environment Technologies), DTM2020's forbids modifying or passing
+  on the code (CNES). NRLMSIS 2.1's licence, in NRL's download, allows a translation for research,
+  academic and non-profit use, on conditions: the port published as open source and marked as
+  changed, sent to NRL (Code 7630), shipped with the licence file, never sold. Whether to accept them
+  is the owner's decision, **pending**: on 2026-09-27 the owner asked to come back to it later.
+  NRLMSISE-00 stays the model (ECSS-E-ST-10-04C Rev.1 says it "shall" be used), and a B fitted to
+  the tracking takes its bias in.
 - **The mass column was corrected (P2.5 fix-up).** Until 2026-09-27 the fixture read GCAT's `Mass`,
   which for a stage is its mass at orbital insertion; GCAT gives `DryMass` as "a reasonable proxy for
   the mass of the object after its active lifetime" ([GCAT's columns](https://planet4589.org/space/gcat/web/cat/cols.html)),
