@@ -71,11 +71,17 @@ describe('the built-in case lessons', () => {
         expect(text.th, `${l.id}: ${text.en}`).toMatch(THAI);
       }
       const told = [l.brief, ...l.hints].flatMap((x) => [x.en, x.ru ?? '', x.th ?? '']).join(' ');
-      for (const item of sheetOf(l).sections[1].items) {
-        if (item.kind !== 'number') continue;
-        const figure = item.answer.text.split(' ')[0];
-        expect(told, `${l.id}: ${item.id} = ${figure}`).not.toContain(figure);
+      // each figure as the key prints it, with a decimal point and (Russian) a decimal comma
+      for (const lang of ['en', 'ru'] as const) {
+        setLang(lang);
+        const sheet = caseWorksheet(l.case, { lang, generatedAt: at, activity, theos2 })!;
+        for (const item of sheet.sections[1].items) {
+          if (item.kind !== 'number') continue;
+          const figure = item.answer.text.split(' ')[0];
+          expect(told, `${l.id} (${lang}): ${item.id} = ${figure}`).not.toContain(figure);
+        }
       }
+      setLang('en');
     }
   });
 });
