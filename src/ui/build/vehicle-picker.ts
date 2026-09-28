@@ -23,10 +23,11 @@ export class VehiclePicker {
   private readonly next: HTMLButtonElement;
   private id = '';
 
-  constructor(private entries: readonly PickerEntry[], private readonly onPick: (id: string) => void) {
+  /** `id` is the list's element id: the Watch level's by default, another where a second picker shares the page (Explore) */
+  constructor(private entries: readonly PickerEntry[], private readonly onPick: (id: string) => void, id = 'bs-picker-select') {
     const label = el('label', 'bs-picker-label');
-    label.htmlFor = 'bs-picker-select';
-    this.select.id = 'bs-picker-select';
+    label.htmlFor = id;
+    this.select.id = id;
     this.select.addEventListener('change', () => this.choose(this.select.value));
     this.prev = button('bs-step', '‹', () => this.choose(stepEntry(this.entries, this.id, -1)));
     this.next = button('bs-step', '›', () => this.choose(stepEntry(this.entries, this.id, 1)));

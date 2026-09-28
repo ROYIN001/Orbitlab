@@ -25,12 +25,10 @@
  *
  * What the tunnel does not cover: Reynolds-number effects, roll orientation of
  * strap-ons, control surfaces, power-on base flow, and dynamic derivatives (the
- * damping is zero here: no body rate). And one known defect it inherits from
- * the flight: the stack's tables are cached for the page's lifetime under the
- * vehicle's id and configuration (src/physics/rigid/mass.ts, `aeroTables`), so
- * a design edited under an unchanged id and reference area gets the table of
- * its previous shape until that cache is keyed by geometry (the Phase 3 map,
- * §4.3 item 2). Give an edited design a new id until then.
+ * damping is zero here: no body rate). The stack's tables are cached per spec
+ * object and configuration (src/physics/rigid/mass.ts, `ascentTables`, the
+ * Phase 3 map §4.3 item 2), so an edited design — always a new spec object —
+ * gets the table of its own shape, whatever its id.
  *
  * DOM-free, SI units: angles in degrees only at the interface (`alphaDeg`),
  * lengths in m along the body x axis (the structural datum: +x towards the
@@ -90,6 +88,10 @@ export interface TunnelResult {
   referenceDiameter: number;
   /** body x of the centre of mass, m */
   cgX: number;
+  /** body x of the bottom of what is in the tunnel, m (the lowest stage still attached) */
+  baseX: number;
+  /** body x of its nose tip, m: `baseX` plus the flight's reference length (the top of the fairing, or of the payload once it is off) */
+  noseX: number;
   points: TunnelPoint[];
 }
 
@@ -161,5 +163,5 @@ export function tunnelSweep(spec: VehicleSpec, payloadKg: number, cfg: TunnelCon
       });
     }
   }
-  return { referenceArea: S, referenceDiameter: d, cgX, points };
+  return { referenceArea: S, referenceDiameter: d, cgX, baseX: snap.activeBase.x, noseX: snap.activeBase.x + aero.referenceLength, points };
 }

@@ -15,7 +15,7 @@ two held-out flights ("Six-DOF pitch programme fitted"). That is the only fitted
 Later, Falcon Heavy took the same published first-stage masses and Falcon 9's max-Q bucket
 (§4, F11). Neither was fitted.
 
-Status on 2026-09-27:
+Status on 2026-09-28:
 
 | vehicle | reference | state |
 | --- | --- | --- |
@@ -36,6 +36,14 @@ Status on 2026-09-27:
 | Close approaches (M01, P2.5) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023); NASA CARA's test conjunctions as messages (Alfano 2009; Omitron) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade; CARA's twelve within 0.12 % (§7), 2026-09-27 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
 | The Earth's orientation (P2.5) | Vallado et al., AIAA 2006-6753, Appendix C: TEME to ITRF with UT1 − UTC and polar motion; the IERS's finals2000A | The paper's Earth-fixed position within 71 mm (262 m before) (§6), 2026-09-27 |
+| Parts catalogue (D01) | The fleet's specs and 27 point-mass and 21 six-DOF flights, recorded before the catalogue; main's literal fleet after F11 | The 21 vehicles emitted value for value and key for key; every flight bit for bit; sources missing for 29 of 55 engines, 25 of 50 stage bodies, 6 of 14 strap-on bodies and 13 of 17 fairings, stated (§8), 2026-09-28 |
+| The builder's figures (D02–D05) | The model's own Δv walk; the rocket equation worked by hand; published burn times; engine masses from makers, agencies, secondary sources and Wikipedia, some inferred | Exactly the walk's Δv from every state tried; the hand-worked stage figures within 1e-12; six published burn times within 10 %; a mass with its sources for every engine but the four with none published (§8), 2026-09-28 |
+| Optimal staging (D05) | Closed forms; brute-force grids; NPTEL Lecture 20's worked examples (IIT Bombay); Saturn V and Falcon 9 by hand | All met; one bound widened after a result, for the slide's truncated β, and the page's Saturn V bounds set after a probe; two of the slide's figures found not to follow from its own; the real first stage takes more than the optimum on two vehicles and less on four (§8), 2026-09-28 |
+| Remix, parts builder and warnings (D02, D03) | The catalogue vehicles; the published engine masses; the rocket equation; the flight's own liftoff, planner and acceleration decisions | Unchanged remixes and rebuilt vehicles equal the catalogue; `noLiftoff` agrees with 85 flights; no catalogue vehicle fails (§8), 2026-09-28 |
+| Test stand, wind tunnel, readiness review (D04) | The engine data and 20 published burn times; the six-DOF tables, the point-mass drag and slender-body theory; the Launch panel's verdict | Met; the known sea-level Isp inconsistencies shown, not tuned; the verdict identical on 36 catalogue rows (§8), 2026-09-28 |
+| Computed payload ratings (D03, D04) | Eight published ratings (Soyuz-2.1a, Falcon 9, Long March 2D, Vega-C, Ariane 64, Electron), ±25 % fixed before | Seven met; Vega-C's LEO 31 % high, missed and unexplained; the method changed after its first GTO results (§8), 2026-09-28 |
+| Six-DOF for a vehicle of one's own (D03) | The point-mass thrust; slender-body theory; the thick-walled tube; the 21 six-DOF fingerprints | Four fixes and two found in review, each with a test that failed first; the catalogue unchanged; still experimental (§8), 2026-09-28 |
+| Sizing (D05) | The planner's own ascent cost; sanity bounds from launchers of the class; point-mass flights | The design Δv is the planner's exactly; the 1 t launcher plausible; but none of the sized launchers tried reaches orbit at its design Δv (a finding) (§8), 2026-09-28 |
 
 ## 1. Method
 
@@ -2063,7 +2071,643 @@ error lies between −16.7 % and +25 %.
 The first set's decay rate came from its first week of tracking, in the quiet Sun of mid-2021;
 over five years any error in it is multiplied. The test records the −28 %.
 
-## 8. Re-running
+## 8. The Build section (D01–D05): the parts catalogue, the builder's figures, testing, sizing
+
+The Build section (roadmap D01–D05, [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)) adds little physics
+of its own. It builds vehicles from a parts catalogue and hands them to the models the launches
+already fly: the Δv walk, the engine model, the aerodynamic tables, the mission planner, the
+pre-flight verdict and the flight itself. So most of its checks are identities: a figure the
+builder shows must be the flight model's own, or the rocket equation worked by hand in the test.
+The rest are closed forms, a published worked example, published figures, and flights. The code
+is in `src/data/parts.ts`, `src/design/` (no DOM) and `src/ui/build/`; the tests are
+`tests/d01-*.test.ts`, `tests/parts*.test.ts`, `tests/design-*.test.ts` and
+`tests/heavy/sixdof-fingerprint.test.ts`.
+
+The bounds were fixed before each comparison unless the text says otherwise. Several cores went
+in as one commit each, so for them git cannot show that the bound came first; the reviewers said
+so, and it is repeated below where it matters.
+
+### The parts catalogue (D01)
+
+`src/data/parts.ts` holds the fleet's hardware as parts: engines, stage bodies, strap-on bodies
+and fairings. The 21 vehicles of `src/data/vehicles.ts` are assembled from it. Interstages are
+derived for the drawing only (`src/design/interstages.ts`) and have no mass. The catalogue must
+emit exactly the fleet that flew before it, and that fleet must fly exactly as before.
+
+**Spec identity** (`tests/d01-vehicles-identity.test.ts`). Before `vehicles.ts` was touched, the
+whole `VEHICLES` value was written to `tests/fixtures/vehicles-pre-d01.json` (keys sorted,
+42 929 bytes, at eedd035). In review a SHA-256 of the unsorted JSON at eedd035 was added, for the
+key order.
+The 21 vehicles the catalogue emits equal the fixture exactly (`256.4 * kN` is pinned as
+`256399.99999999997`) and give the same hash, so even the key order is unchanged. A recursive
+walk finds no value JSON cannot show (an undefined key, −0, NaN, ±Infinity, a function). **Met.**
+In review the test was changed from a file snapshot to a read and compare: with Blok A's mass
+changed to 87 001 kg, `vitest -u`, which the repository uses for another file, passed and
+rewrote the fixture. Now an update run fails and leaves the file alone.
+
+**Main's F11, re-recorded once, with its reason.** On 2026-09-28 main changed Falcon Heavy on
+purpose (§4, F11): its side boosters and core carry Falcon 9 Block 5's published first-stage
+masses, and it flies Falcon 9's max-Q bucket. When main was merged, the catalogue took the same
+figures (the `side` and `core` bodies, and the bucket in the vehicle's installation). The fixture
+and the key-order hash were then written again from main's own literal `vehicles.ts` (at
+3d713b5, before the catalogue), not from the catalogue, so the test still proves that the
+catalogue emits the fleet main flies. Only Falcon Heavy changed: the fixture is now 43 012 bytes
+and the unsorted JSON 30 987 characters (30 926 at eedd035). Falcon Heavy's point-mass and
+six-DOF fingerprints were re-recorded, each with the reason written beside it and the old hash
+kept in the comment. The other vehicles' were not touched.
+
+**Point-mass flights** (`tests/d01-fleet-fingerprint.test.ts`, part of `npm test`). 27 fleet
+cases, flown as the fleet matrix flies them, each hashed (SHA-256, first 16 hex digits) over the
+state `[t, r, v]` once a second from T−10 s, the recorded telemetry and the event log:
+
+- every vehicle's `leo` row at 50 % (21);
+- five kick-stage and restart rows: `protonm/gto/50`, `soyuz21b/gto/50`, `ariane64/gto/50`,
+  `vegac/sso/50`, `pslvxl/sso/50`;
+- `angaraa5/leo/25`, because `angaraa5/leo/50` is a known break-up at T+179 s, before its upper
+  stages light.
+
+All 27 match the hashes recorded at eedd035 (Falcon Heavy's, since F11, main's). **Met.** The
+fleet matrix (`tests/fleet-defaults.test.ts`) passes. The test notices small changes: 1 g added to
+Electron's fairing fails `electron/leo/50` and nothing else.
+
+**Six-DOF flights** (`tests/heavy/sixdof-fingerprint.test.ts`, `npm run test:heavy`). Each of the
+21 vehicles flies its `leo` row at 50 % as a rigid body, in crosswind, for 160 s. The hash covers
+every second of state and rigid-body telemetry, the telemetry and the events. The hashes were
+recorded before any of the six-DOF changes below, and recomputed in two separate processes, in
+reverse order, with the same result. After every change all 21 match (Falcon Heavy's since F11),
+and so do the whole-mission goldens of Falcon 9, Soyuz-2.1a and Angara-A5. The bound is bit
+identity. **Met.** The 160 s do not reach most upper-stage burns. Those are covered by the three
+whole-mission goldens and by a one-off comparison of every catalogue stage's six-DOF inputs
+before and after the changes (below).
+
+Both kinds of hash are exact hashes of floating-point flights. A new Node or V8 could break them
+with no change to the code, as it could the older six-DOF goldens.
+
+**The catalogue held to itself** (`tests/parts.test.ts`, every comparison exact):
+
+- 21 vehicles; 55 engine parts (49 single engines, 2 clusters, 4 lumped entries), 50 stage
+  bodies, 14 strap-on bodies, 17 fairings.
+- Every stage, strap-on group and fairing of every vehicle is emitted, field for field, by exactly
+  one part, and every part is used. This is found by value, not by asking the catalogue.
+- The propellant family agrees with the six-DOF model's `PROPELLANT_LOADS` for the 51 of 64
+  bodies that have an entry. The other 13 (the R-7's and Falcon's) were not checked at first; in
+  review they were held to kerolox, stated by hand.
+- `solid` is set exactly where the family is solid (10 motors), and `historical` exactly on the
+  10 engines that only retired vehicles fly.
+- The lumped and cluster entries keep the counts they flew with: RD-0210/0211 ×4, YF-21C ×4,
+  RD-0213 + RD-0214 ×1, YF-24C ×1, YF-75 ×1, Raptor 2 / RVac ×6.
+- The custom-vehicle validator passes all 21. The parts are frozen, so an edit in the builder
+  cannot reach the catalogue.
+
+**Interstages** (`tests/design-interstages.test.ts`). 26 massless display parts over the 21
+vehicles, each |Δd| × 1.1 + 0.6 m high, the drawing's own rule, restated by hand: Falcon 9's is
+(5.2 − 3.66) × 1.1 + 0.6 = 2.294 m. The stack heights were first rebuilt with the same calls the
+layout makes, which the review found circular. They are now also held to totals added by hand:
+Falcon 9 59.294 m, Soyuz-2.1a 35.419 m (46.849 m with its fairing, the 46.85 m the data says is
+drawn), Saturn V 90.15 m. Bound 1e-12 m, fixed before the first comparison. **Met.**
+
+**Findings, not filled in.** The old file recorded no source for many figures, and the parts say
+so (`UNCITED`) rather than borrow one:
+
+- 29 of 55 engine parts, and 5 more solid motors that cite only their peak-to-mean thrust ratio;
+- 25 of 50 stage bodies (26 before F11 gave Falcon Heavy's core a source for its propellant; its
+  28 000 kg dry mass is still an estimate), and Proton-M's first stage cites only its diameter;
+- 6 of 14 strap-on bodies (7 before F11);
+- 13 of 17 fairings.
+
+Four engine entries are not one real engine: RD-0213 + RD-0214, YF-24C, YF-75 and Raptor 2 /
+RVac are lumped, and the builder refuses to re-count them (below). Some propellant families are
+estimates copied from the six-DOF data (Curie as hypergolic, for one) and are not labelled as
+estimates. The six-DOF model still reads the family by stage id, not from the part.
+
+### Engine masses (D02, D03)
+
+A remix or a design from parts needs what an engine weighs, which no flight did. Every engine part
+now carries a mass per unit of its count (one engine, or the whole of a lumped entry), with its
+sources as links, what the figure includes and a note (`EnginePart.mass`;
+`tests/parts-engine-masses.test.ts`, all exact):
+
+- **Coverage:** all 55. Four are null because no source publishes one, each with its reason:
+  Curie, PS4's L-2-5, PSOM-XL and Raptor 2 / RVac.
+- **Basis:** 32 published, 6 from a secondary source, 5 from Wikipedia only, 8 inferred,
+  4 unpublished. Three are marked low confidence, and are estimates even where a source prints
+  them: Merlin Vacuum, BE-4 and Vinci.
+- **Solids:** a solid motor's figure is its inert mass, which belongs to its own body.
+- **A sanity bound:** for every liquid body, count × engine mass is below the body's dry mass. The
+  tightest is Vulcan's first stage: two BE-4 at the low-confidence 5 400 kg are 38 % of its
+  28 600 kg. That it is the tightest was recorded after the run (the test had guessed another
+  stage).
+- **Never flown:** no emitted engine carries a mass. The identity fixture and the 27 fingerprints
+  are unchanged. **Met.**
+
+**Findings, recorded, not acted on.** Each solid body's dry mass beside its motor's published inert
+mass: equal for Vega-C's P120C, Z40 and Z9 and PSLV's PS1 and PS3; GEM 63 5 100 against 5 035 kg;
+GEM 63XL 5 177 against 5 352 kg; Ariane 6's P120C strap-ons 13 000 against 11 200 kg; H-IIA's
+SRB-A 8 700 against 10 600 kg (the body carries SRB-3's planning value); H3's SRB-3 8 700 against
+9 000 kg; PSOM-XL 2 010 kg against none published. The flown data were not changed. The
+8D74K/8D75K index labels may be wrong, and the engine named RD-869 is really the RD-843.
+
+### The budget core (D02–D05)
+
+`src/design/budget.ts` splits the model's own Δv walk (`deltaVRemaining`) into phases: each stage,
+and for a stage with strap-ons one phase with them and one of the core alone. Every figure the
+builder shows (Δv, burn time, thrust-to-weight, structural ratio ε, propellant fraction) comes
+from it. `tests/design-budget.test.ts`:
+
+| check | reference | bound, fixed first | result |
+| --- | --- | --- | --- |
+| the phases' Δv added up, 21 vehicles at half the LEO rating | `idealDeltaV`, the model's own walk | exact (the phases are added in the walk's order) | met: 0 difference for all 21 |
+| the same from other states: recovery reserves, part-burned tanks, strap-ons gone, first stage gone; in review also one engine out, each first-stage engine out, the fairing gone, a spacecraft stage on top | `deltaVRemaining()` | exact | met, every state, every vehicle |
+| every serial stage: m0, mf, ve, Δv = g0·Isp_vac·ln(m0/mf), burn time mp/ṁ, the fairing dropped at the first boundary | worked by hand in the test | 1e-12 relative | met; largest Δv difference 3.9e-15 |
+| 14 strap-on first stages, the phase with strap-ons: ve = ΣF/Σṁ, masses, burn time | worked by hand | 1e-12 relative | met |
+| the same 14, the core alone | worked by hand | 1e-12 relative and 1e-9 m/s | met |
+| liftoff T/W | the setup panel's own T0/(m0·g0) | exact | met, all 21 |
+| second stage's T/W | `nextStageAccel()` × the solid head factor | 1e-12 relative | met |
+| full-throttle burn times | published: Vega-C Z40 92.9 s, Z9 119.6 s; Long March 3B third stage 478 s; H-IIA second stage 534 s; GEM 63 94 s; Long March 3B strap-on 140 s (sources as in `tests/data-consistency.test.ts`) | 10 %, the fleet's | met: 92.9, 119.6, 467.6 (−2.2 %), 531.1 (−0.5 %), 93.0 (−1.1 %), 141.9 s (+1.4 %) |
+
+- The exact equality holds by construction: the review compared the module with the walk line by
+  line (the same mass bookkeeping, flow floor, fairing drop and order of addition). The
+  hand-worked checks are separate code.
+- The 1e-9 m/s part of the core-alone bound was probably added after Falcon Heavy's and
+  Angara-A5's cores gave 0/0 on the relative bound (they run dry with their strap-ons, so their
+  core phase is 0 m/s), although the test's comment says it was fixed first. The history cannot
+  tell.
+- The strap-on check works ve with each group's own Isp; the model uses the first group's Isp for
+  every group. Every fleet vehicle's groups have equal Isp, so the test cannot see the difference,
+  but a design with unlike groups gets a wrong Δv. The model's other simplifications are copied
+  on purpose, so that the builder's figures stay the flight model's: Falcon Heavy's and
+  Angara-A5's cores are counted at full throttle beside their strap-ons, and PSLV's two air-lit
+  strap-ons from liftoff.
+
+The Watch level's table therefore showed the core alone at "0 m/s, 0 s" for Falcon Heavy and
+Angara-A5. It now says that the flight throttles those cores to 55 % and 30 % while the strap-ons
+burn (`tests/design-stage-table.test.ts` finds exactly those two rows, from the data).
+
+### Optimal staging (D05)
+
+`src/design/optimal-staging.ts` divides a Δv among serial stages of given Isp and structural ratio
+ε for the largest payload ratio, by Lagrange multipliers: n_i = (c_i η − 1)/(c_i ε_i η), solved by
+bisection. The method is the textbook one (Curtis, *Orbital Mechanics for Engineering Students*);
+no figure is taken from the book. One correction to the plan: Δv < Σ c ln(1/ε) is not enough, since
+every stage also needs n_i > 1. For a small Δv on unlike stages the formula gives a stage a
+negative mass, and the true optimum drops that stage. That case is reported (`stageWithoutDv`),
+not solved. `tests/design-optimal-staging.test.ts`:
+
+| check | reference | bound, fixed first | result |
+| --- | --- | --- | --- |
+| equal stages, N = 1–5, Isp 350 s, ε 0.1, 7 000 m/s | closed form: equal shares, n = exp(Δv/(Nc)) | 1e-12 relative | met (largest 6.9e-16). The first Δv tried, 9 000 m/s, is past one stage's limit (7 903 m/s), so it was lowered; the bound was not changed |
+| two stages with Falcon 9's Isp and ε, 9 500 m/s | brute-force grid, 1 m/s | one grid step | met: 3 247.7 / 6 252.3 m/s; grid 3 248 |
+| three stages with Saturn V's, 12 000 m/s | brute-force grid, 5 m/s | one step per free share | met: 1 669.8 / 5 983.1 / 4 347.0 m/s; grid 1 670 / 5 985 |
+| δ = 1, 10 and 100 m/s moved between every pair of stages, both ways | the payload ratio worked by hand | strictly lower | met |
+| the feasibility limit Σ c ln(1/ε) | by hand | 1e-15 | met |
+| a stage the optimum drops (200 s under 450 s, 3 km/s) | brute force puts 0 m/s on it | reported, not solved | met; in review the switch falls between 7 907 and 7 908 m/s, whichever way round the stages are listed |
+| the stack rebuilt from the answer | ε, n = m0/mf, Σ c ln n = Δv, scaling with the payload | 1e-12 | met |
+
+**A published worked example.** "Introduction to Launch Vehicle Analysis and Design",
+Prof. Ashok Joshi, IIT Bombay, Lecture 20, "Lagrange Solution"
+([NPTEL course 101101086](https://nptel.ac.in/courses/101101086)). The slides were read from
+[a mirror](http://elearn.psgcas.ac.in/nptel/courses/video/101101086/lec20.pdf), whose checksum
+the test records. The lecture's g0 = 9.81 is passed in.
+
+- **Two equal stages** (ε 0.15, Isp 240 s, 4 000 m/s, 10 kg): the slide's β 0.8494, e^−β 0.428,
+  π 0.3267, π* 0.1067 and m0 93.7 kg; here 0.84947, 0.42764, 0.32664, 0.10669 and 93.73 kg.
+  **Finding, and a bound changed after the result:** π was held to 5e-5 like the others and missed
+  by 1.4e-5, because the slide truncates β to 0.8494 and works π from the truncated value. The
+  bound was widened to 1.0e-4, what that truncation is worth. The test says so, and checks that
+  the truncated β gives the slide's 0.3267.
+- **The payload-constrained example** (π* 0.15, V* 3 466.4 m/s): π 0.38700 and π* 0.14977 here.
+  Met. The slide's middle factor, −1.4482, is a misprint for −1.4723; recorded, not relied on.
+- **Unequal stages** (Angara 1.2: 310 s and ε 0.072, 342.5 s and ε 0.089, π* 0.025): the slide's
+  root λ = −2 055.9 against −2 056.81 here (bound 2.5, from the slide's three-figure
+  coefficient); π 0.162 / 0.154 against 0.16213 / 0.15420. Met. **Finding:** the slide's
+  π* = 0.029 and V* = 8 337.8 m/s do not follow from its own π1 and π2, which by its own formula
+  give π* 0.0249 and V* 9 520.8 m/s. Here V* is 9 516.5 m/s. The lecturer says π* "will be close
+  to 0.025".
+
+**Two real vehicles by hand.** In review, at each vehicle's own ideal Δv and half its LEO rating,
+with n_i = (c_i − x)/(c_i ε_i) and bisection: Saturn V 1 747 / 6 006 / 4 370 m/s (payload ratio
+2.2166 %) and Falcon 9 4 209 / 6 891 m/s. Both equal the page to 0.1 m/s. The real splits, from
+the rocket equation on the data: Saturn V 3.88 / 4.51 / 3.73 km/s (2.00 %), Falcon 9 4 056 /
+7 045 m/s (2.04 %, against the optimum's 2.07 %). The optimum always carries at least as much as
+the real split. The page's Saturn V bounds (1.70–1.80 and 3.83–3.93 km/s on the first stage) were
+set after a probe printed 1 747 and 3 882 m/s (`tests/design-staging-model.test.ts`).
+
+**Finding: the real first stage against the optimum.** For each vehicle with no strap-ons, at half
+its LEO rating (recorded after a probe, not tuned):
+
+| vehicle | the real first stage's Δv against the loss-free optimum's |
+| --- | --- |
+| Saturn V | +2.13 km/s |
+| Proton-M | +0.02 km/s |
+| Falcon 9 | −0.15 km/s |
+| Electron | −0.72 km/s |
+| Long March 2D | −1.62 km/s |
+| Starship | −2.44 km/s |
+| Vega-C | no optimum at its own Δv |
+
+The page first said that real first stages "usually" take more, because they pay the gravity and
+drag losses. Both halves were wrong. The catalogue goes the other way four times out of six, and
+the two splits are compared at the same total ideal Δv, where the payload ratio depends only on
+each stage's ideal Δv: a loss of fixed size cannot move the optimum, whichever stage pays it.
+Only losses that depend on the split, or structural ratios that change with a stage's size, can.
+The page now gives split-dependent gravity loss as one possible reason, and claims no reason
+where the first stage takes less.
+
+### Remix (D02)
+
+`src/design/remix.ts` turns a catalogue vehicle into one of the user's own: stretch or shrink a
+stage or strap-on, swap or re-count its engines, add or remove strap-on groups, fit another
+fairing. `tests/design-remix.test.ts`, bounds fixed first:
+
+- **Identity:** with no changes, the remix equals the S02 copy for all 21 vehicles, with nothing
+  estimated. H3's unchanged remix flies point mass to the 500 km preset with 5 t and records the
+  catalogue H3's flight, strap-on separation included. **Met.**
+- **Swap arithmetic:** the dry mass changes by count × the engines' published masses, exactly:
+  Falcon 9's first stage with one RD-180 for nine Merlin 1D is 22 200 + 5 480 − 9 × 467 kg; Atlas
+  V's Centaur III takes two RL10C-1-1, Angara-A5's URM-1 strap-ons two YF-100 each. Fregat's
+  engine swapped for Curie, whose mass is unpublished, leaves the dry mass and says so. **Met.**
+- **Stretch:** Falcon 9's second stage × 1.25 grows by exactly the extra propellant's volume at
+  3.66 m (kerolox at a mixture ratio of 2.6), within 1e-12 m. Proton-M's first stage falls back to
+  a proportional length (its load does not fit the core's diameter); a Zefiro 9 scales its whole
+  inert mass. The Δv change equals the rocket equation on the budget core's phases within 1e-12
+  relative for Falcon 9's second stage × 1.25, Saturn V's S-II × 0.8, Electron's first stage
+  × 1.1, Angara-A5's URM-2 × 1.5 and H3's second stage × 1.3. **Met.** The test re-derives the
+  stretch's mass rule itself, so it only partly tests it, and the rule (tank structure scales with
+  the propellant) is an estimate.
+- **Refusals**, each with its own code: re-counting a lumped or cluster entry (YF-75 ×2, RD-0210
+  ×3, Raptor 2 / RVac ×1), swapping a solid motor, an engine of another propellant family on the
+  tanks, a vacuum engine on the pad, bad counts and factors, a fifth strap-on group, anything past
+  the validator's limits, unknown parts and edits. **Met.** The propellant-family refusal was added
+  in review: Falcon 9's second stage had taken a YF-75 and kept 108 t of kerolox tankage, flown as
+  hydrolox (about three times the volume), with no refusal and no estimate.
+- **Fuzz** (seeded, 630 lists of edits over the 21 vehicles): 278 accepted, every one clean under
+  the validator; every refusal a coded one; the catalogue unchanged. The floor of 25 % accepted was
+  fixed before the first run, lowered from 50 % on an estimate. **Met.**
+
+### Building from parts, and the warnings (D03)
+
+`src/design/assemble.ts` builds a vehicle from catalogue bodies or bodies of one's own
+(`tests/design-assemble.test.ts`):
+
+- **The catalogue from its own parts:** all 21 vehicles, parts found by value, assemble to the
+  same stages, strap-ons and fairing (`toStrictEqual`), with identical ideal Δv at 0 and at half
+  the LEO rating, identical liftoff thrust, and a clean validator. **Met.**
+- **Defaults, each reported as a default or an estimate:** a max-Q limit of 40 kPa and an
+  acceleration limit of 50 m/s² (the fleet's medians), fairing jettison at 115 km (the median),
+  ratings of 0 flagged until computed, and the country taken from the first launch site (flagged
+  since the review; a Baikonur design gets KZ).
+- **Fuzz:** 600 designs. The floor of 25 % accepted was fixed before the first run. After the
+  propellant-family refusal the fuzz accepted 139, under the floor; the floor was kept and the draw
+  changed to pick a catalogue body's other engine as it already picked one for a body of one's own:
+  from the body's propellant family, with a 10 % chance of any. It now accepts 162, all clean
+  under the validator with unique, valid ids. **Met.**
+- **Heights, recorded:** the drawn height (the stages and adapters as the flight stacks them)
+  differs from the typed one: Soyuz-2.1a 46.85 against 46.3 m, Vega-C 41.85 against 34.8 m,
+  PSLV-XL 52.84 against 44 m, Atlas V 551 70.52 against 62.2 m, Saturn V 90.15 against 110.6 m
+  (the Apollo spacecraft and its tower are not drawn). The builder states the drawn height.
+
+`src/design/warnings.ts` gives a design's warnings as codes (`tests/design-warnings.test.ts`).
+Each code is shown on one constructed design and on its negation. Those that restate a decision
+the flight or the planner makes are held to that decision:
+
+- **`noLiftoff` is not "T/W ≤ 1".** The flight burns propellant on the hold-down from T−2.5 s and
+  releases at T+3 s, so it lifts off designs whose static T/W is below 1: Falcon 9 from 0.982,
+  Soyuz-2.1a from 0.978, Electron from 0.983, H3 from 0.992. The warning replays the hold-down
+  instead. Against the flight's own `evt.noLiftoff`: 85 point-mass flights over static T/W 0.90 to
+  1.06 on five vehicles (Falcon 9, Soyuz-2.1a, Vega-C, H3, Electron). A band of ±0.5 % about a
+  release T/W of 1 was fixed before the run for the one-step difference in where the two put T+0.
+  75 flights fell outside it with no disagreement; the 10 inside it agreed too. The replay's
+  release T/W is within 0.0041 of the one the flight logs (bound 0.01). **Met.** The replay
+  mirrors the point-mass 0.1 s step; six-DOF flies the prelaunch at 0.01 s, so its release can
+  differ by one step's burn.
+- **`weakUpperStage`** gives the planner's own `weakFinalStage` at 1.5, 1.59, 1.61 and 1.7 m/s²
+  (1.6 m/s² with a 1 500 kg margin). **Met.** It is also applied to middle stages, which the
+  planner never does.
+- **`fixedThrustOverAccel`** against the peak thrust acceleration of every stage of the fleet,
+  flown point mass to LEO at half the rating: it names exactly the stages the flight takes more
+  than 2 % over the vehicle's limit. **The 2 % was set after a probe** had shown every unwarned
+  stage at most 0.5 % over and every warned one at least 5.8 % over; the test says so. Warned,
+  flight peak against limit in m/s²: Long March 2D's first stage (63.5 against 60) and second
+  (113.9 against 60), Long March 5's strap-on phase (54.4 against 45; the warning predicts 54.6),
+  Sputnik's (111.5 against 70) and Saturn V's first stage (48.3 against 45). At zero payload it
+  predicts more warnings (the upper stages of Falcon 9 and Soyuz-2.1a) that no flight has
+  confirmed.
+- **The catalogue** at half its LEO rating: no vehicle fails. It raises nine warnings, recorded:
+  four kick stages under the planner's 1.6 m/s² (Proton-M, Angara-A5, Vega-C, Electron) and the
+  five places above. The propellant-fraction band, 0.51–0.97 against the catalogue's 0.516–0.962,
+  is an estimate of what is plausible, not a physical limit.
+- **Not checked:** a body of one's own may state a dry mass below its engines' mass (100 kg with
+  an RD-180 is accepted without a flag).
+
+The warnings, refusals and estimates in words (`tests/design-warning-text.test.ts`): every code
+has a sentence in English, Russian and Thai, and every sentence gets exactly the numbers its
+placeholders need. Checked on constructed warnings, on every warning the fleet raises at half its
+rating, and on a Falcon 9 that cannot lift off. **Met.**
+
+### The test stand, the wind tunnel and the readiness review (D04)
+
+**The test stand** (`src/design/static-fire.ts`, `src/design/test-stand.ts`;
+`tests/design-static-fire.test.ts`, `tests/design-test-stand.test.ts`) fires an engine with the
+engine model every flight runs.
+
+- **Steady state:** for every liquid installation in the fleet (more than 60 firings), thrust is
+  count × thrustVac at zero pressure and count × thrustSL at 101 325 Pa exactly, and Isp in
+  vacuum is ispVac within 1e-12. **Met.**
+- **Delivered sea-level Isp against the quoted one**, bound 8 % (from `physics-core.test.ts`):
+  worst RD-108A, +6.93 %. The engines more than 2 % off are the four already known: RD-108A
+  +6.9 %, Vulcain 2.1 5.0 %, Rutherford 2.6 %, Raptor 2 2.4 %. **Met.** In review the expected
+  value was worked from the data in the test, not from the model the stand runs on. These are
+  inconsistencies in the data (the model derives sea-level Isp from the thrust ratio), shown on
+  screen and not tuned: Merlin 1D 287.52 s against 282 s (+1.96 %), Vulcain 2.1 302.0 s against
+  318 s (−5.0 %).
+- **Impulse = propellant × g0 × Isp(p)** within 1e-9, on Merlin 1D, P120C and RL10C-1, at steps of
+  0.01, 0.1 and 0.5 s with the tank emptied; in review also at 40 kPa. **Met.**
+- **Transients:** the start-up deficit F·T/2 and the tail-off impulse F·τ·(1 − e⁻⁵), within 1e-9, on
+  Merlin 1D and a test engine with its own transients, at four step sizes. **Met.** The stand's Isp
+  stays constant through both, the model's own simplification, and both are estimates.
+- **Burn times:** all 20 published burn times of `tests/data-consistency.test.ts` within 10 %.
+  Worst: Long March 2D's first stage, 158.0 s against 170 s (−7.1 %); then Ariane 6's P120C
+  +4.2 %, PSOM-XL −3.9 %, S139 −3.3 %. **Met.** Each is also within one step plus 0.01 s of the
+  closed form m/ṁ + T/2 − τ(1 − e⁻⁵); the 0.01 s is an estimate.
+- **Solid peaks,** all ten solids: the data's peak within 0.5 % of the published table (worst S139,
+  4 862.0 against 4 846.9 kN, +0.31 %) and the stand's within 1 % (worst ±0.24 %). **Met.** On
+  screen, P120C in vacuum peaks at 4 321 kN against the published 4 323 kN (Vega C).
+- **Bounds corrected after a first run,** and the test says so: the firing's length (the end of the
+  tail-off, rounded up to the step), and the count of the burn-time table (20, not 21).
+- **Finding:** a solid's mean thrust on the stand reads high, P120C +0.63 % and GEM 63 +0.92 %. The
+  mean is the impulse over the burn time; the impulse includes the tail-off and the burn time
+  does not. Recorded, not adjusted.
+- **At a launch site:** every site's pressure is within 0.1 % of the barometric formula
+  P0·(1 − 2.25577e-5·h)^5.25588 (the bound covers geometric against geopotential height), and
+  thrust is linear in pressure within 1e-12. At Xichang (1 825 m) it is 81.2 kPa. A vacuum-only
+  engine is refused in air, and a solid's shutdown is refused.
+
+**The wind tunnel** (`src/design/tunnel.ts`, `src/design/tunnel-view.ts`;
+`tests/design-tunnel.test.ts`, `tests/design-tunnel-view.test.ts`) sweeps the aerodynamic tables
+the six-DOF flight flies over Mach and angle of attack. The tables are the model's estimates
+(slender-body theory plus crossflow), not measured data.
+
+- **Against the flight's tables:** as the angle goes to 0, C_Nα and the centre of pressure equal the
+  table's slope and x_cp at 25 Mach numbers on 8 configurations of 6 vehicles (bound 1e-6; worst
+  1.3e-10 and 1.2e-8). **Met.**
+- **Drag:** C_A at zero angle equals the point-mass flight's `dragCoefficient(M)` at all 13 table
+  Mach numbers (bound 1e-12, worst 4.4e-16) and at the 201 drawn from Mach 0 to 10 on Falcon 9,
+  Ariane 6, Soyuz-2.1a and Saturn V; the reference area is `frontalArea()` exactly. **Met.**
+- **Slender-body theory:** a nose on a cylinder gives C_Nα = 2 per radian for 1.2, 3.7 and 5.4 m
+  at Mach 0.8 and below, and a stack under a wider fairing 2·(d_base/d_max)², 1.125 for 3 m under
+  4 m (table within 1e-12, tunnel within 1e-6). **Met.**
+- **Through 90°:** continuous, bounds 1e-4 on C_N and C_A and 1 mm on x_cp; worst 2.5e-6, 5.6e-12
+  and 0.03 mm. **Met.**
+- **The moment's sign,** which the page's "above zero is unstable" rests on: C_m = −C_N × margin
+  within 1e-9 on all 21 vehicles at Mach 0.6, 1.2 and 3, at 2°, 5° and 10°. **Met.**
+- **A probe, not a test:** with full tanks and half the rated payload every catalogue stack has a
+  negative static margin at small angles at Mach 0 and 1.5, from about −0.95 calibres (Sputnik) to
+  −8.0 (Falcon 9 subsonic; −6.3 supersonic). The steering keeps them pointed.
+- The tables were cached by vehicle id, so a design edited under one id got its old table. The
+  six-DOF work below keys them per design; the tunnel's comment was corrected to say so.
+
+**The flight readiness review** (`src/design/readiness.ts`, `src/design/review-model.ts`;
+`tests/design-readiness.test.ts`, `tests/design-review-model.test.ts`) runs the Launch panel's own
+verdict, and always flies the insertion probe for a vehicle of one's own.
+
+- **The catalogue:** on 36 rows (every vehicle's LEO row at half its rating, the 12 rows the panel's
+  verdict test names, and 3 added in review) the verdict and the probe are identical to the Launch
+  panel's, and the rows reach nine of its causes: ready, margin, corridor, burnBudget, noRestart,
+  noInsertion, overCapacity, noRating and inclination. Two causes cannot be reached from the
+  catalogue. **Met.** In Chromium, "Fly it" from the review gives Launch's verdict text for
+  Falcon 9 to the station orbit (11.4 t), Proton-M to GTO (6 t, "2,830 m/s short") and Electron to
+  SSO (200 kg); Falcon 9 at 21 t, Soyuz-2.1a at 7 t to the station orbit and Long March 2D at
+  1.2 t to SSO are refused by both.
+- **A vehicle of one's own:** Falcon 9 with its sea-level thrust halved and a typed rating passes
+  the static verdict; the review fails it and blocks the flight. Falcon 9 typed at 1.5 × its LEO
+  rating and flying 90 % of the real one would not be probed by the static verdict; the review's
+  probe runs out of propellant and fails it. **Met.**
+- **Bugs found in review, each fixed:** the review could fly the wrong vehicle when the mission
+  still carried another vehicle's spec (Falcon 9 at 90 %, which the probe fails, came out as a
+  tight margin that may fly; reproduced by a test that failed before the fix); the test flight's
+  row said "reached orbit −1 s after liftoff" for a rocket still flying, never lost, at the
+  probe's 2 400 s limit (unchanged Vulcan and Angara-A5 remixes coasting on a 137 km perigee;
+  Long March 2D to GTO), which the verdict counts as orbit and the row now says as a note;
+  computing ratings in the review reset the typed payload (900 kg re-reviewed at 1 000 kg) and
+  kept an SSO rating never computed (a saved Vega-C remix kept the published 2 300 kg); and the
+  reached-orbit sentence claimed the perigee had just risen past 140 km and promised later burns
+  that a stack with no restart cannot make.
+
+### Computed payload ratings (D03, D04)
+
+`src/design/ratings.ts` finds the heaviest payload a design delivers by flying it: point mass, calm
+air, the guidance programme the design carries (a remix keeps its origin's), 6 to 9 probe flights a
+rating. The rating orbits are the
+vehicle's (or its origin's) published reference orbit, else 200 km at the site's lowest
+inclination for LEO, and the fleet's `gto` preset. `tests/design-ratings.test.ts`, bound ±25 %
+against the published figure, fixed first:
+
+| vehicle and rating | computed / published, kg | ratio | result |
+| --- | --- | --- | --- |
+| Soyuz-2.1a LEO (240 km × 51.6°, Baikonur) | 7 021 / 7 430 | 0.945 | met |
+| Falcon 9 LEO | 20 031 / 22 800 | 0.879 | met |
+| Long March 2D LEO (200 km × 41°, Jiuquan) | 3 165 / 3 500 | 0.904 | met |
+| Vega-C LEO | 4 330 / 3 300 | 1.312 | **missed** |
+| Ariane 64 LEO | 26 274 / 21 600 | 1.216 | met |
+| Electron LEO | 315 / 300 | 1.050 | met |
+| Falcon 9 GTO | 6 832 / 8 300 | 0.823 | met |
+| Ariane 64 GTO | 13 328 / 11 500 | 1.159 | met |
+
+- **Vega-C's miss is not explained.** To its published reference orbit, 700 km × 98.2° from
+  Kourou, it rates 2 906 kg against 2 300 kg (1.26), limited by the burns after the insertion, so
+  the 200 km convention does not explain the LEO miss on its own. The suspects are AVUM+'s burns
+  counted as instantaneous (2.42 kN under a 4 t payload burns for minutes) and the solid stages.
+- **The method was changed after its first result.** The first method judged a payload delivered by
+  the verdict and the probe alone. It gave Falcon 9 17 005 kg to GTO (2.05 × published) and
+  Ariane 64 26 303 kg (2.29 ×), about what each lifts to LEO, because the probe stops at the
+  parking orbit and the verdict's burn budget counts the last stage as full. The method now also
+  requires the Δv left at the probe's stop to cover the planned burns. The ±25 % bound was not
+  changed. Both results are in the test's comment.
+- **A bug found in review:** a typed rating capped a computed one when the verdict filed the rating
+  orbit under another class (an orbit at 95° or more is SSO to it): Vega-C to 700 km × 98.2° came
+  out 2 297 kg, its own typed 2 300 kg. Fixed; the eight figures above did not move.
+- GTO ratings count the burns after the insertion as instantaneous, so a low-thrust kick stage is
+  rated generously, and the search assumes that a vehicle that delivers a payload delivers any
+  lighter one.
+- **Finding in the browser, not a test:** Falcon 9 with its second stage stretched to 110 % and
+  130 % rates 18 130 and 8 870 kg to LEO, against 20 031 kg unchanged; heavier payloads end short
+  of orbit (`noInsertion`). A remix flies its origin's guidance programme, set for the original
+  rocket; that this is the cause is a guess, not shown.
+
+### Six-DOF for a vehicle of one's own (D03)
+
+Before Phase 3, six-DOF built a custom vehicle's rigid-body data from the spec, but several things
+were keyed by the catalogue's stage ids ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), "S02: what keys
+off a vehicle id"). Four were fixed (`src/physics/rigid/vehicle-data.ts`, `mass.ts`;
+`tests/custom-vehicle-rigid.test.ts`, `tests/rigid-fleet.test.ts`), each with a test that failed
+before the fix:
+
+1. **Every engine's thrust reaches the chambers.** The chambers' thrust must add up to the thrust
+   the point-mass model flies (1e-9 relative), on all 21 vehicles and three constructed ones (new
+   ids: a 12-Merlin core with RD-191 and GEM 63 strap-ons, a four-RL10 second stage and a Zefiro 9
+   third stage; a Falcon 9 with 5 engines on its first stage; a Soyuz with 2/2/3 engines). Before,
+   the chambers carried 0.368, 0.200 and 0.500 of it; after, 1. The chambers sit on the bells the
+   drawing draws (1e-12 m), with generic ±5° steering, an estimate.
+2. **Aerodynamic tables follow the design, not the id.** A first stage stretched 6.5 m under the
+   same id keeps C_Nα at every Mach (slender-body theory: lengths do not enter it), moves the
+   centre of pressure up 6.5 m (1e-9 m) and adds d × 6.5 of side area; before, the centre of
+   pressure moved 0 m. Widened to 4.2 m, its subsonic C_Nα is 2·A_base/S within 1e-12; before, it
+   read 0.759 of that, (3.66/4.2)², the old table's.
+3. **A solid stage with an id of its own burns as a grain.** A renamed Zefiro 9 gives exactly the
+   catalogue Zefiro 9's mass components at 100, 50, 10 and 0 % fill (before, four liquid tanks),
+   and the full grain's axial inertia is the thick-walled tube's within 1e-12. Its radii, 0.95 and
+   0.3 of the stage's, are estimates.
+4. **An upper stage with an id of its own gets three-axis thrusters:** Falcon 9's second-stage
+   installation, 50 N pairs at 60 s of Isp with the lesser of 10 % of the dry mass and 30 kg of gas
+   (estimates, not scaled to the stage). Roll authority equals the couple F·d within 1e-9; before,
+   the renamed solid third stage had none.
+
+What keys off an origin stays with it: a Soyuz-2.1a copy keeps its 65 % trim share (a 2.28° limit
+at 30 kPa and Mach 1.2), the same hardware with no origin gets 35 % (1.25°, Soyuz-2.1b's), and only
+a Falcon 9 copy's first stage flies home in six-DOF.
+
+**Two defects found in review, fixed:**
+
+- **Engine out.** Where a stage has more engines than drawn bells (the generic ring draws at most
+  8) or bells that do not divide evenly (3 engines on the R-7's 4 chambers, 5 on the octaweb), an
+  engine out zeroed whole bells: six-DOF thrust was 0.979, 0.972 and 0.75 of the point-mass
+  model's on the three constructed vehicles. Each such chamber now records which engines it holds,
+  and one engine out, or each engine shut down in turn, keeps the chambers' thrust equal to the
+  flight's within 1e-9, on all 21 vehicles and the three constructed ones. No catalogue chamber
+  gets a span.
+- **Falcon 9's second stage on a vehicle with no origin** kept its catalogue id, so it was passed
+  over by the new rule, and Falcon's thrusters are keyed by the vehicle's id: it flew with none, no
+  roll and nothing to hold attitude in a coast. It now gets the generic set.
+
+**The catalogue is unchanged:** the 21 fingerprints and the three whole-mission goldens match.
+Beyond them, the review compared the base source with the branch for every catalogue stage and
+strap-on: chamber geometry, thrusters, mass components at four fills, and the whole rigid vehicle
+with its aerodynamic table in every burning configuration, with no failure, a random engine out,
+and each engine shut down in turn. All deep-equal. A vehicle with new ids flies 180 s in six-DOF on
+Falcon 9's guidance, through both strap-on separations, staging and second-stage ignition, without
+loss.
+
+**What is still wrong or missing**, which is why six-DOF stays experimental for a vehicle of one's
+own:
+
+- A single-engine first stage with an id of its own has no roll control. PSLV, H-IIA, Ariane 6 and
+  Vega-C flown with the first stage renamed and no origin were not lost, but PSLV rolled at
+  2.2°/s against the catalogue vehicle's 0.075°/s.
+- Where bells share engines, the fault system names a bell by its first engine, so shutting that
+  engine leaves the rest of a failed bell burning, and its "a quarter of the stage's engines" limit
+  counts bells.
+- A single-engine stage or strap-on with an id of its own gets 5° steering even when copied from a
+  fixed-nozzle motor such as the GEM 63.
+- R-7 blocks with more than one engine fly generic 5° steering on their four main chambers, and
+  their verniers stay in the list with no thrust.
+- The generic thrusters do not scale with the stage.
+- The drawing still draws the nine-engine octaweb for a kept Falcon 9 first stage with another
+  engine count, and at most 8 bells in a generic ring.
+
+### Sizing a launcher (D05)
+
+`src/design/sizing.ts` sizes serial liquid stages from a payload, an orbit, a site and, for each
+stage, an engine, a structural ratio, a diameter and a thrust-to-weight. The design Δv is the
+planner's ascent cost to that orbit plus its required margin (and any extra Δv asked for); it is
+split optimally, and the stages' masses, engine counts and lengths follow.
+`tests/design-sizing.test.ts`, bounds fixed first:
+
+- **The design Δv is the planner's own:** for three requests (1 t to LEO from Kourou; 8 t to the
+  station's plane from Baikonur, RD-191 then RL10C-1-1; 3 t to SSO from Vandenberg on three
+  stages), the sized vehicle's ideal Δv is the design Δv within 1e-9 relative, the planner's
+  ascent margin is exactly its required margin (1e-6 m/s), each stage's Δv is its optimal share
+  (1e-9), every T/W at ignition meets its target, the validator is clean, and nothing fails.
+  **Met.**
+- **Sanity bounds** for 1 t to the 500 km preset from Kourou (Rutherford and Rutherford Vacuum,
+  ε 0.08 and 0.09, 1.8 m), taken from launchers of that class (Firefly Alpha, 54 t for about
+  1 030 kg; Electron, 13 t for 300 kg; Vega-C, 210 t for 3.3 t). They say "plausible", not "right":
+
+| figure | bound | result |
+| --- | --- | --- |
+| design Δv | — | 9 049 m/s |
+| split | — | 4 723 / 4 327 m/s |
+| liftoff mass | 20–80 t | 31.6 t |
+| payload fraction | 1–5 % | 3.17 % |
+| engines | first stage ≤ 33 | 17 + 2 |
+| T/W at ignition | 1.3–2.6; upper stage 0.7–2.6 | 1.317; 0.926 |
+| height | 15–60 m | 22.25 m |
+
+  All **met**. Whole engines overshoot the T/W target (0.926 against 0.7 on the upper stage). The
+  lengths come from the propellant's volume plus the catalogue's median length beyond the tanks,
+  a recorded value: 1.466 diameters when it was written, 1.4648 since F11 filled Falcon Heavy's
+  core fuller.
+
+**Finding: the design Δv is not enough.** The plan expected a sized launcher to pass the readiness
+review at its design Δv. It does not. Flown point mass, the 1 t launcher runs out of propellant
+short of orbit; with the fleet's median loss over the planner's allowance (+220 m/s) it still does;
+with +500 m/s it reaches orbit (at T+455 s, 167 × 432 km). Most of the shortfall is the fairing:
+"the narrowest that fits" gives the 1.8 m stage Vostok's 800 kg shroud, which the design Δv drops
+at the first staging (as the planner counts it) but the flight carries to 115 km, well into the
+second burn. In review, the extra Δv each launcher needs to reach orbit, in steps of 100 m/s, on
+the review's mission:
+
+| launcher | extra Δv to reach orbit |
+| --- | --- |
+| 1 t, Rutherford, fairing chosen by the sizing | +500 m/s |
+| 1 t, Rutherford, no fairing | +100 m/s |
+| 10 t, Merlin 1D and Merlin Vacuum, Cape, fairing chosen | +300 m/s |
+| 10 t, Merlin 1D and Merlin Vacuum, Cape, no fairing | +200 m/s |
+| 5 t, RD-180 and RL10C-1, Baikonur, the station's orbit | not reached up to +1 000 m/s (lost in flight up to +700, then out of propellant) |
+
+The first measurement, on the sizing test's own mission, tried fewer steps: with no fairing it
+reached orbit at +200 m/s (only +0 and +200 were tried), with Sputnik's 300 kg shroud at +400, with
+the chosen fairing at +500. Nothing was tuned: `extraDvMps` lets the user ask for more, and the
+page says why. Charging the fairing to the second stage, or choosing fairings otherwise, is a
+design decision left to the owner. With +500 m/s the 1 t launcher's computed ratings are 1 033 kg
+to LEO and 246 kg to GTO (18 flights, about 1.5 s), and the review then says ready, with one
+warning.
+
+### The screens (Watch, Explore, Engineer)
+
+The screens format the cores' output; none re-derives physics. What they show was checked in tests
+where it is logic, and in Chromium (Playwright, software rendering) where it is layout.
+
+- **Watch** (`tests/design-exploded.test.ts`, `design-stack-drawing`, `design-part-card`,
+  `design-stage-table`, `design-build-tour`): every stage, strap-on group and fairing of the 21
+  vehicles is found as the one part that emits it, and five vehicles also against part lists
+  written by hand. Every drawn part keeps the spec's length and diameter exactly and stands where
+  the flight's own stack layout puts it; taken apart, no two parts overlap. At a phone's
+  343 × 440 px and at 700 × 600 px, labels stay inside the drawing, clear of it and of each other.
+  A card's numbers are the flown spec's (ε plus the propellant fraction is 1 within 1e-15). The
+  stage table is the budget core's phases, adding up to the total within 1e-9. The tour's figures
+  mean what each step says: Falcon 9's Δv with nothing dropped (an estimate) 8 533 m/s against
+  11 100 staged; Soyuz-2.1a's liftoff T/W 1.42 against the core alone's 0.27 (an estimate); Atlas
+  V's Centaur lights at a T/W of 0.29, its liftoff 1.96; Ariane 64's fairing 2 900 kg, 20 m, off at
+  T+200 s as published. **Finding:** the first run failed on −0 in the geometry; the code now emits
+  +0, no bound changed.
+- **Explore** (`tests/design-explore-model.test.ts`, `design-handoff`, `design-explore-drafts`,
+  `design-stage-names`): an unchanged remix equals the catalogue vehicle, with the same stage table,
+  for all 21; designs survive a round trip (to JSON, through the design store and as a file) field
+  for field; the engines offered never include a lumped or cluster entry other than the one
+  installed, another propellant, or a vacuum engine on the first stage. "Fly it" hands a mission
+  document that the Launch panel's own parser takes, point mass unless six-DOF is ticked, and a
+  stretched Falcon 9 remix so handed climbs more than 3 km in 60 s (bound fixed first).
+- **Engineer** (`tests/design-review-model.test.ts`, `design-staging-model`, `design-sizing-model`):
+  the checklist passes exactly when the review allows the flight, and every sentence can be said in
+  the three languages; the staging curve is the optimiser's own score and peaks within one sample
+  of the optimum; for three requests the sized launcher opens in the parts builder and is rebuilt
+  field for field.
+- **Number entry in three languages** (`tests/design-number-entry.test.ts`, 9 tests, cases fixed
+  before the first run). **Found in review:** every Build number box was a browser number field,
+  and under a Russian locale "0,08" became 008 with nothing on screen to show it: a structural
+  ratio of 8, or a payload a hundred times too heavy. The boxes now read a comma or a point as the
+  decimal mark and spaces as thousands. In English, Russian and Thai "0,08" and "0.08" read 0.08;
+  "11,400" is 11 400 in English and Thai and 11.4 in Russian; "", "abc", "0x10", "1,2,3",
+  "1.234,5", "12kg" and "Infinity" read as no number; every value written back reads back exactly.
+  **Met.** In Chromium with a Russian locale, "0,1" was taken as 0.1 and "12kg" marked invalid.
+- **Chromium,** not part of the suite: each level was walked in English, Russian and Thai at
+  widths of 1440, 1280, 375 and 360 px. The last pass, 96 views, had no sideways scroll of
+  the page and no page errors. The walks found and fixed, among others: clicks on parts swallowed
+  by the launch camera's pointer capture (which had also broken the Orbit playground's drag and its
+  porkchop plot), a tour's figures covered by its own buttons, and the phone layouts of the
+  drawing, the sizing and staging tables and the tunnel's labels.
+
+## 9. Re-running
 
 ```sh
 npx vitest run tests/kepler.test.ts tests/orbit-playground.test.ts tests/maneuvers.test.ts tests/maneuver-setup.test.ts tests/budget.test.ts tests/applications.test.ts   # the Orbit section, ~3 s
@@ -2074,6 +2718,8 @@ npx vitest run tests/screening-filter.test.ts                                   
 npx vitest run tests/msis.test.ts tests/earth-orientation.test.ts tests/cdm.test.ts tests/sensors.test.ts tests/case-worksheets.test.ts   # P2.5, ~10 s
 npx vitest run tests/ballistic.test.ts                                           # P2.5: the fitted drag, 66 stages, NAPA-2, ~2 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/reentry-agencies.test.ts   # P2.5: re-entries the agencies' way, 100 objects
+npx vitest run tests/d01-vehicles-identity.test.ts tests/d01-fleet-fingerprint.test.ts tests/parts.test.ts tests/parts-engine-masses.test.ts tests/design-*.test.ts   # the Build section (D01–D05)
+npx vitest run --config vitest.heavy.config.ts tests/heavy/sixdof-fingerprint.test.ts   # D01: 21 six-DOF flights of 160 s, ~4 min
 npx vitest run tests/validation                                                   # point mass, ~10 s
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-falcon9.test.ts   # six-DOF, ~6 min
 npx vitest run --config vitest.heavy.config.ts tests/heavy/validation-timelines.test.ts # six-DOF, ~13 min

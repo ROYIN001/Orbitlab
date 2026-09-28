@@ -123,6 +123,12 @@ export interface RatingOptions {
   now?: () => number;
   /** the launch date, for the flights (default 2026-09-15 12:00 UTC, the fleet tests') */
   launchTime?: Date;
+  /**
+   * Told after every probe flight, with the rating it was for and the flights
+   * flown so far in all: the Build section shows the search going (a rating
+   * takes 1–2 s). It sees the search and never steers it.
+   */
+  onFlight?: (rating: RatingClass, flights: number) => void;
 }
 
 const DEFAULT_LAUNCH = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
@@ -245,7 +251,10 @@ export function computedRatings(spec: VehicleSpec, opts: RatingOptions = {}): Co
       (now() - t0 > budget ? 'timeBudget' : flights >= maxFlights ? 'flightBudget' : null);
     const tryAt = (m: number) => {
       const r = delivers(spec, ref, m, launchTime);
-      if (r.flew) { used++; flights++; }
+      if (r.flew) {
+        used++; flights++;
+        opts.onFlight?.(ref.rating, flights);
+      }
       return r;
     };
     if (ceil <= 0) return result(true);

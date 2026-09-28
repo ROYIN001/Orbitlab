@@ -387,13 +387,14 @@ class App {
   private watchFollow: 'auto' | 'rocket' | 'booster' = 'auto';
   /** mission time the followed stage was first seen down, s (-1 while it flies) */
   private focusDownT = -1;
+  private readonly helpGuide: HelpGuide;
   /** the viewer mission's payload as flown (i18n key), in place of the catalogue name */
   private watchPayloadKey: string | null = null;
   private vehiclePos = new THREE.Vector3();
   private earthC = new THREE.Vector3();
 
   constructor() {
-    new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
+    this.helpGuide = new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
     this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
       if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
@@ -459,7 +460,22 @@ class App {
       lastMission: () => missionSummary(loadStoredMission()),
       continueMission: () => this.continueMission(),
     }, this.homeStage);
-    this.buildScreen = new BuildScreen(document.getElementById('build-screen')!, { go: (r) => this.go(r) });
+    this.buildScreen = new BuildScreen(document.getElementById('build-screen')!, {
+      go: (r) => this.go(r),
+      // Phase 3 (D02, D03): "Fly it" loads a design as a mission, as a file does, and opens Launch at the same level
+      launchTime: () => this.panel.missionState().launchTime,
+      flyDesign: (doc, level) => {
+        this.goLive(); this.playing = false;
+        const parsed = this.panel.share.apply(doc, 'build');
+        if (!parsed.usable) return false;
+        // the first-use guide's first step says to pick a Quick start example, which would replace this design
+        this.helpGuide.missionGiven();
+        // the page's own copy of the mission (U01): previewed from the Build section, which keeps none
+        saveStoredMission(this.panel.missionState());
+        this.go(route('launch', level));
+        return true;
+      },
+    });
     this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
       go: (r) => this.go(r),
       // S03: the hand-off's orbit, carried on for years (P07)
