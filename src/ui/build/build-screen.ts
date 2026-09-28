@@ -349,7 +349,8 @@ export class BuildScreen {
       el('h2', 'bs-fig-title', t('build.fig.title')),
       el('p', 'bs-fig-note', t('build.fig.note', { payload: mass(payload) })),
       figuresView(this.spec, table),
-      el('p', 'bs-fig-note small', t('build.fig.twNote')),
+      // the second clause only where there is a fairing to count (not Saturn V, not Starship)
+      el('p', 'bs-fig-note small', this.spec.fairing ? `${t('build.fig.twNote')} ${t('build.fig.twNoteFairing')}` : t('build.fig.twNote')),
     );
     // a core that these full-throttle figures run dry with its strap-ons, while the flight throttles it down
     for (const row of table.rows) {
