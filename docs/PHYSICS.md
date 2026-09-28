@@ -2788,7 +2788,8 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
     - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
       published.
-    - PSLV-XL's first stage is 29 % slow at separation, the cost of the linear solid-motor taper.
+    - PSLV-XL's first stage is 29 % slow at separation. It flies too steep and then turns hard;
+      the solid-motor curve shape was measured and is not the cause.
     - H3's first stage flies far flatter than JAXA's plan.
     - The heating placard drops most fairings 10–50 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket

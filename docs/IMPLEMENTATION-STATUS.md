@@ -306,7 +306,8 @@ Phase 2, real satellites and the military track, continues on the same branch:
   - Electron's second stage burns ~25 % short.
   - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
     published.
-  - PSLV-XL's first stage is 29 % slow at separation.
+  - PSLV-XL's first stage is 29 % slow at separation, because of its ascent profile, not its
+    solid-motor thrust curve.
   - H3's first stage flies far flatter than planned.
   - Most fairings come off 10–50 % early.
 
