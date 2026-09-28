@@ -347,8 +347,10 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
   Falcon 9's first stage flies its published masses and its six-DOF pitch programme is fitted to
   the flights. Among what is left and recorded:
   - Electron's second stage burns ~25 % short.
-  - Falcon Heavy's first stages cut off ~18 % early.
-  - PSLV-XL's first stage is 29 % slow at separation.
+  - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
+    published.
+  - PSLV-XL's first stage is 29 % slow at separation, because of its ascent profile, not its
+    solid-motor thrust curve.
   - H3's first stage flies far flatter than planned.
   - Most fairings come off 10–50 % early.
 

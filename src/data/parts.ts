@@ -641,16 +641,19 @@ export const STAGE_BODIES: readonly StageBodyPart[] = [
   // 22 200 kg empty stage (Espace & Exploration no. 39, May 2017, as cited by
   // Wikipedia's "Falcon 9 Block 5"). The 395 700 / 25 600 kg flown before cut
   // the burn ~10 % short of five flights' webcast telemetry (docs/VALIDATION.md,
-  // F1). Falcon Heavy's cores keep their own figures.
+  // F1). Falcon Heavy's three cores carry the same load (F11).
   { id: 's1', stageId: 's1', name: 'First stage (9× Merlin 1D)', dryMass: 22200, propellantMass: 410900, diameter: 3.66, length: 42,
     engine: { part: 'merlin1d', count: 9 }, source: 'Espace & Exploration no. 39 (May 2017), as cited by Wikipedia’s “Falcon 9 Block 5”' },
   { id: 's2', stageId: 's2', name: 'Second stage (Merlin Vacuum)', dryMass: 4300, propellantMass: 108000, diameter: 3.66, length: 15,
     engine: { part: 'mvac', count: 1 }, source: UNCITED, note: 'Falcon 9 and Falcon Heavy' },
   // The centre core's real differences from a side booster are its heavier
   // structure and the throttle-down while the sides burn (an installation
-  // field in vehicles.ts); its engines are the same Merlin 1D.
-  { id: 'core', stageId: 'core', name: 'Center core', dryMass: 28000, propellantMass: 395700, diameter: 3.66, length: 42,
-    engine: { part: 'merlin1d', count: 9 }, variantOf: 's1', source: UNCITED },
+  // field in vehicles.ts); its engines are the same Merlin 1D. Its tanks are a
+  // Falcon 9 first stage's and hold its published 410 900 kg (F11). No empty
+  // mass is published for the reinforced core: the 28 000 kg is an estimate,
+  // 5.8 t over the Falcon 9 stage.
+  { id: 'core', stageId: 'core', name: 'Center core', dryMass: 28000, propellantMass: 410900, diameter: 3.66, length: 42,
+    engine: { part: 'merlin1d', count: 9 }, variantOf: 's1', source: 'propellant: as the Falcon 9 first stage (s1); dry mass an estimate (not cited in the data)' },
   { id: 'ccb', stageId: 'ccb', name: 'Common Core Booster (RD-180)', dryMass: 21054, propellantMass: 284089, diameter: 3.81, length: 32.5,
     engine: { part: 'rd180', count: 1 }, source: UNCITED },
   { id: 'centaur3', stageId: 'centaur3', name: 'Centaur III (RL10C-1)', dryMass: 2243, propellantMass: 20830, diameter: 3.05, length: 12.7,
@@ -796,8 +799,11 @@ export const BOOSTER_BODIES: readonly BoosterBodyPart[] = [
     engine: { part: 'rd107a', count: 1 }, source: UNCITED, note: 'Soyuz-2.1a and 2.1b' },
   { id: 'urm1', stageId: 'urm1', name: 'URM-1 boosters', dryMass: 9000, propellantMass: 128800, diameter: 2.9, length: 25.7,
     engine: { part: 'rd191', count: 1 }, source: UNCITED, note: 'the same URM-1 module as the stage body urm1core' },
-  { id: 'side', stageId: 'side', name: 'Side boosters', dryMass: 25600, propellantMass: 395700, diameter: 3.66, length: 42,
-    engine: { part: 'merlin1d', count: 9 }, source: UNCITED, note: 'Falcon 9 first stages on the old 25 600 / 395 700 kg figures' },
+  // A Falcon Heavy side booster is a Falcon 9 first stage ("a Falcon 9 first
+  // stage or Falcon Heavy side booster", SpaceX via Wikipedia's "Falcon
+  // Heavy"), so it carries Falcon 9 Block 5's published masses (F11).
+  { id: 'side', stageId: 'side', name: 'Side boosters', dryMass: 22200, propellantMass: 410900, diameter: 3.66, length: 42,
+    engine: { part: 'merlin1d', count: 9 }, source: 'Espace & Exploration no. 39 (May 2017), as cited by Wikipedia’s “Falcon 9 Block 5”', note: 'Falcon 9 first stages (the stage body s1’s figures), on Falcon 9 Block 5’s published masses since F11' },
   // GEM-63 inert mass 5 100 kg = the 49 300 kg gross minus the 44 200 kg grain
   // quoted on the same page.
   { id: 'gem63', stageId: 'gem63', name: 'GEM-63 solid boosters', dryMass: 5100, propellantMass: 44200, diameter: 1.6, length: 20,

@@ -26,6 +26,13 @@
  * recorded before the catalogue". They are never re-recorded by the D01 work:
  * a mismatch means a built-in flight changed. 27 flights, about 5 s in all on
  * the machine that recorded them (4.8 s of flying, measured).
+ *
+ * Re-recorded once, for a change made on purpose elsewhere: main's F11
+ * (2026-09-28) gave Falcon Heavy Falcon 9 Block 5's published first-stage
+ * masses and a max-Q bucket, so `falconheavy/leo/50` flies a different vehicle
+ * (it was 'ef9bbec0786e0558'). Its spec equals main's literal value for value
+ * (tests/d01-vehicles-identity.test.ts), and the other 26 rows, unchanged,
+ * show the point-mass physics is main's, so the new hash is main's flight.
  */
 import { describe, expect, it } from 'vitest';
 import { VEHICLES } from '../src/data/vehicles';
@@ -38,7 +45,7 @@ export const D01_FINGERPRINTS: Readonly<Record<string, string>> = {
   'protonm/leo/50': '76fae19e6ec959b6',
   'angaraa5/leo/50': '7cea61f34555f892',
   'falcon9/leo/50': '8504537bbd7ef7e5',
-  'falconheavy/leo/50': 'ef9bbec0786e0558',
+  'falconheavy/leo/50': '9d7255f795d6d88b',
   'atlasv551/leo/50': '0d1e6478571ba55a',
   'vulcan/leo/50': '4d91d8ca27fb9268',
   'ariane64/leo/50': '0c847c54216a4e9e',

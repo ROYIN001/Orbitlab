@@ -190,5 +190,9 @@ describe('D05 sizing: what it refuses, and its estimates', () => {
   });
 });
 
-/** Recorded from today's catalogue (src/data/parts.ts) when the allowance was written. */
-const LENGTH_ALLOWANCE_DIAMETERS_RECORDED = 1.466;
+/**
+ * Recorded from the catalogue (src/data/parts.ts): 1.466 when the allowance was
+ * written, 1.4648 since main's F11 gave Falcon Heavy's core Falcon 9's 410 900 kg
+ * of propellant in the same 42 m (its tanks now fill more of the stage).
+ */
+const LENGTH_ALLOWANCE_DIAMETERS_RECORDED = 1.4648;

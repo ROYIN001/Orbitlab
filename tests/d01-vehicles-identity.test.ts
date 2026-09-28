@@ -9,10 +9,18 @@
  *
  * The fixture was written once, from `VEHICLES` as it stood before
  * src/data/vehicles.ts was touched, in the commit that added this file. It is
- * never re-recorded after that commit: a difference is a change to a built-in
- * vehicle and fails here, whatever caused it. So the test reads the fixture and
- * compares; it is not a snapshot, and `vitest -u` (which the repo uses to
- * rewrite src/lessons/assessment/flights.json) cannot rewrite it.
+ * never re-recorded by the catalogue's own work: a difference is a change to a
+ * built-in vehicle and fails here, whatever caused it. So the test reads the
+ * fixture and compares; it is not a snapshot, and `vitest -u` (which the repo
+ * uses to rewrite src/lessons/assessment/flights.json) cannot rewrite it.
+ *
+ * Re-recorded once, for a change to the data made on purpose elsewhere: main's
+ * F11 (2026-09-28, docs/VALIDATION.md) gave Falcon Heavy's side boosters and
+ * core Falcon 9 Block 5's published first-stage masses and a max-Q bucket. The
+ * fixture and the key-order hash were then written from main's own literal
+ * `VEHICLES` (its src/data/vehicles.ts at 3d713b5, before the catalogue), not
+ * from the catalogue, so this test still proves the catalogue emits exactly
+ * the fleet main flies. Only Falcon Heavy changed.
  *
  * What the JSON pins and what it leaves out, on purpose:
  * - keys are sorted recursively, so key order is left out of the fixture. It
@@ -33,8 +41,12 @@ import { VEHICLES } from '../src/data/vehicles';
 // as text, through Vite's `?raw` (tsconfig types only `vite/client`, no `node:fs`)
 import FIXTURE from './fixtures/vehicles-pre-d01.json?raw';
 
-/** SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, at eedd035 (the pre-D01 HEAD); 30 926 characters. */
-const PRE_D01_UNSORTED_SHA256 = 'f891238efbdbe546a2c96c40d632513f03b8ebe02ee1971155c202b69bf87f9a';
+/**
+ * SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, from main's literal fleet at
+ * 3d713b5 (F11 included); 30 987 characters. At eedd035, the pre-D01 HEAD, it
+ * was f891238e…, 30 926 characters.
+ */
+const PRE_D01_UNSORTED_SHA256 = '420d7d170991740362d985e602da126d94c4efb4187ac167a102be108c93f420';
 
 const sortKeys = (v: unknown): unknown => (Array.isArray(v) ? v.map(sortKeys)
   : v && typeof v === 'object'
@@ -72,6 +84,6 @@ describe('D01: the catalogue vehicles, recorded before the parts catalogue', () 
     const unsorted = JSON.stringify(VEHICLES);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    expect([unsorted.length, hex]).toEqual([30926, PRE_D01_UNSORTED_SHA256]);
+    expect([unsorted.length, hex]).toEqual([30987, PRE_D01_UNSORTED_SHA256]);
   });
 });

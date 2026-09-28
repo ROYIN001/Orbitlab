@@ -267,6 +267,11 @@ export const VEHICLES: VehicleSpec[] = [
       f9Stage2(),
     ],
     sites: ['cape', 'ksc39a'], maxQ: 40e3, maxAccel: 45,
+    // Falcon 9's bucket. Falcon Heavy Demo 1's webcast telemetry shows the whole
+    // vehicle throttled down from T+38 to T+72 s, holding the dynamic pressure
+    // on a 20-23 kPa plateau (peak 22.9 kPa); without a bucket the model peaked
+    // at 34 kPa (docs/VALIDATION.md, F11).
+    maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.75 },
     // Side boosters flown back to LZ-1 and LZ-2 keep 15 %: at 12 % they run
     // into their landing reserve before the boostback is done (Arabsat-6A,
     // 6.5 t to GTO, point-mass model).

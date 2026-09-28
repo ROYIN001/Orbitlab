@@ -558,6 +558,11 @@
   "manufacturer": "SpaceX",
   "maxAccel": 45,
   "maxQ": 40000,
+  "maxQThrottle": {
+   "qEnd": 22000,
+   "qStart": 22000,
+   "throttle": 0.75
+  },
   "name": "Falcon Heavy",
   "notes": "Three Falcon 9 cores; the center core throttles down until side-booster separation.",
   "payloadGTO": 26700,
@@ -577,7 +582,7 @@
       "color": "#f2f2f2",
       "count": 2,
       "diameter": 3.66,
-      "dryMass": 25600,
+      "dryMass": 22200,
       "engine": {
        "count": 9,
        "ispSL": 282,
@@ -590,7 +595,7 @@
       "id": "side",
       "length": 42,
       "name": "Side boosters",
-      "propellantMass": 395700,
+      "propellantMass": 410900,
       "sepDelay": 2
      }
     ],
@@ -611,7 +616,7 @@
     "legs": true,
     "length": 42,
     "name": "Center core",
-    "propellantMass": 395700,
+    "propellantMass": 410900,
     "throttleWithBoosters": 0.55
    },
    {

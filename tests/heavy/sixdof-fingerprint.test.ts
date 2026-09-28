@@ -15,7 +15,11 @@
  *
  * Recorded before any of those fixes, at the commit that added this file, and
  * never re-recorded by them. A vehicle whose data change on purpose later is
- * re-recorded with its reason stated here, as `GOLDEN` is.
+ * re-recorded with its reason stated here, as `GOLDEN` is:
+ * - falconheavy, after main's F11 (2026-09-28) gave its side boosters and core
+ *   Falcon 9 Block 5's published first-stage masses and a max-Q bucket; it was
+ *   'dd5364877d7d1b7f'. The spec equals main's literal value for value
+ *   (tests/d01-vehicles-identity.test.ts) and the other 20 are unchanged.
  *
  * Heavy suite only (`npm run test:heavy`): 21 six-DOF flights of 160 s.
  */
@@ -47,7 +51,7 @@ const FINGERPRINTS: Readonly<Record<string, string>> = {
   protonm: '2844117a23563142',
   angaraa5: '1e14a01434e78edb',
   falcon9: '4e7814725cdd4e3b',
-  falconheavy: 'dd5364877d7d1b7f',
+  falconheavy: 'd54a7e829a77ee6a',
   atlasv551: '24fc1e3c19a18c03',
   vulcan: '1b2c16f43de54bb5',
   ariane64: 'e521b86e4a051606',
