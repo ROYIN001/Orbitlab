@@ -1917,6 +1917,9 @@ top of the search, 115 % of the rating); the others date from the previous wave:
 | Electron | > 0.30 t | > 0.30 t | 0.2 t / 0.30 t | — |
 | Starship | > 100 t | > 100 t | — | 21.2 t / 27 t |
 
+The Falcon 9 and Falcon Heavy rows predate the published first-stage masses
+([VALIDATION.md](VALIDATION.md), F1 and F11) and have not been re-measured since.
+
 "The largest payload that passes the acceptance criteria" is not the same thing as "the largest
 payload delivered": a flight can reach a perfectly good orbit and still miss the criteria on
 apsis accuracy or on the mission clock.
@@ -2308,7 +2311,8 @@ every recovered body is flown downrange, unchanged. A plan changes the propellan
 body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for Falcon 9 and
 Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 15 %
 touches down with 13.0 t to spare, measured with Falcon 9's published first-stage masses; 12 %
-leaves Arabsat-6A's side boosters short of their boostback), a drone-ship or downrange body keeps
+leaves Arabsat-6A's side boosters short of their boostback, and 13 % lands them 7 m off,
+measured with the same published masses on all three cores), a drone-ship or downrange body keeps
 `recoveryReserve`, and a body the plan expends, or leaves out, holds nothing back.
 
 The plan is checked with the rest of the configuration (`validateConfigInput`): a landing zone has
@@ -2402,16 +2406,18 @@ tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 |---|---|---|---|
 | Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.2 m |
 | | six-DOF | first stage → LZ-1 | 1.6 m |
-| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.0 m, 0.0 m |
-| | | core → drone ship, ~930 km downrange | 0.0 m |
-| | six-DOF | side boosters → LZ-1, LZ-2 | 0.8 m, 0.8 m |
-| | | core → drone ship | 0.7 m |
+| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.3 m, 0.2 m |
+| | | core → drone ship, ~930 km downrange | 2.1 m |
+| | six-DOF | side boosters → LZ-1, LZ-2 | 1.7 m, 1.6 m |
+| | | core → drone ship | 1.6 m |
 | Starship (15.6 t, 500 km) | point mass | Super Heavy → tower | 0.0 m, caught |
 | | six-DOF | Super Heavy → tower | 0.3 m, caught at 2.4 m/s down, 0.45 m/s across, 0.5° |
 
 The Falcon 9 rows were re-measured on 2026-09-25 with the published first-stage masses
 (VALIDATION.md). The rows they replace (0.0 m and 0.8 m) were already out of date: with the
 earlier masses the same harness now gives 0.7 m and 1.5 m.
+The Falcon Heavy rows were re-measured on 2026-09-27 with the same masses on its three cores
+and Falcon 9's max-Q bucket (VALIDATION.md, F11).
 
 The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
 real flight.
@@ -2706,19 +2712,19 @@ where drag and the third bodies are left out for both vehicles alike.
 - **Gravity**: the central term and the zonal harmonics J2 = 1.08263·10⁻³, J3 = −2.53266·10⁻⁶,
   J4 = −1.61962·10⁻⁶ (EGM96, unnormalised), as the gradient of the zonal potential (the test
   differentiates the potential numerically and requires the accelerations to match).
-- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth, at the height above
-  the WGS-84 ellipsoid. ρ's level is NRLMSISE-00's total density averaged over the day and the
-  seasons, as ECSS tabulates it for low, moderate and high long-term activity (ECSS-E-ST-10-04C,
-  2008, Annex G, Tables G-1 to G-3; F10.7 65, 140, 250 and Ap 0, 15, 45), interpolated in log ρ
-  against 1/T, T = 900 + 2.5 (F10.7 − 70) + 1.5 Ap K the exospheric temperature of the IPS
-  relation (IPS Radio and Space Services, "Satellite Orbital Decay Calculations"). Its spread
-  through the day is Harris–Priester's (Montenbruck & Gill, *Satellite Orbits*, 2000, §3.5.2,
-  Table 3.8, 100–1000 km): the table's minimum rising to its maximum as cosⁿ(ψ/2) of the angle
-  from the diurnal bulge, whose apex lags the Sun by 30°, n from 2 at the equator to 6 in polar
-  orbits, normalised so that its average over the globe is the level. The indices (R05,
-  src/physics/propagator/activity.ts) are one of ECSS's levels, or measured month by month
-  (GFZ since 1947, then NOAA SWPC), then SWPC's forecast, then the Sun repeating itself eleven
-  years on; Ap where none is measured is 13, the mean of solar cycles 19–24.
+- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth. ρ is NRLMSISE-00's
+  effective mass density for drag (GTD7D, the anomalous oxygen included; Picone, Hedin, Drob and
+  Aikin, JGR 107(A12), 2002), at the satellite's geodetic height, latitude and longitude above
+  WGS-84, the day of the year, the UT and the local solar time (UT + longitude/15): a port of the
+  model's C release (src/physics/propagator/msis.ts, P2.5), the model ECSS-E-ST-10-04C (§8.3)
+  names for orbit decay, with an uncertainty ECSS puts at about 15 % in mean conditions (Annex
+  G.5). Above 2500 km there is no air. The indices (R05, P2.5, src/physics/propagator/activity.ts)
+  are what the model reads for a day — the previous day's observed F10.7, its 81-day centred
+  mean, the day's Ap — either held at one of ECSS's levels (F10.7 65, 140, 250; Ap 0, 15, 45), or
+  measured day by day (GFZ since 1954, then NOAA SWPC), then SWPC's forecast, then the mean of
+  solar cycles 19–24 month by month from cycle 25's minimum; the Ap where none is measured is the
+  same mean cycle's. Until P2.5 the density was the model's day-and-season average (ECSS's
+  tables) spread by Harris–Priester's diurnal bulge, and the indices monthly.
 - **Sun and Moon**: third-body accelerations (the direct pull less the pull on the Earth), with
   the low-precision ephemerides of Montenbruck & Gill §3.3.2 (Sun to 0.1 %, Moon to a few hundred
   kilometres).
@@ -2726,21 +2732,25 @@ where drag and the third bodies are left out for both vehicles alike.
   Earth's cylindrical shadow.
 - **Cowell**: Dormand–Prince 5(4) with step control on the relative position error (10⁻⁹ in the
   window). **Mean elements**: J2's secular rates of the node and the perigee, and drag's rates of
-  a and e averaged over a revolution by Gauss's equations at 36 points of eccentric anomaly, in
-  steps of up to six hours (shorter as the orbit decays); no Sun, Moon or sunlight.
+  a and e averaged over a revolution by Gauss's equations in eccentric anomaly — 24 points, or for
+  an eccentric orbit 24 over the arc within 300 km of the perigee's height and 12 over the rest —
+  in steps of up to five days, each losing at most 0.5 % of the height left above the re-entry
+  line, a step of more than a day reading the indices' mean over it; no Sun, Moon or sunlight.
 - Both stop at a perigee of 120 km, where a satellite is lost within a revolution or two; that
   instant is reported as the lifetime.
 
 Checked (tests/propagator.test.ts): J2's nodal regression against −3/2 n J2 (R/p)² cos i to
 0.1 %; a force-free orbit kept to a metre over five days; a space station at 420 km losing 1–6 km
 a month, with Cowell and the mean elements within 25 % of each other; a 1U CubeSat at 400 km
-down in a month to a few years depending on the Sun (the model: 74, 222 and 1208 days at ECSS's
-high, moderate and low levels); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
+down in a month to a few years depending on the Sun (the model: 69, 217 and 1268 days at ECSS's
+high, moderate and low levels; 74, 222 and 1208 with R05's density); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
 Sun and the Moon (known: about 0.75–0.95°); and sunlight pressure raising a light satellite's
-eccentricity. tests/activity.test.ts holds the density to the ECSS tables and, with the Sun as
-measured, brings seven spheres of published mass and size (Starshine 1–3, the four ANDE spheres,
-1999–2010) down within 25 % of their days in orbit on record, 13–22 % early for six of them
-(VALIDATION.md §6).
+eccentricity; and the drag's average over a transfer orbit's revolution against a fine even
+sampling, to 0.1 %. tests/msis.test.ts holds the model to its distribution's test cases and to
+NRL's Fortran; tests/activity.test.ts holds its equatorial averages to ECSS's tables (0.3 %) and,
+with the Sun as measured, brings seven spheres of published mass and size (Starshine 1–3, the four
+ANDE spheres, 1999–2010) down within 25 % of their days in orbit on record, 8–23 % early for six of
+them (VALIDATION.md §6).
 
 The payloads' cross-sections are estimates by class (src/physics/propagator/spacecraft.ts); the
 window lets them be changed, and the lifetime is inversely proportional to C_D A/m.
@@ -2780,8 +2790,10 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     telemetry of five flights) and ten others against published timelines
     ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
     - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
-    - Falcon Heavy's first stages cut off ~18 % early.
-    - PSLV-XL's first stage is 29 % slow at separation, the cost of the linear solid-motor taper.
+    - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
+      published.
+    - PSLV-XL's first stage is 29 % slow at separation. It flies too steep and then turns hard;
+      the solid-motor curve shape was measured and is not the cause.
     - H3's first stage flies far flatter than JAXA's plan.
     - The heating placard drops most fairings 10–50 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket

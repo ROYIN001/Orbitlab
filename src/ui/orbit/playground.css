@@ -260,6 +260,12 @@
 .pg-conj-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--text); }
 .pg-conj-main { color: #c9d6e2; overflow-wrap: anywhere; }
 .pg-conj-more { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pg-sensor { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.15); font-size: 12px; overflow-wrap: anywhere; }
+.pg-sensor-what { color: var(--muted); }
+.pg-sensor.yes { border-left-color: #6fd6a8; }
+.pg-sensor.yes .pg-sensor-verdict { color: #8fe3bd; }
+.pg-sensor.no .pg-sensor-verdict { color: #c9a58e; }
+.pg-sensor.unknown .pg-sensor-verdict { color: var(--muted); }
 /* R03: the passes over a place */
 .pg-passes { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
 .pg-pass-next { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
@@ -335,3 +341,15 @@
   .pg-tour-text { font-size: 14.5px; }
   .pg-tour-stat strong { font-size: 19px; }
 }
+
+/* P2.5: an approach shown in the views, its encounter plane, a conjunction message */
+.pg-conj-list li.shown { background: rgba(255, 138, 101, 0.07); }
+.pg-conj-list li .watch-btn.link { padding: 2px 0; font-size: 12px; }
+.pg-plane { margin: 8px 0 4px; }
+.pg-plane-svg svg { display: block; width: 100%; max-width: 280px; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+.pg-cdm { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pg-cdm .pg-file { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.pg-cdm .pg-file input { max-width: 100%; font-size: 12px; }
+.pg-cdm label:not(.pg-file) { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 12.5px; color: var(--muted); }
+.pg-cdm label:not(.pg-file) input { width: 90px; }
+.pg-cdm-objects { margin: 6px 0; color: var(--text); font-size: 12.5px; overflow-wrap: anywhere; }

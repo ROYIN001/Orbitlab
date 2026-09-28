@@ -10,10 +10,11 @@ import { describe, expect, it } from 'vitest';
 import { CZ5B_STAGES } from '../src/data/cz5b';
 import { WINDOW_FRACTION, predictReentry, tumblingCylinderArea } from '../src/orbit/reentry';
 import { elementsFromRecord } from '../src/orbit/omm';
-import { ECSS_LEVELS, measuredActivity } from '../src/physics/propagator/activity';
+import { ECSS_LEVELS, measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import HISTORY from '../src/data/solar-daily.json';
 
 const jdOf = (iso: string): number => Date.parse(iso) / 86400000 + 2440587.5;
-const measured = measuredActivity(null).series;
+const measured = measuredActivity(HISTORY as SolarDaily, null).series;
 
 describe('re-entry prediction (M03)', () => {
   it('takes a tumbling body\'s mean cross-section as a quarter of its surface', () => {

@@ -86,6 +86,20 @@ export function handoffOrbit(h: Pick<OrbitHandoff, 'r' | 'v' | 'jd'>): Orbit {
   return orbitFromState(v3(h.r[0], h.r[1], h.r[2]), v3(h.v[0], h.v[1], h.v[2]), h.jd);
 }
 
+/**
+ * S03: how the playground stands when a flight hands a new orbit on
+ * ("Continue in Orbit", audit 2026-09-27 A6): on its own orbit, not the real
+ * satellites it may have been left showing, and keeping nothing that
+ * describes another satellite — the real one an orbit was taken from, or
+ * the Thai one an application was showing (the applications' other
+ * settings, a station and the like, stay).
+ */
+export function handoffEntry<A extends { thaiId: string | null }>(was: { mode: 'orbit' | 'sky'; apps: A | null }): {
+  leaveSky: boolean; apps: A | null; skyLabel: null;
+} {
+  return { leaveSky: was.mode === 'sky', apps: was.apps && { ...was.apps, thaiId: null }, skyLabel: null };
+}
+
 /** How the playground stands for one step of the Watch tour. */
 export interface TourSetup {
   view: TourStep['view'];

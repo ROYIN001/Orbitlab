@@ -78,6 +78,8 @@ export interface OrbitMarker {
 export interface OrbitViewOptions {
   /** Kepler's second law: the equal-time sectors and the sweeping radius */
   sectors: boolean;
+  /** a picture rather than a diagram (the home page's globe): no perigee, apogee or node marks */
+  plain?: boolean;
   /** the Engineer's extras: the orbit's normal and the inertial axes */
   engineer: boolean;
   /** carry J2's drift of the node and the perigee */
@@ -88,19 +90,24 @@ export interface OrbitViewOptions {
 const COLORS = { orbit: 0x8be5cd, crash: 0xff6b6b, perigee: 0xefa47e, apogee: 0x6ec8ff, node: 0xc3a6ff, sat: 0xffffff, sectorA: 0x8be5cd, sectorB: 0x6ec8ff };
 
 function labelSprite(text: string, color: string): THREE.Sprite {
+  const font = '600 38px system-ui, sans-serif';
   const c = document.createElement('canvas');
-  c.width = 64; c.height = 64;
+  const g0 = c.getContext('2d')!;
+  g0.font = font;
+  // a word (P2.5: "closest") is as wide as it needs; a symbol keeps its square
+  const w = Math.max(64, Math.ceil(g0.measureText(text).width) + 16);
+  c.width = w; c.height = 64;
   const g = c.getContext('2d')!;
-  g.font = '600 38px system-ui, sans-serif';
+  g.font = font;
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.lineWidth = 6; g.strokeStyle = 'rgba(5,8,13,0.9)';
-  g.strokeText(text, 32, 34);
+  g.strokeText(text, w / 2, 34);
   g.fillStyle = color;
-  g.fillText(text, 32, 34);
+  g.fillText(text, w / 2, 34);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, sizeAttenuation: false }));
-  sprite.scale.set(0.045, 0.045, 1);
+  sprite.scale.set((0.045 * w) / 64, 0.045, 1);
   // drawn just above the point it names
   sprite.center.set(0.5, -0.25);
   sprite.renderOrder = 10;
@@ -158,6 +165,8 @@ export class OrbitView {
   private readonly markers = new THREE.Group();
   private readonly target: THREE.Mesh;
   private size = { w: 1, h: 1 };
+  /** the picture's shift off centre, fractions of its size (see `shiftPicture`) */
+  private shift = { x: 0, y: 0 };
   /** the farthest point of the plan's other orbits, m: framing takes them in too */
   private ghostReach = 0;
   /** R02: a catalogue group's satellites, as points; and the moment the Earth is drawn at when no orbit is */
@@ -447,6 +456,9 @@ export class OrbitView {
     this.sat.scale.setScalar(px * 1.15);
     this.target.scale.setScalar(px * 1.1);
     for (const m of this.markers.children) if (m instanceof THREE.Mesh) m.scale.setScalar(px * 0.8);
+    if (this.options.plain) {
+      for (const m of [this.perigee, this.apogee, this.perigeeLabel, this.apogeeLabel, this.node, this.nodeLabel, this.nodeLine]) m.visible = false;
+    }
   }
 
   /** The Earth turned by the sidereal angle `theta`; the Sun where it is at `jd`. */
@@ -457,6 +469,28 @@ export class OrbitView {
     (this.earthMat.uniforms.sunDir.value as THREE.Vector3).set(sun.x, sun.y, sun.z);
   }
 
+  /** The home page's globe (src/ui/home-globe.ts): where the camera stands about the Earth's centre. */
+  setView(az: number, el: number, dist: number): void {
+    this.az = az; this.el = el; this.dist = dist;
+  }
+
+  /** The Earth moved off the middle of the picture, by fractions of the width and height (+x right, +y down). */
+  shiftPicture(fx: number, fy: number): void {
+    this.shift = { x: fx, y: fy };
+  }
+
+  /** Where a point (m, ECI) is drawn on the canvas, CSS px; null behind the camera or hidden by the Earth. */
+  project(p: { x: number; y: number; z: number }): { x: number; y: number } | null {
+    const v = new THREE.Vector3(p.x * S, p.y * S, p.z * S);
+    const c = this.camera.position;
+    const d = v.clone().sub(c);
+    if (d.dot(this.camera.getWorldDirection(new THREE.Vector3())) <= 0) return null;
+    const along = -c.dot(d) / d.lengthSq();
+    if (along > 0 && along < 1 && c.clone().addScaledVector(d, along).length() < RE) return null;
+    v.project(this.camera);
+    return { x: (v.x + 1) / 2 * this.size.w, y: (1 - v.y) / 2 * this.size.h };
+  }
+
   render(): void {
     // the field of view is set vertically: on a portrait screen stand back until the width fits too
     const d = this.dist * Math.max(1, 1 / this.camera.aspect);
@@ -464,6 +498,9 @@ export class OrbitView {
     this.camera.position.set(d * c * Math.cos(this.az), d * c * Math.sin(this.az), d * Math.sin(this.el));
     this.camera.lookAt(0, 0, 0);
     this.camera.near = Math.max(0.01, d * 0.002);
+    const { w, h } = this.size;
+    if (this.shift.x || this.shift.y) this.camera.setViewOffset(w, h, -this.shift.x * w, -this.shift.y * h, w, h);
+    else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
     (this.earthMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
     this.renderer.render(this.scene, this.camera);

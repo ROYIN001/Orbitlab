@@ -16,8 +16,9 @@ import type { SimEvent } from '../physics/simulation';
 import { vehicleById, vehicleDataId } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
-import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
+import { autoWarp, flightEnding, groundSpeed, parkingMilestone, watchBeat, watchSummary, WATCH_BEATS, type WatchBeat, type WatchEnding, type WatchSummary } from './watch-logic';
+import { WATCH_MISSIONS, watchMissionById, type WatchMissionId } from './watch-missions';
+import { satelliteNameById, stageNameByLabel } from './names';
 
 export interface WatchHost {
   /** load a viewer mission and launch it */
@@ -38,6 +39,10 @@ export interface WatchHost {
 export type WatchSpeed = 'auto' | number;
 /** fixed speeds, all of them presets of the workspace's warp selector */
 const SPEEDS: readonly WatchSpeed[] = ['auto', 1, 5, 25, 100];
+/** How long the parking-orbit note stays up on its own, ms of real time (A9). */
+const MILESTONE_MS = 12_000;
+/** A parking orbit left within this many seconds is not worth a note: Falcon Heavy's lights again a second later, s. */
+const MILESTONE_LEAD = 20;
 
 interface UpdateState {
   /** the live flight is advancing */
@@ -80,6 +85,11 @@ function fmtClock(sec: number): string {
   return fmtTime(sec).replace('-', '−');
 }
 
+/** A span of time, "45:52", for a sentence. */
+function fmtSpan(sec: number): string {
+  return fmtClock(Math.max(0, sec)).replace(/^T\+/, '');
+}
+
 export class WatchView {
   private missionId: WatchMissionId | null = null;
   private speed: WatchSpeed = 'auto';
@@ -89,7 +99,22 @@ export class WatchView {
   private beat: WatchBeat | null = null;
   private lastFrame: VisualFrame | null = null;
   /** the frame the end card was written for, so a language change rewrites the same card */
-  private endFrame: { frame: VisualFrame; ending: WatchEnding } | null = null;
+  private endFrame: { frame: VisualFrame; ending: WatchEnding; summary: WatchSummary } | null = null;
+  /** the vehicle on screen, for the names of the stages it flew home */
+  private vehicle: VehicleSpec | null = null;
+  /** the flight was paused under its end card, so "keep watching" plays it on */
+  private pausedAtEnd = false;
+  /**
+   * A9: the parking-orbit note. It is shown once a flight, over the top of the
+   * scene rather than across it, and goes by itself, when closed, or when the
+   * next burn lights.
+   */
+  private milestone: HTMLElement;
+  private milestoneText: HTMLElement;
+  private milestoneEyebrow: HTMLElement;
+  private milestoneClose: HTMLButtonElement;
+  private milestoneShown = false;
+  private milestoneTimer: ReturnType<typeof setTimeout> | null = null;
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
@@ -167,7 +192,22 @@ export class WatchView {
     this.picker.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); this.closePicker(); } });
     this.endCard = el('section', 'watch-card watch-end');
     this.endCard.hidden = true;
-    root.replaceChildren(bottom, this.picker, this.endCard);
+    // A9: the card styles belong to src/ui/modes.css, which is not this
+    // change's to edit; the note borrows the cards' look and sits at the top.
+    this.milestone = el('section', 'watch-card watch-milestone');
+    this.milestone.hidden = true;
+    this.milestone.setAttribute('role', 'status');
+    Object.assign(this.milestone.style, { top: '16px', transform: 'translateX(-50%)', width: 'min(460px, calc(100% - 32px))', padding: '12px 14px 14px' });
+    const milestoneHead = el('div', 'watch-card-head');
+    this.milestoneEyebrow = el('span', 'eyebrow');
+    this.milestoneClose = el('button', 'watch-close', '×');
+    this.milestoneClose.type = 'button';
+    this.milestoneClose.addEventListener('click', () => this.hideMilestone());
+    milestoneHead.append(this.milestoneEyebrow, this.milestoneClose);
+    this.milestoneText = el('p');
+    Object.assign(this.milestoneText.style, { margin: '2px 0 0', fontSize: '14.5px', lineHeight: '1.5', color: '#c8d6e2' });
+    this.milestone.append(milestoneHead, this.milestoneText);
+    root.replaceChildren(bottom, this.picker, this.endCard, this.milestone);
     this.applyLanguage();
   }
 
@@ -193,9 +233,12 @@ export class WatchView {
     this.missionId = null;
     this.ended = false;
     this.endFrame = null;
+    this.pausedAtEnd = false;
     this.beat = null;
     this.lastWarp = 0;
     this.endCard.hidden = true;
+    this.hideMilestone();
+    this.milestoneShown = false;
     this.shown.label = '';
   }
 
@@ -208,6 +251,7 @@ export class WatchView {
   openPicker(): void {
     this.renderPicker();
     this.endCard.hidden = true;
+    this.hideMilestone();
     this.picker.hidden = false;
     this.root.classList.add('picking');
     this.picker.querySelector<HTMLElement>('.watch-mission')?.focus({ preventScroll: true });
@@ -254,6 +298,7 @@ export class WatchView {
   /** Called at the HUD's 10 Hz with the frame on screen. */
   update(frame: VisualFrame | null, events: readonly SimEvent[], state: UpdateState): void {
     this.lastFrame = frame;
+    this.vehicle = state.vehicle;
     // Four strap-ons leaving together is the Soyuz "Korolev cross".
     const cross = !!state.vehicle && vehicleDataId(state.vehicle).startsWith('soyuz');
     const beat = watchBeat(frame, events, cross, this.solidBoosters(state.vehicle));
@@ -281,10 +326,39 @@ export class WatchView {
     if (state.playing !== this.shown.playing) this.syncPlay(state.playing);
     this.syncFollow(state.follow);
     if (this.speed === 'auto' && state.playing) this.applyAutoWarp();
+    this.syncMilestone(frame, events);
     if (!this.ended && frame) {
       const ending = flightEnding(frame, events);
-      if (ending) { this.ended = true; this.showEnd(frame, ending); }
+      if (ending) {
+        this.ended = true;
+        this.hideMilestone();
+        this.showEnd(frame, ending, watchSummary(frame, events));
+        // A9: the flight stops under its card rather than running on behind it
+        if (!this.endCard.hidden && state.playing) { this.pausedAtEnd = true; this.host.togglePlay(); }
+      }
     }
+  }
+
+  /**
+   * A9: a parking orbit is a milestone, not the end: say so, with the orbit
+   * and the time to the burn that leaves it, and count that time down.
+   */
+  private syncMilestone(frame: VisualFrame | null, events: readonly SimEvent[]): void {
+    const m = this.ended ? null : parkingMilestone(frame, events);
+    if (!m) { this.hideMilestone(); return; }
+    if (this.milestone.hidden) {
+      if (this.milestoneShown || !this.picker.hidden || m.tgo < MILESTONE_LEAD) return;
+      this.milestoneShown = true;
+      this.milestone.hidden = false;
+      this.milestoneTimer = setTimeout(() => this.hideMilestone(), MILESTONE_MS);
+    }
+    const text = t('watch.parking.text', { pe: num(m.pe), ap: num(m.ap), tgo: fmtSpan(m.tgo) });
+    if (this.milestoneText.textContent !== text) this.milestoneText.textContent = text;
+  }
+
+  private hideMilestone(): void {
+    if (this.milestoneTimer !== null) { clearTimeout(this.milestoneTimer); this.milestoneTimer = null; }
+    this.milestone.hidden = true;
   }
 
   private syncFollow(follow: UpdateState['follow']): void {
@@ -304,9 +378,9 @@ export class WatchView {
     this.playBtn.setAttribute('aria-label', title);
   }
 
-  private showEnd(frame: VisualFrame, ending: WatchEnding): void {
+  private showEnd(frame: VisualFrame, ending: WatchEnding, summary: WatchSummary): void {
     const success = ending !== 'failed';
-    this.endFrame = { frame, ending };
+    this.endFrame = { frame, ending, summary };
     if (!this.picker.hidden) return;
     const card = this.endCard;
     card.replaceChildren();
@@ -330,17 +404,20 @@ export class WatchView {
         port: t(`rv.port.${rv.port}`), time: fmtClock(since).replace(/^T\+/, ''), burns: num(rv.burns.length),
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
+      for (const line of this.summaryLines(summary, frame, false)) card.append(el('p', 'watch-end-fact', line));
     } else if (ending === 'splashdown') {
       const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
       card.append(el('p', undefined, t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
     } else if (success) {
-      const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
+      // A9: the time to the final orbit, not to the card
+      const since = (summary.orbit?.at ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
       const period = frame.elements.period;
       card.append(el('p', undefined, t('watch.end.text', {
         time: fmtClock(since).replace(/^T\+/, ''),
         alt: num(Math.max(0, frame.altitudeAGL) / 1000),
         speed: num(groundSpeed(frame) * 3.6),
       })));
+      for (const line of this.summaryLines(summary, frame, true)) card.append(el('p', 'watch-end-fact', line));
       if (isFinite(period) && period > 0) card.append(el('p', 'watch-end-fact', t('watch.end.fact', { min: num(period / 60) })));
     } else {
       card.append(el('p', undefined, t('watch.fail.text', { time: fmtClock(frame.t) })));
@@ -352,7 +429,11 @@ export class WatchView {
       b.addEventListener('click', action);
       actions.append(b);
     };
-    if (success) button('watch.end.continue', 'watch-btn primary', () => { card.hidden = true; });
+    if (success) button('watch.end.continue', 'watch-btn primary', () => {
+      card.hidden = true;
+      if (this.pausedAtEnd && !this.shown.playing) this.host.togglePlay();
+      this.pausedAtEnd = false;
+    });
     const id = this.missionId;
     if (id) button('watch.end.again', 'watch-btn', () => this.host.start(id));
     button('watch.end.other', 'watch-btn', () => this.openPicker());
@@ -361,6 +442,35 @@ export class WatchView {
     button('watch.end.explore', 'watch-btn link', () => this.host.explore());
     card.append(actions);
     card.hidden = false;
+  }
+
+  /**
+   * A9: the end card's summary, a line each — the orbit the flight ended in,
+   * the payload, every stage flown home, a docking called off. `orbit` is
+   * false on the docking card, which names the station instead.
+   */
+  private summaryLines(s: WatchSummary, frame: VisualFrame, orbit: boolean): string[] {
+    const lines: string[] = [];
+    const liftoff = Math.max(0, frame.liftoffT ?? 0);
+    if (orbit && s.orbit) {
+      lines.push(t(s.orbit.onTarget ? 'watch.end.orbit' : 'watch.end.orbitOff', { pe: num(s.orbit.pe), ap: num(s.orbit.ap), inc: num(s.orbit.inc, 1) }));
+    }
+    if (orbit && s.payloadAt !== null) {
+      const key = this.missionId ? watchMissionById(this.missionId)?.payloadKey : undefined;
+      const name = key ? t(key) : s.payloadId ? satelliteNameById(s.payloadId) : null;
+      const time = fmtSpan(s.payloadAt - liftoff);
+      lines.push(name ? t('watch.end.payload', { name, time }) : t('watch.end.payloadAny', { time }));
+    }
+    for (const r of s.recovery) {
+      const name = stageNameByLabel(this.vehicle, r.name);
+      lines.push(r.outcome === 'zone' ? t('watch.end.recovery.zone', { name, zone: r.zone ?? '' })
+        : r.outcome === 'ship' ? t('watch.end.recovery.ship', { name })
+          : r.outcome === 'tower' ? t('watch.end.recovery.tower', { name })
+            : r.outcome === 'landed' ? t('watch.end.recovery.landed', { name })
+              : t('watch.end.recovery.lost', { name }));
+    }
+    if (s.dockingAborted) lines.push(t('watch.end.rvAborted'));
+    return lines;
   }
 
   private renderPicker(): void {
@@ -407,6 +517,11 @@ export class WatchView {
     // numbers are re-formatted in the new locale on the next update
     this.shown = { ...this.shown, label: '', text: '', clock: '', alt: '', speed: '', follow: '' };
     if (!this.picker.hidden) this.renderPicker();
-    if (!this.endCard.hidden && this.endFrame) this.showEnd(this.endFrame.frame, this.endFrame.ending);
+    if (!this.endCard.hidden && this.endFrame) this.showEnd(this.endFrame.frame, this.endFrame.ending, this.endFrame.summary);
+    this.milestoneEyebrow.textContent = t('watch.parking.eyebrow');
+    this.milestoneClose.setAttribute('aria-label', t('watch.pick.close'));
+    this.milestoneClose.title = t('watch.pick.close');
+    // the note's sentence is rewritten on the next update
+    this.milestoneText.textContent = '';
   }
 }

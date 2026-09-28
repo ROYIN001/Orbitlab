@@ -4,10 +4,10 @@
  * the bundled snapshot read back, the online source parsed into the same
  * dataset, and every way online can fail falling back to the snapshot.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DATA_MODE_KEY, DEFAULT_DATA_MODE, loadDataMode, saveDataMode, type DataModeStore } from '../src/provider/data-mode';
 import {
-  OfflineProvider, OnlineProvider, SNAPSHOT_FORMAT, createDataProvider, makeSnapshot, parseSnapshot, type Fetcher,
+  ONLINE_TIMEOUT_MS, OfflineProvider, OnlineProvider, SNAPSHOT_FORMAT, SNAPSHOT_TIMEOUT_MS, createDataProvider, makeSnapshot, parseSnapshot, type Fetcher,
 } from '../src/provider/data-provider';
 import { DATASETS, DATA_HOSTS } from '../src/provider/datasets';
 import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather } from '../src/provider/space-weather';
@@ -144,6 +144,27 @@ describe('the providers (S04)', () => {
     expect(createDataProvider('offline', BASE, net).mode).toBe('offline');
   });
 
+  it('offline: waits for a slow snapshot past the online limit, and gives up on a server that hangs (P2.5)', async () => {
+    vi.useFakeTimers();
+    try {
+      // a page still starting on a phone: the bundled file answers after 20 s
+      const slow = (async (url: string) => {
+        await new Promise((r) => setTimeout(r, 20_000));
+        return { ok: true, status: 200, json: async () => structuredClone(url === SNAP_URL ? bundled : {}) };
+      }) as Fetcher;
+      const pending = new OfflineProvider(BASE, slow).load('spaceWeather');
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect((await pending).from).toBe('snapshot');
+      expect(20_000).toBeGreaterThan(ONLINE_TIMEOUT_MS);
+      const hung = new OfflineProvider(BASE, fakeFetch({ [SNAP_URL]: 'hang' })).load('spaceWeather');
+      const failed = expect(hung).rejects.toThrow(`no answer within ${SNAPSHOT_TIMEOUT_MS / 1000} s`);
+      await vi.advanceTimersByTimeAsync(SNAPSHOT_TIMEOUT_MS);
+      await failed;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('online: reads the sources, into the same dataset the snapshot holds', async () => {
     const net = fakeFetch({ [SNAP_URL]: bundled, ...SWPC });
     const provider = createDataProvider('online', BASE, net);
@@ -170,6 +191,21 @@ describe('the providers (S04)', () => {
       expect(set.fallback, what).toMatch(why);
       expect(set.asOf, what).toBe((bundled as { asOf: string }).asOf);
     }
+  });
+
+  it('online: asks one host one question at a time (P2.5)', async () => {
+    const answers: Record<string, unknown> = { ...SWPC };
+    let inFlight = 0, most = 0;
+    const net = (async (url: string, init: { signal: AbortSignal }) => {
+      inFlight++;
+      most = Math.max(most, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight--;
+      return fakeFetch(answers)(url, init);
+    }) as Fetcher;
+    const set = await new OnlineProvider(new OfflineProvider(BASE, net), net, 10_000).load('spaceWeather');
+    expect(set.from).toBe('online');
+    expect(most).toBe(1);
   });
 
   it('online: stops when the caller does, without falling back', async () => {

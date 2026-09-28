@@ -7,7 +7,9 @@
  * was fixed before the comparison.
  */
 import { describe, expect, it } from 'vitest';
-import fixture from './fixtures/conjunction/iridium33-cosmos2251.json';
+import fixture from '../src/data/iridium33-cosmos2251.json';
+import { encounterPlane, encounterPlaneSvg } from '../src/orbit/encounter-plane';
+import { runScreeningJob } from '../src/orbit/screening-job';
 import {
   closeApproaches, collisionProbability, inertialVelocity, rtnAxes, rtnToFrame, type Ephemeris, type Mat3, type PosVel,
 } from '../src/orbit/conjunction';
@@ -58,6 +60,25 @@ describe('the closest approach (M01)', () => {
 describe('the probability of collision (M01)', () => {
   const at = (r: Vec3, v: Vec3): PosVel => ({ r, v });
   const iso = (s2: number): Mat3 => [[s2, 0, 0], [0, s2, 0], [0, 0, s2]];
+
+  it('draws the encounter plane it is worked out in (P2.5)', () => {
+    // an uncertainty long along x, the other object 300 m off along y, passing along z
+    const a = at(v3(0, 0, 0), v3(0, 0, 7000)), b = at(v3(0, 300, 0), v3(0, 0, -7000));
+    const covA: Mat3 = [[200 ** 2, 0, 0], [0, 50 ** 2, 0], [0, 0, 100]], covB = iso(0);
+    const plane = encounterPlane(a, covA, b, covB, 12);
+    const p = collisionProbability(a, covA, b, covB, 12);
+    expect(Math.hypot(plane.miss.x, plane.miss.y)).toBeCloseTo(p.miss, 9);
+    expect(plane.sigma[0]).toBeCloseTo(p.sigma[0], 9);
+    expect(plane.sigma[1]).toBeCloseTo(p.sigma[1], 9);
+    // x is along the miss: the larger axis (the frame's x) lies square to it
+    expect(plane.miss.x).toBeCloseTo(300, 9);
+    expect(Math.abs(Math.cos(plane.angle))).toBeLessThan(1e-9);
+    const svg = encounterPlaneSvg(plane, { first: 'A', second: 'B<2>', scale: 'plane' });
+    expect(svg.startsWith('<svg')).toBe(true);
+    expect(svg).toContain('B&lt;2&gt;');
+    // the view spans the 3σ ellipse (660 m); the scale bar, a round length under half of it
+    expect(svg).toContain('200 m');
+  });
 
   it('is 1 − exp(−R²/2σ²) for a direct hit through a round uncertainty', () => {
     const a = at(v3(0, 0, 0), v3(0, 7000, 0)), b = at(v3(0, 0, 0), v3(7000, 0, 0));
@@ -159,6 +180,15 @@ describe('screening the catalogue (M01)', () => {
     expect(near.some((o) => o.source === 'gnss')).toBe(false);
     for (const o of near) expect(bandsOverlap(iss, o, 5000)).toBe(true);
   });
+
+  it('gives the same approaches off the main thread as on it, the others found again by index (P2.5)', async () => {
+    const iss = byNum(25544);
+    const direct = screen(iss, all, jd0, jd0 + 1, 25e3, 10);
+    // no Worker under the tests: the job runs inline, as a page without module workers does
+    const job = await runScreeningJob(iss, all.filter((o) => o !== iss), jd0, jd0 + 1, 25e3, 10, new AbortController().signal, () => {});
+    expect(job.map((c) => [c.other.key, c.approach.tca, c.approach.miss])).toEqual(direct.map((c) => [c.other.key, c.approach.tca, c.approach.miss]));
+    expect(job.length).toBeGreaterThan(0);
+  }, 60_000);
 
   it('misses no approach a ten-second brute force finds, with its coarser steps', () => {
     // a weather satellite in the Fengyun-1C debris' band, against the first forty fragments near it

@@ -19,6 +19,8 @@ export type WsKind = 'number' | 'choice' | 'multi' | 'order';
 
 export interface WsItem {
   kind: WsKind;
+  /** a stable name for the question, where something reads its answer (a case sheet's, graded as a lesson: src/worksheets/case-ids.ts) */
+  id?: string;
   prompt: string;
   /** for a number: its unit, printed after the answer box */
   unit?: string;
@@ -31,6 +33,10 @@ export interface WsItem {
     /** a number's value, and how close counts as right */
     value?: number;
     tolerance?: string;
+    /** the tolerance as a number, in the unit of `value` */
+    tol?: number;
+    /** a choice's right option, counted from 0 */
+    index?: number;
     /** how it is worked out, with the flight's own numbers */
     working?: string;
   };
@@ -57,4 +63,6 @@ export interface Worksheet {
   seed: number;
   generatedAt: Date;
   sections: WsSection[];
+  /** the line at the foot of the sheet, where it is not the flight's (P2.5: a case from the record) */
+  footer?: string;
 }

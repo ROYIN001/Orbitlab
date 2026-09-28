@@ -12,8 +12,8 @@ import type { SatelliteCatalog } from '../src/provider/satellites';
 import { skyObjects } from '../src/orbit/real-sky';
 import { elementsFromRecord } from '../src/orbit/omm';
 import { stationOf } from '../src/orbit/applications-setup';
-import { predictReentry } from '../src/orbit/reentry';
-import { measuredActivity } from '../src/physics/propagator/activity';
+import { predictFromRequest } from '../src/orbit/reentry-job';
+import { loadSolarDaily, measuredActivity } from '../src/physics/propagator/activity';
 import { describeLifetime, type LifetimeInputs } from '../src/ui/lifetime';
 import { getLang } from '../src/i18n';
 
@@ -175,6 +175,8 @@ class SlowProvider implements DataProvider {
   readonly asked: { id: string; answer: ReturnType<typeof later<Dataset<unknown>>> }[] = [];
   constructor(readonly mode: 'online' | 'offline') {}
   load<K extends DatasetId>(id: K): Promise<Dataset<DatasetTypes[K]>> {
+    // the Earth's orientation is not what these tests are about: none, at once (UT1 is taken for UTC)
+    if (id === 'earthOrientation') return Promise.reject(new Error('not in this test'));
     const answer = later<Dataset<unknown>>();
     this.asked.push({ id, answer });
     return answer.promise as Promise<Dataset<DatasetTypes[K]>>;
@@ -250,9 +252,10 @@ describe('RealSky: results keep what they were found from (A4, A14, A15)', () =>
     expect(slot.inputs!.stationId).toBe('bangkok');
     page.place = { stationId: 'bangkok', station: stationOf('bangkok')! };
     expect(slot.status(sky.overInputs())).toBe('fresh');
+    const minEl = page.over.minEl;
     page.over.minEl = 45 * DEG;
     expect(slot.status(sky.overInputs())).toBe('stale');
-    page.over.minEl = 60 * DEG;
+    page.over.minEl = minEl;
     page.over.days = 3;
     expect(slot.status(sky.overInputs())).toBe('stale');
     page.over.days = 1;
@@ -272,6 +275,8 @@ describe('RealSky: results keep what they were found from (A4, A14, A15)', () =>
     const { sky, provider } = await loaded(OFFLINE);
     const objects = skyObjects(catalogue.data.groups.find((g) => g.id === 'stations')!.sets.map(elementsFromRecord), 'stations');
     const o = objects.find((x) => x.el.satnum === 25544)!;
+    // the drag from a mass and size given, the inputs this test changes
+    sky.reentry.from = 'size';
     const pending = sky.runReentry(o);
     expect(sky.results.reentry.state).toBe('running');
     sky.reentry.mass = 450000;
@@ -281,8 +286,11 @@ describe('RealSky: results keep what they were found from (A4, A14, A15)', () =>
     const slot = sky.results.reentry;
     expect(slot.state).toBe('done');
     expect(slot.inputs!.mass).toBe(1000);
-    const expected = predictReentry(o.el, { mass: 1000, area: 5, cd: 2.2 }, measuredActivity(null).series);
-    expect(slot.result!.reentry).toEqual(expected);
+    const expected = predictFromRequest({
+      sets: [o.el], from: 'size', craft: { mass: 1000, area: 5, cd: 2.2 }, activity: measuredActivity(await loadSolarDaily(), null).series, horizonDays: 365,
+    }, () => {});
+    expect(slot.result!.reentry).toEqual(expected.reentry);
+    expect(slot.result!.b).toBeCloseTo(2.2 * 5 / 1000, 12);
     expect(slot.status(sky.reentryInputs(o))).toBe('stale');
     expect(slot.changed(sky.reentryInputs(o))).toEqual(['mass']);
     // where its space weather came from is kept with it
@@ -295,6 +303,7 @@ describe('RealSky: results keep what they were found from (A4, A14, A15)', () =>
     const { sky, provider } = await loaded(OFFLINE);
     const objects = skyObjects(catalogue.data.groups.find((g) => g.id === 'stations')!.sets.map(elementsFromRecord), 'stations');
     const o = objects.find((x) => x.el.satnum === 25544)!;
+    sky.reentry.from = 'size';
     const first = sky.runReentry(o);
     sky.reentry.mass = 2000;
     const second = sky.runReentry(o);

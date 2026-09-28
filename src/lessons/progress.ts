@@ -8,7 +8,8 @@
  */
 import type { MissionDocument } from '../config/mission-file';
 import type { AssessmentAttempt, Question } from './assessment/types';
-import type { CriterionGrade, Lesson, LessonGrade } from './types';
+import type { CaseId } from '../worksheets/case-ids';
+import type { CatalogLesson, CriterionGrade, LessonGrade } from './types';
 
 export const PROGRESS_STORAGE_KEY = 'orbitlab.lessons';
 export const RESULTS_FORMAT = 'orbitlab.results';
@@ -16,19 +17,27 @@ export const RESULTS_FILE_EXTENSION = '.orbitlab-results.json';
 
 export interface KeyValueStore { getItem(key: string): string | null; setItem(key: string, value: string): void }
 
-/** One graded flight of a lesson. */
+/** One graded flight of a lesson, or one check of a case lesson's answers. */
 export interface LessonRecord {
   at: string;
   verdict: LessonGrade['verdict'];
   criteria: CriterionGrade[];
   answers: Record<string, number>;
   hintsShown: number;
-  /** the mission as it was flown */
-  mission: MissionDocument;
+  /** the mission as it was flown (a flight lesson's) */
+  mission?: MissionDocument;
+  /**
+   * A case lesson's inputs, frozen when it opened: the answers depend on
+   * THEOS-2's element set (its epoch) and the Sun's activity (the last day
+   * of it measured or forecast), so the teacher can see which were used.
+   */
+  caseData?: { case: CaseId; theos2Epoch?: string; activityTo?: string };
+  /** the answers shown to the student in this attempt, by criterion id: the attempt did not pass on them */
+  revealed?: string[];
 }
 
 export interface LessonProgress {
-  /** flights launched in the lesson */
+  /** flights launched in the lesson; for a case lesson, the answers checked */
   attempts: number;
   /** hints revealed, 0–3 */
   hintsShown: number;
@@ -37,6 +46,11 @@ export interface LessonProgress {
   passedRecord?: LessonRecord;
   /** the last flight graded */
   last?: LessonRecord;
+  /**
+   * Expected values shown with "Show the answers", by criterion id: a number
+   * shown is never a pass again (src/lessons/grader.ts `RevealedAnswers`).
+   */
+  revealed?: Record<string, number[]>;
 }
 
 export interface ProgressData {
@@ -44,7 +58,7 @@ export interface ProgressData {
   lessons: Record<string, LessonProgress>;
   assessments: AssessmentAttempt[];
   /** a teacher's lessons and questions, opened from a file and kept */
-  customLessons: Lesson[];
+  customLessons: CatalogLesson[];
   customQuestions: Question[];
 }
 
@@ -62,7 +76,7 @@ export function loadProgress(store?: KeyValueStore): ProgressData {
       version: 1,
       lessons: isRecord(data.lessons) ? data.lessons as Record<string, LessonProgress> : {},
       assessments: Array.isArray(data.assessments) ? data.assessments as AssessmentAttempt[] : [],
-      customLessons: Array.isArray(data.customLessons) ? data.customLessons as Lesson[] : [],
+      customLessons: Array.isArray(data.customLessons) ? data.customLessons as CatalogLesson[] : [],
       customQuestions: Array.isArray(data.customQuestions) ? data.customQuestions as Question[] : [],
     };
   } catch {
@@ -84,6 +98,17 @@ export function recordGrade(data: ProgressData, record: LessonRecord & { lessonI
   const p = lessonProgress(data, lessonId);
   p.last = rec;
   if (rec.verdict === 'pass' && !p.passed) { p.passed = true; p.passedRecord = rec; }
+}
+
+/** Keep the expected values shown to the student, so none of them passes later. */
+export function recordRevealed(data: ProgressData, lessonId: string, shown: Readonly<Record<string, number>>): void {
+  const p = lessonProgress(data, lessonId);
+  const kept = (p.revealed ??= {});
+  for (const [id, v] of Object.entries(shown)) {
+    if (!Number.isFinite(v)) continue;
+    const list = (kept[id] ??= []);
+    if (!list.includes(v)) list.push(v);
+  }
 }
 
 async function sha256(text: string): Promise<string> {
