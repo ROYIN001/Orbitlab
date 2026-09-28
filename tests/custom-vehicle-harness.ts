@@ -62,15 +62,21 @@ export function scratchVehicles(): VehicleSpec[] {
   return [newIds, falcon, soyuz];
 }
 
-const MISSIONS: Record<'falcon9' | 'soyuz21a', Omit<MissionConfig, 'vehicleId' | 'dynamics' | 'launchTime'>> = {
+/** The vehicles these tests fly: two reference vehicles, and H3 for a strap-on vehicle of another kind (solid strap-ons; roadmap D02's remix). */
+export type HarnessVehicle = 'falcon9' | 'soyuz21a' | 'h3';
+
+const MISSIONS: Record<HarnessVehicle, Omit<MissionConfig, 'vehicleId' | 'dynamics' | 'launchTime'>> = {
   falcon9: { satelliteId: 'starlink', siteId: 'cape', orbit: orbitById('starlink'),
     guidance: { ...DEFAULT_GUIDANCE }, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false },
   soyuz21a: { satelliteId: 'crew', siteId: 'baikonur', orbit: orbitById('iss'),
     guidance: { ...DEFAULT_GUIDANCE }, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false },
+  // the fleet's H3 reference timeline (tests/fleet-defaults.test.ts): 5 t of rideshare to the 500 km LEO preset
+  h3: { satelliteId: 'cubesats', siteId: 'tanegashima', orbit: orbitById('leo'),
+    guidance: { ...DEFAULT_GUIDANCE }, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, payloadMassOverride: 5000 },
 };
 
 /** The vehicle's mission, flown by the catalogue vehicle or by `custom`. */
-export function mission(id: 'falcon9' | 'soyuz21a', model: 'pointMass' | 'sixDof', custom?: VehicleSpec): MissionConfig {
+export function mission(id: HarnessVehicle, model: 'pointMass' | 'sixDof', custom?: VehicleSpec): MissionConfig {
   return { ...structuredClone(MISSIONS[id]), launchTime: LAUNCH, vehicleId: custom?.id ?? id,
     ...(custom ? { vehicleSpec: custom } : {}), dynamics: { ...defaultDynamics(id), model } };
 }
