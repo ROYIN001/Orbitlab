@@ -15,11 +15,18 @@ import { VEHICLES, vehicleById, vehicleDataId } from '../src/data/vehicles';
 import { engineLayout } from '../src/data/engine-layout';
 import { vehicleSpecProblems } from '../src/config/vehicle-spec';
 import { VehicleModel } from '../src/physics/vehicle';
-import { buildRigidVehicle, stageMassComponents } from '../src/physics/rigid/mass';
+import { buildDetachedStage, buildRigidVehicle, stageMassComponents } from '../src/physics/rigid/mass';
+import { RigidRuntime } from '../src/physics/rigid/runtime';
+import { createRigidDebris, rigidLandingReserve } from '../src/physics/rigid/debris-runtime';
+import { quatIdentity } from '../src/physics/rigid/math';
+import type { RigidState } from '../src/physics/rigid/integrator';
+import type { PartitionedRigidBody } from '../src/physics/rigid/partition';
+import type { Debris } from '../src/physics/simulation';
 import {
   chamberGeometry, isCataloguePartId, PROPELLANT_LOADS, rcsGeometry, renderToBody, thrusterMomentArm,
 } from '../src/physics/rigid/vehicle-data';
-import { scale, v3 } from '../src/physics/vec3';
+import { OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
+import { add, cross, scale, v3 } from '../src/physics/vec3';
 import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../src/types';
 import { copyOf, scratchVehicles } from './custom-vehicle-harness';
 
@@ -205,5 +212,51 @@ describe('six-DOF for custom vehicles (D03): attitude thrusters', () => {
       const at = v3(1, 0, 0);
       expect(rcsGeometry(vehicleDataId(spec), stage, at, index), `${spec.id} ${stage.id}`).toEqual(rcsGeometry(vehicleDataId(spec), stage, at));
     });
+  });
+});
+
+describe('six-DOF for custom vehicles (D03): what stays with a catalogue origin', () => {
+  it('flies the R-7 trim allowance only for an R-7 or a vehicle made from one', () => {
+    const runtime = new RigidRuntime({ model: 'sixDof', wind: 'calm', seed: 20260919 });
+    const lifting = (spec: VehicleSpec) => {
+      const vm = new VehicleModel(spec, 1000);
+      vm.igniteStage(vm.stages[0], 0);
+      for (const booster of vm.stages[0].boosters) vm.igniteBooster(booster, 0);
+      return buildRigidVehicle(vm, { pressure: 30000, coreThrottle: 1, boosterThrottle: 1, time: 10 });
+    };
+    const limit = (snapshot: ReturnType<typeof lifting>, vehicleId = snapshot.geometry.vehicleId) =>
+      runtime.ascentAngleLimit({ ...snapshot, geometry: { ...snapshot.geometry, vehicleId } }, 30e3, 1.2);
+    const soyuz = lifting(vehicleById('soyuz21a'));
+    const { derivedFrom: _, escapeSystem: __, ...plain } = copyOf('soyuz21a');
+    const scratch = lifting({ ...plain, id: 'scratch-r7' });
+    // The copy made from Soyuz-2.1a keeps its 65 %; the same hardware with no
+    // origin gets everyone else's 35 %, exactly as if it were Soyuz-2.1b.
+    expect(limit(lifting(copyOf('soyuz21a')))).toBe(limit(soyuz));
+    expect(limit(scratch)).toBe(limit(soyuz, 'soyuz21b'));
+    expect(limit(scratch)).toBeLessThan(limit(soyuz));
+  });
+
+  it('flies a first stage back in six-DOF only as its catalogue origin', () => {
+    const recovered = (spec: VehicleSpec, stage: StageSpec) => {
+      const fuel = 5000, snapshot = buildDetachedStage(vehicleDataId(spec), stage, fuel);
+      const r = v3(R_EARTH + 1000, 0, 0);
+      const state: RigidState = { r, v: add(cross(v3(0, 0, OMEGA_EARTH), r), v3(-300, 0, 0)), attitudeQ: quatIdentity(), omegaBody: v3(0, 0, OMEGA_EARTH) };
+      const split: PartitionedRigidBody = { id: stage.id, state, properties: snapshot, datumBody: v3(), offsetBody: v3(),
+        bodyToParentQ: quatIdentity(), sourceOwnerIds: [stage.id] };
+      const debris: Debris = { id: 1, name: 'first stage', r: { ...r }, v: { ...state.v }, dir: v3(1, 0, 0), mass: snapshot.mass,
+        area: circle(stage.diameter), cd: 1.2, visual: { diameter: stage.diameter, length: stage.length, color: '#fff', kind: 'stage' },
+        alive: true, createdAt: 0,
+        recovery: { engine: stage.engine, propellant: fuel, thrustVac: 0, thrustSL: 0, mdot: 0, burning: false, landed: false,
+          landingReserve: rigidLandingReserve(stage), phase: 'landing', landingStarted: true } };
+      // The simulation passes the vehicle's data id (src/physics/sim/debris.ts).
+      return createRigidDebris(debris, split, { model: 'sixDof', wind: 'calm', seed: 20260919 }, snapshot,
+        { vehicleId: vehicleDataId(spec), stage }).recoveryEnabled;
+    };
+    const copy = copyOf('falcon9');
+    const { derivedFrom: _, ...plain } = copyOf('falcon9');
+    expect(recovered(vehicleById('falcon9'), vehicleById('falcon9').stages[0])).toBe(true);
+    expect(recovered(copy, copy.stages[0])).toBe(true);
+    expect(recovered({ ...plain, id: 'scratch-f9' }, plain.stages[0])).toBe(false);
+    expect(recovered(NEW_IDS, NEW_IDS.stages[0])).toBe(false);
   });
 });
