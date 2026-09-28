@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { SITES } from '../src/data/sites';
 import {
-  BOOSTER_BODIES, ENGINE_PARTS, FAIRING_PARTS, STAGE_BODIES, boosterSpec, engineSpec, fairingSpec, stageSpec,
+  BOOSTER_BODIES, ENGINE_PARTS, FAIRING_PARTS, STAGE_BODIES, boosterSpec, enginePart, engineSpec, fairingSpec, stageSpec,
 } from '../src/data/parts';
 import { PART_ID_PATTERN, vehicleSpecProblems } from '../src/config/vehicle-spec';
 import { idealDeltaV, liftoffThrust } from '../src/physics/vehicle';
@@ -141,6 +141,8 @@ describe('D03 assemble: engines and bodies of one’s own', () => {
       [{ body: { ...tank, dryMass: -1 }, engine: { part: 'merlin1d', count: 1 } }, 'outOfLimits'],
       [{ body: 'cz3b3', engine: { part: 'yf75', count: 2 } }, 'lumpedRecount'],
       [{ body: 'z9', engine: { part: 'rd180', count: 1 } }, 'solidMotor'],
+      // a catalogue body's tanks hold what its own engine burns: Falcon 9's kerolox first stage with a hydrolox engine
+      [{ body: 's1', engine: { part: 'le9', count: 2 } }, 'familyMismatch'],
       [{ body: 'nothing' }, 'unknownPart'],
     ];
     for (const [stage, code] of cases) {
@@ -167,6 +169,11 @@ describe('D03 assemble: a fuzz of designs', () => {
     // Fixed before the run: every accepted design has no validator problem
     // and unique ids of the validator's pattern; every throw is an
     // AssembleRefused; at least a quarter of the 600 designs are accepted.
+    // Recorded at review: once a catalogue body was held to its own
+    // propellant family, drawing ANY engine for one left 139 of 600 accepted
+    // (23 %, under the floor). The floor stays; the draw now picks a
+    // catalogue body's other engine as custom() picks one, from its family
+    // with a 10 % chance of any, which exercises the refusal and accepts 162.
     let seed = 20260929;
     const rand = (): number => {
       seed = (seed + 0x6d2b79f5) | 0;
@@ -192,8 +199,12 @@ describe('D03 assemble: a fuzz of designs', () => {
     for (let n = 0; n < N; n++) {
       const stages: DesignStage[] = Array.from({ length: 1 + Math.floor(rand() * 4) }, () => {
         if (rand() < 0.4) return custom();
-        const body = pick1(STAGE_BODIES).id;
-        return rand() < 0.3 ? { body, engine: { part: pick1(ENGINE_PARTS).id, count: 1 + Math.floor(rand() * 9) } } : { body };
+        const body = pick1(STAGE_BODIES);
+        if (rand() >= 0.3) return { body: body.id };
+        // another engine, as custom() picks one: of the body's own propellant, now and then any
+        const family = enginePart(body.engine.part).family;
+        const engines = ENGINE_PARTS.filter((p) => rand() < 0.1 || p.family === family);
+        return { body: body.id, engine: { part: pick1(engines).id, count: 1 + Math.floor(rand() * 9) } };
       });
       if (rand() < 0.35) {
         stages[0].boosters = Array.from({ length: 1 + Math.floor(rand() * 2) }, () => {

@@ -39,10 +39,11 @@
  *
  * REFUSED (`AssembleRefused`, with a code): what the remix refuses — a lumped
  * or cluster engine re-counted, a solid motor swapped into or out of a
- * catalogue body, a vacuum-only engine lit on the pad, anything past the
- * validator's bounds — and, for a body of one's own, an engine of another
- * propellant family than the body's (a solid body needs a solid motor, and a
- * liquid body an engine that burns what its tanks hold).
+ * catalogue body, an engine of another propellant family than the one a
+ * catalogue body was built for, a vacuum-only engine lit on the pad, anything
+ * past the validator's bounds — and, for a body of one's own, an engine of
+ * another propellant family than the body's (a solid body needs a solid
+ * motor, and a liquid body an engine that burns what its tanks hold).
  *
  * DOM-free, SI units (kg, m, Pa, m/s²).
  */
@@ -212,6 +213,8 @@ export function assemble(design: PartsDesign): Assembly {
     const sameEngine = !custom && own === engine && body.engine.count === want.count;
     if (!custom && !sameEngine) {
       if (own!.solid || engine.solid) refuse('solidMotor', where, `${own!.id} to ${engine.id}`);
+      // a catalogue body's tanks hold what its own engine burns
+      if (own!.family !== engine.family) refuse('familyMismatch', where, `${engine.id} burns ${engine.family}, the body holds ${own!.family}`);
       const dry = swapDryMass(body.dryMass, engineSpec(own!, body.engine.count), engine, want.count);
       if (dry === null) estimates.push({ code: 'engineMassUnknown', ...where });
       body = { ...body, dryMass: dry ?? body.dryMass, engine: { part: engine.id, count: want.count } };

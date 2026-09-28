@@ -12,7 +12,8 @@
  * - a stretch changes Δv exactly as the rocket equation, applied to the
  *   budget core's phases (src/design/budget.ts), predicts;
  * - a swap changes the dry mass by the engines' published masses;
- * - a lumped or cluster engine is never re-counted.
+ * - a lumped or cluster engine is never re-counted, and no engine goes on
+ *   tanks built for another propellant family.
  *
  * Tolerances were fixed before the first run: identities are exact
  * (`toStrictEqual`, `toBe`), the Δv prediction 1e-12 relative (it adds the
@@ -70,16 +71,16 @@ describe('D02 remix: the mass rules', () => {
     expect(isCataloguePartId(s1.id)).toBe(false);
     expect(s1.name).toBe('RD-180');
     expect(r.estimates).toEqual([{ code: 'originRatings' }]);
-    // one Merlin Vacuum (550 kg) out, two RL10C-1-1 (188.2 kg each) in; the first stage keeps its id
-    const r2 = remix(f9, [{ op: 'swapEngine', target: { stage: 1 }, part: 'rl10c11', count: 2 }], 'f9-rl10', 'F9 RL10');
-    expect(r2.spec.stages[1].dryMass).toBe(4300 + 2 * 188.2 - 550);
+    // Atlas V's Centaur III: one RL10C-1 (190.5 kg) out, two RL10C-1-1 (188.2 kg each) in; the first stage keeps its id
+    const r2 = remix(vehicleById('atlasv551'), [{ op: 'swapEngine', target: { stage: 1 }, part: 'rl10c11', count: 2 }], 'a-rl10', 'A RL10');
+    expect(r2.spec.stages[1].dryMass).toBe(2243 + 2 * 188.2 - 190.5);
     expect(r2.spec.stages[1].name).toBe('2× RL10C-1-1');
-    expect(r2.spec.stages[0].id).toBe('s1');
-    // Curie has no published mass: the dry mass is left, and that is an estimate
-    const electron = vehicleById('electron');
-    const r3 = remix(electron, [{ op: 'swapEngine', target: { stage: 1 }, part: 'curie', count: 1 }], 'e-curie', 'E');
-    expect(r3.spec.stages[1].dryMass).toBe(electron.stages[1].dryMass);
-    expect(r3.estimates).toEqual([{ code: 'engineMassUnknown', stage: 1 }, { code: 'originRatings' }]);
+    expect(r2.spec.stages[0].id).toBe('ccb');
+    // Curie has no published mass: Fregat's S5.92 (75 kg) out, Curie in, the dry mass left, and that is an estimate
+    const soyuz21b = vehicleById('soyuz21b');
+    const r3 = remix(soyuz21b, [{ op: 'swapEngine', target: { stage: 2 }, part: 'curie', count: 1 }], 's-curie', 'S');
+    expect(r3.spec.stages[2].dryMass).toBe(soyuz21b.stages[2].dryMass);
+    expect(r3.estimates).toEqual([{ code: 'engineMassUnknown', stage: 2 }, { code: 'originRatings' }]);
     // a strap-on group swaps the same way: Angara's URM-1 RD-191 (2 290 kg) for two YF-100 (1 920 kg each)
     const r4 = remix(vehicleById('angaraa5'), [{ op: 'swapEngine', target: { stage: 0, group: 0 }, part: 'yf100', count: 2 }], 'a5-yf', 'A5');
     expect(r4.spec.stages[0].boosters![0].dryMass).toBe(9000 + 2 * 1920 - 2290);
@@ -164,17 +165,21 @@ describe('D02 remix: what it refuses', () => {
     // Proton's second stage: RD-0210/0211 is a cluster of four
     expect(refusal(() => remix(vehicleById('protonm'), [{ op: 'swapEngine', target: { stage: 1 }, part: 'rd0210', count: 3 }], 'x', 'x'))).toBe('lumpedRecount');
     expect(refusal(() => remix(vehicleById('falcon9'), [{ op: 'swapEngine', target: { stage: 1 }, part: 'raptor2-rvac', count: 1 }], 'x', 'x'))).toBe('lumpedRecount');
-    // at the count it has always had, it may go on another stage
-    const ok = remix(vehicleById('falcon9'), [{ op: 'swapEngine', target: { stage: 1 }, part: 'yf75', count: 1 }], 'x', 'x');
-    expect(ok.spec.stages[1].engine).toStrictEqual(engineSpec('yf75', 1));
+    // at the count it has always had, it may go on another stage of its propellant: Proton's RD-0213 + RD-0214 on Long March 2D's second
+    const ok = remix(vehicleById('longmarch2d'), [{ op: 'swapEngine', target: { stage: 1 }, part: 'rd0213', count: 1 }], 'x', 'x');
+    expect(ok.spec.stages[1].engine).toStrictEqual(engineSpec('rd0213', 1));
   });
 
-  it('refuses a solid motor swap, a vacuum engine on the pad, bad counts and factors, and a fifth strap-on group', () => {
+  it('refuses a solid motor swap, an engine of another propellant, a vacuum engine on the pad, bad counts and factors, and a fifth strap-on group', () => {
     const f9 = vehicleById('falcon9');
     const cases: [VehicleSpec, RemixOp, RemixRefusal][] = [
       [vehicleById('vegac'), { op: 'swapEngine', target: { stage: 0 }, part: 'rd180', count: 1 }, 'solidMotor'],
       [f9, { op: 'swapEngine', target: { stage: 1 }, part: 'zefiro9', count: 1 }, 'solidMotor'],
-      [f9, { op: 'swapEngine', target: { stage: 0 }, part: 'rl10c1', count: 9 }, 'vacuumEngineOnPad'],
+      // the tanks hold what they were built for: no hydrolox or methalox engine on Falcon 9's kerolox stages
+      [f9, { op: 'swapEngine', target: { stage: 1 }, part: 'rl10c11', count: 2 }, 'familyMismatch'],
+      [f9, { op: 'swapEngine', target: { stage: 0 }, part: 'raptor2', count: 2 }, 'familyMismatch'],
+      [f9, { op: 'swapEngine', target: { stage: 1 }, part: 'yf75', count: 1 }, 'familyMismatch'],
+      [f9, { op: 'swapEngine', target: { stage: 0 }, part: 'mvac', count: 9 }, 'vacuumEngineOnPad'],
       [f9, { op: 'swapEngine', target: { stage: 0 }, part: 'merlin1d', count: 0 }, 'badCount'],
       [f9, { op: 'swapEngine', target: { stage: 0 }, part: 'merlin1d', count: 51 }, 'badCount'],
       [f9, { op: 'swapEngine', target: { stage: 0 }, part: 'no-such-engine', count: 1 }, 'unknownPart'],

@@ -25,7 +25,11 @@
  * re-counting a lumped or cluster engine part (the parts catalogue's comment:
  * its `count` is not a count of engines, and changing it changes far more than
  * thrust); swapping a solid motor in or out (a solid motor is its own casing
- * and grain: its stage is the motor, so change the strap-on body instead); a
+ * and grain: its stage is the motor, so change the strap-on body instead); an
+ * engine that burns another propellant family than the one it replaces
+ * (`familyMismatch`: the stage's tanks, their volume, length and dry mass,
+ * were built for what they hold, and a swap changes the engine, not the
+ * tanks — 108 t of Falcon 9's kerolox tankage is not 108 t of hydrolox); a
  * vacuum-only engine where it would light on the pad; and anything beyond the
  * validator's bounds (`PART_LIMITS`, src/config/vehicle-spec.ts). Anything the
  * ops cannot produce is not refused here: tests/design-remix.test.ts holds
@@ -112,7 +116,7 @@ export interface Remix {
 
 export type RemixRefusal =
   | 'unknownOp' | 'noSuchStage' | 'noSuchGroup' | 'unknownPart' | 'badFactor' | 'badCount' | 'badIgnition' | 'lumpedRecount'
-  | 'solidMotor' | 'vacuumEngineOnPad' | 'tooManyGroups' | 'outOfLimits';
+  | 'solidMotor' | 'familyMismatch' | 'vacuumEngineOnPad' | 'tooManyGroups' | 'outOfLimits';
 
 /** An op the remix will not apply; `code` says why, `op` which one (index in the list). */
 export class RemixRefused extends Error {
@@ -252,6 +256,9 @@ export function remix(origin: VehicleSpec, ops: readonly RemixOp[], id: string, 
         if (locked !== undefined && n !== locked) refuse('lumpedRecount', `${next.id} is installed ${locked}, never ${n}`);
         const current = enginePartOf(part.engine);
         if (next.solid || part.engine.solid) refuse('solidMotor', `${current?.id ?? part.engine.name} to ${next.id}`);
+        // The tanks hold what the engine they were built for burns. (An engine
+        // that is not a catalogue part says nothing of its family: not checked.)
+        if (current && current.family !== next.family) refuse('familyMismatch', `${current.id} burns ${current.family}, ${next.id} ${next.family}`);
         if (next.vacuumOnly && groundLit(op.target)) refuse('vacuumEngineOnPad', next.id);
         if (current === next && part.engine.count === n) break; // the same installation: nothing changes
         const swapped = swapDryMass(part.dryMass, part.engine, next, n);
