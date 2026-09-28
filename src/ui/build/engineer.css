@@ -40,6 +40,9 @@
 .be-stand, .be-tunnel, .be-review, .be-staging, .be-sizing {
   display: grid; gap: 10px; align-items: start;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  /* the second row takes what a tall control column leaves over, so the curves sit right under the results
+     (two auto rows shared it: 160 px of nothing under Saturn V's best split at 1440 × 900) */
+  grid-template-rows: auto 1fr;
   grid-template-areas: 'ctrl out' 'ctrl plots';
 }
 .be-ctrl { grid-area: ctrl; display: flex; flex-direction: column; gap: 10px; }
