@@ -60,7 +60,7 @@ function designOf(v: VehicleSpec): PartsDesign {
     const hits = FAIRING_PARTS.filter((f) => same(pick(fairingSpec(f, { sepAltitude: 0 }), ['mass', 'diameter', 'length', 'adapter']),
       pick(v.fairing!, ['mass', 'diameter', 'length', 'adapter'])));
     expect([v.id, hits.length]).toEqual([v.id, 1]);
-    fairing = { part: hits[0].id, ...(pick(v.fairing, ['sepAltitude', 'sepTime', 'color']) as { sepAltitude: number }) };
+    fairing = { part: hits[0].id, ...(pick(v.fairing, ['sepAltitude', 'sepTime', 'sepAfterIgnition', 'color']) as { sepAltitude: number }) };
   }
   return {
     id: `${v.id}-parts`, name: v.name, sites: [...v.sites], stages, fairing, country: v.country, manufacturer: v.manufacturer,
