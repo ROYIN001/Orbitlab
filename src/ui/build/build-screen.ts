@@ -184,8 +184,19 @@ export class BuildScreen {
     this.renderDrawing();
     this.renderCard();
     if (ref && fromLabel) this.stack.focusLabel(ref);
-    // on a phone the card is under the drawing: bring it into sight
-    if (ref && narrow()) this.card.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
+    if (ref) this.showCard();
+  }
+
+  /**
+   * Bring the card into sight: on a phone it is under the drawing; on a wider
+   * screen the drawing stays in sight while the page scrolls, so a part can
+   * be picked with the page scrolled down to the figures, the card above.
+   */
+  private showCard(): void {
+    const behavior: ScrollBehavior = reducedMotion() ? 'auto' : 'smooth';
+    if (narrow()) { this.card.scrollIntoView({ block: 'nearest', behavior }); return; }
+    const top = this.card.getBoundingClientRect().top, view = this.root.getBoundingClientRect();
+    if (top < view.top || top > view.bottom - 60) this.card.scrollIntoView({ block: 'start', behavior });
   }
 
   private setView(view: BuildView): void {

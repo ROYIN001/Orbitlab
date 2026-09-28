@@ -7,33 +7,40 @@
    drawn at all. The Watch level on a wide screen: the drawing on the left,
    the whole height of the screen (a rocket is tall and thin); beside it the
    rocket's name and picker across the top, the tour and the part card side
-   by side, and the stage-by-stage figures under both. Two columns on a tablet, the drawing kept in sight; on a phone one
-   column that scrolls, the drawing under the rocket's name and the figures
-   as one card per stage.
+   by side, and the stage-by-stage figures under both. Two columns on a
+   tablet; on a phone one column, the drawing under the rocket's name and the
+   figures as one card per stage.
+
+   The screen scrolls as one page, and on a wide screen or a tablet the
+   drawing stays in sight beside it (sticky). The panels do not scroll on
+   their own: at 1440 × 900 a Russian or Thai tour step is taller than the
+   space a fixed-height grid left it, and a Back/Next bar pinned to the foot
+   of a scrolling panel covered the step's own figures and its "Show it".
    ========================================================================== */
 
 .build-screen {
   position: absolute; inset: 0; z-index: 5;
   background: var(--bg);
-  overflow: hidden;
+  overflow-x: hidden; overflow-y: auto;
 }
 .bs-grid {
-  display: grid; height: 100%; gap: 10px; padding: 10px;
+  display: grid; min-height: 100%; gap: 10px; padding: 10px;
   grid-template-columns: minmax(340px, 1.05fr) minmax(280px, 1fr) minmax(280px, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr auto;
   grid-template-areas: 'stage intro intro' 'stage tour card' 'stage figs figs';
 }
 .bs-grid[hidden], .bs-soon[hidden] { display: none; }
 .bs-panel {
-  min-height: 0; min-width: 0; overflow-y: auto;
+  min-height: 0; min-width: 0;
   padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
 }
 .bs-intro { grid-area: intro; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 20px; }
 .bs-intro-text { flex: 1 1 360px; min-width: 0; }
 .bs-intro .bs-picker { flex: 0 1 320px; min-width: 240px; }
 .bs-tour { grid-area: tour; }
-.bs-card { grid-area: card; }
-.bs-figures { grid-area: figs; max-height: 36vh; }
+/* a card opened with the page scrolled down to the figures is scrolled back into sight (build-screen.ts) */
+.bs-card { grid-area: card; scroll-margin-top: 10px; }
+.bs-figures { grid-area: figs; }
 
 /* ── the rocket ───────────────────────────────────────────────────────────── */
 
@@ -54,7 +61,13 @@
 
 .bs-stage {
   grid-area: stage;
-  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  /* As tall as the rows beside it, and no taller than the screen below the
+     60 px top bar less the grid's padding. A percentage height leaves the
+     rows to their own content: a fixed one, spanning all three, pushed the
+     middle row to the drawing's height and left the tour and card half empty. */
+  position: sticky; top: 10px; align-self: start;
+  height: 100%; max-height: calc(100dvh - 80px); min-height: 380px;
+  display: flex; flex-direction: column; min-width: 0;
   border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
   background-color: #05080d;
   background-image: linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
@@ -142,9 +155,7 @@
 .bs-est { font-style: normal; color: var(--warn); }
 .bs-tour-about { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .bs-tour-about .watch-btn.link { padding: 0; font-size: 13px; }
-.bs-tour { padding-bottom: 0; }
-/* Back and Next stay in sight at the foot of the card while its text scrolls */
-.bs-tour-nav { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 10px 0 14px; background: var(--panel); }
+.bs-tour-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .bs-tour-nav .watch-btn:disabled { opacity: 0.4; cursor: default; }
 
 /* ── Explore and Engineer, while they are being built ─────────────────────── */
@@ -161,24 +172,20 @@
 
 /* the card and the tour go under the rocket's name, the drawing stays in sight beside them */
 @media (max-width: 1180px) {
-  .build-screen { overflow-y: auto; }
   .bs-grid {
-    height: auto; min-height: 100%; align-items: start;
+    align-items: start;
     grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
     grid-template-rows: auto auto auto auto;
     grid-template-areas: 'stage intro' 'stage card' 'stage tour' 'figs figs';
   }
-  .bs-stage { position: sticky; top: 10px; height: calc(100dvh - 90px); min-height: 380px; }
-  .bs-panel { overflow: visible; }
-  .bs-figures { max-height: none; }
-  .bs-tour-nav { position: static; }
+  .bs-stage { max-height: calc(100dvh - 90px); }
 }
 /* a phone: one column that scrolls; the figures as a card per stage */
 @media (max-width: 860px) {
   .bs-grid { display: flex; flex-direction: column; align-items: stretch; padding: 10px 16px 16px; gap: 10px; }
   .bs-intro { display: block; }
   .bs-intro .bs-picker { margin-top: 12px; }
-  .bs-stage { position: static; height: auto; min-height: 0; flex: none; }
+  .bs-stage { position: static; height: auto; max-height: none; min-height: 0; flex: none; }
   .bs-draw { flex: none; height: min(64vh, 480px); }
   .bs-panel { padding: 12px; }
   .bs-title { font-size: 19px; }
