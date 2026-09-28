@@ -369,8 +369,13 @@ export const VEHICLES: VehicleSpec[] = [
       // Instead the stage carries its real diameter and the vehicle carries a
       // `dragArea` override — the first use of a field that had been declared
       // and set by nothing (audit item B39).
-      { id: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 419400, engine: RD276, diameter: 4.1, length: 21.2, color: '#d9d9d9', accentColor: '#7a7a7a' },
-      { id: 'p2', name: 'Second stage', dryMass: 11000, propellantMass: 156100, engine: RD0210, diameter: 4.1, length: 17, sepDelay: 0, ignitionDelay: 0, color: '#d9d9d9' },
+      // Published propellant loads, 428.3 t and 157.3 t (Wikipedia, "Proton-M",
+      // stage table). The 419.4 / 156.1 t flown before had no source; the 10 t
+      // they were short was hidden while the heating placard dropped the 2 t
+      // fairing at T+175 s, and showed once it stayed on to the published
+      // 348 s (docs/VALIDATION.md, F14).
+      { id: 'p1', name: 'First stage (6× RD-276)', dryMass: 30600, propellantMass: 428300, engine: RD276, diameter: 4.1, length: 21.2, color: '#d9d9d9', accentColor: '#7a7a7a' },
+      { id: 'p2', name: 'Second stage', dryMass: 11000, propellantMass: 157300, engine: RD0210, diameter: 4.1, length: 17, sepDelay: 0, ignitionDelay: 0, color: '#d9d9d9' },
       { id: 'p3', name: 'Third stage', dryMass: 3500, propellantMass: 46600, engine: RD0213, diameter: 4.1, length: 6.5, sepDelay: 1, ignitionDelay: 1, color: '#d9d9d9' },
       briz(),
     ],

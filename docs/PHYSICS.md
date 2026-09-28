@@ -1155,7 +1155,8 @@ and "PLF jettison typically at 348 s", timed "so that fairing hardware will impa
 areas"; on Angara-A5 it goes "at the initial phase of Stage III operation", ten seconds after the
 core separated on the first flight (ILS, 2014). On the placard they had dropped it at T+175 s and
 T+302 s against Telstar 14R's 347 s and Angara flight 2's 340 s; on the rule they drop it at
-T+338.6 s and T+341.6 s (point mass). Everything else in the fleet — Falcon 9, H3, Electron,
+T+342.6 s and T+341.6 s (point mass). Carrying Proton's fairing that long uncovered a first
+stage 8.9 t short of its published propellant load, now corrected (VALIDATION.md, F14). Everything else in the fleet — Falcon 9, H3, Electron,
 PSLV-XL, Long March 5, Atlas V, Vulcan — keeps the unmodified physical placard.
 
 That placard is not what the operators who quote it evaluate. ULA jettisons Atlas V's fairing
@@ -1892,7 +1893,7 @@ limit — no guidance defects are left, see "Guidance defects" below — `n/a` =
 | --- | --- | --- | --- | --- |
 | Soyuz-2.1a | - - - | - - - | n/a | — |
 | Soyuz-2.1b / Fregat-M | + + - | + + - | n/a | + + + |
-| Proton-M / Briz-M | + - - | + - - | n/a | + + - |
+| Proton-M / Briz-M | + - - | + - - | n/a | + + + |
 | Angara-A5 / Briz-M | + - - | — | + - - | + + + |
 | Falcon 9 Block 5 | + + - | + + - | n/a | + + - |
 | Falcon Heavy | + + - | + + - | n/a | + + - |
@@ -1953,8 +1954,8 @@ configuration, and the column that matters is whether it agrees with the outcome
 
 | mission | outcome | final orbit | insertion | verdict |
 | --- | --- | --- | --- | --- |
-| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 384 s | — | — | **fail** ✓ |
-| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+19 046 s | 245 × 35 738 km | T+571 s | warn ✓ |
+| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 458 s | — | — | **fail** ✓ |
+| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+37 597 s | 250 × 35 732 km | T+575 s | warn ✓ |
 | Angara-A5/Briz-M · crew 7.15 t → 500 km, Plesetsk | target orbit T+8 394 s | 498 × 498 km | T+1 051 s | warn ✓ |
 | Angara-A5/Briz-M · comsat 5 t → GTO, Plesetsk | target orbit T+57 235 s | 251 × 35 720 km | T+754 s | warn ✓ |
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
@@ -1991,8 +1992,8 @@ Two rows are failures and both are capability limits with the shortfall measured
   during the ascent, burns short of orbit and the stack falls back. The insertion floor
   (`abandonInsertion`) used to apply only after SECO and let that end in a break-up at
   T+1 448 s; it now covers the ascent once the first stage has gone, and the flight ends
-  abandoned at T+1 384 s (measured 2026-09-28; the two Proton rows of the table above were
-  re-measured the same day, the verdicts were not).
+  abandoned at T+1 458 s (measured 2026-09-28 with Proton-M's published stage propellant loads;
+  the two Proton rows of the table above were re-measured the same day, the verdicts were not).
 - **Soyuz-2.1b/Fregat with the same crew ship** is the same shape one step down: the Blok I
   under a Fregat and 7.15 t is 470 m/s short (`ascentMargin` −470), the ascent sags and the
   stack breaks up at T+962 s — *before* any insertion is announced, which is the honest end

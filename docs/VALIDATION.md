@@ -13,7 +13,8 @@ data changes and one bug fix, all in §2. Falcon 9's first stage now flies its p
 Falcon 9's six-DOF pitch programme was fitted to three flights' flight-path angles and checked on
 two held-out flights ("Six-DOF pitch programme fitted"). That is the only fitted value.
 Later, Falcon Heavy took the same published first-stage masses and Falcon 9's max-Q bucket
-(§4, F11). Neither was fitted.
+(§4, F11), and Proton-M its published stage propellant loads and, with Angara-A5, its operator's
+fairing jettison rule (§4, F14). None of these was fitted.
 
 Status on 2026-09-25:
 
@@ -752,11 +753,11 @@ F14's fairing rule).
 
 | milestone | unit | published | point mass | six-DOF | tolerance |
 | --- | --- | ---: | ---: | ---: | ---: |
-| maxQ time | s | 62.0 | 50.4 (−19 %) ✗ | 50.5 (−19 %) ✗ | ±6.2 |
-| sep12 time | s | 120.0 | 111.6 (−7 %) | 111.4 (−7 %) | ±12.0 |
-| sep23 time | s | 327.0 | 327.6 (0 %) | 327.7 (0 %) | ±32.7 |
-| fairing time | s | 347.0 | 338.6 (−2 %) | 338.7 (−2 %) | ±34.7 |
-| sep3b time | s | 582.0 | 572.6 (−2 %) | 572.9 (−2 %) | ±58.2 |
+| maxQ time | s | 62.0 | 52.2 (−16 %) ✗ | 52.4 (−15 %) ✗ | ±6.2 |
+| sep12 time | s | 120.0 | 113.7 (−5 %) | 113.6 (−5 %) | ±12.0 |
+| sep23 time | s | 327.0 | 331.6 (+1 %) | 331.5 (+1 %) | ±32.7 |
+| fairing time | s | 347.0 | 342.6 (−1 %) | 342.5 (−1 %) | ±34.7 |
+| sep3b time | s | 582.0 | 576.6 (−1 %) | 576.7 (−1 %) | ±58.2 |
 
 **Falcon Heavy Arabsat-6A (planned)**
 
@@ -788,9 +789,11 @@ MECO at T+174.0 s (six-DOF 174.2 s), max Q at T+51.3 s and fairing jettison at T
 | stage3Cutoff time | s | 746.0 | 729.5 (−2 %) | 747.4 (0 %) | ±74.6 |
 | brizSep time | s | 748.0 | 732.7 (−2 %) | 750.6 (0 %) | ±74.8 |
 
-The Proton-M and Angara-A5 fairing rows are measured with the jettison rule of F14. On the
-heating placard they were 174.6 / 151.0 s (Proton) and 301.6 / 256.2 s (Angara); carrying the
-fairing longer moved Angara's third-stage cut-off and Briz-M separation by about 2–4 s.
+The Proton-M and Angara-A5 fairing rows are measured with the jettison rule of F14, and Proton-M
+with its published stage propellant loads (F14). On the heating placard and the earlier loads the
+Proton rows were max Q 50.4 / 50.5 s, sep12 111.6 / 111.4 s, sep23 327.6 / 327.7 s, fairing
+174.6 / 151.0 s and sep3b 572.6 / 572.9 s; Angara's fairing was 301.6 / 256.2 s, and carrying it
+longer moved Angara's third-stage cut-off and Briz-M separation by about 2–4 s.
 
 ### Findings
 
@@ -891,18 +894,19 @@ documents say instead:
   `fairing.sepAfterIgnition`: ten seconds after the Proton third stage lights, nine after the
   URM-2 does (it lights a second after separation). The rule comes from the operator's guide and
   from Angara's first flight; Telstar 14R and Angara flight 2 are the check. Proton comes off at
-  T+338.6 / 338.7 s against 347 s (−2 %), Angara at T+341.6 / 341.8 s against 340 s. The Proton
+  T+342.6 / 342.5 s against 347 s (−1 %), Angara at T+341.6 / 341.8 s against 340 s. The Proton
   row is not fully independent of the guide's 348 s, since the model's third stage lights at
-  328.6 s, near the flight's 327 s, but it is timed by the model's own staging.
+  332.6 s, near the flight's 327 s, but it is timed by the model's own staging.
 - *The early jettison had been hiding a Proton shortfall.* Carrying the 2 t fairing to T+339 s
-  instead of T+175 s costs about 110 m/s, and Proton-M no longer takes 90 % of its GTO rating
-  (6.2 t) to orbit: the Briz-M lights during the ascent and the stack falls back, so
-  `protonm/gto/90` is now filed as beyond the modelled vehicle's capability
-  (`tests/fleet-harness.ts`). The real Proton-M/Briz-M lifts 6.9 t to GTO with the fairing on
-  that long, so the model is short elsewhere. The crew-ship flight (7.15 t) showed that the
-  insertion floor did not cover a stack that never reaches SECO: it broke up at T+1 448 s
-  instead of ending as an abandoned insertion. The floor now applies during the ascent once the
-  first stage has gone (PHYSICS.md §6, "The insertion floor").
+  instead of T+175 s costs about 110 m/s, and on its earlier stage data Proton-M no longer took
+  90 % of its GTO rating (6.2 t) to orbit. Those data were short: the first and second stages
+  carried 419.4 t and 156.1 t of propellant, with no source, against the published 428.3 t and
+  157.3 t (Wikipedia, "Proton-M"). With the published loads the row flies again, with 425 m/s
+  to spare, and every Telstar 14R row moves towards the flight (table above). The crew-ship
+  flight (7.15 t, which stays beyond the stack) showed that the insertion floor did not cover a
+  stack that never reaches SECO: it broke up at T+1 448 s instead of ending as an abandoned
+  insertion. The floor now applies during the ascent once the first stage has gone (PHYSICS.md
+  §6, "The insertion floor"); it ends at T+1 458 s.
 - *And a six-DOF coast that could not reach its apex.* Angara-A5 to low orbit (6.1 t, six-DOF
   with PEG or IGM) now cuts its URM-2 off at 200.5 km, a kilometre past a 201.6 km apex, with a
   −602 km perigee. The next apoapsis is a revolution away through the Earth, the J2 coast
