@@ -20,9 +20,17 @@
  * optimum carries at least as much (tests/design-optimal-staging.test.ts).
  * A vehicle with a fairing lifts it on its first stage, which the optimum
  * does not count (`fairingKg`, said on screen). What the comparison shows is
- * the optimum's blind spot: it is loss-free, and gravity and drag are paid by
- * the first stage, so real first stages take more of the Δv than the optimum
- * gives them (Saturn V: about 1.75 km/s optimal against 3.88 km/s flown).
+ * the optimum's blind spot (Saturn V: about 1.75 km/s optimal against the real
+ * first stage's 3.88 km/s, both ideal). WHY, SAID CAREFULLY: both sides are
+ * compared at the same total ideal Δv, and the payload ratio depends only on
+ * each stage's ideal Δv, so a loss of fixed size moves the optimum not at
+ * all, whichever stage "pays" it (Σ Δv_i = V + L is the same Lagrange problem
+ * at a larger total). What the method cannot see is that the losses depend on
+ * the split — a high-thrust first stage gets through the steep climb and the
+ * thick air quickly, where low-thrust upper stages lit sooner would lose far
+ * more to gravity — and that a stage's ε depends on its size and engines.
+ * Those are why real first stages usually take more. (Found in review: the
+ * page said the first stage takes more BECAUSE it pays the losses.)
  *
  * DOM-free, SI (m/s, s, kg).
  */
