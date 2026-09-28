@@ -10,7 +10,9 @@
  * old cache rather than downloading it again — and waits; the page offers to
  * reload onto it (`src/pwa/register.ts`). The fonts come from Google Fonts
  * and are cached the first time they load; offline before that, the page
- * falls back on the system fonts.
+ * falls back on the system fonts. The landing page's pictures of the app are
+ * the same (`ON_DEMAND_PREFIXES`): one language's set of them is all a visitor
+ * needs, so none is precached, and each is kept once it has been seen.
  *
  * The data snapshots the offline mode reads (`public/data/`, roadmap S04) are
  * files of the build like any other, so they are precached with it. What the
@@ -24,7 +26,7 @@
  * entry that hands it the real `self`.
  */
 
-import type { PrecacheManifest } from './manifest';
+import { onDemand, type PrecacheManifest } from './manifest';
 export type { PrecacheEntry, PrecacheManifest } from './manifest';
 
 /** The parts of `CacheStorage` / `Cache` the worker uses. */
@@ -76,16 +78,17 @@ export type Route = 'page' | 'precache' | 'runtime' | 'data' | 'network';
 /**
  * How a GET is answered: the page itself (any navigation inside the scope,
  * whatever its query — a mission link carries one) from the precached
- * `index.html`; a precached file from the cache; a font by
- * stale-while-revalidate; an online dataset network-first, from its last
- * answer when the network fails (S04); everything else from the network.
+ * `index.html`; a precached file from the cache; a font, or a file of the
+ * app's fetched on demand, by stale-while-revalidate; an online dataset
+ * network-first, from its last answer when the network fails (S04);
+ * everything else from the network.
  */
 export function routeFor(url: URL, mode: string, scope: URL, precached: ReadonlySet<string>): Route {
   if (url.origin === scope.origin && url.pathname.startsWith(scope.pathname)) {
     if (mode === 'navigate') return 'page';
     const path = url.pathname.slice(scope.pathname.length);
     if (precached.has(path)) return 'precache';
-    return 'network';
+    return onDemand(path) ? 'runtime' : 'network';
   }
   if (RUNTIME_HOSTS.includes(url.hostname)) return 'runtime';
   return DATA_HOSTS.includes(url.hostname) ? 'data' : 'network';

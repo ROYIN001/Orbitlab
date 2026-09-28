@@ -112,12 +112,6 @@ export class LessonMode implements LessonToolsHost {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this.pageView && !e.defaultPrevented) { e.preventDefault(); this.closePage(); }
     });
-    // The landing page's fourth card: the home screen rebuilds its cards, so it is put back whenever they are.
-    const home = document.getElementById('home-screen');
-    if (home) {
-      new MutationObserver(() => this.homeCard(home)).observe(home, { childList: true });
-      this.homeCard(home);
-    }
     this.applyLanguage();
   }
 
@@ -151,23 +145,8 @@ export class LessonMode implements LessonToolsHost {
     this.button.setAttribute('aria-label', `${t('lesson.button')} — ${t('lesson.catalog.progress', { passed, total: written.length })}`);
   }
 
-  private homeCard(home: HTMLElement): void {
-    const list = home.querySelector('.home-modes');
-    if (!list || list.querySelector('.lesson-card')) return;
-    const card = el('button', 'mode-card lesson-card');
-    card.type = 'button';
-    card.setAttribute('role', 'listitem');
-    const icon = el('span', 'mode-card-icon', '✎');
-    icon.setAttribute('aria-hidden', 'true');
-    card.append(icon, el('strong', undefined, t('lesson.home.title')), el('span', 'mode-card-text', t('lesson.home.text')));
-    card.addEventListener('click', () => this.openCatalog());
-    list.append(card);
-  }
-
   applyLanguage(): void {
     this.paintButton();
-    const home = document.getElementById('home-screen');
-    if (home) this.homeCard(home);
     this.lastStripKey = '';
     if (this.active) { this.locks.apply(); this.paintStrip(); }
     if (this.pageView) this.paintPageBar();
