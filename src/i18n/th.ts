@@ -2683,6 +2683,7 @@ export const th: Record<string, string> = {
   'setup.dispersion.imu': 'ค่าความคลาดเคลื่อนของ IMU ชุดใหม่',
   'setup.dispersion.pointMass': 'แบบจำลองมวลจุดไม่มีลมและ IMU ค่าที่สุ่มเหล่านั้นจึงไม่ถูกใช้',
   'mc.tip.open': 'คลิกเพื่อบินรอบนี้เดี่ยว ๆ',
+  'mc.opened': 'เปิดรอบที่ {n} ของชุดนี้ (seed {seed}, {law}) ในแผงตั้งค่าแล้ว: เป็นภารกิจของชุดนี้เอง พร้อมค่ากระจายของรอบนั้น',
   'report.dispersionRun': 'รอบที่ {run} ของชุดที่ใช้ค่าเมล็ด {seed}',
   // --- C01 ---
   'vehicle.sputnik8k71ps.manufacturer': 'OKB-1 (โคโรเลฟ)',

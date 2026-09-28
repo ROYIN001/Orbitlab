@@ -2682,6 +2682,7 @@ export const ru: Record<string, string> = {
   'setup.dispersion.imu': 'Новая реализация ошибок ИИБ',
   'setup.dispersion.pointMass': 'В модели материальной точки нет ветра и ИИБ: эти значения не используются.',
   'mc.tip.open': 'щелчок — выполнить этот прогон отдельно',
+  'mc.opened': 'Прогон {n} этой серии (зерно {seed}, {law}) открыт в панели настройки: миссия самой серии с разбросом этого прогона.',
   'report.dispersionRun': 'прогон {run} набора с зерном {seed}',
   // --- C01 ---
   'vehicle.sputnik8k71ps.manufacturer': 'ОКБ-1 (Королёв)',

@@ -2703,6 +2703,7 @@ export const en: Record<string, string> = {
   'setup.dispersion.imu': 'A fresh realisation of the IMU\'s errors',
   'setup.dispersion.pointMass': 'Point-mass has no wind and no IMU: those draws are not flown.',
   'mc.tip.open': 'click to fly it on its own',
+  'mc.opened': 'Run {n} of this set (seed {seed}, {law}) is open in the setup panel: the set\'s own mission, with that run\'s dispersion.',
   'report.dispersionRun': 'run {run} of the set seeded {seed}',
   // --- C01 ---
   'vehicle.sputnik8k71ps.manufacturer': 'OKB-1 (Korolev)',

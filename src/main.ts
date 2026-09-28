@@ -431,12 +431,11 @@ class App {
       onExperience: (experience) => this.go(route('launch', experience === 'advanced' ? 'engineer' : 'explore')),
       onMonteCarlo: (opener) => this.monteCarlo.open(opener),
     });
-    this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig() });
-    // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight
-    this.monteCarlo.onOpenRun = (dynamics) => {
-      const state = this.panel.missionState();
-      state.dynamics = dynamics;
-      this.goLive(); this.playing = false; this.workspace.adopt(); this.panel.restoreMission(state);
+    this.monteCarlo = new MonteCarloWindow({ config: () => this.panel.getConfig(), missionState: () => this.panel.missionState() });
+    // P08: a run clicked in the Monte Carlo window opens in the setup panel as one dispersed flight —
+    // the set's own mission with that run's dispersion, not today's setup (audit 2026-09-27 A10)
+    this.monteCarlo.onOpenRun = (mission) => {
+      this.goLive(); this.playing = false; this.workspace.adopt(); this.panel.restoreMission(mission);
     };
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
       watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },

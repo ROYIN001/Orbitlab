@@ -22,11 +22,32 @@ import {
 import { MonteCarloJob } from '../physics/monte-carlo-job';
 import { dispersedRunMission } from '../physics/monte-carlo'; // P08
 import type { McpMonteCarloHost } from '../mcp';
+import { copyMission, type MissionState } from '../config/mission-file';
 import './monte-carlo.css';
 
 export interface MonteCarloWindowHost {
   /** The mission the setup panel would fly now. */
   config(): MissionConfig;
+  /** The same mission as the panel holds it, to open a run of the set in (audit 2026-09-27 A10). */
+  missionState(): MissionState;
+}
+
+/** A10: a set's own mission, kept from its start, whatever the setup panel holds by the time a run is opened. */
+export interface MonteCarloSet {
+  /** the panel's mission when the set started */
+  mission: MissionState;
+  /** that mission as flown: what every run dispersed */
+  cfg: MissionConfig;
+  mc: Pick<MonteCarloConfig, 'seed' | 'dispersions'>;
+}
+
+/**
+ * A10: one run of a set as a mission for the setup panel — the set's mission
+ * whole (vehicle, payload, orbit, guidance, failure, recovery, launch time),
+ * with that run's dynamics: its guidance law and its draw of the dispersions.
+ */
+export function runMissionState(set: MonteCarloSet, run: Pick<MonteCarloRun, 'index' | 'law'>): MissionState {
+  return { ...copyMission(set.mission), dynamics: dispersedRunMission(set.cfg, set.mc, run).dynamics };
 }
 
 /** One hue per guidance law, fixed (validated against the chart surface, dark: CVD ΔE ≥ 16). */
@@ -142,9 +163,11 @@ interface HoverPoint { x: number; y: number; text: string; /** P08: the run a sc
 
 export class MonteCarloWindow implements McpMonteCarloHost {
   readonly el: HTMLDialogElement;
-  /** P08: a run clicked on the scatter, opened as one dispersed flight (its dynamics) in the setup panel. */
-  onOpenRun?: (dynamics: NonNullable<MissionConfig['dynamics']>) => void;
+  /** P08: a run clicked on the scatter, opened as one dispersed flight in the setup panel (A10: the set's mission, whole). */
+  onOpenRun?: (mission: MissionState) => void;
   job: MonteCarloJob | null = null;
+  /** A10: the panel's mission when the job started */
+  private jobMission: MissionState | null = null;
   private config: MonteCarloConfig = defaultMonteCarlo();
   /** the law the histograms and the sensitivity show */
   private law: GuidanceLaw = 'standard';
@@ -183,6 +206,8 @@ export class MonteCarloWindow implements McpMonteCarloHost {
   private sensNote = el('p', 'mc-note');
   private sens = el('div', 'mc-sens');
   private lost = el('p', 'mc-lost');
+  /** A10: which run of the set was last opened in the setup panel */
+  private opened = el('p', 'mc-note');
   private csvBtn = el('button', 'btn mc-csv');
   private tooltip = el('div', 'mc-tooltip');
   private hover = new Map<HTMLCanvasElement, HoverPoint[]>();
@@ -208,7 +233,8 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     this.csvBtn.addEventListener('click', () => this.downloadCsv());
     this.progress.max = 1; this.progress.value = 0;
     controls.append(this.startBtn, this.stopBtn, this.progress, this.progressText);
-    const scatterBox = el('div', 'mc-chart'); scatterBox.append(this.scatterTitle, this.legend, this.scatter);
+    const scatterBox = el('div', 'mc-chart'); scatterBox.append(this.scatterTitle, this.legend, this.scatter, this.opened);
+    this.opened.setAttribute('role', 'status');
     const histBox = el('div', 'mc-chart'); const histGrid = el('div', 'mc-hists');
     for (const k of OUTPUT_KEYS) histGrid.append(this.hists[k]);
     histBox.append(this.histTitle, this.lawBar, histGrid);
@@ -263,12 +289,15 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     if (!validMonteCarloConfig(mc)) return t('mc.invalid');
     const cfg = this.host.config();
     if (cfg.orbit.suborbital) return t('mc.suborbital');
+    const mission = this.host.missionState();
     try {
       this.config = { ...mc, dispersions: cloneDispersions(mc.dispersions) };
       this.job = new MonteCarloJob(cfg, this.config, { onChange: () => this.schedule() });
     } catch (error) {
       return error instanceof Error ? error.message : String(error);
     }
+    this.jobMission = mission;
+    this.opened.textContent = '';
     this.law = this.job.laws[0];
     if (this.isOpen) { this.fillForm(); this.render(true); }
     return this.job;
@@ -634,8 +663,10 @@ export class MonteCarloWindow implements McpMonteCarloHost {
       const d = Math.hypot(p.x - x, p.y - y);
       if (p.run && d < bestD) { bestD = d; best = p; }
     }
-    if (!best?.run) return;
-    this.onOpenRun(dispersedRunMission(job.cfg, job.mc, best.run).dynamics!);
+    if (!best?.run || !this.jobMission) return;
+    // A10: the set's own mission, not the one the panel has moved on to
+    this.onOpenRun(runMissionState({ mission: this.jobMission, cfg: job.cfg, mc: job.mc }, best.run));
+    this.opened.textContent = t('mc.opened', { n: best.run.index + 1, seed: job.mc.seed, law: t(LAW_NAME[best.run.law]) });
   }
 
   private startDrag(e: PointerEvent): void {
