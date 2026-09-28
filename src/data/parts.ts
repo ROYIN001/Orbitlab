@@ -894,6 +894,23 @@ function find<T>(map: ReadonlyMap<string, T>, id: string, what: string): T {
 export const enginePart = (id: string): EnginePart => find(ENGINES, id, 'engine part');
 
 /**
+ * The one count a lumped or cluster engine part is installed at in the
+ * catalogue — the only count it may have (see "count is load-bearing" in the
+ * file comment) — or undefined for an ordinary engine, which any count of
+ * engines may carry. Roadmap D02, D03: the builders refuse a re-count.
+ */
+export function lockedEngineCount(partId: string): number | undefined {
+  return LOCKED_COUNT.get(partId);
+}
+const LOCKED_COUNT: ReadonlyMap<string, number> = (() => {
+  const out = new Map<string, number>();
+  for (const body of [...STAGE_BODIES, ...BOOSTER_BODIES]) {
+    if (enginePart(body.engine.part).kind !== 'engine') out.set(body.engine.part, body.engine.count);
+  }
+  return out;
+})();
+
+/**
  * The engine part an `EngineSpec` was emitted from, found by value: the one
  * part whose `engineSpec(part, engine.count)` has the same fields with the same
  * values (roadmap D02: a remix asks which engine a stage carries, and a spec

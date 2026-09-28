@@ -64,9 +64,9 @@
  *
  * DOM-free, SI units (kg, m, N).
  */
-import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../types';
+import type { BoosterGroupSpec, EngineSpec, StageSpec, VehicleSpec } from '../types';
 import {
-  BOOSTER_BODIES, STAGE_BODIES, boosterBody, boosterSpec, enginePart, enginePartOf, engineSpec, fairingPart, fairingSpec,
+  boosterBody, boosterSpec, enginePart, enginePartOf, engineSpec, fairingPart, fairingSpec, lockedEngineCount,
   type EnginePart,
 } from '../data/parts';
 import { VEHICLES, isCatalogueVehicle, vehicleById } from '../data/vehicles';
@@ -122,21 +122,9 @@ export class RemixRefused extends Error {
   }
 }
 
-/**
- * The one count each lumped or cluster engine part is installed at in the
- * catalogue, the only count it may have (src/data/parts.ts: "count is
- * load-bearing").
- */
-const LOCKED_COUNT: ReadonlyMap<string, number> = (() => {
-  const out = new Map<string, number>();
-  for (const body of [...STAGE_BODIES, ...BOOSTER_BODIES]) {
-    if (enginePart(body.engine.part).kind !== 'engine') out.set(body.engine.part, body.engine.count);
-  }
-  return out;
-})();
 
-/** The fleet's median fairing jettison altitude, m: an origin without a fairing has none of its own. */
-const FLEET_FAIRING_SEP_ALTITUDE = (() => {
+/** The fleet's median fairing jettison altitude, m (115 km today): for a fairing where the design has none of its own. An estimate. */
+export const FLEET_FAIRING_SEP_ALTITUDE = (() => {
   const alts = VEHICLES.flatMap((v) => (v.fairing ? [v.fairing.sepAltitude] : [])).sort((a, b) => a - b);
   const mid = alts.length >> 1;
   return alts.length % 2 ? alts[mid] : (alts[mid - 1] + alts[mid]) / 2;
@@ -163,7 +151,23 @@ const partIds = (spec: VehicleSpec): Set<string> =>
 /** The drawn height of a stack: stages, adapters, fairing (`stackLayout`). */
 const drawnHeight = (spec: VehicleSpec): number => stackLayout(spec).total + (spec.fairing?.length ?? 0);
 
-const engineName = (part: EnginePart, count: number): string => (count > 1 ? `${count}× ${part.name}` : part.name);
+/** A stage named for its engines: a proper name and a count, no words of any language. */
+export const engineName = (part: EnginePart, count: number): string => (count > 1 ? `${count}× ${part.name}` : part.name);
+
+/**
+ * A stage's dry mass with `count` of `next` in place of the engines it has:
+ * count × published mass, new minus old (`EnginePart.mass`). Null when either
+ * mass is not known (the engine it has is not a catalogue part, or a figure is
+ * unpublished) or the result would not be positive: the caller leaves the dry
+ * mass as it is and says so. Published data, not an estimate.
+ */
+export function swapDryMass(dryMass: number, engine: EngineSpec, next: EnginePart, count: number): number | null {
+  const before = enginePartOf(engine)?.mass.kg ?? null;
+  const after = next.mass.kg;
+  if (before === null || after === null) return null;
+  const out = dryMass + count * after - engine.count * before;
+  return out > 0 ? out : null;
+}
 
 /**
  * Apply `ops` to a deep copy of `origin` and name it. Throws `RemixRefused`
@@ -243,17 +247,15 @@ export function remix(origin: VehicleSpec, ops: readonly RemixOp[], id: string, 
         try { next = enginePart(op.part); } catch { return refuse('unknownPart', `engine ${op.part}`); }
         const n = op.count;
         if (!Number.isInteger(n) || n < 1 || n > PART_LIMITS.engineCount) refuse('badCount', `count ${n}`);
-        const locked = LOCKED_COUNT.get(next.id);
+        const locked = lockedEngineCount(next.id);
         if (locked !== undefined && n !== locked) refuse('lumpedRecount', `${next.id} is installed ${locked}, never ${n}`);
         const current = enginePartOf(part.engine);
         if (next.solid || part.engine.solid) refuse('solidMotor', `${current?.id ?? part.engine.name} to ${next.id}`);
         if (next.vacuumOnly && groundLit(op.target)) refuse('vacuumEngineOnPad', next.id);
         if (current === next && part.engine.count === n) break; // the same installation: nothing changes
-        const before = current?.mass.kg ?? null;
-        const after = next.mass.kg;
-        if (current !== null && before !== null && after !== null && part.dryMass + n * after - part.engine.count * before > 0) {
-          part.dryMass = part.dryMass + n * after - part.engine.count * before;
-        } else note('engineMassUnknown', op.target);
+        const swapped = swapDryMass(part.dryMass, part.engine, next, n);
+        if (swapped === null) note('engineMassUnknown', op.target);
+        else part.dryMass = swapped;
         part.engine = engineSpec(next, n);
         const taken = partIds(spec);
         taken.delete(part.id);
