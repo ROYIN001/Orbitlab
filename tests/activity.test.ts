@@ -173,8 +173,12 @@ describe('the indices (R05, P2.5)', () => {
     let sum = 0;
     for (let k = -40; k <= 40; k++) sum += history.f107[Math.round(jdOf('2003-10-29T00:00:00Z') - jdOf('1954-01-01T00:00:00Z')) + k];
     expect(i.f107a).toBeCloseTo(sum / 81, 9);
-    // the history reaches the bundled snapshot's last month; SWPC's days after it
-    expect(m.measuredTo).toBe(history.to);
+    // measured to the history's last day, or to the end of SWPC's last month when that is later
+    // (the snapshot is refreshed at every deploy: nothing here may name its months)
+    const [ly, lm] = bundled.monthly.at(-1)!.month.split('-').map(Number);
+    const monthEnd = new Date(Date.UTC(ly, lm, 0)).toISOString().slice(0, 10);
+    expect(m.measuredTo).toBe(monthEnd > history.to ? monthEnd : history.to);
+    // SWPC's days after it
     const days = bundled.f107.filter((d) => d.date > history.to);
     if (days.length) {
       expect(m.recentTo).toBe(days.at(-1)!.date);
@@ -182,18 +186,21 @@ describe('the indices (R05, P2.5)', () => {
       const next = new Date(Date.parse(`${d.date}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
       expect(at(s, `${next}T12:00:00Z`).f107).toBeCloseTo(d.flux, 9);
     }
-    // NOAA's forecast to its end, at its months' middles
+    // NOAA's forecast to its end, at its months' middles (a month halfway through the part after the measurements)
     expect(m.forecastTo).toBe(bundled.forecast.at(-1)!.month);
-    const mid = bundled.forecast.find((r) => r.month === '2028-06')!;
-    expect(at(s, '2028-06-16T00:00:00Z').f107).toBeCloseTo(mid.f107, 0);
-    // then the mean cycle, from cycle 25's minimum (2019-12), 132 months on: 2030-12 is its month 132, so month 0
-    // again; 2035-06 is its month 54, and its first day halfway between the middles of months 53 and 54
-    expect(m.repeatFrom).toBe('2031-01');
+    const ahead = bundled.forecast.filter((r) => r.month > m.measuredTo.slice(0, 7));
+    const mid = ahead[ahead.length >> 1];
+    expect(at(s, `${mid.month}-16T00:00:00Z`).f107).toBeCloseTo(mid.f107, 0);
+    // then the mean cycle, from the month after the forecast's last
+    const [fy, fm] = m.forecastTo!.split('-').map(Number);
+    expect(m.repeatFrom).toBe(fm === 12 ? `${fy + 1}-01` : `${fy}-${String(fm + 1).padStart(2, '0')}`);
+    // counted from cycle 25's minimum (2019-12), 132 months to a cycle: 2035-06 is its month 54, and its
+    // first day halfway between the middles of months 53 and 54
     const c = meanCycle(history);
     expect(at(s, '2035-06-01T00:00:00Z').f107).toBeCloseTo((c.f107[53] + c.f107[54]) / 2, 0);
     expect(at(s, '2046-06-01T00:00:00Z').f107).toBeCloseTo((c.f107[53] + c.f107[54]) / 2, 0);
     // the high and low sides bracket it, in NOAA's forecast and in the cycle beyond
-    for (const iso of ['2028-06-15T12:00:00Z', '2035-06-01T00:00:00Z']) {
+    for (const iso of [`${mid.month}-15T12:00:00Z`, '2035-06-01T00:00:00Z']) {
       const mean = at(s, iso).f107;
       expect(at(measuredActivity(history, bundled, 'high').series, iso).f107).toBeGreaterThan(mean);
       expect(at(measuredActivity(history, bundled, 'low').series, iso).f107).toBeLessThan(mean);
@@ -251,5 +258,5 @@ describe('decay against re-entries on record (R05, P2.5)', () => {
     // mean |log ratio|: measured about 0.18, fixed about 0.9
     expect(measuredErr / cases.length).toBeLessThan(0.25);
     expect(fixedErr / cases.length).toBeGreaterThan(3 * (measuredErr / cases.length));
-  });
+  }, 30000); // fourteen three-year propagations: close to the default five seconds
 });
