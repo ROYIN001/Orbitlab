@@ -142,6 +142,12 @@ describe('D01 parts catalogue: agreement with the tables still keyed by stage id
     // without an entry would fall back to liquid tanks there, so it must be
     // noticed here.
     expect([...noEntry].sort()).toEqual(['blokA', 'blokBVGD', 'blokI', 'core', 's1', 's2', 'side']);
+    // With no table to hold them to, the 13 bodies behind those ids are held
+    // to what is stated here by hand: every R-7 block (the RD-107/108 family,
+    // RD-0110, RD-0124) and every Falcon stage (Merlin) burns LOX and kerosene.
+    const unkeyed = [...STAGE_BODIES, ...BOOSTER_BODIES].filter((b) => noEntry.has(b.stageId));
+    expect(unkeyed).toHaveLength(13);
+    expect(unkeyed.filter((b) => enginePart(b.engine.part).family !== 'kerolox').map((b) => b.id)).toEqual([]);
   });
 
   it('marks an engine solid exactly where its family is solid, and gives variants their parent’s family', () => {
