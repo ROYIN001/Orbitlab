@@ -330,7 +330,7 @@ export class WatchView {
     card.classList.toggle('failed', !success);
     const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
       : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle'
-      : ending === 'translunar' ? 'watch.end.translunarTitle' : 'watch.fail.title'));
+      : ending === 'lunarArrival' ? 'watch.end.moonTitle' : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
@@ -348,15 +348,15 @@ export class WatchView {
         port: t(`rv.port.${rv.port}`), time: fmtClock(since).replace(/^T\+/, ''), burns: num(rv.burns.length),
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
-    } else if (ending === 'translunar') {
-      // C01: Apollo on its way to the Moon, the CSM and LM out of the S-IVB
-      const tli = frame.apollo?.tli;
-      card.append(el('p', undefined, t('watch.end.translunarText', {
-        dist: num(Math.round((Math.hypot(frame.r.x, frame.r.y, frame.r.z) - 6371e3) / 1000)),
-        speed: num(Math.round(Math.hypot(frame.v.x, frame.v.y, frame.v.z) * 3.6)),
-        c3: tli ? (tli.c3 / 1e6).toFixed(3) : '—',
+    } else if (ending === 'lunarArrival') {
+      // C01: Apollo at the Moon, its lunar orbit insertion due
+      const ap = frame.apollo!;
+      card.append(el('p', undefined, t('watch.end.moonText', {
+        time: fmtClock(ap.arrival ?? frame.t).replace(/^T\+/, ''),
+        alt: num(Math.round(ap.moon.alt / 1000)), speed: num(Math.round(ap.moon.speed * 3.6)),
+        dv: ap.mcc ? ap.mcc.dv.toFixed(1) : '—',
       })));
-      card.append(el('p', 'watch-end-fact', t('watch.end.translunarFact')));
+      card.append(el('p', 'watch-end-fact', t('watch.end.moonFact')));
     } else if (ending === 'splashdown') {
       // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
       const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');

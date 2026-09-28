@@ -10,7 +10,13 @@ import { describe, expect, it } from 'vitest';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, VEHICLES, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
-import { G0 } from '../src/physics/constants';
+import { DEG, G0, R_EARTH } from '../src/physics/constants';
+import { gmst, julianDate } from '../src/physics/orbital';
+import { add, cross, norm, scale, v3 } from '../src/physics/vec3';
+import { moonState, R_MOON } from '../src/physics/lunar/ephemeris';
+import { eciToSelenographic } from '../src/physics/lunar/orientation';
+import { coastToPerilune } from '../src/physics/lunar/cislunar';
+import { APOLLO11 } from '../src/data/apollo11';
 import { Simulation } from '../src/physics/simulation';
 import { guidanceForVehicle } from '../src/physics/defaults';
 import { supportsRigid } from '../src/physics/rigid/config';
@@ -19,7 +25,7 @@ import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../sr
 import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
 import { expectFlownMr3, flyMr3 } from './mr3-harness';
 import { captureFrame } from '../src/physics/frame';
-import { flightEnding, watchBeat } from '../src/ui/watch-logic';
+import { autoWarp, flightEnding, watchBeat } from '../src/ui/watch-logic';
 
 const burn = (propellant: number, thrustVac: number, ispVac: number) => propellant / (thrustVac / (G0 * ispVac));
 
@@ -186,32 +192,159 @@ describe('Apollo 11, point-mass', () => {
   });
 });
 
-describe('Apollo 11 from its parking orbit, point-mass', () => {
-  it('relights the S-IVB for the Moon on time, reaches the flown conic, and docks and pulls the LM out on the flown timeline', { timeout: 300_000 }, () => {
+describe('Apollo 11 from its parking orbit to the Moon, point-mass', () => {
+  const s = watchMissionSettings('apollo11');
+  const sim = new Simulation({
+    vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
+    payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
+    failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
+  }, { headless: true });
+  /** to exactly `t`, the steps landing on it */
+  const flyTo = (t: number) => { while (!sim.isFailed() && sim.state.t < t - 1e-6) sim.advance(t - sim.state.t, 100_000); };
+  const log = () => sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
+  const at = (key: string, n = 1) => sim.events.filter((e) => e.key === key)[n - 1];
+  const moonRel = () => {
+    const m = moonState(sim.plan.jd0 + sim.state.t / 86400);
+    return { d: Math.hypot(sim.state.r.x - m.r.x, sim.state.r.y - m.r.y, sim.state.r.z - m.r.z), v: Math.hypot(sim.state.v.x - m.v.x, sim.state.v.y - m.v.y, sim.state.v.z - m.v.z) };
+  };
+
+  it('inserts into the flown plane and coasts with the S-IVB\'s hydrogen vent pushing it, to the restart', () => {
+    flyTo(709.3);
+    // FER Table 4-5: the node 123.088° east of the launch meridian at T−17 s, 359.624° of date; 32.521°
+    expect(Math.abs(sim.state.elements.raan / DEG - 359.624)).toBeLessThan(0.15);
+    expect(Math.abs(sim.state.elements.i / DEG - 32.521)).toBeLessThan(0.02);
+    const m0 = sim.vehicle.totalMass();
+    flyTo(9856.1);
+    // FER Table 20-10: 135,102 kg at the first burn's end, 134,047 kg at the restart — 1,053 kg vented on the
+    // way; the restart's mass as near as the ascent's first S-IVB burn is to the flown one's length (7 s short)
+    expect(m0 - sim.vehicle.totalMass()).toBeCloseTo(1053, -1);
+    expect(Math.abs(sim.vehicle.totalMass() - 134047)).toBeLessThan(2000);
+  });
+
+  it('relights the S-IVB on time, steers it onto the flown conic, and docks and pulls the LM out on the flown timeline', () => {
+    flyTo(15500);
+    expect(sim.isFailed(), log()).toBe(false);
+    const tli = at('evt.tli');
+    expect(tli, log()).toBeDefined();
+    // the state ten seconds after the cut-off (Orloff, from the FER): C3 −1.3916 km²/s², e 0.97696, 31.383°,
+    // perigee 4.410° past the node
+    expect(Math.abs(Number(tli!.params!.c3) + 1.3916)).toBeLessThan(0.005);
+    expect(Math.abs(Number(tli!.params!.e) - 0.97696)).toBeLessThan(0.0003);
+    expect(Math.abs(Number(tli!.params!.inc) - 31.383)).toBeLessThan(0.05);
+    expect(Math.abs(Number(tli!.params!.argp) - 4.410)).toBeLessThan(0.05);
+    // the cut-off: FER, 10,203.07 s
+    expect(Math.abs(tli!.t - 10203.07)).toBeLessThan(10);
+    const m = WATCH_MISSIONS.find((x) => x.id === 'apollo11')!;
+    for (const row of compareEvents(m.flown!, sim.events).filter((r) => r.real > 9000 && r.real < 15500)) {
+      expect(row.sim, `${row.key}: ${log()}`).not.toBeNull();
+      expect(Math.abs(row.delta!), `${row.key}`).toBeLessThan(15);
+    }
+    // the CSM and LM on their own, as they were weighed at the ejection; the S-IVB left behind
+    expect(sim.state.payloadSeparated).toBe(true);
+    expect(sim.apollo.phase).toBe('extracted');
+    expect(sim.vehicle.totalMass()).toBe(APOLLO11.dockedMass);
+    // Mission Report Table 7-III: the pericynthion after the separation, 827.2 n mi at 75:07:47 — within the
+    // few hundred miles that a foot a second at the injection moves it (1.6 ft/s moved it 177 n mi)
+    const p = sim.apollo.frame()!.perilune!;
+    expect(Math.abs(p.alt - APOLLO11.pericynthion.separation.alt)).toBeLessThan(300 * 1852);
+    expect(Math.abs(p.t - APOLLO11.pericynthion.separation.t)).toBeLessThan(20 * 60);
+  });
+
+  it('flies the evasive burn and the midcourse correction on time, and arrives at the flown pericynthion', () => {
+    flyTo(96400);
+    const ev = at('evt.evasive'), mcc = at('evt.mcc');
+    expect(ev, log()).toBeDefined();
+    expect(mcc, log()).toBeDefined();
+    expect(ev!.t).toBeCloseTo(APOLLO11.evasive.t, 6);
+    expect(mcc!.t).toBeCloseTo(APOLLO11.mcc2.t, 6);
+    // the evasive burn's flown 19.7 ft/s put the pericynthion at the planned 167.7 n mi (310.6 km)
+    const cut = sim.events.filter((e) => e.key === 'evt.spsCutoff');
+    expect(Math.abs(Number(cut[0].params!.alt) - 310.6)).toBeLessThan(4);
+    // MCC-2: 20.9 ft/s flown (6.37 m/s); the correction this flight needs is as small
+    expect(Number(mcc!.params!.dv)).toBeGreaterThan(1);
+    expect(Math.abs(Number(mcc!.params!.dv) - APOLLO11.mcc2.dv)).toBeLessThan(4);
+    // Table 7-III after MCC-2: 61.5 n mi (60.0 aimed at), 0.17° N 173.57° E, 75:53:35
+    const p = sim.apollo.frame()!.perilune!, want = APOLLO11.pericynthion.mcc2;
+    expect(Math.abs(p.alt - APOLLO11.mcc2.perilune)).toBeLessThan(1 * 1852);
+    expect(Math.abs(p.t - want.t)).toBeLessThan(60);
+    expect(Math.abs(p.lat - want.lat)).toBeLessThan(0.1);
+    expect(Math.abs(p.lon - want.lon)).toBeLessThan(1);
+  });
+
+  it('crosses into the Moon\'s sphere of influence where Mission Control saw it, and reaches the Moon for the lunar orbit insertion', () => {
+    flyTo(221995);
+    // the Public Affairs commentary at 61:39:55: 186,437 n mi above the Earth, 33,822 n mi above the Moon,
+    // 2,990 ft/s from the Earth and 3,772 ft/s from the Moon
+    expect(Math.abs(norm(sim.state.r) - R_EARTH - 186437 * 1852)).toBeLessThan(300e3);
+    expect(Math.abs(norm(sim.state.v) - 2990 * 0.3048)).toBeLessThan(5);
+    const rel = moonRel();
+    expect(Math.abs(rel.d - R_MOON - 33822 * 1852)).toBeLessThan(300e3);
+    expect(Math.abs(rel.v - 3772 * 0.3048)).toBeLessThan(5);
+    flyTo(APOLLO11.loi1.t + 1);
+    expect(sim.isFailed(), log()).toBe(false);
+    expect(Math.abs(at('evt.lunarSoi')!.t - APOLLO11.lunarSoi)).toBeLessThan(120);
+    expect(sim.apollo.phase).toBe('arrival');
+    // at the lunar orbit insertion's ignition: MR Table 7-II, 86.7 n mi above the landing site's radius, 8,250 ft/s
+    const now = moonRel();
+    expect(Math.abs(now.d - APOLLO11.siteRadius - 86.7 * 1852)).toBeLessThan(15e3);
+    expect(Math.abs(now.v - 8250 * 0.3048)).toBeLessThan(10);
+    // the flight passes the pericynthion at 8,334 ft/s (Table 7-III)
+    flyTo(APOLLO11.pericynthion.mcc2.t);
+    expect(Math.abs(moonRel().v - 8334 * 0.3048)).toBeLessThan(10);
+  });
+});
+
+describe('Apollo 11 in the viewer', () => {
+  it('tells the flight to the Moon beat by beat, each coast at a preset speed, and ends at the lunar orbit insertion', { timeout: 300_000 }, () => {
     const s = watchMissionSettings('apollo11');
     const sim = new Simulation({
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
       payloadMassOverride: s.payloadMass, guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, 'pointMass'), guidanceResolved: true,
       failure: s.failure, boosterRecovery: false, dynamics: { model: 'pointMass', wind: 'calm', seed: 1 },
     }, { headless: true });
-    while (!sim.isFailed() && sim.state.t < 15500) sim.step(sim.suggestedDt());
-    const log = sim.events.map((e) => `${Math.round(e.t)}:${e.key}`).join(' ');
-    expect(sim.isFailed(), log).toBe(false);
-    const tli = sim.events.find((e) => e.key === 'evt.tli');
-    expect(tli, log).toBeDefined();
-    // FER Table 4-6: C3 −1.4875 km²/s², eccentricity 0.97537, inclination 31.386° at the cut-off (T+10,203.0 s)
-    expect(Math.abs(Number(tli!.params!.c3) + 1.4875)).toBeLessThan(0.01);
-    expect(Math.abs(Number(tli!.params!.e) - 0.97537)).toBeLessThan(0.0005);
-    expect(Math.abs(Number(tli!.params!.inc) - 31.386)).toBeLessThan(0.1);
-    expect(Math.abs(tli!.t - 10203.03)).toBeLessThan(15);
-    const m = WATCH_MISSIONS.find((x) => x.id === 'apollo11')!;
-    for (const row of compareEvents(m.flown!, sim.events).filter((r) => r.real > 9000)) {
-      expect(row.sim, `${row.key}: ${log}`).not.toBeNull();
-      expect(Math.abs(row.delta!), `${row.key}`).toBeLessThan(15);
+    const beats: string[] = [];
+    const warps = new Set<number>();
+    let ending: string | null = null;
+    while (!sim.isFailed() && sim.state.t < 290000 && !ending) {
+      sim.step(sim.suggestedDt());
+      if (sim.state.t < 9000) continue;
+      const frame = captureFrame(sim);
+      const beat = watchBeat(frame, sim.events);
+      if (beats[beats.length - 1] !== beat) beats.push(beat);
+      warps.add(autoWarp(frame, beat));
+      ending = flightEnding(frame, sim.events);
     }
-    // the CSM and LM on their own, the S-IVB left behind
-    expect(sim.state.payloadSeparated).toBe(true);
-    expect(sim.apollo.phase).toBe('extracted');
-    expect(sim.state.elements.e).toBeGreaterThan(0.97);
+    // in the order they were flown: each after the one before it
+    let at = -1;
+    for (const b of ['tliBurn', 'tliDone', 'transposition', 'apolloDocked', 'extraction', 'evasiveBurn', 'translunarCoast', 'midcourseBurn',
+      'lunarSoi', 'lunarApproach', 'lunarArrival']) {
+      at = beats.indexOf(b, at + 1);
+      expect(at, `${b}: ${beats.join(' ')}`).toBeGreaterThanOrEqual(0);
+    }
+    expect(ending).toBe('lunarArrival');
+    // every speed one of the workspace selector's presets (src/main.ts)
+    for (const w of warps) expect([0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000]).toContain(w);
+    expect(warps.has(5000)).toBe(true);
+  });
+});
+
+describe('the flown injection, propagated', () => {
+  it('passes the Moon where the Mission Report predicted it would after the injection', () => {
+    // Orloff's state ten seconds after the cut-off, 2:50:13.03: 9.9204° N (geocentric), 164.8373° W, 334.44 km,
+    // 35,545.6 ft/s, 7.367° up, heading 60.073°
+    const jd0 = julianDate(new Date('1969-07-16T13:32:00Z')), t = 10213.03;
+    const lat = 9.9204 * DEG, lam = -164.8373 * DEG + gmst(jd0 + t / 86400);
+    const rm = 6378166 * (1 - Math.sin(lat) ** 2 / 298.3) + 334.44e3;
+    const up = v3(Math.cos(lat) * Math.cos(lam), Math.cos(lat) * Math.sin(lam), Math.sin(lat));
+    const east = v3(-Math.sin(lam), Math.cos(lam), 0), north = cross(up, east);
+    const V = 35545.6 * 0.3048, g = 7.367 * DEG, h = 60.073 * DEG;
+    const v = add(scale(up, V * Math.sin(g)), scale(add(scale(north, Math.cos(h)), scale(east, Math.sin(h))), V * Math.cos(g)));
+    const p = coastToPerilune(jd0, t, { r: scale(up, rm), v }, 400000)!;
+    // Table 7-III: 896.3 n mi at 75:05:21 — each foot a second at the injection moves it a hundred miles
+    // (1.6 ft/s moved it from the planned 718.9), and the state is given to a tenth of one
+    const want = APOLLO11.pericynthion.tli;
+    expect(Math.abs(norm(p.rel.r) - APOLLO11.siteRadius - want.alt)).toBeLessThan(300 * 1852);
+    expect(Math.abs(p.t - want.t)).toBeLessThan(15 * 60);
+    expect(Math.abs(eciToSelenographic(p.rel.r, jd0 + p.t / 86400).lon - want.lon)).toBeLessThan(5);
   });
 });

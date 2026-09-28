@@ -702,14 +702,15 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   }
   const dt = span * u;
   const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
-  const ballistic = !a.rigid && coasting(a) && coasting(b) && a.thrust <= 0;
+  // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends
+  const ballistic = !a.rigid && !a.apollo && coasting(a) && coasting(b) && a.thrust <= 0;
   let r: Vec3;
   let v: Vec3;
   if (ballistic) {
     const p = propagateKepler(a.r, a.v, dt);
     r = p.r;
     v = p.v;
-  } else if (a.status === 'rendezvous' && b.status === 'rendezvous') {
+  } else if ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) {
     const p = hermite(a.r, a.v, b.r, b.v, u, span);
     r = p.r;
     v = p.v;

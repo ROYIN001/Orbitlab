@@ -249,10 +249,23 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // (FER MPR-SAT-FE-69-9; docs/PHYSICS.md §13.8). The flight goes on from
   // there — the S-IVB's restart for the Moon — in the parts that follow.
   { id: 'apollo11', vehicleId: 'saturnv', siteId: 'ksc39a', satelliteId: 'apollo', orbitId: 'custom', payloadMass: 49735,
-    orbit: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, argPerigee: 0, raanMode: 'free',
-      // the translunar injection: the S-IVB relit at T+2:44:16.2 at 894.4 kN (FER), onto C3 −1.4875 km²/s²,
-      // e 0.97537, the plane 1.135° less inclined and its node 1.238° west of the parking orbit's (FER Table 4-6)
-      injection: { time: 9856.2, c3: -1487528, eccentricity: 0.97537, inclinationShift: -1.135, nodeShift: -1.238, thrustVac: 894.4e3,
+    // the parking orbit's plane: its node 123.088° east of the launch meridian at guidance reference release,
+    // T−17 s (FER Table 4-5) — 359.624° from the mean equinox of date
+    orbit: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, argPerigee: 0, raanMode: 'fixed', raan: 359.624, flightAzimuth: 72.058,
+      // the translunar injection. The S-IVB relit at T+2:44:16.2 (STDV open), at 795 kN and 432.4 s for its
+      // first two minutes on a lean mixture, then 894.4 kN and 428.7 s (FER Figure 7-7, Table 7-2; the first
+      // figures and the shift's time read off the plot). Onto the conic the state ten seconds after the
+      // cut-off gives (Orloff, "Translunar Injection", from the FER): C3 −1.3916 km²/s², e 0.97696, 31.383°,
+      // the node 121.847° east of the launch meridian at T−17 s (358.383° of date) and perigee 4.410° past it
+      // (computed from that state) — at the cut-off signal, before the thrust's 239 kN·s decay, the FER's
+      // −1.4875 and 0.97537 (Table 4-6)
+      injection: { time: 9856.2, c3: -1391609, eccentricity: 0.97696, inclination: 31.383, raan: 358.383, argPerigee: 4.410,
+        thrustVac: 795e3, ispVac: 432.4, mixture: { t: 9976.7, thrustVac: 894.4e3, ispVac: 428.7 },
+        // the S-IVB's continuous hydrogen vent in the parking orbit, 758.5 s to 9,320.4 s, its thrust read off
+        // FER Figure 7-3 (the valve's cycling at its mean), and the 1,053 kg the coast lost (Table 20-10)
+        vent: { mass: 1053, thrust: [[758.5, 300], [800, 200], [900, 130], [1000, 105], [1200, 125], [2200, 130],
+          [2400, 110], [3100, 105], [3150, 75], [3950, 75], [4000, 45], [5000, 45], [5050, 62], [5300, 62], [5350, 70],
+          [6600, 70], [6650, 118], [7900, 118], [7950, 70], [9320.4, 70]] },
         // the SLA's panels at 3:15:23.0 (Orloff); the CSM's separation at 3:17:04.6, docking at 3:24:03.1 and the
         // ejection from the S-IVB at 4:16:59.1 (Apollo 11 Mission Report MSC-00171, Table 3-I)
         sequence: { panels: 11723.0, separation: 11824.6, docking: 12243.1, extraction: 15419.1 } } },
@@ -263,8 +276,11 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       { key: 'evt.mixtureShift', t: 498.0, approx: true }, { key: 'evt.stageCutoff', t: 548.22 }, { key: 'evt.stageSep', n: 2, t: 549.00 },
       { key: 'evt.seco', t: 699.33 },
       // the restart and the translunar injection (FER), the transposition (Orloff; Mission Report Table 3-I)
-      { key: 'evt.ignition', n: 4, t: 9856.2 }, { key: 'evt.tli', t: 10203.03 }, { key: 'evt.slaPanels', t: 11723.0 },
+      { key: 'evt.ignition', n: 4, t: 9856.2 }, { key: 'evt.mixtureShift', n: 2, t: 9976.7, approx: true }, { key: 'evt.tli', t: 10203.07 }, { key: 'evt.slaPanels', t: 11723.0 },
       { key: 'evt.csmSeparation', t: 11824.6 }, { key: 'evt.csmDocked', t: 12243.1 }, { key: 'evt.lmExtraction', t: 15419.1 },
+      // on to the Moon: the evasive burn, MCC-2 (the only correction flown: the model's first), the sphere of
+      // influence (Orloff; Mission Report Tables 7-III and 3-I; the Public Affairs commentary)
+      { key: 'evt.evasive', t: 16801.72 }, { key: 'evt.mcc', t: 96298.64 }, { key: 'evt.lunarSoi', t: 221995 },
     ], orbit: { perigee: 183.2, apogee: 186.0, inclination: 32.521 } },
     titleKey: 'watch.mission.apollo11', blurbKey: 'watch.mission.apollo11Blurb', payloadKey: 'watch.payload.apollo11' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a

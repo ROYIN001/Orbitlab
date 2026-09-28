@@ -103,6 +103,13 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
         params.tgo = fmtClockShort(Math.max(0, frame.apollo.tliTime - frame.t));
         params.speed = Math.round(frame.speed).toString();
         params.alt = Math.round(frame.altitude / 1000).toString();
+        // on the way to the Moon: how far off it is and how fast it comes, the closest approach and when
+        const ap = frame.apollo;
+        params.moon = Math.round(ap.moon.alt / 1000).toString();
+        params.mspeed = Math.round(ap.moon.speed).toString();
+        params.peri = ap.perilune ? Math.round(ap.perilune.alt / 1000).toString() : '—';
+        params.arr = ap.perilune ? fmtClockShort(Math.max(0, ap.perilune.t - frame.t)) : '—';
+        params.dv = ap.mcc ? ap.mcc.dv.toFixed(1) : '—';
         break;
       }
       titleKey = 'hud.status.orbit';

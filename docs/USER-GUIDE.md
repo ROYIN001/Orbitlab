@@ -627,9 +627,16 @@ leave six seconds later, the S-II's centre engine stop at 7:41 and its other fou
 at 8:18 as the mixture shifts, and the S-IVB put Apollo into its 186 km parking orbit. Two and a half hours later — at 100× it takes a minute
 and a half — the S-IVB relights over the Pacific for the six-minute translunar injection, and the
 camera comes in close for the transposition: the adapter's four panels spring open, Columbia backs
-away, turns round and docks with Eagle, and an hour later pulls it out of the S-IVB. So far the
-flight ends there, on the way to the Moon; the Moon itself and the rest of the journey are being
-added.
+away, turns round and docks with Eagle, and an hour later pulls it out of the S-IVB. Then the
+journey itself: a three-second burn of Columbia's big engine to get clear of the S-IVB, three days
+of coasting — Watch runs them at up to 5,000×, slowing for each event, so the whole way takes a few
+minutes — the one midcourse correction on the second day, the moment at 61 hours 40 minutes when
+Mission Control switched its displays to the Moon, and the Moon itself growing until it fills the
+view. The flight ends, for now, behind the Moon at 75 hours 50 minutes, 160 km above it, just as the
+burn into lunar orbit is due; the lunar orbit, the landing and the way home are being added. The
+phase line under the clock shows how far off the Moon is and how close the path will pass it, and
+the line of the real flight beside it the flown times: the model's midcourse correction is a little
+smaller than the flown one, because its injection was a little more exact.
 
 Mercury-Redstone 3 never went into orbit: the Redstone burns for two and a half minutes and
 throws Freedom 7 on a 15-minute arc, 187 km up and 487 km down range. Ten seconds after the

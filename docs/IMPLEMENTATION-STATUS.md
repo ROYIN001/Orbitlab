@@ -138,7 +138,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 328 tests in 95 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1 338 tests in 96 files, about 25 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -180,7 +180,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
-| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a and 6b of 7 (below) |
+| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a, 6b and 6c of 7 (below) |
 | U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | done | | |
 | E02 live equations panel | done | | |
@@ -200,7 +200,11 @@ splashdown), within 11–16 km of Freedom 7's splashdown in both models, flown f
 Saturn V, the whole mission to the Moon and back, in seven steps: (6a) the Saturn V to the parking
 orbit, with planned engine shutdowns, the mixture shift and the jettisons, LC-39A as in 1969 — done;
 (6b) the S-IVB's restart for the Moon onto the flown conic and the transposition, docking and the
-LM's extraction at the flown times — done; (6c) the Moon in the model; (6d) lunar
+LM's extraction at the flown times — done; (6c) the Moon in the model — JPL's DE441 Moon and Sun for
+the week, the Moon turned as the IAU turns it, their pull on the flight, the injection aimed at the
+flown conic's perigee, the service engine's evasive burn and the midcourse correction worked out as
+the flight's was, to the lunar orbit insertion within 40 km and a metre per second of the flown
+approach, and the Moon drawn — done; (6d) lunar
 orbit and the landing; (6e) the LM's ascent and docking; (6f) home and splashdown; (6g) the viewer
 and the documents; (7) the fleet acceptance and the documents.
 

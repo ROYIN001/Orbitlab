@@ -983,7 +983,8 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const descending = direction.descending;
   const lat = site.latitude * DEG;
   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
-  const azimuthInertial = inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
+  const azimuthInertial = cfg.orbit.flightAzimuth !== undefined ? cfg.orbit.flightAzimuth * DEG
+    : inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
   const jd0 = julianDate(cfg.launchTime);
   const gmst0 = gmst(jd0);
   const raanExpected = raanFromLaunch(lat, site.longitude * DEG + gmst0 + OMEGA_EARTH * T_PLANE, ascentInclination, descending);
@@ -1106,7 +1107,12 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   }
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
   // A dogleg leaves on the corridor edge; the closed loop turns into the plane.
-  const azimuthRotating = direction.doglegDeg > 0 ? direction.azimuthRotating
+  // A flight azimuth the mission names (C01: the Saturn V's, 72.058°) is flown as it
+  // was, over the ground as the site's speed turns it; the closed loop yaws into the plane.
+  const flown = cfg.orbit.flightAzimuth !== undefined ? azimuthInertial : null;
+  const vEq = OMEGA_EARTH * R_EARTH * Math.cos(lat);
+  const azimuthRotating = flown !== null ? Math.atan2(vOrb * Math.sin(flown) - vEq, vOrb * Math.cos(flown))
+    : direction.doglegDeg > 0 ? direction.azimuthRotating
     : rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
   // A suborbital target is flown to its apogee and cut off there, when the
   // periapsis has risen to the target's (`AscentMonitor.checkAscent`): there

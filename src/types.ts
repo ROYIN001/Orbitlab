@@ -216,6 +216,16 @@ export interface VehicleSpec {
    * trajectory than it needs (docs/SIXDOF-ACCEPTANCE.md).
    */
   guidanceDefaultsSixDof?: Partial<GuidanceParams>;
+  /**
+   * Its ascent guidance steers into the target orbit's own plane when the
+   * mission fixes its RAAN, the distance and the speed out of it brought to
+   * zero together (C01: the Saturn V's iterative guidance flew to a descending
+   * node set by the day's lunar geometry, yawing up to 274 m/s across its
+   * launch plane, AS-506 flight evaluation report Table 4-5). Absent: the plane
+   * through wherever the vehicle is, with the target inclination — the rule for
+   * every other launcher, whose plane is set by the moment of liftoff.
+   */
+  targetPlane?: boolean;
   /** Reference drag area override (m^2); default from max diameter */
   dragArea?: number;
   /** Crewed launches supported */
@@ -245,15 +255,29 @@ export type OrbitKind = 'circular' | 'elliptical';
 export interface InjectionSpec {
   /** mission time of the restart, s */
   time: number;
-  /** vis-viva energy of the conic, v² − 2μ/r, m²/s² */
+  /**
+   * The conic the injection leaves the stack on, once the engine's thrust has
+   * decayed: its vis-viva energy, v² − 2μ/r (m²/s²), eccentricity, and where
+   * it lies — inclination, node (RAAN from the mean equinox of date) and
+   * argument of perigee, deg.
+   */
   c3: number;
   eccentricity: number;
-  /** the conic's plane against the parking orbit's at its insertion: inclination and node, deg */
-  inclinationShift: number;
-  nodeShift: number;
+  inclination: number;
+  raan: number;
+  argPerigee: number;
   /** the restarted engine's operating point, each, when it differs from the first burn's */
   thrustVac?: number;
   ispVac?: number;
+  /** a change of mixture ratio during the burn: its mission time, s, and the operating point after it */
+  mixture?: { t: number; thrustVac: number; ispVac: number };
+  /**
+   * The stage's propulsive vent while it coasts in the parking orbit: its
+   * thrust along the flight path, N, piecewise linear in mission time
+   * ([t s, N]; nothing outside the points), and the mass the coast loses by
+   * it, kg.
+   */
+  vent?: { thrust: [number, number][]; mass: number };
   /** what the spacecraft does after it, mission times, s (Apollo: separation, docking, extraction) */
   sequence?: { panels: number; separation: number; docking: number; extraction: number };
 }
@@ -295,6 +319,13 @@ export interface OrbitSpec {
    * translunar injection): the last stage relit at `time` and flown onto the
    * conic the flight left on (`src/physics/sim/apollo.ts`).
    */
+  /**
+   * The launch azimuth flown, deg east of north in the inertial frame at the
+   * pad, when the mission's own is known (C01: the Saturn V's flight azimuth,
+   * which its guidance set for the day's lunar geometry); absent, the one the
+   * inclination asks for.
+   */
+  flightAzimuth?: number;
   injection?: InjectionSpec;
   description: string;
 }

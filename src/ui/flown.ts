@@ -12,7 +12,8 @@ import type { SimEvent } from '../physics/sim/types';
 /** The simulation's events a flown one is matched to. */
 export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.interstageSep' | 'evt.towerJettison' | 'evt.boosterSep' | 'evt.fairingSep' | 'evt.meco' | 'evt.stageCutoff' | 'evt.stageSep' | 'evt.seco'
   | 'evt.payloadSep' | 'evt.boosterLandedZone' | 'evt.boosterLandedShip' | 'evt.contact'
-  | 'evt.ignition' | 'evt.tli' | 'evt.slaPanels' | 'evt.csmSeparation' | 'evt.csmDocked' | 'evt.lmExtraction';
+  | 'evt.ignition' | 'evt.tli' | 'evt.slaPanels' | 'evt.csmSeparation' | 'evt.csmDocked' | 'evt.lmExtraction'
+  | 'evt.evasive' | 'evt.mcc' | 'evt.lunarSoi';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -62,6 +63,9 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.csmSeparation': 'tl.evt.csmSeparation',
   'evt.csmDocked': 'tl.evt.csmDocked',
   'evt.lmExtraction': 'tl.evt.lmExtraction',
+  'evt.evasive': 'tl.evt.evasive',
+  'evt.mcc': 'tl.evt.mcc',
+  'evt.lunarSoi': 'tl.evt.lunarSoi',
 };
 
 export interface FlownRow {

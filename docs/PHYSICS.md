@@ -2679,7 +2679,7 @@ is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's S
 | Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
 | Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
 | Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
-| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8) | FER MPR-SAT-FE-69-9; SP-4029 |
+| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection and the flight to the Moon, to the lunar orbit insertion (§13.9, §13.10) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
 | Mercury-Redstone 3 | 1961-05-05 14:34:13 | Mercury-Redstone, Cape LC-5 | 1,832.6 kg (Freedom 7 and its tower) | 187.5 km apogee, splashdown 487 km down range (§13.7) | NASA MR-3 postlaunch report; TM X-53107 |
 
 **13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
@@ -2886,10 +2886,10 @@ of the real splashdown.
 
 **13.8 Apollo 11 on the Saturn V, launch to parking orbit (part 6a).** The vehicle `saturnv` in
 `HISTORICAL_VEHICLES`, the spacecraft `apollo` in src/data/satellites.ts. 16 July 1969, range zero
-13:32:00 UTC, LC-39A, azimuth 72.058°. Sources: the Saturn V flight evaluation report for AS-506,
+13:32:00 UTC, LC-39A, flight azimuth 72.058°. Sources: the Saturn V flight evaluation report for AS-506,
 MPR-SAT-FE-69-9 (FER), and NASA SP-4029 (*Saturn V Launch Vehicle Flight Evaluation* summary tables).
 The mission from the parking orbit on — the S-IVB's restart for the Moon, the spacecraft's own
-flight to the Moon and back — is flown in the parts that follow.
+flight to the Moon — is §13.9 and §13.10; the lunar orbit, the landing and the way home follow.
 
 | | Value | Source |
 |---|---|---|
@@ -2903,7 +2903,8 @@ flight to the Moon and back — is flown in the parts that follow.
 | S-IVB, IU | 11,273 kg dry, 751 kg other, IU 1,939 kg; 107,095 kg LOX and LH2; J-2 901.2 kN, 428.7 s (first burn) | FER |
 | Spacecraft | CSM 28,806 kg, LM 15,095 kg, SLA 1,792 kg, escape tower 4,042 kg (off at T+197.9 s) = 49,735 kg | SP-4029 |
 | Times | CECO 135.20; OECO 161.63; separation 162.30; S-II start command 163.04; CECO ESC +297.58 (460.62); S-II cut-off 548.22, separation 549.00; S-IVB start 552.2; cut-off 699.33; insertion 709.33 | FER |
-| Orbit | 183.2 × 186.0 km, 32.521° | FER |
+| Orbit | 183.2 × 186.0 km, 32.521°; the node 123.088° east of the launch meridian at guidance reference release (T−17 s) — 359.624° from the mean equinox of date | FER Table 4-5 |
+| Insertion + 10 s (709.3 s) | 191.1 km, 7,793.1 m/s, 0.012°, heading 88.848°; 32.672° N, 52.694° W | FER Table 4-5 |
 
 *New in the model.* `StageSpec.engineEvents` are planned changes in a stage's engines during its burn, s
 after its first ignition: an engine shut down early (the centre engines of the S-IC and S-II, index 4
@@ -2923,7 +2924,15 @@ from its residual. The ullage-motor propellant rides with the ring until it drop
 flown liftoff, T+0.63 s, is not modelled. The model flies a gravity turn where the Saturn V flew a
 time-based tilt programme, frozen at the S-IC's cut-off: along the air-relative velocity, its kick
 (3° at 0.5°/s) set so that the S-IC hands over at the flown state; and from T+204.1 s, as the
-Saturn V's iterative guidance mode did, its own closed-loop steering. The hand-over time is new in
+Saturn V's iterative guidance mode did, its own closed-loop steering, into the flown plane. The azimuth
+is the flown one (`OrbitSpec.flightAzimuth`, 72.058° in the inertial frame at the pad, turned over the
+ground as the site's rotation turns it), not the one the inclination alone would ask for (73.83°), and
+the closed loop steers into the parking orbit's own plane (`VehicleSpec.targetPlane`, the mission's RAAN
+fixed at the flown 359.624°): the distance out of the plane and the speed across it both brought to zero
+by the cut-off, the lateral acceleration −(6y/T² + 4ẏ/T) for the time to go T (held to a minute at the
+end) — where every other vehicle flies the plane through wherever it is, which set the Saturn V's node
+1.7° east of the flown one, and the restart for the Moon 200 km round the orbit from where it was. The
+Saturn's guidance yawed as much: 274 m/s across its launch plane by the insertion (FER Table 4-5). The hand-over time is new in
 the guidance (`GuidanceParams.closedLoopStart`): without it every vehicle's gravity turn hands over
 in thin air (q under 4 kPa, above 25 km), which for the Saturn V is 115 s into the S-IC's burn — it
 flattened the S-IC, put it 6 km low at its cut-off and had the S-II climb at a 20° angle of attack
@@ -2936,12 +2945,16 @@ Model − flight, s:
 | | Max-Q | CECO | OECO | Sep. | Ring | Tower | S-II CECO | Mixture | S-II cut-off | Sep. | S-IVB cut-off | Orbit, km |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Flown | 83.0 (35.2 kPa) | 135.20 | 161.63 | 162.30 | 192.3 | 197.9 | 460.62 | ≈ 498 | 548.22 | 549.00 | 699.33 | 183.2 × 186.0 |
-| Point-mass | −6.3 (35.7 kPa) | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | +0.1 | ±0.0 | −2.2 | 180 × 183 |
-| Six-DOF | −6.1 (38.0 kPa) | ±0.0 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.5 | +0.4 | +6.1 | 174 × 183 |
+| Point-mass | −6.3 (35.7 kPa) | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | +0.3 | +0.3 | −6.7 | 180 × 183 |
+| Six-DOF | −6.1 (38.0 kPa) | ±0.0 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.4 | +0.4 | +4.9 | 174 × 183 |
 
-The stages' own clocks keep the flown times. The S-IC hands over at 69 km and 2,753 m/s point-mass,
-66 km and 2,791 m/s six-DOF (66.1 km and 2,764 m/s flown), and the S-II at 186 and 183 km, 6,946 and
-6,894 m/s (187.3 km and 6,910 m/s); the S-IVB then cuts off 2 s early and 6 s late. Max-Q, 35.7 and 38 kPa
+The stages' own clocks keep the flown times. The S-IC hands over at 68 km and 2,742 m/s point-mass,
+66 km and 2,780 m/s six-DOF (66.1 km and 2,764 m/s flown), and the S-II at 186 and 183 km, 6,968 and
+6,902 m/s (187.3 km and 6,910 m/s); the S-IVB then cuts off 7 s early and 5 s late — its yaw into the
+flown plane costs the six-DOF flight, whose gravity turn leaves it 436 m/s across that plane at the
+hand-over against the point mass's 309, more than the point mass. Ten seconds after the cut-off the
+point mass is at 32.674° N (geodetic), 52.68° W, the node 359.70° (flown 32.672° N, 52.694° W,
+359.624°). Max-Q, 35.7 and 38 kPa
 against 35.2, comes 6 s early whatever the kick: the flown peak was broad and flat, and where on it the
 maximum falls moves with the day's air, which the model's standard atmosphere is not. The orbits are
 3–9 km under the flown perigee, inside the model's acceptance band. In six-DOF the S-II's closed-loop
@@ -2950,55 +2963,145 @@ dynamic pressure is under 1 Pa: the disclosure every six-DOF flight in the fleet
 steering leaves the table in thin air (`evt.aeroEnvelopeExceeded`; Soyuz at T+124 s, Falcon 9 at
 T+123 s, H-IIA at T+104 s), not a load.
 
-**13.9 Apollo 11 from the parking orbit to the translunar coast (part 6b).** `ApolloFlight` in
-src/physics/sim/apollo.ts; the mission's `OrbitSpec.injection`. Sources: the Saturn V flight evaluation
-report MPR-SAT-FE-69-9 (FER), the Apollo 11 Mission Report MSC-00171 (MR), and R. Orloff, *Apollo by the
-Numbers*, NASA SP-2000-4029 (ORL); JPL Horizons for the Moon, from part 6c.
+**13.9 Apollo 11 from the parking orbit to the translunar coast (parts 6b and 6c).** `ApolloFlight` in
+src/physics/sim/apollo.ts, `TliGuidance` in src/physics/sim/tli-guidance.ts; the mission's
+`OrbitSpec.injection`. Sources: the Saturn V flight evaluation report MPR-SAT-FE-69-9 (FER), the Apollo 11
+Mission Report MSC-00171 (MR), and R. Orloff, *Apollo by the Numbers*, NASA SP-2000-4029 (ORL).
 
 | | Value | Source |
 |---|---|---|
-| S-IVB restart | TLI ignition (start tank discharge valve open) T+2:44:16.20, 9,856.2 s | FER; ORL p.115; MR Table 3-I |
-| Second burn | 894.4 kN, 428.7 s at STDV +172 s; 346.9 s; cut-off 10,203.07 s by guidance velocity cut-off; cut-off impulse 239,061 N·s | FER §7.7–7.8, Table 7-2 |
-| TLI cut-off state | 320.9 km, 10,841.0 m/s space-fixed, flight-path angle 6.913°; eccentricity 0.97537, C3 −1.4875 km²/s², inclination 31.386°, descending node 121.850° | FER Table 4-6 |
-| Parking orbit at insertion | inclination 32.521°, descending node 123.088° | FER Table 4-5 |
-| Stack mass | 134,046 kg at the restart, 63,189 kg at cut-off | FER Tables 20-7, 20-8 |
+| Parking-orbit coast | the S-IVB's continuous hydrogen vent from 758.5 s to 9,320.4 s: 300 N falling to 105–130 N, then 45–118 N and the valve cycling; 135,102 kg at the first burn's end, 134,047 kg at the restart | FER §7.5, Figure 7-3, Table 20-10 |
+| S-IVB restart | start tank discharge valve open T+2:44:16.20, 9,856.2 s | FER; ORL p.115; MR Table 3-I |
+| Second burn | for its first two minutes on the lean mixture the propellant utilisation valve held (795 kN, 4,240 N·s/kg = 432.4 s), then from STDV +120.5 s (9,976.7 s) 894.4 kN, 428.7 s; cut-off 10,203.07 s by guidance, 346.9 s after the restart; cut-off impulse 239,061 N·s | FER §7.7–7.8, Figure 7-7 (the first operating point and the shift's time read off the plot), Table 7-2 |
+| At the cut-off signal | 320.9 km, 10,841.0 m/s, 6.913°; e 0.97537, C3 −1.4875 km²/s², 31.386°, node 121.850° | FER Table 4-6 |
+| Ten seconds later (the conic flown) | 2:50:13.03: 9.9204° N geocentric, 164.8373° W, 334.44 km, 35,545.6 ft/s, 7.367°, heading 60.073°; C3 −1.3916 km²/s², e 0.97696, 31.383°, node 121.847° (358.383° of date); perigee 4.410° past the node, computed from the state | ORL "Translunar Injection" |
+| Stack mass | 134,047 kg at the restart, 63,190 kg at the cut-off signal | FER Table 20-10 |
 | Transposition | SLA panels open 3:15:23.0 (ORL); CSM separation 3:17:04.6, docking 3:24:03.1 (MR Table 3-I) | ORL p.116; MR |
-| Ejection | the CSM and LM out of the S-IVB 4:16:59.1 (MR; ORL 4:17:03.0), 0.7 ft/s | MR §7.4.2; ORL p.116 |
+| Ejection | the CSM and LM out of the S-IVB 4:16:59.1 (MR; ORL 4:17:03.0), 0.7 ft/s; 43,893 kg (96,767.5 lb) | MR §7.4.2, Table A-I |
 
-*The flight.* When the ascent reaches the parking orbit, `ApolloFlight` takes the stack over: a point
-under J2 with its attitude set, in both dynamics models, as the far phases of a rendezvous are (§9.2).
-At the flown time it relights the S-IVB (at the second burn's 894.4 kN) and steers by velocity to be
-gained onto the flown conic: its energy (C3), eccentricity and plane, the plane taken from the parking
-orbit's at insertion shifted as the flown one was (−1.135° in inclination, −1.238° at the node — the
-nodal regression between the two, 0.8°, is in both the flown and the modelled orbits); where the conic
-has no velocity at the stack's radius (under its perigee) the wanted velocity is horizontal. It cuts
-off when the energy, the engine's tail-off counted, is the conic's; the step shrinks to a hundredth of
-a second as the speed still to gain comes to a few steps' worth (at the end of the burn the stage gains
-14 m/s² and a 0.2 s step overshoots the energy by 3 m/s). The argument of perigee is not aimed at: it
-follows from the flown time of the burn, as it did.
+*The coast and the restart.* When the ascent reaches the parking orbit `ApolloFlight` takes the stack
+over: a point under J2, drag, and the Moon's and the Sun's pull (§13.10), with its attitude set, in both
+dynamics models, as the far phases of a rendezvous are (§9.2). In the parking orbit the S-IVB's vent
+pushes it along its flight path at the thrust of the FER's figure, and takes the coast's 1,053 kg of
+hydrogen from its tanks in proportion to that thrust — 5.7 m/s in all, worth 0.8° of the orbit by the
+restart. At the flown time the S-IVB relights at the lean mixture's operating point, and changes to the
+mixture's second at its flown time (`InjectionSpec.mixture`, `evt.mixtureShift`).
+
+*The steering.* The Saturn's iterative guidance aimed the injection at five elements of the conic for
+the Moon: energy, eccentricity, inclination, node, and the direction of the perigee against the Moon's
+(ALPHA_D). So does `TliGuidance`, at the flown conic — as it was ten seconds after the cut-off, the
+engine's tail-off in it: at the cut-off signal the FER's C3 is 0.096 km²/s² lower, the 3.8 m/s the
+thrust's decay (239 kN·s on 63 t) and the 10 s after it added. In the conic's plane the thrust is
+pitched by an angle linear in time, θ = p0 + p1 (t − t0), the two numbers solved by Newton's method
+against a prediction of the rest of the burn — RK4 at 1 s under J2, the engine's operating points, its
+start-up and its tail-off, the cut-off at the energy — so that the conic's perigee comes out at its
+radius and its argument; every 2 s (the LVDC's cycle was about that), from the last solution, not in
+the last 8 s. Out of the plane the thrust brings the distance and the speed across it to zero together
+by the predicted cut-off (as §13.8's ascent). The energy, the tail-off counted, ends the burn; the step
+shrinks to a hundredth of a second as the speed still to gain comes to a few steps' worth. Should the
+solution fail, the burn falls back to velocity-to-be-gained steering onto the conic (6b's).
 
 The transposition — the adapter's panels, the CSM backing 30 m off, turning round, docking with the LM
 in the S-IVB — moves the spacecraft tens of metres from the stage and its orbit by less than a metre
 per second, so it is flown as events at the flown times and drawn (src/render/apollo.ts: 100 s to back
 off, 100 s to turn, the rest of the seven minutes to close); the CSM and LM leave the S-IVB as a body of
-their own at the ejection, when the stage becomes debris behind them.
+their own at the ejection, weighing what the Mission Report weighed them at, when the stage becomes
+debris behind them.
 
-Model − flight, and the conic:
+Model − flight, and the conic ten seconds after the cut-off:
 
-| | Restart | TLI cut-off | C3, km²/s² | Eccentricity | Inclination | Panels, separation, docking, ejection |
+| | Mass at restart | Restart | Mixture | TLI cut-off | C3, km²/s² | e | Inclination | Perigee's argument |
+|---|---|---|---|---|---|---|---|---|
+| Flown | 134,047 kg | 9,856.2 | ≈ 9,976.7 | 10,203.07 | −1.3916 | 0.97696 | 31.383° | 4.410° |
+| Point-mass | 135,698 kg | ±0.0 | ±0.0 | +5.9 | −1.3905 | 0.97698 | 31.398° | 4.41° |
+| Six-DOF | 133,253 kg | ±0.0 | ±0.0 | −0.1 | −1.3909 | 0.97697 | 31.401° | 4.41° |
+
+The panels, the separation, the docking and the ejection are at their flown times in both. The burn
+ends with the stack's own mass: the point mass's S-IVB reaches the parking orbit 7 s before the flown
+one and carries 1.7 t more into the restart, the six-DOF's 5 s after it and 0.8 t less, and each burns to
+the same energy — 6 s longer and 0.1 s shorter than flown. The plane is 0.02° steeper than the flown (the
+yaw is held in the last 8 s). Without the mixture's two operating points the burn was 5–9 s short and,
+aimed at the cut-off signal's C3 and without the perigee's argument, left the conic's perigee 5° from the
+flown one — the flight arrived 11 hours late and 20,000 km from the Moon; without the fixed plane at the
+ascent the restart was 200 km further round the orbit, and without the vent 0.8° more.
+
+**13.10 Apollo 11 to the Moon (part 6c).** src/physics/lunar/ (ephemeris.ts, orientation.ts,
+cislunar.ts), the Moon's and the Sun's tables src/data/ephemeris-1969.ts (generated by
+docs/data/horizons/make-ephemeris.py from the Horizons tables beside it), the flight's numbers
+src/data/apollo11.ts, the Moon drawn by src/render/moon.ts. Sources: JPL Horizons (DE441), the IAU/WGCCRE
+2009 report (Archinal et al. 2011), MR, ORL, and the Public Affairs commentary in the Apollo 11 Flight
+Journal (AFJ).
+
+| | Value | Source |
+|---|---|---|
+| The Moon and the Sun | geocentric states, ICRF, hourly from 1969-07-16 13:00 to 07-24 18:00 TDB; GM 4,902.800066 km³/s² | Horizons, DE441 |
+| TDB − UTC | 39.75 s: TT − TAI 32.184 s, TAI − UTC 7.56 s in July 1969 (4.2131700 s + 0.002592 s/day from MJD 39126) | USNO |
+| The Moon's orientation | pole and prime meridian with the 13 periodic terms (physical librations) | IAU/WGCCRE 2009 |
+| SPS | 91.19 kN (20,500 lbf), 314.2 s (Apollo 8's engine, measured; CSM-107's not published) | Press kit; Apollo 8 SPS supplement |
+| Evasive burn | 4:40:01.72, 2.93 s, 19.7 ft/s (6.0 m/s), planned to lower the pericynthion to 167.7 n mi | ORL; MR §7.4.2, Table 7-III |
+| MCC-2 | 26:44:58.64, 3.13 s, 20.9 ft/s (6.37 m/s), aimed at a 60.0 n mi pericynthion and a node; gave 61.5 n mi, 0.17° N 173.57° E, 75:53:35, 8,334 ft/s | ORL; MR §7.4.3, Table 7-III |
+| Pericynthion predicted | after the injection 896.3 n mi, 75:05:21; after the separation 827.2 n mi, 75:07:47; after the evasive burn 180.8 n mi, 75:39:30 | MR Table 7-III |
+| Sphere of influence | 61:39:55, 33,822 n mi above the Moon, 186,437 n mi above the Earth, 2,990 ft/s from the Earth, 3,772 ft/s from the Moon | AFJ (PAO); ORL "Equigravisphere" |
+| LOI-1 ignition | 75:49:50.37: 86.7 n mi, 8,250 ft/s, 1.57° S 169.58° W | ORL; MR Table 7-II |
+| Lunar altitudes | above the landing site's radius, 937.17 n mi (1,735.6 km) | MR Table 7-I, 5-IV |
+
+*The Moon and the Sun.* The simulation's inertial frame is the mean equator and equinox of date (the
+Earth turns by the mean sidereal time), so the ICRF states are precessed to the date by the IAU 1976
+angles (ζ, z, θ: 30.46 years of 46.12″ a year of right ascension in 1969); nutation, nine arc-seconds,
+is left out as the Earth's own rotation leaves it out. Between the hours, cubic Hermite interpolation in
+the positions and velocities, to a metre at the table's own hours; outside the table the low-precision
+series of the lifetime propagator (a few hundred kilometres), which only the drawing would use. The
+Moon's body axes, from the IAU 2009 model precessed the same way, put its near side to the Earth within
+the librations (tests/lunar-ephemeris.test.ts) and give the selenographic latitude and longitude of the
+pericynthion; the model's frame follows the mean-Earth one Apollo's sites are given in to a few hundred
+metres.
+
+*The forces.* From the parking orbit on the stack feels the Earth with its J2 and the Moon and the Sun
+as third bodies — each body's pull on the spacecraft less its pull on the Earth — and drag below
+1,000 km. The coast after the ejection is RK4 with a step a hundredth of the time to cross the distance
+to the nearer body at the speed relative to it, between 1 s and 2 min (8 s in low Earth orbit, 12 s in a
+low lunar orbit, two minutes between); the closest approach to the Moon is found by the range rate
+turning from closing to opening and refined within its step by a golden-section search to a tenth of a
+second. The Moon is a point mass here: its own harmonics, which move a low lunar orbit's plane by a
+fraction of a degree a day, come with the lunar orbit.
+
+*The burns.* The service propulsion system burns along a fixed inertial direction until its Δv is in,
+the propellant it uses coming off the spacecraft's mass. The evasive burn has the flown Δv and time, in
+the orbit's plane, pointed so that it lowers the pericynthion to the planned 167.7 n mi — of the two
+directions that do, the one whose arrival is nearer the flown one (its attitude is not published). MCC-2
+is worked out at its flown time: the impulse that puts the pericynthion at 60.0 n mi, at 75:53:35 and at
+0.17° N — the node the flight aimed at is not published, so the latitude it gave stands in for it — by
+Newton's method on the three misses against the impulse's three components, the Jacobian by
+differences at 2 cm/s, each step capped at 20 m/s; then flown as a burn along it. Mission Control's
+sphere of influence (33,822 n mi above the Moon) is where `evt.lunarSoi` is; its time is interpolated
+between the steps either side. The flight ends this part at the lunar orbit insertion's flown ignition.
+
+*The check on the chain.* The injection state Orloff gives, propagated with these forces from
+2:50:13.03, passes the Moon at 665.6 n mi at 75:15:30, 176.85° W, where the Mission Report predicted
+896.3 n mi at 75:05:21, 174.13° W: the state is given to a tenth of a foot per second and a thousandth
+of a degree, and each foot per second at the injection moves the pericynthion about a hundred miles
+(1.6 ft/s moved the prediction from the planned 718.9) — a frame or ephemeris error of a tenth of a
+degree would move it thousands (tests/historical-vehicles.test.ts).
+
+Model − flight:
+
+| | Evasive: pericynthion after | MCC-2 Δv | Pericynthion after MCC-2 | SOI crossing | At the SOI (61:39:55) | At LOI-1 ignition |
 |---|---|---|---|---|---|---|
-| Flown | 9,856.2 | 10,203.03 | −1.4875 | 0.97537 | 31.386° | 11,723.0 · 11,824.6 · 12,243.1 · 15,419.1 |
-| Point-mass | ±0.0 | −5.2 | −1.486 | 0.97539 | 31.355° | ±0.0 each |
-| Six-DOF | ±0.0 | −9.0 | −1.485 | 0.97541 | 31.351° | ±0.0 each |
+| Flown | 180.8 n mi, 75:39:30 (167.7 planned) | 6.37 m/s | 61.5 n mi (60.0 aimed at), 75:53:35, 0.17° N 173.57° E, 2,540 m/s | 61:39:55 | 345,281 km up, 911.4 m/s; 62,638 km above the Moon, 1,149.7 m/s | 160.6 km, 2,514.6 m/s |
+| Point-mass | 167.3 n mi, 75:45:31 | 3.92 m/s | 59.8 n mi, 75:53:36, 0.17° N 173.51° E, 2,543.6 m/s | +34 s | 345,263 km, 911 m/s; 62,679 km, 1,150.6 m/s | 162.4 km, 2,515.1 m/s |
+| Six-DOF | 167.3 n mi, 75:45:46 | 3.82 m/s | 59.7 n mi, 75:53:36, 0.17° N 173.51° E, 2,543.8 m/s | +36 s | 345,262 km, 911 m/s; 62,681 km, 1,150.6 m/s | 162.4 km, 2,515.1 m/s |
 
-The burn is 5–9 s short of the flown 346.9 s: the stack is 1.7 t heavier at the restart than flown
-(135.75 against 134.05 t — the hydrogen vented and the ullage motors' propellant between the burns are
-not modelled) yet reaches the flown energy sooner, because the model's J-2 comes to full thrust at once
-where the flown one took its start sequence (and its mixture ratio, 5.0 then 4.5, the PU system's; the
-model flies the average 894.4 kN throughout). The plane is 0.03° under the flown: the parking orbit's
-node and inclination at the model's insertion are carried, not the flown ones. The Mission Report's
-"injection" state, 10 s after the cut-off (180.6 n mi, 35,545.6 ft/s, 7.367°, e 0.97696), is a later
-point on the same conic, not a different one.
+The model's injection leaves its flight closer to its aim than the flown one was: its pericynthion
+after the separation is 710 and 725 n mi at 75:16 against the flown prediction's 827 n mi at 75:08,
+its correction 3.9 m/s against the flown 6.4 — the flown injection's own error, 1.6 ft/s, was the size
+of what separates them. From the correction on, the model's flight and the flown one are the same to
+40 km and a metre per second.
+
+*Approximations.* The vent's thrust is read off the FER's plot, the valve's cycling at its mean, and
+the mass it takes spread in proportion to it; the lean mixture's operating point and the shift's time
+likewise. The SPS's specific impulse is Apollo 8's engine's. The evasive burn's direction and the
+MCC-2's aim in latitude stand in for the unpublished attitude and node. The Moon is drawn painted, not
+mapped: the principal maria at their centres and sizes, four rayed craters, a scatter of small ones.
 
 ## Glossary (EN / RU / TH)
 

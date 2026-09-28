@@ -14,7 +14,7 @@
  */
 import * as THREE from 'three';
 import type { SatelliteView } from './satellite';
-import type { ApolloState } from '../physics/sim/apollo';
+import { APOLLO_OUT, type ApolloState } from '../physics/sim/apollo';
 import { clamp01, smoothstep } from './noise';
 
 /** Height of the stack on the S-IVB with its tower, m (Saturn V 110.6 m less its stages). */
@@ -160,7 +160,7 @@ export function buildApollo(): SatelliteView & { setApollo(state: ApolloState | 
   const setApollo = (state: ApolloState | undefined, t: number, separated: boolean): void => {
     const q = state?.sequence;
     const phase = state?.phase;
-    const after = phase === 'translunar' || phase === 'transposition' || phase === 'docked' || phase === 'extracted';
+    const after = phase === 'translunar' || phase === 'transposition' || phase === 'docked' || (!!phase && APOLLO_OUT.includes(phase));
     const u = q && after && phase !== 'translunar' ? t - q.separation : -1;
     // the panels, at their own time before the CSM backs away: open to 45° on their hinges,
     // then away on their springs, tumbling

@@ -46,7 +46,7 @@ import { gravity, gravityJ2 } from './gravity';
 import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
 import { rk4Step } from './integrator';
-import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
+import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, planeNormal, wrapPi } from './orbital';
 import { VehicleModel, StageState, engineMassFlow } from './vehicle';
 import { AscentGuidance, planeNormalThrough } from './guidance';
 import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
@@ -63,7 +63,7 @@ import { LaunchEscape } from './sim/abort';
 import { Rendezvous, type ToruCommand } from './sim/rendezvous';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
-import { APOLLO_COAST_STEP_S, ApolloFlight, TLI_STEP_S } from './sim/apollo';
+import { ApolloFlight } from './sim/apollo';
 import { RIGID_ASCENT_COMMAND_RATE, RIGID_STEERING_FREEZE_S, TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
 import type { Debris, EventSeverity, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
 
@@ -228,8 +228,10 @@ export class Simulation {
     this.payloadMass = cfg.payloadMassOverride ?? this.satellite.mass;
     this.plan = planMission(cfg, this.site, this.vehicleSpec);
     this.vehicle = new VehicleModel(this.vehicleSpec, this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
+    const fixedPlane = this.vehicleSpec.targetPlane && this.plan.target.raan !== null && !this.plan.suborbitalAim
+      ? planeNormal(this.plan.target.inclination, this.plan.target.raan) : undefined;
     this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis,
-      this.plan.suborbitalAim);
+      this.plan.suborbitalAim, fixedPlane);
     // G01: PEG or IGM, aimed at the same insertion orbit (orbital targets only: a suborbital flight keeps its own guidance).
     const explicit = cfgIn.dynamics?.explicitGuidance;
     if (explicit && !this.plan.suborbitalAim) {
@@ -405,7 +407,7 @@ export class Simulation {
       }
       if (e.mixture) {
         st.spec = { ...st.spec, engine: { ...st.spec.engine, ...e.mixture } };
-        this.event('evt.mixtureShift', 'info', { ...this.stageParams(st) }, at);
+        this.event('evt.mixtureShift', 'info', { ...this.stageParams(st), kn: Math.round((VehicleModel.enginesRunning(st) * st.spec.engine.thrustVac) / 1000) }, at);
       }
     }
     st.engineEventsDone = done;
@@ -633,7 +635,7 @@ export class Simulation {
       // step costs no accuracy; it only has to stay short enough to resolve the
       // scheduled burn, which the pending-action clamp below takes care of.
       case 'coast': dt = s.altitude > 2000e3 ? 60 : s.altitude > 140e3 ? 10 : 0.5; break;
-      case 'orbit': dt = this.apollo.active ? (this.apollo.burning ? this.apollo.burnStep() : this.vehicle.inTransient(s.t) ? TLI_STEP_S : APOLLO_COAST_STEP_S)
+      case 'orbit': dt = this.apollo.active ? this.apollo.suggestedDt()
         : Math.min(30, Math.max(1, (s.elements.period || 5400) / 300)); break;
       case 'descent': {
         // Kepler above the air; the entry resolved at its speed; the flip and

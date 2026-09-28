@@ -579,3 +579,10 @@ and a mission flown from the pad it names (`padId`); the fleet's vehicles and mi
 them, so every case flies as before: **161 of 161 passed** in 1 h 42 min on four cores, run alone.
 The heavy tests the pad change touches — Mercury-Redstone 3 in six-DOF, the Soyuz aborts from
 Gagarin's Start, the historical dockings — pass too (5 of 5).
+
+**The rigid fleet with C01 part 6b: interrupted.** `npm run test:sixdof-fleet` at commit 50ded76 (the
+translunar injection and the transposition, `ApolloFlight`, flown only by a mission with an injection)
+ran for 63 minutes with **106 of 106 finished cases passed**, when its three workers were killed by
+mistake — taken for orphans of a probe run — while they ran wind.test.ts,
+electron-longmarch5-vegac-falcon9.test.ts and dedicated.test.ts (SIGTERM; 55 cases not run). No
+case failed. The run on part 6c's commit, which carries part 6b, stands for both.
