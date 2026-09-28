@@ -18,3 +18,26 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # The app in a real browser (tests/browser/): the smoke journeys on the production build,
+  # served under /Orbitlab/ as GitHub Pages serves it. Pull requests only; the deploy runs the full set.
+  browser-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:browser:smoke
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-screenshots
+          path: tests/browser/screenshots/
+          if-no-files-found: ignore
