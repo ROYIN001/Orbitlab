@@ -93,12 +93,15 @@ export const BUILT_ITEMS: ReadonlySet<string> = new Set(['O01', 'O02', 'O03', 'O
  * The Build section's own (Phase 3 on). D01, the parts catalogue, is built:
  * the fleet is assembled from it and the Watch level draws its parts. The
  * Watch level itself, real rockets taken apart ("exploded views",
- * `plan.build.watch`), is not a numbered roadmap item.
+ * `plan.build.watch`), is not a numbered roadmap item. D02, the remix, is
+ * built at the Explore level, its only level. D03, the parts builder, is built
+ * at the Explore level too, but its Engineer face (designing from parts
+ * there) is not, so it stays on the Engineer level's list of what is coming.
  */
-export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01']);
+export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01', 'D02']);
 
 /** The Build section's levels that are built; the others show what is coming to them. */
-export const BUILD_READY_LEVELS: ReadonlySet<AppLevel> = new Set(['watch']);
+export const BUILD_READY_LEVELS: ReadonlySet<AppLevel> = new Set(['watch', 'explore']);
 
 /**
  * What each Build level will offer, by roadmap item, as the roadmap and the

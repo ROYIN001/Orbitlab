@@ -1,0 +1,177 @@
+/* ==========================================================================
+   The Build section's Explore level (roadmap D02, D03;
+   src/ui/build/explore-level.ts), on the Watch level's panels and drawing
+   (build.css).
+
+   A wide screen: the drawing on the left, the whole height of the screen and
+   in sight while the page scrolls (sticky, as the Watch level's); beside it
+   the design's name, mode and payload across the top, the controls and the
+   checks side by side, and the figures and the saved designs under both. A
+   tablet: two columns, the checks under the controls. A phone: one column —
+   the name, the drawing with its figures at a glance, the checks, then the
+   controls, the figures as a card per stage, the saved designs — nothing
+   behind a drawer, no sideways scroll, 16 px gutters.
+   ========================================================================== */
+
+.bs-explore[hidden] { display: none; }
+.bx-grid {
+  display: grid; min-height: 100%; gap: 10px; padding: 10px;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(300px, 1fr) minmax(300px, 1fr);
+  grid-template-rows: auto auto auto auto;
+  grid-template-areas: 'stage head head' 'stage ctrl check' 'stage figs figs' 'stage store store';
+  align-items: start;
+}
+.bx-head { grid-area: head; display: flex; flex-direction: column; gap: 12px; }
+.bx-stage { grid-area: stage; }
+.bx-controls { grid-area: ctrl; display: flex; flex-direction: column; gap: 10px; }
+.bx-checks { grid-area: check; display: flex; flex-direction: column; gap: 14px; }
+.bx-figures { grid-area: figs; }
+.bx-store { grid-area: store; }
+.bx-grid .bs-panel { min-width: 0; }
+
+.bx-h2 { margin: 0; font: 600 16px/1.3 var(--sans); color: #dce6ee; }
+.bx-h3 { margin: 0 0 8px; font: 600 13.5px/1.35 var(--sans); color: #c9d6e2; }
+.bx-h3 small { font-weight: 400; color: var(--muted); }
+.bx-note { margin: 6px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.bx-note.small { font-size: 12px; }
+.bx-note.warn { color: var(--warn); }
+.bx-msg-error { color: var(--fail); }
+.bx-msg-ok { color: var(--ok); }
+
+/* ── the design's name, mode and payload ──────────────────────────────────── */
+
+.bx-head-text { min-width: 0; }
+.bx-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.bx-mode {
+  padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line2); background: var(--panel2);
+  font-size: 14px; color: #c9d6e2;
+}
+.bx-mode:hover { border-color: var(--accent-line); color: var(--text); }
+.bx-mode[aria-pressed='true'] { background: var(--accent-weak); border-color: var(--accent-line); color: var(--accent); font-weight: 600; }
+.bx-head-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; }
+.bx-name { flex: 2 1 220px; }
+.bx-payload { flex: 1 1 160px; }
+.bx-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bx-field-name { font-size: 12.5px; line-height: 1.35; color: #b8c6d4; }
+.bx-field select, .bx-field input, .bx-text { width: 100%; min-width: 0; height: 34px; }
+.bx-with-unit { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.bx-with-unit input { flex: 1; min-width: 0; }
+.bx-unit { flex: none; font-size: 12px; color: var(--muted); }
+.bx-num { text-align: right; }
+
+/* ── the drawing and its figures at a glance ──────────────────────────────── */
+
+.bs-draw.stale .bs-svg { opacity: 0.45; }
+/* four figures in a row where they fit; a figure never shrinks under its number and unit, it moves to the next row */
+.bx-summary {
+  display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0;
+  padding: 8px 12px 10px; border-top: 1px solid var(--line); background: var(--panel3);
+}
+.bx-sum { flex: 1 1 96px; }
+.bx-sum dt { font-size: 11.5px; line-height: 1.3; color: var(--muted); }
+.bx-sum dd { margin: 2px 0 0; font: 600 15px/1.2 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── the controls ─────────────────────────────────────────────────────────── */
+
+.bx-card { padding: 12px; border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); scroll-margin-top: 10px; }
+.bx-card > * + * { margin-top: 10px; }
+.bx-card .bx-h3 + * { margin-top: 0; }
+.bx-card.flash { animation: bx-flash 1.2s ease-out; }
+@keyframes bx-flash { from { box-shadow: 0 0 0 2px var(--accent); } to { box-shadow: 0 0 0 2px transparent; } }
+@media (prefers-reduced-motion: reduce) { .bx-card.flash { animation: none; outline: 2px solid var(--accent-line); } }
+.bx-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bx-card-head .bx-h3 { margin: 0; }
+.bx-card .pg-field { margin-top: 10px; }
+.bx-stepper { display: flex; align-items: center; gap: 6px; }
+.bx-stepper input { width: 88px; height: 34px; }
+.bx-stepper .bs-step:disabled, .bx-stepper input:disabled { opacity: 0.45; cursor: default; }
+.bx-own { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bx-wide { grid-column: 1 / -1; }
+.bx-groups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bx-groups > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.bx-groups > li.off .bx-group-text strong { text-decoration: line-through; color: var(--muted); }
+.bx-group-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 160px; }
+.bx-group-text small { font-size: 12px; color: var(--muted); }
+.bx-off { color: var(--warn) !important; }
+.bx-group-edit { align-items: flex-end !important; }
+.bx-group-edit .bx-field:first-child { flex: 1 1 200px; }
+.bx-count { flex: 0 0 90px; }
+.bx-none { font-size: 13px; color: var(--muted); }
+.bx-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.watch-btn.small { padding: 6px 10px; font-size: 12.5px; }
+.watch-btn:disabled { opacity: 0.45; cursor: default; }
+.watch-btn.danger { border-color: var(--fail); color: var(--fail); }
+
+/* ── the checks: will not fly, warnings, estimates ────────────────────────── */
+
+.bd-say-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.bd-say { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line2); border-left-width: 4px; background: var(--panel2); font-size: 13px; line-height: 1.5; }
+.bd-say-tag { display: block; margin-bottom: 2px; font: 600 11.5px/1.3 var(--sans); letter-spacing: 0.4px; text-transform: uppercase; }
+.bd-say-glyph { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; font-size: 11px; }
+.bd-say-fail { border-left-color: var(--fail); }
+.bd-say-fail .bd-say-tag { color: var(--fail); }
+.bd-say-fail .bd-say-glyph { background: var(--fail); color: #1b0909; }
+.bd-say-warn { border-left-color: var(--warn); }
+.bd-say-warn .bd-say-tag { color: var(--warn); }
+.bd-say-warn .bd-say-glyph { background: var(--warn); color: #231a02; }
+.bd-say-note { border-left-color: var(--line2); background: transparent; }
+.bd-say-note .bd-say-tag { color: var(--muted); }
+.bd-say-note .bd-say-glyph, .bd-say-default .bd-say-glyph { border: 1px solid var(--muted); }
+.bd-say-default { border-left-color: var(--line2); background: transparent; }
+.bd-say-default .bd-say-tag { color: var(--muted); }
+.bd-say-body { display: block; overflow-wrap: anywhere; }
+.bd-say-detail { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.bd-say-detail code { font: 500 11.5px var(--mono); overflow-wrap: anywhere; }
+.bx-clear { margin: 8px 0 0; font-size: 13px; color: var(--ok); }
+.bx-checks .bd-say-list + .bx-h3, .bx-checks .bx-clear + .bx-h3, .bx-checks .bx-note + .bx-h3 { margin-top: 14px; }
+.bx-ratings-dl { margin: 0; }
+.bx-unknown { color: var(--warn); font-style: italic; }
+.bx-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+.bx-progress progress { width: 120px; accent-color: var(--accent); }
+.bx-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.4; cursor: pointer; }
+.bx-check input { margin-top: 2px; accent-color: var(--accent); }
+.bx-fly-btn { margin-top: 10px; }
+
+/* ── saved designs ────────────────────────────────────────────────────────── */
+
+.bx-store { display: flex; flex-direction: column; gap: 10px; }
+.bx-store-msg:empty { display: none; }
+.bx-store-msg { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line2); font-size: 13px; line-height: 1.45; }
+.bx-store-msg p { margin: 0; }
+.bx-store-msg[data-level='ok'] { border-color: var(--accent-line); }
+.bx-store-msg[data-level='warn'] { border-color: var(--warn); }
+.bx-store-msg[data-level='error'] { border-color: var(--fail); color: #ffd4d4; }
+.bx-store-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+.bx-store-item { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); min-width: 0; }
+.bx-store-item.current { border-color: var(--accent-line); }
+.bx-store-text { display: flex; flex-direction: column; min-width: 0; }
+.bx-store-text strong { overflow-wrap: anywhere; }
+.bx-store-text small { font-size: 12px; color: var(--muted); }
+.bx-store-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bx-store-row .watch-btn { padding: 6px 10px; font-size: 12.5px; }
+.bx-confirm { flex-basis: 100%; font-size: 13px; color: var(--warn); }
+.bx-store-empty { font-size: 13px; color: var(--muted); }
+.bx-rename { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; }
+.bx-rename .bx-field { flex: 1 1 180px; }
+
+/* ── narrower screens ─────────────────────────────────────────────────────── */
+
+@media (max-width: 1180px) {
+  .bx-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+    grid-template-areas: 'stage head' 'stage ctrl' 'stage check' 'figs figs' 'store store';
+  }
+}
+@media (max-width: 860px) {
+  .bx-grid { display: flex; flex-direction: column; align-items: stretch; padding: 10px 16px 16px; gap: 10px; }
+  .bx-head { order: 0; }
+  /* build.css comes after this sheet and puts the Watch level's drawing at the start of its row: this one takes the column */
+  .bx-grid > .bx-stage { order: 1; align-self: stretch; }
+  .bx-checks { order: 2; }
+  .bx-controls { order: 3; }
+  .bx-figures { order: 4; }
+  .bx-store { order: 5; }
+  .bx-stage .bs-draw { height: min(56vh, 440px); }
+  .bx-sum { flex-basis: 40%; }
+  .bx-store-list { grid-template-columns: minmax(0, 1fr); }
+}

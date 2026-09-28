@@ -459,7 +459,20 @@ class App {
       lastMission: () => missionSummary(loadStoredMission()),
       continueMission: () => this.continueMission(),
     }, this.homeStage);
-    this.buildScreen = new BuildScreen(document.getElementById('build-screen')!, { go: (r) => this.go(r) });
+    this.buildScreen = new BuildScreen(document.getElementById('build-screen')!, {
+      go: (r) => this.go(r),
+      // Phase 3 (D02, D03): "Fly it" loads a design as a mission, as a file does, and opens Launch at the same level
+      launchTime: () => this.panel.missionState().launchTime,
+      flyDesign: (doc, level) => {
+        this.goLive(); this.playing = false;
+        const parsed = this.panel.share.apply(doc, 'build');
+        if (!parsed.usable) return false;
+        // the page's own copy of the mission (U01): previewed from the Build section, which keeps none
+        saveStoredMission(this.panel.missionState());
+        this.go(route('launch', level));
+        return true;
+      },
+    });
     this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
       go: (r) => this.go(r),
       // S03: the hand-off's orbit, carried on for years (P07)

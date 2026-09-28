@@ -12,10 +12,12 @@
  * is and why rockets stage, what strap-ons do, why an upper stage can push
  * less than its weight, and what the fairing is for.
  *
- * Its Explore and Engineer levels are being built next (D02–D05): until they
- * are, each shows what is coming to it, item by roadmap item, and leads to
- * the Watch level. The section links open the Build section at its Watch
- * level for that reason (`sectionLinkLevel`, src/ui/section-plan.ts).
+ * Its Explore level remixes a real rocket and builds one from parts (D02,
+ * D03): a module of its own, src/ui/build/explore-level.ts, mounted here. The
+ * Engineer level is being built next (D03–D05): until it is, it shows what is
+ * coming to it, item by roadmap item, and leads to the Watch level, and the
+ * section links open the Build section at a level that is built
+ * (`sectionLinkLevel`, src/ui/section-plan.ts).
  *
  * The thin DOM part, mounted like the Orbit playground (src/ui/orbit/
  * playground.ts): drawn over the launch scene, opaque, so the scene under it
@@ -41,10 +43,16 @@ import { StackSvg, type StackLabel } from './stack-svg';
 import { VehiclePicker } from './vehicle-picker';
 import { figuresView, mass } from './figures';
 import { partCardView } from './part-card';
+import { ExploreLevel } from './explore-level';
+import type { MissionDocument } from '../../config/mission-file';
 import './build.css';
 
 export interface BuildScreenHost {
   go(route: AppRoute): void;
+  /** the Launch section's launch time, kept by a design handed to it (D02, D03: "Fly it") */
+  launchTime?(): Date;
+  /** hand a design to the Launch section as a mission document and open it at `level`; false when it could not take it */
+  flyDesign?(doc: MissionDocument, level: AppLevel): boolean;
 }
 
 type BuildView = 'exploded' | 'assembled';
@@ -114,6 +122,9 @@ export class BuildScreen {
   private readonly card = el('aside', 'bs-panel bs-card');
   private readonly figures = el('section', 'bs-panel bs-figures');
   private readonly soon = el('div', 'bs-soon');
+  /** the Explore level (D02, D03), made the first time it is shown */
+  private explore: ExploreLevel | null = null;
+  private readonly exploreRoot = el('div', 'bs-explore');
 
   constructor(private readonly root: HTMLElement, private readonly host: BuildScreenHost) {
     root.classList.add('build-screen');
@@ -126,7 +137,7 @@ export class BuildScreen {
     this.card.setAttribute('aria-live', 'polite');
     this.tour.setAttribute('aria-live', 'polite');
     this.grid.append(this.intro, this.stage, this.card, this.tour, this.figures);
-    root.replaceChildren(this.grid, this.soon);
+    root.replaceChildren(this.grid, this.exploreRoot, this.soon);
     // The launch scene's camera takes every press on the viewport and captures
     // the pointer to drag with it (src/render/cameras.ts), which would steal the
     // click from a part of the drawing. The scene is covered here; keep the press.
@@ -150,6 +161,7 @@ export class BuildScreen {
   /** Off screen: nothing moves. */
   hide(): void {
     this.visible = false;
+    this.explore?.hide();
     if (this.anim) cancelAnimationFrame(this.anim);
     this.anim = 0;
     this.explode = this.view === 'exploded' ? 1 : 0;
@@ -253,11 +265,26 @@ export class BuildScreen {
   private render(): void {
     this.root.dataset.level = this.level;
     this.root.setAttribute('aria-label', t('section.build'));
-    const watch = this.level === 'watch';
+    const watch = this.level === 'watch', explore = this.level === 'explore';
     this.grid.hidden = !watch;
-    this.soon.hidden = watch;
+    this.exploreRoot.hidden = !explore;
+    this.soon.hidden = watch || explore;
     if (watch) this.renderWatch();
+    else if (explore) this.showExplore();
     else this.renderSoon();
+  }
+
+  /** The Explore level: remix a real rocket, build one from parts (src/ui/build/explore-level.ts). */
+  private showExplore(): void {
+    if (!this.explore) {
+      this.explore = new ExploreLevel({
+        launchTime: () => this.host.launchTime?.() ?? new Date(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
+      });
+      this.exploreRoot.append(this.explore.root);
+    }
+    this.explore.show();
+    this.root.setAttribute('aria-labelledby', this.explore.titleId);
   }
 
   private renderWatch(): void {
