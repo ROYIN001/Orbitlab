@@ -35,7 +35,18 @@
  * (`burnsAfterInsertion`). Vega-C's miss is not explained by a measurement
  * here; candidates are the impulsive count of AVUM+'s burns (2.42 kN under a
  * 4 t payload burns for minutes) and the published 3 300 kg being quoted to
- * another orbit than the 200 km convention.
+ * another orbit than the 200 km convention. Measured at review, after the
+ * fix below: to its published reference orbit, 700 km × 98.2° from Kourou,
+ * Vega-C rates 2 906 kg against the published 2 300 kg (`payloadSSO`), 1.26,
+ * bounded by the burns after the insertion; so the orbit convention does not
+ * explain the miss on its own, and the model is generous with Vega-C at both.
+ *
+ * FIXED AT REVIEW: `delivers` set only the typed rating of `ref.rating`'s
+ * class to the payload, but the verdict files an orbit by its own reading;
+ * a LEO rating orbit at 95° or more is SSO to it and was capped by the typed
+ * `payloadSSO` (Vega-C to 700 km × 98.2° came out 2 297 kg, "overCapacity",
+ * i.e. its own typed 2 300 kg). None of the rows below is such an orbit, so
+ * none moved.
  *
  * AN EARLIER METHOD, RECORDED: the first run judged "delivers" by the verdict
  * and the probe alone. It gave the same LEO figures, but Falcon 9 GTO
@@ -71,6 +82,20 @@ describe('computed ratings: the rating orbits', () => {
     // the orbits carry the hand-set preset's id and name: nothing new to translate
     expect([f9.LEO.orbit.id, f9.GTO.orbit.id]).toEqual(['custom', 'gto']);
   });
+});
+
+describe('computed ratings: what delivers', () => {
+  it('lets no typed rating take part, whatever class the verdict files the orbit under', () => {
+    // Vega-C's reference orbit, 700 km × 98.2°, which the verdict files as SSO:
+    // 2 400 kg is over the typed payloadSSO (2 300 kg), and is not what stops it
+    const v = vehicleById('vegac');
+    const ref = { rating: 'LEO' as const, siteId: 'kourou', from: 'ratingOrbits' as const,
+      orbit: { ...orbitById('custom'), perigee: 700e3, apogee: 700e3, inclination: 98.2, argPerigee: 0, raanMode: 'free' as const } };
+    const r = delivers(v, ref, 2400);
+    expect(r.cause).not.toBe('overCapacity');
+    // measured: delivered up to about 2 900 kg
+    expect(r.ok).toBe(true);
+  }, 60_000);
 });
 
 describe('computed ratings: the search', () => {

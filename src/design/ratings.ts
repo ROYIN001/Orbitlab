@@ -155,8 +155,12 @@ export function ratingOrbits(spec: VehicleSpec): { LEO: RatingOrbitRef; GTO: Rat
  * is not a failure. `flew` is whether a probe flight was needed.
  */
 export function delivers(spec: VehicleSpec, ref: RatingOrbitRef, payloadKg: number, launchTime = DEFAULT_LAUNCH): { ok: boolean; flew: boolean; cause: string } {
-  // the rating the verdict compares with is the payload itself: no typed rating takes part
-  const rated: VehicleSpec = ref.rating === 'GTO' ? { ...spec, payloadGTO: Math.max(1, payloadKg) } : { ...spec, payloadLEO: Math.max(1, payloadKg) };
+  // The rating the verdict compares with is the payload itself: no typed
+  // rating takes part. Every class's, because the verdict files the orbit by
+  // its own reading (`orbitClassOf`), not by `ref.rating`: a LEO rating orbit
+  // at 95° or more is "sso" to it, and would be capped by a typed payloadSSO.
+  const cap = Math.max(1, payloadKg);
+  const rated: VehicleSpec = { ...spec, payloadLEO: cap, payloadGTO: cap, ...(spec.payloadSSO !== undefined ? { payloadSSO: cap } : {}) };
   const site = siteById(ref.siteId);
   // A catalogue entry flies as itself; anything else inline, as a custom vehicle does.
   const catalogue = isCatalogueVehicle(spec.id) && vehicleById(spec.id) === spec;
