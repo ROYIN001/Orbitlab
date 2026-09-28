@@ -265,6 +265,15 @@ export interface InsertionProbe {
   apoapsis: number;
   /** the event the flight ended on, '' when it was still flying at the horizon */
   endedWith: string;
+  /**
+   * The launcher's ideal Δv left where the probe stopped (`deltaVRemaining`
+   * of what is still attached; the spacecraft's own propulsion not counted),
+   * m/s. Read after the flight, so it changes nothing about it. Roadmap D03's
+   * computed ratings (src/design/ratings.ts) hold it against the burns the
+   * plan still asks for after the insertion: a GTO mission reaches its
+   * parking orbit long before it can be said to reach GTO.
+   */
+  dvLeft: number;
 }
 
 /**
@@ -331,5 +340,6 @@ export function probeInsertion(cfg: MissionConfig, horizon = INSERTION_PROBE_HOR
     bestPerigee: isFinite(best) ? best : -Infinity,
     apoapsis,
     endedWith: sim.state.status === 'failed' && last ? last.key : '',
+    dvLeft: sim.vehicle.deltaVRemaining(),
   };
 }
