@@ -2092,6 +2092,7 @@ export const en: Record<string, string> = {
   'build.tour.fairing.text': 'The fairing is the nose that shields the satellite from the air rushing past on the way up. Once the air is too thin to heat it or push on it, some hundred kilometres up, its two halves are thrown off: carrying them any higher would only cost payload. Here it is on Ariane 64, split into the two halves it separates into.',
   'build.soon.toWatch': 'See real rockets taken apart',
   'build.soon.done': 'Already built',
+  'build.eng.coming.atExplore': 'Already open at the Explore level: build from parts there ›',
   'share.source.build': 'the Build section',
   'build.say.stage': 'Stage {n}',
   'build.say.strapOns': 'Strap-on group {n}',

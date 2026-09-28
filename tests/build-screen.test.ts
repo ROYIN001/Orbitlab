@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { APP_LEVELS } from '../src/ui/app-mode';
-import { BUILD_BUILT_ITEMS, BUILD_LEVEL_ITEMS, BUILD_READY_LEVELS, BUILT_ITEMS, SECTION_PLANS, sectionLinkLevel } from '../src/ui/section-plan';
+import { BUILD_BUILT_ITEMS, BUILD_ITEM_OPEN_AT, BUILD_LEVEL_ITEMS, BUILD_READY_LEVELS, BUILT_ITEMS, SECTION_PLANS, sectionLinkLevel } from '../src/ui/section-plan';
 
 const buildItems = SECTION_PLANS.build.phases.flatMap((p) => p.items.map((i) => i.id));
 
@@ -27,6 +27,13 @@ describe('the Build section (Phase 3)', () => {
     expect(BUILD_LEVEL_ITEMS.engineer.filter((id) => !BUILD_BUILT_ITEMS.has(id))).toEqual(['D03', 'D06', 'D07']);
     // what Explore offers is built there, but for the satellite templates of Phase 4 (D06)
     expect(BUILD_LEVEL_ITEMS.explore.filter((id) => !BUILD_BUILT_ITEMS.has(id))).toEqual(['D03', 'D06']);
+    // an item one level still lists as coming but another already offers (D03's parts builder, at Explore) says where
+    expect([...BUILD_ITEM_OPEN_AT]).toEqual([['D03', 'explore']]);
+    for (const [id, level] of BUILD_ITEM_OPEN_AT) {
+      expect(BUILD_BUILT_ITEMS.has(id)).toBe(false);
+      expect(BUILD_READY_LEVELS.has(level)).toBe(true);
+      expect(BUILD_LEVEL_ITEMS.engineer).toContain(id);
+    }
     // every item still to come is promised to some level
     const promised = new Set([...BUILD_LEVEL_ITEMS.explore, ...BUILD_LEVEL_ITEMS.engineer]);
     expect(buildItems.filter((id) => !BUILD_BUILT_ITEMS.has(id) && !promised.has(id))).toEqual([]);

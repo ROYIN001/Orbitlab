@@ -105,6 +105,14 @@ export const BUILT_ITEMS: ReadonlySet<string> = new Set(['O01', 'O02', 'O03', 'O
 export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01', 'D02', 'D04', 'D05']);
 
 /**
+ * Items a level still lists as coming that another level already offers:
+ * D03's parts builder is built at the Explore level, so the Engineer level's
+ * list, which keeps D03 for its own face of it, says so and links there
+ * rather than let a student read "build from parts" as not there yet.
+ */
+export const BUILD_ITEM_OPEN_AT: ReadonlyMap<string, AppLevel> = new Map([['D03', 'explore']]);
+
+/**
  * The Build section's levels that are built; the others show what is coming
  * to them. The Engineer level is, since D04 and D05 are: what is still to
  * come to it (D03's Engineer face, Phase 4's satellites) is listed under its

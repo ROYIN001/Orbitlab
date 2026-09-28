@@ -179,6 +179,7 @@
 .be-coming .section-coming { margin-top: 16px; }
 .be-coming .section-items li.done .section-item-id { color: var(--ok); }
 .be-coming .section-actions { margin-top: 14px; }
+.be-coming .be-coming-open { padding: 0; font-size: inherit; text-align: left; white-space: normal; }
 
 /* ── narrower screens ─────────────────────────────────────────────────────── */
 

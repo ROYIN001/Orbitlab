@@ -34,7 +34,7 @@ import type { VehicleSpec } from '../../types';
 import type { MissionDocument } from '../../config/mission-file';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
 import { route, type AppRoute } from '../app-mode';
-import { BUILD_BUILT_ITEMS, BUILD_LEVEL_ITEMS, SECTION_PLANS } from '../section-plan';
+import { BUILD_BUILT_ITEMS, BUILD_ITEM_OPEN_AT, BUILD_LEVEL_ITEMS, SECTION_PLANS } from '../section-plan';
 import { LocalDesignStore, type DesignStore, type DesignSummary } from '../../design/design-store';
 import { pickerEntries, type PickerEntry } from '../../design/vehicle-picker';
 import { watchPayload } from '../../design/stage-table';
@@ -379,7 +379,12 @@ export class EngineerLevel {
       const list = el('ul', 'section-items');
       for (const item of items) {
         const li = el('li');
-        li.append(el('code', 'section-item-id', item.id), el('span', undefined, t(item.key)));
+        const text = el('span', undefined, t(item.key));
+        // already there at another level (D03's parts builder at Explore): say so, and go there
+        if (BUILD_ITEM_OPEN_AT.get(item.id) === 'explore') {
+          text.append(' ', button('watch-btn link be-coming-open', t('build.eng.coming.atExplore'), () => this.host.go(route('build', 'explore'))));
+        }
+        li.append(el('code', 'section-item-id', item.id), text);
         list.append(li);
       }
       block.append(list);
