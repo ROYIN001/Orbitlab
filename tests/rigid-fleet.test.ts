@@ -13,8 +13,13 @@ import { PROPELLANT_LOADS, STAGE_STEERING, thrusterMomentArm } from '../src/phys
 import { gravityJ2 } from '../src/physics/gravity';
 import { R_EARTH } from '../src/physics/constants';
 import { cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../src/physics/vec3';
+import type { VehicleSpec } from '../src/types';
+import { scratchVehicles } from './custom-vehicle-harness';
 
 type Snapshot = ReturnType<typeof buildRigidVehicle>;
+
+/** Custom vehicles that reach the six-DOF branches no catalogue stage does (tests/custom-vehicle-harness.ts). */
+const SCRATCH = scratchVehicles();
 
 /** Largest moment on each body axis the gimbals (at full travel) and the thrusters can make. */
 function authority(snapshot: Snapshot): { engines: Vec3; rcs: Vec3 } {
@@ -33,6 +38,54 @@ function authority(snapshot: Snapshot): { engines: Vec3; rcs: Vec3 } {
     for (const axis of ['x', 'y', 'z'] as const) { positive[axis] += Math.max(0, moment[axis]); negative[axis] += Math.max(0, -moment[axis]); }
   }
   return { engines, rcs: v3(Math.min(positive.x, negative.x), Math.min(positive.y, negative.y), Math.min(positive.z, negative.z)) };
+}
+
+/**
+ * The vehicle as the flight has it when stage `k` burns: the stages below gone,
+ * the fairing gone above the first stage, stage `k` and its strap-ons lit.
+ */
+function burning(spec: VehicleSpec, k: number): VehicleModel {
+  const vm = new VehicleModel(spec, 1000);
+  for (let j = 0; j < k; j++) {
+    for (const booster of vm.stages[j].boosters) vm.jettisonBooster(booster, 50);
+    vm.separateStage(vm.stages[j], 100);
+  }
+  if (k > 0 && vm.fairingAttached) vm.jettisonFairing();
+  vm.igniteStage(vm.stages[k], 0);
+  for (const booster of vm.stages[k].boosters) vm.igniteBooster(booster, 0);
+  return vm;
+}
+
+/** Pitch and yaw from the engines or the thrusters, roll from either: no configuration that burns may be left without an axis. */
+function steersOnThreeAxes(spec: VehicleSpec): void {
+  spec.stages.forEach((stageSpec, k) => {
+    if (stageSpec.isSpacecraft) return;
+    const snapshot = buildRigidVehicle(burning(spec, k), { pressure: k === 0 ? 101325 : 0, coreThrottle: 1, boosterThrottle: 1, time: 10 });
+    const { engines, rcs } = authority(snapshot);
+    const label = `${spec.id} ${stageSpec.id}`;
+    expect(engines.y + rcs.y, label).toBeGreaterThan(0);
+    expect(engines.z + rcs.z, label).toBeGreaterThan(0);
+    expect(engines.x + rcs.x, label).toBeGreaterThan(0);
+  });
+}
+
+/**
+ * The chambers' thrust budgets add up to the thrust `VehicleModel` flies (and
+ * burns propellant for), to 1e-9 relative: an identity, fixed before any
+ * comparison, that holds whatever the engine count.
+ */
+function putsFlightThrustIntoChambers(spec: VehicleSpec): void {
+  spec.stages.forEach((stageSpec, k) => {
+    if (stageSpec.isSpacecraft) return;
+    const vm = burning(spec, k);
+    for (let t = 0; t < 5; t += 0.25) vm.consume(t, 1, 0.25);
+    const pressure = k === 0 ? 60000 : 0;
+    const thrust = vm.thrust(5, pressure, 1, 0.01);
+    const snapshot = buildRigidVehicle(vm, { pressure, coreThrottle: thrust.coreLevel, boosterThrottle: thrust.boosterThrottle,
+      boosterThrottles: thrust.boosterLevels, time: 5 });
+    const chambers = snapshot.engines.reduce((sum, engine) => sum + engine.thrustBudgetN, 0);
+    expect(chambers / thrust.thrust, `${spec.id} ${stageSpec.id}`).toBeCloseTo(1, 9);
+  });
 }
 
 describe('six-DOF data for every vehicle', () => {
@@ -65,48 +118,17 @@ describe('six-DOF data for every vehicle', () => {
   });
 
   it.each(VEHICLES.map(v => v.id))('%s can steer on all three axes in every powered configuration', id => {
-    const spec = vehicleById(id);
-    spec.stages.forEach((stageSpec, k) => {
-      if (stageSpec.isSpacecraft) return;
-      const vm = new VehicleModel(spec, 1000);
-      for (let j = 0; j < k; j++) {
-        for (const booster of vm.stages[j].boosters) vm.jettisonBooster(booster, 50);
-        vm.separateStage(vm.stages[j], 100);
-      }
-      if (k > 0 && vm.fairingAttached) vm.jettisonFairing();
-      vm.igniteStage(vm.stages[k], 0);
-      for (const booster of vm.stages[k].boosters) vm.igniteBooster(booster, 0);
-      const snapshot = buildRigidVehicle(vm, { pressure: k === 0 ? 101325 : 0, coreThrottle: 1, boosterThrottle: 1, time: 10 });
-      const { engines, rcs } = authority(snapshot);
-      const label = `${id} ${stageSpec.id}`;
-      // Pitch and yaw from the engines or the thrusters, roll from either:
-      // no configuration that burns may be left without an axis.
-      expect(engines.y + rcs.y, label).toBeGreaterThan(0);
-      expect(engines.z + rcs.z, label).toBeGreaterThan(0);
-      expect(engines.x + rcs.x, label).toBeGreaterThan(0);
-    });
+    steersOnThreeAxes(vehicleById(id));
   });
 
   it.each(VEHICLES.map(v => v.id))('%s puts the thrust the flight model flies into its chambers, solids above their mean included', id => {
-    const spec = vehicleById(id);
-    spec.stages.forEach((stageSpec, k) => {
-      if (stageSpec.isSpacecraft) return;
-      const vm = new VehicleModel(spec, 1000);
-      for (let j = 0; j < k; j++) {
-        for (const booster of vm.stages[j].boosters) vm.jettisonBooster(booster, 50);
-        vm.separateStage(vm.stages[j], 100);
-      }
-      if (k > 0 && vm.fairingAttached) vm.jettisonFairing();
-      vm.igniteStage(vm.stages[k], 0);
-      for (const booster of vm.stages[k].boosters) vm.igniteBooster(booster, 0);
-      for (let t = 0; t < 5; t += 0.25) vm.consume(t, 1, 0.25);
-      const pressure = k === 0 ? 60000 : 0;
-      const thrust = vm.thrust(5, pressure, 1, 0.01);
-      const snapshot = buildRigidVehicle(vm, { pressure, coreThrottle: thrust.coreLevel, boosterThrottle: thrust.boosterThrottle,
-        boosterThrottles: thrust.boosterLevels, time: 5 });
-      const chambers = snapshot.engines.reduce((sum, engine) => sum + engine.thrustBudgetN, 0);
-      expect(chambers / thrust.thrust, `${id} ${stageSpec.id}`).toBeCloseTo(1, 9);
-    });
+    putsFlightThrustIntoChambers(vehicleById(id));
+  });
+
+  // D03: a stage with no chamber layout of its own, or one flown with another
+  // engine count than the catalogue's, gets every engine's thrust, not one's.
+  it.each(SCRATCH.map(v => [v.id, v] as const))('custom %s puts the thrust the flight model flies into its chambers (D03)', (_id, spec) => {
+    putsFlightThrustIntoChambers(spec);
   });
 
   it('gives every stage and strap-on beyond the reference vehicles a propellant and a steering entry', () => {

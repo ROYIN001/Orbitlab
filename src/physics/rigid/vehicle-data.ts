@@ -262,6 +262,15 @@ export const STAGE_STEERING: Readonly<Record<string, StageSteering>> = {
 };
 
 /**
+ * How a stage steers when nothing above says (roadmap D03): a custom vehicle's
+ * stage with an id of its own, or a catalogue stage flown with an engine count
+ * its dedicated branch in `chamberGeometry` was not written for. Every main
+ * chamber swings ±5° in two planes, the travel the single on-axis chamber of
+ * such a stage has always had; an estimate (E), not a published figure.
+ */
+export const GENERIC_STEERING: StageSteering = { gimbalDeg: 5, steer: 'tvc', estimated: true };
+
+/**
  * Attitude-control thrusters beyond the reference vehicles: a full three-axis
  * set on an upper stage that coasts or restarts, and a roll-only pair on a
  * stage that cannot roll with its own engine (one chamber on the axis). Force
@@ -312,6 +321,16 @@ const rotateX = (p: Vec3, angle: number): Vec3 => v3(p.x,
 
 /** Geometry matches the source mesh patterns without importing Three.js.
  * Soyuz vernier thrust partitions the existing cluster budget; it is not added.
+ *
+ * The chambers' `thrustFraction`s are shares of ONE engine's thrust (the mass
+ * model multiplies them by `engineThrust`, which is per engine), so they add up
+ * to `engine.count`. The Falcon and R-7 branches are written for the
+ * catalogue's counts (nine Merlins; one RD-107/108/0110 cluster). Any other
+ * count, and any stage with several engines and no steering entry of its own —
+ * a custom vehicle's (D03) — goes to `layoutChambers` with `GENERIC_STEERING`,
+ * which shares all `count` engines among the bells the renderer draws. Before
+ * D03 such a stage flew on one chamber holding one engine's thrust while the
+ * flight model burned propellant for all of them.
  */
 export function chamberGeometry(
   ownerId: string, shapeId: string, engine: EngineSpec, radius: number,
@@ -340,7 +359,7 @@ export function chamberGeometry(
   if (shapeId === 's1' && engine.count === 9) {
     for (let i = 0; i < 8; i++) make(`engine.${i}`, i, point(radius * 0.70, Math.PI / 8 + i * Math.PI / 4), 1, 'main', 'tvc');
     make('engine.8', 8, v3(), 1, 'main', 'tvc');
-  } else if (shapeId === 'blokA' || shapeId === 'blokBVGD' || shapeId === 'blokI') {
+  } else if ((shapeId === 'blokA' || shapeId === 'blokBVGD' || shapeId === 'blokI') && engine.count === 1) {
     const count = shapeId === 'blokBVGD' ? 2 : 4;
     const nominalVernier = shapeId === 'blokI' ? 6000 : 35000;
     const vf = nominalVernier / engine.thrustVac;
@@ -350,6 +369,9 @@ export function chamberGeometry(
     for (let i = 0; i < count; i++) make(`vernier.${i}`, 0, point(vernierRadius, i * 2 * Math.PI / count), vf, 'vernier', 'tangential');
   } else if (STAGE_STEERING[shapeId]) {
     return layoutChambers(ownerId, shapeId, engine, radius, base, rotationAboutX, STAGE_STEERING[shapeId]);
+  } else if (engine.count > 1) {
+    // D03: several engines and no layout of their own, or a count the branches above do not fly.
+    return layoutChambers(ownerId, shapeId, engine, radius, base, rotationAboutX, GENERIC_STEERING);
   } else {
     // Supported upper stage or explicitly synthetic spacecraft engine.
     make('engine.0', 0, v3(), 1, 'main', 'tvc');
