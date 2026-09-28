@@ -46,4 +46,26 @@ describe('D01 interstages: derived, massless display parts', () => {
     // (5.2 − 3.66)·1.1 + 0.6 = 2.294 m, by hand
     expect(Math.abs(f9.height - 2.294)).toBeLessThan(1e-12);
   });
+
+  it('add up to launcher stacks restated by hand, not by stackLayout', () => {
+    // The first test sums the same interstageHeight calls stackLayout sums, so
+    // it proves nothing is dropped or doubled, not that the total is right.
+    // These are stage lengths and adapters added by hand from the spec's
+    // figures, held to the file's 1e-12 m:
+    //  Falcon 9   42 + 15 + (5.2 − 3.66)·1.1 + 0.6          = 59.294 m
+    //  Soyuz-2.1a 27.8 + (2.95 − 2.66)·1.1 + 0.6 + 6.7      = 35.419 m, and
+    //             with the 11.43 m fairing 46.849 m, the "46.85 m drawn" of
+    //             the owner's figures quoted in src/data/vehicles.ts
+    //  Saturn V   42 + 24.9 (flush, both 10.1 m) + 18.8
+    //             + (10.1 − 6.6)·1.1 + 0.6                   = 90.15 m
+    const stack = (id: string) => {
+      const v = VEHICLES.find((x) => x.id === id)!;
+      return v.stages.filter((s) => !s.isSpacecraft).reduce((sum, s) => sum + s.length, 0)
+        + interstageParts(v).reduce((sum, p) => sum + p.height, 0);
+    };
+    expect(Math.abs(stack('falcon9') - 59.294)).toBeLessThan(1e-12);
+    expect(Math.abs(stack('soyuz21a') - 35.419)).toBeLessThan(1e-12);
+    expect(Math.abs(stack('soyuz21a') + VEHICLES.find((v) => v.id === 'soyuz21a')!.fairing!.length - 46.849)).toBeLessThan(1e-12);
+    expect(Math.abs(stack('saturnv') - 90.15)).toBeLessThan(1e-12);
+  });
 });
