@@ -109,6 +109,13 @@ export const DV_FLOOR = 9500;
  */
 export const PROPELLANT_FRACTION_RANGE: readonly [number, number] = [0.51, 0.97];
 
+/**
+ * The catalogue's own entry (the object `vehicleById` returns), not a copy of
+ * it: a copy has an id of its own, and a spec that reuses a catalogue id is one
+ * the validator refuses.
+ */
+export const isCatalogueEntry = (spec: VehicleSpec): boolean => isCatalogueVehicle(spec.id) && vehicleById(spec.id) === spec;
+
 /** `stages[1].boosters[0].engine.ispVac` → stage 1, group 0, `stages.boosters.engine.ispVac`. */
 function locate(path: string): Pick<DesignWarning, 'stage' | 'booster' | 'path' | 'field'> {
   const stage = /^stages\[(\d+)\]/.exec(path);
@@ -228,8 +235,7 @@ export function designWarnings(spec: VehicleSpec, payloadKg: number, siteId?: st
   };
 
   // --- structure: what the validator refuses
-  const catalogue = isCatalogueVehicle(spec.id) && vehicleById(spec.id) === spec;
-  const issues = catalogue ? [] : vehicleSpecProblems(spec);
+  const issues = isCatalogueEntry(spec) ? [] : vehicleSpecProblems(spec);
   const onPad = groundLit(spec).filter((g) => g.engine.vacuumOnly === true);
   const restated = new Set(onPad.map((g) => `${g.path}.vacuumOnly`));
   for (const issue of issues) if (!restated.has(issue.path)) add('invalid', {}, locate(issue.path));
