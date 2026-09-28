@@ -13,6 +13,7 @@
  */
 import type { VisualFrame } from '../physics/frame';
 import { APOLLO_AT_MOON, APOLLO_CM } from '../physics/sim/apollo';
+import { STATIONKEEPING_M } from '../physics/sim/apollo-rendezvous';
 import type { SimEvent } from '../physics/simulation';
 import { OMEGA_EARTH } from '../physics/constants';
 
@@ -497,8 +498,11 @@ function beatWarp(frame: VisualFrame, beat: WatchBeat): number {
     case 'tpiBurn':
     case 'rendezvousBraking':
       return 5;
-    case 'lmStationkeeping':
-      return 2;
+    // held 30 m off Columbia at 10×, the last metres in to the docking at 2×
+    case 'lmStationkeeping': {
+      const range = frame.apollo?.rendezvous?.range ?? Infinity;
+      return range < STATIONKEEPING_M - 2 ? 2 : 10;
+    }
     // the twelve minutes of the descent: the braking at 5×, the approach at 2×, Armstrong's landing and the
     // landing itself live
     case 'brakingPhase':

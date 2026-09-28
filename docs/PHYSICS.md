@@ -3325,7 +3325,8 @@ CSI and CDH are not flown: the ascent steers into the CSM's plane.
 **13.14 Apollo 11 home (part 6f).** src/physics/sim/apollo-entry.ts (the aim at the Earth, the entry
 guidance, the CM's aerodynamics and parachutes), the flight in src/physics/sim/apollo.ts, the numbers
 src/data/apollo11.ts; the command module, its parachutes and the service module drawn by
-src/render/apollo-cm.ts. Sources: MR (§3, §7.4.8–7.6; Tables 3-I, 7-VI, 7-VII, A-I) and the Apollo 11 press
+src/render/apollo-cm.ts, with the glow of the air round the CM through the entry as bright as the heating at its
+stagnation point (√ρ·v³) makes it — the scale the picture's. Sources: MR (§3, §7.4.8–7.6; Tables 3-I, 7-VI, 7-VII, A-I) and the Apollo 11 press
 kit (the earth landing system).
 
 | | Value | Source |

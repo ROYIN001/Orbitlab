@@ -26,6 +26,7 @@ import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
 import { expectFlownMr3, flyMr3 } from './mr3-harness';
 import { captureFrame } from '../src/physics/frame';
 import { autoWarp, flightEnding, watchBeat, watchReadout } from '../src/ui/watch-logic';
+import { entryGlow } from '../src/render/apollo-cm';
 
 const burn = (propellant: number, thrustVac: number, ispVac: number) => propellant / (thrustVac / (G0 * ispVac));
 
@@ -476,6 +477,14 @@ describe('Apollo 11 in the viewer', () => {
     // every speed one of the workspace selector's presets (src/main.ts)
     for (const w of warps) expect([0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000]).toContain(w);
     expect(warps.has(5000)).toBe(true);
+  });
+
+  it('lights the air round the command module as the heating goes: none in space or under the parachutes, full at its peak', () => {
+    expect(entryGlow(400e3, 11000)).toBe(0);
+    expect(entryGlow(100e3, 11000)).toBeGreaterThan(0);
+    expect(entryGlow(100e3, 11000)).toBeLessThan(0.2);
+    expect(entryGlow(60e3, 10000)).toBe(1);
+    expect(entryGlow(7e3, 150)).toBeLessThan(0.01);
   });
 });
 

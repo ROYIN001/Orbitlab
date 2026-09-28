@@ -8,6 +8,7 @@
  * canopies' shapes from photographs, approximate.
  */
 import * as THREE from 'three';
+import { density } from '../physics/atmosphere';
 
 const CM_R = 1.956;
 const CM_H = 3.23;
@@ -44,7 +45,19 @@ export interface EntryCmView {
   group: THREE.Group;
   /** The canopies open, 0..1 each (their drag area's fraction); 0 hides them. */
   setChutes(drogue: number, main: number): void;
+  /** The entry's glow for the CM `alt` m up at `airspeed` m/s through the air; 0 airspeed puts it out. */
+  setGlow(alt: number, airspeed: number): void;
   dispose(): void;
+}
+
+/**
+ * How brightly the air round the CM glows, 0..1: as the heating at its stagnation
+ * point goes, √ρ·v³ — full at Apollo's peak heating, about 60 km up at 10 km/s,
+ * first seen near 100 km (the scale the model's, for the picture).
+ */
+export function entryGlow(alt: number, airspeed: number): number {
+  if (!(airspeed > 0) || alt > 130e3) return 0;
+  return Math.min(1, (Math.sqrt(density(Math.max(0, alt))) * airspeed ** 3) / 1.2e10);
 }
 
 /**
@@ -86,6 +99,21 @@ export function buildEntryCm(): EntryCmView {
   drogues.visible = mains.visible = false;
   group.add(drogues, mains);
   group.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+  // the entry's glow: the shock layer ahead of the heat shield, white-hot at its face, and the wake closing behind the apex
+  const glowMat = (color: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
+    depthWrite: false, side: THREE.DoubleSide });
+  const shockMat = glowMat(0xffa24a), faceMat = glowMat(0xfff1d0), wakeMat = glowMat(0xff7a32);
+  const shock = new THREE.Mesh(new THREE.SphereGeometry(CM_R * 2.1, 32, 8, 0, Math.PI * 2, Math.PI - 0.62, 0.62), shockMat);
+  shock.position.y = CM_R * 2.1 * Math.cos(0.62) - 0.35;
+  const face = new THREE.Mesh(new THREE.CircleGeometry(CM_R * 1.05, 32), faceMat);
+  face.rotation.x = Math.PI / 2;
+  face.position.y = -0.47;
+  const wake = new THREE.Mesh(new THREE.ConeGeometry(CM_R * 1.25, 16, 24, 1, true), wakeMat);
+  wake.position.y = 8;
+  const glow = new THREE.Group();
+  glow.add(shock, face, wake);
+  glow.visible = false;
+  group.add(glow);
   group.visible = false;
   const setChutes = (drogue: number, main: number): void => {
     drogues.visible = drogue > 0;
@@ -95,11 +123,16 @@ export function buildEntryCm(): EntryCmView {
     drogues.children.forEach((c) => { if (c instanceof THREE.Group) c.scale.set(sd, 1, sd); });
     mains.children.forEach((c) => { if (c instanceof THREE.Group) c.scale.set(sm, 1, sm); });
   };
+  const setGlow = (alt: number, airspeed: number): void => {
+    const k = entryGlow(alt, airspeed);
+    glow.visible = k > 0.01;
+    shockMat.opacity = 0.75 * k; faceMat.opacity = 0.9 * k; wakeMat.opacity = 0.4 * k;
+  };
   return {
-    group, setChutes,
+    group, setChutes, setGlow,
     dispose: () => {
       group.traverse((o) => { if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) o.geometry.dispose(); });
-      for (const m of [mylar, shield, orange, white, line]) m.dispose();
+      for (const m of [mylar, shield, orange, white, line, shockMat, faceMat, wakeMat]) m.dispose();
     },
   };
 }

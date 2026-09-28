@@ -32,9 +32,8 @@ const PROBE = 0.35;
 /** the LM folded in the SLA: its base and height, m (its docking hatch is its top) */
 const LM_BASE = 0.4;
 const LM_H = 5.1;
-/** the LM's descent stage's and ascent stage's cabin heights, m */
+/** the LM's descent stage's height, m */
 const DESCENT_H = 1.7;
-const ASCENT_H = 2.9;
 /** The ascent stage from its base to its docking tunnel's top, m. */
 export const AS_HEIGHT = LM_H - DESCENT_H;
 /**
@@ -198,10 +197,78 @@ export function buildApollo(): SatelliteView & { setApollo(state: ApolloState | 
 }
 
 /**
+ * The ascent stage, its origin at its base on the descent stage and its
+ * docking tunnel's top `AS_HEIGHT` up +Y, forward (the hatch, the windows) +Z:
+ * the crew compartment, a faceted drum 2.34 m across facing forward, with its
+ * two triangular windows and the square hatch under them; the midsection
+ * behind it with the tunnel on top; the aft equipment bay; the ascent engine's
+ * propellant tanks bulging from either side; the four thruster quads on their
+ * booms; the rendezvous radar's dish over the windows, the steerable S-band
+ * dish and the VHF antennas. The crew compartment's size from the press kit;
+ * the rest from photographs, approximate.
+ */
+function ascentModel(gold: THREE.Material, grey: THREE.Material, dark: THREE.Material, silver: THREE.Material) {
+  const ascent = new THREE.Group();
+  const at = (m: THREE.Mesh, x: number, y: number, z: number): THREE.Mesh => { m.position.set(x, y, z); return m; };
+  // the crew compartment: an octagonal drum on the fore-and-aft axis, its front face flat
+  const drumGeo = new THREE.CylinderGeometry(1.17, 1.17, 1.2, 8);
+  drumGeo.rotateY(Math.PI / 8);
+  drumGeo.rotateX(Math.PI / 2);
+  const drum = at(new THREE.Mesh(drumGeo, grey), 0, 1.55, 0.55);
+  // the two windows: triangles, their inner edges upright either side of the centre line, wide at the top
+  const windowGeo = (s: number): THREE.ShapeGeometry => {
+    const w = new THREE.Shape();
+    w.moveTo(s * 0.12, 0.35); w.lineTo(s * 0.72, 0.35); w.lineTo(s * 0.12, -0.25); w.closePath();
+    return new THREE.ShapeGeometry(w);
+  };
+  const windows = [-1, 1].map((s) => at(new THREE.Mesh(windowGeo(s), dark), 0, 1.95, 1.156));
+  const hatch = at(new THREE.Mesh(new THREE.PlaneGeometry(0.81, 0.81), dark), 0, 0.95, 1.156);
+  // behind it the midsection, the tunnel on it, and the aft equipment bay
+  const mid = at(new THREE.Mesh(new THREE.BoxGeometry(2.3, 2.1, 1.3), grey), 0, 1.45, -0.6);
+  const aft = at(new THREE.Mesh(new THREE.BoxGeometry(2.9, 1.3, 0.75), dark), 0, 1.85, -1.6);
+  const base = at(new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.45, 2.2), gold), 0, 0.225, -0.25);
+  const tunnelFoot = 2.45;
+  const tunnel = at(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, AS_HEIGHT - tunnelFoot, 16), silver), 0, (tunnelFoot + AS_HEIGHT) / 2, 0);
+  // the ascent engine's oxidizer tank to the left, its fuel tank to the right
+  const tanks = [-1, 1].map((s) => {
+    const t = at(new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), gold), s * 1.25, 0.95, -0.35);
+    t.scale.set(0.85, 0.9, 1.15);
+    return t;
+  });
+  ascent.add(drum, ...windows, hatch, mid, aft, base, tunnel, ...tanks);
+  // the thruster quads: a housing on a boom at each corner, a nozzle up, one down and two sideways
+  const nozzle = new THREE.ConeGeometry(0.075, 0.22, 8, 1, true);
+  for (const [x, z] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+    const q = new THREE.Vector3(x * 1.55, 2.3, z > 0 ? 0.75 : -1.1);
+    const boom = at(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.5, 6), silver), q.x - x * 0.25, q.y, q.z);
+    boom.rotation.z = Math.PI / 2;
+    const housing = at(new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.24), grey), q.x, q.y, q.z);
+    ascent.add(boom, housing);
+    for (const d of [new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0), new THREE.Vector3(x, 0, 0), new THREE.Vector3(0, 0, z)]) {
+      // the bell's mouth outwards: the cone's tip, at +Y, turned inwards
+      const n = new THREE.Mesh(nozzle, dark);
+      n.position.copy(q).addScaledVector(d, 0.2);
+      n.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().negate());
+      ascent.add(n);
+    }
+  }
+  // the rendezvous radar's dish over the windows, the S-band dish aft on the left, two VHF antennas aft
+  const radar = at(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 20), gold), 0.35, 2.85, 0.7);
+  radar.rotation.x = 0.7;
+  const sband = at(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.12, 0.12, 20), silver), -0.95, 2.95, -0.55);
+  sband.rotation.z = 0.5;
+  const mast = at(new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.45, 6), silver), -0.95, 2.7, -0.55);
+  const vhf = [-1, 1].map((s) => at(new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.7, 4), silver), s * 1.0, 2.85, -1.7));
+  const apsBell = at(new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.45, 0.6, 16, 1, true), dark), 0, -0.3, 0);
+  ascent.add(radar, sband, mast, ...vhf, apsBell);
+  return { ascent, apsBell };
+}
+
+/**
  * The lunar module, its origin at the descent stage's base: the descent stage
  * (gold foil, its engine's bell under it) with its legs folded or out and the
- * probes under three pads, the ascent stage (its engine's bell under it, seen
- * when it flies alone), its windows and the docking tunnel on top.
+ * probes under three pads, and the ascent stage on it (`ascentModel`; its
+ * engine's bell seen when it flies alone).
  */
 function lmModel(gold: THREE.Material, grey: THREE.Material, dark: THREE.Material, silver: THREE.Material) {
   const lm = new THREE.Group();
@@ -209,16 +276,7 @@ function lmModel(gold: THREE.Material, grey: THREE.Material, dark: THREE.Materia
   descent.position.y = DESCENT_H / 2;
   const dpsBell = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.75, 0.9, 20, 1, true), dark);
   dpsBell.position.y = -0.3;
-  const ascent = new THREE.Group();
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(3.0, ASCENT_H, 2.6), grey);
-  cabin.position.y = ASCENT_H / 2;
-  const windows = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.05), dark);
-  windows.position.set(0, ASCENT_H * 0.7, 1.31);
-  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, LM_H - DESCENT_H - ASCENT_H, 16), silver);
-  tunnel.position.y = ASCENT_H + (LM_H - DESCENT_H - ASCENT_H) / 2;
-  const apsBell = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.45, 0.6, 16, 1, true), dark);
-  apsBell.position.y = -0.3;
-  ascent.add(cabin, windows, tunnel, apsBell);
+  const { ascent, apsBell } = ascentModel(gold, grey, dark, silver);
   ascent.position.y = DESCENT_H;
   /** a strut from `a` to `b` (LM coordinates) */
   const strut = (a: THREE.Vector3, b: THREE.Vector3, r: number, mat: THREE.Material): THREE.Mesh => {

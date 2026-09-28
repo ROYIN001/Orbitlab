@@ -138,7 +138,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 342 tests in 96 files, about 20 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1 343 tests in 96 files, about 20 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -218,8 +218,11 @@ injection aimed as the ground aimed it, at the entry the flight flew, the coast 
 the command module on its own, its lifting entry steered by a prediction of the rest of the flight
 against the range to the flown splash point, the drogues and the mains, into the Pacific within a
 minute of the flown time and a few kilometres of the flown point, and the command module, its parachutes
-and the service module drawn — done; (6g) the viewer
-and the documents; (7) the fleet acceptance and the documents.
+and the service module drawn — done; (6g) the viewer and the documents — the ascent stage drawn in its
+own shape, the lift-off watched looking down at the descent stage it leaves, the braking and the
+station-keeping from behind Eagle with Columbia ahead, the entry's glow, the station-keeping at 10×, the
+whole flight in about forty minutes of Watch, and the README — done; (7) the fleet acceptance and the
+documents.
 
 Twenty further items are kept for later, once these are done.
 

@@ -606,3 +606,10 @@ minute, two test files on one worker.
 LM's ascent, the rendezvous and the docking, all inside `ApolloFlight`) ran for about an hour with no
 case failed when the container it ran in was restarted and the run stopped. The run on part 6f's
 commit, which carries part 6e, stands for both.
+
+**The rigid fleet with C01 parts 6e and 6f.** `npm run test:sixdof-fleet` at commit 04fa91e: the LM's
+ascent and the rendezvous, the way home, the entry and the parachutes, and every service-engine burn's
+Δv counted by the rocket equation — all inside `ApolloFlight`, flown only by a mission with an injection,
+which the fleet's are not, so every case flies as before: **161 of 161 passed** in 1 h 52 min on four
+cores, alongside one test run of four files on one worker. Part 6g after it changes the viewer only
+(drawing, camera, Watch's pace), no physics, so this run is also the final acceptance of C01's Apollo 11.

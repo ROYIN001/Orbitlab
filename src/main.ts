@@ -1629,6 +1629,7 @@ class App {
         this.entryCmView.group.position.copy(this.vehiclePos);
         this.entryCmView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(frame.dir.x, frame.dir.y, frame.dir.z));
         this.entryCmView.setChutes(frame.apollo!.entry?.drogue ?? 0, frame.apollo!.entry?.main ?? 0);
+        this.entryCmView.setGlow(frame.altitude, frame.apollo!.phase === 'entry' ? frame.airspeed : 0);
       }
     }
     const sm = frame.apollo?.serviceModule;
@@ -1687,8 +1688,16 @@ class App {
     const rv = frame.rendezvous;
     const nearStation = !!rv && !!this.stationView && rv.range < NEAR_STATION && rv.phase !== 'coast' && rv.phase !== 'burn' && rv.phase !== 'separation';
     const docking = !!rv && nearStation && (rv.phase === 'approach' || rv.phase === 'flyaround' || rv.phase === 'stationkeeping' || rv.phase === 'final' || rv.phase === 'retreat');
-    this.trail.line.visible = !nearStation;
-    this.predicted.setHidden(nearStation);
+    // C01: Eagle's lift-off watched from over it, looking down past it at the descent stage it leaves behind; the
+    // braking and the station-keeping from behind it, looking past it at Columbia
+    const ap = frame.apollo, apPhase = ap?.phase;
+    const apolloPartner = apPhase === 'ascent' && ap!.moon.alt < 400 && this.descentStageView?.group.visible ? this.descentStageView.group.position
+      : (apPhase === 'braking' || apPhase === 'stationkeeping' || (apPhase === 'terminal' && (ap!.rendezvous?.range ?? Infinity) < 3000))
+        && this.csmView?.group.visible ? this.csmView.group.position : null;
+    // (and the command module close up through the air: the lines, the whole way from the Moon, stand aside)
+    const cmClose = !!apPhase && APOLLO_CM.includes(apPhase);
+    this.trail.line.visible = !nearStation && !apolloPartner && !cmClose;
+    this.predicted.setHidden(nearStation || !!apolloPartner || cmClose);
     if (focus) {
       // A stage flown home: framed on its own axis, over its own ground.
       const f = enuFrame(focus.r);
@@ -1714,7 +1723,7 @@ class App {
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
         vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
         t: frame.t, phase: camPhase(frame), agl: lunar ? norm(lunar) - APOLLO11.siteRadius : frame.altitudeAGL,
-        ...(nearStation ? { partner: this.stationView!.group.position } : {}),
+        ...(nearStation ? { partner: this.stationView!.group.position } : apolloPartner ? { partner: apolloPartner } : {}),
         ...(docking && rv ? { dockingEye: this.dockingEye(frame, rv) } : {}),
       }, dt, R_EARTH);
     }
