@@ -68,6 +68,23 @@ describe('six-DOF for custom vehicles (D03): every engine in the chambers', () =
     }
   });
 
+  it('gives a span of engines only to a chamber that does not stand for one engine, and never to a catalogue chamber', () => {
+    // Every catalogue chamber is one engine or part of one, so an engine out
+    // keeps working on them exactly as before (the engine-out identity over
+    // the fleet is in tests/rigid-fleet.test.ts).
+    for (const spec of VEHICLES) for (const p of parts(spec)) {
+      expect(chamberGeometry(p.id, p.id, p.engine, p.diameter / 2).filter((c) => c.engineSpan).map((c) => c.id), `${spec.id} ${p.id}`).toEqual([]);
+    }
+    // Twelve engines on eight bells: 1.5 each, bell i holding [1.5 i, 1.5 i + 1.5).
+    const x1 = NEW_IDS.stages[0];
+    expect(chamberGeometry(x1.id, x1.id, x1.engine, x1.diameter / 2).map((c) => c.engineSpan))
+      .toEqual(Array.from({ length: 8 }, (_, i) => [1.5 * i, 1.5 * i + 1.5]));
+    // Three engines on four bells: the two middle bells straddle two engines; the outer two lie within one.
+    const blokI = SOYUZ_MULTI.stages[1];
+    expect(chamberGeometry(blokI.id, blokI.id, blokI.engine, blokI.diameter / 2).filter((c) => c.kind === 'main').map((c) => c.engineSpan))
+      .toEqual([undefined, [0.75, 1.5], [1.5, 2.25], undefined]);
+  });
+
   it('puts a stage with no layout of its own on the bells the renderer draws for it, with the generic 5° two-axis travel', () => {
     // [part, bells, engines per bell]: the generic ring draws at most eight
     // bells, a kept `s1` draws the octaweb whatever its count, and the R-7
@@ -93,8 +110,9 @@ describe('six-DOF for custom vehicles (D03): every engine in the chambers', () =
         expect(c.gimbalAxesBody, p.id).toEqual([v3(0, 1, 0), v3(0, 0, 1)]);
       });
       for (const vernier of chambers.filter((c) => c.kind === 'vernier')) expect(vernier.thrustFraction, p.id).toBe(0);
-      // Every engine has a bell when there are fewer engines than bells, and no
-      // two bells share an engine when there are more.
+      // Every engine has a bell when there are fewer engines than bells, and
+      // each bell is named by a different engine (the first it holds) when
+      // there are more; the engines bells share are in their `engineSpan`.
       expect(new Set(mains.map((c) => c.engineIndex)).size, p.id).toBe(Math.min(bells, p.engine.count));
     }
     // A single engine keeps the one on-axis chamber it always had.

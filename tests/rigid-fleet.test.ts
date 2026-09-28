@@ -88,6 +88,35 @@ function putsFlightThrustIntoChambers(spec: VehicleSpec): void {
   });
 }
 
+/**
+ * With one engine of a burning stage out — the random engine-out
+ * (`engineFraction`) and each engine in turn shut down by the FDIR
+ * (`shutEngines`) — the chambers still carry exactly the thrust `VehicleModel`
+ * flies, to 1e-9 relative: an identity fixed before any comparison (D03). A
+ * chamber that stands for more or less than one engine (a stage with more
+ * engines than bells drawn, or bells that do not divide evenly among them)
+ * must lose that one engine's share, not its own whole budget.
+ */
+function losesOneEngineInTheChambers(spec: VehicleSpec): void {
+  spec.stages.forEach((stageSpec, k) => {
+    const n = stageSpec.engine.count;
+    if (stageSpec.isSpacecraft || n < 2) return;
+    const pressure = k === 0 ? 60000 : 0;
+    for (const shut of [undefined, ...Array.from({ length: n }, (_, j) => j)]) {
+      const vm = burning(spec, k);
+      for (let t = 0; t < 5; t += 0.25) vm.consume(t, 1, 0.25);
+      const st = vm.stages[k];
+      st.engineFraction = (n - 1) / n;
+      if (shut !== undefined) st.shutEngines = [shut];
+      const thrust = vm.thrust(5, pressure, 1, 0.01);
+      const snapshot = buildRigidVehicle(vm, { pressure, coreThrottle: thrust.coreLevel, boosterThrottle: thrust.boosterThrottle,
+        boosterThrottles: thrust.boosterLevels, time: 5 });
+      const chambers = snapshot.engines.reduce((sum, engine) => sum + engine.thrustBudgetN, 0);
+      expect(chambers / thrust.thrust, `${spec.id} ${stageSpec.id} engine ${shut ?? 'out'}`).toBeCloseTo(1, 9);
+    }
+  });
+}
+
 describe('six-DOF data for every vehicle', () => {
   it('lets every vehicle be flown in six-DOF', () => {
     for (const vehicle of VEHICLES) expect(supportsRigid(vehicle.id)).toBe(true);
@@ -136,6 +165,11 @@ describe('six-DOF data for every vehicle', () => {
   it.each(SCRATCH.map(v => [v.id, v] as const))('custom %s puts the thrust the flight model flies into its chambers (D03)', (_id, spec) => {
     putsFlightThrustIntoChambers(spec);
   });
+
+  it.each([...VEHICLES.map(v => [v.id, v] as const), ...SCRATCH.map(v => [v.id, v] as const)])(
+    '%s loses one engine\'s thrust from its chambers when one engine is out (D03)', (_id, spec) => {
+      losesOneEngineInTheChambers(spec);
+    });
 
   it('gives every stage and strap-on beyond the reference vehicles a propellant and a steering entry', () => {
     const reference = new Set(['s1', 's2', 'blokA', 'blokBVGD', 'blokI', 'core', 'side']);

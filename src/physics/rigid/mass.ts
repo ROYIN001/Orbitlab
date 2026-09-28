@@ -10,7 +10,7 @@ import { assertSPD, type Mat3 } from './math';
 import type { Aero6DofSpec } from './aero';
 import { AERO_MACH, ascentAeroTable, detachedAeroTable, shipDescentAeroTable, type AeroTable } from './aero-tables';
 import {
-  chamberGeometry, getRigidVehicleGeometry, PROPELLANT_DENSITY, PROPELLANT_LOADS, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
+  chamberGeometry, chamberShare, getRigidVehicleGeometry, PROPELLANT_DENSITY, PROPELLANT_LOADS, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
   type ChamberGeometry, type RcsReservoir, type RcsThrusterGeometry, type RigidVehicleGeometry,
 } from './vehicle-data';
 
@@ -197,19 +197,37 @@ function budgetEngines(geometry: readonly ChamberGeometry[], thrustPerEngine: nu
   if (shutEngines?.length) {
     // G08: the engines the FDIR shut down go first; any budget left is lost from the lowest index of the rest.
     const shut = new Set(shutEngines), rest = failed - shut.size;
-    return geometry.map((engine) => {
+    const burning = (index: number) => {
       let rank = 0;
-      for (let i = 0; i < engine.engineIndex; i++) if (!shut.has(i)) rank++;
-      const available = shut.has(engine.engineIndex) ? 0 : fraction(rank + 1 - rest);
+      for (let i = 0; i < index; i++) if (!shut.has(i)) rank++;
+      return shut.has(index) ? 0 : fraction(rank + 1 - rest);
+    };
+    return geometry.map((engine) => {
+      const available = chamberShare(engine, burning);
       return { ...engine, thrustBudgetN: thrustPerEngine * available * engine.thrustFraction,
         massFlowKgS: flowPerEngine * available * engine.thrustFraction, upstreamThrottle: upstreamThrottle * available };
     });
   }
   return geometry.map((engine) => {
-    const available = fraction(engine.engineIndex + 1 - failed);
+    const available = chamberShare(engine, (index) => fraction(index + 1 - failed));
     return { ...engine, thrustBudgetN: thrustPerEngine * available * engine.thrustFraction,
       massFlowKgS: flowPerEngine * available * engine.thrustFraction, upstreamThrottle: upstreamThrottle * available };
   });
+}
+/**
+ * Engines left cold make no thrust and burn nothing: a chamber of one engine
+ * that is not `lit` goes out, and a chamber standing for a span of engines
+ * (D03, `engineSpan`) keeps the share of it that is lit.
+ */
+function coldEngines(engines: BudgetedEngine[], lit: readonly number[]): void {
+  for (const engine of engines) {
+    if (!engine.engineSpan) {
+      if (!lit.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }
+      continue;
+    }
+    const share = chamberShare(engine, (index) => (lit.includes(index) ? 1 : 0));
+    engine.thrustBudgetN *= share; engine.massFlowKgS *= share; engine.upstreamThrottle = (engine.upstreamThrottle ?? 0) * share;
+  }
 }
 function aeroEstimate(area: number, length: number, base: Vec3, diameter: number, table?: AeroTable,
   cd: (mach: number) => number = dragCoefficient): Aero6DofSpec {
@@ -329,9 +347,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       engineThrust(st.spec.engine, pressure) * throttle, engineMassFlow(st.spec.engine) * throttle,
       st.spec.engine.count, st.engineFraction, throttle, st.shutEngines);
     // Engines left cold (`StageState.litEngines`) make no thrust and burn nothing.
-    if (st.litEngines) for (const engine of budgeted) {
-      if (!st.litEngines.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }
-    }
+    if (st.litEngines) coldEngines(budgeted, st.litEngines);
     engines.push(...budgeted);
     st.boosters.forEach((b, groupIndex) => {
       if (!b.attached) return;
@@ -418,9 +434,7 @@ export function buildDetachedStage(vehicleId: string, stage: StageSpec, propella
   const engines = budgetEngines(chamberGeometry(stage.id, stage.id, stage.engine, stage.diameter / 2),
     engineThrust(stage.engine, op.pressure ?? 0) * throttle, engineMassFlow(stage.engine) * throttle,
     stage.engine.count, op.engineFraction ?? 1, throttle);
-  if (op.activeEngineIndices) for (const engine of engines) {
-    if (!op.activeEngineIndices.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }
-  }
+  if (op.activeEngineIndices) coldEngines(engines, op.activeEngineIndices);
   const massFlow = engines.reduce((sum, engine) => sum + engine.massFlowKgS, 0);
   const remaining = Math.max(0, propellant - massFlow * (op.propellantOffsetSeconds ?? 0));
   const components = stageMassComponents(stage, remaining, v3(), stage.id,

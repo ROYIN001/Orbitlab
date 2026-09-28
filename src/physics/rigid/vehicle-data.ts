@@ -314,6 +314,16 @@ export interface ChamberGeometry {
   gimbalAxesBody: Vec3[]; maxGimbalRad: number; maxGimbalRateRadS: number; timeConstantS: number;
   /** Independent Merlin index, or 0 for a shared-feed Soyuz cluster. */
   engineIndex: number;
+  /**
+   * The engines this chamber stands for, `[from, to)` in engine units, when
+   * they are not one engine or part of one (roadmap D03): a stage flown with
+   * more engines than bells are drawn (the generic ring draws at most eight),
+   * or with bells that do not divide evenly among its engines. An engine out
+   * then takes exactly its own share from each chamber it feeds. Absent, the
+   * chamber belongs to engine `engineIndex` alone, as every catalogue
+   * chamber does.
+   */
+  engineSpan?: readonly [number, number];
 }
 const DEG = Math.PI / 180;
 const rotateX = (p: Vec3, angle: number): Vec3 => v3(p.x,
@@ -404,11 +414,31 @@ function layoutChambers(ownerId: string, shapeId: string, engine: EngineSpec, ra
       gimbalAxesBody: axes, maxGimbalRad: axes.length ? travelDeg * DEG : 0,
       maxGimbalRateRadS: 20 * DEG, timeConstantS: 0.1, engineIndex: index };
   };
-  const list: ChamberGeometry[] = layout.nozzles.map((nozzle, i) => chamber(`engine.${i}`, Math.floor(i * count / mains), nozzle,
-    count * (1 - vernierShare) / mains, 'main', steering.steerable === undefined || i < steering.steerable ? steering.gimbalDeg : 0, steering.steer));
-  layout.verniers.forEach((nozzle, i) => list.push(chamber(`vernier.${i}`, Math.floor(i * count / verniers), nozzle,
-    count * vernierShare / verniers, 'vernier', steering.vernierDeg ?? 0, 'tangential')));
+  // D03: the `i`-th of `n` chambers stands for the engines [i·count/n, (i+1)·count/n).
+  const spanned = (made: ChamberGeometry, i: number, n: number): ChamberGeometry => {
+    const from = i * count / n, to = (i + 1) * count / n;
+    return to > Math.floor(from) + 1 ? { ...made, engineSpan: [from, to] } : made;
+  };
+  const list: ChamberGeometry[] = layout.nozzles.map((nozzle, i) => spanned(chamber(`engine.${i}`, Math.floor(i * count / mains), nozzle,
+    count * (1 - vernierShare) / mains, 'main', steering.steerable === undefined || i < steering.steerable ? steering.gimbalDeg : 0, steering.steer), i, mains));
+  layout.verniers.forEach((nozzle, i) => list.push(spanned(chamber(`vernier.${i}`, Math.floor(i * count / verniers), nozzle,
+    count * vernierShare / verniers, 'vernier', steering.vernierDeg ?? 0, 'tangential'), i, verniers)));
   return list;
+}
+
+/**
+ * How much of a chamber still burns, given how much of each engine does
+ * (`perEngine(j)`, 0 to 1): its own engine's, or, for a chamber that stands
+ * for a span of engines (D03, `engineSpan`), the mean over the span weighted
+ * by how much of each engine it holds. So a failed engine takes one engine's
+ * thrust from the stage, however the bells share the engines.
+ */
+export function chamberShare(chamber: ChamberGeometry, perEngine: (engine: number) => number): number {
+  if (!chamber.engineSpan) return perEngine(chamber.engineIndex);
+  const [from, to] = chamber.engineSpan;
+  let sum = 0;
+  for (let j = Math.floor(from); j < to; j++) sum += (Math.min(to, j + 1) - Math.max(from, j)) * perEngine(j);
+  return sum / (to - from);
 }
 
 export interface RcsThrusterGeometry {
