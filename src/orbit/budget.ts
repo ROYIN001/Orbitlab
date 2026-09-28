@@ -10,8 +10,9 @@
  * DOM-free, SI units; tests/budget.test.ts holds it to the rocket equation.
  */
 import { G0 } from '../physics/constants';
-import { norm } from '../physics/vec3';
-import type { Plan } from './maneuvers';
+import { add, norm, scale, sub, type Vec3 } from '../physics/vec3';
+import { stateOnPlan, type Plan } from './maneuvers';
+import { stateAt } from './kepler';
 import type { OrbitHandoff } from './handoff';
 import { SATELLITES } from '../data/satellites';
 
@@ -145,6 +146,34 @@ export function adoptBlock(plan: Pick<Plan, 'burns' | 'spiral' | 'totalDv' | 'ar
   if (!craft) return null;
   if (craftProblem(craft)) return 'craft';
   return budgetFor(plan, craft).enough ? null : 'fuel';
+}
+
+/**
+ * Where a spacecraft whose tanks run dry gets to (audit 2026-09-27 A3, the
+ * alternative to D3): the plan flown up to the burn the tanks run dry in,
+ * that burn only as far as its propellant goes — Δv = Isp·g₀·ln(m_before /
+ * m_after) along the burn's direction — and none after it; a spiral as far
+ * along as that Δv takes it (its Δv grows evenly with time). The state then
+ * (ECI, SI) and when, s after the start orbit's epoch; null when the tanks
+ * hold the whole plan.
+ */
+export function reachedState(plan: Plan, budget: Budget, j2: boolean): { r: Vec3; v: Vec3; t: number } | null {
+  if (budget.enough) return null;
+  const k = budget.burns.findIndex((b) => b.short);
+  const bb = budget.burns[k];
+  const got = bb.propellant > 0 ? exhaustSpeed(budget.craft.isp) * Math.log(bb.massBefore / bb.massAfter) : 0;
+  const sp = plan.spiral;
+  if (sp) {
+    const t = sp.t0 + sp.duration * Math.min(1, got / plan.totalDv);
+    const s = stateOnPlan(plan, t, j2);
+    return { r: s.r, v: s.v, t };
+  }
+  const burn = plan.burns[k], dv = norm(burn.dv);
+  // the state just before the burn: on the segment it is made from (one per burn, src/orbit/maneuvers.ts), else
+  // the plan's state at the burn — just after it — with the burn taken back off
+  const seg = plan.segments.length === plan.burns.length + 1 ? plan.segments[k] : null;
+  const before = seg ? stateAt(seg.orbit, burn.t - seg.t0, j2) : (({ r, v }) => ({ r, v: sub(v, burn.dv) }))(stateOnPlan(plan, burn.t, j2));
+  return { r: before.r, v: dv > 0 ? add(before.v, scale(burn.dv, got / dv)) : before.v, t: burn.t };
 }
 
 /** The spacecraft after a plan flown: lighter by what it burned. */

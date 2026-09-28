@@ -6,12 +6,13 @@
  * would; tanks that run dry make the plan short, by the Δv they lack.
  */
 import { describe, expect, it } from 'vitest';
-import { G0, R_EARTH } from '../src/physics/constants';
+import { G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import {
-  CRAFT_LIMITS, adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, deltaVAvailable, exhaustSpeed, maxPropellant, type Craft,
+  CRAFT_LIMITS, adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, deltaVAvailable, exhaustSpeed, maxPropellant, reachedState, type Craft,
 } from '../src/orbit/budget';
-import { hohmann, isPlan, spiral, type Plan } from '../src/orbit/maneuvers';
-import { v3 } from '../src/physics/vec3';
+import { hohmann, isPlan, spiral, stateOnPlan, type Plan } from '../src/orbit/maneuvers';
+import { orbitFacts, orbitFromState } from '../src/orbit/kepler';
+import { norm as vnorm, sub, v3 } from '../src/physics/vec3';
 
 const burns = (...dvs: number[]): Pick<Plan, 'burns' | 'spiral' | 'totalDv'> => ({
   burns: dvs.map((dv, k) => ({ t: k, dv: v3(dv, 0, 0), vnb: { prograde: dv, normal: 0, radial: 0 }, point: 'now' as const })),
@@ -169,5 +170,58 @@ describe('carrying on from a plan the tanks cannot fly (audit 2026-09-27 A3)', (
     expect(adoptBlock(running, 50, null)).toBe('notYet');
     expect(adoptBlock(running, 50, dry)).toBe('notYet');
     expect(adoptBlock(running, 100, null)).toBeNull();
+  });
+});
+
+describe('carrying on as far as the propellant goes (audit 2026-09-27 A3, the D3 alternative)', () => {
+  const r1 = R_EARTH + 500e3;
+  const leo = { a: r1, e: 0, i: 0.5, raan: 0, argp: 0, m0: 0, jd0: 2461309.5 };
+  const plan = hohmann(leo, 0, 35_786e3, false);
+  if (!isPlan(plan)) throw new Error('hohmann');
+  const vc = Math.sqrt(MU_EARTH / r1);
+
+  it('stops the burn the tanks run dry in where the propellant ends, along the burn', () => {
+    const craft: Craft = { mass: 1000, propellant: 300, isp: 315, thrust: 400 };
+    const b = budgetFor(plan, craft);
+    expect(b.enough).toBe(false);
+    expect(b.burns[0].short).toBe(true);
+    const got = exhaustSpeed(315) * Math.log(1000 / 700);
+    const s = reachedState(plan, b, false)!;
+    expect(s.t).toBe(plan.burns[0].t);
+    // a prograde kick on a circle: the speed is the circle's and what the tanks gave
+    expect(vnorm(s.v)).toBeCloseTo(vc + got, 6);
+    expect(vnorm(s.r)).toBeCloseTo(r1, 3);
+    const f = orbitFacts(orbitFromState(s.r, s.v, leo.jd0 + s.t / 86400), false);
+    expect(f.perigeeAlt).toBeCloseTo(500e3, -1);
+    expect(f.apogeeAlt).toBeGreaterThan(600e3);
+    expect(f.apogeeAlt).toBeLessThan(35_786e3);
+  });
+
+  it('flies the burns the tanks hold, and none of the one they do not', () => {
+    // enough for the first burn and part of the second
+    const first = budgetFor({ ...plan, burns: plan.burns.slice(0, 1) }, { mass: 1000, propellant: 999, isp: 315, thrust: 400 }).used;
+    const b = budgetFor(plan, { mass: 1000, propellant: first + 20, isp: 315, thrust: 400 });
+    expect(b.burns[0].short).toBe(false);
+    expect(b.burns[1].short).toBe(true);
+    const s = reachedState(plan, b, false)!;
+    expect(s.t).toBe(plan.burns[1].t);
+    const onTransfer = stateOnPlan(plan, plan.burns[1].t - 1e-6, false);
+    const got = exhaustSpeed(315) * Math.log(b.burns[1].massBefore / b.burns[1].massAfter);
+    expect(vnorm(sub(s.v, onTransfer.v))).toBeCloseTo(got, 2);
+    // with no propellant at all it stays on the start orbit
+    const none = reachedState(plan, budgetFor(plan, { mass: 1000, propellant: 0, isp: 315, thrust: 400 }), false)!;
+    expect(vnorm(none.v)).toBeCloseTo(vc, 6);
+  });
+
+  it('is nothing to work out when the tanks hold the plan, and a spiral stops part way', () => {
+    expect(reachedState(plan, budgetFor(plan, { mass: 10_000, propellant: 8000, isp: 320, thrust: 20_000 }), false)).toBeNull();
+    const sp = spiral(leo, 0, 1000e3, 0.5, 1e-3, false);
+    if (!isPlan(sp) || !sp.spiral) throw new Error('spiral');
+    const b = budgetFor(sp, { mass: 1000, propellant: 20, isp: 315, thrust: 400 });
+    expect(b.enough).toBe(false);
+    const s = reachedState(sp, b, false)!;
+    const got = exhaustSpeed(315) * Math.log(1000 / 980);
+    expect(s.t).toBeCloseTo(sp.spiral.t0 + sp.spiral.duration * got / sp.totalDv, 6);
+    expect(s.t).toBeLessThan(sp.arrival);
   });
 });

@@ -38,7 +38,9 @@ import {
 } from '../../orbit/maneuver-setup';
 import type { OrbitGhost, OrbitMarker } from '../../render/orbit-view';
 import { maneuverControls, planTable, type CraftSource, type ManeuverPanelHost } from './maneuver-panel';
-import { adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, type Budget, type Craft } from '../../orbit/budget';
+import {
+  adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, reachedState, type Budget, type Craft,
+} from '../../orbit/budget';
 import { handoffFromState } from '../../orbit/handoff';
 import { spacecraftFor } from '../../physics/propagator/spacecraft';
 import { MANEUVER_LIMITS } from '../../orbit/maneuver-setup';
@@ -669,6 +671,27 @@ export class OrbitPlayground {
       this.time = 0;
       this.planStart = 0;
       this.setOrbit(orbitFromState(s.r, s.v, this.orbit.jd0 + at / 86400));
+      this.jd0 = this.orbit.jd0;
+      this.orbitView?.setOrbit(this.orbit, true);
+      this.render();
+    },
+    adoptReached: () => {
+      const p = this.activePlan, budget = this.budget;
+      const s = p && budget ? reachedState(p, budget, this.j2) : null;
+      if (!s || !budget) return;
+      // audit 2026-09-27 A3: the tanks dry, the spacecraft coasts on the orbit it has then, to the clock if that is later
+      const after = craftAfter(budget);
+      if (this.craftSource === 'launch') this.launchCraft = after; else if (this.craftSource === 'own') this.ownCraft = after;
+      let orbit = orbitFromState(s.r, s.v, this.orbit.jd0 + s.t / 86400);
+      const at = Math.max(this.time, s.t);
+      if (at > s.t) {
+        const c = stateAt(orbit, at - s.t, this.j2);
+        orbit = orbitFromState(c.r, c.v, this.orbit.jd0 + at / 86400);
+      }
+      this.maneuver = null;
+      this.time = 0;
+      this.planStart = 0;
+      this.setOrbit(orbit);
       this.jd0 = this.orbit.jd0;
       this.orbitView?.setOrbit(this.orbit, true);
       this.render();

@@ -1051,6 +1051,8 @@ export const en: Record<string, string> = {
   'mv.b.ideal': 'Ideal plan, propellant unlimited: the drawing and the animation fly all of it, which this spacecraft cannot.',
   'mv.adopt.fuel': 'Not enough propellant: the spacecraft would not reach this orbit, so it cannot carry on from it.',
   'mv.adopt.craft': 'Correct the spacecraft\'s numbers to carry on from this orbit.',
+  'mv.adoptReached': 'Carry on as far as the propellant goes',
+  'mv.adoptReached.title': 'From the orbit the spacecraft is on when its tanks run dry, during burn {n}',
   'mv.b.burn': '{kg} {u} of propellant, the engine on for {time}',
   'mv.b.dry': 'no propellant left for it',
   // O04: what satellites are for (src/ui/orbit/applications-panel.ts, src/data/thai-satellites.ts)

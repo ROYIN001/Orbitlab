@@ -32,6 +32,8 @@ export interface ManeuverPanelHost {
   replanNow(): void;
   /** the plan flown: its final orbit becomes the playground's */
   adopt(): void;
+  /** audit 2026-09-27 A3: the plan flown as far as the tanks go: the orbit then becomes the playground's */
+  adoptReached(): void;
   /** Engineer: show the porkchop plot */
   showPorkchop(): void;
   /**
@@ -358,14 +360,15 @@ export function planTable(host: ManeuverPanelHost, plan: Plan | PlanError, s: Ma
   const next = plan.burns.find((b) => b.t > now);
   const note = el('p', 'pg-note pg-plan-next');
   note.textContent = next ? t('mv.next', { time: span(next.t - now) }) : plan.arrival <= now ? t('mv.done') : '';
-  box.append(note, actions(host, block));
+  const dryIn = budget ? budget.burns.findIndex((b) => b.short) + 1 : 0;
+  box.append(note, actions(host, block, dryIn));
   return box;
 }
 
 const ADOPT_BLOCK_KEY: Record<Exclude<AdoptBlock, 'notYet'>, string> = { craft: 'mv.adopt.craft', fuel: 'mv.adopt.fuel' };
 
 /** The plan's buttons: "Carry on" as `block` allows — offered, shown off with the reason (A3), or not yet there. */
-function actions(host: ManeuverPanelHost, block: AdoptBlock | null): DocumentFragment {
+function actions(host: ManeuverPanelHost, block: AdoptBlock | null, dryIn = 0): DocumentFragment {
   const out = document.createDocumentFragment();
   const row = el('div', 'pg-actions');
   out.append(row);
@@ -378,6 +381,12 @@ function actions(host: ManeuverPanelHost, block: AdoptBlock | null): DocumentFra
       adopt.disabled = true;
       adopt.title = why;
       out.append(el('p', 'pg-note pg-adopt-why', why));
+      // … or where the spacecraft does get to, its tanks dry
+      if (block === 'fuel') {
+        const reached = button('watch-btn', t('mv.adoptReached'), () => host.adoptReached());
+        reached.title = t('mv.adoptReached.title', { n: String(Math.max(1, dryIn)) });
+        row.append(reached);
+      }
     }
   }
   row.append(button('watch-btn link', t('mv.clear'), () => host.choose(null)));
