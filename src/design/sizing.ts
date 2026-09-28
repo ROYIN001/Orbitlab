@@ -203,7 +203,10 @@ export function sizeVehicle(req: SizingRequest): Sizing {
     fairingId = (fits[0] ?? [...FAIRING_PARTS].sort((a, b) => b.diameter - a.diameter)[0]).id;
     estimates.push({ code: 'fairingChosen' });
   }
-  const fairingMass = fairingId === null ? 0 : fairingPart(fairingId).mass;
+  let fairingMass = 0;
+  if (fairingId !== null) {
+    try { fairingMass = fairingPart(fairingId).mass; } catch { return refuse('unknownPart', null, `fairing ${fairingId}`); }
+  }
   if (fairingMass > 0 && n > 1) estimates.push({ code: 'splitIgnoresFairing' });
 
   // 3. The masses, top down, each stage its share exactly.
