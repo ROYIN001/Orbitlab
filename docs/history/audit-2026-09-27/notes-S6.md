@@ -1,6 +1,6 @@
 # S6 — Browser harness & CI: บันทึกเซสชัน
 
-สาขา `claude/audit0927-s6-browser-ci` จาก `dba7b0a` (main) · รายการ CI ในแผน PLAN-2026-09-28
+สาขา `claude/audit0927-s6-browser-ci` จาก `dba7b0a` (main) และ merge main `a937a88` ภายหลัง · รายการ CI ในแผน PLAN-2026-09-28
 
 ## สิ่งที่ทำ
 
@@ -75,11 +75,13 @@ job `browser-smoke` รันขนานกับ job `test` เดิม (ไ�
 
 | ขั้น | ประมาณในเครื่อง | บน GitHub Actions |
 |---|---|---|
-| `npm ci` + `playwright install --with-deps chromium` + build | ~1 นาที (ไม่รวม apt) | CI_MEASURED_SETUP |
-| smoke 3 journey | 276 s | CI_MEASURED_SMOKE |
-| รวม job | ~5–6 นาที | CI_MEASURED_TOTAL |
+| `npm ci` + `playwright install --with-deps chromium` + build | ~1 นาที (ไม่รวม apt) | 3 s + 20 s + 3 s (run 36365025310) |
+| smoke 3 journey | 276 s | 349 s (launch-explore 135 s, mobile-smoke 39 s, watch-controls 163 s) |
+| รวม job | ~5–6 นาที | **6 นาที 21 วินาที** — job `test` เดิมใช้ ~20 นาทีบน PR อื่นวันเดียวกัน (เช่น run 36362327189) จึง**ไม่เพิ่มเวลารอ PR** แต่เพิ่ม runner time ~6.4 นาทีต่อ PR |
 
 deploy เพิ่ม: เกต snapshot ~8 s (vitest 2 ไฟล์) + ติดตั้ง Chromium + ชุดเต็ม 4 journey (~340 s ในเครื่อง: smoke 276 s + pwa-offline 64 s)
+
+**PR ที่มี merge conflict ไม่ได้ run `pull_request` เลย** (GitHub ไม่สร้าง merge commit ให้ทดสอบ) จึงไม่มี browser-smoke จนกว่าจะแก้ conflict — PR นี้เจอเองหลัง main รวม #29 (แก้ด้วยการ merge main เก็บทั้ง `playwright` และ `playwright-core` 1.63.0 ที่ #29 เพิ่มให้ `scripts/shots.ts`; ชุดเต็ม 4 journey ผ่านบน main ใหม่ใน 340 s)
 
 job `browser-smoke` ถูก skip บน push event โดยตั้งใจ (`if: github.event_name == 'pull_request'`) เพื่อไม่ให้รันซ้ำสองครั้งต่อ commit
 
