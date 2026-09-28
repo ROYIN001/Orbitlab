@@ -16,10 +16,11 @@
  * split beside the optimum at its own Δv and payload, and says plainly why
  * they differ: the optimum is loss-free and takes ε as fixed, while a real
  * rocket's gravity loss depends on the split (its high-thrust first stage
- * climbs out quickly; low-thrust upper stages lit sooner would lose far more),
- * so real first stages usually take more of the Δv (Saturn V's first stage:
- * about 1.75 km/s optimal against its own 3.88; staging-model.ts says why a
- * loss of fixed size alone would not move the optimum).
+ * climbs out quickly; low-thrust upper stages lit sooner would lose more),
+ * one reason a designer may give the first stage more (Saturn V's: about
+ * 1.75 km/s optimal against its own 3.88). Not a rule: four of the six
+ * catalogue vehicles compared give it less (staging-model.ts), and for them
+ * the page says so and claims no reason.
  * Strap-ons are left out and said to be; the closed form does not describe
  * them.
  */

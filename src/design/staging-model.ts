@@ -29,8 +29,14 @@
  * the split — a high-thrust first stage gets through the steep climb and the
  * thick air quickly, where low-thrust upper stages lit sooner would lose far
  * more to gravity — and that a stage's ε depends on its size and engines.
- * Those are why real first stages usually take more. (Found in review: the
- * page said the first stage takes more BECAUSE it pays the losses.)
+ * That is one reason a designer may give the first stage more; it is not a
+ * rule. Across the catalogue's six vehicles the comparison covers, the real
+ * first stage takes MORE than the optimum on two (Saturn V, +2.1 km/s;
+ * Proton-M, +0.02) and LESS on four (Falcon 9 −0.15, Long March 2D −1.62,
+ * Electron −0.72, Starship −2.44 km/s); Vega-C's stages have no optimum at
+ * its own Δv (tests/design-staging-model.test.ts records it). Found in
+ * review: the page said the first stage takes more BECAUSE it pays the
+ * losses, and that real first stages usually take more.
  *
  * DOM-free, SI (m/s, s, kg).
  */

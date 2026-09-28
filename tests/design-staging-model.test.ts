@@ -88,6 +88,26 @@ describe('the real split beside the optimum', () => {
     expect(cmp.real.stageDv[0]).toBeLessThan(3930);
     expect(cmp.real.fairingKg).toBe(0);
   });
+
+  it('finding, recorded not tuned: the real first stage takes more than the optimum on two vehicles and less on four', () => {
+    // Found in review. The page said real first stages take more of the Δv than the loss-free optimum "usually",
+    // and because they pay the losses. The catalogue says otherwise: of the six vehicles the comparison covers,
+    // Saturn V and Proton-M give the first stage more, and Falcon 9, Long March 2D, Electron and Starship give it
+    // less. Vega-C's stages have no optimum at its own Δv. These are the model's outcomes at half the rated LEO
+    // payload, recorded after a probe run printed them; a change to the catalogue or the budget that moves one
+    // shows here.
+    const side: Record<string, string> = {};
+    for (const v of VEHICLES) {
+      const cmp = compareWithVehicle(v, watchPayload(v));
+      if (cmp) side[v.id] = cmp.real.stageDv[0] > cmp.optimum.stageDv[0] ? 'more' : 'less';
+      else if (realSplit(v, watchPayload(v))) side[v.id] = 'no optimum';
+    }
+    expect(side).toEqual({
+      saturnv: 'more', protonm: 'more',
+      falcon9: 'less', longmarch2d: 'less', electron: 'less', starship: 'less',
+      vegac: 'no optimum',
+    });
+  });
 });
 
 describe('the two-stage curve', () => {
