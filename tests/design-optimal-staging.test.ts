@@ -182,8 +182,37 @@ describe('where the problem has no answer', () => {
     for (const bad of [0, 1, -0.1, NaN]) expect(stagingProblem([{ ispS: 300, epsilon: bad }], 1000)).toBe('invalid');
     for (const bad of [0, -300, NaN, Infinity]) expect(stagingProblem([{ ispS: bad, epsilon: 0.1 }], 1000)).toBe('invalid');
     for (const bad of [0, -1, NaN, Infinity]) expect(stagingProblem(ok, bad)).toBe('invalid');
-    expect(optimalStaging(ok, 1000, -1)).toBeNull();
-    expect(optimalStaging(ok, 1000, NaN)).toBeNull();
+    for (const bad of [-1, NaN, Infinity]) {
+      expect(optimalStaging(ok, 1000, bad)).toBeNull();
+      expect(stagingProblem(ok, 1000, bad), `payload ${bad}`).toBe('invalid');
+    }
+    expect(stagingProblem(ok, 1000, 0)).toBeNull();
+  });
+
+  it('gives a reason for every null answer, and none for an answer', () => {
+    // A null from optimalStaging with no reason from stagingProblem would leave
+    // the D05 page with nothing to say, so the two are held to each other over
+    // every kind of input above.
+    const stageSets: StagingStage[][] = [
+      [],
+      [{ ispS: 300, epsilon: 0.1 }],
+      [{ ispS: 300, epsilon: 1 }],
+      [{ ispS: 200, epsilon: 0.1 }, { ispS: 450, epsilon: 0.1 }],
+      [{ ispS: 300, epsilon: 0.08 }, { ispS: 350, epsilon: 0.1 }, { ispS: 450, epsilon: 0.12 }],
+    ];
+    let nulls = 0, answers = 0;
+    for (const stages of stageSets) {
+      for (const dv of [-1, 0, 1, 1000, 3000, 7000, 9000, 12000, 30000, NaN]) {
+        for (const pay of [-1, 0, 1000, NaN]) {
+          const r = optimalStaging(stages, dv, pay);
+          const why = stagingProblem(stages, dv, pay);
+          if (r === null) { nulls++; expect(why, `${JSON.stringify(stages)} ${dv} ${pay}`).not.toBeNull(); }
+          else { answers++; expect(why, `${JSON.stringify(stages)} ${dv} ${pay}`).toBeNull(); }
+        }
+      }
+    }
+    expect(nulls).toBeGreaterThan(0);
+    expect(answers).toBeGreaterThan(0);
   });
 });
 

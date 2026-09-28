@@ -71,10 +71,15 @@ export interface OptimalStaging {
   payloadRatio: number;
 }
 
-/** Why no optimum is returned: bad input, Δv at or past the limit, or a stage the optimum would leave out. */
+/**
+ * Why no optimum is returned: bad input (stages, Δv or payload), Δv at or past
+ * the limit, or a stage the optimum would leave out.
+ */
 export type StagingProblem = 'invalid' | 'beyondLimit' | 'stageWithoutDv';
 
 const exhaust = (s: StagingStage): number => G0 * s.ispS;
+
+const validPayload = (kg: number): boolean => Number.isFinite(kg) && kg >= 0;
 
 const validStages = (stages: readonly StagingStage[]): boolean =>
   stages.length > 0 && stages.every((s) => Number.isFinite(s.ispS) && s.ispS > 0 && Number.isFinite(s.epsilon) && s.epsilon > 0 && s.epsilon < 1);
@@ -129,8 +134,14 @@ function solve(stages: readonly StagingStage[], dvMps: number): Solved {
   return { x, n };
 }
 
-/** What stops `optimalStaging` from answering, or null when it answers. */
-export function stagingProblem(stages: readonly StagingStage[], dvMps: number): StagingProblem | null {
+/**
+ * What stops `optimalStaging` from answering, or null when it answers. Pass
+ * the same payload: a negative or non-finite one is `invalid` too (the default,
+ * 0, is always a payload the solver takes), so every null `optimalStaging`
+ * returns has a reason here.
+ */
+export function stagingProblem(stages: readonly StagingStage[], dvMps: number, payloadKg = 0): StagingProblem | null {
+  if (!validPayload(payloadKg)) return 'invalid';
   const s = solve(stages, dvMps);
   return 'problem' in s ? s.problem : null;
 }
@@ -140,7 +151,7 @@ export function stagingProblem(stages: readonly StagingStage[], dvMps: number): 
  * masses that carry `payloadKg`, or null (see `stagingProblem` for why).
  */
 export function optimalStaging(stages: readonly StagingStage[], dvMps: number, payloadKg: number): OptimalStaging | null {
-  if (!Number.isFinite(payloadKg) || payloadKg < 0) return null;
+  if (!validPayload(payloadKg)) return null;
   const s = solve(stages, dvMps);
   if ('problem' in s) return null;
   const { x, n } = s;
