@@ -251,7 +251,7 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   elevation you choose (30° by default), soonest first: when, how high and in which direction,
   the off-nadir angle a camera must look at to see the place, whether the place is in daylight
   (optical cameras need it, radars do not) and whether the satellite is heading north or south.
-  For 51 imaging satellites whose instruments are published, each pass also says what the
+  For 95 imaging satellites whose instruments are published, each pass also says what the
   instrument can make of it: a camera needs daylight and the place inside its swath (Landsat,
   Sentinel-2) or within the angle it can turn to (Pléiades, WorldView, THEOS-2); a radar
   (Sentinel-1, COSMO-SkyMed, ALOS) sees by night and through cloud, but only to its side and within

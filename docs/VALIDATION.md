@@ -30,7 +30,7 @@ Status on 2026-09-27:
 | Passes (R03, P2.5) | Skyfield 1.55 with JPL DE421: 249 events of three satellites over two places; Skyfield's refraction | Every event found; times within 0.34 s, angles within 0.005°; refraction within 0.07′ (§6), 2026-09-27 |
 | Satellite catalogue (R02) | CelesTrak's six formats of one element set; published orbits of the ISS, Thaicom 8, THEOS-2, GPS | Every format read alike; the catalogue's satellites where they are published to be (§6), 2026-09-26 |
 | Re-entry prediction (M03, P2.5) | The four Long March 5B core stages' re-entries (GCAT); ESA's ±20 % window (Klinkrad 2013); seven spheres' known C_D A/m; 66 rocket stages of 2023–2025 and NAPA-2 (GCAT); 100 re-entries of 1985–2004 (GCAT) with NORAD's element sets (J. McDowell's archive) | All four Long March 5B inside the window; B fitted to two sets within 30 % for all seven spheres; the 66 stages 33 inside from their first sets, the criterion fixed before missed (a finding), 32 of 61 after a screen written after the results; the agencies' way, B fitted to two sets a week apart: 81 % inside at 30 days and 85 % at 10 (met), 79 % at 5 days (missed, 80 % fixed); NAPA-2 +8 % by its size, −28 % with B from its first set's decay (§7), 2026-09-27 |
-| Overflights (M02, P2.5) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal); published swaths, fields of view and revisit periods (USGS, ESA, NASA) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time; swaths from fields of view within 2 %; Landsat, Sentinel-2 and Sentinel-1 can image Bangkok within their published revisit periods (§7), 2026-09-27 |
+| Overflights (M02, P2.5) | R03's passes; published local times of Landsat 8 and 9 (USGS), Sentinel-2A/B/C (ESA), THEOS-2 (eoPortal); published swaths, fields of view and revisit periods (USGS, ESA, NASA; eoPortal for those added on 2026-09-28) | The same passes; every near-overhead overflight of Bangkok in 16 days at its satellite's published local time; swaths from fields of view within 2 %, but two of the four added on 2026-09-28 missed it (+4.4 %, +5.4 %: a finding); Landsat, Sentinel-2 and Sentinel-1 can image Bangkok within their published revisit periods (§7), 2026-09-27 and 2026-09-28 |
 | Close approaches (M01, P2.5) | Constructed encounters with exact answers; Rice's integral; the Iridium 33–Cosmos 2251 conjunction data and probabilities as published (Shepperd, AMOS 2023); NASA CARA's test conjunctions as messages (Alfano 2009; Omitron) | Times and misses exact; all three published probabilities reproduced within a tenth of a decade; CARA's twelve within 0.12 % (§7), 2026-09-27 |
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
 | The Earth's orientation (P2.5) | Vallado et al., AIAA 2006-6753, Appendix C: TEME to ITRF with UT1 − UTC and polar motion; the IERS's finals2000A | The paper's Earth-fixed position within 71 mm (262 m before) (§6), 2026-09-27 |
@@ -1546,7 +1546,7 @@ Landsat 8 and 9 before this was committed; the results are within the tolerance 
 #### What the instrument can image (P2.5)
 
 An overflight is not an image: that depends on the instrument. `src/data/sensors.ts` holds the
-published geometry of the instruments on 51 of the catalogue's satellites (39 entries, satellites of one design sharing one), each
+published geometry of the instruments on 95 of the catalogue's satellites (64 entries, satellites of one design sharing one), each
 with its sources: a fixed camera's swath (Landsat's OLI, Sentinel-2's MSI, MODIS, Sentinel-3's
 OLCI), an agile camera's largest off-nadir angle (Pléiades, WorldView, THEOS and THEOS-2, the
 Gaofen, …), a radar's incidence angles and, where a source says so, the side it looks to
@@ -1556,10 +1556,13 @@ Gaofen, …), a radar's incidence angles and, where a source says so, the side i
 place inside its swath or within its off-nadir limit; a radar needs the place on its side and the
 incidence (90° less the elevation there) within its band. Where an agile satellite's limit is not
 published it would not be judged (the path is kept and tested with a made-up entry), but every
-agile satellite in the table now has one; the three the operators have retired but the catalogue
-still lists (SPOT 7, COSMO-SkyMed 1 and 3, by eoPortal) are marked so. Where sources disagree the
-operator's figure is used and the other noted in the table (the Maxar angles, for one, are the
-tasking limits, not what the satellites can turn to).
+agile satellite in the table now has one; the 15 the operators have retired but the catalogue
+still lists (SPOT 7, COSMO-SkyMed 1 and 3, and 12 of those added on 2026-09-28, below) are marked
+so. Where sources disagree the operator's figure is used and the other noted in the table (the
+Maxar angles, for one, are the tasking limits, not what the satellites can turn to), with one
+exception left for the owner: Cartosat-2C to 2F keep eoPortal's 0.65 m against the 0.6 m of NRSC's
+[product sheet](https://bhoonidhi.nrsc.gov.in/bhoonidhi_resources/help/sampleprods/Cartosat-2S/C2S-Specs.pdf)
+for the series.
 
 Three agile satellites were first entered unjudged and were given limits in the P2.5 fix-up
 (2026-09-27). Where the along- and across-track limits differ the across-track one is used: a pass
@@ -1580,7 +1583,8 @@ see it.
   ±26°), and eoPortal's 2E page gives ±45° along the track and ±26° across; the operator's figure is
   used, and ISRO's 2B page is the entry's first source, the one the Engineer level's "source" link
   opens. The "field of regard of 400 km" the table used to cite is WMO OSCAR's text, which
-  OSCAR gives for Cartosat-3's camera too.
+  OSCAR gives for Cartosat-3's camera too. Since 2026-09-28 Cartosat-2D, 2E and 2F share the entry
+  (below).
 - **CO3D**: no operator publishes how far it can turn. The one angle published is a planning limit,
   in CNES's paper written before launch (Lebègue, Cazala-Hourcade, Languille, Artigues, Melet,
   ["CO3D, a worldwide one-meter accuracy DEM for 2025"](https://doi.org/10.5194/isprs-archives-XLIII-B1-2020-299-2020),
@@ -1588,6 +1592,92 @@ see it.
   pitch angles to 20° for each satellite of a stereo pair". It is used as 15°, labelled a planning
   limit as the Maxar and SkySat tasking limits are: the 3D mission's, not what the satellites can
   turn to.
+
+**Added on 2026-09-28: 44 satellites, in 25 new entries and 4 joined to existing ones.** Joined:
+Cartosat-2D, 2E and 2F to 2C, ISRO calling each "similar to the earlier" satellites "of the
+Cartosat-2 series" ([PSLV-C37](https://www.isro.gov.in/CARTOSAT_2_PSLVC37.html)); SkySat-C2 to C11 to C1,
+Planet's figures being for the whole C generation ([Planet](https://docs.planet.com/data/imagery/skysat/));
+WorldView Legion 2 to 4 to Legion 1, on the operator's one
+[datasheet](https://pacgeo.com/wp-content/uploads/2025/12/Vantor_WorldView-Legion_25AUG2025_Datasheet_PacGeo.pdf)
+for the fleet; CSG-3 to the CSG ([ESA](https://earth.esa.int/eogateway/missions/cosmo-skymed-second-generation)).
+New agile cameras: Cartosat-1, 2A and 2B, Resourcesat-2 and 2A (LISS-4, on its steering motor),
+KOMPSAT-2, KazEOSat-1 and 2, KazSTSAT, DubaiSat-1 and 2, RASAT, Göktürk-1A, ASNARO-1, LAPAN-A3,
+Resurs-DK1, Resurs-P No.4, CBERS-4 (PAN, by its mirror) and ZY-1 02C (HR). New fixed ones:
+Oceansat-2's OCM-2, which tilts only along the track ([eoPortal](https://www.eoportal.org/satellite-missions/oceansat-2)),
+Deimos-1, HJ-1A and 1B, HY-1B's CZI, GOSAT's TANSO-CAI and TechSat-1B. HJ-1's and HY-1B's are
+fixed by inference: no source describes a way to turn them, and none says they cannot. SWOT's
+KaRIn, a water-height interferometer, is entered as a radar looking to both sides, its band of
+incidence (0.73° to 4.39°) worked out on a sphere from the "two 50 km swaths from 10 to 60 km on
+each side of the nadir ground track" of JPL's
+[handbook](https://www.earthdata.nasa.gov/s3fs-public/2024-06/D-109532_SWOT_UserHandbook_20240502.pdf),
+not a published angle. Some retirements are known to the month or the year only (Oceansat-2,
+TechSat-1B, Cartosat-2A), and DubaiSat-1's is the date of the report that it had stopped imaging.
+Each entry's comment in the table gives its sources and their disagreements. Of the imaging group's
+73 satellites not in the table, 72 were examined and left out; the 73rd, PRSC-E03, launched in
+2026, was not examined.
+
+- **Not imagers in this sense**: altimeters, radiometers, sounders, a scatterometer and receivers,
+  which measure a line under the track or kilometres to a pixel, or make no picture at all.
+  SCATSAT-1, a wind scatterometer ([ISRO](https://www.isro.gov.in/SCATSAT_1.html)); SMOS, "a
+  spatial resolution of 35 - 50 km" ([eoPortal](https://www.eoportal.org/satellite-missions/smos));
+  SMAP, whose radar "stopped transmitting" in 2015
+  ([eoPortal](https://www.eoportal.org/satellite-missions/smap)); GPM Core
+  ([eoPortal](https://www.eoportal.org/satellite-missions/gpm)), Jason-3
+  ([eoPortal](https://www.eoportal.org/satellite-missions/jason-3)), Sentinel-5P ("spatial sampling
+  of 7 km x 7 km", [eoPortal](https://www.eoportal.org/satellite-missions/copernicus-sentinel-5p)),
+  Sentinel-6A and 6B ([eoPortal](https://www.eoportal.org/satellite-missions/copernicus-sentinel-6)),
+  ICESat-2 ("split into 6 beams", [eoPortal](https://www.eoportal.org/satellite-missions/icesat-2)),
+  SARAL ([eoPortal](https://www.eoportal.org/satellite-missions/saral)), HY-2A
+  ([eoPortal](https://www.eoportal.org/satellite-missions/hy-2a)), MicroCarb
+  ([eoPortal](https://www.eoportal.org/satellite-missions/microcarb)), Aura
+  ([eoPortal](https://www.eoportal.org/satellite-missions/aura)), GOSAT-GW
+  ([eoPortal](https://www.eoportal.org/satellite-missions/gosat-gw)), Ionosfera-M 1 to 4
+  ([eoPortal](https://www.eoportal.org/satellite-missions/ionosphera-m-ionosfera-m)), SCD 1 and 2,
+  data relays ([Gunter's Space Page](https://space.skyrocket.de/doc_sdat/scd-1.htm)), SRMSAT, a
+  spectrometer ([eoPortal](https://www.eoportal.org/satellite-missions/srmsat)), ExactView-1, an AIS
+  receiver ([eoPortal](https://www.eoportal.org/satellite-missions/ev-1)), and CAS500-3, which "is
+  not an Earth observation mission" ([eoPortal](https://www.eoportal.org/satellite-missions/cas500)).
+- **No published pointing limit**, or for a few no geometry at all. Cameras for which no source
+  gives how far they turn, or says that they are fixed: HySIS (neither ISRO's
+  [page](https://www.isro.gov.in/HysIS.html) nor [eoPortal](https://www.eoportal.org/satellite-missions/hysis)
+  gives a range); SkySat-A and B
+  (Planet's [documents](https://docs.planet.com/data/imagery/skysat/) cover the C generation only);
+  CAS500-1 and 2 ([KARI](https://www.kari.re.kr/eng/contents/170),
+  [eoPortal](https://www.eoportal.org/satellite-missions/cas500)); NEMO-HD
+  ([eoPortal](https://www.eoportal.org/satellite-missions/nemo-hd)); AlSat-1B, which images "en
+  pointage Nadir et en roulis" ([ASAL](https://asal.dz/?page_id=76)); Göktürk-2
+  ([eoPortal](https://www.eoportal.org/satellite-missions/gokturk-2)); Gaofen-1 02 to 04, which
+  roll ("重访周期（侧摆时） 4天", [operator](https://www.sasclouds.com/satellite/chinese/gf1bcd)) on a
+  smaller bus than Gaofen-1's ([Gunter's](https://space.skyrocket.de/doc_sdat/gf-1-02.htm)), so its
+  ±35° is not carried over; Gaofen-5 01, whose AHSI has a
+  pointing mirror of no published range ([operator](https://www.sasclouds.com/satellite/chinese/gf5));
+  Gaofen-6 ([operator](https://www.sasclouds.com/satellite/chinese/gf6)); DLR-TUBSAT, Maroc-TUBSAT
+  and LAPAN-TUBSAT ([eoPortal](https://www.eoportal.org/satellite-missions/tubsat)); HODOYOSHI-3
+  and 4 ([eoPortal](https://www.eoportal.org/satellite-missions/hodoyoshi-3-4)); Kent Ridge 1
+  ([eoPortal](https://www.eoportal.org/satellite-missions/kent-ridge-1)); Pathfinder 1
+  ([eoPortal](https://www.eoportal.org/satellite-missions/blacksky-constellation)). ZY-3 02 was
+  proposed at 32° and rejected: that is eoPortal's figure for ZY-3 01
+  ([eoPortal](https://www.eoportal.org/satellite-missions/zy-3a)), and no source gives one for 02.
+  Gaofen-4 is geostationary ([operator](https://www.sasclouds.com/satellite/chinese/gf4)), outside
+  a low orbit's pass judgement, and no pointing limit is published for it either. Carbonite-1 has
+  no published swath and is retired ([eoPortal](https://www.eoportal.org/satellite-missions/carbonite)).
+  No geometry is published for SaudiSat 5A and 5B, PARS 1, PRSC-EO1, Shiyan-1, Sinah-1, Gaofen-8
+  ([Gunter's Space Page](https://space.skyrocket.de/doc_sdat/gf-8.htm)), Gaofen-9 01 ("sub-meter
+  class", [Gunter's](https://space.skyrocket.de/doc_sdat/gf-9.htm)), Gaofen-10R ("The exact nature
+  of the GF 10 satellite is not known", [Gunter's](https://space.skyrocket.de/doc_sdat/gf-10.htm)),
+  or the radars Gaofen-12 01 to 04 ([Gunter's](https://space.skyrocket.de/doc_sdat/gf-12.htm)) and
+  PRSC-S1 ([Gunter's](https://space.skyrocket.de/doc_sdat/prsc-s1.htm)).
+- **Military, with no public figures**: Gaofen-11 01, "believed to be in fact a military
+  satellite" ([Gunter's](https://space.skyrocket.de/doc_sdat/gf-11.htm)); the radars Yaogan-3 and
+  10, of which "It is not known which band the JB-5's radar is working, and what kind of resolution
+  the radar image can achieve" ([Gunter's](https://space.skyrocket.de/doc_sdat/yaogan-1.htm)), and
+  Yaogan-29, likely their successor ([Gunter's](https://space.skyrocket.de/doc_sdat/yaogan-29.htm));
+  and the optical reconnaissance satellites Yaogan-4, 7 and 24
+  ([Gunter's](https://space.skyrocket.de/doc_sdat/yaogan-2.htm)), 21
+  ([Gunter's](https://space.skyrocket.de/doc_sdat/yaogan-5.htm)), 22 and 27
+  ([Gunter's](https://space.skyrocket.de/doc_sdat/yaogan-8.htm)), 26
+  ([Gunter's](https://space.skyrocket.de/doc_sdat/yaogan-26.htm)) and 28
+  ([Gunter's](https://space.skyrocket.de/doc_sdat/yaogan-14.htm)).
 
 `tests/sensors.test.ts`:
 
@@ -1597,6 +1687,16 @@ see it.
   OLCI's 68.5° field turned 12.6° from the Sun gives 1 274 km for its published 1 270 km, reaching
   947 km to one side and 327 km to the other. The 2 % was set after Sentinel-2's figure had been
   worked out while the table was built.
+  The fixed cameras added on 2026-09-28 whose source gives the field of view, the altitude and
+  the swath together were held to the same 2 %, fixed before any of them was worked out:
+  Oceansat-2's OCM-2 (±43° at ~720 km, eoPortal) gives 1 419.4 km for 1 420 and GOSAT's TANSO-CAI
+  (72° at 666 km, eoPortal's GOSAT-2 article) 997.1 km for 1 002, both inside; HY-1B's CZI (36° at
+  798 km) gives 522.2 km for 500 (+4.4 %) and Deimos-1's SLIM6 (52° at ~661 km) 653.2 km for
+  ~620 (+5.4 %), both outside. That is a finding: those published figures do not agree with each
+  other on a sphere, and the test records it (the bounds that do so were set after the run). The
+  table keeps the published swaths, the operator's 600 km for Deimos-1. HJ-1's WVC (its "aspect
+  angle" not called a field of view) and TechSat-1B's ERIP (no field of view published) were not
+  held to it.
 - **The side and incidence of each overflight**: for the near-polar imagers over Bangkok the side
   the place is on agrees with its longitude against the point below the satellite and the heading
   (every pass more than 100 km off the track), and the incidence agrees with the off-nadir angle by
