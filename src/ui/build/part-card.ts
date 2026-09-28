@@ -14,10 +14,20 @@
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import type { PropellantFamily } from '../../physics/rigid/vehicle-data';
+import type { EngineMassBasis } from '../../data/parts';
 import { linkText, type BodyCard, type EngineCard, type PartCard, type Sources } from '../../design/part-card';
 import { stageName } from '../names';
 import { el, num } from '../orbit/dom';
 import { mass } from './figures';
+
+/** How far an engine's mass can be trusted (src/data/parts.ts, EngineMassBasis). */
+const MASS_BASIS_KEY: Record<EngineMassBasis, string> = {
+  published: 'build.card.massBasis.published',
+  secondary: 'build.card.massBasis.secondary',
+  wikipediaOnly: 'build.card.massBasis.wikipediaOnly',
+  inferred: 'build.card.massBasis.inferred',
+  unpublished: 'build.card.massBasis.inferred',
+};
 
 const FAMILY_KEY: Record<PropellantFamily, string> = {
   kerolox: 'build.family.kerolox',
@@ -79,8 +89,9 @@ function engineSection(e: EngineCard): HTMLElement {
     [t('build.card.ispVac'), isp(e.ispVac)],
     e.minThrottle !== null ? [t('build.card.throttle'), `${num(e.minThrottle * 100)} %`] : null,
     e.family ? [t('build.card.family'), t(FAMILY_KEY[e.family])] : null,
-    e.dryMass !== null ? [t('build.card.engineMass'), mass(e.dryMass)] : null,
+    e.dryMass !== null ? [t(e.solid ? 'build.card.motorMass' : 'build.card.engineMass'), mass(e.dryMass)] : null,
   ]));
+  if (e.massBasis) box.append(note(t(e.massLowConfidence && e.massBasis === 'published' ? 'build.card.massBasis.lowConfidence' : MASS_BASIS_KEY[e.massBasis])));
   if (e.vacuumOnly) box.append(note(t('build.card.vacuumOnly')));
   if (e.solid && e.peakFactor !== null) box.append(note(t('build.card.solid', { f: num(e.peakFactor, 2) })));
   if (e.kind === 'lumped') box.append(note(t('build.card.lumped'), 'warn'));

@@ -14,9 +14,10 @@
  *   `peakFactor` times that. A lumped entry is not one real engine, so its
  *   count is not a count of engines. The card says which.
  *
- * An engine's published dry mass appears only when its catalogue part
- * carries one (a `dryMass` field; the base catalogue has none yet, so this
- * card shows none).
+ * An engine's own mass is the catalogue part's `mass` (src/data/parts.ts,
+ * `EngineMass`): shown with how far it can be trusted (published, secondary,
+ * encyclopedia only, inferred) and, for a solid motor, as the motor's inert
+ * mass. None is shown where no source publishes one.
  *
  * Sources are free text in the catalogue ("https://… (note); …"). They are
  * split into the links they cite and the references that are not links, and
@@ -26,7 +27,7 @@
  * DOM-free, SI (N, s, kg, m). tests/design-part-card.test.ts.
  */
 import type { EngineSpec, VehicleSpec } from '../types';
-import { UNCITED, type EngineKind, type EnginePart } from '../data/parts';
+import { UNCITED, type EngineKind, type EngineMassBasis, type EnginePart } from '../data/parts';
 import type { PropellantFamily } from '../physics/rigid/vehicle-data';
 import { interstageParts } from './interstages';
 import { vehicleParts } from './vehicle-parts';
@@ -59,8 +60,11 @@ export interface EngineCard {
   minThrottle: number | null;
   vacuumOnly: boolean;
   historical: boolean;
-  /** published dry mass of one engine, kg, when the catalogue part carries one */
+  /** the part's own mass per count unit, kg (for a solid, the motor's inert mass), when a source gives one */
   dryMass: number | null;
+  /** how far that mass can be trusted; `lowConfidence` makes a printed figure an estimate too */
+  massBasis: EngineMassBasis | null;
+  massLowConfidence: boolean;
   sources: Sources | null;
 }
 
@@ -131,9 +135,9 @@ export function linkText(url: string): string {
   try { return decodeURI(bare).replace(/_/g, ' '); } catch { return bare; }
 }
 
-/** The published dry mass of one engine, when the catalogue part carries it. */
+/** The engine part's own mass per count unit, when a source gives one. */
 export function engineDryMass(part: EnginePart | null): number | null {
-  const m = (part as { dryMass?: unknown } | null)?.dryMass;
+  const m = part?.mass?.kg;
   return typeof m === 'number' && Number.isFinite(m) && m > 0 ? m : null;
 }
 
@@ -155,6 +159,8 @@ function engineCard(e: EngineSpec, part: EnginePart | null): EngineCard {
     vacuumOnly,
     historical: !!part?.historical,
     dryMass: engineDryMass(part),
+    massBasis: engineDryMass(part) !== null ? part!.mass.basis : null,
+    massLowConfidence: !!part?.mass?.lowConfidence,
     sources: part ? sourceItems(part.source) : null,
   };
 }

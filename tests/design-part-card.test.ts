@@ -99,10 +99,22 @@ describe('the cards of the 21 vehicles', () => {
     expect(partCard(vehicleById('falcon9'), 'booster:0:0')).toBeNull();
   });
 
-  it('shows an engine\'s published dry mass only when its part carries one', () => {
-    // the base catalogue carries none
-    expect(VEHICLES.flatMap((v) => v.stages.map((_, i) => partCard(v, `stage:${i}`))).every((c) => c?.kind === 'stage' && c.engine.dryMass === null)).toBe(true);
-    expect(engineDryMass({ ...enginePart('rd107a'), dryMass: 1090 } as never)).toBe(1090);
-    expect(engineDryMass(enginePart('rd107a'))).toBeNull();
+  it('shows an engine\'s own mass from its catalogue part, with how far it can be trusted', () => {
+    // RD-107A: Energomash's 1 090 kg dry, published (src/data/parts.ts)
+    const soyuz = partCard(vehicleById('soyuz21a'), 'booster:0:0') ?? partCard(vehicleById('soyuz21a'), 'stage:0');
+    expect(engineDryMass(enginePart('rd107a'))).toBe(enginePart('rd107a').mass.kg);
+    expect(enginePart('rd107a').mass.kg).toBe(1090);
+    expect(soyuz).not.toBeNull();
+    // every card's mass is its part's, and a part with none shows none
+    for (const v of VEHICLES) {
+      for (let i = 0; i < v.stages.length; i++) {
+        const c = partCard(v, `stage:${i}`);
+        if (c?.kind !== 'stage' || !c.engine.partId) continue;
+        const kg = enginePart(c.engine.partId).mass.kg;
+        expect(c.engine.dryMass, `${v.id} stage ${i}`).toBe(kg && kg > 0 ? kg : null);
+        expect(c.engine.massBasis === null, `${v.id} stage ${i}`).toBe(c.engine.dryMass === null);
+      }
+    }
+    expect(engineDryMass({ ...enginePart('rd107a'), mass: { ...enginePart('rd107a').mass, kg: null } } as never)).toBeNull();
   });
 });
