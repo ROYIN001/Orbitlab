@@ -164,7 +164,8 @@
 .be-stage-in .be-wide { grid-column: 1 / -1; }
 .be-size-finding { padding: 8px 10px; border-left: 3px solid var(--warn); background: rgba(239, 164, 126, 0.06); color: #e7d2c6; border-radius: 0 8px 8px 0; }
 .be-size-table small.be-sub { display: block; font-weight: 400; color: var(--muted); }
-.be-size-table tbody th small.be-sub { white-space: normal; }
+/* a number keeps its unit on its line; a header or a note under a number may wrap, so a phone's column fits (Russian's are long) */
+.be-size-table thead th, .be-staging-table thead th, .be-staging-table tbody th, .be-size-table small, .be-staging-table small { white-space: normal; }
 .be-size-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .be-size-row { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
 /* build.css's .bs-draw fills a column (and loads after this file): held to a box of its own here */

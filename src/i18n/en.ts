@@ -1977,6 +1977,7 @@ export const en: Record<string, string> = {
   'build.eng.size.drawn': 'Drawn to scale',
   'build.eng.src.sized': '{name} (sized here)',
   'build.eng.size.twIn': 'T/W at ignition {tw}',
+  'build.eng.staging.nIn': 'mass ratio {n}',
   'build.watch.title': 'Real rockets, taken apart',
   'build.watch.lead': 'Pick a rocket and see it drawn to scale and taken apart: its stages along the axis, its strap-ons out to the sides, the two halves of its fairing. Tap any part to read its card from the parts catalogue.',
   'build.pick.prev': 'Previous rocket',

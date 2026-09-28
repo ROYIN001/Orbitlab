@@ -253,7 +253,8 @@ export class StagingPanel {
     const table = el('table', 'bs-table be-compare be-staging-table');
     table.append(el('caption', 'bs-sr', t('build.eng.staging.caption')));
     const head = el('tr');
-    for (const [k, cls] of [['build.fig.stage', ''], ['build.eng.staging.col.dv', 'num'], ['build.eng.staging.col.n', 'num'], ['build.eng.staging.col.mass', 'num'], ['build.eng.staging.col.prop', 'num be-diff']] as const) {
+    // a phone has room for three columns: there the mass ratio goes under the Δv and the propellant under the mass (engineer.css)
+    for (const [k, cls] of [['build.fig.stage', ''], ['build.eng.staging.col.dv', 'num'], ['build.eng.staging.col.n', 'num be-diff'], ['build.eng.staging.col.mass', 'num'], ['build.eng.staging.col.prop', 'num be-diff']] as const) {
       const th = el('th', cls || undefined, t(k));
       th.scope = 'col';
       head.append(th);
@@ -266,9 +267,10 @@ export class StagingPanel {
       const th = el('th', undefined, t('build.label.stage', { n: i + 1 }));
       th.scope = 'row';
       const m = el('td', 'num', mass(o.stageMass[i]));
-      // a phone has no room for the fifth column: the propellant goes under the stage's mass (engineer.css)
       m.append(el('small', 'be-diff-in', t('build.eng.staging.propIn', { m: mass(o.propellantMass[i]) })));
-      tr.append(th, el('td', 'num', ms(dv)), el('td', 'num', num(o.massRatio[i], 2)), m, el('td', 'num be-diff', mass(o.propellantMass[i])));
+      const d = el('td', 'num', ms(dv));
+      d.append(el('small', 'be-diff-in', t('build.eng.staging.nIn', { n: num(o.massRatio[i], 2) })));
+      tr.append(th, d, el('td', 'num be-diff', num(o.massRatio[i], 2)), m, el('td', 'num be-diff', mass(o.propellantMass[i])));
       tbody.append(tr);
     });
     table.append(thead, tbody);
