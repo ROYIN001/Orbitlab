@@ -192,7 +192,12 @@ const structural = (dry: number, prop: number): { structuralRatio: number; prope
  *   same). Where a vehicle has shed it earlier the figure is slightly low,
  *   never high, so it cannot promise thrust a stage does not have. This is also
  *   the mass `VehicleModel.nextStageAccel` divides by from the pad. From the
- *   third stage on the fairing is gone, as it is in the Δv walk.
+ *   third stage on the fairing is gone, as it is in the Δv walk; that is not
+ *   the conservative side, so a vehicle that still carries its fairing when
+ *   its third stage lights reads high there by the fairing's share of the
+ *   ignition mass.
+ * - The second stage's `ignitionMass` therefore differs from its Δv phase's
+ *   `m0` by the fairing mass: the walk has already dropped it.
  */
 export function vehicleFigures(spec: VehicleSpec, payloadKg: number): VehicleFigures {
   const vm = new VehicleModel(spec, payloadKg);

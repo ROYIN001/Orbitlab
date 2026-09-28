@@ -21,6 +21,7 @@
 import { describe, expect, it } from 'vitest';
 import panelSource from '../src/ui/panel.ts?raw';
 import { VEHICLES } from '../src/data/vehicles';
+import { SATELLITES } from '../src/data/satellites';
 import { G0 } from '../src/physics/constants';
 import { VehicleModel, idealDeltaV, liftoffMass, liftoffThrust, solidProfile } from '../src/physics/vehicle';
 import { phaseBudgets, stageBudgets, totalDv, vehicleFigures } from '../src/design/budget';
@@ -68,12 +69,34 @@ describe('the phase walk against the model (D02–D05 budget core)', () => {
         upper.separateStage(upper.stages[0], 150);
         states.push(['first stage gone', upper]);
       }
+      // Paths the pad does not take: fewer engines (the walk's flow, and its
+      // 1e-9 kg/s floor when none is left), the fairing already gone, and a
+      // spacecraft stage on top, which the walk leaves out.
+      const oneOut = new VehicleModel(v, PAYLOAD(v));
+      const n0 = v.stages[0].engine.count;
+      oneOut.stages[0].engineFraction = n0 > 1 ? (n0 - 1) / n0 : 0.5;
+      states.push(['an engine out', oneOut]);
+      const allOut = new VehicleModel(v, PAYLOAD(v));
+      allOut.stages[0].engineFraction = 0;
+      states.push(['every first-stage engine out', allOut]);
+      const bare = new VehicleModel(v, PAYLOAD(v));
+      bare.jettisonFairing();
+      states.push(['fairing gone on the first stage', bare]);
+      states.push(['spacecraft stage on top', new VehicleModel(v, PAYLOAD(v), false, SATELLITES.find((s) => s.propulsion)!)]);
       for (const [what, vm] of states) {
         const walk = vm.deltaVRemaining();
         const sum = totalDv(phaseBudgets(vm));
         expect(rel(sum, walk), `${v.id}, ${what}`).toBeLessThan(1e-9);
         expect(sum, `${v.id}, ${what}`).toBe(walk);
       }
+      // With no engine running, what the first stage still holds cannot be
+      // burned: its core (or serial) phase has no finite burn time.
+      const dead = phaseBudgets(allOut).find((p) => p.stageIndex === 0 && p.phase !== 'parallel')!;
+      if (dead.m0 > dead.mf) expect(dead.burnTime, v.id).toBe(Infinity);
+      // The spacecraft's own propulsion is not the launcher's budget.
+      const withCraft = new VehicleModel(v, PAYLOAD(v), false, SATELLITES.find((s) => s.propulsion)!);
+      expect(withCraft.hasSpacecraftStage, v.id).toBe(true);
+      expect(phaseBudgets(withCraft).every((p) => p.stageIndex < v.stages.length), v.id).toBe(true);
     }
   });
 
