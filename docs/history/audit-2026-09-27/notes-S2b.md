@@ -53,7 +53,7 @@ key ใหม่ครบ en/ru/th: `result.*` (from, runningFrom, stale, staleD
 ## การทดสอบ
 
 - `tests/result-slot.test.ts` (ใหม่, 17 กรณี): stale หลังเปลี่ยนอินพุต, สำเนา frozen, ผล generation เก่าถูกทิ้ง, stop/fail/clear, describe, `positiveNumber`, `Latest`; ระดับ model ของ `RealSky` ด้วย provider ปลอมที่ resolve ตามสั่ง: Online ค้าง → Offline → สถานะสุดท้ายเป็น Offline แม้ Online ตอบ/ล้มทีหลัง; overflights stale เมื่อเปลี่ยนเมือง/มุมเงย/ช่วงเวลา/ชุดข้อมูล; re-entry เปลี่ยนมวลระหว่างรอ space weather → ผลใช้ 1 000 kg, stale, `changed = ['mass']`, เก็บ fallback ของ space weather; run ที่สองชนะ run แรก; lifetime stale ทุกอินพุตและ describe ครบ
-- `npm run typecheck` ผ่าน; `npm test` ทั้งชุด: ดูผลท้ายไฟล์นี้
+- `npm run typecheck` ผ่าน (ตรวจทั้ง 4 commit แยกกัน); `npm test` ทั้งชุดบน HEAD: **129 files, 1 687 tests ผ่าน** (1 151 s; เดิม 1 670 + ใหม่ 17)
 - ไม่ได้แตะ physics/flight ใด ๆ เที่ยวบิน built-in จึงไม่เปลี่ยน
 - tests/overflights, reentry, passes ไม่ต้องเพิ่มกรณี (ตรรกะของมันไม่เปลี่ยน)
 
