@@ -202,6 +202,8 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 }
 /* audit 2026-09-27 A8: a section that works says so in the accent, not the warning colour */
 .section-badge.ready { border-color: var(--accent-line); color: var(--accent); }
+/* A1: the user's last mission, under the play button */
+.home-resume-box { max-width: 420px; margin-top: 14px; }
 .mode-card {
   display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 8px; align-items: baseline; text-align: left;
   padding: 9px 10px; border-radius: 10px;

@@ -1,8 +1,8 @@
 /**
- * The landing page: one button that plays a launch, and the three parts of
- * the program (roadmap S01) — Launch and Orbit, each with its three ways
- * in, and Build, which says plainly that it is being built (audit
- * 2026-09-27 A8: Orbit works, and says so).
+ * The landing page: one button that plays a launch, the user's last mission
+ * to go back to, and the three parts of the program (roadmap S01) — Launch
+ * and Orbit, each with its three ways in, and Build, which says plainly that
+ * it is being built (audit 2026-09-27 A8: Orbit works, and says so).
  *
  * It is drawn over the live scene — the featured vehicle standing on its pad
  * behind the text — so the first thing a visitor sees is the thing they are
@@ -10,14 +10,20 @@
  * pressing play.
  */
 import { t } from '../i18n';
+import { VEHICLES } from '../data/vehicles';
 import { route, type AppLevel, type AppRoute } from './app-mode';
 import { FEATURED_WATCH_MISSION, watchMissionById } from './watch-missions';
+import type { MissionSummary } from './workspace-mission';
 
 export interface HomeHost {
   /** play the featured launch in the viewer */
   watchFeatured(): void;
   /** open a section at a level */
   go(route: AppRoute): void;
+  /** A1: the mission the workspace last held, as the page stored it, or null */
+  lastMission(): MissionSummary | null;
+  /** A1: open the launch workspace, at the level last used, on that mission */
+  continueMission(): void;
 }
 
 interface LevelEntry { level: AppLevel; icon: string; title: string; text: string }
@@ -36,6 +42,11 @@ export class HomeScreen {
   }
 
   applyLanguage(): void {
+    this.render();
+  }
+
+  /** The page is being shown: the last mission may have changed since it was drawn. */
+  refresh(): void {
     this.render();
   }
 
@@ -59,6 +70,8 @@ export class HomeScreen {
     play.append(glyph, label);
     play.addEventListener('click', () => this.host.watchFeatured());
     inner.append(play);
+    const resume = this.resumeCard();
+    if (resume) inner.append(resume);
 
     const sections = el('div', 'home-sections');
     sections.setAttribute('role', 'list');
@@ -93,6 +106,29 @@ export class HomeScreen {
       list.append(button);
     }
     return list;
+  }
+
+  /**
+   * A1: the mission the workspace last held, to go back to — the page opens
+   * on the featured launch, and the user's own is one press away.
+   */
+  private resumeCard(): HTMLElement | null {
+    const last = this.host.lastMission();
+    if (!last) return null;
+    const vehicle = last.vehicleName ?? VEHICLES.find((v) => v.id === last.vehicleId)?.name ?? last.vehicleId;
+    const km = (v: number) => Math.round(v).toLocaleString();
+    const button = el('button', 'mode-card home-resume');
+    button.type = 'button';
+    button.dataset.homeFocus = 'resume';
+    const icon = el('span', 'mode-card-icon', '↻');
+    icon.setAttribute('aria-hidden', 'true');
+    button.append(icon, el('strong', undefined, t('home.resume.title')), el('span', 'mode-card-text', t('home.resume.text', {
+      vehicle, payload: Math.round(last.payloadKg).toLocaleString(), pe: km(last.perigeeKm), ap: km(last.apogeeKm),
+    })));
+    button.addEventListener('click', () => this.host.continueMission());
+    const box = el('div', 'home-modes home-resume-box');
+    box.append(button);
+    return box;
   }
 
   /** The launch simulator, which works today: its three levels, each a way in. */

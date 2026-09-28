@@ -43,7 +43,8 @@ import {
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
 } from './ui/app-mode';
 import { SectionScreen } from './ui/section-screen';
-import { WorkspaceMission, startupMission } from './ui/workspace-mission';
+import { WorkspaceMission, missionSummary, startupMission } from './ui/workspace-mission';
+import { loadExperience } from './ui/experience';
 import { OrbitPlayground } from './ui/orbit/playground';
 import { DataDialog } from './ui/data-dialog';
 import { applyWebFonts } from './ui/web-fonts';
@@ -440,6 +441,8 @@ class App {
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
       watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
       go: (r) => this.go(r),
+      lastMission: () => missionSummary(loadStoredMission()),
+      continueMission: () => this.continueMission(),
     });
     this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
     this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
@@ -621,6 +624,7 @@ class App {
     if (mode !== 'explore') this.debrief.close();
     if (mode !== 'engineer') this.monteCarlo.close(); // G05: a running set flies on
     document.getElementById('home-screen')!.hidden = next.section !== null;
+    if (next.section === null && previous !== 'home') this.home.refresh(); // A1: the "continue" card
     document.getElementById('watch-ui')!.hidden = mode !== 'watch';
     // The two faces fly different camera programmes; re-apply at once.
     this.lastPhase = null;
@@ -870,6 +874,20 @@ class App {
     this.workspace.adopt();
     const parsed = this.panel.share.apply(stored, 'stored');
     if (!parsed.usable) this.preview(this.panel.getConfig());
+  }
+
+  /**
+   * A1: Home's "continue" card — the launch workspace, at the level last
+   * used, on the stored mission. What the panel already holds as the user's
+   * is that mission (every preview stores it), and a flight of it carries on.
+   */
+  private continueMission(): void {
+    const stored = loadStoredMission();
+    if (stored && this.workspace.origin !== 'workspace') {
+      this.goLive(); this.playing = false;
+      this.applyStoredMission(stored);
+    }
+    this.go(route('launch', loadExperience() === 'advanced' ? 'engineer' : 'explore'));
   }
 
   /**

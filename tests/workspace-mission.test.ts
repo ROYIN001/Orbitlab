@@ -7,11 +7,12 @@
 import { describe, expect, it } from 'vitest';
 import { loadStoredMission, missionDocument, parseMissionDocument, saveStoredMission, type MissionState } from '../src/config/mission-file';
 import { orbitById } from '../src/data/orbits';
+import { vehicleById } from '../src/data/vehicles';
 import { DEFAULT_FAILURE } from '../src/physics/defaults';
 import { defaultDynamics } from '../src/physics/rigid/config';
 import { quickstartMission } from '../src/ui/quickstart';
 import { FEATURED_WATCH_MISSION, watchMissionSettings, type WatchMissionId } from '../src/ui/watch-missions';
-import { WorkspaceMission, startupMission } from '../src/ui/workspace-mission';
+import { WorkspaceMission, missionSummary, startupMission } from '../src/ui/workspace-mission';
 
 const FROM = new Date('2026-09-25T06:00:00Z');
 type Mode = 'home' | 'watch' | 'explore' | 'engineer' | 'orbit' | 'build';
@@ -236,5 +237,24 @@ describe('journeys (A1)', () => {
     expect(storage.map.size).toBe(0);
     page.edit((m) => Object.assign(m, quickstartMission('leo', FROM), { dynamics: defaultDynamics('falcon9') }));
     expect(page.stored()?.vehicleId).toBe('falcon9');
+  });
+});
+
+describe('the "continue" card\'s summary (A1)', () => {
+  it('reads the vehicle, the payload and the orbit off a stored document', () => {
+    const storage = withUsersMission();
+    expect(missionSummary(loadStoredMission(storage))).toEqual({
+      vehicleId: 'falcon9', vehicleName: null, payloadKg: 1000,
+      perigeeKm: orbitById('leo').perigee / 1000, apogeeKm: orbitById('leo').apogee / 1000,
+    });
+  });
+
+  it('names a custom vehicle by its own name, and reads nothing out of what is not a mission', () => {
+    const spec = { ...structuredClone(vehicleById('falcon9')), id: 'mine', name: 'My Falcon' };
+    const doc = missionDocument({ ...usersMission(), vehicleId: 'mine', vehicleSpec: spec });
+    expect(missionSummary(JSON.parse(JSON.stringify(doc)))?.vehicleName).toBe('My Falcon');
+    expect(missionSummary(null)).toBeNull();
+    expect(missionSummary({ format: 'something else', mission: {} })).toBeNull();
+    expect(missionSummary({ ...doc, mission: { ...doc.mission, payloadMass: 'heavy' } })).toBeNull();
   });
 });

@@ -24,8 +24,10 @@
  *   is not flying and has not been changed brings the stored mission back
  *   (`WorkspaceMission.entering`). One that is flying — the launch the user
  *   was watching, carried into the workspace with every instrument on it — is
- *   kept, and the stored mission waits, unchanged, for the next reload.
+ *   kept, and the stored mission waits, unchanged, for the next reload or for
+ *   Home's "continue" card.
  */
+import { MISSION_FORMAT } from '../config/mission-file';
 
 /** Who the mission in the setup panel belongs to. */
 export type MissionOrigin =
@@ -101,4 +103,31 @@ export class WorkspaceMission {
     if (this.settle(o.doc)) return false;
     return o.stored && !o.underway;
   }
+}
+
+/** A stored mission in a line: the vehicle, the payload and the orbit asked for. */
+export interface MissionSummary {
+  vehicleId: string;
+  /** the custom vehicle's name (S02); a catalogue vehicle is named by its id */
+  vehicleName: string | null;
+  payloadKg: number;
+  perigeeKm: number;
+  apogeeKm: number;
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
+const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+/**
+ * The summary Home's "continue" card shows, read straight off a stored
+ * document; null when it does not look like a mission (it is fully checked,
+ * with `parseMissionDocument`, when it is loaded).
+ */
+export function missionSummary(raw: unknown): MissionSummary | null {
+  if (!isRecord(raw) || raw.format !== MISSION_FORMAT || !isRecord(raw.mission)) return null;
+  const m = raw.mission;
+  if (typeof m.vehicleId !== 'string' || !finite(m.payloadMass) || !isRecord(m.orbit)) return null;
+  if (!finite(m.orbit.perigee) || !finite(m.orbit.apogee)) return null;
+  const spec = isRecord(m.vehicleSpec) && typeof m.vehicleSpec.name === 'string' ? m.vehicleSpec.name : null;
+  return { vehicleId: m.vehicleId, vehicleName: spec, payloadKg: m.payloadMass, perigeeKm: m.orbit.perigee / 1000, apogeeKm: m.orbit.apogee / 1000 };
 }

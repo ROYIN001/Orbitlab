@@ -1501,6 +1501,8 @@ export const en: Record<string, string> = {
   'home.orbit.exploreText': 'Put a satellite in any orbit and change it with a burn, or follow the real satellites overhead right now.',
   'home.orbit.engineer': 'Plan manoeuvres',
   'home.orbit.engineerText': 'Transfers with a propellant budget, launch-window (porkchop) plots, rendezvous and orbital lifetime.',
+  'home.resume.title': 'Continue your last mission',
+  'home.resume.text': '{vehicle} · {payload} kg · target orbit {pe} × {ap} km',
   'plan.orbit.title': 'Orbits: how they work and what they are for',
   'plan.orbit.lead': 'This part of Orbitlab is being built. Nothing on this page works yet: it is the plan, in the order it will be built, and every model in it will be checked against published data before it is switched on.',
   'plan.build.title': 'Build your own rocket and satellite',
