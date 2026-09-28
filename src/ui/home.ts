@@ -9,7 +9,7 @@
  * about to watch, not a form. Nothing here needs to be understood before
  * pressing play.
  */
-import { t } from '../i18n';
+import { getLang, t } from '../i18n';
 import { VEHICLES } from '../data/vehicles';
 import { route, type AppLevel, type AppRoute } from './app-mode';
 import { FEATURED_WATCH_MISSION, watchMissionById } from './watch-missions';
@@ -116,14 +116,14 @@ export class HomeScreen {
     const last = this.host.lastMission();
     if (!last) return null;
     const vehicle = last.vehicleName ?? VEHICLES.find((v) => v.id === last.vehicleId)?.name ?? last.vehicleId;
-    const km = (v: number) => Math.round(v).toLocaleString();
+    const whole = (v: number) => Math.round(v).toLocaleString(getLang());
     const button = el('button', 'mode-card home-resume');
     button.type = 'button';
     button.dataset.homeFocus = 'resume';
     const icon = el('span', 'mode-card-icon', '↻');
     icon.setAttribute('aria-hidden', 'true');
     button.append(icon, el('strong', undefined, t('home.resume.title')), el('span', 'mode-card-text', t('home.resume.text', {
-      vehicle, payload: Math.round(last.payloadKg).toLocaleString(), pe: km(last.perigeeKm), ap: km(last.apogeeKm),
+      vehicle, payload: whole(last.payloadKg), pe: whole(last.perigeeKm), ap: whole(last.apogeeKm),
     })));
     button.addEventListener('click', () => this.host.continueMission());
     const box = el('div', 'home-modes home-resume-box');
