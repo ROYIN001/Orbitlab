@@ -1836,7 +1836,7 @@ export const en: Record<string, string> = {
   'build.eng.review.plan.burnShort': 'The burns after the ascent need {dv} more than what is left of the stack can give them.',
   'build.eng.review.probe.notFlown': 'Not flown: the published payload rating covers this mission with margin, so the Launch section would not fly a test flight either.',
   'build.eng.review.probe.failed': 'The test flight could not be flown, so this review cannot say whether the rocket reaches orbit.',
-  'build.eng.review.probe.orbit': 'The test flight (point mass, calm air) reached orbit {t} s after liftoff, when its perigee first rose above {floor}; its orbit was then {pe} by {ap}. The test stops there: the burns on to the target orbit are left to the flight itself.',
+  'build.eng.review.probe.orbit': 'The test flight (point mass, calm air) reached orbit {t} s after liftoff, with its perigee above {floor}: {pe} by {ap} at that moment. The test stops there; the burns on to the target orbit are left to the flight itself.',
   'build.eng.review.probe.horizon': 'The test flight (point mass, calm air) flew to the test\'s limit, {t} s after liftoff, without the rocket being lost, which the Launch section counts as reaching orbit; but by then its perigee had not risen above {floor} (the highest was {pe}).',
   'build.eng.review.probe.horizonNever': 'The test flight (point mass, calm air) flew to the test\'s limit, {t} s after liftoff, without the rocket being lost, which the Launch section counts as reaching orbit; but by then it had not yet finished climbing into an orbit.',
   'build.eng.review.probe.noOrbit': 'The test flight (point mass, calm air) did not reach orbit: {end}. The best perigee it held was {pe}.',

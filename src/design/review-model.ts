@@ -30,9 +30,9 @@
  * are never worse than `warn`: what they describe fails the mission through
  * the verdict, which is where the review's `fail` for it is — one reason, not
  * two. The probe's row is the review's own: `fail` when the flight did not
- * reach orbit. When it did, the orbit said is the one at the moment its
- * perigee first cleared `ORBIT_INSERTION_FLOOR`, where the probe stops — not
- * the target orbit, which the flight goes on to. A flight the probe calls
+ * reach orbit. When it did, the orbit said is the one at the first moment
+ * after the climb that its perigee was above `ORBIT_INSERTION_FLOOR`, where
+ * the probe stops — not the target orbit, which the flight goes on to. A flight the probe calls
  * "reaches orbit" because it was still flying, never lost, at its horizon
  * without ever clearing the floor (`tInsertion` −1) is said as exactly that,
  * as a note: the verdict counts it as orbit, the test saw no orbit above the
@@ -257,7 +257,7 @@ export function checklist(spec: VehicleSpec, r: Readiness): ChecklistSection[] {
       const floor = { value: ORBIT_INSERTION_FLOOR, unit: 'km' as const };
       const pe = probe.params.bestPerigee;
       if (probe.params.tInsertion >= 0) {
-        // the orbit at the moment its perigee first cleared the floor, where the probe stops: not the target orbit
+        // the orbit at the first moment after the climb with its perigee above the floor, where the probe stops: not the target orbit
         sections.probe = [say('build.eng.review.probe.orbit', 'ok', {
           t: { value: probe.params.tInsertion, unit: 'count' }, floor,
           pe: { value: pe, unit: 'km' }, ap: { value: probe.params.apoapsis, unit: 'km' },
