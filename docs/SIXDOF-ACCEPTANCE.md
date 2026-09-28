@@ -586,3 +586,11 @@ ran for 63 minutes with **106 of 106 finished cases passed**, when its three wor
 mistake — taken for orphans of a probe run — while they ran wind.test.ts,
 electron-longmarch5-vegac-falcon9.test.ts and dedicated.test.ts (SIGTERM; 55 cases not run). No
 case failed. The run on part 6c's commit, which carries part 6b, stands for both.
+
+**The rigid fleet with C01 parts 6b and 6c.** `npm run test:sixdof-fleet` at commit f9e0aec: the Moon and
+the Sun in the model (their tables, the Moon's axes), the translunar injection aimed at the flown conic
+(`TliGuidance`), the ascent into a fixed plane (`VehicleSpec.targetPlane`, only the Saturn V) at a set
+flight azimuth (`OrbitSpec.flightAzimuth`, only a mission that names one), the mixture shift's thrust and
+the SPS burns — all flown only by a mission with an injection, which the fleet's are not, so every case
+flies as before: **161 of 161 passed** in 1 h 46 min on four cores, alongside low-priority (niced)
+probe runs of the Apollo flight and, for its last 20 minutes, five test files on two workers.

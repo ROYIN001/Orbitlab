@@ -747,6 +747,8 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     // the escape's flags and parachutes step, its motors blend
     ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
     ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
+    // C01: Columbia beside Eagle, on its own arc
+    ...(a.apollo?.csm && b.apollo?.csm ? { apollo: { ...a.apollo, csm: hermite(a.apollo.csm.r, a.apollo.csm.v, b.apollo.csm.r, b.apollo.csm.v, u, span) } } : {}),
     rigid,
     // E02: the left frame's step, copied like everything else handed out.
     ...(a.eom ? { eom: cloneEom(a.eom) } : {}),

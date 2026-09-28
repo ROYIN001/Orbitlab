@@ -281,6 +281,16 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       // on to the Moon: the evasive burn, MCC-2 (the only correction flown: the model's first), the sphere of
       // influence (Orloff; Mission Report Tables 7-III and 3-I; the Public Affairs commentary)
       { key: 'evt.evasive', t: 16801.72 }, { key: 'evt.mcc', t: 96298.64 }, { key: 'evt.lunarSoi', t: 221995 },
+      // into lunar orbit: LOI-1's ignition and cut-off, LOI-2's (Orloff)
+      { key: 'evt.loi', t: 272990.37 }, { key: 'evt.lunarOrbit', t: 273347.90 },
+      { key: 'evt.circularize', t: 288696.75 }, { key: 'evt.lunarOrbit', n: 2, t: 288713.63 },
+      // Eagle down to Tranquility Base: the undocking, Columbia's separation, DOI's ignition and cut-off, the
+      // powered descent, its throttle recovery and gates, the contact light and the engine off (Mission Report
+      // Tables 3-I, 5-I; Orloff)
+      { key: 'evt.undocking', t: 360720 }, { key: 'evt.separationBurn', t: 362392.9 },
+      { key: 'evt.doi', t: 365774 }, { key: 'evt.lunarOrbit', n: 3, t: 365804 },
+      { key: 'evt.pdi', t: 369185.01 }, { key: 'evt.throttleRecovery', t: 369571 }, { key: 'evt.highGate', t: 369692 },
+      { key: 'evt.lowGate', t: 369802 }, { key: 'evt.lunarLanding', t: 369939.9 }, { key: 'evt.lmEngineOff', t: 369941.4 },
     ], orbit: { perigee: 183.2, apogee: 186.0, inclination: 32.521 } },
     titleKey: 'watch.mission.apollo11', blurbKey: 'watch.mission.apollo11Blurb', payloadKey: 'watch.payload.apollo11' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a

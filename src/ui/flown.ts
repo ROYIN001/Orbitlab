@@ -13,7 +13,9 @@ import type { SimEvent } from '../physics/sim/types';
 export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.interstageSep' | 'evt.towerJettison' | 'evt.boosterSep' | 'evt.fairingSep' | 'evt.meco' | 'evt.stageCutoff' | 'evt.stageSep' | 'evt.seco'
   | 'evt.payloadSep' | 'evt.boosterLandedZone' | 'evt.boosterLandedShip' | 'evt.contact'
   | 'evt.ignition' | 'evt.tli' | 'evt.slaPanels' | 'evt.csmSeparation' | 'evt.csmDocked' | 'evt.lmExtraction'
-  | 'evt.evasive' | 'evt.mcc' | 'evt.lunarSoi';
+  | 'evt.evasive' | 'evt.mcc' | 'evt.lunarSoi' | 'evt.loi' | 'evt.lunarOrbit' | 'evt.circularize'
+  | 'evt.undocking' | 'evt.separationBurn' | 'evt.doi' | 'evt.pdi' | 'evt.throttleRecovery' | 'evt.highGate' | 'evt.lowGate'
+  | 'evt.lunarLanding' | 'evt.lmEngineOff';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -66,6 +68,18 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.evasive': 'tl.evt.evasive',
   'evt.mcc': 'tl.evt.mcc',
   'evt.lunarSoi': 'tl.evt.lunarSoi',
+  'evt.loi': 'tl.evt.loi',
+  'evt.lunarOrbit': 'tl.evt.lunarOrbit',
+  'evt.circularize': 'tl.evt.circularize',
+  'evt.undocking': 'tl.evt.undocking',
+  'evt.separationBurn': 'tl.evt.separationBurn',
+  'evt.doi': 'tl.evt.doi',
+  'evt.pdi': 'tl.evt.pdi',
+  'evt.throttleRecovery': 'tl.evt.throttleRecovery',
+  'evt.highGate': 'tl.evt.highGate',
+  'evt.lowGate': 'tl.evt.lowGate',
+  'evt.lunarLanding': 'tl.evt.lunarLanding',
+  'evt.lmEngineOff': 'tl.evt.lmEngineOff',
 };
 
 export interface FlownRow {

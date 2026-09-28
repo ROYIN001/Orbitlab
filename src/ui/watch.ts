@@ -289,13 +289,16 @@ export class WatchView {
     // above the ground, so the pad reads 0 rather than the site's elevation
     const subject = state.subject;
     const readout = frame ? watchReadout(frame) : null;
-    const alt = subject ? fmtAltitude(subject.altitude) : readout ? fmtAltitude(readout.altitude) : fmtAltitude(0);
+    // C01: at the Moon, the readouts are the Moon's — and its last kilometre in metres, as the call-outs gave it
+    const moon = !subject && !!readout?.moon;
+    const metres = moon && readout!.altitude < 1000;
+    const alt = subject ? fmtAltitude(subject.altitude) : metres ? num(Math.max(0, readout!.altitude))
+      : readout ? fmtAltitude(readout.altitude) : fmtAltitude(0);
     // a pad abort never lifts off, but its crew does (T-10-1)
     const moving = !!frame && (frame.liftoff || !!frame.abort);
     const speed = subject ? num(subject.speed * 3.6) : readout ? num(moving ? readout.speed * 3.6 : 0) : num(0);
-    // C01: at the Moon, the readouts are the Moon's
-    const moon = !subject && !!readout?.moon;
     if (moon !== this.readoutMoon) { this.readoutMoon = moon; this.applyStatLabels(); }
+    if (metres !== this.readoutMetres) { this.readoutMetres = metres; this.applyUnits(); }
     if (clock !== this.shown.clock) { this.clockValue.textContent = clock; this.shown.clock = clock; }
     if (alt !== this.shown.alt) { this.altValue.textContent = alt; this.shown.alt = alt; }
     if (speed !== this.shown.speed) { this.speedValue.textContent = speed; this.shown.speed = speed; }
@@ -334,7 +337,7 @@ export class WatchView {
     card.classList.toggle('failed', !success);
     const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
       : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle'
-      : ending === 'lunarArrival' ? 'watch.end.moonTitle' : 'watch.fail.title'));
+      : ending === 'lunarLanding' ? 'watch.end.landedTitle' : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
@@ -352,15 +355,14 @@ export class WatchView {
         port: t(`rv.port.${rv.port}`), time: fmtClock(since).replace(/^T\+/, ''), burns: num(rv.burns.length),
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
-    } else if (ending === 'lunarArrival') {
-      // C01: Apollo at the Moon, its lunar orbit insertion due
-      const ap = frame.apollo!;
-      card.append(el('p', undefined, t('watch.end.moonText', {
-        time: fmtClock(frame.t).replace(/^T\+/, ''),
-        alt: num(Math.round(ap.moon.alt / 1000)), speed: num(Math.round(ap.moon.speed * 3.6)),
-        dv: ap.mcc ? ap.mcc.dv.toFixed(1) : '—',
+    } else if (ending === 'lunarLanding') {
+      // C01: Eagle on the Moon
+      const l = frame.apollo!.landed!;
+      card.append(el('p', undefined, t('watch.end.landedText', {
+        time: fmtClock(l.t).replace(/^T\+/, ''), lat: l.lat.toFixed(3), lon: l.lon.toFixed(3),
+        miss: num(Math.round(l.miss)), mass: num(Math.round(frame.mass)),
       })));
-      card.append(el('p', 'watch-end-fact', t('watch.end.moonFact')));
+      card.append(el('p', 'watch-end-fact', t('watch.end.landedFact')));
     } else if (ending === 'splashdown') {
       // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
       const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');
@@ -435,6 +437,12 @@ export class WatchView {
   }
 
   private readoutMoon = false;
+  private readoutMetres = false;
+  private applyUnits(): void {
+    const units = [this.readoutMetres ? 'u.m' : 'u.km', 'watch.unit.kmh'];
+    this.unitLabels.forEach((node, i) => { node.textContent = ` ${t(units[i])}`; });
+  }
+
   private applyStatLabels(): void {
     const labels = this.readoutMoon ? ['watch.stat.time', 'watch.stat.moonAltitude', 'watch.stat.moonSpeed']
       : ['watch.stat.time', 'watch.stat.altitude', 'watch.stat.speed'];
@@ -443,8 +451,7 @@ export class WatchView {
 
   applyLanguage(): void {
     this.applyStatLabels();
-    const units = ['u.km', 'watch.unit.kmh'];
-    this.unitLabels.forEach((node, i) => { node.textContent = ` ${t(units[i])}`; });
+    this.applyUnits();
     this.speedGroup.setAttribute('aria-label', t('watch.speed'));
     for (const b of this.speedGroup.querySelectorAll<HTMLButtonElement>('.watch-speed')) {
       b.textContent = b.dataset.speed === 'auto' ? t('watch.speed.auto') : `${b.dataset.speed}×`;

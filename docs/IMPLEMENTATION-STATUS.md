@@ -138,7 +138,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 338 tests in 96 files, about 25 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1 340 tests in 96 files, about 17 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -180,7 +180,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
-| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a, 6b and 6c of 7 (below) |
+| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a–6d of 7 (below) |
 | U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | done | | |
 | E02 live equations panel | done | | |
@@ -205,7 +205,11 @@ the week, the Moon turned as the IAU turns it, their pull on the flight, the inj
 flown conic's perigee, the service engine's evasive burn and the midcourse correction worked out as
 the flight's was, to the lunar orbit insertion within 40 km and a metre per second of the flown
 approach, and the Moon drawn — done; (6d) lunar
-orbit and the landing; (6e) the LM's ascent and docking; (6f) home and splashdown; (6g) the viewer
+orbit and the landing — the Moon's degree-2 field, LOI-1 turned into the plane over the landing site
+and LOI-2 at the flown times, Eagle undocked and flown on its own beside Columbia, DOI to the targeted
+perilune, the powered descent through P63, P64 and P66 with the descent engine's fixed throttle and
+throttle recovery, to within a few metres of Tranquility Base and 10 kg of the flown landed mass, and
+the LM, the CSM and the ground at the site drawn — done; (6e) the LM's ascent and docking; (6f) home and splashdown; (6g) the viewer
 and the documents; (7) the fleet acceptance and the documents.
 
 Twenty further items are kept for later, once these are done.

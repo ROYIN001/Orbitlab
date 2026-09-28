@@ -833,10 +833,11 @@ export class RocketView {
       // origin; the stage it came off is drawn *below* the origin
       // (DebrisFrame.anchor), so the two abut at the separation plane and then
       // drift apart instead of occupying the same 15 m of space.
+      // (C01: Apollo's drawing first, which sets its height: the stack, or Eagle alone)
+      this.satellite.setApollo?.(frame.apollo, frame.t, true);
       satG.position.y = this.satellite.height / 2;
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
       this.satellite.setDeploy(p);
-      this.satellite.setApollo?.(frame.apollo, frame.t, true);
       satG.visible = true;
     } else {
       // a payload flown in the open stands on the stage; one in a fairing half a metre up inside it

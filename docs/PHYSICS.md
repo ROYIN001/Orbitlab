@@ -2679,7 +2679,7 @@ is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's S
 | Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
 | Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
 | Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
-| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection and the flight to the Moon, to the lunar orbit insertion (§13.9, §13.10) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
+| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection, the flight to the Moon, the lunar orbit and the landing at Tranquility Base (§13.9–§13.12) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
 | Mercury-Redstone 3 | 1961-05-05 14:34:13 | Mercury-Redstone, Cape LC-5 | 1,832.6 kg (Freedom 7 and its tower) | 187.5 km apogee, splashdown 487 km down range (§13.7) | NASA MR-3 postlaunch report; TM X-53107 |
 
 **13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
@@ -2889,7 +2889,7 @@ of the real splashdown.
 13:32:00 UTC, LC-39A, flight azimuth 72.058°. Sources: the Saturn V flight evaluation report for AS-506,
 MPR-SAT-FE-69-9 (FER), and NASA SP-4029 (*Saturn V Launch Vehicle Flight Evaluation* summary tables).
 The mission from the parking orbit on — the S-IVB's restart for the Moon, the spacecraft's own
-flight to the Moon — is §13.9 and §13.10; the lunar orbit, the landing and the way home follow.
+flight to the Moon — is §13.9 and §13.10, the lunar orbit §13.11 and the landing §13.12; the way home follows.
 
 | | Value | Source |
 |---|---|---|
@@ -3037,7 +3037,8 @@ Journal (AFJ).
 | The Moon and the Sun | geocentric states, ICRF, hourly from 1969-07-16 13:00 to 07-24 18:00 TDB; GM 4,902.800066 km³/s² | Horizons, DE441 |
 | TDB − UTC | 39.75 s: TT − TAI 32.184 s, TAI − UTC 7.56 s in July 1969 (4.2131700 s + 0.002592 s/day from MJD 39126) | USNO |
 | The Moon's orientation | pole and prime meridian with the 13 periodic terms (physical librations) | IAU/WGCCRE 2009 |
-| SPS | 91.19 kN (20,500 lbf), 314.2 s (Apollo 8's engine, measured; CSM-107's not published) | Press kit; Apollo 8 SPS supplement |
+| SPS | 94.18 kN, 315.1 s, 30.48 kg/s: the flight's own, from LOI-1 — 43,572.8 kg to 32,675.7 kg in 357.53 s for 2,917.5 ft/s (rated 20,500 lbf, 91.19 kN; the propellant utilisation valve, moved to "increase" 76 s into LOI-1, raised the thrust) | MR Table A-I, §8.8; ORL; press kit |
+| Masses at the burns | docked at the ejection 43,893.0 kg; MCC-2 ignition 43,734.6; LOI-1 ignition 43,572.8; LOI-2 ignition 32,667.7 | MR Table A-I |
 | Evasive burn | 4:40:01.72, 2.93 s, 19.7 ft/s (6.0 m/s), planned to lower the pericynthion to 167.7 n mi | ORL; MR §7.4.2, Table 7-III |
 | MCC-2 | 26:44:58.64, 3.13 s, 20.9 ft/s (6.37 m/s), aimed at a 60.0 n mi pericynthion and a node; gave 61.5 n mi, 0.17° N 173.57° E, 75:53:35, 8,334 ft/s | ORL; MR §7.4.3, Table 7-III |
 | Pericynthion predicted | after the injection 896.3 n mi, 75:05:21; after the separation 827.2 n mi, 75:07:47; after the evasive burn 180.8 n mi, 75:39:30 | MR Table 7-III |
@@ -3062,8 +3063,8 @@ as third bodies — each body's pull on the spacecraft less its pull on the Eart
 to the nearer body at the speed relative to it, between 1 s and 2 min (8 s in low Earth orbit, 12 s in a
 low lunar orbit, two minutes between); the closest approach to the Moon is found by the range rate
 turning from closing to opening and refined within its step by a golden-section search to a tenth of a
-second. The Moon is a point mass here: its own harmonics, which move a low lunar orbit's plane by a
-fraction of a degree a day, come with the lunar orbit.
+second. Within 100,000 km of the Moon its own degree-2 field is added (§13.11); farther out it is a
+point mass, the field's pull there under a millionth of the centre's.
 
 *The burns.* The service propulsion system burns along a fixed inertial direction until its Δv is in,
 the propellant it uses coming off the spacecraft's mass. The evasive burn has the flown Δv and time, in
@@ -3074,7 +3075,8 @@ is worked out at its flown time: the impulse that puts the pericynthion at 60.0 
 Newton's method on the three misses against the impulse's three components, the Jacobian by
 differences at 2 cm/s, each step capped at 20 m/s; then flown as a burn along it. Mission Control's
 sphere of influence (33,822 n mi above the Moon) is where `evt.lunarSoi` is; its time is interpolated
-between the steps either side. The flight ends this part at the lunar orbit insertion's flown ignition.
+between the steps either side. This part ends at the lunar orbit insertion's flown ignition; §13.11
+goes on from there.
 
 *The check on the chain.* The injection state Orloff gives, propagated with these forces from
 2:50:13.03, passes the Moon at 665.6 n mi at 75:15:30, 176.85° W, where the Mission Report predicted
@@ -3088,8 +3090,8 @@ Model − flight:
 | | Evasive: pericynthion after | MCC-2 Δv | Pericynthion after MCC-2 | SOI crossing | At the SOI (61:39:55) | At LOI-1 ignition |
 |---|---|---|---|---|---|---|
 | Flown | 180.8 n mi, 75:39:30 (167.7 planned) | 6.37 m/s | 61.5 n mi (60.0 aimed at), 75:53:35, 0.17° N 173.57° E, 2,540 m/s | 61:39:55 | 345,281 km up, 911.4 m/s; 62,638 km above the Moon, 1,149.7 m/s | 160.6 km, 2,514.6 m/s |
-| Point-mass | 167.3 n mi, 75:45:31 | 3.92 m/s | 59.8 n mi, 75:53:36, 0.17° N 173.51° E, 2,543.6 m/s | +34 s | 345,263 km, 911 m/s; 62,679 km, 1,150.6 m/s | 162.4 km, 2,515.1 m/s |
-| Six-DOF | 167.3 n mi, 75:45:46 | 3.82 m/s | 59.7 n mi, 75:53:36, 0.17° N 173.51° E, 2,543.8 m/s | +36 s | 345,262 km, 911 m/s; 62,681 km, 1,150.6 m/s | 162.4 km, 2,515.1 m/s |
+| Point-mass | 166.5 n mi, 75:45:33 | 3.89 m/s | 59.7 n mi, 75:53:37, 0.17° N 173.50° E, 2,544.0 m/s | +35 s | 345,262 km, 911 m/s; 62,680 km, 1,150.6 m/s | 162.4 km, 2,515.2 m/s |
+| Six-DOF | 167.0 n mi, 75:45:47 | 3.81 m/s | 60.0 n mi, 75:53:35, 0.17° N 173.51° E, 2,543.7 m/s | +35 s | 345,263 km, 911 m/s; 62,680 km, 1,150.6 m/s | 162.4 km, 2,515.3 m/s |
 
 The model's injection leaves its flight closer to its aim than the flown one was: its pericynthion
 after the separation is 710 and 725 n mi at 75:16 against the flown prediction's 827 n mi at 75:08,
@@ -3099,9 +3101,150 @@ of what separates them. From the correction on, the model's flight and the flown
 
 *Approximations.* The vent's thrust is read off the FER's plot, the valve's cycling at its mean, and
 the mass it takes spread in proportion to it; the lean mixture's operating point and the shift's time
-likewise. The SPS's specific impulse is Apollo 8's engine's. The evasive burn's direction and the
+likewise. The SPS flies LOI-1's average operating point at every burn, and between the burns the
+spacecraft is weighed as the Mission Report weighed it (the reaction control system's, the crew's and
+the venting's use not modelled). The evasive burn's direction and the
 MCC-2's aim in latitude stand in for the unpublished attitude and node. The Moon is drawn painted, not
-mapped: the principal maria at their centres and sizes, four rayed craters, a scatter of small ones.
+mapped: the principal maria at their centres and sizes, four rayed craters, a scatter of small ones —
+and drawn at the landing site's radius, 1,735.6 km, not the mean 1,737.4, so that Eagle stands on it
+(§13.12).
+
+**13.11 Apollo 11 into lunar orbit (part 6d).** src/physics/lunar/gravity.ts (the Moon's field),
+src/physics/lunar/cislunar.ts (`lunarOrbit`), the burns in src/physics/sim/apollo.ts. Sources: MR
+(§7.4.4, §7.7, Tables 7-V, 7-VIII, A-I), ORL, the Apollo 11 Flight Journal, and the GRAIL gravity field
+(Konopliv et al., *JGR Planets* 118, 2013; GL0660B).
+
+| | Value | Source |
+|---|---|---|
+| The Moon's field | J2 2.0330 × 10⁻⁴, C22 2.2382 × 10⁻⁵ (unnormalized), reference radius 1,738.0 km, in the Moon's body axes (§13.10), within 100,000 km of it | GRAIL GL0660B |
+| LOI-1 | 75:49:50.37, 357.53 s, 2,917.5 ft/s (889.3 m/s), cut-off 75:55:47.90, into 169.7 × 60.0 n mi (314.3 × 111.1 km) | ORL; MR Table 7-V |
+| LOI-2 | 80:11:36.75, 16.88 s, 158.8 ft/s (48.4 m/s), aimed at 65.7 × 53.7 n mi, reaching 65.7 × 53.8 (121.7 × 99.6 km; ORL 66.1 × 54.5) | MR §7.4.4; ORL |
+| Masses | 43,572.8 kg at LOI-1's ignition, 32,667.7 kg at LOI-2's, 32,162.4 kg after it | MR Table A-I |
+| The plane | aimed 0.37° south of the site's latitude, for the regression the mascons were predicted to give it (the Langley 13 × 13 field); on the landing revolution 0.078° (2.4 km) north of the site; inclination 1.25° | MR §7.7, Table 7-VIII; en.wikipedia |
+
+*The field.* A low lunar orbit feels the Moon's shape: the oblateness J2 and the ellipticity C22 (the
+long axis at the Earth) move its node and perilune by a fraction of a degree and a few kilometres a
+day. `moonDegree2` turns the spacecraft's position into the Moon's body axes, takes the gradient of the
+degree-2 potential there and turns the acceleration back; the point mass's own pull is `lunisolar`'s. The
+mascons and the higher degrees — what pulled the flown orbit about by kilometres a day (the "R2" model
+and the 13 × 13 field of MR §7.7) — are not here: the model's orbit keeps its shape where the flown one
+drifted, and the plane the flight had to bias the model does not.
+
+*LOI-1.* At its flown time, behind the Moon: the service engine against the velocity, pitched up by a
+fixed angle, until the energy about the Moon is the 169.7 × 60.0 n mi orbit's. A retrograde burn through
+the pericynthion leaves the perilune there; the pitch — found before the burn by a golden-section search
+on a prediction of it about the Moon alone — sets how far below the approach's pericynthion it ends. Out
+of the plane it steers into the plane through the Moon's centre, the burn's midpoint and the landing site
+where it will be at the landing's time: the distance and the speed across that plane brought to zero
+together by the cut-off, the time to go by the energy still to take off, the steering up to 37° out of
+the retrograde. The model's arrival does not come in that plane: its approach (MCC-2 aimed, as the flight
+was, at 0.17° N — §13.10) crosses the lunar equator at the pericynthion 5.75° inclined, and the plane over
+the site is 5.2° from it, which LOI-1 turns through in the burn for 12 m/s more than the flown 889.3.
+The flown state after the injection, propagated in the model, arrives the same way (5.2°), and the flown
+orbit, 1.25° to the equator, is the plane over the site — which the flight reached coplanar, or nearly:
+its LOI-1 took no more Δv than a coplanar burn. Where the model's arrival direction is out by these
+degrees is not found (the Moon's axes, its ephemeris and the injection all check to far better).
+
+*LOI-2.* Two revolutions later, at its flown time: velocity-to-be-gained steering onto the 65.7 × 53.7
+n mi orbit in the plane the stack is in, ended when the velocity still to gain is under a step's worth.
+
+Model − flight:
+
+| | LOI-1 cut-off | LOI-1 Δv | Orbit after LOI-1 | LOI-2 cut-off | LOI-2 Δv | Orbit after LOI-2 | Mass after | Inclination | Plane at the site, landing day |
+|---|---|---|---|---|---|---|---|---|---|
+| Flown | 75:55:47.90 | 889.3 m/s | 314.3 × 111.1 km | 80:11:53.63 | 48.4 m/s | 121.7 × 99.6 km | 32,162 kg | 1.25° | 2.4 km north |
+| Point-mass | +4.4 s | 901.6 m/s | 320.0 × 105.3 km | −2.1 s | 42.8 m/s | 121.8 × 99.5 km | 32,218 kg | 0.69° | 0.1 km |
+| Six-DOF | +4.3 s | 901.8 m/s | 319.6 × 105.7 km | −2.1 s | 42.8 m/s | 121.9 × 99.5 km | 32,218 kg | 0.69° | 0.1 km |
+
+The retrograde burn cannot put the perilune above the approach's pericynthion, and the model's approach
+is 1.5 km under the flown one (§13.10): the pitch that comes nearest leaves it 6 km under the flown
+60.0 n mi and the apolune 6 km over. LOI-2's smaller burn follows: the orbit it rounds off is already
+closer to the aim. Before the steering's time to go was taken by the energy, the steering saturated
+against the 5° turn and left the plane 35 km from the site — which the descent then flew across.
+
+*Approximations.* The field is degree 2; the mascons are left out, and with them the flight's bias of
+the plane and the drift of its orbit. The service engine flies LOI-1's average operating point for LOI-2
+too, and the masses at the ignitions are the Mission Report's. The attitude of LOI-1 is the model's (the
+flown one is not published): a fixed pitch and a steered yaw.
+
+**13.12 Apollo 11's landing (part 6d).** src/physics/sim/apollo-descent.ts (`PoweredDescent`), the LM's
+flight in src/physics/sim/apollo.ts (`stepLunarModule`), the numbers src/data/apollo11.ts; the LM, the
+CSM and the ground drawn by src/render/apollo.ts and src/render/moon.ts. Sources: MR (§5, §7.7, §9.8,
+Tables 3-I, 5-I, 7-II, A-I), ORL, the Apollo 11 press kit, AER-DPS (the descent engine) and the LM data
+book.
+
+| | Value | Source |
+|---|---|---|
+| Undocking | 100:12:00; the LM 15,278.6 kg, the CSM 16,817.7 kg | MR Tables 3-I, A-I |
+| CSM separation | 100:39:52.9, 2.7 ft/s radially down, 9.0 s, with the service module's thrusters | MR §7.4.5; press kit |
+| DOI | 101:36:14, 30.0 s, 15 s at 10 % throttle then 40 %, 76.4 ft/s (23.3 m/s); targeted to 60 × 8.2 n mi, the pericynthion 260 n mi up range of the site; reached 58.5 × 7.8 n mi; 15,272.3 kg at ignition | ORL; MR §5.1, §9.8.1, Table A-I |
+| Descent engine | 9,870 lbf at the fixed throttle position, throttleable 1,050–6,300 lbf, rated 10,500 lbf; 300.5 s | press kit; AER-DPS; LM data book |
+| PDI | 102:33:05.01 at the pericynthion, 1.02° N 39.39° E — 482.3 km round the Moon from where Eagle landed; 26 s at the minimum throttle; 15,150.7 kg | MR Tables 5-I, 7-II, A-I |
+| Throttle recovery | 102:39:31 (PDI + 386 s), when the thrust asked for fell under 57 % of the rating | MR §5.3 |
+| High gate | 102:41:32, P64, 7,129 ft (2,173 m), descending at 125 ft/s | MR Table 5-I |
+| Low gate | 102:43:22, P66 (manual attitude, the rate-of-descent mode) at about 400 ft | MR §5.3; ORL |
+| Contact light, engine off | 102:45:39.9, 102:45:41.4 | MR Table 3-I |
+| Tranquility Base | 0.67408° N 23.47297° E; 7,327.0 kg on the surface | MR §5.3, Table A-I |
+
+*The two spacecraft.* At the undocking Eagle becomes the tracked vehicle, weighed as the Mission Report
+weighed it; Columbia flies on beside it under the same forces, a state of its own propagated with each
+step, and at its flown time backs away with its separation push, radially down. What each did between —
+the LM's pirouette for Collins, the station-keeping — moves them metres and is drawn, not flown: Columbia
+at its own position, over Eagle's tunnel, backing off 25 m in two minutes.
+
+*DOI.* The descent engine against the velocity at the flown time, 15 s at 10 % and then 40 %, until the
+orbit's perilune is the 8.2 n mi it was targeted at (the flown Δv on the model's orbit, 9 km lower where
+DOI is burned than the mascons had left the flown one, took the perilune only to 18 km).
+
+*PDI.* The guidance computer lit the engine where its state vector put the LM (P63's ignition
+algorithm); the model lights it when the LM is as far round the Moon from the landing site as Eagle was,
+482.3 km — the flown pericynthion — and times the gates from its own ignition as long after it as the
+flown ones.
+
+*The guidance.* The braking and approach phases steer onto a target state at a target time with the
+energy-optimal law for a position and velocity at a time, a = 6 (r_T − r − v T)/T² − 2 (v_T − v)/T − g
+(its gains held as if eight seconds were left for the last eight); the targets are on the site's own
+axes: high gate 7,129 ft up and 7.9 km short of the site, at 145 m/s over the ground and 125 ft/s down;
+low gate 400 ft up and 400 m short, 12 m/s over the ground, 4 m/s down. The landing phase — P66, flown
+by Armstrong — keeps the law over the ground towards a hover 20 m over the site 20 s before the
+touchdown and comes down at the steady rate that reaches it then (never climbing): about 1 m/s, the
+"down 3½" of the call-outs; the last 20 m straight down at 1 m/s, the drift over the ground taken out.
+The throttle is set once each 2-s cycle: 26 s at the minimum, then the fixed position until the thrust
+asked for falls under 57 % of the rating — the throttle recovery — then what is asked for, in the
+throttle's range, and back at the fixed position whenever that is past the range's top (the engine is
+not run between 60 % and the fixed position). The LM's attitude is the thrust's direction. The probes
+under three footpads touch at 67 in (1.70 m): the contact light; the engine stops the flown 1.5 s later,
+and Eagle stands on the Moon, turning with it.
+
+Model − flight (times from the ignition):
+
+| | PDI | Throttle recovery | High gate | Low gate | Contact light | Engine off | From the site | On the surface |
+|---|---|---|---|---|---|---|---|---|
+| Flown | 102:33:05.01 | +386 s | +507 s, 2,173 m | +617 s, 122 m | +754.9 s | +756.4 s | — | 7,327 kg |
+| Point-mass | −45 s | +374 s | +507 s, 2,176 m | +617 s, 135 m | +756.4 s | +757.9 s | 3.0 m | 7,323 kg |
+| Six-DOF | −45 s | +368 s | +507 s, 2,180 m | +617 s, 135 m | +756.0 s | +757.5 s | 3.3 m | 7,328 kg |
+
+DOI in the model: 24.3 m/s into 99.5 × 14.9 km (six-DOF 24.2 m/s, 99.7 × 15.2), against the flown 23.3 m/s
+into 108.3 × 14.4 km. The LM reaches the ignition's point 45 s early: twelve revolutions of an orbit that
+kept its shape, where the flown one drifted, add up to it. Eagle's guidance began the descent with its
+position 20,000 ft down range in error, and brought it down that far past the planned point; Armstrong
+flew it 1,100 ft further on, over West crater's boulders (MR §5.3). The model aims at where it landed.
+
+*The drawing.* From the undocking the spacecraft on screen is Eagle alone, its legs out (their pads 4.5 m
+from its axis, 1.5 m under the descent stage; the probes under them until the landing), and Columbia a
+body of its own where its flight has it; the camera's up and ground are the Moon's. The Moon is drawn at
+the site's radius, 1,735.6 km, and round Tranquility Base two finer patches of ground, 100 km and 6 km
+across, carry craters to a few metres, lit from the low morning Sun, with West crater (180 m across, 400 m
+east of Eagle), the 33-m crater 50 m east and the doublet 10 m west where the Mission Report puts them
+(§11); Eagle's shadow falls on them from the last 200 m.
+
+*Approximations.* The gates' distances from the site and speeds over the ground, the hover's height and
+time, and the vertical law are the model's: the flown targets of P63 and P64 (position, velocity,
+acceleration and jerk at each gate) are not published here, nor are Armstrong's inputs, so the model's
+landing phase is a steady descent on the rate, not his flight across West crater. The throttle's cycle
+and its return to the fixed position are the model's reading of the guidance computer's logic. The legs,
+the probes and the ground are drawn to the press kit's sizes and photographs, the craters painted at
+their sizes and places, not mapped.
 
 ## Glossary (EN / RU / TH)
 

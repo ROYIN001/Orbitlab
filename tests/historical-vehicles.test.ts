@@ -12,9 +12,9 @@ import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
 import { DEG, G0, R_EARTH } from '../src/physics/constants';
 import { gmst, julianDate } from '../src/physics/orbital';
-import { add, cross, norm, scale, v3 } from '../src/physics/vec3';
+import { add, cross, dot, norm, normalize, scale, sub, v3 } from '../src/physics/vec3';
 import { moonState, R_MOON } from '../src/physics/lunar/ephemeris';
-import { eciToSelenographic } from '../src/physics/lunar/orientation';
+import { eciToSelenographic, selenographicToEci } from '../src/physics/lunar/orientation';
 import { coastToPerilune } from '../src/physics/lunar/cislunar';
 import { APOLLO11 } from '../src/data/apollo11';
 import { Simulation } from '../src/physics/simulation';
@@ -271,7 +271,7 @@ describe('Apollo 11 from its parking orbit to the Moon, point-mass', () => {
     expect(Math.abs(p.lon - want.lon)).toBeLessThan(1);
   });
 
-  it('crosses into the Moon\'s sphere of influence where Mission Control saw it, and reaches the Moon for the lunar orbit insertion', () => {
+  it('crosses into the Moon\'s sphere of influence where Mission Control saw it, and reaches the Moon as the flight did', () => {
     flyTo(221995);
     // the Public Affairs commentary at 61:39:55: 186,437 n mi above the Earth, 33,822 n mi above the Moon,
     // 2,990 ft/s from the Earth and 3,772 ft/s from the Moon
@@ -280,22 +280,85 @@ describe('Apollo 11 from its parking orbit to the Moon, point-mass', () => {
     const rel = moonRel();
     expect(Math.abs(rel.d - R_MOON - 33822 * 1852)).toBeLessThan(300e3);
     expect(Math.abs(rel.v - 3772 * 0.3048)).toBeLessThan(5);
-    flyTo(APOLLO11.loi1.t + 1);
+    flyTo(APOLLO11.loi1.t);
     expect(sim.isFailed(), log()).toBe(false);
     expect(Math.abs(at('evt.lunarSoi')!.t - APOLLO11.lunarSoi)).toBeLessThan(120);
-    expect(sim.apollo.phase).toBe('arrival');
     // at the lunar orbit insertion's ignition: MR Table 7-II, 86.7 n mi above the landing site's radius, 8,250 ft/s
     const now = moonRel();
     expect(Math.abs(now.d - APOLLO11.siteRadius - 86.7 * 1852)).toBeLessThan(15e3);
     expect(Math.abs(now.v - 8250 * 0.3048)).toBeLessThan(10);
-    // the flight passes the pericynthion at 8,334 ft/s (Table 7-III)
-    flyTo(APOLLO11.pericynthion.mcc2.t);
-    expect(Math.abs(moonRel().v - 8334 * 0.3048)).toBeLessThan(10);
+  });
+
+  it('slows into the flown lunar orbit behind the Moon, rounds it off two revolutions later, and passes over Tranquility Base when the landing is due', () => {
+    flyTo(APOLLO11.loi2.t + 120);
+    expect(sim.isFailed(), log()).toBe(false);
+    const loi = at('evt.loi'), in1 = at('evt.lunarOrbit'), loi2 = at('evt.circularize'), in2 = at('evt.lunarOrbit', 2);
+    expect(loi?.t, log()).toBeCloseTo(APOLLO11.loi1.t, 6);
+    expect(loi2?.t, log()).toBeCloseTo(APOLLO11.loi2.t, 6);
+    // LOI-1 (ORL; MR Table 7-V): cut-off 75:55:47.90, 2,917.5 ft/s, into 169.7 × 60.0 n mi. A retrograde burn
+    // leaves the orbit's perilune a little under the approach's pericynthion (61.5 → 60.0 n mi flown; the
+    // model's approach is at 59.8), so the orbit is a few kilometres under the flown one; the plane over the
+    // landing site costs some metres a second more
+    expect(Math.abs(in1!.t - (APOLLO11.loi1.t + APOLLO11.loi1.duration))).toBeLessThan(10);
+    expect(Math.abs(Number(in1!.params!.dv) - APOLLO11.loi1.dv)).toBeLessThan(25);
+    expect(Math.abs(Number(in1!.params!.ap) - 169.7 * 1.852)).toBeLessThan(7);
+    expect(Math.abs(Number(in1!.params!.pe) - 60.0 * 1.852)).toBeLessThan(7);
+    // LOI-2: 16.88 s, 158.8 ft/s, aimed at 65.7 × 53.7 n mi, reaching 65.7 × 53.8
+    expect(Math.abs(in2!.t - (APOLLO11.loi2.t + APOLLO11.loi2.duration))).toBeLessThan(4);
+    expect(Math.abs(Number(in2!.params!.dv) - APOLLO11.loi2.dv)).toBeLessThan(8);
+    expect(Math.abs(Number(in2!.params!.ap) - 65.7 * 1.852)).toBeLessThan(2);
+    expect(Math.abs(Number(in2!.params!.pe) - 53.8 * 1.852)).toBeLessThan(2);
+    // 32,162.4 kg after LOI-2 (MR Table A-I)
+    expect(Math.abs(sim.vehicle.totalMass() - 32162.4)).toBeLessThan(150);
+    // near the Moon's equator, retrograde
+    const lunar = sim.apollo.frame()!.lunar!;
+    expect(lunar.inc).toBeGreaterThan(176);
+    // the orbit's plane — Columbia's, after the undocking — passes over the landing site at the landing's time,
+    // within a few kilometres
+    flyTo(APOLLO11.landing.t);
+    const m = moonState(sim.plan.jd0 + sim.state.t / 86400), csm = sim.apollo.frame()!.csm!;
+    const rel = { r: sub(csm.r, m.r), v: sub(csm.v, m.v) };
+    const site = selenographicToEci(APOLLO11.landing.lat, APOLLO11.landing.lon, R_MOON, sim.plan.jd0 + sim.state.t / 86400);
+    expect(Math.abs(dot(site, normalize(cross(rel.r, rel.v))))).toBeLessThan(3e3);
+  });
+
+  it('undocks Eagle, drops it towards the site with the descent engine, and lands it at Tranquility Base on the flown timeline', () => {
+    flyTo(APOLLO11.engineOff + 120);
+    expect(sim.isFailed(), log()).toBe(false);
+    expect(at('evt.undocking')?.t, log()).toBeCloseTo(APOLLO11.undocking.t, 6);
+    expect(at('evt.doi')?.t, log()).toBeCloseTo(APOLLO11.doi.t, 6);
+    // DOI (ORL; MR §5.1): 30.0 s, 76.4 ft/s, targeted to 60 × 8.2 n mi and reaching 58.5 × 7.8. The flown orbit
+    // had been pulled about by the mascons in the day since LOI-2, which the model's degree-2 field does not
+    // have: its apolune, where DOI is burned, is some kilometres lower, and a metre a second more takes it down
+    const doi = at('evt.lunarOrbit', 3)!;
+    expect(Math.abs(doi.t - (APOLLO11.doi.t + APOLLO11.doi.duration))).toBeLessThan(3);
+    expect(Math.abs(Number(doi.params!.dv) - APOLLO11.doi.dv)).toBeLessThan(1.5);
+    expect(Math.abs(Number(doi.params!.ap) - 58.5 * 1.852)).toBeLessThan(12);
+    expect(Math.abs(Number(doi.params!.pe) - 7.8 * 1.852)).toBeLessThan(1.5);
+    // the powered descent, lit as far round the Moon from the site as Eagle was: within a minute of 102:33:05
+    const pdi = at('evt.pdi')!;
+    expect(Math.abs(pdi.t - APOLLO11.pdi.t), log()).toBeLessThan(60);
+    // the throttle recovery 386 s after the ignition; high gate at 7,129 ft; low gate at about 400 ft
+    expect(Math.abs(at('evt.throttleRecovery')!.t - pdi.t - (369571 - APOLLO11.pdi.t))).toBeLessThan(20);
+    expect(Math.abs(Number(at('evt.highGate')!.params!.alt) - APOLLO11.highGate.alt)).toBeLessThan(200);
+    expect(Math.abs(Number(at('evt.lowGate')!.params!.alt) - APOLLO11.lowGate.alt)).toBeLessThan(30);
+    // the contact light 754.9 s after the ignition (102:45:39.9), the engine off 1.5 s later, at the site
+    const contact = at('evt.lunarLanding')!;
+    expect(Math.abs(contact.t - pdi.t - (APOLLO11.landing.t - APOLLO11.pdi.t))).toBeLessThan(10);
+    expect(Math.abs(at('evt.lmEngineOff')!.t - contact.t - 1.5)).toBeLessThan(0.3);
+    const landed = sim.apollo.frame()!.landed!;
+    expect(sim.apollo.phase).toBe('landed');
+    expect(landed.miss).toBeLessThan(50);
+    // 7,327.0 kg on the surface (MR Table A-I)
+    expect(Math.abs(sim.vehicle.totalMass() - APOLLO11.pdi.landedMass)).toBeLessThan(100);
+    // on the ground, turning with the Moon
+    const mm = moonState(sim.plan.jd0 + sim.state.t / 86400);
+    expect(Math.abs(norm(sub(sim.state.r, mm.r)) - APOLLO11.siteRadius)).toBeLessThan(0.01);
   });
 });
 
 describe('Apollo 11 in the viewer', () => {
-  it('tells the flight to the Moon beat by beat, each coast at a preset speed, and ends at the lunar orbit insertion', { timeout: 300_000 }, () => {
+  it('tells the flight to the Moon beat by beat, each coast at a preset speed, and ends on the Moon', { timeout: 400_000 }, () => {
     const s = watchMissionSettings('apollo11');
     const sim = new Simulation({
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
@@ -305,8 +368,8 @@ describe('Apollo 11 in the viewer', () => {
     const beats: string[] = [];
     const warps = new Set<number>();
     let ending: string | null = null;
-    let last: ReturnType<typeof captureFrame> | undefined;
-    while (!sim.isFailed() && sim.state.t < 290000 && !ending) {
+    let last: ReturnType<typeof captureFrame> | undefined, inOrbit: ReturnType<typeof captureFrame> | undefined;
+    while (!sim.isFailed() && sim.state.t < 380000 && !ending) {
       sim.step(sim.suggestedDt());
       if (sim.state.t < 9000) continue;
       const frame = captureFrame(sim);
@@ -315,21 +378,28 @@ describe('Apollo 11 in the viewer', () => {
       warps.add(autoWarp(frame, beat));
       ending = flightEnding(frame, sim.events);
       if (ending) last = frame;
+      // docked in the circular orbit, a minute before the undocking
+      if (!inOrbit && frame.t >= APOLLO11.undocking.t - 60) inOrbit = frame;
     }
-    // the readouts switch to the Moon as Mission Control's displays did: height above it and speed relative to it
+    // the readouts switch to the Moon as Mission Control's displays did: height above it and speed relative to
+    // it; on the surface, nothing left of either
+    expect(inOrbit, beats.join(' ')).toBeDefined();
+    const o = watchReadout(inOrbit!);
+    expect(o.moon).toBe(true);
+    expect(o.altitude).toBeGreaterThan(95e3);
+    expect(o.altitude).toBeLessThan(125e3);
+    expect(Math.abs(o.speed - 1630)).toBeLessThan(20);
     const r = watchReadout(last!);
-    expect(r.moon).toBe(true);
-    expect(r.altitude).toBeGreaterThan(100e3);
-    expect(r.altitude).toBeLessThan(170e3);
-    expect(Math.abs(r.speed - 2520)).toBeLessThan(20);
+    expect(r).toEqual({ altitude: 0, speed: 0, moon: true });
     // in the order they were flown: each after the one before it
     let at = -1;
     for (const b of ['tliBurn', 'tliDone', 'transposition', 'apolloDocked', 'extraction', 'evasiveBurn', 'translunarCoast', 'midcourseBurn',
-      'lunarSoi', 'lunarApproach', 'lunarArrival']) {
+      'lunarSoi', 'lunarApproach', 'loiBurn', 'lunarOrbit', 'circularizeBurn', 'lunarOrbit', 'lmUndocked', 'doiBurn', 'descentOrbit',
+      'brakingPhase', 'approachPhase', 'landingPhase', 'lunarLanding']) {
       at = beats.indexOf(b, at + 1);
       expect(at, `${b}: ${beats.join(' ')}`).toBeGreaterThanOrEqual(0);
     }
-    expect(ending).toBe('lunarArrival');
+    expect(ending).toBe('lunarLanding');
     // every speed one of the workspace selector's presets (src/main.ts)
     for (const w of warps) expect([0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000]).toContain(w);
     expect(warps.has(5000)).toBe(true);

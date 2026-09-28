@@ -12,6 +12,7 @@
  * read (time, height, speed).
  */
 import type { VisualFrame } from '../physics/frame';
+import { APOLLO_AT_MOON } from '../physics/sim/apollo';
 import type { SimEvent } from '../physics/simulation';
 import { OMEGA_EARTH } from '../physics/constants';
 
@@ -32,7 +33,9 @@ export type WatchBeat =
   // Apollo from its parking orbit (C01): the restart for the Moon, the transposition, the extraction,
   // and on to the Moon: the evasive burn, the coast, the midcourse correction, the Moon's sphere of influence
   | 'apolloParking' | 'tliBurn' | 'tliDone' | 'transposition' | 'apolloDocked' | 'extraction' | 'translunarCoast'
-  | 'evasiveBurn' | 'midcourseBurn' | 'lunarSoi' | 'lunarApproach' | 'lunarArrival';
+  | 'evasiveBurn' | 'midcourseBurn' | 'lunarSoi' | 'lunarApproach' | 'loiBurn' | 'lunarOrbit' | 'circularizeBurn'
+  // and down to the surface: undocking, the descent orbit, the three programs of the powered descent, the landing
+  | 'lmUndocked' | 'doiBurn' | 'descentOrbit' | 'brakingPhase' | 'approachPhase' | 'landingPhase' | 'lunarLanding';
 
 /** Label and sentence of each beat. Literal keys, so the i18n suite sees their call sites. */
 export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
@@ -84,7 +87,16 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   midcourseBurn: { label: 'watch.beat.midcourseBurn', text: 'watch.say.midcourseBurn' },
   lunarSoi: { label: 'watch.beat.lunarSoi', text: 'watch.say.lunarSoi' },
   lunarApproach: { label: 'watch.beat.lunarApproach', text: 'watch.say.lunarApproach' },
-  lunarArrival: { label: 'watch.beat.lunarArrival', text: 'watch.say.lunarArrival' },
+  loiBurn: { label: 'watch.beat.loiBurn', text: 'watch.say.loiBurn' },
+  lunarOrbit: { label: 'watch.beat.lunarOrbit', text: 'watch.say.lunarOrbit' },
+  circularizeBurn: { label: 'watch.beat.circularizeBurn', text: 'watch.say.circularizeBurn' },
+  lmUndocked: { label: 'watch.beat.lmUndocked', text: 'watch.say.lmUndocked' },
+  doiBurn: { label: 'watch.beat.doiBurn', text: 'watch.say.doiBurn' },
+  descentOrbit: { label: 'watch.beat.descentOrbit', text: 'watch.say.descentOrbit' },
+  brakingPhase: { label: 'watch.beat.brakingPhase', text: 'watch.say.brakingPhase' },
+  approachPhase: { label: 'watch.beat.approachPhase', text: 'watch.say.approachPhase' },
+  landingPhase: { label: 'watch.beat.landingPhase', text: 'watch.say.landingPhase' },
+  lunarLanding: { label: 'watch.beat.lunarLanding', text: 'watch.say.lunarLanding' },
   capsuleSep: { label: 'watch.beat.capsuleSep', text: 'watch.say.capsuleSep' },
   capsuleArc: { label: 'watch.beat.capsuleArc', text: 'watch.say.capsuleArc' },
   retroFire: { label: 'watch.beat.retroFire', text: 'watch.say.retroFire' },
@@ -156,6 +168,7 @@ const EVENT_BEATS: ReadonlyArray<{ key: string; beat: WatchBeat; hold: number }>
   { key: 'evt.evasive', beat: 'evasiveBurn', hold: 20 },
   { key: 'evt.mcc', beat: 'midcourseBurn', hold: 20 },
   { key: 'evt.lunarSoi', beat: 'lunarSoi', hold: 300 },
+  { key: 'evt.undocking', beat: 'lmUndocked', hold: 60 },
   { key: 'evt.contact', beat: 'rvContact', hold: 20 },
 ];
 const ABORT_BEATS: Record<string, WatchBeat> = { tower: 'abortTower', fairing: 'abortFairing', separation: 'abortSeparation' };
@@ -246,7 +259,17 @@ function apolloBeat(frame: VisualFrame): WatchBeat {
     case 'evasive': return 'evasiveBurn';
     case 'midcourse': return 'midcourseBurn';
     case 'approach': return 'lunarApproach';
-    case 'arrival': return 'lunarArrival';
+    case 'loi': return 'loiBurn';
+    case 'lunarOrbit': return 'lunarOrbit';
+    case 'circularize': return 'circularizeBurn';
+    case 'undocked': return 'lmUndocked';
+    case 'doi': return 'doiBurn';
+    case 'descentOrbit': return 'descentOrbit';
+    case 'descent': {
+      const d = frame.apollo!.descent?.phase;
+      return d === 'approach' ? 'approachPhase' : d === 'landing' || d === 'vertical' ? 'landingPhase' : 'brakingPhase';
+    }
+    case 'landed': return 'lunarLanding';
     default: return 'translunarCoast';
   }
 }
@@ -397,14 +420,30 @@ function beatWarp(frame: VisualFrame, beat: WatchBeat): number {
     case 'translunarCoast':
       return frame.apollo && frame.apollo.phase !== 'translunar' ? coastWarp(frame) : 100;
     case 'lunarApproach':
+    case 'lunarOrbit':
+    case 'lmUndocked':
+    case 'descentOrbit':
       return coastWarp(frame);
+    // the twelve minutes of the descent: the braking at 5×, the approach at 2×, Armstrong's landing and the
+    // landing itself live
+    case 'brakingPhase':
+      return 5;
+    case 'approachPhase':
+      return 2;
+    case 'doiBurn':
+    case 'landingPhase':
+    case 'lunarLanding':
+      return 1;
     case 'evasiveBurn':
     case 'midcourseBurn':
       return 1;
     case 'lunarSoi':
       return 10;
-    case 'lunarArrival':
+    // the six minutes behind the Moon into lunar orbit at a pace to follow, the seventeen seconds rounding it off live
+    case 'loiBurn':
       return 5;
+    case 'circularizeBurn':
+      return 1;
     default:
       return 1;
   }
@@ -431,7 +470,11 @@ export function groundSpeed(frame: VisualFrame): number {
  */
 export function watchReadout(frame: VisualFrame): { altitude: number; speed: number; moon: boolean } {
   const ap = frame.apollo;
-  if (ap && (ap.phase === 'approach' || ap.phase === 'arrival')) return { altitude: ap.moon.alt, speed: ap.moon.speed, moon: true };
+  if (ap?.phase === 'landed') return { altitude: 0, speed: 0, moon: true };
+  if (ap?.descent) {
+    return { altitude: Math.max(0, ap.descent.alt), speed: Math.hypot(ap.descent.vh, ap.descent.vz), moon: true };
+  }
+  if (ap && APOLLO_AT_MOON.includes(ap.phase)) return { altitude: ap.moon.alt, speed: ap.moon.speed, moon: true };
   if (ap && ap.phase !== 'parking' && ap.phase !== 'tli') {
     return { altitude: frame.altitude, speed: Math.hypot(frame.v.x, frame.v.y, frame.v.z), moon: false };
   }
@@ -450,7 +493,7 @@ export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEven
 }
 
 /** How a flight on screen ends. */
-export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'lunarArrival' | 'failed';
+export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'lunarLanding' | 'failed';
 
 /**
  * How the flight on screen has ended, if it has: in orbit, with a splashdown
@@ -468,11 +511,11 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
     if (rv.phase === 'docked') return rv.dockedAt !== undefined && frame.t - rv.dockedAt >= RETURN_SETTLE ? 'docked' : null;
     return rv.phase === 'aborted' ? 'orbit' : null;
   }
-  // C01: Apollo's part of the flight so far ends at the Moon, the lunar orbit insertion due
+  // C01: Apollo's part of the flight so far ends on the Moon, twenty seconds after the engine is off
   if (frame.apollo) {
     if (frame.status === 'failed') return 'failed';
-    const at = frame.apollo.arrival;
-    return frame.apollo.phase === 'arrival' && at !== undefined && frame.t - at >= RETURN_SETTLE ? 'lunarArrival' : null;
+    const at = frame.apollo.landed?.t;
+    return frame.apollo.phase === 'landed' && at !== undefined && frame.t - at >= 20 ? 'lunarLanding' : null;
   }
   // G06: after an abort, the end is the crew down and a few seconds more
   if (frame.abort) {

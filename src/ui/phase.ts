@@ -110,6 +110,23 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
         params.peri = ap.perilune ? Math.round(ap.perilune.alt / 1000).toString() : '—';
         params.arr = ap.perilune ? fmtClockShort(Math.max(0, ap.perilune.t - frame.t)) : '—';
         params.dv = ap.mcc ? ap.mcc.dv.toFixed(1) : '—';
+        // coming down: the program flying it, the height over the ground (m), the distance to go (km), the speeds
+        if (ap.descent) {
+          const d = ap.descent;
+          params.program = d.phase === 'braking' ? 'P63' : d.phase === 'approach' ? 'P64' : 'P66';
+          params.galt = Math.round(Math.max(0, d.alt)).toString();
+          params.range = (d.range / 1000).toFixed(1);
+          params.vh = Math.round(d.vh).toString();
+          params.vz = Math.round(-d.vz).toString();
+          params.thr = Math.round(d.throttle * 100).toString();
+        }
+        if (ap.landed) { params.lat = ap.landed.lat.toFixed(3); params.lon = ap.landed.lon.toFixed(3); }
+        // in lunar orbit, the orbit is the Moon's: above the landing site's radius, against its equator
+        if (ap.lunar) {
+          params.ap = Math.round(ap.lunar.ap / 1000).toString();
+          params.pe = Math.round(ap.lunar.pe / 1000).toString();
+          params.inc = ap.lunar.inc.toFixed(1);
+        }
         break;
       }
       titleKey = 'hud.status.orbit';
@@ -228,3 +245,20 @@ export function eventLabel(key: string, params?: Record<string, string | number>
   const s = t(short);
   return s === short ? t(key, params) : s;
 }
+
+/**
+ * The status the HUD and the narration print: the simulation's own, save for
+ * Apollo on its way (C01), which is not "in orbit" between the Earth and the
+ * Moon, in lunar orbit, coming down to the Moon or on it.
+ */
+export function statusKey(frame: VisualFrame): string {
+  const ap = frame.apollo;
+  if (ap && frame.status === 'orbit') {
+    if (ap.phase === 'landed') return 'hud.status.onMoon';
+    if (ap.phase === 'descent') return 'hud.status.lunarDescent';
+    if (['loi', 'lunarOrbit', 'circularize', 'undocked', 'doi', 'descentOrbit'].includes(ap.phase)) return 'hud.status.lunarOrbit';
+    if (ap.phase !== 'parking' && ap.phase !== 'tli') return 'hud.status.translunar';
+  }
+  return `hud.status.${frame.status}`;
+}
+

@@ -48,11 +48,12 @@ import { ExplosionEffect } from './replay/explosion';
 import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { moonState } from './physics/lunar/ephemeris';
-import { APOLLO_OUT } from './physics/sim/apollo';
+import { APOLLO_AT_MOON, APOLLO_LM, APOLLO_OUT } from './physics/sim/apollo';
+import { APOLLO11 } from './data/apollo11';
 import { moonBodyToEci } from './physics/lunar/orientation';
 import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
-import { add, normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
+import { add, normalize, cross, dot, norm, scale, addScaled, sub, v3, type Vec3 } from './physics/vec3';
 import { vehicleById } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
@@ -62,6 +63,7 @@ import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
 import { EscapeView } from './render/escape';
 import { StationView } from './render/station';
+import { buildCsm, CSM_LENGTH, LM_HEIGHT } from './render/apollo';
 import { PORTS, TARGET_OFFSET, targetOffset } from './physics/rendezvous/ports';
 import { SPACECRAFT } from './physics/rendezvous/profiles';
 import type { RendezvousState } from './physics/sim/rendezvous';
@@ -239,6 +241,8 @@ class App {
   private escapeView: EscapeView | null = null;
   /** G07: the station a rendezvous flies to */
   private stationView: StationView | null = null;
+  /** C01: Columbia, drawn on its own from the undocking */
+  private csmView: ReturnType<typeof buildCsm> | null = null;
   private dockingEyePos = new THREE.Vector3();
   /** the 3-D picture is the docking TV camera's (drawn black and white) */
   private tvPicture = false;
@@ -1093,6 +1097,11 @@ class App {
       this.escapeView = new EscapeView(1, 1, sim.satellite.descent);
       this.scene.scene.add(this.escapeView.group);
     }
+    if (this.csmView) {
+      this.scene.scene.remove(this.csmView.group);
+      this.csmView.dispose();
+      this.csmView = null;
+    }
     if (this.stationView) {
       this.scene.scene.remove(this.stationView.group);
       this.stationView.dispose();
@@ -1563,6 +1572,24 @@ class App {
         this.stationView.group.quaternion.set(rv.station.q.x, rv.station.q.y, rv.station.q.z, rv.station.q.w);
       }
     }
+    // C01: Columbia after the undocking, where its own flight has it: over Eagle's docking tunnel, nose down, as
+    // it was docked, backing off to stationkeeping in the first two minutes — the drawing's offset, tens of
+    // metres, beside the separation its maneuver opens
+    const csm = frame.apollo?.csm;
+    if (csm && !this.csmView) {
+      this.csmView = buildCsm();
+      this.scene.scene.add(this.csmView.group);
+    }
+    if (this.csmView) {
+      this.csmView.group.visible = !!csm;
+      if (csm) {
+        const moonUp = normalize(sub(csm.r, moonState(frame.jd).r));
+        const since = frame.t - APOLLO11.undocking.t;
+        const lift = LM_HEIGHT + CSM_LENGTH + 0.3 + 25 * Math.min(1, Math.max(0, since) / 120);
+        scene.toScene(addScaled(csm.r, moonUp, lift), this.csmView.group.position);
+        this.csmView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(-moonUp.x, -moonUp.y, -moonUp.z));
+      }
+    }
     if (this.escapeView) {
       this.escapeView.group.position.copy(this.rocket.group.position);
       this.escapeView.group.quaternion.copy(this.rocket.group.quaternion);
@@ -1571,7 +1598,10 @@ class App {
     // Size of the object actually being tracked: the stack now, the spacecraft
     // after payload separation. It frames the camera, decides when the space
     // view's marker takes over, and scales the break-up effect.
+    // (C01: Eagle alone from the undocking)
+    const lmAlone = !!frame.apollo && APOLLO_LM.includes(frame.apollo.phase);
     const height = frame.abort && this.escapeView ? this.escapeView.size(frame)
+      : lmAlone ? LM_HEIGHT
       : frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
     this.explosion.update(scene, frame, this.recorder.events, dt, height);
     // lines
@@ -1583,7 +1613,7 @@ class App {
     this.target.update(scene);
     this.debrisView.update(frame.debris, frame.t);
     // camera
-    const radius = frame.abort ? Math.min(2, height / 4) : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
+    const radius = frame.abort ? Math.min(2, height / 4) : lmAlone ? 4.5 : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
     // G07: close to the station the exterior view keeps it in the picture, and the onboard view is the docking TV camera;
     // the flight-path lines, kilometres long through the middle of that picture, stand aside
@@ -1609,11 +1639,14 @@ class App {
       // G06: under a parachute the camera frames the canopy above the capsule,
       // not the ground below its heat shield
       const canopy = frame.abort?.body === 'capsule' && (frame.abort.main > 0.2 || frame.abort.drogue > 0.2);
+      // C01: at the Moon the camera's up and its ground are the Moon's
+      const lunar = frame.apollo && APOLLO_AT_MOON.includes(frame.apollo.phase) ? sub(frame.r, moonState(frame.jd).r) : null;
+      const ground = lunar ? enuFrame(lunar) : { up, east, north };
       this.cams.update(scene.camera, {
-        pos: this.originV, up, east, north, dir: canopy ? scale(frame.dir, -1) : frame.dir, side, height, radius,
+        pos: this.originV, up: ground.up, east: ground.east, north: ground.north, dir: canopy ? scale(frame.dir, -1) : frame.dir, side, height, radius,
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
         vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
-        t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
+        t: frame.t, phase: camPhase(frame), agl: lunar ? norm(lunar) - APOLLO11.siteRadius : frame.altitudeAGL,
         ...(nearStation ? { partner: this.stationView!.group.position } : {}),
         ...(docking && rv ? { dockingEye: this.dockingEye(frame, rv) } : {}),
       }, dt, R_EARTH);
@@ -1625,6 +1658,9 @@ class App {
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);
+    // C01: Eagle's shadow on the Moon, from the last kilometres of the descent
+    const lunarAlt = frame.apollo?.descent?.alt ?? (frame.apollo?.phase === 'landed' ? 0 : Infinity);
+    if (lunarAlt < 200) scene.setShadowFocus(this.vehiclePos, 60, true);
     // `height` is the size of the object actually being tracked — the stack
     // now, the spacecraft after payload separation. Without it the space view's
     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for

@@ -50,7 +50,7 @@ import type { VisualFrame } from '../physics/frame';
 import type { VehicleSpec } from '../types';
 import { t } from '../i18n';
 import { RAD } from '../physics/constants';
-import { DESCENT_PHASE_KEYS, hasNextBurn, rendezvousRange } from './phase';
+import { DESCENT_PHASE_KEYS, hasNextBurn, rendezvousRange, statusKey } from './phase';
 import { localizeEventParams, stageName } from './names';
 import { withSymbol, type Quantity } from './notation';
 import { coerceHudMode, loadHudMode, nextHudMode, saveHudMode, type HudMode, type ModeStore } from './hudmode';
@@ -907,7 +907,7 @@ export class Hud {
       const rv = frame.rendezvous, d = rendezvousRange(rv.range);
       phase = `${t(`hud.rv.${rv.phase}`)}${rv.manual ? ' · ' + t('hud.rv.manual') : ''} · ${d.range} ${d.unit}`;
     }
-    const status = `${t(`hud.status.${frame.status}`)}${phase ? ' · ' + phase : ''}`;
+    const status = `${t(statusKey(frame))}${phase ? ' · ' + phase : ''}`;
     if (status !== this.shownStatus) { this.status.textContent = status; this.shownStatus = status; }
     let note = '';
     let noteCls = 'note';
