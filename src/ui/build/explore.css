@@ -64,10 +64,10 @@
 .bs-draw.stale .bs-svg { opacity: 0.45; }
 /* four figures in a row where they fit; a figure never shrinks under its number and unit, it moves to the next row */
 .bx-summary {
-  display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0;
+  display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0;
   padding: 8px 12px 10px; border-top: 1px solid var(--line); background: var(--panel3);
 }
-.bx-sum { flex: 1 1 96px; }
+.bx-sum { flex: 1 1 84px; }
 .bx-sum dt { font-size: 11.5px; line-height: 1.3; color: var(--muted); }
 .bx-sum dd { margin: 2px 0 0; font: 600 15px/1.2 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
