@@ -23,23 +23,47 @@ export const GOLDEN_FLIGHTS = [
   { vehicle: 'angaraa5', site: 'plesetsk', orbit: 'leo' },
 ] as const;
 
+/**
+ * The fingerprint of a flight as it is flown: call `observe` after every step,
+ * then `digest` once the flight is over. From T−10 s it keeps one sample each
+ * time the clock passes the next whole second (every step, while steps are
+ * longer than a second), then the recorded telemetry and the event log
+ * `[key, t]`, and hashes the concatenation with SHA-256, first 16 hex digits.
+ * `flightFingerprint` below samples the six-DOF state with it; the D01 fleet
+ * fingerprints (tests/d01-fleet-fingerprint.test.ts) sample `[t, r, v]` of a
+ * point-mass fleet case through `flyCase`.
+ */
+export class FingerprintSampler {
+  private readonly parts: string[] = [];
+  private next = -10;
+  constructor(private readonly sample: (sim: Simulation) => unknown,
+    private readonly replacer?: (key: string, value: unknown) => unknown) {}
+
+  observe(sim: Simulation): void {
+    if (sim.state.t >= this.next) { this.parts.push(JSON.stringify(this.sample(sim), this.replacer)); this.next += 1; }
+  }
+
+  async digest(sim: Simulation): Promise<string> {
+    this.parts.push(JSON.stringify(sim.telemetry, this.replacer));
+    this.parts.push(JSON.stringify(sim.events.map((e) => [e.key, e.t])));
+    // SHA-256 of the concatenation, as recorded.
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(this.parts.join('')));
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  }
+}
+
 export async function flightFingerprint(flight: (typeof GOLDEN_FLIGHTS)[number], until: number,
   dynamics: DynamicsConfig = { model: 'sixDof', wind: 'crosswind', seed: 20260919 }): Promise<string> {
   const sim = new Simulation({ vehicleId: flight.vehicle, satelliteId: 'cubesats', siteId: flight.site, orbit: orbitById(flight.orbit),
     launchTime: LAUNCH_TIME, guidance: guidanceForVehicle(vehicleById(flight.vehicle), DEFAULT_GUIDANCE, 'sixDof'), guidanceResolved: true,
     failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, dynamics }, { headless: true });
-  const parts: string[] = [];
   const withoutLoop = (key: string, value: unknown) => (key === 'attitudeLoop' || key === 'linearModel' ? undefined : value);
-  let next = -10;
+  const sampler = new FingerprintSampler((s) => [s.state.t, s.state.r, s.state.v, s.state.rigid], withoutLoop);
   while (!sim.done && sim.state.t < until) {
     sim.step(sim.suggestedDt());
-    if (sim.state.t >= next) { parts.push(JSON.stringify([sim.state.t, sim.state.r, sim.state.v, sim.state.rigid], withoutLoop)); next += 1; }
+    sampler.observe(sim);
   }
-  parts.push(JSON.stringify(sim.telemetry, withoutLoop));
-  parts.push(JSON.stringify(sim.events.map((e) => [e.key, e.t])));
-  // SHA-256 of the concatenation, as recorded.
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts.join('')));
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  return sampler.digest(sim);
 }
 
 /**
