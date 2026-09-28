@@ -894,6 +894,15 @@ documents say instead:
   T+338.6 / 338.7 s against 347 s (−2 %), Angara at T+341.6 / 341.8 s against 340 s. The Proton
   row is not fully independent of the guide's 348 s, since the model's third stage lights at
   328.6 s, near the flight's 327 s, but it is timed by the model's own staging.
+- *The early jettison had been hiding a Proton shortfall.* Carrying the 2 t fairing to T+339 s
+  instead of T+175 s costs about 110 m/s, and Proton-M no longer takes 90 % of its GTO rating
+  (6.2 t) to orbit: the Briz-M lights during the ascent and the stack falls back, so
+  `protonm/gto/90` is now filed as beyond the modelled vehicle's capability
+  (`tests/fleet-harness.ts`). The real Proton-M/Briz-M lifts 6.9 t to GTO with the fairing on
+  that long, so the model is short elsewhere. The crew-ship flight (7.15 t) showed that the
+  insertion floor did not cover a stack that never reaches SECO: it broke up at T+1 448 s
+  instead of ending as an abandoned insertion. The floor now applies during the ascent once the
+  first stage has gone (PHYSICS.md §6, "The insertion floor").
 - *Atlas V's criterion is a 3-sigma one.* ULA jettisons "when the 3-sigma free molecular heat flux
   falls below 1,135 W/m²" (Atlas V Launch Services User's Guide, Rev. 11, 2010, §2.3), on a
   dispersed atmosphere and trajectory. The model evaluates the same number on the nominal

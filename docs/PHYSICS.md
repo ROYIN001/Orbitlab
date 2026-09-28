@@ -1612,6 +1612,12 @@ screen's knife edge showed.
   tests over the whole matrix pin both halves: `no flight breaks up after it has reported an
   insertion` and `no flight reports a parking orbit below the insertion floor`.
 
+  The rule was first written for the stack after SECO, in `burn` and `coast`. With the fairing
+  kept to the published T+339 s (§4) the same crew-ship flight never reaches SECO: the Briz-M
+  lights during the ascent and burns out short of orbit, and it broke up at T+1 448 s still in
+  `ascent`. The floor now applies during the ascent too, once the first stage has separated; a
+  first-stage failure is an ascent failure and is left to the placards.
+
 ## 6a. Reference timelines
 
 Flown with `DEFAULT_GUIDANCE` merged with each vehicle's `guidanceDefaults`, no auto-tuning and
@@ -1886,7 +1892,7 @@ limit — no guidance defects are left, see "Guidance defects" below — `n/a` =
 | --- | --- | --- | --- | --- |
 | Soyuz-2.1a | - - - | - - - | n/a | — |
 | Soyuz-2.1b / Fregat-M | + + - | + + - | n/a | + + + |
-| Proton-M / Briz-M | + - - | + - - | n/a | + + + |
+| Proton-M / Briz-M | + - - | + - - | n/a | + + - |
 | Angara-A5 / Briz-M | + - - | — | + - - | + + + |
 | Falcon 9 Block 5 | + + - | + + - | n/a | + + - |
 | Falcon Heavy | + + - | + + - | n/a | + + - |
@@ -1947,8 +1953,8 @@ configuration, and the column that matters is whether it agrees with the outcome
 
 | mission | outcome | final orbit | insertion | verdict |
 | --- | --- | --- | --- | --- |
-| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 292 s | — | T+570 s | **fail** ✓ |
-| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+21 519 s | 254 × 35 731 km | T+570 s | warn ✓ |
+| Proton-M/Briz-M · crew 7.15 t → ISS, Baikonur | insertion abandoned T+1 384 s | — | — | **fail** ✓ |
+| Proton-M/Briz-M · comsat 5.5 t → GTO, Baikonur | target orbit T+19 046 s | 245 × 35 738 km | T+571 s | warn ✓ |
 | Angara-A5/Briz-M · crew 7.15 t → 500 km, Plesetsk | target orbit T+8 394 s | 498 × 498 km | T+1 051 s | warn ✓ |
 | Angara-A5/Briz-M · comsat 5 t → GTO, Plesetsk | target orbit T+57 235 s | 251 × 35 720 km | T+754 s | warn ✓ |
 | Soyuz-2.1b/Fregat · earth-obs 2.2 t → SSO, Vostochny | target orbit T+3 626 s | 597 × 597 km | T+827 s | ok ✓ |
@@ -1980,7 +1986,13 @@ Two rows are failures and both are capability limits with the shortfall measured
   target, all at kick angles of 6–8° with turn rates the fleet does not use and none at or
   near the shipped programme: with the DEFAULT guidance this combination does not fly. The
   boundary is measured either side — 5.75 t delivers 412 × 412 km, 7.15 t does not — and it
-  is sharp because the sink is cubic in the shortfall.
+  is sharp because the sink is cubic in the shortfall. Since the fairing stays on to T+339 s,
+  as ILS publishes (§4), the third stage no longer reaches a cut-off at all: the Briz-M lights
+  during the ascent, burns short of orbit and the stack falls back. The insertion floor
+  (`abandonInsertion`) used to apply only after SECO and let that end in a break-up at
+  T+1 448 s; it now covers the ascent once the first stage has gone, and the flight ends
+  abandoned at T+1 384 s (measured 2026-09-28; the two Proton rows of the table above were
+  re-measured the same day, the verdicts were not).
 - **Soyuz-2.1b/Fregat with the same crew ship** is the same shape one step down: the Blok I
   under a Fregat and 7.15 t is 470 m/s short (`ascentMargin` −470), the ascent sags and the
   stack breaks up at T+962 s — *before* any insertion is announced, which is the honest end

@@ -365,6 +365,13 @@ fill(BEYOND_CAPABILITY,
 fill(BEYOND_CAPABILITY,
   'the three Proton stages are 548-1206 m/s short under a Briz-M and 11.5-20.7 t: the ascent flattens and the 19.6 kN Briz-M cannot hold 30 t up, break-up at T+780-1038 s',
   'protonm/leo/50', 'protonm/leo/90', 'protonm/iss/50', 'protonm/iss/90');
+// Proton-M's GTO row at 90 % flew while the heating placard dropped its 2 t
+// fairing at T+175 s. It now stays on to T+339 s, as ILS publishes (348 s,
+// `fairing.sepAfterIgnition`, docs/VALIDATION.md F14), and the Briz-M no
+// longer makes up the difference: the placard had been hiding the shortfall.
+fill(BEYOND_CAPABILITY,
+  'the three Proton stages are 2 700 m/s short of the ascent under a Briz-M and 6.2 t with the fairing carried to T+339 s: the Briz-M lights at T+576 s and cannot hold the stack up, insertion abandoned at 76 km at T+1 762 s with 2.9 km/s still aboard',
+  'protonm/gto/90');
 fill(BEYOND_CAPABILITY,
   'URM-1/URM-2 are 735-1533 m/s short under a Briz-M and 12.3-22 t: the gravity turn cannot be held at 0.3 deg/s (the q-alpha placard leaves 4 deg of authority at 27 kPa), the trajectory flattens at 32 km and the vehicle breaks up by T+146-202 s',
   'angaraa5/leo/50', 'angaraa5/leo/90', 'angaraa5/sso/50', 'angaraa5/sso/90');

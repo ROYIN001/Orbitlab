@@ -348,7 +348,14 @@ export class AscentMonitor {
   abandonInsertion(q: number, vz: number): boolean {
     const s = this.sim.state;
     if (s.payloadSeparated || !s.liftoff) return false;
-    if (s.status !== 'burn' && s.status !== 'coast') return false;
+    // During the ascent too, once the first stage has gone: a weak upper stage
+    // that burns out its tanks still short of orbit never reaches SECO, stays
+    // in `ascent` and used to fall back through the atmosphere to a break-up
+    // (Proton-M/Briz-M with the 7.15 t crew ship, once its fairing stayed on
+    // to the published 348 s). A first-stage failure is an ascent failure, not
+    // an insertion, and is left to the placards.
+    const inAscent = s.status === 'ascent' && this.sim.vehicle.activeIndex > 0;
+    if (s.status !== 'burn' && s.status !== 'coast' && !inAscent) return false;
     const el = s.elements;
     if (!(el.e < 1) || el.periapsisAlt >= ORBIT_INSERTION_FLOOR) return false;
     if (!(q >= FAIRING_Q_LIMIT && vz < 0)) return false;
