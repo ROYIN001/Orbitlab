@@ -73,3 +73,14 @@ key ใหม่ครบ en/ru/th: `result.*` (from, runningFrom, stale, staleD
 - การหรี่ผลใช้ inline style (ห้ามแก้ `style.css`) — ถ้าเจ้าของต้องการ ให้เพิ่ม `.pg-result[data-fresh="stale"], .life-result[data-fresh="stale"] { opacity: .55 }` ใน wave 2 แล้วเอา inline ออก
 - `lastGood` ยังถูกอัปเดตจากจุดบนเส้น track ที่คำนวณได้ (พฤติกรรมเดิม) จึงเป็น "ตำแหน่งล่าสุดที่คำนวณได้" ตามลำดับการวาด ไม่ใช่ตามเวลาเสมอไป
 - ปัญหาเดียวกันในที่อื่นที่รายงานเอ่ยถึง (Monte Carlo, tuning) อยู่นอกขอบเขต S2b; `ResultSlot` ใช้ซ้ำได้
+
+## Merge กับ main (28 ก.ย.)
+
+main เปลี่ยน `sky-panel.ts` ไปมากจาก P2.5 (screening ใน worker, re-entry เป็น job พร้อม drag fit, overlay บนแผนที่, case lessons) จึงยึดไฟล์ของ main เป็นฐาน แล้วนำการแก้ S2b ไปใส่ใหม่:
+
+- `load()` ยังใช้ token ล่าสุด ครอบการรอ Earth orientation ที่เพิ่มเข้ามา
+- screening/re-entry ใช้ `AbortController` ของ main สำหรับปุ่ม Stop และเก็บผลใน `ResultSlot`; inputs ของ re-entry มีแหล่ง drag (`history`/`decay`/`size`) และนับมวล/พื้นที่/C_D เฉพาะเมื่อเลือก `size`
+- แผนที่วาดพื้นที่ตกของ re-entry เฉพาะเมื่อผลยัง fresh
+- progress ของ job อัปเดตผ่าน element ที่เก็บไว้แทน `document.querySelector` (ทำให้ model test รันใน node ได้)
+- `lifetime.ts` ใช้ `loadSolarDaily()` ตาม main
+- ตรวจในเบราว์เซอร์ซ้ำบนโค้ดที่ merge แล้ว: A4, A5, A15 (ต้องเลือก "a mass and size you give" ก่อนจึงมีช่องมวล), A16 ผ่านเหมือนเดิม
