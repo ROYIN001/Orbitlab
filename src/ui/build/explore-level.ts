@@ -498,7 +498,8 @@ export class ExploreLevel {
 
   private renderTabs(): void {
     this.tabs.setAttribute('aria-label', t('build.views'));
-    this.tabs.replaceChildren(...(['assembled', 'exploded'] as const).map((v) => {
+    // in the Watch level's order (build-screen.ts VIEWS), so the same switch sits in the same place on every level
+    this.tabs.replaceChildren(...(['exploded', 'assembled'] as const).map((v) => {
       const b = button('bs-tab', t(v === 'exploded' ? 'build.view.exploded' : 'build.view.assembled'), () => {
         this.view = v;
         this.renderTabs();
