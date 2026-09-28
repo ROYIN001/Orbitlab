@@ -76,8 +76,16 @@ describe('readiness review · the catalogue gets the setup panel’s verdict', (
    * the verdict states it cannot see (`pslvxl/gto/50`). The verdict and the
    * probe must be identical, not close: it is the same functions on the same
    * inputs.
+   *
+   * Three rows added in review, for the branches the set did not reach: a
+   * payload over the rating, an orbit class with no rating (Soyuz-2.1a has no
+   * GTO figure), and a plane the site cannot launch into directly (GEO from
+   * the Cape). Not reached, and not reachable from the catalogue with this
+   * composition: `beyondCapability` (no single-shot catalogue stack is short
+   * of the orbit its plan aims at — the plan closes at 200 km instead, which
+   * is `noRestart`) and `siteChanged` (an input the panel sets, false here).
    */
-  it('gives verdictFor’s verdict, probe and all, on a set of rows that takes every branch', () => {
+  it('gives verdictFor’s verdict, probe and all, on a set of rows that takes every branch the catalogue reaches', () => {
     const byKey = new Map(allCases().map((c) => [caseKey(c), c]));
     const rows: [string, string, string, string, number | undefined][] = [
       ...[...byKey.values()].filter((c) => c.orbit === 'leo' && c.percent === 50).map((c) => [c.vehicle, c.site, c.orbit, 'cubesats', c.mass] as [string, string, string, string, number]),
@@ -93,8 +101,12 @@ describe('readiness review · the catalogue gets the setup panel’s verdict', (
       ['falcon9', 'cape', 'leo', 'cubesats', byKey.get('falcon9/leo/90')!.mass],
       ['electron', 'mahia', 'sso', 'cubesats', 100],
       ['pslvxl', 'sriharikota', 'gto', 'cubesats', byKey.get('pslvxl/gto/50')!.mass],
+      // added in review (see above)
+      ['falcon9', 'cape', 'leo', 'cubesats', 30000],
+      ['soyuz21a', 'baikonur', 'gto', 'cubesats', 1000],
+      ['falcon9', 'cape', 'geo', 'cubesats', 1000],
     ];
-    expect(rows.length).toBe(21 + 12);
+    expect(rows.length).toBe(21 + 12 + 3);
     const causes = new Set<string>();
     const started = performance.now();
     for (const [vehicle, site, orbit, satellite, mass] of rows) {
@@ -108,10 +120,11 @@ describe('readiness review · the catalogue gets the setup panel’s verdict', (
       expect(review.items.filter((i) => i.step === 'notice'), label).toEqual([]);
       causes.add(expected.verdict.cause);
     }
-    // the set reaches these six branches of the verdict
-    expect([...causes].sort()).toEqual(['burnBudget', 'corridor', 'margin', 'noInsertion', 'noRestart', 'ready']);
-    // Runtime: 1.5 s measured for the 33 rows (two plans and up to two probes
-    // each) on a shared 4-core machine; the bound only catches a runaway.
+    // the set reaches these nine branches of the verdict
+    expect([...causes].sort()).toEqual(['burnBudget', 'corridor', 'inclination', 'margin', 'noInsertion', 'noRating', 'noRestart',
+      'overCapacity', 'ready']);
+    // Runtime: 1.5 s measured for the first 33 rows (two plans and up to two
+    // probes each) on a shared 4-core machine; the bound only catches a runaway.
     expect(performance.now() - started).toBeLessThan(60_000);
   }, 120_000);
 });
