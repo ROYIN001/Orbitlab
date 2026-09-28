@@ -24,6 +24,14 @@
  * `pointMass`, or `sixDof` only when the student ticked the experimental
  * option; calm air, the fleet tests' seed.
  *
+ * THE ENGINEER LEVEL'S READINESS REVIEW (roadmap D04) hands over the mission
+ * it reviewed, not the preset: the orbit and site the student chose
+ * (`HandoffMission`), and the launch time the review flew — the first launch
+ * window after the Launch panel's time for a plane that has one — so that
+ * what flies in Launch is what was reviewed. A vehicle reviewed as it is in
+ * the catalogue goes by its id alone: a mission document carries a
+ * `vehicleSpec` only for a vehicle no catalogue has (src/config/mission-file.ts).
+ *
  * DOM-free. tests/design-handoff.test.ts parses the document with the Launch
  * panel's own parser and flies it.
  */
@@ -31,6 +39,7 @@ import type { DynamicsConfig, VehicleSpec } from '../types';
 import { missionDocument, type MissionDocument } from '../config/mission-file';
 import { orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE } from '../physics/defaults';
+import { isCatalogueEntry } from './warnings';
 
 /** The orbit preset "Fly it" targets. */
 export const HANDOFF_ORBIT = 'leo';
@@ -41,11 +50,23 @@ export const HANDOFF_SEED = 20260919;
 /** The least payload an orbital mission may carry (src/config/validation.ts, `setup.payloadMass`). */
 export const HANDOFF_MIN_PAYLOAD = 1;
 
-export function handoffDocument(spec: VehicleSpec, payloadKg: number, launchTime: Date, model: DynamicsConfig['model'] = 'pointMass'): MissionDocument {
+/** Where a vehicle is handed over to fly: an orbit preset and a launch site. */
+export interface HandoffMission {
+  orbitId: string;
+  siteId: string;
+}
+
+/**
+ * The mission document "Fly it" hands to the Launch section: `spec` carrying
+ * `payloadKg`, by default to the 500 km preset from its first site, or where
+ * `where` says (the readiness review's mission).
+ */
+export function handoffDocument(spec: VehicleSpec, payloadKg: number, launchTime: Date, model: DynamicsConfig['model'] = 'pointMass',
+  where: HandoffMission = { orbitId: HANDOFF_ORBIT, siteId: spec.sites[0] }): MissionDocument {
   return missionDocument({
-    vehicleId: spec.id, vehicleSpec: structuredClone(spec),
-    satelliteId: HANDOFF_SATELLITE, siteId: spec.sites[0],
-    orbitId: HANDOFF_ORBIT, orbit: { ...orbitById(HANDOFF_ORBIT) },
+    vehicleId: spec.id, ...(isCatalogueEntry(spec) ? {} : { vehicleSpec: structuredClone(spec) }),
+    satelliteId: HANDOFF_SATELLITE, siteId: where.siteId,
+    orbitId: where.orbitId, orbit: { ...orbitById(where.orbitId) },
     launchTime: new Date(launchTime.getTime()),
     payloadMass: Math.max(HANDOFF_MIN_PAYLOAD, payloadKg),
     guidanceOverrides: {}, failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
