@@ -1,0 +1,190 @@
+/* ==========================================================================
+   The Build section (roadmap Phase 3, src/ui/build/build-screen.ts).
+
+   Drawn over the launch scene like the Orbit playground — in the Build
+   section `body[data-mode]` is `home`, so the launch workspace around the
+   viewport is already hidden — and opaque, so the scene under it is not
+   drawn at all. The Watch level on a wide screen: the drawing on the left,
+   the whole height of the screen (a rocket is tall and thin); beside it the
+   rocket's name and picker across the top, the tour and the part card side
+   by side, and the stage-by-stage figures under both. Two columns on a tablet, the drawing kept in sight; on a phone one
+   column that scrolls, the drawing under the rocket's name and the figures
+   as one card per stage.
+   ========================================================================== */
+
+.build-screen {
+  position: absolute; inset: 0; z-index: 5;
+  background: var(--bg);
+  overflow: hidden;
+}
+.bs-grid {
+  display: grid; height: 100%; gap: 10px; padding: 10px;
+  grid-template-columns: minmax(340px, 1.05fr) minmax(280px, 1fr) minmax(280px, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'stage intro intro' 'stage tour card' 'stage figs figs';
+}
+.bs-grid[hidden], .bs-soon[hidden] { display: none; }
+.bs-panel {
+  min-height: 0; min-width: 0; overflow-y: auto;
+  padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
+}
+.bs-intro { grid-area: intro; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px 20px; }
+.bs-intro-text { flex: 1 1 360px; min-width: 0; }
+.bs-intro .bs-picker { flex: 0 1 320px; min-width: 240px; }
+.bs-tour { grid-area: tour; }
+.bs-card { grid-area: card; }
+.bs-figures { grid-area: figs; max-height: 36vh; }
+
+/* ── the rocket ───────────────────────────────────────────────────────────── */
+
+.bs-eyebrow { color: var(--accent); letter-spacing: 2px; }
+.bs-title { margin: 4px 0 8px; font: 600 21px/1.2 var(--display); letter-spacing: -0.3px; }
+.bs-lead { margin: 0; font-size: 13.5px; line-height: 1.55; color: #c9d6e2; }
+.bs-picker-label { display: block; margin-bottom: 5px; font-size: 12.5px; color: var(--muted); }
+.bs-picker-row { display: flex; align-items: center; gap: 6px; }
+.bs-picker-row select { flex: 1; min-width: 0; height: 36px; }
+.bs-step {
+  display: grid; place-items: center; flex: none;
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line2);
+  font-size: 18px; line-height: 1; color: #c9d6e2;
+}
+.bs-step:hover { border-color: var(--accent-line); color: var(--text); }
+
+/* ── the drawing ──────────────────────────────────────────────────────────── */
+
+.bs-stage {
+  grid-area: stage;
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+  background-color: #05080d;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.bs-tabs { display: flex; gap: 2px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--panel3); }
+.bs-tab { padding: 6px 12px; border-radius: 6px; font-size: 13px; color: #a9b7c8; white-space: nowrap; }
+.bs-tab:hover { color: var(--text); }
+.bs-tab[aria-pressed='true'] { background: var(--accent-weak); color: var(--accent); }
+.bs-draw { position: relative; flex: 1; min-height: 0; }
+.bs-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bs-hint { margin: 0; padding: 6px 12px 8px; font-size: 12px; color: var(--muted); }
+
+.bs-part { stroke: rgba(190, 205, 220, 0.55); stroke-width: 1; stroke-linejoin: round; cursor: pointer; transition: opacity 0.2s; }
+.bs-part:hover { stroke: var(--accent); stroke-width: 1.6; }
+.bs-part.sel { stroke: var(--accent); stroke-width: 2.4; }
+.bs-bell { fill: #59606a; stroke: #2a3038; stroke-width: 0.8; cursor: pointer; transition: opacity 0.2s; }
+.bs-part.dim, .bs-bell.dim { opacity: 0.32; }
+.bs-label { cursor: pointer; outline: none; transition: opacity 0.2s; }
+.bs-label.dim { opacity: 0.55; }
+.bs-hit { fill: transparent; stroke: none; }
+.bs-label:hover .bs-hit, .bs-label:focus-visible .bs-hit { fill: rgba(139, 229, 205, 0.08); stroke: var(--accent-line); }
+.bs-leader { fill: none; stroke: rgba(150, 163, 180, 0.6); stroke-width: 1; }
+.bs-dot { fill: #b8c4d2; }
+.bs-l1 { fill: var(--text); font: 600 12.5px var(--sans); }
+.bs-l2 { fill: var(--muted); font: 400 11.5px var(--sans); }
+.bs-label.hi .bs-l1, .bs-label.sel .bs-l1 { fill: var(--accent); }
+.bs-label.sel .bs-leader, .bs-label.hi .bs-leader { stroke: var(--accent); }
+.bs-label.sel .bs-dot, .bs-label.hi .bs-dot { fill: var(--accent); }
+.bs-scale path { fill: none; stroke: var(--muted); stroke-width: 1.2; }
+.bs-scale text { fill: var(--muted); font: 11px var(--sans); }
+
+/* ── the part card ────────────────────────────────────────────────────────── */
+
+.bs-card-empty { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.bs-card-role { color: var(--accent); letter-spacing: 1.4px; overflow-wrap: anywhere; }
+.bs-card-role code { font: 500 11px var(--mono); letter-spacing: 0; text-transform: none; color: #c9d6e2; }
+.bs-card-title { margin: 4px 0 10px; font: 600 19px/1.25 var(--display); letter-spacing: -0.2px; }
+.bs-card-sec { margin-top: 12px; }
+.bs-card-sec h3 { margin: 0 0 8px; font: 600 13px/1.4 var(--sans); color: var(--muted); }
+.bs-dl { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); margin-bottom: 4px; }
+.bs-dl dd { white-space: normal; overflow-wrap: anywhere; }
+.bs-note { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.bs-note.warn { color: var(--warn); }
+.bs-note.est { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; }
+.bs-sources { margin-bottom: 8px; }
+.bs-sources-what { display: block; font-size: 12px; color: #c9d6e2; }
+.bs-sources ul { list-style: none; margin: 3px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.bs-sources li { font-size: 12.5px; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+.bs-sources a { color: var(--blue); }
+.bs-sources q { quotes: none; }
+.bs-uncited { font-style: italic; }
+
+/* ── the figures ──────────────────────────────────────────────────────────── */
+
+.bs-fig-title { margin: 0 0 4px; font: 600 14px/1.4 var(--sans); color: #c9d6e2; }
+.bs-fig-note { margin: 0 0 8px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.bs-fig-note.small { margin: 8px 0 0; font-size: 12px; }
+.bs-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.bs-table th, .bs-table td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.bs-table thead th { font: 500 12px/1.3 var(--sans); color: var(--muted); }
+.bs-table .num { text-align: right; }
+.bs-table tfoot th, .bs-table tfoot td { border-bottom: 0; font-weight: 600; }
+.bs-table tfoot .bs-foot-rest { text-align: left; font-weight: 400; }
+.bs-foot-rest .bs-line { display: inline-block; margin-right: 18px; }
+.bs-line { display: block; }
+.bs-v { white-space: nowrap; }
+.bs-line small { font-size: 11.5px; color: var(--muted); }
+.bs-stage-name strong { display: block; font-weight: 600; }
+.bs-stage-name small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+.bs-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.bs-cards { display: none; }
+.bs-fig-card { padding: 10px 12px; border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); }
+.bs-fig-card .bs-stage-name { display: block; margin-bottom: 6px; }
+.bs-fig-dl { margin: 0; }
+
+/* ── the tour ─────────────────────────────────────────────────────────────── */
+
+.bs-tour-step { color: var(--accent); letter-spacing: 1.8px; }
+.bs-tour h2 { margin: 4px 0 6px; font: 600 20px/1.2 var(--display); letter-spacing: -0.3px; }
+.bs-tour-text { margin: 0; font-size: 14px; line-height: 1.58; color: #dce6ee; }
+.bs-tour-stats { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 12px; }
+.bs-tour-stat small { display: block; font-size: 12px; color: #9fb2c4; }
+.bs-tour-stat strong { display: block; margin-top: 2px; font: 600 20px/1.15 var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bs-est { font-style: normal; color: var(--warn); }
+.bs-tour-about { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+.bs-tour-about .watch-btn.link { padding: 0; font-size: 13px; }
+.bs-tour { padding-bottom: 0; }
+/* Back and Next stay in sight at the foot of the card while its text scrolls */
+.bs-tour-nav { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 10px 0 14px; background: var(--panel); }
+.bs-tour-nav .watch-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Explore and Engineer, while they are being built ─────────────────────── */
+
+.bs-soon {
+  position: absolute; inset: 0; overflow-y: auto;
+  padding: 40px clamp(20px, 5vw, 72px);
+  background: var(--bg);
+}
+.bs-soon .section-level { max-width: 620px; margin-bottom: 4px; }
+.bs-soon .section-items li.done .section-item-id { color: var(--ok); }
+
+/* ── narrower screens ─────────────────────────────────────────────────────── */
+
+/* the card and the tour go under the rocket's name, the drawing stays in sight beside them */
+@media (max-width: 1180px) {
+  .build-screen { overflow-y: auto; }
+  .bs-grid {
+    height: auto; min-height: 100%; align-items: start;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    grid-template-rows: auto auto auto auto;
+    grid-template-areas: 'stage intro' 'stage card' 'stage tour' 'figs figs';
+  }
+  .bs-stage { position: sticky; top: 10px; height: calc(100dvh - 90px); min-height: 380px; }
+  .bs-panel { overflow: visible; }
+  .bs-figures { max-height: none; }
+  .bs-tour-nav { position: static; }
+}
+/* a phone: one column that scrolls; the figures as a card per stage */
+@media (max-width: 860px) {
+  .bs-grid { display: flex; flex-direction: column; align-items: stretch; padding: 10px 16px 16px; gap: 10px; }
+  .bs-intro { display: block; }
+  .bs-intro .bs-picker { margin-top: 12px; }
+  .bs-stage { position: static; height: auto; min-height: 0; flex: none; }
+  .bs-draw { flex: none; height: min(64vh, 480px); }
+  .bs-panel { padding: 12px; }
+  .bs-title { font-size: 19px; }
+  .bs-table { display: none; }
+  .bs-cards { display: flex; flex-direction: column; gap: 8px; }
+  .bs-tour h2 { font-size: 18px; }
+  .bs-tour-stat strong { font-size: 18px; }
+  .bs-soon { padding: 24px 16px; }
+}

@@ -1,16 +1,18 @@
 /**
- * What the Orbit and Build sections will hold (roadmap S01), for the screens
- * that stand in for them until they are built. Taken from
- * docs/ROADMAP-PART2-3.md, item for item, so the screen promises nothing the
- * roadmap does not: each line is a roadmap item, named by its identifier,
- * and none of it pretends to work yet.
+ * What the Orbit and Build sections hold and will hold (roadmap S01), taken
+ * from docs/ROADMAP-PART2-3.md item for item, so no screen promises anything
+ * the roadmap does not: each line is a roadmap item, named by its
+ * identifier. The Orbit playground lists what it still lacks from it
+ * (src/ui/orbit/playground.ts); the Build screen shows it where a level is
+ * still being built (src/ui/build/build-screen.ts).
  *
- * DOM-free: `src/ui/section-screen.ts` draws it, tests/section-plan.test.ts
- * holds it to the roadmap document and the dictionaries.
+ * DOM-free: tests/section-plan.test.ts holds it to the roadmap document and
+ * the dictionaries, tests/orbit-playground.test.ts and
+ * tests/build-screen.test.ts each section's built items.
  */
 import type { AppLevel, AppSection } from './app-mode';
 
-/** A section that is not built yet. */
+/** A section with a plan of roadmap items: both sections beyond the launch simulator, built or being built. */
 export type PlannedSection = Exclude<AppSection, 'launch'>;
 export const PLANNED_SECTIONS: readonly PlannedSection[] = ['orbit', 'build'];
 
@@ -86,6 +88,40 @@ export const SECTION_PLANS: Readonly<Record<PlannedSection, SectionPlan>> = {
  * pages say what is still to come, and leave these out of that list.
  */
 export const BUILT_ITEMS: ReadonlySet<string> = new Set(['O01', 'O02', 'O03', 'O04', 'R01', 'R02', 'R03', 'R04', 'R05', 'M01', 'M02', 'M03']);
+
+/**
+ * The Build section's own (Phase 3 on). D01, the parts catalogue, is built:
+ * the fleet is assembled from it and the Watch level draws its parts. The
+ * Watch level itself, real rockets taken apart ("exploded views",
+ * `plan.build.watch`), is not a numbered roadmap item.
+ */
+export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01']);
+
+/** The Build section's levels that are built; the others show what is coming to them. */
+export const BUILD_READY_LEVELS: ReadonlySet<AppLevel> = new Set(['watch']);
+
+/**
+ * What each Build level will offer, by roadmap item, as the roadmap and the
+ * level lines (`plan.build.explore`, `plan.build.engineer`) divide it:
+ * Explore remixes a real rocket (D02), builds one from parts (D03) and starts
+ * a satellite from a template (D06); Engineer designs from parts (D03), tests
+ * before flight (D04), sizes from a payload with optimal staging (D05) and
+ * budgets a satellite (D06, D07).
+ */
+export const BUILD_LEVEL_ITEMS: Readonly<Record<Exclude<AppLevel, 'watch'>, readonly string[]>> = {
+  explore: ['D02', 'D03', 'D06'],
+  engineer: ['D03', 'D04', 'D05', 'D06', 'D07'],
+};
+
+/**
+ * The level a section link opens a section at, from the level showing (or
+ * last used): the same level, except that the Build section opens at a level
+ * that is built, its Watch level, rather than at one that only says what is
+ * coming. The level links still open any level.
+ */
+export function sectionLinkLevel(section: AppSection, level: AppLevel): AppLevel {
+  return section === 'build' && !BUILD_READY_LEVELS.has(level) ? 'watch' : level;
+}
 
 export const isPlannedSection = (section: AppSection | null): section is PlannedSection =>
   section === 'orbit' || section === 'build';
