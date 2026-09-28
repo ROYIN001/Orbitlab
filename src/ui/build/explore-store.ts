@@ -248,6 +248,8 @@ export class ExploreStore {
       cancel.dataset.k = `renameCancel:${d.id}`;
       form.append(label, ok, cancel);
       form.addEventListener('submit', (e) => { e.preventDefault(); void this.rename(d.id, input.value); });
+      // Escape backs out of the rename, as Cancel does
+      form.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel.click(); } });
       li.append(form);
       return li;
     }
@@ -266,6 +268,8 @@ export class ExploreStore {
       const ask = el('span', 'bx-confirm', t('build.ex.store.confirmDelete', { name: d.name }));
       ask.setAttribute('role', 'alert');
       row.append(ask, yes, no);
+      // Escape keeps the design, as Cancel does
+      row.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); no.click(); } });
     } else {
       const named = (b: HTMLButtonElement, key: string, k: string): HTMLButtonElement => {
         b.setAttribute('aria-label', `${t(key)}: ${d.name}`);
