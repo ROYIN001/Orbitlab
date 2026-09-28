@@ -18,11 +18,26 @@ import { staticFire } from '../src/design/static-fire';
 import { VEHICLES } from '../src/data/vehicles';
 import { G0, P0 } from '../src/physics/constants';
 import {
-  engineIsp, engineMassFlow, engineStartupS, engineTailoffS, TAILOFF_SPAN,
+  engineMassFlow, engineStartupS, engineTailoffS, TAILOFF_SPAN,
 } from '../src/physics/vehicle';
 import type { EngineSpec } from '../src/types';
 
 const rel = (a: number, b: number): number => Math.abs(a / b - 1);
+
+/**
+ * The effective exhaust velocity G0·Isp(p), N·s/kg, worked out here from the
+ * data rather than taken from the engine model the stand runs on: the thrust
+ * falls linearly from the vacuum figure to the sea-level one as the pressure
+ * rises to P0 (a vacuum-only engine keeps its vacuum figure, since its
+ * sea-level pair is a placeholder), and the mass flow is the vacuum pair's,
+ * thrustVac/(G0·ispVac), at every pressure (src/physics/vehicle.ts documents
+ * that convention; this restates it independently of its code).
+ */
+function exhaustVelocity(e: EngineSpec, p: number): number {
+  const seaLevel = e.vacuumOnly ? e.thrustVac : e.thrustSL;
+  const thrust = e.thrustVac - (e.thrustVac - seaLevel) * Math.min(1, p / P0);
+  return thrust / (e.thrustVac / (G0 * e.ispVac));
+}
 
 /** Every engine installation in the fleet, once per distinct object, with the propellant it burns and where. */
 function installations(): { owner: string; engine: EngineSpec; propellant: number; groundLit: boolean }[] {
@@ -123,7 +138,7 @@ describe('test stand · the engine model reproduced', () => {
       if (!groundLit || e.vacuumOnly) continue;
       const r = staticFire(e, { count: e.count, propellantKg: 1e6, pressurePa: P0, throttle: 1, ...(e.solid ? {} : { cutoffS: 5 }), dt: 0.1 });
       const s = r.samples[Math.floor(r.samples.length / 2)];
-      expect(rel(s.isp, engineIsp(e, P0)), `${owner}: the stand is the model`).toBeLessThan(1e-12);
+      expect(rel(s.isp, exhaustVelocity(e, P0) / G0), `${owner}: the stand is the model`).toBeLessThan(1e-12);
       const err = rel(s.isp, e.ispSL);
       expect(err, `${owner} ${e.name}: delivers ${s.isp.toFixed(1)} s against a quoted ${e.ispSL} s`).toBeLessThan(0.08);
       if (err > 0.02) off.push(`${e.name} ${(err * 100).toFixed(1)} %`);
@@ -141,6 +156,8 @@ describe('test stand · the engine model reproduced', () => {
   it('pays for every newton-second at the delivered Isp, and empties the tank', () => {
     const cases: [string, EngineSpec, number][] = [
       ['Merlin 1D, vacuum', merlin, 0], ['Merlin 1D, sea level', merlin, P0],
+      // between the two, where the pressure blend is not at an end point (added in review)
+      ['Merlin 1D, 40 kPa', merlin, 40e3], ['P120C, 40 kPa', p120c, 40e3],
       ['P120C, vacuum', p120c, 0], ['P120C, sea level', p120c, P0],
       ['RL10 (vacuum-only), vacuum', centaurRl10, 0],
     ];
@@ -148,7 +165,7 @@ describe('test stand · the engine model reproduced', () => {
       for (const dt of [0.01, 0.1, 0.5]) {
         const load = 20 * e.count * engineMassFlow(e) + 1234.5;
         const r = staticFire(e, { count: e.count, propellantKg: load, pressurePa: p, throttle: 1, dt });
-        expect(rel(r.impulse / r.propellantUsed, G0 * engineIsp(e, p)), `${name}, dt ${dt}`).toBeLessThan(1e-9);
+        expect(rel(r.impulse / r.propellantUsed, exhaustVelocity(e, p)), `${name}, dt ${dt}`).toBeLessThan(1e-9);
         expect(load - r.propellantUsed, `${name}, dt ${dt}: tank left`).toBeLessThan(1e-6 * load);
       }
     }
