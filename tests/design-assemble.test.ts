@@ -103,7 +103,7 @@ describe('D03 assemble: the fields a design leaves out', () => {
     expect([FLEET_MAX_Q, FLEET_MAX_ACCEL]).toEqual([40e3, 50]);
     expect([spec.maxQ, spec.maxAccel, spec.country, spec.manufacturer]).toEqual([40e3, 50, 'KZ', '']);
     expect(spec.fairing!.sepAltitude).toBe(115e3);
-    expect(estimates).toEqual([{ code: 'fairingSepAltitude' }, { code: 'noRatings' }, { code: 'maxQDefault' }, { code: 'maxAccelDefault' }]);
+    expect(estimates).toEqual([{ code: 'fairingSepAltitude' }, { code: 'noRatings' }, { code: 'maxQDefault' }, { code: 'maxAccelDefault' }, { code: 'countryDefault' }]);
     expect('derivedFrom' in spec).toBe(false);
     expect(vehicleSpecProblems(spec)).toEqual([]);
   });
@@ -122,7 +122,7 @@ describe('D03 assemble: engines and bodies of one’s own', () => {
     expect(spec.stages[0]).toMatchObject({ id: 's1-r1', name: 'RD-180', dryMass: 22200 + 5480 - 9 * 467 });
     expect(spec.stages[0].engine).toStrictEqual(engineSpec('rd180', 1));
     expect(spec.stages[1].id).toBe('s2');
-    expect(estimates.map((e) => e.code)).toEqual(['noRatings', 'maxQDefault', 'maxAccelDefault']);
+    expect(estimates.map((e) => e.code)).toEqual(['noRatings', 'maxQDefault', 'maxAccelDefault', 'countryDefault']);
     expect(vehicleSpecProblems(spec)).toEqual([]);
   });
 

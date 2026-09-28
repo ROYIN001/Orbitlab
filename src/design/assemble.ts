@@ -25,7 +25,8 @@
  *   property of the design.
  * - `height`: the drawn stack, `stackLayout` plus the fairing — what the
  *   drawing shows, not a typed number.
- * - `country`: the design's, else its first launch site's.
+ * - `country`: the design's, else its first launch site's (`countryDefault`:
+ *   a design flown from Baikonur is "KZ" until the designer says otherwise).
  *
  * IDS follow the remix's rule (src/design/remix.ts): a catalogue body flown
  * with its own engine installation keeps its catalogue stage id, which keys
@@ -131,7 +132,7 @@ export interface PartsDesign {
   guidanceDefaults?: Partial<GuidanceParams>;
 }
 
-export type AssembleEstimateCode = 'noRatings' | 'maxQDefault' | 'maxAccelDefault' | 'engineMassUnknown' | 'fairingSepAltitude';
+export type AssembleEstimateCode = 'noRatings' | 'maxQDefault' | 'maxAccelDefault' | 'countryDefault' | 'engineMassUnknown' | 'fairingSepAltitude';
 
 export interface AssembleEstimate {
   code: AssembleEstimateCode;
@@ -257,6 +258,7 @@ export function assemble(design: PartsDesign): Assembly {
   if (!design.ratings) estimates.push({ code: 'noRatings' });
   if (design.maxQ === undefined) estimates.push({ code: 'maxQDefault' });
   if (design.maxAccel === undefined) estimates.push({ code: 'maxAccelDefault' });
+  if (design.country === undefined) estimates.push({ code: 'countryDefault' });
   const site = SITES.find((s) => s.id === design.sites[0])!;
   const spec: VehicleSpec = {
     id: design.id, name: design.name, country: design.country ?? site.country, manufacturer: design.manufacturer ?? '',
