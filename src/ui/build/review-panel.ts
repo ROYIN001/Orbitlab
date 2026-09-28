@@ -279,6 +279,8 @@ export class ReviewPanel {
       banner.append(glyph, ` ${text}`);
       parts.push(banner);
     }
+    // what computing the ratings came to: said here, since the box that offered it goes once they exist
+    if (this.ratingsMessage) parts.push(el('p', `bx-note bx-msg-${this.ratingsMessage.level}`, this.ratingsMessage.text));
     this.status.replaceChildren(...parts);
   }
 
@@ -359,11 +361,6 @@ export class ReviewPanel {
       const go = button('watch-btn', t('build.eng.review.rate'), () => this.computeRatings());
       go.dataset.k = 'review:rate';
       box.append(go);
-    }
-    if (this.ratingsMessage) {
-      const p = el('p', `bx-note bx-msg-${this.ratingsMessage.level}`, this.ratingsMessage.text);
-      p.setAttribute('role', 'status');
-      box.append(p);
     }
     return box;
   }

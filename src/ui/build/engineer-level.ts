@@ -7,7 +7,9 @@
  * WIND TUNNEL (src/ui/build/tunnel-panel.ts) and FLIGHT READINESS REVIEW
  * (src/ui/build/review-panel.ts, which hands a mission that passes to the
  * Launch section, as the Explore level's "Fly it" does), and D05's OPTIMAL
- * STAGING (src/ui/build/staging-panel.ts). What is still coming
+ * STAGING (src/ui/build/staging-panel.ts) and SIZING (src/ui/build/
+ * sizing-panel.ts, whose launcher goes on to the review here or to the
+ * Explore level's parts builder). What is still coming
  * to the level is listed under the tabs, by roadmap item, as the level's
  * placeholder listed it.
  *
@@ -15,13 +17,17 @@
  * not a list of its own: a catalogue rocket, the design open in the Explore
  * level (read again every time this level is shown, so an edit made there is
  * what is tested here), or a design saved in this browser
- * (src/design/design-store.ts). The first time the level opens after the
- * Explore level has been used, it starts on that design.
+ * (src/design/design-store.ts) — and, once the sizing page has sent one
+ * here, the launcher it sized. The first time the level opens after the
+ * Explore level has been used, it starts on that design. Payload ratings the
+ * review computes for a design of one's own stay with its source.
  *
- * Both facilities run the flights' own models on it — the stand the engine
- * model every launch flies, the tunnel the six-DOF flight's aerodynamics —
- * so this file and its panels only choose inputs and draw outputs; the
- * logic is DOM-free in src/design/test-stand.ts and src/design/tunnel-view.ts.
+ * Every facility runs the flights' own models on it — the stand the engine
+ * model every launch flies, the tunnel the six-DOF flight's aerodynamics, the
+ * review the Launch section's planner, probe flight and verdict — so this
+ * file and its panels only choose inputs and draw outputs; the logic is
+ * DOM-free in src/design/ (test-stand.ts, tunnel-view.ts, review-model.ts,
+ * staging-model.ts, sizing-model.ts).
  */
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
@@ -38,6 +44,8 @@ import { StandPanel } from './stand-panel';
 import { TunnelPanel } from './tunnel-panel';
 import { ReviewPanel } from './review-panel';
 import { StagingPanel } from './staging-panel';
+import { SizingPanel } from './sizing-panel';
+import type { ReviewChoice } from '../../design/review-model';
 import './engineer.css';
 
 /** A design the Explore level has on screen. */
@@ -57,19 +65,24 @@ export interface EngineerHost {
   launchTime(): Date;
   /** hand a reviewed mission to the Launch section and go there; false when it could not take it */
   fly(doc: MissionDocument): boolean;
+  /** load a sized launcher into the Explore level's parts builder and go there (D05) */
+  openInExplore(spec: VehicleSpec, payloadKg: number): void;
 }
 
 /** The vehicle on the bench: its spec, the name it goes by, and the payload the tunnel weighs it with. */
 export type BenchVehicle = ExploreDesign;
 
-type EngineerTab = 'stand' | 'tunnel' | 'review' | 'staging';
-/** The level's facilities and tools, in tab order: D05's sizing joins here. */
-const TABS: readonly EngineerTab[] = ['stand', 'tunnel', 'review', 'staging'];
+type EngineerTab = 'stand' | 'tunnel' | 'review' | 'staging' | 'sizing';
+/** The level's facilities and tools, in tab order. */
+const TABS: readonly EngineerTab[] = ['stand', 'tunnel', 'review', 'staging', 'sizing'];
 const TAB_KEY: Record<EngineerTab, string> = {
   stand: 'build.eng.tab.stand', tunnel: 'build.eng.tab.tunnel', review: 'build.eng.tab.review', staging: 'build.eng.tab.staging',
+  sizing: 'build.eng.tab.sizing',
 };
 
 const EXPLORE_ID = 'explore';
+/** the launcher the sizing page sized, once "Check readiness" has put it on the bench */
+const SIZED_ID = 'sized';
 const SAVED = 'saved:';
 const DEFAULT_ID = 'falcon9';
 
@@ -89,6 +102,7 @@ export class EngineerLevel {
   /** the student has chosen a vehicle here (the level no longer follows the Explore level on its own) */
   private chosen = false;
   private saved: DesignSummary[] = [];
+  private sized: BenchVehicle | null = null;
   private message: string | null = null;
   /** the latest vehicle load asked for; an older answer arriving late is dropped */
   private loadSeq = 0;
@@ -102,6 +116,7 @@ export class EngineerLevel {
   private readonly tunnel = new TunnelPanel();
   private readonly review: ReviewPanel;
   private readonly staging = new StagingPanel();
+  private readonly sizing: SizingPanel;
 
   constructor(private readonly host: EngineerHost, private readonly store: DesignStore = new LocalDesignStore()) {
     this.picker = new VehiclePicker(pickerEntries(VEHICLES), (id) => this.pick(id), 'be-picker-select');
@@ -110,9 +125,14 @@ export class EngineerLevel {
       fly: (doc) => this.host.fly(doc),
       rated: (spec) => this.rated(spec),
     });
+    this.sizing = new SizingPanel({
+      openInBuilder: (spec, payloadKg) => this.host.openInExplore(spec, payloadKg),
+      checkReadiness: (spec, name, payloadKg, choice) => this.checkSized({ spec, name, payloadKg }, choice),
+    });
     this.tabBar.setAttribute('role', 'tablist');
     this.tabBar.addEventListener('keydown', (e) => this.onTabKey(e));
-    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root, tunnel: this.tunnel.root, review: this.review.root, staging: this.staging.root };
+    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root, tunnel: this.tunnel.root, review: this.review.root, staging: this.staging.root,
+      sizing: this.sizing.root };
     for (const k of TABS) {
       const panel = el('section', 'be-panel');
       panel.id = `be-panel-${k}`;
@@ -139,6 +159,7 @@ export class EngineerLevel {
     this.tunnel.hide();
     this.review.hide();
     this.staging.hide();
+    this.sizing.hide();
   }
 
   // ─── the vehicle on the bench ──────────────────────────────────────────────
@@ -166,6 +187,7 @@ export class EngineerLevel {
   private setEntries(explore: ExploreDesign | null): void {
     const designs: PickerEntry[] = [
       ...(explore ? [{ id: EXPLORE_ID, label: t('build.eng.src.explore', { name: explore.name }), group: 'design' as const }] : []),
+      ...(this.sized ? [{ id: SIZED_ID, label: t('build.eng.src.sized', { name: this.sized.name }), group: 'design' as const }] : []),
       ...this.saved.map((d) => ({ id: SAVED + d.id, label: d.name, group: 'design' as const })),
     ];
     this.picker.setEntries([...pickerEntries(VEHICLES), ...designs]);
@@ -190,6 +212,12 @@ export class EngineerLevel {
       this.afterPick();
       return;
     }
+    if (id === SIZED_ID && this.sized) {
+      this.sourceId = id;
+      this.setBench(this.sized);
+      this.afterPick();
+      return;
+    }
     if (id.startsWith(SAVED)) {
       this.sourceId = id;
       void this.store.get(id.slice(SAVED.length)).catch(() => null).then((rec) => {
@@ -211,12 +239,32 @@ export class EngineerLevel {
     if (this.visible) this.renderHead();
   }
 
-  private setBench(b: BenchVehicle): void {
+  /** `choice`: the whole mission the readiness review starts on (the sizing page's); otherwise it keeps what fits. */
+  private setBench(b: BenchVehicle, choice?: ReviewChoice): void {
     this.bench = b;
     this.stand.setVehicle(b.spec, b.name);
     this.tunnel.setVehicle(b.spec, b.name, b.payloadKg);
-    this.review.setVehicle(b.spec, b.name, b.payloadKg);
+    this.review.setVehicle(b.spec, b.name, b.payloadKg, choice);
     this.staging.setVehicle(b.spec, b.name, b.payloadKg);
+  }
+
+  /**
+   * The sizing page's "Check readiness": the sized launcher becomes a source
+   * of its own and goes on the bench, and the review opens on the mission it
+   * was sized for.
+   */
+  private checkSized(b: BenchVehicle, choice: ReviewChoice): void {
+    this.sized = b;
+    this.chosen = true;
+    this.message = null;
+    ++this.loadSeq;
+    this.sourceId = SIZED_ID;
+    this.setEntries(this.host.exploreDesign());
+    this.setBench(b, choice);
+    this.renderHead();
+    this.setTab('review', false);
+    this.root.closest('.build-screen')?.scrollTo({ top: 0 });
+    this.tabBar.querySelector<HTMLElement>('#be-tab-review')?.focus();
   }
 
   /**
@@ -231,7 +279,11 @@ export class EngineerLevel {
       this.host.rateExploreDesign(spec);
       const d = this.host.exploreDesign();
       this.setBench(d ?? { ...this.bench, spec });
-    } else this.setBench({ ...this.bench, spec });
+    } else {
+      const b = { ...this.bench, spec };
+      if (this.sourceId === SIZED_ID) this.sized = b;
+      this.setBench(b);
+    }
   }
 
   // ─── the page ─────────────────────────────────────────────────────────────
@@ -246,6 +298,7 @@ export class EngineerLevel {
     this.tunnel.render();
     this.review.render();
     this.staging.render();
+    this.sizing.render();
     this.showTab();
   }
 
@@ -306,7 +359,7 @@ export class EngineerLevel {
   private showTab(): void {
     for (const k of TABS) this.panels[k].hidden = k !== this.tab;
     if (!this.visible) return;
-    const panels = { stand: this.stand, tunnel: this.tunnel, review: this.review, staging: this.staging };
+    const panels = { stand: this.stand, tunnel: this.tunnel, review: this.review, staging: this.staging, sizing: this.sizing };
     for (const k of TABS) if (k !== this.tab) panels[k].hide();
     panels[this.tab].show();
   }

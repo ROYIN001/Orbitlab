@@ -4,7 +4,7 @@
    (build.css, explore.css).
 
    The vehicle on the bench across the top, one tab bar under it (the test
-   stand, the wind tunnel, the readiness review; D05's tools join it),
+   stand, the wind tunnel, the readiness review, optimal staging, sizing),
    and the open facility under that: on a wide screen its controls on the
    left and what it measured on the right, the curves under the results; on
    a tablet the same two columns narrower; on a phone one column — the
@@ -38,7 +38,7 @@
 
 /* ── a facility: controls, results, curves ────────────────────────────────── */
 
-.be-stand, .be-tunnel, .be-review, .be-staging {
+.be-stand, .be-tunnel, .be-review, .be-staging, .be-sizing {
   display: grid; gap: 10px; align-items: start;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   grid-template-areas: 'ctrl out' 'ctrl plots';
@@ -160,6 +160,19 @@
 .be-why { color: #c9d6e2; }
 .be-chart-tall { height: 280px; }
 
+/* ── sizing ───────────────────────────────────────────────────────────────── */
+
+.be-stage-in .be-wide { grid-column: 1 / -1; }
+.be-size-finding { padding: 8px 10px; border-left: 3px solid var(--warn); background: rgba(239, 164, 126, 0.06); color: #e7d2c6; border-radius: 0 8px 8px 0; }
+.be-size-table td small.be-sub { display: block; font-weight: 400; color: var(--muted); }
+.be-size-table td:nth-child(3) { white-space: normal; }
+.be-size-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.be-size-row { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+/* build.css's .bs-draw fills a column (and loads after this file): held to a box of its own here */
+.be-size-row .be-size-draw { flex: none; width: 240px; height: 440px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel3); }
+.be-size-figs { flex: 1; min-width: 0; }
+.be-sizing .bs-draw.stale .bs-svg { opacity: 0.45; }
+
 /* ── what is still coming ─────────────────────────────────────────────────── */
 
 .be-coming { padding: 6px 20px 20px; }
@@ -170,7 +183,7 @@
 /* ── narrower screens ─────────────────────────────────────────────────────── */
 
 @media (max-width: 1180px) {
-  .be-stand, .be-tunnel, .be-review, .be-staging { grid-template-columns: minmax(280px, 330px) minmax(0, 1fr); }
+  .be-stand, .be-tunnel, .be-review, .be-staging, .be-sizing { grid-template-columns: minmax(280px, 330px) minmax(0, 1fr); }
   .be-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .be-charts.two { grid-template-columns: minmax(0, 1fr); }
 }
@@ -185,7 +198,9 @@
     border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); font-size: 13.5px;
   }
   .be-tab[aria-selected='true'] { border-color: var(--accent-line); background: var(--accent-weak); }
-  .be-stand, .be-tunnel, .be-review, .be-staging { display: flex; flex-direction: column; align-items: stretch; }
+  .be-stand, .be-tunnel, .be-review, .be-staging, .be-sizing { display: flex; flex-direction: column; align-items: stretch; }
+  .be-size-row { flex-direction: column; }
+  .be-size-row .be-size-draw { width: 100%; height: 340px; }
   .be-charts, .be-charts.two { grid-template-columns: minmax(0, 1fr); }
   .be-chart { height: 170px; }
   .be-coming { padding: 4px 12px 16px; }

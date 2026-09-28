@@ -169,6 +169,8 @@ describe('what the sized launcher goes on to', () => {
     const probe = bare.list.find((s) => s.id === 'probe')!.rows[0].text!;
     expect(probe.key).toBe(bare.r.insertion!.bestPerigee >= 0 ? 'build.eng.review.probe.noOrbit' : 'build.eng.review.probe.noOrbitNever');
     expect(probe.values.end).toEqual({ key: 'build.eng.review.end.outOfPropellant' });
+    // sized exactly to the planner's line: its shortfall on paper is a rounding residue, not said as one
+    expect(bare.list.find((s) => s.id === 'plan')!.rows[0].text?.key).toBe('build.eng.review.plan.margin');
     const margin = run(500);
     expect(margin.list.find((s) => s.id === 'probe')!.rows[0].text?.key).toBe('build.eng.review.probe.orbit');
     // no payload rating yet: the Launch panel's verdict cannot call it ready

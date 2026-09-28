@@ -150,6 +150,15 @@ function say(key: string, level: ReadinessLevel, values: DesignText['values'] = 
   return { level, text: { key, level: shown, subject: null, values } };
 }
 
+/**
+ * A shortfall on paper the checklist calls one, m/s: one that rounds to at
+ * least 1 m/s. A launcher sized by src/design/sizing.ts sits exactly on the
+ * planner's line, and its shortfall is then a rounding residue (1e-10 m/s),
+ * which "0 m/s short" would misstate. The verdict's own note has no such
+ * floor; for a vehicle on the line it is the verdict's text, not this.
+ */
+export const SHORTFALL_SAID = 0.5;
+
 /** How the probe's flight ended, by the event it ended on; one sentence for any other. */
 export const PROBE_END_KEYS: Readonly<Record<string, string>> = {
   'evt.noLiftoff': 'build.eng.review.end.noLiftoff',
@@ -196,7 +205,7 @@ export function checklist(spec: VehicleSpec, r: Readiness): ChecklistSection[] {
       const p = cap.params;
       const rows: ChecklistRow[] = [];
       const need = { value: ASCENT_MARGIN_REQUIRED, unit: 'speed' as const };
-      if (p.ascentShortfall > 0) {
+      if (p.ascentShortfall >= SHORTFALL_SAID) {
         rows.push(say(p.singleShot ? 'build.eng.review.plan.shortSingle' : 'build.eng.review.plan.short', 'warn',
           { dv: { value: p.ascentShortfall, unit: 'speed' }, need }));
       } else rows.push(say('build.eng.review.plan.margin', 'ok', { margin: { value: p.ascentMargin, unit: 'speed' }, need }));

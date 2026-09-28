@@ -16,9 +16,11 @@
  * D03): a module of its own, src/ui/build/explore-level.ts, mounted here. Its
  * Engineer level (D03–D05) is a module of its own too,
  * src/ui/build/engineer-level.ts: the test stand, the wind tunnel and the
- * flight readiness review (D04), with what is still coming to it listed under
- * them; a mission the review passes is handed to the Launch section at the
- * Engineer level, as "Fly it" hands the Explore level's to Launch's Explore.
+ * flight readiness review (D04), optimal staging and sizing (D05), with what
+ * is still coming to it listed under them; a mission the review passes is
+ * handed to the Launch section at the Engineer level, as "Fly it" hands the
+ * Explore level's to Launch's Explore, and a sized launcher is opened in the
+ * Explore level's parts builder.
  *
  * The thin DOM part, mounted like the Orbit playground (src/ui/orbit/
  * playground.ts): drawn over the launch scene, opaque, so the scene under it
@@ -31,7 +33,7 @@
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
-import type { AppLevel, AppRoute } from '../app-mode';
+import { route, type AppLevel, type AppRoute } from '../app-mode';
 import { stageName } from '../names';
 import { BUILD_TOUR, tourFigures, type TourFigure, type TourStat } from '../../design/build-tour';
 import type { DrawnPart } from '../../design/exploded';
@@ -288,6 +290,10 @@ export class BuildScreen {
         rateExploreDesign: (spec) => this.explore?.adoptRatings(spec),
         launchTime: () => this.host.launchTime?.() ?? new Date(),
         fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
+        openInExplore: (spec, payloadKg) => {
+          this.ensureExplore().openDesign(spec, payloadKg);
+          this.host.go(route('build', 'explore'));
+        },
       });
       this.engineerRoot.append(this.engineer.root);
     }
@@ -295,8 +301,8 @@ export class BuildScreen {
     this.root.setAttribute('aria-labelledby', this.engineer.titleId);
   }
 
-  /** The Explore level: remix a real rocket, build one from parts (src/ui/build/explore-level.ts). */
-  private showExplore(): void {
+  /** The Explore level, made the first time it is wanted (shown, or handed a sized launcher). */
+  private ensureExplore(): ExploreLevel {
     if (!this.explore) {
       this.explore = new ExploreLevel({
         launchTime: () => this.host.launchTime?.() ?? new Date(),
@@ -304,6 +310,12 @@ export class BuildScreen {
       });
       this.exploreRoot.append(this.explore.root);
     }
+    return this.explore;
+  }
+
+  /** The Explore level: remix a real rocket, build one from parts (src/ui/build/explore-level.ts). */
+  private showExplore(): void {
+    this.explore = this.ensureExplore();
     this.explore.show();
     this.root.setAttribute('aria-labelledby', this.explore.titleId);
   }

@@ -327,6 +327,25 @@ export class ExploreLevel {
     this.store.render();
   }
 
+  /**
+   * A launcher sized on the Engineer level (D05), opened here to be changed,
+   * saved and flown: in the parts builder when a parts design rebuilds it
+   * exactly (a sized launcher is one, bodies of its own), with the payload it
+   * was sized for. Not yet saved.
+   */
+  openDesign(spec: VehicleSpec, payloadKg: number): void {
+    const opened = draftFromSpec(spec, null);
+    opened.draft.payloadKg = payloadKg;
+    if (opened.mode === 'remix') this.state.remix = opened.draft;
+    else this.state.parts = opened.draft;
+    this.state.mode = opened.mode;
+    this.selected = null;
+    this.shown = undefined as unknown as Built;
+    this.compute();
+    if (this.visible) this.reshaped();
+    this.store.render();
+  }
+
   private openRecord(record: DesignRecord): void {
     const opened = draftFromSpec(record.design, record.id);
     if (opened.mode === 'remix') this.state.remix = opened.draft;
