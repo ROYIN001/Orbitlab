@@ -170,7 +170,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 879 tests in 138 files, 20 to 30 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 1 883 tests in 138 files, 20 to 30 minutes on four cores. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -318,11 +318,12 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
 - Overflights (M02) count only satellites whose element sets are published, and are when a place
   could be seen, not that it was imaged. The instruments' limits are the published ones (for the
   Maxar satellites and SkySat, the tasking limits). CO3D's is a planning limit (its acquisition
-  plan's 15° of roll, from before launch) and Cartosat-2C's is its series' figure (ISRO gives none
-  for 2C itself): no operator publishes how far those satellites can turn. HJ-1's and HY-1B's
-  cameras are fixed by inference, and SWOT's band of incidence is worked out from its published
-  ground band. 72 of the imaging group's other 73 satellites are left out: no published limit or
-  figures, or not imagers ([VALIDATION.md](VALIDATION.md) §7).
+  plan's 15° of roll, from before launch) and Cartosat-2C to 2F's is their series' figure (ISRO
+  gives none for them): no operator publishes how far those satellites can turn. HJ-1's and
+  HY-1B's cameras are fixed by inference, and SWOT's band of incidence is worked out from its
+  published ground band. The imaging group's other 73 satellites are left out: 72 examined (no
+  published limit or figures, or not imagers) and PRSC-E03, launched in 2026, not examined
+  ([VALIDATION.md](VALIDATION.md) §7).
 - Re-entry (M03): predicted from one element set, as here, half of 66 rocket stages came down
   inside the ±20 % window; the criterion fixed before (70 % with B from the first set's decay, of
   at least 20) was missed and could not have been met, only 14 first sets giving a B. With the drag

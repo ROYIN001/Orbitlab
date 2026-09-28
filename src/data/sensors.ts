@@ -43,13 +43,14 @@
  * and the other is noted beside it, with one exception, left for the owner:
  * Cartosat-2C to 2F keep eoPortal's 0.65 m against the 0.6 m of NRSC's
  * product sheet for the series. The satellites without an operator's page
- * rest on eoPortal alone: THEOS, the Gaofen, Deimos-2, VNREDSat-1,
- * FORMOSAT-5, KOMPSAT-3, KOMPSAT-5, KazEOSat-1, DubaiSat-1 and -2,
- * Göktürk-1A, HJ-1A and -1B, TechSat-1B; CSG's figures are eoPortal's too
- * (ESA agrees, and ASI's page for CSG-3 gives none). Where the operator,
- * builder or distributor publishes some figures but no pointing angle, the
- * limit is eoPortal's alone, and the entry says so: KazEOSat-2, KazSTSAT,
- * RASAT, ASNARO-1, Resurs-DK1, Resurs-P No.4.
+ * giving their geometry rest on eoPortal alone: THEOS, the Gaofen,
+ * Deimos-2, VNREDSat-1, FORMOSAT-5, KOMPSAT-3, KOMPSAT-5, KazEOSat-1,
+ * DubaiSat-1 and -2, Göktürk-1A, HJ-1A and -1B, TechSat-1B (MBRSC's page
+ * gives the DubaiSats' orbits, not their cameras' figures); CSG's figures
+ * are eoPortal's too (ESA agrees, and ASI's page for CSG-3 gives none).
+ * Where the operator, builder or distributor publishes some figures but no
+ * pointing angle, the limit is eoPortal's alone, and the entry says so:
+ * KazEOSat-2, KazSTSAT, RASAT, ASNARO-1, Resurs-DK1, Resurs-P No.4.
  */
 
 export interface SensorSpec {
@@ -109,7 +110,8 @@ export const SENSORS: readonly SensorSpec[] = [
   // ISRO's PSLV-C14 brochure: "a ground IFOV of 360 m in across track and 246 m in along track directions covering a swath of
   // 1420 km" (eoPortal and ESA: 360 × 236 m); 360 m, across the track, is the figure given. Its only tilt is along the track,
   // "±20º ... to avoid sun glint" (eoPortal), so it is fixed across it, "FOV (swath) 1420 km (±43º)". Retired: ESA's month
-  // only, "ceased operations in December 2022"; ISRO records that it "was disposed in an orbit at 900 km altitude" (ISSAR-2023)
+  // only, "ceased operations in December 2022" (eoPortal's summary line gives an end of life of 31 May 2023); ISRO records
+  // that it "was disposed in an orbit at 900 km altitude" (ISSAR-2023)
   { name: 'Oceansat-2', norad: [35931], kind: 'optical', instrument: 'OCM-2', swathKm: 1420, lookMaxDeg: 0, resolutionM: 360, retired: '2022-12', sources: ['https://www.isro.gov.in/media_isro/pdf/PSLVC14/pslvc14_brochr.pdf', EOPORTAL('oceansat-2'), ESA_MISSION('oceansat-2'), 'https://www.isro.gov.in/Indian_Space_Situational_Assessment_Report_ISSAR2023.html', 'https://www.isro.gov.in/Oceansat_2.html'] },
   // GEOSAT's user guide (the operator's): "up to 20m resolution over a 600km swath", "22.0m ... considering Nadir observation
   // conditions"; eoPortal gives 660, 650, "> 600" and "~ 620 km", ESA 600 and "650 km (325 per bank)". Fixed: eoPortal's
@@ -127,7 +129,7 @@ export const SENSORS: readonly SensorSpec[] = [
   // A paper by NSOAS, the operator (its director first), table 1: "海岸带成像仪(CZI)：4个波段，幅宽500 km"; eoPortal and WMO OSCAR
   // agree, and give 250 m at nadir. Fixed is INFERRED: an Earth-pointing, bias-momentum platform and no pointing mechanism for
   // the CZI in any source. eoPortal's "36º" field at 798 km gives 522 km (tests/sensors.test.ts, a finding). Retired: OSCAR's
-  // end of life, "13 Feb 2016"
+  // end of life, "13 Feb 2016" (eoPortal's summary line gives 11 April 2011, four years to the day after launch)
   { name: 'HY-1B', norad: [31113], kind: 'optical', instrument: 'CZI', swathKm: 500, lookMaxDeg: 0, resolutionM: 250, retired: '2016-02-13', sources: [NSOAS_HY, EOPORTAL('hy-1b'), 'https://space.oscar.wmo.int/satellites/view/hy_1b', 'https://space.oscar.wmo.int/instruments/view/czi'] },
   // TANSO-CAI, the cloud and aerosol imager, bands 1–3: eoPortal, "a swath width of 1000 km and 0.5 km resolution" (ESA
   // agrees); its GOSAT-2 article's table lists GOSAT's CAI as "Nadir viewing", "1002 km (72º)". By day only. JAXA, the
@@ -235,8 +237,10 @@ export const SENSORS: readonly SensorSpec[] = [
   // eoPortal alone (MBRSC's page gives no geometry): "2.5 m (Pan) ... Swath width 20 km at nadir", "a body pointing capability
   // of up to ±45º in along-track as well as in cross-track"; its "FOR (Field of Regard) 720 km" would be ±27.5° from MBRSC's
   // 682 km (on a sphere, not published). Retired: the date of MBRSC's report, quoted by eoPortal, that it "stopped imaging",
-  // not the day it stopped, which no source gives (eoPortal, "March 2017: ... has come to the end of its operational life")
-  { name: 'DubaiSat-1', norad: [35682], kind: 'optical', instrument: 'DMAC', swathKm: 20, lookMaxDeg: 45, resolutionM: 2.5, retired: '2016-05-09', sources: [EOPORTAL('dubaisat-1')] },
+  // not the day it stopped, which no status report gives (eoPortal, "March 2017: ... has come to the end of its operational
+  // life"); eoPortal's summary line gives an end of life of 29 July 2013, four years to the day after launch, but its own
+  // status reports have it imaging in July 2015
+  { name: 'DubaiSat-1', norad: [35682], kind: 'optical', instrument: 'DMAC', swathKm: 20, lookMaxDeg: 45, resolutionM: 2.5, retired: '2016-05-09', sources: [EOPORTAL('dubaisat-1'), 'https://www.mbrsc.ae/satellites/'] },
   // eoPortal alone (MBRSC's page gives no geometry): "1 m GSD ... The swath width of the generated image is 12 km", "up to
   // ±45º roll tilt, ±30º pitch tilt"
   { name: 'DubaiSat-2', norad: [39419], kind: 'optical', instrument: 'HiRAIS', swathKm: 12, lookMaxDeg: 45, resolutionM: 1, sources: [EOPORTAL('dubaisat-2')] },
@@ -244,11 +248,12 @@ export const SENSORS: readonly SensorSpec[] = [
   // report's date); eoPortal: "Swath width 30 km", "an off-nadir body-pointing capability of ±30º in all directions"
   { name: 'RASAT', norad: [37791], kind: 'optical', instrument: 'OIS', swathKm: 30, lookMaxDeg: 30, resolutionM: 7.5, retired: '2022-08-23', sources: ['https://uzay.tubitak.gov.tr/en/rasat/', EOPORTAL('rasat')] },
   // eoPortal alone (Telespazio and CNES material): "a ground swath of 20 km at nadir and ... off-nadir imaging at angles of 30º
-  // to either side", "0.7 m for Pan"; a later paragraph's 29 km disagrees with its table and text. A military satellite whose
-  // figures are public
+  // to either side", "0.7 m for Pan"; its summary's "swath width of 29 km" disagrees with its table and text. A military
+  // satellite whose figures are public
   { name: 'Göktürk-1A', norad: [41875], kind: 'optical', instrument: 'HiRI', swathKm: 20, lookMaxDeg: 30, resolutionM: 0.7, sources: [EOPORTAL('gokturk-1')] },
   // eoPortal: "Pan: ≤ 0.5 m ... Swath width 10 km at nadir", "body pointing capability ±45º from nadir in any direction";
   // Tellus (data from PASCO and NEC) gives 0.5 m and 10 km and no angle; NEC and PASCO, 2024-11-07: still operating normally
+  // (eoPortal's summary line gives an end of life of 11 June 2019; the operators' later statement is used)
   { name: 'ASNARO-1', norad: [40298], kind: 'optical', instrument: 'OPS', swathKm: 10, lookMaxDeg: 45, resolutionM: 0.5, sources: [EOPORTAL('asnaro'), 'https://www.tellusxdp.com/ja/catalog/data/asnaro-1_l1b.html', 'https://www.pasco.co.jp/press/2024/download/PPR20241107.pdf'] },
   // LAPAN's own authors: "15 meter resolution, 120 km swath-width" (Hakim et al., IJASCSE 2018), and "off-nadir imaging up to
   // 34.5° roll angle" (Khamsah et al., IEEE ICARES 2019, its abstract read through Semantic Scholar); eoPortal's 18 m and
