@@ -128,11 +128,13 @@ export class CameraController {
   attach(el: HTMLElement): void {
     // `.scene-ui` is the overlay layer that carries the camera tabs, the HUD,
     // the ticker and the narration band; the generic selectors cover anything
-    // interactive a later redesign puts inside the viewport.
+    // interactive a later redesign puts inside the viewport. The landing page
+    // is a page, not a viewer: its wheel scrolls it and its drags select text,
+    // neither of them turns or zooms the scene behind it.
     const isControl = (target: EventTarget | null): boolean => {
       const node = target as HTMLElement | null;
       return !!node && typeof node.closest === 'function'
-        && !!node.closest('button, select, input, label, a, .scene-ui');
+        && !!node.closest('button, select, input, label, a, .scene-ui, .home-screen');
     };
     const zoomBy = (factor: number): void => {
       if (this.mode === 'exterior') this.zoom = Math.max(0.35, Math.min(this.maxZoom, this.zoom * factor));

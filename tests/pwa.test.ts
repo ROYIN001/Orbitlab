@@ -78,6 +78,14 @@ describe('precache manifest (U03)', () => {
     expect(precacheable('assets/tune.worker-x.js')).toBe(true);
   });
 
+  it('leaves out the landing page\'s pictures, a set per language fetched as they are shown', () => {
+    expect(precacheable('home/watch.th.webp')).toBe(false);
+    expect(precacheManifest([{ url: 'home/watch.en.webp', revision: '1' }, { url: 'textures/earth.jpg', revision: '1' }]).entries.map((e) => e.url))
+      .toEqual(['textures/earth.jpg']);
+    // only a path that starts there: a file elsewhere that merely has the word in it is precached
+    expect(precacheable('assets/home-x.js')).toBe(true);
+  });
+
   it('writes the manifest over the placeholder, in any quoting the minifier chose', () => {
     const m = manifestOf(V1);
     for (const q of ["'", '"', '`']) {
@@ -134,6 +142,18 @@ describe('service worker (U03)', () => {
     await (await sw.caches.open(RUNTIME_CACHE)).put('https://fonts.gstatic.com/x.woff2', new Response('font'));
     await prune(sw, m2);
     expect(await sw.caches.keys()).toEqual([precacheName(m2.version), RUNTIME_CACHE]);
+  });
+
+  it('keeps a landing page picture once it has been seen, and answers with it offline', async () => {
+    const scope = new URL(SCOPE), pre = new Set<string>();
+    const shot = `${SCOPE}home/orbit.ru.webp`;
+    expect(routeFor(new URL(shot), 'no-cors', scope, pre)).toBe('runtime');
+    const online = { on: true };
+    const sw = fakeScope({ [shot]: 'SHOT' }, online);
+    const m = manifestOf(V1);
+    expect(await (await respond(sw, m, new Request(shot), pre)).text()).toBe('SHOT');
+    online.on = false;
+    expect(await (await respond(sw, m, new Request(shot), pre)).text()).toBe('SHOT');
   });
 
   it('keeps fonts for offline use: the cached copy first, refreshed when online', async () => {
