@@ -31,7 +31,19 @@ jobs:
       - run: npm test
       # the tests ran on the committed snapshots; the build takes fresh ones (a source that fails keeps its baseline)
       - run: npm run snapshots
+      # ...so the fresh ones are checked again before they ship: the tests that read the snapshots' schema and
+      # contents (tests/activity.test.ts is left out: it pins the month the committed snapshot ends at)
+      - run: npx vitest run tests/data-provider.test.ts tests/satellite-catalogue.test.ts
       - run: npm run build
+      # the build that deploys, in a real browser: every journey in tests/browser/journeys/
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/browser/run.mjs
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-journey-screenshots
+          path: tests/browser/screenshots/
+          if-no-files-found: ignore
       - uses: actions/configure-pages@v5
         with:
           enablement: true
