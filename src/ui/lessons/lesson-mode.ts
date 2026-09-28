@@ -22,7 +22,7 @@
 import { t, getLang } from '../../i18n';
 import type { AppMode } from '../app-mode';
 import type { Simulation } from '../../physics/simulation';
-import { missionDocument, type MissionState } from '../../config/mission-file';
+import type { MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
@@ -32,7 +32,7 @@ import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import {
-  RESULTS_FILE_EXTENSION, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, flownMission, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
 import { isCaseLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
@@ -126,6 +126,8 @@ export class LessonMode implements LessonToolsHost {
   private assessmentView: { applyLanguage(): void } | null = null;
   private assessmentModule: Promise<typeof import('./assessment-view')> | null = null;
   private notice: { level: 'ok' | 'warn' | 'error'; text: string; details: string[] } | null = null;
+  /** whether the last save reached the browser's storage; null before the first (audit 2026-09-27 A19) */
+  private saved: boolean | null = null;
   private lastStripKey = '';
   /** what the Orbit section was last told of the case lesson open */
   private orbitKey = 'null';
@@ -164,8 +166,19 @@ export class LessonMode implements LessonToolsHost {
   }
 
   private save(): void {
-    saveProgress(this.progressData);
+    const saved = saveProgress(this.progressData);
+    const changed = saved !== this.saved;
+    this.saved = saved;
     this.paintButton();
+    if (changed && this.pageView === 'catalog') this.renderCatalog();
+  }
+
+  /** Whether the progress is being kept, in a line the strip and the catalogue show (audit 2026-09-27 A19). */
+  private saveNote(tag: 'p' | 'span'): HTMLElement | null {
+    if (this.saved === null) return null;
+    const note = el(tag, this.saved ? 'lesson-note lesson-save' : 'lesson-note fail lesson-save', t(this.saved ? 'lesson.save.saved' : 'lesson.save.failed'));
+    note.dataset.saved = String(this.saved);
+    return note;
   }
 
   private written(): CatalogLesson[] {
@@ -383,7 +396,7 @@ export class LessonMode implements LessonToolsHost {
       a.grade = gradeLesson(lesson, sim, a.answers);
       if (started && a.grade.final) { a.frozen = a.grade; a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed); }
     }
-    if (started && a.grade.final && !a.recorded && awaitingAnswers(lesson, a.grade).length === 0) this.record(a, lesson);
+    if (started && a.grade.final && !a.recorded && awaitingAnswers(lesson, a.grade).length === 0) this.record(a);
     this.paintStrip();
   }
 
@@ -392,22 +405,14 @@ export class LessonMode implements LessonToolsHost {
     return this.progressData.lessons[id]?.revealed ?? {};
   }
 
-  private record(a: Active, lesson: Lesson): void {
+  private record(a: Active): void {
     if (!a.grade || !a.sim) return;
     a.recorded = true;
     const revealed = a.grade.criteria.filter((c) => c.revealed).map((c) => c.id);
     const p = lessonProgress(this.progressData, a.lesson.id);
-    const cfg = a.sim.cfg;
-    const state: MissionState = {
-      vehicleId: cfg.vehicleId, satelliteId: cfg.satelliteId, siteId: cfg.siteId, orbitId: 'custom', orbit: { ...cfg.orbit },
-      launchTime: new Date(cfg.launchTime.getTime()), guidanceOverrides: {}, failure: { ...cfg.failure }, boosterRecovery: cfg.boosterRecovery,
-      payloadMass: cfg.payloadMassOverride ?? lesson.mission.mission.payloadMass,
-      ...(cfg.recoveryPlan ? { recoveryPlan: structuredClone(cfg.recoveryPlan) } : {}),
-      ...(cfg.dynamics ? { dynamics: structuredClone(cfg.dynamics) } : {}),
-    };
     recordGrade(this.progressData, {
       lessonId: a.lesson.id, at: new Date().toISOString(), verdict: a.grade.verdict, criteria: a.grade.criteria,
-      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: missionDocument(state), ...(revealed.length ? { revealed } : {}),
+      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: flownMission(a.sim.cfg), ...(revealed.length ? { revealed } : {}),
     });
     this.save();
   }
@@ -571,7 +576,7 @@ export class LessonMode implements LessonToolsHost {
     const g = a.grade;
     const flown = !!a.sim && flightStarted(a.sim);
     const hints = lessonProgress(this.progressData, a.lesson.id).hintsShown;
-    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3)), !!c.revealed]), hints, a.answers]);
+    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3)), !!c.revealed]), hints, a.answers, a.recorded, this.saved]);
     if (key === this.lastStripKey) return;
     // keep what the student is typing
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement;
@@ -637,6 +642,9 @@ export class LessonMode implements LessonToolsHost {
       const key = g.criteria.some((cg) => cg.revealed) ? 'lesson.strip.revealed' : onlyAnswers ? 'lesson.strip.answersWrong' : 'lesson.strip.fail';
       status.append(el('p', 'lesson-note fail', t(key)));
     }
+    // once this flight's grade is kept, or whenever nothing can be
+    const saveNote = a.recorded || this.saved === false ? this.saveNote('p') : null;
+    if (saveNote) status.append(saveNote);
 
     const { actions, button } = this.actionBar();
     const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
@@ -937,6 +945,8 @@ export class LessonMode implements LessonToolsHost {
     exp.type = 'button';
     exp.addEventListener('click', () => void this.exportResults());
     bar.append(open, exp, fileInput);
+    const saveNote = this.saveNote('span');
+    if (saveNote) bar.append(saveNote);
     body.append(bar);
 
     const nameRow = el('label', 'lesson-student');

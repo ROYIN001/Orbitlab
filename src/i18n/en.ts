@@ -2672,6 +2672,9 @@ export const en: Record<string, string> = {
   'lesson.catalog.progress': '{passed} of {total} passed',
   'lesson.catalog.openFile': 'Open lesson file…',
   'lesson.catalog.export': 'Export results',
+  // audit 2026-09-27 A19: whether the progress is kept
+  'lesson.save.saved': 'Progress saved in this browser.',
+  'lesson.save.failed': 'Progress not saved: this browser is not keeping it (a private window, or storage full). Export your results before you close the page. The file is a record of your results; it cannot restore them.',
   'lesson.catalog.student': 'Your name, for the results file',
   'lesson.catalog.assess': 'Take the placement test',
   'lesson.catalog.assessResult': 'Placement test: the result',
