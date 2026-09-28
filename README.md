@@ -173,7 +173,8 @@ about five minutes. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGH
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
 leaves the CSS layout unchanged). Pull requests run the smoke set; the deploy runs every journey on
 the build it publishes, after checking the freshly fetched data snapshots with
-`tests/data-provider.test.ts` and `tests/satellite-catalogue.test.ts`.
+`tests/data-provider.test.ts`, `tests/satellite-catalogue.test.ts`, `tests/earth-orientation.test.ts`
+and `tests/activity.test.ts`.
 
 ## Using the simulator
 
