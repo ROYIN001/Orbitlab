@@ -96,7 +96,8 @@ describe('engine specs', () => {
  *
  * Only figures that are actually published for the stage in question are
  * listed; a stage with no entry is not checked. Sources are cited next to the
- * stage in `src/data/vehicles.ts`.
+ * stage's body in the parts catalogue, `src/data/parts.ts`, or next to the
+ * vehicle in `src/data/vehicles.ts`.
  */
 const PUBLISHED_BURN_TIME: Record<string, number> = {
   // Vega-C — https://en.wikipedia.org/wiki/Vega_C

@@ -960,7 +960,7 @@ describe('reference timelines', () => {
    *    Soyuz row left: the 87 000 kg Blok A load that produces it is
    *    deliberately kept on 2.1a for exactly that reason, while the audited
    *    90 100 kg went to 2.1b, which has no published clock to move (see the
-   *    core helpers in src/data/vehicles.ts).
+   *    two R-7 core bodies in src/data/parts.ts).
    *  - H3-22 SRB-3 burnout (T+104.3 s vs 105-115 s) — 0.7 s early, the smallest
    *    disagreement in the table and the one most likely to flip. It is listed
    *    rather than rounded away because the rule here is the published window,
