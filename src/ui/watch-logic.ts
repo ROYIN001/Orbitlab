@@ -320,7 +320,11 @@ export function groundSpeed(frame: VisualFrame): number {
   return Math.hypot(vx, vy, v.z);
 }
 
-/** The flight has reached a stable orbit worth a "you made it" card. */
+/**
+ * The flight is in orbit: a parking orbit or the final one. It is what the
+ * viewer's missions are flown to (tests/watch-missions.test.ts); it is NOT the
+ * end of the flight — that is `missionOrbit` (audit 2026-09-27 A9).
+ */
 export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEvent[]): boolean {
   if (!frame || frame.status === 'failed') return false;
   if (frame.status === 'orbit') return true;
@@ -331,14 +335,58 @@ export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEven
   return false;
 }
 
+/** The events that close an orbital flight: its orbital work is done, on the target or not. */
+const FINAL_ORBIT = new Set(['evt.targetOrbit', 'evt.offTargetOrbit']);
+
+/** The newest event of `keys` at or before the frame. */
+function lastEvent(frame: VisualFrame, events: readonly SimEvent[], keys: ReadonlySet<string>): SimEvent | undefined {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.t <= frame.t + 1e-6 && keys.has(e.key)) return e;
+  }
+  return undefined;
+}
+
+/**
+ * The flight has reached the orbit it was flown to, not merely a parking orbit
+ * with burns still to fly (audit 2026-09-27 A9).
+ *
+ * Falcon 9 Bandwagon-1 reaches 200 × 588 km at T+07:59 and then coasts 46
+ * minutes to the burn that raises it to 586 × 595 km; calling the first
+ * "mission accomplished" put the end card and its 200 km over the rest of the
+ * flight. The simulation says a flight's orbital work is done in one place
+ * only (`reachTargetOrbit`): the status goes to 'orbit' and `evt.targetOrbit`
+ * or `evt.offTargetOrbit` is logged. Nothing weaker will do — between a
+ * cut-off and the plan for the next burn the stage tails off for a second or
+ * two with nothing scheduled (`nextBurnTime` < 0, no `evt.burnScheduled` yet),
+ * so "in orbit and no burn pending" would still end Bandwagon-1 at its parking
+ * orbit. The same rule G07 follows for a flight to the station, which ends
+ * docked rather than at its insertion.
+ */
+export function missionOrbit(frame: VisualFrame | null, events: readonly SimEvent[]): boolean {
+  if (!frame || frame.status === 'failed') return false;
+  // the status alone for a recording older than the events
+  return frame.status === 'orbit' || !!lastEvent(frame, events, FINAL_ORBIT);
+}
+
 /** How a flight on screen ends. */
 export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'failed';
+
+/**
+ * After the final orbit, how long the end card waits for the payload to
+ * separate, s. `reachTargetOrbit` releases it 15 s later (plus a tail-off); a
+ * payload that never comes free must not hold the card back for ever.
+ */
+const PAYLOAD_WAIT = 30;
+/** Moments of an orbital flight the end card waits a few seconds after, as it does after a landing (A9). */
+const SETTLE_AFTER = new Set([...FINAL_ORBIT, 'evt.payloadSep']);
 
 /**
  * How the flight on screen has ended, if it has: in orbit, with a splashdown
  * (a suborbital ship flown home), or lost. The end card waits for every stage
  * flown home to be down and a few seconds more, so it does not cover a
- * landing.
+ * landing; an orbital flight's for its final orbit, not its parking orbit, and
+ * for its payload to come free (audit 2026-09-27 A9).
  */
 export function flightEnding(frame: VisualFrame | null, events: readonly SimEvent[]): WatchEnding | null {
   if (!frame) return null;
@@ -357,13 +405,16 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
     return down && frame.t - down.t >= RETURN_SETTLE ? 'crewSafe' : null;
   }
   if (frame.status === 'failed' || (frame.status === 'landed' && frame.note === 'shipLost')) return 'failed';
-  const ending = frame.status === 'landed' ? 'splashdown' : reachedOrbit(frame, events) ? 'orbit' : null;
+  const ending = frame.status === 'landed' ? 'splashdown' : missionOrbit(frame, events) ? 'orbit' : null;
   if (!ending || returning(frame).alive) return null;
+  // A9: the payload coming free is the moment an orbital flight was for
+  const done = ending === 'orbit' ? lastEvent(frame, events, FINAL_ORBIT) : undefined;
+  if (done && !frame.payloadSeparated && frame.t - done.t < PAYLOAD_WAIT) return null;
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     if (e.t > frame.t + 1e-6) continue;
     if (frame.t - e.t > RETURN_SETTLE) break;
-    if (RETURN_DOWN.has(e.key)) return null;
+    if (RETURN_DOWN.has(e.key) || (ending === 'orbit' && SETTLE_AFTER.has(e.key))) return null;
   }
   return ending;
 }
