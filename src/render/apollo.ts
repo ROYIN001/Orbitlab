@@ -14,7 +14,7 @@
  */
 import * as THREE from 'three';
 import type { SatelliteView } from './satellite';
-import { APOLLO_ASCENT, APOLLO_LM, APOLLO_OUT, type ApolloPhase, type ApolloState } from '../physics/sim/apollo';
+import { APOLLO_ASCENT, APOLLO_CM, APOLLO_HOME, APOLLO_LM, APOLLO_OUT, type ApolloState } from '../physics/sim/apollo';
 import { clamp01, smoothstep } from './noise';
 
 /** Height of the stack on the S-IVB with its tower, m (Saturn V 110.6 m less its stages). */
@@ -151,8 +151,10 @@ export function buildApollo(): SatelliteView & { setApollo(state: ApolloState | 
     const alone = !!phase && APOLLO_LM.includes(phase);
     // from the lift-off the ascent stage alone, its base on the view's; docked again, the CSM on the base with
     // the ascent stage upside down on its nose; after the jettison the CSM alone
-    const asAlone = !!phase && APOLLO_ASCENT.includes(phase), redocked = phase === 'redocked', csmAlone = phase === 'csmOrbit';
-    const size = apolloViewSize(phase);
+    const asAlone = !!phase && APOLLO_ASCENT.includes(phase), redocked = phase === 'redocked';
+    // (and on the way home, the CSM alone; the command module on its own is drawn by `buildEntryCm`)
+    const csmAlone = phase === 'csmOrbit' || (!!phase && (APOLLO_HOME.includes(phase) || APOLLO_CM.includes(phase)));
+    const size = apolloViewSize(state);
     view.height = size?.height ?? h;
     L.descent.visible = L.dpsBell.visible = !(asAlone || redocked || csmAlone);
     L.apsBell.visible = asAlone;
@@ -281,8 +283,15 @@ export const CSM_LENGTH = SM_H + CM_H + PROBE;
  * C01: the size the camera frames Apollo at, from the undocking on — Eagle, its
  * ascent stage, the two docked again, the CSM — or null for the stack (m).
  */
-export function apolloViewSize(phase: ApolloPhase | undefined): { height: number; radius: number } | null {
+export function apolloViewSize(state: ApolloState | undefined): { height: number; radius: number } | null {
+  const phase = state?.phase;
   if (!phase) return null;
+  // the command module, its parachutes' risers and canopies over it once they are out
+  if (APOLLO_CM.includes(phase)) {
+    const e = state.entry;
+    return e && e.main > 0 ? { height: 70, radius: 25 } : e && e.drogue > 0 ? { height: 26, radius: 6 } : { height: 3.23, radius: 1.96 };
+  }
+  if (APOLLO_HOME.includes(phase)) return { height: CSM_LENGTH, radius: SLA_R1 };
   if (APOLLO_LM.includes(phase)) return { height: LM_HEIGHT, radius: LM_TREAD };
   if (APOLLO_ASCENT.includes(phase)) return { height: AS_HEIGHT, radius: 2 };
   if (phase === 'redocked') return { height: CSM_LENGTH + AS_HEIGHT, radius: SLA_R1 };

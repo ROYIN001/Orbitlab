@@ -48,7 +48,8 @@ import { ExplosionEffect } from './replay/explosion';
 import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { moonState } from './physics/lunar/ephemeris';
-import { APOLLO_ASCENT, APOLLO_AT_MOON, APOLLO_LM, APOLLO_OUT } from './physics/sim/apollo';
+import { APOLLO_ASCENT, APOLLO_AT_MOON, APOLLO_CM, APOLLO_LM, APOLLO_OUT } from './physics/sim/apollo';
+import { buildEntryCm, buildServiceModule } from './render/apollo-cm';
 import { APOLLO11 } from './data/apollo11';
 import { moonBodyToEci, selenographicToEci } from './physics/lunar/orientation';
 import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
@@ -245,6 +246,9 @@ class App {
   private csmView: ReturnType<typeof buildCsm> | null = null;
   private descentStageView: ReturnType<typeof buildDescentStage> | null = null;
   private ascentStageView: ReturnType<typeof buildAscentStage> | null = null;
+  /** C01: the command module on its own on the way in, and the service module it left */
+  private entryCmView: ReturnType<typeof buildEntryCm> | null = null;
+  private smView: ReturnType<typeof buildServiceModule> | null = null;
   private dockingEyePos = new THREE.Vector3();
   /** the 3-D picture is the docking TV camera's (drawn black and white) */
   private tvPicture = false;
@@ -1099,12 +1103,12 @@ class App {
       this.escapeView = new EscapeView(1, 1, sim.satellite.descent);
       this.scene.scene.add(this.escapeView.group);
     }
-    for (const v of [this.csmView, this.descentStageView, this.ascentStageView]) {
+    for (const v of [this.csmView, this.descentStageView, this.ascentStageView, this.entryCmView, this.smView]) {
       if (!v) continue;
       this.scene.scene.remove(v.group);
       v.dispose();
     }
-    this.csmView = this.descentStageView = this.ascentStageView = null;
+    this.csmView = this.descentStageView = this.ascentStageView = this.entryCmView = this.smView = null;
     if (this.stationView) {
       this.scene.scene.remove(this.stationView.group);
       this.stationView.dispose();
@@ -1612,6 +1616,34 @@ class App {
         this.descentStageView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(up.x, up.y, up.z));
       }
     }
+    // C01: the command module home: drawn on its own, heat shield first, then under its parachutes; the service module off it
+    const cmHome = !!frame.apollo && APOLLO_CM.includes(frame.apollo.phase);
+    if (cmHome && !this.entryCmView) {
+      this.entryCmView = buildEntryCm();
+      this.scene.scene.add(this.entryCmView.group);
+    }
+    if (this.entryCmView) {
+      this.entryCmView.group.visible = cmHome;
+      if (cmHome) {
+        this.rocket.group.visible = false;
+        this.entryCmView.group.position.copy(this.vehiclePos);
+        this.entryCmView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(frame.dir.x, frame.dir.y, frame.dir.z));
+        this.entryCmView.setChutes(frame.apollo!.entry?.drogue ?? 0, frame.apollo!.entry?.main ?? 0);
+      }
+    }
+    const sm = frame.apollo?.serviceModule;
+    if (sm && !this.smView) {
+      this.smView = buildServiceModule();
+      this.scene.scene.add(this.smView.group);
+    }
+    if (this.smView) {
+      this.smView.group.visible = !!sm;
+      if (sm) {
+        const toCm = normalize(sub(frame.r, sm.r));
+        scene.toScene(sm.r, this.smView.group.position);
+        this.smView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(toCm.x, toCm.y, toCm.z));
+      }
+    }
     const as = frame.apollo?.ascentStage;
     if (as && !this.ascentStageView) {
       this.ascentStageView = buildAscentStage();
@@ -1634,7 +1666,7 @@ class App {
     // after payload separation. It frames the camera, decides when the space
     // view's marker takes over, and scales the break-up effect.
     // (C01: from the undocking, Eagle, its ascent stage, the two docked again, Columbia)
-    const apolloSize = apolloViewSize(frame.apollo?.phase);
+    const apolloSize = apolloViewSize(frame.apollo);
     const height = frame.abort && this.escapeView ? this.escapeView.size(frame)
       : apolloSize ? apolloSize.height
       : frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);

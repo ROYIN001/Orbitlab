@@ -2679,7 +2679,7 @@ is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's S
 | Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
 | Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
 | Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
-| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection, the flight to the Moon, the lunar orbit, the landing at Tranquility Base and the rendezvous back (§13.9–§13.13) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
+| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection, the flight to the Moon, the lunar orbit, the landing at Tranquility Base, the rendezvous back and the way home to the Pacific (§13.9–§13.14) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
 | Mercury-Redstone 3 | 1961-05-05 14:34:13 | Mercury-Redstone, Cape LC-5 | 1,832.6 kg (Freedom 7 and its tower) | 187.5 km apogee, splashdown 487 km down range (§13.7) | NASA MR-3 postlaunch report; TM X-53107 |
 
 **13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
@@ -2890,7 +2890,7 @@ of the real splashdown.
 MPR-SAT-FE-69-9 (FER), and NASA SP-4029 (*Saturn V Launch Vehicle Flight Evaluation* summary tables).
 The mission from the parking orbit on — the S-IVB's restart for the Moon, the spacecraft's own
 flight to the Moon — is §13.9 and §13.10, the lunar orbit §13.11, the landing §13.12 and the rendezvous
-back to the CSM §13.13; the way home follows.
+back to the CSM §13.13 and the way home §13.14.
 
 | | Value | Source |
 |---|---|---|
@@ -3140,7 +3140,7 @@ where it will be at the landing's time: the distance and the speed across that p
 together by the cut-off, the time to go by the energy still to take off, the steering up to 37° out of
 the retrograde. The model's arrival does not come in that plane: its approach (MCC-2 aimed, as the flight
 was, at 0.17° N — §13.10) crosses the lunar equator at the pericynthion 5.75° inclined, and the plane over
-the site is 5.2° from it, which LOI-1 turns through in the burn for 12 m/s more than the flown 889.3.
+the site is 5.2° from it, which LOI-1 turns through in the burn for 12.5–12.7 m/s more than the flown 889.3.
 The flown state after the injection, propagated in the model, arrives the same way (5.2°), and the flown
 orbit, 1.25° to the equator, is the plane over the site — which the flight reached coplanar, or nearly:
 its LOI-1 took no more Δv than a coplanar burn. Where the model's arrival direction is out by these
@@ -3154,7 +3154,7 @@ Model − flight:
 | | LOI-1 cut-off | LOI-1 Δv | Orbit after LOI-1 | LOI-2 cut-off | LOI-2 Δv | Orbit after LOI-2 | Mass after | Inclination | Plane at the site, landing day |
 |---|---|---|---|---|---|---|---|---|---|
 | Flown | 75:55:47.90 | 889.3 m/s | 314.3 × 111.1 km | 80:11:53.63 | 48.4 m/s | 121.7 × 99.6 km | 32,162 kg | 1.25° | 2.4 km north |
-| Point-mass | +4.4 s | 901.6 m/s | 320.0 × 105.3 km | −2.1 s | 42.8 m/s | 121.8 × 99.5 km | 32,218 kg | 0.69° | 0.1 km |
+| Point-mass | +4.4 s | 902.0 m/s | 320.1 × 105.3 km | −2.1 s | 42.9 m/s | 121.8 × 99.5 km | 32,218 kg | 0.69° | 0.1 km |
 | Six-DOF | +4.3 s | 901.8 m/s | 319.6 × 105.7 km | −2.1 s | 42.8 m/s | 121.9 × 99.5 km | 32,218 kg | 0.69° | 0.1 km |
 
 The retrograde burn cannot put the perilune above the approach's pericynthion, and the model's approach
@@ -3222,7 +3222,7 @@ Model − flight (times from the ignition):
 | | PDI | Throttle recovery | High gate | Low gate | Contact light | Engine off | From the site | On the surface |
 |---|---|---|---|---|---|---|---|---|
 | Flown | 102:33:05.01 | +386 s | +507 s, 2,173 m | +617 s, 122 m | +754.9 s | +756.4 s | — | 7,327 kg |
-| Point-mass | −45 s | +374 s | +507 s, 2,176 m | +617 s, 135 m | +756.4 s | +757.9 s | 3.0 m | 7,323 kg |
+| Point-mass | −45 s | +374 s | +507 s, 2,168 m | +617 s, 135 m | +756.3 s | +757.9 s | 3.0 m | 7,326 kg |
 | Six-DOF | −45 s | +368 s | +507 s, 2,180 m | +617 s, 135 m | +756.0 s | +757.5 s | 3.3 m | 7,328 kg |
 
 DOI in the model: 24.3 m/s into 99.5 × 14.9 km (six-DOF 24.2 m/s, 99.7 × 15.2), against the flown 23.3 m/s
@@ -3321,6 +3321,67 @@ comes 20 s after the flown one: the approach, timed for it at 0.1 m/s, eases off
 standard procedure's, not the flight's own record; the docking is flown by the LM, where Collins flew the
 CSM onto it; the ascent stage's drift at the jettison is the model's, and so is the final separation's direction. The insertion's crossrange of 1.7 mi, trimmed after it, and the small out-of-plane components of
 CSI and CDH are not flown: the ascent steers into the CSM's plane.
+
+**13.14 Apollo 11 home (part 6f).** src/physics/sim/apollo-entry.ts (the aim at the Earth, the entry
+guidance, the CM's aerodynamics and parachutes), the flight in src/physics/sim/apollo.ts, the numbers
+src/data/apollo11.ts; the command module, its parachutes and the service module drawn by
+src/render/apollo-cm.ts. Sources: MR (§3, §7.4.8–7.6; Tables 3-I, 7-VI, 7-VII, A-I) and the Apollo 11 press
+kit (the earth landing system).
+
+| | Value | Source |
+|---|---|---|
+| TEI | 135:23:42.3, 151.4 s, 3,279.0 ft/s on the SPS; the CSM 36,965.7 lb; it left the flight 0.79° from entering the air (vacuum perigee 69.4 n mi against the nominal 20.4) | MR Tables 7-VI, A-I, §7.4.8 |
+| MCC-5 | 150:29:57.4, 4.8 ft/s in 11.2 s on the SM's thrusters, to the entry at −6.51° | MR Table 7-VI, §7.4.9 |
+| CM/SM separation | 194:49:12.7; the CM 12,107.4 lb | MR Tables 3-I, A-I |
+| Entry interface | 195:03:05.7, 400,000 ft, 3.19° S 171.96° E, 36,194.4 ft/s, −6.48°, heading 50.18°; 6.56 g at the most | MR Table 7-VII, §7.5 |
+| The landing | drogues 195:12:06.9; in the water at 195:18:35, 13.30° N 169.15° W — 1,285 n mi from the entry interface, the target moved 215 n mi down range for the weather; the CM 11,601.7 lb at the drogues, 11,318.9 at the mains, 10,873.0 in the water | MR §3, Tables 3-I, 7-VII, A-I |
+| Earth landing system | the forward heat shield off and two reefed 16.5-ft drogues at 24,000 ft; three 83.3-ft mains in two reefing stages; 31 ft/s in the water on three | press kit |
+
+*TEI and the coast.* The burn is aimed as the ground aimed it, half an hour before, at the vacuum perigee
+of the entry the flight flew — the conic of the Mission Report's entry-interface state carried on to its
+perigee (38 km up) — by Newton's method on its altitude, time and latitude: first as an impulse at the
+burn's middle, from the flown size along the velocity, then as the burn itself, along a fixed direction
+from its flown ignition. The Δv of every service-engine burn is counted by the rocket equation over each
+step (a count of thrust over the step's starting mass came short by a quarter of a metre a second over
+TEI's two and a half minutes, and left the flight 30 km off its perigee). The coast home is the outbound
+one's (§13.10) the other way; MCC-5, at its flown time on the service module's thrusters, is aimed the same
+way from where the flight is.
+
+*The entry.* The CM leaves the SM at its flown time, the SM drifting back 1 m/s and breaking up at 70 km
+(the Mission Report saw it come apart near the CM; the model's). Below the entry interface the CM flies
+on its hypersonic aerodynamics — 3.91 m across, a drag coefficient of 1.29, lift 0.30 of it —, the lift
+rolled about the air-relative velocity by the bank angle: lift up through the first plunge to its
+pull-out, then, every two seconds, the bank's size by a bisection on a prediction of the rest of the
+entry (held at that bank to the drogues' height, the load limit below applied as the guidance applies it)
+against the range to the flown splash point; its side towards the target, reversed when the target lies
+off to the other side by more than a band that narrows with the speed (0.1° + 0.6° (v/7.8 km/s)²); lift up
+whenever the CM is falling at more than 5 g; the bank held below 700 m/s. At 24,000 ft the drogues open
+(45 % reefed for 8 s), at 10,000 ft the mains (10 % for 6 s, 35 % to 10 s, then in full), their drag area
+the one that gives 31 ft/s at sea level on the CM's weight in the water; the CM is weighed at each as the
+Mission Report weighed it, the propellant dumped under the mains over two minutes. At sea level it
+splashes down and floats, turning with the Earth.
+
+Model − flight:
+
+| | TEI Δv, burn | Entry after TEI | MCC-5 | Entry interface | Peak load | Drogues | Splashdown |
+|---|---|---|---|---|---|---|---|
+| Flown | 999.4 m/s, 151.4 s | −0.79° | 1.46 m/s | 195:03:05.7, −6.48° | 6.56 g | 195:12:06.9 | 195:18:35, 13.30° N 169.15° W |
+| Point-mass | 1,007.4 m/s, 153.1 s | −6.75° | 0.14 m/s | −0.1 s, −6.47° | 6.3 g | +5 s | −37 s, 5 km off |
+| Six-DOF | 1,006.6 m/s, 153.0 s | −6.51° | under 0.03 m/s, not made | −1.9 s, −6.51° | 6.5 g | −0.3 s | −42 s, 2 km off |
+
+The model's TEI is a few metres a second larger than the flown one — its orbit about the Moon kept the shape
+the mascons changed (§13.11) — and lands nearer its aim, so its correction is a tenth of the flown one, and
+in six-DOF under the 0.03 m/s below which none is made. The entry follows the flown one: the drogues within
+seconds of the flown time, the splash within a few kilometres of where Columbia came down. The splash comes
+half a minute early: under the mains the model comes down at 31 ft/s at sea level, faster higher up; the
+flown descent took longer.
+
+*Approximations.* The CM's aerodynamics are round values for its hypersonic trim, not a table; the
+guidance's structure is the model's — a predictor on the bank angle, not the flight computer's reference
+trajectory and its phases (initial roll, huntest, upcontrol, Kepler, final) — though it flies the same
+geometry: lift up to the pull-out, the lift rolled to fly the range, the reversals. The mains' deployment
+height (10,000 ft), the reefing's steps, the drogues' drag coefficient, the SM's drift and break-up and the
+thrusters' specific impulse are the model's.
 
 ## Glossary (EN / RU / TH)
 

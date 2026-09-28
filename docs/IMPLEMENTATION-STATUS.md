@@ -138,7 +138,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 341 tests in 96 files, about 17 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1 342 tests in 96 files, about 20 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -213,7 +213,12 @@ the LM, the CSM and the ground at the site drawn — done; (6e) the LM's ascent 
 ascent engine's P12 guidance off the Moon, the lift-off timed for the CSM, the coelliptic sequence (CSI, CDH,
 TPI, two midcourse corrections, the braking gates) on the LM's thrusters to within minutes of the flown
 times and a metre or two a second of the flown burns, the docking, the ascent stage's jettison, and the
-descent stage left at Tranquility Base drawn — done; (6f) home and splashdown; (6g) the viewer
+descent stage left at Tranquility Base drawn — done; (6f) home and splashdown — the transearth
+injection aimed as the ground aimed it, at the entry the flight flew, the coast home and its correction,
+the command module on its own, its lifting entry steered by a prediction of the rest of the flight
+against the range to the flown splash point, the drogues and the mains, into the Pacific within a
+minute of the flown time and a few kilometres of the flown point, and the command module, its parachutes
+and the service module drawn — done; (6g) the viewer
 and the documents; (7) the fleet acceptance and the documents.
 
 Twenty further items are kept for later, once these are done.

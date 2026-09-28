@@ -131,6 +131,21 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
           params.el = r.elevation.toFixed(1);
           params.rngm = Math.round(r.range).toString();
         }
+        // home: the entry ahead, the entry itself, the parachutes
+        if (ap.interfaceAhead) {
+          params.fpa = ap.interfaceAhead.fpa.toFixed(2);
+          params.eta = fmtClockShort(Math.max(0, ap.interfaceAhead.t - frame.t));
+        }
+        if (ap.entry) {
+          params.bank = Math.round(Math.abs(ap.entry.bank)).toString();
+          params.side = ap.entry.bank >= 0 ? t('phase.detail.apollo.right') : t('phase.detail.apollo.left');
+          params.load = ap.entry.load.toFixed(1);
+          params.maxg = ap.entry.maxLoad.toFixed(1);
+          params.ekm = Math.round(frame.altitude / 1000).toString();
+          params.em = Math.round(frame.altitude).toString();
+          params.espeed = Math.round(frame.airspeed).toString();
+        }
+        if (ap.splash) { params.slat = Math.abs(ap.splash.lat).toFixed(2); params.slon = Math.abs(ap.splash.lon).toFixed(2); }
         // in lunar orbit, the orbit is the Moon's: above the landing site's radius, against its equator
         if (ap.lunar) {
           params.ap = Math.round(ap.lunar.ap / 1000).toString();
@@ -263,10 +278,14 @@ export function eventLabel(key: string, params?: Record<string, string | number>
  */
 export function statusKey(frame: VisualFrame): string {
   const ap = frame.apollo;
+  if (ap?.phase === 'splashdown') return 'hud.status.splashdown';
   if (ap && frame.status === 'orbit') {
     if (ap.phase === 'landed') return 'hud.status.onMoon';
     if (ap.phase === 'descent') return 'hud.status.lunarDescent';
     if (ap.phase === 'ascent') return 'hud.status.lunarAscent';
+    if (ap.phase === 'transearth' || ap.phase === 'returnMidcourse') return 'hud.status.homeward';
+    if (ap.phase === 'cmSeparated' || ap.phase === 'entry') return 'hud.status.entry';
+    if (ap.phase === 'drogues' || ap.phase === 'mains') return 'hud.status.descent';
     if (APOLLO_AT_MOON.includes(ap.phase) && ap.phase !== 'approach') return 'hud.status.lunarOrbit';
     if (ap.phase !== 'parking' && ap.phase !== 'tli') return 'hud.status.translunar';
   }

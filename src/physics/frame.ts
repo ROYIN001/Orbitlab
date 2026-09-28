@@ -748,11 +748,14 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
     ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
     // C01: Columbia beside Eagle, and the ascent stage beside Columbia after its jettison, each on its own arc
-    ...(a.apollo && b.apollo && ((a.apollo.csm && b.apollo.csm) || (a.apollo.ascentStage && b.apollo.ascentStage)) ? { apollo: {
+    ...(a.apollo && b.apollo && ((a.apollo.csm && b.apollo.csm) || (a.apollo.ascentStage && b.apollo.ascentStage)
+      || (a.apollo.serviceModule && b.apollo.serviceModule)) ? { apollo: {
       ...a.apollo,
       ...(a.apollo.csm && b.apollo.csm ? { csm: hermite(a.apollo.csm.r, a.apollo.csm.v, b.apollo.csm.r, b.apollo.csm.v, u, span) } : {}),
       ...(a.apollo.ascentStage && b.apollo.ascentStage
         ? { ascentStage: hermite(a.apollo.ascentStage.r, a.apollo.ascentStage.v, b.apollo.ascentStage.r, b.apollo.ascentStage.v, u, span) } : {}),
+      ...(a.apollo.serviceModule && b.apollo.serviceModule
+        ? { serviceModule: hermite(a.apollo.serviceModule.r, a.apollo.serviceModule.v, b.apollo.serviceModule.r, b.apollo.serviceModule.v, u, span) } : {}),
     } } : {}),
     rigid,
     // E02: the left frame's step, copied like everything else handed out.

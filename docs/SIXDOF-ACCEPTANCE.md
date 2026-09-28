@@ -601,3 +601,8 @@ degree-2 field, the lunar orbit insertion and circularisation, the undocking, DO
 mission with an injection, which the fleet's are not, so every case flies as before: **161 of 161 passed**
 in 1 h 40 min on four cores, alongside low-priority (niced) probe runs of the Apollo flight and, for a
 minute, two test files on one worker.
+
+**The rigid fleet with C01 part 6e: interrupted.** `npm run test:sixdof-fleet` at commit 708d878 (the
+LM's ascent, the rendezvous and the docking, all inside `ApolloFlight`) ran for about an hour with no
+case failed when the container it ran in was restarted and the run stopped. The run on part 6f's
+commit, which carries part 6e, stands for both.

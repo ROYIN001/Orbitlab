@@ -298,6 +298,11 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       { key: 'evt.lmMcc', t: 458310.8 }, { key: 'evt.lmMcc', n: 2, t: 459210.8 }, { key: 'evt.braking', t: 459417.3 },
       { key: 'evt.stationkeeping', t: 460325.3 }, { key: 'evt.lmDocked', t: 460980 },
       { key: 'evt.lmJettison', t: 468571.2 }, { key: 'evt.asSeparation', t: 469801 },
+      // home: the transearth injection and its cut-off, MCC-5, the CM's separation, the entry interface, the
+      // drogues and the splash (Mission Report Tables 3-I, 7-VI, 7-VII)
+      { key: 'evt.tei', t: 487422.3 }, { key: 'evt.transearth', t: 487573.7 }, { key: 'evt.transearthMcc', t: 541797.4 },
+      { key: 'evt.cmSmSeparation', t: 701352.7 }, { key: 'evt.entryInterface', t: 702185.7 }, { key: 'evt.drogues', t: 702726.9 },
+      { key: 'evt.cmSplashdown', t: 703115 },
     ], orbit: { perigee: 183.2, apogee: 186.0, inclination: 32.521 } },
     titleKey: 'watch.mission.apollo11', blurbKey: 'watch.mission.apollo11Blurb', payloadKey: 'watch.payload.apollo11' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a

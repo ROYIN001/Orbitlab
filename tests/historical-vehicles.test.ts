@@ -391,10 +391,37 @@ describe('Apollo 11 from its parking orbit to the Moon, point-mass', () => {
     expect(norm(sub(f.ascentStage!.r, sim.state.r))).toBeGreaterThan(200);
     expect(f.lunar!.pe).toBeGreaterThan(90e3);
   });
+
+  it('burns for home on time, meets the air as the flight did, and splashes down where Columbia came down', () => {
+    flyTo(APOLLO11.splashdown.t + 300);
+    expect(sim.isFailed(), log()).toBe(false);
+    // TEI (MR Table 7-VI): 135:23:42.3, 3,279.0 ft/s in 151.4 s
+    const tei = at('evt.tei')!, cut = at('evt.transearth')!;
+    expect(tei.t).toBeCloseTo(APOLLO11.tei.t, 6);
+    expect(Math.abs(Number(tei.params!.dv) - APOLLO11.tei.dv)).toBeLessThan(15);
+    expect(Math.abs(cut.t - tei.t - APOLLO11.tei.duration)).toBeLessThan(5);
+    // MCC-5 at its flown time, 4.8 ft/s flown; the model's injection closer to its aim
+    const mcc5 = at('evt.transearthMcc')!;
+    expect(mcc5.t).toBeCloseTo(APOLLO11.mcc5.t, 6);
+    expect(Number(mcc5.params!.dv)).toBeLessThan(3);
+    // the CM's separation on time; the entry interface as flown (MR Table 7-VII): 195:03:05.7, −6.48°
+    expect(at('evt.cmSmSeparation')!.t).toBeCloseTo(APOLLO11.cmSep.t, 6);
+    const ei = at('evt.entryInterface')!;
+    expect(Math.abs(ei.t - APOLLO11.entryInterface.t)).toBeLessThan(30);
+    expect(Math.abs(Number(ei.params!.fpa) - APOLLO11.entryInterface.fpa)).toBeLessThan(0.1);
+    // 6.56 g at the most; the drogues at 195:12:06.9; the water at 195:18:35, 13.30° N 169.15° W, 10,873 lb
+    const splash = at('evt.cmSplashdown')!;
+    expect(Math.abs(Number(splash.params!.g) - 6.56)).toBeLessThan(1);
+    expect(Math.abs(at('evt.drogues')!.t - APOLLO11.splashdown.drogue)).toBeLessThan(60);
+    expect(Math.abs(splash.t - APOLLO11.splashdown.t)).toBeLessThan(120);
+    expect(Number(splash.params!.miss)).toBeLessThan(15);
+    expect(sim.state.status).toBe('landed');
+    expect(Math.abs(sim.vehicle.totalMass() - APOLLO11.splashdown.mass)).toBeLessThan(1);
+  });
 });
 
 describe('Apollo 11 in the viewer', () => {
-  it('tells the flight to the Moon beat by beat, each coast at a preset speed, and ends back in lunar orbit', { timeout: 500_000 }, () => {
+  it('tells the flight to the Moon and back beat by beat, each coast at a preset speed, and ends in the Pacific', { timeout: 600_000 }, () => {
     const s = watchMissionSettings('apollo11');
     const sim = new Simulation({
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
@@ -405,8 +432,8 @@ describe('Apollo 11 in the viewer', () => {
     const warps = new Set<number>();
     let ending: string | null = null;
     let last: ReturnType<typeof captureFrame> | undefined, inOrbit: ReturnType<typeof captureFrame> | undefined;
-    let onMoon: ReturnType<typeof captureFrame> | undefined;
-    while (!sim.isFailed() && sim.state.t < 472000 && !ending) {
+    let onMoon: ReturnType<typeof captureFrame> | undefined, lunarAgain: ReturnType<typeof captureFrame> | undefined;
+    while (!sim.isFailed() && sim.state.t < 704000 && !ending) {
       sim.step(sim.suggestedDt());
       if (sim.state.t < 9000) continue;
       const frame = captureFrame(sim);
@@ -418,6 +445,7 @@ describe('Apollo 11 in the viewer', () => {
       // docked in the circular orbit, a minute before the undocking; on the Moon, an hour before the lift-off
       if (!inOrbit && frame.t >= APOLLO11.undocking.t - 60) inOrbit = frame;
       if (!onMoon && frame.t >= APOLLO11.ascent.t - 3600) onMoon = frame;
+      if (!lunarAgain && frame.t >= APOLLO11.separation.t + 60) lunarAgain = frame;
     }
     // the readouts switch to the Moon as Mission Control's displays did: height above it and speed relative to
     // it; on the surface, nothing left of either
@@ -428,20 +456,23 @@ describe('Apollo 11 in the viewer', () => {
     expect(o.altitude).toBeLessThan(125e3);
     expect(Math.abs(o.speed - 1630)).toBeLessThan(20);
     expect(watchReadout(onMoon!)).toEqual({ altitude: 0, speed: 0, moon: true });
-    const r = watchReadout(last!);
+    const r = watchReadout(lunarAgain!);
     expect(r.moon).toBe(true);
     expect(r.altitude).toBeGreaterThan(95e3);
     expect(r.altitude).toBeLessThan(125e3);
+    // in the water, the Earth's again
+    expect(watchReadout(last!)).toEqual({ altitude: 0, speed: 0, moon: false });
     // in the order they were flown: each after the one before it
     let at = -1;
     for (const b of ['tliBurn', 'tliDone', 'transposition', 'apolloDocked', 'extraction', 'evasiveBurn', 'translunarCoast', 'midcourseBurn',
       'lunarSoi', 'lunarApproach', 'loiBurn', 'lunarOrbit', 'circularizeBurn', 'lunarOrbit', 'lmUndocked', 'doiBurn', 'descentOrbit',
       'brakingPhase', 'approachPhase', 'landingPhase', 'lunarLanding', 'onTheMoon', 'lunarLiftoff', 'lmInOrbit', 'csiBurn', 'cdhBurn',
-      'tpiBurn', 'terminalPhase', 'rendezvousBraking', 'lmStationkeeping', 'redocked', 'lmJettison']) {
+      'tpiBurn', 'terminalPhase', 'rendezvousBraking', 'lmStationkeeping', 'redocked', 'lmJettison', 'teiBurn', 'homewardCoast',
+      'returnMccBurn', 'cmSeparation', 'apolloEntry', 'apolloDrogues', 'apolloMains', 'apolloSplashdown']) {
       at = beats.indexOf(b, at + 1);
       expect(at, `${b}: ${beats.join(' ')}`).toBeGreaterThanOrEqual(0);
     }
-    expect(ending).toBe('redocked');
+    expect(ending).toBe('splashdown');
     // every speed one of the workspace selector's presets (src/main.ts)
     for (const w of warps) expect([0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000]).toContain(w);
     expect(warps.has(5000)).toBe(true);

@@ -335,9 +335,9 @@ export class WatchView {
     const card = this.endCard;
     card.replaceChildren();
     card.classList.toggle('failed', !success);
-    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
+    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? (frame.apollo ? 'watch.end.apolloSplashTitle' : 'watch.end.splashTitle')
       : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle'
-      : ending === 'redocked' ? 'watch.end.redockedTitle' : 'watch.fail.title'));
+      : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
@@ -355,15 +355,16 @@ export class WatchView {
         port: t(`rv.port.${rv.port}`), time: fmtClock(since).replace(/^T\+/, ''), burns: num(rv.burns.length),
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
-    } else if (ending === 'redocked') {
-      // C01: Eagle down at Tranquility Base and back up to Columbia
-      const l = frame.apollo!.landed, at = (key: string) => this.lastEvents.find((e) => e.key === key)?.t ?? frame.t;
+    } else if (ending === 'splashdown' && frame.apollo) {
+      // C01: Apollo 11 home, the whole flight in a paragraph
+      const ap = frame.apollo, l = ap.landed, at = (key: string) => this.lastEvents.find((e) => e.key === key)?.t ?? frame.t;
       const clock = (x: number) => fmtClock(x).replace(/^T\+/, '');
-      card.append(el('p', undefined, t('watch.end.redockedText', {
-        miss: num(Math.round(l?.miss ?? 0)), landed: clock(l?.t ?? frame.t), liftoff: clock(at('evt.lunarLiftoff')), docked: clock(at('evt.lmDocked')),
-        mass: num(Math.round(frame.mass)),
+      const sp = ap.splash ?? { lat: 0, lon: 0, t: frame.t };
+      card.append(el('p', undefined, t('watch.end.apolloSplashText', {
+        time: clock(sp.t), lat: Math.abs(sp.lat).toFixed(2), lon: Math.abs(sp.lon).toFixed(2), landed: clock(l?.t ?? 0), miss: num(Math.round(l?.miss ?? 0)),
+        docked: clock(at('evt.lmDocked')), g: (ap.entry?.maxLoad ?? 0).toFixed(1), mass: num(Math.round(frame.mass)),
       })));
-      card.append(el('p', 'watch-end-fact', t('watch.end.redockedFact')));
+      card.append(el('p', 'watch-end-fact', t('watch.end.apolloSplashFact')));
     } else if (ending === 'splashdown') {
       // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
       const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');

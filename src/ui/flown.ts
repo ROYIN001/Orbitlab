@@ -16,7 +16,8 @@ export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.inter
   | 'evt.evasive' | 'evt.mcc' | 'evt.lunarSoi' | 'evt.loi' | 'evt.lunarOrbit' | 'evt.circularize'
   | 'evt.undocking' | 'evt.separationBurn' | 'evt.doi' | 'evt.pdi' | 'evt.throttleRecovery' | 'evt.highGate' | 'evt.lowGate'
   | 'evt.lunarLanding' | 'evt.lmEngineOff'
-  | 'evt.lunarLiftoff' | 'evt.lmInsertion' | 'evt.csi' | 'evt.cdh' | 'evt.tpi' | 'evt.lmMcc' | 'evt.braking' | 'evt.stationkeeping' | 'evt.lmDocked' | 'evt.lmJettison' | 'evt.asSeparation';
+  | 'evt.lunarLiftoff' | 'evt.lmInsertion' | 'evt.csi' | 'evt.cdh' | 'evt.tpi' | 'evt.lmMcc' | 'evt.braking' | 'evt.stationkeeping' | 'evt.lmDocked' | 'evt.lmJettison' | 'evt.asSeparation'
+  | 'evt.tei' | 'evt.transearth' | 'evt.transearthMcc' | 'evt.cmSmSeparation' | 'evt.entryInterface' | 'evt.drogues' | 'evt.cmSplashdown';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -92,6 +93,13 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.lmDocked': 'tl.evt.lmDocked',
   'evt.lmJettison': 'tl.evt.lmJettison',
   'evt.asSeparation': 'tl.evt.asSeparation',
+  'evt.tei': 'tl.evt.tei',
+  'evt.transearth': 'tl.evt.transearth',
+  'evt.transearthMcc': 'tl.evt.transearthMcc',
+  'evt.cmSmSeparation': 'tl.evt.cmSmSeparation',
+  'evt.entryInterface': 'tl.evt.entryInterface',
+  'evt.drogues': 'tl.evt.drogues',
+  'evt.cmSplashdown': 'tl.evt.cmSplashdown',
 };
 
 export interface FlownRow {

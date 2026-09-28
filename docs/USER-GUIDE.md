@@ -646,11 +646,21 @@ stays behind at Tranquility Base, where you can see it — straight up, then ove
 climbing to orbit, and the rendezvous follows as it was flown: four burns of the lunar module's small
 thrusters over three hours, the first to bring it 28 km under Columbia, the second to keep it there, the
 third, when Columbia stands 26.6° above its horizon, to meet it; then braking in steps, station-keeping 30 m
-off, and docking. Two hours later the ascent stage is let go, Columbia backs away from it, and the flight
-ends back in lunar orbit; the way home is being added. The phase line under the clock shows the lunar
-orbit's height, during the descent the program (P63, P64, P66), the height, the distance to the site and
-the speeds, and during the rendezvous the range to Columbia, the rate it closes at and the height between
-the two orbits; the line of the real flight beside it gives the flown times. The model lights the descent
+off, and docking. Two hours later the ascent stage is let go and Columbia backs away from it. Behind
+the Moon again, the service engine fires for two and a half minutes — watched at 5× — for home. Two and a
+half days of coasting follow, with one small correction on the service module's thrusters (Columbia's was
+1.5 m/s; the model, aimed more closely, needs a tenth of that or none). A quarter of an hour before the
+air the command module leaves the service module, which drifts off and later breaks up, and turns its
+heat shield forward; it meets the air 122 km up at 11 km/s over the Pacific. The entry, at 2×: the lift
+turned upward through the first plunge, at 6½ g, then rolled left and right to fly the 2,400 km to the
+recovery area; at 7.3 km the forward heat shield goes and the two drogues open, at 3 km the three
+orange-and-white mains, and after five minutes under them — at 5× — Columbia splashes down within a few
+kilometres of where it really did, and the end card sums up the flight. The phase line under the clock
+shows the lunar orbit's height, during the descent the program (P63, P64, P66), the height, the distance
+to the site and the speeds, during the rendezvous the range to Columbia, the rate it closes at and the
+height between the two orbits, on the way home the time to the air and the angle it will be met at, and
+during the entry the height, the speed, the bank angle and the load; the line of the real flight beside
+it gives the flown times. The model lights the descent
 45 s before Eagle did and lifts off 43 s earlier, both for the same reason — its orbit keeps its shape
 where the real one was pulled about by the Moon's uneven gravity — and from each keeps the flown timeline
 to a few minutes.

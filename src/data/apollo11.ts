@@ -51,6 +51,13 @@ export const APS = [{ t: 10, thrust: 3464 * LBF, isp: 309.4 }, { t: 400, thrust:
  */
 export const LM_RCS = { thrust: 2 * 100 * LBF, isp: 290 };
 
+/**
+ * The service module's reaction control system for the transearth correction:
+ * four 100-lbf thrusters along the axis (MCC-5's 4.8 ft/s took 11.2 s on 12 t,
+ * MR Table 7-VI); 290 s (approximate).
+ */
+export const SM_RCS = { thrust: 4 * 100 * LBF, isp: 290 };
+
 /** Pounds to kilograms. */
 const LB = 0.45359237;
 
@@ -159,6 +166,25 @@ export const APOLLO11 = {
    */
   jettison: { t: get(130, 9, 31.2), csm: 37100.5 * LB, lm: 5462.5 * LB },
   separation: { t: get(130, 30, 1), dv: 2.2 * FPS, duration: 7.2 },
+  /**
+   * The transearth injection: 135:23:42.3, 151.4 s, 3,279.0 ft/s on the service engine; the CSM weighed
+   * 36,965.7 lb at its ignition (MR Tables 7-VI, A-I). It left the flight 0.79° from entering the air; the one
+   * correction, MCC-5 at 150:29:57.4, 4.8 ft/s in 11.2 s on the service module's thrusters, put it on the entry
+   * flown: 195:03:05.7, 400,000 ft up at 3.19° S 171.96° E, 36,194.4 ft/s, −6.48°, heading 50.18° (MR Tables 7-VI,
+   * 7-VII).
+   */
+  tei: { t: get(135, 23, 42.3), duration: 151.4, dv: 3279.0 * FPS, mass: 36965.7 * LB },
+  mcc5: { t: get(150, 29, 57.4), dv: 4.8 * FPS, duration: 11.2 },
+  entryInterface: { t: get(195, 3, 5.7), fpa: -6.48, heading: 50.18, lat: -3.19, lon: 171.96, speed: 36194.4 * FPS },
+  /** The CM's separation from the SM, 194:49:12.7; the CM 12,107.4 lb after it, 12,095.5 at the entry interface (MR Tables 3-I, A-I). */
+  cmSep: { t: get(194, 49, 12.7), cm: 12107.4 * LB, ei: 12095.5 * LB },
+  /**
+   * The parachutes and the splashdown: drogues at 195:12:06.9, the landing at 195:18:35 at 13.30° N 169.15° W —
+   * the target moved 215 n mi down range for the weather — 1,285 n mi from the entry interface; the CM weighed
+   * 11,601.7 lb at the drogues, 11,318.9 at the mains and 10,873.0 lb in the water (MR Tables 3-I, 7-VII, A-I, §3).
+   */
+  splashdown: { drogue: get(195, 12, 6.9), t: get(195, 18, 35), lat: 13.30, lon: -169.15,
+    drogueMass: 11601.7 * LB, mainMass: 11318.9 * LB, mass: 10873.0 * LB },
   /** the Moon's radius the Mission Report's lunar altitudes are above (the landing site's, PGNCS; MR Table 5-IV), m */
   siteRadius: 937.17 * NMI,
 } as const;
