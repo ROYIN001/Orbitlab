@@ -1643,6 +1643,8 @@ export const en: Record<string, string> = {
   'home.iss.path': 'from the {from} to the {to}, up to {el}° high',
   'home.iss.none': 'none in the next {n} days',
   'home.iss.note': 'To the naked eye the station is a bright, steady star gliding across the sky for a few minutes, with no blinking lights. Times are the city’s local time.',
+  'home.resume.title': 'Continue your last mission',
+  'home.resume.text': '{vehicle} · {payload} kg · target orbit {pe} × {ap} km',
   'plan.orbit.title': 'Orbits: how they work and what they are for',
   'plan.orbit.lead': 'This part of Orbitlab is being built. Nothing on this page works yet: it is the plan, in the order it will be built, and every model in it will be checked against published data before it is switched on.',
   'plan.build.title': 'Build your own rocket and satellite',
@@ -3082,6 +3084,7 @@ export const en: Record<string, string> = {
   'setup.dispersion.imu': 'A fresh realisation of the IMU\'s errors',
   'setup.dispersion.pointMass': 'Point-mass has no wind and no IMU: those draws are not flown.',
   'mc.tip.open': 'click to fly it on its own',
+  'mc.opened': 'Run {n} of this set (seed {seed}, {law}) is open in the setup panel: the set\'s own mission, with that run\'s dispersion.',
   'report.dispersionRun': 'run {run} of the set seeded {seed}',
   // --- C01 ---
   'vehicle.sputnik8k71ps.manufacturer': 'OKB-1 (Korolev)',

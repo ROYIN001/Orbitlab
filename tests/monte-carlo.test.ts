@@ -8,13 +8,16 @@ import {
   type FlightDispersion,
 } from '../src/physics/dispersion';
 import {
-  defaultMonteCarlo, drawLayout, ellipseOf, histogram, monteCarloCsv, monteCarloLaws, regress, runMission, sensitivityOf, statsOf,
+  defaultMonteCarlo, dispersedRunMission, drawLayout, ellipseOf, histogram, monteCarloCsv, monteCarloLaws, regress, runMission, sensitivityOf, statsOf,
   summarizeMonteCarlo, validMonteCarloConfig, type MonteCarloRun,
 } from '../src/physics/monte-carlo';
 import { MonteCarloJob, type MonteCarloReply, type MonteCarloRequest, type MonteCarloWorker } from '../src/physics/monte-carlo-job';
 import { windScenario } from '../src/physics/rigid/runtime';
 import type { MissionConfig } from '../src/types';
 import { LAUNCH_TIME } from './fleet-harness';
+import { runMissionState, type MonteCarloSet } from '../src/ui/monte-carlo';
+import type { MissionState } from '../src/config/mission-file';
+import { validateConfigInput } from '../src/config/validation';
 
 function mission(vehicleId = 'falcon9', model: 'sixDof' | 'pointMass' = 'sixDof'): MissionConfig {
   return { vehicleId, satelliteId: 'cubesats', siteId: vehicleId === 'falconheavy' || vehicleId === 'falcon9' ? 'cape' : 'kourou', orbit: orbitById('leo'),
@@ -283,5 +286,45 @@ describe('the Monte Carlo job (roadmap G05)', () => {
     expect(stopped.state).toBe('stopped');
     expect(stopped.runs.length).toBe(done);
     expect(stopped.progress().etaS).toBeNull();
+  });
+});
+
+describe('a run opened from the scatter (audit 2026-09-27 A10)', () => {
+  // The set's mission as the panel held it at the start, and as it flew
+  const setMission = (): MissionState => ({
+    vehicleId: 'falcon9', satelliteId: 'cubesats', siteId: 'cape', orbitId: 'leo', orbit: orbitById('leo'),
+    launchTime: LAUNCH_TIME, payloadMass: 1000, guidanceOverrides: { kickAngle: 4.5 },
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
+    dynamics: { model: 'sixDof', wind: 'crosswind', seed: 20260919 },
+  });
+  const set = (): MonteCarloSet => ({ mission: setMission(), cfg: mission('falcon9'), mc: { ...defaultMonteCarlo(), seed: 1 } });
+
+  it('is the set\'s own mission with that run\'s dispersion and law, whatever the panel holds now', () => {
+    const s = set();
+    const run = { index: 6, law: 'peg' as const };
+    const opened = runMissionState(s, run);
+    const { dynamics, ...rest } = opened;
+    const { dynamics: _nominal, ...setRest } = setMission();
+    expect(rest).toEqual(setRest);
+    expect(dynamics).toEqual(dispersedRunMission(s.cfg, s.mc, run).dynamics);
+    expect(dynamics?.dispersion).toEqual({ seed: 1, run: 6 });
+    expect(dynamics?.explicitGuidance?.law).toBe('peg');
+    expect(validateConfigInput(opened)).toEqual([]);
+  });
+
+  it('shares nothing with the set, so opening one run cannot change the next', () => {
+    const s = set();
+    const opened = runMissionState(s, { index: 0, law: 'standard' });
+    opened.guidanceOverrides.kickAngle = 9;
+    opened.orbit.perigee = 1;
+    opened.launchTime.setTime(0);
+    expect(runMissionState(s, { index: 0, law: 'standard' })).toMatchObject({ guidanceOverrides: { kickAngle: 4.5 }, orbit: orbitById('leo'), launchTime: LAUNCH_TIME });
+    expect(s.mission).toEqual(setMission());
+  });
+
+  it('carries non-default dispersion settings with the run', () => {
+    const s = set();
+    s.mc = { seed: 3, dispersions: { ...cloneDispersions(DEFAULT_DISPERSIONS), thrust: { enabled: true, sigma: 2 } } };
+    expect(runMissionState(s, { index: 2, law: 'standard' }).dynamics?.dispersion).toEqual({ seed: 3, run: 2, settings: s.mc.dispersions });
   });
 });
