@@ -107,7 +107,7 @@ const PUBLISHED_BURN_TIME: Record<string, number> = {
   // Ariane 6 flies the same P120C as a strap-on, but quotes ~130 s for it
   // against Avio's 135.7 s on Vega-C: the same grain, two operators, two
   // published burn times. Both are listed as published, and the single mean
-  // thrust in vehicles.ts sits between them (136.3 s here, 135.7 s on Vega-C).
+  // thrust in src/data/parts.ts sits between them (136.3 s here, 135.7 s on Vega-C).
   // docs/history/AUDIT-2026-09-16.md B22 uses the 130 s figure.
   'ariane64/llpm/p120c': 130,
   // Pre-existing solids. Published figures from docs/history/AUDIT-2026-09-16.md B22,

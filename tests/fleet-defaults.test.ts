@@ -788,7 +788,7 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('electron', 'mahia', 'sso', 'cubesats', 200),
     milestones: [
       // This wave corrected Rutherford from the file's old 24.9 / 27.5 kN to
-      // the published 24 kN sea level / 25.8 kN vacuum (see vehicles.ts), which
+      // the published 24 kN sea level / 25.8 kN vacuum (see src/data/parts.ts), which
       // is a change to an existing vehicle: the nine-engine mean mass flow is
       // 68.4 kg/s, the 9.7 t first stage burns 142 s instead of 132 s, and
       // measured MECO moves from T+129 s (pre-wave, docs/history/AUDIT-2026-09-16.md
@@ -822,7 +822,7 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('ariane64', 'kourou', 'gto', 'cubesats', 5750),
     milestones: [
       // The P120C mean thrust is now derived from the grain mass and the
-      // published 135 s burn time (see the engine table in vehicles.ts), so
+      // published 135 s burn time (see the P120C part in src/data/parts.ts), so
       // separation lands inside the published band instead of ~24 s early.
       { label: 'P120C separation', at: evTime('evt.boosterSep'), published: '130-140 s', regression: [130, 145] },
       // Flown on the published TIMELINE, not on the heating placard: Ariane 6

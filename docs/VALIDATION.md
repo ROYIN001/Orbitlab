@@ -240,7 +240,7 @@ propellant or about 10 % less mass flow, or a deeper and longer throttle-down th
 The events file puts the real throttle-down window at 18–35 s long, between T+43 and T+78 s.
 This is inside the ±10 % the data are quoted to (PHYSICS.md §10), but it is **systematic**:
 all five flights agree on the sign and on the size. It is a vehicle-data finding
-(`src/data/vehicles.ts`, `falcon9` first stage and `MERLIN1D`), not an error in the equations.
+(`falcon9`'s first stage, now the body `s1` and the engine part `merlin1d` in `src/data/parts.ts`), not an error in the equations.
 The published first-stage masses have since been applied ("Data change applied" below), which
 narrows this gap by about a third (the expended burn is 157.9 s against 168 s) but does not
 close it.
@@ -288,7 +288,7 @@ F1 had a sourced fix. Wikipedia's "Falcon 9 Block 5" specification table (`actio
 2026-09-25) cites *Espace & Exploration* no. 39 (May 2017, "Fiche technique: Falcon-9") for the
 first stage's tank capacities and empty mass:
 
-| first stage | before (main @ 844ffca) | now (`src/data/vehicles.ts`) |
+| first stage | before (main @ 844ffca) | now (`src/data/parts.ts`, body `s1`) |
 | --- | --- | --- |
 | propellant | 395 700 kg | 287 400 kg LOX + 123 500 kg RP-1 = 410 900 kg |
 | empty mass | 25 600 kg | 22 200 kg |
@@ -620,7 +620,7 @@ Three caveats about how independent these comparisons are:
 
 **F7. Electron's second stage burns about 25 % too short.** The press kit runs it from T+151 s
 to T+538 s, 387 s. The model runs it from T+141 s to T+439 s, 298 s. With the model's data
-(`src/data/vehicles.ts`: 2 300 kg of propellant, one Rutherford Vacuum at 25.8 kN and 343 s,
+(`src/data/parts.ts`, body `e2`: 2 300 kg of propellant, one Rutherford Vacuum at 25.8 kN and 343 s,
 about 7.7 kg/s), 298 s is exactly a burn to depletion. The real stage burns for longer, so it
 must carry more propellant (about 3 t at the same flow) or throttle below full thrust. Nothing
 reachable here says which. This is a vehicle-data finding, like F1, but unlike F1 no published
