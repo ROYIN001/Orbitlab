@@ -822,14 +822,36 @@ SpaceX does not publish that schedule, and Arabsat-6A is the only Block 5 Falcon
 here, so it is not fitted. The disagreement list is unchanged, and max Q moved 3 s earlier
 (T+48 s against 69 s): a q-limited plateau puts the peak where the plateau starts.
 
-**F12. PSLV-XL's first stage delivers too little.** At first-stage separation the model is at
-1 512 m/s inertial against 2 143 m/s (−29 %), and 14 km higher. The deficit builds between T+70
-and T+92 s: 199 m/s gained against 562 m/s. The stage and strap-on masses agree with ISRO's
-brochure (139 t, 6 × 12.2 t), and so do the burn times. What differs is the thrust curve. The
-model flies every solid motor as a linear taper about its published mean (PHYSICS.md §10), and a
-steeply tapered S139 is weak exactly there. The second stage makes up the speed (4 066 m/s
-against 4 033 at its separation). The real flight then climbs to 451 km before the fourth stage
-lights; the model parks at 200 km, as in F6.
+**F12. PSLV-XL's first stage flies too steep.** At first-stage separation the model is at
+1 512 m/s inertial against 2 143 m/s (−29 %), and 14 km higher. The stage and strap-on masses
+agree with ISRO's brochure (139 t, 6 × 12.2 t), and so do the burn times. The second stage makes
+up the speed (4 066 m/s against 4 033 at its separation). The real flight then climbs to 451 km
+before the fourth stage lights; the model parks at 200 km, as in F6.
+
+This was first put down to the thrust curve: the model flies every solid motor as a linear
+taper about its published mean (PHYSICS.md §10). Measured on 2026-09-28, the curve is not the
+cause:
+
+- *The shape moves the impulse, not the total.* Flown with the S139's and the PSOM-XLs' peak
+  factor at 1 (flat), at the shipped 1.43 / 1.53 and at 2, the stack gets the same ideal delta-v
+  to T+107 s, 2 882–2 894 m/s. It reaches PS1 separation at 1 578, 1 515 and 1 494 m/s: all
+  about 600 m/s short, and within 84 m/s of each other
+  (`tests/validation/pslv-first-stage.test.ts`). The shipped peak also agrees with the published
+  one: 3 400 kN × 1.43 = 4 862 kN against the S139's 4 847 kN maximum (Wikipedia, "S139
+  Booster"). No published thrust-time curve was found for either motor.
+- *The loss is in the trajectory.* The real flight gains 1 691 m/s by PS1 separation, so its
+  losses are about 1 200 m/s; the model's are about 1 800 m/s. It climbs almost vertically
+  (pitch 86–87° up to T+60 s) and is at 35 km by T+70 s, where the real vehicle was at 27 km.
+  Once the dynamic pressure falls below 12 kPa, closed-loop guidance takes over and pitches the
+  thrust down to 10–20° while the velocity still points about 70° up. Between T+70 and T+92 s
+  the thrust turns the velocity rather than adding to it: 180 m/s gained for 600 m/s of ideal
+  delta-v.
+- *The pitch programme moves it.* A 25–30° kick instead of 1.5° puts the first-stage rows inside
+  tolerance: 1 899–1 934 m/s at PS1 separation, 63–66 km. But the second stage then flies far too
+  flat, 155–161 km at PS2 separation against 237 km. The real PSLV lofts through its second and
+  third stages, as H3 does (F13). Matching it means reshaping the ascent profile as a whole,
+  fitted on several PSLV-XL flights and checked on others, not on C52 alone. That is not done
+  here.
 
 **F13. H3 flies a far flatter first stage than JAXA's plan.** JAXA's plan reaches MECO at 278 km
 and 3.6 km/s (frame not stated). The model reaches 157 km and 5.9 km/s. The gap is much larger
