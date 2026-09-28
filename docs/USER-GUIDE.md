@@ -13,8 +13,9 @@ rocket and a satellite). Each section has the same three **levels** — Watch, E
 Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
 **Orbit** opens on its playground (section 0a below). **Build** takes real rockets apart, remixes
 them, builds new ones from parts and tests them before they fly (section 0b below); what is still
-to come to it, the satellites, is listed on its levels, from
-[ROADMAP-PART2-3.md](ROADMAP-PART2-3.md). Everything after section 0b is about Launch.
+to come to it (designing from parts at the Engineer level, and the satellites) is listed at its
+Engineer level, from [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md). Everything after section 0b is
+about Launch.
 
 - **Home** — the landing page, a page you scroll (the wheel scrolls it; it does not move the
   scene). Its first screen is the featured rocket on its pad: **Watch a launch** plays the
@@ -494,15 +495,16 @@ has been opened in this session), a saved design, or a launcher sized here.
 - **Figures marked "estimate"** are the builder's approximations, not published data: a stretched
   tank's structure, a sized stage's length, the defaults a design of your own has not set (the
   dynamic-pressure and acceleration limits are the fleet's middle values, the fairing comes off at
-  115 km), the country taken from the launch site, and every computed rating. The catalogue's own
-  figures are rounded public ones, good to about ±10 %, and some have no source; the part card says
-  so.
+  115 km), and every computed rating. The country a design of your own takes from its launch site
+  is shown as a default, not an estimate. The catalogue's own figures are rounded public ones, good
+  to about ±10 %, and some have no source; the part card says so.
 - **Computed payload ratings** are the heaviest payload the model delivered in test flights of the
-  design, point mass, in calm air, on the guidance programme it carries, to about 200 km at the
-  site's lowest inclination (or the original rocket's published rating orbit) and to the standard
+  design, point mass, in calm air, on the guidance programme it carries, to 200 km at the site's
+  lowest inclination (or the original rocket's published rating orbit) and to the standard
   transfer orbit. Against eight published ratings they came within 25 % for seven; Vega-C's
   low-orbit rating comes out 31 % high. A remix keeps the original's guidance programme, which may
-  not suit it, so a big change can lower its rating more than the rocket itself would.
+  not suit it, so a big change can lower its rating; how much of a drop is the programme's has not
+  been shown.
 - **The builder will not**
   - re-count an engine entry that stands for several engines at once (YF-75, for one);
   - swap or re-count a solid motor (stretch or shrink it instead);
@@ -565,12 +567,12 @@ buttons lists what was reset. The file carries a format version, so a file from 
 Orbitlab still opens as far as this one understands it, and says so.
 
 Since version 2 a file can also carry a **vehicle of its own** — a custom rocket, the start of
-the Build section ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), S02). There is no builder on screen
-yet; a file (or a link) that carries one opens with the vehicle listed first in the vehicle menu
-as "*name* — custom vehicle", and it flies like any other. Every figure in it is checked before it
-flies — masses and sizes above zero, engine figures a chemical engine can have, at most six
-stages, strap-ons on the first stage only — and a vehicle that fails the check is not flown: the
-note names the vehicle as reset. Picking a catalogue vehicle from the menu drops the custom one.
+the Build section ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), S02). The Build section makes one
+and hands it over with **Fly it** (section 0b); a file (or a link) that carries one opens with the
+vehicle listed first in the vehicle menu as "*name* — custom vehicle", and it flies like any
+other. Every figure in it is checked before it flies — masses and sizes above zero, engine figures
+a chemical engine can have, at most six stages, strap-ons on the first stage only — and a vehicle
+that fails the check is not flown: the note names the vehicle as reset. Picking a catalogue vehicle from the menu drops the custom one.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch

@@ -37,8 +37,8 @@ Status on 2026-09-28:
 | Space weather in the lifetime (R05, P2.5) | NRLMSISE-00's own test cases and NRL's Fortran; ECSS-E-ST-10-04C's tables of it; seven spheres of published mass and size, 1999–2010, and their re-entries (GCAT) | The port within 2 × 10⁻⁶ of the test cases and 10⁻⁴ of the Fortran; ECSS's averages within 0.3 %; all seven spheres within 25 % of their days in orbit with the daily Sun (+1.5 to −23 %); a fixed moderate Sun is off by −72 to +98 % (§6), 2026-09-27 |
 | The Earth's orientation (P2.5) | Vallado et al., AIAA 2006-6753, Appendix C: TEME to ITRF with UT1 − UTC and polar motion; the IERS's finals2000A | The paper's Earth-fixed position within 71 mm (262 m before) (§6), 2026-09-27 |
 | Parts catalogue (D01) | The fleet's specs and 27 point-mass and 21 six-DOF flights, recorded before the catalogue; main's literal fleet after F11 | The 21 vehicles emitted value for value and key for key; every flight bit for bit; sources missing for 29 of 55 engines, 25 of 50 stage bodies, 6 of 14 strap-on bodies and 13 of 17 fairings, stated (§8), 2026-09-28 |
-| The builder's figures (D02–D05) | The model's own Δv walk; the rocket equation worked by hand; published burn times; engine masses from their makers and secondary sources | Exactly the walk's Δv from every state tried; the hand-worked stage figures within 1e-12; six published burn times within 10 %; every engine's mass sourced, four unpublished (§8), 2026-09-28 |
-| Optimal staging (D05) | Closed forms; brute-force grids; NPTEL Lecture 20's worked examples (IIT Bombay); Saturn V and Falcon 9 by hand | All met; one bound widened after a result, for the slide's truncated β, and two of the slide's figures found not to follow from its own; the real first stage takes more than the optimum on two vehicles and less on four (§8), 2026-09-28 |
+| The builder's figures (D02–D05) | The model's own Δv walk; the rocket equation worked by hand; published burn times; engine masses from makers, agencies, secondary sources and Wikipedia, some inferred | Exactly the walk's Δv from every state tried; the hand-worked stage figures within 1e-12; six published burn times within 10 %; a mass with its sources for every engine but the four with none published (§8), 2026-09-28 |
+| Optimal staging (D05) | Closed forms; brute-force grids; NPTEL Lecture 20's worked examples (IIT Bombay); Saturn V and Falcon 9 by hand | All met; one bound widened after a result, for the slide's truncated β, and the page's Saturn V bounds set after a probe; two of the slide's figures found not to follow from its own; the real first stage takes more than the optimum on two vehicles and less on four (§8), 2026-09-28 |
 | Remix, parts builder and warnings (D02, D03) | The catalogue vehicles; the published engine masses; the rocket equation; the flight's own liftoff, planner and acceleration decisions | Unchanged remixes and rebuilt vehicles equal the catalogue; `noLiftoff` agrees with 85 flights; no catalogue vehicle fails (§8), 2026-09-28 |
 | Test stand, wind tunnel, readiness review (D04) | The engine data and 20 published burn times; the six-DOF tables, the point-mass drag and slender-body theory; the Launch panel's verdict | Met; the known sea-level Isp inconsistencies shown, not tuned; the verdict identical on 36 catalogue rows (§8), 2026-09-28 |
 | Computed payload ratings (D03, D04) | Eight published ratings (Soyuz-2.1a, Falcon 9, Long March 2D, Vega-C, Ariane 64, Electron), ±25 % fixed before | Seven met; Vega-C's LEO 31 % high, missed and unexplained; the method changed after its first GTO results (§8), 2026-09-28 |
@@ -2096,7 +2096,8 @@ emit exactly the fleet that flew before it, and that fleet must fly exactly as b
 
 **Spec identity** (`tests/d01-vehicles-identity.test.ts`). Before `vehicles.ts` was touched, the
 whole `VEHICLES` value was written to `tests/fixtures/vehicles-pre-d01.json` (keys sorted,
-42 929 bytes, at eedd035), and a SHA-256 of the unsorted JSON was recorded for the key order.
+42 929 bytes, at eedd035). In review a SHA-256 of the unsorted JSON at eedd035 was added, for the
+key order.
 The 21 vehicles the catalogue emits equal the fixture exactly (`256.4 * kN` is pinned as
 `256399.99999999997`) and give the same hash, so even the key order is unchanged. A recursive
 walk finds no value JSON cannot show (an undefined key, −0, NaN, ±Infinity, a function). **Met.**
@@ -2182,8 +2183,9 @@ estimates. The six-DOF model still reads the family by stage id, not from the pa
 ### Engine masses (D02, D03)
 
 A remix or a design from parts needs what an engine weighs, which no flight did. Every engine part
-now carries a mass per engine, with its sources as links, what the figure includes and a note
-(`EnginePart.mass`; `tests/parts-engine-masses.test.ts`, all exact):
+now carries a mass per unit of its count (one engine, or the whole of a lumped entry), with its
+sources as links, what the figure includes and a note (`EnginePart.mass`;
+`tests/parts-engine-masses.test.ts`, all exact):
 
 - **Coverage:** all 55. Four are null because no source publishes one, each with its reason:
   Curie, PS4's L-2-5, PSOM-XL and Raptor 2 / RVac.
@@ -2339,7 +2341,8 @@ fairing. `tests/design-remix.test.ts`, bounds fixed first:
   in review: Falcon 9's second stage had taken a YF-75 and kept 108 t of kerolox tankage, flown as
   hydrolox (about three times the volume), with no refusal and no estimate.
 - **Fuzz** (seeded, 630 lists of edits over the 21 vehicles): 278 accepted, every one clean under
-  the validator; every refusal a coded one; the catalogue unchanged. **Met.**
+  the validator; every refusal a coded one; the catalogue unchanged. The floor of 25 % accepted was
+  fixed before the first run, lowered from 50 % on an estimate. **Met.**
 
 ### Building from parts, and the warnings (D03)
 
@@ -2353,10 +2356,11 @@ fairing. `tests/design-remix.test.ts`, bounds fixed first:
   acceleration limit of 50 m/s² (the fleet's medians), fairing jettison at 115 km (the median),
   ratings of 0 flagged until computed, and the country taken from the first launch site (flagged
   since the review; a Baikonur design gets KZ).
-- **Fuzz:** 600 designs. The floor of 25 % accepted was fixed before the first run (lowered from
-  50 %, on an estimate). After the propellant-family refusal the fuzz accepted 139, under the
-  floor; the floor was kept and the draw changed to pick engines as the S02 harness does. It now
-  accepts 162, all clean under the validator with unique, valid ids. **Met.**
+- **Fuzz:** 600 designs. The floor of 25 % accepted was fixed before the first run. After the
+  propellant-family refusal the fuzz accepted 139, under the floor; the floor was kept and the draw
+  changed to pick a catalogue body's other engine as it already picked one for a body of one's own:
+  from the body's propellant family, with a 10 % chance of any. It now accepts 162, all clean
+  under the validator with unique, valid ids. **Met.**
 - **Heights, recorded:** the drawn height (the stages and adapters as the flight stacks them)
   differs from the typed one: Soyuz-2.1a 46.85 against 46.3 m, Vega-C 41.85 against 34.8 m,
   PSLV-XL 52.84 against 44 m, Atlas V 551 70.52 against 62.2 m, Saturn V 90.15 against 110.6 m
@@ -2450,8 +2454,8 @@ the six-DOF flight flies over Mach and angle of attack. The tables are the model
   Mach numbers (bound 1e-12, worst 4.4e-16) and at the 201 drawn from Mach 0 to 10 on Falcon 9,
   Ariane 6, Soyuz-2.1a and Saturn V; the reference area is `frontalArea()` exactly. **Met.**
 - **Slender-body theory:** a nose on a cylinder gives C_Nα = 2 per radian for 1.2, 3.7 and 5.4 m
-  below Mach 0.8, and a stack under a wider fairing 2·(d_base/d_max)², 1.125 for 3 m under 4 m
-  (table within 1e-12, tunnel within 1e-6). **Met.**
+  at Mach 0.8 and below, and a stack under a wider fairing 2·(d_base/d_max)², 1.125 for 3 m under
+  4 m (table within 1e-12, tunnel within 1e-6). **Met.**
 - **Through 90°:** continuous, bounds 1e-4 on C_N and C_A and 1 mm on x_cp; worst 2.5e-6, 5.6e-12
   and 0.03 mm. **Met.**
 - **The moment's sign,** which the page's "above zero is unstable" rests on: C_m = −C_N × margin
@@ -2478,16 +2482,16 @@ verdict, and always flies the insertion probe for a vehicle of one's own.
   the static verdict; the review fails it and blocks the flight. Falcon 9 typed at 1.5 × its LEO
   rating and flying 90 % of the real one would not be probed by the static verdict; the review's
   probe runs out of propellant and fails it. **Met.**
-- **Bugs found in review, each fixed with a test that failed first:** the review could fly the wrong
-  vehicle when the mission still carried another vehicle's spec (Falcon 9 at 90 %, which the probe
-  fails, came out as a tight margin that may fly); the test flight's row said "reached orbit −1 s
-  after liftoff" for a rocket still flying, never lost, at the probe's 2 400 s limit (unchanged
-  Vulcan and Angara-A5 remixes coasting on a 137 km perigee; Long March 2D to GTO), which the
-  verdict counts as orbit and the row now says as a note; computing ratings in the review reset
-  the typed payload (900 kg re-reviewed at 1 000 kg) and kept an SSO rating never computed (a
-  saved Vega-C remix kept the published 2 300 kg); and the reached-orbit sentence claimed the
-  perigee had just risen past 140 km and promised later burns that a stack with no restart
-  cannot make.
+- **Bugs found in review, each fixed:** the review could fly the wrong vehicle when the mission
+  still carried another vehicle's spec (Falcon 9 at 90 %, which the probe fails, came out as a
+  tight margin that may fly; reproduced by a test that failed before the fix); the test flight's
+  row said "reached orbit −1 s after liftoff" for a rocket still flying, never lost, at the
+  probe's 2 400 s limit (unchanged Vulcan and Angara-A5 remixes coasting on a 137 km perigee;
+  Long March 2D to GTO), which the verdict counts as orbit and the row now says as a note;
+  computing ratings in the review reset the typed payload (900 kg re-reviewed at 1 000 kg) and
+  kept an SSO rating never computed (a saved Vega-C remix kept the published 2 300 kg); and the
+  reached-orbit sentence claimed the perigee had just risen past 140 km and promised later burns
+  that a stack with no restart cannot make.
 
 ### Computed payload ratings (D03, D04)
 

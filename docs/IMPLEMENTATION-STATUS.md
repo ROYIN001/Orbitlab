@@ -52,8 +52,8 @@ design's warnings in plain words, payload ratings computed by flying it, saving,
 import, and **Fly it**, which hands the design to Launch as a mission, point-mass unless six-DOF
 (experimental) is asked for. Engineer tests a rocket on a test stand, in a wind tunnel and in a
 flight readiness review (D04), finds the best split of a Δv among stages, and sizes a launcher
-from a payload and an orbit (D05). The figures are the launch physics' own, and every estimate is
-labelled as one.
+from a payload and an orbit (D05). The figures are the launch physics' own, and estimates are
+labelled as such; the known gaps are under "Known limitations" below.
 
 - **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
   for every vehicle, which is the default, with each stage's chambers, steering, thrusters and
@@ -305,7 +305,7 @@ Phase 3, the rocket builder (the Build section), on the same branch. No built-in
 
 | Item | |
 |---|---|
-| D01 parts catalogue | done: `src/data/parts.ts`, 55 engines, 50 stage bodies, 14 strap-on bodies and 17 fairings, from which the 21 vehicles are assembled, with interstages derived for the drawing and each engine's published mass, with its sources, for the builder. The fleet it emits equals the literal one value for value and key for key (main's F11 included), and 27 point-mass and 21 six-DOF flights hash as they did before it ([VALIDATION.md](VALIDATION.md) §8) |
+| D01 parts catalogue | done: `src/data/parts.ts`, 55 engines, 50 stage bodies, 14 strap-on bodies and 17 fairings, from which the 21 vehicles are assembled, with interstages derived for the drawing and, for the builder, each engine's mass with its sources (none for the four whose mass is unpublished). The fleet it emits equals the literal one value for value and key for key (main's F11 included), and 27 point-mass and 21 six-DOF flights hash as they did before it ([VALIDATION.md](VALIDATION.md) §8) |
 | D02 remix a real rocket | done, at Explore: stretch or shrink a stage's propellant (50–200 %), swap or re-count its engines for engines of the same propellant, add or take off strap-on groups, fit another fairing. Unchanged, a remix is the real rocket and flies as it does; a swap moves the dry mass by the engines' published masses exactly; a stretch moves the Δv as the rocket equation does; 630 random lists of edits give a valid vehicle or a refusal with its reason ([VALIDATION.md](VALIDATION.md) §8) |
 | D03 parts builder | done, at Explore: up to six stages from catalogue bodies or bodies of one's own, engines, strap-ons, a fairing; the design's warnings in plain words; payload ratings computed by flying it; save, export, import; **Fly it**, point-mass by default, six-DOF experimental. Every catalogue vehicle rebuilds from its own parts exactly; each warning is shown on constructed cases, "will not lift off" agrees with the flight in 85 flights, and no catalogue vehicle fails; computed ratings fall within 25 % of seven of eight published ones, Vega-C's LEO 31 % high ([VALIDATION.md](VALIDATION.md) §8). The Engineer level still lists designing from parts there as to come, with a link to Explore |
 | D04 test facilities | done, at Engineer: a test stand that fires any engine with the flights' own engine model, in a vacuum, at sea level or at a site's height; a wind tunnel of the six-DOF flight's aerodynamic tables over Mach and angle of attack; a flight readiness review. Thrust, Isp, impulse and the transients are held to the data and to closed forms, 20 published burn times fall within 10 %, the tunnel's zero-angle drag is the point-mass flight's, and the review gives the Launch panel's own verdict on 36 catalogue rows ([VALIDATION.md](VALIDATION.md) §8) |
@@ -406,9 +406,10 @@ Phase 3, the rocket builder (the Build section), on the same branch. No built-in
   new remix with its stretches back at 100 %, a parts design reopens in the parts builder only when
   it rebuilds exactly, and neither keeps its payload; ratings computed in the review for a saved
   design are not written back to it. **Fly it** from Explore always aims at the 500 km preset from
-  the design's first site, with the rideshare dispenser as the payload. A design whose ratings have
-  not been computed reads "will not fly" at Launch's Explore level, where a rating of 0 counts as
-  none. The validator's and the design store's details are shown in English.
+  the design's first site, with the design's payload named as the rideshare dispenser whatever its
+  mass. A design whose ratings have not been computed reads "will not fly" at Launch's Explore
+  level, where a rating of 0 counts as none. The validator's and the design store's details are
+  shown in English.
 - Six-DOF for a rocket of one's own (D03) is experimental. A single-engine first stage with an id
   of its own has no roll control (PSLV so renamed rolled at 2.2°/s, against 0.075°/s). Where bells
   share engines, the fault system names a bell by its first engine and counts bells, not engines,

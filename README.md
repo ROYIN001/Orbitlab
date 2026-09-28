@@ -249,11 +249,11 @@ parts catalogue (`src/data/parts.ts`) from which the 21 vehicles are themselves 
   readiness review with the Launch section's own verdict, finds the best split of a Δv among
   stages, and sizes a launcher from a payload and an orbit.
 
-The figures are the launch physics' own, and every estimate is labelled as one. The catalogue
-emits the fleet value for value and the built-in flights are unchanged; computed ratings fall
-within 25 % of seven of eight published ones (Vega-C's LEO is 31 % high), and the sized
-launchers tried need more Δv than the planner allows for
-([docs/VALIDATION.md](docs/VALIDATION.md) §8). Designing satellites (D06, D07) comes in Phase 4.
+The figures are the launch physics' own, and estimates are labelled as such (the known gaps are
+in [docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)). The catalogue emits the fleet
+value for value and the built-in flights are unchanged; computed ratings fall within 25 % of seven
+of eight published ones (Vega-C's LEO is 31 % high), and the sized launchers tried need more Δv
+than the planner allows for ([docs/VALIDATION.md](docs/VALIDATION.md) §8). Designing satellites (D06, D07) comes in Phase 4.
 
 The cloud in the top bar switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
 each dated, so `dist/` works on a network with no internet — and **online**, which fetches from
