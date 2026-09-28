@@ -130,7 +130,11 @@ export function stageMassComponents(
   if (rcs && initialGas > consumed) addCylinder('rcs', initialGas - consumed, radius * 0.2, length * 0.02, rcs.centerBody);
   const fill = stage.propellantMass > 0 ? fraction(propellant / stage.propellantMass) : 0;
   const load = PROPELLANT_LOADS[stage.id];
-  if (load?.family === 'solid') {
+  // D03: a stage the table does not know (a custom vehicle's own id) is a grain
+  // when its engine is a solid motor, as the flexible body already reads it
+  // (`solidPropellantIds`); without this it drained as two liquid tanks. Every
+  // catalogue solid has its entry, so none of them comes this way.
+  if (load?.family === 'solid' || (!load && stage.engine.solid)) {
     // A case-bonded grain burning outward from its bore: the length stays,
     // the web thins, and what is left sits at the case wall.
     const outer = radius * 0.95, port = radius * 0.3;

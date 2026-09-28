@@ -15,8 +15,8 @@ import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { engineLayout } from '../src/data/engine-layout';
 import { vehicleSpecProblems } from '../src/config/vehicle-spec';
 import { VehicleModel } from '../src/physics/vehicle';
-import { buildRigidVehicle } from '../src/physics/rigid/mass';
-import { chamberGeometry, renderToBody } from '../src/physics/rigid/vehicle-data';
+import { buildRigidVehicle, stageMassComponents } from '../src/physics/rigid/mass';
+import { chamberGeometry, PROPELLANT_LOADS, renderToBody } from '../src/physics/rigid/vehicle-data';
 import { v3 } from '../src/physics/vec3';
 import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../src/types';
 import { copyOf, scratchVehicles } from './custom-vehicle-harness';
@@ -132,5 +132,33 @@ describe('six-DOF for custom vehicles (D03): aerodynamic tables of the design fl
       });
     }
     expect(after.table!.normalSlope[0]).not.toBe(before.table!.normalSlope[0]);
+  });
+});
+
+describe('six-DOF for custom vehicles (D03): a solid stage the catalogue does not know', () => {
+  it('burns it as a grain from the bore, exactly as the catalogue motor of the same size', () => {
+    const z9 = vehicleById('vegac').stages.find((s) => s.id === 'z9')!;
+    const x3 = NEW_IDS.stages[2];
+    expect(x3).toEqual({ ...z9, id: 'x3', name: 'Solid third stage' });
+    const unowned = (list: ReturnType<typeof stageMassComponents>) => list.map(({ id: _, ownerId: __, ...c }) => c);
+    for (const fill of [1, 0.5, 0.1, 0]) {
+      expect(unowned(stageMassComponents(x3, fill * x3.propellantMass))).toEqual(unowned(stageMassComponents(z9, fill * z9.propellantMass)));
+    }
+    // A thick-walled tube about its axis: I = m (r_o² + r_i²)/2, the case at
+    // 0.95 R and, full, the bore at 0.3 R (the model's estimated grain). To 1e-12 relative.
+    const R = x3.diameter / 2, full = stageMassComponents(x3, x3.propellantMass);
+    expect(full.map((c) => c.kind)).toEqual(['structure', 'equipment', 'fuel']);
+    const grain = full.find((c) => c.kind === 'fuel')!;
+    expect(grain.centerBody.x).toBe(x3.length / 2);
+    expect(grain.inertiaAtCenter[0] / (x3.propellantMass * ((0.95 * R) ** 2 + (0.3 * R) ** 2) / 2)).toBeCloseTo(1, 12);
+    // A liquid stage the catalogue does not know still has its two tanks.
+    expect(stageMassComponents(NEW_IDS.stages[1], NEW_IDS.stages[1].propellantMass).map((c) => c.kind))
+      .toEqual(['structure', 'equipment', 'fuel', 'oxidizer']);
+  });
+
+  it('reaches no catalogue stage: every catalogue solid has its grain entry, and only they do', () => {
+    for (const spec of VEHICLES) for (const p of parts(spec)) {
+      expect(PROPELLANT_LOADS[p.id]?.family === 'solid', `${spec.id} ${p.id}`).toBe(!!p.engine.solid);
+    }
   });
 });
