@@ -6,7 +6,8 @@
  * One tab bar: D04's TEST STAND (a static fire, src/ui/build/stand-panel.ts),
  * WIND TUNNEL (src/ui/build/tunnel-panel.ts) and FLIGHT READINESS REVIEW
  * (src/ui/build/review-panel.ts, which hands a mission that passes to the
- * Launch section, as the Explore level's "Fly it" does). What is still coming
+ * Launch section, as the Explore level's "Fly it" does), and D05's OPTIMAL
+ * STAGING (src/ui/build/staging-panel.ts). What is still coming
  * to the level is listed under the tabs, by roadmap item, as the level's
  * placeholder listed it.
  *
@@ -36,6 +37,7 @@ import { VehiclePicker } from './vehicle-picker';
 import { StandPanel } from './stand-panel';
 import { TunnelPanel } from './tunnel-panel';
 import { ReviewPanel } from './review-panel';
+import { StagingPanel } from './staging-panel';
 import './engineer.css';
 
 /** A design the Explore level has on screen. */
@@ -60,10 +62,12 @@ export interface EngineerHost {
 /** The vehicle on the bench: its spec, the name it goes by, and the payload the tunnel weighs it with. */
 export type BenchVehicle = ExploreDesign;
 
-type EngineerTab = 'stand' | 'tunnel' | 'review';
-/** The level's facilities, in tab order: D05's optimal staging and sizing join here. */
-const TABS: readonly EngineerTab[] = ['stand', 'tunnel', 'review'];
-const TAB_KEY: Record<EngineerTab, string> = { stand: 'build.eng.tab.stand', tunnel: 'build.eng.tab.tunnel', review: 'build.eng.tab.review' };
+type EngineerTab = 'stand' | 'tunnel' | 'review' | 'staging';
+/** The level's facilities and tools, in tab order: D05's sizing joins here. */
+const TABS: readonly EngineerTab[] = ['stand', 'tunnel', 'review', 'staging'];
+const TAB_KEY: Record<EngineerTab, string> = {
+  stand: 'build.eng.tab.stand', tunnel: 'build.eng.tab.tunnel', review: 'build.eng.tab.review', staging: 'build.eng.tab.staging',
+};
 
 const EXPLORE_ID = 'explore';
 const SAVED = 'saved:';
@@ -97,6 +101,7 @@ export class EngineerLevel {
   private readonly stand = new StandPanel();
   private readonly tunnel = new TunnelPanel();
   private readonly review: ReviewPanel;
+  private readonly staging = new StagingPanel();
 
   constructor(private readonly host: EngineerHost, private readonly store: DesignStore = new LocalDesignStore()) {
     this.picker = new VehiclePicker(pickerEntries(VEHICLES), (id) => this.pick(id), 'be-picker-select');
@@ -107,7 +112,7 @@ export class EngineerLevel {
     });
     this.tabBar.setAttribute('role', 'tablist');
     this.tabBar.addEventListener('keydown', (e) => this.onTabKey(e));
-    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root, tunnel: this.tunnel.root, review: this.review.root };
+    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root, tunnel: this.tunnel.root, review: this.review.root, staging: this.staging.root };
     for (const k of TABS) {
       const panel = el('section', 'be-panel');
       panel.id = `be-panel-${k}`;
@@ -133,6 +138,7 @@ export class EngineerLevel {
     this.stand.hide();
     this.tunnel.hide();
     this.review.hide();
+    this.staging.hide();
   }
 
   // ─── the vehicle on the bench ──────────────────────────────────────────────
@@ -210,6 +216,7 @@ export class EngineerLevel {
     this.stand.setVehicle(b.spec, b.name);
     this.tunnel.setVehicle(b.spec, b.name, b.payloadKg);
     this.review.setVehicle(b.spec, b.name, b.payloadKg);
+    this.staging.setVehicle(b.spec, b.name, b.payloadKg);
   }
 
   /**
@@ -238,6 +245,7 @@ export class EngineerLevel {
     this.stand.render();
     this.tunnel.render();
     this.review.render();
+    this.staging.render();
     this.showTab();
   }
 
@@ -298,7 +306,7 @@ export class EngineerLevel {
   private showTab(): void {
     for (const k of TABS) this.panels[k].hidden = k !== this.tab;
     if (!this.visible) return;
-    const panels = { stand: this.stand, tunnel: this.tunnel, review: this.review };
+    const panels = { stand: this.stand, tunnel: this.tunnel, review: this.review, staging: this.staging };
     for (const k of TABS) if (k !== this.tab) panels[k].hide();
     panels[this.tab].show();
   }

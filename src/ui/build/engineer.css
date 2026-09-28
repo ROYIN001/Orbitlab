@@ -38,7 +38,7 @@
 
 /* ── a facility: controls, results, curves ────────────────────────────────── */
 
-.be-stand, .be-tunnel, .be-review {
+.be-stand, .be-tunnel, .be-review, .be-staging {
   display: grid; gap: 10px; align-items: start;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   grid-template-areas: 'ctrl out' 'ctrl plots';
@@ -147,6 +147,19 @@
 .be-review-rate .watch-btn { margin-top: 8px; }
 .be-review-fly { padding-top: 12px; border-top: 1px solid var(--line); }
 
+/* ── optimal staging ──────────────────────────────────────────────────────── */
+
+.be-count { min-width: 44px; text-align: center; font: 600 16px/34px var(--sans); font-variant-numeric: tabular-nums; }
+.be-stage-inputs { display: flex; flex-direction: column; gap: 8px; }
+.be-stage-in { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 10px; padding: 8px 10px 10px; border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); }
+.be-grid .be-stage-in { margin: 0; }
+.be-stage-in legend { padding: 0 4px; margin: 0; }
+.be-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.be-staging-table td small { font-weight: 400; }
+.be-compare-title { margin-top: 6px; }
+.be-why { color: #c9d6e2; }
+.be-chart-tall { height: 280px; }
+
 /* ── what is still coming ─────────────────────────────────────────────────── */
 
 .be-coming { padding: 6px 20px 20px; }
@@ -157,7 +170,7 @@
 /* ── narrower screens ─────────────────────────────────────────────────────── */
 
 @media (max-width: 1180px) {
-  .be-stand, .be-tunnel, .be-review { grid-template-columns: minmax(280px, 330px) minmax(0, 1fr); }
+  .be-stand, .be-tunnel, .be-review, .be-staging { grid-template-columns: minmax(280px, 330px) minmax(0, 1fr); }
   .be-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .be-charts.two { grid-template-columns: minmax(0, 1fr); }
 }
@@ -172,7 +185,7 @@
     border: 1px solid var(--line2); border-radius: 10px; background: var(--panel2); font-size: 13.5px;
   }
   .be-tab[aria-selected='true'] { border-color: var(--accent-line); background: var(--accent-weak); }
-  .be-stand, .be-tunnel, .be-review { display: flex; flex-direction: column; align-items: stretch; }
+  .be-stand, .be-tunnel, .be-review, .be-staging { display: flex; flex-direction: column; align-items: stretch; }
   .be-charts, .be-charts.two { grid-template-columns: minmax(0, 1fr); }
   .be-chart { height: 170px; }
   .be-coming { padding: 4px 12px 16px; }
