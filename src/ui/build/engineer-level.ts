@@ -1,13 +1,14 @@
 /**
  * The Build section's Engineer level (roadmap D03–D05; docs/ROADMAP-PART2-3.md):
- * the test facilities a rocket goes through before it flies.
+ * the test facilities a rocket goes through before it flies, and the tools
+ * that design one.
  *
- * Built so far, D04's first two: the TEST STAND (a static fire,
- * src/ui/build/stand-panel.ts) and the WIND TUNNEL (src/ui/build/
- * tunnel-panel.ts), each a tab of one tab bar that the flight readiness
- * review (D04), optimal staging and sizing (D05) will join. What is still
- * coming to the level is listed under the tabs, by roadmap item, as the
- * level's placeholder listed it.
+ * One tab bar: D04's TEST STAND (a static fire, src/ui/build/stand-panel.ts),
+ * WIND TUNNEL (src/ui/build/tunnel-panel.ts) and FLIGHT READINESS REVIEW
+ * (src/ui/build/review-panel.ts, which hands a mission that passes to the
+ * Launch section, as the Explore level's "Fly it" does). What is still coming
+ * to the level is listed under the tabs, by roadmap item, as the level's
+ * placeholder listed it.
  *
  * THE VEHICLE ON THE BENCH is one of the vehicles the Explore level works on,
  * not a list of its own: a catalogue rocket, the design open in the Explore
@@ -23,6 +24,7 @@
  */
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
+import type { MissionDocument } from '../../config/mission-file';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
 import { route, type AppRoute } from '../app-mode';
 import { BUILD_BUILT_ITEMS, BUILD_LEVEL_ITEMS, SECTION_PLANS } from '../section-plan';
@@ -33,6 +35,7 @@ import { button, el } from '../orbit/dom';
 import { VehiclePicker } from './vehicle-picker';
 import { StandPanel } from './stand-panel';
 import { TunnelPanel } from './tunnel-panel';
+import { ReviewPanel } from './review-panel';
 import './engineer.css';
 
 /** A design the Explore level has on screen. */
@@ -46,15 +49,21 @@ export interface EngineerHost {
   go(route: AppRoute): void;
   /** the design open in the Explore level, as the vehicle it flies; null when there is none or it is refused */
   exploreDesign(): ExploreDesign | null;
+  /** payload ratings computed here for the Explore level's design: it keeps them, as if computed there */
+  rateExploreDesign(spec: VehicleSpec): void;
+  /** the Launch section's launch time, which a reviewed mission starts from */
+  launchTime(): Date;
+  /** hand a reviewed mission to the Launch section and go there; false when it could not take it */
+  fly(doc: MissionDocument): boolean;
 }
 
 /** The vehicle on the bench: its spec, the name it goes by, and the payload the tunnel weighs it with. */
 export type BenchVehicle = ExploreDesign;
 
-type EngineerTab = 'stand' | 'tunnel';
-/** The level's facilities, in tab order: the readiness review (D04) and D05's optimal staging and sizing join here. */
-const TABS: readonly EngineerTab[] = ['stand', 'tunnel'];
-const TAB_KEY: Record<EngineerTab, string> = { stand: 'build.eng.tab.stand', tunnel: 'build.eng.tab.tunnel' };
+type EngineerTab = 'stand' | 'tunnel' | 'review';
+/** The level's facilities, in tab order: D05's optimal staging and sizing join here. */
+const TABS: readonly EngineerTab[] = ['stand', 'tunnel', 'review'];
+const TAB_KEY: Record<EngineerTab, string> = { stand: 'build.eng.tab.stand', tunnel: 'build.eng.tab.tunnel', review: 'build.eng.tab.review' };
 
 const EXPLORE_ID = 'explore';
 const SAVED = 'saved:';
@@ -87,12 +96,18 @@ export class EngineerLevel {
   private readonly picker: VehiclePicker;
   private readonly stand = new StandPanel();
   private readonly tunnel = new TunnelPanel();
+  private readonly review: ReviewPanel;
 
   constructor(private readonly host: EngineerHost, private readonly store: DesignStore = new LocalDesignStore()) {
     this.picker = new VehiclePicker(pickerEntries(VEHICLES), (id) => this.pick(id), 'be-picker-select');
+    this.review = new ReviewPanel({
+      launchTime: () => this.host.launchTime(),
+      fly: (doc) => this.host.fly(doc),
+      rated: (spec) => this.rated(spec),
+    });
     this.tabBar.setAttribute('role', 'tablist');
     this.tabBar.addEventListener('keydown', (e) => this.onTabKey(e));
-    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root, tunnel: this.tunnel.root };
+    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root, tunnel: this.tunnel.root, review: this.review.root };
     for (const k of TABS) {
       const panel = el('section', 'be-panel');
       panel.id = `be-panel-${k}`;
@@ -117,6 +132,7 @@ export class EngineerLevel {
     this.visible = false;
     this.stand.hide();
     this.tunnel.hide();
+    this.review.hide();
   }
 
   // ─── the vehicle on the bench ──────────────────────────────────────────────
@@ -193,6 +209,22 @@ export class EngineerLevel {
     this.bench = b;
     this.stand.setVehicle(b.spec, b.name);
     this.tunnel.setVehicle(b.spec, b.name, b.payloadKg);
+    this.review.setVehicle(b.spec, b.name, b.payloadKg);
+  }
+
+  /**
+   * Payload ratings the readiness review computed for the vehicle on the
+   * bench: kept with its source — the Explore level's design keeps them as
+   * if computed there; a saved design keeps them while it is on the bench
+   * (they are estimates, and are not written into the saved record) — and the
+   * rated vehicle goes back on the bench.
+   */
+  private rated(spec: VehicleSpec): void {
+    if (this.sourceId === EXPLORE_ID) {
+      this.host.rateExploreDesign(spec);
+      const d = this.host.exploreDesign();
+      this.setBench(d ?? { ...this.bench, spec });
+    } else this.setBench({ ...this.bench, spec });
   }
 
   // ─── the page ─────────────────────────────────────────────────────────────
@@ -205,6 +237,7 @@ export class EngineerLevel {
     this.renderComing();
     this.stand.render();
     this.tunnel.render();
+    this.review.render();
     this.showTab();
   }
 
@@ -265,7 +298,9 @@ export class EngineerLevel {
   private showTab(): void {
     for (const k of TABS) this.panels[k].hidden = k !== this.tab;
     if (!this.visible) return;
-    if (this.tab === 'stand') { this.tunnel.hide(); this.stand.show(); } else { this.stand.hide(); this.tunnel.show(); }
+    const panels = { stand: this.stand, tunnel: this.tunnel, review: this.review };
+    for (const k of TABS) if (k !== this.tab) panels[k].hide();
+    panels[this.tab].show();
   }
 
   /** What is still coming to the level, by roadmap item, and what the section has built (the level's placeholder, kept). */

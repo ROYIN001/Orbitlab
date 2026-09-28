@@ -217,7 +217,8 @@ export function checklist(spec: VehicleSpec, r: Readiness): ChecklistSection[] {
       })];
     } else {
       const end = { key: PROBE_END_KEYS[probe.event ?? ''] ?? PROBE_END_OTHER };
-      const held = Number.isFinite(probe.params.bestPerigee);
+      // a "perigee" below the ground is a ballistic arc, not an orbit it held: said as never having held one
+      const held = Number.isFinite(probe.params.bestPerigee) && probe.params.bestPerigee >= 0;
       sections.probe = [held
         ? say('build.eng.review.probe.noOrbit', 'fail', { end, pe: { value: probe.params.bestPerigee, unit: 'km' } })
         : say('build.eng.review.probe.noOrbitNever', 'fail', { end })];

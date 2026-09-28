@@ -47,7 +47,7 @@ import { handoffDocument } from '../../design/build-handoff';
 import type { RatingClass } from '../../design/ratings';
 import {
   DEFAULT_GROUP, EXPLORE_MODES, STRETCH_RANGE, activeDraft, asOwnBody, designChecks, designResult, draftFromSpec, estimateTexts, fitEngine,
-  newDesignId, newStage, partOrigins, partsDraft, partsEngineOptions, remixBase, remixDraft, remixEngineOptions,
+  newDesignId, newStage, partOrigins, partsDraft, partsEngineOptions, ratingsSignature, remixBase, remixDraft, remixEngineOptions,
   type DesignResult, type Draft, type EngineOptions, type ExploreMode, type ExploreState, type PartsEdit, type PartsStage, type RemixEdit,
 } from '../../design/explore-model';
 import { localized, siteName, stageName } from '../names';
@@ -224,6 +224,19 @@ export class ExploreLevel {
     if (!this.result.ok) return null;
     const d = activeDraft(this.state);
     return { spec: this.result.spec, name: d.name.trim() || this.result.spec.name, payloadKg: Number.isFinite(d.payloadKg) && d.payloadKg >= 0 ? d.payloadKg : 0 };
+  }
+
+  /**
+   * Payload ratings the Engineer level's readiness review computed for the
+   * design on screen (D04): kept as if computed here, with the signature of
+   * the vehicle they were computed for, so any later change leaves them
+   * behind. Ignored when the design has changed since.
+   */
+  adoptRatings(spec: VehicleSpec): void {
+    if (!this.result.ok || ratingsSignature(this.result.spec) !== ratingsSignature(spec)) return;
+    activeDraft(this.state).ratings = { signature: ratingsSignature(spec), payloadLEO: spec.payloadLEO, payloadGTO: spec.payloadGTO };
+    this.compute();
+    if (this.visible) this.refresh();
   }
 
   /** A default name the student has not changed follows the interface language. */

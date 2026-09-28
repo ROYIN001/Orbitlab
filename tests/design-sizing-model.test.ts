@@ -167,7 +167,7 @@ describe('what the sized launcher goes on to', () => {
     const bare = run(0);
     expect(bare.r.canFly).toBe(false);
     const probe = bare.list.find((s) => s.id === 'probe')!.rows[0].text!;
-    expect(probe.key).toBe('build.eng.review.probe.noOrbit');
+    expect(probe.key).toBe(bare.r.insertion!.bestPerigee >= 0 ? 'build.eng.review.probe.noOrbit' : 'build.eng.review.probe.noOrbitNever');
     expect(probe.values.end).toEqual({ key: 'build.eng.review.end.outOfPropellant' });
     const margin = run(500);
     expect(margin.list.find((s) => s.id === 'probe')!.rows[0].text?.key).toBe('build.eng.review.probe.orbit');

@@ -14,11 +14,11 @@
  *
  * Its Explore level remixes a real rocket and builds one from parts (D02,
  * D03): a module of its own, src/ui/build/explore-level.ts, mounted here. Its
- * Engineer level is being built (D03–D05), a module of its own too,
- * src/ui/build/engineer-level.ts: the test stand and the wind tunnel (D04),
- * with what is still coming to it listed under them; until it is complete
- * the section links open the Build section at a level that is built
- * (`sectionLinkLevel`, src/ui/section-plan.ts).
+ * Engineer level (D03–D05) is a module of its own too,
+ * src/ui/build/engineer-level.ts: the test stand, the wind tunnel and the
+ * flight readiness review (D04), with what is still coming to it listed under
+ * them; a mission the review passes is handed to the Launch section at the
+ * Engineer level, as "Fly it" hands the Explore level's to Launch's Explore.
  *
  * The thin DOM part, mounted like the Orbit playground (src/ui/orbit/
  * playground.ts): drawn over the launch scene, opaque, so the scene under it
@@ -285,6 +285,9 @@ export class BuildScreen {
       this.engineer = new EngineerLevel({
         go: (r) => this.host.go(r),
         exploreDesign: () => this.explore?.design() ?? null,
+        rateExploreDesign: (spec) => this.explore?.adoptRatings(spec),
+        launchTime: () => this.host.launchTime?.() ?? new Date(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
       });
       this.engineerRoot.append(this.engineer.root);
     }
