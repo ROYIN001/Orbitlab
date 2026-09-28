@@ -164,6 +164,12 @@ export class OrbitPlayground {
 
   constructor(private readonly root: HTMLElement, private readonly host: PlaygroundHost) {
     root.classList.add('orbit-pg');
+    // The launch scene's camera takes every press on the viewport and captures
+    // the pointer to drag with it (src/render/cameras.ts). That capture took the
+    // drag away from the 3-D view's own canvas, which never saw a move, and the
+    // click away from the porkchop plot. The scene is covered here; keep the
+    // press, as the Build screen does (src/ui/build/build-screen.ts).
+    root.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.canvases = {
       '3d': el('canvas', 'pg-canvas pg-canvas-3d'),
       track: el('canvas', 'pg-canvas pg-canvas-track'),
