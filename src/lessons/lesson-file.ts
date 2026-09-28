@@ -7,6 +7,12 @@
  * A lesson whose mission, criteria or texts cannot be used is left out with
  * the reason; the rest of the file is kept. A text missing a language falls
  * back to English and is reported as a warning.
+ *
+ * Version 2 adds the case lessons (`"kind": "case"`, track 6: P2.5's cases
+ * from the record). A file is still written as version 1 when it holds none,
+ * so a teacher's file of flight lessons reads back byte for byte, and an
+ * older copy of the app warns of a newer file rather than calling a case
+ * lesson's missing mission an error.
  */
 import { missionDocument, parseMissionDocument, MISSION_FORMAT, type MissionDocument } from '../config/mission-file';
 import { defaultMissionState } from './config';
@@ -14,12 +20,18 @@ import { hookExists } from './hooks';
 import { MEASURE_IDS } from './measures';
 import { compileExpression } from './assessment/expression';
 import { DIAGRAM_IDS } from './assessment/diagrams';
-import { DOMAINS, LOCK_KEYS, REVEAL_KEYS, type Criterion, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId, type RevealKey } from './types';
+import {
+  DOMAINS, LOCK_KEYS, REVEAL_KEYS, isCaseLesson,
+  type CaseCriterion, type CaseLesson, type CatalogLesson, type Criterion, type Domain, type Lesson, type LocalText, type LockKey, type MeasureId, type RevealKey,
+} from './types';
+import { CASE_CHOICE_ITEMS, CASE_IDS, CASE_ITEM_IDS, type CaseId } from '../worksheets/case-ids';
 import type { ChoiceOption, Figure, FlightSeries, Question } from './assessment/types';
 import { VEHICLES } from '../data/vehicles';
 
 export const LESSON_FORMAT = 'orbitlab.lessons';
-export const LESSON_FORMAT_VERSION = 1;
+export const LESSON_FORMAT_VERSION = 2;
+/** The version a file of flight lessons alone is written as: every copy of the app reads it. */
+const FLIGHT_ONLY_VERSION = 1;
 export const LESSON_FILE_EXTENSION = '.orbitlab-lesson.json';
 
 export interface LessonFileDocument {
@@ -33,7 +45,7 @@ export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 
 export interface FileIssue { where: string; code: FileIssueCode; level: 'error' | 'warn'; detail?: string }
 
 export interface ParsedLessonFile {
-  lessons: Lesson[];
+  lessons: CatalogLesson[];
   questions: Question[];
   issues: FileIssue[];
   /** false when the file is not a lesson file at all */
@@ -115,22 +127,39 @@ function readCriterion(r: Reader, raw: unknown, where: string): Criterion | null
   }
 }
 
-/** Read one lesson. Its mission is normalised through the mission reader. */
-export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Lesson | null {
-  const r = new Reader(issues);
-  if (!isRecord(raw) || !isStr(raw.id)) return r.error(where, 'missing', 'id') || null;
-  const at = `${where} (${raw.id})`;
+/** What every lesson has, of either kind: its texts and where it is listed. */
+function readMeta(r: Reader, raw: Record<string, unknown>, at: string) {
   const title = r.text(raw.title, `${at}.title`);
   const brief = r.text(raw.brief, `${at}.brief`);
   if (!title || !brief) return null;
   const debrief = raw.debrief === undefined ? undefined : r.text(raw.debrief, `${at}.debrief`) ?? undefined;
   const track = isNum(raw.track) ? Math.round(raw.track) : 9;
   const order = isNum(raw.order) ? Math.round(raw.order) : 99;
-  const mode = raw.mode === 'engineer' ? 'engineer' : 'explore';
+  const mode: 'explore' | 'engineer' = raw.mode === 'engineer' ? 'engineer' : 'explore';
   const domains = Array.isArray(raw.domains) ? raw.domains.filter((d): d is Domain => DOMAINS.includes(d as Domain)) : [];
   if (!domains.length) return r.error(`${at}.domains`, 'missing') || null;
   const tags = Array.isArray(raw.tags) ? raw.tags.filter(isStr) : undefined;
   const comingSoon = raw.comingSoon === true;
+  return { title, brief, debrief, track, order, mode, domains, tags, comingSoon };
+}
+
+function readHints(r: Reader, raw: Record<string, unknown>, at: string): LocalText[] {
+  const hints: LocalText[] = [];
+  if (Array.isArray(raw.hints)) for (let i = 0; i < raw.hints.length; i++) {
+    const h = r.text(raw.hints[i], `${at}.hints[${i}]`);
+    if (h) hints.push(h);
+  }
+  return hints;
+}
+
+/** Read one flight lesson. Its mission is normalised through the mission reader. */
+export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Lesson | null {
+  const r = new Reader(issues);
+  if (!isRecord(raw) || !isStr(raw.id)) return r.error(where, 'missing', 'id') || null;
+  const at = `${where} (${raw.id})`;
+  const meta = readMeta(r, raw, at);
+  if (!meta) return null;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon } = meta;
 
   let mission: MissionDocument;
   if (!isRecord(raw.mission) || raw.mission.format !== MISSION_FORMAT) return r.error(`${at}.mission`, 'mission', 'format') || null;
@@ -156,17 +185,71 @@ export function readLesson(raw: unknown, where: string, issues: FileIssue[]): Le
     ids.add(c.id);
     criteria.push(c);
   }
-  const hints: LocalText[] = [];
-  if (Array.isArray(raw.hints)) for (let i = 0; i < raw.hints.length; i++) {
-    const h = r.text(raw.hints[i], `${at}.hints[${i}]`);
-    if (h) hints.push(h);
-  }
+  const hints = readHints(r, raw, at);
   return {
     id: raw.id, track, order, mode, domains, ...(tags?.length ? { tags } : {}),
     title, brief, ...(debrief ? { debrief } : {}), mission, locked, ...(reveal.length ? { reveal } : {}), criteria, hints,
     ...(isStr(raw.endEvent) ? { endEvent: raw.endEvent } : {}),
     ...(comingSoon ? { comingSoon } : {}),
   };
+}
+
+function readCaseCriterion(r: Reader, raw: unknown, where: string, id: CaseId): CaseCriterion | null {
+  if (!isRecord(raw) || !isStr(raw.id)) { r.error(where, 'missing', 'id'); return null; }
+  if (raw.kind !== 'case') { r.error(where, 'invalid', 'kind'); return null; }
+  if (!isStr(raw.item) || !CASE_ITEM_IDS[id].includes(raw.item)) { r.error(where, 'invalid', 'item'); return null; }
+  const choice = CASE_CHOICE_ITEMS.includes(raw.item);
+  for (const k of ['tol', 'tolPct'] as const) {
+    if (raw[k] === undefined) continue;
+    // a choice is right or not: a tolerance on it means the file meant another question
+    if (choice || !isNum(raw[k]) || (raw[k] as number) < 0) { r.error(where, 'invalid', k); return null; }
+  }
+  const label = raw.label === undefined ? undefined : r.text(raw.label, `${where}.label`) ?? undefined;
+  return {
+    id: raw.id, kind: 'case', item: raw.item,
+    ...(raw.tol !== undefined ? { tol: raw.tol as number } : {}), ...(raw.tolPct !== undefined ? { tolPct: raw.tolPct as number } : {}),
+    ...(label ? { label } : {}),
+  };
+}
+
+/**
+ * Read one case lesson: a case from the record (`case`) and the questions of
+ * its sheet the student answers. What only a flight lesson has (a mission,
+ * locks) is dropped with a warning.
+ */
+export function readCaseLesson(raw: unknown, where: string, issues: FileIssue[]): CaseLesson | null {
+  const r = new Reader(issues);
+  if (!isRecord(raw) || !isStr(raw.id)) return r.error(where, 'missing', 'id') || null;
+  const at = `${where} (${raw.id})`;
+  const meta = readMeta(r, raw, at);
+  if (!meta) return null;
+  const { title, brief, debrief, track, order, mode, domains, tags, comingSoon } = meta;
+  if (!CASE_IDS.includes(raw.case as CaseId)) return r.error(`${at}.case`, 'invalid', 'case') || null;
+  const id = raw.case as CaseId;
+  for (const k of ['mission', 'locked', 'reveal', 'endEvent']) if (raw[k] !== undefined) r.warn(`${at}.${k}`, 'invalid', k);
+  if (!Array.isArray(raw.criteria) || (!raw.criteria.length && !comingSoon)) return r.error(`${at}.criteria`, 'missing') || null;
+  const criteria: CaseCriterion[] = [];
+  for (let i = 0; i < raw.criteria.length; i++) {
+    const c = readCaseCriterion(r, raw.criteria[i], `${at}.criteria[${i}]`, id);
+    if (!c) return null;
+    if (criteria.some((x) => x.id === c.id || x.item === c.item)) return r.error(`${at}.criteria[${i}]`, 'duplicate', c.id) || null;
+    criteria.push(c);
+  }
+  const hints = readHints(r, raw, at);
+  return {
+    kind: 'case', id: raw.id, track, order, mode, domains, ...(tags?.length ? { tags } : {}),
+    title, brief, ...(debrief ? { debrief } : {}), case: id, criteria, hints,
+    ...(comingSoon ? { comingSoon } : {}),
+  };
+}
+
+/** Read one lesson of either kind: a case lesson says so; a lesson without a kind is a flight lesson. */
+export function readAnyLesson(raw: unknown, where: string, issues: FileIssue[]): CatalogLesson | null {
+  const kind = isRecord(raw) ? raw.kind : undefined;
+  if (kind === 'case') return readCaseLesson(raw, where, issues);
+  if (kind === undefined || kind === 'flight') return readLesson(raw, where, issues);
+  issues.push({ where: isRecord(raw) && isStr(raw.id) ? `${where} (${raw.id})` : where, code: 'invalid', level: 'error', detail: 'kind' });
+  return null;
 }
 
 const SERIES: readonly FlightSeries[] = ['alt', 'vInertial', 'q', 'gLoad', 'mass', 'thrust', 'pitch', 'dvRemaining'];
@@ -267,7 +350,7 @@ export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): Pa
     return { lessons: [], questions: [], issues: [{ where: 'document', code: 'format', level: 'error' }], usable: false };
   }
   if (raw.version > LESSON_FORMAT_VERSION) issues.push({ where: 'document', code: 'newerVersion', level: 'warn' });
-  const lessons: Lesson[] = [];
+  const lessons: CatalogLesson[] = [];
   const questions: Question[] = [];
   const seen = new Set<string>();
   const unique = (id: string, where: string): boolean => {
@@ -276,7 +359,7 @@ export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): Pa
     return true;
   };
   if (Array.isArray(raw.lessons)) raw.lessons.forEach((l, i) => {
-    const lesson = readLesson(l, `lessons[${i}]`, issues);
+    const lesson = readAnyLesson(l, `lessons[${i}]`, issues);
     if (lesson && unique(lesson.id, `lessons[${i}]`)) lessons.push(lesson);
   });
   if (Array.isArray(raw.questions)) raw.questions.forEach((q, i) => {
@@ -287,8 +370,9 @@ export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): Pa
   return { lessons, questions, issues, usable: true };
 }
 
-/** A file holding the given lessons and questions. */
-export function lessonFileText(lessons: readonly Lesson[], questions: readonly Question[] = []): string {
-  const doc: LessonFileDocument = { format: LESSON_FORMAT, version: LESSON_FORMAT_VERSION, lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}) };
+/** A file holding the given lessons and questions: version 1 unless it holds a case lesson. */
+export function lessonFileText(lessons: readonly CatalogLesson[], questions: readonly Question[] = []): string {
+  const version = lessons.some(isCaseLesson) ? LESSON_FORMAT_VERSION : FLIGHT_ONLY_VERSION;
+  const doc: LessonFileDocument = { format: LESSON_FORMAT, version, lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}) };
   return `${JSON.stringify(doc, null, 2)}\n`;
 }

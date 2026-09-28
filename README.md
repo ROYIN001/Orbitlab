@@ -138,12 +138,43 @@ npm install
 npm run dev        # http://localhost:5173
 npm test           # physics, mission and tool tests (vitest)
 npm run test:heavy # the delivered-orbit matrix with wind (about 15 minutes)
+npm run test:browser # the build in a real browser (see Browser tests below)
 npm run typecheck  # tsc --noEmit
 npm run build      # typecheck, then a static site in dist/
 npm run snapshots  # refresh the bundled data snapshots in public/data/ (needs the network)
 ```
 
 Requires Node.js 20 or newer and a browser with WebGL 2.
+
+### Browser tests
+
+Short journeys through the production build in a real Chromium (`tests/browser/`), served under
+`/Orbitlab/` as GitHub Pages serves it. They drive the app with real mouse, keyboard and touch
+input and read its state back through its WebMCP tools.
+
+```bash
+npx playwright install chromium   # once: the browser Playwright drives
+npm run test:browser              # build, then every journey
+npm run build && npm run test:browser:smoke   # the pull-request set, on the build in dist/
+node tests/browser/run.mjs watch-controls     # one journey (file name in tests/browser/journeys/)
+node tests/browser/serve.mjs                  # just serve dist/ at http://127.0.0.1:4173/Orbitlab/
+```
+
+| Journey | Smoke | Checks |
+|---|---|---|
+| `watch-controls` | ✓ | Watch answers play/pause, 100×, Choose a launch and Another launch by mouse, keyboard and touch while a flight runs |
+| `mobile-smoke` | ✓ | At 390×844, the Thai placement test and the Russian Orbit engineer page do not scroll sideways, and every section/level link is on screen with an accessible name in the page's language |
+| `launch-explore` | ✓ | Falcon 9 configured, launched and warped to its 500 km orbit; the CSV export is over 1 MB and covers the flight |
+| `pwa-offline` | | The service worker precaches the app, a mission flies offline, and a new deploy is offered as a reload |
+
+A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as an artifact in CI).
+Without a GPU the scene is drawn in software at about two frames a second, so the smoke set takes
+about five minutes. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
+another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
+leaves the CSS layout unchanged). Pull requests run the smoke set; the deploy runs every journey on
+the build it publishes, after checking the freshly fetched data snapshots with
+`tests/data-provider.test.ts`, `tests/satellite-catalogue.test.ts`, `tests/earth-orientation.test.ts`
+and `tests/activity.test.ts`.
 
 ## Using the simulator
 
@@ -195,7 +226,15 @@ figures of the Iridium 33–Cosmos 2251 collision (M01). **Overflights** lists w
 group — the Earth-imaging ones, say — pass over a place, how high, at what off-nadir angle and
 whether in daylight; sun-synchronous imagers come over at their published local times (M02).
 **When it will come down** predicts a low object's re-entry with the agencies' ±20 % window; its
-case study, the four Long March 5B core stages, came down inside their windows (M03). Build is
+case study, the four Long March 5B core stages, came down inside their windows (M03).
+Phase 2.5 made this finer: the density is the full NRLMSISE-00 with the day's indices, the Earth
+is turned by UT1 and the pole (IERS), passes carry refraction and brightness, a conjunction data
+message can be read (held to NASA CARA's test cases) and a whole catalogue screened off the page's
+thread, each imaging satellite's instrument judges whether it can image the place, the drag of a
+re-entry can be fitted to the object's own decay and a transfer orbit is carried with the Sun and
+the Moon (66 rocket stages of 2023–2025 and NAPA-2 as cases), the Watch tour goes on to the real
+satellites, and three real cases come as worksheets with answer keys and as graded lessons
+([docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)). Build is
 still being built: it shows, in all three languages, what it will hold and in what order, and
 nothing on it pretends to work.
 
@@ -399,6 +438,7 @@ src/mcp.ts      WebMCP tools
 public/data/    bundled data snapshots, each dated
 scripts/        snapshot refresh (npm run snapshots)
 tests/          vitest suites (unit tests and full missions to orbit)
+tests/browser/  browser journeys on the production build (Playwright)
 ```
 
 ## Deployment

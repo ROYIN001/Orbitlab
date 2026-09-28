@@ -7,7 +7,7 @@ import type { Vec3 } from '../vec3';
 import { add, cross, normalize, v3 } from '../vec3';
 import { stackLayout } from '../frame';
 import { engineLayout } from '../../data/engine-layout';
-import { vehicleDataId } from '../../data/vehicles';
+import { VEHICLES, vehicleDataId } from '../../data/vehicles';
 
 export const RIGID_DATA_REVISION = 'estimated-components-2026-09-19-v1';
 export const RIGID_DATA_ASSUMPTIONS = [
@@ -262,6 +262,15 @@ export const STAGE_STEERING: Readonly<Record<string, StageSteering>> = {
 };
 
 /**
+ * How a stage steers when nothing above says (roadmap D03): a custom vehicle's
+ * stage with an id of its own, or a catalogue stage flown with an engine count
+ * its dedicated branch in `chamberGeometry` was not written for. Every main
+ * chamber swings ±5° in two planes, the travel the single on-axis chamber of
+ * such a stage has always had; an estimate (E), not a published figure.
+ */
+export const GENERIC_STEERING: StageSteering = { gimbalDeg: 5, steer: 'tvc', estimated: true };
+
+/**
  * Attitude-control thrusters beyond the reference vehicles: a full three-axis
  * set on an upper stage that coasts or restarts, and a roll-only pair on a
  * stage that cannot roll with its own engine (one chamber on the axis). Force
@@ -305,6 +314,16 @@ export interface ChamberGeometry {
   gimbalAxesBody: Vec3[]; maxGimbalRad: number; maxGimbalRateRadS: number; timeConstantS: number;
   /** Independent Merlin index, or 0 for a shared-feed Soyuz cluster. */
   engineIndex: number;
+  /**
+   * The engines this chamber stands for, `[from, to)` in engine units, when
+   * they are not one engine or part of one (roadmap D03): a stage flown with
+   * more engines than bells are drawn (the generic ring draws at most eight),
+   * or with bells that do not divide evenly among its engines. An engine out
+   * then takes exactly its own share from each chamber it feeds. Absent, the
+   * chamber belongs to engine `engineIndex` alone, as every catalogue
+   * chamber does.
+   */
+  engineSpan?: readonly [number, number];
 }
 const DEG = Math.PI / 180;
 const rotateX = (p: Vec3, angle: number): Vec3 => v3(p.x,
@@ -312,6 +331,16 @@ const rotateX = (p: Vec3, angle: number): Vec3 => v3(p.x,
 
 /** Geometry matches the source mesh patterns without importing Three.js.
  * Soyuz vernier thrust partitions the existing cluster budget; it is not added.
+ *
+ * The chambers' `thrustFraction`s are shares of ONE engine's thrust (the mass
+ * model multiplies them by `engineThrust`, which is per engine), so they add up
+ * to `engine.count`. The Falcon and R-7 branches are written for the
+ * catalogue's counts (nine Merlins; one RD-107/108/0110 cluster). Any other
+ * count, and any stage with several engines and no steering entry of its own —
+ * a custom vehicle's (D03) — goes to `layoutChambers` with `GENERIC_STEERING`,
+ * which shares all `count` engines among the bells the renderer draws. Before
+ * D03 such a stage flew on one chamber holding one engine's thrust while the
+ * flight model burned propellant for all of them.
  */
 export function chamberGeometry(
   ownerId: string, shapeId: string, engine: EngineSpec, radius: number,
@@ -340,7 +369,7 @@ export function chamberGeometry(
   if (shapeId === 's1' && engine.count === 9) {
     for (let i = 0; i < 8; i++) make(`engine.${i}`, i, point(radius * 0.70, Math.PI / 8 + i * Math.PI / 4), 1, 'main', 'tvc');
     make('engine.8', 8, v3(), 1, 'main', 'tvc');
-  } else if (shapeId === 'blokA' || shapeId === 'blokBVGD' || shapeId === 'blokI') {
+  } else if ((shapeId === 'blokA' || shapeId === 'blokBVGD' || shapeId === 'blokI') && engine.count === 1) {
     const count = shapeId === 'blokBVGD' ? 2 : 4;
     const nominalVernier = shapeId === 'blokI' ? 6000 : 35000;
     const vf = nominalVernier / engine.thrustVac;
@@ -350,6 +379,9 @@ export function chamberGeometry(
     for (let i = 0; i < count; i++) make(`vernier.${i}`, 0, point(vernierRadius, i * 2 * Math.PI / count), vf, 'vernier', 'tangential');
   } else if (STAGE_STEERING[shapeId]) {
     return layoutChambers(ownerId, shapeId, engine, radius, base, rotationAboutX, STAGE_STEERING[shapeId]);
+  } else if (engine.count > 1) {
+    // D03: several engines and no layout of their own, or a count the branches above do not fly.
+    return layoutChambers(ownerId, shapeId, engine, radius, base, rotationAboutX, GENERIC_STEERING);
   } else {
     // Supported upper stage or explicitly synthetic spacecraft engine.
     make('engine.0', 0, v3(), 1, 'main', 'tvc');
@@ -382,11 +414,31 @@ function layoutChambers(ownerId: string, shapeId: string, engine: EngineSpec, ra
       gimbalAxesBody: axes, maxGimbalRad: axes.length ? travelDeg * DEG : 0,
       maxGimbalRateRadS: 20 * DEG, timeConstantS: 0.1, engineIndex: index };
   };
-  const list: ChamberGeometry[] = layout.nozzles.map((nozzle, i) => chamber(`engine.${i}`, Math.floor(i * count / mains), nozzle,
-    count * (1 - vernierShare) / mains, 'main', steering.steerable === undefined || i < steering.steerable ? steering.gimbalDeg : 0, steering.steer));
-  layout.verniers.forEach((nozzle, i) => list.push(chamber(`vernier.${i}`, Math.floor(i * count / verniers), nozzle,
-    count * vernierShare / verniers, 'vernier', steering.vernierDeg ?? 0, 'tangential')));
+  // D03: the `i`-th of `n` chambers stands for the engines [i·count/n, (i+1)·count/n).
+  const spanned = (made: ChamberGeometry, i: number, n: number): ChamberGeometry => {
+    const from = i * count / n, to = (i + 1) * count / n;
+    return to > Math.floor(from) + 1 ? { ...made, engineSpan: [from, to] } : made;
+  };
+  const list: ChamberGeometry[] = layout.nozzles.map((nozzle, i) => spanned(chamber(`engine.${i}`, Math.floor(i * count / mains), nozzle,
+    count * (1 - vernierShare) / mains, 'main', steering.steerable === undefined || i < steering.steerable ? steering.gimbalDeg : 0, steering.steer), i, mains));
+  layout.verniers.forEach((nozzle, i) => list.push(spanned(chamber(`vernier.${i}`, Math.floor(i * count / verniers), nozzle,
+    count * vernierShare / verniers, 'vernier', steering.vernierDeg ?? 0, 'tangential'), i, verniers)));
   return list;
+}
+
+/**
+ * How much of a chamber still burns, given how much of each engine does
+ * (`perEngine(j)`, 0 to 1): its own engine's, or, for a chamber that stands
+ * for a span of engines (D03, `engineSpan`), the mean over the span weighted
+ * by how much of each engine it holds. So a failed engine takes one engine's
+ * thrust from the stage, however the bells share the engines.
+ */
+export function chamberShare(chamber: ChamberGeometry, perEngine: (engine: number) => number): number {
+  if (!chamber.engineSpan) return perEngine(chamber.engineIndex);
+  const [from, to] = chamber.engineSpan;
+  let sum = 0;
+  for (let j = Math.floor(from); j < to; j++) sum += (Math.min(to, j + 1) - Math.max(from, j)) * perEngine(j);
+  return sum / (to - from);
 }
 
 export interface RcsThrusterGeometry {
@@ -396,15 +448,43 @@ export interface RcsReservoir {
   stageId: string; initialPropellantKg: number; centerBody: Vec3; thrusters: RcsThrusterGeometry[];
 }
 
+const CATALOGUE_PART_IDS: ReadonlySet<string> = new Set(VEHICLES.flatMap((vehicle) =>
+  vehicle.stages.flatMap((stage) => [stage.id, ...(stage.boosters ?? []).map((booster) => booster.id)])));
+
+/**
+ * Whether a stage or strap-on id is one the catalogue flies (roadmap D03). The
+ * id-keyed tables in this file are written for those; a part with an id of its
+ * own — a custom vehicle's, whose changed parts get new ids — has no entry in
+ * any of them and gets the generic behaviour.
+ */
+export const isCataloguePartId = (id: string): boolean => CATALOGUE_PART_IDS.has(id);
+
+/** The Falcons' stages, whose attitude thrusters `rcsGeometry` keys by the vehicle (D03). */
+const FALCON_PART_IDS: ReadonlySet<string> = new Set(VEHICLES.filter((vehicle) => vehicle.id === 'falcon9' || vehicle.id === 'falconheavy')
+  .flatMap((vehicle) => vehicle.stages.map((stage) => stage.id)));
+
 /** Synthetic finite force-pair installation. It is NOT SpaceX's nozzle count.
  * Opposed pairs yield pure torque only when both real forces are commanded.
+ *
+ * `stageIndex` is the stage's place in the stack, 0 for the first stage; a
+ * detached body gives none. An upper stage with an id the catalogue does not
+ * know (D03) gets the generic three-axis set, the one Falcon 9's second stage
+ * flies: 50 N cold-gas pairs at 60 s and the lesser of 10 % of the dry mass and
+ * 30 kg of gas, estimates (E) not scaled to the stage. Without it a single
+ * on-axis chamber left such a stage no roll at all. So does a Falcon stage
+ * flown above the first on a vehicle that is not a Falcon (its installation is
+ * keyed by the vehicle, not the stage): Falcon 9's second stage, unchanged,
+ * on a vehicle built with no origin, gets exactly what it has on Falcon 9,
+ * rather than less than a renamed copy of it. A first stage, and every other
+ * catalogue id on any vehicle, keeps what it had.
  */
-export function rcsGeometry(vehicleId: string, stage: StageSpec, base = v3()): RcsReservoir {
+export function rcsGeometry(vehicleId: string, stage: StageSpec, base = v3(), stageIndex?: number): RcsReservoir {
   // Falcon Heavy flies Falcon 9's stages and their installation.
   const falcon = vehicleId === 'falcon9' || vehicleId === 'falconheavy';
   const firstStage = stage.id === 's1' || stage.id === 'core' || stage.id === 'side';
   const extra = falcon ? undefined : STAGE_RCS[`${vehicleId}:${stage.id}`] ?? STAGE_RCS[stage.id];
-  const supported = falcon || stage.isSpacecraft || !!extra;
+  const generic = (stageIndex ?? 0) > 0 && (!isCataloguePartId(stage.id) || (!falcon && FALCON_PART_IDS.has(stage.id)));
+  const supported = falcon || stage.isSpacecraft || !!extra || generic;
   const initial = !supported ? 0 : extra ? Math.min(stage.dryMass * 0.1, extra.propellantKg) : Math.min(stage.dryMass * 0.1,
     stage.isSpacecraft ? 10 : firstStage ? 100 : 30);
   const force = extra?.forceN ?? (stage.isSpacecraft ? 20 : firstStage ? 200 : 50);

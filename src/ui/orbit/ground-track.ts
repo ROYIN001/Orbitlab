@@ -25,6 +25,24 @@ export interface TrackOverlay {
   swath?: number;
   /** R02: a catalogue group's satellites, the points below them (rad, latitude then longitude, `count` pairs), named in the legend */
   points?: { latlon: Float32Array; count: number; label: string };
+  /** the satellite's marker in the legend, when it is not where the satellite is now (audit 2026-09-27 A16: the last position SGP4 could give) */
+  nowLabel?: string;
+  /** P2.5: lines over the ground (rad), each named in the legend once */
+  paths?: TrackPath[];
+  /** P2.5: a band of latitudes shaded (rad), named in the legend */
+  band?: { from: number; to: number; label: string; color: string };
+  /** P2.5: points marked and named (rad) */
+  marks?: { lat: number; lon: number; label: string; color: string }[];
+}
+
+/** A line over the ground (P2.5): a pass, the edges of what an instrument can reach, the track a re-entry may fall on. */
+export interface TrackPath {
+  pts: { lat: number; lon: number }[];
+  color: string;
+  width: number;
+  dash?: number[];
+  /** the legend's words; paths with the same words share an entry */
+  label?: string;
 }
 
 /** The point `d` m from (lat, lon) along bearing `b` on the sphere, rad. */
@@ -33,6 +51,21 @@ function offset(lat: number, lon: number, b: number, d: number): { lat: number; 
   const la = Math.asin(Math.sin(lat) * Math.cos(g) + Math.cos(lat) * Math.sin(g) * Math.cos(b));
   const lo = lon + Math.atan2(Math.sin(b) * Math.sin(g) * Math.cos(lat), Math.cos(g) - Math.sin(lat) * Math.sin(la));
   return { lat: la, lon: Math.atan2(Math.sin(lo), Math.cos(lo)) };
+}
+
+/**
+ * A line beside a track, `d` m to its right (negative: its left), each point
+ * moved square to the way the track goes (P2.5: the edges of what an
+ * instrument reaches).
+ */
+export function alongside(pts: readonly { lat: number; lon: number }[], d: number): { lat: number; lon: number }[] {
+  const out: { lat: number; lon: number }[] = [];
+  for (let k = 0; k < pts.length - 1; k++) {
+    const a = pts[k], b = pts[k + 1];
+    const bearing = Math.atan2(Math.sin(b.lon - a.lon) * Math.cos(b.lat), Math.cos(a.lat) * Math.sin(b.lat) - Math.sin(a.lat) * Math.cos(b.lat) * Math.cos(b.lon - a.lon));
+    out.push(offset(a.lat, a.lon, bearing + Math.PI / 2, d));
+  }
+  return out;
 }
 
 /** How far behind and ahead the track is drawn, s: a revolution back, three on, never more than a day. */
@@ -75,7 +108,7 @@ export class GroundTrackView {
     // the legend's entries, in as many lines as the width needs; over the map (under it, a card could cover it)
     g.font = '12px system-ui, sans-serif';
     const items: [string, string, number[]][] = stateOf ? [
-      [COLORS.sat, t('pg.track.now'), []], [COLORS.future, t('pg.track.next'), []],
+      [COLORS.sat, overlay.nowLabel ?? t('pg.track.now'), []], [COLORS.future, t('pg.track.next'), []],
       [COLORS.past, t('pg.track.past'), [4, 4]], [COLORS.sun, t('pg.track.sun'), []],
     ] : [[COLORS.sun, t('pg.track.sun'), []]];
     if (overlay.points) items.push([COLORS.points, overlay.points.label, []]);
@@ -83,6 +116,14 @@ export class GroundTrackView {
     if (overlay.station) items.push([COLORS.station, t('use.station'), []]);
     if (overlay.footprint) items.push([COLORS.footprint, t('use.footprint'), [1]]);
     if (overlay.swath) items.push([COLORS.swath, t('use.cam.swath'), [2, 3]]);
+    if (overlay.band) items.push([overlay.band.color, overlay.band.label, [8, 1]]);
+    const named = new Set<string>();
+    for (const p of overlay.paths ?? []) {
+      if (!p.label || named.has(p.label)) continue;
+      named.add(p.label);
+      items.push([p.color, p.label, p.dash && p.dash.length > 1 ? p.dash : [8, 1]]);
+    }
+    for (const m of overlay.marks ?? []) items.push([m.color, m.label, []]);
     const widths = items.map(([, label]) => 22 + g.measureText(label).width + 16);
     const lines = (width: number): number => {
       let n = 1, x = 0;
@@ -129,6 +170,15 @@ export class GroundTrackView {
     g.closePath();
     g.fill();
 
+    // P2.5: a band of latitudes where something may come down
+    if (overlay.band) {
+      const [, y0] = xy(overlay.band.to, 0), [, y1] = xy(overlay.band.from, 0);
+      g.fillStyle = overlay.band.color;
+      g.globalAlpha = 0.18;
+      g.fillRect(ox, y0, mw, y1 - y0);
+      g.globalAlpha = 1;
+    }
+
     // R02: a group's satellites, a dot each
     if (overlay.points) {
       const { latlon, count } = overlay.points;
@@ -162,6 +212,13 @@ export class GroundTrackView {
     }
     if (now && overlay.footprint && overlay.footprint > 0) {
       this.line(g, footprintCircle(now.lat, now.lon, overlay.footprint, 180), xy, mw, COLORS.footprint, 1.6, []);
+    }
+    for (const p of overlay.paths ?? []) this.line(g, p.pts, xy, mw, p.color, p.width, p.dash ?? []);
+    for (const m of overlay.marks ?? []) {
+      const [x, y] = xy(m.lat, m.lon);
+      g.strokeStyle = m.color;
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x - 6, y - 6); g.lineTo(x + 6, y + 6); g.moveTo(x + 6, y - 6); g.lineTo(x - 6, y + 6); g.stroke();
     }
     if (overlay.station) {
       const [x, y] = xy(overlay.station.lat, overlay.station.lon);

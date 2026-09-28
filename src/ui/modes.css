@@ -141,22 +141,16 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 
 /* ── the landing page: src/ui/home.css ─────────────────────────────────── */
 
-/* "in development", on the section's own screen */
+/* "in development", on a level still being built */
 .section-badge {
   display: inline-block; padding: 2px 8px; border-radius: 999px;
   border: 1px solid rgba(239, 164, 126, 0.5); color: var(--warn);
   font: 500 10.5px/1.4 var(--sans); letter-spacing: 0.8px; text-transform: uppercase;
 }
 
-/* ── the Orbit and Build sections while they are being built (S01) ─────── */
+/* ── a section's plan: the Build levels still being built show it (src/ui/build/build.css), the
+   Orbit playground lists what it still lacks with the same items (S01) ─────── */
 
-.section-screen {
-  position: absolute; inset: 0; z-index: 5;
-  overflow-y: auto;
-  padding: 40px clamp(20px, 5vw, 72px);
-  /* darker than the landing page's: this is a page to read, not a scene to look at */
-  background: linear-gradient(90deg, rgba(6, 10, 16, 0.96) 0%, rgba(6, 10, 16, 0.9) 55%, rgba(6, 10, 16, 0.74) 100%);
-}
 .section-inner { max-width: 880px; }
 .section-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; color: var(--accent); letter-spacing: 2.4px; }
 .section-title {
@@ -282,7 +276,6 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 /* ── narrow screens ──────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {
-  .section-screen { padding: 24px 16px; }
   .section-levels { grid-template-columns: 1fr; }
   .section-lead { font-size: 15px; }
   .watch-ui { padding: 12px; }

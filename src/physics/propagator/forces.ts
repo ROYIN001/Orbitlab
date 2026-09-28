@@ -8,9 +8,10 @@
  *   the Earth's pear shape — slowly swings the eccentricity (the "frozen
  *   orbit" of an Earth-observation satellite sits where it balances J2);
  *   J4 refines both.
- * - **Drag** in an atmosphere turning with the Earth (density.ts: NRLMSISE-00's
- *   level for the Sun's activity, Harris–Priester's diurnal bulge; the
- *   activity fixed, or measured and forecast, R05): −½ ρ C_D (A/m) |v_r| v_r.
+ * - **Drag** in an atmosphere turning with the Earth (density.ts:
+ *   NRLMSISE-00 at the place and time, for the Sun's and the field's
+ *   activity fixed, or measured and forecast day by day, R05 and P2.5):
+ *   −½ ρ C_D (A/m) |v_r| v_r.
  * - **The Sun and the Moon** as third bodies, direct pull less the pull on
  *   the Earth (the part that matters is their tide across the orbit).
  * - **Sunlight pressure** on a sphere ("cannonball"): P_⊙ C_R (A/m) (AU/d)²
@@ -21,7 +22,7 @@
  */
 import { MU_EARTH, OMEGA_EARTH, R_EARTH, J2_EARTH } from '../constants';
 import { AU, moonPosition, sunPosition, type V3 } from './ephemeris';
-import { airDensity, heightKm } from './density';
+import { airDensity } from './density';
 import { ECSS_LEVELS, indicesAt, type Activity } from './activity';
 
 export const J3_EARTH = -2.53265649e-6;
@@ -103,14 +104,13 @@ export function inShadow(r: V3, s: V3): boolean {
 }
 
 /** Everything on the satellite at `r`, `v` (m, m/s) at Julian date `jd`, m/s². */
-export function acceleration(r: V3, v: V3, jd: number, f: ForceModel, sc: Spacecraft, bulgeN = 4): V3 {
+export function acceleration(r: V3, v: V3, jd: number, f: ForceModel, sc: Spacecraft): V3 {
   const a = gravityAcceleration(r, f.j2, f.j3j4);
-  const needSun = f.sun || f.srp || f.drag;
+  const needSun = f.sun || f.srp;
   const sun = needSun ? sunPosition(jd) : null;
   if (f.drag) {
-    const alt = heightKm(r);
-    if (alt < 1000) {
-      const rho = airDensity(r, alt, sun!, bulgeN, indicesAt(f.activity, jd));
+    const rho = airDensity(r, jd, indicesAt(f.activity, jd));
+    if (rho > 0) {
       // air turning with the Earth: v_rel = v − ω × r
       const vr: V3 = [v[0] + OMEGA_EARTH * r[1], v[1] - OMEGA_EARTH * r[0], v[2]];
       const vm = Math.hypot(vr[0], vr[1], vr[2]);

@@ -15,12 +15,14 @@
  * needs to be understood before pressing play.
  */
 import { t, getLang } from '../i18n';
+import { VEHICLES } from '../data/vehicles';
 import { route, type AppLevel, type AppRoute } from './app-mode';
 import { FEATURED_WATCH_MISSION, watchMissionById, type WatchMissionId } from './watch-missions';
 import { STATIONS } from '../orbit/applications-setup';
 import { STATION_KEY, compass } from './orbit/applications-panel';
 import { PASS_DAYS, SHOWCASE_FACES, STATION_ZONES, featureOffset, showcaseBlend, whenFrom, type ShowcaseFace } from './home-logic';
 import { reducedMotion, type HomeStage } from './home-stage';
+import type { MissionSummary } from './workspace-mission';
 import './home.css';
 
 export interface HomeHost {
@@ -30,6 +32,10 @@ export interface HomeHost {
   go(route: AppRoute): void;
   /** E03: the lessons' catalogue */
   openLessons(): void;
+  /** audit 2026-09-27 A1: the mission the workspace last held, as the page stored it, or null */
+  lastMission(): MissionSummary | null;
+  /** A1: open the launch workspace, at the level last used, on that mission */
+  continueMission(): void;
 }
 
 /** A chapter of the page: one face of the app, its picture beside it (in SHOWCASE_FACES' order). */
@@ -92,6 +98,11 @@ export class HomeScreen {
     this.render();
   }
 
+  /** The page is being shown: the last mission may have changed since it was drawn. */
+  refresh(): void {
+    this.render();
+  }
+
   private render(): void {
     const hadFocus = this.root.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.homeFocus : undefined;
     const kept = this.scroller?.scrollTop ?? 0;
@@ -145,6 +156,8 @@ export class HomeScreen {
     const actions = el('div', 'home-actions');
     actions.append(play, this.button('home-secondary', t('home.hero.lessons'), 'lessons', () => this.host.openLessons()));
     inner.append(el('span', 'eyebrow home-eyebrow', t('home.eyebrow')), title, el('p', 'home-lead', t('home.lead')), actions);
+    const resume = this.resumeCard();
+    if (resume) inner.append(resume);
     // "more below", which also takes you there
     const cue = el('button', 'home-cue');
     cue.type = 'button';
@@ -158,6 +171,26 @@ export class HomeScreen {
     });
     hero.append(inner, cue);
     return hero;
+  }
+
+  /**
+   * Audit 2026-09-27 A1: the mission the workspace last held, to go back to —
+   * the page opens on the featured launch, and the user's own is one press away.
+   */
+  private resumeCard(): HTMLElement | null {
+    const last = this.host.lastMission();
+    if (!last) return null;
+    const vehicle = last.vehicleName ?? VEHICLES.find((v) => v.id === last.vehicleId)?.name ?? last.vehicleId;
+    const button = el('button', 'home-resume');
+    button.type = 'button';
+    button.dataset.homeFocus = 'resume';
+    const icon = el('span', 'home-resume-icon', '↻');
+    icon.setAttribute('aria-hidden', 'true');
+    button.append(icon, el('strong', undefined, t('home.resume.title')), el('span', 'home-resume-text', t('home.resume.text', {
+      vehicle, payload: num(last.payloadKg), pe: num(last.perigeeKm), ap: num(last.apogeeKm),
+    })));
+    button.addEventListener('click', () => this.host.continueMission());
+    return button;
   }
 
   // ─── the program, a face at a time ───────────────────────────────────────

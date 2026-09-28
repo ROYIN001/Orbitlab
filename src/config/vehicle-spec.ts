@@ -37,7 +37,20 @@ export const MAX_BOOSTER_GROUPS = 4;
 export const MAX_BOOSTERS_PER_GROUP = 12;
 /** Ids the vehicle model uses for parts of its own. */
 export const RESERVED_PART_IDS: readonly string[] = ['spacecraft', 'fairing', 'payload', 'stage', 'active'];
-const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/;
+/** A vehicle's, stage's or strap-on group's id: Latin letters, digits, "-" and "_", starting with a letter or a digit, at most 40 characters. */
+export const PART_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/;
+const ID = PART_ID_PATTERN;
+/**
+ * The upper bounds the checks below hold a stage, a strap-on group and a
+ * vehicle to, by name, so that a builder that changes a part (the remix of
+ * roadmap D02) can refuse what the validator would refuse and say which bound.
+ */
+export const PART_LIMITS = {
+  engineCount: 50,
+  stageDryMass: 1e6, stagePropellantMass: 1e7,
+  boosterDryMass: 1e6, boosterPropellantMass: 5e6,
+  diameter: 15, length: 100, height: 200,
+} as const;
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -109,7 +122,7 @@ function checkEngine(c: Checker, raw: unknown, path: string, groundLit: boolean)
   if (!isObj(raw)) { c.add(path, `must be an engine (got ${describe(raw)})`); return; }
   c.known(raw, path, ENGINE_FIELDS);
   c.string(raw, 'name', path);
-  c.number(raw, 'count', path, 1, 50, { integer: true });
+  c.number(raw, 'count', path, 1, PART_LIMITS.engineCount, { integer: true });
   const thrustVac = c.number(raw, 'thrustVac', path, 0, 2e7, { exclusiveMin: true });
   const ispVac = c.number(raw, 'ispVac', path, 50, 480);
   const vacuumOnly = raw.vacuumOnly === true;
@@ -136,12 +149,12 @@ function checkBooster(c: Checker, raw: unknown, path: string): string | undefine
   const id = c.string(raw, 'id', path, { pattern: ID });
   c.string(raw, 'name', path);
   c.number(raw, 'count', path, 1, MAX_BOOSTERS_PER_GROUP, { integer: true });
-  c.number(raw, 'dryMass', path, 0, 1e6, { exclusiveMin: true });
-  c.number(raw, 'propellantMass', path, 0, 5e6, { exclusiveMin: true });
+  c.number(raw, 'dryMass', path, 0, PART_LIMITS.boosterDryMass, { exclusiveMin: true });
+  c.number(raw, 'propellantMass', path, 0, PART_LIMITS.boosterPropellantMass, { exclusiveMin: true });
   const igniteAt = c.number(raw, 'igniteAt', path, 0, 600, { optional: true });
   checkEngine(c, raw.engine, `${path}.engine`, igniteAt === undefined || igniteAt === 0);
-  c.number(raw, 'diameter', path, 0, 15, { exclusiveMin: true });
-  c.number(raw, 'length', path, 0, 100, { exclusiveMin: true });
+  c.number(raw, 'diameter', path, 0, PART_LIMITS.diameter, { exclusiveMin: true });
+  c.number(raw, 'length', path, 0, PART_LIMITS.length, { exclusiveMin: true });
   c.number(raw, 'sepDelay', path, 0, 60, { optional: true });
   c.string(raw, 'color', path, { optional: true, max: 32 });
   c.boolean(raw, 'conicalTop', path);
@@ -155,11 +168,11 @@ function checkStage(c: Checker, raw: unknown, path: string, index: number, ids: 
   const id = c.string(raw, 'id', path, { pattern: ID });
   if (id !== undefined) ids.push(id);
   c.string(raw, 'name', path);
-  c.number(raw, 'dryMass', path, 0, 1e6, { exclusiveMin: true });
-  c.number(raw, 'propellantMass', path, 0, 1e7, { exclusiveMin: true });
+  c.number(raw, 'dryMass', path, 0, PART_LIMITS.stageDryMass, { exclusiveMin: true });
+  c.number(raw, 'propellantMass', path, 0, PART_LIMITS.stagePropellantMass, { exclusiveMin: true });
   checkEngine(c, raw.engine, `${path}.engine`, index === 0);
-  c.number(raw, 'diameter', path, 0, 15, { exclusiveMin: true });
-  c.number(raw, 'length', path, 0, 100, { exclusiveMin: true });
+  c.number(raw, 'diameter', path, 0, PART_LIMITS.diameter, { exclusiveMin: true });
+  c.number(raw, 'length', path, 0, PART_LIMITS.length, { exclusiveMin: true });
   for (const key of ['restartable', 'fins', 'gridFins', 'legs', 'flaps']) c.boolean(raw, key, path);
   c.number(raw, 'sepDelay', path, 0, 60, { optional: true });
   c.number(raw, 'ignitionDelay', path, 0, 60, { optional: true });
@@ -189,7 +202,7 @@ export function vehicleSpecProblems(raw: unknown): VehicleSpecIssue[] {
   c.string(raw, 'name', '');
   c.string(raw, 'country', '', { max: 16 });
   c.string(raw, 'manufacturer', '', { allowEmpty: true });
-  c.number(raw, 'height', '', 0, 200, { exclusiveMin: true });
+  c.number(raw, 'height', '', 0, PART_LIMITS.height, { exclusiveMin: true });
   c.number(raw, 'payloadLEO', '', 0, 5e5);
   c.number(raw, 'payloadGTO', '', 0, 5e5);
   c.number(raw, 'payloadSSO', '', 0, 5e5, { optional: true });

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
 import { launchWindows } from '../src/physics/mission';
 import { siteById } from '../src/data/sites';
-import { BUILTIN_ISSUES, BUILTIN_LESSONS, allLessons, lessonNumber } from '../src/lessons/catalog';
+import { BUILTIN_CASE_LESSONS, BUILTIN_ISSUES, BUILTIN_LESSONS, allLessons, lessonNumber } from '../src/lessons/catalog';
 import { lessonConfig } from '../src/lessons/config';
 import { answerMatches, awaitingAnswers, brokenLocks, flightEnded, gradeLesson, regradeAnswers, type LessonAnswers } from '../src/lessons/grader';
 import { MEASURES } from '../src/lessons/measures';
@@ -52,6 +52,8 @@ describe('the built-in lessons', () => {
   it('read without a single issue, every text in all three languages', () => {
     expect(BUILTIN_ISSUES).toEqual([]);
     expect(BUILTIN_LESSONS.length).toBe(21);
+    // and the three cases from the record, track 6 (tests/case-lessons.test.ts)
+    expect(BUILTIN_CASE_LESSONS.length).toBe(3);
   });
 
   it('carry Russian in Cyrillic and Thai in Thai script in every text', () => {
@@ -65,20 +67,24 @@ describe('the built-in lessons', () => {
     }
   });
 
-  it('are numbered 1.1 … 5.5 without a gap, all twenty-one written and none left coming', () => {
+  it('are numbered 1.1 … 6.3 without a gap, all twenty-four written and none left coming', () => {
     const numbers = allLessons().map(lessonNumber);
-    expect(numbers).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5', '2.1', '2.2', '2.3', '2.4', '3.1', '3.2', '3.3', '4.1', '4.2', '4.3', '4.4', '5.1', '5.2', '5.3', '5.4', '5.5']);
-    expect(BUILTIN_LESSONS.filter((l) => l.comingSoon).map((l) => l.id)).toEqual([]);
-    for (const l of BUILTIN_LESSONS.filter((x) => !x.comingSoon)) {
+    expect(numbers).toEqual(['1.1', '1.2', '1.3', '1.4', '1.5', '2.1', '2.2', '2.3', '2.4', '3.1', '3.2', '3.3', '4.1', '4.2', '4.3', '4.4', '5.1', '5.2', '5.3', '5.4', '5.5', '6.1', '6.2', '6.3']);
+    expect(allLessons().filter((l) => l.comingSoon).map((l) => l.id)).toEqual([]);
+    for (const l of allLessons().filter((x) => !x.comingSoon)) {
       expect(l.hints.length, l.id).toBe(3);
       expect(l.criteria.length, l.id).toBeGreaterThan(0);
     }
   });
 
-  it('come back unchanged through a lesson file', () => {
+  it('come back unchanged through a lesson file, the flight lessons alone and with the case lessons', () => {
     const parsed = parseLessonFile(JSON.parse(lessonFileText(BUILTIN_LESSONS)), new Set());
     expect(parsed.issues).toEqual([]);
     expect(parsed.lessons).toEqual(BUILTIN_LESSONS);
+    const all = allLessons();
+    const both = parseLessonFile(JSON.parse(lessonFileText(all)), new Set());
+    expect(both.issues).toEqual([]);
+    expect(both.lessons).toEqual(all);
   });
 });
 
@@ -273,7 +279,8 @@ describe('a teacher\'s lesson file', () => {
     expect(parsed.lessons).toEqual([]);
     expect(parsed.issues[0]).toMatchObject({ code: 'mission', detail: 'setup.site' });
     expect(parseLessonFile({ format: 'orbitlab.mission', version: 1 }, new Set()).usable).toBe(false);
-    expect(parseLessonFile({ format: LESSON_FORMAT, version: 2, lessons: JSON.parse(base()).lessons }, new Set()).issues)
+    // version 2 holds the case lessons (track 6); a file newer than that still reads, with a warning
+    expect(parseLessonFile({ format: LESSON_FORMAT, version: 3, lessons: JSON.parse(base()).lessons }, new Set()).issues)
       .toEqual([{ where: 'document', code: 'newerVersion', level: 'warn' }]);
   });
 
