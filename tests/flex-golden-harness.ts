@@ -88,9 +88,14 @@ export async function missionFingerprint(cfg: MissionConfig, until: number): Pro
  * when its fairing became the 4.11 × 11.43 m unit with its own adapter
  * (owner's figures, 2026-09-25): a change to the vehicle, not to the options,
  * and with every option given and off it still flies the same 160 s bit for bit.
+ * Angara-A5's mission was re-recorded when its fairing took Khrunichev's
+ * jettison rule (`fairing.sepAfterIgnition`, docs/VALIDATION.md F14), by
+ * 7834edd itself with only that rule ported in; the current code flies the
+ * same hash. It was '08a8c33302e646d6'; the first 160 s, before the fairing
+ * comes off, are unchanged.
  */
 export const GOLDEN: Record<(typeof GOLDEN_FLIGHTS)[number]['vehicle'], { first160s: string; mission: string }> = {
   falcon9: { first160s: '3f48e9ee37213f9e', mission: '7fb4ebc11cd17b4f' },
   soyuz21a: { first160s: '839f89154a81d07c', mission: '1edcbd927a140a70' },
-  angaraa5: { first160s: 'c3022008e3f8d476', mission: '08a8c33302e646d6' },
+  angaraa5: { first160s: 'c3022008e3f8d476', mission: '43a7c53e9e83eca4' },
 };
