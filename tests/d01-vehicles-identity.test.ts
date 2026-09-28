@@ -28,12 +28,11 @@
  *   holds none of them, and an emitter that filled an absent optional field
  *   with `undefined` would otherwise pass the snapshot unseen.
  */
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { VEHICLES } from '../src/data/vehicles';
+// as text, through Vite's `?raw` (tsconfig types only `vite/client`, no `node:fs`)
+import FIXTURE from './fixtures/vehicles-pre-d01.json?raw';
 
-const FIXTURE = new URL('./fixtures/vehicles-pre-d01.json', import.meta.url);
 /** SHA-256 of `JSON.stringify(VEHICLES)`, unsorted, at eedd035 (the pre-D01 HEAD); 30 926 characters. */
 const PRE_D01_UNSORTED_SHA256 = 'f891238efbdbe546a2c96c40d632513f03b8ebe02ee1971155c202b69bf87f9a';
 
@@ -62,15 +61,17 @@ describe('D01: the catalogue vehicles, recorded before the parts catalogue', () 
   it('equal the pre-D01 literals, value for value', () => {
     expect(VEHICLES).toHaveLength(21);
     // read and compared, never written: a mismatch fails, even under `vitest -u`
-    expect(`${JSON.stringify(sortKeys(VEHICLES), null, 1)}\n`).toBe(readFileSync(FIXTURE, 'utf8'));
+    expect(`${JSON.stringify(sortKeys(VEHICLES), null, 1)}\n`).toBe(FIXTURE);
   });
 
   it('carry no undefined-valued key, and nothing else JSON would hide', () => {
     expect(jsonBlindSpots(VEHICLES, 'VEHICLES', [])).toEqual([]);
   });
 
-  it('keep the pre-D01 key order too', () => {
+  it('keep the pre-D01 key order too', async () => {
     const unsorted = JSON.stringify(VEHICLES);
-    expect([unsorted.length, createHash('sha256').update(unsorted).digest('hex')]).toEqual([30926, PRE_D01_UNSORTED_SHA256]);
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
+    const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    expect([unsorted.length, hex]).toEqual([30926, PRE_D01_UNSORTED_SHA256]);
   });
 });
