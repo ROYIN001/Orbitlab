@@ -7,7 +7,7 @@ simulator and in what order. The status of each item is kept in
 
 ## The idea
 
-Orbitlab today is Part 1, **Launch**: 18 real vehicles flown from the pad to orbit, point-mass or
+Orbitlab today is Part 1, **Launch**: 21 real vehicles flown from the pad to orbit, point-mass or
 six-DOF, recorded and replayable, in English, Russian and Thai. It becomes one space program for
 anyone interested, in three parts inside the same app:
 
@@ -145,7 +145,7 @@ with a slowed CPU. What each met and missed is in [VALIDATION.md](VALIDATION.md)
 
 | Item | What | Validation |
 |---|---|---|
-| **D01** parts catalog | Engines, tanks, fairings and interstages as a catalogue extracted from `src/data/vehicles.ts` (about 45 real engines). The 18 real vehicles are re-expressed on the catalogue, so the fleet tests validate it. | Every re-expressed vehicle flies the same recording as today; the fleet matrix stays green. |
+| **D01** parts catalog | Engines, tanks, fairings and interstages as a catalogue extracted from `src/data/vehicles.ts` (55 engine parts, `src/data/parts.ts`). The 21 real vehicles are re-expressed on the catalogue, so the fleet tests validate it. | Every re-expressed vehicle flies the same recording as today; the fleet matrix stays green. |
 | **D02** remix a real rocket | Start from a real vehicle and change it: stretch a stage, swap an engine, add boosters. | A remix identical to its original flies identically (S02's test). |
 | **D03** parts builder | Build a vehicle from parts. Point-mass by default; six-DOF marked experimental for custom vehicles. Live Δv, thrust-to-weight and mass fractions, and plain-language warnings ("the upper stage cannot lift itself off the pad"). | Δv against the rocket equation stage by stage; the warnings against constructed cases. |
 | **D04** test facilities | A static fire (the engine model's thrust and Isp against pressure, start-up and tail-off); a "wind tunnel" from the aerodynamic tables, `src/physics/rigid/aero-tables.ts`; a flight readiness review using the existing pre-flight feasibility verdict. | Static fire against the engine data's published figures; the tunnel against the tables the six-DOF flight uses. |

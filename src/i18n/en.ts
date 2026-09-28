@@ -1628,7 +1628,7 @@ export const en: Record<string, string> = {
   'plan.item.L03': 'Getting there: trans-lunar injection, free return, phasing loops and lunar orbit insertion.',
   'plan.item.L04': 'Powered descent to the surface.',
   'plan.item.L05': 'The way home: the return and a skip entry.',
-  'plan.item.D01': 'A catalogue of real parts — about 45 engines — taken from the 18 vehicles, which are rebuilt from it.',
+  'plan.item.D01': 'A catalogue of real parts — 55 engines — taken from the 21 vehicles, which are rebuilt from it.',
   'plan.item.D02': 'Remix a real rocket: stretch a stage, swap an engine, add boosters.',
   'plan.item.D03': 'Build from parts, with live Δv, thrust-to-weight and mass fractions, and warnings in plain words.',
   'plan.item.D04': 'Test before flight: a static fire, a wind tunnel and a flight readiness review.',
