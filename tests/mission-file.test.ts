@@ -12,7 +12,7 @@ import { DEFAULT_FAILURE } from '../src/physics/defaults';
 import { defaultDynamics } from '../src/physics/rigid/config';
 import { CONTROL_FAULT_PRESETS } from '../src/physics/rigid/fault-config';
 import { quickstartMission } from '../src/ui/quickstart';
-import { WATCH_MISSIONS, watchMissionSettings } from '../src/ui/watch-missions';
+import { FEATURED_WATCH_MISSION, WATCH_MISSIONS, watchMissionSettings } from '../src/ui/watch-missions';
 
 const FROM = new Date('2026-09-25T06:00:00Z');
 
@@ -273,5 +273,31 @@ describe('mission document version 2: a custom vehicle (S02)', () => {
     const back = parseMissionDocument(forged, fallback());
     expect(back.state.vehicleSpec).toBeUndefined();
     expect(back.issues.map((i) => i.field)).toContain('setup.vehicle');
+  });
+});
+
+describe('the stored mission restored over a viewer launch (audit 2026-09-27 A1)', () => {
+  // What the panel holds after a reload on Home, Watch, Orbit or Build: the featured launch, with its vehicle's defaults.
+  const featured = (): MissionState => {
+    const settings = watchMissionSettings(FEATURED_WATCH_MISSION, FROM);
+    return { ...settings, dynamics: defaultDynamics(settings.vehicleId) };
+  };
+
+  it('brings back every setting: vehicle, payload, orbit, guidance, failure, dynamics and seed, recovery, launch time', () => {
+    const store = new Map<string, string>();
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); } };
+    saveStoredMission(everything(), storage);
+    const back = parseMissionDocument(loadStoredMission(storage), featured());
+    expect(back.issues).toEqual([]);
+    expect(back.state).toEqual(everything());
+    expect(back.state.dynamics?.seed).toBe(4242);
+  });
+
+  it('brings back a custom vehicle (S02) and a Falcon 9 quick start the same way', () => {
+    const custom = { ...everything(), vehicleId: 'my-falcon', dynamics: defaultDynamics('falcon9'),
+      vehicleSpec: { ...structuredClone(vehicleById('falcon9')), id: 'my-falcon', name: 'My Falcon', derivedFrom: 'falcon9' } };
+    expect(parseMissionDocument(viaJson(custom), featured()).state).toEqual(custom);
+    const quick = { ...quickstartMission('leo', FROM), dynamics: defaultDynamics('falcon9') };
+    expect(parseMissionDocument(viaJson(quick), featured())).toMatchObject({ issues: [], state: quick });
   });
 });

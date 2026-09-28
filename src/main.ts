@@ -43,6 +43,7 @@ import {
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
 } from './ui/app-mode';
 import { SectionScreen } from './ui/section-screen';
+import { WorkspaceMission, startupMission } from './ui/workspace-mission';
 import { OrbitPlayground } from './ui/orbit/playground';
 import { DataDialog } from './ui/data-dialog';
 import { applyWebFonts } from './ui/web-fonts';
@@ -327,6 +328,13 @@ class App {
   readonly monteCarlo: MonteCarloWindow;
   private cameraDialog: CameraDialog;
   private shown: VisualFrame | null = null;
+  /**
+   * Audit 2026-09-27 A1: whether the setup panel holds the user's mission,
+   * which the page stores, or one a viewer prepared, which it does not.
+   */
+  private readonly workspace = new WorkspaceMission();
+  /** the start-up mission is in the panel: entering the workspace may restore the stored one from now on */
+  private started = false;
   private wasLive = true;
   /** the flight phase the camera sequence last acted on */
   private lastPhase: FlightPhase | null = null;
@@ -428,7 +436,7 @@ class App {
     this.monteCarlo.onOpenRun = (dynamics) => {
       const state = this.panel.missionState();
       state.dynamics = dynamics;
-      this.goLive(); this.playing = false; this.panel.restoreMission(state);
+      this.goLive(); this.playing = false; this.workspace.adopt(); this.panel.restoreMission(state);
     };
     this.home = new HomeScreen(document.getElementById('home-screen')!, {
       watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
@@ -500,7 +508,7 @@ class App {
       // a lesson flies in the launch section; the page closes onto the route under it
       go: (mode) => this.go(mode === 'home' ? HOME_ROUTE : route('launch', mode)),
       back: () => this.go(this.route),
-      loadMission: (state) => { this.goLive(); this.playing = false; this.panel.restoreMission(state); },
+      loadMission: (state) => { this.goLive(); this.playing = false; this.workspace.adopt(); this.panel.restoreMission(state); },
       sim: () => this.sim,
       panelRoot: document.getElementById('setup')!,
       renderPanel: () => this.panel.render(),
@@ -605,6 +613,8 @@ class App {
     if (orbit) this.playground.show(next.mode as AppLevel);
     else this.playground.hide();
     const experience = experienceForMode(mode);
+    // A1: the workspace comes back to the user's mission, not the viewer's launch left on the pad
+    if (experience) this.restoreWorkspaceMission();
     if (experience) this.panel.setExperience(experience);
     this.rigidControls.setInspectorAvailable(mode === 'engineer');
     this.tel.setEquationLevel(mode === 'engineer' ? 'engineer' : 'explore'); // E02
@@ -632,7 +642,7 @@ class App {
   startWatch(id: WatchMissionId): void {
     if (!this.scene) return;
     this.goLive();
-    this.panel.loadMission(watchMissionSettings(id));
+    this.loadViewerMission('watch', watchMissionSettings(id));
     if (!this.panel.isValid()) return;
     this.launch(this.panel.getConfig());
     this.setWarp(1);
@@ -719,13 +729,16 @@ class App {
     // A mission link opens the workspace on its mission; otherwise the landing
     // page and the viewer open on the featured launch standing on its pad in
     // daylight, and the workspace on the mission it held when it was closed.
-    if (await this.openMissionLink()) { /* previewed by the panel */ }
-    else if (this.lean) this.panel.loadMission(watchMissionSettings(FEATURED_WATCH_MISSION));
-    else {
-      const stored = loadStoredMission();
-      if (stored) this.panel.share.apply(stored, 'stored');
-      else this.preview(this.panel.getConfig());
-    }
+    // The featured launch is the viewer's: the stored mission waits for the
+    // workspace to be entered (audit 2026-09-27 A1).
+    const stored = loadStoredMission();
+    const link = new URL(location.href).searchParams.has(MISSION_PARAM);
+    const start = startupMission({ link, lean: this.lean, stored: stored !== null });
+    if (start === 'link') await this.openMissionLink();
+    else if (start === 'demo') this.loadViewerMission('demo', watchMissionSettings(FEATURED_WATCH_MISSION));
+    else if (start === 'stored') this.applyStoredMission(stored);
+    else { this.workspace.adopt(); this.preview(this.panel.getConfig()); }
+    this.started = true;
     requestAnimationFrame((now) => this.frame(now));
     registerServiceWorker();
     this.lessons.openFromLink(); // E03: ?lesson=<id>
@@ -835,9 +848,42 @@ class App {
     // a mission is the launch section's: a link that names another section or the viewer opens Explore
     if (this.lean) this.setRoute(route('launch', 'explore'));
     history.replaceState(null, '', `${url.pathname}${url.search}${hashForRoute(this.route)}`);
+    this.workspace.adopt();
     const parsed = this.panel.share.apply(raw, 'link');
     if (!parsed.usable) this.preview(this.panel.getConfig());
     return true;
+  }
+
+  /** The panel's mission as the stored document's text: what A1's comparisons compare. */
+  private missionDoc(): string {
+    return JSON.stringify(missionDocument(this.panel.missionState()));
+  }
+
+  /** A1: a viewer's launch into the panel, held as the viewer's until it is changed. */
+  private loadViewerMission(origin: 'demo' | 'watch', mission: Parameters<SetupPanel['loadMission']>[0]): void {
+    this.workspace.viewing(origin);
+    this.panel.loadMission(mission);
+    this.workspace.loaded(this.missionDoc());
+  }
+
+  /** The stored mission into the panel, as the user's; the notice says what could not be used. */
+  private applyStoredMission(stored: unknown): void {
+    this.workspace.adopt();
+    const parsed = this.panel.share.apply(stored, 'stored');
+    if (!parsed.usable) this.preview(this.panel.getConfig());
+  }
+
+  /**
+   * A1: entering Explore or Engineer with the viewer's launch standing
+   * untouched on the pad brings the stored mission back. A launch that is
+   * flying, or has flown, is kept: that is the one the user came to look at.
+   */
+  private restoreWorkspaceMission(): void {
+    if (!this.started) return;
+    const stored = loadStoredMission();
+    const underway = this.playing || (this.shown?.status ?? 'prelaunch') !== 'prelaunch';
+    if (!this.workspace.entering({ doc: this.missionDoc(), stored: stored !== null, underway })) return;
+    this.applyStoredMission(stored);
   }
 
   /**
@@ -1175,8 +1221,8 @@ class App {
     this.watchSoundtrackId = null;
     // The workspace's mission outlives the tab (roadmap U01): every edit, from
     // the panel or over WebMCP, previews. The viewer's prepared launches do
-    // not replace it.
-    if (!this.lean) saveStoredMission(this.panel.missionState());
+    // not replace it until they are changed (audit 2026-09-27 A1).
+    if (this.workspace.persists(this.missionDoc())) saveStoredMission(this.panel.missionState());
     this.playing = false;
     this.panel.setRunning(false);
     this.fastForwardTo = null;
