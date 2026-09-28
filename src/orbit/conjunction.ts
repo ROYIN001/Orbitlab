@@ -11,7 +11,10 @@
  *   plus that is not refined. A pair whose radial bands (perigee to apogee)
  *   are farther apart than the limit never meets and is not searched (the
  *   apogee–perigee filter of Hoots, Crawford and Roehrich, *Celestial
- *   Mechanics* 33, 1984).
+ *   Mechanics* 33, 1984). Given windows (the screening's time filter, P2.5)
+ *   it takes only the samples near them — the same ones, at the same times,
+ *   as the whole search — so what it finds in them is what the whole search
+ *   finds there.
  * - **The probability** is the usual two-dimensional one (Foster and Estes,
  *   NASA JSC-25898, 1992; Chan, *Spacecraft Collision Probability*, 2008):
  *   at the closest approach the encounter is so fast that the relative motion
@@ -85,27 +88,67 @@ function between(a: Ephemeris, b: Ephemeris, jd: number): { range: number; speed
 }
 
 /**
+ * The runs of sample indices, first to last, that hold every sample the
+ * whole search could bracket an approach inside one of `windows` with: an
+ * approach at `tca` is refined between the samples either side of the one it
+ * was found at, so that sample is within a step of `tca`, and its neighbours
+ * within two. Three steps are taken, for rounding.
+ */
+function gridRuns(windows: ReadonlyArray<readonly [number, number]>, jd0: number, dt: number, n: number): [number, number][] {
+  const runs = windows
+    .map(([w0, w1]): [number, number] => [Math.max(0, Math.floor((w0 - jd0) / dt) - 3), Math.min(n, Math.ceil((w1 - jd0) / dt) + 3)])
+    .filter(([k0, k1]) => k0 <= k1)
+    .sort((p, q) => p[0] - q[0]);
+  const out: [number, number][] = [];
+  for (const r of runs) {
+    const last = out[out.length - 1];
+    if (last && r[0] <= last[1] + 1) last[1] = Math.max(last[1], r[1]);
+    else out.push([r[0], r[1]]);
+  }
+  return out;
+}
+
+/**
  * Every closest approach of `b` to `a` between Julian dates `jd0` and `jd1`
  * nearer than `within` m, in time order. `step` (s) must be well under the
  * shorter of the two orbits' periods; the default suits low orbits.
+ *
+ * With `windows` (Julian dates; P2.5) only the samples near them are taken —
+ * the same samples, at the same times, as the whole search takes there — so
+ * every approach whose closest point lies in a window is found exactly as the
+ * whole search finds it, to the last bit, and none outside is looked for. A
+ * sample is taken for a local minimum only where both its neighbours were
+ * taken too. The screening's time filter (src/orbit/screening-filter.ts)
+ * gives the windows.
  */
-export function closeApproaches(a: Ephemeris, b: Ephemeris, jd0: number, jd1: number, within: number, step = 60): Approach[] {
+export function closeApproaches(a: Ephemeris, b: Ephemeris, jd0: number, jd1: number, within: number, step = 60,
+  windows?: ReadonlyArray<readonly [number, number]>): Approach[] {
   const dt = step / 86400;
   const n = Math.max(2, Math.ceil((jd1 - jd0) / dt));
+  const out: Approach[] = [];
+  for (const [k0, k1] of windows ? gridRuns(windows, jd0, dt, n) : [[0, n]]) searchRun(a, b, jd0, jd1, within, step, dt, n, k0, k1, out);
+  return out;
+}
+
+/** The search over samples `k0` to `k1` of the whole search's `n`; the approaches found are added to `out`. */
+function searchRun(a: Ephemeris, b: Ephemeris, jd0: number, jd1: number, within: number, step: number, dt: number, n: number,
+  k0: number, k1: number, out: Approach[]): void {
   const ts: number[] = [], rs: number[] = [], vs: number[] = [];
-  for (let k = 0; k <= n; k++) {
+  for (let k = k0; k <= k1; k++) {
     const jd = Math.min(jd1, jd0 + k * dt);
     const s = between(a, b, jd);
     ts.push(jd); rs.push(s ? s.range : Infinity); vs.push(s ? s.speed : 0);
   }
   const range = (jd: number): number => between(a, b, jd)?.range ?? Infinity;
-  const out: Approach[] = [];
-  for (let k = 0; k <= n; k++) {
-    const left = k > 0 ? rs[k - 1] : Infinity, right = k < n ? rs[k + 1] : Infinity;
-    if (!(rs[k] <= left && rs[k] < right) || !Number.isFinite(rs[k])) continue;
-    if (rs[k] > within + (vs[k] * step) / 2) continue;
+  for (let k = k0; k <= k1; k++) {
+    // a sample at the run's edge whose neighbour was not taken cannot be judged here
+    if ((k === k0 && k > 0) || (k === k1 && k < n)) continue;
+    const i = k - k0;
+    const left = k > 0 ? rs[i - 1] : Infinity, right = k < n ? rs[i + 1] : Infinity;
+    if (!(rs[i] <= left && rs[i] < right) || !Number.isFinite(rs[i])) continue;
+    if (rs[i] > within + (vs[i] * step) / 2) continue;
     // golden section on the range between the neighbouring samples
-    let lo = ts[Math.max(0, k - 1)], hi = ts[Math.min(n, k + 1)];
+    let lo = ts[Math.max(0, k - 1) - k0], hi = ts[Math.min(n, k + 1) - k0];
     let x1 = hi - PHI * (hi - lo), x2 = lo + PHI * (hi - lo);
     let f1 = range(x1), f2 = range(x2);
     while (hi - lo > MS) {
@@ -121,7 +164,6 @@ export function closeApproaches(a: Ephemeris, b: Ephemeris, jd0: number, jd1: nu
     const [R, T, N] = rtnAxes(s.a);
     out.push({ tca, miss: s.range, speed: s.speed, rtn: { radial: dot(d, R), along: dot(d, T), cross: dot(d, N) }, a: s.a, b: s.b });
   }
-  return out;
 }
 
 // ─── the probability of collision ───────────────────────────────────────────

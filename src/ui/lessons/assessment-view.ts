@@ -21,12 +21,12 @@ import type { Answer, AssessmentAttempt, Confidence, Figure, PreparedQuestion, Q
 import { lessonNumber } from '../../lessons/catalog';
 import { localText, unitText } from '../../lessons/text';
 import type { ProgressData } from '../../lessons/progress';
-import type { Domain, Lesson } from '../../lessons/types';
+import type { CatalogLesson, Domain } from '../../lessons/types';
 
 export interface AssessmentHost {
   progress(): ProgressData;
   save(): void;
-  lessons(): Lesson[];
+  lessons(): CatalogLesson[];
   goToLesson(id: string): void;
   exportResults(): void;
   /** back to the lesson catalogue */
@@ -47,7 +47,7 @@ export const datasetIds = (): ReadonlySet<string> => DATASET_IDS;
 const bankFor = (p: ProgressData): Question[] => questionBank(p.customQuestions);
 
 /** The latest finished test, scored. */
-export function latestResult(progress: ProgressData, lessons: readonly Lesson[]): { kind: string; finishedAt?: string; result: AssessmentResult } | null {
+export function latestResult(progress: ProgressData, lessons: readonly CatalogLesson[]): { kind: string; finishedAt?: string; result: AssessmentResult } | null {
   const done = progress.assessments.filter((a) => a.finishedAt);
   const last = done[done.length - 1];
   return last ? { kind: last.kind, finishedAt: last.finishedAt, result: scoreAttempt(last, bankFor(progress), lessons) } : null;
@@ -499,7 +499,7 @@ class AssessmentView {
       li.append(el('p', 'small', localText(q.explanation)));
       const credit = q.type === 'vehicle' ? VEHICLE_PHOTOS[p.vehicle!] : undefined;
       if (credit) li.append(photoCredit(credit));
-      const lessons = (q.lessons ?? []).map((id) => this.host.lessons().find((l) => l.id === id)).filter((l): l is Lesson => !!l);
+      const lessons = (q.lessons ?? []).map((id) => this.host.lessons().find((l) => l.id === id)).filter((l): l is CatalogLesson => !!l);
       if (lessons.length) li.append(el('p', 'small', t('assess.relatedLessons', { list: lessons.map((l) => `${lessonNumber(l)} ${localText(l.title)}`).join(', ') })));
       list.append(li);
     }

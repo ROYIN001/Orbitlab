@@ -190,8 +190,8 @@ const RESERVED: Record<string, string> = {
   // setup panel still format 'km', 'm/s', 'kPa' as English literals
   // (ui/hud.ts:186-198, ui/telemetry.ts:200-229, ui/panel.ts:697-702). Wiring
   // those call sites is the fix; deleting the keys would be the wrong half of
-  // it. Raised as an open item by the wave-3 translation pass.
-  'u.kN': 'unit symbols are not wired to their call sites yet',
+  // it. Raised as an open item by the wave-3 translation pass. ('u.kN' left
+  // the list when the Build section's part card became its first call site.)
   'u.deg': 'unit symbols are not wired to their call sites yet',
   // The setup aside is announced with a11y.setupPanel and headed with
   // app.missionControl + app.buildMission; the old caption has no call site.

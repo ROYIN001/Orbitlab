@@ -4,7 +4,11 @@
  * charts and the radar as SVG text, and unit symbols in each language.
  */
 import { describe, expect, it } from 'vitest';
-import { emptyProgress, loadProgress, recordGrade, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { emptyProgress, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { awaitingAnswers, regradeAnswers } from '../src/lessons/grader';
+import { FlightLessons } from '../src/lessons/flight-lessons';
+import { worksheetSource } from '../src/worksheets/build';
+import type { WsFlight } from '../src/worksheets/flight-questions';
 import { createLessonTools, type LessonToolsHost } from '../src/lessons/mcp-tools';
 import { BUILTIN_LESSONS, allLessons } from '../src/lessons/catalog';
 import { chartSvg, niceStep, radarSvg } from '../src/lessons/assessment/figures';
@@ -48,6 +52,64 @@ describe('progress and the results file', () => {
   });
 });
 
+// E03: the strip once printed the expected value after a wrong answer, and typing it in then passed
+describe('an answer shown to the student', () => {
+  const lesson = BUILTIN_LESSONS.find((l) => l.id === 'orbit-first')!;
+  // the grade taken when lesson 1.1's flight ended: the orbit reached, the two answers awaited
+  const frozen: LessonGrade = { lessonId: 'orbit-first', final: true, verdict: 'open', lockBroken: [], t: 900,
+    criteria: [{ id: 'orbit', state: 'pass', value: null }, { id: 'period', state: 'pending', value: null, expected: 94.6 }, { id: 'speed', state: 'pending', value: null, expected: 7.61 }] };
+
+  it('is only marked wrong, and a right answer after a wrong one still passes', () => {
+    const wrong = regradeAnswers(lesson, frozen, { period: 90, speed: 7.61 });
+    expect(wrong.verdict).toBe('fail');
+    expect(wrong.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'fail', value: 90 });
+    expect(wrong.criteria.some((c) => c.revealed)).toBe(false);
+    expect(regradeAnswers(lesson, frozen, { period: 94.6, speed: 7.61 }).verdict).toBe('pass');
+  });
+
+  it('once shown, never passes: not on this flight, not on the same flight flown again', () => {
+    const p = emptyProgress();
+    recordRevealed(p, 'orbit-first', { period: 94.6 });
+    const revealed = lessonProgress(p, 'orbit-first').revealed!;
+    // the value shown, typed in: recorded as not passed, and marked as shown
+    const typed = regradeAnswers(lesson, frozen, { period: 94.6, speed: 7.61 }, revealed);
+    expect(typed.verdict).toBe('fail');
+    expect(typed.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'fail', revealed: true });
+    expect(typed.criteria.find((c) => c.id === 'speed')).toMatchObject({ state: 'pass' });
+    // shown before anything is typed: it is decided at once, so the attempt is recorded
+    const untyped = regradeAnswers(lesson, frozen, {}, revealed);
+    expect(untyped.criteria.find((c) => c.id === 'period')!.state).toBe('fail');
+    expect(awaitingAnswers(lesson, untyped)).toEqual(['speed']);
+    // a flight whose answer is another number (a different orbit) can still pass
+    const other: LessonGrade = { ...frozen, criteria: frozen.criteria.map((c) => (c.id === 'period' ? { ...c, expected: 101.3 } : c)) };
+    expect(regradeAnswers(lesson, other, { period: 101.3, speed: 7.61 }, revealed).verdict).toBe('pass');
+    // kept through storage, the number once
+    recordRevealed(p, 'orbit-first', { period: 94.6, speed: Number.NaN });
+    const store = memory();
+    saveProgress(p, store);
+    expect(loadProgress(store).lessons['orbit-first'].revealed).toEqual({ period: [94.6] });
+  });
+});
+
+// E05: the Worksheets tab titled a flight's sheet with whatever lesson was open, a case lesson opened afterwards included
+describe('the lesson a flight belongs to', () => {
+  it('is the one it was flown in, whatever is open when its sheet is made, and none for a flight flown outside a lesson', () => {
+    const owners = new FlightLessons<WsFlight, typeof BUILTIN_LESSONS[number]>();
+    const flight = (siteId: string) => ({ cfg: { vehicleId: 'falcon9', siteId, launchTime: new Date('2026-09-15T12:00:00Z') } }) as unknown as WsFlight;
+    const inLesson = flight('cape'), outside = flight('baikonur');
+    const first = BUILTIN_LESSONS[0], second = BUILTIN_LESSONS[1];
+    owners.claim(inLesson, first);
+    // opening another lesson later does not take the flight over
+    owners.claim(inLesson, second);
+    expect(owners.lessonOf(inLesson)).toBe(first);
+    expect(owners.lessonOf(outside)).toBeNull();
+    expect(owners.lessonOf(null)).toBeNull();
+    // the sheet's source, which titles it and seeds the students' numbers, follows
+    expect(worksheetSource({ lesson: owners.lessonOf(inLesson) ?? undefined, flight: inLesson })).toBe(`lesson:${first.id}`);
+    expect(worksheetSource({ lesson: owners.lessonOf(outside) ?? undefined, flight: outside })).toBe('mission:falcon9:baikonur:2026-09-15T12:00:00.000Z');
+  });
+});
+
 describe('the lessons over WebMCP', () => {
   const grade: LessonGrade = { lessonId: 'orbit-first', final: true, verdict: 'open', lockBroken: [], t: 900,
     criteria: [{ id: 'orbit', state: 'pass', value: null }, { id: 'period', state: 'pending', value: null, expected: 94.6 }, { id: 'speed', state: 'pending', value: null, expected: 7.61 }] };
@@ -65,10 +127,22 @@ describe('the lessons over WebMCP', () => {
   const tool = (h: LessonToolsHost, name: string) => createLessonTools(h).find((t) => t.name === name)!;
 
   it('lists every lesson with the student\'s progress', () => {
-    const out = tool(host(false), 'list_lessons').execute({}) as { lessons: Array<{ id: string; passed: boolean; written: boolean }> };
-    expect(out.lessons).toHaveLength(21);
-    expect(out.lessons[0]).toMatchObject({ id: 'orbit-first', passed: true, written: true });
-    expect(out.lessons.filter((l) => l.written)).toHaveLength(21);
+    const out = tool(host(false), 'list_lessons').execute({}) as { lessons: Array<{ id: string; passed: boolean; written: boolean; kind: string }> };
+    // twenty-one flight lessons and the three case lessons of track 6
+    expect(out.lessons).toHaveLength(24);
+    expect(out.lessons[0]).toMatchObject({ id: 'orbit-first', kind: 'flight', passed: true, written: true });
+    expect(out.lessons.filter((l) => l.written)).toHaveLength(24);
+    expect(out.lessons.filter((l) => l.kind === 'case')).toHaveLength(3);
+  });
+
+  // it once read "1 orbital mechanics, … 5 failures and safety, 6 basics": one off, so an attitude-control lesson (area 5) read as failures
+  it('names the six areas as the lessons number them', () => {
+    const description = tool(host(false), 'list_lessons').description;
+    expect(description).toContain('(1 space basics, 2 orbital mechanics, 3 rocket performance and the atmosphere, 4 guidance and navigation, 5 attitude control, 6 failures and safety)');
+    const areas = (id: string) => BUILTIN_LESSONS.find((l) => l.id === id)!.domains;
+    expect(areas('orbit-first')[0]).toBe(2); // orbital mechanics
+    expect(areas('ctl-inspector')).toContain(5); // attitude control
+    expect(areas('fail-engine-out')[0]).toBe(6); // failures and safety
   });
 
   it('opens a lesson, and never gives away an answer\'s expected value', () => {

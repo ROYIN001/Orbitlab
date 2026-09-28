@@ -7,7 +7,7 @@ simulator and in what order. The status of each item is kept in
 
 ## The idea
 
-Orbitlab today is Part 1, **Launch**: 18 real vehicles flown from the pad to orbit, point-mass or
+Orbitlab today is Part 1, **Launch**: 21 real vehicles flown from the pad to orbit, point-mass or
 six-DOF, recorded and replayable, in English, Russian and Thai. It becomes one space program for
 anyone interested, in three parts inside the same app:
 
@@ -128,11 +128,24 @@ The ground the other phases stand on. No new physics.
 | **M02** overflight timing | When the imaging satellites of the public catalogue pass over a place, and at what elevation — the public-source planning question of when a site is overflown. | Against R03's passes. |
 | **M03** re-entry prediction | An uncontrolled re-entry predicted from the element sets and the density model, with the window widening honestly; case study: the Long March 5B core stages. | Predictions against the published re-entry times, cited. |
 
+### Phase 2.5: the physics made finer, the gaps closed
+
+Added after Phase 2, before Phase 3, at the owner's request: the thermosphere as NRLMSISE-00 with
+daily indices; UT1 − UTC and polar motion from the IERS; refraction and brightness for passes;
+conjunction data messages (CCSDS 508.0-B-1) held to NASA CARA's test cases, whole-catalogue
+screening in a worker, the encounter plane; each imaging satellite's published instrument geometry
+(swath, pointing limit, radar incidence and side) held to published fields of view and revisits;
+the ballistic coefficient fitted to the tracking, transfer orbits with the Sun and the Moon, 66
+rocket stages and NAPA-2 as re-entry cases; conjunctions, overflights and re-entries on the map;
+the Watch tour on real satellites; worksheets from real cases; checks in a real browser, online and
+with a slowed CPU. What each met and missed is in [VALIDATION.md](VALIDATION.md) §6–7 and
+[IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
+
 ## Phase 3: Rocket builder
 
 | Item | What | Validation |
 |---|---|---|
-| **D01** parts catalog | Engines, tanks, fairings and interstages as a catalogue extracted from `src/data/vehicles.ts` (about 45 real engines). The 18 real vehicles are re-expressed on the catalogue, so the fleet tests validate it. | Every re-expressed vehicle flies the same recording as today; the fleet matrix stays green. |
+| **D01** parts catalog | Engines, tanks, fairings and interstages as a catalogue extracted from `src/data/vehicles.ts` (55 engine parts, `src/data/parts.ts`). The 21 real vehicles are re-expressed on the catalogue, so the fleet tests validate it. | Every re-expressed vehicle flies the same recording as today; the fleet matrix stays green. |
 | **D02** remix a real rocket | Start from a real vehicle and change it: stretch a stage, swap an engine, add boosters. | A remix identical to its original flies identically (S02's test). |
 | **D03** parts builder | Build a vehicle from parts. Point-mass by default; six-DOF marked experimental for custom vehicles. Live Δv, thrust-to-weight and mass fractions, and plain-language warnings ("the upper stage cannot lift itself off the pad"). | Δv against the rocket equation stage by stage; the warnings against constructed cases. |
 | **D04** test facilities | A static fire (the engine model's thrust and Isp against pressure, start-up and tail-off); a "wind tunnel" from the aerodynamic tables, `src/physics/rigid/aero-tables.ts`; a flight readiness review using the existing pre-flight feasibility verdict. | Static fire against the engine data's published figures; the tunnel against the tables the six-DOF flight uses. |
@@ -235,7 +248,7 @@ a custom vehicle without one gets the generic behaviour.
 | Resolving the mission's vehicle: simulation, flight worker, auto-tuner, Monte Carlo job and workers, setup panel, WebMCP, narration | `vehicleById(cfg.vehicleId)` | `missionVehicle(cfg)`: the inline spec. The workers receive it inside the config (structured clone). |
 | Merged from `main` on 2026-09-26 (PR #22): the dispersed flight a mission names (P08) and its drawn values in the Engineer panel, a worksheet's questions and header from a flown flight (E05) | `vehicleById(cfg.vehicleId)` | `missionVehicle(cfg)`, as above. The lessons and the placement test name catalogue vehicles only, and keep `vehicleById`. |
 | Six-DOF available | `supportsRigid(id)`: catalogue membership | six-DOF: the rigid data are built from the spec itself. |
-| Six-DOF RCS installation (Falcon's, and `vegac:p120c`'s roll pair) | vehicle id + stage id | its origin's; else the generic installation by stage id. |
+| Six-DOF RCS installation (Falcon's, and `vegac:p120c`'s roll pair) | vehicle id + stage id | its origin's; else the generic installation by stage id. An upper stage that would be left with none — a stage id the catalogue does not know, or a Falcon stage on a vehicle that is not a Falcon — gets Falcon 9's second-stage set (D03: 50 N pairs, 60 s, the lesser of 10 % of the dry mass and 30 kg; estimates). |
 | Six-DOF trim share (Soyuz-2.1a 0.65, others 0.35) | vehicle id | its origin's; else 0.35. |
 | Six-DOF stages that can fly home (`RIGID_RECOVERABLE`) | vehicle id + stage id | its origin's; else none in six-DOF (point-mass recovery follows `recoverable`, a spec field). |
 | Flexible body: launcher stages, solid propellant | catalogue lookup by id, cached per id | read from the spec itself (`RigidVehicleGeometry.launcherStageIds`, `solidPropellantIds`). The per-id cache would have gone stale across two custom vehicles with one id in the same worker; the lists now travel with the geometry. |

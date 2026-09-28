@@ -15,10 +15,24 @@ import { defaultDynamics } from '../physics/rigid/config';
 import { vehicleById } from '../data/vehicles';
 import { LESSON_HOOKS } from './hooks';
 import { MEASURES, missionTarget } from './measures';
-import type { Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
+import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
 
 /** Answers the student has typed, by criterion id. */
 export type LessonAnswers = Readonly<Record<string, number>>;
+
+/**
+ * The expected values a student was shown, by criterion id, over all their
+ * attempts at a lesson (`LessonProgress.revealed`). A lesson whose flight is
+ * the same every time gives the same number again, so a number once shown
+ * must not pass on the next flight either.
+ */
+export type RevealedAnswers = Readonly<Record<string, readonly number[]>>;
+
+/** Whether an expected value was shown: a value shown would pass as the answer to it. */
+export function wasRevealed(c: { tol?: number; tolPct?: number }, expected: number | null | undefined, shown: readonly number[] | undefined): boolean {
+  if (expected === null || expected === undefined || !shown?.length) return false;
+  return shown.some((v) => answerMatches(v, expected, c.tol, c.tolPct));
+}
 
 /**
  * Thrust acceleration below which a shut-down engine's tail-off is spent, m/s².
@@ -202,22 +216,29 @@ export function gradeLesson(lesson: Lesson, flight: LessonFlight, answers: Lesso
  * student types them. The page keeps that grade rather than grading the head
  * of a flight that coasts on (a node that precesses, a payload that
  * separates): the lesson is judged at its end, however long it is watched.
+ *
+ * An answer whose expected value the student was shown (`revealed`) fails,
+ * typed or not, and says so: showing the answers ends the attempt as not
+ * passed rather than handing over a pass.
  */
-export function regradeAnswers(lesson: Lesson, frozen: LessonGrade, answers: LessonAnswers = {}): LessonGrade {
+export function regradeAnswers(lesson: Lesson, frozen: LessonGrade, answers: LessonAnswers = {}, revealed: RevealedAnswers = {}): LessonGrade {
   const criteria = frozen.criteria.map((g) => {
     const c = lesson.criteria.find((x) => x.id === g.id);
     if (c?.kind !== 'answer') return g;
     const typed = answers[c.id];
-    if (typed === undefined || !Number.isFinite(typed)) return { ...g, state: 'pending' as const, value: null };
-    const ok = g.expected !== null && g.expected !== undefined && answerMatches(typed, g.expected, c.tol, c.tolPct);
-    return { ...g, state: ok ? 'pass' as const : 'fail' as const, value: typed };
+    const value = typed === undefined || !Number.isFinite(typed) ? null : typed;
+    if (wasRevealed(c, g.expected, revealed[c.id])) return { ...g, state: 'fail' as const, value, revealed: true };
+    if (value === null) return { ...g, state: 'pending' as const, value: null };
+    const ok = g.expected !== null && g.expected !== undefined && answerMatches(value, g.expected, c.tol, c.tolPct);
+    return { ...g, state: ok ? 'pass' as const : 'fail' as const, value };
   });
   const anyFail = frozen.lockBroken.length > 0 || criteria.some((c) => c.state === 'fail');
   return { ...frozen, criteria, verdict: anyFail ? 'fail' : criteria.every((c) => c.state === 'pass') ? 'pass' : 'open' };
 }
 
-/** The answers a lesson still waits for, once the flight has ended. */
-export function awaitingAnswers(lesson: Lesson, grade: LessonGrade): string[] {
+/** The answers a lesson still waits for, once the flight has ended (a case lesson's, from the start). */
+export function awaitingAnswers(lesson: CatalogLesson, grade: LessonGrade): string[] {
   if (!grade.final) return [];
-  return lesson.criteria.filter((c) => c.kind === 'answer' && grade.criteria.find((g) => g.id === c.id)?.state === 'pending').map((c) => c.id);
+  const typed: ReadonlyArray<{ id: string; kind: string }> = lesson.criteria;
+  return typed.filter((c) => (c.kind === 'answer' || c.kind === 'case') && grade.criteria.find((g) => g.id === c.id)?.state === 'pending').map((c) => c.id);
 }

@@ -5,16 +5,18 @@
  * satellite as the playground's orbit state, a whole group as points for the
  * 3-D view and the map.
  *
- * TEME is taken as the program's inertial frame, and Greenwich mean sidereal
- * time (src/physics/orbital.ts `gmst`) turns the Earth under it, as it turns
- * it under the playground's own orbits; the two frames differ by the
- * equation of the equinoxes (about a second of time), which moves nothing a
- * screen can show.
+ * TEME is taken as the program's inertial frame, and the Greenwich mean
+ * sidereal time of UT1 turns the Earth under it (src/orbit/earth-orientation.ts,
+ * P2.5: TEME's own relation to the Earth, with the IERS's UT1 − UTC), as the
+ * sidereal time turns it under the playground's own orbits; the two frames
+ * differ by the equation of the equinoxes (about a second of time), which
+ * moves nothing a screen can show.
  *
  * DOM-free: tests/real-sky.test.ts holds it.
  */
 import { R_EARTH } from '../physics/constants';
-import { gmst, wrapPi } from '../physics/orbital';
+import { wrapPi } from '../physics/orbital';
+import { earthAngle } from './earth-orientation';
 import { v3 } from '../physics/vec3';
 import { orbitFromState, type Orbit, type OrbitState } from './kepler';
 import { minutesSinceEpoch, satrecFrom, sgp4, type Satrec, type Sgp4Error } from './sgp4';
@@ -62,7 +64,7 @@ export function skyState(o: SkyObject, jd: number): (OrbitState & { error: 0 }) 
   if (e !== 0) return { error: e as Exclude<Sgp4Error, 0> };
   const r = v3(scratchR[0] * 1e3, scratchR[1] * 1e3, scratchR[2] * 1e3);
   const v = v3(scratchV[0] * 1e3, scratchV[1] * 1e3, scratchV[2] * 1e3);
-  const theta = gmst(jd), rm = Math.hypot(r.x, r.y, r.z);
+  const theta = earthAngle(jd), rm = Math.hypot(r.x, r.y, r.z);
   // the angles an orbit state carries are the osculating orbit's, for the playground's readouts
   const o2 = orbitFromState(r, v, jd);
   return {
@@ -110,7 +112,7 @@ export function skyFacts(o: SkyObject): SkyFacts {
  * reused frame after frame.
  */
 export function skyPositions(objs: readonly SkyObject[], jd: number, xyz: Float32Array, latlon: Float32Array): number {
-  const theta = gmst(jd);
+  const theta = earthAngle(jd);
   let n = 0;
   for (const o of objs) {
     if (sgp4(o.sat, minutesSinceEpoch(o.sat, jd), scratchR, scratchV) !== 0) continue;

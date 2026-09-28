@@ -12,7 +12,9 @@
  * (M01, src/orbit/screening.ts); for the group, when its satellites pass over
  * a place (M02, src/orbit/overflights.ts); for a low one, when it will come
  * down, and the Long March 5B core stages as the case study (M03,
- * src/orbit/reentry.ts).
+ * src/orbit/reentry.ts). A case lesson (E03 track 6) opens it at the case's
+ * tool (`focusCase`) and reads the data it freezes from here (`caseInput`);
+ * while it is open, that case's answer key waits until it is answered.
  *
  * The logic is src/orbit/real-sky.ts, omm.ts, tle.ts and sgp4.ts; this is the
  * page's part, driven by the playground (src/ui/orbit/playground.ts), which
@@ -30,20 +32,35 @@ import {
 } from '../../orbit/real-sky';
 import type { Orbit, OrbitState } from '../../orbit/kepler';
 import type { OrbitView } from '../../render/orbit-view';
-import type { GroundTrackView } from './ground-track';
+import { alongside, type GroundTrackView, type TrackOverlay, type TrackPath } from './ground-track';
 import { THAI_SATELLITES } from '../../data/thai-satellites';
 import type { TleField } from '../../orbit/tle';
 import type { Sgp4Error } from '../../orbit/sgp4';
 import { button, el, num, span } from './dom';
-import { DARK_SKY, findPasses, lookFrom, type Look, type Pass } from '../../orbit/passes';
+import { brightest, DARK_SKY, findPasses, lookFrom, type Look, type Pass } from '../../orbit/passes';
+import { apparentElevation, loadStandardMagnitudes, type StandardMagnitudes } from '../../orbit/visibility';
 import { compass, placeName, stationPicker, type StationChoice } from './applications-panel';
 import { stationOf } from '../../orbit/applications-setup';
 import { footprintAngle } from '../../orbit/applications';
 import { GROWTH_PER_DAY, uncertaintyAt } from '../../orbit/uncertainty';
-import { screenInSlices, type Conjunction } from '../../orbit/screening';
+import { ephemerisOf, type Conjunction } from '../../orbit/screening';
+import { runScreeningJob } from '../../orbit/screening-job';
+import { cdmCovariances, cdmProbability, parseCdm, type ConjunctionMessage } from '../../orbit/cdm';
+import { encounterPlane, encounterPlaneSvg } from '../../orbit/encounter-plane';
+import { rtnAxes, rtnToFrame, type Mat3 } from '../../orbit/conjunction';
 import { overflightsInSlices, type Overflight } from '../../orbit/overflights';
-import { predictReentry, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
-import { measuredActivity } from '../../physics/propagator/activity';
+import { canImage, reachEdges, sensorFor, type ImagingVerdict, type Sensor } from '../../orbit/sensors';
+import { ECCENTRIC, predictReentry, REENTRY_BELOW, tumblingBoxArea, tumblingCylinderArea, WINDOW_FRACTION, type Reentry } from '../../orbit/reentry';
+import { runReentryJob, type DragFrom } from '../../orbit/reentry-job';
+import { ballisticFromDecayRate, craftOfB } from '../../orbit/ballistic';
+import { NAPA2 } from '../../data/napa2';
+import type { ElementSet } from '../../orbit/tle';
+import { CASE_IDS, caseWorksheet, type CaseId, type CaseSource } from '../../worksheets/cases';
+import { CASE_FOCUS, caseAnswersShown, caseStudyErrorShown, type CaseLessonState } from '../../worksheets/case-ids';
+import { answerKeyHtml, worksheetsHtml } from '../../worksheets/html';
+import { downloadBlob } from '../download';
+import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activity';
+import { setEarthOrientation } from '../../orbit/earth-orientation';
 import { CZ5B_STAGES } from '../../data/cz5b';
 import type { SpaceWeather } from '../../provider/space-weather';
 
@@ -56,6 +73,8 @@ export interface SkyHost {
   refreshFacts(): void;
   /** put an orbit in the playground (the picked satellite's, now) */
   toPlayground(orbit: Orbit, label: string): void;
+  /** P2.5: show the map (the ground track), for what is drawn on it */
+  showMap?(): void;
 }
 
 /** A file larger than this is not read: a whole catalogue is a few MB. */
@@ -116,27 +135,91 @@ export class RealSky {
   private place: StationChoice = { stationId: 'bangkok', station: stationOf('bangkok')! };
   private minEl = 10 * Math.PI / 180;
   private passes: { key: string; list: Pass[]; from: number; until: number } | null = null;
+  /** P2.5: the satellites' standard magnitudes (McCants), for how bright a pass is */
+  private magnitudes: StandardMagnitudes | null = null;
   /** M01: the screening's settings, and the last one run (or running) */
   private conj = { within: 5e3, days: 3, radius: 10, open: false };
-  private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; stop: boolean } | null = null;
+  private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; abort: AbortController } | null = null;
+  /** P2.5: the close approach shown in the views and with its encounter plane */
+  private shownApproach: Conjunction | null = null;
+  /** P2.5: the overflight drawn on the map, with its instrument's reach */
+  private shownOverflight: Overflight | null = null;
+  /** P2.5: the map's lines for what is shown, kept while it stays the same */
+  private mapCache: { key: string; overlay: Pick<TrackOverlay, 'paths' | 'band' | 'marks'> } | null = null;
+  private focus3dKey = '';
+  /** P2.5: a conjunction data message read from a file, and the combined radius used with it */
+  private cdm: { file: string; msg: ConjunctionMessage | null; error: string | null; radius: number } | null = null;
   /** M02: overflights of the place by the group on screen: the settings, and the last search */
-  private over = { minEl: 60 * Math.PI / 180, days: 1, daylight: false, open: false };
+  private over = { minEl: 30 * Math.PI / 180, days: 1, daylight: false, canOnly: false, open: false };
   private overSearch: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Overflight[]; stop: boolean } | null = null;
   /** M03: the object's mass and size for the re-entry prediction, the last prediction, and the case study's */
-  private reentry = { mass: 1000, area: 5, cd: 2.2, open: false };
-  private reentryResult: { key: string; state: 'running' | 'done'; result: Reentry | null; sun: string } | null = null;
+  private reentry = { mass: 1000, area: 5, cd: 2.2, from: 'decay' as DragFrom, open: false };
+  private reentryResult: { key: string; state: 'running' | 'done' | 'failed'; result: Reentry | null; b: number | null; from: DragFrom; sun: string; progress: number; abort: AbortController } | null = null;
+  private napaCase: { box: Reentry; fitted: Reentry | null; b: number | null; actual: number } | null = null;
   private caseStudy: { name: string; missionKey: string; p: Reentry; actual: number }[] | null = null;
 
   constructor(private readonly host: SkyHost) {}
+
+  /** waiting for the catalogue to be in, or to have failed (`ready`) */
+  private waiting: Array<() => void> = [];
 
   /** Load the catalogue (once; again after the data mode changes). */
   load(): void {
     if (this.status.state === 'loading' || this.status.state === 'ready') return;
     this.status = { state: 'loading' };
+    const settled = () => { const w = this.waiting; this.waiting = []; for (const f of w) f(); };
+    // P2.5: the Earth's orientation, for placing the satellites over the ground; without it UT1 is taken for UTC
+    const eop = this.host.provider().load('earthOrientation').then((set) => set.data, () => null);
+    loadStandardMagnitudes().then((m) => { this.magnitudes = m; }, () => { this.magnitudes = null; });
     this.host.provider().load('satellites').then(
-      (set) => { this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); },
-      (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); },
+      async (set) => { setEarthOrientation(await eop); this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); settled(); },
+      (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); settled(); },
     );
+  }
+
+  /** The catalogue is in, or could not be had: loaded first if it is not. */
+  ready(): Promise<void> {
+    this.load();
+    if (this.status.state === 'ready' || this.status.state === 'failed') return Promise.resolve();
+    return new Promise((resolve) => this.waiting.push(resolve));
+  }
+
+  /**
+   * The data a case sheet is worked from as they are now (P2.5): the Sun's
+   * activity, and THEOS-2's element set from the catalogue once it is in. A
+   * case lesson takes them once, when it opens, and keeps them.
+   */
+  async caseInput(): Promise<CaseSource> {
+    // a catalogue that could not be loaded is asked for again
+    if (this.status.state === 'failed') this.status = { state: 'idle' };
+    await this.ready();
+    const { series, to } = await this.sun();
+    const theos2 = this.objects('thai').find((o) => o.el.satnum === THEOS2_NORAD)?.el ?? null;
+    return { activity: series, theos2, activityTo: to };
+  }
+
+  /**
+   * A case lesson opens here (E03 track 6): the case's group, its satellite
+   * picked, the tool the case is about opened, and the case chosen in the
+   * case sheets' block. Nothing is run for the student (src/worksheets/case-ids.ts).
+   */
+  focusCase(id: CaseId): void {
+    const f = CASE_FOCUS[id];
+    this.showForTour(f.group, f.satnum);
+    if (id === 'theos2') { this.place = { stationId: 'bangkok', station: stationOf('bangkok')! }; this.passes = null; }
+    this.over.open = f.open === 'over';
+    this.reentry.open = f.open === 'reentry';
+    this.conj.open = f.open === 'conj';
+    this.caseChoice = id;
+    this.casesOpen = true;
+  }
+
+  /** The case lesson open now, if any: its case's answer key waits until the lesson is answered. */
+  private lessonCase: CaseLessonState | null = null;
+
+  setLessonCase(state: CaseLessonState | null): void {
+    this.lessonCase = state;
+    this.host.refresh();
   }
 
   /** The data mode changed: the catalogue is loaded again from the new provider when next shown. */
@@ -211,6 +294,7 @@ export class RealSky {
     view.setBareTime(this.jd);
     view.setPoints(this.count ? this.xyz : null, this.count);
     view.setOrbit(orbit);
+    this.drawFocus3d(view, sel);
     // a new satellite or group: the camera stands back to see it (its orbit, or the whole group)
     const key = `${this.source}|${sel?.key ?? ''}`;
     if (key !== this.framedKey && (orbit || this.count)) {
@@ -221,6 +305,33 @@ export class RealSky {
     view.render();
   }
 
+  /** The views were cleared (the playground's own drawing came and went): draw the focus again. */
+  forgetViews(): void {
+    this.focus3dKey = '';
+  }
+
+  /** What the 3-D view shows of the approach picked (P2.5): the other object's orbit about the closest approach, where they meet, where it is now. */
+  private drawFocus3d(view: OrbitView, sel: SkyObject | null): void {
+    const c = sel && this.screening?.key.startsWith(`${sel.key}|`) ? this.shownApproach : null;
+    const key = c ? `${c.other.key}|${c.approach.tca}` : '';
+    if (key !== this.focus3dKey) {
+      this.focus3dKey = key;
+      if (!c) { view.setGhosts([]); view.setMarkers([]); }
+      else {
+        const eph = ephemerisOf(c.other), period = skyFacts(c.other).period / 86400;
+        const points: { x: number; y: number; z: number }[] = [];
+        for (let k = 0; k <= 240; k++) {
+          const s = eph(c.approach.tca + period * (k / 240 - 0.5));
+          if (s) points.push(s.r);
+        }
+        view.setGhosts([{ points, color: 0xff8a65 }]);
+        view.setMarkers([{ position: c.approach.a.r, label: t('conj.tcaMark'), color: 0xffd28a }]);
+      }
+    }
+    const now = c ? ephemerisOf(c.other)(this.jd) : null;
+    view.setTarget(now ? now.r : null);
+  }
+
   /** One frame of the map. */
   drawTrack(track: GroundTrackView, realSeconds: number): void {
     this.tick(realSeconds);
@@ -229,6 +340,7 @@ export class RealSky {
     const now = sel ? this.stateAt(sel, jd) : null;
     const stateOf = sel && now ? (tt: number) => this.stateAt(sel, jd + tt / 86400) ?? now : null;
     track.draw(stateOf, 0, jd, sel ? skyFacts(sel).period : 5400, {
+      ...this.mapOverlay(sel),
       points: this.count ? { latlon: this.latlon, count: this.count, label: t(SOURCE_KEY[this.source]) } : undefined,
       // R03: where the passes are seen from, and the ground the satellite is above the lowest elevation for
       station: sel ? { lat: this.place.station.lat, lon: this.place.station.lon } : undefined,
@@ -236,9 +348,57 @@ export class RealSky {
     });
   }
 
+  /**
+   * What the map adds for what is shown (P2.5): an overflight's pass with the
+   * edges of the ground its instrument can reach; the ground a re-entry may
+   * come down on (the track over the window when it is two days or less, the
+   * band of latitudes the orbit covers when it is longer); the point below a
+   * close approach.
+   */
+  private mapOverlay(sel: SkyObject | null): Pick<TrackOverlay, 'paths' | 'band' | 'marks'> {
+    const f = sel && this.shownOverflight?.object.key === sel.key ? this.shownOverflight : null;
+    const r = sel && this.reentryResult?.state === 'done' && this.reentryResult.result?.window && this.reentryResult.key.startsWith(`${sel.key}|`) ? this.reentryResult.result : null;
+    const c = sel && this.screening?.key.startsWith(`${sel.key}|`) ? this.shownApproach : null;
+    const key = `${sel?.key}|${f?.pass.top.jd}|${r?.jd}|${c?.approach.tca}|${getLang()}`;
+    if (this.mapCache?.key === key) return this.mapCache.overlay;
+    const ground = (o: SkyObject, jd0: number, jd1: number, step: number): { lat: number; lon: number }[] => {
+      const pts: { lat: number; lon: number }[] = [];
+      for (let jd = jd0; jd <= jd1; jd += step / 86400) { const s = skyState(o, jd); if (s.error === 0) pts.push({ lat: s.lat, lon: s.lon }); }
+      return pts;
+    };
+    const paths: TrackPath[] = [], marks: NonNullable<TrackOverlay['marks']> = [];
+    let band: TrackOverlay['band'];
+    if (f && sel) {
+      const pts = ground(sel, f.pass.top.jd - 8 / 1440, f.pass.top.jd + 8 / 1440, 10);
+      paths.push({ pts, color: '#ffffff', width: 2, label: t('map.pass') });
+      const sensor = sensorFor(sel.el.satnum);
+      const top = skyState(sel, f.pass.top.jd);
+      if (sensor && top.error === 0) {
+        for (const d of reachEdges(sensor, top.alt)) paths.push({ pts: alongside(pts, d), color: '#7ddba0', width: 1.4, dash: [5, 3], label: t('map.reach') });
+      }
+    }
+    if (r && sel && r.window) {
+      if (r.window[1] - r.window[0] <= 2) {
+        paths.push({ pts: ground(sel, r.window[0], r.window[1], 60), color: 'rgba(255, 110, 90, 0.8)', width: 2.5, label: t('map.reentryTrack') });
+      } else {
+        const i = Math.min(sel.sat.inclo, Math.PI - sel.sat.inclo);
+        band = { from: -i, to: i, color: '#ff6e5a', label: t('map.reentryBand', { lat: num((i * 180) / Math.PI, 1) }) };
+      }
+    }
+    if (c && sel) {
+      const s = skyState(sel, c.approach.tca);
+      if (s.error === 0) marks.push({ lat: s.lat, lon: s.lon, label: t('map.tca'), color: '#ffd28a' });
+      paths.push({ pts: ground(c.other, c.approach.tca - 10 / 1440, c.approach.tca + 10 / 1440, 15), color: '#ff8a65', width: 1.6, dash: [6, 3], label: t('map.other') });
+    }
+    const overlay = { paths, band, marks };
+    this.mapCache = { key, overlay };
+    return overlay;
+  }
+
   /** The group's points, moved to the moment on screen: every frame, or four times a second for a large group. */
   private tick(realSeconds: number): void {
     if (this.status.state === 'idle') this.load();
+    this.pickForTour();
     const objs = this.objects();
     this.pointsClock += realSeconds;
     if (objs.length > EVERY_FRAME && !this.stale && this.pointsClock < 0.25) return;
@@ -310,6 +470,7 @@ export class RealSky {
     }
 
     if (objs.length) box.append(this.overflightsBlock());
+    if (this.status.state === 'ready') box.append(this.caseSheetsBlock());
 
     // a file of one's own: read here, sent nowhere
     const imp = el('div', 'pg-sky-import');
@@ -370,6 +531,7 @@ export class RealSky {
         : set.fetched ? t('data.from.onlineKept', { source: set.source.name, date: utc(set.fetched) }) : t('data.from.online', { source: set.source.name });
       box.append(el('p', 'pg-note', `${t('sky.asOf', { date: utc(set.asOf) })} · ${from}`));
       if (set.fallback) box.append(el('p', 'pg-note warn', t('data.fallback', { reason: set.fallback })));
+      if (set.partial) box.append(el('p', 'pg-note warn', t('data.partial', { parts: set.partial.parts.map((id) => t(SOURCE_KEY[id as SkySourceId])).join(', '), reason: set.partial.reason })));
     }
     const o = this.selected;
     box.append(el('h2', 'pg-facts-title', o ? (o.el.name ?? t('sky.unnamed')) : t('sky.facts')));
@@ -488,6 +650,7 @@ export class RealSky {
   /** Every pass of the group on screen over the place, from the moment on screen, a few satellites at a time. */
   private async findOverflights(): Promise<void> {
     const run = { key: this.overKey(), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Overflight[], stop: false };
+    this.shownOverflight = null;
     this.overSearch = run;
     this.host.refresh();
     const list = await overflightsInSlices(this.objects(), this.place.station, run.from, run.from + this.over.days, this.over.minEl, (f) => {
@@ -524,7 +687,8 @@ export class RealSky {
       return l;
     };
     row.append(
-      choose(t('over.minEl'), [30, 45, 60, 75].map((d) => [d, `${d}°`] as [number, string]), Math.round(this.over.minEl * 180 / Math.PI), (v) => { this.over.minEl = v * Math.PI / 180; }),
+      // P2.5: lower too, where a wide swath or a radar's shallow incidence reaches
+      choose(t('over.minEl'), [15, 30, 45, 60, 75].map((d) => [d, `${d}°`] as [number, string]), Math.round(this.over.minEl * 180 / Math.PI), (v) => { this.over.minEl = v * Math.PI / 180; }),
       choose(t('conj.days'), [[1, t('conj.oneDay')], [3, t('life.days', { n: num(3) })]], this.over.days, (v) => { this.over.days = v; }),
     );
     box.append(row);
@@ -535,6 +699,13 @@ export class RealSky {
     dayBox.addEventListener('change', () => { this.over.daylight = dayBox.checked; this.host.refresh(); });
     day.append(dayBox, el('span', undefined, t('over.daylight')));
     box.append(day);
+    const can = el('label', 'pg-check');
+    const canBox = el('input');
+    canBox.type = 'checkbox';
+    canBox.checked = this.over.canOnly;
+    canBox.addEventListener('change', () => { this.over.canOnly = canBox.checked; this.host.refresh(); });
+    can.append(canBox, el('span', undefined, t('over.canOnly')));
+    box.append(can);
     const running = run?.state === 'running';
     box.append(button('watch-btn', running ? t('over.stop') : t('over.run'), () => {
       if (running && run) { run.stop = true; return; }
@@ -546,11 +717,11 @@ export class RealSky {
     if (running) status.textContent = t('over.running', { p: Math.round(run!.progress * 100) });
     else if (run?.state === 'stopped') status.textContent = t('conj.stopped');
     else if (run) {
-      const shown = run.list.filter((f) => !this.over.daylight || f.daylight);
+      const shown = run.list.filter((f) => (!this.over.daylight || f.daylight) && (!this.over.canOnly || verdictOf(f)?.can === true));
       status.textContent = shown.length ? t('over.found', { n: num(shown.length), from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('over.none');
       if (shown.length) box.append(this.overflightList(shown));
     }
-    box.append(el('p', 'pg-note', t('over.note')));
+    box.append(el('p', 'pg-note', t('over.note')), el('p', 'pg-note', t('over.sensorNote')));
     return box;
   }
 
@@ -568,6 +739,21 @@ export class RealSky {
         time: `${dayName(top.jd)} ${clockTime(top.jd)}`, el: deg(top.el), dir: compass(top.az), off: deg(f.offNadir),
         light: t(f.daylight ? 'over.day' : 'over.night'), way: t(f.northbound ? 'over.north' : 'over.south'),
       })));
+      const sensor = sensorFor(f.object.el.satnum);
+      if (sensor) li.append(this.sensorLine(sensor, f, engineer));
+      // P2.5: the pass on the map, with what the instrument reaches
+      const shown = this.shownOverflight === f;
+      li.classList.toggle('shown', shown);
+      li.append(button('watch-btn link', shown ? t('over.hideMap') : t('over.showMap'), () => {
+        this.shownOverflight = shown ? null : f;
+        if (!shown) {
+          this.jd = top.jd - 2 / 1440;
+          this.stale = true;
+          if (this.selectedKey !== f.object.key) this.select(f.object.key);
+          this.host.showMap?.();
+        }
+        this.host.refreshFacts();
+      }));
       if (engineer) {
         const h = Math.floor(f.solarTime), m = Math.floor((f.solarTime - h) * 60);
         li.append(el('div', 'pg-conj-more', t('over.more', {
@@ -584,25 +770,95 @@ export class RealSky {
     return box;
   }
 
+  /** What the satellite's instrument can make of the place on this pass (P2.5). */
+  private sensorLine(s: Sensor, f: Overflight, engineer: boolean): HTMLElement {
+    const deg = (x: number) => `${num(x * 180 / Math.PI, 0)}°`;
+    const v = canImage(s, f);
+    const box = el('div', `pg-sensor ${v.can === true ? 'yes' : v.can === false ? 'no' : 'unknown'}`);
+    const res = s.resolution < 1 ? num(s.resolution, 2) : num(s.resolution, s.resolution < 10 ? 1 : 0);
+    const what = el('span', 'pg-sensor-what', t('sensor.line', { instrument: s.instrument, kind: t(s.kind === 'sar' ? 'sensor.sar' : 'sensor.optical'), res }));
+    if (engineer && s.sources[0]) {
+      const a = el('a', undefined, t('sensor.source'));
+      a.href = s.sources[0]; a.target = '_blank'; a.rel = 'noopener';
+      what.append(' · ', a);
+    }
+    const [lo, hi] = s.incidence ?? [0, 0];
+    const words = {
+      swath: num(s.swath / 1000, s.swath < 20e3 ? 1 : 0), km: num(f.groundRange / 1000, 0), off: deg(f.offNadir), max: deg(s.lookMax ?? 0),
+      inc: deg(f.incidence), lo: deg(lo), hi: deg(hi), date: s.retired ?? '',
+      side: t(f.side === 'left' ? 'sensor.left' : 'sensor.right'), look: t(s.side === 'left' ? 'sensor.left' : 'sensor.right'),
+    };
+    box.append(what, el('span', 'pg-sensor-verdict', t(VERDICT_KEY[v.reason], words)));
+    return box;
+  }
+
   // ─── re-entry (M03) ────────────────────────────────────────────────────────
 
   /** The Sun's activity as measured and forecast, from the space-weather dataset of the data mode chosen (R05); GFZ's months alone without it. */
-  private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string }> {
+  private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string; to: string }> {
     let sw: SpaceWeather | null = null;
     try { sw = (await this.host.provider().load('spaceWeather')).data; } catch { sw = null; }
-    const m = measuredActivity(sw);
-    return { series: m.series, note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }) };
+    const m = measuredActivity(await loadSolarDaily(), sw);
+    return {
+      series: m.series, to: m.forecastTo ?? m.measuredTo,
+      note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }),
+    };
+  }
+
+  /** The object's element sets: a history read from a file has several of one satellite, which the drag can be fitted to (P2.5). */
+  private setsOf(o: SkyObject): ElementSet[] {
+    if (o.source !== 'imported' || !this.imported) return [o.el];
+    const same = this.imported.result.sets.filter((x) => x.satnum === o.el.satnum);
+    return same.length ? same : [o.el];
+  }
+
+  /** The ways the drag can be had for this object, the best first (P2.5). */
+  private dragChoices(o: SkyObject): DragFrom[] {
+    const sets = this.setsOf(o);
+    const epochs = sets.map((x) => x.jdEpoch + x.jdEpochFrac);
+    const out: DragFrom[] = [];
+    if (sets.length >= 2 && Math.max(...epochs) - Math.min(...epochs) >= 1) out.push('history');
+    if (o.el.ndot > 0) out.push('decay');
+    out.push('size');
+    return out;
   }
 
   private async runReentry(o: SkyObject): Promise<void> {
-    const key = `${o.key}|${this.reentry.mass}|${this.reentry.area}|${this.reentry.cd}`;
-    this.reentryResult = { key, state: 'running', result: null, sun: '' };
+    this.reentryResult?.abort.abort();
+    const choices = this.dragChoices(o);
+    const from = choices.includes(this.reentry.from) ? this.reentry.from : choices[0];
+    const key = `${o.key}|${from}|${this.reentry.mass}|${this.reentry.area}|${this.reentry.cd}`;
+    const run = { key, state: 'running' as const, result: null, b: null, from, sun: '', progress: 0, abort: new AbortController() };
+    this.reentryResult = run;
     this.host.refreshFacts();
     const { series, note } = await this.sun();
-    // the mean elements run a year in well under a second: no slices needed
-    const result = predictReentry(o.el, { mass: this.reentry.mass, area: this.reentry.area, cd: this.reentry.cd }, series);
-    if (this.reentryResult?.key !== key) return;
-    this.reentryResult = { key, state: 'done', result, sun: note };
+    try {
+      const answer = await runReentryJob(
+        { sets: this.setsOf(o), from, craft: { mass: this.reentry.mass, area: this.reentry.area, cd: this.reentry.cd }, activity: series, horizonDays: 365 },
+        run.abort.signal, (f) => {
+          run.progress = f;
+          const out = document.querySelector('.pg-reentry-status');
+          if (out && this.reentryResult === run) out.textContent = `${t('reentry.running')} ${Math.round(f * 100)} %`;
+        });
+      if (this.reentryResult !== run) return;
+      this.reentryResult = { ...run, state: answer.reentry ? 'done' : 'failed', result: answer.reentry, b: answer.b, sun: note };
+    } catch {
+      if (this.reentryResult !== run) return;
+      this.reentryResult = null;
+    }
+    this.host.refreshFacts();
+  }
+
+  /** NAPA-2 from its first element set, as a tumbling box and with B fitted to the set's decay (P2.5). */
+  private async runNapaCase(): Promise<void> {
+    const { series } = await this.sun();
+    const el = elementsFromRecord(NAPA2.elements);
+    const b = ballisticFromDecayRate(el, series);
+    this.napaCase = {
+      box: predictReentry(el, { mass: NAPA2.mass, area: tumblingBoxArea(NAPA2.size), cd: 2.2 }, series, 3000),
+      fitted: b === null ? null : predictReentry(el, craftOfB(b), series, 3000),
+      b, actual: Date.parse(`${NAPA2.decay}T12:00:00Z`) / 86400000 + 2440587.5,
+    };
     this.host.refreshFacts();
   }
 
@@ -621,27 +877,48 @@ export class RealSky {
     box.open = this.reentry.open;
     box.addEventListener('toggle', () => { this.reentry.open = box.open; });
     box.append(el('summary', undefined, t('reentry.title')), el('p', 'pg-tool-lead', t('reentry.lead')));
-    const row = el('div', 'pg-tool-row');
-    const field = (label: string, value: number, set: (v: number) => void): HTMLElement => {
-      const l = el('label');
-      const i = el('input');
-      i.type = 'number'; i.min = '0'; i.step = 'any'; i.value = String(value);
-      i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v) && v > 0) set(v); });
-      l.append(el('span', undefined, label), i);
-      return l;
+    // P2.5: the drag fitted to the object's own decay, as the agencies do, or from a mass and size given
+    const choices = this.dragChoices(o);
+    const from = choices.includes(this.reentry.from) ? this.reentry.from : choices[0];
+    const pick = el('label');
+    const sel = el('select');
+    const WORDS: Record<DragFrom, string> = {
+      history: t('reentry.fromHistory', { n: num(this.setsOf(o).length) }), decay: t('reentry.fromDecay'), size: t('reentry.fromSize'),
     };
-    row.append(
-      field(t('life.mass'), this.reentry.mass, (v) => { this.reentry.mass = v; }),
-      field(t('life.area'), this.reentry.area, (v) => { this.reentry.area = v; }),
-      field(t('life.cd'), this.reentry.cd, (v) => { this.reentry.cd = v; }),
-    );
-    box.append(row);
+    for (const k of choices) { const opt = el('option', undefined, WORDS[k]); opt.value = k; sel.append(opt); }
+    sel.value = from;
+    sel.addEventListener('change', () => { this.reentry.from = sel.value as DragFrom; this.host.refreshFacts(); });
+    pick.append(el('span', undefined, t('reentry.dragFrom')), sel);
+    box.append(pick);
+    if (from === 'size') {
+      const row = el('div', 'pg-tool-row');
+      const field = (label: string, value: number, set: (v: number) => void): HTMLElement => {
+        const l = el('label');
+        const i = el('input');
+        i.type = 'number'; i.min = '0'; i.step = 'any'; i.value = String(value);
+        i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v) && v > 0) set(v); });
+        l.append(el('span', undefined, label), i);
+        return l;
+      };
+      row.append(
+        field(t('life.mass'), this.reentry.mass, (v) => { this.reentry.mass = v; }),
+        field(t('life.area'), this.reentry.area, (v) => { this.reentry.area = v; }),
+        field(t('life.cd'), this.reentry.cd, (v) => { this.reentry.cd = v; }),
+      );
+      box.append(row);
+    } else box.append(el('p', 'pg-note', t(from === 'history' ? 'reentry.historyNote' : 'reentry.decayNote')));
+    if (o.sat.ecco >= ECCENTRIC) box.append(el('p', 'pg-note', t('reentry.eccentric')));
     const mine = this.reentryResult && this.reentryResult.key.startsWith(`${o.key}|`) ? this.reentryResult : null;
-    box.append(button('watch-btn', t('reentry.run'), () => { void this.runReentry(o); }));
-    const out = el('p', 'pg-tool-out');
+    const running = mine?.state === 'running';
+    box.append(button('watch-btn', running ? t('reentry.stop') : t('reentry.run'), () => {
+      if (running && mine) { mine.abort.abort(); this.reentryResult = null; this.host.refreshFacts(); return; }
+      void this.runReentry(o);
+    }));
+    const out = el('p', 'pg-tool-out pg-reentry-status');
     out.setAttribute('role', 'status');
     box.append(out);
-    if (mine?.state === 'running') out.textContent = t('reentry.running');
+    if (running) out.textContent = `${t('reentry.running')} ${Math.round(mine!.progress * 100)} %`;
+    else if (mine?.state === 'failed') out.textContent = t('reentry.noFit');
     else if (mine?.result) {
       const r = mine.result;
       if (r.jd === null) out.textContent = t('reentry.stays');
@@ -650,13 +927,40 @@ export class RealSky {
           date: fullDate(r.jd), from: fullDate(r.window![0]), to: fullDate(r.window![1]), days: num(r.jd - r.from, 1), pct: num(WINDOW_FRACTION * 100),
         });
       }
+      if (mine.b !== null) box.append(el('p', 'pg-note', t(mine.from === 'size' ? 'reentry.bGiven' : 'reentry.bFitted', { b: bText(mine.b) })));
       box.append(el('p', 'pg-note', mine.sun));
     }
     const note = el('p', 'pg-note');
     const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
     note.append(t('reentry.note'), ' ', link('Klinkrad, ESA, 2013', 'https://conference.sdo.esoc.esa.int/proceedings/sdc6/paper/148/SDC6-paper148.pdf'), '.');
     box.append(note);
-    box.append(this.caseStudyBlock());
+    box.append(this.caseStudyBlock(), this.napaCaseBlock());
+    return box;
+  }
+
+  /** NAPA-2: a Thai satellite's five years, predicted from its first element set two ways (P2.5). */
+  private napaCaseBlock(): HTMLElement {
+    const box = el('div', 'pg-reentry-case');
+    box.append(el('h3', 'pg-case-title', t('reentry.napa.title')), el('p', 'pg-tool-lead', t('reentry.napa.lead')));
+    const c = this.napaCase;
+    if (!c) {
+      box.append(button('watch-btn', t('reentry.napa.run'), () => { void this.runNapaCase(); }));
+      return box;
+    }
+    const day = (jd: number) => dateOf(jd).toISOString().slice(0, 10);
+    const err = (p: Reentry) => { const x = ((p.jd! - p.from) / (c.actual - p.from) - 1) * 100; return `${x >= 0 ? '+' : '−'}${num(Math.abs(x), 0)}`; };
+    const ol = el('ol', 'pg-conj-list');
+    const row = (label: string, p: Reentry | null) => {
+      const li = el('li');
+      li.append(el('div', 'pg-conj-head', label));
+      li.append(el('div', 'pg-conj-main', p && p.jd !== null
+        ? t('reentry.napa.row', { pred: day(p.jd), err: err(p), inside: t(c.actual >= p.window![0] && c.actual <= p.window![1] ? 'reentry.napa.in' : 'reentry.napa.out') })
+        : t('reentry.stays')));
+      ol.append(li);
+    };
+    row(t('reentry.napa.box', { b: bText((2.2 * tumblingBoxArea(NAPA2.size)) / NAPA2.mass) }), c.box);
+    if (c.b !== null) row(t('reentry.napa.fitted', { b: bText(c.b) }), c.fitted);
+    box.append(ol, el('p', 'pg-tool-out', t('reentry.napa.actual', { date: NAPA2.decay, days: num(c.actual - c.box.from, 0) })), el('p', 'pg-note', t('reentry.napa.lesson')), el('p', 'pg-note', t('reentry.napa.source')));
     return box;
   }
 
@@ -679,9 +983,11 @@ export class RealSky {
       if (c.p.jd === null) { li.append(el('div', 'pg-conj-main', t('reentry.stays'))); ol.append(li); continue; }
       const err = ((c.p.jd - c.p.from) / (c.actual - c.p.from) - 1) * 100;
       const inside = c.actual >= c.p.window![0] && c.actual <= c.p.window![1];
-      li.append(el('div', 'pg-conj-main', t('reentry.case.row', {
-        from: utcTime(c.p.from), pred: utcTime(c.p.jd), actual: utcTime(c.actual), err: `${err >= 0 ? '+' : '−'}${num(Math.abs(err), 1)}`,
-      })));
+      const times = { from: utcTime(c.p.from), pred: utcTime(c.p.jd), actual: utcTime(c.actual) };
+      // E03 6.2: the stage of Tianhe's error is the open lesson's to work out, until it is answered
+      li.append(el('div', 'pg-conj-main', caseStudyErrorShown(c.name, this.lessonCase)
+        ? t('reentry.case.row', { ...times, err: `${err >= 0 ? '+' : '−'}${num(Math.abs(err), 1)}` })
+        : t('reentry.case.rowOpen', times)));
       li.append(el('div', 'pg-conj-more', t(inside ? 'reentry.case.inside' : 'reentry.case.outside', { from: utcTime(c.p.window![0]), to: utcTime(c.p.window![1]) })));
       ol.append(li);
     }
@@ -701,17 +1007,21 @@ export class RealSky {
     return `${o.key}|${this.conj.within}|${this.conj.days}|${this.conj.radius}`;
   }
 
-  /** Screen the catalogue for approaches to the satellite picked, from the moment on screen, a few objects at a time. */
+  /** Screen the catalogue for approaches to the satellite picked, from the moment on screen, in a worker (P2.5). */
   private async runScreening(o: SkyObject): Promise<void> {
-    const run = { key: this.screeningKey(o), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Conjunction[], stop: false };
+    const abort = new AbortController();
+    const run = { key: this.screeningKey(o), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Conjunction[], abort };
     this.screening = run;
+    this.shownApproach = null;
     this.host.refreshFacts();
-    const list = await screenInSlices(o, this.catalogue(), run.from, run.from + this.conj.days, this.conj.within, this.conj.radius, (f) => {
-      run.progress = f;
-      const s = document.querySelector('.pg-conj-status');
-      if (s && this.screening === run) s.textContent = t('conj.running', { p: Math.round(f * 100) });
-      return !run.stop && this.screening === run;
-    });
+    let list: Conjunction[] | null = null;
+    try {
+      list = await runScreeningJob(o, this.catalogue().filter((x) => x !== o), run.from, run.from + this.conj.days, this.conj.within, this.conj.radius, abort.signal, (f) => {
+        run.progress = f;
+        const st = document.querySelector('.pg-conj-status');
+        if (st && this.screening === run) st.textContent = t('conj.running', { p: Math.round(f * 100) });
+      });
+    } catch { list = null; }
     if (this.screening !== run) return;
     run.state = list ? 'done' : 'stopped';
     run.list = list ?? [];
@@ -749,7 +1059,7 @@ export class RealSky {
     box.append(row);
     const running = run?.state === 'running';
     box.append(button('watch-btn', running ? t('conj.stop') : t('conj.run'), () => {
-      if (running && run) { run.stop = true; return; }
+      if (running && run) { run.abort.abort(); return; }
       void this.runScreening(o);
     }));
     const status = el('p', 'pg-tool-out pg-conj-status');
@@ -760,7 +1070,7 @@ export class RealSky {
     else if (run) {
       const km = num(Number(run.key.split('|')[1]) / 1000);
       status.textContent = run.list.length ? t('conj.found', { n: num(run.list.length), km, from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('conj.none', { km });
-      if (run.list.length) box.append(this.approachList(run.list, engineer));
+      if (run.list.length) box.append(this.approachList(o, run.list, engineer));
     }
     const note = el('p', 'pg-note');
     const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
@@ -771,10 +1081,72 @@ export class RealSky {
       cs.append(t('conj.case'), ' ', link('Shepperd, AMOS 2023', 'https://amostech.com/TechnicalPapers/2023/Conjunction-RPO/Shepperd.pdf'), '.');
       box.append(cs);
     }
+    box.append(this.cdmBlock());
     return box;
   }
 
-  private approachList(list: Conjunction[], engineer: boolean): HTMLElement {
+  /** P2.5: a conjunction data message from a file: the operators' own probability, from the message's covariances. */
+  private cdmBlock(): HTMLElement {
+    const box = el('div', 'pg-cdm');
+    box.append(el('h3', 'pg-case-title', t('cdm.title')), el('p', 'pg-tool-lead', t('cdm.lead')));
+    const pick = el('label', 'pg-file');
+    const input = el('input');
+    input.type = 'file';
+    input.accept = '.cdm,.txt,.kvn,text/plain';
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { this.cdm = { file: file.name, msg: null, error: t('cdm.tooBig'), radius: 10 }; this.host.refreshFacts(); return; }
+      void file.text().then((text) => {
+        try {
+          const msg = parseCdm(text);
+          this.cdm = { file: file.name, msg, error: null, radius: msg.hbr ?? this.cdm?.radius ?? 10 };
+        } catch (e) {
+          this.cdm = { file: file.name, msg: null, error: e instanceof Error ? e.message : String(e), radius: 10 };
+        }
+        this.host.refreshFacts();
+      });
+    });
+    pick.append(el('span', undefined, t('cdm.read')), input);
+    box.append(pick);
+    const c = this.cdm;
+    if (!c) return box;
+    if (c.error || !c.msg) { box.append(el('p', 'pg-warn', t('cdm.error', { file: c.file, reason: c.error ?? '' }))); return box; }
+    const m = c.msg;
+    const [a, b] = m.objects;
+    const name = (x: typeof a) => [x.name, x.designator].filter(Boolean).join(' · ') || x.role;
+    box.append(el('p', 'pg-cdm-objects', t('cdm.objects', { a: name(a), b: name(b), from: m.originator ?? '—' })));
+    // the combined radius: the message's comment, or the user's
+    const size = el('label');
+    const r = el('input');
+    r.type = 'number'; r.min = '0.1'; r.max = '200'; r.step = 'any'; r.value = String(c.radius);
+    r.addEventListener('change', () => { const v = Number(r.value); if (Number.isFinite(v) && v > 0 && v <= 200) { c.radius = v; this.host.refreshFacts(); } });
+    size.append(el('span', undefined, t(m.hbr !== null ? 'cdm.radiusGiven' : 'conj.radius')), r);
+    box.append(size);
+    const p = cdmProbability(m, c.radius);
+    const rel = Math.hypot(b.state.v.x - a.state.v.x, b.state.v.y - a.state.v.y, b.state.v.z - a.state.v.z);
+    const miss = Math.hypot(b.state.r.x - a.state.r.x, b.state.r.y - a.state.r.y, b.state.r.z - a.state.r.z);
+    box.append(el('p', 'pg-tool-out', t('cdm.result', {
+      tca: `${dayName(m.tca)} ${clockTime(m.tca)}`, miss: num(miss, 0), p: tinyPc(p.log10) ? t('conj.pcBelow') : sci(p.log10),
+      v: rel >= 1000 ? `${num(rel / 1000, 2)} ${t('u.kms')}` : `${num(rel, rel < 1 ? 3 : 1)} ${t('u.ms')}`,
+    })));
+    if (m.pc !== null) box.append(el('p', 'pg-note', t('cdm.theirs', { p: m.pc > 0 && !tinyPc(Math.log10(m.pc)) ? sci(Math.log10(m.pc)) : t('conj.pcBelow'), method: m.pcMethod ?? '—' })));
+    const [covA, covB] = cdmCovariances(m);
+    box.append(this.planeFigure(encounterPlane(a.state, covA, b.state, covB, c.radius), name(a), name(b), false));
+    return box;
+  }
+
+  /** The encounter plane, drawn (P2.5); `shown`: the approach is also in the views. */
+  private planeFigure(plane: ReturnType<typeof encounterPlane>, first: string, second: string, shown: boolean): HTMLElement {
+    const fig = el('figure', 'pg-plane');
+    const holder = el('div', 'pg-plane-svg');
+    holder.innerHTML = encounterPlaneSvg(plane, { first, second, scale: t('conj.planeScale') });
+    const words = { miss: num(Math.hypot(plane.miss.x, plane.miss.y), 0), s1: num(plane.sigma[0], 0), s2: num(plane.sigma[1], 0), r: num(plane.radius, 1) };
+    fig.append(holder, el('figcaption', 'pg-note', `${t('conj.planeNote', words)}${shown ? ` ${t('conj.planeShown')}` : ''}`));
+    return fig;
+  }
+
+  private approachList(self: SkyObject, list: Conjunction[], engineer: boolean): HTMLElement {
     const ol = el('ol', 'pg-conj-list');
     for (const c of list.slice(0, CONJ_LIMIT)) {
       const a = c.approach;
@@ -782,7 +1154,7 @@ export class RealSky {
       const head = el('div', 'pg-conj-head');
       head.append(el('span', 'pg-sky-name', c.other.el.name ?? t('sky.unnamed')), el('span', 'pg-sky-num', String(c.other.el.satnum)));
       li.append(head);
-      li.append(el('div', 'pg-conj-main', `${dayName(a.tca)} ${clockTime(a.tca)} · ${num(a.miss / 1000, 2)} ${t('u.km')} · ${t('conj.pc', { p: sci(c.probability.log10) })}`));
+      li.append(el('div', 'pg-conj-main', `${dayName(a.tca)} ${clockTime(a.tca)} · ${num(a.miss / 1000, 2)} ${t('u.km')} · ${tinyPc(c.probability.log10) ? t('conj.pcTiny') : t('conj.pc', { p: sci(c.probability.log10) })}`));
       if (engineer) {
         const m = (x: number) => `${num(x, 0)} ${t('u.m')}`;
         li.append(el('div', 'pg-conj-more', t('conj.more', {
@@ -790,6 +1162,19 @@ export class RealSky {
           s1: num(Math.hypot(c.sigma.self.radial, c.sigma.self.along, c.sigma.self.cross) / 1000, 1),
           s2: num(Math.hypot(c.sigma.other.radial, c.sigma.other.along, c.sigma.other.cross) / 1000, 1),
         })));
+      }
+      // P2.5: shown in the views, at its moment, with its encounter plane
+      const shown = this.shownApproach === c;
+      li.classList.toggle('shown', shown);
+      li.append(button('watch-btn link', shown ? t('conj.hide') : t('conj.show'), () => {
+        this.shownApproach = shown ? null : c;
+        if (!shown) { this.jd = a.tca - 5 / 1440; this.stale = true; }
+        this.host.refreshFacts();
+      }));
+      if (shown) {
+        const diag = (sg: { radial: number; along: number; cross: number }): Mat3 => [[sg.radial ** 2, 0, 0], [0, sg.along ** 2, 0], [0, 0, sg.cross ** 2]];
+        const plane = encounterPlane(a.a, rtnToFrame(diag(c.sigma.self), rtnAxes(a.a)), a.b, rtnToFrame(diag(c.sigma.other), rtnAxes(a.b)), this.conj.radius);
+        li.append(this.planeFigure(plane, self.el.name ?? String(self.el.satnum), c.other.el.name ?? String(c.other.el.satnum), true));
       }
       ol.append(li);
     }
@@ -800,13 +1185,115 @@ export class RealSky {
     return box;
   }
 
+  // ─── worksheets from real cases (P2.5) ──────────────────────────────────────
+
+  private caseChoice: CaseId = 'iridium';
+  private casesOpen = false;
+
+  /** A sheet and its answer key for a case from the record, in the language on screen. */
+  private caseSheetsBlock(): HTMLElement {
+    const box = el('details', 'pg-tool pg-cases');
+    box.open = this.casesOpen;
+    box.addEventListener('toggle', () => { this.casesOpen = box.open; });
+    box.append(el('summary', undefined, t('cases.title')), el('p', 'pg-tool-lead', t('cases.lead')));
+    const pick = el('label');
+    const sel = el('select');
+    const NAME: Record<CaseId, string> = { iridium: t('cases.iridium'), cz5b: t('cases.cz5b'), theos2: t('cases.theos2') };
+    for (const id of CASE_IDS) { const o = el('option', undefined, NAME[id]); o.value = id; sel.append(o); }
+    sel.value = this.caseChoice;
+    sel.addEventListener('change', () => { this.caseChoice = sel.value as CaseId; this.host.refresh(); });
+    pick.append(el('span', undefined, t('cases.pick')), sel);
+    const out = el('p', 'pg-note');
+    out.setAttribute('role', 'status');
+    const make = async (key: boolean): Promise<void> => {
+      const sheet = caseWorksheet(this.caseChoice, { ...await this.caseInput(), lang: getLang(), generatedAt: new Date() });
+      if (!sheet) { out.textContent = t('cases.noData'); return; }
+      const html = key ? answerKeyHtml([sheet]) : worksheetsHtml([sheet]);
+      downloadBlob(new Blob([html], { type: 'text/html' }), `orbitlab-case-${this.caseChoice}${key ? '-key' : ''}-${getLang()}.html`);
+      out.textContent = t('cases.done');
+    };
+    const row = el('div', 'pg-tool-row');
+    const keyBtn = button('watch-btn', t('cases.key'), () => { void make(true); });
+    // E03 track 6: the case's own lesson is open and not yet answered
+    const keyOpen = caseAnswersShown(this.lessonCase, this.caseChoice);
+    keyBtn.disabled = !keyOpen;
+    row.append(button('watch-btn', t('cases.sheet'), () => { void make(false); }), keyBtn);
+    box.append(pick, row, out);
+    if (!keyOpen) box.append(el('p', 'pg-note', t('cases.keyLater')));
+    box.append(el('p', 'pg-note', t('cases.note')));
+    return box;
+  }
+
+  // ─── the Watch tour (P2.5) ─────────────────────────────────────────────────
+
+  /** the satellite a tour step wants picked, by catalogue number, until the catalogue is in (null: none; undefined: nothing waiting) */
+  private tourPick: number | null | undefined = undefined;
+
+  /** The Watch tour (src/orbit/sky-tour.ts): a group on screen and, in it, a satellite by its catalogue number. */
+  showForTour(source: SkySourceId, satnum?: number): void {
+    this.load();
+    this.source = source;
+    this.query = '';
+    this.stale = true;
+    this.framedKey = null;
+    this.selectedKey = null;
+    this.shownApproach = null;
+    this.shownOverflight = null;
+    this.tourPick = satnum ?? null;
+    this.pickForTour();
+  }
+
+  private pickForTour(): void {
+    if (this.tourPick === undefined) return;
+    const objs = this.objects();
+    if (!objs.length) return;
+    const pick = this.tourPick;
+    this.tourPick = undefined;
+    this.selectedKey = pick === null ? null : objs.find((o) => o.el.satnum === pick)?.key ?? null;
+    this.host.refresh();
+  }
+
+  /** The tour card's readouts: the picked satellite's height and speed now, and its period; null with none picked. */
+  liveNow(): { alt: number; speed: number; period: number } | null {
+    const o = this.selected;
+    if (!o) return null;
+    const s = skyState(o, this.jd);
+    return s.error === 0 ? { alt: s.alt, speed: Math.hypot(s.v.x, s.v.y, s.v.z), period: skyFacts(o).period } : null;
+  }
+
+  /** What a tour step's card adds: the next passes over the place, or the Long March 5B stages' re-entries. */
+  tourExtra(show: 'passes' | 'reentryCase'): HTMLElement | null {
+    const box = el('div', 'pg-tour-extra');
+    if (show === 'reentryCase') {
+      const ul = el('ul', 'pg-tour-list');
+      for (const s of CZ5B_STAGES) ul.append(el('li', undefined, t('skytour.reentry.row', { name: s.name, date: s.reentry.slice(0, 10) })));
+      box.append(ul, el('p', 'pg-note', t('reentry.case.source')));
+      return box;
+    }
+    const o = this.selected;
+    if (!o) return null;
+    const list = this.passList(o).slice(0, 3);
+    box.append(el('h3', 'pg-tour-extra-title', t('pass.title', { place: this.placeLabel() })));
+    if (!list.length) { box.append(el('p', 'pg-note', t('pass.none', { el: `${num(this.minEl * 180 / Math.PI, 0)}°` }))); return box; }
+    const ul = el('ul', 'pg-tour-list');
+    for (const p of list) {
+      ul.append(el('li', p.visible ? 'visible' : undefined, t('skytour.passRow', {
+        time: `${dayName(p.top.jd)} ${clockTime(p.top.jd)}`, el: `${num(apparentElevation(p.top.el) * 180 / Math.PI, 0)}°`, dir: compass(p.top.az),
+        seen: visibility(p, o, this.place),
+      })));
+    }
+    box.append(ul, el('p', 'pg-note', t('conj.zone', { zone: zoneName(list[0].top.jd) })));
+    return box;
+  }
+
   // ─── passes (R03) ─────────────────────────────────────────────────────────
 
   /** The passes of the next three days from the moment on screen, found again when the place, the satellite or the first pass changes. */
   private passList(o: SkyObject): Pass[] {
     const key = `${o.key}|${this.place.station.lat}|${this.place.station.lon}|${this.minEl}`;
     if (this.passes && this.passes.key === key && this.jd >= this.passes.from && this.jd < this.passes.until) return this.passes.list;
-    const list = findPasses(o, this.place.station, this.jd, this.jd + 3, this.minEl).slice(0, PASS_LIMIT);
+    // P2.5: as seen, the air's refraction included
+    const list = findPasses(o, this.place.station, this.jd, this.jd + 3, this.minEl, { refraction: true }).slice(0, PASS_LIMIT);
     // the list is good until its first pass is over (or, with none, for a day)
     const first = list[0];
     const until = first ? (first.set?.jd ?? this.jd + 3) : this.jd + 1;
@@ -855,7 +1342,7 @@ export class RealSky {
     if (!list.length) { box.append(el('p', 'pg-note', t('pass.none', { el: deg(this.minEl) }))); return box; }
     if (list.length === 1 && !list[0].rise && !list[0].set) {
       const top = list[0].top;
-      box.append(el('p', 'pg-note', t('pass.always', { el: deg(top.el), dir: compass(top.az) })));
+      box.append(el('p', 'pg-note', t('pass.always', { el: deg(apparentElevation(top.el)), dir: compass(top.az) })));
       return box;
     }
     this.live.next = el('p', 'pg-pass-next');
@@ -869,7 +1356,7 @@ export class RealSky {
       const td = el('td');
       if (!l) { td.textContent = '—'; return td; }
       td.append(el('span', 'pg-pass-time', clockTime(l.jd)));
-      const where = showEl ? `${deg(l.el)} ${compass(l.az)}` : compass(l.az);
+      const where = showEl ? `${deg(apparentElevation(l.el))} ${compass(l.az)}` : compass(l.az);
       td.append(el('span', 'pg-pass-where', engineer ? `${where} · ${num(l.az * 180 / Math.PI, 0)}°` : where));
       return td;
     };
@@ -881,7 +1368,11 @@ export class RealSky {
       const row = el('tr');
       row.append(cell(p.rise, false), cell(p.top, true), cell(p.set, false));
       const seen = el('tr', 'pg-pass-seen');
-      const seenText = visibility(p, o, this.place);
+      let seenText = visibility(p, o, this.place);
+      // P2.5: how bright, for a satellite with a standard magnitude
+      const standard = this.magnitudes?.[String(o.el.satnum)];
+      const bright = standard !== undefined ? brightest(o, this.place.station, p, standard) : null;
+      if (bright) seenText += ` · ${t('pass.bright', { mag: num(bright.magnitude, 1) })}`;
       // R04, Engineer: how early or late the pass may come, from the set's age at that time
       const seenCell = el('td', undefined, engineer ? `${seenText} · ${t('unc.passTiming', { s: num(uncertaintyAt(o, p.top.jd).timing, 1) })}` : seenText);
       seenCell.colSpan = 3;
@@ -905,7 +1396,7 @@ export class RealSky {
       if (this.jd < start) L.next.textContent = t('pass.next', { span: span((start - this.jd) * 86400) });
       else {
         const look = lookFrom(o, this.place.station, this.jd);
-        L.next.textContent = look ? t('pass.upNow', { el: `${num(look.el * 180 / Math.PI, 0)}°`, dir: compass(look.az) }) : '';
+        L.next.textContent = look ? t('pass.upNow', { el: `${num(apparentElevation(look.el) * 180 / Math.PI, 0)}°`, dir: compass(look.az) }) : '';
       }
     }
     const s = skyState(o, this.jd);
@@ -939,8 +1430,15 @@ const PASS_LIMIT = 12;
 const CONJ_LIMIT = 20;
 /** How many overflights are listed, soonest first. */
 const OVER_LIMIT = 40;
-/** A re-entry is predicted for an orbit whose perigee is below this, m: higher, it is years away and the lifetime analysis is the tool. */
-const REENTRY_BELOW = 700e3;
+/** What each verdict on an instrument says (P2.5). */
+const VERDICT_KEY: Record<ImagingVerdict['reason'], string> = {
+  swath: 'sensor.swath', agile: 'sensor.agile', sar: 'sensor.sarYes', retired: 'sensor.retired', dark: 'sensor.dark',
+  outsideSwath: 'sensor.outsideSwath', tooFarOff: 'sensor.tooFarOff', incidence: 'sensor.incidence', wrongSide: 'sensor.wrongSide', noLimit: 'sensor.noLimit',
+};
+/** The verdict on an overflight's instrument, where its figures are published. */
+const verdictOf = (f: Overflight): ImagingVerdict | null => { const s = sensorFor(f.object.el.satnum); return s ? canImage(s, f) : null; };
+/** THEOS-2's catalogue number: its element set is the THEOS-2 case's data (P2.5). */
+const THEOS2_NORAD = 58016;
 
 const SUPERSCRIPT: Record<string, string> = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
 /** A probability from its logarithm, as 2.7 × 10⁻⁵¹, however small. */
@@ -951,11 +1449,22 @@ export function sci(log10: number): string {
   return `${num(m, 1)} × 10${String(e).split('').map((ch) => SUPERSCRIPT[ch]).join('')}`;
 }
 
+/**
+ * Below this a probability of collision is shown as "below 10⁻¹⁰" (P2.5):
+ * it comes from a Gaussian's tail many standard deviations out, and the real
+ * errors of an element set are not Gaussian that far out, so 9 × 10⁻⁶¹⁸ would
+ * be a precision the numbers do not have.
+ */
+const PC_FLOOR = -10;
+const tinyPc = (log10: number): boolean => log10 < PC_FLOOR;
+
 const dateOf = (jd: number): Date => new Date((jd - 2440587.5) * 86400e3);
 /** A pass's time on the device's clock: 19:42:05. */
 const clockTime = (jd: number): string => dateOf(jd).toLocaleTimeString(getLang(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const dayName = (jd: number): string => dateOf(jd).toLocaleDateString(getLang(), { weekday: 'long', day: 'numeric', month: 'long' });
 /** A date months away, with its year, on the device's clock. */
+/** A ballistic coefficient, m²/kg, to three figures. */
+const bText = (b: number): string => `${num(b, b < 0.01 ? 4 : 3)} ${t('u.m2kg')}`;
 const fullDate = (jd: number): string => dateOf(jd).toLocaleString(getLang(), { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 /** The device's time zone, as the date says it: GMT+7, UTC. */
 function zoneName(jd: number): string {

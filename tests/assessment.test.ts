@@ -10,7 +10,7 @@ import { BANK_ISSUES, BUILTIN_QUESTIONS, FLIGHT_DATA, questionBank } from '../sr
 import { BLUEPRINT, DOMAIN_ORDER, TEST_LENGTH, drawTest, nextKind, prepareQuestion, rng } from '../src/lessons/assessment/draw';
 import { compileExpression, evaluate } from '../src/lessons/assessment/expression';
 import { DOMAIN_PREREQUISITES, domainLevel, gradeQuestion, numericExpected, scoreAttempt } from '../src/lessons/assessment/score';
-import { BUILTIN_LESSONS } from '../src/lessons/catalog';
+import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, allLessons } from '../src/lessons/catalog';
 import { DOMAINS, type Domain } from '../src/lessons/types';
 import type { Answer, AssessmentAttempt, PreparedQuestion, Question } from '../src/lessons/assessment/types';
 import { VEHICLE_PHOTOS } from '../src/lessons/assessment/photos';
@@ -244,6 +244,16 @@ describe('scoring', () => {
     expect(start.domains).toContain(5);
     expect(r.advice['orbit-first']).toBe('skip');
     expect(r.advice['ctl-margins']).toBe('review');
+  });
+
+  // E03 track 6: the case lessons come last in the catalogue, so a start stays where it was; each still gets its advice
+  it('starts where it did with the case lessons in the catalogue, and advises on each of them', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const a = attempt(seed, (q) => (q.id.length + seed) % 3 !== 0);
+      const both = scoreAttempt(a, BUILTIN_QUESTIONS, allLessons());
+      expect(both.start, `seed ${seed}`).toBe(scoreAttempt(a, BUILTIN_QUESTIONS, BUILTIN_LESSONS).start);
+      for (const l of BUILTIN_CASE_LESSONS) expect(both.advice[l.id], `seed ${seed}: ${l.id}`).toBeDefined();
+    }
   });
 
   it('never starts at a lesson still to be written', () => {

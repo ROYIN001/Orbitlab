@@ -3,15 +3,22 @@
  * implementation of the look angles, the pass search, the Earth's shadow and
  * the Sun (JPL DE421) — for the same element sets: the ISS, THEOS-2 and a GPS
  * satellite, over Bangkok and Saint Petersburg, three days each
- * (tests/fixtures/passes/, made by make_pass_fixtures.py there).
+ * (tests/fixtures/passes/, made by make_pass_fixtures.py there). The Earth
+ * turns by the IERS's UT1 of the bundled snapshot, as in the app (P2.5).
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import fixture from './fixtures/passes/skyfield-passes.json';
 import { DARK_SKY, findPasses, inSunlight, lookFrom, sunElevation } from '../src/orbit/passes';
 import { elementsFromRecord } from '../src/orbit/omm';
 import { skyObjects, skyState } from '../src/orbit/real-sky';
 import type { OmmRecord } from '../src/provider/satellites';
 import { DEG } from '../src/physics/constants';
+import { setEarthOrientation } from '../src/orbit/earth-orientation';
+import { parseSnapshot } from '../src/provider/data-provider';
+
+const EOP_FILE = import.meta.glob('../public/data/earth-orientation.json', { import: 'default', eager: true }) as Record<string, unknown>;
+beforeAll(() => setEarthOrientation(parseSnapshot(Object.values(EOP_FILE)[0], 'earthOrientation').data));
+afterAll(() => setEarthOrientation(null));
 
 type Event = { norad: number; station: string; event: 'rise' | 'culminate' | 'set'; time: string; alt: number; az: number; km: number; sunlit: boolean; sunAlt: number };
 const F = fixture as unknown as { stations: Record<string, [number, number]>; sets: OmmRecord[]; passes: Event[]; shadow: { time: string; sunlit: boolean }[] };

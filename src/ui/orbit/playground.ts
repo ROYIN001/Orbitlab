@@ -28,6 +28,7 @@ import { hitsEarth, nodeLocalTime, orbitFacts, orbitFromState, stateAt, type Orb
 import { footprintAngle } from '../../orbit/applications';
 import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
+import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
   PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffOrbit, linearScale, logScale, orbitPath,
   repeatGroundTrack, tourSetup, withApsis, type SliderScale,
@@ -52,6 +53,8 @@ import { GroundTrackView } from './ground-track';
 import { Field, altKm, button, clockText, deg, el, hhmm, km, num, plain, sci, span } from './dom';
 import { CannonView } from './cannon-view';
 import { RealSky } from './sky-panel';
+import { CASE_FOCUS, type CaseId, type CaseLessonState } from '../../worksheets/case-ids';
+import type { CaseSource } from '../../worksheets/cases';
 import type { DataProvider } from '../../provider/data-provider';
 
 export interface PlaygroundHost {
@@ -161,6 +164,12 @@ export class OrbitPlayground {
 
   constructor(private readonly root: HTMLElement, private readonly host: PlaygroundHost) {
     root.classList.add('orbit-pg');
+    // The launch scene's camera takes every press on the viewport and captures
+    // the pointer to drag with it (src/render/cameras.ts). That capture took the
+    // drag away from the 3-D view's own canvas, which never saw a move, and the
+    // click away from the porkchop plot. The scene is covered here; keep the
+    // press, as the Build screen does (src/ui/build/build-screen.ts).
+    root.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.canvases = {
       '3d': el('canvas', 'pg-canvas pg-canvas-3d'),
       track: el('canvas', 'pg-canvas pg-canvas-track'),
@@ -175,9 +184,12 @@ export class OrbitPlayground {
     this.sky = new RealSky({
       level: () => this.level,
       provider: () => host.data(),
-      refresh: () => { if (this.mode === 'sky') { this.renderControls(); this.renderFacts(); } },
+      // the Watch tour's card reads the sky too (P2.5)
+      refresh: () => { if (this.mode === 'sky') { this.renderControls(); this.renderFacts(); if (this.level === 'watch') this.renderTour(); } },
       refreshFacts: () => { if (this.mode === 'sky') this.renderFacts(); },
       toPlayground: (orbit, label) => this.fromSky(orbit, label),
+      // on a phone the view is above the panel: bring it into sight
+      showMap: () => { this.setView('track'); this.views.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); },
     });
     this.tabs.setAttribute('role', 'tablist');
     this.views.append(...VIEWS.map((v) => this.canvases[v]), this.hint);
@@ -206,8 +218,8 @@ export class OrbitPlayground {
     const entering = !this.visible || level !== this.level;
     if (level === 'watch' && (entering || this.level !== 'watch')) this.applyTourStep();
     if (level !== 'engineer' && this.view === 'porkchop') this.view = '3d';
-    // the Watch level is the tour: the real satellites are the other levels'
-    if (level === 'watch' && this.mode === 'sky') this.leaveSky();
+    // the Watch level is the tour: its last steps are real satellites (P2.5), the rest are the playground's
+    if (level === 'watch' && this.mode === 'sky' && !this.skyStep()) this.leaveSky();
     // Lambert's rendezvous is the Engineer's: the other levels have no control to clear it with
     if (level !== 'engineer' && this.maneuver?.kind === 'rendezvous') { this.maneuver = null; this.replan(); }
     this.level = level;
@@ -249,6 +261,11 @@ export class OrbitPlayground {
     this.playing = true;
     if (!this.skyEntered) { this.sky.now(); this.skyEntered = true; }
     if (this.view !== '3d' && this.view !== 'track') this.view = '3d';
+    // the playground's plan is not the real satellites': they draw their own (P2.5)
+    this.orbitView?.setGhosts([]);
+    this.orbitView?.setMarkers([]);
+    this.orbitView?.setTarget(null);
+    this.sky.forgetViews();
     this.render();
     this.resize();
   }
@@ -258,6 +275,7 @@ export class OrbitPlayground {
     this.warp = this.orbitWarp;
     this.orbitView?.setPoints(null);
     this.orbitView?.setOrbit(this.orbit, true);
+    this.syncGhosts();
   }
 
   /** A real satellite's orbit, as it is now, put in the playground to plan from. */
@@ -367,7 +385,62 @@ export class OrbitPlayground {
     else this.time = 0;
   }
 
+  /** The Watch tour's step among the real satellites, if it is one (P2.5): they follow the playground's. */
+  private skyStep(): SkyTourStep | null {
+    return this.tourIndex >= TOUR.length ? SKY_TOUR[this.tourIndex - TOUR.length] ?? null : null;
+  }
+
+  /** Into the real satellites, now, for a tour step or a case lesson: the playground's own drawing put aside. */
+  private enterSkyNow(): void {
+    if (this.mode !== 'sky') {
+      this.mode = 'sky';
+      this.orbitWarp = this.warp;
+      this.orbitView?.setGhosts([]);
+      this.orbitView?.setMarkers([]);
+      this.orbitView?.setTarget(null);
+      this.sky.forgetViews();
+    }
+    this.skyEntered = true;
+    this.sky.now();
+  }
+
+  /**
+   * A case lesson (E03 track 6): Real satellites, at the case's satellite,
+   * view and tool (src/worksheets/case-ids.ts), in real time. The level is
+   * the route's (Explore or Engineer: the Watch level is the tour).
+   */
+  openCase(id: CaseId): void {
+    const f = CASE_FOCUS[id];
+    this.enterSkyNow();
+    this.sky.focusCase(id);
+    this.view = f.view;
+    this.warp = 1;
+    this.playing = true;
+    this.render();
+    this.resize();
+  }
+
+  /** The data a case sheet is worked from, as Real satellites has them once its catalogue is in. */
+  caseInput(): Promise<CaseSource> {
+    return this.sky.caseInput();
+  }
+
+  /** The case lesson open now, if any (its answer key waits until it is answered). */
+  lessonCase(state: CaseLessonState | null): void {
+    this.sky.setLessonCase(state);
+  }
+
   private applyTourStep(): void {
+    const sky = this.skyStep();
+    if (sky) {
+      this.enterSkyNow();
+      this.sky.showForTour(sky.group, sky.satnum);
+      this.view = sky.view;
+      this.warp = sky.warp;
+      this.playing = true;
+      return;
+    }
+    if (this.mode === 'sky') this.leaveSky();
     if (this.tourIndex === -1 && this.handoff) {
       this.maneuver = null;
       this.loadHandoff();
@@ -404,7 +477,7 @@ export class OrbitPlayground {
 
   private stepTour(delta: number): void {
     const first = this.handoff ? -1 : 0;
-    const next = Math.min(TOUR.length - 1, Math.max(first, this.tourIndex + delta));
+    const next = Math.min(TOUR.length + SKY_TOUR.length - 1, Math.max(first, this.tourIndex + delta));
     if (next === this.tourIndex) return;
     this.tourIndex = next;
     this.applyTourStep();
@@ -1153,14 +1226,33 @@ export class OrbitPlayground {
     box.hidden = this.level !== 'watch';
     if (this.level !== 'watch') return;
     const yours = this.tourIndex === -1 && !!this.handoff;
-    const step = TOUR[Math.max(0, this.tourIndex)];
-    const n = yours ? 0 : this.tourIndex + 1;
+    const sky = this.skyStep();
+    const step = sky ?? TOUR[Math.max(0, this.tourIndex)];
+    const n = yours ? 0 : this.tourIndex + 1, total = TOUR.length + SKY_TOUR.length;
     box.append(
-      el('span', 'eyebrow pg-tour-step', yours ? t('handoff.eyebrow') : t('pg.tour.step', { n, total: TOUR.length })),
+      el('span', 'eyebrow pg-tour-step', yours ? t('handoff.eyebrow') : `${t('pg.tour.step', { n, total })}${sky ? ` · ${t('skytour.eyebrow')}` : ''}`),
       el('h2', undefined, yours ? t('pg.tour.yours.title') : t(step.titleKey)),
       el('p', 'pg-tour-text', yours ? t('pg.tour.yours.text', { label: this.handoff!.label }) : t(step.textKey)),
     );
-    if (this.view === 'cannon') box.append(this.cannonOutcome());
+    if (sky) {
+      // P2.5: a real satellite's readouts, and what the step adds
+      const now = this.sky.liveNow();
+      if (now) {
+        const stats = el('div', 'pg-tour-stats');
+        const stat = (label: string, value: string): HTMLElement => {
+          const s = el('div', 'pg-tour-stat');
+          const v = el('strong', undefined, value);
+          s.append(el('small', undefined, label), v);
+          stats.append(s);
+          return v;
+        };
+        this.live.alt = stat(t('pg.f.altNow'), '');
+        this.live.speed = stat(t('pg.f.speedNow'), '');
+        stat(t('pg.f.period'), span(now.period));
+        box.append(stats);
+      }
+      if (sky.show) { const extra = this.sky.tourExtra(sky.show); if (extra) box.append(extra); }
+    } else if (this.view === 'cannon') box.append(this.cannonOutcome());
     else {
       const stats = el('div', 'pg-tour-stats');
       const stat = (label: string): HTMLElement => {
@@ -1179,7 +1271,7 @@ export class OrbitPlayground {
     const prev = button('watch-btn', `‹ ${t('pg.tour.prev')}`, () => this.stepTour(-1));
     prev.disabled = this.tourIndex <= (this.handoff ? -1 : 0);
     const next = button('watch-btn primary', `${t(yours ? 'pg.tour.start' : 'pg.tour.next')} ›`, () => this.stepTour(1));
-    next.disabled = this.tourIndex >= TOUR.length - 1;
+    next.disabled = this.tourIndex >= TOUR.length + SKY_TOUR.length - 1;
     nav.append(prev, next, button('watch-btn link', t('pg.tour.try'), () => this.host.go(route('orbit', 'explore'))));
     box.append(nav);
     this.updateLive();
@@ -1189,6 +1281,10 @@ export class OrbitPlayground {
   private updateLive(): void {
     if (this.mode === 'sky') {
       this.sky.updateLive();
+      // the Watch tour's card (P2.5)
+      const now = this.level === 'watch' ? this.sky.liveNow() : null;
+      if (now && this.live.alt) this.live.alt.textContent = `${num(now.alt / 1000, 0)} ${t('u.km')}`;
+      if (now && this.live.speed) this.live.speed.textContent = `${num(now.speed / 1000, 2)} ${t('u.kms')}`;
       const c = this.sky.clock(this.warp);
       this.clock.textContent = c.live ? `● ${t('sky.live')}` : t('sky.notLive');
       this.clock.classList.toggle('live', c.live);
