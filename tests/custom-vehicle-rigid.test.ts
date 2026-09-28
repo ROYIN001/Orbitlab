@@ -225,11 +225,35 @@ describe('six-DOF for custom vehicles (D03): attitude thrusters', () => {
     expect(roll / (50 * x3.diameter)).toBeCloseTo(1, 9);
   });
 
-  it('changes nothing for a catalogue stage id, on any vehicle', () => {
+  it('changes nothing for a catalogue stage id on a vehicle of the catalogue or made from one', () => {
     for (const spec of [...VEHICLES, FALCON_FIVE, SOYUZ_MULTI]) spec.stages.forEach((stage, index) => {
       const at = v3(1, 0, 0);
       expect(rcsGeometry(vehicleDataId(spec), stage, at, index), `${spec.id} ${stage.id}`).toEqual(rcsGeometry(vehicleDataId(spec), stage, at));
     });
+  });
+
+  it('gives Falcon 9\'s second stage, unchanged, its own installation on a vehicle with no origin', () => {
+    // Falcon's thrusters are keyed by the vehicle: with no origin its second
+    // stage kept its catalogue id and so had none — no roll on its one
+    // on-axis chamber and nothing to hold it in a coast — while a renamed copy
+    // of the same stage got the generic set.
+    const { derivedFrom: _, ...plain } = copyOf('falcon9');
+    const scratch: VehicleSpec = { ...plain, id: 'scratch-f9' };
+    const at = v3(1, 0, 0), [s1, s2] = scratch.stages;
+    expect(rcsGeometry(vehicleDataId(scratch), s2, at, 1)).toEqual(rcsGeometry('falcon9', s2, at, 1));
+    expect(rcsGeometry(vehicleDataId(scratch), s2, at, 1)).toMatchObject({ initialPropellantKg: 30 });
+    expect(rcsGeometry(vehicleDataId(scratch), { ...s2, id: 'x2' }, at, 1).thrusters.map((jet) => [jet.maxThrust, jet.isp]))
+      .toEqual(rcsGeometry(vehicleDataId(scratch), s2, at, 1).thrusters.map((jet) => [jet.maxThrust, jet.isp]));
+    // Its first stage rolls on its nine engines and gets nothing, as a first stage with an id of its own does.
+    expect(rcsGeometry(vehicleDataId(scratch), s1, at, 0)).toMatchObject({ initialPropellantKg: 0, thrusters: [] });
+    // Flying alone, the second stage rolls on the couple across it, F·d, to 1e-9 relative.
+    const vm = new VehicleModel(scratch, 1000);
+    vm.separateStage(vm.stages[0], 100);
+    vm.jettisonFairing();
+    const snapshot = buildRigidVehicle(vm);
+    let roll = 0;
+    for (const jet of snapshot.rcsThrusters) roll += Math.max(0, scale(thrusterMomentArm(jet, snapshot.cg), jet.maxThrust).x);
+    expect(roll / (50 * s2.diameter)).toBeCloseTo(1, 9);
   });
 });
 

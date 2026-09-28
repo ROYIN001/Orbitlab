@@ -459,6 +459,10 @@ const CATALOGUE_PART_IDS: ReadonlySet<string> = new Set(VEHICLES.flatMap((vehicl
  */
 export const isCataloguePartId = (id: string): boolean => CATALOGUE_PART_IDS.has(id);
 
+/** The Falcons' stages, whose attitude thrusters `rcsGeometry` keys by the vehicle (D03). */
+const FALCON_PART_IDS: ReadonlySet<string> = new Set(VEHICLES.filter((vehicle) => vehicle.id === 'falcon9' || vehicle.id === 'falconheavy')
+  .flatMap((vehicle) => vehicle.stages.map((stage) => stage.id)));
+
 /** Synthetic finite force-pair installation. It is NOT SpaceX's nozzle count.
  * Opposed pairs yield pure torque only when both real forces are commanded.
  *
@@ -467,7 +471,11 @@ export const isCataloguePartId = (id: string): boolean => CATALOGUE_PART_IDS.has
  * know (D03) gets the generic three-axis set, the one Falcon 9's second stage
  * flies: 50 N cold-gas pairs at 60 s and the lesser of 10 % of the dry mass and
  * 30 kg of gas, estimates (E) not scaled to the stage. Without it a single
- * on-axis chamber left such a stage no roll at all. A first stage, and every
+ * on-axis chamber left such a stage no roll at all. So does a Falcon stage
+ * flown above the first on a vehicle that is not a Falcon (its installation is
+ * keyed by the vehicle, not the stage): Falcon 9's second stage, unchanged,
+ * on a vehicle built with no origin, gets exactly what it has on Falcon 9,
+ * rather than less than a renamed copy of it. A first stage, and every other
  * catalogue id on any vehicle, keeps what it had.
  */
 export function rcsGeometry(vehicleId: string, stage: StageSpec, base = v3(), stageIndex?: number): RcsReservoir {
@@ -475,7 +483,7 @@ export function rcsGeometry(vehicleId: string, stage: StageSpec, base = v3(), st
   const falcon = vehicleId === 'falcon9' || vehicleId === 'falconheavy';
   const firstStage = stage.id === 's1' || stage.id === 'core' || stage.id === 'side';
   const extra = falcon ? undefined : STAGE_RCS[`${vehicleId}:${stage.id}`] ?? STAGE_RCS[stage.id];
-  const generic = (stageIndex ?? 0) > 0 && !isCataloguePartId(stage.id);
+  const generic = (stageIndex ?? 0) > 0 && (!isCataloguePartId(stage.id) || (!falcon && FALCON_PART_IDS.has(stage.id)));
   const supported = falcon || stage.isSpacecraft || !!extra || generic;
   const initial = !supported ? 0 : extra ? Math.min(stage.dryMass * 0.1, extra.propellantKg) : Math.min(stage.dryMass * 0.1,
     stage.isSpacecraft ? 10 : firstStage ? 100 : 30);
