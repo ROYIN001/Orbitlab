@@ -234,9 +234,26 @@ thread, each imaging satellite's instrument judges whether it can image the plac
 re-entry can be fitted to the object's own decay and a transfer orbit is carried with the Sun and
 the Moon (66 rocket stages of 2023–2025 and NAPA-2 as cases), the Watch tour goes on to the real
 satellites, and three real cases come as worksheets with answer keys and as graded lessons
-([docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)). Build is
-still being built: it shows, in all three languages, what it will hold and in what order, and
-nothing on it pretends to work.
+([docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md)).
+
+**Build** (Phase 3, roadmap D01–D05, `src/design/`, `src/ui/build/`) is the rocket builder, on a
+parts catalogue (`src/data/parts.ts`) from which the 21 vehicles are themselves assembled:
+
+- **Watch** takes any of them apart, drawn to scale, with a catalogue card for each part, each
+  stage's Δv, burn time and thrust-to-weight, and a five-step tour.
+- **Explore** remixes a real rocket or builds one from parts, says in plain words what will not
+  fly and why, computes its payload ratings by flying it, keeps designs in the browser and as
+  `.orbitlab.json` files, and hands a design to Launch with **Fly it** (point-mass; six-DOF
+  experimental).
+- **Engineer** fires an engine on a test stand, puts the rocket in a wind tunnel, holds a flight
+  readiness review with the Launch section's own verdict, finds the best split of a Δv among
+  stages, and sizes a launcher from a payload and an orbit.
+
+The figures are the launch physics' own, and every estimate is labelled as one. The catalogue
+emits the fleet value for value and the built-in flights are unchanged; computed ratings fall
+within 25 % of seven of eight published ones (Vega-C's LEO is 31 % high), and the sized
+launchers tried need more Δv than the planner allows for
+([docs/VALIDATION.md](docs/VALIDATION.md) §8). Designing satellites (D06, D07) comes in Phase 4.
 
 The cloud in the top bar switches the data between **offline**, the default — the snapshots bundled in `public/data/`,
 each dated, so `dist/` works on a network with no internet — and **online**, which fetches from
@@ -433,7 +450,11 @@ src/orbit/      the Orbit section's physics: Kepler and J2 (O01), the playground
                 two-line element format for real satellites (R01)
 src/data/thai-satellites.ts  Thailand's satellites, each fact with its source (O04)
 src/provider/   offline and online data: the providers, datasets, snapshots (S04)
-src/design/     the user's designs, kept locally and as files (S05)
+src/data/parts.ts  the parts catalogue the vehicles are assembled from (D01)
+src/design/     the rocket builder's logic, no DOM: remix, assembly, warnings, budgets,
+                optimal staging, sizing, test stand, wind tunnel, readiness review, ratings
+                (D02–D05); the user's designs, kept locally and as files (S05)
+src/ui/build/   the Build section's screens (Watch, Explore, Engineer)
 src/mcp.ts      WebMCP tools
 public/data/    bundled data snapshots, each dated
 scripts/        snapshot refresh (npm run snapshots)

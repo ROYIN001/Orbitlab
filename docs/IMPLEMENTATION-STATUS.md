@@ -1,6 +1,6 @@
 # Where Orbitlab stands
 
-Updated 2026-09-26. This file states the current position only; how it was reached is in the
+Updated 2026-09-28. This file states the current position only; how it was reached is in the
 dated records under [history/](history/), and where those disagree with this file, this file is
 right.
 
@@ -42,8 +42,18 @@ the playground's other half, draws the satellites of a catalogue group where SGP
 the space stations, Thailand's satellites, the navigation and weather satellites, and the debris
 of Fengyun-1C. The group is shown in 3-D and on the map, the one picked with its orbit, track and
 element set. A file of element sets can be read in the page. What the section will hold next is
-listed under the playground. **Build** is still an "in
-development" screen that lists what is coming, from the roadmap, and nothing more.
+listed under the playground.
+
+**Build** (Phase 3, D01–D05) takes rockets apart and puts them together, on a parts catalogue from
+which the 21 vehicles are themselves assembled (D01). Its Watch level draws any of them to scale,
+taken apart or assembled, with a catalogue card for each part, the stage-by-stage figures and a
+five-step tour. Explore remixes a real rocket (D02) or builds one from parts (D03), with the
+design's warnings in plain words, payload ratings computed by flying it, saving, export and
+import, and **Fly it**, which hands the design to Launch as a mission, point-mass unless six-DOF
+(experimental) is asked for. Engineer tests a rocket on a test stand, in a wind tunnel and in a
+flight readiness review (D04), finds the best split of a Δv among stages, and sizes a launcher
+from a payload and an orbit (D05). The figures are the launch physics' own, and every estimate is
+labelled as one.
 
 - **Physics** ([PHYSICS.md](PHYSICS.md)): a rigid-body (six-DOF) model with finite actuators
   for every vehicle, which is the default, with each stage's chambers, steering, thrusters and
@@ -155,6 +165,9 @@ moves only with the physics' wind; the calm default leaves it where it was made.
   integration steps, and 16 of 18 terminal-restart stress trajectories land (the other two end
   honestly as impacts), but the stage's cold-gas supply runs out before T+180 s and the outcome
   still depends on the separation state ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)).
+- **Six-DOF for a rocket of one's own** (Build, D03). Point mass is its default; six-DOF flies it
+  with generic steering and thrusters where the real rockets have their own. What is still
+  missing is under "Known limitations" below.
 - **Soyuz-2.1a's late first-stage pitch in six-DOF**: from about T+89 s, as the dynamic
   pressure falls, the aerodynamic angle limit releases a closed-loop pitch command that has run
   far below the vehicle (7° against 33°), and the vehicle pitches down from 60° to 33° above the
@@ -183,10 +196,15 @@ moves only with the physics' wind; the calm default leaves it where it was made.
   (tests/rigid-*.test.ts).
 - **The physics worker**: its main-thread mirror is held frame for frame to an in-process
   recording (tests/session.test.ts).
+- **The Build section** (tests/d01-*.test.ts, tests/parts*.test.ts, tests/design-*.test.ts): the
+  parts catalogue emits the fleet main flies, value for value, and 27 point-mass flights hash as
+  they did before it; the builder's figures are the flight model's own or the rocket equation
+  worked by hand ([VALIDATION.md](VALIDATION.md) §8).
 
 `npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
 model, Soyuz MS-10's and 18a's aborts flown to the crew on the ground, and the screening's time
-filter against the full search over its whole sweep (tests/heavy/, about 20 minutes).
+filter against the full search over its whole sweep (tests/heavy/, about 20 minutes), and D01's
+21 six-DOF fingerprints, 160 s of flight each (about four minutes more).
 `npm run test:sixdof-fleet` flies the fleet matrix as rigid bodies: its 126 accepted cases, each
 vehicle's first case in crosswind and shear, and Long March 2D's real mission — 161 cases, about
 2 h 40 min on four cores ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and
@@ -209,7 +227,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
-| P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | done |
+| P01 six-DOF for every vehicle (18 when chosen; C01's three have it too) | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
 | P05 slosh, bending and notch filter | done | C01 historical missions | |
 | U07 ГОСТ 20058-80 notation | done | | |
@@ -282,6 +300,20 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
 | Worksheets from real cases | done: a sheet and its answer key for the Iridium 33–Cosmos 2251 collision, the Long March 5B stage of Tianhe and THEOS-2 over Bangkok, worked with the published data and this app's physics, in three languages, each with its units and option letters in its own script. Graded as lessons 6.1–6.3 (E03, track 6): Real satellites opens at the case's tool, and the typed answers are graded by the sheet's own key and tolerances with the data frozen when the lesson opens ([USER-GUIDE](USER-GUIDE.md) §18) |
 | Checks in a real browser, and the daily refresh | done: online mode in Chromium through this machine's proxy. NOAA's four answers were read both times. CelesTrak's nine lists, asked all at once, came back three without the cross-origin header a page needs; asked one at a time two hours later, one of nine did — so it is not the asking at once alone, and whether CelesTrak's edge or this machine's proxy drops the header could not be told apart from here. Either way the whole catalogue fell back to the snapshot for one list, so now a list that cannot be read keeps only its own group from the snapshot (the data window and the panel say which), and a host that refuses (403, 429) is asked nothing more. A 30 000-object screening was timed with the CPU slowed fourfold (below). The deploy's refresh step ran on the builds of 27 September (fresh CelesTrak and SWPC data at 13:02 UTC); the scheduled daily build (03:17 UTC) did not start on 28 September: GitHub had begun none by 05:21, and GitHub documents that scheduled runs may be delayed or dropped under load. The deploys pushed to main run the same step: on 28 September at 05:19 UTC it read SWPC's space weather (30 days of F10.7, 57 Kp readings, as of 00:00 UTC) and CelesTrak's six groups (2 408 element sets, as of 23:59 UTC the day before), neither kept its baseline. The Earth-orientation source of P2.5 is not on main yet, so it has not run there. Opened straight from its link, a case lesson sometimes lost the catalogue: the bundled snapshot was read under the online sources' 8 s limit while the page was still starting. The snapshot now has its own limit, 60 s, for a server that hangs; nine cold opens of the three case lessons at a phone's size in Chromium all loaded, in 10 to 12 s. |
 
+Phase 3, the rocket builder (the Build section), on the same branch. No built-in flight changed
+(the fingerprints below); Falcon Heavy's data changed on main (F11), and the catalogue took them.
+
+| Item | |
+|---|---|
+| D01 parts catalogue | done: `src/data/parts.ts`, 55 engines, 50 stage bodies, 14 strap-on bodies and 17 fairings, from which the 21 vehicles are assembled, with interstages derived for the drawing and each engine's published mass, with its sources, for the builder. The fleet it emits equals the literal one value for value and key for key (main's F11 included), and 27 point-mass and 21 six-DOF flights hash as they did before it ([VALIDATION.md](VALIDATION.md) §8) |
+| D02 remix a real rocket | done, at Explore: stretch or shrink a stage's propellant (50–200 %), swap or re-count its engines for engines of the same propellant, add or take off strap-on groups, fit another fairing. Unchanged, a remix is the real rocket and flies as it does; a swap moves the dry mass by the engines' published masses exactly; a stretch moves the Δv as the rocket equation does; 630 random lists of edits give a valid vehicle or a refusal with its reason ([VALIDATION.md](VALIDATION.md) §8) |
+| D03 parts builder | done, at Explore: up to six stages from catalogue bodies or bodies of one's own, engines, strap-ons, a fairing; the design's warnings in plain words; payload ratings computed by flying it; save, export, import; **Fly it**, point-mass by default, six-DOF experimental. Every catalogue vehicle rebuilds from its own parts exactly; each warning is shown on constructed cases, "will not lift off" agrees with the flight in 85 flights, and no catalogue vehicle fails; computed ratings fall within 25 % of seven of eight published ones, Vega-C's LEO 31 % high ([VALIDATION.md](VALIDATION.md) §8). The Engineer level still lists designing from parts there as to come, with a link to Explore |
+| D04 test facilities | done, at Engineer: a test stand that fires any engine with the flights' own engine model, in a vacuum, at sea level or at a site's height; a wind tunnel of the six-DOF flight's aerodynamic tables over Mach and angle of attack; a flight readiness review. Thrust, Isp, impulse and the transients are held to the data and to closed forms, 20 published burn times fall within 10 %, the tunnel's zero-angle drag is the point-mass flight's, and the review gives the Launch panel's own verdict on 36 catalogue rows ([VALIDATION.md](VALIDATION.md) §8) |
+| D05 optimal staging and sizing | done, at Engineer: the loss-free best split of a Δv among stages, by Lagrange multipliers, beside a real rocket's own split; a launcher sized from a payload, an orbit and a site. Staging is held to closed forms, brute-force grids and NPTEL Lecture 20's worked examples; sizing's Δv is the planner's own, but no sized launcher tried reaches orbit at it (a finding, below) ([VALIDATION.md](VALIDATION.md) §8) |
+| Build at Watch: real rockets taken apart | done: any of the 21 drawn to scale, taken apart or assembled; a card for each part with its figures and sources; each stage's ideal Δv, burn time, T/W and mass fractions; a five-step tour on Saturn V, Falcon 9, Soyuz-2.1a, Atlas V 551 and Ariane 64. The geometry is the flight's own stack layout, the figures the budget core's ([VALIDATION.md](VALIDATION.md) §8) |
+| Build at Explore | done: D02 and D03 above, with designs kept in the browser (the one on the bench also across a reload), `.orbitlab.json` files, and ratings computed off the page's thread with a Stop button. Walked in Chromium in English, Russian and Thai at desktop and phone widths ([VALIDATION.md](VALIDATION.md) §8) |
+| Build at Engineer ("Design and test") | done: D04 and D05 above as five tabs, on a real rocket, the design open in Explore, a saved one or a launcher sized there. **Fly it** from the review opens Launch's Engineer level on the mission reviewed; **Open in the builder** takes a sized launcher to Explore's parts builder ([VALIDATION.md](VALIDATION.md) §8) |
+
 ## Known limitations
 
 - The orbit playground (O01) carries an orbit by Kepler's equation and J2's secular drift to
@@ -340,8 +372,78 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
   unanswered, but a flight's worksheet key does not. Showing a lesson's answers is recorded, and a
   number once shown never passes. The case lessons' Russian and Thai texts have not yet been read by
   a native speaker.
+- Build's computed payload ratings (D03, D04) are the model's estimates, flown point-mass in calm
+  air on the guidance programme the design carries. Seven of eight published ratings come out
+  within 25 %; Vega-C's LEO rating is 31 % high (4 330 against 3 300 kg), and 26 % high to its own
+  700 km reference orbit, which is not explained. GTO ratings count the burns after the insertion
+  as instantaneous, so a low-thrust kick stage is rated generously. The rating method was changed
+  after its first GTO results, which were about twice the published ones; the bound was not. A
+  remix keeps its origin's guidance programme: Falcon 9 with its second stage stretched to 130 %
+  rates 8 870 kg to LEO against 20 031 kg unchanged, and whether that is the programme or the
+  rocket was not shown. A rating takes 1–2 s ([VALIDATION.md](VALIDATION.md) §8).
+- Build's sizing (D05): the design Δv is the planner's, whose loss allowance is the low end of
+  what the fleet spends, and no sized launcher tried reaches orbit at it. The extra Δv each needed,
+  in steps of 100 m/s: the 1 t launcher the page starts on +500 m/s, mostly for the 800 kg fairing
+  "the narrowest that fits" gives it, which the design Δv drops at the first staging and the flight
+  carries to 115 km (+100 m/s with no fairing); a 10 t launcher from the Cape +300 m/s (+200 with no
+  fairing); a 5 t launcher from Baikonur to the station's orbit reached no orbit up to +1 000 m/s.
+  Only serial liquid stages can be sized; left to choose, it picks the fairing by diameter alone;
+  whole engines overshoot the thrust-to-weight asked for; the lengths are estimates from the propellant's volume.
+  A launcher just sized has no payload rating, so the review fails it on "no rating" until its
+  ratings are computed. After **Open in the builder**, its lengths, its fairing and its relightable
+  last stage are no longer marked as estimates in Explore ([VALIDATION.md](VALIDATION.md) §8).
+- Build's figures are the flight model's, with its simplifications: every strap-on group burns at
+  the first group's Isp (a design with unlike groups gets a wrong Δv), Falcon Heavy's and
+  Angara-A5's cores are counted at full throttle beside their strap-ons, and PSLV's air-lit
+  strap-ons from liftoff. Optimal staging counts no losses, leaves strap-ons out, and where the
+  optimum would drop a stage it says so rather than solve it.
+- Build's remix and parts builder (D02, D03): a stretch's mass rule (the tank structure grows with
+  the propellant) is an estimate awaiting the owner's decision. A swapped engine keeps the stage's
+  drawing (nozzle length, profile, legs, grid fins), which may then be drawn wrong. Strap-on groups
+  can be added or taken off, not stretched or re-engined, and the parts builder's strap-ons are
+  catalogue bodies only. A body of one's own may state a dry mass below its engines' mass without a
+  warning. A saved design keeps the vehicle, not how it was made: a remix reopens as the base of a
+  new remix with its stretches back at 100 %, a parts design reopens in the parts builder only when
+  it rebuilds exactly, and neither keeps its payload; ratings computed in the review for a saved
+  design are not written back to it. **Fly it** from Explore always aims at the 500 km preset from
+  the design's first site, with the rideshare dispenser as the payload. A design whose ratings have
+  not been computed reads "will not fly" at Launch's Explore level, where a rating of 0 counts as
+  none. The validator's and the design store's details are shown in English.
+- Six-DOF for a rocket of one's own (D03) is experimental. A single-engine first stage with an id
+  of its own has no roll control (PSLV so renamed rolled at 2.2°/s, against 0.075°/s). Where bells
+  share engines, the fault system names a bell by its first engine and counts bells, not engines,
+  towards its limit of a quarter of the stage. A renamed single-engine stage or strap-on gets 5° of
+  steering even when copied from a fixed-nozzle motor such as the GEM 63. R-7 blocks with several
+  engines fly generic steering, and their verniers give no thrust. The generic thrusters (50 N
+  pairs, at most 30 kg of gas, estimates) do not scale with the stage
+  ([VALIDATION.md](VALIDATION.md) §8).
+- Build's drawings: each strap-on group is drawn as one unit on each side, and a second group
+  (PSLV's air-lit pair) outside the first rather than where it sits on the ring; nose shapes, the
+  R-7's taper, the bells and the gaps are drawing only. The drawn height is the stages and adapters
+  as the flight stacks them, not the published height: Vega-C 41.9 against 34.8 m, PSLV-XL 52.8
+  against 44 m, Atlas V 551 70.5 against 62.2 m; Saturn V's published 110.6 m counts the Apollo
+  spacecraft and its escape tower, which are not drawn (90.15 m). A kept Falcon 9 first stage with
+  another engine count is still drawn with the nine-engine octaweb, and a generic ring draws at most
+  8 bells.
+- Build's test facilities (D04): the wind tunnel's tables are the model's estimates
+  (slender-body theory and crossflow), not tunnel data; fins and the nose's shape do not change
+  them, and the reference diameter includes the strap-ons, as the flight's does. On the test stand
+  the Isp stays constant through start-up and tail-off, both estimates, and a solid motor's mean
+  thrust reads 0.6–0.9 % high, because the impulse includes the tail-off and the burn time does
+  not.
+- Build: the landing page has no Build chapter (one would need new pictures; the owner's call), so
+  the top bar is the way in. Designing from parts at the Engineer level (D03's face there) is
+  listed as to come, with a link to Explore, where it is. The Russian and Thai texts have not been
+  read by a native speaker. The parts' source notes are partly in English: a note after a link is
+  dropped, and a reference that is not a link is shown as written. Chart tick labels use "." in
+  every language. On a phone the wind tunnel's table of numbers scrolls sideways in its own box,
+  the Engineer level's lead runs to 8–12 lines, and in Russian at 360 px its five tabs take five
+  rows; at 1440 px the sizing drawing cuts off "Rutherford Vacu…".
+- D01's fingerprints (27 point-mass flights, 21 six-DOF) are exact hashes of floating-point
+  flights: a Node or V8 upgrade could change them with no change to the code, as it could the older
+  six-DOF goldens.
 - At about 1100 × 650 px the Engineer mode's panels squeeze the 3-D viewport out.
-- The physics has been compared with flight data for eleven of the eighteen vehicles: Falcon 9
+- The physics has been compared with flight data for twelve of the 21 vehicles: Falcon 9
   against webcast telemetry of five flights, the others against published timelines
   ([VALIDATION.md](VALIDATION.md)). No disagreement pointed at the equations. As a result,
   Falcon 9's first stage flies its published masses and its six-DOF pitch programme is fitted to
@@ -355,4 +457,6 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
   - Most fairings come off 10–50 % early.
 
   Long March 2D, 3B/E and 5, Vulcan, Soyuz-2.1b and Starship are not compared; see
-  "Assumptions and limitations" in [PHYSICS.md](PHYSICS.md).
+  "Assumptions and limitations" in [PHYSICS.md](PHYSICS.md). The three historical vehicles are
+  flown on their own missions and set beside the orbits those reached
+  ([SIXDOF-VEHICLE-DATA.md](SIXDOF-VEHICLE-DATA.md)).
