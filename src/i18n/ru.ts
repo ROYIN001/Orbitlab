@@ -1085,6 +1085,8 @@ export const ru: Record<string, string> = {
   'watch.say.crewSafe': 'Ракета потеряна, экипаж — нет. Для этого и существует система аварийного спасения.',
   'watch.stat.time': 'Полётное время',
   'watch.stat.altitude': 'Высота',
+  'watch.stat.moonAltitude': 'Высота над Луной',
+  'watch.stat.moonSpeed': 'Скорость отн. Луны',
   'watch.stat.speed': 'Скорость',
   'watch.unit.kmh': 'км/ч',
   'watch.speed': 'Скорость воспроизведения',

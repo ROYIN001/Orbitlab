@@ -15,7 +15,7 @@ import type { SimEvent } from '../physics/simulation';
 import { vehicleById } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
+import { autoWarp, flightEnding, groundSpeed, watchBeat, watchReadout, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
 import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionById, type WatchMissionId } from './watch-missions';
 import { FLOWN_LABEL, recentFlown } from './flown';
 import { flownTable, fmtMissionTime } from './flown-view';
@@ -288,10 +288,14 @@ export class WatchView {
     const clock = frame ? fmtClock(frame.t) : fmtClock(-10);
     // above the ground, so the pad reads 0 rather than the site's elevation
     const subject = state.subject;
-    const alt = subject ? fmtAltitude(subject.altitude) : frame ? fmtAltitude(frame.altitudeAGL) : fmtAltitude(0);
+    const readout = frame ? watchReadout(frame) : null;
+    const alt = subject ? fmtAltitude(subject.altitude) : readout ? fmtAltitude(readout.altitude) : fmtAltitude(0);
     // a pad abort never lifts off, but its crew does (T-10-1)
     const moving = !!frame && (frame.liftoff || !!frame.abort);
-    const speed = subject ? num(subject.speed * 3.6) : frame ? num(moving ? groundSpeed(frame) * 3.6 : 0) : num(0);
+    const speed = subject ? num(subject.speed * 3.6) : readout ? num(moving ? readout.speed * 3.6 : 0) : num(0);
+    // C01: at the Moon, the readouts are the Moon's
+    const moon = !subject && !!readout?.moon;
+    if (moon !== this.readoutMoon) { this.readoutMoon = moon; this.applyStatLabels(); }
     if (clock !== this.shown.clock) { this.clockValue.textContent = clock; this.shown.clock = clock; }
     if (alt !== this.shown.alt) { this.altValue.textContent = alt; this.shown.alt = alt; }
     if (speed !== this.shown.speed) { this.speedValue.textContent = speed; this.shown.speed = speed; }
@@ -352,7 +356,7 @@ export class WatchView {
       // C01: Apollo at the Moon, its lunar orbit insertion due
       const ap = frame.apollo!;
       card.append(el('p', undefined, t('watch.end.moonText', {
-        time: fmtClock(ap.arrival ?? frame.t).replace(/^T\+/, ''),
+        time: fmtClock(frame.t).replace(/^T\+/, ''),
         alt: num(Math.round(ap.moon.alt / 1000)), speed: num(Math.round(ap.moon.speed * 3.6)),
         dv: ap.mcc ? ap.mcc.dv.toFixed(1) : '—',
       })));
@@ -430,9 +434,15 @@ export class WatchView {
     if (footer) card.append(footer);
   }
 
-  applyLanguage(): void {
-    const labels = ['watch.stat.time', 'watch.stat.altitude', 'watch.stat.speed'];
+  private readoutMoon = false;
+  private applyStatLabels(): void {
+    const labels = this.readoutMoon ? ['watch.stat.time', 'watch.stat.moonAltitude', 'watch.stat.moonSpeed']
+      : ['watch.stat.time', 'watch.stat.altitude', 'watch.stat.speed'];
     this.statLabels.forEach((node, i) => { node.textContent = t(labels[i]); });
+  }
+
+  applyLanguage(): void {
+    this.applyStatLabels();
     const units = ['u.km', 'watch.unit.kmh'];
     this.unitLabels.forEach((node, i) => { node.textContent = ` ${t(units[i])}`; });
     this.speedGroup.setAttribute('aria-label', t('watch.speed'));

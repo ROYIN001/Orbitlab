@@ -257,12 +257,13 @@ export class ApolloFlight {
       vehicle.payloadMass = Math.max(1, vehicle.payloadMass - mdot * dt);
       sps.done += (thrust / mass) * dt;
     }
-    s.dir = dir;
+    // the docked stack is drawn with the CSM's engine bell up: its service engine pushes it the other way
+    s.dir = sps ? scale(dir, -1) : dir;
     s.thrust = thrust; s.throttle = throttle; s.coreThrottle = throttle; s.boosterThrottle = 0;
     s.mass = vehicle.totalMass();
     s.gLoad = thrust / mass / G0;
     s.elements = elementsFromState(s.r, s.v);
-    if (s.rigid) s.rigid = { ...s.rigid, attitudeQ: targetAttitude(dir, normalize(s.r)), omegaBody: v3() };
+    if (s.rigid) s.rigid = { ...s.rigid, attitudeQ: targetAttitude(s.dir, normalize(s.r)), omegaBody: v3() };
     if (burning) this.checkCutoff();
     if (sps && sps.done >= sps.dv - 1e-4) this.endSps();
     if (this.cislunar) this.checkSoi();

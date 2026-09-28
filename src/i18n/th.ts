@@ -1086,6 +1086,8 @@ export const th: Record<string, string> = {
   'watch.say.crewSafe': 'จรวดเสียไป แต่ลูกเรือรอด ระบบหนีภัยมีไว้เพื่อสิ่งนี้',
   'watch.stat.time': 'เวลาภารกิจ',
   'watch.stat.altitude': 'ความสูง',
+  'watch.stat.moonAltitude': 'สูงเหนือดวงจันทร์',
+  'watch.stat.moonSpeed': 'ความเร็วเทียบดวงจันทร์',
   'watch.stat.speed': 'ความเร็ว',
   'watch.unit.kmh': 'กม./ชม.',
   'watch.speed': 'ความเร็วในการเล่น',

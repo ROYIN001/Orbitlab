@@ -25,7 +25,7 @@ import { WATCH_MISSIONS, watchMissionSettings, type WatchMissionId } from '../sr
 import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
 import { expectFlownMr3, flyMr3 } from './mr3-harness';
 import { captureFrame } from '../src/physics/frame';
-import { autoWarp, flightEnding, watchBeat } from '../src/ui/watch-logic';
+import { autoWarp, flightEnding, watchBeat, watchReadout } from '../src/ui/watch-logic';
 
 const burn = (propellant: number, thrustVac: number, ispVac: number) => propellant / (thrustVac / (G0 * ispVac));
 
@@ -305,6 +305,7 @@ describe('Apollo 11 in the viewer', () => {
     const beats: string[] = [];
     const warps = new Set<number>();
     let ending: string | null = null;
+    let last: ReturnType<typeof captureFrame> | undefined;
     while (!sim.isFailed() && sim.state.t < 290000 && !ending) {
       sim.step(sim.suggestedDt());
       if (sim.state.t < 9000) continue;
@@ -313,7 +314,14 @@ describe('Apollo 11 in the viewer', () => {
       if (beats[beats.length - 1] !== beat) beats.push(beat);
       warps.add(autoWarp(frame, beat));
       ending = flightEnding(frame, sim.events);
+      if (ending) last = frame;
     }
+    // the readouts switch to the Moon as Mission Control's displays did: height above it and speed relative to it
+    const r = watchReadout(last!);
+    expect(r.moon).toBe(true);
+    expect(r.altitude).toBeGreaterThan(100e3);
+    expect(r.altitude).toBeLessThan(170e3);
+    expect(Math.abs(r.speed - 2520)).toBeLessThan(20);
     // in the order they were flown: each after the one before it
     let at = -1;
     for (const b of ['tliBurn', 'tliDone', 'transposition', 'apolloDocked', 'extraction', 'evasiveBurn', 'translunarCoast', 'midcourseBurn',

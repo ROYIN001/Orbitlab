@@ -48,6 +48,7 @@ import { ExplosionEffect } from './replay/explosion';
 import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
 import { moonState } from './physics/lunar/ephemeris';
+import { APOLLO_OUT } from './physics/sim/apollo';
 import { moonBodyToEci } from './physics/lunar/orientation';
 import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
@@ -108,9 +109,6 @@ function camPhase(frame: VisualFrame): CamPhase {
   return 'orbit';
 }
 
-/** C01: Apollo this near the Moon (m above it) is watched from beside the stack, the Moon filling the view. */
-const APOLLO_NEAR_MOON = 20000e3;
-
 /**
  * The narrative flight phase the camera sequence is programmed against.
  *
@@ -131,15 +129,12 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
   // entry interface to the water.
   if (frame.status === 'descent') return frame.descentPhase === 'coast' ? 'coast' : 'descent';
   if (frame.status === 'landed') return 'descent';
-  // C01: Apollo's burn for the Moon from space; its transposition, docking and extraction from beside the
-  // stack, and its service engine's burns; the coast from space; the Moon, once near it, from beside the stack
+  // C01: Apollo's burn for the Moon from space; its transposition, docking and extraction, and all the way
+  // to the Moon, from beside the stack — from space, 300,000 km out, it is a marker on a black sky
   const ap = frame.apollo;
   if (ap?.phase === 'tli') return 'burn';
-  if (ap && (ap.phase === 'transposition' || ap.phase === 'docked' || ap.phase === 'extracted'
-    || ap.phase === 'evasive' || ap.phase === 'midcourse' || ap.phase === 'arrival'
-    || (ap.phase === 'approach' && ap.moon.alt < APOLLO_NEAR_MOON)
+  if (ap && (ap.phase === 'transposition' || ap.phase === 'docked' || APOLLO_OUT.includes(ap.phase)
     || (ap.phase === 'translunar' && ap.sequence && frame.t >= ap.sequence.panels - 20))) return 'proximity';
-  if (ap && (ap.phase === 'coast' || ap.phase === 'approach')) return 'orbit';
   // G07: close to the station, from the automatic approach on
   const rv = frame.rendezvous;
   if (rv && rv.range < NEAR_STATION && rv.phase !== 'separation' && rv.phase !== 'coast' && rv.phase !== 'burn') return 'proximity';

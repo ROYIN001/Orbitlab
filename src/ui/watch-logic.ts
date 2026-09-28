@@ -423,6 +423,21 @@ export function groundSpeed(frame: VisualFrame): number {
   return Math.hypot(vx, vy, v.z);
 }
 
+/**
+ * What the height and speed readouts show: over the ground, as a launch
+ * broadcast does; C01: for Apollo on its way, the speed through space, and
+ * from the Moon's sphere of influence on — as Mission Control's displays
+ * switched there — the height above the Moon and the speed relative to it.
+ */
+export function watchReadout(frame: VisualFrame): { altitude: number; speed: number; moon: boolean } {
+  const ap = frame.apollo;
+  if (ap && (ap.phase === 'approach' || ap.phase === 'arrival')) return { altitude: ap.moon.alt, speed: ap.moon.speed, moon: true };
+  if (ap && ap.phase !== 'parking' && ap.phase !== 'tli') {
+    return { altitude: frame.altitude, speed: Math.hypot(frame.v.x, frame.v.y, frame.v.z), moon: false };
+  }
+  return { altitude: frame.altitudeAGL, speed: groundSpeed(frame), moon: false };
+}
+
 /** The flight has reached a stable orbit worth a "you made it" card. */
 export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEvent[]): boolean {
   if (!frame || frame.status === 'failed') return false;

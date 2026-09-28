@@ -1106,6 +1106,8 @@ export const en: Record<string, string> = {
   'watch.say.crewSafe': 'The rocket was lost; the crew was not. That is what the escape system is for.',
   'watch.stat.time': 'Mission time',
   'watch.stat.altitude': 'Altitude',
+  'watch.stat.moonAltitude': 'Above the Moon',
+  'watch.stat.moonSpeed': 'Speed relative to the Moon',
   'watch.stat.speed': 'Speed',
   'watch.unit.kmh': 'km/h',
   'watch.speed': 'Playback speed',
