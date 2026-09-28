@@ -14,14 +14,17 @@ import { describe, expect, it } from 'vitest';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { engineLayout } from '../src/data/engine-layout';
 import { vehicleSpecProblems } from '../src/config/vehicle-spec';
+import { VehicleModel } from '../src/physics/vehicle';
+import { buildRigidVehicle } from '../src/physics/rigid/mass';
 import { chamberGeometry, renderToBody } from '../src/physics/rigid/vehicle-data';
 import { v3 } from '../src/physics/vec3';
 import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../src/types';
-import { scratchVehicles } from './custom-vehicle-harness';
+import { copyOf, scratchVehicles } from './custom-vehicle-harness';
 
 const SCRATCH = scratchVehicles();
 const [NEW_IDS, FALCON_FIVE, SOYUZ_MULTI] = SCRATCH;
 const DEG = Math.PI / 180;
+const circle = (d: number) => Math.PI * d * d / 4;
 const parts = (spec: VehicleSpec): (StageSpec | BoosterGroupSpec)[] => spec.stages.flatMap((s) => [s, ...(s.boosters ?? [])]);
 /** Every stage and strap-on id the catalogue flies, gathered here rather than asked of the library. */
 const CATALOGUE_PARTS = new Set(VEHICLES.flatMap((v) => parts(v).map((p) => p.id)));
@@ -86,5 +89,48 @@ describe('six-DOF for custom vehicles (D03): every engine in the chambers', () =
       expect(rest, p.id).toEqual([]);
       expect([only.thrustFraction, Math.hypot(only.positionBody.y, only.positionBody.z), only.maxGimbalRad], p.id).toEqual([1, 0, 5 * DEG]);
     }
+  });
+});
+
+describe('six-DOF for custom vehicles (D03): aerodynamic tables of the design flown', () => {
+  const table = (spec: VehicleSpec) => buildRigidVehicle(new VehicleModel(spec, 1000)).aero.table!;
+  const base = (): VehicleSpec => {
+    const { derivedFrom: _, ...spec } = copyOf('falcon9');
+    return { ...spec, id: 'scratch-aero' };
+  };
+
+  it('keeps one table per design, not per id: a stretched stage moves the centre of pressure by the stretch', () => {
+    const short = base(), long = structuredClone(short);
+    const stretch = 6.5;
+    long.stages[0].length += stretch;
+    const before = table(short), after = table(long);
+    // The same design twice is the same table (the cache still works).
+    expect(table(short)).toBe(before);
+    // Slender-body theory: the normal-force slope is 2·(area gained)/S, and a
+    // longer cylinder gains no area, so C_Nα is the same at every Mach; every
+    // lift term (the fairing's joint, its ogive, the carried-over lift behind
+    // it) sits above the stretched stage and moves up by exactly the stretch,
+    // and the side area grows by diameter × stretch. Identities, to 1e-9 m.
+    expect(after.normalSlope).toEqual(before.normalSlope);
+    after.cpX.forEach((x, i) => expect(x - before.cpX[i]).toBeCloseTo(stretch, 9));
+    expect(after.planformArea - before.planformArea).toBeCloseTo(short.stages[0].diameter * stretch, 9);
+  });
+
+  it('gives a widened first stage under the same id the slope slender-body theory gives its base', () => {
+    const narrow = base(), wide = structuredClone(narrow);
+    wide.stages[0].diameter = 4.2;
+    const before = buildRigidVehicle(new VehicleModel(narrow, 1000)).aero, after = buildRigidVehicle(new VehicleModel(wide, 1000)).aero;
+    // The 5.2 m fairing is still the widest part, so the reference area is the same.
+    expect(after.referenceArea).toBe(before.referenceArea);
+    // Subsonic (no carried-over lift up to Mach 0.8) a pointed body's C_Nα is
+    // 2·A_base/S whatever the steps above the base: the terms telescope.
+    // Held to 1e-12 relative, fixed before the comparison.
+    const S = before.referenceArea;
+    for (const [aero, d] of [[before, narrow.stages[0].diameter], [after, 4.2]] as const) {
+      aero.table!.mach.forEach((m, i) => {
+        if (m <= 0.8) expect(aero.table!.normalSlope[i] / (2 * circle(d) / S)).toBeCloseTo(1, 12);
+      });
+    }
+    expect(after.table!.normalSlope[0]).not.toBe(before.table!.normalSlope[0]);
   });
 });

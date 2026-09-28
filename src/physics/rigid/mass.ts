@@ -1,7 +1,7 @@
 /** Variable mass/CG/full inertia from disclosed component estimates. Pure: never
  * consumes fuel, changes staging, or mutates the legacy VehicleModel. */
 import { shipFlapSurfaces, type ControlSurfaceSpec } from './surfaces';
-import type { BoosterGroupSpec, StageSpec } from '../../types';
+import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../../types';
 import type { VehicleModel } from '../vehicle';
 import { engineMassFlow, engineThrust } from '../vehicle';
 import { add, scale, sub, v3, type Vec3 } from '../vec3';
@@ -221,8 +221,18 @@ function aeroEstimate(area: number, length: number, base: Vec3, diameter: number
 /** A payload or spacecraft flying without its launcher: a blunt body, as the point-mass model flies it. */
 const RELEASED_BODY_CD = 2.2;
 
-/** Tables per attached configuration: the stack changes only at separations. */
+/**
+ * Tables per attached configuration: the stack changes only at separations.
+ * A released body's and a returning ship's are keyed by their dimensions. A
+ * launcher's are kept per spec object (roadmap D03), as `stackLayout` keeps its
+ * layout: keyed by the vehicle's id, a design stretched or widened and flown
+ * again under the same id was handed the previous design's centre of pressure
+ * and normal-force slope. The tables depend on the geometry alone, so a
+ * catalogue flight's are the same numbers either way. A spec is never edited in
+ * place, the rule `stackLayout`'s cache already relies on.
+ */
 const aeroTables = new Map<string, AeroTable>();
+const ascentTables = new WeakMap<VehicleSpec, Map<string, AeroTable>>();
 
 function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, area: number, length: number, diameter: number,
   base: Vec3): { table: AeroTable; cd?: (mach: number) => number } {
@@ -240,12 +250,17 @@ function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, a
   // One booster state per strap-on group.
   const groups = active ? active.boosters.map((b) => b.attached) : [];
   const stageAttached = vehicle.stages.map((st) => st.attached);
-  const key = `${vehicle.spec.id}|${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${groups.map(Number).join('')}|${area}`;
-  let table = aeroTables.get(key);
+  const key = `${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${groups.map(Number).join('')}|${area}`;
+  let tables = ascentTables.get(vehicle.spec);
+  if (!tables) {
+    tables = new Map();
+    ascentTables.set(vehicle.spec, tables);
+  }
+  let table = tables.get(key);
   if (!table) {
     table = ascentAeroTable(vehicle.spec, { activeIndex: vehicle.activeIndex, stageAttached, fairingAttached: vehicle.fairingAttached, boosterGroups: groups },
       area, (index) => geometry.stageBases[index].x);
-    aeroTables.set(key, table);
+    tables.set(key, table);
   }
   return { table };
 }
