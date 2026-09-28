@@ -263,7 +263,9 @@ export class SizingPanel {
     const tb = el('table', 'bs-table be-compare be-size-table');
     tb.append(el('caption', 'bs-sr', t('build.eng.size.caption')));
     const head = el('tr');
-    for (const [k, cls] of [['build.fig.stage', ''], ['build.eng.staging.col.dv', 'num'], ['build.eng.size.col.engines', ''], ['build.fig.tw', 'num'],
+    // the engines go under each stage's name; a phone has room for three columns, so there the T/W goes
+    // under the name too and the length under the mass (engineer.css)
+    for (const [k, cls] of [['build.fig.stage', ''], ['build.eng.staging.col.dv', 'num'], ['build.fig.tw', 'num be-diff'],
       ['build.eng.staging.col.mass', 'num'], ['build.eng.size.col.length', 'num be-diff']] as const) {
       const th = el('th', cls || undefined, t(k));
       if (k === 'build.eng.size.col.length') th.append(' ', el('em', 'bs-est', t('build.stat.estimate')));
@@ -275,14 +277,15 @@ export class SizingPanel {
     const tbody = el('tbody');
     s.stages.forEach((st, i) => {
       const tr = el('tr');
-      const th = el('th', undefined, t('build.label.stage', { n: i + 1 }));
+      const th = el('th');
       th.scope = 'row';
+      th.append(el('span', undefined, t('build.label.stage', { n: i + 1 })), el('small', 'be-sub', engineLine(st.engines, enginePart(req.stages[i].enginePart).name)),
+        el('small', 'be-diff-in', t('build.eng.size.twIn', { tw: num(st.tw, 2) })));
       const m = el('td', 'num', mass(st.mass));
       m.append(el('small', 'be-sub', t('build.eng.staging.propIn', { m: mass(st.propellantMass) })));
       // a phone has no room for the length column: it goes under the mass (engineer.css)
       m.append(el('small', 'be-diff-in', t('build.eng.size.lengthIn', { l: metres(st.length) })));
-      tr.append(th, el('td', 'num', ms(st.dv)), el('td', undefined, engineLine(st.engines, enginePart(req.stages[i].enginePart).name)),
-        el('td', 'num', num(st.tw, 2)), m, el('td', 'num be-diff', metres(st.length)));
+      tr.append(th, el('td', 'num', ms(st.dv)), el('td', 'num be-diff', num(st.tw, 2)), m, el('td', 'num be-diff', metres(st.length)));
       tbody.append(tr);
     });
     tb.append(thead, tbody);

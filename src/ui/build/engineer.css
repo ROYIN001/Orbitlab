@@ -134,9 +134,9 @@
   display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: 50%;
   font-size: 11px; border: 1px solid var(--muted); color: var(--muted);
 }
-.be-check-glyph.ok { border-color: var(--ok); background: var(--ok); color: #0b2415; }
-.be-check-glyph.warn { border-color: var(--warn); background: var(--warn); color: #231a02; }
-.be-check-glyph.fail { border-color: var(--fail); background: var(--fail); color: #1b0909; }
+.be-check-glyph.be-lvl-ok { border-color: var(--ok); background: var(--ok); color: #0b2415; }
+.be-check-glyph.be-lvl-warn { border-color: var(--warn); background: var(--warn); color: #231a02; }
+.be-check-glyph.be-lvl-fail { border-color: var(--fail); background: var(--fail); color: #1b0909; }
 .bd-say-ok { border-left-color: var(--ok); background: transparent; }
 .bd-say-ok .bd-say-tag { color: var(--ok); }
 .bd-say-ok .bd-say-glyph { background: var(--ok); color: #0b2415; }
@@ -163,8 +163,8 @@
 
 .be-stage-in .be-wide { grid-column: 1 / -1; }
 .be-size-finding { padding: 8px 10px; border-left: 3px solid var(--warn); background: rgba(239, 164, 126, 0.06); color: #e7d2c6; border-radius: 0 8px 8px 0; }
-.be-size-table td small.be-sub { display: block; font-weight: 400; color: var(--muted); }
-.be-size-table td:nth-child(3) { white-space: normal; }
+.be-size-table small.be-sub { display: block; font-weight: 400; color: var(--muted); }
+.be-size-table tbody th small.be-sub { white-space: normal; }
 .be-size-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .be-size-row { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
 /* build.css's .bs-draw fills a column (and loads after this file): held to a box of its own here */
@@ -206,6 +206,8 @@
   .be-tile dd { font-size: 16px; }
   /* build.css turns the Watch level's stage table into cards on a phone; these tables stay tables */
   .be-grid table.bs-table { display: table; }
+  /* …but the stage-by-stage figures of a sized launcher are build.css's, cards on a phone */
+  .be-grid .bs-figures-body table.bs-table { display: none; }
   .be-compare { font-size: 12px; }
   .be-compare th, .be-compare td { padding: 5px 4px; }
   .be-compare .be-diff { display: none; }

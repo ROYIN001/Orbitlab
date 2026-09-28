@@ -305,7 +305,7 @@ export class ReviewPanel {
   private sectionView(s: ChecklistSection): HTMLElement {
     const box = el('section', `be-check be-check-${s.level}`);
     const h = el('h3', 'bx-h3 be-check-title');
-    const glyph = el('span', `be-check-glyph ${s.level}`, LEVEL_GLYPH[s.level]);
+    const glyph = el('span', `be-check-glyph be-lvl-${s.level}`, LEVEL_GLYPH[s.level]);
     glyph.setAttribute('aria-hidden', 'true');
     h.append(glyph, ` ${t(SECTION_KEY[s.id])}`, el('span', 'bs-sr', ` — ${t(LEVEL_KEY[s.level])}`));
     const ul = el('ul', 'bd-say-list');
