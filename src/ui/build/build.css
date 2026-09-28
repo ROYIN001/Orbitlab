@@ -175,7 +175,9 @@
   .bs-grid { display: flex; flex-direction: column; align-items: stretch; padding: 10px 16px 16px; gap: 10px; }
   .bs-intro { display: block; }
   .bs-intro .bs-picker { margin-top: 12px; }
-  .bs-stage { position: static; height: auto; max-height: none; min-height: 0; flex: none; }
+  /* the column's whole width: the wide screen's `align-self: start` would
+     shrink the box to its widest line of text (the hint), 250 px in English */
+  .bs-stage { position: static; height: auto; max-height: none; min-height: 0; flex: none; align-self: stretch; }
   .bs-draw { flex: none; height: min(64vh, 480px); }
   .bs-panel { padding: 12px; }
   .bs-title { font-size: 19px; }
