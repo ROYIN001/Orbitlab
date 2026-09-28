@@ -180,8 +180,9 @@ export class TunnelMapView {
     for (let m = 0; m < map.machs.length; m++) {
       const label = machText(map.machs[m]);
       const x = x0(m) + g.cw / 2, half = c.measureText(label).width / 2;
-      // a label that would touch the one before it is left out (a phone's narrow columns); the readout still names it
-      if (x - half < right + 3) continue;
+      // a label that would come within a character of the one before it is left out (a phone's narrow
+      // columns: 3 px apart, "0.6 0.8" read as one number); the readout still names every column
+      if (x - half < right + 8) continue;
       c.fillText(label, x, PAD.t + n * g.ch + 4);
       right = x + half;
     }
