@@ -57,7 +57,8 @@
 .bx-with-unit { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .bx-with-unit input { flex: 1; min-width: 0; }
 .bx-unit { flex: none; font-size: 12px; color: var(--muted); }
-.bx-num { text-align: right; }
+/* a text box read as a number (numberBox): the number box's look */
+.bx-num { text-align: right; font-family: var(--mono); }
 
 /* ── the drawing and its figures at a glance ──────────────────────────────── */
 

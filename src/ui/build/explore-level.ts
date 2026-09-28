@@ -28,7 +28,7 @@
  * and the checks, so a drag is never interrupted, and the keyboard stays on
  * the control it was on when anything is redrawn.
  */
-import { t } from '../../i18n';
+import { getLang, t } from '../../i18n';
 import type { StageSpec, VehicleSpec } from '../../types';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
 import { BOOSTER_BODIES, FAIRING_PARTS, STAGE_BODIES, enginePart, enginePartOf, lockedEngineCount, stageBody, type EnginePart } from '../../data/parts';
@@ -44,6 +44,7 @@ import { pickerEntries } from '../../design/vehicle-picker';
 import { fairingOf } from '../../design/vehicle-parts';
 import { refusalText, type DesignText } from '../../design/warning-text';
 import { handoffDocument } from '../../design/build-handoff';
+import { decimalMark, parseTyped, stepTyped, typedText } from '../../design/number-entry';
 import type { RatingClass } from '../../design/ratings';
 import {
   DEFAULT_GROUP, EXPLORE_MODES, STRETCH_RANGE, activeDraft, asOwnBody, designChecks, designResult, draftFromSpec, estimateTexts, fitEngine,
@@ -110,20 +111,40 @@ export function select(key: string, options: { value: string; label: string; gro
   return s;
 }
 
-/** A number box in the units shown, SI in the model. */
-export function numberBox(key: string, value: number, o: { min: number; max: number; step: number; show?: (v: number) => number; read?: (n: number) => number },
+/**
+ * A number box in the units shown, SI in the model. A text box with a
+ * decimal keyboard, not `type="number"`: Chromium's number box drops a
+ * Russian decimal comma (0,08 became 008), so the box is read and written the
+ * reader's way (src/design/number-entry.ts), and the arrow keys step it as a
+ * number box's would. `digits` fixes how many decimals a value is shown with.
+ */
+export function numberBox(key: string, value: number,
+  o: { min: number; max: number; step: number; show?: (v: number) => number; read?: (n: number) => number; digits?: number },
   onChange: (v: number) => void): HTMLInputElement {
   const show = o.show ?? ((v: number) => v), read = o.read ?? ((n: number) => n);
+  // the language when the box is read or written: a box kept across a language switch follows it
+  const text = (shown: number): string => (o.digits === undefined || !Number.isFinite(shown)
+    ? typedText(shown, getLang()) : shown.toFixed(o.digits).replace('.', decimalMark(getLang())));
   const box = el('input', 'bx-num');
-  box.type = 'number';
+  box.type = 'text';
   box.inputMode = 'decimal';
+  box.autocomplete = 'off';
+  box.spellcheck = false;
   box.dataset.k = key;
-  box.min = String(o.min);
-  box.max = String(o.max);
-  box.step = String(o.step);
-  box.value = Number.isFinite(value) ? String(+show(value).toFixed(6)) : '';
+  box.value = Number.isFinite(value) ? text(show(value)) : '';
   // an empty or half-typed box is NaN, which the model refuses by name
-  box.addEventListener('input', () => onChange(box.value.trim() === '' ? Number.NaN : read(Number(box.value.replace(',', '.')))));
+  const typed = (): void => {
+    const n = parseTyped(box.value, getLang());
+    box.setAttribute('aria-invalid', String(box.value.trim() !== '' && !Number.isFinite(n)));
+    onChange(Number.isFinite(n) ? read(n) : Number.NaN);
+  };
+  box.addEventListener('input', typed);
+  box.addEventListener('keydown', (e) => {
+    if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || e.altKey || e.ctrlKey || e.metaKey) return;
+    e.preventDefault();
+    box.value = text(stepTyped(parseTyped(box.value, getLang()), e.key === 'ArrowUp' ? 1 : -1, o));
+    typed();
+  });
   return box;
 }
 

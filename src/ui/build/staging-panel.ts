@@ -188,19 +188,16 @@ export class StagingPanel {
       const isp = numberBox(`staging:isp:${i}`, st.ispS, { min: STAGING_LIMITS.isp[0], max: STAGING_LIMITS.isp[1], step: 1 }, (v) => { st.ispS = v; this.changed(); });
       const ispRow = el('span', 'bx-with-unit');
       ispRow.append(isp, el('span', 'bx-unit', t('u.s')));
-      const eps = numberBox(`staging:eps:${i}`, st.epsilon, { min: STAGING_LIMITS.epsilon[0], max: STAGING_LIMITS.epsilon[1], step: 0.001 }, (v) => { st.epsilon = v; this.changed(); });
-      eps.value = Number.isFinite(st.epsilon) ? st.epsilon.toFixed(4) : '';
+      const eps = numberBox(`staging:eps:${i}`, st.epsilon, { min: STAGING_LIMITS.epsilon[0], max: STAGING_LIMITS.epsilon[1], step: 0.001, digits: 4 }, (v) => { st.epsilon = v; this.changed(); });
       row.append(field(t('build.eng.staging.isp'), ispRow), field(t('build.fig.eps'), eps));
       list.append(row);
     });
     parts.push(list);
 
-    const dv = numberBox('staging:dv', this.inputs.dvMps, { min: STAGING_LIMITS.dv[0], max: STAGING_LIMITS.dv[1], step: 10 }, (v) => { this.inputs.dvMps = v; this.changed(); });
-    dv.value = String(Math.round(this.inputs.dvMps));
+    const dv = numberBox('staging:dv', this.inputs.dvMps, { min: STAGING_LIMITS.dv[0], max: STAGING_LIMITS.dv[1], step: 10, digits: 0 }, (v) => { this.inputs.dvMps = v; this.changed(); });
     const dvRow = el('span', 'bx-with-unit');
     dvRow.append(dv, el('span', 'bx-unit', t('u.ms')));
-    const pay = numberBox('staging:payload', this.inputs.payloadKg, { min: 0, max: STAGING_LIMITS.payload[1], step: 1 }, (v) => { this.inputs.payloadKg = v; this.changed(); });
-    pay.value = String(Math.round(this.inputs.payloadKg));
+    const pay = numberBox('staging:payload', this.inputs.payloadKg, { min: 0, max: STAGING_LIMITS.payload[1], step: 1, digits: 0 }, (v) => { this.inputs.payloadKg = v; this.changed(); });
     const payRow = el('span', 'bx-with-unit');
     payRow.append(pay, el('span', 'bx-unit', t('u.kg')));
     const pair = el('div', 'be-pair');
