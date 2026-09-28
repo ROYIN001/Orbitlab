@@ -1825,6 +1825,7 @@ export const th: Record<string, string> = {
   'build.ex.own.propellant': 'มวลเชื้อเพลิง',
   'build.ex.own.diameter': 'เส้นผ่านศูนย์กลาง',
   'build.ex.own.length': 'ความยาว',
+  'share.source.build': 'ส่วนสร้างจรวด',
   'watch.beat.countdown': 'นับถอยหลัง',
   'watch.beat.liftoff': 'ทะยานขึ้น',
   'watch.beat.climb': 'พ้นหอปล่อย',

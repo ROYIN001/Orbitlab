@@ -1824,6 +1824,7 @@ export const ru: Record<string, string> = {
   'build.ex.own.propellant': 'Масса топлива',
   'build.ex.own.diameter': 'Диаметр',
   'build.ex.own.length': 'Длина',
+  'share.source.build': 'раздела «Конструктор»',
   'watch.beat.countdown': 'Обратный отсчёт',
   'watch.beat.liftoff': 'Старт',
   'watch.beat.climb': 'Уход от башни',

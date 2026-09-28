@@ -1845,6 +1845,7 @@ export const en: Record<string, string> = {
   'build.ex.own.propellant': 'Propellant',
   'build.ex.own.diameter': 'Diameter',
   'build.ex.own.length': 'Length',
+  'share.source.build': 'the Build section',
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',
   'watch.beat.climb': 'Clearing the tower',
