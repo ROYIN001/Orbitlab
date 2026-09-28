@@ -337,6 +337,7 @@ export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEven
 
 /** The events that close an orbital flight: its orbital work is done, on the target or not. */
 const FINAL_ORBIT = new Set(['evt.targetOrbit', 'evt.offTargetOrbit']);
+const PARKING = new Set(['evt.parkingOrbit']);
 
 /** The newest event of `keys` at or before the frame. */
 function lastEvent(frame: VisualFrame, events: readonly SimEvent[], keys: ReadonlySet<string>): SimEvent | undefined {
@@ -367,6 +368,33 @@ export function missionOrbit(frame: VisualFrame | null, events: readonly SimEven
   if (!frame || frame.status === 'failed') return false;
   // the status alone for a recording older than the events
   return frame.status === 'orbit' || !!lastEvent(frame, events, FINAL_ORBIT);
+}
+
+/** The parking orbit on screen, and the burn it is waiting for (audit 2026-09-27 A9). */
+export interface ParkingMilestone {
+  /** mission time of the insertion, s */
+  t: number;
+  /** periapsis and apoapsis heights, km */
+  pe: number;
+  ap: number;
+  /** time to the next burn, s */
+  tgo: number;
+}
+
+/**
+ * The flight is coasting in a parking orbit with its next burn scheduled: a
+ * milestone worth a word, not the end (audit 2026-09-27 A9). Null once that
+ * burn lights, once the final orbit is reached, and for a flight to the
+ * station, which reads its own plan out (G07).
+ */
+export function parkingMilestone(frame: VisualFrame | null, events: readonly SimEvent[]): ParkingMilestone | null {
+  if (!frame || frame.status !== 'coast' || frame.rendezvous || frame.abort) return null;
+  if (!(frame.nextBurnTime > frame.t)) return null;
+  if (missionOrbit(frame, events)) return null;
+  const parking = lastEvent(frame, events, PARKING);
+  if (!parking) return null;
+  const p = parking.params ?? {};
+  return { t: parking.t, pe: Number(p.pe ?? frame.elements.periapsisAlt / 1000), ap: Number(p.ap ?? frame.elements.apoapsisAlt / 1000), tgo: frame.nextBurnTime - frame.t };
 }
 
 /** How a flight on screen ends. */

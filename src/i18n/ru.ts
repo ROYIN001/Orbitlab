@@ -1755,6 +1755,9 @@ export const ru: Record<string, string> = {
   'watch.end.dockedTitle': 'Стыковка со станцией!',
   'watch.end.dockedText': 'Корабль коснулся узла {port} через {time} после старта, выполнив {burns} включений двигателя, чтобы догнать станцию на высоте 400 км.',
   'watch.end.dockedFact': 'До 2020 года на это уходило двое суток; быстрая схема, по которой летают с «Союза МС-17», доставляет экипаж примерно за три часа.',
+  // audit 2026-09-27 A9: the parking orbit as a milestone
+  'watch.parking.eyebrow': 'Опорная орбита',
+  'watch.parking.text': 'Аппарат на орбите {pe} × {ap} км, но она ещё не конечная: двигатель включится снова через {tgo}.',
   'dock.range': 'Дальность',
   'dock.rate': 'Скорость',
   'dock.lateral': 'Смещение',

@@ -1756,6 +1756,9 @@ export const th: Record<string, string> = {
   'watch.end.dockedTitle': 'เทียบท่ากับสถานีแล้ว!',
   'watch.end.dockedText': 'ยานสัมผัสช่องเทียบ {port} หลังปล่อย {time} โดยจุดเครื่องยนต์ {burns} ครั้งเพื่อไล่ทันสถานีที่ความสูง 400 กม.',
   'watch.end.dockedFact': 'ก่อนปี 2020 ต้องใช้เวลาสองวัน แผนการบินแบบเร็วที่ใช้ตั้งแต่ Soyuz MS-17 พาลูกเรือไปถึงในราวสามชั่วโมง',
+  // audit 2026-09-27 A9: the parking orbit as a milestone
+  'watch.parking.eyebrow': 'วงโคจรพัก',
+  'watch.parking.text': 'เข้าวงโคจรพักแล้ว {pe} × {ap} กม. แต่ยังไม่ใช่วงโคจรสุดท้าย เครื่องยนต์จะจุดอีกครั้งในอีก {tgo}',
   'dock.range': 'ระยะ',
   'dock.rate': 'ความเร็วเข้าหา',
   'dock.lateral': 'เยื้องแกน',

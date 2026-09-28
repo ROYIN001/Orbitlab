@@ -1776,6 +1776,9 @@ export const en: Record<string, string> = {
   'watch.end.dockedTitle': 'Docked at the station!',
   'watch.end.dockedText': 'The spacecraft touched the {port} port {time} after liftoff, after {burns} engine burns to catch the station 400 km above the Earth.',
   'watch.end.dockedFact': 'Until 2020 this took two days; the fast profile, flown since Soyuz MS-17, gets the crew there in about three hours.',
+  // audit 2026-09-27 A9: the parking orbit as a milestone
+  'watch.parking.eyebrow': 'Parking orbit',
+  'watch.parking.text': 'In orbit at {pe} × {ap} km, but not the final one yet: the engine fires again in {tgo} to get there.',
   'dock.range': 'Range',
   'dock.rate': 'Closing',
   'dock.lateral': 'Off axis',

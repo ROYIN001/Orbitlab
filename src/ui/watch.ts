@@ -16,7 +16,7 @@ import type { SimEvent } from '../physics/simulation';
 import { vehicleById, vehicleDataId } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
+import { autoWarp, flightEnding, groundSpeed, parkingMilestone, watchBeat, WATCH_BEATS, type WatchBeat, type WatchEnding } from './watch-logic';
 import { WATCH_MISSIONS, type WatchMissionId } from './watch-missions';
 
 export interface WatchHost {
@@ -38,6 +38,10 @@ export interface WatchHost {
 export type WatchSpeed = 'auto' | number;
 /** fixed speeds, all of them presets of the workspace's warp selector */
 const SPEEDS: readonly WatchSpeed[] = ['auto', 1, 5, 25, 100];
+/** How long the parking-orbit note stays up on its own, ms of real time (A9). */
+const MILESTONE_MS = 12_000;
+/** A parking orbit left within this many seconds is not worth a note: Falcon Heavy's lights again a second later, s. */
+const MILESTONE_LEAD = 20;
 
 interface UpdateState {
   /** the live flight is advancing */
@@ -80,6 +84,11 @@ function fmtClock(sec: number): string {
   return fmtTime(sec).replace('-', '−');
 }
 
+/** A span of time, "45:52", for a sentence. */
+function fmtSpan(sec: number): string {
+  return fmtClock(Math.max(0, sec)).replace(/^T\+/, '');
+}
+
 export class WatchView {
   private missionId: WatchMissionId | null = null;
   private speed: WatchSpeed = 'auto';
@@ -90,6 +99,17 @@ export class WatchView {
   private lastFrame: VisualFrame | null = null;
   /** the frame the end card was written for, so a language change rewrites the same card */
   private endFrame: { frame: VisualFrame; ending: WatchEnding } | null = null;
+  /**
+   * A9: the parking-orbit note. It is shown once a flight, over the top of the
+   * scene rather than across it, and goes by itself, when closed, or when the
+   * next burn lights.
+   */
+  private milestone: HTMLElement;
+  private milestoneText: HTMLElement;
+  private milestoneEyebrow: HTMLElement;
+  private milestoneClose: HTMLButtonElement;
+  private milestoneShown = false;
+  private milestoneTimer: ReturnType<typeof setTimeout> | null = null;
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
@@ -167,7 +187,22 @@ export class WatchView {
     this.picker.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); this.closePicker(); } });
     this.endCard = el('section', 'watch-card watch-end');
     this.endCard.hidden = true;
-    root.replaceChildren(bottom, this.picker, this.endCard);
+    // A9: the card styles belong to src/ui/modes.css, which is not this
+    // change's to edit; the note borrows the cards' look and sits at the top.
+    this.milestone = el('section', 'watch-card watch-milestone');
+    this.milestone.hidden = true;
+    this.milestone.setAttribute('role', 'status');
+    Object.assign(this.milestone.style, { top: '16px', transform: 'translateX(-50%)', width: 'min(460px, calc(100% - 32px))', padding: '12px 14px 14px' });
+    const milestoneHead = el('div', 'watch-card-head');
+    this.milestoneEyebrow = el('span', 'eyebrow');
+    this.milestoneClose = el('button', 'watch-close', '×');
+    this.milestoneClose.type = 'button';
+    this.milestoneClose.addEventListener('click', () => this.hideMilestone());
+    milestoneHead.append(this.milestoneEyebrow, this.milestoneClose);
+    this.milestoneText = el('p');
+    Object.assign(this.milestoneText.style, { margin: '2px 0 0', fontSize: '14.5px', lineHeight: '1.5', color: '#c8d6e2' });
+    this.milestone.append(milestoneHead, this.milestoneText);
+    root.replaceChildren(bottom, this.picker, this.endCard, this.milestone);
     this.applyLanguage();
   }
 
@@ -196,6 +231,8 @@ export class WatchView {
     this.beat = null;
     this.lastWarp = 0;
     this.endCard.hidden = true;
+    this.hideMilestone();
+    this.milestoneShown = false;
     this.shown.label = '';
   }
 
@@ -208,6 +245,7 @@ export class WatchView {
   openPicker(): void {
     this.renderPicker();
     this.endCard.hidden = true;
+    this.hideMilestone();
     this.picker.hidden = false;
     this.root.classList.add('picking');
     this.picker.querySelector<HTMLElement>('.watch-mission')?.focus({ preventScroll: true });
@@ -281,10 +319,37 @@ export class WatchView {
     if (state.playing !== this.shown.playing) this.syncPlay(state.playing);
     this.syncFollow(state.follow);
     if (this.speed === 'auto' && state.playing) this.applyAutoWarp();
+    this.syncMilestone(frame, events);
     if (!this.ended && frame) {
       const ending = flightEnding(frame, events);
-      if (ending) { this.ended = true; this.showEnd(frame, ending); }
+      if (ending) {
+        this.ended = true;
+        this.hideMilestone();
+        this.showEnd(frame, ending);
+      }
     }
+  }
+
+  /**
+   * A9: a parking orbit is a milestone, not the end: say so, with the orbit
+   * and the time to the burn that leaves it, and count that time down.
+   */
+  private syncMilestone(frame: VisualFrame | null, events: readonly SimEvent[]): void {
+    const m = this.ended ? null : parkingMilestone(frame, events);
+    if (!m) { this.hideMilestone(); return; }
+    if (this.milestone.hidden) {
+      if (this.milestoneShown || !this.picker.hidden || m.tgo < MILESTONE_LEAD) return;
+      this.milestoneShown = true;
+      this.milestone.hidden = false;
+      this.milestoneTimer = setTimeout(() => this.hideMilestone(), MILESTONE_MS);
+    }
+    const text = t('watch.parking.text', { pe: num(m.pe), ap: num(m.ap), tgo: fmtSpan(m.tgo) });
+    if (this.milestoneText.textContent !== text) this.milestoneText.textContent = text;
+  }
+
+  private hideMilestone(): void {
+    if (this.milestoneTimer !== null) { clearTimeout(this.milestoneTimer); this.milestoneTimer = null; }
+    this.milestone.hidden = true;
   }
 
   private syncFollow(follow: UpdateState['follow']): void {
@@ -408,5 +473,10 @@ export class WatchView {
     this.shown = { ...this.shown, label: '', text: '', clock: '', alt: '', speed: '', follow: '' };
     if (!this.picker.hidden) this.renderPicker();
     if (!this.endCard.hidden && this.endFrame) this.showEnd(this.endFrame.frame, this.endFrame.ending);
+    this.milestoneEyebrow.textContent = t('watch.parking.eyebrow');
+    this.milestoneClose.setAttribute('aria-label', t('watch.pick.close'));
+    this.milestoneClose.title = t('watch.pick.close');
+    // the note's sentence is rewritten on the next update
+    this.milestoneText.textContent = '';
   }
 }

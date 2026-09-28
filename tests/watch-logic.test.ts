@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoWarp, flightEnding, groundSpeed, missionOrbit, reachedOrbit, watchBeat, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
+import { autoWarp, flightEnding, groundSpeed, missionOrbit, parkingMilestone, reachedOrbit, watchBeat, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
 import { OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
 import type { DebrisFrame, VisualFrame } from '../src/physics/frame';
 import type { SimEvent } from '../src/physics/simulation';
@@ -203,11 +203,25 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
     expect(flightEnding(bandwagon(payload + 10.5), log)).toBe('orbit');
   });
 
+  it('marks the parking orbit as a milestone with the burn still to come, until that burn lights', () => {
+    expect(parkingMilestone(bandwagon(470), log)).toBeNull();
+    // the stage tails off for a second after the cut-off with nothing planned yet: no milestone, no ending
+    expect(parkingMilestone(bandwagon(480.5), log)).toBeNull();
+    expect(flightEnding(bandwagon(480.5), log)).toBeNull();
+    const m = parkingMilestone(bandwagon(500), log)!;
+    expect(m).toMatchObject({ pe: 200, ap: 588 });
+    expect(m.tgo).toBeCloseTo(scheduled + tgo - 500, 6);
+    expect(parkingMilestone(bandwagon(3000), log)!.tgo).toBeCloseTo(scheduled + tgo - 3000, 6);
+    expect(parkingMilestone(bandwagon(burnStart + 1), log)).toBeNull();
+    expect(parkingMilestone(bandwagon(target + 1), log)).toBeNull();
+  });
+
   it('does not end on a burn scheduled and never completed, until the flight is closed off target', () => {
     // parking orbit, a burn planned, then the stage stops pointing it (`evt.burnPaused`): no burn pending on the frame
     const events = [ev(480, 'evt.parkingOrbit'), ev(481, 'evt.burnScheduled'), ev(3234, 'evt.burnStart'), ev(3240, 'evt.burnPaused')];
     const coasting = frame({ t: 3300, status: 'coast', nextBurnTime: -1 });
     expect(flightEnding(coasting, events)).toBeNull();
+    expect(parkingMilestone(coasting, events)).toBeNull();
     // the flight is closed off target (`evt.burnAlignmentTimeout` → `reachTargetOrbit(el, false)`) with the payload aboard
     const closed = [...events, ev(3400, 'evt.burnAlignmentTimeout'), { ...ev(3400, 'evt.offTargetOrbit'), params: { pe: 205, ap: 590, inc: 45.4 } }];
     expect(flightEnding(frame({ t: 3405, status: 'orbit' }), closed)).toBeNull();
@@ -237,6 +251,7 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
     ];
     const after = (t: number, o: Partial<VisualFrame> = {}) => frame({ t, status: 'coast', payloadSeparated: true, ...o });
     expect(flightEnding(after(545), soyuz)).toBeNull();
+    expect(parkingMilestone(after(540, { nextBurnTime: 564.4 }), soyuz)).toMatchObject({ pe: 198, ap: 200 });
     expect(flightEnding(after(1500), soyuz)).toBeNull();
     expect(flightEnding(after(3405, { status: 'orbit' }), soyuz)).toBeNull();
     // the payload was already off: the card only settles after the final orbit
