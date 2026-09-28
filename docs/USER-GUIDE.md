@@ -11,10 +11,10 @@ Orbitlab is being grown into one space program in three **sections**: **Launch**
 simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build** (designing a
 rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
 Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
-**Orbit** opens on its playground (section 0a below). Build is being built: today it shows what
-is coming, level by level and in the order it will be built
-([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on it pretends to work. Everything after
-section 0a is about Launch.
+**Orbit** opens on its playground (section 0a below). **Build** takes real rockets apart, remixes
+them, builds new ones from parts and tests them before they fly (section 0b below); what is still
+to come to it, the satellites, is listed on its levels, from
+[ROADMAP-PART2-3.md](ROADMAP-PART2-3.md). Everything after section 0b is about Launch.
 
 - **Home** — the landing page, a page you scroll (the wheel scrolls it; it does not move the
   scene). Its first screen is the featured rocket on its pad: **Watch a launch** plays the
@@ -345,6 +345,185 @@ be read keeps its own group from the snapshot, and the panel says which. A publi
 with a fresh snapshot. An element set is a fraction of a kilometre to a few kilometres off at
 its epoch, and further as it ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its
 reference.
+
+## 0b. The Build section: rockets taken apart, remixed, built and tested
+
+Build is where rockets are taken apart and put together. Open **Build** in the top bar; the level
+switch beside it chooses Watch, Explore or Engineer. (The landing page has no Build chapter yet, so
+the top bar is the way in.) Every rocket here is made from one parts catalogue, the same one the
+21 real rockets are assembled from, and every figure is worked out by the physics the launches
+fly. What the builder cannot know is marked as an estimate, and the section below the three levels
+says what those estimates mean.
+
+### Watch: real rockets, taken apart
+
+- **Choose a rocket** from the list, or step through all 21 with ‹ and ›. They are grouped into
+  today's rockets and historical ones.
+- **The drawing** is to scale, with a scale bar at the bottom. **Taken apart** moves the stages
+  apart along the axis, the strap-ons out to the sides and the fairing's two halves apart;
+  **Assembled** stands the rocket up. Each strap-on group is drawn as one unit on each side and
+  labelled with how many there are.
+- **Click or tap a part, or its label,** to open its catalogue card: its engines (how many, their
+  thrust and specific impulse at sea level and in vacuum, how far they throttle down, what they
+  burn, and what one engine weighs, with how far that figure can be trusted), its dry mass,
+  propellant, diameter and length, its structural ratio and propellant fraction, and its sources
+  as links. A vacuum engine shows no sea-level figures. A solid motor's thrust is its mean over the
+  burn. Labels can also be reached with Tab and opened with Enter; Escape closes the card.
+- **Stage by stage** gives each stage's ideal Δv (split into "with strap-ons" and "core alone"
+  where there are strap-ons), its burn time, its thrust-to-weight at ignition, its structural
+  ratio ε and its propellant fraction. It is worked at half the rated low-orbit payload, with
+  vacuum Isp and no gravity or drag losses, from the catalogue's rounded figures: estimates. Falcon
+  Heavy's and Angara-A5's cores show 0 m/s alone, and a note says why: the figures count them at
+  full throttle, while in flight they throttle to 55 % and 30 % beside their strap-ons. On a phone
+  each stage is a card.
+- **The tour** has five steps, each on a real rocket: Saturn V (a rocket is a stack of stages),
+  Falcon 9 (why rockets stage: the rocket equation), Soyuz (strap-ons and the parallel phase),
+  Atlas V (why an upper stage can push less than its weight) and Ariane 64 (the fairing). Saturn
+  V's 110.6 m counts the Apollo spacecraft and its escape tower, which are not drawn. If you pick
+  another rocket, **Show it** brings back the step's own.
+
+### Explore: remix a real rocket, or build one from parts
+
+Choose **Remix a real rocket** or **Build from parts**. Each keeps its own design, name and
+payload. The drawing, the figures at a glance, the stage-by-stage table and **Before it flies**
+follow every change.
+
+- **Remix a real rocket.** Pick the rocket to start from; unchanged, it shows exactly the real
+  rocket's figures. For each stage, stretch or shrink its propellant (50–200 %), change its engine
+  to one that burns the same propellant, and change the number of engines. Take strap-ons off or
+  add catalogue strap-ons (up to four groups), and fit another fairing. A stage keeps the real
+  rocket's steering, thrusters and drawing while its engines are unchanged; a stage whose engines
+  you change gets generic ones and is named after its engines. Swapping engines changes the dry
+  mass by the engines' published masses. A stretch scales the propellant, the tank structure and
+  the stage's length; how much the structure grows is an estimate.
+- **Build from parts.** Choose the launch site, then stack stages (**Add a stage on top**, up to
+  six). Each stage is a catalogue body, or **A body of my own**: its dry mass with the engines
+  included, its propellant, diameter, length and propellant type. Give each stage an engine and a
+  number of them, then add strap-ons (catalogue bodies) and a fairing. A kerosene tank needs a
+  kerosene engine, and a solid body needs a solid motor.
+- **Before it flies** lists, in plain words and with the numbers, what **Will not fly** (red, ✕)
+  and each **Warning** (orange, !): a rocket that will not leave the pad, an upper stage too weak
+  for the planner, a stage that cannot throttle down to the acceleration limit, an upper stage
+  wider than its fairing, and so on. **What is estimated or assumed** lists the builder's
+  approximations. If the builder cannot make a change it says why, and the drawing shows the last
+  rocket it could make. Some details are only in English, under "Technical detail (in English)".
+- **Payload ratings.** A rocket you changed shows "unknown" until you press **Compute ratings**.
+  That flies test flights, about 1–2 s, with a **Stop** button; any edit stops it too. The results
+  are the model's estimates, not a manufacturer's figures (below). The Launch section judges a
+  mission by the rocket's ratings, and a rating of 0 counts as none: compute them before you fly,
+  or Launch's Explore level will say the rocket will not fly.
+- **Your designs.** **Save** keeps the design in this browser; **Save as new** makes a copy. Each
+  saved design can be opened, renamed, exported or deleted (after a confirmation; Escape cancels a
+  rename or a delete). **Export this design** and **Import a file** use `.orbitlab.json` files,
+  and an import is all or nothing. If the browser's storage is full or switched off, the page says
+  so: export the design as a file instead. The rocket on the bench is also kept in this browser
+  across a reload, in both modes; that is not a saved design, and **Start again** clears it. A
+  saved design keeps the rocket, not how it was made: a remix reopens with its stretches back at
+  100 %, and the payload is not kept.
+- **Fly it** opens Launch at the same level, with your rocket and payload, bound for a 500 km low
+  orbit from its first launch site (the payload is called the CubeSat rideshare dispenser, whatever
+  its mass). Change the mission there. It flies as a point mass unless you tick **Fly it in six-DOF
+  (experimental)**: six-DOF also flies the rocket's attitude, but with generic steering and
+  thrusters where real rockets have their own, so it is an experiment, not a prediction. The
+  first-use guide in Launch moves past "choose a Quick start example", which would replace your
+  rocket.
+
+### Engineer: design and test
+
+The level is called **Design and test**. The rocket chosen under **Launch vehicle** is used by
+every tab: a real rocket, the design open in Explore (listed as "(open in Explore)", once Explore
+has been opened in this session), a saved design, or a launcher sized here.
+
+- **Test stand.** Pick an engine: one on the rocket (each stage, or one strap-on of each group) or
+  any engine in the parts catalogue. Set how many, how much propellant, the throttle, and if you
+  like **Shut it down early**. Choose where it fires: a vacuum chamber, sea level, or a launch
+  site's height (the page gives the air pressure there). You get the total impulse, the burn time,
+  the peak thrust, the delivered specific impulse and the propellant burned, and curves of thrust,
+  mass flow and Isp against time, with close-ups of start-up and tail-off (both the model's
+  estimates). **The model beside the data** sets the catalogue's published figures next to what the
+  stand measured, with the difference: where they differ, the model departs from the data (for
+  Vulcain 2.1's sea-level Isp, by 5 %). The stand fires the engine as a flight does, with the same
+  throttle limits and solid-motor thrust curve. It refuses a vacuum engine in air and a shutdown
+  of a solid motor, says why, and offers the way out.
+- **Wind tunnel.** Choose what is in the tunnel (the whole rocket or from a given stage up,
+  strap-ons on or off, fairing on or off, propellant left, payload), then C_N, C_A, C_m or the
+  centre of pressure, over 0–10° or 0–90°. Point at a cell, or select the map and use the arrow
+  keys, to read its value. Hatched cells lie beyond the 15° the tables are built for. Below the
+  map: the drag coefficient at zero angle, which is the curve the point-mass flight flies, and the
+  static margin in diameters. Above zero the air turns the nose back into the wind; below zero only
+  the steering of the engines keeps the rocket pointed, as on almost every launcher. The tables
+  are the model's estimates, not wind-tunnel data, and fins and the nose's shape do not change
+  them.
+- **Readiness review.** Choose the target orbit, the launch site (one of the rocket's own) and the
+  payload. The checklist has six parts: the specification; the design's warnings, in Explore's
+  words; the mission plan on paper; a test flight (point mass, calm air; always flown for a rocket
+  of your own); the Launch section's own verdict; and notices. A line at the top says **Ready to
+  fly**, ready with warnings to read first, or **Not ready**, with the number of failing checks.
+  The test flight asks only whether the rocket gets into orbit at all; the orbit it shows is the
+  one at that moment, not the target. A rocket still flying, never lost, when the test ends at
+  2 400 s counts as reaching orbit, and the row says so. **Fly it** works only when nothing fails,
+  and opens Launch at the Engineer level with exactly the mission reviewed. A rocket of your own
+  with no payload rating always fails the verdict ("no rating"): press **Compute its payload
+  ratings** (1–2 s, estimates), and the review runs again on the same mission with them. A mission
+  to a sun-synchronous orbit is then judged against the computed low-orbit rating.
+- **Optimal staging.** Start from a real rocket (Saturn V first) or the rocket on the bench, then
+  change the number of stages (1–5), each stage's Isp and structural ratio, the Δv and the payload.
+  You get each stage's share of the Δv, its mass ratio and mass, and the payload ratio; when there
+  is no answer, the page says why. With two stages, a chart shows the payload ratio against the
+  split, with the best split marked. Strap-ons are left out, and the page says so. **Compare with
+  the real vehicle** sets the rocket's own split beside the best one. Saturn V's first stage takes
+  3.88 km/s where the loss-free best gives it 1.75. The method counts no losses and treats each
+  stage's structure as fixed; real gravity losses depend on how the Δv is split, which is one
+  reason to give a high-thrust first stage more. Falcon 9, Long March 2D, Electron and Starship
+  give their first stage less than the optimum.
+- **Sizing.** Give a payload, an orbit, a launch site, a fairing (or **Narrowest that fits**) and
+  any **Extra Δv**; for each stage choose an engine, a structural ratio, a diameter and a
+  thrust-to-weight. You get the design Δv and where it comes from, each stage (engines, T/W, mass,
+  length), a drawing to scale, the figures, the warnings, and everything that is an estimate or a
+  default. The design Δv is the planner's allowance, and real rockets may need more: the 1 t
+  launcher the page starts on runs out of propellant short of orbit and needs about +500 m/s,
+  mostly because of the 800 kg fairing "the narrowest that fits" gives it. **Check readiness**
+  reviews the launcher for its mission. **Open in the builder** loads it into Explore's parts
+  builder, where you can change, save and fly it; there its lengths and fairing are no longer
+  marked as estimates, but they still are.
+
+### What the estimates mean, and what the builder will not do
+
+- **"Ideal" Δv** is the rocket equation with vacuum Isp and no gravity, drag or steering losses. A
+  real ascent pays those losses too, so a rocket needs more ideal Δv than its orbit's speed.
+- **Figures marked "estimate"** are the builder's approximations, not published data: a stretched
+  tank's structure, a sized stage's length, the defaults a design of your own has not set (the
+  dynamic-pressure and acceleration limits are the fleet's middle values, the fairing comes off at
+  115 km), the country taken from the launch site, and every computed rating. The catalogue's own
+  figures are rounded public ones, good to about ±10 %, and some have no source; the part card says
+  so.
+- **Computed payload ratings** are the heaviest payload the model delivered in test flights of the
+  design, point mass, in calm air, on the guidance programme it carries, to about 200 km at the
+  site's lowest inclination (or the original rocket's published rating orbit) and to the standard
+  transfer orbit. Against eight published ratings they came within 25 % for seven; Vega-C's
+  low-orbit rating comes out 31 % high. A remix keeps the original's guidance programme, which may
+  not suit it, so a big change can lower its rating more than the rocket itself would.
+- **The builder will not**
+  - re-count an engine entry that stands for several engines at once (YF-75, for one);
+  - swap or re-count a solid motor (stretch or shrink it instead);
+  - put an engine on tanks of another propellant;
+  - put a vacuum-only engine on the first stage, or fire one in air on the test stand;
+  - shut down a solid motor on the test stand;
+  - make a rocket past the program's limits (six stages, four strap-on groups, 50 engines to a
+    stage);
+  - size strap-ons or solid stages (sizing makes stacks of liquid stages only);
+  - stretch or re-engine strap-ons in a remix, or take strap-ons of your own in the parts builder.
+
+### Small things that help
+
+- **Typing numbers:** a decimal comma or a point both work (0,08 or 0.08), and spaces between
+  thousands (11 400). In English and Thai "11,400" is eleven thousand four hundred; in Russian it
+  is 11.4. A box turns red if it cannot read a number. The Up and Down arrow keys step the value.
+- **Escape** closes a part card and cancels a rename or a delete.
+- **Watch and Explore** both list **Taken apart** first and **Assembled** second; Explore opens
+  assembled.
+- **The Engineer level's "Coming" list** notes that building from parts is already at the
+  Explore level, with a link there.
 
 ## 1. Set up a mission
 
