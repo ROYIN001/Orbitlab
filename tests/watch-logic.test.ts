@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoWarp, flightEnding, groundSpeed, missionOrbit, parkingMilestone, reachedOrbit, watchBeat, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
+import { autoWarp, flightEnding, groundSpeed, missionOrbit, parkingMilestone, reachedOrbit, watchBeat, watchSummary, WATCH_BEATS, type WatchBeat } from '../src/ui/watch-logic';
 import { OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
 import type { DebrisFrame, VisualFrame } from '../src/physics/frame';
 import type { SimEvent } from '../src/physics/simulation';
@@ -216,6 +216,19 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
     expect(parkingMilestone(bandwagon(target + 1), log)).toBeNull();
   });
 
+  it('sums the flight up from the final orbit, the payload and the booster, not the parking orbit', () => {
+    const s = watchSummary(bandwagon(payload + 11), log);
+    expect(s.orbit).toMatchObject({ onTarget: true, at: target });
+    // six-DOF: the unrounded apsides the verdict was reached on
+    expect(s.orbit!.pe).toBeCloseTo(586.1, 1);
+    expect(s.orbit!.ap).toBeCloseTo(594.8, 1);
+    expect(s.orbit!.inc).toBeCloseTo(45.4, 6);
+    expect(s.payloadAt).toBeCloseTo(payload, 6);
+    expect(s.payloadId).toBe('cubesats');
+    expect(s.recovery).toEqual([{ name: 'First stage (9× Merlin 1D)', outcome: 'zone', zone: 'LZ-1' }]);
+    expect(s.dockingAborted).toBe(false);
+  });
+
   it('does not end on a burn scheduled and never completed, until the flight is closed off target', () => {
     // parking orbit, a burn planned, then the stage stops pointing it (`evt.burnPaused`): no burn pending on the frame
     const events = [ev(480, 'evt.parkingOrbit'), ev(481, 'evt.burnScheduled'), ev(3234, 'evt.burnStart'), ev(3240, 'evt.burnPaused')];
@@ -231,6 +244,7 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
     const sep = [...closed, ev(3415, 'evt.payloadSep')];
     expect(flightEnding(frame({ t: 3420, status: 'orbit', payloadSeparated: true }), sep)).toBeNull();
     expect(flightEnding(frame({ t: 3426, status: 'orbit', payloadSeparated: true }), sep)).toBe('orbit');
+    expect(watchSummary(frame({ t: 3426, status: 'orbit', payloadSeparated: true }), sep).orbit).toMatchObject({ pe: 205, ap: 590, onTarget: false });
   });
 
   it('still ends a splashdown and an abort as before', () => {
@@ -256,5 +270,27 @@ describe('the end of an orbital flight is its final orbit, not its parking orbit
     expect(flightEnding(after(3405, { status: 'orbit' }), soyuz)).toBeNull();
     // the payload was already off: the card only settles after the final orbit
     expect(flightEnding(after(3412, { status: 'orbit' }), soyuz)).toBe('orbit');
+    expect(watchSummary(after(3412, { status: 'orbit' }), soyuz)).toMatchObject({ orbit: { pe: 413, ap: 427, at: 3401.6 }, payloadAt: 534.4, recovery: [] });
+  });
+
+  it('lists every stage flown home by its own touchdown: Falcon Heavy\'s two side boosters and its core', () => {
+    const named = (name: string) => ({ ...home('landing', false), name });
+    const f = frame({ t: 640, status: 'orbit', payloadSeparated: true, debris: [named('Side boosters'), named('Side boosters'), named('Center core'), { ...home('landing', false), recovery: undefined }] });
+    const events = [
+      { ...ev(522.2, 'evt.boosterLandedZone'), params: { name: 'Side boosters', zone: 'LZ-1' } },
+      { ...ev(522.4, 'evt.boosterLandedZone'), params: { name: 'Side boosters', zone: 'LZ-2' } },
+      ev(569.6, 'evt.targetOrbit'), ev(584.6, 'evt.payloadSep'),
+      { ...ev(614.6, 'evt.boosterLandedShip'), params: { name: 'Center core' } },
+    ];
+    expect(flightEnding({ ...f, t: 620 }, events)).toBeNull();
+    expect(flightEnding(f, events)).toBe('orbit');
+    expect(watchSummary(f, events).recovery).toEqual([
+      { name: 'Side boosters', outcome: 'zone', zone: 'LZ-1' },
+      { name: 'Side boosters', outcome: 'zone', zone: 'LZ-2' },
+      { name: 'Center core', outcome: 'ship' },
+    ]);
+    // a stage sent home that came down without landing
+    const lost = frame({ t: 640, status: 'orbit', debris: [{ ...named('First stage'), outcome: 'impact' } as DebrisFrame] });
+    expect(watchSummary(lost, [{ ...ev(600, 'evt.stageImpact'), params: { name: 'First stage' } }]).recovery).toEqual([{ name: 'First stage', outcome: 'lost' }]);
   });
 });

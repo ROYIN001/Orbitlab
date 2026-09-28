@@ -446,3 +446,69 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
   }
   return ending;
 }
+
+/** How a stage flown home came down, for the end card. */
+export type RecoveryOutcome = 'zone' | 'ship' | 'tower' | 'landed' | 'lost';
+
+/**
+ * What an orbital flight's end card says, one line each: the orbit it ended
+ * in, the payload, every stage flown home, and the docking when one was called
+ * off (audit 2026-09-27 A9). Read from the events that closed each part of the
+ * flight, so the card never repeats a parking orbit's numbers.
+ */
+export interface WatchSummary {
+  /** the final orbit, heights km, inclination degrees; `at` is when it was reached */
+  orbit: { pe: number; ap: number; inc: number; onTarget: boolean; at: number } | null;
+  /** when the payload came free, or null when it has not */
+  payloadAt: number | null;
+  /** the spacecraft's catalogue id from `evt.payloadSep`, for its localized name */
+  payloadId: string | null;
+  /** each stage flown home, by its English name (the physics' label), in the order it left */
+  recovery: { name: string; outcome: RecoveryOutcome; zone?: string }[];
+  /** G07: the approach to the station was called off */
+  dockingAborted: boolean;
+}
+
+const RECOVERY_EVENTS: Record<string, RecoveryOutcome> = {
+  'evt.boosterLandedZone': 'zone', 'evt.boosterLandedShip': 'ship', 'evt.boosterCaught': 'tower', 'evt.boosterLanded': 'landed', 'evt.stageImpact': 'lost',
+};
+
+export function watchSummary(frame: VisualFrame, events: readonly SimEvent[]): WatchSummary {
+  const now = events.filter((e) => e.t <= frame.t + 1e-6);
+  const done = lastEvent(frame, events, FINAL_ORBIT);
+  const num = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
+  let orbit: WatchSummary['orbit'] = null;
+  if (done) {
+    const p = done.params ?? {};
+    // six-DOF: the apsides the verdict was reached on, unrounded
+    const pe = num(p.peAltM) !== null ? num(p.peAltM)! / 1000 : num(p.pe);
+    const ap = num(p.apAltM) !== null ? num(p.apAltM)! / 1000 : num(p.ap);
+    if (pe !== null && ap !== null) orbit = { pe, ap, inc: num(p.inc) ?? frame.elements.i * 180 / Math.PI, onTarget: done.key === 'evt.targetOrbit', at: done.t };
+  }
+  if (!orbit && (frame.status === 'orbit' || frame.status === 'rendezvous') && frame.elements.e < 1) {
+    orbit = {
+      pe: frame.elements.periapsisAlt / 1000, ap: frame.elements.apoapsisAlt / 1000, inc: frame.elements.i * 180 / Math.PI,
+      onTarget: frame.note !== 'orbitOffTarget', at: frame.t,
+    };
+  }
+  const sep = now.find((e) => e.key === 'evt.payloadSep');
+  // Each stage is matched to its own touchdown by name, in order: a Falcon
+  // Heavy's two side boosters share one.
+  const touchdowns = now.filter((e) => RECOVERY_EVENTS[e.key]);
+  const recovery: WatchSummary['recovery'] = [];
+  for (const d of frame.debris ?? []) {
+    if (!d.recovery?.target || d.alive) continue;
+    const i = touchdowns.findIndex((e) => e.params?.name === d.name);
+    const e = i >= 0 ? touchdowns.splice(i, 1)[0] : undefined;
+    const outcome: RecoveryOutcome = e ? RECOVERY_EVENTS[e.key] : d.outcome === 'landed' ? 'landed' : 'lost';
+    const zone = typeof e?.params?.zone === 'string' ? e.params.zone : undefined;
+    recovery.push(zone ? { name: d.name, outcome, zone } : { name: d.name, outcome });
+  }
+  return {
+    orbit,
+    payloadAt: sep ? sep.t : null,
+    payloadId: typeof sep?.params?.satId === 'string' ? sep.params.satId : null,
+    recovery,
+    dockingAborted: frame.rendezvous?.phase === 'aborted',
+  };
+}
