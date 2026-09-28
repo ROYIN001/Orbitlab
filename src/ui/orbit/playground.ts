@@ -30,7 +30,7 @@ import { PLAYGROUND_PRESET_IDS, presetOrbit } from '../../orbit/presets';
 import { TOUR, type TourView } from '../../orbit/tour';
 import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
-  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffOrbit, linearScale, logScale, orbitPath,
+  PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffEntry, handoffOrbit, linearScale, logScale, orbitPath,
   repeatGroundTrack, tourSetup, withApsis, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
@@ -39,7 +39,9 @@ import {
 } from '../../orbit/maneuver-setup';
 import type { OrbitGhost, OrbitMarker } from '../../render/orbit-view';
 import { maneuverControls, planTable, type CraftSource, type ManeuverPanelHost } from './maneuver-panel';
-import { budgetFor, craftAfter, craftFromHandoff, defaultCraft, type Budget, type Craft } from '../../orbit/budget';
+import {
+  adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, reachedState, type Budget, type Craft,
+} from '../../orbit/budget';
 import { handoffFromState } from '../../orbit/handoff';
 import { spacecraftFor } from '../../physics/propagator/spacecraft';
 import { MANEUVER_LIMITS } from '../../orbit/maneuver-setup';
@@ -320,10 +322,17 @@ export class OrbitPlayground {
     this.handoff = handoff;
     this.handoffNote = note;
     if (fresh) {
+      // audit 2026-09-27 A6: out of the real satellites, if the playground was left on them, and nothing kept about another satellite
+      const entry = handoffEntry({ mode: this.mode, apps: this.apps });
+      if (entry.leaveSky) this.leaveSky();
+      this.apps = entry.apps;
+      this.skyLabel = entry.skyLabel;
       // O03: the spacecraft that flew, with what is left in its tanks
       this.launchCraft = craftFromHandoff(handoff);
       this.craftSource = this.launchCraft ? 'launch' : this.craftSource === 'launch' ? 'none' : this.craftSource;
       this.loadHandoff();
+      // framed on the new orbit, as "Show this orbit" does
+      this.orbitView?.setOrbit(this.orbit, true);
       this.tourIndex = -1;
     }
     this.render();
@@ -721,7 +730,8 @@ export class OrbitPlayground {
     },
     adopt: () => {
       const p = this.activePlan;
-      if (!p) return;
+      // audit 2026-09-27 A2, A3: no orbit to carry on from for a spacecraft that cannot be one, or cannot fly the plan
+      if (!p || adoptBlock(p, this.time, this.craft)) return;
       // O03: the spacecraft carries on lighter by what the plan burned
       const budget = this.budget;
       if (budget) {
@@ -738,10 +748,31 @@ export class OrbitPlayground {
       this.orbitView?.setOrbit(this.orbit, true);
       this.render();
     },
+    adoptReached: () => {
+      const p = this.activePlan, budget = this.budget;
+      const s = p && budget ? reachedState(p, budget, this.j2) : null;
+      if (!s || !budget) return;
+      // audit 2026-09-27 A3: the tanks dry, the spacecraft coasts on the orbit it has then, to the clock if that is later
+      const after = craftAfter(budget);
+      if (this.craftSource === 'launch') this.launchCraft = after; else if (this.craftSource === 'own') this.ownCraft = after;
+      let orbit = orbitFromState(s.r, s.v, this.orbit.jd0 + s.t / 86400);
+      const at = Math.max(this.time, s.t);
+      if (at > s.t) {
+        const c = stateAt(orbit, at - s.t, this.j2);
+        orbit = orbitFromState(c.r, c.v, this.orbit.jd0 + at / 86400);
+      }
+      this.maneuver = null;
+      this.time = 0;
+      this.planStart = 0;
+      this.setOrbit(orbit);
+      this.jd0 = this.orbit.jd0;
+      this.orbitView?.setOrbit(this.orbit, true);
+      this.render();
+    },
     showPorkchop: () => this.setView('porkchop'),
     craft: () => ({
       source: this.craftSource, own: this.ownCraft, fromLaunch: this.launchCraft,
-      launchHasNoEngine: !!this.handoff && !this.launchCraft,
+      launchHasNoEngine: !!this.handoff && !this.launchCraft, chosen: this.craft,
     }),
     setCraft: (source: CraftSource, own?: Partial<Craft>) => {
       const changedSource = source !== this.craftSource;
@@ -825,10 +856,10 @@ export class OrbitPlayground {
     return this.craftSource === 'launch' ? this.launchCraft : this.craftSource === 'own' ? this.ownCraft : null;
   }
 
-  /** O03: the plan against the chosen spacecraft's tanks. */
+  /** O03: the plan against the chosen spacecraft's tanks; none for a spacecraft that cannot be one (audit 2026-09-27 A2). */
   private get budget(): Budget | null {
     const p = this.activePlan, c = this.craft;
-    return p && c ? budgetFor(p, c) : null;
+    return p && c && !craftProblem(c) ? budgetFor(p, c) : null;
   }
 
   /**
