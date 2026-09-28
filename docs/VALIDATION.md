@@ -1487,8 +1487,26 @@ to other nodes and other places in their orbits. The start is 2026-09-27 12:00 U
   - the filter's own work, pass by pass, about 0.3 s;
   - the 132 pairs whose planes are within 3° of each other, searched whole, 0.13 to 0.23 s.
 
-A phone's core is slower than this machine's, and Chromium cannot slow a worker. The times on
-phones are measured separately; none are claimed here.
+**In Chromium, with the worker slowed (P2.5).** Chromium's own CPU slow-down reaches only the
+page's thread. So the worker's threads were put in a Linux control group limited to a quarter of
+one core (cgroup v1, `cpu.cfs_quota_us` 25 000 of 100 000), and the page's thread was slowed four
+times with DevTools. This stands in for a slow phone; it is not a phone. It slows the arithmetic
+but not the memory or the caches, and no phone was measured. The page was 375 × 812, the file the
+same 30 000 objects, the window three days and the limit 5 km. Each figure is one run, on
+28 September, timed from the button to the answer. It includes copying the sets to the worker,
+which runs on the page's slowed thread.
+
+| primary | worker at full speed | worker at a quarter core | before the filter, at a quarter core |
+| --- | --- | --- | --- |
+| ISS | 2.0 s | 2.7 s | — |
+| SCD 1, 708 × 768 km at 25°, the page's first in the imaging group | 2.7 s | 5.3 s | 80.5 s (27 s at full speed) |
+| Landsat 8 | 2.5 s | 4.7 s | — |
+
+- With the filter, most of the time is the page's own work, which the DevTools slow-down governs:
+  the quarter-core worker adds 0.7 to 2.6 s.
+- The page drew throughout, at a median of 133 to 183 ms a frame (117 to 133 ms at rest). Software
+  WebGL on this machine sets that pace, not the screening.
+- The before-the-filter figures are from the same script and page on 27 September.
 
 ### Overflights of a place (M02)
 

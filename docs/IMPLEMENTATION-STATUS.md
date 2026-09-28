@@ -311,9 +311,10 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
   over three days at 5 km took 0.55 s with the time filter and 18.5 s without, in Node on one
   core of this build machine. The whole worker job took 0.69 s. The load is synthetic: 3 104 real
   sets and copies of them turned to other nodes and anomalies. Deep-space primaries (GEO, Molniya,
-  geostationary transfer) and near-coplanar pairs are still searched whole. A phone's slower core takes
-  longer; Chromium's CPU slow-down does not reach a worker, so those times are measured separately
-  and none are claimed here.
+  geostationary transfer) and near-coplanar pairs are still searched whole. In Chromium, with the
+  worker held to a quarter of one core and the page slowed four times, as a stand-in for a slow
+  phone, the same screening took 2.7 to 5.3 s (80.5 s before the filter). No phone was measured
+  ([VALIDATION.md](VALIDATION.md) §7).
 - Overflights (M02) count only satellites whose element sets are published, and are when a place
   could be seen, not that it was imaged. The instruments' limits are the published ones (for the
   Maxar satellites and SkySat, the tasking limits). CO3D's is a planning limit (its acquisition
