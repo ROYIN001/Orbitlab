@@ -16,7 +16,12 @@
  *    (src/design/readiness.ts flies the probe), and `extraDvMps` adds Δv on
  *    top for such a vehicle. Measured: a 1 t launcher sized for Kourou at the
  *    bare design Δv runs out of propellant short of orbit, and needs about
- *    +500 m/s (tests/design-sizing.test.ts records it).
+ *    +500 m/s (tests/design-sizing.test.ts records it). Most of that is its
+ *    fairing: the design Δv drops it at the first staging, as `idealDeltaV`
+ *    and the planner do, but the flight carries it to its jettison altitude
+ *    (115 km), well into a small launcher's second burn. The 800 kg shroud
+ *    chosen for 1.8 m costs about 300 m/s: with no fairing the same request
+ *    reaches orbit at +200 m/s, with a 300 kg one at +400.
  * 2. THE SPLIT of that Δv among the stages is the optimal one
  *    (`optimalStaging`, src/design/optimal-staging.ts), for the payload. It
  *    ignores the fairing, which only the first stage carries: the split is

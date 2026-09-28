@@ -137,8 +137,16 @@ describe('D05 sizing: flown', () => {
     // fleet's median loss over the allowance) still runs out, +500 m/s reaches
     // orbit. Recorded here so that a change to the sizing, the planner or the
     // flight that moves it is seen; not tuned away.
-    const fly = (extraDvMps: number) => {
-      const r = sizeVehicle({ ...SMALL, extraDvMps });
+    //
+    // Measured at review: most of the shortfall is the fairing, not the loss
+    // allowance. The shroud chosen for a 1.8 m stage is Vostok's 800 kg one;
+    // the design Δv drops it at the first staging (as `idealDeltaV` and the
+    // planner count it), but the flight carries it to 115 km, well into the
+    // second stage's burn. With no fairing the same request reaches orbit at
+    // +200 m/s (+0 still runs out, its best perigee −164 km); with Sputnik's
+    // 300 kg shroud it takes +400.
+    const fly = (extraDvMps: number, fairing?: string | null) => {
+      const r = sizeVehicle({ ...SMALL, extraDvMps, ...(fairing !== undefined ? { fairing } : {}) });
       return probeInsertion({ ...missionFor(SMALL, r.spec), dynamics: { model: 'pointMass', wind: 'calm', seed: 20260919 } });
     };
     const bare = fly(0);
@@ -147,6 +155,7 @@ describe('D05 sizing: flown', () => {
     expect([median.reachesOrbit, median.endedWith]).toEqual([false, 'evt.outOfPropellant']);
     const margin = fly(500);
     expect([margin.reachesOrbit, margin.tInsertion > 0]).toEqual([true, true]);
+    expect([fly(0, null).reachesOrbit, fly(200, null).reachesOrbit]).toEqual([false, true]);
   });
 
   it('adds extra Δv on request, and the planner sees exactly that much more margin', () => {
