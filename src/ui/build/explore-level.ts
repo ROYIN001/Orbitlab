@@ -86,13 +86,13 @@ const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMe
 const engineLine = (e: { count: number; name: string }): string => (e.count > 1 ? `${e.count} × ${e.name}` : e.name);
 
 /** A labelled control: the label above, the control under it. */
-function field(labelText: string, control: HTMLElement, cls = 'bx-field'): HTMLLabelElement {
+export function field(labelText: string, control: HTMLElement, cls = 'bx-field'): HTMLLabelElement {
   const label = el('label', cls);
   label.append(el('span', 'bx-field-name', labelText), control);
   return label;
 }
 
-function select(key: string, options: { value: string; label: string; group?: string }[], value: string, onChange: (v: string) => void): HTMLSelectElement {
+export function select(key: string, options: { value: string; label: string; group?: string }[], value: string, onChange: (v: string) => void): HTMLSelectElement {
   const s = el('select');
   s.dataset.k = key;
   const groups = new Map<string, HTMLOptGroupElement>();
@@ -111,7 +111,7 @@ function select(key: string, options: { value: string; label: string; group?: st
 }
 
 /** A number box in the units shown, SI in the model. */
-function numberBox(key: string, value: number, o: { min: number; max: number; step: number; show?: (v: number) => number; read?: (n: number) => number },
+export function numberBox(key: string, value: number, o: { min: number; max: number; step: number; show?: (v: number) => number; read?: (n: number) => number },
   onChange: (v: number) => void): HTMLInputElement {
   const show = o.show ?? ((v: number) => v), read = o.read ?? ((n: number) => n);
   const box = el('input', 'bx-num');
@@ -214,6 +214,16 @@ export class ExploreLevel {
 
   hide(): void {
     this.visible = false;
+  }
+
+  /**
+   * The design on screen as the vehicle it flies, its name and payload, for
+   * the Engineer level's test facilities (D04); null while it is refused.
+   */
+  design(): { spec: VehicleSpec; name: string; payloadKg: number } | null {
+    if (!this.result.ok) return null;
+    const d = activeDraft(this.state);
+    return { spec: this.result.spec, name: d.name.trim() || this.result.spec.name, payloadKg: Number.isFinite(d.payloadKg) && d.payloadKg >= 0 ? d.payloadKg : 0 };
   }
 
   /** A default name the student has not changed follows the interface language. */
