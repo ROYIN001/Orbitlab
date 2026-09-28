@@ -102,7 +102,7 @@ export function buildEntryCm(): EntryCmView {
   // the entry's glow: the shock layer ahead of the heat shield, white-hot at its face, and the wake closing behind the apex
   const glowMat = (color: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
     depthWrite: false, side: THREE.DoubleSide });
-  const shockMat = glowMat(0xffa24a), faceMat = glowMat(0xfff1d0), wakeMat = glowMat(0xff7a32);
+  const shockMat = glowMat(0xff8434), faceMat = glowMat(0xffc27a), wakeMat = glowMat(0xff6a22);
   const shock = new THREE.Mesh(new THREE.SphereGeometry(CM_R * 2.1, 32, 8, 0, Math.PI * 2, Math.PI - 0.62, 0.62), shockMat);
   shock.position.y = CM_R * 2.1 * Math.cos(0.62) - 0.35;
   const face = new THREE.Mesh(new THREE.CircleGeometry(CM_R * 1.05, 32), faceMat);
@@ -126,7 +126,7 @@ export function buildEntryCm(): EntryCmView {
   const setGlow = (alt: number, airspeed: number): void => {
     const k = entryGlow(alt, airspeed);
     glow.visible = k > 0.01;
-    shockMat.opacity = 0.75 * k; faceMat.opacity = 0.9 * k; wakeMat.opacity = 0.4 * k;
+    shockMat.opacity = 0.35 * k; faceMat.opacity = 0.22 * k; wakeMat.opacity = 0.22 * k;
   };
   return {
     group, setChutes, setGlow,
