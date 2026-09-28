@@ -102,6 +102,8 @@ export class WatchView {
   private endFrame: { frame: VisualFrame; ending: WatchEnding; summary: WatchSummary } | null = null;
   /** the vehicle on screen, for the names of the stages it flew home */
   private vehicle: VehicleSpec | null = null;
+  /** the flight was paused under its end card, so "keep watching" plays it on */
+  private pausedAtEnd = false;
   /**
    * A9: the parking-orbit note. It is shown once a flight, over the top of the
    * scene rather than across it, and goes by itself, when closed, or when the
@@ -231,6 +233,7 @@ export class WatchView {
     this.missionId = null;
     this.ended = false;
     this.endFrame = null;
+    this.pausedAtEnd = false;
     this.beat = null;
     this.lastWarp = 0;
     this.endCard.hidden = true;
@@ -330,6 +333,8 @@ export class WatchView {
         this.ended = true;
         this.hideMilestone();
         this.showEnd(frame, ending, watchSummary(frame, events));
+        // A9: the flight stops under its card rather than running on behind it
+        if (!this.endCard.hidden && state.playing) { this.pausedAtEnd = true; this.host.togglePlay(); }
       }
     }
   }
@@ -424,7 +429,11 @@ export class WatchView {
       b.addEventListener('click', action);
       actions.append(b);
     };
-    if (success) button('watch.end.continue', 'watch-btn primary', () => { card.hidden = true; });
+    if (success) button('watch.end.continue', 'watch-btn primary', () => {
+      card.hidden = true;
+      if (this.pausedAtEnd && !this.shown.playing) this.host.togglePlay();
+      this.pausedAtEnd = false;
+    });
     const id = this.missionId;
     if (id) button('watch.end.again', 'watch-btn', () => this.host.start(id));
     button('watch.end.other', 'watch-btn', () => this.openPicker());
