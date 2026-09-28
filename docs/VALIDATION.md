@@ -903,6 +903,12 @@ documents say instead:
   insertion floor did not cover a stack that never reaches SECO: it broke up at T+1 448 s
   instead of ending as an abandoned insertion. The floor now applies during the ascent once the
   first stage has gone (PHYSICS.md §6, "The insertion floor").
+- *And a six-DOF coast that could not reach its apex.* Angara-A5 to low orbit (6.1 t, six-DOF
+  with PEG or IGM) now cuts its URM-2 off at 200.5 km, a kilometre past a 201.6 km apex, with a
+  −602 km perigee. The next apoapsis is a revolution away through the Earth, the J2 coast
+  prediction reported the impact and the mission ended there with the Briz-M full. With the
+  placard the same cut-off came before the apex. The sequencer now burns at once when that
+  prediction fails on a suborbital state, and the flight reaches its orbit at T+4 251 s.
 - *Atlas V's criterion is a 3-sigma one.* ULA jettisons "when the 3-sigma free molecular heat flux
   falls below 1,135 W/m²" (Atlas V Launch Services User's Guide, Rev. 11, 2010, §2.3), on a
   dispersed atmosphere and trajectory. The model evaluates the same number on the nominal
