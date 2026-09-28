@@ -34,7 +34,7 @@ import { stageName } from '../names';
 import { BUILD_TOUR, tourFigures, type TourFigure, type TourStat } from '../../design/build-tour';
 import type { DrawnPart } from '../../design/exploded';
 import { partCard } from '../../design/part-card';
-import { stageTable, watchPayload } from '../../design/stage-table';
+import { stageTable, throttledCore, watchPayload } from '../../design/stage-table';
 import { pickerEntries } from '../../design/vehicle-picker';
 import { button, el, num } from '../orbit/dom';
 import { StackSvg, type StackLabel } from './stack-svg';
@@ -351,6 +351,11 @@ export class BuildScreen {
       figuresView(this.spec, table),
       el('p', 'bs-fig-note small', t('build.fig.twNote')),
     );
+    // a core that these full-throttle figures run dry with its strap-ons, while the flight throttles it down
+    for (const row of table.rows) {
+      const share = throttledCore(this.spec, row);
+      if (share !== null) this.figures.append(el('p', 'bs-fig-note small', t('build.fig.throttledCore', { n: row.stageIndex + 1, p: num(share * 100) })));
+    }
   }
 
   private renderTour(): void {

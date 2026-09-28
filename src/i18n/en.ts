@@ -1734,6 +1734,7 @@ export const en: Record<string, string> = {
   'build.fig.liftoffMass': 'Liftoff mass',
   'build.fig.payloadFraction': 'Payload fraction',
   'build.fig.twNote': 'Stage 1\'s T/W is at liftoff, with every engine lit on the pad; stage 2\'s counts the fairing as still on.',
+  'build.fig.throttledCore': 'Stage {n}: at full throttle, as these figures run it, its core would run dry together with its strap-ons, so it has nothing left to burn alone. In flight it throttles down to {p} % while they burn, and burns on alone after they separate.',
   'build.stat.stages': 'Stages',
   'build.stat.height': 'Height',
   'build.stat.liftoffMass': 'Liftoff mass',

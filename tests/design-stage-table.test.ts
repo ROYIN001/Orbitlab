@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { vehicleFigures } from '../src/design/budget';
-import { WATCH_PAYLOAD_SHARE, stageRows, stageTable, watchPayload } from '../src/design/stage-table';
+import { WATCH_PAYLOAD_SHARE, stageRows, stageTable, throttledCore, watchPayload } from '../src/design/stage-table';
 
 describe('the stage table', () => {
   it('works at half the rated LEO payload, as the fleet tests fly', () => {
@@ -35,6 +35,15 @@ describe('the stage table', () => {
       expect(table).toMatchObject({ totalDv: fig.totalDv, liftoffMass: fig.liftoffMass, liftoffTW: fig.liftoffTW, payloadKg: payload, payloadFraction: fig.payloadFraction });
     });
   }
+
+  it('names the cores that run dry with their strap-ons at full throttle but are throttled down in flight', () => {
+    // the shares are the data's own (src/data/vehicles.ts); every other row has none
+    const found = VEHICLES.flatMap((v) => stageTable(v, watchPayload(v)).rows
+      .map((r) => ({ id: v.id, stage: r.stageIndex, share: throttledCore(v, r), core: r.phases.find((p) => p.phase === 'core') })))
+      .filter((f) => f.share !== null);
+    expect(found.map(({ id, stage, share }) => [id, stage, share])).toEqual([['angaraa5', 0, 0.3], ['falconheavy', 0, 0.55]]);
+    for (const f of found) expect([f.core!.dv, f.core!.burnTime]).toEqual([0, 0]);
+  });
 
   it('splits a strap-on stage into its parallel phase and the core alone', () => {
     const [first, second] = stageRows(vehicleFigures(vehicleById('soyuz21a'), 3715));
