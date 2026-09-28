@@ -1,7 +1,8 @@
 /**
  * The landing page: one button that plays a launch, and the three parts of
- * the program (roadmap S01) — Launch with its three ways in, and Orbit and
- * Build, which say plainly that they are being built.
+ * the program (roadmap S01) — Launch and Orbit, each with its three ways
+ * in, and Build, which says plainly that it is being built (audit
+ * 2026-09-27 A8: Orbit works, and says so).
  *
  * It is drawn over the live scene — the featured vehicle standing on its pad
  * behind the text — so the first thing a visitor sees is the thing they are
@@ -61,20 +62,37 @@ export class HomeScreen {
 
     const sections = el('div', 'home-sections');
     sections.setAttribute('role', 'list');
-    sections.append(this.launchCard(), this.plannedCard('orbit'), this.plannedCard('build'));
+    sections.append(this.launchCard(), this.orbitCard(), this.plannedCard());
     inner.append(el('p', 'home-more', t('home.more')), sections);
     this.root.replaceChildren(inner);
     if (hadFocus) this.root.querySelector<HTMLElement>(`[data-home-focus="${hadFocus}"]`)?.focus({ preventScroll: true });
   }
 
-  private sectionHead(card: HTMLElement, icon: string, name: string, text: string, badge?: string): void {
+  private sectionHead(card: HTMLElement, icon: string, name: string, text: string, badge?: { text: string; ready: boolean }): void {
     const head = el('div', 'home-section-head');
     const glyph = el('span', 'mode-card-icon', icon);
     glyph.setAttribute('aria-hidden', 'true');
     const title = el('h2', undefined, name);
     head.append(glyph, title);
-    if (badge) head.append(el('span', 'section-badge', badge));
+    if (badge) head.append(el('span', badge.ready ? 'section-badge ready' : 'section-badge', badge.text));
     card.append(head, el('p', 'home-section-text', text));
+  }
+
+  /** A section's three levels, each a way in. */
+  private levelList(section: 'launch' | 'orbit', levels: LevelEntry[]): HTMLElement {
+    const list = el('div', 'home-modes');
+    for (const entry of levels) {
+      const button = el('button', 'mode-card');
+      button.type = 'button';
+      button.dataset.mode = entry.level;
+      button.dataset.homeFocus = `${section}-${entry.level}`;
+      const icon = el('span', 'mode-card-icon', entry.icon);
+      icon.setAttribute('aria-hidden', 'true');
+      button.append(icon, el('strong', undefined, entry.title), el('span', 'mode-card-text', entry.text));
+      button.addEventListener('click', () => this.host.go(route(section, entry.level)));
+      list.append(button);
+    }
+    return list;
   }
 
   /** The launch simulator, which works today: its three levels, each a way in. */
@@ -83,43 +101,42 @@ export class HomeScreen {
     card.setAttribute('role', 'listitem');
     card.dataset.section = 'launch';
     this.sectionHead(card, '▲', t('section.launch'), t('home.section.launchText'));
-    const levels: LevelEntry[] = [
+    card.append(this.levelList('launch', [
       { level: 'watch', icon: '▷', title: t('home.card.watch'), text: t('home.card.watchText') },
       { level: 'explore', icon: '◎', title: t('home.card.explore'), text: t('home.card.exploreText') },
       { level: 'engineer', icon: '⌬', title: t('home.card.engineer'), text: t('home.card.engineerText') },
-    ];
-    const list = el('div', 'home-modes');
-    for (const entry of levels) {
-      const button = el('button', 'mode-card');
-      button.type = 'button';
-      button.dataset.mode = entry.level;
-      button.dataset.homeFocus = `launch-${entry.level}`;
-      const icon = el('span', 'mode-card-icon', entry.icon);
-      icon.setAttribute('aria-hidden', 'true');
-      button.append(icon, el('strong', undefined, entry.title), el('span', 'mode-card-text', entry.text));
-      button.addEventListener('click', () => this.host.go(route('launch', entry.level)));
-      list.append(button);
-    }
-    card.append(list);
+    ]));
     return card;
   }
 
   /**
-   * A section being built: what it will be, and the way in — the Orbit
-   * section's playground (O01) now, the Build section's plan until its first
-   * item is built.
+   * The Orbit section, usable since O01–O04, R01–R05 and M01–M03
+   * (section-plan.ts's BUILT_ITEMS): the tour, the playground with the real
+   * satellites, and the Engineer's planning tools (audit 2026-09-27 A8).
    */
-  private plannedCard(section: 'orbit' | 'build'): HTMLElement {
+  private orbitCard(): HTMLElement {
+    const card = el('section', 'home-section');
+    card.setAttribute('role', 'listitem');
+    card.dataset.section = 'orbit';
+    this.sectionHead(card, '⊕', t('section.orbit'), t('home.section.orbitText'), { text: t('section.ready'), ready: true });
+    card.append(this.levelList('orbit', [
+      { level: 'watch', icon: '▷', title: t('home.orbit.watch'), text: t('home.orbit.watchText') },
+      { level: 'explore', icon: '◎', title: t('home.orbit.explore'), text: t('home.orbit.exploreText') },
+      { level: 'engineer', icon: '⌬', title: t('home.orbit.engineer'), text: t('home.orbit.engineerText') },
+    ]));
+    return card;
+  }
+
+  /** The Build section, being built: what it will be, and its plan until its first item is built. */
+  private plannedCard(): HTMLElement {
     const card = el('section', 'home-section planned');
     card.setAttribute('role', 'listitem');
-    card.dataset.section = section;
-    const orbit = section === 'orbit';
-    this.sectionHead(card, orbit ? '⊕' : '⚙︎', t(orbit ? 'section.orbit' : 'section.build'),
-      t(orbit ? 'home.section.orbitText' : 'home.section.buildText'), t('section.inDevelopment'));
-    const button = el('button', 'home-section-link', t(orbit ? 'home.section.orbitOpen' : 'home.section.plan'));
+    card.dataset.section = 'build';
+    this.sectionHead(card, '⚙︎', t('section.build'), t('home.section.buildText'), { text: t('section.inDevelopment'), ready: false });
+    const button = el('button', 'home-section-link', t('home.section.plan'));
     button.type = 'button';
-    button.dataset.homeFocus = section;
-    button.addEventListener('click', () => this.host.go(route(section, 'explore')));
+    button.dataset.homeFocus = 'build';
+    button.addEventListener('click', () => this.host.go(route('build', 'explore')));
     card.append(button);
     return card;
   }
