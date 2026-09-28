@@ -2786,8 +2786,8 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
   - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
     jettison **time** their operator publishes (§4). Neither is a model of the real decision,
     which is a heating placard evaluated against a specific fairing's thermal design.
-  - The physics has been compared with flight data for eleven vehicles: Falcon 9 (webcast
-    telemetry of five flights) and ten others against published timelines
+  - The physics has been compared with flight data for twelve vehicles: Falcon 9 (webcast
+    telemetry of five flights) and eleven others against published timelines
     ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
     - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
     - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
