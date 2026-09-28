@@ -1559,10 +1559,10 @@ published it would not be judged (the path is kept and tested with a made-up ent
 agile satellite in the table now has one; the 15 the operators have retired but the catalogue
 still lists (SPOT 7, COSMO-SkyMed 1 and 3, and 12 of those added on 2026-09-28, below) are marked
 so. Where sources disagree the operator's figure is used and the other noted in the table (the
-Maxar angles, for one, are the tasking limits, not what the satellites can turn to), with one
-exception left for the owner: Cartosat-2C to 2F keep eoPortal's 0.65 m against the 0.6 m of NRSC's
+Maxar angles, for one, are the tasking limits, not what the satellites can turn to). Cartosat-2C to
+2F take the 0.6 m of NRSC's
 [product sheet](https://bhoonidhi.nrsc.gov.in/bhoonidhi_resources/help/sampleprods/Cartosat-2S/C2S-Specs.pdf)
-for the series.
+for the series over eoPortal's 0.65 m, as Cartosat-3 takes NRSC's 0.28 m.
 
 Three agile satellites were first entered unjudged and were given limits in the P2.5 fix-up
 (2026-09-27). Where the along- and across-track limits differ the across-track one is used: a pass

@@ -40,9 +40,8 @@
  *
  * Collected 2026-09-27, and for 44 satellites more on 2026-09-28, from the
  * sources each entry lists; where two disagree, the operator's figure is used
- * and the other is noted beside it, with one exception, left for the owner:
- * Cartosat-2C to 2F keep eoPortal's 0.65 m against the 0.6 m of NRSC's
- * product sheet for the series. The satellites without an operator's page
+ * and the other is noted beside it (Cartosat-2C to 2F, like Cartosat-3, take
+ * the resolution of NRSC, ISRO's data centre, over eoPortal's). The satellites without an operator's page
  * giving their geometry rest on eoPortal alone: THEOS, the Gaofen,
  * Deimos-2, VNREDSat-1, FORMOSAT-5, KOMPSAT-3, KOMPSAT-5, KazEOSat-1,
  * DubaiSat-1 and -2, Göktürk-1A, HJ-1A and -1B, TechSat-1B (MBRSC's page
@@ -186,9 +185,9 @@ export const SENSORS: readonly SensorSpec[] = [
   // 2D, 2E and 2F joined 2C on 2026-09-28: ISRO calls each "similar to the earlier" four, five and six "satellites of the
   // Cartosat-2 series" (its PSLV-C37 page, C38 and C40 brochures), eoPortal's 2E page says "steerable by ±45° along the track
   // and ±26° across the track", and NRSC sells the series as one product, "Cartosat-2S", from June 2016. NRSC's sheet for it
-  // gives "Resolution: 0.6 mtrs" (and a 9 × 9 km scene, not the swath): eoPortal's 0.65 m is kept for the owner to decide,
-  // the one place the operator's figure is not yet used
-  { name: 'Cartosat-2C to 2F', norad: [41599, 41948, 42767, 43111], kind: 'optical', instrument: 'PAN', swathKm: 9.6, lookMaxDeg: 26, resolutionM: 0.65, sources: ['https://www.isro.gov.in/CARTOSAT_2B.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC34.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC37.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC38.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC40.html', 'https://www.isro.gov.in/media_isro/pdf/Missions/PSLV-C38.pdf', 'https://www.isro.gov.in/media_isro/pdf/Missions/PSLVC40/PSLV_C40.pdf', 'https://bhoonidhi.nrsc.gov.in/bhoonidhi_resources/help/sampleprods/Cartosat-2S/C2S-Specs.pdf', EOPORTAL('cartosat-2d'), EOPORTAL('cartosat-2e'), EOPORTAL('cartosat-2')] },
+  // gives "Resolution: 0.6 mtrs" (and a 9 × 9 km scene, not the swath). The operator's 0.6 m is used, as NRSC's 0.28 m is for
+  // Cartosat-3; eoPortal gives 0.65 m
+  { name: 'Cartosat-2C to 2F', norad: [41599, 41948, 42767, 43111], kind: 'optical', instrument: 'PAN', swathKm: 9.6, lookMaxDeg: 26, resolutionM: 0.6, sources: ['https://www.isro.gov.in/CARTOSAT_2B.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC34.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC37.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC38.html', 'https://www.isro.gov.in/CARTOSAT_2_PSLVC40.html', 'https://www.isro.gov.in/media_isro/pdf/Missions/PSLV-C38.pdf', 'https://www.isro.gov.in/media_isro/pdf/Missions/PSLVC40/PSLV_C40.pdf', 'https://bhoonidhi.nrsc.gov.in/bhoonidhi_resources/help/sampleprods/Cartosat-2S/C2S-Specs.pdf', EOPORTAL('cartosat-2d'), EOPORTAL('cartosat-2e'), EOPORTAL('cartosat-2')] },
   // NRSC's handbook (the operator's): "off-nadir capability upto +/- 23 deg by providing roll biasing", "a swath of about 30 km"
   // (the Fore camera's; the Aft camera's 26.8 km, a stereo pair's 26 km), 2.5 m (ISRO and NRSC's headline figure; the
   // handbook's table gives 2.452 m for the Fore camera and 2.187 m for the Aft). eoPortal: a field of regard of ±26°, not used.
