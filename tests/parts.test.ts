@@ -202,6 +202,7 @@ describe('D01 parts catalogue: the emitters', () => {
       id: 'bare', kind: 'engine', family: 'kerolox', name: 'Bare', thrustSL: 1, thrustVac: 2, ispSL: 3, ispVac: 4,
       minThrottle: undefined, solid: undefined, peakFactor: undefined, vacuumOnly: undefined, startupS: undefined, tailoffS: undefined,
       variantOf: undefined, historical: undefined, note: undefined, source: 'test',
+      mass: { kg: 1, basis: 'published', what: 'test', sources: ['https://example.org/'], note: 'test' },
     };
     expect(engineSpec(bare, 2)).toStrictEqual({ name: 'Bare', count: 2, thrustSL: 1, thrustVac: 2, ispSL: 3, ispVac: 4 });
     expect(engineSpec({ ...bare, minThrottle: 0, solid: false, vacuumOnly: false }, 1))
@@ -222,7 +223,7 @@ describe('D01 parts catalogue: the emitters', () => {
   it('never emit catalogue metadata, and refuse a hardware field passed as an installation', () => {
     for (const p of ENGINE_PARTS) {
       const keys = Object.keys(engineSpec(p, 1));
-      for (const meta of ['id', 'kind', 'family', 'variantOf', 'historical', 'source', 'note']) expect(keys).not.toContain(meta);
+      for (const meta of ['id', 'kind', 'family', 'variantOf', 'historical', 'source', 'note', 'mass']) expect(keys).not.toContain(meta);
     }
     expect(Object.keys(stageSpec('s1'))).not.toContain('stageId');
     expect(() => stageSpec('s1', { dryMass: 1 } as never)).toThrow(/dryMass is not a field of a stage installation/);
