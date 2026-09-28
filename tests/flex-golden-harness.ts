@@ -14,7 +14,7 @@ import { Simulation } from '../src/physics/simulation';
 import { vehicleById } from '../src/data/vehicles';
 import { orbitById } from '../src/data/orbits';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
-import type { DynamicsConfig } from '../src/types';
+import type { DynamicsConfig, MissionConfig } from '../src/types';
 import { LAUNCH_TIME } from './fleet-harness';
 
 export const GOLDEN_FLIGHTS = [
@@ -54,9 +54,20 @@ export class FingerprintSampler {
 
 export async function flightFingerprint(flight: (typeof GOLDEN_FLIGHTS)[number], until: number,
   dynamics: DynamicsConfig = { model: 'sixDof', wind: 'crosswind', seed: 20260919 }): Promise<string> {
-  const sim = new Simulation({ vehicleId: flight.vehicle, satelliteId: 'cubesats', siteId: flight.site, orbit: orbitById(flight.orbit),
+  return missionFingerprint({ vehicleId: flight.vehicle, satelliteId: 'cubesats', siteId: flight.site, orbit: orbitById(flight.orbit),
     launchTime: LAUNCH_TIME, guidance: guidanceForVehicle(vehicleById(flight.vehicle), DEFAULT_GUIDANCE, 'sixDof'), guidanceResolved: true,
-    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, dynamics }, { headless: true });
+    failure: { ...DEFAULT_FAILURE }, boosterRecovery: false, dynamics }, until);
+}
+
+/**
+ * The same fingerprint for any mission: every second of state and six-DOF
+ * telemetry up to `until`, the recorded telemetry and the event log. The
+ * catalogue's six-DOF fingerprints (tests/heavy/sixdof-fingerprint.test.ts,
+ * the guard for the custom-vehicle fixes before roadmap D03) fly their fleet
+ * rows through it.
+ */
+export async function missionFingerprint(cfg: MissionConfig, until: number): Promise<string> {
+  const sim = new Simulation(cfg, { headless: true });
   const withoutLoop = (key: string, value: unknown) => (key === 'attitudeLoop' || key === 'linearModel' ? undefined : value);
   const sampler = new FingerprintSampler((s) => [s.state.t, s.state.r, s.state.v, s.state.rigid], withoutLoop);
   while (!sim.done && sim.state.t < until) {
