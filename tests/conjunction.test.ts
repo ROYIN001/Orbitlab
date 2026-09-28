@@ -183,9 +183,12 @@ describe('screening the catalogue (M01)', () => {
 
   it('gives the same approaches off the main thread as on it, the others found again by index (P2.5)', async () => {
     const iss = byNum(25544);
-    const direct = screen(iss, all, jd0, jd0 + 1, 25e3, 10);
+    // 100 km, not closer: within 25 km the only objects were the vehicles docked at the station, and only
+    // while CelesTrak gave them an older element set than the station's (the snapshot of 2026-09-27 gives
+    // them the station's own, and nothing comes that near in the day)
+    const direct = screen(iss, all, jd0, jd0 + 1, 100e3, 10);
     // no Worker under the tests: the job runs inline, as a page without module workers does
-    const job = await runScreeningJob(iss, all.filter((o) => o !== iss), jd0, jd0 + 1, 25e3, 10, new AbortController().signal, () => {});
+    const job = await runScreeningJob(iss, all.filter((o) => o !== iss), jd0, jd0 + 1, 100e3, 10, new AbortController().signal, () => {});
     expect(job.map((c) => [c.other.key, c.approach.tca, c.approach.miss])).toEqual(direct.map((c) => [c.other.key, c.approach.tca, c.approach.miss]));
     expect(job.length).toBeGreaterThan(0);
   }, 60_000);

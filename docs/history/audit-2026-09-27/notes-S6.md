@@ -14,7 +14,7 @@
 | smoke journeys | `journeys/watch-controls.mjs`, `mobile-smoke.mjs`, `launch-explore.mjs` | ดูหัวข้อถัดไป |
 | npm scripts | `test:browser` (build + ทุก journey), `test:browser:smoke` (ชุด smoke บน build ที่มีอยู่) | |
 | CI | `.github/workflows/ci.yml` | job `browser-smoke` บน pull_request: `npm ci` → `npx playwright install --with-deps chromium` → `npm run build` → `npm run test:browser:smoke`; upload `tests/browser/screenshots/` เมื่อล้มเหลว |
-| deploy | `.github/workflows/deploy.yml` | หลัง `npm run snapshots`: `vitest run tests/data-provider.test.ts tests/satellite-catalogue.test.ts`; หลัง build: ติดตั้ง Chromium แล้ว `node tests/browser/run.mjs` (ทุก journey บน dist ที่จะ publish จริง ไม่ build ซ้ำ) |
+| deploy | `.github/workflows/deploy.yml` | หลัง `npm run snapshots`: `vitest run tests/data-provider.test.ts tests/satellite-catalogue.test.ts` (ภายหลังเพิ่ม `tests/earth-orientation.test.ts tests/activity.test.ts` ดูหัวข้อ "ติดตามผล"); หลัง build: ติดตั้ง Chromium แล้ว `node tests/browser/run.mjs` (ทุก journey บน dist ที่จะ publish จริง ไม่ build ซ้ำ) |
 | README | หัวข้อ "Browser tests" ใต้ Quick start | วิธีรันในเครื่อง ตาราง journey และตัวแปร env |
 
 ## Journey และสิ่งที่ตรวจ
@@ -90,7 +90,7 @@ job `browser-smoke` ถูก skip บน push event โดยตั้งใจ
 ไม่พบบั๊กที่ทำให้ journey smoke ล้มบน main ข้อที่ควรส่งต่อ:
 
 1. **Watch click failure (code-review "Watch click failure") ไม่เกิดซ้ำ**: ปุ่ม play/pause, 100×, Choose a launch, Another launch ตอบสนองทั้ง mouse, keyboard, touch ขณะ simulation เดินใน Chromium headless ทุกรอบที่รัน (รวมรอบ sabotage ที่ไม่ได้แตะปุ่มเหล่านั้น) จึงไม่มีหลักฐานว่าเป็นบั๊กของ source ปัจจุบัน สอดคล้องกับ code-review ที่ให้ตรวจเครื่องมือ/เวอร์ชันที่ deploy ก่อน; journey นี้จะจับได้ถ้าเกิดขึ้นจริงในอนาคต (sabotage ยืนยันแล้ว) ข้อจำกัด: ทดสอบเฉพาะ Chromium
-2. **`tests/activity.test.ts` จะล้มเมื่อ commit snapshot เดือนถัดไป** (ไม่ใช่เฉพาะใน deploy): `measuredTo` ผูกกับ `'2026-08'` ของ snapshot ที่ commit ไว้; ใครรัน `npm run snapshots` แล้ว commit หลัง SWPC ออกค่าเดือน 2026-09 จะทำให้ `npm test` แดง ควรให้ test อ่านเดือนสุดท้ายจาก `bundled.monthly` แทนค่าคงที่ (ไฟล์ `tests/*.test.ts` อยู่นอกขอบเขต S6) แล้วจึงเพิ่มเข้าเกต deploy ได้
+2. **(แก้แล้วในงานติดตามผล ดูท้ายไฟล์)** **`tests/activity.test.ts` จะล้มเมื่อ commit snapshot เดือนถัดไป** (ไม่ใช่เฉพาะใน deploy): `measuredTo` ผูกกับ `'2026-08'` ของ snapshot ที่ commit ไว้; ใครรัน `npm run snapshots` แล้ว commit หลัง SWPC ออกค่าเดือน 2026-09 จะทำให้ `npm test` แดง ควรให้ test อ่านเดือนสุดท้ายจาก `bundled.monthly` แทนค่าคงที่ (ไฟล์ `tests/*.test.ts` อยู่นอกขอบเขต S6) แล้วจึงเพิ่มเข้าเกต deploy ได้
 3. **CSV ที่ export ตอนประกาศ orbit ยังไม่มีแถวของวงโคจรสุดท้าย**: ครั้งหนึ่ง status เป็น `orbit` ที่ T+3274 s แต่แถวสุดท้ายของ CSV อยู่ที่ T+3269.8 s (ก่อน `evt.targetOrbit` ที่ T+3272 s, periapsis ในแถวสุดท้าย 413 km กลาง burn) เพราะ telemetry ทั้งเที่ยวบินสุ่มห่างในช่วง coast/orbit และมาจาก worker เป็นชุด ผู้ใช้ที่กด export ทันทีเมื่อเห็นข้อความถึงวงโคจรจะได้ไฟล์ที่จบก่อนเหตุการณ์นั้น ไม่ร้ายแรง แต่อาจทำให้กราฟ/รายงานไม่แสดงวงโคจรสุดท้าย (ข้อสังเกต ยังไม่ยืนยันว่าเป็นบั๊ก)
 4. **ประสิทธิภาพเมื่อไม่มี GPU**: SwiftShader วาดฉากได้ ~1 frame/s ที่ 1280×800 (0.5 s/frame ที่ scale 0.5) แม้หน้า Home ที่ไม่มีเที่ยวบิน เพราะ render loop วาดต่อเนื่อง และ event `load` ของ `#/orbit/engineer` บนมือถือเกิน 30 s หนึ่งครั้ง อุปกรณ์เรียนราคาถูก/ไม่มี GPU น่าจะได้ประสบการณ์คล้ายกัน (ข้อสังเกต ไม่ใช่บั๊กที่ยืนยัน)
 5. **แถบแท็บของ Orbit engineer ภาษารัสเซียที่ 390 px** (`.pg-tab` ขวาสุดถึง ~457 px) ล้นในกล่องที่เลื่อนเองได้ ไม่ทำให้ document ล้น ตรงกับรายงานหลัก ("เมนูย่อยบางส่วนเลื่อนแนวนอน") เป็นเรื่องของ S8/S16
@@ -112,3 +112,14 @@ npm run build && npm run test:browser:smoke
 node tests/browser/pwa-offline.mjs     # pwa-offline บน harness ใหม่
 npm run typecheck && npm test
 ```
+
+## ติดตามผล (2026-09-28, หลัง PR #34 merge)
+
+ทำตามข้อเสนอในข้อ 2 ของ "บั๊ก/ข้อสังเกต" โดยผู้ใช้สั่งให้ทำต่อ (สาขา `claude/friendly-brahmagupta-7sxvst` จาก main `98b3d3b`)
+
+- **สภาพบน main ตอนเริ่ม**: `tests/activity.test.ts` ถูกเขียนใหม่ใน P2.5 (`ddd07b6`) แล้ว `measuredTo` เทียบกับ `history.to` (`src/data/solar-daily.json`) ไม่ใช่ `'2026-08'` แต่ยังผูกกับเนื้อหา snapshot สองจุด ทดลองกับ snapshot ที่ commit ไว้บวกค่าเดือน 2026-09 ใน monthly → ล้ม `expected '2026-09-30' to be '2026-09-25'` (บรรทัด 177); บวก forecast ถึง 2031-01 → ล้ม `expected '2031-02' to be '2031-01'` (บรรทัด 191) และเดือน `2028-06` ที่ใช้ตรวจ forecast จะหลุดออกเมื่อ measured ไปถึงเดือนนั้น
+- **แก้** `tests/activity.test.ts`: `measuredTo` คาดจากข้อมูล (วันสุดท้ายของ history หรือสิ้นเดือนสุดท้ายของ SWPC monthly แล้วแต่ว่าอันไหนหลัง ตาม `measuredActivity`), เดือนที่ตรวจ forecast เลือกจากกึ่งกลางช่วง forecast ที่อยู่หลังค่าวัด, `repeatFrom` = เดือนถัดจาก `forecastTo`; ค่าคงที่ที่เหลือ (2035-06, 2040-02, 2046-06 นับจาก minimum ของ cycle 25) ไม่ขึ้นกับ snapshot จนกว่า NOAA จะพยากรณ์ถึงปี 2035
+- **timeout**: `is far better with the measured Sun…` ใช้ 4.7–4.8 s ในเครื่องเทียบ timeout เริ่มต้น 5 s และล้มด้วย timeout (6.1 s) ในรอบที่เครื่องมีงานอื่น จึงให้ 30 s ตามแบบ `tests/ascent.test.ts`
+- **พบเพิ่ม: `tests/conjunction.test.ts` ก็จะล้มเมื่อ commit snapshot ใหม่**: `gives the same approaches off the main thread as on it` ต้องการ approach ของ ISS ภายใน 25 km ใน 1 วัน ใน snapshot ที่ commit ไว้ (2026-09-26) พบ 75 ครั้ง ทั้งหมดคือยานที่จอดอยู่กับสถานี (Crew Dragon 12, Cygnus NG-24, Progress MS-34/35, Soyuz MS-29) เพราะ CelesTrak ให้ element set ของยานเหล่านั้นเก่ากว่าของสถานี; snapshot 2026-09-27 ให้ element set เดียวกับสถานี จึงพบ 0 และ test ล้ม (`expected 0 to be greater than 0`) — เปลี่ยนเป็น 100 km (พบ 29 ครั้งจากดาวเทียมอื่นในข้อมูลใหม่, 109 ในข้อมูลเดิม) test ยังตรวจสิ่งเดิม (ผลบน worker เท่ากับบน main thread) ข้อสังเกตข้างเคียง: ในข้อมูลเก่า การคัดกรองรายงานยานที่จอดอยู่เป็น "approach" ของสถานีเอง ซึ่งไม่ใช่ความเสี่ยงชนจริง (ไม่ได้แก้ใน src)
+- **เกต deploy**: เพิ่ม `tests/earth-orientation.test.ts` (snapshot ชุดที่สาม `earth-orientation.json` ที่ main เพิ่มหลัง S6; ส่วนที่อ่าน snapshot ตรวจ `validEarthOrientation`, ต้นข้อมูล 2019, พยากรณ์เกิน 180 วัน, |UT1−UTC| < 0.9 s) และ `tests/activity.test.ts` (หลังแก้); `conjunction`/`overflights` ยังไม่ใส่ด้วยเหตุผลเดิม (jd0 คงที่)
+- **ตรวจ**: 5 ไฟล์ (activity, conjunction, data-provider, satellite-catalogue, earth-orientation) ผ่านทั้งบน snapshot ที่ commit ไว้ บน snapshot ที่ดึงใหม่ 2026-09-28 และ (activity) บน snapshot ที่เพิ่มเดือน 2026-09 และ forecast ถึง 2031-01; ไฟล์อื่นที่อ่าน `public/data` (case-lessons, case-worksheets, passes, sensors, sky-tour, overflights) ผ่านบน snapshot ใหม่อยู่แล้ว
