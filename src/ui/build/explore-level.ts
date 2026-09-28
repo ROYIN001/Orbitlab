@@ -48,7 +48,8 @@ import { decimalMark, parseTyped, stepTyped, typedText } from '../../design/numb
 import type { RatingClass } from '../../design/ratings';
 import {
   DEFAULT_GROUP, EXPLORE_MODES, STRETCH_RANGE, activeDraft, asOwnBody, designChecks, designResult, draftFromSpec, estimateTexts, fitEngine,
-  newDesignId, newStage, partOrigins, partsDraft, partsEngineOptions, ratingsSignature, remixBase, remixDraft, remixEngineOptions,
+  keptDraftsText, newDesignId, newStage, partOrigins, partsDraft, partsEngineOptions, ratingsSignature, remixBase, remixDraft, remixEngineOptions,
+  restoreKeptDrafts,
   type DesignResult, type Draft, type EngineOptions, type ExploreMode, type ExploreState, type PartsEdit, type PartsStage, type RemixEdit,
 } from '../../design/explore-model';
 import { localized, siteName, stageName } from '../names';
@@ -83,6 +84,15 @@ const LOCK_KEY: Record<string, string> = {
 
 const narrow = (): boolean => typeof matchMedia === 'function' && matchMedia('(max-width: 860px)').matches;
 const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+/**
+ * Where this browser keeps the drafts on screen between visits
+ * (explore-model.ts `keptDraftsText`): a convenience of this browser only —
+ * a design is kept for good by Save — so a storage that throws or is empty
+ * only means the page starts on its first designs.
+ */
+const DRAFTS_KEY = 'orbitlab.build.explore.v1';
+/** how long after the last change the drafts are written, ms (a slider drag writes once) */
+const KEEP_MS = 400;
 /** "9 × Merlin 1D", or the name alone for one engine. */
 const engineLine = (e: { count: number; name: string }): string => (e.count > 1 ? `${e.count} × ${e.name}` : e.name);
 
@@ -168,6 +178,7 @@ export class ExploreLevel {
   private said: DesignText[] = [];
   private refreshQueued = 0;
   private drawQueued = 0;
+  private keepQueued: ReturnType<typeof setTimeout> | null = null;
 
   private readonly head = el('header', 'bs-panel bx-head');
   private readonly stagePanel = el('div', 'bs-stage bx-stage');
@@ -194,6 +205,16 @@ export class ExploreLevel {
       remix: remixDraft('falcon9', newDesignId(remixName), remixName),
       parts: partsDraft(newDesignId(partsName), partsName),
     };
+    // the drafts this browser kept from the last visit, where the student left them (not saved designs: those are Save's)
+    let kept: string | null = null;
+    try { kept = localStorage.getItem(DRAFTS_KEY); } catch { /* storage blocked: start on the first designs */ }
+    const restored = restoreKeptDrafts(kept);
+    if (restored) {
+      this.state = restored.state;
+      this.defaultNames = restored.defaults;
+    }
+    // written once the page is being left too, so a change made just before a reload is kept
+    addEventListener('pagehide', () => this.keepDrafts());
     this.stack = new StackSvg((ref) => this.pickPart(ref));
     this.picker = new VehiclePicker(pickerEntries(VEHICLES), (id) => this.pickBase(id), 'bx-picker-select');
     this.store = new ExploreStore({
@@ -202,10 +223,12 @@ export class ExploreLevel {
         const d = activeDraft(this.state);
         d.recordId = recordId;
         if (d.name.trim() !== name) { d.name = name; this.rebuild(); }
+        this.queueKeep();
       },
       open: (record) => this.openRecord(record),
       forgotten: (recordId) => {
         for (const d of [this.state.remix, this.state.parts]) if (d.recordId === recordId) d.recordId = null;
+        this.queueKeep();
       },
     });
     this.tabs.setAttribute('role', 'group');
@@ -270,9 +293,22 @@ export class ExploreLevel {
     this.defaultNames.parts = partsName;
   }
 
+  /** Keep the drafts in this browser a moment after the last change. */
+  private queueKeep(): void {
+    if (this.keepQueued !== null) clearTimeout(this.keepQueued);
+    this.keepQueued = setTimeout(() => this.keepDrafts(), KEEP_MS);
+  }
+
+  private keepDrafts(): void {
+    if (this.keepQueued !== null) clearTimeout(this.keepQueued);
+    this.keepQueued = null;
+    try { localStorage.setItem(DRAFTS_KEY, keptDraftsText({ state: this.state, defaults: this.defaultNames })); } catch { /* full or blocked: Save says so */ }
+  }
+
   // ─── the model ────────────────────────────────────────────────────────────
 
   private compute(): void {
+    this.queueKeep();
     this.result = designResult(this.state);
     const payload = activeDraft(this.state).payloadKg;
     this.said = this.result.ok ? designChecks(this.result.spec, payload) : [];

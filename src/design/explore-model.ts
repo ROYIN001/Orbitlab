@@ -54,7 +54,7 @@
 import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../types';
 import { VEHICLES, isCatalogueVehicle, vehicleById } from '../data/vehicles';
 import {
-  BOOSTER_BODIES, ENGINE_PARTS, STAGE_BODIES, boosterSpec, enginePart, enginePartOf, lockedEngineCount, stageBody, stageSpec,
+  BOOSTER_BODIES, ENGINE_PARTS, FAIRING_PARTS, STAGE_BODIES, boosterSpec, enginePart, enginePartOf, lockedEngineCount, stageBody, stageSpec,
   type BoosterInstall, type EnginePart, type StageInstall,
 } from '../data/parts';
 import { SITES } from '../data/sites';
@@ -708,4 +708,83 @@ export function draftFromSpec(spec: VehicleSpec, recordId: string | null):
       edit: { base: { kind: 'design', spec: copy }, stages: copy.stages.map(() => ({ stretch: 1 })), removedGroups: [], addedGroups: [], fairing: null },
     },
   };
+}
+
+// ─── the drafts kept across a reload ────────────────────────────────────────
+
+/** The version of the drafts' record in the browser; a record of another version is not read. */
+export const EXPLORE_DRAFTS_VERSION = 1;
+
+/** The Explore level's drafts as a record of this browser, with the default names they were given (so a language switch can give them again). */
+export interface KeptDrafts {
+  state: ExploreState;
+  defaults: Record<ExploreMode, string>;
+}
+
+/**
+ * The drafts on screen as text for the browser's storage: a stretched remix
+ * or a half-built rocket is the student's work, and a reload, a phone that
+ * drops the tab in the background or a slip of the finger must not lose it
+ * before it is saved (roadmap S05 keeps saved designs; this keeps the one on
+ * the bench). An empty payload box (NaN) is kept as `null`.
+ */
+export function keptDraftsText(kept: KeptDrafts): string {
+  return JSON.stringify({ v: EXPLORE_DRAFTS_VERSION, ...kept });
+}
+
+const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+// a part this version's catalogue has: the controls look each one up by id
+const knownIn = (parts: readonly { id: string }[]) => (id: unknown): boolean => typeof id === 'string' && parts.some((p) => p.id === id);
+const isEnginePart = knownIn(ENGINE_PARTS), isStageBody = knownIn(STAGE_BODIES), isBoosterBody = knownIn(BOOSTER_BODIES);
+const isFairingPart = knownIn(FAIRING_PARTS), isSite = knownIn(SITES);
+const isEngine = (v: unknown): boolean => isObj(v) && isEnginePart(v.part) && isNum(v.count);
+const isRatings = (v: unknown): boolean => v === null
+  || (isObj(v) && typeof v.signature === 'string' && isNum(v.payloadLEO) && isNum(v.payloadGTO) && (v.payloadSSO === undefined || isNum(v.payloadSSO)));
+
+function isDraft(v: unknown, edit: (e: Obj) => boolean): boolean {
+  return isObj(v) && typeof v.id === 'string' && PART_ID_PATTERN.test(v.id) && !isCatalogueVehicle(v.id) && typeof v.name === 'string'
+    && (v.payloadKg === null || isNum(v.payloadKg)) && (v.recordId === null || typeof v.recordId === 'string') && isRatings(v.ratings)
+    && isObj(v.edit) && edit(v.edit);
+}
+
+const isRemixEdit = (e: Obj): boolean => isObj(e.base)
+  && ((e.base.kind === 'catalogue' && typeof e.base.id === 'string' && isCatalogueVehicle(e.base.id)) || (e.base.kind === 'design' && isObj(e.base.spec)))
+  && Array.isArray(e.stages) && e.stages.every((s) => isObj(s) && isNum(s.stretch) && (s.engine === undefined || isEngine(s.engine)))
+  && Array.isArray(e.removedGroups) && e.removedGroups.every(isNum)
+  && Array.isArray(e.addedGroups) && e.addedGroups.every((g) => isObj(g) && isBoosterBody(g.body) && isNum(g.count))
+  && (e.fairing === null || isFairingPart(e.fairing));
+
+const isPartsEdit = (e: Obj): boolean => Array.isArray(e.sites) && e.sites.every(isSite)
+  && Array.isArray(e.stages) && e.stages.every((s) => isObj(s) && isEngine(s.engine) && (s.install === undefined || isObj(s.install)) && isObj(s.body)
+    && ((s.body.kind === 'catalogue' && isStageBody(s.body.id)) || (s.body.kind === 'own' && isObj(s.body.body))))
+  && Array.isArray(e.groups) && e.groups.every((g) => isObj(g) && isBoosterBody(g.body) && isNum(g.count) && (g.install === undefined || isObj(g.install)))
+  && (e.fairing === null || (isObj(e.fairing) && isFairingPart(e.fairing.part))) && (e.keep === undefined || isObj(e.keep));
+
+/**
+ * The drafts a browser kept (`keptDraftsText`), or null when there are none
+ * or they cannot be taken whole: another version's record, a shape this
+ * version does not know, a catalogue part it no longer has. All or nothing,
+ * as an import is: the page then starts on its first designs. A draft the
+ * builder refuses (a payload box left empty, a stage stretched past its
+ * limit) is taken as it is — that is where the student left it.
+ */
+export function restoreKeptDrafts(text: string | null): KeptDrafts | null {
+  if (!text) return null;
+  let raw: unknown;
+  try { raw = JSON.parse(text); } catch { return null; }
+  if (!isObj(raw) || raw.v !== EXPLORE_DRAFTS_VERSION || !isObj(raw.state) || !isObj(raw.defaults)) return null;
+  const { state: s, defaults: names } = raw;
+  if (!EXPLORE_MODES.includes(s.mode as ExploreMode) || !isDraft(s.remix, isRemixEdit) || !isDraft(s.parts, isPartsEdit)) return null;
+  if (typeof names.remix !== 'string' || typeof names.parts !== 'string') return null;
+  const draft = <E>(d: Obj): Draft<E> => ({ ...(d as unknown as Draft<E>), payloadKg: d.payloadKg === null ? Number.NaN : (d.payloadKg as number) });
+  const state: ExploreState = { mode: s.mode as ExploreMode, remix: draft<RemixEdit>(s.remix as Obj), parts: draft<PartsEdit>(s.parts as Obj) };
+  try {
+    // what the page will do with them first; anything this version cannot build or refuse by name is not taken
+    remixResult(state.remix);
+    partsResult(state.parts);
+  } catch {
+    return null;
+  }
+  return { state, defaults: { remix: names.remix, parts: names.parts } };
 }
