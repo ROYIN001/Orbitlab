@@ -36,7 +36,7 @@ import { pickerEntries } from '../../design/vehicle-picker';
 import { watchPayload } from '../../design/stage-table';
 import { drawChart, type ChartMarker } from '../charts';
 import { button, el, num } from '../orbit/dom';
-import { mass } from './figures';
+import { mass, unbroken } from './figures';
 import { field, numberBox, select } from './explore-level';
 
 const BENCH = 'bench';
@@ -268,7 +268,7 @@ export class StagingPanel {
       const th = el('th', undefined, t('build.label.stage', { n: i + 1 }));
       th.scope = 'row';
       const m = el('td', 'num', mass(o.stageMass[i]));
-      m.append(el('small', 'be-diff-in', t('build.eng.staging.propIn', { m: mass(o.propellantMass[i]) })));
+      m.append(el('small', 'be-diff-in', t('build.eng.staging.propIn', { m: unbroken(mass(o.propellantMass[i])) })));
       const d = el('td', 'num', ms(dv));
       d.append(el('small', 'be-diff-in', t('build.eng.staging.nIn', { n: num(o.massRatio[i], 2) })));
       tr.append(th, d, el('td', 'num be-diff', num(o.massRatio[i], 2)), m, el('td', 'num be-diff', mass(o.propellantMass[i])));

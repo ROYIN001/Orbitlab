@@ -42,7 +42,7 @@ import type { DrawnPart } from '../../design/exploded';
 import { localized, siteName, stageName } from '../names';
 import { button, el, num } from '../orbit/dom';
 import { StackSvg, type StackLabel } from './stack-svg';
-import { figuresView, mass } from './figures';
+import { figuresView, mass, unbroken } from './figures';
 import { designTextList } from './design-text';
 import { field, numberBox, select } from './explore-level';
 
@@ -282,9 +282,9 @@ export class SizingPanel {
       th.append(el('span', undefined, t('build.label.stage', { n: i + 1 })), el('small', 'be-sub', engineLine(st.engines, enginePart(req.stages[i].enginePart).name)),
         el('small', 'be-diff-in', t('build.eng.size.twIn', { tw: num(st.tw, 2) })));
       const m = el('td', 'num', mass(st.mass));
-      m.append(el('small', 'be-sub', t('build.eng.staging.propIn', { m: mass(st.propellantMass) })));
+      m.append(el('small', 'be-sub', t('build.eng.staging.propIn', { m: unbroken(mass(st.propellantMass)) })));
       // a phone has no room for the length column: it goes under the mass (engineer.css)
-      m.append(el('small', 'be-diff-in', t('build.eng.size.lengthIn', { l: metres(st.length) })));
+      m.append(el('small', 'be-diff-in', t('build.eng.size.lengthIn', { l: unbroken(metres(st.length)) })));
       tr.append(th, el('td', 'num', ms(st.dv)), el('td', 'num be-diff', num(st.tw, 2)), m, el('td', 'num be-diff', metres(st.length)));
       tbody.append(tr);
     });
