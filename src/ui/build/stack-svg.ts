@@ -95,6 +95,11 @@ export class StackSvg {
     root.setAttribute('viewBox', `0 0 ${w} ${h}`);
     root.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     root.setAttribute('aria-label', view.title);
+    // Every render replaces the labels, and with them the one the keyboard is
+    // on: a card closed with Escape, the parts moving apart, a resize. Keep the
+    // focus on the same piece of hardware's new label.
+    const active = root.ownerDocument.activeElement;
+    const focused = active && root.contains(active) ? active.closest('.bs-label')?.getAttribute('data-ref') ?? null : null;
     root.replaceChildren();
     const dim = (p: DrawnPart): boolean => !!view.highlight && !view.highlight.has(p.ref);
     const cls = (p: DrawnPart, base: string): string =>
@@ -157,6 +162,8 @@ export class StackSvg {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.pick(l.ref); }
       });
     }
+
+    if (focused) this.focusLabel(focused);
 
     // a scale bar, so "to scale" can be read off
     const metres = scaleBarLength(apart.maxY - apart.minY);

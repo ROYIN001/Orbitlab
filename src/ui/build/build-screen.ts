@@ -179,11 +179,10 @@ export class BuildScreen {
   }
 
   private select(ref: string | null): void {
-    const fromLabel = !!ref && (document.activeElement as Element | null)?.closest?.('.bs-label') !== null;
     this.selected = ref;
+    // the drawing keeps the keyboard on the label it was on (StackSvg.render)
     this.renderDrawing();
     this.renderCard();
-    if (ref && fromLabel) this.stack.focusLabel(ref);
     if (ref) this.showCard();
   }
 
