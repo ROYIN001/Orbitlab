@@ -190,6 +190,31 @@ describe('readiness review · a vehicle of one’s own', () => {
     expect(readiness(copyOf('falcon9'), missionFor(copyOf('falcon9'), 'cape', 'leo', 'cubesats', mass)).verdict?.cause).toBe('noInsertion');
   });
 
+  /**
+   * The mission most callers have to hand is a whole `MissionConfig` (the
+   * setup panel's `getConfig()`), and it names the vehicle it was set up for,
+   * with that vehicle's spec when it is a custom one. The review is of `spec`,
+   * so whatever vehicle the mission carries must not reach the plan or the
+   * probe: found in review, where a catalogue entry reviewed on a mission
+   * still carrying a custom spec of another id made the probe throw
+   * (`missionVehicle`: the ids disagree), which the review reported as a
+   * `probeFailed` warning instead of the probe's `noInsertion`.
+   */
+  it('reviews the vehicle it is given, not one the mission still names', () => {
+    const other = copyOf('soyuz21a');
+    const tight = vehicleById('falcon9').payloadLEO * 0.9;
+    for (const spec of [vehicleById('falcon9'), copyOf('falcon9')]) {
+      const clean = missionFor(spec, 'cape', 'leo', 'cubesats', tight);
+      const expected = readiness(spec, clean);
+      expect(expected.insertion, `${spec.id}: the probe flies (90 % of the rating)`).not.toBeNull();
+      const stale = { ...clean, vehicleId: other.id, vehicleSpec: other } as ReadinessMission;
+      const review = readiness(spec, stale);
+      expect(review.items, spec.id).toEqual(expected.items);
+      expect(review.insertion, spec.id).toEqual(expected.insertion);
+      expect(review.verdict, spec.id).toEqual(expected.verdict);
+    }
+  });
+
   it('stops at the validator: an invalid spec is reviewed no further', () => {
     const spec = copyOf('falcon9');
     spec.stages[1].engine.ispVac = 3000;

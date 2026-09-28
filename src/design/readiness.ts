@@ -49,7 +49,11 @@ import { RAD } from '../physics/constants';
 import { marginalMission, missionCapability, missionVerdict, type Capability, type Feasibility } from '../config/verdict';
 import { designWarnings, isCatalogueEntry } from './warnings';
 
-/** The mission a vehicle is reviewed for: a `MissionConfig` without the vehicle, which is the one under review. */
+/**
+ * The mission a vehicle is reviewed for: a `MissionConfig` without the vehicle,
+ * which is the one under review. A whole `MissionConfig` is accepted too; the
+ * vehicle it names (`vehicleId`, `vehicleSpec`) is ignored.
+ */
 export type ReadinessMission = Omit<MissionConfig, 'vehicleId' | 'vehicleSpec'>;
 
 export type ReadinessStep = 'design' | 'plan' | 'capability' | 'probe' | 'verdict' | 'notice';
@@ -118,7 +122,15 @@ export function readiness(spec: VehicleSpec, mission: ReadinessMission): Readine
   // 3–4. The plan and what it says the stack can deliver. The panel treats a
   // planner that throws as no plan, and the verdict then judges the mass and
   // the corridor only; so does the review, and says so.
-  const cfg: MissionConfig = { ...mission, vehicleId: spec.id, ...(catalogue ? {} : { vehicleSpec: spec }) };
+  //
+  // The vehicle is `spec` and nothing else. A caller may hand over a whole
+  // `MissionConfig` (the setup panel's `getConfig()` is one), which names the
+  // vehicle it was set up for and, for a custom one, carries its spec; left
+  // in, a catalogue entry reviewed on such a mission flew the probe with the
+  // other vehicle's spec, `missionVehicle` refused the pair, and a mission
+  // the probe fails came out as a `probeFailed` warning (found in review).
+  const { vehicleId: _vehicleId, vehicleSpec: _vehicleSpec, ...flown } = mission as ReadinessMission & Partial<Pick<MissionConfig, 'vehicleId' | 'vehicleSpec'>>;
+  const cfg: MissionConfig = { ...flown, vehicleId: spec.id, ...(catalogue ? {} : { vehicleSpec: spec }) };
   const site = siteById(mission.siteId);
   let plan: MissionPlan | null = null;
   try { plan = planMission(cfg, site, spec); } catch { plan = null; }
