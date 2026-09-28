@@ -11,13 +11,15 @@
  * flight is pinned by tests/heavy/sixdof-fingerprint.test.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { VEHICLES, vehicleById } from '../src/data/vehicles';
+import { VEHICLES, vehicleById, vehicleDataId } from '../src/data/vehicles';
 import { engineLayout } from '../src/data/engine-layout';
 import { vehicleSpecProblems } from '../src/config/vehicle-spec';
 import { VehicleModel } from '../src/physics/vehicle';
 import { buildRigidVehicle, stageMassComponents } from '../src/physics/rigid/mass';
-import { chamberGeometry, PROPELLANT_LOADS, renderToBody } from '../src/physics/rigid/vehicle-data';
-import { v3 } from '../src/physics/vec3';
+import {
+  chamberGeometry, isCataloguePartId, PROPELLANT_LOADS, rcsGeometry, renderToBody, thrusterMomentArm,
+} from '../src/physics/rigid/vehicle-data';
+import { scale, v3 } from '../src/physics/vec3';
 import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../src/types';
 import { copyOf, scratchVehicles } from './custom-vehicle-harness';
 
@@ -34,6 +36,11 @@ describe('six-DOF for custom vehicles (D03): the constructed vehicles', () => {
     for (const spec of SCRATCH) expect({ [spec.id]: vehicleSpecProblems(spec) }).toEqual({ [spec.id]: [] });
     expect(parts(NEW_IDS).map((p) => [p.id, CATALOGUE_PARTS.has(p.id)]))
       .toEqual([['x1', false], ['xl', false], ['xs', false], ['x2', false], ['x3', false]]);
+    // The library's test of a new id says the same, part by part.
+    for (const spec of [...VEHICLES, ...SCRATCH]) for (const p of parts(spec)) {
+      expect(isCataloguePartId(p.id), `${spec.id} ${p.id}`).toBe(CATALOGUE_PARTS.has(p.id));
+    }
+    expect(isCataloguePartId('spacecraft')).toBe(false);
     // The two ids with dedicated chamber branches, flown with another engine count than the catalogue's.
     expect(FALCON_FIVE.stages[0]).toMatchObject({ id: 's1', engine: { count: 5 } });
     expect(parts(SOYUZ_MULTI).map((p) => [p.id, p.engine.count])).toEqual([['blokA', 2], ['blokBVGD', 2], ['blokI', 3]]);
@@ -160,5 +167,43 @@ describe('six-DOF for custom vehicles (D03): a solid stage the catalogue does no
     for (const spec of VEHICLES) for (const p of parts(spec)) {
       expect(PROPELLANT_LOADS[p.id]?.family === 'solid', `${spec.id} ${p.id}`).toBe(!!p.engine.solid);
     }
+  });
+});
+
+describe('six-DOF for custom vehicles (D03): attitude thrusters', () => {
+  it('gives an upper stage the catalogue does not know the generic three-axis set, and its first stage none', () => {
+    const snapshot = buildRigidVehicle(new VehicleModel(NEW_IDS, 1000));
+    const byStage = new Map(snapshot.rcs.map((r) => [r.stageId, r]));
+    expect(byStage.get('x1')).toMatchObject({ initialPropellantKg: 0, thrusters: [] });
+    for (const stage of NEW_IDS.stages.slice(1)) {
+      const set = byStage.get(stage.id)!;
+      // Falcon 9's second-stage installation: 50 N cold gas at 60 s, the gas
+      // the lesser of 10 % of the dry mass and 30 kg (estimates, E).
+      expect(set.initialPropellantKg, stage.id).toBe(Math.min(0.1 * stage.dryMass, 30));
+      expect(set.thrusters, stage.id).toHaveLength(12);
+      for (const jet of set.thrusters) expect([jet.maxThrust, jet.isp], stage.id).toEqual([50, 60]);
+    }
+  });
+
+  it('gives the generic set the roll authority of a couple across the stage, F·d', () => {
+    // The Zefiro 9 third stage alone: one chamber on the axis, so no roll of its own.
+    const vm = new VehicleModel(NEW_IDS, 1000);
+    vm.separateStage(vm.stages[0], 100);
+    vm.jettisonFairing();
+    vm.separateStage(vm.stages[1], 200);
+    const snapshot = buildRigidVehicle(vm);
+    const x3 = NEW_IDS.stages[2];
+    let roll = 0;
+    for (const jet of snapshot.rcsThrusters) roll += Math.max(0, scale(thrusterMomentArm(jet, snapshot.cg), jet.maxThrust).x);
+    // Each sense has two 50 N jets pushing opposite ways at ±R: a couple of
+    // 2·F·R = F·d. To 1e-9 relative, fixed before the comparison.
+    expect(roll / (50 * x3.diameter)).toBeCloseTo(1, 9);
+  });
+
+  it('changes nothing for a catalogue stage id, on any vehicle', () => {
+    for (const spec of [...VEHICLES, FALCON_FIVE, SOYUZ_MULTI]) spec.stages.forEach((stage, index) => {
+      const at = v3(1, 0, 0);
+      expect(rcsGeometry(vehicleDataId(spec), stage, at, index), `${spec.id} ${stage.id}`).toEqual(rcsGeometry(vehicleDataId(spec), stage, at));
+    });
   });
 });

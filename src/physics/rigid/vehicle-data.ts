@@ -7,7 +7,7 @@ import type { Vec3 } from '../vec3';
 import { add, cross, normalize, v3 } from '../vec3';
 import { stackLayout } from '../frame';
 import { engineLayout } from '../../data/engine-layout';
-import { vehicleDataId } from '../../data/vehicles';
+import { VEHICLES, vehicleDataId } from '../../data/vehicles';
 
 export const RIGID_DATA_REVISION = 'estimated-components-2026-09-19-v1';
 export const RIGID_DATA_ASSUMPTIONS = [
@@ -418,15 +418,35 @@ export interface RcsReservoir {
   stageId: string; initialPropellantKg: number; centerBody: Vec3; thrusters: RcsThrusterGeometry[];
 }
 
+const CATALOGUE_PART_IDS: ReadonlySet<string> = new Set(VEHICLES.flatMap((vehicle) =>
+  vehicle.stages.flatMap((stage) => [stage.id, ...(stage.boosters ?? []).map((booster) => booster.id)])));
+
+/**
+ * Whether a stage or strap-on id is one the catalogue flies (roadmap D03). The
+ * id-keyed tables in this file are written for those; a part with an id of its
+ * own — a custom vehicle's, whose changed parts get new ids — has no entry in
+ * any of them and gets the generic behaviour.
+ */
+export const isCataloguePartId = (id: string): boolean => CATALOGUE_PART_IDS.has(id);
+
 /** Synthetic finite force-pair installation. It is NOT SpaceX's nozzle count.
  * Opposed pairs yield pure torque only when both real forces are commanded.
+ *
+ * `stageIndex` is the stage's place in the stack, 0 for the first stage; a
+ * detached body gives none. An upper stage with an id the catalogue does not
+ * know (D03) gets the generic three-axis set, the one Falcon 9's second stage
+ * flies: 50 N cold-gas pairs at 60 s and the lesser of 10 % of the dry mass and
+ * 30 kg of gas, estimates (E) not scaled to the stage. Without it a single
+ * on-axis chamber left such a stage no roll at all. A first stage, and every
+ * catalogue id on any vehicle, keeps what it had.
  */
-export function rcsGeometry(vehicleId: string, stage: StageSpec, base = v3()): RcsReservoir {
+export function rcsGeometry(vehicleId: string, stage: StageSpec, base = v3(), stageIndex?: number): RcsReservoir {
   // Falcon Heavy flies Falcon 9's stages and their installation.
   const falcon = vehicleId === 'falcon9' || vehicleId === 'falconheavy';
   const firstStage = stage.id === 's1' || stage.id === 'core' || stage.id === 'side';
   const extra = falcon ? undefined : STAGE_RCS[`${vehicleId}:${stage.id}`] ?? STAGE_RCS[stage.id];
-  const supported = falcon || stage.isSpacecraft || !!extra;
+  const generic = (stageIndex ?? 0) > 0 && !isCataloguePartId(stage.id);
+  const supported = falcon || stage.isSpacecraft || !!extra || generic;
   const initial = !supported ? 0 : extra ? Math.min(stage.dryMass * 0.1, extra.propellantKg) : Math.min(stage.dryMass * 0.1,
     stage.isSpacecraft ? 10 : firstStage ? 100 : 30);
   const force = extra?.forceN ?? (stage.isSpacecraft ? 20 : firstStage ? 200 : 50);

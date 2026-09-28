@@ -121,6 +121,12 @@ describe('six-DOF data for every vehicle', () => {
     steersOnThreeAxes(vehicleById(id));
   });
 
+  // D03: an upper stage with an id of its own and one chamber on the axis
+  // rolls on the generic attitude thrusters.
+  it.each(SCRATCH.map(v => [v.id, v] as const))('custom %s can steer on all three axes in every powered configuration (D03)', (_id, spec) => {
+    steersOnThreeAxes(spec);
+  });
+
   it.each(VEHICLES.map(v => v.id))('%s puts the thrust the flight model flies into its chambers, solids above their mean included', id => {
     putsFlightThrustIntoChambers(vehicleById(id));
   });
