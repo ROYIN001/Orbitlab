@@ -37,6 +37,23 @@ const LBF = 4.4482216;
  */
 export const DPS = { ftp: 9870 * LBF, max: 6300 * LBF, min: 1050 * LBF, recovery: 0.57 * 10500 * LBF, rated: 10500 * LBF, isp: 300.5 };
 
+/**
+ * The ascent engine (APS), not throttleable: the predicted steady-state
+ * operating points 10 s and 400 s into the ascent (MR Table 9.9-I; the measured
+ * pressures matched them), linear between.
+ */
+export const APS = [{ t: 10, thrust: 3464 * LBF, isp: 309.4 }, { t: 400, thrust: 3439 * LBF, isp: 308.8 }] as const;
+
+/**
+ * The LM's reaction control system for the rendezvous: two 100-lbf thrusters
+ * along the axis (CSI's 51.6 ft/s took 47.0 s on 2.67 t: 0.34 m/s², MR Table 5-VI,
+ * §5.7); 290 s, the thrusters' steady-state specific impulse (approximate).
+ */
+export const LM_RCS = { thrust: 2 * 100 * LBF, isp: 290 };
+
+/** Pounds to kilograms. */
+const LB = 0.45359237;
+
 /** Nautical miles to metres. */
 const NMI = 1852;
 
@@ -111,6 +128,37 @@ export const APOLLO11 = {
     evasive: { alt: 180.8 * NMI, t: get(75, 39, 30), lat: 0.18, lon: 175.97 },
     mcc2: { alt: 61.5 * NMI, t: get(75, 53, 35), lat: 0.17, lon: 173.57 },
   } satisfies Record<string, Pericynthion>,
+  /**
+   * The ascent: lift-off 124:22:00.79 and the ascent engine's cut-off at 124:29:15.67 (MR Table 3-I, §5.6); 10 s of
+   * vertical rise to 50 ft/s, then the pitch-over (press kit); aimed at 60,000 ft, climbing at 32 ft/s, 5,534.9 ft/s
+   * down range — flown 60,300 ft, 32 ft/s, 5,537.0 ft/s — into 47.3 × 9.5 n mi (MR Table 5-V). The ascent stage
+   * weighed 10,776.6 lb at lift-off and 5,928.6 lb at insertion (MR Table A-I). The lift-off was timed for the
+   * CSM: the insertion 166 n mi west of the landing site, the CSM then about 255 n mi ahead (press kit).
+   */
+  ascent: { t: get(124, 22, 0.79), cutoff: get(124, 29, 15.67), vertical: 10, alt: 60000 * FPS, vr: 32 * FPS, vh: 5534.9 * FPS,
+    apolune: 47.3 * NMI, perilune: 9.5 * NMI, mass: 10776.6 * LB, insertionMass: 5928.6 * LB, downrange: 166 * NMI, lead: 255 * NMI },
+  /**
+   * The rendezvous, all on the LM's thrusters (MR §5.7, Tables 3-I, 5-VI; press kit): CSI at 125:19:35, 51.6 ft/s
+   * posigrade in 47.0 s, targeted to put the LM 15 n mi under the CSM at CDH; CDH at 126:17:49.6, 19.9 ft/s in all,
+   * the orbits made coelliptic; TPI at 127:03:51.8, 25.4 ft/s, when the CSM stood 26.6° above the LM's horizon,
+   * for an intercept 130° of the CSM's orbit later; two midcourse corrections, 127:18:30.8 and 127:33:30.8;
+   * braking from 127:36:57.3, station-keeping from 127:52:05.3, docking at 128:03:00.0. The LM weighed 5,881.5 lb
+   * at CSI and 5,738.0 lb at the docking, the CSM 36,847.4 lb (MR Table A-I).
+   */
+  csi: { t: get(125, 19, 35), dv: 51.6 * FPS, dh: 15 * NMI, mass: 5881.5 * LB },
+  cdh: { t: get(126, 17, 49.6), dv: 19.9 * FPS },
+  tpi: { t: get(127, 3, 51.8), dv: Math.hypot(22.9, 1.4, 11.0) * FPS, elevation: 26.6, transfer: 130 },
+  lmMcc: [get(127, 18, 30.8), get(127, 33, 30.8)],
+  braking: get(127, 36, 57.3),
+  stationkeeping: get(127, 52, 5.3),
+  redocking: { t: get(128, 3, 0), lm: 5738.0 * LB, csm: 36847.4 * LB },
+  /**
+   * The ascent stage jettisoned at 130:09:31.2, the CSM then 37,100.5 lb with the crew, the samples and the film
+   * in it; the final separation at 130:30:01.0, 2.2 ft/s in 7.2 s (MR Tables 3-I, 7-V, A-I; flown retrograde by
+   * the CSM in the model, as the press kit planned it).
+   */
+  jettison: { t: get(130, 9, 31.2), csm: 37100.5 * LB, lm: 5462.5 * LB },
+  separation: { t: get(130, 30, 1), dv: 2.2 * FPS, duration: 7.2 },
   /** the Moon's radius the Mission Report's lunar altitudes are above (the landing site's, PGNCS; MR Table 5-IV), m */
   siteRadius: 937.17 * NMI,
 } as const;

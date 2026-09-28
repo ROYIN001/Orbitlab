@@ -355,10 +355,46 @@ describe('Apollo 11 from its parking orbit to the Moon, point-mass', () => {
     const mm = moonState(sim.plan.jd0 + sim.state.t / 86400);
     expect(Math.abs(norm(sub(sim.state.r, mm.r)) - APOLLO11.siteRadius)).toBeLessThan(0.01);
   });
+
+  it('lifts Eagle off timed for Columbia, flies the coelliptic rendezvous back to it, docks, and lets the ascent stage go', () => {
+    flyTo(APOLLO11.separation.t + 120);
+    expect(sim.isFailed(), log()).toBe(false);
+    const NMI = 1852, FT = 0.3048;
+    // the lift-off, timed for the CSM where the model has it: within a minute or two of 124:22:00.79
+    expect(Math.abs(at('evt.lunarLiftoff')!.t - APOLLO11.ascent.t), log()).toBeLessThan(120);
+    // the insertion: 47.3 × 9.5 n mi (aimed at 45 × 9), 5,928.6 lb
+    const ins = at('evt.lmInsertion')!;
+    expect(Math.abs(ins.t - at('evt.lunarLiftoff')!.t - (APOLLO11.ascent.cutoff - APOLLO11.ascent.t))).toBeLessThan(15);
+    expect(Math.abs(Number(ins.params!.ap) - 47.3 * 1.852)).toBeLessThan(3.5 * 1.852);
+    expect(Math.abs(Number(ins.params!.pe) - 9.5 * 1.852)).toBeLessThan(1 * 1.852);
+    expect(Math.abs(Number(ins.params!.mass) - APOLLO11.ascent.insertionMass)).toBeLessThan(60);
+    // CSI 51.6 ft/s, CDH 19.9 ft/s with the orbits 15 n mi apart, TPI 25.4 ft/s at 26.6° (MR Table 5-VI)
+    expect(at('evt.csi')!.t).toBeCloseTo(APOLLO11.csi.t, 6);
+    expect(Math.abs(Number(at('evt.csi')!.params!.dv) - 51.6 * FT)).toBeLessThan(2.5);
+    const cdh = at('evt.cdh')!;
+    expect(cdh.t).toBeCloseTo(APOLLO11.cdh.t, 6);
+    expect(Math.abs(Number(cdh.params!.dh) - (15 * NMI) / 1000)).toBeLessThan(0.3);
+    expect(Math.abs(Number(cdh.params!.dv) - 19.9 * FT)).toBeLessThan(2.5);
+    const tpi = at('evt.tpi')!;
+    expect(Math.abs(tpi.t - APOLLO11.tpi.t)).toBeLessThan(10 * 60);
+    expect(Math.abs(Number(tpi.params!.el) - 26.6)).toBeLessThan(0.3);
+    expect(Math.abs(Number(tpi.params!.dv) - APOLLO11.tpi.dv)).toBeLessThan(1);
+    // docked within minutes of 128:03:00, weighed as the two were
+    const dock = at('evt.lmDocked')!;
+    expect(Math.abs(dock.t - APOLLO11.redocking.t), log()).toBeLessThan(5 * 60);
+    expect(at('evt.stationkeeping')!.t).toBeLessThan(dock.t);
+    // the ascent stage let go at its flown time; the CSM as weighed after it, backing away
+    expect(at('evt.lmJettison')!.t).toBeCloseTo(APOLLO11.jettison.t, 6);
+    expect(sim.apollo.phase).toBe('csmOrbit');
+    expect(Math.abs(sim.vehicle.totalMass() - APOLLO11.jettison.csm)).toBeLessThan(1);
+    const f = sim.apollo.frame()!;
+    expect(norm(sub(f.ascentStage!.r, sim.state.r))).toBeGreaterThan(200);
+    expect(f.lunar!.pe).toBeGreaterThan(90e3);
+  });
 });
 
 describe('Apollo 11 in the viewer', () => {
-  it('tells the flight to the Moon beat by beat, each coast at a preset speed, and ends on the Moon', { timeout: 400_000 }, () => {
+  it('tells the flight to the Moon beat by beat, each coast at a preset speed, and ends back in lunar orbit', { timeout: 500_000 }, () => {
     const s = watchMissionSettings('apollo11');
     const sim = new Simulation({
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, launchTime: s.launchTime, padId: s.padId,
@@ -369,7 +405,8 @@ describe('Apollo 11 in the viewer', () => {
     const warps = new Set<number>();
     let ending: string | null = null;
     let last: ReturnType<typeof captureFrame> | undefined, inOrbit: ReturnType<typeof captureFrame> | undefined;
-    while (!sim.isFailed() && sim.state.t < 380000 && !ending) {
+    let onMoon: ReturnType<typeof captureFrame> | undefined;
+    while (!sim.isFailed() && sim.state.t < 472000 && !ending) {
       sim.step(sim.suggestedDt());
       if (sim.state.t < 9000) continue;
       const frame = captureFrame(sim);
@@ -378,8 +415,9 @@ describe('Apollo 11 in the viewer', () => {
       warps.add(autoWarp(frame, beat));
       ending = flightEnding(frame, sim.events);
       if (ending) last = frame;
-      // docked in the circular orbit, a minute before the undocking
+      // docked in the circular orbit, a minute before the undocking; on the Moon, an hour before the lift-off
       if (!inOrbit && frame.t >= APOLLO11.undocking.t - 60) inOrbit = frame;
+      if (!onMoon && frame.t >= APOLLO11.ascent.t - 3600) onMoon = frame;
     }
     // the readouts switch to the Moon as Mission Control's displays did: height above it and speed relative to
     // it; on the surface, nothing left of either
@@ -389,17 +427,21 @@ describe('Apollo 11 in the viewer', () => {
     expect(o.altitude).toBeGreaterThan(95e3);
     expect(o.altitude).toBeLessThan(125e3);
     expect(Math.abs(o.speed - 1630)).toBeLessThan(20);
+    expect(watchReadout(onMoon!)).toEqual({ altitude: 0, speed: 0, moon: true });
     const r = watchReadout(last!);
-    expect(r).toEqual({ altitude: 0, speed: 0, moon: true });
+    expect(r.moon).toBe(true);
+    expect(r.altitude).toBeGreaterThan(95e3);
+    expect(r.altitude).toBeLessThan(125e3);
     // in the order they were flown: each after the one before it
     let at = -1;
     for (const b of ['tliBurn', 'tliDone', 'transposition', 'apolloDocked', 'extraction', 'evasiveBurn', 'translunarCoast', 'midcourseBurn',
       'lunarSoi', 'lunarApproach', 'loiBurn', 'lunarOrbit', 'circularizeBurn', 'lunarOrbit', 'lmUndocked', 'doiBurn', 'descentOrbit',
-      'brakingPhase', 'approachPhase', 'landingPhase', 'lunarLanding']) {
+      'brakingPhase', 'approachPhase', 'landingPhase', 'lunarLanding', 'onTheMoon', 'lunarLiftoff', 'lmInOrbit', 'csiBurn', 'cdhBurn',
+      'tpiBurn', 'terminalPhase', 'rendezvousBraking', 'lmStationkeeping', 'redocked', 'lmJettison']) {
       at = beats.indexOf(b, at + 1);
       expect(at, `${b}: ${beats.join(' ')}`).toBeGreaterThanOrEqual(0);
     }
-    expect(ending).toBe('lunarLanding');
+    expect(ending).toBe('redocked');
     // every speed one of the workspace selector's presets (src/main.ts)
     for (const w of warps) expect([0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000, 10000, 50000]).toContain(w);
     expect(warps.has(5000)).toBe(true);

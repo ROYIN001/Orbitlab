@@ -15,7 +15,8 @@ export type FlownKey = 'evt.maxQ' | 'evt.ceco' | 'evt.mixtureShift' | 'evt.inter
   | 'evt.ignition' | 'evt.tli' | 'evt.slaPanels' | 'evt.csmSeparation' | 'evt.csmDocked' | 'evt.lmExtraction'
   | 'evt.evasive' | 'evt.mcc' | 'evt.lunarSoi' | 'evt.loi' | 'evt.lunarOrbit' | 'evt.circularize'
   | 'evt.undocking' | 'evt.separationBurn' | 'evt.doi' | 'evt.pdi' | 'evt.throttleRecovery' | 'evt.highGate' | 'evt.lowGate'
-  | 'evt.lunarLanding' | 'evt.lmEngineOff';
+  | 'evt.lunarLanding' | 'evt.lmEngineOff'
+  | 'evt.lunarLiftoff' | 'evt.lmInsertion' | 'evt.csi' | 'evt.cdh' | 'evt.tpi' | 'evt.lmMcc' | 'evt.braking' | 'evt.stationkeeping' | 'evt.lmDocked' | 'evt.lmJettison' | 'evt.asSeparation';
 
 export interface FlownEvent {
   key: FlownKey;
@@ -80,6 +81,17 @@ export const FLOWN_LABEL: Record<FlownKey, string> = {
   'evt.lowGate': 'tl.evt.lowGate',
   'evt.lunarLanding': 'tl.evt.lunarLanding',
   'evt.lmEngineOff': 'tl.evt.lmEngineOff',
+  'evt.lunarLiftoff': 'tl.evt.lunarLiftoff',
+  'evt.lmInsertion': 'tl.evt.lmInsertion',
+  'evt.csi': 'tl.evt.csi',
+  'evt.cdh': 'tl.evt.cdh',
+  'evt.tpi': 'tl.evt.tpi',
+  'evt.lmMcc': 'tl.evt.lmMcc',
+  'evt.braking': 'tl.evt.braking',
+  'evt.stationkeeping': 'tl.evt.stationkeeping',
+  'evt.lmDocked': 'tl.evt.lmDocked',
+  'evt.lmJettison': 'tl.evt.lmJettison',
+  'evt.asSeparation': 'tl.evt.asSeparation',
 };
 
 export interface FlownRow {

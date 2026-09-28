@@ -138,7 +138,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 1 340 tests in 96 files, about 17 minutes. Among it:
+`npm test` runs the regular suite (vitest): 1 341 tests in 96 files, about 17 minutes. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -180,7 +180,7 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for all 18 vehicles | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
-| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a–6d of 7 (below) |
+| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a–6e of 7 (below) |
 | U07 ГОСТ 20058-80 notation | done | | |
 | G03 attitude-loop inspector | done | | |
 | E02 live equations panel | done | | |
@@ -209,7 +209,11 @@ orbit and the landing — the Moon's degree-2 field, LOI-1 turned into the plane
 and LOI-2 at the flown times, Eagle undocked and flown on its own beside Columbia, DOI to the targeted
 perilune, the powered descent through P63, P64 and P66 with the descent engine's fixed throttle and
 throttle recovery, to within a few metres of Tranquility Base and 10 kg of the flown landed mass, and
-the LM, the CSM and the ground at the site drawn — done; (6e) the LM's ascent and docking; (6f) home and splashdown; (6g) the viewer
+the LM, the CSM and the ground at the site drawn — done; (6e) the LM's ascent and docking — the
+ascent engine's P12 guidance off the Moon, the lift-off timed for the CSM, the coelliptic sequence (CSI, CDH,
+TPI, two midcourse corrections, the braking gates) on the LM's thrusters to within minutes of the flown
+times and a metre or two a second of the flown burns, the docking, the ascent stage's jettison, and the
+descent stage left at Tranquility Base drawn — done; (6f) home and splashdown; (6g) the viewer
 and the documents; (7) the fleet acceptance and the documents.
 
 Twenty further items are kept for later, once these are done.

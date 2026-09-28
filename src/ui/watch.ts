@@ -337,7 +337,7 @@ export class WatchView {
     card.classList.toggle('failed', !success);
     const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
       : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle'
-      : ending === 'lunarLanding' ? 'watch.end.landedTitle' : 'watch.fail.title'));
+      : ending === 'redocked' ? 'watch.end.redockedTitle' : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
@@ -355,14 +355,15 @@ export class WatchView {
         port: t(`rv.port.${rv.port}`), time: fmtClock(since).replace(/^T\+/, ''), burns: num(rv.burns.length),
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
-    } else if (ending === 'lunarLanding') {
-      // C01: Eagle on the Moon
-      const l = frame.apollo!.landed!;
-      card.append(el('p', undefined, t('watch.end.landedText', {
-        time: fmtClock(l.t).replace(/^T\+/, ''), lat: l.lat.toFixed(3), lon: l.lon.toFixed(3),
-        miss: num(Math.round(l.miss)), mass: num(Math.round(frame.mass)),
+    } else if (ending === 'redocked') {
+      // C01: Eagle down at Tranquility Base and back up to Columbia
+      const l = frame.apollo!.landed, at = (key: string) => this.lastEvents.find((e) => e.key === key)?.t ?? frame.t;
+      const clock = (x: number) => fmtClock(x).replace(/^T\+/, '');
+      card.append(el('p', undefined, t('watch.end.redockedText', {
+        miss: num(Math.round(l?.miss ?? 0)), landed: clock(l?.t ?? frame.t), liftoff: clock(at('evt.lunarLiftoff')), docked: clock(at('evt.lmDocked')),
+        mass: num(Math.round(frame.mass)),
       })));
-      card.append(el('p', 'watch-end-fact', t('watch.end.landedFact')));
+      card.append(el('p', 'watch-end-fact', t('watch.end.redockedFact')));
     } else if (ending === 'splashdown') {
       // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
       const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');

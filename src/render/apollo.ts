@@ -14,7 +14,7 @@
  */
 import * as THREE from 'three';
 import type { SatelliteView } from './satellite';
-import { APOLLO_LM, APOLLO_OUT, type ApolloState } from '../physics/sim/apollo';
+import { APOLLO_ASCENT, APOLLO_LM, APOLLO_OUT, type ApolloPhase, type ApolloState } from '../physics/sim/apollo';
 import { clamp01, smoothstep } from './noise';
 
 /** Height of the stack on the S-IVB with its tower, m (Saturn V 110.6 m less its stages). */
@@ -32,6 +32,11 @@ const PROBE = 0.35;
 /** the LM folded in the SLA: its base and height, m (its docking hatch is its top) */
 const LM_BASE = 0.4;
 const LM_H = 5.1;
+/** the LM's descent stage's and ascent stage's cabin heights, m */
+const DESCENT_H = 1.7;
+const ASCENT_H = 2.9;
+/** The ascent stage from its base to its docking tunnel's top, m. */
+export const AS_HEIGHT = LM_H - DESCENT_H;
 /**
  * The LM on its own, legs out: the footpads' centres 4.5 m from its axis, their
  * soles 1.5 m under the descent stage, the contact probes 1.7 m (67 in) under
@@ -88,61 +93,8 @@ export function buildApollo(): SatelliteView & { setApollo(state: ApolloState | 
   // --- the LM in the adapter: gold-foiled descent stage with its legs folded,
   // the ascent stage, the docking tunnel on top; from the undocking on its own
   // with the legs out and the contact probes under three of the footpads
-  const lm = new THREE.Group();
-  const descentH = 1.7, ascentH = 2.9;
-  const body = new THREE.Group();
-  const descent = new THREE.Mesh(new THREE.CylinderGeometry(2.05, 2.05, descentH, 8), gold);
-  descent.position.y = descentH / 2;
-  body.add(descent);
-  const dpsBell = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.75, 0.9, 20, 1, true), dark);
-  dpsBell.position.y = -0.3;
-  body.add(dpsBell);
-  const ascent = new THREE.Mesh(new THREE.BoxGeometry(3.0, ascentH, 2.6), grey);
-  ascent.position.y = descentH + ascentH / 2;
-  body.add(ascent);
-  const windows = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.05), dark);
-  windows.position.set(0, descentH + ascentH * 0.7, 1.31);
-  body.add(windows);
-  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, LM_H - descentH - ascentH, 16), silver);
-  tunnel.position.y = descentH + ascentH + (LM_H - descentH - ascentH) / 2;
-  body.add(tunnel);
-  lm.add(body);
-  /** a strut from `a` to `b` (LM coordinates) */
-  const strut = (a: THREE.Vector3, b: THREE.Vector3, r: number, mat: THREE.Material): THREE.Mesh => {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, a.distanceTo(b), 6), mat);
-    m.position.copy(a).add(b).multiplyScalar(0.5);
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
-    return m;
-  };
-  const folded = new THREE.Group(), deployed = new THREE.Group(), probes = new THREE.Group();
-  // the four legs on the descent stage's axes, the forward one (+Z, under the hatch) carrying the ladder
-  for (let i = 0; i < 4; i++) {
-    const a = (i * Math.PI) / 2, cx = Math.sin(a), cz = Math.cos(a);
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.4, 6), silver);
-    leg.position.set(cx * 2.25, 1.9, cz * 2.25);
-    folded.add(leg);
-    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.12, 12), silver);
-    pad.position.set(cx * 2.25, 3.6, cz * 2.25);
-    folded.add(pad);
-    // out: the primary strut from the stage's upper corner to the footpad, the secondary from its foot
-    const foot = new THREE.Vector3(cx * LM_TREAD, -LM_LEGS + 0.25, cz * LM_TREAD);
-    deployed.add(strut(new THREE.Vector3(cx * 2.05, descentH - 0.2, cz * 2.05), foot, 0.09, silver));
-    for (const s of [-1, 1]) {
-      const sx = Math.sin(a + s * 0.45), sz = Math.cos(a + s * 0.45);
-      deployed.add(strut(new THREE.Vector3(sx * 2.1, 0.1, sz * 2.1), foot.clone().multiplyScalar(0.82).setY(-LM_LEGS + 0.6), 0.045, silver));
-    }
-    const pad2 = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.38, 0.25, 14), gold);
-    pad2.position.set(cx * LM_TREAD, -LM_LEGS + 0.125, cz * LM_TREAD);
-    deployed.add(pad2);
-    // the contact probes: 67 in under the pads, on all but the ladder's leg
-    if (i > 0) probes.add(strut(new THREE.Vector3(cx * LM_TREAD, -LM_LEGS, cz * LM_TREAD), new THREE.Vector3(cx * LM_TREAD, -LM_LEGS - LM_PROBE, cz * LM_TREAD), 0.02, silver));
-  }
-  const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.55, 2.6, 0.04), silver);
-  ladder.position.set(0, -LM_LEGS / 2 + 0.8, 2.05 + (LM_TREAD - 2.05) * 0.45);
-  ladder.rotation.x = -Math.atan2(LM_TREAD - 2.05, LM_LEGS + descentH);
-  deployed.add(ladder, probes);
-  lm.add(folded, deployed);
-  lm.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+  const L = lmModel(gold, grey, dark, silver);
+  const { lm, folded, deployed, probes } = L;
   lm.position.y = base + LM_BASE;
   g.add(lm);
 
@@ -197,13 +149,23 @@ export function buildApollo(): SatelliteView & { setApollo(state: ApolloState | 
     // C01: from the undocking the drawing is Eagle alone, legs out, its footpads' soles on the view's base (the
     // tracked point); Columbia is drawn on its own (`buildCsm`)
     const alone = !!phase && APOLLO_LM.includes(phase);
-    view.height = alone ? LM_HEIGHT : h;
-    folded.visible = !alone;
+    // from the lift-off the ascent stage alone, its base on the view's; docked again, the CSM on the base with
+    // the ascent stage upside down on its nose; after the jettison the CSM alone
+    const asAlone = !!phase && APOLLO_ASCENT.includes(phase), redocked = phase === 'redocked', csmAlone = phase === 'csmOrbit';
+    const size = apolloViewSize(phase);
+    view.height = size?.height ?? h;
+    L.descent.visible = L.dpsBell.visible = !(asAlone || redocked || csmAlone);
+    L.apsBell.visible = asAlone;
+    lm.visible = !csmAlone;
+    lm.rotation.x = redocked ? Math.PI : 0;
+    folded.visible = !alone && !asAlone && !redocked;
     deployed.visible = alone;
     probes.visible = alone && phase !== 'landed';
-    csm.visible = !alone;
-    lm.position.y = alone ? -LM_HEIGHT / 2 + LM_LEGS : base + LM_BASE;
-    if (alone) { panels.forEach((p) => { p.visible = false; }); fixed.visible = false; return; }
+    csm.visible = !alone && !asAlone;
+    lm.position.y = alone ? -LM_HEIGHT / 2 + LM_LEGS : asAlone ? -AS_HEIGHT / 2 - DESCENT_H
+      : redocked ? -view.height / 2 + CSM_LENGTH + LM_H : base + LM_BASE;
+    if (redocked || csmAlone) { csm.rotation.set(0, 0, 0); csm.position.set(0, -view.height / 2, 0); }
+    if (alone || asAlone || redocked || csmAlone) { panels.forEach((p) => { p.visible = false; }); fixed.visible = false; return; }
     const after = phase === 'translunar' || phase === 'transposition' || phase === 'docked' || (!!phase && APOLLO_OUT.includes(phase));
     const u = q && after && phase !== 'translunar' ? t - q.separation : -1;
     // the panels, at their own time before the CSM backs away: open to 45° on their hinges,
@@ -233,6 +195,68 @@ export function buildApollo(): SatelliteView & { setApollo(state: ApolloState | 
   return view;
 }
 
+/**
+ * The lunar module, its origin at the descent stage's base: the descent stage
+ * (gold foil, its engine's bell under it) with its legs folded or out and the
+ * probes under three pads, the ascent stage (its engine's bell under it, seen
+ * when it flies alone), its windows and the docking tunnel on top.
+ */
+function lmModel(gold: THREE.Material, grey: THREE.Material, dark: THREE.Material, silver: THREE.Material) {
+  const lm = new THREE.Group();
+  const descent = new THREE.Mesh(new THREE.CylinderGeometry(2.05, 2.05, DESCENT_H, 8), gold);
+  descent.position.y = DESCENT_H / 2;
+  const dpsBell = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.75, 0.9, 20, 1, true), dark);
+  dpsBell.position.y = -0.3;
+  const ascent = new THREE.Group();
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(3.0, ASCENT_H, 2.6), grey);
+  cabin.position.y = ASCENT_H / 2;
+  const windows = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.05), dark);
+  windows.position.set(0, ASCENT_H * 0.7, 1.31);
+  const tunnel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, LM_H - DESCENT_H - ASCENT_H, 16), silver);
+  tunnel.position.y = ASCENT_H + (LM_H - DESCENT_H - ASCENT_H) / 2;
+  const apsBell = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.45, 0.6, 16, 1, true), dark);
+  apsBell.position.y = -0.3;
+  ascent.add(cabin, windows, tunnel, apsBell);
+  ascent.position.y = DESCENT_H;
+  /** a strut from `a` to `b` (LM coordinates) */
+  const strut = (a: THREE.Vector3, b: THREE.Vector3, r: number, mat: THREE.Material): THREE.Mesh => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, a.distanceTo(b), 6), mat);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+    return m;
+  };
+  const folded = new THREE.Group(), deployed = new THREE.Group(), probes = new THREE.Group();
+  // the four legs on the descent stage's axes, the forward one (+Z, under the hatch) carrying the ladder
+  for (let i = 0; i < 4; i++) {
+    const a = (i * Math.PI) / 2, cx = Math.sin(a), cz = Math.cos(a);
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.4, 6), silver);
+    leg.position.set(cx * 2.25, 1.9, cz * 2.25);
+    folded.add(leg);
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.12, 12), silver);
+    pad.position.set(cx * 2.25, 3.6, cz * 2.25);
+    folded.add(pad);
+    // out: the primary strut from the stage's upper corner to the footpad, the secondary from its foot
+    const foot = new THREE.Vector3(cx * LM_TREAD, -LM_LEGS + 0.25, cz * LM_TREAD);
+    deployed.add(strut(new THREE.Vector3(cx * 2.05, DESCENT_H - 0.2, cz * 2.05), foot, 0.09, silver));
+    for (const s of [-1, 1]) {
+      const sx = Math.sin(a + s * 0.45), sz = Math.cos(a + s * 0.45);
+      deployed.add(strut(new THREE.Vector3(sx * 2.1, 0.1, sz * 2.1), foot.clone().multiplyScalar(0.82).setY(-LM_LEGS + 0.6), 0.045, silver));
+    }
+    const pad2 = new THREE.Mesh(new THREE.CylinderGeometry(0.47, 0.38, 0.25, 14), gold);
+    pad2.position.set(cx * LM_TREAD, -LM_LEGS + 0.125, cz * LM_TREAD);
+    deployed.add(pad2);
+    // the contact probes: 67 in under the pads, on all but the ladder's leg
+    if (i > 0) probes.add(strut(new THREE.Vector3(cx * LM_TREAD, -LM_LEGS, cz * LM_TREAD), new THREE.Vector3(cx * LM_TREAD, -LM_LEGS - LM_PROBE, cz * LM_TREAD), 0.02, silver));
+  }
+  const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.55, 2.6, 0.04), silver);
+  ladder.position.set(0, -LM_LEGS / 2 + 0.8, 2.05 + (LM_TREAD - 2.05) * 0.45);
+  ladder.rotation.x = -Math.atan2(LM_TREAD - 2.05, LM_LEGS + DESCENT_H);
+  deployed.add(ladder, probes);
+  lm.add(descent, dpsBell, ascent, folded, deployed);
+  lm.traverse((o) => { if (o instanceof THREE.Mesh) o.castShadow = true; });
+  return { lm, descent, dpsBell, ascent, apsBell, folded, deployed, probes };
+}
+
 /** The CSM, its origin at the SM's aft face and its nose up +Y: the SPS bell below, the SM, the CM, the docking probe. */
 function csmModel(silver: THREE.Material, dark: THREE.Material, mylar: THREE.Material): THREE.Group {
   const csm = new THREE.Group();
@@ -252,6 +276,61 @@ function csmModel(silver: THREE.Material, dark: THREE.Material, mylar: THREE.Mat
 
 /** The CSM's length from its origin to the probe's tip, m. */
 export const CSM_LENGTH = SM_H + CM_H + PROBE;
+
+/**
+ * C01: the size the camera frames Apollo at, from the undocking on — Eagle, its
+ * ascent stage, the two docked again, the CSM — or null for the stack (m).
+ */
+export function apolloViewSize(phase: ApolloPhase | undefined): { height: number; radius: number } | null {
+  if (!phase) return null;
+  if (APOLLO_LM.includes(phase)) return { height: LM_HEIGHT, radius: LM_TREAD };
+  if (APOLLO_ASCENT.includes(phase)) return { height: AS_HEIGHT, radius: 2 };
+  if (phase === 'redocked') return { height: CSM_LENGTH + AS_HEIGHT, radius: SLA_R1 };
+  if (phase === 'csmOrbit') return { height: CSM_LENGTH, radius: SLA_R1 };
+  return null;
+}
+
+/** Materials for a stage drawn on its own; disposed with it. */
+function stageMaterials() {
+  return {
+    gold: new THREE.MeshStandardMaterial({ color: 0xc9a13b, roughness: 0.35, metalness: 0.8 }),
+    grey: new THREE.MeshStandardMaterial({ color: 0x8d9096, roughness: 0.5, metalness: 0.4 }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x2a2b2e, roughness: 0.6 }),
+    silver: new THREE.MeshStandardMaterial({ color: 0xc9ccd1, roughness: 0.3, metalness: 0.8 }),
+  };
+}
+
+function disposer(group: THREE.Group, mats: Record<string, THREE.Material>): () => void {
+  return () => {
+    group.traverse((o) => { if (o instanceof THREE.Mesh) o.geometry.dispose(); });
+    for (const m of Object.values(mats)) m.dispose();
+  };
+}
+
+/**
+ * C01: Eagle's descent stage, left at Tranquility Base: legs out, the probes
+ * bent under it, its group's origin at the footpads' soles, up +Y.
+ */
+export function buildDescentStage(): { group: THREE.Group; dispose(): void } {
+  const m = stageMaterials(), L = lmModel(m.gold, m.grey, m.dark, m.silver);
+  L.ascent.visible = false; L.folded.visible = false; L.probes.visible = false;
+  L.lm.position.y = LM_LEGS;
+  const group = new THREE.Group();
+  group.add(L.lm);
+  group.visible = false;
+  return { group, dispose: disposer(group, m) };
+}
+
+/** C01: Eagle's ascent stage, jettisoned: its group's origin at its base, the docking tunnel up +Y. */
+export function buildAscentStage(): { group: THREE.Group; dispose(): void } {
+  const m = stageMaterials(), L = lmModel(m.gold, m.grey, m.dark, m.silver);
+  L.descent.visible = false; L.dpsBell.visible = false; L.folded.visible = false; L.deployed.visible = false;
+  L.lm.position.y = -DESCENT_H;
+  const group = new THREE.Group();
+  group.add(L.lm);
+  group.visible = false;
+  return { group, dispose: disposer(group, m) };
+}
 
 /**
  * C01: Columbia on its own after the undocking, drawn where the flight puts it

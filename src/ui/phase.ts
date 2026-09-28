@@ -8,6 +8,7 @@
  * design wave can style the narration block however it likes, and so the same
  * data can drive a screen reader or a future caption track.
  */
+import { APOLLO_AT_MOON } from '../physics/sim/apollo';
 import type { VisualFrame } from '../physics/frame';
 import type { DescentPhase, SimEvent } from '../physics/simulation';
 import type { EscapePhase } from '../physics/rigid/escape';
@@ -121,6 +122,15 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
           params.thr = Math.round(d.throttle * 100).toString();
         }
         if (ap.landed) { params.lat = ap.landed.lat.toFixed(3); params.lon = ap.landed.lon.toFixed(3); }
+        // back to Columbia: the range to it (km), the rate it closes at (m/s), the height between the orbits (km), its elevation
+        if (ap.rendezvous) {
+          const r = ap.rendezvous;
+          params.rng = r.range >= 10e3 ? Math.round(r.range / 1000).toString() : (r.range / 1000).toFixed(r.range >= 1e3 ? 1 : 2);
+          params.rdot = r.closing.toFixed(1);
+          params.dh = (r.dh / 1000).toFixed(1);
+          params.el = r.elevation.toFixed(1);
+          params.rngm = Math.round(r.range).toString();
+        }
         // in lunar orbit, the orbit is the Moon's: above the landing site's radius, against its equator
         if (ap.lunar) {
           params.ap = Math.round(ap.lunar.ap / 1000).toString();
@@ -256,7 +266,8 @@ export function statusKey(frame: VisualFrame): string {
   if (ap && frame.status === 'orbit') {
     if (ap.phase === 'landed') return 'hud.status.onMoon';
     if (ap.phase === 'descent') return 'hud.status.lunarDescent';
-    if (['loi', 'lunarOrbit', 'circularize', 'undocked', 'doi', 'descentOrbit'].includes(ap.phase)) return 'hud.status.lunarOrbit';
+    if (ap.phase === 'ascent') return 'hud.status.lunarAscent';
+    if (APOLLO_AT_MOON.includes(ap.phase) && ap.phase !== 'approach') return 'hud.status.lunarOrbit';
     if (ap.phase !== 'parking' && ap.phase !== 'tli') return 'hud.status.translunar';
   }
   return `hud.status.${frame.status}`;

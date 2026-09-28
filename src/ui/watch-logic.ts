@@ -12,6 +12,7 @@
  * read (time, height, speed).
  */
 import type { VisualFrame } from '../physics/frame';
+import { APOLLO11 } from '../data/apollo11';
 import { APOLLO_AT_MOON } from '../physics/sim/apollo';
 import type { SimEvent } from '../physics/simulation';
 import { OMEGA_EARTH } from '../physics/constants';
@@ -35,7 +36,10 @@ export type WatchBeat =
   | 'apolloParking' | 'tliBurn' | 'tliDone' | 'transposition' | 'apolloDocked' | 'extraction' | 'translunarCoast'
   | 'evasiveBurn' | 'midcourseBurn' | 'lunarSoi' | 'lunarApproach' | 'loiBurn' | 'lunarOrbit' | 'circularizeBurn'
   // and down to the surface: undocking, the descent orbit, the three programs of the powered descent, the landing
-  | 'lmUndocked' | 'doiBurn' | 'descentOrbit' | 'brakingPhase' | 'approachPhase' | 'landingPhase' | 'lunarLanding';
+  | 'lmUndocked' | 'doiBurn' | 'descentOrbit' | 'brakingPhase' | 'approachPhase' | 'landingPhase' | 'lunarLanding'
+  // and back to Columbia: the stay, the lift-off, the coelliptic sequence, the terminal phase, the docking, the jettison
+  | 'onTheMoon' | 'lunarLiftoff' | 'lmInOrbit' | 'csiBurn' | 'coelliptic' | 'cdhBurn' | 'tpiBurn' | 'terminalPhase'
+  | 'rendezvousBraking' | 'lmStationkeeping' | 'redocked' | 'lmJettison';
 
 /** Label and sentence of each beat. Literal keys, so the i18n suite sees their call sites. */
 export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
@@ -97,6 +101,18 @@ export const WATCH_BEATS: Record<WatchBeat, { label: string; text: string }> = {
   approachPhase: { label: 'watch.beat.approachPhase', text: 'watch.say.approachPhase' },
   landingPhase: { label: 'watch.beat.landingPhase', text: 'watch.say.landingPhase' },
   lunarLanding: { label: 'watch.beat.lunarLanding', text: 'watch.say.lunarLanding' },
+  onTheMoon: { label: 'watch.beat.onTheMoon', text: 'watch.say.onTheMoon' },
+  lunarLiftoff: { label: 'watch.beat.lunarLiftoff', text: 'watch.say.lunarLiftoff' },
+  lmInOrbit: { label: 'watch.beat.lmInOrbit', text: 'watch.say.lmInOrbit' },
+  csiBurn: { label: 'watch.beat.csiBurn', text: 'watch.say.csiBurn' },
+  coelliptic: { label: 'watch.beat.coelliptic', text: 'watch.say.coelliptic' },
+  cdhBurn: { label: 'watch.beat.cdhBurn', text: 'watch.say.cdhBurn' },
+  tpiBurn: { label: 'watch.beat.tpiBurn', text: 'watch.say.tpiBurn' },
+  terminalPhase: { label: 'watch.beat.terminalPhase', text: 'watch.say.terminalPhase' },
+  rendezvousBraking: { label: 'watch.beat.rendezvousBraking', text: 'watch.say.rendezvousBraking' },
+  lmStationkeeping: { label: 'watch.beat.lmStationkeeping', text: 'watch.say.lmStationkeeping' },
+  redocked: { label: 'watch.beat.redocked', text: 'watch.say.redocked' },
+  lmJettison: { label: 'watch.beat.lmJettison', text: 'watch.say.lmJettison' },
   capsuleSep: { label: 'watch.beat.capsuleSep', text: 'watch.say.capsuleSep' },
   capsuleArc: { label: 'watch.beat.capsuleArc', text: 'watch.say.capsuleArc' },
   retroFire: { label: 'watch.beat.retroFire', text: 'watch.say.retroFire' },
@@ -269,7 +285,19 @@ function apolloBeat(frame: VisualFrame): WatchBeat {
       const d = frame.apollo!.descent?.phase;
       return d === 'approach' ? 'approachPhase' : d === 'landing' || d === 'vertical' ? 'landingPhase' : 'brakingPhase';
     }
-    case 'landed': return 'lunarLanding';
+    // the first minutes on the Moon, then the stay
+    case 'landed': return frame.apollo!.landed && frame.t - frame.apollo!.landed.t > 120 ? 'onTheMoon' : 'lunarLanding';
+    case 'ascent': return 'lunarLiftoff';
+    case 'lmOrbit': return frame.apollo!.rendezvous && frame.apollo!.rendezvous.dh < 20 * 1852 && frame.apollo!.lunar && frame.apollo!.lunar.pe > 30e3 ? 'coelliptic' : 'lmInOrbit';
+    case 'csi': return 'csiBurn';
+    case 'cdh': return 'cdhBurn';
+    case 'tpi': return 'tpiBurn';
+    case 'lmMidcourse':
+    case 'terminal': return 'terminalPhase';
+    case 'braking': return 'rendezvousBraking';
+    case 'stationkeeping': return 'lmStationkeeping';
+    case 'redocked': return 'redocked';
+    case 'csmOrbit': return 'lmJettison';
     default: return 'translunarCoast';
   }
 }
@@ -423,7 +451,22 @@ function beatWarp(frame: VisualFrame, beat: WatchBeat): number {
     case 'lunarOrbit':
     case 'lmUndocked':
     case 'descentOrbit':
+    case 'onTheMoon':
+    case 'lmInOrbit':
+    case 'coelliptic':
+    case 'terminalPhase':
+    case 'redocked':
+    case 'lmJettison':
       return coastWarp(frame);
+    // the seven minutes of the ascent, the thrusters' burns and the braking at 5×, the last metres to the docking live
+    case 'lunarLiftoff':
+    case 'csiBurn':
+    case 'cdhBurn':
+    case 'tpiBurn':
+    case 'rendezvousBraking':
+      return 5;
+    case 'lmStationkeeping':
+      return 2;
     // the twelve minutes of the descent: the braking at 5×, the approach at 2×, Armstrong's landing and the
     // landing itself live
     case 'brakingPhase':
@@ -493,7 +536,7 @@ export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEven
 }
 
 /** How a flight on screen ends. */
-export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'lunarLanding' | 'failed';
+export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'redocked' | 'failed';
 
 /**
  * How the flight on screen has ended, if it has: in orbit, with a splashdown
@@ -511,11 +554,11 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
     if (rv.phase === 'docked') return rv.dockedAt !== undefined && frame.t - rv.dockedAt >= RETURN_SETTLE ? 'docked' : null;
     return rv.phase === 'aborted' ? 'orbit' : null;
   }
-  // C01: Apollo's part of the flight so far ends on the Moon, twenty seconds after the engine is off
+  // C01: Apollo's part of the flight so far ends back in lunar orbit, the ascent stage left behind, half a minute
+  // after the CSM's separation from it
   if (frame.apollo) {
     if (frame.status === 'failed') return 'failed';
-    const at = frame.apollo.landed?.t;
-    return frame.apollo.phase === 'landed' && at !== undefined && frame.t - at >= 20 ? 'lunarLanding' : null;
+    return frame.apollo.phase === 'csmOrbit' && frame.t >= APOLLO11.separation.t + 30 ? 'redocked' : null;
   }
   // G06: after an abort, the end is the crew down and a few seconds more
   if (frame.abort) {

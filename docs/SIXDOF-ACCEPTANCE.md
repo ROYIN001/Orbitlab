@@ -594,3 +594,10 @@ flight azimuth (`OrbitSpec.flightAzimuth`, only a mission that names one), the m
 the SPS burns — all flown only by a mission with an injection, which the fleet's are not, so every case
 flies as before: **161 of 161 passed** in 1 h 46 min on four cores, alongside low-priority (niced)
 probe runs of the Apollo flight and, for its last 20 minutes, five test files on two workers.
+
+**The rigid fleet with C01 part 6d.** `npm run test:sixdof-fleet` at commit aa964ac: the Moon's
+degree-2 field, the lunar orbit insertion and circularisation, the undocking, DOI and the powered descent
+(`PoweredDescent`) with the landed LM turning with the Moon — all inside `ApolloFlight`, flown only by a
+mission with an injection, which the fleet's are not, so every case flies as before: **161 of 161 passed**
+in 1 h 40 min on four cores, alongside low-priority (niced) probe runs of the Apollo flight and, for a
+minute, two test files on one worker.

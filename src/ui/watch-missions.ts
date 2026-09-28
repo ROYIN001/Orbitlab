@@ -291,6 +291,13 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
       { key: 'evt.doi', t: 365774 }, { key: 'evt.lunarOrbit', n: 3, t: 365804 },
       { key: 'evt.pdi', t: 369185.01 }, { key: 'evt.throttleRecovery', t: 369571 }, { key: 'evt.highGate', t: 369692 },
       { key: 'evt.lowGate', t: 369802 }, { key: 'evt.lunarLanding', t: 369939.9 }, { key: 'evt.lmEngineOff', t: 369941.4 },
+      // back to Columbia: the lift-off and the insertion, the coelliptic sequence, the terminal phase, the docking,
+      // the ascent stage's jettison and the CSM's separation from it (Mission Report Tables 3-I, 5-VI; Figure 5-19)
+      { key: 'evt.lunarLiftoff', t: 447720.79 }, { key: 'evt.lmInsertion', t: 448155.67 },
+      { key: 'evt.csi', t: 451175 }, { key: 'evt.cdh', t: 454669.6 }, { key: 'evt.tpi', t: 457431.8 },
+      { key: 'evt.lmMcc', t: 458310.8 }, { key: 'evt.lmMcc', n: 2, t: 459210.8 }, { key: 'evt.braking', t: 459417.3 },
+      { key: 'evt.stationkeeping', t: 460325.3 }, { key: 'evt.lmDocked', t: 460980 },
+      { key: 'evt.lmJettison', t: 468571.2 }, { key: 'evt.asSeparation', t: 469801 },
     ], orbit: { perigee: 183.2, apogee: 186.0, inclination: 32.521 } },
     titleKey: 'watch.mission.apollo11', blurbKey: 'watch.mission.apollo11Blurb', payloadKey: 'watch.payload.apollo11' },
   // H-IIA F26, 3 December 2014: Hayabusa2 and three small passengers to a

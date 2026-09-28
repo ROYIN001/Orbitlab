@@ -640,11 +640,20 @@ off beside it and then out of sight. Half a revolution later the descent engine 
 minutes down: the braking phase at 5× (the engine at full thrust until, six minutes in, the computer
 throttles it back), the approach from high gate at 2×, and from 400 ft the landing live — down at about
 a metre a second, as Armstrong flew it, the ground coming up with its craters and the LM's shadow on
-them. The contact light comes on 1.7 m up, the engine stops a second and a half later, and the flight
-ends on the Moon; the way home is being added. The phase line under the clock shows the lunar orbit's
-height, and during the descent the program (P63, P64, P66), the height, the distance to the site and the
-speeds, and the line of the real flight beside it the flown times: the model lights the descent 45 s
-before Eagle did, and from its own ignition keeps the flown timeline to a few seconds.
+them. The contact light comes on 1.7 m up, and the engine stops a second and a half later. The
+twenty-one hours on the Moon pass in seconds; then the ascent stage lifts off the descent stage — which
+stays behind at Tranquility Base, where you can see it — straight up, then over into seven minutes of
+climbing to orbit, and the rendezvous follows as it was flown: four burns of the lunar module's small
+thrusters over three hours, the first to bring it 28 km under Columbia, the second to keep it there, the
+third, when Columbia stands 26.6° above its horizon, to meet it; then braking in steps, station-keeping 30 m
+off, and docking. Two hours later the ascent stage is let go, Columbia backs away from it, and the flight
+ends back in lunar orbit; the way home is being added. The phase line under the clock shows the lunar
+orbit's height, during the descent the program (P63, P64, P66), the height, the distance to the site and
+the speeds, and during the rendezvous the range to Columbia, the rate it closes at and the height between
+the two orbits; the line of the real flight beside it gives the flown times. The model lights the descent
+45 s before Eagle did and lifts off 43 s earlier, both for the same reason — its orbit keeps its shape
+where the real one was pulled about by the Moon's uneven gravity — and from each keeps the flown timeline
+to a few minutes.
 
 Mercury-Redstone 3 never went into orbit: the Redstone burns for two and a half minutes and
 throws Freedom 7 on a 15-minute arc, 187 km up and 487 km down range. Ten seconds after the

@@ -23,7 +23,7 @@ import { elementsFromState } from '../orbital';
 import { targetAttitude } from '../rigid/runtime';
 import { add, cross, dot, norm, normalize, scale, sub, v3, type Vec3 } from '../vec3';
 import { engineStartupS, engineTailoffS } from '../vehicle';
-import { APOLLO11, DPS, SPS } from '../../data/apollo11';
+import { APOLLO11, DPS, LM_RCS, SPS } from '../../data/apollo11';
 import { LUNAR_SOI, cislunarStep, coastToPerilune, lunarOrbit, lunisolar, targetMidcourse, type LunarAim } from '../lunar/cislunar';
 import { MU_MOON, moonState, R_MOON } from '../lunar/ephemeris';
 import { eciToSelenographic, selenographicToEci } from '../lunar/orientation';
@@ -31,6 +31,8 @@ import { pointMassAcceleration } from './forces';
 import { PoweredDescent, type DescentPhase } from './apollo-descent';
 import { gravityJ2 } from '../gravity';
 import { TliGuidance } from './tli-guidance';
+import { AscentGuidance, apsPoint, brakingAcceleration, cdhImpulse, closingSpeed, csiImpulse, elevation, heightBelow, interceptImpulse,
+  STATIONKEEPING_M, type OrbitState } from './apollo-rendezvous';
 
 /**
  * Where the flight is: in the parking orbit; burning for the Moon; coasting
@@ -42,16 +44,22 @@ import { TliGuidance } from './tli-guidance';
  */
 export type ApolloPhase = 'parking' | 'tli' | 'translunar' | 'transposition' | 'docked' | 'extracted'
   | 'evasive' | 'coast' | 'midcourse' | 'approach' | 'loi' | 'lunarOrbit' | 'circularize'
-  | 'undocked' | 'doi' | 'descentOrbit' | 'descent' | 'landed';
+  | 'undocked' | 'doi' | 'descentOrbit' | 'descent' | 'landed'
+  | 'ascent' | 'lmOrbit' | 'csi' | 'cdh' | 'tpi' | 'lmMidcourse' | 'terminal' | 'braking' | 'stationkeeping'
+  | 'redocked' | 'csmOrbit';
 
 /** The phases with the CSM and LM out of the S-IVB, docked nose to nose. */
 export const APOLLO_DOCKED: readonly ApolloPhase[] = ['extracted', 'evasive', 'coast', 'midcourse', 'approach', 'loi', 'lunarOrbit', 'circularize'];
 /** The lunar module on its own, the flight followed with it: undocked, its descent, on the Moon. */
 export const APOLLO_LM: readonly ApolloPhase[] = ['undocked', 'doi', 'descentOrbit', 'descent', 'landed'];
+/** The ascent stage on its own, the descent stage left on the Moon: the ascent, the rendezvous's burns and coasts. */
+export const APOLLO_ASCENT: readonly ApolloPhase[] = ['ascent', 'lmOrbit', 'csi', 'cdh', 'tpi', 'lmMidcourse', 'terminal', 'braking', 'stationkeeping'];
+/** The CSM, the flight followed with it again: docked with the ascent stage, then on its own. */
+export const APOLLO_CSM_BACK: readonly ApolloPhase[] = ['redocked', 'csmOrbit'];
 /** The phases with the spacecraft out of the S-IVB. */
-export const APOLLO_OUT: readonly ApolloPhase[] = [...APOLLO_DOCKED, ...APOLLO_LM];
+export const APOLLO_OUT: readonly ApolloPhase[] = [...APOLLO_DOCKED, ...APOLLO_LM, ...APOLLO_ASCENT, ...APOLLO_CSM_BACK];
 /** The phases at the Moon: from its sphere of influence on, heights and speeds are the Moon's. */
-export const APOLLO_AT_MOON: readonly ApolloPhase[] = ['approach', 'loi', 'lunarOrbit', 'circularize', ...APOLLO_LM];
+export const APOLLO_AT_MOON: readonly ApolloPhase[] = ['approach', 'loi', 'lunarOrbit', 'circularize', ...APOLLO_LM, ...APOLLO_ASCENT, ...APOLLO_CSM_BACK];
 
 /** What a frame carries of it. */
 export interface ApolloState {
@@ -91,6 +99,16 @@ export interface ApolloState {
   descent?: { phase: DescentPhase; ftp: boolean; throttle: number; alt: number; range: number; vh: number; vz: number };
   /** on the Moon: where (selenographic, deg), how far from Tranquility Base's published position (m), and when (s) */
   landed?: { lat: number; lon: number; miss: number; t: number };
+  /**
+   * The rendezvous: the CSM's distance from the ascent stage (m), the rate it
+   * closes at (m/s), the height of the CSM's orbit over the LM (m) and its
+   * elevation above the LM's horizon (deg).
+   */
+  rendezvous?: { range: number; closing: number; dh: number; elevation: number };
+  /** the ascent stage after its jettison: its state (ECI, m, m/s) */
+  ascentStage?: { r: Vec3; v: Vec3 };
+  /** the docking axis while the two are docked again, from the CSM to the ascent stage (ECI, unit) */
+  dockAxis?: Vec3;
 }
 
 /** Integration step while the engine burns, s. */
@@ -103,6 +121,16 @@ export const EXTRACTION_SPEED = 0.3;
 const LM_PROBE = 1.70;
 /** Integration step while the service propulsion system burns, s, at most. */
 const SPS_STEP_S = 0.25;
+/**
+ * The ascent stage's and the CSM's reference points apart when docked, m: the
+ * ascent stage's base to its docking tunnel's top (3.4 m), the CSM's service
+ * module's aft face to its probe's tip (7.5 m) — the drawing's lengths.
+ */
+export const DOCKED_RANGE = 10.9;
+/** The last approach from station-keeping to the docking, m/s. */
+const DOCKING_SPEED = 0.1;
+/** The ascent stage's drift from the CSM at its jettison, m/s (the model's). */
+const JETTISON_SPEED = 0.3;
 
 /**
  * A lunar orbit a burn is steered into: its energy (m²/s²), semi-major axis
@@ -139,6 +167,14 @@ export class ApolloFlight {
   private descent?: PoweredDescent;
   private contact?: number;
   private landed?: { lat: number; lon: number; miss: number; t: number; r: Vec3 };
+  private ascentGuidance?: AscentGuidance;
+  /** a rendezvous burn on the LM's thrusters: along a fixed direction until its Δv is in */
+  private rcs?: { dir: Vec3; dv: number; done: number; next: ApolloPhase };
+  private cdhDone = false;
+  /** the terminal phase's intercept time, and the midcourse corrections still to come */
+  private intercept?: number;
+  private dockAxis?: Vec3;
+  private ascentStage?: OrbitState;
 
   constructor(private readonly sim: Simulation) {}
 
@@ -273,6 +309,8 @@ export class ApolloFlight {
 
   step(dt: number): void {
     if (APOLLO_LM.includes(this.phase)) { this.stepLunarModule(dt); return; }
+    if (APOLLO_ASCENT.includes(this.phase)) { this.stepAscentStage(dt); return; }
+    if (APOLLO_CSM_BACK.includes(this.phase)) { this.stepCsmBack(dt); return; }
     const sim = this.sim, s = sim.state, vehicle = sim.vehicle;
     const burning = this.burning, sps = this.sps;
     const mass = Math.max(1, vehicle.totalMass());
@@ -355,6 +393,15 @@ export class ApolloFlight {
       return this.phase === 'descent' && alt < 300 ? 0.05 : 0.2;
     }
     if (this.phase === 'landed') return 10;
+    if (this.phase === 'ascent') {
+      const s = this.sim.state, rel = this.moonRel(s.t, s.r, s.v), aT = Math.max(0.1, s.thrust / Math.max(1, s.mass));
+      const toGo = this.ascentGuidance ? this.ascentGuidance.toGo(rel.r, rel.v) : 100;
+      return Math.max(0.01, Math.min(0.2, toGo / (4 * aT)));
+    }
+    if (this.rcs) return Math.max(0.01, Math.min(0.5, (this.rcs.dv - this.rcs.done) / (2 * LM_RCS.thrust / Math.max(1, this.sim.state.mass))));
+    if (this.phase === 'braking' || this.phase === 'stationkeeping') return 0.5;
+    if (this.phase === 'terminal') return this.rendezvousNow().range < 8e3 ? 1 : 5;
+    if (APOLLO_ASCENT.includes(this.phase) || APOLLO_CSM_BACK.includes(this.phase)) return 10;
     // the half hour before the descent's ignition, which is timed by the LM's position: a second at a time
     if (this.phase === 'descentOrbit' && this.sim.state.t > APOLLO11.pdi.t - 1800) return 0.5;
     if (this.burning || this.sps) return this.burnStep();
@@ -407,6 +454,13 @@ export class ApolloFlight {
       this.sim.state.note = 'doi';
       this.doiDone = 0;
       this.sim.event('evt.doi', 'major', { dv: +APOLLO11.doi.dv.toFixed(1) });
+    });
+    this.sim.schedule(APOLLO11.ascent.t - 3600, 'planLiftoff', () => this.planLiftoff());
+    this.sim.schedule(APOLLO11.csi.t, 'csi', () => this.coellipticInitiation());
+    this.sim.schedule(APOLLO11.cdh.t, 'cdh', () => this.constantHeight());
+    this.sim.schedule(APOLLO11.jettison.t, 'lmJettison', () => this.jettisonAscentStage());
+    this.sim.schedule(APOLLO11.separation.t, 'finalSeparation', () => {
+      if (this.phase === 'csmOrbit') this.sim.event('evt.asSeparation', 'info', { dv: +APOLLO11.separation.dv.toFixed(2) });
     });
   }
 
@@ -552,6 +606,257 @@ export class ApolloFlight {
       s.note = 'landed';
       this.sim.event('evt.lmEngineOff', 'success', { miss: Math.round(this.landed.miss) });
     }
+  }
+
+  // ---------------------------------------------------------- back to Columbia
+
+  /** A coast under the flight's own forces — the Earth with its J2, the Moon with its field, the Sun — in 10-s steps. */
+  private coast = (t0: number, st: OrbitState, t1: number): OrbitState => {
+    const jd0 = this.jd0, gravity = (t: number, r: Vec3) => add(gravityJ2(r), lunisolar(jd0, t, r));
+    let t = t0, x = { r: st.r, v: st.v };
+    while (t1 - t > 1e-9) {
+      const h = Math.min(10, t1 - t);
+      const n = rk4Step(t, x, h, gravity);
+      x = { r: n.r, v: n.v }; t += h;
+    }
+    return x;
+  };
+
+  /** The same, for a state relative to the Moon's centre. */
+  private coastRel = (t0: number, st: OrbitState, t1: number): OrbitState => {
+    const m0 = moonState(this.jd0 + t0 / 86400), m1 = moonState(this.jd0 + t1 / 86400);
+    const x = this.coast(t0, { r: add(st.r, m0.r), v: add(st.v, m0.v) }, t1);
+    return { r: sub(x.r, m1.r), v: sub(x.v, m1.v) };
+  };
+
+  /** The rendezvous seen from the ascent stage: range to the CSM (m), closing rate (m/s), ΔH (m), elevation (deg). */
+  private rendezvousNow(): { range: number; closing: number; dh: number; elevation: number } {
+    const s = this.sim.state, c = this.csm!, m = moonState(this.jd0 + s.t / 86400);
+    const l = { r: sub(s.r, m.r), v: sub(s.v, m.v) }, cr = { r: sub(c.r, m.r), v: sub(c.v, m.v) };
+    const rel = sub(c.r, s.r), range = norm(rel);
+    return { range, closing: -dot(sub(c.v, s.v), scale(rel, 1 / Math.max(1e-9, range))), dh: heightBelow(cr, l), elevation: elevation(cr, l) };
+  }
+
+  /**
+   * The lift-off's time, worked out an hour before it from the CSM's state as
+   * the flight's was, for the rendezvous: when the CSM will be as far ahead of
+   * the insertion — as long after the lift-off as the flown one, as far west of
+   * the landing site — as planned (a secant search on the lift-off's time).
+   */
+  private planLiftoff(): void {
+    if (this.phase !== 'landed' || !this.csm || !this.landed) return;
+    const a = APOLLO11.ascent, s = this.sim.state, t0 = s.t, dur = a.cutoff - a.t, l = this.landed;
+    const m0 = moonState(this.jd0 + t0 / 86400), c0 = { r: sub(this.csm.r, m0.r), v: sub(this.csm.v, m0.v) };
+    const miss = (tlo: number): number => {
+      const ti = tlo + dur, c = this.coastRel(t0, c0, ti), n = normalize(cross(c.r, c.v));
+      const u = normalize(selenographicToEci(l.lat, l.lon, 1, this.jd0 + ti / 86400)), th = a.downrange / APOLLO11.siteRadius;
+      const p = scale(add(scale(u, Math.cos(th)), scale(normalize(cross(n, u)), Math.sin(th))), APOLLO11.siteRadius + a.alt);
+      return norm(sub(c.r, p)) - a.lead;
+    };
+    let x0 = a.t, x1 = a.t + 30, f0 = miss(x0), f1 = miss(x1);
+    for (let i = 0; i < 10 && Math.abs(f1) > 50; i++) {
+      const d = f1 - f0;
+      if (!(Math.abs(d) > 1e-6)) break;
+      const x2 = Math.max(a.t - 900, Math.min(a.t + 900, x1 - (f1 * (x1 - x0)) / d));
+      x0 = x1; f0 = f1; x1 = x2; f1 = miss(x1);
+    }
+    this.sim.schedule(Math.max(s.t + 1, x1), 'lunarLiftoff', () => this.liftoff());
+  }
+
+  /**
+   * Lift-off: the ascent stage off the descent stage, its engine lit and
+   * steered by P12 into the CSM's plane.
+   */
+  private liftoff(): void {
+    if (this.phase !== 'landed' || !this.csm) return;
+    const s = this.sim.state, a = APOLLO11.ascent, m = moonState(this.jd0 + s.t / 86400);
+    const c = { r: sub(this.csm.r, m.r), v: sub(this.csm.v, m.v) };
+    this.sim.vehicle.payloadMass = a.mass;
+    s.mass = this.sim.vehicle.totalMass();
+    this.ascentGuidance = new AscentGuidance({ r: APOLLO11.siteRadius + a.alt, vr: a.vr, vh: a.vh }, normalize(cross(c.r, c.v)), s.t, a.vertical);
+    this.phase = 'ascent';
+    s.note = 'ascent';
+    this.sim.event('evt.lunarLiftoff', 'major');
+  }
+
+  /** The ascent engine's cut-off at the insertion's speed: the ascent stage in orbit, weighed as flown. */
+  private insertion(): void {
+    const s = this.sim.state, rel = this.moonRel(s.t, s.r, s.v), o = lunarOrbit(rel, this.jd0 + s.t / 86400);
+    this.ascentGuidance = undefined;
+    this.phase = 'lmOrbit';
+    s.note = 'lmOrbit';
+    this.sim.event('evt.lmInsertion', 'success', { ap: Math.round((o.ra - APOLLO11.siteRadius) / 100) / 10, pe: Math.round((o.rp - APOLLO11.siteRadius) / 100) / 10,
+      mass: Math.round(this.sim.vehicle.totalMass()) });
+  }
+
+  /** A rendezvous burn on the LM's thrusters: along `dv`'s direction until its size is in. */
+  private startRcs(kind: 'csi' | 'cdh' | 'tpi' | 'lmMidcourse', dv: Vec3, event: string, params: Record<string, number>): void {
+    this.rcs = { dir: normalize(dv), dv: norm(dv), done: 0, next: kind === 'tpi' || kind === 'lmMidcourse' ? 'terminal' : 'lmOrbit' };
+    this.phase = kind;
+    this.sim.state.note = kind;
+    this.sim.event(event, 'major', { ...params, dv: +norm(dv).toFixed(1) });
+  }
+
+  /** The two spacecraft's states about the Moon now. */
+  private pair(): { l: OrbitState; c: OrbitState } {
+    const s = this.sim.state, m = moonState(this.jd0 + s.t / 86400);
+    return { l: { r: sub(s.r, m.r), v: sub(s.v, m.v) }, c: { r: sub(this.csm!.r, m.r), v: sub(this.csm!.v, m.v) } };
+  }
+
+  /** CSI at its flown time: the impulse along the LM's horizontal that puts it 15 n mi under the CSM at CDH. */
+  private coellipticInitiation(): void {
+    if (this.phase !== 'lmOrbit' || !this.csm) return;
+    const s = this.sim.state, c = APOLLO11.csi;
+    this.sim.vehicle.payloadMass = c.mass;
+    s.mass = this.sim.vehicle.totalMass();
+    const { l, c: cm } = this.pair();
+    const dv = csiImpulse(this.coastRel, s.t, l, cm, APOLLO11.cdh.t, c.dh, c.dv);
+    if (!dv) { this.sim.event('evt.rendezvousFailed', 'warn'); return; }
+    this.startRcs('csi', dv, 'evt.csi', {});
+  }
+
+  /** CDH at its flown time: the LM's orbit made coelliptic with the CSM's. */
+  private constantHeight(): void {
+    if (this.phase !== 'lmOrbit' || !this.csm) return;
+    const { l, c } = this.pair();
+    this.cdhDone = true;
+    this.startRcs('cdh', cdhImpulse(l, c), 'evt.cdh', { dh: Math.round(heightBelow(c, l) / 100) / 10 });
+  }
+
+  /** TPI, when the CSM stands 26.6° over the LM's horizon: onto the path that meets it 130° of its orbit later. */
+  private terminalPhaseInitiation(): void {
+    const s = this.sim.state;
+    const { l, c: cm } = this.pair(), a = 1 / (2 / norm(cm.r) - dot(cm.v, cm.v) / MU_MOON);
+    const period = 2 * Math.PI * Math.sqrt((a * a * a) / MU_MOON);
+    this.intercept = s.t + (APOLLO11.tpi.transfer / 360) * period;
+    const dv = interceptImpulse(this.coastRel, s.t, l, cm, this.intercept);
+    if (!dv) { this.sim.event('evt.rendezvousFailed', 'warn'); return; }
+    // the two midcourse corrections, as long after TPI as the flown ones were
+    APOLLO11.lmMcc.forEach((tm, i) => this.sim.schedule(s.t + (tm - APOLLO11.tpi.t), `lmMcc${i + 1}`, () => this.lmMidcourse(i + 1)));
+    this.startRcs('tpi', dv, 'evt.tpi', { el: +elevation(this.pair().c, this.pair().l).toFixed(1) });
+  }
+
+  /** A midcourse correction of the terminal phase: back onto the path to the intercept. */
+  private lmMidcourse(n: number): void {
+    if (this.phase !== 'terminal' || !this.csm || !this.intercept) return;
+    const s = this.sim.state, { l, c } = this.pair();
+    const dv = interceptImpulse(this.coastRel, s.t, l, c, this.intercept);
+    if (!dv) return;
+    this.startRcs('lmMidcourse', dv, 'evt.lmMcc', { n });
+  }
+
+  /** The ascent stage's flight — and the CSM's beside it — from the lift-off to the docking. */
+  private stepAscentStage(dt: number): void {
+    const sim = this.sim, s = sim.state, vehicle = sim.vehicle, jd0 = this.jd0;
+    const gravity = (t: number, r: Vec3) => add(gravityJ2(r), lunisolar(jd0, t, r));
+    const c0 = this.csm!;
+    const cn = rk4Step(s.t, { r: c0.r, v: c0.v }, dt, gravity);
+    const mass = Math.max(1, vehicle.totalMass()), rel = this.moonRel(s.t, s.r, s.v);
+    let thrust = 0, isp = LM_RCS.isp;
+    let dir = norm(rel.v) > 1 ? normalize(rel.v) : normalize(rel.r);
+    if (this.phase === 'ascent' && this.ascentGuidance) {
+      const p = apsPoint(s.t - APOLLO11.ascent.t);
+      thrust = p.thrust; isp = p.isp;
+      dir = this.ascentGuidance.steer(s.t, rel.r, rel.v, thrust / mass, isp * G0);
+    } else if (this.rcs) {
+      thrust = LM_RCS.thrust; dir = this.rcs.dir;
+    } else if (this.phase === 'braking' || this.phase === 'stationkeeping') {
+      const range = norm(sub(c0.r, s.r));
+      const close = this.phase === 'braking' ? closingSpeed(range)
+        : s.t >= APOLLO11.redocking.t - (STATIONKEEPING_M - DOCKED_RANGE) / DOCKING_SPEED ? DOCKING_SPEED * Math.min(1, (range - DOCKED_RANGE + 0.5) / 2) : 0;
+      const a = brakingAcceleration({ r: s.r, v: s.v }, c0, close, LM_RCS.thrust / mass);
+      thrust = norm(a) * mass;
+      if (thrust > 1e-6) dir = normalize(a);
+    }
+    const mdot = thrust / (isp * G0);
+    const next = rk4Step(s.t, { r: s.r, v: s.v }, dt, (t, r) => add(gravity(t, r), scale(dir, thrust / Math.max(1, mass - mdot * (t - s.t)))));
+    s.r = next.r; s.v = next.v; s.t += dt;
+    this.csm = { r: cn.r, v: cn.v };
+    if (thrust > 0) vehicle.payloadMass = Math.max(1, vehicle.payloadMass - mdot * dt);
+    // the ascent engine up its thrust axis; in the rendezvous the stage's docking tunnel towards the CSM
+    const los = normalize(sub(this.csm.r, s.r));
+    s.dir = this.phase === 'ascent' ? dir : APOLLO_ASCENT.includes(this.phase) && this.phase !== 'lmOrbit' ? los : normalize(sub(s.r, moonState(jd0 + s.t / 86400).r));
+    s.thrust = thrust; s.throttle = this.phase === 'ascent' ? 1 : 0; s.coreThrottle = s.throttle; s.boosterThrottle = 0;
+    s.mass = vehicle.totalMass();
+    s.gLoad = thrust / mass / G0;
+    s.elements = elementsFromState(s.r, s.v);
+    if (s.rigid) s.rigid = { ...s.rigid, attitudeQ: targetAttitude(s.dir, normalize(s.r)), omegaBody: v3() };
+    // the milestones
+    if (this.phase === 'ascent' && this.ascentGuidance) {
+      const now = this.moonRel(s.t, s.r, s.v);
+      if (this.ascentGuidance.toGo(now.r, now.v) <= 0.01) this.insertion();
+      return;
+    }
+    if (this.rcs) {
+      this.rcs.done += (thrust / mass) * dt;
+      if (this.rcs.done >= this.rcs.dv - 1e-4) {
+        const next = this.rcs.next;
+        this.rcs = undefined;
+        this.phase = next;
+        s.note = next;
+      }
+      return;
+    }
+    const rv = this.rendezvousNow();
+    if (this.phase === 'lmOrbit' && this.cdhDone && !this.intercept && rv.elevation >= APOLLO11.tpi.elevation) this.terminalPhaseInitiation();
+    else if (this.phase === 'terminal' && rv.range <= 6000 * 0.3048 && rv.closing > 0) {
+      this.phase = 'braking';
+      s.note = 'braking';
+      this.sim.event('evt.braking', 'info', { range: Math.round(rv.range) });
+    } else if (this.phase === 'braking' && rv.range <= STATIONKEEPING_M + 1 && Math.abs(rv.closing) < 0.05) {
+      this.phase = 'stationkeeping';
+      s.note = 'stationkeeping';
+      this.sim.event('evt.stationkeeping', 'info', { range: Math.round(rv.range) });
+    } else if (this.phase === 'stationkeeping' && rv.range <= DOCKED_RANGE) this.redock();
+  }
+
+  /**
+   * Docked again: the flight followed with the CSM, the ascent stage on its
+   * nose, weighed as the Mission Report weighed the two.
+   */
+  private redock(): void {
+    const s = this.sim.state, c = this.csm!;
+    this.dockAxis = normalize(sub(s.r, c.r));
+    s.r = { ...c.r }; s.v = { ...c.v };
+    this.csm = undefined;
+    const d = APOLLO11.redocking;
+    this.sim.vehicle.payloadMass = d.csm + d.lm;
+    s.mass = this.sim.vehicle.totalMass();
+    s.thrust = 0;
+    this.phase = 'redocked';
+    s.note = 'redocked';
+    this.sim.event('evt.lmDocked', 'success');
+  }
+
+  /** The ascent stage jettisoned at its flown time, drifting off the CSM's nose; the CSM as weighed after it. */
+  private jettisonAscentStage(): void {
+    if (this.phase !== 'redocked' || !this.dockAxis) return;
+    const s = this.sim.state, ax = this.dockAxis;
+    this.ascentStage = { r: add(s.r, scale(ax, DOCKED_RANGE)), v: add(s.v, scale(ax, JETTISON_SPEED)) };
+    this.sim.vehicle.payloadMass = APOLLO11.jettison.csm;
+    s.mass = this.sim.vehicle.totalMass();
+    this.phase = 'csmOrbit';
+    s.note = 'csmOrbit';
+    this.sim.event('evt.lmJettison', 'major');
+  }
+
+  /** The CSM again, with the ascent stage docked or drifting off, and its separation push retrograde. */
+  private stepCsmBack(dt: number): void {
+    const sim = this.sim, s = sim.state, jd0 = this.jd0;
+    const gravity = (t: number, r: Vec3) => add(gravityJ2(r), lunisolar(jd0, t, r));
+    if (this.ascentStage) {
+      const n = rk4Step(s.t, this.ascentStage, dt, gravity);
+      this.ascentStage = { r: n.r, v: n.v };
+    }
+    const sep = APOLLO11.separation, rel = this.moonRel(s.t, s.r, s.v);
+    const push = this.phase === 'csmOrbit' && s.t >= sep.t && s.t < sep.t + sep.duration ? scale(normalize(rel.v), -sep.dv / sep.duration) : v3();
+    const next = rk4Step(s.t, { r: s.r, v: s.v }, dt, (t, r) => add(gravity(t, r), push));
+    s.r = next.r; s.v = next.v; s.t += dt;
+    s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0; s.gLoad = 0;
+    s.dir = this.dockAxis ?? normalize(sub(s.r, moonState(jd0 + s.t / 86400).r));
+    s.mass = sim.vehicle.totalMass();
+    s.elements = elementsFromState(s.r, s.v);
+    if (s.rigid) s.rigid = { ...s.rigid, attitudeQ: targetAttitude(s.dir, normalize(s.r)), omegaBody: v3() };
   }
 
   /** Height over the landing site's ground, m: the Moon, where Eagle came down, is at the site's radius. */
@@ -825,7 +1130,8 @@ export class ApolloFlight {
     const q = this.spec?.sequence;
     const times = [this.spec?.time ?? 0, q?.panels ?? 0, q?.separation ?? 0, q?.docking ?? 0, q?.extraction ?? 0,
       APOLLO11.evasive.t, APOLLO11.mcc2.t, APOLLO11.loi1.t, APOLLO11.loi2.t, APOLLO11.undocking.t, APOLLO11.csmSep.t,
-      APOLLO11.doi.t, APOLLO11.pdi.t - 120];
+      APOLLO11.doi.t, APOLLO11.pdi.t - 120, APOLLO11.ascent.t - 120, APOLLO11.csi.t, APOLLO11.cdh.t, this.cdhDone && !this.intercept ? APOLLO11.tpi.t - 600 : 0,
+      ...(this.intercept ? [this.intercept - 1500] : []), APOLLO11.jettison.t, APOLLO11.separation.t];
     return times.filter((x) => x > t).reduce((a, b) => Math.min(a, b), Infinity) || 0;
   }
 
@@ -834,7 +1140,9 @@ export class ApolloFlight {
     if (!this.started) return undefined;
     const s = this.sim.state, rel = this.moonRel(s.t, s.r, s.v);
     const next = this.nextMilestone(s.t);
-    const orbit = ['lunarOrbit', 'circularize', 'undocked', 'doi', 'descentOrbit'].includes(this.phase) ? lunarOrbit(rel, this.jd0 + s.t / 86400) : null;
+    const orbit = ['lunarOrbit', 'circularize', 'undocked', 'doi', 'descentOrbit', ...APOLLO_ASCENT.filter((p) => p !== 'ascent'), ...APOLLO_CSM_BACK]
+      .includes(this.phase) ? lunarOrbit(rel, this.jd0 + s.t / 86400) : null;
+    const rv = APOLLO_ASCENT.includes(this.phase) && this.csm ? this.rendezvousNow() : undefined;
     const d = this.descent, ds = d && this.phase === 'descent' ? this.siteAt(s.t) : null;
     const descent = d && ds ? (() => {
       const up = normalize(rel.r), vRel = sub(rel.v, ds.v), vz = dot(vRel, up);
@@ -854,6 +1162,9 @@ export class ApolloFlight {
       ...(this.csm ? { csm: { r: { ...this.csm.r }, v: { ...this.csm.v } } } : {}),
       ...(descent ? { descent } : {}),
       ...(this.landed ? { landed: { lat: this.landed.lat, lon: this.landed.lon, miss: this.landed.miss, t: this.landed.t } } : {}),
+      ...(rv ? { rendezvous: rv } : {}),
+      ...(this.ascentStage ? { ascentStage: { r: { ...this.ascentStage.r }, v: { ...this.ascentStage.v } } } : {}),
+      ...(this.dockAxis && this.phase === 'redocked' ? { dockAxis: { ...this.dockAxis } } : {}),
     };
   }
 }

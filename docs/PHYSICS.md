@@ -2679,7 +2679,7 @@ is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's S
 | Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
 | Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
 | Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
-| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection, the flight to the Moon, the lunar orbit and the landing at Tranquility Base (§13.9–§13.12) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
+| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection, the flight to the Moon, the lunar orbit, the landing at Tranquility Base and the rendezvous back (§13.9–§13.13) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
 | Mercury-Redstone 3 | 1961-05-05 14:34:13 | Mercury-Redstone, Cape LC-5 | 1,832.6 kg (Freedom 7 and its tower) | 187.5 km apogee, splashdown 487 km down range (§13.7) | NASA MR-3 postlaunch report; TM X-53107 |
 
 **13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
@@ -2889,7 +2889,8 @@ of the real splashdown.
 13:32:00 UTC, LC-39A, flight azimuth 72.058°. Sources: the Saturn V flight evaluation report for AS-506,
 MPR-SAT-FE-69-9 (FER), and NASA SP-4029 (*Saturn V Launch Vehicle Flight Evaluation* summary tables).
 The mission from the parking orbit on — the S-IVB's restart for the Moon, the spacecraft's own
-flight to the Moon — is §13.9 and §13.10, the lunar orbit §13.11 and the landing §13.12; the way home follows.
+flight to the Moon — is §13.9 and §13.10, the lunar orbit §13.11, the landing §13.12 and the rendezvous
+back to the CSM §13.13; the way home follows.
 
 | | Value | Source |
 |---|---|---|
@@ -3245,6 +3246,81 @@ landing phase is a steady descent on the rate, not his flight across West crater
 and its return to the fixed position are the model's reading of the guidance computer's logic. The legs,
 the probes and the ground are drawn to the press kit's sizes and photographs, the craters painted at
 their sizes and places, not mapped.
+
+**13.13 Apollo 11 back to Columbia (part 6e).** src/physics/sim/apollo-rendezvous.ts (the ascent's guidance
+and the rendezvous's targeting), the ascent stage's flight in src/physics/sim/apollo.ts, the numbers
+src/data/apollo11.ts; the ascent stage, the descent stage left on the Moon and the two spacecraft docked
+again drawn by src/render/apollo.ts. Sources: MR (§5.6, §5.7, §9.9; Tables 3-I, 5-V, 5-VI, 9.9-I, A-I;
+Figure 5-19) and the Apollo 11 press kit.
+
+| | Value | Source |
+|---|---|---|
+| Lift-off | 124:22:00.79, after 21 h 36 min on the Moon; 10 s of vertical rise to 50 ft/s, then the pitch-over | MR Table 3-I, §7.4.7; press kit |
+| Ascent engine | 3,464 lbf and 309.4 s 10 s in, 3,439 lbf and 308.8 s at 400 s (predicted; the measured pressures matched) | MR Table 9.9-I |
+| Insertion | 124:29:15.67; aimed at 60,000 ft, climbing at 32 ft/s, 5,534.9 ft/s down range, flown 60,300 ft, 32 ft/s, 5,537.0 ft/s; 47.3 × 9.5 n mi | MR Table 5-V |
+| The lift-off's timing | the insertion 166 n mi west of the landing site, the CSM then about 255 n mi ahead | press kit |
+| CSI | 125:19:35, 51.6 ft/s posigrade (0.7 S, 0.1 down), 47 s on the thrusters; targeted for the LM 15 n mi under the CSM at CDH | MR Table 5-VI, §5.7; press kit |
+| CDH | 126:17:49.6, 8.0 ft/s retrograde, 1.7 S, 18.1 up (19.9 in all; the CSM's orbit, 62 × 56 n mi, not circular) | MR Table 5-VI, §5.7 |
+| TPI | 127:03:51.8, 22.9 ft/s posigrade, 1.4 N, 11.0 up; when the CSM stood 26.6° above the LM's horizon, for an intercept 130° of the CSM's orbit later | MR Table 5-VI; press kit |
+| Midcourse corrections | 127:18:30.8 and 127:33:30.8: under 1 ft/s and about 1.5 | MR Table 5-VI, §5.7 |
+| Braking, station-keeping, docking | 127:36:57.3, 127:52:05.3, 128:03:00.0 | MR Figure 5-19 |
+| Masses | the ascent stage 10,776.6 lb at lift-off, 5,928.6 at insertion, 5,881.5 at CSI, 5,738.0 at the docking; the CSM 36,847.4 lb docked, 37,100.5 after the jettison | MR Table A-I |
+| Jettison, separation | the ascent stage at 130:09:31.2; the final separation 130:30:01.0, 2.2 ft/s in 7.2 s | MR Tables 3-I, 7-V |
+
+*The ascent.* P12's shape: straight up for ten seconds, then the ascent engine — at its operating point,
+not throttleable — steered so that the height and the rate of climb reach the insertion's at the cut-off:
+along the local vertical and across the CSM's plane the energy-optimal law for a position and a velocity at
+a time (§13.12's), the time to go by the rocket equation on the speed still to gain, gains held for the
+last eight seconds; the rest of the thrust down range; the cut-off when the speed down range is the
+insertion's. The thrust's direction is the stage's attitude. The lift-off is timed as the guidance computer
+timed it, for where the CSM is: an hour before, the model looks for the lift-off time at which, as long after
+it as the flown insertion and as far west of the site, the CSM will be the planned 255 n mi ahead — a secant
+search on a prediction of the CSM's coast. At the flown lift-off time the model's CSM is 2° further round
+its orbit than the flown one was (its orbit kept the shape the mascons changed, §13.11), and the search
+lifts Eagle off 42 s early — about as early as its descent (§13.12), for the same reason. Flown at the flown
+time instead, the rendezvous came 28 min late.
+
+*The rendezvous.* All on the LM's thrusters — two 100-lbf thrusters along the axis, 0.34 m/s² — each burn
+worked out at its time and flown along a fixed direction until its Δv is in, the ascent stage weighed at
+CSI as the Mission Report weighed it:
+- CSI at its flown time, along the LM's local horizontal: the size, found by a secant search on a
+  prediction of both spacecraft's coasts, that puts the LM 15 n mi under the CSM's orbit at CDH;
+- CDH at its flown time: the LM's orbit made coelliptic with the CSM's — the same line of apsides, its
+  semi-major axis the CSM's less the height between them, its eccentricity scaled to keep a·e — and its
+  speed across the CSM's plane taken out;
+- TPI when the CSM's elevation above the LM's horizon reaches 26.6°: the impulse that brings the LM to where
+  the CSM will be 130° of its orbit later (Newton's method on the three components against the miss, the
+  Jacobian by differences), and the two midcourse corrections at the flown intervals after it, back onto the
+  same intercept;
+- the braking from 6,000 ft: the closing speed held at the gates — 30 ft/s from 6,000 ft, 20 from 3,000,
+  10 from 1,500, 5 from 500 — and slowed to a stop at 30 m, the thrusters bringing the speed relative to the
+  CSM to it along the line of sight and taking out the drift across it (a time constant of 10 s);
+- station-keeping at 30 m until the docking's approach at 0.1 m/s is due for the flown docking time, or at
+  once when that time has passed; the docking at the two bodies' docked distance, 10.9 m between the
+  ascent stage's base and the CSM's aft face.
+Docked, the flight follows the CSM, the ascent stage on its nose, weighed as the two were; at its flown time
+the ascent stage is let go, drifting off at 0.3 m/s along the docking axis, and twenty minutes later the CSM
+backs away, 2.2 ft/s retrograde (the Mission Report's table has the LM's thrusters make it, its sequence of
+events the CSM; the press kit planned the CSM). The rendezvous is targeted in states about the Moon's centre; the forces are the
+flight's own (the Earth with J2, the Moon with its degree-2 field, the Sun).
+
+Model − flight:
+
+| | Lift-off | Insertion (after lift-off), orbit | CSI | CDH | TPI | Braking | Station-keeping | Docking |
+|---|---|---|---|---|---|---|---|---|
+| Flown | 124:22:00.79 | +434.9 s, 47.3 × 9.5 n mi, 2,689 kg | 15.7 m/s | 6.1 m/s, ΔH 15 n mi | 127:03:51.8, 7.8 m/s | 127:36:57 | 127:52:05 | 128:03:00 |
+| Point-mass | −42 s | +440.3 s, 44.9 × 9.8 n mi, 2,657 kg | 17.1 m/s | 4.5 m/s, 15.0 n mi | −4 min 49 s, 7.6 m/s | +1 min 44 s | −2 min 8 s | +20 s |
+| Six-DOF | −42 s | +440.3 s, 44.9 × 9.8 n mi, 2,657 kg | 17.1 m/s | 4.2 m/s, 15.0 n mi | −5 min 4 s, 7.6 m/s | +1 min 29 s | −2 min 22 s | +20 s |
+
+The midcourse corrections are 0.2 m/s and under 0.1 (flown under 0.3 and about 0.5). The insertion's orbit
+is the press kit's aim, 45 × 9 n mi, rather than the flown one's; CSI then takes a little more to lift the
+LM to 15 n mi under the CSM, and CDH, with the orbits nearer coelliptic already, a little less. The docking
+comes 20 s after the flown one: the approach, timed for it at 0.1 m/s, eases off over the last two metres.
+
+*Approximations.* The thrusters' specific impulse (290 s) is approximate; the braking gates are the
+standard procedure's, not the flight's own record; the docking is flown by the LM, where Collins flew the
+CSM onto it; the ascent stage's drift at the jettison is the model's, and so is the final separation's direction. The insertion's crossrange of 1.7 mi, trimmed after it, and the small out-of-plane components of
+CSI and CDH are not flown: the ascent steers into the CSM's plane.
 
 ## Glossary (EN / RU / TH)
 
