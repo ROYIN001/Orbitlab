@@ -2,10 +2,10 @@
  * The Build section's Engineer level (roadmap D03–D05; docs/ROADMAP-PART2-3.md):
  * the test facilities a rocket goes through before it flies.
  *
- * Built so far, D04's first: the TEST STAND (a static fire,
- * src/ui/build/stand-panel.ts), a tab of one tab bar that the wind tunnel
- * and the flight readiness review (D04), optimal staging and sizing (D05)
- * will join. What is still
+ * Built so far, D04's first two: the TEST STAND (a static fire,
+ * src/ui/build/stand-panel.ts) and the WIND TUNNEL (src/ui/build/
+ * tunnel-panel.ts), each a tab of one tab bar that the flight readiness
+ * review (D04), optimal staging and sizing (D05) will join. What is still
  * coming to the level is listed under the tabs, by roadmap item, as the
  * level's placeholder listed it.
  *
@@ -32,6 +32,7 @@ import { watchPayload } from '../../design/stage-table';
 import { button, el } from '../orbit/dom';
 import { VehiclePicker } from './vehicle-picker';
 import { StandPanel } from './stand-panel';
+import { TunnelPanel } from './tunnel-panel';
 import './engineer.css';
 
 /** A design the Explore level has on screen. */
@@ -50,10 +51,10 @@ export interface EngineerHost {
 /** The vehicle on the bench: its spec, the name it goes by, and the payload the tunnel weighs it with. */
 export type BenchVehicle = ExploreDesign;
 
-type EngineerTab = 'stand';
-/** The level's facilities, in tab order: the wind tunnel and the readiness review (D04), D05's optimal staging and sizing join here. */
-const TABS: readonly EngineerTab[] = ['stand'];
-const TAB_KEY: Record<EngineerTab, string> = { stand: 'build.eng.tab.stand' };
+type EngineerTab = 'stand' | 'tunnel';
+/** The level's facilities, in tab order: the readiness review (D04) and D05's optimal staging and sizing join here. */
+const TABS: readonly EngineerTab[] = ['stand', 'tunnel'];
+const TAB_KEY: Record<EngineerTab, string> = { stand: 'build.eng.tab.stand', tunnel: 'build.eng.tab.tunnel' };
 
 const EXPLORE_ID = 'explore';
 const SAVED = 'saved:';
@@ -85,12 +86,13 @@ export class EngineerLevel {
   private readonly coming = el('section', 'bs-panel be-coming');
   private readonly picker: VehiclePicker;
   private readonly stand = new StandPanel();
+  private readonly tunnel = new TunnelPanel();
 
   constructor(private readonly host: EngineerHost, private readonly store: DesignStore = new LocalDesignStore()) {
     this.picker = new VehiclePicker(pickerEntries(VEHICLES), (id) => this.pick(id), 'be-picker-select');
     this.tabBar.setAttribute('role', 'tablist');
     this.tabBar.addEventListener('keydown', (e) => this.onTabKey(e));
-    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root };
+    const body: Record<EngineerTab, HTMLElement> = { stand: this.stand.root, tunnel: this.tunnel.root };
     for (const k of TABS) {
       const panel = el('section', 'be-panel');
       panel.id = `be-panel-${k}`;
@@ -114,6 +116,7 @@ export class EngineerLevel {
   hide(): void {
     this.visible = false;
     this.stand.hide();
+    this.tunnel.hide();
   }
 
   // ─── the vehicle on the bench ──────────────────────────────────────────────
@@ -189,6 +192,7 @@ export class EngineerLevel {
   private setBench(b: BenchVehicle): void {
     this.bench = b;
     this.stand.setVehicle(b.spec, b.name);
+    this.tunnel.setVehicle(b.spec, b.name, b.payloadKg);
   }
 
   // ─── the page ─────────────────────────────────────────────────────────────
@@ -200,6 +204,7 @@ export class EngineerLevel {
     this.renderTabs();
     this.renderComing();
     this.stand.render();
+    this.tunnel.render();
     this.showTab();
   }
 
@@ -260,7 +265,7 @@ export class EngineerLevel {
   private showTab(): void {
     for (const k of TABS) this.panels[k].hidden = k !== this.tab;
     if (!this.visible) return;
-    this.stand.show();
+    if (this.tab === 'stand') { this.tunnel.hide(); this.stand.show(); } else { this.stand.hide(); this.tunnel.show(); }
   }
 
   /** What is still coming to the level, by roadmap item, and what the section has built (the level's placeholder, kept). */

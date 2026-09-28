@@ -15,7 +15,7 @@
  * Its Explore level remixes a real rocket and builds one from parts (D02,
  * D03): a module of its own, src/ui/build/explore-level.ts, mounted here. Its
  * Engineer level is being built (D03–D05), a module of its own too,
- * src/ui/build/engineer-level.ts: the test stand (D04),
+ * src/ui/build/engineer-level.ts: the test stand and the wind tunnel (D04),
  * with what is still coming to it listed under them; until it is complete
  * the section links open the Build section at a level that is built
  * (`sectionLinkLevel`, src/ui/section-plan.ts).
