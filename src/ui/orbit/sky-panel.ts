@@ -63,6 +63,7 @@ import { loadSolarDaily, measuredActivity } from '../../physics/propagator/activ
 import { setEarthOrientation } from '../../orbit/earth-orientation';
 import { CZ5B_STAGES } from '../../data/cz5b';
 import type { SpaceWeather } from '../../provider/space-weather';
+import { Latest, positiveNumber, ResultSlot, type Freshness, type SlotInputs } from '../result-slot';
 
 export interface SkyHost {
   level(): AppLevel;
@@ -120,6 +121,8 @@ export class RealSky {
   private selectedKey: string | null = 'stations:25544';
   private readonly bySource = new Map<SkySourceId, SkyObject[]>();
   private imported: { file: string; result: ElementFile } | null = null;
+  /** how many files have been read: a file read again is new data, even under the same name (A14) */
+  private importCount = 0;
   private importNote: string | null = null;
   /** the group's positions and the points below them, reused */
   private xyz = new Float32Array(0);
@@ -130,16 +133,18 @@ export class RealSky {
   private stale = true;
   private framedKey: string | null = null;
   private lastGood: OrbitState | null = null;
-  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement; next?: HTMLElement; error?: HTMLElement } = {};
-  /** R03: where the passes are seen from, the lowest elevation that counts, and the passes found */
+  private live: { alt?: HTMLElement; speed?: HTMLElement; latlon?: HTMLElement; age?: HTMLElement; teme?: HTMLElement; next?: HTMLElement; error?: HTMLElement; state?: HTMLElement } = {};
+  /** A16: whether the facts on screen were drawn for a moment SGP4 could not place the satellite at */
+  private shownFailed = false;
+  /** R03: where the passes are seen from, the lowest elevation that counts (the passes found are in `results.passes`) */
   private place: StationChoice = { stationId: 'bangkok', station: stationOf('bangkok')! };
   private minEl = 10 * Math.PI / 180;
-  private passes: { key: string; list: Pass[]; from: number; until: number } | null = null;
   /** P2.5: the satellites' standard magnitudes (McCants), for how bright a pass is */
   private magnitudes: StandardMagnitudes | null = null;
   /** M01: the screening's settings, and the last one run (or running) */
   private conj = { within: 5e3, days: 3, radius: 10, open: false };
-  private screening: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Conjunction[]; abort: AbortController } | null = null;
+  /** the screening running, to stop it */
+  private screeningAbort: AbortController | null = null;
   /** P2.5: the close approach shown in the views and with its encounter plane */
   private shownApproach: Conjunction | null = null;
   /** P2.5: the overflight drawn on the map, with its instrument's reach */
@@ -151,14 +156,46 @@ export class RealSky {
   private cdm: { file: string; msg: ConjunctionMessage | null; error: string | null; radius: number } | null = null;
   /** M02: overflights of the place by the group on screen: the settings, and the last search */
   private over = { minEl: 30 * Math.PI / 180, days: 1, daylight: false, canOnly: false, open: false };
-  private overSearch: { key: string; from: number; state: 'running' | 'done' | 'stopped'; progress: number; list: Overflight[]; stop: boolean } | null = null;
   /** M03: the object's mass and size for the re-entry prediction, the last prediction, and the case study's */
-  private reentry = { mass: 1000, area: 5, cd: 2.2, from: 'decay' as DragFrom, open: false };
-  private reentryResult: { key: string; state: 'running' | 'done' | 'failed'; result: Reentry | null; b: number | null; from: DragFrom; sun: string; progress: number; abort: AbortController } | null = null;
+  readonly reentry = { mass: 1000, area: 5, cd: 2.2, from: 'decay' as DragFrom, open: false };
+  /** the re-entry prediction running, to stop it */
+  private reentryAbort: AbortController | null = null;
   private napaCase: { box: Reentry; fitted: Reentry | null; b: number | null; actual: number } | null = null;
-  private caseStudy: { name: string; missionKey: string; p: Reentry; actual: number }[] | null = null;
+
+  /**
+   * The results, each with the inputs it was found from (audit 2026-09-27 A4,
+   * A14, A15): shown with them, and marked stale when the controls or the data
+   * loaded have moved on since. The passes are found again by themselves.
+   */
+  readonly results = {
+    passes: new ResultSlot<PassInputs, { list: Pass[]; until: number }>(),
+    over: new ResultSlot<OverInputs, Overflight[]>((i) => [
+      placeText(i.stationId, i.lat, i.lon), t(SOURCE_KEY[i.source]), `≥ ${num(i.minEl * 180 / Math.PI)}°`, daysText(i.days), dataText(i.data),
+    ]),
+    reentry: new ResultSlot<ReentryInputs, { reentry: Reentry | null; b: number | null; sun: SunSource }>((i) => [
+      i.name, t(DRAG_KEY[i.from], { n: num(i.sets) }),
+      ...(i.from === 'size' ? [`${num(i.mass)} ${t('u.kg')}`, t('result.area', { v: num(i.area, 2) }), `C_D ${num(i.cd, 2)}`] : []),
+      epochText(i.epoch), dataText(i.data),
+    ]),
+    screening: new ResultSlot<ScreenInputs, Conjunction[]>((i) => [
+      i.name, `< ${num(i.within / 1000)} ${t('u.km')}`, daysText(i.days), t('result.radius', { v: num(i.radius, 1) }), epochText(i.epoch), dataText(i.data),
+      ...(i.file ? [t('result.file', { file: i.file.replace(/#\d+$/, '') })] : []),
+    ]),
+    caseStudy: new ResultSlot<CaseInputs, { rows: { name: string; missionKey: string; p: Reentry; actual: number }[]; sun: SunSource }>(),
+  };
+  /** A14: only the latest catalogue request may answer */
+  private readonly loads = new Latest();
+  /** the status lines of the searches in progress, to count them up without drawing the panel again */
+  private overStatus: HTMLElement | null = null;
+  private conjStatus: HTMLElement | null = null;
+  private reentryStatus: HTMLElement | null = null;
 
   constructor(private readonly host: SkyHost) {}
+
+  /** The catalogue as loaded, or null while it is not. */
+  get dataset(): Dataset<SatelliteCatalog> | null {
+    return this.status.state === 'ready' ? this.status.set : null;
+  }
 
   /** waiting for the catalogue to be in, or to have failed (`ready`) */
   private waiting: Array<() => void> = [];
@@ -168,12 +205,22 @@ export class RealSky {
     if (this.status.state === 'loading' || this.status.state === 'ready') return;
     this.status = { state: 'loading' };
     const settled = () => { const w = this.waiting; this.waiting = []; for (const f of w) f(); };
+    // A14: a request of an earlier data mode may answer after this one: only the latest is taken
+    const token = this.loads.next();
     // P2.5: the Earth's orientation, for placing the satellites over the ground; without it UT1 is taken for UTC
     const eop = this.host.provider().load('earthOrientation').then((set) => set.data, () => null);
     loadStandardMagnitudes().then((m) => { this.magnitudes = m; }, () => { this.magnitudes = null; });
     this.host.provider().load('satellites').then(
-      async (set) => { setEarthOrientation(await eop); this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.host.refresh(); settled(); },
-      (error: unknown) => { this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); settled(); },
+      async (set) => {
+        const orientation = await eop;
+        if (!this.loads.isLatest(token)) return;
+        setEarthOrientation(orientation);
+        this.status = { state: 'ready', set }; this.bySource.clear(); this.stale = true; this.lastGood = null; this.host.refresh(); settled();
+      },
+      (error: unknown) => {
+        if (!this.loads.isLatest(token)) return;
+        this.status = { state: 'failed', reason: error instanceof Error ? error.message : String(error) }; this.host.refresh(); settled();
+      },
     );
   }
 
@@ -206,7 +253,7 @@ export class RealSky {
   focusCase(id: CaseId): void {
     const f = CASE_FOCUS[id];
     this.showForTour(f.group, f.satnum);
-    if (id === 'theos2') { this.place = { stationId: 'bangkok', station: stationOf('bangkok')! }; this.passes = null; }
+    if (id === 'theos2') this.place = { stationId: 'bangkok', station: stationOf('bangkok')! };
     this.over.open = f.open === 'over';
     this.reentry.open = f.open === 'reentry';
     this.conj.open = f.open === 'conj';
@@ -222,10 +269,24 @@ export class RealSky {
     this.host.refresh();
   }
 
-  /** The data mode changed: the catalogue is loaded again from the new provider when next shown. */
+  /**
+   * The data mode changed: the catalogue is loaded again from the new provider
+   * when next shown, and a request still out for the old one is not listened
+   * to (A14). The results found stay, marked stale once the new data differ.
+   */
   reset(): void {
+    this.loads.next();
     this.status = { state: 'idle' };
     this.bySource.clear();
+    this.lastGood = null;
+    this.stale = true;
+  }
+
+  /** The data a result from `source` rests on (A14): the catalogue as loaded, or the file read. */
+  private dataTag(source: SkySourceId): DataTag {
+    if (source === 'imported') return { from: 'file', asOf: this.imported?.file ?? '', fetched: String(this.importCount) };
+    const set = this.dataset;
+    return set ? { from: set.from, asOf: set.asOf, fetched: set.fetched ?? '' } : { from: 'none', asOf: '', fetched: '' };
   }
 
   /** Back to this moment. */
@@ -277,7 +338,7 @@ export class RealSky {
     this.host.refresh();
   }
 
-  /** Where the picked satellite is at `jd`: SGP4's answer, or the last one it gave where it gives none. */
+  /** Where the picked satellite is at `jd`: SGP4's answer, or the last one it gave where it gives none — for drawing its track only (A16). */
   private stateAt(o: SkyObject, jd: number): OrbitState | null {
     const s = skyState(o, jd);
     if (s.error === 0) { this.lastGood = s; return s; }
@@ -312,7 +373,7 @@ export class RealSky {
 
   /** What the 3-D view shows of the approach picked (P2.5): the other object's orbit about the closest approach, where they meet, where it is now. */
   private drawFocus3d(view: OrbitView, sel: SkyObject | null): void {
-    const c = sel && this.screening?.key.startsWith(`${sel.key}|`) ? this.shownApproach : null;
+    const c = sel && this.results.screening.inputs?.object === sel.key ? this.shownApproach : null;
     const key = c ? `${c.other.key}|${c.approach.tca}` : '';
     if (key !== this.focus3dKey) {
       this.focus3dKey = key;
@@ -337,14 +398,19 @@ export class RealSky {
     this.tick(realSeconds);
     const sel = this.selected;
     const jd = this.jd;
-    const now = sel ? this.stateAt(sel, jd) : null;
+    const cur = sel ? skyState(sel, jd) : null;
+    if (cur && cur.error === 0) this.lastGood = cur;
+    // A16: no position now: the track is drawn to the last one SGP4 gave, and the map says so
+    const failed = !!cur && cur.error !== 0;
+    const now = cur && !failed ? cur : failed ? this.lastGood : null;
     const stateOf = sel && now ? (tt: number) => this.stateAt(sel, jd + tt / 86400) ?? now : null;
     track.draw(stateOf, 0, jd, sel ? skyFacts(sel).period : 5400, {
       ...this.mapOverlay(sel),
       points: this.count ? { latlon: this.latlon, count: this.count, label: t(SOURCE_KEY[this.source]) } : undefined,
       // R03: where the passes are seen from, and the ground the satellite is above the lowest elevation for
       station: sel ? { lat: this.place.station.lat, lon: this.place.station.lon } : undefined,
-      footprint: sel && now ? Math.max(0, footprintAngle(Math.hypot(now.r.x, now.r.y, now.r.z), this.minEl)) : undefined,
+      footprint: sel && now && !failed ? Math.max(0, footprintAngle(Math.hypot(now.r.x, now.r.y, now.r.z), this.minEl)) : undefined,
+      nowLabel: failed ? t('sky.track.lastGood') : undefined,
     });
   }
 
@@ -357,8 +423,10 @@ export class RealSky {
    */
   private mapOverlay(sel: SkyObject | null): Pick<TrackOverlay, 'paths' | 'band' | 'marks'> {
     const f = sel && this.shownOverflight?.object.key === sel.key ? this.shownOverflight : null;
-    const r = sel && this.reentryResult?.state === 'done' && this.reentryResult.result?.window && this.reentryResult.key.startsWith(`${sel.key}|`) ? this.reentryResult.result : null;
-    const c = sel && this.screening?.key.startsWith(`${sel.key}|`) ? this.shownApproach : null;
+    // a re-entry result is drawn only while it is for the inputs on screen (A15)
+    const rs = this.results.reentry;
+    const r = sel && rs.state === 'done' && rs.inputs?.object === sel.key && rs.result?.reentry?.window && rs.status(this.reentryInputs(sel)) === 'fresh' ? rs.result.reentry : null;
+    const c = sel && this.results.screening.inputs?.object === sel.key ? this.shownApproach : null;
     const key = `${sel?.key}|${f?.pass.top.jd}|${r?.jd}|${c?.approach.tca}|${getLang()}`;
     if (this.mapCache?.key === key) return this.mapCache.overlay;
     const ground = (o: SkyObject, jd0: number, jd1: number, step: number): { lat: number; lon: number }[] => {
@@ -515,6 +583,7 @@ export class RealSky {
       return;
     }
     this.imported = { file: file.name, result };
+    this.importCount++;
     this.importNote = t('sky.import.read', { n: num(result.sets.length), file: file.name, format: (result.format ?? '').toUpperCase() });
     this.bySource.delete('imported');
     this.setSource('imported');
@@ -542,7 +611,12 @@ export class RealSky {
     const dl = el('dl', 'pg-dl');
     const row = (k: string, v: string): HTMLElement => { const dd = el('dd', undefined, v); dl.append(el('dt', undefined, k), dd); return dd; };
     const now = skyState(o, this.jd);
-    if (now.error !== 0) box.append(el('p', 'pg-warn', t('sky.error', { why: t(ERROR_KEY[now.error]) })));
+    // A16: whether SGP4 can place it now, kept up to date by updateLive() as the clock runs
+    this.shownFailed = now.error !== 0;
+    this.live.state = el('p', 'pg-warn pg-sky-state');
+    this.live.state.setAttribute('role', 'status');
+    this.live.state.hidden = true;
+    box.append(this.live.state);
     row(t('sky.f.norad'), String(o.el.satnum));
     if (o.el.intldesg) row(t('sky.f.cospar'), cospar(o.el.intldesg));
     row(t('sky.f.epoch'), utc(new Date((o.el.jdEpoch + o.el.jdEpochFrac - 2440587.5) * 86400e3).toISOString()));
@@ -643,25 +717,27 @@ export class RealSky {
 
   // ─── overflights (M02) ─────────────────────────────────────────────────────
 
-  private overKey(): string {
-    return `${this.source}|${this.place.station.lat}|${this.place.station.lon}|${this.over.minEl}|${this.over.days}`;
+  /** What an overflight search now would be run on (A4): the group, the place, the elevation, the time, and the data. */
+  overInputs(): OverInputs {
+    const { lat, lon } = this.place.station;
+    return { source: this.source, stationId: this.place.stationId, lat, lon, minEl: this.over.minEl, days: this.over.days, data: this.dataTag(this.source) };
   }
 
   /** Every pass of the group on screen over the place, from the moment on screen, a few satellites at a time. */
-  private async findOverflights(): Promise<void> {
-    const run = { key: this.overKey(), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Overflight[], stop: false };
+  async findOverflights(): Promise<void> {
+    const slot = this.results.over;
+    const inputs = this.overInputs();
+    const from = this.jd;
+    const gen = slot.start(inputs, from);
     this.shownOverflight = null;
-    this.overSearch = run;
     this.host.refresh();
-    const list = await overflightsInSlices(this.objects(), this.place.station, run.from, run.from + this.over.days, this.over.minEl, (f) => {
-      run.progress = f;
-      const s = document.querySelector('.pg-over-status');
-      if (s && this.overSearch === run) s.textContent = t('over.running', { p: Math.round(f * 100) });
-      return !run.stop && this.overSearch === run;
+    const list = await overflightsInSlices(this.objects(), this.place.station, from, from + inputs.days, inputs.minEl, (f) => {
+      if (!slot.report(gen, f)) return false;
+      if (this.overStatus?.isConnected) this.overStatus.textContent = t('over.running', { p: Math.round(f * 100) });
+      return true;
     });
-    if (this.overSearch !== run) return;
-    run.state = list ? 'done' : 'stopped';
-    run.list = list ?? [];
+    if (!slot.current(gen)) return;
+    if (list) slot.accept(gen, list); else slot.stop(gen);
     this.host.refresh();
   }
 
@@ -670,10 +746,12 @@ export class RealSky {
     box.open = this.over.open;
     box.addEventListener('toggle', () => { this.over.open = box.open; });
     box.append(el('summary', undefined, t('over.title', { place: this.placeLabel() })), el('p', 'pg-tool-lead', t('over.lead')));
-    const run = this.overSearch && this.overSearch.key.startsWith(`${this.source}|`) ? this.overSearch : null;
+    const slot = this.results.over;
+    // A4: the last search is shown whatever the controls say now, with what it was run on, and marked when that differs
+    const refresh = () => { if (slot.inputs) this.host.refresh(); };
     box.append(stationPicker(t('pass.from'), this.place, () => this.place, (next) => {
       this.place = next;
-      this.passes = null;
+      // the heading names the place, and the passes on the right are found from it
       this.host.refresh();
     }));
     const row = el('div', 'pg-tool-row');
@@ -682,7 +760,7 @@ export class RealSky {
       const s = el('select');
       for (const [v, text] of options) { const opt = el('option', undefined, text); opt.value = String(v); s.append(opt); }
       s.value = String(value);
-      s.addEventListener('change', () => { set(Number(s.value)); });
+      s.addEventListener('change', () => { set(Number(s.value)); refresh(); });
       l.append(el('span', undefined, label), s);
       return l;
     };
@@ -706,20 +784,28 @@ export class RealSky {
     canBox.addEventListener('change', () => { this.over.canOnly = canBox.checked; this.host.refresh(); });
     can.append(canBox, el('span', undefined, t('over.canOnly')));
     box.append(can);
-    const running = run?.state === 'running';
+    const running = slot.state === 'running';
     box.append(button('watch-btn', running ? t('over.stop') : t('over.run'), () => {
-      if (running && run) { run.stop = true; return; }
+      if (slot.state === 'running') { slot.requestStop(); return; }
       void this.findOverflights();
     }));
     const status = el('p', 'pg-tool-out pg-over-status');
     status.setAttribute('role', 'status');
-    box.append(status);
-    if (running) status.textContent = t('over.running', { p: Math.round(run!.progress * 100) });
-    else if (run?.state === 'stopped') status.textContent = t('conj.stopped');
-    else if (run) {
-      const shown = run.list.filter((f) => (!this.over.daylight || f.daylight) && (!this.over.canOnly || verdictOf(f)?.can === true));
-      status.textContent = shown.length ? t('over.found', { n: num(shown.length), from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('over.none');
-      if (shown.length) box.append(this.overflightList(shown));
+    this.overStatus = status;
+    const ran = slot.inputs;
+    if (!ran) box.append(status);
+    else {
+      const place = placeText(ran.stationId, ran.lat, ran.lon);
+      const results = el('div', 'pg-result');
+      if (running) status.textContent = t('over.running', { p: Math.round(slot.progress * 100) });
+      else if (slot.state === 'stopped') status.textContent = t('conj.stopped');
+      else {
+        const shown = (slot.result ?? []).filter((f) => (!this.over.daylight || f.daylight) && (!this.over.canOnly || verdictOf(f)?.can === true));
+        const from = `${dayName(slot.startedAt!)} ${clockTime(slot.startedAt!)}`;
+        status.textContent = shown.length ? t('over.foundAt', { n: num(shown.length), place, from }) : t('over.noneAt', { place });
+        if (shown.length) results.append(this.overflightList(shown));
+      }
+      box.append(...provenance(slot, this.overInputs(), status, results));
     }
     box.append(el('p', 'pg-note', t('over.note')), el('p', 'pg-note', t('over.sensorNote')));
     return box;
@@ -794,14 +880,19 @@ export class RealSky {
 
   // ─── re-entry (M03) ────────────────────────────────────────────────────────
 
-  /** The Sun's activity as measured and forecast, from the space-weather dataset of the data mode chosen (R05); GFZ's months alone without it. */
-  private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string; to: string }> {
-    let sw: SpaceWeather | null = null;
-    try { sw = (await this.host.provider().load('spaceWeather')).data; } catch { sw = null; }
-    const m = measuredActivity(await loadSolarDaily(), sw);
+  /**
+   * The Sun's activity as measured and forecast, from the space-weather dataset
+   * of the data mode chosen (R05); GFZ's months alone without it. With where it
+   * came from (A15), shown under the result as the catalogue's source is.
+   */
+  private async sun(): Promise<{ series: ReturnType<typeof measuredActivity>['series']; note: string; to: string; source: SunSource }> {
+    let set: Dataset<SpaceWeather> | null = null;
+    try { set = await this.host.provider().load('spaceWeather'); } catch { set = null; }
+    const m = measuredActivity(await loadSolarDaily(), set?.data ?? null);
+    const note = m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo });
     return {
-      series: m.series, to: m.forecastTo ?? m.measuredTo,
-      note: m.forecastTo ? t('reentry.sun', { measured: m.measuredTo, forecast: m.forecastTo }) : t('reentry.sunHistory', { measured: m.measuredTo }),
+      series: m.series, to: m.forecastTo ?? m.measuredTo, note,
+      source: { note, ...(set ? { asOf: set.asOf, from: set.from, source: set.source.name, ...(set.fetched ? { fetched: set.fetched } : {}), ...(set.fallback ? { fallback: set.fallback } : {}) } : {}) },
     };
   }
 
@@ -823,28 +914,45 @@ export class RealSky {
     return out;
   }
 
-  private async runReentry(o: SkyObject): Promise<void> {
-    this.reentryResult?.abort.abort();
+  /** What a re-entry prediction for `o` now would be run on (A15): the object, its element sets, where the drag comes from, the mass and size, and the data. */
+  reentryInputs(o: SkyObject): ReentryInputs {
     const choices = this.dragChoices(o);
     const from = choices.includes(this.reentry.from) ? this.reentry.from : choices[0];
-    const key = `${o.key}|${from}|${this.reentry.mass}|${this.reentry.area}|${this.reentry.cd}`;
-    const run = { key, state: 'running' as const, result: null, b: null, from, sun: '', progress: 0, abort: new AbortController() };
-    this.reentryResult = run;
+    // the mass and size count only when the drag comes from them
+    const size = from === 'size' ? this.reentry : { mass: 0, area: 0, cd: 0 };
+    return {
+      object: o.key, name: o.el.name ?? String(o.el.satnum), epoch: o.el.jdEpoch + o.el.jdEpochFrac, sets: this.setsOf(o).length, from,
+      mass: size.mass, area: size.area, cd: size.cd, data: this.dataTag(this.source), sw: this.host.provider().mode,
+    };
+  }
+
+  /**
+   * Predict `o`'s re-entry. A15: the inputs are copied before the space
+   * weather is waited for, and the prediction is made from that copy: a mass
+   * typed in meanwhile makes the answer stale, not wrong.
+   */
+  async runReentry(o: SkyObject): Promise<void> {
+    this.reentryAbort?.abort();
+    const abort = new AbortController();
+    this.reentryAbort = abort;
+    const slot = this.results.reentry;
+    const gen = slot.start(this.reentryInputs(o));
+    const ran = slot.inputs!;
+    const sets = this.setsOf(o);
     this.host.refreshFacts();
-    const { series, note } = await this.sun();
+    const { series, source } = await this.sun();
+    if (!slot.current(gen)) return;
     try {
       const answer = await runReentryJob(
-        { sets: this.setsOf(o), from, craft: { mass: this.reentry.mass, area: this.reentry.area, cd: this.reentry.cd }, activity: series, horizonDays: 365 },
-        run.abort.signal, (f) => {
-          run.progress = f;
-          const out = document.querySelector('.pg-reentry-status');
-          if (out && this.reentryResult === run) out.textContent = `${t('reentry.running')} ${Math.round(f * 100)} %`;
+        { sets, from: ran.from, craft: { mass: ran.mass, area: ran.area, cd: ran.cd }, activity: series, horizonDays: 365 },
+        abort.signal, (f) => {
+          if (!slot.report(gen, f)) return;
+          if (this.reentryStatus?.isConnected) this.reentryStatus.textContent = `${t('reentry.running')} ${Math.round(f * 100)} %`;
         });
-      if (this.reentryResult !== run) return;
-      this.reentryResult = { ...run, state: answer.reentry ? 'done' : 'failed', result: answer.reentry, b: answer.b, sun: note };
+      if (!slot.accept(gen, { reentry: answer.reentry, b: answer.b, sun: source })) return;
     } catch {
-      if (this.reentryResult !== run) return;
-      this.reentryResult = null;
+      if (!slot.current(gen)) return;
+      slot.clear();
     }
     this.host.refreshFacts();
   }
@@ -862,14 +970,22 @@ export class RealSky {
     this.host.refreshFacts();
   }
 
+  private caseInputs(): CaseInputs {
+    return { sw: this.host.provider().mode };
+  }
+
   private async runCaseStudy(): Promise<void> {
-    const { series } = await this.sun();
-    this.caseStudy = CZ5B_STAGES.map((s) => ({
+    const slot = this.results.caseStudy;
+    const gen = slot.start(this.caseInputs());
+    this.host.refreshFacts();
+    const { series, source } = await this.sun();
+    if (!slot.current(gen)) return;
+    const rows = CZ5B_STAGES.map((s) => ({
       name: s.name, missionKey: s.missionKey,
       p: predictReentry(elementsFromRecord(s.elements), { mass: s.mass, area: tumblingCylinderArea(s.length, s.diameter), cd: 2.2 }, series),
       actual: Date.parse(s.reentry) / 86400000 + 2440587.5,
     }));
-    this.host.refreshFacts();
+    if (slot.accept(gen, { rows, sun: source })) this.host.refreshFacts();
   }
 
   private reentryBlock(o: SkyObject): HTMLElement {
@@ -880,6 +996,13 @@ export class RealSky {
     // P2.5: the drag fitted to the object's own decay, as the agencies do, or from a mass and size given
     const choices = this.dragChoices(o);
     const from = choices.includes(this.reentry.from) ? this.reentry.from : choices[0];
+    const slot = this.results.reentry;
+    const mine = slot.inputs?.object === o.key ? slot : null;
+    const running = mine?.state === 'running';
+    const run = button('watch-btn', running ? t('reentry.stop') : t('reentry.run'), () => {
+      if (slot.state === 'running' && slot.inputs?.object === o.key) { this.reentryAbort?.abort(); slot.clear(); this.host.refreshFacts(); return; }
+      void this.runReentry(o);
+    });
     const pick = el('label');
     const sel = el('select');
     const WORDS: Record<DragFrom, string> = {
@@ -892,43 +1015,56 @@ export class RealSky {
     box.append(pick);
     if (from === 'size') {
       const row = el('div', 'pg-tool-row');
-      const field = (label: string, value: number, set: (v: number) => void): HTMLElement => {
+      // A5/A15: a box that does not hold a number above zero says so, and the prediction waits for it
+      const bad = new Set<string>();
+      const field = (id: string, label: string, value: number, set: (v: number) => void): HTMLElement => {
         const l = el('label');
         const i = el('input');
         i.type = 'number'; i.min = '0'; i.step = 'any'; i.value = String(value);
-        i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v) && v > 0) set(v); });
-        l.append(el('span', undefined, label), i);
+        const why = el('span', 'pg-warn pg-field-invalid', t('result.invalid'));
+        why.hidden = true;
+        i.addEventListener('input', () => {
+          const v = positiveNumber(i.value);
+          if (v === null) bad.add(id); else { bad.delete(id); set(v); }
+          why.hidden = v !== null;
+          i.setAttribute('aria-invalid', String(v === null));
+          if (!running) run.disabled = bad.size > 0;
+          if (mine) this.markReentry(box, o);
+        });
+        l.append(el('span', undefined, label), i, why);
         return l;
       };
       row.append(
-        field(t('life.mass'), this.reentry.mass, (v) => { this.reentry.mass = v; }),
-        field(t('life.area'), this.reentry.area, (v) => { this.reentry.area = v; }),
-        field(t('life.cd'), this.reentry.cd, (v) => { this.reentry.cd = v; }),
+        field('mass', t('life.mass'), this.reentry.mass, (v) => { this.reentry.mass = v; }),
+        field('area', t('life.area'), this.reentry.area, (v) => { this.reentry.area = v; }),
+        field('cd', t('life.cd'), this.reentry.cd, (v) => { this.reentry.cd = v; }),
       );
       box.append(row);
     } else box.append(el('p', 'pg-note', t(from === 'history' ? 'reentry.historyNote' : 'reentry.decayNote')));
     if (o.sat.ecco >= ECCENTRIC) box.append(el('p', 'pg-note', t('reentry.eccentric')));
-    const mine = this.reentryResult && this.reentryResult.key.startsWith(`${o.key}|`) ? this.reentryResult : null;
-    const running = mine?.state === 'running';
-    box.append(button('watch-btn', running ? t('reentry.stop') : t('reentry.run'), () => {
-      if (running && mine) { mine.abort.abort(); this.reentryResult = null; this.host.refreshFacts(); return; }
-      void this.runReentry(o);
-    }));
+    box.append(run);
     const out = el('p', 'pg-tool-out pg-reentry-status');
     out.setAttribute('role', 'status');
-    box.append(out);
-    if (running) out.textContent = `${t('reentry.running')} ${Math.round(mine!.progress * 100)} %`;
-    else if (mine?.state === 'failed') out.textContent = t('reentry.noFit');
-    else if (mine?.result) {
-      const r = mine.result;
-      if (r.jd === null) out.textContent = t('reentry.stays');
-      else {
-        out.textContent = t('reentry.result', {
-          date: fullDate(r.jd), from: fullDate(r.window![0]), to: fullDate(r.window![1]), days: num(r.jd - r.from, 1), pct: num(WINDOW_FRACTION * 100),
-        });
+    this.reentryStatus = out;
+    const result = el('div', 'pg-result');
+    if (!mine) box.append(out);
+    else {
+      if (running) out.textContent = `${t('reentry.running')} ${Math.round(mine.progress * 100)} %`;
+      else if (mine.result && !mine.result.reentry) out.textContent = t('reentry.noFit');
+      else if (mine.result?.reentry) {
+        const r = mine.result.reentry;
+        if (r.jd === null) out.textContent = t('reentry.stays');
+        else {
+          out.textContent = t('reentry.result', {
+            date: fullDate(r.jd), from: fullDate(r.window![0]), to: fullDate(r.window![1]), days: num(r.jd - r.from, 1), pct: num(WINDOW_FRACTION * 100),
+          });
+        }
+        if (mine.result.b !== null) result.append(el('p', 'pg-note', t(mine.inputs!.from === 'size' ? 'reentry.bGiven' : 'reentry.bFitted', { b: bText(mine.result.b) })));
+        result.append(...sunNotes(mine.result.sun));
       }
-      if (mine.b !== null) box.append(el('p', 'pg-note', t(mine.from === 'size' ? 'reentry.bGiven' : 'reentry.bFitted', { b: bText(mine.b) })));
-      box.append(el('p', 'pg-note', mine.sun));
+      const shown = el('div', 'pg-reentry-result');
+      shown.append(...provenance(mine, this.reentryInputs(o), out, result));
+      box.append(shown);
     }
     const note = el('p', 'pg-note');
     const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
@@ -936,6 +1072,15 @@ export class RealSky {
     box.append(note);
     box.append(this.caseStudyBlock(), this.napaCaseBlock());
     return box;
+  }
+
+  /** The re-entry result's stale mark, again, as a box is typed in (the panel is not drawn again while one is being typed in). */
+  private markReentry(box: HTMLElement, o: SkyObject): void {
+    const slot = this.results.reentry;
+    const shown = box.querySelector('.pg-reentry-result');
+    if (!shown || slot.inputs?.object !== o.key) return;
+    const [out, result] = [shown.querySelector('.pg-tool-out'), shown.querySelector('.pg-result')] as HTMLElement[];
+    shown.replaceChildren(...provenance(slot, this.reentryInputs(o), out, result));
   }
 
   /** NAPA-2: a Thai satellite's five years, predicted from its first element set two ways (P2.5). */
@@ -968,14 +1113,16 @@ export class RealSky {
   private caseStudyBlock(): HTMLElement {
     const box = el('div', 'pg-reentry-case');
     box.append(el('h3', 'pg-case-title', t('reentry.case.title')), el('p', 'pg-tool-lead', t('reentry.case.lead')));
-    if (!this.caseStudy) {
-      box.append(button('watch-btn', t('reentry.case.run'), () => { void this.runCaseStudy(); }));
-      return box;
-    }
+    const slot = this.results.caseStudy;
+    const fresh = slot.status(this.caseInputs());
+    // run again when the data mode has changed since (its space weather may differ)
+    if (slot.state !== 'running' && (!slot.result || fresh === 'stale')) box.append(button('watch-btn', t('reentry.case.run'), () => { void this.runCaseStudy(); }));
+    if (slot.state === 'running') box.append(el('p', 'pg-tool-out', t('reentry.running')));
+    if (!slot.result) return box;
     // to the nearest minute, as GCAT records them
     const utcTime = (jd: number) => `${new Date(Math.round((jd - 2440587.5) * 1440) * 60e3).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
     const ol = el('ol', 'pg-conj-list');
-    for (const c of this.caseStudy) {
+    for (const c of slot.result.rows) {
       const li = el('li');
       const head = el('div', 'pg-conj-head');
       head.append(el('span', 'pg-sky-name', c.name));
@@ -991,7 +1138,11 @@ export class RealSky {
       li.append(el('div', 'pg-conj-more', t(inside ? 'reentry.case.inside' : 'reentry.case.outside', { from: utcTime(c.p.window![0]), to: utcTime(c.p.window![1]) })));
       ol.append(li);
     }
-    box.append(ol, el('p', 'pg-note', t('reentry.case.source')));
+    const result = el('div', 'pg-result');
+    result.append(ol, ...sunNotes(slot.result.sun));
+    if (fresh === 'stale') box.append(el('p', 'pg-warn pg-result-stale', t('result.staleData')));
+    markFreshness(result, fresh);
+    box.append(result, el('p', 'pg-note', t('reentry.case.source')));
     return box;
   }
 
@@ -1003,28 +1154,35 @@ export class RealSky {
     return ids.flatMap((id) => this.objects(id));
   }
 
-  private screeningKey(o: SkyObject): string {
-    return `${o.key}|${this.conj.within}|${this.conj.days}|${this.conj.radius}`;
+  /** What a screening of `o` now would be run on (A14): the object and its element set, the settings, and the data of everything it is screened against. */
+  screeningInputs(o: SkyObject): ScreenInputs {
+    const file = this.imported ? `${this.imported.file}#${this.importCount}` : '';
+    return {
+      object: o.key, name: o.el.name ?? String(o.el.satnum), epoch: o.el.jdEpoch + o.el.jdEpochFrac,
+      within: this.conj.within, days: this.conj.days, radius: this.conj.radius, data: this.dataTag('stations'), file,
+    };
   }
 
   /** Screen the catalogue for approaches to the satellite picked, from the moment on screen, in a worker (P2.5). */
   private async runScreening(o: SkyObject): Promise<void> {
+    this.screeningAbort?.abort();
     const abort = new AbortController();
-    const run = { key: this.screeningKey(o), from: this.jd, state: 'running' as 'running' | 'done' | 'stopped', progress: 0, list: [] as Conjunction[], abort };
-    this.screening = run;
+    this.screeningAbort = abort;
+    const slot = this.results.screening;
+    const inputs = this.screeningInputs(o);
+    const from = this.jd;
+    const gen = slot.start(inputs, from);
     this.shownApproach = null;
     this.host.refreshFacts();
     let list: Conjunction[] | null = null;
     try {
-      list = await runScreeningJob(o, this.catalogue().filter((x) => x !== o), run.from, run.from + this.conj.days, this.conj.within, this.conj.radius, abort.signal, (f) => {
-        run.progress = f;
-        const st = document.querySelector('.pg-conj-status');
-        if (st && this.screening === run) st.textContent = t('conj.running', { p: Math.round(f * 100) });
+      list = await runScreeningJob(o, this.catalogue().filter((x) => x !== o), from, from + inputs.days, inputs.within, inputs.radius, abort.signal, (f) => {
+        if (!slot.report(gen, f)) return;
+        if (this.conjStatus?.isConnected) this.conjStatus.textContent = t('conj.running', { p: Math.round(f * 100) });
       });
     } catch { list = null; }
-    if (this.screening !== run) return;
-    run.state = list ? 'done' : 'stopped';
-    run.list = list ?? [];
+    if (!slot.current(gen)) return;
+    if (list) slot.accept(gen, list); else slot.stop(gen);
     this.host.refreshFacts();
   }
 
@@ -1034,13 +1192,15 @@ export class RealSky {
     box.addEventListener('toggle', () => { this.conj.open = box.open; });
     box.append(el('summary', undefined, t('conj.title')), el('p', 'pg-tool-lead', t('conj.lead')));
     const engineer = this.host.level() === 'engineer';
-    const run = this.screening && this.screening.key.startsWith(`${o.key}|`) ? this.screening : null;
+    const slot = this.results.screening;
+    // another satellite's screening is not shown here; this one's is, marked when the settings or data have moved on (A14)
+    const run = slot.inputs?.object === o.key ? slot : null;
     const choose = (label: string, options: [number, string][], value: number, set: (v: number) => void): HTMLElement => {
       const l = el('label');
       const s = el('select');
       for (const [v, text] of options) { const opt = el('option', undefined, text); opt.value = String(v); s.append(opt); }
       s.value = String(value);
-      s.addEventListener('change', () => { set(Number(s.value)); });
+      s.addEventListener('change', () => { set(Number(s.value)); if (run) this.host.refreshFacts(); });
       l.append(el('span', undefined, label), s);
       return l;
     };
@@ -1053,24 +1213,33 @@ export class RealSky {
     const input = el('input');
     input.type = 'number'; input.min = '0.1'; input.max = '200'; input.step = 'any';
     input.value = String(this.conj.radius);
-    input.addEventListener('change', () => { const v = Number(input.value); if (Number.isFinite(v) && v > 0 && v <= 200) this.conj.radius = v; });
+    input.addEventListener('change', () => {
+      const v = Number(input.value);
+      if (Number.isFinite(v) && v > 0 && v <= 200) { this.conj.radius = v; if (run) this.host.refreshFacts(); }
+    });
     size.append(el('span', undefined, t('conj.radius')), input);
     row.append(size);
     box.append(row);
     const running = run?.state === 'running';
     box.append(button('watch-btn', running ? t('conj.stop') : t('conj.run'), () => {
-      if (running && run) { run.abort.abort(); return; }
+      if (slot.state === 'running' && slot.inputs?.object === o.key) { this.screeningAbort?.abort(); return; }
       void this.runScreening(o);
     }));
     const status = el('p', 'pg-tool-out pg-conj-status');
     status.setAttribute('role', 'status');
-    box.append(status);
-    if (running) status.textContent = t('conj.running', { p: Math.round(run!.progress * 100) });
-    else if (run?.state === 'stopped') status.textContent = t('conj.stopped');
-    else if (run) {
-      const km = num(Number(run.key.split('|')[1]) / 1000);
-      status.textContent = run.list.length ? t('conj.found', { n: num(run.list.length), km, from: `${dayName(run.from)} ${clockTime(run.from)}` }) : t('conj.none', { km });
-      if (run.list.length) box.append(this.approachList(o, run.list, engineer));
+    this.conjStatus = status;
+    if (!run) box.append(status);
+    else {
+      const results = el('div', 'pg-result');
+      if (running) status.textContent = t('conj.running', { p: Math.round(run.progress * 100) });
+      else if (run.state === 'stopped') status.textContent = t('conj.stopped');
+      else {
+        const list = run.result ?? [];
+        const km = num(run.inputs!.within / 1000);
+        status.textContent = list.length ? t('conj.found', { n: num(list.length), km, from: `${dayName(run.startedAt!)} ${clockTime(run.startedAt!)}` }) : t('conj.none', { km });
+        if (list.length) results.append(this.approachList(o, list, engineer));
+      }
+      box.append(...provenance(run, this.screeningInputs(o), status, results));
     }
     const note = el('p', 'pg-note');
     const link = (title: string, url: string) => { const a = el('a', undefined, title); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; };
@@ -1288,24 +1457,36 @@ export class RealSky {
 
   // ─── passes (R03) ─────────────────────────────────────────────────────────
 
-  /** The passes of the next three days from the moment on screen, found again when the place, the satellite or the first pass changes. */
+  /** What the passes of `o` now are found from: the object and its element set, the place, the lowest elevation, and the data (A14). */
+  passInputs(o: SkyObject): PassInputs {
+    const { lat, lon } = this.place.station;
+    return { object: o.key, epoch: o.el.jdEpoch + o.el.jdEpochFrac, lat, lon, minEl: this.minEl, data: this.dataTag(this.source) };
+  }
+
+  /**
+   * The passes of the next three days from the moment on screen, found again
+   * when anything they were found from changes — the place, the elevation, the
+   * satellite, its element set (A14) — or the first pass is over. A light job:
+   * never shown stale, found again instead.
+   */
   private passList(o: SkyObject): Pass[] {
-    const key = `${o.key}|${this.place.station.lat}|${this.place.station.lon}|${this.minEl}`;
-    if (this.passes && this.passes.key === key && this.jd >= this.passes.from && this.jd < this.passes.until) return this.passes.list;
+    const slot = this.results.passes;
+    const inputs = this.passInputs(o);
+    const kept = slot.result;
+    if (kept && slot.status(inputs) === 'fresh' && this.jd >= slot.startedAt! && this.jd < kept.until) return kept.list;
+    const gen = slot.start(inputs, this.jd);
     // P2.5: as seen, the air's refraction included
     const list = findPasses(o, this.place.station, this.jd, this.jd + 3, this.minEl, { refraction: true }).slice(0, PASS_LIMIT);
     // the list is good until its first pass is over (or, with none, for a day)
     const first = list[0];
     const until = first ? (first.set?.jd ?? this.jd + 3) : this.jd + 1;
-    this.passes = { key, list, from: this.jd, until };
+    slot.accept(gen, { list, until });
     return list;
   }
 
   /** The place's name, or its coordinates when they were typed in. */
   private placeLabel(): string {
-    if (this.place.stationId !== 'custom') return placeName(this.place);
-    const { lat, lon } = this.place.station;
-    return `${num(Math.abs(lat * 180 / Math.PI), 4)}° ${lat >= 0 ? 'N' : 'S'}, ${num(Math.abs(lon * 180 / Math.PI), 4)}° ${lon >= 0 ? 'E' : 'W'}`;
+    return placeText(this.place.stationId, this.place.station.lat, this.place.station.lon);
   }
 
   private passesSection(o: SkyObject): HTMLElement {
@@ -1314,7 +1495,6 @@ export class RealSky {
     box.append(stationPicker(t('pass.from'), this.place, () => this.place, (next) => {
       const toggled = (next.stationId === 'custom') !== (this.place.stationId === 'custom');
       this.place = next;
-      this.passes = null;
       if (toggled) this.host.refreshFacts(); else this.refreshPasses(box, o);
     }));
     const mins = el('label', 'pg-preset');
@@ -1322,7 +1502,7 @@ export class RealSky {
     const msel = el('select');
     for (const d of [0, 10, 20, 30]) { const opt = el('option', undefined, `${d}°`); opt.value = String(d); msel.append(opt); }
     msel.value = String(Math.round(this.minEl * 180 / Math.PI));
-    msel.addEventListener('change', () => { this.minEl = Number(msel.value) * Math.PI / 180; this.passes = null; this.refreshPasses(box, o); });
+    msel.addEventListener('change', () => { this.minEl = Number(msel.value) * Math.PI / 180; this.refreshPasses(box, o); });
     mins.append(msel);
     box.append(mins);
     box.append(this.passesTable(o));
@@ -1388,10 +1568,14 @@ export class RealSky {
   updateLive(): void {
     const o = this.selected, L = this.live;
     if (!o) return;
+    const s = skyState(o, this.jd);
+    // A16: SGP4 has started or stopped failing since the facts were drawn: what they offer depends on it
+    if ((s.error !== 0) !== this.shownFailed) { this.host.refreshFacts(); return; }
     // R03: the first pass is over: the list moves on
-    if (this.passes && this.jd >= this.passes.until && L.next) { this.passes = null; this.host.refreshFacts(); return; }
-    if (L.next && this.passes?.list.length) {
-      const p = this.passes.list[0];
+    const passes = this.results.passes.result;
+    if (passes && this.jd >= passes.until && L.next) { this.host.refreshFacts(); return; }
+    if (L.next && passes?.list.length) {
+      const p = passes.list[0];
       const start = p.rise?.jd ?? this.jd;
       if (this.jd < start) L.next.textContent = t('pass.next', { span: span((start - this.jd) * 86400) });
       else {
@@ -1399,7 +1583,6 @@ export class RealSky {
         L.next.textContent = look ? t('pass.upNow', { el: `${num(apparentElevation(look.el) * 180 / Math.PI, 0)}°`, dir: compass(look.az) }) : '';
       }
     }
-    const s = skyState(o, this.jd);
     const age = elementAge(o.el, this.jd) * 86400;
     if (L.age) {
       L.age.textContent = age >= 0 ? span(age) : t('sky.ageBefore', { age: span(-age) });
@@ -1409,7 +1592,15 @@ export class RealSky {
       const u = uncertaintyAt(o, this.jd);
       L.error.textContent = t('unc.value', { km: num(u.total / 1000, u.total < 10e3 ? 1 : 0), s: num(u.timing, u.timing < 10 ? 1 : 0) });
     }
-    if (s.error !== 0) return;
+    // A16: no position at this moment: every readout of it says so, not the last one it had
+    if (L.state) {
+      L.state.hidden = s.error === 0;
+      L.state.textContent = s.error === 0 ? '' : `${t('sky.error', { why: t(ERROR_KEY[s.error]) })} ${t('sky.unavailable')}`;
+    }
+    if (s.error !== 0) {
+      for (const cell of [L.alt, L.speed, L.latlon, L.teme]) if (cell) cell.textContent = '—';
+      return;
+    }
     if (L.alt) L.alt.textContent = `${num(s.alt / 1000)} ${t('u.km')}`;
     if (L.speed) L.speed.textContent = `${num(Math.hypot(s.v.x, s.v.y, s.v.z) / 1000, 3)} ${t('u.kms')}`;
     if (L.latlon) L.latlon.textContent = `${num(Math.abs(s.lat * RAD), 2)}° ${s.lat >= 0 ? 'N' : 'S'} · ${num(Math.abs(s.lon * RAD), 2)}° ${s.lon >= 0 ? 'E' : 'W'}`;
@@ -1422,6 +1613,70 @@ export class RealSky {
     const live = warp === 1 && Math.abs(this.jd - julianDate(new Date())) * 86400 < 5;
     return { time: t('pg.utc', { date: d.toLocaleString(getLang(), { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }) }), live };
   }
+}
+
+// ─── results and what they were found from (audit 2026-09-27 A4, A14, A15) ────
+
+/** The data a result rests on: the catalogue as loaded (its source, its newest reading, when it was fetched), or a file read. */
+type DataTag = { from: string; asOf: string; fetched: string };
+type PassInputs = { object: string; epoch: number; lat: number; lon: number; minEl: number; data: DataTag };
+type OverInputs = { source: SkySourceId; stationId: string; lat: number; lon: number; minEl: number; days: number; data: DataTag };
+type ScreenInputs = { object: string; name: string; epoch: number; within: number; days: number; radius: number; data: DataTag; file: string };
+type ReentryInputs = { object: string; name: string; epoch: number; sets: number; from: DragFrom; mass: number; area: number; cd: number; data: DataTag; sw: string };
+/** Where a re-entry's drag came from, in words (P2.5). */
+const DRAG_KEY: Record<DragFrom, string> = { history: 'reentry.fromHistory', decay: 'reentry.fromDecay', size: 'reentry.fromSize' };
+type CaseInputs = { sw: string };
+/** Where a prediction's space weather came from (A15): the words for the activity used, and the dataset's date, source and any fallback. */
+type SunSource = { note: string; asOf?: string; from?: 'snapshot' | 'online'; source?: string; fetched?: string; fallback?: string };
+
+/** A place by its station, or by its coordinates when they were typed in. */
+function placeText(stationId: string, lat: number, lon: number): string {
+  if (stationId !== 'custom') return placeName({ stationId, station: { lat, lon } } as StationChoice);
+  return `${num(Math.abs(lat * 180 / Math.PI), 4)}° ${lat >= 0 ? 'N' : 'S'}, ${num(Math.abs(lon * 180 / Math.PI), 4)}° ${lon >= 0 ? 'E' : 'W'}`;
+}
+const daysText = (days: number): string => (days === 1 ? t('conj.oneDay') : t('life.days', { n: num(days) }));
+const dateText = (iso: string): string => new Date(iso).toLocaleDateString(getLang(), { dateStyle: 'medium', timeZone: 'UTC' });
+function dataText(d: DataTag): string {
+  if (d.from === 'file') return t('result.file', { file: d.asOf });
+  return d.asOf ? t('result.data', { date: dateText(d.asOf) }) : '';
+}
+const epochText = (jd: number): string => t('result.epoch', { date: dateText(dateOf(jd).toISOString()) });
+
+/** A result's parts marked as for the inputs on screen or not: a stale one is dimmed (no stylesheet of its own: A4). */
+function markFreshness(node: HTMLElement, fresh: Freshness): void {
+  node.dataset.fresh = fresh;
+  node.style.opacity = fresh === 'stale' ? '0.55' : '';
+}
+
+/**
+ * A result with what it was found from (A4, A14, A15): a warning first when the
+ * controls or the data have moved on since, then the inputs in words, then the
+ * result's parts, dimmed when stale.
+ */
+function provenance<I extends SlotInputs>(slot: ResultSlot<I, unknown>, current: I, ...parts: HTMLElement[]): HTMLElement[] {
+  const fresh = slot.status(current);
+  const out: HTMLElement[] = [];
+  if (fresh === 'stale') {
+    const onlyData = slot.changed(current).every((k) => k === 'data' || k === 'epoch' || k === 'file' || k === 'sw');
+    const warn = el('p', 'pg-warn pg-result-stale', t(slot.state === 'running' ? 'result.staleRunning' : onlyData ? 'result.staleData' : 'result.stale'));
+    warn.setAttribute('role', 'status');
+    out.push(warn);
+  }
+  out.push(el('p', 'pg-note pg-result-from', t(slot.state === 'running' ? 'result.runningFrom' : 'result.from', { inputs: slot.describe() })));
+  for (const p of parts) markFreshness(p, fresh);
+  return [...out, ...parts];
+}
+
+/** Under a re-entry prediction: the Sun's activity used, and where the space weather came from, as the catalogue's source is said (A15). */
+function sunNotes(sun: SunSource): HTMLElement[] {
+  const out = [el('p', 'pg-note', sun.note)];
+  if (sun.asOf) {
+    const from = sun.from === 'snapshot' ? t('data.from.snapshot')
+      : sun.fetched ? t('data.from.onlineKept', { source: sun.source ?? '', date: utc(sun.fetched) }) : t('data.from.online', { source: sun.source ?? '' });
+    out.push(el('p', 'pg-note', `${t('result.sw', { date: utc(sun.asOf) })} · ${from}`));
+  }
+  if (sun.fallback) out.push(el('p', 'pg-note warn', t('data.fallback', { reason: sun.fallback })));
+  return out;
 }
 
 /** How many of the next three days' passes are listed. */
