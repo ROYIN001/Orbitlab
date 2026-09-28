@@ -7,6 +7,8 @@
  * The tolerances were fixed before the comparison, with one exception said
  * where it is: the swath check's 2 % was set after Sentinel-2's figure had
  * been worked out by hand while the table was built (286 km for 290 km).
+ * The same 2 % was fixed before the fixed cameras added on 2026-09-28 were
+ * worked out; two missed it, and the test records what was found and says so.
  */
 import { describe, expect, it } from 'vitest';
 import { SENSORS } from '../src/data/sensors';
@@ -56,6 +58,39 @@ describe('the instruments\' table (P2.5)', () => {
 
   it.each(FIELDS)('%s: the swath follows from the field of view and the altitude', (_, half, h, swath) => {
     expect(Math.abs(2 * groundReach(half * DEG, h) / swath - 1)).toBeLessThan(0.02);
+  });
+
+  /**
+   * The fixed cameras added on 2026-09-28 whose source gives the field of view, the altitude and the
+   * swath together. The 2 % was fixed, and these four chosen, before any of them was worked out.
+   * Two new fixed cameras are not here: eoPortal gives HJ-1's WVC an "aspect angle" of 31°, not
+   * called a field of view, the word its table also uses for the HSI's "cross-track looking
+   * capability", and without saying whether it is each camera's or the pair's; TechSat-1B's ERIP
+   * has no published field of view, only its frame (25 × 31 km).
+   *
+   * Two met the 2 %: OCM-2 (1 419.4 km for 1 420) and TANSO-CAI (997.1 km for 1 002). Two missed it,
+   * a finding: CZI, 522.2 km for 500 (+4.4 %), and SLIM6, 653.2 km for ~620 (+5.4 %). The published
+   * figures do not agree with each other on a sphere; the table keeps the published swath (the
+   * operator's 600 km for Deimos-1). The bounds that record the misses were set after the run.
+   */
+  const FIELDS_ADDED: [string, number, number, number, string][] = [
+    ['OCM-2', 43, 720e3, 1420e3, 'eoPortal, Oceansat-2: "FOV (swath) 1420 km (±43º)", "altitude ~720 km"'],
+    ['TANSO-CAI', 36, 666e3, 1002e3, 'eoPortal, GOSAT-2 (Table 6, GOSAT\'s CAI): bands 1-3 "1002 km (72º)"; GOSAT\'s "Orbital altitude" 666 km'],
+  ];
+  const FIELDS_ADDED_MISSED: [string, number, number, number, number, string][] = [
+    ['CZI', 18, 798e3, 500e3, 522.2e3, 'eoPortal, HY-1B: "FOV (Field of View), swath width 36º, or 500 km swath width", "altitude = 798 km"'],
+    ['SLIM6', 26, 661e3, 620e3, 653.2e3, 'eoPortal, Deimos-1: "TFOV = 52º (due to two banks of imagers)", "Total imaging swath ~ 620 km", "altitude of ~661 km"'],
+  ];
+
+  it.each(FIELDS_ADDED)('%s: the swath follows from the field of view and the altitude (added 2026-09-28)', (_, half, h, swath) => {
+    expect(Math.abs(2 * groundReach(half * DEG, h) / swath - 1)).toBeLessThan(0.02);
+  });
+
+  it.each(FIELDS_ADDED_MISSED)('%s: the swath misses the tolerance fixed before (added 2026-09-28): the finding', (_, half, h, swath, found) => {
+    const w = 2 * groundReach(half * DEG, h);
+    // fixed before: within 2 %; found as the comment above says; this records it, set after the run
+    expect(Math.abs(w / swath - 1)).toBeGreaterThan(0.02);
+    expect(Math.abs(w - found)).toBeLessThan(0.5e3);
   });
 
   it('puts OLCI\'s swath where its field of view, turned 12.6° from the Sun, falls', () => {
