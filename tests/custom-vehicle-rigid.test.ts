@@ -21,14 +21,14 @@ import { createRigidDebris, rigidLandingReserve } from '../src/physics/rigid/deb
 import { quatIdentity } from '../src/physics/rigid/math';
 import type { RigidState } from '../src/physics/rigid/integrator';
 import type { PartitionedRigidBody } from '../src/physics/rigid/partition';
-import type { Debris } from '../src/physics/simulation';
+import { Simulation, type Debris } from '../src/physics/simulation';
 import {
   chamberGeometry, isCataloguePartId, PROPELLANT_LOADS, rcsGeometry, renderToBody, thrusterMomentArm,
 } from '../src/physics/rigid/vehicle-data';
 import { OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
 import { add, cross, scale, v3 } from '../src/physics/vec3';
 import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../src/types';
-import { copyOf, scratchVehicles } from './custom-vehicle-harness';
+import { copyOf, mission, scratchVehicles } from './custom-vehicle-harness';
 
 const SCRATCH = scratchVehicles();
 const [NEW_IDS, FALCON_FIVE, SOYUZ_MULTI] = SCRATCH;
@@ -213,6 +213,28 @@ describe('six-DOF for custom vehicles (D03): attitude thrusters', () => {
       expect(rcsGeometry(vehicleDataId(spec), stage, at, index), `${spec.id} ${stage.id}`).toEqual(rcsGeometry(vehicleDataId(spec), stage, at));
     });
   });
+});
+
+describe('six-DOF for custom vehicles (D03): in flight', () => {
+  it('flies the new-id vehicle through strap-on separation, staging and second-stage ignition', () => {
+    // A smoke test of the pieces together, on Falcon 9's Starlink mission and
+    // guidance (not tuned for this vehicle): twelve engines on eight bells, the
+    // strap-ons' own chambers, the four-RL10 second stage and its thrusters.
+    const sim = new Simulation(mission('falcon9', 'sixDof', NEW_IDS), { headless: true });
+    let gasAtStaging = NaN;
+    while (!sim.done && sim.state.t < 180) {
+      sim.step(sim.suggestedDt());
+      if (Number.isNaN(gasAtStaging) && sim.events.some((e) => e.key === 'evt.stageSep')) gasAtStaging = sim.state.rigid!.rcsPropellantKg;
+    }
+    const keys = sim.events.map((e) => e.key), log = JSON.stringify(keys);
+    for (const k of ['evt.impact', 'evt.vehicleLost', 'evt.structuralFailure', 'evt.rangeSafety', 'evt.noLiftoff']) expect(keys, log).not.toContain(k);
+    expect(keys.filter((k) => k === 'evt.boosterSep'), log).toHaveLength(2);
+    expect(keys.filter((k) => k === 'evt.ignition'), log).toHaveLength(2);
+    expect(sim.state.status, log).toBe('ascent');
+    expect(sim.state.altitude, log).toBeGreaterThan(150e3);
+    // The second stage's generic thrusters hold it once it flies alone: their gas goes down.
+    expect(sim.state.rigid!.rcsPropellantKg).toBeLessThan(gasAtStaging);
+  }, 120_000);
 });
 
 describe('six-DOF for custom vehicles (D03): what stays with a catalogue origin', () => {
