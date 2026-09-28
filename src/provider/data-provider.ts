@@ -60,6 +60,17 @@ export type Fetcher = (url: string, init: { signal: AbortSignal; cache?: Request
 /** How long an online source may take before its snapshot answers instead, ms. */
 export const ONLINE_TIMEOUT_MS = 8000;
 
+/**
+ * How long the bundled snapshot may take, ms (P2.5). It comes from the server
+ * the page came from and nothing stands behind it, so its limit is for a
+ * server that hangs, not for a slow source: a phone still starting the page
+ * (the satellites' snapshot is 1 MB of JSON to read), or an intranet at
+ * 150 kbit/s, must not lose the data. Under the online limit, a case lesson
+ * opened from its link in Chromium lost the catalogue while the page was
+ * still busy starting.
+ */
+export const SNAPSHOT_TIMEOUT_MS = 60_000;
+
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isoTime = (v: unknown): v is string => typeof v === 'string' && Number.isFinite(Date.parse(v));
 
@@ -93,11 +104,11 @@ async function withTimeout<T>(ms: number, outer: AbortSignal | undefined, work: 
 export class OfflineProvider implements DataProvider {
   readonly mode = 'offline' as const;
   /** @param base the app's base URL (the snapshots are relative to it); @param fetcher `fetch`, or a fake */
-  constructor(private readonly base: string, private readonly fetcher: Fetcher) {}
+  constructor(private readonly base: string, private readonly fetcher: Fetcher, private readonly timeoutMs = SNAPSHOT_TIMEOUT_MS) {}
 
   async load<K extends DatasetId>(id: K, signal?: AbortSignal): Promise<Dataset<DatasetTypes[K]>> {
     const url = new URL(DATASETS[id].snapshot, this.base).href;
-    const snap = await withTimeout(ONLINE_TIMEOUT_MS, signal, async (s) => {
+    const snap = await withTimeout(this.timeoutMs, signal, async (s) => {
       const res = await this.fetcher(url, { signal: s });
       if (!res.ok) throw new Error(`the snapshot of ${id} answered ${res.status}`);
       return parseSnapshot(await res.json(), id);
