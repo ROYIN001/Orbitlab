@@ -1752,7 +1752,7 @@ export const en: Record<string, string> = {
   'build.tour.about': 'This step is about {name}.',
   'build.tour.show': 'Show it',
   'build.tour.stack.title': 'A rocket is a stack of rockets',
-  'build.tour.stack.text': 'Saturn V, which sent the Apollo crews to the Moon, is three rockets stacked one on another. Each stage has its own tanks and its own engines. The bottom one lights first and lifts everything; when its tanks run dry it falls away, and the next one lights. Tap any stage to see its engines and its masses.',
+  'build.tour.stack.text': 'Saturn V, which sent the Apollo crews to the Moon, is three rockets stacked one on another. The Apollo spacecraft and its escape tower rode on top as the payload: they count in its height, but are not drawn here. Each stage has its own tanks and its own engines. The bottom one lights first and lifts everything; when its tanks run dry it falls away, and the next one lights. Tap any stage to see its engines and its masses.',
   'build.tour.staging.title': 'Why rockets stage: the rocket equation',
   'build.tour.staging.text': 'A rocket gains speed by throwing propellant backwards: Δv = vₑ · ln(m₀ / m_f), the exhaust speed times the logarithm of how many times lighter the rocket becomes. Empty tanks and engines are dead weight. Falcon 9 drops its first stage as soon as it is empty, so the second stage only has to push itself and the payload. Carried along to the end instead, the same propellant would give much less Δv.',
   'build.tour.strapons.title': 'Strap-ons and the parallel phase',
