@@ -51,7 +51,8 @@ import type { Readiness, ReadinessItem, ReadinessLevel, ReadinessMission } from 
 import { HANDOFF_SATELLITE, HANDOFF_SEED, handoffDocument } from './build-handoff';
 import type { MissionDocument } from '../config/mission-file';
 import { isCatalogueEntry, type DesignWarning } from './warnings';
-import { exploreChecks } from './explore-model';
+import { exploreChecks, ratingsSignature } from './explore-model';
+import type { ComputedRatings } from './ratings';
 import { exploreCheckText, warningText, type DesignText, type TextLevel } from './warning-text';
 
 /** The orbits the review offers: the Launch panel's presets, but its "custom" one. */
@@ -90,6 +91,32 @@ export function fitReviewChoice(spec: VehicleSpec, c: ReviewChoice, payloadKg: n
     sixDof: isCatalogueEntry(spec) && defaultDynamics(spec.id).model === 'sixDof',
   };
 }
+
+/**
+ * The vehicle on the bench with the payload ratings the review computed for it
+ * (src/design/ratings.ts, estimates): its LEO and GTO ratings replaced, and any
+ * SSO rating it carried dropped. That one was typed, or its origin's published
+ * figure for another vehicle (a saved remix of Vega-C or Long March 2D, which
+ * rate GTO at 0 and so are offered the computation), never computed; kept, a
+ * mission to a sun-synchronous orbit was judged against it beside computed
+ * LEO and GTO ratings (found in review). Without it the verdict judges that
+ * orbit against the computed LEO rating (`ratedPayload`), as it does for a
+ * design the Explore level rated (explore-model.ts `remixResult`).
+ */
+export function withComputedRatings(spec: VehicleSpec, r: Pick<ComputedRatings, 'payloadLEO' | 'payloadGTO'>): VehicleSpec {
+  const { payloadSSO: _sso, ...rest } = spec;
+  return { ...rest, payloadLEO: r.payloadLEO.kg, payloadGTO: r.payloadGTO.kg };
+}
+
+/**
+ * `next` is `prev` rated: the same vehicle but for its id, its name and its
+ * ratings (`ratingsSignature`). The review keeps the mission it was on for
+ * it — the payload typed, the site, six-DOF — since the ratings change the
+ * verdict, not the mission (found in review: the payload went back to the
+ * bench's while the page said the review had run again).
+ */
+export const sameVehicleRated = (prev: VehicleSpec, next: VehicleSpec): boolean =>
+  isCatalogueEntry(prev) === isCatalogueEntry(next) && ratingsSignature(prev) === ratingsSignature(next);
 
 /** Why a choice cannot be reviewed: a payload that is not a mass the Launch panel takes (1 kg up), an orbit or site not on offer. */
 export type ChoiceProblem = 'payload' | 'orbit' | 'site';

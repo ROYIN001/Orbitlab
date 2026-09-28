@@ -27,6 +27,7 @@ import { siteById } from '../../data/sites';
 import { readinessVerdict, type Readiness, type ReadinessLevel, type ReadinessMission } from '../../design/readiness';
 import {
   REVIEW_ORBITS, checklist, checklistCounts, fitReviewChoice, reviewChoiceProblem, reviewHandoff, reviewMission, reviewSites,
+  sameVehicleRated, withComputedRatings,
   type ChecklistRow, type ChecklistSection, type ChecklistSectionId, type ReviewChoice,
 } from '../../design/review-model';
 import { isCatalogueEntry } from '../../design/warnings';
@@ -85,6 +86,8 @@ export class ReviewPanel {
   private flyMessage: string | null = null;
   private ratingsJob: { controller: AbortController; rating: RatingClass | null; flights: number } | null = null;
   private ratingsMessage: { level: 'ok' | 'error'; text: string } | null = null;
+  /** true while the level puts the vehicle this panel rated back on the bench (`host.rated`) */
+  private rerating = false;
   private visible = false;
   private queued = 0;
   private readonly runner = new ReadinessRunner();
@@ -114,10 +117,12 @@ export class ReviewPanel {
    */
   setVehicle(spec: VehicleSpec, name: string, payloadKg: number, choice?: ReviewChoice): void {
     const same = this.spec === spec;
+    // the vehicle this panel just rated, back on the bench: the same mission, reviewed again with its ratings
+    const rerated = this.rerating && this.spec !== null && sameVehicleRated(this.spec, spec);
     this.spec = spec;
     this.vehicleName = name;
     if (choice) this.choice = { ...choice };
-    else if (!same) this.choice = fitReviewChoice(spec, this.choice, payloadKg);
+    else if (!same && !rerated) this.choice = fitReviewChoice(spec, this.choice, payloadKg);
     this.ratingsJob?.controller.abort();
     this.ratingsMessage = null;
     this.flyMessage = null;
@@ -385,8 +390,9 @@ export class ReviewPanel {
         gto: res.payloadGTO.kg > 0 ? mass(res.payloadGTO.kg) : t('build.ex.ratings.nothing'),
       }) };
       const message = this.ratingsMessage;
-      // the level puts the rated vehicle on the bench, which reviews it again
-      this.host.rated({ ...spec, payloadLEO: res.payloadLEO.kg, payloadGTO: res.payloadGTO.kg });
+      // the level puts the rated vehicle on the bench, which reviews it again on the same mission
+      this.rerating = true;
+      try { this.host.rated(withComputedRatings(spec, res)); } finally { this.rerating = false; }
       this.ratingsMessage = message;
       this.renderOut();
     }).catch((error: unknown) => {

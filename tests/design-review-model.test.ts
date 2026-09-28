@@ -27,9 +27,9 @@ import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/ph
 import { readiness, readinessVerdict } from '../src/design/readiness';
 import {
   CHECKLIST_SECTIONS, PROBE_END_KEYS, PROBE_END_OTHER, REVIEW_ORBITS, checklist, checklistCounts, defaultReviewChoice, fitReviewChoice,
-  reviewChoiceProblem, reviewHandoff, reviewLaunchTime, reviewMission, reviewSites, type ReviewChoice,
+  reviewChoiceProblem, reviewHandoff, reviewLaunchTime, reviewMission, reviewSites, sameVehicleRated, withComputedRatings, type ReviewChoice,
 } from '../src/design/review-model';
-import { remixDraft, remixResult } from '../src/design/explore-model';
+import { ratingsSignature, remixDraft, remixResult } from '../src/design/explore-model';
 import { missionFileText, parseMissionDocument, type MissionState } from '../src/config/mission-file';
 import { defaultDynamics } from '../src/physics/rigid/config';
 import type { VehicleSpec } from '../src/types';
@@ -197,6 +197,33 @@ describe('the checklist', () => {
   it('has a sentence for every way the probe can end, and one for any other', () => {
     for (const key of [...Object.values(PROBE_END_KEYS), PROBE_END_OTHER]) expectKey(key);
     for (const evt of Object.keys(PROBE_END_KEYS)) expectKey(evt);
+  });
+});
+
+describe('ratings computed in the review (found in review)', () => {
+  it('replace LEO and GTO and drop an SSO rating that was never computed; the verdict then judges SSO against the computed LEO', () => {
+    // a saved Vega-C remix: GTO rated 0 (so the review offers the computation), SSO the catalogue's published 2 300 kg
+    const d = remixDraft('vegac', 'vegac-remix-r1', 'Vega-C remix');
+    d.edit.stages[0].stretch = 1.1;
+    const made = remixResult(d);
+    if (!made.ok) throw new Error('refused');
+    const saved = made.spec;
+    expect(saved.payloadSSO).toBe(vehicleById('vegac').payloadSSO);
+    const rated = withComputedRatings(saved, { payloadLEO: { kg: 1500 } as never, payloadGTO: { kg: 200 } as never });
+    expect([rated.payloadLEO, rated.payloadGTO, 'payloadSSO' in rated]).toEqual([1500, 200, false]);
+    expect(ratingsSignature(rated)).toBe(ratingsSignature(saved));
+    const c: ReviewChoice = { orbitId: 'sso', siteId: saved.sites[0], payloadKg: 1400, sixDof: false };
+    const r = readiness(rated, reviewMission(rated, c, FROM));
+    expect(r.verdict?.text).toContain('1,500');
+    expect(r.verdict?.text).not.toContain('2,300');
+  });
+
+  it('the same vehicle rated keeps the mission; another vehicle, or the catalogue entry beside a copy, does not', () => {
+    const own = stretchedFalcon(1.2);
+    expect(sameVehicleRated(own, { ...own, payloadLEO: 9000, payloadGTO: 3000 })).toBe(true);
+    expect(sameVehicleRated(own, stretchedFalcon(1.3))).toBe(false);
+    const f9 = vehicleById('falcon9');
+    expect(sameVehicleRated(f9, { ...f9 })).toBe(false);
   });
 });
 
