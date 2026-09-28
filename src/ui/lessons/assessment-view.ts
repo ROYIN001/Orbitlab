@@ -17,7 +17,8 @@ import { CHART_COLOURS, chartSvg, radarSvg } from '../../lessons/assessment/figu
 import { SERIES_UNITS } from '../../lessons/assessment/flights';
 import { indexList, numericExpected, scoreAttempt, type AssessmentResult } from '../../lessons/assessment/score';
 import { diagramSvg } from '../../lessons/assessment/diagrams';
-import type { Answer, AssessmentAttempt, Confidence, Figure, PreparedQuestion, Question } from '../../lessons/assessment/types';
+import { DraftBook, canSubmit, dontKnow, draftAnswer, pick, setConfidence, toggleChoice, toggleItem, typeNumber } from '../../lessons/assessment/draft';
+import type { AssessmentAttempt, Figure, PreparedQuestion, Question } from '../../lessons/assessment/types';
 import { lessonNumber } from '../../lessons/catalog';
 import { localText, unitText } from '../../lessons/text';
 import type { ProgressData } from '../../lessons/progress';
@@ -109,10 +110,10 @@ function photoCredit(credit: PhotoCredit): HTMLElement {
 class AssessmentView {
   private attempt: AssessmentAttempt | null = null;
   private index = 0;
-  private picked: number | string | null | undefined = undefined;
-  private confidence: Confidence | undefined;
-  /** empties a multiple choice or an order when "I don't know" is chosen */
-  private clearChoices: (() => void) | null = null;
+  /** the answers not yet recorded, by question: kept through a change of language (audit 2026-09-27 A7) */
+  private readonly drafts = new DraftBook();
+  /** set for the one redraw a change of language asks for, when the focus was in the test */
+  private restoreFocus = false;
 
   /** the screen showing, drawn again when the language changes */
   private redraw: () => void = () => undefined;
@@ -120,7 +121,12 @@ class AssessmentView {
   constructor(private readonly host: AssessmentHost, private readonly container: HTMLElement) {}
 
   applyLanguage(): void {
+    // The focus goes back to the control it was on only if it was in the test
+    // (or nowhere): it is never taken from the language menu (audit 2026-09-27 A7).
+    const active = document.activeElement;
+    this.restoreFocus = !active || active === document.body || this.container.contains(active);
     this.redraw();
+    this.restoreFocus = false;
   }
 
   private get bank(): Question[] { return bankFor(this.host.progress()); }
@@ -176,6 +182,7 @@ class AssessmentView {
     progress.assessments.push(this.attempt);
     this.host.save();
     this.index = 0;
+    this.drafts.clearAll();
     this.renderQuestion();
   }
 
@@ -222,14 +229,16 @@ class AssessmentView {
 
   private renderQuestion(): void {
     this.redraw = () => this.renderQuestion();
+    const restoreFocus = this.restoreFocus;
+    this.restoreFocus = false;
     const a = this.attempt!;
     if (this.index >= a.questions.length) { this.finish(); return; }
     const p = a.questions[this.index];
     const q = this.question(p.id);
     if (!q) { a.answers.push({ id: p.id, value: null, skipped: true }); this.index++; this.renderQuestion(); return; }
-    this.picked = undefined;
-    this.confidence = undefined;
-    this.clearChoices = null;
+    // The answer so far lives in the draft, not in the page: drawn again in
+    // another language, the question shows it as it was (audit 2026-09-27 A7).
+    const d = this.drafts.get(p.id);
 
     const head = el('div', 'assess-head');
     head.append(el('span', 'lesson-eyebrow', `${t(`assess.kind.${a.kind}`)} · ${t('assess.areaLevel', { area: q.domain, name: t(`assess.domain.${q.domain}`), level: q.level })}`),
@@ -244,116 +253,99 @@ class AssessmentView {
     const options = el('div', 'assess-options');
     options.setAttribute('role', 'radiogroup');
     const next = this.button(this.index + 1 < a.questions.length ? t('assess.next') : t('assess.finish'), () => this.answer(q, p), true);
-    next.disabled = true;
-    const choose = (value: number | string | null, btn: HTMLElement): void => {
-      this.picked = value;
-      options.querySelectorAll('.assess-option').forEach((o) => { o.classList.remove('sel'); o.setAttribute('aria-checked', 'false'); });
-      btn.classList.add('sel');
-      btn.setAttribute('aria-checked', 'true');
-      next.disabled = false;
+    next.dataset.focus = 'next';
+    /** each control and how it shows the draft; `paint` brings them all up to date after every change */
+    const painters: (() => void)[] = [];
+    const paint = (): void => {
+      for (const f of painters) f();
+      next.disabled = !canSubmit(q, d);
     };
-    const option = (label: string, value: number | string | null, letter: string): void => {
-      const b = el('button', 'assess-option');
+    const change = (fn: () => void) => (): void => { fn(); paint(); };
+    const optionButton = (label: string, mark: string, key: string, cls = 'assess-option'): HTMLButtonElement => {
+      const b = el('button', cls);
       b.type = 'button';
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', 'false');
-      b.append(el('b', undefined, letter), el('span', undefined, label));
-      b.addEventListener('click', () => choose(value, b));
+      b.dataset.focus = key;
+      b.append(el('b', undefined, mark), el('span', undefined, label));
       options.append(b);
+      return b;
+    };
+    const showChecked = (b: HTMLElement, on: () => boolean): void => {
+      painters.push(() => { b.classList.toggle('sel', on()); b.setAttribute('aria-checked', String(on())); });
     };
     const letters = getLang() === 'th' ? ['ก', 'ข', 'ค', 'ง', 'จ', 'ฉ'] : getLang() === 'ru' ? ['а', 'б', 'в', 'г', 'д', 'е'] : ['a', 'b', 'c', 'd', 'e', 'f'];
-    if (q.type === 'choice') (p.order ?? q.options.map((_, i) => i)).forEach((i, k) => option(localText(q.options[i].text), i, letters[k]));
-    if (q.type === 'vehicle') (p.vehicleOptions ?? []).forEach((id, k) => option(vehicleById(id).name, id, letters[k]));
+    const single = (label: string, value: number | string, letter: string): void => {
+      const b = optionButton(label, letter, `opt:${value}`);
+      b.setAttribute('role', 'radio');
+      b.addEventListener('click', change(() => pick(d, value)));
+      showChecked(b, () => !d.dontKnow && d.picked === value);
+    };
+    if (q.type === 'choice') (p.order ?? q.options.map((_, i) => i)).forEach((i, k) => single(localText(q.options[i].text), i, letters[k]));
+    if (q.type === 'vehicle') (p.vehicleOptions ?? []).forEach((id, k) => single(vehicleById(id).name, id, letters[k]));
     if (q.type === 'multi') {
       options.setAttribute('role', 'group');
-      const chosen = new Set<number>();
       left.append(el('p', 'assess-hint', t('assess.multiHint')));
       (p.order ?? q.options.map((_, i) => i)).forEach((i, k) => {
-        const b = el('button', 'assess-option assess-check');
-        b.type = 'button';
+        const b = optionButton(localText(q.options[i].text), letters[k], `opt:${i}`, 'assess-option assess-check');
         b.setAttribute('role', 'checkbox');
-        b.setAttribute('aria-checked', 'false');
-        b.append(el('b', undefined, letters[k]), el('span', undefined, localText(q.options[i].text)));
-        b.addEventListener('click', () => {
-          if (chosen.has(i)) chosen.delete(i); else chosen.add(i);
-          b.classList.toggle('sel', chosen.has(i));
-          b.setAttribute('aria-checked', String(chosen.has(i)));
-          options.querySelector('.dont-know')?.classList.remove('sel');
-          this.picked = chosen.size ? [...chosen].sort((x, y) => x - y).join(',') : undefined;
-          next.disabled = !chosen.size;
-        });
-        options.append(b);
+        b.addEventListener('click', change(() => toggleChoice(d, i)));
+        showChecked(b, () => !!d.chosen?.includes(i));
       });
-      // "I don't know" clears the choices
-      this.clearChoices = () => { chosen.clear(); options.querySelectorAll('.assess-check').forEach((o) => { o.classList.remove('sel'); o.setAttribute('aria-checked', 'false'); }); };
     }
     if (q.type === 'order') {
       options.setAttribute('role', 'group');
-      const put: number[] = [];
       left.append(el('p', 'assess-hint', t('assess.orderHint')));
-      const buttons = new Map<number, HTMLButtonElement>();
-      const paint = (): void => {
-        for (const [i, b] of buttons) {
-          const at = put.indexOf(i);
+      for (const i of p.order ?? q.items.map((_, k) => k)) {
+        const b = optionButton(localText(q.items[i]), '·', `opt:${i}`, 'assess-option assess-item');
+        b.addEventListener('click', change(() => toggleItem(d, i)));
+        painters.push(() => {
+          const at = d.put?.indexOf(i) ?? -1;
           b.classList.toggle('sel', at >= 0);
           b.querySelector('b')!.textContent = at >= 0 ? String(at + 1) : '·';
-        }
-        options.querySelector('.dont-know')?.classList.remove('sel');
-        this.picked = put.length === q.items.length ? put.join(',') : undefined;
-        next.disabled = this.picked === undefined;
-      };
-      for (const i of p.order ?? q.items.map((_, k) => k)) {
-        const b = el('button', 'assess-option assess-item');
-        b.type = 'button';
-        b.append(el('b', undefined, '·'), el('span', undefined, localText(q.items[i])));
-        b.addEventListener('click', () => {
-          const at = put.indexOf(i);
-          if (at >= 0) put.splice(at, 1); else put.push(i);
-          paint();
         });
-        buttons.set(i, b);
-        options.append(b);
       }
-      this.clearChoices = () => { put.length = 0; paint(); this.picked = null; };
     }
+    let numberBox: HTMLInputElement | null = null;
     if (q.type === 'numeric') {
       const row = el('label', 'assess-number');
       const input = el('input');
       input.type = 'text';
       input.inputMode = 'decimal';
+      input.dataset.focus = 'number';
       input.setAttribute('aria-label', t('assess.answerNumber'));
-      input.addEventListener('input', () => {
-        const v = Number(input.value.replace(',', '.'));
-        this.picked = input.value.trim() && Number.isFinite(v) ? v : undefined;
-        options.querySelectorAll('.assess-option').forEach((o) => o.classList.remove('sel'));
-        next.disabled = this.picked === undefined;
-      });
+      // the text as typed, finished or not, and where the caret was
+      input.value = d.typed ?? '';
+      const caret = (): void => { d.caret = [input.selectionStart ?? input.value.length, input.selectionEnd ?? input.value.length]; };
+      input.addEventListener('input', change(() => { typeNumber(d, input.value); caret(); }));
+      for (const type of ['keyup', 'pointerup', 'select'] as const) input.addEventListener(type, caret);
+      // "I don't know" empties the box
+      painters.push(() => { if (d.dontKnow) input.value = ''; });
       row.append(el('span', undefined, t('assess.answerNumber')), input, el('span', 'assess-unit', unitText(q.unit)));
       options.append(row);
+      numberBox = input;
     }
     if (q.kind === 'knowledge') {
-      const dk = el('button', 'assess-option dont-know');
-      dk.type = 'button';
+      const dk = optionButton(t('assess.dontKnow'), '?', 'dk', 'assess-option dont-know');
       dk.setAttribute('role', 'radio');
-      dk.append(el('b', undefined, '?'), el('span', undefined, t('assess.dontKnow')));
-      dk.addEventListener('click', () => { this.clearChoices?.(); choose(null, dk); });
-      options.append(dk);
+      dk.addEventListener('click', change(() => dontKnow(d)));
+      showChecked(dk, () => !!d.dontKnow);
     }
     left.append(options);
     if (q.kind === 'understanding') {
       const conf = el('div', 'assess-confidence');
+      conf.setAttribute('role', 'radiogroup');
+      conf.setAttribute('aria-label', t('assess.confidence'));
       conf.append(el('span', undefined, t('assess.confidence')));
       for (const c of ['guess', 'unsure', 'sure'] as const) {
         const b = el('button', 'assess-conf', t(`assess.confidence.${c}`));
         b.type = 'button';
-        b.addEventListener('click', () => {
-          this.confidence = c;
-          conf.querySelectorAll('.assess-conf').forEach((x) => x.classList.remove('sel'));
-          b.classList.add('sel');
-        });
+        b.dataset.focus = `conf:${c}`;
+        b.setAttribute('role', 'radio');
+        b.addEventListener('click', change(() => setConfidence(d, c)));
+        showChecked(b, () => d.confidence === c);
         conf.append(b);
       }
-      left.append(conf);
+      // what the choice does to the score, said before it is made (audit 2026-09-27 A13)
+      left.append(conf, el('p', 'assess-conf-note', t('assess.confidenceNote')));
     }
     grid.append(left);
     const figure: Figure | undefined = q.type === 'vehicle' && p.vehicle ? { kind: 'vehicle', vehicleId: p.vehicle } : q.figure;
@@ -361,18 +353,34 @@ class AssessmentView {
       const fig = this.figure(figure, undefined, p.values);
       if (fig) grid.append(fig);
     } else grid.classList.add('single');
-    const skip = this.button(t('assess.skip'), () => { this.picked = null; this.confidence = undefined; this.answer(q, p, true); });
-    this.frame(head, grid, this.buttonRow(skip, next));
+    const skip = this.button(t('assess.skip'), () => this.answer(q, p, true));
+    skip.dataset.focus = 'skip';
+    const actions = this.buttonRow(skip, next);
+    paint();
+    this.frame(head, grid, actions);
+
+    // remember the control in use, and give it the focus back after a redraw
+    this.container.querySelector('.assess-body')!.addEventListener('focusin', (e) => {
+      const key = (e.target as HTMLElement).dataset?.focus;
+      if (key) d.focus = key;
+    });
+    if (restoreFocus && d.focus) {
+      const target = this.container.querySelector<HTMLElement>(`[data-focus="${CSS.escape(d.focus)}"]`);
+      target?.focus({ preventScroll: true });
+      if (target && target === numberBox && d.caret) numberBox.setSelectionRange(...d.caret);
+    }
   }
 
   private answer(q: Question, p: PreparedQuestion, skipped = false): void {
     const a = this.attempt!;
-    const value = this.picked === undefined ? null : this.picked;
-    const answer: Answer = { id: p.id, value, ...(skipped ? { skipped: true } : {}), ...(q.kind === 'understanding' && value !== null ? { confidence: this.confidence ?? 'unsure' } : {}) };
+    const d = this.drafts.get(p.id);
+    if (!skipped && !canSubmit(q, d)) return;
+    const answer = draftAnswer(q, d, skipped);
     a.answers[this.index] = answer;
+    this.drafts.clear(p.id);
     this.host.save();
     this.index++;
-    if (q.type === 'choice' && q.observe && !skipped && value !== null) this.renderObserve(q);
+    if (q.type === 'choice' && q.observe && !skipped && answer.value !== null) this.renderObserve(q);
     else this.renderQuestion();
   }
 
@@ -418,7 +426,12 @@ class AssessmentView {
       const fill = el('i', s.level);
       fill.style.width = `${s.percent}%`;
       meter.append(fill);
-      row.append(el('span', undefined, `${dmn} ${t(`assess.domain.${dmn}`)}`), meter, el('span', 'assess-pct', `${s.percent} %`), el('span', `assess-level ${s.level}`, t(`assess.level.${s.level}`)));
+      // the count behind the percentage, and the misconceptions that cap the level (audit 2026-09-27 A13)
+      const label = el('div', 'assess-bar-name');
+      label.append(el('span', undefined, `${dmn} ${t(`assess.domain.${dmn}`)}`),
+        el('span', 'assess-count', [t('assess.correctOf', { correct: s.correct, total: s.asked }),
+          ...(s.misconceptions ? [t('assess.misconceptionCount', { n: s.misconceptions })] : [])].join(' · ')));
+      row.append(label, meter, el('span', 'assess-pct', `${s.percent} %`), el('span', `assess-level ${s.level}`, t(`assess.level.${s.level}`)));
       bars.append(row);
     }
     const left = el('div');
@@ -472,8 +485,12 @@ class AssessmentView {
     const grid = el('div', 'assess-result');
     grid.append(left, right);
     const headline = start ? t('assess.headline', { percent: r.percent, area: name(r.startDomain!) }) : t('assess.headlineAll', { percent: r.percent });
+    // what the percentage is made of: the right answers out of those asked, and why the two differ (audit 2026-09-27 A13)
+    const summary = el('p', 'assess-summary', t('assess.summary', {
+      correct: r.questions.filter((x) => x.correct).length, total: r.questions.length, n: r.questions.filter((x) => x.misconception).length,
+    }));
     this.frame(el('span', 'lesson-eyebrow', `${t(`assess.kind.${last.kind}`)} · ${new Date(last.finishedAt!).toLocaleDateString(getLang())}`),
-      el('h2', undefined, headline), grid, this.buttonRow(...buttons));
+      el('h2', undefined, headline), summary, el('p', 'small assess-summary-note', t('assess.scoreNote')), grid, this.buttonRow(...buttons));
   }
 
   private renderReview(a: AssessmentAttempt): void {

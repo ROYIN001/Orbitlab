@@ -16,6 +16,8 @@ import type { Answer, AssessmentAttempt, PreparedQuestion, Question } from '../s
 import { VEHICLE_PHOTOS } from '../src/lessons/assessment/photos';
 import { readQuestion, type FileIssue } from '../src/lessons/lesson-file';
 import { DIAGRAM_IDS, diagramSvg } from '../src/lessons/assessment/diagrams';
+import { DraftBook, canSubmit, dontKnow, draftAnswer, draftValue, pick, setConfidence, toggleChoice, toggleItem, typeNumber, type QuestionDraft } from '../src/lessons/assessment/draft';
+import { setLang } from '../src/i18n';
 
 const CYRILLIC = /\p{Script=Cyrillic}/u;
 const THAI = /\p{Script=Thai}/u;
@@ -337,4 +339,134 @@ describe('a teacher\'s question', () => {
 // the areas the recommendation walks through all have lessons or a fallback
 it('has lessons for every area but the basics, which start at the first lesson', () => {
   for (const d of DOMAINS.filter((x) => x !== 1) as Domain[]) expect(BUILTIN_LESSONS.some((l) => l.domains.includes(d)), `area ${d}`).toBe(true);
+});
+
+// ─── the answer still being put together (audit 2026-09-27 A7, A13) ────────
+
+describe('a draft answer', () => {
+  const first = <T extends Question['type']>(type: T, kind?: Question['kind']) =>
+    BUILTIN_QUESTIONS.find((q) => q.type === type && (!kind || q.kind === kind)) as Extract<Question, { type: T }>;
+
+  it('turns every kind of question into the value an answer records, and nothing while unfinished', () => {
+    const choice = first('choice');
+    const d: QuestionDraft = {};
+    expect(draftValue(choice, d)).toBeUndefined();
+    pick(d, 2);
+    expect(draftValue(choice, d)).toBe(2);
+    dontKnow(d);
+    expect(draftValue(choice, d)).toBeNull();
+    pick(d, 1);
+    expect(draftValue(choice, d)).toBe(1);
+
+    const multi = first('multi');
+    const m: QuestionDraft = {};
+    toggleChoice(m, 3); toggleChoice(m, 0); toggleChoice(m, 2); toggleChoice(m, 2);
+    expect(draftValue(multi, m)).toBe('0,3');
+    toggleChoice(m, 0); toggleChoice(m, 3);
+    expect(draftValue(multi, m)).toBeUndefined();
+
+    const order = first('order');
+    const o: QuestionDraft = {};
+    const reversed = order.items.map((_, i) => order.items.length - 1 - i);
+    for (const i of reversed.slice(0, -1)) toggleItem(o, i);
+    expect(draftValue(order, o)).toBeUndefined();
+    toggleItem(o, reversed[reversed.length - 1]);
+    expect(draftValue(order, o)).toBe(reversed.join(','));
+    toggleItem(o, reversed[0]);
+    expect(o.put).toEqual(reversed.slice(1));
+
+    const numeric = first('numeric');
+    const n: QuestionDraft = {};
+    for (const [typed, value] of [['', undefined], ['-', undefined], ['7.8e', undefined], ['7,8', 7.8], [' 12 ', 12]] as const) {
+      typeNumber(n, typed);
+      expect(draftValue(numeric, n), JSON.stringify(typed)).toBe(value);
+      expect(n.typed).toBe(typed);
+    }
+    dontKnow(n);
+    expect(n.typed).toBe('');
+    expect(draftValue(numeric, n)).toBeNull();
+  });
+
+  it('asks a question of understanding for a confidence before it can be recorded, and a question of knowledge not', () => {
+    const understanding = first('choice', 'understanding');
+    const knowledge = first('choice', 'knowledge');
+    const d: QuestionDraft = {};
+    pick(d, 0);
+    expect(canSubmit(knowledge, d)).toBe(true);
+    expect(draftAnswer(knowledge, d)).toEqual({ id: knowledge.id, value: 0 });
+    expect(canSubmit(understanding, d)).toBe(false);
+    setConfidence(d, 'guess');
+    expect(canSubmit(understanding, d)).toBe(true);
+    expect(draftAnswer(understanding, d)).toEqual({ id: understanding.id, value: 0, confidence: 'guess' });
+    // skipped: nothing chosen and no confidence, whatever the draft held
+    expect(draftAnswer(understanding, d, true)).toEqual({ id: understanding.id, value: null, skipped: true });
+  });
+
+  it('never records an understanding answer without the confidence the student chose, so leaving it out cannot score differently', () => {
+    for (const seed of [1, 2, 3]) {
+      const questions = drawTest(BUILTIN_QUESTIONS, seed);
+      for (const p of questions) {
+        const q = byId.get(p.id)!;
+        const right = answer(q, p, true);
+        const d: QuestionDraft = {};
+        if (q.type === 'choice' || q.type === 'vehicle') pick(d, right.value as number | string);
+        if (q.type === 'multi') for (const i of String(right.value).split(',').map(Number)) toggleChoice(d, i);
+        if (q.type === 'order') for (const i of String(right.value).split(',').map(Number)) toggleItem(d, i);
+        if (q.type === 'numeric') typeNumber(d, String(right.value));
+        expect(canSubmit(q, d), q.id).toBe(q.kind === 'knowledge');
+        for (const c of ['guess', 'unsure', 'sure'] as const) {
+          setConfidence(d, c);
+          const recorded = draftAnswer(q, d);
+          expect(recorded.confidence, q.id).toBe(q.kind === 'understanding' ? c : undefined);
+          expect(gradeQuestion(q, p, recorded).credit, q.id).toBe(q.kind === 'understanding' && c === 'guess' ? 0.5 : 1);
+        }
+      }
+    }
+  });
+
+  it('keeps every draft through English → Thai → Russian, and records nothing in the attempt until the student goes on', () => {
+    const questions = drawTest(BUILTIN_QUESTIONS, 11);
+    const a: AssessmentAttempt = { kind: 'pre', seed: 11, startedAt: '2026-09-27T00:00:00Z', questions, answers: [] };
+    const book = new DraftBook();
+    // one unfinished draft of each kind of question in the test
+    for (const p of questions) {
+      const q = byId.get(p.id)!;
+      const d = book.get(p.id);
+      if (q.type === 'choice' || q.type === 'vehicle') pick(d, q.type === 'choice' ? 1 : p.vehicleOptions![1]);
+      if (q.type === 'multi') { toggleChoice(d, 1); toggleChoice(d, 0); }
+      if (q.type === 'order') toggleItem(d, 1);
+      if (q.type === 'numeric') { typeNumber(d, '12,'); d.focus = 'number'; d.caret = [3, 3]; }
+      if (q.kind === 'understanding') setConfidence(d, 'sure');
+    }
+    const snapshot = JSON.stringify(questions.map((p) => book.get(p.id)));
+    const recorded = questions.map((p) => JSON.stringify(draftAnswer(byId.get(p.id)!, book.get(p.id))));
+    // setLang writes document.documentElement.lang; this suite runs without a DOM
+    const g = globalThis as { document?: unknown };
+    if (!g.document) g.document = { documentElement: {} };
+    try {
+      for (const lang of ['en', 'th', 'ru'] as const) {
+        setLang(lang);
+        expect(JSON.stringify(questions.map((p) => book.get(p.id))), lang).toBe(snapshot);
+        expect(questions.map((p) => JSON.stringify(draftAnswer(byId.get(p.id)!, book.get(p.id)))), lang).toEqual(recorded);
+        expect(a.answers, lang).toEqual([]);
+      }
+    } finally { setLang('en'); }
+    // going on records the answer and drops the draft
+    const p = questions[0];
+    a.answers[0] = draftAnswer(byId.get(p.id)!, book.get(p.id));
+    book.clear(p.id);
+    expect(book.has(p.id)).toBe(false);
+    expect(book.get(p.id)).toEqual({});
+  });
+
+  it('scores an unfinished test from before confidence was required exactly as before', () => {
+    // answers saved with no confidence were given full credit, like "unsure"
+    const unsure = attempt(5, (q) => q.level < 3, 'unsure');
+    const noConfidence = { ...unsure, answers: unsure.answers.map(({ confidence: _, ...rest }) => rest) };
+    expect(noConfidence.answers.some((x) => 'confidence' in x)).toBe(false);
+    const before = scoreAttempt(noConfidence, BUILTIN_QUESTIONS, BUILTIN_LESSONS);
+    expect(before).toEqual(scoreAttempt(unsure, BUILTIN_QUESTIONS, BUILTIN_LESSONS));
+    expect(before.questions.every((r) => r.credit === (r.correct ? 1 : 0))).toBe(true);
+    expect(before.questions.some((r) => r.misconception)).toBe(false);
+  });
 });
