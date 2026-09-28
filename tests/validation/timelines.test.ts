@@ -9,7 +9,7 @@ import { flyMission } from './flight-harness';
 import { TIMELINE_REFERENCES } from './reference-data';
 import { formatRows, timelineRows } from './compare';
 
-/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since). */
+/** Measured 2026-09-26 (the first three on main @ 844ffca, unchanged since); Proton-M and Angara-A5 re-measured 2026-09-28 with F14's fairing rule. */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
   soyuzMs25: ['insertion/apogee'],
   electronNtt: ['seco/time', 'kickSep/time'],
