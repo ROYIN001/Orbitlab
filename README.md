@@ -216,7 +216,15 @@ ones, which it does not commit (R02).
 
 The launch section's levels, with the landing page:
 
-- **Home** — the landing page over the live scene. One button plays a launch.
+- **Home** — the landing page over the live scene, read by scrolling (the scene behind no
+  longer takes the wheel). Its first screen is the featured vehicle on its pad, one button
+  that plays its launch and one that starts the lessons. Below it the program shows itself a
+  face at a time over a starry sky — Watch, Explore, Engineer, the lessons and the Orbit
+  section, each beside a picture of the app's own screen in the page's language
+  (`public/home/<face>.<lang>.webp`, retaken with `npm run shots`). It ends on the globe with
+  the International Space Station where it is now, and when it next passes over the
+  visitor's city and when it can next be seen there with the naked eye (`src/ui/home.ts`,
+  `src/ui/home-stage.ts`).
 - **Watch** — a launch viewer for people with no background in spaceflight: the scene
   fills the window, three big numbers (mission time, altitude in km, speed over the
   ground in km/h) and one plain-language sentence about what the rocket is doing now.

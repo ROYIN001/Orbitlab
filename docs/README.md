@@ -31,3 +31,4 @@ the documents above are right. File names they mention without a folder are in `
 | [SIXDOF-UI-SOURCE-REVIEW.md](history/SIXDOF-UI-SOURCE-REVIEW.md) | 2026-09-19 | Source review of the six-DOF user interface. |
 | [CONTINUE-PHASE-6.md](history/CONTINUE-PHASE-6.md) | 2026-09-19/20 | The hand-over note for resuming the six-DOF phase (Thai). |
 | [CHECKPOINT-2026-09-20.md](history/CHECKPOINT-2026-09-20.md) | 2026-09-19/20 | The status file as it stood when the six-DOF phase was accepted. It was appended to over two days and contradicts itself; [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) replaces it. |
+| [audit-2026-09-27/](history/audit-2026-09-27/) | 2026-09-27 | The usage audit of the live site and its source (Thai), the three source reviews behind it, its event-log evidence and screenshots, and the fix plan of 2026-09-28 (Thai) with one prompt per session. |

@@ -20,9 +20,6 @@
 @keyframes lesson-glow { 50% { box-shadow: 0 0 0 3px rgba(245, 196, 81, 0.1), 0 0 8px rgba(245, 196, 81, 0.2); } }
 @media (prefers-reduced-motion: reduce) { .lesson-btn.fresh { animation: none; } }
 .lesson-badge { background: var(--lesson-ink); color: var(--lesson); border-radius: 8px; padding: 0 6px; font: 11px var(--mono); }
-.lesson-card { border-color: var(--lesson-line) !important; background: rgba(40, 32, 12, 0.78) !important; }
-.lesson-card .mode-card-icon { color: var(--lesson); }
-.home-modes:has(.lesson-card) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 /* ── locked settings ─────────────────────────────────────────────────── */
 #setup .lesson-locked { position: relative; opacity: 0.6; }
@@ -245,7 +242,6 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
   .lesson-strip.case { grid-template-columns: 1fr; grid-template-areas: 'head' 'status' 'actions'; }
   .lesson-answer.lesson-case-item { grid-template-columns: minmax(0, 1fr) 1.6em; }
   .lesson-case-prompt, .lesson-case-options { grid-column: 1 / -1; }
-  .home-modes:has(.lesson-card) { grid-template-columns: 1fr; }
   .assess-question, .assess-result { grid-template-columns: 1fr; }
   .lesson-btn .lesson-btn-label { display: none; }
   .lessons-page-bar { gap: 8px; padding: 8px 12px; }

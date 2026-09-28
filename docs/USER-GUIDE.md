@@ -16,9 +16,16 @@ is coming, level by level and in the order it will be built
 ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on it pretends to work. Everything after
 section 0a is about Launch.
 
-- **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
-  space station) straight away; under it are the three sections, Launch with its three ways
-  in.
+- **Home** — the landing page, a page you scroll (the wheel scrolls it; it does not move the
+  scene). Its first screen is the featured rocket on its pad: **Watch a launch** plays the
+  featured flight (Soyuz to the space station) straight away, **Start with a lesson** opens the
+  lessons. Below it, one at a time, are the ways in — Watch, Explore, Engineer, the lessons and
+  the Orbit section — each with a picture of it in the language you chose and a button that
+  takes you there. At the end is the Earth with the International Space Station where it is
+  now, and for the city you pick, when it next passes over and when you can next see it with
+  the naked eye (a bright star gliding across the sky for a few minutes, the station sunlit in
+  a dark sky), in the city's local time. With *reduce motion* set in your system, the pictures
+  and the camera keep still.
 
 Once a flight is in orbit, **Continue in Orbit** — under the telemetry panel, and on the viewer's
 end card — puts the orbit on screen into the Orbit section's playground (section 0a), with the
@@ -118,7 +125,7 @@ IERS cannot be read from a page.
 (Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
 and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
 network at all — the page, the physics and auto-tune workers and the Earth textures are all kept
-on the device, and the fonts too once they have loaded. When a new version is published, a note
+on the device, and the fonts and the landing page's pictures too once they have loaded. When a new version is published, a note
 at the bottom of the page offers **Reload**; until you press it, the version you have keeps
 running.
 
@@ -967,7 +974,7 @@ a mission file or link carries it and the flight report names it. Untick it to f
 
 ## 18. Lessons and the placement test
 
-The gold **Lessons** button in the top bar (and the fourth card on the landing page) opens the
+The gold **Lessons** button in the top bar (and **Start with a lesson** on the landing page) opens the
 lessons page: a page of its own over the whole window below the top bar, like a mode, with two
 tabs — **Lessons** and **Placement test** — and **Back to the simulator** (or Esc, or the
 browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
