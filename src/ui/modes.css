@@ -139,91 +139,18 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
   .debrief-loss-bar { grid-column: 1 / -1; grid-row: 2; }
 }
 
-/* ── the landing page ────────────────────────────────────────────────────── */
+/* ── the landing page: src/ui/home.css ─────────────────────────────────── */
 
-.home-screen {
-  position: absolute; inset: 0; z-index: 5;
-  /* centred by the child's auto margins, not by align-items: a centred flex
-     child taller than the box overflows at the top, out of scroll reach */
-  display: flex; align-items: flex-start;
-  padding: 40px clamp(20px, 5vw, 72px);
-  overflow-y: auto;
-  background: linear-gradient(90deg, rgba(6, 10, 16, 0.9) 0%, rgba(6, 10, 16, 0.66) 42%, rgba(6, 10, 16, 0.12) 74%, rgba(6, 10, 16, 0) 100%);
-}
-.home-inner { max-width: 900px; margin: auto 0; }
-.home-inner > :is(.home-eyebrow, .home-title) { max-width: 640px; }
-.home-eyebrow { color: var(--accent); letter-spacing: 2.4px; }
-.home-title {
-  margin: 10px 0 12px;
-  font: 600 clamp(32px, 4.4vw, 56px)/1.08 var(--display); letter-spacing: -1.2px;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
-}
-.home-lead { margin: 0 0 28px; max-width: 540px; font-size: 17px; line-height: 1.6; color: #c9d6e2; }
-.home-play {
-  display: inline-flex; align-items: center; gap: 14px;
-  padding: 12px 28px 12px 12px; border-radius: 999px;
-  background: var(--accent); color: #062019;
-  box-shadow: 0 12px 34px rgba(139, 229, 205, 0.22);
-  transition: transform 0.15s ease, filter 0.15s ease;
-}
-.home-play:hover { filter: brightness(1.06); transform: translateY(-1px); }
-.home-play-glyph {
-  display: grid; place-items: center; flex: none;
-  width: 46px; height: 46px; padding-left: 3px; border-radius: 50%;
-  background: #062019; color: var(--accent); font-size: 17px;
-}
-.home-play-label { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
-.home-play strong { font: 700 19px/1.25 var(--display); }
-.home-play small { font-size: 12.5px; opacity: 0.8; }
-.home-more { margin: 36px 0 10px; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
-/* S01: the three sections, Launch first and widest — it is the one that works today */
-.home-sections { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 10px; }
-.home-section {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 14px; border-radius: 12px;
-  border: 1px solid rgba(103, 132, 138, 0.35); background: rgba(14, 22, 32, 0.74);
-  backdrop-filter: blur(8px);
-}
-.home-section-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
-.home-section-head h2 { margin: 0; font: 600 17px/1.3 var(--display); }
-.home-section-text { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
-.home-modes { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
-.home-section-link {
-  margin-top: 4px; align-self: flex-start;
-  padding: 8px 12px; border-radius: 9px; font-size: 13px;
-  border: 1px solid var(--accent-line); color: var(--accent);
-}
-.home-section-link:hover { border-color: var(--accent); }
-/* "in development", on the home page and on the section's own screen */
+/* "in development", on a level still being built */
 .section-badge {
   display: inline-block; padding: 2px 8px; border-radius: 999px;
   border: 1px solid rgba(239, 164, 126, 0.5); color: var(--warn);
   font: 500 10.5px/1.4 var(--sans); letter-spacing: 0.8px; text-transform: uppercase;
 }
-/* audit 2026-09-27 A8: a section that works says so in the accent, not the warning colour */
-.section-badge.ready { border-color: var(--accent-line); color: var(--accent); }
-/* A1: the user's last mission, under the play button */
-.home-resume-box { max-width: 420px; margin-top: 14px; }
-.mode-card {
-  display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 2px 8px; align-items: baseline; text-align: left;
-  padding: 9px 10px; border-radius: 10px;
-  border: 1px solid rgba(103, 132, 138, 0.3); background: rgba(22, 32, 44, 0.6);
-}
-.mode-card > .mode-card-icon { grid-row: span 2; }
-.mode-card:hover { border-color: var(--accent-line); background: rgba(22, 34, 44, 0.88); }
-.mode-card-icon { color: var(--accent); font-size: 18px; line-height: 1; }
-.mode-card strong { font: 600 14.5px/1.3 var(--display); }
-.mode-card-text { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 
-/* ── the Orbit and Build sections while they are being built (S01) ─────── */
+/* ── a section's plan: the Build levels still being built show it (src/ui/build/build.css), the
+   Orbit playground lists what it still lacks with the same items (S01) ─────── */
 
-.section-screen {
-  position: absolute; inset: 0; z-index: 5;
-  overflow-y: auto;
-  padding: 40px clamp(20px, 5vw, 72px);
-  /* darker than the landing page's: this is a page to read, not a scene to look at */
-  background: linear-gradient(90deg, rgba(6, 10, 16, 0.96) 0%, rgba(6, 10, 16, 0.9) 55%, rgba(6, 10, 16, 0.74) 100%);
-}
 .section-inner { max-width: 880px; }
 .section-eyebrow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; color: var(--accent); letter-spacing: 2.4px; }
 .section-title {
@@ -349,15 +276,6 @@ body[data-mode='explore']:not([data-lesson]) #mission-result { display: none !im
 /* ── narrow screens ──────────────────────────────────────────────────────── */
 
 @media (max-width: 860px) {
-  .home-screen {
-    padding: 24px 16px;
-    background: linear-gradient(0deg, rgba(6, 10, 16, 0.94) 0%, rgba(6, 10, 16, 0.8) 55%, rgba(6, 10, 16, 0.6) 100%);
-  }
-  .home-inner { margin: auto 0 0; }
-  .home-lead { font-size: 15px; margin-bottom: 20px; }
-  .home-more { margin-top: 22px; }
-  .home-sections { grid-template-columns: 1fr; }
-  .section-screen { padding: 24px 16px; }
   .section-levels { grid-template-columns: 1fr; }
   .section-lead { font-size: 15px; }
   .watch-ui { padding: 12px; }

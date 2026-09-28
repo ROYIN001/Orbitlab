@@ -6,10 +6,13 @@
  * would; tanks that run dry make the plan short, by the Δv they lack.
  */
 import { describe, expect, it } from 'vitest';
-import { G0, R_EARTH } from '../src/physics/constants';
-import { budgetFor, craftAfter, craftFromHandoff, defaultCraft, deltaVAvailable, exhaustSpeed } from '../src/orbit/budget';
-import { hohmann, isPlan, spiral, type Plan } from '../src/orbit/maneuvers';
-import { v3 } from '../src/physics/vec3';
+import { G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
+import {
+  CRAFT_LIMITS, adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, deltaVAvailable, exhaustSpeed, maxPropellant, reachedState, type Craft,
+} from '../src/orbit/budget';
+import { hohmann, isPlan, spiral, stateOnPlan, type Plan } from '../src/orbit/maneuvers';
+import { orbitFacts, orbitFromState } from '../src/orbit/kepler';
+import { norm as vnorm, sub, v3 } from '../src/physics/vec3';
 
 const burns = (...dvs: number[]): Pick<Plan, 'burns' | 'spiral' | 'totalDv'> => ({
   burns: dvs.map((dv, k) => ({ t: k, dv: v3(dv, 0, 0), vnb: { prograde: dv, normal: 0, radial: 0 }, point: 'now' as const })),
@@ -76,5 +79,149 @@ describe('the propellant budget (O03)', () => {
     const withEngine = { spacecraft: { mass: 7150, area: 10, cd: 2.2, cr: 1.3, kind: 'crew' as const, propulsion: { thrust: 3920, isp: 302, propellantMass: 500 } } };
     expect(craftFromHandoff(withEngine)).toEqual({ mass: 7150, propellant: 500, isp: 302, thrust: 3920 });
     expect(craftFromHandoff({ spacecraft: { ...withEngine.spacecraft, propulsion: null } })).toBeNull();
+  });
+});
+
+describe('a spacecraft that cannot be one (audit 2026-09-27 A2)', () => {
+  // orbit-review.md 2: two burns of 3 500 m/s in all, for 100 kg with 1 000 kg of propellant, came out Infinity and "enough"
+  const review = { mass: 100, propellant: 1000, isp: 315, thrust: 400 };
+
+  it('is found before it is budgeted: propellant must be less than the mass', () => {
+    expect(craftProblem(review)).toBe('propellantOverMass');
+    // the browser repro: 101 kg with 1 001 kg
+    expect(craftProblem({ ...review, mass: 101, propellant: 1001 })).toBe('propellantOverMass');
+    // tanks that are the whole spacecraft leave nothing when dry
+    expect(craftProblem({ ...review, propellant: 100 })).toBe('propellantOverMass');
+    expect(craftProblem({ ...review, propellant: 99.9 })).toBeNull();
+    expect(craftProblem({ ...review, propellant: 0 })).toBeNull();
+    expect(craftProblem({ ...review, propellant: -1 })).toBe('propellant');
+    expect(craftProblem({ ...review, mass: 0, propellant: 0 })).toBe('mass');
+    expect(craftProblem({ ...review, mass: Number.NaN })).toBe('mass');
+    expect(craftProblem({ ...review, propellant: 10, isp: 0 })).toBe('isp');
+    expect(craftProblem({ ...review, propellant: 10, thrust: 0 })).toBe('thrust');
+    expect(craftProblem({ ...review, propellant: 10, thrust: Infinity })).toBe('thrust');
+    expect(craftProblem(defaultCraft())).toBeNull();
+  });
+
+  it('is never given an infinite or undefined Δv: it is refused instead', () => {
+    expect(() => deltaVAvailable(review)).toThrow(RangeError);
+    expect(() => budgetFor(burns(1500, 2000), review)).toThrow(RangeError);
+    expect(() => deltaVAvailable({ ...review, propellant: 100 })).toThrow(RangeError);
+  });
+
+  it('gives finite numbers for every spacecraft it accepts, and never more propellant than mass', () => {
+    const cases: Craft[] = [
+      { ...review, propellant: 99 }, { ...review, propellant: 0 }, { ...review, propellant: 99.999 },
+      { mass: 10, propellant: maxPropellant(10), isp: 50, thrust: 0.01 },
+      { mass: 20_000, propellant: maxPropellant(20_000), isp: 5000, thrust: 5000 },
+    ];
+    for (const craft of cases) {
+      expect(craftProblem(craft)).toBeNull();
+      expect(Number.isFinite(deltaVAvailable(craft))).toBe(true);
+      const b = budgetFor(burns(1500, 2000), craft);
+      for (const x of [b.available, b.used, b.left, b.shortfall, ...b.burns.flatMap((k) => [k.propellant, k.massBefore, k.massAfter, k.duration])]) {
+        expect(Number.isFinite(x)).toBe(true);
+      }
+      const after = craftAfter(b);
+      expect(after.propellant).toBeLessThan(after.mass);
+      expect(craftProblem(after)).toBeNull();
+    }
+  });
+
+  it('offers a propellant slider that ends below the mass', () => {
+    for (const mass of [CRAFT_LIMITS.mass.min, 101, 1800, CRAFT_LIMITS.mass.max]) {
+      const hi = maxPropellant(mass);
+      expect(hi).toBeLessThan(mass);
+      expect(hi).toBeLessThanOrEqual(CRAFT_LIMITS.propellant.max);
+      expect(craftProblem({ mass, propellant: hi, isp: 315, thrust: 400 })).toBeNull();
+    }
+    expect(maxPropellant(101)).toBe(100);
+  });
+});
+
+describe('carrying on from a plan the tanks cannot fly (audit 2026-09-27 A3)', () => {
+  // orbit-review.md 3: Hohmann from a low orbit, own spacecraft with no propellant — it still carried on to 35 786 × 35 786 km
+  const leo = { a: R_EARTH + 500e3, e: 0, i: 0.5, raan: 0, argp: 0, m0: 0, jd0: 2461309.5 };
+  const plan = hohmann(leo, 0, 35_786e3, false);
+  if (!isPlan(plan)) throw new Error('hohmann');
+  const dry: Craft = { ...defaultCraft(), propellant: 0 };
+
+  it('does not carry on a spacecraft whose tanks run dry', () => {
+    expect(budgetFor(plan, dry).enough).toBe(false);
+    expect(adoptBlock(plan, 0, dry)).toBe('fuel');
+    expect(adoptBlock(plan, plan.arrival + 1, dry)).toBe('fuel');
+    // a geostationary bus's own tanks are short of a Hohmann from LEO too
+    expect(adoptBlock(plan, 0, defaultCraft())).toBe('fuel');
+  });
+
+  it('carries on a spacecraft that can fly the plan, and the ideal plan with no spacecraft', () => {
+    const big: Craft = { mass: 10_000, propellant: 8000, isp: 320, thrust: 20_000 };
+    expect(budgetFor(plan, big).enough).toBe(true);
+    expect(adoptBlock(plan, 0, big)).toBeNull();
+    expect(adoptBlock(plan, 0, null)).toBeNull();
+  });
+
+  it('does not carry on a spacecraft that cannot be one (A2)', () => {
+    expect(adoptBlock(plan, 0, { mass: 100, propellant: 1000, isp: 315, thrust: 400 })).toBe('craft');
+  });
+
+  it('has nothing to carry on from before a burnless plan ends, whatever the spacecraft', () => {
+    const running = { burns: [], totalDv: 0, arrival: 100 };
+    expect(adoptBlock(running, 50, null)).toBe('notYet');
+    expect(adoptBlock(running, 50, dry)).toBe('notYet');
+    expect(adoptBlock(running, 100, null)).toBeNull();
+  });
+});
+
+describe('carrying on as far as the propellant goes (audit 2026-09-27 A3, the D3 alternative)', () => {
+  const r1 = R_EARTH + 500e3;
+  const leo = { a: r1, e: 0, i: 0.5, raan: 0, argp: 0, m0: 0, jd0: 2461309.5 };
+  const plan = hohmann(leo, 0, 35_786e3, false);
+  if (!isPlan(plan)) throw new Error('hohmann');
+  const vc = Math.sqrt(MU_EARTH / r1);
+
+  it('stops the burn the tanks run dry in where the propellant ends, along the burn', () => {
+    const craft: Craft = { mass: 1000, propellant: 300, isp: 315, thrust: 400 };
+    const b = budgetFor(plan, craft);
+    expect(b.enough).toBe(false);
+    expect(b.burns[0].short).toBe(true);
+    const got = exhaustSpeed(315) * Math.log(1000 / 700);
+    const s = reachedState(plan, b, false)!;
+    expect(s.t).toBe(plan.burns[0].t);
+    // a prograde kick on a circle: the speed is the circle's and what the tanks gave
+    expect(vnorm(s.v)).toBeCloseTo(vc + got, 6);
+    expect(vnorm(s.r)).toBeCloseTo(r1, 3);
+    const f = orbitFacts(orbitFromState(s.r, s.v, leo.jd0 + s.t / 86400), false);
+    expect(f.perigeeAlt).toBeCloseTo(500e3, -1);
+    expect(f.apogeeAlt).toBeGreaterThan(600e3);
+    expect(f.apogeeAlt).toBeLessThan(35_786e3);
+  });
+
+  it('flies the burns the tanks hold, and none of the one they do not', () => {
+    // enough for the first burn and part of the second
+    const first = budgetFor({ ...plan, burns: plan.burns.slice(0, 1) }, { mass: 1000, propellant: 999, isp: 315, thrust: 400 }).used;
+    const b = budgetFor(plan, { mass: 1000, propellant: first + 20, isp: 315, thrust: 400 });
+    expect(b.burns[0].short).toBe(false);
+    expect(b.burns[1].short).toBe(true);
+    const s = reachedState(plan, b, false)!;
+    expect(s.t).toBe(plan.burns[1].t);
+    const onTransfer = stateOnPlan(plan, plan.burns[1].t - 1e-6, false);
+    const got = exhaustSpeed(315) * Math.log(b.burns[1].massBefore / b.burns[1].massAfter);
+    expect(vnorm(sub(s.v, onTransfer.v))).toBeCloseTo(got, 2);
+    // with no propellant at all it stays on the start orbit
+    const none = reachedState(plan, budgetFor(plan, { mass: 1000, propellant: 0, isp: 315, thrust: 400 }), false)!;
+    expect(vnorm(none.v)).toBeCloseTo(vc, 6);
+  });
+
+  it('is nothing to work out when the tanks hold the plan, and a spiral stops part way', () => {
+    expect(reachedState(plan, budgetFor(plan, { mass: 10_000, propellant: 8000, isp: 320, thrust: 20_000 }), false)).toBeNull();
+    const sp = spiral(leo, 0, 1000e3, 0.5, 1e-3, false);
+    if (!isPlan(sp) || !sp.spiral) throw new Error('spiral');
+    const b = budgetFor(sp, { mass: 1000, propellant: 20, isp: 315, thrust: 400 });
+    expect(b.enough).toBe(false);
+    const s = reachedState(sp, b, false)!;
+    const got = exhaustSpeed(315) * Math.log(1000 / 980);
+    expect(s.t).toBeCloseTo(sp.spiral.t0 + sp.spiral.duration * got / sp.totalDv, 6);
+    expect(s.t).toBeLessThan(sp.arrival);
   });
 });

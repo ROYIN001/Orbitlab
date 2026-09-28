@@ -1,0 +1,2111 @@
+[
+ {
+  "country": "RU",
+  "crewCapable": true,
+  "escapeSystem": "soyuz",
+  "fairing": {
+   "adapter": 2.2,
+   "color": "#e8e8e8",
+   "diameter": 4.11,
+   "length": 11.43,
+   "mass": 1000,
+   "sepAltitude": 95000,
+   "sepTime": 157
+  },
+  "guidanceDefaults": {
+   "kickAngle": 3,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "guidanceDefaultsSixDof": {
+   "kickAngle": 4,
+   "kickDuration": 12,
+   "maxTurnRate": 0.5,
+   "pitchOverAltitude": 50
+  },
+  "height": 46.3,
+  "id": "soyuz21a",
+  "manufacturer": "RKTs Progress",
+  "maxAccel": 60,
+  "maxQ": 40000,
+  "name": "Soyuz-2.1a",
+  "notes": "The crew/cargo launcher for Soyuz MS and Progress: R-7 boosters and core with the RD-0110 third stage, direct insertion.",
+  "payloadGTO": 0,
+  "payloadLEO": 7430,
+  "sites": [
+   "baikonur",
+   "plesetsk",
+   "vostochny"
+  ],
+  "stages": [
+   {
+    "accentColor": "#5a6b4c",
+    "boosters": [
+     {
+      "color": "#c9c7bd",
+      "conicalTop": true,
+      "count": 4,
+      "diameter": 2.68,
+      "dryMass": 3784,
+      "engine": {
+       "count": 1,
+       "ispSL": 263.3,
+       "ispVac": 320.2,
+       "minThrottle": 0.5,
+       "name": "RD-107A",
+       "thrustSL": 839500,
+       "thrustVac": 1019900
+      },
+      "id": "blokBVGD",
+      "length": 19.6,
+      "name": "Blok B/V/G/D boosters",
+      "propellantMass": 39600,
+      "sepDelay": 1
+     }
+    ],
+    "color": "#c9c7bd",
+    "diameter": 2.95,
+    "dryMass": 6545,
+    "engine": {
+     "count": 1,
+     "ispSL": 257.7,
+     "ispVac": 320.6,
+     "minThrottle": 0.5,
+     "name": "RD-108A",
+     "thrustSL": 792400,
+     "thrustVac": 921900
+    },
+    "id": "blokA",
+    "length": 27.8,
+    "name": "Blok A (core)",
+    "profile": "r7Core",
+    "propellantMass": 87000
+   },
+   {
+    "color": "#c9c7bd",
+    "diameter": 2.66,
+    "dryMass": 2410,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 326,
+     "minThrottle": 0.5,
+     "name": "RD-0110",
+     "thrustSL": 200000,
+     "thrustVac": 298000,
+     "vacuumOnly": true
+    },
+    "id": "blokI",
+    "ignitionDelay": 0,
+    "length": 6.7,
+    "name": "Blok I (3rd stage, RD-0110)",
+    "profile": "r7Upper",
+    "propellantMass": 22900,
+    "sepDelay": 0
+   }
+  ]
+ },
+ {
+  "country": "RU",
+  "fairing": {
+   "color": "#e8e8e8",
+   "diameter": 4.11,
+   "length": 11.4,
+   "mass": 1500,
+   "sepAltitude": 95000,
+   "sepTime": 157
+  },
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "height": 46.3,
+  "id": "soyuz21b",
+  "manufacturer": "RKTs Progress",
+  "maxAccel": 60,
+  "maxQ": 40000,
+  "name": "Soyuz-2.1b / Fregat-M",
+  "notes": "R-7 family; four conical strap-on boosters, hot-staged third stage, restartable Fregat upper stage.",
+  "payloadGTO": 1900,
+  "payloadLEO": 8670,
+  "payloadSSO": 4900,
+  "sites": [
+   "baikonur",
+   "plesetsk",
+   "vostochny"
+  ],
+  "stages": [
+   {
+    "accentColor": "#5a6b4c",
+    "boosters": [
+     {
+      "color": "#c9c7bd",
+      "conicalTop": true,
+      "count": 4,
+      "diameter": 2.68,
+      "dryMass": 3784,
+      "engine": {
+       "count": 1,
+       "ispSL": 263.3,
+       "ispVac": 320.2,
+       "minThrottle": 0.5,
+       "name": "RD-107A",
+       "thrustSL": 839500,
+       "thrustVac": 1019900
+      },
+      "id": "blokBVGD",
+      "length": 19.6,
+      "name": "Blok B/V/G/D boosters",
+      "propellantMass": 39600,
+      "sepDelay": 1
+     }
+    ],
+    "color": "#c9c7bd",
+    "diameter": 2.95,
+    "dryMass": 6545,
+    "engine": {
+     "count": 1,
+     "ispSL": 257.7,
+     "ispVac": 320.6,
+     "minThrottle": 0.5,
+     "name": "RD-108A",
+     "thrustSL": 792400,
+     "thrustVac": 921900
+    },
+    "id": "blokA",
+    "length": 27.8,
+    "name": "Blok A (core)",
+    "profile": "r7Core",
+    "propellantMass": 90100
+   },
+   {
+    "color": "#c9c7bd",
+    "diameter": 2.66,
+    "dryMass": 2355,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 359,
+     "minThrottle": 0.5,
+     "name": "RD-0124",
+     "thrustSL": 200000,
+     "thrustVac": 294300,
+     "vacuumOnly": true
+    },
+    "id": "blokI",
+    "ignitionDelay": 0,
+    "length": 6.7,
+    "name": "Blok I (3rd stage)",
+    "profile": "r7Upper",
+    "propellantMass": 23000,
+    "sepDelay": 0
+   },
+   {
+    "color": "#b8b0a0",
+    "diameter": 3.35,
+    "dryMass": 1050,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 333.2,
+     "name": "S5.92",
+     "thrustSL": 15000,
+     "thrustVac": 19850,
+     "vacuumOnly": true
+    },
+    "id": "fregat",
+    "ignitionDelay": 3,
+    "length": 1.5,
+    "name": "Fregat-M",
+    "propellantMass": 5350,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "RU",
+  "dragArea": 25,
+  "fairing": {
+   "color": "#e8e8e8",
+   "diameter": 4.35,
+   "length": 15,
+   "mass": 2000,
+   "sepAltitude": 120000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 6,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.3,
+   "pitchMax": 25
+  },
+  "height": 58.2,
+  "id": "protonm",
+  "manufacturer": "Khrunichev",
+  "maxAccel": 55,
+  "maxQ": 40000,
+  "name": "Proton-M / Briz-M",
+  "notes": "Hypergolic heavy-lift launcher; Briz-M performs multi-burn GTO/GEO insertions.",
+  "payloadGTO": 6920,
+  "payloadLEO": 23000,
+  "sites": [
+   "baikonur"
+  ],
+  "stages": [
+   {
+    "accentColor": "#7a7a7a",
+    "color": "#d9d9d9",
+    "diameter": 4.1,
+    "dryMass": 30600,
+    "engine": {
+     "count": 6,
+     "ispSL": 288,
+     "ispVac": 316,
+     "minThrottle": 0.6,
+     "name": "RD-276",
+     "thrustSL": 1745000,
+     "thrustVac": 1915000
+    },
+    "id": "p1",
+    "length": 21.2,
+    "name": "First stage (6× RD-276)",
+    "propellantMass": 419400
+   },
+   {
+    "color": "#d9d9d9",
+    "diameter": 4.1,
+    "dryMass": 11000,
+    "engine": {
+     "count": 4,
+     "ispSL": 280,
+     "ispVac": 327,
+     "name": "RD-0210/0211",
+     "thrustSL": 500000,
+     "thrustVac": 582000
+    },
+    "id": "p2",
+    "ignitionDelay": 0,
+    "length": 17,
+    "name": "Second stage",
+    "propellantMass": 156100,
+    "sepDelay": 0
+   },
+   {
+    "color": "#d9d9d9",
+    "diameter": 4.1,
+    "dryMass": 3500,
+    "engine": {
+     "count": 1,
+     "ispSL": 280,
+     "ispVac": 325,
+     "name": "RD-0213 + RD-0214",
+     "thrustSL": 520000,
+     "thrustVac": 613800
+    },
+    "id": "p3",
+    "ignitionDelay": 1,
+    "length": 6.5,
+    "name": "Third stage",
+    "propellantMass": 46600,
+    "sepDelay": 1
+   },
+   {
+    "color": "#d8d8d8",
+    "diameter": 4,
+    "dryMass": 2370,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 326,
+     "name": "S5.98M",
+     "thrustSL": 15000,
+     "thrustVac": 19620,
+     "vacuumOnly": true
+    },
+    "id": "brizm",
+    "ignitionDelay": 3,
+    "length": 2.6,
+    "name": "Briz-M",
+    "propellantMass": 19800,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "RU",
+  "fairing": {
+   "color": "#e8e8e8",
+   "diameter": 4.35,
+   "length": 15,
+   "mass": 2000,
+   "sepAltitude": 120000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 4,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.3,
+   "pitchMax": 25
+  },
+  "height": 55.4,
+  "id": "angaraa5",
+  "manufacturer": "Khrunichev",
+  "maxAccel": 50,
+  "maxQ": 40000,
+  "name": "Angara-A5 / Briz-M",
+  "notes": "Modular kerolox launcher; core throttles to 30 % while four identical URM-1 boosters burn.",
+  "payloadGTO": 5400,
+  "payloadLEO": 24500,
+  "sites": [
+   "plesetsk",
+   "vostochny"
+  ],
+  "stages": [
+   {
+    "accentColor": "#c33",
+    "boosters": [
+     {
+      "color": "#f0f0f0",
+      "count": 4,
+      "diameter": 2.9,
+      "dryMass": 9000,
+      "engine": {
+       "count": 1,
+       "ispSL": 310.7,
+       "ispVac": 337.5,
+       "minThrottle": 0.3,
+       "name": "RD-191",
+       "thrustSL": 1920000,
+       "thrustVac": 2090000
+      },
+      "id": "urm1",
+      "length": 25.7,
+      "name": "URM-1 boosters",
+      "propellantMass": 128800,
+      "sepDelay": 1
+     }
+    ],
+    "color": "#f0f0f0",
+    "diameter": 2.9,
+    "dryMass": 9000,
+    "engine": {
+     "count": 1,
+     "ispSL": 310.7,
+     "ispVac": 337.5,
+     "minThrottle": 0.3,
+     "name": "RD-191",
+     "thrustSL": 1920000,
+     "thrustVac": 2090000
+    },
+    "id": "urm1core",
+    "length": 25.7,
+    "name": "URM-1 core",
+    "propellantMass": 128800,
+    "throttleWithBoosters": 0.3
+   },
+   {
+    "color": "#f0f0f0",
+    "diameter": 3.6,
+    "dryMass": 4000,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 359,
+     "name": "RD-0124A",
+     "thrustSL": 200000,
+     "thrustVac": 294300,
+     "vacuumOnly": true
+    },
+    "id": "urm2",
+    "ignitionDelay": 1,
+    "length": 6.9,
+    "name": "URM-2",
+    "propellantMass": 35800,
+    "sepDelay": 1
+   },
+   {
+    "color": "#d8d8d8",
+    "diameter": 4,
+    "dryMass": 2370,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 326,
+     "name": "S5.98M",
+     "thrustSL": 15000,
+     "thrustVac": 19620,
+     "vacuumOnly": true
+    },
+    "id": "brizm",
+    "ignitionDelay": 3,
+    "length": 2.6,
+    "name": "Briz-M",
+    "propellantMass": 19800,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "US",
+  "crewCapable": true,
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 5.2,
+   "length": 13.1,
+   "mass": 1900,
+   "sepAltitude": 110000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "guidanceDefaultsSixDof": {
+   "kickAngle": 3.5
+  },
+  "height": 70,
+  "id": "falcon9",
+  "manufacturer": "SpaceX",
+  "maxAccel": 45,
+  "maxQ": 40000,
+  "maxQThrottle": {
+   "qEnd": 22000,
+   "qStart": 22000,
+   "throttle": 0.75
+  },
+  "name": "Falcon 9 Block 5",
+  "notes": "Partially reusable; enabling booster recovery reserves propellant for the boost-back/landing burns.",
+  "payloadGTO": 8300,
+  "payloadLEO": 22800,
+  "payloadSSO": 15000,
+  "recoverable": true,
+  "recoveryReserve": 0.12,
+  "returnReserve": 0.15,
+  "sites": [
+   "cape",
+   "ksc39a",
+   "vandenberg"
+  ],
+  "stages": [
+   {
+    "accentColor": "#1a1a1a",
+    "color": "#f2f2f2",
+    "diameter": 3.66,
+    "dryMass": 22200,
+    "engine": {
+     "count": 9,
+     "ispSL": 282,
+     "ispVac": 311,
+     "minThrottle": 0.4,
+     "name": "Merlin 1D",
+     "thrustSL": 845000,
+     "thrustVac": 914000
+    },
+    "gridFins": true,
+    "id": "s1",
+    "legs": true,
+    "length": 42,
+    "name": "First stage (9× Merlin 1D)",
+    "propellantMass": 410900
+   },
+   {
+    "accentColor": "#222",
+    "color": "#f2f2f2",
+    "diameter": 3.66,
+    "dryMass": 4300,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 348,
+     "minThrottle": 0.4,
+     "name": "Merlin Vacuum",
+     "thrustSL": 700000,
+     "thrustVac": 981000,
+     "vacuumOnly": true
+    },
+    "id": "s2",
+    "ignitionDelay": 4,
+    "length": 15,
+    "name": "Second stage (Merlin Vacuum)",
+    "propellantMass": 108000,
+    "restartable": true,
+    "sepDelay": 3
+   }
+  ]
+ },
+ {
+  "country": "US",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 5.2,
+   "length": 13.1,
+   "mass": 1900,
+   "sepAltitude": 110000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.3,
+   "pitchMax": 25
+  },
+  "height": 70,
+  "id": "falconheavy",
+  "manufacturer": "SpaceX",
+  "maxAccel": 45,
+  "maxQ": 40000,
+  "maxQThrottle": {
+   "qEnd": 22000,
+   "qStart": 22000,
+   "throttle": 0.75
+  },
+  "name": "Falcon Heavy",
+  "notes": "Three Falcon 9 cores; the center core throttles down until side-booster separation.",
+  "payloadGTO": 26700,
+  "payloadLEO": 63800,
+  "recoverable": true,
+  "recoveryReserve": 0.12,
+  "returnReserve": 0.15,
+  "sites": [
+   "cape",
+   "ksc39a"
+  ],
+  "stages": [
+   {
+    "accentColor": "#1a1a1a",
+    "boosters": [
+     {
+      "color": "#f2f2f2",
+      "count": 2,
+      "diameter": 3.66,
+      "dryMass": 22200,
+      "engine": {
+       "count": 9,
+       "ispSL": 282,
+       "ispVac": 311,
+       "minThrottle": 0.4,
+       "name": "Merlin 1D",
+       "thrustSL": 845000,
+       "thrustVac": 914000
+      },
+      "id": "side",
+      "length": 42,
+      "name": "Side boosters",
+      "propellantMass": 410900,
+      "sepDelay": 2
+     }
+    ],
+    "color": "#f2f2f2",
+    "diameter": 3.66,
+    "dryMass": 28000,
+    "engine": {
+     "count": 9,
+     "ispSL": 282,
+     "ispVac": 311,
+     "minThrottle": 0.4,
+     "name": "Merlin 1D",
+     "thrustSL": 845000,
+     "thrustVac": 914000
+    },
+    "gridFins": true,
+    "id": "core",
+    "legs": true,
+    "length": 42,
+    "name": "Center core",
+    "propellantMass": 410900,
+    "throttleWithBoosters": 0.55
+   },
+   {
+    "accentColor": "#222",
+    "color": "#f2f2f2",
+    "diameter": 3.66,
+    "dryMass": 4300,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 348,
+     "minThrottle": 0.4,
+     "name": "Merlin Vacuum",
+     "thrustSL": 700000,
+     "thrustVac": 981000,
+     "vacuumOnly": true
+    },
+    "id": "s2",
+    "ignitionDelay": 4,
+    "length": 15,
+    "name": "Second stage (Merlin Vacuum)",
+    "propellantMass": 108000,
+    "restartable": true,
+    "sepDelay": 3
+   }
+  ]
+ },
+ {
+  "country": "US",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 5.4,
+   "length": 20.7,
+   "mass": 3524,
+   "sepAltitude": 110000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 6,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.3,
+   "pitchMax": 25
+  },
+  "guidanceDefaultsSixDof": {
+   "kickAngle": 8
+  },
+  "height": 62.2,
+  "id": "atlasv551",
+  "manufacturer": "ULA",
+  "maxAccel": 49,
+  "maxQ": 45000,
+  "maxQThrottle": {
+   "qEnd": 22000,
+   "qStart": 22000,
+   "throttle": 0.6
+  },
+  "name": "Atlas V 551",
+  "notes": "Five solid boosters, kerolox core and a high-Isp hydrogen Centaur upper stage. The RD-180 throttles down through max-Q.",
+  "payloadGTO": 8900,
+  "payloadLEO": 18850,
+  "sites": [
+   "cape",
+   "vandenberg"
+  ],
+  "stages": [
+   {
+    "accentColor": "#7a4a17",
+    "boosters": [
+     {
+      "color": "#f4f4f4",
+      "count": 5,
+      "diameter": 1.6,
+      "dryMass": 5100,
+      "engine": {
+       "count": 1,
+       "ispSL": 254,
+       "ispVac": 279,
+       "name": "GEM-63",
+       "peakFactor": 1.27,
+       "solid": true,
+       "thrustSL": 1180000,
+       "thrustVac": 1300000
+      },
+      "id": "gem63",
+      "length": 20,
+      "name": "GEM-63 solid boosters",
+      "propellantMass": 44200,
+      "sepDelay": 5
+     }
+    ],
+    "color": "#c8792a",
+    "diameter": 3.81,
+    "dryMass": 21054,
+    "engine": {
+     "count": 1,
+     "ispSL": 311.3,
+     "ispVac": 337.8,
+     "minThrottle": 0.47,
+     "name": "RD-180",
+     "thrustSL": 3827000,
+     "thrustVac": 4152000
+    },
+    "id": "ccb",
+    "length": 32.5,
+    "name": "Common Core Booster (RD-180)",
+    "propellantMass": 284089
+   },
+   {
+    "color": "#e5e5e5",
+    "diameter": 3.05,
+    "dryMass": 2243,
+    "engine": {
+     "count": 1,
+     "ispSL": 280,
+     "ispVac": 449.7,
+     "name": "RL10C-1",
+     "thrustSL": 60000,
+     "thrustVac": 101800,
+     "vacuumOnly": true
+    },
+    "id": "centaur3",
+    "ignitionDelay": 10,
+    "length": 12.7,
+    "name": "Centaur III (RL10C-1)",
+    "propellantMass": 20830,
+    "restartable": true,
+    "sepDelay": 3
+   }
+  ]
+ },
+ {
+  "country": "US",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 5.4,
+   "length": 15.5,
+   "mass": 3500,
+   "sepAltitude": 110000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 3,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.3,
+   "parkingAltitude": 250000,
+   "pitchMax": 40
+  },
+  "height": 61.6,
+  "id": "vulcan",
+  "manufacturer": "ULA",
+  "maxAccel": 49,
+  "maxQ": 45000,
+  "maxQThrottle": {
+   "qEnd": 25000,
+   "qStart": 25000,
+   "throttle": 0.7
+  },
+  "name": "Vulcan Centaur VC4",
+  "notes": "Methalox first stage with up to six solids; Centaur V is a long-coast hydrogen upper stage.",
+  "payloadGTO": 11600,
+  "payloadLEO": 21400,
+  "payloadSSO": 18500,
+  "sites": [
+   "cape",
+   "vandenberg"
+  ],
+  "stages": [
+   {
+    "accentColor": "#c0392b",
+    "boosters": [
+     {
+      "color": "#f4f4f4",
+      "count": 4,
+      "diameter": 1.6,
+      "dryMass": 5177,
+      "engine": {
+       "count": 1,
+       "ispSL": 254,
+       "ispVac": 279,
+       "name": "GEM-63XL",
+       "peakFactor": 1.41,
+       "solid": true,
+       "thrustSL": 1340000,
+       "thrustVac": 1460000
+      },
+      "id": "gem63xl",
+      "length": 22,
+      "name": "GEM-63XL solid boosters",
+      "propellantMass": 47853,
+      "sepDelay": 6
+     }
+    ],
+    "color": "#f4f4f4",
+    "diameter": 5.4,
+    "dryMass": 28600,
+    "engine": {
+     "count": 2,
+     "ispSL": 310,
+     "ispVac": 340,
+     "minThrottle": 0.4,
+     "name": "BE-4",
+     "thrustSL": 2400000,
+     "thrustVac": 2600000
+    },
+    "id": "v1",
+    "length": 33.3,
+    "name": "First stage (2× BE-4)",
+    "propellantMass": 481700
+   },
+   {
+    "color": "#e5e5e5",
+    "diameter": 5.4,
+    "dryMass": 5000,
+    "engine": {
+     "count": 2,
+     "ispSL": 280,
+     "ispVac": 453.8,
+     "name": "RL10C-1-1",
+     "thrustSL": 60000,
+     "thrustVac": 106000,
+     "vacuumOnly": true
+    },
+    "id": "centaur5",
+    "ignitionDelay": 10,
+    "length": 11.7,
+    "name": "Centaur V (2× RL10C-1-1)",
+    "propellantMass": 54000,
+    "restartable": true,
+    "sepDelay": 3
+   }
+  ]
+ },
+ {
+  "country": "EU",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 5.4,
+   "length": 20,
+   "mass": 2900,
+   "sepAltitude": 115000,
+   "sepTime": 200
+  },
+  "guidanceDefaults": {
+   "kickAngle": 6,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35,
+   "pitchMin": 10
+  },
+  "height": 62,
+  "id": "ariane64",
+  "manufacturer": "ArianeGroup",
+  "maxAccel": 45,
+  "maxQ": 55000,
+  "name": "Ariane 64",
+  "notes": "Hydrogen core with four P120C solids; the Vinci upper stage restarts for multi-orbit missions.",
+  "payloadGTO": 11500,
+  "payloadLEO": 21600,
+  "payloadSSO": 15000,
+  "sites": [
+   "kourou"
+  ],
+  "stages": [
+   {
+    "accentColor": "#1d4f91",
+    "boosters": [
+     {
+      "color": "#f4f4f4",
+      "count": 4,
+      "diameter": 3.4,
+      "dryMass": 13000,
+      "engine": {
+       "count": 1,
+       "ispSL": 262,
+       "ispVac": 278.5,
+       "name": "P120C",
+       "peakFactor": 1.52,
+       "solid": true,
+       "thrustSL": 2677000,
+       "thrustVac": 2845600
+      },
+      "id": "p120c",
+      "length": 13.5,
+      "name": "P120C solid boosters",
+      "propellantMass": 142000,
+      "sepDelay": 2
+     }
+    ],
+    "color": "#f4f4f4",
+    "diameter": 5.4,
+    "dryMass": 15700,
+    "engine": {
+     "count": 1,
+     "ispSL": 318,
+     "ispVac": 431,
+     "name": "Vulcain 2.1",
+     "thrustSL": 960000,
+     "thrustVac": 1370000
+    },
+    "id": "llpm",
+    "length": 29,
+    "name": "Core (Vulcain 2.1)",
+    "propellantMass": 145000
+   },
+   {
+    "color": "#f4f4f4",
+    "diameter": 5.4,
+    "dryMass": 5300,
+    "engine": {
+     "count": 1,
+     "ispSL": 280,
+     "ispVac": 457,
+     "name": "Vinci",
+     "thrustSL": 100000,
+     "thrustVac": 180000,
+     "vacuumOnly": true
+    },
+    "id": "ulpm",
+    "ignitionDelay": 6,
+    "length": 11.6,
+    "name": "Upper stage (Vinci)",
+    "propellantMass": 31000,
+    "restartable": true,
+    "sepDelay": 3
+   }
+  ]
+ },
+ {
+  "country": "EU",
+  "fairing": {
+   "color": "#f0f0f0",
+   "diameter": 3.3,
+   "length": 9,
+   "mass": 500,
+   "sepAltitude": 120000,
+   "sepTime": 220
+  },
+  "guidanceDefaults": {
+   "kickAngle": 6,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.45,
+   "pitchMax": 35
+  },
+  "height": 34.8,
+  "id": "vegac",
+  "manufacturer": "Avio / ESA",
+  "maxAccel": 60,
+  "maxQ": 55000,
+  "name": "Vega-C",
+  "notes": "Three solid stages (P120C, Zefiro 40, Zefiro 9) and the restartable liquid AVUM+ kick stage. The P120C is shared with Ariane 6 as a strap-on.",
+  "payloadGTO": 0,
+  "payloadLEO": 3300,
+  "payloadSSO": 2300,
+  "sites": [
+   "kourou"
+  ],
+  "stages": [
+   {
+    "accentColor": "#1d4f91",
+    "color": "#f0f0f0",
+    "diameter": 3.4,
+    "dryMass": 11200,
+    "engine": {
+     "count": 1,
+     "ispSL": 262,
+     "ispVac": 278.5,
+     "name": "P120C",
+     "peakFactor": 1.52,
+     "solid": true,
+     "thrustSL": 2677000,
+     "thrustVac": 2845600
+    },
+    "id": "p120c",
+    "length": 13.5,
+    "name": "P120C (first stage)",
+    "propellantMass": 141400
+   },
+   {
+    "color": "#f0f0f0",
+    "diameter": 2.3,
+    "dryMass": 3230,
+    "engine": {
+     "count": 1,
+     "ispSL": 270,
+     "ispVac": 293.5,
+     "name": "Zefiro 40",
+     "peakFactor": 1.16,
+     "solid": true,
+     "thrustSL": 1033000,
+     "thrustVac": 1122900
+    },
+    "id": "z40",
+    "ignitionDelay": 1,
+    "length": 7.6,
+    "name": "Zefiro 40 (second stage)",
+    "propellantMass": 36239,
+    "sepDelay": 1
+   },
+   {
+    "color": "#f0f0f0",
+    "diameter": 1.9,
+    "dryMass": 929,
+    "engine": {
+     "count": 1,
+     "ispSL": 270,
+     "ispVac": 295.9,
+     "name": "Zefiro 9",
+     "peakFactor": 1.24,
+     "solid": true,
+     "thrustSL": 234000,
+     "thrustVac": 256399.99999999997
+    },
+    "id": "z9",
+    "ignitionDelay": 2,
+    "length": 4.12,
+    "name": "Zefiro 9 (third stage)",
+    "propellantMass": 10567,
+    "sepDelay": 2
+   },
+   {
+    "color": "#d8d8d8",
+    "diameter": 2.18,
+    "dryMass": 695,
+    "engine": {
+     "count": 1,
+     "ispSL": 248,
+     "ispVac": 315.8,
+     "name": "AVUM+ (RD-869)",
+     "thrustSL": 1900,
+     "thrustVac": 2420,
+     "vacuumOnly": true
+    },
+    "id": "avum",
+    "ignitionDelay": 4,
+    "length": 2.04,
+    "name": "AVUM+ (fourth stage)",
+    "propellantMass": 740,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "CN",
+  "fairing": {
+   "color": "#f0f0f0",
+   "diameter": 3.35,
+   "length": 6.98,
+   "mass": 800,
+   "sepAltitude": 120000,
+   "sepTime": 220
+  },
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "height": 41.06,
+  "id": "longmarch2d",
+  "manufacturer": "SAST",
+  "maxAccel": 60,
+  "maxQ": 45000,
+  "name": "Long March 2D",
+  "notes": "China's workhorse for sun-synchronous remote-sensing satellites: two hypergolic stages, flown from all three inland launch centres.",
+  "payloadGTO": 0,
+  "payloadLEO": 3500,
+  "payloadSSO": 1300,
+  "sites": [
+   "jiuquan",
+   "taiyuan",
+   "xichang"
+  ],
+  "stages": [
+   {
+    "accentColor": "#b0332a",
+    "color": "#f0f0f0",
+    "diameter": 3.35,
+    "dryMass": 9500,
+    "engine": {
+     "count": 4,
+     "ispSL": 260,
+     "ispVac": 289,
+     "name": "YF-21C (4× YF-20C)",
+     "thrustSL": 740400,
+     "thrustVac": 823000
+    },
+    "id": "cz2d1",
+    "length": 27.91,
+    "name": "First stage (YF-21C, 4× YF-20C)",
+    "propellantMass": 183200
+   },
+   {
+    "color": "#f0f0f0",
+    "diameter": 3.35,
+    "dryMass": 4000,
+    "engine": {
+     "count": 1,
+     "ispSL": 265.5,
+     "ispVac": 299.4,
+     "name": "YF-24C (YF-22C + 4× YF-23C)",
+     "thrustSL": 700000,
+     "thrustVac": 789140
+    },
+    "id": "cz2d2",
+    "ignitionDelay": 1,
+    "length": 10.9,
+    "name": "Second stage (YF-24C)",
+    "propellantMass": 35550,
+    "sepDelay": 1
+   }
+  ]
+ },
+ {
+  "country": "CN",
+  "fairing": {
+   "color": "#f0f0f0",
+   "diameter": 4.2,
+   "length": 9.56,
+   "mass": 2000,
+   "sepAltitude": 115000,
+   "sepTime": 215
+  },
+  "guidanceDefaults": {
+   "kickAngle": 4,
+   "loftAltitude": 150000,
+   "maxTurnRate": 0.3,
+   "pitchMax": 25
+  },
+  "height": 56.3,
+  "id": "longmarch3be",
+  "manufacturer": "CALT",
+  "maxAccel": 55,
+  "maxQ": 45000,
+  "name": "Long March 3B/E",
+  "notes": "China's main geostationary launcher: four liquid strap-ons, two hypergolic stages and a restartable YF-75 hydrogen third stage.",
+  "payloadGTO": 5500,
+  "payloadLEO": 11500,
+  "sites": [
+   "xichang"
+  ],
+  "stages": [
+   {
+    "accentColor": "#b0332a",
+    "boosters": [
+     {
+      "color": "#f0f0f0",
+      "conicalTop": true,
+      "count": 4,
+      "diameter": 2.25,
+      "dryMass": 3000,
+      "engine": {
+       "count": 1,
+       "ispSL": 260.66,
+       "ispVac": 289,
+       "name": "YF-25",
+       "thrustSL": 740400,
+       "thrustVac": 820900
+      },
+      "id": "cz3bb",
+      "length": 16.1,
+      "name": "Liquid strap-on boosters (YF-25)",
+      "propellantMass": 41100,
+      "sepDelay": 2
+     }
+    ],
+    "color": "#f0f0f0",
+    "diameter": 3.35,
+    "dryMass": 9800,
+    "engine": {
+     "count": 4,
+     "ispSL": 260,
+     "ispVac": 289,
+     "name": "YF-21C (4× YF-20C)",
+     "thrustSL": 740400,
+     "thrustVac": 823000
+    },
+    "id": "cz3b1",
+    "length": 24.76,
+    "name": "First stage (YF-21C, 4× YF-20C)",
+    "propellantMass": 186200
+   },
+   {
+    "color": "#f0f0f0",
+    "diameter": 3.35,
+    "dryMass": 4000,
+    "engine": {
+     "count": 1,
+     "ispSL": 265.5,
+     "ispVac": 299.4,
+     "name": "YF-24C (YF-22C + 4× YF-23C)",
+     "thrustSL": 700000,
+     "thrustVac": 789140
+    },
+    "id": "cz3b2",
+    "ignitionDelay": 1,
+    "length": 12.92,
+    "name": "Second stage (YF-24E)",
+    "propellantMass": 49400,
+    "sepDelay": 1
+   },
+   {
+    "color": "#f0f0f0",
+    "diameter": 3,
+    "dryMass": 2800,
+    "engine": {
+     "count": 1,
+     "ispSL": 314.5,
+     "ispVac": 438,
+     "name": "YF-75",
+     "thrustSL": 120000,
+     "thrustVac": 167170,
+     "vacuumOnly": true
+    },
+    "id": "cz3b3",
+    "ignitionDelay": 4,
+    "length": 12.38,
+    "name": "Third stage (2× YF-75, cryogenic)",
+    "propellantMass": 18200,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "JP",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 4.07,
+   "length": 12,
+   "mass": 1400,
+   "sepAltitude": 150000,
+   "sepTime": 250
+  },
+  "guidanceDefaults": {
+   "kickAngle": 4,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "height": 53,
+  "id": "h2a202",
+  "manufacturer": "MHI / JAXA",
+  "maxAccel": 50,
+  "maxQ": 40000,
+  "name": "H-IIA 202 (historical)",
+  "notes": "Retired 28 June 2025 after 50 flights. Hydrogen LE-7A core with two SRB-A solids and a restartable LE-5B upper stage; the direct ancestor of H3.",
+  "payloadGTO": 4100,
+  "payloadLEO": 10000,
+  "payloadSSO": 3600,
+  "sites": [
+   "tanegashima"
+  ],
+  "stages": [
+   {
+    "accentColor": "#f4f4f4",
+    "boosters": [
+     {
+      "color": "#f4f4f4",
+      "count": 2,
+      "diameter": 2.5,
+      "dryMass": 8700,
+      "engine": {
+       "count": 1,
+       "ispSL": 265,
+       "ispVac": 283.6,
+       "name": "SRB-A3",
+       "peakFactor": 1.22,
+       "solid": true,
+       "thrustSL": 1736000,
+       "thrustVac": 1857900
+      },
+      "id": "srba",
+      "length": 15.1,
+      "name": "SRB-A3 solid boosters",
+      "propellantMass": 66800,
+      "sepDelay": 8
+     }
+    ],
+    "color": "#e2762a",
+    "diameter": 4,
+    "dryMass": 13600,
+    "engine": {
+     "count": 1,
+     "ispSL": 337.8,
+     "ispVac": 440,
+     "name": "LE-7A",
+     "thrustSL": 843000,
+     "thrustVac": 1098000
+    },
+    "id": "h2a1",
+    "length": 37.2,
+    "name": "First stage (LE-7A)",
+    "propellantMass": 100000
+   },
+   {
+    "color": "#f4f4f4",
+    "diameter": 4,
+    "dryMass": 3000,
+    "engine": {
+     "count": 1,
+     "ispSL": 293.7,
+     "ispVac": 447,
+     "name": "LE-5B",
+     "thrustSL": 90000,
+     "thrustVac": 137000,
+     "vacuumOnly": true
+    },
+    "id": "h2a2",
+    "ignitionDelay": 6,
+    "length": 9.2,
+    "name": "Second stage (LE-5B)",
+    "propellantMass": 16600,
+    "restartable": true,
+    "sepDelay": 6
+   }
+  ]
+ },
+ {
+  "country": "CN",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 5.2,
+   "length": 12.3,
+   "mass": 3000,
+   "sepAltitude": 120000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.45,
+   "pitchMax": 35
+  },
+  "height": 57,
+  "id": "longmarch5",
+  "manufacturer": "CALT",
+  "maxAccel": 45,
+  "maxQ": 40000,
+  "name": "Long March 5",
+  "notes": "China's heavy-lift launcher: hydrogen core with four kerolox boosters.",
+  "payloadGTO": 14000,
+  "payloadLEO": 25000,
+  "payloadSSO": 15000,
+  "sites": [
+   "wenchang"
+  ],
+  "stages": [
+   {
+    "accentColor": "#1f5fbf",
+    "boosters": [
+     {
+      "color": "#f4f4f4",
+      "count": 4,
+      "diameter": 3.35,
+      "dryMass": 12000,
+      "engine": {
+       "count": 2,
+       "ispSL": 300,
+       "ispVac": 335,
+       "name": "YF-100",
+       "thrustSL": 1200000,
+       "thrustVac": 1340000
+      },
+      "id": "k3",
+      "length": 26.3,
+      "name": "Kerolox boosters (2× YF-100 each)",
+      "propellantMass": 144600,
+      "sepDelay": 3
+     }
+    ],
+    "color": "#f4f4f4",
+    "diameter": 5,
+    "dryMass": 21600,
+    "engine": {
+     "count": 2,
+     "ispSL": 310,
+     "ispVac": 430,
+     "name": "YF-77",
+     "thrustSL": 510000,
+     "thrustVac": 700000
+    },
+    "id": "cz5core",
+    "length": 33,
+    "name": "Core (2× YF-77)",
+    "propellantMass": 165300
+   },
+   {
+    "color": "#f4f4f4",
+    "diameter": 5,
+    "dryMass": 5500,
+    "engine": {
+     "count": 2,
+     "ispSL": 280,
+     "ispVac": 442,
+     "name": "YF-75D",
+     "thrustSL": 50000,
+     "thrustVac": 88360,
+     "vacuumOnly": true
+    },
+    "id": "cz5s2",
+    "ignitionDelay": 4,
+    "length": 12,
+    "name": "Second stage (2× YF-75D)",
+    "propellantMass": 25000,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "JP",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 5.2,
+   "length": 12,
+   "mass": 2400,
+   "sepAltitude": 120000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "height": 63,
+  "id": "h3",
+  "manufacturer": "MHI / JAXA",
+  "maxAccel": 45,
+  "maxQ": 40000,
+  "name": "H3-22",
+  "notes": "Expander-bleed LE-9 hydrogen engines with two SRB-3 solids.",
+  "payloadGTO": 4000,
+  "payloadLEO": 10000,
+  "payloadSSO": 4000,
+  "sites": [
+   "tanegashima"
+  ],
+  "stages": [
+   {
+    "accentColor": "#d35400",
+    "boosters": [
+     {
+      "color": "#f4f4f4",
+      "count": 2,
+      "diameter": 2.5,
+      "dryMass": 8700,
+      "engine": {
+       "count": 1,
+       "ispSL": 265,
+       "ispVac": 283.6,
+       "name": "SRB-3",
+       "peakFactor": 1.29,
+       "solid": true,
+       "thrustSL": 1650000,
+       "thrustVac": 1780000
+      },
+      "id": "srb3",
+      "length": 14.6,
+      "name": "SRB-3 solid boosters",
+      "propellantMass": 66800,
+      "sepDelay": 6
+     }
+    ],
+    "color": "#f4f4f4",
+    "diameter": 5.2,
+    "dryMass": 20000,
+    "engine": {
+     "count": 2,
+     "ispSL": 352,
+     "ispVac": 425,
+     "minThrottle": 0.63,
+     "name": "LE-9",
+     "thrustSL": 1220000,
+     "thrustVac": 1471000
+    },
+    "id": "h3s1",
+    "length": 37,
+    "name": "First stage (2× LE-9)",
+    "propellantMass": 225000
+   },
+   {
+    "color": "#f4f4f4",
+    "diameter": 5.2,
+    "dryMass": 3700,
+    "engine": {
+     "count": 1,
+     "ispSL": 280,
+     "ispVac": 448,
+     "name": "LE-5B-3",
+     "thrustSL": 80000,
+     "thrustVac": 137000,
+     "vacuumOnly": true
+    },
+    "id": "h3s2",
+    "ignitionDelay": 5,
+    "length": 12,
+    "name": "Second stage (LE-5B-3)",
+    "propellantMass": 23300,
+    "restartable": true,
+    "sepDelay": 3
+   }
+  ]
+ },
+ {
+  "country": "IN",
+  "fairing": {
+   "color": "#f4f4f4",
+   "diameter": 3.2,
+   "length": 8.3,
+   "mass": 1150,
+   "sepAltitude": 115000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 80000,
+   "maxTurnRate": 0.3,
+   "pitchMax": 25
+  },
+  "height": 44,
+  "id": "pslvxl",
+  "manufacturer": "ISRO",
+  "maxAccel": 60,
+  "maxQ": 70000,
+  "name": "PSLV-XL",
+  "notes": "Four alternating solid/liquid stages; two of six strap-ons are air-lit at T+25 s.",
+  "payloadGTO": 1425,
+  "payloadLEO": 3800,
+  "payloadSSO": 1750,
+  "sites": [
+   "sriharikota"
+  ],
+  "stages": [
+   {
+    "accentColor": "#e67e22",
+    "boosters": [
+     {
+      "color": "#f4f4f4",
+      "count": 4,
+      "diameter": 1,
+      "dryMass": 2010,
+      "engine": {
+       "count": 1,
+       "ispSL": 240,
+       "ispVac": 262,
+       "name": "PSOM-XL",
+       "peakFactor": 1.53,
+       "solid": true,
+       "thrustSL": 420000,
+       "thrustVac": 460000
+      },
+      "id": "psomg",
+      "length": 12,
+      "name": "PSOM-XL (ground-lit)",
+      "propellantMass": 12200,
+      "sepDelay": 2
+     },
+     {
+      "color": "#f4f4f4",
+      "count": 2,
+      "diameter": 1,
+      "dryMass": 2010,
+      "engine": {
+       "count": 1,
+       "ispSL": 240,
+       "ispVac": 262,
+       "name": "PSOM-XL",
+       "peakFactor": 1.53,
+       "solid": true,
+       "thrustSL": 420000,
+       "thrustVac": 460000
+      },
+      "id": "psoma",
+      "igniteAt": 25,
+      "length": 12,
+      "name": "PSOM-XL (air-lit)",
+      "propellantMass": 12200,
+      "sepDelay": 2
+     }
+    ],
+    "color": "#f4f4f4",
+    "diameter": 2.8,
+    "dryMass": 30200,
+    "engine": {
+     "count": 1,
+     "ispSL": 237,
+     "ispVac": 269,
+     "name": "S139",
+     "peakFactor": 1.43,
+     "solid": true,
+     "thrustSL": 3000000,
+     "thrustVac": 3400000
+    },
+    "id": "ps1",
+    "length": 20,
+    "name": "PS1 (S139 solid)",
+    "propellantMass": 138200
+   },
+   {
+    "color": "#f4f4f4",
+    "diameter": 2.8,
+    "dryMass": 5300,
+    "engine": {
+     "count": 1,
+     "ispSL": 262,
+     "ispVac": 293,
+     "name": "Vikas",
+     "thrustSL": 725000,
+     "thrustVac": 803000
+    },
+    "id": "ps2",
+    "ignitionDelay": 1,
+    "length": 12.8,
+    "name": "PS2 (Vikas)",
+    "propellantMass": 41000,
+    "sepDelay": 1
+   },
+   {
+    "color": "#f4f4f4",
+    "diameter": 2,
+    "dryMass": 1100,
+    "engine": {
+     "count": 1,
+     "ispSL": 260,
+     "ispVac": 295,
+     "name": "HPS3",
+     "peakFactor": 1.44,
+     "solid": true,
+     "thrustSL": 150000,
+     "thrustVac": 174000
+    },
+    "id": "ps3",
+    "ignitionDelay": 2,
+    "length": 3.6,
+    "name": "PS3 (HPS3 solid)",
+    "propellantMass": 7600,
+    "sepDelay": 2
+   },
+   {
+    "color": "#f4f4f4",
+    "diameter": 1.3,
+    "dryMass": 920,
+    "engine": {
+     "count": 2,
+     "ispSL": 260,
+     "ispVac": 308,
+     "name": "L-2-5",
+     "thrustSL": 5000,
+     "thrustVac": 7300,
+     "vacuumOnly": true
+    },
+    "id": "ps4",
+    "ignitionDelay": 3,
+    "length": 2.6,
+    "name": "PS4 (2× L-2-5)",
+    "propellantMass": 2500,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "NZ/US",
+  "fairing": {
+   "color": "#111",
+   "diameter": 1.2,
+   "length": 2.5,
+   "mass": 50,
+   "sepAltitude": 105000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 6,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.45,
+   "pitchMax": 35
+  },
+  "height": 18,
+  "id": "electron",
+  "manufacturer": "Rocket Lab",
+  "maxAccel": 60,
+  "maxQ": 50000,
+  "name": "Electron",
+  "notes": "Small carbon-composite launcher with electric-pump Rutherford engines and a Curie kick stage.",
+  "payloadGTO": 0,
+  "payloadLEO": 300,
+  "payloadSSO": 200,
+  "sites": [
+   "mahia",
+   "wallops"
+  ],
+  "stages": [
+   {
+    "accentColor": "#333",
+    "color": "#111",
+    "diameter": 1.2,
+    "dryMass": 850,
+    "engine": {
+     "count": 9,
+     "ispSL": 311,
+     "ispVac": 343,
+     "minThrottle": 0.5,
+     "name": "Rutherford",
+     "thrustSL": 24000,
+     "thrustVac": 25800
+    },
+    "id": "e1",
+    "length": 12.1,
+    "name": "First stage (9× Rutherford)",
+    "propellantMass": 9700
+   },
+   {
+    "color": "#111",
+    "diameter": 1.2,
+    "dryMass": 220,
+    "engine": {
+     "count": 1,
+     "ispSL": 260,
+     "ispVac": 343,
+     "minThrottle": 0.5,
+     "name": "Rutherford Vacuum",
+     "thrustSL": 18000,
+     "thrustVac": 25800,
+     "vacuumOnly": true
+    },
+    "id": "e2",
+    "ignitionDelay": 2,
+    "length": 2.4,
+    "name": "Second stage (Rutherford Vacuum)",
+    "propellantMass": 2300,
+    "sepDelay": 1
+   },
+   {
+    "color": "#222",
+    "diameter": 1.2,
+    "dryMass": 30,
+    "engine": {
+     "count": 1,
+     "ispSL": 250,
+     "ispVac": 320,
+     "name": "Curie",
+     "thrustSL": 100,
+     "thrustVac": 120,
+     "vacuumOnly": true
+    },
+    "id": "curie",
+    "ignitionDelay": 3,
+    "length": 0.5,
+    "name": "Curie kick stage",
+    "propellantMass": 150,
+    "restartable": true,
+    "sepDelay": 2
+   }
+  ]
+ },
+ {
+  "country": "US",
+  "crewCapable": true,
+  "fairing": null,
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "height": 123,
+  "id": "starship",
+  "manufacturer": "SpaceX",
+  "maxAccel": 40,
+  "maxQ": 35000,
+  "maxQThrottle": {
+   "qEnd": 25000,
+   "qStart": 25000,
+   "throttle": 0.8
+  },
+  "name": "Starship (Super Heavy)",
+  "notes": "Fully reusable two-stage methalox system; hot-staged ship, integrated payload bay (no fairing).",
+  "payloadGTO": 27000,
+  "payloadLEO": 100000,
+  "recoverable": true,
+  "recoveryReserve": 0.07,
+  "returnReserve": 0.11,
+  "sites": [
+   "starbase",
+   "cape"
+  ],
+  "stages": [
+   {
+    "accentColor": "#3b3b3b",
+    "color": "#a8a9ad",
+    "diameter": 9,
+    "dryMass": 220000,
+    "engine": {
+     "count": 33,
+     "ispSL": 327,
+     "ispVac": 347,
+     "minThrottle": 0.4,
+     "name": "Raptor 2",
+     "thrustSL": 2300000,
+     "thrustVac": 2500000
+    },
+    "gridFins": true,
+    "id": "superheavy",
+    "length": 71,
+    "name": "Super Heavy (33× Raptor)",
+    "propellantMass": 3500000
+   },
+   {
+    "accentColor": "#1c1c1c",
+    "color": "#a8a9ad",
+    "diameter": 9,
+    "dryMass": 130000,
+    "engine": {
+     "count": 6,
+     "ispSL": 320,
+     "ispVac": 365,
+     "minThrottle": 0.4,
+     "name": "Raptor 2 / RVac",
+     "thrustSL": 2000000,
+     "thrustVac": 2400000
+    },
+    "flaps": true,
+    "id": "ship",
+    "ignitionDelay": 0,
+    "length": 52,
+    "name": "Ship (3× Raptor + 3× RVac)",
+    "propellantMass": 1500000,
+    "restartable": true,
+    "sepDelay": 0
+   }
+  ]
+ },
+ {
+  "country": "SU",
+  "fairing": {
+   "color": "#d9d9d2",
+   "diameter": 2.95,
+   "length": 2.2,
+   "mass": 300,
+   "sepAltitude": 120000
+  },
+  "guidanceDefaults": {
+   "kickAngle": 3,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "guidanceDefaultsSixDof": {
+   "kickAngle": 5,
+   "kickDuration": 12,
+   "maxTurnRate": 0.5,
+   "pitchOverAltitude": 50
+  },
+  "height": 29.2,
+  "id": "sputnik8k71ps",
+  "manufacturer": "OKB-1 (Korolev)",
+  "maxAccel": 70,
+  "maxQ": 45000,
+  "name": "Sputnik (R-7 8K71PS)",
+  "notes": "Sputnik-1, 4 October 1957: the R-7 with no upper stage, its core flown into a 215 × 939 km orbit.",
+  "payloadGTO": 0,
+  "payloadLEO": 500,
+  "sites": [
+   "baikonur"
+  ],
+  "stages": [
+   {
+    "accentColor": "#5a6b4c",
+    "boosters": [
+     {
+      "color": "#c9c7bd",
+      "conicalTop": true,
+      "count": 4,
+      "diameter": 2.68,
+      "dryMass": 3500,
+      "engine": {
+       "count": 1,
+       "ispSL": 248.8,
+       "ispVac": 306,
+       "name": "RD-107 (8D74PS)",
+       "thrustSL": 813000,
+       "thrustVac": 1000000
+      },
+      "id": "blokBVGD",
+      "length": 19,
+      "name": "Blok B/V/G/D boosters",
+      "propellantMass": 39500,
+      "sepDelay": 1
+     }
+    ],
+    "color": "#c9c7bd",
+    "diameter": 2.95,
+    "dryMass": 7500,
+    "engine": {
+     "count": 1,
+     "ispSL": 243.8,
+     "ispVac": 308,
+     "name": "RD-108 (8D75PS)",
+     "thrustSL": 745000,
+     "thrustVac": 941000
+    },
+    "id": "blokA",
+    "length": 26,
+    "name": "Blok A (core, RD-108)",
+    "profile": "r7Core",
+    "propellantMass": 90000
+   }
+  ]
+ },
+ {
+  "country": "SU",
+  "fairing": {
+   "color": "#d9d9d2",
+   "diameter": 2.6,
+   "length": 5,
+   "mass": 800,
+   "sepAltitude": 100000,
+   "sepTime": 156
+  },
+  "guidanceDefaults": {
+   "kickAngle": 3,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "guidanceDefaultsSixDof": {
+   "kickAngle": 4,
+   "kickDuration": 12,
+   "maxTurnRate": 0.5,
+   "pitchOverAltitude": 50
+  },
+  "height": 38.4,
+  "id": "vostok8k72k",
+  "manufacturer": "OKB-1 (Korolev)",
+  "maxAccel": 70,
+  "maxQ": 45000,
+  "name": "Vostok-K (8K72K)",
+  "notes": "Vostok-1, 12 April 1961: the R-7 with Blok E, inserting Vostok 3KA directly into a 181 × 327 km orbit.",
+  "payloadGTO": 0,
+  "payloadLEO": 4730,
+  "sites": [
+   "baikonur"
+  ],
+  "stages": [
+   {
+    "accentColor": "#5a6b4c",
+    "boosters": [
+     {
+      "color": "#c9c7bd",
+      "conicalTop": true,
+      "count": 4,
+      "diameter": 2.68,
+      "dryMass": 3450,
+      "engine": {
+       "count": 1,
+       "ispSL": 257,
+       "ispVac": 313,
+       "name": "RD-107 (8D74K)",
+       "thrustSL": 821000,
+       "thrustVac": 1000000
+      },
+      "id": "blokBVGD",
+      "length": 19.8,
+      "name": "Blok B/V/G/D boosters",
+      "propellantMass": 39250,
+      "sepDelay": 1
+     }
+    ],
+    "color": "#c9c7bd",
+    "diameter": 2.95,
+    "dryMass": 6800,
+    "engine": {
+     "count": 1,
+     "ispSL": 249.4,
+     "ispVac": 315,
+     "name": "RD-108 (8D75K)",
+     "thrustSL": 745000,
+     "thrustVac": 941000
+    },
+    "id": "blokA",
+    "length": 28,
+    "name": "Blok A (core, RD-108)",
+    "profile": "r7Core",
+    "propellantMass": 93000
+   },
+   {
+    "color": "#c9c7bd",
+    "diameter": 2.56,
+    "dryMass": 1440,
+    "engine": {
+     "count": 1,
+     "ispSL": 240,
+     "ispVac": 323.5,
+     "name": "RD-0109",
+     "thrustSL": 40000,
+     "thrustVac": 54500,
+     "vacuumOnly": true
+    },
+    "id": "blokE",
+    "ignitionDelay": 0,
+    "length": 3.1,
+    "name": "Blok E (RD-0109)",
+    "profile": "r7Upper",
+    "propellantMass": 7780,
+    "sepDelay": 0
+   }
+  ]
+ },
+ {
+  "country": "US",
+  "crewCapable": true,
+  "fairing": null,
+  "guidanceDefaults": {
+   "kickAngle": 1.5,
+   "loftAltitude": 0,
+   "maxTurnRate": 0.3,
+   "pitchMax": 35
+  },
+  "height": 110.6,
+  "id": "saturnv",
+  "manufacturer": "Boeing / North American / Douglas (NASA MSFC)",
+  "maxAccel": 45,
+  "maxQ": 40000,
+  "name": "Saturn V",
+  "notes": "Apollo 11, 16 July 1969: S-IC, S-II and a restartable S-IVB, which relit in orbit for the translunar injection.",
+  "payloadGTO": 0,
+  "payloadLEO": 118000,
+  "sites": [
+   "ksc39a"
+  ],
+  "stages": [
+   {
+    "accentColor": "#1a1a1a",
+    "color": "#f4f4f4",
+    "diameter": 10.1,
+    "dryMass": 135000,
+    "engine": {
+     "count": 5,
+     "ispSL": 264.9,
+     "ispVac": 304,
+     "name": "F-1",
+     "thrustSL": 6770000,
+     "thrustVac": 7770000
+    },
+    "fins": true,
+    "id": "sic",
+    "length": 42,
+    "name": "S-IC (5× F-1)",
+    "propellantMass": 2145000
+   },
+   {
+    "accentColor": "#1a1a1a",
+    "color": "#f4f4f4",
+    "diameter": 10.1,
+    "dryMass": 40000,
+    "engine": {
+     "count": 5,
+     "ispSL": 200,
+     "ispVac": 421,
+     "name": "J-2",
+     "thrustSL": 486000,
+     "thrustVac": 1033000,
+     "vacuumOnly": true
+    },
+    "id": "sii",
+    "ignitionDelay": 2,
+    "length": 24.9,
+    "name": "S-II (5× J-2)",
+    "propellantMass": 443000,
+    "sepDelay": 1
+   },
+   {
+    "accentColor": "#1a1a1a",
+    "color": "#f4f4f4",
+    "diameter": 6.6,
+    "dryMass": 15300,
+    "engine": {
+     "count": 1,
+     "ispSL": 200,
+     "ispVac": 421,
+     "name": "J-2",
+     "thrustSL": 486000,
+     "thrustVac": 1033000,
+     "vacuumOnly": true
+    },
+    "id": "sivb",
+    "ignitionDelay": 3,
+    "length": 18.8,
+    "name": "S-IVB (J-2) + IU",
+    "propellantMass": 109000,
+    "restartable": true,
+    "sepDelay": 1
+   }
+  ]
+ }
+]

@@ -21,9 +21,10 @@ import {
 import { PLAYGROUND_PRESET_IDS, SITE_INCLINATION_DEG, presetOrbit } from '../src/orbit/presets';
 import { TOUR } from '../src/orbit/tour';
 import {
-  PG_LIMITS, PG_WARPS, PG_DEFAULT_WARP, SLIDER_STEPS, handoffOrbit, linearScale, logScale, repeatGroundTrack, tourSetup, withApsis,
+  PG_LIMITS, PG_WARPS, PG_DEFAULT_WARP, SLIDER_STEPS, handoffEntry, handoffOrbit, linearScale, logScale, repeatGroundTrack, tourSetup, withApsis,
 } from '../src/orbit/playground-model';
 import { handoffElements } from '../src/orbit/handoff';
+import { defaultApps } from '../src/orbit/applications-setup';
 import { trackSpans } from '../src/ui/orbit/ground-track';
 import { ballAt, framing } from '../src/ui/orbit/cannon-view';
 import { BUILT_ITEMS, SECTION_PLANS } from '../src/ui/section-plan';
@@ -277,5 +278,23 @@ describe('the Watch tour (O01)', () => {
     expect(Math.abs(s1.lat / DEG)).toBeLessThan(0.01);
     const west = ((s0.lon - s1.lon) / DEG + 360) % 360;
     expect(west).toBeCloseTo(f.trackShift / DEG, 2);
+  });
+});
+
+describe('a flight handed on while the real satellites are showing (audit 2026-09-27 A6)', () => {
+  it('leaves the real satellites for the orbit handed on', () => {
+    expect(handoffEntry({ mode: 'sky', apps: null }).leaveSky).toBe(true);
+    expect(handoffEntry({ mode: 'orbit', apps: null }).leaveSky).toBe(false);
+  });
+
+  it('keeps nothing that describes another satellite, and the rest of an application', () => {
+    const apps = { ...defaultApps('thai'), thaiId: 'theos2' };
+    const entry = handoffEntry({ mode: 'sky', apps });
+    expect(entry.skyLabel).toBeNull();
+    expect(entry.apps).toEqual({ ...apps, thaiId: null });
+    expect(apps.thaiId).toBe('theos2');
+    const eo = { ...defaultApps('eo'), stationId: 'moscow', thaiId: 'theos2' };
+    expect(handoffEntry({ mode: 'orbit', apps: eo }).apps).toEqual({ ...eo, thaiId: null });
+    expect(handoffEntry({ mode: 'orbit', apps: null }).apps).toBeNull();
   });
 });

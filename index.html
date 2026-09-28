@@ -6,6 +6,20 @@
     <title>Orbitlab — launch &amp; orbital insertion simulator</title>
     <meta id="meta-description" name="description" content="Physics-based rocket launch and orbital insertion simulator: real launch vehicles, satellites, orbit presets, four camera views and engineering telemetry." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1017'/%3E%3Cellipse cx='32' cy='32' rx='26' ry='12' transform='rotate(-32 32 32)' fill='none' stroke='%238be5cd' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='10' fill='%238be5cd'/%3E%3C/svg%3E" />
+    <!-- How a link to the site is shown where it is shared (LINE, Facebook, Telegram, X…). Those
+         sites read these without running the page, so the picture's address is written out whole;
+         the picture is the landing page's first screen (public/social/preview.jpg, npm run shots). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Orbitlab" />
+    <meta property="og:title" content="Orbitlab — watch a real rocket fly to space" />
+    <meta property="og:description" content="Real launch vehicles and real physics, from the launch pad to orbit, explained as they fly. Lessons, an orbit playground and the space station where it is now. In English, Thai and Russian; works offline." />
+    <meta property="og:url" content="https://royin001.github.io/Orbitlab/" />
+    <meta property="og:image" content="https://royin001.github.io/Orbitlab/social/preview.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A Soyuz rocket on its launch pad, beside the words: Watch a real rocket fly to space" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <meta name="theme-color" content="#080c13" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
@@ -33,7 +47,7 @@
             <a href="#/home" data-section="home" data-i18n-title="mode.home"><span class="mode-glyph" aria-hidden="true">⌂</span><span data-i18n="mode.home">Home</span></a>
             <a href="#/launch/explore" data-section="launch" data-i18n-title="section.launch"><span class="mode-glyph" aria-hidden="true">▲</span><span data-i18n="section.launch">Launch</span></a>
             <a href="#/orbit/explore" data-section="orbit" data-i18n-title="section.orbit"><span class="mode-glyph" aria-hidden="true">⊕</span><span data-i18n="section.orbit">Orbit</span></a>
-            <a href="#/build/explore" data-section="build" data-i18n-title="section.build"><span class="mode-glyph" aria-hidden="true">⚙&#xFE0E;</span><span data-i18n="section.build">Build</span></a>
+            <a href="#/build/watch" data-section="build" data-i18n-title="section.build"><span class="mode-glyph" aria-hidden="true">⚙&#xFE0E;</span><span data-i18n="section.build">Build</span></a>
           </nav>
           <nav id="mode-nav" class="mode-nav level-nav" data-i18n-aria-label="mode.nav">
             <a href="#/launch/watch" data-mode="watch" data-i18n-title="mode.watch"><span class="mode-glyph" aria-hidden="true">▷</span><span data-i18n="mode.watch">Watch</span></a>
@@ -126,8 +140,8 @@
             <!-- Explore's card at the end of a flight (src/ui/explore-debrief.ts) -->
             <div id="explore-debrief" hidden></div>
             <section id="home-screen" hidden></section>
-            <!-- S01: the Build section's plan, over the same scene -->
-            <section id="section-screen" hidden></section>
+            <!-- Phase 3: the Build section (src/ui/build/build-screen.ts), over the same scene -->
+            <section id="build-screen" hidden></section>
             <!-- O01: the Orbit section's playground (src/ui/orbit/playground.ts) -->
             <section id="orbit-playground" hidden></section>
           </div>

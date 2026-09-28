@@ -57,6 +57,21 @@ The rules are now one DOM-free module, `src/ui/workspace-mission.ts`:
   panel already holds the user's mission (e.g. a flight of it is under way) it is left as is.
 - Home re-renders when it is shown, so the card follows the stored mission.
 
+## Merge with main (after S2a, S3, S4a, S6 and the Home redesign)
+
+`main` replaced the landing page with a scrolling page of chapters (`src/ui/home.ts`, `home.css`,
+`home-stage.ts`) and built the Build section's first levels. Resolved as follows:
+
+- **A8 badge: superseded.** The new Home has no section cards and no "In development" badge; Orbit has its own
+  chapter with a call to action. The S1 Orbit card, `section.ready`, `home.orbit.*` and the `.section-badge.ready`
+  rule were dropped; `home.section.orbitOpen` is used again by the new page and stays.
+- **Continue card: kept**, moved into the new page's first screen under its two buttons, styled in `home.css`
+  (`.home-resume`). `HomeHost` keeps `lastMission()` / `continueMission()`; `refresh()` re-renders on the way back.
+- **`main.ts`**: `HomeStage`, `BuildScreen` and `homeStage.leave()` from main alongside the A1/A10 wiring;
+  `modes.css` is main's.
+
+The sections below describe the branch before the merge.
+
 ## Decisions
 
 - **Watch → workspace keeps the watched flight.** The plan asks that Watch never overwrite the user's

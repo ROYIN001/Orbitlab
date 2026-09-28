@@ -1,15 +1,16 @@
 /**
  * The long-term propagator (roadmap P07): each force against what it must
  * reproduce, the two methods against each other, and the guarantee that the
- * flight does not use it.
+ * flight does not use it. The drag's average over an eccentric revolution
+ * (P2.5) is held to a fine even sampling of it.
  */
 import { describe, expect, it } from 'vitest';
-import { propagate, elementsOf } from '../src/physics/propagator/propagate';
-import { ALL_FORCES, J3_EARTH, J4_EARTH, gravityAcceleration, inShadow, type ForceModel } from '../src/physics/propagator/forces';
+import { dragRates, propagate, elementsOf, stateAt } from '../src/physics/propagator/propagate';
+import { ALL_FORCES, J3_EARTH, J4_EARTH, acceleration, gravityAcceleration, inShadow, type ForceModel } from '../src/physics/propagator/forces';
 import { moonPosition, sunPosition, AU, type V3 } from '../src/physics/propagator/ephemeris';
-import { harrisPriesterBounds, harrisPriesterDensity } from '../src/physics/propagator/density';
+import { airDensity } from '../src/physics/propagator/density';
 import { ECSS_LEVELS, type EcssLevel } from '../src/physics/propagator/activity';
-import { J2_EARTH, MU_EARTH, R_EARTH } from '../src/physics/constants';
+import { J2_EARTH, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../src/physics/constants';
 
 const DEG = Math.PI / 180;
 const JD = 2461310.5; // 2026-09-25
@@ -69,18 +70,39 @@ describe('forces (P07)', () => {
     expect(inShadow([-7e6, 7e6, 0], sun)).toBe(false);
   });
 
-  it('reads the Harris–Priester table, with its bulge', () => {
-    const [mn, mx] = harrisPriesterBounds(400);
-    expect(mn).toBeCloseTo(2.249e-12, 15);
-    expect(mx).toBeCloseTo(7.492e-12, 15);
-    expect(harrisPriesterBounds(1200)).toEqual([0, 0]);
-    const sun: V3 = [AU, 0, 0];
-    const r = R_EARTH + 400e3;
-    // the apex lags the Sun by 30°: afternoon is densest, the far side thinnest
-    const apex = harrisPriesterDensity([r * Math.cos(30 * DEG), r * Math.sin(30 * DEG), 0], 400, sun, 4);
-    const night = harrisPriesterDensity([-r * Math.cos(30 * DEG), -r * Math.sin(30 * DEG), 0], 400, sun, 4);
-    expect(apex).toBeCloseTo(mx, 15);
-    expect(night).toBeCloseTo(mn, 15);
+  it('drags with NRLMSISE-00\'s air turning with the Earth: −½ ρ C_D (A/m) |v_r| v_r', () => {
+    const r: V3 = [R_EARTH + 350e3, 1e5, 2e5], v: V3 = [10, 7000, 3000];
+    const sc = { mass: 100, area: 2, cd: 2.2, cr: 1.3 };
+    const on = acceleration(r, v, JD, { ...NONE, drag: true }, sc), off = acceleration(r, v, JD, NONE, sc);
+    const rho = airDensity(r, JD, ECSS_LEVELS.moderate);
+    expect(rho).toBeGreaterThan(1e-12);
+    const vr: V3 = [v[0] + OMEGA_EARTH * r[1], v[1] - OMEGA_EARTH * r[0], v[2]];
+    const k = -0.5 * rho * sc.cd * (sc.area / sc.mass) * Math.hypot(...vr);
+    // the difference of two accelerations some 10⁶ times the drag: good to a few parts in 10⁸
+    for (let i = 0; i < 3; i++) expect((on[i] - off[i]) / (k * vr[i])).toBeCloseTo(1, 6);
+  });
+
+  it('averages the drag over an eccentric revolution as a fine even sampling does', () => {
+    // a geostationary transfer orbit, perigee 200 km: the air is met over a few degrees about the perigee
+    const rp = R_EARTH + 200e3, ra = R_EARTH + 35786e3, a = (rp + ra) / 2, e = (ra - rp) / (ra + rp);
+    const sc = { mass: 3000, area: 15, cd: 2.2, cr: 1.3 };
+    const f = { ...NONE, drag: true };
+    for (const el of [{ a, e, i: 27 * DEG, raan: 1, argp: 2, M: 0 }, { a: R_EARTH + 400e3, e: 0.001, i: 51.6 * DEG, raan: 1, argp: 2, M: 0 }]) {
+      const got = dragRates(el, JD, f, sc);
+      // the same Gauss equation by 20 000 even points of eccentric anomaly
+      let da = 0;
+      const N = 20000;
+      for (let k = 0; k < N; k++) {
+        const E = (2 * Math.PI * (k + 0.5)) / N;
+        const { r, v } = stateAt(el, E);
+        const rho = airDensity(r, JD, ECSS_LEVELS.moderate);
+        const vr: V3 = [v[0] + OMEGA_EARTH * r[1], v[1] - OMEGA_EARTH * r[0], v[2]];
+        const kd = -0.5 * rho * sc.cd * (sc.area / sc.mass) * Math.hypot(...vr);
+        da += (Math.hypot(...r) / el.a / N) * ((2 * el.a * el.a) / MU_EARTH) * kd * (v[0] * vr[0] + v[1] * vr[1] + v[2] * vr[2]);
+      }
+      expect(got.da / da, `e = ${el.e}`).toBeGreaterThan(0.97);
+      expect(got.da / da, `e = ${el.e}`).toBeLessThan(1.03);
+    }
   });
 });
 
@@ -171,9 +193,10 @@ describe('the flight is untouched (P07)', () => {
     const users = Object.entries(src)
       .filter(([path, text]) => !path.includes('/propagator/') && /from ['"][^'"]*propagator\//.test(text))
       .map(([path]) => path.replace('../src/', ''));
-    // the lifetime window, its worker, the app wiring that opens it, and the Orbit section (S03)
+    // the lifetime window, its worker, the app wiring that opens it, the Orbit section (S03), and the
+    // worksheets from real cases, which predict a re-entry (P2.5)
     const allowed = (p: string) => p.startsWith('ui/') || p.startsWith('orbit/') || p === 'main.ts'
-      || p === 'physics/lifetime.worker.ts' || p === 'physics/lifetime-job.ts';
+      || p === 'physics/lifetime.worker.ts' || p === 'physics/lifetime-job.ts' || p === 'worksheets/cases.ts';
     expect(users.filter((p) => !allowed(p))).toEqual([]);
     expect(users.some((p) => p.startsWith('physics/sim/') || p.startsWith('physics/rigid/') || p === 'physics/simulation.ts')).toBe(false);
   });

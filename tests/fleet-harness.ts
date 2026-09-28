@@ -171,9 +171,13 @@ export function allCases(): FleetCase[] {
 /**
  * Fly one fleet case with the vehicle's default guidance. `dynamics` flies it
  * as a rigid body instead of the point-mass model the regular fleet test uses
- * (the six-DOF fleet suite, `npm run test:sixdof-fleet`).
+ * (the six-DOF fleet suite, `npm run test:sixdof-fleet`). `onStep`, when
+ * given, sees the simulation after every step and must only read it: the D01
+ * fleet fingerprints (tests/d01-fleet-fingerprint.test.ts) sample the flight
+ * through it, so they hash the very flight the fleet matrix grades.
  */
-export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: DynamicsConfig): Simulation {
+export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: DynamicsConfig,
+  onStep?: (sim: Simulation) => void): Simulation {
   const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
   const orbit = orbitById(c.orbit);
   const window = orbit.raanMode === 'free' ? undefined : launchWindows(orbit, siteById(c.site), LAUNCH_TIME, 1)[0];
@@ -192,7 +196,10 @@ export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: Dynam
   // Six-DOF flies its powered phases in 0.01 s control ticks.
   const maxSteps = dynamics?.model === 'sixDof' ? 20_000_000 : 400000;
   let guard = 0;
-  while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) sim.step(sim.suggestedDt());
+  while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) {
+    sim.step(sim.suggestedDt());
+    onStep?.(sim);
+  }
   return sim;
 }
 
