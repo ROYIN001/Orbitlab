@@ -21,7 +21,6 @@
 
 .be-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 28px; }
 .be-head-text { flex: 1 1 440px; min-width: 0; }
-.be-head .section-badge { vertical-align: 1px; }
 .be-bench { flex: 0 1 360px; min-width: 240px; }
 .be-bench-note { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
 .be-bench-msg { margin: 6px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--warn); }

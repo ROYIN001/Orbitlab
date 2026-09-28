@@ -303,8 +303,8 @@ export class EngineerLevel {
   }
 
   private renderHead(): void {
+    // built, as the Watch and Explore levels are (BUILD_READY_LEVELS): no "in development" badge
     const eyebrow = el('span', 'eyebrow bs-eyebrow', `${t('section.build')} · ${t('mode.engineer')}`);
-    eyebrow.append(' ', el('span', 'section-badge', t('section.inDevelopment')));
     const title = el('h1', 'bs-title', t('build.eng.title'));
     title.id = this.titleId;
     const text = el('div', 'be-head-text');
