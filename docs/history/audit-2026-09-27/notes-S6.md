@@ -71,7 +71,17 @@
 
 ## เวลา CI ที่เพิ่มขึ้น
 
-(เติมหลัง CI รอบแรกบน PR)
+job `browser-smoke` รันขนานกับ job `test` เดิม (ไม่ต่อท้าย) จึงเพิ่มเวลารอ PR เฉพาะเมื่อยาวกว่า `test`:
+
+| ขั้น | ประมาณในเครื่อง | บน GitHub Actions |
+|---|---|---|
+| `npm ci` + `playwright install --with-deps chromium` + build | ~1 นาที (ไม่รวม apt) | CI_MEASURED_SETUP |
+| smoke 3 journey | 276 s | CI_MEASURED_SMOKE |
+| รวม job | ~5–6 นาที | CI_MEASURED_TOTAL |
+
+deploy เพิ่ม: เกต snapshot ~8 s (vitest 2 ไฟล์) + ติดตั้ง Chromium + ชุดเต็ม 4 journey (~340 s ในเครื่อง: smoke 276 s + pwa-offline 64 s)
+
+job `browser-smoke` ถูก skip บน push event โดยตั้งใจ (`if: github.event_name == 'pull_request'`) เพื่อไม่ให้รันซ้ำสองครั้งต่อ commit
 
 ## บั๊ก/ข้อสังเกตที่ journey พบแต่ไม่ได้แก้ (ห้ามแก้ src ในเซสชันนี้)
 
