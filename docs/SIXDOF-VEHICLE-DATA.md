@@ -475,6 +475,11 @@ row's 1.64 Hz exactly) and the rate-gain cap with it, to about 1.6/s. In flight 
 1.61 Hz at T+25 s where it was 1.72 Hz. Consequences for the tuned flexible autopilot are in
 PHYSICS.md §2g.
 
+The Falcon Heavy row too was measured with the earlier masses. With the published Falcon 9
+first-stage load on all three cores and the side boosters' published empty mass (VALIDATION.md,
+F11) the lift-off stack is 1 420.3 t, the published 1 420 t, and the same run lowers f₁ by 3.5 %
+(from 1.80 to 1.74 Hz) and the rate-gain cap to 1.82/s.
+
 The frequencies rise as the propellant goes (Falcon 9's from 1.6 Hz at liftoff to 2.5 Hz at
 T+120 s) and jump at every separation: the stacks left after it measured 9–75 Hz (Vega-C 18 Hz,
 then 49 Hz; Soyuz-2.1b's Blok I with Fregat 45 Hz; H3's second stage 75 Hz), and those above

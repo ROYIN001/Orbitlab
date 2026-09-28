@@ -1,8 +1,10 @@
 /**
  * The datasets the app can load (roadmap S04), each with its bundled
  * snapshot and, for online mode, where it comes from and how the answers
- * become the dataset: space weather (S04; R05's density model reads it) and the
- * satellite catalogue (R02); launches (Launch Library 2) will join them.
+ * become the dataset: space weather (S04; R05's density model reads it), the
+ * satellite catalogue (R02) and the Earth's orientation (P2.5, snapshot only:
+ * its source cannot be read from a browser); launches (Launch Library 2) will
+ * join them.
  *
  * Online sources, as checked on 2026-09-26: NOAA SWPC, CelesTrak's GP JSON
  * and Launch Library 2 all answer `access-control-allow-origin: *`, so a
@@ -11,7 +13,8 @@
  * the user imports.
  */
 import { SWPC_F107_URL, SWPC_FORECAST_URL, SWPC_KP_URL, SWPC_MONTHLY_URL, parseSwpc, validSpaceWeather, type SpaceWeather } from './space-weather';
-import { SATELLITES_MIN_INTERVAL_MS, SATELLITE_URLS, parseCelestrakGp, validSatelliteCatalog, type SatelliteCatalog } from './satellites';
+import { SATELLITES_MIN_INTERVAL_MS, SATELLITE_URLS, mergeCelestrakGp, parseCelestrakGp, validSatelliteCatalog, type SatelliteCatalog } from './satellites';
+import { validEarthOrientation, type EarthOrientation } from './earth-orientation';
 
 export interface DatasetSource {
   /** who publishes it */
@@ -25,8 +28,21 @@ export interface DatasetDef<T> {
   /** the bundled snapshot, relative to the app's base (under `public/`) */
   snapshot: string;
   source: DatasetSource;
-  /** online: the URLs to fetch, and how their JSON answers, in that order, become the dataset and its "data as of" */
-  online: { urls: readonly string[]; parse(answers: unknown[]): { data: T; asOf: string } };
+  /**
+   * online: the URLs to fetch, and how their JSON answers, in that order,
+   * become the dataset and its "data as of"; null for a dataset whose source a
+   * browser cannot read, which comes from its snapshot in either mode
+   */
+  online: {
+    urls: readonly string[];
+    parse(answers: unknown[]): { data: T; asOf: string };
+    /**
+     * P2.5: the dataset from the answers that came, with the snapshot's part
+     * for each that failed (null) — which parts those are; absent: one failed
+     * answer is the whole snapshot
+     */
+    merge?(answers: readonly unknown[], snapshot: T): { data: T; asOf: string; parts: string[] };
+  } | null;
   /** the dataset's data, from whichever side it came: checked, never trusted */
   valid(data: unknown): data is T;
   /**
@@ -39,6 +55,7 @@ export interface DatasetDef<T> {
 export interface DatasetTypes {
   spaceWeather: SpaceWeather;
   satellites: SatelliteCatalog;
+  earthOrientation: EarthOrientation;
 }
 export type DatasetId = keyof DatasetTypes;
 
@@ -57,13 +74,21 @@ export const DATASETS: { readonly [K in DatasetId]: DatasetDef<DatasetTypes[K]> 
     id: 'satellites',
     snapshot: 'data/satellites.json',
     source: { name: 'CelesTrak', url: 'https://celestrak.org/NORAD/elements/' },
-    online: { urls: SATELLITE_URLS, parse: parseCelestrakGp },
+    online: { urls: SATELLITE_URLS, parse: parseCelestrakGp, merge: mergeCelestrakGp },
     valid: validSatelliteCatalog,
     minIntervalMs: SATELLITES_MIN_INTERVAL_MS,
+  },
+  earthOrientation: {
+    id: 'earthOrientation',
+    snapshot: 'data/earth-orientation.json',
+    source: { name: 'IERS Earth Orientation Center, Bulletin A (finals2000A)', url: 'https://datacenter.iers.org/' },
+    // the IERS sends no cross-origin header: the scheduled build refreshes the snapshot instead
+    online: null,
+    valid: validEarthOrientation,
   },
 };
 
 export const DATASET_IDS = Object.keys(DATASETS) as DatasetId[];
 
 /** Hosts the online datasets are fetched from: the service worker keeps their answers for when the network goes (S04). */
-export const DATA_HOSTS: readonly string[] = [...new Set(DATASET_IDS.flatMap((id) => DATASETS[id].online.urls.map((u) => new URL(u).hostname)))];
+export const DATA_HOSTS: readonly string[] = [...new Set(DATASET_IDS.flatMap((id) => DATASETS[id].online?.urls.map((u) => new URL(u).hostname) ?? []))];

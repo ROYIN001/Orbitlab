@@ -96,7 +96,8 @@ describe('engine specs', () => {
  *
  * Only figures that are actually published for the stage in question are
  * listed; a stage with no entry is not checked. Sources are cited next to the
- * stage in `src/data/vehicles.ts`.
+ * stage's body in the parts catalogue, `src/data/parts.ts`, or next to the
+ * vehicle in `src/data/vehicles.ts`.
  */
 const PUBLISHED_BURN_TIME: Record<string, number> = {
   // Vega-C — https://en.wikipedia.org/wiki/Vega_C
@@ -106,7 +107,7 @@ const PUBLISHED_BURN_TIME: Record<string, number> = {
   // Ariane 6 flies the same P120C as a strap-on, but quotes ~130 s for it
   // against Avio's 135.7 s on Vega-C: the same grain, two operators, two
   // published burn times. Both are listed as published, and the single mean
-  // thrust in vehicles.ts sits between them (136.3 s here, 135.7 s on Vega-C).
+  // thrust in src/data/parts.ts sits between them (136.3 s here, 135.7 s on Vega-C).
   // docs/history/AUDIT-2026-09-16.md B22 uses the 130 s figure.
   'ariane64/llpm/p120c': 130,
   // Pre-existing solids. Published figures from docs/history/AUDIT-2026-09-16.md B22,

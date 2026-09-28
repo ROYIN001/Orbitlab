@@ -1,0 +1,243 @@
+{
+  "format": "orbitlab.lessons",
+  "version": 1,
+  "lessons": [
+    {
+      "id": "orbit-first",
+      "track": 1,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        2,
+        1
+      ],
+      "tags": [
+        "hp ha",
+        "T"
+      ],
+      "title": {
+        "en": "Your first orbit",
+        "ru": "Первая орбита",
+        "th": "วงโคจรแรก"
+      },
+      "brief": {
+        "en": "Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed.",
+        "ru": "Выведите Falcon 9 с мыса Канаверал на круговую орбиту высотой 500 км. Всё уже настроено: нажмите «Пуск» и проследите выведение — работу первой ступени, разделение, выключение второй ступени на опорной орбите 200 × 500 км и её повторное включение в апогее, которое делает орбиту круговой. Когда орбита будет достигнута, рассчитайте для неё два числа и введите их: период обращения и орбитальную скорость.",
+        "th": "นำ Falcon 9 จากแหลมคะแนเวอรัลขึ้นสู่วงโคจรวงกลมที่ความสูง 500 กม. ทุกอย่างตั้งค่าไว้แล้ว กด «ปล่อยจรวด» แล้วติดตามการไต่ระดับ ตั้งแต่ขั้นที่ 1 การแยกขั้น ขั้นที่ 2 ดับเครื่องในวงโคจรพัก 200 × 500 กม. จนถึงการจุดเครื่องอีกครั้งที่จุดไกลโลกเพื่อทำให้วงโคจรเป็นวงกลม เมื่อเข้าวงโคจรแล้ว ให้คำนวณค่าสองค่าของวงโคจรนั้นแล้วพิมพ์คำตอบ ได้แก่ คาบการโคจร และอัตราเร็วในวงโคจร"
+      },
+      "debrief": {
+        "en": "Period and speed depend on the size of the orbit alone: T = 2π√(a³/μ) grows as a^3/2 (Kepler's third law), and on a circle v = √(μ/r). Neither depends on the mass of the satellite.",
+        "ru": "Период и скорость зависят только от размера орбиты: T = 2π√(a³/μ) растёт как a^3/2 (третий закон Кеплера), а на круговой орбите v = √(μ/r). Ни то, ни другое не зависит от массы спутника.",
+        "th": "คาบและอัตราเร็วขึ้นกับขนาดของวงโคจรเท่านั้น: T = 2π√(a³/μ) เพิ่มตาม a^3/2 (กฎข้อที่สามของเคปเลอร์) และบนวงโคจรวงกลม v = √(μ/r) ทั้งสองค่าไม่ขึ้นกับมวลของดาวเทียม"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "falcon9",
+          "satelliteId": "cubesats",
+          "siteId": "cape",
+          "orbitId": "leo",
+          "orbit": {
+            "id": "leo",
+            "name": "Low Earth orbit (500 km)",
+            "perigee": 500000,
+            "apogee": 500000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Generic circular LEO at the minimum inclination of the launch site."
+          },
+          "launchTime": "2026-09-15T12:00:00.000Z",
+          "payloadMass": 10000,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.failure",
+        "setup.dynamics.model"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Orbital period of your orbit (min)",
+            "ru": "Период обращения на вашей орбите (мин)",
+            "th": "คาบการโคจรของวงโคจรนี้ (นาที)"
+          },
+          "tol": 1,
+          "unit": "min"
+        },
+        {
+          "id": "speed",
+          "kind": "answer",
+          "measure": "orbit.speed",
+          "prompt": {
+            "en": "Orbital speed (km/s)",
+            "ru": "Орбитальная скорость (км/с)",
+            "th": "อัตราเร็วในวงโคจร (กม./วินาที)"
+          },
+          "tol": 0.05,
+          "unit": "km/s"
+        }
+      ],
+      "hints": [
+        {
+          "en": "The orbit is a circle: its radius is the Earth's radius (6 378 km) plus the altitude.",
+          "ru": "Орбита круговая: её радиус равен радиусу Земли (6 378 км) плюс высота.",
+          "th": "วงโคจรเป็นวงกลม: รัศมีเท่ากับรัศมีโลก (6 378 กม.) บวกความสูง"
+        },
+        {
+          "en": "Period: T = 2π√(r³/μ) with μ = 398 600 km³/s². Speed on a circle: v = √(μ/r).",
+          "ru": "Период: T = 2π√(r³/μ), μ = 398 600 км³/с². Скорость на круговой орбите: v = √(μ/r).",
+          "th": "คาบ: T = 2π√(r³/μ) โดย μ = 398 600 กม.³/วินาที² อัตราเร็วบนวงกลม: v = √(μ/r)"
+        },
+        {
+          "en": "A check: at 400 km, where the ISS flies, the period is about 92.6 min and the speed 7.67 km/s; higher is slower and longer.",
+          "ru": "Для проверки: на высоте 400 км, где летает МКС, период около 92,6 мин, скорость 7,67 км/с; выше — медленнее и дольше.",
+          "th": "ใช้ตรวจสอบ: ที่ความสูง 400 กม. ซึ่งเป็นวงโคจรของ ISS คาบประมาณ 92.6 นาที อัตราเร็ว 7.67 กม./วินาที ยิ่งสูงยิ่งช้าและคาบยิ่งยาว"
+        }
+      ]
+    },
+    {
+      "id": "guid-maxq",
+      "track": 2,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        3,
+        4
+      ],
+      "tags": [
+        "q_max",
+        "a_max"
+      ],
+      "title": {
+        "en": "Aerodynamic loads",
+        "ru": "Аэродинамические нагрузки",
+        "th": "ภาระทางอากาศพลศาสตร์"
+      },
+      "brief": {
+        "en": "Soyuz-2.1a has no throttle bucket: flown as it is, it meets a dynamic pressure of about 34 kPa. Your payload's structure is rated for 25 kPa. Keep the peak dynamic pressure q at or below 25 kPa and still reach orbit. You may change the guidance — the acceleration limit is the setting to look at — nothing else.",
+        "ru": "У «Союза-2.1а» нет дросселирования на участке максимального напора: в штатном полёте скоростной напор достигает около 34 кПа. Конструкция вашей полезной нагрузки рассчитана на 25 кПа. Удержите максимальный скоростной напор q не выше 25 кПа и выйдите на орбиту. Менять можно только параметры наведения — обратите внимание на ограничение ускорения.",
+        "th": "Soyuz-2.1a ไม่มีการลดแรงขับช่วง max-Q หากบินตามปกติ ความดันพลวัตจะสูงถึงประมาณ 34 kPa แต่โครงสร้างสัมภาระของคุณรับได้ 25 kPa จงรักษาความดันพลวัตสูงสุด q ไม่ให้เกิน 25 kPa และยังเข้าสู่วงโคจรได้ ปรับได้เฉพาะค่าการนำวิถี โดยให้ดูที่ขีดจำกัดความเร่ง"
+      },
+      "debrief": {
+        "en": "q = ½ρv²: the peak comes where the air is still dense and the rocket already fast. Holding the acceleration down keeps the speed low through the dense air, at a price — the engines burn longer against gravity, so less Δv is left. Too low a limit and the ascent is so slow that the rocket is still low and dense-aired when it finally gets fast: the load comes back, higher. Launchers do this with a throttle bucket (Falcon 9 to about 75 % near 22 kPa) rather than a fixed limit.",
+        "ru": "q = ½ρv²: максимум напора там, где воздух ещё плотный, а скорость уже велика. Ограничение ускорения удерживает скорость малой в плотных слоях, но за это приходится платить: двигатели дольше работают против тяготения, и запас Δv уменьшается. При слишком низком ограничении выведение идёт так медленно, что ракета набирает скорость, всё ещё находясь в плотной атмосфере, — и нагрузка возвращается, причём больше. На практике для этого снижают тягу на участке максимального напора (Falcon 9 — примерно до 75 % около 22 кПа), а не вводят постоянное ограничение.",
+        "th": "q = ½ρv² ค่าสูงสุดเกิดในช่วงที่อากาศยังหนาแน่นแต่จรวดเร็วแล้ว การจำกัดความเร่งทำให้ความเร็วต่ำขณะผ่านอากาศหนาแน่น แต่ต้องแลกด้วยการที่เครื่องยนต์เผาไหม้นานขึ้นเพื่อต้านแรงโน้มถ่วง Δv ที่เหลือจึงน้อยลง ถ้าจำกัดต่ำเกินไป จรวดไต่ช้าจนยังอยู่ในอากาศหนาแน่นตอนที่เร่งจนเร็ว ภาระจึงกลับมาและสูงกว่าเดิม จรวดจริงใช้การลดแรงขับช่วง max-Q (Falcon 9 ลดเหลือประมาณ 75% ที่ราว 22 kPa) แทนการจำกัดความเร่งตายตัว"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "soyuz21a",
+          "satelliteId": "cubesats",
+          "siteId": "baikonur",
+          "orbitId": "custom",
+          "orbit": {
+            "id": "leo",
+            "name": "Low Earth orbit (500 km)",
+            "perigee": 200000,
+            "apogee": 450000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Generic circular LEO at the minimum inclination of the launch site."
+          },
+          "launchTime": "2026-09-15T12:00:00.000Z",
+          "payloadMass": 5000,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.failure",
+        "setup.dynamics.model"
+      ],
+      "reveal": [
+        "setup.guidance"
+      ],
+      "criteria": [
+        {
+          "id": "q",
+          "kind": "measure",
+          "measure": "maxQ",
+          "max": 25
+        },
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "orbit"
+        },
+        {
+          "id": "q-read",
+          "kind": "answer",
+          "measure": "maxQ",
+          "prompt": {
+            "en": "The peak dynamic pressure you flew through (kPa)",
+            "ru": "Максимальный скоростной напор в вашем полёте (кПа)",
+            "th": "ความดันพลวัตสูงสุดที่คุณบินผ่าน (kPa)"
+          },
+          "tol": 1,
+          "unit": "kPa"
+        }
+      ],
+      "hints": [
+        {
+          "en": "The peak q comes from the speed reached while the air is still dense: slow the rocket down through the first minute and a half.",
+          "ru": "Максимум q определяется скоростью, набранной, пока воздух ещё плотный: замедлите ракету в первые полторы минуты.",
+          "th": "ค่า q สูงสุดมาจากความเร็วที่ได้ขณะอากาศยังหนาแน่น ให้จรวดช้าลงในช่วงนาทีครึ่งแรก"
+        },
+        {
+          "en": "Guidance → Acceleration limit: above it the engines are throttled back. Flown as it is, Soyuz reaches over 25 m/s².",
+          "ru": "Наведение → Ограничение ускорения: выше него тяга снижается. В штатном полёте «Союз» разгоняется более чем до 25 м/с².",
+          "th": "การนำวิถี → ขีดจำกัดความเร่ง เมื่อเกินค่านี้เครื่องยนต์จะลดแรงขับ ถ้าบินตามปกติ Soyuz เร่งได้เกิน 25 ม./วินาที²"
+        },
+        {
+          "en": "Try about 17–18 m/s². Much lower and the ascent drags on in the dense air, and the load comes back higher than before.",
+          "ru": "Попробуйте около 17–18 м/с². Намного меньше — и выведение затянется в плотных слоях, а нагрузка вернётся ещё большей.",
+          "th": "ลองประมาณ 17–18 ม./วินาที² ถ้าต่ำกว่านี้มาก การไต่ระดับจะยืดเยื้อในอากาศหนาแน่น และภาระจะกลับมาสูงกว่าเดิม"
+        }
+      ]
+    }
+  ]
+}

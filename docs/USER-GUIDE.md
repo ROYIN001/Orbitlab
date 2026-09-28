@@ -16,9 +16,16 @@ is coming, level by level and in the order it will be built
 ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on it pretends to work. Everything after
 section 0a is about Launch.
 
-- **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
-  space station) straight away; under it are the three sections, Launch with its three ways
-  in.
+- **Home** — the landing page, a page you scroll (the wheel scrolls it; it does not move the
+  scene). Its first screen is the featured rocket on its pad: **Watch a launch** plays the
+  featured flight (Soyuz to the space station) straight away, **Start with a lesson** opens the
+  lessons. Below it, one at a time, are the ways in — Watch, Explore, Engineer, the lessons and
+  the Orbit section — each with a picture of it in the language you chose and a button that
+  takes you there. At the end is the Earth with the International Space Station where it is
+  now, and for the city you pick, when it next passes over and when you can next see it with
+  the naked eye (a bright star gliding across the sky for a few minutes, the station sunlit in
+  a dark sky), in the city's local time. With *reduce motion* set in your system, the pictures
+  and the camera keep still.
 
 Once a flight is in orbit, **Continue in Orbit** — under the telemetry panel, and on the viewer's
 end card — puts the orbit on screen into the Orbit section's playground (section 0a), with the
@@ -109,14 +116,16 @@ uses the data bundled with it, each dated ("data as of …"), and the platform's
 right setting for a closed network, a classroom or no connection. Online also loads the
 interface's web fonts. **Online** fetches current data from the sources that publish them
 and falls back to the bundled copy, saying why, whenever they cannot be reached. The window lists
-each dataset with its date and where it came from. Today there is one, the space weather (the
-solar flux F10.7 and the Kp index, from NOAA), and nothing in the simulation reads it yet.
+each dataset with its date and where it came from: the space weather (the solar flux F10.7 and
+the Kp index, from NOAA), which the orbit lifetime and re-entry read; the satellite catalogue
+(CelesTrak); and the Earth's orientation (the IERS), which is always the bundled copy because the
+IERS cannot be read from a page.
 
 **Installing Orbitlab and using it offline.** The published site can be installed as an app
 (Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
 and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
 network at all — the page, the physics and auto-tune workers and the Earth textures are all kept
-on the device, and the fonts too once they have loaded. When a new version is published, a note
+on the device, and the fonts and the landing page's pictures too once they have loaded. When a new version is published, a note
 at the bottom of the page offers **Reload**; until you press it, the version you have keeps
 running.
 
@@ -144,7 +153,11 @@ The three levels:
 
 - **Watch**: a tour in seven steps, from Newton's cannon to the space station, Hohmann's
   transfer to geostationary height, a Molniya orbit, a geostationary satellite standing over
-  78.5° E (the slot Thaicom's satellites use) and a sun-synchronous orbit. **Next** and **Back** move between the steps; **Try it yourself** opens
+  78.5° E (the slot Thaicom's satellites use) and a sun-synchronous orbit; then eight steps with
+  the real satellites of the bundled catalogue, where they are now: the space station and its next
+  passes over the place, THEOS-2 on its sun-synchronous track, the navigation and weather
+  satellites, the Earth-imaging satellites, the debris of Fengyun-1C, and the Long March 5B stages
+  that fell uncontrolled. **Next** and **Back** move between the steps; **Try it yourself** opens
   Explore on the orbit on screen.
 - **Explore**: choose an orbit from the list, or set its perigee and apogee altitudes, its
   inclination i, its node Ω and its argument of perigee ω with the sliders or the number boxes.
@@ -242,17 +255,44 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   an anti-satellite test in 2007. The group is drawn as points in 3-D and on the ground track.
 - **Overflights of** a place, under the group's list: every pass of the group's satellites over a
   city or your coordinates in the next 24 hours or 3 days whose highest point is at least the
-  elevation you choose (60° by default), soonest first: when, how high and in which direction,
+  elevation you choose (30° by default), soonest first: when, how high and in which direction,
   the off-nadir angle a camera must look at to see the place, whether the place is in daylight
   (optical cameras need it, radars do not) and whether the satellite is heading north or south.
-  Engineer adds the distance from the ground track, the local solar time and the timing
-  uncertainty. It is when the place *could* be seen, not that it is.
-- **When it will come down**, for a satellite whose perigee is under 700 km: give the object's mass
-  and mean cross-section (an element set does not carry them) and C_D, and its orbit is carried
+  For 95 imaging satellites whose instruments are published, each pass also says what the
+  instrument can make of it: a camera needs daylight and the place inside its swath (Landsat,
+  Sentinel-2) or within the angle it can turn to (Pléiades, WorldView, THEOS-2); a radar
+  (Sentinel-1, COSMO-SkyMed, ALOS) sees by night and through cloud, but only to its side and within
+  its band of incidence angles. **Only when its instrument can image the place** keeps just those,
+  and **Show on the map** under a pass picks the satellite, sets the clock two minutes before and
+  draws the pass on the ground track with the edges of the ground its instrument can reach: a
+  camera's swath or pointing reach either side, a radar's band on its side.
+  Engineer adds the distance from the ground track, the local solar time, the timing
+  uncertainty and a link to the instrument's source. It is when the place *could* be seen, not
+  that it is: that takes the operator's tasking and, for a camera, a clear sky.
+- **When it will come down**, for a satellite whose perigee is under 700 km: its orbit is carried
   down with the Sun as measured and forecast to a predicted re-entry, with the window of ±20 % of
-  the time left that the agencies use. More than a year away, the orbit lifetime analysis is the
-  tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
-  their first element sets and sets each prediction beside the re-entry on record.
+  the time left that the agencies use. The drag comes, as you choose, from the object's own decay,
+  fitted as the agencies fit it to the tracking — to the decay rate its element set carries, or,
+  for an object read from a file with several of its sets (a history you downloaded), to how far
+  it fell between the first and the last — or from a mass, mean cross-section and C_D you give.
+  An eccentric orbit, a stage left in a transfer orbit, is carried step by step with the Sun's and
+  the Moon's pull, which takes some seconds. The ground track then shows where it may come down:
+  its track through the window when the window is two days or less, and otherwise the band of
+  latitudes its orbit covers (a satellite can fall anywhere under its orbit). More than a year away, the orbit lifetime analysis is
+  the tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
+  their first element sets and sets each prediction beside the re-entry on record; **Case study:
+  NAPA-2** predicts the Royal Thai Air Force's CubeSat five years ahead from its first element set,
+  by its size and with the drag fitted, beside the day it came down.
+- **Worksheets from real cases**, under the group's list: a printable sheet of questions and,
+  apart, its answer key with the working, on a case from the record — the collision of Iridium 33
+  and Cosmos 2251 (the conjunction message's data, its encounter plane, the miss in standard
+  deviations, why 10⁻⁵¹ was wrong), the Long March 5B stage that launched Tianhe (Cauchy's area,
+  C_D·A/m, the ±20 % window against the day it fell) and THEOS-2 over Bangkok (the J₂ turn that
+  makes an orbit sun-synchronous, how far it sees tilted 45°, the local time it passes). Each is
+  made in the page in the language on screen, as HTML to open and print, its units and option
+  letters in that language's own script. Each case is also a graded lesson (§18, lessons
+  6.1–6.3): while a case's lesson is open and not yet passed, its answer key here waits, and the
+  Long March 5B case study leaves out the error of the stage of Tianhe, which lesson 6.2 asks for.
 - **Search** by name, catalogue number or international designator, then pick a satellite. Its
   orbit and its track are drawn. The right panel gives its catalogue number and designator, the
   epoch of its element set and how old the set is, where it is now, its period, its mean perigee
@@ -261,9 +301,10 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
 - **Passes over** a place, under the satellite's figures: choose a city or type coordinates (they
   stay in the page), and the lowest elevation that counts. The next three days' passes are
   listed, each with when the satellite rises, is highest and sets, in which direction and how
-  high. Each pass also says whether you can see it: only when the satellite is in sunlight and
-  your sky is dark (the Sun 6° or more below the horizon). The first line counts down to the next
-  pass. Times are your device's clock. The map draws the place, and the circle of ground from
+  high as you see it (the air's refraction included). Each pass also says whether you can see it:
+  only when the satellite is in sunlight and your sky is dark (the Sun 6° or more below the
+  horizon), and, for a satellite with a standard magnitude, about how bright it gets (a magnitude:
+  smaller is brighter). The first line counts down to the next pass. Times are your device's clock. The map draws the place, and the circle of ground from
   which the satellite is above that elevation.
 - **Position error (estimate)** says how far off the satellite may be: an element set does not
   carry its own accuracy, so the page estimates it from published studies, from the kind of orbit
@@ -275,7 +316,21 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   from both element sets' estimated error and the size you give the pair. Engineer adds the miss
   split radial, along-track and cross-track, the relative speed and each set's uncertainty. It is
   what CelesTrak's SOCRATES does with the same data, and it shows traffic, not collisions: the
-  page recalls that Iridium 33 and Cosmos 2251 were 152nd on the list the day they collided.
+  page recalls that Iridium 33 and Cosmos 2251 were 152nd on the list the day they collided. The
+  screening runs off the page's own thread, so a whole catalogue read from a file (some 30 000
+  objects) can be screened while the page stays usable, and stopped. **Show it** under an approach
+  moves the clock to five minutes before it, draws the other object's orbit and the meeting point
+  in 3-D, the point below the meeting and the other object's track on the ground track, and the
+  *encounter plane*: the other object at its miss distance with the pair's
+  combined size round it, and the combined position uncertainty as ellipses — the probability is
+  the share of the uncertainty inside the circle. A probability smaller than 10⁻¹⁰ is shown as
+  *below 10⁻¹⁰*: the numbers do not carry a precision finer than that.
+- **A conjunction data message**, under the screening: an operator is warned of an approach to its
+  satellite by such a message (CCSDS 508.0-B-1, from the combined space operations centre through
+  Space-Track), which carries each object's position uncertainty from the tracking. Read one in its
+  text form (KVN) and the page gives the probability from the message's own uncertainties, with its
+  encounter plane, beside the probability the message states. The file is read in the page and
+  sent nowhere.
 - **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
   Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
   the two part company.
@@ -284,8 +339,9 @@ speed you choose; **⟲** brings it back to now, and **Live** shows while it is 
   nowhere. Whatever cannot be read is listed, line by line or set by set, with the reason.
 
 Offline (the default) the element sets are the snapshot bundled with this version, dated in the
-right panel. Online they come from CelesTrak, at most once in two hours, as CelesTrak asks, and
-from the snapshot whenever CelesTrak cannot be reached. A published site is rebuilt every day
+right panel. Online they come from CelesTrak, at most once in two hours and one list at a time,
+as CelesTrak asks, and from the snapshot whenever CelesTrak cannot be reached; a list that cannot
+be read keeps its own group from the snapshot, and the panel says which. A published site is rebuilt every day
 with a fresh snapshot. An element set is a fraction of a kilometre to a few kilometres off at
 its epoch, and further as it ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its
 reference.
@@ -587,14 +643,16 @@ under the forces that act after the launch, each of which can be switched off to
 the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
 works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
 the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
-and the pressure of sunlight. The Sun's activity, which sets how much air there is, is taken as
-measured by default: month by month from 1947 (GFZ), then NOAA's latest months and its forecast,
-then the Sun repeating its last eleven years — the result says how far each reaches, and the data
-mode decides whether NOAA's figures are the bundled ones or fetched now. The forecast's high and
-low sides show how much the answer can move; ECSS's fixed quiet, moderate and active levels are
-there for a what-if (at 400 km a CubeSat lasts about two and a half months with an active Sun
-and over three years with a quiet one). With the measured Sun, seven satellites of known shape
-came down within 25 % of their dates on record. The *mean elements* method
+and the pressure of sunlight. The air is NRLMSISE-00's, the model the European space standards
+name for orbit decay, at the satellite's height, latitude and local time. The Sun's activity,
+which sets how much air there is, is taken as measured by default: day by day from 1954 (GFZ),
+then NOAA's latest months and days and its forecast, then the mean of the last six solar cycles —
+the result says how far each reaches, and the data mode decides whether NOAA's figures are the
+bundled ones or fetched now. The forecast's high and low sides show how much the answer can move;
+ECSS's fixed quiet, moderate and active levels are there for a what-if (at 400 km a CubeSat lasts
+some ten weeks with an active Sun and three and a half years with a quiet one). With
+the measured Sun, seven satellites of known shape came down within 25 % of their dates on record,
+usually a little early. The *mean elements* method
 covers decades in a moment with J2 and drag; the *full equations* include every force but are
 slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
 payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
@@ -916,14 +974,17 @@ a mission file or link carries it and the flight report names it. Untick it to f
 
 ## 18. Lessons and the placement test
 
-The gold **Lessons** button in the top bar (and the fourth card on the landing page) opens the
+The gold **Lessons** button in the top bar (and **Start with a lesson** on the landing page) opens the
 lessons page: a page of its own over the whole window below the top bar, like a mode, with two
 tabs — **Lessons** and **Placement test** — and **Back to the simulator** (or Esc, or the
 browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
-The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends.
-They are listed in five tracks — orbital mechanics, guidance and navigation, failures, attitude
-control, advanced missions — each with its number (1.1 … 5.5), a ✓ once passed and ● once tried.
-All twenty-one are written; the last three (5.3–5.5) fly the historical missions of roadmap C01.
+The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends,
+and three cases from the record, worked from their data. They are listed in six tracks — orbital
+mechanics, guidance and navigation, failures, attitude control, advanced missions, real cases —
+each with its number (1.1 … 6.3), a ✓ once passed and ● once tried. All twenty-four are written:
+5.3–5.5 fly the historical missions of roadmap C01, and 6.1–6.3 are P2.5's cases, worked in the
+Orbit section rather than flown. Track 6 is the built-in cases': a teacher's lesson put there shares
+their numbers.
 
 **A lesson.** Pick one: its mission is loaded into the setup panel, the app goes to the mode it
 needs (Explore or Engineer), and the settings it fixes are greyed out with a 🔒 — in lesson 1.2
@@ -932,8 +993,14 @@ the task, the criteria and the buttons. Launch; each criterion shows *waiting*, 
 (a bound that could still be broken), ✓ or ✗ — a peak such as q is failed the moment it is
 passed, everything else when the flight ends. Some lessons then ask for numbers you work out from
 your own flight (the period of the orbit you reached, the Δv of a burn, the peak load on the
-crew): type them in and **Check**. The grade is read from the recording's head, so scrubbing back
-through the replay never changes it. **Hint** reveals up to three hints, one at a time (the
+crew): type them in and **Check**. A wrong answer is only marked ✗, and can be worked again;
+**Show the answers** gives the values, but the attempt is then recorded as not passed, and a
+number once shown never counts as a pass in this browser (a lesson flies the same flight again, so
+the same number would do): a lesson whose answers come out the same on every flight can then no
+longer be passed here, as the button's tooltip (and the strip, after a wrong answer) warns. The
+grades are formative: a worksheet's answer key is on the same
+device. The grade is read from the recording's head, so scrubbing back through the replay never
+changes it. **Hint** reveals up to three hints, one at a time (the
 results file says how many you used); **Start again** puts the lesson's mission back; **Copy
 link** gives an address that opens the lesson (`?lesson=orbit-first`). A setting the lesson fixes
 that is changed anyway — by a mission link or over WebMCP — fails the flight, and the strip says
@@ -962,11 +1029,29 @@ which one.
 | 5.3 | Sputnik-1 (1957) | the payload mass | the 215 × 939 km orbit reached, and its period read (±0.2 min) |
 | 5.4 | Vostok-1 (1961) | the target orbit | the 181 × 327 km orbit Gagarin reached, and its period read (±0.2 min) |
 | 5.5 | Apollo 11: the way to the Moon (1969) | the target orbit | the S-IVB relit for the translunar injection (apogee past 300 000 km), and its Δv read (±3 %) |
+| 6.1 | THEOS-2 over Bangkok (Orbit section) | — worked from the data | the turn a sun-synchronous plane needs (±0.0005 °/day) and J₂'s (±0.01 °/day), the mean height (±2 km), the reach tilted 45° (±10 km), the local time over Bangkok (±0.02 h), and why a camera satellite flies such an orbit |
+| 6.2 | The Long March 5B stage of Tianhe (Orbit section) | — worked from the data | the tumbling cross-section (±1 m²) and C_D·A/m (±0.0003 m²/kg), the ±20 % window's two ends and the time actually left (±0.05 day each), the prediction's error (±1 point), the time broadside (±0.5 day), and why a window is given |
+| 6.3 | Iridium 33 and Cosmos 2251 (Engineer, Orbit section) | — worked from the data | the miss (±5 m), the speed (±0.05 km/s) and angle (±2°) of the meeting, the combined radius (±0.1 m), σ along the miss (±5 %, at least 0.5 m) and the miss in σ (±5 %, at least 1), the cautious probability against 1 in 10 000 (±30 times), and why 10⁻⁵¹ was wrong |
 
 The three historical lessons fly the vehicles, pads and dates of the real flights: the R-7 of
 1957 from Gagarin's Start with no upper stage, Vostok-K with Blok E, and Saturn V from LC-39A.
 The Moon is not part of the flight model, so Apollo 11 ends at the injection: the S-IVB raises
 the apogee to the Moon's distance, and what the Moon's gravity does three days later is left out.
+
+**A case lesson** (6.1–6.3) flies nothing. It opens the Orbit section's **Real satellites** at the
+case's satellite and tool — THEOS-2 with its overflights of Bangkok; the station, with the re-entry
+tool and its Long March 5B case study; the station, with the close approaches — at the lesson's
+level. The strip holds **The data**, the case sheet's own table (with the encounter plane for
+Iridium–Cosmos), and the sheet's questions: numbers to type, with their units, and one answer to
+choose. They are graded by the case sheet's key, with its tolerances (the table above), so the
+lesson and the printed key cannot disagree. The data are fixed when the lesson opens — THEOS-2's
+element set as the catalogue on screen has it, and the Sun's activity the re-entry is predicted with
+— so the table, the key and the grade stay together however the catalogue or the forecast changes
+meanwhile; the results file says which set and which forecast were used, and each **Check** counts
+as an attempt. After a pass (or once the answers are shown) each answer comes with its working, and
+the answer key and the Tianhe stage's error open in the Orbit section. **Show the tool** goes back to
+the case's tool; **Worksheet** makes the case's sheet, and its key once it gives nothing away. If
+the data cannot be read (the catalogue did not load), **Start again** reads them again.
 
 **The placement test** is 25 questions in six areas — 1 the basics of spaceflight, 2 orbital
 mechanics, 3 rocket performance, 4 guidance and navigation, 5 attitude control, 6 failures and
@@ -1006,7 +1091,9 @@ worksheets** makes one file with a page for each student and no answers; **Downl
 key** makes a separate file with every student's answers, the tolerance that counts as right, and
 how each is worked out with the flight's own numbers. Either as HTML to print (Print → Save as PDF)
 or as a Word document to edit first. Values the questions ask for (max-Q, the lift-off T/W) are
-left out of the sheet's event table.
+left out of the sheet's event table. A flight's sheet goes with the lesson the flight was flown in,
+or with none — not with whatever lesson is open when the sheet is made. With a case lesson open, the
+tab also offers that case's sheet and key, one for the whole class, from the data the lesson froze.
 
 **Keeping and handing in your work.** Progress and tests stay in this browser. **Export results**
 writes a `.orbitlab-results.json` file with your name (if you type it), each lesson's attempts,
@@ -1019,13 +1106,17 @@ lesson-file.ts`). A lesson is a mission document (as a mission file holds it, U0
 it locks, its criteria — a measure within bounds (`maxQ`, `dvLeft`, `orbit.inclination`, …), the
 outcome, an event, a number the student works out from the flight, or a check written in code —
 its hints, and its texts in English, Russian and Thai (a missing language falls back to English).
+A case lesson (`"kind": "case"`, with `"case"` one of `theos2`, `cz5b`, `iridium`) has no mission:
+its criteria name the case sheet's questions (`"item"`, as `src/worksheets/case-ids.ts` lists them),
+each optionally with a tolerance of its own for a number. A file that holds one is written as
+version 2; a file of flight lessons alone is still version 1, so an older copy of the app reads it.
 A question is a choice, several answers (`multi`), an ordering (`order`, its items in the right
 order), a calculation whose answer is an arithmetic expression of its drawn numbers, or a vehicle to
 recognise, with its area (1–6, as above), level and explanation, and optionally a chart of a
 recorded flight or one of the built-in diagrams (`src/lessons/assessment/diagrams.ts`). Anything that cannot be
 used is left out, and the catalogue says what and why. Over WebMCP, `list_lessons`,
 `start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
-the student and read how it is going — never the expected value of an answer.
+the student (a case lesson too) and read how it is going — never the expected value of an answer.
 
 ## Glossary
 

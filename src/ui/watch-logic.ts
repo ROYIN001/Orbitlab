@@ -320,7 +320,11 @@ export function groundSpeed(frame: VisualFrame): number {
   return Math.hypot(vx, vy, v.z);
 }
 
-/** The flight has reached a stable orbit worth a "you made it" card. */
+/**
+ * The flight is in orbit: a parking orbit or the final one. It is what the
+ * viewer's missions are flown to (tests/watch-missions.test.ts); it is NOT the
+ * end of the flight — that is `missionOrbit` (audit 2026-09-27 A9).
+ */
 export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEvent[]): boolean {
   if (!frame || frame.status === 'failed') return false;
   if (frame.status === 'orbit') return true;
@@ -331,14 +335,86 @@ export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEven
   return false;
 }
 
+/** The events that close an orbital flight: its orbital work is done, on the target or not. */
+const FINAL_ORBIT = new Set(['evt.targetOrbit', 'evt.offTargetOrbit']);
+const PARKING = new Set(['evt.parkingOrbit']);
+
+/** The newest event of `keys` at or before the frame. */
+function lastEvent(frame: VisualFrame, events: readonly SimEvent[], keys: ReadonlySet<string>): SimEvent | undefined {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i];
+    if (e.t <= frame.t + 1e-6 && keys.has(e.key)) return e;
+  }
+  return undefined;
+}
+
+/**
+ * The flight has reached the orbit it was flown to, not merely a parking orbit
+ * with burns still to fly (audit 2026-09-27 A9).
+ *
+ * Falcon 9 Bandwagon-1 reaches 200 × 588 km at T+07:59 and then coasts 46
+ * minutes to the burn that raises it to 586 × 595 km; calling the first
+ * "mission accomplished" put the end card and its 200 km over the rest of the
+ * flight. The simulation says a flight's orbital work is done in one place
+ * only (`reachTargetOrbit`): the status goes to 'orbit' and `evt.targetOrbit`
+ * or `evt.offTargetOrbit` is logged. Nothing weaker will do — between a
+ * cut-off and the plan for the next burn the stage tails off for a second or
+ * two with nothing scheduled (`nextBurnTime` < 0, no `evt.burnScheduled` yet),
+ * so "in orbit and no burn pending" would still end Bandwagon-1 at its parking
+ * orbit. The same rule G07 follows for a flight to the station, which ends
+ * docked rather than at its insertion.
+ */
+export function missionOrbit(frame: VisualFrame | null, events: readonly SimEvent[]): boolean {
+  if (!frame || frame.status === 'failed') return false;
+  // the status alone for a recording older than the events
+  return frame.status === 'orbit' || !!lastEvent(frame, events, FINAL_ORBIT);
+}
+
+/** The parking orbit on screen, and the burn it is waiting for (audit 2026-09-27 A9). */
+export interface ParkingMilestone {
+  /** mission time of the insertion, s */
+  t: number;
+  /** periapsis and apoapsis heights, km */
+  pe: number;
+  ap: number;
+  /** time to the next burn, s */
+  tgo: number;
+}
+
+/**
+ * The flight is coasting in a parking orbit with its next burn scheduled: a
+ * milestone worth a word, not the end (audit 2026-09-27 A9). Null once that
+ * burn lights, once the final orbit is reached, and for a flight to the
+ * station, which reads its own plan out (G07).
+ */
+export function parkingMilestone(frame: VisualFrame | null, events: readonly SimEvent[]): ParkingMilestone | null {
+  if (!frame || frame.status !== 'coast' || frame.rendezvous || frame.abort) return null;
+  if (!(frame.nextBurnTime > frame.t)) return null;
+  if (missionOrbit(frame, events)) return null;
+  const parking = lastEvent(frame, events, PARKING);
+  if (!parking) return null;
+  const p = parking.params ?? {};
+  return { t: parking.t, pe: Number(p.pe ?? frame.elements.periapsisAlt / 1000), ap: Number(p.ap ?? frame.elements.apoapsisAlt / 1000), tgo: frame.nextBurnTime - frame.t };
+}
+
 /** How a flight on screen ends. */
 export type WatchEnding = 'orbit' | 'splashdown' | 'crewSafe' | 'docked' | 'failed';
+
+/**
+ * After the final orbit, how long the end card waits for the payload to
+ * separate, s. `reachTargetOrbit` releases it 15 s later (plus a tail-off); a
+ * payload that never comes free must not hold the card back for ever.
+ */
+const PAYLOAD_WAIT = 30;
+/** Moments of an orbital flight the end card waits a few seconds after, as it does after a landing (A9). */
+const SETTLE_AFTER = new Set([...FINAL_ORBIT, 'evt.payloadSep']);
 
 /**
  * How the flight on screen has ended, if it has: in orbit, with a splashdown
  * (a suborbital ship flown home), or lost. The end card waits for every stage
  * flown home to be down and a few seconds more, so it does not cover a
- * landing.
+ * landing; an orbital flight's for its final orbit, not its parking orbit, and
+ * for its payload to come free (audit 2026-09-27 A9).
  */
 export function flightEnding(frame: VisualFrame | null, events: readonly SimEvent[]): WatchEnding | null {
   if (!frame) return null;
@@ -357,13 +433,82 @@ export function flightEnding(frame: VisualFrame | null, events: readonly SimEven
     return down && frame.t - down.t >= RETURN_SETTLE ? 'crewSafe' : null;
   }
   if (frame.status === 'failed' || (frame.status === 'landed' && frame.note === 'shipLost')) return 'failed';
-  const ending = frame.status === 'landed' ? 'splashdown' : reachedOrbit(frame, events) ? 'orbit' : null;
+  const ending = frame.status === 'landed' ? 'splashdown' : missionOrbit(frame, events) ? 'orbit' : null;
   if (!ending || returning(frame).alive) return null;
+  // A9: the payload coming free is the moment an orbital flight was for
+  const done = ending === 'orbit' ? lastEvent(frame, events, FINAL_ORBIT) : undefined;
+  if (done && !frame.payloadSeparated && frame.t - done.t < PAYLOAD_WAIT) return null;
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i];
     if (e.t > frame.t + 1e-6) continue;
     if (frame.t - e.t > RETURN_SETTLE) break;
-    if (RETURN_DOWN.has(e.key)) return null;
+    if (RETURN_DOWN.has(e.key) || (ending === 'orbit' && SETTLE_AFTER.has(e.key))) return null;
   }
   return ending;
+}
+
+/** How a stage flown home came down, for the end card. */
+export type RecoveryOutcome = 'zone' | 'ship' | 'tower' | 'landed' | 'lost';
+
+/**
+ * What an orbital flight's end card says, one line each: the orbit it ended
+ * in, the payload, every stage flown home, and the docking when one was called
+ * off (audit 2026-09-27 A9). Read from the events that closed each part of the
+ * flight, so the card never repeats a parking orbit's numbers.
+ */
+export interface WatchSummary {
+  /** the final orbit, heights km, inclination degrees; `at` is when it was reached */
+  orbit: { pe: number; ap: number; inc: number; onTarget: boolean; at: number } | null;
+  /** when the payload came free, or null when it has not */
+  payloadAt: number | null;
+  /** the spacecraft's catalogue id from `evt.payloadSep`, for its localized name */
+  payloadId: string | null;
+  /** each stage flown home, by its English name (the physics' label), in the order it left */
+  recovery: { name: string; outcome: RecoveryOutcome; zone?: string }[];
+  /** G07: the approach to the station was called off */
+  dockingAborted: boolean;
+}
+
+const RECOVERY_EVENTS: Record<string, RecoveryOutcome> = {
+  'evt.boosterLandedZone': 'zone', 'evt.boosterLandedShip': 'ship', 'evt.boosterCaught': 'tower', 'evt.boosterLanded': 'landed', 'evt.stageImpact': 'lost',
+};
+
+export function watchSummary(frame: VisualFrame, events: readonly SimEvent[]): WatchSummary {
+  const now = events.filter((e) => e.t <= frame.t + 1e-6);
+  const done = lastEvent(frame, events, FINAL_ORBIT);
+  const num = (v: unknown): number | null => (typeof v === 'number' && isFinite(v) ? v : null);
+  let orbit: WatchSummary['orbit'] = null;
+  if (done) {
+    const p = done.params ?? {};
+    // six-DOF: the apsides the verdict was reached on, unrounded
+    const pe = num(p.peAltM) !== null ? num(p.peAltM)! / 1000 : num(p.pe);
+    const ap = num(p.apAltM) !== null ? num(p.apAltM)! / 1000 : num(p.ap);
+    if (pe !== null && ap !== null) orbit = { pe, ap, inc: num(p.inc) ?? frame.elements.i * 180 / Math.PI, onTarget: done.key === 'evt.targetOrbit', at: done.t };
+  }
+  if (!orbit && (frame.status === 'orbit' || frame.status === 'rendezvous') && frame.elements.e < 1) {
+    orbit = {
+      pe: frame.elements.periapsisAlt / 1000, ap: frame.elements.apoapsisAlt / 1000, inc: frame.elements.i * 180 / Math.PI,
+      onTarget: frame.note !== 'orbitOffTarget', at: frame.t,
+    };
+  }
+  const sep = now.find((e) => e.key === 'evt.payloadSep');
+  // Each stage is matched to its own touchdown by name, in order: a Falcon
+  // Heavy's two side boosters share one.
+  const touchdowns = now.filter((e) => RECOVERY_EVENTS[e.key]);
+  const recovery: WatchSummary['recovery'] = [];
+  for (const d of frame.debris ?? []) {
+    if (!d.recovery?.target || d.alive) continue;
+    const i = touchdowns.findIndex((e) => e.params?.name === d.name);
+    const e = i >= 0 ? touchdowns.splice(i, 1)[0] : undefined;
+    const outcome: RecoveryOutcome = e ? RECOVERY_EVENTS[e.key] : d.outcome === 'landed' ? 'landed' : 'lost';
+    const zone = typeof e?.params?.zone === 'string' ? e.params.zone : undefined;
+    recovery.push(zone ? { name: d.name, outcome, zone } : { name: d.name, outcome });
+  }
+  return {
+    orbit,
+    payloadAt: sep ? sep.t : null,
+    payloadId: typeof sep?.params?.satId === 'string' ? sep.params.satId : null,
+    recovery,
+    dockingAborted: frame.rendezvous?.phase === 'aborted',
+  };
 }

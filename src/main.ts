@@ -35,6 +35,7 @@ import { OnboardOverlay } from './ui/onboard';
 import { Timeline } from './ui/timeline';
 import { Narration } from './ui/narration';
 import { HomeScreen } from './ui/home';
+import { HomeStage } from './ui/home-stage';
 import './ui/modes.css';
 import './ui/orbit/playground.css';
 import { WatchView } from './ui/watch';
@@ -42,13 +43,13 @@ import {
   HOME_ROUTE, experienceForMode, hashForRoute, initialRoute, launchMode, loadRoute, route, routeFromHash, sameRoute, saveRoute,
   DEFAULT_LEVEL, type AppLevel, type AppMode, type AppRoute, type AppSection,
 } from './ui/app-mode';
-import { SectionScreen } from './ui/section-screen';
+import { BuildScreen } from './ui/build/build-screen';
 import { OrbitPlayground } from './ui/orbit/playground';
 import { DataDialog } from './ui/data-dialog';
 import { applyWebFonts } from './ui/web-fonts';
 import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
 import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
-import { isPlannedSection } from './ui/section-plan';
+import { sectionLinkLevel } from './ui/section-plan';
 import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
@@ -205,9 +206,14 @@ class App {
   cams = new CameraController();
   panel: SetupPanel;
   home: HomeScreen;
+  /** what the landing page shows behind itself: the vehicle on its pad, then its starry sky and its globe */
+  homeStage: HomeStage;
+  /** the landing page's sky or its globe covers the launch scene */
+  private homeCovers = false;
   watch: WatchView;
   /** S01: the Build section while it is being built */
-  private sectionScreen: SectionScreen;
+  /** Phase 3: the Build section's screen (src/ui/build/) */
+  private buildScreen: BuildScreen;
   /** O01: the Orbit section's playground */
   private playground: OrbitPlayground;
   /** the Earth's textures, loaded once for the launch scene and the playground's 3-D view */
@@ -430,11 +436,20 @@ class App {
       state.dynamics = dynamics;
       this.goLive(); this.playing = false; this.panel.restoreMission(state);
     };
-    this.home = new HomeScreen(document.getElementById('home-screen')!, {
-      watchFeatured: () => { this.go(route('launch', 'watch')); this.startWatch(FEATURED_WATCH_MISSION); },
-      go: (r) => this.go(r),
+    this.homeStage = new HomeStage({
+      cams: this.cams,
+      camera: () => (this.scene ? this.scene.camera : null),
+      viewport: this.viewport,
+      coverScene: (on) => { this.homeCovers = on; },
+      textures: () => (this.earthTextures ??= loadEarthTextures(base)),
+      satellites: () => this.dataProvider.load('satellites'),
     });
-    this.sectionScreen = new SectionScreen(document.getElementById('section-screen')!, { go: (r) => this.go(r) });
+    this.home = new HomeScreen(document.getElementById('home-screen')!, {
+      watch: (id) => { this.go(route('launch', 'watch')); this.startWatch(id); },
+      go: (r) => this.go(r),
+      openLessons: () => this.lessons.openCatalog(),
+    }, this.homeStage);
+    this.buildScreen = new BuildScreen(document.getElementById('build-screen')!, { go: (r) => this.go(r) });
     this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
       go: (r) => this.go(r),
       // S03: the hand-off's orbit, carried on for years (P07)
@@ -499,6 +514,10 @@ class App {
     this.lessons = new LessonMode({
       // a lesson flies in the launch section; the page closes onto the route under it
       go: (mode) => this.go(mode === 'home' ? HOME_ROUTE : route('launch', mode)),
+      // a case lesson (track 6) works in the Orbit section's Real satellites
+      openCase: (id, level) => { this.go(route('orbit', level)); this.playground.openCase(id); },
+      caseInput: () => this.playground.caseInput(),
+      lessonCase: (state) => this.playground.lessonCase(state),
       back: () => this.go(this.route),
       loadMission: (state) => { this.goLive(); this.playing = false; this.panel.restoreMission(state); },
       sim: () => this.sim,
@@ -551,7 +570,8 @@ class App {
     const section: AppSection = this.route.section ?? 'launch';
     document.querySelectorAll<HTMLAnchorElement>('#section-nav a').forEach((a) => {
       const name = a.dataset.section as AppSection | 'home';
-      a.href = name === 'home' ? hashForRoute(HOME_ROUTE) : hashForRoute(route(name, level));
+      // the Build section opens at a level that is built (src/ui/section-plan.ts)
+      a.href = name === 'home' ? hashForRoute(HOME_ROUTE) : hashForRoute(route(name, sectionLinkLevel(name, level)));
       if (name === (this.route.section ?? 'home')) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
     });
@@ -563,9 +583,9 @@ class App {
     });
   }
 
-  /** O01: the Orbit section's playground is drawn over the whole scene, which need not be drawn under it. */
+  /** O01, Phase 3: the Orbit playground and the Build screen are drawn over the whole scene, which need not be drawn under them. */
   private get sceneCovered(): boolean {
-    return this.route.section === 'orbit';
+    return this.route.section === 'orbit' || this.route.section === 'build' || (this.mode === 'home' && this.homeCovers);
   }
 
   /** The landing page and the viewer: no workspace, the scene is the page. */
@@ -596,11 +616,12 @@ class App {
     document.body.dataset.section = next.section ?? 'home';
     saveRoute(next);
     this.syncNav();
-    // O01: the Orbit section is its playground; the Build section is still its plan (S01)
+    // O01: the Orbit section is its playground; Phase 3: the Build section is its screen
     const orbit = next.section === 'orbit';
-    const planned = isPlannedSection(next.section) && !orbit;
-    document.getElementById('section-screen')!.hidden = !planned;
-    if (planned) this.sectionScreen.show(next.section as 'build', next.mode as AppLevel);
+    const build = next.section === 'build';
+    document.getElementById('build-screen')!.hidden = !build;
+    if (build) this.buildScreen.show(next.mode as AppLevel);
+    else this.buildScreen.hide();
     document.getElementById('orbit-playground')!.hidden = !orbit;
     if (orbit) this.playground.show(next.mode as AppLevel);
     else this.playground.hide();
@@ -612,6 +633,7 @@ class App {
     if (mode !== 'explore') this.debrief.close();
     if (mode !== 'engineer') this.monteCarlo.close(); // G05: a running set flies on
     document.getElementById('home-screen')!.hidden = next.section !== null;
+    if (previous === 'home' && mode !== 'home') this.homeStage.leave();
     document.getElementById('watch-ui')!.hidden = mode !== 'watch';
     // The two faces fly different camera programmes; re-apply at once.
     this.lastPhase = null;
@@ -948,6 +970,8 @@ class App {
     if (document.body.dataset.lessonsPage) return; // E03: the lessons page owns the keyboard
     // O01: the Orbit section's playground has its own clock
     if (this.route.section === 'orbit') { this.playground.onKey(e); return; }
+    // Phase 3: the Build section has its own keys, and none of the launch's
+    if (this.route.section === 'build') { this.buildScreen.onKey(e); return; }
     // The landing page has no flight controls on it: Space must not launch the
     // rocket standing behind it, out of sight.
     if (this.mode === 'home') return;
@@ -1027,7 +1051,7 @@ class App {
     this.timeline.applyStaticText();
     this.home.applyLanguage();
     this.watch.applyLanguage();
-    this.sectionScreen.applyLanguage();
+    this.buildScreen.applyLanguage();
     this.playground.applyLanguage();
     this.syncDataMode();
     if (this.dataDialog.el.open) this.dataDialog.applyLanguage();
@@ -1449,6 +1473,7 @@ class App {
     }
     // The replay cursor runs on its own clock; warp > 1 skips through frames.
     if (sim && !this.player.live && this.player.playing) this.player.advanceCursor(dtReal * this.replayWarp);
+    if (this.mode === 'home') this.homeStage.update(dtReal);
     this.updateVisuals(dtReal);
     this.hudTimer += dtReal;
     if (this.hudTimer > 0.1) {
@@ -1463,6 +1488,7 @@ class App {
         playing: replaying ? this.player.playing : this.playing,
         armed: !!sim,
       });
+      if (this.mode === 'home') this.home.tick();
       if (this.mode === 'watch') {
         this.watch.update(this.shown, this.recorder.events, {
           playing: this.playing && this.player.live,
@@ -1839,7 +1865,7 @@ class App {
     // rather than the live object: everything they read — clock, state vector,
     // ground track, debris, event log — is the frame on screen.
     if (this.sceneCovered) {
-      // the Orbit section's playground covers the scene: the flight flies on, undrawn
+      // the Orbit playground or the Build screen covers the scene: the flight flies on, undrawn
     } else if (this.camMode === 'map') {
       this.map.draw(view.sim, sim.site.latitude, sim.site.longitude, Math.max(0, this.sbHeight));
     } else {

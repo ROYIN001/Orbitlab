@@ -17,7 +17,7 @@ import { drawChart } from './charts';
 import { runLifetimeJob } from '../physics/lifetime-job';
 import type { ForceModel, Spacecraft } from '../physics/propagator/forces';
 import type { PropagationResult } from '../physics/propagator/propagate';
-import { ECSS_LEVELS, measuredActivity, type Activity, type EcssLevel, type ForecastSide } from '../physics/propagator/activity';
+import { ECSS_LEVELS, loadSolarDaily, measuredActivity, type Activity, type EcssLevel, type ForecastSide } from '../physics/propagator/activity';
 import type { OrbitHandoff } from '../orbit/handoff';
 import type { DataProvider } from '../provider/data-provider';
 import type { SpaceWeather } from '../provider/space-weather';
@@ -210,7 +210,7 @@ export class LifetimeDialog extends Modal {
     } catch (e) {
       if (signal.aborted) throw e;
     }
-    const m = measuredActivity(sw, SIDE[choice]);
+    const m = measuredActivity(await loadSolarDaily(), sw, SIDE[choice]);
     this.activityNote = m.forecastTo
       ? t('life.sw.measured', { measured: m.measuredTo, forecast: m.forecastTo, repeat: m.repeatFrom, date: asOf })
       : t('life.sw.history', { measured: m.measuredTo, repeat: m.repeatFrom });

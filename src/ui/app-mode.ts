@@ -11,7 +11,8 @@
  * Since roadmap S01 the app has two axes (docs/ROADMAP-PART2-3.md): a
  * **section** — launch, orbit or build — and a **level** inside it — watch,
  * explore or engineer, the three non-home modes above. The launch simulator is
- * the launch section; orbit and build are the parts being built. A route is
+ * the launch section; the orbit section is its playground (O01 on), and the
+ * build section is being built level by level (Phase 3). A route is
  * a section and a level, or the landing page, which belongs to no section.
  *
  * The route is carried in the URL hash (`#/launch/watch`), so every face can

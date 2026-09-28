@@ -146,7 +146,7 @@ export function worksheetsDocx(sheets: readonly Worksheet[], pictureOf: PictureO
       if (s.figures?.length) out += pictureGrid(doc, s.figures) + para('');
       for (const it of s.items) out += item(doc, it, ++n, sheet.lang);
     }
-    return out + para(run(t('ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) }), { size: 8.5, color: '6B7280' }));
+    return out + para(run((sheet.footer ?? t('ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) })), { size: 8.5, color: '6B7280' }));
   }).join(PAGE_BREAK);
   return pack(body, doc);
 }

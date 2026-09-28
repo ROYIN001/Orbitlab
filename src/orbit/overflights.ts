@@ -9,6 +9,8 @@
  * far the place is from the point below the satellite, whether the place is
  * in daylight (an optical camera needs it; a radar does not), the local mean
  * solar time there, and whether the satellite is going north or south.
+ * P2.5 adds which side of the track the place is on and the incidence angle
+ * there, for a radar (src/orbit/sensors.ts judges each instrument).
  *
  * The satellites are those whose element sets are published: civil and
  * commercial imagers, and the military ones whose sets are public. The times
@@ -17,9 +19,10 @@
  * DOM-free; tests/overflights.test.ts holds it to R03's passes and to the
  * published local times of sun-synchronous imagers.
  */
-import { gmst } from '../physics/orbital';
+import { OMEGA_EARTH } from '../physics/constants';
 import { v3, type Vec3 } from '../physics/vec3';
-import { eciToEcef, geodeticToEcef, type GroundStation } from './applications';
+import { geodeticToEcef, type GroundStation } from './applications';
+import { temeToItrf } from './earth-orientation';
 import { findPasses, sunElevation, type Pass } from './passes';
 import type { SkyObject } from './real-sky';
 import { minutesSinceEpoch, sgp4 } from './sgp4';
@@ -37,6 +40,10 @@ export interface Overflight {
   solarTime: number;
   /** the satellite heading north (ascending) or south then */
   northbound: boolean;
+  /** which side of the ground track the place is on, looking the way the satellite goes (P2.5: a radar looks to one side) */
+  side: 'left' | 'right';
+  /** the angle at the place between its vertical and the line to the satellite, rad: a radar's incidence angle (P2.5) */
+  incidence: number;
 }
 
 const R = [0, 0, 0], V = [0, 0, 0];
@@ -49,9 +56,14 @@ const R_MEAN = 6371e3;
 export function overflightOf(o: SkyObject, st: GroundStation, pass: Pass): Overflight | null {
   const jd = pass.top.jd;
   if (sgp4(o.sat, minutesSinceEpoch(o.sat, jd), R, V) !== 0) return null;
-  const sat = eciToEcef(v3(R[0] * 1e3, R[1] * 1e3, R[2] * 1e3), gmst(jd));
+  const sat = temeToItrf(v3(R[0] * 1e3, R[1] * 1e3, R[2] * 1e3), jd);
   const site = geodeticToEcef(st);
   const down = v3(-sat.x, -sat.y, -sat.z), toSite = v3(site.x - sat.x, site.y - sat.y, site.z - sat.z);
+  // the velocity over the ground: turned as the position is, less the Earth's turning under it
+  const vi = temeToItrf(v3(V[0] * 1e3, V[1] * 1e3, V[2] * 1e3), jd);
+  const vg = v3(vi.x + OMEGA_EARTH * sat.y, vi.y - OMEGA_EARTH * sat.x, vi.z);
+  // up × ahead points to the left
+  const left = v3(sat.y * vg.z - sat.z * vg.y, sat.z * vg.x - sat.x * vg.z, sat.x * vg.y - sat.y * vg.x);
   const utcHours = (((jd - 0.5) % 1) + 1) % 1 * 24;
   return {
     object: o, pass,
@@ -61,6 +73,9 @@ export function overflightOf(o: SkyObject, st: GroundStation, pass: Pass): Overf
     solarTime: (((utcHours + (st.lon * 180) / Math.PI / 15) % 24) + 24) % 24,
     // TEME's z is the Earth's axis
     northbound: V[2] > 0,
+    side: left.x * toSite.x + left.y * toSite.y + left.z * toSite.z > 0 ? 'left' : 'right',
+    // the elevation is from the ellipsoid's normal, as a radar's incidence is
+    incidence: Math.PI / 2 - pass.top.el,
   };
 }
 
