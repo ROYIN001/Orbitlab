@@ -1148,9 +1148,21 @@ it**, and the field is now `FairingSpec.sepTime`: Ariane 64 200 s, Vega-C 220 s,
 March 3B/E carry the same field for the same reason — their operators publish a jettison time too
 — at 157 s, 157 s and 215 s (measured T+157.1 s and T+215.2 s). The 80 km altitude floor still
 applies to a timeline release, so a trajectory that is still deep in the atmosphere at its
-published time does not shed the fairing there. Everything else in the fleet — Falcon 9, H3,
-Electron, PSLV-XL, Long March 5, Angara, Proton, Atlas V, Vulcan — keeps the unmodified physical
-placard.
+published time does not shed the fairing there. Proton-M and Angara-A5 carry a rule instead of a
+time, `FairingSpec.sepAfterIgnition`: Khrunichev drops the fairing ten seconds into third-stage
+flight. ILS's Proton Mission Planner's Guide (Rev. 7, 2009) has the third stage lighting at 338 s
+and "PLF jettison typically at 348 s", timed "so that fairing hardware will impact in designated
+areas"; on Angara-A5 it goes "at the initial phase of Stage III operation", ten seconds after the
+core separated on the first flight (ILS, 2014). On the placard they had dropped it at T+175 s and
+T+302 s against Telstar 14R's 347 s and Angara flight 2's 340 s; on the rule they drop it at
+T+338.6 s and T+341.6 s (point mass). Everything else in the fleet — Falcon 9, H3, Electron,
+PSLV-XL, Long March 5, Atlas V, Vulcan — keeps the unmodified physical placard.
+
+That placard is not what the operators who quote it evaluate. ULA jettisons Atlas V's fairing
+"when the 3-sigma free molecular heat flux falls below 1,135 W/m²" (Atlas V Launch Services
+User's Guide, Rev. 11, 2010, §2.3): the limit applies to a dispersed atmosphere and trajectory, so
+the nominal heating at jettison is lower, and the model, which evaluates it on the nominal
+atmosphere, drops the fairing early (VALIDATION.md, F14).
 
 Soyuz-2.1a and Soyuz-2.1b now fly the published T+157 s callout directly instead of the heating
 placard, which used to leave Soyuz-2.1a 19 s late (T+176 s against that same ~157 s): at the
@@ -2779,9 +2791,10 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     cut-off works and is tested, the 300–800 km band does not close and all six `soyuz21a`
     rows plus Long March 2D's seven remain `ARCHITECTURE` exclusions. `insertionAltitudeFor`
     also still takes only the target and not the `VehicleSpec`, as the audit asked.
-  - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
-    jettison **time** their operator publishes (§4). Neither is a model of the real decision,
-    which is a heating placard evaluated against a specific fairing's thermal design.
+  - The fairing placard is one physical criterion (1135 W/m²) plus, for eight vehicles, the
+    jettison **time** their operator publishes and, for Proton-M and Angara-A5, the operator's
+    rule (§4). The placard is evaluated on the nominal atmosphere, where operators evaluate it on
+    3-sigma dispersions, so it drops Atlas V's and Falcon Heavy's fairings early.
   - The physics has been compared with flight data for eleven vehicles: Falcon 9 (webcast
     telemetry of five flights) and ten others against published timelines
     ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
@@ -2791,7 +2804,7 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     - PSLV-XL's first stage is 29 % slow at separation. It flies too steep and then turns hard;
       the solid-motor curve shape was measured and is not the cause.
     - H3's first stage flies far flatter than JAXA's plan.
-    - The heating placard drops most fairings 10–50 % early.
+    - The heating placard drops Atlas V's and Falcon Heavy's fairings 17–27 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.

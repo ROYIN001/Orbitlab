@@ -8,10 +8,12 @@
  * masses are not published they are estimated from stage mass fractions.
  * Treat every figure as approximate (±10 %).
  *
- * FAIRING JETTISON. Six vehicles carry a `fairing.sepTime`, the operator's own
+ * FAIRING JETTISON. Eight vehicles carry a `fairing.sepTime`, the operator's own
  * published callout, because their operators publish one and fly it: Soyuz-2.1a
  * and 2.1b 157 s, Ariane 64 200 s, Vega-C 220 s, Long March 2D 220 s, Long
- * March 3B/E 215 s, H-IIA 202 250 s. The rest stay on the physical
+ * March 3B/E 215 s, H-IIA 202 250 s, Vostok-K 156 s. Proton-M and Angara-A5 carry a
+ * `fairing.sepAfterIgnition`: Khrunichev drops it ten seconds into third-stage
+ * flight. The rest stay on the physical
  * free-molecular-heating placard, and the altitude floor applies to both, so a
  * trajectory still deep in the atmosphere at its published time does not shed
  * the fairing there. See `FairingSpec.sepTime` in src/types.ts for why a
@@ -346,7 +348,12 @@ export const VEHICLES: VehicleSpec[] = [
   {
     id: 'protonm', name: 'Proton-M / Briz-M', country: 'RU', manufacturer: 'Khrunichev',
     height: 58.2, payloadLEO: 23000, payloadGTO: 6920,
-    fairing: { mass: 2000, diameter: 4.35, length: 15, sepAltitude: 120e3, color: '#e8e8e8' },
+    // Ten seconds after the third stage lights: ILS's Proton Mission Planner's
+    // Guide (Rev. 7, 2009, §2.3.1) has RD-0213 ignition at 338 s and "PLF
+    // jettison typically at 348 s", timed so the halves fall in their impact
+    // areas (§2.4.2). The heating placard dropped it at T+175 s, 170 s early
+    // against Telstar 14R's 347 s (docs/VALIDATION.md, F14).
+    fairing: { mass: 2000, diameter: 4.35, length: 15, sepAltitude: 120e3, sepAfterIgnition: { stage: 'p3', delay: 10 }, color: '#e8e8e8' },
     stages: [
       // 4.1 m, not 7.4 m: audit item B23. 7.4 m is the SPAN across the six
       // outboard fuel tanks, and `VehicleModel.frontalArea()` turns the widest
@@ -394,7 +401,11 @@ export const VEHICLES: VehicleSpec[] = [
   {
     id: 'angaraa5', name: 'Angara-A5 / Briz-M', country: 'RU', manufacturer: 'Khrunichev',
     height: 55.4, payloadLEO: 24500, payloadGTO: 5400,
-    fairing: { mass: 2000, diameter: 4.35, length: 15, sepAltitude: 120e3, color: '#e8e8e8' },
+    // "At the initial phase of Stage III operation": on the first flight ten
+    // seconds after the core separated (ILS, 23 December 2014), and the URM-2
+    // lights a second after separation here. The heating placard dropped it at
+    // T+302 s against flight 2's 340 s (docs/VALIDATION.md, F14).
+    fairing: { mass: 2000, diameter: 4.35, length: 15, sepAltitude: 120e3, sepAfterIgnition: { stage: 'urm2', delay: 9 }, color: '#e8e8e8' },
     stages: [
       {
         id: 'urm1core', name: 'URM-1 core', dryMass: 9000, propellantMass: 128800, engine: RD191,

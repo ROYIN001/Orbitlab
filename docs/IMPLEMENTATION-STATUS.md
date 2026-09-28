@@ -309,7 +309,8 @@ Phase 2, real satellites and the military track, continues on the same branch:
   - PSLV-XL's first stage is 29 % slow at separation, because of its ascent profile, not its
     solid-motor thrust curve.
   - H3's first stage flies far flatter than planned.
-  - Most fairings come off 10–50 % early.
+  - Atlas V's and Falcon Heavy's fairings come off 17–27 % early. Proton-M and Angara-A5 now fly
+    their operator's jettison rule.
 
   Long March 2D, 3B/E and 5, Vulcan, Soyuz-2.1b and Starship are not compared; see
   "Assumptions and limitations" in [PHYSICS.md](PHYSICS.md).

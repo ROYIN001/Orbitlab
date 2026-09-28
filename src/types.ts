@@ -132,6 +132,20 @@ export interface FairingSpec {
    */
   sepTime?: number;
   /**
+   * Jettison a fixed time after a named stage first ignites, for an operator
+   * whose published rule ties the fairing to the sequence rather than to the
+   * clock or to a heating placard. Khrunichev's vehicles drop it early in
+   * third-stage flight: Proton-M "typically at 348 s", ten seconds after the
+   * third stage's main engine lights at 338 s, with the time "constrained to
+   * occur so that fairing hardware will impact in designated areas" (ILS,
+   * Proton Mission Planner's Guide, Rev. 7, 2009, §2.3.1 and §2.4.2); on
+   * Angara-A5 "at the initial phase of Stage III operation", ten seconds after
+   * the core separated on the first flight (ILS, 23 December 2014). A trajectory
+   * that ignites that stage late carries the fairing later, as the real one
+   * would. The altitude floor applies as for `sepTime`.
+   */
+  sepAfterIgnition?: { stage: string; delay: number };
+  /**
    * Height of the fairing's own lower cone, m, down to the diameter of the
    * stage it stands on, counted in `length`: that stage then carries no
    * interstage adapter of its own. Soyuz-2.1a's 4.11 × 11.43 m unit includes

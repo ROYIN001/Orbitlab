@@ -20,9 +20,9 @@ const DISAGREEMENTS: Record<string, readonly string[]> = {
   h3F3: ['meco/altitude', 'stageSep/altitude', 'seli1/altitude', 'seco1/time', 'seco1/altitude'],
   h2aF50: ['srbSep/time', 'seco/time'],
   vegaVV25: ['z40Sep/time', 'fairing/time', 'z9Sep/time'],
-  protonT14R: ['maxQ/time', 'fairing/time'],
+  protonT14R: ['maxQ/time'],
   fhArabsat: ['maxQ/time', 'beco/time', 'boosterSep/time', 'meco/time', 'stageSep/time', 'ses1/time', 'fairing/time'],
-  angaraF2: ['fairing/time'],
+  angaraF2: [],
 };
 
 describe('published launch timelines (point mass)', () => {
