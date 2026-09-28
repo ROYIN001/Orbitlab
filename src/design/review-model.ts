@@ -30,7 +30,13 @@
  * are never worse than `warn`: what they describe fails the mission through
  * the verdict, which is where the review's `fail` for it is — one reason, not
  * two. The probe's row is the review's own: `fail` when the flight did not
- * reach orbit.
+ * reach orbit. When it did, the orbit said is the one at the moment its
+ * perigee first cleared `ORBIT_INSERTION_FLOOR`, where the probe stops — not
+ * the target orbit, which the flight goes on to. A flight the probe calls
+ * "reaches orbit" because it was still flying, never lost, at its horizon
+ * without ever clearing the floor (`tInsertion` −1) is said as exactly that,
+ * as a note: the verdict counts it as orbit, the test saw no orbit above the
+ * floor (found in review: it read "reached orbit −1 s after liftoff").
  *
  * DOM-free, SI in (kg, m, m/s, s); the screen formats the numbers.
  */
@@ -38,7 +44,8 @@ import type { MissionConfig, OrbitSpec, VehicleSpec } from '../types';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../physics/defaults';
-import { ASCENT_MARGIN_REQUIRED, launchWindows } from '../physics/mission';
+import { ASCENT_MARGIN_REQUIRED, ORBIT_INSERTION_FLOOR, launchWindows } from '../physics/mission';
+import { INSERTION_PROBE_HORIZON } from '../physics/autotune';
 import { defaultDynamics } from '../physics/rigid/config';
 import type { Readiness, ReadinessItem, ReadinessLevel, ReadinessMission } from './readiness';
 import { HANDOFF_SATELLITE, HANDOFF_SEED, handoffDocument } from './build-handoff';
@@ -220,10 +227,23 @@ export function checklist(spec: VehicleSpec, r: Readiness): ChecklistSection[] {
     if (!probe) sections.probe = [say('build.eng.review.probe.notFlown', 'ok')];
     else if (probe.code === 'probeFailed') sections.probe = [say('build.eng.review.probe.failed', 'warn')];
     else if (probe.code === 'reachesOrbit') {
-      sections.probe = [say('build.eng.review.probe.orbit', 'ok', {
-        t: { value: probe.params.tInsertion, unit: 'count' },
-        pe: { value: probe.params.bestPerigee, unit: 'km' }, ap: { value: probe.params.apoapsis, unit: 'km' },
-      })];
+      const floor = { value: ORBIT_INSERTION_FLOOR, unit: 'km' as const };
+      const pe = probe.params.bestPerigee;
+      if (probe.params.tInsertion >= 0) {
+        // the orbit at the moment its perigee first cleared the floor, where the probe stops: not the target orbit
+        sections.probe = [say('build.eng.review.probe.orbit', 'ok', {
+          t: { value: probe.params.tInsertion, unit: 'count' }, floor,
+          pe: { value: pe, unit: 'km' }, ap: { value: probe.params.apoapsis, unit: 'km' },
+        })];
+      } else {
+        // Flown to the horizon without being lost, and never above the floor: what the probe (and so the verdict)
+        // counts as reaching orbit — a long, low coast (Vulcan's and Angara-A5's remixes to the 500 km preset
+        // coast at a 137 km perigee) — said as that, never as an orbit reached at "−1 s".
+        const t = { value: INSERTION_PROBE_HORIZON, unit: 'count' as const };
+        sections.probe = [Number.isFinite(pe)
+          ? say('build.eng.review.probe.horizon', 'info', { t, floor, pe: { value: pe, unit: 'km' } })
+          : say('build.eng.review.probe.horizonNever', 'info', { t })];
+      }
     } else {
       const end = { key: PROBE_END_KEYS[probe.event ?? ''] ?? PROBE_END_OTHER };
       // a "perigee" below the ground is a ballistic arc, not an orbit it held: said as never having held one

@@ -21,7 +21,8 @@ import { vehicleById } from '../src/data/vehicles';
 import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
-import { launchWindows } from '../src/physics/mission';
+import { ORBIT_INSERTION_FLOOR, launchWindows } from '../src/physics/mission';
+import { INSERTION_PROBE_HORIZON } from '../src/physics/autotune';
 import { DEFAULT_FAILURE, DEFAULT_GUIDANCE, guidanceForVehicle } from '../src/physics/defaults';
 import { readiness, readinessVerdict } from '../src/design/readiness';
 import {
@@ -160,6 +161,37 @@ describe('the checklist', () => {
     for (const id of ['design', 'plan', 'probe', 'verdict']) {
       expect(list.find((s) => s.id === id)!.rows.map((x) => x.text?.key), id).toEqual(['build.eng.review.notReached']);
     }
+  });
+
+  it('says a flight still going at the probe’s horizon as that, never as an orbit reached at −1 s (found in review)', () => {
+    // Recorded, not tuned: an unchanged Vulcan remix to the 500 km preset at half its rating coasts at a 137 km
+    // perigee past the probe's 2400 s, never lost, so the probe (and the verdict) call it "reaches orbit" with no
+    // insertion time. The row said "reached orbit −1 s after liftoff, with a perigee of 137 km".
+    const d = remixDraft('vulcan', 'vulcan-remix-r1', 'Vulcan remix');
+    const made = remixResult(d);
+    if (!made.ok) throw new Error('refused');
+    const spec = made.spec;
+    const r = readiness(spec, reviewMission(spec, defaultReviewChoice(spec, spec.payloadLEO / 2), FROM));
+    expect(r.insertion?.reachesOrbit).toBe(true);
+    expect(r.insertion?.tInsertion).toBe(-1);
+    const probe = expectChecklist(spec, r).find((s) => s.id === 'probe')!;
+    expect(probe.rows.map((x) => [x.level, x.text?.key])).toEqual([['info', 'build.eng.review.probe.horizon']]);
+    expect(probe.rows[0].text?.values).toEqual({
+      t: { value: INSERTION_PROBE_HORIZON, unit: 'count' }, floor: { value: ORBIT_INSERTION_FLOOR, unit: 'km' },
+      pe: { value: r.insertion!.bestPerigee, unit: 'km' },
+    });
+    // never on a bound orbit after the ascent at all: said without a perigee
+    const never = { ...r, items: r.items.map((i) => (i.step === 'probe' ? { ...i, params: { ...i.params, bestPerigee: -Infinity } } : i)) };
+    const row = expectChecklist(spec, never).find((s) => s.id === 'probe')!.rows[0];
+    expect([row.level, row.text?.key, Object.keys(row.text!.values)]).toEqual(['info', 'build.eng.review.probe.horizonNever', ['t']]);
+    // an insertion the probe saw: its time, and the orbit at that moment with the floor it cleared
+    const copy = copyOf('falcon9');
+    const flown = readiness(copy, reviewMission(copy, { orbitId: 'leo', siteId: 'cape', payloadKg: 5000, sixDof: false }, FROM));
+    const orbit = expectChecklist(copy, flown).find((s) => s.id === 'probe')!.rows[0];
+    expect(orbit.text?.key).toBe('build.eng.review.probe.orbit');
+    expect(orbit.text?.values.t).toEqual({ value: flown.insertion!.tInsertion, unit: 'count' });
+    expect(flown.insertion!.tInsertion).toBeGreaterThan(0);
+    expect(flown.insertion!.bestPerigee).toBeGreaterThanOrEqual(ORBIT_INSERTION_FLOOR);
   });
 
   it('has a sentence for every way the probe can end, and one for any other', () => {
