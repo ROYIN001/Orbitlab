@@ -89,7 +89,7 @@ export class StandPanel {
   constructor() {
     this.ctrl.setAttribute('aria-labelledby', 'be-stand-title');
     this.out.setAttribute('aria-labelledby', 'be-stand-out-title');
-    this.out.setAttribute('aria-live', 'polite');
+    // not a live region: a throttle drag redraws it every frame, and a screen reader would read it out every frame; a refusal is an alert of its own
     this.plots.setAttribute('aria-labelledby', 'be-stand-plots-title');
     this.root.append(this.ctrl, this.out, this.plots);
     this.ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => this.queueCharts()) : null;
