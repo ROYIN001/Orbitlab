@@ -111,8 +111,8 @@ export interface Remix {
 }
 
 export type RemixRefusal =
-  | 'noSuchStage' | 'noSuchGroup' | 'unknownPart' | 'badFactor' | 'badCount' | 'lumpedRecount' | 'solidMotor'
-  | 'vacuumEngineOnPad' | 'tooManyGroups' | 'outOfLimits';
+  | 'unknownOp' | 'noSuchStage' | 'noSuchGroup' | 'unknownPart' | 'badFactor' | 'badCount' | 'badIgnition' | 'lumpedRecount'
+  | 'solidMotor' | 'vacuumEngineOnPad' | 'tooManyGroups' | 'outOfLimits';
 
 /** An op the remix will not apply; `code` says why, `op` which one (index in the list). */
 export class RemixRefused extends Error {
@@ -121,7 +121,6 @@ export class RemixRefused extends Error {
     this.name = 'RemixRefused';
   }
 }
-
 
 /** The fleet's median fairing jettison altitude, m (115 km today): for a fairing where the design has none of its own. An estimate. */
 export const FLEET_FAIRING_SEP_ALTITUDE = (() => {
@@ -177,8 +176,10 @@ export function swapDryMass(dryMass: number, engine: EngineSpec, next: EnginePar
 export function remix(origin: VehicleSpec, ops: readonly RemixOp[], id: string, name: string): Remix {
   const spec: VehicleSpec = { ...structuredClone(origin), id, name };
   // A catalogue origin is the one a custom vehicle can name (the validator's
-  // rule); a remix of a remix keeps the catalogue vehicle behind it.
-  const derivedFrom = isCatalogueVehicle(origin.id) ? origin.id : origin.derivedFrom;
+  // rule); a remix of a remix keeps the catalogue vehicle behind it, and an
+  // origin naming none (or one that is not in the catalogue) passes none on.
+  const derivedFrom = isCatalogueVehicle(origin.id) ? origin.id
+    : origin.derivedFrom !== undefined && isCatalogueVehicle(origin.derivedFrom) ? origin.derivedFrom : undefined;
   if (derivedFrom !== undefined) spec.derivedFrom = derivedFrom;
   else delete spec.derivedFrom;
   // The Soyuz escape tower flies only on a vehicle derived from one that has it.
@@ -273,7 +274,7 @@ export function remix(origin: VehicleSpec, ops: readonly RemixOp[], id: string, 
         const groups = core.boosters ?? [];
         if (groups.length >= MAX_BOOSTER_GROUPS) refuse('tooManyGroups', `${groups.length} groups already`);
         const igniteAt = op.igniteAt;
-        if (igniteAt !== undefined && !(Number.isFinite(igniteAt) && igniteAt >= 0 && igniteAt <= 600)) refuse('badFactor', `igniteAt ${igniteAt}`);
+        if (igniteAt !== undefined && !(Number.isFinite(igniteAt) && igniteAt >= 0 && igniteAt <= 600)) refuse('badIgnition', `igniteAt ${igniteAt}`);
         if (enginePart(body.engine.part).vacuumOnly && !(igniteAt! > 0)) refuse('vacuumEngineOnPad', body.engine.part);
         const group = boosterSpec(body, n, igniteAt !== undefined ? { igniteAt } : {});
         // The catalogue body's own id, which keys its hardware's tables, unless the vehicle has it already.
@@ -303,7 +304,7 @@ export function remix(origin: VehicleSpec, ops: readonly RemixOp[], id: string, 
         break;
       }
       default:
-        refuse('unknownPart', `op ${(op as { op: string }).op}`);
+        refuse('unknownOp', `op ${(op as { op: string }).op}`);
     }
   });
   if (ops.length > 0) {

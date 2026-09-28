@@ -187,6 +187,8 @@ describe('D02 remix: what it refuses', () => {
       [f9, { op: 'addBoosters', body: 'gem63', count: 13 }, 'badCount'],
       [f9, { op: 'addBoosters', body: 'nothing', count: 2 }, 'unknownPart'],
       [f9, { op: 'fairing', part: 'nothing' }, 'unknownPart'],
+      [f9, { op: 'addBoosters', body: 'gem63', count: 2, igniteAt: -5 }, 'badIgnition'],
+      [f9, { op: 'shrink' } as unknown as RemixOp, 'unknownOp'],
     ];
     for (const [v, op, code] of cases) expect([op, refusal(() => remix(v, [op], 'x', 'x'))]).toEqual([op, code]);
     const atlas = vehicleById('atlasv551');
@@ -234,6 +236,9 @@ describe('D02 remix: strap-ons, fairing, ids and the origin', () => {
     expect(vehicleSpecProblems(twice)).toEqual([]);
     const { derivedFrom: _, ...orphan } = once;
     expect('escapeSystem' in remix(orphan, [], 'o', 'O').spec).toBe(false);
+    // an origin naming something that is not in the catalogue passes nothing on
+    const stray = remix({ ...once, derivedFrom: 'no-such-vehicle' }, [], 's', 'S').spec;
+    expect(['derivedFrom' in stray, 'escapeSystem' in stray]).toEqual([false, false]);
   });
 
   it('makes new ids the validator takes, that no catalogue part and nothing reserved uses', () => {

@@ -171,6 +171,7 @@ describe('D05 sizing: what it refuses, and its estimates', () => {
     expect(code({ ...SMALL, stages: [{ ...SMALL.stages[0], epsilon: 0.3 }] })).toBe('beyondLimit');
     expect(code({ ...SMALL, payloadKg: 0 })).toBe('badInput');
     expect(code({ ...SMALL, extraDvMps: -1 })).toBe('badInput');
+    expect(code({ ...SMALL, siteId: 'atlantis' })).toBe('unknownSite');
   });
 
   it('allows for engines and structure beyond the tanks by the catalogue’s median, a recorded estimate', () => {

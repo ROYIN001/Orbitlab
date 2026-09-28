@@ -125,7 +125,7 @@ export interface Sizing {
   estimates: SizingEstimate[];
 }
 
-export type SizingRefusal = StagingProblem | 'noStages' | 'unknownPart' | 'solidMotor' | 'lumpedEngine' | 'vacuumEngineOnPad'
+export type SizingRefusal = StagingProblem | 'noStages' | 'unknownPart' | 'unknownSite' | 'solidMotor' | 'lumpedEngine' | 'vacuumEngineOnPad'
   | 'badInput' | 'tooManyEngines' | 'outOfLimits';
 
 export class SizingRefused extends Error {
@@ -177,7 +177,8 @@ export function sizeVehicle(req: SizingRequest): Sizing {
   const estimates: SizingEstimate[] = [];
 
   // 1. The planner's cost to this orbit from this site, plus its margin.
-  const site = siteById(req.siteId);
+  let site;
+  try { site = siteById(req.siteId); } catch { return refuse('unknownSite', null, req.siteId); }
   const target = resolveTarget(req.orbit, site, req.launchTime ?? DEFAULT_LAUNCH);
   const { inc } = ascentInclinationFor(target, site);
   const lat = site.latitude * DEG;
