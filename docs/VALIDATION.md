@@ -12,6 +12,8 @@ data changes and one bug fix, all in §2. Falcon 9's first stage now flies its p
 ("Data change applied"), and a propellant-conservation bug found along the way is fixed (F10).
 Falcon 9's six-DOF pitch programme was fitted to three flights' flight-path angles and checked on
 two held-out flights ("Six-DOF pitch programme fitted"). That is the only fitted value.
+Later, Falcon Heavy took the same published first-stage masses and Falcon 9's max-Q bucket
+(§4, F11). Neither was fitted.
 
 Status on 2026-09-25:
 
@@ -292,7 +294,7 @@ first stage's tank capacities and empty mass:
 | propellant | 395 700 kg | 287 400 kg LOX + 123 500 kg RP-1 = 410 900 kg |
 | empty mass | 25 600 kg | 22 200 kg |
 
-Falcon Heavy's cores and the second stage keep their own figures. The second stage's published
+Falcon Heavy's cores took the same figures later (§4, F11). The second stage keeps its own. Its published
 4 000 kg empty and 107 500 kg of propellant are within 7 % and 0.5 % of the model's
 4 300 / 108 000 kg. It was not part of F1, so it was left alone.
 
@@ -759,14 +761,18 @@ The code is in `tests/validation/reference-data.ts`. The pinned disagreements ar
 
 | milestone | unit | published | point mass | six-DOF | tolerance |
 | --- | --- | ---: | ---: | ---: | ---: |
-| maxQ time | s | 69.0 | 51.3 (−26 %) ✗ | 51.2 (−26 %) ✗ | ±6.9 |
-| beco time | s | 150.0 | 122.7 (−18 %) ✗ | 122.7 (−18 %) ✗ | ±15.0 |
-| boosterSep time | s | 154.0 | 124.7 (−19 %) ✗ | 124.7 (−19 %) ✗ | ±15.4 |
-| meco time | s | 211.0 | 174.0 (−18 %) ✗ | 174.2 (−17 %) ✗ | ±21.1 |
-| stageSep time | s | 215.0 | 177.0 (−18 %) ✗ | 177.2 (−18 %) ✗ | ±21.5 |
-| ses1 time | s | 222.0 | 181.0 (−18 %) ✗ | 181.2 (−18 %) ✗ | ±22.2 |
-| fairing time | s | 247.0 | 180.2 (−27 %) ✗ | 147.3 (−40 %) ✗✗ | ±24.7 |
-| seco1 time | s | 528.0 | 509.0 (−4 %) | 510.5 (−3 %) | ±52.8 |
+| maxQ time | s | 69.0 | 48.1 (−30 %) ✗✗ | 47.9 (−31 %) ✗✗ | ±6.9 |
+| beco time | s | 150.0 | 134.0 (−11 %) ✗ | 134.0 (−11 %) ✗ | ±15.0 |
+| boosterSep time | s | 154.0 | 136.0 (−12 %) ✗ | 136.0 (−12 %) ✗ | ±15.4 |
+| meco time | s | 211.0 | 184.2 (−13 %) ✗ | 184.2 (−13 %) ✗ | ±21.1 |
+| stageSep time | s | 215.0 | 187.2 (−13 %) ✗ | 187.2 (−13 %) ✗ | ±21.5 |
+| ses1 time | s | 222.0 | 191.2 (−14 %) ✗ | 191.2 (−14 %) ✗ | ±22.2 |
+| fairing time | s | 247.0 | 204.7 (−17 %) ✗ | 164.9 (−33 %) ✗✗ | ±24.7 |
+| seco1 time | s | 528.0 | 513.0 (−3 %) | 517.9 (−2 %) | ±52.8 |
+
+Measured with the data change of F11 below. Before it, side-booster cut-off came at T+122.7 s,
+MECO at T+174.0 s (six-DOF 174.2 s), max Q at T+51.3 s and fairing jettison at T+180.2 s
+(six-DOF 147.3 s).
 
 **Angara-A5 flight 2 (planned)**
 
@@ -791,13 +797,30 @@ The code is in `tests/validation/reference-data.ts`. The pinned disagreements ar
 - **PSLV-XL:** the second-stage separation agrees in time, altitude and inertial speed.
 - **Falcon Heavy:** SECO-1 is within 4 %.
 
-**F11. Falcon Heavy's first stages cut off about 18 % early.** Side-booster cut-off comes at
-T+122.7 s against 150 s, and the core at T+174 s against 211 s, with everything after shifted
-the same way. Falcon Heavy's side boosters and core still fly the earlier Falcon 9 first-stage
-figures (395.7 t / 25.6 t), which F1 found burn short. The real core also throttles down while
-the side boosters burn, to last longer. The published Falcon 9 masses are a candidate for the
-side boosters, which are Falcon 9 first stages. They are not applied, because Falcon Heavy's core
-is a different stage with no published figures of its own.
+**F11. Falcon Heavy's first stages cut off 11–13 % early.** Side-booster cut-off comes at
+T+134.0 s against 150 s, and the core at T+184.2 s against 211 s, with everything after shifted
+the same way. It was 18 % (T+122.7 s and T+174 s) before two data changes, applied 2026-09-27:
+
+- *Published masses.* The side boosters are Falcon 9 first stages (Wikipedia's "Falcon Heavy":
+  "three Falcon 9 derived cores"; SpaceX builds "a Falcon 9 first stage or Falcon Heavy side
+  booster" on one line), and the core's tanks are a Falcon 9 first stage's. All three now carry
+  F1's published 410.9 t, and the side boosters its 22.2 t empty mass. The core keeps its 28 t
+  empty mass as an estimate, since none is published for the reinforced core. The lift-off
+  stack comes to 1 420.3 t against the published 1 420 t; it was 1 381.5 t.
+- *Falcon 9's max-Q bucket* (22 kPa, 75 %). The model's Falcon Heavy had none and peaked at
+  34 kPa. Falcon Heavy Demo 1's webcast telemetry (the same dataset as §2, Block 3 hardware, so
+  used for this and nothing else) shows the vehicle throttled down from T+38 to T+72 s and the
+  dynamic pressure on a 20–23 kPa plateau, peak 22.9 kPa. With the bucket the model peaks at
+  23.7 kPa.
+
+The masses alone moved cut-off by 5 s (T+127.6 s), the bucket another 6 s. The pitch kick was
+measured too (1.5° to 7°) and moves these times by about a second. What is left is the throttle
+schedule of each core: burning 410.9 t at full thrust takes about 150 s, so a side booster that
+cuts off at 150 s and still flies home, and a core that burns to 211 s and lands on a drone
+ship, must both throttle deeper and longer than the model's (the core to 55 % from T+20 s).
+SpaceX does not publish that schedule, and Arabsat-6A is the only Block 5 Falcon Heavy flight
+here, so it is not fitted. The disagreement list is unchanged, and max Q moved 3 s earlier
+(T+48 s against 69 s): a q-limited plateau puts the peak where the plateau starts.
 
 **F12. PSLV-XL's first stage delivers too little.** At first-stage separation the model is at
 1 512 m/s inertial against 2 143 m/s (−29 %), and 14 km higher. The deficit builds between T+70
@@ -823,7 +846,7 @@ where the free-molecular heating falls to 1 135 W/m²:
 | Atlas V | 157 s / 151 s | 205 s |
 | Proton-M | 175 s / 151 s | 347 s (after second-stage separation) |
 | Angara-A5 | 302 s / 256 s | 340 s |
-| Falcon Heavy | 180 s / 147 s | 247 s |
+| Falcon Heavy | 205 s / 165 s | 247 s |
 | H3, six-DOF only | 176 s | 210 s |
 
 The real vehicles hold theirs much longer. Two fixed jettison times (`fairing.sepTime`) also do
@@ -839,7 +862,7 @@ cannot say whether the real stages burn longer or coast before separating.
 **F16. H-IIA's SRB-A separation comes at T+107 s against 124 s as flown (−14 %), and SECO at
 T+760 s against 916 s (−17 %).** MECO agrees within 2 %.
 
-Max Q is early on Proton-M (−19 %) and Falcon Heavy (−26 %), the same pattern as Falcon 9 (F3).
+Max Q is early on Proton-M (−19 %) and Falcon Heavy (−30 %), the same pattern as Falcon 9 (F3).
 Atlas V's max Q is inside its tolerance.
 
 None of these was fitted. Each is a single flight, so there is nothing to hold out, and fitting

@@ -179,8 +179,11 @@ const J2_X5: EngineSpec = { name: 'J-2', count: 5, thrustSL: 486 * kN, thrustVac
 const J2: EngineSpec = { name: 'J-2', count: 1, thrustSL: 486 * kN, thrustVac: 1033 * kN, ispSL: 200, ispVac: 421, vacuumOnly: true };
 
 // ---------------------------------------------------------------- helpers
+// A Falcon Heavy side booster is a Falcon 9 first stage ("a Falcon 9 first
+// stage or Falcon Heavy side booster", SpaceX via Wikipedia's "Falcon Heavy"),
+// so it carries Falcon 9 Block 5's published masses (see `falcon9` below).
 const f9Booster = (id: string, name: string, count: number): BoosterGroupSpec => ({
-  id, name, count, dryMass: 25600, propellantMass: 395700, engine: MERLIN1D,
+  id, name, count, dryMass: 22200, propellantMass: 410900, engine: MERLIN1D,
   diameter: 3.66, length: 42, sepDelay: 2, color: '#f2f2f2',
 });
 const briz = (): StageSpec => ({
@@ -415,7 +418,7 @@ export const VEHICLES: VehicleSpec[] = [
       // 22 200 kg empty stage (Espace & Exploration no. 39, May 2017, as cited
       // by Wikipedia's "Falcon 9 Block 5"). The 395 700 / 25 600 kg flown before
       // cut the burn ~10 % short of five flights' webcast telemetry
-      // (docs/VALIDATION.md, F1). Falcon Heavy's cores keep their own figures.
+      // (docs/VALIDATION.md, F1). Falcon Heavy's three cores carry the same load (F11).
       { id: 's1', name: 'First stage (9× Merlin 1D)', dryMass: 22200, propellantMass: 410900, engine: MERLIN1D, diameter: 3.66, length: 42, color: '#f2f2f2', accentColor: '#1a1a1a', gridFins: true, legs: true },
       f9Stage2(),
     ],
@@ -456,7 +459,10 @@ export const VEHICLES: VehicleSpec[] = [
         // modelled below; it used to point at a `MERLIN1D_FH_CORE` alias that
         // was `{ ...MERLIN1D }` with no overrides, implying a distinction in the
         // engine that the data did not carry.
-        id: 'core', name: 'Center core', dryMass: 28000, propellantMass: 395700, engine: MERLIN1D,
+        // The core's tanks are a Falcon 9 first stage's and hold its published
+        // 410 900 kg. No empty mass is published for the reinforced core; the
+        // 28 000 kg is an estimate, 5.8 t over the Falcon 9 stage.
+        id: 'core', name: 'Center core', dryMass: 28000, propellantMass: 410900, engine: MERLIN1D,
         diameter: 3.66, length: 42, color: '#f2f2f2', accentColor: '#1a1a1a', gridFins: true, legs: true,
         throttleWithBoosters: 0.55,
         boosters: [f9Booster('side', 'Side boosters', 2)],
@@ -464,6 +470,11 @@ export const VEHICLES: VehicleSpec[] = [
       f9Stage2(),
     ],
     sites: ['cape', 'ksc39a'], maxQ: 40e3, maxAccel: 45,
+    // Falcon 9's bucket. Falcon Heavy Demo 1's webcast telemetry shows the whole
+    // vehicle throttled down from T+38 to T+72 s, holding the dynamic pressure
+    // on a 20-23 kPa plateau (peak 22.9 kPa); without a bucket the model peaked
+    // at 34 kPa (docs/VALIDATION.md, F11).
+    maxQThrottle: { qStart: 22e3, qEnd: 22e3, throttle: 0.75 },
     // Side boosters flown back to LZ-1 and LZ-2 keep 15 %: at 12 % they run
     // into their landing reserve before the boostback is done (Arabsat-6A,
     // 6.5 t to GTO, point-mass model).
