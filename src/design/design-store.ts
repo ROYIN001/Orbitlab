@@ -84,36 +84,64 @@ export interface DesignStorage { getItem(key: string): string | null; setItem(ke
 export const DESIGN_STORE_KEY = 'orbitlab.designs';
 const STORE_VERSION = 1;
 
-interface Stored { version: number; designs: DesignRecord[] }
-
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+
+/**
+ * What the store keeps under its key. `designs` holds every record it was
+ * given, including ones this build cannot read (see `Entry`), so it is
+ * `unknown[]` on the way in and out.
+ */
+interface Stored { version: number; designs: unknown[] }
+
+/**
+ * One stored record as this build reads it: a sound design, or anything else
+ * — a kind a newer build added (Phase 4's satellites, D06), or a damaged
+ * record — kept exactly as it was found. Risk R4 of the Phase 4 map: an
+ * older build (a PWA still serving a cached copy) must not erase a newer
+ * build's designs when it saves or removes one of its own, so the raw ones
+ * are written back untouched and in place.
+ */
+type Entry = { record: DesignRecord } | { raw: unknown };
+
+const isRecord = (d: unknown): d is DesignRecord => isObj(d) && typeof d.id === 'string' && typeof d.created === 'string'
+  && typeof d.updated === 'string' && designProblems(d.kind, d.name, d.design) === null;
+
+/** The entry is the sound record with this id (a raw one never is: R4). */
+const isSound = (e: Entry, id: string | undefined): e is { record: DesignRecord } => 'record' in e && e.record.id === id;
 
 /**
  * Designs kept in this browser's localStorage, under one key. A storage that
  * refuses (a private window, a policy) makes `list` empty and `save` reject
  * with `unavailable`; a full one rejects with `full`: a design is someone's
  * work, and losing it silently is the one thing this must not do. A record
- * that does not read back as a sound design is left out of the list, not
- * deleted.
+ * that does not read back as a sound design — damaged, or of a kind this
+ * build does not know — is left out of the list, not deleted: `save` and
+ * `remove` write it back as it was, where it was (risk R4, see `Entry`).
  */
 export class LocalDesignStore implements DesignStore {
   constructor(private readonly storage: () => DesignStorage = () => localStorage,
     private readonly now: () => Date = () => new Date(),
     private readonly newId: () => string = () => `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`) {}
 
-  private read(): DesignRecord[] {
+  /** Every stored record in its order, the sound ones read and the rest kept raw. */
+  private entries(): Entry[] {
     let text: string | null;
     try { text = this.storage().getItem(DESIGN_STORE_KEY); } catch { return []; }
     if (!text) return [];
     let stored: unknown;
     try { stored = JSON.parse(text); } catch { return []; }
     if (!isObj(stored) || !Array.isArray(stored.designs)) return [];
-    return stored.designs.filter((d): d is DesignRecord => isObj(d) && typeof d.id === 'string' && typeof d.created === 'string'
-      && typeof d.updated === 'string' && designProblems(d.kind, d.name, d.design) === null);
+    return stored.designs.map((d): Entry => (isRecord(d) ? { record: d } : { raw: d }));
   }
 
-  private write(designs: DesignRecord[]): void {
+  /** The sound records alone: all that `list` and `get` show. */
+  private read(): DesignRecord[] {
+    return this.entries().flatMap((e) => ('record' in e ? [e.record] : []));
+  }
+
+  private write(entries: Entry[]): void {
+    const designs = entries.map((e) => ('record' in e ? e.record : e.raw));
     const text = JSON.stringify({ version: STORE_VERSION, designs } satisfies Stored);
     let storage: DesignStorage;
     try { storage = this.storage(); } catch { throw new DesignStoreError('unavailable', 'This browser does not allow the app to keep anything.'); }
@@ -137,22 +165,24 @@ export class LocalDesignStore implements DesignStore {
   async save<K extends DesignKind>(input: DesignInput<K>): Promise<DesignRecord<K>> {
     const problem = designProblems(input.kind, input.name, input.design);
     if (problem) throw new DesignStoreError('invalid', problem);
-    const designs = this.read();
+    const entries = this.entries();
     const at = this.now().toISOString();
-    const existing = input.id !== undefined ? designs.find((d) => d.id === input.id) : undefined;
+    // only a sound record can be changed: a raw one (R4) is never overwritten, not even by its own id
+    const existing = input.id !== undefined ? entries.find((e) => isSound(e, input.id)) : undefined;
     if (input.id !== undefined && !existing) throw new DesignStoreError('notFound', `No design ${input.id} is kept here.`);
     const record = {
-      id: existing?.id ?? this.newId(), kind: input.kind, name: input.name.trim(),
-      created: existing?.created ?? at, updated: at, design: clone(input.design),
+      id: existing?.record.id ?? this.newId(), kind: input.kind, name: input.name.trim(),
+      created: existing?.record.created ?? at, updated: at, design: clone(input.design),
     } as DesignRecord<K>;
-    this.write(existing ? designs.map((d) => (d.id === record.id ? record : d)) : [...designs, record]);
+    this.write(existing ? entries.map((e) => (isSound(e, record.id) ? { record } : e)) : [...entries, { record }]);
     return clone(record);
   }
 
   async remove(id: string): Promise<boolean> {
-    const designs = this.read();
-    const kept = designs.filter((d) => d.id !== id);
-    if (kept.length === designs.length) return false;
+    const entries = this.entries();
+    // a raw record is never removed: this build cannot show it, so it cannot have been asked to
+    const kept = entries.filter((e) => !isSound(e, id));
+    if (kept.length === entries.length) return false;
     this.write(kept);
     return true;
   }
