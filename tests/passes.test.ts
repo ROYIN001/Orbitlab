@@ -16,6 +16,7 @@ import { DEG, R_EARTH } from '../src/physics/constants';
 import { gmst, wrap2pi } from '../src/physics/orbital';
 import { orbitFacts, stateAt, type Orbit } from '../src/orbit/kepler';
 import { eciToEcef, footprintAngle, lookAngles } from '../src/orbit/applications';
+import { maxPassDuration } from '../src/orbit/link';
 import { setEarthOrientation } from '../src/orbit/earth-orientation';
 import { parseSnapshot } from '../src/provider/data-provider';
 
@@ -155,7 +156,7 @@ describe('what a pass says', () => {
  * 2·λ_max, with λ_max = `footprintAngle(r, ε_min)` = acos(R·cos ε/r) − ε
  * (spherical Earth); so T = 2·λ_max/(2π/P). It is the form of Wertz & Larson,
  * *Space Mission Analysis and Design* (Earth-coverage chapter; not free, no
- * URL), and the map's `maxPassDuration` (§2.2 E), which track A3 implements.
+ * URL), and D06's `maxPassDuration` (src/orbit/link.ts; map §2.2 E), which this holds.
  *
  * The case: circular, 500 km, i = 90°, its ascending node over a station on
  * the equator at jd0, so the pass is overhead. On the equator at h = 0 the
@@ -207,7 +208,7 @@ describe('passes of a designed orbit (D07, findPassesOf)', () => {
     it(`lasts (P/π)·λ_max within 1 % straight overhead, above ${minElDeg}°`, () => {
       const minEl = minElDeg * DEG;
       const lambda = footprintAngle(r, minEl);
-      const closedForm = (P / Math.PI) * lambda;
+      const closedForm = maxPassDuration(P, lambda);
       const passes = findPassesOf(elevation, P, jd0 - 0.02, jd0 + 0.02, minEl);
       expect(passes).toHaveLength(1);
       const [p] = passes;
