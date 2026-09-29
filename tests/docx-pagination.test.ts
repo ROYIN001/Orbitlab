@@ -24,6 +24,29 @@ afterEach(() => language('en'));
 
 describe('Word question pagination', () => {
   for (const lang of ['en', 'th', 'ru'] as const) {
+    for (const withPicture of [false, true]) {
+      it(`keeps the ${lang} numeric prompt, optional picture (${withPicture}), answer and working box together`, () => {
+        language(lang);
+        const item: WsItem = { kind: 'number', prompt: 'Numeric question', unit: 'm',
+          ...(withPicture ? { figure: { svg: '<svg/>', caption: 'Picture caption' } } : {}), answer: { text: '42 m', value: 42 } };
+        const sheet: Worksheet = { lang, title: 'Numeric pagination regression', subtitle: '', student: 'QA', code: 'QA', seed: 1,
+          generatedAt: new Date('2026-09-29T12:00:00Z'), sections: [{ title: 'Questions', items: [item, { ...item, prompt: 'Next numeric question' }] }] };
+        const xml = documentXml(worksheetsDocx([sheet], () => ({ bytes: new Uint8Array([137, 80, 78, 71]), type: 'png', width: 100, height: 50 })));
+        const paragraphs = [...xml.matchAll(/<w:p>(.*?)<\/w:p>/g)].map((m) => m[1]);
+        const first = paragraphs.findIndex((p) => p.includes('Numeric question'));
+        const answer = paragraphs.findIndex((p) => p.includes('______________________ m'));
+        expect(answer).toBeGreaterThan(first);
+        // The answer must continue the prompt's keep-with-next chain into
+        // the following working table; otherwise the empty box is orphaned.
+        for (const p of paragraphs.slice(first, answer + 1)) {
+          expect(p).toContain('<w:keepNext/>');
+          expect(p).toContain('<w:keepLines/>');
+        }
+        expect(paragraphs[answer + 1]).not.toContain('<w:keepNext/>');
+        expect(paragraphs[answer + 2]).not.toContain('<w:keepNext/>');
+        expect(paragraphs[answer + 3]).toContain('Next numeric question');
+      });
+    }
     for (const kind of ['choice', 'multi', 'order'] as const) {
       it(`keeps the ${lang} ${kind} prompt, picture, hint and choices together but releases the next question`, () => {
         language(lang);

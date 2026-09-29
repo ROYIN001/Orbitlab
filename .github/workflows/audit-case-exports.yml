@@ -6,6 +6,8 @@ on:
     paths:
       - .github/workflows/audit-case-exports.yml
       - tests/browser/journeys/case-worksheet-exports.mjs
+      - src/worksheets/docx.ts
+      - src/orbit/encounter-plane.ts
   workflow_dispatch:
 
 permissions:

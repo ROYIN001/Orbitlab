@@ -88,7 +88,7 @@ function item(doc: Doc, it: WsItem, n: number, lang: Worksheet['lang']): string 
   let out = para(run(`${n}. `, { bold: true }) + run(it.prompt, { bold: true }), { keepNext: true, keepLines: true, after: 60 });
   if (it.figure) out += doc.figure(it.figure, it.figure.image ? 70 : 120, true);
   if (it.kind === 'number') {
-    out += para(run(`${tFor(lang, 'ws.answer')} ______________________ ${it.unit ?? ''}`), { after: 40 });
+    out += para(run(`${tFor(lang, 'ws.answer')} ______________________ ${it.unit ?? ''}`), { after: 40, keepNext: true, keepLines: true });
     out += `${WORK_BOX}${para(run(tFor(lang, 'ws.working'), { size: 8, color: '9CA3AF' }))}</w:tc></w:tr></w:tbl>`;
   } else {
     if (it.kind === 'multi') out += para(run(tFor(lang, 'ws.multiHint'), { size: 9, color: '4B5563', italic: true }), { keepNext: true, keepLines: true });
