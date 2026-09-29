@@ -14,7 +14,13 @@
  *   re-entry on 2026-07-05 (GCAT, https://planet4589.org/space/gcat/) — the
  *   criterion P2.5 fixed — and the +8.0 % VALIDATION records, **±0.05
  *   percentage points** (its last digit: the same run, reached through the
- *   design, must not move it).
+ *   design, must not move it). Met on the first run: +8.046 %. CHANGED AFTER
+ *   THAT RUN: the last-digit bound is replaced by the identity it stood for —
+ *   the design's run is the box run of tests/ballistic.test.ts, the same
+ *   re-entry to 1e-9 day — because +8.046 sits 0.004 points inside it and the
+ *   run's last months read the committed solar baseline
+ *   (src/data/solar-daily.json), whose next refresh would move it without
+ *   anything here being wrong. The 25 % criterion is unchanged.
  * - **TU Delft p. 138** (B.T.C. Zandbergen, *Spacecraft bus design and
  *   sizing*, TU Delft 2020, https://repository.tudelft.nl/file/File_124a068a-158f-4b40-a44f-9ba407a14845):
  *   500 km, 5 m², C_D 2, 7.613 km/s, 4.89 × 10⁻¹³ kg/m³ (its Appendix H
@@ -70,7 +76,7 @@ describe('NAPA-2 as a 6U design (VALIDATION §7)', () => {
     expect(dragArea(napa2)).toBe(tumblingBoxArea(NAPA2.size));
   });
 
-  it('lasts within 25 % from its first element set, the +8.0 % VALIDATION records ± 0.05 points', () => {
+  it('lasts within 25 % from its first element set: the run VALIDATION records (+8.0 %)', () => {
     const el = elementsFromRecord(NAPA2.elements);
     const measured = measuredActivity(HISTORY as SolarDaily, null).series;
     // GCAT gives the day: noon
@@ -78,7 +84,9 @@ describe('NAPA-2 as a 6U design (VALIDATION §7)', () => {
     const p = predictReentry(el, lifetimeSpacecraft(napa2), measured, 3000);
     const err = (p.jd! - p.from) / actual - 1;
     expect(Math.abs(err)).toBeLessThan(0.25);
-    within(err * 100, 8.0, 0.05, 'error of the time, %');
+    // the box run of tests/ballistic.test.ts (VALIDATION §7's +8.0 %): the same re-entry
+    const box = predictReentry(el, { mass: NAPA2.mass, area: tumblingBoxArea(NAPA2.size), cd: 2.2 }, measured, 3000);
+    expect(Math.abs(p.jd! - box.jd!)).toBeLessThan(1e-9);
   }, 60_000);
 });
 
