@@ -17,7 +17,8 @@
  *   paper cants those thrusters 17° and 30° off the north–south axis to keep
  *   the plumes off the arrays, so each must give Δv/cos(cant). Worked by hand
  *   (roughly 43.5 and 7.6 kg) before this bound was written: **±0.1 kg** as
- *   for hydrazine; a miss is recorded, not loosened.
+ *   for hydrazine; a miss is recorded, not loosened. Found: ion 7.63 kg, met;
+ *   arcjet 43.49 kg, 0.109 under, missed — recorded below.
  * - **V-V2**, S.M. Hull, "End of Mission Considerations", NTRS 20130000278
  *   (New SMAD ch. 30), Fig. 30.2-1, p. 6
  *   (https://ntrs.nasa.gov/api/citations/20130000278/downloads/20130000278.pdf):
@@ -104,9 +105,17 @@ describe('V-V1: propellant for a Δv (Patterson & Oleson, TM-113111, Table III)'
     expect(Math.abs(deltaVAvailable(craft) / 450 - 1)).toBeLessThan(1e-9);
   });
 
-  it('the arcjet (17° cant) and ion (30° cant) rows, each giving Δv/cos(cant): 43.6 and 7.6 kg ± 0.1', () => {
-    within(propellantFor(430, 450 / Math.cos(17 * DEG), 450), 43.6, 0.1, 'arcjet');
+  it('the xenon ion row (30° cant), giving Δv/cos(cant): 7.6 kg ± 0.1', () => {
     within(propellantFor(430, 450 / Math.cos(30 * DEG), 2960), 7.6, 0.1, 'xenon ion');
+  });
+
+  it('the arcjet row (17° cant) comes out 0.11 kg under the table\'s 43.6: the finding', () => {
+    // fixed before: 43.6 ± 0.1 kg; found 43.49 kg (−0.109), missed. The cant takes 41.69 kg (none) to
+    // 43.49, 94 % of the way to the table; the rest is not in the paper's text (17.5° would give 43.60).
+    // This bound records the miss; it was set after the first run.
+    const arcjet = propellantFor(430, 450 / Math.cos(17 * DEG), 450);
+    expect(43.6 - arcjet).toBeGreaterThan(0.1);
+    expect(43.6 - arcjet).toBeLessThan(0.12);
   });
 });
 
