@@ -108,12 +108,22 @@ export function aeroTorque(rho: number, cd: number, area: number, v: number, arm
  * The dipole field's strength, T (D06; Starin & Eterno Table 19-4):
  * M·λ/r³ at radius `r` (m), M = `EARTH_DIPOLE_MOMENT`. λ is the chapter's
  * factor of magnetic latitude, 1 on the magnetic equator and 2 over a
- * magnetic pole (`dipoleLatitudeFactor`); it defaults to 2, the peak a polar
- * orbit meets, so `dipoleField(r)` is the strongest field at that radius (the
- * `AttitudeCore` contract). The chapter takes λ ≈ 1.2 for an equatorial orbit.
+ * magnetic pole (`dipoleLatitudeFactor`). The chapter takes λ = 2 for a polar
+ * orbit and λ ≈ 1.2 for an equatorial one.
  */
-export function dipoleField(r: number, latitudeFactor = 2): number {
+export function dipoleFieldAt(r: number, latitudeFactor: number): number {
   return (EARTH_DIPOLE_MOMENT * latitudeFactor) / r ** 3;
+}
+
+/**
+ * The strongest dipole field at radius `r` (m), T: 2M/r³, the field over a
+ * magnetic pole, which a polar orbit meets (the `AttitudeCore` contract).
+ * It takes `r` alone on purpose: with λ as an optional second argument,
+ * `radii.map(dipoleField)` would pass each index as λ and give 0 T for the
+ * first radius. `dipoleFieldAt` takes λ.
+ */
+export function dipoleField(r: number): number {
+  return dipoleFieldAt(r, 2);
 }
 
 /**

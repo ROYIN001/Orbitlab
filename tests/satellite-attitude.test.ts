@@ -62,7 +62,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  EARTH_DIPOLE_MOMENT, aeroTorque, attitudeCore, biasMomentum, dipoleField, dipoleLatitudeFactor,
+  EARTH_DIPOLE_MOMENT, aeroTorque, attitudeCore, biasMomentum, dipoleField, dipoleFieldAt, dipoleLatitudeFactor,
   gravityGradientTorque, magneticTorque, momentumDumpForce, pointingLoss, slewTorque, solarTorque,
   thrusterForce, torquerDipole, wheelMomentumCyclic,
 } from '../src/orbit/attitude';
@@ -140,10 +140,10 @@ describe('disturbance torques (Starin & Eterno Table 19-4, PDF pp. 9–10)', () 
   it('magnetic: B = 4.4e-5 T over FireSat\'s poles, 4.4e-5 N·m on 1 A·m²; SCS 4.6e-7 N·m at λ = 1.2', () => {
     const B = dipoleField(FIRESAT_R);
     expectPrinted(B, '4.4e-5');
-    // the default factor is the polar 2, the chapter's for a polar orbit
-    expect(B).toBe(dipoleField(FIRESAT_R, 2));
+    // dipoleField is the polar λ = 2, the chapter's for a polar orbit
+    expect(B).toBe(dipoleFieldAt(FIRESAT_R, 2));
     expectPrinted(magneticTorque(1, B), '4.4e-5');
-    expectPrinted(magneticTorque(1, dipoleField(SCS_R, 1.2)), '4.6e-7');
+    expectPrinted(magneticTorque(1, dipoleFieldAt(SCS_R, 1.2)), '4.6e-7');
   });
 });
 
@@ -252,7 +252,7 @@ describe('the laws behind the rules (analytic)', () => {
       expect(dipoleLatitudeFactor(phi) / Math.hypot(bx, bz)).toBeCloseTo(1, 12);
     }
     // at the surface on the magnetic equator the field is 3.0e-5 T (the module's doc)
-    expectPrinted(dipoleField(6378137, 1), '3.0e-5');
+    expectPrinted(dipoleFieldAt(6378137, 1), '3.0e-5');
   });
 
   it('the slew torque covers the angle: accelerate half the time, brake the other half', () => {
@@ -339,5 +339,11 @@ describe('the attitude core (src/orbit/satellite-cores.ts)', () => {
     expect(attitudeCore.dipoleField).toBe(dipoleField);
     expect(attitudeCore.pointingLoss).toBe(pointingLoss);
     expect(Object.keys(attitudeCore)).toHaveLength(12);
+  });
+
+  it('takes the contract\'s arguments only, so a core passed to map() ignores the index', () => {
+    // with λ as an optional second argument the index would be taken for λ: 0 T at the first radius
+    const radii = [FIRESAT_R, SCS_R];
+    expect(radii.map(attitudeCore.dipoleField)).toEqual(radii.map((r) => dipoleField(r)));
   });
 });
