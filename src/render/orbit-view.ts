@@ -121,7 +121,7 @@ export class OrbitView {
   private readonly camera = new THREE.PerspectiveCamera(40, 1, 0.01, 10000);
   private readonly earth: THREE.Mesh;
   private readonly earthMat: THREE.ShaderMaterial;
-  private readonly stars = buildStarField(3000);
+  private readonly stars = buildStarField(3000, 1, true);
   /** the orbit's own frame (perifocal: x to perigee, z along the angular momentum), turned into ECI each frame */
   private readonly perifocal = new THREE.Group();
   private readonly ellipse: Line2;
@@ -505,8 +505,8 @@ export class OrbitView {
     else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
     // The star shell represents directions at infinity, not foreground
-    // geometry. Keep it centred on the camera as Launch does; depth testing
-    // still lets the Earth occlude stars behind it.
+    // geometry. Keep it centred on the camera as Launch does. Its shader uses
+    // far depth, so even a narrow portrait view cannot put stars before Earth.
     this.stars.position.copy(this.camera.position);
     (this.earthMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
     this.renderer.render(this.scene, this.camera);

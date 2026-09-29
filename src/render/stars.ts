@@ -20,6 +20,10 @@ const STAR_VERT = /* glsl */ `
   void main() {
     vCol = aColor;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    #ifdef BACKGROUND_SKY
+      // Preserve the sky direction while keeping it behind all scene geometry.
+      gl_Position.z = gl_Position.w;
+    #endif
     gl_PointSize = aSize * uPixelRatio;
   }
 `;
@@ -51,7 +55,7 @@ const STAR_FRAG = /* glsl */ `
  * hundred you can pick out, and thousands at the threshold of visibility.
  * Nothing here uses `Math.random`, so the sky is identical on every run.
  */
-export function buildStarField(radius = 4e8, pixelRatio = 1): THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial> {
+export function buildStarField(radius = 4e8, pixelRatio = 1, background = false): THREE.Points<THREE.BufferGeometry, THREE.ShaderMaterial> {
   const FIELD = 3600;
   const BAND = 2400;
   const N = FIELD + BAND;
@@ -103,10 +107,14 @@ export function buildStarField(radius = 4e8, pixelRatio = 1): THREE.Points<THREE
   geo.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
   const mat = new THREE.ShaderMaterial({
     vertexShader: STAR_VERT, fragmentShader: STAR_FRAG,
+    defines: background ? { BACKGROUND_SKY: 1 } : {},
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
     uniforms: { uOpacity: { value: 1 }, uPixelRatio: { value: pixelRatio } },
   });
   const points = new THREE.Points(geo, mat);
+  // Opaque geometry has already written depth. Other transparent overlays
+  // should blend over the sky, including those that do not write depth.
+  if (background) points.renderOrder = -1;
   points.frustumCulled = false;
   return points;
 }

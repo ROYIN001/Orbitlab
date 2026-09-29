@@ -144,21 +144,46 @@ export const emptyProgress = (): ProgressData => ({ version: 1, lessons: {}, ass
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
+// Keep malformed source bytes out of the public/exported progress schema. A
+// repair may be saved only after the original has been preserved separately.
+// null means storage could not even be read: it must not be overwritten.
+const recoverySource = new WeakMap<ProgressData, string | null>();
+const recovering = (data: ProgressData, raw: string | null): ProgressData => {
+  recoverySource.set(data, raw);
+  return data;
+};
+
+function readLessonProgress(value: unknown): LessonProgress {
+  if (!isRecord(value)) return { attempts: 0, hintsShown: 0, passed: false };
+  const count = (n: unknown): number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0 ? n : 0;
+  // Leave old records (including ones without frozen snapshots) intact.
+  const out = { ...value, attempts: count(value.attempts), hintsShown: Math.min(3, count(value.hintsShown)), passed: value.passed === true } as LessonProgress;
+  if (value.revealed !== undefined) {
+    out.revealed = isRecord(value.revealed)
+      ? Object.fromEntries(Object.entries(value.revealed).map(([id, values]) => [id, Array.isArray(values)
+        ? values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v)) : []]))
+      : {};
+  }
+  return out;
+}
+
 export function loadProgress(store?: KeyValueStore): ProgressData {
+  let raw: string | null = null;
   try {
-    const raw = (store ?? localStorage).getItem(PROGRESS_STORAGE_KEY);
+    raw = (store ?? localStorage).getItem(PROGRESS_STORAGE_KEY);
     if (!raw) return emptyProgress();
     const data = JSON.parse(raw) as unknown;
-    if (!isRecord(data) || data.version !== 1) return emptyProgress();
-    return {
+    if (!isRecord(data) || data.version !== 1) return recovering(emptyProgress(), raw);
+    const loaded: ProgressData = {
       version: 1,
-      lessons: isRecord(data.lessons) ? data.lessons as Record<string, LessonProgress> : {},
+      lessons: isRecord(data.lessons) ? Object.fromEntries(Object.entries(data.lessons).map(([id, value]) => [id, readLessonProgress(value)])) : {},
       assessments: Array.isArray(data.assessments) ? data.assessments as AssessmentAttempt[] : [],
       customLessons: Array.isArray(data.customLessons) ? data.customLessons as CatalogLesson[] : [],
       customQuestions: Array.isArray(data.customQuestions) ? data.customQuestions as Question[] : [],
     };
+    return JSON.stringify(loaded) === JSON.stringify(data) ? loaded : recovering(loaded, raw);
   } catch {
-    return emptyProgress();
+    return recovering(emptyProgress(), raw);
   }
 }
 
@@ -170,7 +195,22 @@ export function loadProgress(store?: KeyValueStore): ProgressData {
  */
 export function saveProgress(data: ProgressData, store?: KeyValueStore): boolean {
   try {
-    (store ?? localStorage).setItem(PROGRESS_STORAGE_KEY, JSON.stringify(data));
+    const target = store ?? localStorage;
+    if (recoverySource.has(data)) {
+      const raw = recoverySource.get(data);
+      if (raw == null) return false;
+      // Never replace an older recovery copy. If backup fails (e.g. quota),
+      // the original active record stays untouched and the UI reports failure.
+      const base = `${PROGRESS_STORAGE_KEY}.recovery`;
+      let key = base, suffix = 0, previous = target.getItem(key);
+      while (previous !== null && previous !== raw) {
+        key = `${base}.${++suffix}`;
+        previous = target.getItem(key);
+      }
+      if (previous !== raw) target.setItem(key, raw);
+    }
+    target.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(data));
+    recoverySource.delete(data);
     return true;
   } catch {
     return false;

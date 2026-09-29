@@ -256,6 +256,14 @@ describe('dictionary parity', () => {
 });
 
 describe('translation coverage', () => {
+  it('qualifies the omitted heating model as detailed in all three languages', () => {
+    // staging.ts still evaluates approximate heat flux for fairing release;
+    // the limitations must not claim that all heating is absent.
+    expect(en['dlg.physics.limitsText']).toMatch(/detailed heating/);
+    expect(ru['dlg.physics.limitsText']).toMatch(/детальн\p{L}* нагрев/u);
+    expect(th['dlg.physics.limitsText']).toContain('ความร้อนโดยละเอียด');
+  });
+
   it('writes every prose value in the target script', () => {
     for (const name of Object.keys(DICTS) as Target[]) {
       const bad = Object.keys(en)
