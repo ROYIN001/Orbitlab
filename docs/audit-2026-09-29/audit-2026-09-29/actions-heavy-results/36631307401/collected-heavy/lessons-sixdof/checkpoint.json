@@ -1,0 +1,23 @@
+{
+  "file": "tests/heavy/lessons-sixdof.test.ts",
+  "caseId": "lessons-sixdof",
+  "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+  "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+  "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+  "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+  "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+  "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+  "node": "v22.22.2",
+  "v8": "12.4.254.21-node.39",
+  "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+  "platform": "linux",
+  "arch": "x64",
+  "startedAt": "2026-09-29T21:23:16.723Z",
+  "githubRunId": "36631307401",
+  "githubRunAttempt": "1",
+  "state": "finished",
+  "exit": 0,
+  "signal": null,
+  "finishedAt": "2026-09-29T21:27:55.059Z",
+  "elapsedMs": 278335
+}

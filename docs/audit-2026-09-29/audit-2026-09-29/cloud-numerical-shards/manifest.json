@@ -1,0 +1,104 @@
+{
+  "createdAt": "2026-09-29T19:36:20.1420748Z",
+  "mechanism": "codex cloud exec CLI; no Codex app thread/artifact created",
+  "environment": "6abb00feffcc8191a4b3fc030ff13efb",
+  "branch": "codex/cloud-audit-handoff-2026-09-29",
+  "tasks": [
+    {
+      "label": "standard-6-7-8",
+      "id": "task_e_6abc12b7b6b4832996e449c2919a3fb7",
+      "title": "Complete numerical tests for Orbitlab audit",
+      "assignment": "standard 6/8, 7/8, 8/8",
+      "url": "https://chatgpt.com/codex/cloud/tasks/task_e_6abc12b7b6b4832996e449c2919a3fb7",
+      "cliReturnedUrl": "https://chatgpt.com/codex/tasks/task_e_6abc12b7b6b4832996e449c2919a3fb7",
+      "prompt": "standard-6-7-8.md",
+      "dispatchReturn": "standard-6-7-8-dispatch.txt",
+      "dispatchExitCode": 0,
+      "lastObservedStatus": "ready",
+      "statusCommandExitCode": 1,
+      "resultPatch": "standard-6-7-8-latest.patch",
+      "recovered": "recovered-standard-6-7-8/audit-2026-09-29/cloud-numerical/standard-6-7-8"
+    },
+    {
+      "label": "heavy-1-of-3",
+      "id": "task_e_6abc12cb41ac8329831d030815de3803",
+      "title": "Complete HEAVY shard 1/3 tests",
+      "assignment": "heavy 1/3",
+      "url": "https://chatgpt.com/codex/cloud/tasks/task_e_6abc12cb41ac8329831d030815de3803",
+      "cliReturnedUrl": "https://chatgpt.com/codex/tasks/task_e_6abc12cb41ac8329831d030815de3803",
+      "prompt": "heavy-1-of-3.md",
+      "dispatchReturn": "heavy-1-of-3-dispatch.txt",
+      "dispatchExitCode": 0,
+      "lastObservedStatus": "pending",
+      "statusCommandExitCode": 1
+    },
+    {
+      "label": "heavy-2-of-3",
+      "id": "task_e_6abc12de82ac83299417368e38f3791e",
+      "title": "Complete heavy shard 2/3 tests",
+      "assignment": "heavy 2/3",
+      "url": "https://chatgpt.com/codex/cloud/tasks/task_e_6abc12de82ac83299417368e38f3791e",
+      "cliReturnedUrl": "https://chatgpt.com/codex/tasks/task_e_6abc12de82ac83299417368e38f3791e",
+      "prompt": "heavy-2-of-3.md",
+      "dispatchReturn": "heavy-2-of-3-dispatch.txt",
+      "dispatchExitCode": 0,
+      "lastObservedStatus": "pending",
+      "statusCommandExitCode": 1
+    },
+    {
+      "label": "heavy-3-of-3",
+      "id": "task_e_6abc12fb61d88329ae21af7d91db4dac",
+      "title": "Complete HEAVY shard 3/3 tests",
+      "assignment": "heavy 3/3",
+      "url": "https://chatgpt.com/codex/cloud/tasks/task_e_6abc12fb61d88329ae21af7d91db4dac",
+      "cliReturnedUrl": "https://chatgpt.com/codex/tasks/task_e_6abc12fb61d88329ae21af7d91db4dac",
+      "prompt": "heavy-3-of-3.md",
+      "dispatchReturn": "heavy-3-of-3-dispatch.txt",
+      "dispatchExitCode": 0,
+      "lastObservedStatus": "pending",
+      "statusCommandExitCode": 1
+    }
+  ],
+  "existingParentTask": {
+    "id": "task_e_6abc0b7629588329aac7b982ab04a033",
+    "assignment": "standard 3/8,4/8",
+    "status": "ready",
+    "handledBy": "root",
+    "recovered": "recovered-parent-3-4/audit-2026-09-29/physics-cloud-results",
+    "latestPatch": "standard-3-4-latest.patch"
+  },
+  "coverageUnion": "standard-coverage-union.json",
+  "completedStandardShards": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "completedStandardUniqueAssertions": 2544,
+  "lastCheckedAt": "2026-09-29T20:22:07.850Z",
+  "standardOriginalCloudPassed": 2542,
+  "standardOriginalCloudFailed": 2,
+  "focusedIntegratedRetest": {
+    "tests": 35,
+    "passed": 35,
+    "failed": 0,
+    "exit": 0,
+    "artifact": "standard-failures-focused.json"
+  },
+  "isolatedCloudExplore": {
+    "tests": 19,
+    "passed": 19,
+    "failed": 0,
+    "exit": 0,
+    "runtime": "Node22.22.2 Linux x64",
+    "sourceUnchanged": true,
+    "originalTimeoutMs": 5000,
+    "previousTimeoutCaseMs": 1238.395886,
+    "patch": "standard-6-7-8-isolated-explore.patch",
+    "recovered": "recovered-standard-explore-followup/audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun"
+  }
+}

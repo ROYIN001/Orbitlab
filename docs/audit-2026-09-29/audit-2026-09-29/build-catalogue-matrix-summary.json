@@ -1,0 +1,253 @@
+{
+  "generatedAt": "2026-09-29T19:47:22.461Z",
+  "catalogue": {
+    "stageBodies": 50,
+    "boosterBodies": 14,
+    "engines": 55,
+    "fairings": 17
+  },
+  "payloads": [
+    0,
+    1000,
+    100000
+  ],
+  "boxes": [
+    {
+      "width": 343,
+      "height": 440
+    },
+    {
+      "width": 700,
+      "height": 600
+    }
+  ],
+  "ratingOptions": {
+    "maxFlights": 16,
+    "timeBudgetMs": 2000,
+    "resolution": 0.025
+  },
+  "counts": {
+    "stage-pad": {
+      "accepted": 349,
+      "vacuumEngineOnPad": 950,
+      "familyMismatch": 826,
+      "solidMotor": 625
+    },
+    "stage-upper": {
+      "accepted": 614,
+      "familyMismatch": 1416,
+      "solidMotor": 720
+    },
+    "booster": {
+      "accepted": 86,
+      "vacuumEngineOnPad": 266,
+      "familyMismatch": 103,
+      "solidMotor": 315
+    },
+    "fairing": {
+      "accepted": 17
+    },
+    "body-edge": {
+      "accepted": 8,
+      "fieldRange": 20
+    },
+    "payload-edge": {
+      "accepted": 4,
+      "badPayload": 3
+    },
+    "count-edge": {
+      "rejected": 220
+    }
+  },
+  "validationEvidence": {
+    "fullSuitePassed": 6542,
+    "fullSuiteFailed": 0,
+    "fullSuiteDurationSeconds": 193.68,
+    "fullSuiteLog": "build-catalogue-matrix-run-final.txt",
+    "captureDescription": "All row data from initial full enumeration; dryMass=0.001 row replaced by focused passing capture; two time-budget ratings replaced by focused 8000ms reruns. Full second enumeration passed all 6542 cases; its default reporter suppressed passed console output.",
+    "originalCapture": "build-catalogue-matrix-run.txt",
+    "originalFailure": "One analytic tolerance at custom dryMass=0.001: cancellation error 6.213376764208078e-7 m/s. Production unchanged; relative tolerance 1e-9 used and complete suite rerun passed.",
+    "followUpLogs": [
+      "build-catalogue-matrix-edge-confirm.txt",
+      "build-catalogue-matrix-rating-followup.txt"
+    ],
+    "followUpPassed": 3,
+    "ratingBudgetsMs": [
+      2000,
+      8000
+    ]
+  },
+  "combinedAt": "2026-09-29T19:53:42.7870964Z",
+  "modelObservations": {
+    "gtoAboveLeo": [
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "blokI-rd0110",
+        "engine": "rd0109",
+        "LEOkg": 0,
+        "GTOkg": 312,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "blokI-rd0124",
+        "engine": "rd0109",
+        "LEOkg": 0,
+        "GTOkg": 477,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "fregat",
+        "engine": "l25",
+        "LEOkg": 0,
+        "GTOkg": 313,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "burnsAfterInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "ulpm",
+        "engine": "le5b3",
+        "LEOkg": 3667,
+        "GTOkg": 5077,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "ulpm",
+        "engine": "le5b",
+        "LEOkg": 3661,
+        "GTOkg": 5065,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "h2a1",
+        "engine": "yf77",
+        "LEOkg": 3357,
+        "GTOkg": 4722,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "cz5core",
+        "engine": "vulcain21",
+        "LEOkg": 0,
+        "GTOkg": 2465,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "cz5core",
+        "engine": "yf77",
+        "LEOkg": 983,
+        "GTOkg": 1660,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "cz5s2",
+        "engine": "rl10c1",
+        "LEOkg": 2810,
+        "GTOkg": 4428,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "cz5s2",
+        "engine": "rl10c11",
+        "LEOkg": 3399,
+        "GTOkg": 5135,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "h3s1",
+        "engine": "le9",
+        "LEOkg": 3637,
+        "GTOkg": 4155,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "h3s2",
+        "engine": "rl10c1",
+        "LEOkg": 5717,
+        "GTOkg": 6553,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "beyondCapability"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "h3s2",
+        "engine": "rl10c11",
+        "LEOkg": 6335,
+        "GTOkg": 6868,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "beyondCapability"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "h3s2",
+        "engine": "yf75d",
+        "LEOkg": 3377,
+        "GTOkg": 4826,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "curie",
+        "engine": "rd0210",
+        "LEOkg": 0,
+        "GTOkg": 76,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "noInsertion"
+      },
+      {
+        "group": "stage",
+        "mount": "upper",
+        "body": "curie",
+        "engine": "curie",
+        "LEOkg": 0,
+        "GTOkg": 37,
+        "LEOfailCause": "noInsertion",
+        "GTOfailCause": "burnsAfterInsertion"
+      }
+    ],
+    "interpretation": "Target-specific guidance/probe estimates; 16 inversions need model acceptance investigation. Convergence and schema/numeric checks are not physical capability certification. No production fix inferred."
+  },
+  "rawEvidence": {
+    "path": "audit-2026-09-29/build-catalogue-matrix-results.json",
+    "bytes": 2157612,
+    "sha256": "d74d19acc9c9c8787a650037bb8ef0fb567d41315881cd5e4418ffd5b0e59adc",
+    "rowsOmitted": 6542,
+    "availability": "local-only; see LOCAL-EVIDENCE-INDEX.md"
+  }
+}

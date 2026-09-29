@@ -1,0 +1,13 @@
+2026-09-29T22:36:15.4748711Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +b75b607f287cdda5a684a78f2320f11cc82d335e:refs/remotes/pull/41/merge
+2026-09-29T22:36:16.5312321Z  * [new ref]         b75b607f287cdda5a684a78f2320f11cc82d335e -> pull/41/merge
+2026-09-29T22:36:16.6409921Z HEAD is now at b75b607 Merge 4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c into 0a6d1a709ffbf88e8e36f606d6993bd27e5c25e0
+2026-09-29T22:36:16.6465648Z [command]/usr/bin/git log -1 --format=%H
+2026-09-29T22:36:16.6493010Z b75b607f287cdda5a684a78f2320f11cc82d335e
+2026-09-29T22:36:17.1524419Z node: v22.23.2
+2026-09-29T22:36:56.5564032Z ✓ built in 1.69s
+2026-09-29T22:36:56.5918902Z ##[group]Run npm run test:browser:smoke
+2026-09-29T22:36:56.7531472Z browser journeys against http://127.0.0.1:44223/Orbitlab/: launch-explore, mobile-smoke, watch-controls
+2026-09-29T22:38:56.0335144Z ✓ launch-explore (118.7 s)
+2026-09-29T22:39:32.4411149Z ✓ mobile-smoke (36.4 s)
+2026-09-29T22:42:04.9090631Z ✓ watch-controls (152.5 s)
+2026-09-29T22:42:15.8578936Z 3/3 journeys passed in 318.5 s

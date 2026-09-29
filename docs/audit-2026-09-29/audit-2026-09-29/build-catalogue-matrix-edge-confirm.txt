@@ -1,0 +1,14 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source-integrated
+
+stdout | tests/build-catalogue-matrix.test.ts
+Catalogue matrix summary: {"catalogue":{"stageBodies":50,"boosterBodies":14,"engines":55,"fairings":17},"counts":{"body-edge":{"accepted":1}}}
+CATALOGUE_MATRIX_JSON={"generatedAt":"2026-09-29T19:52:23.774Z","catalogue":{"stageBodies":50,"boosterBodies":14,"engines":55,"fairings":17},"payloads":[0,1000,100000],"boxes":[{"width":343,"height":440},{"width":700,"height":600}],"ratingOptions":{"maxFlights":16,"timeBudgetMs":2000,"resolution":0.025},"counts":{"body-edge":{"accepted":1}},"rows":[{"group":"body-edge","field":"dryMass","value":"0.001","outcome":"accepted","payloadFigures":[{"payloadKg":0,"idealDv":52508.6892939597,"liftoffTW":2.872200570814479,"liftoffMass":30000.001},{"payloadKg":1000,"idealDv":10473.205250983,"liftoffTW":2.7795489424866453,"liftoffMass":31000.001},{"payloadKg":100000,"idealDv":800.1764068594204,"liftoffTW":0.6628155333370723,"liftoffMass":130000.001}]}]}
+
+ ✓ tests/build-catalogue-matrix.test.ts (6542 tests | 6541 skipped) 10ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 6541 skipped (6542)
+   Start at  22:52:21
+   Duration  2.10s (transform 79%, import 20%, tests 1%)
+

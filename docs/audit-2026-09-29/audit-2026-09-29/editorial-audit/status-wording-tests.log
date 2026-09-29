@@ -1,0 +1,17 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source-integrated
+
+ ✓ tests/worksheet-language.test.ts (9 tests) 17ms
+ ✓ tests/worksheet-export-race.test.ts (2 tests) 9ms
+ ✓ tests/i18n.test.ts (18 tests) 205ms
+
+ Test Files  3 passed (3)
+      Tests  29 passed (29)
+   Start at  01:16:45
+   Duration  3.92s (transform 82%, import 14%, tests 4%)
+
+  Transform  transforming modules took 5.00s · 82% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+JSON report written to C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/editorial-audit/status-wording-tests.json

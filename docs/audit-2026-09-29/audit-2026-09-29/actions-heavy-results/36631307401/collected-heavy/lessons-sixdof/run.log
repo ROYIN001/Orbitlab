@@ -1,0 +1,17 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.1 [39m[90m/home/runner/work/Orbitlab/Orbitlab[39m
+
+ [32m✓[39m tests/heavy/lessons-sixdof.test.ts[2m > [22mlesson 3.2, a stuck gyro and the FDIR[2m > [22mpasses with the FDIR on[33m 69377[2mms[22m[39m
+ [32m✓[39m tests/heavy/lessons-sixdof.test.ts[2m > [22mround 2: the six-DOF lessons, solved[2m > [22m2.3 inertial navigation: a tactical-grade unit keeps the error under 500 m to MECO[33m 8586[2mms[22m[39m
+ [32m✓[39m tests/heavy/lessons-sixdof.test.ts[2m > [22mround 2: the six-DOF lessons, solved[2m > [22m2.4 Monte Carlo 3σ: run 5 of set 1 flown alone reaches orbit, and its perigee is the set's[33m 138931[2mms[22m[39m
+ [32m✓[39m tests/heavy/lessons-sixdof.test.ts[2m > [22mround 2: the six-DOF lessons, solved[2m > [22m4.1 reading the loop: the crossover and the phase margin read at max-Q pass[33m 5877[2mms[22m[39m
+ [32m✓[39m tests/heavy/lessons-sixdof.test.ts[2m > [22mround 2: the six-DOF lessons, solved[2m > [22m4.2 gains with margins: the default gains give 30° and 6 dB at max-Q[33m 5867[2mms[22m[39m
+ [32m✓[39m tests/heavy/lessons-sixdof.test.ts[2m > [22mround 2: the six-DOF lessons, solved[2m > [22m4.3 a step test: the fast tuning overshoots past 6 %; the default gains hardly at all[33m 40051[2mms[22m[39m
+ [32m✓[39m tests/heavy/lessons-sixdof.test.ts[2m > [22mround 2: the six-DOF lessons, solved[2m > [22m4.4 bending and the notch filter: with the filter on the rocket flies through max-Q[33m 7738[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m7 passed[39m[22m[90m (7)[39m
+[2m   Start at [22m 21:23:17
+[2m   Duration [22m 277.99s[2m (tests 99%)[22m
+
+JSON report written to /home/runner/work/Orbitlab/Orbitlab/heavy-results/lessons-sixdof/result.json

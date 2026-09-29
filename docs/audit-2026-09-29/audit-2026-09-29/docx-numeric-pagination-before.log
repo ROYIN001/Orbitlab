@@ -1,0 +1,71 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source-integrated
+
+ ❯ tests/docx-pagination.test.ts (15 tests | 6 failed) 18ms
+   ❯ Word question pagination (15)
+     × keeps the en numeric prompt, optional picture (false), answer and working box together 8ms
+     × keeps the en numeric prompt, optional picture (true), answer and working box together 1ms
+     × keeps the th numeric prompt, optional picture (false), answer and working box together 1ms
+     × keeps the th numeric prompt, optional picture (true), answer and working box together 1ms
+     × keeps the ru numeric prompt, optional picture (false), answer and working box together 1ms
+     × keeps the ru numeric prompt, optional picture (true), answer and working box together 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/docx-pagination.test.ts > Word question pagination > keeps the en numeric prompt, optional picture (false), answer and working box together
+ FAIL  tests/docx-pagination.test.ts > Word question pagination > keeps the en numeric prompt, optional picture (true), answer and working box together
+AssertionError: expected '<w:pPr><w:spacing w:after="40"/></w:p…' to contain '<w:keepNext/>'
+
+Expected: "<w:keepNext/>"
+Received: "<w:pPr><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Tahoma"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr><w:t xml:space="preserve">Answer: ______________________ m</w:t></w:r>"
+
+ ❯ tests/docx-pagination.test.ts:42:21
+     40|         // the following working table; otherwise the empty box is orp…
+     41|         for (const p of paragraphs.slice(first, answer + 1)) {
+     42|           expect(p).toContain('<w:keepNext/>');
+       |                     ^
+     43|           expect(p).toContain('<w:keepLines/>');
+     44|         }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  tests/docx-pagination.test.ts > Word question pagination > keeps the th numeric prompt, optional picture (false), answer and working box together
+ FAIL  tests/docx-pagination.test.ts > Word question pagination > keeps the th numeric prompt, optional picture (true), answer and working box together
+AssertionError: expected '<w:pPr><w:spacing w:after="40"/></w:p…' to contain '<w:keepNext/>'
+
+Expected: "<w:keepNext/>"
+Received: "<w:pPr><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Tahoma"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr><w:t xml:space="preserve">คำตอบ: ______________________ m</w:t></w:r>"
+
+ ❯ tests/docx-pagination.test.ts:42:21
+     40|         // the following working table; otherwise the empty box is orp…
+     41|         for (const p of paragraphs.slice(first, answer + 1)) {
+     42|           expect(p).toContain('<w:keepNext/>');
+       |                     ^
+     43|           expect(p).toContain('<w:keepLines/>');
+     44|         }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  tests/docx-pagination.test.ts > Word question pagination > keeps the ru numeric prompt, optional picture (false), answer and working box together
+ FAIL  tests/docx-pagination.test.ts > Word question pagination > keeps the ru numeric prompt, optional picture (true), answer and working box together
+AssertionError: expected '<w:pPr><w:spacing w:after="40"/></w:p…' to contain '<w:keepNext/>'
+
+Expected: "<w:keepNext/>"
+Received: "<w:pPr><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Tahoma"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr><w:t xml:space="preserve">Ответ: ______________________ m</w:t></w:r>"
+
+ ❯ tests/docx-pagination.test.ts:42:21
+     40|         // the following working table; otherwise the empty box is orp…
+     41|         for (const p of paragraphs.slice(first, answer + 1)) {
+     42|           expect(p).toContain('<w:keepNext/>');
+       |                     ^
+     43|           expect(p).toContain('<w:keepLines/>');
+     44|         }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 9 passed (15)
+   Start at  01:29:04
+   Duration  1.35s (transform 83%, import 13%, tests 3%, worker 1%)
+

@@ -1,0 +1,13 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source-integrated
+
+
+ Test Files  7 passed (7)
+      Tests  82 passed (82)
+   Start at  01:34:29
+   Duration  6.78s (transform 73%, tests 17%, import 10%)
+
+  Transform  transforming modules took 8.61s · 73% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+

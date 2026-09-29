@@ -1,0 +1,58 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source
+
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > records a leo/50 row for every vehicle, and every recorded row is a fleet case
+ × tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > soyuz21a/leo/50 448ms
+   → expected 'a173338ebfab9d7b' to be 'deef4d6e49a74ea0' // Object.is equality
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > soyuz21b/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > protonm/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > angaraa5/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > falcon9/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > falconheavy/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > atlasv551/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > vulcan/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > ariane64/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > vegac/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > longmarch2d/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > longmarch3be/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > h2a202/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > longmarch5/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > h3/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > pslvxl/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > electron/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > starship/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > sputnik8k71ps/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > vostok8k72k/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > saturnv/leo/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > protonm/gto/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > soyuz21b/gto/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > ariane64/gto/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > vegac/sso/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > pslvxl/sso/50
+ ↓ tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > angaraa5/leo/25
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/d01-fleet-fingerprint.test.ts > D01: the fleet flies as it did before the parts catalogue > soyuz21a/leo/50
+AssertionError: expected 'a173338ebfab9d7b' to be 'deef4d6e49a74ea0' // Object.is equality
+
+Expected: "deef4d6e49a74ea0"
+Received: "a173338ebfab9d7b"
+
+ ❯ tests/d01-fleet-fingerprint.test.ts:91:40
+     89|
+     90|   it.each(Object.keys(D01_FINGERPRINTS))('%s', async (key) => {
+     91|     expect(await caseFingerprint(key)).toBe(D01_FINGERPRINTS[key]);
+       |                                        ^
+     92|   }, 60_000);
+     93| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 27 skipped (28)
+   Start at  21:59:25
+   Duration  2.15s (transform 57%, tests 34%, import 9%)
+
+JSON report written to C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/fingerprint-node24-jitless-probe-20260929.json

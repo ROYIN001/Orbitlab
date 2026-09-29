@@ -1,0 +1,78 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source-integrated
+
+ ❯ tests/encounter-plane-labels.test.ts (12 tests | 8 failed) 10ms
+   ❯ encounter-plane label placement (12)
+     × separates the actual Iridium 3σ label from Cosmos 2251 (screen) 5ms
+     × separates the actual Iridium 3σ label from Cosmos 2251 (paper) 1ms
+     × keeps the 3σ label inside the plot for angle -1.5707963267948966 and miss -300 0ms
+     × keeps the 3σ label inside the plot for angle -1.5707963267948966 and miss 300 0ms
+     × keeps the 3σ label inside the plot for angle 0 and miss -300 0ms
+     × keeps the 3σ label inside the plot for angle 0 and miss 300 0ms
+     × keeps the 3σ label inside the plot for angle 1.5707963267948966 and miss -300 0ms
+     × keeps the 3σ label inside the plot for angle 1.5707963267948966 and miss 300 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > separates the actual Iridium 3σ label from Cosmos 2251 (screen)
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > separates the actual Iridium 3σ label from Cosmos 2251 (paper)
+AssertionError: expected 'start' to be 'end' // Object.is equality
+
+Expected: "end"
+Received: "start"
+
+ ❯ tests/encounter-plane-labels.test.ts:24:28
+     22|       const svg = encounterPlaneSvg(plane, { first: 'Iridium 33', seco…
+     23|       const sigma = textPosition(svg, '3σ'), second = textPosition(svg…
+     24|       expect(sigma.anchor).toBe('end');
+       |                            ^
+     25|       expect(second.anchor).toBe('end');
+     26|       // Conservative 11 px per character bounds at the SVG's 11 px fo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > keeps the 3σ label inside the plot for angle -1.5707963267948966 and miss -300
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > keeps the 3σ label inside the plot for angle -1.5707963267948966 and miss 300
+AssertionError: expected 250.5 to be less than or equal to 248
+ ❯ tests/encounter-plane-labels.test.ts:43:25
+     41|         expect(right).toBeLessThanOrEqual(272);
+     42|         expect(sigma.y - 11).toBeGreaterThanOrEqual(20);
+     43|         expect(sigma.y).toBeLessThanOrEqual(248);
+       |                         ^
+     44|       });
+     45|     }
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > keeps the 3σ label inside the plot for angle 0 and miss -300
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > keeps the 3σ label inside the plot for angle 0 and miss 300
+AssertionError: expected 280.5 to be less than or equal to 272
+ ❯ tests/encounter-plane-labels.test.ts:41:23
+     39|         const right = sigma.anchor === 'end' ? sigma.x : sigma.x + 22;
+     40|         expect(left).toBeGreaterThanOrEqual(8);
+     41|         expect(right).toBeLessThanOrEqual(272);
+       |                       ^
+     42|         expect(sigma.y - 11).toBeGreaterThanOrEqual(20);
+     43|         expect(sigma.y).toBeLessThanOrEqual(248);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > keeps the 3σ label inside the plot for angle 1.5707963267948966 and miss -300
+ FAIL  tests/encounter-plane-labels.test.ts > encounter-plane label placement > keeps the 3σ label inside the plot for angle 1.5707963267948966 and miss 300
+AssertionError: expected 10.5 to be greater than or equal to 20
+ ❯ tests/encounter-plane-labels.test.ts:42:30
+     40|         expect(left).toBeGreaterThanOrEqual(8);
+     41|         expect(right).toBeLessThanOrEqual(272);
+     42|         expect(sigma.y - 11).toBeGreaterThanOrEqual(20);
+       |                              ^
+     43|         expect(sigma.y).toBeLessThanOrEqual(248);
+     44|       });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 4 passed (12)
+   Start at  01:30:28
+   Duration  945ms (transform 66%, import 18%, tests 10%, worker 5%)
+

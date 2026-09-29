@@ -1,0 +1,173 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source
+
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > soyuz21b/leo/25 reaches its target in crosswind 192816ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > soyuz21b/leo/25 reaches its target in six-DOF 214678ms
+ ✓ tests/sixdof-fleet/dedicated.test.ts > six-DOF dedicated missions > Long March 2D delivers 325 kg to the sun-synchronous orbit from Jiuquan 262703ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > soyuz21b/leo/50 reaches its target in six-DOF 166609ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > protonm/leo/25 reaches its target in crosswind 215949ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > soyuz21b/iss/25 reaches its target in six-DOF 75352ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > angaraa5/leo/25 reaches its target in crosswind 102150ms
+ ✓ tests/sixdof-fleet/dedicated.test.ts > six-DOF dedicated missions > Long March 2D delivers 650 kg to the sun-synchronous orbit from Jiuquan 271419ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > soyuz21b/iss/50 reaches its target in six-DOF 81052ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > falcon9/leo/25 reaches its target in crosswind 48107ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > soyuz21b/gto/25 reaches its target in six-DOF 79748ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > falconheavy/leo/25 reaches its target in crosswind 59401ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > atlasv551/leo/25 reaches its target in crosswind 78109ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > soyuz21b/gto/50 reaches its target in six-DOF 87174ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > soyuz21b/gto/90 reaches its target in six-DOF 115722ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > vulcan/leo/25 reaches its target in crosswind 182527ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > falconheavy/leo/25 reaches its target in six-DOF 77672ms
+ ✓ tests/sixdof-fleet/dedicated.test.ts > six-DOF dedicated missions > Long March 2D delivers 1170 kg to the sun-synchronous orbit from Jiuquan 396028ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > ariane64/leo/25 reaches its target in crosswind 100756ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > falconheavy/leo/50 reaches its target in six-DOF 90622ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > falcon9/leo/25 reaches its target in six-DOF 82506ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > vegac/leo/25 reaches its target in crosswind 63742ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > falconheavy/iss/25 reaches its target in six-DOF 89780ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > falcon9/leo/50 reaches its target in six-DOF 73537ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > longmarch3be/leo/25 reaches its target in crosswind 75369ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > falcon9/iss/25 reaches its target in six-DOF 63327ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > falconheavy/iss/50 reaches its target in six-DOF 81475ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > h2a202/leo/25 reaches its target in crosswind 80527ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > falcon9/iss/50 reaches its target in six-DOF 75172ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > falconheavy/gto/25 reaches its target in six-DOF 70839ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > falcon9/gto/25 reaches its target in six-DOF 68593ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > longmarch5/leo/25 reaches its target in crosswind 107913ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > falconheavy/gto/50 reaches its target in six-DOF 94743ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > falcon9/gto/50 reaches its target in six-DOF 67850ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > h3/leo/25 reaches its target in crosswind 92264ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/leo/25 reaches its target in six-DOF 93611ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/leo/50 reaches its target in six-DOF 96845ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > pslvxl/leo/25 reaches its target in crosswind 178273ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/leo/25 reaches its target in six-DOF 311791ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/leo/90 reaches its target in six-DOF 88105ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > electron/leo/25 reaches its target in crosswind 92103ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/iss/25 reaches its target in six-DOF 71203ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > starship/leo/25 reaches its target in crosswind 62183ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/iss/50 reaches its target in six-DOF 50225ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > saturnv/leo/25 reaches its target in crosswind 47892ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/iss/90 reaches its target in six-DOF 78857ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/leo/50 reaches its target in six-DOF 236832ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > soyuz21b/leo/25 reaches its target in shear 104629ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/sso/25 reaches its target in six-DOF 62413ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/sso/50 reaches its target in six-DOF 60391ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > vegac/sso/90 reaches its target in six-DOF 91045ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > protonm/leo/25 reaches its target in shear 207975ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/leo/25 reaches its target in six-DOF 128407ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/leo/90 reaches its target in six-DOF 358564ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > angaraa5/leo/25 reaches its target in shear 198222ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/leo/50 reaches its target in six-DOF 137823ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > falcon9/leo/25 reaches its target in shear 95467ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/iss/25 reaches its target in six-DOF 220940ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/leo/90 reaches its target in six-DOF 147548ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > falconheavy/leo/25 reaches its target in shear 120609ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/iss/25 reaches its target in six-DOF 126792ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > atlasv551/leo/25 reaches its target in shear 157465ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/iss/50 reaches its target in six-DOF 274910ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/iss/50 reaches its target in six-DOF 146645ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/iss/90 reaches its target in six-DOF 156045ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > vulcan/leo/25 reaches its target in shear 288367ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/gto/25 reaches its target in six-DOF 102666ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/iss/90 reaches its target in six-DOF 287251ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > ariane64/leo/25 reaches its target in shear 139087ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/gto/50 reaches its target in six-DOF 153941ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > vegac/leo/25 reaches its target in shear 79527ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/gto/25 reaches its target in six-DOF 188657ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > longmarch3be/leo/25 reaches its target in shear 112585ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > longmarch5/gto/90 reaches its target in six-DOF 173061ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > h2a202/leo/25 reaches its target in shear 113269ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/gto/50 reaches its target in six-DOF 206465ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/leo/25 reaches its target in six-DOF 105993ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > longmarch5/leo/25 reaches its target in shear 120133ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/leo/50 reaches its target in six-DOF 111757ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > h3/leo/25 reaches its target in shear 100047ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > vulcan/gto/90 reaches its target in six-DOF 219367ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/leo/90 reaches its target in six-DOF 190325ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > longmarch3be/leo/25 reaches its target in six-DOF 109249ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > pslvxl/leo/25 reaches its target in shear 145948ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > longmarch3be/leo/50 reaches its target in six-DOF 114071ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > electron/leo/25 reaches its target in shear 97856ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/iss/25 reaches its target in six-DOF 132193ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > starship/leo/25 reaches its target in shear 78312ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > longmarch3be/leo/90 reaches its target in six-DOF 119993ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/iss/50 reaches its target in six-DOF 128567ms
+ ✓ tests/sixdof-fleet/wind.test.ts > six-DOF reference cases in wind > saturnv/leo/25 reaches its target in shear 69946ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > longmarch3be/gto/25 reaches its target in six-DOF 132083ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/iss/90 reaches its target in six-DOF 196758ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > longmarch3be/gto/50 reaches its target in six-DOF 122849ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > protonm/leo/25 reaches its target in six-DOF 249688ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/sso/25 reaches its target in six-DOF 130530ms
+ ✓ tests/sixdof-fleet/vulcan-soyuz21b-falconheavy-longmarch3be.test.ts > six-DOF fleet matrix > longmarch3be/gto/90 reaches its target in six-DOF 129762ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/sso/50 reaches its target in six-DOF 136733ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > protonm/iss/25 reaches its target in six-DOF 224159ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > angaraa5/leo/25 reaches its target in six-DOF 196558ms
+ ✓ tests/sixdof-fleet/electron-longmarch5-vegac-falcon9.test.ts > six-DOF fleet matrix > electron/sso/90 reaches its target in six-DOF 212200ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > angaraa5/sso/25 reaches its target in six-DOF 292462ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > protonm/gto/25 reaches its target in six-DOF 381270ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > angaraa5/gto/25 reaches its target in six-DOF 331731ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > protonm/gto/50 reaches its target in six-DOF 383325ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > angaraa5/gto/50 reaches its target in six-DOF 372709ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > protonm/gto/90 reaches its target in six-DOF 378694ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/leo/25 reaches its target in six-DOF 136037ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/leo/50 reaches its target in six-DOF 122286ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > angaraa5/gto/90 reaches its target in six-DOF 428595ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/leo/90 reaches its target in six-DOF 173218ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/leo/25 reaches its target in six-DOF 128722ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/iss/25 reaches its target in six-DOF 120157ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/leo/50 reaches its target in six-DOF 165751ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/iss/50 reaches its target in six-DOF 135877ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/iss/90 reaches its target in six-DOF 192832ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/leo/90 reaches its target in six-DOF 270946ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/sso/25 reaches its target in six-DOF 118680ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/iss/25 reaches its target in six-DOF 135521ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/sso/50 reaches its target in six-DOF 123018ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/sso/90 reaches its target in six-DOF 143575ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/iss/50 reaches its target in six-DOF 241225ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/gto/25 reaches its target in six-DOF 131380ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/iss/90 reaches its target in six-DOF 175451ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/gto/50 reaches its target in six-DOF 131435ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/gto/25 reaches its target in six-DOF 121777ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > ariane64/gto/90 reaches its target in six-DOF 141023ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/gto/50 reaches its target in six-DOF 142215ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/leo/25 reaches its target in six-DOF 100203ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/leo/50 reaches its target in six-DOF 105736ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > atlasv551/gto/90 reaches its target in six-DOF 206450ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/leo/90 reaches its target in six-DOF 150543ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/leo/25 reaches its target in six-DOF 88532ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/leo/50 reaches its target in six-DOF 93722ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/iss/25 reaches its target in six-DOF 101523ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/leo/90 reaches its target in six-DOF 99870ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/iss/50 reaches its target in six-DOF 105599ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/iss/25 reaches its target in six-DOF 85202ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/iss/90 reaches its target in six-DOF 144688ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/iss/50 reaches its target in six-DOF 89068ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/sso/25 reaches its target in six-DOF 100024ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/iss/90 reaches its target in six-DOF 94586ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/sso/25 reaches its target in six-DOF 88316ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/sso/50 reaches its target in six-DOF 103464ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/sso/50 reaches its target in six-DOF 90031ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/sso/90 reaches its target in six-DOF 104921ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/sso/90 reaches its target in six-DOF 94099ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/gto/25 reaches its target in six-DOF 85235ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/gto/25 reaches its target in six-DOF 93967ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/gto/50 reaches its target in six-DOF 87916ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > h2a202/gto/90 reaches its target in six-DOF 94990ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/gto/50 reaches its target in six-DOF 101493ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > starship/leo/25 reaches its target in six-DOF 75228ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > h3/gto/90 reaches its target in six-DOF 105123ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > starship/leo/50 reaches its target in six-DOF 77522ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > starship/leo/90 reaches its target in six-DOF 77520ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > pslvxl/leo/25 reaches its target in six-DOF 133243ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > starship/gto/25 reaches its target in six-DOF 59536ms
+ ✓ tests/sixdof-fleet/ariane64-h2a202-protonm-starship.test.ts > six-DOF fleet matrix > starship/gto/50 reaches its target in six-DOF 58308ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > pslvxl/leo/50 reaches its target in six-DOF 157726ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > pslvxl/iss/25 reaches its target in six-DOF 140955ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > pslvxl/iss/50 reaches its target in six-DOF 172029ms
+ ✓ tests/sixdof-fleet/h3-atlasv551-angaraa5-pslvxl.test.ts > six-DOF fleet matrix > pslvxl/gto/25 reaches its target in six-DOF 100538ms
+
+ Test Files  6 passed (6)
+      Tests  163 passed (163)
+   Start at  02:36:41
+   Duration  9400.95s (tests 100%)
+
+JSON report written to C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/fleet-results.json

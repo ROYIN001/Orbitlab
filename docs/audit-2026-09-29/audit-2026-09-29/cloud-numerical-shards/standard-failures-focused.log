@@ -1,0 +1,49 @@
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source-integrated
+
+ ✓ tests/i18n.test.ts > dictionary parity > declares the same keys in en, ru and th 8ms
+ ✓ tests/i18n.test.ts > dictionary parity > declares each key exactly once per file 5ms
+ ✓ tests/i18n.test.ts > dictionary parity > parses the same number of entries out of each file as the module exports 5ms
+ ✓ tests/i18n.test.ts > dictionary parity > has no empty, padded or double-spaced values 11ms
+ ✓ tests/i18n.test.ts > dictionary parity > keeps every {param} placeholder intact 7ms
+ ✓ tests/i18n.test.ts > translation coverage > writes every prose value in the target script 9ms
+ ✓ tests/i18n.test.ts > translation coverage > never leaves a prose value identical to English 11ms
+ ✓ tests/i18n.test.ts > translation coverage > writes Thai numbers with Arabic numerals, as the rest of the app does 5ms
+ ✓ tests/i18n.test.ts > call sites > localizes recorded aerodynamic limits while preserving raw angles and scope 4ms
+ ✓ tests/i18n.test.ts > call sites > localizes command events without changing their SI replay/export metadata 2ms
+ ✓ tests/i18n.test.ts > call sites > reads the source tree it is supposed to scan 1ms
+ ✓ tests/i18n.test.ts > call sites > resolves every t() key and data-i18n attribute in the source 13ms
+ ✓ tests/i18n.test.ts > call sites > still has a key for every dynamic call-site family 6ms
+ ✓ tests/i18n.test.ts > call sites > has a call site for every key 60ms
+ ✓ tests/i18n.test.ts > call sites > renders evt.payloadSep with no English left in it 3ms
+ ✓ tests/i18n.test.ts > call sites > keeps the reserved list honest 47ms
+ ✓ tests/explore.test.ts > computed guidance > shows the pitch programme the simulation flies, in the units of the fields it replaces 14ms
+ ✓ tests/explore.test.ts > computed guidance > has a programme of its own for every vehicle in the catalogue 1ms
+ ✓ tests/explore.test.ts > computed guidance > marks the values the Engineer level or the auto-tuner changed, and flies them 0ms
+ ✓ tests/explore.test.ts > computed guidance > lists a changed limit or parking orbit too, so every value flown instead of a computed one is shown 0ms
+ ✓ tests/explore.test.ts > Engineer settings carried into Explore > names each Engineer-only setting a flight carries, and nothing for a plain one 0ms
+ ✓ tests/explore.test.ts > Engineer settings carried into Explore > goes back to the computed values keeping the model, the wind and the seed 0ms
+ ✓ tests/explore.test.ts > Engineer settings carried into Explore > counts a guidance override or an Engineer setting as an adjustment 0ms
+ ✓ tests/explore.test.ts > lessons in Explore > shows the guidance for the lesson that asks the student to change it, and for no other 1ms
+ ✓ tests/explore.test.ts > lessons in Explore > reads `reveal` from a lesson file and warns of a key it does not know 1ms
+ ✓ tests/explore.test.ts > lessons in Explore > keeps on Explore's chart picker every chart its lessons point the student to 1ms
+ ✓ tests/explore.test.ts > the pre-flight light and its fixes > names the cause of each verdict, and says when the launch misses its window 308ms
+ ✓ tests/explore.test.ts > the pre-flight light and its fixes > lightens an overloaded Soyuz to the heaviest payload its verdict passes, and no further 644ms
+ ✓ tests/explore.test.ts > the pre-flight light and its fixes > bisects to the last passing step, and gives up when not even one step passes 1ms
+ ✓ tests/explore.test.ts > the pre-flight light and its fixes > draws what each vehicle lifts on a scale where Electron and Saturn V both fit 2ms
+ ✓ tests/explore.test.ts > challenges > has a moment and a sentence for every failure scenario, each one a mission can be set to 2ms
+ ✓ tests/explore.test.ts > challenges > flies the engine out and the abort at the moments the lessons fly them 0ms
+ ✓ tests/explore.test.ts > challenges > says a separation failure strikes at its separation, and a fairing or a random one at no set moment 0ms
+ ✓ tests/explore.test.ts > the debrief > reads the Δv left at the outcome, not after it, against the Δv at liftoff 1ms
+ ✓ tests/explore.test.ts > the debrief > gives each loss its share of the three, and no share of nothing 1ms
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  23:13:57
+   Duration  7.49s (transform 73%, tests 17%, import 11%)
+
+  Transform  transforming modules took 5.18s · 73% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+JSON report written to C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/cloud-numerical-shards/standard-failures-focused.json

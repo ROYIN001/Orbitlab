@@ -1,0 +1,84 @@
+{
+  "formats": [
+    {
+      "ext": "tle",
+      "lines": [
+        "        - heading \"Real satellites\" [level=1]",
+        "        - paragraph: 1 element sets read from iss.tle (TLE).",
+        "        - heading \"ISS (ZARYA)\" [level=2]",
+        "        - term: Element set epoch",
+        "        - heading \"Passes over Bangkok\" [level=2]"
+      ]
+    },
+    {
+      "ext": "2le",
+      "lines": [
+        "        - heading \"Real satellites\" [level=1]",
+        "        - paragraph: 1 element sets read from iss.2le (TLE).",
+        "        - heading \"(no name)\" [level=2]",
+        "        - term: Element set epoch",
+        "        - heading \"Passes over Bangkok\" [level=2]"
+      ]
+    },
+    {
+      "ext": "csv",
+      "lines": [
+        "        - heading \"Real satellites\" [level=1]",
+        "        - paragraph: 1 element sets read from iss.csv (CSV).",
+        "        - heading \"ISS (ZARYA)\" [level=2]",
+        "        - term: Element set epoch",
+        "        - heading \"Passes over Bangkok\" [level=2]"
+      ]
+    },
+    {
+      "ext": "xml",
+      "lines": [
+        "        - heading \"Real satellites\" [level=1]",
+        "        - paragraph: 1 element sets read from iss.xml (XML).",
+        "        - heading \"ISS (ZARYA)\" [level=2]",
+        "        - term: Element set epoch",
+        "        - heading \"Passes over Bangkok\" [level=2]"
+      ]
+    },
+    {
+      "ext": "kvn",
+      "lines": [
+        "        - heading \"Real satellites\" [level=1]",
+        "        - paragraph: 1 element sets read from iss.kvn (KVN).",
+        "        - heading \"ISS (ZARYA)\" [level=2]",
+        "        - term: Element set epoch",
+        "        - heading \"Passes over Bangkok\" [level=2]"
+      ]
+    }
+  ],
+  "afterInvalid": [],
+  "cdm": [
+    {
+      "name": "valid-cdm-alfano-1.cdm",
+      "result": "heading \"A conjunction data message\" [level=3]\n        - paragraph: An operator is warned of a close approach to its satellite by a conjunction data message (CCSDS 508.0-B-1), with each object's position uncertainty from the tracking. Read one in its text form (KVN) to get the probability from the message's own uncertainties, not from the rough estimates above. The file is read in the page and sent nowhere.\n        - generic: Read a message (.cdm, KVN)\n        - button \"Read a message (.cdm, KVN)\"\n        - paragraph: SAT 1001 · 1001 and SAT 1002 · 1002, from TEST\n        - generic: Combined radius (m), as the message gives it\n        - spinbutton \"Combined radius (m), as the message gives it\": \"15\"\n        - paragraph: \"Closest Saturday, January 1 03:00:00 AM: 5 m apart at 0.014 m/s; probability of collision 0.147, from the message's own uncertainties.\"\n        - 'figure \"The plane square to the relative velocity at the closest approach: the other object 5 m away, the pair''s combined radius (15.0 m) round it, and the combined position uncertainty round this one, drawn at 1σ and 3σ (1σ: 76 m by 2 m). The probability of collision is the uncertainty''s share of the circle.\"':\n          - generic: \"The plane square to the relative velocity at the closest approach: the other object 5 m away, the pair's combined radius (15.0 m) round it, and the combined position uncertainty round this one, drawn at 1σ and 3σ (1σ: 76 m by 2 m). The probability of collision is the uncertainty's share of the circle.\"\n        - "
+    },
+    {
+      "name": "invalid-cdm-missing-object2.cdm",
+      "result": "heading \"A conjunction data message\" [level=3]\n        - paragraph: An operator is warned of a close approach to its satellite by a conjunction data message (CCSDS 508.0-B-1), with each object's position uncertainty from the tracking. Read one in its text form (KVN) to get the probability from the message's own uncertainties, not from the rough estimates above. The file is read in the page and sent nowhere.\n        - generic: Read a message (.cdm, KVN)\n        - button \"Read a message (.cdm, KVN)\"\n        - paragraph: \"invalid-cdm-missing-object2.cdm could not be read as a conjunction data message: 1 objects, not two\"\n        - "
+    }
+  ],
+  "iridiumInputs": [
+    227.11450856342526,
+    11.64704234988437,
+    102.46285873438991,
+    19.942,
+    17.982738110624545,
+    12.629584391780787,
+    330
+  ],
+  "cz5bInputs": [
+    134.30308594096365,
+    0.013679018012505558,
+    7.456,
+    11.184,
+    9.7125,
+    -4.041184041184042,
+    7.897190920944992
+  ],
+  "notes": "afterInvalid array may be empty due stale tab6; final tab7 DOM confirmed accepted iss.json retained next to rejected.json error. Inputs calculated from visible tables. Test profile only."
+}

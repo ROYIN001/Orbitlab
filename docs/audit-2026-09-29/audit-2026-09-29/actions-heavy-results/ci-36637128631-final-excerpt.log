@@ -1,0 +1,14 @@
+2026-09-29T22:02:28.5856386Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3da351785d611cb6cc567ff036f470dc8eb3e4ca:refs/remotes/pull/41/merge
+2026-09-29T22:02:30.5437825Z  * [new ref]         3da351785d611cb6cc567ff036f470dc8eb3e4ca -> pull/41/merge
+2026-09-29T22:02:30.6407975Z HEAD is now at 3da3517 Merge c146a699f01bb5d299af39e3ca9742445442b474 into 0a6d1a709ffbf88e8e36f606d6993bd27e5c25e0
+2026-09-29T22:02:30.6449287Z [command]/usr/bin/git log -1 --format=%H
+2026-09-29T22:02:30.6472836Z 3da351785d611cb6cc567ff036f470dc8eb3e4ca
+2026-09-29T22:02:31.1280900Z node: v22.23.2
+2026-09-29T22:02:35.4464883Z > tsc --noEmit
+2026-09-29T22:02:36.8398457Z ##[group]Run npm test
+2026-09-29T22:21:18.8715490Z  Test Files  190 passed (190)
+2026-09-29T22:21:18.8744595Z       Tests  9241 passed (9241)
+2026-09-29T22:21:18.8745233Z    Start at  22:02:37
+2026-09-29T22:21:18.8749790Z    Duration  1121.67s (tests 97%, import 3%)
+2026-09-29T22:21:19.0467777Z > tsc --noEmit && vite build
+2026-09-29T22:21:21.9129651Z ✓ built in 1.22s

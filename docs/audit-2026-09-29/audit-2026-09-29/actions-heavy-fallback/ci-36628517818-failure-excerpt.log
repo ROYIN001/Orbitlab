@@ -1,0 +1,61 @@
+Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+2026-09-29T21:00:14.7719695Z 
+2026-09-29T21:00:14.7721041Z  FAIL  tests/propagator.test.ts > the flight is untouched (P07) > imports the propagator from nothing that flies the ascent or judges the orbit
+2026-09-29T21:00:14.7726240Z AssertionError: expected [ 'lessons/progress.ts' ] to deeply equal []
+2026-09-29T21:00:14.7726925Z 
+2026-09-29T21:00:14.7728258Z - Expected
+2026-09-29T21:00:14.7728719Z + Received
+2026-09-29T21:00:14.7728872Z 
+2026-09-29T21:00:14.7729014Z - []
+2026-09-29T21:00:14.7729376Z + [
+2026-09-29T21:00:14.7729769Z +   "lessons/progress.ts",
+2026-09-29T21:00:14.7730129Z + ]
+2026-09-29T21:00:14.7730295Z 
+2026-09-29T21:00:14.7730624Z  ❯ tests/propagator.test.ts:200:46
+2026-09-29T21:00:14.7781338Z     198|     const allowed = (p: string) => p.startsWith('ui/') || p.startsWith…
+2026-09-29T21:00:14.7782583Z     199|       || p === 'physics/lifetime.worker.ts' || p === 'physics/lifetime…
+2026-09-29T21:00:14.7783359Z     200|     expect(users.filter((p) => !allowed(p))).toEqual([]);
+2026-09-29T21:00:14.7784072Z        |                                              ^
+2026-09-29T21:00:14.7784905Z     201|     expect(users.some((p) => p.startsWith('physics/sim/') || p.startsW…
+2026-09-29T21:00:14.7785563Z     202|   });
+2026-09-29T21:00:14.7785849Z 
+2026-09-29T21:00:14.7786227Z ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+2026-09-29T21:00:14.7786699Z 
+2026-09-29T21:00:14.7786745Z 
+2026-09-29T21:00:14.7806642Z  Test Files  1 failed | 186 passed (187)
+2026-09-29T21:00:14.7862644Z       Tests  1 failed | 9187 passed (9188)
+2026-09-29T21:00:14.7863362Z    Start at  20:44:59
+2026-09-29T21:00:14.7868409Z    Duration  915.34s (tests 97%, import 3%)
+2026-09-29T21:00:14.7888897Z 
+2026-09-29T21:00:14.7932531Z 
+2026-09-29T21:00:14.7951461Z ##[error]AssertionError: expected [ 'lessons/progress.ts' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "lessons/progress.ts",
++ ]
+
+ ❯ tests/propagator.test.ts:200:46
+
+
+2026-09-29T21:00:14.8243951Z ##[error]Process completed with exit code 1.
+2026-09-29T21:00:14.8476140Z Post job cleanup.
+2026-09-29T21:00:14.9117854Z [command]/usr/bin/git version
+2026-09-29T21:00:14.9150772Z git version 2.55.0
+2026-09-29T21:00:14.9180890Z Temporarily overriding HOME='/home/runner/work/_temp/5dc731c2-8e31-4be8-b931-97aa8938dc7a' before making global git config changes
+2026-09-29T21:00:14.9181760Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-29T21:00:14.9185620Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Orbitlab/Orbitlab
+2026-09-29T21:00:14.9214858Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-29T21:00:14.9238645Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-29T21:00:14.9395549Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-29T21:00:14.9414045Z http.https://github.com/.extraheader
+2026-09-29T21:00:14.9422153Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-09-29T21:00:14.9447374Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-29T21:00:14.9625338Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-29T21:00:14.9651377Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-29T21:00:14.9926806Z Cleaning up orphan processes
+2026-09-29T21:00:15.0107090Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+

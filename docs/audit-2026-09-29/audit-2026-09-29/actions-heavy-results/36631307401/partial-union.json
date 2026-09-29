@@ -1,0 +1,2533 @@
+{
+  "generatedAt": "2026-09-29T22:04:41.155Z",
+  "ok": false,
+  "expectedAssertions": 246,
+  "expectedFiles": 27,
+  "uniqueAssertions": 245,
+  "uniqueFiles": 26,
+  "passed": 245,
+  "missingFiles": [
+    "tests/heavy/monte-carlo-soyuz21b.test.ts"
+  ],
+  "missing": [
+    {
+      "file": "tests/heavy/monte-carlo-soyuz21b.test.ts",
+      "name": "Monte Carlo insertion accuracy (roadmap G05) > soyuz21b standard: 30 dispersed runs, each counted and each loss named"
+    }
+  ],
+  "unexpected": [],
+  "duplicates": [],
+  "failures": [],
+  "nonPassed": [],
+  "issues": [
+    {
+      "kind": "missing-or-duplicate-file-runs",
+      "expected": 27,
+      "actual": 26
+    }
+  ],
+  "sixDofLessons": [
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "lesson 3.2, a stuck gyro and the FDIR > passes with the FDIR on",
+      "fullName": "lesson 3.2, a stuck gyro and the FDIR passes with the FDIR on",
+      "status": "passed",
+      "durationMs": 69376.511024
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 2.3 inertial navigation: a tactical-grade unit keeps the error under 500 m to MECO",
+      "fullName": "round 2: the six-DOF lessons, solved 2.3 inertial navigation: a tactical-grade unit keeps the error under 500 m to MECO",
+      "status": "passed",
+      "durationMs": 8585.605519000004
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 2.4 Monte Carlo 3σ: run 5 of set 1 flown alone reaches orbit, and its perigee is the set's",
+      "fullName": "round 2: the six-DOF lessons, solved 2.4 Monte Carlo 3σ: run 5 of set 1 flown alone reaches orbit, and its perigee is the set's",
+      "status": "passed",
+      "durationMs": 138931.119566
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.1 reading the loop: the crossover and the phase margin read at max-Q pass",
+      "fullName": "round 2: the six-DOF lessons, solved 4.1 reading the loop: the crossover and the phase margin read at max-Q pass",
+      "status": "passed",
+      "durationMs": 5876.798634999985
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.2 gains with margins: the default gains give 30° and 6 dB at max-Q",
+      "fullName": "round 2: the six-DOF lessons, solved 4.2 gains with margins: the default gains give 30° and 6 dB at max-Q",
+      "status": "passed",
+      "durationMs": 5866.539348999999
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.3 a step test: the fast tuning overshoots past 6 %; the default gains hardly at all",
+      "fullName": "round 2: the six-DOF lessons, solved 4.3 a step test: the fast tuning overshoots past 6 %; the default gains hardly at all",
+      "status": "passed",
+      "durationMs": 40051.476888000005
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.4 bending and the notch filter: with the filter on the rocket flies through max-Q",
+      "fullName": "round 2: the six-DOF lessons, solved 4.4 bending and the notch filter: with the filter on the rocket flies through max-Q",
+      "status": "passed",
+      "durationMs": 7738.257947999984
+    }
+  ],
+  "runs": [
+    {
+      "file": "tests/heavy/delivered-falcon-wind.test.ts",
+      "resultPath": "delivered-falcon-wind\\result.json",
+      "resultSha256": "19ff9f93306ae7ef830e2414810703343eb5e93803006837f17aeffffe41947e",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/delivered-falcon-wind.test.ts",
+        "caseId": "delivered-falcon-wind",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:07.006Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/delivered-reduced-flux.test.ts",
+      "resultPath": "delivered-reduced-flux\\result.json",
+      "resultSha256": "2783dfcbcf156c21f1d2cf8d5d6152fe1815c8be562ce2afaeee38aed71d5d4a",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/delivered-reduced-flux.test.ts",
+        "caseId": "delivered-reduced-flux",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:10.168Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/delivered-soyuz-wind.test.ts",
+      "resultPath": "delivered-soyuz-wind\\result.json",
+      "resultSha256": "c3eb1b44ab38c3c6be6938a66480d5a6de44bc4ee84b0226b3985e7be9356987",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/delivered-soyuz-wind.test.ts",
+        "caseId": "delivered-soyuz-wind",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:11.022Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "resultPath": "explicit-fleet-1\\result.json",
+      "resultSha256": "fb7517ab3e7325d43b5ee2683f28f097743f5cfd17ab91076e50b453df82068a",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/explicit-fleet-1.test.ts",
+        "caseId": "explicit-fleet-1",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:08.733Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "resultPath": "explicit-fleet-2\\result.json",
+      "resultSha256": "46f5b28b906b104a82496e05946013dc5911238d7ba9410d83355faf6895febf",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/explicit-fleet-2.test.ts",
+        "caseId": "explicit-fleet-2",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:08.665Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/falcon-heavy-returns.test.ts",
+      "resultPath": "falcon-heavy-returns\\result.json",
+      "resultSha256": "2f52b2d297b8362c98d24727d13d07612617d5315328a404ccb90d59065476d5",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/falcon-heavy-returns.test.ts",
+        "caseId": "falcon-heavy-returns",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:14.636Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "resultPath": "flex-fleet-1\\result.json",
+      "resultSha256": "63fc929adb3050635e012b26a1ea72309c7653d83e5a306377621c4e9d386198",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-1.test.ts",
+        "caseId": "flex-fleet-1",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:12.791Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "resultPath": "flex-fleet-2\\result.json",
+      "resultSha256": "cdf38a4a1e184d5f4f1ee40991b385b443371bb14b1b4deb8cd347a5fe9f22ca",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-2.test.ts",
+        "caseId": "flex-fleet-2",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:40.723Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "resultPath": "flex-fleet-3\\result.json",
+      "resultSha256": "94d980a4b85f8176f0aaa0e2690fe1b0ac8b77d179ac56fcc4ed122627a6f295",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-3.test.ts",
+        "caseId": "flex-fleet-3",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:45.570Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/flex-fleet-4.test.ts",
+      "resultPath": "flex-fleet-4\\result.json",
+      "resultSha256": "217507a1bffb786b802e1b64035a09f95501bc0c373778a42ab661e96549d8a2",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-4.test.ts",
+        "caseId": "flex-fleet-4",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:12:13.534Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/flex-golden.test.ts",
+      "resultPath": "flex-golden\\result.json",
+      "resultSha256": "390946e265605c75770f552d8eccf8b443328ed8d10ec3e86ddaae2ffd9a1934",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-golden.test.ts",
+        "caseId": "flex-golden",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:19:56.549Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/history-sixdof.test.ts",
+      "resultPath": "history-sixdof\\result.json",
+      "resultSha256": "384def59a0b4dd02ca8d222f8b67b9207646fc981f591a2834874c7881ad762b",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/history-sixdof.test.ts",
+        "caseId": "history-sixdof",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:22:12.609Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "resultPath": "lessons-sixdof\\result.json",
+      "resultSha256": "cfe76eb2f6e5166d59490926b37eedf1bad33d88edb6b7659887639625c406ea",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/lessons-sixdof.test.ts",
+        "caseId": "lessons-sixdof",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:16.723Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-igm.test.ts",
+      "resultPath": "monte-carlo-falcon9-igm\\result.json",
+      "resultSha256": "c95cea0c5fb6a3a888e9d9118374198c8303e554f06437ad63d14bd132d90dc9",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-igm.test.ts",
+        "caseId": "monte-carlo-falcon9-igm",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:33.355Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-navigation.test.ts",
+      "resultPath": "monte-carlo-falcon9-navigation\\result.json",
+      "resultSha256": "928c8045ad75c974b812f76d747919d3e830160ed84293684e1654484ddd49c2",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-navigation.test.ts",
+        "caseId": "monte-carlo-falcon9-navigation",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:30.326Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-peg.test.ts",
+      "resultPath": "monte-carlo-falcon9-peg\\result.json",
+      "resultSha256": "1eaedeefd06122de938eae018a62f78cd4395f9a8fd2a15ac64ced03127082d4",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-peg.test.ts",
+        "caseId": "monte-carlo-falcon9-peg",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:24:31.628Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-standard.test.ts",
+      "resultPath": "monte-carlo-falcon9-standard\\result.json",
+      "resultSha256": "d828a5e973262376b5bf7eb880dbe897aa0f8ab2ea5e06aefb57520a4386da28",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-standard.test.ts",
+        "caseId": "monte-carlo-falcon9-standard",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:24:38.511Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/navigation-burns.test.ts",
+      "resultPath": "navigation-burns\\result.json",
+      "resultSha256": "647697af9b6c62784dd58cb1606ade759033493f1ee3dc70107fb1cb477f4eea",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/navigation-burns.test.ts",
+        "caseId": "navigation-burns",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:36:36.012Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "resultPath": "reentry-agencies\\result.json",
+      "resultSha256": "5bacd21cab17bdbb00532567e2ca49fbe0adbc577a16319471957c5801c43704",
+      "tests": 104,
+      "passed": 104,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/reentry-agencies.test.ts",
+        "caseId": "reentry-agencies",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:38:39.545Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "resultPath": "rendezvous\\result.json",
+      "resultSha256": "84ac7b88bea73c9b886171f06a3b8b41ececa33451a1837ec12f591e06ba1d2a",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/rendezvous.test.ts",
+        "caseId": "rendezvous",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:40:32.207Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "resultPath": "screening-filter\\result.json",
+      "resultSha256": "deffecadcd5f6c1786eb7f63a3c8a53bb368dbea2dcc5044ea6794915f6c6fce",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/screening-filter.test.ts",
+        "caseId": "screening-filter",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:42:06.776Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "resultPath": "sixdof-fingerprint\\result.json",
+      "resultSha256": "7cf4c3d0270b1e27507ded637416c0d8985357a2e8dcb2ce4f9fcfdcef16369c",
+      "tests": 22,
+      "passed": 22,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/sixdof-fingerprint.test.ts",
+        "caseId": "sixdof-fingerprint",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:45:34.964Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/soyuz-aborts.test.ts",
+      "resultPath": "soyuz-aborts\\result.json",
+      "resultSha256": "a8dab62afe165b49b4fd6fe5e619af243b81ecc84a21c1eddd585bcfbd732977",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/soyuz-aborts.test.ts",
+        "caseId": "soyuz-aborts",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:49:40.374Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/starship-flight5.test.ts",
+      "resultPath": "starship-flight5\\result.json",
+      "resultSha256": "df252d80d132affad5a4a2cdb6fb2d307cf8de7e68831dc3f68025487892802e",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/starship-flight5.test.ts",
+        "caseId": "starship-flight5",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:51:04.291Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "resultPath": "validation-falcon9\\result.json",
+      "resultSha256": "e06f285690dc89e32925fea6f67377e26d3e48fda1760931a668a6b2a44d3101",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/validation-falcon9.test.ts",
+        "caseId": "validation-falcon9",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:51:15.605Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "resultPath": "validation-timelines\\result.json",
+      "resultSha256": "7edec9339cc7113e377d1c104164fdf2ddd0c9797121e0bfc5baef5b2aecd2ef",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "pending": 0,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/validation-timelines.test.ts",
+        "caseId": "validation-timelines",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:51:30.793Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "file": "tests/heavy/delivered-falcon-wind.test.ts",
+      "name": "six-DOF delivered orbit: Falcon 9 in wind > Falcon 9 / quasi-steady / fixed 5 m/s",
+      "fullName": "six-DOF delivered orbit: Falcon 9 in wind Falcon 9 / quasi-steady / fixed 5 m/s",
+      "status": "passed",
+      "durationMs": 45642.654766
+    },
+    {
+      "file": "tests/heavy/delivered-falcon-wind.test.ts",
+      "name": "six-DOF delivered orbit: Falcon 9 in wind > Falcon 9 / quasi-steady / fixed 10 m/s",
+      "fullName": "six-DOF delivered orbit: Falcon 9 in wind Falcon 9 / quasi-steady / fixed 10 m/s",
+      "status": "passed",
+      "durationMs": 44046.807000999994
+    },
+    {
+      "file": "tests/heavy/delivered-falcon-wind.test.ts",
+      "name": "six-DOF delivered orbit: Falcon 9 in wind > Falcon 9 / quasi-steady / shear",
+      "fullName": "six-DOF delivered orbit: Falcon 9 in wind Falcon 9 / quasi-steady / shear",
+      "status": "passed",
+      "durationMs": 44088.91774800001
+    },
+    {
+      "file": "tests/heavy/delivered-reduced-flux.test.ts",
+      "name": "six-DOF delivered orbit: the reduced-flux rotational mass-flow model > Falcon 9 / reduced flux / calm",
+      "fullName": "six-DOF delivered orbit: the reduced-flux rotational mass-flow model Falcon 9 / reduced flux / calm",
+      "status": "passed",
+      "durationMs": 70024.226322
+    },
+    {
+      "file": "tests/heavy/delivered-reduced-flux.test.ts",
+      "name": "six-DOF delivered orbit: the reduced-flux rotational mass-flow model > Soyuz-2.1a / reduced flux / calm",
+      "fullName": "six-DOF delivered orbit: the reduced-flux rotational mass-flow model Soyuz-2.1a / reduced flux / calm",
+      "status": "passed",
+      "durationMs": 90108.862583
+    },
+    {
+      "file": "tests/heavy/delivered-soyuz-wind.test.ts",
+      "name": "six-DOF delivered orbit: Soyuz-2.1a in wind > Soyuz-2.1a / quasi-steady / crosswind",
+      "fullName": "six-DOF delivered orbit: Soyuz-2.1a in wind Soyuz-2.1a / quasi-steady / crosswind",
+      "status": "passed",
+      "durationMs": 69129.968287
+    },
+    {
+      "file": "tests/heavy/delivered-soyuz-wind.test.ts",
+      "name": "six-DOF delivered orbit: Soyuz-2.1a in wind > Soyuz-2.1a / quasi-steady / shear",
+      "fullName": "six-DOF delivered orbit: Soyuz-2.1a in wind Soyuz-2.1a / quasi-steady / shear",
+      "status": "passed",
+      "durationMs": 66441.748584
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > soyuz21b/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan soyuz21b/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 111507.34062100001
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > soyuz21b/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan soyuz21b/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 91787.33579099999
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > protonm/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan protonm/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 159732.70201399998
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > protonm/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan protonm/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 159189.74243599997
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > angaraa5/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan angaraa5/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 139110.660607
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > angaraa5/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan angaraa5/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 138553.91581099993
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falcon9/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan falcon9/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 70400.18806800002
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falcon9/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan falcon9/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 64339.53929300001
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falconheavy/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan falconheavy/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 86948.24386699998
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > falconheavy/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan falconheavy/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 98046.29665200005
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > atlasv551/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan atlasv551/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 132187.51543899998
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > atlasv551/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan atlasv551/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 109736.89364399994
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > vulcan/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan vulcan/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 139001.48221899988
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "name": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan > vulcan/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): R-7 family, Proton, Angara, Falcon, Atlas, Vulcan vulcan/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 121307.34308500006
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > ariane64/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship ariane64/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 54302.428643
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > ariane64/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship ariane64/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 46155.882836000004
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > vegac/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship vegac/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 39499.143688
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > vegac/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship vegac/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 30546.749034000008
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch3be/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship longmarch3be/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 50716.222393000004
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch3be/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship longmarch3be/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 47012.902119999984
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h2a202/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship h2a202/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 51975.233236
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h2a202/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship h2a202/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 46335.82015900005
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch5/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship longmarch5/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 68859.3298
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > longmarch5/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship longmarch5/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 47663.28080999997
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h3/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship h3/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 52307.98783099995
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > h3/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship h3/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 41520.00249500002
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > pslvxl/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship pslvxl/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 59083.338945999974
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > pslvxl/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship pslvxl/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 50989.217078000074
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > electron/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship electron/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 40262.20678899996
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > electron/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship electron/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 39678.94307599997
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > starship/leo/25 reaches its target on PEG",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship starship/leo/25 reaches its target on PEG",
+      "status": "passed",
+      "durationMs": 38082.43269799999
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "name": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship > starship/leo/25 reaches its target on IGM",
+      "fullName": "PEG and IGM (roadmap G01): Ariane, Vega, Long March, H-IIA, H3, PSLV, Electron, Starship starship/leo/25 reaches its target on IGM",
+      "status": "passed",
+      "durationMs": 38596.91465699999
+    },
+    {
+      "file": "tests/heavy/falcon-heavy-returns.test.ts",
+      "name": "six-DOF Falcon Heavy returns > lands both side boosters on LZ-1 and LZ-2 and the core on the drone ship",
+      "fullName": "six-DOF Falcon Heavy returns lands both side boosters on LZ-1 and LZ-2 and the core on the drone ship",
+      "status": "passed",
+      "durationMs": 100275.545155
+    },
+    {
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > soyuz21a/iss (crew) reaches the station orbit as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon soyuz21a/iss (crew) reaches the station orbit as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 113969.705256
+    },
+    {
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > soyuz21b/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon soyuz21b/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 123600.544601
+    },
+    {
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > protonm/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon protonm/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 210395.699312
+    },
+    {
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > angaraa5/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon angaraa5/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 191691.53057700006
+    },
+    {
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "name": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon > falcon9/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon falcon9/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 78411.845171
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > falconheavy/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C falconheavy/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 87459.123132
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > atlasv551/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C atlasv551/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 104253.33018
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > vulcan/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C vulcan/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 218279.358276
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > ariane64/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C ariane64/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 108186.81784599996
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "name": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C > vegac/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C vegac/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 60004.56286500004
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > longmarch2d/sso/650 kg reaches its orbit as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 longmarch2d/sso/650 kg reaches its orbit as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 367602.592328
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > longmarch3be/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 longmarch3be/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 99326.145586
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > longmarch5/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 longmarch5/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 106468.89482800005
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > h2a202/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 h2a202/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 95450.77714199992
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "name": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 > h3/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 h3/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 80178.33999999997
+    },
+    {
+      "file": "tests/heavy/flex-fleet-4.test.ts",
+      "name": "flexible vehicles (roadmap P05): PSLV, Electron, Starship > pslvxl/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): PSLV, Electron, Starship pslvxl/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 123030.44140899999
+    },
+    {
+      "file": "tests/heavy/flex-fleet-4.test.ts",
+      "name": "flexible vehicles (roadmap P05): PSLV, Electron, Starship > electron/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): PSLV, Electron, Starship electron/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 83943.274224
+    },
+    {
+      "file": "tests/heavy/flex-fleet-4.test.ts",
+      "name": "flexible vehicles (roadmap P05): PSLV, Electron, Starship > starship/leo/25 reaches its target as a flexible vehicle",
+      "fullName": "flexible vehicles (roadmap P05): PSLV, Electron, Starship starship/leo/25 reaches its target as a flexible vehicle",
+      "status": "passed",
+      "durationMs": 71880.93487099998
+    },
+    {
+      "file": "tests/heavy/flex-fleet-4.test.ts",
+      "name": "flexible Falcon 9 between integration steps > delivers the same orbit at 0.01 s and 0.005 s",
+      "fullName": "flexible Falcon 9 between integration steps delivers the same orbit at 0.01 s and 0.005 s",
+      "status": "passed",
+      "durationMs": 164756.45463499997
+    },
+    {
+      "file": "tests/heavy/flex-golden.test.ts",
+      "name": "six-DOF missions without the flexible-body options > falcon9 flies its mission exactly as recorded",
+      "fullName": "six-DOF missions without the flexible-body options falcon9 flies its mission exactly as recorded",
+      "status": "passed",
+      "durationMs": 60642.990047
+    },
+    {
+      "file": "tests/heavy/flex-golden.test.ts",
+      "name": "six-DOF missions without the flexible-body options > soyuz21a flies its mission exactly as recorded",
+      "fullName": "six-DOF missions without the flexible-body options soyuz21a flies its mission exactly as recorded",
+      "status": "passed",
+      "durationMs": 35232.055641000006
+    },
+    {
+      "file": "tests/heavy/flex-golden.test.ts",
+      "name": "six-DOF missions without the flexible-body options > angaraa5 flies its mission exactly as recorded",
+      "fullName": "six-DOF missions without the flexible-body options angaraa5 flies its mission exactly as recorded",
+      "status": "passed",
+      "durationMs": 87667.140627
+    },
+    {
+      "file": "tests/heavy/history-sixdof.test.ts",
+      "name": "historical missions as rigid bodies > Sputnik-1 reaches its 215 × 939 km orbit",
+      "fullName": "historical missions as rigid bodies Sputnik-1 reaches its 215 × 939 km orbit",
+      "status": "passed",
+      "durationMs": 19659.602676
+    },
+    {
+      "file": "tests/heavy/history-sixdof.test.ts",
+      "name": "historical missions as rigid bodies > Vostok-1 reaches its 181 × 327 km orbit",
+      "fullName": "historical missions as rigid bodies Vostok-1 reaches its 181 × 327 km orbit",
+      "status": "passed",
+      "durationMs": 50298.176139
+    },
+    {
+      "file": "tests/heavy/history-sixdof.test.ts",
+      "name": "historical missions as rigid bodies > Apollo 11: the S-IVB relights for the translunar injection",
+      "fullName": "historical missions as rigid bodies Apollo 11: the S-IVB relights for the translunar injection",
+      "status": "passed",
+      "durationMs": 56542.484381999995
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "lesson 3.2, a stuck gyro and the FDIR > passes with the FDIR on",
+      "fullName": "lesson 3.2, a stuck gyro and the FDIR passes with the FDIR on",
+      "status": "passed",
+      "durationMs": 69376.511024
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 2.3 inertial navigation: a tactical-grade unit keeps the error under 500 m to MECO",
+      "fullName": "round 2: the six-DOF lessons, solved 2.3 inertial navigation: a tactical-grade unit keeps the error under 500 m to MECO",
+      "status": "passed",
+      "durationMs": 8585.605519000004
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 2.4 Monte Carlo 3σ: run 5 of set 1 flown alone reaches orbit, and its perigee is the set's",
+      "fullName": "round 2: the six-DOF lessons, solved 2.4 Monte Carlo 3σ: run 5 of set 1 flown alone reaches orbit, and its perigee is the set's",
+      "status": "passed",
+      "durationMs": 138931.119566
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.1 reading the loop: the crossover and the phase margin read at max-Q pass",
+      "fullName": "round 2: the six-DOF lessons, solved 4.1 reading the loop: the crossover and the phase margin read at max-Q pass",
+      "status": "passed",
+      "durationMs": 5876.798634999985
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.2 gains with margins: the default gains give 30° and 6 dB at max-Q",
+      "fullName": "round 2: the six-DOF lessons, solved 4.2 gains with margins: the default gains give 30° and 6 dB at max-Q",
+      "status": "passed",
+      "durationMs": 5866.539348999999
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.3 a step test: the fast tuning overshoots past 6 %; the default gains hardly at all",
+      "fullName": "round 2: the six-DOF lessons, solved 4.3 a step test: the fast tuning overshoots past 6 %; the default gains hardly at all",
+      "status": "passed",
+      "durationMs": 40051.476888000005
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "name": "round 2: the six-DOF lessons, solved > 4.4 bending and the notch filter: with the filter on the rocket flies through max-Q",
+      "fullName": "round 2: the six-DOF lessons, solved 4.4 bending and the notch filter: with the filter on the rocket flies through max-Q",
+      "status": "passed",
+      "durationMs": 7738.257947999984
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-igm.test.ts",
+      "name": "Monte Carlo insertion accuracy (roadmap G05) > falcon9 igm: 40 dispersed runs, each counted and each loss named",
+      "fullName": "Monte Carlo insertion accuracy (roadmap G05) falcon9 igm: 40 dispersed runs, each counted and each loss named",
+      "status": "passed",
+      "durationMs": 1995527.392086
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-navigation.test.ts",
+      "name": "Monte Carlo insertion accuracy (roadmap G05) > falcon9 peg with navigation: 20 dispersed runs, each counted and each loss named",
+      "fullName": "Monte Carlo insertion accuracy (roadmap G05) falcon9 peg with navigation: 20 dispersed runs, each counted and each loss named",
+      "status": "passed",
+      "durationMs": 1000628.416957
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-peg.test.ts",
+      "name": "Monte Carlo insertion accuracy (roadmap G05) > falcon9 peg: 40 dispersed runs, each counted and each loss named",
+      "fullName": "Monte Carlo insertion accuracy (roadmap G05) falcon9 peg: 40 dispersed runs, each counted and each loss named",
+      "status": "passed",
+      "durationMs": 1575639.925013
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-standard.test.ts",
+      "name": "Monte Carlo insertion accuracy (roadmap G05) > falcon9 standard: 40 dispersed runs, each counted and each loss named",
+      "fullName": "Monte Carlo insertion accuracy (roadmap G05) falcon9 standard: 40 dispersed runs, each counted and each loss named",
+      "status": "passed",
+      "durationMs": 2312724.6254310003
+    },
+    {
+      "file": "tests/heavy/navigation-burns.test.ts",
+      "name": "Falcon 9 to its reference orbit on a tactical and a MEMS navigation > tactical: the burns align and the target orbit is reached, gas to spare",
+      "fullName": "Falcon 9 to its reference orbit on a tactical and a MEMS navigation tactical: the burns align and the target orbit is reached, gas to spare",
+      "status": "passed",
+      "durationMs": 30752.690842
+    },
+    {
+      "file": "tests/heavy/navigation-burns.test.ts",
+      "name": "Falcon 9 to its reference orbit on a tactical and a MEMS navigation > mems: the burns align and the target orbit is reached, gas to spare",
+      "fullName": "Falcon 9 to its reference orbit on a tactical and a MEMS navigation mems: the burns align and the target orbit is reached, gas to spare",
+      "status": "passed",
+      "durationMs": 68375.522238
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > takes the 100 objects the selection names",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) takes the 100 objects the selection names",
+      "status": "passed",
+      "durationMs": 1.8036570000000438
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23 Cluster 13 Assembly 4",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 23 Cluster 13 Assembly 4",
+      "status": "passed",
+      "durationMs": 3529.86338
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 509 Transit VA-1",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 509 Transit VA-1",
+      "status": "passed",
+      "durationMs": 2442.7177140000003
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 987 OSO 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 987 OSO 2",
+      "status": "passed",
+      "durationMs": 2767.1377439999997
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 2168 Kosmos-118",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 2168 Kosmos-118",
+      "status": "passed",
+      "durationMs": 2584.9660719999993
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 2763 Vostok-2M (N07) Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 2763 Vostok-2M (N07) Stage 3",
+      "status": "passed",
+      "durationMs": 2637.7806629999995
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 4119 Meteor",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 4119 Meteor",
+      "status": "passed",
+      "durationMs": 2641.505954
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 4958 S70-4 Drag Sphere",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 4958 S70-4 Drag Sphere",
+      "status": "passed",
+      "durationMs": 2078.1600059999982
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 5328 Vostok-2M (N22) Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 5328 Vostok-2M (N22) Stage 3",
+      "status": "passed",
+      "durationMs": 2939.946208000001
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 7417 Kosmos-673",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 7417 Kosmos-673",
+      "status": "passed",
+      "durationMs": 2659.306764000001
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 7753 Kosmos-3M 21-279 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 7753 Kosmos-3M 21-279 Stage 2",
+      "status": "passed",
+      "durationMs": 3518.5066039999983
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 9390 Vostok-2M (N47) Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 9390 Vostok-2M (N47) Stage 3",
+      "status": "passed",
+      "durationMs": 2931.9606280000007
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 10113 Meteor-Priroda",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 10113 Meteor-Priroda",
+      "status": "passed",
+      "durationMs": 2934.278362000001
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 11161 Kosmos-1064",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 11161 Kosmos-1064",
+      "status": "passed",
+      "durationMs": 3093.5652039999986
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 11285 Interkosmos-19",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 11285 Interkosmos-19",
+      "status": "passed",
+      "durationMs": 3311.1270839999997
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 11589 Molniya-1",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 11589 Molniya-1",
+      "status": "passed",
+      "durationMs": 6.6038489999991725
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 11762 Blok-L 48-633",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 11762 Blok-L 48-633",
+      "status": "passed",
+      "durationMs": 2.7534769999983837
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 12308 M-3S-2 Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 12308 M-3S-2 Stage 3",
+      "status": "passed",
+      "durationMs": 2362.2396059999955
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 12852 Kosmos-1310",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 12852 Kosmos-1310",
+      "status": "passed",
+      "durationMs": 3017.6553609999974
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 13118 Kosmos-1345",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 13118 Kosmos-1345",
+      "status": "passed",
+      "durationMs": 3000.1031870000006
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 13390 Blok-ML No. 160",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 13390 Blok-ML No. 160",
+      "status": "passed",
+      "durationMs": 3.648754000001645
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 13940 Delta 149 Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 13940 Delta 149 Stage 3",
+      "status": "passed",
+      "durationMs": 27213.57100099999
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 14088 Kosmos-3M 83-548 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 14088 Kosmos-3M 83-548 Stage 2",
+      "status": "passed",
+      "durationMs": 2802.162672999999
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 14381 Kosmos-3M 93-482 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 14381 Kosmos-3M 93-482 Stage 2",
+      "status": "passed",
+      "durationMs": 2684.7592739999964
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 14722 Ohzora",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 14722 Ohzora",
+      "status": "passed",
+      "durationMs": 3048.691193999999
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15110 Kosmos-1501 SS 6",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15110 Kosmos-1501 SS 6",
+      "status": "passed",
+      "durationMs": 7608.686312000005
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15363 Scout S208C Stage 4",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15363 Scout S208C Stage 4",
+      "status": "passed",
+      "durationMs": 2629.0591200000054
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15446 Kosmos-1615",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15446 Kosmos-1615",
+      "status": "passed",
+      "durationMs": 2950.755004999999
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15584 Kosmos-1631",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15584 Kosmos-1631",
+      "status": "passed",
+      "durationMs": 4895.015472999992
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15662 Molniya-M No. 252 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15662 Molniya-M No. 252 Blok-I",
+      "status": "passed",
+      "durationMs": 3428.0058280000085
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15862 Kosmos-1501 SS 21",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15862 Kosmos-1501 SS 21",
+      "status": "passed",
+      "durationMs": 8685.370802000005
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15978 Molniya-M 32-664 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15978 Molniya-M 32-664 Blok-I",
+      "status": "passed",
+      "durationMs": 4088.255922000011
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 15987 Kosmos-1601 SS 8",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 15987 Kosmos-1601 SS 8",
+      "status": "passed",
+      "durationMs": 2374.9830340000044
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 16006 Kosmos-1601 SS 16",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 16006 Kosmos-1601 SS 16",
+      "status": "passed",
+      "durationMs": 2484.656575999994
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 16104 Molniya-M 32-670 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 16104 Molniya-M 32-670 Blok-I",
+      "status": "passed",
+      "durationMs": 4032.040909000003
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 16184 Molniya-M 46-765 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 16184 Molniya-M 46-765 Blok-I",
+      "status": "passed",
+      "durationMs": 3518.92482
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 16328 ITV 1 Canister",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 16328 ITV 1 Canister",
+      "status": "passed",
+      "durationMs": 3611.5827160000044
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 16600 N-II-14F Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 16600 N-II-14F Stage 3",
+      "status": "passed",
+      "durationMs": 9484.412466999987
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 16803 Molniya-M 54-653 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 16803 Molniya-M 54-653 Blok-I",
+      "status": "passed",
+      "durationMs": 15281.572337999998
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 16929 Kosmos-3M 22-342 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 16929 Kosmos-3M 22-342 Stage 2",
+      "status": "passed",
+      "durationMs": 3021.9206720000075
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 17041 Blok-ML 29-459",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 17041 Blok-ML 29-459",
+      "status": "passed",
+      "durationMs": 3.693295000004582
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 17135 Molniya-M 11-689 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 17135 Molniya-M 11-689 Blok-I",
+      "status": "passed",
+      "durationMs": 3488.021007000003
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 17259 Kosmos-1776 SS 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 17259 Kosmos-1776 SS 2",
+      "status": "passed",
+      "durationMs": 2063.2335179999936
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 17365 Kosmos-1817",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 17365 Kosmos-1817",
+      "status": "passed",
+      "durationMs": 3405.4603810000117
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 17562 Delta 179",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 17562 Delta 179",
+      "status": "passed",
+      "durationMs": 4504.945885000023
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 17910 Blok DM-2 No. 18L",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 17910 Blok DM-2 No. 18L",
+      "status": "passed",
+      "durationMs": 93764.69290999998
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 18435 Kosmos-1776 SS 14",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 18435 Kosmos-1776 SS 14",
+      "status": "passed",
+      "durationMs": 2720.0439710000064
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 19193 Kosmos-1949",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 19193 Kosmos-1949",
+      "status": "passed",
+      "durationMs": 3522.940491999965
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 19339 Kosmos-3M 26-187 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 19339 Kosmos-3M 26-187 Stage 2",
+      "status": "passed",
+      "durationMs": 2634.2766110000084
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 19647 Kosmos-1979",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 19647 Kosmos-1979",
+      "status": "passed",
+      "durationMs": 3393.327401000017
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 19727 Kosmos-1985 SS 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 19727 Kosmos-1985 SS 3",
+      "status": "passed",
+      "durationMs": 2158.501823999977
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 19823 M-3S2-4 Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 19823 M-3S2-4 Stage 3",
+      "status": "passed",
+      "durationMs": 15459.218127999979
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 19959 Kosmos-1985 SS 13",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 19959 Kosmos-1985 SS 13",
+      "status": "passed",
+      "durationMs": 2395.0927800000063
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20060 Pion",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20060 Pion",
+      "status": "passed",
+      "durationMs": 3442.9822270000004
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20161 Pion-4",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20161 Pion-4",
+      "status": "passed",
+      "durationMs": 4070.917191000015
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20304 Delta 188 Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20304 Delta 188 Stage 3",
+      "status": "passed",
+      "durationMs": 51376.91864700004
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20422 Kosmos-1985 SS 31",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20422 Kosmos-1985 SS 31",
+      "status": "passed",
+      "durationMs": 2142.7841079999926
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20477 Kosmos-3M 11-237 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20477 Kosmos-3M 11-237 Stage 2",
+      "status": "passed",
+      "durationMs": 15978.920730999962
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20532 Kosmos-2053 SS 9",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20532 Kosmos-2053 SS 9",
+      "status": "passed",
+      "durationMs": 3233.107018999988
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20581 Kosmos-2075",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20581 Kosmos-2075",
+      "status": "passed",
+      "durationMs": 2698.374287999992
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20685 Badr",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20685 Badr",
+      "status": "passed",
+      "durationMs": 5948.690804000013
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20749 Kosmos-2075 SS 4",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20749 Kosmos-2075 SS 4",
+      "status": "passed",
+      "durationMs": 1779.9847200000077
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20802 Kosmos-2053 SS 12",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20802 Kosmos-2053 SS 12",
+      "status": "passed",
+      "durationMs": 2166.4965990000055
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 20933 Kosmos-2103",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 20933 Kosmos-2103",
+      "status": "passed",
+      "durationMs": 2971.2208840000094
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21023 Kosmos-2053 SS 20",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21023 Kosmos-2053 SS 20",
+      "status": "passed",
+      "durationMs": 2136.653394999972
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21081 Kosmos-2106 SS 6",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21081 Kosmos-2106 SS 6",
+      "status": "passed",
+      "durationMs": 1733.7765210000216
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21259 Kosmos-2106 SS 8",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21259 Kosmos-2106 SS 8",
+      "status": "passed",
+      "durationMs": 2275.226101999986
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21306 Kosmos-2106 SS 14",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21306 Kosmos-2106 SS 14",
+      "status": "passed",
+      "durationMs": 2331.613624999998
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21553 LOSAT-X",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21553 LOSAT-X",
+      "status": "passed",
+      "durationMs": 2970.695251999947
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21585 Microsat 6",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21585 Microsat 6",
+      "status": "passed",
+      "durationMs": 3260.9767870000214
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21868 H-I-24F Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21868 H-I-24F Stage 2",
+      "status": "passed",
+      "durationMs": 2758.003408999997
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21988 Delta 210",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21988 Delta 210",
+      "status": "passed",
+      "durationMs": 2522.5829529999755
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 21996 Kosmos-2106 SS 23",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 21996 Kosmos-2106 SS 23",
+      "status": "passed",
+      "durationMs": 1863.7576780000236
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 22088 CZ-2E Y3 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 22088 CZ-2E Y3 Stage 2",
+      "status": "passed",
+      "durationMs": 5008.261722000025
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 22279 CZ-2E Y4 Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 22279 CZ-2E Y4 Stage 2",
+      "status": "passed",
+      "durationMs": 10516.984406000003
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 22643 Kosmos-2244",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 22643 Kosmos-2244",
+      "status": "passed",
+      "durationMs": 2920.0910110000405
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 22870 FSW-1 RV",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 22870 FSW-1 RV",
+      "status": "passed",
+      "durationMs": 11044.242511000019
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 22922 Delta 224",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 22922 Delta 224",
+      "status": "passed",
+      "durationMs": 3185.5745779999997
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 22998 BREMSAT",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 22998 BREMSAT",
+      "status": "passed",
+      "durationMs": 2919.0473880000063
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23145 Fanhui Shi Weixing (16)",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 23145 Fanhui Shi Weixing (16)",
+      "status": "passed",
+      "durationMs": 3531.873006000009
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23231 H-II-2F Stage 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 23231 H-II-2F Stage 2",
+      "status": "passed",
+      "durationMs": 55059.37997899996
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23471 ODERACS 2A",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 23471 ODERACS 2A",
+      "status": "passed",
+      "durationMs": 2987.613812000025
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23652 Ariane H10-3 V77",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 23652 Ariane H10-3 V77",
+      "status": "passed",
+      "durationMs": 70027.61068299995
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23797 Blok DM-2 No. 82L",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 23797 Blok DM-2 No. 82L",
+      "status": "passed",
+      "durationMs": 68324.4179900001
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 23876 PAMS",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 23876 PAMS",
+      "status": "passed",
+      "durationMs": 3254.878473000019
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 24634 Fanhui Shi Weixing (17)",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 24634 Fanhui Shi Weixing (17)",
+      "status": "passed",
+      "durationMs": 3613.143434000085
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 24702 Soyuz-U No. 050 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 24702 Soyuz-U No. 050 Blok-I",
+      "status": "passed",
+      "durationMs": 4588.919937000028
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 24782 Kosmos-2306 SS 2",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 24782 Kosmos-2306 SS 2",
+      "status": "passed",
+      "durationMs": 2268.8560730000027
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 24801 Molniya-M 31-673 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 24801 Molniya-M 31-673 Blok-I",
+      "status": "passed",
+      "durationMs": 3618.1714399999473
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 24884 Pegasus F16 Stage 3",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 24884 Pegasus F16 Stage 3",
+      "status": "passed",
+      "durationMs": 3097.9522369999904
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 24970 Delta 248",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 24970 Delta 248",
+      "status": "passed",
+      "durationMs": 3637.891949999961
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 25044 Delta 250",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 25044 Delta 250",
+      "status": "passed",
+      "durationMs": 3184.239971999894
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 25240 Centaur AC-151",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 25240 Centaur AC-151",
+      "status": "passed",
+      "durationMs": 13964.338338000001
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 25529 Iridium 85",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 25529 Iridium 85",
+      "status": "passed",
+      "durationMs": 4981.848135000095
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 25685 Sputnik-99",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 25685 Sputnik-99",
+      "status": "passed",
+      "durationMs": 2975.140201000031
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 25855 Delta 272",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 25855 Delta 272",
+      "status": "passed",
+      "durationMs": 3553.596181000001
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 26403 Centaur AC-161",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 26403 Centaur AC-161",
+      "status": "passed",
+      "durationMs": 3.9864379999926314
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 26885 Delta 287",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 26885 Delta 287",
+      "status": "passed",
+      "durationMs": 10835.387875999906
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 27425 Delta 291",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 27425 Delta 291",
+      "status": "passed",
+      "durationMs": 5165.005405000062
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 27614 Molniya-M 45-685 Blok-I",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 27614 Molniya-M 45-685 Blok-I",
+      "status": "passed",
+      "durationMs": 3737.0172670000466
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 27829 Delta 298",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 27829 Delta 298",
+      "status": "passed",
+      "durationMs": 25490.324482000084
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 30 days ahead: inside the window as fixed",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 30 days ahead: inside the window as fixed",
+      "status": "passed",
+      "durationMs": 2.785407999996096
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 10 days ahead: inside the window as fixed",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 10 days ahead: inside the window as fixed",
+      "status": "passed",
+      "durationMs": 1.2415510000428185
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "name": "re-entries predicted the agencies' way, 1985–2004 (P2.5) > 5 days ahead: inside the window as fixed",
+      "fullName": "re-entries predicted the agencies' way, 1985–2004 (P2.5) 5 days ahead: inside the window as fixed",
+      "status": "passed",
+      "durationMs": 0.9150310000404716
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each profile, to Rassvet > twoOrbit docks on the flight's timeline",
+      "fullName": "each profile, to Rassvet twoOrbit docks on the flight's timeline",
+      "status": "passed",
+      "durationMs": 989.3232130000001
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each profile, to Rassvet > fourOrbit docks on the flight's timeline",
+      "fullName": "each profile, to Rassvet fourOrbit docks on the flight's timeline",
+      "status": "passed",
+      "durationMs": 717.280753
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each profile, to Rassvet > twoDay docks on the flight's timeline",
+      "fullName": "each profile, to Rassvet twoDay docks on the flight's timeline",
+      "status": "passed",
+      "durationMs": 823.731151
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each port, on the two-orbit profile > rassvet",
+      "fullName": "each port, on the two-orbit profile rassvet",
+      "status": "passed",
+      "durationMs": 494.7908550000002
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each port, on the two-orbit profile > poisk",
+      "fullName": "each port, on the two-orbit profile poisk",
+      "status": "passed",
+      "durationMs": 545.2276770000003
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each port, on the two-orbit profile > prichal",
+      "fullName": "each port, on the two-orbit profile prichal",
+      "status": "passed",
+      "durationMs": 492.93700700000045
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "each port, on the two-orbit profile > zvezdaAft",
+      "fullName": "each port, on the two-orbit profile zvezdaAft",
+      "status": "passed",
+      "durationMs": 475.72711100000015
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "name": "the six-DOF ascent > flies the two-orbit profile to Rassvet like the point-mass one",
+      "fullName": "the six-DOF ascent flies the two-orbit profile to Rassvet like the point-mass one",
+      "status": "passed",
+      "durationMs": 69349.826077
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > iss",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) iss",
+      "status": "passed",
+      "durationMs": 1184.6592
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > sso700",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) sso700",
+      "status": "passed",
+      "durationMs": 10230.685825
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > leo1200",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) leo1200",
+      "status": "passed",
+      "durationMs": 2486.119563
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > molniya",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) molniya",
+      "status": "passed",
+      "durationMs": 9331.46265
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > gto",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) gto",
+      "status": "passed",
+      "durationMs": 38146.713122999994
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > transfer",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) transfer",
+      "status": "passed",
+      "durationMs": 40718.233304
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > geo",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) geo",
+      "status": "passed",
+      "durationMs": 1327.421576000008
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > decaying",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) decaying",
+      "status": "passed",
+      "durationMs": 74.54955199999677
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > reentering",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) reentering",
+      "status": "passed",
+      "durationMs": 34503.933582
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > falling",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) falling",
+      "status": "passed",
+      "durationMs": 28850.525479000004
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > sinking",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) sinking",
+      "status": "passed",
+      "durationMs": 2688.6785760000057
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "name": "the filtered screening against the full search, the whole sweep (M01, P2.5) > eccentric",
+      "fullName": "the filtered screening against the full search, the whole sweep (M01, P2.5) eccentric",
+      "status": "passed",
+      "durationMs": 19356.432513999986
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > has one row for every catalogue vehicle",
+      "fullName": "six-DOF fingerprints of the catalogue has one row for every catalogue vehicle",
+      "status": "passed",
+      "durationMs": 2.3356690000000526
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > soyuz21a/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue soyuz21a/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 13787.739076
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > soyuz21b/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue soyuz21b/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 13545.281549000001
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > protonm/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue protonm/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 9450.635642000005
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > angaraa5/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue angaraa5/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 9888.389392999998
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > falcon9/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue falcon9/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 12651.266529
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > falconheavy/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue falconheavy/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 18634.746993
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > atlasv551/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue atlasv551/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 8840.505430999998
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > vulcan/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue vulcan/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 8466.100032000002
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > ariane64/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue ariane64/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 10479.417167000007
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > vegac/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue vegac/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 9512.619229000004
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > longmarch2d/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue longmarch2d/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 6271.031529
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > longmarch3be/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue longmarch3be/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 10069.967186999987
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > h2a202/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue h2a202/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 9588.936191999994
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > longmarch5/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue longmarch5/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 9417.07332700002
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > h3/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue h3/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 6733.685524
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > pslvxl/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue pslvxl/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 14474.26019999999
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > electron/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue electron/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 8975.986566999985
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > starship/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue starship/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 12733.241279000009
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > sputnik8k71ps/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue sputnik8k71ps/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 10463.747980999993
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > vostok8k72k/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue vostok8k72k/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 12446.641023999982
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "name": "six-DOF fingerprints of the catalogue > saturnv/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "fullName": "six-DOF fingerprints of the catalogue saturnv/leo/50 flies its first 160 s in six-DOF exactly as recorded",
+      "status": "passed",
+      "durationMs": 7816.041002000013
+    },
+    {
+      "file": "tests/heavy/soyuz-aborts.test.ts",
+      "name": "Soyuz MS-10: a strap-on strikes the core > aborts on the fairing motors three seconds after the strap-ons separate and lands the crew",
+      "fullName": "Soyuz MS-10: a strap-on strikes the core aborts on the fairing motors three seconds after the strap-ons separate and lands the crew",
+      "status": "passed",
+      "durationMs": 29653.775653
+    },
+    {
+      "file": "tests/heavy/soyuz-aborts.test.ts",
+      "name": "Soyuz 18a: a stage separation half-fails > releases the spacecraft for a ballistic entry and lands the crew in the Altai, as in 1975",
+      "fullName": "Soyuz 18a: a stage separation half-fails releases the spacecraft for a ballistic entry and lands the crew in the Altai, as in 1975",
+      "status": "passed",
+      "durationMs": 47682.352196
+    },
+    {
+      "file": "tests/heavy/starship-flight5.test.ts",
+      "name": "six-DOF Starship Flight 5 > catches the booster and splashes the ship down intact in the Indian Ocean",
+      "fullName": "six-DOF Starship Flight 5 catches the booster and splashes the ship down intact in the Indian Ocean",
+      "status": "passed",
+      "durationMs": 164518.930498
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > has a disagreement list for every reference flight and nothing else",
+      "fullName": "Falcon 9 against webcast telemetry (six-DOF) has a disagreement list for every reference flight and nothing else",
+      "status": "passed",
+      "durationMs": 2.087368999999967
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > crs16",
+      "fullName": "Falcon 9 against webcast telemetry (six-DOF) crs16",
+      "status": "passed",
+      "durationMs": 65188.89311799999
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > ssoA",
+      "fullName": "Falcon 9 against webcast telemetry (six-DOF) ssoA",
+      "status": "passed",
+      "durationMs": 50413.008971999996
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > iridium8",
+      "fullName": "Falcon 9 against webcast telemetry (six-DOF) iridium8",
+      "status": "passed",
+      "durationMs": 51890.09479299998
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > bangabandhu1",
+      "fullName": "Falcon 9 against webcast telemetry (six-DOF) bangabandhu1",
+      "status": "passed",
+      "durationMs": 52075.635916
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "name": "Falcon 9 against webcast telemetry (six-DOF) > gps3sv01",
+      "fullName": "Falcon 9 against webcast telemetry (six-DOF) gps3sv01",
+      "status": "passed",
+      "durationMs": 42004.58517800004
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > has a disagreement list for every reference and nothing else",
+      "fullName": "published launch timelines (six-DOF) has a disagreement list for every reference and nothing else",
+      "status": "passed",
+      "durationMs": 2.155858999999964
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > soyuzMs25",
+      "fullName": "published launch timelines (six-DOF) soyuzMs25",
+      "status": "passed",
+      "durationMs": 44138.087722
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > electronNtt",
+      "fullName": "published launch timelines (six-DOF) electronNtt",
+      "status": "passed",
+      "durationMs": 34479.74198
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > ariane64Va267",
+      "fullName": "published launch timelines (six-DOF) ariane64Va267",
+      "status": "passed",
+      "durationMs": 92322.60347
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > atlasJuno",
+      "fullName": "published launch timelines (six-DOF) atlasJuno",
+      "status": "passed",
+      "durationMs": 63790.77726
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > pslvC52",
+      "fullName": "published launch timelines (six-DOF) pslvC52",
+      "status": "passed",
+      "durationMs": 92312.971761
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > h3F3",
+      "fullName": "published launch timelines (six-DOF) h3F3",
+      "status": "passed",
+      "durationMs": 53429.35288099997
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > h2aF50",
+      "fullName": "published launch timelines (six-DOF) h2aF50",
+      "status": "passed",
+      "durationMs": 62876.05315600004
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > vegaVV25",
+      "fullName": "published launch timelines (six-DOF) vegaVV25",
+      "status": "passed",
+      "durationMs": 24747.663941000006
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > protonT14R",
+      "fullName": "published launch timelines (six-DOF) protonT14R",
+      "status": "passed",
+      "durationMs": 36964.324303
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > fhArabsat",
+      "fullName": "published launch timelines (six-DOF) fhArabsat",
+      "status": "passed",
+      "durationMs": 149197.83884599997
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "name": "published launch timelines (six-DOF) > angaraF2",
+      "fullName": "published launch timelines (six-DOF) angaraF2",
+      "status": "passed",
+      "durationMs": 61032.39257899998
+    }
+  ],
+  "sourceTuples": [
+    "[\"0b844f77f5f0ffdeb7274642ddf74a57c2ee230b\",\"501bf32ec992bcc3aa629c11b66cbb3a3845f0fb\",\"d766e4660516140749fc2aa34c96b6b276fdd5c7\",\"bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c\",\"973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9\",\"1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5\"]"
+  ],
+  "runtimeTuples": [
+    "[\"v22.22.2\",\"12.4.254.21-node.39\",\"linux\",\"x64\"]"
+  ]
+}

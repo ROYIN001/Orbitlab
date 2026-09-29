@@ -1,0 +1,17 @@
+{"node":"v22.23.3","v8":"12.4.254.21-node.57","execPath":"C:\\Users\\Royin\\AppData\\Local\\npm-cache\\_npx\\52027bd8fc0022aa\\node_modules\\node\\bin\\node.exe","arch":"x64","platform":"win32"}
+
+ RUN  v5.0.1 C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/source
+
+FINGERPRINT_WORKER_RUNTIME {"node":"v22.23.3","v8":"12.4.254.21-node.57","execPath":"C:\\Users\\Royin\\AppData\\Local\\npm-cache\\_npx\\52027bd8fc0022aa\\node_modules\\node\\bin\\node.exe","pid":26500,"arch":"x64","platform":"win32"}
+ ✓ tests/rigid-flex-golden.test.ts > six-DOF flight without the flexible-body options > falcon9 flies its first 160 s exactly as recorded 12447ms
+ ✓ tests/rigid-flex-golden.test.ts > six-DOF flight without the flexible-body options > soyuz21a flies its first 160 s exactly as recorded 15501ms
+ ✓ tests/rigid-flex-golden.test.ts > six-DOF flight without the flexible-body options > angaraa5 flies its first 160 s exactly as recorded 11044ms
+ ✓ tests/rigid-flex-golden.test.ts > six-DOF flight without the flexible-body options > Falcon 9 flies the same with every option given and off 12920ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  22:04:32
+   Duration  53.12s (tests 98%, transform 2%)
+
+JSON report written to C:/Users/Royin/OneDrive/Desktop/Royin/Orbitlab/audit-2026-09-29/fingerprint-node22-rigid-flex-20260929.json
+EXIT=0
