@@ -787,14 +787,15 @@ MECO at T+174.0 s (six-DOF 174.2 s), max Q at T+51.3 s and fairing jettison at T
 | stage2Sep time | s | 326.0 | 331.6 (+2 %) | 331.8 (+2 %) | ±32.6 |
 | stage3Ign time | s | 328.0 | 332.6 (+1 %) | 332.8 (+1 %) | ±32.8 |
 | fairing time | s | 340.0 | 341.6 (+0 %) | 341.8 (+1 %) | ±34.0 |
-| stage3Cutoff time | s | 746.0 | 729.5 (−2 %) | 747.4 (0 %) | ±74.6 |
-| brizSep time | s | 748.0 | 732.7 (−2 %) | 750.6 (0 %) | ±74.8 |
+| stage3Cutoff time | s | 746.0 | 729.5 (−2 %) | 732.6 (−2 %) | ±74.6 |
+| brizSep time | s | 748.0 | 732.7 (−2 %) | 735.9 (−2 %) | ±74.8 |
 
 The Proton-M and Angara-A5 fairing rows are measured with the jettison rule of F14, and Proton-M
 with its published stage propellant loads (F14). On the heating placard and the earlier loads the
 Proton rows were max Q 50.4 / 50.5 s, sep12 111.6 / 111.4 s, sep23 327.6 / 327.7 s, fairing
-174.6 / 151.0 s and sep3b 572.6 / 572.9 s; Angara's fairing was 301.6 / 256.2 s, and carrying it
-longer moved Angara's third-stage cut-off and Briz-M separation by about 2–4 s.
+174.6 / 151.0 s and sep3b 572.6 / 572.9 s; Angara's fairing was 301.6 / 256.2 s, and its
+third-stage cut-off and Briz-M separation 727.3 / 743.1 s and 730.6 / 746.3 s before the fairing
+rule and its six-DOF kick (F14).
 
 ### Findings
 
@@ -914,6 +915,18 @@ documents say instead:
   prediction reported the impact and the mission ended there with the Briz-M full. With the
   placard the same cut-off came before the apex. The sequencer now burns at once when that
   prediction fails on a suborbital state, and the flight reaches its orbit at T+4 251 s.
+- *And a six-DOF ascent that was already short.* Angara-A5 to the sun-synchronous preset (6.1 t,
+  six-DOF) stopped reaching orbit: the Briz-M, burning from a suborbital cut-off, sank into the
+  air during its first burn and the insertion was abandoned at 76 km with 3.1 km/s aboard. The
+  sequencer was not the cause (keeping its thrust at or above the horizon changed nothing): the
+  six-DOF ascent handed the Briz-M 257 m/s less than the point mass does (7 094 m/s at 250 km
+  against 7 351 m/s at 190 km), which the placard's earlier jettison had been covering. As for
+  Atlas V, the rigid body cannot hold the angle of attack the point mass pitches over at. A
+  six-DOF kick (`guidanceDefaultsSixDof`) of 4–8° was swept on that case and 8° chosen, as the
+  one leaving the most delta-v; it brings the held-out cases, low orbit at 25 % and the transfer
+  orbit at 25, 50 and 90 %, to within 20 m/s of the point mass's remaining delta-v, where they
+  had been up to 255 m/s short. No flight data was fitted: Angara's published timelines give
+  times only, and every flight-2 row stays inside its tolerance.
 - *Atlas V's criterion is a 3-sigma one.* ULA jettisons "when the 3-sigma free molecular heat flux
   falls below 1,135 W/m²" (Atlas V Launch Services User's Guide, Rev. 11, 2010, §2.3), on a
   dispersed atmosphere and trajectory. The model evaluates the same number on the nominal
