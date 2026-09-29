@@ -8,11 +8,14 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import fixture from './fixtures/passes/skyfield-passes.json';
-import { DARK_SKY, findPasses, inSunlight, lookFrom, sunElevation } from '../src/orbit/passes';
+import { DARK_SKY, findPasses, findPassesOf, inSunlight, lookFrom, sunElevation } from '../src/orbit/passes';
 import { elementsFromRecord } from '../src/orbit/omm';
 import { skyObjects, skyState } from '../src/orbit/real-sky';
 import type { OmmRecord } from '../src/provider/satellites';
-import { DEG } from '../src/physics/constants';
+import { DEG, R_EARTH } from '../src/physics/constants';
+import { gmst, wrap2pi } from '../src/physics/orbital';
+import { orbitFacts, stateAt, type Orbit } from '../src/orbit/kepler';
+import { eciToEcef, footprintAngle, lookAngles } from '../src/orbit/applications';
 import { setEarthOrientation } from '../src/orbit/earth-orientation';
 import { parseSnapshot } from '../src/provider/data-provider';
 
@@ -137,4 +140,90 @@ describe('what a pass says', () => {
     expect(up[0].top.el).toBeGreaterThan(70 * DEG);
     expect(findPasses(geo, opposite, t0, t0 + 1)).toEqual([]);
   });
+});
+
+/**
+ * The same search on a designed orbit (roadmap D07, docs/ROADMAP-PART2-3.md;
+ * Phase 4 map §3 item 1): `findPassesOf` fed by a Kepler orbit — `stateAt`
+ * (src/orbit/kepler.ts, J2 on) through `eciToEcef` and `lookAngles` — as D07
+ * will feed it. The SGP4 path through `findPasses` is held to Skyfield above;
+ * this holds the search, apart from SGP4, to an analytic reference.
+ *
+ * Reference: the longest pass, straight overhead, T_max = (P/π)·λ_max. A
+ * satellite on a circular orbit sweeps 2π/P rad of Earth central angle a
+ * second; an overhead pass crosses the whole footprint, a central angle of
+ * 2·λ_max, with λ_max = `footprintAngle(r, ε_min)` = acos(R·cos ε/r) − ε
+ * (spherical Earth); so T = 2·λ_max/(2π/P). It is the form of Wertz & Larson,
+ * *Space Mission Analysis and Design* (Earth-coverage chapter; not free, no
+ * URL), and the map's `maxPassDuration` (§2.2 E), which track A3 implements.
+ *
+ * The case: circular, 500 km, i = 90°, its ascending node over a station on
+ * the equator at jd0, so the pass is overhead. On the equator at h = 0 the
+ * WGS-84 station's radius is R_EARTH and its vertical is the radius, so the
+ * closed form's spherical geometry holds exactly there. P is the nodal period,
+ * the period of the argument of latitude that the J2 mean motion and perigee
+ * drift set (about 0.14 % longer than the two-body period here).
+ *
+ * Tolerances, fixed before the first run:
+ * - the map's criterion: the pass lasts (P/π)·λ_max within 1 %, at
+ *   ε_min = 0° and 10°;
+ * - the closed form leaves out the Earth turning under the pass. For this
+ *   orbit and station the central angle from the station is exactly
+ *   cos γ = cos(u̇t)·cos(ω⊕t), with u̇ = 2π/P and ω⊕ the sidereal angle's rate,
+ *   so the pass is shorter by δ ≈ (k²/2)·λ/tan λ, k = ω⊕/u̇ ≈ 0.066: −0.207 %
+ *   at 0°, −0.213 % at 10°, worked by hand before the run. The difference must
+ *   therefore lie in [−0.30 %, −0.12 %];
+ * - the pass must last as long as that exact rotating-Earth solution, solved
+ *   here by bisection, within 10 ms (the search bisects each end to 1 ms);
+ * - the top is overhead: at jd0 within 10 ms (golden section to 1 ms), above
+ *   89.99°, and the rise and set are symmetric about it within 10 ms
+ *   (cos γ is even in t).
+ */
+describe('passes of a designed orbit (D07, findPassesOf)', () => {
+  const jd0 = Date.parse('2026-09-21T00:00:00Z') / 86400e3 + 2440587.5;
+  const station = { lat: 0, lon: 100.5018 * DEG, h: 0 };
+  const h = 500e3, r = R_EARTH + h;
+  const o: Orbit = { a: r, e: 0, i: 90 * DEG, raan: wrap2pi(gmst(jd0) + station.lon), argp: 0, m0: 0, jd0 };
+  const elevation = (jd: number) => {
+    const s = stateAt(o, (jd - o.jd0) * 86400, true);
+    return lookAngles(station, eciToEcef(s.r, s.theta)).elevation;
+  };
+  const P = orbitFacts(o, true).nodalPeriod;
+  // the sidereal angle's rate, rad/s: gmst's own 360.98564736629° a day
+  const wEarth = (360.98564736629 * DEG) / 86400;
+
+  /** Half the exact overhead pass, s: cos(u̇t)·cos(ω⊕t) = cos λ, by bisection. */
+  function halfPassTurning(lambda: number): number {
+    const u = (2 * Math.PI) / P;
+    let a = 0, b = lambda / u;
+    for (let k = 0; k < 200; k++) {
+      const m = (a + b) / 2;
+      if (Math.cos(u * m) * Math.cos(wEarth * m) > Math.cos(lambda)) a = m; else b = m;
+    }
+    return (a + b) / 2;
+  }
+
+  for (const minElDeg of [0, 10]) {
+    it(`lasts (P/π)·λ_max within 1 % straight overhead, above ${minElDeg}°`, () => {
+      const minEl = minElDeg * DEG;
+      const lambda = footprintAngle(r, minEl);
+      const closedForm = (P / Math.PI) * lambda;
+      const passes = findPassesOf(elevation, P, jd0 - 0.02, jd0 + 0.02, minEl);
+      expect(passes).toHaveLength(1);
+      const [p] = passes;
+      if (p.rise === null || p.set === null) throw new Error('the pass is cut by the window');
+      const found = (p.set - p.rise) * 86400;
+      // the map's criterion
+      expect(Math.abs(found / closedForm - 1)).toBeLessThan(0.01);
+      // the Earth's turning, and nothing else, makes the difference
+      expect(found / closedForm - 1).toBeGreaterThan(-0.003);
+      expect(found / closedForm - 1).toBeLessThan(-0.0012);
+      expect(Math.abs(found - 2 * halfPassTurning(lambda))).toBeLessThan(0.01);
+      // overhead, and symmetric about the top
+      expect(p.culminations).toHaveLength(1);
+      expect(Math.abs(p.top - jd0) * 86400).toBeLessThan(0.01);
+      expect(elevation(p.top)).toBeGreaterThan(89.99 * DEG);
+      expect(Math.abs((jd0 - p.rise) - (p.set - jd0)) * 86400).toBeLessThan(0.01);
+    });
+  }
 });

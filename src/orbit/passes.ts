@@ -22,8 +22,13 @@
  * moves the shadow's edge by a few hundred metres); the sky is dark when the
  * Sun is 6° or more below the horizon, the end of civil twilight.
  *
+ * The search itself needs only an elevation and a period: `findPassesOf`
+ * runs it on any orbit — a designed one for D07 (Phase 4) — and
+ * `findPasses` runs it on SGP4's.
+ *
  * DOM-free; tests/passes.test.ts holds it to Skyfield's passes of the same
- * element sets.
+ * element sets, and `findPassesOf` on a Kepler orbit to the closed form of an
+ * overhead pass.
  */
 import { R_EARTH } from '../physics/constants';
 import { sunDirectionEci } from '../physics/orbital';
@@ -129,16 +134,36 @@ function crossing(f: (jd: number) => number, level: number, a: number, b: number
   return (a + b) / 2;
 }
 
+/** A pass as times alone, Julian dates (UTC): what `findPassesOf` finds on any elevation. */
+export interface PassTimes {
+  /** above the minimum elevation from … to …; null when it already was, or still is, at the window's edge */
+  rise: number | null;
+  set: number | null;
+  /** the highest points inside the window (usually one) */
+  culminations: number[];
+  /** the highest of them; with none inside the window, the higher of the pass's two ends there */
+  top: number;
+}
+
 /**
- * Every pass of the satellite over `st` between Julian dates `jd0` and `jd1`
- * above `minEl` (rad; 0 is the horizon), the elevation geometric or, with
- * `refraction`, as seen. A satellite that never sets over the window — a
- * geostationary one — gives one pass with neither rise nor set; one that
- * never rises gives none.
+ * Every pass above `minEl` (rad; 0 is the horizon) between Julian dates
+ * `jd0` and `jd1`, of whatever `elevation` (rad, at a Julian date) describes,
+ * for an orbit of `period` s — the search `findPasses` runs, apart from SGP4.
+ * Roadmap D07 (docs/ROADMAP-PART2-3.md; Phase 4 map §3 item 1) needs it for a
+ * designed orbit, whose elevation comes from `stateAt` (src/orbit/kepler.ts)
+ * through `eciToEcef` and `lookAngles`: contact time and revisit are found by
+ * the same search, held to Skyfield through `findPasses`, rather than by a
+ * second one.
+ *
+ * The samples are 1/60 of the period apart, never more than a minute, so no
+ * pass is stepped over; each highest point is refined by golden section and
+ * each rise and set by bisection, to a millisecond. Something that never goes
+ * below `minEl` over the window gives one pass with neither rise nor set; one
+ * that never rises above it gives none.
  */
-export function findPasses(o: SkyObject, st: GroundStation, jd0: number, jd1: number, minEl = 0, opts: { refraction?: boolean } = {}): Pass[] {
-  const f = (jd: number) => elevation(o, st, jd, !!opts.refraction);
-  const step = Math.min(60, skyFacts(o).period / 60) / 86400;
+export function findPassesOf(elevation: (jd: number) => number, period: number, jd0: number, jd1: number, minEl = 0): PassTimes[] {
+  const f = elevation;
+  const step = Math.min(60, period / 60) / 86400;
   const n = Math.ceil((jd1 - jd0) / step);
   const ts: number[] = [], es: number[] = [];
   for (let k = 0; k <= n; k++) { const jd = Math.min(jd1, jd0 + k * step); ts.push(jd); es.push(f(jd)); }
@@ -171,14 +196,31 @@ export function findPasses(o: SkyObject, st: GroundStation, jd0: number, jd1: nu
 
   return spans.map((sp) => {
     const a = sp.from ?? jd0, b = sp.to ?? jd1;
-    let culminations = tops.filter((jd) => jd >= a && jd <= b).map((jd) => lookFrom(o, st, jd)!);
+    const culminations = tops.filter((jd) => jd >= a && jd <= b);
     // no highest point inside the window: the pass's highest is at one of its edges
-    const edge = culminations.length ? null : (f(a) >= f(b) ? a : b);
-    const top = culminations.length ? culminations.reduce((m, c) => (c.el > m.el ? c : m)) : lookFrom(o, st, edge!)!;
-    if (!culminations.length) culminations = [];
+    const top = culminations.length ? culminations.reduce((m, c) => (f(c) > f(m) ? c : m)) : (f(a) >= f(b) ? a : b);
+    return { rise: sp.from, set: sp.to, culminations, top };
+  });
+}
+
+/**
+ * Every pass of the satellite over `st` between Julian dates `jd0` and `jd1`
+ * above `minEl` (rad; 0 is the horizon), the elevation geometric or, with
+ * `refraction`, as seen. A satellite that never sets over the window — a
+ * geostationary one — gives one pass with neither rise nor set; one that
+ * never rises gives none. The search is `findPassesOf`'s, on SGP4's
+ * elevation and the element set's period.
+ */
+export function findPasses(o: SkyObject, st: GroundStation, jd0: number, jd1: number, minEl = 0, opts: { refraction?: boolean } = {}): Pass[] {
+  const f = (jd: number) => elevation(o, st, jd, !!opts.refraction);
+  return findPassesOf(f, skyFacts(o).period, jd0, jd1, minEl).map((p) => {
+    const a = p.rise ?? jd0, b = p.set ?? jd1;
+    const culminations = p.culminations.map((jd) => lookFrom(o, st, jd)!);
+    // the highest by the geometric elevation the looks carry, as it always was
+    const top = culminations.length ? culminations.reduce((m, c) => (c.el > m.el ? c : m)) : lookFrom(o, st, p.top)!;
     return {
-      rise: sp.from === null ? null : lookFrom(o, st, sp.from),
-      set: sp.to === null ? null : lookFrom(o, st, sp.to),
+      rise: p.rise === null ? null : lookFrom(o, st, p.rise),
+      set: p.set === null ? null : lookFrom(o, st, p.set),
       // a pass of half a day or more is a high orbit's: too faint to see, and not worth ten-second steps across days
       culminations, top, visible: b - a < 0.5 ? visibleWithin(o, st, a, b) : null,
     };
