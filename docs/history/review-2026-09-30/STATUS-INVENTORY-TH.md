@@ -74,9 +74,10 @@
 
 ไม่มี GitHub issue เปิดอยู่เลย (0) — งานทั้งหมดติดตามผ่านเอกสารและ PR
 
-## 6. เว็บสาธารณะ
+## 6. เว็บสาธารณะและ CI ของ main
 
-- Deploy ล่าสุดที่เสร็จก่อนการตรวจนี้: 29 ก.ย. 21:55 UTC (`last-modified`), data snapshot บนเว็บ: space weather asOf 2026-09-29 20:00 UTC, CelesTrak asOf 2026-09-29 12:25 UTC, IERS asOf 2026-09-24 — ระบบ refresh รายวันทำงาน
-- Deploy ของ `404eb0c` (PR #42) เริ่ม 23:05 UTC ระหว่างการตรวจ
+- Deploy ของ `404eb0c` (PR #42, run 36643332538) เสร็จ 29 ก.ย. 23:38 UTC: `npm test` ผ่านใน 25 นาที 27 วินาที, snapshot ใหม่ผ่าน 4 ไฟล์ทดสอบ, build, browser journeys 4 เส้นทางผ่านใน 6 นาที 39 วินาที — ชุดทดสอบของ main เขียวทั้งชุด ณ วันนี้
+- Build ทำซ้ำได้: bundle ที่เว็บเสิร์ฟ (`assets/index-DRVc1iQl.js`) มี hash ตรงกับที่ build ในเซสชันนี้จาก source เดียวกัน
+- Data snapshot บนเว็บหลัง deploy: CelesTrak asOf 2026-09-29 21:04 UTC (fetched 23:31), space weather asOf 20:00 UTC, IERS asOf 2026-09-24 — ระบบ refresh ทุก deploy ทำงาน
 - Header ตอบกลับไม่มี Content-Security-Policy (GitHub Pages ไม่ให้ตั้ง header เอง ต้องใช้ `<meta http-equiv>` ถ้าต้องการ)
 - `index.html` ประกาศ `lang="en"` ตายตัว แม้ UI จะเป็นไทย/รัสเซีย (ตรวจต่อในรายงานข้อค้นพบ)
