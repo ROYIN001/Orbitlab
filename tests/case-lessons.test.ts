@@ -177,9 +177,12 @@ describe('a teacher\'s lesson file with case lessons', () => {
   const V1 = Object.values(v1)[0];
 
   it('reads a file written before case lessons unchanged and writes canonical LF JSON', () => {
-    const parsed = parseLessonFile(JSON.parse(V1), new Set());
+    const original = JSON.parse(V1);
+    const parsed = parseLessonFile(original, new Set());
     expect(parsed.issues).toEqual([]);
-    expect(parsed.lessons).toEqual(BUILTIN_LESSONS.filter((l) => l.id === 'orbit-first' || l.id === 'guid-maxq'));
+    expect(parsed.lessons.map((lesson) => lesson.id)).toEqual(['orbit-first', 'guid-maxq']);
+    // Imported lessons retain their authored text even after built-in copy is revised.
+    expect(parsed.lessons).toEqual(original.lessons);
     expect(lessonFileText(parsed.lessons)).toBe(V1.replace(/\r\n/g, '\n'));
   });
 
