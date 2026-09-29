@@ -14,12 +14,16 @@ import { describe, expect, it } from 'vitest';
 import {
   handoffFromFlight, handoffFromState, lifetimeSpacecraft, parseHandoff, type HandoffFrame, type HandoffSpacecraft,
 } from '../src/orbit/handoff';
-import { playgroundLifetimeCraft } from '../src/orbit/playground-model';
-import { craftFromHandoff } from '../src/orbit/budget';
+import { handoffOrbit, playgroundLifetimeCraft } from '../src/orbit/playground-model';
+import { craftFromHandoff, deltaVAvailable } from '../src/orbit/budget';
+import { apsidesToAE, nodeLocalTime, orbitFacts, stateAt, sunSynchronousInclination } from '../src/orbit/kepler';
+import { tumblingBoxArea } from '../src/orbit/reentry';
 import { spacecraftFor } from '../src/physics/propagator/spacecraft';
 import { SATELLITES, satelliteById } from '../src/data/satellites';
-import { MU_EARTH, R_EARTH } from '../src/physics/constants';
-import type { SatelliteSpec } from '../src/types';
+import { DEG, G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
+import type { SatelliteKind, SatelliteSpec } from '../src/types';
+import { designOrbit, handoffFromDesign, type DesignHandoffInput } from '../src/design/satellite-handoff';
+import type { SatelliteDesign } from '../src/design/satellite-spec';
 
 const JD = 2461312.5; // 2026-09-29 00:00 UTC
 
@@ -100,5 +104,130 @@ describe('a flight\'s hand-off prefers the satellite\'s own area, C_D and C_R (D
       expect(h.spacecraft, String(bad)).toEqual(estimate);
       expect(parseHandoff(JSON.parse(JSON.stringify(h)))).not.toBeNull();
     }
+  });
+});
+
+/*
+ * Two test designs, not templates (track B makes those), with every field a
+ * design has; only the orbit, the bus, the engine and the kind reach a
+ * hand-off. The imager is sun-synchronous with its descending node at 10:30
+ * (ascending at 22:30), its inclination left at a rounded 98.2° as a student
+ * might type it; the CubeSat has NAPA-2's published size and mass
+ * (src/data/napa2.ts) in a fixed plane.
+ */
+const imager: SatelliteDesign = {
+  id: 'test-imager', name: 'Test imager', template: 'earthObs', kind: 'earthObs',
+  orbit: { perigee: 695e3, apogee: 705e3, inclination: 98.2, sso: true, ltan: 22.5 },
+  lifeYears: 5,
+  bus: { dryMass: 750, size: { width: 1.8, height: 2.4, depth: 1.6 }, cd: 2.4, cr: 1.4 },
+  power: { payloadW: 300, busW: 250, arrayArea: 8, cellEff: 0.28, Id: 0.77, degPerYear: 0.0275, mount: 'tracking', regulation: 'PPT',
+    batteryWh: 1200, dod: 0.3, batteryEff: 0.9 },
+  propulsion: { thrust: 22, isp: 220, propellant: 62.5 },
+  adcs: { mode: 'threeAxis', inertia: [400, 450, 300], pointingDeg: 0.05, wheelH: 12, residualDipole: 1, cpOffset: 0.2 },
+  comms: { txPowerW: 10, frequency: 8.2e9, txAntennaD: 0.3, lineLoss: 1, dataRate: 150e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 5 },
+  payload: { focalLength: 3.6, pixelPitch: 7e-6, pixels: 12000, aperture: 0.6, bits: 12 },
+};
+const cubesat: SatelliteDesign = {
+  id: 'test-6u', name: 'Test 6U', template: 'cubesat6u', kind: 'science',
+  orbit: { perigee: 500e3, apogee: 500e3, inclination: 97.4, sso: false, ltan: 10, raan: 45 },
+  lifeYears: 3,
+  bus: { dryMass: 10, size: { width: 0.2, height: 0.1, depth: 0.3405 }, cd: 2.2, cr: 1.3 },
+  power: { payloadW: 5, busW: 8, arrayArea: 0.12, cellEff: 0.28, Id: 0.77, degPerYear: 0.0275, mount: 'body', regulation: 'DET',
+    batteryWh: 40, dod: 0.2, batteryEff: 0.9 },
+  propulsion: null,
+  adcs: { mode: 'threeAxis', inertia: [0.1, 0.12, 0.05], pointingDeg: 1, wheelH: 0.01, residualDipole: 0.01, cpOffset: 0.01 },
+  comms: { txPowerW: 2, frequency: 2.2e9, txAntennaD: 0.1, lineLoss: 1, dataRate: 1e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 10 },
+  payload: null,
+};
+/** A stand-in for track A4's `dragArea` (src/design/satellite-area.ts, not landed on this base): the tumbling body alone. */
+const bodyArea = (d: SatelliteDesign): number => tumblingBoxArea([d.bus.size.width, d.bus.size.height, d.bus.size.depth]);
+const input: DesignHandoffInput = { jd: JD, dragArea: bodyArea, label: 'from the Build section' };
+const wet = (d: SatelliteDesign): number => d.bus.dryMass + (d.propulsion ? d.propulsion.propellant : 0);
+const roundTrip = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+
+describe('Build → Orbit: a design handed on with no launch (D06, map §2.6 a)', () => {
+  it('reads back as sound and carries what the design says', () => {
+    // exact: parseHandoff gives back what it is given, and every spacecraft figure is copied (the wet mass is one sum, dry + propellant)
+    for (const d of [imager, cubesat]) {
+      const h = handoffFromDesign(d, input)!;
+      expect(h, d.id).not.toBeNull();
+      expect(parseHandoff(roundTrip(h))).toEqual(h);
+      expect(h.spacecraft).toEqual({
+        mass: wet(d), area: bodyArea(d), cd: d.bus.cd, cr: d.bus.cr, kind: d.kind,
+        propulsion: d.propulsion ? { thrust: d.propulsion.thrust, isp: d.propulsion.isp, propellantMass: d.propulsion.propellant } : null,
+      });
+      // the state is the design's orbit at its epoch, stateAt(…, 0, true), as the map says
+      const s = stateAt(designOrbit(d.orbit, JD), 0, true);
+      expect(h.r).toEqual([s.r.x, s.r.y, s.r.z]);
+      expect(h.v).toEqual([s.v.x, s.v.y, s.v.z]);
+      expect(h.jd).toBe(JD);
+      expect(h.label).toBe('from the Build section');
+      // no launch: no mission, no vehicle, no mission time
+      expect(h.origin).toEqual({ mission: null, vehicleName: '', missionTime: 0 });
+    }
+    expect(handoffFromDesign(imager, input)!.spacecraft.mass).toBe(812.5);
+  });
+
+  it('is in the orbit the design asks for', () => {
+    // Tolerances, fixed before the first comparison: the orbit goes elements → state → elements (handoffOrbit, as the
+    // playground loads it) in double precision, so the apsis altitudes come back within 1 mm, the angles within 1e-9 rad
+    // and the node's local time within 1e-9 h.
+    const MM = 1e-3, ANGLE = 1e-9, HOURS = 1e-9;
+    const back = handoffOrbit(handoffFromDesign(imager, input)!);
+    const facts = orbitFacts(back, true);
+    expect(Math.abs(facts.perigeeAlt - 695e3)).toBeLessThan(MM);
+    expect(Math.abs(facts.apogeeAlt - 705e3)).toBeLessThan(MM);
+    // sun-synchronous: J2's inclination for that size and shape (98.188°), not the rounded 98.2° stored
+    const sso = sunSynchronousInclination(apsidesToAE(695e3, 705e3))!;
+    expect(Math.abs(back.i - sso)).toBeLessThan(ANGLE);
+    expect(Math.abs(sso - 98.2 * DEG)).toBeGreaterThan(1e-4);
+    expect(facts.sunSynchronous).toBe(true);
+    expect(Math.abs(nodeLocalTime(back.raan, JD) - 22.5)).toBeLessThan(HOURS);
+    // a fixed plane: the stored inclination and node; a local time is read only with sso
+    const fixed = handoffOrbit(handoffFromDesign(cubesat, input)!);
+    const f = orbitFacts(fixed, true);
+    expect(Math.abs(f.perigeeAlt - 500e3)).toBeLessThan(MM);
+    expect(Math.abs(f.apogeeAlt - 500e3)).toBeLessThan(MM);
+    expect(Math.abs(fixed.i - 97.4 * DEG)).toBeLessThan(ANGLE);
+    expect(Math.abs(fixed.raan - 45 * DEG)).toBeLessThan(ANGLE);
+    // where no orbit of that size is sun-synchronous, the stored inclination (the design's checker reports the flag)
+    const high = designOrbit({ perigee: 8000e3, apogee: 8000e3, inclination: 60, sso: true, ltan: 10 }, JD);
+    expect(sunSynchronousInclination(high)).toBeNull();
+    expect(high.i).toBe(60 * DEG);
+  });
+
+  it('gives the lifetime dialog the design\'s mass, area, C_D and C_R, and the planner its engine', () => {
+    // exact: the four figures are copied from the design (the mass is dry + propellant) and must arrive unchanged
+    for (const d of [imager, cubesat]) {
+      const h = parseHandoff(roundTrip(handoffFromDesign(d, input)))!;
+      const figures = { mass: wet(d), area: bodyArea(d), cd: d.bus.cd, cr: d.bus.cr };
+      // opened on the hand-off itself
+      expect(lifetimeSpacecraft(h), d.id).toEqual(figures);
+      // opened from the playground it went to: setHandoff makes the launch craft from it
+      // (src/ui/orbit/playground.ts), and the dialog gets the orbit flown now with that spacecraft
+      const pg = handoffFromState({ r: { x: h.r[0], y: h.r[1], z: h.r[2] }, v: { x: h.v[0], y: h.v[1], z: h.v[2] }, jd: h.jd,
+        spacecraft: playgroundLifetimeCraft(h, craftFromHandoff(h)), label: 'pg' });
+      expect(lifetimeSpacecraft(parseHandoff(roundTrip(pg))!), d.id).toEqual(figures);
+    }
+    // The planner's craft is the design's engine with full tanks, so its Δv is the design's. Tolerance: 1e-12
+    // relative, the rocket equation evaluated here and in deltaVAvailable in double precision.
+    const craft = craftFromHandoff(handoffFromDesign(imager, input)!)!;
+    expect(craft).toEqual({ mass: 812.5, propellant: 62.5, isp: 220, thrust: 22 });
+    const dv = 220 * G0 * Math.log(812.5 / 750);
+    expect(Math.abs(deltaVAvailable(craft) - dv) / dv).toBeLessThan(1e-12);
+    expect(craftFromHandoff(handoffFromDesign(cubesat, input)!)).toBeNull();
+  });
+
+  it('carries any of the eight kinds, and refuses a design the hand-off cannot carry', () => {
+    const kinds: SatelliteKind[] = ['comsat', 'earthObs', 'weather', 'navigation', 'science', 'cubesats', 'starlink', 'crew'];
+    for (const kind of kinds) expect(handoffFromDesign({ ...cubesat, kind }, input)?.spacecraft.kind).toBe(kind);
+    // no orbit above the atmosphere: the perigee at 90 km, under the hand-off's 100 km
+    expect(handoffFromDesign({ ...cubesat, orbit: { ...cubesat.orbit, perigee: 90e3 } }, input)).toBeNull();
+    // a figure not above zero, or not a number
+    expect(handoffFromDesign(cubesat, { ...input, dragArea: () => 0 })).toBeNull();
+    expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, cd: 0 } }, input)).toBeNull();
+    expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, cr: -1 } }, input)).toBeNull();
+    expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, dryMass: Number.NaN } }, input)).toBeNull();
+    expect(handoffFromDesign({ ...imager, propulsion: { ...imager.propulsion!, thrust: 0 } }, input)).toBeNull();
   });
 });
