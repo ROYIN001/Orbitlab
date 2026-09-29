@@ -222,6 +222,14 @@ export const VEHICLES: VehicleSpec[] = [
     sites: ['plesetsk', 'vostochny'], maxQ: 40e3, maxAccel: 50,
     // Low liftoff T/W with the core throttled to 30 %; lofts so that the URM-2 takes over climbing.
     guidanceDefaults: { kickAngle: 4, maxTurnRate: 0.3, pitchMax: 25, loftAltitude: 150e3 },
+    // As Atlas V: the rigid body cannot hold the angle of attack the point mass
+    // pitches over at, and handed the Briz-M a slower, higher arc — 257 m/s short
+    // of the point mass at SECO to the sun-synchronous orbit, which stopped
+    // flying once the fairing stayed on to the third stage (docs/VALIDATION.md,
+    // F14). Chosen on angaraa5/sso/25 as the kick leaving the most delta-v, and
+    // checked on leo/25 and gto/25/50/90, which it brings to within 20 m/s of
+    // the point mass's remaining delta-v (they were up to 255 m/s short).
+    guidanceDefaultsSixDof: { kickAngle: 8 },
     notes: 'Modular kerolox launcher; core throttles to 30 % while four identical URM-1 boosters burn.',
   },
   {

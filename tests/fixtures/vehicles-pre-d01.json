@@ -358,6 +358,9 @@
    "maxTurnRate": 0.3,
    "pitchMax": 25
   },
+  "guidanceDefaultsSixDof": {
+   "kickAngle": 8
+  },
   "height": 55.4,
   "id": "angaraa5",
   "manufacturer": "Khrunichev",
