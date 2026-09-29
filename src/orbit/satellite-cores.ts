@@ -215,7 +215,12 @@ export interface DisposalCore {
   nsskPerYear: (di: number) => number;
   /** Δv a year that makes up the drag at the orbit's height at its epoch: (v/2a)·|ȧ|·1 yr, ȧ from `dragRates`, m/s a year. */
   dragMakeupPerYear: (o: Orbit, sc: Spacecraft, activity: Activity) => number;
-  dvAllocation: (i: DvAllocationInput, craft: Craft) => DvAllocation;
+  /** The budget against the tanks; `craft` null is a satellite with no engine (nothing available). */
+  dvAllocation: (i: DvAllocationInput, craft: Craft | null) => DvAllocation;
+  /** Aerodynamic drag, N: ½ρ·v²·C_D·A, ρ kg/m³, v m/s through the air, A m² (TU Delft Eq. [101], p. 138's 142 µN). */
+  dragForce: (rho: number, cd: number, area: number, v: number) => number;
+  /** Propellant to make `dv` m/s from mass `mass` kg at Isp `isp` s, kg: m·(1 − e^(−Δv/(Isp·g₀))), `deltaVAvailable`'s inverse (V-V1). */
+  propellantFor: (mass: number, dv: number, isp: number) => number;
 }
 
 // ─── D. Attitude determination and control (src/orbit/attitude.ts) ──────────
