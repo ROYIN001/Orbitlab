@@ -151,7 +151,8 @@ describe('V-G4: TU Delft\'s image data rate, 338.4 kbit/s at 500 km (D06)', () =
  *    its slope times the IFOV is the cross-track sample. Tolerance 1e-6
  *    relative (a central difference of 1e-5 rad).
  * 3. Its shape: even in η; growing with η; across ≥ along; ~η² near nadir
- *    (1e-9 relative at 1e-6 rad); unbounded at the horizon, Infinity past it.
+ *    (1e-9 relative at 1e-6 rad); unbounded at the horizon (across, over a
+ *    thousand times the nadir sample 1e-9 rad inside it), Infinity past it.
  */
 describe('off-nadir GSD, self-consistency only (D06)', () => {
   const cameras = [

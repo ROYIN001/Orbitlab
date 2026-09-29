@@ -124,7 +124,12 @@ describe('V-L1: MarCO\'s X-band downlink, JPL DESCANSO 18 Table 5-4 (D06)', () =
  *   disagree by about 0.5 dB (below);
  * - the gain, printed to 0.01 dB: ±0.01 dB;
  * - the defects, as the map recomputed them: space loss 179.10 dB, and C/N₀
- *   81.8 dB-Hz from the table's own inputs: ±0.05 dB.
+ *   81.8 dB-Hz from the table's own inputs: ±0.05 dB; so too the received
+ *   power against PFD + effective area, and the printed C/N₀ against the
+ *   printed received power;
+ * - the printed margin against the printed C/N₀, rate and threshold: ±0.02
+ *   dB, three lines printed to 0.01 dB;
+ * - `linkBudget` against `designControlTable`, the same arithmetic: 1e-9 dB.
  *
  * SOURCE DEFECTS, recorded, not tuned away:
  * - "Space Loss −119.1 dB" is not the free-space loss at 2566 km (179.10
