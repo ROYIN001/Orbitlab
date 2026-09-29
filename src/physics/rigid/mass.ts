@@ -1,7 +1,7 @@
 /** Variable mass/CG/full inertia from disclosed component estimates. Pure: never
  * consumes fuel, changes staging, or mutates the legacy VehicleModel. */
 import { shipFlapSurfaces, type ControlSurfaceSpec } from './surfaces';
-import type { BoosterGroupSpec, StageSpec } from '../../types';
+import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../../types';
 import type { VehicleModel } from '../vehicle';
 import { engineMassFlow, engineThrust } from '../vehicle';
 import { add, scale, sub, v3, type Vec3 } from '../vec3';
@@ -10,7 +10,7 @@ import { assertSPD, type Mat3 } from './math';
 import type { Aero6DofSpec } from './aero';
 import { AERO_MACH, ascentAeroTable, detachedAeroTable, shipDescentAeroTable, type AeroTable } from './aero-tables';
 import {
-  chamberGeometry, getRigidVehicleGeometry, PROPELLANT_DENSITY, PROPELLANT_LOADS, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
+  chamberGeometry, chamberShare, getRigidVehicleGeometry, PROPELLANT_DENSITY, PROPELLANT_LOADS, rcsGeometry, RIGID_DATA_ASSUMPTIONS, RIGID_DATA_REVISION,
   type ChamberGeometry, type RcsReservoir, type RcsThrusterGeometry, type RigidVehicleGeometry,
 } from './vehicle-data';
 
@@ -130,7 +130,11 @@ export function stageMassComponents(
   if (rcs && initialGas > consumed) addCylinder('rcs', initialGas - consumed, radius * 0.2, length * 0.02, rcs.centerBody);
   const fill = stage.propellantMass > 0 ? fraction(propellant / stage.propellantMass) : 0;
   const load = PROPELLANT_LOADS[stage.id];
-  if (load?.family === 'solid') {
+  // D03: a stage the table does not know (a custom vehicle's own id) is a grain
+  // when its engine is a solid motor, as the flexible body already reads it
+  // (`solidPropellantIds`); without this it drained as two liquid tanks. Every
+  // catalogue solid has its entry, so none of them comes this way.
+  if (load?.family === 'solid' || (!load && stage.engine.solid)) {
     // A case-bonded grain burning outward from its bore: the length stays,
     // the web thins, and what is left sits at the case wall.
     const outer = radius * 0.95, port = radius * 0.3;
@@ -193,19 +197,37 @@ function budgetEngines(geometry: readonly ChamberGeometry[], thrustPerEngine: nu
   if (shutEngines?.length) {
     // G08: the engines the FDIR shut down go first; any budget left is lost from the lowest index of the rest.
     const shut = new Set(shutEngines), rest = failed - shut.size;
-    return geometry.map((engine) => {
+    const burning = (index: number) => {
       let rank = 0;
-      for (let i = 0; i < engine.engineIndex; i++) if (!shut.has(i)) rank++;
-      const available = shut.has(engine.engineIndex) ? 0 : fraction(rank + 1 - rest);
+      for (let i = 0; i < index; i++) if (!shut.has(i)) rank++;
+      return shut.has(index) ? 0 : fraction(rank + 1 - rest);
+    };
+    return geometry.map((engine) => {
+      const available = chamberShare(engine, burning);
       return { ...engine, thrustBudgetN: thrustPerEngine * available * engine.thrustFraction,
         massFlowKgS: flowPerEngine * available * engine.thrustFraction, upstreamThrottle: upstreamThrottle * available };
     });
   }
   return geometry.map((engine) => {
-    const available = fraction(engine.engineIndex + 1 - failed);
+    const available = chamberShare(engine, (index) => fraction(index + 1 - failed));
     return { ...engine, thrustBudgetN: thrustPerEngine * available * engine.thrustFraction,
       massFlowKgS: flowPerEngine * available * engine.thrustFraction, upstreamThrottle: upstreamThrottle * available };
   });
+}
+/**
+ * Engines left cold make no thrust and burn nothing: a chamber of one engine
+ * that is not `lit` goes out, and a chamber standing for a span of engines
+ * (D03, `engineSpan`) keeps the share of it that is lit.
+ */
+function coldEngines(engines: BudgetedEngine[], lit: readonly number[]): void {
+  for (const engine of engines) {
+    if (!engine.engineSpan) {
+      if (!lit.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }
+      continue;
+    }
+    const share = chamberShare(engine, (index) => (lit.includes(index) ? 1 : 0));
+    engine.thrustBudgetN *= share; engine.massFlowKgS *= share; engine.upstreamThrottle = (engine.upstreamThrottle ?? 0) * share;
+  }
 }
 function aeroEstimate(area: number, length: number, base: Vec3, diameter: number, table?: AeroTable,
   cd: (mach: number) => number = dragCoefficient): Aero6DofSpec {
@@ -221,8 +243,18 @@ function aeroEstimate(area: number, length: number, base: Vec3, diameter: number
 /** A payload or spacecraft flying without its launcher: a blunt body, as the point-mass model flies it. */
 const RELEASED_BODY_CD = 2.2;
 
-/** Tables per attached configuration: the stack changes only at separations. */
+/**
+ * Tables per attached configuration: the stack changes only at separations.
+ * A released body's and a returning ship's are keyed by their dimensions. A
+ * launcher's are kept per spec object (roadmap D03), as `stackLayout` keeps its
+ * layout: keyed by the vehicle's id, a design stretched or widened and flown
+ * again under the same id was handed the previous design's centre of pressure
+ * and normal-force slope. The tables depend on the geometry alone, so a
+ * catalogue flight's are the same numbers either way. A spec is never edited in
+ * place, the rule `stackLayout`'s cache already relies on.
+ */
 const aeroTables = new Map<string, AeroTable>();
+const ascentTables = new WeakMap<VehicleSpec, Map<string, AeroTable>>();
 
 function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, area: number, length: number, diameter: number,
   base: Vec3): { table: AeroTable; cd?: (mach: number) => number } {
@@ -240,12 +272,17 @@ function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, a
   // One booster state per strap-on group.
   const groups = active ? active.boosters.map((b) => b.attached) : [];
   const stageAttached = vehicle.stages.map((st) => st.attached);
-  const key = `${vehicle.spec.id}|${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${vehicle.payloadAttached}|${groups.map(Number).join('')}|${area}`;
-  let table = aeroTables.get(key);
+  const key = `${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${vehicle.payloadAttached}|${groups.map(Number).join('')}|${area}`;
+  let tables = ascentTables.get(vehicle.spec);
+  if (!tables) {
+    tables = new Map();
+    ascentTables.set(vehicle.spec, tables);
+  }
+  let table = tables.get(key);
   if (!table) {
     table = ascentAeroTable(vehicle.spec, { activeIndex: vehicle.activeIndex, stageAttached, fairingAttached: vehicle.fairingAttached, payloadAttached: vehicle.payloadAttached, boosterGroups: groups },
       area, (index) => geometry.stageBases[index].x);
-    aeroTables.set(key, table);
+    tables.set(key, table);
   }
   return { table };
 }
@@ -286,7 +323,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
     if (firstAttached) { activeBase = base; firstAttached = false; }
     diameter = Math.max(diameter, st.spec.diameter);
     highest = Math.max(highest, base.x + st.spec.length);
-    const reservoir = rcsGeometry(vehicle.spec.id, st.spec, base);
+    const reservoir = rcsGeometry(geometry.vehicleId, st.spec, base, st.index);
     rcs.push(reservoir);
     const consumed = op.rcsConsumedKgByStage?.[st.spec.id] ?? 0;
     // A core that has been shut down still thrusts through its tail-off; the
@@ -310,9 +347,7 @@ export function buildRigidVehicle(vehicle: VehicleModel, op: RigidOperatingState
       engineThrust(st.spec.engine, pressure) * throttle, engineMassFlow(st.spec.engine) * throttle,
       st.spec.engine.count, st.engineFraction, throttle, st.shutEngines);
     // Engines left cold (`StageState.litEngines`) make no thrust and burn nothing.
-    if (st.litEngines) for (const engine of budgeted) {
-      if (!st.litEngines.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }
-    }
+    if (st.litEngines) coldEngines(budgeted, st.litEngines);
     engines.push(...budgeted);
     st.boosters.forEach((b, groupIndex) => {
       if (!b.attached) return;
@@ -399,9 +434,7 @@ export function buildDetachedStage(vehicleId: string, stage: StageSpec, propella
   const engines = budgetEngines(chamberGeometry(stage.id, stage.id, stage.engine, stage.diameter / 2),
     engineThrust(stage.engine, op.pressure ?? 0) * throttle, engineMassFlow(stage.engine) * throttle,
     stage.engine.count, op.engineFraction ?? 1, throttle);
-  if (op.activeEngineIndices) for (const engine of engines) {
-    if (!op.activeEngineIndices.includes(engine.engineIndex)) { engine.thrustBudgetN = 0; engine.massFlowKgS = 0; engine.upstreamThrottle = 0; }
-  }
+  if (op.activeEngineIndices) coldEngines(engines, op.activeEngineIndices);
   const massFlow = engines.reduce((sum, engine) => sum + engine.massFlowKgS, 0);
   const remaining = Math.max(0, propellant - massFlow * (op.propellantOffsetSeconds ?? 0));
   const components = stageMassComponents(stage, remaining, v3(), stage.id,

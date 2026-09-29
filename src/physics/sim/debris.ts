@@ -15,6 +15,7 @@ import {
   predictDescent, type DescentModel, type DescentState, type EntryState, type ReturnTarget,
 } from './return-guidance';
 import type { RigidVehicleSnapshot } from '../rigid/mass';
+import { vehicleDataId } from '../../data/vehicles';
 import type { PartitionedRigidBody } from '../rigid/partition';
 import { createRigidDebris, RETURN_CONTROL_GAINS, RETURN_LANDING_LEVEL, returnPropellant, zoneLabel, type RigidDebrisRuntime } from '../rigid/debris-runtime';
 import { rk4Step } from '../integrator';
@@ -138,7 +139,7 @@ export class DebrisTracker {
       : stage as StageSpec | undefined;
     const rc = d.recovery;
     const runtime = createRigidDebris(d, body, this.sim.cfg.dynamics!, parent,
-      { stage: asStage, vehicleId: this.sim.cfg.vehicleId, consumed: this.sim.rigidRuntime!.consumed, engineFraction,
+      { stage: asStage, vehicleId: vehicleDataId(this.sim.vehicleSpec), consumed: this.sim.rigidRuntime!.consumed, engineFraction,
         withoutRcs: booster || undefined,
         returnGuidance: rc?.target ? { gmst0: this.sim.plan.gmst0, model: this.descentModel(d),
           entryTargetSpeed: entrySpeedOf(rc) } : undefined,
@@ -309,7 +310,7 @@ export class DebrisTracker {
     const memo = rc.guidance;
     if (memo && t - memo.t < every - 1e-9) return memo;
     const c = boostbackCommand(this.descentState(d, t), this.descentModel(d), rc.target!, this.sim.plan.gmst0);
-    rc.guidance = { t, dir: c.dir, dvNeeded: c.dvNeeded, trim: memo?.trim ?? false, lateral: memo?.lateral };
+    rc.guidance = { t, dir: c.dir, dvNeeded: c.dvNeeded, miss: c.miss, trim: memo?.trim ?? false, lateral: memo?.lateral };
     return rc.guidance;
   }
 
@@ -353,10 +354,14 @@ export class DebrisTracker {
           break;
         }
         case 'boostback': {
-          const before = rc.guidance?.dvNeeded ?? Infinity;
+          // The trim ends once the predicted miss stops shrinking. The Δv still
+          // needed is no guide there: it comes from a finite-difference
+          // Jacobian of a stepped descent and wobbles by a metre per second
+          // or two, which once cut a boostback 40 m/s short (4.5 km long).
+          const before = rc.guidance?.miss ?? Infinity;
           const g = this.returnSolution(d, t, rc.guidance?.trim ? 0 : RETURN_REPLAN_S);
           const spent = rc.propellant <= rc.landingReserve;
-          if (g.dvNeeded < BOOSTBACK_DONE_DV || spent || (g.trim && g.dvNeeded > before + 1e-6)) {
+          if (g.dvNeeded < BOOSTBACK_DONE_DV || spent || (g.trim && (g.miss ?? 0) > before + 1)) {
             rc.phase = 'coast';
             rc.guidance = undefined;
             rc.burning = false;

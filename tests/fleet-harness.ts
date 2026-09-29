@@ -171,9 +171,13 @@ export function allCases(): FleetCase[] {
 /**
  * Fly one fleet case with the vehicle's default guidance. `dynamics` flies it
  * as a rigid body instead of the point-mass model the regular fleet test uses
- * (the six-DOF fleet suite, `npm run test:sixdof-fleet`).
+ * (the six-DOF fleet suite, `npm run test:sixdof-fleet`). `onStep`, when
+ * given, sees the simulation after every step and must only read it: the D01
+ * fleet fingerprints (tests/d01-fleet-fingerprint.test.ts) sample the flight
+ * through it, so they hash the very flight the fleet matrix grades.
  */
-export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: DynamicsConfig): Simulation {
+export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: DynamicsConfig,
+  onStep?: (sim: Simulation) => void): Simulation {
   const spec = VEHICLES.find((v) => v.id === c.vehicle)!;
   const orbit = orbitById(c.orbit);
   const window = orbit.raanMode === 'free' ? undefined : launchWindows(orbit, siteById(c.site), LAUNCH_TIME, 1)[0];
@@ -192,7 +196,10 @@ export function flyCase(c: FleetCase, satelliteId = 'cubesats', dynamics?: Dynam
   // Six-DOF flies its powered phases in 0.01 s control ticks.
   const maxSteps = dynamics?.model === 'sixDof' ? 20_000_000 : 400000;
   let guard = 0;
-  while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) sim.step(sim.suggestedDt());
+  while (!sim.done && sim.state.t < maxTime && guard++ < maxSteps) {
+    sim.step(sim.suggestedDt());
+    onStep?.(sim);
+  }
   return sim;
 }
 
@@ -403,6 +410,12 @@ fill(BEYOND_CAPABILITY,
 fill(BEYOND_CAPABILITY,
   'second stage empty at T+289 s at 148 x 314 km (LEO) and 14 x 276 km (ISS plane)',
   'longmarch2d/leo/90', 'longmarch2d/iss/90');
+// Saturn V (C01) carries 106 t at 90 %, against a 118 t rating quoted for a
+// 185 km orbit: the S-IVB, which parks at 242 km and must circularise at 420 km
+// for the station's plane, runs dry on the way.
+fill(BEYOND_CAPABILITY,
+  'S-IVB empty at T+3203 s circularising at 242 x 521 km for the 420 km target with 106 t on top (the 118 t rating is to 185 km)',
+  'saturnv/iss/90');
 // Electron, H3, Long March 5, Long March 3B/E, Vega-C, Atlas V 551,
 // Vulcan, Ariane 64 and H-IIA 202 have no capability exclusion at all.
 
@@ -410,7 +423,7 @@ fill(BEYOND_CAPABILITY,
 // 3. Architectural limits: propellant left, orbit reachable, nothing in the
 // stack that can use it.
 //
-// Both entries are single-shot stacks - no restartable stage anywhere - flown
+// All four entries are single-shot stacks - no restartable stage anywhere - flown
 // with the INERT dispenser, so the orbit the ascent cuts off in is final.
 //
 // The model flies single-burn direct insertion (see the
@@ -434,6 +447,16 @@ fill(BEYOND_CAPABILITY,
 // ones fly a Fregat, a Briz-M or a second-stage vernier phase this model does
 // not have.
 export const ARCHITECTURE: Record<string, string> = {};
+// C01: the two historical R-7s are the same case as Soyuz-2.1a, and more so:
+// the 8K71PS has no upper stage at all and the 8K72K's Blok E fires once.
+fill(ARCHITECTURE,
+  'inserts at 199 x 420-501 km with 0.16-0.29 km/s left in the core: one stage, no restart and an inert payload (Sputnik-1 flew to 215 x 939 km, which it reaches; tests/lessons-history.test.ts)',
+  'sputnik8k71ps/leo/25', 'sputnik8k71ps/leo/50', 'sputnik8k71ps/leo/90',
+  'sputnik8k71ps/iss/25', 'sputnik8k71ps/iss/50', 'sputnik8k71ps/iss/90');
+fill(ARCHITECTURE,
+  'inserts at 200 x 417-498 km with 0.6-2.8 km/s left in Blok E: no restart and an inert payload (Vostok-1 flew to 181 x 327 km, which it reaches; tests/lessons-history.test.ts)',
+  'vostok8k72k/leo/25', 'vostok8k72k/leo/50', 'vostok8k72k/leo/90',
+  'vostok8k72k/iss/25', 'vostok8k72k/iss/50', 'vostok8k72k/iss/90');
 fill(ARCHITECTURE,
   'inserts at 200 x 417-499 km with 0.3-2.6 km/s left in the Blok I: no restart, no kick stage and an inert payload, so nothing can raise the perigee (direct insertion closes at 200 km, not at 420-500 km)',
   'soyuz21a/leo/25', 'soyuz21a/leo/50', 'soyuz21a/leo/90',

@@ -150,6 +150,12 @@ describe('J2 coast prediction for finite-attitude orbital planning', () => {
     expect(shootJ2ApsisVelocity(cutoff, cutoff.v, R_EARTH + 2000e3, 'apoapsis', {
       minSpeedMS: 7869, maxSpeedMS: 7871,
     })).toBeNull();
+    // A revolution longer than the forecast budget — Apollo 11's translunar
+    // ellipse, 186 × 370 000 km, ten days round — is not forecast (C01): no
+    // apsides, and no throw from a burn sequencer that asks.
+    const rp = R_EARTH + 186e3, ra = R_EARTH + 370000e3;
+    const translunar = { r: v3(rp, 0, 0), v: v3(0, Math.sqrt(MU_EARTH * (2 / rp - 2 / (rp + ra))), 0) };
+    expect(physicalApsides(translunar)).toBeNull();
     expect(() => propagateJ2Coast(cutoff, Infinity)).toThrow(RangeError);
     expect(() => nextJ2Apsis(cutoff, 'apoapsis', { stepS: 0 })).toThrow(RangeError);
   });

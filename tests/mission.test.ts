@@ -202,7 +202,9 @@ describe('autotune covers all vehicles', () => {
       else console.log(`${v}: kick ${tuned.best.kickAngle}° rate ${tuned.best.maxTurnRate}°/s loft ${tuned.best.loftAltitude / 1000} km margin ${Math.round(tuned.best.dvRemaining)} m/s maxQ ${Math.round(tuned.best.maxQ / 1000)} kPa t=${Math.round(tuned.best.tInsertion)} s`);
     }
     expect(failures, failures.join('\n')).toEqual([]);
-  }, 120000);
+    // 64 s on an idle machine; CI runs it beside every other file and took it
+    // past 120 s. The limit is there to catch a hang, not to time the tuner.
+  }, 300000);
 });
 
 describe('insertion orbit planning', () => {

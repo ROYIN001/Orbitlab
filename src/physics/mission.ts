@@ -6,6 +6,7 @@ import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../ty
 import type { SiteExtra } from '../data/sites';
 import { satelliteById } from '../data/satellites';
 import { rendezvousAvailable } from './rendezvous/profiles';
+import { vehicleDataId } from '../data/vehicles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
 import { VehicleModel } from './vehicle';
 import {
@@ -976,6 +977,39 @@ export function canBurnAfterAscent(vehicle: VehicleSpec, satellite: SatelliteSpe
   return !!p && p.propellantFraction > 0 && p.thrust > 0;
 }
 
+/**
+ * The Earth's rotation credit to an ascent from latitude `lat` (rad) on the
+ * inertial azimuth `azimuthInertial` (rad), m/s: the surface speed's component
+ * along the launch direction. `planMission`'s own expression, exported for
+ * the parametric sizing of roadmap D05 (src/design/sizing.ts).
+ */
+export function earthRotationCredit(lat: number, azimuthInertial: number): number {
+  return OMEGA_EARTH * R_EARTH * Math.cos(lat) * Math.sin(azimuthInertial);
+}
+
+/**
+ * Ideal delta-v an ascent straight into the orbit h × ha costs the stages
+ * that fly it, m/s: the perigee speed of that orbit + typical ascent losses −
+ * the Earth-rotation credit `vRot` (`earthRotationCredit`).
+ *
+ * The loss allowance is `ASCENT_LOSS_ALLOWANCE`, the low end of the
+ * 1 684–2 633 m/s the fleet actually spends (see its own doc comment for the
+ * measurement, for the value, and for why the flat 1 450 m/s it replaces was
+ * wrong — the number is deliberately not repeated here, because a figure
+ * typed next to the constant it copies is a figure that will be left behind
+ * when the constant moves).
+ *
+ * This is `planMission`'s own cost, the closure it has always used, exported
+ * operation for operation and in the same order so that no plan moves by a
+ * bit: roadmap D05 sizes a vehicle to it (src/design/sizing.ts), and the
+ * planner's `ascentMargin` then measures the sized vehicle against the very
+ * number it was sized to.
+ */
+export function ascentCost(h: number, ha: number, vRot: number): number {
+  const rIns = R_EARTH + h;
+  return visViva(rIns, (rIns + R_EARTH + ha) / 2) + ASCENT_LOSS_ALLOWANCE - vRot;
+}
+
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   const { inc: ascentInclination } = ascentInclinationFor(target, site);
@@ -1011,23 +1045,9 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const strongSpec = weakFinalStage ? { ..._vehicle, stages: _vehicle.stages.slice(0, -1) } : _vehicle;
   const carried = weakFinalStage ? last.dryMass + last.propellantMass : 0;
   const dvStrong = new VehicleModel(strongSpec, payload + carried, cfg.boosterRecovery, undefined, cfg.recoveryPlan).deltaVRemaining();
-  const vRot = OMEGA_EARTH * R_EARTH * Math.cos(lat) * Math.sin(azimuthInertial);
-  /**
-   * Ideal delta-v an ascent straight into the orbit h × ha costs these stages:
-   * the perigee speed of that orbit + typical ascent losses − the
-   * Earth-rotation credit.
-   *
-   * The loss allowance is `ASCENT_LOSS_ALLOWANCE`, the low end of the
-   * 1 684–2 633 m/s the fleet actually spends (see its own doc comment for the
-   * measurement, for the value, and for why the flat 1 450 m/s it replaces was
-   * wrong — the number is deliberately not repeated here, because a figure
-   * typed next to the constant it copies is a figure that will be left behind
-   * when the constant moves).
-   */
-  const ascentCost = (h: number, ha: number): number => {
-    const rIns = R_EARTH + h;
-    return visViva(rIns, (rIns + R_EARTH + ha) / 2) + ASCENT_LOSS_ALLOWANCE - vRot;
-  };
+  const vRot = earthRotationCredit(lat, azimuthInertial);
+  // What an ascent straight into h × ha costs these stages (`ascentCost`, below).
+  const ascentCostHere = (h: number, ha: number): number => ascentCost(h, ha, vRot);
   /**
    * Whether those stages can fly that ascent, with `ASCENT_MARGIN_REQUIRED` of
    * margin on top.
@@ -1037,7 +1057,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
    * it could have reached would have been a mission.
    */
   const ascentReaches = (h: number, ha: number): boolean =>
-    dvStrong - ascentCost(h, ha) >= ASCENT_MARGIN_REQUIRED;
+    dvStrong - ascentCostHere(h, ha) >= ASCENT_MARGIN_REQUIRED;
 
   let insertionAltitude = target.suborbital ? Math.min(target.apogee, SUBORBITAL_CUTOFF_ALTITUDE) : Math.max(parkingOverride, insertionAltitudeFor(target));
   // The ascent flies straight into the transfer ellipse whose apogee is the
@@ -1100,7 +1120,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // Progress MS are, 200 × 242 km with the cut-off near perigee: the
   // spacecraft's own burns raise it to the station from there, and the
   // rendezvous profiles are timed from that orbit (docs/PHYSICS.md §9.2).
-  if (cfg.rendezvous && rendezvousAvailable(cfg.vehicleId, cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
+  if (cfg.rendezvous && rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
     && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
     insertionAltitude = RENDEZVOUS_INSERTION.perigee;
     insertionApoapsis = RENDEZVOUS_INSERTION.apogee;
@@ -1121,7 +1141,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   const burns = target.suborbital ? [] : planBurns(target, ascentInclination, insertionAltitude, insertionApoapsis);
   const insertionCost = target.suborbital
     ? visViva(R_EARTH + insertionAltitude, target.a) + ASCENT_LOSS_ALLOWANCE - vRot
-    : ascentCost(insertionAltitude, insertionApoapsis);
+    : ascentCostHere(insertionAltitude, insertionApoapsis);
   // What the kick stage is left holding, and whether it can hold it. The ascent
   // stages' shortfall against the orbit they are AIMED at is what a kick stage
   // has to make up; `kickStageSink` turns that into the altitude the stack
@@ -1149,7 +1169,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
     // The same arithmetic as `ascentReaches`, evaluated against the MISSION's
     // own orbit rather than against whatever the planner ended up aiming at:
     // that is the question a capability claim asks.
-    ascentMargin: dvStrong - (target.suborbital ? insertionCost : ascentCost(target.perigee, target.apogee)),
+    ascentMargin: dvStrong - (target.suborbital ? insertionCost : ascentCostHere(target.perigee, target.apogee)),
     ascentMakeUp, kickStageAccel, insertionSink,
     ...(suborbitalAim ? { suborbitalAim } : {}),
   };

@@ -75,6 +75,22 @@ describe('the strapdown navigation (roadmap G02)', () => {
     expect(Math.abs(size(coarse.positionError) - size(fine.positionError))).toBeLessThan(0.05);
   });
 
+  it('reads the rate with the gyro\'s white noise, and says how much there is (for the jets\' deadband)', () => {
+    const nav = new NavigationSystem({ imu: { ...PERFECT, gyroArwDegRtH: IMU_PRESETS.tactical.gyroArwDegRtH }, aiding: NO_AIDING, seed: 5 });
+    const r = v3(R_EARTH + 400e3, 0, 0), v = v3(0, 7670, 0), q = { w: 1, x: 0, y: 0, z: 0 }, dt = 0.01;
+    expect(nav.rateNoise).toBe(0);
+    nav.reading(0, r, v, q, v3());
+    expect(nav.rateNoise).toBe(0);
+    const reads: number[] = [];
+    for (let k = 1; k <= 4000; k++) reads.push(nav.reading(k * dt, r, v, q, v3()).omegaBody.y);
+    // 0.05°/√h over 10 ms: 1.45e-4 rad/s, about 0.008°/s.
+    const expected = IMU_PRESETS.tactical.gyroArwDegRtH * Math.PI / 180 / 60 / Math.sqrt(dt);
+    expect(nav.rateNoise).toBeCloseTo(expected, 12);
+    const sigma = Math.sqrt(reads.reduce((a, x) => a + x * x, 0) / reads.length);
+    expect(sigma / expected).toBeGreaterThan(0.95);
+    expect(sigma / expected).toBeLessThan(1.05);
+  });
+
   it('draws the same errors from the same seed, and others from another', () => {
     const errors = (seed: number) => {
       const nav = new NavigationSystem({ imu: IMU_PRESETS.mems, aiding: NO_AIDING, seed });

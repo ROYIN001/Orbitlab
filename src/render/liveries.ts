@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import type { StageSpec, BoosterGroupSpec, VehicleSpec } from '../types';
 import { hash11 } from './noise';
+import { vehicleDataId } from '../data/vehicles';
 
 export { engineLayout, type EngineLayout, type NozzlePos } from '../data/engine-layout';
 
@@ -116,11 +117,11 @@ const OVERRIDES: Record<string, Partial<StageLivery>> = {
   // Saturn V (C01): white with the black roll pattern low on the S-IC and on the
   // S-IVB's aft skirt, black bands at the S-IC's intertank and forward skirt, and
   // "USA" down the S-IC
-  'saturnv/sic': { base: '#f2f2ef', text: 'USA', textColor: '#151517', textAt: 0.62, flag: 'us',
+  'saturnv506/sic506': { base: '#f2f2ef', text: 'USA', textColor: '#151517', textAt: 0.62, flag: 'us',
     bands: [{ at: 0.5, h: 0.035, color: '#121214' }, { at: 0.94, h: 0.06, color: '#121214' }],
     quarters: [{ at: 0.08, h: 0.3, color: '#121214' }] },
-  'saturnv/sii': { base: '#f2f2ef', bands: [{ at: 0.965, h: 0.035, color: '#121214' }] },
-  'saturnv/sivb': { base: '#f2f2ef', bands: [], quarters: [{ at: 0.0, h: 0.2, color: '#121214' }] },
+  'saturnv506/sii506': { base: '#f2f2ef', bands: [{ at: 0.965, h: 0.035, color: '#121214' }] },
+  'saturnv506/sivb506': { base: '#f2f2ef', bands: [], quarters: [{ at: 0.0, h: 0.2, color: '#121214' }] },
   'falcon9/s1': { base: '#f0f0f2', text: 'FALCON 9', textColor: '#1b1b1f', textAt: 0.52, soot: true, bands: [{ at: 0.985, h: 0.03, color: '#151519' }] },
   'falcon9/s2': { base: '#f0f0f2', bands: [{ at: 0.02, h: 0.08, color: '#151519' }] },
   'falconheavy/core': { base: '#f0f0f2', text: 'FALCON HEAVY', textColor: '#1b1b1f', textAt: 0.5, soot: true, bands: [{ at: 0.985, h: 0.03, color: '#151519' }] },
@@ -148,7 +149,8 @@ export function stageLivery(vehicle: VehicleSpec, stage: StageSpec): StageLivery
     bands: stage.accentColor ? [{ at: 0.92, h: 0.05, color: stage.accentColor }] : [],
     flag: FLAG_BY_COUNTRY[vehicle.country],
   };
-  const ov = OVERRIDES[`${vehicle.id}/${stage.id}`];
+  // a custom vehicle made from a catalogue one wears its livery (roadmap S02)
+  const ov = OVERRIDES[`${vehicleDataId(vehicle)}/${stage.id}`];
   return ov ? { ...base, ...ov } : base;
 }
 

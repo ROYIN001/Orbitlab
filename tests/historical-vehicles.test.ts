@@ -53,7 +53,7 @@ describe('historical vehicles', () => {
       }
     }
     // burn times against the published ones: strap-ons 116–120 s, cores 295–301 s, Blok E 365 s
-    const sputnik = vehicleById('sputnik8k71ps'), vostok = vehicleById('vostokk');
+    const sputnik = vehicleById('r7sputnik'), vostok = vehicleById('vostokk');
     const b = (v: typeof sputnik) => v.stages[0].boosters![0];
     expect(burn(b(sputnik).propellantMass, b(sputnik).engine.thrustVac, b(sputnik).engine.ispVac)).toBeGreaterThan(110);
     expect(burn(b(sputnik).propellantMass, b(sputnik).engine.thrustVac, b(sputnik).engine.ispVac)).toBeLessThan(125);
@@ -63,7 +63,7 @@ describe('historical vehicles', () => {
     expect(Math.abs(burn(e.propellantMass, e.engine.thrustVac, e.engine.ispVac) - 365)).toBeLessThan(10);
     // the S-IC: five F-1s from ignition 2.5 s before liftoff to the centre engine's
     // shutdown at T+135.2 s, four to the LOX running out at T+161.63 s (AS-506)
-    const sic = vehicleById('saturnv').stages[0];
+    const sic = vehicleById('saturnv506').stages[0];
     const flow = sic.engine.thrustVac / (G0 * sic.engine.ispVac);
     expect(Math.abs(sic.propellantMass / flow - (137.7 * 5 + (161.63 - 135.2) * 4)) / 5).toBeLessThan(2);
     // the Redstone: 143.5 s nominal (MR-3 cut off at 141.8)
@@ -72,10 +72,10 @@ describe('historical vehicles', () => {
   });
 
   it('carry their own spacecraft, and only they do', () => {
-    expect(satelliteById('ps1').carriers).toEqual(['sputnik8k71ps']);
-    expect(satelliteById('vostok3ka').carriers).toEqual(['vostokk']);
+    expect(satelliteById('ps1').carriers).toEqual(['r7sputnik']);
+    expect(satelliteById('vostok1').carriers).toEqual(['vostokk']);
     expect(satelliteById('mercury').carriers).toEqual(['mercuryredstone']);
-    expect(satelliteById('apollo').carriers).toEqual(['saturnv']);
+    expect(satelliteById('apollo11').carriers).toEqual(['saturnv506']);
     const s = watchMissionSettings('vostok1');
     expect(validateConfigInput(s)).toEqual([]);
     expect(validateConfigInput({ ...s, satelliteId: 'ps1' }).some((i) => i.field === 'setup.satellite')).toBe(true);
@@ -166,7 +166,7 @@ describe('Apollo 11, point-mass', () => {
     const payload0 = sim.vehicle.payloadMass;
     massAt(195);
     expect(sim.vehicle.jettisoned).toEqual({ interstage: true, tower: false });
-    expect(sim.vehicle.stages[1].spec.dryMass).toBe(vehicleById('saturnv').stages[1].dryMass - 4591);
+    expect(sim.vehicle.stages[1].spec.dryMass).toBe(vehicleById('saturnv506').stages[1].dryMass - 4591);
     massAt(200);
     expect(sim.vehicle.jettisoned.tower).toBe(true);
     // the gravity turn flown across the staging to T+204.1 s, as the tilt programme held until the iterative guidance
@@ -184,7 +184,7 @@ describe('Apollo 11, point-mass', () => {
     expect(Math.abs(at('evt.interstageSep')! - 192.3)).toBeLessThan(1.5);
     expect(Math.abs(at('evt.towerJettison')! - 197.9)).toBeLessThan(1.5);
     // the vehicle's own spec is never touched
-    expect(vehicleById('saturnv').stages[1].engine.thrustVac).toBe(1028.3e3);
+    expect(vehicleById('saturnv506').stages[1].engine.thrustVac).toBe(1028.3e3);
     // and Apollo stays on the S-IVB in the parking orbit
     massAt(740);
     expect(sim.events.some((e) => e.key === 'evt.targetOrbit')).toBe(true);

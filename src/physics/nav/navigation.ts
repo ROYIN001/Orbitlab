@@ -116,6 +116,8 @@ export class NavigationSystem {
   private sg: Vec3 = v3();
   private sa: Vec3 = v3();
   private omega: Vec3 = v3();
+  /** 1σ of the white noise in `omega`, rad/s */
+  private omegaNoise = 0;
   private readonly P = new Float64Array(N * N);
   private readonly F = new Float64Array(N * N);
   private readonly Phi = new Float64Array(N * N);
@@ -199,6 +201,8 @@ export class NavigationSystem {
   get aligned(): boolean { return !!this.last; }
   /** The bias-corrected body rate of the last step, rad/s. */
   get rate(): Vec3 { return this.omega; }
+  /** 1σ of the white noise in that rate, rad/s: the gyro's random walk over the step it was read over. */
+  get rateNoise(): number { return this.omegaNoise; }
 
   private propagate(t: number, v: Vec3, q: Quat): void {
     const last = this.last!, dt = t - last.t, s = this.sig;
@@ -261,6 +265,7 @@ export class NavigationSystem {
     }
     this.q = q1; this.v = v1; this.r = r1; this.t = t;
     this.omega = scale(dThetaHat, 1 / dt);
+    this.omegaNoise = s.gArw / Math.sqrt(dt);
   }
 
   private outage(t: number): boolean { return this.aiding.gnssOutages.some(([a, b]) => t >= a && t < b); }

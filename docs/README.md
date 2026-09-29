@@ -10,6 +10,8 @@ Read in this order. Each document assumes the ones before it.
 | 4 | [SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md) | The gates the six-DOF model was accepted against and the results, dated. |
 | 5 | [SIXDOF-BROWSER-QA.md](SIXDOF-BROWSER-QA.md) | Browser checks of the six-DOF build: what was verified by hand, performance and memory limits. |
 | 6 | [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) | Where the project stands now: what is done, what is experimental, what is next, and how it is tested. |
+| 7 | [VALIDATION.md](VALIDATION.md) | The simulator against real flight data: Falcon 9 webcast telemetry of five flights and published timelines of ten more vehicles, the tolerances, where it disagrees and why, and the data changes it led to. |
+| 8 | [ROADMAP-PART2-3.md](ROADMAP-PART2-3.md) | What comes after the launch simulator: the Orbit and Build sections, the section × level structure, online and offline data, the Moon, and the order they are built in. |
 
 The repository's own [README](../README.md) covers installing, running and the source layout.
 
@@ -29,3 +31,4 @@ the documents above are right. File names they mention without a folder are in `
 | [SIXDOF-UI-SOURCE-REVIEW.md](history/SIXDOF-UI-SOURCE-REVIEW.md) | 2026-09-19 | Source review of the six-DOF user interface. |
 | [CONTINUE-PHASE-6.md](history/CONTINUE-PHASE-6.md) | 2026-09-19/20 | The hand-over note for resuming the six-DOF phase (Thai). |
 | [CHECKPOINT-2026-09-20.md](history/CHECKPOINT-2026-09-20.md) | 2026-09-19/20 | The status file as it stood when the six-DOF phase was accepted. It was appended to over two days and contradicts itself; [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md) replaces it. |
+| [audit-2026-09-27/](history/audit-2026-09-27/) | 2026-09-27 | The usage audit of the live site and its source (Thai), the three source reviews behind it, its event-log evidence and screenshots, and the fix plan of 2026-09-28 (Thai) with one prompt per session. |

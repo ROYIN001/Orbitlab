@@ -215,7 +215,7 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // (GCAT). The core itself reached orbit; the strap-ons fell away at
   // T+116.38 s, the core cut off at T+295.4 s and PS-1 was pushed off with
   // its nose cone at T+314.5 s (en.wikipedia, from the flight records).
-  { id: 'sputnik1', vehicleId: 'sputnik8k71ps', siteId: 'baikonur', satelliteId: 'ps1', orbitId: 'custom', payloadMass: 83.6, padId: 'site1',
+  { id: 'sputnik1', vehicleId: 'r7sputnik', siteId: 'baikonur', satelliteId: 'ps1', orbitId: 'custom', payloadMass: 83.6, padId: 'site1',
     orbit: { perigee: 214e3, apogee: 938e3, inclination: 65.1, argPerigee: 0, raanMode: 'free' }, launchTime: '1957-10-04T19:28:34Z',
     flown: { events: [
       { key: 'evt.boosterSep', t: 116.38 }, { key: 'evt.seco', t: 295.4 }, { key: 'evt.payloadSep', t: 314.5 },
@@ -225,7 +225,7 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // Earth, 168 × 314 km at 64.95° (GCAT; 181 × 327 km in the older figures).
   // Strap-ons T+119 s, shroud T+156 s, Blok A off and Blok E lit T+300 s,
   // Blok E off T+676 s (ESA).
-  { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok3ka', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
+  { id: 'vostok1', vehicleId: 'vostokk', siteId: 'baikonur', satelliteId: 'vostok1', orbitId: 'custom', payloadMass: 4725, padId: 'site1',
     orbit: { perigee: 168e3, apogee: 314e3, inclination: 64.95, argPerigee: 0, raanMode: 'free' }, launchTime: '1961-04-12T06:07:00Z',
     flown: { events: [
       { key: 'evt.boosterSep', t: 119 }, { key: 'evt.fairingSep', t: 156 }, { key: 'evt.meco', t: 300 },
@@ -248,7 +248,7 @@ export const WATCH_MISSIONS: readonly WatchMission[] = [
   // AS-506 on azimuth 72.058° into a 183.2 × 186.0 km parking orbit at 32.521°
   // (FER MPR-SAT-FE-69-9; docs/PHYSICS.md §13.8). The flight goes on from
   // there — the S-IVB's restart for the Moon — in the parts that follow.
-  { id: 'apollo11', vehicleId: 'saturnv', siteId: 'ksc39a', satelliteId: 'apollo', orbitId: 'custom', payloadMass: 49735,
+  { id: 'apollo11', vehicleId: 'saturnv506', siteId: 'ksc39a', satelliteId: 'apollo11', orbitId: 'custom', payloadMass: 49735,
     // the parking orbit's plane: its node 123.088° east of the launch meridian at guidance reference release,
     // T−17 s (FER Table 4-5) — 359.624° from the mean equinox of date
     orbit: { perigee: 183.2e3, apogee: 186.0e3, inclination: 32.521, argPerigee: 0, raanMode: 'fixed', raan: 359.624, flightAzimuth: 72.058,

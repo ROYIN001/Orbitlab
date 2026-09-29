@@ -22,7 +22,7 @@
 import type { MissionConfig, SatelliteSpec, VehicleSpec, GuidanceParams, DynamicsConfig } from '../types';
 import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
-import { missionVehicle } from '../data/vehicles';
+import { missionVehicle, openTopVehicle } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
@@ -35,6 +35,8 @@ import { resolveControl } from './rigid/control-config';
 import { resolveNavigation } from './nav/config';
 import { resolveControlFaults, faultSeed, validControlFaultsConfig } from './rigid/fault-config';
 import { BREAKUP_Q_ALPHA_KPA_DEG } from './rigid/faults';
+import { dispersedVehicle, type FlightDispersion } from './dispersion';
+import { configuredDispersion } from './dispersed-flight';
 import { attitudeTestStub, validateAttitudeTestSpec, type AttitudeTestRecord, type AttitudeTestSpec } from './rigid/attitude-test';
 import { limitAscentCommand } from './rigid/control';
 import { nosePointingTarget } from './rigid/guidance-attitude';
@@ -137,6 +139,8 @@ export class Simulation {
    * candidate flights, which nothing displays, leave it off: it is over a tenth of their time.
    */
   private readonly recordEquations: boolean;
+  /** G05: a Monte Carlo run's air density over the standard atmosphere's; absent, the standard atmosphere. */
+  private readonly densityFactor?: number;
   readonly rigidRuntime?: RigidRuntime;
   private readonly rigidDt: number;
   private advanceRemainder = 0;
@@ -185,24 +189,34 @@ export class Simulation {
   readonly ascent: AscentMonitor;
   /** @internal injected failures */
   readonly failures: FailureInjector;
-  constructor(cfgIn: MissionConfig, opts: { headless?: boolean; rigidDt?: number; rigidOptions?: RigidRuntimeOptions; equations?: boolean } = {}) {
+  constructor(cfgIn: MissionConfig, opts: { headless?: boolean; rigidDt?: number; rigidOptions?: RigidRuntimeOptions; equations?: boolean;
+    dispersion?: FlightDispersion; } = {}) {
     this.headless = opts.headless ?? false;
     this.recordEquations = opts.equations ?? true;
+    // G05: a Monte Carlo run — the vehicle that flies and its air dispersed; the mission is planned on the nominal ones.
+    // P08: or one run of a set named by the mission, drawn the same way (absent: the nominal flight, untouched).
+    const dispersion = opts.dispersion
+      ?? (cfgIn.dynamics?.dispersion ? configuredDispersion(missionVehicle(cfgIn), cfgIn.dynamics.dispersion) : undefined);
+    this.densityFactor = dispersion?.densityFactor;
     const integrationStepS = opts.rigidDt ?? opts.rigidOptions?.integrationStepS ?? 0.01;
     if (!(integrationStepS > 0 && integrationStepS <= 0.02)) throw new RangeError('Rigid timestep must be in (0, 0.02] s');
     this.rigidDt = 0.01;
+    // S02: a catalogue vehicle, or the custom one the mission carries inline
+    const vehicleSpec = missionVehicle(cfgIn);
     if (cfgIn.dynamics) {
-      if (!validateDynamics(cfgIn.dynamics, cfgIn.vehicleId)) throw new RangeError('Invalid dynamics configuration');
+      if (!validateDynamics(cfgIn.dynamics, vehicleSpec)) throw new RangeError('Invalid dynamics configuration');
       if (cfgIn.dynamics.model === 'sixDof') {
         // Slosh, bending and the notch filter fly on the vehicle only, never on its debris.
         const flex = resolveFlexOptions(cfgIn.dynamics.flex);
         // G03: the flown vehicle records its attitude loop for the inspector (its debris do not).
-        const options = { ...opts.rigidOptions, integrationStepS, recordLoop: opts.rigidOptions?.recordLoop ?? true };
+        const options = { ...opts.rigidOptions, integrationStepS, recordLoop: opts.rigidOptions?.recordLoop ?? true,
+          ...(dispersion ? { air: { densityFactor: dispersion.densityFactor, windENU: dispersion.windENU, windSeed: dispersion.windSeed } } : {}) };
         // E04: the mission's autopilot tuning, on the vehicle only; absent, the runtime's defaults untouched.
         const control = resolveControl(cfgIn.dynamics.control);
         const tuned = control ? { ...options, controlGains: control.gains, feedForward: control.feedForward, capPitchYawGains: control.capPitchYawGains } : options;
         // G02: inertial navigation, on the vehicle only.
-        const navigation = resolveNavigation(cfgIn.dynamics.navigation, cfgIn.dynamics.seed);
+        const navigation = resolveNavigation(cfgIn.dynamics.navigation && dispersion?.navigationSeed !== undefined
+          ? { ...cfgIn.dynamics.navigation, seed: dispersion.navigationSeed } : cfgIn.dynamics.navigation, cfgIn.dynamics.seed);
         const navigated = navigation ? { ...tuned, navigation } : tuned;
         // G08: the control system's failures and its FDIR, on the vehicle only.
         const faults = resolveControlFaults(cfgIn.dynamics.controlFaults, cfgIn.dynamics.seed);
@@ -216,7 +230,7 @@ export class Simulation {
     const site = siteById(cfgIn.siteId);
     const pad = cfgIn.padId ? site.pads?.find((p) => p.id === cfgIn.padId) : undefined;
     this.site = pad ? { ...site, latitude: pad.latitude, longitude: pad.longitude } : site;
-    this.vehicleSpec = missionVehicle(cfgIn.vehicleId, satelliteById(cfgIn.satelliteId));
+    this.vehicleSpec = openTopVehicle(vehicleSpec, satelliteById(cfgIn.satelliteId));
     // Per-vehicle guidance defaults fill in every parameter the caller left at
     // the library default, so the UI (and any caller that does not merge them
     // itself) flies each launcher with its own pitch program.
@@ -227,7 +241,8 @@ export class Simulation {
     this.satellite = satelliteById(cfg.satelliteId);
     this.payloadMass = cfg.payloadMassOverride ?? this.satellite.mass;
     this.plan = planMission(cfg, this.site, this.vehicleSpec);
-    this.vehicle = new VehicleModel(this.vehicleSpec, this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
+    this.vehicle = new VehicleModel(dispersion ? dispersedVehicle(this.vehicleSpec, dispersion.vehicle) : this.vehicleSpec,
+      this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
     const fixedPlane = this.vehicleSpec.targetPlane && this.plan.target.raan !== null && !this.plan.suborbitalAim
       ? planeNormal(this.plan.target.inclination, this.plan.target.raan) : undefined;
     this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis,
@@ -798,7 +813,8 @@ export class Simulation {
     this.engineSchedule();
     const rm = norm(s.r);
     const alt = rm - R_EARTH;
-    const atm = atmosphere(alt);
+    const standard = atmosphere(alt);
+    const atm = this.densityFactor === undefined ? standard : { ...standard, rho: standard.rho * this.densityFactor };
     const omega = v3(0, 0, OMEGA_EARTH);
     const vAir = this.rigidRuntime ? this.rigidRuntime.airVelocity(s, s.t) : sub(s.v, cross(omega, s.r));
     const vAirMag = norm(vAir);
@@ -1011,7 +1027,7 @@ export class Simulation {
     } else if (s.status === 'descent') {
       next = rk4Step(s.t, { r: s.r, v: s.v }, dt, this.shipDescent.pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t));
     } else {
-      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, false));
+      next = rk4Step(s.t, { r: s.r, v: s.v }, dt, pointMassAcceleration(thrustAccel, s.dir, mass, thr.mdot, s.t, area, false, undefined, this.densityFactor));
     }
     // --- ascent losses (evaluated at step start)
     //
@@ -1296,12 +1312,13 @@ export class Simulation {
   }
 
   /**
-   * G08: with the failures layer, a launcher that has lost control breaks up under the air's
-   * lateral load, q·α past BREAKUP_Q_ALPHA_KPA_DEG.
+   * A six-DOF launcher that has lost control on the ascent breaks up under the air's lateral load,
+   * q·α past BREAKUP_Q_ALPHA_KPA_DEG (G08; every six-DOF ascent since G05's Q0). A re-entry is
+   * flown at a large angle of attack on purpose and is not judged by it.
    */
   private checkAeroBreakup(q: number): boolean {
     const s = this.state, rigid = s.rigid;
-    if (!this.rigidRuntime?.faults || !rigid || !s.liftoff || s.payloadSeparated || this.isFailed()) return false;
+    if (!rigid || s.status !== 'ascent' || !s.liftoff || s.payloadSeparated || this.isFailed()) return false;
     const alphaDeg = Math.hypot(rigid.angleOfAttack, rigid.sideslip) * RAD, qAlpha = q / 1000 * alphaDeg;
     if (!(qAlpha > BREAKUP_Q_ALPHA_KPA_DEG)) return false;
     this.event('evt.aeroBreakup', 'fail', { qAlpha: Math.round(qAlpha), alphaDeg: +alphaDeg.toFixed(1), q: +(q / 1000).toFixed(1) });

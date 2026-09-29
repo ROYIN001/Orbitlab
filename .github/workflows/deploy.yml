@@ -3,6 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # R02: every day the site is built again with fresh data snapshots (satellites, space weather),
+  # fetched at build time and deployed with it, never committed; the committed ones are the baseline
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -25,7 +29,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # the tests ran on the committed snapshots; the build takes fresh ones (a source that fails keeps its baseline)
+      - run: npm run snapshots
+      # ...so the fresh ones are checked again before they ship: the tests that read each snapshot's schema and
+      # contents (space weather, the satellite catalogue, the Earth's orientation, and the solar activity built on them)
+      - run: npx vitest run tests/data-provider.test.ts tests/satellite-catalogue.test.ts tests/earth-orientation.test.ts tests/activity.test.ts
       - run: npm run build
+      # the build that deploys, in a real browser: every journey in tests/browser/journeys/
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/browser/run.mjs
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-journey-screenshots
+          path: tests/browser/screenshots/
+          if-no-files-found: ignore
       - uses: actions/configure-pages@v5
         with:
           enablement: true

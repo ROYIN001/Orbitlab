@@ -68,6 +68,20 @@ export function engineLayout(id: string, engine: EngineSpec, R: number, nozzleLe
       };
     case 'blokI':
       return { nozzles: ring(4, R * 0.42, R * 0.26, R * 0.66, Math.PI / 4), verniers: ring(4, R * 0.82, R * 0.07, R * 0.2), clusterRadius: R * 0.85 };
+    // --- Vostok-K's Blok E: the fixed RD-0109 chamber and its four steering nozzles
+    case 'blokE':
+      return { nozzles: [{ x: 0, z: 0, r: R * 0.36, len: R * 0.8 }], verniers: ring(4, R * 0.8, R * 0.06, R * 0.18, Math.PI / 4), clusterRadius: R * 0.55 };
+    // --- Saturn V: four outer engines on a cross, one in the middle (the ring
+    // first: its four are the ones that gimbal)
+    case 'sic': {
+      const r = R * 0.19, len = R * 0.56;
+      return { nozzles: [...ring(4, R * 0.5, r, len, Math.PI / 4), { x: 0, z: 0, r, len }], verniers: [], clusterRadius: R * 0.8 };
+    }
+    case 'sii': {
+      const r = R * 0.1, len = R * 0.3;
+      return { nozzles: [...ring(4, R * 0.36, r, len, Math.PI / 4), { x: 0, z: 0, r, len }], verniers: [], clusterRadius: R * 0.5 };
+    }
+    case 'sivb': return { nozzles: [{ x: 0, z: 0, r: R * 0.15, len: R * 0.62 }], verniers: [], clusterRadius: R * 0.25 };
     // --- Proton: six RD-276 around the core tank
     case 'p1': return { nozzles: ring(6, R * 0.62, R * 0.21, R * 0.5), verniers: [], clusterRadius: R * 0.85 };
     case 'p2': return { nozzles: ring(4, R * 0.46, R * 0.26, R * 0.66, Math.PI / 4), verniers: [], clusterRadius: R * 0.8 };
@@ -109,9 +123,9 @@ export function engineLayout(id: string, engine: EngineSpec, R: number, nozzleLe
     // --- Saturn V (C01): five F-1s and five J-2s in a cross — the four outboard
     // engines first, the centre one (index 4, the one each stage shuts down early)
     // last — then one J-2 on the S-IVB
-    case 'sic': return { nozzles: [...ring(4, R * 0.78, 1.88, 5.8, Math.PI / 4), { x: 0, z: 0, r: 1.88, len: 5.8 }], verniers: [], clusterRadius: R * 1.1 };
-    case 'sii': return { nozzles: [...ring(4, R * 0.54, 0.99, 3.4, Math.PI / 4), { x: 0, z: 0, r: 0.99, len: 3.4 }], verniers: [], clusterRadius: R * 0.8 };
-    case 'sivb': return { nozzles: [{ x: 0, z: 0, r: 0.99, len: 3.4 }], verniers: [], clusterRadius: 1.2 };
+    case 'sic506': return { nozzles: [...ring(4, R * 0.78, 1.88, 5.8, Math.PI / 4), { x: 0, z: 0, r: 1.88, len: 5.8 }], verniers: [], clusterRadius: R * 1.1 };
+    case 'sii506': return { nozzles: [...ring(4, R * 0.54, 0.99, 3.4, Math.PI / 4), { x: 0, z: 0, r: 0.99, len: 3.4 }], verniers: [], clusterRadius: R * 0.8 };
+    case 'sivb506': return { nozzles: [{ x: 0, z: 0, r: 0.99, len: 3.4 }], verniers: [], clusterRadius: 1.2 };
     case 'urm1': return { nozzles: [{ x: 0, z: 0, r: R * 0.55, len: R * 1.1 }], verniers: [], clusterRadius: R * 0.65 };
     case 'urm1core': return { nozzles: [{ x: 0, z: 0, r: R * 0.55, len: R * 1.1 }], verniers: ring(4, R * 0.8, R * 0.07, R * 0.2), clusterRadius: R * 0.65 };
     case 'k3': return { nozzles: ring(2, R * 0.36, R * 0.28, R * 0.8), verniers: [], clusterRadius: R * 0.68 };

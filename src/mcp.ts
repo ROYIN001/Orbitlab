@@ -26,7 +26,7 @@ import type { Simulation, SimEvent } from './physics/simulation';
 import type { VisualFrame, StageFrame } from './physics/frame';
 import type { CameraMode } from './render/cameras';
 import type { Feasibility } from './ui/panel';
-import { ALL_VEHICLES, vehicleById } from './data/vehicles';
+import { ALL_VEHICLES, missionVehicle, vehicleById } from './data/vehicles';
 import { SITES, siteById } from './data/sites';
 import { SATELLITES, satelliteById } from './data/satellites';
 import { ORBIT_PRESETS } from './data/orbits';
@@ -51,6 +51,10 @@ import { CYCLE_LIMITS, EXPLICIT_LAWS, type ExplicitGuidanceRecord } from './phys
 import { elementsFromState } from './physics/orbital';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch, type AttitudeTestRecord } from './physics/rigid/attitude-test';
 import type { RigidTelemetry } from './physics/rigid/telemetry';
+import { createLessonTools, type LessonToolsHost } from './lessons/mcp-tools';
+import { MONTE_CARLO_RUNS, OUTPUT_KEYS, validMonteCarloConfig, type MonteCarloConfig, type OutputStats, type PointSummary } from './physics/monte-carlo';
+import type { MonteCarloJob } from './physics/monte-carlo-job';
+import { cloneDispersions, DISPERSION_KEYS, DISPERSION_SIGMA_LIMITS, type DispersionSettings } from './physics/dispersion';
 
 /** configure_mission's `flex` fields (roadmap P05). */
 const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
@@ -63,6 +67,8 @@ const FLEX_KEYS = ['slosh', 'bending', 'notch', ...Object.keys(FLEX_LIMITS)];
 interface McpPanelState {
   dynamics?: import('./types').DynamicsConfig;
   vehicleId: string;
+  /** S02: the custom vehicle a mission file brought in, when there is one */
+  vehicleSpec?: VehicleSpec;
   satelliteId: string;
   siteId: string;
   orbitId: string;
@@ -144,6 +150,20 @@ export interface McpAppHost {
   previousEvent(): void;
   preview(cfg: MissionConfig): void;
   launch(cfg: MissionConfig): void;
+  /** E03: the lessons and the placement test, when the app has them */
+  lessons?: LessonToolsHost;
+  /** G05: the Monte Carlo set the window runs; absent, `run_monte_carlo` reports that none can run. */
+  readonly monteCarlo?: McpMonteCarloHost;
+}
+
+/** G05: the app's Monte Carlo runner, as the window drives it. */
+export interface McpMonteCarloHost {
+  /** The window's current settings, which a start input is merged over. */
+  settings(): MonteCarloConfig;
+  /** Fly a set on the mission in the setup panel; a reason when it cannot start. */
+  start(mc: MonteCarloConfig): MonteCarloJob | string;
+  stop(): void;
+  readonly job: MonteCarloJob | null;
 }
 
 // ───────────────────────────────────────────────────────────────── tool type
@@ -341,9 +361,13 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   // "site was reassigned" warning the panel itself would show for this edit.
   let siteReassigned = false;
 
-  if (input.vehicleId !== undefined) {
+  // S02: WebMCP names catalogue vehicles only (the owner's choice, 2026-09-26); a custom
+  // vehicle the mission already carries, from a mission file, may be named to keep it.
+  const keepCustom = input.vehicleId !== undefined && !!state.vehicleSpec && input.vehicleId === state.vehicleId;
+  if (input.vehicleId !== undefined && !keepCustom) {
     const id = expectString(input.vehicleId, 'vehicleId');
     if (!ALL_VEHICLES.some((v) => v.id === id)) throw new Error(`Unknown vehicleId "${id}". Valid ids: ${ALL_VEHICLES.map((v) => v.id).join(', ')}`);
+    state.vehicleSpec = undefined;
     if (id !== state.vehicleId || !state.dynamics) state.dynamics = defaultDynamics(id);
     state.vehicleId = id;
     const spec = vehicleById(id);
@@ -363,7 +387,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   if (input.siteId !== undefined) {
     const id = expectString(input.siteId, 'siteId');
     if (!SITES.some((s) => s.id === id)) throw new Error(`Unknown siteId "${id}". Valid ids: ${SITES.map((s) => s.id).join(', ')}`);
-    const spec = vehicleById(state.vehicleId);
+    const spec = missionVehicle(state);
     if (!spec.sites.includes(id)) throw new Error(`${spec.name} does not fly from "${id}". Valid sites for this vehicle: ${spec.sites.join(', ')}`);
     if (id !== live.siteId) state.recoveryPlan = undefined;
     state.siteId = id;
@@ -389,7 +413,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   }
   if (input.boosterRecovery !== undefined) {
     if (typeof input.boosterRecovery !== 'boolean') throw new Error('"boosterRecovery" must be a boolean');
-    const spec = vehicleById(state.vehicleId);
+    const spec = missionVehicle(state);
     if (input.boosterRecovery && !spec.recoverable) throw new Error(`${spec.name} has no first-stage recovery option`);
     state.boosterRecovery = input.boosterRecovery;
   }
@@ -397,8 +421,8 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     // null clears it; the plan itself is checked against the vehicle and the
     // site by `assertConfigInput` below
     state.recoveryPlan = input.recoveryPlan === null ? undefined : parseRecoveryPlan(input.recoveryPlan);
-    if (state.recoveryPlan && !vehicleById(state.vehicleId).recoverable) {
-      throw new Error(`${vehicleById(state.vehicleId).name} has no first-stage recovery option`);
+    if (state.recoveryPlan && !missionVehicle(state).recoverable) {
+      throw new Error(`${missionVehicle(state).name} has no first-stage recovery option`);
     }
   }
   if (input.failureMode !== undefined) {
@@ -414,7 +438,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     state.failure = { ...state.failure, time: v };
   }
   if (input.failureStageIndex !== undefined) {
-    const spec = vehicleById(state.vehicleId);
+    const spec = missionVehicle(state);
     const v = expectNumber(input.failureStageIndex, 'failureStageIndex');
     if (!Number.isInteger(v) || v < 0 || v >= spec.stages.length) {
       throw new Error(`"failureStageIndex" must be an integer between 0 and ${spec.stages.length - 1} for ${spec.name}`);
@@ -422,7 +446,7 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
     state.failure = { ...state.failure, stage: v };
   }
   if (input.guidance !== undefined) {
-    state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, vehicleById(state.vehicleId)) };
+    state.guidanceOverrides = { ...state.guidanceOverrides, ...parseGuidanceInput(input.guidance, missionVehicle(state)) };
   }
   // --- P05: a vehicle, physics or wind edit keeps the flexible-body settings already chosen.
   const priorFlex = live.dynamics?.flex;
@@ -442,31 +466,31 @@ function applyConfigureInput(host: McpAppHost, rawInput: unknown): { notices: st
   const priorNavigation = live.dynamics?.navigation;
   if (priorNavigation && state.dynamics && !state.dynamics.navigation) state.dynamics = { ...state.dynamics, navigation: priorNavigation };
   if (input.navigation !== undefined) {
-    const { navigation: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { navigation: previous, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeNavigation(previous, input.navigation) };
   }
   // --- G01: and the explicit guidance.
   const priorExplicit = live.dynamics?.explicitGuidance;
   if (priorExplicit && state.dynamics && !state.dynamics.explicitGuidance) state.dynamics = { ...state.dynamics, explicitGuidance: priorExplicit };
   if (input.explicitGuidance !== undefined) {
-    const { explicitGuidance: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { explicitGuidance: previous, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeExplicitGuidance(previous, input.explicitGuidance) };
   }
   // --- G08: and the failures.
   const priorFaults = live.dynamics?.controlFaults;
   if (priorFaults && state.dynamics && !state.dynamics.controlFaults) state.dynamics = { ...state.dynamics, controlFaults: priorFaults };
   if (input.controlFaults !== undefined) {
-    const { controlFaults: previous, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { controlFaults: previous, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeControlFaults(previous, input.controlFaults) };
   }
   if (input.control !== undefined) {
-    const { control: _, ...rest } = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const { control: _, ...rest } = state.dynamics ?? defaultDynamics(missionVehicle(state));
     state.dynamics = { ...rest, ...mergeControl(state.dynamics?.control, input.control) };
   }
   if (input.flex !== undefined) {
     // Merged into what is set: a field given as null goes back to its default.
     if (!input.flex || typeof input.flex !== 'object' || Array.isArray(input.flex)) throw new Error('"flex" must be an object');
-    const current = state.dynamics ?? defaultDynamics(state.vehicleId);
+    const current = state.dynamics ?? defaultDynamics(missionVehicle(state));
     const flex: Record<string, unknown> = { ...(current.flex ?? {}) };
     for (const [key, value] of Object.entries(input.flex as Record<string, unknown>)) {
       if (!FLEX_KEYS.includes(key)) throw new Error(`Unknown flex field "${key}"`);
@@ -488,6 +512,8 @@ function summarizeConfig(cfg: MissionConfig): Record<string, unknown> {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   return {
     vehicleId: cfg.vehicleId,
+    /** S02: the mission flies a custom vehicle from a mission file */
+    customVehicle: cfg.vehicleSpec ? { name: cfg.vehicleSpec.name, derivedFrom: cfg.vehicleSpec.derivedFrom ?? null } : null,
     satelliteId: cfg.satelliteId,
     siteId: cfg.siteId,
     payloadMassKg: cfg.payloadMassOverride ?? null,
@@ -1254,6 +1280,105 @@ function toolRunAttitudeTest(host: McpAppHost): WebMcpTool {
   };
 }
 
+// --- G05 ---
+/** A dispersions input merged over `base`: each quantity's `enabled` and `sigma`, checked against its limits. */
+function mergeDispersions(base: DispersionSettings, raw: unknown): DispersionSettings {
+  if (raw === undefined) return base;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('"dispersions" must be an object.');
+  const out = cloneDispersions(base);
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(DISPERSION_KEYS as readonly string[]).includes(key)) throw new Error(`Unknown dispersion "${key}". Valid: ${DISPERSION_KEYS.join(', ')}.`);
+    const k = key as keyof DispersionSettings, v = asRecord(value), [lo, hi] = DISPERSION_SIGMA_LIMITS[k];
+    if (Object.keys(v).some((f) => f !== 'enabled' && f !== 'sigma')) throw new Error(`"dispersions.${key}" takes "enabled" and "sigma" only.`);
+    if (v.enabled !== undefined && typeof v.enabled !== 'boolean') throw new Error(`"dispersions.${key}.enabled" must be a boolean.`);
+    if (v.sigma !== undefined) {
+      const sigma = expectNumber(v.sigma, `dispersions.${key}.sigma`);
+      if (sigma < lo || sigma > hi) throw new Error(`"dispersions.${key}.sigma" must be between ${lo} and ${hi}.`);
+      out[k].sigma = sigma;
+    }
+    if (v.enabled !== undefined) out[k].enabled = v.enabled as boolean;
+  }
+  return out;
+}
+
+function roundStats(s: OutputStats, digits: number): Record<string, number | null> {
+  const r = (x: number | undefined) => (x === undefined || !Number.isFinite(x) ? null : +x.toFixed(digits));
+  return { n: s.n, mean: r(s.mean), sigma: r(s.sigma), threeSigma: r(3 * s.sigma), min: r(s.min), max: r(s.max), ...(s.bias !== undefined ? { bias: r(s.bias) } : {}) };
+}
+
+/** A law's runs read at one point: statistics, the 3σ ellipse and the shares. */
+function pointStatus(p: PointSummary): Record<string, unknown> {
+  const digits: Record<string, number> = { perigeeKm: 3, apogeeKm: 3, inclinationDeg: 4, dvLeft: 1 };
+  return {
+    runs: p.n,
+    stats: Object.fromEntries(OUTPUT_KEYS.map((k) => [k, roundStats(p.stats[k], digits[k])])),
+    ellipse3SigmaKm: p.ellipse ? { perigeeKm: +p.ellipse.cx.toFixed(3), apogeeKm: +p.ellipse.cy.toFixed(3), semiMajorKm: +p.ellipse.a.toFixed(3),
+      semiMinorKm: +p.ellipse.b.toFixed(3), angleDeg: +(p.ellipse.angle * RAD).toFixed(1) } : null,
+    sensitivity: Object.fromEntries(OUTPUT_KEYS.map((k) => {
+      const sens = p.sensitivity[k];
+      return [k, sens.ok ? { shares: Object.fromEntries(Object.entries(sens.shares).map(([q, v]) => [q, +(v ?? 0).toFixed(3)])),
+        other: +sens.other.toFixed(3), rSquared: +sens.rSquared.toFixed(3) } : null];
+    })),
+  };
+}
+
+/** The state of the app's Monte Carlo set, with its statistics per guidance law at the end of the mission and at the ascent's cut-off. */
+function monteCarloStatus(job: MonteCarloJob | null, includeCsv: boolean): Record<string, unknown> {
+  if (!job) return { ok: true, state: 'none' };
+  const progress = job.progress(), summary = job.summary();
+  return {
+    ok: true, state: job.state, done: progress.done, total: progress.total, etaS: progress.etaS === null ? null : Math.round(progress.etaS),
+    workers: job.workerCount, vehicleId: job.cfg.vehicleId, runs: job.mc.runs, seed: job.mc.seed, compareLaws: job.mc.compareLaws,
+    dispersions: job.mc.dispersions, targets: summary.targets,
+    laws: summary.laws.map((l) => ({
+      law: l.law, runs: l.runs, inserted: l.inserted, short: l.short, lost: l.lost, onTarget: l.onTarget, lostReasons: l.reasons,
+      final: pointStatus(l.points.final), cutoff: pointStatus(l.points.cutoff),
+    })),
+    ...(includeCsv ? { csv: job.csv() } : {}),
+  };
+}
+
+function toolRunMonteCarlo(host: McpAppHost): WebMcpTool {
+  const dispersionSchema = { type: 'object', additionalProperties: false, properties: Object.fromEntries(DISPERSION_KEYS.map((k) => [k, {
+    type: 'object', additionalProperties: false, properties: { enabled: { type: 'boolean' },
+      sigma: { type: 'number', minimum: DISPERSION_SIGMA_LIMITS[k][0], maximum: DISPERSION_SIGMA_LIMITS[k][1] } } }])) };
+  return {
+    name: 'run_monte_carlo', title: 'Monte Carlo insertion accuracy',
+    description: 'Roadmap G05: fly the mission in the setup panel many times in six-DOF, each run with its thrust, Isp, propellant and dry mass (per stage and strap-on group), air density and wind dispersed and — with the inertial navigation — a fresh IMU realisation, to the end of the mission, reading its orbit there (after every planned burn: what the payload is delivered to) and at the end of the powered ascent (the ascent guidance\'s accuracy). '
+      + 'action "start" starts a set (runs 20–2000, seed, compareLaws flies the standard law, PEG and IGM on the same draws, dispersions as {quantity: {enabled, sigma}} over the window\'s settings: sigma in % for thrust, isp, propellant, dryMass and density, m/s per horizontal axis for wind; the imu has none). '
+      + 'Runs take tens of seconds each, spread over the machine\'s cores: "status" reads the progress and, per law, how many runs reached orbit and their target, how many were lost and why, and at both points (final: against the target orbit; cutoff: against the planned insertion) perigee, apogee, inclination and Δv left as mean, σ, 3σ and bias, the 3σ perigee–apogee ellipse, and each dispersion\'s share of each element\'s variance; includeCsv adds every run as CSV. "stop" ends the set.',
+    inputSchema: { type: 'object', properties: {
+      action: { type: 'string', enum: ['start', 'status', 'stop'] },
+      runs: { type: 'integer', minimum: MONTE_CARLO_RUNS.min, maximum: MONTE_CARLO_RUNS.max },
+      seed: { type: 'integer', minimum: 0, maximum: 4294967295 },
+      compareLaws: { type: 'boolean' },
+      dispersions: dispersionSchema,
+      includeCsv: { type: 'boolean' },
+    }, required: ['action'], additionalProperties: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    execute: raw => {
+      const input = asRecord(raw), action = input.action, mc = host.monteCarlo;
+      if (action !== 'start' && action !== 'status' && action !== 'stop') throw new Error('"action" must be "start", "status" or "stop".');
+      if (input.includeCsv !== undefined && typeof input.includeCsv !== 'boolean') throw new Error('"includeCsv" must be a boolean.');
+      if (!mc) return { ok: false, reason: 'This page has no Monte Carlo runner.' };
+      if (action === 'status') return monteCarloStatus(mc.job, input.includeCsv === true);
+      if (action === 'stop') { mc.stop(); return monteCarloStatus(mc.job, false); }
+      const base = mc.settings();
+      const config: MonteCarloConfig = {
+        runs: input.runs === undefined ? base.runs : expectNumber(input.runs, 'runs'),
+        seed: input.seed === undefined ? base.seed : expectNumber(input.seed, 'seed'),
+        compareLaws: input.compareLaws === undefined ? base.compareLaws : input.compareLaws as boolean,
+        dispersions: mergeDispersions(base.dispersions, input.dispersions),
+      };
+      if (typeof config.compareLaws !== 'boolean') throw new Error('"compareLaws" must be a boolean.');
+      if (!validMonteCarloConfig(config)) throw new Error(`"runs" must be an integer from ${MONTE_CARLO_RUNS.min} to ${MONTE_CARLO_RUNS.max}, "seed" an integer from 0 to 4294967295.`);
+      const started = mc.start(config);
+      if (typeof started === 'string') return { ok: false, reason: started };
+      return { ...monteCarloStatus(started, false), started: true };
+    },
+  };
+}
+
 /** Build the tool definitions against `host`. Pure and DOM-free. */
 export function createMcpTools(host: McpAppHost): WebMcpTool[] {
   return [
@@ -1269,6 +1394,8 @@ export function createMcpTools(host: McpAppHost): WebMcpTool[] {
     toolExportCsv(host),
     toolRunAttitudeTest(host),
     toolInjectControlFault(host),
+    ...(host.lessons ? createLessonTools(host.lessons) : []), // E03
+    toolRunMonteCarlo(host),
   ];
 }
 

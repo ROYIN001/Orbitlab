@@ -73,6 +73,21 @@ describe('engine start-up and tail-off', () => {
     }
   });
 
+  it('never burns more than the tank holds when the tank runs dry inside a long step', () => {
+    // Before the cap in `VehicleModel.withinTank`, a step that ran through the
+    // depletion boundary burned its full flow × dt and the tank was clamped
+    // back to empty: 418 kg of free impulse at 0.5 s on the published 410.9 t
+    // first stage. Sweep the load so the boundary falls anywhere in a step.
+    for (let extra = 0; extra < 1400; extra += 97) {
+      const spec = structuredClone(vehicleById('falcon9'));
+      spec.stages[0].propellantMass += extra;
+      const vm = new VehicleModel(spec, 0);
+      const e = vm.active!.spec.engine;
+      const { impulse, used } = burnOut(vm, 0.5);
+      expect(impulse / used, `+${extra} kg`).toBeCloseTo(G0 * e.ispVac, 6);
+    }
+  });
+
   it('delivers after a commanded cut-off exactly the tail-off it announced', () => {
     const vm = new VehicleModel(vehicleById('falcon9'), 5000);
     const st = vm.active!;

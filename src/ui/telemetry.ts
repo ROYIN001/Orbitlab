@@ -36,7 +36,7 @@ import { getLang, t } from '../i18n';
 import { fmtTime } from './hud';
 import { eventLabel } from './phase';
 import { localizeEventParams, stageNameByLabel } from './names';
-import { OMEGA_EARTH, R_EARTH, DEG } from '../physics/constants';
+import { OMEGA_EARTH, R_EARTH, DEG, RAD } from '../physics/constants';
 import { buildTelemetryCsv, telemetryCsvFilename } from './csv';
 import type { TelemetrySample } from '../physics/sim/types';
 import { symbolText } from './notation';
@@ -44,7 +44,7 @@ import { EquationsPanel } from './equations';
 import type { EquationLevel } from './equations-model';
 import type { VisualFrame } from '../physics/frame';
 import { downloadBlob } from './download';
-import { ASCENT_MARKERS, CHART_IDS, ORBIT_MARKERS, chartTitle, referenceSeries } from './telemetry-charts';
+import { ASCENT_MARKERS, CHART_IDS, EXPLORE_CHART_IDS, EXPLORE_CHART_LABELS, ORBIT_MARKERS, chartTitle, referenceSeries, type ExploreChartId } from './telemetry-charts';
 import type { FlownRecord } from './flown';
 import { referenceWindow, type ReferenceFlight } from '../replay/reference';
 
@@ -142,11 +142,18 @@ export class TelemetryPanel {
   private viewBtns: HTMLButtonElement[] = [];
   private frame: VisualFrame | null = null;
   private equationLevel: EquationLevel = 'explore';
+  /** Explore: the flight against its target orbit, drawn above the charts (see `drawProgress`) */
+  private progressRows: { value: HTMLElement; fill: HTMLElement; bar: HTMLElement }[] = [];
+  /** Explore: the one chart on screen, picked from `EXPLORE_CHART_IDS` */
+  private picked: ExploreChartId = 'altitude';
+  private pickBtns: HTMLButtonElement[] = [];
 
-  constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null) {
+  constructor(root: HTMLElement, onReport: (() => void) | null = null, onLifetime: (() => void) | null = null,
+    onOrbit: (() => void) | null = null) {
     this.root = root;
     this.onReport = onReport;
     this.onLifetime = onLifetime;
+    this.onOrbit = onOrbit;
     this.build();
   }
 
@@ -190,6 +197,35 @@ export class TelemetryPanel {
     }
     r.append(views);
     r.classList.toggle('view-equations', this.viewMode === 'equations');
+    // Explore: the flight against its target, then one chart at a time, picked here (style.css hides the rest)
+    r.classList.toggle('simple-charts', this.equationLevel === 'explore');
+    const progress = el('section', 'tel-progress');
+    progress.setAttribute('aria-label', t('tel.progress'));
+    progress.append(el('h3', 'section', t('tel.progress')));
+    this.progressRows = [];
+    for (const key of ['tel.chart.apogee', 'tel.chart.perigee', 'tel.progress.inclination', 'tel.pick.dv']) {
+      const row = el('div', 'tel-progress-row');
+      const value = el('span', 'v', '—');
+      const bar = el('div', 'tel-progress-bar');
+      const fill = el('span');
+      bar.append(fill);
+      row.append(el('span', 'k', t(key)), value, bar);
+      progress.append(row);
+      this.progressRows.push({ value, fill, bar });
+    }
+    r.append(progress);
+    const picker = el('div', 'chart-picker');
+    picker.setAttribute('role', 'group');
+    picker.setAttribute('aria-label', t('tel.pick'));
+    this.pickBtns = [];
+    for (const id of EXPLORE_CHART_IDS) {
+      const b = el('button', undefined, t(EXPLORE_CHART_LABELS[id])) as HTMLButtonElement;
+      b.type = 'button';
+      b.dataset.chart = id;
+      b.addEventListener('click', () => this.pick(id));
+      picker.append(b);
+      this.pickBtns.push(b);
+    }
     // First block under the heading: the docked instrument card, when the user
     // has put it there. Empty (and collapsed by `:empty` in style.css) when the
     // card is floating over the picture.
@@ -198,9 +234,11 @@ export class TelemetryPanel {
     r.append(this.equations.root);
     this.note = el('p', 'chart-note hidden');
     r.append(this.note);
+    r.append(picker);
     for (const id of CHART_IDS) {
       const c = document.createElement('canvas');
       c.className = 'chart';
+      c.dataset.chart = id;
       r.append(c);
       this.charts[id] = c;
       c.setAttribute('role', 'img');
@@ -209,6 +247,7 @@ export class TelemetryPanel {
     for (const id of FLEX_CHART_IDS) {
       const c = document.createElement('canvas');
       c.className = 'chart hidden';
+      c.dataset.chart = id;
       r.append(c);
       this.charts[id] = c;
       c.setAttribute('role', 'img');
@@ -250,9 +289,58 @@ export class TelemetryPanel {
       life.addEventListener('click', () => this.onLifetime?.());
       r.append(life);
     }
+    // S03: the orbit handed on to the Orbit section
+    if (this.onOrbit) {
+      const orbit = el('button', 'btn export-btn', t('handoff.continue')) as HTMLButtonElement;
+      orbit.type = 'button';
+      orbit.id = 'btn-continue-orbit';
+      orbit.addEventListener('click', () => this.onOrbit?.());
+      r.append(orbit);
+    }
     this.shownEvents = 0;
     this.shownEventItems.length = 0;
+    this.markPicked();
     if (this.view) this.update(this.view, this.cursor);
+  }
+
+  /**
+   * Explore: the flight against its target orbit at the displayed instant —
+   * apoapsis and periapsis as shares of the target's, the inclination beside
+   * the target's, and the Δv left as a share of the Δv at liftoff. Frame-backed
+   * like every other line of the panel, so it rewinds with the timeline.
+   */
+  private drawProgress(view: Simulation, tel: readonly TelemetrySample[]): void {
+    if (!this.progressRows.length) return;
+    const target = view.plan.target;
+    const last = tel.length ? tel[tel.length - 1] : null;
+    const km = (m: number): string => Math.round(m / 1000).toLocaleString(getLang());
+    const set = (i: number, text: string, share: number | null): void => {
+      const row = this.progressRows[i];
+      if (row.value.textContent !== text) row.value.textContent = text;
+      row.bar.hidden = share === null;
+      if (share !== null) row.fill.style.width = `${(Math.min(1, Math.max(0, share)) * 100).toFixed(1)}%`;
+    };
+    const ap = last && last.ap > 0 && last.ap < 5e7 ? last.ap : null;
+    const pe = last && last.pe > -2000e3 ? last.pe : null;
+    set(0, `${ap === null ? '—' : km(ap)} / ${km(target.apogee)} km`, ap === null ? 0 : ap / Math.max(1, target.apogee));
+    // a suborbital target's periapsis is below the ground: there is no share of it to fill
+    set(1, `${pe === null ? '—' : km(pe)} / ${km(target.perigee)} km`, target.perigee > 0 ? (pe === null ? 0 : pe / target.perigee) : null);
+    set(2, `${last ? (view.state.elements.i * RAD).toFixed(1) : '—'}° / ${(target.inclination * RAD).toFixed(1)}°`, null);
+    const dv0 = tel.length ? tel[0].dvRemaining : NaN;
+    const dv = last ? last.dvRemaining : NaN;
+    set(3, Number.isFinite(dv) ? `${Math.round(dv).toLocaleString(getLang())} m/s` : '—', Number.isFinite(dv) && dv0 > 0 ? dv / dv0 : 0);
+  }
+
+  /** Explore: show one chart, and draw it now rather than at the next tick. */
+  private pick(id: ExploreChartId): void {
+    this.picked = id;
+    this.markPicked();
+    if (this.view) this.update(this.view, this.cursor);
+  }
+
+  private markPicked(): void {
+    for (const b of this.pickBtns) b.setAttribute('aria-pressed', String(b.dataset.chart === this.picked));
+    for (const id of CHART_IDS) this.charts[id].classList.toggle('picked', id === this.picked);
   }
 
   /**
@@ -294,11 +382,14 @@ export class TelemetryPanel {
     else this.equations.update(null, null, this.equationLevel, getLang());
   }
 
-  /** E02: the Explore mode's equations or the Engineer mode's fuller set. */
+  /** E02: the Explore mode's equations or the Engineer mode's fuller set — and its charts: Explore's one at a time. */
   setEquationLevel(level: EquationLevel): void {
     if (level === this.equationLevel) return;
     this.equationLevel = level;
+    // the level's chart set too: Explore shows the one picked, Engineer all of them
+    this.root.classList.toggle('simple-charts', level === 'explore');
     if (this.viewMode === 'equations') this.setView('equations');
+    else if (this.view) this.update(this.view, this.cursor);
   }
 
   private setRange(mode: Range): void {
@@ -344,6 +435,7 @@ export class TelemetryPanel {
       drawChart(this.charts[id], [], { title: chartTitle(id), xMin: -10, xMax: 60, timeAxis: true, xLabel: t('tel.xAxis') });
     }
     for (const id of FLEX_CHART_IDS) this.charts[id].classList.add('hidden');
+    for (const row of this.progressRows) { row.value.textContent = '—'; row.fill.style.width = '0%'; }
     this.view = null;
     this.live = null;
   }
@@ -369,6 +461,7 @@ export class TelemetryPanel {
     // that had been taken by the displayed instant.
     const tel = view.telemetry;
     const events = view.events;
+    this.drawProgress(view, tel);
     // Drawn even with no samples yet: eight empty framed charts with their
     // titles read as "nothing has happened", eight blank canvases read as broken.
     let ascentEnd: number | undefined;
@@ -631,6 +724,8 @@ export class TelemetryPanel {
   onReport: (() => void) | null = null;
   /** P07: set by the app to offer the orbit-lifetime analysis. */
   onLifetime: (() => void) | null = null;
+  /** S03: set by the app to hand the orbit on to the Orbit section. */
+  onOrbit: (() => void) | null = null;
 
   /** U02: draw a reference flight on every chart, dashed (null: none). */
   setReference(ref: ReferenceFlight | null): void {

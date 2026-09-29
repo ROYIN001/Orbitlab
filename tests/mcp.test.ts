@@ -10,7 +10,7 @@
  */
 import { describe, expect, it, beforeEach } from 'vitest';
 import { createMcpTools, registerMcpTools, type McpAppHost, type WebMcpTool } from '../src/mcp';
-import { vehicleById } from '../src/data/vehicles';
+import { missionVehicle, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { satelliteById } from '../src/data/satellites';
 import { orbitById } from '../src/data/orbits';
@@ -24,6 +24,8 @@ import type { CameraMode } from '../src/render/cameras';
 import type { Simulation, SimEvent, TelemetrySample } from '../src/physics/simulation';
 import type { VisualFrame } from '../src/physics/frame';
 import type { MissionConfig } from '../src/types';
+import { defaultMonteCarlo, type MonteCarloConfig } from '../src/physics/monte-carlo';
+import { MonteCarloJob, type MonteCarloReply, type MonteCarloWorker } from '../src/physics/monte-carlo-job';
 
 // ────────────────────────────────────────────────────────────────── fakes
 
@@ -88,7 +90,7 @@ function makeFakeSim(cfg: MissionConfig): Simulation {
   };
   return {
     cfg,
-    vehicleSpec: vehicleById(cfg.vehicleId),
+    vehicleSpec: missionVehicle(cfg),
     site: siteById(cfg.siteId),
     satellite: satelliteById(cfg.satelliteId),
     telemetry: [sample, { ...sample, t: 1.5, alt: 40, vInertial: 12 }],
@@ -99,6 +101,7 @@ function makeFakeSim(cfg: MissionConfig): Simulation {
 interface FakePanelState {
   dynamics?: MissionConfig['dynamics'];
   vehicleId: string;
+  vehicleSpec?: MissionConfig['vehicleSpec'];
   satelliteId: string;
   siteId: string;
   orbitId: string;
@@ -152,8 +155,9 @@ class FakePanel {
     const s = this.state;
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
+      ...(s.vehicleSpec ? { vehicleSpec: structuredClone(s.vehicleSpec) } : {}),
       launchTime: new Date(s.launchTime.getTime()),
-      guidance: { ...guidanceForVehicle(vehicleById(s.vehicleId), undefined, s.dynamics?.model), ...s.guidanceOverrides },
+      guidance: { ...guidanceForVehicle(missionVehicle(s), undefined, s.dynamics?.model), ...s.guidanceOverrides },
       failure: { ...s.failure }, boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
       guidanceResolved: true,
@@ -163,7 +167,7 @@ class FakePanel {
   feasibility() {
     const s = this.state;
     const site = siteById(s.siteId);
-    const spec = vehicleById(s.vehicleId);
+    const spec = missionVehicle(s);
     // Like `SetupPanel#refresh`: one plan per verdict, and null when the
     // planner rejects the configuration.
     let plan = null;
@@ -260,6 +264,7 @@ describe('createMcpTools', () => {
     expect(names).toEqual([
       'read_flight_state', 'list_missions', 'configure_mission', 'launch_mission',
       'control_playback', 'set_flight_control', 'seek', 'set_camera', 'get_events', 'export_csv', 'run_attitude_test', 'inject_control_fault',
+      'run_monte_carlo',
     ]);
     expect(new Set(names).size).toBe(names.length);
     for (const t of tools) {
@@ -439,6 +444,24 @@ describe('configure_mission', () => {
   it('rejects an unknown vehicle with a clear, listing error', () => {
     expect(() => tool(tools, 'configure_mission').execute({ vehicleId: 'saturn-v' }))
       .toThrowError(/Unknown vehicleId "saturn-v"/);
+  });
+
+  it('keeps a custom vehicle a mission file brought in, and takes no new one (S02)', () => {
+    const configure = tool(tools, 'configure_mission');
+    configure.execute({ vehicleId: 'falcon9' });
+    const custom = { ...structuredClone(vehicleById('falcon9')), id: 'my-falcon', name: 'My Falcon', derivedFrom: 'falcon9' };
+    Object.assign(host.panel.state, { vehicleId: custom.id, vehicleSpec: custom });
+    // edits act on the custom vehicle, read through the one resolver
+    configure.execute({ payloadMassKg: 5000, failureStageIndex: 1 });
+    expect(host.panel.state.vehicleSpec).toEqual(custom);
+    // naming it keeps it; naming a catalogue vehicle replaces it
+    configure.execute({ vehicleId: 'my-falcon' });
+    expect(host.panel.state.vehicleSpec).toEqual(custom);
+    configure.execute({ vehicleId: 'electron' });
+    expect(host.panel.state.vehicleId).toBe('electron');
+    expect(host.panel.state.vehicleSpec).toBeUndefined();
+    // WebMCP does not accept a spec itself (the owner's choice, 2026-09-26): an id it does not know is refused
+    expect(() => configure.execute({ vehicleId: 'my-falcon' })).toThrowError(/Unknown vehicleId "my-falcon"/);
   });
 
   it('applies a valid configuration, re-renders the panel and previews it', () => {
@@ -868,7 +891,7 @@ describe('registerMcpTools', () => {
     (globalThis as any).window = { addEventListener: (_: string, fn: () => void) => listeners.push(fn) };
     try {
       registerMcpTools(host);
-      expect(registered.length).toBe(12);
+      expect(registered.length).toBe(13);
       for (const fn of listeners) fn();
       expect(abortSeen).toBe(true);
     } finally {
@@ -1067,3 +1090,67 @@ describe('explicit ascent guidance (roadmap G01)', () => {
       yawOutOfPlaneDeg: 0.1, standardPitchDeg: 9, stagesPlanned: 1 });
   });
 });
+
+// --- G05 ---
+describe('Monte Carlo insertion accuracy (roadmap G05)', () => {
+  /** The app's runner: a real job whose workers reply in-process with synthetic runs. */
+  function monteCarloHost(): NonNullable<McpAppHost['monteCarlo']> & { job: MonteCarloJob | null } {
+    const worker = (): MonteCarloWorker => {
+      const w: MonteCarloWorker = { onmessage: null, onerror: null, terminate() { w.onmessage = null; },
+        postMessage(req) {
+          const final = { perigeeKm: 200 + (req.index % 5) * 0.1, apogeeKm: 500 - (req.index % 3), inclinationDeg: 28.61, dvLeft: 2900, t: 3200 };
+          setTimeout(() => w.onmessage?.({ data: { type: 'run', run: { index: req.index, law: req.law, outcome: 'inserted', onTarget: true, final, cutoff: { ...final, t: 487 },
+            maxQkPa: 31, maxQAlpha: 100, z: [], ms: 40_000 } } } as unknown as MessageEvent<MonteCarloReply>), 0);
+        } };
+      return w;
+    };
+    const runner = {
+      job: null as MonteCarloJob | null,
+      settings: () => defaultMonteCarlo(),
+      start(mc: MonteCarloConfig) {
+        if (runner.job?.state === 'running') return 'A Monte Carlo set is already running.';
+        runner.job = new MonteCarloJob(host.panel.getConfig(), mc, { workers: 3, createWorker: worker });
+        return runner.job;
+      },
+      stop() { runner.job?.stop(); },
+    };
+    return runner;
+  }
+
+  it('reports that the page has no runner, and checks its input', () => {
+    const run = tool(tools, 'run_monte_carlo');
+    expect(run.execute({ action: 'status' })).toEqual({ ok: false, reason: 'This page has no Monte Carlo runner.' });
+    expect(() => run.execute({ action: 'fly' })).toThrow(/"action" must be/);
+  });
+
+  it('starts a set over the window\'s settings, reads its progress and statistics, and stops it', async () => {
+    const runner = monteCarloHost();
+    (host as { monteCarlo?: unknown }).monteCarlo = runner;
+    tools = createMcpTools(host);
+    const run = tool(tools, 'run_monte_carlo');
+    expect(run.execute({ action: 'status' })).toEqual({ ok: true, state: 'none' });
+    expect(() => run.execute({ action: 'start', runs: 10 })).toThrow(/"runs" must be an integer from 20 to 2000/);
+    expect(() => run.execute({ action: 'start', dispersions: { thrust: { sigma: 20 } } })).toThrow(/dispersions\.thrust\.sigma" must be between 0 and 10/);
+    expect(() => run.execute({ action: 'start', dispersions: { gravity: {} } })).toThrow(/Unknown dispersion "gravity"/);
+    const started = run.execute({ action: 'start', runs: 20, seed: 4, compareLaws: true, dispersions: { wind: { enabled: false }, thrust: { sigma: 2 } } }) as any;
+    expect(started).toMatchObject({ ok: true, started: true, state: 'running', total: 60, workers: 3, runs: 20, seed: 4, compareLaws: true });
+    expect(started.dispersions.wind).toEqual({ enabled: false, sigma: 5 });
+    expect(started.dispersions.thrust).toEqual({ enabled: true, sigma: 2 });
+    expect(run.execute({ action: 'start' })).toEqual({ ok: false, reason: 'A Monte Carlo set is already running.' });
+    while (runner.job!.state === 'running') await new Promise((r) => setTimeout(r, 5));
+    const status = run.execute({ action: 'status', includeCsv: true }) as any;
+    expect(status).toMatchObject({ state: 'done', done: 60, total: 60, etaS: null });
+    expect(status.laws.map((l: any) => l.law)).toEqual(['standard', 'peg', 'igm']);
+    expect(status.laws[0]).toMatchObject({ runs: 20, inserted: 20, short: 0, lost: 0, onTarget: 20 });
+    expect(status.targets.final.perigeeKm).toBeGreaterThan(status.targets.cutoff.perigeeKm - 1e-9);
+    expect(status.laws[0].final.stats.perigeeKm.mean).toBeCloseTo(200.2, 6);
+    expect(status.laws[0].final.stats.perigeeKm.threeSigma).toBeCloseTo(3 * status.laws[0].final.stats.perigeeKm.sigma, 3);
+    expect(status.laws[0].final.ellipse3SigmaKm).not.toBeNull();
+    expect(status.laws[0].cutoff.runs).toBe(20);
+    expect(status.csv.trim().split('\n')).toHaveLength(61);
+    run.execute({ action: 'start', runs: 20 });
+    const stopped = run.execute({ action: 'stop' }) as any;
+    expect(stopped.state).toBe('stopped');
+  });
+});
+

@@ -19,6 +19,8 @@ export interface ReturnGuidanceMemory {
   dir: Vec3;
   /** horizontal velocity still needed, m/s */
   dvNeeded: number;
+  /** predicted miss if the burn ended now, m */
+  miss?: number;
   /** the burn is down to its trim on the centre engine */
   trim: boolean;
   /** the entry burn's horizontal correction, m/s² (ECI) */

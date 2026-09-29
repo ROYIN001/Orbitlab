@@ -231,6 +231,16 @@ export interface VehicleSpec {
   /** Crewed launches supported */
   crewCapable?: boolean;
   notes?: string;
+  /**
+   * S02: a custom vehicle's origin, the id of the catalogue vehicle it was
+   * made from (a copy, or a remix in roadmap D02). What a spec does not carry
+   * and the code looks up by vehicle id — the six-DOF tables of that hardware
+   * (its RCS installation, its trim share, which of its stages fly home), the
+   * flight to the station, the drawing's livery and plume, the localized stage
+   * names — are that vehicle's (`vehicleDataId`). Absent, a custom vehicle gets
+   * the generic behaviour there. Catalogue vehicles never set it.
+   */
+  derivedFrom?: string;
 }
 
 export interface LaunchSiteSpec {
@@ -442,6 +452,13 @@ export interface MissionConfig {
   /** Explicit model selection; absent means the legacy point-mass API. */
   dynamics?: DynamicsConfig;
   vehicleId: string;
+  /**
+   * S02: a custom vehicle, carried inline: its `id` is `vehicleId`, which no
+   * catalogue vehicle has. Absent, `vehicleId` names a catalogue vehicle.
+   * Resolve a mission's vehicle with `missionVehicle` (src/data/vehicles.ts),
+   * never with `vehicleById(cfg.vehicleId)`.
+   */
+  vehicleSpec?: VehicleSpec;
   satelliteId: string;
   siteId: string;
   orbit: OrbitSpec;
@@ -518,6 +535,8 @@ export interface DynamicsConfig {
   controlFaults?: ControlFaultsConfig;
   /** PEG or IGM for the stages out of the atmosphere (roadmap G01). Absent: the standard ascent guidance, bit for bit. */
   explicitGuidance?: ExplicitGuidanceConfig;
+  /** P08: fly one run of a Monte Carlo set on its own, its vehicle and air dispersed (src/physics/dispersed-flight.ts). */
+  dispersion?: DispersedFlightConfig;
 }
 
 /**
@@ -634,4 +653,16 @@ export interface ExplicitGuidanceConfig {
   law: 'peg' | 'igm';
   /** guidance cycle, s (default 1) */
   cycleS?: number;
+}
+
+// --- P08 ---
+/**
+ * One dispersed flight (src/physics/dispersed-flight.ts): run `run` of the Monte Carlo set seeded
+ * `seed`, drawn exactly as G05 draws it, with the set's dispersions (the default set if absent).
+ */
+export interface DispersedFlightConfig {
+  seed: number;
+  /** the run's index in the set, 0-based (the Monte Carlo window shows it 1-based) */
+  run: number;
+  settings?: import('./physics/dispersion').DispersionSettings;
 }

@@ -5,12 +5,32 @@ you while it flies — written for a student rather than for a contributor. If y
 equations and the sources behind them, that is [docs/PHYSICS.md](PHYSICS.md); this guide
 sticks to what you see on screen and what it means.
 
-## 0. Four ways in
+## 0. Three sections, three levels
 
-The switch in the top bar picks how much of the simulator you see:
+Orbitlab is being grown into one space program in three **sections**: **Launch** (this
+simulator), **Orbit** (orbits, orbit changes and what satellites do) and **Build** (designing a
+rocket and a satellite). Each section has the same three **levels** — Watch, Explore and
+Engineer — and the top bar has a switch for each: the section on the left, the level beside it.
+**Orbit** opens on its playground (section 0a below). Build is being built: today it shows what
+is coming, level by level and in the order it will be built
+([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md)), and nothing on it pretends to work. Everything after
+section 0a is about Launch.
 
-- **Home** — the landing page. **Watch a launch** plays the featured flight (Soyuz to the
-  space station) straight away.
+- **Home** — the landing page, a page you scroll (the wheel scrolls it; it does not move the
+  scene). Its first screen is the featured rocket on its pad: **Watch a launch** plays the
+  featured flight (Soyuz to the space station) straight away, **Start with a lesson** opens the
+  lessons. Below it, one at a time, are the ways in — Watch, Explore, Engineer, the lessons and
+  the Orbit section — each with a picture of it in the language you chose and a button that
+  takes you there. At the end is the Earth with the International Space Station where it is
+  now, and for the city you pick, when it next passes over and when you can next see it with
+  the naked eye (a bright star gliding across the sky for a few minutes, the station sunlit in
+  a dark sky), in the city's local time. With *reduce motion* set in your system, the pictures
+  and the camera keep still.
+
+Once a flight is in orbit, **Continue in Orbit** — under the telemetry panel, and on the viewer's
+end card — puts the orbit on screen into the Orbit section's playground (section 0a), with the
+spacecraft's mass, what is left of its own propellant, and the orbit lifetime analysis started
+from it. The flight itself carries on in Launch.
 - **Watch** — just the picture, three numbers (mission time, altitude, speed over the ground)
   and one sentence about what is happening and why. **Choose a launch** lists nine real flights,
   each flown as it was, only in daylight today: Soyuz to the space station, Falcon 9's
@@ -30,21 +50,301 @@ The switch in the top bar picks how much of the simulator you see:
   rocket** takes it there or back at any time. When the rocket reaches orbit, or the ship is
   down in the water, a card offers to keep watching, watch again, pick another launch, or plan a
   mission of your own.
-- **Explore** — everything below this line, in the learning layout (the advanced guidance
-  parameters stay folded away).
-- **Engineer** — the same workspace with every guidance parameter open.
+- **Explore** — the mission builder below, lighter: the same simulation and the same
+  physics as Engineer, with the settings an engineer tunes computed and shown instead of
+  asked for (see **Explore** below).
+- **Engineer** — the whole workspace, with every guidance parameter open.
 
-Switching mode never touches the flight: leave the viewer half-way up and the workspace
-shows the same launch with every instrument on it. Each mode has its own address
-(`#/watch` and so on), and the browser's Back button moves between them.
+**Explore.** The level is chosen in the top bar only. A mission is set up in three steps,
+one on screen at a time, with tabs to move between them — **Rocket**, **Payload**, **Orbit**:
+
+1. **Rocket** — the quick starts, then the vehicles as cards, each with what it lifts to low
+   orbit on a logarithmic bar (Electron's 300 kg to Saturn V's 118 t), the launch site, and
+   whether the first stage comes home.
+2. **Payload** — what is flown and its mass, drawn against the vehicle's rating for the
+   orbit's class, with a tick at the 90 % the verdict calls tight.
+3. **Orbit** — the presets and the perigee, apogee and inclination. Picking a plane that has
+   to be launched into at its time (the ISS's, a sun-synchronous one) sets the next launch
+   window. The argument of perigee, the RAAN mode and the LTAN come with the preset. Below:
+   the weather (calm, crosswind or wind shear, for a six-DOF flight), the guidance, and the
+   challenges.
+
+The verdict above **Launch** is a light — ready, flyable with a caution, not flyable as set —
+and under it the change that answers it, one press each: the next launch window, another
+site whose range-safety corridor reaches the plane (or an inclination this one can fly),
+the heaviest payload the verdict passes (found by bisection, the insertion flown where the
+budget calls it marginal), and for a stack that the flown insertion probe says does not
+reach orbit, the auto-tuner. None is offered during a lesson.
+
+The **guidance** is the vehicle's own pitch programme — the pitch-over altitude, the kick and
+its duration, the pitch-program rate, the gravity-turn ceiling, the loft — the one
+`tests/fleet-defaults.test.ts` and the six-DOF fleet fly to every reference orbit each vehicle
+can reach (LEO, the ISS plane, SSO, GTO, at 25, 50 and 90 % of the rated payload) with no
+tuning; the closed-loop limits are the vehicle's and the parking orbit the planner's. The card
+shows the values flown. Anything changed at the Engineer level — a guidance value, the
+auto-tuner's result, the flexible body, the autopilot, navigation, control failures, PEG or
+IGM, a dispersed flight — is still flown in Explore, since a level never touches the mission:
+the card marks it (✎), names it, and **Back to the computed values** removes it. A lesson
+that asks the student to change the guidance (2.1, the acceleration limit) shows its fields.
+
+The **challenges** are the failure scenarios, each set for its moment: an engine out at T+80 s,
+a thrust loss at T+100 s, a premature separation at T+90 s, a range-safety destruct at T+70 s,
+a launch abort at T+60 s, the pad fire six seconds before liftoff; the separation failures
+strike at their separations. The Engineer level sets the moment and the stage itself.
+
+In flight, the set-up gives way to a summary of what is flying (**New mission** brings the
+set-up back); the telemetry panel starts with the flight against its target orbit —
+apoapsis and periapsis against the target's, the inclination, the Δv left — and shows one
+chart at a time (altitude, speed, dynamic pressure, acceleration, the apsides, Δv left); the
+6-DOF manual controls appear only while a flight is under manual command. A moment after the
+flight's outcome a card says what happened and why, the orbit reached against the target, the
+Δv left and where the ascent's went (gravity, drag, steering), and the next step, and offers to
+fly again, to keep watching (it folds into a tab), to carry the orbit on into Orbit, and every
+number at the Engineer level. The result table under the controls is the Engineer level's.
+
+Switching level or section never touches the flight: leave the viewer half-way up and the
+workspace shows the same launch with every instrument on it, and a flight left running while
+you look at Orbit is still flying when you come back. Every section and level has its own
+address — `#/launch/watch`, `#/orbit/explore`, `#/home` and so on — the browser's Back button
+moves between them, and the app reopens where you left it. The older addresses `#/watch`,
+`#/explore` and `#/engineer` still work: they open the launch section, and the address bar shows
+the new form.
+
+**Offline or online data.** The cloud in the top bar says where Orbitlab's data come from, and
+opens the **Data sources** window. **Offline**, the default, sends no request outside: the app
+uses the data bundled with it, each dated ("data as of …"), and the platform's own fonts — the
+right setting for a closed network, a classroom or no connection. Online also loads the
+interface's web fonts. **Online** fetches current data from the sources that publish them
+and falls back to the bundled copy, saying why, whenever they cannot be reached. The window lists
+each dataset with its date and where it came from: the space weather (the solar flux F10.7 and
+the Kp index, from NOAA), which the orbit lifetime and re-entry read; the satellite catalogue
+(CelesTrak); and the Earth's orientation (the IERS), which is always the bundled copy because the
+IERS cannot be read from a page.
 
 **Installing Orbitlab and using it offline.** The published site can be installed as an app
 (Chrome or Edge: the install icon in the address bar; Android: *Add to Home screen*; iPhone
 and iPad: *Share → Add to Home Screen*), and once it has been opened online it works with no
 network at all — the page, the physics and auto-tune workers and the Earth textures are all kept
-on the device, and the fonts too once they have loaded. When a new version is published, a note
+on the device, and the fonts and the landing page's pictures too once they have loaded. When a new version is published, a note
 at the bottom of the page offers **Reload**; until you press it, the version you have keeps
 running.
+
+## 0a. The Orbit section: the orbit playground
+
+The Orbit section opens on one orbit and three ways of looking at it. The tabs over the picture
+switch between them:
+
+- **3-D**: the orbit about the Earth, which turns with the time of day and is lit by the Sun of
+  that moment. **P** and **A** mark the perigee and the apogee, and **☊** the ascending node,
+  where the orbit crosses the equator going north. Drag to turn the view; the wheel or a pinch
+  zooms; a double-click shows the whole orbit. An orbit drawn in red passes below the ground:
+  it would hit the Earth.
+- **Ground track**: the point under the satellite on a map, a revolution back as a dashed line
+  and the next ones solid, with the night side and the point under the Sun.
+- **Newton's cannon**: a cannon on a mountain above the air, firing sideways. Set the speed and
+  press **Fire**. Up to about 7.8 km/s the ball falls back, further round the Earth each time;
+  faster, it goes all the way round (an orbit); above the escape speed, about 11 km/s, it never
+  comes back.
+
+Under the picture are the clock, how fast it runs, and **⟲**, which goes back to the start.
+Space pauses and resumes.
+
+The three levels:
+
+- **Watch**: a tour in seven steps, from Newton's cannon to the space station, Hohmann's
+  transfer to geostationary height, a Molniya orbit, a geostationary satellite standing over
+  78.5° E (the slot Thaicom's satellites use) and a sun-synchronous orbit; then eight steps with
+  the real satellites of the bundled catalogue, where they are now: the space station and its next
+  passes over the place, THEOS-2 on its sun-synchronous track, the navigation and weather
+  satellites, the Earth-imaging satellites, the debris of Fengyun-1C, and the Long March 5B stages
+  that fell uncontrolled. **Next** and **Back** move between the steps; **Try it yourself** opens
+  Explore on the orbit on screen.
+- **Explore**: choose an orbit from the list, or set its perigee and apogee altitudes, its
+  inclination i, its node Ω and its argument of perigee ω with the sliders or the number boxes.
+  Dragging the perigee above the apogee takes the apogee along. **Earth's bulge (J2)** lets the
+  equatorial bulge turn the orbit's plane and perigee. **Kepler's second law** shades twelve
+  slices the satellite sweeps in equal times. The panel on the right gives the orbit's period,
+  speeds and altitudes, and Kepler's three laws with this orbit's own numbers.
+- **Engineer**: the classical elements themselves (a, e, i, Ω, ω and the mean anomaly M₀), and
+  the orbit's energy, angular momentum, the drift of the node and the perigee, the nodal
+  period, how far the track steps west each revolution, and the local time at the ascending
+  node. **Repeating ground track** finds the circular orbit whose track repeats after N
+  revolutions in D days. 143 revolutions in 10 days, sun-synchronous, gives 786 km: Sentinel-2's
+  orbit.
+
+**Maneuvers** (Explore and Engineer) plans a change of orbit from the one set above. Choose one
+and its numbers, and the plan appears on the right: each burn, where and when it is made
+(T+ on the clock) and how big it is, the total Δv, the transfer time and the orbit it ends on.
+The 3-D view draws the orbits of the plan as dashed lines and numbers the burns. Press play,
+and the satellite flies the plan, burn by burn.
+
+- **Hohmann transfer** and **Bi-elliptic transfer** go to a circle at the height you give.
+  The bi-elliptic plan also says what Hohmann would have cost.
+- **Plane change** turns the orbit's plane to the inclination you give, at the node farther
+  from the Earth.
+- **Circularise at apogee (GTO → GEO)** rounds the orbit off at apogee and turns it towards
+  the equator, in one burn or split over several apogees.
+- **Phasing** moves the satellite along its own orbit in a few revolutions.
+- **Deorbit burn** brings the perigee down, and says when the satellite reaches 100 km.
+- **Low-thrust spiral** is an electric thruster's slow climb, Edelbaum's way.
+- **Your own burns** takes up to five burns, each at a point of the orbit (now, perigee,
+  apogee, a node, or after a set time), with prograde, normal and radial parts.
+
+**Plan from now** starts the plan at the time on the clock, and **Carry on from the new orbit**
+makes the orbit at the end the playground's. At the Engineer level, **Rendezvous (Lambert)**
+plans a transfer to a satellite in your orbit's plane, at a height and a phase you choose. The
+**Porkchop** tab plots the total Δv of every departure time and time of flight: the white ring
+is the cheapest, the red one the transfer planned. Click a point to plan it instead. The tour
+at Watch has a step for Hohmann's transfer.
+
+**Spacecraft**, under the maneuver's numbers, says whose tanks the plan is paid from:
+
+- **None** shows the Δv alone.
+- **From your launch** uses the spacecraft a flight handed on, with what is left of its own
+  propellant.
+- **Your own** takes a mass, propellant, Isp and thrust. It starts as the catalogue's weather
+  satellite: 1 800 kg, 400 N, Isp 315 s.
+
+The plan then gives each burn's propellant and how long its engine runs, the Δv in the tanks,
+what is burned and what is left. It says so when the tanks run dry, and in which burn. **Carry
+on from the new orbit** leaves the spacecraft lighter by what it burned.
+
+**What satellites do** (Explore and Engineer) turns the orbit into what it is for. Its three
+applications are:
+
+- **Communications from geostationary orbit.** Choose where the dish stands: a Thai city, St
+  Petersburg or Moscow, or coordinates you type in. What you type stays in the page; the browser
+  is never asked for your location. The playground then says where the dish points (azimuth and
+  elevation), how far away the satellite is, and how long a signal takes up and down, compared
+  with a satellite 550 km up. It also says how much of the Earth the satellite sees above the
+  lowest elevation you set. The ground track draws the station and that footprint. At the
+  Engineer level the link budget follows: path loss, dish gain, G/T, C/N₀ and Eb/N₀, from a
+  frequency, EIRP, dish, noise temperature, losses and data rate you choose.
+- **Earth observation.** A camera's swath and ground sample distance (or, at the Engineer
+  level, its focal length, pixel pitch and pixels), how far apart the day's tracks are, how much
+  of that gap the camera sees looking straight down, and how far tilting the satellite reaches.
+  The ground track draws the swath along the next revolution.
+- **Thailand's satellites.** THEOS, THEOS-2, NAPA-1, NAPA-2 and Thaicom 4, 6, 7 and 8, each with
+  its operator, builder, launch, orbit, camera, identifiers and sources. **Show its orbit** puts
+  its catalogue orbit in the playground. That is its shape, not where it is today; to see where
+  it is now, use **Real satellites** (below).
+
+For Thaicom 8 from Bangkok, the dish points south-west (239.5°), 59.9° up. For THEOS-2, the
+10.3 km swath covers well under 1 % of the gap between two of the day's tracks, which is why the
+satellite tilts.
+
+After **Continue in Orbit** from a flight, the list says **From your launch** and the playground
+starts from where the flight was. **Orbit lifetime**, under the orbit's figures, runs the
+long-term analysis on whatever orbit the playground is showing. With a flight's spacecraft it
+uses that spacecraft, as it is now; without one it starts from an estimate you can change in the
+dialog. At Watch, the flight's orbit is the first card, before the tour.
+
+The model is Kepler's orbit plus the secular drift of J2, nothing more: no drag and no Sun or
+Moon. [VALIDATION.md](VALIDATION.md) §5 holds it to real orbits.
+
+### Real satellites (Explore and Engineer)
+
+The switch at the top of the left panel changes between **Your orbit** and **Real satellites**.
+Real satellites are drawn where they are, from the element sets they are tracked by, propagated
+by SGP4, the theory those sets are made for. The clock starts at this moment and runs at the
+speed you choose; **⟲** brings it back to now, and **Live** shows while it is now.
+
+- **Group**: the space stations, Thailand's satellites, the navigation satellites (GPS, GLONASS,
+  Galileo, BeiDou), the weather satellites, the Earth-imaging satellites (civil, commercial, and
+  the military ones whose element sets are published), or the debris of Fengyun-1C, destroyed by
+  an anti-satellite test in 2007. The group is drawn as points in 3-D and on the ground track.
+- **Overflights of** a place, under the group's list: every pass of the group's satellites over a
+  city or your coordinates in the next 24 hours or 3 days whose highest point is at least the
+  elevation you choose (30° by default), soonest first: when, how high and in which direction,
+  the off-nadir angle a camera must look at to see the place, whether the place is in daylight
+  (optical cameras need it, radars do not) and whether the satellite is heading north or south.
+  For 95 imaging satellites whose instruments are published, each pass also says what the
+  instrument can make of it: a camera needs daylight and the place inside its swath (Landsat,
+  Sentinel-2) or within the angle it can turn to (Pléiades, WorldView, THEOS-2); a radar
+  (Sentinel-1, COSMO-SkyMed, ALOS) sees by night and through cloud, but only to its side and within
+  its band of incidence angles. **Only when its instrument can image the place** keeps just those,
+  and **Show on the map** under a pass picks the satellite, sets the clock two minutes before and
+  draws the pass on the ground track with the edges of the ground its instrument can reach: a
+  camera's swath or pointing reach either side, a radar's band on its side.
+  Engineer adds the distance from the ground track, the local solar time, the timing
+  uncertainty and a link to the instrument's source. It is when the place *could* be seen, not
+  that it is: that takes the operator's tasking and, for a camera, a clear sky.
+- **When it will come down**, for a satellite whose perigee is under 700 km: its orbit is carried
+  down with the Sun as measured and forecast to a predicted re-entry, with the window of ±20 % of
+  the time left that the agencies use. The drag comes, as you choose, from the object's own decay,
+  fitted as the agencies fit it to the tracking — to the decay rate its element set carries, or,
+  for an object read from a file with several of its sets (a history you downloaded), to how far
+  it fell between the first and the last — or from a mass, mean cross-section and C_D you give.
+  An eccentric orbit, a stage left in a transfer orbit, is carried step by step with the Sun's and
+  the Moon's pull, which takes some seconds. The ground track then shows where it may come down:
+  its track through the window when the window is two days or less, and otherwise the band of
+  latitudes its orbit covers (a satellite can fall anywhere under its orbit). More than a year away, the orbit lifetime analysis is
+  the tool. **Case study: the Long March 5B core stages** predicts the four 21.6-tonne stages from
+  their first element sets and sets each prediction beside the re-entry on record; **Case study:
+  NAPA-2** predicts the Royal Thai Air Force's CubeSat five years ahead from its first element set,
+  by its size and with the drag fitted, beside the day it came down.
+- **Worksheets from real cases**, under the group's list: a printable sheet of questions and,
+  apart, its answer key with the working, on a case from the record — the collision of Iridium 33
+  and Cosmos 2251 (the conjunction message's data, its encounter plane, the miss in standard
+  deviations, why 10⁻⁵¹ was wrong), the Long March 5B stage that launched Tianhe (Cauchy's area,
+  C_D·A/m, the ±20 % window against the day it fell) and THEOS-2 over Bangkok (the J₂ turn that
+  makes an orbit sun-synchronous, how far it sees tilted 45°, the local time it passes). Each is
+  made in the page in the language on screen, as HTML to open and print, its units and option
+  letters in that language's own script. Each case is also a graded lesson (§18, lessons
+  6.1–6.3): while a case's lesson is open and not yet passed, its answer key here waits, and the
+  Long March 5B case study leaves out the error of the stage of Tianhe, which lesson 6.2 asks for.
+- **Search** by name, catalogue number or international designator, then pick a satellite. Its
+  orbit and its track are drawn. The right panel gives its catalogue number and designator, the
+  epoch of its element set and how old the set is, where it is now, its period, its mean perigee
+  and apogee, its inclination, and whether SGP4 or SDP4 (deep space) carries it. The Engineer
+  level adds the mean elements, the drag term B* and the position and velocity in TEME.
+- **Passes over** a place, under the satellite's figures: choose a city or type coordinates (they
+  stay in the page), and the lowest elevation that counts. The next three days' passes are
+  listed, each with when the satellite rises, is highest and sets, in which direction and how
+  high as you see it (the air's refraction included). Each pass also says whether you can see it:
+  only when the satellite is in sunlight and your sky is dark (the Sun 6° or more below the
+  horizon), and, for a satellite with a standard magnitude, about how bright it gets (a magnitude:
+  smaller is brighter). The first line counts down to the next pass. Times are your device's clock. The map draws the place, and the circle of ground from
+  which the satellite is above that elevation.
+- **Position error (estimate)** says how far off the satellite may be: an element set does not
+  carry its own accuracy, so the page estimates it from published studies, from the kind of orbit
+  and the set's age. **How far off it may be** draws the band widening with that age and names the
+  studies. At the Engineer level each pass gives its timing uncertainty.
+- **Close approaches** screens every object loaded — the catalogue's groups and a file you read —
+  against the satellite picked, for 24 hours, 3 or 7 days from the moment on screen: each pass
+  nearer than the limit you choose, when, how near, and an estimated probability of collision
+  from both element sets' estimated error and the size you give the pair. Engineer adds the miss
+  split radial, along-track and cross-track, the relative speed and each set's uncertainty. It is
+  what CelesTrak's SOCRATES does with the same data, and it shows traffic, not collisions: the
+  page recalls that Iridium 33 and Cosmos 2251 were 152nd on the list the day they collided. The
+  screening runs off the page's own thread, so a whole catalogue read from a file (some 30 000
+  objects) can be screened while the page stays usable, and stopped. **Show it** under an approach
+  moves the clock to five minutes before it, draws the other object's orbit and the meeting point
+  in 3-D, the point below the meeting and the other object's track on the ground track, and the
+  *encounter plane*: the other object at its miss distance with the pair's
+  combined size round it, and the combined position uncertainty as ellipses — the probability is
+  the share of the uncertainty inside the circle. A probability smaller than 10⁻¹⁰ is shown as
+  *below 10⁻¹⁰*: the numbers do not carry a precision finer than that.
+- **A conjunction data message**, under the screening: an operator is warned of an approach to its
+  satellite by such a message (CCSDS 508.0-B-1, from the combined space operations centre through
+  Space-Track), which carries each object's position uncertainty from the tracking. Read one in its
+  text form (KVN) and the page gives the probability from the message's own uncertainties, with its
+  encounter plane, beside the probability the message states. The file is read in the page and
+  sent nowhere.
+- **Put this orbit in the playground** takes the satellite's orbit as it is at that moment into
+  Your orbit, to plan maneuvers from. From there Kepler and J2 carry it, not SGP4, so over days
+  the two part company.
+- **Read a file of element sets** opens a file you have: TLE or 3LE, or OMM as JSON, CSV, XML or
+  KVN, from CelesTrak or from your own Space-Track account. It is read in the page and sent
+  nowhere. Whatever cannot be read is listed, line by line or set by set, with the reason.
+
+Offline (the default) the element sets are the snapshot bundled with this version, dated in the
+right panel. Online they come from CelesTrak, at most once in two hours and one list at a time,
+as CelesTrak asks, and from the snapshot whenever CelesTrak cannot be reached; a list that cannot
+be read keeps its own group from the snapshot, and the panel says which. A published site is rebuilt every day
+with a fresh snapshot. An element set is a fraction of a kilometre to a few kilometres off at
+its epoch, and further as it ages; [VALIDATION.md](VALIDATION.md) §6 holds SGP4 to its
+reference.
 
 ## 1. Set up a mission
 
@@ -84,6 +384,14 @@ that cannot be used (a perigee above the apogee, a gain out of range, a site the
 not fly from) goes back to its default, the rest of the mission is kept, and a note under the
 buttons lists what was reset. The file carries a format version, so a file from a later
 Orbitlab still opens as far as this one understands it, and says so.
+
+Since version 2 a file can also carry a **vehicle of its own** — a custom rocket, the start of
+the Build section ([ROADMAP-PART2-3.md](ROADMAP-PART2-3.md), S02). There is no builder on screen
+yet; a file (or a link) that carries one opens with the vehicle listed first in the vehicle menu
+as "*name* — custom vehicle", and it flies like any other. Every figure in it is checked before it
+flies — masses and sizes above zero, engine figures a chemical engine can have, at most six
+stages, strap-ons on the first stage only — and a vehicle that fails the check is not flown: the
+note names the vehicle as reset. Picking a catalogue vehicle from the menu drops the custom one.
 
 Under **Guidance parameters** you can hand-tune the ascent (kick angle, pitch-program rate,
 loft, pitch limits — see PHYSICS.md §5 for what each one does) or press **Auto-tune pitch
@@ -335,8 +643,16 @@ under the forces that act after the launch, each of which can be switched off to
 the Earth's oblateness (J2, which turns the orbit's plane and is why a sun-synchronous orbit
 works), its pear shape (J3, J4), drag in an upper atmosphere that swells when the Sun is active,
 the pull of the Sun and the Moon (which tilts a geostationary orbit by nearly a degree a year),
-and the pressure of sunlight. Choose low, mean or high solar activity: at 400 km a CubeSat lasts
-about four months at solar maximum and over a year at solar minimum. The *mean elements* method
+and the pressure of sunlight. The air is NRLMSISE-00's, the model the European space standards
+name for orbit decay, at the satellite's height, latitude and local time. The Sun's activity,
+which sets how much air there is, is taken as measured by default: day by day from 1954 (GFZ),
+then NOAA's latest months and days and its forecast, then the mean of the last six solar cycles —
+the result says how far each reaches, and the data mode decides whether NOAA's figures are the
+bundled ones or fetched now. The forecast's high and low sides show how much the answer can move;
+ECSS's fixed quiet, moderate and active levels are there for a what-if (at 400 km a CubeSat lasts
+some ten weeks with an active Sun and three and a half years with a quiet one). With
+the measured Sun, seven satellites of known shape came down within 25 % of their dates on record,
+usually a little early. The *mean elements* method
 covers decades in a moment with J2 and drag; the *full equations* include every force but are
 slow, so keep them to months. The mass, cross-section and coefficients are filled in from the
 payload and can be changed. The result is the date of re-entry, or the orbit at the end, and two
@@ -547,8 +863,9 @@ A failure can also be injected into a live flight with WebMCP's `inject_control_
 attitude-loop inspector (§9) marks the IMU, actuator and control-law blocks that failed, with each
 unit's and engine's state; its rate chart shows what the IMUs read against the truth. The event log
 reports every failure and every FDIR action; the CSV adds the failures' columns and
-`read_flight_state` a `controlFaults` summary. A launcher that loses control in the air breaks up
-when its lateral load q·α passes 300 kPa·°. Details in PHYSICS.md §2i.
+`read_flight_state` a `controlFaults` summary. A six-DOF launcher that loses control on the ascent
+breaks up when its lateral load q·α passes 300 kPa·° — with or without the failures layer.
+Details in PHYSICS.md §2i.
 
 ## 15. PEG and IGM ascent guidance (Engineer mode)
 
@@ -564,7 +881,7 @@ cannot reach the target, the standard guidance takes over again (and the event l
 
 In six-DOF flights with PEG or IGM the ascent load relief is also released at 4 °/s once the
 dynamic pressure falls below 500 Pa, where the standard flight releases it all at once and swings
-the stack by up to 24°.
+the stack by about 15° on Falcon 9.
 
 The attitude-loop inspector's **Guidance** tab (§9) charts the time and velocity to go, the pitch
 the law steers against the standard law's (and its yaw out of the target plane), and the orbit it
@@ -603,7 +920,205 @@ the docking is called off. **Hand back to Kurs** lets it fly back to the station
 and in again. How the profiles, the approach and the contact limits compare with real flights
 is in [PHYSICS.md §9.2](PHYSICS.md).
 
-## 17. Historical missions
+## 17. Monte Carlo insertion accuracy (Engineer mode)
+
+The *Monte Carlo: insertion accuracy (G05)* section opens a window that flies the mission in the
+setup panel many times — always in six-DOF — each run with its own vehicle and air, to the end
+of the mission, and shows how accurately the payload is put into orbit. The orbit is read at
+two points, switched above the table: **at the end of the mission**, after every planned burn,
+against the target orbit; and **at the ascent's cut-off**, against the insertion the mission
+plans — the ascent guidance's own accuracy (a mission whose upper stage finishes the insertion
+later, like Electron's, cuts off short of it on purpose).
+
+**Settings.** *Runs* (20–2000, 200 by default) and a *Seed*: the same seed draws the same numbers,
+whatever is switched off and whichever guidance flies, so two sets can be compared run by run.
+*Fly the three guidance laws* flies every run with the standard guidance, PEG and IGM (§15) on
+the same draws — three times the flights. Each dispersion can be switched off and its 1σ edited:
+thrust 1 %, specific impulse 0.3 %, propellant loaded 0.5 %, dry mass 0.5 % (each per stage and
+per strap-on group), air density 5 %, a steady wind of 5 m/s per horizontal axis added to the
+mission's (with a new phase of its gusts), and — when the mission flies the inertial navigation
+(§13) — a fresh realisation of its IMU's errors. Draws are normal, clipped at 3σ. The mission is
+planned on the nominal vehicle; the dispersed one flies.
+
+**Running.** *Start* spreads the runs over the computer's cores (all but one, at most 16); a
+six-DOF run takes about a minute (longer for a mission that coasts to a higher orbit), so 200
+runs take from about half an hour to a few hours. The
+results fill in as the runs land, and *Stop* ends the set with what it has.
+
+**Results.** The table gives, per guidance law, the runs in orbit and on target, and the perigee,
+apogee, inclination and Δv left at the chosen point as mean ± 3σ, with the bias from the target
+(or the planned insertion). The
+chart plots each run's perigee against its apogee, with each law's 3σ ellipse and the planned
+insertion; hovering a point shows the run. Histograms show the spread of each element for the
+law chosen above them, with the planned value marked. **What drives the spread** regresses each
+element on the numbers the runs drew: each dispersion's share of the variance, and *other* for
+what it leaves — the gusts' and the IMU's realisations, and anything not linear (it needs three
+runs per number drawn). Runs lost — broken up, or short of orbit — are counted with their cause.
+*Download CSV* writes every run: its orbit, how it ended, and what it drew.
+
+WebMCP's `run_monte_carlo` starts (`action: "start"`, with the same settings), reads
+(`"status"`, optionally with the CSV) and stops the same set. Details in PHYSICS.md §2l, with what
+the recorded sets found: Falcon 9 delivered to about a kilometre on every law, but even the
+minimal dispersions lose a few runs to the air's loads, and leave a few in the wrong plane.
+
+### One run on its own (P08)
+
+Any run of a set can be flown alone, watched and replayed like any flight. **Click a run on the
+scatter**: the setup panel gets the set's seed and the run's number (and its guidance law, in
+six-DOF, as the set flew it); launch it. Or open **Dispersed flight: one Monte Carlo run** in the
+Engineer mode's setup, tick it, and type a set seed and a run number: the section lists what that
+run drew — each stage's thrust, Isp, propellant and dry mass, the air's density, and in six-DOF the
+steady wind (and a fresh IMU with navigation on). It works in point-mass too, where the vehicle
+and the density are dispersed (point-mass has no wind or IMU). The run is part of the mission, so
+a mission file or link carries it and the flight report names it. Untick it to fly nominal again.
+
+## 18. Lessons and the placement test
+
+The gold **Lessons** button in the top bar (and **Start with a lesson** on the landing page) opens the
+lessons page: a page of its own over the whole window below the top bar, like a mode, with two
+tabs — **Lessons** and **Placement test** — and **Back to the simulator** (or Esc, or the
+browser's Back). Its addresses are `#/lessons` and `#/lessons/test`, so either can be linked to.
+The lessons are training missions with a goal and pass criteria, graded as soon as the flight ends,
+and three cases from the record, worked from their data. They are listed in six tracks — orbital
+mechanics, guidance and navigation, failures, attitude control, advanced missions, real cases —
+each with its number (1.1 … 6.3), a ✓ once passed and ● once tried. All twenty-four are written:
+5.3–5.5 fly the historical missions of roadmap C01, and 6.1–6.3 are P2.5's cases, worked in the
+Orbit section rather than flown. Track 6 is the built-in cases': a teacher's lesson put there shares
+their numbers.
+
+**A lesson.** Pick one: its mission is loaded into the setup panel, the app goes to the mode it
+needs (Explore or Engineer), and the settings it fixes are greyed out with a 🔒 — in lesson 1.2
+only the launch time may change, in 1.4 only the payload mass. A strip over the workspace holds
+the task, the criteria and the buttons. Launch; each criterion shows *waiting*, *so far ✓*
+(a bound that could still be broken), ✓ or ✗ — a peak such as q is failed the moment it is
+passed, everything else when the flight ends. Some lessons then ask for numbers you work out from
+your own flight (the period of the orbit you reached, the Δv of a burn, the peak load on the
+crew): type them in and **Check**. A wrong answer is only marked ✗, and can be worked again;
+**Show the answers** gives the values, but the attempt is then recorded as not passed, and a
+number once shown never counts as a pass in this browser (a lesson flies the same flight again, so
+the same number would do): a lesson whose answers come out the same on every flight can then no
+longer be passed here, as the button's tooltip (and the strip, after a wrong answer) warns. The
+grades are formative: a worksheet's answer key is on the same
+device. The grade is read from the recording's head, so scrubbing back through the replay never
+changes it. **Hint** reveals up to three hints, one at a time (the
+results file says how many you used); **Start again** puts the lesson's mission back; **Copy
+link** gives an address that opens the lesson (`?lesson=orbit-first`). A setting the lesson fixes
+that is changed anyway — by a mission link or over WebMCP — fails the flight, and the strip says
+which one.
+
+| | Lesson | What you change | Passed when |
+|---|---|---|---|
+| 1.1 | Your first orbit | nothing | the 500 km orbit is reached, and its period (±1 min) and speed (±0.05 km/s) are worked out |
+| 1.2 | Into the station's plane | the launch time | the ISS plane is reached directly: i within 0.1°, Ω within 0.5° |
+| 1.3 | A Hohmann transfer | nothing | the 2 000 km circle is reached, and the apogee burn's Δv (±5 %) and the period are worked out with vis-viva |
+| 1.4 | Payload and Δv | the payload mass | at least 17.5 t to 500 km with 150 m/s of Δv left |
+| 1.5 | Range safety and the launch site | the launch site | a site whose corridor licenses a polar launch, and the orbit |
+| 2.1 | Aerodynamic loads (Soyuz-2.1a) | the guidance (the acceleration limit) | peak q at most 25 kPa, the orbit reached, and the peak read (±1 kPa) |
+| 2.2 | PEG and IGM (Engineer) | the upper-stage guidance | 18.8 t to 500 km with an engine lost at T+80 s: the target orbit, explicit guidance engaged, 20 m/s left |
+| 2.3 | Inertial navigation without GNSS (Engineer, six-DOF) | the IMU grade | the position error within 500 m up to MECO, GNSS still off |
+| 2.4 | Monte Carlo 3σ (Engineer, six-DOF) | a Monte Carlo set, and the run you fly | a run of the set seeded 1 flown on its own to orbit, its perigee and its miss from the target read (±1 km) |
+| 3.1 | One engine out | the payload mass | the orbit with an engine lost at T+80 s, carrying at least 17.5 t |
+| 3.2 | A stuck gyro and the FDIR (Engineer, six-DOF) | the FDIR switch | the orbit, with IMU 1 voted out |
+| 3.3 | The crew's escape | nothing | the crew lands, and the peak load on them is read (±10 %) |
+| 4.1 | Reading the control loop (Engineer, six-DOF) | nothing | the pitch crossover and phase margin at max-Q read from the loop inspector (±10 %) |
+| 4.2 | Gains with margins (Engineer, six-DOF) | the pitch–yaw gains | at max-Q, a phase margin of 30° and a gain margin of 6 dB |
+| 4.3 | A step test in flight (Engineer, six-DOF) | the pitch–yaw gains, and the test you fly | a 2° pitch step flown before MECO overshoots by 6 % at most, and its overshoot is read (±5 points) |
+| 4.4 | Bending and the notch filter (Engineer, six-DOF) | the flexible-vehicle settings | through max-Q with the bending on and no breakup |
+| 5.1 | Bringing the booster home | the payload mass | at least 9 t to 500 km with the first stage on Landing Zone 1 |
+| 5.2 | Rendezvous and docking | the rendezvous profile | docked within 4 h of launch, and the time read (±0.1 h) |
+| 5.3 | Sputnik-1 (1957) | the payload mass | the 215 × 939 km orbit reached, and its period read (±0.2 min) |
+| 5.4 | Vostok-1 (1961) | the target orbit | the 181 × 327 km orbit Gagarin reached, and its period read (±0.2 min) |
+| 5.5 | Apollo 11: the way to the Moon (1969) | the target orbit | the S-IVB relit for the translunar injection (apogee past 300 000 km), and its Δv read (±3 %) |
+| 6.1 | THEOS-2 over Bangkok (Orbit section) | — worked from the data | the turn a sun-synchronous plane needs (±0.0005 °/day) and J₂'s (±0.01 °/day), the mean height (±2 km), the reach tilted 45° (±10 km), the local time over Bangkok (±0.02 h), and why a camera satellite flies such an orbit |
+| 6.2 | The Long March 5B stage of Tianhe (Orbit section) | — worked from the data | the tumbling cross-section (±1 m²) and C_D·A/m (±0.0003 m²/kg), the ±20 % window's two ends and the time actually left (±0.05 day each), the prediction's error (±1 point), the time broadside (±0.5 day), and why a window is given |
+| 6.3 | Iridium 33 and Cosmos 2251 (Engineer, Orbit section) | — worked from the data | the miss (±5 m), the speed (±0.05 km/s) and angle (±2°) of the meeting, the combined radius (±0.1 m), σ along the miss (±5 %, at least 0.5 m) and the miss in σ (±5 %, at least 1), the cautious probability against 1 in 10 000 (±30 times), and why 10⁻⁵¹ was wrong |
+
+The three historical lessons fly the vehicles, pads and dates of the real flights: the R-7 of
+1957 from Gagarin's Start with no upper stage, Vostok-K with Blok E, and Saturn V from LC-39A.
+The Moon is not part of the flight model, so Apollo 11 ends at the injection: the S-IVB raises
+the apogee to the Moon's distance, and what the Moon's gravity does three days later is left out.
+
+**A case lesson** (6.1–6.3) flies nothing. It opens the Orbit section's **Real satellites** at the
+case's satellite and tool — THEOS-2 with its overflights of Bangkok; the station, with the re-entry
+tool and its Long March 5B case study; the station, with the close approaches — at the lesson's
+level. The strip holds **The data**, the case sheet's own table (with the encounter plane for
+Iridium–Cosmos), and the sheet's questions: numbers to type, with their units, and one answer to
+choose. They are graded by the case sheet's key, with its tolerances (the table above), so the
+lesson and the printed key cannot disagree. The data are fixed when the lesson opens — THEOS-2's
+element set as the catalogue on screen has it, and the Sun's activity the re-entry is predicted with
+— so the table, the key and the grade stay together however the catalogue or the forecast changes
+meanwhile; the results file says which set and which forecast were used, and each **Check** counts
+as an attempt. After a pass (or once the answers are shown) each answer comes with its working, and
+the answer key and the Tianhe stage's error open in the Orbit section. **Show the tool** goes back to
+the case's tool; **Worksheet** makes the case's sheet, and its key once it gives nothing away. If
+the data cannot be read (the catalogue did not load), **Start again** reads them again.
+
+**The placement test** is 25 questions in six areas — 1 the basics of spaceflight, 2 orbital
+mechanics, 3 rocket performance, 4 guidance and navigation, 5 attitude control, 6 failures and
+safety — five from the basics and four from each of the others, easy to hard, with no clock. The
+questions and the numbers in the calculations are drawn for you from a bank of 157 (at least 25
+in every area), always to the same plan, so no two tests are alike but all are the same size and
+difficulty. Where a question is only knowledge it offers
+**I don't know**; where being sure of a wrong answer would matter it asks how sure you are. The
+questions come in several kinds: one answer of four; **several answers** (choose every right one);
+**put in order** (click the items first to last); a calculation; a value **read off a chart** of a
+flight flown in this simulator or off a **diagram** drawn with your own numbers (a ground track, a
+step response, a Bode plot); a diagram with lettered points (an orbit's apsides and nodes, the
+forces on a rocket, dispersed flights, three inertial units voting); **predict, then observe**,
+which shows the two flights after you answer; and **which vehicle is this?**, with a photograph of
+the real vehicle (from Wikimedia Commons, under free licences; the author is named in the answers,
+since it would give the answer away, and all are listed in `public/lessons/vehicles/CREDITS.txt`).
+The recommended start is always a lesson already written: the nearest one to the area you most
+need. The result is a radar
+of the six areas and a level for each (beginner, basic, proficient), your strengths, what to work
+on, your misconceptions — wrong answers you were sure of — and the recommended path through the
+lessons: which you can skip, which to go over, and a ★ where to start. Every lesson stays open
+whatever it says. **Answers and explanations** goes through every question. After the lessons,
+the **test after the lessons** asks different questions to the same plan, and the radar shows
+both.
+
+**Worksheets** (the third tab, `#/lessons/worksheets`, or **Worksheet** on a lesson's strip once
+its flight has ended) are printable sheets about a flight flown here — the open lesson's, or any
+mission on screen, flown to its end. A sheet has the mission, its key events, the flight's charts
+(altitude, speed, dynamic pressure, load factor, mass), questions worked from that flight — a value
+read off a chart at a time drawn for the student, the peak q and its time, the peak load, the first
+stage's burn time, the thrust-to-weight at lift-off, the first stage's ideal Δv and what the ascent
+lost of it, the period and perigee speed of the orbit reached — and questions from the placement
+test's bank in the areas you tick, with their diagrams and photographs. Type the class's names,
+one to a line, and a class code: each student gets their own numbers, drawn from the name and the
+code, so the same names and code always make the same sheets, in any language. **Download the
+worksheets** makes one file with a page for each student and no answers; **Download the answer
+key** makes a separate file with every student's answers, the tolerance that counts as right, and
+how each is worked out with the flight's own numbers. Either as HTML to print (Print → Save as PDF)
+or as a Word document to edit first. Values the questions ask for (max-Q, the lift-off T/W) are
+left out of the sheet's event table. A flight's sheet goes with the lesson the flight was flown in,
+or with none — not with whatever lesson is open when the sheet is made. With a case lesson open, the
+tab also offers that case's sheet and key, one for the whole class, from the data the lesson froze.
+
+**Keeping and handing in your work.** Progress and tests stay in this browser. **Export results**
+writes a `.orbitlab-results.json` file with your name (if you type it), each lesson's attempts,
+hints and graded flights, and your tests with their scores, sealed with a SHA-256 checksum that
+shows whether the file was edited after export (a check against accidents, not a signature).
+
+**Lessons of your own.** **Open lesson file…** reads a `.orbitlab-lesson.json` file: lessons and
+placement-test questions in the same format the built-in ones are written in (`src/lessons/
+lesson-file.ts`). A lesson is a mission document (as a mission file holds it, U01), the settings
+it locks, its criteria — a measure within bounds (`maxQ`, `dvLeft`, `orbit.inclination`, …), the
+outcome, an event, a number the student works out from the flight, or a check written in code —
+its hints, and its texts in English, Russian and Thai (a missing language falls back to English).
+A case lesson (`"kind": "case"`, with `"case"` one of `theos2`, `cz5b`, `iridium`) has no mission:
+its criteria name the case sheet's questions (`"item"`, as `src/worksheets/case-ids.ts` lists them),
+each optionally with a tolerance of its own for a number. A file that holds one is written as
+version 2; a file of flight lessons alone is still version 1, so an older copy of the app reads it.
+A question is a choice, several answers (`multi`), an ordering (`order`, its items in the right
+order), a calculation whose answer is an arithmetic expression of its drawn numbers, or a vehicle to
+recognise, with its area (1–6, as above), level and explanation, and optionally a chart of a
+recorded flight or one of the built-in diagrams (`src/lessons/assessment/diagrams.ts`). Anything that cannot be
+used is left out, and the catalogue says what and why. Over WebMCP, `list_lessons`,
+`start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
+the student (a case lesson too) and read how it is going — never the expected value of an answer.
+
+## 19. Historical missions
 
 Real flights, replayed on the day and at the second they flew: Sputnik 1 (1957) and Yuri
 Gagarin's Vostok 1 (1961) on the first R-7s, Alan Shepard's Mercury-Redstone 3 (1961), Apollo 11 on the Saturn V (1969), Soyuz MS-16 (the first crew on a

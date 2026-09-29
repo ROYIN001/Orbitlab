@@ -155,7 +155,10 @@ describe('explicit guidance in flight (roadmap G01)', () => {
     expect(standard.telemetry.some((s) => s.explicitGuidance)).toBe(false);
   }, 60000);
 
-  it('releases the six-DOF load relief smoothly, where the standard flight swings 24° at 500 Pa', () => {
+  // The standard flight's swing was 24° before Falcon 9's six-DOF pitch programme
+  // was fitted to webcast telemetry (docs/VALIDATION.md, F5); the earlier turn
+  // leaves less for the load relief to hold back, and it is 15° now.
+  it('releases the six-DOF load relief smoothly, where the standard flight swings 15° at 500 Pa', () => {
     const worst = (sim: Simulation) => {
       let max = 0;
       while (!sim.done && sim.state.t < 150) {
@@ -165,7 +168,7 @@ describe('explicit guidance in flight (roadmap G01)', () => {
       }
       return max;
     };
-    expect(worst(new Simulation(mission('falcon9', 'sixDof'), { headless: true }))).toBeGreaterThan(20);
+    expect(worst(new Simulation(mission('falcon9', 'sixDof'), { headless: true }))).toBeGreaterThan(12);
     expect(worst(new Simulation(mission('falcon9', 'sixDof', { law: 'peg' }), { headless: true }))).toBeLessThan(8);
   }, 120000);
 

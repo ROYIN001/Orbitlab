@@ -526,7 +526,7 @@ export class RigidDebrisRuntime {
     const carried = returnPropellant(rc, this.snapshot.mass, this.options.stage!.engine.ispVac);
     const c = boostbackCommand({ r: this.state.r, v: this.state.v, t: time, mass: this.snapshot.mass - (rc.propellant - carried),
       propellant: carried, entry: this.entryState() }, rg.model, rc.target!, rg.gmst0);
-    rc.guidance = { t: time, dir: c.dir, dvNeeded: c.dvNeeded, trim: memo?.trim ?? false };
+    rc.guidance = { t: time, dir: c.dir, dvNeeded: c.dvNeeded, miss: c.miss, trim: memo?.trim ?? false };
     return rc.guidance;
   }
 
@@ -557,10 +557,12 @@ export class RigidDebrisRuntime {
         return { nose: g.dir, throttle: lit ? minimum : 0, engines: lit ? this.centre : [] };
       }
       case 'boostback': {
-        const before = rc.guidance?.dvNeeded ?? Infinity;
+        // As in the point-mass tracker: the trim ends once the predicted miss
+        // stops shrinking, not on a wobble of the Δv still needed.
+        const before = rc.guidance?.miss ?? Infinity;
         const g = this.solution(time, rc.guidance?.trim ? TRIM_REPLAN_S : RETURN_REPLAN_S);
         const spent = rc.propellant <= rc.landingReserve;
-        if (g.dvNeeded < BOOSTBACK_DONE_DV || spent || (g.trim && g.dvNeeded > before + 1e-6)) {
+        if (g.dvNeeded < BOOSTBACK_DONE_DV || spent || (g.trim && (g.miss ?? 0) > before + 1)) {
           rc.phase = 'coast';
           rc.guidance = undefined;
           this.raised.push({ key: 'evt.boostbackEnd', severity: 'info', params: { name: d.name } });

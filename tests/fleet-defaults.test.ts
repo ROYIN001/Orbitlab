@@ -80,6 +80,9 @@ import {
 } from '../src/physics/mission';
 import { probeInsertion } from '../src/physics/autotune';
 import type { MissionConfig } from '../src/types';
+import { BUILTIN_LESSONS } from '../src/lessons/catalog';
+import { lessonConfig } from '../src/lessons/config';
+import type { MissionState } from '../src/config/mission-file';
 import { RAD, DEG, R_EARTH, MU_EARTH } from '../src/physics/constants';
 import {
   LAUNCH_TIME, allCases, caseKey, flyCase, acceptanceFailures, insertionTime, insertionLimit,
@@ -90,11 +93,12 @@ import {
 
 /**
  * Vehicles whose every matrix row is excluded, and the real mission that is
- * flown instead. Both are single-shot stacks: no restartable stage anywhere, so
+ * flown instead. All four are single-shot stacks: no restartable stage anywhere, so
  * the orbit the ascent cuts off in is the final one, and the matrix's
  * 420-600 km circular presets flown with an INERT payload are not missions they
  * have. Flown with the payload class they really launch — a spacecraft with its
- * own propulsion — both complete.
+ * own propulsion — Soyuz-2.1a and Long March 2D complete; the two historical
+ * R-7s fly the orbits they really flew, which they reach directly.
  *
  * The map carries the flight itself, not the name of a test that claims to fly
  * it. `a fully excluded vehicle must have a dedicated mission that succeeds`
@@ -118,7 +122,26 @@ const DEDICATED_MISSIONS: Record<string, DedicatedMission> = {
     name: 'real missions › Long March 2D delivers a sun-synchronous remote-sensing satellite from Jiuquan',
     fly: () => flyLongMarch2D(650),
   },
+  // C01: the two R-7s fly the missions they flew, as lessons 5.3 and 5.4 set them
+  // up and solve them (tests/lessons-history.test.ts)
+  sputnik8k71ps: {
+    name: 'track 5, historical missions › 5.3 Sputnik-1',
+    fly: () => flyLesson('adv-history', (s) => { s.payloadMass = 83.6; }),
+  },
+  vostok8k72k: {
+    name: 'track 5, historical missions › 5.4 Vostok-1',
+    fly: () => flyLesson('adv-vostok', (s) => { s.orbit = { ...s.orbit, apogee: 327e3 }; }),
+  },
 };
+
+/** A built-in lesson's mission, with the student's edits, flown to its end. */
+function flyLesson(id: string, edit: (s: MissionState) => void): Simulation {
+  const l = BUILTIN_LESSONS.find((x) => x.id === id)!;
+  const sim = new Simulation(lessonConfig(l.mission, edit), { headless: true });
+  let guard = 0;
+  while (!sim.done && sim.state.t < 4000 && guard++ < 400000) sim.step(sim.suggestedDt());
+  return sim;
+}
 
 
 describe('fleet acceptance with default guidance', () => {
@@ -732,9 +755,9 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('falcon9', 'cape', 'iss', 'starlink', 15600),
     milestones: [
       { label: 'max Q', at: maxQTime, published: '65-80 s', regression: [44, 58] },
-      { label: 'MECO', at: evTime('evt.meco'), published: '150-165 s', regression: [145, 165] },
-      { label: 'stage separation', at: evTime('evt.stageSep'), published: 'MECO + 3 s', regression: [148, 168] },
-      { label: 'MVac ignition', at: evTime('evt.ignition', 1), published: 'MECO + 7 s', regression: [152, 172] },
+      { label: 'MECO', at: evTime('evt.meco'), published: '150-165 s', regression: [146, 166] },
+      { label: 'stage separation', at: evTime('evt.stageSep'), published: 'MECO + 3 s', regression: [149, 169] },
+      { label: 'MVac ignition', at: evTime('evt.ignition', 1), published: 'MECO + 7 s', regression: [153, 173] },
       { label: 'fairing jettison', at: evTime('evt.fairingSep'), published: '190-230 s', regression: [185, 235] },
       { label: 'SECO', at: evTime('evt.seco'), published: '500-560 s', regression: [495, 565] },
     ],
@@ -765,7 +788,7 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('electron', 'mahia', 'sso', 'cubesats', 200),
     milestones: [
       // This wave corrected Rutherford from the file's old 24.9 / 27.5 kN to
-      // the published 24 kN sea level / 25.8 kN vacuum (see vehicles.ts), which
+      // the published 24 kN sea level / 25.8 kN vacuum (see src/data/parts.ts), which
       // is a change to an existing vehicle: the nine-engine mean mass flow is
       // 68.4 kg/s, the 9.7 t first stage burns 142 s instead of 132 s, and
       // measured MECO moves from T+129 s (pre-wave, docs/history/AUDIT-2026-09-16.md
@@ -799,7 +822,7 @@ const REFERENCE_MISSIONS: { name: string; fly: () => Simulation; milestones: Mil
     fly: () => flyReference('ariane64', 'kourou', 'gto', 'cubesats', 5750),
     milestones: [
       // The P120C mean thrust is now derived from the grain mass and the
-      // published 135 s burn time (see the engine table in vehicles.ts), so
+      // published 135 s burn time (see the P120C part in src/data/parts.ts), so
       // separation lands inside the published band instead of ~24 s early.
       { label: 'P120C separation', at: evTime('evt.boosterSep'), published: '130-140 s', regression: [130, 145] },
       // Flown on the published TIMELINE, not on the heating placard: Ariane 6
@@ -920,12 +943,14 @@ describe('reference timelines', () => {
    *
    *    Raising Falcon 9's `qStart` to the real ~33 kPa peak was tried and
    *    measured (the table is in docs/PHYSICS.md §6a and next to the value in
-   *    vehicles.ts): the marker moves to T+57.6 s and still misses 65-80 s,
-   *    while MECO moves to T+145.0 s and fairing jettison to T+188.8 s, both
-   *    outside their own published windows. Removing the bucket entirely puts
-   *    max Q at T+59.2 s — the peak TIME is a property of the ascent profile,
-   *    not of the bucket — so no value of `qStart` takes this row off the list
-   *    and three values put two more rows on it.
+   *    vehicles.ts): with the published first-stage masses the marker moves to
+   *    T+61.3 s and still misses 65-80 s, and removing the bucket entirely does
+   *    no better — the peak TIME is a property of the ascent profile, not of
+   *    the bucket — so no value of `qStart` takes this row off the list. (With
+   *    the earlier masses it also pushed MECO and fairing jettison out of their
+   *    windows; with the published ones they stay in, and the bucket stays at
+   *    22 kPa because a later one moves the early ascent further from the
+   *    webcast telemetry in docs/VALIDATION.md.)
    *  - Electron MECO (T+138 s vs 145-155 s) — the corrected 24 kN / 25.8 kN
    *    Rutherford gives a 142 s first-stage burn; still ~5 % early.
    *  - Ariane 64 core cut-off (T+445 s vs ~460 s) — the Vulcain phase runs ~15 s
@@ -935,7 +960,7 @@ describe('reference timelines', () => {
    *    Soyuz row left: the 87 000 kg Blok A load that produces it is
    *    deliberately kept on 2.1a for exactly that reason, while the audited
    *    90 100 kg went to 2.1b, which has no published clock to move (see the
-   *    core helpers in src/data/vehicles.ts).
+   *    two R-7 core bodies in src/data/parts.ts).
    *  - H3-22 SRB-3 burnout (T+104.3 s vs 105-115 s) — 0.7 s early, the smallest
    *    disagreement in the table and the one most likely to flip. It is listed
    *    rather than rounded away because the rule here is the published window,

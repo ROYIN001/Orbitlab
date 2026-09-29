@@ -4,7 +4,7 @@
  * capsule and trunk are the nose, and nothing else carries it.
  */
 import { describe, expect, it } from 'vitest';
-import { missionVehicle, vehicleById } from '../src/data/vehicles';
+import { openTopVehicle, vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import { VehicleModel } from '../src/physics/vehicle';
 import { buildRigidVehicle } from '../src/physics/rigid/mass';
@@ -15,16 +15,16 @@ const dragon = satelliteById('crewDragon');
 
 describe('Crew Dragon on Falcon 9', () => {
   it('flies without the fairing, its own shape the nose', () => {
-    const spec = missionVehicle('falcon9', dragon);
+    const spec = openTopVehicle(vehicleById('falcon9'), dragon);
     expect(spec.fairing).toBeNull();
     expect(spec.exposedPayload).toEqual({ diameter: 4.0, length: 8.1, noseLength: 4.5 });
-    expect(missionVehicle('falcon9', dragon)).toBe(spec);
+    expect(openTopVehicle(vehicleById('falcon9'), dragon)).toBe(spec);
     // any other payload keeps the catalogue's vehicle, fairing and all
-    expect(missionVehicle('falcon9', satelliteById('cubesats'))).toBe(vehicleById('falcon9'));
+    expect(openTopVehicle(vehicleById('falcon9'), satelliteById('cubesats'))).toBe(vehicleById('falcon9'));
   });
 
   it('puts the nose on the capsule and takes it away with the payload', () => {
-    const spec = missionVehicle('falcon9', dragon);
+    const spec = openTopVehicle(vehicleById('falcon9'), dragon);
     const vm = new VehicleModel(spec, dragon.mass);
     const withDragon = buildRigidVehicle(vm, { payloadDiameter: 4, payloadLength: 8.1 });
     const table = withDragon.aero.table!;

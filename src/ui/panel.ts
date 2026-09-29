@@ -32,17 +32,15 @@
  *   better.
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
-import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, vehicleById } from '../data/vehicles';
+import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
 import { liftoffMass, liftoffThrust, idealDeltaV, VehicleModel } from '../physics/vehicle';
 import {
-  planMission, launchWindows, resolveTarget, inclinationCorridor, maxInclinationFor, canBurnAfterAscent,
-  apsisTolerance, perigeeTolerance, ASCENT_MARGIN_REQUIRED, RAAN_TOLERANCE, type MissionPlan,
+  planMission, launchWindows, resolveTarget, inclinationCorridor, maxInclinationFor, type MissionPlan,
 } from '../physics/mission';
-import { wrapPi } from '../physics/orbital';
 import { probeInsertion, type InsertionProbe } from '../physics/autotune';
 import { runTuneJob } from '../physics/tune-job';
 import { DEG, G0, RAD } from '../physics/constants';
@@ -53,8 +51,11 @@ import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
 import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionSettings } from './watch-missions';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
+import {
+  CHALLENGE_PRESETS, CHALLENGE_TEXT, ENGINEER_SETTING_TITLE, autoGuidanceRows, challengeTiming, engineerSettings, hasAdjustments,
+  heaviestPassing, withoutEngineerSettings,
+} from './explore';
 import { defaultDynamics, supportsRigid } from '../physics/rigid/config';
-import { SHIP_RETURN_VERIFIED_PAYLOAD } from '../physics/sim/ship-descent';
 import type { DynamicsConfig } from '../types';
 import type { FlexConfig } from '../types';
 import { FLEX_DEFAULTS } from '../physics/rigid/flex';
@@ -70,24 +71,42 @@ import { faultKindName } from './fault-names';
 import type { ExplicitGuidanceConfig } from '../types';
 import { EXPLICIT_FIELD_KEYS } from '../physics/explicit-guidance';
 import { copyMission, type MissionState } from '../config/mission-file';
+import { configuredDispersion } from '../physics/dispersed-flight'; // P08
+import { propulsionElements } from '../physics/dispersion'; // P08
+import type { DispersedFlightConfig } from '../types'; // P08
 import { MissionShare } from './mission-share';
+import {
+  missionVerdict, missionCapability, ratedPayload, orbitClassOf, marginalMission,
+  type Capability, type Feasibility, type OrbitClass, type VerdictCause, type VerdictInput,
+} from '../config/verdict';
+
+// The verdict itself is DOM-free and lives in src/config/verdict.ts (roadmap
+// D04's readiness review calls it too); every name stays importable from here.
+export {
+  missionVerdict, missionCapability, ratedPayload, orbitClassOf, marginalMission,
+  type Capability, type Feasibility, type OrbitClass, type VerdictCause, type VerdictInput,
+};
 
 export interface SetupCallbacks {
   onLaunch: (cfg: MissionConfig) => void;
   onReset: () => void;
   onChange?: (cfg: MissionConfig) => void;
   /**
-   * The user asked for the other layout from inside the panel (its mode
-   * select, or "Show advanced guidance parameters"). The app owns the mode —
-   * it is also in the URL and the top bar — so the panel reports the request
+   * The user asked for the other layout from inside the panel ("Adjust in the
+   * Engineer mode" under Explore's computed guidance). The app owns the mode —
+   * it is in the URL and the top bar — so the panel reports the request
    * instead of switching itself.
    */
   onExperience?: (mode: ExperienceMode) => void;
+  /** G05: open the Monte Carlo window on the mission as set here. */
+  onMonteCarlo?: (opener: HTMLElement) => void;
 }
 
 interface SetupState {
   dynamics?: DynamicsConfig;
   vehicleId: string;
+  /** S02: a custom vehicle, from a mission file; its id is `vehicleId` */
+  vehicleSpec?: VehicleSpec;
   satelliteId: string;
   siteId: string;
   orbitId: string;
@@ -109,15 +128,6 @@ interface SetupState {
   payloadMass: number;
 }
 
-/** Which rated payload figure a target orbit should be measured against. */
-export type OrbitClass = 'leo' | 'sso' | 'gto';
-
-export interface Feasibility {
-  level: 'ok' | 'warn' | 'fail';
-  text: string;
-}
-
-
 /** Whether `vehicleId` carries this payload (Crew Dragon flies on Falcon 9 only). */
 const carries = (vehicleId: string, sat: SatelliteSpec): boolean => !sat.carriers || sat.carriers.includes(vehicleId);
 
@@ -138,28 +148,21 @@ function num(v: number, digits = 0): string {
   }
 }
 
+/** The fewest decimals (up to two) that print a value exactly: 1.5, 0.45, 4. */
+function decimals(v: number): number {
+  for (let d = 0; d < 2; d++) if (Math.abs(Math.round(v * 10 ** d) - v * 10 ** d) < 1e-9) return d;
+  return 2;
+}
+
+/** Where a payload to low orbit sits between 100 kg and 150 t, on a logarithmic scale, 0–1. */
+export function liftShare(kg: number): number {
+  const lo = Math.log10(100), hi = Math.log10(150e3);
+  return Math.min(1, Math.max(0, (Math.log10(Math.max(kg, 1)) - lo) / (hi - lo)));
+}
+
 const orbitName = (o: OrbitSpec): string => localized(`orbit.${o.id}.name`, o.name);
 const orbitDesc = (o: OrbitSpec): string => localized(`orbit.${o.id}.desc`, o.description);
 const orbitShort = (o: OrbitSpec): string => localized(`orbit.${o.id}.short`, o.id.toUpperCase());
-
-/** Which payload rating this target should be judged against. */
-export function orbitClassOf(orbit: OrbitSpec): OrbitClass {
-  if (orbit.apogee >= 30000e3) return 'gto';
-  if (orbit.raanMode === 'ltan' || orbit.inclination === 'sso') return 'sso';
-  if (typeof orbit.inclination === 'number' && orbit.inclination >= 95) return 'sso';
-  return 'leo';
-}
-
-/**
- * The vehicle's rated payload for an orbit class, and the class the figure
- * actually belongs to. A vehicle with no published SSO figure is judged on its
- * LEO rating, and says so, rather than being failed for missing data.
- */
-export function ratedPayload(spec: VehicleSpec, cls: OrbitClass): { cap: number; cls: OrbitClass } {
-  if (cls === 'gto') return { cap: spec.payloadGTO, cls: 'gto' };
-  if (cls === 'sso') return spec.payloadSSO ? { cap: spec.payloadSSO, cls: 'sso' } : { cap: spec.payloadLEO, cls: 'leo' };
-  return { cap: spec.payloadLEO, cls: 'leo' };
-}
 
 /**
  * Whether the site's range-safety corridor contains this inclination — BOTH
@@ -176,238 +179,13 @@ export function reachableFromSite(site: SiteExtra, incDeg: number): boolean {
   return inclinationCorridor(site, incDeg * DEG) === 'ok';
 }
 
-/**
- * What the mission plan says about this stack's ability to DELIVER the orbit,
- * as opposed to its ability to lift the mass (release review 2, major #3).
- *
- * Every number here is the planner's own, evaluated with the planner's own
- * thresholds, so the verdict and the flight cannot drift apart:
- *
- * - `ascentShortfall` is `MissionPlan.ascentMargin` against
- *   `ASCENT_MARGIN_REQUIRED` — the ideal Δv of the stages that have to fly the
- *   ascent, minus what the mission's own orbit costs them. It is the same test
- *   `tests/fleet-defaults.test.ts` files a row under `BEYOND_CAPABILITY` with.
- * - `stranded` is the `ARCHITECTURE` case: nothing in the stack can light an
- *   engine after cut-off (`canBurnAfterAscent`), so the orbit the ascent cuts
- *   off in is final — and the plan's own insertion orbit is not the mission's,
- *   judged by the acceptance bands the simulation itself uses. Long March 2D
- *   from Jiuquan to a 600 km sun-synchronous orbit is exactly this: two
- *   hypergolic stages, no restart, an inert payload, and a direct insertion
- *   that closes at 200 km.
- * - `burnShortfall` is a BOUND, not an estimate: whatever is left when the
- *   ascent cuts off, the stage that has to fly the post-ascent burns can never
- *   deliver more than its own ideal Δv (plus the spacecraft's), and the plan
- *   asks it for `dvEstimateBurns`. The fairing is gone by then, so it is not
- *   carried.
- *
- * Deliberately still not a headless flight (see `missionVerdict`): what this
- * cannot see is the ascent LOSSES, which is why a row like `pslvxl/gto/50` —
- * short of nothing on paper and out of propellant in the air — is invisible
- * here and is recorded as such in tests/panel-verdict.test.ts.
- */
-export interface Capability {
-  /**
-   * m/s the ascent stages are short of this orbit, 0 when they are not short.
-   * Measured against the line the planner itself draws — the orbit's cost PLUS
-   * `ASCENT_MARGIN_REQUIRED` — so a stack that clears the cost with no margin
-   * to spare still reports the margin it is missing.
-   */
-  ascentShortfall: number;
-  /** nothing in the stack can light an engine after the ascent cuts off */
-  singleShot: boolean;
-  /** …and the orbit it cuts off in is not the mission's */
-  stranded: boolean;
-  /** m/s the post-ascent burns exceed what can possibly fly them, 0 when they do not */
-  burnShortfall: number;
+/** The payload step the verdict's fix searches in: 10 kg for a small launcher, 100 kg otherwise. */
+export function payloadStep(spec: VehicleSpec): number {
+  return spec.payloadLEO < 5000 ? 10 : 100;
 }
 
-export function missionCapability(
-  spec: VehicleSpec, satellite: SatelliteSpec, payloadMass: number, plan: MissionPlan,
-): Capability {
-  const singleShot = !canBurnAfterAscent(spec, satellite, plan.weakFinalStage);
-  const onTarget = Math.abs(plan.insertionApoapsis - plan.target.apogee) <= apsisTolerance(plan.target.apogee)
-    && Math.abs(plan.insertionAltitude - plan.target.perigee) <= perigeeTolerance(plan.target);
-  const last = spec.stages[spec.stages.length - 1];
-  // The kick stage never flies the ascent, and a restartable last stage can
-  // light again; anything else has nothing left to give the burns but the
-  // spacecraft's own engine.
-  const relights = plan.weakFinalStage || last.restartable === true;
-  const afterAscent = (relights ? new VehicleModel({ ...spec, stages: [last], fairing: null }, payloadMass).deltaVRemaining() : 0)
-    + new VehicleModel(spec, payloadMass, false, satellite).spacecraftDeltaV();
-  return {
-    ascentShortfall: Math.max(0, ASCENT_MARGIN_REQUIRED - plan.ascentMargin),
-    singleShot,
-    stranded: singleShot && !onTarget,
-    burnShortfall: Math.max(0, plan.dvEstimateBurns - afterAscent),
-  };
-}
-
-/** Everything the verdict is derived from. Pure data, so it can be tested without a DOM. */
-export interface VerdictInput {
-  spec: VehicleSpec;
-  site: SiteExtra;
-  orbit: OrbitSpec;
-  /** what is being flown, for its own propulsion and its rated mass */
-  satellite: SatelliteSpec;
-  payloadMass: number;
-  /** resolved target inclination, deg */
-  inclinationDeg: number;
-  /**
-   * The mission plan for this configuration, or null when the planner rejected
-   * it. Everything the verdict says about DELIVERING the orbit — the corridor,
-   * the ascent margin, the insertion orbit, the burn budget — comes from here,
-   * so the verdict cannot promise something the planner does not.
-   */
-  plan: MissionPlan | null;
-  failureMode: FailureMode;
-  /** the vehicle forced a different site and the change has not been reported yet */
-  siteReassigned: boolean;
-  /**
-   * A headless flight of the ascent and the insertion, when one was run.
-   *
-   * The verdict is still a static budget everywhere else, and deliberately so.
-   * This is the single question the budget provably cannot answer — *does the
-   * stack get into orbit at all?* — because for a stack that carries a kick
-   * stage the answer turns on the ascent LOSSES, which is the one term only a
-   * flight measures (`probeInsertion` carries the measurement that rules out
-   * the static alternatives). Left null the verdict behaves exactly as it did.
-   *
-   * `SetupPanel` runs it only when the static budget already says the mission
-   * is marginal — the ascent stages short of the orbit, or the payload at 90 %
-   * of the rating or above — so a comfortable configuration still costs
-   * nothing, and a marginal one costs the 7-95 ms the probe measures at.
-   */
-  insertion?: InsertionProbe | null;
-}
-
-/**
- * Pre-flight feasibility verdict (audit B12), from data and the mission plan.
- *
- * Ordering is by how badly the mission is broken: no rating, over-capacity, a
- * target outside the site's range-safety corridor and a stack that cannot
- * deliver the orbit are failures; an unreachable inclination costs a plane
- * change; the site reassignment is news about what the user just did; and the
- * rest are margins and caveats on a mission that will fly.
- *
- * **An armed failure is reported whatever else is true.** It used to be the
- * last branch of the chain, so the shipped default mission — permanently tight
- * at 7 150 of 7 430 kg — never mentioned it: arming "Range-safety destruct"
- * left the note reading "Tight margin…" and the flight then ended with
- * `evt.ftsCommanded` at T+70 s (release review 2, minor #4). An armed
- * loss-of-vehicle is more important news than a 96 % margin, so it is written
- * FIRST and the rest of the verdict follows it, rather than being ordered
- * against it.
- *
- * `siteReassigned` is deliberately a **one-shot** input, cleared by the panel
- * as soon as it has been shown. Left sticky it masked every later verdict:
- * once the user picked a vehicle that does not fly from the selected site, the
- * note stayed on "this vehicle does not fly from the previous site" for the
- * rest of the session and never reported a tight margin, an over-capacity
- * payload or an armed failure again.
- *
- * Deliberately not a headless flight, with one exception: a full mission costs
- * tens of milliseconds per keystroke, and `runAscent` stops at the parking
- * orbit, so it reports success for missions that later run out of propellant
- * and failure for missions whose coast outlives its 2400 s horizon. The
- * exception is `VerdictInput.insertion`, which asks only whether the stack
- * reaches an orbit at all — the question stopping at the parking orbit
- * answers — and is supplied by the caller rather than run here.
- */
-export function missionVerdict(i: VerdictInput): Feasibility {
-  const cls = orbitClassOf(i.orbit);
-  const { cap, cls: capCls } = ratedPayload(i.spec, cls);
-  const className = t(`orbit.class.${capCls}`);
-  // Written first and carried into whatever the rest of the verdict turns out
-  // to be, so no branch below can return without it.
-  const armed = i.failureMode !== 'none' ? t('setup.verdict.failureArmed', { mode: t(`setup.fail.${i.failureMode}`) }) : '';
-  const planeError = i.plan && i.plan.target.raan !== null
-    ? Math.abs(wrapPi(i.plan.raanExpected - i.plan.target.raan)) : 0;
-  const planeWarning = planeError > RAAN_TOLERANCE
-    ? t('setup.verdict.offWindow', { error: (planeError * RAD).toFixed(1) }) : '';
-  const say = (level: Feasibility['level'], ...clauses: string[]): Feasibility =>
-    ({ level: planeWarning && level === 'ok' ? 'warn' : level,
-      text: [armed, planeWarning, ...clauses].filter((s) => s !== '').join(' ') });
-
-  if (cap <= 0) {
-    return say('fail', t('setup.verdict.noRating', { vehicle: i.spec.name, class: t(`orbit.class.${cls}`) }));
-  }
-  if (i.payloadMass > cap) {
-    return say('fail', t('setup.verdict.overCapacity', { mass: num(i.payloadMass), cap: num(cap), class: className, vehicle: i.spec.name }));
-  }
-  // Range safety before performance: a heading the site may not fly is not a
-  // margin the operator can trade, and no amount of Δv buys it.
-  const corridor = inclinationCorridor(i.site, i.inclinationDeg * DEG);
-  if (corridor === 'aboveCorridor') {
-    // The upper bound quoted is the one the check used — the reach of the
-    // site's azimuth window — not the declared `maxInclination`, which is the
-    // same figure rounded and could print a different last digit.
-    return say('fail', t('setup.verdict.corridor', {
-      inc: i.inclinationDeg.toFixed(1), site: siteName(i.site),
-      min: i.site.minInclination.toFixed(1), max: (maxInclinationFor(i.site) * RAD).toFixed(1),
-    }));
-  }
-  const capability = i.plan ? missionCapability(i.spec, i.satellite, i.payloadMass, i.plan) : null;
-  if (capability && i.plan) {
-    // Nothing can burn after cut-off, so the ascent has to BE the mission: the
-    // two ways that fails are not having the Δv for the orbit and not being
-    // able to arrive on it (direct insertion closes at DIRECT_INSERTION_CEILING).
-    if (capability.singleShot && capability.ascentShortfall > 0) {
-      return say('fail', t('setup.verdict.beyondCapability', { dv: num(Math.round(capability.ascentShortfall)), vehicle: i.spec.name }));
-    }
-    if (capability.stranded) {
-      return say('fail', t('setup.verdict.noRestart', {
-        alt: num(Math.round(i.plan.insertionAltitude / 1000)), ap: num(Math.round(i.plan.insertionApoapsis / 1000)),
-        pe: num(Math.round(i.plan.target.perigee / 1000)), target: num(Math.round(i.plan.target.apogee / 1000)),
-      }));
-    }
-    if (capability.burnShortfall > 0) {
-      return say('fail', t('setup.verdict.burnBudget', {
-        dv: num(Math.round(i.plan.dvEstimateBurns)), have: num(Math.round(i.plan.dvEstimateBurns - capability.burnShortfall)),
-      }));
-    }
-  }
-  // Last of the capability failures, because it is the least specific: the
-  // three above name what is missing, this one only reports that the flight was
-  // made and the stack did not get into orbit. It is also the only one that can
-  // see an ascent-loss shortfall, which is why the note it replaces was wrong —
-  // "the upper stage has to make up the difference" is true of Proton-M/Briz-M
-  // right up to the payload at which the upper stage cannot, and a 19.6 kN
-  // Briz-M under 29 t stops being able to somewhere between 5.75 t and 7.15 t.
-  if (i.insertion && !i.insertion.reachesOrbit) {
-    return say('fail', t('setup.verdict.noInsertion', { vehicle: i.spec.name }));
-  }
-  const reachable = i.plan ? i.plan.inclinationReachable : corridor === 'ok';
-  if (!reachable) {
-    return say('warn', t('setup.verdict.inclination', { inc: i.inclinationDeg.toFixed(1), site: siteName(i.site), min: i.site.minInclination.toFixed(1) }));
-  }
-  if (i.siteReassigned) {
-    return say('warn', t('setup.verdict.siteChanged', { site: siteName(i.site) }));
-  }
-  const notes: string[] = [];
-  // Short on paper, but something above the ascent can make it up — which is
-  // how Proton-M and Angara-A5 fly every one of their missions in this model,
-  // their three or four core stages being short of a direct ascent and the
-  // Briz-M finishing the job. Reported rather than hidden, and not a failure.
-  if (capability && capability.ascentShortfall > 0) {
-    notes.push(t('setup.verdict.ascentShort', { dv: num(Math.round(capability.ascentShortfall)) }));
-  }
-  // At or above 90 % of the rating. Inclusive: the fleet matrix's own 90 % rows
-  // land exactly on this line, and several of them are `BEYOND_CAPABILITY`.
-  if (i.payloadMass >= cap * 0.9) {
-    notes.push(t('setup.verdict.tight', { mass: num(i.payloadMass), cap: num(cap), class: className }));
-  }
-  // A suborbital ship brings its payload home with it, and it has only been
-  // flown home with so much (`SHIP_RETURN_VERIFIED_PAYLOAD`).
-  if (i.orbit.suborbital && i.payloadMass > SHIP_RETURN_VERIFIED_PAYLOAD) {
-    notes.push(t('setup.verdict.suborbitalHeavy', { mass: num(i.payloadMass), max: num(SHIP_RETURN_VERIFIED_PAYLOAD) }));
-  }
-  // A dogleg is how the site flies this plane, not a problem with the mission:
-  // said, but it does not turn a ready verdict into a warning.
-  const dogleg = i.plan && i.plan.doglegDeg > 0
-    ? t('setup.verdict.dogleg', { site: siteName(i.site), deg: i.plan.doglegDeg.toFixed(1) }) : '';
-  if (armed !== '' || notes.length > 0) return say('warn', ...notes, dogleg);
-  return say('ok', t('setup.verdict.readyMargin', { mass: num(i.payloadMass), cap: num(cap), class: className }), dogleg);
-}
+/** Explore's title over the verdict, by its level. */
+const VERDICT_LIGHT: Record<Feasibility['level'], string> = { ok: 'setup.light.ok', warn: 'setup.light.warn', fail: 'setup.light.fail' };
 
 export class SetupPanel {
   readonly root: HTMLElement;
@@ -429,6 +207,14 @@ export class SetupPanel {
   private statsEl: HTMLElement | null = null;
   private windowsEl: HTMLElement | null = null;
   private launchBtn: HTMLButtonElement | null = null;
+  /** Explore: the payload against the vehicle's rating, and the verdict's fixes */
+  private meterEl: HTMLElement | null = null;
+  private fixesEl: HTMLElement | null = null;
+  private scrollEl: HTMLElement | null = null;
+  /** Explore: the set-up step on screen */
+  private step: 1 | 2 | 3 = 1;
+  /** Explore: what the last fix did, until the next edit */
+  private fixMessage = '';
   private readonly fieldInputs = new Map<string, { input: HTMLInputElement; error: HTMLElement }>();
   private readonly fieldDrafts = new Map<string, string>();
   private readonly inputIssues = new Map<string, ValidationIssue>();
@@ -452,13 +238,15 @@ export class SetupPanel {
       payloadMass: satelliteById('crew').mass,
       dynamics: defaultDynamics('soyuz21a'),
     };
+    // Explore launches into a plane at its window: the default mission is the ISS's
+    if (this.experience === 'learning') this.snapToWindow();
     this.tunedFor = this.missionSignature();
     this.render();
   }
 
   /** The guidance that will be flown: the vehicle's own programme plus operator edits. */
   get guidance(): GuidanceParams {
-    return { ...guidanceForVehicle(vehicleById(this.state.vehicleId), undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
+    return { ...guidanceForVehicle(missionVehicle(this.state), undefined, this.state.dynamics?.model), ...this.state.guidanceOverrides };
   }
 
   getConfig(): MissionConfig {
@@ -466,6 +254,7 @@ export class SetupPanel {
     const s = this.state;
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
+      ...(s.vehicleSpec ? { vehicleSpec: structuredClone(s.vehicleSpec) } : {}),
       launchTime: new Date(s.launchTime.getTime()), guidance: this.guidance, failure: { ...s.failure },
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
@@ -497,6 +286,7 @@ export class SetupPanel {
       case 'suborbital': return t('setup.validation.suborbital');
       case 'failureUnavailable': return t('setup.validation.failureUnavailable');
       case 'rendezvousUnavailable': return t('setup.validation.rendezvousUnavailable');
+      case 'vehicleSpec': return t('setup.validation.vehicleSpec');
     }
   }
 
@@ -519,10 +309,18 @@ export class SetupPanel {
     if (this.launchBtn) this.launchBtn.disabled = this.tuning || issues.length > 0;
     const tune = this.root.querySelector<HTMLButtonElement>('[data-action="autotune"]');
     if (tune && !this.tuning) tune.disabled = this.running || issues.length > 0;
+    // Explore: a step holding a field to correct says so on its tab
+    for (const tab of this.root.querySelectorAll<HTMLElement>('.explore-step-tab')) {
+      const pane = this.root.querySelector(`.explore-step[data-step="${tab.dataset.step}"]`);
+      tab.dataset.invalid = String(!!pane?.querySelector('[aria-invalid="true"]'));
+    }
     if (issues.length && this.noteEl) {
       this.noteEl.className = 'status-note fail';
       const text = this.noteEl.querySelector('.status-text');
       if (text) text.textContent = t('setup.validation.summary');
+      const title = this.noteEl.querySelector('.status-title');
+      if (title) title.textContent = t('setup.light.fail');
+      this.fixesEl?.replaceChildren();
     } else if (this.noteEl) this.updateVerdict();
   }
 
@@ -545,6 +343,16 @@ export class SetupPanel {
 
   private clearOrbitDrafts(): void {
     this.clearFieldDrafts('setup.perigee', 'setup.apogee', 'setup.inclination', 'setup.argPerigee', 'setup.raan', 'setup.ltan');
+  }
+
+  /** New mission: the rocket back on the pad and the set-up open again (the Explore debrief's "fly again" too). */
+  backToSetup(): void {
+    this.cancelTune();
+    this.fieldDrafts.clear();
+    this.inputIssues.clear();
+    this.running = false;
+    this.render();
+    this.cb.onReset();
   }
 
   setRunning(r: boolean): void {
@@ -587,6 +395,7 @@ export class SetupPanel {
    */
   applyExternalEdit(opts?: { siteReassigned?: boolean }): Feasibility {
     this.cancelTune();
+    this.fixMessage = '';
     this.fieldDrafts.clear();
     this.inputIssues.clear();
     this.siteReassigned = !!opts?.siteReassigned;
@@ -609,7 +418,9 @@ export class SetupPanel {
     // nor its pad, nor its flight to the station
     this.state.padId = mission.padId;
     this.state.rendezvous = mission.rendezvous ? { ...mission.rendezvous } : undefined;
-    this.state.dynamics = defaultDynamics(this.state.vehicleId);
+    // and a catalogue vehicle's, unless it carries its own (S02)
+    this.state.vehicleSpec = mission.vehicleSpec ? structuredClone(mission.vehicleSpec) : undefined;
+    this.state.dynamics = defaultDynamics(missionVehicle(this.state));
     this.tuneMessage = '';
     this.applyExternalEdit();
     this.cb.onChange?.(this.getConfig());
@@ -633,7 +444,12 @@ export class SetupPanel {
     this.cancelTune();
     Object.assign(this.state, copyMission(mission));
     if (!mission.recoveryPlan) this.state.recoveryPlan = undefined;
+    if (!mission.vehicleSpec) this.state.vehicleSpec = undefined;
     if (!mission.dynamics) this.state.dynamics = undefined;
+    // nor the last mission's pad or flight to the station: Vostok-1's Site 1
+    // left on a Saturn V at LC-39A made the next lesson unlaunchable (C01)
+    if (!mission.padId) this.state.padId = undefined;
+    if (!mission.rendezvous) this.state.rendezvous = undefined;
     this.tuneMessage = '';
     this.applyExternalEdit();
     this.cb.onChange?.(this.getConfig());
@@ -654,7 +470,7 @@ export class SetupPanel {
   /** What an auto-tune result is valid for: change any of it and the tune is stale. */
   private missionSignature(): string {
     const s = this.state;
-    return JSON.stringify({ vehicle: s.vehicleId, site: s.siteId, orbit: s.orbit,
+    return JSON.stringify({ vehicle: s.vehicleId, custom: s.vehicleSpec, site: s.siteId, orbit: s.orbit,
       payload: s.payloadMass, satellite: s.satelliteId, launchTime: s.launchTime,
       failure: s.failure, recovery: s.boosterRecovery, plan: s.recoveryPlan, dynamics: s.dynamics });
   }
@@ -694,7 +510,7 @@ export class SetupPanel {
     inp.step = String(step);
     inp.setAttribute('aria-label', t(labelKey));
     const def = Object.values(GUIDANCE_FIELDS).find((f) => `setup.${f.key}` === labelKey);
-    const stored = def ? guidanceLimits(def.key, vehicleById(this.state.vehicleId)) : null;
+    const stored = def ? guidanceLimits(def.key, missionVehicle(this.state)) : null;
     const limits = def && stored
       ? { min: stored.min === undefined ? undefined : stored.min / def.scale, max: stored.max === undefined ? undefined : stored.max / def.scale }
       : fieldLimits(labelKey, this.state.orbit) ?? { min, max };
@@ -795,29 +611,6 @@ export class SetupPanel {
     return section;
   }
 
-  private experienceSection(): HTMLElement {
-    const section = this.el('section', 'config-section experience-section');
-    const label = this.el('label', 'field experience-label');
-    label.append(this.el('span', undefined, t('setup.mode.label')));
-    const select = this.el('select');
-    select.id = 'experience-mode';
-    select.setAttribute('aria-label', t('setup.mode.label'));
-    for (const [value, text] of [['learning', t('setup.mode.learning')], ['advanced', t('setup.mode.advanced')]]) {
-      const option = this.el('option', undefined, text);
-      option.value = value;
-      option.selected = this.experience === value;
-      select.append(option);
-    }
-    select.addEventListener('change', () => {
-      const mode = select.value as ExperienceMode;
-      if (this.cb.onExperience) this.cb.onExperience(mode); else this.setExperience(mode);
-    });
-    label.append(select);
-    section.append(label, this.el('p', 'field-note', t(this.experience === 'learning' ? 'setup.mode.learningNote' : 'setup.mode.advancedNote')));
-    if (this.experience === 'learning') section.append(this.el('p', 'field-note experience-glossary', t('setup.mode.glossary')));
-    return section;
-  }
-
   private statCell(label: string, value: string, unit?: string): HTMLElement {
     const cell = this.el('div');
     cell.appendChild(this.el('small', undefined, label));
@@ -829,6 +622,7 @@ export class SetupPanel {
 
   private changed(): void {
     this.cancelTune();
+    this.fixMessage = '';
     // An auto-tune result belongs to the mission it was measured on.
     const sig = this.missionSignature();
     if (sig !== this.tunedFor) {
@@ -871,13 +665,14 @@ export class SetupPanel {
     root.dataset.experience = this.experience;
     this.fieldInputs.clear();
     root.replaceChildren();
-    const vehicle = vehicleById(s.vehicleId);
+    const vehicle = missionVehicle(s);
     if (!vehicle.sites.includes(s.siteId)) {
       s.siteId = vehicle.sites[0];
       this.siteReassigned = true;
     }
 
     s.failure.stage = Math.min(s.failure.stage, vehicle.stages.length - 1);
+    const learning = this.experience === 'learning';
 
     // heading
     const heading = this.el('div', 'panel-heading');
@@ -885,50 +680,46 @@ export class SetupPanel {
     headLeft.appendChild(this.el('span', 'eyebrow', t('app.missionControl')));
     headLeft.appendChild(this.el('h1', undefined, t('app.buildMission')));
     heading.appendChild(headLeft);
-    heading.appendChild(this.el('span', 'step-count', '01—03'));
+    if (!learning) heading.appendChild(this.el('span', 'step-count', '01—03'));
     root.appendChild(heading);
+    if (learning) root.appendChild(this.stepTabs());
 
     const scroll = this.el('div', 'setup-scroll');
+    this.scrollEl = scroll;
     root.appendChild(scroll);
-    scroll.appendChild(this.experienceSection());
+    // Explore sets a mission up in three steps — the rocket, the payload, the
+    // orbit — one on screen at a time; the Engineer level has it all in one
+    // column. Every control is built either way, so a lesson's locks, the
+    // validation and the focus kept across a rebuild find them all.
+    const steps = learning ? ([1, 2, 3] as const).map((n) => {
+      const pane = this.el('div', 'explore-step');
+      pane.dataset.step = String(n);
+      pane.hidden = n !== this.step;
+      scroll.append(pane);
+      return pane;
+    }) : null;
+    const into = (n: 1 | 2 | 3): HTMLElement => steps ? steps[n - 1] : scroll;
+    // Explore, while the rocket flies: the steps give way to what is flying (style.css)
+    root.dataset.running = String(this.running);
+    if (learning) scroll.prepend(this.flightSummary(vehicle));
+    // The level itself is chosen in the top bar only (src/ui/app-mode.ts): the
+    // panel used to carry a second switch for it, which did the same thing.
     if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
-    scroll.appendChild(this.quickstartSection());
-    scroll.appendChild(this.historicalSection());
-    scroll.appendChild(this.share.section());
+    into(1).appendChild(this.quickstartSection());
+    into(1).appendChild(this.historicalSection());
+    if (!learning) scroll.appendChild(this.share.section());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
     const s1 = this.el('section', 'config-section');
     s1.appendChild(this.sectionTitle('01', 'setup.step.vehicle'));
-    s1.appendChild(this.select('setup.vehicle', [
-      ...VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })),
-      // C01: the vehicles of historical flights, after the fleet
-      ...HISTORICAL_VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country}) · ${t('setup.vehicle.historical')}` })),
-    ], s.vehicleId, (v) => {
-      s.vehicleId = v;
-      const flex = s.dynamics?.flex;
-      const control = s.dynamics?.control;
-      const navigation = s.dynamics?.navigation;
-      const controlFaults = s.dynamics?.controlFaults;
-      const explicitGuidance = s.dynamics?.explicitGuidance;
-      s.dynamics = defaultDynamics(v);
-      if (explicitGuidance) s.dynamics.explicitGuidance = explicitGuidance;
-      if (flex) s.dynamics.flex = flex;
-      if (control) s.dynamics.control = control;
-      if (navigation) s.dynamics.navigation = navigation;
-      if (controlFaults) s.dynamics.controlFaults = controlFaults;
-      const spec = vehicleById(v);
-      this.siteReassigned = false;
-      if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
-      if (!spec.recoverable) s.boosterRecovery = false;
-      // a payload this vehicle does not carry (Crew Dragon off Falcon 9) gives way to the generic crew ship
-      if (!carries(v, satelliteById(s.satelliteId))) { s.satelliteId = 'crew'; s.payloadMass = satelliteById('crew').mass; }
-      s.recoveryPlan = undefined;
-      s.padId = undefined;
-      // only a ship that flies itself home can take a suborbital target
-      if (s.orbit.suborbital && !flightHomeCapable(spec)) s.orbit = this.orbitalAgain(s.orbit);
-      this.render();
-      this.changed();
-    }));
+    if (learning) s1.appendChild(this.vehicleCards());
+    else {
+      // S02: a custom vehicle (from a mission file) is offered beside the catalogue until another is picked
+      const custom = s.vehicleSpec ? [{ value: s.vehicleSpec.id, label: t('setup.vehicle.custom', { name: s.vehicleSpec.name }) }] : [];
+      s1.appendChild(this.select('setup.vehicle', [...custom, ...VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })),
+        // C01: the vehicles of historical flights, after the fleet
+        ...HISTORICAL_VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country}) · ${t('setup.vehicle.historical')}` }))], s.vehicleId, (v) => this.pickVehicle(v)));
+    }
     const detail = this.el('div', 'vehicle-detail');
     detail.appendChild(this.el('span', undefined, `${vehicleManufacturer(vehicle)} · ${vehicle.country}`));
     detail.appendChild(this.el('span', undefined, `${vehicle.stages.length} · ${t('setup.info.stages')}`));
@@ -968,12 +759,14 @@ export class SetupPanel {
     const coords = this.el('p', 'field-note');
     coords.id = 'site-coordinates';
     s1.appendChild(coords);
-    scroll.appendChild(s1);
+    // Explore: whether the first stage comes home belongs with the rocket
+    if (learning && vehicle.recoverable) s1.appendChild(this.optionsSection(vehicle));
+    into(1).appendChild(s1);
 
     // ── 02 payload ──────────────────────────────────────────────────────────
     const s2 = this.el('section', 'config-section');
     s2.appendChild(this.sectionTitle('02', 'setup.step.payload'));
-    s2.appendChild(this.select('setup.satellite', SATELLITES.filter((x) => carries(s.vehicleId, x)).map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
+    s2.appendChild(this.select('setup.satellite', SATELLITES.filter((x) => carries(vehicleDataId(missionVehicle(s)), x)).map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
       this.clearOrbitDrafts();
       this.clearFieldDrafts('setup.payloadMass');
       s.satelliteId = v;
@@ -982,11 +775,18 @@ export class SetupPanel {
       const typical = orbitById(sat.typicalOrbit);
       s.orbitId = typical.id;
       s.orbit = { ...typical };
+      if (learning) this.snapToWindow();
       this.render();
       this.changed();
     }));
     s2.appendChild(this.number('setup.payloadMass', s.payloadMass, (v) => { s.payloadMass = v; this.changed(); }, 10, 1));
-    scroll.appendChild(s2);
+    if (learning) {
+      const meter = this.el('div', 'payload-meter');
+      meter.id = 'payload-meter';
+      this.meterEl = meter;
+      s2.appendChild(meter);
+    } else this.meterEl = null;
+    into(2).appendChild(s2);
 
     // ── 03 target orbit & launch time ───────────────────────────────────────
     const s3 = this.el('section', 'config-section orbit-section');
@@ -1004,6 +804,8 @@ export class SetupPanel {
         this.clearOrbitDrafts();
         s.orbitId = o.id;
         s.orbit = { ...orbitById(o.id) };
+        // Explore: a plane that has to be launched into at its time gets that time
+        if (learning) this.snapToWindow();
         this.render();
         this.changed();
       });
@@ -1026,15 +828,20 @@ export class SetupPanel {
     // inclination, and rebuilding the panel here destroyed the field the
     // operator had just typed into and dropped focus to the body.
     orbitRow2.appendChild(this.number('setup.inclination', target.inclination * RAD, (v) => { this.customise(); s.orbit.inclination = v; this.changed(); }, 0.1, 0, 180));
-    orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = v; this.changed(); }, 1, 0, 360));
+    // Explore keeps the orbit's geometry — ω, the RAAN mode, the LTAN — as the
+    // preset sets it (src/ui/explore.ts); the Engineer level edits it.
+    if (!learning) orbitRow2.appendChild(this.number('setup.argPerigee', s.orbit.argPerigee, (v) => { this.customise(); s.orbit.argPerigee = v; this.changed(); }, 1, 0, 360));
     s3.appendChild(orbitRow2);
+    if (learning) s3.appendChild(this.el('p', 'field-note orbit-glossary', t('setup.glossary')));
     if (flightHomeCapable(vehicle)) s3.appendChild(this.suborbitalOption());
-    s3.appendChild(this.select('setup.raanMode', [
-      { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
-      { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
-    ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
-    if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
-    if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+    if (!learning) {
+      s3.appendChild(this.select('setup.raanMode', [
+        { value: 'free', label: t('setup.raanFree') }, { value: 'fixed', label: t('setup.raanFixed') },
+        { value: 'iss', label: t('setup.raanIss') }, { value: 'ltan', label: t('setup.raanLtan') },
+      ], s.orbit.raanMode, (v) => { this.customise(); s.orbit.raanMode = v as OrbitSpec['raanMode']; this.render(); this.changed(); }));
+      if (s.orbit.raanMode === 'fixed') s3.appendChild(this.number('setup.raan', s.orbit.raan ?? 0, (v) => { s.orbit.raan = v; this.changed(); }, 1, 0, 360));
+      if (s.orbit.raanMode === 'ltan') s3.appendChild(this.number('setup.ltan', s.orbit.ltan ?? 10.5, (v) => { s.orbit.ltan = v; this.changed(); }, 0.25, 0, 24));
+    }
     if (this.rendezvousAvailable()) s3.appendChild(this.rendezvousOption());
 
     const timeLab = this.el('label', 'field');
@@ -1079,20 +886,27 @@ export class SetupPanel {
     info.id = 'vehicle-info';
     this.infoEl = info;
     s3.appendChild(info);
-    scroll.appendChild(s3);
+    into(3).appendChild(s3);
 
     // ── collapsible: guidance / failure / options ───────────────────────────
     const s4 = this.el('section', 'config-section');
-    s4.appendChild(this.dynamicsSection());
+    const dynamics = this.dynamicsSection();
+    if (dynamics) s4.appendChild(dynamics);
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.flexSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.controlSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.navigationSection());
     if (this.experience === 'advanced' && this.state.dynamics?.model === 'sixDof') s4.appendChild(this.faultsSection());
     if (this.experience === 'advanced') s4.appendChild(this.explicitGuidanceSection());
+    if (this.experience === 'advanced') s4.appendChild(this.dispersedFlightSection()); // P08
+    if (this.experience === 'advanced' && this.cb.onMonteCarlo) s4.appendChild(this.monteCarloSection());
     s4.appendChild(this.guidanceSection());
     s4.appendChild(this.failureSection(vehicle));
-    s4.appendChild(this.optionsSection(vehicle));
-    scroll.appendChild(s4);
+    if (!learning) s4.appendChild(this.optionsSection(vehicle));
+    into(3).appendChild(s4);
+    if (steps) {
+      steps[2].appendChild(this.share.section());
+      for (const [k, pane] of steps.entries()) pane.appendChild(this.stepNav((k + 1) as 1 | 2 | 3));
+    }
 
     // ── launch area ─────────────────────────────────────────────────────────
     const area = this.el('div', 'launch-area');
@@ -1100,9 +914,19 @@ export class SetupPanel {
     note.id = 'mission-note';
     note.setAttribute('aria-live', 'polite');
     note.appendChild(this.el('span', 'status-dot'));
-    note.appendChild(this.el('span', 'status-text'));
+    if (learning) {
+      // Explore: the verdict as a light with a title, and the changes that answer it
+      const body = this.el('span', 'status-body');
+      body.append(this.el('strong', 'status-title'), this.el('span', 'status-text'));
+      note.appendChild(body);
+    } else note.appendChild(this.el('span', 'status-text'));
     this.noteEl = note;
     area.appendChild(note);
+    if (learning) {
+      const fixes = this.el('div', 'verdict-fixes');
+      this.fixesEl = fixes;
+      area.appendChild(fixes);
+    } else this.fixesEl = null;
     const launch = this.el('button', 'launch-button');
     launch.type = 'button';
     launch.appendChild(this.el('span', 'arrow', '↗'));
@@ -1114,14 +938,7 @@ export class SetupPanel {
     area.appendChild(launch);
     const reset = this.el('button', 'ghost-button', t('setup.reset'));
     reset.type = 'button';
-    reset.addEventListener('click', () => {
-      this.cancelTune();
-      this.fieldDrafts.clear();
-      this.inputIssues.clear();
-      this.running = false;
-      this.render();
-      this.cb.onReset();
-    });
+    reset.addEventListener('click', () => { this.step = 1; this.backToSetup(); });
     area.appendChild(reset);
     area.appendChild(this.el('p', 'launch-note', t('setup.launchNote')));
     root.appendChild(area);
@@ -1146,10 +963,291 @@ export class SetupPanel {
     }
   }
 
+  // ─── Explore: the three set-up steps ──────────────────────────────────────
+
+  private static readonly STEP_TAB = { 1: 'setup.tab.vehicle', 2: 'setup.tab.payload', 3: 'setup.tab.orbit' } as const;
+
+  /** The step tabs under the heading: any step can be opened at any time. */
+  private stepTabs(): HTMLElement {
+    const nav = this.el('nav', 'explore-steps');
+    nav.setAttribute('aria-label', t('setup.steps'));
+    for (const n of [1, 2, 3] as const) {
+      const b = this.el('button', 'explore-step-tab');
+      b.type = 'button';
+      b.dataset.step = String(n);
+      b.append(this.el('small', undefined, `0${n}`), this.el('span', undefined, t(SetupPanel.STEP_TAB[n])));
+      if (n === this.step) b.setAttribute('aria-current', 'step');
+      b.addEventListener('click', () => this.goStep(n));
+      nav.append(b);
+    }
+    return nav;
+  }
+
+  /** Back and on, at the foot of each step; the last step's "on" is the Launch button. */
+  private stepNav(n: 1 | 2 | 3): HTMLElement {
+    const nav = this.el('div', 'step-nav');
+    if (n > 1) {
+      const back = this.el('button', 'btn', t('setup.stepBack'));
+      back.type = 'button';
+      back.addEventListener('click', () => this.goStep((n - 1) as 1 | 2));
+      nav.append(back);
+    }
+    if (n < 3) {
+      const next = this.el('button', 'btn next', t('setup.stepNext', { step: t(SetupPanel.STEP_TAB[(n + 1) as 2 | 3]) }));
+      next.type = 'button';
+      next.addEventListener('click', () => this.goStep((n + 1) as 2 | 3));
+      nav.append(next);
+    }
+    return nav;
+  }
+
+  /** Show one step. Nothing is rebuilt: the steps are all there, and hidden. */
+  private goStep(n: 1 | 2 | 3): void {
+    this.step = n;
+    for (const pane of this.root.querySelectorAll<HTMLElement>('.explore-step')) pane.hidden = pane.dataset.step !== String(n);
+    for (const tab of this.root.querySelectorAll<HTMLElement>('.explore-step-tab')) {
+      if (tab.dataset.step === String(n)) tab.setAttribute('aria-current', 'step');
+      else tab.removeAttribute('aria-current');
+    }
+    if (this.scrollEl) this.scrollEl.scrollTop = 0;
+  }
+
+  /** The first launch window at or after the launch time set, for a plane that has one. */
+  private nextWindow(): Date | null {
+    const s = this.state;
+    if (s.orbit.raanMode === 'free') return null;
+    return launchWindows(s.orbit, siteById(s.siteId), new Date(s.launchTime.getTime() - 60e3), 1)[0]?.time ?? null;
+  }
+
+  /**
+   * Explore: launch at the next window of the plane just chosen (the ISS's, a
+   * sun-synchronous one). Not in a lesson: 5.4 and 5.5 fix the launch time
+   * and leave the orbit free, and a moved launch time would break the lock.
+   */
+  private snapToWindow(): void {
+    if (document.body.dataset.lesson) return;
+    const w = this.nextWindow();
+    if (!w) return;
+    this.clearFieldDrafts('setup.launchTime');
+    this.state.launchTime = new Date(w.getTime());
+  }
+
+  /** Explore: the payload as a share of what the vehicle is rated to lift to this orbit's class. */
+  private updatePayloadMeter(): void {
+    const box = this.meterEl;
+    if (!box) return;
+    const s = this.state;
+    const spec = missionVehicle(s);
+    const want = orbitClassOf(s.orbit);
+    const { cap, cls } = ratedPayload(spec, want);
+    box.replaceChildren();
+    if (cap <= 0) {
+      box.dataset.level = 'fail';
+      box.append(this.el('p', 'field-note', t('setup.meter.noRating', { vehicle: spec.name, class: t(`orbit.class.${want}`) })));
+      return;
+    }
+    const share = s.payloadMass / cap;
+    box.dataset.level = share > 1 ? 'fail' : share >= 0.9 ? 'warn' : 'ok';
+    const bar = this.el('div', 'payload-bar');
+    const fill = this.el('span');
+    fill.style.width = `${Math.min(100, share * 100).toFixed(1)}%`;
+    bar.append(fill);
+    box.append(bar, this.el('p', 'field-note', t('setup.meter', {
+      mass: num(s.payloadMass), cap: num(cap), class: t(`orbit.class.${cls}`), pct: num(Math.round(share * 100)),
+    })));
+  }
+
+  /**
+   * Explore: the changes that answer the verdict, each a button that makes
+   * it. Only what the verdict's own cause points to is offered, and nothing
+   * during a lesson (style.css), where finding the change is the exercise.
+   */
+  private updateFixes(v: Feasibility): void {
+    const box = this.fixesEl;
+    if (!box) return;
+    box.replaceChildren();
+    const s = this.state;
+    const message = (text: string, cls = 'field-note'): void => { if (text) box.append(this.el('p', cls, text)); };
+    if (this.tuning) {
+      message(this.tuneMessage, 'progress tune-progress');
+      const cancel = this.el('button', 'btn', t('setup.tune.cancel'));
+      cancel.type = 'button';
+      cancel.addEventListener('click', () => { this.cancelTune(); this.render(); });
+      box.append(cancel);
+      return;
+    }
+    if (this.running || !this.isValid()) return;
+    const fix = (label: string, apply: (button: HTMLButtonElement) => void): void => {
+      const b = this.el('button', 'btn fix', label);
+      b.type = 'button';
+      b.addEventListener('click', () => apply(b));
+      box.append(b);
+    };
+    if (v.offWindow) {
+      const w = this.nextWindow();
+      if (w) fix(t('setup.fix.window', { time: fmtUTC(w) }), () => {
+        this.clearFieldDrafts('setup.launchTime');
+        s.launchTime = w;
+        this.render();
+        this.changed();
+      });
+    }
+    if (v.cause === 'corridor' || v.cause === 'inclination') {
+      const site = this.siteForOrbit();
+      const here = siteById(s.siteId);
+      if (site) {
+        fix(t('setup.fix.site', { site: siteName(site) }), () => {
+          s.siteId = site.id;
+          s.recoveryPlan = undefined;
+          s.padId = undefined;
+          this.siteReassigned = false;
+          this.render();
+          this.changed();
+        });
+      } else if (typeof s.orbit.inclination === 'number') {
+        const inc = Math.round(Math.min(Math.max(s.orbit.inclination, here.minInclination), maxInclinationFor(here) * RAD) * 10) / 10;
+        fix(t('setup.fix.inclination', { inc: inc.toFixed(1) }), () => {
+          this.clearOrbitDrafts();
+          this.customise();
+          s.orbit.inclination = inc;
+          this.render();
+          this.changed();
+        });
+      }
+    }
+    if (v.cause === 'overCapacity' || v.cause === 'beyondCapability' || v.cause === 'noInsertion' || v.cause === 'burnBudget') {
+      fix(t('setup.fix.payload'), (b) => {
+        b.disabled = true;
+        b.textContent = t('setup.fix.working');
+        // let the button say so before the search takes the thread
+        setTimeout(() => this.lightenPayload(), 20);
+      });
+    }
+    // Only a flown shortfall: the auto-tuner buys Δv margin, which no static note measures.
+    if (v.cause === 'noInsertion') fix(t('setup.fix.tune'), () => void this.autotune());
+    message(this.fixMessage);
+    if (!this.fixMessage) message(this.tuneMessage, 'progress tune-progress');
+  }
+
+  /** Another site the vehicle flies from whose corridor reaches the target plane without a plane change. */
+  private siteForOrbit(): SiteExtra | null {
+    const s = this.state;
+    for (const id of missionVehicle(s).sites) {
+      if (id === s.siteId) continue;
+      const site = siteById(id);
+      const inc = resolveTarget(s.orbit, site, s.launchTime).inclination * RAD;
+      if (inclinationCorridor(site, inc * DEG) === 'ok' && inc >= site.minInclination - 0.05) return site;
+    }
+    return null;
+  }
+
+  /**
+   * Set the heaviest payload, to the vehicle's own step, that the pre-flight
+   * verdict does not fail (`heaviestPassing`). The verdict is the whole of
+   * it, the insertion probe included when the budget calls the mass
+   * marginal, so what this sets is what the light then shows.
+   */
+  private lightenPayload(): void {
+    if (!this.isValid() || this.running) return;
+    const s = this.state;
+    const base = this.getConfig();
+    const mass = heaviestPassing(s.payloadMass, payloadStep(missionVehicle(s)), (m) => this.verdictAt(base, m).level !== 'fail');
+    if (mass !== null) {
+      this.clearFieldDrafts('setup.payloadMass');
+      s.payloadMass = mass;
+      this.render();
+      this.changed();
+    }
+    this.fixMessage = mass === null ? t('setup.fix.payloadNone') : t('setup.fix.payloadDone', { mass: num(mass) });
+    this.updateVerdict();
+  }
+
+  /** The verdict this mission would get with another payload mass (see `refreshInsertionProbe` for the probe's gate). */
+  private verdictAt(cfg: MissionConfig, mass: number): Feasibility {
+    const s = this.state;
+    const spec = missionVehicle(s);
+    const site = siteById(s.siteId);
+    const satellite = satelliteById(s.satelliteId);
+    const flown: MissionConfig = { ...cfg, payloadMassOverride: mass };
+    let plan: MissionPlan | null = null;
+    try { plan = planMission(flown, site, spec); } catch { plan = null; }
+    let insertion: InsertionProbe | null = null;
+    if (plan && marginalMission(spec, satellite, mass, plan, s.orbit)) {
+      try { insertion = probeInsertion({ ...flown, dynamics: { ...(flown.dynamics ?? { wind: 'calm', seed: 20260919 }), model: 'pointMass' } }); } catch { insertion = null; }
+    }
+    return missionVerdict({
+      spec, site, orbit: s.orbit, satellite, payloadMass: mass,
+      inclinationDeg: resolveTarget(s.orbit, site, s.launchTime).inclination * RAD,
+      plan, insertion, failureMode: s.failure.mode, siteReassigned: false,
+    });
+  }
+
+  /** Fly another vehicle from the catalogue: its own sites, flight model and recovery, the Engineer settings kept. */
+  private pickVehicle(v: string): void {
+    const s = this.state;
+    if (v === s.vehicleSpec?.id) return;
+    s.vehicleId = v;
+    s.vehicleSpec = undefined;
+    const flex = s.dynamics?.flex;
+    const control = s.dynamics?.control;
+    const navigation = s.dynamics?.navigation;
+    const controlFaults = s.dynamics?.controlFaults;
+    const explicitGuidance = s.dynamics?.explicitGuidance;
+    s.dynamics = defaultDynamics(v);
+    if (explicitGuidance) s.dynamics.explicitGuidance = explicitGuidance;
+    if (flex) s.dynamics.flex = flex;
+    if (control) s.dynamics.control = control;
+    if (navigation) s.dynamics.navigation = navigation;
+    if (controlFaults) s.dynamics.controlFaults = controlFaults;
+    const spec = vehicleById(v);
+    this.siteReassigned = false;
+    if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
+    if (!spec.recoverable) s.boosterRecovery = false;
+    // a payload this vehicle does not carry (Crew Dragon off Falcon 9) gives way to the generic crew ship
+    if (!carries(v, satelliteById(s.satelliteId))) { s.satelliteId = 'crew'; s.payloadMass = satelliteById('crew').mass; }
+    s.recoveryPlan = undefined;
+    s.padId = undefined;
+    // only a ship that flies itself home can take a suborbital target
+    if (s.orbit.suborbital && !flightHomeCapable(spec)) s.orbit = this.orbitalAgain(s.orbit);
+    this.render();
+    this.changed();
+  }
+
+  /**
+   * Explore's vehicle choice: the catalogue as cards, each with what it can
+   * lift to low orbit on a logarithmic bar — 300 kg to 118 t is too wide a
+   * range for a linear one — in place of a list of names.
+   */
+  private vehicleCards(): HTMLElement {
+    const s = this.state;
+    const box = this.el('div', 'vehicle-cards');
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', t('setup.vehicle'));
+    const card = (spec: VehicleSpec, label: string): void => {
+      const b = this.el('button', 'vehicle-card');
+      b.type = 'button';
+      b.dataset.vehicle = spec.id;
+      b.setAttribute('aria-pressed', String(s.vehicleId === spec.id));
+      b.disabled = this.running;
+      b.append(this.el('strong', undefined, label));
+      b.append(this.el('span', 'vehicle-card-meta', `${spec.country} · ${spec.stages.length} ${t('setup.info.stages')}`));
+      const bar = this.el('span', 'vehicle-card-bar');
+      bar.style.setProperty('--share', String(liftShare(spec.payloadLEO)));
+      b.append(bar, this.el('span', 'vehicle-card-lift', `${t('orbit.class.leo')} ${num(spec.payloadLEO / 1000, spec.payloadLEO < 10000 ? 1 : 0)} t`));
+      b.addEventListener('click', () => { if (!this.running) this.pickVehicle(spec.id); });
+      box.append(b);
+    };
+    // S02: a custom vehicle (from a mission file) is offered beside the catalogue until another is picked
+    if (s.vehicleSpec) card(s.vehicleSpec, t('setup.vehicle.custom', { name: s.vehicleSpec.name }));
+    for (const v of VEHICLES) card(v, v.name);
+    return box;
+  }
+
   private guidanceSection(): HTMLElement {
     const gd = this.el('details');
     gd.dataset.section = 'guidance';
-    gd.appendChild(this.el('summary', undefined, t('setup.guidance')));
+    const learning = this.experience === 'learning';
+    gd.appendChild(this.el('summary', undefined, t(learning ? 'setup.auto.title' : 'setup.guidance')));
     const g = this.guidance;
     const set = (k: keyof GuidanceParams, v: number): void => {
       this.state.guidanceOverrides[k] = v;
@@ -1157,15 +1255,15 @@ export class SetupPanel {
       this.tunedFor = this.missionSignature();
       this.changed();
     };
-    gd.appendChild(this.el('p', 'field-note', t('setup.guidanceNote')));
+    if (learning) {
+      // folded unless something flown differs from what is computed
+      gd.open = hasAdjustments(this.state.guidanceOverrides, this.state.dynamics);
+      this.computedGuidance(gd);
+    } else gd.appendChild(this.el('p', 'field-note', t('setup.guidanceNote')));
+    // Built at both levels: Explore keeps them folded away (style.css) unless
+    // one is invalid or a lesson asks the student to change the guidance.
     const parameters = this.el('div', 'guidance-parameters');
     gd.append(parameters);
-    const reveal = this.el('button', 'btn guidance-reveal', t('setup.mode.reveal'));
-    reveal.type = 'button';
-    reveal.addEventListener('click', () => {
-      if (this.cb.onExperience) this.cb.onExperience('advanced'); else this.setExperience('advanced');
-    });
-    gd.append(reveal);
     const r1 = this.el('div', 'row');
     r1.appendChild(this.number('setup.kickAngle', g.kickAngle, (v) => set('kickAngle', v), 0.5, 0, 45));
     r1.appendChild(this.number('setup.maxTurnRate', g.maxTurnRate, (v) => set('maxTurnRate', v), 0.05, 0.1, 3));
@@ -1187,6 +1285,7 @@ export class SetupPanel {
     r5.appendChild(this.number('setup.maxAccel', g.maxAccel, (v) => set('maxAccel', v), 1, 0, 100));
     parameters.appendChild(r5);
     parameters.appendChild(this.number('setup.parkingAltitude', g.parkingAltitude / 1000, (v) => set('parkingAltitude', v * 1000), 10, 0, 2000));
+    const tools = this.el('div', 'guidance-tools');
     const tuneBtn = this.el('button', 'btn', this.tuning ? t('setup.tune.cancel') : t('setup.autotune'));
     tuneBtn.type = 'button';
     tuneBtn.dataset.action = 'autotune';
@@ -1195,15 +1294,70 @@ export class SetupPanel {
       if (this.tuning) { this.cancelTune(); this.render(); }
       else void this.autotune();
     });
-    gd.appendChild(tuneBtn);
-    gd.appendChild(this.el('p', 'field-note', t('setup.autotuneScope')));
+    tools.appendChild(tuneBtn);
+    tools.appendChild(this.el('p', 'field-note', t('setup.autotuneScope')));
     const tuneMsg = this.el('div', 'progress', this.tuneMessage);
     tuneMsg.id = 'tune-msg';
-    gd.appendChild(tuneMsg);
+    tools.appendChild(tuneMsg);
+    gd.appendChild(tools);
     return gd;
   }
 
+  /**
+   * Explore's guidance: the values the vehicle flies, computed and shown
+   * rather than asked for (src/ui/explore.ts), with what the Engineer level
+   * has changed of them — still flown here, since a level never touches the
+   * mission — and the way back to the precomputed set.
+   */
+  private computedGuidance(gd: HTMLElement): void {
+    const s = this.state;
+    const vehicle = missionVehicle(s);
+    gd.append(this.el('p', 'field-note', t(s.vehicleSpec ? 'setup.auto.noteCustom' : 'setup.auto.note', { vehicle: vehicle.name })));
+    const box = this.el('div', 'info auto-guidance');
+    const line = (key: string, value: string, cls?: string): void => {
+      const row = this.el('div', cls);
+      row.append(this.el('span', 'k', key), this.el('span', 'v', value));
+      box.append(row);
+    };
+    line(t('setup.dynamics.title'), t(s.dynamics?.model === 'sixDof' ? 'setup.dynamics.sixDof' : 'setup.dynamics.pointMass'), 'model');
+    for (const row of autoGuidanceRows(this.guidance, s.guidanceOverrides)) {
+      line(t(`setup.${row.key}`), `${row.adjusted ? '✎ ' : ''}${num(row.value, decimals(row.value))}`, row.adjusted ? 'adjusted' : undefined);
+    }
+    gd.append(box);
+    if (Object.keys(s.guidanceOverrides).length > 0) gd.append(this.el('p', 'field-note warn', t('setup.auto.adjusted')));
+    const engineer = engineerSettings(s.dynamics);
+    if (engineer.length > 0) {
+      gd.append(this.el('p', 'field-note warn', t('setup.auto.engineer', { list: engineer.map((key) => t(ENGINEER_SETTING_TITLE[key])).join(' · ') })));
+    }
+    const actions = this.el('div', 'auto-actions');
+    if (hasAdjustments(s.guidanceOverrides, s.dynamics)) {
+      const reset = this.el('button', 'btn', t('setup.auto.reset'));
+      reset.type = 'button';
+      reset.disabled = this.running;
+      reset.addEventListener('click', () => {
+        if (this.running) return;
+        this.cancelTune();
+        this.clearFieldDrafts(...Object.values(GUIDANCE_FIELDS).map((f) => `setup.${f.key}`));
+        s.guidanceOverrides = {};
+        if (s.dynamics) s.dynamics = withoutEngineerSettings(s.dynamics);
+        this.tuneMessage = '';
+        this.tunedFor = this.missionSignature();
+        this.render();
+        this.changed();
+      });
+      actions.append(reset);
+    }
+    const engineerBtn = this.el('button', 'btn', t('setup.auto.open'));
+    engineerBtn.type = 'button';
+    engineerBtn.addEventListener('click', () => {
+      if (this.cb.onExperience) this.cb.onExperience('advanced'); else this.setExperience('advanced');
+    });
+    actions.append(engineerBtn);
+    gd.append(actions);
+  }
+
   private failureSection(vehicle: VehicleSpec): HTMLElement {
+    if (this.experience === 'learning') return this.challengeSection(vehicle);
     const s = this.state;
     const fd = this.el('details');
     fd.dataset.section = 'failure';
@@ -1216,9 +1370,88 @@ export class SetupPanel {
     if (s.failure.mode !== 'boosterCollision' && s.failure.mode !== 'stagingFailure') {
       fr.appendChild(this.number('setup.failureTime', s.failure.time, (v) => { s.failure.time = v; this.changed(); }, 5, -10, 2000));
     }
-    fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
+    fr.appendChild(this.select('setup.failureStage', vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle, st.id, st.name)}` })), String(Math.min(s.failure.stage, vehicle.stages.length - 1)), (v) => { s.failure.stage = Number(v); this.changed(); }));
     fd.appendChild(fr);
     return fd;
+  }
+
+  /**
+   * Explore's failure scenarios, as challenges: pick what goes wrong, and it
+   * goes wrong at the moment it is set for (`CHALLENGE_PRESETS`). The
+   * Engineer level sets the moment and the stage itself; a scenario set
+   * there is kept here, and its own moment is the one shown.
+   */
+  private challengeSection(vehicle: VehicleSpec): HTMLElement {
+    const s = this.state;
+    const fd = this.el('details');
+    fd.dataset.section = 'failure';
+    fd.open = true;
+    fd.append(this.el('summary', undefined, t('setup.challenge.title')), this.el('p', 'field-note', t('setup.challenge.note')));
+    const box = this.el('div', 'challenge-cards');
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', t('setup.challenge.title'));
+    // only the failures this vehicle and payload can have (a launch abort needs an escape system)
+    for (const mode of FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, s.satelliteId))) {
+      const b = this.el('button', 'challenge-card');
+      b.type = 'button';
+      b.dataset.failure = mode;
+      b.setAttribute('aria-pressed', String(s.failure.mode === mode));
+      b.disabled = this.running;
+      b.append(this.el('strong', undefined, t(`setup.fail.${mode}`)), this.el('span', undefined, t(CHALLENGE_TEXT[mode])));
+      b.title = t(CHALLENGE_TEXT[mode]);
+      b.addEventListener('click', () => {
+        if (this.running || s.failure.mode === mode) return;
+        const preset = mode === 'none' ? DEFAULT_FAILURE : CHALLENGE_PRESETS[mode];
+        s.failure = { mode, time: preset.time, stage: Math.min(preset.stage, vehicle.stages.length - 1) };
+        this.render();
+        this.changed();
+      });
+      box.append(b);
+    }
+    fd.append(box);
+    const when = this.challengeWhen(vehicle);
+    if (when) fd.append(this.el('p', 'field-note challenge-when', when));
+    return fd;
+  }
+
+  /** When the chosen challenge strikes, in words: its time and stage, its separation, or nothing. */
+  private challengeWhen(vehicle: VehicleSpec): string {
+    const f = this.state.failure;
+    const index = Math.min(f.stage, vehicle.stages.length - 1);
+    const st = vehicle.stages[index];
+    const stage = `${index + 1}: ${stageName(vehicle, st.id, st.name)}`;
+    switch (challengeTiming(f)) {
+      case 'time': return t('setup.challenge.at', { time: f.time < 0 ? `−${num(-f.time)}` : `+${num(f.time)}`, stage });
+      case 'separation': return t('setup.challenge.atSeparation', { stage });
+      case 'strapOns': return t('setup.challenge.atStrapOns');
+      default: return '';
+    }
+  }
+
+  /**
+   * Explore, while the rocket flies: what is flying, in place of the set-up
+   * it can no longer change. New mission brings the set-up back.
+   */
+  private flightSummary(vehicle: VehicleSpec): HTMLElement {
+    const s = this.state;
+    const section = this.el('section', 'config-section flight-summary');
+    section.append(this.el('h2', undefined, t('setup.flying.title')));
+    const box = this.el('div', 'info');
+    const row = (key: string, value: string): void => {
+      const line = this.el('div');
+      line.append(this.el('span', 'k', key), this.el('span', 'v', value));
+      box.append(line);
+    };
+    const site = siteById(s.siteId);
+    const target = resolveTarget(s.orbit, site, s.launchTime);
+    row(t('setup.tab.vehicle'), vehicle.name);
+    row(t('setup.site'), siteName(site));
+    row(t('setup.tab.payload'), `${satelliteName(satelliteById(s.satelliteId))} · ${num(s.payloadMass)} kg`);
+    row(t('setup.tab.orbit'), `${num(Math.round(s.orbit.perigee / 1000))} × ${num(Math.round(s.orbit.apogee / 1000))} km · ${(target.inclination * RAD).toFixed(1)}°`);
+    if (s.failure.mode !== 'none') row(t('setup.challenge.title'), t(`setup.fail.${s.failure.mode}`));
+    if (s.dynamics?.model === 'sixDof') row(t('setup.weather'), t(`setup.dynamics.${s.dynamics.wind}`));
+    section.append(box, this.el('p', 'field-note', t('setup.flying.note')));
+    return section;
   }
 
   // --- U07: the flight-dynamics notation (Engineer mode) -------------------------
@@ -1248,7 +1481,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.flex.title')));
     const flex: FlexConfig = this.state.dynamics?.flex ?? {};
     const update = (patch: Partial<FlexConfig>, rebuild = false): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       const next: Record<string, unknown> = { ...(dynamics.flex ?? {}), ...patch };
       for (const key of Object.keys(next)) if (next[key] === undefined || next[key] === false) delete next[key];
       this.state.dynamics = { ...dynamics, ...(Object.keys(next).length ? { flex: next as FlexConfig } : {}) };
@@ -1302,7 +1535,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.control.title')));
     section.append(this.el('p', 'field-note', t('setup.control.note')));
     const update = (next: ControlConfig | undefined, rebuild = false): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { control: next } : {}) };
       if (!next) delete this.state.dynamics.control;
       if (rebuild) this.render();
@@ -1345,7 +1578,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.nav.title')));
     section.append(this.el('p', 'field-note', t('setup.nav.note')));
     const update = (next: NavigationConfig | undefined, rebuild = false): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { navigation: next } : {}) };
       if (!next) delete this.state.dynamics.navigation;
       if (rebuild) this.render();
@@ -1412,7 +1645,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.explicit.title')));
     section.append(this.el('p', 'field-note', t('setup.explicit.note')));
     const update = (next: ExplicitGuidanceConfig | undefined): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { explicitGuidance: next } : {}) };
       if (!next) delete this.state.dynamics.explicitGuidance;
       this.render();
@@ -1432,6 +1665,74 @@ export class SetupPanel {
     return section;
   }
 
+  // --- P08: one dispersed flight (Engineer mode) --------------------------------------
+  /**
+   * Fly this mission as one run of a Monte Carlo set: the set's seed and the run's number, the
+   * vehicle and air that run drew shown beside them. Off, the mission flies nominal.
+   */
+  private dispersedFlightSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'dispersion';
+    const config = this.state.dynamics?.dispersion;
+    if (config) section.open = true;
+    section.append(this.el('summary', undefined, t('setup.dispersion.title')));
+    section.append(this.el('p', 'field-note', t('setup.dispersion.note')));
+    const update = (next: DispersedFlightConfig | undefined): void => {
+      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      this.state.dynamics = { ...dynamics, ...(next ? { dispersion: next } : {}) };
+      if (!next) delete this.state.dynamics.dispersion;
+      this.render();
+      this.changed();
+    };
+    const row = this.el('label', 'checkbox'), box = this.el('input');
+    box.type = 'checkbox'; box.checked = !!config; box.disabled = this.running;
+    box.addEventListener('change', () => update(box.checked ? { seed: 1, run: 0 } : undefined));
+    row.append(box, this.el('span', undefined, t('setup.dispersion.on')));
+    section.append(row);
+    if (!config) return section;
+    section.append(this.number('setup.dispersion.seed', config.seed, (v) => update({ ...config, seed: v })));
+    section.append(this.number('setup.dispersion.run', config.run + 1, (v) => update({ ...config, run: v - 1 })));
+    if (config.settings) {
+      section.append(this.el('p', 'field-note', t('setup.dispersion.ownSet')));
+      const reset = this.el('button', 'quiet-btn', t('setup.dispersion.defaultSet'));
+      reset.type = 'button';
+      reset.disabled = this.running;
+      reset.addEventListener('click', () => update({ seed: config.seed, run: config.run }));
+      section.append(reset);
+    }
+    // what the run drew, as the flight flies it (S02: the mission's vehicle, custom ones included)
+    const spec = missionVehicle(this.state);
+    const drawn = configuredDispersion(spec, config);
+    const pct = (f: number) => `${f >= 1 ? '+' : '−'}${Math.abs((f - 1) * 100).toFixed(2)} %`;
+    const list = this.el('ul', 'field-note dispersion-draws');
+    for (const e of propulsionElements(spec)) {
+      const f = drawn.vehicle[e.id];
+      const name = e.kind === 'stage' ? spec.stages[e.stage].name : spec.stages[e.stage].boosters?.find((b) => b.id === e.id)?.name ?? e.id;
+      list.append(this.el('li', undefined, t('setup.dispersion.stage', { name, thrust: pct(f.thrust), isp: pct(f.isp), prop: pct(f.propellant), dry: pct(f.dryMass) })));
+    }
+    list.append(this.el('li', undefined, t('setup.dispersion.density', { density: pct(drawn.densityFactor) })));
+    if (this.state.dynamics?.model === 'sixDof') {
+      list.append(this.el('li', undefined, t('setup.dispersion.wind', { east: drawn.windENU.east.toFixed(1).replace('-', '−'), north: drawn.windENU.north.toFixed(1).replace('-', '−') })));
+      if (this.state.dynamics.navigation) list.append(this.el('li', undefined, t('setup.dispersion.imu')));
+    } else list.append(this.el('li', undefined, t('setup.dispersion.pointMass')));
+    section.append(list);
+    return section;
+  }
+
+  // --- G05: Monte Carlo insertion accuracy (Engineer mode) ------------------------
+  /** Opens the Monte Carlo window on the mission as it is set here (its runs fly six-DOF). */
+  private monteCarloSection(): HTMLElement {
+    const section = this.el('details');
+    section.dataset.section = 'montecarlo';
+    section.append(this.el('summary', undefined, t('setup.mc.title')));
+    section.append(this.el('p', 'field-note', t('setup.mc.note')));
+    const open = this.el('button', 'btn', t('setup.mc.open'));
+    open.type = 'button';
+    open.addEventListener('click', () => this.cb.onMonteCarlo?.(open));
+    section.append(open);
+    return section;
+  }
+
   // --- G08: failures of the control system (Engineer mode, six-DOF only) ---------
   /**
    * An accident's preset, or a list of failures — actuators, sensors, the flight computer — each
@@ -1445,7 +1746,7 @@ export class SetupPanel {
     section.append(this.el('summary', undefined, t('setup.faults.title')));
     section.append(this.el('p', 'field-note', t('setup.faults.note')));
     const update = (next: ControlFaultsConfig | undefined, rebuild = true): void => {
-      const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+      const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
       this.state.dynamics = { ...dynamics, ...(next ? { controlFaults: next } : {}) };
       if (!next) delete this.state.dynamics.controlFaults;
       if (rebuild) this.render();
@@ -1472,7 +1773,7 @@ export class SetupPanel {
     if (config.preset && CONTROL_FAULT_PRESETS[config.preset]) {
       section.append(this.el('p', 'field-note fault-preset-note', t(`setup.faults.presetNote.${config.preset}`)));
       const own = CONTROL_FAULT_PRESETS[config.preset].vehicleId;
-      if (own !== this.state.vehicleId) section.append(this.el('p', 'field-note warn', t('setup.faults.otherVehicle', { vehicle: vehicleById(own).name })));
+      if (own !== vehicleDataId(missionVehicle(this.state))) section.append(this.el('p', 'field-note warn', t('setup.faults.otherVehicle', { vehicle: vehicleById(own).name })));
     }
     // The FDIR.
     const fdirRow = this.el('label', 'checkbox'), fdirBox = this.el('input');
@@ -1481,7 +1782,7 @@ export class SetupPanel {
     fdirRow.append(fdirBox, this.el('span', undefined, t('setup.faults.fdir')));
     section.append(fdirRow, this.el('p', 'field-note', t('setup.faults.fdirNote')));
     // The failures.
-    const vehicle = vehicleById(this.state.vehicleId), navigation = !!this.state.dynamics?.navigation;
+    const vehicle = missionVehicle(this.state), navigation = !!this.state.dynamics?.navigation;
     config.faults.forEach((fault, index) => section.append(this.faultRow(fault, index, vehicle, navigation, (next) => {
       const faults = [...current().faults];
       if (next) faults[index] = next; else faults.splice(index, 1);
@@ -1553,7 +1854,7 @@ export class SetupPanel {
     field('setup.faults.kind', choice(kinds, fault.kind, (v) => change(defaultFault(v as ControlFaultKind, fault.time, fault.stage))));
     field('setup.faults.time', numberInput(fault.time, [0, 1e5], 1, (v) => set({ time: v })));
     field('setup.faults.stage', choice([{ value: '', label: t('setup.faults.stageAny') },
-      ...vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle.id, st.id, st.name)}` }))],
+      ...vehicle.stages.map((st, i) => ({ value: String(i), label: `${i + 1}: ${stageName(vehicle, st.id, st.name)}` }))],
     fault.stage === undefined ? '' : String(fault.stage), (v) => { const { stage: _s, ...rest } = fault; change(v === '' ? rest : { ...rest, stage: Number(v) }); }));
     const fields = FAULT_FIELDS[fault.kind];
     if (fields.includes('engine')) {
@@ -1594,6 +1895,7 @@ export class SetupPanel {
   private faultPresetVehicle(vehicleId: string): void {
     const s = this.state, kept = s.dynamics;
     s.vehicleId = vehicleId;
+    s.vehicleSpec = undefined;
     s.dynamics = defaultDynamics(vehicleId);
     for (const key of ['flex', 'control', 'navigation', 'controlFaults', 'explicitGuidance'] as const) if (kept?.[key]) (s.dynamics as unknown as Record<string, unknown>)[key] = kept[key];
     const spec = vehicleById(vehicleId);
@@ -1605,7 +1907,7 @@ export class SetupPanel {
   /** E04: take a tuning (the attitude-loop inspector's "use for the next launch"); undefined restores the defaults. */
   applyControl(control: ControlConfig | undefined): boolean {
     // Also while a flight runs: the setup then holds it for the next launch.
-    const dynamics = this.state.dynamics ?? defaultDynamics(this.state.vehicleId);
+    const dynamics = this.state.dynamics ?? defaultDynamics(missionVehicle(this.state));
     if (dynamics.model !== 'sixDof') return false;
     this.state.dynamics = { ...dynamics, ...(control ? { control } : {}) };
     if (!control) delete this.state.dynamics.control;
@@ -1632,7 +1934,12 @@ export class SetupPanel {
     chk.appendChild(cb);
     chk.appendChild(this.el('span', undefined, t('setup.boosterRecovery')));
     od.appendChild(chk);
-    if (vehicle.recoverable && s.boosterRecovery) od.appendChild(this.recoveryChoices(vehicle));
+    // Explore flies each stage home the vehicle's own way; a prepared mission's
+    // landing places are still flown, and named.
+    if (vehicle.recoverable && s.boosterRecovery) {
+      if (this.experience === 'advanced') od.appendChild(this.recoveryChoices(vehicle));
+      else if (s.recoveryPlan) od.appendChild(this.el('p', 'field-note', this.recoveryPlanText(vehicle, s.recoveryPlan)));
+    }
     if (vehicle.recoverable && s.dynamics?.model === 'sixDof') od.appendChild(this.el('p', 'field-note', t('setup.recoveryRigidNote')));
     return od;
   }
@@ -1666,7 +1973,7 @@ export class SetupPanel {
   /** A flight on to the station: a Soyuz MS to the ISS orbit (the rule `validateConfigInput` states). */
   private rendezvousAvailable(): boolean {
     const s = this.state;
-    return rendezvousAvailable(s.vehicleId, s.satelliteId, s.orbit);
+    return rendezvousAvailable(vehicleDataId(missionVehicle(s)), s.satelliteId, s.orbit);
   }
 
   /**
@@ -1738,6 +2045,24 @@ export class SetupPanel {
     return box;
   }
 
+  /** A recovery plan in words, one clause per stage, as the Engineer level's choices name them. */
+  private recoveryPlanText(vehicle: VehicleSpec, plan: RecoveryPlan): string {
+    const zones = landingZonesForSite(this.state.siteId);
+    const where = (mode: RecoveryMode | undefined): string => {
+      if (!mode) return t('setup.recovery.expended');
+      if (mode.kind === 'landingZone') {
+        const zone = zones.find((z) => z.id === mode.zoneId);
+        return zone ? zoneName(zone) : mode.zoneId;
+      }
+      return t(`setup.recovery.${mode.kind}`);
+    };
+    const strapOns = (vehicle.stages[0].boosters ?? []).filter((b) => b.engine.count > 1).reduce((n, b) => n + b.count, 0);
+    return [
+      `${t('setup.recovery.core')}: ${where(plan.core)}`,
+      ...Array.from({ length: strapOns }, (_, k) => `${t('setup.recovery.booster', { n: k + 1 })}: ${where(plan.boosters?.[k])}`),
+    ].join(' · ');
+  }
+
   private customise(): void {
     if (this.state.orbitId !== 'custom') {
       this.state.orbitId = 'custom';
@@ -1762,11 +2087,12 @@ export class SetupPanel {
     }
     // One plan per refresh: both the info card and the feasibility verdict read
     // it, and planning twice per keystroke buys nothing.
-    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), missionVehicle(this.state.vehicleId, satelliteById(this.state.satelliteId))); } catch { this.planCache = null; }
+    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), openTopVehicle(missionVehicle(this.state), satelliteById(this.state.satelliteId))); } catch { this.planCache = null; }
     this.refreshInsertionProbe();
     this.updateStats();
     this.updateWindows();
     this.updateInfo();
+    this.updatePayloadMeter();
     this.updateVerdict();
     if (this.descEl) this.descEl.textContent = orbitDesc(this.state.orbit);
     if (this.launchBtn) {
@@ -1780,7 +2106,7 @@ export class SetupPanel {
     const box = this.statsEl;
     if (!box) return;
     const s = this.state;
-    const spec = missionVehicle(s.vehicleId, satelliteById(s.satelliteId));
+    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
     const sat = satelliteById(s.satelliteId);
     const m0 = liftoffMass(spec, s.payloadMass);
     const T0 = liftoffThrust(spec);
@@ -1846,7 +2172,7 @@ export class SetupPanel {
     const box = this.infoEl;
     if (!box) return;
     const s = this.state;
-    const spec = missionVehicle(s.vehicleId, satelliteById(s.satelliteId));
+    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
     const site = siteById(s.siteId);
     const sat = satelliteById(s.satelliteId);
     const dv = idealDeltaV(spec, s.payloadMass);
@@ -1903,11 +2229,8 @@ export class SetupPanel {
       this.probedFor = '';
       return;
     }
-    const spec = missionVehicle(s.vehicleId, satelliteById(s.satelliteId));
-    const capability = missionCapability(spec, satelliteById(s.satelliteId), s.payloadMass, plan);
-    const { cap } = ratedPayload(spec, orbitClassOf(s.orbit));
-    const marginal = capability.ascentShortfall > 0 || (cap > 0 && s.payloadMass >= cap * 0.9);
-    if (!marginal) {
+    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
+    if (!marginalMission(spec, satelliteById(s.satelliteId), s.payloadMass, plan, s.orbit)) {
       this.probeCache = null;
       this.probedFor = '';
       return;
@@ -1930,7 +2253,7 @@ export class SetupPanel {
     const s = this.state;
     const site = siteById(s.siteId);
     return missionVerdict({
-      spec: missionVehicle(s.vehicleId, satelliteById(s.satelliteId)),
+      spec: openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId)),
       site,
       orbit: s.orbit,
       satellite: satelliteById(s.satelliteId),
@@ -1954,8 +2277,13 @@ export class SetupPanel {
     if (!note) return;
     const v = this.feasibility();
     note.className = `status-note ${v.level}`;
-    const text = note.querySelector('.status-text');
+    const text = note.querySelector<HTMLElement>('.status-text');
     if (text) text.textContent = v.text;
+    // Explore clamps the sentence to a few lines under its title; all of it is the tooltip
+    if (text && this.experience === 'learning') text.title = v.text;
+    const title = note.querySelector('.status-title');
+    if (title) title.textContent = t(VERDICT_LIGHT[v.level]);
+    this.updateFixes(v);
   }
 
   private cancelTune(): void {
@@ -1967,20 +2295,30 @@ export class SetupPanel {
     // Draft edits cancel before blur. Refresh only these nodes so focus and
     // the unfinished input are retained, while the cancelled worker's last
     // progress line cannot remain visible as if it were still running.
-    const message = this.root.querySelector('#tune-msg');
-    if (message) message.textContent = this.tuneMessage;
+    for (const message of this.root.querySelectorAll('#tune-msg, .tune-progress')) message.textContent = this.tuneMessage;
     const button = this.root.querySelector<HTMLButtonElement>('[data-action="autotune"]');
     if (button) button.textContent = t('setup.autotune');
   }
 
-  private dynamicsSection(): HTMLElement {
+  private dynamicsSection(): HTMLElement | null {
     const section = this.el('details');
     section.dataset.section = 'dynamics';
     section.open = true;
-    section.append(this.el('summary', undefined, t('setup.dynamics.title')));
     const d = this.state.dynamics ?? { model: 'pointMass', wind: 'calm', seed: 20260919 };
+    if (this.experience === 'learning') {
+      // Explore: the model is the vehicle's own (named in the computed
+      // guidance) and the seed is fixed; the weather is the choice left, and
+      // only a six-DOF flight feels the wind.
+      if (d.model !== 'sixDof') return null;
+      section.append(this.el('summary', undefined, t('setup.weather')));
+      section.append(this.select('setup.dynamics.wind', [
+        { value: 'calm', label: t('setup.dynamics.calm') }, { value: 'crosswind', label: t('setup.dynamics.crosswind') }, { value: 'shear', label: t('setup.dynamics.shear') },
+      ], d.wind, (value) => { this.state.dynamics = { ...(this.state.dynamics ?? d), wind: value as DynamicsConfig['wind'] }; this.changed(); }));
+      return section;
+    }
+    section.append(this.el('summary', undefined, t('setup.dynamics.title')));
     const choices = [{ value: 'pointMass', label: t('setup.dynamics.pointMass') }];
-    if (supportsRigid(this.state.vehicleId)) choices.unshift({ value:'sixDof', label:t('setup.dynamics.sixDof') });
+    if (supportsRigid(missionVehicle(this.state))) choices.unshift({ value:'sixDof', label:t('setup.dynamics.sixDof') });
     section.append(this.select('setup.dynamics.model', choices, d.model, value => {
       const next = { ...(this.state.dynamics ?? d), model: value as DynamicsConfig['model'] };
       // Legacy flight hides weather controls. Preserve valid settings for a
@@ -1988,12 +2326,12 @@ export class SetupPanel {
       // editing controls disappear. Ordinary invalid UI drafts are discarded by render().
       if (value === 'pointMass') {
         if (!['calm', 'crosswind', 'shear'].includes(next.wind)) next.wind = 'calm';
-        if (!Number.isInteger(next.seed) || next.seed < 0 || next.seed > 0xffffffff) next.seed = defaultDynamics(this.state.vehicleId).seed;
+        if (!Number.isInteger(next.seed) || next.seed < 0 || next.seed > 0xffffffff) next.seed = defaultDynamics(missionVehicle(this.state)).seed;
       }
       this.state.dynamics = next;
       this.render(); this.changed();
     }));
-    section.append(this.el('p', 'field-note', t(supportsRigid(this.state.vehicleId) ? 'setup.dynamics.note' : 'setup.dynamics.unsupported')));
+    section.append(this.el('p', 'field-note', t(supportsRigid(missionVehicle(this.state)) ? 'setup.dynamics.note' : 'setup.dynamics.unsupported')));
     if (d.model === 'sixDof') {
       section.append(this.select('setup.dynamics.wind', [
         {value:'calm',label:t('setup.dynamics.calm')}, {value:'crosswind',label:t('setup.dynamics.crosswind')}, {value:'shear',label:t('setup.dynamics.shear')},
@@ -2017,8 +2355,7 @@ export class SetupPanel {
       const outcome = await runTuneJob(cfg, controller.signal, (progress) => {
         if (this.tuneController !== controller) return;
         this.tuneMessage = t(progress.phase === 'ascent' ? 'setup.tune.ascent' : 'setup.tune.mission', { done: progress.completed, total: progress.total });
-        const msg = this.root.querySelector('#tune-msg');
-        if (msg) msg.textContent = this.tuneMessage;
+        for (const msg of this.root.querySelectorAll('#tune-msg, .tune-progress')) msg.textContent = this.tuneMessage;
       });
       if (this.tuneController !== controller || this.running || !this.isValid() || JSON.stringify(this.getConfig()) !== signature) return;
       const best = outcome.best;

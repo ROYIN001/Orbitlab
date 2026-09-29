@@ -1,0 +1,69 @@
+Photographs of launch vehicles used by the placement test (src/lessons/assessment/photos.ts).
+All from Wikimedia Commons, resized to at most 560 x 720 pixels.
+
+soyuz21a.jpg
+  "Expedition 50 Soyuz Rollout (NHQ201611140038).jpg"
+  Author: NASA/Victor Zelentsov
+  License: Public domain
+  Source: https://commons.wikimedia.org/wiki/File:Expedition_50_Soyuz_Rollout_(NHQ201611140038).jpg
+
+falcon9.jpg
+  "NHQ202210010026 orig.jpg"
+  Author: NASA/Joel Kowsky
+  License: Public domain
+  Source: https://commons.wikimedia.org/wiki/File:NHQ202210010026_orig.jpg
+
+falconheavy.jpg
+  "Falcon Heavy cropped.jpg"
+  Author: SpaceX
+  License: CC0 (http://creativecommons.org/publicdomain/zero/1.0/deed.en)
+  Source: https://commons.wikimedia.org/wiki/File:Falcon_Heavy_cropped.jpg
+
+starship.jpg
+  "Starship full stack with Jeep.jpg"
+  Author: Hotel Pika
+  License: CC BY-SA 2.0 (https://creativecommons.org/licenses/by-sa/2.0)
+  Source: https://commons.wikimedia.org/wiki/File:Starship_full_stack_with_Jeep.jpg
+
+electron.jpg
+  "Rocket Lab PREFIRE and Ice Launch (KSC-20240605-PH-RKL01 0004).jpg"
+  Author: NASA Kennedy Space Center / Rocket Lab
+  License: Public domain
+  Source: https://commons.wikimedia.org/wiki/File:Rocket_Lab_PREFIRE_and_Ice_Launch_(KSC-20240605-PH-RKL01_0004).jpg
+
+atlasv551.jpg
+  "Atlas V 551 with New Horizons on Launch Pad 41.jpg"
+  Author: NASA
+  License: Public domain
+  Source: https://commons.wikimedia.org/wiki/File:Atlas_V_551_with_New_Horizons_on_Launch_Pad_41.jpg
+
+vulcan.jpg
+  "Vulcan Centaur rollout (Peregrine) (cropped).jpg"
+  Author: NASA/Ben Smegelsky
+  License: Public domain
+  Source: https://commons.wikimedia.org/wiki/File:Vulcan_Centaur_rollout_(Peregrine)_(cropped).jpg
+
+longmarch5.jpg
+  "Long March 5 rolling out at WSLS.jpg"
+  Author: Xiaojun Wang, China Academy of Launch Vehicle Technology
+  License: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0)
+  Source: https://commons.wikimedia.org/wiki/File:Long_March_5_rolling_out_at_WSLS.jpg
+
+angaraa5.jpg
+  "Launch of Angara-A5 from Plesetsk Cosmodrome (2021-12-28) 2.jpg"
+  Author: Russian Ministry of Defense
+  License: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0)
+  Source: https://commons.wikimedia.org/wiki/File:Launch_of_Angara-A5_from_Plesetsk_Cosmodrome_(2021-12-28)_2.jpg
+
+longmarch2d.jpg
+  "Long March 2D launching VRSS-1.jpg"
+  Author: Cristóbal Alvarado Minic
+  License: CC BY 2.0 (https://creativecommons.org/licenses/by/2.0)
+  Source: https://commons.wikimedia.org/wiki/File:Long_March_2D_launching_VRSS-1.jpg
+
+protonm.jpg
+  "On the launch pad.jpg"
+  Author: alexpgp
+  License: CC BY-SA 2.0 (https://creativecommons.org/licenses/by-sa/2.0)
+  Source: https://commons.wikimedia.org/wiki/File:On_the_launch_pad.jpg
+

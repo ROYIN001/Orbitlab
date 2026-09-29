@@ -326,10 +326,12 @@ What it shows on Falcon 9 to LEO in the crosswind scenario:
 - From T+89 s guidance pitches the command away from the airflow (0.7° to 11° in four seconds)
   faster than the stack follows: the pitch error grows to 4.6° with the pitch rate held by its
   stopping distance, and the air's pitching moment reaches 2.4 MN·m at T+96 s.
-- At T+127.3 s the dynamic pressure falls through 500 Pa and the load relief, which had been
-  holding the command 24° nearer the air than guidance asked (39° asked, 15° allowed), switches
-  off in one step: the attitude error jumps from 0.4° to 24° and the stack swings back at its
-  5°/s rate limit for five seconds.
+- At T+133.5 s the dynamic pressure falls through 500 Pa and the load relief, which had been
+  holding the command nearer the air than guidance asked, switches off in one step: the
+  attitude error jumps by about 15° and the stack swings back at its 5°/s rate limit until
+  T+137.2 s. (Measured with Falcon 9's published first-stage masses and its fitted six-DOF
+  pitch programme, VALIDATION.md F5. Before the pitch programme it was T+130.5 s; before the
+  masses, T+127.3 s with 39° asked and 15° allowed and an error jumping from 0.4° to 24°.)
 - After staging the upper stage's roll authority is so small (an ε limit of 0.02°/s²) that its
   roll rate is held by the stopping distance.
 
@@ -502,12 +504,20 @@ What it finds on Falcon 9 (crosswind, over the first 55 s):
 
 - Rigid: K_θ 1.61, K_ω 3.39 s⁻¹ — the default autopilot (1.5, 3) is already at the 45° target;
   the gimbals' 0.1 s lag sets the limit.
-- With all of P05: PM ≥ 45° and GM ≥ 6 dB cannot both be met by the two gains over the flight —
-  at T+33.5 s a slosh mode sits where lower gains lose gain margin and higher ones lose it at the
-  bending mode (no PD gains are stable at K_θ 0.5, K_ω 1.0 there). At PM ≥ 40°, GM ≥ 4 dB it
-  gives K_θ 0.74, K_ω 1.49 s⁻¹ (the flexible autopilot flies 0.91–0.99, 1.83–1.97); **flown again
-  with them, the linearised loop keeps GM ≥ 4.1 dB and PM ≥ 48.8° over the ascent** (2.3 dB and
-  40.3° with the defaults), and the flight reaches its orbit (tests/control-tuning.test.ts).
+- With all of P05: PM ≥ 45° and GM ≥ 6 dB cannot both be met by the two gains over the flight.
+  A slosh mode sits where lower gains lose gain margin and higher ones lose it at the bending
+  mode. With Falcon 9's published first-stage masses (VALIDATION.md) the first bending mode is
+  lower (1.61 Hz at T+25 s, where it was 1.72 Hz), and PM ≥ 40°, GM ≥ 4 dB can no longer be met
+  either: over the gain grid the best is about 2.7 dB, limited from lift-off, and the tuner says
+  so. The default flexible autopilot already comes within 0.1 dB of what two gains can do. With
+  the six-DOF pitch programme fitted to webcast telemetry (VALIDATION.md, F5), gains tuned at
+  PM ≥ 40°, GM ≥ 2.5 dB over the first 60 s (K_θ 0.82, K_ω 1.64 s⁻¹) leave a mode growing at
+  about 0.003/s from T+64 s, outside the flight they were tuned on, and tuned over 90 s nothing
+  at 2.5 dB is stable. At GM ≥ 2 dB it gives K_θ 0.88, K_ω 1.75 s⁻¹, and flown again to T+90 s
+  the loop is stable with GM ≥ 2.15 dB and PM ≥ 45.6° (tests/control-tuning.test.ts). The lesson
+  for the tuner is that it answers for the flight it was shown. With the earlier masses the tuner found K_θ 0.74,
+  K_ω 1.49 s⁻¹ for GM ≥ 4 dB, and flown again they kept GM ≥ 4.1 dB and PM ≥ 48.8° (2.3 dB and
+  40.3° with the defaults).
 - Without the feed-forward (w = 0) or at half of it, the rigid Falcon 9 still reaches orbit; a
   1 °/s pitch–yaw rate limit doubles the largest attitude error of the ascent (4.9° to 11°).
 
@@ -587,14 +597,38 @@ burns (src/physics/sim/burns.ts, the other session's) still read the truth.
 
 - Tactical grade with GNSS: position within ±3σ through staging (mean normalised error 1.7 per
   axis, 0.5 % of samples outside 3σ), under 5 m and 0.1 m/s; the orbit it believes in is the true
-  one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop: the
-  attitude thrusters run at full duty 84 % of the first minute against 64 % on the truth.
+  one to tens of metres. Its gyro noise (0.008 °/s per axis at 100 Hz) reaches the rate loop,
+  and the jets' deadband below keeps it off them.
 - A GNSS outage from T+60 s to T+200 s: the error grows to about 130 m and 1.9 m/s, inside the
   filter's growing 3σ, and falls back to metres at the first fix.
 - MEMS without GNSS: 12 km and 30 m/s of error by orbit; guidance cuts off on an orbit the
   navigation believes is 200 × 529 km while the true one is 202 × 511 km. The star tracker, above
   150 km, brings the attitude error from 1.6° to seconds of arc.
 - Navigation grade without GNSS: 80 m and 0.6 m/s; the apoapsis 1.4 km off.
+
+**The jets' rate deadband** (G05's finding). A gyro's white noise reads as rate: over a 10 ms
+step, a tactical gyro's 0.05 °/√h is 1.45·10⁻⁴ rad/s per axis, and the rate loop (3 s⁻¹ times the
+inertia) turns it into a moment demand of some hundreds of N·m on Falcon 9's second stage, half
+its jets' authority. The nozzles only jitter on it; the jets, allocated in proportion to what the
+nozzles leave, spent the stage's 30 kg of cold gas on it by T+250 s, and in orbit the stack could
+not turn for its circularisation burn (`evt.burnAlignmentTimeout`, on every tactical and MEMS
+flight). So, flying on a navigation, the jets fire on an axis only when the rate error the loop
+reads there stands out of that noise: beyond 4σ of it (`JET_RATE_DEADBAND_SIGMA`; σ = ARW/√Δt of
+the step the rate was read over, `NavigationSystem.rateNoise`), a rate deadband as a real
+reaction control system has, with a false firing about once a minute. Within it the axis is left
+to the nozzles, and in a coast to drift until the attitude error asks for more than the band:
+the attitude holds to about 4σ/k_θ (0.02° tactical, 0.13° MEMS). A slew asks for a hundred times
+the band and fires them as before. On the truth the loop reads no noise and nothing changes.
+Falcon 9 to its reference orbit (500 km, 28.6°; tests/heavy/navigation-burns.test.ts):
+
+| Grade | Jets at full duty, first minute | 2nd-stage gas to T+480 s | … to the end | Orbit |
+|---|---|---|---|---|
+| truth (no navigation) | 60 % | 7.0 kg | 17.3 kg | 500.3 × 509.8 km, 28.614° |
+| navigation | 44 % | 6.8 kg | 17.2 kg | 500.5 × 510.1 km, 28.614° |
+| tactical | 12 % | 4.4 kg | 16.4 kg | 500.5 × 510.2 km, 28.614° |
+| MEMS | 6 % | 2.1 kg | 14.7 kg | 500.4 × 509.4 km, 28.614° |
+
+Before it, the tactical and MEMS flights had used all 30 kg by T+250 s and ended off their target.
 
 **Cost**: within the run-to-run noise (runs with navigation were not slower).
 
@@ -644,9 +678,10 @@ Off, the computer reads IMU 1 alone and watches nothing. An engine shut down goe
 engine-out: its share of `engineFraction` (thrust and flow alike), with the engine the FDIR named
 — not the lowest-numbered — the one that stops (`StageState.shutEngines`), so the others steer on.
 
-**Break-up.** A launcher that loses control in the air is broken up by the air: with the failures
-layer (and only with it), the attached stack is lost when q·α — the dynamic pressure times the
-total angle of attack — exceeds 300 kPa·°. The fleet's healthy ascents stay under 135 kPa·°
+**Break-up.** A launcher that loses control in the air is broken up by the air: on any six-DOF
+ascent (with the failures layer or without it, since G05), the attached stack is lost when q·α —
+the dynamic pressure times the total angle of attack — exceeds 300 kPa·°. A re-entry, flown at a
+large angle of attack on purpose, is not judged by it. The fleet's healthy ascents stay under 135 kPa·°
 (Angara A5; calm and shear winds, measured over all eighteen vehicles), much of it late in the
 ascent where q is small and α large.
 
@@ -747,7 +782,7 @@ Heavy's spent half its gas on the ripple the blend left and could not point its 
 once the dynamic pressure falls under 500 Pa the command is released from where the load relief
 held it at 4 °/s (under the stack's own 5 °/s) and, below 100 Pa, at the vacuum ascent's
 1 °/s. The standard flight releases it all at once at 500 Pa: on Falcon 9 the attitude error
-jumps from 0.4° to 24° (§2d, G03). A release at 1 °/s everywhere was tried and cost 93 m/s.
+jumps by about 15° (24° before its six-DOF pitch programme was fitted to flight data; §2d, G03). A release at 1 °/s everywhere was tried and cost 93 m/s.
 
 **What it does** (calm air, LEO insertion 200 × 500 km; tests/explicit-guidance.test.ts and
 tests/heavy/explicit-fleet-*.test.ts):
@@ -812,6 +847,136 @@ larger turns the velocity over the ground well away from it; the gap closes as t
 gathers speed. Through the same stretch a six-DOF ascent reads a roll of 10–15°: its attitude
 reference holds the belly in the inertial trajectory plane (§2c), not in the vertical plane
 through the nose.
+
+## 2l. Monte Carlo insertion accuracy (roadmap G05)
+
+A tool, not a flight option: nothing in a single flight changes. The Engineer mode's
+*Monte Carlo* window (and WebMCP's `run_monte_carlo`) flies the mission in the setup panel many
+times in six-DOF (src/physics/monte-carlo.ts), each run to the end of its mission — its target
+orbit, after every planned burn — and reads its orbit (perigee, apogee, inclination, and the Δv
+the stack has left) at two points: **at the end of the mission**, against the target orbit, as
+the apsides the next revolution flies under J2 (the fleet acceptance's measure, §2a) — the orbit
+the payload is delivered to; and **at the ascent's cut-off**, the first moment the vehicle is
+neither on the pad nor in the ascent and its engines' tail-off is over, against the insertion the
+mission plans, osculating as the ascent's own cut-off judges it — the ascent guidance's own
+accuracy. A mission whose upper stage finishes the insertion later (Electron's kick stage) cuts
+off short of it on purpose; only the first point says whether it got there.
+
+**The dispersions** (src/physics/dispersion.ts). Per stage and per strap-on group (a group's
+boosters share their draw): thrust, specific impulse, propellant loaded, dry mass; for the run:
+the air's density (the whole standard atmosphere scaled), a steady wind added to the mission's,
+east and north, with a new phase of its gusts, and — with the inertial navigation of G02 — a new
+seed for the IMU's error model, a fresh realisation of the same grade. A thrust factor keeps the
+Isp, so the flow ṁ = T/(g₀ I_sp) and the burn time follow the thrust; an Isp factor keeps the
+thrust. The default 1σ is the minimal set agreed with the owner — thrust 1 %, Isp 0.3 %,
+propellant and dry mass 0.5 %, density 5 %, wind 5 m/s per axis — every one editable, and
+switchable off.
+
+**The draws.** Run k of a set seeded S draws from its own mulberry32 stream (seeded by a 32-bit
+mix of S and k), by Box–Muller, one standard normal number z per quantity, clipped at ±3σ (a
+4σ engine is a failed engine, not a dispersed one), a factor 1 + σz. All the numbers are drawn,
+always in the same order, whether their quantity is on or not: switching one off moves no other,
+and the three guidance laws fly the same vehicles through the same air.
+
+**Nominal plan, dispersed flight.** The mission is planned (`planMission`, the guidance
+defaults, the fairing and max-Q placards) on the nominal vehicle; the vehicle model that flies
+— `VehicleModel`, and the rigid body built from it — is the dispersed one, and what the flight
+computer reads of it (thrust, mass, the stages left) it reads as its sensors would. The density
+factor scales the air in the six-DOF aerodynamics and in the step's dynamic pressure (and in the
+point-mass drag); the wind changes the six-DOF scenario. With nothing dispersed, a flight is the
+nominal one bit for bit (tests/monte-carlo.test.ts), and so is one with the attitude-loop and
+equation records off, which a run flies without.
+
+**What is read.** Per law: the runs in orbit at the end (periapsis at or above the insertion
+floor less 3 km), those whose mission reached its target orbit, those lost and why; and at each
+point, over the runs read there (in orbit at the end; through the cut-off at the other), the
+mean, σ, extremes and bias of each element; the 3σ
+ellipse of (perigee, apogee) from their sample covariance (the eigenvectors, √λ scaled by 3);
+the runs lost (the vehicle broken up, or short of orbit) and why. **Which dispersion drives
+it**: each element is regressed, by least squares with an intercept, on the numbers the
+switched-on quantities drew; a term's share of the element's variance is b²·var(z)/var(y),
+summed over the stages for each quantity, and what the fit leaves (1 − Σ shares) is *other* —
+the gusts' and the IMU's realisations, which are not numbers drawn, and whatever is not linear.
+The shares are shown only with three runs per number drawn.
+
+**The runs** fly in a pool of Web Workers (all the machine's cores but one, at most 16), every
+law flying run k before any flies run k + 1, so a set stopped early still compares like with
+like; a run the physics throws on is a lost run, not a lost set. A six-DOF run takes about a
+minute of one core here to a LEO target (Falcon 9 64 s, 41 of them to the cut-off; Soyuz-2.1b
+84 s), longer when the target is reached by a Hohmann transfer (Electron to 500 km, 2–3 min).
+
+**What it finds** (tests/heavy/monte-carlo-*.test.ts, seed 1: each vehicle's reference mission to
+a 500 × 500 km orbit, six-DOF in crosswind, the minimal set; the whole record in
+docs/history/PARALLEL-GNC-2026-09.md, G05). The runs that reached their target orbit, ± 3σ (bias):
+
+| Set | In orbit | On target | Lost | Perigee, km | Apogee, km | Inclination, ° |
+|---|---|---|---|---|---|---|
+| Falcon 9, standard, 40 runs | 36 | 33 | 4 | 499.78 ± 1.11 (−0.22) | 501.37 ± 0.84 (+1.37) | 28.6138 ± 0.0006 (+0.0018) |
+| Falcon 9, PEG, 40 | 36 | 33 | 4 | 499.80 ± 1.10 (−0.20) | 501.53 ± 0.83 (+1.53) | 28.6156 ± 0.0009 (+0.0036) |
+| Falcon 9, IGM, 40 | 36 | 33 | 4 | 499.89 ± 1.07 (−0.11) | 501.44 ± 0.81 (+1.44) | 28.6133 ± 0.0001 (+0.0013) |
+| Falcon 9, PEG, tactical navigation, 20 | 20 | 19 | 0 | 499.76 ± 0.91 (−0.24) | 501.39 ± 0.60 (+1.39) | 28.6155 ± 0.0013 (+0.0035) |
+| Soyuz-2.1b, standard, 30 | 24 | 24 | 6 | 494.79 ± 5.18 (−5.21) | 505.20 ± 5.20 (+5.20) | 51.6033 ± 0.0114 (+0.0033) |
+
+Delivered, the orbit is good to a kilometre or so on Falcon 9 and five on Soyuz, whatever the
+law; the three laws lose and miss the same runs: the losses come before an explicit law engages
+(on Falcon 9 at T+135 s, §2j), and the runs that miss are already in the wrong plane at the
+cut-off, whichever law flew the ascent. At the cut-off (the planned 200 × 500 km insertion)
+Falcon 9 reaches 200.00 ± 0.00 × 497.86 ± 1.31 km
+on the standard guidance (it cuts off on the perigee), 199.36 ± 0.64 × 497.62 ± 1.11 on PEG,
+200.01 ± 0.02 × 497.82 ± 1.27 on IGM; Soyuz 195.86 ± 16.30 × 497.06 ± 0.07. What drives the
+cut-off's apogee is the propellant and the thrust (standard 24 % and 14 %, IGM 34 % and 40 %);
+its perigee on PEG and IGM, the wind and the Isp (the standard guidance cuts off on it); the
+inclination's spread over all the runs in orbit (± 0.47°)
+is the wind's (46 %), through the runs that stayed in the wrong plane.
+
+**What it found wrong** — the runs not on target, the known issues of the G05 record:
+
+1. *Falcon 9 breaks up on dynamic pressure* past its placard (46 kPa, 1.15 × 40 kPa) at T+68–88 s,
+   in 4 runs of 40 on every law (runs 21, 23, 25, 34; the three examined with a dispersed wind of
+   +6.7 to +9.6 m/s to the east). The load relief does not hold them under it.
+2. *Soyuz-2.1b breaks up on q·α* (the 300 kPa·° of Q0) at T+34–62 s in 3 of 30 (runs 1, 20, 23;
+   +6 to +13 m/s to the east, α 8–17°).
+3. *Soyuz-2.1b runs out of propellant* in 3 of 30 (runs 12, 16, 25): run 12's third stage burns on
+   after the core's cut-off to its last propellant at T+1493 s, on a path of 6400 km apogee and
+   a perigee inside the Earth — the ascent never cuts off. Not yet understood.
+4. *Falcon 9 stays in the wrong plane* in 3 of 40 on every law (runs 13, 35, 36; 1 of 20 with
+   the navigation): in orbit at 29.1–29.3° against 28.61°, a plane they were in already at the
+   ascent's cut-off, most still in the 200 × 500 km parking orbit; run 13 (a wind of −14.5 m/s to
+   the north) timed out aligning for its burn (`evt.burnAlignmentTimeout`, then
+   `evt.offTargetOrbit`). Not yet understood.
+5. *With a tactical or MEMS navigation every flight missed its target*: the gyro noise had spent
+   the second stage's gas before orbit. Fixed by the jets' rate deadband (§2h); the set now
+   reaches its target 19 times in 20.
+6. *Electron* (a probe of 3 runs, not a heavy set): one run's second stage cut off with no burn
+   prediction (`evt.burnPredictionUnavailable`, a wind of −14.6 m/s to the east) and the flight
+   ended suborbital, its kick stage unlit.
+
+The heavy sets hold the tool to account (every run counted, every loss named by the failure
+that caused it) and the flights to what they did when recorded (no more runs lost, no fewer on
+target, the runs on target within bands); the losses themselves are left for the owner to
+decide on.
+
+## 2m. One dispersed flight (roadmap P08)
+
+A Monte Carlo run can be flown on its own, as any other flight: watched, replayed, charted,
+reported. The mission names it in its dynamics — `dispersion: { seed, run, settings? }`, the set's
+seed, the run's index (0-based; the window and the panel count from 1) and, when they are not
+the default ones, the set's dispersions — and the `Simulation` draws it with G05's own
+`drawDispersion`: the same stream (`runSeed(seed, run)`), the same order of draws, the same
+clipping at ±3σ. Run `n` flown alone is therefore run `n` of the set, to the bit: a test flies both
+and compares the state (`tests/dispersed-flight.test.ts`). A mission without `dispersion` takes
+the constructor's old path and flies exactly as before.
+
+What a run disperses depends on the model. In six-DOF, everything G05 draws: every stage's and
+strap-on group's thrust, specific impulse, propellant and dry mass, the air's density, a steady
+wind added to the mission's, the gusts' phase and — with the inertial navigation — a fresh
+realisation of the IMU. In point-mass the same draws are made in the same order, and the vehicle
+and the density are flown with them; point-mass has no wind and no IMU, so those draws are not
+flown. A run flown point-mass is thus a different flight from the set's six-DOF run with the same
+number: the same vehicle and air, a different model of the flight.
+
+Clicking a run on the Monte Carlo window's scatter puts it in the setup panel — the set's seed
+and the run's number, its guidance law, six-DOF (as the set flew it) — ready to launch.
 
 ## 3. Atmosphere and aerodynamics
 
@@ -1463,7 +1628,7 @@ seven left:
 
 | mission | milestone | model | published |
 | --- | --- | --- | --- |
-| Falcon 9 | max Q | 50.3 s | 65–80 s |
+| Falcon 9 | max Q | 49.4 s | 65–80 s |
 | Electron | max Q | 50.7 s | 60–70 s |
 | Electron | MECO | 138.0 s | 145–155 s |
 | Soyuz-2.1a | core cut-off | 294.1 s | ~287 s |
@@ -1490,14 +1655,18 @@ them with an earlier revision:
 
 **Falcon 9, Starlink-class 15.6 t to the ISS plane from Cape Canaveral**
 
+Measured 2026-09-25 with the published first-stage masses (410.9 t of propellant, 22.2 t
+empty; [VALIDATION.md](VALIDATION.md), "Data change applied"). The values before them are in
+brackets.
+
 | milestone | published | model | window |
 | --- | --- | --- | --- |
-| max Q | 65–80 s | 50.3 s (22.6 kPa) | 44–58 |
-| MECO | 150–165 s | 150.8 s | 145–165 |
-| stage separation | MECO + 3 s | 153.8 s | 148–168 |
-| MVac ignition | MECO + 7 s | 157.8 s | 152–172 |
-| fairing jettison | 190–230 s | 210.9 s (108 km) | 185–235 |
-| SECO | 500–560 s | 526.4 s | 495–565 |
+| max Q | 65–80 s | 49.4 s, 22.2 kPa (50.3 s) | 44–58 |
+| MECO | 150–165 s | 156.3 s (150.8 s) | 146–166 |
+| stage separation | MECO + 3 s | 159.3 s (153.8 s) | 149–169 |
+| MVac ignition | MECO + 7 s | 163.3 s (157.8 s) | 153–173 |
+| fairing jettison | 190–230 s | 221.5 s, 109 km (210.9 s) | 185–235 |
+| SECO | 500–560 s | 528.6 s (526.4 s) | 495–565 |
 
 Max Q is the one milestone in this table that disagrees with its published figure, and it is a
 *data* disagreement rather than a guidance one: `maxQThrottle` starts Falcon 9's throttle bucket
@@ -1507,26 +1676,26 @@ and low.
 
 **Raising `qStart` does not close it, and was measured rather than assumed.** A review proposed
 moving the bucket to the real ~33 kPa peak and expected the disagreement list to drop by one.
-Flown, the same mission with `qStart` at 26 / 30 / 33 / 36 kPa and with the bucket removed
-entirely gives:
+Flown with the published masses, the same mission with `qStart` at 26 / 30 / 33 kPa and with
+the bucket removed entirely gives (the first measurement, with the earlier masses, in brackets):
 
 | `qStart` | max Q | MECO (150–165) | fairing (190–230) |
 | --- | --- | --- | --- |
-| 22 kPa (shipped) | 50.3 s, 22.6 kPa | 150.8 s | 210.9 s |
-| 26 kPa | 44.6 s, 26.1 kPa | 148.2 s | 200.3 s |
-| 30 kPa | 50.7 s, 30.1 kPa | 146.2 s | 192.9 s |
-| 33 kPa | 57.6 s, 33.0 kPa | 145.0 s | 188.8 s |
-| no bucket | 59.2 s, 33.1 kPa | 145.0 s | 188.6 s |
+| 22 kPa (shipped) | 49.4 s, 22.2 kPa (50.3 s) | 156.3 s (150.8 s) | 221.5 s (210.9 s) |
+| 26 kPa | 47.6 s, 26.1 kPa (44.6 s) | 153.8 s (148.2 s) | 210.0 s (200.3 s) |
+| 30 kPa | 54.0 s, 30.0 kPa (50.7 s) | 151.8 s (146.2 s) | 201.7 s (192.9 s) |
+| 33 kPa | 61.3 s, 31.8 kPa (57.6 s) | 151.1 s (145.0 s) | 199.1 s (188.8 s) |
+| no bucket | 61.3 s, 31.8 kPa (59.2 s) | 151.1 s (145.0 s) | 199.1 s (188.6 s) |
 
-The peak *value* is a data question and 33 kPa reproduces the real one exactly; the peak *time*
-is not. Even with no throttle-down at all the modelled q peaks at T+59 s, six seconds short of
-the published window, because when q peaks is set by the ascent profile — the speed the vehicle
-has at the altitude where density has fallen away — and not by the bucket. Meanwhile a vehicle
-that never throttles back climbs faster, so MECO moves to T+145 s and fairing jettison to
-T+188.8 s, both of which *leave* their published windows. The change therefore takes the
-disagreement list from seven entries to nine while still missing max Q. Closing it honestly
-means a lofter first-stage profile (`guidanceDefaults`), which moves every other row in this
-table, so the shipped data stay where they are and the disagreement stays disclosed.
+The peak *time* is not a bucket question. Even with no throttle-down at all the modelled q peaks
+at T+61 s, four seconds short of the published window, because when q peaks is set by the ascent
+profile (the speed the vehicle has at the altitude where density has fallen away) and not by
+the bucket. With the earlier masses a vehicle that never throttled back also pushed MECO and
+fairing jettison *out* of their windows; with the published masses both stay inside, so that
+argument is gone. What keeps the shipped 22 kPa is the flight data: a later, deeper bucket moves
+the early ascent further from five flights' webcast telemetry (VALIDATION.md: 42 of 66 rows in
+tolerance against 49), and it still misses max Q. Closing it honestly means a lofter first-stage
+profile (`guidanceDefaults`), which moves every other row in this table.
 
 **Soyuz-2.1a, 7.15 t crew ship from Baikonur to the ISS** (the application's default mission)
 
@@ -1747,6 +1916,9 @@ top of the search, 115 % of the rating); the others date from the previous wave:
 | PSLV-XL | 2.8 t / 3.8 t | 2.6 t / 3.8 t | — | 0.6 t / 1.4 t |
 | Electron | > 0.30 t | > 0.30 t | 0.2 t / 0.30 t | — |
 | Starship | > 100 t | > 100 t | — | 21.2 t / 27 t |
+
+The Falcon 9 and Falcon Heavy rows predate the published first-stage masses
+([VALIDATION.md](VALIDATION.md), F1 and F11) and have not been re-measured since.
 
 "The largest payload that passes the acceptance criteria" is not the same thing as "the largest
 payload delivered": a flight can reach a perfectly good orbit and still miss the criteria on
@@ -2137,8 +2309,10 @@ the Starbase launch tower, whose arms catch Super Heavy) or a **drone ship**; a 
 flown **downrange**, the original model above with no target, or **expended**. Without a plan
 every recovered body is flown downrange, unchanged. A plan changes the propellant reserve too: a
 body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for Falcon 9 and
-Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 12 %
-leaves Arabsat-6A's side boosters short of their boostback), a downrange body keeps
+Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 15 %
+touches down with 13.0 t to spare, measured with Falcon 9's published first-stage masses; 12 %
+leaves Arabsat-6A's side boosters short of their boostback, and 13 % lands them 7 m off,
+measured with the same published masses on all three cores), a downrange body keeps
 `recoveryReserve`, a drone-ship body `recoveryReserve` or, a lone first stage, what its return
 needs (`droneShipReserve`, §13.5), and a body the plan expends, or leaves out, holds nothing back.
 
@@ -2239,14 +2413,20 @@ tests/rigid-return.test.ts, tests/heavy/falcon-heavy-returns.test.ts):
 
 | Flight | Model | Body | Miss |
 |---|---|---|---|
-| Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.0 m |
-| | six-DOF | first stage → LZ-1 | 0.8 m |
-| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.0 m, 0.0 m |
-| | | core → drone ship, ~930 km downrange | 0.0 m |
-| | six-DOF | side boosters → LZ-1, LZ-2 | 0.8 m, 0.8 m |
-| | | core → drone ship | 0.7 m |
+| Falcon 9, Bandwagon-1 (1.3 t, 590 km, 45.4°) | point mass | first stage → LZ-1 | 0.2 m |
+| | six-DOF | first stage → LZ-1 | 1.6 m |
+| Falcon Heavy, Arabsat-6A (6.465 t, GTO) | point mass | side boosters → LZ-1, LZ-2 | 0.3 m, 0.2 m |
+| | | core → drone ship, ~930 km downrange | 2.1 m |
+| | six-DOF | side boosters → LZ-1, LZ-2 | 1.7 m, 1.6 m |
+| | | core → drone ship | 1.6 m |
 | Starship (15.6 t, 500 km) | point mass | Super Heavy → tower | 0.0 m, caught |
 | | six-DOF | Super Heavy → tower | 0.3 m, caught at 2.4 m/s down, 0.45 m/s across, 0.5° |
+
+The Falcon 9 rows were re-measured on 2026-09-25 with the published first-stage masses
+(VALIDATION.md). The rows they replace (0.0 m and 0.8 m) were already out of date: with the
+earlier masses the same harness now gives 0.7 m and 1.5 m.
+The Falcon Heavy rows were re-measured on 2026-09-27 with the same masses on its three cores
+and Falcon 9's max-Q bucket (VALIDATION.md, F11).
 
 The drone ship ends up 930 km downrange, where Of Course I Still Love You was 967 km out for the
 real flight.
@@ -2541,13 +2721,19 @@ where drag and the third bodies are left out for both vehicles alike.
 - **Gravity**: the central term and the zonal harmonics J2 = 1.08263·10⁻³, J3 = −2.53266·10⁻⁶,
   J4 = −1.61962·10⁻⁶ (EGM96, unnormalised), as the gradient of the zonal potential (the test
   differentiates the potential numerically and requires the accelerations to match).
-- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth. ρ is Harris–Priester
-  (Montenbruck & Gill, *Satellite Orbits*, 2000, §3.5.2, Table 3.8, 100–1000 km): the table's
-  minimum rising to its maximum as cosⁿ(ψ/2) of the angle from the diurnal bulge, whose apex lags
-  the Sun by 30°; n goes from 2 at the equator to 6 in polar orbits. The table is for mean solar
-  activity; low and high activity take ∓0.45 decades of density above 500 km, tapering to none at
-  120 km (a fit to the spread of the CIRA/MSIS profiles between F10.7 = 70 and 250, good to a
-  factor of two).
+- **Drag**: −½ ρ C_D (A/m) |v_r| v_r with the air turning with the Earth. ρ is NRLMSISE-00's
+  effective mass density for drag (GTD7D, the anomalous oxygen included; Picone, Hedin, Drob and
+  Aikin, JGR 107(A12), 2002), at the satellite's geodetic height, latitude and longitude above
+  WGS-84, the day of the year, the UT and the local solar time (UT + longitude/15): a port of the
+  model's C release (src/physics/propagator/msis.ts, P2.5), the model ECSS-E-ST-10-04C (§8.3)
+  names for orbit decay, with an uncertainty ECSS puts at about 15 % in mean conditions (Annex
+  G.5). Above 2500 km there is no air. The indices (R05, P2.5, src/physics/propagator/activity.ts)
+  are what the model reads for a day — the previous day's observed F10.7, its 81-day centred
+  mean, the day's Ap — either held at one of ECSS's levels (F10.7 65, 140, 250; Ap 0, 15, 45), or
+  measured day by day (GFZ since 1954, then NOAA SWPC), then SWPC's forecast, then the mean of
+  solar cycles 19–24 month by month from cycle 25's minimum; the Ap where none is measured is the
+  same mean cycle's. Until P2.5 the density was the model's day-and-season average (ECSS's
+  tables) spread by Harris–Priester's diurnal bulge, and the indices monthly.
 - **Sun and Moon**: third-body accelerations (the direct pull less the pull on the Earth), with
   the low-precision ephemerides of Montenbruck & Gill §3.3.2 (Sun to 0.1 %, Moon to a few hundred
   kilometres).
@@ -2555,18 +2741,25 @@ where drag and the third bodies are left out for both vehicles alike.
   Earth's cylindrical shadow.
 - **Cowell**: Dormand–Prince 5(4) with step control on the relative position error (10⁻⁹ in the
   window). **Mean elements**: J2's secular rates of the node and the perigee, and drag's rates of
-  a and e averaged over a revolution by Gauss's equations at 36 points of eccentric anomaly, in
-  steps of up to six hours (shorter as the orbit decays); no Sun, Moon or sunlight.
+  a and e averaged over a revolution by Gauss's equations in eccentric anomaly — 24 points, or for
+  an eccentric orbit 24 over the arc within 300 km of the perigee's height and 12 over the rest —
+  in steps of up to five days, each losing at most 0.5 % of the height left above the re-entry
+  line, a step of more than a day reading the indices' mean over it; no Sun, Moon or sunlight.
 - Both stop at a perigee of 120 km, where a satellite is lost within a revolution or two; that
   instant is reported as the lifetime.
 
 Checked (tests/propagator.test.ts): J2's nodal regression against −3/2 n J2 (R/p)² cos i to
 0.1 %; a force-free orbit kept to a metre over five days; a space station at 420 km losing 1–6 km
 a month, with Cowell and the mean elements within 25 % of each other; a 1U CubeSat at 400 km
-down in 30 days to two years depending on the Sun (the model: 113, 211 and 397 days for high,
-mean and low activity); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
+down in a month to a few years depending on the Sun (the model: 69, 217 and 1268 days at ECSS's
+high, moderate and low levels; 74, 222 and 1208 with R05's density); a geostationary orbit's inclination growing at 0.6–1.2° a year under the
 Sun and the Moon (known: about 0.75–0.95°); and sunlight pressure raising a light satellite's
-eccentricity.
+eccentricity; and the drag's average over a transfer orbit's revolution against a fine even
+sampling, to 0.1 %. tests/msis.test.ts holds the model to its distribution's test cases and to
+NRL's Fortran; tests/activity.test.ts holds its equatorial averages to ECSS's tables (0.3 %) and,
+with the Sun as measured, brings seven spheres of published mass and size (Starshine 1–3, the four
+ANDE spheres, 1999–2010) down within 25 % of their days in orbit on record, 8–23 % early for six of
+them (VALIDATION.md §6).
 
 The payloads' cross-sections are estimates by class (src/physics/propagator/spacecraft.ts); the
 window lets them be changed, and the lifetime is inversely proportional to C_D A/m.
@@ -2602,6 +2795,16 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
   - The fairing placard is one physical criterion (1135 W/m²) plus, for four vehicles, the
     jettison **time** their operator publishes (§4). Neither is a model of the real decision,
     which is a heating placard evaluated against a specific fairing's thermal design.
+  - The physics has been compared with flight data for eleven vehicles: Falcon 9 (webcast
+    telemetry of five flights) and ten others against published timelines
+    ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
+    - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
+    - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
+      published.
+    - PSLV-XL's first stage is 29 % slow at separation. It flies too steep and then turns hard;
+      the solid-motor curve shape was measured and is not the cause.
+    - H3's first stage flies far flatter than JAXA's plan.
+    - The heating placard drops most fairings 10–50 % early.
   - Falcon 9's modelled max-Q peak is ~20 s early and ~25 % low, because its throttle bucket
     starts at 22 kPa (§6a).
   - Exo-atmospheric coasts are pure Kepler (no J2, no drag) while the orbital phase is RK4 + J2.
@@ -2782,7 +2985,7 @@ keeps 9.1 % (15.6 t) to 9.8 % (nothing), Demo-2 9.25 %, and Demo-2 now reaches i
 Falcon Heavy's core, separating from its side boosters' stack, keeps its 12 %.
 
 **13.6 The first R-7s: Sputnik 1 and Vostok 1.** `HISTORICAL_VEHICLES` in src/data/vehicles.ts;
-the spacecraft `ps1` and `vostok3ka` in src/data/satellites.ts. The vehicles of historical flights
+the spacecraft `ps1` and `vostok1` in src/data/satellites.ts. The vehicles of historical flights
 are kept out of the fleet's generic orbit matrix (tests/fleet-*.test.ts, `npm run
 test:sixdof-fleet`), which would ask a 1957 rocket for orbits it never flew; each is held instead to
 its own flight — point-mass in tests/historical-vehicles.test.ts, six-DOF as Watch flies it in
@@ -2884,7 +3087,7 @@ Tested: point-mass in tests/historical-vehicles.test.ts, six-DOF in tests/heavy/
 (tests/mr3-harness.ts), each to the timeline above within 15–30 s, 11 ± 1.5 g, 487 ± 25 km and 25 km
 of the real splashdown.
 
-**13.8 Apollo 11 on the Saturn V, launch to parking orbit (part 6a).** The vehicle `saturnv` in
+**13.8 Apollo 11 on the Saturn V, launch to parking orbit (part 6a).** The vehicle `saturnv506` in
 `HISTORICAL_VEHICLES`, the spacecraft `apollo` in src/data/satellites.ts. 16 July 1969, range zero
 13:32:00 UTC, LC-39A, flight azimuth 72.058°. Sources: the Saturn V flight evaluation report for AS-506,
 MPR-SAT-FE-69-9 (FER), and NASA SP-4029 (*Saturn V Launch Vehicle Flight Evaluation* summary tables).

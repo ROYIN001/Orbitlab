@@ -1902,7 +1902,7 @@ const mahiaPad: Builder = (ctx) => {
 
 const BUILDERS: Record<string, Builder> = {
   baikonur: baikonurPad, plesetsk: soyuzPad, vostochny: soyuzPad,
-  cape: (ctx) => (ctx.pad === 'lc5' ? lc5Pad(ctx) : slc40Pad(ctx)), ksc39a: (ctx) => (ctx.vehicle.id === 'saturnv' ? lc39a1969Pad(ctx) : lc39aPad(ctx)), vandenberg: slc4ePad, wallops: wallopsPad,
+  cape: (ctx) => (ctx.pad === 'lc5' ? lc5Pad(ctx) : slc40Pad(ctx)), ksc39a: (ctx) => (ctx.vehicle.id === 'saturnv506' ? lc39a1969Pad(ctx) : lc39aPad(ctx)), vandenberg: slc4ePad, wallops: wallopsPad,
   starbase: starbasePad, kourou: kourouPad, wenchang: wenchangPad,
   tanegashima: tanegashimaPad, sriharikota: sriharikotaPad, mahia: mahiaPad,
 };

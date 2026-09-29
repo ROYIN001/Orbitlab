@@ -6,12 +6,13 @@ import {
 } from '../src/config/mission-file';
 import { validateConfigInput } from '../src/config/validation';
 import { orbitById } from '../src/data/orbits';
+import { vehicleById } from '../src/data/vehicles';
 import { satelliteById } from '../src/data/satellites';
 import { DEFAULT_FAILURE } from '../src/physics/defaults';
 import { defaultDynamics } from '../src/physics/rigid/config';
 import { CONTROL_FAULT_PRESETS } from '../src/physics/rigid/fault-config';
 import { quickstartMission } from '../src/ui/quickstart';
-import { WATCH_MISSIONS, watchMissionSettings } from '../src/ui/watch-missions';
+import { FEATURED_WATCH_MISSION, WATCH_MISSIONS, watchMissionSettings } from '../src/ui/watch-missions';
 
 const FROM = new Date('2026-09-25T06:00:00Z');
 
@@ -220,5 +221,83 @@ describe('mission link and file (U01)', () => {
     const broken = { getItem: () => { throw new Error('denied'); }, setItem: () => { throw new Error('denied'); } };
     expect(() => saveStoredMission(everything(), broken)).not.toThrow();
     expect(loadStoredMission(broken)).toBeNull();
+  });
+});
+
+describe('mission document version 2: a custom vehicle (S02)', () => {
+  const custom = () => ({ ...structuredClone(vehicleById('falcon9')), id: 'my-falcon', name: 'My Falcon', derivedFrom: 'falcon9' });
+  const withCustom = (): MissionState => ({ ...everything(), vehicleId: 'my-falcon', vehicleSpec: custom(), dynamics: defaultDynamics('falcon9') });
+
+  it('carries the vehicle inline and brings it back whole', async () => {
+    const state = withCustom();
+    expect(validateConfigInput(state)).toEqual([]);
+    const doc = missionDocument(state);
+    expect(doc.version).toBe(2);
+    expect(doc.mission.vehicleSpec).toEqual(custom());
+    const back = parseMissionDocument(viaJson(state), fallback());
+    expect(back.issues).toEqual([]);
+    expect(back.state).toEqual(state);
+    // and through a link
+    expect(parseMissionDocument(await decodeMissionParam(await encodeMissionParam(doc)), fallback()).state).toEqual(state);
+    // a copy shares nothing with it
+    const copy = copyMission(state);
+    copy.vehicleSpec!.stages[0].dryMass = 1;
+    expect(state.vehicleSpec!.stages[0].dryMass).toBe(vehicleById('falcon9').stages[0].dryMass);
+  });
+
+  it('drops the page\'s custom vehicle when the document names a catalogue one', () => {
+    const back = parseMissionDocument(viaJson(everything()), withCustom());
+    expect(back.state.vehicleId).toBe('falcon9');
+    expect(back.state.vehicleSpec).toBeUndefined();
+    expect(back.issues).toEqual([]);
+  });
+
+  it('refuses a malformed vehicle, naming the vehicle, and keeps the page mission', () => {
+    const doc = viaJson(withCustom());
+    doc.mission.vehicleSpec.stages[1].engine.ispVac = null;
+    const back = parseMissionDocument(doc, fallback());
+    expect(back.issues).toContainEqual(expect.objectContaining({ field: 'setup.vehicle', code: 'vehicleSpec' }));
+    expect(back.state).toEqual(fallback());
+    const notObject = viaJson(withCustom());
+    notObject.mission.vehicleSpec = 'falcon';
+    expect(parseMissionDocument(notObject, fallback()).state).toEqual(fallback());
+  });
+
+  it('reads a version-1 file as before, and never a vehicle out of one', () => {
+    const v1 = viaJson(everything());
+    v1.version = 1;
+    expect(parseMissionDocument(v1, fallback()).state).toEqual(everything());
+    // a version-1 writer could not have put a vehicle there: it is not read
+    const forged = viaJson(withCustom());
+    forged.version = 1;
+    const back = parseMissionDocument(forged, fallback());
+    expect(back.state.vehicleSpec).toBeUndefined();
+    expect(back.issues.map((i) => i.field)).toContain('setup.vehicle');
+  });
+});
+
+describe('the stored mission restored over a viewer launch (audit 2026-09-27 A1)', () => {
+  // What the panel holds after a reload on Home, Watch, Orbit or Build: the featured launch, with its vehicle's defaults.
+  const featured = (): MissionState => {
+    const settings = watchMissionSettings(FEATURED_WATCH_MISSION, FROM);
+    return { ...settings, dynamics: defaultDynamics(settings.vehicleId) };
+  };
+
+  it('brings back every setting: vehicle, payload, orbit, guidance, failure, dynamics and seed, recovery, launch time', () => {
+    const store = new Map<string, string>();
+    const storage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); } };
+    saveStoredMission(everything(), storage);
+    const back = parseMissionDocument(loadStoredMission(storage), featured());
+    expect(back.issues).toEqual([]);
+    expect(back.state).toEqual(everything());
+    expect(back.state.dynamics?.seed).toBe(4242);
+  });
+
+  it('brings back a custom vehicle (S02) and a Falcon 9 quick start the same way', () => {
+    const custom = { ...everything(), vehicleId: 'my-falcon', dynamics: defaultDynamics('falcon9'),
+      vehicleSpec: { ...structuredClone(vehicleById('falcon9')), id: 'my-falcon', name: 'My Falcon', derivedFrom: 'falcon9' } };
+    expect(parseMissionDocument(viaJson(custom), featured()).state).toEqual(custom);
+    const quick = { ...quickstartMission('leo', FROM), dynamics: defaultDynamics('falcon9') };
+    expect(parseMissionDocument(viaJson(quick), featured())).toMatchObject({ issues: [], state: quick });
   });
 });

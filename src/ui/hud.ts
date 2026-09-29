@@ -923,7 +923,7 @@ export class Hud {
     }
     const stages = this.vehicle?.stages;
     const active = stages && frame.activeStageIndex < stages.length ? stages[frame.activeStageIndex] : null;
-    this.set('stage', active && stages && this.vehicle ? `${frame.activeStageIndex + 1}/${stages.length} ${stageName(this.vehicle.id, active.id, active.name)}` : '—');
+    this.set('stage', active && stages && this.vehicle ? `${frame.activeStageIndex + 1}/${stages.length} ${stageName(this.vehicle, active.id, active.name)}` : '—');
     this.set('throttle', `${(frame.throttle * 100).toFixed(0)} %`);
     this.set('thrust', `${(frame.thrust / 1000).toFixed(0)} kN`);
     this.set('mass', `${(frame.mass / 1000).toFixed(1)} t`);
