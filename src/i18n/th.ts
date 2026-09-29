@@ -3432,7 +3432,7 @@ export const th: Record<string, string> = {
   'ws.makeSheets': 'ดาวน์โหลดใบงาน',
   'ws.makeKey': 'ดาวน์โหลดเฉลย',
   'ws.languageNote': 'ใช้ภาษาที่แสดงบนหน้าจอ ชื่อและรหัสเดียวกันให้ใบงานเดียวกันในทุกภาษา',
-  'ws.made': 'บันทึกแล้ว: {file}',
+  'ws.made': 'เตรียมไฟล์แล้ว: {file}',
   'ws.stripButton': 'ใบงาน',
 
   // --- G05 ---

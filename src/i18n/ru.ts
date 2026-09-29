@@ -3431,7 +3431,7 @@ export const ru: Record<string, string> = {
   'ws.makeSheets': 'Скачать рабочие листы',
   'ws.makeKey': 'Скачать ключ ответов',
   'ws.languageNote': 'На языке интерфейса; одни и те же имена и код дают те же листы на любом языке.',
-  'ws.made': 'Сохранено: {file}',
+  'ws.made': 'Файл подготовлен: {file}',
   'ws.stripButton': 'Рабочий лист',
 
   // --- G05 ---

@@ -3452,7 +3452,7 @@ export const en: Record<string, string> = {
   'ws.makeSheets': 'Download the worksheets',
   'ws.makeKey': 'Download the answer key',
   'ws.languageNote': 'In the language on screen; the same names and code make the same sheets in any language.',
-  'ws.made': 'Saved: {file}',
+  'ws.made': 'File prepared: {file}',
   'ws.stripButton': 'Worksheet',
 
   // --- G05 ---
