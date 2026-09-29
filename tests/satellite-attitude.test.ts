@@ -68,6 +68,7 @@ import {
   gravityGradientTorque, magneticTorque, momentumDumpForce, pointingLoss, slewTorque, solarTorque,
   thrusterForce, torquerDipole, wheelMomentumCyclic,
 } from '../src/orbit/attitude';
+import { C_LIGHT } from '../src/orbit/applications';
 import { orbitFacts } from '../src/orbit/kepler';
 import { circularSpeed } from '../src/physics/orbital';
 import { DEG } from '../src/physics/constants';
@@ -119,8 +120,11 @@ describe('disturbance torques (Starin & Eterno Table 19-4, PDF pp. 9–10)', () 
 
   it('solar pressure: FireSat 6.57e-6 N·m by the equation; the printed 3.3e-6 is defect D2 (an extra 0.5)', () => {
     const t = solarTorque(1367, 2 * 1.5, 0.6, 0, 0.3);
-    // the map's recomputation, 6.57e-6, to ½ unit in its last digit
+    // the map's recomputation, 6.57e-6, to ½ unit in its last digit. Its third
+    // digit is the code's c: the chapter's 3e8 gives 6.5616e-6, which is 6.56
+    // (the references report rounds to 6.6); the printed 2-digit figures do not move
     expectPrinted(t, '6.57e-6');
+    expectPrinted((t * C_LIGHT) / 3e8, '6.56e-6');
     expectNotPrinted(t, '3.3e-6');
     // the slip: the working's factor 0.5 gives the printed figure
     expectPrinted(0.5 * t, '3.3e-6');
