@@ -10,7 +10,7 @@
  * to within floating-point round-off. The tolerances are written in each
  * test before its first comparison.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   handoffFromFlight, handoffFromState, lifetimeSpacecraft, parseHandoff, type HandoffFrame, type HandoffSpacecraft,
 } from '../src/orbit/handoff';
@@ -24,6 +24,9 @@ import { DEG, G0, MU_EARTH, R_EARTH } from '../src/physics/constants';
 import type { SatelliteKind, SatelliteSpec } from '../src/types';
 import { designOrbit, handoffFromDesign, type DesignHandoffInput } from '../src/design/satellite-handoff';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
+import type { BuildScreenHost } from '../src/ui/build/build-screen';
+import type { AppLevel } from '../src/ui/app-mode';
+import type { OrbitHandoff } from '../src/orbit/handoff';
 
 const JD = 2461312.5; // 2026-09-29 00:00 UTC
 
@@ -229,5 +232,11 @@ describe('Build → Orbit: a design handed on with no launch (D06, map §2.6 a)'
     expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, cr: -1 } }, input)).toBeNull();
     expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, dryMass: Number.NaN } }, input)).toBeNull();
     expect(handoffFromDesign({ ...imager, propulsion: { ...imager.propulsion!, thrust: 0 } }, input)).toBeNull();
+  });
+
+  it('is what the Build screen hands main.ts to open in the Orbit section (tsc checks it)', () => {
+    type ToOrbit = NonNullable<BuildScreenHost['toOrbit']>;
+    expectTypeOf<Parameters<ToOrbit>>().toEqualTypeOf<[OrbitHandoff, AppLevel]>();
+    expectTypeOf<NonNullable<ReturnType<typeof handoffFromDesign>>>().toEqualTypeOf<OrbitHandoff>();
   });
 });

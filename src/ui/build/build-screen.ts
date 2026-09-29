@@ -48,6 +48,7 @@ import { partCardView } from './part-card';
 import { ExploreLevel } from './explore-level';
 import { EngineerLevel } from './engineer-level';
 import type { MissionDocument } from '../../config/mission-file';
+import type { OrbitHandoff } from '../../orbit/handoff';
 import './build.css';
 
 export interface BuildScreenHost {
@@ -56,6 +57,13 @@ export interface BuildScreenHost {
   launchTime?(): Date;
   /** hand a design to the Launch section as a mission document and open it at `level`; false when it could not take it */
   flyDesign?(doc: MissionDocument, level: AppLevel): boolean;
+  /**
+   * D06 (Phase 4 map §2.6 a): hand a designed satellite to the Orbit section
+   * in its own orbit, with no launch, as the S03 hand-off
+   * `handoffFromDesign` makes (src/design/satellite-handoff.ts), and open it
+   * at `level`. Nothing here calls it yet: the satellite levels will.
+   */
+  toOrbit?(h: OrbitHandoff, level: AppLevel): void;
 }
 
 type BuildView = 'exploded' | 'assembled';
