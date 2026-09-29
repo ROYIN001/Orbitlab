@@ -41,7 +41,9 @@
  *   3.3 × 10⁻⁶ N·m, without it 6.57 × 10⁻⁶ N·m (map §2.2 D).
  * - D3, Table 19-11, bias momentum for 0.1° (0.0017 rad): printed
  *   37.7 N·m·s; its own inputs give 38.3, the exact 0.1° gives 37.3
- *   (Phase 4 references report §9; not in the map's table).
+ *   (Phase 4 references report §9; not in the map's table). The 1° row's
+ *   3.8 follows from 0.017 rad or from 37.7/10, not from the exact 1°
+ *   (3.73); the test feeds 0.017 rad and records the exact figure.
  * - D4, Table 19-12, SCS thruster force against the disturbance: printed
  *   F = (1.2 × 10⁻⁵ N·m)/(0.5 m) = 6 × 10⁻⁶ N; the quotient is 2.4 × 10⁻⁵ N,
  *   and 6 × 10⁻⁶ is the product T·L. Found by this track (checked on the page
@@ -171,9 +173,14 @@ describe('wheels and torquers (Starin & Eterno Table 19-11, PDF p. 20, FireSat)'
   });
 
   it('bias momentum: 3.8 N·m·s for 1°; 38.3 for 0.1° (0.0017 rad), where the printed 37.7 is defect D3', () => {
-    // 1°: the chapter's rounding of 0.1° to 0.0017 rad makes 1° 0.017 rad;
-    // the exact 0.01745 rad would give 3.73, not the printed 3.8
+    // 1°: the chapter prints no angle in rad for it. 0.017 rad (0.1°'s
+    // 0.0017 × 10) gives 3.83, and so does its own 37.7/10 = 3.77; the exact
+    // 0.01745 rad gives 3.73, which is not the printed 3.8 either. The 3.8 is
+    // read here as the chapter's rounding, and the exact 1° is recorded.
     expectPrinted(biasMomentum(4.4e-5, 5926, 0.017), '3.8');
+    expectPrinted(37.7 / 10, '3.8');
+    expectPrinted(biasMomentum(4.4e-5, 5926, 1 * DEG), '3.73');
+    expectNotPrinted(biasMomentum(4.4e-5, 5926, 1 * DEG), '3.8');
     const h = biasMomentum(4.4e-5, 5926, 0.0017);
     expectPrinted(h, '38.3');
     expectNotPrinted(h, '37.7');
