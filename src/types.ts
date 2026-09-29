@@ -272,6 +272,19 @@ export interface SatelliteSpec {
   propulsion?: { thrust: number; isp: number; propellantFraction: number };
   /** Approximate body dimensions for visuals, m */
   size?: { width: number; height: number; depth: number };
+  /**
+   * The satellite's own drag and sunlight figures for the orbit it is handed
+   * on in (S03, src/orbit/handoff.ts; roadmap D06, Phase 4 map §2.6): its mean
+   * cross-section, m² (one area serves drag and sunlight pressure alike,
+   * src/physics/propagator/forces.ts), its drag coefficient and its
+   * radiation-pressure coefficient. Each one absent is the payload class's
+   * estimate (`spacecraftFor`, src/physics/propagator/spacecraft.ts). No
+   * catalogue entry has them, so no built-in flight changes (Principle 7); a
+   * designed satellite does.
+   */
+  area?: number;
+  cd?: number;
+  cr?: number;
 }
 
 export interface GuidanceParams {
