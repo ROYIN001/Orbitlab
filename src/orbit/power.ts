@@ -185,8 +185,9 @@ export function arrayArea(i: ArrayAreaInput): ArrayArea {
   if (!(i.sunAngle >= 0 && i.sunAngle < Math.PI / 2)) throw new RangeError(`sunAngle must be in [0, π/2) rad (got ${i.sunAngle})`);
   if (!(i.degPerYear >= 0 && i.degPerYear < 1)) throw new RangeError(`degPerYear must be in [0, 1) (got ${i.degPerYear})`);
   if (!nonNegative(i.years)) throw new RangeError(`years must be 0 or more (got ${i.years})`);
+  // own keys only: a design read from a file could name 'toString'
+  if (!Object.hasOwn(MOUNT_FACTOR, i.mount)) throw new RangeError(`not a mount: ${String(i.mount)}`);
   const factor = MOUNT_FACTOR[i.mount];
-  if (factor === undefined) throw new RangeError(`not a mount: ${String(i.mount)}`);
   const pBol = i.flux * i.cellEff * i.Id * Math.cos(i.sunAngle);
   const lifeFactor = (1 - i.degPerYear) ** i.years;
   const pEol = pBol * lifeFactor;

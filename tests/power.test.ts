@@ -189,6 +189,7 @@ describe('the array’s area (V-P3, V-P4)', () => {
     expect(() => arrayArea({ ...base, years: -1 })).toThrow(RangeError);
     expect(() => arrayArea({ ...base, Psa: -1 })).toThrow(RangeError);
     expect(() => arrayArea({ ...base, mount: 'kite' as never })).toThrow(RangeError);
+    expect(() => arrayArea({ ...base, mount: 'toString' as never })).toThrow(RangeError);
   });
 });
 
