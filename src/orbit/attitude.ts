@@ -48,9 +48,11 @@ import { C_LIGHT } from './applications';
 import type { AttitudeCore } from './satellite-cores';
 
 /**
- * The Earth's magnetic dipole moment times the magnetic constant, T·m³: the
- * M of B = M·λ/r³ (Starin & Eterno, Table 19-4, p. 9, "M = 7.8 × 10¹⁵
- * tesla·m³", SMAD's value). At the surface it is a field of 3.0 × 10⁻⁵ T on
+ * The Earth's magnetic dipole moment m times μ₀/4π, T·m³: the M of
+ * B = M·λ/r³ (Starin & Eterno, Table 19-4, p. 9, "M = 7.8 × 10¹⁵ tesla·m³",
+ * SMAD's value). The chapter calls it the moment "multiplied by the magnetic
+ * constant", which leaves out the 4π: μ₀·m would be about 10¹⁷ T·m³ for the
+ * Earth's m ≈ 7.8 × 10²² A·m². At the surface M is a field of 3.0 × 10⁻⁵ T on
  * the magnetic equator.
  */
 export const EARTH_DIPOLE_MOMENT = 7.8e15;
