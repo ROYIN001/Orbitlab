@@ -33,7 +33,7 @@ export const YEAR = 365.25 * 86400;
 
 /**
  * The geostationary radius as IADC writes it, m: R_EARTH + 35 786 km, the
- * altitude its protected ring (±200 km) is centred on. It is 33 m from the
+ * altitude its protected ring (±200 km) is centred on. It is 33 m inside the
  * sidereal-day circle `GEO_RADIUS` (src/orbit/applications.ts), 1e-6 of it.
  */
 export const GEO_RADIUS_IADC = R_EARTH + GEO_ALTITUDE;
@@ -52,13 +52,15 @@ const V_GEO = Math.sqrt(MU_EARTH / GEO_RADIUS_IADC);
  * of about 1.2 to 1.5", A/m the aspect area over the dry mass).
  */
 export const IADC_GEO_BASE = 235e3;
-/** The sunlight term's scale, m per unit of C_R·A/m (kg/m² × m²/kg): 1000 km. */
+/** The sunlight term's scale, m per unit of C_R·A/m (C_R has no unit; A/m in m²/kg): 1000 km. */
 export const IADC_GEO_SRP_SCALE = 1000e3;
 
 /**
- * Hull's controlled re-entry: the last burn leaves the perigee below 50 km,
- * so what survives falls where it was aimed (NTRS 20130000278, p. 4). The
- * closed-form checks lower the perigee to it (map §2.2 C).
+ * Hull's controlled re-entry: "a final perigee of less than 50 km, to prevent
+ * atmospheric skip", in at least three burns (NTRS 20130000278, PDF p. 5).
+ * Burns made at the same apogee add up to the one burn `perigeeLowerDv`
+ * gives, so the closed-form checks lower the perigee to it at once (map
+ * §2.2 C).
  */
 export const CONTROLLED_REENTRY_PERIGEE = 50e3;
 
@@ -108,10 +110,10 @@ export function graveyardRaise(cr: number, areaToMass: number): { dh: number; dv
  * against the inclination the Sun's and the Moon's pull builds up, `di` rad
  * a year: the plane turned back each year at the geostationary speed,
  * 2v·sin(Δi/2) (`planeChangeDv`). The drift itself is not the builder's to
- * choose: it is about 0.85° a year on a ten-year average and goes up and down
- * with the Moon's node (tests/propagator.test.ts finds 0.6–1.2° a year with
- * the propagator's Sun and Moon), so a template gives it with its source
- * (V-V4: 0.85° a year gives TU Delft Fig. 11's 45.5 m/s a year).
+ * choose, and no figure for it is kept here: the propagator's own Sun and
+ * Moon give 0.6–1.2° a year (tests/propagator.test.ts), and 0.85° a year
+ * reproduces TU Delft Fig. 11's ten-year average of 45.5 m/s a year (V-V4),
+ * so a template gives the drift with its source.
  */
 export function nsskPerYear(di: number): number {
   finite('di', di, 0);
@@ -121,9 +123,9 @@ export function nsskPerYear(di: number): number {
 /**
  * The Δv a year that makes up the drag of a satellite held at orbit `o`, m/s
  * a year: (v/2a)·|ȧ|·1 year, with ȧ the drag rate of the semi-major axis the
- * lifetime propagator itself uses (`dragRates`, src/physics/propagator/
- * propagate.ts: NRLMSISE-00 at each point of the revolution, the air turning
- * with the Earth), and v = √(μ/a).
+ * lifetime propagator itself uses (`dragRates` in
+ * src/physics/propagator/propagate.ts: NRLMSISE-00 at each point of the
+ * revolution, the air turning with the Earth), and v = √(μ/a).
  *
  * Why that is the make-up: on a near-circular orbit a small push along the
  * motion raises a at da/dv = 2a/v, so each metre per second buys back 2a/v
@@ -135,8 +137,8 @@ export function nsskPerYear(di: number): number {
  * year after the epoch; with an ECSS level, that level.
  *
  * An estimate: the density model's own error (some 20 % on the spheres of
- * R05, docs/VALIDATION.md §6) and the drag area's (a tumbling mean, src/
- * design/satellite-area.ts) both go straight into it.
+ * R05, docs/VALIDATION.md §6) and the drag area's (a tumbling mean,
+ * src/design/satellite-area.ts) both go straight into it.
  */
 export function dragMakeupPerYear(o: Orbit, sc: Spacecraft, activity: Activity): number {
   finite('a', o.a, R_EARTH);

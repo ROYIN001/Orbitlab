@@ -48,7 +48,7 @@
  *   ten-year average north–south station keeping 45.5 m/s a year; at the
  *   map's 0.85° a year, `nsskPerYear` within **±0.5 m/s a year**.
  * - **Closed forms** (map §2.2 C): the perigee lowered to 50 km (Hull's
- *   controlled re-entry, p. 4) costs 156.7 m/s from 600 km, 182.8 from 700
+ *   controlled re-entry, PDF p. 5) costs 156.7 m/s from 600 km, 182.8 from 700
  *   and 208.3 from 800: **±0.1 m/s**; and it is the O02 planner's `deorbit`
  *   burn on a circle to **1e-6 m/s**.
  * - **The Δv allocation** against TU Delft Fig. 11's budget for a 15-year
