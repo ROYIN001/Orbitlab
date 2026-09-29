@@ -16,7 +16,9 @@ import { apsidesToAE, orbitFromState, repeatOrbit, stateAt, type Orbit } from '.
 import { presetOrbit } from './presets';
 import type { TourStep } from './tour';
 import type { ManeuverSettings, PlannerKind } from './maneuver-setup';
-import type { OrbitHandoff } from './handoff';
+import type { HandoffSpacecraft, OrbitHandoff } from './handoff';
+import type { Craft } from './budget';
+import { spacecraftFor } from '../physics/propagator/spacecraft';
 
 /** The time warps the playground offers, orbit seconds per screen second. */
 export const PG_WARPS: readonly number[] = [1, 10, 60, 300, 600, 1800, 3600, 21_600, 86_400];
@@ -84,6 +86,21 @@ export function withApsis(o: Orbit, which: 'perigee' | 'apogee', altitude: numbe
 /** S03: an orbit handed on from a flight, as the playground's, its epoch the moment of the hand-off. */
 export function handoffOrbit(h: Pick<OrbitHandoff, 'r' | 'v' | 'jd'>): Orbit {
   return orbitFromState(v3(h.r[0], h.r[1], h.r[2]), v3(h.v[0], h.v[1], h.v[2]), h.jd);
+}
+
+/**
+ * O03: the spacecraft the playground hands the lifetime analysis (P07) with
+ * the orbit flown now: the one handed on, at the mass of the craft the plans
+ * are flown with (lighter by what they burned) or else its own; with none
+ * handed on, the science class's estimate (src/physics/propagator/
+ * spacecraft.ts) at the craft's mass, else 1000 kg. Out of the playground's
+ * DOM part so the Build → Orbit hand-off (D06, Phase 4 map §2.6 a) can be
+ * held to reach the dialog with the design's area, C_D and C_R.
+ */
+export function playgroundLifetimeCraft(handoff: Pick<OrbitHandoff, 'spacecraft'> | null, craft: Pick<Craft, 'mass'> | null): HandoffSpacecraft {
+  const kind = handoff?.spacecraft.kind ?? 'science';
+  const mass = craft?.mass ?? handoff?.spacecraft.mass ?? 1000;
+  return handoff ? { ...handoff.spacecraft, mass } : { ...spacecraftFor(kind, mass), kind, propulsion: null };
 }
 
 /**

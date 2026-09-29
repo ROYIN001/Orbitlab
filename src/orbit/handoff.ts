@@ -139,6 +139,19 @@ export function handoffFromState(input: { r: { x: number; y: number; z: number }
   };
 }
 
+/**
+ * What the lifetime analysis (P07) flies from a hand-off: the spacecraft's
+ * mass, area, C_D and C_R, as a copy of its own that the lifetime dialog's
+ * form starts from and edits (src/ui/lifetime.ts). The kind and the engine
+ * are not the propagator's. DOM-free, so the Build → Orbit hand-off (D06,
+ * Phase 4 map §2.6 a) can be held to reach the dialog with the design's
+ * figures (tests/d06-build-orbit-handoff.test.ts).
+ */
+export function lifetimeSpacecraft(h: Pick<OrbitHandoff, 'spacecraft'>): Spacecraft {
+  const { mass, area, cd, cr } = h.spacecraft;
+  return { mass, area, cd, cr };
+}
+
 /** The classical elements of the handed-on orbit (src/physics/orbital.ts). */
 export function handoffElements(h: Pick<OrbitHandoff, 'r' | 'v'>): OrbitalElements {
   return elementsFromState(v3(h.r[0], h.r[1], h.r[2]), v3(h.v[0], h.v[1], h.v[2]));

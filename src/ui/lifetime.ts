@@ -18,7 +18,7 @@ import { runLifetimeJob } from '../physics/lifetime-job';
 import type { ForceModel, Spacecraft } from '../physics/propagator/forces';
 import type { PropagationResult } from '../physics/propagator/propagate';
 import { ECSS_LEVELS, loadSolarDaily, measuredActivity, type Activity, type EcssLevel, type ForecastSide } from '../physics/propagator/activity';
-import type { OrbitHandoff } from '../orbit/handoff';
+import { lifetimeSpacecraft, type OrbitHandoff } from '../orbit/handoff';
 import type { Dataset, DataProvider } from '../provider/data-provider';
 import type { SpaceWeather } from '../provider/space-weather';
 import { positiveNumber, ResultSlot, type Freshness } from './result-slot';
@@ -123,7 +123,7 @@ export class LifetimeDialog extends Modal {
   openFor(start: OrbitHandoff | null, opener: HTMLElement | null): void {
     this.start = start;
     // the analysis's own copy of what it reads, which the form edits
-    this.spacecraft = start ? { mass: start.spacecraft.mass, area: start.spacecraft.area, cd: start.spacecraft.cd, cr: start.spacecraft.cr } : null;
+    this.spacecraft = start ? lifetimeSpacecraft(start) : null;
     this.invalid.clear();
     this.slot.clear();
     this.message = start ? '' : t('life.notInOrbit');
