@@ -4,7 +4,7 @@
  * WordprocessingML written directly, the pictures as PNG or JPEG the page
  * makes from the SVGs (`picture`), stored in a zip (`zip.ts`).
  */
-import { t } from '../i18n';
+import { tFor } from '../i18n';
 import { letterOf } from './bank-items';
 import { zipStore } from './zip';
 import type { WsFigure, WsItem, Worksheet } from './types';
@@ -24,8 +24,8 @@ function run(text: string, s: RunStyle = {}): string {
   const rpr = `<w:rPr>${FONT}${s.bold ? '<w:b/><w:bCs/>' : ''}${s.italic ? '<w:i/><w:iCs/>' : ''}${s.color ? `<w:color w:val="${s.color}"/>` : ''}<w:sz w:val="${size}"/><w:szCs w:val="${size}"/></w:rPr>`;
   return `<w:r>${rpr}<w:t xml:space="preserve">${x(text)}</w:t></w:r>`;
 }
-function para(runs: string, o: { after?: number; keepNext?: boolean; border?: boolean; align?: 'center' } = {}): string {
-  const ppr = `<w:pPr>${o.keepNext ? '<w:keepNext/>' : ''}${o.border ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="9CA3AF"/></w:pBdr>' : ''}`
+function para(runs: string, o: { after?: number; keepNext?: boolean; keepLines?: boolean; border?: boolean; align?: 'center' } = {}): string {
+  const ppr = `<w:pPr>${o.keepNext ? '<w:keepNext/>' : ''}${o.keepLines ? '<w:keepLines/>' : ''}${o.border ? '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="9CA3AF"/></w:pBdr>' : ''}`
     + `<w:spacing w:after="${o.after ?? 80}"/>${o.align ? `<w:jc w:val="${o.align}"/>` : ''}</w:pPr>`;
   return `<w:p>${ppr}${runs}</w:p>`;
 }
@@ -52,10 +52,11 @@ class Doc {
       + '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
   }
 
-  figure(f: WsFigure, widthMm: number): string {
+  figure(f: WsFigure, widthMm: number, keepNext = false): string {
     const img = this.image(f, widthMm);
     if (!img) return '';
-    return para(img, { after: 20, align: 'center' }) + (f.caption ? para(run(f.caption, { size: 8.5, color: '4B5563' }), { align: 'center' }) : '');
+    return para(img, { after: 20, align: 'center', keepNext, keepLines: keepNext })
+      + (f.caption ? para(run(f.caption, { size: 8.5, color: '4B5563' }), { align: 'center', keepNext, keepLines: keepNext }) : '');
   }
 }
 
@@ -84,25 +85,29 @@ const WORK_BOX = '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders
   + '</w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="9600"/></w:tblGrid><w:tr><w:trPr><w:trHeight w:val="760" w:hRule="atLeast"/></w:trPr><w:tc>';
 
 function item(doc: Doc, it: WsItem, n: number, lang: Worksheet['lang']): string {
-  let out = para(run(`${n}. `, { bold: true }) + run(it.prompt, { bold: true }), { keepNext: true, after: 60 });
-  if (it.figure) out += doc.figure(it.figure, it.figure.image ? 70 : 120);
+  let out = para(run(`${n}. `, { bold: true }) + run(it.prompt, { bold: true }), { keepNext: true, keepLines: true, after: 60 });
+  if (it.figure) out += doc.figure(it.figure, it.figure.image ? 70 : 120, true);
   if (it.kind === 'number') {
-    out += para(run(`${t('ws.answer')} ______________________ ${it.unit ?? ''}`), { after: 40 });
-    out += `${WORK_BOX}${para(run(t('ws.working'), { size: 8, color: '9CA3AF' }))}</w:tc></w:tr></w:tbl>`;
+    out += para(run(`${tFor(lang, 'ws.answer')} ______________________ ${it.unit ?? ''}`), { after: 40 });
+    out += `${WORK_BOX}${para(run(tFor(lang, 'ws.working'), { size: 8, color: '9CA3AF' }))}</w:tc></w:tr></w:tbl>`;
   } else {
-    if (it.kind === 'multi') out += para(run(t('ws.multiHint'), { size: 9, color: '4B5563', italic: true }));
-    if (it.kind === 'order') out += para(run(t('ws.orderHint'), { size: 9, color: '4B5563', italic: true }));
+    if (it.kind === 'multi') out += para(run(tFor(lang, 'ws.multiHint'), { size: 9, color: '4B5563', italic: true }), { keepNext: true, keepLines: true });
+    if (it.kind === 'order') out += para(run(tFor(lang, 'ws.orderHint'), { size: 9, color: '4B5563', italic: true }), { keepNext: true, keepLines: true });
     const box = it.kind === 'order' ? '[   ]' : '☐';
-    out += (it.options ?? []).map((o, k) => para(run(`${box}  ${letterOf(lang, k)}) ${o}`), { after: 20 })).join('');
+    const options = it.options ?? [];
+    // Keep one question together, ending the chain at its final option so
+    // that Word can move the next question independently to another page.
+    out += options.map((o, k) => para(run(`${box}  ${letterOf(lang, k)}) ${o}`), { after: 20, keepNext: k < options.length - 1, keepLines: true })).join('');
   }
   return out + para('', { after: 120 });
 }
 
 function header(sheet: Worksheet, key: boolean): string {
-  return para(run(key ? t('ws.keyTitle', { title: sheet.title }) : sheet.title, { bold: true, size: 17 }), { after: 20 })
+  const tr = (key: string, params?: Record<string, string | number>) => tFor(sheet.lang, key, params);
+  return para(run(key ? tr('ws.keyTitle', { title: sheet.title }) : sheet.title, { bold: true, size: 17 }), { after: 20 })
     + para(run(sheet.subtitle, { size: 9.5, color: '4B5563' }))
-    + para(run(`${t('ws.name')} `, { bold: true }) + run(sheet.student || '______________________________') + run(`     ${t('ws.code')} `, { bold: true }) + run(sheet.code)
-      + (key ? '' : run(`     ${t('ws.date')} `, { bold: true }) + run('____________')), { border: true, after: 160 });
+    + para(run(`${tr('ws.name')} `, { bold: true }) + run(sheet.student || '______________________________') + run(`     ${tr('ws.code')} `, { bold: true }) + run(sheet.code)
+      + (key ? '' : run(`     ${tr('ws.date')} `, { bold: true }) + run('____________')), { border: true, after: 160 });
 }
 const heading = (text: string) => para(run(text, { bold: true, size: 12.5 }), { keepNext: true, border: true, after: 80 });
 
@@ -146,7 +151,7 @@ export function worksheetsDocx(sheets: readonly Worksheet[], pictureOf: PictureO
       if (s.figures?.length) out += pictureGrid(doc, s.figures) + para('');
       for (const it of s.items) out += item(doc, it, ++n, sheet.lang);
     }
-    return out + para(run((sheet.footer ?? t('ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) })), { size: 8.5, color: '6B7280' }));
+    return out + para(run((sheet.footer ?? tFor(sheet.lang, 'ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) })), { size: 8.5, color: '6B7280' }));
   }).join(PAGE_BREAK);
   return pack(body, doc);
 }

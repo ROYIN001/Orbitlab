@@ -25,6 +25,8 @@ import { th } from '../src/i18n/th';
 import { setLang, t } from '../src/i18n';
 import { localized, localizeEventParams } from '../src/ui/names';
 import { SATELLITES } from '../src/data/satellites';
+import { DesignStoreError, type DesignStoreErrorCode } from '../src/design/design-store';
+import { ExploreStore } from '../src/ui/build/explore-store';
 
 // `import.meta.glob` requires its options to be an inline object literal — a
 // shared `const RAW = {…}` is rejected by the transform at build time.
@@ -279,6 +281,28 @@ describe('translation coverage', () => {
 });
 
 describe('call sites', () => {
+  it('renders every design-store error code through the runtime mapping in all languages', () => {
+    // Read the public error union, not a duplicate list of the UI's mappings:
+    // adding a new error must bring its runtime message and all dictionaries.
+    const definition = /export type DesignStoreErrorCode\s*=\s*([^;]+);/.exec(SRC['../src/design/design-store.ts']);
+    expect(definition).not.toBeNull();
+    const codes = [...definition![1].matchAll(/'([^']+)'/g)].map((m) => m[1] as DesignStoreErrorCode);
+    expect(codes.length).toBeGreaterThan(0);
+    const rendering = ExploreStore.prototype as unknown as { failure(error: unknown): { level: string; text: string } };
+    try {
+      for (const [lang, dict] of Object.entries({ en, ru, th })) {
+        withLang(lang as 'en' | 'ru' | 'th');
+        for (const code of codes) {
+          const message = rendering.failure(new DesignStoreError(code, 'Raw internal detail'));
+          expect(message.level).toBe('error');
+          expect(Object.values(dict), `${lang}/${code}`).toContain(message.text);
+          expect(message.text).not.toBe('Raw internal detail');
+          if (lang !== 'en') expect(message.text).toMatch(SCRIPT[lang as Target]);
+        }
+      }
+    } finally { withLang('en'); }
+  });
+
   it('localizes recorded aerodynamic limits while preserving raw angles and scope', () => {
     const params = { scope: 'debris', name: 'Falcon 9', angleOfAttackRad: Math.PI / 6, sideslipRad: -Math.PI / 60 };
     for (const lang of ['en', 'ru', 'th'] as const) {

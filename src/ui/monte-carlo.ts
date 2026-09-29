@@ -403,7 +403,7 @@ export class MonteCarloWindow implements McpMonteCarloHost {
     this.progressText.textContent = job && p ? t(running ? 'mc.progress.running' : `mc.progress.${job.state}`, {
       done: p.done, total: p.total, workers: job.workerCount, eta: p.etaS === null ? '…' : duration(p.etaS),
     }) : '';
-    this.statusEl.textContent = job ? t(`mc.state.${job.state}`) : '';
+    this.statusEl.textContent = job ? `${t(`mc.state.${job.state}`)}${job.error ? `: ${job.error}` : ''}` : '';
     this.statusEl.dataset.state = job?.state ?? '';
     this.renderMission();
     const summary = job?.runs.length ? job.summary() : null;

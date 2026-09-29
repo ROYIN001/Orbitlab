@@ -113,16 +113,19 @@ describe('displayed mission result', () => {
     expect(row.actual).toBeCloseTo(2.9 / DEG, 8);
   });
 
-  it('reports signed apsis errors using the displayed orbit, rather than rounded completion-event values', () => {
+  it('reports signed apsis errors from the displayed orbit even when completion carries unrounded judged apsides', () => {
     const input = fixture();
     input.state.t = 800;
     input.state.elements.periapsisAlt = 370123;
     input.state.elements.apoapsisAlt = 450456;
-    input.events = [{ t: 500, key: 'evt.offTargetOrbit', severity: 'warn', params: { pe: 369, ap: 449 } }];
+    input.events = [{ t: 500, key: 'evt.offTargetOrbit', severity: 'warn',
+      params: { pe: 369, ap: 450, peAltM: 369250, apAltM: 449750 } }];
     const result = assessMissionResult(input)!;
     expect(result.cause).toBe('shape');
     expect(result.displayedTime).toBe(800);
     expect(result.outcomeTime).toBe(500);
+    expect(result.metrics[0].actual).toBe(370.123);
+    expect(result.metrics[1].actual).toBe(450.456);
     expect(result.metrics[0].delta).toBeCloseTo(-29.877, 8);
     expect(result.metrics[1].delta).toBeCloseTo(50.456, 8);
     expect(result.metrics[0].outside).toBe(true);
@@ -134,11 +137,57 @@ describe('displayed mission result', () => {
     input.plan.target.raanMode = 'fixed';
     input.plan.target.raan = 0;
     input.state.elements.raan = 5 * DEG;
+    input.state.elements.periapsisAlt = 370e3;
+    input.state.elements.apoapsisAlt = 445e3;
+    input.events = [{ t: 500, key: 'evt.targetOrbit', severity: 'success',
+      params: { pe: 399, ap: 401, peAltM: 399e3, apAltM: 401e3 } }];
     const result = assessMissionResult(input)!;
     expect(result.outcome).toBe('target');
     expect(result.cause).toBe('target');
+    expect(result.metrics[0]).toMatchObject({ actual: 370, delta: -30, outside: true });
+    expect(result.metrics[1]).toMatchObject({ actual: 445, delta: 45, outside: true });
     expect(result.metrics[3].outside).toBe(true);
     expect(result.outcomeTime).toBe(500);
+  });
+
+  it('moves completed-result metrics with the replay cursor without changing the recorded outcome or the live orbit', () => {
+    const sim = new Simulation({
+      vehicleId: 'falcon9', satelliteId: 'cubesats', siteId: 'cape', orbit: orbitById('leo'),
+      launchTime: new Date('2026-09-19T12:00:00Z'), guidance: { ...DEFAULT_GUIDANCE },
+      failure: { ...DEFAULT_FAILURE }, boosterRecovery: false,
+    }, { headless: true });
+    expect(sim.plan.target.perigee).toBe(500e3);
+    expect(sim.plan.target.apogee).toBe(500e3);
+    sim.state.status = 'orbit';
+    sim.events.push({ t: 500, key: 'evt.targetOrbit', severity: 'success',
+      params: { pe: 500, ap: 500, peAltM: 500e3, apAltM: 500e3 } });
+    // Deliberately different cursor, completion and live apsides. No full
+    // flight is needed to exercise the actual capture/view/replay boundary.
+    sim.state.t = 600;
+    sim.state.elements.periapsisAlt = 488e3;
+    sim.state.elements.apoapsisAlt = 511e3;
+    const early = captureFrame(sim);
+    sim.state.t = 900;
+    sim.state.elements.periapsisAlt = 515e3;
+    sim.state.elements.apoapsisAlt = 530e3;
+    const later = captureFrame(sim);
+    const view = createFrameSimView(sim);
+
+    view.setFrame(early);
+    const first = assessMissionResult(view.sim)!;
+    expect(first).toMatchObject({ outcome: 'target', cause: 'target', displayedTime: 600, outcomeTime: 500, reviewTime: 500 });
+    expect(first.metrics[0]).toMatchObject({ actual: 488, delta: -12, outside: true });
+    expect(first.metrics[1]).toMatchObject({ actual: 511, delta: 11, outside: true });
+    view.setFrame(later);
+    const next = assessMissionResult(view.sim)!;
+    expect(next).toMatchObject({ outcome: 'target', displayedTime: 900, outcomeTime: 500 });
+    expect(next.metrics[0]).toMatchObject({ actual: 515, delta: 15, outside: true });
+    expect(next.metrics[1]).toMatchObject({ actual: 530, delta: 30, outside: true });
+    view.setFrame(early);
+    expect(assessMissionResult(view.sim)).toEqual(first);
+    expect(sim.state.t).toBe(900);
+    expect(sim.state.elements.periapsisAlt).toBe(515e3);
+    expect(sim.state.elements.apoapsisAlt).toBe(530e3);
   });
 
   it('uses the observed engine-out event for failure guidance and never a future event', () => {

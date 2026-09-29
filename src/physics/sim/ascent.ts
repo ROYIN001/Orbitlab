@@ -244,8 +244,8 @@ export class AscentMonitor {
     for (const b of this.sim.plan.burns) b.done = true;
     this.sim.event(hit ? 'evt.suborbitalTarget' : 'evt.suborbitalOffTarget', hit ? 'success' : 'warn', {
       ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
-      // The apsides the verdict was reached on, for the result panel: the
-      // frame's own drift away from them as the ship falls back into the air.
+      // Preserve the apsides judged at cut-off. Displayed-time metrics follow
+      // the frame's own apsides as the ship falls back into the air.
       apAltM: el.apoapsisAlt, peAltM: el.periapsisAlt,
     });
     this.sim.shipDescent.start();

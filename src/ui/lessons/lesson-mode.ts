@@ -28,11 +28,12 @@ import { missionStateOf } from '../../lessons/config';
 import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
 import { FlightLessons } from '../../lessons/flight-lessons';
+import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
 import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import {
-  RESULTS_FILE_EXTENSION, flownMission, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, flownMission, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
 import { isCaseLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
@@ -100,6 +101,7 @@ interface CaseState {
 interface Active {
   lesson: CatalogLesson;
   answers: Record<string, number>;
+  drafts: AnswerDrafts;
   /** the simulation the grade was last read from: a new one is a new flight */
   sim: Simulation | null;
   /** this flight left the pad (counted as an attempt) */
@@ -171,6 +173,7 @@ export class LessonMode implements LessonToolsHost {
     this.saved = saved;
     this.paintButton();
     if (changed && this.pageView === 'catalog') this.renderCatalog();
+    if (changed && this.pageView) this.paintPageBar();
   }
 
   /** Whether the progress is being kept, in a line the strip and the catalogue show (audit 2026-09-27 A19). */
@@ -212,7 +215,7 @@ export class LessonMode implements LessonToolsHost {
     if (!lesson) return { ok: false, reason: t('lesson.notFound', { id }) };
     if (lesson.comingSoon) return { ok: false, reason: t('lesson.comingSoon') };
     if (isCaseLesson(lesson)) return this.startCase(lesson);
-    this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
+    this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.tellOrbit();
     lessonProgress(this.progressData, id);
     this.save();
@@ -237,7 +240,7 @@ export class LessonMode implements LessonToolsHost {
    */
   private startCase(lesson: CaseLesson): { ok: true } {
     const state: CaseState = { source: null, failed: null, sheet: null, key: null, openedAt: new Date(), dataOpen: true };
-    const a: Active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null, case: state };
+    const a: Active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null, case: state };
     this.active = a;
     lessonProgress(this.progressData, lesson.id);
     this.save();
@@ -263,7 +266,7 @@ export class LessonMode implements LessonToolsHost {
     const source = this.host.caseInput ? this.host.caseInput() : Promise.reject(new Error('Orbit section'));
     source.then((s) => {
       if (this.active !== a) return;
-      state.source = s;
+      state.source = structuredClone(s);
       this.buildCase(a);
       this.lastStripKey = '';
       this.gradeCase(false);
@@ -320,6 +323,7 @@ export class LessonMode implements LessonToolsHost {
     if (isCaseLesson(lesson)) {
       const a = this.active;
       a.answers = {};
+      a.drafts = {};
       a.recorded = false;
       this.lastStripKey = '';
       // data that could not be had are asked for again; data had are kept, frozen
@@ -327,7 +331,7 @@ export class LessonMode implements LessonToolsHost {
       this.gradeCase(false);
       return;
     }
-    this.active = { lesson, answers: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
+    this.active = { lesson, answers: {}, drafts: {}, sim: null, counted: false, recorded: false, grade: null, frozen: null };
     this.host.loadMission(missionStateOf(lesson.mission));
     this.locks.set(lesson.locked);
     this.lastStripKey = '';
@@ -380,6 +384,7 @@ export class LessonMode implements LessonToolsHost {
       a.counted = false;
       a.recorded = false;
       a.answers = {};
+      a.drafts = {};
       a.frozen = null;
     }
     if (!sim) { a.grade = null; this.paintStrip(); return; }
@@ -424,11 +429,10 @@ export class LessonMode implements LessonToolsHost {
     const p = lessonProgress(this.progressData, a.lesson.id);
     const revealed = a.grade.criteria.filter((c) => c.revealed).map((c) => c.id);
     const s = a.case.source;
-    const epoch = a.lesson.case === 'theos2' && s?.theos2 ? new Date((s.theos2.jdEpoch + s.theos2.jdEpochFrac - 2440587.5) * 86400e3).toISOString() : null;
     recordGrade(this.progressData, {
       lessonId: a.lesson.id, at: new Date().toISOString(), verdict: a.grade.verdict, criteria: a.grade.criteria,
       answers: { ...a.answers }, hintsShown: p.hintsShown,
-      caseData: { case: a.lesson.case, ...(epoch ? { theos2Epoch: epoch } : {}), ...(a.lesson.case === 'cz5b' && s?.activityTo ? { activityTo: s.activityTo } : {}) },
+      caseData: s && a.case.sheet ? frozenCaseData(a.lesson.case, s, a.case.sheet, a.case.openedAt) : { case: a.lesson.case },
       ...(revealed.length ? { revealed } : {}),
     });
     this.save();
@@ -438,13 +442,9 @@ export class LessonMode implements LessonToolsHost {
   private submitAnswers(inputs: Map<string, () => string>): void {
     const a = this.active;
     if (!a) return;
-    let typed = false;
-    for (const [id, read] of inputs) {
-      // a decimal comma (Russian), and a minus sign as the key prints it
-      const raw = read().replace(',', '.').replace(/[−–]/g, '-');
-      const v = Number(raw);
-      if (raw.trim() !== '' && Number.isFinite(v)) { a.answers[id] = v; typed = true; }
-    }
+    for (const [id, read] of inputs) a.drafts[id] = read();
+    a.answers = submittedAnswers(a.drafts);
+    const typed = Object.keys(a.answers).length > 0;
     a.recorded = false;
     this.lastStripKey = '';
     // Enter in an answer submits: the strip is drawn again with the marks, not held for the typing
@@ -606,7 +606,8 @@ export class LessonMode implements LessonToolsHost {
         const input = el('input');
         input.type = 'text';
         input.inputMode = 'decimal';
-        input.value = a.answers[c.id] !== undefined ? String(a.answers[c.id]) : '';
+        input.value = draftValue(a.drafts, a.answers, c.id);
+        input.addEventListener('input', () => { a.drafts[c.id] = input.value; });
         input.setAttribute('aria-label', localText(c.prompt));
         input.disabled = !!cg?.revealed;
         inputs.set(c.id, () => input.value);
@@ -673,7 +674,7 @@ export class LessonMode implements LessonToolsHost {
     if (c.sheet && c.sheet.lang !== getLang()) this.buildCase(a);
     const g = a.grade;
     const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
-    const key = JSON.stringify([getLang(), lesson.id, !!c.sheet, c.failed, g?.verdict, g?.criteria.map((x) => [x.state, x.value, !!x.revealed]), hints, a.answers]);
+    const key = JSON.stringify([getLang(), lesson.id, !!c.sheet, c.failed, g?.verdict, g?.criteria.map((x) => [x.state, x.value, !!x.revealed]), hints, a.answers, a.recorded, this.saved]);
     if (key === this.lastStripKey) return;
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
     if (typing && this.lastStripKey) return;
@@ -691,6 +692,8 @@ export class LessonMode implements LessonToolsHost {
         status.append(el('p', 'lesson-note fail', t(g.criteria.some((x) => x.revealed) ? 'lesson.strip.revealed' : 'lesson.strip.answersWrong')));
       }
     }
+    const saveNote = a.recorded || this.saved === false ? this.saveNote('p') : null;
+    if (saveNote) status.append(saveNote);
     const { actions, button } = this.actionBar();
     const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
@@ -763,7 +766,8 @@ export class LessonMode implements LessonToolsHost {
           radio.type = 'radio';
           radio.name = `case-${crit.id}`;
           radio.value = String(k);
-          radio.checked = a.answers[crit.id] === k;
+          radio.checked = draftValue(a.drafts, a.answers, crit.id) === String(k);
+          radio.addEventListener('change', () => { if (radio.checked) a.drafts[crit.id] = radio.value; });
           radio.disabled = !!cg?.revealed;
           label.append(radio, document.createTextNode(` ${letterOf(sheet.lang, k)}) ${text}`));
           group.append(label);
@@ -775,7 +779,8 @@ export class LessonMode implements LessonToolsHost {
         const input = el('input');
         input.type = 'text';
         input.inputMode = 'decimal';
-        input.value = a.answers[crit.id] !== undefined ? String(a.answers[crit.id]) : '';
+        input.value = draftValue(a.drafts, a.answers, crit.id);
+        input.addEventListener('input', () => { a.drafts[crit.id] = input.value; });
         input.setAttribute('aria-label', prompt);
         input.disabled = !!cg?.revealed;
         inputs.set(crit.id, () => input.value);
@@ -903,6 +908,8 @@ export class LessonMode implements LessonToolsHost {
     title.append(el('span', 'lesson-glyph', '✎'), document.createTextNode(` ${t('lesson.page.title')}`));
     this.page.setAttribute('aria-label', t('lesson.page.title'));
     this.pageBar.replaceChildren(title, tabs, back);
+    const saveNote = this.pageView === 'test' ? this.saveNote('span') : null;
+    if (saveNote) { saveNote.setAttribute('role', 'status'); this.pageBar.append(saveNote); }
   }
 
   /** The latest finished test, scored against today's bank and lessons. */

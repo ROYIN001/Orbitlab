@@ -165,16 +165,20 @@ export function scoreAttempt(attempt: AssessmentAttempt, bank: readonly Question
   };
   const weakest = [...DOMAINS].filter((d) => levelOf.get(d) !== 'strong')
     .sort((a, b) => rank[levelOf.get(a)!] - rank[levelOf.get(b)!] || pct.get(a)! - pct.get(b)! || DOMAIN_ORDER_INDEX[a] - DOMAIN_ORDER_INDEX[b])[0];
-  const startDomain = weakest === undefined ? null : foundation(weakest);
+  let startDomain = weakest === undefined ? null : foundation(weakest);
   // The start is a lesson already written: the nearest one to the area —
   // chiefly about it, then touching it, then touching what it rests on.
   const ordered = [...lessons].sort(byOrder);
   const open = ordered.filter((l) => !l.comingSoon && advice[l.id] !== 'skip');
+  // A strong aggregate can still contain a wrong foundation question. Keep
+  // its explicit review assignment visible in the recommended starting point.
+  const review = open.find((l) => flagged.has(l.id));
+  if (startDomain === null && review) startDomain = review.domains[0];
   const pick = (d: Domain): LessonMeta | undefined =>
     open.find((l) => l.domains[0] === d) ?? open.find((l) => l.domains.includes(d))
     ?? DOMAIN_PREREQUISITES[d].map((p) => open.find((l) => l.domains.includes(p))).find((l) => !!l);
   // the basics have no lessons of their own: the first lesson of all is where they are practised
-  const start = startDomain === null ? null
+  const start = weakest === undefined && review ? review.id : startDomain === null ? null
     : (pick(startDomain) ?? open[0] ?? ordered.find((l) => !l.comingSoon) ?? null)?.id ?? null;
   return { percent, domains, questions, advice, start, startDomain };
 }

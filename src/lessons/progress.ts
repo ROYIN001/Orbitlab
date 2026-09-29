@@ -10,7 +10,11 @@ import { missionDocument, type MissionDocument, type MissionState } from '../con
 import { satelliteById } from '../data/satellites';
 import type { MissionConfig } from '../types';
 import type { AssessmentAttempt, Question } from './assessment/types';
-import type { CaseId } from '../worksheets/case-ids';
+import { CZ5B_CASE_STAGE, type CaseId } from '../worksheets/case-ids';
+import { CZ5B_STAGES } from '../data/cz5b';
+import type { CaseSource } from '../worksheets/cases';
+import type { Activity, DailyActivity } from '../physics/propagator/activity';
+import type { Worksheet } from '../worksheets/types';
 import type { CatalogLesson, CriterionGrade, LessonGrade } from './types';
 
 export const PROGRESS_STORAGE_KEY = 'orbitlab.lessons';
@@ -33,9 +37,56 @@ export interface LessonRecord {
    * THEOS-2's element set (its epoch) and the Sun's activity (the last day
    * of it measured or forecast), so the teacher can see which were used.
    */
-  caseData?: { case: CaseId; theos2Epoch?: string; activityTo?: string };
+  caseData?: CaseRecordData;
   /** the answers shown to the student in this attempt, by criterion id: the attempt did not pass on them */
   revealed?: string[];
+}
+
+export interface CaseRecordData {
+  case: CaseId;
+  theos2Epoch?: string;
+  activityTo?: string;
+  /** Optional for old results; new records keep the complete inputs and exact generated sheet/key. */
+  snapshot?: { version: 1; generatedAt: string; source: CaseSource; worksheet: Worksheet };
+}
+
+/** Keep the input horizon, independently of the predicted answer (reentry.ts defaults to 365 days). */
+function frozenCz5bActivity(activity: Activity): Activity {
+  if (!('from' in activity)) return structuredClone(activity);
+  // OMM epochs have no suffix but are UTC, never the browser's local time.
+  const epochText = CZ5B_STAGES.find((stage) => stage.name === CZ5B_CASE_STAGE)!.elements.EPOCH;
+  const epoch = Date.parse(epochText.endsWith('Z') ? epochText : `${epochText}Z`) / 86400000 + 2440587.5;
+  const through = epoch + 365;
+  // Clamp both endpoints: a series wholly before/after the run must still
+  // retain its boundary value. Preserve the already computed 81-day means.
+  const at = (jd: number) => Math.max(0, Math.min(activity.f107.length - 1, Math.floor(jd - activity.from)));
+  const first = at(epoch), last = at(through);
+  const slice = (values: number[]) => values.slice(first, last + 1);
+  return {
+    from: activity.from + first,
+    f107: slice(activity.f107), f107a: slice(activity.f107a), ap: slice(activity.ap),
+  } satisfies DailyActivity;
+}
+
+function frozenCaseSource(id: CaseId, source: CaseSource): CaseSource {
+  if (id === 'cz5b') return {
+    activity: frozenCz5bActivity(source.activity), theos2: null,
+    ...(source.activityTo ? { activityTo: source.activityTo } : {}),
+  };
+  if (id === 'theos2') return { activity: { f107: 0, f107a: 0, ap: 0 }, theos2: structuredClone(source.theos2) };
+  return { activity: { f107: 0, f107a: 0, ap: 0 }, theos2: null };
+}
+
+/** Copy the opened case, not the live catalogue: later updates cannot rewrite this evidence. */
+export function frozenCaseData(id: CaseId, source: CaseSource, worksheet: Worksheet, generatedAt: Date): CaseRecordData {
+  const theos2Epoch = id === 'theos2' && source.theos2
+    ? new Date((source.theos2.jdEpoch + source.theos2.jdEpochFrac - 2440587.5) * 86400e3).toISOString() : null;
+  return {
+    case: id,
+    ...(theos2Epoch ? { theos2Epoch } : {}),
+    ...(id === 'cz5b' && source.activityTo ? { activityTo: source.activityTo } : {}),
+    snapshot: { version: 1, generatedAt: generatedAt.toISOString(), source: frozenCaseSource(id, source), worksheet: structuredClone(worksheet) },
+  };
 }
 
 export interface LessonProgress {

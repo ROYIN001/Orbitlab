@@ -102,6 +102,8 @@ export class EngineerLevel {
   /** the student has chosen a vehicle here (the level no longer follows the Explore level on its own) */
   private chosen = false;
   private saved: DesignSummary[] = [];
+  /** Saved revision loaded on the bench; locally computed ratings do not change it. */
+  private savedUpdated: string | null = null;
   private sized: BenchVehicle | null = null;
   private message: string | null = null;
   /** the latest vehicle load asked for; an older answer arriving late is dropped */
@@ -179,7 +181,11 @@ export class EngineerLevel {
     } else if (this.sourceId === EXPLORE_ID) {
       if (!explore) this.fallBack();
       else if (explore.spec !== this.bench.spec || explore.payloadKg !== this.bench.payloadKg) this.setBench(explore);
-    } else if (this.sourceId.startsWith(SAVED) && !this.saved.some((d) => SAVED + d.id === this.sourceId)) this.fallBack();
+    } else if (this.sourceId.startsWith(SAVED)) {
+      const saved = this.saved.find((d) => SAVED + d.id === this.sourceId);
+      if (!saved) this.fallBack();
+      else if (saved.updated !== this.savedUpdated) this.pick(this.sourceId);
+    }
     this.picker.set(this.sourceId);
     if (this.visible) this.renderHead();
   }
@@ -222,7 +228,10 @@ export class EngineerLevel {
       this.sourceId = id;
       void this.store.get(id.slice(SAVED.length)).catch(() => null).then((rec) => {
         if (seq !== this.loadSeq) return;
-        if (rec && rec.kind === 'vehicle') this.setBench({ spec: rec.design, name: rec.name, payloadKg: watchPayload(rec.design) });
+        if (rec && rec.kind === 'vehicle') {
+          this.savedUpdated = rec.updated;
+          this.setBench({ spec: rec.design, name: rec.name, payloadKg: watchPayload(rec.design) });
+        }
         else this.fallBack();
         this.afterPick();
       });
