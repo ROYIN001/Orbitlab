@@ -151,6 +151,19 @@ with a slowed CPU. What each met and missed is in [VALIDATION.md](VALIDATION.md)
 | **D04** test facilities | A static fire (the engine model's thrust and Isp against pressure, start-up and tail-off); a "wind tunnel" from the aerodynamic tables, `src/physics/rigid/aero-tables.ts`; a flight readiness review using the existing pre-flight feasibility verdict. | Static fire against the engine data's published figures; the tunnel against the tables the six-DOF flight uses. |
 | **D05** parametric design and optimal staging | Size a vehicle from a payload and an orbit; the optimal division of Δv among stages. | Optimal staging against the analytic Lagrange-multiplier solution for stages of given Isp and structural ratio (Curtis ch. 11). |
 
+Built by 2026-09-28, as the Build section's three levels. The catalogue (`src/data/parts.ts`) holds
+55 engines (49 single engines, 2 clusters and 4 entries that lump several engines together), 50
+stage bodies, 14 strap-on bodies and 17 fairings, and the 21 vehicles are assembled from it;
+interstages are derived for the drawing and weigh nothing. The Watch level takes the real rockets
+apart. Explore remixes one (D02) or builds one from parts (D03), with the warnings, payload ratings
+computed by flying the design, saved designs and **Fly it**. Engineer has the test stand, the wind
+tunnel and the readiness review (D04), and optimal staging and sizing (D05). Designing from parts
+at the Engineer level is still to come; the parts builder is at Explore. Optimal staging is held to
+the Lagrange solution and to NPTEL Lecture 20's worked examples (IIT Bombay); Curtis is cited for
+the method only. What each met and missed, among them Vega-C's computed LEO rating (31 % high) and
+sized launchers that need more Δv than the planner allows for, is in [VALIDATION.md](VALIDATION.md)
+§8 and [IMPLEMENTATION-STATUS.md](IMPLEMENTATION-STATUS.md).
+
 ## Phase 4: Satellite builder and instructor mode
 
 | Item | What | Validation |
@@ -230,7 +243,7 @@ Public sources only, each cited. Spread over the phases above rather than a phas
   rather than losing someone's work. A design is checked by its kind's own check before it is kept
   or read (a vehicle's is S02's), and leaves the browser as `<name>-<kind>.orbitlab.json`
   (`orbitlab.design`, version 1), read back all or nothing — half a rocket is not a rocket.
-  No builder uses it yet; Phase 3's will.
+  The Build section's Explore level keeps its designs in it (Phase 3).
 - **Everything a user makes is a file first**: missions (U01), designs (S05) and scenarios (T01)
   are versioned JSON documents that open offline, so the closed-intranet deployment loses
   nothing but the live data.

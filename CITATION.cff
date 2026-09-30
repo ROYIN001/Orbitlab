@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use Orbitlab, please cite it as below."
+title: "Orbitlab"
+type: software
+authors:
+  - given-names: "Royin"
+    alias: "ROYIN001"
+repository-code: "https://github.com/ROYIN001/Orbitlab"
+url: "https://royin001.github.io/Orbitlab/"
+license: Apache-2.0
+version: "0.1.0"
+date-released: "2026-09-30"
+abstract: "An offline-first launch, orbit and rocket-design simulator for teaching, in English, Russian and Thai."

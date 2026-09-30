@@ -1,0 +1,274 @@
+{
+  "scope": "Synthetic boundary fixtures only; no browser acceptance claimed.",
+  "files": [
+    {
+      "file": "C02-mission-negative-payload.orbitlab.json",
+      "checklist": [
+        "C02"
+      ],
+      "bytes": 778,
+      "sha256": "27689a1a02b15121f52515f675d918e7cc40058fc3afadacc3fb5d4b1896839c",
+      "expected": "Partial recovery with invalid payload field notice; never install negative mass.",
+      "source": "C:\\Users\\Royin\\Downloads\\falcon9-cape-2026-09-29-19-47.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C02-mission-version999.orbitlab.json",
+      "checklist": [
+        "C02"
+      ],
+      "bytes": 782,
+      "sha256": "e898d87b3454414de7eb617d8e06b37f78211f1a2d6f30a7b514d86e65b3ccf0",
+      "expected": "Accept known mission fields with newerVersion warning.",
+      "source": "C:\\Users\\Royin\\Downloads\\falcon9-cape-2026-09-29-19-47.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C02-mission-unknown-vehicle.orbitlab.json",
+      "checklist": [
+        "C02"
+      ],
+      "bytes": 790,
+      "sha256": "fe0a112ad9557c10fafe0d09d98241cef52542529edf637f6e425f3c28dc9a22",
+      "expected": "Partial recovery with invalid vehicleId notice; never retain unknown enum.",
+      "source": "C:\\Users\\Royin\\Downloads\\falcon9-cape-2026-09-29-19-47.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C03-broken.json",
+      "checklist": [
+        "C03",
+        "C06",
+        "C15",
+        "C30"
+      ],
+      "bytes": 7,
+      "sha256": "be302461cda285db3ed2d45fb767b23e08ca8808b35a638009937df22b332d73",
+      "expected": "Reject malformed JSON and preserve previously accepted state.",
+      "source": "synthetic text",
+      "synthetic": true
+    },
+    {
+      "file": "C03-empty-object.json",
+      "checklist": [
+        "C03"
+      ],
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "expected": "Reject wrong mission envelope; preserve mission.",
+      "source": "synthetic object",
+      "synthetic": true
+    },
+    {
+      "file": "C03-design-wrong-mission-format.orbitlab.json",
+      "checklist": [
+        "C03"
+      ],
+      "bytes": 2334,
+      "sha256": "beb955f667de92c0b81689e08cc4755bce88798af28c12ce81ac12bde810fffb",
+      "expected": "Mission importer rejects design format; preserve mission.",
+      "source": "C:\\Users\\Royin\\Downloads\\qa-falcon-a-vehicle.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C06-mission-wrong-flight-format.orbitlab.json",
+      "checklist": [
+        "C06",
+        "C15"
+      ],
+      "bytes": 780,
+      "sha256": "f7eb555ffcba2a286871f1ee9cef2d68ff87f143dedbfa4c0babf902fa454c78",
+      "expected": "Flight importer rejects mission format; design importer rejects and directs user to Launch.",
+      "source": "C:\\Users\\Royin\\Downloads\\falcon9-cape-2026-09-29-19-47.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C06-flight-path-mismatch.orbitlab-flight.json",
+      "checklist": [
+        "C06"
+      ],
+      "bytes": 1921,
+      "sha256": "f0cec444d8a26782f78ec26cabcc3d410568f3f65b7382b1d3b7c3a007a5749c",
+      "expected": "Reject unequal path arrays; retain previous accepted reference.",
+      "source": "valid-reference.orbitlab-flight.json",
+      "synthetic": true
+    },
+    {
+      "file": "C07-flight-event-overflow.orbitlab-flight.json",
+      "checklist": [
+        "C06",
+        "C07"
+      ],
+      "bytes": 1944,
+      "sha256": "992e5891b77cdf904bacea771433bcea70c1c7115ebf753b40d30e5f629dd263",
+      "expected": "Reject nonfinite event time parsed from literal1e309; retain previous reference.",
+      "source": "valid-reference.orbitlab-flight.json",
+      "synthetic": true
+    },
+    {
+      "file": "C15-design-satellite.orbitlab.json",
+      "checklist": [
+        "C15"
+      ],
+      "bytes": 2336,
+      "sha256": "423819db31f4f21bb0c325984a55901ee916774f3a4b14a5ade8e3573014874e",
+      "expected": "Reject unsupported design kind; saved designs unchanged.",
+      "source": "C:\\Users\\Royin\\Downloads\\qa-falcon-a-vehicle.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C15-design-empty-stages.orbitlab.json",
+      "checklist": [
+        "C15"
+      ],
+      "bytes": 1219,
+      "sha256": "2f92fc5b0d888392120f4c964c7c90c91062ee295a54abb9381b49e33a8918d7",
+      "expected": "Reject no-stage vehicle; saved designs unchanged.",
+      "source": "C:\\Users\\Royin\\Downloads\\qa-falcon-a-vehicle.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C16-design-version999.orbitlab.json",
+      "checklist": [
+        "C16"
+      ],
+      "bytes": 2336,
+      "sha256": "8f8cbe96e7a3a6876ba8d60b6f5a064c9bf32c4e23cb4095b30f1a8ea613cd1e",
+      "expected": "Accept valid vehicle as new record with newerVersion warning.",
+      "source": "C:\\Users\\Royin\\Downloads\\qa-falcon-a-vehicle.orbitlab.json",
+      "synthetic": true
+    },
+    {
+      "file": "C24-mixed-valid-missing-bstar-valid.json",
+      "checklist": [
+        "C24"
+      ],
+      "bytes": 1576,
+      "sha256": "a7e3e764f0e802fd36327243026a389d73d6e859c5a5c05dac0c7b6950fff1d2",
+      "expected": "Read two valid element sets and reject record2 for missingBSTAR; third is a labeled synthetic copy, not a real satellite.",
+      "source": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\source-integrated\\tests\\fixtures\\gp\\iss.json",
+      "synthetic": true
+    },
+    {
+      "file": "C24-unsupported-type4.json",
+      "checklist": [
+        "C24"
+      ],
+      "bytes": 568,
+      "sha256": "8302cbffaa1beada14b4ff977306888305fed235384815a52c1c32180082b87f",
+      "expected": "Reject unsupported SGP4-XP/type4; previous accepted satellite data retained.",
+      "source": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\source-integrated\\tests\\fixtures\\gp\\iss.json",
+      "synthetic": true
+    },
+    {
+      "file": "C25-bad-checksum.tle",
+      "checklist": [
+        "C25"
+      ],
+      "bytes": 165,
+      "sha256": "3100d4e6bd2796cebd663d3455eca4cb7e3493396c24e451bb17128c4924fbfd",
+      "expected": "Current compatibility parser intentionally accepts bad checksum (requireChecksum=false); record UI behavior and lack of warning as a limitation, not strict-rejection acceptance.",
+      "source": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\source-integrated\\tests\\fixtures\\gp\\iss.tle",
+      "synthetic": true
+    },
+    {
+      "file": "C25-plain-text.txt",
+      "checklist": [
+        "C25"
+      ],
+      "bytes": 33,
+      "sha256": "e695782c43323b442f1c1f189eebac86edef96031e084eaec2eb6aade2940716",
+      "expected": "Unrecognized element format; retain accepted satellite data.",
+      "source": "synthetic text",
+      "synthetic": true
+    },
+    {
+      "file": "C25-malformed-json.json",
+      "checklist": [
+        "C25"
+      ],
+      "bytes": 9,
+      "sha256": "75b024fc89d389aaf232c375db8d89994eb253cdde781b1d6c8c14aab997e5ef",
+      "expected": "Reject JSON syntax; retain accepted satellite data.",
+      "source": "synthetic text",
+      "synthetic": true
+    },
+    {
+      "file": "C26-omm-over-30MiB.txt",
+      "checklist": [
+        "C26"
+      ],
+      "bytes": 31457281,
+      "sha256": "5d061de9c5ad0ed4ea2ad1bed6640d8e9a6b0cf88908c77059d5ad570e644fa1",
+      "expected": "UI file size guard rejects30MiB+1before parsing and keeps accepted data.",
+      "source": "synthetic repeated ASCII Q",
+      "synthetic": true
+    },
+    {
+      "file": "C26-cdm-over-2MiB.cdm",
+      "checklist": [
+        "C26"
+      ],
+      "bytes": 2097153,
+      "sha256": "1724b64485f2d3b56724324e31ad45a5fb2e359e3e1e9bbf01c2ccb0689ec581",
+      "expected": "UI file size guard rejects2MiB+1before parsing; do not display oldPc as this file result.",
+      "source": "synthetic repeated ASCII Q",
+      "synthetic": true
+    },
+    {
+      "file": "C28-cdm-missing-CN_N.cdm",
+      "checklist": [
+        "C28"
+      ],
+      "bytes": 1394,
+      "sha256": "4a714187f56e042afe4ff08211d33ef34854d6aed8973ae7e183b465ad2ac506",
+      "expected": "Reject missing covariance CN_N inOBJECT1; no stalePc displayed.",
+      "source": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\browser-fixtures\\valid-cdm-alfano-1.cdm",
+      "synthetic": true
+    },
+    {
+      "file": "C28-cdm-unsupported-TOD.cdm",
+      "checklist": [
+        "C28"
+      ],
+      "bytes": 1437,
+      "sha256": "5ede91e99c70d270eba8c587150d4ca0b66d7bf928422c884fd08cd27e2479c4",
+      "expected": "Reject unsupportedTODframe (bothobjects); no stalePc displayed.",
+      "source": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\browser-fixtures\\valid-cdm-alfano-1.cdm",
+      "synthetic": true
+    },
+    {
+      "file": "C28-cdm-wrong-json.json",
+      "checklist": [
+        "C28"
+      ],
+      "bytes": 66,
+      "sha256": "ed03bfd9c20a705497485c3957778e6e882ddc15702373285d67882811213780",
+      "expected": "Reject JSON instead of supportedKVNCDM; no stalePc displayed.",
+      "source": "synthetic object",
+      "synthetic": true
+    },
+    {
+      "file": "C30-lessons-missing-array.orbitlab-lesson.json",
+      "checklist": [
+        "C30"
+      ],
+      "bytes": 51,
+      "sha256": "73b0da44e1b99427640e42292e54907502444e476f585608ed0c5b1869366f27",
+      "expected": "Unusable empty lesson package; keep existing library.",
+      "source": "synthetic envelope",
+      "synthetic": true
+    },
+    {
+      "file": "C30-lessons-partial-duplicate.orbitlab-lesson.json",
+      "checklist": [
+        "C30"
+      ],
+      "bytes": 14950,
+      "sha256": "852b5ede3555d1815f08a8feddbe77508bbb392dcfb845bf12831c88d32aaf99",
+      "expected": "Import exactly1valid newlesson; report invalidseconditem and duplicate thirditem; no duplicate libraryentry.",
+      "source": "custom-lesson.json",
+      "synthetic": true
+    }
+  ]
+}

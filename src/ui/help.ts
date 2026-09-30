@@ -111,6 +111,9 @@ export class HelpGuide {
 
   restart(): void { this.progress.restart(); this.applyLanguage(); }
 
+  /** A whole mission was handed over (help-state.ts, `missionGiven`). */
+  missionGiven(): void { this.progress.missionGiven(); this.applyLanguage(); }
+
   applyLanguage(): void {
     const copy = HELP_COPY[getLang()];
     const step = copy.steps[this.progress.step];

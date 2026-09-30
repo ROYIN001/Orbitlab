@@ -46,15 +46,23 @@ export const zoneName = (z: LandingZoneSpec): string => localized(`zone.${z.id}.
  * vehicle (roadmap S02) made from a catalogue one borrows that vehicle's
  * translation only for a part it has not renamed; any other custom part keeps
  * the name its designer gave it.
+ *
+ * A design of one's own (D02, D03) also carries catalogue parts under their
+ * catalogue id and English name — a body the parts builder took as it is, a
+ * strap-on a remix added — which its origin, if it has one, does not list.
+ * Such a part borrows the translation of the catalogue vehicle whose part it
+ * is (same id, same name), so a Russian or Thai stage table does not read
+ * "First stage (9× Merlin 1D)" among translated words; a part renamed, or
+ * with another engine (the builder names it after its engines), matches none
+ * and keeps its own name.
  */
 export function stageName(vehicle: VehicleSpec, stageId: string, fallback: string): string {
   const dataId = vehicleDataId(vehicle);
-  if (dataId !== vehicle.id) {
-    const origin = VEHICLES.find((v) => v.id === dataId);
-    const part = origin?.stages.flatMap((st) => [st, ...(st.boosters ?? [])]).find((x) => x.id === stageId);
-    if (!part || part.name !== fallback) return fallback;
-  }
-  return localized(`stage.${dataId}.${stageId}.name`, fallback);
+  const partOf = (v: VehicleSpec | undefined) => v?.stages.flatMap((st) => [st, ...(st.boosters ?? [])]).find((x) => x.id === stageId);
+  const catalogue = VEHICLES.find((v) => v.id === dataId);
+  if (dataId === vehicle.id && catalogue) return localized(`stage.${dataId}.${stageId}.name`, fallback);
+  const source = partOf(catalogue)?.name === fallback ? catalogue : VEHICLES.find((v) => partOf(v)?.name === fallback);
+  return source ? localized(`stage.${source.id}.${stageId}.name`, fallback) : fallback;
 }
 
 /**

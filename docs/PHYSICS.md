@@ -2337,8 +2337,9 @@ body flown back to a landing zone keeps the vehicle's `returnReserve` (15 % for 
 Falcon Heavy; 13 % is the least that lands Bandwagon-1 on LZ-1 in the point-mass model, and 15 %
 touches down with 13.0 t to spare, measured with Falcon 9's published first-stage masses; 12 %
 leaves Arabsat-6A's side boosters short of their boostback, and 13 % lands them 7 m off,
-measured with the same published masses on all three cores), a drone-ship or downrange body keeps
-`recoveryReserve`, and a body the plan expends, or leaves out, holds nothing back.
+measured with the same published masses on all three cores), a downrange body keeps
+`recoveryReserve`, a drone-ship body `recoveryReserve` or, a lone first stage, what its return
+needs (`droneShipReserve`, §13.5), and a body the plan expends, or leaves out, holds nothing back.
 
 The plan is checked with the rest of the configuration (`validateConfigInput`): a landing zone has
 to be one the flight's site can reach, a pad or a drone ship's deck needs a stage with legs, and
@@ -2365,8 +2366,16 @@ The guidance is one piece, `src/physics/sim/return-guidance.ts`, shared by both 
   boostback is finished, the prediction assumes the propellant it will leave (the rocket
   equation on the velocity it still needs), not a full tank for the entry burn.
 - **Entry burn.** A returning stage crosses 70 km slower than a downrange one, so its burn
-  waits armed until the airspeed is over its target (550 m/s for a return to the launch site,
-  1.4 km/s downrange) and leans up to 15° off retrograde to trim the landing point.
+  waits armed until the airspeed is over its target (550 m/s for a return to the launch site)
+  and leans up to 15° off retrograde to trim the landing point. A stage bound for a drone ship
+  (roadmap C01) spends what it carries above its landing reserve: the target is the airspeed at
+  70 km (from the stage's energy at separation) less three quarters of that propellant's ideal
+  Δv, held between 550 m/s and 1.4 km/s, and the ship is stationed on the descent that burn
+  gives. The fixed 1.4 km/s it replaces left a lone Falcon 9 first stage off Demo-2's steep
+  ascent (13 t to 51.6°) coming through 3 km at nearly 300 m/s sideways with 30 t unburnt, past
+  what its landing burn could take off; it now lands on the deck at T+552 s in six-DOF (the real
+  booster at T+9:22, 562 s; NASA Demo-2 launch timeline) with 7 t left. Falcon Heavy's core
+  (Arabsat-6A) still lands (tests/heavy/falcon-heavy-returns.test.ts).
 - **Landing burn.** A constant deceleration to 2 m/s at the pad, lit at the drag-aware braking
   height, with the zero-effort-miss divert of Ebrahimi, Bahrami and Roshanian (2008) in the
   horizontal plane, a = 6·Δr/t² − 4·v/t, leaning up to 20°.
@@ -2812,8 +2821,8 @@ window lets them be changed, and the lifetime is inversely proportional to C_D A
     jettison **time** their operator publishes and, for Proton-M and Angara-A5, the operator's
     rule (§4). The placard is evaluated on the nominal atmosphere, where operators evaluate it on
     3-sigma dispersions, so it drops Atlas V's and Falcon Heavy's fairings early.
-  - The physics has been compared with flight data for eleven vehicles: Falcon 9 (webcast
-    telemetry of five flights) and ten others against published timelines
+  - The physics has been compared with flight data for twelve vehicles: Falcon 9 (webcast
+    telemetry of five flights) and eleven others against published timelines
     ([VALIDATION.md](VALIDATION.md)). Among the disagreements it records:
     - Electron's second stage burns ~25 % short, and there is no stage mass to correct it with.
     - Falcon Heavy's first stages cut off ~11–13 % early: how deeply each core throttles is not
@@ -2878,6 +2887,731 @@ above 45 km, its radius growing 0.45 m per metre of altitude to at most 60 km, l
 cylindrical shadow of the Earth at the vehicle (`sunlitAt`, src/render/sky.ts) and weighted by the
 observer's twilight (the sun between about 6° above and 18° below the camera's horizon); it fades out
 for a camera inside it. It is an illustration of the phenomenon, not a plume-expansion model.
+
+## 13. Historical missions (roadmap C01)
+
+src/ui/watch-missions.ts (the entries with a `launchTime`), src/physics/mission.ts
+(`ISS_ANCHORS`). Each is a real flight replayed on its own day, to the second: the launch time
+drives the Earth's rotation (GMST) and the Sun's direction exactly as any other launch time does,
+so a night launch is dark and the station stands where it stood. They are offered in Watch
+(*From history*) and in the setup panel of Explore and Engineer (*Historical missions*).
+
+**13.1 The flights and what is taken from them.** Liftoff times, pads, masses and orbits are from
+Jonathan McDowell's GCAT (launch.tsv, satcat.tsv, lp.tsv, read 2026-09-25) unless another source
+is named; RSW is Anatoly Zak's russianspaceweb.com, JSR McDowell's *Jonathan's Space Report*.
+
+| Flight | Liftoff (UTC) | Vehicle / site | Payload | Target flown to | Source |
+|---|---|---|---|---|---|
+| Soyuz MS-16 | 2020-04-09 08:05:06.463 | Soyuz-2.1a, Baikonur 31/6 | 7,218 kg | ISS plane; four-orbit rendezvous, Poisk | GCAT; RSW *soyuz-ms-16*; JSR 777 |
+| Soyuz MS-25 | 2024-03-23 12:36:10.573 | Soyuz-2.1a, Baikonur 31/6 | 7,152 kg | ISS plane; two-day rendezvous, Prichal | RSW *soyuz-ms-25*; JSR 831 |
+| ORBCOMM-2 (F9 flight 20) | 2015-12-22 01:29:00 | Falcon 9, SLC-40; core to LZ-1 | 2,553 kg (11 × 172 kg + dispenser) | 613 × 657 km, 47.0° | GCAT; JSR 721 |
+| Angara-A5 1L | 2014-12-23 05:57:00 | Angara-A5 / Briz-M, Plesetsk 35/1 | 2,042 kg dummy | GEO | GCAT; RSW *angara5_flight1* |
+| Hayabusa2 (H-IIA F26) | 2014-12-03 04:22:04 | H-IIA 202, Tanegashima | 600 kg | 250 × 254 km parking orbit | GCAT; MHI quick review, 3 Dec 2014 |
+| Crew Dragon Demo-2 | 2020-05-30 19:22:45 | Falcon 9, LC-39A; core to the drone ship | 13,055 kg | ISS plane, 190 × 211 km | GCAT; JSR 779; NASA Demo-2 launch timeline |
+| Apollo 11 | 1969-07-16 13:32:00 | Saturn V AS-506, LC-39A | 49,735 kg (CSM, LM, SLA, escape tower) | 183.2 × 186.0 km, 32.521° parking orbit (§13.8); the translunar injection, the flight to the Moon, the lunar orbit, the landing at Tranquility Base, the rendezvous back and the way home to the Pacific (§13.9–§13.14) | FER MPR-SAT-FE-69-9; SP-4029; MR MSC-00171; SP-2000-4029; JPL Horizons |
+| Mercury-Redstone 3 | 1961-05-05 14:34:13 | Mercury-Redstone, Cape LC-5 | 1,832.6 kg (Freedom 7 and its tower) | 187.5 km apogee, splashdown 487 km down range (§13.7) | NASA MR-3 postlaunch report; TM X-53107 |
+
+**13.2 The station's plane on the day.** `issRaanAt` extrapolates one 2026 node with the J2
+regression, which six years back is tens of degrees out. Within 10 days of a historical flight
+to the station it regresses instead from that day's measured node, interpolated between the two
+ISS TLEs (NORAD 25544) either side of liftoff: 329.18° at MS-16's liftoff (TLEs 20100.15584978,
+330.0733°, and 20100.35421498, 329.0927°), 74.49° at Demo-2's (extrapolated 4.4 h from
+20151.61686127, 75.4313°) and 20.03° at MS-25's (24083.43487593, 20.4792°, and 24083.54107639,
+19.9531°). The TLEs are public copies (github.com/emit-sds/emit-sds-l1b-geo,
+`end_to_end_testing/iss_spice/iss_tle.txt`; github.com/wparker781/REACT-GC,
+`sat_tracking_and_pred/ref_tles_2024/25544.txt`); Space-Track itself needs an account. With the
+measured node the model's own launch window opens 158 s (MS-16) and 69 s (MS-25) from the real
+liftoff — the difference between its one head start for every launch (`T_PLANE`, 200 s) and the
+one flown — and MS-16, launched at its real second, reaches a plane 0.4° from the station's
+(tests/watch-missions.test.ts).
+
+**13.3 What stands in, and what is left out (approximations).**
+- *ORBCOMM-2* flew the first Falcon 9 Full Thrust (v1.2, 2015); the fleet's Block 5 stands in
+  for it, with more thrust per Merlin (about 190 against 170 klbf) — so it stages earlier (T+129 s
+  against about T+140 s planned) and lands sooner (T+517 s against T+604 s).
+- *Angara-A5 1L* is flown to a 35,786 km circular equatorial orbit, the target; the flight
+  itself ended 35,625 × 36,946 km at 0.49° after four Briz-M burns, then raised the stage to a
+  36,155 × 39,089 km disposal orbit. The model's burn plan is its own, not the flown one.
+- *Hayabusa2*: the parking orbit was 30.0°, below the pad's 30.4° latitude — a yaw the model does
+  not fly, so it aims at 30.4°. The restart towards Ryugu (T+5,966–6,211 s, C3 ≈ 21 km²/s²) is
+  not flown: the model has no escape target. The three passengers (Shin'en-2, DESPATCH,
+  PROCYON, together about a tenth of a tonne) are left out.
+- *Soyuz MS-16 / MS-25*: 200 × 242 km insertion as for every crewed Soyuz (§9.2); the measured
+  Blok I orbits were 192 × 218 km and 193 × 218 km.
+- The pads of Plesetsk, Tanegashima and SLC-40 are the sites' own coordinates, within a few
+  kilometres of the pads flown.
+
+**13.4 Crew Dragon: a payload flown in the open (Demo-2).** src/data/satellites.ts
+(`crewDragon`), `missionVehicle` in src/data/vehicles.ts, src/render/dragon.ts. Crew Dragon
+flies on top of Falcon 9 without a fairing, so the vehicle a mission flies (`missionVehicle`)
+is Falcon 9 with the fairing left off and an `exposedPayload` of 4.0 m diameter and 8.1 m
+length, the capsule the top 4.5 m of it (en.wikipedia, *SpaceX Dragon 2*; the trunk is
+3.7 m across, GCAT S46024). The simulation, the mass model, the aerodynamic table and the
+drawing all take that vehicle:
+
+- *Mass*: no 1,900 kg fairing to carry or drop; the payload is 13,055 kg — the capsule with
+  its propellant, about 10,755 kg, and the trunk, about 2,300 kg (GCAT S45623/S46024, both
+  marked as estimates there; Wikipedia gives 12,519 kg at launch). The rigid model carries it
+  as a 4.0 × 8.1 m cylinder standing on the second stage.
+- *Aerodynamics*: until separation the capsule is the nose — a widening from the 3.66 m stage
+  to 4.0 m, the capsule's cone with its lift two thirds of its 4.5 m behind the tip, and the
+  side area of the whole (`ascentAeroTable`); after separation the second stage's blunt top.
+  The frontal area is the capsule's, 12.6 m².
+- *Flight*: Demo-2 lifts off at 19:22:45 UTC on 30 May 2020 from LC-39A into the station's
+  measured plane (74.49°, §13.2), for 190 × 211 km at 51.6° (JSR 779; GCAT A09591 for the
+  second stage), the booster to the drone ship. Dragon's own flight to the station (Draco
+  thrusters, docking 19 h later) is not modelled: the flight ends at separation. The launch
+  escape (eight SuperDracos pushing the capsule off) is not modelled either.
+- *Drawing*: the dimensions above; the side-wall taper, the four SuperDraco pods, the four
+  windows, the trunk's half cover of solar cells and its four fins are drawn from photographs.
+
+**13.5 The model against the flight.** src/ui/flown.ts, src/ui/flown-view.ts. Each historical
+mission carries the real flight's event times and orbit (`WatchMission.flown`, sources as in
+§13.1; ≈ marks a planned, rounded or second-hand value), matched to the n-th occurrence of the
+simulation's own event. Watch's caption sets the real time beside the one just seen, the end card
+and the panel under the mission result (Explore, Engineer) tabulate them with the orbit the
+payload was left in (the last target orbit the simulation reported up to separation), and the
+telemetry charts mark the real events in orange. Only a flight whose settings are unchanged — the
+same vehicle, site, payload, mass and second of launch (`historicalFor`) — is compared.
+
+Six-DOF flights as the viewer flies them, model − flight, s (tests/watch-missions.test.ts holds
+each ascent event within a minute or 30 % of its flown time; tests/heavy/historical-docking.test.ts
+the dockings):
+
+| Flight | Strap-ons / SRBs | Fairing | MECO / core sep. | Upper-stage cut-off | Other |
+|---|---|---|---|---|---|
+| Soyuz MS-16 | +2.7 (≈118) | +4.0 (≈153) | +6.5 (≈288) | — | separation +5.1 (530); contact 6:29 against 6:08:15 |
+| Soyuz MS-25 | +2.9 (117.8) | +3.7 (153.33) | +6.8 (287.7) | +7.3 (525.93) | separation +5.2 (529.2); contact 2 d 02:37 against 2 d 02:26:39 |
+| ORBCOMM-2 | — | −14.7 (≈175) | −11.4 / −12.4 (≈140 / ≈144) | — | Max Q −34 (≈84); landing at LZ-1 −87 (≈604) |
+| Angara-A5 1L | −10.7 (213.7) | −89.1 (345.1) | +0.9 (330.9) | −16.5 (≈733) | URM-2 separation −18.6 (738.4) |
+| Demo-2 | — | — | −16.0 / −16.0 (153 / 156) | −11.1 (527) | Max Q −6.9 (58); landing on the ship −9.5 (562); Dragon separation −185 (720) |
+| Hayabusa2 | +0.1 (107) | −1.0 (251) | −5.3 / −7.3 (396 / 404) | −48 (680) | — |
+
+The differences are the model's, and mostly known: the Soyuz-2.1a's accepted ascent runs about
+five seconds long throughout. Falcon 9 Block 5 stands in for the 2015 Full Thrust, and even with
+the drone-ship reserve sized for the mission its default pitch programme cuts off the first stage
+16 s early on Demo-2's heavy crewed ascent; the model releases Dragon 15 s after cut-off, where
+the real stage coasted three minutes first. Angara-A5 drops its fairing on the heating placard at 256 s, where
+the real one kept it until after the core had gone (345 s). H-IIA's model flies a short second
+burn and circularises at apogee, where the real one cut off at 680 s into the parking orbit
+directly. The two dockings are the G07 profiles', copied from other flights (§9.2): the
+four-orbit one is Soyuz TMA-19M's 6 h 21 min, and MS-16 was planned for 6 h 11 min.
+
+*The drone-ship reserve, sized for the mission.* Found here: with the fixed 12 % every
+drone-ship return held back (47.5 t on Falcon 9), Demo-2's second stage ran dry 100 m/s short in
+the point-mass model, and the booster still landed with 11 t unburnt; flown expended, the same
+ascent cuts off the first stage at T+152 s (the real one at 153 s) with nearly 1 km/s left. A lone
+first stage bound for a drone ship now keeps what its return needs (`droneShipReserve`,
+src/physics/vehicle.ts): the landing burn's 800 m/s and an entry burn from its separation speed
+down to 550 m/s, the separation speed from the rocket equation over the mass the stage lifts less
+1.1 km/s of ascent losses (Falcon 9 on Demo-2: 2.95 km/s ideal, 1.85 km/s at separation), iterated
+because the reserve sets that speed — never more than the vehicle's `recoveryReserve`. Falcon 9
+keeps 9.1 % (15.6 t) to 9.8 % (nothing), Demo-2 9.25 %, and Demo-2 now reaches its orbit with
+173 m/s to spare in point-mass and 255 m/s in six-DOF, the booster on the deck with 7–11 t left.
+Falcon Heavy's core, separating from its side boosters' stack, keeps its 12 %.
+
+**13.6 The first R-7s: Sputnik 1 and Vostok 1.** `HISTORICAL_VEHICLES` in src/data/vehicles.ts;
+the spacecraft `ps1` and `vostok1` in src/data/satellites.ts. The vehicles of historical flights
+are kept out of the fleet's generic orbit matrix (tests/fleet-*.test.ts, `npm run
+test:sixdof-fleet`), which would ask a 1957 rocket for orbits it never flew; each is held instead to
+its own flight — point-mass in tests/historical-vehicles.test.ts, six-DOF as Watch flies it in
+tests/watch-missions.test.ts, both to the flown orbit — and to the data rules every vehicle keeps. They reuse the
+fleet's R-7 stage ids, so the strap-ons and the core are laid out, drawn and flown as a rigid body
+as Soyuz-2.1a's are: four main chambers and two verniers on each strap-on, four and four on the core.
+
+No primary document could be reached (roscosmos.ru and sputnik.rusarchives.ru refused the
+requests); the values are secondary, and where the sources disagree the table says which was
+taken. Zak is Anatoly Zak's russianspaceweb.com (*sputnik_lv*, *vostok_lv*, *vostok1*), astronautix
+is Mark Wade's astronautix.com (*vostok8k72k*), W is Wikipedia (en and ru), ESA is *The flight of
+Vostok 1* (esa.int).
+
+| | R-7 Sputnik (8K71PS) | Vostok-K (8K72K) |
+|---|---|---|
+| Strap-ons (each) | 42.0 t, 38.3 t propellant (Zak; W: 43.0 / 3.40 t dry) | 43.3 t, 3.71 t dry (astronautix) |
+| RD-107 | 8D74PS: 793 / 975 kN, 247.6 / 304.2 s (Zak) | 8D74-1959: 970 kN vac., 256 / 313 s (astronautix, W); 793 kN SL from the Isp ratio |
+| Core (Blok A) | 99.1 t, 91.8 t propellant, 28.0 m (Zak; W: 94.0 / 7.5 t, 26 m) | 100.4 t, 6.8 t dry, 28.75 m (astronautix; W ru) |
+| RD-108 | 8D75PS: 914 kN, 303.1 s vac. (Zak); sea level from W's 241 / 308 s ratio: 715 kN, 237.2 s | 8D75-1959: 912 kN vac., 248 / 315 s (astronautix, W en; W ru 941 kN) |
+| Blok E | — | 7,775 kg, 1,440 kg dry, 2.84 × 2.56 m (astronautix; Zak 1.34 t dry); RD-0109 54.52 kN, 323.5 s (W; astronautix 326 s), 365 s |
+| Nose | a 1.17 m cone over PS-1, released with it (W); its 1.0 m base and 40 kg estimated | the 0.8 t, 2.7 m shroud (Zak), off at T+156 s (ESA); its 6.8 m length from the 38.36 m stack, estimated |
+| Spacecraft | PS-1, 83.6 kg, 0.58 m sphere, four whips of 2.4 and 2.9 m (W) | Vostok 3KA, 4,725 kg: the 2.3 m descent sphere and the 2.43 × 2.25 m instrument module (W) |
+
+With these, the strap-ons of 8K71PS burn out at 117 s (flown 116.38 s) and its core at 298 s (295.4 s);
+Vostok-K's Blok E burns 368 s (365 s published).
+
+Flown from Gagarin's Start at their own second, model − flight, s, and the orbit reached:
+
+| Flight | Strap-ons | Shroud | Core cut-off | Last cut-off | Separation | Orbit, model (flown) |
+|---|---|---|---|---|---|---|
+| Sputnik 1, point-mass | −0.5 (116.38) | — | — | +7.9 (295.4) | +3.8 (314.5) | 214 × 937 km, 65.09° (214 × 938, 65.1°) |
+| Sputnik 1, six-DOF | −0.4 | — | — | +8.2 | +5.4 | 214 × 949 km, 65.09° |
+| Vostok 1, point-mass | +5.0 (119) | +0.1 (156) | +14.6 (300) | −18.3 (676) | — | 168 × 311 km, 64.95° (168 × 314, 64.95°) |
+| Vostok 1, six-DOF | +5.0 | ±0.0 | +14.8 | −23.3 | — | 168 × 311 km, 64.95° |
+
+Sputnik's core, the orbital stage itself, cuts off 8 s late on Zak's 91.8 t; the real one shut down
+about a second early (en.wikipedia). With no upper stage its cut-off orbit is final, so the pitch
+kick sets the apogee: 4° in point-mass and 5° as a rigid body reach the flown 938 km, where
+Soyuz's 3° and 4° leave it 130 and 510 km short. Vostok-K's core, on astronautix's 93.6 t, burns
+15 s longer than flown and Blok E, lit late, is 18–23 s early to the same orbit; the published
+over-burn of Blok E (a backup timer cut it off when the radio command did not come, and the
+apogee was some 90 km above the planned one) is flown to, not modelled. The R-7's engines did not throttle; `minThrottle`
+0.7 stands for the verniers' authority. RD-0109 steered by turbine exhaust through control nozzles
+of Blok E's own, drawn and flown as one gimballed chamber (estimated). The pad is Gagarin's Start
+(Site 1/5) for both.
+
+**13.7 Mercury-Redstone 3.** The vehicle `mercuryredstone` in `HISTORICAL_VEHICLES`, the spacecraft
+`mercury` in src/data/satellites.ts, the capsule's flight home `MERCURY_CAPSULE` in
+src/physics/rigid/escape.ts. Alan Shepard's Freedom 7, 5 May 1961, 14:34:13 UTC, from Launch Complex
+5 at the Cape (28.43944° N, 80.57333° W, 14 km south of the Cape site's point: a mission that
+names its pad, `padId`, flies from the pad's own point). Sources: NASA, *Postlaunch Report for Mercury-Redstone No. 3* (June 1961),
+PR; NASA TM X-53107, *The Mercury-Redstone Project* (1964), TM.
+
+| | Value | Source |
+|---|---|---|
+| Liftoff mass | 29,982 kg with the capsule | TM Table 8-1 |
+| Booster | 3,717 kg dry, 24,432 kg of alcohol, LOX, peroxide and residuals (the difference); 1.778 m across, 17.98 m | TM §4.2.1 |
+| A-7 as flown | 350.8 kN, 214.8 s at sea level (TM Table 8-1); 395.9 kN in vacuum (thisdayinaviation.com), 242.4 s from the same flow | TM, secondary |
+| Burn | 143.5 s planned, cut off at T+141.8 s; model 146.7 s from the tanks | PR |
+| Capsule | 1,832.6 kg with its tower, 1,295.1 kg after the tower and the separation, 1,169.8 kg without the retropack; 1.892 m shield | PR |
+| Retros | three, at T+5:14.1, 5:18.8, 5:23.6 (separation + 161.8, 166.5, 171.3 s), 1,000 lbf (4,448 N) each; burn 10 s (estimated); pack off at T+6:13.6 | PR |
+| Parachutes | 6 ft drogue at 21,000 ft (6.4 km, T+9:38.1); 63 ft ring-sail main, 290 m², at 10,600 ft (3.23 km, T+10:14.8) | PR |
+| Arc | separation at T+2:32.3, 74.3 km, 2,252 m/s inertial at 39.01° up; apogee 187.5 km; 487.3 km down range; splashdown T+15:22 at 27°13.7' N, 75°53' W | PR |
+
+The target is the conic through the flown separation state: 187.5 km apogee, perigee −6,214 km.
+The flown heading, 105.2° Earth-fixed at the separation, is an inclination of 30.55° taken as inertial
+(101.6°) — but the model's arc, flown from LC-5, then curves on to land 17–21 km south of the
+recovery point. The report's splashdown point is itself 7 km short of its 487.3 km range (a
+great circle from LC-5 of 480.4 km, bearing 105.17°), so the two cannot both be met; the target's
+inclination is **30.3°**, between them: the separation heading 104.8° (0.4° off the flown), the
+splashdown 11–16 km from the recovery point, 490–496 km down range. `OrbitSpec.descending` makes the plan fly the southbound of the two
+launch solutions, as MR-3 did out of the Cape; without it the plane is flown north-east. The drag
+coefficients, the parachutes' reefing and the capsule's inertia are estimates.
+
+*What changed to fly it.* A lobbed arc is cut off far under 100 km, on its way up, the moment its
+apogee reaches the target's (`AscentMonitor.checkSuborbitalAscent`), and judged once; the capsule
+then rides the spent booster to its separation 10.5 s later (the flown interval) and is flown home by
+`EscapeFlight` in its new mode `capsule`: ballistic over the top, retros against the flight
+direction, the pack off, the heat shield first into the air, drogue, main, the water. The same
+rigid-body flight as a Soyuz abort's descent module (§8), with the capsule's own mass, size, CG
+(0.6 m above the shield's face, estimated), parachutes and retros; Soyuz's descent module is
+`SOYUZ_DESCENT`, with its values unchanged. The Redstone had no closed-loop guidance, only a tilt
+programme; the model flies its own gravity turn, whose pitch floor (3° kick, falling 0.34°/s) was
+set so that both models cut off on the flown arc.
+
+Model − flight, s, and the landing:
+
+| | Max-Q | Cut-off | Separation | 1st retro | Drogue | Main | Splashdown | Peak g | Down range | From the real splashdown |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Flown | 84 (28.1 kPa) | 141.8 | 152.3 | 314.1 | 578.1 | 614.8 | 922.0 | 11.0 | 487.3 km | — |
+| Point-mass | −10.2 (31.2 kPa) | −5.5 | −5.5 | −5.2 | −9.5 | −10.9 | −15.8 | 11.6 | 496 km | 16.4 km |
+| Six-DOF | −10.4 (30.9 kPa) | −5.6 | −5.6 | −5.6 | −9.8 | −11.2 | −16.1 | 11.3 | 490 km | 11.4 km |
+
+The model's Redstone burns out 5.5 s early on the same arc, and everything after is timed from the
+separation, so it follows. Max-Q comes 10 s early and 3 kPa higher: the gravity turn is steeper low
+down than the tilt programme. The parachute times are set by heights, so they depend on the fall, not
+the clock; the capsule comes down 16 s early because its drag after the main opens is estimated.
+Tested: point-mass in tests/historical-vehicles.test.ts, six-DOF in tests/heavy/mercury-redstone.test.ts
+(tests/mr3-harness.ts), each to the timeline above within 15–30 s, 11 ± 1.5 g, 487 ± 25 km and 25 km
+of the real splashdown.
+
+**13.8 Apollo 11 on the Saturn V, launch to parking orbit (part 6a).** The vehicle `saturnv506` in
+`HISTORICAL_VEHICLES`, the spacecraft `apollo` in src/data/satellites.ts. 16 July 1969, range zero
+13:32:00 UTC, LC-39A, flight azimuth 72.058°. Sources: the Saturn V flight evaluation report for AS-506,
+MPR-SAT-FE-69-9 (FER), and NASA SP-4029 (*Saturn V Launch Vehicle Flight Evaluation* summary tables).
+The mission from the parking orbit on — the S-IVB's restart for the Moon, the spacecraft's own
+flight to the Moon — is §13.9 and §13.10, the lunar orbit §13.11, the landing §13.12 and the rendezvous
+back to the CSM §13.13 and the way home §13.14.
+
+| | Value | Source |
+|---|---|---|
+| S-IC | 130,423 kg dry, 2,145,798 kg RP-1 and LOX, 2,468 kg other; 28.4 t left at separation | FER Table 20-9; SP-4029 Table 23 |
+| F-1 | 6,719 kN, 264.5 s at sea level (flight average); 304 s in vacuum (en.wikipedia) with the same flow → 7,722 kN | FER; secondary |
+| S-II | 36,158 kg dry, 443,236 kg LOX and LH2, 572 kg other; 3.3 t left at cut-off | FER |
+| J-2, S-II | 5,141.5 kN for the stage and 423.2 s at ESC +61 s (mixture ratio 5.5) | FER §6.3 |
+| S-II mixture shift | at ESC +335 s: 3,082.8 kN on four engines (770.7 kN each); 427 s (the J-2's rating at ratio 4.3–4.5; **estimated**) | FER §6.3 |
+| S-IC/S-II interstage | 5,206 kg: 614 kg stays with the S-IC; the 3,982 kg ring, with its 609 kg of ullage-motor propellant, dropped at T+192.3 s | FER |
+| S-II/S-IVB interstage | 3,663 kg, with the S-II | FER |
+| S-IVB, IU | 11,273 kg dry, 751 kg other, IU 1,939 kg; 107,095 kg LOX and LH2; J-2 901.2 kN, 428.7 s (first burn) | FER |
+| Spacecraft | CSM 28,806 kg, LM 15,095 kg, SLA 1,792 kg, escape tower 4,042 kg (off at T+197.9 s) = 49,735 kg | SP-4029 |
+| Times | CECO 135.20; OECO 161.63; separation 162.30; S-II start command 163.04; CECO ESC +297.58 (460.62); S-II cut-off 548.22, separation 549.00; S-IVB start 552.2; cut-off 699.33; insertion 709.33 | FER |
+| Orbit | 183.2 × 186.0 km, 32.521°; the node 123.088° east of the launch meridian at guidance reference release (T−17 s) — 359.624° from the mean equinox of date | FER Table 4-5 |
+| Insertion + 10 s (709.3 s) | 191.1 km, 7,793.1 m/s, 0.012°, heading 88.848°; 32.672° N, 52.694° W | FER Table 4-5 |
+
+*New in the model.* `StageSpec.engineEvents` are planned changes in a stage's engines during its burn, s
+after its first ignition: an engine shut down early (the centre engines of the S-IC and S-II, index 4
+of the layout, which the six-DOF budget loses as it loses an engine the FDIR shuts down, §2j) or a new
+operating point for every engine (the S-II's mixture shift), which replaces the stage's engine
+where every consumer reads it — point mass, six-DOF mass model, guidance. `StageSpec.jettisons` drop a
+mass during the burn: an `interstage` off the stage's dry mass, a `tower` off the payload's. Events
+`evt.ceco`, `evt.mixtureShift`, `evt.interstageSep`, `evt.towerJettison`.
+
+*Approximations.* The propellant loads are what the stages burn in the model, their totals kept: the
+S-IC's is what five F-1s burn from ignition (T−2.5 s here; T−8.9 s flown) to its centre engine's
+shutdown and four to the LOX's end at T+161.63 s, the 28.4 t left over is carried as dry mass, and the
+73 t burned on the pad before that is left out, so the stack weighs 2,838 t at liftoff, about what
+flew (2,938 t at ignition), and 825 t at the S-IC's cut-off (827.3 t flown); the S-II's is 2.6 t over what the published
+flows burn to T+548.22 s (the thrust build-up from ESC to mainstage, 3 s flown, is not modelled), taken
+from its residual. The ullage-motor propellant rides with the ring until it drops. The clock's zero is range zero; the
+flown liftoff, T+0.63 s, is not modelled. The model flies a gravity turn where the Saturn V flew a
+time-based tilt programme, frozen at the S-IC's cut-off: along the air-relative velocity, its kick
+(3° at 0.5°/s) set so that the S-IC hands over at the flown state; and from T+204.1 s, as the
+Saturn V's iterative guidance mode did, its own closed-loop steering, into the flown plane. The azimuth
+is the flown one (`OrbitSpec.flightAzimuth`, 72.058° in the inertial frame at the pad, turned over the
+ground as the site's rotation turns it), not the one the inclination alone would ask for (73.83°), and
+the closed loop steers into the parking orbit's own plane (`VehicleSpec.targetPlane`, the mission's RAAN
+fixed at the flown 359.624°): the distance out of the plane and the speed across it both brought to zero
+by the cut-off, the lateral acceleration −(6y/T² + 4ẏ/T) for the time to go T (held to a minute at the
+end) — where every other vehicle flies the plane through wherever it is, which set the Saturn V's node
+1.7° east of the flown one, and the restart for the Moon 200 km round the orbit from where it was. The
+Saturn's guidance yawed as much: 274 m/s across its launch plane by the insertion (FER Table 4-5). The hand-over time is new in
+the guidance (`GuidanceParams.closedLoopStart`): without it every vehicle's gravity turn hands over
+in thin air (q under 4 kPa, above 25 km), which for the Saturn V is 115 s into the S-IC's burn — it
+flattened the S-IC, put it 6 km low at its cut-off and had the S-II climb at a 20° angle of attack
+just after staging. The Apollo spacecraft stays on the S-IVB in the parking orbit
+(`SatelliteSpec.staysAttached`), as it did until after the translunar injection. The launch escape tower, the SLA and the CSM are drawn from the flight
+manual's proportions; the tower's colour is a guess.
+
+Model − flight, s:
+
+| | Max-Q | CECO | OECO | Sep. | Ring | Tower | S-II CECO | Mixture | S-II cut-off | Sep. | S-IVB cut-off | Orbit, km |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Flown | 83.0 (35.2 kPa) | 135.20 | 161.63 | 162.30 | 192.3 | 197.9 | 460.62 | ≈ 498 | 548.22 | 549.00 | 699.33 | 183.2 × 186.0 |
+| Point-mass | −6.3 (35.7 kPa) | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | ±0.0 | +0.3 | +0.3 | −6.7 | 180 × 183 |
+| Six-DOF | −6.1 (38.0 kPa) | ±0.0 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.1 | +0.4 | +0.4 | +4.9 | 174 × 183 |
+
+The stages' own clocks keep the flown times. The S-IC hands over at 68 km and 2,742 m/s point-mass,
+66 km and 2,780 m/s six-DOF (66.1 km and 2,764 m/s flown), and the S-II at 186 and 183 km, 6,968 and
+6,902 m/s (187.3 km and 6,910 m/s); the S-IVB then cuts off 7 s early and 5 s late — its yaw into the
+flown plane costs the six-DOF flight, whose gravity turn leaves it 436 m/s across that plane at the
+hand-over against the point mass's 309, more than the point mass. Ten seconds after the cut-off the
+point mass is at 32.674° N (geodetic), 52.68° W, the node 359.70° (flown 32.672° N, 52.694° W,
+359.624°). Max-Q, 35.7 and 38 kPa
+against 35.2, comes 6 s early whatever the kick: the flown peak was broad and flat, and where on it the
+maximum falls moves with the day's air, which the model's standard atmosphere is not. The orbits are
+3–9 km under the flown perigee, inside the model's acceptance band. In six-DOF the S-II's closed-loop
+steering takes its angle of attack past the aerodynamic table's 15° at T+218 s, 108 km up, where the
+dynamic pressure is under 1 Pa: the disclosure every six-DOF flight in the fleet makes once where its
+steering leaves the table in thin air (`evt.aeroEnvelopeExceeded`; Soyuz at T+124 s, Falcon 9 at
+T+123 s, H-IIA at T+104 s), not a load.
+
+**13.9 Apollo 11 from the parking orbit to the translunar coast (parts 6b and 6c).** `ApolloFlight` in
+src/physics/sim/apollo.ts, `TliGuidance` in src/physics/sim/tli-guidance.ts; the mission's
+`OrbitSpec.injection`. Sources: the Saturn V flight evaluation report MPR-SAT-FE-69-9 (FER), the Apollo 11
+Mission Report MSC-00171 (MR), and R. Orloff, *Apollo by the Numbers*, NASA SP-2000-4029 (ORL).
+
+| | Value | Source |
+|---|---|---|
+| Parking-orbit coast | the S-IVB's continuous hydrogen vent from 758.5 s to 9,320.4 s: 300 N falling to 105–130 N, then 45–118 N and the valve cycling; 135,102 kg at the first burn's end, 134,047 kg at the restart | FER §7.5, Figure 7-3, Table 20-10 |
+| S-IVB restart | start tank discharge valve open T+2:44:16.20, 9,856.2 s | FER; ORL p.115; MR Table 3-I |
+| Second burn | for its first two minutes on the lean mixture the propellant utilisation valve held (795 kN, 4,240 N·s/kg = 432.4 s), then from STDV +120.5 s (9,976.7 s) 894.4 kN, 428.7 s; cut-off 10,203.07 s by guidance, 346.9 s after the restart; cut-off impulse 239,061 N·s | FER §7.7–7.8, Figure 7-7 (the first operating point and the shift's time read off the plot), Table 7-2 |
+| At the cut-off signal | 320.9 km, 10,841.0 m/s, 6.913°; e 0.97537, C3 −1.4875 km²/s², 31.386°, node 121.850° | FER Table 4-6 |
+| Ten seconds later (the conic flown) | 2:50:13.03: 9.9204° N geocentric, 164.8373° W, 334.44 km, 35,545.6 ft/s, 7.367°, heading 60.073°; C3 −1.3916 km²/s², e 0.97696, 31.383°, node 121.847° (358.383° of date); perigee 4.410° past the node, computed from the state | ORL "Translunar Injection" |
+| Stack mass | 134,047 kg at the restart, 63,190 kg at the cut-off signal | FER Table 20-10 |
+| Transposition | SLA panels open 3:15:23.0 (ORL); CSM separation 3:17:04.6, docking 3:24:03.1 (MR Table 3-I) | ORL p.116; MR |
+| Ejection | the CSM and LM out of the S-IVB 4:16:59.1 (MR; ORL 4:17:03.0), 0.7 ft/s; 43,893 kg (96,767.5 lb) | MR §7.4.2, Table A-I |
+
+*The coast and the restart.* When the ascent reaches the parking orbit `ApolloFlight` takes the stack
+over: a point under J2, drag, and the Moon's and the Sun's pull (§13.10), with its attitude set, in both
+dynamics models, as the far phases of a rendezvous are (§9.2). In the parking orbit the S-IVB's vent
+pushes it along its flight path at the thrust of the FER's figure, and takes the coast's 1,053 kg of
+hydrogen from its tanks in proportion to that thrust — 5.7 m/s in all, worth 0.8° of the orbit by the
+restart. At the flown time the S-IVB relights at the lean mixture's operating point, and changes to the
+mixture's second at its flown time (`InjectionSpec.mixture`, `evt.mixtureShift`).
+
+*The steering.* The Saturn's iterative guidance aimed the injection at five elements of the conic for
+the Moon: energy, eccentricity, inclination, node, and the direction of the perigee against the Moon's
+(ALPHA_D). So does `TliGuidance`, at the flown conic — as it was ten seconds after the cut-off, the
+engine's tail-off in it: at the cut-off signal the FER's C3 is 0.096 km²/s² lower, the 3.8 m/s the
+thrust's decay (239 kN·s on 63 t) and the 10 s after it added. In the conic's plane the thrust is
+pitched by an angle linear in time, θ = p0 + p1 (t − t0), the two numbers solved by Newton's method
+against a prediction of the rest of the burn — RK4 at 1 s under J2, the engine's operating points, its
+start-up and its tail-off, the cut-off at the energy — so that the conic's perigee comes out at its
+radius and its argument; every 2 s (the LVDC's cycle was about that), from the last solution, not in
+the last 8 s. Out of the plane the thrust brings the distance and the speed across it to zero together
+by the predicted cut-off (as §13.8's ascent). The energy, the tail-off counted, ends the burn; the step
+shrinks to a hundredth of a second as the speed still to gain comes to a few steps' worth. Should the
+solution fail, the burn falls back to velocity-to-be-gained steering onto the conic (6b's).
+
+The transposition — the adapter's panels, the CSM backing 30 m off, turning round, docking with the LM
+in the S-IVB — moves the spacecraft tens of metres from the stage and its orbit by less than a metre
+per second, so it is flown as events at the flown times and drawn (src/render/apollo.ts: 100 s to back
+off, 100 s to turn, the rest of the seven minutes to close); the CSM and LM leave the S-IVB as a body of
+their own at the ejection, weighing what the Mission Report weighed them at, when the stage becomes
+debris behind them.
+
+Model − flight, and the conic ten seconds after the cut-off:
+
+| | Mass at restart | Restart | Mixture | TLI cut-off | C3, km²/s² | e | Inclination | Perigee's argument |
+|---|---|---|---|---|---|---|---|---|
+| Flown | 134,047 kg | 9,856.2 | ≈ 9,976.7 | 10,203.07 | −1.3916 | 0.97696 | 31.383° | 4.410° |
+| Point-mass | 135,698 kg | ±0.0 | ±0.0 | +5.9 | −1.3905 | 0.97698 | 31.398° | 4.41° |
+| Six-DOF | 133,253 kg | ±0.0 | ±0.0 | −0.1 | −1.3909 | 0.97697 | 31.401° | 4.41° |
+
+The panels, the separation, the docking and the ejection are at their flown times in both. The burn
+ends with the stack's own mass: the point mass's S-IVB reaches the parking orbit 7 s before the flown
+one and carries 1.7 t more into the restart, the six-DOF's 5 s after it and 0.8 t less, and each burns to
+the same energy — 6 s longer and 0.1 s shorter than flown. The plane is 0.02° steeper than the flown (the
+yaw is held in the last 8 s). Without the mixture's two operating points the burn was 5–9 s short and,
+aimed at the cut-off signal's C3 and without the perigee's argument, left the conic's perigee 5° from the
+flown one — the flight arrived 11 hours late and 20,000 km from the Moon; without the fixed plane at the
+ascent the restart was 200 km further round the orbit, and without the vent 0.8° more.
+
+**13.10 Apollo 11 to the Moon (part 6c).** src/physics/lunar/ (ephemeris.ts, orientation.ts,
+cislunar.ts), the Moon's and the Sun's tables src/data/ephemeris-1969.ts (generated by
+docs/data/horizons/make-ephemeris.py from the Horizons tables beside it), the flight's numbers
+src/data/apollo11.ts, the Moon drawn by src/render/moon.ts. Sources: JPL Horizons (DE441), the IAU/WGCCRE
+2009 report (Archinal et al. 2011), MR, ORL, and the Public Affairs commentary in the Apollo 11 Flight
+Journal (AFJ).
+
+| | Value | Source |
+|---|---|---|
+| The Moon and the Sun | geocentric states, ICRF, hourly from 1969-07-16 13:00 to 07-24 18:00 TDB; GM 4,902.800066 km³/s² | Horizons, DE441 |
+| TDB − UTC | 39.75 s: TT − TAI 32.184 s, TAI − UTC 7.56 s in July 1969 (4.2131700 s + 0.002592 s/day from MJD 39126) | USNO |
+| The Moon's orientation | pole and prime meridian with the 13 periodic terms (physical librations) | IAU/WGCCRE 2009 |
+| SPS | 94.18 kN, 315.1 s, 30.48 kg/s: the flight's own, from LOI-1 — 43,572.8 kg to 32,675.7 kg in 357.53 s for 2,917.5 ft/s (rated 20,500 lbf, 91.19 kN; the propellant utilisation valve, moved to "increase" 76 s into LOI-1, raised the thrust) | MR Table A-I, §8.8; ORL; press kit |
+| Masses at the burns | docked at the ejection 43,893.0 kg; MCC-2 ignition 43,734.6; LOI-1 ignition 43,572.8; LOI-2 ignition 32,667.7 | MR Table A-I |
+| Evasive burn | 4:40:01.72, 2.93 s, 19.7 ft/s (6.0 m/s), planned to lower the pericynthion to 167.7 n mi | ORL; MR §7.4.2, Table 7-III |
+| MCC-2 | 26:44:58.64, 3.13 s, 20.9 ft/s (6.37 m/s), aimed at a 60.0 n mi pericynthion and a node; gave 61.5 n mi, 0.17° N 173.57° E, 75:53:35, 8,334 ft/s | ORL; MR §7.4.3, Table 7-III |
+| Pericynthion predicted | after the injection 896.3 n mi, 75:05:21; after the separation 827.2 n mi, 75:07:47; after the evasive burn 180.8 n mi, 75:39:30 | MR Table 7-III |
+| Sphere of influence | 61:39:55, 33,822 n mi above the Moon, 186,437 n mi above the Earth, 2,990 ft/s from the Earth, 3,772 ft/s from the Moon | AFJ (PAO); ORL "Equigravisphere" |
+| LOI-1 ignition | 75:49:50.37: 86.7 n mi, 8,250 ft/s, 1.57° S 169.58° W | ORL; MR Table 7-II |
+| Lunar altitudes | above the landing site's radius, 937.17 n mi (1,735.6 km) | MR Table 7-I, 5-IV |
+
+*The Moon and the Sun.* The simulation's inertial frame is the mean equator and equinox of date (the
+Earth turns by the mean sidereal time), so the ICRF states are precessed to the date by the IAU 1976
+angles (ζ, z, θ: 30.46 years of 46.12″ a year of right ascension in 1969); nutation, nine arc-seconds,
+is left out as the Earth's own rotation leaves it out. Between the hours, cubic Hermite interpolation in
+the positions and velocities, to a metre at the table's own hours; outside the table the low-precision
+series of the lifetime propagator (a few hundred kilometres), which only the drawing would use. The
+Moon's body axes, from the IAU 2009 model precessed the same way, put its near side to the Earth within
+the librations (tests/lunar-ephemeris.test.ts) and give the selenographic latitude and longitude of the
+pericynthion; the model's frame follows the mean-Earth one Apollo's sites are given in to a few hundred
+metres.
+
+*The forces.* From the parking orbit on the stack feels the Earth with its J2 and the Moon and the Sun
+as third bodies — each body's pull on the spacecraft less its pull on the Earth — and drag below
+1,000 km. The coast after the ejection is RK4 with a step a hundredth of the time to cross the distance
+to the nearer body at the speed relative to it, between 1 s and 2 min (8 s in low Earth orbit, 12 s in a
+low lunar orbit, two minutes between); the closest approach to the Moon is found by the range rate
+turning from closing to opening and refined within its step by a golden-section search to a tenth of a
+second. Within 100,000 km of the Moon its own degree-2 field is added (§13.11); farther out it is a
+point mass, the field's pull there under a millionth of the centre's.
+
+*The burns.* The service propulsion system burns along a fixed inertial direction until its Δv is in,
+the propellant it uses coming off the spacecraft's mass. The evasive burn has the flown Δv and time, in
+the orbit's plane, pointed so that it lowers the pericynthion to the planned 167.7 n mi — of the two
+directions that do, the one whose arrival is nearer the flown one (its attitude is not published). MCC-2
+is worked out at its flown time: the impulse that puts the pericynthion at 60.0 n mi, at 75:53:35 and at
+0.17° N — the node the flight aimed at is not published, so the latitude it gave stands in for it — by
+Newton's method on the three misses against the impulse's three components, the Jacobian by
+differences at 2 cm/s, each step capped at 20 m/s; then flown as a burn along it. Mission Control's
+sphere of influence (33,822 n mi above the Moon) is where `evt.lunarSoi` is; its time is interpolated
+between the steps either side. This part ends at the lunar orbit insertion's flown ignition; §13.11
+goes on from there.
+
+*The check on the chain.* The injection state Orloff gives, propagated with these forces from
+2:50:13.03, passes the Moon at 665.6 n mi at 75:15:30, 176.85° W, where the Mission Report predicted
+896.3 n mi at 75:05:21, 174.13° W: the state is given to a tenth of a foot per second and a thousandth
+of a degree, and each foot per second at the injection moves the pericynthion about a hundred miles
+(1.6 ft/s moved the prediction from the planned 718.9) — a frame or ephemeris error of a tenth of a
+degree would move it thousands (tests/historical-vehicles.test.ts).
+
+Model − flight:
+
+| | Evasive: pericynthion after | MCC-2 Δv | Pericynthion after MCC-2 | SOI crossing | At the SOI (61:39:55) | At LOI-1 ignition |
+|---|---|---|---|---|---|---|
+| Flown | 180.8 n mi, 75:39:30 (167.7 planned) | 6.37 m/s | 61.5 n mi (60.0 aimed at), 75:53:35, 0.17° N 173.57° E, 2,540 m/s | 61:39:55 | 345,281 km up, 911.4 m/s; 62,638 km above the Moon, 1,149.7 m/s | 160.6 km, 2,514.6 m/s |
+| Point-mass | 166.5 n mi, 75:45:33 | 3.89 m/s | 59.7 n mi, 75:53:37, 0.17° N 173.50° E, 2,544.0 m/s | +35 s | 345,262 km, 911 m/s; 62,680 km, 1,150.6 m/s | 162.4 km, 2,515.2 m/s |
+| Six-DOF | 167.0 n mi, 75:45:47 | 3.81 m/s | 60.0 n mi, 75:53:35, 0.17° N 173.51° E, 2,543.7 m/s | +35 s | 345,263 km, 911 m/s; 62,680 km, 1,150.6 m/s | 162.4 km, 2,515.3 m/s |
+
+The model's injection leaves its flight closer to its aim than the flown one was: its pericynthion
+after the separation is 710 and 725 n mi at 75:16 against the flown prediction's 827 n mi at 75:08,
+its correction 3.9 m/s against the flown 6.4 — the flown injection's own error, 1.6 ft/s, was the size
+of what separates them. From the correction on, the model's flight and the flown one are the same to
+40 km and a metre per second.
+
+*Approximations.* The vent's thrust is read off the FER's plot, the valve's cycling at its mean, and
+the mass it takes spread in proportion to it; the lean mixture's operating point and the shift's time
+likewise. The SPS flies LOI-1's average operating point at every burn, and between the burns the
+spacecraft is weighed as the Mission Report weighed it (the reaction control system's, the crew's and
+the venting's use not modelled). The evasive burn's direction and the
+MCC-2's aim in latitude stand in for the unpublished attitude and node. The Moon is drawn painted, not
+mapped: the principal maria at their centres and sizes, four rayed craters, a scatter of small ones —
+and drawn at the landing site's radius, 1,735.6 km, not the mean 1,737.4, so that Eagle stands on it
+(§13.12).
+
+**13.11 Apollo 11 into lunar orbit (part 6d).** src/physics/lunar/gravity.ts (the Moon's field),
+src/physics/lunar/cislunar.ts (`lunarOrbit`), the burns in src/physics/sim/apollo.ts. Sources: MR
+(§7.4.4, §7.7, Tables 7-V, 7-VIII, A-I), ORL, the Apollo 11 Flight Journal, and the GRAIL gravity field
+(Konopliv et al., *JGR Planets* 118, 2013; GL0660B).
+
+| | Value | Source |
+|---|---|---|
+| The Moon's field | J2 2.0330 × 10⁻⁴, C22 2.2382 × 10⁻⁵ (unnormalized), reference radius 1,738.0 km, in the Moon's body axes (§13.10), within 100,000 km of it | GRAIL GL0660B |
+| LOI-1 | 75:49:50.37, 357.53 s, 2,917.5 ft/s (889.3 m/s), cut-off 75:55:47.90, into 169.7 × 60.0 n mi (314.3 × 111.1 km) | ORL; MR Table 7-V |
+| LOI-2 | 80:11:36.75, 16.88 s, 158.8 ft/s (48.4 m/s), aimed at 65.7 × 53.7 n mi, reaching 65.7 × 53.8 (121.7 × 99.6 km; ORL 66.1 × 54.5) | MR §7.4.4; ORL |
+| Masses | 43,572.8 kg at LOI-1's ignition, 32,667.7 kg at LOI-2's, 32,162.4 kg after it | MR Table A-I |
+| The plane | aimed 0.37° south of the site's latitude, for the regression the mascons were predicted to give it (the Langley 13 × 13 field); on the landing revolution 0.078° (2.4 km) north of the site; inclination 1.25° | MR §7.7, Table 7-VIII; en.wikipedia |
+
+*The field.* A low lunar orbit feels the Moon's shape: the oblateness J2 and the ellipticity C22 (the
+long axis at the Earth) move its node and perilune by a fraction of a degree and a few kilometres a
+day. `moonDegree2` turns the spacecraft's position into the Moon's body axes, takes the gradient of the
+degree-2 potential there and turns the acceleration back; the point mass's own pull is `lunisolar`'s. The
+mascons and the higher degrees — what pulled the flown orbit about by kilometres a day (the "R2" model
+and the 13 × 13 field of MR §7.7) — are not here: the model's orbit keeps its shape where the flown one
+drifted, and the plane the flight had to bias the model does not.
+
+*LOI-1.* At its flown time, behind the Moon: the service engine against the velocity, pitched up by a
+fixed angle, until the energy about the Moon is the 169.7 × 60.0 n mi orbit's. A retrograde burn through
+the pericynthion leaves the perilune there; the pitch — found before the burn by a golden-section search
+on a prediction of it about the Moon alone — sets how far below the approach's pericynthion it ends. Out
+of the plane it steers into the plane through the Moon's centre, the burn's midpoint and the landing site
+where it will be at the landing's time: the distance and the speed across that plane brought to zero
+together by the cut-off, the time to go by the energy still to take off, the steering up to 37° out of
+the retrograde. The model's arrival does not come in that plane: its approach (MCC-2 aimed, as the flight
+was, at 0.17° N — §13.10) crosses the lunar equator at the pericynthion 5.75° inclined, and the plane over
+the site is 5.2° from it, which LOI-1 turns through in the burn for 12.5–12.7 m/s more than the flown 889.3.
+The flown state after the injection, propagated in the model, arrives the same way (5.2°), and the flown
+orbit, 1.25° to the equator, is the plane over the site — which the flight reached coplanar, or nearly:
+its LOI-1 took no more Δv than a coplanar burn. Where the model's arrival direction is out by these
+degrees is not found (the Moon's axes, its ephemeris and the injection all check to far better).
+
+*LOI-2.* Two revolutions later, at its flown time: velocity-to-be-gained steering onto the 65.7 × 53.7
+n mi orbit in the plane the stack is in, ended when the velocity still to gain is under a step's worth.
+
+Model − flight:
+
+| | LOI-1 cut-off | LOI-1 Δv | Orbit after LOI-1 | LOI-2 cut-off | LOI-2 Δv | Orbit after LOI-2 | Mass after | Inclination | Plane at the site, landing day |
+|---|---|---|---|---|---|---|---|---|---|
+| Flown | 75:55:47.90 | 889.3 m/s | 314.3 × 111.1 km | 80:11:53.63 | 48.4 m/s | 121.7 × 99.6 km | 32,162 kg | 1.25° | 2.4 km north |
+| Point-mass | +4.4 s | 902.0 m/s | 320.1 × 105.3 km | −2.1 s | 42.9 m/s | 121.8 × 99.5 km | 32,218 kg | 0.69° | 0.1 km |
+| Six-DOF | +4.3 s | 901.8 m/s | 319.6 × 105.7 km | −2.1 s | 42.8 m/s | 121.9 × 99.5 km | 32,218 kg | 0.69° | 0.1 km |
+
+The retrograde burn cannot put the perilune above the approach's pericynthion, and the model's approach
+is 1.5 km under the flown one (§13.10): the pitch that comes nearest leaves it 6 km under the flown
+60.0 n mi and the apolune 6 km over. LOI-2's smaller burn follows: the orbit it rounds off is already
+closer to the aim. Before the steering's time to go was taken by the energy, the steering saturated
+against the 5° turn and left the plane 35 km from the site — which the descent then flew across.
+
+*Approximations.* The field is degree 2; the mascons are left out, and with them the flight's bias of
+the plane and the drift of its orbit. The service engine flies LOI-1's average operating point for LOI-2
+too, and the masses at the ignitions are the Mission Report's. The attitude of LOI-1 is the model's (the
+flown one is not published): a fixed pitch and a steered yaw.
+
+**13.12 Apollo 11's landing (part 6d).** src/physics/sim/apollo-descent.ts (`PoweredDescent`), the LM's
+flight in src/physics/sim/apollo.ts (`stepLunarModule`), the numbers src/data/apollo11.ts; the LM, the
+CSM and the ground drawn by src/render/apollo.ts and src/render/moon.ts. Sources: MR (§5, §7.7, §9.8,
+Tables 3-I, 5-I, 7-II, A-I), ORL, the Apollo 11 press kit, AER-DPS (the descent engine) and the LM data
+book.
+
+| | Value | Source |
+|---|---|---|
+| Undocking | 100:12:00; the LM 15,278.6 kg, the CSM 16,817.7 kg | MR Tables 3-I, A-I |
+| CSM separation | 100:39:52.9, 2.7 ft/s radially down, 9.0 s, with the service module's thrusters | MR §7.4.5; press kit |
+| DOI | 101:36:14, 30.0 s, 15 s at 10 % throttle then 40 %, 76.4 ft/s (23.3 m/s); targeted to 60 × 8.2 n mi, the pericynthion 260 n mi up range of the site; reached 58.5 × 7.8 n mi; 15,272.3 kg at ignition | ORL; MR §5.1, §9.8.1, Table A-I |
+| Descent engine | 9,870 lbf at the fixed throttle position, throttleable 1,050–6,300 lbf, rated 10,500 lbf; 300.5 s | press kit; AER-DPS; LM data book |
+| PDI | 102:33:05.01 at the pericynthion, 1.02° N 39.39° E — 482.3 km round the Moon from where Eagle landed; 26 s at the minimum throttle; 15,150.7 kg | MR Tables 5-I, 7-II, A-I |
+| Throttle recovery | 102:39:31 (PDI + 386 s), when the thrust asked for fell under 57 % of the rating | MR §5.3 |
+| High gate | 102:41:32, P64, 7,129 ft (2,173 m), descending at 125 ft/s | MR Table 5-I |
+| Low gate | 102:43:22, P66 (manual attitude, the rate-of-descent mode) at about 400 ft | MR §5.3; ORL |
+| Contact light, engine off | 102:45:39.9, 102:45:41.4 | MR Table 3-I |
+| Tranquility Base | 0.67408° N 23.47297° E; 7,327.0 kg on the surface | MR §5.3, Table A-I |
+
+*The two spacecraft.* At the undocking Eagle becomes the tracked vehicle, weighed as the Mission Report
+weighed it; Columbia flies on beside it under the same forces, a state of its own propagated with each
+step, and at its flown time backs away with its separation push, radially down. What each did between —
+the LM's pirouette for Collins, the station-keeping — moves them metres and is drawn, not flown: Columbia
+at its own position, over Eagle's tunnel, backing off 25 m in two minutes.
+
+*DOI.* The descent engine against the velocity at the flown time, 15 s at 10 % and then 40 %, until the
+orbit's perilune is the 8.2 n mi it was targeted at (the flown Δv on the model's orbit, 9 km lower where
+DOI is burned than the mascons had left the flown one, took the perilune only to 18 km).
+
+*PDI.* The guidance computer lit the engine where its state vector put the LM (P63's ignition
+algorithm); the model lights it when the LM is as far round the Moon from the landing site as Eagle was,
+482.3 km — the flown pericynthion — and times the gates from its own ignition as long after it as the
+flown ones.
+
+*The guidance.* The braking and approach phases steer onto a target state at a target time with the
+energy-optimal law for a position and velocity at a time, a = 6 (r_T − r − v T)/T² − 2 (v_T − v)/T − g
+(its gains held as if eight seconds were left for the last eight); the targets are on the site's own
+axes: high gate 7,129 ft up and 7.9 km short of the site, at 145 m/s over the ground and 125 ft/s down;
+low gate 400 ft up and 400 m short, 12 m/s over the ground, 4 m/s down. The landing phase — P66, flown
+by Armstrong — keeps the law over the ground towards a hover 20 m over the site 20 s before the
+touchdown and comes down at the steady rate that reaches it then (never climbing): about 1 m/s, the
+"down 3½" of the call-outs; the last 20 m straight down at 1 m/s, the drift over the ground taken out.
+The throttle is set once each 2-s cycle: 26 s at the minimum, then the fixed position until the thrust
+asked for falls under 57 % of the rating — the throttle recovery — then what is asked for, in the
+throttle's range, and back at the fixed position whenever that is past the range's top (the engine is
+not run between 60 % and the fixed position). The LM's attitude is the thrust's direction. The probes
+under three footpads touch at 67 in (1.70 m): the contact light; the engine stops the flown 1.5 s later,
+and Eagle stands on the Moon, turning with it.
+
+Model − flight (times from the ignition):
+
+| | PDI | Throttle recovery | High gate | Low gate | Contact light | Engine off | From the site | On the surface |
+|---|---|---|---|---|---|---|---|---|
+| Flown | 102:33:05.01 | +386 s | +507 s, 2,173 m | +617 s, 122 m | +754.9 s | +756.4 s | — | 7,327 kg |
+| Point-mass | −45 s | +374 s | +507 s, 2,168 m | +617 s, 135 m | +756.3 s | +757.9 s | 3.0 m | 7,326 kg |
+| Six-DOF | −45 s | +368 s | +507 s, 2,180 m | +617 s, 135 m | +756.0 s | +757.5 s | 3.3 m | 7,328 kg |
+
+DOI in the model: 24.3 m/s into 99.5 × 14.9 km (six-DOF 24.2 m/s, 99.7 × 15.2), against the flown 23.3 m/s
+into 108.3 × 14.4 km. The LM reaches the ignition's point 45 s early: twelve revolutions of an orbit that
+kept its shape, where the flown one drifted, add up to it. Eagle's guidance began the descent with its
+position 20,000 ft down range in error, and brought it down that far past the planned point; Armstrong
+flew it 1,100 ft further on, over West crater's boulders (MR §5.3). The model aims at where it landed.
+
+*The drawing.* From the undocking the spacecraft on screen is Eagle alone, its legs out (their pads 4.5 m
+from its axis, 1.5 m under the descent stage; the probes under them until the landing), and Columbia a
+body of its own where its flight has it; the camera's up and ground are the Moon's. The Moon is drawn at
+the site's radius, 1,735.6 km, and round Tranquility Base two finer patches of ground, 100 km and 6 km
+across, carry craters to a few metres, lit from the low morning Sun, with West crater (180 m across, 400 m
+east of Eagle), the 33-m crater 50 m east and the doublet 10 m west where the Mission Report puts them
+(§11); Eagle's shadow falls on them from the last 200 m.
+
+*Approximations.* The gates' distances from the site and speeds over the ground, the hover's height and
+time, and the vertical law are the model's: the flown targets of P63 and P64 (position, velocity,
+acceleration and jerk at each gate) are not published here, nor are Armstrong's inputs, so the model's
+landing phase is a steady descent on the rate, not his flight across West crater. The throttle's cycle
+and its return to the fixed position are the model's reading of the guidance computer's logic. The legs,
+the probes and the ground are drawn to the press kit's sizes and photographs, the craters painted at
+their sizes and places, not mapped.
+
+**13.13 Apollo 11 back to Columbia (part 6e).** src/physics/sim/apollo-rendezvous.ts (the ascent's guidance
+and the rendezvous's targeting), the ascent stage's flight in src/physics/sim/apollo.ts, the numbers
+src/data/apollo11.ts; the ascent stage, the descent stage left on the Moon and the two spacecraft docked
+again drawn by src/render/apollo.ts. Sources: MR (§5.6, §5.7, §9.9; Tables 3-I, 5-V, 5-VI, 9.9-I, A-I;
+Figure 5-19) and the Apollo 11 press kit.
+
+| | Value | Source |
+|---|---|---|
+| Lift-off | 124:22:00.79, after 21 h 36 min on the Moon; 10 s of vertical rise to 50 ft/s, then the pitch-over | MR Table 3-I, §7.4.7; press kit |
+| Ascent engine | 3,464 lbf and 309.4 s 10 s in, 3,439 lbf and 308.8 s at 400 s (predicted; the measured pressures matched) | MR Table 9.9-I |
+| Insertion | 124:29:15.67; aimed at 60,000 ft, climbing at 32 ft/s, 5,534.9 ft/s down range, flown 60,300 ft, 32 ft/s, 5,537.0 ft/s; 47.3 × 9.5 n mi | MR Table 5-V |
+| The lift-off's timing | the insertion 166 n mi west of the landing site, the CSM then about 255 n mi ahead | press kit |
+| CSI | 125:19:35, 51.6 ft/s posigrade (0.7 S, 0.1 down), 47 s on the thrusters; targeted for the LM 15 n mi under the CSM at CDH | MR Table 5-VI, §5.7; press kit |
+| CDH | 126:17:49.6, 8.0 ft/s retrograde, 1.7 S, 18.1 up (19.9 in all; the CSM's orbit, 62 × 56 n mi, not circular) | MR Table 5-VI, §5.7 |
+| TPI | 127:03:51.8, 22.9 ft/s posigrade, 1.4 N, 11.0 up; when the CSM stood 26.6° above the LM's horizon, for an intercept 130° of the CSM's orbit later | MR Table 5-VI; press kit |
+| Midcourse corrections | 127:18:30.8 and 127:33:30.8: under 1 ft/s and about 1.5 | MR Table 5-VI, §5.7 |
+| Braking, station-keeping, docking | 127:36:57.3, 127:52:05.3, 128:03:00.0 | MR Figure 5-19 |
+| Masses | the ascent stage 10,776.6 lb at lift-off, 5,928.6 at insertion, 5,881.5 at CSI, 5,738.0 at the docking; the CSM 36,847.4 lb docked, 37,100.5 after the jettison | MR Table A-I |
+| Jettison, separation | the ascent stage at 130:09:31.2; the final separation 130:30:01.0, 2.2 ft/s in 7.2 s | MR Tables 3-I, 7-V |
+
+*The ascent.* P12's shape: straight up for ten seconds, then the ascent engine — at its operating point,
+not throttleable — steered so that the height and the rate of climb reach the insertion's at the cut-off:
+along the local vertical and across the CSM's plane the energy-optimal law for a position and a velocity at
+a time (§13.12's), the time to go by the rocket equation on the speed still to gain, gains held for the
+last eight seconds; the rest of the thrust down range; the cut-off when the speed down range is the
+insertion's. The thrust's direction is the stage's attitude. The lift-off is timed as the guidance computer
+timed it, for where the CSM is: an hour before, the model looks for the lift-off time at which, as long after
+it as the flown insertion and as far west of the site, the CSM will be the planned 255 n mi ahead — a secant
+search on a prediction of the CSM's coast. At the flown lift-off time the model's CSM is 2° further round
+its orbit than the flown one was (its orbit kept the shape the mascons changed, §13.11), and the search
+lifts Eagle off 42 s early — about as early as its descent (§13.12), for the same reason. Flown at the flown
+time instead, the rendezvous came 28 min late.
+
+*The rendezvous.* All on the LM's thrusters — two 100-lbf thrusters along the axis, 0.34 m/s² — each burn
+worked out at its time and flown along a fixed direction until its Δv is in, the ascent stage weighed at
+CSI as the Mission Report weighed it:
+- CSI at its flown time, along the LM's local horizontal: the size, found by a secant search on a
+  prediction of both spacecraft's coasts, that puts the LM 15 n mi under the CSM's orbit at CDH;
+- CDH at its flown time: the LM's orbit made coelliptic with the CSM's — the same line of apsides, its
+  semi-major axis the CSM's less the height between them, its eccentricity scaled to keep a·e — and its
+  speed across the CSM's plane taken out;
+- TPI when the CSM's elevation above the LM's horizon reaches 26.6°: the impulse that brings the LM to where
+  the CSM will be 130° of its orbit later (Newton's method on the three components against the miss, the
+  Jacobian by differences), and the two midcourse corrections at the flown intervals after it, back onto the
+  same intercept;
+- the braking from 6,000 ft: the closing speed held at the gates — 30 ft/s from 6,000 ft, 20 from 3,000,
+  10 from 1,500, 5 from 500 — and slowed to a stop at 30 m, the thrusters bringing the speed relative to the
+  CSM to it along the line of sight and taking out the drift across it (a time constant of 10 s);
+- station-keeping at 30 m until the docking's approach at 0.1 m/s is due for the flown docking time, or at
+  once when that time has passed; the docking at the two bodies' docked distance, 10.9 m between the
+  ascent stage's base and the CSM's aft face.
+Docked, the flight follows the CSM, the ascent stage on its nose, weighed as the two were; at its flown time
+the ascent stage is let go, drifting off at 0.3 m/s along the docking axis, and twenty minutes later the CSM
+backs away, 2.2 ft/s retrograde (the Mission Report's table has the LM's thrusters make it, its sequence of
+events the CSM; the press kit planned the CSM). The rendezvous is targeted in states about the Moon's centre; the forces are the
+flight's own (the Earth with J2, the Moon with its degree-2 field, the Sun).
+
+Model − flight:
+
+| | Lift-off | Insertion (after lift-off), orbit | CSI | CDH | TPI | Braking | Station-keeping | Docking |
+|---|---|---|---|---|---|---|---|---|
+| Flown | 124:22:00.79 | +434.9 s, 47.3 × 9.5 n mi, 2,689 kg | 15.7 m/s | 6.1 m/s, ΔH 15 n mi | 127:03:51.8, 7.8 m/s | 127:36:57 | 127:52:05 | 128:03:00 |
+| Point-mass | −42 s | +440.3 s, 44.9 × 9.8 n mi, 2,657 kg | 17.1 m/s | 4.5 m/s, 15.0 n mi | −4 min 49 s, 7.6 m/s | +1 min 44 s | −2 min 8 s | +20 s |
+| Six-DOF | −42 s | +440.3 s, 44.9 × 9.8 n mi, 2,657 kg | 17.1 m/s | 4.2 m/s, 15.0 n mi | −5 min 4 s, 7.6 m/s | +1 min 29 s | −2 min 22 s | +20 s |
+
+The midcourse corrections are 0.2 m/s and under 0.1 (flown under 0.3 and about 0.5). The insertion's orbit
+is the press kit's aim, 45 × 9 n mi, rather than the flown one's; CSI then takes a little more to lift the
+LM to 15 n mi under the CSM, and CDH, with the orbits nearer coelliptic already, a little less. The docking
+comes 20 s after the flown one: the approach, timed for it at 0.1 m/s, eases off over the last two metres.
+
+*Approximations.* The thrusters' specific impulse (290 s) is approximate; the braking gates are the
+standard procedure's, not the flight's own record; the docking is flown by the LM, where Collins flew the
+CSM onto it; the ascent stage's drift at the jettison is the model's, and so is the final separation's direction. The insertion's crossrange of 1.7 mi, trimmed after it, and the small out-of-plane components of
+CSI and CDH are not flown: the ascent steers into the CSM's plane.
+
+**13.14 Apollo 11 home (part 6f).** src/physics/sim/apollo-entry.ts (the aim at the Earth, the entry
+guidance, the CM's aerodynamics and parachutes), the flight in src/physics/sim/apollo.ts, the numbers
+src/data/apollo11.ts; the command module, its parachutes and the service module drawn by
+src/render/apollo-cm.ts, with the glow of the air round the CM through the entry as bright as the heating at its
+stagnation point (√ρ·v³) makes it — the scale the picture's. Sources: MR (§3, §7.4.8–7.6; Tables 3-I, 7-VI, 7-VII, A-I) and the Apollo 11 press
+kit (the earth landing system).
+
+| | Value | Source |
+|---|---|---|
+| TEI | 135:23:42.3, 151.4 s, 3,279.0 ft/s on the SPS; the CSM 36,965.7 lb; it left the flight 0.79° from entering the air (vacuum perigee 69.4 n mi against the nominal 20.4) | MR Tables 7-VI, A-I, §7.4.8 |
+| MCC-5 | 150:29:57.4, 4.8 ft/s in 11.2 s on the SM's thrusters, to the entry at −6.51° | MR Table 7-VI, §7.4.9 |
+| CM/SM separation | 194:49:12.7; the CM 12,107.4 lb | MR Tables 3-I, A-I |
+| Entry interface | 195:03:05.7, 400,000 ft, 3.19° S 171.96° E, 36,194.4 ft/s, −6.48°, heading 50.18°; 6.56 g at the most | MR Table 7-VII, §7.5 |
+| The landing | drogues 195:12:06.9; in the water at 195:18:35, 13.30° N 169.15° W — 1,285 n mi from the entry interface, the target moved 215 n mi down range for the weather; the CM 11,601.7 lb at the drogues, 11,318.9 at the mains, 10,873.0 in the water | MR §3, Tables 3-I, 7-VII, A-I |
+| Earth landing system | the forward heat shield off and two reefed 16.5-ft drogues at 24,000 ft; three 83.3-ft mains in two reefing stages; 31 ft/s in the water on three | press kit |
+
+*TEI and the coast.* The burn is aimed as the ground aimed it, half an hour before, at the vacuum perigee
+of the entry the flight flew — the conic of the Mission Report's entry-interface state carried on to its
+perigee (38 km up) — by Newton's method on its altitude, time and latitude: first as an impulse at the
+burn's middle, from the flown size along the velocity, then as the burn itself, along a fixed direction
+from its flown ignition. The Δv of every service-engine burn is counted by the rocket equation over each
+step (a count of thrust over the step's starting mass came short by a quarter of a metre a second over
+TEI's two and a half minutes, and left the flight 30 km off its perigee). The coast home is the outbound
+one's (§13.10) the other way; MCC-5, at its flown time on the service module's thrusters, is aimed the same
+way from where the flight is.
+
+*The entry.* The CM leaves the SM at its flown time, the SM drifting back 1 m/s and breaking up at 70 km
+(the Mission Report saw it come apart near the CM; the model's). Below the entry interface the CM flies
+on its hypersonic aerodynamics — 3.91 m across, a drag coefficient of 1.29, lift 0.30 of it —, the lift
+rolled about the air-relative velocity by the bank angle: lift up through the first plunge to its
+pull-out, then, every two seconds, the bank's size by a bisection on a prediction of the rest of the
+entry (held at that bank to the drogues' height, the load limit below applied as the guidance applies it)
+against the range to the flown splash point; its side towards the target, reversed when the target lies
+off to the other side by more than a band that narrows with the speed (0.1° + 0.6° (v/7.8 km/s)²); lift up
+whenever the CM is falling at more than 5 g; the bank held below 700 m/s. At 24,000 ft the drogues open
+(45 % reefed for 8 s), at 10,000 ft the mains (10 % for 6 s, 35 % to 10 s, then in full), their drag area
+the one that gives 31 ft/s at sea level on the CM's weight in the water; the CM is weighed at each as the
+Mission Report weighed it, the propellant dumped under the mains over two minutes. At sea level it
+splashes down and floats, turning with the Earth.
+
+Model − flight:
+
+| | TEI Δv, burn | Entry after TEI | MCC-5 | Entry interface | Peak load | Drogues | Splashdown |
+|---|---|---|---|---|---|---|---|
+| Flown | 999.4 m/s, 151.4 s | −0.79° | 1.46 m/s | 195:03:05.7, −6.48° | 6.56 g | 195:12:06.9 | 195:18:35, 13.30° N 169.15° W |
+| Point-mass | 1,007.4 m/s, 153.1 s | −6.75° | 0.14 m/s | −0.1 s, −6.47° | 6.3 g | +5 s | −37 s, 5 km off |
+| Six-DOF | 1,006.6 m/s, 153.0 s | −6.51° | under 0.03 m/s, not made | −1.9 s, −6.51° | 6.5 g | −0.3 s | −42 s, 2 km off |
+
+The model's TEI is a few metres a second larger than the flown one — its orbit about the Moon kept the shape
+the mascons changed (§13.11) — and lands nearer its aim, so its correction is a tenth of the flown one, and
+in six-DOF under the 0.03 m/s below which none is made. The entry follows the flown one: the drogues within
+seconds of the flown time, the splash within a few kilometres of where Columbia came down. The splash comes
+half a minute early: under the mains the model comes down at 31 ft/s at sea level, faster higher up; the
+flown descent took longer.
+
+*Approximations.* The CM's aerodynamics are round values for its hypersonic trim, not a table; the
+guidance's structure is the model's — a predictor on the bank angle, not the flight computer's reference
+trajectory and its phases (initial roll, huntest, upcontrol, Kepler, final) — though it flies the same
+geometry: lift up to the pull-out, the lift rolled to fly the range, the reversals. The mains' deployment
+height (10,000 ft), the reefing's steps, the drogues' drag coefficient, the SM's drift and break-up and the
+thrusters' specific impulse are the model's.
 
 ## Glossary (EN / RU / TH)
 

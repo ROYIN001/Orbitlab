@@ -1,0 +1,120 @@
+{
+  "summary": {
+    "oracleChecks": [
+      {
+        "kind": "circular",
+        "periods": 0.5,
+        "positionErrorM": 2.7939677238464355e-9
+      },
+      {
+        "kind": "circular",
+        "periods": 1,
+        "positionErrorM": 1.3949026061540381e-8
+      },
+      {
+        "kind": "circular",
+        "periods": 10,
+        "positionErrorM": 1.1159220849232305e-7
+      },
+      {
+        "kind": "independent RK4 circular 600s/0.5s",
+        "positionErrorM": 1.1214608865596628e-8,
+        "velocityErrorMs": 1.3520610761878294e-11
+      }
+    ],
+    "kepler": {
+      "cases": 108,
+      "passed": 108,
+      "failures": 0
+    },
+    "lambert": {
+      "cases": 120,
+      "returned": 72,
+      "passedReturned": 72,
+      "failedReturned": 0,
+      "null": 48,
+      "nonImpactFailures": 0,
+      "maxReturnedPositionErrorM": 0.2610996250948041,
+      "maxReturnedVelocityErrorMs": 0.0001965795117791819
+    },
+    "invalidTime": [
+      {
+        "dt": "0",
+        "returnsNull": true
+      },
+      {
+        "dt": "-1",
+        "returnsNull": true
+      },
+      {
+        "dt": "NaN",
+        "returnsNull": true
+      }
+    ],
+    "rkWitness": null,
+    "keplerRkWitnesses": [
+      {
+        "e": 0.999999,
+        "t": -3600,
+        "productionPositionErrorM": 2.3470068013571568e-7,
+        "productionVelocityErrorMs": 8.14048566260972e-11,
+        "bisectionPositionErrorM": 2.4621463520978096e-7,
+        "bisectionVelocityErrorMs": 8.005620142163167e-11,
+        "rkStepHalvingPositionDifferenceM": 5.738519207004794e-7,
+        "rkStepHalvingVelocityDifferenceMs": 2.0837156800511058e-10
+      },
+      {
+        "e": 0.999999,
+        "t": 3600,
+        "productionPositionErrorM": 2.3470068013571568e-7,
+        "productionVelocityErrorMs": 8.14048566260972e-11,
+        "bisectionPositionErrorM": 2.3470068013571568e-7,
+        "bisectionVelocityErrorMs": 8.14048566260972e-11,
+        "rkStepHalvingPositionDifferenceM": 5.738519207004794e-7,
+        "rkStepHalvingVelocityDifferenceMs": 2.0837156800511058e-10
+      },
+      {
+        "e": 0.999999999,
+        "t": -3600,
+        "productionPositionErrorM": 4.9701571703427785e-8,
+        "productionVelocityErrorMs": 3.6108772348789566e-11,
+        "bisectionPositionErrorM": 4.9701571703427785e-8,
+        "bisectionVelocityErrorMs": 3.6108772348789566e-11,
+        "rkStepHalvingPositionDifferenceM": 3.839941346661803e-8,
+        "rkStepHalvingVelocityDifferenceMs": 1.3920023652657589e-11
+      },
+      {
+        "e": 0.999999999,
+        "t": 3600,
+        "productionPositionErrorM": 4.9701571703427785e-8,
+        "productionVelocityErrorMs": 3.6108772348789566e-11,
+        "bisectionPositionErrorM": 4.9701571703427785e-8,
+        "bisectionVelocityErrorMs": 3.6108772348789566e-11,
+        "rkStepHalvingPositionDifferenceM": 3.839941346661803e-8,
+        "rkStepHalvingVelocityDifferenceMs": 1.3920023652657589e-11
+      },
+      {
+        "e": 1.000000001,
+        "t": -3600,
+        "productionPositionErrorM": 8.529613272737943e-8,
+        "productionVelocityErrorMs": 5.760232835661534e-11,
+        "bisectionPositionErrorM": 8.529613272737943e-8,
+        "bisectionVelocityErrorMs": 5.760232835661534e-11,
+        "rkStepHalvingPositionDifferenceM": 2.0158777777492535e-7,
+        "rkStepHalvingVelocityDifferenceMs": 1.2235323749694855e-10
+      },
+      {
+        "e": 1.000000001,
+        "t": 3600,
+        "productionPositionErrorM": 8.529613272737943e-8,
+        "productionVelocityErrorMs": 5.760232835661534e-11,
+        "bisectionPositionErrorM": 8.529613272737943e-8,
+        "bisectionVelocityErrorMs": 5.760232835661534e-11,
+        "rkStepHalvingPositionDifferenceM": 2.0158777777492535e-7,
+        "rkStepHalvingVelocityDifferenceMs": 1.2235323749694855e-10
+      }
+    ]
+  },
+  "keplerFailures": [],
+  "lambertFailures": []
+}

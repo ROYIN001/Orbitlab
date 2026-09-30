@@ -1,0 +1,126 @@
+{
+  "format": "orbitlab.lessons",
+  "version": 1,
+  "lessons": [
+    {
+      "id": "qa-import-v1",
+      "track": 1,
+      "order": 1,
+      "mode": "explore",
+      "domains": [
+        2,
+        1
+      ],
+      "tags": [
+        "hp ha",
+        "T"
+      ],
+      "title": {
+        "en": "QA Imported Lesson",
+        "ru": "Импорт QA",
+        "th": "บทเรียน QA นำเข้า"
+      },
+      "brief": {
+        "en": "Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed.",
+        "ru": "Выведите Falcon 9 с мыса Канаверал на круговую орбиту высотой 500 км. Всё уже настроено: нажмите «Пуск» и проследите выведение — работу первой ступени, разделение, выключение второй ступени на опорной орбите 200 × 500 км и её повторное включение в апогее, которое делает орбиту круговой. Когда орбита будет достигнута, рассчитайте для неё два числа и введите их: период обращения и орбитальную скорость.",
+        "th": "นำ Falcon 9 จากแหลมคะแนเวอรัลขึ้นสู่วงโคจรวงกลมที่ความสูง 500 กม. ทุกอย่างตั้งค่าไว้แล้ว กด «ปล่อยจรวด» แล้วติดตามการไต่ระดับ ตั้งแต่ขั้นที่ 1 การแยกขั้น ขั้นที่ 2 ดับเครื่องในวงโคจรพัก 200 × 500 กม. จนถึงการจุดเครื่องอีกครั้งที่จุดไกลโลกเพื่อทำให้วงโคจรเป็นวงกลม เมื่อเข้าวงโคจรแล้ว ให้คำนวณค่าสองค่าของวงโคจรนั้นแล้วพิมพ์คำตอบ ได้แก่ คาบการโคจร และอัตราเร็วในวงโคจร"
+      },
+      "debrief": {
+        "en": "Period and speed depend on the size of the orbit alone: T = 2π√(a³/μ) grows as a^3/2 (Kepler's third law), and on a circle v = √(μ/r). Neither depends on the mass of the satellite.",
+        "ru": "Период и скорость зависят только от размера орбиты: T = 2π√(a³/μ) растёт как a^3/2 (третий закон Кеплера), а на круговой орбите v = √(μ/r). Ни то, ни другое не зависит от массы спутника.",
+        "th": "คาบและอัตราเร็วขึ้นกับขนาดของวงโคจรเท่านั้น: T = 2π√(a³/μ) เพิ่มตาม a^3/2 (กฎข้อที่สามของเคปเลอร์) และบนวงโคจรวงกลม v = √(μ/r) ทั้งสองค่าไม่ขึ้นกับมวลของดาวเทียม"
+      },
+      "mission": {
+        "format": "orbitlab.mission",
+        "version": 2,
+        "mission": {
+          "vehicleId": "falcon9",
+          "satelliteId": "cubesats",
+          "siteId": "cape",
+          "orbitId": "leo",
+          "orbit": {
+            "id": "leo",
+            "name": "Low Earth orbit (500 km)",
+            "perigee": 500000,
+            "apogee": 500000,
+            "inclination": "site",
+            "argPerigee": 0,
+            "raanMode": "free",
+            "description": "Generic circular LEO at the minimum inclination of the launch site."
+          },
+          "launchTime": "2026-09-15T12:00:00Z",
+          "payloadMass": 10000,
+          "guidanceOverrides": {},
+          "failure": {
+            "mode": "none",
+            "time": 60,
+            "stage": 0
+          },
+          "boosterRecovery": false,
+          "dynamics": {
+            "model": "pointMass",
+            "wind": "calm",
+            "seed": 20260919
+          }
+        }
+      },
+      "locked": [
+        "setup.vehicle",
+        "setup.site",
+        "setup.satellite",
+        "setup.payloadMass",
+        "setup.orbit",
+        "setup.failure",
+        "setup.dynamics.model"
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Orbital period of your orbit (min)",
+            "ru": "Период обращения на вашей орбите (мин)",
+            "th": "คาบการโคจรของวงโคจรนี้ (นาที)"
+          },
+          "tol": 1,
+          "unit": "min"
+        },
+        {
+          "id": "speed",
+          "kind": "answer",
+          "measure": "orbit.speed",
+          "prompt": {
+            "en": "Orbital speed (km/s)",
+            "ru": "Орбитальная скорость (км/с)",
+            "th": "อัตราเร็วในวงโคจร (กม./วินาที)"
+          },
+          "tol": 0.05,
+          "unit": "km/s"
+        }
+      ],
+      "hints": [
+        {
+          "en": "The orbit is a circle: its radius is the Earth's radius (6 378 km) plus the altitude.",
+          "ru": "Орбита круговая: её радиус равен радиусу Земли (6 378 км) плюс высота.",
+          "th": "วงโคจรเป็นวงกลม: รัศมีเท่ากับรัศมีโลก (6 378 กม.) บวกความสูง"
+        },
+        {
+          "en": "Period: T = 2π√(r³/μ) with μ = 398 600 km³/s². Speed on a circle: v = √(μ/r).",
+          "ru": "Период: T = 2π√(r³/μ), μ = 398 600 км³/с². Скорость на круговой орбите: v = √(μ/r).",
+          "th": "คาบ: T = 2π√(r³/μ) โดย μ = 398 600 กม.³/วินาที² อัตราเร็วบนวงกลม: v = √(μ/r)"
+        },
+        {
+          "en": "A check: at 400 km, where the ISS flies, the period is about 92.6 min and the speed 7.67 km/s; higher is slower and longer.",
+          "ru": "Для проверки: на высоте 400 км, где летает МКС, период около 92,6 мин, скорость 7,67 км/с; выше — медленнее и дольше.",
+          "th": "ใช้ตรวจสอบ: ที่ความสูง 400 กม. ซึ่งเป็นวงโคจรของ ISS คาบประมาณ 92.6 นาที อัตราเร็ว 7.67 กม./วินาที ยิ่งสูงยิ่งช้าและคาบยิ่งยาว"
+        }
+      ]
+    }
+  ]
+}

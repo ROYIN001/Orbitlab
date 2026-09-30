@@ -83,9 +83,32 @@ function open(): Promise<IDBDatabase> {
 async function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   const db = await open();
   return new Promise((resolve, reject) => {
-    const req = run(db.transaction(STORE, mode).objectStore(STORE));
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    let transaction: IDBTransaction | undefined;
+    let settled = false;
+    const fail = (error: unknown) => {
+      if (settled) return;
+      settled = true;
+      db.close();
+      reject(error);
+    };
+    try {
+      transaction = db.transaction(STORE, mode);
+      const req = run(transaction.objectStore(STORE));
+      let result: T;
+      req.onsuccess = () => { result = req.result; };
+      // Request success precedes commit and can still be followed by an abort.
+      // Only a completed transaction may announce a saved/deleted recording.
+      transaction.oncomplete = () => {
+        if (settled) return;
+        settled = true;
+        db.close();
+        resolve(result);
+      };
+      transaction.onerror = transaction.onabort = () => fail(transaction!.error ?? req.error ?? new Error('Recording storage transaction failed'));
+    } catch (error) {
+      try { transaction?.abort(); } catch { /* already inactive */ }
+      fail(error);
+    }
   });
 }
 
@@ -98,7 +121,7 @@ export async function loadUserSoundtrack(id: WatchMissionId): Promise<StoredTrac
 }
 
 export async function removeUserSoundtrack(id: WatchMissionId): Promise<void> {
-  try { await tx('readwrite', (s) => s.delete(id)); } catch { /* nothing stored */ }
+  await tx('readwrite', (s) => s.delete(id));
 }
 
 /** The soundtrack a viewer launch plays: the user's own recording first, else the bundled one, else none. */

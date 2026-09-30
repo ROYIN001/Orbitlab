@@ -1,0 +1,8 @@
+{
+  "sourceCommit": "c146a699f01bb5d299af39e3ca9742445442b474",
+  "origin": "http://127.0.0.1:4183",
+  "firstActualDownload": "orbitlab-case-theos2-th.html",
+  "firstDownloadSha256": "260f246050ff65f93b31130bb378490a800e6e0ba94fd41bfe51a7d69a0cc280",
+  "limitation": "IAB saved the first file. Later UI saved statuses did not produce files in Downloads or captured download events. Tried documented Playwright clicks, native AX click, Enter and a download listener. No console error. Cause unverified; not classified as an Orbitlab defect.",
+  "followup": "Use the repository automated browser acceptance journey to verify real generated downloads and retain them as CI artifacts."
+}

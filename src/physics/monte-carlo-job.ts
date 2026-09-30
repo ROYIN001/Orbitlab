@@ -43,6 +43,8 @@ export class MonteCarloJob {
   readonly startedAt = Date.now();
   finishedAt?: number;
   state: MonteCarloState = 'running';
+  /** Pool setup/dispatch failure, distinct from a physically lost flight. */
+  error: string | null = null;
   private queue: { index: number; law: GuidanceLaw }[] = [];
   private workers: MonteCarloWorker[] = [];
   /** the run each worker is flying */
@@ -61,7 +63,14 @@ export class MonteCarloJob {
     for (let index = 0; index < mc.runs; index++) for (const law of this.laws) this.queue.push({ index, law });
     this.total = this.queue.length;
     const count = Math.max(1, Math.min(options.workers ?? defaultWorkerCount(), this.total));
-    for (let i = 0; i < count; i++) this.spawn();
+    try {
+      for (let i = 0; i < count; i++) this.spawn();
+    } catch (error) {
+      // The caller does not own this job until construction returns.
+      this.state = 'stopped';
+      this.releaseWorkers();
+      throw error;
+    }
   }
 
   get workerCount(): number { return this.workers.length; }
@@ -69,7 +78,10 @@ export class MonteCarloJob {
   private spawn(): void {
     const worker = (this.options.createWorker ?? createMonteCarloWorker)();
     this.workers.push(worker);
-    worker.onmessage = ({ data }) => this.received(worker, data);
+    worker.onmessage = ({ data }) => {
+      try { this.received(worker, data); }
+      catch (error) { this.fail(error); }
+    };
     worker.onerror = (event) => {
       event.preventDefault?.();
       // A worker that died takes its run with it: record the run as lost and fly on with a fresh worker.
@@ -78,7 +90,10 @@ export class MonteCarloJob {
       worker.onmessage = null; worker.onerror = null; worker.terminate();
       this.workers = this.workers.filter((w) => w !== worker);
       this.received(worker, { type: 'error', ...job, message: event.message || 'worker error' }, false);
-      if (this.state === 'running' && this.queue.length) this.spawn();
+      if (this.state === 'running' && this.queue.length) {
+        try { this.spawn(); }
+        catch (error) { this.fail(error); }
+      }
     };
     this.next(worker);
   }
@@ -109,8 +124,19 @@ export class MonteCarloJob {
     if (this.state !== 'running') return;
     this.state = state;
     this.finishedAt = (this.options.now ?? Date.now)();
-    for (const w of this.workers) { w.onmessage = null; w.onerror = null; w.terminate(); }
+    this.releaseWorkers();
     this.options.onChange?.(this);
+  }
+
+  private releaseWorkers(): void {
+    for (const w of this.workers) { w.onmessage = null; w.onerror = null; w.terminate(); }
+    this.current.clear();
+    this.queue.length = 0;
+  }
+
+  private fail(error: unknown): void {
+    this.error = error instanceof Error ? error.message : String(error);
+    this.finish('stopped');
   }
 
   stop(): void { this.finish('stopped'); }

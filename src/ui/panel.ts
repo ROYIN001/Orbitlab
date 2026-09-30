@@ -31,8 +31,8 @@
  *   cached per configuration, and can only make the verdict worse, never
  *   better.
  */
-import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
-import { RATING_ORBITS, VEHICLES, missionVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
+import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
+import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
@@ -49,6 +49,7 @@ import { localized, satelliteName, siteName, stageName, vehicleManufacturer, veh
 import { FAILURE_MODES, GUIDANCE_FIELDS, failureAvailable, fieldLimits, flightHomeCapable, guidanceLimits, parseNumberField, parseUtcDateTime, validateConfigInput, type ValidationIssue, type ConfigInput } from '../config/validation';
 import { landingZonesForSite } from '../data/landing-zones';
 import { quickstartMission, type QuickstartId } from './quickstart';
+import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionSettings } from './watch-missions';
 import { loadExperience, saveExperience, type ExperienceMode } from './experience';
 import {
   CHALLENGE_PRESETS, CHALLENGE_TEXT, ENGINEER_SETTING_TITLE, autoGuidanceRows, challengeTiming, engineerSettings, hasAdjustments,
@@ -126,6 +127,9 @@ interface SetupState {
   rendezvous?: MissionConfig['rendezvous'];
   payloadMass: number;
 }
+
+/** Whether `vehicleId` carries this payload (Crew Dragon flies on Falcon 9 only). */
+const carries = (vehicleId: string, sat: SatelliteSpec): boolean => !sat.carriers || sat.carriers.includes(vehicleId);
 
 function toDatetimeLocalUTC(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
@@ -575,6 +579,38 @@ export class SetupPanel {
     return section;
   }
 
+  /**
+   * The flights of history (roadmap C01), the viewer's own list: each fills
+   * the settings as flown, on its day and at its second, for the reader to
+   * launch as it is or to change.
+   */
+  /** the historical list stays open across the panel's re-renders */
+  private historyOpen = false;
+
+  private historicalSection(): HTMLElement {
+    const section = this.el('details', 'config-section quickstart historical-missions') as HTMLDetailsElement;
+    section.id = 'historical-missions';
+    section.open = this.historyOpen;
+    section.addEventListener('toggle', () => { this.historyOpen = section.open; });
+    const summary = this.el('summary', undefined);
+    summary.append(this.el('h2', undefined, t('setup.history.title')));
+    section.append(summary, this.el('p', 'field-note', t('setup.history.note')));
+    for (const m of WATCH_MISSIONS.filter(isHistorical)) {
+      const button = this.el('button', 'quickstart-button');
+      button.type = 'button';
+      button.dataset.historical = m.id;
+      button.disabled = this.running;
+      const spec = vehicleById(m.vehicleId);
+      button.append(this.el('strong', undefined, t(m.titleKey)), this.el('span', undefined, `${spec.name} · ${historicalDate(m.launchTime!)}`));
+      button.addEventListener('click', () => {
+        if (this.running) return;
+        this.loadMission(watchMissionSettings(m.id));
+      });
+      section.append(button);
+    }
+    return section;
+  }
+
   private statCell(label: string, value: string, unit?: string): HTMLElement {
     const cell = this.el('div');
     cell.appendChild(this.el('small', undefined, label));
@@ -670,6 +706,7 @@ export class SetupPanel {
     // panel used to carry a second switch for it, which did the same thing.
     if (this.experience === 'advanced') scroll.appendChild(this.notationSection());
     into(1).appendChild(this.quickstartSection());
+    into(1).appendChild(this.historicalSection());
     if (!learning) scroll.appendChild(this.share.section());
 
     // ── 01 vehicle & site ───────────────────────────────────────────────────
@@ -679,7 +716,9 @@ export class SetupPanel {
     else {
       // S02: a custom vehicle (from a mission file) is offered beside the catalogue until another is picked
       const custom = s.vehicleSpec ? [{ value: s.vehicleSpec.id, label: t('setup.vehicle.custom', { name: s.vehicleSpec.name }) }] : [];
-      s1.appendChild(this.select('setup.vehicle', [...custom, ...VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` }))], s.vehicleId, (v) => this.pickVehicle(v)));
+      s1.appendChild(this.select('setup.vehicle', [...custom, ...VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country})` })),
+        // C01: the vehicles of historical flights, after the fleet
+        ...HISTORICAL_VEHICLES.map((v) => ({ value: v.id, label: `${v.name} (${v.country}) · ${t('setup.vehicle.historical')}` }))], s.vehicleId, (v) => this.pickVehicle(v)));
     }
     const detail = this.el('div', 'vehicle-detail');
     detail.appendChild(this.el('span', undefined, `${vehicleManufacturer(vehicle)} · ${vehicle.country}`));
@@ -704,7 +743,7 @@ export class SetupPanel {
       this.changed();
     });
     // Sites no vehicle flies from yet (roadmap C04), shown for what they are
-    const unflown = SITES.filter((x) => !VEHICLES.some((v) => v.sites.includes(x.id)));
+    const unflown = SITES.filter((x) => !ALL_VEHICLES.some((v) => v.sites.includes(x.id)));
     if (unflown.length) {
       const group = this.el('optgroup');
       group.label = t('setup.siteUnflown');
@@ -727,7 +766,7 @@ export class SetupPanel {
     // ── 02 payload ──────────────────────────────────────────────────────────
     const s2 = this.el('section', 'config-section');
     s2.appendChild(this.sectionTitle('02', 'setup.step.payload'));
-    s2.appendChild(this.select('setup.satellite', SATELLITES.map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
+    s2.appendChild(this.select('setup.satellite', SATELLITES.filter((x) => carries(vehicleDataId(missionVehicle(s)), x)).map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
       this.clearOrbitDrafts();
       this.clearFieldDrafts('setup.payloadMass');
       s.satelliteId = v;
@@ -1164,6 +1203,8 @@ export class SetupPanel {
     this.siteReassigned = false;
     if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
     if (!spec.recoverable) s.boosterRecovery = false;
+    // a payload this vehicle does not carry (Crew Dragon off Falcon 9) gives way to the generic crew ship
+    if (!carries(v, satelliteById(s.satelliteId))) { s.satelliteId = 'crew'; s.payloadMass = satelliteById('crew').mass; }
     s.recoveryPlan = undefined;
     s.padId = undefined;
     // only a ship that flies itself home can take a suborbital target
@@ -2046,7 +2087,7 @@ export class SetupPanel {
     }
     // One plan per refresh: both the info card and the feasibility verdict read
     // it, and planning twice per keystroke buys nothing.
-    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), missionVehicle(this.state)); } catch { this.planCache = null; }
+    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), openTopVehicle(missionVehicle(this.state), satelliteById(this.state.satelliteId))); } catch { this.planCache = null; }
     this.refreshInsertionProbe();
     this.updateStats();
     this.updateWindows();
@@ -2065,7 +2106,7 @@ export class SetupPanel {
     const box = this.statsEl;
     if (!box) return;
     const s = this.state;
-    const spec = missionVehicle(s);
+    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
     const sat = satelliteById(s.satelliteId);
     const m0 = liftoffMass(spec, s.payloadMass);
     const T0 = liftoffThrust(spec);
@@ -2131,7 +2172,7 @@ export class SetupPanel {
     const box = this.infoEl;
     if (!box) return;
     const s = this.state;
-    const spec = missionVehicle(s);
+    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
     const site = siteById(s.siteId);
     const sat = satelliteById(s.satelliteId);
     const dv = idealDeltaV(spec, s.payloadMass);
@@ -2188,7 +2229,7 @@ export class SetupPanel {
       this.probedFor = '';
       return;
     }
-    const spec = missionVehicle(s);
+    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
     if (!marginalMission(spec, satelliteById(s.satelliteId), s.payloadMass, plan, s.orbit)) {
       this.probeCache = null;
       this.probedFor = '';
@@ -2212,7 +2253,7 @@ export class SetupPanel {
     const s = this.state;
     const site = siteById(s.siteId);
     return missionVerdict({
-      spec: missionVehicle(s),
+      spec: openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId)),
       site,
       orbit: s.orbit,
       satellite: satelliteById(s.satelliteId),

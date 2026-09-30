@@ -93,12 +93,32 @@ export const BUILT_ITEMS: ReadonlySet<string> = new Set(['O01', 'O02', 'O03', 'O
  * The Build section's own (Phase 3 on). D01, the parts catalogue, is built:
  * the fleet is assembled from it and the Watch level draws its parts. The
  * Watch level itself, real rockets taken apart ("exploded views",
- * `plan.build.watch`), is not a numbered roadmap item.
+ * `plan.build.watch`), is not a numbered roadmap item. D02, the remix, is
+ * built at the Explore level, its only level. D03, the parts builder, is built
+ * at the Explore level too, but its Engineer face (designing from parts
+ * there) is not, so it stays on the Engineer level's list of what is coming.
+ * D04, the test facilities (the test stand, the wind tunnel, the flight
+ * readiness review), and D05, sizing and optimal staging, are built at the
+ * Engineer level, their only level; a sized launcher is designed further in
+ * the Explore level's parts builder.
  */
-export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01']);
+export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01', 'D02', 'D04', 'D05']);
 
-/** The Build section's levels that are built; the others show what is coming to them. */
-export const BUILD_READY_LEVELS: ReadonlySet<AppLevel> = new Set(['watch']);
+/**
+ * Items a level still lists as coming that another level already offers:
+ * D03's parts builder is built at the Explore level, so the Engineer level's
+ * list, which keeps D03 for its own face of it, says so and links there
+ * rather than let a student read "build from parts" as not there yet.
+ */
+export const BUILD_ITEM_OPEN_AT: ReadonlyMap<string, AppLevel> = new Map([['D03', 'explore']]);
+
+/**
+ * The Build section's levels that are built; the others show what is coming
+ * to them. The Engineer level is, since D04 and D05 are: what is still to
+ * come to it (D03's Engineer face, Phase 4's satellites) is listed under its
+ * tabs, as Explore's D06 is not yet there either.
+ */
+export const BUILD_READY_LEVELS: ReadonlySet<AppLevel> = new Set(['watch', 'explore', 'engineer']);
 
 /**
  * What each Build level will offer, by roadmap item, as the roadmap and the

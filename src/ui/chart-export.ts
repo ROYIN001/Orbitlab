@@ -49,7 +49,7 @@ export function chartImage(snapshot: ChartSnapshot, o: ChartImageOptions = {}): 
   // at a larger type and line size too, so it keeps its proportions.
   const typeScale = Math.max(1, Math.min(2.4, width / 520));
   g.setTransform(scale, 0, 0, scale, 0, 0);
-  paintChart(g, width, height, snapshot.series, snapshot.opt, o.theme ?? PRINT_THEME, typeScale);
+  paintChart(g, width, height, snapshot.series, snapshot.opt, o.theme ?? PRINT_THEME, typeScale, true);
   return canvas;
 }
 

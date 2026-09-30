@@ -90,7 +90,11 @@ export const TRACK4: readonly unknown[] = [
     locked: [...LOCKED, 'setup.boosterRecovery'],
     endEvent: 'evt.meco',
     criteria: [
-      { id: 'overshoot', kind: 'measure', measure: 'step.overshoot', max: 6 },
+      {
+        // audit 2026-09-27 A12: only a step begun in the window after max-Q is graded (measures.ts GRADED_STEP)
+        id: 'overshoot', kind: 'measure', measure: 'step.overshoot', max: 6,
+        label: { en: 'Overshoot of a step begun within 30 s after max-Q', ru: 'Перерегулирование при воздействии в течение 30 с после max-Q', th: 'โอเวอร์ชูตของขั้นที่เริ่มภายใน 30 วินาทีหลัง max-Q' },
+      },
       { id: 'flying', kind: 'outcome', is: 'survived' },
       {
         id: 'overshoot-read', kind: 'answer', measure: 'step.overshoot', tol: 3, unit: '%',
@@ -98,7 +102,7 @@ export const TRACK4: readonly unknown[] = [
       },
     ],
     hints: [
-      { en: 'Attitude-loop inspector → flight test: pitch, a step of 2°, held 8 s. Press it at about T+65 s; the last step flown before MECO is graded.', ru: 'Инспектор контура стабилизации → лётные испытания: тангаж, ступенька 2°, 8 с. Нажмите около T+65 с; оценивается последнее воздействие до MECO.', th: 'ตัวตรวจลูปควบคุมท่าทาง → ทดสอบการบิน: พิตช์ ขั้น 2° ค้าง 8 วินาที กดที่ประมาณ T+65 วินาที ระบบจะให้คะแนนการทดสอบขั้นครั้งสุดท้ายก่อน MECO' },
+      { en: 'Attitude-loop inspector → flight test: pitch, a step of 2°, held 8 s. Press it at about T+65 s. Only a step begun after max-Q (about T+53 s) and within 30 s of it, held at least 5 s, is graded — the last such step before MECO.', ru: 'Инспектор контура стабилизации → лётные испытания: тангаж, ступенька 2°, 8 с. Нажмите около T+65 с. Оценивается только воздействие, поданное после max-Q (около T+53 с) и не позже 30 с после него, длительностью не меньше 5 с, — последнее такое воздействие до MECO.', th: 'ตัวตรวจลูปควบคุมท่าทาง → ทดสอบการบิน: พิตช์ ขั้น 2° ค้าง 8 วินาที กดที่ประมาณ T+65 วินาที ระบบให้คะแนนเฉพาะการทดสอบขั้นที่เริ่มหลัง max-Q (ประมาณ T+53 วินาที) ไม่เกิน 30 วินาทีหลังจากนั้น และค้างไว้อย่างน้อย 5 วินาที โดยนับครั้งสุดท้ายที่เข้าเงื่อนไขก่อน MECO' },
       { en: 'The overshoot is the first peak above the commanded 2°, as a share of it.', ru: 'Перерегулирование — превышение первым максимумом заданных 2°, в процентах от них.', th: 'โอเวอร์ชูตคือยอดแรกที่เกิน 2° ที่สั่ง คิดเป็นร้อยละของ 2°' },
       { en: 'Attitude autopilot → Pitch–yaw: more K_ω or less K_θ. The default 1.5 and 3 overshoot hardly at all.', ru: '«Автомат стабилизации» → «Тангаж–рыскание»: больше K_ω или меньше K_θ. Штатные 1,5 и 3 почти не дают перерегулирования.', th: 'ระบบรักษาท่าทางอัตโนมัติ → พิตช์–ยอว์: เพิ่ม K_ω หรือลด K_θ ค่าเริ่มต้น 1.5 และ 3 แทบไม่มีโอเวอร์ชูต' },
     ],

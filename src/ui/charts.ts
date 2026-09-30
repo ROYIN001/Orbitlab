@@ -139,12 +139,28 @@ export function drawChart(canvas: HTMLCanvasElement, series: Series[], opt: Char
   onDrawn?.(canvas, series, opt);
 }
 
+/** Separate printed event labels into rows, keeping every label inside the plot. */
+export function layoutChartMarkerLabels(items: readonly { x: number; width: number }[], left: number, right: number, gap: number): { x: number; width: number; row: number }[] {
+  const ends: number[] = [];
+  const placed: { x: number; width: number; row: number }[] = [];
+  const room = Math.max(1, right - left);
+  for (const { item, index } of items.map((item, index) => ({ item, index })).sort((a, b) => a.item.x - b.item.x)) {
+    const width = Math.min(item.width, room);
+    const x = Math.max(left, Math.min(item.x + gap, right - width));
+    let row = ends.findIndex((end) => end + gap <= x);
+    if (row < 0) row = ends.length;
+    ends[row] = x + width;
+    placed[index] = { x, width, row };
+  }
+  return placed;
+}
+
 /**
  * Draw a chart into a 2-D context of `w` × `h` CSS pixels, in a theme; returns
  * its text description. `drawChart` is this on the panel's canvas; an export
  * (src/ui/chart-export.ts) is this on a larger one, in `PRINT_THEME`.
  */
-export function paintChart(g: CanvasRenderingContext2D, w: number, h: number, series: Series[], opt: ChartOptions, theme: ChartTheme, scale = 1): string {
+export function paintChart(g: CanvasRenderingContext2D, w: number, h: number, series: Series[], opt: ChartOptions, theme: ChartTheme, scale = 1, separateMarkerLabels = false): string {
   g.clearRect(0, 0, w, h);
   if (theme.background) { g.fillStyle = theme.background; g.fillRect(0, 0, w, h); }
   const GRID = theme.grid, AXIS_TEXT = theme.axisText, TITLE_TEXT = theme.titleText;
@@ -207,24 +223,36 @@ export function paintChart(g: CanvasRenderingContext2D, w: number, h: number, se
     g.fillText(fmtX(x), xp, h - px(5));
   }
   // markers
+  const markers = (opt.markers ?? []).filter((m) => Number.isFinite(m.x) && m.x >= xMin && m.x <= xMax);
+  g.font = `${px(9)}px ui-monospace, monospace`;
+  const labelled = markers.filter((m) => m.label);
+  const placements = separateMarkerLabels ? layoutChartMarkerLabels(
+    labelled.map((m) => ({ x: sx(m.x), width: g.measureText(m.label!).width })), padL + px(2), w - padR - px(2), px(3),
+  ) : [];
+  const labelRows = placements.reduce((n, p) => Math.max(n, p.row + 1), 0);
+  // A very dense export still fits all labels vertically; ordinary event
+  // clusters retain the chart's normal print font and use only a few rows.
+  const labelScale = labelRows ? Math.min(1, Math.max(1, ph - px(4)) / (labelRows * px(12))) : 1;
+  let labelIndex = 0;
   g.save();
   g.beginPath();
   g.rect(padL, padT, pw, ph);
   g.clip();
-  for (const m of opt.markers ?? []) {
-    if (m.x < xMin || m.x > xMax) continue;
+  for (const m of markers) {
     const xp = sx(m.x);
     g.strokeStyle = theme.ink(m.color); g.setLineDash([px(3), px(3)]);
     g.beginPath(); g.moveTo(xp, padT); g.lineTo(xp, h - padB); g.stroke();
     g.setLineDash([]);
     if (m.label) {
+      const placed = placements[labelIndex++];
       g.save();
-      g.translate(xp + px(3), padT + px(2));
+      g.translate(placed?.x ?? xp + px(3), padT + px(2) + (placed ? placed.row * px(12) * labelScale : 0));
       g.textAlign = 'left';
       g.textBaseline = 'top';
-      g.font = `${px(9)}px ui-monospace, monospace`;
+      g.font = `${px(9) * (placed ? labelScale : 1)}px ui-monospace, monospace`;
       g.fillStyle = theme.ink(m.color);
-      g.fillText(m.label, 0, 0);
+      if (placed) g.fillText(m.label, 0, 0, placed.width);
+      else g.fillText(m.label, 0, 0);
       g.restore();
       g.textBaseline = 'alphabetic';
     }
@@ -256,8 +284,17 @@ export function paintChart(g: CanvasRenderingContext2D, w: number, h: number, se
   // title & legend
   g.textAlign = 'left';
   g.fillStyle = TITLE_TEXT;
-  g.font = `600 ${px(11)}px "Space Grotesk", system-ui, sans-serif`;
-  g.fillText(opt.title, padL, px(12));
+  // A title longer than the room left of the legend — a Russian or Thai one
+  // on a phone — is set smaller, down to the axis labels' size, and then
+  // narrowed to fit: never cut off at the canvas's edge or run under the legend.
+  g.font = `${px(10)}px "DM Sans", system-ui, sans-serif`;
+  const legend = series.reduce((sum, s) => sum + (s.label ? g.measureText(s.label).width + px(12) : 0), 0);
+  const room = Math.max(px(40), w - padR - legend - padL - (legend > 0 ? px(6) : 0));
+  let titleSize = 11;
+  const titleFont = (): string => `600 ${px(titleSize)}px "Space Grotesk", system-ui, sans-serif`;
+  g.font = titleFont();
+  while (titleSize > 9 && g.measureText(opt.title).width > room) { titleSize -= 0.5; g.font = titleFont(); }
+  g.fillText(opt.title, padL, px(12), room);
   let lx = w - padR;
   g.font = `${px(10)}px "DM Sans", system-ui, sans-serif`;
   for (const s of [...series].reverse()) {

@@ -2,6 +2,7 @@
   "name": "orbitlab",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Physics-based rocket launch and orbital insertion simulator",
   "type": "module",
   "scripts": {
@@ -16,7 +17,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "snapshots": "node --experimental-strip-types scripts/refresh-snapshots.ts",
-    "shots": "node --experimental-strip-types scripts/shots.ts"
+    "shots": "node --experimental-strip-types scripts/shots.ts",
+    "budget": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {
     "three": "0.186.0"

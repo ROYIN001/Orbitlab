@@ -15,17 +15,22 @@ import type { Debris } from './types';
 import { add, addScaled, clone, cross, dot, normalize, scale, v3, type Vec3 } from '../vec3';
 import { enuFrame } from '../orbital';
 import { OMEGA_EARTH } from '../constants';
-import { quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from '../rigid/math';
+import { quatFromAxisAngle, quatInverseRotate, quatMultiply, quatNormalize, quatRotate, type Quat } from '../rigid/math';
 import { targetAttitude } from '../rigid/runtime';
 import type { RigidState } from '../rigid/integrator';
-import { ESCAPE, EscapeFlight, capsuleConfiguration, headConfiguration, spacecraftConfiguration, type EscapeMode } from '../rigid/escape';
+import { ESCAPE, EscapeFlight, MERCURY_CAPSULE, capsuleConfiguration, headConfiguration, spacecraftConfiguration, type EscapeMode } from '../rigid/escape';
 import { stackLayout } from '../frame';
 
 /** Seconds from the escape to the burning rocket's explosion on its pad (T-10-1: 2–6 s). */
 export const PAD_FIRE_EXPLOSION = 4;
 
+/** Seconds from a suborbital capsule flight's cut-off to the capsule's separation (MR-3: T+2:21.8 to 2:32.3). */
+export const CAPSULE_SEPARATION_DELAY = 10.5;
+
 export class LaunchEscape {
   flight: EscapeFlight | null = null;
+  /** C01: the flight is a capsule coming home as planned, not an abort */
+  returning = false;
   private cause = '';
   private rocketLost?: { r: Vec3; t: number };
 
@@ -81,6 +86,38 @@ export class LaunchEscape {
     s.currentBurn = null;
     this.sync();
     return true;
+  }
+
+  /**
+   * A suborbital capsule flight (C01: Mercury-Redstone 3): the capsule, just
+   * separated from the spent booster, flies home on its own — ballistic over
+   * the top, its retro-rockets, the entry heat shield first, drogue, main,
+   * the water. The same flight as an abort's descent module, for Mercury's
+   * capsule, and not an abort.
+   */
+  beginReturn(): void {
+    const sim = this.sim, s = sim.state;
+    let attitudeQ;
+    if (s.rigid) attitudeQ = s.rigid.attitudeQ;
+    else {
+      const { east, north, up } = enuFrame(s.r);
+      const az = sim.plan.azimuthRotating;
+      attitudeQ = targetAttitude(s.dir, cross(up, add(scale(east, Math.sin(az)), scale(north, Math.cos(az)))));
+    }
+    // capsule axes: +x out of the heat shield, which faced the booster
+    attitudeQ = quatMultiply(attitudeQ, quatFromAxisAngle(v3(0, 1, 0), Math.PI));
+    this.returning = true;
+    this.cause = '';
+    this.flight = new EscapeFlight('capsule', { r: clone(s.r), v: clone(s.v), attitudeQ, omegaBody: v3() }, s.t, v3(0, 1, 0), {
+      groundElevation: (r) => sim.groundElevation(r),
+      wind: (r, t) => sim.rigidRuntime ? sim.rigidRuntime.windAt(r, t) : v3(),
+    }, (what, state, t) => this.release(what, state, t), MERCURY_CAPSULE);
+    s.status = 'abort';
+    s.note = 'capsuleReturn';
+    s.ascentPhase = null;
+    s.thrust = 0; s.throttle = 0; s.coreThrottle = 0; s.boosterThrottle = 0;
+    s.currentBurn = null;
+    this.sync();
   }
 
   /**
@@ -196,8 +233,9 @@ export class LaunchEscape {
     this.sync();
     if (flight.landed) {
       s.status = 'landed';
-      s.note = 'abortLanded';
-      sim.event('evt.abortCrewSafe', 'success', { km: Math.round(s.downrange / 100) / 10, g: +flight.status.maxG.toFixed(1) });
+      s.note = this.returning ? 'capsuleLanded' : 'abortLanded';
+      // a planned return has said so in its own splashdown event
+      if (!this.returning) sim.event('evt.abortCrewSafe', 'success', { km: Math.round(s.downrange / 100) / 10, g: +flight.status.maxG.toFixed(1) });
     }
   }
 
@@ -209,7 +247,8 @@ export class LaunchEscape {
     s.rigid = flight.telemetry();
     s.mass = flight.config.mass;
     s.gLoad = flight.status.phase === 'landed' ? 1 : flight.gLoad;
-    s.abort = { ...flight.status, motors: { ...flight.status.motors }, cause: this.cause, ...(this.rocketLost ? { rocketLost: this.rocketLost } : {}) };
+    s.abort = { ...flight.status, motors: { ...flight.status.motors }, cause: this.cause, ...(this.returning ? { kind: 'return' as const } : {}),
+      ...(this.rocketLost ? { rocketLost: this.rocketLost } : {}) };
   }
 
   /** At rest: turned with the Earth by `turn`, as a landed vehicle is. */

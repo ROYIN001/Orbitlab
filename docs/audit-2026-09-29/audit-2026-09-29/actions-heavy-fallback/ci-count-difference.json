@@ -1,0 +1,91 @@
+{
+  "oldFiles": 177,
+  "currentFiles": 187,
+  "totalDelta": 6644.0,
+  "changed": [
+    {
+      "file": "tests/case-lessons.test.ts",
+      "prior": 18,
+      "current": 23,
+      "delta": 5
+    },
+    {
+      "file": "tests/i18n.test.ts",
+      "prior": 16,
+      "current": 17,
+      "delta": 1
+    },
+    {
+      "file": "tests/mission-result.test.ts",
+      "prior": 15,
+      "current": 16,
+      "delta": 1
+    },
+    {
+      "file": "tests/compare.test.ts",
+      "prior": 7,
+      "current": 48,
+      "delta": 41
+    },
+    {
+      "file": "tests/soundtrack-panel.test.ts",
+      "prior": 0,
+      "current": 10,
+      "delta": 10
+    },
+    {
+      "file": "tests/build-catalogue-matrix.test.ts",
+      "prior": 0,
+      "current": 6542,
+      "delta": 6542
+    },
+    {
+      "file": "tests/render-stars-regression.test.ts",
+      "prior": 0,
+      "current": 5,
+      "delta": 5
+    },
+    {
+      "file": "tests/soundtrack-storage.test.ts",
+      "prior": 0,
+      "current": 9,
+      "delta": 9
+    },
+    {
+      "file": "tests/sky-import.test.ts",
+      "prior": 0,
+      "current": 5,
+      "delta": 5
+    },
+    {
+      "file": "tests/chart-marker-export.test.ts",
+      "prior": 0,
+      "current": 2,
+      "delta": 2
+    },
+    {
+      "file": "tests/case-export-race.test.ts",
+      "prior": 0,
+      "current": 3,
+      "delta": 3
+    },
+    {
+      "file": "tests/docx-pagination.test.ts",
+      "prior": 0,
+      "current": 9,
+      "delta": 9
+    },
+    {
+      "file": "tests/worksheet-export-race.test.ts",
+      "prior": 0,
+      "current": 2,
+      "delta": 2
+    },
+    {
+      "file": "tests/worksheet-language.test.ts",
+      "prior": 0,
+      "current": 9,
+      "delta": 9
+    }
+  ]
+}

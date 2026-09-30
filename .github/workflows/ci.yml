@@ -1,13 +1,29 @@
 name: CI
 
 on:
+  # a change to Markdown files only (README, CHANGELOG, docs/*.md) skips CI, except the two documents the
+  # app and the tests read; anything else under docs/ (evidence JSON, pictures) still runs it
   pull_request:
+    paths:
+      - '**'
+      - '!**/*.md'
+      - 'docs/ROADMAP-PART2-3.md'     # read by tests/section-plan.test.ts
+      - 'docs/SIXDOF-VEHICLE-DATA.md' # bundled by src/ui/dialogs.ts
   push:
     branches-ignore: [main, gh-pages]
+    paths:
+      - '**'
+      - '!**/*.md'
+      - 'docs/ROADMAP-PART2-3.md'
+      - 'docs/SIXDOF-VEHICLE-DATA.md'
+
+permissions:
+  contents: read
 
 jobs:
-  test:
+  typecheck:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,13 +32,52 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
 
-  # The app in a real browser (tests/browser/): the smoke journeys on the production build,
-  # served under /Orbitlab/ as GitHub Pages serves it. Pull requests only; the deploy runs the full set.
+  # the default suite (tests/heavy and tests/sixdof-fleet excluded by vite.config.ts) split three ways
+  test:
+    runs-on: ubuntu-latest
+    # watch-missions.test.ts alone takes 12-16 min on a shared runner and sits in one shard
+    # with the other long files (build-catalogue-matrix, rigid-recovery, ballistic); 20 min
+    # left no margin for the runner's ~2x speed swing
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run --shard=${{ matrix.shard }}/3
+
+  # the production build (the typecheck runs in its own job), kept as an artifact for browser-smoke
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build
+      - if: hashFiles('scripts/bundle-budget.mjs') != ''
+        run: node scripts/bundle-budget.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 3
+          if-no-files-found: error
+
+  # The app in a real browser (tests/browser/): the smoke journeys on the build job's dist,
+  # served under /Orbitlab/ as GitHub Pages serves it. The deploy runs the full set.
   browser-smoke:
-    if: github.event_name == 'pull_request'
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -32,8 +87,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
       - run: npx playwright install --with-deps chromium
-      - run: npm run build
       - run: npm run test:browser:smoke
       - if: failure()
         uses: actions/upload-artifact@v4

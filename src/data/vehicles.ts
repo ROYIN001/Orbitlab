@@ -26,7 +26,7 @@
  * P120C keeps 2 s: its separation gap was burn duration, not delay, and was
  * fixed by the B22 mean-thrust correction on the motor itself.
  */
-import type { BoosterGroupSpec, StageSpec, VehicleSpec } from '../types';
+import type { BoosterGroupSpec, EngineSpec, SatelliteSpec, StageSpec, VehicleSpec } from '../types';
 import { boosterSpec, fairingSpec, stageSpec } from './parts';
 
 // ---------------------------------------------------------------- the fleet
@@ -683,14 +683,176 @@ export const VEHICLES: VehicleSpec[] = [
   },
 ];
 
+// ── Roadmap C01: the vehicles of historical flights ─────────────────────────
+// Kept apart from the fleet (`VEHICLES`): each is flown to the one flight it is
+// here for and held to it (tests/historical-vehicles.test.ts), not put through
+// the fleet's generic orbit matrix, which asks of a 1957 rocket what it never
+// flew. The setup panel lists them after the fleet. Sources and the values
+// taken where they disagree: docs/PHYSICS.md §13.6.
+//
+// The R-7s reuse the fleet's R-7 stage ids (`blokBVGD`, `blokA`): the same
+// hardware family, drawn, laid out and flown as a rigid body the same way —
+// four main chambers and two verniers on each strap-on, four and four on the
+// core. Their 1957 and 1961 engines are older: the RD-107 and RD-108 below.
+
+const kN = 1000;
+
+/** RD-107 8D74PS and RD-108 8D75PS as flown on Sputnik 1 (Zak, russianspaceweb.com/sputnik_lv.html). */
+const RD107_1957: EngineSpec = { name: 'RD-107 (8D74PS)', count: 1, thrustSL: 793 * kN, thrustVac: 975 * kN, ispSL: 247.6, ispVac: 304.2, minThrottle: 0.7 };
+// The vacuum figures are Zak's; the sea level ones scale them by the ratio en.wikipedia gives (241 / 308 s).
+const RD108_1957: EngineSpec = { name: 'RD-108 (8D75PS)', count: 1, thrustSL: 715 * kN, thrustVac: 914 * kN, ispSL: 237.2, ispVac: 303.1, minThrottle: 0.7 };
+/** RD-107 8D74-1959 and RD-108 8D75-1959 as on Vostok-K (astronautix.com; en.wikipedia, Vostok-K). */
+const RD107_1959: EngineSpec = { name: 'RD-107 (8D74-1959)', count: 1, thrustSL: 793 * kN, thrustVac: 970 * kN, ispSL: 256, ispVac: 313, minThrottle: 0.7 };
+const RD108_1959: EngineSpec = { name: 'RD-108 (8D75-1959)', count: 1, thrustSL: 718 * kN, thrustVac: 912 * kN, ispSL: 248, ispVac: 315, minThrottle: 0.7 };
+/** RD-0109 of Blok E (en.wikipedia RD-0109, Blok E): 54.52 kN, 323.5 s, no verniers. */
+/** Rocketdyne A-7 of the Mercury-Redstone as flown on MR-3 (NASA TM X-53107, Table 8-1; vacuum thrust from thisdayinaviation.com). */
+const A7_REDSTONE: EngineSpec = { name: 'Rocketdyne A-7', count: 1, thrustSL: 350.8 * kN, thrustVac: 395.9 * kN, ispSL: 214.8, ispVac: 242.4 };
+/**
+ * Saturn V AS-506 (Apollo 11), from the flight evaluation report MPR-SAT-FE-69-9
+ * (FER) and NASA SP-4029. F-1: 6,719 kN and 264.5 s at sea level, the flight's
+ * average (FER); its 304 s in vacuum (en.wikipedia) with the same flow, 2,590 kg/s.
+ */
+const F1_AS506: EngineSpec = { name: 'Rocketdyne F-1', count: 5, thrustSL: 6719 * kN, thrustVac: 7722 * kN, ispSL: 264.5, ispVac: 304 };
+/**
+ * The S-II's five J-2s at the high mixture ratio (5.5): 5,141.5 kN for the stage
+ * and 423.2 s at ESC +61 s (FER §6.3). The J-2 never ran at sea level; its
+ * sea-level pair is a placeholder (`vacuumOnly`).
+ */
+const J2_SII: EngineSpec = { name: 'Rocketdyne J-2', count: 5, thrustSL: 486 * kN, thrustVac: 1028.3 * kN, ispSL: 200, ispVac: 423.2, vacuumOnly: true };
+/** The S-IVB's J-2, first burn: 901.2 kN, 428.7 s (FER). */
+const J2_SIVB: EngineSpec = { name: 'Rocketdyne J-2', count: 1, thrustSL: 426 * kN, thrustVac: 901.2 * kN, ispSL: 200, ispVac: 428.7, vacuumOnly: true };
+const RD0109: EngineSpec = { name: 'RD-0109', count: 1, thrustSL: 40 * kN, thrustVac: 54.52 * kN, ispSL: 240, ispVac: 323.5, vacuumOnly: true };
+
+export const HISTORICAL_VEHICLES: VehicleSpec[] = [
+  {
+    id: 'r7sputnik', name: 'R-7 Sputnik (8K71PS)', country: 'SU', manufacturer: 'OKB-1',
+    // 29.167 m (Zak; ru.wikipedia); the core 28.0 m under a 1.17 m nose cone over PS-1.
+    height: 29.2, payloadLEO: 1327, payloadGTO: 0,
+    // A small cone over PS-1, released with it at T+314.5 s (en.wikipedia,
+    // Sputnik 1). Its base and mass are not published: sized to the core's
+    // top and estimated.
+    fairing: { mass: 40, diameter: 1.0, length: 1.17, sepAltitude: 150e3, sepTime: 314.5, color: '#d9d9d6' },
+    stages: [
+      // Zak: stage I 168.0 t with 153.2 t of propellant (38.3 t a block), the
+      // core 99.1 t with 91.8 t — which burn out at 117 s and 298 s on these
+      // engines, against 116.38 s and 295.4 s flown.
+      { id: 'blokA', name: 'Blok A (core)', dryMass: 7300, propellantMass: 91800, engine: RD108_1957,
+        diameter: 2.95, length: 28.0, color: '#d3d3cf', accentColor: '#6a6d70', profile: 'r7Core',
+        boosters: [{ id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3700, propellantMass: 38300,
+          engine: RD107_1957, diameter: 2.68, length: 19.2, sepDelay: 1, conicalTop: true, color: '#d3d3cf' }] },
+    ],
+    sites: ['baikonur'], maxQ: 45e3, maxAccel: 60,
+    // With no upper stage the core's cut-off orbit is final, so the kick sets
+    // the apogee: 3° leaves the point-mass flight 130 km short of the flown
+    // 938 km, 4° reaches 214 × 937 km; the rigid body, Soyuz's 4°, only
+    // 208 × 424 km, and 5° 214 × 949 km.
+    guidanceDefaults: { kickAngle: 4, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 5, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'The R-7 that launched Sputnik 1: four strap-ons and the core, no upper stage — the core itself reached orbit.',
+  },
+  {
+    id: 'vostokk', name: 'Vostok-K (8K72K)', country: 'SU', manufacturer: 'OKB-1',
+    // 38.36 m (ru.wikipedia; Zak), 287 t at liftoff.
+    height: 38.4, payloadLEO: 4725, payloadGTO: 0,
+    // The shroud over Vostok 3KA, 0.8 t and 2.7 m across (Zak), off at
+    // T+156 s (ESA, *The flight of Vostok 1*). Its length is the head of the
+    // 38.36 m stack less Blok A and Blok E: estimated.
+    fairing: { mass: 800, diameter: 2.7, length: 6.8, sepAltitude: 70e3, sepTime: 156, color: '#d9d9d6' },
+    stages: [
+      // astronautix: strap-ons 43.3 t (3.71 t dry), the core 100.4 t (6.8 t dry)
+      { id: 'blokA', name: 'Blok A (core)', dryMass: 6800, propellantMass: 93600, engine: RD108_1959,
+        diameter: 2.95, length: 28.75, color: '#d3d3cf', accentColor: '#6a6d70', profile: 'r7Core',
+        boosters: [{ id: 'blokBVGD', name: 'Blok B/V/G/D boosters', count: 4, dryMass: 3710, propellantMass: 39590,
+          engine: RD107_1959, diameter: 2.68, length: 19.8, sepDelay: 1, conicalTop: true, color: '#d3d3cf' }] },
+      // Blok E: 7,775 kg, 1,440 kg dry (astronautix), 2.84 × 2.56 m; lit
+      // through the truss before Blok A is let go.
+      { id: 'blokE1961', name: 'Blok E (RD-0109)', dryMass: 1440, propellantMass: 6335, engine: RD0109,
+        diameter: 2.56, length: 2.84, sepDelay: 0, ignitionDelay: 0, color: '#d3d3cf' },
+    ],
+    sites: ['baikonur'], maxQ: 45e3, maxAccel: 60,
+    crewCapable: true,
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'The R-7 that flew Gagarin: the Sputnik core and strap-ons with Blok E, a small third stage hot-staged through a truss.',
+  },
+  {
+    id: 'mercuryredstone', name: 'Mercury-Redstone (MRLV)', country: 'US', manufacturer: 'Chrysler / ABMA',
+    // 83.38 ft (25.41 m) with the capsule and its tower; the booster 59.0 ft,
+    // 70 in across (NASA TM X-53107, *The Mercury-Redstone Project*, 1964).
+    height: 25.4, payloadLEO: 0, payloadGTO: 0,
+    // no fairing: the capsule and its escape tower are the nose
+    fairing: null,
+    stages: [
+      // MR-3's booster: 29,982 kg at liftoff with Freedom 7 (1,832.6 kg), 3,717 kg
+      // dry (TM X-53107, Table 8-1 and §4.2.1), so 24,432 kg of alcohol, LOX,
+      // peroxide and residuals. The A-7 as flown on MR-3: 78,860 lbf, 214.8 s at
+      // sea level (Table 8-1); 89,000 lbf in vacuum (thisdayinaviation), 242.4 s
+      // from the same flow. Graphite jet vanes and air rudders on its four fins.
+      { id: 'redstone', name: 'Redstone (A-7)', dryMass: 3717, propellantMass: 24432, engine: A7_REDSTONE,
+        diameter: 1.778, length: 17.98, fins: true, color: '#f0f0ee', accentColor: '#1d1d1f' },
+    ],
+    sites: ['cape'], maxQ: 45e3, maxAccel: 80,
+    crewCapable: true,
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.34, pitchMax: 50, loftAltitude: 0 },
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3, kickDuration: 12, maxTurnRate: 0.34 },
+    notes: 'The Redstone missile lengthened for the Mercury capsule: one alcohol/LOX engine, jet vanes and fins, 141 s of burn — enough to throw a capsule 187 km up and 487 km down range.',
+  },
+  {
+    id: 'saturnv506', name: 'Saturn V (AS-506)', country: 'US', manufacturer: 'Boeing / North American / Douglas / IBM',
+    // 110.6 m with the Apollo spacecraft and its escape tower (SP-4029).
+    height: 110.6, payloadLEO: 140000, payloadGTO: 0,
+    // no fairing: the Apollo spacecraft, its adapter and the escape tower are the nose
+    fairing: null,
+    stages: [
+      // S-IC (FER Table 20-9, SP-4029 Table 23): 130,423 kg dry, 2,145,798 kg of
+      // RP-1 and LOX, 2,468 kg of other fluids; the interstage's small ring (614 kg)
+      // stays with it, and 28.4 t of propellant was left at the separation — all
+      // carried here as dry mass. The propellant is what the five F-1s burn from
+      // ignition, 2.5 s before liftoff here, to the LOX running out at T+161.63 s,
+      // the centre engine shut down at T+135.20 s to hold the acceleration under 4 g.
+      { id: 'sic506', name: 'S-IC', dryMass: 152250, propellantMass: 2053900, engine: F1_AS506,
+        diameter: 10.06, length: 42.06, fins: true, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 5.8,
+        engineEvents: [{ t: 137.7, shutdown: [4] }] },
+      // S-II: 36,158 kg dry, 443,236 kg of LOX and LH2, 572 kg other; the S-II/S-IVB
+      // interstage (3,663 kg) goes with it, and the S-IC/S-II aft interstage ring
+      // (3,982 kg, with its 609 kg of spent ullage-motor propellant) until it is
+      // dropped 30 s into the burn (T+192.3 s, "second-plane separation"); 3.3 t
+      // left at the cut-off. Engine start command 0.74 s after the separation
+      // (T+163.04 s); the centre engine off at ESC +297.58 s against pogo; the
+      // mixture ratio shifted to 4.3 at about ESC +335 s: 3,082.8 kN on four
+      // engines (FER §6.3), at 427 s (the J-2's rating at that ratio; estimated).
+      { id: 'sii506', name: 'S-II', dryMass: 45654, propellantMass: 442530, engine: J2_SII,
+        diameter: 10.06, length: 24.84, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 3.4, sepDelay: 0.67, ignitionDelay: 0.74,
+        engineEvents: [{ t: 297.58, shutdown: [4] }, { t: 335, mixture: { thrustVac: 770.7 * kN, thrustSL: 364 * kN, ispVac: 427, ispSL: 200 } }],
+        // the aft interstage ring, then the escape tower (T+197.9 s)
+        jettisons: [{ t: 29.26, mass: 4591, part: 'interstage' }, { t: 34.86, mass: 4042, part: 'tower' }] },
+      // S-IVB with the instrument unit: 11,273 kg dry, 751 kg other, IU 1,939 kg;
+      // 107,095 kg of LOX and LH2, of which the two burns use 105.3 t (FER). Start
+      // command 3.2 s after the separation (T+552.2 s). Restarts for the
+      // translunar injection.
+      { id: 'sivb506', name: 'S-IVB', dryMass: 15758, propellantMass: 105300, engine: J2_SIVB, restartable: true,
+        diameter: 6.604, length: 18.77, color: '#f2f2ef', accentColor: '#121214', nozzleLength: 3.4, sepDelay: 0.78, ignitionDelay: 3.2 },
+    ],
+    sites: ['ksc39a'], maxQ: 45e3, maxAccel: 40,
+    crewCapable: true,
+    guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.5, pitchMax: 40, loftAltitude: 0, closedLoopStart: 204.1 },
+    targetPlane: true,
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 3, kickDuration: 12, maxTurnRate: 0.5 },
+    notes: 'The Moon rocket: five F-1s, five J-2s and one restartable J-2 on three stages, 2,938 t at ignition. Apollo 11\'s flew on 16 July 1969.',
+  },
+];
+
+/** The fleet and the historical vehicles together: everything a mission can name. */
+export const ALL_VEHICLES: readonly VehicleSpec[] = [...VEHICLES, ...HISTORICAL_VEHICLES];
+
 export const vehicleById = (id: string): VehicleSpec => {
-  const v = VEHICLES.find((x) => x.id === id);
+  const v = ALL_VEHICLES.find((x) => x.id === id);
   if (!v) throw new Error(`Unknown vehicle ${id}`);
   return v;
 };
 
-/** A vehicle of the catalogue above (as against a custom one, roadmap S02). */
-export const isCatalogueVehicle = (id: string): boolean => VEHICLES.some((x) => x.id === id);
+/** A vehicle of the catalogue above, the fleet or the historical ones (as against a custom one, roadmap S02). */
+export const isCatalogueVehicle = (id: string): boolean => ALL_VEHICLES.some((x) => x.id === id);
 
 /**
  * The vehicle a mission flies (roadmap S02): its inline spec when it carries a
@@ -712,3 +874,21 @@ export function missionVehicle(cfg: { vehicleId: string; vehicleSpec?: VehicleSp
  * and gets the generic behaviour.
  */
 export const vehicleDataId = (spec: VehicleSpec): string => spec.derivedFrom ?? spec.id;
+
+/**
+ * The vehicle as a mission flies it with its payload: the vehicle's own, except
+ * that a payload flown in the open (Crew Dragon) takes the fairing's place, so
+ * the fairing is left off and the payload's own shape is the nose (roadmap C01).
+ */
+export function openTopVehicle(v: VehicleSpec, sat: Pick<SatelliteSpec, 'exposed'>): VehicleSpec {
+  if (!sat.exposed) return v;
+  // one object per combination, so caches keyed by the spec (`stackLayout`) keep hitting
+  const { diameter, length, noseLength } = sat.exposed;
+  const key = `${diameter}|${length}|${noseLength}`;
+  let byShape = OPEN_TOP.get(v);
+  if (!byShape) OPEN_TOP.set(v, byShape = new Map());
+  let open = byShape.get(key);
+  if (!open) byShape.set(key, open = { ...v, fairing: null, exposedPayload: { diameter, length, noseLength } });
+  return open;
+}
+const OPEN_TOP = new WeakMap<VehicleSpec, Map<string, VehicleSpec>>();

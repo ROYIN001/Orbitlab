@@ -19,6 +19,9 @@ const sec = (v: number): string => (Number.isFinite(v) ? `${num(v)} ${t('u.s')}`
 const ratio = (v: number): string => num(v, 3);
 const tw = (v: number): string => num(v, 2);
 /** a mass in tonnes above 10 t, else in kilograms */
+/** A figure and its unit on one line, however narrow the cell it is put in: "23.8 t" never ends a line at "23.8". */
+export const unbroken = (s: string): string => s.replace(/ /g, '\u00a0');
+
 export const mass = (kg: number): string => (kg >= 10_000 ? `${num(kg / 1000, kg >= 100_000 ? 0 : 1)} ${t('u.t')}` : `${num(kg)} ${t('u.kg')}`);
 
 const phaseLabel = (kind: string): string => (kind === 'parallel' ? t('build.fig.parallel') : t('build.fig.core'));

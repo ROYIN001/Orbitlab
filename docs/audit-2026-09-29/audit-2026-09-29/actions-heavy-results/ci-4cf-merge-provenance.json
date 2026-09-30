@@ -1,0 +1,20 @@
+{
+  "checkedAtUTC": "2026-09-29T23:03:24Z",
+  "head": "4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c",
+  "base": "0a6d1a709ffbf88e8e36f606d6993bd27e5c25e0",
+  "merge": "b75b607f287cdda5a684a78f2320f11cc82d335e",
+  "runId": 36640538286,
+  "headSrcTree": "f8513353f67c0f59637429df5b8129fa6bf565a1",
+  "mergeSrcTree": "f8513353f67c0f59637429df5b8129fa6bf565a1",
+  "headTestsTree": "d6bd5baf07be10a2ab26a00665b0a5ebed8923d5",
+  "mergeTestsTree": "d6bd5baf07be10a2ab26a00665b0a5ebed8923d5",
+  "sourceAndTestsIdentical": true,
+  "method": "GitHub REST pulls/41 and git/trees/<merge SHA>, compared with local git rev-parse <head>:src and :tests. Browser job checkout log confirms same merge.",
+  "standardCheckoutStatus": "verified from completed standard job log",
+  "browserJobId": 109651489524,
+  "browserCheckout": "b75b607f287cdda5a684a78f2320f11cc82d335e",
+  "standardJobId": 109651489240,
+  "standardCheckout": "b75b607f287cdda5a684a78f2320f11cc82d335e",
+  "exactHeadPushCheckout": "4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c",
+  "exactHeadPushJobId": 109651468870
+}

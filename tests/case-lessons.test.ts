@@ -11,13 +11,13 @@ import { BUILTIN_CASE_LESSONS, BUILTIN_ISSUES, BUILTIN_LESSONS, allLessons, less
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../src/lessons/case-grader';
 import { awaitingAnswers } from '../src/lessons/grader';
 import { LESSON_FORMAT, lessonFileText, parseLessonFile, readCaseLesson, type FileIssue } from '../src/lessons/lesson-file';
-import { emptyProgress, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { emptyProgress, frozenCaseData, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
 import { createLessonTools, type LessonToolsHost } from '../src/lessons/mcp-tools';
 import { isCaseLesson, type CaseKey, type CaseLesson, type LessonGrade } from '../src/lessons/types';
 import { CASE_FOCUS, CASE_IDS, CASE_ITEM_IDS, CZ5B_CASE_STAGE, caseAnswersShown, caseStudyErrorShown } from '../src/worksheets/case-ids';
 import { CZ5B_STAGES } from '../src/data/cz5b';
 import { caseKey, caseWorksheet } from '../src/worksheets/cases';
-import { measuredActivity, type SolarDaily } from '../src/physics/propagator/activity';
+import { indicesAt, indicesOver, measuredActivity, type DailyActivity, type SolarDaily } from '../src/physics/propagator/activity';
 import HISTORY from '../src/data/solar-daily.json';
 import { setLang } from '../src/i18n';
 import { elementsFromRecord } from '../src/orbit/omm';
@@ -176,11 +176,14 @@ describe('a teacher\'s lesson file with case lessons', () => {
   const v1 = import.meta.glob('./fixtures/lessons/v1.orbitlab-lesson.json', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
   const V1 = Object.values(v1)[0];
 
-  it('reads a file written before case lessons as it was, and writes it back byte for byte', () => {
-    const parsed = parseLessonFile(JSON.parse(V1), new Set());
+  it('reads a file written before case lessons unchanged and writes canonical LF JSON', () => {
+    const original = JSON.parse(V1);
+    const parsed = parseLessonFile(original, new Set());
     expect(parsed.issues).toEqual([]);
-    expect(parsed.lessons).toEqual(BUILTIN_LESSONS.filter((l) => l.id === 'orbit-first' || l.id === 'guid-maxq'));
-    expect(lessonFileText(parsed.lessons)).toBe(V1);
+    expect(parsed.lessons.map((lesson) => lesson.id)).toEqual(['orbit-first', 'guid-maxq']);
+    // Imported lessons retain their authored text even after built-in copy is revised.
+    expect(parsed.lessons).toEqual(original.lessons);
+    expect(lessonFileText(parsed.lessons)).toBe(V1.replace(/\r\n/g, '\n'));
   });
 
   it('writes a file of flight lessons as version 1, and one with a case lesson as version 2, both read back unchanged', () => {
@@ -218,6 +221,112 @@ describe('a teacher\'s lesson file with case lessons', () => {
 
 describe('progress, results and the assistant', () => {
   const memory = (): KeyValueStore => { const m = new Map<string, string>(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => { m.set(k, v); } }; };
+
+  it('freezes only each worksheet input, stays small, and recreates every key after save/load', () => {
+    const p = emptyProgress();
+    for (const id of CASE_IDS) {
+      const sheet = caseWorksheet(id, { lang: 'en', generatedAt: at, activity, theos2 })!;
+      const frozen = frozenCaseData(id, { activity, theos2, activityTo: '2086-09-27' }, sheet, at);
+      const json = JSON.stringify(frozen);
+      expect(json.length, `${id} persisted characters`).toBeLessThan(100_000);
+      const source = frozen.snapshot!.source;
+      if (id === 'cz5b') {
+        expect('from' in source.activity).toBe(true);
+        expect((source.activity as typeof activity).f107.length).toBeGreaterThan(1);
+        expect((source.activity as typeof activity).f107.length).toBeLessThanOrEqual(367);
+      } else expect('from' in source.activity).toBe(false);
+      expect(caseKey(caseWorksheet(id, { lang: 'en', generatedAt: at, ...source })!)).toEqual(caseKey(sheet));
+
+      const l = lesson(`case-${id}`);
+      const grade = gradeCaseLesson(l, caseKey(sheet), exact(l, caseKey(sheet)));
+      recordGrade(p, { lessonId: l.id, at: at.toISOString(), verdict: grade.verdict, criteria: grade.criteria,
+        answers: exact(l, caseKey(sheet)), hintsShown: 0, caseData: frozen });
+      const store = memory();
+      expect(saveProgress(p, store)).toBe(true);
+      expect(loadProgress(store).lessons[l.id].passedRecord?.caseData).toEqual(JSON.parse(JSON.stringify(frozen)));
+    }
+    // All three cases, including duplicated first-pass/latest records, fit
+    // this conservative test budget; it is not a browser quota assertion.
+    expect(JSON.stringify(p).length).toBeLessThan(500_000);
+  });
+
+  it('preserves daily boundaries and interval means across the full CZ-5B prediction horizon', () => {
+    const el = elementsFromRecord(CZ5B_STAGES.find((s) => s.name === CZ5B_CASE_STAGE)!.elements);
+    const epoch = el.jdEpoch + el.jdEpochFrac, through = epoch + 365;
+    const frozen = frozenCaseData('cz5b', { activity, theos2 }, sheetOf(lesson('case-cz5b')), at);
+    const cropped = frozen.snapshot!.source.activity as DailyActivity;
+    const first = Math.floor(epoch - activity.from);
+    expect(cropped.from).toBe(activity.from + first);
+    expect(cropped.f107).toHaveLength(366);
+    expect(cropped.f107a).toEqual(activity.f107a.slice(first, first + 366));
+    expect(cropped.ap).toEqual(activity.ap.slice(first, first + 366));
+    // The original patch kept only the ~10 days until the answer it predicted.
+    // Checking every day beyond that also detects silent endpoint clamping.
+    for (let day = 0; day <= 366; day++) {
+      for (const fraction of [-1e-6, 0, 1e-6, 0.5]) {
+        const jd = cropped.from + day + fraction;
+        if (jd >= epoch && jd <= through) expect(indicesAt(cropped, jd)).toEqual(indicesAt(activity, jd));
+      }
+    }
+    for (let day = 0; day < 365; day++) {
+      for (const span of [0.5, 1, 5]) {
+        const start = epoch + day, end = Math.min(through, start + span);
+        expect(indicesOver(cropped, start, end)).toEqual(indicesOver(activity, start, end));
+      }
+    }
+    expect(indicesAt(cropped, epoch)).toEqual(indicesAt(activity, epoch));
+    expect(indicesAt(cropped, through)).toEqual(indicesAt(activity, through));
+    expect(indicesOver(cropped, epoch, through)).toEqual(indicesOver(activity, epoch, through));
+  });
+
+  it('keeps the original clamp behavior when activity falls wholly before or after the prediction', () => {
+    const el = elementsFromRecord(CZ5B_STAGES.find((s) => s.name === CZ5B_CASE_STAGE)!.elements);
+    const epoch = el.jdEpoch + el.jdEpochFrac;
+    const sheet = sheetOf(lesson('case-cz5b'));
+    for (const offset of [-500, 500]) {
+      const original: DailyActivity = {
+        from: Math.floor(epoch) + offset,
+        f107: Array.from({ length: 12 }, (_, i) => 100 + i),
+        f107a: Array.from({ length: 12 }, (_, i) => 120 + i),
+        ap: Array.from({ length: 12 }, (_, i) => 1 + i),
+      };
+      const cropped = frozenCaseData('cz5b', { activity: original, theos2 }, sheet, at).snapshot!.source.activity as DailyActivity;
+      expect(cropped.f107).toHaveLength(1);
+      expect(cropped.f107a).toHaveLength(1);
+      expect(cropped.ap).toHaveLength(1);
+      for (const day of [0, 0.5, 1, 180, 364, 365]) {
+        expect(indicesAt(cropped, epoch + day)).toEqual(indicesAt(original, epoch + day));
+      }
+      expect(indicesOver(cropped, epoch, epoch + 365)).toEqual(indicesOver(original, epoch, epoch + 365));
+    }
+  });
+
+  it('isolates saved case inputs and worksheets from later mutations, including constant activity', () => {
+    const source = { activity: structuredClone(activity), theos2: structuredClone(theos2) };
+    const sheet = structuredClone(sheetOf(lesson('case-cz5b')));
+    const cz = frozenCaseData('cz5b', source, sheet, at);
+    const th = frozenCaseData('theos2', source, sheetOf(lesson('case-theos2')), at);
+    const beforeCz = JSON.stringify(cz), beforeTh = JSON.stringify(th);
+    source.activity.f107.fill(999);
+    source.activity.f107a.fill(999);
+    source.activity.ap.fill(999);
+    source.theos2.noKozai *= 2;
+    sheet.sections[1].items[0].answer.value = -123;
+    expect(JSON.stringify(cz)).toBe(beforeCz);
+    expect(JSON.stringify(th)).toBe(beforeTh);
+    const fixed = { f107: 123, f107a: 124, ap: 5 };
+    const constant = frozenCaseData('cz5b', { activity: fixed, theos2: null }, sheet, at).snapshot!.source.activity;
+    expect(constant).toEqual(fixed);
+    fixed.ap = 999;
+    expect(constant.ap).toBe(5);
+  });
+
+  it('treats malformed and unsupported legacy storage as empty without throwing', () => {
+    for (const raw of ['{', 'null', '{"version":0}', '{"version":1,"lessons":null}']) {
+      const store: KeyValueStore = { getItem: () => raw, setItem: () => {} };
+      expect(loadProgress(store)).toEqual(emptyProgress());
+    }
+  });
 
   it('keeps a case lesson\'s check with its frozen data and no mission, through storage and in a results file that verifies', async () => {
     const l = lesson('case-theos2');

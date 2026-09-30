@@ -151,9 +151,31 @@ const ISS_RAAN0 = 200 * DEG;
 const ISS_A = R_EARTH + 420e3;
 const ISS_INC = 51.64 * DEG;
 
+/**
+ * The station's measured node at the historical launches flown to it (roadmap
+ * C01), interpolated between the two ISS TLEs (NORAD 25544) either side of
+ * liftoff: 2020-04-09 from 20100.15584978 (330.0733°) and 20100.35421498
+ * (329.0927°); 2020-05-30 extrapolated 4.4 h from 20151.61686127 (75.4313°);
+ * 2024-03-23 from 24083.43487593 (20.4792°) and 24083.54107639 (19.9531°).
+ * TLE copies: github.com/emit-sds/emit-sds-l1b-geo (end_to_end_testing/
+ * iss_spice/iss_tle.txt) and github.com/wparker781/REACT-GC
+ * (sat_tracking_and_pred/ref_tles_2024/25544.txt). The linear model above
+ * extrapolated six years back is tens of degrees out, so within
+ * `ISS_ANCHOR_REACH` of one of these the node regresses from the anchor.
+ */
+const ISS_ANCHORS: readonly { epoch: number; raan: number }[] = [
+  { epoch: Date.UTC(2020, 3, 9, 8, 5, 6), raan: 329.18 * DEG },   // Soyuz MS-16
+  { epoch: Date.UTC(2020, 4, 30, 19, 22, 45), raan: 74.49 * DEG }, // Crew Dragon Demo-2
+  { epoch: Date.UTC(2024, 2, 23, 12, 36, 10), raan: 20.03 * DEG }, // Soyuz MS-25
+];
+const ISS_ANCHOR_REACH = 10 * 86400e3;
+
 export function issRaanAt(date: Date): number {
   const rate = nodalPrecessionRate(ISS_A, 0.0005, ISS_INC); // rad/s (negative)
-  const dt = (date.getTime() - ISS_EPOCH) / 1000;
+  const t = date.getTime();
+  const anchor = ISS_ANCHORS.find((a) => Math.abs(t - a.epoch) <= ISS_ANCHOR_REACH);
+  if (anchor) return wrap2pi(anchor.raan + rate * (t - anchor.epoch) / 1000);
+  const dt = (t - ISS_EPOCH) / 1000;
   return wrap2pi(ISS_RAAN0 + rate * dt);
 }
 
@@ -327,15 +349,16 @@ export interface LaunchDirection {
  * - anything else is not licensed, and reports the solution closer to the
  *   window.
  */
-export function launchDirection(site: SiteExtra, inc: number, vOrbit = CORRIDOR_REFERENCE_SPEED): LaunchDirection {
+export function launchDirection(site: SiteExtra, inc: number, vOrbit = CORRIDOR_REFERENCE_SPEED, descending?: boolean): LaunchDirection {
   const lat = site.latitude * DEG;
-  const customary = inc > 75 * DEG ? site.descendingForPolar : false;
+  const customary = descending ?? (inc > 75 * DEG ? site.descendingForPolar : false);
   const solution = (descending: boolean) => {
     const azimuth = rotatingLaunchAzimuth(lat, inc, vOrbit, descending);
     return { descending, azimuth, ...(azimuth === null ? { excess: Infinity, edgeDeg: 0 } : windowExcess(site, azimuth)) };
   };
   const own = solution(customary), mirror = solution(!customary);
-  const chosen = mirror.excess < own.excess ? mirror : own;
+  // a solution the orbit names (`OrbitSpec.descending`) is flown, window permitting
+  const chosen = descending === undefined && mirror.excess < own.excess ? mirror : own;
   if (chosen.azimuth !== null && inc <= maxInclinationFor(site) + CORRIDOR_SLACK) {
     return { descending: chosen.descending, azimuthRotating: chosen.azimuth, doglegDeg: 0, allowed: true };
   }
@@ -990,11 +1013,12 @@ export function ascentCost(h: number, ha: number, vRot: number): number {
 export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: VehicleSpec): MissionPlan {
   const target = resolveTarget(cfg.orbit, site, cfg.launchTime);
   const { inc: ascentInclination } = ascentInclinationFor(target, site);
-  const direction = launchDirection(site, ascentInclination);
+  const direction = launchDirection(site, ascentInclination, undefined, cfg.orbit.descending);
   const descending = direction.descending;
   const lat = site.latitude * DEG;
   const parkingOverride = cfg.guidance.parkingAltitude > 0 ? cfg.guidance.parkingAltitude : 0;
-  const azimuthInertial = inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
+  const azimuthInertial = cfg.orbit.flightAzimuth !== undefined ? cfg.orbit.flightAzimuth * DEG
+    : inertialLaunchAzimuth(lat, ascentInclination, descending) ?? Math.PI / 2;
   const jd0 = julianDate(cfg.launchTime);
   const gmst0 = gmst(jd0);
   const raanExpected = raanFromLaunch(lat, site.longitude * DEG + gmst0 + OMEGA_EARTH * T_PLANE, ascentInclination, descending);
@@ -1103,7 +1127,12 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   }
   const vOrb = circularSpeed(R_EARTH + insertionAltitude);
   // A dogleg leaves on the corridor edge; the closed loop turns into the plane.
-  const azimuthRotating = direction.doglegDeg > 0 ? direction.azimuthRotating
+  // A flight azimuth the mission names (C01: the Saturn V's, 72.058°) is flown as it
+  // was, over the ground as the site's speed turns it; the closed loop yaws into the plane.
+  const flown = cfg.orbit.flightAzimuth !== undefined ? azimuthInertial : null;
+  const vEq = OMEGA_EARTH * R_EARTH * Math.cos(lat);
+  const azimuthRotating = flown !== null ? Math.atan2(vOrb * Math.sin(flown) - vEq, vOrb * Math.cos(flown))
+    : direction.doglegDeg > 0 ? direction.azimuthRotating
     : rotatingLaunchAzimuth(lat, ascentInclination, vOrb, descending) ?? azimuthInertial;
   // A suborbital target is flown to its apogee and cut off there, when the
   // periapsis has risen to the target's (`AscentMonitor.checkAscent`): there

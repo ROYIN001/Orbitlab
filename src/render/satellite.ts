@@ -7,12 +7,19 @@
 import * as THREE from 'three';
 import type { SatelliteSpec } from '../types';
 import { clamp01, smoothstep } from './noise';
+import { buildCrewDragon } from './dragon';
+import { buildApollo } from './apollo';
+import type { ApolloState } from '../physics/sim/apollo';
 
 export interface SatelliteView {
   group: THREE.Group;
   height: number;
   /** @param p deployment progress 0 (stowed) .. 1 (fully deployed) */
   setDeploy(p: number): void;
+  /** C01: the parts dropped on the way up (the Apollo escape tower) */
+  setJettisoned?(j: { tower: boolean } | undefined): void;
+  /** C01: Apollo's transposition, docking and extraction, at mission time `t` */
+  setApollo?(state: ApolloState | undefined, t: number, separated: boolean): void;
 }
 
 interface Hinge {
@@ -62,9 +69,13 @@ function solarWing(parent: THREE.Group, hinges: Hinge[], mats: { panel: THREE.Ma
 }
 
 export function buildSatellite(spec: SatelliteSpec): SatelliteView {
+  if (spec.kind === 'crewDragon') return buildCrewDragon();
+  if (spec.kind === 'apollo') return buildApollo();
   const g = new THREE.Group();
   const hinges: Hinge[] = [];
   const slides: Slide[] = [];
+  /** parts gone the moment deployment starts (Mercury's escape tower) */
+  const shed: THREE.Object3D[] = [];
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4b048, metalness: 0.55, roughness: 0.35 });
   const foil = new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.8, roughness: 0.25 });
   const white = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.6, metalness: 0.05 });
@@ -232,6 +243,100 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
       }
       break;
     }
+    case 'ps1': {
+      // Sputnik 1: a polished 0.58 m sphere, four whip aerials swept back
+      // (2.4 and 2.9 m) — folded along the core under the nose cone, then
+      // springing out to 35° from the axis once it is free.
+      const polished = new THREE.MeshStandardMaterial({ color: 0xdcdfe3, metalness: 0.95, roughness: 0.12 });
+      g.add(new THREE.Mesh(new THREE.SphereGeometry(w / 2, 32, 20), polished));
+      [2.4, 2.9, 2.4, 2.9].forEach((len, i) => {
+        const a = Math.PI / 4 + (i * Math.PI) / 2;
+        const pivot = new THREE.Group();
+        pivot.position.set(Math.cos(a) * w * 0.3, w * 0.3, Math.sin(a) * w * 0.3);
+        pivot.rotation.y = -a;
+        const whip = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, len, 6), polished);
+        whip.position.y = -len / 2;
+        pivot.add(whip);
+        g.add(pivot);
+        hinges.push({ pivot, axis: 'z', from: 0.08, to: 35 * Math.PI / 180, t0: 0.05, t1: 0.35 });
+      });
+      break;
+    }
+    case 'vostok': {
+      // Vostok 3KA: the 2.3 m descent sphere, covered in ablative (dark), with
+      // its hatch and window, on the instrument module — two cones base to
+      // base, 2.43 m across — and its antennas.
+      const ablative = new THREE.MeshStandardMaterial({ color: 0x6b6a66, roughness: 0.85, metalness: 0.05 });
+      const bottles = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.45, metalness: 0.5 });
+      const moduleH = 2.25, sphereR = 1.15;
+      const lower = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, 0.6, moduleH * 0.55, 28), bottles);
+      lower.position.y = -h / 2 + moduleH * 0.275;
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.9, w / 2, moduleH * 0.45, 28), dark);
+      upper.position.y = -h / 2 + moduleH * 0.55 + moduleH * 0.225;
+      g.add(lower, upper);
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(sphereR, 36, 24), ablative);
+      sphere.position.y = -h / 2 + moduleH + sphereR - 0.1;
+      g.add(sphere);
+      const glass = new THREE.MeshStandardMaterial({ color: 0x14171d, roughness: 0.1, metalness: 0.8 });
+      for (const [y, rz, size] of [[0.2, 0, 0.22], [-0.35, 1.9, 0.3]] as const) {
+        const port = new THREE.Mesh(new THREE.CircleGeometry(size, 20), glass);
+        port.position.set(Math.cos(rz) * (sphereR + 0.01), sphere.position.y + y, Math.sin(rz) * (sphereR + 0.01));
+        port.lookAt(port.position.x * 2, port.position.y, port.position.z * 2);
+        g.add(port);
+      }
+      for (let i = 0; i < 2; i++) {
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.4, 6), bottles);
+        mast.position.set((i ? 1 : -1) * 0.35, sphere.position.y + sphereR + 0.55, 0);
+        mast.rotation.z = (i ? -1 : 1) * 0.35;
+        g.add(mast);
+      }
+      break;
+    }
+    case 'mercury': {
+      // Mercury on the Redstone: the retropack over the 1.89 m heat shield at
+      // the base, the conical cabin in its dark shingles, the recovery
+      // compartment and antenna canister, and the escape tower above — a
+      // three-legged truss carrying the red-and-white motor and its spike.
+      // 7.9 m in all (NASA drawings; proportions approximate).
+      const shingles = new THREE.MeshStandardMaterial({ color: 0x24262b, metalness: 0.35, roughness: 0.55 });
+      const base = -h / 2;
+      const pack = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 0.3, 20), white);
+      pack.position.y = base + 0.15;
+      const shield = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2 - 0.05, 0.14, 32), new THREE.MeshStandardMaterial({ color: 0x3b2d24, roughness: 0.95 }));
+      shield.position.y = base + 0.37;
+      const profile = [[0.946, 0], [0.93, 0.1], [0.53, 1.28], [0.4, 1.28], [0.36, 1.7], [0.24, 1.7], [0.2, 2.06], [0, 2.06]] as const;
+      const cabin = new THREE.Mesh(new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), 32), shingles);
+      cabin.position.y = base + 0.44;
+      g.add(pack, shield, cabin);
+      const window = new THREE.Mesh(new THREE.CircleGeometry(0.14, 16), new THREE.MeshStandardMaterial({ color: 0x14171d, roughness: 0.1, metalness: 0.8 }));
+      window.position.set(0, base + 1.35, 0.66);
+      window.rotation.x = -0.33;
+      g.add(window);
+      const tower = new THREE.Group();
+      const towerBase = base + 0.44 + 2.06, legs = 2.9, rTop = 0.12, rBot = 0.5;
+      const red = new THREE.MeshStandardMaterial({ color: 0xb3261e, roughness: 0.6 });
+      for (let i = 0; i < 3; i++) {
+        const a = (i * 2 * Math.PI) / 3;
+        const x0 = Math.cos(a) * rBot, z0 = Math.sin(a) * rBot, x1 = Math.cos(a) * rTop, z1 = Math.sin(a) * rTop;
+        const len = Math.hypot(x1 - x0, legs, z1 - z0);
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, len, 6), red);
+        leg.position.set((x0 + x1) / 2, towerBase + legs / 2, (z0 + z1) / 2);
+        leg.lookAt(x1, towerBase + legs, z1);
+        leg.rotateX(Math.PI / 2);
+        tower.add(leg);
+      }
+      const motorH = 1.9, motorY = towerBase + legs + motorH / 2;
+      const motor = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, motorH, 16), white);
+      motor.position.y = motorY;
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.5, 16), red);
+      band.position.y = motorY - motorH / 2 + 0.25;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.13, h / 2 - (motorY + motorH / 2), 12), red);
+      spike.position.y = (motorY + motorH / 2 + h / 2) / 2;
+      tower.add(motor, band, spike);
+      g.add(tower);
+      shed.push(tower);
+      break;
+    }
     case 'crew': {
       const capsule = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.22, w / 2, h * 0.45, 28), white);
       capsule.position.y = h * 0.28;
@@ -251,6 +356,7 @@ export function buildSatellite(spec: SatelliteSpec): SatelliteView {
 
   const setDeploy = (p: number): void => {
     const q = clamp01(p);
+    for (const o of shed) o.visible = q <= 0;
     for (const hg of hinges) {
       const f = smoothstep(hg.t0, hg.t1, q);
       const a = hg.from + (hg.to - hg.from) * f;

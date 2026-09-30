@@ -4,11 +4,14 @@
  * charts and the radar as SVG text, and unit symbols in each language.
  */
 import { describe, expect, it } from 'vitest';
-import { emptyProgress, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { emptyProgress, flownMission, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
 import { awaitingAnswers, regradeAnswers } from '../src/lessons/grader';
 import { FlightLessons } from '../src/lessons/flight-lessons';
 import { worksheetSource } from '../src/worksheets/build';
 import type { WsFlight } from '../src/worksheets/flight-questions';
+import { parseMissionDocument } from '../src/config/mission-file';
+import { defaultMissionState, lessonConfig, missionConfigFromState } from '../src/lessons/config';
+import { Simulation } from '../src/physics/simulation';
 import { createLessonTools, type LessonToolsHost } from '../src/lessons/mcp-tools';
 import { BUILTIN_LESSONS, allLessons } from '../src/lessons/catalog';
 import { chartSvg, niceStep, radarSvg } from '../src/lessons/assessment/figures';
@@ -37,6 +40,38 @@ describe('progress and the results file', () => {
     expect(loadProgress(memory())).toEqual(emptyProgress());
     const broken = memory(); broken.setItem('orbitlab.lessons', '{nope');
     expect(loadProgress(broken)).toEqual(emptyProgress());
+  });
+
+  it('keeps the mission as flown: every lesson\'s configuration reads back unchanged (audit 2026-09-27 A11)', () => {
+    for (const lesson of BUILTIN_LESSONS.filter((l) => !l.comingSoon)) {
+      // the guidance changed, the docking profile, the pad: what a student's edits and the lessons touch
+      const cfg = new Simulation(lessonConfig(lesson.mission, (s) => {
+        s.guidanceOverrides = { ...s.guidanceOverrides, maxAccel: 21 };
+        if (s.rendezvous) s.rendezvous = { ...s.rendezvous, profile: 'twoOrbit' };
+      }), { headless: true }).cfg;
+      const doc = JSON.parse(JSON.stringify(flownMission(cfg)));
+      const parsed = parseMissionDocument(doc, defaultMissionState());
+      expect(parsed.issues, lesson.id).toEqual([]);
+      expect(missionConfigFromState(parsed.state), lesson.id).toEqual(cfg);
+      expect(doc.mission.guidanceOverrides.maxAccel, lesson.id).toBe(21);
+    }
+    // the payload flown when the mission gives no override: the satellite's own
+    const cfg = lessonConfig(BUILTIN_LESSONS[0].mission);
+    expect(flownMission({ ...cfg, payloadMassOverride: undefined }).mission.payloadMass).toBeGreaterThan(0);
+  });
+
+  it('says whether the progress was kept: a store that throws is reported, not swallowed (audit 2026-09-27 A19)', () => {
+    const p = emptyProgress();
+    p.lessons['orbit-first'] = { attempts: 1, hintsShown: 0, passed: false };
+    const store = memory();
+    expect(saveProgress(p, store)).toBe(true);
+    expect(loadProgress(store).lessons['orbit-first'].attempts).toBe(1);
+    // a private window that refuses storage, or storage that is full
+    const refusing: KeyValueStore = { getItem: () => null, setItem: () => { throw new DOMException('quota', 'QuotaExceededError'); } };
+    expect(saveProgress(p, refusing)).toBe(false);
+    const denied: KeyValueStore = { getItem: () => { throw new DOMException('denied', 'SecurityError'); }, setItem: () => { throw new DOMException('denied', 'SecurityError'); } };
+    expect(saveProgress(p, denied)).toBe(false);
+    expect(loadProgress(denied)).toEqual(emptyProgress());
   });
 
   it('writes a results file whose checksum shows an edit', async () => {

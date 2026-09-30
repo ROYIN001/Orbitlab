@@ -32,6 +32,21 @@ describe('optional first-use guide', () => {
     expect(new GuideProgress(store).visible).toBe(false);
   });
 
+  it('moves past "choose a Quick start example" when a whole mission is handed over (Phase 3, "Fly it")', () => {
+    const store = memoryStore();
+    const guide = new GuideProgress(store);
+    guide.missionGiven();
+    expect([guide.visible, guide.step]).toEqual([true, 1]);
+    // nothing is stored: the next visit starts at the beginning again
+    expect(new GuideProgress(store).step).toBe(0);
+    // a guide further on stays where it is, and a dismissed one stays hidden
+    guide.next(); guide.missionGiven();
+    expect(guide.step).toBe(2);
+    const dismissed = new GuideProgress(memoryStore('dismissed'));
+    dismissed.missionGiven();
+    expect([dismissed.visible, dismissed.step]).toEqual([false, 0]);
+  });
+
   it('does not treat malformed stored data as a dismissal', () => {
     for (const value of ['false', '{}', 'completed', '']) expect(new GuideProgress(memoryStore(value)).visible).toBe(true);
   });

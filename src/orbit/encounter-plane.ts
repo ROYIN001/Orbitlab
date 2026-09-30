@@ -85,6 +85,13 @@ export function encounterPlaneSvg(p: EncounterPlane, labels: PlaneLabels, size =
   const deg = (-p.angle * 180) / Math.PI;
   const ell = (n: number, dash: string) => `<ellipse cx="${cx}" cy="${cy}" rx="${Math.max(0.5, n * p.sigma[0] * k).toFixed(2)}" ry="${Math.max(0.5, n * p.sigma[1] * k).toFixed(2)}" transform="rotate(${deg.toFixed(2)} ${cx} ${cy})" fill="none" stroke="#6ec8ff" stroke-width="1.4"${dash}/>`;
   const rpx = p.radius * k, tiny = rpx < 3;
+  // Name the 3σ ellipse at the end of its major axis away from the
+  // second object: otherwise its name can cover this short label.
+  const majorX = 3 * p.sigma[0] * k * Math.cos(p.angle), majorY = -3 * p.sigma[0] * k * Math.sin(p.angle);
+  const labelSide = majorX * p.miss.x - majorY * p.miss.y >= 0 ? -1 : 1;
+  const labelLeft = labelSide * majorX < 0;
+  const sigmaX = Math.max(labelLeft ? 30 : 8, Math.min(size - (labelLeft ? 8 : 30), cx + labelSide * majorX + (labelLeft ? -4 : 4)));
+  const sigmaY = Math.max(31, Math.min(size - 32, cy + labelSide * majorY + (labelSide * majorY >= 0 ? 14 : -6)));
   // a scale bar of a round length about a quarter of the view
   const raw = reach / 2, mag = 10 ** Math.floor(Math.log10(raw)), bar = [1, 2, 5, 10].map((m) => m * mag).filter((v) => v <= raw).pop() ?? mag;
   const barText = bar >= 1000 ? `${bar / 1000} km` : `${bar} m`;
@@ -92,7 +99,7 @@ export function encounterPlaneSvg(p: EncounterPlane, labels: PlaneLabels, size =
     + `<rect width="${size}" height="${size}" fill="${c.ground}"/>`
     + `<line x1="${cx}" y1="8" x2="${cx}" y2="${size - 8}" stroke="${c.axis}"/><line x1="8" y1="${cy}" x2="${size - 8}" y2="${cy}" stroke="${c.axis}"/>`
     + ell(3, ' stroke-dasharray="4 3" opacity="0.7"') + ell(1, '')
-    + `<text x="${(cx + 3 * p.sigma[0] * k * Math.cos(-p.angle) + 4).toFixed(1)}" y="${(cy + 3 * p.sigma[0] * k * Math.sin(-p.angle) - 4).toFixed(1)}" fill="#6ec8ff">3σ</text>`
+    + `<text x="${sigmaX.toFixed(1)}" y="${sigmaY.toFixed(1)}" text-anchor="${labelLeft ? 'end' : 'start'}" fill="#6ec8ff">3σ</text>`
     + `<circle cx="${cx}" cy="${cy}" r="3.5" fill="${c.first}"/><text x="${cx + 6}" y="${cy + 14}" fill="${c.text}">${esc(labels.first)}</text>`
     + `<circle cx="${px(p.miss.x).toFixed(2)}" cy="${py(p.miss.y).toFixed(2)}" r="${Math.max(3, rpx).toFixed(2)}" fill="rgba(255,138,101,0.35)" stroke="${c.second}" stroke-width="1.4"${tiny ? ' stroke-dasharray="2 2"' : ''}/>`
     // the second object's name beside it, or above and to its left near the right edge
