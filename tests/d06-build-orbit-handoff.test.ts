@@ -235,6 +235,8 @@ describe('Build → Orbit: a design handed on with no launch (D06, map §2.6 a)'
     expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, cd: 0 } }, input)).toBeNull();
     expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, cr: -1 } }, input)).toBeNull();
     expect(handoffFromDesign({ ...cubesat, bus: { ...cubesat.bus, dryMass: Number.NaN } }, input)).toBeNull();
+    // a dry mass not above zero, though the propellant on top makes the wet mass positive: parseHandoff sees only the sum
+    for (const dryMass of [0, -5]) expect(handoffFromDesign({ ...imager, bus: { ...imager.bus, dryMass } }, input), String(dryMass)).toBeNull();
     expect(handoffFromDesign({ ...imager, propulsion: { ...imager.propulsion!, thrust: 0 } }, input)).toBeNull();
   });
 

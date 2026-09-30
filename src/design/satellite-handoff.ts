@@ -67,8 +67,13 @@ export interface DesignHandoffInput {
  * the drag area; the bus's C_D and C_R; the kind; the engine with its full
  * tanks, or none. Null when the hand-off would not read back
  * (`parseHandoff`): a perigee at or below 100 km, a figure not above zero.
+ * The dry mass is checked here, as `parseHandoff` sees only the sum: a dry
+ * mass of zero or less with propellant on top would read back, and hand the
+ * lifetime analysis a mass that is not the design's and the planner a craft
+ * that is more propellant than spacecraft.
  */
 export function handoffFromDesign(design: SatelliteDesign, input: DesignHandoffInput): OrbitHandoff | null {
+  if (!(Number.isFinite(design.bus.dryMass) && design.bus.dryMass > 0)) return null;
   const { r, v } = stateAt(designOrbit(design.orbit, input.jd), 0, true);
   const p = design.propulsion;
   const h = handoffFromState({
