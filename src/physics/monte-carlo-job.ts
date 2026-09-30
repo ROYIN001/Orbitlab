@@ -30,7 +30,8 @@ export function defaultWorkerCount(): number {
   return Math.max(1, Math.min(16, cores - 1));
 }
 
-export type MonteCarloState = 'running' | 'done' | 'stopped';
+/** `failed`: no worker was left to fly the rest of the set (one could not be started). */
+export type MonteCarloState = 'running' | 'done' | 'stopped' | 'failed';
 
 export class MonteCarloJob {
   readonly runs: MonteCarloRun[] = [];
@@ -43,11 +44,15 @@ export class MonteCarloJob {
   readonly startedAt = Date.now();
   finishedAt?: number;
   state: MonteCarloState = 'running';
+  /** Why the set failed, when it did. */
+  error?: string;
   private queue: { index: number; law: GuidanceLaw }[] = [];
   private workers: MonteCarloWorker[] = [];
   /** the run each worker is flying */
   private current = new Map<MonteCarloWorker, { index: number; law: GuidanceLaw }>();
   private cached?: { n: number; summary: MonteCarloSummary };
+  /** While the constructor starts the pool: a failure then is thrown, the job never being handed out. */
+  private starting = true;
 
   constructor(readonly cfg: MissionConfig, readonly mc: MonteCarloConfig, private readonly options: {
     workers?: number; createWorker?: () => MonteCarloWorker; onChange?: (job: MonteCarloJob) => void; now?: () => number;
@@ -61,7 +66,17 @@ export class MonteCarloJob {
     for (let index = 0; index < mc.runs; index++) for (const law of this.laws) this.queue.push({ index, law });
     this.total = this.queue.length;
     const count = Math.max(1, Math.min(options.workers ?? defaultWorkerCount(), this.total));
-    for (let i = 0; i < count; i++) this.spawn();
+    // A worker that cannot be built or sent its first run fails the set: the caller never gets the
+    // job, so nothing could stop the workers already started — end them here, and throw once.
+    try {
+      for (let i = 0; i < count && this.state === 'running'; i++) this.spawn();
+    } catch (error) {
+      this.error = message(error);
+      this.finish('failed', false);
+      throw error;
+    } finally {
+      this.starting = false;
+    }
   }
 
   get workerCount(): number { return this.workers.length; }
@@ -75,12 +90,26 @@ export class MonteCarloJob {
       // A worker that died takes its run with it: record the run as lost and fly on with a fresh worker.
       const job = this.current.get(worker);
       if (this.state !== 'running' || !job) return;
-      worker.onmessage = null; worker.onerror = null; worker.terminate();
-      this.workers = this.workers.filter((w) => w !== worker);
+      this.release(worker);
       this.received(worker, { type: 'error', ...job, message: event.message || 'worker error' }, false);
-      if (this.state === 'running' && this.queue.length) this.spawn();
+      if (this.state === 'running' && this.queue.length) {
+        // No fresh worker: fly on with the rest of the pool, or, if it was the last, end the set.
+        try { this.spawn(); } catch (error) { this.workerLost(message(error)); }
+      }
     };
     this.next(worker);
+  }
+
+  private release(worker: MonteCarloWorker): void {
+    worker.onmessage = null; worker.onerror = null; worker.terminate();
+    this.workers = this.workers.filter((w) => w !== worker);
+  }
+
+  /** A worker gone for good: with none left and runs still to fly, the set cannot finish. */
+  private workerLost(reason: string): void {
+    if (this.state !== 'running' || this.workers.length || !this.queue.length) return;
+    this.error = reason;
+    this.finish('failed');
   }
 
   private next(worker: MonteCarloWorker): void {
@@ -88,7 +117,15 @@ export class MonteCarloJob {
     const job = this.queue.shift();
     if (!job) { if (this.current.size === 0) this.finish('done'); return; }
     this.current.set(worker, job);
-    worker.postMessage({ cfg: this.cfg, mc: this.mc, index: job.index, law: job.law });
+    try {
+      worker.postMessage({ cfg: this.cfg, mc: this.mc, index: job.index, law: job.law });
+    } catch (error) {
+      if (this.starting) throw error;
+      // The run could not be sent: it is lost, and so is the worker (the next run would fare no better).
+      this.release(worker);
+      this.received(worker, { type: 'error', ...job, message: message(error) }, false);
+      this.workerLost(message(error));
+    }
   }
 
   private received(worker: MonteCarloWorker, reply: MonteCarloReply, fliesOn = true): void {
@@ -105,12 +142,13 @@ export class MonteCarloJob {
     else if (this.state === 'running' && !this.queue.length && this.current.size === 0) this.finish('done');
   }
 
-  private finish(state: MonteCarloState): void {
+  private finish(state: MonteCarloState, notify = true): void {
     if (this.state !== 'running') return;
     this.state = state;
     this.finishedAt = (this.options.now ?? Date.now)();
     for (const w of this.workers) { w.onmessage = null; w.onerror = null; w.terminate(); }
-    this.options.onChange?.(this);
+    this.current.clear();
+    if (notify) this.options.onChange?.(this);
   }
 
   stop(): void { this.finish('stopped'); }
@@ -130,3 +168,5 @@ export class MonteCarloJob {
 
   csv(): string { return monteCarloCsv(this.runs, this.layout, this.mc.dispersions); }
 }
+
+const message = (error: unknown): string => (error instanceof Error ? error.message : String(error));
