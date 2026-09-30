@@ -9,12 +9,21 @@
  * it claims — its geometry, exactly — and against the pairings the built-in
  * missions fly, which the criterion (fixed before the first run) says must
  * never come out larger than the fairing itself.
+ *
+ * ADDED AT INTEGRATION (Phase 4 stage 3, task I; C2's open problems), exact
+ * checks written before their first run: a crew only on the crewed
+ * spacecraft's own kind; C_D·A/m within `B_RANGE` where a satellite gives its
+ * own area, both ends taken and just outside refused; a box section
+ * (`crossSection: 'box'`, which only a designed satellite sets) measured
+ * across its diagonal, while a body with no section is still measured across
+ * the larger edge — so the built-in pairings' table below is unchanged.
  */
 import { describe, expect, it } from 'vitest';
 import {
   FAIRING_ENVELOPE, SATELLITE_KIND_IDS, SATELLITE_LIMITS, assertSatelliteSpec, fairingFit, satelliteSpecProblems,
 } from '../src/config/satellite-spec';
 import { SATELLITES, satelliteById } from '../src/data/satellites';
+import { B_RANGE } from '../src/orbit/ballistic-range';
 import { NUMBER_FIELDS } from '../src/config/validation';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { WATCH_MISSIONS } from '../src/ui/watch-missions';
@@ -103,7 +112,42 @@ describe('custom satellite checker (D06)', () => {
   });
 
   it('leaves the catalogue as it was (no entry has the fields a custom satellite may add)', () => {
-    for (const s of SATELLITES) for (const key of ['area', 'cd', 'cr', 'derivedFrom'] as const) expect(s[key], `${s.id}.${key}`).toBeUndefined();
+    for (const s of SATELLITES) for (const key of ['area', 'cd', 'cr', 'derivedFrom', 'crossSection'] as const) expect(s[key], `${s.id}.${key}`).toBeUndefined();
+  });
+
+  it('keeps a crew on the crewed spacecraft\'s own kind (integration, C2\'s review)', () => {
+    // a comsat-kind copy of the crew ship said crewed opened the abort and drew a Soyuz MS on an R-7
+    expect(problems((s) => { s.kind = 'comsat'; }, 'crew')).toEqual(['crewed only a crewed spacecraft\'s own kind carries a crew: a copy of crew keeps "crew" (got "comsat")']);
+    expect(problems((s) => { s.kind = 'comsat'; delete s.crewed; }, 'crew')).toEqual([]);
+    // each crewed catalogue spacecraft's copy keeps its crew on its own kind (C01's too), and on no other
+    for (const sat of SATELLITES.filter((x) => x.crewed)) {
+      expect(problems(() => {}, sat.id)).toEqual([]);
+      expect(problems((s) => { s.kind = sat.kind === 'crew' ? 'science' : 'crew'; }, sat.id).map((p) => p.split(' ')[0])).toEqual(['crewed']);
+    }
+  });
+
+  it('holds C_D·A/m to what anything in orbit has, where the satellite gives its own area (integration, C2\'s open problem 6)', () => {
+    const [lo, hi] = B_RANGE;
+    const out = (b: number) => `area with the C_D and the mass gives C_D·A/m = ${Number(b.toPrecision(3))} m²/kg, outside the ${lo} to ${hi} m²/kg anything in orbit has`;
+    // each figure alone within its bound, together not: a 1 kg satellite of 1000 m², and 5.5 t on 0.05 m²
+    expect(problems((s) => { s.mass = 1; s.area = 1000; s.cd = 2.2; })).toEqual([out(2200)]);
+    expect(problems((s) => { s.area = 0.05; s.cd = 2.2; })).toEqual([out((2.2 * 0.05) / 5500)]);
+    // both ends are taken, just outside is not
+    expect(problems((s) => { s.mass = 1000; s.cd = 2; s.area = (lo * 1000) / 2; })).toEqual([]);
+    expect(problems((s) => { s.mass = 1000; s.cd = 2; s.area = (hi * 1000) / 2; })).toEqual([]);
+    expect(problems((s) => { s.mass = 1000; s.cd = 2; s.area = (lo * 1000) / 2 * 0.99; })).toEqual([out(lo * 0.99)]);
+    expect(problems((s) => { s.mass = 1000; s.cd = 2; s.area = (hi * 1000) / 2 * 1.01; })).toEqual([out(hi * 1.01)]);
+    // with no C_D of its own it is flown at the class's 2.2 (the hand-off's fallback), and read so
+    expect(problems((s) => { s.mass = 1000; s.area = 500; })).toEqual([out(1.1)]);
+    expect(problems((s) => { s.mass = 1000; s.area = 450; })).toEqual([]);
+    // no area of its own: the class estimate's, not this checker's to judge; a bad C_D is reported once, as itself
+    expect(problems((s) => { s.mass = 1; s.cd = 5; })).toEqual([]);
+    expect(problems((s) => { s.area = 1; s.cd = 22; })).toEqual(['cd must be at most 5 (got 22)']);
+  });
+
+  it('takes a box section, and nothing else by that name (integration)', () => {
+    expect(problems((s) => { s.crossSection = 'box'; })).toEqual([]);
+    expect(problems((s) => { s.crossSection = 'round'; })).toEqual(['crossSection must be "box", or left out for a round body (got "round")']);
   });
 });
 
@@ -127,6 +171,25 @@ describe('fairing fit, an estimate (D06)', () => {
     expect(fairingFit(f9, box(3, 13.2, 3)).verdict).toBe('tooBig');
     expect(fairingFit(f9, {}).verdict).toBe('noSize');
     expect(fairingFit(vehicleById('starship'), box(3, 5, 3))).toEqual({ verdict: 'noFairing' });
+  });
+
+  it('measures a box section across its diagonal and a body with none across its larger edge (integration)', () => {
+    const f9 = vehicleById('falcon9'); // a 5.2 m shell, 4.42 m of it taken as usable
+    const body = (width: number, height: number, depth: number, crossSection?: 'box'): Pick<SatelliteSpec, 'size' | 'crossSection'> =>
+      ({ size: { width, height, depth }, ...(crossSection ? { crossSection } : {}) });
+    // C2's review's case: a 4 × 4 × 5 m box "fits" as a cylinder on its 4 m edge; its corners need 5.66 m, more than the shell
+    expect(fairingFit(f9, body(4, 5, 4))).toMatchObject({ verdict: 'fits', payload: { diameter: 4, length: 5 } });
+    const boxed = fairingFit(f9, body(4, 5, 4, 'box'));
+    expect(boxed.verdict).toBe('tooBig');
+    expect(boxed.payload).toEqual({ diameter: Math.hypot(4, 4), length: 5 });
+    // a box whose diagonal is inside the estimated space, and one between it and the shell
+    expect(fairingFit(f9, body(3, 5, 3, 'box')).verdict).toBe('fits'); // 4.24 m
+    expect(fairingFit(f9, body(3.5, 5, 3, 'box')).verdict).toBe('tight'); // 4.61 m
+    // NAPA-2's 6U box, 0.2 × 0.1 m in section, on Electron's 1.2 m fairing
+    expect(fairingFit(vehicleById('electron'), body(0.2, 0.3405, 0.1, 'box')).payload!.diameter).toBe(Math.hypot(0.2, 0.1));
+    // no size, no fairing: as before, whatever the section
+    expect(fairingFit(f9, { crossSection: 'box' }).verdict).toBe('noSize');
+    expect(fairingFit(vehicleById('starship'), body(3, 5, 3, 'box'))).toEqual({ verdict: 'noFairing' });
   });
 
   it('never finds a satellite a built-in mission flies larger than its fairing', () => {

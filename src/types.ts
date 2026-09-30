@@ -410,6 +410,17 @@ export interface SatelliteSpec {
    * escape system. Catalogue satellites never set it.
    */
   derivedFrom?: string;
+  /**
+   * The body's section across the launcher's axis, for the fairing-fit
+   * estimate (roadmap D06, Phase 4 map §2.6 c; src/config/satellite-spec.ts
+   * `fairingFit`): `'box'`, a designed satellite's bus, a rectangle of its
+   * width and depth whose corners reach out to its diagonal (a 4 × 4 m box
+   * needs 5.66 m across). Absent, the body is taken as round, the larger of
+   * its width and depth across, as every catalogue satellite is (a sphere, a
+   * capsule, a bus under its arrays folded round it), so no built-in
+   * pairing's verdict changes. Nothing in the flight reads it.
+   */
+  crossSection?: 'box';
 }
 
 export interface GuidanceParams {

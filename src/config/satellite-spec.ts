@@ -22,6 +22,7 @@ import type { SatelliteKind, SatelliteSpec, VehicleSpec } from '../types';
 import { ORBIT_PRESETS } from '../data/orbits';
 import { isCatalogueSatellite, SATELLITES } from '../data/satellites';
 import { ALL_VEHICLES } from '../data/vehicles';
+import { B_RANGE } from '../orbit/ballistic-range';
 import { PART_ID_PATTERN, PART_LIMITS, SpecChecker, describeSpecValue, isSpecRecord, type VehicleSpecIssue } from './vehicle-spec';
 
 /** A problem with a custom satellite: where in the spec (`propulsion.isp`), and what. */
@@ -66,6 +67,13 @@ void allKinds;
  *   and spacecraft.ts takes 2.2.
  * - `cr`: the propagator's model runs from 1 (absorbing) to 2 (mirror)
  *   (`Spacecraft.cr`, src/physics/propagator/forces.ts).
+ * - `ballistic`, m²/kg: the three figures together, C_D·A/m, where the
+ *   satellite gives its own area (C2's review, 2026-09-30: each bound alone
+ *   takes a 1 kg satellite of 1000 m², 1000 m²/kg): what anything in orbit
+ *   has, `B_RANGE` (src/orbit/ballistic-range.ts), a dense sphere to a sheet
+ *   of foil — the range a fitted B is held to (src/orbit/ballistic.ts) and
+ *   the one the satellite builder shows a design's against
+ *   (src/design/satellite-area.ts `ballisticProblem`).
  */
 export const SATELLITE_LIMITS = {
   mass: 5e5,
@@ -77,10 +85,19 @@ export const SATELLITE_LIMITS = {
   area: 1000,
   cd: 5,
   cr: [1, 2],
+  ballistic: B_RANGE,
 } as const;
 
+/**
+ * The drag coefficient a satellite that gives its area but not its C_D is
+ * flown at: the class estimate's 2.2 (src/physics/propagator/spacecraft.ts
+ * `spacecraftFor`, which the S03 hand-off falls back on for each figure
+ * absent), so the ballistic bound reads what the hand-off would fly.
+ */
+const CLASS_CD = 2.2;
+
 const SATELLITE_FIELDS = ['id', 'kind', 'name', 'mass', 'typicalOrbit', 'description', 'crewed', 'propulsion', 'size', 'area', 'cd', 'cr', 'derivedFrom',
-  'exposed', 'carriers', 'descent', 'staysAttached'];
+  'exposed', 'carriers', 'descent', 'staysAttached', 'crossSection'];
 
 /**
  * Everything wrong with a custom satellite, or an empty list. `raw` is
@@ -97,7 +114,7 @@ export function satelliteSpecProblems(raw: unknown): SatelliteSpecIssue[] {
     c.add('kind', `must be one of ${SATELLITE_KIND_IDS.join(', ')} (got ${JSON.stringify(raw.kind)})`);
   } else if (raw.kind === undefined) c.add('kind', 'is required');
   c.string(raw, 'name', '');
-  c.number(raw, 'mass', '', SATELLITE_LIMITS.minMass, SATELLITE_LIMITS.mass);
+  const mass = c.number(raw, 'mass', '', SATELLITE_LIMITS.minMass, SATELLITE_LIMITS.mass);
   if (typeof raw.typicalOrbit !== 'string' || !ORBIT_PRESETS.some((o) => o.id === raw.typicalOrbit)) {
     c.add('typicalOrbit', `must be an orbit preset's id (got ${JSON.stringify(raw.typicalOrbit)})`);
   }
@@ -110,8 +127,14 @@ export function satelliteSpecProblems(raw: unknown): SatelliteSpecIssue[] {
     else origin = SATELLITES.find((s) => s.id === raw.derivedFrom);
   }
   // A crew is what a launch abort saves (G06) and what the onboard view and
-  // the Soyuz MS drawing are for: only a copy of a crewed satellite has one.
-  if (raw.crewed === true && !origin?.crewed) c.add('crewed', 'only a satellite derived from a crewed catalogue one carries a crew');
+  // the Soyuz MS drawing are for: only a copy of a crewed satellite has one,
+  // and only while it is still that spacecraft's kind — a crew-kind copy of
+  // the crew ship (C2's review: a comsat-kind copy marked crewed opened the
+  // abort and drew a Soyuz MS on an R-7), a Vostok's, a Crew Dragon's (C01).
+  if (raw.crewed === true) {
+    if (!origin?.crewed) c.add('crewed', 'only a satellite derived from a crewed catalogue one carries a crew');
+    else if (raw.kind !== origin.kind) c.add('crewed', `only a crewed spacecraft's own kind carries a crew: a copy of ${origin.id} keeps "${origin.kind}" (got ${JSON.stringify(raw.kind)})`);
+  }
   // C01's flight behaviours — flown on top with no fairing (`exposed`), home
   // on its own parachutes (`descent`), riding the last stage into orbit
   // (`staysAttached`) — each changes how the launch itself is flown, and each
@@ -160,9 +183,18 @@ export function satelliteSpecProblems(raw: unknown): SatelliteSpecIssue[] {
       c.number(z, 'depth', 'size', 0, SATELLITE_LIMITS.width, { exclusiveMin: true });
     }
   }
-  c.number(raw, 'area', '', 0, SATELLITE_LIMITS.area, { optional: true, exclusiveMin: true });
-  c.number(raw, 'cd', '', 0, SATELLITE_LIMITS.cd, { optional: true, exclusiveMin: true });
+  const area = c.number(raw, 'area', '', 0, SATELLITE_LIMITS.area, { optional: true, exclusiveMin: true });
+  const cd = c.number(raw, 'cd', '', 0, SATELLITE_LIMITS.cd, { optional: true, exclusiveMin: true });
   c.number(raw, 'cr', '', SATELLITE_LIMITS.cr[0], SATELLITE_LIMITS.cr[1], { optional: true });
+  // the three together, where the satellite gives its own area (the class's otherwise, which is the class's to be right),
+  // and each is sound on its own: one wrong figure is reported once, as itself
+  const sound = !c.issues.some((i) => i.path === 'mass' || i.path === 'area' || i.path === 'cd');
+  if (sound && area !== undefined && mass !== undefined) {
+    const b = ((cd ?? CLASS_CD) * area) / mass;
+    const [lo, hi] = SATELLITE_LIMITS.ballistic;
+    if (!(b >= lo && b <= hi)) c.add('area', `with the C_D and the mass gives C_D·A/m = ${Number(b.toPrecision(3))} m²/kg, outside the ${lo} to ${hi} m²/kg anything in orbit has`);
+  }
+  if (raw.crossSection !== undefined && raw.crossSection !== 'box') c.add('crossSection', `must be "box", or left out for a round body (got ${JSON.stringify(raw.crossSection)})`);
   return c.issues;
 }
 
@@ -207,7 +239,12 @@ export type FairingFitVerdict = 'fits' | 'tight' | 'tooBig' | 'noFairing' | 'noS
 
 export interface FairingFit {
   verdict: FairingFitVerdict;
-  /** the satellite as a cylinder, m: across, the larger of its width and depth (as the rigid body takes it, src/physics/simulation.ts); long, its height */
+  /**
+   * the satellite as a cylinder, m: across, the larger of its width and depth
+   * (as the rigid body takes it, src/physics/simulation.ts), or for a box
+   * (`crossSection: 'box'`, a designed bus) its section's diagonal, which its
+   * corners reach; long, its height
+   */
   payload?: { diameter: number; length: number };
   /** the fairing's shell above its adapter cone, m */
   shell?: { diameter: number; length: number };
@@ -215,15 +252,25 @@ export interface FairingFit {
   envelope?: { diameter: number; length: number };
 }
 
-/** Whether a satellite fits the vehicle's fairing, as an estimate (roadmap D06, Phase 4 map §2.6 c). */
-export function fairingFit(vehicle: Pick<VehicleSpec, 'fairing'>, satellite: Pick<SatelliteSpec, 'size' | 'exposed'>): FairingFit {
+/**
+ * Whether a satellite fits the vehicle's fairing, as an estimate (roadmap
+ * D06, Phase 4 map §2.6 c). A round body is as wide as the larger of its
+ * width and depth; a box (`crossSection: 'box'`, which only a designed
+ * satellite sets) as its section's diagonal: its corners are what meet the
+ * shell (C2's review: a 4 × 4 × 5 m box "fitted" Falcon 9's 4.42 m on its
+ * 4 m edge, where its 5.66 m diagonal is wider than the 5.2 m shell itself).
+ * The catalogue sets no section, so no built-in pairing's verdict changes
+ * (tests/d06-satellite-spec.test.ts).
+ */
+export function fairingFit(vehicle: Pick<VehicleSpec, 'fairing'>, satellite: Pick<SatelliteSpec, 'size' | 'exposed' | 'crossSection'>): FairingFit {
   const f = vehicle.fairing;
   if (!f || satellite.exposed) return { verdict: 'noFairing' };
   const shell = { diameter: f.diameter, length: f.length - (f.adapter ?? 0) };
   const envelope = { diameter: shell.diameter * FAIRING_ENVELOPE.diameter, length: shell.length * FAIRING_ENVELOPE.length };
   const z = satellite.size;
   if (!z) return { verdict: 'noSize', shell, envelope };
-  const payload = { diameter: Math.max(z.width, z.depth), length: z.height };
+  const across = satellite.crossSection === 'box' ? Math.hypot(z.width, z.depth) : Math.max(z.width, z.depth);
+  const payload = { diameter: across, length: z.height };
   const verdict: FairingFitVerdict = payload.diameter > shell.diameter || payload.length > shell.length ? 'tooBig'
     : payload.diameter > envelope.diameter || payload.length > envelope.length ? 'tight' : 'fits';
   return { verdict, payload, shell, envelope };

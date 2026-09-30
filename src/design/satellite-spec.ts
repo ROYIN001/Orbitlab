@@ -198,6 +198,6 @@ export interface SatelliteAreaCore {
    * also the area sunlight pressure sees in Cowell mode.
    */
   dragArea: (design: SatelliteDesign) => number;
-  /** B = C_D·A/m, m²/kg, with the wet mass (dry + propellant); shown against `B_RANGE` (src/orbit/ballistic.ts). */
+  /** B = C_D·A/m, m²/kg, with the wet mass (dry + propellant); shown against `B_RANGE` (src/orbit/ballistic-range.ts). */
   ballisticCoefficient: (design: SatelliteDesign) => number;
 }
