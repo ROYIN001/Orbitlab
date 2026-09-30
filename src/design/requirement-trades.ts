@@ -34,7 +34,10 @@
  *   highest such (≤ 1); above it, the Δv to hold and to leave, together,
  *   over the tanks.
  * The row's `binds` is the requirement with the largest ratio: the one that
- * fails first, or, when all are met, the one nearest to failing.
+ * fails first, or, when all are met, the one nearest to failing; `unmet`
+ * lists every one not met, as several can be at once (a CubeSat with no
+ * engine and no view of the place fails revisit, lifetime and disposal
+ * together, each by an infinite ratio).
  *
  * WHAT IS AN ESTIMATE, and the screen says so: the mass stays the template's
  * (no free, sourced scaling from payload to mass was found, map §3); the drag
@@ -185,7 +188,10 @@ export interface TradeRow extends RepeatCycle {
   dvAvailable: number;
   /** what the orbit needs over what the satellite has (NaN where it does not apply) */
   ratios: Record<Requirement, number>;
+  /** the largest ratio's requirement; among equal ones (several Infinity) the first in `REQUIREMENTS` order */
   binds: Requirement;
+  /** every requirement not met (ratio above 1), in `REQUIREMENTS` order */
+  unmet: Requirement[];
   meets: boolean;
 }
 
@@ -307,14 +313,15 @@ export function tradeRow(req: MissionRequirements, template: SatelliteDesign, cy
   };
   let binds: Requirement = 'gsd';
   for (const k of REQUIREMENTS) if (!Number.isNaN(ratios[k]) && !(ratios[k] <= ratios[binds])) binds = k;
-  const meets = REQUIREMENTS.every((k) => Number.isNaN(ratios[k]) || ratios[k] <= 1);
+  const unmet = REQUIREMENTS.filter((k) => ratios[k] > 1);
+  const meets = unmet.length === 0;
   return {
     ...cycle, orbit, altitude: h, inclination: base.i, sso: plane.sso,
     focalLength, aperture, swath, reach, gsdAtTilt,
     revisit: { maxGap, meanGap: rv.meanGap, looks: rv.looks.length },
     contactPerDay: contact.perDay, maxRate, requiredRate, dataPerDay, requiredTxPower,
     power: { beta: sizing.beta, eclipse: sizing.eclipse, arrayArea: sizing.array.area, batteryWh: sizing.batteryWh },
-    life, disposal, dvAvailable, ratios, binds, meets,
+    life, disposal, dvAvailable, ratios, binds, unmet, meets,
   };
 }
 

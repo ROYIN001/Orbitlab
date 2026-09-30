@@ -182,6 +182,8 @@ describe('a row (D07)', () => {
       const top = Math.max(...REQUIREMENTS.map((k) => r.ratios[k]).filter((x) => !Number.isNaN(x)));
       expect(r.ratios[r.binds]).toBe(top);
       expect(r.meets).toBe(REQUIREMENTS.every((k) => Number.isNaN(r.ratios[k]) || r.ratios[k] <= 1));
+      expect(r.unmet).toEqual(REQUIREMENTS.filter((k) => r.ratios[k] > 1));
+      if (!r.meets) expect(r.unmet).toContain(r.binds);
     };
     const revisit = look({ ...THEOS2_REQ, revisitDays: 1 });
     expect(revisit.binds).toBe('revisit');
@@ -214,6 +216,16 @@ describe('a row (D07)', () => {
     expect(disposal.disposal!.dvLow).toBeLessThan(disposal.disposal!.dvHigh);
     expect(disposal.binds).toBe('disposal');
     check(disposal);
+    // two at once, both infinite (no pass climbs to 89.99°, so no contact; no engine): the first in order
+    // binds, and both are unmet
+    const both = look({ ...THEOS2_REQ, minElDeg: 89.99 }, high, noEngine);
+    expect(both.contactPerDay).toBe(0);
+    expect(both.ratios.data).toBe(Infinity);
+    expect(both.ratios.lifetime).toBe(Infinity);
+    expect(both.binds).toBe('data');
+    expect(both.unmet).toEqual(expect.arrayContaining(['data', 'lifetime']));
+    expect(designFromRow(noEngine, both, THEOS2_REQ)).toBeNull();
+    check(both);
     // with no disposal rule it does not count
     const none = look({ ...THEOS2_REQ, disposal: 'none' }, low, noEngine);
     expect(none.disposal).toBeNull();
