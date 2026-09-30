@@ -35,6 +35,7 @@ import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMo
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, missionSatellite, satelliteById } from '../data/satellites';
 import { FAIRING_ENVELOPE, fairingFit } from '../config/satellite-spec';
+import { unbroken } from './build/figures';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
@@ -1204,9 +1205,11 @@ export class SetupPanel {
    */
   private fairingFitNote(vehicle: VehicleSpec, satellite: SatelliteSpec): HTMLElement {
     const fit = fairingFit(vehicle, satellite);
-    const size = (b?: { diameter: number; length: number }): string => (b ? `${num(b.diameter, 1)} × ${num(b.length, 1)} ${t('u.m')}` : '');
+    // a size and a share on one line each, however narrow the panel: "4,4 × 10,5 м" never ends a line at "10,5" (`unbroken`)
+    const size = (b?: { diameter: number; length: number }): string => (b ? unbroken(`${num(b.diameter, 1)} × ${num(b.length, 1)} ${t('u.m')}`) : '');
     const params = { payload: size(fit.payload), envelope: size(fit.envelope), shell: size(fit.shell) };
-    const estimate = t('setup.customSat.estimate', { d: num(FAIRING_ENVELOPE.diameter * 100), l: num(FAIRING_ENVELOPE.length * 100) });
+    const estimate = t('setup.customSat.estimate', { d: num(FAIRING_ENVELOPE.diameter * 100), l: num(FAIRING_ENVELOPE.length * 100) })
+      .replace(/(\d) %/g, '$1\u00a0%');
     let text: string;
     switch (fit.verdict) {
       case 'fits': text = `${t('setup.customSat.fits', params)} ${estimate}`; break;
