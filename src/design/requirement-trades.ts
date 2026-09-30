@@ -61,7 +61,7 @@ import { DEG, R_EARTH } from '../physics/constants';
 import { STATIONS } from '../orbit/applications-setup';
 import { footprintAngle, sideReach, swathWidth, type GroundStation } from '../orbit/applications';
 import { deltaVAvailable } from '../orbit/budget';
-import { contactTime, revisitGaps } from '../orbit/coverage';
+import { contactTime, repeatPeriod, revisitGaps } from '../orbit/coverage';
 import { CONTROLLED_REENTRY_PERIGEE, perigeeLowerDv } from '../orbit/disposal';
 import { offNadirGsd } from '../orbit/imaging';
 import { raanForLocalTime, type Orbit } from '../orbit/kepler';
@@ -167,7 +167,7 @@ export interface TradeRow extends RepeatCycle {
   reach: number;
   /** the cross-track GSD at the largest tilt, m (the GSD asked is met straight down); null with no tilt */
   gsdAtTilt: number | null;
-  /** days: the longest and the mean gap between looks, and the looks in the window */
+  /** days: the longest and the mean gap between looks, and the looks in the window (one repeat of the pattern, `repeatPeriod`, or the open window) */
   revisit: { maxGap: number; meanGap: number; looks: number };
   /** s a day heard by the stations */
   contactPerDay: number;
@@ -247,16 +247,19 @@ export function tradeRow(req: MissionRequirements, template: SatelliteDesign, cy
   const reach = Math.min(horizon, swath / 2 + (tilt > 0 ? sideReach(h, tilt) ?? horizon : 0));
   const gsdAtTilt = tilt > 0 ? offNadirGsd(h, cam.pixelPitch, focalLength, tilt).cross : null;
 
-  // revisit: one cycle when the looks repeat with it, else a longer open window
+  // revisit: one repeat of the pattern when the looks repeat with it, else a longer open window. The
+  // pattern takes the cycle's days in turns of the Earth under the node, solar days only when
+  // sun-synchronous (`repeatPeriod`: a 31/2 orbit at 51.6° repeats in 1.966 days)
   const target: GroundStation = { lat: req.target.lat * DEG, lon: req.target.lon * DEG, h: 0 };
+  const period = repeatPeriod(orbit, cycle.revs);
   const periodic = plane.sso || !req.daylightOnly;
-  const window = periodic ? cycle.days : Math.max(cycle.days, opts.revisitWindow ?? 60);
+  const window = periodic ? period : Math.max(period, opts.revisitWindow ?? 60);
   const rv = revisitGaps(orbit, target, reach, opts.jd0, window, req.daylightOnly, { periodic });
   const maxGap = periodic ? rv.maxGap : Math.max(rv.gaps.length ? rv.maxGap : 0, rv.firstAfter, rv.lastBefore);
 
   // the downlink
   const minEl = req.minElDeg * DEG;
-  const contact = contactTime(orbit, stationsOf(req.stations), minEl, opts.jd0, cycle.days);
+  const contact = contactTime(orbit, stationsOf(req.stations), minEl, opts.jd0, period);
   const path = {
     frequency: template.comms.frequency, rxGain: opts.ground.rxGain, systemTemperature: opts.ground.systemTemperature,
     losses: opts.ground.losses, requiredEbN0: template.comms.requiredEbN0, implementationLoss: opts.ground.implementationLoss,

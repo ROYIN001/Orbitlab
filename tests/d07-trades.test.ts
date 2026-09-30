@@ -22,13 +22,24 @@
  *   within 2 ms (twice the refinement);
  * - lifetime and disposal verdicts against P07 itself: a row said to last
  *   does, one said not to does not (exact comparisons);
- * - the binding requirement is the largest ratio, exactly.
+ * - the binding requirement is the largest ratio, exactly;
+ * - ADDED IN REVIEW, fixed before its first run: a row whose orbit is not
+ *   sun-synchronous (31/2 at 51.6°, flown day and night) takes its revisit and
+ *   contact over one repeat of its pattern, so twenty repeats give twenty
+ *   times its looks exactly, and its contact a day to 1e-6 relative; the same
+ *   longest gap within 2 ms, CHANGED AFTER THAT FIRST RUN to 0.1 s: the run
+ *   gave 8.5 ms, and the cause is the time, not the orbit — a Julian date
+ *   holds it to 40 µs, in which the Earth turns up to 19 m under the track, so
+ *   a closest approach far off the track is certain only to some ±20 ms
+ *   (the looks of the twenty repeats move by up to 9 ms, not in a trend).
  */
 import { describe, expect, it } from 'vitest';
 import { DEG, R_EARTH } from '../src/physics/constants';
 import { julianDate } from '../src/physics/orbital';
 import { groundSampleDistance } from '../src/orbit/applications';
-import { revisitGaps } from '../src/orbit/coverage';
+import { contactTime, repeatPeriod, revisitGaps } from '../src/orbit/coverage';
+import { orbitFacts } from '../src/orbit/kepler';
+import { stationOf } from '../src/orbit/applications-setup';
 import { YEAR } from '../src/orbit/disposal';
 import { diffractionGsd } from '../src/orbit/imaging';
 import { designControlTable, eirp, slantRange } from '../src/orbit/link';
@@ -79,6 +90,7 @@ const THEOS2_REQ: MissionRequirements = {
 };
 
 const OPTS: TradeOptions = { jd0: JD0, txGain: 20, ground: NEN, wavelength: 0.65e-6, lifetime: null };
+const stationsFor = (ids: string[]) => ids.map((id) => stationOf(id)!);
 
 describe('the rows\' orbits (D07)', () => {
   it('are every repeat cycle in 150–5 000 km, highest first, and hold Landsat\'s, Sentinel-2\'s and THEOS-2\'s', () => {
@@ -165,7 +177,8 @@ describe('a row (D07)', () => {
     expect(rel((d.power.arrayArea * p.array.pEol) / MOUNT_FACTOR[d.power.mount], p.arrayPower)).toBeLessThanOrEqual(1e-9);
     expect(rel(d.power.batteryWh * 3600 * d.power.dod * d.power.batteryEff, d.power.busW * p.eclipse)).toBeLessThanOrEqual(1e-9);
     // and the revisit seen from it is the row's
-    const again = revisitGaps(o, { lat: req.target.lat * DEG, lon: req.target.lon * DEG, h: 0 }, row.reach, JD0, 26, true, { periodic: true });
+    // over one repeat of its pattern, as the row takes it (changed in review from 26 days, which is 14 ms more)
+    const again = revisitGaps(o, { lat: req.target.lat * DEG, lon: req.target.lon * DEG, h: 0 }, row.reach, JD0, repeatPeriod(o, 385), true, { periodic: true });
     expect(Math.abs(again.maxGap - row.revisit.maxGap) * 86400).toBeLessThanOrEqual(2e-3);
     // the rest is the template's: mass, bus, the engine
     expect(d.bus).toEqual(IMAGER.bus);
@@ -235,6 +248,23 @@ describe('a row (D07)', () => {
     const easy = look({ ...THEOS2_REQ, dataPerDay: 1e9, gsd: 1 }, { ...tilted, lifetime: [search(7, 395e3, 405e3), search(32, 695e3, 705e3)] });
     expect(easy.meets).toBe(true);
     check(easy);
+  });
+
+  it('takes the revisit and the contact of an orbit that is not sun-synchronous over one repeat of its pattern', () => {
+    // 31 revolutions while the Earth turns twice under the node: at 51.6° the node drifts west, so the
+    // pattern repeats in two turns under the node, some 1.97 days, not in two solar days
+    const req: MissionRequirements = { ...THEOS2_REQ, daylightOnly: false, revisitDays: 2, gsd: 5 };
+    delete req.ltan;
+    const opts = { ...OPTS, inclination: 51.6 * DEG, tilt: 30 * DEG };
+    const row = tradeRow(req, IMAGER, { revs: 31, days: 2 }, opts)!;
+    const period = (31 * orbitFacts(row.orbit, true).nodalPeriod) / 86400;
+    const target = { lat: req.target.lat * DEG, lon: req.target.lon * DEG, h: 0 };
+    const twenty = revisitGaps(row.orbit, target, row.reach, JD0, 20 * period, false, { periodic: true });
+    expect(twenty.looks.length).toBeGreaterThan(20);
+    expect(twenty.looks.length).toBe(20 * row.revisit.looks);
+    expect(Math.abs(twenty.maxGap - row.revisit.maxGap) * 86400).toBeLessThanOrEqual(0.1);
+    const contact = contactTime(row.orbit, stationsFor(req.stations), req.minElDeg * DEG, JD0, 20 * period);
+    expect(rel(row.contactPerDay, contact.perDay)).toBeLessThanOrEqual(1e-6);
   });
 
   it('refuses a template with no camera, an unknown station, or no plane', () => {

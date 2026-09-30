@@ -18,6 +18,10 @@
  * - the repeat-grid bound: a swath of `repeatGridSpacing(revs)·cos φ` gives a
  *   longest gap no longer than the cycle, to 1e-12 relative, at every
  *   longitude of one grid cell; half that swath leaves some longitude unseen;
+ * - CHANGED IN REVIEW, fixed before its first run: the cycle is one repeat of
+ *   the pattern (`repeatPeriod`), the cycle's days only for a sun-synchronous
+ *   orbit; the point below comes back to within 10 m of where it started
+ *   after it, and a sun-synchronous one's is its days within 1 s;
  * - contact: the union of passes equals the sum of `findPassesOf`'s passes for
  *   one station, to 1e-9 s; a station listed twice counts once, exactly; no
  *   pass longer than the overhead bound `maxPassDuration` by more than 1 %.
@@ -25,9 +29,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEG, R_EARTH } from '../src/physics/constants';
 import { julianDate } from '../src/physics/orbital';
-import { cross, norm, scale, sub, v3, type Vec3 } from '../src/physics/vec3';
+import { cross, dot, norm, scale, sub, v3, type Vec3 } from '../src/physics/vec3';
 import { WGS84, eciToEcef, footprintAngle, repeatGridSpacing, type GroundStation } from '../src/orbit/applications';
-import { contactTime, elevationOf, revisitGaps } from '../src/orbit/coverage';
+import { contactTime, elevationOf, repeatPeriod, revisitGaps } from '../src/orbit/coverage';
 import { groundTrack, orbitFacts, raanForLocalTime, stateAt, type Orbit } from '../src/orbit/kepler';
 import { maxPassDuration } from '../src/orbit/link';
 import { findPassesOf } from '../src/orbit/passes';
@@ -156,6 +160,12 @@ describe('revisit by brute force on the ground track (D07)', () => {
     ];
     for (const c of cases) {
       const o = repeat(c.revs, c.days, c.plane);
+      // one repeat of the pattern (changed in review: it was the cycle's days, which for the 31/2 orbit at
+      // 51.6° is half a revolution more than the 1.966 days it repeats in)
+      const period = repeatPeriod(o, c.revs);
+      const back = Math.acos(Math.min(1, dot(belowAt(o, 0), belowAt(o, period * 86400)))) * R_EARTH;
+      expect(back, `${c.revs}/${c.days}: back where it started`).toBeLessThanOrEqual(10);
+      if ('ltan' in c.plane) expect(Math.abs(period - c.days) * 86400).toBeLessThanOrEqual(1);
       for (const latDeg of c.lats) {
         const lat = latDeg * DEG;
         const bound = repeatGridSpacing(c.revs) * Math.cos(lat);
@@ -163,9 +173,9 @@ describe('revisit by brute force on the ground track (D07)', () => {
         for (const lon of cell(c.revs, 100.5 * DEG, 12)) {
           for (const daylight of c.daylight) {
             const at = { lat, lon, h: 0 };
-            const r = revisitGaps(o, at, bound / 2, JD0, c.days, daylight, { periodic: true });
-            expect(r.maxGap, `${c.revs}/${c.days} at ${latDeg}°`).toBeLessThanOrEqual(c.days * (1 + 1e-12));
-            if (revisitGaps(o, at, (bound * c.under) / 2, JD0, c.days, daylight, { periodic: true }).maxGap === Infinity) unseen++;
+            const r = revisitGaps(o, at, bound / 2, JD0, period, daylight, { periodic: true });
+            expect(r.maxGap, `${c.revs}/${c.days} at ${latDeg}°`).toBeLessThanOrEqual(period * (1 + 1e-12));
+            if (revisitGaps(o, at, (bound * c.under) / 2, JD0, period, daylight, { periodic: true }).maxGap === Infinity) unseen++;
           }
         }
         expect(unseen, `${c.revs}/${c.days} at ${latDeg}°: a narrower swath leaves some place unseen`).toBeGreaterThan(0);

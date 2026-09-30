@@ -204,7 +204,9 @@ export function revisitGaps(
 
   const gaps: number[] = [];
   for (let k = 1; k < looks.length; k++) gaps.push(looks[k].jd - looks[k - 1].jd);
-  if (periodic && looks.length > 0) gaps.push(looks[0].jd + days - looks[looks.length - 1].jd);
+  // the window less the span of the looks: a difference of two nearby Julian dates is exact, so one look a
+  // window gives exactly the window whatever its length (the window added to a date would round to 40 µs)
+  if (periodic && looks.length > 0) gaps.push(days - (looks[looks.length - 1].jd - looks[0].jd));
   const maxGap = gaps.length ? Math.max(...gaps) : Infinity;
   const meanGap = !gaps.length ? Infinity : periodic ? days / looks.length : (looks[looks.length - 1].jd - looks[0].jd) / gaps.length;
   return {
@@ -212,6 +214,21 @@ export function revisitGaps(
     firstAfter: looks.length ? looks[0].jd - jd0 : Infinity,
     lastBefore: looks.length ? jd0 + days - looks[looks.length - 1].jd : Infinity,
   };
+}
+
+/**
+ * How long a repeat-ground-track orbit takes to fly its pattern once, days:
+ * `revs` nodal periods, which is the `days` of its cycle counted as turns of
+ * the Earth under the orbit's node, 2π/(ω⊕ − Ω̇) s each (`repeatOrbit`,
+ * src/orbit/kepler.ts). Only a sun-synchronous node keeps pace with the Sun,
+ * so only then is each turn a solar day; a 31/2 orbit at 51.6°, whose node
+ * drifts west, repeats in 1.966 days, and a window of 2 would count half a
+ * revolution twice. The window to give `revisitGaps` with `periodic`, and
+ * `contactTime` for the orbit's own daily mean.
+ */
+export function repeatPeriod(o: Orbit, revs: number, j2 = true): number {
+  if (!(Number.isInteger(revs) && revs >= 1)) throw new RangeError(`revs must be a whole number, 1 or more (got ${revs})`);
+  return (revs * orbitFacts(o, j2).nodalPeriod) / DAY;
 }
 
 // ─── contact with the ground stations ───────────────────────────────────────
@@ -244,8 +261,9 @@ export function elevationOf(o: Orbit, station: GroundStation, jd: number, j2 = t
  * `days` from Julian date `jd0` (D07, map §3: "contact minutes per day"): the
  * passes over each station found by `findPassesOf` on the Kepler orbit's
  * elevation, cut to the window, and merged across stations. Over one repeat
- * cycle of a repeat-ground-track orbit the daily mean is the orbit's own: a
- * pass cut at the window's start is the pass cut at its end.
+ * of a repeat-ground-track orbit's pattern (`repeatPeriod`, which is its
+ * cycle's days only when it is sun-synchronous) the daily mean is the orbit's
+ * own: a pass cut at the window's start is the pass cut at its end.
  */
 export function contactTime(o: Orbit, stations: readonly GroundStation[], minEl: number, jd0: number, days: number, j2 = true): Contact {
   if (!(days > 0) || !Number.isFinite(days)) throw new RangeError(`days must be more than 0 (got ${days})`);
