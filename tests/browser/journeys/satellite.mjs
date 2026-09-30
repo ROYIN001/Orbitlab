@@ -14,7 +14,7 @@
  * `control_playback` skip_next), as tests/browser/journeys/launch-explore.mjs
  * drives one.
  */
-// about 40 s here on a shared 4-core machine (software WebGL), so part of the smoke run
+// 34–47 s here on a shared 4-core machine (software WebGL), so part of the smoke run
 export const smoke = true;
 export const timeoutMs = 300_000;
 
