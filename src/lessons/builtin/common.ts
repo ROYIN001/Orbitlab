@@ -2,7 +2,7 @@
  * What the built-in lessons share: the date they fly on and a short way to
  * write a lesson's mission as the document a mission file holds (U01).
  */
-import { MISSION_FORMAT, MISSION_FORMAT_VERSION, type MissionDocument } from '../../config/mission-file';
+import { MISSION_FORMAT, MISSION_BASE_VERSION, type MissionDocument } from '../../config/mission-file';
 import { DEFAULT_FAILURE } from '../../physics/defaults';
 import { orbitById } from '../../data/orbits';
 import type { OrbitSpec } from '../../types';
@@ -13,7 +13,7 @@ export const LESSON_LAUNCH = '2026-09-15T12:00:00.000Z';
 export function missionDoc(m: Partial<MissionDocument['mission']> & { vehicleId: string; siteId: string; satelliteId: string; payloadMass: number; orbitId: string; orbit?: OrbitSpec }): MissionDocument {
   return {
     format: MISSION_FORMAT,
-    version: MISSION_FORMAT_VERSION,
+    version: MISSION_BASE_VERSION,
     mission: {
       launchTime: LESSON_LAUNCH,
       guidanceOverrides: {},

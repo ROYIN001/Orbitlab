@@ -8,7 +8,7 @@
  * WebMCP, and a value it rejects goes back to its default (the rest of the
  * mission is kept) with an issue naming the field, for the page to show.
  */
-import type { DynamicsConfig, FailureConfig, GuidanceParams, MissionConfig, OrbitSpec, RecoveryPlan, VehicleSpec } from '../types';
+import type { DynamicsConfig, FailureConfig, GuidanceParams, MissionConfig, OrbitSpec, RecoveryPlan, SatelliteSpec, VehicleSpec } from '../types';
 import { ALL_VEHICLES } from '../data/vehicles';
 import { SATELLITES } from '../data/satellites';
 import { ORBIT_PRESETS } from '../data/orbits';
@@ -28,8 +28,17 @@ export const MISSION_FORMAT = 'orbitlab.mission';
  * `vehicleId` names a vehicle no catalogue has, and a version-1 reader would
  * fly something else — so the version says a reader has to understand it, and
  * an older Orbitlab reports the file as newer than itself.
+ *
+ * Version 3 (roadmap D06, Phase 4 map §2.6 c) may carry the mission's
+ * satellite inline (`mission.satelliteSpec`), for the same reason: with it,
+ * `satelliteId` names a satellite no catalogue has. It is written ONLY when
+ * the mission carries one (`MISSION_BASE_VERSION` otherwise), so every
+ * mission and lesson file written before stays byte for byte what it was, and
+ * every Orbitlab since S02 still reads a mission with a catalogue satellite.
  */
-export const MISSION_FORMAT_VERSION = 2;
+export const MISSION_FORMAT_VERSION = 3;
+/** The version a mission with a catalogue satellite is written as (see above); built-in lessons write it too. */
+export const MISSION_BASE_VERSION = 2;
 
 /** The setup panel's mission: `ConfigInput` plus which orbit preset it started from. */
 export type MissionState = ConfigInput & { orbitId: string };
@@ -41,6 +50,8 @@ export interface MissionDocument {
     vehicleId: string; satelliteId: string; siteId: string;
     /** a custom vehicle, whose id is `vehicleId` (version 2, S02) */
     vehicleSpec?: VehicleSpec;
+    /** a custom satellite, whose id is `satelliteId` (version 3, D06) */
+    satelliteSpec?: SatelliteSpec;
     orbitId: string; orbit: OrbitSpec;
     /** ISO 8601, UTC */
     launchTime: string;
@@ -82,10 +93,11 @@ const clone = <T>(v: T): T => (v === undefined ? v : JSON.parse(JSON.stringify(v
 export function missionDocument(state: MissionState): MissionDocument {
   return {
     format: MISSION_FORMAT,
-    version: MISSION_FORMAT_VERSION,
+    version: state.satelliteSpec ? MISSION_FORMAT_VERSION : MISSION_BASE_VERSION,
     mission: {
       vehicleId: state.vehicleId, satelliteId: state.satelliteId, siteId: state.siteId,
       ...(state.vehicleSpec ? { vehicleSpec: clone(state.vehicleSpec) } : {}),
+      ...(state.satelliteSpec ? { satelliteSpec: clone(state.satelliteSpec) } : {}),
       orbitId: state.orbitId, orbit: clone(state.orbit),
       launchTime: state.launchTime.toISOString(),
       payloadMass: state.payloadMass,
@@ -106,6 +118,20 @@ export function copyMission(state: MissionState): MissionState {
     ...clone({ ...state, launchTime: undefined }),
     launchTime: new Date(state.launchTime.getTime()),
   } as MissionState;
+}
+
+/**
+ * The mission's satellite — a custom one included (D06) — or undefined when
+ * the mission names none it has; the checks judge which, not this.
+ */
+function satelliteOf(state: Pick<MissionState, 'satelliteId' | 'satelliteSpec'>): SatelliteSpec | undefined {
+  return state.satelliteSpec?.id === state.satelliteId ? state.satelliteSpec : SATELLITES.find((s) => s.id === state.satelliteId);
+}
+
+/** A satellite's own mass as a payload mass, or the fallback's when it gives none that is one. */
+function payloadMassOf(state: Pick<MissionState, 'satelliteId' | 'satelliteSpec'>, fallback: number): number {
+  const mass = satelliteOf(state)?.mass;
+  return typeof mass === 'number' && Number.isFinite(mass) && mass > 0 ? mass : fallback;
 }
 
 /** The defaults a reset value falls back on, for this mission's vehicle — a custom one included (S02). */
@@ -145,10 +171,17 @@ function overlay(m: Record<string, unknown>, fallback: MissionState, issues: Mis
     out.failure = { ...DEFAULT_FAILURE };
   }
   str('satelliteId', 'setup.satellite');
+  // D06: a document that names its satellite carries its custom spec too, or flies a catalogue one
+  if (m.satelliteSpec !== undefined) {
+    if (isRecord(m.satelliteSpec)) out.satelliteSpec = clone(m.satelliteSpec) as unknown as SatelliteSpec;
+    else issues.push({ field: 'setup.satellite', code: 'satelliteSpec' });
+  } else if (m.satelliteId !== undefined) out.satelliteSpec = undefined;
+  const satelliteChanged = out.satelliteId !== fallback.satelliteId
+    || JSON.stringify(out.satelliteSpec ?? null) !== JSON.stringify(fallback.satelliteSpec ?? null);
   str('siteId', 'setup.site');
   // a pad belongs to one site; a flight to the station to one vehicle and payload
   if (vehicleChanged || out.siteId !== fallback.siteId) out.padId = undefined;
-  if (vehicleChanged || out.satelliteId !== fallback.satelliteId) out.rendezvous = undefined;
+  if (vehicleChanged || satelliteChanged) out.rendezvous = undefined;
   str('orbitId', 'setup.orbit');
   if (m.orbit !== undefined) {
     if (isRecord(m.orbit)) out.orbit = { ...clone(m.orbit) } as unknown as OrbitSpec;
@@ -202,17 +235,21 @@ function reset(state: MissionState, field: string, fallback: MissionState): void
     Object.assign(state, copyMission(fallback));
     // Object.assign keeps what the fallback lacks: a custom vehicle must not outlive a reset to a catalogue one
     if (!fallback.vehicleSpec) state.vehicleSpec = undefined;
+    // …nor a custom satellite a reset to a catalogue one (D06)
+    if (!fallback.satelliteSpec) state.satelliteSpec = undefined;
     return;
   }
   if (field === 'setup.site') { if (d.site) state.siteId = d.site; state.recoveryPlan = undefined; state.padId = undefined; return; }
   if (field === 'setup.rendezvous') { state.rendezvous = undefined; return; }
   if (field === 'setup.satellite') {
     state.satelliteId = fallback.satelliteId;
-    state.payloadMass = SATELLITES.find((s) => s.id === fallback.satelliteId)?.mass ?? fallback.payloadMass;
+    // a custom satellite must not outlive a reset to the fallback's, nor the fallback's be lost (D06)
+    state.satelliteSpec = fallback.satelliteSpec ? clone(fallback.satelliteSpec) : undefined;
+    state.payloadMass = payloadMassOf(fallback, fallback.payloadMass);
     return;
   }
   if (field === 'setup.payloadMass') {
-    state.payloadMass = SATELLITES.find((s) => s.id === state.satelliteId)?.mass ?? fallback.payloadMass;
+    state.payloadMass = payloadMassOf(state, fallback.payloadMass);
     return;
   }
   if (['setup.orbit', 'setup.perigee', 'setup.apogee', 'setup.inclination', 'setup.argPerigee', 'setup.raanMode', 'setup.raan', 'setup.ltan'].includes(field)) {
@@ -250,14 +287,13 @@ function reset(state: MissionState, field: string, fallback: MissionState): void
  * A document in an older layout, brought to the current one. Version 1 is
  * version 2 without a custom vehicle: its `vehicleId` always names a catalogue
  * vehicle, so a `vehicleSpec` found in one was not written by Orbitlab and is
- * not read.
+ * not read. Version 2 is version 3 without a custom satellite (D06), and a
+ * `satelliteSpec` found in a version 1 or 2 file is not read either.
  */
 function upgrade(doc: Record<string, unknown>): Record<string, unknown> {
-  if (doc.version === 1 && isRecord(doc.mission) && 'vehicleSpec' in doc.mission) {
-    const { vehicleSpec: _ignored, ...mission } = doc.mission;
-    return { ...doc, mission };
-  }
-  return doc;
+  if (!isRecord(doc.mission) || typeof doc.version !== 'number' || doc.version >= MISSION_FORMAT_VERSION) return doc;
+  const { vehicleSpec, satelliteSpec: _satellite, ...mission } = doc.mission;
+  return { ...doc, mission: doc.version >= 2 && vehicleSpec !== undefined ? { ...mission, vehicleSpec } : mission };
 }
 
 /**

@@ -169,7 +169,8 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
     switch (key) {
       case 'setup.vehicle': kept = cfg.vehicleId === m.vehicleId; break;
       case 'setup.site': kept = cfg.siteId === m.siteId && (!m.padId || cfg.padId === m.padId); break;
-      case 'setup.satellite': kept = cfg.satelliteId === m.satelliteId; break;
+      // D06: a custom satellite is its spec, not only its id (a file could keep the id and change the design)
+      case 'setup.satellite': kept = cfg.satelliteId === m.satelliteId && same(cfg.satelliteSpec, m.satelliteSpec); break;
       case 'setup.payloadMass': kept = near(cfg.payloadMassOverride, m.payloadMass, 0.5); break;
       case 'setup.orbit': {
         const a = cfg.orbit, b = m.orbit;

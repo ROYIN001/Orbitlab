@@ -26,6 +26,8 @@ export function missionConfigFromState(s: MissionState): MissionConfig {
   const guidance = { ...guidanceForVehicle(vehicleById(s.vehicleId), undefined, s.dynamics?.model), ...s.guidanceOverrides };
   return {
     vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
+    // D06: a lesson's own satellite flies as the setup panel flies it (the custom vehicle is track T01's fix, Phase 4 map §4.1)
+    ...(s.satelliteSpec ? { satelliteSpec: structuredClone(s.satelliteSpec) } : {}),
     launchTime: new Date(s.launchTime.getTime()), guidance, failure: { ...s.failure },
     boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
     ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),

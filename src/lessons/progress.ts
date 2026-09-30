@@ -7,7 +7,7 @@
  * was not edited by accident; it is not a signature, and does not claim to be.
  */
 import { missionDocument, type MissionDocument, type MissionState } from '../config/mission-file';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import type { MissionConfig } from '../types';
 import type { AssessmentAttempt, Question } from './assessment/types';
 import { CZ5B_CASE_STAGE, type CaseId } from '../worksheets/case-ids';
@@ -131,7 +131,7 @@ export interface ProgressData {
  * edits dropped. `cfg.guidance` is the guidance already merged with the
  * vehicle's defaults, and is kept whole, so the document flies the same
  * guidance even if a later Orbitlab changes those defaults. The docking
- * profile, the pad and a custom vehicle go with it.
+ * profile, the pad, a custom vehicle and a custom satellite go with it.
  */
 export function flownMission(cfg: MissionConfig): MissionDocument {
   const state: MissionState = {
@@ -139,8 +139,10 @@ export function flownMission(cfg: MissionConfig): MissionDocument {
     launchTime: new Date(cfg.launchTime.getTime()), guidanceOverrides: { ...cfg.guidance }, failure: { ...cfg.failure },
     boosterRecovery: cfg.boosterRecovery,
     // what the simulation flew: the override, else the payload's own mass
-    payloadMass: cfg.payloadMassOverride ?? satelliteById(cfg.satelliteId).mass,
+    payloadMass: cfg.payloadMassOverride ?? missionSatellite(cfg).mass,
     ...(cfg.vehicleSpec ? { vehicleSpec: cfg.vehicleSpec } : {}),
+    // D06: and a custom satellite, which makes the document version 3
+    ...(cfg.satelliteSpec ? { satelliteSpec: cfg.satelliteSpec } : {}),
     ...(cfg.recoveryPlan ? { recoveryPlan: cfg.recoveryPlan } : {}),
     ...(cfg.dynamics ? { dynamics: cfg.dynamics } : {}),
     ...(cfg.padId ? { padId: cfg.padId } : {}),

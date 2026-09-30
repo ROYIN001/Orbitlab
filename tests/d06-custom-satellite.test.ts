@@ -28,6 +28,12 @@ import { handoffFromFlight, parseHandoff } from '../src/orbit/handoff';
 import { spacecraftFor } from '../src/physics/propagator/spacecraft';
 import { localizeEventParams, satelliteName } from '../src/ui/names';
 import { setLang, t } from '../src/i18n';
+import { missionDocument } from '../src/config/mission-file';
+import { defaultMissionState, lessonConfig } from '../src/lessons/config';
+import { brokenLocks } from '../src/lessons/grader';
+import { BUILTIN_LESSONS } from '../src/lessons/catalog';
+import type { LessonFlight } from '../src/lessons/types';
+import { defaultDynamics } from '../src/physics/rigid/config';
 import type { MissionConfig, SatelliteSpec } from '../src/types';
 import { SAT_FLIGHT_TIME, flySatellite, satelliteCopyOf, satelliteMission, type HarnessSatellite } from './custom-satellite-harness';
 
@@ -144,6 +150,21 @@ describe('custom satellites (D06): one resolver', () => {
         if (lang !== 'en') expect(satelliteName(satelliteById('comsat'))).not.toBe(satelliteById('comsat').name);
       }
     } finally { setLang('en'); }
+  });
+});
+
+describe('custom satellites (D06): a lesson that locks one', () => {
+  it('holds its locked satellite to the spec, not only the id', () => {
+    const mine = satelliteCopyOf('earthObs', { id: 'my-imager', name: 'My imager' });
+    const mission = missionDocument({ ...defaultMissionState(), vehicleId: 'falcon9', siteId: 'cape', orbitId: 'sso', orbit: orbitById('sso'),
+      satelliteId: mine.id, satelliteSpec: mine, payloadMass: mine.mass, dynamics: defaultDynamics('falcon9') });
+    const lesson = { locked: ['setup.satellite' as const], mission };
+    const flown = (edit?: (s: SatelliteSpec) => void) => lessonConfig(mission, (s) => { if (edit) edit(s.satelliteSpec!); });
+    expect(brokenLocks(lesson, { cfg: flown() } as LessonFlight)).toEqual([]);
+    expect(brokenLocks(lesson, { cfg: flown((s) => { s.propulsion!.thrust = 400; }) } as LessonFlight)).toEqual(['setup.satellite']);
+    // the catalogue's lessons are held as before
+    const catalogue = BUILTIN_LESSONS.find((l) => l.locked.includes('setup.satellite'))!;
+    expect(brokenLocks(catalogue, { cfg: lessonConfig(catalogue.mission) } as LessonFlight)).toEqual([]);
   });
 });
 
