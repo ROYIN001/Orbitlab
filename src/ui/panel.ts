@@ -34,6 +34,7 @@
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, missionSatellite, satelliteById } from '../data/satellites';
+import { FAIRING_ENVELOPE, fairingFit } from '../config/satellite-spec';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
@@ -773,7 +774,10 @@ export class SetupPanel {
     // ── 02 payload ──────────────────────────────────────────────────────────
     const s2 = this.el('section', 'config-section');
     s2.appendChild(this.sectionTitle('02', 'setup.step.payload'));
-    s2.appendChild(this.select('setup.satellite', SATELLITES.filter((x) => carries(vehicleDataId(missionVehicle(s)), x)).map((x) => ({ value: x.id, label: satelliteName(x) })), s.satelliteId, (v) => {
+    // D06: a custom satellite (from a mission file) is offered beside the catalogue until another is picked; its name is the designer's
+    const customSat = s.satelliteSpec ? [{ value: s.satelliteSpec.id, label: t('setup.customSat.option', { name: s.satelliteSpec.name }) }] : [];
+    s2.appendChild(this.select('setup.satellite', [...customSat, ...SATELLITES.filter((x) => carries(vehicleDataId(missionVehicle(s)), x)).map((x) => ({ value: x.id, label: satelliteName(x) }))], s.satelliteId, (v) => {
+      if (v === s.satelliteSpec?.id) return;
       this.clearOrbitDrafts();
       this.clearFieldDrafts('setup.payloadMass');
       s.satelliteId = v;
@@ -788,6 +792,7 @@ export class SetupPanel {
       this.changed();
     }));
     s2.appendChild(this.number('setup.payloadMass', s.payloadMass, (v) => { s.payloadMass = v; this.changed(); }, 10, 1));
+    if (s.satelliteSpec) s2.appendChild(this.fairingFitNote(vehicle, s.satelliteSpec));
     if (learning) {
       const meter = this.el('div', 'payload-meter');
       meter.id = 'payload-meter';
@@ -1188,6 +1193,31 @@ export class SetupPanel {
       inclinationDeg: resolveTarget(s.orbit, site, s.launchTime).inclination * RAD,
       plan, insertion, failureMode: s.failure.mode, siteReassigned: false,
     });
+  }
+
+  /**
+   * D06 (Phase 4 map §2.6 c): whether the mission's custom satellite fits the
+   * vehicle's fairing — an estimate, and said to be one, since a fairing's
+   * usable space is the launcher's user's guide's and `FairingSpec` carries
+   * only its shell (`fairingFit`, src/config/satellite-spec.ts). A catalogue
+   * satellite flies as it flew and gets no note.
+   */
+  private fairingFitNote(vehicle: VehicleSpec, satellite: SatelliteSpec): HTMLElement {
+    const fit = fairingFit(vehicle, satellite);
+    const size = (b?: { diameter: number; length: number }): string => (b ? `${num(b.diameter, 1)} × ${num(b.length, 1)} ${t('u.m')}` : '');
+    const params = { payload: size(fit.payload), envelope: size(fit.envelope), shell: size(fit.shell) };
+    const estimate = t('setup.customSat.estimate', { d: num(FAIRING_ENVELOPE.diameter * 100), l: num(FAIRING_ENVELOPE.length * 100) });
+    let text: string;
+    switch (fit.verdict) {
+      case 'fits': text = `${t('setup.customSat.fits', params)} ${estimate}`; break;
+      case 'tight': text = `${t('setup.customSat.tight', params)} ${estimate}`; break;
+      case 'tooBig': text = t('setup.customSat.tooBig', params); break;
+      case 'noFairing': text = t('setup.customSat.noFairing'); break;
+      case 'noSize': text = t('setup.customSat.noSize'); break;
+    }
+    const note = this.el('p', fit.verdict === 'tight' || fit.verdict === 'tooBig' ? 'field-note warn' : 'field-note', text);
+    note.dataset.fairingFit = fit.verdict;
+    return note;
   }
 
   /** Fly another vehicle from the catalogue: its own sites, flight model and recovery, the Engineer settings kept. */
