@@ -6,13 +6,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { Simulation } from '../src/physics/simulation';
-import { BUILTIN_LESSONS } from '../src/lessons/catalog';
+import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS } from '../src/lessons/catalog';
 import { lessonConfig, missionConfigFromState, missionStateOf, defaultMissionState } from '../src/lessons/config';
 import { brokenLocks, flightEnded } from '../src/lessons/grader';
 import { flownMission } from '../src/lessons/progress';
 import { missionDocument, parseMissionDocument } from '../src/config/mission-file';
 import { guidanceForVehicle } from '../src/physics/defaults';
 import type { Lesson } from '../src/lessons/types';
+import { LESSON_FORMAT_VERSION, lessonFileText, lessonFileVersion, parseLessonFile } from '../src/lessons/lesson-file';
 import { copyOf } from './custom-vehicle-harness';
 import { satelliteCopyOf } from './custom-satellite-harness';
 
@@ -107,5 +108,35 @@ describe('a lesson on a satellite of the class\'s own (T01 with D06\'s inline sa
     // the same id, another rocket: a file could keep the id and change the design
     const edited = new Simulation(lessonConfig(custom.mission, (s) => { s.vehicleSpec = copyOf('falcon9', { name: 'Heavier' }); }), { headless: true });
     expect(brokenLocks(custom, edited)).toEqual(['setup.vehicle']);
+  });
+});
+
+describe('the lesson file a custom rocket or satellite is written in (T01; C2\'s open question)', () => {
+  const caseLesson = () => BUILTIN_CASE_LESSONS[0];
+
+  it('is the lowest version whose every reader flies each lesson', () => {
+    expect(LESSON_FORMAT_VERSION).toBe(3);
+    expect(lessonFileVersion([lesson('orbit-first')])).toBe(1);
+    expect(lessonFileVersion([])).toBe(1);
+    // a custom rocket (mission v2, S02): every reader of version 2 flies it
+    expect(lessonFileVersion([lesson('orbit-first'), customLesson()])).toBe(2);
+    expect(lessonFileVersion([caseLesson(), customLesson()])).toBe(2);
+    // a custom satellite (mission v3, D06): a reader older than D06 cannot
+    expect(lessonFileVersion([lesson('orbit-first'), customSatelliteLesson()])).toBe(3);
+    expect(lessonFileVersion([caseLesson(), customSatelliteLesson(), customLesson()])).toBe(3);
+  });
+
+  it('reads a version-3 file back to the same lessons and writes it again byte for byte', () => {
+    const text = lessonFileText([customSatelliteLesson(), customLesson()]);
+    const doc = JSON.parse(text);
+    expect(doc.version).toBe(3);
+    expect(doc.lessons[0].mission.version).toBe(3);
+    expect(doc.lessons[1].mission.version).toBe(2);
+    const parsed = parseLessonFile(doc, new Set());
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.lessons.map((l) => l.id)).toEqual(['custom-sat-first', 'custom-first']);
+    expect(lessonFileText(parsed.lessons)).toBe(text);
+    // and the lesson flies its own satellite
+    expect(lessonConfig((parsed.lessons[0] as Lesson).mission).satelliteSpec).toEqual(satelliteCopyOf('cubesats'));
   });
 });

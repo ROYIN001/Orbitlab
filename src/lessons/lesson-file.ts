@@ -13,6 +13,22 @@
  * so a teacher's file of flight lessons reads back byte for byte, and an
  * older copy of the app warns of a newer file rather than calling a case
  * lesson's missing mission an error.
+ *
+ * Version 3 (roadmap T01, Phase 4 map §4.1; C2's open question) is a file
+ * with a flight lesson whose mission carries a satellite of its own (mission
+ * file v3, D06). The layout is unchanged, but a reader older than D06 cannot
+ * fly such a lesson: it does not know the satellite's id and leaves the
+ * lesson out as an error in its mission. With the version raised it also says
+ * the file is newer than itself, which is the one thing its user can act on
+ * (update the app), exactly the reason version 2 was raised for case lessons.
+ * The same rule, applied to what came before, writes a lesson on a custom
+ * rocket (mission v2, S02) as version 2: every reader of version 2 (P2.5 on)
+ * flies one, while a reader of version 1 alone may predate S02. A file is
+ * written at the lowest version whose every reader flies all of its lessons
+ * (`lessonFileVersion`), so a file of catalogue flights stays version 1. The
+ * design-lesson kind (map §4.1) is planned for version 3 as well, since it
+ * ships in the same Phase 4 release; if it shipped later it would need its
+ * own number.
  */
 import { missionDocument, parseMissionDocument, MISSION_FORMAT, type MissionDocument } from '../config/mission-file';
 import { defaultMissionState } from './config';
@@ -29,9 +45,11 @@ import type { ChoiceOption, Figure, FlightSeries, Question } from './assessment/
 import { VEHICLES } from '../data/vehicles';
 
 export const LESSON_FORMAT = 'orbitlab.lessons';
-export const LESSON_FORMAT_VERSION = 2;
-/** The version a file of flight lessons alone is written as: every copy of the app reads it. */
+export const LESSON_FORMAT_VERSION = 3;
+/** The version a file of flight lessons on catalogue rockets and satellites is written as: every copy of the app reads it. */
 const FLIGHT_ONLY_VERSION = 1;
+/** The version that first read case lessons (track 6), after S02's custom rockets. */
+const CASE_VERSION = 2;
 export const LESSON_FILE_EXTENSION = '.orbitlab-lesson.json';
 
 export interface LessonFileDocument {
@@ -370,9 +388,27 @@ export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): Pa
   return { lessons, questions, issues, usable: true };
 }
 
-/** A file holding the given lessons and questions: version 1 unless it holds a case lesson. */
+/**
+ * The lowest file version whose every reader flies this lesson (see the
+ * header): 1 for a flight on catalogue parts, 2 for a case lesson or a custom
+ * rocket, 3 for a custom satellite.
+ */
+export function lessonVersion(lesson: CatalogLesson): number {
+  if (isCaseLesson(lesson)) return CASE_VERSION;
+  const m = lesson.mission.mission;
+  if (m.satelliteSpec) return LESSON_FORMAT_VERSION;
+  if (m.vehicleSpec) return CASE_VERSION;
+  return FLIGHT_ONLY_VERSION;
+}
+
+/** The version a file of these lessons is written as: the highest any of them needs. */
+export function lessonFileVersion(lessons: readonly CatalogLesson[]): number {
+  return lessons.reduce((v, l) => Math.max(v, lessonVersion(l)), FLIGHT_ONLY_VERSION);
+}
+
+/** A file holding the given lessons and questions, at the lowest version that reads them all (`lessonFileVersion`). */
 export function lessonFileText(lessons: readonly CatalogLesson[], questions: readonly Question[] = []): string {
-  const version = lessons.some(isCaseLesson) ? LESSON_FORMAT_VERSION : FLIGHT_ONLY_VERSION;
+  const version = lessonFileVersion(lessons);
   const doc: LessonFileDocument = { format: LESSON_FORMAT, version, lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}) };
   return `${JSON.stringify(doc, null, 2)}\n`;
 }
