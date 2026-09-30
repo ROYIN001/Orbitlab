@@ -201,7 +201,10 @@ export function biasMomentum(torque: number, period: number, accuracy: number): 
  *
  * Why: a torquer (a coil round a rod) pushes on the Earth's field to unload
  * the wheels without propellant. It can only push square to the field, and
- * the field is weaker high up, so the chapter takes 3–10 times this minimum.
+ * the field it meets swings at twice the orbital rate, so the full torque
+ * T = D·B is there only twice an orbit; the chapter therefore takes 3–10
+ * times this minimum (Table 19-11). B is already the field at the orbit's
+ * radius, so the height is in the minimum, not in the margin.
  */
 export function torquerDipole(torque: number, B: number): number {
   return torque / B;
