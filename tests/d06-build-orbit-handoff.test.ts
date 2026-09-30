@@ -15,7 +15,7 @@ import {
   handoffFromFlight, handoffFromState, lifetimeSpacecraft, parseHandoff, type HandoffFrame, type HandoffSpacecraft,
 } from '../src/orbit/handoff';
 import { handoffOrbit, playgroundLifetimeCraft } from '../src/orbit/playground-model';
-import { craftFromHandoff, deltaVAvailable } from '../src/orbit/budget';
+import { craftFromHandoff, craftProblem, deltaVAvailable } from '../src/orbit/budget';
 import { apsidesToAE, nodeLocalTime, orbitFacts, stateAt, sunSynchronousInclination } from '../src/orbit/kepler';
 import { tumblingBoxArea } from '../src/orbit/reentry';
 import { spacecraftFor } from '../src/physics/propagator/spacecraft';
@@ -204,6 +204,29 @@ describe('Build → Orbit: a design handed on with no launch (D06, map §2.6 a)'
     expect(high.i).toBe(60 * DEG);
   });
 
+  it('is in the orbit asked for at GEO, in the equator\'s plane, and on a highly eccentric orbit', () => {
+    // The same tolerances as the test above (1 mm, 1e-9 rad), for the same round trip; set by it, not by these cases,
+    // whose values were looked at first (worst: 1.3e-7 m at the 39 000 km apogee, 5e-16 rad).
+    const MM = 1e-3, ANGLE = 1e-9;
+    // GEO: an equatorial orbit, which orbitFromState reads through its own branch (no node to measure from)
+    const geo = handoffOrbit(handoffFromDesign({ ...imager, kind: 'comsat', orbit: { perigee: 35_786e3, apogee: 35_786e3, inclination: 0, sso: false } }, input)!);
+    const g = orbitFacts(geo, true);
+    expect(Math.abs(g.perigeeAlt - 35_786e3)).toBeLessThan(MM);
+    expect(Math.abs(g.apogeeAlt - 35_786e3)).toBeLessThan(MM);
+    expect(Math.abs(geo.i)).toBeLessThan(ANGLE);
+    // e ≈ 0.74 (500 × 39 000 km, a Molniya's size, at its 63.4°): the perigee on the ascending node (ω = 0), the
+    // satellite at the perigee (M₀ = 0), as the design has no argument of perigee
+    const heo = handoffOrbit(handoffFromDesign({ ...imager, orbit: { perigee: 500e3, apogee: 39_000e3, inclination: 63.4, sso: false, raan: 30 } }, input)!);
+    const e = orbitFacts(heo, true);
+    expect(heo.e).toBeGreaterThan(0.7);
+    expect(Math.abs(e.perigeeAlt - 500e3)).toBeLessThan(MM);
+    expect(Math.abs(e.apogeeAlt - 39_000e3)).toBeLessThan(MM);
+    expect(Math.abs(heo.i - 63.4 * DEG)).toBeLessThan(ANGLE);
+    expect(Math.abs(heo.raan - 30 * DEG)).toBeLessThan(ANGLE);
+    expect(Math.abs(Math.sin(heo.argp))).toBeLessThan(ANGLE);
+    expect(Math.abs(Math.sin(heo.m0))).toBeLessThan(ANGLE);
+  });
+
   it('gives the lifetime dialog the design\'s mass, area, C_D and C_R, and the planner its engine', () => {
     // exact: the four figures are copied from the design (the mass is dry + propellant) and must arrive unchanged
     for (const d of [imager, cubesat]) {
@@ -224,6 +247,15 @@ describe('Build → Orbit: a design handed on with no launch (D06, map §2.6 a)'
     const dv = 220 * G0 * Math.log(812.5 / 750);
     expect(Math.abs(deltaVAvailable(craft) - dv) / dv).toBeLessThan(1e-12);
     expect(craftFromHandoff(handoffFromDesign(cubesat, input)!)).toBeNull();
+    // an engine with empty tanks: handed on as an engine with nothing to burn, so the planner has a craft with no Δv
+    // (exact: ln 1 = 0), not no craft; the lifetime flies the dry mass
+    const dry = handoffFromDesign({ ...imager, propulsion: { ...imager.propulsion!, propellant: 0 } }, input)!;
+    expect(parseHandoff(roundTrip(dry))).toEqual(dry);
+    expect(dry.spacecraft.propulsion).toEqual({ thrust: 22, isp: 220, propellantMass: 0 });
+    const empty = craftFromHandoff(dry)!;
+    expect(craftProblem(empty)).toBeNull();
+    expect(deltaVAvailable(empty)).toBe(0);
+    expect(lifetimeSpacecraft(dry).mass).toBe(750);
   });
 
   it('carries any of the eight kinds, and refuses a design the hand-off cannot carry', () => {
@@ -239,6 +271,10 @@ describe('Build → Orbit: a design handed on with no launch (D06, map §2.6 a)'
     // a dry mass not above zero, though the propellant on top makes the wet mass positive: parseHandoff sees only the sum
     for (const dryMass of [0, -5]) expect(handoffFromDesign({ ...imager, bus: { ...imager.bus, dryMass } }, input), String(dryMass)).toBeNull();
     expect(handoffFromDesign({ ...imager, propulsion: { ...imager.propulsion!, thrust: 0 } }, input)).toBeNull();
+    // propellant below zero or not a number: parseHandoff refuses the tanks (and the NaN wet mass)
+    for (const propellant of [-5, Number.NaN]) {
+      expect(handoffFromDesign({ ...imager, propulsion: { ...imager.propulsion!, propellant } }, input), String(propellant)).toBeNull();
+    }
   });
 
   it('is what the Build screen hands main.ts to open in the Orbit section (tsc checks it)', () => {
