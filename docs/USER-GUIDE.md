@@ -1300,6 +1300,100 @@ used is left out, and the catalogue says what and why. Over WebMCP, `list_lesson
 `start_lesson`, `get_lesson_result` and `get_assessment_result` let an assistant open a lesson for
 the student (a case lesson too) and read how it is going — never the expected value of an answer.
 
+## 19. Historical missions
+
+Real flights, replayed on the day and at the second they flew: Sputnik 1 (1957) and Yuri
+Gagarin's Vostok 1 (1961) on the first R-7s, Alan Shepard's Mercury-Redstone 3 (1961), Apollo 11 on the Saturn V (1969), Soyuz MS-16 (the first crew on a
+Soyuz-2.1a, 2020), Crew Dragon Demo-2 (2020), Soyuz MS-25 (2024), ORBCOMM-2 (the first Falcon 9 booster to land, 2015), the
+first Angara-A5 (2014) and H-IIA with Hayabusa2 (2014). In **Watch** they are under *From
+history* in the list of launches; in **Explore** and **Engineer** open *Historical missions* at
+the top of the setup panel, which fills the settings as flown — change anything, then launch.
+
+The two R-7s of 1957 and 1961 are in the vehicle list too, after the fleet and marked
+*historical*: **R-7 Sputnik (8K71PS)**, whose core stage itself went into orbit, and **Vostok-K
+(8K72K)** with its small Blok E third stage; each carries its own spacecraft (Sputnik 1, the
+Vostok capsule) and flies from Gagarin's Start. **Mercury-Redstone** is there too, with the
+**Mercury capsule** under its escape tower, from Launch Complex 5 at the Cape. Try them on other
+orbits if you like — they are tested on the flights they made.
+
+**Saturn V** is in the list too, with **Apollo CSM and LM** on top, from LC-39A as it stood in
+1969 — the Mobile Launcher and its red umbilical tower, whose arms swing away as the rocket
+rises. Watch the S-IC's centre engine stop at 2:15 (the other four keep going to 2:42), the ring
+between the first two stages fall away half a minute after the S-II lights, the escape tower
+leave six seconds later, the S-II's centre engine stop at 7:41 and its other four throttle back
+at 8:18 as the mixture shifts, and the S-IVB put Apollo into its 186 km parking orbit. Two and a half hours later — at 100× it takes a minute
+and a half — the S-IVB relights over the Pacific for the six-minute translunar injection, and the
+camera comes in close for the transposition: the adapter's four panels spring open, Columbia backs
+away, turns round and docks with Eagle, and an hour later pulls it out of the S-IVB. Then the
+journey itself: a three-second burn of Columbia's big engine to get clear of the S-IVB, three days
+of coasting — Watch runs them at up to 5,000×, slowing for each event, so the whole way takes a few
+minutes — the one midcourse correction on the second day, the moment at 61 hours 40 minutes when
+Mission Control switched its displays to the Moon, and the Moon itself growing until it fills the
+view. Behind the Moon, out of touch with the Earth, the six-minute burn into lunar orbit — watched at 5×
+— and two revolutions later the seventeen seconds that round the orbit off, 100 by 120 km. A day on,
+Eagle undocks: from then the camera follows the lunar module alone, its legs out, with Columbia drifting
+off beside it and then out of sight. Half a revolution later the descent engine drops Eagle's orbit to
+15 km, and on the next pass, 480 km short of Tranquility Base, it lights for the twelve and a half
+minutes down: the braking phase at 5× (the engine at full thrust until, six minutes in, the computer
+throttles it back), the approach from high gate at 2×, and from 400 ft the landing live — down at about
+a metre a second, as Armstrong flew it, the ground coming up with its craters and the LM's shadow on
+them. The contact light comes on 1.7 m up, and the engine stops a second and a half later. The
+twenty-one hours on the Moon pass in seconds; then the ascent stage lifts off the descent stage — the
+camera looks down past it at the descent stage it leaves at Tranquility Base — straight up, then over into seven minutes of
+climbing to orbit, and the rendezvous follows as it was flown: four burns of the lunar module's small
+thrusters over three hours, the first to bring it 28 km under Columbia, the second to keep it there, the
+third, when Columbia stands 26.6° above its horizon, to meet it; then braking in steps, station-keeping 30 m
+off, and docking, watched from behind Eagle with Columbia ahead of it. Two hours later the ascent stage is let go and Columbia backs away from it. Behind
+the Moon again, the service engine fires for two and a half minutes — watched at 5× — for home. Two and a
+half days of coasting follow, with one small correction on the service module's thrusters (Columbia's was
+1.5 m/s; the model, aimed more closely, needs a tenth of that or none). A quarter of an hour before the
+air the command module leaves the service module, which drifts off and later breaks up, and turns its
+heat shield forward; it meets the air 122 km up at 11 km/s over the Pacific, before dawn. The entry, at
+2×, wrapped in the glow of the air it heats: the lift turned upward through
+the first plunge, at 6½ g, then rolled left and right to fly the 2,400 km to the
+recovery area; at 7.3 km the forward heat shield goes and the two drogues open, at 3 km the three
+orange-and-white mains, and after five minutes under them — at 5× — Columbia splashes down within a few
+kilometres of where it really did, and the end card sums up the flight. At Watch's own pace the eight
+days take about forty minutes. The phase line under the clock
+shows the lunar orbit's height, during the descent the program (P63, P64, P66), the height, the distance
+to the site and the speeds, during the rendezvous the range to Columbia, the rate it closes at and the
+height between the two orbits, on the way home the time to the air and the angle it will be met at, and
+during the entry the height, the speed, the bank angle and the load; the line of the real flight beside
+it gives the flown times. The model lights the descent
+45 s before Eagle did and lifts off 43 s earlier, both for the same reason — its orbit keeps its shape
+where the real one was pulled about by the Moon's uneven gravity — and from each keeps the flown timeline
+to a few minutes.
+
+Mercury-Redstone 3 never went into orbit: the Redstone burns for two and a half minutes and
+throws Freedom 7 on a 15-minute arc, 187 km up and 487 km down range. Ten seconds after the
+engine stops the capsule separates, turns its heat shield forward, fires its three retro-rockets
+over the top (a test: on this flight they were not needed to come down), drops the empty pack,
+and falls back into the air at 11 g; the drogue opens at 6.4 km, the big main parachute at 3.2 km,
+and it lands in the Atlantic. Watch follows it all the way to the water. In Explore and Engineer
+the setup keeps it a *suborbital* flight — the perigee is thousands of kilometres below the ground,
+which is how a short arc like this is written as an orbit.
+
+Because the date is the real one, the light is too: ORBCOMM-2 lifts off in the dark, as it did.
+For the two Soyuz flights the space station's orbit is the one measured that day, so the launch
+reaches its plane and the spacecraft flies on to dock as its crew did. Demo-2 flies Crew Dragon
+the way it really goes up: on top of Falcon 9 with no fairing, the capsule itself the rocket's
+nose; the payload list offers **Crew Dragon** with Falcon 9 only, and the flight ends when it
+separates. Where the model differs
+from the flight — a later Falcon 9 standing in for the 2015 one, the Hayabusa2 flight ending in
+its parking orbit — is listed in [PHYSICS.md §13](PHYSICS.md).
+
+Each historical flight is set beside the real one. In **Watch**, when the rocket does something
+the real flight's timeline records — the strap-ons falling away, the main engine cutting off, the
+booster landing, the spacecraft docking — the caption adds a line such as *Real flight: MECO at
+T+02:33 (here T+02:13)*, and the end card has a table of every such event, the model's time
+against the real one, and the orbit the payload was left in. In **Explore** and **Engineer** the
+same table is under the mission result, and the telemetry charts mark the real flight's events in
+orange beside the model's grey ones. A time marked ≈ is a planned, rounded or second-hand figure.
+The table only appears while the settings are the historical flight's own: change the payload,
+the date or the vehicle and it is a different flight. The model flies its own guidance, not the
+real pitch programme, so the times differ by seconds to a minute; why, flight by flight, is in
+[PHYSICS.md §13](PHYSICS.md).
+
 ## Glossary
 
 Vehicle, propulsion, orbital-mechanics and operations terminology, in English, Russian and

@@ -8,6 +8,7 @@
  * design wave can style the narration block however it likes, and so the same
  * data can drive a screen reader or a future caption track.
  */
+import { APOLLO_AT_MOON } from '../physics/sim/apollo';
 import type { VisualFrame } from '../physics/frame';
 import type { DescentPhase, SimEvent } from '../physics/simulation';
 import type { EscapePhase } from '../physics/rigid/escape';
@@ -94,6 +95,65 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
         detailKey = `phase.detail.rv.${frame.rendezvous.phase}`;
         break;
       }
+      if (frame.apollo) {
+        // C01: Apollo from its parking orbit
+        titleKey = `hud.apollo.${frame.apollo.phase}`;
+        detailKey = `phase.detail.apollo.${frame.apollo.phase}`;
+        params.ap = fmtAlt(frame.elements.apoapsisAlt);
+        params.pe = fmtAlt(frame.elements.periapsisAlt);
+        params.tgo = fmtClockShort(Math.max(0, frame.apollo.tliTime - frame.t));
+        params.speed = Math.round(frame.speed).toString();
+        params.alt = Math.round(frame.altitude / 1000).toString();
+        // on the way to the Moon: how far off it is and how fast it comes, the closest approach and when
+        const ap = frame.apollo;
+        params.moon = Math.round(ap.moon.alt / 1000).toString();
+        params.mspeed = Math.round(ap.moon.speed).toString();
+        params.peri = ap.perilune ? Math.round(ap.perilune.alt / 1000).toString() : '—';
+        params.arr = ap.perilune ? fmtClockShort(Math.max(0, ap.perilune.t - frame.t)) : '—';
+        params.dv = ap.mcc ? ap.mcc.dv.toFixed(1) : '—';
+        // coming down: the program flying it, the height over the ground (m), the distance to go (km), the speeds
+        if (ap.descent) {
+          const d = ap.descent;
+          params.program = d.phase === 'braking' ? 'P63' : d.phase === 'approach' ? 'P64' : 'P66';
+          params.galt = Math.round(Math.max(0, d.alt)).toString();
+          params.range = (d.range / 1000).toFixed(1);
+          params.vh = Math.round(d.vh).toString();
+          params.vz = Math.round(-d.vz).toString();
+          params.thr = Math.round(d.throttle * 100).toString();
+        }
+        if (ap.landed) { params.lat = ap.landed.lat.toFixed(3); params.lon = ap.landed.lon.toFixed(3); }
+        // back to Columbia: the range to it (km), the rate it closes at (m/s), the height between the orbits (km), its elevation
+        if (ap.rendezvous) {
+          const r = ap.rendezvous;
+          params.rng = r.range >= 10e3 ? Math.round(r.range / 1000).toString() : (r.range / 1000).toFixed(r.range >= 1e3 ? 1 : 2);
+          params.rdot = r.closing.toFixed(1);
+          params.dh = (r.dh / 1000).toFixed(1);
+          params.el = r.elevation.toFixed(1);
+          params.rngm = Math.round(r.range).toString();
+        }
+        // home: the entry ahead, the entry itself, the parachutes
+        if (ap.interfaceAhead) {
+          params.fpa = ap.interfaceAhead.fpa.toFixed(2);
+          params.eta = fmtClockShort(Math.max(0, ap.interfaceAhead.t - frame.t));
+        }
+        if (ap.entry) {
+          params.bank = Math.round(Math.abs(ap.entry.bank)).toString();
+          params.side = ap.entry.bank >= 0 ? t('phase.detail.apollo.right') : t('phase.detail.apollo.left');
+          params.load = ap.entry.load.toFixed(1);
+          params.maxg = ap.entry.maxLoad.toFixed(1);
+          params.ekm = Math.round(frame.altitude / 1000).toString();
+          params.em = Math.round(frame.altitude).toString();
+          params.espeed = Math.round(frame.airspeed).toString();
+        }
+        if (ap.splash) { params.slat = Math.abs(ap.splash.lat).toFixed(2); params.slon = Math.abs(ap.splash.lon).toFixed(2); }
+        // in lunar orbit, the orbit is the Moon's: above the landing site's radius, against its equator
+        if (ap.lunar) {
+          params.ap = Math.round(ap.lunar.ap / 1000).toString();
+          params.pe = Math.round(ap.lunar.pe / 1000).toString();
+          params.inc = ap.lunar.inc.toFixed(1);
+        }
+        break;
+      }
       titleKey = 'hud.status.orbit';
       detailKey = frame.payloadSeparated ? 'phase.detail.deployed' : 'phase.detail.orbit';
       params.ap = fmtAlt(frame.elements.apoapsisAlt);
@@ -107,17 +167,20 @@ export function phaseInfo(frame: VisualFrame | null, events: readonly SimEvent[]
       params.speed = frame.airspeed.toFixed(0);
       break;
     case 'abort':
-      titleKey = frame.abort ? ABORT_PHASE_KEYS[frame.abort.phase] : 'hud.status.abort';
-      detailKey = 'phase.detail.abort';
+      // C01: a capsule flying home from a suborbital flight is no abort
+      titleKey = frame.abort?.kind === 'return' && frame.abort.phase === 'fall' ? 'hud.capsule.fall'
+        : frame.abort ? ABORT_PHASE_KEYS[frame.abort.phase] : 'hud.status.abort';
+      detailKey = frame.abort?.kind === 'return' ? 'phase.detail.capsule' : 'phase.detail.abort';
       params.alt = (frame.altitude / 1000).toFixed(1);
       params.speed = frame.airspeed.toFixed(0);
       params.g = frame.gLoad.toFixed(1);
       break;
     case 'landed':
       if (frame.abort) {
-        // the crew's descent module, down after an abort
-        titleKey = 'hud.abort.landed';
-        detailKey = 'phase.detail.abortLanded';
+        // the crew's descent module, down after an abort — or a capsule home as planned (C01)
+        const planned = frame.abort.kind === 'return';
+        titleKey = planned ? 'hud.capsule.landed' : 'hud.abort.landed';
+        detailKey = planned ? 'phase.detail.capsuleLanded' : 'phase.detail.abortLanded';
         params.km = (frame.downrange / 1000).toFixed(1);
         params.g = frame.abort.maxG.toFixed(1);
         break;
@@ -186,6 +249,13 @@ export function hasNextBurn(frame: VisualFrame): boolean {
   return frame.nextBurnTime > 0 && frame.nextBurnTime > frame.t;
 }
 
+/** A countdown as h:mm:ss (m:ss under an hour). */
+function fmtClockShort(s: number): string {
+  const total = Math.round(s), h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sec = total % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
 function fmtAlt(m: number): string {
   return isFinite(m) ? (m / 1000).toFixed(0) : '∞';
 }
@@ -200,3 +270,25 @@ export function eventLabel(key: string, params?: Record<string, string | number>
   const s = t(short);
   return s === short ? t(key, params) : s;
 }
+
+/**
+ * The status the HUD and the narration print: the simulation's own, save for
+ * Apollo on its way (C01), which is not "in orbit" between the Earth and the
+ * Moon, in lunar orbit, coming down to the Moon or on it.
+ */
+export function statusKey(frame: VisualFrame): string {
+  const ap = frame.apollo;
+  if (ap?.phase === 'splashdown') return 'hud.status.splashdown';
+  if (ap && frame.status === 'orbit') {
+    if (ap.phase === 'landed') return 'hud.status.onMoon';
+    if (ap.phase === 'descent') return 'hud.status.lunarDescent';
+    if (ap.phase === 'ascent') return 'hud.status.lunarAscent';
+    if (ap.phase === 'transearth' || ap.phase === 'returnMidcourse') return 'hud.status.homeward';
+    if (ap.phase === 'cmSeparated' || ap.phase === 'entry') return 'hud.status.entry';
+    if (ap.phase === 'drogues' || ap.phase === 'mains') return 'hud.status.descent';
+    if (APOLLO_AT_MOON.includes(ap.phase) && ap.phase !== 'approach') return 'hud.status.lunarOrbit';
+    if (ap.phase !== 'parking' && ap.phase !== 'tli') return 'hud.status.translunar';
+  }
+  return `hud.status.${frame.status}`;
+}
+

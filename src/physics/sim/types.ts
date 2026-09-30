@@ -119,6 +119,12 @@ export interface Debris {
     burning: boolean; landed: boolean;
     /** propellant held back for the landing burn, kg */
     landingReserve: number;
+    /**
+     * Airspeed a drone-ship stage's entry burn ends at, m/s: set when the ship
+     * is stationed, from the propellant the stage carries above its landing
+     * reserve (`DebrisManager.planReturn`). Absent, the fixed defaults.
+     */
+    entryTargetSpeed?: number;
     /** the landing burn has begun (its bang-bang throttling keeps the plume lit) */
     landingStarted?: boolean;
     /**
@@ -219,6 +225,11 @@ export interface SimState {
 
 /** A launch abort as the frame carries it (src/physics/sim/abort.ts). */
 export interface AbortState extends EscapeStatus {
+  /**
+   * An abort (G06), or a capsule separated on a suborbital flight and flown
+   * home as planned (C01: Mercury-Redstone 3). Absent: an abort.
+   */
+  kind?: 'abort' | 'return';
   /** event key of what set it off */
   cause: string;
   /** where and when the rocket was lost, for the drawing; absent for a commanded abort that leaves it flying */

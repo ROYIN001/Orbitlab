@@ -54,9 +54,9 @@ export interface SiteExtra extends LaunchSiteSpec {
   maxInclination: number;
   /**
    * The site's launch pads, where the drawing tells them apart (V05); the
-   * first is the one a mission flies from unless it names another. Only the
-   * drawing reads them: every pad is launched from the site's own point above,
-   * so the choice changes no trajectory.
+   * first is the one a mission is drawn at unless it names another. A mission
+   * that names its pad (`padId`) flies from the pad's own point (C01); one that
+   * does not, from the site's point above.
    */
   pads?: readonly LaunchPad[];
 }
@@ -92,7 +92,13 @@ export const SITES: SiteExtra[] = [
     ] },
   { id: 'plesetsk', name: 'Plesetsk Cosmodrome', country: 'RU', latitude: 62.925, longitude: 40.578, altitude: 100, minInclination: 62.8, maxInclination: 102.6, azimuthMin: 330, azimuthMax: 90, tz: 'UTC+3', descendingForPolar: false },
   { id: 'vostochny', name: 'Vostochny Cosmodrome', country: 'RU', latitude: 51.884, longitude: 128.334, altitude: 250, minInclination: 51.7, maxInclination: 100.9, azimuthMin: 340, azimuthMax: 95, tz: 'UTC+9', descendingForPolar: false },
-  { id: 'cape', name: 'Cape Canaveral SLC-40', country: 'US', latitude: 28.562, longitude: -80.577, altitude: 3, minInclination: 28.5, maxInclination: 57.6, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false },
+  { id: 'cape', name: 'Cape Canaveral SLC-40', country: 'US', latitude: 28.562, longitude: -80.577, altitude: 3, minInclination: 28.5, maxInclination: 57.6, azimuthMin: 35, azimuthMax: 120, tz: 'UTC-5', descendingForPolar: false,
+    // C01: Launch Complex 5, where Mercury-Redstone 3 flew from (en.wikipedia,
+    // Cape Canaveral Launch Complex 5; GCAT), 14 km south of the site's point.
+    pads: [
+      { id: 'slc40', name: 'SLC-40', latitude: 28.562, longitude: -80.577 },
+      { id: 'lc5', name: 'LC-5', latitude: 28.43944, longitude: -80.57333 },
+    ] },
   // Kennedy LC-39A, 6 km north of SLC-40 on the same coast and the same range
   // corridor. The pad stands on a hardstand some 15 m above the marsh; that
   // mound is drawn (src/render/pads.ts) but the site keeps the ground level,

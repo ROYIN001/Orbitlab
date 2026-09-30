@@ -101,6 +101,11 @@ export interface StageLivery {
    * belly-first ship presents to the flow.
    */
   heatShield?: number;
+  /**
+   * The Saturn V's roll pattern (C01): opposite quarters of the circumference
+   * painted `color` over [at, at + h] of the stage, so the roll reads on film.
+   */
+  quarters?: BandSpec[];
 }
 
 const FLAG_BY_COUNTRY: Record<string, FlagId> = {
@@ -109,6 +114,14 @@ const FLAG_BY_COUNTRY: Record<string, FlagId> = {
 
 /** Per-vehicle overrides, keyed `${vehicleId}/${stageId}`. */
 const OVERRIDES: Record<string, Partial<StageLivery>> = {
+  // Saturn V (C01): white with the black roll pattern low on the S-IC and on the
+  // S-IVB's aft skirt, black bands at the S-IC's intertank and forward skirt, and
+  // "USA" down the S-IC
+  'saturnv506/sic506': { base: '#f2f2ef', text: 'USA', textColor: '#151517', textAt: 0.62, flag: 'us',
+    bands: [{ at: 0.5, h: 0.035, color: '#121214' }, { at: 0.94, h: 0.06, color: '#121214' }],
+    quarters: [{ at: 0.08, h: 0.3, color: '#121214' }] },
+  'saturnv506/sii506': { base: '#f2f2ef', bands: [{ at: 0.965, h: 0.035, color: '#121214' }] },
+  'saturnv506/sivb506': { base: '#f2f2ef', bands: [], quarters: [{ at: 0.0, h: 0.2, color: '#121214' }] },
   'falcon9/s1': { base: '#f0f0f2', text: 'FALCON 9', textColor: '#1b1b1f', textAt: 0.52, soot: true, bands: [{ at: 0.985, h: 0.03, color: '#151519' }] },
   'falcon9/s2': { base: '#f0f0f2', bands: [{ at: 0.02, h: 0.08, color: '#151519' }] },
   'falconheavy/core': { base: '#f0f0f2', text: 'FALCON HEAVY', textColor: '#1b1b1f', textAt: 0.5, soot: true, bands: [{ at: 0.985, h: 0.03, color: '#151519' }] },
@@ -316,6 +329,14 @@ export function bodyTexture(liv: StageLivery, diameter: number, length: number, 
     const y1 = yOf(Math.min(1, b.at + b.h));
     const y2 = yOf(Math.max(0, b.at));
     g.fillRect(0, y1, W, Math.max(2, y2 - y1));
+  }
+
+  for (const q of liv.quarters ?? []) {
+    g.fillStyle = q.color;
+    const y1 = yOf(Math.min(1, q.at + q.h));
+    const y2 = yOf(Math.max(0, q.at));
+    g.fillRect(0, y1, W * 0.25, Math.max(2, y2 - y1));
+    g.fillRect(W * 0.5, y1, W * 0.25, Math.max(2, y2 - y1));
   }
 
   if (liv.soot) {

@@ -12,6 +12,7 @@
  */
 import type { CameraMode } from '../render/cameras';
 import { t } from '../i18n';
+import { BUILD } from '../build-info';
 import rigidDossierUrl from '../../docs/SIXDOF-VEHICLE-DATA.md?url';
 import { getNotation, QUANTITIES, symbolNode, type Quantity } from './notation';
 import './notation.css';
@@ -226,6 +227,7 @@ export class PhysicsDialog extends Modal {
     );
     b.append(ul);
     b.append(el('p', 'small', t('dlg.physics.credits')));
+    b.append(el('p', 'small', t('dlg.physics.build', { commit: BUILD.commit, version: BUILD.version })));
   }
 }
 

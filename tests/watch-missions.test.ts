@@ -9,18 +9,19 @@
  * corridor.
  */
 import { describe, expect, it } from 'vitest';
-import { FEATURED_WATCH_MISSION, WATCH_MISSIONS, daylightLaunchTime, localSolarHour, watchMissionById, watchMissionSettings } from '../src/ui/watch-missions';
+import { FEATURED_WATCH_MISSION, WATCH_MISSIONS, daylightLaunchTime, isHistorical, localSolarHour, watchMissionById, watchMissionSettings } from '../src/ui/watch-missions';
 import { validateConfigInput } from '../src/config/validation';
 import { Simulation } from '../src/physics/simulation';
-import { vehicleById } from '../src/data/vehicles';
+import { HISTORICAL_VEHICLES, vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { orbitById } from '../src/data/orbits';
 import { guidanceForVehicle } from '../src/physics/defaults';
-import { azimuthAllowedFor, resolveTarget } from '../src/physics/mission';
+import { ascentInclinationFor, azimuthAllowedFor, launchWindows, resolveTarget } from '../src/physics/mission';
 import { defaultDynamics } from '../src/physics/rigid/config';
 import { reachedOrbit } from '../src/ui/watch-logic';
 import { captureFrame } from '../src/physics/frame';
 import { en } from '../src/i18n/en';
+import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
 
 const FROM = [new Date('2026-09-22T03:00:00Z'), new Date('2027-03-14T17:30:00Z')];
 
@@ -36,7 +37,7 @@ describe('viewer missions', () => {
     }
   });
 
-  it.each(WATCH_MISSIONS.map((m) => m.id))('%s builds valid daylight settings inside the range corridor', (id) => {
+  it.each(WATCH_MISSIONS.filter((m) => !isHistorical(m)).map((m) => m.id))('%s builds valid daylight settings inside the range corridor', (id) => {
     for (const from of FROM) {
       const s = watchMissionSettings(id, from);
       expect(validateConfigInput(s)).toEqual([]);
@@ -48,6 +49,29 @@ describe('viewer missions', () => {
       const target = resolveTarget(s.orbit, site, s.launchTime);
       expect(azimuthAllowedFor(site, target.inclination)).toBe(true);
     }
+  });
+
+  // C01: a historical flight launches at its own second, whatever the day
+  it.each(WATCH_MISSIONS.filter(isHistorical).map((m) => m.id))('%s launches on its real date inside the range corridor', (id) => {
+    const m = watchMissionById(id)!;
+    for (const from of FROM) {
+      const s = watchMissionSettings(id, from);
+      expect(validateConfigInput(s)).toEqual([]);
+      expect(s.launchTime.toISOString()).toBe(new Date(m.launchTime!).toISOString());
+      const site = siteById(s.siteId);
+      // the ascent's plane: Angara-A5 turns to the equator only at apogee
+      expect(azimuthAllowedFor(site, ascentInclinationFor(resolveTarget(s.orbit, site, s.launchTime), site).inc)).toBe(true);
+    }
+  });
+
+  // The station's node on those days is the measured one (issRaanAt's TLE
+  // anchors), so the model's own launch window falls on the real liftoff —
+  // within the three minutes its single head start (`T_PLANE`, 200 s) differs
+  // from the flown one; the ascent's steering takes up the rest.
+  it.each(WATCH_MISSIONS.filter((m) => isHistorical(m) && m.orbitId === 'iss').map((m) => m.id))('%s: a launch window of the ISS plane opens within three minutes of the real liftoff', (id) => {
+    const s = watchMissionSettings(id);
+    const [w] = launchWindows(s.orbit, siteById(s.siteId), new Date(s.launchTime.getTime() - 3600e3), 1);
+    expect(Math.abs(w.time.getTime() - s.launchTime.getTime()) / 1000).toBeLessThan(180);
   });
 
   it('launches a free-node orbit straight away when it is already day at the pad', () => {
@@ -64,7 +88,7 @@ describe('viewer missions', () => {
     const s = watchMissionSettings(id, FROM[0]);
     const dynamics = defaultDynamics(s.vehicleId);
     const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit,
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
       launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
       guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
       failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,
@@ -80,7 +104,7 @@ describe('viewer missions', () => {
     const s = watchMissionSettings(id, FROM[0]);
     const dynamics = defaultDynamics(s.vehicleId);
     const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit,
+      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
       launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
       guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
       failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,
@@ -109,6 +133,23 @@ describe('viewer missions', () => {
     for (const d of home()) {
       expect(d.outcome, `${d.name} → ${d.recovery!.target!.id}`).toBe('landed');
       expect(d.recovery!.missDistance!).toBeLessThan(d.recovery!.target!.radius);
+    }
+    // C01: a historical flight's ascent happens as flown, give or take the
+    // model's own guidance — within a minute, or 30 % of the time flown
+    const flown = watchMissionById(id)!.flown;
+    for (const row of flown ? compareEvents(flown, sim.events) : []) {
+      if (['evt.maxQ', 'evt.boosterSep', 'evt.fairingSep', 'evt.meco'].includes(row.key) || (row.key === 'evt.stageSep' && row.n === 1)) {
+        expect(row.sim, `${id} ${row.key}`).not.toBeNull();
+      }
+      if (row.delta !== null) expect(Math.abs(row.delta), `${id} ${row.key} ${row.n}`).toBeLessThan(Math.max(60, 0.3 * row.real));
+    }
+    // …and the vehicles of historical flights, flown only for them, reach the flown orbit
+    if (flown?.orbit && HISTORICAL_VEHICLES.some((v) => v.id === s.vehicleId)) {
+      // the reported orbit, or where the stage is now if the loop stopped before separation
+      const el = sim.state.elements;
+      const orbit = simPayloadOrbit(sim.events) ?? { perigee: el.periapsisAlt / 1000, apogee: el.apoapsisAlt / 1000 };
+      expect(Math.abs(orbit.perigee - flown.orbit.perigee), id).toBeLessThan(25);
+      expect(Math.abs(orbit.apogee - flown.orbit.apogee) / flown.orbit.apogee, id).toBeLessThan(0.15);
     }
   });
 });
