@@ -44,10 +44,19 @@
  * area is the tumbling estimate (src/design/satellite-area.ts), the
  * template's, as the lifetime search was run with it (`lifetimeRequest`);
  * the disposal Δv where a burn is needed is a bracket, from the Δv to lower
- * the perigee to the altitude that comes down in time as a circle (too
- * little: an ellipse with that perigee lasts longer) to the Δv for Hull's
- * controlled re-entry, perigee 50 km (enough); the verdict uses the upper
- * end, and the D06 bench, which flies the chosen design, settles it.
+ * the perigee to the altitude whose circle lasts the life plus 25 years (too
+ * little, twice over: the burn comes at the end of the life, when the orbit
+ * has 25 years left, not the life plus 25, and an ellipse with that perigee
+ * lasts longer than the circle) to the Δv for Hull's controlled re-entry,
+ * perigee 50 km (enough); the verdict uses the upper end, and the D06 bench,
+ * which flies the chosen design, settles it.
+ *
+ * WHAT A ROW DOES NOT SAY. Its revisit by day is for the cycle from the
+ * epoch (`TradeOptions.jd0`): at a place far from the equator the Sun's height
+ * at the local time of the passes changes with the season (none at all in a
+ * polar night), so a row that meets the revisit at the equinox may not in
+ * winter. Its contact is every station asked, heard together, while a design
+ * names one station (`designFromRow`).
  *
  * The chosen row becomes a `SatelliteDesign` (`designFromRow`), opened in the
  * D06 bench, where every figure is worked out again by the D06 cores: D07
@@ -115,7 +124,7 @@ export interface GroundReceiver {
 }
 
 export interface TradeOptions {
-  /** the epoch, Julian date (UTC): the node's local time is set on it, and the Sun and the ground turn from it */
+  /** the epoch, Julian date (UTC): the node's local time is set on it, and the Sun and the ground turn from it; the revisit by day is for its season */
   jd0: number;
   /** the cycles to try; default every cycle of 1 to `maxDays` days (`repeatCycles`) */
   cycles?: RepeatCycle[];
@@ -352,10 +361,13 @@ export function tradeTable(req: MissionRequirements, template: SatelliteDesign, 
  * asked, or the row's inclination and node), the life asked, the camera's
  * focal length and aperture for the GSD, the array and the battery sized for
  * the worst eclipse, and the transmitter and rate that bring the day's data
- * down at the margin (the template's when no data is asked), over the first
- * station asked. The mass, the bus and
- * everything else stay the template's (an estimate, labelled so). Null when
- * the row cannot bring the data down at all (no contact).
+ * down at the margin (the template's when no data is asked). The rate is
+ * sized for the contact of every station asked, heard together, but the
+ * design names only the first (`SatelliteDesign.comms.station`), so with
+ * several stations the D06 bench counts less contact than the row did. The
+ * mass, the bus and everything else stay the template's (an estimate,
+ * labelled so). Null when the row cannot bring the data down at all (no
+ * contact).
  */
 export function designFromRow(template: SatelliteDesign, row: TradeRow, req: MissionRequirements): SatelliteDesign | null {
   if (!template.payload) throw new RangeError('the template carries no camera');

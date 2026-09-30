@@ -13,7 +13,7 @@
  * between looks are what is reported — the longest and the mean — never the
  * "days to cover" a grid argument gives (docs/VALIDATION.md, O04 notes: a
  * repeat grid says when every place has been seen once, not how long any one
- * place waits). tests/coverage.test.ts holds it to Landsat's and Sentinel's
+ * place waits). tests/d07-coverage.test.ts holds it to Landsat's and Sentinel's
  * published revisits, to the repeat-grid bound, and to a second, slower brute
  * force with no refinement.
  *
@@ -136,10 +136,14 @@ function withinReach(across: number, reach: Reach): boolean {
  * could be within reach — the sampled angle no more than the reach plus what
  * the point below can move in one step — is refined by golden section to a
  * millisecond, and the place's signed distance from the track is read there,
- * where it is square to the track. The walk runs one step past each end of
- * the window, so an approach at an edge is found; a pass the step could skip
- * would have to be over within one step, which at a minute is shorter than
- * any pass of a satellite above the air.
+ * where it is square to the track. The time of a look is good to some
+ * hundredths of a second, not the millisecond: the Earth's turn is read from
+ * a Julian date, which holds the time to 40 µs, so the ground moves under the
+ * track in steps of up to 19 m, and for a place far off the track those steps
+ * outweigh how little the distance changes near its closest. The walk runs
+ * one step past each end of the window, so an approach at an edge is found;
+ * a pass the step could skip would have to be over within one step, which at
+ * a minute is shorter than any pass of a satellite above the air.
  */
 export function revisitGaps(
   o: Orbit, target: GroundStation, reach: Reach, jd0: number, days: number, daylightOnly: boolean, opts: RevisitOptions = {},
