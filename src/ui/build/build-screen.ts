@@ -33,7 +33,7 @@
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
-import { route, type AppLevel, type AppRoute } from '../app-mode';
+import { route, type AppLevel, type AppPage, type AppRoute } from '../app-mode';
 import { stageName } from '../names';
 import { BUILD_TOUR, tourFigures, type TourFigure, type TourStat } from '../../design/build-tour';
 import type { DrawnPart } from '../../design/exploded';
@@ -50,6 +50,7 @@ import { EngineerLevel } from './engineer-level';
 import { SatelliteWorkspace } from './satellite-workspace';
 import { SatelliteLevel } from './satellite-level';
 import { SatelliteBench } from './satellite-bench';
+import { RequirementsPage } from './requirements-page';
 import type { MissionDocument } from '../../config/mission-file';
 import type { OrbitHandoff } from '../../orbit/handoff';
 import type { LaunchMissionNow } from './satellite-fly';
@@ -163,6 +164,10 @@ export class BuildScreen {
   private satWorkspace: SatelliteWorkspace | null = null;
   private satLevel: SatelliteLevel | null = null;
   private satBench: SatelliteBench | null = null;
+  /** D07: the page of a level with an address of its own (the requirements page), and the row last opened from it on the bench */
+  private page: AppPage | null = null;
+  private reqPage: RequirementsPage | null = null;
+  private reqOrigin: { designId: string; cycle: string; altitude: number } | null = null;
 
   constructor(private readonly root: HTMLElement, private readonly host: BuildScreenHost) {
     root.classList.add('build-screen');
@@ -188,10 +193,11 @@ export class BuildScreen {
     this.ro?.observe(this.draw);
   }
 
-  /** Show the section at a level. */
-  show(level: AppLevel): void {
-    const entering = !this.visible || level !== this.level;
+  /** Show the section at a level, or at a page of it (D07: `requirements`, at the Engineer level). */
+  show(level: AppLevel, page?: AppPage): void {
+    const entering = !this.visible || level !== this.level || (page ?? null) !== this.page;
     this.level = level;
+    this.page = page ?? null;
     this.visible = true;
     if (entering) {
       this.render();
@@ -206,6 +212,7 @@ export class BuildScreen {
     this.engineer?.hide();
     this.satLevel?.hide();
     this.satBench?.hide();
+    this.reqPage?.hide();
     if (this.anim) cancelAnimationFrame(this.anim);
     this.anim = 0;
     this.explode = this.view === 'exploded' ? 1 : 0;
@@ -322,7 +329,15 @@ export class BuildScreen {
     if (this.engineer) this.engineer.root.hidden = !rocket;
     if (this.satLevel) this.satLevel.root.hidden = rocket;
     if (this.satBench) this.satBench.root.hidden = rocket;
+    // D07: the requirements page takes the Engineer level's place, the switch and the benches with it
+    const requirements = !watch && !explore && this.page === 'requirements';
+    this.engineerBar.hidden = requirements;
+    if (!requirements) {
+      this.reqPage?.hide();
+      if (this.reqPage) this.reqPage.root.hidden = true;
+    }
     if (watch) this.renderWatch();
+    else if (requirements) this.showRequirements();
     else {
       this.renderCraftBar(explore ? this.exploreBar : this.engineerBar);
       if (explore) {
@@ -347,8 +362,7 @@ export class BuildScreen {
 
   private setCraft(c: BuildCraft): void {
     if (c === this.craft) return;
-    this.craft = c;
-    try { localStorage.setItem(CRAFT_STORE, c); } catch { /* storage blocked: kept for this visit */ }
+    this.rememberCraft(c);
     if (this.visible) {
       this.render();
       const bar = this.level === 'explore' ? this.exploreBar : this.engineerBar;
@@ -359,6 +373,34 @@ export class BuildScreen {
   /** The Launch section's mission now, for "Fly it"; without a host that gives one, Falcon 9 from the Cape now. */
   private launchMission(): LaunchMissionNow {
     return this.host.launchMission?.() ?? { vehicleId: 'falcon9', siteId: 'cape', launchTime: this.host.launchTime?.() ?? new Date() };
+  }
+
+  private rememberCraft(c: BuildCraft): void {
+    this.craft = c;
+    try { localStorage.setItem(CRAFT_STORE, c); } catch { /* storage blocked: kept for this visit */ }
+  }
+
+  /**
+   * D07: the requirements page (`#/build/engineer/requirements`), made the
+   * first time it is shown. It is the satellite side's, so leaving it for
+   * the bench leaves the Engineer level on the satellite; a row it opens is
+   * put on the shared workspace and shown on the bench.
+   */
+  private showRequirements(): void {
+    this.engineer?.hide();
+    if (this.engineer) this.engineer.root.hidden = true;
+    this.satBench?.hide();
+    if (this.satBench) this.satBench.root.hidden = true;
+    if (!this.reqPage) {
+      this.reqPage = new RequirementsPage(this.workspace(), {
+        toBench: () => { this.rememberCraft('satellite'); this.host.go(route('build', 'engineer')); },
+        opened: (origin) => { this.reqOrigin = origin; this.rememberCraft('satellite'); this.host.go(route('build', 'engineer')); },
+      });
+      this.engineerRoot.append(this.reqPage.root);
+    }
+    this.reqPage.root.hidden = false;
+    this.reqPage.show();
+    this.root.setAttribute('aria-labelledby', this.reqPage.titleId);
   }
 
   /** The one satellite both levels work on, made the first time either is wanted. */
@@ -400,6 +442,9 @@ export class BuildScreen {
         toExplore: () => { this.setCraft('satellite'); this.host.go(route('build', 'explore')); },
         launchMission: () => this.launchMission(),
         fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
+        // D07: "Start from requirements", and where a design opened from a row came from
+        toRequirements: () => this.host.go(route('build', 'engineer', 'requirements')),
+        origin: (designId) => (this.reqOrigin?.designId === designId ? this.reqOrigin : null),
       });
       this.engineerRoot.append(this.satBench.root);
     }

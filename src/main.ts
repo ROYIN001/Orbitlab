@@ -682,7 +682,7 @@ class App {
     const orbit = next.section === 'orbit';
     const build = next.section === 'build';
     document.getElementById('build-screen')!.hidden = !build;
-    if (build) this.buildScreen.show(next.mode as AppLevel);
+    if (build) this.buildScreen.show(next.mode as AppLevel, next.page); // D07: a page of the level (#/build/engineer/requirements)
     else this.buildScreen.hide();
     document.getElementById('orbit-playground')!.hidden = !orbit;
     if (orbit) this.playground.show(next.mode as AppLevel);

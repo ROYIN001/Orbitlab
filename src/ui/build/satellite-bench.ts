@@ -52,6 +52,10 @@ import './satellite.css';
 export interface SatelliteBenchHost extends SatelliteFlyHost {
   /** open the Explore level's satellite designer, where the design is saved and sent to Orbit */
   toExplore(): void;
+  /** D07: open the requirements page ("Start from requirements", `#/build/engineer/requirements`) */
+  toRequirements?(): void;
+  /** D07: the requirements row the design `designId` was opened from, if it was */
+  origin?(designId: string): { cycle: string; altitude: number } | null;
 }
 
 type BenchTab = 'power' | 'propulsion' | 'attitude' | 'radio' | 'camera' | 'lifetime';
@@ -182,9 +186,17 @@ export class SatelliteBench {
     text.append(eyebrow, title, el('p', 'bs-lead', t('build.sat.bench.lead')));
     const side = el('div', 'bsb-design');
     side.append(el('p', 'bsb-name', t('build.sat.bench.design', { name: this.ws.design.name.trim() || '—' })));
+    // D07: a design opened from a row of the requirements page says which; any design can start from requirements
+    const from = this.host.origin?.(this.ws.design.id);
+    if (from) side.append(el('p', 'bx-note small', t('build.req.origin', { cycle: from.cycle, h: sayFig({ value: from.altitude, unit: 'm' }) })));
     const toExplore = button('watch-btn', t('build.sat.bench.toExplore'), () => this.host.toExplore());
     toExplore.dataset.k = `${P}toExplore`;
     side.append(toExplore);
+    if (this.host.toRequirements) {
+      const toReq = button('watch-btn', t('build.req.start'), () => this.host.toRequirements?.());
+      toReq.dataset.k = `${P}toRequirements`;
+      side.append(toReq);
+    }
     const level = select(`${P}level`, DESIGN_ACTIVITY_LEVELS.map((l) => ({ value: l, label: t(LEVEL_KEY[l]) })), this.ws.activityLevel,
       (v) => this.ws.setLevel(v as EcssLevel));
     side.append(field(t('build.sat.bench.level'), level, 'bx-field bsb-level'), designDateField(this.ws, P));
