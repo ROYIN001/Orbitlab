@@ -57,6 +57,12 @@ export interface LessonProgress {
    * until the student clears them (`clearRevealed`).
    */
   revealed?: Record<string, number[]>;
+  /**
+   * How many times "Show the answers" was pressed in this lesson. Clearing the
+   * values shown (`clearRevealed`) keeps this count, so a teacher can still see
+   * that answers were shown even when a later attempt passed unaided.
+   */
+  reveals?: number;
 }
 
 export interface ProgressData {
@@ -147,11 +153,14 @@ export function recordGrade(data: ProgressData, record: LessonRecord & { lessonI
 export function recordRevealed(data: ProgressData, lessonId: string, shown: Readonly<Record<string, number>>): void {
   const p = lessonProgress(data, lessonId);
   const kept = (p.revealed ??= {});
+  let any = false;
   for (const [id, v] of Object.entries(shown)) {
     if (!Number.isFinite(v)) continue;
+    any = true;
     const list = (kept[id] ??= []);
     if (!list.includes(v)) list.push(v);
   }
+  if (any) p.reveals = (p.reveals ?? 0) + 1;
 }
 
 /**

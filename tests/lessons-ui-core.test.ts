@@ -117,11 +117,16 @@ describe('progress and the results file', () => {
     kept.attempts = 3;
     kept.hintsShown = 2;
     recordRevealed(p, 'orbit-first', { period: 94.6, speed: 7.61 });
+    recordRevealed(p, 'orbit-first', { period: 94.6 });
+    recordRevealed(p, 'orbit-first', { speed: Number.NaN }); // nothing finite shown: not a reveal
+    expect(kept.reveals).toBe(2);
     const before = JSON.parse(JSON.stringify(kept));
     clearRevealed(p, 'orbit-first');
     const { revealed, ...rest } = before;
     expect(revealed).toEqual({ period: [94.6], speed: [7.61] });
     expect(p.lessons['orbit-first']).toEqual(rest);
+    // the count of reveals survives clearing, so the teacher can still see the answers were shown
+    expect(p.lessons['orbit-first'].reveals).toBe(2);
     // a lesson never opened is not created by clearing it
     clearRevealed(p, 'never-opened');
     expect(p.lessons).not.toHaveProperty('never-opened');
