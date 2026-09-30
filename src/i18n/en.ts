@@ -589,6 +589,7 @@ export const en: Record<string, string> = {
   'dlg.physics.shortcutsText': 'Space plays or pauses (shift+space acts on the live flight while you are replaying). Keys 1–4 select the cameras. “,” and “.” step the time warp. ← → seek ±5 s on the timeline, shift ±30 s; Home returns to the start and End to the live head. “H” cycles the telemetry card on the picture: compact, full, hidden. “D” docks that card into the telemetry panel, where it shows every readout, and floats it again; the floating card is dragged by its header strip and resized from its bottom-right corner, and with the header focused the arrow keys move it (shift for a bigger step) while alt+arrows resize it. Escape closes a dialog.',
   'dlg.physics.sources': 'Sources & credits',
   'dlg.physics.credits': 'Earth textures: the planet textures from the three.js examples (NASA Blue Marble derivatives). 3-D rendering: three.js (MIT). Vehicle and site figures use public guides and summaries; estimated six-DOF parameters are identified in the dossier.',
+  'dlg.physics.build': 'Build {commit} · version {version}',
   // telemetry panel
   'tel.eyebrow': 'FLIGHT TELEMETRY',
   'tel.range': 'Chart range',

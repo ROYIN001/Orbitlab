@@ -1,11 +1,29 @@
 import { defineConfig, type Plugin, type ResolvedConfig } from 'vite';
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { injectPrecacheManifest, precacheManifest } from './src/pwa/manifest.ts';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
+
+/**
+ * The build stamp (plan S5), compiled into the page as `__ORBITLAB_BUILD__`
+ * (src/build-info.ts): package.json's version and the commit's short SHA,
+ * "dev" when git cannot say. No build time here — it goes to build-info.json
+ * only — so two builds of one commit give the same bundle.
+ */
+const buildStamp = {
+  version: (JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string }).version,
+  commit: ((): string => {
+    try {
+      return execSync('git rev-parse --short HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() || 'dev';
+    } catch {
+      return 'dev';
+    }
+  })(),
+};
 
 /**
  * Orbitlab as an installable app that works offline (roadmap U03): the build
@@ -41,6 +59,30 @@ function pwaPlugin(): Plugin {
       }
       sw.code = injectPrecacheManifest(sw.code, precacheManifest(entries));
     } },
+    // Once the files are on disk (a build with `write: false` never gets
+    // here): build-info.json — the stamp, the build time and the date of each
+    // data snapshot — and SHA256SUMS over every file, for `sha256sum -c`.
+    // Neither is in the precache manifest: the build time would change sw.js
+    // on every rebuild of the same commit.
+    writeBundle: { order: 'post', handler() {
+      const outDir = resolve(config.root, config.build.outDir);
+      const asOf = (name: string): string | null => {
+        try { return (JSON.parse(readFileSync(join(outDir, 'data', name), 'utf8')) as { asOf?: string }).asOf ?? null; } catch { return null; }
+      };
+      const epoch = Number(process.env.SOURCE_DATE_EPOCH);
+      const info = {
+        ...buildStamp,
+        builtAt: new Date(Number.isFinite(epoch) && epoch > 0 ? epoch * 1000 : Date.now()).toISOString(),
+        data: { spaceWeather: asOf('space-weather.json'), satellites: asOf('satellites.json'), earthOrientation: asOf('earth-orientation.json') },
+      };
+      writeFileSync(join(outDir, 'build-info.json'), `${JSON.stringify(info, null, 2)}\n`);
+      const sums = files(outDir)
+        .map((path) => relative(outDir, path).split(sep).join('/'))
+        .filter((path) => path !== 'SHA256SUMS')
+        .sort()
+        .map((path) => `${createHash('sha256').update(readFileSync(join(outDir, path))).digest('hex')}  ${path}\n`);
+      writeFileSync(join(outDir, 'SHA256SUMS'), sums.join(''));
+    } },
   };
 }
 
@@ -49,6 +91,7 @@ function pwaPlugin(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [pwaPlugin()],
+  define: { __ORBITLAB_BUILD__: JSON.stringify(buildStamp) },
   build: {
     target: 'es2022',
     sourcemap: false,
