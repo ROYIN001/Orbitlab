@@ -35,7 +35,7 @@ import type { SatelliteDesign } from '../../design/satellite-spec';
 import { isDesignOf, type DesignRecord } from '../../design/design-store';
 import type { OrbitHandoff } from '../../orbit/handoff';
 import { button, el, num } from '../orbit/dom';
-import { ExploreStore } from './explore-store';
+import { ExploreStore, STORE_TEXTS } from './explore-store';
 import { field, select } from './explore-level';
 import { camera, engine, menu, numberField, refreshControls, sso } from './satellite-controls';
 import { SECTION_KEY, sectionRows, type Section } from './satellite-figures';
@@ -93,7 +93,7 @@ export class SatelliteLevel {
       open: (record) => this.open(record),
       forgotten: (recordId) => { if (this.ws.recordId === recordId) this.ws.saved(null); },
       other: (record, message) => { if (isDesignOf(record, 'vehicle')) this.host.openRocket(record, message); },
-    }, undefined, 'satellite', { invalid: 'build.sat.store.invalid', fileInvalid: 'build.sat.store.fileInvalid' });
+    }, undefined, 'satellite', STORE_TEXTS.satellite);
     this.glance.setAttribute('aria-labelledby', 'bsat-glance-title');
     this.controls.setAttribute('aria-labelledby', 'bsat-controls-title');
     this.checks.setAttribute('aria-labelledby', 'bsat-checks-title');

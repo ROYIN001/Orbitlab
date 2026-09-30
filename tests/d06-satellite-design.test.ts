@@ -70,7 +70,8 @@ describe('the satellite checker', () => {
   });
 
   it('takes only the kinds, stations, mounts, regulators and modes there are', () => {
-    expect(SATELLITE_DESIGN_KINDS).toEqual(['comsat', 'earthObs', 'weather', 'navigation', 'science', 'cubesats', 'starlink', 'crew']);
+    expect(SATELLITE_DESIGN_KINDS).toEqual(['comsat', 'earthObs', 'weather', 'navigation', 'science', 'cubesats', 'starlink', 'crew',
+      'crewDragon', 'ps1', 'vostok', 'mercury', 'apollo']);
     expect(paths(edit((d) => { d.kind = 'rocket'; }))).toEqual(['kind']);
     expect(paths(edit((d) => { d.kind = 'toString'; }))).toEqual(['kind']);
     expect(paths(edit((d) => { d.comms.station = 'mars'; }))).toEqual(['comms.station']);

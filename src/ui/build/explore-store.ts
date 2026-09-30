@@ -50,7 +50,12 @@ export interface StoreTexts {
   /** a file of this kind whose design is not sound */
   fileInvalid: string;
 }
-const ROCKET_TEXTS: StoreTexts = { invalid: 'build.ex.store.invalid', fileInvalid: 'build.ex.store.fileInvalid' };
+/** Each kind's sentences (the rocket designer's and the satellite designer's, D06). */
+export const STORE_TEXTS: Readonly<Record<DesignKind, StoreTexts>> = {
+  vehicle: { invalid: 'build.ex.store.invalid', fileInvalid: 'build.ex.store.fileInvalid' },
+  satellite: { invalid: 'build.sat.store.invalid', fileInvalid: 'build.sat.store.fileInvalid' },
+};
+const ROCKET_TEXTS = STORE_TEXTS.vehicle;
 /** What a file of each kind is called when it is refused, whichever designer it was imported in. */
 const FILE_INVALID: Record<DesignKind, string> = { vehicle: 'build.ex.store.fileInvalid', satellite: 'build.sat.store.fileInvalid' };
 

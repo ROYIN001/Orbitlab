@@ -43,9 +43,14 @@ export interface SatelliteDesignIssue {
   message: string;
 }
 
-/** Every kind a design may have: the catalogue's eight, the ones the S03 hand-off carries (a record, so tsc keeps it whole). */
+/**
+ * Every kind a design may have: the catalogue's, the ones the S03 hand-off
+ * carries — the eight classes and C01's historical spacecraft (a record, so
+ * tsc keeps it whole).
+ */
 const KINDS: Readonly<Record<SatelliteKind, true>> = {
   comsat: true, earthObs: true, weather: true, navigation: true, science: true, cubesats: true, starlink: true, crew: true,
+  crewDragon: true, ps1: true, vostok: true, mercury: true, apollo: true,
 };
 export const SATELLITE_DESIGN_KINDS = Object.keys(KINDS) as SatelliteKind[];
 

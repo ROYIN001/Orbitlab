@@ -1245,7 +1245,8 @@ export class SetupPanel {
     if (!spec.sites.includes(s.siteId)) { s.siteId = spec.sites[0]; this.siteReassigned = true; }
     if (!spec.recoverable) s.boosterRecovery = false;
     // a payload this vehicle does not carry (Crew Dragon off Falcon 9) gives way to the generic crew ship
-    if (!carries(v, satelliteById(s.satelliteId))) { s.satelliteId = 'crew'; s.payloadMass = satelliteById('crew').mass; }
+    // (a custom satellite, D06, is its own spec: it goes too when it gives way)
+    if (!carries(v, missionSatellite(s))) { s.satelliteId = 'crew'; s.satelliteSpec = undefined; s.payloadMass = satelliteById('crew').mass; }
     s.recoveryPlan = undefined;
     s.padId = undefined;
     // only a ship that flies itself home can take a suborbital target

@@ -21,13 +21,20 @@
 import type { SatelliteKind, SatelliteSpec, VehicleSpec } from '../types';
 import { ORBIT_PRESETS } from '../data/orbits';
 import { isCatalogueSatellite, SATELLITES } from '../data/satellites';
+import { ALL_VEHICLES } from '../data/vehicles';
 import { PART_ID_PATTERN, PART_LIMITS, SpecChecker, describeSpecValue, isSpecRecord, type VehicleSpecIssue } from './vehicle-spec';
 
 /** A problem with a custom satellite: where in the spec (`propulsion.isp`), and what. */
 export type SatelliteSpecIssue = VehicleSpecIssue;
 
-/** The eight satellite kinds (`SatelliteKind`, src/types.ts): what draws it and what the hand-off carries. */
-export const SATELLITE_KIND_IDS = ['comsat', 'earthObs', 'weather', 'navigation', 'science', 'cubesats', 'starlink', 'crew'] as const satisfies readonly SatelliteKind[];
+/**
+ * The satellite kinds (`SatelliteKind`, src/types.ts): what draws it and what
+ * the hand-off carries — the eight classes, and the historical spacecraft C01
+ * added (Crew Dragon, PS-1, Vostok, Mercury, Apollo), whose copies a file may
+ * carry too.
+ */
+export const SATELLITE_KIND_IDS = ['comsat', 'earthObs', 'weather', 'navigation', 'science', 'cubesats', 'starlink', 'crew',
+  'crewDragon', 'ps1', 'vostok', 'mercury', 'apollo'] as const satisfies readonly SatelliteKind[];
 // every kind is in the list: a kind added to the type and not here fails to compile
 const allKinds: Exclude<SatelliteKind, (typeof SATELLITE_KIND_IDS)[number]> extends never ? true : never = true;
 void allKinds;
@@ -72,7 +79,8 @@ export const SATELLITE_LIMITS = {
   cr: [1, 2],
 } as const;
 
-const SATELLITE_FIELDS = ['id', 'kind', 'name', 'mass', 'typicalOrbit', 'description', 'crewed', 'propulsion', 'size', 'area', 'cd', 'cr', 'derivedFrom'];
+const SATELLITE_FIELDS = ['id', 'kind', 'name', 'mass', 'typicalOrbit', 'description', 'crewed', 'propulsion', 'size', 'area', 'cd', 'cr', 'derivedFrom',
+  'exposed', 'carriers', 'descent', 'staysAttached'];
 
 /**
  * Everything wrong with a custom satellite, or an empty list. `raw` is
@@ -104,6 +112,33 @@ export function satelliteSpecProblems(raw: unknown): SatelliteSpecIssue[] {
   // A crew is what a launch abort saves (G06) and what the onboard view and
   // the Soyuz MS drawing are for: only a copy of a crewed satellite has one.
   if (raw.crewed === true && !origin?.crewed) c.add('crewed', 'only a satellite derived from a crewed catalogue one carries a crew');
+  // C01's flight behaviours — flown on top with no fairing (`exposed`), home
+  // on its own parachutes (`descent`), riding the last stage into orbit
+  // (`staysAttached`) — each changes how the launch itself is flown, and each
+  // is modelled for its own spacecraft only: a copy keeps its original's, and
+  // no other satellite takes one on.
+  if (raw.exposed !== undefined) {
+    const x = raw.exposed;
+    if (!origin?.exposed) c.add('exposed', 'only a satellite derived from one flown without a fairing is flown without one');
+    else if (!isSpecRecord(x)) c.add('exposed', `must be a diameter, length and nose length (got ${describeSpecValue(x)})`);
+    else {
+      c.known(x, 'exposed', ['diameter', 'length', 'noseLength']);
+      c.number(x, 'diameter', 'exposed', 0, SATELLITE_LIMITS.width, { exclusiveMin: true });
+      const length = c.number(x, 'length', 'exposed', 0, SATELLITE_LIMITS.height, { exclusiveMin: true });
+      const nose = c.number(x, 'noseLength', 'exposed', 0, SATELLITE_LIMITS.height, { exclusiveMin: true });
+      if (length !== undefined && nose !== undefined && nose > length) c.add('exposed.noseLength', `must not be longer than the whole (${nose} > ${length})`);
+    }
+  }
+  if (raw.descent !== undefined && (raw.descent !== 'mercury' || origin?.descent !== raw.descent)) {
+    c.add('descent', `only a satellite derived from one that comes home on its own parachutes keeps that descent (got ${JSON.stringify(raw.descent)})`);
+  }
+  c.boolean(raw, 'staysAttached', '');
+  if (raw.staysAttached === true && !origin?.staysAttached) c.add('staysAttached', 'only a satellite derived from one that rides the last stage into orbit does so');
+  if (raw.carriers !== undefined) {
+    const known = new Set(ALL_VEHICLES.map((v) => v.id));
+    if (!Array.isArray(raw.carriers) || !raw.carriers.length || raw.carriers.length > known.size) c.add('carriers', 'must list the vehicles that carry it');
+    else raw.carriers.forEach((v, i) => { if (typeof v !== 'string' || !known.has(v)) c.add(`carriers[${i}]`, `must be a vehicle's id (got ${JSON.stringify(v)})`); });
+  }
 
   if (raw.propulsion !== undefined) {
     const p = raw.propulsion;
@@ -163,7 +198,9 @@ export const FAIRING_ENVELOPE = { diameter: 0.85, length: 0.8 } as const;
  *   not fit, and the launcher's user's guide would say;
  * - `tooBig`: wider or longer than the shell itself;
  * - `noFairing`: the vehicle carries its payload in a bay of its own
- *   (`fairing: null`, Starship and the Saturn V), which nothing here models;
+ *   (`fairing: null`, Starship and the Saturn V), which nothing here models,
+ *   or the satellite rides on top with no fairing at all (`exposed`, C01:
+ *   Crew Dragon, Mercury, Apollo 11 — `openTopVehicle`, src/data/vehicles.ts);
  * - `noSize`: the satellite gives no size.
  */
 export type FairingFitVerdict = 'fits' | 'tight' | 'tooBig' | 'noFairing' | 'noSize';
@@ -179,9 +216,9 @@ export interface FairingFit {
 }
 
 /** Whether a satellite fits the vehicle's fairing, as an estimate (roadmap D06, Phase 4 map §2.6 c). */
-export function fairingFit(vehicle: Pick<VehicleSpec, 'fairing'>, satellite: Pick<SatelliteSpec, 'size'>): FairingFit {
+export function fairingFit(vehicle: Pick<VehicleSpec, 'fairing'>, satellite: Pick<SatelliteSpec, 'size' | 'exposed'>): FairingFit {
   const f = vehicle.fairing;
-  if (!f) return { verdict: 'noFairing' };
+  if (!f || satellite.exposed) return { verdict: 'noFairing' };
   const shell = { diameter: f.diameter, length: f.length - (f.adapter ?? 0) };
   const envelope = { diameter: shell.diameter * FAIRING_ENVELOPE.diameter, length: shell.length * FAIRING_ENVELOPE.length };
   const z = satellite.size;
