@@ -1,0 +1,34 @@
+{
+  "format": "orbitlab.mission",
+  "version": 2,
+  "mission": {
+    "vehicleId": "falcon9",
+    "satelliteId": "cubesats",
+    "siteId": "cape",
+    "orbitId": "leo",
+    "orbit": {
+      "id": "leo",
+      "name": "Low Earth orbit (500 km)",
+      "perigee": 500000,
+      "apogee": 500000,
+      "inclination": "site",
+      "argPerigee": 0,
+      "raanMode": "free",
+      "description": "Generic circular LEO at the minimum inclination of the launch site."
+    },
+    "launchTime": "2026-09-29T19:47:18.006Z",
+    "payloadMass": 1000,
+    "guidanceOverrides": {},
+    "failure": {
+      "mode": "none",
+      "time": 60,
+      "stage": 0
+    },
+    "boosterRecovery": false,
+    "dynamics": {
+      "model": "sixDof",
+      "wind": "calm",
+      "seed": 20260919
+    }
+  }
+}

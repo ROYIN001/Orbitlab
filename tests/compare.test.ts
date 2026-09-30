@@ -1,7 +1,7 @@
 /** Comparing two flights (roadmap U02): the reference kept of a flight, its file, its path and the table. */
 import { describe, expect, it } from 'vitest';
 import {
-  REFERENCE_PATH_POINTS, REFERENCE_SAMPLES, alignTrajectory, compareFlights, flightFileName, flightFileText,
+  REFERENCE_FIELDS, REFERENCE_PATH_POINTS, REFERENCE_SAMPLES, alignTrajectory, compareFlights, flightFileName, flightFileText,
   parseFlightFile, referenceFromFlight, referenceWindow, type ReferenceFlight,
 } from '../src/replay/reference';
 import { missionDocument, type MissionState } from '../src/config/mission-file';
@@ -76,6 +76,43 @@ describe('reference flight (U02)', () => {
       JSON.stringify({ ...ok, flight: { ...ok.flight, mission: { format: 'other' } } }),
     ];
     for (const text of bad) expect(parseFlightFile(text), text.slice(0, 40)).toBeNull();
+  });
+
+  const numericFields = [
+    'version', 'flight.launchJd', 'flight.events.0.t',
+    ...['t', 'x', 'y', 'z'].map((field) => `flight.path.${field}.0`),
+    ...REFERENCE_FIELDS.map((field) => `flight.telemetry.0.${field}`),
+  ];
+  it.each(numericFields.flatMap((field) => ['1e309', '-1e309'].map((literal) => [field, literal] as const)))(
+    'rejects numeric overflow in %s (%s)', (field, literal) => {
+      const raw = JSON.parse(flightFileText(reference(3)));
+      const keys = field.split('.');
+      const parent = keys.slice(0, -1).reduce((value, key) => value[key], raw);
+      parent[keys[keys.length - 1]] = 'numeric-overflow-marker';
+      // Infinity is not a JSON token, but a syntactically valid exponent can
+      // overflow while parsing. Stringifying Infinity would hide it as null.
+      const text = JSON.stringify(raw).replace('"numeric-overflow-marker"', literal);
+      expect(parseFlightFile(text)).toBeNull();
+    },
+  );
+
+  it('still accepts finite scientific notation, negative path coordinates and explicit telemetry gaps', () => {
+    const ref = reference(3);
+    ref.path.x[0] = 6.4e6;
+    ref.path.y[0] = -6.4e6;
+    ref.telemetry[1].ap = NaN;
+    const raw = JSON.parse(flightFileText(ref));
+    raw.flight.path.x[0] = 'positive-exponent-marker';
+    raw.flight.path.y[0] = 'negative-exponent-marker';
+    const text = JSON.stringify(raw)
+      .replace('"positive-exponent-marker"', '6.4e6')
+      .replace('"negative-exponent-marker"', '-6.4e6');
+    const back = parseFlightFile(text);
+    expect(back).not.toBeNull();
+    expect(back!.path).toEqual(ref.path);
+    expect(back!.events).toEqual(ref.events);
+    expect(back!.telemetry[1].ap).toBeNaN();
+    expect(back!.telemetry[2]).toEqual(ref.telemetry[2]);
   });
 
   it('turns its path to the launch on screen: same ground, any day', () => {

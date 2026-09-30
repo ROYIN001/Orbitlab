@@ -1,0 +1,1133 @@
+{
+  "workflowRun": 36628517818,
+  "jobId": 109611544609,
+  "url": "https://github.com/ROYIN001/Orbitlab/actions/runs/36628517818",
+  "sourceHead": "3eff70baf71f0484570466c9b1a0869bd795c7de",
+  "checkedOutMerge": "e1a4bfac2a62c95eb4a703e18549187b9b21d0b5",
+  "node": "v22.23.2",
+  "vitest": "5.0.1",
+  "totalTests": 9188,
+  "passed": 9187,
+  "failed": 1,
+  "totalFiles": 187,
+  "durationSeconds": 915.34,
+  "files": [
+    {"file":"tests/propagator.test.ts","tests":15,"failed":1,"durationMs":4926},
+    {
+      "file": "tests/assessment.test.ts",
+      "tests": 31,
+      "failedText": null,
+      "durationMs": 132
+    },
+    {
+      "file": "tests/mcp.test.ts",
+      "tests": 85,
+      "failedText": null,
+      "durationMs": 166
+    },
+    {
+      "file": "tests/replay.test.ts",
+      "tests": 31,
+      "failedText": null,
+      "durationMs": 431
+    },
+    {
+      "file": "tests/case-lessons.test.ts",
+      "tests": 23,
+      "failedText": null,
+      "durationMs": 797
+    },
+    {
+      "file": "tests/design-explore-model.test.ts",
+      "tests": 19,
+      "failedText": null,
+      "durationMs": 138
+    },
+    {
+      "file": "tests/data-consistency.test.ts",
+      "tests": 17,
+      "failedText": null,
+      "durationMs": 50
+    },
+    {
+      "file": "tests/physics-core.test.ts",
+      "tests": 32,
+      "failedText": null,
+      "durationMs": 1495
+    },
+    {
+      "file": "tests/i18n.test.ts",
+      "tests": 17,
+      "failedText": null,
+      "durationMs": 109
+    },
+    {
+      "file": "tests/hud-layout.test.ts",
+      "tests": 24,
+      "failedText": null,
+      "durationMs": 17
+    },
+    {
+      "file": "tests/panel-verdict.test.ts",
+      "tests": 19,
+      "failedText": null,
+      "durationMs": 7510
+    },
+    {
+      "file": "tests/design-remix.test.ts",
+      "tests": 13,
+      "failedText": null,
+      "durationMs": 1562
+    },
+    {
+      "file": "tests/control-faults.test.ts",
+      "tests": 27,
+      "failedText": null,
+      "durationMs": 25441
+    },
+    {
+      "file": "tests/design-optimal-staging.test.ts",
+      "tests": 15,
+      "failedText": null,
+      "durationMs": 486
+    },
+    {
+      "file": "tests/rigid-runtime.test.ts",
+      "tests": 21,
+      "failedText": null,
+      "durationMs": 5666
+    },
+    {
+      "file": "tests/custom-vehicle-rigid.test.ts",
+      "tests": 15,
+      "failedText": null,
+      "durationMs": 16510
+    },
+    {
+      "file": "tests/watch-logic.test.ts",
+      "tests": 19,
+      "failedText": null,
+      "durationMs": 32
+    },
+    {
+      "file": "tests/range-safety.test.ts",
+      "tests": 11,
+      "failedText": null,
+      "durationMs": 414
+    },
+    {
+      "file": "tests/monte-carlo.test.ts",
+      "tests": 18,
+      "failedText": null,
+      "durationMs": 9402
+    },
+    {
+      "file": "tests/rigid-actuators-control-aero.test.ts",
+      "tests": 23,
+      "failedText": null,
+      "durationMs": 926
+    },
+    {
+      "file": "tests/rigid-replay.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 1558
+    },
+    {
+      "file": "tests/rigid-core.test.ts",
+      "tests": 13,
+      "failedText": null,
+      "durationMs": 672
+    },
+    {
+      "file": "tests/design-static-fire.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 455
+    },
+    {
+      "file": "tests/fleet-defaults.test.ts",
+      "tests": 164,
+      "failedText": null,
+      "durationMs": 49409
+    },
+    {
+      "file": "tests/rendezvous.test.ts",
+      "tests": 22,
+      "failedText": null,
+      "durationMs": 2039
+    },
+    {
+      "file": "tests/maneuvers.test.ts",
+      "tests": 20,
+      "failedText": null,
+      "durationMs": 170
+    },
+    {
+      "file": "tests/design-warnings.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 2304
+    },
+    {
+      "file": "tests/rigid-debris.test.ts",
+      "tests": 26,
+      "failedText": null,
+      "durationMs": 18427
+    },
+    {
+      "file": "tests/linear-loop.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 15062
+    },
+    {
+      "file": "tests/result-slot.test.ts",
+      "tests": 17,
+      "failedText": null,
+      "durationMs": 442
+    },
+    {
+      "file": "tests/rigid-fleet.test.ts",
+      "tests": 101,
+      "failedText": null,
+      "durationMs": 24579
+    },
+    {
+      "file": "tests/mission-file.test.ts",
+      "tests": 38,
+      "failedText": null,
+      "durationMs": 91
+    },
+    {
+      "file": "tests/design-review-model.test.ts",
+      "tests": 13,
+      "failedText": null,
+      "durationMs": 992
+    },
+    {
+      "file": "tests/lessons.test.ts",
+      "tests": 23,
+      "failedText": null,
+      "durationMs": 7782
+    },
+    {
+      "file": "tests/design-budget.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 33
+    },
+    {
+      "file": "tests/sgp4.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 44
+    },
+    {
+      "file": "tests/rigid-flex.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 232
+    },
+    {
+      "file": "tests/mission.test.ts",
+      "tests": 15,
+      "failedText": null,
+      "durationMs": 50838
+    },
+    {
+      "file": "tests/orbit-playground.test.ts",
+      "tests": 20,
+      "failedText": null,
+      "durationMs": 34
+    },
+    {
+      "file": "tests/activity.test.ts",
+      "tests": 27,
+      "failedText": null,
+      "durationMs": 3429
+    },
+    {
+      "file": "tests/parts.test.ts",
+      "tests": 13,
+      "failedText": null,
+      "durationMs": 22
+    },
+    {
+      "file": "tests/recovery-return.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 11849
+    },
+    {
+      "file": "tests/design-assemble.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 89
+    },
+    {
+      "file": "tests/design-readiness.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 1828
+    },
+    {
+      "file": "tests/sensors.test.ts",
+      "tests": 30,
+      "failedText": null,
+      "durationMs": 167
+    },
+    {
+      "file": "tests/pwa.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 1563
+    },
+    {
+      "file": "tests/rigid-mass.test.ts",
+      "tests": 19,
+      "failedText": null,
+      "durationMs": 59
+    },
+    {
+      "file": "tests/ballistic.test.ts",
+      "tests": 22,
+      "failedText": null,
+      "durationMs": 139358
+    },
+    {
+      "file": "tests/design-test-stand.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 272
+    },
+    {
+      "file": "tests/conjunction.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 803
+    },
+    {
+      "file": "tests/kepler.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 72
+    },
+    {
+      "file": "tests/lessons-ui-core.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 50
+    },
+    {
+      "file": "tests/custom-vehicle.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 7285
+    },
+    {
+      "file": "tests/explore.test.ts",
+      "tests": 19,
+      "failedText": null,
+      "durationMs": 726
+    },
+    {
+      "file": "tests/mission-result.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 19
+    },
+    {
+      "file": "tests/control-tuning.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 31299
+    },
+    {
+      "file": "tests/data-provider.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 116
+    },
+    {
+      "file": "tests/session.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 22009
+    },
+    {
+      "file": "tests/explicit-guidance.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 25825
+    },
+    {
+      "file": "tests/lessons-round2.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 24595
+    },
+    {
+      "file": "tests/attitude-loop.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 4265
+    },
+    {
+      "file": "tests/design-tunnel.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 78
+    },
+    {
+      "file": "tests/worksheets.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 375
+    },
+    {
+      "file": "tests/budget.test.ts",
+      "tests": 16,
+      "failedText": null,
+      "durationMs": 16
+    },
+    {
+      "file": "tests/applications.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 13
+    },
+    {
+      "file": "tests/satellite-catalogue.test.ts",
+      "tests": 11,
+      "failedText": null,
+      "durationMs": 114
+    },
+    {
+      "file": "tests/rigid-staging-integration.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 91
+    },
+    {
+      "file": "tests/workspace-mission.test.ts",
+      "tests": 15,
+      "failedText": null,
+      "durationMs": 23
+    },
+    {
+      "file": "tests/design-sizing.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 399
+    },
+    {
+      "file": "tests/screening-filter.test.ts",
+      "tests": 26,
+      "failedText": null,
+      "durationMs": 28220
+    },
+    {
+      "file": "tests/navigation.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 54961
+    },
+    {
+      "file": "tests/reference-frames.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 456
+    },
+    {
+      "file": "tests/design-store.test.ts",
+      "tests": 11,
+      "failedText": null,
+      "durationMs": 22
+    },
+    {
+      "file": "tests/rigid-orbit-prediction.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 81
+    },
+    {
+      "file": "tests/csv.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 8
+    },
+    {
+      "file": "tests/design-exploded.test.ts",
+      "tests": 150,
+      "failedText": null,
+      "durationMs": 63
+    },
+    {
+      "file": "tests/design-sizing-model.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 255
+    },
+    {
+      "file": "tests/rigid-render.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 27
+    },
+    {
+      "file": "tests/design-staging-model.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 45
+    },
+    {
+      "file": "tests/design-ratings.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 6673
+    },
+    {
+      "file": "tests/tune-job.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 17
+    },
+    {
+      "file": "tests/config-validation.test.ts",
+      "tests": 34,
+      "failedText": null,
+      "durationMs": 17
+    },
+    {
+      "file": "tests/ship-descent.test.ts",
+      "tests": 11,
+      "failedText": null,
+      "durationMs": 9269
+    },
+    {
+      "file": "tests/case-worksheets.test.ts",
+      "tests": 22,
+      "failedText": null,
+      "durationMs": 595
+    },
+    {
+      "file": "tests/launch-abort.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 5672
+    },
+    {
+      "file": "tests/design-tunnel-view.test.ts",
+      "tests": 13,
+      "failedText": null,
+      "durationMs": 99
+    },
+    {
+      "file": "tests/orbit-handoff.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 54
+    },
+    {
+      "file": "tests/compare.test.ts",
+      "tests": 48,
+      "failedText": null,
+      "durationMs": 190
+    },
+    {
+      "file": "tests/rigid-aero-tables.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 24
+    },
+    {
+      "file": "tests/design-warning-text.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 29
+    },
+    {
+      "file": "tests/rigid-sensitivity.test.ts",
+      "tests": 67,
+      "failedText": null,
+      "durationMs": 285991
+    },
+    {
+      "file": "tests/ascent.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 9244
+    },
+    {
+      "file": "tests/parts-engine-masses.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 17
+    },
+    {
+      "file": "tests/design-part-card.test.ts",
+      "tests": 28,
+      "failedText": null,
+      "durationMs": 64
+    },
+    {
+      "file": "tests/report.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 59
+    },
+    {
+      "file": "tests/rigid-orbit-planning.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 423
+    },
+    {
+      "file": "tests/rigid-partition.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 26
+    },
+    {
+      "file": "tests/passes.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 236
+    },
+    {
+      "file": "tests/audio.test.ts",
+      "tests": 14,
+      "failedText": null,
+      "durationMs": 105
+    },
+    {
+      "file": "tests/rigid-flow-derivative.test.ts",
+      "tests": 2,
+      "failedText": null,
+      "durationMs": 536
+    },
+    {
+      "file": "tests/omm.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 21
+    },
+    {
+      "file": "tests/design-build-tour.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 27
+    },
+    {
+      "file": "tests/notation.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 36
+    },
+    {
+      "file": "tests/equations.test.ts",
+      "tests": 11,
+      "failedText": null,
+      "durationMs": 10155
+    },
+    {
+      "file": "tests/engine-transients.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 95
+    },
+    {
+      "file": "tests/app-mode.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 10
+    },
+    {
+      "file": "tests/soundtrack-panel.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 47
+    },
+    {
+      "file": "tests/rigid-rcs-inventory.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 18571
+    },
+    {
+      "file": "tests/timeaxis.test.ts",
+      "tests": 11,
+      "failedText": null,
+      "durationMs": 19
+    },
+    {
+      "file": "tests/design-handoff.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 45
+    },
+    {
+      "file": "tests/build-catalogue-matrix.test.ts",
+      "tests": 6542,
+      "failedText": null,
+      "durationMs": 92236
+    },
+    {
+      "file": "tests/home-logic.test.ts",
+      "tests": 13,
+      "failedText": null,
+      "durationMs": 16
+    },
+    {
+      "file": "tests/dispersed-flight.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 7217
+    },
+    {
+      "file": "tests/msis.test.ts",
+      "tests": 19,
+      "failedText": null,
+      "durationMs": 132
+    },
+    {
+      "file": "tests/rigid-failure-boundary.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 168
+    },
+    {
+      "file": "tests/render-stars-regression.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 365
+    },
+    {
+      "file": "tests/maneuver-setup.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 82
+    },
+    {
+      "file": "tests/exhaust-trails.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 150
+    },
+    {
+      "file": "tests/soyuz-render.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 57
+    },
+    {
+      "file": "tests/rigid-metadata.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 25
+    },
+    {
+      "file": "tests/soundtrack-storage.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 31
+    },
+    {
+      "file": "tests/rigid-burn-alignment.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 62
+    },
+    {
+      "file": "tests/rigid-pointing.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 7
+    },
+    {
+      "file": "tests/sky-import.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 24
+    },
+    {
+      "file": "tests/rigid-controls.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 6
+    },
+    {
+      "file": "tests/baikonur-pads.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 584
+    },
+    {
+      "file": "tests/flex-config.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 7
+    },
+    {
+      "file": "tests/rigid-event-boundary.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 694
+    },
+    {
+      "file": "tests/cdm.test.ts",
+      "tests": 15,
+      "failedText": null,
+      "durationMs": 44
+    },
+    {
+      "file": "tests/visibility.test.ts",
+      "tests": 23,
+      "failedText": null,
+      "durationMs": 101
+    },
+    {
+      "file": "tests/earth-orientation.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 44
+    },
+    {
+      "file": "tests/overflights.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 1079
+    },
+    {
+      "file": "tests/d01-vehicles-identity.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 8
+    },
+    {
+      "file": "tests/ship-render.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 10
+    },
+    {
+      "file": "tests/d01-fleet-fingerprint.test.ts",
+      "tests": 28,
+      "failedText": null,
+      "durationMs": 3467
+    },
+    {
+      "file": "tests/real-sky.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 14
+    },
+    {
+      "file": "tests/design-explore-drafts.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 11
+    },
+    {
+      "file": "tests/monte-carlo-job-failures.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 28
+    },
+    {
+      "file": "tests/design-stack-drawing.test.ts",
+      "tests": 45,
+      "failedText": null,
+      "durationMs": 88
+    },
+    {
+      "file": "tests/lessons-history.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 1092
+    },
+    {
+      "file": "tests/dynamics-panel.test.ts",
+      "tests": 10,
+      "failedText": null,
+      "durationMs": 23
+    },
+    {
+      "file": "tests/recovery-panel.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 9
+    },
+    {
+      "file": "tests/design-interstages.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 7
+    },
+    {
+      "file": "tests/chart-marker-export.test.ts",
+      "tests": 2,
+      "failedText": null,
+      "durationMs": 10
+    },
+    {
+      "file": "tests/section-plan.test.ts",
+      "tests": 6,
+      "failedText": null,
+      "durationMs": 9
+    },
+    {
+      "file": "tests/design-number-entry.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 21
+    },
+    {
+      "file": "tests/case-export-race.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 162
+    },
+    {
+      "file": "tests/build-bench-refresh.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 24
+    },
+    {
+      "file": "tests/rigid-recovery.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 155371
+    },
+    {
+      "file": "tests/rigid-wind-guidance.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 10
+    },
+    {
+      "file": "tests/attitude-track.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 26
+    },
+    {
+      "file": "tests/target-plane.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 499
+    },
+    {
+      "file": "tests/hud-mode.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 4
+    },
+    {
+      "file": "tests/rigid-return.test.ts",
+      "tests": 2,
+      "failedText": null,
+      "durationMs": 109106
+    },
+    {
+      "file": "tests/uncertainty.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 5
+    },
+    {
+      "file": "tests/quickstart.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 627
+    },
+    {
+      "file": "tests/docx-pagination.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 15
+    },
+    {
+      "file": "tests/reentry.test.ts",
+      "tests": 7,
+      "failedText": null,
+      "durationMs": 2693
+    },
+    {
+      "file": "tests/design-stage-table.test.ts",
+      "tests": 24,
+      "failedText": null,
+      "durationMs": 16
+    },
+    {
+      "file": "tests/worksheet-export-race.test.ts",
+      "tests": 2,
+      "failedText": null,
+      "durationMs": 7
+    },
+    {
+      "file": "tests/build-screen.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 5
+    },
+    {
+      "file": "tests/validation/falcon9-webcast.test.ts",
+      "tests": 8,
+      "failedText": null,
+      "durationMs": 5407
+    },
+    {
+      "file": "tests/frames-view.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 5
+    },
+    {
+      "file": "tests/help-state.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 5
+    },
+    {
+      "file": "tests/design-stage-names.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 7
+    },
+    {
+      "file": "tests/worksheet-language.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 21
+    },
+    {
+      "file": "tests/validation/pslv-first-stage.test.ts",
+      "tests": 1,
+      "failedText": null,
+      "durationMs": 341
+    },
+    {
+      "file": "tests/rigid-envelope-events.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 4
+    },
+    {
+      "file": "tests/glow-governor.test.ts",
+      "tests": 5,
+      "failedText": null,
+      "durationMs": 48
+    },
+    {
+      "file": "tests/sky.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 3
+    },
+    {
+      "file": "tests/chart-summary.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 7
+    },
+    {
+      "file": "tests/validation/timelines.test.ts",
+      "tests": 12,
+      "failedText": null,
+      "durationMs": 3676
+    },
+    {
+      "file": "tests/rigid-flex-flight.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 14049
+    },
+    {
+      "file": "tests/rigid-simulation.test.ts",
+      "tests": 2,
+      "failedText": null,
+      "durationMs": 125514
+    },
+    {
+      "file": "tests/sky-tour.test.ts",
+      "tests": 9,
+      "failedText": null,
+      "durationMs": 7
+    },
+    {
+      "file": "tests/web-fonts.test.ts",
+      "tests": 2,
+      "failedText": null,
+      "durationMs": 10
+    },
+    {
+      "file": "tests/help-content.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 10
+    },
+    {
+      "file": "tests/experience.test.ts",
+      "tests": 3,
+      "failedText": null,
+      "durationMs": 5
+    },
+    {
+      "file": "tests/rigid-control-clock.test.ts",
+      "tests": 1,
+      "failedText": null,
+      "durationMs": 603
+    },
+    {
+      "file": "tests/rigid-flex-golden.test.ts",
+      "tests": 4,
+      "failedText": null,
+      "durationMs": 43368
+    },
+    {
+      "file": "tests/rigid-budget.test.ts",
+      "tests": 1,
+      "failedText": null,
+      "durationMs": 3801
+    },
+    {
+      "file": "tests/rigid-mission-convergence.test.ts",
+      "tests": 2,
+      "failedText": null,
+      "durationMs": 280692
+    },
+    {
+      "file": "tests/custom-vehicle-soyuz-sixdof.test.ts",
+      "tests": 1,
+      "failedText": null,
+      "durationMs": 156772
+    },
+    {
+      "file": "tests/rigid-guidance-attitude.test.ts",
+      "tests": 1,
+      "failedText": null,
+      "durationMs": 3
+    },
+    {
+      "file": "tests/assessment-flights.test.ts",
+      "tests": 1,
+      "failedText": null,
+      "durationMs": 483
+    },
+    {
+      "file": "tests/watch-missions.test.ts",
+      "tests": 22,
+      "failedText": null,
+      "durationMs": 530887
+    },
+    {
+      "file": "tests/custom-vehicle-falcon9-sixdof.test.ts",
+      "tests": 1,
+      "failedText": null,
+      "durationMs": 99732
+    }
+  ]
+}

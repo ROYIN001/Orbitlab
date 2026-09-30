@@ -1,0 +1,94 @@
+{
+  "format": "orbitlab.flight",
+  "version": 1,
+  "flight": {
+    "label": "Synthetic browser QA - Falcon 9 reference",
+    "mission": {
+      "format": "orbitlab.mission",
+      "version": 2,
+      "mission": {
+        "vehicleId": "falcon9",
+        "satelliteId": "cubesats",
+        "siteId": "cape",
+        "orbitId": "starlink",
+        "orbit": {
+          "id": "starlink",
+          "name": "Starlink shell (550 km, 53°)",
+          "perigee": 550000,
+          "apogee": 550000,
+          "inclination": 53,
+          "argPerigee": 0,
+          "raanMode": "free",
+          "description": "First-generation Starlink shell."
+        },
+        "launchTime": "2026-10-01T13:37:00.000Z",
+        "payloadMass": 5000,
+        "guidanceOverrides": {},
+        "failure": {
+          "mode": "none",
+          "time": 60,
+          "stage": 0
+        },
+        "boosterRecovery": false
+      }
+    },
+    "launchJd": 2461315.0673611113,
+    "telemetry": [
+      {
+        "t": 72,
+        "alt": 12000,
+        "vInertial": 750,
+        "vAir": 420,
+        "q": 30000,
+        "gLoad": 2.5,
+        "mass": 400000,
+        "pitch": 65,
+        "ap": 40000,
+        "pe": -6300000,
+        "inc": 53,
+        "dvRemaining": 7500,
+        "downrange": 8000
+      },
+      {
+        "t": 520,
+        "alt": 550000,
+        "vInertial": 7585,
+        "vAir": 0,
+        "q": 0,
+        "gLoad": 0,
+        "mass": 9500,
+        "pitch": 0,
+        "ap": 550000,
+        "pe": 550000,
+        "inc": 53,
+        "dvRemaining": 300,
+        "downrange": 3000000
+      }
+    ],
+    "events": [
+      {
+        "t": 520,
+        "key": "evt.targetOrbit",
+        "severity": "success"
+      }
+    ],
+    "path": {
+      "t": [
+        72,
+        520
+      ],
+      "x": [
+        1e309,
+        4800000
+      ],
+      "y": [
+        950000,
+        3500000
+      ],
+      "z": [
+        2860000,
+        3550000
+      ]
+    }
+  }
+}

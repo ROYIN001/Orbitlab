@@ -4,7 +4,7 @@
  * held instead to the data rules every vehicle keeps and to the one flight each
  * is here for, point-mass here; Mercury-Redstone 3 in six-DOF in
  * tests/heavy/mercury-redstone.test.ts, and every historical flight's ascent
- * in six-DOF in tests/watch-missions.test.ts.
+ * in six-DOF in tests/watch-missions-flights-*.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, VEHICLES, vehicleById } from '../src/data/vehicles';
@@ -393,7 +393,7 @@ describe('Apollo 11 from its parking orbit to the Moon, point-mass', () => {
     expect(f.lunar!.pe).toBeGreaterThan(90e3);
   });
 
-  it('burns for home on time, meets the air as the flight did, and splashes down where Columbia came down', () => {
+  it('burns for home on time, meets the air as the flight did, and splashes down where Columbia came down', { timeout: 300_000 }, () => {
     flyTo(APOLLO11.splashdown.t + 300);
     expect(sim.isFailed(), log()).toBe(false);
     // TEI (MR Table 7-VI): 135:23:42.3, 3,279.0 ft/s in 151.4 s

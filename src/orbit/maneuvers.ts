@@ -511,13 +511,18 @@ function stumpff(psi: number): { c2: number; c3: number } {
  * Lambert's problem by universal variables, solved by bisection on ψ
  * (Vallado, Algorithm 58): the orbit from r1 to r2 in `dt` seconds, less
  * than one revolution, the short way or the long way. Returns null where no
- * such orbit exists or the geometry is degenerate (r1 and r2 opposite).
+ * such orbit exists or the geometry has no unique plane (collinear endpoints).
  */
 export function lambert(r1: Vec3, r2: Vec3, dt: number, longWay = false): { v1: Vec3; v2: Vec3 } | null {
   const r1m = norm(r1), r2m = norm(r2);
   const cosDnu = Math.max(-1, Math.min(1, dot(r1, r2) / (r1m * r2m)));
+  const crossMagnitude = norm(cross(r1, r2));
+  if (!(crossMagnitude / (r1m * r2m) > Number.EPSILON)) return null;
   const tm = longWay ? -1 : 1;
-  const A = tm * Math.sqrt(r1m * r2m * (1 + cosDnu));
+  // 1 + cos(theta) loses the angle near pi. The equivalent cross-product
+  // form retains it; use the sum near zero, where 1 - cos(theta) is fragile.
+  const A = tm * (cosDnu < 0 ? crossMagnitude / Math.sqrt(r1m * r2m * (1 - cosDnu))
+    : Math.sqrt(r1m * r2m * (1 + cosDnu)));
   if (Math.abs(A) < 1e-9 || !(dt > 0)) return null;
   const sqrtMu = Math.sqrt(MU_EARTH);
   let psiLow = -4 * Math.PI, psiUp = 4 * Math.PI * Math.PI, psi = 0;
@@ -541,8 +546,16 @@ export function lambert(r1: Vec3, r2: Vec3, dt: number, longWay = false): { v1: 
     if (psiUp - psiLow < 1e-14) return null;
   }
   if (!(y > 0)) return null;
-  const f = 1 - y / r1m, gdot = 1 - y / r2m, g = A * Math.sqrt(y / MU_EARTH);
-  return { v1: scale(sub(r2, scale(r1, f)), 1 / g), v2: scale(sub(scale(r2, gdot), r1), 1 / g) };
+  // Resolve the same f/g velocities radially and transversely. Subtracting
+  // nearly opposite position vectors before dividing by tiny g loses the
+  // radial velocity even after A has been evaluated accurately.
+  const normal = scale(cross(r1, r2), 1 / crossMagnitude);
+  const u1 = scale(r1, 1 / r1m), u2 = scale(r2, 1 / r2m);
+  const k = (psi * c3 - 1) / Math.sqrt(c2), speed = Math.sqrt(MU_EARTH / y);
+  return {
+    v1: add(scale(u1, (A / r1m + k) * speed), scale(cross(normal, u1), crossMagnitude / (r1m * A) * speed)),
+    v2: add(scale(u2, -(A / r2m + k) * speed), scale(cross(normal, u2), crossMagnitude / (r2m * A) * speed)),
+  };
 }
 
 /**

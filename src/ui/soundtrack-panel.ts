@@ -19,7 +19,8 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
 export function parseOffset(text: string): number | null {
   const parts = text.trim().split(':');
   if (!parts.length || parts.length > 3 || parts.some((p) => !/^\d+(\.\d+)?$/.test(p))) return null;
-  return parts.reduce((acc, p) => acc * 60 + Number(p), 0);
+  const seconds = parts.reduce((acc, p) => acc * 60 + Number(p), 0);
+  return Number.isFinite(seconds) ? seconds : null;
 }
 
 export function formatOffset(s: number): string {
@@ -57,29 +58,67 @@ export class SoundtrackPanel {
       const remove = el('button', 'watch-audio-btn', t('snd.remove'));
       remove.type = 'button';
       remove.hidden = true;
-      void loadUserSoundtrack(m.id).then((mine) => {
-        if (!mine) return;
-        status.textContent = t('snd.mine', { name: mine.name });
-        t0Input.value = formatOffset(mine.t0);
-        remove.hidden = false;
+      let mine: Awaited<ReturnType<typeof loadUserSoundtrack>> = null;
+      let edited = false, revision = 0;
+      const showTrack = () => {
+        status.textContent = mine ? t('snd.mine', { name: mine.name })
+          : BUNDLED_SOUNDTRACKS[m.id] ? t('snd.bundled', { flight: BUNDLED_SOUNDTRACKS[m.id]!.flight }) : t('snd.synth');
+        remove.hidden = !mine;
+      };
+      // Serialize changes with the initial read and with one another: a slow
+      // offset save must never restore a recording after Remove/replacement.
+      let pending = loadUserSoundtrack(m.id).then((stored) => {
+        mine = stored;
+        if (!edited && mine) t0Input.value = formatOffset(mine.t0);
+        if (revision === 0) showTrack();
+      });
+      const enqueue = (action: () => Promise<void>) => {
+        const actionRevision = revision;
+        pending = pending.then(async () => {
+          await action();
+          if (revision === actionRevision) showTrack();
+        }).catch(() => {
+          if (revision === actionRevision) status.textContent = t('snd.saveFailed');
+        });
+      };
+      const readOffset = () => {
+        edited = true;
+        revision++;
+        const t0 = parseOffset(t0Input.value);
+        if (t0 === null) status.textContent = t('snd.badT0');
+        return t0;
+      };
+      t0Input.addEventListener('input', () => { edited = true; });
+      t0Input.addEventListener('change', () => {
+        const t0 = readOffset();
+        if (t0 === null) return;
+        enqueue(async () => {
+          if (!mine || mine.t0 === t0) return; // a new upload's offset remains a draft
+          await saveUserSoundtrack(m.id, mine.blob, mine.name, t0);
+          mine = { ...mine, t0 };
+          this.onChange(m.id);
+        });
       });
       add.addEventListener('click', () => input.click());
-      input.addEventListener('change', async () => {
+      input.addEventListener('change', () => {
         const file = input.files?.[0];
         input.value = '';
         if (!file) return;
-        const t0 = parseOffset(t0Input.value);
-        if (t0 === null) { status.textContent = t('snd.badT0'); return; }
-        await saveUserSoundtrack(m.id, file, file.name, t0);
-        status.textContent = t('snd.mine', { name: file.name });
-        remove.hidden = false;
-        this.onChange(m.id);
+        const t0 = readOffset();
+        if (t0 === null) return;
+        enqueue(async () => {
+          await saveUserSoundtrack(m.id, file, file.name, t0);
+          mine = { id: m.id, blob: file, name: file.name, t0 };
+          this.onChange(m.id);
+        });
       });
-      remove.addEventListener('click', async () => {
-        await removeUserSoundtrack(m.id);
-        status.textContent = BUNDLED_SOUNDTRACKS[m.id] ? t('snd.bundled', { flight: BUNDLED_SOUNDTRACKS[m.id]!.flight }) : t('snd.synth');
-        remove.hidden = true;
-        this.onChange(m.id);
+      remove.addEventListener('click', () => {
+        revision++;
+        enqueue(async () => {
+          await removeUserSoundtrack(m.id);
+          mine = null;
+          this.onChange(m.id);
+        });
       });
       row.append(name, status, t0Field, add, remove, input);
       list.append(row);

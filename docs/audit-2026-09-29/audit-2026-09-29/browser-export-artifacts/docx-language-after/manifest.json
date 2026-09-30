@@ -1,0 +1,53 @@
+{
+  "source": "Actual browser Downloads from integrated preview4181; QAFINAL4 mission epoch2026-09-29T20:00Z; TH DOCX started before immediate switch to RU",
+  "files": [
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.docx",
+      "bytes": 15096,
+      "sha256": "fe6577c368ee56a7affb4ae52d59b9e56f92bdefe29e50f2595ad01dbf20dbf9",
+      "downloadLastWriteTime": "2026-09-29T23:35:36.3532081+03:00"
+    },
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.html",
+      "bytes": 5899,
+      "sha256": "dd7d17235939cddd734d408335b4e6d02a7873eb4fc5a4bb752c79964cf52de9",
+      "downloadLastWriteTime": "2026-09-29T23:35:48.6779817+03:00"
+    },
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.docx",
+      "bytes": 15734,
+      "sha256": "b3fcd7140eb0d25e40e0a6b1398a303a1d2be44a300d47c6ddefd9739724a202",
+      "downloadLastWriteTime": "2026-09-29T23:35:24.4950981+03:00"
+    },
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.html",
+      "bytes": 6535,
+      "sha256": "7c4233049c159e452023d2cf2612f9f5f8bf299a1b9de69b61e635b54c09d080",
+      "downloadLastWriteTime": "2026-09-29T23:35:24.4173203+03:00"
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.docx",
+      "bytes": 354081,
+      "sha256": "cc3fa4ca167d11289c6e06a0bcfad2d63ff7b4fd125bea85451ee36c9472be82",
+      "downloadLastWriteTime": "2026-09-29T23:35:41.8940725+03:00"
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.html",
+      "bytes": 28186,
+      "sha256": "9c14fdfffa7351a005787a73b776e4fee5ae02af224e8f1c2ff4b2db1d9e00a5",
+      "downloadLastWriteTime": "2026-09-29T23:35:48.5915114+03:00"
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.docx",
+      "bytes": 358550,
+      "sha256": "5807ac23fab818234e08c4ab004bb8cbb301f230ad57134b5f6747cb76efc36f",
+      "downloadLastWriteTime": "2026-09-29T23:35:31.1377724+03:00"
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.html",
+      "bytes": 29574,
+      "sha256": "6bdd5ec34436db2eebb7238ce45ac10fc80fcb1d7dee05d28979bd1e3e9ab70a",
+      "downloadLastWriteTime": "2026-09-29T23:35:24.3365582+03:00"
+    }
+  ]
+}

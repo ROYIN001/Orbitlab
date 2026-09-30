@@ -162,8 +162,9 @@ export interface CriterionGrade {
   /** the value the answer is checked against; absent before the flight ends */
   expected?: number | null;
   /**
-   * The answer was shown to the student (the strip's "Show the answers")
-   * before it was right: it cannot pass, whatever is typed after.
+   * The answer's value was shown to the student (the strip's "Show the
+   * answers") before it was right: typed right after, it passes only with
+   * help (the lesson's verdict `passedWithHelp`), never unaided.
    */
   revealed?: boolean;
 }
@@ -181,8 +182,12 @@ export interface LessonGrade {
   lessonId: string;
   /** the flight has ended for grading */
   final: boolean;
-  /** all passed / any failed / not yet decided */
-  verdict: 'pass' | 'fail' | 'open';
+  /**
+   * all passed / all passed, but on an answer the student had been shown
+   * (owner decision D-6: recorded as such, never as an unaided pass) / any
+   * failed / not yet decided
+   */
+  verdict: 'pass' | 'passedWithHelp' | 'fail' | 'open';
   criteria: CriterionGrade[];
   /** settings the lesson locked that the flight did not keep */
   lockBroken: LockKey[];

@@ -1,0 +1,14 @@
+{
+  "checkedAtUTC": "2026-09-29T22:15:36.1073041Z",
+  "productionCommit": "c146a699f01bb5d299af39e3ca9742445442b474",
+  "browserAcceptanceCommit": "277f41dd6cbd46d1b03d97bcc060258ec8c7554a",
+  "sourceTrees": {
+    "numerical": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+    "editorial": "0487cbf1584bc72dc785864eef777e6ccde075a0",
+    "browserAcceptance": "0487cbf1584bc72dc785864eef777e6ccde075a0"
+  },
+  "testedWorkingFilesMatchCommittedSource": true,
+  "checkedFileCount": 11,
+  "nonLocalizedAstUnchanged": true,
+  "note": "Focused165 ran on the working files subsequently committed as c146a699; 277f41d only adds browser test/workflow. Numerical source identity is established by text-only-verification-c146.json against9737, whose production source equals0b."
+}

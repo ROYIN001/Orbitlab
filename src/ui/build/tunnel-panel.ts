@@ -19,7 +19,7 @@
 import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import {
-  TUNNEL_ALPHAS, TUNNEL_MAP_MACH, TUNNEL_QUANTITIES, TUNNEL_RANGES, cgFromNose, defaultTunnelChoice, rampColour, sweepMap, tunnelBench, tunnelLines,
+  TUNNEL_ALPHAS, TUNNEL_MAP_MACH, TUNNEL_MAX_PAYLOAD_KG, TUNNEL_QUANTITIES, TUNNEL_RANGES, cgFromNose, defaultTunnelChoice, rampColour, sweepMap, tunnelBench, tunnelLines, validTunnelPayload,
   tunnelMap, type TunnelChoice, type TunnelLines, type TunnelMap, type TunnelQuantity, type TunnelRange,
 } from '../../design/tunnel-view';
 import type { TunnelResult } from '../../design/tunnel';
@@ -94,6 +94,14 @@ export class TunnelPanel {
 
   private sweep(): void {
     if (!this.spec) return;
+    // Every input path (including stages/range) comes through this guard.
+    // Never leave results for an earlier configuration beside invalid input.
+    if (!validTunnelPayload(this.choice.payloadKg)) {
+      this.result = null;
+      this.map = null;
+      this.lines = null;
+      return;
+    }
     this.result = sweepMap(this.spec, this.choice, this.range);
     this.map = tunnelMap(this.result, this.quantity, TUNNEL_MAP_MACH, TUNNEL_ALPHAS[this.range]);
     this.lines = tunnelLines(this.spec, this.choice);
@@ -104,7 +112,6 @@ export class TunnelPanel {
     if (this.queued) return;
     this.queued = requestAnimationFrame(() => {
       this.queued = 0;
-      if (!Number.isFinite(this.choice.payloadKg) || this.choice.payloadKg < 0) return;
       this.sweep();
       this.renderOutput();
     });
@@ -197,7 +204,13 @@ export class TunnelPanel {
     rr.append(range, out);
     cfg.append(field(t('build.eng.tunnel.propellant'), rr));
 
-    const payload = numberBox('payload', this.choice.payloadKg, { min: 0, max: 500000, step: 1 }, (v) => { this.choice.payloadKg = v; this.changed(); });
+    const payload = numberBox('payload', this.choice.payloadKg, { min: 0, max: TUNNEL_MAX_PAYLOAD_KG, step: 1 }, (v) => {
+      this.choice.payloadKg = v;
+      payload.setAttribute('aria-invalid', String(!validTunnelPayload(v)));
+      this.changed();
+    });
+    payload.setAttribute('aria-invalid', String(!validTunnelPayload(this.choice.payloadKg)));
+    payload.setAttribute('aria-errormessage', 'be-tunnel-payload-error');
     const pr = el('span', 'bx-with-unit');
     pr.append(payload, el('span', 'bx-unit', t('u.kg')));
     cfg.append(field(t('build.ex.payload'), pr), el('p', 'bx-note small', t('build.eng.tunnel.massNote')));
@@ -216,7 +229,16 @@ export class TunnelPanel {
 
   private renderOutput(): void {
     const r = this.result, map = this.map;
-    if (!r || !map) return;
+    if (!r || !map) {
+      const title = el('h2', 'bx-h2', t('build.eng.tunnel.map'));
+      title.id = 'be-map-title';
+      const problem = el('p', 'bd-say bd-say-warn', t('build.eng.tunnel.invalidPayload'));
+      problem.id = 'be-tunnel-payload-error';
+      problem.setAttribute('role', 'status');
+      this.out.replaceChildren(title, problem);
+      this.plots.replaceChildren();
+      return;
+    }
     // what is in the tunnel
     const tile = (label: string, value: string): HTMLElement => {
       const box = el('div', 'be-tile');

@@ -1,0 +1,2244 @@
+{
+  "scope": "Manual semantic comparison of every localized prompt, option, misconception, explanation and ordering item in all 157 built-in questions, EN/RU/TH. Not statistical validation or an independent primary-source audit of every historical number.",
+  "questionCount": 157,
+  "localizedTriples": 926,
+  "stringsRead": 2778,
+  "reviewers": {
+    "learning_content": {
+      "domains": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "questions": 104,
+      "triples": 594,
+      "strings": 1782
+    },
+    "physics_validation": {
+      "domains": [
+        1,
+        6
+      ],
+      "questions": 53,
+      "triples": 332,
+      "strings": 996
+    }
+  },
+  "sourceFinal": [
+    {
+      "path": "src/lessons/assessment/bank/basics.ts",
+      "bytes": 65983,
+      "sha256": "94c81de572b5fc3bf52258c41a6b93bd389d0f932a95ea4cba114cf308ab20b3"
+    },
+    {
+      "path": "src/lessons/assessment/bank/orbits.ts",
+      "bytes": 62824,
+      "sha256": "3e0719bb6b92a85d7c085e51954660dc200cddaffaa90e571eeec46d8ef24d2e"
+    },
+    {
+      "path": "src/lessons/assessment/bank/rockets.ts",
+      "bytes": 68799,
+      "sha256": "c228274834e233b35e659233234e8a6395c86a47d71d9039c8264239e4e9986d"
+    },
+    {
+      "path": "src/lessons/assessment/bank/guidance.ts",
+      "bytes": 74609,
+      "sha256": "583eb98ef889d604cd6035fa17e4c71bc6ae0c528db2d4fa694641cd6be7408e"
+    },
+    {
+      "path": "src/lessons/assessment/bank/control.ts",
+      "bytes": 64225,
+      "sha256": "82ca4cbf09f6419da91f8788b49326ffa729c5e07c55c9e8422ab6ec878984a7"
+    },
+    {
+      "path": "src/lessons/assessment/bank/failures.ts",
+      "bytes": 77801,
+      "sha256": "307d872b1ce4bcbb45ad89f6d8356d6faee84033d3df39e8b82e297c1cf4eaff"
+    }
+  ],
+  "records": [
+    {
+      "id": "b-vehicle-distinct",
+      "domain": 1,
+      "type": "vehicle",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "b-vehicle-similar",
+      "domain": 1,
+      "type": "vehicle",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "b-karman",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-float",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-what-holds",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-launch-east",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-vacuum-thrust",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-sputnik",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-leo-speed",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-iss-period",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-geo",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-stages",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-kepler2",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-black-sky",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-escape",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-higher-slower",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-opposite-side",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-gravity-altitude",
+      "domain": 1,
+      "type": "numeric",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "b-gravity-iss",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-order-altitude",
+      "domain": 1,
+      "type": "order",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "b-order-history",
+      "domain": 1,
+      "type": "order",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "b-multi-leo",
+      "domain": 1,
+      "type": "multi",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[4].text"
+      ]
+    },
+    {
+      "id": "b-forces-drag",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-ellipse-slow",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[0].misconception",
+        "options[1].text",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-theos",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-cosmodromes",
+      "domain": 1,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "b-multi-freefall",
+      "domain": 1,
+      "type": "multi",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception",
+        "options[4].text",
+        "options[4].misconception"
+      ]
+    },
+    {
+      "id": "o-perigee",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-equatorial",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-kepler3",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-raan",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-min-inclination",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-circular-speed",
+      "domain": 2,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "o-period",
+      "domain": 2,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "o-window",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-two-burns",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-sso",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-plane-burn",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "o-molniya",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-hohmann-first",
+      "domain": 2,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "o-plane-change",
+      "domain": 2,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "o-catch-up",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-geo-latitude",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "o-perigee-speed",
+      "domain": 2,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "o-order-period",
+      "domain": 2,
+      "type": "order",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "o-plane-node",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text"
+      ]
+    },
+    {
+      "id": "o-plane-raan",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text"
+      ]
+    },
+    {
+      "id": "o-hohmann-burns",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "o-ellipse-raise",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[0].misconception",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "o-ground-track",
+      "domain": 2,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "o-multi-perigee-burn",
+      "domain": 2,
+      "type": "multi",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception",
+        "options[4].text",
+        "options[4].misconception"
+      ]
+    },
+    {
+      "id": "o-period-height",
+      "domain": 2,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "o-nodal-regression",
+      "domain": 2,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-isp",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-tsiolkovsky",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-q",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-twr",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-propellants",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-soyuz-mass",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-tsiolkovsky-calc",
+      "domain": 3,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "r-maxq-chart",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-gravity-loss",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-throttle-maxq",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-g-peak",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-isp-vacuum",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-dv-leo",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-mass-ratio",
+      "domain": 3,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "r-q-calc",
+      "domain": 3,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "r-engine-out-predict",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-payload-upper",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "r-order-isp",
+      "domain": 3,
+      "type": "order",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "r-order-events",
+      "domain": 3,
+      "type": "order",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]",
+        "items[5]"
+      ]
+    },
+    {
+      "id": "r-multi-losses",
+      "domain": 3,
+      "type": "multi",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception",
+        "options[4].text",
+        "options[4].misconception"
+      ]
+    },
+    {
+      "id": "r-read-maxq",
+      "domain": 3,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "r-read-meco",
+      "domain": 3,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "r-multi-solid",
+      "domain": 3,
+      "type": "multi",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[4].text"
+      ]
+    },
+    {
+      "id": "r-trajectories",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "r-liftoff-accel",
+      "domain": 3,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "r-hydrogen-first",
+      "domain": 3,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-gravity-turn",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-gnc",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-imu",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-turn-early",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-gnss-alone",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "g-closed-loop",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "g-ins-drift",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-kalman",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-peg-igm",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-zero-alpha",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-tgo",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-monte-carlo",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-ins-error",
+      "domain": 4,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "g-gyro-bias",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-3sigma",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-linear-tangent",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-dogleg-cost",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "g-ellipse-inner",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-ellipse-outer",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text"
+      ]
+    },
+    {
+      "id": "g-order-ascent",
+      "domain": 4,
+      "type": "order",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "g-multi-imu",
+      "domain": 4,
+      "type": "multi",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[4].text"
+      ]
+    },
+    {
+      "id": "g-multi-peg",
+      "domain": 4,
+      "type": "multi",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception",
+        "options[4].text"
+      ]
+    },
+    {
+      "id": "g-kick-larger",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "g-launch-azimuth",
+      "domain": 4,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "g-order-kalman",
+      "domain": 4,
+      "type": "order",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "g-open-loop",
+      "domain": 4,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-feedback",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-tvc",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-pid-d",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-rcs",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-unstable-simple",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-phase-margin",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-gain-margin",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-more-gain",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-crossover",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-notch",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[2].misconception",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-step-terms",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-tvc-sign",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-overshoot",
+      "domain": 5,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "c-gain-db",
+      "domain": 5,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "c-delay-phase",
+      "domain": 5,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "c-maxq-margins",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-slosh",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "c-read-overshoot",
+      "domain": 5,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "c-read-pm",
+      "domain": 5,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "c-step-compare",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[0].misconception",
+        "options[1].text",
+        "options[2].text"
+      ]
+    },
+    {
+      "id": "c-multi-actuators",
+      "domain": 5,
+      "type": "multi",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[4].text"
+      ]
+    },
+    {
+      "id": "c-order-loop",
+      "domain": 5,
+      "type": "order",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "c-multi-phase",
+      "domain": 5,
+      "type": "multi",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception",
+        "options[4].text",
+        "options[4].misconception"
+      ]
+    },
+    {
+      "id": "c-pd-damping",
+      "domain": 5,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "c-tvc-moment",
+      "domain": 5,
+      "type": "numeric",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "c-integral",
+      "domain": 5,
+      "type": "choice",
+      "reviewer": "learning_content",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-fts",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-les",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-three-imus",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-engine-out-cap",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-ms10",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-fdir",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-stuck-gyro",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-ariane501",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-proton2013",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-engine-out-thrust",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-maxq-danger",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "f-fairing-motors",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-common-mode",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "f-escape-load",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception"
+      ]
+    },
+    {
+      "id": "f-voting-reliability",
+      "domain": 6,
+      "type": "numeric",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "f-engine-out-timing",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-18a",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-imu-votes",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-order-fdir",
+      "domain": 6,
+      "type": "order",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]"
+      ]
+    },
+    {
+      "id": "f-multi-voting",
+      "domain": 6,
+      "type": "multi",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[3].misconception",
+        "options[4].text",
+        "options[4].misconception"
+      ]
+    },
+    {
+      "id": "f-order-ms10",
+      "domain": 6,
+      "type": "order",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "items[0]",
+        "items[1]",
+        "items[2]",
+        "items[3]",
+        "items[4]"
+      ]
+    },
+    {
+      "id": "f-multi-fts",
+      "domain": 6,
+      "type": "multi",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text",
+        "options[4].text"
+      ]
+    },
+    {
+      "id": "f-challenger",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-series-reliability",
+      "domain": 6,
+      "type": "numeric",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation"
+      ]
+    },
+    {
+      "id": "f-reserve",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[1].misconception",
+        "options[2].text",
+        "options[3].text"
+      ]
+    },
+    {
+      "id": "f-apollo13",
+      "domain": 6,
+      "type": "choice",
+      "reviewer": "physics_validation",
+      "reviewedPaths": [
+        "prompt",
+        "explanation",
+        "options[0].text",
+        "options[1].text",
+        "options[2].text",
+        "options[3].text"
+      ]
+    }
+  ]
+}

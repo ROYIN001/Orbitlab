@@ -121,7 +121,9 @@ export class RealSky {
   private selectedKey: string | null = 'stations:25544';
   private readonly bySource = new Map<SkySourceId, SkyObject[]>();
   private imported: { file: string; result: ElementFile } | null = null;
-  /** how many files have been read: a file read again is new data, even under the same name (A14) */
+  /** The latest attempt's diagnostics are separate from the last accepted element sets. */
+  private importReportResult: ElementFile | null = null;
+  /** how many files have been accepted: a file read again is new data, even under the same name (A14) */
   private importCount = 0;
   private importNote: string | null = null;
   /** the group's positions and the points below them, reused */
@@ -557,7 +559,7 @@ export class RealSky {
     const box = el('div', 'pg-sky-report');
     box.setAttribute('aria-live', 'polite');
     box.append(el('p', undefined, this.importNote ?? ''));
-    const r = this.imported?.result;
+    const r = this.importReportResult;
     if (r && r.rejected.length) {
       box.append(el('p', 'pg-warn', t('sky.import.rejected', { n: num(r.rejected.length) })));
       const ul = el('ul', 'pg-sky-problems');
@@ -565,20 +567,25 @@ export class RealSky {
       if (r.rejected.length > 8) ul.append(el('li', undefined, '…'));
       box.append(ul);
     }
+    if (this.imported && r !== this.imported.result) {
+      const { file, result } = this.imported;
+      box.append(el('p', 'pg-note', t('sky.import.read', { n: num(result.sets.length), file, format: (result.format ?? '').toUpperCase() })));
+    }
     return box;
   }
 
   /** Read a file the user picked: in this page, nowhere else. */
   async importFile(file: File): Promise<void> {
     if (file.size > MAX_IMPORT_BYTES) {
+      this.importReportResult = null;
       this.importNote = t('sky.import.tooBig', { mb: num(MAX_IMPORT_BYTES / 1024 / 1024) });
       this.host.refresh();
       return;
     }
     const result = readElementFile(await file.text());
+    this.importReportResult = result;
     if (!result.sets.length) {
       this.importNote = t('sky.import.empty', { file: file.name });
-      this.imported = result.rejected.length ? { file: file.name, result } : this.imported;
       this.host.refresh();
       return;
     }
@@ -1375,10 +1382,15 @@ export class RealSky {
     const out = el('p', 'pg-note');
     out.setAttribute('role', 'status');
     const make = async (key: boolean): Promise<void> => {
-      const sheet = caseWorksheet(this.caseChoice, { ...await this.caseInput(), lang: getLang(), generatedAt: new Date() });
+      // A different case may be selected while its input data are loading.
+      const id = this.caseChoice;
+      const source = await this.caseInput();
+      // Build and name the file in the same, current language synchronously.
+      const lang = getLang();
+      const sheet = caseWorksheet(id, { ...source, lang, generatedAt: new Date() });
       if (!sheet) { out.textContent = t('cases.noData'); return; }
       const html = key ? answerKeyHtml([sheet]) : worksheetsHtml([sheet]);
-      downloadBlob(new Blob([html], { type: 'text/html' }), `orbitlab-case-${this.caseChoice}${key ? '-key' : ''}-${getLang()}.html`);
+      downloadBlob(new Blob([html], { type: 'text/html' }), `orbitlab-case-${id}${key ? '-key' : ''}-${lang}.html`);
       out.textContent = t('cases.done');
     };
     const row = el('div', 'pg-tool-row');

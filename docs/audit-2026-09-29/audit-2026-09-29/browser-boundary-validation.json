@@ -1,0 +1,234 @@
+[
+  {
+    "file": "C02-mission-negative-payload.orbitlab.json",
+    "notice": "\n      - heading \"Share & save the mission\" [level=2]\n      - button \"Copy link\"\n      - button \"Save file\"\n      - button \"Open file\"\n      - status:\n        - paragraph: \"Mission loaded from the file, but these settings could not be used and are back at their defaults:\"\n        - list:\n          - listitem: Payload mass (kg)\n        - button \"Dismiss\": ×\n    ",
+    "vehicle": "falcon9",
+    "payload": "300"
+  },
+  {
+    "file": "C02-mission-version999.orbitlab.json",
+    "notice": "\n      - heading \"Share & save the mission\" [level=2]\n      - button \"Copy link\"\n      - button \"Save file\"\n      - button \"Open file\"\n      - status:\n        - paragraph: \"Mission loaded from the file, but these settings could not be used and are back at their defaults:\"\n        - list:\n          - listitem: it was saved by a newer version of Orbitlab, so anything this version does not know is left out\n        - button \"Dismiss\": ×\n    ",
+    "vehicle": "falcon9",
+    "payload": "1000"
+  },
+  {
+    "file": "C02-mission-unknown-vehicle.orbitlab.json",
+    "notice": "\n      - heading \"Share & save the mission\" [level=2]\n      - button \"Copy link\"\n      - button \"Save file\"\n      - button \"Open file\"\n      - status:\n        - paragraph: \"Mission loaded from the file, but these settings could not be used and are back at their defaults:\"\n        - list:\n          - listitem: Model\n          - listitem: Launch vehicle\n        - button \"Dismiss\": ×\n    ",
+    "vehicle": "falcon9",
+    "payload": "1000"
+  },
+  {
+    "file": "C03-broken.json",
+    "notice": "\n      - heading \"Share & save the mission\" [level=2]\n      - button \"Copy link\"\n      - button \"Save file\"\n      - button \"Open file\" [active]\n      - status:\n        - paragraph: \"Nothing in the file could be used as a mission: it is not an Orbitlab mission or it is damaged. The current mission is unchanged.\"\n        - button \"Dismiss\": ×\n    ",
+    "vehicle": "falcon9",
+    "payload": "1000"
+  },
+  {
+    "file": "C03-empty-object.json",
+    "notice": "\n      - heading \"Share & save the mission\" [level=2]\n      - button \"Copy link\"\n      - button \"Save file\"\n      - button \"Open file\" [active]\n      - status:\n        - paragraph: \"Nothing in the file could be used as a mission: it is not an Orbitlab mission or it is damaged. The current mission is unchanged.\"\n        - button \"Dismiss\": ×\n    ",
+    "vehicle": "falcon9",
+    "payload": "1000"
+  },
+  {
+    "file": "C03-design-wrong-mission-format.orbitlab.json",
+    "notice": "\n      - heading \"Share & save the mission\" [level=2]\n      - button \"Copy link\"\n      - button \"Save file\"\n      - button \"Open file\" [active]\n      - status:\n        - paragraph: \"Nothing in the file could be used as a mission: it is not an Orbitlab mission or it is damaged. The current mission is unchanged.\"\n        - button \"Dismiss\": ×\n    ",
+    "vehicle": "falcon9",
+    "payload": "1000"
+  },
+  {
+    "file": "C03-broken.json",
+    "reference": " [level=3]\n    - button \"Use as reference\"\n    - button \"Open flight\"\n    - button \"Save flight\"\n    - paragraph: That file is not an Orbitlab flight, or it is damaged.\n    - generic: \"Reference: Synthetic browser QA - Falcon 9 reference\"\n    - button \"Stop comparing\": ×\n    - table:\n      - rowgroup:\n        - row \"Quantity This flight Reference Difference\":\n          - columnheader \"Quantity\"\n          - columnheader \"This flight\"\n          - columnheader \"Reference\"\n          - columnheader \"Difference\"\n      - rowgroup:\n        - row \"Orbit insertion, T+ — 520.0 s —\":\n          - rowheader \"Orbit insertion, T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n        - row \"Perigee at the end — 550.0 km —\":\n          - rowheader \"Perigee at the end\"\n          - cell \"—\"\n          - cell \"550.0 km\"\n          - cell \"—\"\n        - row \"Apogee at the end 0.0 km 550.0 km -550.0 km\":\n          - rowheader \"Apogee at the end\"\n          - cell \"0.0 km\"\n          - cell \"550.0 km\"\n          - cell \"-550.0 km\"\n        - row \"Inclination at the end 28.56° 53.00° -24.44°\":\n          - rowheader \"Inclination at the end\"\n          - cell \"28.56°\"\n          - cell \"53.00°\"\n          - cell \"-24.44°\"\n        - row \"Maximum dynamic pressure 0.00 kPa 30.00 kPa -30.00 kPa\":\n          - rowheader \"Maximum dynamic pressure\"\n          - cell \"0.00 kPa\"\n          - cell \"30.00 kPa\"\n          - cell \"-30.00 kPa\"\n        - row \"Maximum dynamic pressure, T+ -10.0 s 72.0 s -82.0 s\":\n          - rowheader \"Maximum dynamic pressure, T+\"\n          - cell \"-10.0 s\"\n          - cell \"72.0 s\"\n          - cell \"-82.0 s\"\n        - row \"Maximum load factor 1.00 g 2.50 g -1.50 g\":\n          - rowheader \"Maximum load factor\"\n          - cell \"1.00 g\"\n          - cell \"2.50 g\"\n          - cell \"-1.50 g\"\n        - row \"Δv left at the end 14,672 m/s 300 m/s +14,372 m/s\":\n          - rowheader \"Δv left at the end\"\n          - cell \"14,672 m/s\"\n          - cell \"300 m/s\"\n          - cell \"+14,372 m/s\"\n        - row \"Target orbit, time T+ — 520.0 s —\":\n          - rowheader \"Target orbit, time T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n    - "
+  },
+  {
+    "file": "C06-mission-wrong-flight-format.orbitlab.json",
+    "reference": " [level=3]\n    - button \"Use as reference\"\n    - button \"Open flight\"\n    - button \"Save flight\"\n    - paragraph: That file is not an Orbitlab flight, or it is damaged.\n    - generic: \"Reference: Synthetic browser QA - Falcon 9 reference\"\n    - button \"Stop comparing\": ×\n    - table:\n      - rowgroup:\n        - row \"Quantity This flight Reference Difference\":\n          - columnheader \"Quantity\"\n          - columnheader \"This flight\"\n          - columnheader \"Reference\"\n          - columnheader \"Difference\"\n      - rowgroup:\n        - row \"Orbit insertion, T+ — 520.0 s —\":\n          - rowheader \"Orbit insertion, T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n        - row \"Perigee at the end — 550.0 km —\":\n          - rowheader \"Perigee at the end\"\n          - cell \"—\"\n          - cell \"550.0 km\"\n          - cell \"—\"\n        - row \"Apogee at the end 0.0 km 550.0 km -550.0 km\":\n          - rowheader \"Apogee at the end\"\n          - cell \"0.0 km\"\n          - cell \"550.0 km\"\n          - cell \"-550.0 km\"\n        - row \"Inclination at the end 28.56° 53.00° -24.44°\":\n          - rowheader \"Inclination at the end\"\n          - cell \"28.56°\"\n          - cell \"53.00°\"\n          - cell \"-24.44°\"\n        - row \"Maximum dynamic pressure 0.00 kPa 30.00 kPa -30.00 kPa\":\n          - rowheader \"Maximum dynamic pressure\"\n          - cell \"0.00 kPa\"\n          - cell \"30.00 kPa\"\n          - cell \"-30.00 kPa\"\n        - row \"Maximum dynamic pressure, T+ -10.0 s 72.0 s -82.0 s\":\n          - rowheader \"Maximum dynamic pressure, T+\"\n          - cell \"-10.0 s\"\n          - cell \"72.0 s\"\n          - cell \"-82.0 s\"\n        - row \"Maximum load factor 1.00 g 2.50 g -1.50 g\":\n          - rowheader \"Maximum load factor\"\n          - cell \"1.00 g\"\n          - cell \"2.50 g\"\n          - cell \"-1.50 g\"\n        - row \"Δv left at the end 14,672 m/s 300 m/s +14,372 m/s\":\n          - rowheader \"Δv left at the end\"\n          - cell \"14,672 m/s\"\n          - cell \"300 m/s\"\n          - cell \"+14,372 m/s\"\n        - row \"Target orbit, time T+ — 520.0 s —\":\n          - rowheader \"Target orbit, time T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n    - "
+  },
+  {
+    "file": "C06-flight-path-mismatch.orbitlab-flight.json",
+    "reference": " [level=3]\n    - button \"Use as reference\"\n    - button \"Open flight\"\n    - button \"Save flight\"\n    - paragraph: That file is not an Orbitlab flight, or it is damaged.\n    - generic: \"Reference: Synthetic browser QA - Falcon 9 reference\"\n    - button \"Stop comparing\": ×\n    - table:\n      - rowgroup:\n        - row \"Quantity This flight Reference Difference\":\n          - columnheader \"Quantity\"\n          - columnheader \"This flight\"\n          - columnheader \"Reference\"\n          - columnheader \"Difference\"\n      - rowgroup:\n        - row \"Orbit insertion, T+ — 520.0 s —\":\n          - rowheader \"Orbit insertion, T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n        - row \"Perigee at the end — 550.0 km —\":\n          - rowheader \"Perigee at the end\"\n          - cell \"—\"\n          - cell \"550.0 km\"\n          - cell \"—\"\n        - row \"Apogee at the end 0.0 km 550.0 km -550.0 km\":\n          - rowheader \"Apogee at the end\"\n          - cell \"0.0 km\"\n          - cell \"550.0 km\"\n          - cell \"-550.0 km\"\n        - row \"Inclination at the end 28.56° 53.00° -24.44°\":\n          - rowheader \"Inclination at the end\"\n          - cell \"28.56°\"\n          - cell \"53.00°\"\n          - cell \"-24.44°\"\n        - row \"Maximum dynamic pressure 0.00 kPa 30.00 kPa -30.00 kPa\":\n          - rowheader \"Maximum dynamic pressure\"\n          - cell \"0.00 kPa\"\n          - cell \"30.00 kPa\"\n          - cell \"-30.00 kPa\"\n        - row \"Maximum dynamic pressure, T+ -10.0 s 72.0 s -82.0 s\":\n          - rowheader \"Maximum dynamic pressure, T+\"\n          - cell \"-10.0 s\"\n          - cell \"72.0 s\"\n          - cell \"-82.0 s\"\n        - row \"Maximum load factor 1.00 g 2.50 g -1.50 g\":\n          - rowheader \"Maximum load factor\"\n          - cell \"1.00 g\"\n          - cell \"2.50 g\"\n          - cell \"-1.50 g\"\n        - row \"Δv left at the end 14,672 m/s 300 m/s +14,372 m/s\":\n          - rowheader \"Δv left at the end\"\n          - cell \"14,672 m/s\"\n          - cell \"300 m/s\"\n          - cell \"+14,372 m/s\"\n        - row \"Target orbit, time T+ — 520.0 s —\":\n          - rowheader \"Target orbit, time T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n    - "
+  },
+  {
+    "file": "C07-flight-event-overflow.orbitlab-flight.json",
+    "reference": " [level=3]\n    - button \"Use as reference\"\n    - button \"Open flight\"\n    - button \"Save flight\"\n    - paragraph: That file is not an Orbitlab flight, or it is damaged.\n    - generic: \"Reference: Synthetic browser QA - Falcon 9 reference\"\n    - button \"Stop comparing\": ×\n    - table:\n      - rowgroup:\n        - row \"Quantity This flight Reference Difference\":\n          - columnheader \"Quantity\"\n          - columnheader \"This flight\"\n          - columnheader \"Reference\"\n          - columnheader \"Difference\"\n      - rowgroup:\n        - row \"Orbit insertion, T+ — 520.0 s —\":\n          - rowheader \"Orbit insertion, T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n        - row \"Perigee at the end — 550.0 km —\":\n          - rowheader \"Perigee at the end\"\n          - cell \"—\"\n          - cell \"550.0 km\"\n          - cell \"—\"\n        - row \"Apogee at the end 0.0 km 550.0 km -550.0 km\":\n          - rowheader \"Apogee at the end\"\n          - cell \"0.0 km\"\n          - cell \"550.0 km\"\n          - cell \"-550.0 km\"\n        - row \"Inclination at the end 28.56° 53.00° -24.44°\":\n          - rowheader \"Inclination at the end\"\n          - cell \"28.56°\"\n          - cell \"53.00°\"\n          - cell \"-24.44°\"\n        - row \"Maximum dynamic pressure 0.00 kPa 30.00 kPa -30.00 kPa\":\n          - rowheader \"Maximum dynamic pressure\"\n          - cell \"0.00 kPa\"\n          - cell \"30.00 kPa\"\n          - cell \"-30.00 kPa\"\n        - row \"Maximum dynamic pressure, T+ -10.0 s 72.0 s -82.0 s\":\n          - rowheader \"Maximum dynamic pressure, T+\"\n          - cell \"-10.0 s\"\n          - cell \"72.0 s\"\n          - cell \"-82.0 s\"\n        - row \"Maximum load factor 1.00 g 2.50 g -1.50 g\":\n          - rowheader \"Maximum load factor\"\n          - cell \"1.00 g\"\n          - cell \"2.50 g\"\n          - cell \"-1.50 g\"\n        - row \"Δv left at the end 14,672 m/s 300 m/s +14,372 m/s\":\n          - rowheader \"Δv left at the end\"\n          - cell \"14,672 m/s\"\n          - cell \"300 m/s\"\n          - cell \"+14,372 m/s\"\n        - row \"Target orbit, time T+ — 520.0 s —\":\n          - rowheader \"Target orbit, time T+\"\n          - cell \"—\"\n          - cell \"520.0 s\"\n          - cell \"—\"\n    - "
+  },
+  {
+    "file": "C06-mission-wrong-flight-format.orbitlab.json",
+    "designs": "\n        - heading \"Your designs\" [level=2]\n        - button \"Save\"\n        - button \"Save as new\"\n        - button \"Export this design\"\n        - button \"Import a file\" [active]\n        - status:\n          - paragraph: \"This is a mission file, not a design: open it in the Launch section, under \\\"Share & save the mission\\\".\"\n        - list:\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM · open now\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete"
+  },
+  {
+    "file": "C03-broken.json",
+    "designs": "\n        - heading \"Your designs\" [level=2]\n        - button \"Save\"\n        - button \"Save as new\"\n        - button \"Export this design\"\n        - button \"Import a file\" [active]\n        - status:\n          - paragraph: This file is not an Orbitlab design, so nothing was imported.\n        - list:\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM · open now\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete"
+  },
+  {
+    "file": "C15-design-satellite.orbitlab.json",
+    "designs": "\n        - heading \"Your designs\" [level=2]\n        - button \"Save\"\n        - button \"Save as new\"\n        - button \"Export this design\"\n        - button \"Import a file\" [active]\n        - status:\n          - paragraph: The rocket in this file is not one this version can fly, so nothing was imported.\n          - generic \"Technical detail (in English)\"\n        - list:\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM · open now\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete"
+  },
+  {
+    "file": "C15-design-empty-stages.orbitlab.json",
+    "designs": "\n        - heading \"Your designs\" [level=2]\n        - button \"Save\"\n        - button \"Save as new\"\n        - button \"Export this design\"\n        - button \"Import a file\" [active]\n        - status:\n          - paragraph: The rocket in this file is not one this version can fly, so nothing was imported.\n          - generic \"Technical detail (in English)\"\n        - list:\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM · open now\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete"
+  },
+  {
+    "file": "C16-design-version999.orbitlab.json",
+    "designs": "\n        - heading \"Your designs\" [level=2]\n        - button \"Save\"\n        - button \"Save as new\"\n        - button \"Export this design\"\n        - button \"Import a file\" [active]\n        - status:\n          - paragraph: \"Imported \\\"QA-Falcon-A\\\" and opened it. It was saved by a newer version of Orbitlab: anything this version does not know was left out.\"\n        - list:\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM · open now\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete"
+  },
+  {
+    "file": "C16-design-version999.orbitlab.json",
+    "designs": "\n        - heading \"Your designs\" [level=2]\n        - button \"Save\"\n        - button \"Save as new\"\n        - button \"Export this design\"\n        - button \"Import a file\" [active]\n        - status:\n          - paragraph: \"Imported \\\"QA-Falcon-A\\\" and opened it. It was saved by a newer version of Orbitlab: anything this version does not know was left out.\"\n        - list:\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM · open now\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete\n          - strong: QA-Falcon-A\n          - generic: Changed Sep 29, 2026, 11:20 PM\n          - 'button \"Open: QA-Falcon-A\"': Open\n          - 'button \"Rename: QA-Falcon-A\"': Rename\n          - 'button \"Export: QA-Falcon-A\"': Export\n          - 'button \"Delete: QA-Falcon-A\"': Delete"
+  },
+  {
+    "file": "C24-mixed-valid-missing-bstar-valid.json",
+    "notices": [
+      "        - paragraph: Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.",
+      "          - option \"Your file\" [selected]",
+      "        - paragraph: \"The element sets of your file: 2 of them. The file was read in this page and was sent nowhere.\"",
+      "        - list \"Your file\":",
+      "          - button \"ISS (ZARYA) 25544\" [pressed]:",
+      "            - generic: \"25544\"",
+      "          - button \"QA SYNTHETIC SECOND ISS COPY 90002\":",
+      "            - generic: \"90002\"",
+      "        - button \"Read a file of element sets…\"",
+      "        - paragraph: TLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.",
+      "        - paragraph: 2 element sets read from C24-mixed-valid-missing-bstar-valid.json (JSON).",
+      "          - listitem: \"set 2: BSTAR is missing\"",
+      "        - definition: \"25544\"",
+      "        - option \"its element set's decay rate, fitted\" [selected]"
+    ]
+  },
+  {
+    "file": "C24-unsupported-type4.json",
+    "notices": [
+      "        - paragraph: Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.",
+      "          - option \"Your file\" [selected]",
+      "        - paragraph: \"The element sets of your file: 2 of them. The file was read in this page and was sent nowhere.\"",
+      "        - list \"Your file\":",
+      "          - button \"ISS (ZARYA) 25544\" [pressed]:",
+      "            - generic: \"25544\"",
+      "          - button \"QA SYNTHETIC SECOND ISS COPY 90002\":",
+      "            - generic: \"90002\"",
+      "        - button \"Read a file of element sets…\"",
+      "        - paragraph: TLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.",
+      "        - paragraph: No element set could be read from C24-unsupported-type4.json.",
+      "          - listitem: \"set 1: made for SGP4-XP, not for SGP4\"",
+      "        - paragraph: 2 element sets read from C24-mixed-valid-missing-bstar-valid.json (JSON).",
+      "        - definition: \"25544\"",
+      "        - option \"its element set's decay rate, fitted\" [selected]"
+    ]
+  },
+  {
+    "file": "C25-plain-text.txt",
+    "notices": [
+      "        - paragraph: Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.",
+      "          - option \"Your file\" [selected]",
+      "        - paragraph: \"The element sets of your file: 2 of them. The file was read in this page and was sent nowhere.\"",
+      "        - list \"Your file\":",
+      "          - button \"ISS (ZARYA) 25544\" [pressed]:",
+      "            - generic: \"25544\"",
+      "          - button \"QA SYNTHETIC SECOND ISS COPY 90002\":",
+      "            - generic: \"90002\"",
+      "        - button \"Read a file of element sets…\"",
+      "        - paragraph: TLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.",
+      "        - paragraph: No element set could be read from C25-plain-text.txt.",
+      "        - paragraph: 2 element sets read from C24-mixed-valid-missing-bstar-valid.json (JSON).",
+      "        - definition: \"25544\"",
+      "        - option \"its element set's decay rate, fitted\" [selected]"
+    ]
+  },
+  {
+    "file": "C25-malformed-json.json",
+    "notices": [
+      "        - paragraph: Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.",
+      "          - option \"Your file\" [selected]",
+      "        - paragraph: \"The element sets of your file: 2 of them. The file was read in this page and was sent nowhere.\"",
+      "        - list \"Your file\":",
+      "          - button \"ISS (ZARYA) 25544\" [pressed]:",
+      "            - generic: \"25544\"",
+      "          - button \"QA SYNTHETIC SECOND ISS COPY 90002\":",
+      "            - generic: \"90002\"",
+      "        - button \"Read a file of element sets…\"",
+      "        - paragraph: TLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.",
+      "        - paragraph: No element set could be read from C25-malformed-json.json.",
+      "          - listitem: \"set 1: JSON cannot be read\"",
+      "        - paragraph: 2 element sets read from C24-mixed-valid-missing-bstar-valid.json (JSON).",
+      "        - definition: \"25544\"",
+      "        - option \"its element set's decay rate, fitted\" [selected]"
+    ]
+  },
+  {
+    "file": "C26-omm-over-30MiB.txt",
+    "notices": [
+      "        - paragraph: Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.",
+      "          - option \"Your file\" [selected]",
+      "        - paragraph: \"The element sets of your file: 2 of them. The file was read in this page and was sent nowhere.\"",
+      "        - list \"Your file\":",
+      "          - button \"ISS (ZARYA) 25544\" [pressed]:",
+      "            - generic: \"25544\"",
+      "          - button \"QA SYNTHETIC SECOND ISS COPY 90002\":",
+      "            - generic: \"90002\"",
+      "        - button \"Read a file of element sets…\"",
+      "        - paragraph: TLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.",
+      "        - paragraph: The file is larger than 30 MB.",
+      "        - paragraph: 2 element sets read from C24-mixed-valid-missing-bstar-valid.json (JSON).",
+      "        - definition: \"25544\"",
+      "        - option \"its element set's decay rate, fitted\" [selected]"
+    ]
+  },
+  {
+    "file": "C25-bad-checksum.tle",
+    "notices": [
+      "        - paragraph: Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.",
+      "          - option \"Your file\" [selected]",
+      "        - paragraph: \"The element sets of your file: 1 of them. The file was read in this page and was sent nowhere.\"",
+      "        - list \"Your file\":",
+      "          - button \"ISS (ZARYA) 25544\" [pressed]:",
+      "            - generic: \"25544\"",
+      "        - button \"Read a file of element sets…\"",
+      "        - paragraph: TLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.",
+      "        - paragraph: 1 element sets read from C25-bad-checksum.tle (TLE).",
+      "        - definition: \"25544\"",
+      "        - option \"its element set's decay rate, fitted\" [selected]"
+    ]
+  },
+  {
+    "file": "C28-cdm-missing-CN_N.cdm",
+    "cdm": " [level=3]\n        - paragraph: An operator is warned of a close approach to its satellite by a conjunction data message (CCSDS 508.0-B-1), with each object's position uncertainty from the tracking. Read one in its text form (KVN) to get the probability from the message's own uncertainties, not from the rough estimates above. The file is read in the page and sent nowhere.\n        - generic: Read a message (.cdm, KVN)\n        - button \"Read a message (.cdm, KVN)\"\n        - paragraph: \"C28-cdm-missing-CN_N.cdm could not be read as a conjunction data message: no CN_N\"\n        - "
+  },
+  {
+    "file": "C28-cdm-unsupported-TOD.cdm",
+    "cdm": " [level=3]\n        - paragraph: An operator is warned of a close approach to its satellite by a conjunction data message (CCSDS 508.0-B-1), with each object's position uncertainty from the tracking. Read one in its text form (KVN) to get the probability from the message's own uncertainties, not from the rough estimates above. The file is read in the page and sent nowhere.\n        - generic: Read a message (.cdm, KVN)\n        - button \"Read a message (.cdm, KVN)\"\n        - paragraph: \"C28-cdm-unsupported-TOD.cdm could not be read as a conjunction data message: a frame this reader does not take: TOD\"\n        - "
+  },
+  {
+    "file": "C28-cdm-wrong-json.json",
+    "cdm": " [level=3]\n        - paragraph: An operator is warned of a close approach to its satellite by a conjunction data message (CCSDS 508.0-B-1), with each object's position uncertainty from the tracking. Read one in its text form (KVN) to get the probability from the message's own uncertainties, not from the rough estimates above. The file is read in the page and sent nowhere.\n        - generic: Read a message (.cdm, KVN)\n        - button \"Read a message (.cdm, KVN)\"\n        - paragraph: \"C28-cdm-wrong-json.json could not be read as a conjunction data message: no CCSDS_CDM_VERS: not a conjunction data message (KVN)\"\n        - "
+  },
+  {
+    "file": "C26-cdm-over-2MiB.cdm",
+    "cdm": " [level=3]\n        - paragraph: An operator is warned of a close approach to its satellite by a conjunction data message (CCSDS 508.0-B-1), with each object's position uncertainty from the tracking. Read one in its text form (KVN) to get the probability from the message's own uncertainties, not from the rough estimates above. The file is read in the page and sent nowhere.\n        - generic: Read a message (.cdm, KVN)\n        - button \"Read a message (.cdm, KVN)\"\n        - paragraph: \"C26-cdm-over-2MiB.cdm could not be read as a conjunction data message: larger than a conjunction message can be\"\n        - "
+  },
+  {
+    "file": "C03-broken.json",
+    "summary": "\n  - generic: ✎ Lessons and the placement test\n  - navigation \"Lessons\":\n    - link \"Lessons\":\n      - /url: \"#/lessons\"\n    - link \"Placement test\":\n      - /url: \"#/lessons/test\"\n    - link \"Worksheets\":\n      - /url: \"#/lessons/worksheets\"\n  - button \"← Back to the simulator\"\n  - heading \"Lessons\" [level=2]\n  - paragraph: \"Training missions with a goal and pass criteria, graded as soon as the flight ends, and real cases worked from their data. Pick a lesson: a mission is set up for you, the settings it fixes are locked, and you fly it; a case opens the Orbit section's real satellites, and you work out its answers.\"\n  - generic: 0 of 24 passed\n  - button \"Open lesson file…\"\n  - button \"Export results\"\n  - generic: Your name, for the results file\n  - textbox \"Your name, for the results file\"\n  - paragraph: This is not a lesson file Orbitlab can read.\n  - paragraph: Not sure where to start? A 25-question test of what you already know shows your strong and weak areas, recommends where to begin and what you can skip. Every lesson stays open whatever it says.\n  - button \"Take the placement test\"\n  - heading \"1 · Orbital mechanics\" [level=3]\n  - paragraph: Explore · point mass\n  - 'button \"○ 1.1 Your first orbit Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed. hp ha T\"':\n    - generic: ○\n    - generic: 1.1 Your first orbit\n    - generic: \"Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed.\"\n    - generic: hp ha\n    - generic: T\n  - 'button \"○ 1.2 Into the station''s plane Soyuz-2.1a stands at Baikonur with a crewed spacecraft for the space station, but the launch time on the panel is a bad one: the station''s orbital plane is far from the pad. Choose the launch time so that the ascent puts the spacecraft straight into the station''s plane — inclination 51.64° and the station''s longitude of the ascending node Ω — and fly it. On",
+    "qaEntries": []
+  },
+  {
+    "file": "C30-lessons-missing-array.orbitlab-lesson.json",
+    "summary": "\n  - generic: ✎ Lessons and the placement test\n  - navigation \"Lessons\":\n    - link \"Lessons\":\n      - /url: \"#/lessons\"\n    - link \"Placement test\":\n      - /url: \"#/lessons/test\"\n    - link \"Worksheets\":\n      - /url: \"#/lessons/worksheets\"\n  - button \"← Back to the simulator\"\n  - heading \"Lessons\" [level=2]\n  - paragraph: \"Training missions with a goal and pass criteria, graded as soon as the flight ends, and real cases worked from their data. Pick a lesson: a mission is set up for you, the settings it fixes are locked, and you fly it; a case opens the Orbit section's real satellites, and you work out its answers.\"\n  - generic: 0 of 24 passed\n  - button \"Open lesson file…\"\n  - button \"Export results\"\n  - generic: Your name, for the results file\n  - textbox \"Your name, for the results file\"\n  - paragraph: This is not a lesson file Orbitlab can read.\n  - paragraph: Not sure where to start? A 25-question test of what you already know shows your strong and weak areas, recommends where to begin and what you can skip. Every lesson stays open whatever it says.\n  - button \"Take the placement test\"\n  - heading \"1 · Orbital mechanics\" [level=3]\n  - paragraph: Explore · point mass\n  - 'button \"○ 1.1 Your first orbit Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed. hp ha T\"':\n    - generic: ○\n    - generic: 1.1 Your first orbit\n    - generic: \"Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed.\"\n    - generic: hp ha\n    - generic: T\n  - 'button \"○ 1.2 Into the station''s plane Soyuz-2.1a stands at Baikonur with a crewed spacecraft for the space station, but the launch time on the panel is a bad one: the station''s orbital plane is far from the pad. Choose the launch time so that the ascent puts the spacecraft straight into the station''s plane — inclination 51.64° and the station''s longitude of the ascending node Ω — and fly it. On",
+    "qaEntries": []
+  },
+  {
+    "file": "C30-lessons-partial-duplicate.orbitlab-lesson.json",
+    "summary": "\n  - generic: ✎ Lessons and the placement test\n  - navigation \"Lessons\":\n    - link \"Lessons\":\n      - /url: \"#/lessons\"\n    - link \"Placement test\":\n      - /url: \"#/lessons/test\"\n    - link \"Worksheets\":\n      - /url: \"#/lessons/worksheets\"\n  - button \"← Back to the simulator\"\n  - heading \"Lessons\" [level=2]\n  - paragraph: \"Training missions with a goal and pass criteria, graded as soon as the flight ends, and real cases worked from their data. Pick a lesson: a mission is set up for you, the settings it fixes are locked, and you fly it; a case opens the Orbit section's real satellites, and you work out its answers.\"\n  - generic: 0 of 25 passed\n  - button \"Open lesson file…\"\n  - button \"Export results\"\n  - generic: Progress saved in this browser.\n  - generic: Your name, for the results file\n  - textbox \"Your name, for the results file\"\n  - paragraph: \"Added from the file: 1 lessons and 0 placement-test questions.\"\n  - list:\n    - listitem: \"These parts could not be used and were left out:\"\n    - listitem: \"lessons[1] (qa-invalid).title: missing (en)\"\n    - listitem: \"lessons[1] (qa-invalid).brief: missing (en)\"\n    - listitem: \"lessons[2]: duplicate (qa-boundary-partial)\"\n  - paragraph: Not sure where to start? A 25-question test of what you already know shows your strong and weak areas, recommends where to begin and what you can skip. Every lesson stays open whatever it says.\n  - button \"Take the placement test\"\n  - heading \"1 · Orbital mechanics\" [level=3]\n  - paragraph: Explore · point mass\n  - 'button \"○ 1.1 Your first orbit Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed. hp ha T\"':\n    - generic: ○\n    - generic: 1.1 Your first orbit\n    - generic: \"Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed.\"\n    - generic: hp ha\n    - generic: T\n  - 'button \"○ 1.1 QA Boundary Partial Lesson Fly Falcon 9 from Cape Canaveral ",
+    "qaEntries": [
+      "  - 'button \"○ 1.1 QA Boundary Partial Lesson Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed. hp ha T\"':"
+    ]
+  },
+  {
+    "file": "browser-results-assessment.json via lesson importer",
+    "rejected": true,
+    "library25": true
+  },
+  {
+    "file": "qa-draft-b-vehicle.orbitlab.json",
+    "name": "QA-Draft-B",
+    "engines": "8"
+  }
+]

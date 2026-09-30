@@ -42,6 +42,9 @@ export const TUNNEL_QUANTITIES: readonly TunnelQuantity[] = ['cN', 'cA', 'cm', '
 
 export type TunnelRange = 'small' | 'wide';
 export const TUNNEL_RANGES: readonly TunnelRange[] = ['small', 'wide'];
+export const TUNNEL_MAX_PAYLOAD_KG = 500000;
+/** The tunnel's payload entry must be complete and within the advertised bounds. */
+export const validTunnelPayload = (kg: number): boolean => Number.isFinite(kg) && kg >= 0 && kg <= TUNNEL_MAX_PAYLOAD_KG;
 const steps = (to: number, by: number): number[] => Array.from({ length: Math.round(to / by) + 1 }, (_, i) => i * by);
 export const TUNNEL_ALPHAS: Readonly<Record<TunnelRange, readonly number[]>> = { small: steps(10, 1), wide: steps(90, 5) };
 

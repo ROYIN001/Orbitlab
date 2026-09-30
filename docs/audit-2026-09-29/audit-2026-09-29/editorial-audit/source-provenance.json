@@ -1,0 +1,19 @@
+{
+  "checkedAtUTC": "2026-09-29T22:18:34.0285090Z",
+  "finalProductionCommit": "76534dc1d171726cb3d5eadc82d1ac77b629376b",
+  "editorialCommit": "c146a699f01bb5d299af39e3ca9742445442b474",
+  "browserExportsCommit": "277f41dd6cbd46d1b03d97bcc060258ec8c7554a",
+  "numericalCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+  "sourceTrees": {
+    "editorial": "0487cbf1584bc72dc785864eef777e6ccde075a0",
+    "browserExports": "0487cbf1584bc72dc785864eef777e6ccde075a0",
+    "final": "33dd80c27020f142c362238be378bd77e51ce550"
+  },
+  "changedStrings": 60,
+  "changedProductionFiles": 11,
+  "currentSourceMatchesVerifiedHashes": true,
+  "nonLocalizedAstUnchanged": true,
+  "lastChange": "Only ws.made UI status in three languages; generated documents and all execution logic unchanged",
+  "focused165Evidence": "source-provenance-c146.json and text-only-verification-c146.json",
+  "finalChecks": "status-wording-tests.json:29/29; status-wording-build.exit:0"
+}

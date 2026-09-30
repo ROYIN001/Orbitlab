@@ -1,0 +1,147 @@
+- banner:
+  - generic: ◉
+  - generic: ORBITLAB
+  - navigation "Section":
+    - link "Home":
+      - /url: "#/home"
+      - generic: ⌂
+      - generic: Home
+    - link "Launch":
+      - /url: "#/launch/watch"
+      - generic: ▲
+      - generic: Launch
+    - link "Orbit":
+      - /url: "#/orbit/watch"
+      - generic: ⊕
+      - generic: Orbit
+    - link "Build":
+      - /url: "#/build/watch"
+      - generic: ⚙︎
+      - generic: Build
+  - navigation "App mode":
+    - link "Watch":
+      - /url: "#/launch/watch"
+      - generic: ▷
+      - generic: Watch
+    - link "Explore":
+      - /url: "#/launch/explore"
+      - generic: ◎
+    - link "Engineer":
+      - /url: "#/launch/engineer"
+      - generic: ⌬
+  - button "Lessons — 0 of 24 passed":
+    - generic: ✎
+    - generic: Lessons
+  - 'button "Data sources: Offline"':
+  - combobox "Language":
+    - option "English" [selected]
+    - option "Русский"
+    - option "ไทย"
+- main:
+  - generic "Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.":
+    - generic: MISSION
+    - heading "Soyuz-2.1a/Crewed spacecraft" [level=2]
+    - generic: STANDBY
+    - button "Reset camera":
+      - generic: ⌖
+    - button "Sound (off until you turn it on)":
+      - generic: ♪
+    - button "Full screen":
+      - generic: ⛶
+    - region "Choose a launch to watch":
+      - heading "Choose a launch to watch" [level=2]
+      - button "Close": ×
+      - paragraph: Each one is a real rocket flying a typical mission of its own.
+      - button "Soyuz-2.1a · RU Soyuz to the space station A crew ship on the R-7 rocket family that launched Sputnik and Gagarin, from Baikonur in Kazakhstan.":
+        - generic: Soyuz-2.1a · RU
+        - strong: Soyuz to the space station
+        - generic: A crew ship on the R-7 rocket family that launched Sputnik and Gagarin, from Baikonur in Kazakhstan.
+      - 'button "Falcon 9 Block 5 · US Falcon 9: Bandwagon-1 Eleven satellites to a 45° orbit from Kennedy LC-39A, as flown on 7 April 2024, and the first stage flies back to land at Landing Zone 1."':
+        - generic: Falcon 9 Block 5 · US
+        - strong: "Falcon 9: Bandwagon-1"
+        - generic: Eleven satellites to a 45° orbit from Kennedy LC-39A, as flown on 7 April 2024, and the first stage flies back to land at Landing Zone 1.
+      - 'button "Starship (Super Heavy) · US Starship Flight 5 The biggest rocket ever built, as flown on 13 October 2024: the booster is caught by the launch tower’s arms and the ship splashes down in the Indian Ocean."':
+        - generic: Starship (Super Heavy) · US
+        - strong: Starship Flight 5
+        - generic: "The biggest rocket ever built, as flown on 13 October 2024: the booster is caught by the launch tower’s arms and the ship splashes down in the Indian Ocean."
+      - 'button "Falcon Heavy · US Falcon Heavy: Arabsat-6A A 6.5-tonne satellite towards geostationary orbit, as flown on 11 April 2019. Both side boosters land back at the Cape and the core on a ship at sea."':
+        - generic: Falcon Heavy · US
+        - strong: "Falcon Heavy: Arabsat-6A"
+        - generic: A 6.5-tonne satellite towards geostationary orbit, as flown on 11 April 2019. Both side boosters land back at the Cape and the core on a ship at sea.
+      - 'button "Ariane 64 · EU Ariane 6: Amazon Leo Europe’s rocket with four solid boosters takes 32 broadband satellites, about 20 tonnes, from Kourou in French Guiana (flight VA267, 12 February 2026)."':
+        - generic: Ariane 64 · EU
+        - strong: "Ariane 6: Amazon Leo"
+        - generic: Europe’s rocket with four solid boosters takes 32 broadband satellites, about 20 tonnes, from Kourou in French Guiana (flight VA267, 12 February 2026).
+      - button "Electron · NZ/US Electron, the small rocket An 18-metre rocket whose engine pumps are driven by electric motors, launched from New Zealand.":
+        - generic: Electron · NZ/US
+        - strong: Electron, the small rocket
+        - generic: An 18-metre rocket whose engine pumps are driven by electric motors, launched from New Zealand.
+      - 'button "Soyuz-2.1a · RU Soyuz MS-10: an abort at two minutes October 2018. A strap-on struck the core as it separated; the fairing''s motors pulled the crew clear, and they landed safely."':
+        - generic: Soyuz-2.1a · RU
+        - strong: "Soyuz MS-10: an abort at two minutes"
+        - generic: October 2018. A strap-on struck the core as it separated; the fairing's motors pulled the crew clear, and they landed safely.
+      - 'button "Soyuz-2.1a · RU Soyuz T-10-1: escape from a burning pad September 1983. Fire broke out at the foot of the rocket; the escape tower pulled the crew away seconds before it exploded."':
+        - generic: Soyuz-2.1a · RU
+        - strong: "Soyuz T-10-1: escape from a burning pad"
+        - generic: September 1983. Fire broke out at the foot of the rocket; the escape tower pulled the crew away seconds before it exploded.
+      - 'button "Soyuz-2.1a · RU Soyuz 18a: a fall from space April 1975. The stages failed to part cleanly at 145 km; the crew fell back and landed in the Altai mountains, 1,574 km away."':
+        - generic: Soyuz-2.1a · RU
+        - strong: "Soyuz 18a: a fall from space"
+        - generic: April 1975. The stages failed to part cleanly at 145 km; the crew fell back and landed in the Altai mountains, 1,574 km away.
+      - 'button "Soyuz-2.1a · RU Soyuz MS: at the station in 3 hours November 2025: the two-orbit rendezvous of Soyuz MS-28. Four burns, the Kurs approach, a flyaround and docking at Rassvet, 3 h 10 min after liftoff."':
+        - generic: Soyuz-2.1a · RU
+        - strong: "Soyuz MS: at the station in 3 hours"
+        - generic: "November 2025: the two-orbit rendezvous of Soyuz MS-28. Four burns, the Kurs approach, a flyaround and docking at Rassvet, 3 h 10 min after liftoff."
+      - heading "Launch audio" [level=3]
+      - paragraph: "With the sound on (♪), a launch that has a broadcast free to share plays it in step with the flight: the countdown, launch control and the commentary, in the broadcast's own language. The others play the simulator's own sound, because their broadcasts are copyrighted — but you can add a recording you have of one: it stays in this browser and is never uploaded. Say at what time in the recording the rocket lifts off."
+      - strong: Soyuz to the space station
+      - generic: Write the liftoff time in the recording as m:ss or h:mm:ss.
+      - generic: Liftoff at
+      - textbox "Liftoff at": bad
+      - button "Add recording" [active]
+      - button "Remove"
+      - strong: "Falcon 9: Bandwagon-1"
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: Starship Flight 5
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: "Falcon Heavy: Arabsat-6A"
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: "Ariane 6: Amazon Leo"
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: Electron, the small rocket
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: "Soyuz MS-10: an abort at two minutes"
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: "Soyuz T-10-1: escape from a burning pad"
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: "Soyuz 18a: a fall from space"
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
+      - strong: "Soyuz MS: at the station in 3 hours"
+      - generic: Simulated sound
+      - generic: Liftoff at
+      - textbox "Liftoff at": 0:00
+      - button "Add recording"
