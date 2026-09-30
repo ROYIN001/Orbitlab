@@ -34,8 +34,7 @@
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
 import { SATELLITES, missionSatellite, satelliteById } from '../data/satellites';
-import { FAIRING_ENVELOPE, fairingFit } from '../config/satellite-spec';
-import { unbroken } from './build/figures';
+import { fairingFitText } from './fairing-fit';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
@@ -1204,21 +1203,8 @@ export class SetupPanel {
    * satellite flies as it flew and gets no note.
    */
   private fairingFitNote(vehicle: VehicleSpec, satellite: SatelliteSpec): HTMLElement {
-    const fit = fairingFit(vehicle, satellite);
-    // a size and a share on one line each, however narrow the panel: "4,4 × 10,5 м" never ends a line at "10,5" (`unbroken`)
-    const size = (b?: { diameter: number; length: number }): string => (b ? unbroken(`${num(b.diameter, 1)} × ${num(b.length, 1)} ${t('u.m')}`) : '');
-    const params = { payload: size(fit.payload), envelope: size(fit.envelope), shell: size(fit.shell) };
-    const estimate = t('setup.customSat.estimate', { d: num(FAIRING_ENVELOPE.diameter * 100), l: num(FAIRING_ENVELOPE.length * 100) })
-      .replace(/(\d) %/g, '$1\u00a0%');
-    let text: string;
-    switch (fit.verdict) {
-      case 'fits': text = `${t('setup.customSat.fits', params)} ${estimate}`; break;
-      case 'tight': text = `${t('setup.customSat.tight', params)} ${estimate}`; break;
-      case 'tooBig': text = t('setup.customSat.tooBig', params); break;
-      case 'noFairing': text = t('setup.customSat.noFairing'); break;
-      case 'noSize': text = t('setup.customSat.noSize'); break;
-    }
-    const note = this.el('p', fit.verdict === 'tight' || fit.verdict === 'tooBig' ? 'field-note warn' : 'field-note', text);
+    const fit = fairingFitText(vehicle, satellite);
+    const note = this.el('p', fit.warn ? 'field-note warn' : 'field-note', fit.text);
     note.dataset.fairingFit = fit.verdict;
     return note;
   }

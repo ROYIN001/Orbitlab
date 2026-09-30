@@ -499,6 +499,11 @@ class App {
         this.go(route('launch', level));
         return true;
       },
+      // D06 (the integration): "Fly it" on the Launch section's own vehicle, from its site, after its launch time
+      launchMission: () => {
+        const m = this.panel.missionState();
+        return { vehicleId: m.vehicleId, ...(m.vehicleSpec ? { vehicleSpec: m.vehicleSpec } : {}), siteId: m.siteId, launchTime: m.launchTime };
+      },
       // D06: a designed satellite in its own orbit, with no launch, handed on as "Continue in Orbit" hands a flight's
       toOrbit: (h, level) => {
         this.handoff = h;

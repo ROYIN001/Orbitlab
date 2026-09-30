@@ -41,6 +41,8 @@ import { camera, designDateField, engine, menu, numberField, refreshControls, ss
 import { SECTION_KEY, sectionRows, type Section } from './satellite-figures';
 import { figureTable, satTextList, sayFig } from './satellite-text';
 import { defaultNameFor, type SatelliteWorkspace } from './satellite-workspace';
+import { SatelliteFly, type LaunchMissionNow } from './satellite-fly';
+import type { MissionDocument } from '../../config/mission-file';
 import './satellite.css';
 
 export interface SatelliteLevelHost {
@@ -48,6 +50,10 @@ export interface SatelliteLevelHost {
   toOrbit(h: OrbitHandoff): void;
   /** a rocket imported here (a file of the other kind): open it in the rocket designer, whose store says `message` */
   openRocket(record: DesignRecord<'vehicle'>, message: string): void;
+  /** the Launch section's mission now: the vehicle "Fly it" offers first, its site and launch time */
+  launchMission(): LaunchMissionNow;
+  /** "Fly it": hand the design to the Launch section as its mission's satellite; false when it could not take it */
+  fly(doc: MissionDocument): boolean;
 }
 
 /** The groups the Explore level shows, and each one's heading; the rest of the numbers are the bench's. */
@@ -85,6 +91,8 @@ export class SatelliteLevel {
   private readonly checks = el('section', 'bs-panel bsat-checks');
   private readonly figures = el('section', 'bs-panel bsat-figures');
   private readonly store: ExploreStore<'satellite'>;
+  /** "Fly it" in the Launch section (the integration of D06, map §2.6 c) */
+  private readonly flyBox: SatelliteFly;
 
   constructor(private readonly ws: SatelliteWorkspace, private readonly host: SatelliteLevelHost) {
     this.store = new ExploreStore<'satellite'>({
@@ -94,6 +102,7 @@ export class SatelliteLevel {
       forgotten: (recordId) => { if (this.ws.recordId === recordId) this.ws.saved(null); },
       other: (record, message) => { if (isDesignOf(record, 'vehicle')) this.host.openRocket(record, message); },
     }, undefined, 'satellite', STORE_TEXTS.satellite);
+    this.flyBox = new SatelliteFly(this.ws, { launchMission: () => this.host.launchMission(), fly: (doc) => this.host.fly(doc) }, P);
     this.glance.setAttribute('aria-labelledby', 'bsat-glance-title');
     this.controls.setAttribute('aria-labelledby', 'bsat-controls-title');
     this.checks.setAttribute('aria-labelledby', 'bsat-checks-title');
@@ -267,6 +276,8 @@ export class SatelliteLevel {
       parts.push(el('h3', 'bx-h3', t('build.sat.estimates')), satTextList(notes));
     }
     parts.push(this.orbitBox(fig, issues.length > 0));
+    this.flyBox.render(issues.length > 0 || !fig);
+    parts.push(this.flyBox.root);
     this.checks.replaceChildren(...parts);
   }
 

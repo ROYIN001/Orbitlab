@@ -52,6 +52,7 @@ import { SatelliteLevel } from './satellite-level';
 import { SatelliteBench } from './satellite-bench';
 import type { MissionDocument } from '../../config/mission-file';
 import type { OrbitHandoff } from '../../orbit/handoff';
+import type { LaunchMissionNow } from './satellite-fly';
 import './build.css';
 
 export interface BuildScreenHost {
@@ -68,6 +69,13 @@ export interface BuildScreenHost {
    * Orbit").
    */
   toOrbit?(h: OrbitHandoff, level: AppLevel): void;
+  /**
+   * D06 (map §2.6 c, the integration): the Launch section's mission now —
+   * its vehicle (a custom one inline), site and launch time — which the
+   * satellite designer's "Fly it" launches on unless the student picks
+   * another vehicle. It hands the design over through `flyDesign`.
+   */
+  launchMission?(): LaunchMissionNow;
 }
 
 /** What the Explore and Engineer levels build: a rocket (Phase 3) or a satellite (D06). */
@@ -348,6 +356,11 @@ export class BuildScreen {
     }
   }
 
+  /** The Launch section's mission now, for "Fly it"; without a host that gives one, Falcon 9 from the Cape now. */
+  private launchMission(): LaunchMissionNow {
+    return this.host.launchMission?.() ?? { vehicleId: 'falcon9', siteId: 'cape', launchTime: this.host.launchTime?.() ?? new Date() };
+  }
+
   /** The one satellite both levels work on, made the first time either is wanted. */
   private workspace(): SatelliteWorkspace {
     this.satWorkspace ??= new SatelliteWorkspace();
@@ -359,6 +372,8 @@ export class BuildScreen {
     if (!this.satLevel) {
       this.satLevel = new SatelliteLevel(this.workspace(), {
         toOrbit: (h) => this.host.toOrbit?.(h, 'explore'),
+        launchMission: () => this.launchMission(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
         // a rocket imported in the satellite designer opens in the rocket designer
         openRocket: (record, message) => {
           this.setCraft('rocket');
@@ -383,6 +398,8 @@ export class BuildScreen {
     if (!this.satBench) {
       this.satBench = new SatelliteBench(this.workspace(), {
         toExplore: () => { this.setCraft('satellite'); this.host.go(route('build', 'explore')); },
+        launchMission: () => this.launchMission(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
       });
       this.engineerRoot.append(this.satBench.root);
     }

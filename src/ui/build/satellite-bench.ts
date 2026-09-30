@@ -42,9 +42,10 @@ import { attitudeRows, cameraRows, dvRows, eclipseRows, linkRows, massRows, orbi
 import { figureTable, satTextList, sayFig } from './satellite-text';
 import { orbitLabel } from './satellite-level';
 import type { SatelliteWorkspace } from './satellite-workspace';
+import { SatelliteFly, type SatelliteFlyHost } from './satellite-fly';
 import './satellite.css';
 
-export interface SatelliteBenchHost {
+export interface SatelliteBenchHost extends SatelliteFlyHost {
   /** open the Explore level's satellite designer, where the design is saved and sent to Orbit */
   toExplore(): void;
 }
@@ -105,12 +106,17 @@ export class SatelliteBench {
   private readonly head = el('header', 'bs-panel bsb-head');
   private readonly tabBar = el('div', 'be-tabs');
   private readonly panel = el('section', 'bs-panel bsb-panel');
+  /** "Fly it" in the Launch section, under the tabs (the integration of D06, map §2.6 c) */
+  private readonly flySection = el('section', 'bs-panel bsb-fly');
+  private readonly flyBox: SatelliteFly;
 
   constructor(private readonly ws: SatelliteWorkspace, private readonly host: SatelliteBenchHost) {
     this.tabBar.setAttribute('role', 'tablist');
     this.tabBar.addEventListener('keydown', (e) => this.onTabKey(e));
     this.panel.setAttribute('role', 'tabpanel');
-    this.root.append(this.head, this.tabBar, this.panel);
+    this.flyBox = new SatelliteFly(this.ws, { launchMission: () => this.host.launchMission(), fly: (doc) => this.host.fly(doc) }, P);
+    this.flySection.append(this.flyBox.root);
+    this.root.append(this.head, this.tabBar, this.panel, this.flySection);
     this.ws.subscribe(() => {
       if (!this.visible) return;
       if (this.shapeOf() !== this.shape) this.rebuild();
@@ -280,6 +286,7 @@ export class SatelliteBench {
     const results = this.panel.querySelector<HTMLElement>('.bsb-results');
     if (!results) return;
     const { fig, issues, stale } = this.ws.worked();
+    this.flyBox.render(issues.length > 0 || !fig);
     const d = this.ws.design;
     const parts: HTMLElement[] = [el('h2', 'bx-h2', t('build.sat.bench.figures'))];
     if (issues.length) parts.push(satTextList(problemTexts(issues)));
