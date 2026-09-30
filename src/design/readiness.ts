@@ -42,7 +42,7 @@
  */
 import type { MissionConfig, VehicleSpec } from '../types';
 import { siteById } from '../data/sites';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import { planMission, resolveTarget, type MissionPlan } from '../physics/mission';
 import { probeInsertion, type InsertionProbe } from '../physics/autotune';
 import { RAD } from '../physics/constants';
@@ -107,7 +107,7 @@ const RANK: Record<ReadinessLevel, number> = { ok: 0, info: 1, warn: 2, fail: 3 
  */
 export function readinessVerdict(spec: VehicleSpec, mission: ReadinessMission, plan: MissionPlan | null, insertion: InsertionProbe | null): Feasibility {
   const site = siteById(mission.siteId);
-  const satellite = satelliteById(mission.satelliteId);
+  const satellite = missionSatellite(mission);
   return missionVerdict({
     spec, site, orbit: mission.orbit, satellite, payloadMass: mission.payloadMassOverride ?? satellite.mass,
     inclinationDeg: resolveTarget(mission.orbit, site, mission.launchTime).inclination * RAD,
@@ -126,7 +126,7 @@ export function readiness(spec: VehicleSpec, mission: ReadinessMission): Readine
     return { items, level, canFly: level !== 'fail', verdict, plan, capability, insertion };
   };
   const catalogue = isCatalogueEntry(spec);
-  const satellite = satelliteById(mission.satelliteId);
+  const satellite = missionSatellite(mission);
   const payloadMass = mission.payloadMassOverride ?? satellite.mass;
 
   // 1–2. The validator, then the design on its own (designWarnings runs the

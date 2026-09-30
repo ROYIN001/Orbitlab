@@ -902,6 +902,8 @@ export const ru: Record<string, string> = {
   // S02: a custom vehicle from a mission file (ui/panel.ts)
   'setup.validation.vehicleSpec': 'Собственная ракета в этой миссии задана с ошибками, поэтому полететь не может.',
   'setup.vehicle.custom': '{name} — собственная ракета',
+  // D06: a custom satellite carried inline (Phase 4 map §2.6 c; ui/panel.ts)
+  'setup.customSat.invalid': 'Собственный спутник в этой миссии задан с ошибками, поэтому полететь не может.',
   'setup.quickstart.title': 'Быстрый старт',
   'setup.quickstart.note': 'Выберите миссию для заполнения настроек. Проверьте их и нажмите «Пуск».',
   'setup.quickstart.leo': 'Первый полёт · низкая орбита',

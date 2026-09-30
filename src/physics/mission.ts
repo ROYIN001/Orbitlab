@@ -4,7 +4,7 @@
  */
 import type { MissionConfig, OrbitSpec, SatelliteSpec, VehicleSpec } from '../types';
 import type { SiteExtra } from '../data/sites';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import { rendezvousAvailable } from './rendezvous/profiles';
 import { vehicleDataId } from '../data/vehicles';
 import { DEG, R_EARTH, MU_EARTH, OMEGA_EARTH, SIDEREAL_DAY } from './constants';
@@ -1026,7 +1026,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // Curie...) is treated as an orbital-manoeuvring stage: the strong stages insert
   // into an ellipse whose apogee is the target (capped) and the kick stage finishes.
   const last = _vehicle.stages[_vehicle.stages.length - 1];
-  const satellite = satelliteById(cfg.satelliteId);
+  const satellite = missionSatellite(cfg);
   // No override means "fly the spacecraft that was selected", exactly as
   // `Simulation` and the auto-tuner already read it. Defaulting to zero here
   // made the plan — the weak-final-stage test, the ideal Δv of the strong
@@ -1120,7 +1120,7 @@ export function planMission(cfg: MissionConfig, site: SiteExtra, _vehicle: Vehic
   // Progress MS are, 200 × 242 km with the cut-off near perigee: the
   // spacecraft's own burns raise it to the station from there, and the
   // rendezvous profiles are timed from that orbit (docs/PHYSICS.md §9.2).
-  if (cfg.rendezvous && rendezvousAvailable(vehicleDataId(_vehicle), cfg.satelliteId, cfg.orbit) && parkingOverride <= 0
+  if (cfg.rendezvous && rendezvousAvailable(vehicleDataId(_vehicle), satellite, cfg.orbit) && parkingOverride <= 0
     && ascentReaches(RENDEZVOUS_INSERTION.perigee, RENDEZVOUS_INSERTION.apogee)) {
     insertionAltitude = RENDEZVOUS_INSERTION.perigee;
     insertionApoapsis = RENDEZVOUS_INSERTION.apogee;

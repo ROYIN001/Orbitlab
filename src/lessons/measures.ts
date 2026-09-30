@@ -8,7 +8,7 @@ import { MU_EARTH, RAD } from '../physics/constants';
 import { wrapPi, type OrbitalElements } from '../physics/orbital';
 import { norm } from '../physics/vec3';
 import { physicalApsides } from '../physics/rigid/orbit-prediction';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import type { LessonFlight, MeasureId } from './types';
 import { unitText } from './text';
 import { linearModelAt } from '../physics/rigid/linear';
@@ -129,7 +129,7 @@ export const MEASURES: Readonly<Record<MeasureId, MeasureDef>> = {
   },
   'payload': {
     unit: 'kg', over: 'final', digits: 0,
-    read: (f) => f.cfg.payloadMassOverride ?? satelliteById(f.cfg.satelliteId).mass,
+    read: (f) => f.cfg.payloadMassOverride ?? missionSatellite(f.cfg).mass,
   },
   'insertionTime': { unit: 's', over: 'final', digits: 0, read: (f) => firstEvent(f, ['evt.seco', 'evt.parkingOrbit', 'evt.targetOrbit']) },
   'loss.gravity': { unit: 'm/s', over: 'final', digits: 0, read: (f) => finite(f.state.losses.gravity) },

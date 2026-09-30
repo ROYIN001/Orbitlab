@@ -923,6 +923,8 @@ export const en: Record<string, string> = {
   // S02: a custom vehicle from a mission file (ui/panel.ts)
   'setup.validation.vehicleSpec': 'The custom vehicle in this mission is not valid, so it cannot fly.',
   'setup.vehicle.custom': '{name} — custom vehicle',
+  // D06: a custom satellite carried inline (Phase 4 map §2.6 c; ui/panel.ts)
+  'setup.customSat.invalid': 'The custom satellite in this mission is not valid, so it cannot fly.',
   'setup.quickstart.title': 'Quick start',
   'setup.quickstart.note': 'Choose a starting mission to fill the settings. Review it, then press Launch.',
   'setup.quickstart.leo': 'First flight · low Earth orbit',

@@ -903,6 +903,8 @@ export const th: Record<string, string> = {
   // S02: a custom vehicle from a mission file (ui/panel.ts)
   'setup.validation.vehicleSpec': 'จรวดที่กำหนดเองในภารกิจนี้ไม่ถูกต้อง จึงบินไม่ได้',
   'setup.vehicle.custom': '{name} — จรวดที่กำหนดเอง',
+  // D06: a custom satellite carried inline (Phase 4 map §2.6 c; ui/panel.ts)
+  'setup.customSat.invalid': 'ดาวเทียมที่กำหนดเองในภารกิจนี้ไม่ถูกต้อง จึงบินไม่ได้',
   'setup.quickstart.title': 'เริ่มต้นอย่างรวดเร็ว',
   'setup.quickstart.note': 'เลือกภารกิจเพื่อเติมค่าตั้งต้น ตรวจสอบการตั้งค่าแล้วกดเริ่มปล่อยจรวด',
   'setup.quickstart.leo': 'เที่ยวบินแรก · วงโคจรต่ำ',

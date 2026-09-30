@@ -17,6 +17,7 @@ import type { FromCore, ToCore } from '../src/session/protocol';
 import { DEFAULT_FAILURE } from '../src/physics/defaults';
 import { defaultDynamics, supportsRigid } from '../src/physics/rigid/config';
 import { orbitById } from '../src/data/orbits';
+import { satelliteById } from '../src/data/satellites';
 import { VEHICLES, isCatalogueVehicle, missionVehicle, vehicleById, vehicleDataId } from '../src/data/vehicles';
 import { assertVehicleSpec, vehicleSpecProblems } from '../src/config/vehicle-spec';
 import { validateConfigInput, type ConfigInput } from '../src/config/validation';
@@ -80,10 +81,10 @@ describe('custom vehicles (S02): one resolver', () => {
     const soyuz = copyOf('soyuz21a');
     expect(vehicleDataId(soyuz)).toBe('soyuz21a');
     expect(getRigidVehicleGeometry(soyuz).vehicleId).toBe('soyuz21a');
-    expect(rendezvousAvailable(vehicleDataId(soyuz), 'crew', orbitById('iss'))).toBe(true);
+    expect(rendezvousAvailable(vehicleDataId(soyuz), satelliteById('crew'), orbitById('iss'))).toBe(true);
     const scratch: VehicleSpec = { ...copyOf('soyuz21a'), id: 'scratch', derivedFrom: undefined, escapeSystem: undefined };
     expect(vehicleDataId(scratch)).toBe('scratch');
-    expect(rendezvousAvailable(vehicleDataId(scratch), 'crew', orbitById('iss'))).toBe(false);
+    expect(rendezvousAvailable(vehicleDataId(scratch), satelliteById('crew'), orbitById('iss'))).toBe(false);
     // the flexible body's stage roles come from the spec itself, not a catalogue lookup
     const geometry = getRigidVehicleGeometry(scratch);
     expect(geometry.launcherStageIds).toEqual(['blokA', 'blokI']);

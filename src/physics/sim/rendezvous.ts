@@ -110,7 +110,7 @@ export class Rendezvous {
   /** This mission flies to the station. */
   get enabled(): boolean {
     const cfg = this.sim.cfg.rendezvous;
-    return !!cfg && rendezvousAvailable(vehicleDataId(this.sim.vehicleSpec), this.sim.cfg.satelliteId, this.sim.cfg.orbit);
+    return !!cfg && rendezvousAvailable(vehicleDataId(this.sim.vehicleSpec), this.sim.satellite, this.sim.cfg.orbit);
   }
   get profile(): RendezvousProfileId { return this.sim.cfg.rendezvous?.profile ?? 'twoOrbit'; }
   get port(): PortId { return this.sim.cfg.rendezvous?.port ?? 'rassvet'; }

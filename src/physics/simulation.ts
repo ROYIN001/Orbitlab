@@ -23,7 +23,7 @@ import type { MissionConfig, SatelliteSpec, VehicleSpec, GuidanceParams, Dynamic
 import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
 import { missionVehicle, openTopVehicle } from '../data/vehicles';
-import { satelliteById } from '../data/satellites';
+import { missionSatellite } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
 import { atmosphere } from './atmosphere';
@@ -230,7 +230,7 @@ export class Simulation {
     const site = siteById(cfgIn.siteId);
     const pad = cfgIn.padId ? site.pads?.find((p) => p.id === cfgIn.padId) : undefined;
     this.site = pad ? { ...site, latitude: pad.latitude, longitude: pad.longitude } : site;
-    this.vehicleSpec = openTopVehicle(vehicleSpec, satelliteById(cfgIn.satelliteId));
+    this.vehicleSpec = openTopVehicle(vehicleSpec, missionSatellite(cfgIn));
     // Per-vehicle guidance defaults fill in every parameter the caller left at
     // the library default, so the UI (and any caller that does not merge them
     // itself) flies each launcher with its own pitch program.
@@ -238,7 +238,8 @@ export class Simulation {
       ? cfgIn
       : { ...cfgIn, guidance: applyVehicleGuidanceDefaults(cfgIn.guidance, this.vehicleSpec, cfgIn.dynamics?.model), guidanceResolved: true };
     this.cfg = cfg;
-    this.satellite = satelliteById(cfg.satelliteId);
+    // D06: a custom satellite flies its own engine, size and mass, as a custom vehicle its own stages
+    this.satellite = missionSatellite(cfg);
     this.payloadMass = cfg.payloadMassOverride ?? this.satellite.mass;
     this.plan = planMission(cfg, this.site, this.vehicleSpec);
     this.vehicle = new VehicleModel(dispersion ? dispersedVehicle(this.vehicleSpec, dispersion.vehicle) : this.vehicleSpec,

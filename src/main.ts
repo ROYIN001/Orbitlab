@@ -72,7 +72,7 @@ import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, 
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
 import { add, normalize, cross, dot, norm, scale, addScaled, sub, v3, type Vec3 } from './physics/vec3';
 import { missionVehicle } from './data/vehicles';
-import { satelliteById } from './data/satellites';
+import { missionSatellite } from './data/satellites';
 import { satelliteName } from './ui/names';
 import type { MissionConfig } from './types';
 import { registerMcpTools } from './mcp';
@@ -1192,7 +1192,7 @@ class App {
     // The vehicle keeps its proper name in every language; the payload is a
     // description ("Crewed spacecraft") and goes through the dictionaries.
     this.narration.setMission(missionVehicle(cfg).name,
-      this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(satelliteById(cfg.satelliteId)));
+      this.watchPayloadKey ? t(this.watchPayloadKey) : satelliteName(missionSatellite(cfg)));
   }
 
   setCamera(mode: CameraMode): void {
@@ -1638,7 +1638,7 @@ class App {
       // Explore: a card a moment after the live flight's outcome; a lesson grades in its own strip
       const cfg = this.panel.state;
       this.debrief.update(this.flightNo, this.simView.sim, this.player.live, this.mode === 'explore' && !document.body.dataset.lesson,
-        `${missionVehicle(cfg).name} · ${satelliteName(satelliteById(cfg.satelliteId))}`, performance.now());
+        `${missionVehicle(cfg).name} · ${satelliteName(missionSatellite(cfg))}`, performance.now());
       this.lessons.update(); // E03
       // G07: during a rendezvous the spacecraft is flown by Kurs or by TORU, not by the ascent's six-DOF controls
       this.rigidControls.update(this.shown?.rendezvous ? undefined : this.shown?.rigid, this.player.live);

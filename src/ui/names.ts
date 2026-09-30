@@ -189,6 +189,9 @@ const TEST_AXIS = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop
  * The localized name of a spacecraft by its `src/data/satellites.ts` id, or
  * null when no such record exists — an event stream is data, and an id that
  * has been renamed since a recording was made must not throw in a renderer.
+ * A custom satellite's id (roadmap D06, `MissionConfig.satelliteSpec`) is no
+ * catalogue id by its checker's rule, so it gives null too, and its event
+ * keeps the designer's own name untranslated, as a custom vehicle's does.
  */
 export function satelliteNameById(id: string): string | null {
   const sat = SATELLITES.find((s) => s.id === id);

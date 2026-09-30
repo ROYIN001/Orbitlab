@@ -33,7 +33,7 @@
  */
 import type { MissionConfig, OrbitSpec, GuidanceParams, FailureConfig, FailureMode, SatelliteSpec, VehicleSpec, RecoveryMode, RecoveryPlan } from '../types';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, RATING_ORBITS, VEHICLES, missionVehicle, openTopVehicle, vehicleById, vehicleDataId } from '../data/vehicles';
-import { SATELLITES, satelliteById } from '../data/satellites';
+import { SATELLITES, missionSatellite, satelliteById } from '../data/satellites';
 import { SITES, siteById, type SiteExtra } from '../data/sites';
 import { ORBIT_PRESETS, orbitById } from '../data/orbits';
 import { DEFAULT_FAILURE, guidanceForVehicle } from '../physics/defaults';
@@ -108,6 +108,8 @@ interface SetupState {
   /** S02: a custom vehicle, from a mission file; its id is `vehicleId` */
   vehicleSpec?: VehicleSpec;
   satelliteId: string;
+  /** D06: a custom satellite, from a mission file; its id is `satelliteId` */
+  satelliteSpec?: SatelliteSpec;
   siteId: string;
   orbitId: string;
   orbit: OrbitSpec;
@@ -255,6 +257,7 @@ export class SetupPanel {
     return {
       vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: { ...s.orbit },
       ...(s.vehicleSpec ? { vehicleSpec: structuredClone(s.vehicleSpec) } : {}),
+      ...(s.satelliteSpec ? { satelliteSpec: structuredClone(s.satelliteSpec) } : {}),
       launchTime: new Date(s.launchTime.getTime()), guidance: this.guidance, failure: { ...s.failure },
       boosterRecovery: s.boosterRecovery, payloadMassOverride: s.payloadMass,
       ...(s.boosterRecovery && s.recoveryPlan ? { recoveryPlan: structuredClone(s.recoveryPlan) } : {}),
@@ -287,6 +290,7 @@ export class SetupPanel {
       case 'failureUnavailable': return t('setup.validation.failureUnavailable');
       case 'rendezvousUnavailable': return t('setup.validation.rendezvousUnavailable');
       case 'vehicleSpec': return t('setup.validation.vehicleSpec');
+      case 'satelliteSpec': return t('setup.customSat.invalid');
     }
   }
 
@@ -420,6 +424,8 @@ export class SetupPanel {
     this.state.rendezvous = mission.rendezvous ? { ...mission.rendezvous } : undefined;
     // and a catalogue vehicle's, unless it carries its own (S02)
     this.state.vehicleSpec = mission.vehicleSpec ? structuredClone(mission.vehicleSpec) : undefined;
+    // and a catalogue satellite, unless it carries its own (D06)
+    this.state.satelliteSpec = mission.satelliteSpec ? structuredClone(mission.satelliteSpec) : undefined;
     this.state.dynamics = defaultDynamics(missionVehicle(this.state));
     this.tuneMessage = '';
     this.applyExternalEdit();
@@ -445,6 +451,7 @@ export class SetupPanel {
     Object.assign(this.state, copyMission(mission));
     if (!mission.recoveryPlan) this.state.recoveryPlan = undefined;
     if (!mission.vehicleSpec) this.state.vehicleSpec = undefined;
+    if (!mission.satelliteSpec) this.state.satelliteSpec = undefined;
     if (!mission.dynamics) this.state.dynamics = undefined;
     // nor the last mission's pad or flight to the station: Vostok-1's Site 1
     // left on a Saturn V at LC-39A made the next lesson unlaunchable (C01)
@@ -471,7 +478,7 @@ export class SetupPanel {
   private missionSignature(): string {
     const s = this.state;
     return JSON.stringify({ vehicle: s.vehicleId, custom: s.vehicleSpec, site: s.siteId, orbit: s.orbit,
-      payload: s.payloadMass, satellite: s.satelliteId, launchTime: s.launchTime,
+      payload: s.payloadMass, satellite: s.satelliteId, customSatellite: s.satelliteSpec, launchTime: s.launchTime,
       failure: s.failure, recovery: s.boosterRecovery, plan: s.recoveryPlan, dynamics: s.dynamics });
   }
 
@@ -770,6 +777,7 @@ export class SetupPanel {
       this.clearOrbitDrafts();
       this.clearFieldDrafts('setup.payloadMass');
       s.satelliteId = v;
+      s.satelliteSpec = undefined;
       const sat = satelliteById(v);
       s.payloadMass = sat.mass;
       const typical = orbitById(sat.typicalOrbit);
@@ -1167,7 +1175,7 @@ export class SetupPanel {
     const s = this.state;
     const spec = missionVehicle(s);
     const site = siteById(s.siteId);
-    const satellite = satelliteById(s.satelliteId);
+    const satellite = missionSatellite(s);
     const flown: MissionConfig = { ...cfg, payloadMassOverride: mass };
     let plan: MissionPlan | null = null;
     try { plan = planMission(flown, site, spec); } catch { plan = null; }
@@ -1363,7 +1371,7 @@ export class SetupPanel {
     fd.dataset.section = 'failure';
     fd.appendChild(this.el('summary', undefined, t('setup.failure')));
     // only the failures this vehicle and payload can have (a launch abort needs an escape system)
-    const modes = FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, s.satelliteId));
+    const modes = FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, missionSatellite(s)));
     fd.appendChild(this.select('setup.failureMode', modes.map((m) => ({ value: m, label: t(`setup.fail.${m}`) })), s.failure.mode, (v) => { s.failure.mode = v as FailureMode; this.changed(); }));
     const fr = this.el('div', 'row');
     // a strap-on collision and a stage separation failure happen at their separations, not at a time
@@ -1391,7 +1399,7 @@ export class SetupPanel {
     box.setAttribute('role', 'group');
     box.setAttribute('aria-label', t('setup.challenge.title'));
     // only the failures this vehicle and payload can have (a launch abort needs an escape system)
-    for (const mode of FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, s.satelliteId))) {
+    for (const mode of FAILURE_MODES.filter((m) => m === s.failure.mode || failureAvailable(m, vehicle, missionSatellite(s)))) {
       const b = this.el('button', 'challenge-card');
       b.type = 'button';
       b.dataset.failure = mode;
@@ -1446,7 +1454,7 @@ export class SetupPanel {
     const target = resolveTarget(s.orbit, site, s.launchTime);
     row(t('setup.tab.vehicle'), vehicle.name);
     row(t('setup.site'), siteName(site));
-    row(t('setup.tab.payload'), `${satelliteName(satelliteById(s.satelliteId))} · ${num(s.payloadMass)} kg`);
+    row(t('setup.tab.payload'), `${satelliteName(missionSatellite(s))} · ${num(s.payloadMass)} kg`);
     row(t('setup.tab.orbit'), `${num(Math.round(s.orbit.perigee / 1000))} × ${num(Math.round(s.orbit.apogee / 1000))} km · ${(target.inclination * RAD).toFixed(1)}°`);
     if (s.failure.mode !== 'none') row(t('setup.challenge.title'), t(`setup.fail.${s.failure.mode}`));
     if (s.dynamics?.model === 'sixDof') row(t('setup.weather'), t(`setup.dynamics.${s.dynamics.wind}`));
@@ -1973,7 +1981,7 @@ export class SetupPanel {
   /** A flight on to the station: a Soyuz MS to the ISS orbit (the rule `validateConfigInput` states). */
   private rendezvousAvailable(): boolean {
     const s = this.state;
-    return rendezvousAvailable(vehicleDataId(missionVehicle(s)), s.satelliteId, s.orbit);
+    return rendezvousAvailable(vehicleDataId(missionVehicle(s)), missionSatellite(s), s.orbit);
   }
 
   /**
@@ -2087,7 +2095,7 @@ export class SetupPanel {
     }
     // One plan per refresh: both the info card and the feasibility verdict read
     // it, and planning twice per keystroke buys nothing.
-    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), openTopVehicle(missionVehicle(this.state), satelliteById(this.state.satelliteId))); } catch { this.planCache = null; }
+    try { this.planCache = planMission(this.getConfig(), siteById(this.state.siteId), openTopVehicle(missionVehicle(this.state), missionSatellite(this.state))); } catch { this.planCache = null; }
     this.refreshInsertionProbe();
     this.updateStats();
     this.updateWindows();
@@ -2106,8 +2114,8 @@ export class SetupPanel {
     const box = this.statsEl;
     if (!box) return;
     const s = this.state;
-    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
-    const sat = satelliteById(s.satelliteId);
+    const sat = missionSatellite(s);
+    const spec = openTopVehicle(missionVehicle(s), sat);
     const m0 = liftoffMass(spec, s.payloadMass);
     const T0 = liftoffThrust(spec);
     box.replaceChildren();
@@ -2172,9 +2180,9 @@ export class SetupPanel {
     const box = this.infoEl;
     if (!box) return;
     const s = this.state;
-    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
+    const spec = openTopVehicle(missionVehicle(s), missionSatellite(s));
     const site = siteById(s.siteId);
-    const sat = satelliteById(s.satelliteId);
+    const sat = missionSatellite(s);
     const dv = idealDeltaV(spec, s.payloadMass);
     const vm = new VehicleModel(spec, s.payloadMass, s.boosterRecovery, sat);
     const plan = this.planCache;
@@ -2229,8 +2237,8 @@ export class SetupPanel {
       this.probedFor = '';
       return;
     }
-    const spec = openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId));
-    if (!marginalMission(spec, satelliteById(s.satelliteId), s.payloadMass, plan, s.orbit)) {
+    const spec = openTopVehicle(missionVehicle(s), missionSatellite(s));
+    if (!marginalMission(spec, missionSatellite(s), s.payloadMass, plan, s.orbit)) {
       this.probeCache = null;
       this.probedFor = '';
       return;
@@ -2253,10 +2261,10 @@ export class SetupPanel {
     const s = this.state;
     const site = siteById(s.siteId);
     return missionVerdict({
-      spec: openTopVehicle(missionVehicle(s), satelliteById(s.satelliteId)),
+      spec: openTopVehicle(missionVehicle(s), missionSatellite(s)),
       site,
       orbit: s.orbit,
-      satellite: satelliteById(s.satelliteId),
+      satellite: missionSatellite(s),
       payloadMass: s.payloadMass,
       inclinationDeg: resolveTarget(s.orbit, site, s.launchTime).inclination * RAD,
       // The plan made for this very configuration in `refresh()`: the corridor,
