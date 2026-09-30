@@ -8,6 +8,7 @@ Orbitlab has no tagged release yet.
 
 - CI: vitest sharded three ways, typecheck as its own job, build once and reuse dist for browser smoke, deploy guarded against re-running old runs and skipping the full suite on the daily schedule, weekly heavy and monthly six-DOF fleet runs.
 - Repository: LICENSE (Apache-2.0), NOTICE, CITATION, pull request template, CHANGELOG; README disclaimer, licence section and three stale facts corrected.
+- Engineer tools (audit A17, A18): the attitude-loop inspector's Auto-tune runs in a worker with progress, Cancel and stale-answer protection; a Monte Carlo pool that cannot start or replace a worker ends every worker it made and reports `failed`.
 - App: build stamp in Physics & sources and build-info.json + SHA256SUMS in dist; report.ts imports made static and a bundle budget script; repository-hygiene and architecture fitness tests; soundtrack runtime-cached on the public site (precached with ORBITLAB_PRECACHE_AUDIO=1).
 
 ### 2026-09 (unreleased, before the first tagged release)
