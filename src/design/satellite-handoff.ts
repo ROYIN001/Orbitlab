@@ -21,8 +21,12 @@
  * the area sunlight pressure sees in Cowell mode, as one area serves both in
  * the propagator (src/physics/propagator/forces.ts; map risk R8).
  *
- * DOM-free and free of the propagator (tests/propagator.test.ts): it imports
- * src/orbit only. SI and radians inside; the design's degrees and hours
+ * DOM-free, and it imports no src/physics/propagator module itself
+ * (tests/propagator.test.ts): only src/orbit and the physical constants.
+ * src/orbit/handoff.ts, which it calls, reaches the payload classes' area
+ * table (propagator/spacecraft.ts) for a flight's estimates; that is the
+ * route src/design/satellite-spec.ts names, and no integrator comes with it.
+ * SI and radians inside; the design's degrees and hours
  * (src/design/satellite-spec.ts) are converted here, in `designOrbit`.
  */
 import { DEG } from '../physics/constants';
