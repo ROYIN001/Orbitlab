@@ -79,7 +79,8 @@ export function gravityGradientTorque(r: number, Iz: number, Iy: number, theta: 
  * chapter), the sunlit area A (m²), the reflectance q (0 absorbs everything,
  * 1 is a mirror, which doubles the push), the Sun's incidence i off the
  * surface's normal (rad) and the arm L (m) from the centre of mass to the
- * centre of pressure.
+ * centre of pressure. The chapter writes the arm as the offset cp − cm; its
+ * sign is dropped, as the torque is a magnitude.
  *
  * Why: light carries momentum, so it pushes on the surface it strikes; when
  * that push is centred away from the centre of mass it turns the satellite.
@@ -87,7 +88,7 @@ export function gravityGradientTorque(r: number, Iz: number, Iy: number, theta: 
  * torque. A surface the Sun lights from behind (cos i < 0) is not pushed.
  */
 export function solarTorque(flux: number, area: number, q: number, incidence: number, arm: number): number {
-  return (flux / C_LIGHT) * area * (1 + q) * Math.max(0, Math.cos(incidence)) * arm;
+  return (flux / C_LIGHT) * area * (1 + q) * Math.max(0, Math.cos(incidence)) * Math.abs(arm);
 }
 
 /**
@@ -95,7 +96,8 @@ export function solarTorque(flux: number, area: number, q: number, incidence: nu
  * with the air density ρ (kg/m³; from `airDensity` or a fixed ECSS level in
  * the satellite model), the drag coefficient C_D (2.0–2.5 for a satellite),
  * the ram area A (m²), the speed v through the air (m/s) and the arm L (m)
- * from the centre of mass to the centre of pressure.
+ * from the centre of mass to the centre of pressure (the offset cp − cm, its
+ * sign dropped: the torque is a magnitude).
  *
  * Why: the drag force of the orbit's decay also turns the satellite when its
  * centre of pressure is off the centre of mass. The density falls roughly
@@ -103,7 +105,7 @@ export function solarTorque(flux: number, area: number, q: number, incidence: nu
  * vanishes high ones.
  */
 export function aeroTorque(rho: number, cd: number, area: number, v: number, arm: number): number {
-  return 0.5 * rho * cd * area * v * v * arm;
+  return 0.5 * rho * cd * area * v * v * Math.abs(arm);
 }
 
 /**

@@ -253,6 +253,14 @@ describe('the laws behind the rules (analytic)', () => {
     expectPrinted(black, '4.56e-6');
   });
 
+  it('solar and aerodynamic torques are magnitudes: an arm given as a negative offset cp − cm gives the same torque', () => {
+    // a signed offset (the chapter writes cp − cm) must not turn a worst-case
+    // torque negative, where a max() over the disturbances would drop it
+    expect(solarTorque(1367, 5, 0.7, 0, -0.3)).toBe(solarTorque(1367, 5, 0.7, 0, 0.3));
+    expect(aeroTorque(1e-13, 2.0, 3, 7504, -0.2)).toBe(aeroTorque(1e-13, 2.0, 3, 7504, 0.2));
+    expect(aeroTorque(1e-13, 2.0, 3, 7504, -0.2)).toBeGreaterThan(0);
+  });
+
   it('the dipole: λ = √(1 + 3 sin²φ), 1 on the magnetic equator, 2 at a pole, the length of 3(m̂·r̂)r̂ − m̂', () => {
     expect(dipoleLatitudeFactor(0)).toBe(1);
     expect(dipoleLatitudeFactor(90 * DEG)).toBeCloseTo(2, 12);
