@@ -12,10 +12,15 @@
  * is and why rockets stage, what strap-ons do, why an upper stage can push
  * less than its weight, and what the fairing is for.
  *
- * Its Explore and Engineer levels are being built next (D02–D05): until they
- * are, each shows what is coming to it, item by roadmap item, and leads to
- * the Watch level. The section links open the Build section at its Watch
- * level for that reason (`sectionLinkLevel`, src/ui/section-plan.ts).
+ * Its Explore level remixes a real rocket and builds one from parts (D02,
+ * D03): a module of its own, src/ui/build/explore-level.ts, mounted here. Its
+ * Engineer level (D03–D05) is a module of its own too,
+ * src/ui/build/engineer-level.ts: the test stand, the wind tunnel and the
+ * flight readiness review (D04), optimal staging and sizing (D05), with what
+ * is still coming to it listed under them; a mission the review passes is
+ * handed to the Launch section at the Engineer level, as "Fly it" hands the
+ * Explore level's to Launch's Explore, and a sized launcher is opened in the
+ * Explore level's parts builder.
  *
  * The thin DOM part, mounted like the Orbit playground (src/ui/orbit/
  * playground.ts): drawn over the launch scene, opaque, so the scene under it
@@ -29,7 +34,6 @@ import { t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import { VEHICLES, vehicleById } from '../../data/vehicles';
 import { route, type AppLevel, type AppRoute } from '../app-mode';
-import { BUILD_BUILT_ITEMS, BUILD_LEVEL_ITEMS, SECTION_PLANS } from '../section-plan';
 import { stageName } from '../names';
 import { BUILD_TOUR, tourFigures, type TourFigure, type TourStat } from '../../design/build-tour';
 import type { DrawnPart } from '../../design/exploded';
@@ -41,16 +45,22 @@ import { StackSvg, type StackLabel } from './stack-svg';
 import { VehiclePicker } from './vehicle-picker';
 import { figuresView, mass } from './figures';
 import { partCardView } from './part-card';
+import { ExploreLevel } from './explore-level';
+import { EngineerLevel } from './engineer-level';
+import type { MissionDocument } from '../../config/mission-file';
 import './build.css';
 
 export interface BuildScreenHost {
   go(route: AppRoute): void;
+  /** the Launch section's launch time, kept by a design handed to it (D02, D03: "Fly it") */
+  launchTime?(): Date;
+  /** hand a design to the Launch section as a mission document and open it at `level`; false when it could not take it */
+  flyDesign?(doc: MissionDocument, level: AppLevel): boolean;
 }
 
 type BuildView = 'exploded' | 'assembled';
 const VIEWS: readonly BuildView[] = ['exploded', 'assembled'];
 const VIEW_KEY: Record<BuildView, string> = { exploded: 'build.view.exploded', assembled: 'build.view.assembled' };
-const LEVEL_GLYPH: Record<AppLevel, string> = { watch: '▷', explore: '◎', engineer: '⌬' };
 /** how long the parts take to move apart or together, ms */
 const EXPLODE_MS = 450;
 
@@ -113,7 +123,12 @@ export class BuildScreen {
   private readonly hint = el('p', 'bs-hint');
   private readonly card = el('aside', 'bs-panel bs-card');
   private readonly figures = el('section', 'bs-panel bs-figures');
-  private readonly soon = el('div', 'bs-soon');
+  /** the Explore level (D02, D03), made the first time it is shown */
+  private explore: ExploreLevel | null = null;
+  private readonly exploreRoot = el('div', 'bs-explore');
+  /** the Engineer level (D03–D05), made the first time it is shown */
+  private engineer: EngineerLevel | null = null;
+  private readonly engineerRoot = el('div', 'bs-engineer');
 
   constructor(private readonly root: HTMLElement, private readonly host: BuildScreenHost) {
     root.classList.add('build-screen');
@@ -126,7 +141,7 @@ export class BuildScreen {
     this.card.setAttribute('aria-live', 'polite');
     this.tour.setAttribute('aria-live', 'polite');
     this.grid.append(this.intro, this.stage, this.card, this.tour, this.figures);
-    root.replaceChildren(this.grid, this.soon);
+    root.replaceChildren(this.grid, this.exploreRoot, this.engineerRoot);
     // The launch scene's camera takes every press on the viewport and captures
     // the pointer to drag with it (src/render/cameras.ts), which would steal the
     // click from a part of the drawing. The scene is covered here; keep the press.
@@ -150,6 +165,8 @@ export class BuildScreen {
   /** Off screen: nothing moves. */
   hide(): void {
     this.visible = false;
+    this.explore?.hide();
+    this.engineer?.hide();
     if (this.anim) cancelAnimationFrame(this.anim);
     this.anim = 0;
     this.explode = this.view === 'exploded' ? 1 : 0;
@@ -253,11 +270,54 @@ export class BuildScreen {
   private render(): void {
     this.root.dataset.level = this.level;
     this.root.setAttribute('aria-label', t('section.build'));
-    const watch = this.level === 'watch';
+    const watch = this.level === 'watch', explore = this.level === 'explore';
     this.grid.hidden = !watch;
-    this.soon.hidden = watch;
+    this.exploreRoot.hidden = !explore;
+    this.engineerRoot.hidden = watch || explore;
+    if (!explore) this.explore?.hide();
+    if (watch || explore) this.engineer?.hide();
     if (watch) this.renderWatch();
-    else this.renderSoon();
+    else if (explore) this.showExplore();
+    else this.showEngineer();
+  }
+
+  /** The Engineer level: the test stand and the wind tunnel (src/ui/build/engineer-level.ts). */
+  private showEngineer(): void {
+    if (!this.engineer) {
+      this.engineer = new EngineerLevel({
+        go: (r) => this.host.go(r),
+        exploreDesign: () => this.explore?.design() ?? null,
+        rateExploreDesign: (spec) => this.explore?.adoptRatings(spec),
+        launchTime: () => this.host.launchTime?.() ?? new Date(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'engineer') ?? false,
+        openInExplore: (spec, payloadKg) => {
+          this.ensureExplore().openDesign(spec, payloadKg);
+          this.host.go(route('build', 'explore'));
+        },
+      });
+      this.engineerRoot.append(this.engineer.root);
+    }
+    this.engineer.show();
+    this.root.setAttribute('aria-labelledby', this.engineer.titleId);
+  }
+
+  /** The Explore level, made the first time it is wanted (shown, or handed a sized launcher). */
+  private ensureExplore(): ExploreLevel {
+    if (!this.explore) {
+      this.explore = new ExploreLevel({
+        launchTime: () => this.host.launchTime?.() ?? new Date(),
+        fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
+      });
+      this.exploreRoot.append(this.explore.root);
+    }
+    return this.explore;
+  }
+
+  /** The Explore level: remix a real rocket, build one from parts (src/ui/build/explore-level.ts). */
+  private showExplore(): void {
+    this.explore = this.ensureExplore();
+    this.explore.show();
+    this.root.setAttribute('aria-labelledby', this.explore.titleId);
   }
 
   private renderWatch(): void {
@@ -387,62 +447,5 @@ export class BuildScreen {
     next.disabled = this.tourIndex >= BUILD_TOUR.length - 1;
     nav.append(prev, next);
     box.append(nav);
-  }
-
-  /** Explore and Engineer, while they are being built: what is coming to the level, by roadmap item. */
-  private renderSoon(): void {
-    const level = this.level as Exclude<AppLevel, 'watch'>;
-    const plan = SECTION_PLANS.build;
-    const inner = el('div', 'section-inner');
-    const eyebrow = el('span', 'eyebrow section-eyebrow', `${t('section.build')} · ${t(`mode.${level}`)}`);
-    eyebrow.append(el('span', 'section-badge', t('section.inDevelopment')));
-    const title = el('h1', 'section-title', t(plan.titleKey));
-    title.id = 'bs-soon-title';
-    this.root.setAttribute('aria-labelledby', title.id);
-    inner.append(eyebrow, title, el('p', 'section-lead', t(plan.leadKey)));
-    const card = el('div', 'section-level');
-    const head = el('strong');
-    const glyph = el('span', 'mode-glyph', LEVEL_GLYPH[level]);
-    glyph.setAttribute('aria-hidden', 'true');
-    head.append(glyph, ` ${t(`mode.${level}`)}`);
-    card.append(head, el('span', 'section-level-text', t(plan.levels[level])));
-    inner.append(card);
-
-    const actions = el('div', 'section-actions');
-    actions.append(
-      button('watch-btn primary', t('build.soon.toWatch'), () => this.host.go(route('build', 'watch'))),
-      button('watch-btn', t('section.toLaunch'), () => this.host.go(route('launch', level))),
-    );
-    inner.append(actions);
-
-    const wanted = new Set(BUILD_LEVEL_ITEMS[level]);
-    inner.append(el('h2', 'section-coming', t('section.coming')));
-    for (const phase of plan.phases) {
-      const items = phase.items.filter((i) => wanted.has(i.id) && !BUILD_BUILT_ITEMS.has(i.id));
-      if (!items.length) continue;
-      const block = el('section', 'section-phase');
-      block.append(el('h3', undefined, t('section.phase', { n: phase.phase, title: t(phase.titleKey) })));
-      const list = el('ul', 'section-items');
-      for (const item of items) {
-        const li = el('li');
-        li.append(el('code', 'section-item-id', item.id), el('span', undefined, t(item.key)));
-        list.append(li);
-      }
-      block.append(list);
-      inner.append(block);
-    }
-    const done = plan.phases.flatMap((p) => p.items).filter((i) => BUILD_BUILT_ITEMS.has(i.id));
-    if (done.length) {
-      inner.append(el('h2', 'section-coming', t('build.soon.done')));
-      const list = el('ul', 'section-items');
-      for (const item of done) {
-        const li = el('li', 'done');
-        li.append(el('code', 'section-item-id', item.id), el('span', undefined, t(item.key)));
-        list.append(li);
-      }
-      inner.append(list);
-    }
-    inner.append(el('p', 'section-note', t('section.roadmapNote')));
-    this.soon.replaceChildren(inner);
   }
 }

@@ -28,6 +28,14 @@ export class GuideProgress {
     try { this.store?.setItem(GUIDE_STORAGE_KEY, 'dismissed'); } catch { /* keep the in-session dismissal */ }
   }
 
+  /**
+   * A mission handed over whole (Phase 3's "Fly it" from the Build section)
+   * has already been chosen: the first step, which says to choose a Quick
+   * start example, would replace it, so the guide moves on to the preflight
+   * check. Nothing is stored; a guide already past the first step stays put.
+   */
+  missionGiven(): void { if (this.visible && this.step === 0) this.step = 1; }
+
   /** Reopening Help is a deliberate request, even if first-use tips were dismissed. */
   restart(): void { this.step = 0; this.visible = true; }
 }

@@ -97,6 +97,25 @@ export interface Readiness {
 const RANK: Record<ReadinessLevel, number> = { ok: 0, info: 1, warn: 2, fail: 3 };
 
 /**
+ * The review's step 6 on its own: the setup panel's verdict on `mission` for
+ * `spec`, given the plan and the probe the review came to (either may be
+ * null, as in the review). Pure and cheap — no flight — and it is where the
+ * review's only text comes from (`Feasibility.text`, through `t()`), so a
+ * screen that ran the review elsewhere (the Engineer level flies it in a
+ * worker, which has no reader's language) calls this again to say the same
+ * verdict in the reader's language, and again when the language changes.
+ */
+export function readinessVerdict(spec: VehicleSpec, mission: ReadinessMission, plan: MissionPlan | null, insertion: InsertionProbe | null): Feasibility {
+  const site = siteById(mission.siteId);
+  const satellite = satelliteById(mission.satelliteId);
+  return missionVerdict({
+    spec, site, orbit: mission.orbit, satellite, payloadMass: mission.payloadMassOverride ?? satellite.mass,
+    inclinationDeg: resolveTarget(mission.orbit, site, mission.launchTime).inclination * RAD,
+    plan, insertion, failureMode: mission.failure.mode, siteReassigned: false,
+  });
+}
+
+/**
  * Review `spec` for `mission`. The payload is the mission's
  * `payloadMassOverride`, else its satellite's mass, as the flight takes it.
  */
@@ -160,11 +179,7 @@ export function readiness(spec: VehicleSpec, mission: ReadinessMission): Readine
   }
 
   // 6. The setup panel's verdict, on everything above.
-  const verdict = missionVerdict({
-    spec, site, orbit: mission.orbit, satellite, payloadMass,
-    inclinationDeg: resolveTarget(mission.orbit, site, mission.launchTime).inclination * RAD,
-    plan, insertion, failureMode: mission.failure.mode, siteReassigned: false,
-  });
+  const verdict = readinessVerdict(spec, mission, plan, insertion);
   items.push({ step: 'verdict', code: verdict.cause, level: verdict.level, params: {} });
 
   // 7. Notices for a vehicle of one's own.

@@ -16,8 +16,8 @@ export interface MissionShareHost {
   isRunning(): boolean;
 }
 
-/** Where a mission came from, for the notice. */
-export type MissionSource = 'link' | 'file' | 'stored';
+/** Where a mission came from, for the notice: a design handed over by the Build section is 'build' (Phase 3, D02, D03). */
+export type MissionSource = 'link' | 'file' | 'stored' | 'build';
 
 interface Notice { level: 'ok' | 'warn' | 'error'; text: string; details: string[] }
 
@@ -35,7 +35,8 @@ export function missionIssueLabel(issue: MissionIssue): string {
 
 /** The notice for a mission read from a link, a file or the page's own copy. */
 export function missionNotice(parsed: ParsedMission, source: MissionSource): Notice | null {
-  const from = source === 'link' ? t('share.source.link') : source === 'file' ? t('share.source.file') : t('share.source.stored');
+  const from = source === 'link' ? t('share.source.link') : source === 'file' ? t('share.source.file')
+    : source === 'build' ? t('share.source.build') : t('share.source.stored');
   if (!parsed.usable) {
     return { level: 'error', text: t('share.notice.unusable', { source: from }), details: [] };
   }

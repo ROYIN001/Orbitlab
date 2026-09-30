@@ -1,6 +1,6 @@
 # Six-degree-of-freedom acceptance gates
 
-Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control, extended to all eighteen vehicles (roadmap P01, last section). This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
+Scope: the approved educational model for Falcon 9 and Soyuz-2.1a, with automatic and manual rate control, extended to every vehicle (roadmap P01, last section: the eighteen of 2026-09-23; the three historical vehicles of C01 since, in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md); 21 in all). This is an implementation-verification matrix, not a claim of flight validation. The controlling design is [the Thai proposal](../../implementation-planning/six-dof-design-proposal-th.md); parameter provenance and uncertainty are in [the vehicle dossier](SIXDOF-VEHICLE-DATA.md).
 
 **Where the evidence lives.** Paths below that start `../audit-2026-09-19/` or
 `../../implementation-planning/` are the owner's local evidence and planning folders, kept
@@ -101,7 +101,7 @@ Status recorded 2026-09-19 while integration is in progress. A test present in s
 | Recovery/contact | Detached controlled Falcon stage uses the same 6DOF state/finite forces. Landing predicate declares vertical and lateral speed, tilt and rate limits; excessive conditions fail visibly. | Integration and browser evidence required. Decorative debris is labelled separately; no contact/leg dynamics claim. |
 | Replay/export | Immutable frames store full quaternion/rates, actual actuator state, identity/configuration, mass properties and model/data/wind revisions. SLERP; q-sign equivalence; seeking cannot expose later state. | Live/replay comparison, recorded-schema migration and CSV unit tests/browser checks required. |
 | Warp/manual/UI | Fixed simulation ticks across 30/60/120 FPS and warp; same seed gives same tick state. Manual commands body rates/throttle through the same actuator plant. Reset/pause/seek/export and three languages work. | Integrated tests/browser matrix and observed achievable warp required. Physics/controller sampling cannot be render-driven. |
-| Reference fleet | Each named vehicle: nominal, max-Q, coast/restart, separation, off-axis engine loss, nonzero roll, calm/crosswind/shear, parameter sweeps; explain failures beyond authority. | Scenario results pending. Two supported reference models do not establish all 18 vehicles. |
+| Reference fleet | Each named vehicle: nominal, max-Q, coast/restart, separation, off-axis engine loss, nonzero roll, calm/crosswind/shear, parameter sweeps; explain failures beyond authority. | Scenario results pending. Two supported reference models do not establish all 18 vehicles (the fleet on that date; see "Every vehicle in six-DOF" below). |
 
 ## Variable-mass acceptance contract
 
