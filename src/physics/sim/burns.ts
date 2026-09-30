@@ -763,9 +763,9 @@ export class BurnSequencer {
       ap: Math.round(el.apoapsisAlt / 1000), pe: Math.round(el.periapsisAlt / 1000), inc: +(el.i * RAD).toFixed(2),
       raan: +(el.raan * RAD).toFixed(1), period: Math.round(el.period / 60),
       dv: Math.round(this.sim.vehicle.deltaVRemaining()),
-      // The apsides the verdict was reached on, unrounded, when they are not
-      // the osculating ones of the frame (six-DOF): the result panel shows
-      // these, not the frame's, so its numbers agree with its verdict.
+      // Preserve the unrounded apsides used for this recorded verdict when
+      // they differ from the frame's osculating ones (six-DOF). The result
+      // panel's displayed-time metrics separately follow the replay frame.
       ...(el !== elements ? { apAltM: el.apoapsisAlt, peAltM: el.periapsisAlt } : {}),
       // `res.misses` is deliberately NOT put on the event. It used to be
       // joined into an English `miss` clause here — built inside

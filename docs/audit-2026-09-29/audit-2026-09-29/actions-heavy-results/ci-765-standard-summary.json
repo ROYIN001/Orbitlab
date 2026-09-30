@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-09-29T22:50:36Z",
+  "runs": [
+    {
+      "runId": 36638705308,
+      "jobId": 109645569727,
+      "headSource": "76534dc1d171726cb3d5eadc82d1ac77b629376b",
+      "checkout": "c55bf15306eb7adbf1d4fa4e4fcec710d373fb39",
+      "conclusion": "success",
+      "node": "v22.23.2",
+      "tests": 9241,
+      "files": 190,
+      "durationSeconds": 961.77,
+      "buildSucceeded": true,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run npm ci",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run npm run typecheck",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run npm test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run npm run build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        }
+      ]
+    },
+    {
+      "runId": 36638699357,
+      "jobId": 109645551900,
+      "headSource": "76534dc1d171726cb3d5eadc82d1ac77b629376b",
+      "checkout": "76534dc1d171726cb3d5eadc82d1ac77b629376b",
+      "conclusion": "success",
+      "node": "v22.23.2",
+      "tests": 9241,
+      "files": 190,
+      "durationSeconds": 1596.59,
+      "buildSucceeded": true,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run npm ci",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run npm run typecheck",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run npm test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run npm run build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        }
+      ]
+    }
+  ],
+  "pendingRunIds": [],
+  "browserSmoke": {
+    "runId": 36638705308,
+    "jobId": 109645569647,
+    "conclusion": "success",
+    "journeys": 3,
+    "passed": 3,
+    "durationSeconds": 258.5,
+    "node": "v22.23.2"
+  },
+  "note": "Both PR merge and exact-head push runs at765 completed successfully; same9241case set not counted twice. Later4cf rendering corrections and final CI are recorded separately."
+}

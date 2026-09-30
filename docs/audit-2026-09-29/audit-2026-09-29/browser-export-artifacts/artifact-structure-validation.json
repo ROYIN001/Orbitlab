@@ -1,0 +1,306 @@
+{
+  "manifest": [
+    {
+      "file": "browser-monte-carlo-20.json",
+      "bytes": 6283,
+      "sha256": "23638ad5e3fc33d79b1c3fdf5a449b92a0157fd1d7fd8503cf0e82a50d6f2892"
+    },
+    {
+      "file": "falcon9-cape-2026-09-29-19-47.orbitlab-flight.json",
+      "bytes": 353377,
+      "sha256": "743c79111fb7121db3dc7c07049cb6b26183b3cee029cd978b6f8af812d357c3"
+    },
+    {
+      "file": "orbitlab-altitude-h-km-after-browser.png",
+      "bytes": 165160,
+      "sha256": "2dd2e05a622534597681d641b0b61b45649a810b2d40c3f6d892b57cc589fc12"
+    },
+    {
+      "file": "orbitlab-altitude-h-km.png",
+      "bytes": 190205,
+      "sha256": "4fabf2e5aa46f9d5377729ba5b8f5a245329989c9e895243fd131de3a31d2ec0"
+    },
+    {
+      "file": "orbitlab-key-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.docx",
+      "bytes": 14055,
+      "sha256": "a0d4aa426550d6b6cee95c9caa5d7f61111226ba0009bdc929a111712a6820db"
+    },
+    {
+      "file": "orbitlab-key-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.html",
+      "bytes": 5019,
+      "sha256": "091dedb36f4c0263b243f559a5bba02774e2977bb2d2871dec67ece445407033"
+    },
+    {
+      "file": "orbitlab-QA-Test-2026-09-29-19-56.orbitlab-results.json",
+      "bytes": 143023,
+      "sha256": "f8d77fbd03fee1128e8bdf0bfc025bbf2b622b5a573c2061fab949c2560442c1"
+    },
+    {
+      "file": "orbitlab-report-falcon9-cape-2026-09-29-19-47-en.html",
+      "bytes": 1421841,
+      "sha256": "822f6ffd81fde4ff69cd3dda44fccd5a6740882eab9a215d15188973091ac656"
+    },
+    {
+      "file": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.docx",
+      "bytes": 578249,
+      "sha256": "28898ff3145eee84a627898541c45caedebb137b7dcc8533ea6fbbd97cee2239"
+    },
+    {
+      "file": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.html",
+      "bytes": 54849,
+      "sha256": "bff5310d9a152c7d2ccbb68d37bf247eab4b1881457c8790c9826ae39203e641"
+    },
+    {
+      "file": "orbitlab_falcon9_leo (1).csv",
+      "bytes": 2120591,
+      "sha256": "793ed8ca39e722c3747cc3140597dc5bd08ef1e72d9d93df4d5298c3d34fb53d"
+    },
+    {
+      "file": "orbitlab_falcon9_leo (2).csv",
+      "bytes": 2120591,
+      "sha256": "793ed8ca39e722c3747cc3140597dc5bd08ef1e72d9d93df4d5298c3d34fb53d"
+    },
+    {
+      "file": "orbitlab_falcon9_leo (3).csv",
+      "bytes": 2119996,
+      "sha256": "3a7bdcde02c8b410927d05e8ebdcc109471f41490b71e7d9cbba87b238da8f1b"
+    },
+    {
+      "file": "orbitlab_falcon9_leo (4).csv",
+      "bytes": 483696,
+      "sha256": "800d96347762153a21c81a6b7d07042941b37b578600d732fd3f4badc004b96f"
+    },
+    {
+      "file": "orbitlab_falcon9_leo (5).csv",
+      "bytes": 483696,
+      "sha256": "800d96347762153a21c81a6b7d07042941b37b578600d732fd3f4badc004b96f"
+    }
+  ],
+  "telemetryCsv": {
+    "byteIdentical": true,
+    "sha256": "793ed8ca39e722c3747cc3140597dc5bd08ef1e72d9d93df4d5298c3d34fb53d",
+    "rows": 1194,
+    "columns": 116,
+    "firstTime": -10.0,
+    "maxTime": 4941.375,
+    "fullFlightBeyondReplay600": true,
+    "timesMonotone": true,
+    "events": 24,
+    "eventTimesMonotone": true,
+    "schemaVersions": [
+      "3"
+    ],
+    "rigidModels": [
+      "sixdof-1"
+    ]
+  },
+  "html": {
+    "orbitlab-key-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.html": {
+      "lang": "en",
+      "charset": "utf-8",
+      "tables": 0,
+      "images": [],
+      "inlineSvg": 0,
+      "scripts": 0,
+      "headingTags": [
+        "title",
+        "h1",
+        "h2",
+        "h2"
+      ],
+      "containsQAStudent": true,
+      "containsFalcon9": true
+    },
+    "orbitlab-report-falcon9-cape-2026-09-29-19-47-en.html": {
+      "lang": "en",
+      "charset": "utf-8",
+      "tables": 4,
+      "images": [
+        {
+          "alt": "Altitude h (km)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        },
+        {
+          "alt": "Speed (m/s)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        },
+        {
+          "alt": "Dynamic pressure q̄ (kPa)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        },
+        {
+          "alt": "Acceleration n (g)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        },
+        {
+          "alt": "Pitch command Θ (°)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        },
+        {
+          "alt": "Mass m (t)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        },
+        {
+          "alt": "Apoapsis / periapsis (km)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        },
+        {
+          "alt": "Δv remaining (m/s)",
+          "embedded": true,
+          "width": 2000,
+          "height": 840
+        }
+      ],
+      "inlineSvg": 0,
+      "scripts": 0,
+      "headingTags": [
+        "title",
+        "h1",
+        "h2",
+        "h2",
+        "h2",
+        "h2",
+        "h2"
+      ],
+      "containsQAStudent": false,
+      "containsFalcon9": true
+    },
+    "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.html": {
+      "lang": "en",
+      "charset": "utf-8",
+      "tables": 2,
+      "images": [],
+      "inlineSvg": 7,
+      "scripts": 0,
+      "headingTags": [
+        "title",
+        "h1",
+        "h2",
+        "h2",
+        "h2",
+        "h2"
+      ],
+      "containsQAStudent": true,
+      "containsFalcon9": true
+    }
+  },
+  "docx": {
+    "orbitlab-key-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.docx": {
+      "zipCrcValid": true,
+      "allXmlWellFormed": true,
+      "paragraphs": 25,
+      "tables": 0,
+      "drawings": 0,
+      "media": [],
+      "externalRelationships": [],
+      "containsQAStudent": true,
+      "containsQACode": true,
+      "containsFalcon9": true
+    },
+    "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T19-47-18-006Z-QA20260929-en.docx": {
+      "zipCrcValid": true,
+      "allXmlWellFormed": true,
+      "paragraphs": 100,
+      "tables": 9,
+      "drawings": 7,
+      "media": [
+        {
+          "part": "word/media/image1.png",
+          "bytes": 60141,
+          "width": 1300,
+          "height": 650
+        },
+        {
+          "part": "word/media/image2.png",
+          "bytes": 65983,
+          "width": 1300,
+          "height": 650
+        },
+        {
+          "part": "word/media/image3.png",
+          "bytes": 57780,
+          "width": 1300,
+          "height": 650
+        },
+        {
+          "part": "word/media/image4.png",
+          "bytes": 67836,
+          "width": 1300,
+          "height": 650
+        },
+        {
+          "part": "word/media/image5.png",
+          "bytes": 61681,
+          "width": 1300,
+          "height": 650
+        },
+        {
+          "part": "word/media/image6.png",
+          "bytes": 70711,
+          "width": 1300,
+          "height": 650
+        },
+        {
+          "part": "word/media/image7.png",
+          "bytes": 152802,
+          "width": 1300,
+          "height": 750
+        }
+      ],
+      "externalRelationships": [],
+      "containsQAStudent": true,
+      "containsQACode": true,
+      "containsFalcon9": true
+    }
+  },
+  "chartPng": {
+    "width": 2400,
+    "height": 1200
+  },
+  "monteCarloCsvExtractedFromBrowserStatus": {
+    "rows": 20,
+    "file": "browser-monte-carlo-20.csv",
+    "sha256": "641510345ef079a946468f3c2ed2c0e556f1cf4c2cf664a6583ecb53f79405fa"
+  },
+  "renderProvenance": {
+    "packagedRenderer": "Failed: LibreOffice soffice.exe not available on PATH",
+    "existingPdfRenderer": "Microsoft Word for Microsoft 365, hidden read-only COM export completed before parent prohibition arrived; no source DOCX edits and no further native app calls",
+    "rasterizer": "Bundled Poppler pdftoppm -scale-to 1500 -png",
+    "worksheetPages": 3,
+    "keyPages": 1,
+    "allFourPagePngsInspected": true,
+    "findings": [
+      "Worksheet Q8 split after choice b across pages 2 and 3",
+      "Other inspected page contents show no clipping or overlapping text",
+      "Original chart PNG has overlapping event labels at MECO/Stage separation/Fairing and SECO/Burn/Parking orbit"
+    ]
+  },
+  "chartAfterBrowser": {
+    "file": "orbitlab-altitude-h-km-after-browser.png",
+    "downloadedName": "orbitlab-altitude-h-km (2).png",
+    "width": 2400,
+    "height": 1200,
+    "sha256": "2dd2e05a622534597681d641b0b61b45649a810b2d40c3f6d892b57cc589fc12",
+    "visuallyInspected": true,
+    "visibleLabels": 5,
+    "findings": [
+      "MECO and Stage sep occupy separate rows; all five event labels are readable without clipping or overlap",
+      "This fresh browser export has ascent markers only, unlike the reference/orbit overlays present in the original PNG"
+    ],
+    "reconstructedAdditionalCoverage": "chart-reconstructed-after.png uses the original flight data and production chartImage; SECO/Parking orbit/Burn/Burn done use four distinct rows. Different font fallback and no reference overlay: this is not a browser download."
+  }
+}

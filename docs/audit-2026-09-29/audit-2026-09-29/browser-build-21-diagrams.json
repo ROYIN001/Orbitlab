@@ -1,0 +1,254 @@
+[
+  {
+    "vehicle": "Soyuz-2.1a (RU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Soyuz-2.1a (RU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Soyuz-2.1b / Fregat-M (RU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Soyuz-2.1b / Fregat-M (RU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Proton-M / Briz-M (RU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Proton-M / Briz-M (RU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Angara-A5 / Briz-M (RU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Angara-A5 / Briz-M (RU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Falcon 9 Block 5 (US)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Falcon 9 Block 5 (US)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Falcon Heavy (US)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Falcon Heavy (US)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Atlas V 551 (US)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Atlas V 551 (US)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Vulcan Centaur VC4 (US)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Vulcan Centaur VC4 (US)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Ariane 64 (EU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Ariane 64 (EU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Vega-C (EU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Vega-C (EU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Long March 2D (CN)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Long March 2D (CN)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Long March 3B/E (CN)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Long March 3B/E (CN)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Long March 5 (CN)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Long March 5 (CN)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "H3-22 (JP)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "H3-22 (JP)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "PSLV-XL (IN)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "PSLV-XL (IN)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Electron (NZ/US)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Electron (NZ/US)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Starship (Super Heavy) (US)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Starship (Super Heavy) (US)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "H-IIA 202 (historical) (JP)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "H-IIA 202 (historical) (JP)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Sputnik (R-7 8K71PS) (SU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Sputnik (R-7 8K71PS) (SU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Vostok-K (8K72K) (SU)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Vostok-K (8K72K) (SU)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Saturn V (US)",
+    "mode": "Taken apart",
+    "label": "",
+    "badNumber": false
+  },
+  {
+    "vehicle": "Saturn V (US)",
+    "mode": "Assembled",
+    "label": "",
+    "badNumber": false
+  }
+]

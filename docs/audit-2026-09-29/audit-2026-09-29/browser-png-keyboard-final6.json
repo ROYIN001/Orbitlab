@@ -1,0 +1,8 @@
+{
+  "url": "http://127.0.0.1:4182/#/build/engineer",
+  "action": "Tab to PNG then Playwright Enter",
+  "state": [
+    "  - generic \"Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.\":",
+    "          - button \"Save \\\"Specific impulse, s\\\" as a PNG image\" [active]: PNG"
+  ]
+}

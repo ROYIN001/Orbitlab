@@ -1,0 +1,616 @@
+{
+  "checkedAt": "2026-09-29T19:49:09.702Z",
+  "runtime": {
+    "node": "v22.23.3",
+    "v8": "12.4.254.21-node.57",
+    "platform": "win32"
+  },
+  "provenance": {
+    "downloadedFile": "C:/Users/Royin/Downloads/orbitlab-QA-Test-2026-09-29-19-39.orbitlab-results.json",
+    "preservedFile": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\orbitlab-QA-Test-2026-09-29-19-39.orbitlab-results.json",
+    "rawFileSha256": "59e3d2bb809df84aa34a8d2530b888a451f757c45249d6d337c12486a0b515d2",
+    "rawFileBytes": 135093,
+    "exportedAt": "2026-09-29T19:39:48.200Z",
+    "studentLabel": "QA-Test",
+    "storedChecksum": "17ec95b5bed5612f340e02d79641db3ad51fd91f042b69e7463502f3d2a163af",
+    "codeSha256": {
+      "src/lessons/progress.ts": "464218eadd4ca7536c6ec1bebc6c3fe85a925fcc154b4759faa92bb05993e3e2",
+      "src/worksheets/cases.ts": "3e3384e803858fd0affda28c7459b6a102301da4a460bf190131211cda7eb829",
+      "src/lessons/case-grader.ts": "b429f4e125e2c5cb6e3e6d47b16998eef1d8ff99dd471b7e61515b19c89d87f9",
+      "src/lessons/builtin/track6.ts": "5348bd7528dd2354691631e667e538d4b2fdbeee9584673b19354391ffb3801c"
+    }
+  },
+  "checks": {
+    "checksumValid": true,
+    "alteredCopyRejected": true,
+    "savedPasses": 3,
+    "assessments": 0,
+    "recordsVerified": 6,
+    "allSixRecordRegradesPass": true,
+    "allFrozenKeysExactlyRecreated": false,
+    "allFrozenWorksheetsExactlyRecreated": false,
+    "allKeysNumericallyEquivalent": true,
+    "allDisplayedWorksheetsExactlyRecreated": true,
+    "progressJsonCharacters": 50313,
+    "progressUtf8Bytes": 59009,
+    "savePassed": true,
+    "roundtripLessonsUnchanged": true
+  },
+  "records": [
+    {
+      "lessonId": "case-theos2",
+      "case": "theos2",
+      "recordType": "passedRecord",
+      "recordedAt": "2026-09-29T19:38:06.221Z",
+      "worksheetLanguage": "en",
+      "recordedVerdict": "pass",
+      "storedKeyRegrade": "pass",
+      "recreatedKeyRegrade": "pass",
+      "criteriaCount": 6,
+      "allCriteriaPass": true,
+      "caseDataJsonCharacters": 3685,
+      "frozenSourceJsonCharacters": 453,
+      "frozenSourceSha256": "f4483d8ec44829fd3038ab15b338efe618bccb56b774e9467a969c957a979fe0",
+      "recreatedKeysExactlyEqual": false,
+      "recreatedWorksheetExactlyEqual": false,
+      "recreatedKeysNumericallyEquivalent": true,
+      "displayedWorksheetExactlyEqual": true,
+      "keyDifferences": [
+        {
+          "id": "required",
+          "stored": 0.9856473320990837,
+          "recreated": 0.9856473320990837,
+          "absoluteDifference": 0,
+          "tolerance": 0.0005,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "j2",
+          "stored": 0.9907392016508403,
+          "recreated": 0.9907392016508407,
+          "absoluteDifference": 4.440892098500626e-16,
+          "tolerance": 0.01,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "height",
+          "stored": 620.8887471484793,
+          "recreated": 620.8887471484784,
+          "absoluteDifference": 9.094947017729282e-13,
+          "tolerance": 2,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "reach",
+          "stored": 655.7651219691838,
+          "recreated": 655.7651219691822,
+          "absoluteDifference": 1.5916157281026244e-12,
+          "tolerance": 10,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "lst",
+          "stored": 10.033453333333334,
+          "recreated": 10.033453333333334,
+          "absoluteDifference": 0,
+          "tolerance": 0.02,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "why",
+          "stored": 3,
+          "recreated": 3,
+          "absoluteDifference": 0,
+          "tolerance": 0,
+          "kindEqual": true,
+          "toleranceEqual": true
+        }
+      ],
+      "maxAbsoluteKeyDifference": 1.5916157281026244e-12,
+      "theos2Epoch": "2026-09-26T11:28:23.369Z",
+      "activity": {
+        "kind": "constant",
+        "f107": 0,
+        "f107a": 0,
+        "ap": 0
+      }
+    },
+    {
+      "lessonId": "case-theos2",
+      "case": "theos2",
+      "recordType": "last",
+      "recordedAt": "2026-09-29T19:38:06.221Z",
+      "worksheetLanguage": "en",
+      "recordedVerdict": "pass",
+      "storedKeyRegrade": "pass",
+      "recreatedKeyRegrade": "pass",
+      "criteriaCount": 6,
+      "allCriteriaPass": true,
+      "caseDataJsonCharacters": 3685,
+      "frozenSourceJsonCharacters": 453,
+      "frozenSourceSha256": "f4483d8ec44829fd3038ab15b338efe618bccb56b774e9467a969c957a979fe0",
+      "recreatedKeysExactlyEqual": false,
+      "recreatedWorksheetExactlyEqual": false,
+      "recreatedKeysNumericallyEquivalent": true,
+      "displayedWorksheetExactlyEqual": true,
+      "keyDifferences": [
+        {
+          "id": "required",
+          "stored": 0.9856473320990837,
+          "recreated": 0.9856473320990837,
+          "absoluteDifference": 0,
+          "tolerance": 0.0005,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "j2",
+          "stored": 0.9907392016508403,
+          "recreated": 0.9907392016508407,
+          "absoluteDifference": 4.440892098500626e-16,
+          "tolerance": 0.01,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "height",
+          "stored": 620.8887471484793,
+          "recreated": 620.8887471484784,
+          "absoluteDifference": 9.094947017729282e-13,
+          "tolerance": 2,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "reach",
+          "stored": 655.7651219691838,
+          "recreated": 655.7651219691822,
+          "absoluteDifference": 1.5916157281026244e-12,
+          "tolerance": 10,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "lst",
+          "stored": 10.033453333333334,
+          "recreated": 10.033453333333334,
+          "absoluteDifference": 0,
+          "tolerance": 0.02,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "why",
+          "stored": 3,
+          "recreated": 3,
+          "absoluteDifference": 0,
+          "tolerance": 0,
+          "kindEqual": true,
+          "toleranceEqual": true
+        }
+      ],
+      "maxAbsoluteKeyDifference": 1.5916157281026244e-12,
+      "theos2Epoch": "2026-09-26T11:28:23.369Z",
+      "activity": {
+        "kind": "constant",
+        "f107": 0,
+        "f107a": 0,
+        "ap": 0
+      }
+    },
+    {
+      "lessonId": "case-cz5b",
+      "case": "cz5b",
+      "recordType": "passedRecord",
+      "recordedAt": "2026-09-29T19:37:06.789Z",
+      "worksheetLanguage": "en",
+      "recordedVerdict": "pass",
+      "storedKeyRegrade": "pass",
+      "recreatedKeyRegrade": "pass",
+      "criteriaCount": 8,
+      "allCriteriaPass": true,
+      "caseDataJsonCharacters": 13102,
+      "frozenSourceJsonCharacters": 9430,
+      "frozenSourceSha256": "ee155f009198da12747b88784fe051f08649c47f3ea6812cdfaca52f26f4d0e9",
+      "recreatedKeysExactlyEqual": true,
+      "recreatedWorksheetExactlyEqual": true,
+      "recreatedKeysNumericallyEquivalent": true,
+      "displayedWorksheetExactlyEqual": true,
+      "keyDifferences": [
+        {
+          "id": "area",
+          "stored": 134.30308594096365,
+          "recreated": 134.30308594096365,
+          "absoluteDifference": 0,
+          "tolerance": 1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "b",
+          "stored": 0.013679018012505558,
+          "recreated": 0.013679018012505558,
+          "absoluteDifference": 0,
+          "tolerance": 0.0003,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "early",
+          "stored": 7.454256129637361,
+          "recreated": 7.454256129637361,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "late",
+          "stored": 11.18138419445604,
+          "recreated": 11.18138419445604,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "actual",
+          "stored": 9.712308795657009,
+          "recreated": 9.712308795657009,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "error",
+          "stored": -4.061738994405828,
+          "recreated": -4.061738994405828,
+          "absoluteDifference": 0,
+          "tolerance": 1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "broadside",
+          "stored": 7.895343861235344,
+          "recreated": 7.895343861235344,
+          "absoluteDifference": 0,
+          "tolerance": 0.5,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "why",
+          "stored": 1,
+          "recreated": 1,
+          "absoluteDifference": 0,
+          "tolerance": 0,
+          "kindEqual": true,
+          "toleranceEqual": true
+        }
+      ],
+      "maxAbsoluteKeyDifference": 0,
+      "activityTo": "2030-12",
+      "activity": {
+        "kind": "daily",
+        "fromJD": 2459333.5,
+        "days": 366,
+        "equalArrayLengths": true
+      }
+    },
+    {
+      "lessonId": "case-cz5b",
+      "case": "cz5b",
+      "recordType": "last",
+      "recordedAt": "2026-09-29T19:37:06.789Z",
+      "worksheetLanguage": "en",
+      "recordedVerdict": "pass",
+      "storedKeyRegrade": "pass",
+      "recreatedKeyRegrade": "pass",
+      "criteriaCount": 8,
+      "allCriteriaPass": true,
+      "caseDataJsonCharacters": 13102,
+      "frozenSourceJsonCharacters": 9430,
+      "frozenSourceSha256": "ee155f009198da12747b88784fe051f08649c47f3ea6812cdfaca52f26f4d0e9",
+      "recreatedKeysExactlyEqual": true,
+      "recreatedWorksheetExactlyEqual": true,
+      "recreatedKeysNumericallyEquivalent": true,
+      "displayedWorksheetExactlyEqual": true,
+      "keyDifferences": [
+        {
+          "id": "area",
+          "stored": 134.30308594096365,
+          "recreated": 134.30308594096365,
+          "absoluteDifference": 0,
+          "tolerance": 1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "b",
+          "stored": 0.013679018012505558,
+          "recreated": 0.013679018012505558,
+          "absoluteDifference": 0,
+          "tolerance": 0.0003,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "early",
+          "stored": 7.454256129637361,
+          "recreated": 7.454256129637361,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "late",
+          "stored": 11.18138419445604,
+          "recreated": 11.18138419445604,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "actual",
+          "stored": 9.712308795657009,
+          "recreated": 9.712308795657009,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "error",
+          "stored": -4.061738994405828,
+          "recreated": -4.061738994405828,
+          "absoluteDifference": 0,
+          "tolerance": 1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "broadside",
+          "stored": 7.895343861235344,
+          "recreated": 7.895343861235344,
+          "absoluteDifference": 0,
+          "tolerance": 0.5,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "why",
+          "stored": 1,
+          "recreated": 1,
+          "absoluteDifference": 0,
+          "tolerance": 0,
+          "kindEqual": true,
+          "toleranceEqual": true
+        }
+      ],
+      "maxAbsoluteKeyDifference": 0,
+      "activityTo": "2030-12",
+      "activity": {
+        "kind": "daily",
+        "fromJD": 2459333.5,
+        "days": 366,
+        "equalArrayLengths": true
+      }
+    },
+    {
+      "lessonId": "case-iridium",
+      "case": "iridium",
+      "recordType": "passedRecord",
+      "recordedAt": "2026-09-29T19:35:48.518Z",
+      "worksheetLanguage": "th",
+      "recordedVerdict": "pass",
+      "storedKeyRegrade": "pass",
+      "recreatedKeyRegrade": "pass",
+      "criteriaCount": 8,
+      "allCriteriaPass": true,
+      "caseDataJsonCharacters": 5732,
+      "frozenSourceJsonCharacters": 54,
+      "frozenSourceSha256": "796f33f21eea20e54e33a08b284f05c4544c58871a6a69aee731ca5e99910c14",
+      "recreatedKeysExactlyEqual": true,
+      "recreatedWorksheetExactlyEqual": true,
+      "recreatedKeysNumericallyEquivalent": true,
+      "displayedWorksheetExactlyEqual": true,
+      "keyDifferences": [
+        {
+          "id": "miss",
+          "stored": 226.29415932593687,
+          "recreated": 226.29415932593687,
+          "absoluteDifference": 0,
+          "tolerance": 5,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "speed",
+          "stored": 11.64705908340895,
+          "recreated": 11.64705908340895,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "angle",
+          "stored": 102.46270687035434,
+          "recreated": 102.46270687035434,
+          "absoluteDifference": 0,
+          "tolerance": 2,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "radius",
+          "stored": 19.942,
+          "recreated": 19.942,
+          "absoluteDifference": 0,
+          "tolerance": 0.1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "sigma",
+          "stored": 17.95192317210524,
+          "recreated": 17.95192317210524,
+          "absoluteDifference": 0,
+          "tolerance": 0.897596158605262,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "nsigma",
+          "stored": 12.605279881998687,
+          "recreated": 12.605279881998687,
+          "absoluteDifference": 0,
+          "tolerance": 1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "why",
+          "stored": 2,
+          "recreated": 2,
+          "absoluteDifference": 0,
+          "tolerance": 0,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "times",
+          "stored": 323.1666863359347,
+          "recreated": 323.1666863359347,
+          "absoluteDifference": 0,
+          "tolerance": 30,
+          "kindEqual": true,
+          "toleranceEqual": true
+        }
+      ],
+      "maxAbsoluteKeyDifference": 0,
+      "activity": {
+        "kind": "constant",
+        "f107": 0,
+        "f107a": 0,
+        "ap": 0
+      }
+    },
+    {
+      "lessonId": "case-iridium",
+      "case": "iridium",
+      "recordType": "last",
+      "recordedAt": "2026-09-29T19:35:48.518Z",
+      "worksheetLanguage": "th",
+      "recordedVerdict": "pass",
+      "storedKeyRegrade": "pass",
+      "recreatedKeyRegrade": "pass",
+      "criteriaCount": 8,
+      "allCriteriaPass": true,
+      "caseDataJsonCharacters": 5732,
+      "frozenSourceJsonCharacters": 54,
+      "frozenSourceSha256": "796f33f21eea20e54e33a08b284f05c4544c58871a6a69aee731ca5e99910c14",
+      "recreatedKeysExactlyEqual": true,
+      "recreatedWorksheetExactlyEqual": true,
+      "recreatedKeysNumericallyEquivalent": true,
+      "displayedWorksheetExactlyEqual": true,
+      "keyDifferences": [
+        {
+          "id": "miss",
+          "stored": 226.29415932593687,
+          "recreated": 226.29415932593687,
+          "absoluteDifference": 0,
+          "tolerance": 5,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "speed",
+          "stored": 11.64705908340895,
+          "recreated": 11.64705908340895,
+          "absoluteDifference": 0,
+          "tolerance": 0.05,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "angle",
+          "stored": 102.46270687035434,
+          "recreated": 102.46270687035434,
+          "absoluteDifference": 0,
+          "tolerance": 2,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "radius",
+          "stored": 19.942,
+          "recreated": 19.942,
+          "absoluteDifference": 0,
+          "tolerance": 0.1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "sigma",
+          "stored": 17.95192317210524,
+          "recreated": 17.95192317210524,
+          "absoluteDifference": 0,
+          "tolerance": 0.897596158605262,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "nsigma",
+          "stored": 12.605279881998687,
+          "recreated": 12.605279881998687,
+          "absoluteDifference": 0,
+          "tolerance": 1,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "why",
+          "stored": 2,
+          "recreated": 2,
+          "absoluteDifference": 0,
+          "tolerance": 0,
+          "kindEqual": true,
+          "toleranceEqual": true
+        },
+        {
+          "id": "times",
+          "stored": 323.1666863359347,
+          "recreated": 323.1666863359347,
+          "absoluteDifference": 0,
+          "tolerance": 30,
+          "kindEqual": true,
+          "toleranceEqual": true
+        }
+      ],
+      "maxAbsoluteKeyDifference": 0,
+      "activity": {
+        "kind": "constant",
+        "f107": 0,
+        "f107a": 0,
+        "ap": 0
+      }
+    }
+  ],
+  "limits": [
+    "QA-Test is a synthetic UI acceptance run, not the owner's learning score or a psychometric assessment.",
+    "Checksum detects accidental changes; it is not a digital signature or proof of authorship.",
+    "This validates the actual downloaded export and module reconstruction; browser click/reload behavior is documented separately by the UI reviewer.",
+    "Results export has no production progress-import/restore workflow. The in-memory save/load exercise does not claim one exists.",
+    "No application/browser state was read or altered. The original download and preserved copy remain byte-identical."
+  ]
+}

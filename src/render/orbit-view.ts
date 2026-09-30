@@ -16,6 +16,7 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import type { EarthTextures } from './scene';
+import { buildStarField } from './stars';
 import { R_EARTH } from '../physics/constants';
 import { gmst, sunDirectionEci } from '../physics/orbital';
 import { equalTimeCuts, hitsEarth, stateAt, type Orbit } from '../orbit/kepler';
@@ -114,25 +115,13 @@ function labelSprite(text: string, color: string): THREE.Sprite {
   return sprite;
 }
 
-function starField(): THREE.Points {
-  const n = 1800, pos = new Float32Array(n * 3);
-  let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  for (let k = 0; k < n; k++) {
-    const z = 2 * rnd() - 1, phi = 2 * Math.PI * rnd(), s = Math.sqrt(1 - z * z);
-    pos.set([3000 * s * Math.cos(phi), 3000 * s * Math.sin(phi), 3000 * z], k * 3);
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  return new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xaab4c4, size: 1.3, sizeAttenuation: false }));
-}
-
 export class OrbitView {
   readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(40, 1, 0.01, 10000);
   private readonly earth: THREE.Mesh;
   private readonly earthMat: THREE.ShaderMaterial;
+  private readonly stars = buildStarField(3000, 1, true);
   /** the orbit's own frame (perifocal: x to perigee, z along the angular momentum), turned into ECI each frame */
   private readonly perifocal = new THREE.Group();
   private readonly ellipse: Line2;
@@ -188,7 +177,8 @@ export class OrbitView {
         sunDir: { value: new THREE.Vector3(1, 0, 0) }, camPos: { value: new THREE.Vector3() } },
     });
     this.earth = new THREE.Mesh(new THREE.SphereGeometry(RE, 96, 64), this.earthMat);
-    this.scene.add(this.earth, starField());
+    this.stars.material.uniforms.uPixelRatio.value = this.renderer.getPixelRatio();
+    this.scene.add(this.earth, this.stars);
     textures?.then((tex) => {
       // colour maps (the launch scene says the same of the textures it shares)
       tex.day.colorSpace = THREE.SRGBColorSpace;
@@ -381,7 +371,12 @@ export class OrbitView {
     this.apogee.visible = this.apogeeLabel.visible = bound && !round;
     this.perigeeLabel.position.copy(this.perigee.position);
     this.apogeeLabel.position.copy(this.apogee.position);
-    if (this.sectors) { this.perifocal.remove(this.sectors); this.sectors.geometry.dispose(); this.sectors = null; }
+    if (this.sectors) {
+      this.perifocal.remove(this.sectors);
+      this.sectors.geometry.dispose();
+      (this.sectors.material as THREE.Material).dispose();
+      this.sectors = null;
+    }
     if (this.options.sectors && bound) {
       // twelve sectors swept in equal times: a fan of thin triangles from the focus, two colours alternating
       const cuts = equalTimeCuts(o.e, 12), pos: number[] = [], col: number[] = [];
@@ -492,6 +487,13 @@ export class OrbitView {
   }
 
   render(): void {
+    // Moving the window between displays can change DPR without changing the
+    // canvas's CSS box. Refresh here too: ResizeObserver alone does not catch it.
+    const pr = Math.min(window.devicePixelRatio || 1, 2);
+    if (pr !== this.renderer.getPixelRatio()) {
+      this.renderer.setPixelRatio(pr);
+      this.stars.material.uniforms.uPixelRatio.value = pr;
+    }
     // the field of view is set vertically: on a portrait screen stand back until the width fits too
     const d = this.dist * Math.max(1, 1 / this.camera.aspect);
     const c = Math.cos(this.el);
@@ -502,6 +504,10 @@ export class OrbitView {
     if (this.shift.x || this.shift.y) this.camera.setViewOffset(w, h, -this.shift.x * w, -this.shift.y * h, w, h);
     else this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
+    // The star shell represents directions at infinity, not foreground
+    // geometry. Keep it centred on the camera as Launch does. Its shader uses
+    // far depth, so even a narrow portrait view cannot put stars before Earth.
+    this.stars.position.copy(this.camera.position);
     (this.earthMat.uniforms.camPos.value as THREE.Vector3).copy(this.camera.position);
     this.renderer.render(this.scene, this.camera);
   }

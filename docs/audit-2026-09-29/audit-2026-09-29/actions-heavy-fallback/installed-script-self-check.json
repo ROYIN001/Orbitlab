@@ -1,0 +1,67 @@
+{
+  "syntheticOnly": true,
+  "note": "Zero Orbitlab physical tests ran.",
+  "runtime": "v22.23.3",
+  "cases": [
+    {
+      "name": "complete synthetic 246 cases / 27 files",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true
+    },
+    {
+      "name": "missing case rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "wrong worker version rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "missing worker rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "nonzero exit rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "mixed source rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "wrong inventory hash rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "wrong workflow run rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "duplicate assertion rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "restored complete synthetic fixture",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true
+    }
+  ]
+}

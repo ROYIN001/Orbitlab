@@ -1,0 +1,3529 @@
+{
+  "generatedAt": "2026-09-29T20:51:49.177Z",
+  "scope": "Actual module bundle; source unmodified. CPU numerical checks; no browser claim. Exact e=1 excluded (no parabolic element representation).",
+  "tolerances": {
+    "positionM": 1,
+    "relativeKeplerPosition": 1e-8,
+    "velocityMs": 0.001
+  },
+  "summary": {
+    "oracleChecks": [
+      {
+        "kind": "circular",
+        "periods": 0.5,
+        "positionErrorM": 2.7939677238464355e-9
+      },
+      {
+        "kind": "circular",
+        "periods": 1,
+        "positionErrorM": 1.3949026061540381e-8
+      },
+      {
+        "kind": "circular",
+        "periods": 10,
+        "positionErrorM": 1.1159220849232305e-7
+      },
+      {
+        "kind": "independent RK4 circular 600s/0.5s",
+        "positionErrorM": 1.1214608865596628e-8,
+        "velocityErrorMs": 1.3520610761878294e-11
+      }
+    ],
+    "kepler": {
+      "cases": 108,
+      "passed": 95,
+      "failures": 13
+    },
+    "lambert": {
+      "cases": 120,
+      "returned": 80,
+      "passedReturned": 56,
+      "failedReturned": 24,
+      "null": 40,
+      "nonImpactFailures": 4
+    },
+    "invalidTime": [
+      {
+        "dt": "0",
+        "returnsNull": true
+      },
+      {
+        "dt": "-1",
+        "returnsNull": true
+      },
+      {
+        "dt": "NaN",
+        "returnsNull": true
+      }
+    ],
+    "rkWitness": {
+      "degrees": 179.999999,
+      "dt": 2800,
+      "longWay": false,
+      "positionErrorM": 9633504.957827114,
+      "velocityErrorMs": 8690.343189646952,
+      "stepHalvingPositionDifferenceM": 3.3643826596789885e-8,
+      "stepHalvingVelocityDifferenceMs": 2.3738508636848908e-11
+    }
+  },
+  "kepler": [
+    {
+      "e": 0,
+      "m0": 0,
+      "t": 0,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 1.4349894005370572e-47,
+      "velocityErrorMs": 1.5469294981703016e-50,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 0,
+      "t": -3600,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 9.313225746154785e-10,
+      "velocityErrorMs": 0,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 0,
+      "t": 3600,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 3.357931296773245e-9,
+      "velocityErrorMs": 2.5724394843074972e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 0,
+      "t": 2592000,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 2.0954757928848267e-9,
+      "velocityErrorMs": 1.5916157281026244e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 1e-8,
+      "t": 0,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 4.2542297462588863e-10,
+      "velocityErrorMs": 4.586091977096945e-13,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 6.585445079827193e-9,
+      "velocityErrorMs": 7.103380699760833e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 6.71586259354649e-9,
+      "velocityErrorMs": 9.00353819507624e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 1.6789656483866226e-9,
+      "velocityErrorMs": 2.2393709973121313e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 0,
+      "velocityErrorMs": 0,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 2.08250058582033e-9,
+      "velocityErrorMs": 2.033691978340166e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 0,
+      "velocityErrorMs": 0,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": 7000000,
+      "domain": "direct UI ellipse range",
+      "finite": true,
+      "positionErrorM": 9.313225746154785e-10,
+      "velocityErrorMs": 0,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 0,
+      "t": 0,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3.725290298461914e-9,
+      "velocityErrorMs": 3.637978807091713e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 0,
+      "t": -3600,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.1165000178400955e-7,
+      "velocityErrorMs": 1.4693336580788595e-11,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 0,
+      "t": 3600,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 9.996002811937585e-8,
+      "velocityErrorMs": 1.3093249480232744e-11,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 0,
+      "t": 2592000,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 6.869095904598302e-8,
+      "velocityErrorMs": 1.6396148910025611e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 1e-8,
+      "t": 0,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 5.568689764444928e-8,
+      "velocityErrorMs": 4.299264757486675e-11,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3.100954558202141e-7,
+      "velocityErrorMs": 4.114144295520798e-11,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 6.33573209930023e-8,
+      "velocityErrorMs": 8.6282243323741e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.1076084336130698e-7,
+      "velocityErrorMs": 4.1194814302783556e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.810051686770734e-7,
+      "velocityErrorMs": 5.673178723834168e-13,
+      "positionToleranceM": 2.7299999999999978,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2.7806045144674687e-7,
+      "velocityErrorMs": 5.393407855347913e-12,
+      "positionToleranceM": 2.7296707482490654,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.7638438816974326e-7,
+      "velocityErrorMs": 3.3056067827037898e-12,
+      "positionToleranceM": 2.7296707482490654,
+      "pass": true
+    },
+    {
+      "e": 0.95,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": 139999999.99999988,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2.384185791015625e-7,
+      "velocityErrorMs": 4.695090909492384e-12,
+      "positionToleranceM": 2.7245873705289694,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 0,
+      "t": 0,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.0151416063308716e-7,
+      "velocityErrorMs": 7.639755494892597e-11,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 0,
+      "t": -3600,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00004520983958187864,
+      "velocityErrorMs": 5.60760331556333e-9,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 0,
+      "t": 3600,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.000036407907088506276,
+      "velocityErrorMs": 4.5159543317217925e-9,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 0,
+      "t": 2592000,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00003836803347399309,
+      "velocityErrorMs": 3.767459805570353e-12,
+      "positionToleranceM": 22.09506481308069,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 1e-8,
+      "t": 0,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.000019018651238532553,
+      "velocityErrorMs": 1.4500894808522142e-8,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00013515777440804925,
+      "velocityErrorMs": 1.6762326948795882e-8,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.000025951275516740142,
+      "velocityErrorMs": 3.218659377738854e-9,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0000416737607793669,
+      "velocityErrorMs": 4.791993135917545e-12,
+      "positionToleranceM": 22.095066427061564,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00020218589608262319,
+      "velocityErrorMs": 6.401397720881829e-13,
+      "positionToleranceM": 139.92999999999986,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0006256288780498822,
+      "velocityErrorMs": 1.8436059715813277e-12,
+      "positionToleranceM": 139.9299998682177,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0006256646402218114,
+      "velocityErrorMs": 3.1476971548645575e-12,
+      "positionToleranceM": 139.9299998682177,
+      "pass": true
+    },
+    {
+      "e": 0.999,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": 6999999999.999993,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0009670393426611381,
+      "velocityErrorMs": 1.5687134375113619e-12,
+      "positionToleranceM": 139.86167301540166,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 0,
+      "t": 0,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00007742643356323242,
+      "velocityErrorMs": 5.9020749176852405e-8,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 0,
+      "t": -3600,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.2537377783163706,
+      "velocityErrorMs": 0.00015520526558280288,
+      "positionToleranceM": 1,
+      "pass": false
+    },
+    {
+      "e": 0.999999,
+      "m0": 0,
+      "t": 3600,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.0332400119621563,
+      "velocityErrorMs": 0.0001279089545531373,
+      "positionToleranceM": 1,
+      "pass": false
+    },
+    {
+      "e": 0.999999,
+      "m0": 0,
+      "t": 2592000,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.03865090256721339,
+      "velocityErrorMs": 4.996696771378588e-9,
+      "positionToleranceM": 22.856086487643392,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 1e-8,
+      "t": 0,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.23014338010209243,
+      "velocityErrorMs": 0.000009883054653712782,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.5951948375059846,
+      "velocityErrorMs": 0.00004416877960986893,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.8466847652446817,
+      "velocityErrorMs": 0.0000253792561894898,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.07273245434252991,
+      "velocityErrorMs": 9.363672308071582e-9,
+      "positionToleranceM": 22.910750406073277,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 154.85156250947801,
+      "velocityErrorMs": 6.536596720712819e-13,
+      "positionToleranceM": 139999.9299959742,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 154.85156273629775,
+      "velocityErrorMs": 3.2606001277996495e-12,
+      "positionToleranceM": 139999.9299959742,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 154.85156296369647,
+      "velocityErrorMs": 4.5674723501274156e-12,
+      "positionToleranceM": 139999.9299959742,
+      "pass": true
+    },
+    {
+      "e": 0.999999,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": 6999999999798.71,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 161.68554790128692,
+      "velocityErrorMs": 6.9432017384328694e-12,
+      "positionToleranceM": 139999.92999590587,
+      "pass": true
+    },
+    {
+      "e": 0.999999999,
+      "m0": 0,
+      "t": 0,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.003500000573703693,
+      "velocityErrorMs": 0.000002667931767070998,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 0.999999999,
+      "m0": 0,
+      "t": -3600,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 81029.28211942366,
+      "velocityErrorMs": 10.009247187025998,
+      "positionToleranceM": 1,
+      "pass": false
+    },
+    {
+      "e": 0.999999999,
+      "m0": 0,
+      "t": 3600,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 26293.194855164267,
+      "velocityErrorMs": 3.2572242309251536,
+      "positionToleranceM": 1,
+      "pass": false
+    },
+    {
+      "e": 0.999999999,
+      "m0": 0,
+      "t": 2592000,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3576.4370536244774,
+      "velocityErrorMs": 0.0004620402541050272,
+      "positionToleranceM": 22.85683667523319,
+      "pass": false
+    },
+    {
+      "e": 0.999999999,
+      "m0": 1e-8,
+      "t": 0,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 191.44673967558143,
+      "velocityErrorMs": 2.1757634553412457e-7,
+      "positionToleranceM": 536.3462159205942,
+      "pass": true
+    },
+    {
+      "e": 0.999999999,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 361.56697426183007,
+      "velocityErrorMs": 4.1094143804389026e-7,
+      "positionToleranceM": 536.3418272246834,
+      "pass": true
+    },
+    {
+      "e": 0.999999999,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 742.3440651113222,
+      "velocityErrorMs": 8.436834509167774e-7,
+      "positionToleranceM": 536.3506045985515,
+      "pass": false
+    },
+    {
+      "e": 0.999999999,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 547.5382531845162,
+      "velocityErrorMs": 6.168562577063135e-7,
+      "positionToleranceM": 539.5014352559868,
+      "pass": false
+    },
+    {
+      "e": 0.999999999,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 7000000.00000021,
+      "velocityErrorMs": 6.534418046363057e-13,
+      "positionToleranceM": 140000003.88947052,
+      "pass": true
+    },
+    {
+      "e": 0.999999999,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 7000000.000000205,
+      "velocityErrorMs": 6.461297696857236e-13,
+      "positionToleranceM": 140000003.88947052,
+      "pass": true
+    },
+    {
+      "e": 0.999999999,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 7000000.000000214,
+      "velocityErrorMs": 6.607830632664265e-13,
+      "positionToleranceM": 140000003.88947052,
+      "pass": true
+    },
+    {
+      "e": 0.999999999,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": 7000000197973526,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 7000000.000006209,
+      "velocityErrorMs": 3.5535791961108256e-12,
+      "positionToleranceM": 140000003.88947052,
+      "pass": true
+    },
+    {
+      "e": 1.000000001,
+      "m0": 0,
+      "t": 0,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.003500000573694706,
+      "velocityErrorMs": 0.0000026679317670641467,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.000000001,
+      "m0": 0,
+      "t": -3600,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.2975968140955925,
+      "velocityErrorMs": 0.000160634467680405,
+      "positionToleranceM": 1,
+      "pass": false
+    },
+    {
+      "e": 1.000000001,
+      "m0": 0,
+      "t": 3600,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.2975968140955925,
+      "velocityErrorMs": 0.000160634467680405,
+      "positionToleranceM": 1,
+      "pass": false
+    },
+    {
+      "e": 1.000000001,
+      "m0": 0,
+      "t": 2592000,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2.5533353185169836,
+      "velocityErrorMs": 3.298655935731548e-7,
+      "positionToleranceM": 22.856838177089195,
+      "pass": true
+    },
+    {
+      "e": 1.000000001,
+      "m0": 1e-8,
+      "t": 0,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 25.997431724011985,
+      "velocityErrorMs": 2.9558908422467298e-8,
+      "positionToleranceM": 536.3469784886298,
+      "pass": true
+    },
+    {
+      "e": 1.000000001,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 26.026564743632726,
+      "velocityErrorMs": 2.9574775361527343e-8,
+      "positionToleranceM": 536.3425897790231,
+      "pass": true
+    },
+    {
+      "e": 1.000000001,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 27.438983319764883,
+      "velocityErrorMs": 3.1192155071478184e-8,
+      "positionToleranceM": 536.3513671802835,
+      "pass": true
+    },
+    {
+      "e": 1.000000001,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 29.715004586877058,
+      "velocityErrorMs": 3.34965533772256e-8,
+      "positionToleranceM": 539.5022076983612,
+      "pass": true
+    },
+    {
+      "e": 1.000000001,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3844299397.4988885,
+      "velocityErrorMs": 7.176235121216034e-11,
+      "positionToleranceM": 325304915.8001553,
+      "pass": false
+    },
+    {
+      "e": 1.000000001,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3844300429.498889,
+      "velocityErrorMs": 7.176101895365189e-11,
+      "positionToleranceM": 325304915.800145,
+      "pass": false
+    },
+    {
+      "e": 1.000000001,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3844298385.498887,
+      "velocityErrorMs": 7.176379449222132e-11,
+      "positionToleranceM": 325304915.8001654,
+      "pass": false
+    },
+    {
+      "e": 1.000000001,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": -6999999420817451,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3843559677.4973755,
+      "velocityErrorMs": 7.03690860774716e-11,
+      "positionToleranceM": 325304915.8075525,
+      "pass": false
+    },
+    {
+      "e": 1.000001,
+      "m0": 0,
+      "t": 0,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0003111511468887329,
+      "velocityErrorMs": 2.3717984731774777e-7,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 0,
+      "t": -3600,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0015145119403855972,
+      "velocityErrorMs": 1.8748784435103622e-7,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 0,
+      "t": 3600,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0015145119403855972,
+      "velocityErrorMs": 1.8748784435103622e-7,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 0,
+      "t": 2592000,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.10267658968035473,
+      "velocityErrorMs": 1.3264039012352061e-8,
+      "positionToleranceM": 22.857588343599144,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 1e-8,
+      "t": 0,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0027937396386349144,
+      "velocityErrorMs": 1.1997026785425536e-7,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0009007069778529464,
+      "velocityErrorMs": 6.68405528627083e-8,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0037050917609495323,
+      "velocityErrorMs": 1.1105921323825841e-7,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.1004206271703489,
+      "velocityErrorMs": 1.292766956625489e-8,
+      "positionToleranceM": 22.912259432594418,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2486.644191728426,
+      "velocityErrorMs": 2.0154206409108105e-10,
+      "positionToleranceM": 325304.8728128166,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 3564.7316529162786,
+      "velocityErrorMs": 1.9975851816129528e-10,
+      "positionToleranceM": 325304.8724879193,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1408.5098310684543,
+      "velocityErrorMs": 2.009559803278841e-10,
+      "positionToleranceM": 325304.87313771347,
+      "pass": true
+    },
+    {
+      "e": 1.000001,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": -7000000000575.866,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1707.1743104693023,
+      "velocityErrorMs": 2.0119983484441283e-10,
+      "positionToleranceM": 325305.10673873493,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 0,
+      "t": 0,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2.868473529815674e-7,
+      "velocityErrorMs": 2.1827872842550278e-10,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 0,
+      "t": -3600,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 9.083140894946911e-7,
+      "velocityErrorMs": 1.1191682460841661e-10,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 0,
+      "t": 3600,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 9.083140894946911e-7,
+      "velocityErrorMs": 1.1191682460841661e-10,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 0,
+      "t": 2592000,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0001167078427160909,
+      "velocityErrorMs": 1.2310775759658357e-11,
+      "positionToleranceM": 23.597509691937155,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 1e-8,
+      "t": 0,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2.8684795841870623e-7,
+      "velocityErrorMs": 2.1645995028684698e-10,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.000001029151478399754,
+      "velocityErrorMs": 1.2736173605979493e-10,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00000209117570718785,
+      "velocityErrorMs": 2.580181328020298e-10,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00009841232269496615,
+      "velocityErrorMs": 1.2994707746306043e-11,
+      "positionToleranceM": 23.59751153271374,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.005657573213595569,
+      "velocityErrorMs": 6.165022931033235e-12,
+      "positionToleranceM": 325.2349928226567,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0012340325474433094,
+      "velocityErrorMs": 6.140458616300823e-12,
+      "positionToleranceM": 325.22471864946914,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00035920882461131984,
+      "velocityErrorMs": 5.52307478302695e-12,
+      "positionToleranceM": 325.2452669470279,
+      "pass": true
+    },
+    {
+      "e": 1.001,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": -7000000000.000771,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0015812432800790355,
+      "velocityErrorMs": 4.8944124105484226e-12,
+      "positionToleranceM": 332.61991531633475,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 0,
+      "t": 0,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.0465945580032871e-47,
+      "velocityErrorMs": 1.8189894035458565e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 0,
+      "t": -3600,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2.333887682508988e-8,
+      "velocityErrorMs": 4.4787419946242626e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 0,
+      "t": 3600,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 2.333887682508988e-8,
+      "velocityErrorMs": 4.4787419946242626e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 0,
+      "t": 2592000,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.00012289084393452376,
+      "velocityErrorMs": 9.374856803373542e-13,
+      "positionToleranceM": 64.75174196546357,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 1e-8,
+      "t": 0,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 9.313225746282899e-10,
+      "velocityErrorMs": 1.8189894035510264e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 1e-8,
+      "t": -3600,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.862645149230957e-9,
+      "velocityErrorMs": 1.016845989170083e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 1e-8,
+      "t": 3600,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 1.862645149230957e-9,
+      "velocityErrorMs": 1.2862197421537486e-12,
+      "positionToleranceM": 1,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 1e-8,
+      "t": 2592000,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0002921471181992942,
+      "velocityErrorMs": 1.5252689837551246e-12,
+      "positionToleranceM": 64.75174197253878,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 3.141592653589793,
+      "t": 0,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0000013197415963104085,
+      "velocityErrorMs": 9.374856803373542e-13,
+      "positionToleranceM": 3.187811949844513,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 3.141592653589793,
+      "t": -3600,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 5.479090306416225e-7,
+      "velocityErrorMs": 1.5252689837551246e-12,
+      "positionToleranceM": 3.084870161082065,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 3.141592653589793,
+      "t": 3600,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0000011075081930197504,
+      "velocityErrorMs": 6.431098710768743e-13,
+      "positionToleranceM": 3.2902685846496125,
+      "pass": true
+    },
+    {
+      "e": 1.1,
+      "m0": 3.141592653589793,
+      "t": 2592000,
+      "a": -69999999.99999994,
+      "domain": "module conic / handoff-maneuver stress, beyond direct e slider",
+      "finite": true,
+      "positionErrorM": 0.0000744675538095954,
+      "velocityErrorMs": 5.684341886080801e-13,
+      "positionToleranceM": 66.97408275816807,
+      "pass": true
+    }
+  ],
+  "lambert": [
+    {
+      "degrees": 0,
+      "dt": 60,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 3.129243850708008e-7,
+      "velocityErrorMs": 5.229594535194337e-10,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 5252.662888370573,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": 4754.527305649926,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 1.1920928955078125e-7,
+      "velocityErrorMs": 5.252331902738661e-10,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2869.4495671793807,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": -1802.4437022806555,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 600,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.000018125399947166443,
+      "velocityErrorMs": 2.3212123778648674e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6601.513152598682,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": -6212.4905138952645,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.00020803138613700867,
+      "velocityErrorMs": 3.600007403292693e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -5110.977518192704,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": -4597.51603290043,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.0000262334942817688,
+      "velocityErrorMs": 2.7085661713499576e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 8015.625327271092,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": -7698.396707659008,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.0021453797817230225,
+      "velocityErrorMs": 0.0000023444181351806037,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -7615.3061636793545,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": -7280.655907806523,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.0018235333263874054,
+      "velocityErrorMs": 0.0000014272263797465712,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10403.89465067733,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": -10161.50020339997,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 86400,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.1464308276772499,
+      "velocityErrorMs": 0.00011021869067917578,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10799.834479204823,
+        "y": 0,
+        "z": 0
+      },
+      "v2": {
+        "x": -10566.526735854433,
+        "y": 0,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 60,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2.4493783712387085e-7,
+      "positionErrorM": 3.1292438507082995e-7,
+      "velocityErrorMs": 5.229594535194337e-10,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 5252.662888370557,
+        "y": 0.0020604270151684434,
+        "z": 0
+      },
+      "v2": {
+        "x": 4754.527305649911,
+        "y": 0.0020560799621485355,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2.7939677238464355e-9,
+      "positionErrorM": 1.1827796697616635e-7,
+      "velocityErrorMs": 5.259153113001958e-10,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2869.449567179379,
+        "y": 0.00021969080898393887,
+        "z": 0
+      },
+      "v2": {
+        "x": -1802.4437022806571,
+        "y": 0.00017892084905701873,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 600,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.000018124468624591827,
+      "velocityErrorMs": 2.3212123778648674e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6601.513152598682,
+        "y": 0.00008009768364106622,
+        "z": 0
+      },
+      "v2": {
+        "x": -6212.4905138952645,
+        "y": -0.00003172559353040616,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2.300366759300232e-7,
+      "positionErrorM": 0.00020720530301334425,
+      "velocityErrorMs": 3.5857465263688937e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -5110.977518192689,
+        "y": -0.0019989269716501933,
+        "z": 0
+      },
+      "v2": {
+        "x": -4597.516032900416,
+        "y": -0.0019944461748999283,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.000026227906346321106,
+      "velocityErrorMs": 2.7101123123429716e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 8015.625327271091,
+        "y": 0.00006531567854320245,
+        "z": 0
+      },
+      "v2": {
+        "x": -7698.396707659008,
+        "y": -0.00007181503307703235,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 5.420297384262085e-7,
+      "positionErrorM": 0.0021363729611041053,
+      "velocityErrorMs": 0.000002334580130991526,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -7615.306163679331,
+        "y": -0.0030669990350891013,
+        "z": 0
+      },
+      "v2": {
+        "x": -7280.6559078065,
+        "y": -0.00306407866068529,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.00182353425770998,
+      "velocityErrorMs": 0.0000014272263797465712,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10403.89465067733,
+        "y": 0.00004990772212918664,
+        "z": 0
+      },
+      "v2": {
+        "x": -10161.50020339997,
+        "y": -0.00012955920395898722,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 86400,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0,
+      "positionErrorM": 0.14643082860857248,
+      "velocityErrorMs": 0.00011021869067917578,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10799.834479204823,
+        "y": 0.00004803681832032755,
+        "z": 0
+      },
+      "v2": {
+        "x": -10566.526735854433,
+        "y": -0.00013841985786627257,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.000001,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.001,
+      "dt": 60,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.24466249253600836,
+      "positionErrorM": 0.0000014789403868931453,
+      "velocityErrorMs": 2.4783730627055874e-9,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 5252.662870389814,
+        "y": 2.060427015055555,
+        "z": 0
+      },
+      "v2": {
+        "x": 4754.527287667162,
+        "y": 2.0560799620355192,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.001,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.0027814852073788643,
+      "positionErrorM": 2.9150396729053577e-7,
+      "velocityErrorMs": 1.2830696507221525e-9,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2869.4495654306734,
+        "y": 0.21969080897393536,
+        "z": 0
+      },
+      "v2": {
+        "x": -1802.443704004904,
+        "y": 0.17892084904619374,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 600,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.001,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.0003697369247674942,
+      "positionErrorM": 0.00007625855505565912,
+      "velocityErrorMs": 9.765244614423424e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6601.513152227896,
+        "y": 0.080097683639059,
+        "z": 0
+      },
+      "v2": {
+        "x": -6212.490513936602,
+        "y": -0.03172559353237702,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.23027495853602886,
+      "positionErrorM": 0.00005789101668531399,
+      "velocityErrorMs": 1.0016810848972172e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -5110.97713756898,
+        "y": -1.9989268136353975,
+        "z": 0
+      },
+      "v2": {
+        "x": -4597.515611713742,
+        "y": -1.9944460165310398,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.0002458598464727402,
+      "positionErrorM": 0.0002052290365189198,
+      "velocityErrorMs": 2.121196303373994e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 8015.625327015959,
+        "y": 0.06531567854229166,
+        "z": 0
+      },
+      "v2": {
+        "x": -7698.396707335474,
+        "y": -0.07181503307637438,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.5421009138226509,
+      "positionErrorM": 0.0038365175619808544,
+      "velocityErrorMs": 0.000004192458619129038,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -7615.3055475299725,
+        "y": -3.0669987866478476,
+        "z": 0
+      },
+      "v2": {
+        "x": -7280.655264565889,
+        "y": -3.0640784120075466,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.0001435447484254837,
+      "positionErrorM": 0.00589540228295562,
+      "velocityErrorMs": 0.000004615747457840378,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10403.894650555108,
+        "y": 0.049907722128960066,
+        "z": 0
+      },
+      "v2": {
+        "x": -10161.50020257145,
+        "y": -0.1295592039554727,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 86400,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.001,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 0.0001329844817519188,
+      "positionErrorM": 0.04235474393135201,
+      "velocityErrorMs": 0.00003187850598382405,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10799.834479097877,
+        "y": 0.04803681832016778,
+        "z": 0
+      },
+      "v2": {
+        "x": -10566.526734947678,
+        "y": -0.13841985786231933,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.001,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.1,
+      "dt": 60,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2447.2984087960795,
+      "positionErrorM": 5.052474626843981e-7,
+      "velocityErrorMs": 8.585642705248454e-10,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 5252.48327504804,
+        "y": 206.04259704563614,
+        "z": 0
+      },
+      "v2": {
+        "x": 4754.347692655649,
+        "y": 205.60789163358277,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.1,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 27.814928831532598,
+      "positionErrorM": 0.000007899867245774345,
+      "velocityErrorMs": 3.486894310642189e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2869.4320775671918,
+        "y": 21.969070925878903,
+        "z": 0
+      },
+      "v2": {
+        "x": -1802.4609407246405,
+        "y": 17.89207411743557,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 600,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.1,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3.6973688462749124,
+      "positionErrorM": 0.00016464015753019364,
+      "velocityErrorMs": 2.1084302089655046e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6601.509310945043,
+        "y": 8.009766529392232,
+        "z": 0
+      },
+      "v2": {
+        "x": -6212.490785105158,
+        "y": -3.172560910564971,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2299.7214022139087,
+      "positionErrorM": 0.00009288054956837463,
+      "velocityErrorMs": 1.6072887693164972e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -5107.175330465172,
+        "y": -199.73484556652087,
+        "z": 0
+      },
+      "v2": {
+        "x": -4593.308314492793,
+        "y": -199.2864118853811,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2.4585992144420743,
+      "positionErrorM": 0.0000617103919661595,
+      "velocityErrorMs": 6.378387006219825e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 8015.622877387409,
+        "y": 6.5315668574371175,
+        "z": 0
+      },
+      "v2": {
+        "x": -7698.393577960479,
+        "y": -7.181502916515793,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 5414.435610529967,
+      "positionErrorM": 0.006573436035148339,
+      "velocityErrorMs": 0.0000071832646694640055,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -7609.153275647083,
+        "y": -306.4518111732967,
+        "z": 0
+      },
+      "v2": {
+        "x": -7274.232269032653,
+        "y": -306.1595373841278,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1.4354510130360723,
+      "positionErrorM": 0.003857551483991851,
+      "velocityErrorMs": 0.000003020478341496345,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10403.89345459612,
+        "y": 4.990771973526065,
+        "z": 0
+      },
+      "v2": {
+        "x": -10161.491944981031,
+        "y": -12.95591694041211,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 86400,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 0.1,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1.3298460096120834,
+      "positionErrorM": 0.1513319410546536,
+      "velocityErrorMs": 0.00011395496477632011,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10799.833410887706,
+        "y": 4.803681671754815,
+        "z": 0
+      },
+      "v2": {
+        "x": -10566.51766946557,
+        "y": -13.841981835867626,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 0.1,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 1,
+      "dt": 60,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 251456.1337218713,
+      "positionErrorM": 4.995220628413533e-7,
+      "velocityErrorMs": 7.622786483429224e-10,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 5234.702006423046,
+        "y": 2060.322544948216,
+        "z": 0
+      },
+      "v2": {
+        "x": 4736.566456385632,
+        "y": 2055.9753818611625,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 1,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2782.294030994177,
+      "positionErrorM": 0.000008044925127737058,
+      "velocityErrorMs": 3.530536799694175e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2867.7006526785904,
+        "y": 219.68083649492544,
+        "z": 0
+      },
+      "v2": {
+        "x": -1804.1675018565409,
+        "y": 178.91006077444112,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 600,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 1,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 369.7326843570918,
+      "positionErrorM": 0.00001338514255677312,
+      "velocityErrorMs": 1.7140219521265462e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6601.12899266354,
+        "y": 80.09584898985028,
+        "z": 0
+      },
+      "v2": {
+        "x": -6212.517621062169,
+        "y": -31.727150925638032,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 203669.4700005697,
+      "positionErrorM": 0.00009750127928495088,
+      "velocityErrorMs": 1.683330868652107e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -4771.857803741604,
+        "y": -1857.8312609585903,
+        "z": 0
+      },
+      "v2": {
+        "x": -4219.4287830065705,
+        "y": -1853.0102859308572,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 245.8564973771572,
+      "positionErrorM": 0.000311516740307843,
+      "velocityErrorMs": 3.2194922268289456e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 8015.380343044533,
+        "y": 65.31468166981635,
+        "z": 0
+      },
+      "v2": {
+        "x": -7698.0837349189815,
+        "y": -71.81464187340869,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 484070.65360087436,
+      "positionErrorM": 0.0011922861689187883,
+      "velocityErrorMs": 0.0000013026184532057747,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -7065.425567497345,
+        "y": -2845.273161153319,
+        "z": 0
+      },
+      "v2": {
+        "x": -6704.715067642812,
+        "y": -2842.1252883103502,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 143.5439778547734,
+      "positionErrorM": 0.001298257456664368,
+      "velocityErrorMs": 0.0000010160040366312775,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10403.775042940595,
+        "y": 49.90748273791913,
+        "z": 0
+      },
+      "v2": {
+        "x": -10160.674371826119,
+        "y": -129.55574849449692,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 86400,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 1,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 132.98374390229583,
+      "positionErrorM": 0.2593421044524124,
+      "velocityErrorMs": 0.0001952841046906475,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 10799.72764767479,
+        "y": 48.03665804260961,
+        "z": 0
+      },
+      "v2": {
+        "x": -10565.620109696505,
+        "y": -138.41590713955446,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 1,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179,
+      "dt": 60,
+      "longWay": false,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1921455.046316119,
+      "positionErrorM": 0.00009314773248761472,
+      "velocityErrorMs": 3.80824138590429e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -20159.507034602833,
+        "y": 7841.525702325858,
+        "z": 0
+      },
+      "v2": {
+        "x": -20290.38971523702,
+        "y": -7156.143996843044,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 600,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1861026.1956156455,
+      "positionErrorM": 0.00012399072363559487,
+      "velocityErrorMs": 4.914708861437924e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -20228.624926029388,
+        "y": -7661.482491495889,
+        "z": 0
+      },
+      "v2": {
+        "x": -20094.666530206952,
+        "y": 7688.629259273725,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6747791.09518005,
+      "positionErrorM": 0.000033176672381434495,
+      "velocityErrorMs": 3.570679240350225e-8,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -112.86280564553795,
+        "y": 7751.638546947065,
+        "z": 0
+      },
+      "v2": {
+        "x": -245.26318757329634,
+        "y": -7419.942494759856,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6707680.7482467,
+      "positionErrorM": 0.00021285152502999277,
+      "velocityErrorMs": 2.2807953484854098e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -181.9682771959152,
+        "y": -7750.324241671015,
+        "z": 0
+      },
+      "v2": {
+        "x": -49.54544272085305,
+        "y": 7423.829607106601,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4965996.750103037,
+      "positionErrorM": 0.0001390916670989011,
+      "velocityErrorMs": 1.4147138754422464e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2958.6066854095266,
+        "y": 7737.957407304506,
+        "z": 0
+      },
+      "v2": {
+        "x": 2825.9722122327007,
+        "y": -7460.447834627929,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 5026331.962367887,
+      "positionErrorM": 0.0003154686146244813,
+      "velocityErrorMs": 3.1179269423519494e-7,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2889.501423743369,
+        "y": -7764.027247937923,
+        "z": 0
+      },
+      "v2": {
+        "x": 3021.6905404745144,
+        "y": 7383.345200073747,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3585457.005717797,
+      "positionErrorM": 0.005236346556404699,
+      "velocityErrorMs": 0.0000040950728171842855,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6976.360892315459,
+        "y": 7720.097777562915,
+        "z": 0
+      },
+      "v2": {
+        "x": 6843.419583312364,
+        "y": -7513.467367534533,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 86400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3645870.3857456865,
+      "positionErrorM": 0.0054905067115218744,
+      "velocityErrorMs": 0.00000429412392631864,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6907.255308530436,
+        "y": -7781.988504449224,
+        "z": 0
+      },
+      "v2": {
+        "x": 7039.1393255262155,
+        "y": 7330.422976727883,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3447054.7328875596,
+      "positionErrorM": 1.4806333344238265,
+      "velocityErrorMs": 0.0011148421953045475,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7554.882721655007,
+        "y": 7717.529554147494,
+        "z": 0
+      },
+      "v2": {
+        "x": 7421.897172719787,
+        "y": -7521.1049850392765,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3507470.613746109,
+      "positionErrorM": 1.5252109382367334,
+      "velocityErrorMs": 0.0011484070402089344,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7485.777043278076,
+        "y": -7784.578178384523,
+        "z": 0
+      },
+      "v2": {
+        "x": 7617.617186785371,
+        "y": 7322.805898967288,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 60,
+      "longWay": false,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179.9,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179.9,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1894077.241689778,
+      "positionErrorM": 0.00034432026088728585,
+      "velocityErrorMs": 0.0000011032007059989589,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -20191.505311178174,
+        "y": 7760.135254989857,
+        "z": 0
+      },
+      "v2": {
+        "x": -20204.73151738541,
+        "y": -7395.9767913628975,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 600,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1888034.3357958244,
+      "positionErrorM": 0.00034462075871907706,
+      "velocityErrorMs": 0.0000011035226308560486,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -20198.41590857775,
+        "y": -7742.130263901925,
+        "z": 0
+      },
+      "v2": {
+        "x": -20185.158943689108,
+        "y": 7449.228627055679,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6731036.517312446,
+      "positionErrorM": 0.002542653791466697,
+      "velocityErrorMs": 0.000002736525632321849,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -144.13365762008175,
+        "y": 7751.193323884197,
+        "z": 0
+      },
+      "v2": {
+        "x": -157.37512184263002,
+        "y": -7422.4031153981705,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6726997.878666479,
+      "positionErrorM": 0.0024614815071234324,
+      "velocityErrorMs": 0.0000026474970966120606,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": -151.04424260344118,
+        "y": -7751.0617396844145,
+        "z": 0
+      },
+      "v2": {
+        "x": -137.80255358996527,
+        "y": 7422.79229083026,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4993264.570783936,
+      "positionErrorM": 0.0060991225435811725,
+      "velocityErrorMs": 0.000005744908290471958,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2927.439772422366,
+        "y": 7749.82418932628,
+        "z": 0
+      },
+      "v2": {
+        "x": 2914.1959688770307,
+        "y": -7426.452916606754,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4999298.162825072,
+      "positionErrorM": 0.006124202642665913,
+      "velocityErrorMs": 0.000005766581779155188,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 2920.5291876770552,
+        "y": -7752.431092876208,
+        "z": 0
+      },
+      "v2": {
+        "x": 2933.7685377396565,
+        "y": 7418.7426989882215,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3612654.656073975,
+      "positionErrorM": 0.5999709916762663,
+      "velocityErrorMs": 0.0004691587208573029,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6945.322084761745,
+        "y": 7748.033608666062,
+        "z": 0
+      },
+      "v2": {
+        "x": 6932.075220554721,
+        "y": -7431.750754676079,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 86400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3618696.070199122,
+      "positionErrorM": 0.5950198201312447,
+      "velocityErrorMs": 0.0004652830695943412,
+      "oracleFinite": true,
+      "pass": true,
+      "v1": {
+        "x": 6938.411499689777,
+        "y": -7754.222689800814,
+        "z": 0
+      },
+      "v2": {
+        "x": 6951.647790830164,
+        "y": 7413.445834108918,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3474243.0824670955,
+      "positionErrorM": 174.00862543098694,
+      "velocityErrorMs": 0.13101793146387372,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7523.861062454888,
+        "y": 7747.775815215719,
+        "z": 0
+      },
+      "v2": {
+        "x": 7510.613757483102,
+        "y": -7432.513628433316,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.9,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3480284.746684005,
+      "positionErrorM": 174.79724917006243,
+      "velocityErrorMs": 0.1316117106551229,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7516.950477292067,
+        "y": -7754.480697759436,
+        "z": 0
+      },
+      "v2": {
+        "x": 7530.186328030944,
+        "y": 7412.6831657680705,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 60,
+      "longWay": false,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179.999,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179.999,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1891083.1729620416,
+      "positionErrorM": 4.095790133893643,
+      "velocityErrorMs": 0.012936864451559947,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -20194.9350928556,
+        "y": 7751.21592055539,
+        "z": 0
+      },
+      "v2": {
+        "x": -20195.067507211363,
+        "y": -7422.335651341797,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 600,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 1891022.7439198922,
+      "positionErrorM": 4.0958579139680165,
+      "velocityErrorMs": 0.012937064291226218,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -20195.00419840167,
+        "y": -7751.035870576839,
+        "z": 0
+      },
+      "v2": {
+        "x": -20194.87178110304,
+        "y": 7422.868170032996,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6729048.848168753,
+      "positionErrorM": 28.21055538788992,
+      "velocityErrorMs": 0.030350851396254017,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -147.55614866653306,
+        "y": 7751.126552972106,
+        "z": 0
+      },
+      "v2": {
+        "x": -147.68856453421242,
+        "y": -7422.5999642861825,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6729008.458131419,
+      "positionErrorM": 28.210810502000324,
+      "velocityErrorMs": 0.030350789448935243,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -147.62525454480922,
+        "y": -7751.125237114587,
+        "z": 0
+      },
+      "v2": {
+        "x": -147.49283864117484,
+        "y": 7422.603856087391,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4996249.09077234,
+      "positionErrorM": 74.23615699654052,
+      "velocityErrorMs": 0.07006586256895962,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 2924.018330260846,
+        "y": 7751.112860540596,
+        "z": 0
+      },
+      "v2": {
+        "x": 2923.885914101172,
+        "y": -7422.640461283034,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4996309.426722093,
+      "positionErrorM": 74.23662712123608,
+      "velocityErrorMs": 0.07006592185532413,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 2923.9492244034586,
+        "y": -7751.138929567963,
+        "z": 0
+      },
+      "v2": {
+        "x": 2924.081640073531,
+        "y": 7422.563359111477,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3615643.100052935,
+      "positionErrorM": 6898.11611855662,
+      "velocityErrorMs": 5.396648509427621,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 6941.901937897522,
+        "y": 7751.094949698992,
+        "z": 0
+      },
+      "v2": {
+        "x": 6941.76952151792,
+        "y": -7422.693434873069,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 86400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3615703.5141634685,
+      "positionErrorM": 6897.79919549688,
+      "velocityErrorMs": 5.396399997308335,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 6941.832832231343,
+        "y": -7751.156840511193,
+        "z": 0
+      },
+      "v2": {
+        "x": 6941.965247447744,
+        "y": 7422.5103856187625,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3477231.6521513173,
+      "positionErrorM": 2144480.1722265775,
+      "velocityErrorMs": 1913.4389121828654,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7520.441089214148,
+        "y": 7751.092370702083,
+        "z": 0
+      },
+      "v2": {
+        "x": 7520.308672761736,
+        "y": -7422.7010625974945,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 3477292.0688052,
+      "positionErrorM": 2144487.9238280337,
+      "velocityErrorMs": 1913.4435445620093,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7520.371983375724,
+        "y": -7751.159419529552,
+        "z": 0
+      },
+      "v2": {
+        "x": 7520.504398694619,
+        "y": 7422.502757914877,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 60,
+      "longWay": false,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "pass": null
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 600,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2292777.1660038633,
+      "positionErrorM": 1610916.13824204,
+      "velocityErrorMs": 5166.51042923246,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -20194.969582661968,
+        "y": 9078.669746178337,
+        "z": 0
+      },
+      "v2": {
+        "x": -20194.969787989543,
+        "y": -8693.87874556966,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 600,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 2292777.100468564,
+      "positionErrorM": 1610916.1649203014,
+      "velocityErrorMs": 5166.51050814187,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -20194.969729691522,
+        "y": -9078.669566128361,
+        "z": 0
+      },
+      "v2": {
+        "x": -20194.969661249,
+        "y": 8693.879278088345,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 2800,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6775014.860574202,
+      "positionErrorM": 9633504.957827093,
+      "velocityErrorMs": 8690.343189646954,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -147.59062273792472,
+        "y": 9078.669656811278,
+        "z": 0
+      },
+      "v2": {
+        "x": -147.59075962297314,
+        "y": -8693.879009883101,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 2800,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 6775014.854787919,
+      "positionErrorM": 9633504.876733588,
+      "velocityErrorMs": 8690.343065120804,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": -147.5907596015814,
+        "y": -9078.66965549542,
+        "z": 0
+      },
+      "v2": {
+        "x": -147.5906911590572,
+        "y": 8693.879013774904,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 5400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 5922078.57008681,
+      "positionErrorM": 20415560.57838704,
+      "velocityErrorMs": 10827.264635974037,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 2923.9837200031425,
+        "y": 9078.669643118836,
+        "z": 0
+      },
+      "v2": {
+        "x": 2923.9836515606185,
+        "y": -8693.879050380085,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 5400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 5922078.518908776,
+      "positionErrorM": 20415561.966531705,
+      "velocityErrorMs": 10827.265023981841,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 2923.9838652842905,
+        "y": -9078.669669187862,
+        "z": 0
+      },
+      "v2": {
+        "x": 2923.9839337268145,
+        "y": 8693.878973277915,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 86400,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4430053.157142643,
+      "positionErrorM": 382341282.1283726,
+      "velocityErrorMs": 14054.665982946506,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 6941.867383869636,
+        "y": 9078.669625207944,
+        "z": 0
+      },
+      "v2": {
+        "x": 6941.867315427112,
+        "y": -8693.879103353627,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 86400,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4430053.216305533,
+      "positionErrorM": 382341281.08053654,
+      "velocityErrorMs": 14054.665897821382,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 6941.867294308459,
+        "y": -9078.669687098754,
+        "z": 0
+      },
+      "v2": {
+        "x": 6941.867431193507,
+        "y": 8693.878920304376,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4262996.087269721,
+      "positionErrorM": 12096521806.382153,
+      "velocityErrorMs": 14528.662821980004,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7520.406561498146,
+        "y": 9078.669622628937,
+        "z": 0
+      },
+      "v2": {
+        "x": 7520.406424613098,
+        "y": -8693.879110981341,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 179.999999,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "returned",
+      "contract": "positive TOF; less-than-one-revolution branch",
+      "finite": true,
+      "perigeeM": 4262996.144493388,
+      "positionErrorM": 12096521804.794594,
+      "velocityErrorMs": 14528.662766276908,
+      "oracleFinite": true,
+      "pass": false,
+      "v1": {
+        "x": 7520.406480153662,
+        "y": -9078.669689677763,
+        "z": 0
+      },
+      "v2": {
+        "x": 7520.406617038711,
+        "y": 8693.87891267666,
+        "z": 0
+      }
+    },
+    {
+      "degrees": 180,
+      "dt": 60,
+      "longWay": false,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 60,
+      "longWay": true,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 600,
+      "longWay": false,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 600,
+      "longWay": true,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 2800,
+      "longWay": false,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 2800,
+      "longWay": true,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 5400,
+      "longWay": false,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 5400,
+      "longWay": true,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 86400,
+      "longWay": false,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 86400,
+      "longWay": true,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 2592000,
+      "longWay": false,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    },
+    {
+      "degrees": 180,
+      "dt": 2592000,
+      "longWay": true,
+      "result": "null",
+      "contract": "documented antipodal degeneracy",
+      "pass": true
+    }
+  ]
+}

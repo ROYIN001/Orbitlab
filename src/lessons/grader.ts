@@ -22,9 +22,9 @@ export type LessonAnswers = Readonly<Record<string, number>>;
 
 /**
  * The expected values a student was shown, by criterion id, over all their
- * attempts at a lesson (`LessonProgress.revealed`). A lesson whose flight is
- * the same every time gives the same number again, so a number once shown
- * must not pass on the next flight either.
+ * attempts at a lesson (`LessonProgress.revealed`, until the student clears
+ * them). A lesson whose flight is the same every time gives the same number
+ * again, so a number once shown passes only with help on the next flight too.
  */
 export type RevealedAnswers = Readonly<Record<string, readonly number[]>>;
 
@@ -80,6 +80,17 @@ export function gradingEnd(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFligh
 /** Did the flight leave the pad at all? A flight still on the pad is not graded. */
 export function flightStarted(flight: LessonFlight): boolean {
   return flight.state.t > 0 || flight.state.status !== 'prelaunch';
+}
+
+/**
+ * A lesson's verdict from its criteria: any failed, a lock broken → fail;
+ * all passed once the flight has ended → pass, or passedWithHelp when an
+ * answer passed on a value the student had been shown; else open.
+ */
+export function verdictOf(criteria: readonly CriterionGrade[], lockBroken: readonly LockKey[], final: boolean): LessonGrade['verdict'] {
+  if (lockBroken.length > 0 || criteria.some((c) => c.state === 'fail')) return 'fail';
+  if (!final || !criteria.every((c) => c.state === 'pass')) return 'open';
+  return criteria.some((c) => c.revealed) ? 'passedWithHelp' : 'pass';
 }
 
 function withinBound(value: number, bound: MeasureBound, target: number | null): boolean {
@@ -157,7 +168,7 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
     let kept = true;
     switch (key) {
       case 'setup.vehicle': kept = cfg.vehicleId === m.vehicleId; break;
-      case 'setup.site': kept = cfg.siteId === m.siteId; break;
+      case 'setup.site': kept = cfg.siteId === m.siteId && (!m.padId || cfg.padId === m.padId); break;
       case 'setup.satellite': kept = cfg.satelliteId === m.satelliteId; break;
       case 'setup.payloadMass': kept = near(cfg.payloadMassOverride, m.payloadMass, 0.5); break;
       case 'setup.orbit': {
@@ -180,7 +191,8 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
         const model = m.dynamics?.model ?? defaultDynamics(m.vehicleId).model;
         const expected = { ...guidanceForVehicle(spec, undefined, model), ...m.guidanceOverrides } as Record<string, number>;
         const flown = cfg.guidance as unknown as Record<string, number>;
-        kept = Object.keys(expected).every((k) => near(flown[k], expected[k], 1e-6));
+        kept = Object.keys(expected).every((k) => near(flown[k], expected[k], 1e-6))
+          && same(cfg.dynamics?.explicitGuidance, m.dynamics?.explicitGuidance);
         break;
       }
       case 'setup.boosterRecovery':
@@ -202,13 +214,7 @@ export function gradeLesson(lesson: Lesson, flight: LessonFlight, answers: Lesso
   const end = gradingEnd(lesson, flight) ?? undefined;
   const criteria = lesson.criteria.map((c) => gradeCriterion(c, flight, final, answers, end));
   const lockBroken = brokenLocks(lesson, flight);
-  const anyFail = lockBroken.length > 0 || criteria.some((c) => c.state === 'fail');
-  const allPass = criteria.every((c) => c.state === 'pass');
-  return {
-    lessonId: lesson.id, final,
-    verdict: anyFail ? 'fail' : allPass && final ? 'pass' : 'open',
-    criteria, lockBroken, t: flight.state.t,
-  };
+  return { lessonId: lesson.id, final, verdict: verdictOf(criteria, lockBroken, final), criteria, lockBroken, t: flight.state.t };
 }
 
 /**
@@ -217,9 +223,9 @@ export function gradeLesson(lesson: Lesson, flight: LessonFlight, answers: Lesso
  * of a flight that coasts on (a node that precesses, a payload that
  * separates): the lesson is judged at its end, however long it is watched.
  *
- * An answer whose expected value the student was shown (`revealed`) fails,
- * typed or not, and says so: showing the answers ends the attempt as not
- * passed rather than handing over a pass.
+ * An answer whose expected value the student was shown (`revealed`) is
+ * checked as any other, and marked as shown: right, the lesson is passed
+ * only with help (`passedWithHelp`, owner decision D-6), never unaided.
  */
 export function regradeAnswers(lesson: Lesson, frozen: LessonGrade, answers: LessonAnswers = {}, revealed: RevealedAnswers = {}): LessonGrade {
   const criteria = frozen.criteria.map((g) => {
@@ -227,13 +233,12 @@ export function regradeAnswers(lesson: Lesson, frozen: LessonGrade, answers: Les
     if (c?.kind !== 'answer') return g;
     const typed = answers[c.id];
     const value = typed === undefined || !Number.isFinite(typed) ? null : typed;
-    if (wasRevealed(c, g.expected, revealed[c.id])) return { ...g, state: 'fail' as const, value, revealed: true };
-    if (value === null) return { ...g, state: 'pending' as const, value: null };
+    const shown = wasRevealed(c, g.expected, revealed[c.id]) ? { revealed: true } : {};
+    if (value === null) return { ...g, state: 'pending' as const, value: null, ...shown };
     const ok = g.expected !== null && g.expected !== undefined && answerMatches(value, g.expected, c.tol, c.tolPct);
-    return { ...g, state: ok ? 'pass' as const : 'fail' as const, value };
+    return { ...g, state: ok ? 'pass' as const : 'fail' as const, value, ...shown };
   });
-  const anyFail = frozen.lockBroken.length > 0 || criteria.some((c) => c.state === 'fail');
-  return { ...frozen, criteria, verdict: anyFail ? 'fail' : criteria.every((c) => c.state === 'pass') ? 'pass' : 'open' };
+  return { ...frozen, criteria, verdict: verdictOf(criteria, frozen.lockBroken, frozen.final) };
 }
 
 /** The answers a lesson still waits for, once the flight has ended (a case lesson's, from the start). */

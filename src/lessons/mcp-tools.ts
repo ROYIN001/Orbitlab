@@ -45,10 +45,10 @@ export const AREAS_TEXT = DOMAINS.map((d) => `${d} ${en[`assess.domain.${d}`].to
 
 /** A case lesson's questions, as the English sheet asks them; the grade's expected values are left out. */
 function caseCriterionOut(lesson: CaseLesson, grade: LessonGrade | null) {
-  return lesson.criteria.map((c) => ({
-    id: c.id, kind: c.kind, item: c.item, question: en[`wsc.${lesson.case}.q.${c.item}`] ?? c.item,
-    state: grade?.criteria.find((x) => x.id === c.id)?.state ?? 'pending',
-  }));
+  return lesson.criteria.map((c) => {
+    const g = grade?.criteria.find((x) => x.id === c.id);
+    return { id: c.id, kind: c.kind, item: c.item, question: en[`wsc.${lesson.case}.q.${c.item}`] ?? c.item, state: g?.state ?? 'pending', ...(g?.revealed ? { answerShown: true } : {}) };
+  });
 }
 
 function criterionOut(lesson: CatalogLesson, grade: LessonGrade | null) {
@@ -69,6 +69,8 @@ function flightCriterionOut(lesson: Lesson, grade: LessonGrade | null) {
       ...(c.kind === 'answer' ? { question: c.prompt.en } : {}),
       ...(bound ? { bound } : {}),
       state: g?.state ?? 'pending',
+      // the student was shown this answer's value: right, it passes only with help
+      ...(g?.revealed ? { answerShown: true } : {}),
       // an answer's expected value is the student's to work out: it is not given here
       value: c.kind === 'answer' ? undefined : g?.value ?? null,
     };
@@ -79,7 +81,7 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
   return [
     {
       name: 'list_lessons', title: 'List lessons',
-      description: `Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (${AREAS_TEXT}), whether they are written yet, and the student's progress. A flight lesson is flown; a case lesson (track 6) is a case from the record worked from its data in the Orbit section.`,
+      description: `Roadmap E03: the lessons — training missions with a goal and pass criteria graded automatically — with their number, track, the mode they open in, the areas they exercise (${AREAS_TEXT}), whether they are written yet, and the student's progress (passed: unaided; passedWithHelp: passed on answers the student had been shown). A flight lesson is flown; a case lesson (track 6) is a case from the record worked from its data in the Orbit section.`,
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       execute: () => {
@@ -87,7 +89,7 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
         return {
           lessons: host.catalogue().map((l) => ({
             id: l.id, kind: isCaseLesson(l) ? 'case' : 'flight', number: lessonNumber(l), title: l.title.en, track: l.track, mode: l.mode, areas: l.domains, tags: l.tags ?? [],
-            written: !l.comingSoon, passed: !!progress.lessons[l.id]?.passed, attempts: progress.lessons[l.id]?.attempts ?? 0,
+            written: !l.comingSoon, passed: !!progress.lessons[l.id]?.passed, passedWithHelp: !!progress.lessons[l.id]?.passedWithHelp, attempts: progress.lessons[l.id]?.attempts ?? 0,
           })),
         };
       },
@@ -109,7 +111,7 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
     },
     {
       name: 'get_lesson_result', title: 'Read the lesson\'s grade',
-      description: 'The lesson open now and how its flight is graded so far: each criterion\'s state (pending, passing, pass, fail) and measured value, the settings the flight did not keep, the answers still awaited and the hints shown. The expected value of an answer is not given: it is the student\'s to work out. A case lesson has no flight: its answers are awaited from the start. Safe with no lesson open.',
+      description: 'The lesson open now and how its flight is graded so far: the verdict (open, pass, passedWithHelp — every criterion met, but on an answer the student had been shown with "Show the answers" — or fail), each criterion\'s state (pending, passing, pass, fail) and measured value, the settings the flight did not keep, the answers still awaited and the hints shown. The expected value of an answer is not given: it is the student\'s to work out. A case lesson has no flight: its answers are awaited from the start. Safe with no lesson open.',
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
       execute: () => {

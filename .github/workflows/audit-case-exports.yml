@@ -1,0 +1,96 @@
+name: Audit case worksheet exports
+
+on:
+  push:
+    branches: [codex/audit-acceptance]
+    paths:
+      - .github/workflows/audit-case-exports.yml
+      - tests/browser/journeys/case-worksheet-exports.mjs
+      - src/worksheets/docx.ts
+      - src/orbit/encounter-plane.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  case-exports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Record source and runtime
+        run: |
+          set -euo pipefail
+          mkdir -p audit-case-export-logs
+          {
+            printf 'source_sha=%s\n' "$(git rev-parse HEAD)"
+            printf 'event_sha=%s\n' "$GITHUB_SHA"
+            printf 'ref=%s\n' "$GITHUB_REF"
+            printf 'started_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf 'node=%s\nnpm=%s\n' "$(node --version)" "$(npm --version)"
+          } | tee audit-case-export-logs/runtime.txt
+      - name: Install dependencies
+        id: dependencies
+        run: |
+          set -euo pipefail
+          npm ci 2>&1 | tee audit-case-export-logs/npm-ci.log
+      - name: Build production app
+        id: build
+        run: |
+          set -euo pipefail
+          npm run build 2>&1 | tee audit-case-export-logs/build.log
+      - name: Install Chromium
+        id: chromium
+        run: |
+          set -euo pipefail
+          npx playwright install --with-deps chromium 2>&1 | tee audit-case-export-logs/chromium-install.log
+      - name: Download all case worksheets and keys
+        id: exports
+        run: |
+          set -euo pipefail
+          node tests/browser/run.mjs case-worksheet-exports 2>&1 | tee audit-case-export-logs/case-exports.log
+      - name: Summarize evidence
+        if: always()
+        env:
+          DEPENDENCIES_OUTCOME: ${{ steps.dependencies.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          CHROMIUM_OUTCOME: ${{ steps.chromium.outcome }}
+          EXPORTS_OUTCOME: ${{ steps.exports.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p audit-case-export-logs
+          {
+            printf '## Case worksheet exports\n\n'
+            printf 'Only case-worksheet-exports: 3 cases × TH/RU × worksheet/key × HTML/DOCX, expected 24 downloads.\n'
+            printf 'Visible controls in fresh browser contexts; QA answers intentionally revealed. No deployment or snapshot refresh.\n\n'
+            printf '```text\n'
+            if [ -f audit-case-export-logs/runtime.txt ]; then
+              cat audit-case-export-logs/runtime.txt
+            else
+              printf 'Runtime capture unavailable; event_sha=%s\n' "$GITHUB_SHA"
+            fi
+            printf 'dependencies=%s\nbuild=%s\nchromium=%s\nexports=%s\n' \
+              "$DEPENDENCIES_OUTCOME" "$BUILD_OUTCOME" "$CHROMIUM_OUTCOME" "$EXPORTS_OUTCOME"
+            printf 'finished_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf '```\n\n'
+            printf 'The artifact retains completed downloads, SHA256/source manifest, screenshots and logs even after failure. Successful download checks do not certify DOCX pagination; render and review every page separately.\n'
+          } | tee audit-case-export-logs/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload exports and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: case-worksheet-exports-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            audit-case-export-logs/
+            tests/browser/artifacts/case-worksheet-exports/
+            tests/browser/screenshots/
+          if-no-files-found: warn
+          retention-days: 14

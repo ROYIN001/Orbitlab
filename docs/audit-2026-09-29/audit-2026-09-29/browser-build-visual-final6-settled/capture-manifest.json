@@ -1,0 +1,212 @@
+[
+  {
+    "vehicle": "soyuz21a",
+    "mode": "assembled",
+    "file": "soyuz21a-assembled.jpg"
+  },
+  {
+    "vehicle": "soyuz21a",
+    "mode": "exploded",
+    "file": "soyuz21a-exploded.jpg"
+  },
+  {
+    "vehicle": "soyuz21b",
+    "mode": "assembled",
+    "file": "soyuz21b-assembled.jpg"
+  },
+  {
+    "vehicle": "soyuz21b",
+    "mode": "exploded",
+    "file": "soyuz21b-exploded.jpg"
+  },
+  {
+    "vehicle": "protonm",
+    "mode": "assembled",
+    "file": "protonm-assembled.jpg"
+  },
+  {
+    "vehicle": "protonm",
+    "mode": "exploded",
+    "file": "protonm-exploded.jpg"
+  },
+  {
+    "vehicle": "angaraa5",
+    "mode": "assembled",
+    "file": "angaraa5-assembled.jpg"
+  },
+  {
+    "vehicle": "angaraa5",
+    "mode": "exploded",
+    "file": "angaraa5-exploded.jpg"
+  },
+  {
+    "vehicle": "falcon9",
+    "mode": "assembled",
+    "file": "falcon9-assembled.jpg"
+  },
+  {
+    "vehicle": "falcon9",
+    "mode": "exploded",
+    "file": "falcon9-exploded.jpg"
+  },
+  {
+    "vehicle": "falconheavy",
+    "mode": "assembled",
+    "file": "falconheavy-assembled.jpg"
+  },
+  {
+    "vehicle": "falconheavy",
+    "mode": "exploded",
+    "file": "falconheavy-exploded.jpg"
+  },
+  {
+    "vehicle": "atlasv551",
+    "mode": "assembled",
+    "file": "atlasv551-assembled.jpg"
+  },
+  {
+    "vehicle": "atlasv551",
+    "mode": "exploded",
+    "file": "atlasv551-exploded.jpg"
+  },
+  {
+    "vehicle": "vulcan",
+    "mode": "assembled",
+    "file": "vulcan-assembled.jpg"
+  },
+  {
+    "vehicle": "vulcan",
+    "mode": "exploded",
+    "file": "vulcan-exploded.jpg"
+  },
+  {
+    "vehicle": "ariane64",
+    "mode": "assembled",
+    "file": "ariane64-assembled.jpg"
+  },
+  {
+    "vehicle": "ariane64",
+    "mode": "exploded",
+    "file": "ariane64-exploded.jpg"
+  },
+  {
+    "vehicle": "vegac",
+    "mode": "assembled",
+    "file": "vegac-assembled.jpg"
+  },
+  {
+    "vehicle": "vegac",
+    "mode": "exploded",
+    "file": "vegac-exploded.jpg"
+  },
+  {
+    "vehicle": "longmarch2d",
+    "mode": "assembled",
+    "file": "longmarch2d-assembled.jpg"
+  },
+  {
+    "vehicle": "longmarch2d",
+    "mode": "exploded",
+    "file": "longmarch2d-exploded.jpg"
+  },
+  {
+    "vehicle": "longmarch3be",
+    "mode": "assembled",
+    "file": "longmarch3be-assembled.jpg"
+  },
+  {
+    "vehicle": "longmarch3be",
+    "mode": "exploded",
+    "file": "longmarch3be-exploded.jpg"
+  },
+  {
+    "vehicle": "longmarch5",
+    "mode": "assembled",
+    "file": "longmarch5-assembled.jpg"
+  },
+  {
+    "vehicle": "longmarch5",
+    "mode": "exploded",
+    "file": "longmarch5-exploded.jpg"
+  },
+  {
+    "vehicle": "h3",
+    "mode": "assembled",
+    "file": "h3-assembled.jpg"
+  },
+  {
+    "vehicle": "h3",
+    "mode": "exploded",
+    "file": "h3-exploded.jpg"
+  },
+  {
+    "vehicle": "pslvxl",
+    "mode": "assembled",
+    "file": "pslvxl-assembled.jpg"
+  },
+  {
+    "vehicle": "pslvxl",
+    "mode": "exploded",
+    "file": "pslvxl-exploded.jpg"
+  },
+  {
+    "vehicle": "electron",
+    "mode": "assembled",
+    "file": "electron-assembled.jpg"
+  },
+  {
+    "vehicle": "electron",
+    "mode": "exploded",
+    "file": "electron-exploded.jpg"
+  },
+  {
+    "vehicle": "starship",
+    "mode": "assembled",
+    "file": "starship-assembled.jpg"
+  },
+  {
+    "vehicle": "starship",
+    "mode": "exploded",
+    "file": "starship-exploded.jpg"
+  },
+  {
+    "vehicle": "h2a202",
+    "mode": "assembled",
+    "file": "h2a202-assembled.jpg"
+  },
+  {
+    "vehicle": "h2a202",
+    "mode": "exploded",
+    "file": "h2a202-exploded.jpg"
+  },
+  {
+    "vehicle": "sputnik8k71ps",
+    "mode": "assembled",
+    "file": "sputnik8k71ps-assembled.jpg"
+  },
+  {
+    "vehicle": "sputnik8k71ps",
+    "mode": "exploded",
+    "file": "sputnik8k71ps-exploded.jpg"
+  },
+  {
+    "vehicle": "vostok8k72k",
+    "mode": "assembled",
+    "file": "vostok8k72k-assembled.jpg"
+  },
+  {
+    "vehicle": "vostok8k72k",
+    "mode": "exploded",
+    "file": "vostok8k72k-exploded.jpg"
+  },
+  {
+    "vehicle": "saturnv",
+    "mode": "assembled",
+    "file": "saturnv-assembled.jpg"
+  },
+  {
+    "vehicle": "saturnv",
+    "mode": "exploded",
+    "file": "saturnv-exploded.jpg"
+  }
+]

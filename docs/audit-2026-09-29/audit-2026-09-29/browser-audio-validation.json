@@ -1,0 +1,20 @@
+[
+  {
+    "input": "bad",
+    "invalid": null,
+    "error": " [level=3]\n      - paragraph: \"With the sound on (♪), a launch that has a broadcast free to share plays it in step with the flight: the countdown, launch control and the commentary, in the broadcast's own language. The others play the simulator's own sound, because their broadcasts are copyrighted — but you can add a recording you have of one: it stays in this browser and is never uploaded. Say at what time in the recording the rocket lifts off.\"\n      - strong: Soyuz to the space station\n      - generic: Write the liftoff time in the recording as m:ss or h:mm:ss.\n      - generic: Liftoff at\n      - textbox \"Liftoff at\": bad\n      - button \"Add recording\" [active]\n      - button \"Remove\"\n      - strong: \"Falcon 9: Bandwagon-1\"\n      - generic: Simulated sound\n      - generic: Liftoff at\n      - textbox \"Liftoff at\": 0:00\n      - button \"Add recording\"\n      - strong: Starship Flight 5\n      - generic: Simulated sound\n      - generic: Liftoff at\n      - textbox \"Liftoff at\": 0:00\n      - button \"Add recording\"\n      - strong: \"Falcon Heavy: Arabsat-6A\"\n      - generic: Simulated sound\n      - generic: Liftoff at\n      - textbox \"Liftoff at\": 0:00\n      - button \"Add recording\"\n      - strong: \"Ariane 6: Amazon Leo\"\n      - generic: Simulated sound\n      - generic: Liftoff at\n      - textbox \"Liftoff at\": 0:00\n      - button \"Add recording\"\n      - strong: Electron, the small rocket\n      - generic: Simulated sound\n      - generic: Liftoff at\n      - textbox \"Liftoff at\": 0:00\n      - button \"Add recording\"\n      - strong: \"Soyuz MS-10: an abort at two minutes\"\n      - generi"
+  },
+  {
+    "persisted": "1:00"
+  },
+  {
+    "input": "310digits",
+    "shown": true
+  },
+  {
+    "afterOverflow": "1:00"
+  },
+  {
+    "removed": true
+  }
+]

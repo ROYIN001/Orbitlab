@@ -1,0 +1,85 @@
+{
+  "count": 16,
+  "changes": [
+    {
+      "file": "src/lessons/builtin/track2.ts",
+      "before": "Launchers do this with a throttle bucket (Falcon 9 to about 75 % near 22 kPa) rather than a fixed limit.",
+      "after": "A throttle bucket reduces thrust around max-Q instead of using a fixed acceleration limit; this simulator models Falcon 9 at 75 % throttle near 22 kPa."
+    },
+    {
+      "file": "src/lessons/builtin/track2.ts",
+      "before": "На практике для этого снижают тягу на участке максимального напора (Falcon 9 — примерно до 75 % около 22 кПа), а не вводят постоянное ограничение.",
+      "after": "Для снижения напора тягу уменьшают около max-Q вместо постоянного ограничения ускорения; в этом симуляторе для Falcon 9 задано 75 % тяги около 22 кПа."
+    },
+    {
+      "file": "src/lessons/builtin/track2.ts",
+      "before": "จรวดจริงใช้การลดแรงขับช่วง max-Q (Falcon 9 ลดเหลือประมาณ 75% ที่ราว 22 kPa) แทนการจำกัดความเร่งตายตัว",
+      "after": "การลดแรงขับช่วง max-Q ช่วยลดความดันพลวัตแทนการจำกัดความเร่งตายตัว โดยโปรแกรมนี้จำลอง Falcon 9 ให้ลดแรงขับเหลือ 75% ที่ราว 22 kPa"
+    },
+    {
+      "file": "src/lessons/builtin/track2.ts",
+      "before": "MEMS accelerometers are far worse than that.",
+      "after": "the MEMS preset used here has a larger bias; actual MEMS units vary in performance."
+    },
+    {
+      "file": "src/lessons/builtin/track2.ts",
+      "before": "у МЭМС-акселерометров оно намного больше.",
+      "after": "у выбранной здесь модели МЭМС-блока смещение больше; характеристики реальных МЭМС-блоков различаются."
+    },
+    {
+      "file": "src/lessons/builtin/track2.ts",
+      "before": "มาตรความเร่ง MEMS แย่กว่านั้นมาก",
+      "after": "แบบจำลอง MEMS ที่เลือกในบทนี้มีไบแอสมากกว่านี้ ส่วนอุปกรณ์ MEMS จริงมีสมรรถนะแตกต่างกัน"
+    },
+    {
+      "file": "src/lessons/builtin/track5.ts",
+      "before": "จึงแยกตัวเร็วกว่าและช้ากว่า",
+      "after": "จึงแยกตัวก่อนและด้วยอัตราเร็วต่ำกว่า"
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "The prediction from the first element set came within the ±20 % window — yet ±20 % of some nine days is nearly two days, some thirty orbits, and the stage could fall anywhere under them.",
+      "after": "Check whether the actual re-entry falls inside the ±20 % window calculated from your frozen prediction. Even ±20 % of a nine-day prediction is nearly two days, some thirty orbits, and the stage could fall anywhere under them."
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "Прогноз по первому набору элементов попал в окно ±20 %, но ±20 % от девяти с лишним суток — это почти двое суток, около тридцати витков, и ступень могла упасть где угодно под ними.",
+      "after": "Проверьте, попадает ли фактический момент схода в окно ±20 %, рассчитанное по вашему зафиксированному прогнозу. Даже ±20 % от прогноза на девять суток — это почти двое суток, около тридцати витков, и ступень могла упасть где угодно под ними."
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "การทำนายจากชุดข้อมูลชุดแรกตกอยู่ในช่วง ±20 % แต่ ±20 % ของเวลาราวเก้าวันคือเกือบสองวัน ราวสามสิบรอบวงโคจร และท่อนจรวดอาจตกที่ใดก็ได้ใต้แนวโคจรเหล่านั้น",
+      "after": "ตรวจว่าเวลาที่ตกจริงอยู่ในช่วง ±20 % ที่คำนวณจากค่าพยากรณ์ซึ่งตรึงไว้ของคุณหรือไม่ แม้เพียง ±20 % ของเวลาพยากรณ์เก้าวันก็เท่ากับเกือบสองวัน ราวสามสิบรอบวงโคจร และท่อนจรวดอาจตกที่ใดก็ได้ใต้แนวโคจรเหล่านั้น"
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "Tumbling, a body shows on average a quarter of its surface (Cauchy):",
+      "after": "For a convex body sampling all orientations uniformly, the mean projected area is a quarter of its surface (Cauchy):"
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "Кувыркающееся тело в среднем показывает четверть своей поверхности (Коши):",
+      "after": "Для выпуклого тела при равномерном распределении всех ориентаций средняя площадь проекции равна четверти площади поверхности (Коши):"
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "วัตถุที่หมุนคว้างจะหันพื้นที่เฉลี่ยหนึ่งในสี่ของพื้นที่ผิวทั้งหมด (โคชี)",
+      "after": "สำหรับวัตถุนูนที่มีแนววางตัวกระจายสม่ำเสมอทุกทิศ พื้นที่ฉายเฉลี่ยเท่ากับหนึ่งในสี่ของพื้นที่ผิวทั้งหมด (โคชี)"
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "Since then operators receive conjunction messages with realistic covariances, and a probability is read together with the uncertainty behind it",
+      "after": "Conjunction messages provide covariances, but their realism still needs checking; a probability must be read together with the uncertainty behind it"
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "С тех пор операторы получают сообщения о сближениях с реалистичными ковариациями, а вероятность читают вместе с неопределённостью, на которой она основана",
+      "after": "Сообщения о сближениях содержат ковариации, но их реалистичность необходимо проверять; вероятность нужно рассматривать вместе с неопределённостью, на которой она основана"
+    },
+    {
+      "file": "src/lessons/builtin/track6.ts",
+      "before": "ตั้งแต่นั้นมาผู้ควบคุมได้รับข้อความแจ้งการเข้าใกล้พร้อมเมทริกซ์ความแปรปรวนร่วมที่สมจริง และอ่านค่าความน่าจะเป็นควบคู่กับความไม่แน่นอนเบื้องหลัง",
+      "after": "ข้อความแจ้งการเข้าใกล้มีเมทริกซ์ความแปรปรวนร่วม แต่ยังต้องตรวจว่าเมทริกซ์นั้นสะท้อนความคลาดเคลื่อนจริงเพียงใด และต้องอ่านค่าความน่าจะเป็นควบคู่กับความไม่แน่นอนเบื้องหลัง"
+    }
+  ]
+}

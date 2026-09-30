@@ -1,0 +1,195 @@
+{
+  "reviewer": "graphics_quality",
+  "reviewMethod": "Each of all 42 exact saved screenshot originals was opened using view_image and visually inspected at 1280x720; no contact sheet was substituted for individual inspection. Unmodified JPEG/JFIF payloads are retained under .jpg filenames.",
+  "reviewed": [
+    {
+      "vehicle": "soyuz21a",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Fairing halves, 2 labelled stages, interstage and strap-ons shown; both modes visibly distinct."
+    },
+    {
+      "vehicle": "soyuz21b",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "3 stages including Fregat and interstages labelled; assembled labels remain separate."
+    },
+    {
+      "vehicle": "protonm",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "4 stages including Briz-M labelled; compact assembled upper-stage labels readable."
+    },
+    {
+      "vehicle": "angaraa5",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "3 stages/interstages and strap-ons separated; assembled leader labels remain readable."
+    },
+    {
+      "vehicle": "falcon9",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "2 stages, fairing halves and interstage; clear mode distinction and readable engine labels."
+    },
+    {
+      "vehicle": "falconheavy",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Core and twin side cores fit both modes; stage/strap-on leaders do not overlap text."
+    },
+    {
+      "vehicle": "atlasv551",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Orange core, narrow Centaur, fairing and schematic strap-ons fit; x5 label legible."
+    },
+    {
+      "vehicle": "vulcan",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Core, upper stage and x4 strap-on schematic fit; engine labels readable."
+    },
+    {
+      "vehicle": "ariane64",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Wide fairing, upper/core stages and x4 booster schematic fit."
+    },
+    {
+      "vehicle": "vegac",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "All 4 stages/interstages labelled; densely spaced assembled upper labels remain separated."
+    },
+    {
+      "vehicle": "longmarch2d",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "2 stages and long engine labels stay within frame; fairing split visible."
+    },
+    {
+      "vehicle": "longmarch3be",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "3 stages, interstages and x4 boosters; long second-stage engine description fits."
+    },
+    {
+      "vehicle": "longmarch5",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "2 stages, interstage and wide side boosters visible; labels remain separate."
+    },
+    {
+      "vehicle": "h3",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "2 stages and x2 boosters fit; assembled and exploded selection/geometry match."
+    },
+    {
+      "vehicle": "pslvxl",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "4 stages/interstages and separate x4/x2 strap-on labels fit without collisions."
+    },
+    {
+      "vehicle": "electron",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Black body is visible through grey outlines against the dark background; 3 stages including Curie and their labels present, no clipping."
+    },
+    {
+      "vehicle": "starship",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "2-stage stack and separation gap fully visible; no separate fairing expected in this drawing."
+    },
+    {
+      "vehicle": "h2a202",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Orange core, upper stage, interstage, fairing and x2 boosters clear in both modes."
+    },
+    {
+      "vehicle": "sputnik8k71ps",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "Single central stage and x4 strap-on schematic fit; short fairing split and engine bells visible."
+    },
+    {
+      "vehicle": "vostok8k72k",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "2 stages, green interstage, fairing halves and x4 strap-on schematic all visible and labelled."
+    },
+    {
+      "vehicle": "saturnv",
+      "modes": [
+        "assembled",
+        "exploded"
+      ],
+      "result": "pass",
+      "note": "3 stages and interstage fit both modes; top spacecraft/escape tower are intentionally excluded as explained by the tour."
+    }
+  ]
+}

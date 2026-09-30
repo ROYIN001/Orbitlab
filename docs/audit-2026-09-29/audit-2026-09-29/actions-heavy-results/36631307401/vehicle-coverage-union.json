@@ -1,0 +1,497 @@
+{
+  "generatedAt": "2026-09-29T21:38:02.721114+00:00",
+  "updatedAtUTC": "2026-09-29T22:40:47Z",
+  "latestHeavyStatus": {"status":"completed","passed":246,"total":246,"files":27,"finishedAtUTC":"2026-09-29T22:09:55Z","evidence":"final-summary.json"},
+  "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+  "workflowRunId": 36631307401,
+  "workflowUrl": "https://github.com/ROYIN001/Orbitlab/actions/runs/36631307401",
+  "catalogueSource": "src/data/vehicles.ts",
+  "catalogueSha256": "3055647788ea2c2425327d9125a4d64794f041d478fa458dcc945ef2c58c2da2",
+  "catalogueVehicles": 21,
+  "freshUniqueVehiclesFlown": 21,
+  "freshSelectedFiles": 5,
+  "freshPassedTestCases": 22,
+  "claimTH": "บินทดสอบจริงครบจรวดทั้ง 21 รุ่นใน catalogue บน source commit เดียว โดยแต่ละรุ่นมีสถานการณ์อ้างอิงของตนเอง ไม่ใช่ทุกคู่จรวด×ภารกิจ×ฐาน×ลม×ความขัดข้อง และไม่ใช่การรับรองฟิสิกส์จากการบินจริง",
+  "notesTH": [
+    "flex-fleet1–4 มี 18 รุ่นไม่ซ้ำ + อีกหนึ่ง test เปรียบเทียบ Falcon 9 สอง integration steps; history-sixdof เพิ่ม Sputnik, Vostok และ Saturn V เป็น 21 รุ่น",
+    "Vostok test ผ่านเงื่อนไขที่บันทึกไว้: osculating orbit ใกล้ 181×327 km แต่ J2 extremum ทำให้ apogee สูงกว่าเป้าจนผลอาจเป็น off target; การครอบคลุมรุ่นไม่เท่ากับทุกภารกิจรายงาน on target",
+    "ผลเก่า fleet163 มี Saturn V อยู่แล้ว; รุ่นที่ขาดจริงคือ Soyuz-2.1a, Sputnik และ Vostok จึงไม่ใช้สมมติฐานว่า fleet163 เป็น modern18ทั้งหมด",
+    "Heavy suite ทั้งหมดจบแล้ว 246/246 tests ใน 27 ไฟล์ ดู final-summary.json; แถว vehicle coverage ด้านล่างยังคงอ้างผลจริงจากห้าไฟล์เดิมโดยไม่เปลี่ยนข้อมูล"
+  ],
+  "olderFleet": {
+    "artifact": "fleet-results.json",
+    "sha256": "5a8ef14e094949c282c7e101b71fb080ec6d7b85402b25b3461f3cb5c3ac7f47",
+    "tests": 163,
+    "passed": 163,
+    "uniqueVehicles": 18,
+    "missingVehicles": [
+      "soyuz21a",
+      "sputnik8k71ps",
+      "vostok8k72k"
+    ],
+    "note": "Separate pre-existing run; not needed to establish the fresh 21-vehicle coverage."
+  },
+  "vehicles": [
+    {
+      "id": "soyuz21a",
+      "name": "Soyuz-2.1a",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-1.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon soyuz21a/iss (crew) reaches the station orbit as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 113969.705256,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 0
+    },
+    {
+      "id": "soyuz21b",
+      "name": "Soyuz-2.1b / Fregat-M",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-1.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon soyuz21b/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 123600.544601,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 9
+    },
+    {
+      "id": "protonm",
+      "name": "Proton-M / Briz-M",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-1.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon protonm/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 210395.699312,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 7
+    },
+    {
+      "id": "angaraa5",
+      "name": "Angara-A5 / Briz-M",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-1.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon angaraa5/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 191691.53057700006,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 7
+    },
+    {
+      "id": "falcon9",
+      "name": "Falcon 9 Block 5",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-1.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): R-7 family, Proton, Angara, Falcon falcon9/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 78411.845171,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        },
+        {
+          "testFile": "tests/heavy/flex-fleet-4.test.ts",
+          "fullName": "flexible Falcon 9 between integration steps delivers the same orbit at 0.01 s and 0.005 s",
+          "status": "passed",
+          "durationMs": 164756.45463499997,
+          "scenario": "additional six-DOF flexible convergence: two integration step sizes",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 8
+    },
+    {
+      "id": "falconheavy",
+      "name": "Falcon Heavy",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-2.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C falconheavy/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 87459.123132,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 8
+    },
+    {
+      "id": "atlasv551",
+      "name": "Atlas V 551",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-2.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C atlasv551/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 104253.33018,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 11
+    },
+    {
+      "id": "vulcan",
+      "name": "Vulcan Centaur VC4",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-2.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C vulcan/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 218279.358276,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 11
+    },
+    {
+      "id": "ariane64",
+      "name": "Ariane 64",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-2.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C ariane64/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 108186.81784599996,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 14
+    },
+    {
+      "id": "vegac",
+      "name": "Vega-C",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-2.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Falcon Heavy, Atlas V, Vulcan, Ariane 6, Vega-C vegac/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 60004.56286500004,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 11
+    },
+    {
+      "id": "longmarch2d",
+      "name": "Long March 2D",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-3.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 longmarch2d/sso/650 kg reaches its orbit as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 367602.592328,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 3
+    },
+    {
+      "id": "longmarch3be",
+      "name": "Long March 3B/E",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-3.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 longmarch3be/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 99326.145586,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 8
+    },
+    {
+      "id": "h2a202",
+      "name": "H-IIA 202 (historical)",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-3.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 h2a202/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 95450.77714199992,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 14
+    },
+    {
+      "id": "longmarch5",
+      "name": "Long March 5",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-3.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 longmarch5/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 106468.89482800005,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 11
+    },
+    {
+      "id": "h3",
+      "name": "H3-22",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-3.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): Long March, H-IIA, H3 h3/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 80178.33999999997,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 14
+    },
+    {
+      "id": "pslvxl",
+      "name": "PSLV-XL",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-4.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): PSLV, Electron, Starship pslvxl/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 123030.44140899999,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 7
+    },
+    {
+      "id": "electron",
+      "name": "Electron",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-4.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): PSLV, Electron, Starship electron/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 83943.274224,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 11
+    },
+    {
+      "id": "starship",
+      "name": "Starship (Super Heavy)",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/flex-fleet-4.test.ts",
+          "fullName": "flexible vehicles (roadmap P05): PSLV, Electron, Starship starship/leo/25 reaches its target as a flexible vehicle",
+          "status": "passed",
+          "durationMs": 71880.93487099998,
+          "scenario": "reference mission, six-DOF, crosswind, slosh+bending+notch",
+          "lessonId": null
+        }
+      ],
+      "olderFleetPassedCases": 7
+    },
+    {
+      "id": "sputnik8k71ps",
+      "name": "Sputnik (R-7 8K71PS)",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/history-sixdof.test.ts",
+          "fullName": "historical missions as rigid bodies Sputnik-1 reaches its 215 × 939 km orbit",
+          "status": "passed",
+          "durationMs": 19659.602676,
+          "scenario": "historical six-DOF mission: adv-history",
+          "lessonId": "adv-history"
+        }
+      ],
+      "olderFleetPassedCases": 0
+    },
+    {
+      "id": "vostok8k72k",
+      "name": "Vostok-K (8K72K)",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/history-sixdof.test.ts",
+          "fullName": "historical missions as rigid bodies Vostok-1 reaches its 181 × 327 km orbit",
+          "status": "passed",
+          "durationMs": 50298.176139,
+          "scenario": "historical six-DOF mission: adv-vostok",
+          "lessonId": "adv-vostok"
+        }
+      ],
+      "olderFleetPassedCases": 0
+    },
+    {
+      "id": "saturnv",
+      "name": "Saturn V",
+      "status": "passed",
+      "freshEvidence": [
+        {
+          "testFile": "tests/heavy/history-sixdof.test.ts",
+          "fullName": "historical missions as rigid bodies Apollo 11: the S-IVB relights for the translunar injection",
+          "status": "passed",
+          "durationMs": 56542.484381999995,
+          "scenario": "historical six-DOF mission: adv-apollo",
+          "lessonId": "adv-apollo"
+        }
+      ],
+      "olderFleetPassedCases": 2
+    }
+  ],
+  "sources": [
+    {
+      "testFile": "tests/heavy/flex-fleet-1.test.ts",
+      "result": "actions-heavy-results/36631307401/collected-heavy/flex-fleet-1/result.json",
+      "resultSha256": "63fc929adb3050635e012b26a1ea72309c7653d83e5a306377621c4e9d386198",
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-1.test.ts",
+        "caseId": "flex-fleet-1",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:12.791Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "testFile": "tests/heavy/flex-fleet-2.test.ts",
+      "result": "actions-heavy-results/36631307401/collected-heavy/flex-fleet-2/result.json",
+      "resultSha256": "cdf38a4a1e184d5f4f1ee40991b385b443371bb14b1b4deb8cd347a5fe9f22ca",
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-2.test.ts",
+        "caseId": "flex-fleet-2",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:40.723Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "testFile": "tests/heavy/flex-fleet-3.test.ts",
+      "result": "actions-heavy-results/36631307401/collected-heavy/flex-fleet-3/result.json",
+      "resultSha256": "94d980a4b85f8176f0aaa0e2690fe1b0ac8b77d179ac56fcc4ed122627a6f295",
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-3.test.ts",
+        "caseId": "flex-fleet-3",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:45.570Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "testFile": "tests/heavy/flex-fleet-4.test.ts",
+      "result": "actions-heavy-results/36631307401/collected-heavy/flex-fleet-4/result.json",
+      "resultSha256": "217507a1bffb786b802e1b64035a09f95501bc0c373778a42ab661e96549d8a2",
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-4.test.ts",
+        "caseId": "flex-fleet-4",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:12:13.534Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "testFile": "tests/heavy/history-sixdof.test.ts",
+      "result": "actions-heavy-results/36631307401/collected-heavy/history-sixdof/result.json",
+      "resultSha256": "384def59a0b4dd02ca8d222f8b67b9207646fc981f591a2834874c7881ad762b",
+      "provenance": {
+        "file": "tests/heavy/history-sixdof.test.ts",
+        "caseId": "history-sixdof",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:22:12.609Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    }
+  ]
+}
