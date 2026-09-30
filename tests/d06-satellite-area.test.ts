@@ -38,6 +38,7 @@ import {
   ballisticCoefficient, ballisticProblem, dragArea, lifetimeSpacecraft, satelliteAreaCore, wetMass,
 } from '../src/design/satellite-area';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
+import { designFromTemplate } from '../src/design/satellite-model';
 import { dragForce } from '../src/orbit/disposal';
 import { B_RANGE } from '../src/orbit/ballistic';
 import { predictReentry, tumblingBoxArea } from '../src/orbit/reentry';
@@ -52,21 +53,14 @@ const within = (x: number, ref: number, tol: number, what: string): void => {
 const rel = (x: number, ref: number): number => Math.abs(x / ref - 1);
 
 /**
- * NAPA-2 as a design. Only the bus, the propulsion and the array's mount are
- * read here; the rest is filled in so the object is a whole design, and is
- * not NAPA-2's data (track B's template will carry sourced figures).
+ * NAPA-2 as a design: track B's template (src/data/satellite-templates.ts),
+ * as the builder starts it. Only the bus, the propulsion and the array's
+ * mount are read here. Until the template landed this file built the same
+ * bus inline (10 kg, NAPA-2's edges, no engine, cells on the body, C_D 2.2);
+ * the template must give the same re-entry as the box run, so the check
+ * below holds it to that.
  */
-const napa2: SatelliteDesign = {
-  id: 'test-napa2', name: 'NAPA-2', template: 'cubesat6u', kind: 'science',
-  orbit: { perigee: 520e3, apogee: 540e3, inclination: 97.5116, sso: true },
-  lifeYears: 3,
-  bus: { dryMass: NAPA2.mass, size: { width: NAPA2.size[0], height: NAPA2.size[1], depth: NAPA2.size[2] }, cd: 2.2, cr: 1.3 },
-  power: { payloadW: 10, busW: 10, arrayArea: 0.1, cellEff: 0.3, Id: 0.77, degPerYear: 0.0275, mount: 'body', regulation: 'PPT', batteryWh: 40, dod: 0.2, batteryEff: 0.9 },
-  propulsion: null,
-  adcs: { mode: 'threeAxis', inertia: [0.1, 0.1, 0.05], pointingDeg: 1, wheelH: 0.01, residualDipole: 0.01, cpOffset: 0.01 },
-  comms: { txPowerW: 2, frequency: 8.2e9, txAntennaD: 0.1, lineLoss: 1, dataRate: 1e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 10 },
-  payload: null,
-};
+const napa2: SatelliteDesign = designFromTemplate('napa2', 'test-napa2', 'NAPA-2');
 
 describe('NAPA-2 as a 6U design (VALIDATION §7)', () => {
   it('has B = 0.0134 m²/kg ± 0.00005, inside B_RANGE', () => {
