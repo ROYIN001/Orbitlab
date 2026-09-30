@@ -16,7 +16,7 @@
 
 **ภาพรวม** — แกนของเว็บอยู่ในสภาพดี: ฟิสิกส์ผ่าน validation ที่มีวินัยจริง, แกน Build/Orbit/Lessons เป็นโมดูลไม่ใช้ DOM ที่มีเทสต์หนาแน่น, PWA ติดตั้งแบบ atomic และทำงานออฟไลน์ครบ, ไม่มีปัญหาความปลอดภัยหรือความเป็นส่วนตัวเชิงโครงสร้าง งานที่เหลือส่วนใหญ่เป็น (ก) งานที่แผน 28 ก.ย. และ roadmap เขียนไว้แล้วแต่ยังไม่ทำ (S4c, S7/A17, S8–S16, Phase 4–6) (ข) ข้อบกพร่องระดับ P2 ที่กระจุกอยู่ในชั้น UI/สถานะและการนำเสนอผลลัพธ์ ไม่ใช่ในตัวเลขฟิสิกส์ (ค) น้ำหนักบันเดิลและ CI ที่ช้า และ (ง) ช่องว่างเชิงสถาบัน (ไม่มี LICENSE, ไม่มีเวอร์ชัน, ไม่มีเครื่องมือฝั่งครู)
 
-**นับตามระดับ (พื้นที่ที่ตรวจเสร็จ 6 จาก 10)**
+**นับตามระดับ (ครบ 10 พื้นที่; ข้อที่พบซ้ำข้ามพื้นที่ถูกนับในแต่ละพื้นที่และระบุ "=" ไว้ในตาราง)**
 
 | พื้นที่ | P1 | P2 | P3 | รวม |
 |---|---|---|---|---|
@@ -26,7 +26,11 @@
 | 5. Lessons/placement/worksheets | 0 | 7 | 8 | 15 |
 | 6. โครงสร้างพื้นฐาน | 0 | 5 | 13 | 18 |
 | 7. ฟิสิกส์/validation | 0 | 5 | 18 | 23 |
-| **รวม** | **1** | **28** | **70** | **99** |
+| 8. i18n/a11y/มือถือ | 0 | 5 | 13 | 18 |
+| 9. เอกสาร | 0 | 9 | 14 | 23 |
+| 10. ชุดทดสอบ/คุณภาพโค้ด | 0 | 6 | 7 | 13 |
+| 11. เว็บสด/CI/PR | 0 | 5 | 6 | 11 |
+| **รวม** | **1** | **53** | **110** | **164** |
 
 **สิบอันดับที่ควรทำก่อน (เรียงตามผลต่อผู้ใช้ ÷ ต้นทุน)**
 
@@ -43,7 +47,9 @@
 
 **สิ่งที่ *ไม่* ต้องทำ (ตรวจแล้วดีอยู่)** — ตัวเลขฟิสิกส์ของเที่ยวบินในตัว, ความทนทานของ kepler/maneuvers, ResultSlot provenance, วงจร worker ของ Orbit, validator ของ Build, grader ของบทเรียน, SW/PWA, ท่อข้อมูล snapshot, สุขอนามัยความปลอดภัย, WebMCP — ทั้งหมดผ่านการตรวจโดยไม่พบข้อบกพร่อง (รายละเอียดใน "จุดแข็งที่ตรวจแล้ว" ของแต่ละส่วน)
 
-_ตารางนับและอันดับจะถูกปรับเมื่อพื้นที่ 8–11 และรอบยืนยัน (ส่วน 12) เสร็จ_
+**เพิ่มจากพื้นที่ 8–11 ที่ควรเข้า session 1–2 ของแผนเพราะเล็กและเห็นผลทันที** — LS-01 การ์ด `github.sha == origin/main` ใน deploy.yml (เว็บสดเคยถอย 2 ชม. 44 น. จากการ re-run run เก่า); I18N-01/02 สำเนา A8 สองข้อที่ #41 ไม่ได้แก้; I18N-04 ท่อน/ขั้น; MOB-01 (S8); DOC-01/02/03 ตัวเลขใน STATUS/README; DOC-06 เครดิตแหล่งข้อมูล Orbit/Build; TQ-05 ย้ายภารกิจ six-DOF ทั้งเที่ยวออกจากชั้น default; LS-06 ย้าย cron ให้ข้อมูลสดก่อนเวลาเรียนไทย
+
+_การยืนยันอิสระ (ส่วน 12) ทำได้ 1 จาก 17 ข้อ P2 ก่อนโควตาหมด — ข้อที่เหลือยืนตามหลักฐานของผู้ตรวจพื้นที่_
 
 ## 2. ส่วน Launch — UI และสถานะ (main.ts, panel.ts, explore/watch/hud/telemetry/timeline, result-content, loop inspector, monte-carlo, compare/report)
 
@@ -356,10 +362,34 @@ A18 (pool Monte Carlo เริ่มไม่ติด) แก้แล้ว�
 | DOC-23 | P3 | ความเสี่ยง | PR #41 เพิ่ม ~119k บรรทัดหลักฐานใต้ docs/ นอกธรรมเนียม history/ (= R2 ของรีวิว #41) | `docs/README.md:22` | S |
 
 ประมาณสองในสามของข้อค้นพบด้านเอกสารเป็นการแก้ระดับ S ที่ **หนึ่ง session เคลียร์ได้หมด** — และคณะวางแผนเสนอ *เทสต์ความสอดคล้องของตัวเลขในเอกสาร* (จำนวนเทสต์/เครื่องมือ/ยาน/Node ยึดกับ source แบบ `section-plan.test.ts`) เพื่อไม่ให้ drift กลับมา (ENG-K22)
-## 10. คุณภาพชุดทดสอบ
+## 10. กลยุทธ์ทดสอบ, คุณภาพโค้ด และการบำรุงรักษา
 
-_(ผู้ตรวจพื้นที่นี้ยังทำงานอยู่ — จะเติมเมื่อผลมาถึง)_
+**จุดแข็งที่ตรวจแล้ว** — ฐานเทสต์ใหญ่ deterministic และซื่อตรง: 175 ไฟล์ default (172 `tests/*.test.ts` + 3 validation) 2,532 เทสต์, heavy 27 ไฟล์และ six-DOF fleet 6 ไฟล์หลัง config แยกพร้อมต้นทุนที่ระบุ; เทสต์ถูก type-check ใต้ strict; 0 skip/only/todo, 0 @ts-ignore, 1 TODO ใน 103k บรรทัด, 0 console.log ใน src; fleet matrix 195 กรณี 164 เทสต์ใน 71.7 s (worker เดียว) ทุกข้อยกเว้นมีชื่อและเหตุผล; pwa.test.ts ครอบทุก export ของ sw-core รวมเส้นทางล้มเหลว; i18n.test.ts และ assessment.test.ts เป็น QA gate จริง; ไม่มี Date.now()/Math.random() ในเทสต์; fingerprint ทำซ้ำ bit-for-bit บน Node 22.22.2 (32 ผ่านใน 65.6 s); duplication ต่ำนอก dictionary; mcp.test.ts 1,156 บรรทัดครอบพื้นผิว WebMCP
 
+**ข้อค้นพบ**
+
+| รหัส | ระดับ | ชนิด | เรื่อง | ไฟล์ | งาน | อ้างอิง |
+|---|---|---|---|---|---|---|
+| TQ-01 | P2 | ความเสี่ยง | golden fingerprint แฮช float เต็มความละเอียด → Node/V8 เปลี่ยนล้ม 5 ไฟล์พร้อมกัน (โพรบ Node 24.19 ของ Codex ได้ `a173338e…` เทียบที่บันทึก `deef4d6e…` สำหรับ soyuz21a/leo/50) (= PHY-15) | `tests/flex-golden-harness.ts:43` | M | หลักการ 7 |
+| TQ-02 | P2 | ช่องว่าง | journeys มี 4 จาก 10 ที่ S10 ขอ; Build และ Orbit ไม่มีเลย; launch-explore ขับผ่าน WebMCP ไม่ใช่ UI (= LUI-06/ORB-10/B-04/LES-12) | `tests/browser/journeys/launch-explore.mjs:8` | L | S10 |
+| TQ-03 | P2 | ช่องว่าง | ไม่มีชั้นเทสต์ DOM: 54 จาก 91 ไฟล์ src/ui (16,458 จาก 27,424 บรรทัด) + main.ts (1,987) ไม่เคยถูก import โดยเทสต์ใด; 13 ไฟล์ stub `g.document = {…}` เอง | `src/ui/panel.ts:620` | L | S16/S8 |
+| TQ-04 | P2 | ช่องว่าง | โปรโตคอลข้อความ worker 5 จาก 8 และเส้นทางล้มเหลวไม่มีเทสต์ (lifetime, ratings, readiness, screening, reentry) | `src/ui/build/readiness-job.ts:1` | M | S7 |
+| TQ-05 | P2 | ข้อบกพร่อง | suite default ใช้ 25.5 นาที รันสองครั้งต่อการเปลี่ยน (CI + deploy) และบน push ที่แก้แค่ docs; **long pole คือภารกิจ six-DOF ทั้งเที่ยวในชั้น default** (rigid-mission-convergence 4 ภารกิจ timeout 900 s, custom-vehicle-*-sixdof ถึง t=7200 s, rigid-simulation 2 ภารกิจ) ไม่ใช่ fleet matrix (71.7 s) (= INF-11) | `.github/workflows/ci.yml:3` | M | S6 |
+| TQ-13 | P2 | ข้อบกพร่อง | Auto Tune ของ inspector บนเธรดหลักแม้ tune worker มีอยู่ — และไม่มีเทสต์สัญญา threading จึงคงอยู่ได้ (= LUI-02/PHY-06) | `src/ui/loop-tuning.ts:185` | S | S7/A17 |
+| TQ-06 | P3 | ช่องว่าง | คีย์ i18n ไม่มี type: parity 3 × 3,500 คีย์เป็นแค่ runtime test; เทสต์มองไม่เห็นอังกฤษ hard-coded, glossary drift, overflow | `src/i18n/en.ts:1` | M | S5 |
+| TQ-07 | P3 | ช่องว่าง | ไม่มี lint/format/dead-export tooling: 201 export ถูกอ้างเฉพาะในไฟล์ตัวเอง, 16 ไม่ถูกอ้างเลย | `package.json:7` | S | — |
+| TQ-08 | P3 | ความเสี่ยง | 19 ฟังก์ชันเกิน 150 บรรทัด (stepFlight 358, SetupPanel.render 306, guidance update 297) ในโมดูลที่ไม่มีเทสต์ → งาน UI ที่วางไว้ (S16, D06/D07) เสี่ยง | `src/physics/simulation.ts:751` | L | — |
+| TQ-09 | P3 | ข้อบกพร่อง | เทสต์พิมพ์ JSON หลายกิโลไบต์ลง stdout โดยไม่มีเงื่อนไข ทำให้ log CI ท่วม | `tests/rigid-recovery.test.ts:84` | S | — |
+| TQ-10 | P3 | ช่องว่าง | ผลเครื่องมือ WebMCP เป็น `unknown` → เทสต์ใช้ `as any` 64 ครั้ง | `src/mcp.ts:184` | M | — |
+| TQ-11 | P3 | ช่องว่าง | vite.config.ts (PWA plugin) และ scripts/*.ts (รีเฟรช snapshot รายวัน) ไม่เคย type-check | `tsconfig.json:17` | S | R02 |
+| TQ-12 | P3 | ช่องว่าง | ไดเรกทอรีเทสต์แบน 172 ไฟล์ timeout 20–900 s ไม่มีชุด fast-feedback | `vite.config.ts:62` | M | — |
+
+**รายละเอียดข้อที่สำคัญ**
+
+- **TQ-05** — ทางแก้ที่ผู้ตรวจเสนอและคณะวางแผนรับ (ENG-K03): (1) ย้ายเทสต์ six-DOF ทั้งภารกิจไป tests/heavy โดยคง guard 160 s ในชั้น default ตามที่ rigid-flex-golden ทำอยู่; (2) `paths-ignore: ['docs/**', '**/*.md']` บน CI และ deploy ข้าม `npm test` เมื่อ schedule; (3) `timeout-minutes` บน test job; (4) shard 3 ทาง — เป้า CI ของ PR ≤12 นาที
+- **TQ-01** — เสนอ golden สองชั้น: fixture แบบ tolerance ([t, r, v, q] ทุก 10 s + event [key, t] ใน `tests/fixtures/goldens/<case>.json` เทียบ position ≤1e-3 m, velocity ≤1e-6 m/s, event ≤1e-6 s) + hash เดิมเป็น canary ที่ระบุเครื่องที่บันทึก — ตรงกับผลตัดสิน D-4 ของแผน (hash เป็น gate บน Node ที่ปัก, tolerance เป็น oracle ของ T02)
+- **TQ-03/TQ-04** — happy-dom เป็น devDependency + ชั้น `tests/ui/` (`// @vitest-environment happy-dom`) + `tests/dom-harness.ts` แทน stub 13 ชุด; เป้าแรกตามความเสี่ยง: SetupPanel.render + applyLanguage, Hud, Timeline, TelemetryPanel, LoopInspector/LoopTuning, lesson-mode; และ fake-Worker harness (MessageChannel, hook ให้ล้มตอนสร้าง/หน่วง/สลับลำดับ/ยืนยัน terminate) สำหรับ job ทั้งห้า — การตัดสิน D-18 ของแผน
+- **TQ-07/TQ-11** — `knip` + Biome หรือ typescript-eslint recommended ใน CI ก่อน `npm test`; `tsconfig.node.json` สำหรับ vite.config.ts, scripts/**; smoke test ของ refresh-snapshots กับ fixture response
 ## 11. เว็บสด, GitHub Actions และ PR ที่เปิดอยู่ (#41, #38, #36)
 
 **ยืนยันแล้ว** — เว็บสดคือ main 404eb0c เป๊ะ: `index.html` ที่ serve (13,889 B, 2026-09-29 23:38:52 GMT) byte-identical กับ `dist/index.html` ที่ build ในเครื่อง และอ้าง chunk เดียวกัน (index 2,484,344 B; i18n 1,145,154 B; css 139,377 B) → build ทำซ้ำได้; snapshot ทั้งสามถูกดึงโดย deploy เองที่ 23:31:26Z; header เป็นค่าเริ่มต้นของ GitHub Pages (max-age=600, HSTS, gzip เท่านั้น, ไม่มี CSP); social preview 1200×630 มี; PWA plumbing ถูก (manifest, sw.js versioned precache 46 entry, Range 206/416, skip-waiting, ตรวจอัปเดตรายชั่วโมง); CI เขียวบน head ของทั้งสาม PR
@@ -389,8 +419,16 @@ _(ผู้ตรวจพื้นที่นี้ยังทำงานอ
 **สำหรับ roadmap**: หลัง #38 ทำเครื่องหมาย L01–L05 "ทำบางส่วนโดย #38 (Apollo 11 เท่านั้น)" และ re-scope Phase 5: L01 = ขยาย `ephemeris-1969` เป็นอนุกรม Meeus/DE440 ทั่วไปหลัง API `lunar/ephemeris.ts` เดียวกัน; L02 = ย้าย `lunar/gravity.ts` + `cislunar.ts` เข้า Orbit propagator พร้อม SOI switching; L03 = `tli-guidance.ts` เป็น planner ทุกยาน/ทุกวันที่ + free-return + phasing แบบ Chandrayaan; L04/L05 = parametrise `apollo-descent`/`apollo-entry` สำหรับ lander อื่น + skip entry
 ## 12. ผลการยืนยันแบบโต้แย้งของข้อค้นพบ P1/P2
 
-_(รอรอบยืนยัน — ข้อค้นพบชนิด defect/risk ระดับ P1/P2 ทุกข้อจะถูกส่งให้ผู้ยืนยันสองคนที่ตั้งต้นให้หักล้าง)_
+ข้อค้นพบชนิด defect/risk ระดับ P1/P2 จำนวน 17 ข้อ (LUI-01, LUI-02, LUI-05, ORB-03, B-01, B-02, B-03, LES-05, PHY-01, PHY-02, PHY-06, INF-01, I18N-02, I18N-03, I18N-04, TQ-05, TQ-13) ถูกส่งให้ผู้ยืนยันสองคนต่อข้อ (มุม "ทำซ้ำให้เกิด" และมุม "มีอะไรกันไว้อยู่แล้วหรือไม่") โดยตั้งต้นให้หักล้าง
 
+| ข้อ | ผู้ยืนยัน 1 | ผู้ยืนยัน 2 | ผล | สิ่งที่ผู้ยืนยันเพิ่ม |
+|---|---|---|---|---|
+| **LUI-01** ("Use for the next launch" ขณะหยุดชั่วคราวทำลายเที่ยวบิน) | ยืนยัน P2 | ยืนยัน P2 | **P2 ยืน** | ทั้งสองคน *ทำซ้ำได้จริงบน production build ใน headless Chromium* ผ่าน harness ของ repo ไม่ใช่แค่ trace: chain `applyTrial → host.applyControl → panel.applyControl → changed() → onChange → preview()` ตรงตามที่รายงาน; `toggleLiveFlight` ตั้ง `playing=false` ตอนหยุดแต่คงแผง `running` จึงมีเพียงการ์ด `!this.playing` ที่ผ่าน; `preview()` เรียก `session.dispose()` แทน recorder/player และรีเซ็ต timeline/บรรยาย/HUD; ไม่มีสิ่งใดกันไว้ที่อื่น |
+| อีก 16 ข้อ | — | — | **ยังไม่ได้ยืนยันอิสระ** | ผู้ยืนยัน 32 คนของข้อเหล่านี้ล้มเหลวพร้อมกันเพราะ *session limit* ของบัญชีที่ใช้ตรวจ (ไม่ใช่เพราะข้อค้นพบถูกหักล้าง); ข้อค้นพบยังยืนตามหลักฐานของผู้ตรวจพื้นที่ (ทุกข้อมี evidence ระดับไฟล์:บรรทัด และหลายข้อมีโพรบที่รันจริง เช่น B-01, B-03, PHY-01, PHY-02, I18N-04, TQ-05) — ควรอ่านโดยถือว่า *มั่นใจตามที่ผู้ตรวจระบุ* (0.75–0.95) ไม่ใช่ตามมาตรฐาน "รอดการโต้แย้ง" ของส่วน 5 ในรีวิว PR #41 |
+
+การยืนยันที่เหลือรันต่อได้ด้วยคำสั่งเดียว (resume workflow เดิม; agent ที่เสร็จแล้วใช้ cache ไม่รันซ้ำ) เมื่อโควตาเอื้อ — ค่าใช้จ่ายโดยประมาณ 32 agent × ~10 นาที ที่ concurrency 2
+
+หมายเหตุความสอดคล้องข้ามพื้นที่: หลายข้อถูกพบอิสระโดยผู้ตรวจมากกว่าหนึ่งคนซึ่งเป็นการยืนยันแบบอ่อนในตัว — A17 (LUI-02 = PHY-06 = TQ-13), worker ออกแบบฝัง i18n (B-10 = INF-01), CI ช้า (INF-11 = TQ-05), fingerprint เปราะ (PHY-15 = TQ-01), ศัพท์ไทย (LES-05 = I18N-03), LICENSE (INF-09 = DOC-07), PDPA (INF-15 = DOC-08), CSP (INF-13 = LS-05), Node ใน README (INF-07 = DOC-15), journeys (LUI-06 = ORB-10 = B-04 = LES-12 = TQ-02), precache (INF-05 = LS-02)
 ## 13. งานตามแผนและ roadmap ที่ยังไม่เริ่ม (สรุปจาก STATUS-INVENTORY)
 
 รายการนี้คือ "งานที่ยังเหลือ" ในความหมายของแผนที่เขียนไว้แล้ว ไม่ใช่ข้อบกพร่องใหม่ รายละเอียดอยู่ใน STATUS-INVENTORY-TH.md §3–§4
