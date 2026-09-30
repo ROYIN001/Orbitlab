@@ -345,6 +345,20 @@ describe('mission document version 3: a custom satellite (D06)', () => {
     expect(kept.state.payloadMass).toBe(950);
   });
 
+  it('refuses a satellite lighter than a payload may be, and still reads the rest of the file', () => {
+    // Review, 2026-09-30: a 0.25 kg satellite passed its checker, the 1 kg payload
+    // floor reset its payload mass to 0.25 kg again on every pass, and the whole
+    // file came back unusable.
+    const doc = viaJson({ ...withSat(), payloadMass: 0.25, satelliteSpec: { ...mySat(), mass: 0.25 } });
+    const back = parseMissionDocument(doc, fallback());
+    expect(back.usable).toBe(true);
+    expect(back.issues).toContainEqual({ field: 'setup.satellite', code: 'satelliteSpec' });
+    expect(back.state.satelliteId).toBe('crew');
+    expect(back.state.satelliteSpec).toBeUndefined();
+    expect(back.state.vehicleId).toBe(everything().vehicleId);
+    expect(validateConfigInput(back.state)).toEqual([]);
+  });
+
   it('resets a bad payload mass to the custom satellite\'s own', () => {
     const doc = viaJson(withSat());
     doc.mission.payloadMass = -5;

@@ -37,7 +37,12 @@ void allKinds;
  * refuse what the checker would and say which bound. Why each one:
  *
  * - `mass`, kg: the bound vehicle-spec.ts holds a vehicle's `payloadLEO` to;
- *   the catalogue's heaviest is Apollo's 45.7 t.
+ *   the catalogue's heaviest is Apollo's 45.7 t. At least `minMass`, the
+ *   payload-mass field's own 1 kg floor (`NUMBER_FIELDS['setup.payloadMass']`,
+ *   src/config/validation.ts): a lighter satellite could never fly at its own
+ *   mass, and a mission file's reset of a bad payload mass to the
+ *   satellite's would fail again on every pass until the file was refused as
+ *   unreadable.
  * - `thrust`, N: Apollo's service-module engine, about 91 kN, with room to
  *   spare; the catalogue's strongest satellite engine is the crew's 3.9 kN.
  * - `isp`, s: a chemical engine's, the bounds vehicle-spec.ts holds an
@@ -57,6 +62,7 @@ void allKinds;
  */
 export const SATELLITE_LIMITS = {
   mass: 5e5,
+  minMass: 1,
   thrust: 1e5,
   isp: [50, 480],
   propellantFraction: 0.95,
@@ -83,7 +89,7 @@ export function satelliteSpecProblems(raw: unknown): SatelliteSpecIssue[] {
     c.add('kind', `must be one of ${SATELLITE_KIND_IDS.join(', ')} (got ${JSON.stringify(raw.kind)})`);
   } else if (raw.kind === undefined) c.add('kind', 'is required');
   c.string(raw, 'name', '');
-  c.number(raw, 'mass', '', 0, SATELLITE_LIMITS.mass, { exclusiveMin: true });
+  c.number(raw, 'mass', '', SATELLITE_LIMITS.minMass, SATELLITE_LIMITS.mass);
   if (typeof raw.typicalOrbit !== 'string' || !ORBIT_PRESETS.some((o) => o.id === raw.typicalOrbit)) {
     c.add('typicalOrbit', `must be an orbit preset's id (got ${JSON.stringify(raw.typicalOrbit)})`);
   }

@@ -15,6 +15,7 @@ import {
   FAIRING_ENVELOPE, SATELLITE_KIND_IDS, SATELLITE_LIMITS, assertSatelliteSpec, fairingFit, satelliteSpecProblems,
 } from '../src/config/satellite-spec';
 import { SATELLITES, satelliteById } from '../src/data/satellites';
+import { NUMBER_FIELDS } from '../src/config/validation';
 import { VEHICLES, vehicleById } from '../src/data/vehicles';
 import { WATCH_MISSIONS } from '../src/ui/watch-missions';
 import { quickstartMission } from '../src/ui/quickstart';
@@ -44,7 +45,7 @@ describe('custom satellite checker (D06)', () => {
 
   it('rejects NaN, Infinity, wrong types and figures that are not positive, naming the field', () => {
     expect(problems((s) => { s.mass = NaN; })).toEqual(['mass must be a finite number (got NaN)']);
-    expect(problems((s) => { s.mass = 0; })).toEqual(['mass must be more than 0 (got 0)']);
+    expect(problems((s) => { s.mass = 0; })).toEqual(['mass must be at least 1 (got 0)']);
     expect(problems((s) => { s.mass = '5500'; })).toEqual(['mass must be a finite number (got string)']);
     expect(problems((s) => { s.propulsion.thrust = Infinity; })).toEqual(['propulsion.thrust must be a finite number (got Infinity)']);
     expect(problems((s) => { s.propulsion.thrust = 0; })).toEqual(['propulsion.thrust must be more than 0 (got 0)']);
@@ -62,6 +63,10 @@ describe('custom satellite checker (D06)', () => {
     expect(problems((s) => { s.propulsion.propellantFraction = 0; })).toEqual(['propulsion.propellantFraction must be more than 0 (got 0)']);
     expect(problems((s) => { s.propulsion.thrust = 490e3; })).toEqual(['propulsion.thrust must be at most 100000 (got 490000)']);
     expect(problems((s) => { s.mass = 5.5e6; })).toEqual(['mass must be at most 500000 (got 5500000)']);
+    // lighter than the payload-mass field takes: it could never fly at its own mass (review, 2026-09-30)
+    expect(problems((s) => { s.mass = 0.25; })).toEqual(['mass must be at least 1 (got 0.25)']);
+    expect(SATELLITE_LIMITS.minMass).toBe(NUMBER_FIELDS['setup.payloadMass'].min);
+    expect(problems((s) => { s.mass = SATELLITE_LIMITS.minMass; })).toEqual([]);
     expect(problems((s) => { s.size.width = 25; })).toEqual(['size.width must be at most 15 (got 25)']);
     expect(problems((s) => { s.cr = 0.5; })).toEqual(['cr must be at least 1 (got 0.5)']);
     expect(problems((s) => { s.cr = 2.5; })).toEqual(['cr must be at most 2 (got 2.5)']);
@@ -83,7 +88,7 @@ describe('custom satellite checker (D06)', () => {
     expect(problems((s) => { s.name = ''; })).toEqual(['name must not be empty']);
     expect(problems((s) => { s.description = ''; })).toEqual([]);
     expect(satelliteSpecProblems(null)).toEqual([{ path: '', message: 'must be a satellite (got null)' }]);
-    expect(() => assertSatelliteSpec({ ...satelliteCopyOf('comsat'), mass: -1 })).toThrow('Invalid custom satellite: mass must be more than 0 (got -1)');
+    expect(() => assertSatelliteSpec({ ...satelliteCopyOf('comsat'), mass: -1 })).toThrow('Invalid custom satellite: mass must be at least 1 (got -1)');
   });
 
   it('leaves the catalogue as it was (no entry has the fields a custom satellite may add)', () => {
