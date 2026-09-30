@@ -10,8 +10,11 @@ import { en } from '../i18n/en';
 import type { AssessmentResult } from './assessment/score';
 import { DOMAINS, isCaseLesson, type CaseLesson, type CatalogLesson, type LessonGrade, type Lesson } from './types';
 import type { ProgressData } from './progress';
-import { lessonNumber } from './catalog';
+import { BUILTIN_CASE_LESSONS, BUILTIN_LESSONS, lessonNumber } from './catalog';
 import { MEASURES } from './measures';
+import { parseLessonFile, type FileIssue } from './lesson-file';
+import { statusCounts } from './recheck';
+import { runRecheckJob } from './recheck-job';
 
 export interface LessonToolsHost {
   /** the catalogue: built-in lessons and any a teacher's file added */
@@ -77,6 +80,27 @@ function flightCriterionOut(lesson: Lesson, grade: LessonGrade | null) {
   });
 }
 
+const BUILTIN_IDS = new Set<string>([...BUILTIN_LESSONS, ...BUILTIN_CASE_LESSONS].map((l) => l.id));
+
+/**
+ * T02: the lessons a re-check is held to — those of the instructor's lesson
+ * files given, then any the page's catalogue has from a lesson file opened
+ * earlier (a results file carries none of a teacher's own lessons).
+ */
+function lessonsFor(host: LessonToolsHost, raw: unknown): { lessons: CatalogLesson[]; issues: FileIssue[] } {
+  const files = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw];
+  const lessons: CatalogLesson[] = [];
+  const issues: FileIssue[] = [];
+  for (const file of files) {
+    const parsed = parseLessonFile(file, new Set());
+    if (!parsed.usable) throw new Error('"lessons" must be lesson files (format "orbitlab.lessons"), as JSON');
+    issues.push(...parsed.issues.filter((i) => i.level === 'error'));
+    for (const l of parsed.lessons) if (!lessons.some((x) => x.id === l.id)) lessons.push(l);
+  }
+  for (const l of host.catalogue()) if (!BUILTIN_IDS.has(l.id) && !lessons.some((x) => x.id === l.id)) lessons.push(l);
+  return { lessons, issues };
+}
+
 export function createLessonTools(host: LessonToolsHost): Tool[] {
   return [
     {
@@ -138,6 +162,28 @@ export function createLessonTools(host: LessonToolsHost): Tool[] {
           areas: r.result.domains, start: r.result.start, startArea: r.result.startDomain, advice: r.result.advice,
           misconceptions: r.result.questions.filter((q) => q.misconception).map((q) => ({ question: q.id, area: q.domain, belief: q.misconceptionText?.en ?? null })),
         };
+      },
+    },
+    {
+      name: 'check_results', title: 'Re-check a class\'s results',
+      description: 'Roadmap T02, the instructor\'s re-check (the lessons page\'s "Check results" tab): each flight lesson\'s record in the results files given is flown again on this device from the mission it kept, with the commands the student gave at the step boundaries that took them, to the time it was graded at, and graded again. Each record and each of its criteria comes out match, borderline (within the engine tolerance of a bound, so another browser could have decided it either way), differs (edited, another build, or not the lesson the student had) or cannotRefly, with the reason (caseLesson, noLesson, sixDof, incomplete — a record made before the grading time and command journal were kept —, mission, actions, noMission, notReached, error). Also says whether each file\'s checksum holds and which fields an older record lacks. Give the instructor\'s lesson file(s) as "lessons" for their own lessons: results files do not carry them. Six-DOF flights are not re-flown. Nothing is sent anywhere; the result holds only what the files hold and the re-check.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          results: { type: 'array', items: { type: 'object' }, description: 'Results files (format "orbitlab.results"), each as its JSON.' },
+          lessons: { description: 'The instructor\'s lesson file (format "orbitlab.lessons") as its JSON, or an array of them.' },
+          names: { type: 'array', items: { type: 'string' }, description: 'Optional: the results files\' names, in the same order, for the report.' },
+        },
+        required: ['results'], additionalProperties: false,
+      },
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+      execute: async (input) => {
+        const i = record(input);
+        if (!Array.isArray(i.results) || !i.results.length) throw new Error('"results" must be a list of one or more results files, as JSON');
+        const names = Array.isArray(i.names) ? i.names.map((n) => (typeof n === 'string' ? n : null)) : undefined;
+        const { lessons, issues } = lessonsFor(host, i.lessons);
+        const check = await runRecheckJob({ results: i.results, lessons, ...(names ? { names } : {}) }, new AbortController().signal);
+        return { ...check, counts: statusCounts(check), lessonFileIssues: issues.map((x) => `${x.where}: ${x.code}${x.detail ? ` (${x.detail})` : ''}`) };
       },
     },
   ];

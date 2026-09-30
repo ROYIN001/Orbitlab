@@ -1,0 +1,331 @@
+{
+  "format": "orbitlab.results",
+  "version": 1,
+  "exportedAt": "2026-10-06T08:00:00.000Z",
+  "student": "Student A (fixture)",
+  "progress": {
+    "version": 1,
+    "lessons": {
+      "class-leo": {
+        "attempts": 0,
+        "hintsShown": 0,
+        "passed": true,
+        "last": {
+          "at": "2026-10-06T07:20:00.000Z",
+          "verdict": "fail",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "fail",
+              "value": null
+            },
+            {
+              "id": "c2",
+              "state": "fail",
+              "value": 16.57833414386685
+            },
+            {
+              "id": "c3",
+              "state": "pass",
+              "value": 89.67925183462822,
+              "expected": 89.67925183462822
+            }
+          ],
+          "answers": {
+            "c3": 89.67925183462822
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "falcon9",
+              "satelliteId": "cubesats",
+              "siteId": "cape",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "leo",
+                "name": "Low Earth orbit (500 km)",
+                "perigee": 500000,
+                "apogee": 500000,
+                "inclination": "site",
+                "argPerigee": 0,
+                "raanMode": "free",
+                "description": "Generic circular LEO at the minimum inclination of the launch site."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 20000,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 1.5,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 553.8599999999882,
+          "clock": 544.0469232929887,
+          "actions": [],
+          "app": "0.1.0+fixture"
+        },
+        "passedRecord": {
+          "at": "2026-10-06T07:10:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "pass",
+              "value": null
+            },
+            {
+              "id": "c2",
+              "state": "pass",
+              "value": 1725.199846621405
+            },
+            {
+              "id": "c3",
+              "state": "pass",
+              "value": 95.11550580531123,
+              "expected": 94.61590580531123
+            }
+          ],
+          "answers": {
+            "c3": 95.11550580531123
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "falcon9",
+              "satelliteId": "cubesats",
+              "siteId": "cape",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "leo",
+                "name": "Low Earth orbit (500 km)",
+                "perigee": 500000,
+                "apogee": 500000,
+                "inclination": "site",
+                "argPerigee": 0,
+                "raanMode": "free",
+                "description": "Generic circular LEO at the minimum inclination of the launch site."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 10000,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 1.5,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 3237.8201278267784,
+          "clock": 3224.91927886418,
+          "actions": [],
+          "app": "0.1.0+fixture"
+        }
+      },
+      "class-abort": {
+        "attempts": 0,
+        "hintsShown": 0,
+        "passed": true,
+        "last": {
+          "at": "2026-10-06T07:30:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "pass",
+              "value": 1032.399999999463
+            },
+            {
+              "id": "c2",
+              "state": "pass",
+              "value": 15.72483017555198,
+              "expected": 15.266825413157262
+            }
+          ],
+          "answers": {
+            "c2": 15.72483017555198
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "soyuz21a",
+              "satelliteId": "crew",
+              "siteId": "baikonur",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "iss",
+                "name": "ISS orbit (420 km, 51.6°)",
+                "perigee": 420000,
+                "apogee": 420000,
+                "inclination": 51.64,
+                "argPerigee": 0,
+                "raanMode": "iss",
+                "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 7150,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 3,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 1033.399999999463,
+          "clock": 1032.4022443909148,
+          "actions": [
+            {
+              "t": 60.10000000000056,
+              "kind": "commandAbort"
+            }
+          ],
+          "app": "0.1.0+fixture"
+        },
+        "passedRecord": {
+          "at": "2026-10-06T07:30:00.000Z",
+          "verdict": "pass",
+          "criteria": [
+            {
+              "id": "c1",
+              "state": "pass",
+              "value": 1032.399999999463
+            },
+            {
+              "id": "c2",
+              "state": "pass",
+              "value": 15.72483017555198,
+              "expected": 15.266825413157262
+            }
+          ],
+          "answers": {
+            "c2": 15.72483017555198
+          },
+          "hintsShown": 0,
+          "mission": {
+            "format": "orbitlab.mission",
+            "version": 2,
+            "mission": {
+              "vehicleId": "soyuz21a",
+              "satelliteId": "crew",
+              "siteId": "baikonur",
+              "orbitId": "custom",
+              "orbit": {
+                "id": "iss",
+                "name": "ISS orbit (420 km, 51.6°)",
+                "perigee": 420000,
+                "apogee": 420000,
+                "inclination": 51.64,
+                "argPerigee": 0,
+                "raanMode": "iss",
+                "description": "Circular orbit in the plane of the International Space Station. The launch window is set by the station's ascending node."
+              },
+              "launchTime": "2026-10-05T03:00:00.000Z",
+              "payloadMass": 7150,
+              "guidanceOverrides": {
+                "pitchOverAltitude": 200,
+                "kickAngle": 3,
+                "kickDuration": 8,
+                "gravityTurnEnd": 65000,
+                "parkingAltitude": 0,
+                "maxTimeToGo": 1500,
+                "maxTurnRate": 0.3,
+                "loftAltitude": 0,
+                "pitchMax": 35,
+                "pitchMin": -15,
+                "slewRate": 3,
+                "maxAccel": 0
+              },
+              "failure": {
+                "mode": "none",
+                "time": 60,
+                "stage": 0
+              },
+              "boosterRecovery": false,
+              "dynamics": {
+                "model": "pointMass",
+                "wind": "calm",
+                "seed": 20260919
+              }
+            }
+          },
+          "t": 1033.399999999463,
+          "clock": 1032.4022443909148,
+          "actions": [
+            {
+              "t": 60.10000000000056,
+              "kind": "commandAbort"
+            }
+          ],
+          "app": "0.1.0+fixture"
+        }
+      }
+    },
+    "assessments": []
+  },
+  "checksum": "c9a7daef548967b7e7647e939a56d64e5c975b71188de307a12526018ab576b8"
+}
