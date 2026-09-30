@@ -59,7 +59,7 @@ export interface LessonFileDocument {
   questions?: unknown[];
 }
 
-export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate';
+export type FileIssueCode = 'format' | 'newerVersion' | 'missing' | 'invalid' | 'mission' | 'translation' | 'hook' | 'expression' | 'duplicate' | 'event';
 export interface FileIssue { where: string; code: FileIssueCode; level: 'error' | 'warn'; detail?: string }
 
 export interface ParsedLessonFile {
@@ -361,8 +361,27 @@ export function readQuestion(raw: unknown, where: string, issues: FileIssue[], d
   }
 }
 
-/** Read a lesson file. */
-export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): ParsedLessonFile {
+/**
+ * Warnings for the event keys a flight lesson names that no flight emits (T01,
+ * map §4.1): an `event` criterion's key and the `endEvent`. The reader takes
+ * any key — a newer app may emit one this build does not know — so a typo
+ * reads and then never happens: "must happen" fails and an `endEvent` never
+ * ends the flight. `knownEvents` is the set the page knows (the `evt.*` keys of
+ * its dictionary, which name every event the simulation emits); the reader
+ * itself stays free of the dictionaries, so the re-check's worker does not
+ * carry them.
+ */
+export function eventIssues(lesson: Lesson, where: string, knownEvents: ReadonlySet<string>): FileIssue[] {
+  const issues: FileIssue[] = [];
+  lesson.criteria.forEach((c, i) => {
+    if (c.kind === 'event' && !knownEvents.has(c.key)) issues.push({ where: `${where}.criteria[${i}]`, code: 'event', level: 'warn', detail: c.key });
+  });
+  if (lesson.endEvent !== undefined && !knownEvents.has(lesson.endEvent)) issues.push({ where: `${where}.endEvent`, code: 'event', level: 'warn', detail: lesson.endEvent });
+  return issues;
+}
+
+/** Read a lesson file; with `knownEvents`, warn of event keys no flight emits (`eventIssues`). */
+export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>, knownEvents?: ReadonlySet<string>): ParsedLessonFile {
   const issues: FileIssue[] = [];
   if (!isRecord(raw) || raw.format !== LESSON_FORMAT || !isNum(raw.version) || raw.version < 1) {
     return { lessons: [], questions: [], issues: [{ where: 'document', code: 'format', level: 'error' }], usable: false };
@@ -378,7 +397,10 @@ export function parseLessonFile(raw: unknown, datasets: ReadonlySet<string>): Pa
   };
   if (Array.isArray(raw.lessons)) raw.lessons.forEach((l, i) => {
     const lesson = readAnyLesson(l, `lessons[${i}]`, issues);
-    if (lesson && unique(lesson.id, `lessons[${i}]`)) lessons.push(lesson);
+    if (lesson && unique(lesson.id, `lessons[${i}]`)) {
+      lessons.push(lesson);
+      if (knownEvents && !isCaseLesson(lesson)) issues.push(...eventIssues(lesson, `lessons[${i}] (${lesson.id})`, knownEvents));
+    }
   });
   if (Array.isArray(raw.questions)) raw.questions.forEach((q, i) => {
     const question = readQuestion(q, `questions[${i}]`, issues, datasets);
@@ -406,9 +428,12 @@ export function lessonFileVersion(lessons: readonly CatalogLesson[]): number {
   return lessons.reduce((v, l) => Math.max(v, lessonVersion(l)), FLIGHT_ONLY_VERSION);
 }
 
-/** A file holding the given lessons and questions, at the lowest version that reads them all (`lessonFileVersion`). */
+/** The document of a file holding the given lessons and questions, at the lowest version that reads them all (`lessonFileVersion`). */
+export function lessonFileDocument(lessons: readonly CatalogLesson[], questions: readonly Question[] = []): LessonFileDocument {
+  return { format: LESSON_FORMAT, version: lessonFileVersion(lessons), lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}) };
+}
+
+/** That document as the file's text. */
 export function lessonFileText(lessons: readonly CatalogLesson[], questions: readonly Question[] = []): string {
-  const version = lessonFileVersion(lessons);
-  const doc: LessonFileDocument = { format: LESSON_FORMAT, version, lessons: [...lessons], ...(questions.length ? { questions: [...questions] } : {}) };
-  return `${JSON.stringify(doc, null, 2)}\n`;
+  return `${JSON.stringify(lessonFileDocument(lessons, questions), null, 2)}\n`;
 }

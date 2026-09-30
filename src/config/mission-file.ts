@@ -358,23 +358,35 @@ async function pipe(bytes: Uint8Array, stream: CompressionStream | Decompression
 }
 
 /**
- * The document as a link parameter: `z` and the deflated JSON in base64url,
- * or `j` and the JSON itself where the browser has no CompressionStream.
+ * Any JSON document as a link parameter: `z` and the deflated JSON in
+ * base64url, or `j` and the JSON itself where the browser has no
+ * CompressionStream. A mission link (below) is one; T01's scenario link
+ * carries a whole lesson file the same way (src/lessons/scenario-link.ts).
  */
-export async function encodeMissionParam(doc: MissionDocument): Promise<string> {
-  const json = new TextEncoder().encode(JSON.stringify(doc));
+export async function encodeJsonParam(value: unknown): Promise<string> {
+  const json = new TextEncoder().encode(JSON.stringify(value));
   if (typeof CompressionStream === 'function') return `z${toBase64Url(await pipe(json, new CompressionStream('deflate-raw')))}`;
   return `j${toBase64Url(json)}`;
 }
 
 /** A link parameter back to the JSON it carries; throws when it is not one. */
-export async function decodeMissionParam(param: string): Promise<unknown> {
+export async function decodeJsonParam(param: string): Promise<unknown> {
   const kind = param[0], body = fromBase64Url(param.slice(1));
   let bytes: Uint8Array;
   if (kind === 'z') bytes = await pipe(body, new DecompressionStream('deflate-raw'));
   else if (kind === 'j') bytes = body;
-  else throw new Error('not a mission link');
+  else throw new Error('not a link parameter');
   return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+/** The mission document as a link parameter (`encodeJsonParam`). */
+export function encodeMissionParam(doc: MissionDocument): Promise<string> {
+  return encodeJsonParam(doc);
+}
+
+/** A mission link's parameter back to the JSON it carries; throws when it is not one. */
+export function decodeMissionParam(param: string): Promise<unknown> {
+  return decodeJsonParam(param);
 }
 
 // ─── the file ───────────────────────────────────────────────────────────────
