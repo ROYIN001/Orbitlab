@@ -285,6 +285,18 @@ describe('drag make-up', () => {
     }
   });
 
+  it('refuses an open orbit, a perigee under the ground and a spacecraft that is not one (added in review)', () => {
+    const o: Orbit = { a: R_EARTH + 500 * KM, e: 0, i: 0, raan: 0, argp: 0, m0: 0, jd0: JD };
+    expect(() => dragMakeupPerYear({ ...o, e: 1.2 }, sc, ECSS_LEVELS.moderate)).toThrow(RangeError);
+    expect(() => dragMakeupPerYear({ ...o, e: -0.1 }, sc, ECSS_LEVELS.moderate)).toThrow(RangeError);
+    expect(() => dragMakeupPerYear({ ...o, a: 3 * R_EARTH, e: 0.9 }, sc, ECSS_LEVELS.moderate)).toThrow(RangeError);
+    expect(() => dragMakeupPerYear(o, { ...sc, mass: 0 }, ECSS_LEVELS.moderate)).toThrow(RangeError);
+    expect(() => dragMakeupPerYear(o, { ...sc, area: -1 }, ECSS_LEVELS.moderate)).toThrow(RangeError);
+    expect(() => dragMakeupPerYear(o, { ...sc, cd: Number.NaN }, ECSS_LEVELS.moderate)).toThrow(RangeError);
+    // above the air there is nothing to make up: a geostationary satellite
+    expect(dragMakeupPerYear({ ...o, a: GEO_RADIUS_IADC }, sc, ECSS_LEVELS.high)).toBe(0);
+  });
+
   it('grows with the Sun\'s activity', () => {
     const o: Orbit = { a: R_EARTH + 500 * KM, e: 0.001, i: 55 * DEG, raan: 0, argp: 0, m0: 0, jd0: JD };
     const [lo, mid, hi] = (['low', 'moderate', 'high'] as const).map((l) => dragMakeupPerYear(o, sc, ECSS_LEVELS[l]));

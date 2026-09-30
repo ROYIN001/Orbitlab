@@ -148,6 +148,12 @@ export function nsskPerYear(di: number): number {
  */
 export function dragMakeupPerYear(o: Orbit, sc: Spacecraft, activity: Activity): number {
   finite('a', o.a, R_EARTH);
+  finite('e', o.e, 0);
+  if (!(o.e < 1)) throw new RangeError(`e must be below 1, a closed orbit, to be held: ${o.e}`);
+  finite('perigee radius', o.a * (1 - o.e), R_EARTH);
+  if (!(Number.isFinite(sc.mass) && sc.mass > 0)) throw new RangeError(`the spacecraft's mass must be above zero: ${sc.mass}`);
+  finite('area', sc.area, 0);
+  finite('cd', sc.cd, 0);
   const forces: ForceModel = { j2: true, j3j4: false, drag: true, sun: false, moon: false, srp: false, activity };
   const el = { a: o.a, e: o.e, i: o.i, raan: o.raan, argp: o.argp, M: o.m0 };
   const { da } = dragRates(el, o.jd0, forces, sc, indicesOver(activity, o.jd0, o.jd0 + YEAR / 86400));
