@@ -30,8 +30,10 @@
  * `tumblingBoxArea` (src/orbit/reentry.ts) and `B_RANGE`
  * (src/orbit/ballistic.ts): the guard reads direct imports only, and the
  * app's main bundle holds them already (src/worksheets/cases.ts), but a
- * worker that imports this file takes them in too. It is the only file in
- * src/design that does.
+ * worker that imports this file takes them in too. The satellite model
+ * (src/design/satellite-model.ts, track B) does the same through
+ * src/orbit/satellite-air.ts and src/orbit/disposal.ts, and imports this
+ * file besides; those two are the files in src/design that do.
  * tests/d06-satellite-area.test.ts holds it to NAPA-2 (B = 0.0134 m²/kg and
  * its lifetime within 25 %, docs/VALIDATION.md §7) and to TU Delft p. 138.
  */
