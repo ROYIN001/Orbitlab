@@ -50,8 +50,9 @@ export function groundSpeed(h: number): number {
  *
  * At nadir both are `groundSampleDistance(h, p, f)`, returned as that, so the
  * figure O04 shows is the same number to the bit. A view grazing the horizon
- * has an infinite cross-track sample; past the horizon it sees no ground,
- * and both are Infinity.
+ * has an infinite cross-track sample; past the horizon, or pointed away from
+ * the Earth (90° or more from nadir), it sees no ground, and both are
+ * Infinity.
  *
  * No free worked example (map §2.2 F): tests/imaging.test.ts holds it to a
  * ray traced to the sphere, and to `sideReach`.
@@ -63,7 +64,9 @@ export function offNadirGsd(h: number, pitch: number, focalLength: number, offNa
   }
   const r = R_EARTH + h;
   const sinInc = (r / R_EARTH) * Math.abs(Math.sin(offNadir));
-  if (sinInc > 1) return { along: Infinity, cross: Infinity };
+  // no ground: past the horizon, or pointed away from the Earth altogether
+  // (beyond 90° |sin| shrinks again, and the near root would be negative)
+  if (sinInc > 1 || Math.cos(offNadir) <= 0) return { along: Infinity, cross: Infinity };
   const cosInc = Math.sqrt(1 - sinInc * sinInc);
   const rho = (h * (2 * R_EARTH + h)) / (r * Math.cos(offNadir) + R_EARTH * cosInc);
   const along = groundSampleDistance(rho, pitch, focalLength);

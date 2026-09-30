@@ -220,6 +220,17 @@ describe('off-nadir GSD, self-consistency only (D06)', () => {
     expect(offNadirGsd(h, p, f, horizon - 1e-9).cross).toBeGreaterThan(1e3 * nadir);
     expect(offNadirGsd(h, p, f, horizon + 1e-3)).toEqual({ along: Infinity, cross: Infinity });
   });
+
+  it('sees no ground, Infinity, when the camera points away from the Earth, however far round', () => {
+    // Past 90° from nadir the line of sight climbs away from the sphere; near
+    // 180° |sin| is small again, so the horizon test on sin alone passes and
+    // the near root is negative. Expected exactly Infinity, fixed before the run.
+    for (const { h, p, f } of cameras) {
+      for (const deg of [90, 100, 120, 150, 170, 179, 180, -120, -175, -180, 200]) {
+        expect(offNadirGsd(h, p, f, deg * DEG), `${h / 1e3} km, ${deg}°`).toEqual({ along: Infinity, cross: Infinity });
+      }
+    }
+  });
 });
 
 /**
