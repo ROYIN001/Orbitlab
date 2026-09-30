@@ -1,5 +1,5 @@
 /**
- * Modal dialogs: "Physics & sources" and the camera sequence.
+ * Modal dialogs: "Physics & sources", "About Orbitlab" and the camera sequence.
  *
  * Both are native `<dialog>` elements opened with `showModal()`, which gives
  * Escape-to-close and the top layer for free, plus an explicit focus trap and
@@ -13,6 +13,7 @@
 import type { CameraMode } from '../render/cameras';
 import { t } from '../i18n';
 import { BUILD } from '../build-info';
+import { CITATION_URL, DEVELOPER, NOTICE_URL, REPO_URL, citation } from '../credits';
 import rigidDossierUrl from '../../docs/SIXDOF-VEHICLE-DATA.md?url';
 import { getNotation, QUANTITIES, symbolNode, type Quantity } from './notation';
 import './notation.css';
@@ -228,6 +229,48 @@ export class PhysicsDialog extends Modal {
     b.append(ul);
     b.append(el('p', 'small', t('dlg.physics.credits')));
     b.append(el('p', 'small', t('dlg.physics.build', { commit: BUILD.commit, version: BUILD.version })));
+  }
+}
+
+/** Who made the app, its version and licences, how to cite it, thanks and the disclaimer (README "About this project"). */
+export class AboutDialog extends Modal {
+  applyLanguage(): void {
+    super.applyLanguage();
+    this.el.setAttribute('aria-label', t('about.footerLink'));
+    const b = this.body;
+    b.replaceChildren();
+    b.append(el('span', 'eyebrow', t('about.eyebrow')));
+    b.append(el('h2', undefined, t('app.title')));
+    b.append(el('p', 'lead', t('about.lead')));
+
+    const dev = el('div', 'about-dev');
+    const avatar = el('span', 'about-avatar', DEVELOPER.name.charAt(0));
+    avatar.setAttribute('aria-hidden', 'true');
+    const who = el('div');
+    const name = el('p', 'about-name', DEVELOPER.name);
+    name.append(' ', el('span', 'about-handle', `(${DEVELOPER.handle})`));
+    who.append(name, el('p', 'about-role', t('about.role')));
+    dev.append(avatar, who);
+    b.append(dev);
+
+    const facts = el('dl', 'about-facts');
+    for (const [term, value] of [
+      [t('about.version'), t('dlg.physics.build', { commit: BUILD.commit, version: BUILD.version })],
+      [t('about.licence'), t('about.licenceText')],
+      [t('about.cite'), citation(BUILD.version)],
+    ]) facts.append(el('dt', undefined, term), el('dd', undefined, value));
+    b.append(facts);
+
+    b.append(el('h3', undefined, t('about.thanks')));
+    const thanks = el('ul');
+    thanks.append(el('li', undefined, t('about.thanks.threejs')), el('li', undefined, t('about.thanks.data')));
+    b.append(thanks);
+
+    b.append(el('p', 'about-disclaimer', t('about.disclaimer')));
+
+    const links = el('ul', 'about-links');
+    links.append(link(REPO_URL, 'GitHub'), link(NOTICE_URL, t('about.link.notice')), link(CITATION_URL, t('about.link.cite')));
+    b.append(links);
   }
 }
 
