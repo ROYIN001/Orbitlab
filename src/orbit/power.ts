@@ -62,7 +62,8 @@ export const SOLAR_FLUX_1AU = 1361;
  * The solar flux at the Earth on Julian date `jd`, W/m²: `SOLAR_FLUX_1AU`
  * × (1 AU / r)², r the Sun's distance from `sunPosition` (Montenbruck &
  * Gill's series, 0.1 % in distance; the inverse square is TU Delft's
- * Eq. [79], p. 124). The Earth's eccentric orbit swings it
+ * Eq. [80], p. 124, in W/m²; its [79] is the same for W/kg). The Earth's
+ * eccentric orbit swings it
  * by ±3.4 % over a year: about 1408 W/m² at perihelion in early January,
  * 1317 W/m² at aphelion in early July.
  */
