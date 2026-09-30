@@ -34,7 +34,7 @@ export interface LessonRecord {
    * of it measured or forecast), so the teacher can see which were used.
    */
   caseData?: { case: CaseId; theos2Epoch?: string; activityTo?: string };
-  /** the answers shown to the student in this attempt, by criterion id: the attempt did not pass on them */
+  /** the answers shown to the student in this attempt, by criterion id: on them it passes only with help */
   revealed?: string[];
 }
 
@@ -43,14 +43,18 @@ export interface LessonProgress {
   attempts: number;
   /** hints revealed, 0–3 */
   hintsShown: number;
+  /** passed unaided: a pass with help (`passedWithHelp`) never sets it */
   passed: boolean;
-  /** the first flight that passed */
+  /** the first flight that passed unaided */
   passedRecord?: LessonRecord;
+  /** a flight passed with help (on answers shown): recorded as such, never counted as passed */
+  passedWithHelp?: boolean;
   /** the last flight graded */
   last?: LessonRecord;
   /**
    * Expected values shown with "Show the answers", by criterion id: a number
-   * shown is never a pass again (src/lessons/grader.ts `RevealedAnswers`).
+   * shown passes only with help (src/lessons/grader.ts `RevealedAnswers`),
+   * until the student clears them (`clearRevealed`).
    */
   revealed?: Record<string, number[]>;
 }
@@ -130,15 +134,16 @@ export function lessonProgress(data: ProgressData, id: string): LessonProgress {
   return (data.lessons[id] ??= { attempts: 0, hintsShown: 0, passed: false });
 }
 
-/** Keep a graded flight: the last one always, the first pass for good. */
+/** Keep a graded flight: the last one always, the first unaided pass for good, and that one passed with help. */
 export function recordGrade(data: ProgressData, record: LessonRecord & { lessonId: string }): void {
   const { lessonId, ...rec } = record;
   const p = lessonProgress(data, lessonId);
   p.last = rec;
   if (rec.verdict === 'pass' && !p.passed) { p.passed = true; p.passedRecord = rec; }
+  if (rec.verdict === 'passedWithHelp') p.passedWithHelp = true;
 }
 
-/** Keep the expected values shown to the student, so none of them passes later. */
+/** Keep the expected values shown to the student, so none of them passes unaided later. */
 export function recordRevealed(data: ProgressData, lessonId: string, shown: Readonly<Record<string, number>>): void {
   const p = lessonProgress(data, lessonId);
   const kept = (p.revealed ??= {});
@@ -147,6 +152,16 @@ export function recordRevealed(data: ProgressData, lessonId: string, shown: Read
     const list = (kept[id] ??= []);
     if (!list.includes(v)) list.push(v);
   }
+}
+
+/**
+ * "Clear the answers I have seen": forget the values a lesson showed, so a
+ * later attempt can pass unaided (owner decision D-6). What was recorded
+ * (the attempts passed with help, the answers shown in them) stays.
+ */
+export function clearRevealed(data: ProgressData, lessonId: string): void {
+  const p = data.lessons[lessonId];
+  if (p) delete p.revealed;
 }
 
 async function sha256(text: string): Promise<string> {

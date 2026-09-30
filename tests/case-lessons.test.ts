@@ -125,15 +125,20 @@ describe('the case grader', () => {
     expect(gradeCaseLesson(loose, key, typed).verdict).toBe('pass');
   });
 
-  it('fails an answer once shown, and never passes it after', () => {
+  // owner decision D-6: an answer shown passes only with help, never unaided, until the student clears it
+  it('passes an answer once shown only with help, and never unaided after', () => {
     const l = lesson('case-theos2');
     const key = keyOf(l);
     const p = emptyProgress();
     recordRevealed(p, l.id, { j2: key.j2.value, why: key.why.value });
     const g = gradeCaseLesson(l, key, exact(l, key), lessonProgress(p, l.id).revealed);
-    expect(g.verdict).toBe('fail');
+    expect(g.verdict).toBe('passedWithHelp');
     expect(g.criteria.filter((c) => c.revealed).map((c) => c.id)).toEqual(['j2', 'why']);
     expect(g.criteria.find((c) => c.id === 'height')!.state).toBe('pass');
+    // a wrong choice after the answers were shown still fails
+    const wrong = gradeCaseLesson(l, key, { ...exact(l, key), why: key.why.value === 0 ? 1 : 0 }, lessonProgress(p, l.id).revealed);
+    expect(wrong.verdict).toBe('fail');
+    expect(caseAnswersOpen(g)).toBe(true);
   });
 
   // the strip once showed each question's working as soon as it was right, and the Iridium speed's names the miss

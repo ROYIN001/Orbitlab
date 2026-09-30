@@ -10,14 +10,14 @@
  * numbers, and src/lessons may not import the propagator
  * (tests/propagator.test.ts).
  */
-import { answerMatches, wasRevealed, type LessonAnswers, type RevealedAnswers } from './grader';
+import { answerMatches, verdictOf, wasRevealed, type LessonAnswers, type RevealedAnswers } from './grader';
 import type { CaseKey, CaseLesson, CriterionGrade, LessonGrade } from './types';
 
 /**
  * Grade a case lesson. A number is right within the lesson's own tolerance
  * where it sets one, the sheet's otherwise (the key's `tol`); a choice is
- * right on the key's option. An answer shown to the student fails, typed or
- * not (see `regradeAnswers`).
+ * right on the key's option. An answer shown to the student passes only with
+ * help (see `regradeAnswers`).
  */
 export function gradeCaseLesson(lesson: CaseLesson, key: CaseKey, answers: LessonAnswers = {}, revealed: RevealedAnswers = {}): LessonGrade {
   const criteria: CriterionGrade[] = lesson.criteria.map((c) => {
@@ -27,17 +27,12 @@ export function gradeCaseLesson(lesson: CaseLesson, key: CaseKey, answers: Lesso
     const tolPct = k.kind === 'choice' ? undefined : c.tolPct;
     const typed = answers[c.id];
     const value = typed === undefined || !Number.isFinite(typed) ? null : typed;
-    if (wasRevealed({ tol, tolPct }, k.value, revealed[c.id])) return { id: c.id, state: 'fail', value, expected: k.value, revealed: true };
-    if (value === null) return { id: c.id, state: 'pending', value: null, expected: k.value };
+    const shown = wasRevealed({ tol, tolPct }, k.value, revealed[c.id]) ? { revealed: true } : {};
+    if (value === null) return { id: c.id, state: 'pending', value: null, expected: k.value, ...shown };
     const ok = k.kind === 'choice' ? value === k.value : answerMatches(value, k.value, tol, tolPct);
-    return { id: c.id, state: ok ? 'pass' : 'fail', value, expected: k.value };
+    return { id: c.id, state: ok ? 'pass' : 'fail', value, expected: k.value, ...shown };
   });
-  const anyFail = criteria.some((c) => c.state === 'fail');
-  return {
-    lessonId: lesson.id, final: true,
-    verdict: anyFail ? 'fail' : criteria.every((c) => c.state === 'pass') ? 'pass' : 'open',
-    criteria, lockBroken: [], t: 0,
-  };
+  return { lessonId: lesson.id, final: true, verdict: verdictOf(criteria, [], true), criteria, lockBroken: [], t: 0 };
 }
 
 /**
