@@ -285,25 +285,111 @@ A18 (pool Monte Carlo เริ่มไม่ติด) แก้แล้ว�
 - **PHY-05** — `vite.config.ts:67` ตัด `tests/heavy/**` และ `tests/sixdof-fleet/**` ออกจาก `npm test`; CI/deploy รันแค่ `npm test` ข้อเสนอ: workflow ตามตาราง (รายคืนหรือรายสัปดาห์) รัน `test:heavy` + sixdof-fleet 4 shard เป็น matrix และ job ที่กรองด้วย path รัน `validation-timelines.test.ts` บน PR ที่แตะ `src/physics/rigid/**` หรือ `src/data/**`
 - **PHY-18 (PR #36)** — `git merge-tree` ชนเฉพาะ `docs/PHYSICS.md`; branch เพิ่ม `FairingSpec.sepAfterIgnition` (Proton-M p3 +10 s, Angara-A5 urm2 +9 s อ้าง ILS MPG §2.3.1), มวล Proton-M 428.3/157.3 t เทียบ main 419.4/156.1 t, `guidanceDefaultsSixDof {kickAngle: 8}` ของ Angara, abandon insertion, "burn now" เมื่อ J2 coast prediction ล้มเหลวหลัง apex — แต่บันทึก fingerprint/golden/timeline pin ใหม่ก่อน F11/F12/D03 ต้อง rebase, ทิ้งการบันทึกใหม่ของ branch แล้วบันทึกใหม่บน main, re-pin แถว Proton-M/Angara (fairing/time ควรออกจากรายการ), แก้ conflict PHYSICS.md โดยเก็บ §6b ของ main + ย่อหน้า F14; **merge ก่อนงานข้อมูลยานใด ๆ ต่อไป** และการรับต้องผ่าน `test:heavy` (25 น.) + `test:sixdof-fleet` (2 ชม. 40 น.) บนเครื่อง 4 core — ยังไม่มีใครวางเวลานี้
 - **PHY-15** — ข้อเสนอที่ปลอดภัยกว่า "tolerance goldens แทน hash": แฮชค่าที่ปัดเป็น relative 1e-10 (หรือเก็บ state ที่สุ่มแล้วเทียบด้วย 1 mm / 1 µm/s) เพื่อให้เฉพาะการเปลี่ยนฟิสิกส์ขยับ hash และคง exact-hash ไว้หนึ่งตัวเป็น canary — สอดคล้องกับผลตัดสินของคณะวางแผน (ปัก Node 22 ก่อน, hash เป็น gate, tolerance tier เป็น oracle สำหรับ T02)
-## 8. i18n และการเข้าถึง (a11y)
+## 8. i18n, สำเนา, การเข้าถึง (a11y) และมือถือ
+
+**จุดแข็งที่ตรวจแล้ว**
+
+- ท่อภาษา: `setLang`/`initLang` ตั้ง `documentElement.lang`, title และ meta description ตามภาษา; dictionary ~3,560 คีย์ × 3 ภาษาถูกยึด parity ด้วย 16 เทสต์ (เขียวใน 4 s) ครอบ parity, การประกาศเดี่ยว, placeholder, script ครอบ, ไม่มีเลขไทย, call site ทุกคีย์
+- dialog ใช้ `<dialog>` native + `showModal()` จำผู้เปิดและคืนโฟกัส; scrubber เป็น `<input type=range>` มี aria-label/aria-valuetext และคีย์บอร์ดครบ; แท็บ Orbit/inspector/Build เป็น role=tablist; กราฟเป็น role=img มีคำบรรยาย localize; canvas ทั้งสี่ของ Orbit มี aria-label
+- contrast คู่หลักแข็ง (--text 14–17:1, --muted 6.5–7.6:1, --accent 11–13:1); mobile-smoke ผ่านที่ 390×844 (ไม่มี overflow, ทุก nav มีชื่อในภาษาหน้า); web fonts เป็น progressive enhancement (ออนไลน์เท่านั้น, fallback ระบบ, cache โดย SW)
+- ข้อความบทเรียนไทยแทบไม่มีอังกฤษหลงเหลือ (เว้นคำละตินที่ตั้งใจ: max-Q, Isp, Δv); ศัพท์รัสเซียนิ่ง (наведение, апогей, наклонение, ступень)
+
+**ข้อค้นพบ**
+
+| รหัส | ระดับ | ชนิด | เรื่อง | ไฟล์ | งาน | อ้างอิงแผน |
+|---|---|---|---|---|---|---|
+| I18N-01 | P2 | เอกสารล้าสมัย | ข้อความดาวเทียมไทยยังบอกว่าการติดตามดาวเทียมจริง "จะมาในระยะถัดไป" แม้ R02 มีกลุ่ม Thailand แล้ว — **ไม่อยู่ใน #41** | `src/i18n/en.ts:1152` | S | S5/A8 |
+| I18N-02 | P2 | ข้อบกพร่อง | แผงสมการแสดง "No air to act on at this height" บนแท่นปล่อย/หลังลงจอด/เมื่อไม่มีเฟรม (คีย์เดียวสามเงื่อนไข) — **ไม่อยู่ใน #41** | `src/ui/equations-model.ts:84` | S | S5/A8 |
+| I18N-03 | P2 | ข้อบกพร่อง | D5 ยังไม่ใช้: การนำทาง ถูกใช้แทน guidance ใน setup.explicit.*, loop.tab.guidance, evt.guidance*, assess.domain.4 (12 คีย์ + 10 ข้อความบทเรียน) ไม่มีเทสต์กัน (= LES-05) | `src/i18n/th.ts:3067` | M | S5/D5 |
+| I18N-04 | P2 | ข้อบกพร่อง | "stage" ไทยเป็น **ท่อน** ใน UI (292 ครั้ง) แต่ **ขั้น** ในบทเรียน (117 ครั้ง) — hint ของบทเรียนกับป้ายแผงใช้คำต่างกัน ขัดเกณฑ์ S5 "ตรงตัวอักษร" | `src/lessons/builtin/track2.ts:1` | M | S5 |
+| MOB-01 | P2 | ช่องว่าง | S8 ยังไม่ทำ: ที่ความกว้างโทรศัพท์ ปุ่มระดับเป็น glyph เปล่า 3 อันและปุ่มส่วนซ่อนทุกป้ายที่ไม่ใช่ปัจจุบัน — ชื่ออยู่ใน tooltip ที่มองไม่เห็นบนจอสัมผัส (screenshot ยืนยัน: ▷ ◎ ⌬ ไม่มีข้อความ) | `src/ui/modes.css:51` | S | S8/I7 |
+| I18N-05 | P3 | ข้อบกพร่อง | ศัพท์ไทยอื่นมี 2–3 การสะกดและหลายคำขัด glossary: fairing (ครอบจมูก 8 / ฝาครอบ 29 / ครอบหัว 27), telemetry (เทเลเมทรี 8 vs โทรมาตร 3), payload (น้ำหนักบรรทุก 60 vs สัมภาระ 15), apogee/perigee (อะโพจี/เพริจี), inclination (มุมเอียง vs ความเอียง), "max-Q"/"max Q"/"Max-Q" | `src/i18n/th.ts:1` | M | S5 |
+| I18N-06 | P3 | ข้อบกพร่อง | การจัดรูปตัวเลขไม่รวมศูนย์: `num()` 7 ตัว (5 ตาม locale, 3 ตรึง ".") → จอรัสเซียเห็นทั้ง "1 234,5" และ "1234.5"; คำบรรยายกราฟ localize แต่ tick ไม่ (284 `toFixed` ใน 59 ไฟล์) | `src/ui/charts.ts:288` | M | Known limitations |
+| I18N-07 | P3 | ข้อบกพร่อง | วันที่ไทยมีสองปี: พ.ศ. (2569) จาก `toLocaleDateString('th')` และ ค.ศ. (2026) จาก ISO slice บนหน้าเดียวกัน | `src/ui/orbit/sky-panel.ts:1123` | S | — |
+| MOB-02 | P3 | ข้อบกพร่อง | แถบแท็บ Orbit engineer รัสเซียตัดแท็บที่สี่ ("Диаг…") ที่ 390 px โดยไม่มีสัญญาณเลื่อน | `src/ui/orbit/playground.css:33` | S | S8/S16 |
+| MOB-03 | P3 | ข้อบกพร่อง | toast "พร้อมออฟไลน์" ของ PWA ไม่ปิดเองและทับปุ่มล่างบนโทรศัพท์ (ทั้งสอง screenshot) | `src/pwa/register.ts:41` | S | — |
+| MOB-04 | P3 | ช่องว่าง | S16 แท็บงานบนมือถือยังไม่เริ่ม: lead ของ Engineer 8–12 บรรทัด (th 1,017 byte ≈ 2× en) และคอลัมน์ยาวเดียวบนโทรศัพท์ | `src/i18n/en.ts:1689` | L | S16/I7 |
+| A11Y-01 | P3 | ความเสี่ยง | `--dim` (#6c7b8e) ต่ำกว่า WCAG AA บนพื้นแผง (4.20 บน --panel, 3.88 บน --panel2) และใช้กับป้าย 9–11.5 px; 28 กฎ font-size ≤10 px | `src/style.css:754` | S | — |
+| A11Y-02 | P3 | ความเสี่ยง | เป้าแตะของ scene tools/ปุ่มเล่น/ปุ่มหน้าต่าง HUD 21–34 px (ต่ำกว่า 44 px; `.hud-btn` 21×18 ต่ำกว่า WCAG 2.5.8 24 px) | `src/style.css:580` | S | — |
+| A11Y-03 | P3 | ความเสี่ยง | ticker live region ถูกสร้างใหม่ทั้งก้อนทุก event → screen reader อ่านซ้ำถึง 4 แถว; ไม่มีการตรวจ a11y อัตโนมัติเลย | `src/ui/hud.ts:987` | S | — |
+| A11Y-04 | P3 | ความเสี่ยง | `prefers-reduced-motion` ถูกเคารพโดย CSS และหน้า landing/Build แต่ไม่ใช่โดยฉาก launch, camera easing, animation ของ Orbit playground (0 การอ้างใน src/render และ src/ui/orbit) | `src/style.css:1185` | M | — |
+| FONT-01 | P3 | ความเสี่ยง | ไทยออฟไลน์ใช้ฟอนต์ระบบในกล่อง line-height 1.2–1.25 + overflow hidden โดยไม่มี `:lang(th)` — สระ/วรรณยุกต์ซ้อน (ที่, ปั้น) ถูกตัด | `src/style.css:1138` | S | S8 |
+| COPY-01 | P3 | เอกสารล้าสมัย | สำเนา "กำลังสร้าง" ตาย: `plan.orbit.lead` ("Nothing on this page works yet") ไม่เคยถูก render แต่รอด call-site test; `lesson.comingSoon` ฯลฯ เข้าถึงได้ผ่าน COMING ที่ว่าง | `src/i18n/en.ts:1648` | S | — |
+| COPY-02 | P3 | ช่องว่าง | glossary ขาดแถวที่ S5 จะเพิ่ม (guidance/navigation/PEG/IGM/margins/notch) และ build stamp; Known limitations "RU/TH ยังไม่ผ่านเจ้าของภาษา" ยังยืน | `docs/PHYSICS.md:2856` | S | S5 |
+
+**รายละเอียดข้อที่สำคัญ**
+
+- **I18N-01/02** — สองข้อ A8 ที่ยังอยู่บน main และ **PR #41 ไม่ได้แก้** (ตรวจใน worktree ของ codex แล้วสตริงเหมือนกัน); I18N-02: `equations-model.ts:78/84/153` ใช้ `eq.none.noAir` ทั้งกรณี rho = 0, กรณีอากาศมีแต่ความเร็วสัมพัทธ์ ~0 (แท่นปล่อย, หลังลงจอด) และกรณีเฟรมไม่ integrated — ควรแยกเป็น `noAir`/`stillAir`/`noRecord` และเพิ่มกรณี pad/กลางอากาศ/อวกาศ/ลงจอดใน `tests/equations.test.ts` ตามที่แผน S5 ระบุ
+- **I18N-03/04/05 (ศัพท์ไทย)** — รวมกันคืองาน S5 ที่แผนวางไว้: ใช้ D5 เชิงกล (guidance → การนำวิถี ใน setup.explicit.*, loop.tab.guidance, guide.*, evt.guidance*, assess.domain.4, catalog.ts:40; navigation → การนำร่อง ใน guidance.ts:23, track2.ts:87/107 — ตัดสินชัดว่า GNSS ผู้บริโภคใช้ "ดาวเทียมนำทาง" ได้หรือไม่); แทน ขั้น-ที่หมายถึง-stage ด้วย ท่อน ทั่ว builtin/*.ts และคลังคำถาม (คง ขั้นตอน = step); normalize ตาม glossary (ครอบจมูกจรวด, โทรมาตร, น้ำหนักบรรทุก, จุดไกลโลกที่สุด/จุดใกล้โลกที่สุด, ความเอียงของวงโคจร, "max-Q"); เพิ่มแถว glossary phase/gain margin, attitude control, PEG, IGM, notch; ขยาย `tests/i18n.test.ts` ด้วย deny-list (การนำทาง ในคีย์วิศวกรรม, ฝาครอบ, ครอบหัว, เทเลเมทรี, อะโพจี, เพริจี, สัมภาระ, "max Q", "Max-Q") และเทสต์ว่า hint ไทยของ control ตรงป้าย th.ts ของ control นั้น
+- **MOB-01 (S8)** — `modes.css:44` ซ่อน span ของ section ที่ไม่ใช่ปัจจุบัน ≤960 px และ `:51` ซ่อนทุก span ของ level ≤480 px; journey ยืนยันแค่ accessible name (มาจาก title) จึงผ่านทั้งที่ผู้ใช้จอสัมผัสมองไม่เห็นชื่อ ทางแก้: ป้ายสั้นใต้ glyph (ชิปสองแถว) และ mobile-smoke ยืนยันข้อความ *มองเห็น* (computed width > 0)
+- **FONT-01 + A11Y-01** — เกี่ยวเนื่อง: `.hud-body` 10 px/1.24 และ 9.5 px/1.2 ใน overflow hidden; `--dim` 3.9–4.5:1 บนป้าย 9–11.5 px ทางแก้ร่วม: `html[lang=th] .hud-body, .pg-mode, .li-block h4 { line-height: 1.4 }`, ยก `--dim` เป็น ≈#8593a6, ยกป้าย 8.5–10 px เป็น ≥11 px (ช่วย glyph ไทยด้วย); ตรวจใน PWA ออฟไลน์บน Android/Windows — และการ self-host subset ของ Noto Sans Thai เป็นการตัดสินใจของเจ้าของ (README:365 อธิบายว่าทำไมไม่ทำ)
+## 9. เอกสาร — ความสอดคล้องและความครบ (README, docs/*.md, docs/history, พื้นผิวเอกสารในแอป)
+
+**จุดแข็งที่ตรวจแล้ว** — ตาราง fleet 21 ยานและตารางฐาน 16 แถวใน README ตรง `vehicles.ts`/`sites.ts` ทุกค่า; จำนวนที่สำคัญถูก (24 บท, 157 ข้อ, 175 ไฟล์เทสต์, 16+4 ฐาน, tour 7+8 และ 5 ขั้น, วันที่ snapshot); PHYSICS §10 และ Known limitations บันทึกความไม่ตรงแทนการ tune ทิ้ง และ VALIDATION §9 ให้คำสั่งรันซ้ำที่ไฟล์มีจริงทั้ง 12; docs/README.md ให้ลำดับอ่านและกฎบันทึกลงวันที่; ข้อความอนาคต (D06/D07 Phase 4, Engineer parts builder "to come") ตรง `section-plan.ts`; glossary ประกาศเป็น source of truth และเทสต์บังคับ parity; คำอ้าง CI/deploy ใน README ถูกต้อง
+
+**ข้อค้นพบ**
+
+| รหัส | ระดับ | ชนิด | เรื่อง | ไฟล์ | งาน |
+|---|---|---|---|---|---|
+| DOC-01 | P2 | เอกสารล้าสมัย | ตาราง roadmap Launch ใน IMPLEMENTATION-STATUS เว้นว่าง 9 รายการที่ merge แล้ว (G01–G05, G08, E02, E04, C01), ไม่มีแถว E03/E05/P08/Q0, และยังชี้ branch ที่ merge นานแล้ว — history records เขียนไว้ตรง ๆ ว่า "ทิ้งตารางไว้ให้เจ้าของ fold in ตอน merge" ซึ่งไม่เคยเกิด | `docs/IMPLEMENTATION-STATUS.md:219` | S |
+| DOC-02 | P2 | เอกสารล้าสมัย | README/USER-GUIDE บอก Watch มี 9 เที่ยว โค้ดมี 10 (ขาด "Soyuz MS: at the station in 3 hours") | `README.md:281` | S |
+| DOC-03 | P2 | เอกสารล้าสมัย | README บอก WebMCP 9 เครื่องมือ แอปลงทะเบียน 17 (13 ใน mcp.ts + 4 ของบทเรียน) | `README.md:403` | S |
+| DOC-06 | P2 | ช่องว่าง | "Sources & credits" ในแอปและ Acknowledgements ใน README ไม่ระบุแหล่งข้อมูล Orbit/Build ใด (CelesTrak, NOAA SWPC, GFZ, IERS, NRLMSISE-00, AIAA 2006-6753, GCAT, eoPortal, ULA/Arianespace/ILS, Skyfield …) ขัด roadmap principle 5 | `src/ui/dialogs.ts:210` | S |
+| DOC-07 | P2 | ช่องว่าง | ไม่มี LICENSE/ฟิลด์ license/tag/CHANGELOG สำหรับเว็บสาธารณะที่ตั้งใจให้คัดลอกลง intranet (= INF-09) | `package.json:3` | S |
+| DOC-08 | P2 | ช่องว่าง | ไม่มีคำชี้แจงความเป็นส่วนตัว/ข้อมูล แม้ผู้ชมรวมผู้เยาว์ แอปเก็บคำตอบและออนไลน์เรียก 3 โฮสต์ (CelesTrak, NOAA, Google Fonts) — PDPA ปรากฏครั้งเดียวใน ROADMAP:48 (= INF-15) | `docs/ROADMAP-PART2-3.md:48` | S |
+| DOC-09 | P2 | ช่องว่าง | ไม่มีคู่มือครูและไม่มีโปรโตคอลทดสอบผู้ใช้ (S9) — "teacher" ปรากฏครั้งเดียวใน USER-GUIDE §18 ทั้งที่โค้ดอ่านไฟล์ครู ให้เกรด export ผล มี worksheets พร้อมเฉลย | `docs/USER-GUIDE.md:1156` | M |
+| DOC-10 | P2 | ช่องว่าง | USER-GUIDE (100 kB) เป็นอังกฤษล้วน (0 อักษรไทย) และเข้าไม่ถึงจากแอป; dist/ ไม่มี docs; แอปลิงก์เอกสารเดียวคือ dossier six-DOF | `docs/USER-GUIDE.md:1` | L |
+| DOC-11 | P2 | ช่องว่าง | glossary 98 แถว EN/RU/TH อยู่แค่ใน PHYSICS.md; แอปแสดง 4 คำ (= LES-05/COPY-02) | `docs/PHYSICS.md:2856` | M |
+| DOC-04 | P3 | เอกสารล้าสมัย | PHYSICS §10 ประโยค max-Q ของ Falcon 9 ("~20 s early เพราะ bucket 22 kPa") ขัด VALIDATION §2 (8–11 s, −13…−18 %) และคอมเมนต์ใน vehicles.ts ว่าเวลาถูกกำหนดโดย ascent profile | `docs/PHYSICS.md:2799` | S |
+| DOC-05 | P3 | เอกสารล้าสมัย | Help ในแอปยังบอก ISS preset "not rendezvous or docking" (G07 dock แล้ว); ส่วน slosh/bending ใน Physics dialog แก้ใน #41 | `src/ui/help-content.ts:38` | S |
+| DOC-12 | P3 | เอกสารล้าสมัย | docs/README.md: คำบรรยาย USER-GUIDE/VALIDATION เก่า และ history records 3 ไฟล์ (HANDOFF-G02-BURNS, LESSONS-2026-09, PARALLEL-GNC-2026-09) ไม่อยู่ในดัชนี | `docs/README.md:7` | S |
+| DOC-13 | P3 | เอกสารล้าสมัย | README Features ขาด 4 failure mode (launchAbort, padFire, boosterCollision, stagingFailure) และ Project layout ขาด 7 โฟลเดอร์ (lessons, config, audio, pwa, session, worksheets, ui/lessons) | `README.md:35` | S |
+| DOC-14 | P3 | เอกสารล้าสมัย | คำบรรยาย `test:heavy` ("~15 นาที, delivered-orbit matrix") ต่ำกว่าจริงเป็นสิบเท่า — tests/heavy มี 26 ไฟล์รวม validation-falcon9/timelines, monte-carlo ×5, flex-fleet ×4, starship, reentry-agencies | `README.md:140` | S |
+| DOC-15 | P3 | เอกสารล้าสมัย | Node: README "20+", Vite 8 ต้อง ^20.19 \|\| >=22.12, CI 22, ไม่มี engines (= INF-07) | `README.md:147` | S |
+| DOC-16 | P3 | เอกสารล้าสมัย | หัว SIXDOF-VEHICLE-DATA บอก scope 2 ยาน (2026-09-19) ทั้งที่ครอบ 21 แล้วและถูก bundle เป็น dossier ในแอป; SIXDOF-BROWSER-QA (2026-09-20) ควรอยู่ใน history/ | `docs/SIXDOF-VEHICLE-DATA.md:3` | S |
+| DOC-17 | P3 | เอกสารล้าสมัย | history records (CHECKPOINT-2026-09-20, CONTINUE-PHASE-6, HANDOFF-G02-BURNS) ไม่มีแบนเนอร์ "superseded" ในไฟล์เอง | `docs/history/CHECKPOINT-2026-09-20.md:1` | S |
+| DOC-18 | P3 | ช่องว่าง | ไม่มี decision log: "owner" 20 ครั้งกระจายใน 5 เอกสารพร้อมวันที่แต่ไม่มีดัชนี; "Twenty further items are kept for later" ไม่มีรายการที่ใดใน repo | `docs/ROADMAP-PART2-3.md:49` | S |
+| DOC-19 | P3 | ช่องว่าง | PHYSICS.md (223 kB, 46 หัวข้อ) และ VALIDATION.md (205 kB, 48 หัวข้อ) ไม่มี TOC และไม่ถูก publish กับเว็บ | `docs/PHYSICS.md:1` | M |
+| DOC-20 | P3 | ช่องว่าง | USER-GUIDE ขาด Help/คู่มือภารกิจแรก, การแสดงต้นทุน dogleg, สวิตช์ `?physics=inline` | `docs/USER-GUIDE.md:530` | S |
+| DOC-21 | P3 | ช่องว่าง | โฟลเดอร์ audit ไม่มีดัชนีสถานะ: PLAN-2026-09-28 ไม่บอกว่า session ใด merge แล้ว; STATUS/README ไม่อ้าง audit เลย | `docs/history/audit-2026-09-27/PLAN-2026-09-28.md:136` | S |
+| DOC-22 | P3 | เอกสารล้าสมัย | STATUS "Updated 2026-09-28" แต่แก้ล่าสุด 09-29; README ไม่กล่าวถึงฐาน C04 4 แห่งที่ไม่มียานบิน | `docs/IMPLEMENTATION-STATUS.md:3` | S |
+| DOC-23 | P3 | ความเสี่ยง | PR #41 เพิ่ม ~119k บรรทัดหลักฐานใต้ docs/ นอกธรรมเนียม history/ (= R2 ของรีวิว #41) | `docs/README.md:22` | S |
+
+ประมาณสองในสามของข้อค้นพบด้านเอกสารเป็นการแก้ระดับ S ที่ **หนึ่ง session เคลียร์ได้หมด** — และคณะวางแผนเสนอ *เทสต์ความสอดคล้องของตัวเลขในเอกสาร* (จำนวนเทสต์/เครื่องมือ/ยาน/Node ยึดกับ source แบบ `section-plan.test.ts`) เพื่อไม่ให้ drift กลับมา (ENG-K22)
+## 10. คุณภาพชุดทดสอบ
 
 _(ผู้ตรวจพื้นที่นี้ยังทำงานอยู่ — จะเติมเมื่อผลมาถึง)_
 
-## 9. เอกสาร (README, USER-GUIDE, IMPLEMENTATION-STATUS, PHYSICS, VALIDATION, ROADMAP)
+## 11. เว็บสด, GitHub Actions และ PR ที่เปิดอยู่ (#41, #38, #36)
 
-_(รอผลผู้ตรวจ)_
+**ยืนยันแล้ว** — เว็บสดคือ main 404eb0c เป๊ะ: `index.html` ที่ serve (13,889 B, 2026-09-29 23:38:52 GMT) byte-identical กับ `dist/index.html` ที่ build ในเครื่อง และอ้าง chunk เดียวกัน (index 2,484,344 B; i18n 1,145,154 B; css 139,377 B) → build ทำซ้ำได้; snapshot ทั้งสามถูกดึงโดย deploy เองที่ 23:31:26Z; header เป็นค่าเริ่มต้นของ GitHub Pages (max-age=600, HSTS, gzip เท่านั้น, ไม่มี CSP); social preview 1200×630 มี; PWA plumbing ถูก (manifest, sw.js versioned precache 46 entry, Range 206/416, skip-waiting, ตรวจอัปเดตรายชั่วโมง); CI เขียวบน head ของทั้งสาม PR
 
-## 10. คุณภาพชุดทดสอบ
+**ข้อค้นพบ**
 
-_(รอผลผู้ตรวจ)_
+| รหัส | ระดับ | ชนิด | เรื่อง | ไฟล์ | งาน |
+|---|---|---|---|---|---|
+| LS-01 | P2 | ความเสี่ยง | **การ re-run deploy run เก่าจะ publish commit เก่าทับเว็บสด** — เกิดจริง 29 ก.ย.: run 41 attempt 3 (7716799 = merge #33) deploy 20:55Z แล้ว run 44 attempt 2 (f7c7aea = merge #27 ก่อน #40) deploy 21:56Z → เว็บสดถอยไปไม่มีส่วน Build 2 ชม. 44 น. จน run 47 ที่ 23:38Z; deploy.yml ไม่มีการ์ดว่า `github.sha` ยังเป็นปลาย main | `.github/workflows/deploy.yml:65` | S |
+| LS-02 | P2 | ช่องว่าง | การเข้าครั้งแรกดาวน์โหลด ~16 MB: หน้า 1.07 MiB gzip + precache 15.35 MiB เริ่มตอนโหลดหน้า ไม่มี data-saver/การเลื่อน (= INF-05) | `src/main.ts:784` | M |
+| PR36-01 | P2 | ช่องว่าง | PR #36 ยังเป็น draft, mergeable_state dirty, ตามหลัง 54 commit, ค้างผล heavy/six-DOF-fleet ที่สัญญาไว้ในตัว PR, conflict เฉพาะ PHYSICS.md:2811; commit ก่อนหน้า (6a3fa2d) ล้ม rigid-flex golden ของ angaraa5 แล้วแก้ด้วยการบันทึกใหม่ | `docs/PHYSICS.md:2811` | S |
+| PR38-01 | P2 | ช่องว่าง | PR #38 ไม่มีคำบรรยาย ไม่มีรีวิว, conflict กับ main ใน IMPLEMENTATION-STATUS (2 hunk) และหลัง #41 ลงจะ conflict ใน `src/render/scene.ts:366` (#41: `buildStarField(4e8, pixelRatio)`; #38: `buildMoon()` + `buildStarField()`); browser-smoke ไม่เคยรันบน head; bundle delta เทียบ main วัดไม่ได้เพราะ base เก่ากว่า #40 | `src/render/scene.ts:366` | M |
+| PR38-02 | P2 | เอกสารล้าสมัย | roadmap Phase 5 (L01–L05) ยังอ่านเป็น greenfield แม้ #38 ทำ ephemeris (DE441 ก.ค. 1969), lunar gravity degree 2, TLI/LOI, powered descent, lunar-return entry สำหรับ Apollo 11 แล้ว (~2,046 บรรทัด apollo*.ts + lunar/*) — ต้อง re-scope Phase 5 เป็น "generalise #38" | `docs/ROADMAP-PART2-3.md:177` | L |
+| LS-03 | P3 | ช่องว่าง | ไม่มี `public/404.html`: ลิงก์แบบ path (`/Orbitlab/orbit/engineer`) และคำผิดเจอหน้า 404 ของ GitHub | `public` | S |
+| LS-04 | P3 | ช่องว่าง | landmark ของหน้าแอป: ไม่มี h1, ไม่มี skip link, ไม่มี noscript; `lang="en"` จนกว่า JS จะรัน | `index.html:2` | S |
+| LS-05 | P3 | ความเสี่ยง | ไม่มี CSP (= INF-13) | `index.html:3` | S |
+| LS-06 | P3 | ความเสี่ยง | รีเฟรชข้อมูลรายวันลงจริง ~10:00 UTC (17:00 ไทย) → ระหว่างเวลาเรียนไทย snapshot เก่าได้ถึง ~29 ชม.; cron อยู่ในช่วงแออัด (ช้า 6h38m/6h39m) — ควรย้ายเป็นนาทีคี่ที่เงียบ เช่น `43 17 * * *` UTC (00:43 ไทย) | `.github/workflows/deploy.yml:9` | S |
+| CI-01 | P3 | ความเสี่ยง | browser-smoke มี `if: github.event_name == 'pull_request'` จึง "skipped" บน head ของ #36/#38 ที่มีเฉพาะ push run | `.github/workflows/ci.yml:23` | S |
+| PR41-01 | P3 | ความเสี่ยง | สรุป #41 ในมุม repo: 526 ไฟล์ +118,908, packet 20 MB (447 ไฟล์) + zip, workflow 3 ไฟล์ผูก branch, IMPLEMENTATION-STATUS:186 ยังบอก 2,532 เทสต์/175 ไฟล์ ขณะ CI ของ #41 พิมพ์ 9,259/191 (รายละเอียดใน PR41-CODEX-REVIEW-TH.md) | `docs/IMPLEMENTATION-STATUS.md:186` | S |
 
-## 11. PR ที่เปิดอยู่ (#41, #36, #38) ในมุมของงานที่เหลือ
+**ลำดับ merge ที่แนะนำ (ยืนยันจากสามแหล่ง: รีวิว #41, ผู้ตรวจ PR สด, คณะวางแผน)**: **#41 → #36 → #38**
 
-_(รอผลผู้ตรวจ; ดูตาราง PR ใน STATUS-INVENTORY-TH.md §5 และลำดับ merge ใน PR41-CODEX-REVIEW-TH.md §6 ไปก่อน)_
+1. **#41** หลัง R1–R5 (ดูรีวิว): merge-tree กับ main สะอาด; นำ 17 ไฟล์เทสต์ regression ใหม่ที่มีค่าจริง (kepler-boundary, lambert-boundary, progress-storage-recovery, monte-carlo-job-failures, docx-pagination, worksheet-language, sky-import, render-stars-regression …); แนะนำ squash-merge ถ้า packet ไม่ถูกถอดก่อน เพื่อไม่ให้ blob 447 ไฟล์เข้า history ของ main
+2. **#36**: ขอผู้เขียน merge main + แก้ hunk PHYSICS.md (คงถ้อยคำ main + ประโยค `sepAfterIgnition` ของ F14), รัน `test:heavy` และ `test:sixdof-fleet` บน head ที่ merge แล้วและวางผลใน PR, แก้ "68 rows" → 71 ใน VALIDATION §4, แล้ว un-draft; โค้ดแตะแค่ไฟล์ฟิสิกส์และ merge สะอาดกับทั้ง #41 และ #38 — แต่ **ต้องบันทึก golden/fingerprint ใหม่บน main** เพราะของ branch บันทึกก่อน F11/F12/D03 (PHY-18)
+3. **#38**: ขอผู้เขียนเขียนคำบรรยาย (6a–6g เพิ่มอะไร, การ reconcile id, จำนวนเทสต์, bundle delta เทียบ main), merge main *หลัง* #41 และแก้ scene.ts (เรียก `buildStarField(4e8, pixelRatio)` และคง `buildMoon`) + 2 hunk ของ status doc, ให้มี pull_request-event run เพื่อ browser-smoke รัน, รัน test:heavy (เทสต์ heavy ใหม่ของมัน) + journeys 4 เส้นทาง, รายงานการโตของ index/i18n เทียบ 2,484/1,145 kB, ยืนยัน parity EN/TH/RU ของคีย์ใหม่; **เพิ่มเทสต์ยึด Apollo 11 (TLI Δv, เวลาถึง perilune, entry peak g) กับ MSC-00171 ก่อน merge** (คณะวางแผน 3)
 
+**สำหรับ roadmap**: หลัง #38 ทำเครื่องหมาย L01–L05 "ทำบางส่วนโดย #38 (Apollo 11 เท่านั้น)" และ re-scope Phase 5: L01 = ขยาย `ephemeris-1969` เป็นอนุกรม Meeus/DE440 ทั่วไปหลัง API `lunar/ephemeris.ts` เดียวกัน; L02 = ย้าย `lunar/gravity.ts` + `cislunar.ts` เข้า Orbit propagator พร้อม SOI switching; L03 = `tli-guidance.ts` เป็น planner ทุกยาน/ทุกวันที่ + free-return + phasing แบบ Chandrayaan; L04/L05 = parametrise `apollo-descent`/`apollo-entry` สำหรับ lander อื่น + skip entry
 ## 12. ผลการยืนยันแบบโต้แย้งของข้อค้นพบ P1/P2
 
-_(รอรอบยืนยัน)_
+_(รอรอบยืนยัน — ข้อค้นพบชนิด defect/risk ระดับ P1/P2 ทุกข้อจะถูกส่งให้ผู้ยืนยันสองคนที่ตั้งต้นให้หักล้าง)_
 
 ## 13. งานตามแผนและ roadmap ที่ยังไม่เริ่ม (สรุปจาก STATUS-INVENTORY)
 
