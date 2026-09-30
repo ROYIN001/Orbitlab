@@ -16,7 +16,10 @@
  * imported like a rocket (the store's 'satellite' kind), and "Send to
  * Orbit" puts it in its orbit in the Orbit section with no launch (the C1
  * hand-off, `BuildScreenHost.toOrbit`), where the lifetime analysis flies
- * its mass and drag area.
+ * its mass and drag area; "Fly it" (src/ui/build/satellite-fly.ts, the
+ * integration of D06, map §2.6 c) flies it on a rocket in the Launch
+ * section as the mission's own satellite. Its figures are read on the
+ * workspace's design date, shown and set in the head.
  *
  * The thin DOM part: the design lives in the `SatelliteWorkspace` the
  * Engineer level's bench shares; this draws it and turns the student's

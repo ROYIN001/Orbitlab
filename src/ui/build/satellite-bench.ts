@@ -9,10 +9,14 @@
  * it gives, its notes, and where each of its numbers comes from. The design
  * on the bench is the one open in the Explore level's satellite designer
  * (the shared `SatelliteWorkspace`): an edit made here is what Explore shows,
- * and designs are saved, opened and sent to Orbit there.
+ * and designs are saved, opened and sent to Orbit there. Under the tabs,
+ * "Fly it" flies the design on a rocket in the Launch section, at the
+ * Engineer level (src/ui/build/satellite-fly.ts; the integration of D06),
+ * and the head holds the design date the figures and the lifetime run are
+ * read on.
  *
- * LIFETIME runs the lifetime analysis (P07) on the design's orbit, wet mass
- * and drag area through the existing worker job (`runLifetimeJob`), by the
+ * LIFETIME runs the lifetime analysis (P07) on the design's orbit on its
+ * design date, wet mass and drag area through the existing worker job (`runLifetimeJob`), by the
  * mean-element method at a FIXED ECSS level of solar activity (moderate
  * unless the bench is set otherwise), never the measured series, so the
  * answer comes out the same every time (map §2.6 b). It says the area that
