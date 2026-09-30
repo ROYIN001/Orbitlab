@@ -90,6 +90,7 @@ import { ToruControls } from './ui/toru-controls';
 import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
+import { stampDocument } from './build-info';
 
 /** The viewer's own choice of glow, remembered between visits. */
 const GLOW_STORAGE_KEY = 'orbitlab.glow';
@@ -888,7 +889,7 @@ class App {
   private async flightReport(): Promise<void> {
     const sim = this.tel.exportSource();
     if (!sim) return;
-    await downloadFlightReport({
+    downloadFlightReport({
       flight: sim,
       result: this.simView ? assessMissionResult(this.simView.sim) : null,
       link: await this.panel.share.link().catch(() => null),
@@ -2095,6 +2096,7 @@ class App {
 }
 
 initLang();
+stampDocument();
 initNotation();
 // U06: every chart the app draws can be saved as a PNG
 enableChartExport();

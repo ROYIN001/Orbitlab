@@ -10,6 +10,12 @@ Built with Vite, TypeScript and Three.js. Interface in English, Russian and Thai
 The workspace is three columns on a desktop — mission setup, viewport, telemetry — two on a
 tablet, and a single stack on a phone with the viewport first.
 
+## About this project
+
+Orbitlab is a personal educational project by a Thai Air Force cadet studying at a military
+space academy, built from public sources. It is not a product of the Royal Thai Air Force or of
+any academy, and no service or academy name or emblem is used without written permission.
+
 ## Features
 
 - **Full 3D ascent physics** in an Earth-centered inertial frame: inverse-square gravity
@@ -151,7 +157,8 @@ npm run build      # typecheck, then a static site in dist/
 npm run snapshots  # refresh the bundled data snapshots in public/data/ (needs the network)
 ```
 
-Requires Node.js 20 or newer and a browser with WebGL 2.
+Requires Node.js 22 (the version CI and the deploy use; Vite 8 needs 20.19+ or 22.12+) and a
+browser with WebGL 2.
 
 ### Browser tests
 
@@ -178,8 +185,8 @@ A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as
 Without a GPU the scene is drawn in software at about two frames a second, so the smoke set takes
 about five minutes. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
-leaves the CSS layout unchanged). Pull requests run the smoke set; the deploy runs every journey on
-the build it publishes, after checking the freshly fetched data snapshots with
+leaves the CSS layout unchanged). Pull requests and branch pushes run the smoke set; the deploy
+runs every journey on the build it publishes, after checking the freshly fetched data snapshots with
 `tests/data-provider.test.ts`, `tests/satellite-catalogue.test.ts`, `tests/earth-orientation.test.ts`
 and `tests/activity.test.ts`.
 
@@ -285,12 +292,13 @@ The launch section's levels, with the landing page:
   ground in km/h) and one plain-language sentence about what the rocket is doing now.
   Playback runs at an automatic pace — real time for liftoff, max-Q and every separation,
   faster through the long quiet stretches — or at a fixed speed. The launch list holds
-  nine real flights — among them Bandwagon-1 and Arabsat-6A with their boosters landing
+  ten real flights — among them Bandwagon-1 and Arabsat-6A with their boosters landing
   back at the Cape and on a drone ship, Starship Flight 5 with its tower catch and
-  splashdown, and the three Soyuz launch aborts (T-10-1, 18a, MS-10) flown to the crew on
-  the ground — each flown to its target, and every stage it flies home landed, by
-  `tests/watch-missions.test.ts`; the camera follows a returning stage for its landing,
-  and the flight ends on a card that offers another launch or the mission builder.
+  splashdown, the three Soyuz launch aborts (T-10-1, 18a, MS-10) flown to the crew on
+  the ground, and Soyuz MS-28 at the station in three hours — each flown to its target,
+  and every stage it flies home landed, by `tests/watch-missions.test.ts`; the camera
+  follows a returning stage for its landing, and the flight ends on a card that offers
+  another launch or the mission builder.
 - **Explore** — the mission builder, lighter, flying the same physics (`src/ui/explore.ts`).
   A mission is set up in three steps — the rocket (cards with what each lifts), the payload
   (against the vehicle's rating), the orbit — under a pre-flight light that offers the change
@@ -407,23 +415,38 @@ mass flow reproduces the published burn time.
 When the page is opened in a browser (or an embedding surface) that exposes
 `navigator.modelContext` or `document.modelContext` — [WebMCP](https://github.com/webmachinelearning/webmcp)'s
 proposal for letting an on-page agent call back into the app it is looking at — Orbitlab
-registers nine tools (`src/mcp.ts`) so that agent can read the flight and fly a mission the
-same way a person at the keyboard would. This is entirely optional: registration is
-best-effort, wrapped so a single failing tool or a browser with no WebMCP support never
-breaks the app, and every tool that needs a mission returns `{ ok: false }` rather than
-throwing when none is configured yet.
+registers 17 tools — 13 in `src/mcp.ts` and four for the lessons in `src/lessons/mcp-tools.ts` —
+so that agent can read the flight and fly a mission the same way a person at the keyboard would.
+This is entirely optional: registration is best-effort, wrapped so a single failing tool or a
+browser with no WebMCP support never breaks the app, and every tool that needs a mission returns
+`{ ok: false }` rather than throwing when none is configured yet.
 
-| Tool | What it does |
-| --- | --- |
-| `read_flight_state` | The current cursor time, live/replay mode and playback speed, and the frame on screen: altitude, speed, apsides, stage, flight phase, Δv remaining, the last and next event. |
-| `list_missions` | Every vehicle (with its sites and rated payloads), launch site, satellite/payload and orbit preset `configure_mission` accepts. |
-| `configure_mission` | Set vehicle, site, payload, orbit (a preset or custom perigee/apogee/inclination/RAAN), launch time and guidance overrides — validated the same way the setup panel validates them — and preview the mission paused on the pad. |
-| `launch_mission` | Configure (if arguments are given) and launch, exactly like the Launch button. |
-| `control_playback` | `play`, `pause`, `warp`, `live`, `skip_next`, `skip_previous` — the same controls as the playback bar, acting on the live flight while at the recording head and on the replay cursor while scrubbed behind it. |
-| `seek` | Move the cursor to a mission time, in seconds after liftoff. |
-| `set_camera` | Switch between the exterior, onboard, space and orbital-map views. |
-| `get_events` | The recorded event log, optionally filtered to events at or after a given time and capped to a limit. |
-| `export_csv` | The whole recorded flight — telemetry samples and events — as CSV text, in the same format the telemetry panel downloads. |
+| Tool | Input | What it does |
+| --- | --- | --- |
+| `read_flight_state` | none | The current cursor time, live/replay mode and playback speed, and the frame on screen: altitude, speed, apsides, stage, flight phase, Δv remaining, the last and next event. |
+| `list_missions` | none | Every vehicle (with its sites and rated payloads), launch site, satellite/payload and orbit preset `configure_mission` accepts. |
+| `configure_mission` | all optional: `vehicleId`, `siteId`, `satelliteId`, `payloadMassKg`, `orbitId` or a custom orbit (`perigeeKm`, `apogeeKm`, `inclinationDeg`, `argPerigeeDeg`, `raanMode`/`raanDeg`/`ltanHours`, `suborbital`), `launchTimeIso`, `boosterRecovery`, `recoveryPlan`, `guidance`, `failureMode`/`failureTimeS`/`failureStageIndex`, `physicsModel`, `windScenario`/`windSeed` and the six-DOF settings `flex`, `control`, `navigation`, `controlFaults`, `explicitGuidance` | Set vehicle, site, payload, orbit, launch time and guidance overrides — validated the same way the setup panel validates them — and preview the mission paused on the pad. |
+| `launch_mission` | the same fields as `configure_mission`, all optional | Configure (if arguments are given) and launch, exactly like the Launch button. |
+| `control_playback` | `action` (`play`, `pause`, `warp`, `live`, `skip_next`, `skip_previous`); `warp`, the factor, with the `warp` action | The same controls as the playback bar, acting on the live flight while at the recording head and on the replay cursor while scrubbed behind it. Needs a mission. |
+| `seek` | `timeS` | Move the cursor to a mission time, in seconds after liftoff. Needs a mission. |
+| `set_camera` | `mode` (exterior, onboard, space, map) | Switch between the exterior, onboard, space and orbital-map views. |
+| `get_events` | optional `sinceS`, `limit` | The recorded event log, optionally filtered to events at or after a given time and capped to a limit. |
+| `export_csv` | none | The whole recorded flight — telemetry samples and events — as CSV text, in the same format the telemetry panel downloads. |
+| `set_flight_control` | `mode` (`auto`, `manual`); optional `rollRateDegS`, `pitchRateDegS`, `yawRateDegS` (±5°/s, ISO 1151 body axes), `throttle` (0–1) | Automatic guidance, or manual body-rate commands and throttle flown through the actuators. Needs a live six-DOF flight (not a replay). |
+| `run_attitude_test` | `axis` (roll, pitch, yaw), `kind` (step, doublet), `amplitudeDeg`, `holdS` | A step or doublet on the autopilot's attitude target, recorded against the linearised loop's prediction (read back in `read_flight_state.attitudeTest`). Needs a live six-DOF flight under the autopilot. |
+| `inject_control_fault` | `kind` (an actuator, sensor or flight-computer failure) and its fields (`time`, `stage`, `engine`, `jet`, `units`, `axis`, `sign`, `magnitude`); optional `fdir` | Strikes the live flight with a control-system failure, now or at `time`, with or without the FDIR. Needs a live six-DOF flight. |
+| `run_monte_carlo` | `action` (`start`, `status`, `stop`); with `start` optional `runs` (20–2000), `seed`, `compareLaws`, `dispersions`; with `status` optional `includeCsv` | Flies the mission in the setup panel many times in six-DOF with dispersed thrust, Isp, masses, density and wind, and reports the insertion accuracy per guidance law. It runs the Engineer level's Monte Carlo set. |
+| `list_lessons` | none | The lessons with their number, track, mode, areas, whether they are written yet and the student's progress. |
+| `start_lesson` | `id` (from `list_lessons`) | Opens a lesson for the student — its mission, its mode and its locked settings — without launching; returns the task and the criteria. |
+| `get_lesson_result` | none | How the open lesson's flight is graded so far: each criterion's state and value, broken locks, awaited answers and hints shown (never an answer's expected value). Needs an open lesson; safe without one. |
+| `get_assessment_result` | none | The latest finished placement test or post-test: the score and level in each area, the misconceptions, the advice per lesson and the lesson to start at. Safe when no test has been taken. |
+
+No tool checks or changes the level (Watch, Explore, Engineer) the page is on.
+`set_flight_control`, `run_attitude_test` and `inject_control_fault` need a live six-DOF flight
+and answer `{ ok: false }` with a reason without one. `run_monte_carlo` runs the set of the
+Engineer level's Monte Carlo window, whichever level the page shows; leaving the Engineer level
+closes the window and the set flies on. Of the four lesson tools, `get_lesson_result` needs an
+open lesson and answers `{ active: false }` without one.
 
 Every tool declares a JSON Schema for its input, MCP annotations (`readOnlyHint`,
 `destructiveHint`, `idempotentHint`), and validates the way the setup panel does: an unknown
@@ -474,6 +497,30 @@ tests/browser/  browser journeys on the production build (Playwright)
 The `Deploy to GitHub Pages` workflow builds and publishes the site on every push to
 `main`. Enable Pages in the repository settings with **GitHub Actions** as the source.
 The Vite base path is relative, so the build also works from any sub-folder.
+It also runs every day at 17:43 UTC (00:43 Bangkok) to publish fresh data snapshots; that
+scheduled run skips `npm test` (the code was tested when it merged) but still checks the fresh
+snapshots, builds and runs every browser journey. A run whose commit is no longer the tip of
+`main` (an old run re-run) stops before publishing; use **Run workflow** instead.
+
+CI on pull requests and branch pushes runs the typecheck, the default suite in three shards, the
+build and the browser smoke set; a change to Markdown files only skips it, except
+`docs/ROADMAP-PART2-3.md` and `docs/SIXDOF-VEHICLE-DATA.md`, which the tests and the app read.
+The slow suites run in the `Heavy suites` workflow instead: `npm run test:heavy` every Sunday and
+the six-DOF fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
+
+From the next release the launch soundtrack (`public/audio/soyuz-ms-27-nasa.mp3`) is no longer
+part of what the service worker installs on the first visit: the public site's first-visit install
+shrinks by about 3.5 MB, and the soundtrack is cached after it is first played. A build for an
+intranet or a classroom with no internet can set `ORBITLAB_PRECACHE_AUDIO=1` to precache it with
+the rest of the app, so it plays offline from the start.
+
+## Licence and credits
+
+The code is licensed under the [Apache License 2.0](LICENSE). Lesson content, worksheets and the
+documentation (this README and `docs/`) are licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Third-party data, pictures, audio and
+software keep their own terms, all collected in [NOTICE.md](NOTICE.md). To cite Orbitlab, use
+[CITATION.cff](CITATION.cff).
 
 ## Acknowledgements
 

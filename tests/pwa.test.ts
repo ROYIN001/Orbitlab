@@ -86,6 +86,19 @@ describe('precache manifest (U03)', () => {
     expect(precacheable('assets/home-x.js')).toBe(true);
   });
 
+  it('leaves out the soundtrack on the public site, and precaches it for the intranet zip (D-7)', () => {
+    const files = [{ url: 'audio/soyuz-ms-27-nasa.mp3', revision: '1' }, { url: 'audio/CREDITS.txt', revision: '1' }, { url: 'textures/earth.jpg', revision: '1' }];
+    expect(precacheable('audio/soyuz-ms-27-nasa.mp3')).toBe(false);
+    expect(precacheManifest(files).entries.map((e) => e.url)).toEqual(['textures/earth.jpg']);
+    // ORBITLAB_PRECACHE_AUDIO=1 in the build
+    expect(precacheable('audio/soyuz-ms-27-nasa.mp3', { precacheAudio: true })).toBe(true);
+    expect(precacheManifest(files, { precacheAudio: true }).entries.map((e) => e.url))
+      .toEqual(['audio/CREDITS.txt', 'audio/soyuz-ms-27-nasa.mp3', 'textures/earth.jpg']);
+    // the flag brings back only the soundtrack: the other on-demand files stay out
+    expect(precacheable('home/watch.th.webp', { precacheAudio: true })).toBe(false);
+    expect(precacheable('assets/audio-x.js')).toBe(true);
+  });
+
   it('writes the manifest over the placeholder, in any quoting the minifier chose', () => {
     const m = manifestOf(V1);
     for (const q of ["'", '"', '`']) {
@@ -154,6 +167,38 @@ describe('service worker (U03)', () => {
     expect(await (await respond(sw, m, new Request(shot), pre)).text()).toBe('SHOT');
     online.on = false;
     expect(await (await respond(sw, m, new Request(shot), pre)).text()).toBe('SHOT');
+  });
+
+  it('keeps the soundtrack whole on its first play, and cuts every later range from it offline (D-7)', async () => {
+    const scope = new URL(SCOPE), pre = new Set<string>();
+    const mp3 = `${SCOPE}audio/soyuz-ms-27-nasa.mp3`;
+    // the default build: the soundtrack is fetched on demand
+    expect(routeFor(new URL(mp3), 'no-cors', scope, pre)).toBe('runtime');
+    // the intranet zip's build: it is in the precache, which is checked first
+    expect(routeFor(new URL(mp3), 'no-cors', scope, new Set(['audio/soyuz-ms-27-nasa.mp3']))).toBe('precache');
+    const online = { on: true };
+    const sw = fakeScope({ [mp3]: '0123456789' }, online);
+    const m = manifestOf(V1);
+    const ranged = (range: string) => new Request(mp3, { headers: { range } });
+    const first = await respond(sw, m, ranged('bytes=0-'), pre);
+    expect(first.status).toBe(206);
+    expect(await first.text()).toBe('0123456789');
+    // the whole file was fetched once, without the range, and kept
+    expect(sw.fetched).toEqual([mp3]);
+    expect(await (await (await sw.caches.open(RUNTIME_CACHE)).match(mp3))!.text()).toBe('0123456789');
+    online.on = false;
+    const seek = await respond(sw, m, ranged('bytes=4-6'), pre);
+    expect(seek.status).toBe(206);
+    expect(await seek.text()).toBe('456');
+    expect(seek.headers.get('content-range')).toBe('bytes 4-6/10');
+    expect(sw.fetched).toEqual([mp3]);
+    // offline before any play: the fetch fails, and the page plays no recording
+    const other = `${SCOPE}audio/other.mp3`;
+    await expect(respond(sw, m, new Request(other, { headers: { range: 'bytes=0-' } }), pre)).rejects.toThrow('offline');
+    // a refusal is passed on and not kept
+    online.on = true;
+    expect((await respond(sw, m, new Request(other, { headers: { range: 'bytes=0-' } }), pre)).status).toBe(404);
+    expect(await (await sw.caches.open(RUNTIME_CACHE)).match(other)).toBeUndefined();
   });
 
   it('keeps fonts for offline use: the cached copy first, refreshed when online', async () => {
@@ -236,6 +281,8 @@ describe('the build (U03)', () => {
     expect(urls).toEqual(expect.arrayContaining(['manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png']));
     // S04: the offline mode's data snapshots are files of the build like any other
     expect(urls).toContain('data/space-weather.json');
+    // D-7: the default build leaves the soundtrack to the first play
+    expect(urls.filter((u) => u.startsWith('audio/'))).toEqual([]);
   }, 120_000);
 });
 
