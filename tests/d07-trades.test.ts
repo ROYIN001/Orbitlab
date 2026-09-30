@@ -40,6 +40,7 @@ import { powerAtWorstBeta } from '../src/design/requirement-inverses';
 import {
   REQUIREMENTS, designFromRow, lifetimeRequest, orbitOfDesign, repeatCycles, tradeRow, tradeTable, type GroundReceiver, type TradeOptions,
 } from '../src/design/requirement-trades';
+import { runTradesJob } from '../src/design/requirement-trades-job';
 import type { MissionRequirements } from '../src/design/requirements';
 import { lifetimeSpacecraft } from '../src/design/satellite-area';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
@@ -261,6 +262,20 @@ describe('the table (D07)', () => {
     let stopped: unknown = null;
     try { tradeTable(req, IMAGER, { ...OPTS, onProgress: (f) => f < 0.3 }); } catch (e) { stopped = e; }
     expect(stopped).toMatchObject({ name: 'AbortError' });
+  });
+
+  it('runs as a job: the table\'s own rows where no worker can be made, with its progress, and a Stop', async () => {
+    const r = { req: { ...THEOS2_REQ, revisitDays: 1 }, template: IMAGER, opts: { ...OPTS, tilt: 45 * DEG } };
+    const seen: number[] = [];
+    const rows = await runTradesJob(r, new AbortController().signal, (f) => seen.push(f));
+    expect(rows).toEqual(tradeTable(r.req, r.template, r.opts));
+    expect(seen[seen.length - 1]).toBe(1);
+    for (let k = 1; k < seen.length; k++) expect(seen[k]).toBeGreaterThan(seen[k - 1]);
+    const early = new AbortController();
+    early.abort();
+    await expect(runTradesJob(r, early.signal, () => {})).rejects.toMatchObject({ name: 'AbortError' });
+    const mid = new AbortController();
+    await expect(runTradesJob(r, mid.signal, (f) => { if (f > 0.3) mid.abort(); })).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   it('asks the lifetime search for the life and the life plus 25 years, and its verdicts are P07\'s', async () => {
