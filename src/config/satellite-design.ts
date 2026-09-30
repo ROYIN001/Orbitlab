@@ -128,6 +128,8 @@ export const SATELLITE_LIMITS = {
   pixels: [1, 1e6],
   aperture: [0.001, 20],
   bits: [1, 32],
+  /** m: ultraviolet to thermal infrared, 0.1 to 20 µm (a wavelength typed in nm or µm is a slip) */
+  wavelength: [0.1e-6, 20e-6],
 } as const satisfies Record<string, readonly [number, number] | number>;
 
 type Obj = Record<string, unknown>;
@@ -190,7 +192,7 @@ const POWER_FIELDS = ['payloadW', 'busW', 'arrayArea', 'cellEff', 'Id', 'degPerY
 const PROPULSION_FIELDS = ['thrust', 'isp', 'propellant', 'insertionDv'];
 const ADCS_FIELDS = ['mode', 'inertia', 'pointingDeg', 'wheelH', 'residualDipole', 'cpOffset'];
 const COMMS_FIELDS = ['txPowerW', 'frequency', 'txAntennaD', 'lineLoss', 'dataRate', 'requiredEbN0', 'station', 'minElDeg', 'rxAntennaD', 'rxNoiseK', 'losses'];
-const PAYLOAD_FIELDS = ['focalLength', 'pixelPitch', 'pixels', 'aperture', 'bits'];
+const PAYLOAD_FIELDS = ['focalLength', 'pixelPitch', 'pixels', 'aperture', 'bits', 'wavelength'];
 
 function checkOrbit(c: Checker, o: Obj): void {
   c.known(o, 'orbit', ORBIT_FIELDS);
@@ -308,6 +310,7 @@ export function satelliteDesignProblems(raw: unknown): SatelliteDesignIssue[] {
       c.number(p, 'pixels', 'payload', L.pixels, { integer: true });
       c.number(p, 'aperture', 'payload', L.aperture);
       c.number(p, 'bits', 'payload', L.bits, { integer: true });
+      c.number(p, 'wavelength', 'payload', L.wavelength, { optional: true });
     }
   }
 

@@ -50,6 +50,7 @@ import type { SatelliteSpec } from '../types';
 import type { SatelliteTemplate } from '../design/satellite-spec';
 import { SATELLITES } from './satellites';
 import { NAPA2 } from './napa2';
+import { DIFFRACTION_WAVELENGTH } from '../design/satellite-link';
 
 // ─── the sources, once each ─────────────────────────────────────────────────
 
@@ -130,6 +131,13 @@ function classTemplate(id: string, typicalOrbit: string, rest: (c: ReturnType<ty
   };
 }
 
+/**
+ * The wavelength each camera's aperture is read at: 550 nm, the middle of
+ * the visible, with no source — an estimate, and the screen says so (the
+ * integration of D06 and D07, which reads the same number).
+ */
+const VISIBLE = DIFFRACTION_WAVELENGTH;
+
 /** A receiving station on the ground: NASA NEN's 11.28 m dish as Palo et al. give it, and the path's other losses (all sourced to them). */
 const NEN_STATION = { rxAntennaD: 11.28, rxNoiseK: 189.7, losses: 2 };
 const NEN_SOURCES = { 'comms.rxAntennaD': SOURCE.paloStation, 'comms.rxNoiseK': SOURCE.paloStation, 'comms.losses': SOURCE.paloStation };
@@ -152,7 +160,7 @@ const earthObs = classTemplate('earthObs', 'sso', (c) => ({
   power: { payloadW: 800, busW: 600, arrayArea: 12, mount: 'tracking', batteryWh: 3500, dod: 0.3, ...CELL },
   adcs: { mode: 'threeAxis', inertia: boxInertia(c.spec.mass, c.size), pointingDeg: 0.05, wheelH: 25, residualDipole: 5, cpOffset: 0.3 },
   comms: { txPowerW: 20, frequency: 8.2e9, txAntennaD: 0.3, lineLoss: 1, dataRate: 300e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 10, ...NEN_STATION },
-  payload: { focalLength: 6.9, pixelPitch: 8e-6, pixels: 35_000, aperture: 1.1, bits: 11 },
+  payload: { focalLength: 6.9, pixelPitch: 8e-6, pixels: 35_000, aperture: 1.1, bits: 11, wavelength: VISIBLE },
 }), { 'power.dod': SOURCE.dodLeo, 'comms.requiredEbN0': SOURCE.ebN0, ...NEN_SOURCES });
 
 const weather = classTemplate('weather', 'geo', (c) => ({
@@ -195,7 +203,7 @@ const napa2: SatelliteTemplate = {
       txPowerW: 1, frequency: 8.38e9, txAntennaD: 0, lineLoss: 0.4, dataRate: 12.5e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 10, ...NEN_STATION,
     },
     // a camera that gives NAPA-2's published 5 m from 530 km (src/data/thai-satellites.ts): not its real design
-    payload: { focalLength: 0.58, pixelPitch: 5.5e-6, pixels: 4096, aperture: 0.095, bits: 10 },
+    payload: { focalLength: 0.58, pixelPitch: 5.5e-6, pixels: 4096, aperture: 0.095, bits: 10, wavelength: VISIBLE },
   },
   sources: {
     'bus.dryMass': SOURCE.napa2Mass, 'bus.size.width': SOURCE.napa2Size, 'bus.size.height': SOURCE.napa2Size, 'bus.size.depth': SOURCE.napa2Size,
@@ -222,7 +230,7 @@ const theos2: SatelliteTemplate = {
     propulsion: { thrust: 4, isp: 223, propellant: THEOS2_PROPELLANT },
     adcs: { mode: 'threeAxis', inertia: boxInertia(THEOS2_MASS, theos2Size), pointingDeg: 0.05, wheelH: 12, residualDipole: 1, cpOffset: 0.1 },
     comms: { txPowerW: 10, frequency: 8.2e9, txAntennaD: 0.15, lineLoss: 1, dataRate: 140e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 10, ...NEN_STATION },
-    payload: { focalLength: 16.1, pixelPitch: 13e-6, pixels: 20_600, aperture: 0.9, bits: 12 },
+    payload: { focalLength: 16.1, pixelPitch: 13e-6, pixels: 20_600, aperture: 0.9, bits: 12, wavelength: VISIBLE },
   },
   sources: {
     // the 425 kg, less a propellant load that is an estimate: both labelled estimates below

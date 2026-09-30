@@ -14,7 +14,7 @@
  */
 import { getLang, t } from '../../i18n';
 import {
-  SHOWN, designDateOf, fieldOrigin, ssoInclinationDeg, valueAt, withCamera, withChoice, withEngine, withSso, withValue, type SatelliteField,
+  DIFFRACTION_WAVELENGTH, SHOWN, designDateOf, fieldOrigin, ssoInclinationDeg, valueAt, withCamera, withChoice, withEngine, withSso, withValue, type SatelliteField,
 } from '../../design/satellite-model';
 import { typedText } from '../../design/number-entry';
 import type { SatelliteDesign } from '../../design/satellite-spec';
@@ -47,6 +47,8 @@ export function numberField(ws: SatelliteWorkspace, f: SatelliteField, keyPrefix
   box.dataset.path = f.path;
   // a node the design does not fix is flown at 0 (`designOrbit`): the empty box says so
   if (f.path === 'orbit.raan' && v === undefined) box.placeholder = '0';
+  // a camera that gives no wavelength is read at 550 nm (an estimate, `cameraWavelength`): the empty box says so
+  if (f.path === 'payload.wavelength' && v === undefined) box.placeholder = typedText(DIFFRACTION_WAVELENGTH * SHOWN.um, getLang());
   if (f.path === 'orbit.inclination') box.disabled = inclinationFollows(d);
   const unit = fieldUnitText(f.unit);
   const row = el('span', 'bx-with-unit');

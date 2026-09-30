@@ -2755,6 +2755,7 @@ export const ru: Record<string, string> = {
   'build.sat.fly.issues': 'Раздел «Запуск» не примет такую миссию: выберите другую ракету.',
   'build.sat.fly.blocked': 'Запуск невозможен, пока не исправлены значения, названные в проверках.',
   'build.sat.fly.after': 'После полёта кнопка «Продолжить на орбите» передаст спутник дальше с его массой, площадью сопротивления, C_x и C_R.',
+  'build.sat.f.wavelength': 'Длина волны (для дифракционного предела)',
   // --- end of D06 integration ---
   'watch.beat.countdown': 'Обратный отсчёт',
   'watch.beat.liftoff': 'Старт',

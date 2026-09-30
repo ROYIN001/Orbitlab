@@ -51,6 +51,15 @@
  * perigee 50 km (enough); the verdict uses the upper end, and the D06 bench,
  * which flies the chosen design, settles it.
  *
+ * THE TEMPLATE'S OWN RADIO, RECEIVER AND CAMERA (the integration of D06 and
+ * D07): the satellite's antenna gain and pointing loss, the ground receiver
+ * and the wavelength the aperture must resolve are read from the template as
+ * the D06 bench reads them (src/design/satellite-link.ts; `designDownlinkAt`,
+ * `txPowerForDesign`, `apertureForDesign`), where they used to be options of
+ * the table's own — so the design a row makes, worked out again by
+ * `designFigures`, gives the row's camera, swath and link margin back to
+ * 1e-9 (tests/d07-trades.test.ts).
+ *
  * WHAT A ROW DOES NOT SAY. Its revisit by day is for the cycle from the
  * epoch (`TradeOptions.jd0`): at a place far from the equator the Sun's height
  * at the local time of the passes changes with the season (none at all in a
@@ -75,10 +84,10 @@ import { CONTROLLED_REENTRY_PERIGEE, perigeeLowerDv } from '../orbit/disposal';
 import { offNadirGsd } from '../orbit/imaging';
 import { raanForLocalTime, type Orbit } from '../orbit/kepler';
 import { holdDvPerYear, type AltitudeForLifetime, type AltitudesRequest, type LifetimePlane } from '../orbit/lifetime-altitude';
-import { LINK_MARGIN_THRESHOLD, eirp, slantRange } from '../orbit/link';
+import { LINK_MARGIN_THRESHOLD, slantRange } from '../orbit/link';
 import { repeatGroundTrack, REPEAT_SEARCH } from '../orbit/playground-model';
 import {
-  apertureForGsd, focalLengthForGsd, maxRateAtMargin, powerAtWorstBeta, requiredDataRate, requiredEirp, txPowerForEirp,
+  apertureForDesign, designDownlinkAt, focalLengthForGsd, maxRateAtMargin, powerAtWorstBeta, requiredDataRate, requiredEirp, txPowerForDesign,
 } from './requirement-inverses';
 import type { MissionRequirements } from './requirements';
 import { designOrbit } from './satellite-handoff';
@@ -111,18 +120,6 @@ export function repeatCycles(maxDays: number, sso: boolean, i: number): (RepeatC
   return out.sort((a, b) => b.orbit.a - a.orbit.a);
 }
 
-/** The receiving side of the downlink, which a design does not hold (it names the station only, `SatelliteDesign.comms.station`). */
-export interface GroundReceiver {
-  /** the station antenna's gain, dBi */
-  rxGain: number;
-  /** its system noise temperature, K */
-  systemTemperature: number;
-  /** losses between the antennas — atmosphere, polarisation, pointing — dB */
-  losses: number;
-  /** modulation and implementation losses, dB */
-  implementationLoss: number;
-}
-
 export interface TradeOptions {
   /** the epoch, Julian date (UTC): the node's local time is set on it, and the Sun and the ground turn from it; the revisit by day is for its season */
   jd0: number;
@@ -138,13 +135,8 @@ export interface TradeOptions {
   /** without an LTAN in the requirements: the plane's inclination and node, rad */
   inclination?: number;
   raan?: number;
-  /** the satellite antenna's gain, dBi: the D06 bench's figure for the design's antenna */
-  txGain: number;
-  ground: GroundReceiver;
-  /** the link margin held to, dB (default `LINK_MARGIN_THRESHOLD`, 3) */
+  /** the link margin held to, dB (default `LINK_MARGIN_THRESHOLD`, 3, the D06 bench's floor) */
   margin?: number;
-  /** the wavelength the aperture must resolve, m (the design stores none) */
-  wavelength: number;
   /** how far the camera tilts either side, rad (default 0: straight down only) */
   tilt?: number;
   /**
@@ -250,7 +242,7 @@ export function tradeRow(req: MissionRequirements, template: SatelliteDesign, cy
 
   // the camera
   const focalLength = focalLengthForGsd(h, cam.pixelPitch, req.gsd);
-  const aperture = apertureForGsd(h, opts.wavelength, req.gsd);
+  const aperture = apertureForDesign(template, h, req.gsd);
   const horizon = footprintAngle(base.a, 0) * R_EARTH;
   const swath = swathWidth(h, 2 * Math.atan((cam.pixels * cam.pixelPitch) / (2 * focalLength))) ?? 2 * horizon;
   const reach = Math.min(horizon, swath / 2 + (tilt > 0 ? sideReach(h, tilt) ?? horizon : 0));
@@ -269,18 +261,15 @@ export function tradeRow(req: MissionRequirements, template: SatelliteDesign, cy
   // the downlink
   const minEl = req.minElDeg * DEG;
   const contact = contactTime(orbit, stationsOf(req.stations), minEl, opts.jd0, period);
-  const path = {
-    frequency: template.comms.frequency, rxGain: opts.ground.rxGain, systemTemperature: opts.ground.systemTemperature,
-    losses: opts.ground.losses, requiredEbN0: template.comms.requiredEbN0, implementationLoss: opts.ground.implementationLoss,
-  };
-  const txEirp = eirp(template.comms.txPowerW, template.comms.lineLoss, opts.txGain);
+  // the template's transmitter, antenna and pointing and the receiver it carries, down to the requirement's lowest elevation
+  const { eirp: txEirp, altitude: _, minEl: __, ...path } = designDownlinkAt(template, h);
   const maxRate = maxRateAtMargin({ ...path, eirp: txEirp, altitude: h, minEl }, margin);
   const dataPerDay = maxRate * contact.perDay;
   const requiredRate = requiredDataRate(req.dataPerDay, contact.perDay);
   let requiredTxPower = requiredRate === 0 ? 0 : Infinity;
   if (Number.isFinite(requiredRate) && requiredRate > 0) {
     const needed = requiredEirp({ ...path, range: slantRange(base.a, minEl), dataRate: requiredRate }, margin);
-    requiredTxPower = txPowerForEirp(needed, template.comms.lineLoss, opts.txGain);
+    requiredTxPower = txPowerForDesign(template, needed);
   }
 
   // the array and the battery: an optical camera that works by day only is off through the eclipse

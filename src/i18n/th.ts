@@ -2756,6 +2756,7 @@ export const th: Record<string, string> = {
   'build.sat.fly.issues': 'ส่วนปล่อยจรวดจะไม่รับภารกิจนี้ในสภาพนี้ ลองเลือกจรวดลำอื่น',
   'build.sat.fly.blocked': 'ยังบินไม่ได้จนกว่าจะแก้ตัวเลขที่การตรวจระบุไว้',
   'build.sat.fly.after': 'หลังการบิน ปุ่ม “บินต่อในวงโคจร” จะส่งดาวเทียมต่อไปพร้อมมวล พื้นที่แรงต้าน C_D และ C_R ของมันเอง',
+  'build.sat.f.wavelength': 'ความยาวคลื่น (สำหรับขีดจำกัดการเลี้ยวเบน)',
   // --- end of D06 integration ---
   'watch.beat.countdown': 'นับถอยหลัง',
   'watch.beat.liftoff': 'ทะยานขึ้น',

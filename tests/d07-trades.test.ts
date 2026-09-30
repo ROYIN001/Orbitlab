@@ -34,6 +34,26 @@
  *   (the looks of the twenty repeats move by up to 9 ms, not in a trend);
  * - ADDED IN REVIEW: a mission that asks for no data keeps the template's
  *   transmitter power and rate in the design, exactly.
+ *
+ * CHANGED AT INTEGRATION (Phase 4 stage 3, task I; D07's contract gaps): the
+ * TEST INPUTS, not the bounds. The satellite's antenna gain (20 dBi), the
+ * ground receiver (57.476 dBi, 189.7 K, 1.993 dB) and the wavelength
+ * (0.65 µm) were options of the table; the table now reads them from the
+ * template as the D06 bench does (src/design/satellite-link.ts), so the test
+ * imager carries them as design fields — its 0.3 m dish at 55 %, the NEN
+ * station the templates carry (11.28 m at 57 %, 189.7 K, 2 dB) and
+ * `payload.wavelength` 0.65 µm — and the link check reads the design's
+ * downlink (`designDownlink`). Every tolerance above is unchanged.
+ * ADDED AT INTEGRATION, fixed before its first run: a design made from a row
+ * (the THEOS-2-class template itself, and the test imager), fed through
+ * `designFigures`, gives the row's closed-form figures to 1e-9 relative — the
+ * GSD and the diffraction limit (both the GSD asked), the swath, the link
+ * margin (the margin held to, at the D06 bench's 3 dB floor) and its highest
+ * rate at that floor (the rate the design was given), the orbit's size and
+ * inclination, the Δv the tanks hold; and its eclipse and the array and
+ * battery sized for it within 0.5 % (D07's closed form at the worst β
+ * against D06's sampled worst eclipse, the tolerance D07's own inverse test
+ * holds the two to), flown day and night so both carry the same loads.
  */
 import { describe, expect, it } from 'vitest';
 import { DEG, R_EARTH } from '../src/physics/constants';
@@ -44,15 +64,19 @@ import { orbitFacts } from '../src/orbit/kepler';
 import { stationOf } from '../src/orbit/applications-setup';
 import { YEAR } from '../src/orbit/disposal';
 import { diffractionGsd } from '../src/orbit/imaging';
-import { designControlTable, eirp, slantRange } from '../src/orbit/link';
+import { LINK_MARGIN_THRESHOLD, designControlTable, slantRange } from '../src/orbit/link';
 import { lifetimeAt, type AltitudeForLifetime } from '../src/orbit/lifetime-altitude';
 import { runAltitudesJob } from '../src/orbit/lifetime-altitude-job';
 import { repeatGroundTrack, REPEAT_SEARCH } from '../src/orbit/playground-model';
 import { MOUNT_FACTOR } from '../src/orbit/power';
 import { powerAtWorstBeta } from '../src/design/requirement-inverses';
 import {
-  REQUIREMENTS, designFromRow, lifetimeRequest, orbitOfDesign, repeatCycles, tradeRow, tradeTable, type GroundReceiver, type TradeOptions,
+  REQUIREMENTS, designFromRow, lifetimeRequest, orbitOfDesign, repeatCycles, tradeRow, tradeTable, type TradeOptions,
 } from '../src/design/requirement-trades';
+import { designDownlink } from '../src/design/satellite-link';
+import { designFigures, designFromTemplate } from '../src/design/satellite-model';
+import { deltaVAvailable } from '../src/orbit/budget';
+import { wetMass } from '../src/design/satellite-area';
 import { runTradesJob } from '../src/design/requirement-trades-job';
 import type { MissionRequirements } from '../src/design/requirements';
 import { lifetimeSpacecraft } from '../src/design/satellite-area';
@@ -61,8 +85,8 @@ import type { SatelliteDesign } from '../src/design/satellite-spec';
 const JD0 = julianDate(new Date(Date.UTC(2026, 8, 21)));
 const rel = (a: number, b: number): number => Math.abs(a - b) / Math.max(1, Math.abs(b));
 
-/** Palo et al.'s NEN receiver as the D06 link test reads it (NTRS 20150000169, Table 1): test inputs. */
-const NEN: GroundReceiver = { rxGain: 57.476, systemTemperature: 189.7, losses: 1.993, implementationLoss: 0 };
+/** Palo et al.'s NEN station as the templates carry it (NTRS 20150000169, Table 1; src/data/satellite-templates.ts): test inputs. */
+const NEN = { rxAntennaD: 11.28, rxNoiseK: 189.7, losses: 2 };
 
 /**
  * A THEOS-2-class imager, as TEST INPUTS only (track B's templates carry the
@@ -81,8 +105,8 @@ const IMAGER: SatelliteDesign = {
   },
   propulsion: { thrust: 1, isp: 220, propellant: 30 },
   adcs: { mode: 'threeAxis', inertia: [300, 300, 200], pointingDeg: 0.05, wheelH: 12, residualDipole: 1, cpOffset: 0.1 },
-  comms: { txPowerW: 10, frequency: 8.2e9, txAntennaD: 0.3, lineLoss: 1, dataRate: 300e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 5 },
-  payload: { focalLength: 16.1, pixelPitch: 13e-6, pixels: 20_600, aperture: 1, bits: 12 },
+  comms: { txPowerW: 10, frequency: 8.2e9, txAntennaD: 0.3, lineLoss: 1, dataRate: 300e6, requiredEbN0: 5.52, station: 'bangkok', minElDeg: 5, ...NEN },
+  payload: { focalLength: 16.1, pixelPitch: 13e-6, pixels: 20_600, aperture: 1, bits: 12, wavelength: 0.65e-6 },
 };
 
 const THEOS2_REQ: MissionRequirements = {
@@ -91,7 +115,7 @@ const THEOS2_REQ: MissionRequirements = {
   lifeYears: 7, activity: 'moderate', dataPerDay: 1e12, stations: ['bangkok'], minElDeg: 5, disposal: '25y',
 };
 
-const OPTS: TradeOptions = { jd0: JD0, txGain: 20, ground: NEN, wavelength: 0.65e-6, lifetime: null };
+const OPTS: TradeOptions = { jd0: JD0, lifetime: null };
 const stationsFor = (ids: string[]) => ids.map((id) => stationOf(id)!);
 
 describe('the rows\' orbits (D07)', () => {
@@ -155,12 +179,13 @@ describe('a row (D07)', () => {
     const d = designFromRow(IMAGER, row, req)!;
     const h = row.altitude;
     expect(rel(groundSampleDistance(h, d.payload!.pixelPitch, d.payload!.focalLength), 0.5)).toBeLessThanOrEqual(1e-9);
-    expect(rel(diffractionGsd(h, d.payload!.aperture, opts.wavelength), 0.5)).toBeLessThanOrEqual(1e-9);
+    expect(rel(diffractionGsd(h, d.payload!.aperture, d.payload!.wavelength!), 0.5)).toBeLessThanOrEqual(1e-9);
     // the link at the design's power and rate closes with the margin asked, at the lowest elevation
+    const dl = designDownlink(d);
     const t = designControlTable({
-      eirp: eirp(d.comms.txPowerW, d.comms.lineLoss, opts.txGain), frequency: d.comms.frequency, range: slantRange(R_EARTH + h, d.comms.minElDeg * DEG),
-      rxGain: NEN.rxGain, systemTemperature: NEN.systemTemperature, losses: NEN.losses, dataRate: d.comms.dataRate,
-      requiredEbN0: d.comms.requiredEbN0, implementationLoss: NEN.implementationLoss,
+      eirp: dl.eirp, frequency: dl.frequency, range: slantRange(R_EARTH + h, d.comms.minElDeg * DEG),
+      rxGain: dl.rxGain, systemTemperature: dl.systemTemperature, losses: dl.losses, dataRate: d.comms.dataRate,
+      requiredEbN0: dl.requiredEbN0, implementationLoss: dl.implementationLoss,
     });
     expect(rel(t.margin, 4)).toBeLessThanOrEqual(1e-9);
     expect(rel(d.comms.dataRate * row.contactPerDay, req.dataPerDay)).toBeLessThanOrEqual(1e-9);
@@ -281,6 +306,35 @@ describe('a row (D07)', () => {
     expect(rel(row.contactPerDay, contact.perDay)).toBeLessThanOrEqual(1e-6);
   });
 
+  it('makes a design whose figures, worked out by designFigures, are the row\'s (integration: one number, one way)', () => {
+    // flown day and night, so D07 and D06 size the battery for the same load through the eclipse
+    const req: MissionRequirements = { ...THEOS2_REQ, daylightOnly: false, dataPerDay: 2e11 };
+    const templates: [string, SatelliteDesign][] = [['theos2', designFromTemplate('theos2', 'd07-theos2', 'THEOS-2 class')], ['test imager', IMAGER]];
+    for (const [name, template] of templates) {
+      const row = tradeRow(req, template, { revs: 385, days: 26 }, { ...OPTS, tilt: 30 * DEG })!;
+      const d = designFromRow(template, row, req)!;
+      const fig = designFigures(d, JD0);
+      const at = (got: number, want: number, tol: number, what: string) => expect({ name, what, ok: rel(got, want) <= tol, got, want }).toMatchObject({ ok: true });
+      // the camera: the GSD asked, straight down and at the diffraction limit, and the row's swath
+      at(fig.camera!.gsd.value, req.gsd, 1e-9, 'gsd');
+      at(fig.camera!.diffraction.value, req.gsd, 1e-9, 'diffraction');
+      at(fig.camera!.swath!.value, row.swath, 1e-9, 'swath');
+      // the link: the margin held to, the D06 bench's floor, and at that floor the rate the design was given
+      at(fig.link.margin.value, LINK_MARGIN_THRESHOLD, 1e-9, 'link margin');
+      at(fig.link.maxRate.value, row.requiredRate, 1e-9, 'rate at the margin');
+      at(d.comms.dataRate, row.requiredRate, 1e-9, 'rate');
+      // the orbit, and the Δv the tanks hold (the template's mass and engine)
+      at(fig.orbit.semiMajorAxis.value, row.orbit.a, 1e-9, 'a');
+      at(fig.orbit.inclination.value, row.inclination, 1e-9, 'i');
+      at(fig.dv.available.value, row.dvAvailable, 1e-9, 'Δv available');
+      at(row.dvAvailable, deltaVAvailable({ mass: wetMass(d), propellant: d.propulsion!.propellant, isp: d.propulsion!.isp, thrust: d.propulsion!.thrust }), 1e-9, 'Δv');
+      // the eclipse and what it sizes: D07's closed form at the worst β against D06's sampled worst eclipse
+      at(fig.eclipse.worst.value, row.power.eclipse, 5e-3, 'eclipse');
+      at(fig.power.areaNeeded.value, row.power.arrayArea, 5e-3, 'array');
+      at(fig.power.batteryNeeded.value, row.power.batteryWh * 3600, 5e-3, 'battery');
+    }
+  });
+
   it('refuses a template with no camera, an unknown station, or no plane', () => {
     expect(() => tradeRow(THEOS2_REQ, { ...IMAGER, payload: null }, { revs: 385, days: 26 }, OPTS)).toThrow(RangeError);
     expect(() => tradeRow({ ...THEOS2_REQ, stations: ['atlantis'] }, IMAGER, { revs: 385, days: 26 }, OPTS)).toThrow(RangeError);
@@ -340,7 +394,7 @@ describe('the table (D07)', () => {
     expect(ask.plane).toEqual({ sso: true, ltan: 22.25 });
     const lifetime = await runAltitudesJob({ ...ask, hi: 1500e3 }, new AbortController().signal, () => {});
     expect(lifetime.map((r) => r.outcome)).toEqual(['found', 'found']);
-    const rows = tradeTable(req, cube, { ...OPTS, txGain: 6, lifetime });
+    const rows = tradeTable(req, cube, { ...OPTS, lifetime });
     expect(rows.length).toBeGreaterThan(5);
     const [life, down] = lifetime;
     for (const r of rows) {

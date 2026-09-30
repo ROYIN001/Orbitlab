@@ -139,6 +139,15 @@ export interface SatelliteDesign {
     aperture: number;
     /** bits per pixel */
     bits: number;
+    /**
+     * The wavelength its aperture must resolve, m: the diffraction limit's
+     * (D06's camera figure, and D07's aperture for a ground sample). Optional,
+     * so a design written before it still reads; absent, 550 nm, the middle
+     * of the visible (`DIFFRACTION_WAVELENGTH`, src/design/satellite-link.ts),
+     * an estimate and labelled one. The integration of D06 and D07: the
+     * requirement solver used to take it as an option of its own.
+     */
+    wavelength?: number;
   } | null;
   /** where its figures come from, as the designer or the template gave them */
   sources?: string[];

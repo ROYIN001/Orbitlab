@@ -16,7 +16,7 @@ import {
   SATELLITE_DESIGN_KINDS, SATELLITE_LIMITS, isSatelliteDesign, satelliteDesignProblems, satelliteDesignText,
 } from '../src/config/satellite-design';
 import { SATELLITE_TEMPLATES } from '../src/data/satellite-templates';
-import { designFromTemplate, designHandoff } from '../src/design/satellite-model';
+import { DIFFRACTION_WAVELENGTH, designFromTemplate, designHandoff, fieldOrigin } from '../src/design/satellite-model';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
 import { STATIONS } from '../src/orbit/applications-setup';
 import { SATELLITE_LIMITS as SPEC_LIMITS } from '../src/config/satellite-spec';
@@ -105,6 +105,18 @@ describe('the satellite checker', () => {
     expect(paths(edit((d) => { delete d.orbit.ltan; delete d.comms.rxAntennaD; delete d.comms.rxNoiseK; delete d.comms.losses; delete d.propulsion.insertionDv; }))).toEqual([]);
     expect(paths(edit((d) => { d.orbit.ltan = 25; }))).toEqual(['orbit.ltan']);
     expect(paths(edit((d) => { d.comms.losses = -1; }))).toEqual(['comms.losses']);
+    // the camera's wavelength (integration: D07 reads it from the design): absent is 550 nm; one typed in nm is a slip
+    expect(paths(edit((d) => { delete d.payload.wavelength; }))).toEqual([]);
+    expect(paths(edit((d) => { d.payload.wavelength = 550; }))).toEqual(['payload.wavelength']);
+    expect(paths(edit((d) => { d.payload.wavelength = 10e-6; }))).toEqual([]);
+  });
+
+  it('labels the camera\'s wavelength an estimate on every template with a camera (integration)', () => {
+    for (const tpl of SATELLITE_TEMPLATES.filter((x) => x.design.payload)) {
+      const d = designFromTemplate(tpl.id, 'x', 'x');
+      expect({ id: tpl.id, w: d.payload!.wavelength }).toEqual({ id: tpl.id, w: DIFFRACTION_WAVELENGTH });
+      expect({ id: tpl.id, origin: fieldOrigin(d, 'payload.wavelength').kind }).toEqual({ id: tpl.id, origin: 'estimate' });
+    }
   });
 
   it('keeps the tanks within what the planner flies', () => {

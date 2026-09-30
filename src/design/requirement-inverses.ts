@@ -25,16 +25,26 @@
  * `sunDirectionEci`, the Earth the sphere of radius `R_EARTH`, the eclipse
  * the closed form of a circular orbit (SMAD, as TU Delft reproduces it).
  *
+ * THE DESIGN'S OWN FIGURES (the integration of D06 and D07): where an
+ * inverse needs the satellite's antenna, the ground receiver or the
+ * wavelength its aperture must resolve, it reads them from the design as
+ * the D06 bench does (src/design/satellite-link.ts: `designDownlinkAt`,
+ * `txPowerForDesign`, `apertureForDesign`), where it used to take them as
+ * options — so a design sized here and worked out there gives one number
+ * one way (tests/d07-trades.test.ts).
+ *
  * DOM-free, SI units and radians inside (the design stores degrees and hours,
  * src/design/satellite-spec.ts). It reads src/orbit only, never the
  * propagator itself (tests/propagator.test.ts).
  */
-import { R_EARTH } from '../physics/constants';
+import { DEG, R_EARTH } from '../physics/constants';
 import { betaAngle, circularPeriod, eclipseDuration } from '../orbit/eclipse';
 import type { Orbit } from '../orbit/kepler';
 import { designControlTable, maxDataRate, slantRange } from '../orbit/link';
 import { PATH_EFFICIENCY, SOLAR_FLUX_1AU, WORST_SUN_ANGLE, arrayArea, arrayPowerRequired, batteryCapacity } from '../orbit/power';
 import type { ArrayArea, ArrayMount, DesignControlInput, PowerRegulation } from '../orbit/satellite-cores';
+import { cameraWavelength, designDownlink } from './satellite-link';
+import type { SatelliteDesign } from './satellite-spec';
 
 const DAY = 86400;
 const PHI = (Math.sqrt(5) - 1) / 2;
@@ -71,6 +81,11 @@ export function apertureForGsd(h: number, wavelength: number, gsd: number): numb
   positive('wavelength', wavelength);
   positive('gsd', gsd);
   return (1.22 * wavelength * h) / gsd;
+}
+
+/** The aperture a design's camera needs for `gsd` from `h`, m: `apertureForGsd` at the camera's own wavelength (`cameraWavelength`). */
+export function apertureForDesign(design: Pick<SatelliteDesign, 'payload'>, h: number, gsd: number): number {
+  return apertureForGsd(h, cameraWavelength(design.payload), gsd);
 }
 
 // ─── the downlink ───────────────────────────────────────────────────────────
@@ -113,6 +128,26 @@ export function txPowerForEirp(eirpDbw: number, lineLoss: number, gain: number, 
 export interface DownlinkAt extends Omit<DesignControlInput, 'range' | 'dataRate'> {
   altitude: number;
   minEl: number;
+}
+
+/**
+ * The design's downlink from altitude `altitude` (m) down to its station's
+ * lowest elevation (`comms.minElDeg`), as `maxRateAtMargin` takes it: the
+ * design's transmitter, antenna and pointing, and the receiver it carries,
+ * read as the D06 bench reads them (`designDownlink`).
+ */
+export function designDownlinkAt(design: Pick<SatelliteDesign, 'comms' | 'adcs'>, altitude: number): DownlinkAt {
+  const dl = designDownlink(design);
+  return {
+    eirp: dl.eirp, frequency: dl.frequency, rxGain: dl.rxGain, systemTemperature: dl.systemTemperature, losses: dl.losses,
+    requiredEbN0: dl.requiredEbN0, implementationLoss: dl.implementationLoss, altitude, minEl: design.comms.minElDeg * DEG,
+  };
+}
+
+/** The transmitter power that gives the design EIRP `eirpDbw` (dBW) through its own line, antenna and pointing: `txPowerForEirp`, W. */
+export function txPowerForDesign(design: Pick<SatelliteDesign, 'comms' | 'adcs'>, eirpDbw: number): number {
+  const dl = designDownlink(design);
+  return txPowerForEirp(eirpDbw, dl.lineLoss, dl.txGain, dl.pointingLoss);
 }
 
 /**

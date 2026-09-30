@@ -63,16 +63,17 @@ import {
 } from '../orbit/power';
 import { CONTROLLED_REENTRY_PERIGEE, dragMakeupPerYear, dvAllocation, graveyardRaise, nsskPerYear, perigeeLowerDv, propellantFor } from '../orbit/disposal';
 import {
-  aeroTorque, biasMomentum, dipoleField, gravityGradientTorque, magneticTorque, pointingLoss, solarTorque, torquerDipole, wheelMomentumCyclic,
+  aeroTorque, biasMomentum, dipoleField, gravityGradientTorque, magneticTorque, solarTorque, torquerDipole, wheelMomentumCyclic,
 } from '../orbit/attitude';
-import { LINK_MARGIN_THRESHOLD, designControlTable, eirp, maxDataRate, maxPassDuration, slantRange } from '../orbit/link';
+import { LINK_MARGIN_THRESHOLD, designControlTable, maxDataRate, maxPassDuration, slantRange } from '../orbit/link';
 import { diffractionGsd, imagingDataRate, offNadirGsd } from '../orbit/imaging';
-import { dishGain, footprintAngle, swathWidth } from '../orbit/applications';
+import { footprintAngle, swathWidth } from '../orbit/applications';
 import { STATIONS } from '../orbit/applications-setup';
 import { DEFAULT_ACTIVITY_LEVEL, levelActivity, perigeeDensity, type EcssLevel } from '../orbit/satellite-air';
 import type { OrbitHandoff } from '../orbit/handoff';
 import { ballisticCoefficient, ballisticProblem, dragArea, lifetimeSpacecraft, satelliteAreaCore, wetMass } from './satellite-area';
 import { designOrbit, handoffFromDesign } from './satellite-handoff';
+import { DIFFRACTION_WAVELENGTH, cameraWavelength, designDownlink } from './satellite-link';
 import type { SatelliteDesign, SatelliteTemplate } from './satellite-spec';
 
 // ─── the assumptions, by name ───────────────────────────────────────────────
@@ -83,19 +84,14 @@ export const GG_SIZING_ANGLE = 45 * DEG;
 export const SUNLIT_REFLECTANCE = 0.6;
 /** The camera's tilt for the off-nadir figures, rad: 30°. */
 export const OFF_NADIR_ANGLE = 30 * DEG;
-/** The wavelength the diffraction limit is read at, m: 550 nm, the middle of the visible. */
-export const DIFFRACTION_WAVELENGTH = 550e-9;
-/** A transmitting dish's aperture efficiency: 0.55, a textbook value, and an estimate. */
-export const TX_DISH_EFFICIENCY = 0.55;
-/** The receiving dish's efficiency: Palo et al.'s NEN dish, 57 % (NTRS 20150000169, Table 1). */
-export const RX_DISH_EFFICIENCY = 0.57;
-/** The receiving station a design without its own figures is read with: Palo et al.'s NEN 11.28 m dish, 189.7 K, 2 dB (src/data/satellite-templates.ts). */
-export const RX_DEFAULTS = { rxAntennaD: 11.28, rxNoiseK: 189.7, losses: 2 } as const;
 /**
- * The half-power beamwidth of a dish, deg ≈ 21 / (f in GHz · D in m) (MIT OCW
- * 16.851, L21, slide 23): the angle the pointing loss is measured against.
+ * The downlink's and the camera's assumptions — the wavelength a design
+ * without its own is read at (550 nm, an estimate), the dishes' efficiencies,
+ * the NEN station a design without a receiver of its own is read with, the
+ * beamwidth rule — live in src/design/satellite-link.ts, which D07 reads too
+ * (the integration of D06 and D07: one downlink, one way).
  */
-export const beamwidthOf = (frequency: number, diameter: number): number => (21 / ((frequency / 1e9) * diameter)) * DEG;
+export { DIFFRACTION_WAVELENGTH, RX_DEFAULTS, RX_DISH_EFFICIENCY, TX_DISH_EFFICIENCY, beamwidthOf } from './satellite-link';
 /**
  * The inclination a geostationary satellite drifts by each year under the
  * Sun and the Moon, rad a year: 0.85°, which reproduces TU Delft Fig. 11's
@@ -344,6 +340,8 @@ export const SATELLITE_FIELDS: readonly SatelliteField[] = [
   fld('payload.pixels', 'build.sat.f.pixels', 'payload', 'count', L.pixels, 100, 0, { explore: true, integer: true }),
   fld('payload.aperture', 'build.sat.f.aperture', 'payload', 'm', L.aperture, 0.01, 3),
   fld('payload.bits', 'build.sat.f.bits', 'payload', 'bits', L.bits, 1, 0, { integer: true }),
+  // the wavelength the aperture must resolve (optional in a design: absent, 550 nm, an estimate; the integration of D06 and D07)
+  fld('payload.wavelength', 'build.sat.f.wavelength', 'payload', 'um', L.wavelength, 0.01, 3),
 ];
 
 export const fieldByPath = (path: string): SatelliteField | undefined => SATELLITE_FIELDS.find((x) => x.path === path);
@@ -422,7 +420,7 @@ export function withCamera(design: SatelliteDesign, on: boolean): SatelliteDesig
   if (!on) next.payload = null;
   else if (!next.payload) {
     const tpl = satelliteTemplateById(design.template)?.design.payload;
-    next.payload = tpl ? clone(tpl) : { focalLength: 16.1, pixelPitch: 13e-6, pixels: 20_600, aperture: 0.9, bits: 12 };
+    next.payload = tpl ? clone(tpl) : { focalLength: 16.1, pixelPitch: 13e-6, pixels: 20_600, aperture: 0.9, bits: 12, wavelength: DIFFRACTION_WAVELENGTH };
   }
   return next;
 }
@@ -576,17 +574,14 @@ export function designFigures(design: SatelliteDesign, jd: number, opts: FigureO
   const wheelMargin = sized2 !== null && sized2 > 0 ? ad.wheelH / sized2 : null;
 
   // ── link (A3): the downlink at the worst range, the longest pass
+  // the satellite's antenna, the station's and the path's figures, as D07 reads them too (src/design/satellite-link.ts)
   const c = design.comms;
-  const txGain = c.txAntennaD > 0 ? dishGain(c.txAntennaD, c.frequency, TX_DISH_EFFICIENCY) : 0;
-  const beamwidth = c.txAntennaD > 0 ? beamwidthOf(c.frequency, c.txAntennaD) : null;
-  const pLoss = beamwidth !== null ? pointingLoss(ad.pointingDeg * DEG, beamwidth) : 0;
-  const e = eirp(c.txPowerW, c.lineLoss, txGain, pLoss);
+  const dl = designDownlink(design);
+  const { txGain, beamwidth, pointingLoss: pLoss, eirp: e, rxGain } = dl;
   const range = slantRange(R_EARTH + hA, c.minElDeg * DEG);
-  const rxD = c.rxAntennaD ?? RX_DEFAULTS.rxAntennaD;
-  const rxGain = dishGain(rxD, c.frequency, RX_DISH_EFFICIENCY);
   const table = designControlTable({
-    eirp: e, frequency: c.frequency, range, rxGain, systemTemperature: c.rxNoiseK ?? RX_DEFAULTS.rxNoiseK,
-    losses: c.losses ?? RX_DEFAULTS.losses, dataRate: c.dataRate, requiredEbN0: c.requiredEbN0, implementationLoss: 0,
+    eirp: e, frequency: dl.frequency, range, rxGain, systemTemperature: dl.systemTemperature,
+    losses: dl.losses, dataRate: c.dataRate, requiredEbN0: dl.requiredEbN0, implementationLoss: dl.implementationLoss,
   });
   const maxRate = maxDataRate(table.ptOverN0, c.requiredEbN0, LINK_MARGIN_THRESHOLD);
   const passMax = region === 'geo' ? null : maxPassDuration(P, footprintAngle(o.a, c.minElDeg * DEG));
@@ -597,7 +592,7 @@ export function designFigures(design: SatelliteDesign, jd: number, opts: FigureO
   if (cam) {
     const gsd = offNadirGsd(hP, cam.pixelPitch, cam.focalLength, 0).along;
     const off = offNadirGsd(hP, cam.pixelPitch, cam.focalLength, OFF_NADIR_ANGLE);
-    const diffraction = diffractionGsd(hP, cam.aperture, DIFFRACTION_WAVELENGTH);
+    const diffraction = diffractionGsd(hP, cam.aperture, cameraWavelength(cam));
     const fov = 2 * Math.atan((cam.pixels * cam.pixelPitch) / (2 * cam.focalLength));
     const swath = swathWidth(hP, fov);
     camera = {

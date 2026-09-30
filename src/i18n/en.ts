@@ -2776,6 +2776,7 @@ export const en: Record<string, string> = {
   'build.sat.fly.issues': 'The Launch section would not take this mission as it is: try another vehicle.',
   'build.sat.fly.blocked': 'It cannot fly until the numbers the checks name are fixed.',
   'build.sat.fly.after': 'After the flight, “Continue in Orbit” takes it on with its own mass, drag area, C_D and C_R.',
+  'build.sat.f.wavelength': 'Wavelength (for the diffraction limit)',
   // --- end of D06 integration ---
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',
