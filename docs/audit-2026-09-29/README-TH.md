@@ -1,5 +1,7 @@
 # Orbitlab: ชุดรายงานและหลักฐานที่คัดสำหรับเผยแพร่
 
+> **หมายเหตุหลัง merge (30 ก.ย. 2026):** ไฟล์ `.log` และ `.docx` 60 ไฟล์ในชุดนี้ และโฟลเดอร์ `docs/cloud-handoff-2026-09-29/` (zip) ถูกนำออกก่อน merge เข้า main ตามกฎ `tests/repo-hygiene.test.ts` (หลักฐานประเภท archive/log/Word ไม่เก็บใต้ `docs/`) ลิงก์ไปยังไฟล์เหล่านั้นด้านล่างจึงไม่มีปลายทางบน main ไฟล์ต้นฉบับครบชุดยังอยู่ใน commit [`bd3d6e3`](https://github.com/ROYIN001/Orbitlab/tree/bd3d6e3/docs/audit-2026-09-29) ของสาขา `codex/audit-acceptance` และ `SHA256SUMS` ถูกตัดให้เหลือเฉพาะไฟล์ที่ยังอยู่
+
 ชุดนี้รวบรวมผลตรวจและการแก้ข้อผิดพลาดตามคำขอ โดยแยกงานพัฒนาใหม่ไว้เป็นข้อเสนอ เริ่มอ่านที่ [รายงานตรวจรับรวม](audit-2026-09-29/Orbitlab-acceptance-TH.md) แล้วตรวจหลักฐานรายเส้นทางใน [รายการ C01–C34](audit-2026-09-29/import-export-checklist-TH.md) รายงานต้นฉบับยังคงประวัติไว้ใน [ฉบับวันที่ 28 กันยายน พร้อมส่วนติดตาม](audit-2026-09-28/Orbitlab-audit-TH.md)
 
 งานอยู่ใน [PR #41](https://github.com/ROYIN001/Orbitlab/pull/41) และ [branch codex/audit-acceptance](https://github.com/ROYIN001/Orbitlab/tree/codex/audit-acceptance) งานรวมใช้ checkout `source-integrated` แยกจาก `source` เดิมที่เก็บไว้ ไม่ได้นำ final changes ไปเขียนทับ checkout เก่า

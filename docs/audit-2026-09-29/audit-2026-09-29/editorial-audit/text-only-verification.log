@@ -1,4 +1,0 @@
-warning: in the working copy of 'src/lessons/builtin/track2.ts', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'src/lessons/builtin/track5.ts', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'src/lessons/builtin/track6.ts', LF will be replaced by CRLF the next time Git touches it
-{"fileCount":11,"changedStrings":57,"allNonLocalizedAstEqual":true}
