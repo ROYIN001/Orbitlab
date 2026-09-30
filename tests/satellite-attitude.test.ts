@@ -178,9 +178,10 @@ describe('wheels and torquers (Starin & Eterno Table 19-11, PDF p. 20, FireSat)'
 
   it('bias momentum: 3.8 N·m·s for 1°; 38.3 for 0.1° (0.0017 rad), where the printed 37.7 is defect D3', () => {
     // 1°: the chapter prints no angle in rad for it. 0.017 rad (0.1°'s
-    // 0.0017 × 10) gives 3.83, and so does its own 37.7/10 = 3.77; the exact
-    // 0.01745 rad gives 3.73, which is not the printed 3.8 either. The 3.8 is
-    // read here as the chapter's rounding, and the exact 1° is recorded.
+    // 0.0017 × 10) gives 3.83 and its own 37.7/10 is 3.77, both 3.8 to the
+    // printed digit; the exact 0.01745 rad gives 3.73, which is not the
+    // printed 3.8. The 3.8 is read here as the chapter's rounding, and the
+    // exact 1° is recorded.
     expectPrinted(biasMomentum(4.4e-5, 5926, 0.017), '3.8');
     expectPrinted(37.7 / 10, '3.8');
     expectPrinted(biasMomentum(4.4e-5, 5926, 1 * DEG), '3.73');
