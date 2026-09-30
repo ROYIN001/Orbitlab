@@ -75,10 +75,12 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
   /** the control the keyboard goes to once the list is drawn again (a `data-k`) */
   private focusNext: string | null = null;
   private readonly fileInput = el('input');
+  /** The heading's id, one per kind: the rocket's and the satellite's stores are both in the page once both designers were shown. */
+  private get titleId(): string { return this.kind === 'vehicle' ? 'bx-store-title' : `bx-store-title-${this.kind}`; }
 
   constructor(private readonly host: ExploreStoreHost<K>, private readonly store: DesignStore = new LocalDesignStore(),
     private readonly kind: K = 'vehicle' as K, private readonly texts: StoreTexts = ROCKET_TEXTS) {
-    this.root.setAttribute('aria-labelledby', 'bx-store-title');
+    this.root.setAttribute('aria-labelledby', this.titleId);
     this.fileInput.type = 'file';
     this.fileInput.accept = `${DESIGN_FILE_EXTENSION},.json,application/json`;
     this.fileInput.hidden = true;
@@ -224,7 +226,7 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
     const cur = this.host.current();
     const head = el('div', 'bx-store-head');
     const title = el('h2', 'bx-h2', t('build.ex.store'));
-    title.id = 'bx-store-title';
+    title.id = this.titleId;
     head.append(title);
     const actions = el('div', 'bx-actions');
     const save = button('watch-btn primary', t('build.ex.store.save'), () => void this.save(false));
