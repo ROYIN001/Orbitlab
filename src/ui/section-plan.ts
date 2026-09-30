@@ -106,11 +106,12 @@ export const BUILT_ITEMS: ReadonlySet<string> = new Set(['O01', 'O02', 'O03', 'O
  * catalogue's classes), and the Engineer level's satellite bench budgets its
  * power, propulsion, attitude, radio, camera and lifetime; either sends it to
  * the Orbit section with no launch or flies it in the Launch section on a
- * rocket (the integration of D06, Phase 4 map §2.6). D07, requirements to a
- * satellite, is listed here by the D07 page's own track when its page is
- * built.
+ * rocket (the integration of D06, Phase 4 map §2.6). D07, design from
+ * requirements, is built at the Engineer level, its only level: the
+ * requirements page (`#/build/engineer/requirements`), opened from the
+ * satellite bench, whose rows open on that bench.
  */
-export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01', 'D02', 'D04', 'D05', 'D06']);
+export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01', 'D02', 'D04', 'D05', 'D06', 'D07']);
 
 /**
  * Items a level still lists as coming that another level already offers:
