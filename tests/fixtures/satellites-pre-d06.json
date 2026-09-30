@@ -1,0 +1,177 @@
+[
+ {
+  "description": "Large geostationary bus with two solar wings and reflector antennas (e.g. Express-AM, Intelsat). Carries a 490 N apogee engine.",
+  "id": "comsat",
+  "kind": "comsat",
+  "mass": 5500,
+  "name": "Communications satellite",
+  "propulsion": {
+   "isp": 321,
+   "propellantFraction": 0.45,
+   "thrust": 490
+  },
+  "size": {
+   "depth": 2.5,
+   "height": 5,
+   "width": 2.5
+  },
+  "typicalOrbit": "geo"
+ },
+ {
+  "description": "Optical imaging spacecraft in a sun-synchronous orbit (e.g. Resurs-P, WorldView).",
+  "id": "earthObs",
+  "kind": "earthObs",
+  "mass": 2200,
+  "name": "Earth-observation satellite",
+  "propulsion": {
+   "isp": 225,
+   "propellantFraction": 0.1,
+   "thrust": 22
+  },
+  "size": {
+   "depth": 1.8,
+   "height": 4.5,
+   "width": 1.8
+  },
+  "typicalOrbit": "sso"
+ },
+ {
+  "description": "Geostationary meteorological satellite (e.g. Elektro-L, GOES).",
+  "id": "weather",
+  "kind": "weather",
+  "mass": 1800,
+  "name": "Weather satellite",
+  "propulsion": {
+   "isp": 315,
+   "propellantFraction": 0.42,
+   "thrust": 400
+  },
+  "size": {
+   "depth": 2,
+   "height": 3.5,
+   "width": 2
+  },
+  "typicalOrbit": "geo"
+ },
+ {
+  "description": "GNSS spacecraft for MEO constellations (e.g. GLONASS-K, GPS III).",
+  "id": "navigation",
+  "kind": "navigation",
+  "mass": 1400,
+  "name": "Navigation satellite",
+  "propulsion": {
+   "isp": 310,
+   "propellantFraction": 0.3,
+   "thrust": 400
+  },
+  "size": {
+   "depth": 1.8,
+   "height": 3,
+   "width": 1.8
+  },
+  "typicalOrbit": "glonass"
+ },
+ {
+  "description": "Space observatory or research platform (e.g. Spektr-RG, Fermi).",
+  "id": "science",
+  "kind": "science",
+  "mass": 2700,
+  "name": "Science / astronomy satellite",
+  "propulsion": {
+   "isp": 225,
+   "propellantFraction": 0.08,
+   "thrust": 22
+  },
+  "size": {
+   "depth": 2.5,
+   "height": 5.5,
+   "width": 2.5
+  },
+  "typicalOrbit": "polar"
+ },
+ {
+  "description": "Rideshare dispenser releasing a cluster of small satellites. No propulsion of its own.",
+  "id": "cubesats",
+  "kind": "cubesats",
+  "mass": 300,
+  "name": "CubeSat rideshare dispenser",
+  "size": {
+   "depth": 1,
+   "height": 1.2,
+   "width": 1
+  },
+  "typicalOrbit": "sso"
+ },
+ {
+  "description": "Flat-packed stack of broadband satellites; the launcher upper stage performs the orbit raising.",
+  "id": "starlink",
+  "kind": "starlink",
+  "mass": 15600,
+  "name": "Starlink batch (60 × 260 kg)",
+  "size": {
+   "depth": 2.5,
+   "height": 5,
+   "width": 3.5
+  },
+  "typicalOrbit": "starlink"
+ },
+ {
+  "crewed": true,
+  "description": "Crew capsule with service module (e.g. Soyuz MS, Crew Dragon). Raises its own orbit to the station with a 3.9 kN engine.",
+  "id": "crew",
+  "kind": "crew",
+  "mass": 7150,
+  "name": "Crewed spacecraft",
+  "propulsion": {
+   "isp": 302,
+   "propellantFraction": 0.12,
+   "thrust": 3920
+  },
+  "size": {
+   "depth": 2.7,
+   "height": 7,
+   "width": 2.7
+  },
+  "typicalOrbit": "iss"
+ },
+ {
+  "description": "The first artificial satellite: a 58 cm polished sphere with four whip antennas and two radio transmitters. No propulsion.",
+  "id": "sputnik1",
+  "kind": "science",
+  "mass": 83.6,
+  "name": "Sputnik-1 (PS-1)",
+  "size": {
+   "depth": 0.58,
+   "height": 0.58,
+   "width": 0.58
+  },
+  "typicalOrbit": "leo"
+ },
+ {
+  "description": "Gagarin's Vostok: a 2.3 m descent sphere on an instrument module. Its TDU-1 engine only brought it home, so Blok E put it in orbit.",
+  "id": "vostok3ka",
+  "kind": "crew",
+  "mass": 4730,
+  "name": "Vostok 3KA",
+  "size": {
+   "depth": 2.43,
+   "height": 4.4,
+   "width": 2.43
+  },
+  "typicalOrbit": "leo"
+ },
+ {
+  "crewed": true,
+  "description": "Apollo 11: command and service module, the lunar module and its adapter, 45.7 t. The S-IVB made the translunar injection; the service engine was kept for the Moon.",
+  "id": "apollo",
+  "kind": "crew",
+  "mass": 45700,
+  "name": "Apollo CSM + LM",
+  "size": {
+   "depth": 3.9,
+   "height": 11,
+   "width": 3.9
+  },
+  "typicalOrbit": "leo"
+ }
+]

@@ -31,7 +31,7 @@ import { TOUR, type TourView } from '../../orbit/tour';
 import { SKY_TOUR, type SkyTourStep } from '../../orbit/sky-tour';
 import {
   PG_DEFAULT_PRESET, PG_DEFAULT_WARP, PG_LIMITS, PG_WARPS, handoffEntry, handoffOrbit, linearScale, logScale, orbitPath,
-  repeatGroundTrack, tourSetup, withApsis, type SliderScale,
+  playgroundLifetimeCraft, repeatGroundTrack, tourSetup, withApsis, type SliderScale,
 } from '../../orbit/playground-model';
 import { isPlan, porkchop, stateOnPlan, type Plan, type PlanError } from '../../orbit/maneuvers';
 import {
@@ -43,7 +43,6 @@ import {
   adoptBlock, budgetFor, craftAfter, craftFromHandoff, craftProblem, defaultCraft, reachedState, type Budget, type Craft,
 } from '../../orbit/budget';
 import { handoffFromState } from '../../orbit/handoff';
-import { spacecraftFor } from '../../physics/propagator/spacecraft';
 import { MANEUVER_LIMITS } from '../../orbit/maneuver-setup';
 import { appsControls, appsResults, type AppsHost } from './applications-panel';
 import { commsReport, defaultApps, eoReport, thaiOrbit, type AppKind, type AppSettings } from '../../orbit/applications-setup';
@@ -870,11 +869,8 @@ export class OrbitPlayground {
   private openLifetime(opener: HTMLElement): void {
     const s = this.stateNow(this.time);
     const f = orbitFacts(this.flownAt(this.time).orbit, false);
-    const kind = this.handoff?.spacecraft.kind ?? 'science';
-    const mass = this.craft?.mass ?? this.handoff?.spacecraft.mass ?? 1000;
-    const base = this.handoff ? { ...this.handoff.spacecraft, mass } : { ...spacecraftFor(kind, mass), kind, propulsion: null };
     this.host.lifetime(handoffFromState({
-      r: s.r, v: s.v, jd: this.orbit.jd0 + this.time / 86400, spacecraft: base,
+      r: s.r, v: s.v, jd: this.orbit.jd0 + this.time / 86400, spacecraft: playgroundLifetimeCraft(this.handoff, this.craft),
       label: t('pg.life.label', { pe: num(f.perigeeAlt / 1000), ap: num(f.apogeeAlt / 1000), i: num(this.flownAt(this.time).orbit.i * RAD, 1), u: t('u.km') }),
     }), opener);
   }

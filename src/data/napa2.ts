@@ -14,7 +14,8 @@
  *   satcat.tsv of 2026-09-24: 10 kg, separated "2021 Jul 18", re-entered
  *   "2026 Jul 5", day only).
  * - Size: Janes, "SpaceX launches Royal Thai Air Force's second
- *   Earth-observation satellite", 2021: 20 × 10 × 34.05 cm, 10 kg.
+ *   Earth-observation satellite", 2021: 20 × 10 × 34.05 cm (it gives no
+ *   mass; the 10 kg is GCAT's).
  */
 import type { OmmRecord } from '../provider/satellites';
 
