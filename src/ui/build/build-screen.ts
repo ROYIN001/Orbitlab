@@ -360,9 +360,9 @@ export class BuildScreen {
       this.satLevel = new SatelliteLevel(this.workspace(), {
         toOrbit: (h) => this.host.toOrbit?.(h, 'explore'),
         // a rocket imported in the satellite designer opens in the rocket designer
-        openRocket: (record) => {
+        openRocket: (record, message) => {
           this.setCraft('rocket');
-          this.ensureExplore().openSaved(record);
+          this.ensureExplore().openSaved(record, message);
           if (this.level !== 'explore') this.host.go(route('build', 'explore'));
         },
       });
@@ -419,9 +419,9 @@ export class BuildScreen {
         launchTime: () => this.host.launchTime?.() ?? new Date(),
         fly: (doc) => this.host.flyDesign?.(doc, 'explore') ?? false,
         // D06: a satellite file imported in the rocket designer opens in the satellite designer
-        openSatellite: (record) => {
+        openSatellite: (record, message) => {
           this.setCraft('satellite');
-          this.ensureSatellite().open(record);
+          this.ensureSatellite().open(record, message);
         },
       });
       this.explore.root.hidden = this.craft !== 'rocket';

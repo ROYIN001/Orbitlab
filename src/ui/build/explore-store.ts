@@ -35,8 +35,12 @@ export interface ExploreStoreHost<K extends DesignKind = 'vehicle'> {
   open(record: DesignRecord<K>): void;
   /** the record the design on screen belongs to was deleted */
   forgotten(recordId: string): void;
-  /** an imported file held the other kind of design (a satellite in the rocket designer, or a rocket in the satellite's): kept, and opened where it belongs */
-  other?(record: DesignRecord): void;
+  /**
+   * an imported file held the other kind of design (a satellite in the rocket
+   * designer, or a rocket in the satellite's): kept, and opened where it
+   * belongs, whose store says `message` (this one is hidden by then)
+   */
+  other?(record: DesignRecord, message: string): void;
 }
 
 /** The sentences that name what a kind is: the rest of the store's words are the same for both. */
@@ -94,6 +98,11 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
   private say(message: Message | null): void {
     this.message = message;
     this.render();
+  }
+
+  /** Say something that happened elsewhere (a file of this kind imported in the other designer and opened here). */
+  announce(level: Message['level'], text: string): void {
+    this.say({ level, text });
   }
 
   private failure(error: unknown): Message {
@@ -195,10 +204,12 @@ export class ExploreStore<K extends DesignKind = 'vehicle'> {
       const newer = parsed.issues.some((i) => i.code === 'newerVersion');
       const newerText = newer ? ` ${t('build.ex.store.fileNewer')}` : '';
       if (!isDesignOf(rec, this.kind)) {
-        // the other kind: kept, and opened in its own designer, never as the wrong thing
-        this.message = { level: 'warn', text: `${t(rec.kind === 'satellite' ? 'build.sat.store.toSatellite' : 'build.sat.store.toRocket', { name: rec.name })}${newerText}` };
+        // the other kind: kept, and opened in its own designer, never as the wrong thing. That designer's store says
+        // so: this one is hidden once the other designer is on screen, and a message left here would be stale on return
+        const text = `${t(rec.kind === 'satellite' ? 'build.sat.store.toSatellite' : 'build.sat.store.toRocket', { name: rec.name })}${newerText}`;
+        this.message = null;
         await this.refresh();
-        this.host.other?.(rec);
+        this.host.other?.(rec, text);
         return;
       }
       this.message = { level: newer ? 'warn' : 'ok', text: `${t('build.ex.store.imported', { name: rec.name })}${newerText}` };

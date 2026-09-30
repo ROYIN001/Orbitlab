@@ -46,8 +46,8 @@ import './satellite.css';
 export interface SatelliteLevelHost {
   /** hand the design to the Orbit section in its own orbit (C1's hook), at the Explore level */
   toOrbit(h: OrbitHandoff): void;
-  /** a rocket imported here (a file of the other kind): open it in the rocket designer */
-  openRocket(record: DesignRecord<'vehicle'>): void;
+  /** a rocket imported here (a file of the other kind): open it in the rocket designer, whose store says `message` */
+  openRocket(record: DesignRecord<'vehicle'>, message: string): void;
 }
 
 /** The groups the Explore level shows, and each one's heading; the rest of the numbers are the bench's. */
@@ -92,7 +92,7 @@ export class SatelliteLevel {
       saved: (recordId, name) => { this.ws.saved(recordId, name); this.renderHead(); },
       open: (record) => this.open(record),
       forgotten: (recordId) => { if (this.ws.recordId === recordId) this.ws.saved(null); },
-      other: (record) => { if (isDesignOf(record, 'vehicle')) this.host.openRocket(record); },
+      other: (record, message) => { if (isDesignOf(record, 'vehicle')) this.host.openRocket(record, message); },
     }, undefined, 'satellite', { invalid: 'build.sat.store.invalid', fileInvalid: 'build.sat.store.fileInvalid' });
     this.glance.setAttribute('aria-labelledby', 'bsat-glance-title');
     this.controls.setAttribute('aria-labelledby', 'bsat-controls-title');
@@ -120,10 +120,11 @@ export class SatelliteLevel {
     this.visible = false;
   }
 
-  /** A kept or imported satellite design, opened here. */
-  open(record: DesignRecord<'satellite'>): void {
+  /** A kept or imported satellite design, opened here, and what the store says of it (a file imported in the rocket designer). */
+  open(record: DesignRecord<'satellite'>, message?: string): void {
     this.orbitMessage = null;
     this.ws.replace({ design: structuredClone(record.design), recordId: record.id, defaultName: '' });
+    if (message) this.store.announce('warn', message);
     if (this.visible) this.root.closest('.build-screen')?.scrollTo({ top: 0 });
   }
 

@@ -67,8 +67,8 @@ export interface ExploreHost {
   launchTime(): Date;
   /** hand a mission document to the Launch section and go there; false when it could not take it */
   fly(doc: MissionDocument): boolean;
-  /** D06: a satellite design imported here (a file of the other kind): open it in the satellite designer */
-  openSatellite?(record: DesignRecord<'satellite'>): void;
+  /** D06: a satellite design imported here (a file of the other kind): open it in the satellite designer, whose store says `message` */
+  openSatellite?(record: DesignRecord<'satellite'>, message: string): void;
 }
 
 type Built = Extract<DesignResult, { ok: true }>;
@@ -233,7 +233,7 @@ export class ExploreLevel {
         this.queueKeep();
       },
       // a satellite file imported here is kept and opened where it belongs (D06), never as a rocket
-      other: (record) => { if (isDesignOf(record, 'satellite')) this.host.openSatellite?.(record); },
+      other: (record, message) => { if (isDesignOf(record, 'satellite')) this.host.openSatellite?.(record, message); },
     });
     this.tabs.setAttribute('role', 'group');
     this.draw.append(this.stack.root);
@@ -407,9 +407,10 @@ export class ExploreLevel {
     this.store.render();
   }
 
-  /** A kept or imported rocket design, opened here (a rocket file imported in the satellite designer, D06). */
-  openSaved(record: DesignRecord<'vehicle'>): void {
+  /** A kept or imported rocket design, opened here (a rocket file imported in the satellite designer, D06), and what the store says of it. */
+  openSaved(record: DesignRecord<'vehicle'>, message?: string): void {
     this.openRecord(record);
+    if (message) this.store.announce('warn', message);
   }
 
   private openRecord(record: DesignRecord<'vehicle'>): void {
