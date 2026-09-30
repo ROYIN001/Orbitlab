@@ -36,7 +36,8 @@ jobs:
   # the default suite (tests/heavy and tests/sixdof-fleet excluded by vite.config.ts) split three ways
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # a guard against runner speed varying about 2x between runs, not the target (the plan's is a 12-minute PR CI)
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

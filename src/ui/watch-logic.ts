@@ -565,7 +565,7 @@ export function watchReadout(frame: VisualFrame): { altitude: number; speed: num
 
 /**
  * The flight is in orbit: a parking orbit or the final one. It is what the
- * viewer's missions are flown to (tests/watch-missions.test.ts); it is NOT the
+ * viewer's missions are flown to (tests/watch-missions-flights.ts); it is NOT the
  * end of the flight — that is `missionOrbit` (audit 2026-09-27 A9).
  */
 export function reachedOrbit(frame: VisualFrame | null, events: readonly SimEvent[]): boolean {

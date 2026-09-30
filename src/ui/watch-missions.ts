@@ -4,7 +4,7 @@
  * A viewer with no background in spaceflight must never be handed a mission
  * that fails for a reason nobody explained to them, so every entry here is a
  * vehicle, site, payload and orbit that flies to orbit with the default
- * guidance — `tests/watch-missions.test.ts` flies each one to prove it — and
+ * guidance — `tests/watch-missions-flights-*.test.ts` fly each one to prove it — and
  * none of them uses a site whose range-safety corridor the chosen orbit leaves.
  * The exceptions are the three launch aborts (G06), each a failure that really
  * happened, explained as it happens, and each flown to its crew at rest.
