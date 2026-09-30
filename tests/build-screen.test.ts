@@ -11,8 +11,8 @@ import { BUILD_BUILT_ITEMS, BUILD_ITEM_OPEN_AT, BUILD_LEVEL_ITEMS, BUILD_READY_L
 const buildItems = SECTION_PLANS.build.phases.flatMap((p) => p.items.map((i) => i.id));
 
 describe('the Build section (Phase 3)', () => {
-  it('counts D01 (the parts catalogue), D02 (the remix), D04 (the test facilities) and D05 (sizing, optimal staging) as built, and nothing outside its own plan', () => {
-    expect([...BUILD_BUILT_ITEMS]).toEqual(['D01', 'D02', 'D04', 'D05']);
+  it('counts D01 (the parts catalogue), D02 (the remix), D04 (the test facilities), D05 (sizing, optimal staging) and D06 (the satellite builder) as built, and nothing outside its own plan', () => {
+    expect([...BUILD_BUILT_ITEMS]).toEqual(['D01', 'D02', 'D04', 'D05', 'D06']);
     for (const id of BUILD_BUILT_ITEMS) expect(buildItems).toContain(id);
     for (const id of BUILD_BUILT_ITEMS) expect(BUILT_ITEMS.has(id)).toBe(false);
   });
@@ -23,10 +23,10 @@ describe('the Build section (Phase 3)', () => {
       expect(BUILD_LEVEL_ITEMS[level].length).toBeGreaterThan(0);
       for (const id of BUILD_LEVEL_ITEMS[level]) expect(buildItems, `${level} ${id}`).toContain(id);
     }
-    // what Engineer offers is built there, but for D03's Engineer face and the satellites of Phase 4
-    expect(BUILD_LEVEL_ITEMS.engineer.filter((id) => !BUILD_BUILT_ITEMS.has(id))).toEqual(['D03', 'D06', 'D07']);
-    // what Explore offers is built there, but for the satellite templates of Phase 4 (D06)
-    expect(BUILD_LEVEL_ITEMS.explore.filter((id) => !BUILD_BUILT_ITEMS.has(id))).toEqual(['D03', 'D06']);
+    // what Engineer offers is built there, but for D03's Engineer face and D07's requirements (the satellite bench, D06, is built)
+    expect(BUILD_LEVEL_ITEMS.engineer.filter((id) => !BUILD_BUILT_ITEMS.has(id))).toEqual(['D03', 'D07']);
+    // what Explore offers is built there, the satellite designer (D06) too; D03 is built there, and listed for its Engineer face
+    expect(BUILD_LEVEL_ITEMS.explore.filter((id) => !BUILD_BUILT_ITEMS.has(id))).toEqual(['D03']);
     // an item one level still lists as coming but another already offers (D03's parts builder, at Explore) says where
     expect([...BUILD_ITEM_OPEN_AT]).toEqual([['D03', 'explore']]);
     for (const [id, level] of BUILD_ITEM_OPEN_AT) {

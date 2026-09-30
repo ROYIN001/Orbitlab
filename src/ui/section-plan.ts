@@ -100,9 +100,17 @@ export const BUILT_ITEMS: ReadonlySet<string> = new Set(['O01', 'O02', 'O03', 'O
  * D04, the test facilities (the test stand, the wind tunnel, the flight
  * readiness review), and D05, sizing and optimal staging, are built at the
  * Engineer level, their only level; a sized launcher is designed further in
- * the Explore level's parts builder.
+ * the Explore level's parts builder. D06, the satellite builder (Phase 4),
+ * is built at both its levels: the Explore level's satellite designer starts
+ * a satellite from a template (NAPA-2, a THEOS-2-class imager, the
+ * catalogue's classes), and the Engineer level's satellite bench budgets its
+ * power, propulsion, attitude, radio, camera and lifetime; either sends it to
+ * the Orbit section with no launch or flies it in the Launch section on a
+ * rocket (the integration of D06, Phase 4 map §2.6). D07, requirements to a
+ * satellite, is listed here by the D07 page's own track when its page is
+ * built.
  */
-export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01', 'D02', 'D04', 'D05']);
+export const BUILD_BUILT_ITEMS: ReadonlySet<string> = new Set(['D01', 'D02', 'D04', 'D05', 'D06']);
 
 /**
  * Items a level still lists as coming that another level already offers:
@@ -115,8 +123,8 @@ export const BUILD_ITEM_OPEN_AT: ReadonlyMap<string, AppLevel> = new Map([['D03'
 /**
  * The Build section's levels that are built; the others show what is coming
  * to them. The Engineer level is, since D04 and D05 are: what is still to
- * come to it (D03's Engineer face, Phase 4's satellites) is listed under its
- * tabs, as Explore's D06 is not yet there either.
+ * come to it (D03's Engineer face, D07's requirements) is listed under its
+ * tabs.
  */
 export const BUILD_READY_LEVELS: ReadonlySet<AppLevel> = new Set(['watch', 'explore', 'engineer']);
 
