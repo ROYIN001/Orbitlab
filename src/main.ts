@@ -499,6 +499,12 @@ class App {
         this.go(route('launch', level));
         return true;
       },
+      // D06: a designed satellite in its own orbit, with no launch, handed on as "Continue in Orbit" hands a flight's
+      toOrbit: (h, level) => {
+        this.handoff = h;
+        this.playground.setHandoff(h);
+        this.go(route('orbit', level));
+      },
     });
     this.playground = new OrbitPlayground(document.getElementById('orbit-playground')!, {
       go: (r) => this.go(r),

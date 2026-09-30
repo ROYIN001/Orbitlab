@@ -4,7 +4,7 @@
  * charts and the radar as SVG text, and unit symbols in each language.
  */
 import { describe, expect, it } from 'vitest';
-import { emptyProgress, flownMission, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
+import { clearRevealed, emptyProgress, flownMission, lessonProgress, loadProgress, recordGrade, recordRevealed, resultsFile, saveProgress, verifyResults, type KeyValueStore } from '../src/lessons/progress';
 import { awaitingAnswers, regradeAnswers } from '../src/lessons/grader';
 import { FlightLessons } from '../src/lessons/flight-lessons';
 import { worksheetSource } from '../src/worksheets/build';
@@ -85,6 +85,52 @@ describe('progress and the results file', () => {
     expect(await verifyResults(edited)).toBe(false);
     expect(file.progress).not.toHaveProperty('customLessons');
   });
+
+  // owner decision D-6: a pass on answers shown is recorded as such, and never as an unaided pass
+  it('carries a pass with help in the results file, apart from an unaided pass', async () => {
+    const p = emptyProgress();
+    const base = { lessonId: 'orbit-first', criteria: [], answers: {}, hintsShown: 0 };
+    recordGrade(p, { ...base, at: '1', verdict: 'passedWithHelp', revealed: ['period'] });
+    const helped = p.lessons['orbit-first'];
+    expect(helped).toMatchObject({ passed: false, passedWithHelp: true });
+    expect(helped.passedRecord).toBeUndefined();
+    const file = await resultsFile(p, new Date('2026-09-30T10:00:00Z'));
+    expect(file.version).toBe(1);
+    expect(file.progress.lessons['orbit-first'].last).toMatchObject({ verdict: 'passedWithHelp', revealed: ['period'] });
+    expect(await verifyResults(file)).toBe(true);
+    // turned into an unaided pass by hand, the file no longer verifies
+    const edited = JSON.parse(JSON.stringify(file));
+    edited.progress.lessons['orbit-first'].last.verdict = 'pass';
+    expect(await verifyResults(edited)).toBe(false);
+    // an unaided pass later is the one kept as passed
+    recordGrade(p, { ...base, at: '2', verdict: 'pass' });
+    expect(p.lessons['orbit-first']).toMatchObject({ passed: true, passedWithHelp: true, passedRecord: { at: '2' } });
+  });
+
+  // owner decision D-6: "Clear the answers I have seen" forgets the values shown, and nothing else
+  it('clears only the values shown: attempts, hints, answers and what was recorded stay', () => {
+    const p = emptyProgress();
+    const base = { lessonId: 'orbit-first', criteria: [], answers: { period: 94.6 }, hintsShown: 2 };
+    recordGrade(p, { ...base, at: '1', verdict: 'pass' });
+    recordGrade(p, { ...base, at: '2', verdict: 'passedWithHelp', revealed: ['period'] });
+    const kept = lessonProgress(p, 'orbit-first');
+    kept.attempts = 3;
+    kept.hintsShown = 2;
+    recordRevealed(p, 'orbit-first', { period: 94.6, speed: 7.61 });
+    recordRevealed(p, 'orbit-first', { period: 94.6 });
+    recordRevealed(p, 'orbit-first', { speed: Number.NaN }); // nothing finite shown: not a reveal
+    expect(kept.reveals).toBe(2);
+    const before = JSON.parse(JSON.stringify(kept));
+    clearRevealed(p, 'orbit-first');
+    const { revealed, ...rest } = before;
+    expect(revealed).toEqual({ period: [94.6], speed: [7.61] });
+    expect(p.lessons['orbit-first']).toEqual(rest);
+    // the count of reveals survives clearing, so the teacher can still see the answers were shown
+    expect(p.lessons['orbit-first'].reveals).toBe(2);
+    // a lesson never opened is not created by clearing it
+    clearRevealed(p, 'never-opened');
+    expect(p.lessons).not.toHaveProperty('never-opened');
+  });
 });
 
 // E03: the strip once printed the expected value after a wrong answer, and typing it in then passed
@@ -102,19 +148,38 @@ describe('an answer shown to the student', () => {
     expect(regradeAnswers(lesson, frozen, { period: 94.6, speed: 7.61 }).verdict).toBe('pass');
   });
 
-  it('once shown, never passes: not on this flight, not on the same flight flown again', () => {
+  // owner decision D-6: it once failed for good, and lesson 1.1, the same flight every time, could never be passed again here
+  it('once shown, passes only with help — on this flight and on the same flight flown again — until cleared', () => {
     const p = emptyProgress();
     recordRevealed(p, 'orbit-first', { period: 94.6 });
     const revealed = lessonProgress(p, 'orbit-first').revealed!;
-    // the value shown, typed in: recorded as not passed, and marked as shown
+    // the value shown, typed in: passed with help, never an unaided pass, and marked as shown
     const typed = regradeAnswers(lesson, frozen, { period: 94.6, speed: 7.61 }, revealed);
-    expect(typed.verdict).toBe('fail');
-    expect(typed.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'fail', revealed: true });
+    expect(typed.verdict).toBe('passedWithHelp');
+    expect(typed.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'pass', revealed: true });
     expect(typed.criteria.find((c) => c.id === 'speed')).toMatchObject({ state: 'pass' });
-    // shown before anything is typed: it is decided at once, so the attempt is recorded
+    expect(typed.criteria.find((c) => c.id === 'speed')).not.toHaveProperty('revealed');
+    // a wrong answer after the answers were shown still fails
+    const wrong = regradeAnswers(lesson, frozen, { period: 90, speed: 7.61 }, revealed);
+    expect(wrong.verdict).toBe('fail');
+    expect(wrong.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'fail', revealed: true });
+    // shown before anything is typed: the answer is still awaited
     const untyped = regradeAnswers(lesson, frozen, {}, revealed);
-    expect(untyped.criteria.find((c) => c.id === 'period')!.state).toBe('fail');
-    expect(awaitingAnswers(lesson, untyped)).toEqual(['speed']);
+    expect(untyped.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'pending', revealed: true });
+    expect(untyped.verdict).toBe('open');
+    expect(awaitingAnswers(lesson, untyped)).toEqual(['period', 'speed']);
+    // a lock broken, or a criterion failed, is still a fail whatever was shown
+    expect(regradeAnswers(lesson, { ...frozen, lockBroken: ['setup.orbit'] }, { period: 94.6, speed: 7.61 }, revealed).verdict).toBe('fail');
+    // recorded as passed with help: the lesson is not counted as passed
+    recordGrade(p, { lessonId: 'orbit-first', at: '1', verdict: typed.verdict, criteria: typed.criteria, answers: { period: 94.6, speed: 7.61 }, hintsShown: 0, revealed: ['period'] });
+    expect(lessonProgress(p, 'orbit-first')).toMatchObject({ passed: false, passedWithHelp: true });
+    // cleared: the same flight flown again can pass unaided
+    clearRevealed(p, 'orbit-first');
+    expect(lessonProgress(p, 'orbit-first').revealed).toBeUndefined();
+    const fresh = regradeAnswers(lesson, frozen, { period: 94.6, speed: 7.61 }, lessonProgress(p, 'orbit-first').revealed);
+    expect(fresh.verdict).toBe('pass');
+    expect(fresh.criteria.some((c) => c.revealed)).toBe(false);
+    recordRevealed(p, 'orbit-first', { period: 94.6 });
     // a flight whose answer is another number (a different orbit) can still pass
     const other: LessonGrade = { ...frozen, criteria: frozen.criteria.map((c) => (c.id === 'period' ? { ...c, expected: 101.3 } : c)) };
     expect(regradeAnswers(lesson, other, { period: 101.3, speed: 7.61 }, revealed).verdict).toBe('pass');
@@ -193,6 +258,28 @@ describe('the lessons over WebMCP', () => {
     expect(tool(h, 'start_lesson').execute({ id: 'nope' })).toEqual({ ok: false, reason: 'no' });
     expect(() => tool(h, 'start_lesson').execute({})).toThrow();
     expect(tool(h, 'get_assessment_result').execute({})).toEqual({ taken: false });
+  });
+
+  // owner decision D-6: the verdict an assistant reads says a pass on answers shown was one with help
+  it('reports a pass with help as such, in the grade and in the progress, and still not the value', () => {
+    const lesson = BUILTIN_LESSONS[0];
+    const p = emptyProgress();
+    recordRevealed(p, lesson.id, { period: 94.6 });
+    const helped = regradeAnswers(lesson, grade, { period: 94.6, speed: 7.61 }, lessonProgress(p, lesson.id).revealed);
+    recordGrade(p, { lessonId: lesson.id, at: '1', verdict: helped.verdict, criteria: helped.criteria, answers: {}, hintsShown: 0, revealed: ['period'] });
+    const h: LessonToolsHost = {
+      catalogue: () => allLessons(), progress: () => p, startLesson: () => ({ ok: true }),
+      activeLesson: () => ({ lesson, grade: helped, hintsShown: 0, awaiting: [] }), assessmentResult: () => null,
+    };
+    const result = tool(h, 'get_lesson_result').execute({}) as { verdict: string; criteria: Array<{ id: string; state: string; answerShown?: boolean; value?: unknown }> };
+    expect(result.verdict).toBe('passedWithHelp');
+    expect(result.criteria.find((c) => c.id === 'period')).toMatchObject({ state: 'pass', answerShown: true, value: undefined });
+    expect(result.criteria.find((c) => c.id === 'speed')).not.toHaveProperty('answerShown');
+    expect(JSON.stringify(result)).not.toContain('94.6');
+    expect(tool(h, 'get_lesson_result').description).toContain('passedWithHelp');
+    const listed = (tool(h, 'list_lessons').execute({}) as { lessons: Array<{ id: string; passed: boolean; passedWithHelp: boolean }> }).lessons;
+    expect(listed.find((l) => l.id === lesson.id)).toMatchObject({ passed: false, passedWithHelp: true });
+    expect(listed.find((l) => l.id === BUILTIN_LESSONS[1].id)).toMatchObject({ passed: false, passedWithHelp: false });
   });
 });
 

@@ -95,8 +95,18 @@ export interface HandoffInput {
 }
 
 /**
+ * The satellite's own figure where it gives one a hand-off can carry — a
+ * finite number above zero, as `parseHandoff` asks — else the class's
+ * estimate. Reporting a bad figure is the satellite's checker's work; here it
+ * must only not make a hand-off that cannot be read back.
+ */
+const ownFigure = (own: number | undefined, estimate: number): number => (typeof own === 'number' && Number.isFinite(own) && own > 0 ? own : estimate);
+
+/**
  * The hand-off for the state on screen. The drag and sunlight area, C_D and
- * C_R are the payload class's estimates (src/physics/propagator/spacecraft.ts);
+ * C_R are the satellite's own where it has them (a designed satellite, roadmap
+ * D06: `SatelliteSpec.area`, `cd`, `cr`), else the payload class's estimates
+ * (src/physics/propagator/spacecraft.ts), which is every catalogue satellite;
  * the mass is what is in orbit — a spacecraft that has burned its own
  * propellant raising its orbit is that much lighter than at launch.
  */
@@ -112,7 +122,11 @@ export function handoffFromFlight(input: HandoffInput): OrbitHandoff {
     v: [frame.v.x, frame.v.y, frame.v.z],
     jd: frame.jd,
     spacecraft: {
+      // the estimate's keys, in its order, each overridden where the satellite has its own
       ...estimate,
+      area: ownFigure(satellite.area, estimate.area),
+      cd: ownFigure(satellite.cd, estimate.cd),
+      cr: ownFigure(satellite.cr, estimate.cr),
       kind: satellite.kind,
       propulsion: satellite.propulsion && stage
         ? { thrust: satellite.propulsion.thrust, isp: satellite.propulsion.isp, propellantMass: Math.max(0, stage.propellant) } : null,
@@ -137,6 +151,19 @@ export function handoffFromState(input: { r: { x: number; y: number; z: number }
     label: input.label,
     origin: { mission: null, vehicleName: '', missionTime: 0 },
   };
+}
+
+/**
+ * What the lifetime analysis (P07) flies from a hand-off: the spacecraft's
+ * mass, area, C_D and C_R, as a copy of its own that the lifetime dialog's
+ * form starts from and edits (src/ui/lifetime.ts). The kind and the engine
+ * are not the propagator's. DOM-free, so the Build → Orbit hand-off (D06,
+ * Phase 4 map §2.6 a) can be held to reach the dialog with the design's
+ * figures (tests/d06-build-orbit-handoff.test.ts).
+ */
+export function lifetimeSpacecraft(h: Pick<OrbitHandoff, 'spacecraft'>): Spacecraft {
+  const { mass, area, cd, cr } = h.spacecraft;
+  return { mass, area, cd, cr };
 }
 
 /** The classical elements of the handed-on orbit (src/physics/orbital.ts). */

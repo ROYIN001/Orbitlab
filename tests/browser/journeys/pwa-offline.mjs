@@ -30,6 +30,7 @@ export default async function pwaOffline(t) {
   has(/\/index\.html$/, 'index.html');
   has(/flight\.worker-[^/]+\.js$/, 'the physics worker');
   has(/tune\.worker-[^/]+\.js$/, 'the auto-tune worker');
+  has(/attitude-tune\.worker-[^/]+\.js$/, 'the attitude-loop auto-tune worker');
   // the Monte Carlo worker (G05) is emitted the same way and precached with the rest
   for (const f of ['earth_atmos_2048.jpg', 'earth_clouds_1024.png', 'earth_lights_2048.png', 'earth_normal_2048.jpg', 'earth_specular_2048.jpg']) has(new RegExp(`textures/${f}$`), f);
 

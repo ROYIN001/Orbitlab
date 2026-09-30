@@ -89,11 +89,66 @@ describe('the local design store (S05)', () => {
     const s = store(m);
     await s.save({ kind: 'vehicle', name: 'Good', design: rocket() });
     const kept = JSON.parse(m.data.get(DESIGN_STORE_KEY)!);
-    kept.designs.push({ id: 'broken', kind: 'vehicle', name: 'Broken', created: 'x', updated: 'x', design: { stages: 'none' } });
+    const broken = { id: 'broken', kind: 'vehicle', name: 'Broken', created: 'x', updated: 'x', design: { stages: 'none' } };
+    kept.designs.push(broken);
     m.data.set(DESIGN_STORE_KEY, JSON.stringify(kept));
     expect((await s.list()).map((d) => d.name)).toEqual(['Good']);
+    expect(await s.get('broken')).toBeNull();
+    // not deleted by a save or a remove either (R4): written back as it was
+    await s.save({ kind: 'vehicle', name: 'Another', design: rocket('another') });
+    expect(await s.remove('d1')).toBe(true);
+    expect(await s.remove('broken')).toBe(false);
+    expect(JSON.parse(m.data.get(DESIGN_STORE_KEY)!).designs.map((d: { id: string }) => d.id)).toEqual(['broken', 'd2']);
+    expect(JSON.parse(m.data.get(DESIGN_STORE_KEY)!).designs[0]).toEqual(broken);
     m.data.set(DESIGN_STORE_KEY, 'not json');
     expect(await s.list()).toEqual([]);
+  });
+
+  /**
+   * Risk R4 of the Phase 4 map: a record of a kind this build does not know —
+   * a newer build's satellite (D06), say, read by an older build a PWA still
+   * serves — is not the older build's to drop. It stays out of the list, and
+   * every save and remove writes it back unchanged and in its place. The kind
+   * here is one no build will ever know, so the test holds when satellites do
+   * join the store.
+   */
+  it('keeps a record of a kind it does not know through saves and removes (R4)', async () => {
+    const m = memory();
+    const s = store(m);
+    const first = await s.save({ kind: 'vehicle', name: 'First', design: rocket() });
+    const newer = {
+      id: 'from-a-newer-build', kind: 'kindFromTheFuture', name: 'Not mine to drop', created: '2027-01-01T00:00:00.000Z',
+      updated: '2027-01-02T00:00:00.000Z', design: { anything: [1, 2.5, 'three'], nested: { deep: null } }, extra: 'a field I do not know',
+    };
+    const stored = JSON.parse(m.data.get(DESIGN_STORE_KEY)!);
+    stored.designs.push(newer);
+    m.data.set(DESIGN_STORE_KEY, JSON.stringify(stored));
+    const ids = () => JSON.parse(m.data.get(DESIGN_STORE_KEY)!).designs.map((d: { id: string }) => d.id);
+    const raw = () => JSON.parse(m.data.get(DESIGN_STORE_KEY)!).designs.find((d: { id: string }) => d.id === newer.id);
+
+    // unseen by this build
+    expect((await s.list()).map((d) => d.id)).toEqual(['d1']);
+    expect(await s.get(newer.id)).toBeNull();
+    // a new design: appended after it, the record kept as it was
+    await s.save({ kind: 'vehicle', name: 'Second', design: rocket('second') });
+    expect(ids()).toEqual(['d1', newer.id, 'd2']);
+    expect(raw()).toEqual(newer);
+    // a change to a design: made in place, the record kept
+    await s.save({ id: first.id, kind: 'vehicle', name: 'First, changed', design: rocket('my-falcon', { maxQ: 40000 }) });
+    expect(ids()).toEqual(['d1', newer.id, 'd2']);
+    expect(raw()).toEqual(newer);
+    // a remove: the design goes, the record stays
+    expect(await s.remove('d1')).toBe(true);
+    expect(ids()).toEqual([newer.id, 'd2']);
+    expect(raw()).toEqual(newer);
+    // nor can it be removed or overwritten through its id: this build cannot read it
+    expect(await s.remove(newer.id)).toBe(false);
+    await expect(s.save({ id: newer.id, kind: 'vehicle', name: 'Overwrite', design: rocket() })).rejects.toMatchObject({ code: 'notFound' });
+    expect(ids()).toEqual([newer.id, 'd2']);
+    expect(raw()).toEqual(newer);
+    // the layout is the same version 1
+    expect(JSON.parse(m.data.get(DESIGN_STORE_KEY)!).version).toBe(1);
+    expect(DESIGN_FORMAT_VERSION).toBe(1);
   });
 
   it('preserves unreadable records through unrelated save, update and remove', async () => {

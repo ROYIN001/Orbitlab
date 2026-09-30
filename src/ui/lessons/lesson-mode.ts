@@ -33,7 +33,7 @@ import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import {
-  RESULTS_FILE_EXTENSION, flownMission, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, clearRevealed, flownMission, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
 import { isCaseLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
@@ -113,6 +113,8 @@ interface Active {
   frozen: LessonGrade | null;
   /** a case lesson's (no flight: `sim` and `frozen` stay empty) */
   case?: CaseState;
+  /** answers shown, then cleared during this attempt: they still count as shown in it, so only a later one passes unaided */
+  seen?: RevealedAnswers;
 }
 
 export class LessonMode implements LessonToolsHost {
@@ -325,6 +327,7 @@ export class LessonMode implements LessonToolsHost {
       a.answers = {};
       a.drafts = {};
       a.recorded = false;
+      delete a.seen;
       this.lastStripKey = '';
       // data that could not be had are asked for again; data had are kept, frozen
       if (a.case && !a.case.source) { this.host.openCase?.(lesson.case, lesson.mode); this.readCase(a); }
@@ -386,6 +389,7 @@ export class LessonMode implements LessonToolsHost {
       a.answers = {};
       a.drafts = {};
       a.frozen = null;
+      delete a.seen;
     }
     if (!sim) { a.grade = null; this.paintStrip(); return; }
     const started = flightStarted(sim);
@@ -405,9 +409,19 @@ export class LessonMode implements LessonToolsHost {
     this.paintStrip();
   }
 
-  /** The expected values this lesson has shown the student, over all their attempts. */
+  /** The expected values this lesson has shown the student, over all their attempts (and in this one, if cleared since). */
   private revealedOf(id: string): RevealedAnswers {
-    return this.progressData.lessons[id]?.revealed ?? {};
+    const kept = this.progressData.lessons[id]?.revealed ?? {};
+    const seen = this.active?.lesson.id === id ? this.active.seen : undefined;
+    if (!seen) return kept;
+    const all: Record<string, number[]> = {};
+    for (const [k, v] of [...Object.entries(seen), ...Object.entries(kept)]) (all[k] ??= []).push(...v);
+    return all;
+  }
+
+  /** Whether the lesson keeps answers it has shown (the strip then offers to clear them). */
+  private hasRevealed(id: string): boolean {
+    return Object.keys(this.progressData.lessons[id]?.revealed ?? {}).length > 0;
   }
 
   private record(a: Active): void {
@@ -461,8 +475,8 @@ export class LessonMode implements LessonToolsHost {
 
   /**
    * "Show the answers": the expected values of the answers not yet right are
-   * shown, and kept, so this attempt is recorded as not passed on them and
-   * none of those numbers passes later (a lesson flies the same flight again).
+   * shown, and kept, so this attempt passes on them only with help, and so
+   * does a later one (a lesson flies the same flight again) until they are cleared.
    */
   private revealAnswers(): void {
     const a = this.active;
@@ -480,6 +494,23 @@ export class LessonMode implements LessonToolsHost {
     this.lastStripKey = '';
     if (isCaseLesson(a.lesson)) this.gradeCase(true);
     else this.update();
+  }
+
+  /**
+   * "Clear the answers I have seen" (owner decision D-6): the lesson forgets
+   * the values it showed, so a later attempt can pass unaided. This one still
+   * counts them as shown (`Active.seen`).
+   */
+  private forgetRevealed(): void {
+    const a = this.active;
+    if (!a || !this.hasRevealed(a.lesson.id)) return;
+    a.seen = this.revealedOf(a.lesson.id);
+    clearRevealed(this.progressData, a.lesson.id);
+    this.save();
+    this.lastStripKey = '';
+    if (isCaseLesson(a.lesson)) this.gradeCase(false);
+    else this.update();
+    this.flash(t('lesson.strip.revealedCleared'));
   }
 
   private showHint(): void {
@@ -576,7 +607,7 @@ export class LessonMode implements LessonToolsHost {
     const g = a.grade;
     const flown = !!a.sim && flightStarted(a.sim);
     const hints = lessonProgress(this.progressData, a.lesson.id).hintsShown;
-    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3)), !!c.revealed]), hints, a.answers, a.recorded, this.saved]);
+    const key = JSON.stringify([lang, a.lesson.id, flown, g?.verdict, g?.final, g?.lockBroken, g?.criteria.map((c) => [c.state, c.value === null ? null : Number(c.value?.toPrecision(3)), !!c.revealed]), hints, a.answers, a.recorded, this.saved, this.hasRevealed(a.lesson.id)]);
     if (key === this.lastStripKey) return;
     // keep what the student is typing
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement;
@@ -609,11 +640,10 @@ export class LessonMode implements LessonToolsHost {
         input.value = draftValue(a.drafts, a.answers, c.id);
         input.addEventListener('input', () => { a.drafts[c.id] = input.value; });
         input.setAttribute('aria-label', localText(c.prompt));
-        input.disabled = !!cg?.revealed;
         inputs.set(c.id, () => input.value);
-        // a wrong answer is only marked: the value is shown only when asked for, and then no longer counts
-        const verdict = cg?.state === 'pass' ? '✓' : cg?.revealed
-          ? `✗ ${t('lesson.strip.expected', { value: formatMeasure(c.measure, cg.expected ?? null) })}` : cg?.state === 'fail' ? '✗' : '';
+        // a wrong answer is only marked: the value is shown only when asked for, and then passes only with help
+        const mark = cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : '';
+        const verdict = cg?.revealed ? `${mark} ${t('lesson.strip.expected', { value: formatMeasure(c.measure, cg.expected ?? null) })}`.trim() : mark;
         row.append(el('span', undefined, localText(c.prompt)), input, el('span', 'lesson-answer-mark', verdict));
         form.append(row);
       }
@@ -635,8 +665,8 @@ export class LessonMode implements LessonToolsHost {
       form.addEventListener('submit', (e) => { e.preventDefault(); this.submitAnswers(inputs); });
       status.append(form);
     }
-    if (flown && g?.final && g.verdict === 'pass') {
-      status.append(el('p', 'lesson-note pass', t('lesson.strip.pass')));
+    if (flown && g?.final && (g.verdict === 'pass' || g.verdict === 'passedWithHelp')) {
+      status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
       if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
     } else if (flown && g?.final && g.verdict === 'fail') {
       const onlyAnswers = !g.lockBroken.length && g.criteria.every((cg) => cg.state !== 'fail' || lesson.criteria.find((c) => c.id === cg.id)?.kind === 'answer');
@@ -651,7 +681,8 @@ export class LessonMode implements LessonToolsHost {
     const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.strip.restart'), () => this.restart());
-    if (flown && g?.final && g.verdict === 'pass') {
+    if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
+    if (flown && g?.final && (g.verdict === 'pass' || g.verdict === 'passedWithHelp')) {
       const next = this.nextLesson(lesson);
       if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
     }
@@ -674,7 +705,7 @@ export class LessonMode implements LessonToolsHost {
     if (c.sheet && c.sheet.lang !== getLang()) this.buildCase(a);
     const g = a.grade;
     const hints = lessonProgress(this.progressData, lesson.id).hintsShown;
-    const key = JSON.stringify([getLang(), lesson.id, !!c.sheet, c.failed, g?.verdict, g?.criteria.map((x) => [x.state, x.value, !!x.revealed]), hints, a.answers, a.recorded, this.saved]);
+    const key = JSON.stringify([getLang(), lesson.id, !!c.sheet, c.failed, g?.verdict, g?.criteria.map((x) => [x.state, x.value, !!x.revealed]), hints, a.answers, a.recorded, this.saved, this.hasRevealed(lesson.id)]);
     if (key === this.lastStripKey) return;
     const typing = this.strip.contains(document.activeElement) && document.activeElement instanceof HTMLInputElement && document.activeElement.type === 'text';
     if (typing && this.lastStripKey) return;
@@ -685,8 +716,8 @@ export class LessonMode implements LessonToolsHost {
     else if (!c.sheet) status.append(el('p', 'lesson-note', t('lesson.strip.caseLoading')));
     if (c.sheet && g) {
       status.append(this.caseData(c, c.sheet), this.caseForm(a, lesson, c.sheet, g));
-      if (g.verdict === 'pass') {
-        status.append(el('p', 'lesson-note pass', t('lesson.strip.pass')));
+      if (g.verdict === 'pass' || g.verdict === 'passedWithHelp') {
+        status.append(el('p', `lesson-note ${g.verdict === 'pass' ? 'pass' : 'helped'}`, t(g.verdict === 'pass' ? 'lesson.strip.pass' : 'lesson.strip.passedWithHelp')));
         if (lesson.debrief) status.append(el('p', 'lesson-debrief', localText(lesson.debrief)));
       } else if (g.verdict === 'fail') {
         status.append(el('p', 'lesson-note fail', t(g.criteria.some((x) => x.revealed) ? 'lesson.strip.revealed' : 'lesson.strip.answersWrong')));
@@ -698,7 +729,8 @@ export class LessonMode implements LessonToolsHost {
     const hintBtn = button(hints < lesson.hints.length ? t('lesson.strip.hint', { n: hints + 1, total: lesson.hints.length }) : t('lesson.strip.noHints'), () => this.showHint());
     hintBtn.disabled = hints >= lesson.hints.length;
     button(t('lesson.strip.restart'), () => this.restart());
-    if (g?.verdict === 'pass') {
+    if (this.hasRevealed(lesson.id)) button(t('lesson.strip.clearRevealed'), () => this.forgetRevealed());
+    if (g?.verdict === 'pass' || g?.verdict === 'passedWithHelp') {
       const next = this.nextLesson(lesson);
       if (next) button(t('lesson.strip.next', { n: lessonNumber(next) }), () => this.startLesson(next.id), 'lesson-primary');
     }
@@ -768,7 +800,6 @@ export class LessonMode implements LessonToolsHost {
           radio.value = String(k);
           radio.checked = draftValue(a.drafts, a.answers, crit.id) === String(k);
           radio.addEventListener('change', () => { if (radio.checked) a.drafts[crit.id] = radio.value; });
-          radio.disabled = !!cg?.revealed;
           label.append(radio, document.createTextNode(` ${letterOf(sheet.lang, k)}) ${text}`));
           group.append(label);
         });
@@ -782,13 +813,12 @@ export class LessonMode implements LessonToolsHost {
         input.value = draftValue(a.drafts, a.answers, crit.id);
         input.addEventListener('input', () => { a.drafts[crit.id] = input.value; });
         input.setAttribute('aria-label', prompt);
-        input.disabled = !!cg?.revealed;
         inputs.set(crit.id, () => input.value);
         field.append(input);
         if (item.unit) field.append(el('span', 'lesson-case-unit', item.unit));
         row.append(field);
       }
-      // wrong is only marked; the answer and its working come with the lesson passed, or when asked for (and then do not count)
+      // wrong is only marked; the answer and its working come with the lesson passed, or when asked for (and then pass only with help)
       row.append(el('span', 'lesson-answer-mark', cg?.state === 'pass' ? '✓' : cg?.state === 'fail' ? '✗' : ''));
       if (caseWorkingShown(g, crit.id)) {
         const tol = item.answer.tolerance ? ` (${item.answer.tolerance})` : '';
@@ -1006,8 +1036,10 @@ export class LessonMode implements LessonToolsHost {
         const card = el('button', 'lesson-card-item');
         card.type = 'button';
         card.disabled = !!l.comingSoon;
-        const status = l.comingSoon ? '○' : p?.passed ? '✓' : p?.attempts ? '●' : '○';
+        const helped = !p?.passed && !!p?.passedWithHelp;
+        const status = l.comingSoon ? '○' : p?.passed ? '✓' : helped ? '◐' : p?.attempts ? '●' : '○';
         card.classList.toggle('passed', !!p?.passed);
+        card.classList.toggle('helped', helped);
         card.classList.toggle('active', this.active?.lesson.id === l.id);
         card.append(el('span', 'lesson-card-status', status));
         const text = el('span', 'lesson-card-text');
@@ -1015,6 +1047,7 @@ export class LessonMode implements LessonToolsHost {
         const tags = el('span', 'lesson-card-tags');
         for (const tag of l.tags ?? []) tags.append(el('span', 'lesson-tag', tag));
         if (l.comingSoon) tags.append(el('span', 'lesson-tag soon', t('lesson.comingSoon')));
+        if (helped) tags.append(el('span', 'lesson-tag helped', t('lesson.catalog.passedWithHelp')));
         const a = advice[l.id];
         if (summary?.result.start === l.id) tags.append(el('span', 'lesson-tag start', t('lesson.advice.start')));
         else if (a) tags.append(el('span', `lesson-tag ${a}`, t(`lesson.advice.${a}`)));
