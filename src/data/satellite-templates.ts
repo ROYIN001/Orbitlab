@@ -227,7 +227,7 @@ const theos2: SatelliteTemplate = {
   sources: {
     // the 425 kg, less a propellant load that is an estimate: both labelled estimates below
     'bus.dryMass': SOURCE.theos2, lifeYears: SOURCE.theos2, 'comms.dataRate': SOURCE.theos2,
-    'orbit.perigee': SOURCE.theos2, 'orbit.apogee': SOURCE.theos2, 'orbit.sso': SOURCE.theos2, 'orbit.ltan': SOURCE.theos2,
+    'orbit.perigee': SOURCE.theos2, 'orbit.apogee': SOURCE.theos2, 'orbit.inclination': SOURCE.theos2, 'orbit.sso': SOURCE.theos2, 'orbit.ltan': SOURCE.theos2,
     'bus.cr': SOURCE.cr, ...CELL_SOURCES, 'power.dod': SOURCE.dodLeo, 'propulsion.isp': SOURCE.hydrazine,
     'payload.focalLength': SOURCE.theos2Camera, 'payload.pixelPitch': SOURCE.theos2Camera, 'payload.pixels': SOURCE.theos2Camera,
     'adcs.residualDipole': SOURCE.starinDipole, 'comms.requiredEbN0': SOURCE.ebN0, ...NEN_SOURCES,

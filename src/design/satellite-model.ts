@@ -244,11 +244,12 @@ const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 export function designFromTemplate(templateId: string, id: string, name: string): SatelliteDesign {
   const tpl = satelliteTemplateById(templateId);
   if (!tpl) throw new Error(`Unknown satellite template ${templateId}`);
-  return {
+  // a sun-synchronous orbit starts with J2's inclination for its size, as it is flown (the published figure to its printed precision)
+  return syncOrbit({
     id, name, template: tpl.id, kind: tpl.kind,
     orbit: clone(tpl.orbit ?? presetDesignOrbit(tpl.typicalOrbit)),
     ...clone(tpl.design),
-  };
+  });
 }
 
 /** A new design's id: unique enough in one browser, and not a template's. */
