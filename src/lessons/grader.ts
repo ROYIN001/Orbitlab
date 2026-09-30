@@ -12,7 +12,7 @@
 import { assessMissionResult } from '../ui/result-content';
 import { guidanceForVehicle } from '../physics/defaults';
 import { defaultDynamics } from '../physics/rigid/config';
-import { vehicleById } from '../data/vehicles';
+import { missionVehicle } from '../data/vehicles';
 import { LESSON_HOOKS } from './hooks';
 import { MEASURES, missionTarget } from './measures';
 import type { CatalogLesson, Criterion, CriterionGrade, CriterionState, Lesson, LessonFlight, LessonGrade, LockKey, MeasureBound } from './types';
@@ -198,7 +198,8 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
   for (const key of lesson.locked) {
     let kept = true;
     switch (key) {
-      case 'setup.vehicle': kept = cfg.vehicleId === m.vehicleId; break;
+      // T01: a custom rocket is its spec, not only its id, as a custom satellite is (below)
+      case 'setup.vehicle': kept = cfg.vehicleId === m.vehicleId && same(cfg.vehicleSpec, m.vehicleSpec); break;
       case 'setup.site': kept = cfg.siteId === m.siteId && (!m.padId || cfg.padId === m.padId); break;
       // D06: a custom satellite is its spec, not only its id (a file could keep the id and change the design)
       case 'setup.satellite': kept = cfg.satelliteId === m.satelliteId && same(cfg.satelliteSpec, m.satelliteSpec); break;
@@ -217,10 +218,11 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
       case 'setup.failure': kept = cfg.failure.mode === m.failure.mode && (m.failure.mode === 'none'
         || (near(cfg.failure.time, m.failure.time, 1e-6) && cfg.failure.stage === m.failure.stage)); break;
       case 'setup.dynamics.model':
-        kept = (cfg.dynamics?.model ?? 'pointMass') === (m.dynamics?.model ?? defaultDynamics(m.vehicleId).model); break;
+        kept = (cfg.dynamics?.model ?? 'pointMass') === (m.dynamics?.model ?? defaultDynamics(m.vehicleSpec ?? m.vehicleId).model); break;
       case 'setup.guidance': {
-        const spec = vehicleById(m.vehicleId);
-        const model = m.dynamics?.model ?? defaultDynamics(m.vehicleId).model;
+        // the lesson's own rocket, a custom one included (T01, map §4.1): `vehicleById` threw for it
+        const spec = missionVehicle(m);
+        const model = m.dynamics?.model ?? defaultDynamics(spec).model;
         const expected = { ...guidanceForVehicle(spec, undefined, model), ...m.guidanceOverrides } as Record<string, number>;
         const flown = cfg.guidance as unknown as Record<string, number>;
         kept = Object.keys(expected).every((k) => near(flown[k], expected[k], 1e-6))
