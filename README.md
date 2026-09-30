@@ -178,7 +178,7 @@ A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as
 Without a GPU the scene is drawn in software at about two frames a second, so the smoke set takes
 about five minutes. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
-leaves the CSS layout unchanged). Pull requests run the smoke set; the deploy runs every journey on
+leaves the CSS layout unchanged). Pull requests and branch pushes run the smoke set; the deploy runs every journey on
 the build it publishes, after checking the freshly fetched data snapshots with
 `tests/data-provider.test.ts`, `tests/satellite-catalogue.test.ts`, `tests/earth-orientation.test.ts`
 and `tests/activity.test.ts`.
@@ -489,6 +489,15 @@ tests/browser/  browser journeys on the production build (Playwright)
 The `Deploy to GitHub Pages` workflow builds and publishes the site on every push to
 `main`. Enable Pages in the repository settings with **GitHub Actions** as the source.
 The Vite base path is relative, so the build also works from any sub-folder.
+It also runs every day at 17:43 UTC (00:43 Bangkok) to publish fresh data snapshots; that
+scheduled run skips `npm test` (the code was tested when it merged) but still checks the fresh
+snapshots, builds and runs every browser journey. A run whose commit is no longer the tip of
+`main` (an old run re-run) stops before publishing; use **Run workflow** instead.
+
+CI on pull requests and branch pushes runs the typecheck, the default suite in three shards, the
+build and the browser smoke set; changes only to `docs/` or Markdown files skip it. The slow
+suites run in the `Heavy suites` workflow instead: `npm run test:heavy` every Sunday and the six-DOF
+fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
 
 From the next release the launch soundtrack (`public/audio/soyuz-ms-27-nasa.mp3`) is no longer
 part of what the service worker installs on the first visit: the public site's first-visit install
