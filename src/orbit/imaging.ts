@@ -26,10 +26,16 @@ import type { ImagingCore } from './satellite-cores';
  * The speed of the point below a circular orbit at altitude `h` (m) over the
  * ground, m/s: the orbital speed √(μ/r) scaled to the surface, ·R/r (D06;
  * TU Delft reader Eq. [140]). It leaves out the Earth turning beneath, as
- * that equation does: the equator's 465 m/s is mostly across the track of a
- * near-polar orbit, but its share along the track of a sun-synchronous one
- * (about 98°) is some 65 m/s at the equator, so there the ground slides
- * along the track up to about 1 % faster than this.
+ * that equation does. At the equator the surface moves east at 465 m/s,
+ * 465·cos i m/s of it along the track, which the speed over the ground loses
+ * (i < 90°) or gains (i > 90°), so the error depends on the inclination i:
+ * - sun-synchronous (about 98°): some 65 m/s gained, so the ground slides
+ *   along the track up to about 1 % faster than this;
+ * - prograde orbits: slower than this, about 4 % at the ISS's 51.6° and
+ *   6.6 % for an equatorial orbit at 500 km;
+ * - geostationary: the point below does not move over the ground at all,
+ *   where this still gives 465 m/s.
+ * Away from the equator the share falls as cos(latitude).
  */
 export function groundSpeed(h: number): number {
   const r = R_EARTH + h;
