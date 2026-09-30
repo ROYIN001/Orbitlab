@@ -85,11 +85,13 @@ describe('viewer missions', () => {
     const grouped: string[] = Object.values(FLIGHT_GROUPS).flat();
     expect([...grouped].sort(), 'FLIGHT_GROUPS in tests/watch-missions-flights.ts must hold every mission once')
       .toEqual(WATCH_MISSIONS.map((m) => m.id).sort());
-    // one file per group, flying that group
+    // one file per group, flying all of that group: flyGroup registers both the
+    // aborts and the flights to target, and each file makes exactly one such
+    // call, for its own group, as a statement of its own line (not commented out)
     expect(Object.keys(FLIGHT_FILES).sort()).toEqual(Object.keys(FLIGHT_GROUPS).map((g) => `./watch-missions-flights-${g}.test.ts`).sort());
     for (const group of Object.keys(FLIGHT_GROUPS)) {
       const file = `./watch-missions-flights-${group}.test.ts`;
-      expect(FLIGHT_FILES[file], file).toContain(`FLIGHT_GROUPS.${group})`);
+      expect(FLIGHT_FILES[file].match(/^.*flyGroup\(.*$/gm)?.map((line) => line.trim()), file).toEqual([`flyGroup('${group}');`]);
     }
   });
 });
