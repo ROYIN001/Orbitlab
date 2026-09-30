@@ -2768,7 +2768,7 @@ export const en: Record<string, string> = {
   'build.sat.fly.window': 'The plane of its orbit is set, so it launches in the first window after the Launch section\'s launch time.',
   'build.sat.fly.engineOwn': 'Its own engine ({thrust}, Isp {isp}) flies as the last stage, for any burn after the launcher lets it go.',
   'build.sat.fly.engineNone': 'It has no engine: the launcher puts it in its orbit.',
-  'build.sat.fly.engineElectric': 'Its engine is electric (Isp {isp}, above the {max} of a chemical one). The Launch section flies burns, not months of gentle thrust, so there it flies with no engine of its own, its propellant still in its mass. The Orbit section\'s planner keeps the engine.',
+  'build.sat.fly.engineElectric': 'Its engine is electric (Isp {isp}, above the {max} of a chemical one). The Launch section flies burns, not months of gentle thrust, so there it flies with no engine of its own, its propellant still in its mass. Sent to the Orbit section from here instead, it keeps its engine for the planner there.',
   'build.sat.fly.engineEmpty': 'Its tanks are empty, so it flies with no engine of its own.',
   'build.sat.fly.diagonal': 'Its width here is the diagonal of its {w} × {d} {u} body: a box\'s corners reach further out than its sides.',
   'build.sat.fly.ballistic': 'The Launch section takes a satellite whose C_D·A/m is between {lo} and {hi} {u}, as anything in orbit has; this one\'s is {b} {u}. Change its mass or its size.',

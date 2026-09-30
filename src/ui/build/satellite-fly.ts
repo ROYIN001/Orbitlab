@@ -120,7 +120,7 @@ export class SatelliteFly {
           parts.push(this.note(t('build.sat.fly.issues'), 'warn'));
         }
       }
-      parts.push(this.note(t('build.sat.fly.after'), 'small'));
+      if (!cannot) parts.push(this.note(t('build.sat.fly.after'), 'small'));
     }
     const go = button('watch-btn primary bx-fly-btn', `${t('build.ex.fly')} ›`, () => this.fly());
     go.dataset.k = `${this.prefix}fly`;
