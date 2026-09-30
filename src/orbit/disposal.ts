@@ -122,19 +122,25 @@ export function nsskPerYear(di: number): number {
 
 /**
  * The Δv a year that makes up the drag of a satellite held at orbit `o`, m/s
- * a year: (v/2a)·|ȧ|·1 year, with ȧ the drag rate of the semi-major axis the
- * lifetime propagator itself uses (`dragRates` in
+ * a year: μ·|ȧ|/(2a²·v_p)·1 year, with ȧ the drag rate of the semi-major
+ * axis the lifetime propagator itself uses (`dragRates` in
  * src/physics/propagator/propagate.ts: NRLMSISE-00 at each point of the
- * revolution, the air turning with the Earth), and v = √(μ/a).
+ * revolution, the air turning with the Earth), and v_p = √(μ(1+e)/(a(1−e)))
+ * the speed at perigee. On a circle v_p = v = √(μ/a) and it is (v/2a)·|ȧ|.
  *
- * Why that is the make-up: on a near-circular orbit a small push along the
- * motion raises a at da/dv = 2a/v, so each metre per second buys back 2a/v
- * metres of the decay; the same figure is the orbit's mean drag deceleration
- * times the year (tests hold it to ½ρC_D(A/m)v_r² averaged round an
- * equatorial orbit). The orbit is held, so its height stays that of the
- * epoch all year; the air reads the activity's mean over the year, as the
- * propagator's long steps do (`indicesOver`). With a measured series, the
- * year after the epoch; with an ECSS level, that level.
+ * Why that is the make-up: a small push along the motion at speed v raises a
+ * at da/dv = 2a²v/μ (vis-viva), so each metre per second buys back that much
+ * of the decay. On a circle that is 2a/v, and the figure is the orbit's mean
+ * drag deceleration times the year (tests hold it to ½ρC_D(A/m)v_r² averaged
+ * round an equatorial orbit). On an eccentric orbit the air is met near the
+ * perigee, so the push goes there: where a metre per second buys the most,
+ * and where it gives back what the drag took, raising the apogee the drag
+ * lowered. The figure is again the drag's own impulse (tests hold it to that
+ * within 1 % up to e 0.73); the circle's v would give v_p/v times too much,
+ * 11 % at e 0.11 and 2.5 times at e 0.73. The orbit is held, so its height
+ * stays that of the epoch all year; the air reads the activity's mean over
+ * the year, as the propagator's long steps do (`indicesOver`). With a
+ * measured series, the year after the epoch; with an ECSS level, that level.
  *
  * An estimate: the density model's own error (some 20 % on the spheres of
  * R05, docs/VALIDATION.md §6) and the drag area's (a tumbling mean,
@@ -145,8 +151,8 @@ export function dragMakeupPerYear(o: Orbit, sc: Spacecraft, activity: Activity):
   const forces: ForceModel = { j2: true, j3j4: false, drag: true, sun: false, moon: false, srp: false, activity };
   const el = { a: o.a, e: o.e, i: o.i, raan: o.raan, argp: o.argp, M: o.m0 };
   const { da } = dragRates(el, o.jd0, forces, sc, indicesOver(activity, o.jd0, o.jd0 + YEAR / 86400));
-  const v = Math.sqrt(MU_EARTH / o.a);
-  return (v / (2 * o.a)) * Math.abs(da) * YEAR;
+  const vp = Math.sqrt((MU_EARTH * (1 + o.e)) / (o.a * (1 - o.e)));
+  return (MU_EARTH / (2 * o.a * o.a * vp)) * Math.abs(da) * YEAR;
 }
 
 /**

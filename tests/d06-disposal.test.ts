@@ -67,7 +67,11 @@
  *   from `dragRates` is the mean of the drag deceleration ½ρC_D(A/m)v_r²
  *   (`dragForce` over the mass) round the orbit, times the year. The test
  *   averages 720 points against the propagator's 24: **1e-4 relative**. And
- *   ECSS low < moderate < high.
+ *   ECSS low < moderate < high. ADDED IN REVIEW, after the first run and a
+ *   probe: on eccentric orbits (e 0.014 to 0.73) the make-up is the drag's
+ *   impulse, the mean along-track deceleration times the year, **within 1 %**
+ *   (the probe found 0.44–0.54 % under; the circle's speed the function took
+ *   before gave 1 % to 150 % over).
  *
  * Source defects recorded, not tuned away: Hull (p. 10) gives C_R "typically
  * 1 – 2 kg/m²"; C_R has no unit, and IADC gives 1.2 to 1.5.
@@ -251,6 +255,34 @@ describe('drag make-up', () => {
     }
     const expected = (sum / N) * YEAR;
     expect(Math.abs(dragMakeupPerYear(o, sc, ECSS_LEVELS.moderate) / expected - 1)).toBeLessThan(1e-4);
+  });
+
+  // Added in review, after the first run and after a probe: the circle's v = √(μ/a) the function took
+  // gave the eccentric orbits below 11 % and 150 % more than the drag's impulse (v_p/v). The perigee
+  // speed the function now takes came out 0.44–0.54 % under it (the burn at perigee buys a little more
+  // than the drag spread about it takes); the bound, 1 %, was set after that probe.
+  it('on an eccentric orbit is the drag\'s own impulse: the burn at perigee', () => {
+    for (const [hp, ha] of [[400, 600], [300, 2000], [250, 10000], [300, 35786]]) {
+      const a = R_EARTH + ((hp + ha) * KM) / 2, e = ((ha - hp) * KM) / (2 * a);
+      const o: Orbit = { a, e, i: 0, raan: 0, argp: 0, m0: 0, jd0: JD };
+      // the mean along-track drag deceleration, sampled evenly in time (mean anomaly)
+      const N = 20_000;
+      let sum = 0;
+      for (let k = 0; k < N; k++) {
+        const M = (2 * Math.PI * (k + 0.5)) / N;
+        let E = M;
+        for (let j = 0; j < 30; j++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+        const r = a * (1 - e * Math.cos(E)), nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+        const pos: [number, number, number] = [r * Math.cos(nu), r * Math.sin(nu), 0];
+        const p = a * (1 - e * e), vRad = Math.sqrt(MU_EARTH / p) * e * Math.sin(nu), vTan = Math.sqrt(MU_EARTH / p) * (1 + e * Math.cos(nu));
+        const v = Math.hypot(vRad, vTan);
+        // the air turns with the Earth: it takes ω·r off the transverse speed
+        const vr = Math.hypot(vRad, vTan - OMEGA_EARTH * r), along = (vRad * vRad + vTan * (vTan - OMEGA_EARTH * r)) / v;
+        sum += (0.5 * airDensity(pos, JD, ECSS_LEVELS.moderate) * sc.cd * (sc.area / sc.mass) * vr * along);
+      }
+      const impulse = (sum / N) * YEAR;
+      expect(Math.abs(dragMakeupPerYear(o, sc, ECSS_LEVELS.moderate) / impulse - 1), `perigee ${hp} km, apogee ${ha} km`).toBeLessThan(0.01);
+    }
   });
 
   it('grows with the Sun\'s activity', () => {

@@ -213,7 +213,7 @@ export interface DisposalCore {
   graveyardRaise: (cr: number, areaToMass: number) => { dh: number; dv: number };
   /** North–south station keeping against an inclination drift of `di` rad a year (the map writes °/yr; SI here): 2v·sin(Δi/2), v at GEO, m/s a year (V-V4). */
   nsskPerYear: (di: number) => number;
-  /** Δv a year that makes up the drag at the orbit's height at its epoch: (v/2a)·|ȧ|·1 yr, ȧ from `dragRates`, m/s a year. */
+  /** Δv a year that makes up the drag at the orbit's height at its epoch: μ|ȧ|/(2a²v_p)·1 yr, v_p the perigee speed ((v/2a)·|ȧ| on a circle), ȧ from `dragRates`, m/s a year. */
   dragMakeupPerYear: (o: Orbit, sc: Spacecraft, activity: Activity) => number;
   /** The budget against the tanks; `craft` null is a satellite with no engine (nothing available). */
   dvAllocation: (i: DvAllocationInput, craft: Craft | null) => DvAllocation;
