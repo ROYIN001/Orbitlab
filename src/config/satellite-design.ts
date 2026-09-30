@@ -20,8 +20,11 @@
  * may still not work — its battery too small, its link without margin — and
  * that is the satellite model's to say (`satelliteChecks`), in words.
  *
- * The perigee's floor is the S03 hand-off's own (100 km, src/orbit/handoff.ts)
- * so every sound design can be handed to the Orbit section; the engine's are
+ * The perigee's floor is the S03 hand-off's own (100 km, src/orbit/handoff.ts),
+ * and like the hand-off's it is exclusive — `parseHandoff` takes only a
+ * perigee above it — so every sound design can be handed to the Orbit
+ * section (a perigee of exactly 100 km is refused here by name, not
+ * turned away there without a reason); the engine's are
  * the planner's `CRAFT_LIMITS` (src/orbit/budget.ts), so every sound design's
  * engine is one the planner flies.
  *
@@ -171,6 +174,8 @@ const PAYLOAD_FIELDS = ['focalLength', 'pixelPitch', 'pixels', 'aperture', 'bits
 function checkOrbit(c: Checker, o: Obj): void {
   c.known(o, 'orbit', ORBIT_FIELDS);
   const pe = c.number(o, 'perigee', 'orbit', L.perigee);
+  // the hand-off's floor is exclusive (`parseHandoff`: above 100 km), so at the floor itself the design could not be handed on
+  if (pe === L.perigee[0]) c.add('orbit.perigee', `must be above ${L.perigee[0]} (got ${pe})`);
   const ap = c.number(o, 'apogee', 'orbit', L.apogee);
   if (pe !== undefined && ap !== undefined && ap < pe) c.add('orbit.apogee', `must not be below the perigee (${ap} < ${pe})`);
   c.number(o, 'inclination', 'orbit', [0, 180]);

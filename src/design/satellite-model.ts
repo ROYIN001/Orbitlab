@@ -807,7 +807,7 @@ export function restoreKeptSatellite(text: string | null): SatelliteDraft | null
   if (raw.recordId !== null && typeof raw.recordId !== 'string') return null;
   const design = nullsToNaN(raw.design) as SatelliteDesign;
   if (!satelliteTemplateById(String(design.template))) return null;
-  const structural = satelliteDesignProblems(design).filter((i) => !/^must be (a finite number|at least|at most|a whole number)|^must not be below|^with the dry mass/.test(i.message));
+  const structural = satelliteDesignProblems(design).filter((i) => !/^must be (a finite number|at least|at most|above|a whole number)|^must not be below|^with the dry mass/.test(i.message));
   if (structural.length) return null;
   return { design, recordId: raw.recordId, defaultName: raw.defaultName };
 }

@@ -10,7 +10,7 @@ import {
   SATELLITE_DESIGN_KINDS, SATELLITE_LIMITS, isSatelliteDesign, satelliteDesignProblems, satelliteDesignText,
 } from '../src/config/satellite-design';
 import { SATELLITE_TEMPLATES } from '../src/data/satellite-templates';
-import { designFromTemplate } from '../src/design/satellite-model';
+import { designFromTemplate, designHandoff } from '../src/design/satellite-model';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
 import { STATIONS } from '../src/orbit/applications-setup';
 
@@ -55,8 +55,13 @@ describe('the satellite checker', () => {
     expect(paths(edit((d) => { d.power.dod = L.dod[0]; d.power.batteryEff = L.batteryEff[1]; }))).toEqual([]);
     expect(paths(edit((d) => { d.power.dod = L.dod[0] * 0.99; }))).toEqual(['power.dod']);
     expect(paths(edit((d) => { d.power.batteryEff = 1.045; }))).toEqual(['power.batteryEff']);
-    // the hand-off's floor: a perigee at 100 km is taken, below it is not
-    expect(paths(edit((d) => { d.orbit.perigee = 100e3; }))).toEqual([]);
+    // the hand-off's floor, exclusive as the hand-off's is: a perigee at 100 km is refused by name (the hand-off would
+    // refuse it without a reason), one a millimetre above is taken and handed on, below it is refused
+    expect(satelliteDesignProblems(edit((d) => { d.orbit.perigee = 100e3; }))).toEqual([{ path: 'orbit.perigee', message: 'must be above 100000 (got 100000)' }]);
+    expect(designHandoff({ ...base(), orbit: { ...base().orbit, perigee: 100e3 } }, 2461314.5, 'x')).toBeNull();
+    const floor = edit((d) => { d.orbit.perigee = 100e3 + 1e-3; }) as SatelliteDesign;
+    expect(paths(floor)).toEqual([]);
+    expect(designHandoff(floor, 2461314.5, 'x')).not.toBeNull();
     expect(paths(edit((d) => { d.orbit.perigee = 99e3; }))).toEqual(['orbit.perigee']);
   });
 

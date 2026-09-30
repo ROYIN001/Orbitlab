@@ -313,6 +313,10 @@ describe('the draft a browser keeps', () => {
     expect(Number.isNaN(back.design.power.batteryWh)).toBe(true);
     expect({ ...back.design, power: { ...back.design.power, batteryWh: 40 } }).toEqual({ ...d, power: { ...d.power, batteryWh: 40 } });
     // no engine, no camera: null stays null
+    // a perigee left at the hand-off's floor is where the student left it: kept, and the checker names it
+    const floor = withValue(designFromTemplate('napa2', 'x', 'x'), 'orbit.perigee', 100e3);
+    expect(satelliteDesignProblems(floor).map((i) => i.path)).toEqual(['orbit.perigee']);
+    expect(restoreKeptSatellite(keptSatelliteText({ design: floor, recordId: null, defaultName: 'x' }))!.design).toEqual(floor);
     const bare = withCamera(designFromTemplate('napa2', 'x', 'x'), false);
     expect(restoreKeptSatellite(keptSatelliteText({ design: bare, recordId: null, defaultName: 'x' }))!.design).toEqual(bare);
   });
