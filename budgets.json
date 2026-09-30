@@ -15,7 +15,7 @@
       "lifetime.worker-*.js": "seeded 2026-09-30 at the measured size 39.1 kB + 2 %",
       "screening.worker-*.js": "seeded 2026-09-30 at the measured size 30.1 kB + 2 %",
       "other chunks": "seeded 2026-09-30 at the measured size 686.5 kB + 2 %",
-      "precache": "seeded 2026-09-30 at the measured size 16100.5 kB + 2 %"
+      "precache": "seeded 2026-09-30 at the measured size 16100.5 kB + 2 %; lowered 2026-09-30 to the measured 12499.1 kB + 2 % when the soundtrack left the install (D-7; a build with ORBITLAB_PRECACHE_AUDIO=1 precaches 16100.5 kB and is not held to this ceiling)"
     }
   },
   "index-*.js": 3783,
@@ -29,5 +29,5 @@
   "lifetime.worker-*.js": 40,
   "screening.worker-*.js": 31,
   "other chunks": 701,
-  "precache": 16423
+  "precache": 12750
 }

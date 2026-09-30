@@ -57,7 +57,8 @@ function pwaPlugin(): Plugin {
           entries.push({ url: relative(config.publicDir, path).split(sep).join('/'), revision: revision(readFileSync(path)) });
         }
       }
-      sw.code = injectPrecacheManifest(sw.code, precacheManifest(entries));
+      // D-7: the soundtrack is precached only in the intranet zip's build
+      sw.code = injectPrecacheManifest(sw.code, precacheManifest(entries, { precacheAudio: process.env.ORBITLAB_PRECACHE_AUDIO === '1' }));
     } },
     // Once the files are on disk (a build with `write: false` never gets
     // here): build-info.json — the stamp, the build time and the date of each
