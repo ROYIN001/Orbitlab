@@ -312,7 +312,7 @@ describe('live point-mass stepping (T02)', () => {
 });
 
 describe('a lesson graded live (T02)', () => {
-  it('passes or fails a docking only once the picture and the log have reached it', () => {
+  it('grades a docking only once the picture and the log have reached it', () => {
     // Lesson 5.2 flown as a student passes it: the two-orbit profile, to docking. The
     // docking is the end of a 5 s step while the hooks close, so the simulation holds
     // the lesson's end event a few seconds before the picture gets there.
@@ -329,9 +329,12 @@ describe('a lesson graded live (T02)', () => {
       session.recorder.recordNow();
       const sim = session.sim, clock = session.recorder.clock;
       const docked = session.recorder.events.some((e) => e.key === 'evt.docked');
-      shownFinal = gradeShown(lesson, sim, clock).final;
-      // final exactly when the event log on screen shows the docking
+      const grade = gradeShown(lesson, sim, clock);
+      shownFinal = grade.final;
+      // final, and the "Docked to the station" criterion passed, exactly when the
+      // event log on screen shows the docking
       expect(shownFinal).toBe(docked);
+      expect(grade.criteria.find((c) => c.id === 'docked')!.state).toBe(docked ? 'pass' : 'pending');
       if (gradeLesson(lesson, sim).final && !shownFinal) held++;
     }
     expect(shownFinal).toBe(true);
