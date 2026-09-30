@@ -28,6 +28,19 @@
  * the planner's `CRAFT_LIMITS` (src/orbit/budget.ts), so every sound design's
  * engine is one the planner flies.
  *
+ * AND WHAT LAUNCH TAKES (the integration of D06 with Launch, Phase 4 map
+ * §2.6 c): a design flies in Launch as a `SatelliteSpec`
+ * (src/design/satellite-launch.ts), held to src/config/satellite-spec.ts,
+ * so the bounds a design and a spec share are one bound, read from there —
+ * the dry mass's floor is the spec's 1 kg (the payload field's own, which
+ * a wet mass of dry and propellant then clears), an edge is no wider than a
+ * spec's width, and the tanks are no larger a share of the whole than a
+ * spec's `propellantFraction` (tests/d06-satellite-design.test.ts ties
+ * each to the spec's). What a spec does not share stays the design's: an
+ * electric engine's Isp above the 480 s of a chemical one, which the design
+ * keeps for the planner and Launch flies without (said on screen), and a
+ * C_D·A/m outside `B_RANGE`, which the builder warns of and Launch refuses.
+ *
  * Units as the design stores them (src/design/satellite-spec.ts): SI, with
  * angles in degrees, local times in hours and the battery in Wh. DOM-free,
  * tests/d06-satellite-design.test.ts.
@@ -36,6 +49,7 @@ import type { SatelliteKind } from '../types';
 import type { SatelliteDesign } from '../design/satellite-spec';
 import { CRAFT_LIMITS } from '../orbit/budget';
 import { STATIONS } from '../orbit/applications-setup';
+import { SATELLITE_LIMITS as SPEC_LIMITS } from './satellite-spec';
 
 export interface SatelliteDesignIssue {
   /** where in the design, `power.cellEff` */
@@ -64,10 +78,10 @@ export const SATELLITE_LIMITS = {
   apogee: [100e3, 400_000e3],
   /** years */
   lifeYears: [0.1, 30],
-  /** kg */
-  dryMass: [0.5, 20_000],
-  /** m, each edge */
-  edge: [0.01, 20],
+  /** kg: at least what a satellite in Launch weighs (the spec's floor, the payload field's own 1 kg) */
+  dryMass: [SPEC_LIMITS.minMass, 20_000],
+  /** m, each edge: no wider than a satellite in Launch may be across (the spec's, the fairing bound of vehicle-spec.ts) */
+  edge: [0.01, SPEC_LIMITS.width],
   cd: [1, 4],
   cr: [1, 2],
   /** W, each */
@@ -85,6 +99,8 @@ export const SATELLITE_LIMITS = {
   thrust: [CRAFT_LIMITS.thrust.min, CRAFT_LIMITS.thrust.max],
   isp: [CRAFT_LIMITS.isp.min, CRAFT_LIMITS.isp.max],
   propellant: [0, CRAFT_LIMITS.propellant.max],
+  /** the propellant's share of the wet mass at most: a spec's (more is a slip, not a satellite) */
+  propellantFraction: SPEC_LIMITS.propellantFraction,
   insertionDv: [0, 10_000],
   /** kg·m², each principal moment */
   inertia: [1e-5, 1e7],
@@ -112,7 +128,7 @@ export const SATELLITE_LIMITS = {
   pixels: [1, 1e6],
   aperture: [0.001, 20],
   bits: [1, 32],
-} as const satisfies Record<string, readonly [number, number]>;
+} as const satisfies Record<string, readonly [number, number] | number>;
 
 type Obj = Record<string, unknown>;
 type Bound = readonly [number, number];
@@ -273,6 +289,7 @@ export function satelliteDesignProblems(raw: unknown): SatelliteDesignIssue[] {
       const dry = bus && typeof bus.dryMass === 'number' ? bus.dryMass : undefined;
       if (prop !== undefined && dry !== undefined && Number.isFinite(dry) && dry > 0) {
         if (prop + dry > CRAFT_LIMITS.mass.max) c.add('propulsion.propellant', `with the dry mass comes to more than the ${CRAFT_LIMITS.mass.max} kg the planner flies`);
+        else if (prop / (prop + dry) > L.propellantFraction) c.add('propulsion.propellant', `with the dry mass is more than ${L.propellantFraction * 100} % of the satellite (got ${Number(((100 * prop) / (prop + dry)).toPrecision(4))} %)`);
       }
     }
   }

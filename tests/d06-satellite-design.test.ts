@@ -4,6 +4,12 @@
  * file may hold, held to plausibility bounds, each problem named by its path.
  * No reference to validate against: the bounds are the file's own, and the
  * checks are exact (a design is sound, or it is refused by name).
+ *
+ * ADDED AT INTEGRATION (Phase 4 stage 3, task I), exact, written before
+ * their first run: the bounds a design shares with the `SatelliteSpec` it
+ * flies in Launch as are the spec's own (src/config/satellite-spec.ts) — the
+ * dry mass's floor, as C2 tied the spec's floor to the payload field's; the
+ * edges; the propellant's share.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -13,6 +19,8 @@ import { SATELLITE_TEMPLATES } from '../src/data/satellite-templates';
 import { designFromTemplate, designHandoff } from '../src/design/satellite-model';
 import type { SatelliteDesign } from '../src/design/satellite-spec';
 import { STATIONS } from '../src/orbit/applications-setup';
+import { SATELLITE_LIMITS as SPEC_LIMITS } from '../src/config/satellite-spec';
+import { NUMBER_FIELDS } from '../src/config/validation';
 
 const base = (): SatelliteDesign => designFromTemplate('theos2', 'sat-1', 'Test');
 const paths = (raw: unknown): string[] => satelliteDesignProblems(raw).map((i) => i.path);
@@ -101,6 +109,24 @@ describe('the satellite checker', () => {
 
   it('keeps the tanks within what the planner flies', () => {
     expect(paths(edit((d) => { d.bus.dryMass = 15_000; d.propulsion.propellant = 10_000; }))).toEqual(['propulsion.propellant']);
+  });
+
+  it('shares the spec\'s bounds where a design and the satellite it flies in Launch as share a figure (integration)', () => {
+    // the dry mass's floor is the spec's, which is the payload field's: a design lighter than Launch takes is refused here
+    expect(SATELLITE_LIMITS.dryMass[0]).toBe(SPEC_LIMITS.minMass);
+    expect(SATELLITE_LIMITS.dryMass[0]).toBe(NUMBER_FIELDS['setup.payloadMass'].min);
+    expect(satelliteDesignProblems(edit((d) => { d.bus.dryMass = 0.5; d.propulsion = null; }))).toEqual([{ path: 'bus.dryMass', message: 'must be at least 1 (got 0.5)' }]);
+    expect(paths(edit((d) => { d.bus.dryMass = 1; d.propulsion = null; }))).toEqual([]);
+    // an edge no wider than a spec's width, which is its only bound across (its height's, 40 m, is wider still)
+    expect(SATELLITE_LIMITS.edge[1]).toBe(SPEC_LIMITS.width);
+    expect(SATELLITE_LIMITS.edge[1]).toBeLessThanOrEqual(SPEC_LIMITS.height);
+    expect(paths(edit((d) => { d.bus.size.depth = SPEC_LIMITS.width; }))).toEqual([]);
+    expect(paths(edit((d) => { d.bus.size.depth = SPEC_LIMITS.width + 0.01; }))).toEqual(['bus.size.depth']);
+    // the tanks' share of the whole, the spec's: 95 % is taken, more is refused by name
+    expect(SATELLITE_LIMITS.propellantFraction).toBe(SPEC_LIMITS.propellantFraction);
+    expect(paths(edit((d) => { d.bus.dryMass = 10; d.propulsion.propellant = 190; }))).toEqual([]);
+    expect(satelliteDesignProblems(edit((d) => { d.bus.dryMass = 10; d.propulsion.propellant = 191; })))
+      .toEqual([{ path: 'propulsion.propellant', message: 'with the dry mass is more than 95 % of the satellite (got 95.02 %)' }]);
   });
 
   it('wants whole pixels and bits, and texts where texts go', () => {
