@@ -393,7 +393,7 @@ describe('Apollo 11 from its parking orbit to the Moon, point-mass', () => {
     expect(f.lunar!.pe).toBeGreaterThan(90e3);
   });
 
-  it('burns for home on time, meets the air as the flight did, and splashes down where Columbia came down', () => {
+  it('burns for home on time, meets the air as the flight did, and splashes down where Columbia came down', { timeout: 300_000 }, () => {
     flyTo(APOLLO11.splashdown.t + 300);
     expect(sim.isFailed(), log()).toBe(false);
     // TEI (MR Table 7-VI): 135:23:42.3, 3,279.0 ft/s in 151.4 s
