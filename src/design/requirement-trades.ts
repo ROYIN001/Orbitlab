@@ -352,7 +352,8 @@ export function tradeTable(req: MissionRequirements, template: SatelliteDesign, 
  * asked, or the row's inclination and node), the life asked, the camera's
  * focal length and aperture for the GSD, the array and the battery sized for
  * the worst eclipse, and the transmitter and rate that bring the day's data
- * down at the margin, over the first station asked. The mass, the bus and
+ * down at the margin (the template's when no data is asked), over the first
+ * station asked. The mass, the bus and
  * everything else stay the template's (an estimate, labelled so). Null when
  * the row cannot bring the data down at all (no contact).
  */
@@ -368,7 +369,8 @@ export function designFromRow(template: SatelliteDesign, row: TradeRow, req: Mis
     lifeYears: req.lifeYears,
     power: { ...template.power, arrayArea: row.power.arrayArea, batteryWh: row.power.batteryWh },
     comms: {
-      ...template.comms, txPowerW: row.requiredTxPower, dataRate: row.requiredRate,
+      // a mission with no data to bring down keeps the template's transmitter: 0 W at 0 bit/s has no link budget
+      ...template.comms, ...(row.requiredRate > 0 ? { txPowerW: row.requiredTxPower, dataRate: row.requiredRate } : {}),
       station: req.stations[0] ?? template.comms.station, minElDeg: req.minElDeg,
     },
     payload: { ...template.payload, focalLength: row.focalLength, aperture: row.aperture },

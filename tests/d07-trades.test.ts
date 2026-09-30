@@ -31,7 +31,9 @@
  *   gave 8.5 ms, and the cause is the time, not the orbit — a Julian date
  *   holds it to 40 µs, in which the Earth turns up to 19 m under the track, so
  *   a closest approach far off the track is certain only to some ±20 ms
- *   (the looks of the twenty repeats move by up to 9 ms, not in a trend).
+ *   (the looks of the twenty repeats move by up to 9 ms, not in a trend);
+ * - ADDED IN REVIEW: a mission that asks for no data keeps the template's
+ *   transmitter power and rate in the design, exactly.
  */
 import { describe, expect, it } from 'vitest';
 import { DEG, R_EARTH } from '../src/physics/constants';
@@ -248,6 +250,18 @@ describe('a row (D07)', () => {
     const easy = look({ ...THEOS2_REQ, dataPerDay: 1e9, gsd: 1 }, { ...tilted, lifetime: [search(7, 395e3, 405e3), search(32, 695e3, 705e3)] });
     expect(easy.meets).toBe(true);
     check(easy);
+  });
+
+  it('keeps the template\'s transmitter when the mission asks for no data (added in review)', () => {
+    const req = { ...THEOS2_REQ, dataPerDay: 0 };
+    const row = tradeRow(req, IMAGER, { revs: 385, days: 26 }, { ...OPTS, tilt: 45 * DEG })!;
+    expect(row.requiredRate).toBe(0);
+    expect(row.ratios.data).toBe(0);
+    const d = designFromRow(IMAGER, row, req)!;
+    // not a 0 W transmitter at 0 bit/s, whose EIRP and required P/N0 are −∞ in D06's link budget
+    expect(d.comms.txPowerW).toBe(IMAGER.comms.txPowerW);
+    expect(d.comms.dataRate).toBe(IMAGER.comms.dataRate);
+    expect(d.comms.station).toBe('bangkok');
   });
 
   it('takes the revisit and the contact of an orbit that is not sun-synchronous over one repeat of its pattern', () => {
