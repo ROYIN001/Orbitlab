@@ -172,6 +172,12 @@ export interface RecordingSource {
   applyRecordedAttitudes(frame: VisualFrame): VisualFrame;
   /** A copy of the live instant, for drawing. */
   recordNow(): VisualFrame;
+  /**
+   * The live instant, s of mission time: the time `recordNow` draws. A
+   * point-mass simulation runs up to one step ahead of it (T02), so what the
+   * app counts from — a skip, a fast-forward — reads this, not the simulation's clock.
+   */
+  readonly clock: number;
   stats(): RecorderStats;
 }
 

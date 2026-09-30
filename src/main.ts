@@ -1284,11 +1284,14 @@ class App {
       if (next !== null) this.seek(next); else this.goLive();
       return;
     }
-    const s = this.sim.state;
-    if (s.status === 'coast' && s.nextBurnTime > s.t) this.fastForwardTo = s.nextBurnTime - 20;
-    else if (s.status === 'orbit' && isFinite(s.elements.period)) this.fastForwardTo = s.t + s.elements.period;
-    else if (s.status === 'prelaunch') this.fastForwardTo = 0;
-    else this.fastForwardTo = s.t + 60;
+    // From the frame on screen, not the simulation: a point-mass simulation runs up to a step
+    // ahead of it (T02), 60 s in a high coast, and there it had already started the burn, so
+    // Skip jumped a minute into the burn instead of to 20 s before it.
+    const f = this.recorder.recordNow();
+    if (f.status === 'coast' && f.nextBurnTime > f.t) this.fastForwardTo = f.nextBurnTime - 20;
+    else if (f.status === 'orbit' && isFinite(f.elements.period)) this.fastForwardTo = f.t + f.elements.period;
+    else if (f.status === 'prelaunch') this.fastForwardTo = 0;
+    else this.fastForwardTo = f.t + 60;
     if (!this.playing) this.togglePlay();
   }
 
@@ -1549,7 +1552,7 @@ class App {
     // The live flight runs whether or not the user is watching the head.
     if (sim && session && this.playing) {
       const target = this.fastForwardTo;
-      if (target !== null && target > sim.state.t + 1e-3 && !sim.isFailed()) {
+      if (target !== null && target > this.recorder.clock + 1e-3 && !sim.isFailed()) {
         // In the worker the chunks run on their own; on the main thread
         // `tick` spends up to 30 ms of this frame on them.
         session.fastForward(target);

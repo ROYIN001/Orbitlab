@@ -66,6 +66,10 @@ export class RecordingMirror implements RecordingSource {
   recordNow(): VisualFrame {
     return this.live;
   }
+  /** The live instant's mission time, as the worker's recorder last drew it (T02). */
+  get clock(): number {
+    return this.live.t;
+  }
   stats(): RecorderStats {
     return recordingStats(this.frames, this.events.length, this.decimations, this.tracks);
   }
