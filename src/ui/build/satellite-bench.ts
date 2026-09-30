@@ -87,6 +87,8 @@ interface LifeRun {
   from: string;
   mass: number; area: number; cd: number; cr: number;
   years: number;
+  /** the design has an engine, so its Δv budget holds the orbit through the mission (the drag make-up) */
+  held: boolean;
   result?: PropagationResult;
   error?: string;
 }
@@ -356,9 +358,13 @@ export class SatelliteBench {
         out.append(el('p', 'bsb-verdict', res.lifetime !== null
           ? t('build.sat.life.down', { time: formatDuration(res.lifetime) })
           : t('build.sat.life.up', { time: formatDuration(last.t), pe: num(last.perigeeAlt / 1000), ap: num(last.apogeeAlt / 1000) })));
-        // IADC's rule for the low region: down within 25 years of the end of the mission
+        // IADC's rule for the low region: down within 25 years of the end of the mission. With no engine the air
+        // has it from the start, so the run from the design orbit has the mission and 25 years; with one, the
+        // budget holds the orbit through the mission (its drag make-up), so the 25 years start from the design
+        // orbit at the mission's end, and the run from that orbit has 25 years alone.
         if (fig?.orbit.region === 'leo') {
-          const within = res.lifetime !== null && res.lifetime <= (r.years + 25) * YEAR;
+          const within = res.lifetime !== null && res.lifetime <= ((r.held ? 0 : r.years) + 25) * YEAR;
+          if (r.held) out.append(el('p', 'bx-note small', t('build.sat.life.held', { life: num(r.years, r.years % 1 ? 1 : 0) })));
           out.append(el('p', `bx-note${within ? '' : ' warn'}`, t(within ? 'build.sat.life.rule25' : 'build.sat.life.rule25no', { life: num(r.years, r.years % 1 ? 1 : 0) })));
         }
         out.append(el('p', 'bx-note small', t('build.sat.life.inputs', {
@@ -381,7 +387,7 @@ export class SatelliteBench {
     const level = this.ws.activityLevel;
     const run: LifeRun = {
       key: this.runKey(), level, from: new Date((jd - 2440587.5) * 86400e3).toISOString().slice(0, 10),
-      mass: sc.mass, area: sc.area, cd: sc.cd, cr: sc.cr, years: d.lifeYears,
+      mass: sc.mass, area: sc.area, cd: sc.cd, cr: sc.cr, years: d.lifeYears, held: !!d.propulsion,
     };
     const controller = new AbortController();
     const job = { controller, progress: 0 };

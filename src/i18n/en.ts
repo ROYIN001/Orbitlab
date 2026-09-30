@@ -2718,6 +2718,7 @@ export const en: Record<string, string> = {
   'build.sat.life.down': 'It comes down after {time}.',
   'build.sat.life.up': 'Still up after {time}: perigee {pe} km, apogee {ap} km.',
   'build.sat.life.rule25': 'Down within 25 years of the end of its {life}-year mission, as IADC asks.',
+  'build.sat.life.held': 'Its engine holds the orbit through the {life}-year mission (the drag make-up in the Δv budget), so the air\'s 25 years start when the mission ends: from the design orbit, it must come down within 25 years.',
   'build.sat.life.rule25no': 'Not down within 25 years of the end of its {life}-year mission: IADC asks for a burn to bring it lower.',
   'build.sat.life.stale': 'The design has changed since this run.',
   'build.sat.life.failed': 'The run failed.',
