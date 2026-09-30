@@ -94,8 +94,9 @@ describe('physics worker session', () => {
 
   it('fast-forwards in chunks and mirrors exactly what the worker recorded', () => {
     // A fast-forward is cut into wall-clock chunks on either thread, so where
-    // the chunks fall — and the last bits of rounding in the clock — depend on
-    // the machine. What must hold exactly is that the app sees the recording
+    // the chunks fall depends on the machine. Since T02 that no longer changes
+    // the point-mass flight (tests/live-stepping.test.ts holds it to the
+    // headless one); what this test holds is that the app sees the recording
     // the worker made.
     const worker = new InProcessWorker();
     const remote = new WorkerSession(cfg(), worker, 1, (m) => { throw new Error(m); });

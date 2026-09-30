@@ -76,8 +76,19 @@ export interface RecordingDelta {
   frames: VisualFrame[];
   /** The live instant, as `FlightRecorder.recordNow` returned it. */
   live: VisualFrame;
+  /**
+   * T02: the simulation's own state, when a point-mass flight has flown up to
+   * one step ahead of the live instant (`FlightRecorder.simulationFrame`); the
+   * shell takes its state from this, else from `live`.
+   */
+  state?: VisualFrame;
   /** Newly detected events, in detection order. */
   events: SimEvent[];
+  /**
+   * T02: how many events, in occurrence order, the recording shows — those up
+   * to the live instant. The shell's log holds them all, as the simulation's does.
+   */
+  shownEvents: number;
   attitudes: AttitudeSample[];
   telemetry: { reset: boolean; revision: number; samples: TelemetrySample[] };
   /** The mission plan, when it changed (re-planned burns). */

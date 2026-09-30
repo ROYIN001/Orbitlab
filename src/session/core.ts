@@ -124,12 +124,13 @@ export class SimCore {
     if (!ff || !sim || !recorder) return;
     const budget = this.host.now() + FAST_FORWARD_CHUNK_MS;
     let stalled = false;
-    while (sim.state.t < ff.target - 1e-3 && this.host.now() < budget && !sim.isFailed()) {
-      const before = sim.state.t;
-      recorder.advance(Math.min(600, ff.target - sim.state.t), 3000, budget);
-      if (sim.state.t <= before) { stalled = true; break; }
+    // On the live instant, as `InlineSession.tick` counts it (T02).
+    while (recorder.clock < ff.target - 1e-3 && this.host.now() < budget && !sim.isFailed()) {
+      const before = recorder.clock;
+      recorder.advance(Math.min(600, ff.target - recorder.clock), 3000, budget);
+      if (recorder.clock <= before) { stalled = true; break; }
     }
-    const done = stalled || sim.state.t >= ff.target - 1e-3 || sim.isFailed();
+    const done = stalled || recorder.clock >= ff.target - 1e-3 || sim.isFailed();
     if (done) this.fastForward = null;
     this.report(done ? ff.id : undefined, done);
     if (!done) {
@@ -155,6 +156,8 @@ export class SimCore {
     // The live instant first: capturing it can store a frame and pull events,
     // exactly as the app's per-frame `recordNow` did.
     const live = recorder.recordNow();
+    // T02: the shell's state is the simulation's, which may be a step ahead of the picture.
+    const state = recorder.simulationFrame() ?? undefined;
     const current = recorder.frames;
     let keepTimes: number[] | undefined;
     if (recorder.decimationCount !== this.sentDecimations) {
@@ -193,7 +196,7 @@ export class SimCore {
       stages: sim.vehicle.stages.map((st) => ({ cutoff: st.cutoff, burnedOut: st.burnedOut, ignitions: st.ignitions, cutoffTime: st.cutoffTime })),
     };
     return {
-      keepTimes, truncate: common, frames, live, events, attitudes,
+      keepTimes, truncate: common, frames, live, ...(state ? { state } : {}), events, shownEvents: recorder.events.length, attitudes,
       telemetry: { reset, revision, samples }, plan, extras, decimations: recorder.decimationCount,
     };
   }
