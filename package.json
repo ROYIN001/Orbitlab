@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "snapshots": "node --experimental-strip-types scripts/refresh-snapshots.ts",
-    "shots": "node --experimental-strip-types scripts/shots.ts"
+    "shots": "node --experimental-strip-types scripts/shots.ts",
+    "budget": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {
     "three": "0.186.0"

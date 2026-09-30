@@ -866,7 +866,7 @@ class App {
   private async flightReport(): Promise<void> {
     const sim = this.tel.exportSource();
     if (!sim) return;
-    await downloadFlightReport({
+    downloadFlightReport({
       flight: sim,
       result: this.simView ? assessMissionResult(this.simView.sim) : null,
       link: await this.panel.share.link().catch(() => null),
