@@ -33,8 +33,9 @@ import { formatMeasure, MEASURES } from '../../lessons/measures';
 import { localText, unitText } from '../../lessons/text';
 import { LESSON_FILE_EXTENSION, parseLessonFile, type FileIssue } from '../../lessons/lesson-file';
 import {
-  RESULTS_FILE_EXTENSION, clearRevealed, flownMission, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
+  RESULTS_FILE_EXTENSION, clearRevealed, flightRecord, frozenCaseData, loadProgress, lessonProgress, recordGrade, recordRevealed, resultsFile, saveProgress, type ProgressData,
 } from '../../lessons/progress';
+import { appBuildId } from '../../build-info';
 import { isCaseLesson, type CaseKey, type CaseLesson, type CatalogLesson, type Criterion, type CriterionGrade, type Lesson, type LessonGrade } from '../../lessons/types';
 import { caseKey, caseWorksheet, type CaseSource } from '../../worksheets/cases';
 import { letterOf } from '../../worksheets/bank-items';
@@ -116,6 +117,11 @@ interface Active {
   grade: LessonGrade | null;
   /** the grade taken when the flight ended: kept, with only the answers checked again */
   frozen: LessonGrade | null;
+  /**
+   * T02: when `frozen` was taken, the instant on screen and how many commands
+   * the flight's journal held — what the record keeps for the re-check.
+   */
+  frozenAt?: { clock: number; actions: number };
   /** a case lesson's (no flight: `sim` and `frozen` stay empty) */
   case?: CaseState;
   /** answers shown, then cleared during this attempt: they still count as shown in it, so only a later one passes unaided */
@@ -395,6 +401,7 @@ export class LessonMode implements LessonToolsHost {
       a.drafts = {};
       a.frozen = null;
       delete a.seen;
+      a.frozenAt = undefined;
     }
     if (!sim) { a.grade = null; this.paintStrip(); return; }
     const started = flightStarted(sim);
@@ -408,8 +415,13 @@ export class LessonMode implements LessonToolsHost {
     if (a.frozen) a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed);
     else {
       // T02: final only once the picture has reached the end — the simulation can be a step past it
-      a.grade = gradeShown(lesson, sim, this.host.clock(), a.answers);
-      if (started && a.grade.final) { a.frozen = a.grade; a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed); }
+      const clock = this.host.clock();
+      a.grade = gradeShown(lesson, sim, clock, a.answers);
+      if (started && a.grade.final) {
+        a.frozen = a.grade;
+        a.frozenAt = { clock, actions: sim.actions.length };
+        a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed);
+      }
     }
     if (started && a.grade.final && !a.recorded && awaitingAnswers(lesson, a.grade).length === 0) this.record(a);
     this.paintStrip();
@@ -433,11 +445,13 @@ export class LessonMode implements LessonToolsHost {
   private record(a: Active): void {
     if (!a.grade || !a.sim) return;
     a.recorded = true;
-    const revealed = a.grade.criteria.filter((c) => c.revealed).map((c) => c.id);
     const p = lessonProgress(this.progressData, a.lesson.id);
+    // T02: the grading time, the instant on screen and the commands up to the grade, for the instructor's re-check
+    const at = a.frozenAt ?? { clock: this.host.clock(), actions: a.sim.actions.length };
     recordGrade(this.progressData, {
-      lessonId: a.lesson.id, at: new Date().toISOString(), verdict: a.grade.verdict, criteria: a.grade.criteria,
-      answers: { ...a.answers }, hintsShown: p.hintsShown, mission: flownMission(a.sim.cfg), ...(revealed.length ? { revealed } : {}),
+      lessonId: a.lesson.id,
+      ...flightRecord({ at: new Date(), grade: a.grade, answers: a.answers, hintsShown: p.hintsShown, cfg: a.sim.cfg,
+        clock: at.clock, actions: a.sim.actions.slice(0, at.actions), app: appBuildId() }),
     });
     this.save();
   }

@@ -16,6 +16,7 @@ import type { CaseSource } from '../worksheets/cases';
 import type { Activity, DailyActivity } from '../physics/propagator/activity';
 import type { Worksheet } from '../worksheets/types';
 import type { CatalogLesson, CriterionGrade, LessonGrade } from './types';
+import type { FlightAction } from '../physics/sim/actions';
 
 export const PROGRESS_STORAGE_KEY = 'orbitlab.lessons';
 export const RESULTS_FORMAT = 'orbitlab.results';
@@ -40,6 +41,38 @@ export interface LessonRecord {
   caseData?: CaseRecordData;
   /** the answers shown to the student in this attempt, by criterion id: on them it passes only with help */
   revealed?: string[];
+  /**
+   * T02 (owner decision 3, 2026-09-29): the mission time the flight was
+   * graded at, s (`LessonGrade.t`, the simulation's clock). A flight lesson's
+   * numbers are read there — the orbit goes on changing after the end — so
+   * the instructor's re-check flies to exactly this time.
+   */
+  t?: number;
+  /**
+   * T02: the instant on screen when the grade was taken, s. A live point-mass
+   * flight runs up to one step ahead of the picture (src/replay/recorder.ts),
+   * and the grade counts only the events the picture had reached
+   * (`gradeShown`), so the re-check counts the same ones.
+   */
+  clock?: number;
+  /**
+   * T02: the commands given during the flight, up to the grade, each at the
+   * simulation time that took it (src/physics/sim/actions.ts): a re-check
+   * gives them again at the same step boundaries. Absent from a record made
+   * before T02, which the re-check says.
+   */
+  actions?: FlightAction[];
+  /** T02: the build the flight was flown on, `<version>+<commit>` (`appBuildId`, src/build-info.ts) */
+  app?: string;
+}
+
+/** The fields a flight lesson's record needs for an exact re-check (T02), in the order the checker lists them. */
+export const RECHECK_FIELDS = ['mission', 't', 'clock', 'actions', 'app'] as const;
+export type RecheckField = (typeof RECHECK_FIELDS)[number];
+
+/** Which of those a flight lesson's record lacks: all but `mission` are new with T02, so an older file lacks them. */
+export function missingFields(record: LessonRecord): RecheckField[] {
+  return RECHECK_FIELDS.filter((f) => record[f] === undefined);
 }
 
 export interface CaseRecordData {
@@ -150,6 +183,33 @@ export function flownMission(cfg: MissionConfig): MissionDocument {
   };
   // the document copies every nested object: nothing is shared with the flight
   return missionDocument(state);
+}
+
+/** What a flight lesson's grade is kept as, with what the instructor's re-check needs to fly it again (T02). */
+export interface FlightRecordInput {
+  at: Date;
+  /** the grade taken when the flight ended, with the answers checked since */
+  grade: LessonGrade;
+  answers: Readonly<Record<string, number>>;
+  hintsShown: number;
+  /** the configuration the simulation flew */
+  cfg: MissionConfig;
+  /** the instant on screen when the grade was taken */
+  clock: number;
+  /** the flight's command journal as it stood when the grade was taken */
+  actions: readonly FlightAction[];
+  /** the build flying it (`appBuildId`, src/build-info.ts) */
+  app: string;
+}
+
+export function flightRecord(input: FlightRecordInput): LessonRecord {
+  const { grade } = input;
+  const revealed = grade.criteria.filter((c) => c.revealed).map((c) => c.id);
+  return {
+    at: input.at.toISOString(), verdict: grade.verdict, criteria: grade.criteria, answers: { ...input.answers }, hintsShown: input.hintsShown,
+    mission: flownMission(input.cfg), ...(revealed.length ? { revealed } : {}),
+    t: grade.t, clock: input.clock, actions: structuredClone([...input.actions]), app: input.app,
+  };
 }
 
 export const emptyProgress = (): ProgressData => ({ version: 1, lessons: {}, assessments: [], customLessons: [], customQuestions: [] });

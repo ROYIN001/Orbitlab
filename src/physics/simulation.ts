@@ -63,6 +63,7 @@ import { RigidLink } from './sim/rigid-link';
 import { ShipDescent } from './sim/ship-descent';
 import { LaunchEscape } from './sim/abort';
 import { Rendezvous, type ToruCommand } from './sim/rendezvous';
+import type { FlightAction } from './sim/actions';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
 import { ApolloFlight } from './sim/apollo';
@@ -109,6 +110,13 @@ export class Simulation {
   readonly state: SimState;
   readonly events: SimEvent[] = [];
   readonly telemetry: TelemetrySample[] = [];
+  /**
+   * T02: the commands given to the flight while it flew, each at the step
+   * boundary that took it (src/physics/sim/actions.ts): what a lesson's record
+   * keeps so the instructor's copy can fly the flight again. A mission's own
+   * failures are not in it: the mission document already says them.
+   */
+  readonly actions: FlightAction[] = [];
   private telemetryGeneration = 0;
   /** Changes when compaction rewrites existing telemetry indexes. */
   get telemetryRevision(): number { return this.telemetryGeneration; }
@@ -320,6 +328,7 @@ export class Simulation {
     const accepted = runtime.command;
     if (previous.mode === accepted.mode && previous.throttle === accepted.throttle
       && previous.rates.x === accepted.rates.x && previous.rates.y === accepted.rates.y && previous.rates.z === accepted.rates.z) return;
+    this.actions.push({ t: this.state.t, kind: 'setRigidCommand', command: { mode: accepted.mode, rates: { ...accepted.rates }, throttle: accepted.throttle } });
     this.burns.rigidBurnForecast = null;
     this.burns.rigidTransfer = null;
     if (this.state.currentBurn && (this.state.currentBurn.physicalApoapsis !== undefined || this.state.currentBurn.physicalObjective !== undefined)) this.burns.burnIgnited = false;
@@ -457,6 +466,7 @@ export class Simulation {
     const faults = runtime.enableFaults({ faults: [], fdir: fdir === true, seed: faultSeed(this.cfg.dynamics?.seed ?? 0) });
     if (fdir !== undefined) faults.fdir = fdir;
     faults.add({ ...spec, time: Math.max(spec.time, this.state.t) });
+    this.actions.push({ t: this.state.t, kind: 'injectControlFault', spec: structuredClone(spec), ...(fdir !== undefined ? { fdir } : {}) });
     return 'injected';
   }
   startAttitudeTest(spec: AttitudeTestSpec): AttitudeTestRecord | 'notSixDof' | 'notFlying' | 'manual' | 'running' {
@@ -467,6 +477,7 @@ export class Simulation {
     if (runtime.command.mode !== 'auto') return 'manual';
     if (runtime.attitudeTest && !runtime.attitudeTest.done) return 'running';
     const record = runtime.startAttitudeTest(spec, this.state.t);
+    this.actions.push({ t: this.state.t, kind: 'startAttitudeTest', spec: { ...spec } });
     // The axis and sense in ISO 1151 body axes, as the control command's (src/ui/notation.ts).
     const iso = spec.axis === 'x' ? { axis: 'roll', sign: spec.sign } : spec.axis === 'z' ? { axis: 'pitch', sign: -spec.sign } : { axis: 'yaw', sign: spec.sign };
     this.event(spec.kind === 'doublet' ? 'evt.attitudeTestDoublet' : 'evt.attitudeTestStep', 'info',
@@ -1353,19 +1364,33 @@ export class Simulation {
   }
 
   /**
-   * Abort the launch by hand (the Engineer mode's ABORT, a `launchAbort`
-   * failure): the escape system fires and the rocket, its engines shut down,
-   * is left to fall. False when there is no escape to fly.
-   */
-  /**
    * G07: the TORU hand controllers in the Engineer mode (null hands the
    * approach back to the automatic system).
    */
   commandToru(cmd: ToruCommand | null): boolean {
-    return this.state.status === 'rendezvous' && this.rendezvous.command(cmd);
+    const t = this.state.t;
+    const taken = this.state.status === 'rendezvous' && this.rendezvous.command(cmd);
+    if (taken) this.actions.push({ t, kind: 'commandToru', cmd: cmd ? { translate: { ...cmd.translate }, rotate: { ...cmd.rotate } } : null });
+    return taken;
   }
 
+  /**
+   * Abort the launch by hand (the Engineer mode's ABORT): the escape system
+   * fires and the rocket, its engines shut down, is left to fall. False when
+   * there is no escape to fly. Kept in the command journal (T02).
+   */
   commandAbort(): boolean {
+    if (!this.escape.available) return false;
+    this.actions.push({ t: this.state.t, kind: 'commandAbort' });
+    return this.abortLaunch();
+  }
+
+  /**
+   * @internal The abort itself, by hand or as the mission's `launchAbort`
+   * failure (src/physics/sim/failures.ts). The failure is not journaled: the
+   * mission document already carries it, and a re-fly strikes it again.
+   */
+  abortLaunch(): boolean {
     if (!this.escape.available) return false;
     this.event('evt.abortCommand', 'warn');
     return this.escape.begin('evt.abortCommand', false);

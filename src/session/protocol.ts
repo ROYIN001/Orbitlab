@@ -16,6 +16,7 @@ import type { AttitudeTestSpec } from '../physics/rigid/attitude-test';
 import type { ControlFaultSpec } from '../types';
 import type { SimEvent, TelemetrySample } from '../physics/simulation';
 import type { SimState } from '../physics/sim/types';
+import type { FlightAction } from '../physics/sim/actions';
 import type { MissionConfig } from '../types';
 
 /** Main thread → worker. `session` numbers a mission; stale replies are dropped by it. */
@@ -84,6 +85,12 @@ export interface RecordingDelta {
   state?: VisualFrame;
   /** Newly detected events, in detection order. */
   events: SimEvent[];
+  /**
+   * T02: the commands the worker's flight took since the previous delta, each
+   * at the simulation's clock that took it (src/physics/sim/actions.ts); the
+   * shell's journal holds them all, for a lesson's record.
+   */
+  actions: FlightAction[];
   /**
    * T02: how many events, in occurrence order, the recording shows — those up
    * to the live instant. The shell's log holds them all, as the simulation's does.

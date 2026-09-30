@@ -97,6 +97,8 @@ export class RecordingMirror implements RecordingSource {
 
     const shell = this.shell;
     for (const e of delta.events) shell.events.push(e);
+    // T02: the worker's command journal, for a lesson's record
+    for (const a of delta.actions) shell.actions.push(a);
     shell.mirrorTelemetry(delta.telemetry.samples, delta.telemetry.reset, delta.telemetry.revision);
     if (delta.plan) Object.assign(shell.plan, delta.plan);
     // T02: the simulation's clock and state, which a point-mass flight keeps up to one step ahead of the picture
