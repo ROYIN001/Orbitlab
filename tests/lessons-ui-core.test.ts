@@ -106,6 +106,26 @@ describe('progress and the results file', () => {
     recordGrade(p, { ...base, at: '2', verdict: 'pass' });
     expect(p.lessons['orbit-first']).toMatchObject({ passed: true, passedWithHelp: true, passedRecord: { at: '2' } });
   });
+
+  // owner decision D-6: "Clear the answers I have seen" forgets the values shown, and nothing else
+  it('clears only the values shown: attempts, hints, answers and what was recorded stay', () => {
+    const p = emptyProgress();
+    const base = { lessonId: 'orbit-first', criteria: [], answers: { period: 94.6 }, hintsShown: 2 };
+    recordGrade(p, { ...base, at: '1', verdict: 'pass' });
+    recordGrade(p, { ...base, at: '2', verdict: 'passedWithHelp', revealed: ['period'] });
+    const kept = lessonProgress(p, 'orbit-first');
+    kept.attempts = 3;
+    kept.hintsShown = 2;
+    recordRevealed(p, 'orbit-first', { period: 94.6, speed: 7.61 });
+    const before = JSON.parse(JSON.stringify(kept));
+    clearRevealed(p, 'orbit-first');
+    const { revealed, ...rest } = before;
+    expect(revealed).toEqual({ period: [94.6], speed: [7.61] });
+    expect(p.lessons['orbit-first']).toEqual(rest);
+    // a lesson never opened is not created by clearing it
+    clearRevealed(p, 'never-opened');
+    expect(p.lessons).not.toHaveProperty('never-opened');
+  });
 });
 
 // E03: the strip once printed the expected value after a wrong answer, and typing it in then passed
