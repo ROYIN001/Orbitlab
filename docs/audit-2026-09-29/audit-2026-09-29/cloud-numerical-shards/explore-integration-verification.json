@@ -1,0 +1,107 @@
+{
+  "verifiedAt": "2026-09-29T20:35:47.315466+00:00",
+  "parentCheckout": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\source-integrated",
+  "parentHeadBefore": "64757b34fb4cfe0547e274df244bf4946297f051",
+  "parentBranch": "codex/audit-acceptance",
+  "integrationType": "evidence files added to active parent working tree; no staging, commit, push, merge or deploy",
+  "parentCoverageAlreadyContainedFollowup": true,
+  "files": [
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/command.txt",
+      "sha256": "20dabca068ebed9ccd80f4b12f91e01193d66681960a3666e80d4e13e24041c0",
+      "bytes": 214,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/elapsed-seconds.txt",
+      "sha256": "06e9d52c1720fca412803e3b07c4b228ff113e303f4c7ab94665319d832bbfb7",
+      "bytes": 2,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/explore.json",
+      "sha256": "beab3057b4fe64a408660139f3dfa0f415a386c35368dc92f2bf496fb10375d0",
+      "bytes": 7392,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/explore.log",
+      "sha256": "93f0d9ae0cc6c4c83710812e2b52072f486303c4e07920d5205e4ddb5eb619a5",
+      "bytes": 3166,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/finished.txt",
+      "sha256": "885245db2eb2bd9ff0e989fa195fadb12cdea1e74dad23fd0989f8c0829a9d1e",
+      "bytes": 21,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/hashes.sha256",
+      "sha256": "6f09dcb41111579da7201eccecb5546b3108ee0ccae5e3fa8366209443c251f7",
+      "bytes": 607,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/report-TH.md",
+      "sha256": "6b3cb6b583af94bf33074c4ced0b391de11f3874eb32e0ef583af807e30e8dd5",
+      "bytes": 1009,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/runtime.json",
+      "sha256": "300f247267f066efa2523a1b8a74739830620913abe18b372febb6711d7f9a75",
+      "bytes": 202,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/started.txt",
+      "sha256": "40b04930100d0c625b15f6da8c7d5ee6e663a05e6a885b7a5878073c903a690b",
+      "bytes": 21,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/summary.json",
+      "sha256": "02687667de021d61891af005b2e70b98734bb9a71626d2ab99d91cd486368bc9",
+      "bytes": 228,
+      "action": "copied",
+      "byteIdentical": true
+    },
+    {
+      "relativePath": "audit-2026-09-29/cloud-numerical/standard-6-7-8/explore-isolated-rerun/worker-runtime.jsonl",
+      "sha256": "472f75c14a93ea2cfe32d627c08124ed102d902c6259ad733854e95c3833c7ad",
+      "bytes": 815,
+      "action": "copied",
+      "byteIdentical": true
+    }
+  ],
+  "parentCoverageTotals": {
+    "shards": 8,
+    "reportedTests": 2544,
+    "reportedPassed": 2542,
+    "reportedFailed": 2,
+    "uniqueFiles": 177,
+    "uniqueFileAndFullName": 2544,
+    "duplicateNames": []
+  },
+  "parentCoverageArtifact": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\cloud-numerical-shards\\standard-coverage-union.json",
+  "parentHeadAfter": "64757b34fb4cfe0547e274df244bf4946297f051",
+  "parentHeadUnchangedDuringCopy": true,
+  "testExecutionInThisChat": false
+}

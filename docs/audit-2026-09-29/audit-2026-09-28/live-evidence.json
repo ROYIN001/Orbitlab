@@ -1,0 +1,696 @@
+[
+  {
+    "id": "build-saved-refresh",
+    "ui": "Static fire\n\nBolt an engine to the stand and fire it. The stand runs the engine model every flight runs — the same start-up and shutdown, throttle limits and solid-motor thrust curve — so what it measures is what the rocket flies with.\n\nEngine\nStage 1: 9 × Merlin 1D\nStage 2: Merlin Vacuum · vacuum\nRD-107A\nRD-108A\nRD-0110 · vacuum\nRD-0124 · vacuum\nS5.92 · vacuum\nRD-276\nRD-0210/0211\nRD-0213 + RD-0214\nS5.98M · vacuum\nRD-191\nRD-0124A · vacuum\nMerlin 1D\nMerlin Vacuum · vacuum\nRD-180\nGEM-63\nRL10C-1 · vacuum\nBE-4\nGEM-63XL\nRL10C-1-1 · vacuum\nVulcain 2.1\nP120C\nVinci · vacuum\nYF-77\nYF-100\nYF-75D · vacuum\nLE-9\nSRB-3\nLE-5B-3 · vacuum\nS139\nPSOM-XL\nVikas\nHPS3\nL-2-5 · vacuum\nRutherford\nRutherford Vacuum · vacuum\nCurie · vacuum\nZefiro 40\nZefiro 9\nAVUM+ (RD-869) · vacuum\nYF-21C (4× YF-20C)\nYF-24C (YF-22C + 4× YF-23C)\nYF-25\nYF-75 · vacuum\nLE-7A · historical\nSRB-A3 · historical\nLE-5B · vacuum · historical\nRaptor 2\nRaptor 2 / RVac\nRD-107 (8D74PS) · historical\nRD-108 (8D75PS) · historical\nRD-107 (8D74K) · historical\nRD-108 (8D75K) · historical\nRD-0109 · vacuum · historical\nF-1 · historical\nJ-2 · vacuum · historical\nEngines on the stand\n−\n+\nPropellant loaded\nkg\nThrottle\n100 %\n\nThis engine throttles down to 40 % of full thrust.\n\nShut it down early\ns\nWhere it fires\nIn a vacuum chamber\nAt sea level\nAt a launch site's altitude\n\nAir pressure around the nozzle: 0.0 kPa."
+  },
+  {
+    "id": "tunnel-negative",
+    "text": "The rocket in the tunnel\n\nPut Audit 28 Sep Falcon in the tunnel and sweep it through the Mach numbers and angles of attack it can meet. The tunnel reads the six-DOF flight's own aerodynamics through the flight's own code.\n\n≈ ESTIMATE\nThese tables are the model's estimates, not measured data: no rocket in this app has wind-tunnel data. They are worked out from the rocket's layout by slender-body theory with viscous crossflow, and the drag is one generic launcher curve for every rocket, so fins and the shape of the nose change nothing here — nor in either flight model.\nConfiguration\nIn the tunnel\nThe whole rocket\nStage 2 and above\nStrap-ons still on\nThis rocket has none.\nFairing on\nPropellant left in the lowest stage\n100 %\nPayload\nkg\n\nPropellant and payload move the centre of mass, and with it the moment and the static margin; the forces stay the same.\n\nLength in the tunnel\n72.4 m\nReference area S\n21.24 m²\nReference diameter d\n5.20 m\nCentre of mass, from the nose\n43.0 m\nMach number × angle of attack estimate\nShow\nNormal-force coefficient C_N\nAxial-force coefficient C_A\nPitching-moment coefficient C_m\nCentre of pressure, m from the nose\nAngles\n0–10°\n0–90°\n\nMach 1.2, α = 4°: C_N = 0.146\n\n0.000\n0.698\n\nPoint at a cell, or select the map and use the arrow keys, to read its value.\n\nThe numbers as a table\nAgainst Mach number\nwind tunnel\npoint-mass flight\n\nAt zero angle the tunnel's drag is the curve the point-mass flight flies, the same number at every Mach number: straight lines between the table's Mach numbers, with the rise near Mach 1.\n\nstatic margin\nneutral (0)\n\nHow far the centre of pressure lies behind the centre of mass, in diameters of d = 5.20 m. Above zero the air turns the nose back into the wind (stable); below zero it turns it away, and only the steering of the engines keeps the rocket pointed, as on almost every launcher.",
+    "invalid": "false"
+  },
+  {
+    "id": "tunnel-empty-angle",
+    "text": "The rocket in the tunnel\n\nPut Audit 28 Sep Falcon in the tunnel and sweep it through the Mach numbers and angles of attack it can meet. The tunnel reads the six-DOF flight's own aerodynamics through the flight's own code.\n\n≈ ESTIMATE\nThese tables are the model's estimates, not measured data: no rocket in this app has wind-tunnel data. They are worked out from the rocket's layout by slender-body theory with viscous crossflow, and the drag is one generic launcher curve for every rocket, so fins and the shape of the nose change nothing here — nor in either flight model.\nConfiguration\nIn the tunnel\nThe whole rocket\nStage 2 and above\nStrap-ons still on\nThis rocket has none.\nFairing on\nPropellant left in the lowest stage\n100 %\nPayload\nkg\n\nPropellant and payload move the centre of mass, and with it the moment and the static margin; the forces stay the same.\n\nLength in the tunnel\n72.4 m\nReference area S\n21.24 m²\nReference diameter d\n5.20 m\nCentre of mass, from the nose\n43.7 m\nMach number × angle of attack estimate\nShow\nNormal-force coefficient C_N\nAxial-force coefficient C_A\nPitching-moment coefficient C_m\nCentre of pressure, m from the nose\nAngles\n0–10°\n0–90°\n\nMach 1.2, α = 20°: C_N = 1.696 (beyond the 15° the tables are built for)\n\n0.000\n15.5\n\nPoint at a cell, or select the map and use the arrow keys, to read its value.\n\nHatched cells lie beyond the 15° the tables are built for: there they are carried on by crossflow theory alone, and the flight flags such an angle as outside its envelope.\n\nThe numbers as a table\nAgainst Mach number\nwind tunnel\npoint-mass flight\n\nAt zero angle the tunnel's drag is the curve the point-mass flight flies, the same number at every Mach number: straight lines between the table's Mach numbers, with the rise near Mach 1.\n\nstatic margin\nneutral (0)\n\nHow far the centre of pressure lies behind the centre of mass, in diameters of d = 5.20 m. Above zero the air turns the nose back into the wind (stable); below zero it turns it away, and only the steering of the engines keeps the rocket pointed, as on almost every launcher."
+  },
+  {
+    "id": "build-handoff",
+    "state": {
+      "hasMission": true,
+      "mode": "live",
+      "playing": false,
+      "warp": 1,
+      "cursorTimeS": -10,
+      "headTimeS": -10,
+      "startTimeS": -10,
+      "camera": "exterior",
+      "performance": {
+        "achievedWarp": null,
+        "physicsControlStepS": null,
+        "physicsThread": "worker",
+        "recording": {
+          "frames": 1,
+          "events": 0,
+          "bytes": 2240,
+          "bytesPerFrame": 2240,
+          "decimations": 0,
+          "rotationBytes": 0,
+          "rotationWindows": []
+        },
+        "recordingBytesIncludeRigidMaps": true,
+        "usedJSHeapBytes": 49054554,
+        "allocatedJSHeapBytes": 110017962
+      },
+      "vehicle": {
+        "id": "launcher-for-1-000-kg-ljuvgw",
+        "name": "Launcher for 1,000 kg"
+      },
+      "site": {
+        "id": "kourou",
+        "name": "Guiana Space Centre (Kourou)"
+      },
+      "satellite": {
+        "id": "cubesats",
+        "name": "CubeSat rideshare dispenser"
+      },
+      "frame": {
+        "timeS": -10,
+        "status": "prelaunch",
+        "ascentPhase": "vertical",
+        "descentPhase": null,
+        "noteKey": "countdown",
+        "liftoff": false,
+        "destroyed": false,
+        "fairingAttached": true,
+        "payloadSeparated": false,
+        "rigid": null,
+        "flightDynamics": null,
+        "detachedBodies": [],
+        "altitudeKm": 0.01,
+        "altitudeAglKm": 0,
+        "speedMs": 463.15889740828345,
+        "airspeedMs": 0,
+        "verticalSpeedMs": 0,
+        "mach": 0,
+        "dynamicPressurePa": 0,
+        "gLoad": 1,
+        "apoapsisKm": 0.009999999999068677,
+        "periapsisKm": -6367.171528533992,
+        "inclinationDeg": 5.238999999999965,
+        "periodS": 1796.9119092157741,
+        "latitudeDeg": 5.239,
+        "longitudeDeg": -52.768,
+        "downrangeKm": 0,
+        "dvRemainingMs": 9549.487239168328,
+        "nextScheduledBurnInS": 9,
+        "dvBudgetMs": {
+          "thrust": 0,
+          "gravity": 0,
+          "drag": 0,
+          "steering": 0
+        },
+        "stage": {
+          "index": 0,
+          "ofStages": 2,
+          "id": "stage1-r1",
+          "name": "21× Rutherford",
+          "isSpacecraft": false,
+          "attached": true,
+          "burning": false,
+          "propellantFraction": 1
+        }
+      },
+      "loopMargins": null,
+      "attitudeTest": null,
+      "navigation": null,
+      "explicitGuidance": null,
+      "controlFaults": null,
+      "lastEvent": null,
+      "nextEvent": null
+    }
+  },
+  {
+    "id": "sized-launch-flight",
+    "state": {
+      "hasMission": true,
+      "mode": "live",
+      "playing": true,
+      "warp": 1000,
+      "cursorTimeS": 17422.391599999868,
+      "headTimeS": 17397.391599999868,
+      "startTimeS": -10,
+      "camera": "map",
+      "performance": {
+        "achievedWarp": null,
+        "physicsControlStepS": null,
+        "physicsThread": "worker",
+        "recording": {
+          "frames": 3843,
+          "events": 16,
+          "bytes": 14746230,
+          "bytesPerFrame": 3920,
+          "decimations": 0,
+          "rotationBytes": 0,
+          "rotationWindows": []
+        },
+        "recordingBytesIncludeRigidMaps": true,
+        "usedJSHeapBytes": 73965576,
+        "allocatedJSHeapBytes": 119804840
+      },
+      "vehicle": {
+        "id": "launcher-for-1-000-kg-ljuvgw",
+        "name": "Launcher for 1,000 kg"
+      },
+      "site": {
+        "id": "kourou",
+        "name": "Guiana Space Centre (Kourou)"
+      },
+      "satellite": {
+        "id": "cubesats",
+        "name": "CubeSat rideshare dispenser"
+      },
+      "frame": {
+        "timeS": 17426.59159999988,
+        "status": "orbit",
+        "ascentPhase": "closedLoop",
+        "descentPhase": null,
+        "noteKey": "orbitOffTarget",
+        "liftoff": true,
+        "destroyed": false,
+        "fairingAttached": false,
+        "payloadSeparated": true,
+        "rigid": null,
+        "flightDynamics": null,
+        "detachedBodies": [
+          {
+            "id": 1,
+            "name": "21× Rutherford",
+            "outcome": "impact",
+            "rigid": null
+          },
+          {
+            "id": 2,
+            "name": "fairing",
+            "outcome": "impact",
+            "rigid": null
+          },
+          {
+            "id": 3,
+            "name": "fairing",
+            "outcome": "impact",
+            "rigid": null
+          },
+          {
+            "id": 4,
+            "name": "2× Rutherford Vacuum",
+            "outcome": "orbit",
+            "rigid": null
+          }
+        ],
+        "altitudeKm": 286.7771560424501,
+        "altitudeAglKm": 286.7771560424501,
+        "speedMs": 7749.183332045178,
+        "airspeedMs": 7265.46599352017,
+        "verticalSpeedMs": 154.3217628546269,
+        "mach": 11.46089436995553,
+        "dynamicPressurePa": 0.0008531672133172065,
+        "gLoad": 0.000001818275839183576,
+        "apoapsisKm": 450.127723746717,
+        "periapsisKm": 178.04562690369693,
+        "inclinationDeg": 5.294679929649215,
+        "periodS": 5448.370747718787,
+        "latitudeDeg": 1.9356917072502038,
+        "longitudeDeg": -65.85814400221679,
+        "downrangeKm": 1499.8915209361746,
+        "dvRemainingMs": 0,
+        "nextScheduledBurnInS": null,
+        "dvBudgetMs": {
+          "thrust": 9331.186731207183,
+          "gravity": 832.0471739488701,
+          "drag": 124.89311926797015,
+          "steering": 997.2906386771568
+        },
+        "stage": null
+      },
+      "loopMargins": null,
+      "attitudeTest": null,
+      "navigation": null,
+      "explicitGuidance": null,
+      "controlFaults": null,
+      "lastEvent": {
+        "timeS": 560.291599999863,
+        "key": "evt.stageImpact",
+        "severity": "info",
+        "params": {
+          "name": "21× Rutherford",
+          "lat": 5.05,
+          "lon": -44.28
+        }
+      },
+      "nextEvent": null
+    }
+  },
+  {
+    "id": "case-answer-lost-hint",
+    "beforeHint28": "0.986",
+    "afterHint28": ""
+  },
+  {
+    "id": "case61-submit",
+    "state": {
+      "active": true,
+      "id": "case-theos2",
+      "number": "6.1",
+      "title": "THEOS-2 over Bangkok",
+      "flightEnded": true,
+      "verdict": "pass",
+      "criteria": [
+        {
+          "id": "required",
+          "kind": "case",
+          "item": "required",
+          "question": "How fast must the plane turn (°/day)?",
+          "state": "pass"
+        },
+        {
+          "id": "j2",
+          "kind": "case",
+          "item": "j2",
+          "question": "How fast does J₂ turn THEOS-2's plane (°/day)?",
+          "state": "pass"
+        },
+        {
+          "id": "height",
+          "kind": "case",
+          "item": "height",
+          "question": "Its mean height above the equator (km)?",
+          "state": "pass"
+        },
+        {
+          "id": "reach",
+          "kind": "case",
+          "item": "reach",
+          "question": "Tilted 45°, how far from the point below it can it see (km)?",
+          "state": "pass"
+        },
+        {
+          "id": "lst",
+          "kind": "case",
+          "item": "lst",
+          "question": "When it passes over Bangkok's longitude at 03:20 UTC, what is the local mean solar time (hours, decimal)?",
+          "state": "pass"
+        },
+        {
+          "id": "why",
+          "kind": "case",
+          "item": "why",
+          "question": "Why is a camera satellite put in a sun-synchronous orbit?",
+          "state": "pass"
+        }
+      ],
+      "lockBroken": [],
+      "awaitingAnswers": [],
+      "hintsShown": 1
+    }
+  },
+  {
+    "id": "case62-submit",
+    "state": {
+      "active": true,
+      "id": "case-cz5b",
+      "number": "6.2",
+      "title": "The Long March 5B stage of Tianhe",
+      "flightEnded": true,
+      "verdict": "fail",
+      "criteria": [
+        {
+          "id": "area",
+          "kind": "case",
+          "item": "area",
+          "question": "The stage's mean cross-section, tumbling (m²)?",
+          "state": "pass"
+        },
+        {
+          "id": "b",
+          "kind": "case",
+          "item": "b",
+          "question": "Its ballistic coefficient C_D·A/m (m²/kg)?",
+          "state": "pass"
+        },
+        {
+          "id": "early",
+          "kind": "case",
+          "item": "early",
+          "question": "The window's earliest end: the agencies' ±20 % of the time left (days after the epoch)?",
+          "state": "pass"
+        },
+        {
+          "id": "late",
+          "kind": "case",
+          "item": "late",
+          "question": "The window's latest end (days after the epoch)?",
+          "state": "pass"
+        },
+        {
+          "id": "actual",
+          "kind": "case",
+          "item": "actual",
+          "question": "How long did it actually stay up after the epoch (days)?",
+          "state": "pass"
+        },
+        {
+          "id": "error",
+          "kind": "case",
+          "item": "error",
+          "question": "The prediction's error, as a share of the time actually left (%)?",
+          "state": "fail"
+        },
+        {
+          "id": "broadside",
+          "kind": "case",
+          "item": "broadside",
+          "question": "Had it flown broadside all the way, how long would it have stayed up, to a first approximation (days)?",
+          "state": "pass"
+        },
+        {
+          "id": "why",
+          "kind": "case",
+          "item": "why",
+          "question": "Why do the agencies give a window rather than a time?",
+          "state": "pass"
+        }
+      ],
+      "lockBroken": [],
+      "awaitingAnswers": [],
+      "hintsShown": 0
+    }
+  },
+  {
+    "id": "case62-signed",
+    "state": {
+      "active": true,
+      "id": "case-cz5b",
+      "number": "6.2",
+      "title": "The Long March 5B stage of Tianhe",
+      "flightEnded": true,
+      "verdict": "pass",
+      "criteria": [
+        {
+          "id": "area",
+          "kind": "case",
+          "item": "area",
+          "question": "The stage's mean cross-section, tumbling (m²)?",
+          "state": "pass"
+        },
+        {
+          "id": "b",
+          "kind": "case",
+          "item": "b",
+          "question": "Its ballistic coefficient C_D·A/m (m²/kg)?",
+          "state": "pass"
+        },
+        {
+          "id": "early",
+          "kind": "case",
+          "item": "early",
+          "question": "The window's earliest end: the agencies' ±20 % of the time left (days after the epoch)?",
+          "state": "pass"
+        },
+        {
+          "id": "late",
+          "kind": "case",
+          "item": "late",
+          "question": "The window's latest end (days after the epoch)?",
+          "state": "pass"
+        },
+        {
+          "id": "actual",
+          "kind": "case",
+          "item": "actual",
+          "question": "How long did it actually stay up after the epoch (days)?",
+          "state": "pass"
+        },
+        {
+          "id": "error",
+          "kind": "case",
+          "item": "error",
+          "question": "The prediction's error, as a share of the time actually left (%)?",
+          "state": "pass"
+        },
+        {
+          "id": "broadside",
+          "kind": "case",
+          "item": "broadside",
+          "question": "Had it flown broadside all the way, how long would it have stayed up, to a first approximation (days)?",
+          "state": "pass"
+        },
+        {
+          "id": "why",
+          "kind": "case",
+          "item": "why",
+          "question": "Why do the agencies give a window rather than a time?",
+          "state": "pass"
+        }
+      ],
+      "lockBroken": [],
+      "awaitingAnswers": [],
+      "hintsShown": 0
+    }
+  },
+  {
+    "id": "case63-submit",
+    "state": {
+      "active": true,
+      "id": "case-iridium",
+      "number": "6.3",
+      "title": "Iridium 33 and Cosmos 2251",
+      "flightEnded": true,
+      "verdict": "pass",
+      "criteria": [
+        {
+          "id": "miss",
+          "kind": "case",
+          "item": "miss",
+          "question": "How far apart were the two satellites at the time of closest approach (m)?",
+          "state": "pass"
+        },
+        {
+          "id": "speed",
+          "kind": "case",
+          "item": "speed",
+          "question": "At what speed did they meet, one relative to the other (km/s)?",
+          "state": "pass"
+        },
+        {
+          "id": "angle",
+          "kind": "case",
+          "item": "angle",
+          "question": "At what angle did their paths cross (°)?",
+          "state": "pass"
+        },
+        {
+          "id": "radius",
+          "kind": "case",
+          "item": "radius",
+          "question": "The pair's combined radius, within which they touch (m)?",
+          "state": "pass"
+        },
+        {
+          "id": "sigma",
+          "kind": "case",
+          "item": "sigma",
+          "question": "The combined uncertainty's standard deviation along the miss (m)?",
+          "state": "pass"
+        },
+        {
+          "id": "nsigma",
+          "kind": "case",
+          "item": "nsigma",
+          "question": "How many of those standard deviations was the miss?",
+          "state": "pass"
+        },
+        {
+          "id": "why",
+          "kind": "case",
+          "item": "why",
+          "question": "The message gave a probability of about 10⁻⁵¹, yet the satellites collided. Why?",
+          "state": "pass"
+        },
+        {
+          "id": "times",
+          "kind": "case",
+          "item": "times",
+          "question": "With Iridium's own orbit and a cautious uncertainty the probability comes out much larger. How many times the threshold of 1 in 10 000 at which operators usually move a satellite?",
+          "state": "pass"
+        }
+      ],
+      "lockBroken": [],
+      "awaitingAnswers": [],
+      "hintsShown": 0
+    }
+  },
+  {
+    "id": "assessment-language-draft-fixed",
+    "choice": true,
+    "confidence": true,
+    "numericDraft28": "10.78"
+  },
+  {
+    "id": "orbit-watch-tour",
+    "steps": [
+      "◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\nSTEP 1 OF 15\nNewton's cannon: falling\n\nNewton imagined a cannon on a mountain so high that the air no longer slows the ball. Fired at 4 km/s, the ball falls back to Earth as anything thrown does — but the Earth is round, so it lands far round the curve.\n\nIt falls back to Earth, 670 km round the surface, after 3 min.\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\n00:10:17 after the shot",
+      "◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\nSTEP 2 OF 15\nNewton's cannon: falling all the way round\n\nFaster, and the ball lands further away. At about 7.8 km/s from this height the ground curves away beneath it exactly as fast as it falls, and it never lands. That is an orbit: the ball is still falling, all the time — around the Earth.\n\nIt goes all the way round and never lands: an orbit of 1 h 27 min, up to 119 km high.\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\n00:00:00 after the shot",
+      "◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\nSTEP 3 OF 15\nThe International Space Station\n\nAbout 420 km up, the station goes round the Earth in about an hour and a half — more than fifteen times a day — at 7.7 km/s. Its orbit is tilted 51.6° to the equator, so it passes over everywhere between 51.6° north and south, where most of the world's people live.\n\nALTITUDE\n420 km\nSPEED\n7.657 km/s\nORBITAL PERIOD\n1 h 33 min\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 00:00:00\nSep 28, 2026, 06:04 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\nSTEP 4 OF 15\nHohmann's transfer: two burns\n\nFrom a low orbit to geostationary height takes two burns. The first, along the direction of flight, stretches the circle into an ellipse whose far end reaches 35 786 km; half an orbit later, at the top, the second rounds it off. This is Walter Hohmann's transfer (1925), the cheapest two-burn way between two circles: from 500 km it costs about 3.8 km/s and takes a little over five hours.\n\nALTITUDE\n500 km\nSPEED\n9.982 km/s\nORBITAL PERIOD\n10 h 37 min\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 00:00:00\nSep 28, 2026, 06:04 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\nSTEP 5 OF 15\nMolniya: slow at the top\n\nA Soviet orbit for communications in the far north: a long ellipse whose apogee, 39 750 km up, is over the northern hemisphere. The coloured slices are equal times (Kepler's second law): the satellite rushes through its perigee in the south in under an hour and spends the other eleven of its twelve hours high over the north. At 63.4°, the critical inclination, the Earth's bulge does not turn the perigee, so the apogee stays in the north.\n\nALTITUDE\n600 km\nSPEED\n9.961 km/s\nORBITAL PERIOD\n11 h 58 min\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 00:00:00\nSep 28, 2026, 06:04 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\nSTEP 6 OF 15\nGeostationary: standing still\n\n35 786 km above the equator a satellite goes round once in a sidereal day — 23 h 56 min — the time the Earth takes to turn once. From the ground it stands still: its track is a single point. This one is over 78.5° E, the slot Thaicom's satellites use, which is why a dish can be fixed pointing at it.\n\nALTITUDE\n35,786 km\nSPEED\n3.075 km/s\nORBITAL PERIOD\n23 h 56 min\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 00:00:00\nSep 28, 2026, 06:04 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\nSTEP 7 OF 15\nSun-synchronous: the same time every day\n\nEarth-observation satellites fly nearly over the poles, about 98° to the equator. The Earth's equatorial bulge turns their orbit's plane about one degree a day — as fast as the Earth goes round the Sun — so they cross the equator at the same local time every day (here 10:30, heading north), and every picture has the same light. Each revolution the track steps west as the Earth turns beneath.\n\nALTITUDE\n600 km\nSPEED\n7.558 km/s\nORBITAL PERIOD\n1 h 37 min\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 00:00:00\nSep 28, 2026, 06:04 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\nSTEP 8 OF 15 · REAL SATELLITES\nThe International Space Station, right now\n\nThis is where the ISS is at this moment, computed from its latest element set. It flies about 420 km up at 7.7 km/s and goes round the Earth about 16 times a day, with people on board since 2000.\n\nALTITUDE\n416 km\nSPEED\n7.67 km/s\nORBITAL PERIOD\n1 h 33 min\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:47 PM UTC",
+      "◍\n3-D\n⌇\nGround track\nSTEP 9 OF 15 · REAL SATELLITES\nWhen can you see it?\n\nThe track shows the ground the ISS flies over. It is seen from the ground only when it is in sunlight while the sky where you stand is dark — just after sunset or before sunrise. The card lists its next passes over your place.\n\nALTITUDE\n416 km\nSPEED\n7.67 km/s\nORBITAL PERIOD\n1 h 33 min\nPasses over Bangkok\nTuesday, September 29 05:41:49 AM · highest 28° south-east · Not to be seen: the sky is light\nTuesday, September 29 07:18:35 AM · highest 11° north-west · Not to be seen: the sky is light\nTuesday, September 29 03:35:31 PM · highest 13° north-east · Not to be seen: in the Earth's shadow\n\nTimes are your device's (GMT+3).\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:47 PM UTC",
+      "◍\n3-D\n⌇\nGround track\nSTEP 10 OF 15 · REAL SATELLITES\nTHEOS-2, Thailand's eye in orbit\n\nTHEOS-2 is sun-synchronous: its orbit turns once a year with the Sun, so it always crosses the equator heading south between 10:00 and 10:30 local time, when the light is good for pictures. Each track is a little west of the one before as the Earth turns beneath it.\n\nALTITUDE\n632 km\nSPEED\n7.53 km/s\nORBITAL PERIOD\n1 h 37 min\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:47 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\nSTEP 11 OF 15 · REAL SATELLITES\nThe navigation satellites\n\nGPS, GLONASS, Galileo and BeiDou: more than a hundred satellites, most of them some 20 000 km up, arranged so that a receiver anywhere sees at least four at once. From their signals' travel times it works out where it is.\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:58 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\nSTEP 12 OF 15 · REAL SATELLITES\nWeather satellites, high and low\n\nThe ring 36 000 km out is the geostationary belt: a satellite there goes round once a day and stands still over one spot, watching the same half of the Earth all day. The others circle low over the poles and see the whole Earth twice a day, in more detail.\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:48 PM UTC",
+      "◍\n3-D\n⌇\nGround track\nSTEP 13 OF 15 · REAL SATELLITES\nThe Earth-imaging satellites\n\nCivil, commercial and military imagers whose orbits are published. Most fly sun-synchronous orbits some 500–800 km up; cameras need daylight, radar satellites see through cloud and at night. At the Explore level you can list when they pass over a place.\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:48 PM UTC",
+      "◍\n3-D\n⌇\nGround track\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\nSTEP 14 OF 15 · REAL SATELLITES\nA cloud of debris\n\nThese are pieces of the weather satellite Fengyun-1C, destroyed by a Chinese anti-satellite missile test in January 2007: thousands of fragments spread around the whole orbit. On 10 February 2009 two satellites, Iridium 33 and Cosmos 2251, collided at 11.6 km/s, making another such cloud.\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:48 PM UTC",
+      "◍\n3-D\n⌇\nGround track\nSTEP 15 OF 15 · REAL SATELLITES\nWhat goes up comes down\n\nLow satellites are slowed by the thin air and fall back. The Long March 5B core stages, 21.6 t each, were left in orbit four times and came down uncontrolled days later. Even hours before, a re-entry can only be given within a window of about ±20 % of the time left.\n\nCZ-5B Y1: came down on 2020-05-11, uncontrolled\nCZ-5B Y2: came down on 2021-05-09, uncontrolled\nCZ-5B Y3: came down on 2022-07-30, uncontrolled\nCZ-5B Y4: came down on 2022-11-04, uncontrolled\n\nElement sets: CelesTrak's first of each launch. Size, mass and re-entry: GCAT (J. McDowell).\n\n‹ Back\nNext ›\nTry it yourself\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nNot now\nSep 28, 2026, 06:04:48 PM UTC"
+    ]
+  },
+  {
+    "id": "orbit-invalid-fixed",
+    "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nTwo burns along the direction of flight: one to reach the new height, and half an orbit later one to round the orbit off there.\n\nTarget altitude\nkm\nSpacecraft\nNone: Δv only\nYour own\nMass, with propellant\nkg\nPropellant\nkg\nSpecific impulse Isp\ns\nEngine thrust\nN\n\nThe propellant is part of the spacecraft's mass: it must be less than 101 kg.\n\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:53:17\nSep 28, 2026, 07:58 PM UTC\nTHE PLAN: HOHMANN TRANSFER\n1\nat perigee · T+ 00:03:10\n2.370 km/s\n2\nat apogee · T+ 05:21:32\n1.446 km/s\nTotal Δv\n3.816 km/s\nTransfer time\n5 h 18 min\nOrbit at the end\n35,786 × 35,786 km, i = 28.5°\n\nNo budget: the spacecraft's numbers are not possible. Correct them under Spacecraft.\n\nNext burn in 3 h 28 min\n\nPlan from now\nCarry on from the new orbit\nClear\n\nCorrect the spacecraft's numbers to carry on from this orbit.\n\nTHIS ORBIT\nAltitude\n21,963 km\nSpeed\n3.446 km/s\nOrbital period\n10 h 37 min\nPerigee × apogee\n500 × 35,786 km\nSpeed at perigee / apogee\n9.982 / 1.628 km/s\nRevolutions a day\n2.26\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.7195, so the Earth's centre is 17,643 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 34,330 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 10 h 37 min and a = 24,521 km.\n\nComing next in Orbit"
+  },
+  {
+    "id": "explore-maneuvers",
+    "cases": [
+      {
+        "kind": "Bi-elliptic transfer",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nThree burns: out beyond the target first, then down to it. Past about twelve times the starting radius this costs less than Hohmann, and takes far longer.\n\nFar point\nkm\nTarget altitude\nkm\nSpacecraft\nNone: Δv only\nYour own\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:25:48\nSep 28, 2026, 07:42 PM UTC\nTHE PLAN: BI-ELLIPTIC TRANSFER\n1\nat perigee · T+ 01:25:48\n3.054 km/s\n2\nat apogee · T+ 3 d 15:04:41\n0.634 km/s\n3\nat perigee · T+ 9 d 10:12:03\n0.337 km/s\nTotal Δv\n4.025 km/s\nTransfer time\n9.4 days\nOrbit at the end\n120,000 × 120,000 km, i = 51.6°\nHohmann to the same circle\n4.100 km/s\n\nNext burn in 3.6 days\n\nPlan from now\nCarry on from the new orbit\nClear\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n10.711 km/s\nOrbital period\n7.1 days\nPerigee × apogee\n420 × 300,000 km\nSpeed at perigee / apogee\n10.711 / 0.238 km/s\nRevolutions a day\n0.14\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.9566, so the Earth's centre is 149,790 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 36,407 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 7.1 days and a = 156,588 km.\n\nComing next in Orbit"
+      },
+      {
+        "kind": "Plane change",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nOne burn at a node, square to the orbit, turning its plane. The higher and slower the satellite, the cheaper: it is made at the node farther from the Earth.\n\nTarget inclination\n°\nSpacecraft\nNone: Δv only\nYour own\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:25:59\nSep 28, 2026, 07:42 PM UTC\nTHE PLAN: PLANE CHANGE\n1\nat the ascending node · T+ 01:32:58\n1.335 km/s\nTotal Δv\n1.335 km/s\nOrbit at the end\n420 × 420 km, i = 41.6°\n\nNext burn in 7 min\n\nPlan from now\nCarry on from the new orbit\nClear\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.657 km/s\nOrbital period\n1 h 33 min\nPerigee × apogee\n420 × 420 km\nSpeed at perigee / apogee\n7.657 / 7.657 km/s\nRevolutions a day\n15.49\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0000, so the Earth's centre is 0 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 26,028 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 33 min and a = 6,798 km.\n\nComing next in Orbit"
+      },
+      {
+        "kind": "Circularise at apogee (GTO → GEO)",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nAt apogee, speed up to a circle and turn the plane towards the equator in the same burn — how a satellite goes from a transfer orbit to geostationary. It can be split over several apogees, as real satellites do.\n\nBurns at apogee\nSpacecraft\nNone: Δv only\nYour own\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:26:09\nSep 28, 2026, 07:43 PM UTC\nTHE PLAN: CIRCULARISE AT APOGEE (GTO → GEO)\n1\nat apogee · T+ 01:26:07\n6.291 km/s\nTotal Δv\n6.291 km/s\nOrbit at the end\n420 × 420 km, i = 20.5°\n\nEvery burn made.\n\nPlan from now\nCarry on from the new orbit\nClear\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.657 km/s\nOrbital period\n1 h 33 min\nPerigee × apogee\n420 × 420 km\nSpeed at perigee / apogee\n7.657 / 7.657 km/s\nRevolutions a day\n15.49\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0000, so the Earth's centre is 0 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 26,028 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 33 min and a = 6,798 km.\n\nComing next in Orbit"
+      },
+      {
+        "kind": "Phasing",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nMove along your own orbit — to meet a satellite ahead, or to let one catch up — by flying a slightly shorter or longer orbit for a few revolutions.\n\nMove along the orbit by\n°\nOver revolutions\nSpacecraft\nNone: Δv only\nYour own\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:26:16\nSep 28, 2026, 07:43 PM UTC\nTHE PLAN: PHASING\n1\nat perigee · T+ 01:26:16\n0.048 km/s\n2\nat perigee · T+ 06:00:00\n0.048 km/s\nTotal Δv\n0.096 km/s\nTransfer time\n4 h 34 min\nOrbit at the end\n420 × 420 km, i = 51.6°\n\nNext burn in 4 h 34 min\n\nPlan from now\nCarry on from the new orbit\nClear\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.609 km/s\nOrbital period\n1 h 31 min\nPerigee × apogee\n252 × 420 km\nSpeed at perigee / apogee\n7.802 / 7.609 km/s\nRevolutions a day\n15.78\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0125, so the Earth's centre is 84 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 25,864 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 31 min and a = 6,714 km.\n\nComing next in Orbit"
+      },
+      {
+        "kind": "Deorbit burn",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nOne burn against the direction of flight at apogee, bringing the perigee down into the atmosphere.\n\nAim the perigee at\nkm\nSpacecraft\nNone: Δv only\nYour own\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:26:26\nSep 28, 2026, 07:43 PM UTC\nTHE PLAN: DEORBIT BURN\n1\nat apogee · T+ 01:26:26\n0.108 km/s\nTotal Δv\n0.108 km/s\nOrbit at the end\n50 × 420 km, i = 51.6°\nDown to 100 km\n34 min after the burn\n\nEvery burn made.\n\nPlan from now\nCarry on from the new orbit\nClear\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.549 km/s\nOrbital period\n1 h 29 min\nPerigee × apogee\n50 × 420 km\nSpeed at perigee / apogee\n7.984 / 7.549 km/s\nRevolutions a day\n16.14\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0280, so the Earth's centre is 185 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 25,661 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 29 min and a = 6,613 km.\n\nComing next in Orbit"
+      },
+      {
+        "kind": "Low-thrust spiral",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nAn electric thruster pushes gently for weeks. In Edelbaum's solution the orbit stays nearly circular and widens (or narrows) while its plane turns.\n\nTarget altitude\nkm\nTarget inclination\n°\nThrust acceleration\nmm/s²\nSpacecraft\nNone: Δv only\nYour own\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:26:37\nSep 28, 2026, 07:43 PM UTC\nTHE PLAN: LOW-THRUST SPIRAL\nTotal Δv\n7.798 km/s\nThrusting for\n3.0 months\nOrbit at the end\n35,786 × 35,786 km, i = 0.0°\nPlan from now\nClear\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.657 km/s\nOrbital period\n1 h 33 min\nPerigee × apogee\n420 × 420 km\nSpeed at perigee / apogee\n7.657 / 7.657 km/s\nRevolutions a day\n15.49\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0000, so the Earth's centre is 0 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 26,028 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 33 min and a = 6,798 km.\n\nComing next in Orbit"
+      },
+      {
+        "kind": "Your own burns",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\n\nYour own burns, each at a point of the orbit, in three parts: prograde (along the flight), normal (square to the orbit's plane) and radial (outwards).\n\n1\nnow\nat perigee\nat apogee\nat the ascending node\nat the descending node\nafter a set time\nPrograde\nm/s\nNormal\nm/s\nRadial\nm/s\nAdd a burn\nSpacecraft\nNone: Δv only\nYour own\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 01:26:47\nSep 28, 2026, 07:43 PM UTC\nTHE PLAN: YOUR OWN BURNS\n1\nnow · T+ 01:26:47\n0.100 km/s\nTotal Δv\n0.100 km/s\nOrbit at the end\n420 × 787 km, i = 51.6°\n\nEvery burn made.\n\nPlan from now\nCarry on from the new orbit\nClear\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.757 km/s\nOrbital period\n1 h 37 min\nPerigee × apogee\n420 × 787 km\nSpeed at perigee / apogee\n7.757 / 7.360 km/s\nRevolutions a day\n14.88\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0263, so the Earth's centre is 184 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 26,367 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 37 min and a = 6,982 km.\n\nComing next in Orbit"
+      }
+    ]
+  },
+  {
+    "id": "orbit-applications",
+    "cases": [
+      {
+        "app": "Communications from geostationary orbit",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\n\nWhere a dish points to see the satellite, how much of the Earth the satellite sees, how long a signal takes up and down, and — at the Engineer level — whether the downlink closes.\n\nGround station\nBangkok\nChiang Mai\nHat Yai\nUbon Ratchathani\nSaint Petersburg\nMoscow\nCoordinates of your own\nLowest usable elevation\n°\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 02:49:51\nSep 28, 2026, 09:06 PM UTC\nCOMMUNICATIONS FROM GEOSTATIONARY ORBIT\n\nFrom Bangkok:\n\nElevation\nbelow the horizon\nDistance\n12,704 km\nUp and down (one hop)\n84.8 ms\nA question and its answer\n170 ms\nThe same from 550 km straight up\n3.7 ms\nSeen from the satellite\n12.5° round the Earth above 10°: 1.2 % of its surface\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.657 km/s\nOrbital period\n1 h 33 min\nPerigee × apogee\n420 × 420 km\nSpeed at perigee / apogee\n7.657 / 7.657 km/s\nRevolutions a day\n15.49\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0000, so the Earth's centre is 0 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 26,028 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 33 min and a = 6,798 km.\n\nComing next in Orbit"
+      },
+      {
+        "app": "Earth observation",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\n\nWhat a camera on the satellite sees: the strip it covers, the smallest detail, how far apart the day's tracks are, and how far tilting the satellite reaches.\n\nGround station\nBangkok\nChiang Mai\nHat Yai\nUbon Ratchathani\nSaint Petersburg\nMoscow\nCoordinates of your own\nSwath\nkm\nGround sample distance\nm\nTilts up to\n°\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 02:50:03\nSep 28, 2026, 09:06 PM UTC\nEARTH OBSERVATION\nSwath\n10.3 km\nGround sample distance\n0.50 m\nThe day's tracks apart at Bangkok\n2,513 km\nOf that, looking straight down\n0.41 %\nReach to each side, tilting 45°\n435 km\nLocal time, descending node\n07:32\n\nEven tilting, gaps are left between the day's tracks: coming back over a given place takes several days.\n\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.657 km/s\nOrbital period\n1 h 33 min\nPerigee × apogee\n420 × 420 km\nSpeed at perigee / apogee\n7.657 / 7.657 km/s\nRevolutions a day\n15.49\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0000, so the Earth's centre is 0 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 26,028 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 33 min and a = 6,798 km.\n\nComing next in Orbit"
+      },
+      {
+        "app": "Thailand's satellites",
+        "text": "ORBIT\nOrbit playground\nYour orbit\nReal satellites\nOrbit\nLow Earth orbit (500 km)\nISS orbit (420 km, 51.6°)\nStarlink shell (550 km, 53°)\nSun-synchronous (600 km)\nPolar (800 km, 90°)\nMEO – GPS (20 180 km, 55°)\nMEO – GLONASS (19 130 km, 64.8°)\nGeostationary transfer orbit\nGeostationary (35 786 km, 0°)\nMolniya (600 × 39 750 km, 63.4°)\nTundra (24 400 × 47 170 km, 63.4°)\nCustom orbit\nPerigee altitude\nkm\nApogee altitude\nkm\nInclination i\n°\nRight ascension of the ascending node Ω\n°\nArgument of perigee ω\n°\nEarth's bulge (J2)\nThe Earth bulges at the equator, which slowly turns the orbit's plane and its perigee. Off, the orbit is Kepler's and never turns.\nKepler's second law: equal times\nTwelve slices the radius sweeps in equal times; every one has the same area.\nManeuvers\nManeuver\nNone\nHohmann transfer\nBi-elliptic transfer\nPlane change\nCircularise at apogee (GTO → GEO)\nPhasing\nDeorbit burn\nLow-thrust spiral\nYour own burns\nWhat satellites do\nApplication\nNone\nCommunications from geostationary orbit\nEarth observation\nThailand's satellites\n\nThailand's Earth-observation satellites, the Royal Thai Air Force's, and the Thaicom fleet, from public sources. Put one's orbit in the playground to see it.\n\nTHEOS-2\nlow orbit\nGISTDA\nShow its orbit\nTHEOS\nlow orbit\nGISTDA\nShow its orbit\nNAPA-1\nlow orbit\nRoyal Thai Air Force\nShow its orbit\nNAPA-2\nlow orbit\nRoyal Thai Air Force\nre-entered 2026-07-05\nShow its orbit\nThaicom 4 (IPSTAR)\ngeostationary, 119.5° E\nNational Telecom (NT)\nShow its orbit\nThaicom 6\ngeostationary, 78.5° E\nThaicom\nShow its orbit\nThaicom 7\ngeostationary, 120.0° E\nThaicom and AsiaSat (as AsiaSat 6)\nShow its orbit\nThaicom 8\ngeostationary, 78.5° E\nThaicom\nShow its orbit\nFROM YOUR LAUNCH\n\nNo orbit yet. Fly a mission to orbit in Launch, then press Continue in Orbit to bring it here.\n\n◍\n3-D\n⌇\nGround track\n⤻\nNewton's cannon\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 02:50:13\nSep 28, 2026, 09:07 PM UTC\nTHAILAND'S SATELLITES\n\nChoose a satellite on the left to put its orbit in the playground.\n\nTHIS ORBIT\nAltitude\n420 km\nSpeed\n7.657 km/s\nOrbital period\n1 h 33 min\nPerigee × apogee\n420 × 420 km\nSpeed at perigee / apogee\n7.657 / 7.657 km/s\nRevolutions a day\n15.49\nOrbit lifetime\nKEPLER'S LAWS\nKepler's first law\n\nThe orbit is an ellipse with the Earth's centre at one focus. This one has e = 0.0000, so the Earth's centre is 0 km from the middle of the ellipse.\n\nKepler's second law\n\nThe line from the Earth to the satellite sweeps equal areas in equal times — here 26,028 km² every second. So the satellite is fastest at perigee and slowest at apogee.\n\nKepler's third law\n\nThe square of the period over the cube of the semi-major axis is the same for every orbit of the Earth: T²/a³ = 9.904 × 10⁻⁵ s²/km³ (it is 4π²/μ). Here T = 1 h 33 min and a = 6,798 km.\n\nComing next in Orbit"
+      }
+    ]
+  },
+  {
+    "id": "lifetime-stale-fixed",
+    "before": "×\nLONG-TERM ORBIT\nHow long will it stay up?\n\nThe orbit on screen carried on for days to decades under the forces that shape it after the launch: the Earth's oblateness and pear shape, drag in an upper atmosphere that swells with the Sun's activity, the pull of the Sun and the Moon, and the pressure of sunlight. The flight itself is not changed.\n\nThe playground's orbit, 500 × 500 km, i = 28.5°\n\nForces\nOblateness (J2)\nPear shape and beyond (J3, J4)\nAtmospheric drag\nThe Sun's pull\nThe Moon's pull\nSunlight pressure\nSolar activity\nMeasured, then NOAA's forecast\nMeasured, then NOAA's forecast (high side)\nMeasured, then NOAA's forecast (low side)\nQuiet Sun (ECSS low: F10.7 65, Ap 0)\nModerate (ECSS: F10.7 140, Ap 15)\nActive Sun (ECSS high: F10.7 250, Ap 45)\nCarry it for\n30 days\n12.0 months\n5.0 years\n25.0 years\nMethod\nMean elements (fast; J2 and drag)\nFull equations of motion (every force)\nMass (kg)\nCross-section (m²)\nDrag coefficient C_D\nRadiation coefficient C_R\n\nMean elements average each revolution and cover decades in seconds, with J2 and drag only. The full equations include every force and every short-period wobble, but take a minute or more per simulated year; use them for months. The air is NRLMSISE-00's, the model ECSS names for orbit decay, for each day's solar flux and geomagnetic activity; ECSS puts its own uncertainty at about 15 %. Drag depends on the area, mass and C_D; the values offered are estimates for the payload class. With the Sun's activity as measured, the model brings satellites of known shape down within 25 % of their actual re-entry, usually early; a fixed level can be off threefold or more.\n\nRun\n\nCalculated from: 1,000 kg · 10 m² · C_D 2.2 · C_R 1.3 · Forces: Oblateness (J2), Pear shape and beyond (J3, J4), Atmospheric drag, The Sun's pull, The Moon's pull, Sunlight pressure · Mean elements (fast; J2 and drag) · 25.0 years · Measured, then NOAA's forecast.\n\nRe-enters the atmosphere after 6.6 years.\n\nSolar activity: measured day by day to 2026-09-25 (GFZ, then NOAA SWPC; space weather as of 2026-09-28), then NOAA's forecast to 2030-12; from 2031-01, the mean of solar cycles 19 to 24.",
+    "after": "×\nLONG-TERM ORBIT\nHow long will it stay up?\n\nThe orbit on screen carried on for days to decades under the forces that shape it after the launch: the Earth's oblateness and pear shape, drag in an upper atmosphere that swells with the Sun's activity, the pull of the Sun and the Moon, and the pressure of sunlight. The flight itself is not changed.\n\nThe playground's orbit, 500 × 500 km, i = 28.5°\n\nForces\nOblateness (J2)\nPear shape and beyond (J3, J4)\nAtmospheric drag\nThe Sun's pull\nThe Moon's pull\nSunlight pressure\nSolar activity\nMeasured, then NOAA's forecast\nMeasured, then NOAA's forecast (high side)\nMeasured, then NOAA's forecast (low side)\nQuiet Sun (ECSS low: F10.7 65, Ap 0)\nModerate (ECSS: F10.7 140, Ap 15)\nActive Sun (ECSS high: F10.7 250, Ap 45)\nCarry it for\n30 days\n12.0 months\n5.0 years\n25.0 years\nMethod\nMean elements (fast; J2 and drag)\nFull equations of motion (every force)\nMass (kg)\nCross-section (m²)\nDrag coefficient C_D\nRadiation coefficient C_R\n\nMean elements average each revolution and cover decades in seconds, with J2 and drag only. The full equations include every force and every short-period wobble, but take a minute or more per simulated year; use them for months. The air is NRLMSISE-00's, the model ECSS names for orbit decay, for each day's solar flux and geomagnetic activity; ECSS puts its own uncertainty at about 15 %. Drag depends on the area, mass and C_D; the values offered are estimates for the payload class. With the Sun's activity as measured, the model brings satellites of known shape down within 25 % of their actual re-entry, usually early; a fixed level can be off threefold or more.\n\nRun\n\nThe settings have changed since this was calculated: the result below is for the values listed, not for those set now. Run it again.\n\nCalculated from: 1,000 kg · 10 m² · C_D 2.2 · C_R 1.3 · Forces: Oblateness (J2), Pear shape and beyond (J3, J4), Atmospheric drag, The Sun's pull, The Moon's pull, Sunlight pressure · Mean elements (fast; J2 and drag) · 25.0 years · Measured, then NOAA's forecast.\n\nRe-enters the atmosphere after 6.6 years.\n\nSolar activity: measured day by day to 2026-09-25 (GFZ, then NOAA SWPC; space weather as of 2026-09-28), then NOAA's forecast to 2030-12; from 2031-01, the mean of solar cycles 19 to 24."
+  },
+  {
+    "id": "overflight-stale-fixed",
+    "text": "ORBIT\nReal satellites\nYour orbit\nReal satellites\n\nSatellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.\n\nGroup\nSpace stations\nThailand's satellites\nNavigation (GNSS)\nWeather satellites\nEarth-imaging satellites\nDebris: Fengyun-1C\n\nCrewed space stations, and what flies with them or is docked to them: 22 objects.\n\nISS (ZARYA)\n25544\nPOISK\n36086\nCSS (TIANHE)\n48274\nISS (NAUKA)\n49044\nFREGAT DEB\n49271\nCSS (WENTIAN)\n53239\nCSS (MENGTIAN)\n54216\nHRC MONOBLOCK CAMERA\n66052\nSZ-21 MODULE\n66515\nDUPLEX\n66906\nKNACKSAT-2\n67683\nGXIBA-1\n67685\nUITMSAT-2\n67686\nLEOPARD\n67687\nHMU-SAT2\n67688\nCREW DRAGON 12\n67796\nCYGNUS NG-24\n68689\nPROGRESS-MS 34\n68837\nTIANZHOU-10\n69049\nSHENZHOU-23 (SZ-23)\n69180\nSOYUZ-MS 29\n100057\nPROGRESS-MS 35\n100712\nOverflights of Moscow\n\nWhen the satellites of the group on screen pass over the place, from the moment on screen: each pass whose highest point is at least the elevation chosen, with the off-nadir angle a camera must look at to see the place, and whether the place is in daylight (an optical camera needs it; a radar does not).\n\nSeen from\nBangkok\nChiang Mai\nHat Yai\nUbon Ratchathani\nSaint Petersburg\nMoscow\nCoordinates of your own\nHighest at least\n15°\n30°\n45°\n60°\n75°\nOver the next\n24 hours\n3 days\nIn daylight only\nOnly when its instrument can image the place\nFind overflights\n\nThe settings have changed since this was calculated: the result below is for the values listed, not for those set now. Run it again.\n\nCalculated from: Bangkok · Space stations · ≥ 60° · 24 hours · element sets as of Sep 28, 2026.\n\n4 overflights of Bangkok from Monday, September 28 09:19:00 PM, soonest first.\n\nSZ-21 MODULE\n66515\nMonday, September 28 10:05:13 PM · highest 76° north-west · off-nadir 14° · in the dark · heading north\nShow on the map\n73 km from the track · local solar time 01:47 · timing ±0.2 s (estimate)\nUITMSAT-2\n67686\nTuesday, September 29 04:21:16 AM · highest 79° south-east · off-nadir 10° · in daylight · heading north\nShow on the map\n55 km from the track · local solar time 08:03 · timing ±0.3 s (estimate)\nSZ-21 MODULE\n66515\nTuesday, September 29 07:43:26 AM · highest 83° south-west · off-nadir 6° · in daylight · heading south\nShow on the map\n35 km from the track · local solar time 11:25 · timing ±0.3 s (estimate)\nHMU-SAT2\n67688\nTuesday, September 29 03:00:03 PM · highest 83° south-west · off-nadir 7° · in the dark · heading south\nShow on the map\n38 km from the track · local solar time 18:42 · timing ±0.4 s (estimate)\n\nTimes are your device's (GMT+3).\n\nAn overflight is when a camera could see the place, not that it does: that takes its operator's tasking and, for an optical camera, a clear sky. Only satellites whose element sets are published are counted.\n\nWhether an instrument can image the place is judged at the pass's highest point, from what its operator publishes: a fixed camera's swath, an agile one's largest off-nadir angle, a radar's incidence angles and side. A camera needs daylight; a radar sees by night and through cloud. The finest resolution is its best mode's.\n\nWorksheets from real cases\nRead a file of element sets…\n\nTLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.\n\n◍\n3-D\n⌇\nGround track\n\nDrag to turn · wheel or pinch to zoom · double-click to see the whole orbit\n\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\n● Live\nSep 28, 2026, 06:19:09 PM UTC\n\nElement sets as of Sep 28, 2026, 8:13 AM UTC · bundled with this version of Orbitlab\n\nISS (ZARYA)\nCatalogue number\n25544\nInternational designator\n1998-067A\nElement set epoch\nSep 28, 2026, 3:24 AM UTC\nElement set's age\n14 h 54 min\nPosition error (estimate)\nabout 1.3 km, ±0.2 s along the track\nAltitude\n420 km\nSpeed\n7.658 km/s\nUnder the satellite\n34.11° S · 77.61° E\nOrbital period\n1 h 33 min\nPerigee × apogee (mean)\n416 × 426 km\nInclination\n51.63°\nTheory\nSGP4 (near Earth)\nMean motion\n15.48675883 rev/day\nEccentricity e\n0.0007114\nRight ascension of the ascending node Ω\n150.5592°\nArgument of perigee ω\n196.8918°\nMean anomaly at epoch M₀\n163.1834°\nDrag term B*\n1.1922e-4\nElement set number\n999\nRevolution at epoch\n58771\nPosition and velocity (TEME)\n5,628.7, -5.9, -3,812.4 km; -2.832, 5.744, -4.198 km/s\nHow far off it may be\nClose approaches\nWhen it will come down\nPASSES OVER MOSCOW\nSeen from\nBangkok\nChiang Mai\nHat Yai\nUbon Ratchathani\nSaint Petersburg\nMoscow\nCoordinates of your own\nCo"
+  },
+  {
+    "test": "CZ5B four reentry live",
+    "text": "Case study: the Long March 5B core stages\" [level=3]'\n        - paragraph: Four 21.6-tonne core stages reached orbit with their payloads and fell uncontrolled days later. Each is predicted here from its first element set, as a tumbling cylinder of 31.7 × 5.0 m (a mean cross-section of 134 m²), C_D 2.2, against its re-entry as recorded.\n        - list:\n          - generic: CZ-5B Y1\n          - generic: Launched the new-generation crew spacecraft on its test flight (5 May 2020).\n          - generic: \"From 2020-05-05 14:13 UTC: predicted 2020-05-11 17:14 UTC, came down 2020-05-11 15:34 UTC (+1.1 % of the time)\"\n          - generic: Inside the window, 2020-05-10 11:49 UTC to 2020-05-12 22:38 UTC.\n          - generic: CZ-5B Y2\n          - generic: Launched Tianhe, the core module of China's space station (29 April 2021).\n          - generic: \"From 2021-04-29 09:08 UTC: predicted 2021-05-08 16:46 UTC, came down 2021-05-09 02:14 UTC (−4.1 % of the time)\"\n          - generic: Inside the window, 2021-05-06 20:02 UTC to 2021-05-10 13:29 UTC.\n          - generic: CZ-5B Y3\n          - generic: Launched Wentian, the station's first laboratory module (24 July 2022).\n          - generic: \"From 2022-07-24 14:45 UTC: predicted 2022-07-31 17:08 UTC, came down 2022-07-30 16:51 UTC (+16.6 % of the time)\"\n          - generic: Inside the window, 2022-07-30 07:03 UTC to 2022-08-02 03:13 UTC.\n          - generic: CZ-5B Y4\n          - generic: Launched Mengtian, the station's second laboratory module (31 October 2022).\n          - generic: \"From 2022-10-31 13:02 UTC: predicted 2022-11-04 16:20 UTC, came down 2022-11-04 10:01 UTC (+6.8 % of the time)\"\n          - generic: Inside the window, 2022-11-03 20:28 UTC to 2022-11-05 12:12 UTC.\n        - paragraph: \"Solar activity: measured to 2026-09-25, then NOAA's forecast to 2030-12.\"\n        - paragraph: Space weather as of Sep 28, 2026, 9:00 AM UTC · bundled with this version of Orbitlab\n        - paragraph: \"Element sets: CelesTrak's first of each launch. Size, mass and re-entry: GCAT (J. McDowell).\"\n        - 'heading \"Case study: NAPA-2\" [level=3]'\n        - paragraph: NAPA-2, the Royal Thai Air Force's second Earth-observation satellite, a 6U CubeSat of 10 kg, went up on 30 June 2021 into an orbit of about 530 km and was left to decay. It is predicted here from its first element set, of 25 July 2021, five years ahead through the maximum of solar cycle 25.\n        - button \"Predict NAPA-2\"\n        - heading \"Passes over Moscow"
+  },
+  {
+    "test": "NAPA2 reentry live",
+    "text": "Case study: NAPA-2\" [level=3]'\n        - paragraph: NAPA-2, the Royal Thai Air Force's second Earth-observation satellite, a 6U CubeSat of 10 kg, went up on 30 June 2021 into an orbit of about 530 km and was left to decay. It is predicted here from its first element set, of 25 July 2021, five years ahead through the maximum of solar cycle 25.\n        - list:\n          - generic: As a tumbling box of 20 × 10 × 34 cm, C_D 2.2 (C_D·A/m 0.013 m²/kg)\n          - generic: predicted 2026-11-23 (+8 % of the time) — inside the ±20 % window\n          - generic: With C_D·A/m fitted to the first set's decay rate (0.020 m²/kg)\n          - generic: predicted 2025-02-17 (−28 % of the time) — outside the ±20 % window\n        - paragraph: It came down on 2026-07-05, 1,806 days after that element set (GCAT).\n        - paragraph: \"The fitted drag did worse here: the first set's decay rate came from the first week of tracking, in the quiet Sun of mid-2021, and five years magnify any error in it. The agencies refit the drag with every new set, and their window narrows as the day comes.\"\n        - paragraph: \"Element set: CelesTrak's first. Mass and re-entry: GCAT (J. McDowell). Size: Janes, 2021.\"\n        - heading \"Passes over Moscow"
+  },
+  {
+    "test": "Watch Bandwagon-1 sixDOF completion",
+    "state": {
+      "time": 3253.1500389379594,
+      "orbit": [
+        586.1219081793186,
+        597.1500952475416
+      ],
+      "payload": true,
+      "model": "sixdof-1"
+    },
+    "ui": "ภารกิจสำเร็จ\nยินดีต้อนรับสู่วงโคจร!\n\nใช้เวลา 53:58 นับจากทะยานขึ้น ตอนนี้ยานอยู่สูงจากพื้นโลก 586 กม. และเคลื่อนที่ด้วยความเร็ว 25,973 กม./ชม.\n\nวงโคจรสุดท้าย: 586 × 595 กม. เอียงจากเส้นศูนย์สูตร 45.4°\n\nBandwagon-1 (ดาวเทียม 11 ดวง) แยกตัวออกจากจรวดแล้ว หลังทะยานขึ้น 54:13\n\nท่อนที่ 1 (9× Merlin 1D) บินกลับมาลงจอดที่ LZ-1\n\nที่ความสูงและความเร็วนี้ ยานจะโคจรรอบโลกครบหนึ่งรอบในเวลาประมาณ 97 นาที\n\nชมต่อ\nชมอีกครั้ง\nเลือกการปล่อยอื่น\nบินต่อในวงโคจร\nลองวางแผนภารกิจเอง →"
+  },
+  {
+    "test": "Watch to Orbit handoff with previous real satellite context",
+    "text": "◍\nสามมิติ\n⌇\nเส้นทางบนพื้นโลก\n⤻\nปืนใหญ่ของนิวตัน\n\nลากเพื่อหมุน · ใช้ล้อเมาส์หรือถ่างนิ้วเพื่อซูม · ดับเบิลคลิกเพื่อดูทั้งวง\n\nจากการปล่อยจรวดของคุณ\nวงโคจรจากเที่ยวบินของคุณ\n\nนี่คือวงโคจรที่การปล่อยจรวดของคุณไปถึง (ชุดปล่อยคิวบ์แซตแบบร่วมเที่ยวบิน · 586 × 597 กม. · i 45.4° · เริ่มที่ T+3272 วินาที) ต่อจากนี้กฎของเคปเลอร์พามันไป กด \"เริ่มชม\" เพื่อชมทีละขั้น หรือ \"ลองเอง\" เพื่อปรับวงโคจรด้วยตัวเอง\n\nความสูง\n597 กม.\nความเร็ว\n7.557 กม./วินาที\nคาบการโคจร\n1 ชม. 37 นาที\n‹ ย้อนกลับ\nเริ่มชม ›\nลองเอง\n❚❚\n1×\n10×\n60×\n300×\n600×\n1,800×\n3,600×\n21,600×\n86,400×\n⟲\nT+ 00:41:06\n28 ก.ย. 2569 19:59 (เวลา UTC)"
+  },
+  {
+    "test": "Engineer inspector replay all seven tabs",
+    "tabs": [
+      {
+        "tab": "Step response",
+        "text": "GUIDANCE, NAVIGATION AND CONTROL\nAttitude-loop inspector\nT+01:00\nREPLAY\nAutopilot\n▶\nRoll\nPitch\nYaw\n×\nLoop\nFrequency response\nStep response\nTuning\nFlight test\nNavigation\nGuidance\nFeed-forward error\n0 %\nLinearised at T+00:59 · Pitch (y)\n\n✓ Response to a 1° attitude step, linear\n\nRise time (10–90 %)\n0.84 s\nOvershoot\n6.1 %\nSettling time (2 %)\n2.51 s\nAfter 10 s\n1.000°\n\nThe linear loop has no rate, acceleration or gimbal limits: a step large enough to meet them is slower in flight than this one scaled up."
+      },
+      {
+        "tab": "Tuning",
+        "text": "GUIDANCE, NAVIGATION AND CONTROL\nAttitude-loop inspector\nT+01:00\nREPLAY\nAutopilot\n▶\nRoll\nPitch\nYaw\n×\nLoop\nFrequency response\nStep response\nTuning\nFlight test\nNavigation\nGuidance\nPitch–yaw channel · Pitch (y)\nK_θ\n1.50\nK_ω\n3.00\nFeed-forward\n100 %\nBack to the flown gains\nUse for the next launch\nFlown: K_θ 1.50, K_ω 3.00 s⁻¹, feed-forward 100 %\nTargets\nPM ≥ (°)\nGM ≥ (dB)\nover the flight so far\nat this instant\nAuto-tune\n\tflown\ttrial\nClosed loop\tstable\tstable\nPhase margin\t46.2°\t46.2°\nGain margin\t35.6 dB\t35.6 dB\nGain-reduction margin\t-40.0 dB\t-40.0 dB\nCrossover ω_c (rad/s)\t3.07\t3.07\nK_θ / K_ω\t1.50 / 3.00\t1.50 / 3.00\n\nThe trial reuses the loop linearised in flight: gains change the autopilot, not the vehicle. The rate, angular-acceleration and gimbal limits act only in flight: set them in the mission setup and try them with a flight test. Gains taken for the next launch go into the mission setup's Attitude autopilot section."
+      },
+      {
+        "tab": "Flight test",
+        "text": "GUIDANCE, NAVIGATION AND CONTROL\nAttitude-loop inspector\nT+01:00\nREPLAY\nAutopilot\n▶\nRoll\nPitch\nYaw\n×\nLoop\nFrequency response\nStep response\nTuning\nFlight test\nNavigation\nGuidance\nTest\nStep\nDoublet\nAmplitude (°)\nHeld (s)\nFly it now in Pitch (y)\n\nNo flight test yet. Pick the axis in the title bar, set the test above and fly it — in a live six-DOF flight under the autopilot.\n\nThe offset turns the autopilot's target about the axis; guidance itself is untouched. The flight departs from the linear model where a limiter holds the axis (the shares above), where guidance follows the velocity the offset itself bends (pitch and yaw in the air), and as the vehicle changes over the test."
+      },
+      {
+        "tab": "Navigation",
+        "text": "GUIDANCE, NAVIGATION AND CONTROL\nAttitude-loop inspector\nT+01:00\nREPLAY\nAutopilot\n▶\nRoll\nPitch\nYaw\n×\nLoop\nFrequency response\nStep response\nTuning\nFlight test\nNavigation\nGuidance\n\nThis flight has no navigation system: it knows its true state. Turn one on in the mission setup (Engineer mode, six-DOF: Navigation).\n\nTrue less estimated, against the ±3σ the filter claims (dashed): position and velocity in the true orbit's radial, along-track and cross-track axes; attitude in the notation's axes. A 21-state error-state Kalman filter (errors of position, velocity, attitude, and the sensors' biases and scale factors). Air data (the relative wind for the load relief) stay true; planning and steering the in-orbit burns still read the truth."
+      },
+      {
+        "tab": "Guidance",
+        "text": "GUIDANCE, NAVIGATION AND CONTROL\nAttitude-loop inspector\nT+01:00\nREPLAY\nAutopilot\n▶\nRoll\nPitch\nYaw\n×\nLoop\nFrequency response\nStep response\nTuning\nFlight test\nNavigation\nGuidance\n\nNo explicit guidance in this flight. Choose PEG or IGM in the setup (Engineer mode).\n\nThe explicit law against the standard one: its time and velocity to go, the pitch it steers, and the orbit it predicts at cut-off (dashed: the target). The cut-off itself is the ascent's, on the orbit reached."
+      }
+    ]
+  },
+  {
+    "test": "Watch Soyuz T10-1 abort",
+    "text": "- banner:\n  - generic: ◉\n  - generic: ORBITLAB\n  - navigation \"Section\":\n    - link \"Home\":\n      - /url: \"#/home\"\n      - generic: ⌂\n      - generic: Home\n    - link \"Launch\":\n      - /url: \"#/launch/watch\"\n      - generic: ▲\n      - generic: Launch\n    - link \"Orbit\":\n      - /url: \"#/orbit/watch\"\n      - generic: ⊕\n      - generic: Orbit\n    - link \"Build\":\n      - /url: \"#/build/watch\"\n      - generic: ⚙︎\n      - generic: Build\n  - navigation \"App mode\":\n    - link \"Watch\":\n      - /url: \"#/launch/watch\"\n      - generic: ▷\n      - generic: Watch\n    - link \"Explore\":\n      - /url: \"#/launch/explore\"\n      - generic: ◎\n    - link \"Engineer\":\n      - /url: \"#/launch/engineer\"\n      - generic: ⌬\n  - button \"Lessons — 4 of 24 passed\":\n    - generic: ✎\n    - generic: Lessons\n  - 'button \"Data sources: Offline\"':\n  - combobox \"Language\":\n    - option \"English\" [selected]\n    - option \"Русский\"\n    - option \"ไทย\"\n- main:\n  - generic \"Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.\":\n    - generic: MISSION\n    - heading \"Soyuz-2.1a/Soyuz T-10-1 (Titov, Strekalov)\" [level=2]\n    - generic: PAUSED\n    - button \"Reset camera\":\n      - generic: ⌖\n    - button \"Sound (off until you turn it on)\":\n      - generic: ♪\n    - button \"Full screen\":\n      - generic: ⛶\n    - generic: Crew safe\n    - paragraph: The rocket was lost; the crew was not. That is what the escape system is for.\n    - generic: Mission time\n    - strong: T+03:02\n    - generic: Altitude\n    - strong:\n      - text: \"0.0\"\n      - emphasis: km\n    - generic: Speed\n    - strong:\n      - text: \"0\"\n      - emphasis: km/h\n    - button \"Play\": ▶\n    - group \"Playback speed\":\n      - button \"Auto\"\n      - button \"1×\"\n      - button \"5×\"\n      - button \"25×\"\n      - button \"100×\" [active] [pressed]\n    - button \"Choose a launch\"\n    - region \"The crew is safe\":\n      - generic: Launch abort\n      - heading \"The crew is safe\" [level=2]\n      - paragraph: The escape system brought the crew down 0 km from the pad, 03:07 after the abort. The highest load on them was 14 g.\n      - button \"Keep watching\"\n      - button \"Watch again\"\n      - button \"Another launch\"\n      - button \"Plan your own mission →\""
+  },
+  {
+    "test": "Live sixDOF pitch step 2deg 8s",
+    "time": 432.92606015217126,
+    "result": {
+      "axis": "pitch",
+      "kind": "step",
+      "amplitudeDeg": 2,
+      "holdS": 8,
+      "startS": 376.32606015222274,
+      "durationS": 13,
+      "recordedS": 12.989999999988186,
+      "done": true,
+      "aborted": null,
+      "measured": {
+        "riseS": 0.9599999999991269,
+        "overshootPct": 7.484315700690902,
+        "peakOverAmplitude": 1.074843157006909
+      },
+      "predicted": {
+        "riseS": 0.8300000000000001,
+        "overshootPct": 5.002706078666885,
+        "peakOverAmplitude": 1.0500270607866689,
+        "linearisedAtS": 376.00606015222303
+      },
+      "rmsMismatchOverAmplitude": 0.09515574709099626,
+      "limiterShare": {
+        "stopping": 0.09238451935081149,
+        "rate": 0,
+        "acceleration": 0.0686641697877653
+      }
+    }
+  },
+  {
+    "test": "Live manual roll command",
+    "time": 435.7360601521687,
+    "mode": "manual",
+    "rates": {
+      "pDegS": 0.18749438485073028,
+      "qDegS": -0.00003133639285456359,
+      "rDegS": -3.372146958337795e-7
+    }
+  }
+]

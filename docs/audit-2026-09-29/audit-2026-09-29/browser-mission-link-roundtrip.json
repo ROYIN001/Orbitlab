@@ -1,0 +1,482 @@
+{
+  "sharedUrl": "http://127.0.0.1:4180/?m=zVVHLTiMxEPwVq0-LZCInguyOzyCEBGK14sSt4-lJWvgRtT2BKJp_R_ZsePjkrn5UVfcJhiQBC1hIsuHicbMInDOnCBoOJO1nVxrOqD3BgXbsPN33YGFA71LsQEPGQt5zmXE3bihjyTXxieGeQM9EDfCUznGdy19YxEBg4SG9qVuUslOtSP26Nka9hgvQsCfhLRHYa1OfBtynHzFH5zliaaKbCNCAsv17bjQaBDE-pr5SDUK1oKfshPf_u-4okrBTjsWNHkU93D4pLKrsSAWOHMagvvGoNLSUxzG6naqcC5g0zPEzN08rs1pfmu5y1T0vO3v12y7_LIxZv1RPePQJ-0fMGeyyudiO3GN09HQgEe4pgz1NGgZkPwrVrYVZf0yx6i-NZG005ILb6nLSsEkpF5J_5NKB5Ah2QJ9JQ3-MGNjl8xjfFvV-kwbQ8MZxPpoP9YhEPdiq3XTLbpqmDw#/launch/engineer",
+  "importedControls": [
+    {
+      "label": "Flight-dynamics notation",
+      "type": "select-one",
+      "value": "auto"
+    },
+    {
+      "label": "",
+      "type": "file",
+      "value": ""
+    },
+    {
+      "label": "Launch vehicle",
+      "type": "select-one",
+      "value": "falcon9"
+    },
+    {
+      "label": "Launch site",
+      "type": "select-one",
+      "value": "cape"
+    },
+    {
+      "label": "Payload / satellite",
+      "type": "select-one",
+      "value": "cubesats"
+    },
+    {
+      "label": "Payload mass (kg)",
+      "type": "number",
+      "value": "1000"
+    },
+    {
+      "label": "Perigee altitude (km)",
+      "type": "number",
+      "value": "500"
+    },
+    {
+      "label": "Apogee altitude (km)",
+      "type": "number",
+      "value": "500"
+    },
+    {
+      "label": "Inclination (°)",
+      "type": "number",
+      "value": "28.612"
+    },
+    {
+      "label": "Argument of perigee (°)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Orbital plane (RAAN)",
+      "type": "select-one",
+      "value": "free"
+    },
+    {
+      "label": "Launch time (UTC)",
+      "type": "datetime-local",
+      "value": "2026-09-29T19:47"
+    },
+    {
+      "label": "Model",
+      "type": "select-one",
+      "value": "sixDof"
+    },
+    {
+      "label": "Wind scenario",
+      "type": "select-one",
+      "value": "calm"
+    },
+    {
+      "label": "Wind scenario seed",
+      "type": "number",
+      "value": "20260919"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Roll: attitude gain K_θ (1/s)",
+      "type": "number",
+      "value": "1.5"
+    },
+    {
+      "label": "Roll: rate gain K_ω (1/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Roll: rate limit (°/s)",
+      "type": "number",
+      "value": "8"
+    },
+    {
+      "label": "Roll: angular-acceleration ceiling (°/s²)",
+      "type": "number",
+      "value": "5"
+    },
+    {
+      "label": "Pitch–yaw: attitude gain K_θ (1/s)",
+      "type": "number",
+      "value": "1.5"
+    },
+    {
+      "label": "Pitch–yaw: rate gain K_ω (1/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Pitch–yaw: rate limit (°/s)",
+      "type": "number",
+      "value": "5"
+    },
+    {
+      "label": "Pitch–yaw: angular-acceleration ceiling (°/s²)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Aerodynamic feed-forward (%)",
+      "type": "number",
+      "value": "100"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Scenario",
+      "type": "select-one",
+      "value": "none"
+    },
+    {
+      "label": "Upper-stage guidance",
+      "type": "select-one",
+      "value": "standard"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Kick angle (°)",
+      "type": "number",
+      "value": "3.5"
+    },
+    {
+      "label": "Max pitch-program rate (°/s)",
+      "type": "number",
+      "value": "0.3"
+    },
+    {
+      "label": "Pitch-over altitude (m)",
+      "type": "number",
+      "value": "200"
+    },
+    {
+      "label": "Kick duration (s)",
+      "type": "number",
+      "value": "8"
+    },
+    {
+      "label": "Loft above insertion (km)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Gravity-turn ceiling (km)",
+      "type": "number",
+      "value": "65"
+    },
+    {
+      "label": "Closed-loop pitch max (°)",
+      "type": "number",
+      "value": "35"
+    },
+    {
+      "label": "Closed-loop pitch min (°)",
+      "type": "number",
+      "value": "-15"
+    },
+    {
+      "label": "Attitude slew rate (°/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Acceleration limit (m/s², 0 = vehicle)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Parking altitude override (km, 0 = auto)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Mode",
+      "type": "select-one",
+      "value": "none"
+    },
+    {
+      "label": "Time (s after liftoff)",
+      "type": "number",
+      "value": "60"
+    },
+    {
+      "label": "Stage",
+      "type": "select-one",
+      "value": "0"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    }
+  ],
+  "linkedControls": [
+    {
+      "label": "Flight-dynamics notation",
+      "type": "select-one",
+      "value": "auto"
+    },
+    {
+      "label": "",
+      "type": "file",
+      "value": ""
+    },
+    {
+      "label": "Launch vehicle",
+      "type": "select-one",
+      "value": "falcon9"
+    },
+    {
+      "label": "Launch site",
+      "type": "select-one",
+      "value": "cape"
+    },
+    {
+      "label": "Payload / satellite",
+      "type": "select-one",
+      "value": "cubesats"
+    },
+    {
+      "label": "Payload mass (kg)",
+      "type": "number",
+      "value": "1000"
+    },
+    {
+      "label": "Perigee altitude (km)",
+      "type": "number",
+      "value": "500"
+    },
+    {
+      "label": "Apogee altitude (km)",
+      "type": "number",
+      "value": "500"
+    },
+    {
+      "label": "Inclination (°)",
+      "type": "number",
+      "value": "28.612"
+    },
+    {
+      "label": "Argument of perigee (°)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Orbital plane (RAAN)",
+      "type": "select-one",
+      "value": "free"
+    },
+    {
+      "label": "Launch time (UTC)",
+      "type": "datetime-local",
+      "value": "2026-09-29T19:47"
+    },
+    {
+      "label": "Model",
+      "type": "select-one",
+      "value": "sixDof"
+    },
+    {
+      "label": "Wind scenario",
+      "type": "select-one",
+      "value": "calm"
+    },
+    {
+      "label": "Wind scenario seed",
+      "type": "number",
+      "value": "20260919"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Roll: attitude gain K_θ (1/s)",
+      "type": "number",
+      "value": "1.5"
+    },
+    {
+      "label": "Roll: rate gain K_ω (1/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Roll: rate limit (°/s)",
+      "type": "number",
+      "value": "8"
+    },
+    {
+      "label": "Roll: angular-acceleration ceiling (°/s²)",
+      "type": "number",
+      "value": "5"
+    },
+    {
+      "label": "Pitch–yaw: attitude gain K_θ (1/s)",
+      "type": "number",
+      "value": "1.5"
+    },
+    {
+      "label": "Pitch–yaw: rate gain K_ω (1/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Pitch–yaw: rate limit (°/s)",
+      "type": "number",
+      "value": "5"
+    },
+    {
+      "label": "Pitch–yaw: angular-acceleration ceiling (°/s²)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Aerodynamic feed-forward (%)",
+      "type": "number",
+      "value": "100"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Scenario",
+      "type": "select-one",
+      "value": "none"
+    },
+    {
+      "label": "Upper-stage guidance",
+      "type": "select-one",
+      "value": "standard"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Kick angle (°)",
+      "type": "number",
+      "value": "3.5"
+    },
+    {
+      "label": "Max pitch-program rate (°/s)",
+      "type": "number",
+      "value": "0.3"
+    },
+    {
+      "label": "Pitch-over altitude (m)",
+      "type": "number",
+      "value": "200"
+    },
+    {
+      "label": "Kick duration (s)",
+      "type": "number",
+      "value": "8"
+    },
+    {
+      "label": "Loft above insertion (km)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Gravity-turn ceiling (km)",
+      "type": "number",
+      "value": "65"
+    },
+    {
+      "label": "Closed-loop pitch max (°)",
+      "type": "number",
+      "value": "35"
+    },
+    {
+      "label": "Closed-loop pitch min (°)",
+      "type": "number",
+      "value": "-15"
+    },
+    {
+      "label": "Attitude slew rate (°/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Acceleration limit (m/s², 0 = vehicle)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Parking altitude override (km, 0 = auto)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Mode",
+      "type": "select-one",
+      "value": "none"
+    },
+    {
+      "label": "Time (s after liftoff)",
+      "type": "number",
+      "value": "60"
+    },
+    {
+      "label": "Stage",
+      "type": "select-one",
+      "value": "0"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    }
+  ],
+  "equalMissionControls": true,
+  "excludedOtherPanel": "Orbit playground RAAN is initialized from current time and is not a Launch mission setting",
+  "state": "- banner:\n  - generic: ◉\n  - generic: ORBITLAB\n  - navigation \"Section\":\n    - link \"Home\":\n      - /url: \"#/home\"\n      - generic: ⌂\n      - generic: Home\n    - link \"Launch\":\n      - /url: \"#/launch/engineer\"\n      - generic: ▲\n      - generic: Launch\n    - link \"Orbit\":\n      - /url: \"#/orbit/engineer\"\n      - generic: ⊕\n      - generic: Orbit\n    - link \"Build\":\n      - /url: \"#/build/engineer\"\n      - generic: ⚙︎\n      - generic: Build\n  - navigation \"App mode\":\n    - link \"Watch\":\n      - /url: \"#/launch/watch\"\n      - generic: ▷\n    - link \"Explore\":\n      - /url: \"#/launch/explore\"\n      - generic: ◎\n    - link \"Engineer\":\n      - /url: \"#/launch/engineer\"\n      - generic: ⌬\n      - generic: Engineer\n  - button \"Lessons — 0 of 25 passed\":\n    - generic: ✎\n    - generic: Lessons\n  - 'button \"Data sources: Offline\"':\n  - button \"Help\":\n    - generic: \"?\"\n  - button \"Physics & sources\":\n    - generic: ⓘ\n  - button \"Camera sequence\":\n    - generic: ◈\n  - combobox \"Language\":\n    - option \"English\" [selected]\n    - option \"Русский\"\n    - option \"ไทย\"\n- main:\n  - complementary \"Mission setup\":\n    - generic: MISSION CONTROL\n    - heading \"Build your mission\" [level=1]\n    - generic: 01—03\n    - generic: Flight-dynamics notation\n    - combobox \"Flight-dynamics notation\":\n      - 'option \"By language: ISO 1151\" [selected]'\n      - option \"ISO 1151 (international)\"\n      - option \"GOST 20058-80 (Russian)\"\n    - paragraph: By language, Russian reads ГОСТ 20058-80 and English and Thai ISO 1151. Symbols, body axes and signs of every rate and angle the app shows, the manual rate commands and the CSV follow it. The table is in Physics and sources.\n    - region \"Quick start\":\n      - heading \"Quick start\" [level=2]\n      - paragraph: Choose a starting mission to fill the settings. Review it, then press Launch.\n      - button \"First flight · low Earth orbit Falcon 9 · Cape Canaveral · 1,000 kg rideshare · 500 km circular orbit.\":\n        - strong: First flight · low Earth orbit\n        - generic: Falcon 9 · Cape Canaveral · 1,000 kg rideshare · 500 km circular orbit.\n      - button \"ISS orbit · aligned launch window Soyuz-2.1a · Baikonur · 7,150 kg crew ship · next matching window. Orbit matching, without docking.\":\n        - strong: ISS orbit · aligned launch window\n        - generic: Soyuz-2.1a · Baikonur · 7,150 kg crew ship · next matching window. Orbit matching, without docking.\n      - button \"Next challenge · transfer orbit Falcon 9 · Cape Canaveral · 5,500 kg communications satellite · 250 × 35,786 km. This target is GTO, not circular GEO.\":\n        - strong: Next challenge · transfer orbit\n        - generic: Falcon 9 · Cape Canaveral · 5,500 kg communications satellite · 250 × 35,786 km. This target is GTO, not circular GEO.\n    - region \"Share & save the mission\":\n      - heading \"Share & save the mission\" [level=2]\n      - button \"Copy link\"\n      - button \"Save file\"\n      - button \"Open file\"\n      - status:\n        - paragraph: Mission loaded from the link.\n        - button \"Dismiss\": ×\n    - generic: \"01\"\n    - heading \"Vehicle & launch site\" [level=2]\n    - generic: Launch vehicle\n    - combobox \"Launch vehicle\":\n      - option \"Soyuz-2.1a (RU)\"\n      - option \"Soyuz-2.1b / Fregat-M (RU)\"\n      - option \"Proton-M / Briz-M (RU)\"\n      - option \"Angara-A5 / Briz-M (RU)\"\n      - option \"Falcon 9 Block 5 (US)\" [selected]\n      - option \"Falcon Heavy (US)\"\n      - option \"Atlas V 551 (US)\"\n      - option \"Vulcan Centaur VC4 (US)\"\n      - option \"Ariane 64 (EU)\"\n      - option \"Vega-C (EU)\"\n      - option \"Long March 2D (CN)\"\n      - option \"Long March 3B/E (CN)\"\n      - option \"H-IIA 202 (historical) (JP)\"\n      - option \"Long March 5 (CN)\"\n      - option \"H3-22 (JP)\"\n      - option \"PSLV-XL (IN)\"\n      - option \"Electron (NZ/US)\"\n      - option \"Starship (Super Heavy) (US)\"\n      - option \"Sputnik (R-7 8K71PS) (SU)\"\n      - option \"Vostok-K (8K72K) (SU)\"\n      - option \"Saturn V (US)\"\n    - generic: SpaceX · US\n    - generic: 2 · Stages\n    - generic: Height\n    - strong:\n      - text: \"70\"\n      - emphasis: m\n    - generic: Liftoff mass\n    - strong:\n      - text: \"548.3\"\n      - emphasis: t\n    - generic: Liftoff thrust\n    - strong:\n      - text: 7,605\n      - emphasis: kN\n    - generic: Thrust / weight\n    - strong: \"1.41\"\n    - generic: Stages\n    - strong: \"2\"\n    - generic: Rated payload\n    - strong:\n      - text: LEO 22,800 · GTO / GEO 8,300 · SSO / polar 15,000\n      - emphasis: kg\n    - paragraph:\n      - strong: \"Notes:\"\n      - text: Partially reusable; enabling booster recovery reserves propellant for the boost-back/landing burns.\n    - generic: Launch site\n    - combobox \"Launch site\":\n      - option \"Cape Canaveral SLC-40\" [selected]\n      - option \"Kennedy LC-39A\"\n      - option \"Vandenberg SFB\"\n      - option \"Yasny (Dombarovsky)\" [disabled]\n      - option \"Kapustin Yar\" [disabled]\n      - option \"Svobodny Cosmodrome\" [disabled]\n      - option \"Palmachim Airbase\" [disabled]\n    - paragraph: 28.56° N · 80.58° W · lowest inclination 28.5°\n    - generic: \"02\"\n    - heading \"Payload\" [level=2]\n    - generic: Payload / satellite\n    - combobox \"Payload / satellite\":\n      - option \"Communications satellite\"\n      - option \"Earth-observation satellite\"\n      - option \"Weather satellite\"\n      - option \"Navigation satellite\"\n      - option \"Science / astronomy satellite\"\n      - option \"CubeSat rideshare dispenser\" [selected]\n      - option \"Starlink batch (60 × 260 kg)\"\n      - option \"Crewed spacecraft\"\n      - option \"Sputnik-1 (PS-1)\"\n      - option \"Vostok 3KA\"\n      - option \"Apollo CSM + LM\"\n    - generic: Payload mass (kg)\n    - spinbutton \"Payload mass (kg)\": \"1000\"\n    - generic: \"03\"\n    - heading \"Target orbit & launch time\" [level=2]\n    - group \"Orbit presets\":\n      - button \"LEO\" [pressed]\n      - button \"ISS\"\n      - button \"STARLINK\"\n      - button \"SSO\"\n      - button \"POLAR\"\n      - button \"GPS\"\n      - button \"GLONASS\"\n      - button \"GTO\"\n      - button \"GEO\"\n      - button \"MOLNIYA\"\n      - button \"TUNDRA\"\n      - button \"CUSTOM\"\n    - paragraph: Generic circular LEO at the minimum inclination of the launch site.\n    - generic: Perigee altitude (km)\n    - spinbutton \"Perigee altitude (km)\": \"500\"\n    - generic: Apogee altitude (km)\n    - spinbutton \"Apogee altitude (km)\": \"500\"\n    - generic: Inclination (°)\n    - spinbutton \"Inclination (°)\": \"28.612\"\n    - generic: Argument of perigee (°)\n    - spinbutton \"Argument of perigee (°)\": \"0\"\n    - generic: Orbital plane (RAAN)\n    - combobox \"Orbital plane (RAAN)\":\n      - option \"Free (set by launch time)\" [selected]\n      - option \"Fixed RAAN\"\n      - option \"ISS plane\"\n      - option \"Sun-synchronous local time\"\n    - generic: Launch time (UTC)\n    - textbox \"Launch time (UTC)\": 2026-09-29T19:47\n    - generic: \"Plane not constrained: any time works\"\n    - generic: Ideal Δv (this payload)\n    - generic: 14,672 m/s\n    - generic: Launch azimuth\n    - generic: 88.1° (N)\n    - generic: Ascent inclination\n    - generic: 28.61°\n    - generic: Insertion orbit\n    - generic: 200 × 500 km\n    - generic: Post-insertion Δv\n    - generic: 85 m/s (1)\n    - generic \"Flight model\"\n    - generic: Model\n    - combobox \"Model\":\n      - option \"Full 6-DOF\" [selected]\n      - option \"Point mass (legacy)\"\n    - paragraph: Six-DOF integrates translation and three-axis rotation with finite actuators. Vehicle inertia and aerodynamics include documented estimates.\n    - generic: Wind scenario\n    - combobox \"Wind scenario\":\n      - option \"Calm\" [selected]\n      - option \"Crosswind with repeatable gusts\"\n      - option \"Vertical wind shear\"\n    - generic: Wind scenario seed\n    - spinbutton \"Wind scenario seed\": \"20260919\"\n    - 'generic \"Flexible vehicle: slosh and bending\"'\n    - generic \"Attitude autopilot\"\n    - generic \"Navigation (INS / GNSS)\"\n    - generic \"Control-system failures (G08)\"\n    - option \"None\" [selected]\n    - option \"Custom list\"\n    - option \"Proton-M, 2 July 2013 — Proton-M / Briz-M\"\n    - option \"Ariane 501, 4 June 1996 — Ariane 64\"\n    - option \"Vega VV17, 17 November 2020 — Vega-C\"\n    - option \"Nozzle hard-over (hypothetical) — Falcon 9 Block 5\"\n    - 'generic \"Ascent guidance: PEG and IGM (G01)\"'\n    - option \"Standard (linear-tangent closed loop)\" [selected]\n    - option \"PEG — Space Shuttle Powered Explicit Guidance\"\n    - option \"IGM — Saturn V Iterative Guidance Mode\"\n    - 'generic \"Dispersed flight: one Monte Carlo run (P08)\"'\n    - 'generic \"Monte Carlo: insertion accuracy (G05)\"'\n    - generic \"Guidance parameters\"\n    - generic \"Failure scenario\"\n    - option \"Nominal flight\" [selected]\n    - option \"One engine out\"\n    - option \"Total thrust loss\"\n    - option \"Premature stage separation\"\n    - option \"Fairing fails to separate\"\n    - option \"Range-safety destruct\"\n    - option \"Fire on the pad (Soyuz T-10-1)\"\n    - option \"Stage fails to separate (Soyuz 18a)\"\n    - option \"Random failure\"\n    - 'option \"1: First stage (9× Merlin 1D)\" [selected]'\n    - 'option \"2: Second stage (Merlin Vacuum)\"'\n    - generic \"Options\"\n    - paragraph:\n      - generic: Ready to simulate · 1,000 kg of 22,800 kg rated to LEO\n    - button \"↗ Launch mission SPACE\":\n      - generic: ↗\n      - generic: Launch mission\n      - generic: SPACE\n    - button \"New mission\"\n    - paragraph: Changing the mission resets the flight.\n  - generic \"Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.\":\n    - generic: MISSION\n    - heading \"Falcon 9 Block 5/CubeSat rideshare dispenser\" [level=2]\n    - generic: STANDBY\n    - group \"Camera view\":\n      - button \"Exterior\" [pressed]:\n        - generic: Exterior\n      - button \"Onboard\":\n        - generic: Onboard\n      - button \"Space\":\n        - generic: Space\n      - button \"Orbital map\":\n        - generic: Orbital map\n    - button \"Reference frames\":\n    - button \"Reset camera\":\n      - generic: ⌖\n    - button \"Glow (bloom)\" [pressed]:\n      - generic: ✦\n    - button \"Sound (off until you turn it on)\":\n      - generic: ♪\n    - button \"Full screen\":\n      - generic: ⛶\n    - generic: MISSION\n    - heading \"Countdown\" [level=3]\n    - paragraph: \"Terminal count: the vehicle is on the pad and the engines light a few seconds before release.\"\n    - generic: Latest flight event\n    - paragraph: Vehicle standing by on the pad.\n    - generic: Drag to orbit the camera, wheel to zoom\n    - group \"Telemetry card — drag to move, arrow keys to move, alt+arrows to resize\":\n      - generic: Telemetry card\n      - button \"Dock in the telemetry panel · D\":\n        - generic: ⇥\n      - 'button \"Telemetry card: compact · H\"':\n        - generic: ▤\n      - button \"Restore position and size\":\n        - generic: ⌖\n    - generic: Countdown\n    - generic: Alt h\n    - generic: 0.0 km\n    - generic: Speed\n    - generic: 409 m/s\n    - generic: V/S ḣ\n    - generic: 0 m/s\n    - generic: Ap × Pe\n    - generic: 0 × -6370 km\n    - generic: Stage\n    - generic: 1/2 · 0 %\n    - generic: Δv\n    - generic: 14672 m/s\n  - region \"Playback and timeline\":\n    - 'slider \"Mission timeline: drag to scrub, ← → ±5 s, shift ±30 s\"': \"0\"\n    - generic: T-00:10\n    - generic: Live\n    - generic: T-00:10\n    - button \"Skip to previous event\":\n      - generic: ⏮\n    - button \"Play\":\n      - generic: ▶\n    - button \"Skip to next event\":\n      - generic: ⏭\n    - button \"Return to the live flight\" [disabled]: Live\n    - generic: T-00:10\n    - generic: LAUNCH COUNTDOWN\n    - generic: Warp\n    - combobox \"Warp\":\n      - option \"0.25×\"\n      - option \"0.5×\"\n      - option \"1×\" [selected]\n      - option \"2×\"\n      - option \"5×\"\n      - option \"10×\"\n      - option \"25×\"\n      - option \"50×\"\n      - option \"100×\"\n      - option \"500×\"\n      - option \"1000×\"\n      - option \"5000×\"\n      - option \"10000×\"\n      - option \"50000×\"\n  - generic \"6-DOF flight controls\"\n  - text: Flight control\n  - combobox \"Flight control\":\n    - option \"Autopilot\" [selected]\n    - option \"Manual rates\"\n  - generic: Roll rate p (°/s)\n  - spinbutton \"Roll rate p (°/s)\" [disabled]: \"0\"\n  - generic: Pitch rate q (°/s)\n  - spinbutton \"Pitch rate q (°/s)\" [disabled]: \"0\"\n  - generic: Yaw rate r (°/s)\n  - spinbutton \"Yaw rate r (°/s)\" [disabled]: \"0\"\n  - text: Throttle (%)\n  - spinbutton \"Throttle (%)\" [disabled]: \"100\"\n  - button \"Stop rotation command\" [disabled]\n  - button \"Attitude-loop inspector\"\n  - paragraph: Manual commands request rotation rates; actuators have finite authority. Zero rates asks the controller to brake. Returning to Autopilot resumes mission guidance. 0% throttle shuts engines down; only restartable stages can relight after a delay.\n  - paragraph: \"Measured roll / pitch / yaw (p / q / r): 0.00 / -0.00 / 0.00 °/s · RCS propellant: 130.00 kg\"\n  - paragraph\n  - complementary \"Flight telemetry\":\n    - generic: FLIGHT TELEMETRY\n    - heading \"Telemetry\" [level=2]\n    - group \"Chart range\":\n      - button \"Full mission\" [pressed]\n      - button \"Ascent\"\n    - group \"Panel view\":\n      - button \"Charts\" [pressed]\n      - button \"Equations\"\n    - 'img \"Altitude h (km) Displayed mission time: -10 to 60 s. Cursor: -10 s. Altitude h (km): latest plotted sample 0.03 at -10 s; plotted minimum 0.03, maximum 0.03.\"'\n    - 'img \"Speed (m/s) Displayed mission time: -10 to 60 s. Cursor: -10 s. Inertial speed: latest plotted sample 408.5 at -10 s; plotted minimum 408.5, maximum 408.5. Airspeed: latest plotted sample 0 at -10 s; plotted minimum 0, maximum 0.\"'\n    - 'img \"Dynamic pressure q̄ (kPa) Displayed mission time: -10 to 60 s. Cursor: -10 s. Dynamic pressure q̄ (kPa): latest plotted sample 0 at -10 s; plotted minimum 0, maximum 0.\"'\n    - 'img \"Acceleration n (g) Displayed mission time: -10 to 60 s. Cursor: -10 s. Acceleration n (g): latest plotted sample 1 at -10 s; plotted minimum 1, maximum 1.\"'\n    - 'img \"Apoapsis / periapsis (km) Displayed mission time: -10 to 60 s. Cursor: -10 s. Apoapsis altitude: latest plotted sample 0.03 at -10 s; plotted minimum 0.03, maximum 0.03. Periapsis altitude: no plotted data in this time range.\"'\n    - 'img \"Δv remaining (m/s) Displayed mission time: -10 to 60 s. Cursor: -10 s. Δv remaining (m/s): latest plotted sample 14,671.66 at -10 s; plotted minimum 14,671.66, maximum 14,671.66.\"'\n    - 'img \"Pitch command Θ (°) Displayed mission time: -10 to 60 s. Cursor: -10 s. Pitch command Θ (°): latest plotted sample 90 at -10 s; plotted minimum 90, maximum 90.\"'\n    - 'img \"Mass m (t) Displayed mission time: -10 to 60 s. Cursor: -10 s. Mass m (t): latest plotted sample 548.3 at -10 s; plotted minimum 548.3, maximum 548.3.\"'\n    - heading \"Δv budget\" [level=3]\n    - generic: Delivered by thrust\n    - generic: 0 m/s\n    - generic: Gravity loss\n    - generic: 0 m/s\n    - generic: Drag loss\n    - generic: 0 m/s\n    - generic: Steering loss\n    - generic: 0 m/s\n    - generic: Earth rotation credit\n    - generic: 408 m/s\n    - generic: Max-Q\n    - generic: —\n    - heading \"Flight plan\" [level=3]\n    - generic: Insertion orbit\n    - generic: 200 × 500 km\n    - generic: Apogee burn (circularise / plane change)\n    - generic: 85 m/s · pending\n    - heading \"Spent stages\" [level=3]\n    - generic: none\n    - heading \"Compare with another flight\" [level=3]\n    - button \"Use as reference\"\n    - button \"Open flight\"\n    - button \"Save flight\"\n    - paragraph: \"Pin this flight as the reference, change one thing (PEG or IGM, the autopilot gains, a control-system failure) and fly again: every chart then carries the reference dashed, the 3-D view its path, and the table below the differences.\"\n    - heading \"Event log\" [level=3]\n    - generic: No callouts yet — they appear as the flight unfolds.\n    - button \"Export CSV\"\n    - button \"Flight report\"\n    - button \"Orbit lifetime\"\n    - button \"Continue in Orbit\"\n- contentinfo:\n  - generic: Earth · Newtonian flight model\n  - generic: Educational simulation · approximate vehicle data\n- status:\n  - generic: A new version of Orbitlab is ready.\n  - button \"Reload\"\n  - button \"Dismiss\": ×"
+}

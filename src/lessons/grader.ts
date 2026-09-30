@@ -168,7 +168,7 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
     let kept = true;
     switch (key) {
       case 'setup.vehicle': kept = cfg.vehicleId === m.vehicleId; break;
-      case 'setup.site': kept = cfg.siteId === m.siteId; break;
+      case 'setup.site': kept = cfg.siteId === m.siteId && (!m.padId || cfg.padId === m.padId); break;
       case 'setup.satellite': kept = cfg.satelliteId === m.satelliteId; break;
       case 'setup.payloadMass': kept = near(cfg.payloadMassOverride, m.payloadMass, 0.5); break;
       case 'setup.orbit': {
@@ -191,7 +191,8 @@ export function brokenLocks(lesson: Pick<Lesson, 'locked' | 'mission'>, flight: 
         const model = m.dynamics?.model ?? defaultDynamics(m.vehicleId).model;
         const expected = { ...guidanceForVehicle(spec, undefined, model), ...m.guidanceOverrides } as Record<string, number>;
         const flown = cfg.guidance as unknown as Record<string, number>;
-        kept = Object.keys(expected).every((k) => near(flown[k], expected[k], 1e-6));
+        kept = Object.keys(expected).every((k) => near(flown[k], expected[k], 1e-6))
+          && same(cfg.dynamics?.explicitGuidance, m.dynamics?.explicitGuidance);
         break;
       }
       case 'setup.boosterRecovery':

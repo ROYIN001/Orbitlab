@@ -35,7 +35,12 @@ export function initLang(): void {
 
 /** Translate a key with {param} substitution; falls back to English, then the key. */
 export function t(key: string, params?: Record<string, string | number>): string {
-  let s = DICTS[current][key] ?? en[key] ?? key;
+  return tFor(current, key, params);
+}
+
+/** Translate frozen/exported content without changing the UI's language. */
+export function tFor(lang: Lang, key: string, params?: Record<string, string | number>): string {
+  let s = DICTS[lang][key] ?? en[key] ?? key;
   if (params) {
     for (const [k, v] of Object.entries(params)) s = s.split(`{${k}}`).join(String(v));
   }

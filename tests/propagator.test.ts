@@ -5,6 +5,7 @@
  * (P2.5) is held to a fine even sampling of it.
  */
 import { describe, expect, it } from 'vitest';
+import { parseSync } from 'vite';
 import { dragRates, propagate, elementsOf, stateAt } from '../src/physics/propagator/propagate';
 import { ALL_FORCES, J3_EARTH, J4_EARTH, acceleration, gravityAcceleration, inShadow, type ForceModel } from '../src/physics/propagator/forces';
 import { moonPosition, sunPosition, AU, type V3 } from '../src/physics/propagator/ephemeris';
@@ -187,11 +188,48 @@ describe('propagation (P07)', () => {
   });
 });
 
+/** Runtime module references, excluding TypeScript declarations erased at build time. */
+function usesPropagatorAtRuntime(text: string): boolean {
+  const parsed = parseSync('boundary.ts', text, { lang: 'ts' });
+  expect(parsed.errors).toEqual([]);
+  const visit = (value: unknown): boolean => {
+    if (!value || typeof value !== 'object') return false;
+    const node = value as Record<string, unknown>;
+    if (node.type === 'ImportDeclaration' || node.type === 'ExportNamedDeclaration' || node.type === 'ExportAllDeclaration' || node.type === 'ImportExpression') {
+      const source = node.source as { value?: unknown } | undefined;
+      if (typeof source?.value === 'string' && source.value.includes('propagator/')) {
+        if (node.importKind === 'type' || node.exportKind === 'type') return false;
+        const specifiers = node.specifiers as { type: string; importKind?: string; exportKind?: string }[] | undefined;
+        if (specifiers?.length && specifiers.every((s) => s.importKind === 'type' || s.exportKind === 'type')) return false;
+        return true;
+      }
+    }
+    return Object.values(node).some((child) => Array.isArray(child) ? child.some(visit) : visit(child));
+  };
+  return visit(parsed.program);
+}
+
 describe('the flight is untouched (P07)', () => {
+  it.each([
+    ['import type { Activity, DailyActivity } from "../physics/propagator/activity";', false],
+    ['import { type Activity } from "../physics/propagator/activity";', false],
+    ['export type { Activity } from "../physics/propagator/activity";', false],
+    ['type Activity = import("../physics/propagator/activity").Activity;', false],
+    ['// import { propagate } from "../physics/propagator/propagate";', false],
+    ['import { propagate } from "../physics/propagator/propagate";', true],
+    ['import { type Activity, ECSS_LEVELS } from "../physics/propagator/activity";', true],
+    ['import "../physics/propagator/propagate";', true],
+    ['export { propagate } from "../physics/propagator/propagate";', true],
+    ['export * from "../physics/propagator/propagate";', true],
+    ['async function later() { return import("../physics/propagator/propagate"); }', true],
+  ] as const)('classifies runtime dependency in %s', (text, expected) => {
+    expect(usesPropagatorAtRuntime(text)).toBe(expected);
+  });
+
   it('imports the propagator from nothing that flies the ascent or judges the orbit', () => {
     const src = import.meta.glob('../src/**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
     const users = Object.entries(src)
-      .filter(([path, text]) => !path.includes('/propagator/') && /from ['"][^'"]*propagator\//.test(text))
+      .filter(([path, text]) => !path.includes('/propagator/') && usesPropagatorAtRuntime(text))
       .map(([path]) => path.replace('../src/', ''));
     // the lifetime window, its worker, the app wiring that opens it, the Orbit section (S03), and the
     // worksheets from real cases, which predict a re-entry (P2.5)

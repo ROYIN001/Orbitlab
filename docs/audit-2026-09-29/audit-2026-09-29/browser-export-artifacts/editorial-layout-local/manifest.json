@@ -1,0 +1,75 @@
+{
+  "purpose": "Local source-module generated DOCX layout proof; not real browser download. SVG PNGs use sharp/libvips, final acceptance will use Chromium downloads.",
+  "generatedAt": "2026-09-29T22:33:58.044Z",
+  "runtime": {
+    "node": "v24.19.0",
+    "sharp": {
+      "aom": "3.14.1",
+      "archive": "3.8.9",
+      "cairo": "1.18.4",
+      "cgif": "0.5.3",
+      "exif": "0.6.26",
+      "expat": "2.8.3",
+      "ffi": "3.8.0",
+      "fontconfig": "2.18.3",
+      "freetype": "2.14.3",
+      "fribidi": "1.0.16",
+      "glib": "2.89.4",
+      "harfbuzz": "14.3.1",
+      "heif": "1.23.2",
+      "highway": "1.4.0",
+      "imagequant": "2.4.1",
+      "lcms": "2.19.1",
+      "mozjpeg": "0826579",
+      "pango": "1.58.2",
+      "pixman": "0.46.4",
+      "png": "1.6.58",
+      "proxy-libintl": "0.5",
+      "rsvg": "2.62.91",
+      "tiff": "4.7.2",
+      "uhdr": "2.0.2",
+      "vips": "8.18.6",
+      "webp": "1.6.0",
+      "xml2": "2.15.3",
+      "zlib-ng": "2.3.3",
+      "sharp": "0.35.4"
+    }
+  },
+  "sourceSha256": {
+    "src/worksheets/docx.ts": "d9bc5fa7cd594a9a3a74a4745592bf60689dc60a7c98e5f6da4dd2d7c9f283a0",
+    "src/orbit/encounter-plane.ts": "2625eb3c51d26986cf178dd98c3dc5e986ffaad94b649d6a69a6dd51189fe305",
+    "src/worksheets/cases.ts": "3e3384e803858fd0affda28c7459b6a102301da4a460bf190131211cda7eb829"
+  },
+  "files": [
+    {
+      "file": "orbitlab-case-cz5b-th.docx",
+      "bytes": 24966,
+      "sha256": "3e004016319e00b2335ff913d41f268fa21745b4d71113f2b92da59692c1b850"
+    },
+    {
+      "file": "orbitlab-case-cz5b-ru.docx",
+      "bytes": 23601,
+      "sha256": "5f9f678242818fb61a6e90deb5a397f4126db1cb06c35f1c288bcc038481c2be"
+    },
+    {
+      "file": "orbitlab-case-iridium-th.docx",
+      "bytes": 44514,
+      "sha256": "b6bd27f1764c77eb357fb4640e379ece6ca8da38ce73c1f5482a262a58d1b9cc"
+    },
+    {
+      "file": "orbitlab-case-iridium-ru.docx",
+      "bytes": 43924,
+      "sha256": "95899b84b118a3c22938184e7511066921cf5800182cf2c2ab807f1bf88062b3"
+    },
+    {
+      "file": "orbitlab-case-theos2-th.docx",
+      "bytes": 21083,
+      "sha256": "4ffad69de00eeb159d2982cd3adea750b9cb1ef5ceebb1e5797afce7d5a231a7"
+    },
+    {
+      "file": "orbitlab-case-theos2-ru.docx",
+      "bytes": 20165,
+      "sha256": "012bad686b8b315718a643c8a72cfc6d358eaa5b478ef79d249cff8532843a2f"
+    }
+  ]
+}

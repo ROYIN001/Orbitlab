@@ -3,7 +3,7 @@
  * out for A4, so the browser's "Print → Save as PDF" makes the paper. The
  * sheets hold no answer; the key is a file of its own, one block per student.
  */
-import { t } from '../i18n';
+import { tFor } from '../i18n';
 import { letterOf } from './bank-items';
 import { printSvg } from './print-svg';
 import type { WsFigure, WsItem, Worksheet } from './types';
@@ -60,12 +60,12 @@ function itemHtml(item: WsItem, sheet: Worksheet, images: ImageSources): string 
   if (item.figure) parts.push(figureHtml(item.figure, images, 'q-figure'));
   const lang = sheet.lang;
   if (item.kind === 'number') {
-    parts.push(`<p class="answer">${esc(t('ws.answer'))}<span></span>${esc(item.unit ?? '')}</p><div class="work">${esc(t('ws.working'))}</div>`);
+    parts.push(`<p class="answer">${esc(tFor(lang, 'ws.answer'))}<span></span>${esc(item.unit ?? '')}</p><div class="work">${esc(tFor(lang, 'ws.working'))}</div>`);
   } else if (item.kind === 'order') {
-    parts.push(`<p class="meta">${esc(t('ws.orderHint'))}</p><ul class="opts">${(item.options ?? []).map((o, k) =>
+    parts.push(`<p class="meta">${esc(tFor(lang, 'ws.orderHint'))}</p><ul class="opts">${(item.options ?? []).map((o, k) =>
       `<li><span class="box wide"></span>${esc(letterOf(lang, k))}) ${esc(o)}</li>`).join('')}</ul>`);
   } else {
-    if (item.kind === 'multi') parts.push(`<p class="meta">${esc(t('ws.multiHint'))}</p>`);
+    if (item.kind === 'multi') parts.push(`<p class="meta">${esc(tFor(lang, 'ws.multiHint'))}</p>`);
     parts.push(`<ul class="opts">${(item.options ?? []).map((o, k) => `<li><span class="box"></span>${esc(letterOf(lang, k))}) ${esc(o)}</li>`).join('')}</ul>`);
   }
   return `<li>${parts.join('')}</li>`;
@@ -73,8 +73,9 @@ function itemHtml(item: WsItem, sheet: Worksheet, images: ImageSources): string 
 
 function head(sheet: Worksheet, key: boolean): string {
   const name = sheet.student ? esc(sheet.student) : '';
-  return `<header><h1>${esc(key ? t('ws.keyTitle', { title: sheet.title }) : sheet.title)}</h1><p class="sub">${esc(sheet.subtitle)}</p>`
-    + `<div class="who"><span><b>${esc(t('ws.name'))}</b>${name}</span><span><b>${esc(t('ws.code'))}</b>${esc(sheet.code)}</span>${key ? '' : `<span><b>${esc(t('ws.date'))}</b></span>`}</div></header>`;
+  const tr = (key: string, params?: Record<string, string | number>) => tFor(sheet.lang, key, params);
+  return `<header><h1>${esc(key ? tr('ws.keyTitle', { title: sheet.title }) : sheet.title)}</h1><p class="sub">${esc(sheet.subtitle)}</p>`
+    + `<div class="who"><span><b>${esc(tr('ws.name'))}</b>${name}</span><span><b>${esc(tr('ws.code'))}</b>${esc(sheet.code)}</span>${key ? '' : `<span><b>${esc(tr('ws.date'))}</b></span>`}</div></header>`;
 }
 
 function doc(title: string, lang: string, body: string): string {
@@ -95,7 +96,7 @@ export function worksheetsHtml(sheets: readonly Worksheet[], images: ImageSource
       n += s.items.length;
       return `${html}</section>`;
     }).join('');
-    return `<article>${head(sheet, false)}${sections}<footer>${esc((sheet.footer ?? t('ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) })))}</footer></article>`;
+    return `<article>${head(sheet, false)}${sections}<footer>${esc((sheet.footer ?? tFor(sheet.lang, 'ws.footer', { date: sheet.generatedAt.toISOString().slice(0, 10) })))}</footer></article>`;
   });
   return doc(sheets[0]?.title ?? 'Orbitlab', sheets[0]?.lang ?? 'en', articles.join('\n'));
 }
@@ -115,5 +116,5 @@ export function answerKeyHtml(sheets: readonly Worksheet[]): string {
     }).join('');
     return `<article>${head(sheet, true)}${blocks}</article>`;
   });
-  return doc(t('ws.keyTitle', { title: sheets[0]?.title ?? '' }), sheets[0]?.lang ?? 'en', articles.join('\n'));
+  return doc(tFor(sheets[0]?.lang ?? 'en', 'ws.keyTitle', { title: sheets[0]?.title ?? '' }), sheets[0]?.lang ?? 'en', articles.join('\n'));
 }

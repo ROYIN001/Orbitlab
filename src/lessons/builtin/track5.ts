@@ -24,9 +24,9 @@ export const TRACK5: readonly unknown[] = [
       th: 'Falcon 9 จากแหลมคะแนเวอรัลไปที่ 500 กม. โดยขั้นที่หนึ่งบินกลับลงที่ Landing Zone 1 เมื่อบรรทุก 12 ตัน ขั้นแรกยังลงจอดได้ แต่ขั้นที่สองไปไม่ถึงวงโคจรเป้าหมาย เพราะเชื้อเพลิงที่สำรองไว้สำหรับบินกลับและลงจอดหายไปจากการไต่ระดับ จงนำสัมภาระอย่างน้อย 9 ตันเข้าสู่วงโคจรเป้าหมาย โดยให้ขั้นแรกลงที่ LZ-1 ปรับได้เฉพาะมวลสัมภาระ',
     },
     debrief: {
-      en: 'A return to the launch site costs the most: the stage must cancel its downrange speed and fly back, so it separates earlier and slower and keeps a large reserve. Here Falcon 9 lifts about 19 t to this orbit expended and about 9–11 t with the stage coming back; a drone ship downrange costs much less, which is why heavy payloads land at sea.',
-      ru: 'Возвращение к месту старта обходится дороже всего: ступени нужно погасить скорость вдоль трассы и лететь обратно, поэтому она отделяется раньше и медленнее и оставляет большой резерв топлива. Здесь Falcon 9 без возвращения выводит на эту орбиту около 19 т, а с возвращением ступени — около 9–11 т; посадка на морскую платформу вдоль трассы обходится гораздо дешевле, поэтому тяжёлые нагрузки садятся в море.',
-      th: 'การบินกลับฐานปล่อยมีต้นทุนสูงที่สุด ขั้นแรกต้องหักล้างความเร็วตามแนวบินแล้วบินย้อนกลับ จึงแยกตัวเร็วกว่าและช้ากว่า และต้องสำรองเชื้อเพลิงไว้มาก ในที่นี้ Falcon 9 แบบไม่กู้คืนส่งได้ประมาณ 19 ตัน แต่เมื่อบินกลับได้ประมาณ 9–11 ตัน การลงบนเรือโดรนกลางทะเลเสียน้อยกว่ามาก สัมภาระหนักจึงลงจอดในทะเล',
+      en: 'A return to the launch site costs the most: the stage must cancel its downrange speed and fly back, so it separates earlier and slower and keeps a large reserve. Here Falcon 9 lifts about 19 t to this orbit expended and about 9–11 t with the stage coming back; a drone ship downrange costs much less, which is why missions carrying heavier payloads often land the booster at sea.',
+      ru: 'Возвращение к месту старта обходится дороже всего: ступени нужно погасить скорость вдоль трассы и лететь обратно, поэтому она отделяется раньше и медленнее и оставляет большой резерв топлива. Здесь Falcon 9 без возвращения выводит на эту орбиту около 19 т, а с возвращением ступени — около 9–11 т; посадка на морскую платформу вдоль трассы обходится гораздо дешевле, поэтому в миссиях с более тяжёлой полезной нагрузкой первую ступень часто сажают в море.',
+      th: 'การบินกลับฐานปล่อยมีต้นทุนสูงที่สุด ขั้นแรกต้องหักล้างความเร็วตามแนวบินแล้วบินย้อนกลับ จึงแยกตัวก่อนและด้วยอัตราเร็วต่ำกว่า และต้องสำรองเชื้อเพลิงไว้มาก ในที่นี้ Falcon 9 แบบไม่กู้คืนส่งได้ประมาณ 19 ตัน แต่เมื่อบินกลับได้ประมาณ 9–11 ตัน การลงบนเรือโดรนกลางทะเลเสียน้อยกว่ามาก ภารกิจที่บรรทุกหนักจึงมักให้บูสเตอร์ลงจอดกลางทะเล',
     },
     mission: missionDoc({
       vehicleId: 'falcon9', siteId: 'cape', satelliteId: 'cubesats', payloadMass: 12000, orbitId: 'leo',
@@ -43,7 +43,7 @@ export const TRACK5: readonly unknown[] = [
     ],
     hints: [
       { en: 'Watch the Δv left at insertion: with 12 t it runs out before the circularising burn.', ru: 'Следите за остатком Δv при выведении: с 12 т его не хватает на скругление орбиты.', th: 'ดู Δv ที่เหลือตอนเข้าวงโคจร เมื่อบรรทุก 12 ตัน Δv หมดก่อนการจุดปรับวงโคจรเป็นวงกลม' },
-      { en: 'The stage lands whatever the payload: what the payload takes is the second stage\'s margin.', ru: 'Ступень садится при любой нагрузке: нагрузка «съедает» запас второй ступени.', th: 'ขั้นแรกลงจอดได้ไม่ว่าสัมภาระเท่าใด สิ่งที่สัมภาระกินไปคือค่าเผื่อของขั้นที่สอง' },
+      { en: 'Over this exercise’s payload range, the stage lands: what the payload takes is the second stage\'s margin.', ru: 'В диапазоне нагрузок этого упражнения ступень садится: нагрузка «съедает» запас второй ступени.', th: 'ในช่วงมวลสัมภาระของบทนี้ ขั้นแรกยังลงจอดได้ สิ่งที่สัมภาระกินไปคือค่าเผื่อของขั้นที่สอง' },
       { en: 'Around 9–9.5 t both work: the orbit with Δv to spare, and the stage on the pad. Watch the event log for where the stage came down.', ru: 'Около 9–9,5 т получается и то и другое: орбита с запасом Δv и ступень на площадке. Где упала ступень, смотрите в журнале событий.', th: 'ประมาณ 9–9.5 ตันได้ทั้งสองอย่าง คือเข้าวงโคจรโดยมี Δv เหลือ และขั้นแรกลงบนแท่น ดูบันทึกเหตุการณ์ว่าขั้นแรกตกลงที่ใด' },
     ],
   },
@@ -103,6 +103,8 @@ export const TRACK5: readonly unknown[] = [
     locked: [...HISTORY_LOCKS, 'setup.orbit', 'setup.launchTime'],
     criteria: [
       { id: 'orbit', kind: 'outcome', is: 'target' },
+      { id: 'payload', kind: 'measure', measure: 'payload', min: 83.5, max: 83.7,
+        label: { en: 'Sputnik-1 payload: 83.6 kg (±0.1 kg)', ru: 'Масса «Спутника-1»: 83,6 кг (±0,1 кг)', th: 'มวลสปุตนิก-1: 83.6 กก. (±0.1 กก.)' } },
       {
         id: 'period', kind: 'answer', measure: 'orbit.period', tol: 0.2, unit: 'min',
         prompt: { en: 'Orbital period (min)', ru: 'Период обращения (мин)', th: 'คาบวงโคจร (นาที)' },
@@ -110,7 +112,7 @@ export const TRACK5: readonly unknown[] = [
     ],
     hints: [
       { en: 'Object D became Sputnik-3. The satellite that flew first was far smaller: look at the payload list for its mass.', ru: 'Объект Д стал третьим спутником. Первый был гораздо меньше: его массу найдите в списке полезных нагрузок.', th: 'วัตถุ D กลายเป็นสปุตนิก-3 ดวงแรกที่ขึ้นไปเล็กกว่ามาก ดูมวลของมันในรายการสัมภาระ' },
-      { en: 'With 1.3 t the core runs dry short of orbital speed: the whole rocket is one stage, so every kilogram on top comes off the orbit.', ru: 'С 1,3 т центральный блок вырабатывает топливо, не набрав орбитальной скорости: ракета одноступенчатая, и каждый килограмм нагрузки отнимается у орбиты.', th: 'เมื่อบรรทุก 1.3 ตัน ท่อนแกนกลางหมดเชื้อเพลิงก่อนถึงความเร็ววงโคจร จรวดทั้งลำมีขั้นเดียว สัมภาระทุกกิโลกรัมจึงหักออกจากวงโคจรโดยตรง' },
+      { en: 'With 1.3 t the core runs dry short of orbital speed: there is no upper stage above the core and strap-ons, so every kilogram on top comes off the orbit.', ru: 'С 1,3 т центральный блок вырабатывает топливо, не набрав орбитальной скорости: над центральным и боковыми блоками нет верхней ступени, и каждый килограмм нагрузки отнимается у орбиты.', th: 'เมื่อบรรทุก 1.3 ตัน ท่อนแกนกลางหมดเชื้อเพลิงก่อนถึงความเร็ววงโคจร ไม่มีท่อนบนเหนือท่อนแกนกลางและบูสเตอร์ สัมภาระทุกกิโลกรัมจึงหักออกจากวงโคจรโดยตรง' },
       { en: 'The period is on the orbit panel once in orbit, or T = 2π√(a³/μ) with a = R⊕ + (perigee + apogee)/2.', ru: 'Период показан на панели орбиты после выхода на неё, или T = 2π√(a³/μ), где a = R⊕ + (перигей + апогей)/2.', th: 'คาบแสดงอยู่ในแผงวงโคจรเมื่อเข้าวงโคจรแล้ว หรือคำนวณจาก T = 2π√(a³/μ) โดย a = R⊕ + (จุดใกล้โลก + จุดไกลโลก)/2' },
     ],
   },
@@ -138,6 +140,8 @@ export const TRACK5: readonly unknown[] = [
         id: 'apogee', kind: 'measure', measure: 'orbit.apogee', min: 315, max: 340,
         label: { en: 'Apogee near 327 km', ru: 'Апогей около 327 км', th: 'จุดไกลโลกราว 327 กม.' },
       },
+      { id: 'inclination', kind: 'measure', measure: 'orbit.inclination', min: 64.85, max: 65.05,
+        label: { en: 'Inclination 64.95° (±0.1°)', ru: 'Наклонение 64,95° (±0,1°)', th: 'ความเอียงวงโคจร 64.95° (±0.1°)' } },
       {
         id: 'perigee', kind: 'measure', measure: 'orbit.perigee', min: 170, max: 195,
         label: { en: 'Perigee near 181 km', ru: 'Перигей около 181 км', th: 'จุดใกล้โลกราว 181 กม.' },
@@ -173,8 +177,8 @@ export const TRACK5: readonly unknown[] = [
     locked: [...HISTORY_LOCKS, 'setup.payloadMass', 'setup.launchTime'],
     criteria: [
       {
-        id: 'tli', kind: 'measure', measure: 'orbit.apogee', min: 300000,
-        label: { en: 'Apogee at the Moon\'s distance', ru: 'Апогей на расстоянии Луны', th: 'จุดไกลโลกที่ระยะของดวงจันทร์' },
+        id: 'tli', kind: 'measure', measure: 'orbit.apogee', min: 360000, max: 380000,
+        label: { en: 'Apogee near 370 000 km (±10 000 km)', ru: 'Апогей около 370 000 км (±10 000 км)', th: 'จุดไกลโลกราว 370,000 กม. (±10,000 กม.)' },
       },
       {
         id: 'perigee', kind: 'measure', measure: 'orbit.perigee', min: 150, max: 260,

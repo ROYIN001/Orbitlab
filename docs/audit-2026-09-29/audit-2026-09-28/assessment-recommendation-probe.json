@@ -1,0 +1,83 @@
+{
+  "seed": 11,
+  "lessonMetadataCount": 24,
+  "percent": 97,
+  "start": null,
+  "startDomain": null,
+  "domains": [
+    {
+      "domain": 1,
+      "percent": 86,
+      "level": "strong",
+      "asked": 5,
+      "correct": 4,
+      "misconceptions": 0
+    },
+    {
+      "domain": 2,
+      "percent": 100,
+      "level": "strong",
+      "asked": 4,
+      "correct": 4,
+      "misconceptions": 0
+    },
+    {
+      "domain": 3,
+      "percent": 100,
+      "level": "strong",
+      "asked": 4,
+      "correct": 4,
+      "misconceptions": 0
+    },
+    {
+      "domain": 4,
+      "percent": 100,
+      "level": "strong",
+      "asked": 4,
+      "correct": 4,
+      "misconceptions": 0
+    },
+    {
+      "domain": 5,
+      "percent": 100,
+      "level": "strong",
+      "asked": 4,
+      "correct": 4,
+      "misconceptions": 0
+    },
+    {
+      "domain": 6,
+      "percent": 100,
+      "level": "strong",
+      "asked": 4,
+      "correct": 4,
+      "misconceptions": 0
+    }
+  ],
+  "advice": {
+    "orbit-first": "skip",
+    "orbit-iss-plane": "skip",
+    "orbit-hohmann": "skip",
+    "orbit-payload": "skip",
+    "orbit-range-safety": "review",
+    "guid-maxq": "skip",
+    "guid-peg": "skip",
+    "guid-nav": "skip",
+    "guid-monte-carlo": "skip",
+    "fail-engine-out": "skip",
+    "fail-gyro-fdir": "skip",
+    "fail-abort": "skip",
+    "ctl-inspector": "skip",
+    "ctl-margins": "skip",
+    "ctl-step": "skip",
+    "ctl-notch": "skip",
+    "adv-landing": "skip",
+    "adv-docking": "skip",
+    "adv-history": "skip",
+    "adv-vostok": "skip",
+    "adv-apollo": "skip",
+    "case-theos2": "skip",
+    "case-cz5b": "skip",
+    "case-iridium": "skip"
+  }
+}

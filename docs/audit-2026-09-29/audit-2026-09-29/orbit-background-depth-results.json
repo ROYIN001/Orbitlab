@@ -1,0 +1,63 @@
+{
+  "kind": "CPU Three.js camera/ray projection; no browser-pixel claim",
+  "earthRadiusSceneUnits": 6.378137,
+  "correction": "Orbit shader sets clip z=w; LessEqualDepth tests sky against opaque geometry; renderOrder=-1 precedes transparent overlays",
+  "results": [
+    {
+      "canvas": [
+        288,
+        480
+      ],
+      "cameraDistance": 3333.3333333333335,
+      "earthNearDistance": 3326.9551963333333,
+      "originalStarDistance": 3000,
+      "originalNdcDepth": 0.9968868134311761,
+      "earthNdcDepth": 0.9973238808163739,
+      "originalStarInFrontOfEarth": true,
+      "correctedStarNdcDepth": 1,
+      "correctedStarBehindEarth": true
+    },
+    {
+      "canvas": [
+        240,
+        480
+      ],
+      "cameraDistance": 4000,
+      "earthNearDistance": 3993.621863,
+      "originalStarDistance": 3000,
+      "originalNdcDepth": 0.9962636776087537,
+      "earthNdcDepth": 0.9975916850246191,
+      "originalStarInFrontOfEarth": true,
+      "correctedStarNdcDepth": 1,
+      "correctedStarBehindEarth": true
+    },
+    {
+      "canvas": [
+        357.33,
+        480
+      ],
+      "cameraDistance": 2686.5922256737467,
+      "earthNearDistance": 2680.2140886737466,
+      "originalStarDistance": 3000,
+      "originalNdcDepth": 0.997491165879856,
+      "earthNdcDepth": 0.9970635402292106,
+      "originalStarInFrontOfEarth": false,
+      "correctedStarNdcDepth": 1,
+      "correctedStarBehindEarth": true
+    },
+    {
+      "canvas": [
+        700,
+        440
+      ],
+      "cameraDistance": 2000,
+      "earthNearDistance": 1993.621863,
+      "originalStarDistance": 3000,
+      "originalNdcDepth": 0.9981325863678806,
+      "earthNdcDepth": 0.9967859172821331,
+      "originalStarInFrontOfEarth": false,
+      "correctedStarNdcDepth": 1,
+      "correctedStarBehindEarth": true
+    }
+  ]
+}

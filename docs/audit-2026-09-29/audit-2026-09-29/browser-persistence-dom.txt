@@ -1,0 +1,581 @@
+- banner:
+  - generic: ◉
+  - generic: ORBITLAB
+  - navigation "Section":
+    - link "Home":
+      - /url: "#/home"
+      - generic: ⌂
+      - generic: Home
+    - link "Launch":
+      - /url: "#/launch/engineer"
+      - generic: ▲
+      - generic: Launch
+    - link "Orbit":
+      - /url: "#/orbit/engineer"
+      - generic: ⊕
+      - generic: Orbit
+    - link "Build":
+      - /url: "#/build/engineer"
+      - generic: ⚙︎
+      - generic: Build
+  - navigation "App mode":
+    - link "Watch":
+      - /url: "#/launch/watch"
+      - generic: ▷
+    - link "Explore":
+      - /url: "#/launch/explore"
+      - generic: ◎
+    - link "Engineer":
+      - /url: "#/launch/engineer"
+      - generic: ⌬
+  - button "Lessons — 3 of 25 passed" [active]:
+    - generic: ✎
+    - generic: Lessons
+  - 'button "Data sources: Offline"':
+  - button "Help":
+    - generic: "?"
+  - button "Physics & sources":
+    - generic: ⓘ
+  - button "Camera sequence":
+    - generic: ◈
+  - combobox "Language":
+    - option "English" [selected]
+    - option "Русский"
+    - option "ไทย"
+- main:
+  - complementary "Mission setup":
+    - generic: MISSION CONTROL
+    - heading "Build your mission" [level=1]
+    - generic: 01—03
+    - generic: Flight-dynamics notation
+    - combobox "Flight-dynamics notation":
+      - 'option "By language: ISO 1151" [selected]'
+      - option "ISO 1151 (international)"
+      - option "GOST 20058-80 (Russian)"
+    - paragraph: By language, Russian reads ГОСТ 20058-80 and English and Thai ISO 1151. Symbols, body axes and signs of every rate and angle the app shows, the manual rate commands and the CSV follow it. The table is in Physics and sources.
+    - region "Quick start":
+      - heading "Quick start" [level=2]
+      - paragraph: Choose a starting mission to fill the settings. Review it, then press Launch.
+      - button "First flight · low Earth orbit Falcon 9 · Cape Canaveral · 1,000 kg rideshare · 500 km circular orbit.":
+        - strong: First flight · low Earth orbit
+        - generic: Falcon 9 · Cape Canaveral · 1,000 kg rideshare · 500 km circular orbit.
+      - button "ISS orbit · aligned launch window Soyuz-2.1a · Baikonur · 7,150 kg crew ship · next matching window. Orbit matching, without docking.":
+        - strong: ISS orbit · aligned launch window
+        - generic: Soyuz-2.1a · Baikonur · 7,150 kg crew ship · next matching window. Orbit matching, without docking.
+      - button "Next challenge · transfer orbit Falcon 9 · Cape Canaveral · 5,500 kg communications satellite · 250 × 35,786 km. This target is GTO, not circular GEO.":
+        - strong: Next challenge · transfer orbit
+        - generic: Falcon 9 · Cape Canaveral · 5,500 kg communications satellite · 250 × 35,786 km. This target is GTO, not circular GEO.
+    - region "Share & save the mission":
+      - heading "Share & save the mission" [level=2]
+      - button "Copy link"
+      - button "Save file"
+      - button "Open file"
+      - status:
+        - paragraph: Mission loaded from the link.
+        - button "Dismiss": ×
+    - generic: "01"
+    - heading "Vehicle & launch site" [level=2]
+    - generic: Launch vehicle
+    - combobox "Launch vehicle":
+      - option "Soyuz-2.1a (RU)"
+      - option "Soyuz-2.1b / Fregat-M (RU)"
+      - option "Proton-M / Briz-M (RU)"
+      - option "Angara-A5 / Briz-M (RU)"
+      - option "Falcon 9 Block 5 (US)" [selected]
+      - option "Falcon Heavy (US)"
+      - option "Atlas V 551 (US)"
+      - option "Vulcan Centaur VC4 (US)"
+      - option "Ariane 64 (EU)"
+      - option "Vega-C (EU)"
+      - option "Long March 2D (CN)"
+      - option "Long March 3B/E (CN)"
+      - option "H-IIA 202 (historical) (JP)"
+      - option "Long March 5 (CN)"
+      - option "H3-22 (JP)"
+      - option "PSLV-XL (IN)"
+      - option "Electron (NZ/US)"
+      - option "Starship (Super Heavy) (US)"
+      - option "Sputnik (R-7 8K71PS) (SU)"
+      - option "Vostok-K (8K72K) (SU)"
+      - option "Saturn V (US)"
+    - generic: SpaceX · US
+    - generic: 2 · Stages
+    - generic: Height
+    - strong:
+      - text: "70"
+      - emphasis: m
+    - generic: Liftoff mass
+    - strong:
+      - text: "548.3"
+      - emphasis: t
+    - generic: Liftoff thrust
+    - strong:
+      - text: 7,605
+      - emphasis: kN
+    - generic: Thrust / weight
+    - strong: "1.41"
+    - generic: Stages
+    - strong: "2"
+    - generic: Rated payload
+    - strong:
+      - text: LEO 22,800 · GTO / GEO 8,300 · SSO / polar 15,000
+      - emphasis: kg
+    - paragraph:
+      - strong: "Notes:"
+      - text: Partially reusable; enabling booster recovery reserves propellant for the boost-back/landing burns.
+    - generic: Launch site
+    - combobox "Launch site":
+      - option "Cape Canaveral SLC-40" [selected]
+      - option "Kennedy LC-39A"
+      - option "Vandenberg SFB"
+      - option "Yasny (Dombarovsky)" [disabled]
+      - option "Kapustin Yar" [disabled]
+      - option "Svobodny Cosmodrome" [disabled]
+      - option "Palmachim Airbase" [disabled]
+    - paragraph: 28.56° N · 80.58° W · lowest inclination 28.5°
+    - generic: "02"
+    - heading "Payload" [level=2]
+    - generic: Payload / satellite
+    - combobox "Payload / satellite":
+      - option "Communications satellite"
+      - option "Earth-observation satellite"
+      - option "Weather satellite"
+      - option "Navigation satellite"
+      - option "Science / astronomy satellite"
+      - option "CubeSat rideshare dispenser" [selected]
+      - option "Starlink batch (60 × 260 kg)"
+      - option "Crewed spacecraft"
+      - option "Sputnik-1 (PS-1)"
+      - option "Vostok 3KA"
+      - option "Apollo CSM + LM"
+    - generic: Payload mass (kg)
+    - spinbutton "Payload mass (kg)": "1000"
+    - generic: "03"
+    - heading "Target orbit & launch time" [level=2]
+    - group "Orbit presets":
+      - button "LEO" [pressed]
+      - button "ISS"
+      - button "STARLINK"
+      - button "SSO"
+      - button "POLAR"
+      - button "GPS"
+      - button "GLONASS"
+      - button "GTO"
+      - button "GEO"
+      - button "MOLNIYA"
+      - button "TUNDRA"
+      - button "CUSTOM"
+    - paragraph: Generic circular LEO at the minimum inclination of the launch site.
+    - generic: Perigee altitude (km)
+    - spinbutton "Perigee altitude (km)": "500"
+    - generic: Apogee altitude (km)
+    - spinbutton "Apogee altitude (km)": "500"
+    - generic: Inclination (°)
+    - spinbutton "Inclination (°)": "28.612"
+    - generic: Argument of perigee (°)
+    - spinbutton "Argument of perigee (°)": "0"
+    - generic: Orbital plane (RAAN)
+    - combobox "Orbital plane (RAAN)":
+      - option "Free (set by launch time)" [selected]
+      - option "Fixed RAAN"
+      - option "ISS plane"
+      - option "Sun-synchronous local time"
+    - generic: Launch time (UTC)
+    - textbox "Launch time (UTC)": 2026-09-29T19:47
+    - generic: "Plane not constrained: any time works"
+    - generic: Ideal Δv (this payload)
+    - generic: 14,672 m/s
+    - generic: Launch azimuth
+    - generic: 88.1° (N)
+    - generic: Ascent inclination
+    - generic: 28.61°
+    - generic: Insertion orbit
+    - generic: 200 × 500 km
+    - generic: Post-insertion Δv
+    - generic: 85 m/s (1)
+    - generic "Flight model"
+    - generic: Model
+    - combobox "Model":
+      - option "Full 6-DOF" [selected]
+      - option "Point mass (legacy)"
+    - paragraph: Six-DOF integrates translation and three-axis rotation with finite actuators. Vehicle inertia and aerodynamics include documented estimates.
+    - generic: Wind scenario
+    - combobox "Wind scenario":
+      - option "Calm" [selected]
+      - option "Crosswind with repeatable gusts"
+      - option "Vertical wind shear"
+    - generic: Wind scenario seed
+    - spinbutton "Wind scenario seed": "20260919"
+    - 'generic "Flexible vehicle: slosh and bending"'
+    - generic "Attitude autopilot"
+    - generic "Navigation (INS / GNSS)"
+    - generic "Control-system failures (G08)"
+    - option "None" [selected]
+    - option "Custom list"
+    - option "Proton-M, 2 July 2013 — Proton-M / Briz-M"
+    - option "Ariane 501, 4 June 1996 — Ariane 64"
+    - option "Vega VV17, 17 November 2020 — Vega-C"
+    - option "Nozzle hard-over (hypothetical) — Falcon 9 Block 5"
+    - 'generic "Ascent guidance: PEG and IGM (G01)"'
+    - option "Standard (linear-tangent closed loop)" [selected]
+    - option "PEG — Space Shuttle Powered Explicit Guidance"
+    - option "IGM — Saturn V Iterative Guidance Mode"
+    - 'generic "Dispersed flight: one Monte Carlo run (P08)"'
+    - 'generic "Monte Carlo: insertion accuracy (G05)"'
+    - generic "Guidance parameters"
+    - generic "Failure scenario"
+    - option "Nominal flight" [selected]
+    - option "One engine out"
+    - option "Total thrust loss"
+    - option "Premature stage separation"
+    - option "Fairing fails to separate"
+    - option "Range-safety destruct"
+    - option "Fire on the pad (Soyuz T-10-1)"
+    - option "Stage fails to separate (Soyuz 18a)"
+    - option "Random failure"
+    - 'option "1: First stage (9× Merlin 1D)" [selected]'
+    - 'option "2: Second stage (Merlin Vacuum)"'
+    - generic "Options"
+    - paragraph:
+      - generic: Ready to simulate · 1,000 kg of 22,800 kg rated to LEO
+    - button "↗ Launch mission SPACE":
+      - generic: ↗
+      - generic: Launch mission
+      - generic: SPACE
+    - button "New mission"
+    - paragraph: Changing the mission resets the flight.
+  - generic "Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.":
+    - generic: MISSION
+    - heading "Falcon 9 Block 5/CubeSat rideshare dispenser" [level=2]
+    - generic: STANDBY
+    - group "Camera view":
+      - button "Exterior" [pressed]:
+        - generic: Exterior
+      - button "Onboard":
+        - generic: Onboard
+      - button "Space":
+        - generic: Space
+      - button "Orbital map":
+        - generic: Orbital map
+    - button "Reference frames":
+    - button "Reset camera":
+      - generic: ⌖
+    - button "Glow (bloom)" [pressed]:
+      - generic: ✦
+    - button "Sound (off until you turn it on)":
+      - generic: ♪
+    - button "Full screen":
+      - generic: ⛶
+    - generic: MISSION
+    - heading "Countdown" [level=3]
+    - paragraph: "Terminal count: the vehicle is on the pad and the engines light a few seconds before release."
+    - generic: Latest flight event
+    - paragraph: Vehicle standing by on the pad.
+    - generic: Drag to orbit the camera, wheel to zoom
+    - group "Telemetry card — drag to move, arrow keys to move, alt+arrows to resize":
+      - generic: Telemetry card
+      - button "Dock in the telemetry panel · D":
+        - generic: ⇥
+      - 'button "Telemetry card: compact · H"':
+        - generic: ▤
+      - button "Restore position and size":
+        - generic: ⌖
+    - generic: Countdown
+    - generic: Alt h
+    - generic: 0.0 km
+    - generic: Speed
+    - generic: 409 m/s
+    - generic: V/S ḣ
+    - generic: 0 m/s
+    - generic: Ap × Pe
+    - generic: 0 × -6370 km
+    - generic: Stage
+    - generic: 1/2 · 0 %
+    - generic: Δv
+    - generic: 14672 m/s
+  - region "Playback and timeline":
+    - 'slider "Mission timeline: drag to scrub, ← → ±5 s, shift ±30 s"': "0"
+    - generic: T-00:10
+    - generic: Live
+    - generic: T-00:10
+    - button "Skip to previous event":
+      - generic: ⏮
+    - button "Play":
+      - generic: ▶
+    - button "Skip to next event":
+      - generic: ⏭
+    - button "Return to the live flight" [disabled]: Live
+    - generic: T-00:10
+    - generic: LAUNCH COUNTDOWN
+    - generic: Warp
+    - combobox "Warp":
+      - option "0.25×"
+      - option "0.5×"
+      - option "1×" [selected]
+      - option "2×"
+      - option "5×"
+      - option "10×"
+      - option "25×"
+      - option "50×"
+      - option "100×"
+      - option "500×"
+      - option "1000×"
+      - option "5000×"
+      - option "10000×"
+      - option "50000×"
+  - generic "6-DOF flight controls"
+  - text: Flight control
+  - combobox "Flight control":
+    - option "Autopilot" [selected]
+    - option "Manual rates"
+  - generic: Roll rate p (°/s)
+  - spinbutton "Roll rate p (°/s)" [disabled]: "0"
+  - generic: Pitch rate q (°/s)
+  - spinbutton "Pitch rate q (°/s)" [disabled]: "0"
+  - generic: Yaw rate r (°/s)
+  - spinbutton "Yaw rate r (°/s)" [disabled]: "0"
+  - text: Throttle (%)
+  - spinbutton "Throttle (%)" [disabled]: "100"
+  - button "Stop rotation command" [disabled]
+  - button "Attitude-loop inspector"
+  - paragraph: Manual commands request rotation rates; actuators have finite authority. Zero rates asks the controller to brake. Returning to Autopilot resumes mission guidance. 0% throttle shuts engines down; only restartable stages can relight after a delay.
+  - paragraph: "Measured roll / pitch / yaw (p / q / r): 0.00 / -0.00 / 0.00 °/s · RCS propellant: 130.00 kg"
+  - paragraph
+  - complementary "Flight telemetry":
+    - generic: FLIGHT TELEMETRY
+    - heading "Telemetry" [level=2]
+    - group "Chart range":
+      - button "Full mission" [pressed]
+      - button "Ascent"
+    - group "Panel view":
+      - button "Charts" [pressed]
+      - button "Equations"
+    - 'img "Altitude h (km) Displayed mission time: -10 to 60 s. Cursor: -10 s. Altitude h (km): latest plotted sample 0.03 at -10 s; plotted minimum 0.03, maximum 0.03."'
+    - 'img "Speed (m/s) Displayed mission time: -10 to 60 s. Cursor: -10 s. Inertial speed: latest plotted sample 408.5 at -10 s; plotted minimum 408.5, maximum 408.5. Airspeed: latest plotted sample 0 at -10 s; plotted minimum 0, maximum 0."'
+    - 'img "Dynamic pressure q̄ (kPa) Displayed mission time: -10 to 60 s. Cursor: -10 s. Dynamic pressure q̄ (kPa): latest plotted sample 0 at -10 s; plotted minimum 0, maximum 0."'
+    - 'img "Acceleration n (g) Displayed mission time: -10 to 60 s. Cursor: -10 s. Acceleration n (g): latest plotted sample 1 at -10 s; plotted minimum 1, maximum 1."'
+    - 'img "Apoapsis / periapsis (km) Displayed mission time: -10 to 60 s. Cursor: -10 s. Apoapsis altitude: latest plotted sample 0.03 at -10 s; plotted minimum 0.03, maximum 0.03. Periapsis altitude: no plotted data in this time range."'
+    - 'img "Δv remaining (m/s) Displayed mission time: -10 to 60 s. Cursor: -10 s. Δv remaining (m/s): latest plotted sample 14,671.66 at -10 s; plotted minimum 14,671.66, maximum 14,671.66."'
+    - 'img "Pitch command Θ (°) Displayed mission time: -10 to 60 s. Cursor: -10 s. Pitch command Θ (°): latest plotted sample 90 at -10 s; plotted minimum 90, maximum 90."'
+    - 'img "Mass m (t) Displayed mission time: -10 to 60 s. Cursor: -10 s. Mass m (t): latest plotted sample 548.3 at -10 s; plotted minimum 548.3, maximum 548.3."'
+    - heading "Δv budget" [level=3]
+    - generic: Delivered by thrust
+    - generic: 0 m/s
+    - generic: Gravity loss
+    - generic: 0 m/s
+    - generic: Drag loss
+    - generic: 0 m/s
+    - generic: Steering loss
+    - generic: 0 m/s
+    - generic: Earth rotation credit
+    - generic: 408 m/s
+    - generic: Max-Q
+    - generic: —
+    - heading "Flight plan" [level=3]
+    - generic: Insertion orbit
+    - generic: 200 × 500 km
+    - generic: Apogee burn (circularise / plane change)
+    - generic: 85 m/s · pending
+    - heading "Spent stages" [level=3]
+    - generic: none
+    - heading "Compare with another flight" [level=3]
+    - button "Use as reference"
+    - button "Open flight"
+    - button "Save flight"
+    - paragraph: "Pin this flight as the reference, change one thing (PEG or IGM, the autopilot gains, a control-system failure) and fly again: every chart then carries the reference dashed, the 3-D view its path, and the table below the differences."
+    - heading "Event log" [level=3]
+    - generic: No callouts yet — they appear as the flight unfolds.
+    - button "Export CSV"
+    - button "Flight report"
+    - button "Orbit lifetime"
+    - button "Continue in Orbit"
+- contentinfo:
+  - generic: Earth · Newtonian flight model
+  - generic: Educational simulation · approximate vehicle data
+- region "Lessons and the placement test":
+  - generic: ✎ Lessons and the placement test
+  - navigation "Lessons":
+    - link "Lessons":
+      - /url: "#/lessons"
+    - link "Placement test":
+      - /url: "#/lessons/test"
+    - link "Worksheets":
+      - /url: "#/lessons/worksheets"
+  - button "← Back to the simulator"
+  - heading "Lessons" [level=2]
+  - paragraph: "Training missions with a goal and pass criteria, graded as soon as the flight ends, and real cases worked from their data. Pick a lesson: a mission is set up for you, the settings it fixes are locked, and you fly it; a case opens the Orbit section's real satellites, and you work out its answers."
+  - generic: 3 of 25 passed
+  - button "Open lesson file…"
+  - button "Export results"
+  - generic: Your name, for the results file
+  - textbox "Your name, for the results file": QA-Test
+  - paragraph: Not sure where to start? A 25-question test of what you already know shows your strong and weak areas, recommends where to begin and what you can skip. Every lesson stays open whatever it says.
+  - button "Take the placement test"
+  - heading "1 · Orbital mechanics" [level=3]
+  - paragraph: Explore · point mass
+  - 'button "○ 1.1 Your first orbit Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed. hp ha T"':
+    - generic: ○
+    - generic: 1.1 Your first orbit
+    - generic: "Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed."
+    - generic: hp ha
+    - generic: T
+  - 'button "○ 1.1 QA Imported Lesson Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed. hp ha T"':
+    - generic: ○
+    - generic: 1.1 QA Imported Lesson
+    - generic: "Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed."
+    - generic: hp ha
+    - generic: T
+  - 'button "○ 1.2 Into the station''s plane Soyuz-2.1a stands at Baikonur with a crewed spacecraft for the space station, but the launch time on the panel is a bad one: the station''s orbital plane is far from the pad. Choose the launch time so that the ascent puts the spacecraft straight into the station''s plane — inclination 51.64° and the station''s longitude of the ascending node Ω — and fly it. Only the launch time may be changed. i Ω window"':
+    - generic: ○
+    - generic: 1.2 Into the station's plane
+    - generic: "Soyuz-2.1a stands at Baikonur with a crewed spacecraft for the space station, but the launch time on the panel is a bad one: the station's orbital plane is far from the pad. Choose the launch time so that the ascent puts the spacecraft straight into the station's plane — inclination 51.64° and the station's longitude of the ascending node Ω — and fly it. Only the launch time may be changed."
+    - generic: i Ω
+    - generic: window
+  - button "○ 1.3 A Hohmann transfer Falcon 9 carries 3 t to a circular orbit 2 000 km up. The ascent leaves the second stage in a 200 × 2 000 km ellipse — the first half of a Hohmann transfer — and it relights at apogee to make the orbit circular. Work out with the vis-viva equation how much Δv that apogee burn needs, fly the mission, and type in the burn's Δv and the period of the final orbit. vis-viva Δv":
+    - generic: ○
+    - generic: 1.3 A Hohmann transfer
+    - generic: Falcon 9 carries 3 t to a circular orbit 2 000 km up. The ascent leaves the second stage in a 200 × 2 000 km ellipse — the first half of a Hohmann transfer — and it relights at apogee to make the orbit circular. Work out with the vis-viva equation how much Δv that apogee burn needs, fly the mission, and type in the burn's Δv and the period of the final orbit.
+    - generic: vis-viva
+    - generic: Δv
+  - button "○ 1.4 Payload and Δv How much can Falcon 9 carry to a 500 km circular orbit? Set the payload mass so that the rocket reaches the target orbit carrying at least 17.5 t, with at least 150 m/s of Δv left in the second stage as a reserve. The panel starts at 19.5 t, which is too much. Only the payload mass may be changed. m_pl Δv":
+    - generic: ○
+    - generic: 1.4 Payload and Δv
+    - generic: How much can Falcon 9 carry to a 500 km circular orbit? Set the payload mass so that the rocket reaches the target orbit carrying at least 17.5 t, with at least 150 m/s of Δv left in the second stage as a reserve. The panel starts at 19.5 t, which is too much. Only the payload mass may be changed.
+    - generic: m_pl
+    - generic: Δv
+  - button "○ 1.5 Range safety and the launch site A 5 t satellite must go into a polar orbit 800 km up (inclination 90°). In this simulator, Cape Canaveral’s simplified range corridor does not include the southern dogleg used for real polar launches. Choose a launch site whose modelled range-safety corridor allows a polar launch, and fly the mission. Only the launch site may be changed. i range":
+    - generic: ○
+    - generic: 1.5 Range safety and the launch site
+    - generic: A 5 t satellite must go into a polar orbit 800 km up (inclination 90°). In this simulator, Cape Canaveral’s simplified range corridor does not include the southern dogleg used for real polar launches. Choose a launch site whose modelled range-safety corridor allows a polar launch, and fly the mission. Only the launch site may be changed.
+    - generic: i
+    - generic: range
+  - heading "2 · Guidance and navigation" [level=3]
+  - paragraph: Engineer · mostly six-DOF
+  - 'button "○ 2.1 Aerodynamic loads Soyuz-2.1a has no throttle bucket: flown as it is, it meets a dynamic pressure of about 34 kPa. Your payload''s structure is rated for 25 kPa. Keep the peak dynamic pressure q at or below 25 kPa and still reach orbit. You may change the guidance — the acceleration limit is the setting to look at — nothing else. q_max a_max"':
+    - generic: ○
+    - generic: 2.1 Aerodynamic loads
+    - generic: "Soyuz-2.1a has no throttle bucket: flown as it is, it meets a dynamic pressure of about 34 kPa. Your payload's structure is rated for 25 kPa. Keep the peak dynamic pressure q at or below 25 kPa and still reach orbit. You may change the guidance — the acceleration limit is the setting to look at — nothing else."
+    - generic: q_max
+    - generic: a_max
+  - button "○ 2.2 PEG and IGM Falcon 9 carries 18.8 t to 500 km, and one of its first-stage engines will fail at T+80 s. With the standard guidance the second stage runs dry short of the target. Keep the failure and the payload; choose an explicit upper-stage guidance — PEG, the Space Shuttle's, or IGM, Saturn V's — and reach the target orbit with at least 20 m/s of Δv left. G01 PEG IGM":
+    - generic: ○
+    - generic: 2.2 PEG and IGM
+    - generic: Falcon 9 carries 18.8 t to 500 km, and one of its first-stage engines will fail at T+80 s. With the standard guidance the second stage runs dry short of the target. Keep the failure and the payload; choose an explicit upper-stage guidance — PEG, the Space Shuttle's, or IGM, Saturn V's — and reach the target orbit with at least 20 m/s of Δv left.
+    - generic: G01
+    - generic: PEG
+    - generic: IGM
+  - 'button "○ 2.3 Inertial navigation without GNSS Six-DOF Falcon 9. The satellite navigation receiver is out for the whole ascent: the navigation has only its inertial unit, and the one fitted is a cheap MEMS unit. Keep the navigation''s position error within 500 m up to the first stage''s cut-off (MECO). GNSS stays off; choose the inertial unit. G02 INS"':
+    - generic: ○
+    - generic: 2.3 Inertial navigation without GNSS
+    - generic: "Six-DOF Falcon 9. The satellite navigation receiver is out for the whole ascent: the navigation has only its inertial unit, and the one fitted is a cheap MEMS unit. Keep the navigation's position error within 500 m up to the first stage's cut-off (MECO). GNSS stays off; choose the inertial unit."
+    - generic: G02
+    - generic: INS
+  - 'button "○ 2.4 Monte Carlo 3σ How accurately does Falcon 9 put 10 t into a 500 km orbit when its engines, masses and air are not exactly the book''s? The experiment (recommended): in the setup, open the Monte Carlo window, fly 20 runs with seed 1, look at the spread and its 3σ ellipse, and click the run whose perigee lies farthest from the target to fly it on its own. What is graded: a run of the set seeded 1, flown on its own to the end of the mission, and its perigee and how far that is from the target''s 500 km, typed in. The grade does not check the 20 runs or which run you picked. G05 P08 3σ"':
+    - generic: ○
+    - generic: 2.4 Monte Carlo 3σ
+    - generic: "How accurately does Falcon 9 put 10 t into a 500 km orbit when its engines, masses and air are not exactly the book's? The experiment (recommended): in the setup, open the Monte Carlo window, fly 20 runs with seed 1, look at the spread and its 3σ ellipse, and click the run whose perigee lies farthest from the target to fly it on its own. What is graded: a run of the set seeded 1, flown on its own to the end of the mission, and its perigee and how far that is from the target's 500 km, typed in. The grade does not check the 20 runs or which run you picked."
+    - generic: G05
+    - generic: P08
+    - generic: 3σ
+  - heading "3 · Failures" [level=3]
+  - paragraph: Failure scenarios
+  - 'button "○ 3.1 One engine out One of Falcon 9''s nine first-stage engines will fail at T+80 s. The rocket can still reach orbit — the other eight burn longer and the guidance flies on — but not with 19 t on top. Take off as little payload as you must: reach the 500 km target orbit carrying at least 17.5 t. The failure is fixed; only the payload mass may be changed. failure m_pl"':
+    - generic: ○
+    - generic: 3.1 One engine out
+    - generic: "One of Falcon 9's nine first-stage engines will fail at T+80 s. The rocket can still reach orbit — the other eight burn longer and the guidance flies on — but not with 19 t on top. Take off as little payload as you must: reach the 500 km target orbit carrying at least 17.5 t. The failure is fixed; only the payload mass may be changed."
+    - generic: failure
+    - generic: m_pl
+  - button "○ 3.2 A stuck gyro and the FDIR Falcon 9 flown as a rigid body under its autopilot. At T+30 s the rate gyros of inertial unit 1 will stick. Without fault detection the flight computer flies on unit 1 alone. Turn on the FDIR (Engineer mode, \"Control-system failures\") so that the three units vote, and reach the target orbit. The failure itself is fixed. G08 FDIR":
+    - generic: ○
+    - generic: 3.2 A stuck gyro and the FDIR
+    - generic: Falcon 9 flown as a rigid body under its autopilot. At T+30 s the rate gyros of inertial unit 1 will stick. Without fault detection the flight computer flies on unit 1 alone. Turn on the FDIR (Engineer mode, "Control-system failures") so that the three units vote, and reach the target orbit. The failure itself is fixed.
+    - generic: G08
+    - generic: FDIR
+  - 'button "○ 3.3 The crew''s escape A crewed Soyuz. At T+60 s, near the maximum dynamic pressure, the flight director commands an abort: the escape tower pulls the head section off the rocket, the descent module falls free and comes down on its parachutes. Fly it until the crew is on the ground, then read the peak load factor on the crew during the escape and type it in. G06 crew"':
+    - generic: ○
+    - generic: 3.3 The crew's escape
+    - generic: "A crewed Soyuz. At T+60 s, near the maximum dynamic pressure, the flight director commands an abort: the escape tower pulls the head section off the rocket, the descent module falls free and comes down on its parachutes. Fly it until the crew is on the ground, then read the peak load factor on the crew during the escape and type it in."
+    - generic: G06
+    - generic: crew
+  - heading "4 · Attitude control" [level=3]
+  - paragraph: Engineer · six-DOF
+  - button "○ 4.1 Reading the control loop Six-DOF Falcon 9 with its own autopilot. Fly through max-Q, then open the attitude-loop inspector at the moment of max-Q and read the pitch loop's crossover frequency and phase margin off its Bode plot. G03 ω_c Δφ":
+    - generic: ○
+    - generic: 4.1 Reading the control loop
+    - generic: Six-DOF Falcon 9 with its own autopilot. Fly through max-Q, then open the attitude-loop inspector at the moment of max-Q and read the pitch loop's crossover frequency and phase margin off its Bode plot.
+    - generic: G03
+    - generic: ω_c
+    - generic: Δφ
+  - 'button "○ 4.2 Gains with margins Someone has tuned this Falcon 9''s pitch–yaw autopilot for speed: an attitude gain K_θ of 4 and a rate gain K_ω of only 1.5. At max-Q its phase margin is under 20°. Retune the pitch–yaw gains so that at max-Q the pitch loop has at least 30° of phase margin and 6 dB of gain margin, and fly through it. G04 K_θ K_ω"':
+    - generic: ○
+    - generic: 4.2 Gains with margins
+    - generic: "Someone has tuned this Falcon 9's pitch–yaw autopilot for speed: an attitude gain K_θ of 4 and a rate gain K_ω of only 1.5. At max-Q its phase margin is under 20°. Retune the pitch–yaw gains so that at max-Q the pitch loop has at least 30° of phase margin and 6 dB of gain margin, and fly through it."
+    - generic: G04
+    - generic: K_θ
+    - generic: K_ω
+  - 'button "○ 4.3 A step test in flight This Falcon 9''s pitch–yaw autopilot is tuned for speed (K_θ 4, K_ω 1.5). Test it in flight: at about T+65 s, just past max-Q, command a 2° pitch step held for 8 s from the attitude-loop inspector''s flight test, and read its overshoot — about 12 %. Retune the pitch–yaw gains so that the step overshoots by no more than 6 %, fly the test again, and type in the overshoot you measured. E04 σ"':
+    - generic: ○
+    - generic: 4.3 A step test in flight
+    - generic: "This Falcon 9's pitch–yaw autopilot is tuned for speed (K_θ 4, K_ω 1.5). Test it in flight: at about T+65 s, just past max-Q, command a 2° pitch step held for 8 s from the attitude-loop inspector's flight test, and read its overshoot — about 12 %. Retune the pitch–yaw gains so that the step overshoots by no more than 6 %, fly the test again, and type in the overshoot you measured."
+    - generic: E04
+    - generic: σ
+  - 'button "○ 4.4 Bending and the notch filter This Falcon 9 is flown as the long, flexible body it is: its first bending mode is on. Without a filter the autopilot feeds the bending back into the nozzle and the vehicle breaks up within seconds. Keep the bending on; make the autopilot flexible-aware so that the rocket flies through max-Q. P05 notch"':
+    - generic: ○
+    - generic: 4.4 Bending and the notch filter
+    - generic: "This Falcon 9 is flown as the long, flexible body it is: its first bending mode is on. Without a filter the autopilot feeds the bending back into the nozzle and the vehicle breaks up within seconds. Keep the bending on; make the autopilot flexible-aware so that the rocket flies through max-Q."
+    - generic: P05
+    - generic: notch
+  - heading "5 · Advanced missions" [level=3]
+  - paragraph: Several phases
+  - 'button "○ 5.1 Bringing the booster home Falcon 9 from Cape Canaveral to 500 km, its first stage flying back to Landing Zone 1. With 12 t on top the stage still lands, but the second stage cannot reach the target orbit: the propellant kept back for the boostback and the landing is missing from the ascent. Carry at least 9 t to the target orbit with the stage back on LZ-1. Only the payload mass may change. RTLS LZ-1"':
+    - generic: ○
+    - generic: 5.1 Bringing the booster home
+    - generic: "Falcon 9 from Cape Canaveral to 500 km, its first stage flying back to Landing Zone 1. With 12 t on top the stage still lands, but the second stage cannot reach the target orbit: the propellant kept back for the boostback and the landing is missing from the ascent. Carry at least 9 t to the target orbit with the stage back on LZ-1. Only the payload mass may change."
+    - generic: RTLS
+    - generic: LZ-1
+  - 'button "○ 5.2 Rendezvous and docking Soyuz MS to the International Space Station, launched into the station''s plane from Baikonur. It is set to fly the old two-day profile, 34 orbits. The crew should be aboard the station within 4 hours of launch: choose the profile that docks that fast, fly it to docking, and type in how long it took. G07 Kurs"':
+    - generic: ○
+    - generic: 5.2 Rendezvous and docking
+    - generic: "Soyuz MS to the International Space Station, launched into the station's plane from Baikonur. It is set to fly the old two-day profile, 34 orbits. The crew should be aboard the station within 4 hours of launch: choose the profile that docks that fast, fly it to docking, and type in how long it took."
+    - generic: G07
+    - generic: Kurs
+  - 'button "○ 5.3 Sputnik-1 4 October 1957, Site 1 at Baikonur: the R-7 lightened for the job (8K71PS), four strap-ons and a core, nothing above them. Korolev meant to fly Object D, a 1.3 t laboratory, and it is set up here; but its instruments were late, and the rocket cannot put 1.3 t on the planned 215 × 939 km orbit. Fly what was flown instead, and type in the period of the orbit you reach. Only the payload mass may change. C01 R-7"':
+    - generic: ○
+    - generic: 5.3 Sputnik-1
+    - generic: "4 October 1957, Site 1 at Baikonur: the R-7 lightened for the job (8K71PS), four strap-ons and a core, nothing above them. Korolev meant to fly Object D, a 1.3 t laboratory, and it is set up here; but its instruments were late, and the rocket cannot put 1.3 t on the planned 215 × 939 km orbit. Fly what was flown instead, and type in the period of the orbit you reach. Only the payload mass may change."
+    - generic: C01
+    - generic: R-7
+  - 'button "○ 5.4 Vostok-1 12 April 1961, Site 1: Vostok-K with Blok E puts Yuri Gagarin''s Vostok on orbit directly. The orbit was planned at 181 × 230 km, low enough that air drag would bring the ship down within the week its life support lasted if the retro-rocket failed. The radio command to shut down Blok E did not come, and the stage burned on to its backup cut-off. Fly the orbit Gagarin really reached, 181 × 327 km, and type in its period. Only the orbit may change. C01 Vostok"':
+    - generic: ○
+    - generic: 5.4 Vostok-1
+    - generic: "12 April 1961, Site 1: Vostok-K with Blok E puts Yuri Gagarin's Vostok on orbit directly. The orbit was planned at 181 × 230 km, low enough that air drag would bring the ship down within the week its life support lasted if the retro-rocket failed. The radio command to shut down Blok E did not come, and the stage burned on to its backup cut-off. Fly the orbit Gagarin really reached, 181 × 327 km, and type in its period. Only the orbit may change."
+    - generic: C01
+    - generic: Vostok
+  - 'button "○ 5.5 Apollo 11: the way to the Moon 16 July 1969, LC-39A: Saturn V with Apollo 11 on top, 2 938 t. As set up, the S-IVB stops in the 186 km parking orbit with most of its 109 t of propellant still aboard. On the real flight it relit over the Pacific, 2 h 44 min after launch, for the translunar injection. Raise the apogee to the Moon''s distance, 370 000 km, so that the S-IVB relights, and type in the Δv of that burn. The Moon itself is not modelled here: the burn is the one the flight made, the Moon''s pull after it is not. Only the orbit may change. C01 Saturn V TLI"':
+    - generic: ○
+    - generic: "5.5 Apollo 11: the way to the Moon"
+    - generic: "16 July 1969, LC-39A: Saturn V with Apollo 11 on top, 2 938 t. As set up, the S-IVB stops in the 186 km parking orbit with most of its 109 t of propellant still aboard. On the real flight it relit over the Pacific, 2 h 44 min after launch, for the translunar injection. Raise the apogee to the Moon's distance, 370 000 km, so that the S-IVB relights, and type in the Δv of that burn. The Moon itself is not modelled here: the burn is the one the flight made, the Moon's pull after it is not. Only the orbit may change."
+    - generic: C01
+    - generic: Saturn V
+    - generic: TLI
+  - heading "6 · Real cases" [level=3]
+  - paragraph: Orbit section · real satellites
+  - button "✓ 6.1 THEOS-2 over Bangkok THEOS-2, Thailand's Earth-observation satellite, flies a sun-synchronous orbit. Real satellites opens on it, with its overflights of Bangkok. From its element set (the data below, frozen when the lesson opened) work out how fast its orbit's plane must turn and how fast the Earth's bulge (J₂) turns it, its mean height, how far from its track it can see tilted 45°, and the local time it passes over Bangkok; then say why a camera satellite flies such an orbit. M02 J₂ SSO":
+    - generic: ✓
+    - generic: 6.1 THEOS-2 over Bangkok
+    - generic: THEOS-2, Thailand's Earth-observation satellite, flies a sun-synchronous orbit. Real satellites opens on it, with its overflights of Bangkok. From its element set (the data below, frozen when the lesson opened) work out how fast its orbit's plane must turn and how fast the Earth's bulge (J₂) turns it, its mean height, how far from its track it can see tilted 45°, and the local time it passes over Bangkok; then say why a camera satellite flies such an orbit.
+    - generic: M02
+    - generic: J₂
+    - generic: SSO
+  - button "✓ 6.2 The Long March 5B stage of Tianhe In April 2021 the 21.6-tonne core stage that launched Tianhe was left in orbit, and it came down uncontrolled on 9 May, ten days later. Real satellites opens at the re-entry tool. From the stage's size and mass, its first element set and this app's prediction (the data below, with the Sun's activity frozen when the lesson opened) work out its cross-section tumbling and its ballistic coefficient, the agencies' ±20 % window, how long it actually stayed up, the prediction's error, and how long it would have lasted broadside; then say why a window is given. M03 C_D·A/m":
+    - generic: ✓
+    - generic: 6.2 The Long March 5B stage of Tianhe
+    - generic: In April 2021 the 21.6-tonne core stage that launched Tianhe was left in orbit, and it came down uncontrolled on 9 May, ten days later. Real satellites opens at the re-entry tool. From the stage's size and mass, its first element set and this app's prediction (the data below, with the Sun's activity frozen when the lesson opened) work out its cross-section tumbling and its ballistic coefficient, the agencies' ±20 % window, how long it actually stayed up, the prediction's error, and how long it would have lasted broadside; then say why a window is given.
+    - generic: M03
+    - generic: C_D·A/m
+  - button "✓ 6.3 Iridium 33 and Cosmos 2251 On 10 February 2009 Iridium 33 and the dead Cosmos 2251 collided over Siberia, the first collision of two whole satellites. The conjunction message issued the day before gave a probability of about 10⁻⁵¹. Real satellites opens at the close-approach tool. From the message's positions, velocities and uncertainties (the data below) work out the miss distance, the speed and angle at which they met, their combined radius, the uncertainty along the miss and how many standard deviations the miss was, and the probability with a cautious uncertainty against the usual threshold; then say why 10⁻⁵¹ was wrong. M01 P_c":
+    - generic: ✓
+    - generic: 6.3 Iridium 33 and Cosmos 2251
+    - generic: On 10 February 2009 Iridium 33 and the dead Cosmos 2251 collided over Siberia, the first collision of two whole satellites. The conjunction message issued the day before gave a probability of about 10⁻⁵¹. Real satellites opens at the close-approach tool. From the message's positions, velocities and uncertainties (the data below) work out the miss distance, the speed and angle at which they met, their combined radius, the uncertainty along the miss and how many standard deviations the miss was, and the probability with a cautious uncertainty against the usual threshold; then say why 10⁻⁵¹ was wrong.
+    - generic: M01
+    - generic: P_c

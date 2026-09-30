@@ -1,0 +1,100 @@
+name: Audit browser acceptance
+
+on:
+  push:
+    branches: [codex/audit-acceptance]
+    paths: [.github/workflows/audit-browser-acceptance.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Record source and runtime
+        run: |
+          set -euo pipefail
+          mkdir -p audit-browser-logs
+          {
+            printf 'source_sha=%s\n' "$(git rev-parse HEAD)"
+            printf 'event_sha=%s\n' "$GITHUB_SHA"
+            printf 'ref=%s\n' "$GITHUB_REF"
+            printf 'started_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf 'node=%s\n' "$(node --version)"
+            printf 'npm=%s\n' "$(npm --version)"
+            printf 'runner=%s/%s\n' "$RUNNER_OS" "$RUNNER_ARCH"
+          } | tee audit-browser-logs/runtime.txt
+
+      - name: Install dependencies
+        id: dependencies
+        run: |
+          set -euo pipefail
+          npm ci 2>&1 | tee audit-browser-logs/npm-ci.log
+
+      - name: Build production app
+        id: build
+        run: |
+          set -euo pipefail
+          npm run build 2>&1 | tee audit-browser-logs/build.log
+
+      - name: Install Chromium
+        id: chromium
+        run: |
+          set -euo pipefail
+          npx playwright install --with-deps chromium 2>&1 | tee audit-browser-logs/chromium-install.log
+
+      - name: Run all browser journeys
+        id: journeys
+        run: |
+          set -euo pipefail
+          node tests/browser/run.mjs 2>&1 | tee audit-browser-logs/browser-journeys.log
+
+      - name: Summarize evidence
+        if: always()
+        env:
+          DEPENDENCIES_OUTCOME: ${{ steps.dependencies.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          CHROMIUM_OUTCOME: ${{ steps.chromium.outcome }}
+          JOURNEYS_OUTCOME: ${{ steps.journeys.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p audit-browser-logs
+          {
+            printf '## Browser acceptance\n\n'
+            printf 'All four current journeys: launch-explore, mobile-smoke, pwa-offline, watch-controls.\n'
+            printf 'Production build served locally under /Orbitlab/; this job does not deploy.\n\n'
+            printf '```text\n'
+            if [ -f audit-browser-logs/runtime.txt ]; then
+              cat audit-browser-logs/runtime.txt
+            else
+              printf 'Runtime capture unavailable; event_sha=%s\n' "$GITHUB_SHA"
+            fi
+            printf 'dependencies=%s\nbuild=%s\nchromium=%s\njourneys=%s\n' \
+              "$DEPENDENCIES_OUTCOME" "$BUILD_OUTCOME" "$CHROMIUM_OUTCOME" "$JOURNEYS_OUTCOME"
+            printf 'finished_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            printf '```\n\n'
+            printf 'Logs are uploaded on success and failure. The runner captures screenshots for failed journeys only.\n'
+          } | tee audit-browser-logs/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload logs and failure screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-acceptance-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            audit-browser-logs/
+            tests/browser/screenshots/
+          if-no-files-found: warn
+          retention-days: 14

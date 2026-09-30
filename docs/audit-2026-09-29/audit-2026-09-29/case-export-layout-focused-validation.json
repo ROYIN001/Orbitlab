@@ -1,0 +1,71 @@
+{
+  "checkedAtUTC": "2026-09-29T22:37:00.8607664Z",
+  "headAfterCommit": "4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c",
+  "sourceTree": "f8513353f67c0f59637429df5b8129fa6bf565a1",
+  "runtime": {
+    "node": "v24.19.0",
+    "os": "Windows",
+    "note": "Focused local run; CI is separately pinned to Node22",
+    "vitest": "5.0.1"
+  },
+  "sourceSha256": {
+    "src/orbit/encounter-plane.ts": "2625eb3c51d26986cf178dd98c3dc5e986ffaad94b649d6a69a6dd51189fe305",
+    "tests/encounter-plane-labels.test.ts": "9a82386be97181670bd5464191effd798e3a9ec98812991ade87348f6e3479f5",
+    "tests/docx-pagination.test.ts": "3a0b35291f6267ab16995b5f5a1d8ce89e5a707876e1ac19552ad9d8103f04dd",
+    "src/worksheets/docx.ts": "d9bc5fa7cd594a9a3a74a4745592bf60689dc60a7c98e5f6da4dd2d7c9f283a0"
+  },
+  "before": {
+    "encounterLabels": {
+      "passed": 4,
+      "exit": 1,
+      "log": "encounter-labels-before.log",
+      "failed": 8
+    },
+    "numericPagination": {
+      "passed": 9,
+      "exit": 1,
+      "log": "docx-numeric-pagination-before.log",
+      "failed": 6
+    }
+  },
+  "after": {
+    "typecheck": {
+      "exit": 0,
+      "command": "node node_modules/typescript/bin/tsc --noEmit",
+      "log": "case-export-layout-typecheck.log"
+    },
+    "tests": {
+      "files": 7,
+      "log": "case-export-layout-focused-after.log",
+      "passed": 82,
+      "failed": 0,
+      "exit": 0,
+      "command": "node node_modules/vitest/vitest.mjs run tests/docx-pagination.test.ts tests/encounter-plane-labels.test.ts tests/worksheets.test.ts tests/worksheet-language.test.ts tests/worksheet-export-race.test.ts tests/case-worksheets.test.ts tests/conjunction.test.ts"
+    },
+    "build": {
+      "exit": 0,
+      "command": "node node_modules/vite/bin/vite.js build",
+      "log": "case-export-layout-build.log"
+    }
+  },
+  "localRender": {
+    "pages": 12,
+    "manifest": "browser-export-artifacts/editorial-layout-local/manifest.json",
+    "docx": 6,
+    "allPagesOpened": true,
+    "render": "browser-export-artifacts/editorial-layout-local/render-validation.json",
+    "passed": true,
+    "mode": "Source-module fixtures, not actual browser exports; SVG rasterization by sharp/libvips"
+  },
+  "actualBrowserAfter": {
+    "status": "success",
+    "runId": 36640532239,
+    "sourceSha": "4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c",
+    "artifactId": 11066063940,
+    "actualDownloads": 24,
+    "docxViewed": 12,
+    "pagesViewed": 18,
+    "visualPassed": true,
+    "evidence": "browser-export-artifacts/editorial-layout-final/visual-review.json"
+  }
+}

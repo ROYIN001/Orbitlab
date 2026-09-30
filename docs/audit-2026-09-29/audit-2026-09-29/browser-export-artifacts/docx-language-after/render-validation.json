@@ -1,0 +1,138 @@
+{
+  "source": "Actual browser4181 Downloads QAFINAL4, copied unchanged; SHA256 in manifest.json",
+  "race": "Root triggered TH DOCX at23:35:24 then immediately switched UI toRU; download completed23:35:31 Europe/Moscow",
+  "files": [
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.docx",
+      "lang": "ru",
+      "checks": {
+        "contains:Фамилия, имя:": true,
+        "contains:Код:": true,
+        "contains:Ключ ответов": true,
+        "absent:ชื่อ:": true,
+        "absent:รหัส:": true,
+        "absent:คำตอบ:": true,
+        "absent:วิธีทำ": true
+      },
+      "passed": true
+    },
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.html",
+      "lang": "ru",
+      "checks": {
+        "contains:Фамилия, имя:": true,
+        "contains:Код:": true,
+        "contains:Ключ ответов": true,
+        "absent:ชื่อ:": true,
+        "absent:รหัส:": true,
+        "absent:คำตอบ:": true,
+        "absent:วิธีทำ": true
+      },
+      "passed": true
+    },
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.docx",
+      "lang": "th",
+      "checks": {
+        "contains:ชื่อ:": true,
+        "contains:รหัส:": true,
+        "contains:เฉลย": true,
+        "absent:Фамилия, имя:": true,
+        "absent:Код:": true,
+        "absent:Ответ:": true,
+        "absent:Решение": true,
+        "absent:для учебных целей": true
+      },
+      "passed": true
+    },
+    {
+      "name": "orbitlab-key-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.html",
+      "lang": "th",
+      "checks": {
+        "contains:ชื่อ:": true,
+        "contains:รหัส:": true,
+        "contains:เฉลย": true,
+        "absent:Фамилия, имя:": true,
+        "absent:Код:": true,
+        "absent:Ответ:": true,
+        "absent:Решение": true,
+        "absent:для учебных целей": true
+      },
+      "passed": true
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.docx",
+      "lang": "ru",
+      "checks": {
+        "contains:Фамилия, имя:": true,
+        "contains:Код:": true,
+        "contains:Дата:": true,
+        "contains:Ответ:": true,
+        "contains:Решение": true,
+        "absent:ชื่อ:": true,
+        "absent:รหัส:": true,
+        "absent:คำตอบ:": true,
+        "absent:วิธีทำ": true
+      },
+      "passed": true
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-ru.html",
+      "lang": "ru",
+      "checks": {
+        "contains:Фамилия, имя:": true,
+        "contains:Код:": true,
+        "contains:Дата:": true,
+        "contains:Ответ:": true,
+        "contains:Решение": true,
+        "absent:ชื่อ:": true,
+        "absent:รหัส:": true,
+        "absent:คำตอบ:": true,
+        "absent:วิธีทำ": true
+      },
+      "passed": true
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.docx",
+      "lang": "th",
+      "checks": {
+        "contains:ชื่อ:": true,
+        "contains:รหัส:": true,
+        "contains:วันที่:": true,
+        "contains:คำตอบ:": true,
+        "contains:วิธีทำ": true,
+        "absent:Фамилия, имя:": true,
+        "absent:Код:": true,
+        "absent:Ответ:": true,
+        "absent:Решение": true,
+        "absent:для учебных целей": true
+      },
+      "passed": true
+    },
+    {
+      "name": "orbitlab-worksheets-mission-falcon9-cape-2026-09-29T20-00-00-000Z-QAFINAL4-th.html",
+      "lang": "th",
+      "checks": {
+        "contains:ชื่อ:": true,
+        "contains:รหัส:": true,
+        "contains:วันที่:": true,
+        "contains:คำตอบ:": true,
+        "contains:วิธีทำ": true,
+        "absent:Фамилия, имя:": true,
+        "absent:Код:": true,
+        "absent:Ответ:": true,
+        "absent:Решение": true,
+        "absent:для учебных целей": true
+      },
+      "passed": true
+    }
+  ],
+  "render": {
+    "converter": "LibreOffice26.8.0.3 headless exit0; Poppler100dpi",
+    "docxFiles": 4,
+    "pages": 8,
+    "visualInspection": "All8 PNG pages viewed: TH/RU worksheets3pages each and keys1page each. Generic labels, footer and title match requested language. Every displayed question/options block remains together. No clipped glyphs or text observed.",
+    "limitations": "This is one browser-generated flight worksheet draw in each language and one LibreOffice rendering environment; not every Word version or all question draws."
+  },
+  "passed": true
+}

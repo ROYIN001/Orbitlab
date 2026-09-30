@@ -1,0 +1,7 @@
+{
+  "executedAt": "2026-09-29T20:31:18.488Z",
+  "urlRequested": "http://127.0.0.1:4180/?m=invalid#/launch/explore",
+  "urlAfter": "http://127.0.0.1:4180/#/launch/engineer",
+  "notice": "Nothing in the link could be used as a mission: it is not an Orbitlab mission or it is damaged. The current mission is unchanged.\n\n×",
+  "note": "App renders paused mission and navigation by Enter works. Notice becomes visible in Engineer Share & save section."
+}
