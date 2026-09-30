@@ -133,8 +133,17 @@ export const VEHICLES: VehicleSpec[] = [
     guidanceDefaults: { kickAngle: 3, maxTurnRate: 0.3, pitchMax: 35, loftAltitude: 0 },
     // Flown as a rigid body: an early, longer kick and a faster turn allowance, the
     // programme that passed the calm, crosswind and shear reference missions with
-    // the actuator limits unchanged (docs/SIXDOF-ACCEPTANCE.md).
-    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 },
+    // the actuator limits unchanged (docs/SIXDOF-ACCEPTANCE.md). The strap-ons fly
+    // their pitch programme as a zero-lift turn and the steering closes the loop at
+    // T+140 s, twenty seconds after they leave, where the air is under 100 Pa
+    // (audit PHY-01). Handed over at the usual ~4 kPa, the steering asked for a
+    // nose 7° above the horizon while the stack still climbed at 45°: the load
+    // relief held it at the aerodynamic table's 15° edge through T+90–120 s, the
+    // stack pitched down at 3 °/s, and after the strap-ons left it swung past the
+    // table at 380 Pa. The zero-lift turn needs the 6° kick (4° lofts the core out
+    // of reach of its orbit; past 7° the vehicle cannot hold the turn at max Q):
+    // docs/VALIDATION.md, "Soyuz-2.1a's strap-ons fly a zero-lift turn".
+    guidanceDefaultsSixDof: { pitchOverAltitude: 50, kickAngle: 6, kickDuration: 12, maxTurnRate: 0.5, closedLoopStart: 140 },
     notes: 'The crew/cargo launcher for Soyuz MS and Progress: R-7 boosters and core with the RD-0110 third stage, direct insertion.',
   },
   {

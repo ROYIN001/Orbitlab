@@ -1115,6 +1115,10 @@ at 32°) being released by the aerodynamic angle limit as the dynamic pressure f
 step. With the per-vehicle aerodynamic tables (§3) the less unstable Soyuz is released sooner:
 the pitch-down now begins at about T+89 s, before the strap-ons separate, and takes the vehicle
 from 60° to 33° over twenty seconds at up to 3 °/s while the command runs down to 7°.
+That pitch-down is gone since audit PHY-01 (2026-10-01): in six-DOF the Soyuz-2.1a strap-ons fly
+a zero-lift turn from a 6° kick and the steering closes the loop at T+140 s, under 100 Pa, so the
+flow angle stays under 1° through the strap-ons' burn and the stack turns at the 1 °/s the
+command is allowed above the air (VALIDATION.md §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn").
 
 Throttle is limited by the engine's minimum throttle, an acceleration limit (e.g. 4.5 g), a
 throttle bucket around max-Q for vehicles that fly one, and the load-relief law of §3.
@@ -3164,7 +3168,7 @@ maximum falls moves with the day's air, which the model's standard atmosphere is
 3–9 km under the flown perigee, inside the model's acceptance band. In six-DOF the S-II's closed-loop
 steering takes its angle of attack past the aerodynamic table's 15° at T+218 s, 108 km up, where the
 dynamic pressure is under 1 Pa: the disclosure every six-DOF flight in the fleet makes once where its
-steering leaves the table in thin air (`evt.aeroEnvelopeExceeded`; Soyuz at T+124 s, Falcon 9 at
+steering leaves the table in thin air (`evt.aeroEnvelopeExceeded`; Soyuz at T+161 s, Falcon 9 at
 T+123 s, H-IIA at T+104 s), not a load.
 
 **13.9 Apollo 11 from the parking orbit to the translunar coast (parts 6b and 6c).** `ApolloFlight` in

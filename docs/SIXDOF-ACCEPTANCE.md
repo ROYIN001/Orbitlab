@@ -329,7 +329,9 @@ sensitivity cases. The terminal-restart stress set still lands 16 of 18. Two fai
 The Soyuz late first-stage pitch-down is unchanged in character — the command cone releases a
 closed-loop pitch command that has run far below the vehicle as the dynamic pressure falls — but
 begins earlier, at about T+89 s instead of at booster separation, because the less unstable
-vehicle is released sooner. It stays a guidance item (G01).
+vehicle is released sooner. It stays a guidance item (G01). *Since 2026-10-01 (audit PHY-01) it is
+gone: the strap-ons fly a zero-lift turn and the steering closes the loop at T+140 s
+(VALIDATION.md §3, "Soyuz-2.1a's strap-ons fly a zero-lift turn").*
 
 ## Every vehicle in six-DOF (roadmap P01, 2026-09-23)
 

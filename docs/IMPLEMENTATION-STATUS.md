@@ -168,11 +168,6 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 - **Six-DOF for a rocket of one's own** (Build, D03). Point mass is its default; six-DOF flies it
   with generic steering and thrusters where the real rockets have their own. What is still
   missing is under "Known limitations" below.
-- **Soyuz-2.1a's late first-stage pitch in six-DOF**: from about T+89 s, as the dynamic
-  pressure falls, the aerodynamic angle limit releases a closed-loop pitch command that has run
-  far below the vehicle (7° against 33°), and the vehicle pitches down from 60° to 33° above the
-  horizon over twenty seconds at up to 3 °/s. It is not a thrust effect and is left for the
-  guidance work (G01).
 - **Flying back and flying home.** The returns and the ship's descent are flown on estimated
   data (return aerodynamics, the flaps, the catch envelope, the landing propellant), and
   Flight 5's ship comes down about six minutes early and 15–25° of longitude short of the real

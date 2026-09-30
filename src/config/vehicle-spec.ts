@@ -116,6 +116,8 @@ const GUIDANCE_BOUNDS: Record<string, [number, number]> = {
   pitchOverAltitude: [0, 20000], kickAngle: [0, 60], kickDuration: [0, 120], maxTurnRate: [0, 10], loftAltitude: [0, 1e6],
   gravityTurnEnd: [0, 3e5], parkingAltitude: [0, 3e6], pitchMax: [-90, 90], pitchMin: [-90, 90], slewRate: [0, 50],
   maxAccel: [0, 200], maxTimeToGo: [0, 2e4],
+  // a vehicle's own hand-over time (C01, PHY-01): part of a spec, never a user setting
+  closedLoopStart: [0, 2e4],
 };
 
 function checkEngine(c: Checker, raw: unknown, path: string, groundLit: boolean): void {

@@ -35,7 +35,7 @@ describe('computed guidance', () => {
     expect(rows.map((r) => r.key)).toEqual([...AUTO_GUIDANCE_FIELDS]);
     const value = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     // Soyuz-2.1a's own six-DOF programme (src/data/vehicles.ts)
-    expect(value).toMatchObject({ pitchOverAltitude: 50, kickAngle: 4, kickDuration: 12, maxTurnRate: 0.5 });
+    expect(value).toMatchObject({ pitchOverAltitude: 50, kickAngle: 6, kickDuration: 12, maxTurnRate: 0.5 });
     expect(value.gravityTurnEnd).toBe(flown.gravityTurnEnd / 1000);
     expect(value.loftAltitude).toBe(flown.loftAltitude / 1000);
     for (const key of ['pitchOverAltitude', 'kickAngle', 'kickDuration', 'maxTurnRate'] as const) expect(value[key]).toBe(flown[key]);
