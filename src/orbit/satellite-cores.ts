@@ -208,7 +208,8 @@ export interface DisposalCore {
   /**
    * IADC's re-orbit above GEO for radiation-pressure coefficient `cr` and
    * area-to-mass `areaToMass` (m²/kg): the rise ΔH = 235 km + (1000·C_R·A/m)
-   * km, returned in m, and its Δv ≈ v·ΔH/(2a), m/s (V-V3).
+   * km, returned in m, and its Δv, the two-burn Hohmann transfer to the
+   * circle ΔH higher (v·ΔH/(2a) is its first-order term), m/s (V-V3).
    */
   graveyardRaise: (cr: number, areaToMass: number) => { dh: number; dv: number };
   /** North–south station keeping against an inclination drift of `di` rad a year (the map writes °/yr; SI here): 2v·sin(Δi/2), v at GEO, m/s a year (V-V4). */

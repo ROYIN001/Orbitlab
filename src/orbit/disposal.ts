@@ -110,10 +110,10 @@ export function graveyardRaise(cr: number, areaToMass: number): { dh: number; dv
  * against the inclination the Sun's and the Moon's pull builds up, `di` rad
  * a year: the plane turned back each year at the geostationary speed,
  * 2v·sin(Δi/2) (`planeChangeDv`). The drift itself is not the builder's to
- * choose, and no figure for it is kept here: the propagator's own Sun and
- * Moon give 0.6–1.2° a year (tests/propagator.test.ts), and 0.85° a year
- * reproduces TU Delft Fig. 11's ten-year average of 45.5 m/s a year (V-V4),
- * so a template gives the drift with its source.
+ * choose, and no figure for it is kept here: tests/propagator.test.ts holds
+ * the propagator's own Sun and Moon between 0.6 and 1.2° a year, and 0.85°
+ * a year reproduces TU Delft Fig. 11's ten-year average of 45.5 m/s a year
+ * (V-V4), so a template gives the drift with its source.
  */
 export function nsskPerYear(di: number): number {
   finite('di', di, 0);
@@ -141,6 +141,12 @@ export function nsskPerYear(di: number): number {
  * stays that of the epoch all year; the air reads the activity's mean over
  * the year, as the propagator's long steps do (`indicesOver`). With a
  * measured series, the year after the epoch; with an ECSS level, that level.
+ *
+ * The Sun's place and the season are the epoch's too: the revolution is
+ * read once, at `o.jd0`, where the propagator reads it every step. Over a
+ * year at 500 km the node's drift and the season move the figure some
+ * ±30 % about its mean, and the epoch's lay within 6 % of that mean at
+ * inclinations 0 to 97° (a review probe from 2026-01-01).
  *
  * An estimate: the density model's own error (some 20 % on the spheres of
  * R05, docs/VALIDATION.md §6) and the drag area's (a tumbling mean,
