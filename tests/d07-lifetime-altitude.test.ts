@@ -80,7 +80,10 @@ describe('the lowest altitude that lasts (D07)', () => {
   }, 120_000);
 
   it('says when the range holds no answer, and refuses nonsense', () => {
-    const below = minAltitudeForLifetime({ ...base, years: 0.001 });
+    // at 150 km it lasts hours, not days (the first run asked for 0.001 years, 8.8 h, and it came down sooner)
+    const at150 = lifetimeAt(150e3, base, YEAR)!;
+    expect(at150).toBeLessThan(86400);
+    const below = minAltitudeForLifetime({ ...base, years: at150 / 2 / YEAR });
     expect(below.outcome).toBe('belowRange');
     expect(below.altitude).toBe(150e3);
     expect(below.runs.length).toBe(1);
