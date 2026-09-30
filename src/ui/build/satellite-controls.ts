@@ -45,6 +45,8 @@ export function numberField(ws: SatelliteWorkspace, f: SatelliteField, keyPrefix
     min: f.min * scale, max: f.max * scale, step: f.step, show: (x) => x * scale, read: (n) => n / scale,
   }, (next) => ws.change(withValue(ws.design, f.path, f.integer && Number.isFinite(next) ? Math.round(next) : next)));
   box.dataset.path = f.path;
+  // a node the design does not fix is flown at 0 (`designOrbit`): the empty box says so
+  if (f.path === 'orbit.raan' && v === undefined) box.placeholder = '0';
   if (f.path === 'orbit.inclination') box.disabled = inclinationFollows(d);
   const unit = fieldUnitText(f.unit);
   const row = el('span', 'bx-with-unit');

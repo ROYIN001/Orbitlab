@@ -57,7 +57,8 @@ const TAB_KEY: Record<BenchTab, string> = {
 };
 /** Each tab's numbers: its groups, and single fields from others (the bus's edges set the torques and the drag). */
 const TAB_FIELDS: Record<BenchTab, { groups: readonly FieldGroup[]; paths?: readonly string[] }> = {
-  power: { groups: ['power'], paths: ['orbit.ltan'] },
+  // the node sets β and so the eclipse: the local time of a sun-synchronous orbit, the right ascension of any other (its only box)
+  power: { groups: ['power'], paths: ['orbit.ltan', 'orbit.raan'] },
   propulsion: { groups: ['propulsion'], paths: ['bus.dryMass', 'lifeYears'] },
   attitude: { groups: ['adcs'], paths: ['bus.size.width', 'bus.size.height', 'bus.size.depth'] },
   radio: { groups: ['comms'] },

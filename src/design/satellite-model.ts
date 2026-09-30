@@ -390,7 +390,12 @@ export function syncOrbit(design: SatelliteDesign): SatelliteDesign {
   return design;
 }
 
-/** A copy with the orbit sun-synchronous or not: on, the local time kept or 10:30 a.m. at the descending node; off, the node kept where it was. */
+/**
+ * A copy with the orbit sun-synchronous or not: on, the local time kept or
+ * 10:30 a.m. at the descending node; off, the local time dropped, so the node
+ * is at the right ascension the design is given (0 until one is typed on the
+ * bench's Power tab), not where the local time put it.
+ */
 export function withSso(design: SatelliteDesign, sso: boolean): SatelliteDesign {
   const next = clone(design);
   next.orbit.sso = sso;
