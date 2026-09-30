@@ -272,7 +272,7 @@ function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, a
   // One booster state per strap-on group.
   const groups = active ? active.boosters.map((b) => b.attached) : [];
   const stageAttached = vehicle.stages.map((st) => st.attached);
-  const key = `${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${groups.map(Number).join('')}|${area}`;
+  const key = `${vehicle.activeIndex}|${stageAttached.map(Number).join('')}|${vehicle.fairingAttached}|${vehicle.payloadAttached}|${groups.map(Number).join('')}|${area}`;
   let tables = ascentTables.get(vehicle.spec);
   if (!tables) {
     tables = new Map();
@@ -280,7 +280,7 @@ function stackAeroTable(vehicle: VehicleModel, geometry: RigidVehicleGeometry, a
   }
   let table = tables.get(key);
   if (!table) {
-    table = ascentAeroTable(vehicle.spec, { activeIndex: vehicle.activeIndex, stageAttached, fairingAttached: vehicle.fairingAttached, boosterGroups: groups },
+    table = ascentAeroTable(vehicle.spec, { activeIndex: vehicle.activeIndex, stageAttached, fairingAttached: vehicle.fairingAttached, payloadAttached: vehicle.payloadAttached, boosterGroups: groups },
       area, (index) => geometry.stageBases[index].x);
     tables.set(key, table);
   }

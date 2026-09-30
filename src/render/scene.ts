@@ -15,6 +15,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import type { Vec3 } from '../physics/vec3';
 import type { VisualFrame } from '../physics/frame';
+import { buildMoon, type MoonView } from './moon';
 import { R_EARTH } from '../physics/constants';
 import { skyState, type SkyState } from './sky';
 import { buildStarField } from './stars';
@@ -228,6 +229,8 @@ export class SceneManager {
   readonly earthMesh: THREE.Mesh;
   readonly cloudMesh: THREE.Mesh | null;
   readonly atmoMesh: THREE.Mesh;
+  /** C01: the Moon (hidden unless `setMoon` places it) */
+  readonly moon: MoonView;
   readonly stars: THREE.Points;
   readonly sun: THREE.DirectionalLight;
   readonly ambient: THREE.AmbientLight;
@@ -358,6 +361,10 @@ export class SceneManager {
     this.atmoMesh = new THREE.Mesh(new THREE.SphereGeometry(R_EARTH + 110e3, 96, 64), this.atmoMat);
     this.earthGroup.add(this.atmoMesh);
     this.scene.add(this.earthGroup);
+
+    // C01: the Moon, shown where a flight to it needs it
+    this.moon = buildMoon();
+    this.scene.add(this.moon.mesh);
 
     this.stars = buildStarField(4e8, this.renderer.getPixelRatio());
     this.starsMat = this.stars.material as THREE.ShaderMaterial;
@@ -688,6 +695,13 @@ export class SceneManager {
     this.composer.setPixelRatio(pr);
     this.starsMat.uniforms.uPixelRatio.value = pr;
   }
+
+  /** C01: the Moon at its ECI position (m) and turned by its body axes (row-major), or hidden. */
+  setMoon(r: Vec3 | null, bodyToEci?: readonly number[]): void {
+    if (!r || !bodyToEci) { this.moon.mesh.visible = false; return; }
+    this.moon.place(this.toScene(r, this.moonPos), bodyToEci);
+  }
+  private moonPos = new THREE.Vector3();
 
   /** Convert an ECI position (m) into scene coordinates relative to the origin. */
   toScene(v: Vec3, out = new THREE.Vector3()): THREE.Vector3 {

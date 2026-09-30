@@ -136,7 +136,7 @@ labelled as such; the known gaps are under "Known limitations" below.
 
 | | Site 1/5, Gagarin's Start | Site 31/6 | Source |
 |---|---|---|---|
-| Position | 45.920°N 63.342°E | 45.996°N 63.564°E | en.wikipedia (drawn at the site's own point) |
+| Position | 45.920°N 63.342°E | 45.996°N 63.564°E | en.wikipedia (drawn at the site's own point; a mission that names the pad, flown from it — C01) |
 | Pit | 250 m long, 100 m wide, 45 m deep | 135 × 32 m, 24 m deep | Site 1: Roscosmos, elementy (50 m deep in Техника—молодёжи 1991); Site 31: "scaled down", at least 20 m deep where the service cabin fell in 2025 (Habr, iXBT); its length and width are estimates |
 | Direction the pit runs | 300° | 250° | estimates: no source gives them |
 | Launch table opening | 15 m | 15 m | ESA, on the Kourou copy of the Baikonur design |
@@ -183,7 +183,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 2 532 tests in 175 files, 20 to 30 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 2 538 tests in 179 files, 20 to 30 minutes on four cores. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -202,9 +202,10 @@ moves only with the physics' wind; the calm default leaves it where it was made.
   worked by hand ([VALIDATION.md](VALIDATION.md) §8).
 
 `npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
-model, Soyuz MS-10's and 18a's aborts flown to the crew on the ground, and the screening's time
-filter against the full search over its whole sweep (tests/heavy/, about 20 minutes), and D01's
-21 six-DOF fingerprints, 160 s of flight each (about four minutes more).
+model, Soyuz MS-10's and 18a's aborts flown to the crew on the ground, Soyuz MS-16 and MS-25 flown
+from their real second of launch to the station, and the screening's time filter against the full
+search over its whole sweep (tests/heavy/, about 20 minutes), and D01's 21 six-DOF fingerprints,
+160 s of flight each (about four minutes more).
 `npm run test:sixdof-fleet` flies the fleet matrix as rigid bodies: its 126 accepted cases, each
 vehicle's first case in crosswind and shear, and Long March 2D's real mission — 161 cases, about
 2 h 40 min on four cores ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and
@@ -218,22 +219,60 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 
 | Item | | Item | |
 |---|---|---|---|
-| F03 delivered-orbit matrix in the repository | done | G04 Bode, step response, margins | |
-| F05 simulation split into modules | done | E04 controller tuning mode | |
-| F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | |
-| F04 break-ups with Δv left | done | G08 control-system failures | |
-| P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | |
-| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
+| F03 delivered-orbit matrix in the repository | done | G04 Bode, step response, margins | done |
+| F05 simulation split into modules | done | E04 controller tuning mode | done |
+| F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | done |
+| F04 break-ups with Δv left | done | G08 control-system failures | done |
+| P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | done |
+| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | not started |
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for every vehicle (18 when chosen; C01's three have it too) | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
-| P05 slosh, bending and notch filter | done | C01 historical missions | |
+| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a–6e of 7 (below) |
 | U07 ГОСТ 20058-80 notation | done | | |
-| G03 attitude-loop inspector | | | |
-| E02 live equations panel | | | |
+| G03 attitude-loop inspector | done | | |
+| E02 live equations panel | done | | |
 | E01 reference frames in 3-D | done | | |
+
+C01 historical missions is done in seven parts on branch `claude/c01-historical-missions`:
+(1) real flights on the fleet's vehicles, on their real dates — Soyuz MS-16 and MS-25,
+ORBCOMM-2, Angara-A5 1L, Hayabusa2 — in Watch and in Explore/Engineer, with the station's
+measured node on those days ([PHYSICS.md §13](PHYSICS.md)) — done; (2) Crew Dragon and Demo-2, flown on Falcon 9 without a fairing, and a drone-ship entry burn that spends the stage's spare propellant (the lone Falcon 9 stage never landed on the ship before) — done;
+(3) each flight compared with the real one — the caption, a table under the result and on
+Watch's end card, the real events on the telemetry charts, and the dockings timed; and a lone
+first stage's drone-ship reserve sized for its return, found on Demo-2 — done;
+(4) Sputnik 1 and Vostok 1 on the first R-7s (8K71PS, 8K72K), vehicles of historical flights
+kept out of the fleet matrix and held to their own flights — done; (5) Mercury-Redstone 3 from LC-5,
+the Mercury capsule flown home on its own after a suborbital cut-off (retros, drogue, main,
+splashdown), within 11–16 km of Freedom 7's splashdown in both models, flown from LC-5 itself — done; (6) Apollo 11 on
+Saturn V, the whole mission to the Moon and back, in seven steps: (6a) the Saturn V to the parking
+orbit, with planned engine shutdowns, the mixture shift and the jettisons, LC-39A as in 1969 — done;
+(6b) the S-IVB's restart for the Moon onto the flown conic and the transposition, docking and the
+LM's extraction at the flown times — done; (6c) the Moon in the model — JPL's DE441 Moon and Sun for
+the week, the Moon turned as the IAU turns it, their pull on the flight, the injection aimed at the
+flown conic's perigee, the service engine's evasive burn and the midcourse correction worked out as
+the flight's was, to the lunar orbit insertion within 40 km and a metre per second of the flown
+approach, and the Moon drawn — done; (6d) lunar
+orbit and the landing — the Moon's degree-2 field, LOI-1 turned into the plane over the landing site
+and LOI-2 at the flown times, Eagle undocked and flown on its own beside Columbia, DOI to the targeted
+perilune, the powered descent through P63, P64 and P66 with the descent engine's fixed throttle and
+throttle recovery, to within a few metres of Tranquility Base and 10 kg of the flown landed mass, and
+the LM, the CSM and the ground at the site drawn — done; (6e) the LM's ascent and docking — the
+ascent engine's P12 guidance off the Moon, the lift-off timed for the CSM, the coelliptic sequence (CSI, CDH,
+TPI, two midcourse corrections, the braking gates) on the LM's thrusters to within minutes of the flown
+times and a metre or two a second of the flown burns, the docking, the ascent stage's jettison, and the
+descent stage left at Tranquility Base drawn — done; (6f) home and splashdown — the transearth
+injection aimed as the ground aimed it, at the entry the flight flew, the coast home and its correction,
+the command module on its own, its lifting entry steered by a prediction of the rest of the flight
+against the range to the flown splash point, the drogues and the mains, into the Pacific within a
+minute of the flown time and a few kilometres of the flown point, and the command module, its parachutes
+and the service module drawn — done; (6g) the viewer and the documents — the ascent stage drawn in its
+own shape, the lift-off watched looking down at the descent stage it leaves, the braking and the
+station-keeping from behind Eagle with Columbia ahead, the entry's glow, the station-keeping at 10×, the
+whole flight in about forty minutes of Watch, and the README — done; (7) the fleet acceptance and the
+documents.
 
 Twenty further items are kept for later, once these are done.
 
@@ -298,7 +337,7 @@ Phase 2.5, the physics made finer and the gaps of Phase 2 closed, on the same br
 | M03: the drag fitted, transfer orbits, more cases | done: the ballistic coefficient fitted to the element set's decay rate or to a history of sets read from a file (seven spheres within 30 % of their known C_D A/m); an eccentric orbit carried by Cowell with the Sun and the Moon; 66 rocket stages of 2023–2025 and NAPA-2 as new cases (a finding: from first sets, half come down inside the window, 33 of 66; the criterion fixed before, on B from the first set's decay, was missed and could not have been met, only 14 first sets giving a B); the stages' mass is GCAT's dry mass since the fix-up, and a screen written after the results (a first set not the stage's, a kick stage built to fire after deployment, an eccentric perigee lowered more than drag can) is reported beside the unscreened counts (32 of 61); where it may come down drawn on the map. The test fixed before it ran, the agencies' way (B fitted to two NORAD sets a week apart, 100 re-entries of 1985–2004 from J. McDowell's archive): 81 % inside at 30 days and 85 % at 10 (met), 79 % at 5 days (missed by one object; median error under 2 % at each) ([VALIDATION.md](VALIDATION.md) §7) |
 | Real satellites at the Watch level | done: the Watch tour goes on to eight steps with the real catalogue: the station and its passes, THEOS-2, the navigation and weather satellites, the imagers, the Fengyun-1C debris and the Long March 5B re-entries |
 | Worksheets from real cases | done: a sheet and its answer key for the Iridium 33–Cosmos 2251 collision, the Long March 5B stage of Tianhe and THEOS-2 over Bangkok, worked with the published data and this app's physics, in three languages, each with its units and option letters in its own script. Graded as lessons 6.1–6.3 (E03, track 6): Real satellites opens at the case's tool, and the typed answers are graded by the sheet's own key and tolerances with the data frozen when the lesson opens ([USER-GUIDE](USER-GUIDE.md) §18) |
-| Checks in a real browser, and the daily refresh | done: online mode in Chromium through this machine's proxy. NOAA's four answers were read both times. CelesTrak's nine lists, asked all at once, came back three without the cross-origin header a page needs; asked one at a time two hours later, one of nine did — so it is not the asking at once alone, and whether CelesTrak's edge or this machine's proxy drops the header could not be told apart from here. Either way the whole catalogue fell back to the snapshot for one list, so now a list that cannot be read keeps only its own group from the snapshot (the data window and the panel say which), and a host that refuses (403, 429) is asked nothing more. A 30 000-object screening was timed with the CPU slowed fourfold (below). The deploy's refresh step ran on the builds of 27 September (fresh CelesTrak and SWPC data at 13:02 UTC); the scheduled daily build (03:17 UTC) did not start on 28 September: GitHub had begun none by 05:21, and GitHub documents that scheduled runs may be delayed or dropped under load. The deploys pushed to main run the same step: on 28 September at 05:19 UTC it read SWPC's space weather (30 days of F10.7, 57 Kp readings, as of 00:00 UTC) and CelesTrak's six groups (2 408 element sets, as of 23:59 UTC the day before), neither kept its baseline. The Earth-orientation source of P2.5 is not on main yet, so it has not run there. Opened straight from its link, a case lesson sometimes lost the catalogue: the bundled snapshot was read under the online sources' 8 s limit while the page was still starting. The snapshot now has its own limit, 60 s, for a server that hangs; nine cold opens of the three case lessons at a phone's size in Chromium all loaded, in 10 to 12 s. |
+| Checks in a real browser, and the daily refresh | done: online mode in Chromium through this machine's proxy. NOAA's four answers were read both times. CelesTrak's nine lists, asked all at once, came back three without the cross-origin header a page needs; asked one at a time two hours later, one of nine did — so it is not the asking at once alone, and whether CelesTrak's edge or this machine's proxy drops the header could not be told apart from here. Either way the whole catalogue fell back to the snapshot for one list, so now a list that cannot be read keeps only its own group from the snapshot (the data window and the panel say which), and a host that refuses (403, 429) is asked nothing more. A 30 000-object screening was timed with the CPU slowed fourfold (below). The deploy's refresh step ran on the builds of 27 September (fresh CelesTrak and SWPC data at 13:02 UTC); the scheduled daily build (cron 03:17 UTC) runs, but late: GitHub started it at 09:55 UTC on 28 September and 09:56 UTC on 29 September, about six and a half hours after its time (GitHub documents that scheduled runs may be delayed under load; an earlier note here, written at 05:21 on the 28th, took the delay for a run that had not happened). On 29 September its snapshot step read all three sources afresh, none keeping its baseline: SWPC's space weather (30 days of F10.7, 59 Kp readings, as of 06:00 UTC), CelesTrak's six groups (2 409 element sets, as of 05:56 UTC) and the IERS Earth orientation (3 197 days from 2019-01-01, predicted from 25 September). The deploys pushed to main run the same step. Opened straight from its link, a case lesson sometimes lost the catalogue: the bundled snapshot was read under the online sources' 8 s limit while the page was still starting. The snapshot now has its own limit, 60 s, for a server that hangs; nine cold opens of the three case lessons at a phone's size in Chromium all loaded, in 10 to 12 s. |
 
 Phase 3, the rocket builder (the Build section), on the same branch. No built-in flight changed
 (the fingerprints below); Falcon Heavy's data changed on main (F11), and the catalogue took them.

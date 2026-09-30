@@ -198,16 +198,19 @@ export class AscentGuidance {
    * orbit, which is flown level to the perigee speed of its insertion orbit.
    */
   private readonly suborbital?: SuborbitalAim;
+  /** The target orbit's plane, its unit normal, when the closed loop flies into it (`targetPlane`). */
+  private readonly plane?: Vec3;
   lastPitch = 90;
 
   constructor(params: GuidanceParams, azimuthRotating: number, ascentInclination: number, insertionAltitude: number, insertionApoapsis = insertionAltitude,
-    suborbital?: SuborbitalAim) {
+    suborbital?: SuborbitalAim, plane?: Vec3) {
     this.params = params;
     this.azimuthRotating = azimuthRotating;
     this.ascentInclination = ascentInclination;
     this.insertionAltitude = insertionAltitude;
     this.insertionApoapsis = Math.max(insertionApoapsis, insertionAltitude);
     this.suborbital = suborbital;
+    this.plane = plane;
   }
 
   update(inp: GuidanceInputs): GuidanceCommand {
@@ -239,7 +242,9 @@ export class AscentGuidance {
     // Hand over to closed-loop steering once the angle-of-attack budget is wide
     // enough for the command to be followed (q below ~4 kPa), or at the
     // altitude ceiling as a fallback.
-    if (this.phase === 'gravityTurn' && ((inp.q < 4000 && inp.altitude > 25e3 && inp.t > 30) || inp.altitude >= p.gravityTurnEnd)) {
+    const fixedHandover = p.closedLoopStart !== undefined;
+    if (this.phase === 'gravityTurn' && (fixedHandover ? inp.t >= p.closedLoopStart!
+      : (inp.q < 4000 && inp.altitude > 25e3 && inp.t > 30) || inp.altitude >= p.gravityTurnEnd)) {
       this.phase = 'closedLoop';
     }
 
@@ -251,7 +256,7 @@ export class AscentGuidance {
       const vh = add(inp.v, scale(up, -vz));
       const vhMag = norm(vh);
       const curNormal = normalize(cross(inp.r, inp.v));
-      const nDes = planeNormalThrough(rHat, this.ascentInclination, curNormal);
+      const nDes = this.plane ?? planeNormalThrough(rHat, this.ascentInclination, curNormal);
       const hDir = normalize(cross(nDes, rHat));
       // effective gravity: gravity reduced by the centrifugal term of the horizontal speed
       const gEff = MU_EARTH / (rm * rm) - (vhMag * vhMag) / rm;
@@ -438,9 +443,13 @@ export class AscentGuidance {
       theta = Math.max(p.pitchMin, Math.min(p.pitchMax, theta));
       predictedApoapsis = inp.altitude + vz * Tplan + 0.5 * aZ * Tplan * Tplan;
       pitchDeg = theta;
-      // yaw feedback: null the out-of-plane velocity component over ~min(T, 90 s)
+      // yaw feedback: null the out-of-plane velocity component over ~min(T, 90 s);
+      // into a fixed plane, the distance from it too — the lateral acceleration
+      // that brings both to zero at the cut-off, T seconds out (held to a minute
+      // at the end, where the gains would otherwise run away)
       const vOut = dot(inp.v, nDes);
-      const aLat = -vOut / Math.min(T, 90);
+      const Ty = Math.max(T, 60);
+      const aLat = this.plane ? -(6 * dot(inp.r, nDes) / (Ty * Ty) + 4 * vOut / Ty) : -vOut / Math.min(T, 90);
       const lat = Math.max(-0.35, Math.min(0.35, aLat / aT));
       const inPlane = add(scale(hDir, Math.cos(theta * DEG)), scale(up, Math.sin(theta * DEG)));
       return normalize(add(scale(inPlane, Math.sqrt(Math.max(0, 1 - lat * lat))), scale(nDes, lat)));
@@ -473,7 +482,8 @@ export class AscentGuidance {
         // Blend toward the closed-loop command as the atmosphere thins out.
         const wQ = inp.t > 30 && inp.altitude > 20e3 ? smoothstep((12000 - inp.q) / 8000) : 0;
         const blendWidth = 20e3;
-        const w = Math.max(wQ, smoothstep((inp.altitude - (p.gravityTurnEnd - blendWidth)) / blendWidth));
+        // a hand-over fixed in time (`closedLoopStart`) is not blended in early
+        const w = fixedHandover ? 0 : Math.max(wQ, smoothstep((inp.altitude - (p.gravityTurnEnd - blendWidth)) / blendWidth));
         if (w > 0) {
           const cl = closedLoopDir();
           dir = normalize(add(scale(vDir, 1 - w), scale(cl, w)));

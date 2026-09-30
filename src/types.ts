@@ -66,6 +66,21 @@ export interface BoosterGroupSpec {
   baseOffset?: number;
 }
 
+/**
+ * A planned change in a stage's engines partway through its burn (roadmap
+ * C01: the Saturn V), s after the stage's first ignition: engines shut down
+ * early — the centre engine of the S-IC and the S-II, cut off to hold the
+ * acceleration down — or a shift of the mixture ratio that trades thrust for
+ * specific impulse, as the S-II's J-2s flew from about T+498 s.
+ */
+export interface EngineEvent {
+  t: number;
+  /** engines shut down, by their index in the stage's layout (src/data/engine-layout.ts) */
+  shutdown?: number[];
+  /** a new operating point per engine: vacuum and sea-level thrust, N, and specific impulse, s */
+  mixture?: { thrustVac: number; thrustSL: number; ispVac: number; ispSL: number };
+}
+
 export interface StageSpec {
   id: string;
   name: string;
@@ -101,6 +116,15 @@ export interface StageSpec {
   nozzleLength?: number;
   /** Synthetic stage representing the spacecraft's own propulsion */
   isSpacecraft?: boolean;
+  /** planned engine shutdowns and mixture shifts during the burn, in time order (C01) */
+  engineEvents?: EngineEvent[];
+  /**
+   * Parts dropped during this stage's burn, s after its first ignition, in time
+   * order (C01: the Saturn V's S-II aft interstage ring, off 28 s into the S-II's
+   * burn, and the Apollo escape tower six seconds later): an `interstage` comes
+   * off this stage's dry mass, a `tower` off the payload's.
+   */
+  jettisons?: { t: number; mass: number; part: 'interstage' | 'tower' }[];
 }
 
 export interface FairingSpec {
@@ -155,6 +179,13 @@ export interface VehicleSpec {
   fairing: FairingSpec | null;
   /** The launch escape system a crewed launch carries (roadmap G06): Soyuz's tower and fairing motors. */
   escapeSystem?: 'soyuz';
+  /**
+   * A payload flown in the open on top of the last stage instead of inside the
+   * fairing (Crew Dragon; roadmap C01): its outer shape, which is then the
+   * stack's nose. Never in the catalogue; set by `missionVehicle`, which also
+   * leaves the fairing off.
+   */
+  exposedPayload?: { diameter: number; length: number; noseLength: number };
   /** Serial stages in burn order (stage[0] is the first stage) */
   stages: StageSpec[];
   /** Launch site ids this vehicle can fly from */
@@ -185,6 +216,16 @@ export interface VehicleSpec {
    * trajectory than it needs (docs/SIXDOF-ACCEPTANCE.md).
    */
   guidanceDefaultsSixDof?: Partial<GuidanceParams>;
+  /**
+   * Its ascent guidance steers into the target orbit's own plane when the
+   * mission fixes its RAAN, the distance and the speed out of it brought to
+   * zero together (C01: the Saturn V's iterative guidance flew to a descending
+   * node set by the day's lunar geometry, yawing up to 274 m/s across its
+   * launch plane, AS-506 flight evaluation report Table 4-5). Absent: the plane
+   * through wherever the vehicle is, with the target inclination — the rule for
+   * every other launcher, whose plane is set by the moment of liftoff.
+   */
+  targetPlane?: boolean;
   /** Reference drag area override (m^2); default from max diameter */
   dragArea?: number;
   /** Crewed launches supported */
@@ -220,6 +261,37 @@ export interface LaunchSiteSpec {
 
 export type OrbitKind = 'circular' | 'elliptical';
 
+/** A transfer burn flown from the parking orbit at a set time, onto a given conic (C01). */
+export interface InjectionSpec {
+  /** mission time of the restart, s */
+  time: number;
+  /**
+   * The conic the injection leaves the stack on, once the engine's thrust has
+   * decayed: its vis-viva energy, v² − 2μ/r (m²/s²), eccentricity, and where
+   * it lies — inclination, node (RAAN from the mean equinox of date) and
+   * argument of perigee, deg.
+   */
+  c3: number;
+  eccentricity: number;
+  inclination: number;
+  raan: number;
+  argPerigee: number;
+  /** the restarted engine's operating point, each, when it differs from the first burn's */
+  thrustVac?: number;
+  ispVac?: number;
+  /** a change of mixture ratio during the burn: its mission time, s, and the operating point after it */
+  mixture?: { t: number; thrustVac: number; ispVac: number };
+  /**
+   * The stage's propulsive vent while it coasts in the parking orbit: its
+   * thrust along the flight path, N, piecewise linear in mission time
+   * ([t s, N]; nothing outside the points), and the mass the coast loses by
+   * it, kg.
+   */
+  vent?: { thrust: [number, number][]; mass: number };
+  /** what the spacecraft does after it, mission times, s (Apollo: separation, docking, extraction) */
+  sequence?: { panels: number; separation: number; docking: number; extraction: number };
+}
+
 export interface OrbitSpec {
   id: string;
   name: string;
@@ -246,6 +318,25 @@ export interface OrbitSpec {
    * return (`StageSpec.flaps`) is given one.
    */
   suborbital?: boolean;
+  /**
+   * Fly the southbound of the two launch solutions (descending node over the
+   * site) whatever the site's custom — Mercury-Redstone 3's 105° heading out
+   * of the Cape (C01). Absent: `launchDirection` chooses.
+   */
+  descending?: boolean;
+  /**
+   * An injection from this orbit, which is then a parking orbit (C01: Apollo's
+   * translunar injection): the last stage relit at `time` and flown onto the
+   * conic the flight left on (`src/physics/sim/apollo.ts`).
+   */
+  /**
+   * The launch azimuth flown, deg east of north in the inertial frame at the
+   * pad, when the mission's own is known (C01: the Saturn V's flight azimuth,
+   * which its guidance set for the day's lunar geometry); absent, the one the
+   * inclination asks for.
+   */
+  flightAzimuth?: number;
+  injection?: InjectionSpec;
   description: string;
 }
 
@@ -257,7 +348,12 @@ export type SatelliteKind =
   | 'science'
   | 'cubesats'
   | 'starlink'
-  | 'crew';
+  | 'crew'
+  | 'crewDragon'
+  | 'ps1'
+  | 'vostok'
+  | 'mercury'
+  | 'apollo';
 
 export interface SatelliteSpec {
   id: string;
@@ -272,6 +368,25 @@ export interface SatelliteSpec {
   propulsion?: { thrust: number; isp: number; propellantFraction: number };
   /** Approximate body dimensions for visuals, m */
   size?: { width: number; height: number; depth: number };
+  /**
+   * Flies in the open, not in the fairing (Crew Dragon, roadmap C01): the
+   * outer diameter and length the launcher's nose becomes, and the length of
+   * its tapering top (the capsule).
+   */
+  exposed?: { diameter: number; length: number; noseLength: number };
+  /** The only vehicles that carry it, when not every one does */
+  carriers?: string[];
+  /**
+   * A capsule that comes home on its own parachutes from a suborbital flight
+   * (C01: Mercury), which lets a vehicle with no ship to fly home take one.
+   */
+  descent?: 'mercury';
+  /**
+   * Rides the last stage into orbit and stays on it: the Apollo spacecraft
+   * stayed on the S-IVB through the parking orbit (C01), where every other
+   * payload is let go 15 s after the target orbit is reached.
+   */
+  staysAttached?: boolean;
 }
 
 export interface GuidanceParams {
@@ -283,6 +398,14 @@ export interface GuidanceParams {
   kickDuration: number;
   /** Altitude at which zero-AoA gravity turn hands over to closed-loop guidance, m */
   gravityTurnEnd: number;
+  /**
+   * Mission time, s, the gravity turn is flown to whatever the dynamic pressure
+   * and altitude, across staging, before closed-loop guidance takes over (C01:
+   * the Saturn V, whose tilt programme froze at the S-IC's cut-off and whose
+   * iterative guidance took over at T+204.1 s). Absent: the hand-over is at
+   * thin air (`AscentGuidance`) or `gravityTurnEnd`, the rule for every other vehicle.
+   */
+  closedLoopStart?: number;
   /** Target altitude for the initial (parking) orbit, m */
   parkingAltitude: number;
   /** Closed-loop planning horizon cap, s (limits lofting for weak upper stages) */

@@ -1314,6 +1314,53 @@ const slc40Pad: Builder = (ctx) => {
   };
 };
 
+/**
+ * Launch Complex 5, Cape Canaveral (C01: Mercury-Redstone 3): the rocket on a
+ * low pedestal with no hold-down arms, a slim umbilical mast beside it, the
+ * gantry with its White Room rolled back along its rails before the launch,
+ * and the domed blockhouse the flight was run from (NASA TM X-53107, §7.5;
+ * the dimensions are drawn from photographs, approximate).
+ */
+const lc5Pad: Builder = (ctx) => {
+  const g = new THREE.Group();
+  const H = ctx.H;
+  const apron = new THREE.Mesh(ctx.geo(new THREE.BoxGeometry(70, 1.5, 70)), ctx.mat(0xa9a79f, 0.05, 0.92));
+  apron.position.y = -0.75;
+  apron.receiveShadow = true;
+  g.add(apron);
+  // the pedestal the Redstone stood on, with its flame deflector below
+  const pedestal = new THREE.Mesh(ctx.geo(merged([
+    cyl(ctx.R + 1.2, ctx.R + 1.6, 2, 0, 1, 0, 16),
+    ...[0, 1, 2, 3].map((i) => { const a = (i / 4) * Math.PI * 2 + Math.PI / 4; return box(0.8, 2, 0.8, Math.cos(a) * (ctx.R + 1.4), 1, Math.sin(a) * (ctx.R + 1.4)); }),
+  ])), ctx.mat(0x6c7075, 0.45, 0.55));
+  pedestal.castShadow = true;
+  g.add(pedestal);
+  const deflector = new THREE.Mesh(ctx.geo(box(6, 1.2, 10, 0, 0.4, 5)), ctx.mat(0x4d5054, 0.4, 0.6));
+  g.add(deflector);
+  // the umbilical mast
+  const mast = new THREE.Mesh(ctx.geo(lattice(1.6, 1.6, H * 0.8, 10, 0.18)), ctx.mat(0x9c2d24, 0.3, 0.6));
+  mast.position.set(-(ctx.R + 4), 0, 0);
+  mast.castShadow = true;
+  g.add(mast);
+  // the service gantry, rolled back 60 m along its rails
+  const gantry = new THREE.Mesh(ctx.geo(merged([
+    lattice(9, 7, H * 1.25, 18, 0.45),
+    box(10, 3, 8, 0, H * 0.75, 0),
+  ])), ctx.mat(0xb8412f, 0.35, 0.6));
+  gantry.position.set(-62, 0, 0);
+  gantry.castShadow = true;
+  g.add(gantry);
+  g.add(new THREE.Mesh(ctx.geo(merged([box(1.2, 0.4, 90, -62, 0.2, 0), box(1.2, 0.4, 90, -69, 0.2, 0)].map((b) => b))), ctx.mat(0x6b6b6b, 0.3, 0.8)));
+  // the blockhouse: a concrete dome of the 1950s
+  const dome = new THREE.Mesh(ctx.geo(new THREE.SphereGeometry(14, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2)), ctx.mat(0xd2cfc4, 0.05, 0.9));
+  dome.scale.y = 0.55;
+  dome.position.set(120, 0, -110);
+  dome.castShadow = true;
+  g.add(dome);
+  for (const o of infrastructure(ctx, 240, 1)) g.add(o);
+  return { group: g, trenchAzimuth: 0, mouthRadius: 5, mountHeight: 2, animate() { /* the gantry went back hours before */ } };
+};
+
 /** Vandenberg SLC-4E: hillside pad, two masts, a rolled-back mobile shelter. */
 const slc4ePad: Builder = (ctx) => {
   const base = slc40Pad(ctx);
@@ -1444,6 +1491,92 @@ const lc39aPad: Builder = (ctx) => {
     animate(t) {
       // Tips back from T-7 s, away from the vehicle, and on after liftoff.
       tePivot.rotation.z = smoothstep(-7, -3, t) * 0.35 + smoothstep(0, 6, t) * 0.15;
+    },
+  };
+};
+
+/**
+ * LC-39A as it was in 1969, for the Saturn V (C01): the same octagonal hardstand,
+ * and on it the Mobile Launcher — a 49 × 41 m platform 7.6 m deep over the flame
+ * trench, the rocket standing on its hold-down arms, and beside it the red
+ * launch umbilical tower, 121 m above the deck, with its hammerhead crane and
+ * nine swing arms to the stages and the spacecraft, which swing clear as the
+ * rocket rises (Saturn V Flight Manual SA-506; KSC fact sheets). Proportions
+ * approximate.
+ */
+const lc39a1969Pad: Builder = (ctx) => {
+  const g = new THREE.Group();
+  const H = ctx.H, top = LC39A_MOUND, deckH = 7.6;
+  const concrete = ctx.mat(0xa4a298, 0.05, 0.92);
+  const mound = new THREE.CylinderGeometry(80, 122, top, 8, 1);
+  mound.rotateY(Math.PI / 8);
+  mound.translate(0, top / 2, 0);
+  const rampLen = 120, slope = Math.atan2(top, rampLen);
+  const ramp = new THREE.BoxGeometry(rampLen / Math.cos(slope), 1.6, 40);
+  ramp.rotateZ(slope);
+  ramp.translate(-72 - rampLen / 2, top / 2 - 0.6, 0);
+  const hard = new THREE.Mesh(ctx.geo(merged([mound, ramp])), concrete);
+  hard.receiveShadow = true;
+  hard.castShadow = true;
+  g.add(hard);
+  const pad = new THREE.Group();
+  pad.position.y = top;
+  g.add(pad);
+  for (const o of [...flameTrench(ctx, 18, 70, 12, 0), ...flameTrench(ctx, 18, 70, 12, Math.PI)]) pad.add(o);
+  // the platform on its six pedestals, with the 14 m square exhaust hole under the rocket
+  const grey = ctx.mat(0x7d8084, 0.4, 0.6);
+  const platform = new THREE.Mesh(ctx.geo(merged([
+    box(49, deckH, 13.5, 0, 6 + deckH / 2, -13.75), box(49, deckH, 13.5, 0, 6 + deckH / 2, 13.75),
+    box(17.5, deckH, 14, -15.75, 6 + deckH / 2, 0), box(17.5, deckH, 14, 15.75, 6 + deckH / 2, 0),
+    ...[-18, 0, 18].flatMap((x) => [box(3, 6, 3, x, 3, -14), box(3, 6, 3, x, 3, 14)]),
+  ])), grey);
+  platform.castShadow = true;
+  platform.receiveShadow = true;
+  pad.add(platform);
+  const deckY = 6 + deckH;
+  // four hold-down arms at the S-IC's base
+  const arms = new THREE.Mesh(ctx.geo(merged([0, 1, 2, 3].map((i) => {
+    const a = (i / 4) * Math.PI * 2;
+    return box(2.4, 2.2, 2.4, Math.cos(a) * (ctx.R + 0.6), deckY + 1.1, Math.sin(a) * (ctx.R + 0.6));
+  }))), ctx.mat(0x55595e, 0.5, 0.5));
+  pad.add(arms);
+  // the umbilical tower on the platform's edge
+  const red = 0xb33a26;
+  const lutH = 121, lutX = 0, lutZ = ctx.R + 17;
+  const lut = new THREE.Mesh(ctx.geo(merged([
+    lattice(12.2, 12.2, lutH, 28, 0.9),
+    box(13, 1.2, 13, 0, lutH, 0),
+    // the hammerhead crane
+    box(4, 3, 30, 0, lutH + 3, -5),
+  ])), ctx.mat(red, 0.35, 0.6));
+  lut.position.set(lutX, deckY, lutZ);
+  lut.castShadow = true;
+  pad.add(lut);
+  // swing arms: from the S-IC intertank to the command module's access arm
+  const heights = [18, 28, 40, 55, 62, 77, 87, 97, 102].map((y) => Math.min(y, H - 6));
+  const swings: THREE.Group[] = [];
+  const armLen = lutZ - 6.1 - ctx.R - 0.8;
+  heights.forEach((y, i) => {
+    const arm = hingedArm(ctx, armLen, i === heights.length - 1 ? 2.4 : 1.8, red, true);
+    arm.position.set(lutX + 4.5, deckY + y, lutZ - 6.1);
+    arm.rotation.y = Math.PI / 2;
+    pad.add(arm);
+    swings.push(arm);
+  });
+  g.add(tankFarm(ctx, 190, 150, 2, 9, 16));
+  g.add(tankFarm(ctx, -170, 190, 2, 7, 12));
+  for (const o of infrastructure(ctx, 270, -1)) g.add(o);
+  return {
+    group: g,
+    trenchAzimuth: 0,
+    mouthRadius: 16,
+    mountHeight: top + deckY,
+    animate(t) {
+      // the command module's arm is back at T−5 min; the rest swing clear at liftoff
+      swings.forEach((arm, i) => {
+        const away = i === swings.length - 1 ? 1 : smoothstep(-1, 5, t);
+        arm.rotation.y = Math.PI / 2 - away * 1.25;
+      });
     },
   };
 };
@@ -1769,7 +1902,7 @@ const mahiaPad: Builder = (ctx) => {
 
 const BUILDERS: Record<string, Builder> = {
   baikonur: baikonurPad, plesetsk: soyuzPad, vostochny: soyuzPad,
-  cape: slc40Pad, ksc39a: lc39aPad, vandenberg: slc4ePad, wallops: wallopsPad,
+  cape: (ctx) => (ctx.pad === 'lc5' ? lc5Pad(ctx) : slc40Pad(ctx)), ksc39a: (ctx) => (ctx.vehicle.id === 'saturnv506' ? lc39a1969Pad(ctx) : lc39aPad(ctx)), vandenberg: slc4ePad, wallops: wallopsPad,
   starbase: starbasePad, kourou: kourouPad, wenchang: wenchangPad,
   tanegashima: tanegashimaPad, sriharikota: sriharikotaPad, mahia: mahiaPad,
 };
@@ -1783,6 +1916,7 @@ export function buildPad(site: SiteExtra, vehicle: VehicleSpec, geoSink: <T exte
     for (const b of st.boosters ?? []) R = Math.max(R, st.diameter / 2 + b.diameter);
   }
   if (vehicle.fairing) R = Math.max(R, vehicle.fairing.diameter / 2);
+  if (vehicle.exposedPayload) R = Math.max(R, vehicle.exposedPayload.diameter / 2);
   const ctx: Ctx = { site, vehicle, H: vehicle.height, R, mat: matFn, geo: geoSink, pad: opts.padId ?? site.pads?.[0]?.id, azimuth: opts.azimuth ?? 0 };
   const biome = BIOMES[site.id] ?? BIOMES.cape;
   const build = (BUILDERS[site.id] ?? slc40Pad)(ctx);

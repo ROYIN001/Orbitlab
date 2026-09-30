@@ -330,6 +330,9 @@ export class FlightRecorder implements RecordingSource {
         if (altitude < ATMOSPHERIC_CEILING) return 2;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'orbit':
+        // C01: Apollo flies its own burns in orbit, the injection for the Moon and the service engine's
+        // (more than a kilonewton: not the S-IVB's hydrogen vent, a hundred newtons for hours)
+        if (burning) return 1;
         return nextBurnTime > t && nextBurnTime - t < 120 ? 10 : 30;
       case 'descent':
         // A returning ship: sparse on its coast above the air, dense from the entry on.
@@ -340,7 +343,7 @@ export class FlightRecorder implements RecordingSource {
   }
 
   private intervalOf(f: VisualFrame): number {
-    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn');
+    return this.interval(f.status, f.t, f.altitude, f.nextBurnTime, f.rendezvous?.range, f.rendezvous?.phase === 'burn' || (f.status === 'orbit' && f.thrust > 1e3));
   }
 
   /**
@@ -517,7 +520,7 @@ export class FlightRecorder implements RecordingSource {
       else if (!transitionCaptured && preIsHead && fired) this.store(pre, true);
       const s = sim.state;
       const headNow = this.head;
-      const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn') - 1e-9;
+      const dueAfter = !headNow || s.t - headNow.t >= this.interval(s.status, s.t, s.altitude, s.nextBurnTime, s.rendezvous?.range, s.rendezvous?.phase === 'burn' || (s.status === 'orbit' && s.thrust > 1e3)) - 1e-9;
       if (dueAfter || fired) this.store(captureFrame(sim), fired);
       if (fired) this.pullEvents();
       if (rigid && !(used > 0)) { stalled = true; break; }

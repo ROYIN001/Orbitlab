@@ -157,6 +157,8 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^rv\.burn\.[a-z]+$/, from: 'ui/names.ts rendezvousBurnName: localized(`rv.burn.${id}`)' },
   { pattern: /^hud\.rv\.[a-zA-Z]+$/, from: 'ui/phase.ts, ui/hud.ts: t(`hud.rv.${phase}`)' },
   { pattern: /^phase\.detail\.rv\.[a-zA-Z]+$/, from: 'ui/phase.ts phaseInfo: `phase.detail.rv.${phase}`' },
+  { pattern: /^hud\.apollo\.[a-zA-Z]+$/, from: 'ui/phase.ts phaseInfo: `hud.apollo.${frame.apollo.phase}` (C01)' },
+  { pattern: /^phase\.detail\.apollo\.[a-zA-Z]+$/, from: 'ui/phase.ts phaseInfo: `phase.detail.apollo.${frame.apollo.phase}` (C01)' },
   // G08: the control system's failures, by kind, group and state.
   { pattern: /^fault\.(kind|about)\.[a-zA-Z]+$/, from: 'ui/fault-names.ts faultKindName; ui/panel.ts faultRow: t(`fault.about.${fault.kind}`)' },
   { pattern: /^fault\.group\.(actuator|sensor|computer)$/, from: 'ui/panel.ts faultRow: t(`fault.group.${FAULT_GROUP[k]}`)' },

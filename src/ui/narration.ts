@@ -21,7 +21,7 @@ import type { VehicleSpec } from '../types';
 import { t } from '../i18n';
 import { fmtTime } from './hud';
 import { localizeEventParams } from './names';
-import { phaseInfo } from './phase';
+import { phaseInfo, statusKey } from './phase';
 
 export interface NarrationState {
   /** the cursor is behind the recording head */
@@ -119,7 +119,7 @@ export class Narration {
 
   update(frame: VisualFrame | null, events: readonly SimEvent[], st: NarrationState): void {
     const info = phaseInfo(frame, events);
-    const label = frame ? t(`hud.status.${frame.status}`) : t('hud.status.prelaunch');
+    const label = frame ? t(statusKey(frame)) : t('hud.status.prelaunch');
     const title = t(info.titleKey);
     const detail = t(info.detailKey, info.params);
     const last = info.lastEvent;
