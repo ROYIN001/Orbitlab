@@ -238,8 +238,11 @@ describe('off-nadir GSD, self-consistency only (D06)', () => {
  *
  * 1. The 1.22 is the first zero of the Airy pattern, x₁/π with J₁(x₁) = 0,
  *    x₁ = 3.8317 (Airy 1835; any optics text): found here from J₁'s power
- *    series by bisection. Tolerance, fixed before the first run: 0.03 %
- *    (1.22 is 1.2197 to three figures).
+ *    series by bisection. Tolerance 0.03 %. This is not an independent
+ *    bound: 1.22 against 1.21967 is a gap of 0.027 %, known from the
+ *    textbook value before the first run, and 0.03 % was set just above it.
+ *    The check only confirms that the code's 1.22 is that rounding (a half
+ *    unit in its last digit would allow 0.41 %).
  * 2. Its scaling, and the inverse D07 will use, D_min = 1.22·λ·h/GSD:
  *    1e-12 relative.
  * 3. Direction only, against published inputs: Sentinel-2's MSI, a 150 mm
