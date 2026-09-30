@@ -51,7 +51,7 @@ Probe ชั่วคราวใน `tests/probe/` (ลบแล้ว): Chromi
 ## ตรวจแล้ว
 
 - `npm run typecheck` ผ่าน
-- `npm test`: ดูผลใน PR
+- `npm test` (ทั้งชุด ไม่แบ่ง shard, container 4 core, 2472 s): 181/182 ไฟล์ผ่านในรอบแรก ล้มหนึ่งข้อคือ `tests/i18n.test.ts > has a call site for every key` เพราะ `mc.*.failed` ถูกเรียกผ่าน template `mc.state.${job.state}` แก้โดยเพิ่ม `failed` ใน DYNAMIC_FAMILIES บรรทัด 181 (ไฟล์นอกรายการเจ้าของ แต่เป็นทะเบียนของ key ที่เซสชันนี้เพิ่ม แก้คำเดียว) แล้วรัน i18n + monte-carlo + tune-job ซ้ำ ผ่าน 65/65
 - test ใหม่ของ A18 ทั้ง 5 ล้มบนโค้ดเดิม (`git stash` เฉพาะ `monte-carlo-job.ts`) และผ่านบนโค้ดใหม่
 
 ## สิ่งที่ส่งต่อ / นอกขอบเขต
