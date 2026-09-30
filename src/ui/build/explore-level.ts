@@ -407,6 +407,11 @@ export class ExploreLevel {
     this.store.render();
   }
 
+  /** A kept or imported rocket design, opened here (a rocket file imported in the satellite designer, D06). */
+  openSaved(record: DesignRecord<'vehicle'>): void {
+    this.openRecord(record);
+  }
+
   private openRecord(record: DesignRecord<'vehicle'>): void {
     const opened = draftFromSpec(record.design, record.id);
     if (opened.mode === 'remix') this.state.remix = opened.draft;
