@@ -180,7 +180,7 @@ const DYNAMIC_FAMILIES: ReadonlyArray<{ pattern: RegExp; from: string }> = [
   { pattern: /^ws\.format\.(html|docx)$/, from: 'ui/lessons/worksheet-view.ts: t(`ws.format.${k}`)' },
   // G05: the Monte Carlo window's dispersions and states.
   { pattern: /^mc\.q\.(thrust|isp|propellant|dryMass|density|wind|imu)(\.about)?$/, from: 'ui/monte-carlo.ts chrome: t(`mc.q.${key}`), t(`mc.q.${key}.about`)' },
-  { pattern: /^mc\.(progress|state)\.(running|done|stopped)$/, from: 'ui/monte-carlo.ts render: t(`mc.progress.${job.state}`), t(`mc.state.${job.state}`)' },
+  { pattern: /^mc\.(progress|state)\.(running|done|stopped|failed)$/, from: 'ui/monte-carlo.ts render: t(`mc.progress.${job.state}`), t(`mc.state.${job.state}`)' },
   { pattern: /^mc\.(point|point\.about|table\.caption|target)\.(final|cutoff)$/, from: 'ui/monte-carlo.ts: t(`mc.point.${point}`), t(`mc.table.caption.${this.point}`), t(`mc.target.${this.point}`)' },
 ];
 

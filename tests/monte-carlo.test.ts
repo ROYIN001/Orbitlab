@@ -289,6 +289,105 @@ describe('the Monte Carlo job (roadmap G05)', () => {
   });
 });
 
+/**
+ * Workers that record what is done to them and answer only when told: a factory that fails on the
+ * calls in `failOn` (1-based), and workers whose `postMessage` throws on the calls in `postFailOn`.
+ */
+function trackedWorkers(opts: { failOn?: number[]; postFailOn?: number[] } = {}) {
+  const made: (MonteCarloWorker & { posted: MonteCarloRequest[]; terminated: number })[] = [];
+  let calls = 0, posts = 0;
+  const create = (): MonteCarloWorker => {
+    if (opts.failOn?.includes(++calls)) throw new Error(`no worker ${calls}`);
+    const w = {
+      onmessage: null, onerror: null, posted: [] as MonteCarloRequest[], terminated: 0,
+      postMessage(req: MonteCarloRequest) { if (opts.postFailOn?.includes(++posts)) throw new Error('could not clone'); w.posted.push(req); },
+      terminate() { w.terminated++; },
+    } as MonteCarloWorker & { posted: MonteCarloRequest[]; terminated: number };
+    made.push(w);
+    return w;
+  };
+  /** The worker answers the run it was last sent. */
+  const reply = (w: (typeof made)[number]) => {
+    const req = w.posted.at(-1)!, final = { perigeeKm: 200, apogeeKm: 500, inclinationDeg: 28.6, dvLeft: 3000, t: 3000 };
+    const data: MonteCarloReply = { type: 'run', run: { index: req.index, law: req.law, outcome: 'inserted', onTarget: true, final, cutoff: { ...final, t: 480 },
+      maxQkPa: 30, maxQAlpha: 100, z: [], ms: 1000 } };
+    w.onmessage?.({ data } as MessageEvent<MonteCarloReply>);
+  };
+  const die = (w: MonteCarloWorker) => w.onerror?.({ message: 'boom', preventDefault() {} } as ErrorEvent);
+  return { create, made, reply, die };
+}
+
+describe('a Monte Carlo pool that cannot be fully started (audit 2026-09-27 A18)', () => {
+  it('ends every worker already started, and reports nothing more, when a later one cannot be built', () => {
+    const pool = trackedWorkers({ failOn: [2] }), changes: string[] = [];
+    expect(() => new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 20 }, { workers: 4, createWorker: pool.create, onChange: (j) => changes.push(j.state) }))
+      .toThrow('no worker 2');
+    expect(pool.made).toHaveLength(1);
+    expect(pool.made[0].posted).toHaveLength(1);
+    expect(pool.made.map((w) => w.terminated)).toEqual([1]);
+    expect(pool.made[0].onmessage).toBeNull();
+    expect(pool.made[0].onerror).toBeNull();
+    expect(changes).toEqual([]);
+  });
+
+  it('ends the pool the same way when the first run cannot be sent to a worker', () => {
+    const pool = trackedWorkers({ postFailOn: [3] });
+    expect(() => new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 20 }, { workers: 4, createWorker: pool.create })).toThrow('could not clone');
+    expect(pool.made).toHaveLength(3);
+    expect(pool.made.map((w) => w.terminated)).toEqual([1, 1, 1]);
+    expect(pool.made.every((w) => w.onmessage === null && w.onerror === null)).toBe(true);
+  });
+
+  it('flies on with the rest of the pool when a dead worker cannot be replaced', () => {
+    const pool = trackedWorkers({ failOn: [3] });
+    const job = new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 6 }, { workers: 2, createWorker: pool.create });
+    const [a, b] = pool.made;
+    pool.die(a);
+    expect(job.state).toBe('running');
+    expect(job.workerCount).toBe(1);
+    expect(a.terminated).toBe(1);
+    expect(job.runs).toEqual([expect.objectContaining({ index: 0, outcome: 'lost', reason: 'error: boom' })]);
+    while (job.state === 'running') pool.reply(b);
+    expect(job.state).toBe('done');
+    expect(job.runs).toHaveLength(6);
+    expect(new Set(job.runs.map((r) => r.index)).size).toBe(6);
+    expect(pool.made.map((w) => w.terminated)).toEqual([1, 1]);
+  });
+
+  it('ends the set as failed, the lost run recorded, when the last worker dies and cannot be replaced', () => {
+    const pool = trackedWorkers({ failOn: [2] }), changes: string[] = [];
+    const job = new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 5 }, { workers: 1, createWorker: pool.create, onChange: (j) => changes.push(j.state) });
+    const [a] = pool.made;
+    pool.reply(a);
+    pool.die(a);
+    expect(job.state).toBe('failed');
+    expect(job.error).toBe('no worker 2');
+    expect(job.runs.map((r) => [r.index, r.outcome])).toEqual([[0, 'inserted'], [1, 'lost']]);
+    expect(job.finishedAt).toBeDefined();
+    expect(job.progress()).toMatchObject({ done: 2, total: 5, etaS: null });
+    expect(changes.at(-1)).toBe('failed');
+    expect(a.terminated).toBe(1);
+    const n = changes.length;
+    pool.reply(a); pool.die(a); job.stop();
+    expect(changes).toHaveLength(n);
+    expect(job.state).toBe('failed');
+  });
+
+  it('loses the run, and retires the worker, when a later run cannot be sent', () => {
+    const pool = trackedWorkers({ postFailOn: [3] });
+    const job = new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 4 }, { workers: 2, createWorker: pool.create });
+    const [a, b] = pool.made;
+    pool.reply(a);
+    expect(a.terminated).toBe(1);
+    expect(job.workerCount).toBe(1);
+    expect(job.runs.map((r) => [r.index, r.outcome])).toEqual([[0, 'inserted'], [2, 'lost']]);
+    while (job.state === 'running') pool.reply(b);
+    expect(job.state).toBe('done');
+    expect(job.runs).toHaveLength(4);
+    expect(b.terminated).toBe(1);
+  });
+});
+
 describe('a run opened from the scatter (audit 2026-09-27 A10)', () => {
   // The set's mission as the panel held it at the start, and as it flew
   const setMission = (): MissionState => ({

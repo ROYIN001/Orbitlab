@@ -3,6 +3,10 @@ import { runTuneJob, type TuneReply, type TuneWorker } from '../src/physics/tune
 import type { AutotuneOutcome } from '../src/physics/autotune';
 import { DEFAULT_GUIDANCE } from '../src/physics/defaults';
 import type { MissionConfig } from '../src/types';
+import { AttitudeTuneRunner, runAttitudeTuneJob, solveAttitudeTune,
+  type AttitudeTuneEnd, type AttitudeTuneReply, type AttitudeTuneRequest, type AttitudeTuneWorker } from '../src/physics/attitude-tune-job';
+import { autoTune, type TuneResult } from '../src/physics/rigid/tuning';
+import type { PlaneModel } from '../src/physics/rigid/linear';
 
 /** A transport fake: no simulator, browser event loop, or expensive tuning grid. */
 class FakeWorker implements TuneWorker {
@@ -199,5 +203,189 @@ describe('tuning worker lifecycle', () => {
     job.worker.onmessageerror!({ data: undefined } as MessageEvent<unknown>);
     await rejected;
     job.assertReleased();
+  });
+});
+
+// ─── the attitude-loop inspector's auto-tune (audit 2026-09-27 A17) ─────────
+
+class FakeAttitudeWorker implements AttitudeTuneWorker {
+  onmessage: AttitudeTuneWorker['onmessage'] = null;
+  onerror: AttitudeTuneWorker['onerror'] = null;
+  onmessageerror: AttitudeTuneWorker['onmessageerror'] = null;
+  postMessage = vi.fn<(request: AttitudeTuneRequest) => void>();
+  terminate = vi.fn<() => void>();
+
+  reply(data: AttitudeTuneReply): void {
+    this.onmessage?.({ data } as MessageEvent<AttitudeTuneReply>);
+  }
+  released(): boolean {
+    return this.terminate.mock.calls.length === 1 && !this.onmessage && !this.onerror && !this.onmessageerror;
+  }
+}
+
+/** A rigid double integrator behind a gimbal lag, at inertia `I` (kg·m²). */
+function plant(I: number): PlaneModel {
+  return { axis: 'z', n: 2, states: ['angle', 'rate'], A: [0, 1, 0, 0], B: [0, 1 / I], cAngle: [1, 0], cRate: [0, 1], cAero: [0, 0],
+    actuator: 'engines', tau: 0.1 + I / 1e9, inertia: I, kTheta: 1.5, kOmega: 3 };
+}
+
+function attitudeRequest(): AttitudeTuneRequest {
+  const planes = [1e6, 3e6, 1e7, 3e7, 6e7].map(plant);
+  const verify = planes.map((p, i) => ({ t: 10 * i, plane: p }));
+  // The search cases are other objects holding the same planes, as tuneCases gives them.
+  return { cases: [verify[0], verify[2], verify[4]].map((c) => ({ ...c })), T: 0.01, targets: { pmDeg: 45, gmDb: 6 }, feedForward: 1, verify };
+}
+
+const tuneResult = (kTheta = 1): TuneResult => ({ gains: { kTheta, kOmega: 3, feedForward: 1 }, feasible: true, worst: { t: 0, stable: true }, cases: 5 });
+
+describe('attitude auto-tune worker job', () => {
+  it('sends the whole request once, forwards progress, and releases its worker with the answer', async () => {
+    const controller = new AbortController(), worker = new FakeAttitudeWorker(), progress = vi.fn();
+    const request = attitudeRequest();
+    const job = runAttitudeTuneJob(request, controller.signal, progress, () => worker);
+    expect(worker.postMessage).toHaveBeenCalledExactlyOnceWith(request);
+    worker.reply({ type: 'progress', progress: { cases: 3, verify: 5 } });
+    expect(progress).toHaveBeenCalledExactlyOnceWith({ cases: 3, verify: 5 });
+    expect(worker.terminate).not.toHaveBeenCalled();
+    worker.reply({ type: 'result', result: tuneResult() });
+    await expect(job).resolves.toEqual(tuneResult());
+    expect(worker.released()).toBe(true);
+  });
+
+  it('terminates the worker at once when cancelled, and ignores what it sends afterwards', async () => {
+    const controller = new AbortController(), worker = new FakeAttitudeWorker(), progress = vi.fn();
+    const job = runAttitudeTuneJob(attitudeRequest(), controller.signal, progress, () => worker);
+    const late = worker.onmessage!;
+    const rejected = expect(job).rejects.toMatchObject({ name: 'AbortError' });
+    controller.abort();
+    expect(worker.released()).toBe(true);
+    await rejected;
+    late({ data: { type: 'progress', progress: { cases: 1, verify: 1 } } } as MessageEvent<AttitudeTuneReply>);
+    late({ data: { type: 'result', result: tuneResult() } } as MessageEvent<AttitudeTuneReply>);
+    expect(progress).not.toHaveBeenCalled();
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['reply', 'runtime', 'decode', 'post'] as const)('rejects a %s failure and releases the worker', async (kind) => {
+    const worker = new FakeAttitudeWorker();
+    if (kind === 'post') worker.postMessage.mockImplementation(() => { throw new Error('clone failed'); });
+    const job = runAttitudeTuneJob(attitudeRequest(), new AbortController().signal, vi.fn(), () => worker);
+    const rejected = expect(job).rejects.toThrow();
+    if (kind === 'reply') worker.reply({ type: 'error', message: 'search failed' });
+    else if (kind === 'runtime') worker.onerror!({ message: 'worker crashed' } as ErrorEvent);
+    else if (kind === 'decode') worker.onmessageerror!({ data: undefined } as MessageEvent<unknown>);
+    await rejected;
+    expect(worker.released()).toBe(true);
+  });
+
+  it('does not build a worker for a request cancelled before it starts, and rejects one that cannot be built', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const create = vi.fn(() => new FakeAttitudeWorker());
+    await expect(runAttitudeTuneJob(attitudeRequest(), controller.signal, vi.fn(), create)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(create).not.toHaveBeenCalled();
+    await expect(runAttitudeTuneJob(attitudeRequest(), new AbortController().signal, vi.fn(), () => { throw new Error('no workers'); }))
+      .rejects.toThrow('no workers');
+  });
+
+  it('answers in the worker exactly as on the main thread, the structured clone keeping the shared planes', () => {
+    const request = attitudeRequest();
+    const direct = autoTune(request.cases, request.T, request.targets, request.feedForward, request.verify);
+    const cloned = structuredClone(request);
+    expect(cloned.cases[1].plane).toBe(cloned.verify[2].plane);
+    const progress = vi.fn();
+    expect(solveAttitudeTune(cloned, progress)).toEqual(direct);
+    expect(progress).toHaveBeenCalledExactlyOnceWith({ cases: 3, verify: 5 });
+  });
+});
+
+describe('attitude auto-tune runner: run identity, cancellation and stale answers', () => {
+  function runner() {
+    const workers: FakeAttitudeWorker[] = [];
+    const tuner = new AttitudeTuneRunner(() => { const w = new FakeAttitudeWorker(); workers.push(w); return w; });
+    const handlers = () => ({ onProgress: vi.fn(), onEnd: vi.fn<(end: AttitudeTuneEnd) => void>() });
+    return { tuner, workers, handlers };
+  }
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  it('reports progress and then the answer once, while the inputs still match', async () => {
+    const { tuner, workers, handlers } = runner(), h = handlers();
+    tuner.start(attitudeRequest(), 'a', () => 'a', h);
+    expect(tuner.busy).toBe(true);
+    expect(tuner.inputs).toBe('a');
+    workers[0].reply({ type: 'progress', progress: { cases: 3, verify: 5 } });
+    workers[0].reply({ type: 'result', result: tuneResult(2) });
+    await settle();
+    expect(h.onProgress).toHaveBeenCalledOnce();
+    expect(h.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'result', result: tuneResult(2) });
+    expect(tuner.busy).toBe(false);
+    expect(workers[0].released()).toBe(true);
+  });
+
+  it('drops an answer that arrives after the inputs changed', async () => {
+    const { tuner, workers, handlers } = runner(), h = handlers();
+    let inputs = 'pitch';
+    tuner.start(attitudeRequest(), inputs, () => inputs, h);
+    inputs = 'roll';
+    workers[0].reply({ type: 'result', result: tuneResult() });
+    await settle();
+    expect(h.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'stale' });
+  });
+
+  it('cancels at once: the worker is terminated, cancellation is reported once, and nothing from that run follows', async () => {
+    const { tuner, workers, handlers } = runner(), h = handlers();
+    tuner.start(attitudeRequest(), 'a', () => 'a', h);
+    const late = workers[0].onmessage!;
+    tuner.cancel();
+    expect(h.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'cancelled' });
+    expect(tuner.busy).toBe(false);
+    expect(workers[0].released()).toBe(true);
+    late({ data: { type: 'progress', progress: { cases: 1, verify: 1 } } } as MessageEvent<AttitudeTuneReply>);
+    late({ data: { type: 'result', result: tuneResult() } } as MessageEvent<AttitudeTuneReply>);
+    await settle();
+    expect(h.onProgress).not.toHaveBeenCalled();
+    expect(h.onEnd).toHaveBeenCalledOnce();
+    tuner.cancel();
+    expect(h.onEnd).toHaveBeenCalledOnce();
+  });
+
+  it('invalidates a run whose inputs no longer match, and keeps one that still does', async () => {
+    const { tuner, workers, handlers } = runner(), h = handlers();
+    tuner.start(attitudeRequest(), 'a', () => 'a', h);
+    expect(tuner.invalidate('a')).toBe(false);
+    expect(tuner.busy).toBe(true);
+    expect(tuner.invalidate('b')).toBe(true);
+    expect(h.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'stale' });
+    expect(workers[0].released()).toBe(true);
+    expect(tuner.invalidate('c')).toBe(false);
+    await settle();
+    expect(h.onEnd).toHaveBeenCalledOnce();
+  });
+
+  it('ends the previous run as stale when a new one starts, and reports only the new one\'s answer', async () => {
+    const { tuner, workers, handlers } = runner(), first = handlers(), second = handlers();
+    tuner.start(attitudeRequest(), 'a', () => 'b', first);
+    const late = workers[0].onmessage!;
+    tuner.start(attitudeRequest(), 'b', () => 'b', second);
+    expect(first.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'stale' });
+    late({ data: { type: 'result', result: tuneResult(9) } } as MessageEvent<AttitudeTuneReply>);
+    workers[1].reply({ type: 'result', result: tuneResult(4) });
+    await settle();
+    expect(first.onEnd).toHaveBeenCalledOnce();
+    expect(second.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'result', result: tuneResult(4) });
+  });
+
+  it('reports a worker that cannot be built or fails as an error, once', async () => {
+    const failing = new AttitudeTuneRunner(() => { throw new Error('no workers'); }), h = { onProgress: vi.fn(), onEnd: vi.fn() };
+    failing.start(attitudeRequest(), 'a', () => 'a', h);
+    await settle();
+    expect(h.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'error', message: 'no workers' });
+    expect(failing.busy).toBe(false);
+    const { tuner, workers, handlers } = runner(), g = handlers();
+    tuner.start(attitudeRequest(), 'a', () => 'a', g);
+    workers[0].onerror!({ message: 'worker crashed' } as ErrorEvent);
+    await settle();
+    expect(g.onEnd).toHaveBeenCalledExactlyOnceWith({ kind: 'error', message: 'worker crashed' });
+    expect(workers[0].released()).toBe(true);
   });
 });

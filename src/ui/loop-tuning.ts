@@ -4,7 +4,9 @@
  * Tuning: the loop linearised in flight (G04) with trial gains and feed-forward
  * — the plant does not change with them, so every trial is immediate — against
  * the gains flown, over the instant on screen and the flight so far; an
- * auto-tuner for a phase and a gain margin; and "use for the next launch",
+ * auto-tuner for a phase and a gain margin, searched in a worker the user can
+ * cancel (a change of axis, scope, targets, feed-forward or flight drops its
+ * answer); and "use for the next launch",
  * which writes the trial into the mission setup.
  *
  * Flight test: a step or a doublet flown in the live loop about the axis
@@ -14,7 +16,8 @@
 import { t } from '../i18n';
 import { RAD } from '../physics/constants';
 import { curveFromTable, linearModelAt, PLANE_OF, stepResponse, type LinearAxis, type LinearModel, type PlaneModel } from '../physics/rigid/linear';
-import { autoTune, flownGains, tableOf, trialMargins, tuneCases, TUNE_DEFAULT_TARGETS, withGains, type TrialGains, type TuneResult } from '../physics/rigid/tuning';
+import { flownGains, tableOf, trialMargins, tuneCases, TUNE_DEFAULT_TARGETS, withGains, type TrialGains, type TuneResult } from '../physics/rigid/tuning';
+import { AttitudeTuneRunner, type AttitudeTuneEnd } from '../physics/attitude-tune-job';
 import { ATTITUDE_TEST_LIMITS, attitudeTestAt, attitudeTestDuration, limiterShares, predictAttitudeTest, pulseMetrics, responseMismatch,
   type AttitudeTestKind, type AttitudeTestRecord, type AttitudeTestSpec } from '../physics/rigid/attitude-test';
 import { CONTROL_LIMITS } from '../physics/rigid/control-config';
@@ -36,6 +39,8 @@ export interface LoopTuningHost {
 }
 
 type Channel = 'roll' | 'pitchYaw';
+/** A search while it runs: the channel it tunes, when it started and what it searches over. */
+interface TuneRun { channel: Channel; started: number; cases?: number; verify?: number; timer: ReturnType<typeof setInterval> }
 const CHANNEL_OF: Record<LoopAxis, Channel> = { roll: 'roll', pitch: 'pitchYaw', yaw: 'pitchYaw' };
 const PLANES_OF: Record<Channel, readonly LinearAxis[]> = { roll: ['x'], pitchYaw: ['y', 'z'] };
 const AXIS_NAME = { roll: 'loop.axis.roll', pitch: 'loop.axis.pitch', yaw: 'loop.axis.yaw' } as const;
@@ -78,7 +83,9 @@ export class LoopTuning {
   private targets = { ...TUNE_DEFAULT_TARGETS };
   private scope: 'instant' | 'flight' = 'flight';
   private tuneMessage = '';
-  private tuneBusy = false;
+  private tuner: AttitudeTuneRunner;
+  /** While a search runs: when it started and what it searches over, for its progress line. */
+  private tuneRun: TuneRun | null = null;
   private applyMessage = '';
   private testSpec = { kind: 'step' as AttitudeTestKind, amplitudeDeg: 1, holdS: 3 };
   private testMessage = '';
@@ -91,7 +98,7 @@ export class LoopTuning {
     kThetaLabel: el('span'), kOmegaLabel: el('span'), ffLabel: el('span'),
     reset: el('button', 'lt-button'), apply: el('button', 'lt-button primary'), applied: el('span', 'lt-message'),
     targetsLabel: el('span'), pm: el('input'), gm: el('input'), pmLabel: el('span'), gmLabel: el('span'),
-    scope: el('select'), auto: el('button', 'lt-button'), result: el('p', 'lt-result'),
+    scope: el('select'), auto: el('button', 'lt-button'), cancel: el('button', 'lt-button'), result: el('p', 'lt-result'),
     mag: el('canvas'), step: el('canvas'), history: el('canvas'), table: el('table', 'lt-table'), note: el('p', 'la-note'), none: el('p', 'la-none'),
   };
   private test = {
@@ -100,7 +107,8 @@ export class LoopTuning {
     chart: el('canvas'), diff: el('canvas'), table: el('table', 'lt-table'), limiters: el('dl', 'la-margins'), note: el('p', 'la-note'), none: el('p', 'la-none'),
   };
 
-  constructor(private host: LoopTuningHost = {}) {
+  constructor(private host: LoopTuningHost = {}, tuner = new AttitudeTuneRunner()) {
+    this.tuner = tuner;
     const u = this.tune;
     const slider = (input: HTMLInputElement) => { input.type = 'range'; input.min = '0'; input.max = '1000'; input.step = '1'; };
     slider(u.kTheta); slider(u.kOmega);
@@ -112,7 +120,7 @@ export class LoopTuning {
     };
     u.kTheta.addEventListener('input', setGain); u.kOmega.addEventListener('input', setGain);
     u.ff.addEventListener('input', () => { this.trialFf = Number(u.ff.value) / 100; this.applyMessage = ''; this.onChange(); });
-    u.reset.type = 'button'; u.apply.type = 'button'; u.auto.type = 'button';
+    u.reset.type = 'button'; u.apply.type = 'button'; u.auto.type = 'button'; u.cancel.type = 'button';
     u.reset.addEventListener('click', () => { this.trial = {}; this.trialFf = undefined; this.tuneMessage = ''; this.applyMessage = ''; this.onChange(); });
     u.apply.addEventListener('click', () => this.applyTrial());
     for (const [input, key] of [[u.pm, 'pmDeg'], [u.gm, 'gmDb']] as const) {
@@ -122,10 +130,12 @@ export class LoopTuning {
     }
     u.scope.addEventListener('change', () => { this.scope = u.scope.value === 'instant' ? 'instant' : 'flight'; });
     u.auto.addEventListener('click', () => this.runAutoTune());
+    u.cancel.addEventListener('click', () => this.tuner.cancel());
+    u.result.setAttribute('aria-live', 'polite');
     const row1 = el('div', 'la-toolbar lt-row'), row2 = el('div', 'la-toolbar lt-row');
     const labelled = (label: HTMLElement, ...inputs: HTMLElement[]) => { const l = el('label', 'la-ff'); l.append(label, ...inputs); return l; };
     row1.append(u.channel, labelled(u.kThetaLabel, u.kTheta, u.kThetaOut), labelled(u.kOmegaLabel, u.kOmega, u.kOmegaOut), labelled(u.ffLabel, u.ff, u.ffOut), u.reset, u.apply, u.applied);
-    row2.append(u.flown, u.targetsLabel, labelled(u.pmLabel, u.pm), labelled(u.gmLabel, u.gm), u.scope, u.auto);
+    row2.append(u.flown, u.targetsLabel, labelled(u.pmLabel, u.pm), labelled(u.gmLabel, u.gm), u.scope, u.auto, u.cancel);
     const plots = el('div', 'la-plots'), side = el('div', 'la-side'), grid = el('div', 'la-grid');
     plots.append(u.mag, u.step); side.append(u.table, u.result, u.history); grid.append(plots, side);
     this.tuningPanel.append(row1, row2, u.none, grid, u.note);
@@ -168,8 +178,22 @@ export class LoopTuning {
     this.onChange();
   }
 
+  /**
+   * What a search is asked: the channel, the scope, the targets, the feed-forward and the flight.
+   * The flight is told by its first sample's values, not its identity: a physics worker re-sends
+   * the samples when it thins them, while the first one is always kept (a flight flown again the
+   * same way would give the same answer anyway). Samples added as the flight goes on do not
+   * change it — the search was asked about the flight up to the cursor.
+   */
+  private tuneInputs(): string {
+    // Without a trial feed-forward the search takes the flight's own, which the flight fixes.
+    const { axis, samples } = this.last, first = samples[0];
+    return JSON.stringify([CHANNEL_OF[axis], this.scope, this.targets.pmDeg, this.targets.gmDb, this.trialFf ?? 'flown',
+      first ? [first.t, first.mass, first.lat, first.lon, first.alt] : null]);
+  }
+
   private runAutoTune(): void {
-    if (this.tuneBusy) return;
+    if (this.tuner.busy) return;
     const { axis, samples, cursor } = this.last, channel = CHANNEL_OF[axis], planes = PLANES_OF[channel];
     const here = linearModelAt(samples, cursor);
     const models: LinearModel[] = [];
@@ -180,25 +204,50 @@ export class LoopTuning {
     const cases = tuneCases(models, planes, 16);
     if (!cases.length || !here) { this.tuneMessage = t('freq.none'); this.onChange(); return; }
     const ff = this.trialFf ?? flownGains(here.planes[PLANE_OF[axis]]).feedForward;
-    this.tuneBusy = true; this.tuneMessage = t('tune.working'); this.onChange();
-    // Let the message paint before the search (a second or so) runs.
-    setTimeout(() => {
-      let result: TuneResult;
-      try { result = autoTune(cases, here.T, this.targets, ff, tuneCases(models, planes, Infinity)); } finally { this.tuneBusy = false; }
-      this.trial[channel] = { kTheta: result.gains.kTheta, kOmega: result.gains.kOmega };
+    const targets = { ...this.targets };
+    const run: TuneRun = { channel, started: performance.now(), timer: setInterval(() => this.showTuneProgress(), 1000) };
+    this.tuneRun = run;
+    this.tuneMessage = t('tune.working');
+    this.tuner.start({ cases, T: here.T, targets, feedForward: ff, verify: tuneCases(models, planes, Infinity) }, this.tuneInputs(), () => this.tuneInputs(), {
+      onProgress: (progress) => { run.cases = progress.cases; run.verify = progress.verify; this.showTuneProgress(); },
+      onEnd: (end) => this.endAutoTune(run, targets, end),
+    });
+    this.onChange();
+  }
+
+  /** The progress line, written in place: a full render each second would redraw every chart. */
+  private showTuneProgress(): void {
+    const run = this.tuneRun;
+    if (!run) return;
+    const s = Math.floor((performance.now() - run.started) / 1000);
+    this.tuneMessage = run.cases === undefined ? t('tune.working')
+      : t('tune.progress', { n: run.cases, m: run.verify ?? run.cases, s });
+    this.tune.result.textContent = this.tuneMessage;
+  }
+
+  private endAutoTune(run: TuneRun, targets: typeof this.targets, end: AttitudeTuneEnd): void {
+    clearInterval(run.timer);
+    if (this.tuneRun === run) this.tuneRun = null;
+    if (end.kind === 'result') {
+      const result: TuneResult = end.result;
+      this.trial[run.channel] = { kTheta: result.gains.kTheta, kOmega: result.gains.kOmega };
       const w = result.worst, params = { kt: fixed(result.gains.kTheta, 2), kw: fixed(result.gains.kOmega, 2), n: result.cases, t: fmtTime(w.t),
-        pm: fixed(w.pmDeg, 1), gm: w.gmDb === undefined ? '∞' : fixed(w.gmDb, 1), wc: fixed(result.crossoverRadS, 2), pmT: this.targets.pmDeg, gmT: this.targets.gmDb };
+        pm: fixed(w.pmDeg, 1), gm: w.gmDb === undefined ? '∞' : fixed(w.gmDb, 1), wc: fixed(result.crossoverRadS, 2), pmT: targets.pmDeg, gmT: targets.gmDb };
       this.tuneMessage = t(result.feasible ? 'tune.found' : 'tune.notFound', params);
-      this.onChange();
-    }, 30);
+    } else this.tuneMessage = t(end.kind === 'cancelled' ? 'tune.cancelled' : end.kind === 'stale' ? 'tune.stale' : 'tune.error');
+    this.onChange();
   }
 
   renderTuning(axis: LoopAxis, samples: readonly TelemetrySample[], cursor: number, live: boolean): void {
     this.last = { axis, samples, cursor, live };
+    // A search asked about another channel, scope, target, feed-forward or flight: drop it now
+    // rather than let its answer land on what is on screen (onEnd renders again).
+    if (this.tuner.invalidate(this.tuneInputs())) return;
     const u = this.tune, channel = CHANNEL_OF[axis], model = linearModelAt(samples, cursor), plane = model?.planes[PLANE_OF[axis]];
     u.kThetaLabel.textContent = 'K_θ'; u.kOmegaLabel.textContent = 'K_ω'; u.ffLabel.textContent = t('tune.ff');
     u.reset.textContent = t('tune.reset'); u.apply.textContent = t('tune.apply'); u.auto.textContent = t('tune.auto');
-    u.auto.disabled = this.tuneBusy; u.apply.disabled = !this.host.applyControl;
+    u.cancel.textContent = t('tune.cancel'); u.cancel.hidden = !this.tuner.busy;
+    u.auto.disabled = this.tuner.busy; u.apply.disabled = !this.host.applyControl;
     u.targetsLabel.textContent = t('tune.targets'); u.pmLabel.textContent = t('tune.pmTarget'); u.gmLabel.textContent = t('tune.gmTarget');
     u.scope.replaceChildren(...(['flight', 'instant'] as const).map((v) => { const o = el('option', undefined, t(v === 'flight' ? 'tune.scope.flight' : 'tune.scope.instant')); o.value = v; return o; }));
     u.scope.value = this.scope;

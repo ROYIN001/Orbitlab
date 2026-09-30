@@ -43,32 +43,40 @@ describe('Monte Carlo worker failures release the pool (audit 2026-09-29)', () =
     released(second);
   });
 
-  it('stops with an infrastructure error if dispatching the next run throws, retaining completed results', () => {
+  it('loses the run and retires the worker when dispatching its next run throws, and flies on with the rest', () => {
     const first = worker(), second = worker();
     first.postMessage = vi.fn().mockImplementationOnce(() => {}).mockImplementationOnce(() => { throw new Error('later dispatch blocked'); });
     const createWorker = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
     const job = new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 4 }, { workers: 2, createWorker });
     complete(first);
-    expect(job.state).toBe('stopped');
-    expect(job.error).toBe('later dispatch blocked');
-    expect(job.runs).toHaveLength(1);
-    expect(job.progress()).toEqual({ done: 1, total: 4, etaS: null });
-    expect(job.finishedAt).toBeDefined();
+    expect(job.state).toBe('running');
+    expect(job.runs).toEqual([
+      expect.objectContaining({ index: 0, outcome: 'lost', reason: 'error: named flight error' }),
+      expect.objectContaining({ index: 2, outcome: 'lost', reason: 'error: later dispatch blocked' }),
+    ]);
     released(first);
+    complete(second, 1);
+    complete(second, 3);
+    expect(job.state).toBe('done');
+    expect(job.runs).toHaveLength(4);
+    expect(job.finishedAt).toBeDefined();
     released(second);
   });
 
-  it('releases other workers when a crashed worker cannot be replaced', () => {
-    const first = worker(), second = worker();
-    const createWorker = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second)
-      .mockImplementationOnce(() => { throw new Error('replacement blocked'); });
-    const job = new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 4 }, { workers: 2, createWorker });
+  it('ends the set as failed, completed results kept, when the last worker crashes and cannot be replaced', () => {
+    const first = worker();
+    const createWorker = vi.fn().mockReturnValueOnce(first).mockImplementationOnce(() => { throw new Error('replacement blocked'); });
+    const job = new MonteCarloJob(mission(), { ...defaultMonteCarlo(), runs: 4 }, { workers: 1, createWorker });
+    complete(first);
     first.onerror?.({ message: 'worker crashed', preventDefault() {} } as ErrorEvent);
-    expect(job.state).toBe('stopped');
+    expect(job.state).toBe('failed');
     expect(job.error).toBe('replacement blocked');
-    expect(job.runs).toEqual([expect.objectContaining({ index: 0, outcome: 'lost', reason: 'error: worker crashed' })]);
+    expect(job.runs).toEqual([
+      expect.objectContaining({ index: 0, reason: 'error: named flight error' }),
+      expect.objectContaining({ index: 1, outcome: 'lost', reason: 'error: worker crashed' }),
+    ]);
+    expect(job.progress()).toEqual({ done: 2, total: 4, etaS: null });
     released(first);
-    released(second);
   });
 
   it('ignores callbacks already queued when the user stops the job', () => {
