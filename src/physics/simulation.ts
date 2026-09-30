@@ -22,7 +22,7 @@
 import type { MissionConfig, SatelliteSpec, VehicleSpec, GuidanceParams, DynamicsConfig } from '../types';
 import type { ControlFaultSpec } from '../types';
 import { siteById, type SiteExtra } from '../data/sites';
-import { missionVehicle } from '../data/vehicles';
+import { missionVehicle, openTopVehicle } from '../data/vehicles';
 import { satelliteById } from '../data/satellites';
 import { G0, MU_EARTH, R_EARTH, OMEGA_EARTH, DEG, RAD } from './constants';
 import { Vec3, v3, add, addScaled, sub, scale, dot, cross, norm, normalize, slerpLimited, clone } from './vec3';
@@ -48,7 +48,7 @@ import { gravity, gravityJ2 } from './gravity';
 import { runningEngines } from './eom';
 import { validateDynamics } from './rigid/config';
 import { rk4Step } from './integrator';
-import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, wrapPi } from './orbital';
+import { type OrbitalElements, elementsFromState, groundPositionEci, groundVelocityEci, eciToLatLon, propagateKepler, gmst, julianDate, planeNormal, wrapPi } from './orbital';
 import { VehicleModel, StageState, engineMassFlow } from './vehicle';
 import { AscentGuidance, planeNormalThrough } from './guidance';
 import { ExplicitGuidance, LOAD_RELIEF_RELEASE_RATE, burnProfile, explicitReady, insertionTarget } from './explicit-guidance';
@@ -65,6 +65,7 @@ import { LaunchEscape } from './sim/abort';
 import { Rendezvous, type ToruCommand } from './sim/rendezvous';
 import { Staging } from './sim/staging';
 import { pointMassAcceleration } from './sim/forces';
+import { ApolloFlight } from './sim/apollo';
 import { RIGID_ASCENT_COMMAND_RATE, RIGID_STEERING_FREEZE_S, TELEMETRY_CAP, TRANSIENT_DT } from './sim/constants';
 import type { Debris, EventSeverity, PendingAction, SimEvent, SimState, TelemetrySample } from './sim/types';
 
@@ -174,6 +175,8 @@ export class Simulation {
   readonly escape = new LaunchEscape(this);
   /** G07: the flight on to the station, from the spacecraft's separation */
   readonly rendezvous = new Rendezvous(this);
+  /** @internal C01: Apollo's flight from the parking orbit */
+  readonly apollo = new ApolloFlight(this);
   /** The six-DOF steering held through a burn's last seconds (RIGID_STEERING_FREEZE_S). */
   private frozenCommand: Vec3 | null = null;
   /** The six-DOF vacuum-ascent command, rate-limited (RIGID_ASCENT_COMMAND_RATE). */
@@ -221,8 +224,13 @@ export class Simulation {
         this.rigidRuntime = new RigidRuntime(cfgIn.dynamics, 'vehicle', flex ? { ...faulted, flex } : faulted);
       }
     }
-    this.site = siteById(cfgIn.siteId);
-    this.vehicleSpec = vehicleSpec;
+    // C01: a mission that names its pad (`padId`) flies from the pad itself — LC-5,
+    // 14 km south of the Cape's point; Gagarin's Start, 6 km from Baikonur's —
+    // and is planned from there; without one, from the site's own point
+    const site = siteById(cfgIn.siteId);
+    const pad = cfgIn.padId ? site.pads?.find((p) => p.id === cfgIn.padId) : undefined;
+    this.site = pad ? { ...site, latitude: pad.latitude, longitude: pad.longitude } : site;
+    this.vehicleSpec = openTopVehicle(vehicleSpec, satelliteById(cfgIn.satelliteId));
     // Per-vehicle guidance defaults fill in every parameter the caller left at
     // the library default, so the UI (and any caller that does not merge them
     // itself) flies each launcher with its own pitch program.
@@ -235,8 +243,10 @@ export class Simulation {
     this.plan = planMission(cfg, this.site, this.vehicleSpec);
     this.vehicle = new VehicleModel(dispersion ? dispersedVehicle(this.vehicleSpec, dispersion.vehicle) : this.vehicleSpec,
       this.payloadMass, cfg.boosterRecovery, this.satellite, cfg.recoveryPlan);
+    const fixedPlane = this.vehicleSpec.targetPlane && this.plan.target.raan !== null && !this.plan.suborbitalAim
+      ? planeNormal(this.plan.target.inclination, this.plan.target.raan) : undefined;
     this.guidance = new AscentGuidance(cfg.guidance, this.plan.azimuthRotating, this.plan.ascentInclination, this.plan.insertionAltitude, this.plan.insertionApoapsis,
-      this.plan.suborbitalAim);
+      this.plan.suborbitalAim, fixedPlane);
     // G01: PEG or IGM, aimed at the same insertion orbit (orbital targets only: a suborbital flight keeps its own guidance).
     const explicit = cfgIn.dynamics?.explicitGuidance;
     if (explicit && !this.plan.suborbitalAim) {
@@ -386,6 +396,53 @@ export class Simulation {
       this.event('evt.fdirEngineShutdown', 'warn', { ...this.stageParams(st), engine: engineIndex + 1, n: Math.round(n * st.engineFraction), total: n }, t);
     }
   }
+  /**
+   * C01: the active stage's planned engine events that are due (`StageSpec.engineEvents`): an
+   * engine shut down as the FDIR shuts one (`shutEngines`, so the six-DOF budget loses that
+   * chamber and the others steer on), or a new operating point for every engine — the stage's
+   * spec is replaced by one with the shifted engine, which the point mass, the six-DOF mass model
+   * and the guidance all read. And the parts the stage drops on its way (`StageSpec.jettisons`).
+   */
+  private engineSchedule(): void {
+    const st = this.vehicle.active, events = st?.spec.engineEvents ?? [];
+    if (!st || (!events.length && !st.spec.jettisons?.length) || !st.ignited || st.cutoff || st.burnedOut) return;
+    const since = this.state.t - st.ignitionTime;
+    let done = st.engineEventsDone ?? 0;
+    while (done < events.length && events[done].t <= since + 1e-9) {
+      const e = events[done++];
+      const at = st.ignitionTime + e.t;
+      if (e.shutdown?.length) {
+        const n = st.spec.engine.count;
+        for (const i of e.shutdown) {
+          if (st.shutEngines?.includes(i)) continue;
+          st.shutEngines = [...(st.shutEngines ?? []), i];
+          st.engineFraction = Math.max(0, st.engineFraction - 1 / n);
+        }
+        this.event('evt.ceco', 'info', { ...this.stageParams(st), n: Math.round(n * st.engineFraction), total: n }, at);
+      }
+      if (e.mixture) {
+        st.spec = { ...st.spec, engine: { ...st.spec.engine, ...e.mixture } };
+        this.event('evt.mixtureShift', 'info', { ...this.stageParams(st), kn: Math.round((VehicleModel.enginesRunning(st) * st.spec.engine.thrustVac) / 1000) }, at);
+      }
+    }
+    st.engineEventsDone = done;
+    const drops = st.spec.jettisons;
+    let dropped = st.jettisonsDone ?? 0;
+    while (drops && dropped < drops.length && drops[dropped].t <= since + 1e-9) {
+      const j = drops[dropped++];
+      if (j.part === 'interstage') {
+        st.spec = { ...st.spec, dryMass: st.spec.dryMass - j.mass };
+        this.vehicle.jettisoned.interstage = true;
+        this.event('evt.interstageSep', 'success', { ...this.stageParams(st) }, st.ignitionTime + j.t);
+      } else {
+        this.vehicle.payloadMass = Math.max(0, this.vehicle.payloadMass - j.mass);
+        this.vehicle.jettisoned.tower = true;
+        this.event('evt.towerJettison', 'success', {}, st.ignitionTime + j.t);
+      }
+    }
+    st.jettisonsDone = dropped;
+  }
+
   /**
    * G08: a failure of the control system from now on (or at its time, if later). A flight that
    * carries no failures takes them from here, with the FDIR as `fdir` says (off by default); `fdir`
@@ -593,7 +650,8 @@ export class Simulation {
       // step costs no accuracy; it only has to stay short enough to resolve the
       // scheduled burn, which the pending-action clamp below takes care of.
       case 'coast': dt = s.altitude > 2000e3 ? 60 : s.altitude > 140e3 ? 10 : 0.5; break;
-      case 'orbit': dt = Math.min(30, Math.max(1, (s.elements.period || 5400) / 300)); break;
+      case 'orbit': dt = this.apollo.active ? this.apollo.suggestedDt()
+        : Math.min(30, Math.max(1, (s.elements.period || 5400) / 300)); break;
       case 'descent': {
         // Kepler above the air; the entry resolved at its speed; the flip and
         // the landing burn finely.
@@ -675,6 +733,8 @@ export class Simulation {
     if (s.status === 'prelaunch') this.stepPrelaunch(dt);
     // G07: docked (or kept by the station after a docking called off), the rendezvous still flies the spacecraft
     else if (s.status === 'orbit' && this.rendezvous.holding) this.rendezvous.step(dt);
+    // C01: Apollo flies itself from the parking orbit on
+    else if (s.status === 'orbit' && this.apollo.active) this.apollo.step(dt);
     else if (s.status === 'orbit' && !this.vehicle.inTransient(s.t)) this.stepOrbit(dt);
     else if (s.status === 'landed') this.stepLanded(dt);
     else if (s.status === 'abort') this.escape.step(dt);
@@ -750,6 +810,7 @@ export class Simulation {
   /** @internal */
   stepFlight(dt: number): number {
     const s = this.state;
+    this.engineSchedule();
     const rm = norm(s.r);
     const alt = rm - R_EARTH;
     const standard = atmosphere(alt);
@@ -1092,6 +1153,7 @@ export class Simulation {
         for (const booster of stage.boosters) if (booster.attached) radius = Math.max(radius, stage.spec.diameter / 2 + booster.spec.diameter);
       }
       if (this.vehicle.fairingAttached && this.vehicleSpec.fairing) radius = Math.max(radius, this.vehicleSpec.fairing.diameter / 2);
+      if (this.vehicle.payloadAttached && this.vehicleSpec.exposedPayload) radius = Math.max(radius, this.vehicleSpec.exposedPayload.diameter / 2);
       const contact = rigidContactMetrics({ r: s.r, v: s.v, attitudeQ: s.rigid.attitudeQ, omegaBody: s.rigid.omegaBody },
         { ...snapshot, cg: sub(snapshot.cg, snapshot.activeBase) }, snapshot.aero.referenceLength, radius, r => this.groundElevation(r));
       groundImpact = contact.clearance < -0.01;

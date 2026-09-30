@@ -14,7 +14,9 @@ import { missionDoc } from '../src/lessons/builtin/common';
 import { vehicleById } from '../src/data/vehicles';
 import { orbitById } from '../src/data/orbits';
 import { landingZoneById } from '../src/data/landing-zones';
-import { recoveryReserves } from '../src/physics/vehicle';
+import { droneShipReserve, recoveryReserves, VehicleModel } from '../src/physics/vehicle';
+import { openTopVehicle } from '../src/data/vehicles';
+import { satelliteById } from '../src/data/satellites';
 import {
   boostbackCommand, brakingHeight, distanceFromTarget, divertAcceleration, entryStep, predictDescent, targetPosition,
   type DescentModel, type ReturnTarget,
@@ -167,6 +169,40 @@ describe('point-mass returns', () => {
     while (sim.state.t < t0 + 300) sim.step(sim.suggestedDt());
     expect(Math.abs(distanceFromTarget(stage.r, target, sim.plan.gmst0, sim.state.t) - miss)).toBeLessThan(0.01);
     expect(norm(sub(stage.v, groundVelocityEci(stage.r)))).toBeLessThan(1e-6);
+  });
+
+  // C01: the drone-ship reserve is sized for the mission, never above the vehicle's own
+  it('sizes a lone stage\'s drone-ship reserve for its payload, and leaves Falcon Heavy\'s core alone', () => {
+    const dragon = openTopVehicle(vehicleById('falcon9'), satelliteById('crewDragon'));
+    const demo2 = droneShipReserve(dragon, 13055, 0.12);
+    // (8.5 % with Falcon 9's published first-stage masses, F11)
+    expect(demo2).toBeGreaterThan(0.08);
+    expect(demo2).toBeLessThan(0.1);
+    // a heavier payload separates slower and needs less to slow down
+    expect(droneShipReserve(vehicleById('falcon9'), 1300, 0.12)).toBeGreaterThan(droneShipReserve(vehicleById('falcon9'), 15600, 0.12));
+    expect(droneShipReserve(vehicleById('falcon9'), 0, 0.05)).toBe(0.05);
+    const fh = vehicleById('falconheavy');
+    expect(droneShipReserve(fh, 6465, 0.12)).toBe(0.12);
+    expect(new VehicleModel(dragon, 13055, true, undefined, { core: { kind: 'droneShip' } }).recoveryReserve).toBeCloseTo(demo2, 10);
+    // a return to the site keeps its own, larger reserve
+    expect(new VehicleModel(vehicleById('falcon9'), 1300, true, undefined, { core: { kind: 'landingZone', zoneId: 'lz1' } }).recoveryReserve).toBe(0.15);
+  });
+
+  // C01: a lone Falcon 9 first stage to a drone ship, off a steep, fast ascent
+  // with a heavy payload (Demo-2's 13 t to 51.6°). With the old fixed 1.4 km/s
+  // entry burn it came through 3 km at ~300 m/s sideways with 30 t unburnt and
+  // hit the sea beside the ship.
+  it('flies Falcon 9\'s first stage to a drone ship off a heavy crewed ascent (Demo-2)', { timeout: 120_000 }, () => {
+    const sim = fly('falcon9', 13055, { ...orbitById('custom'), perigee: 190e3, apogee: 211e3, inclination: 51.64 }, { core: { kind: 'droneShip' } });
+    const stage = sim.debris.find((d) => d.recovery)!;
+    expect(stage.outcome).toBe('landed');
+    expect(stage.recovery!.missDistance!).toBeLessThan(stage.recovery!.target!.radius);
+    expect(sim.events.some((e) => e.key === 'evt.boosterLandedShip')).toBe(true);
+    // the entry burn now spends the propellant above the landing reserve
+    expect(stage.recovery!.entryTargetSpeed!).toBeLessThan(1400);
+    expect(stage.recovery!.propellant).toBeLessThan(0.5 * vehicleById('falcon9').stages[0].propellantMass * sim.vehicle.recoveryReserve);
+    // the harness stops at the landing; the second stage, still burning, has not run dry
+    expect(sim.isFailed()).toBe(false);
   });
 
   it('trims the boostback on the predicted miss, not on a wobble of the Δv still needed', { timeout: 240_000 }, () => {

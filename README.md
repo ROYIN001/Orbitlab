@@ -59,6 +59,13 @@ tablet, and a single stack on a phone with the viewport first.
   already calls marginal it also flies the ascent and the insertion headlessly and asks
   whether the stack reaches an orbit at all — the one question a static budget provably
   cannot answer for a launcher whose orbit is made by a kick stage.
+- **Historical missions** replayed on their own day and second — Sputnik 1, Vostok 1,
+  Mercury-Redstone 3, Apollo 11, ORBCOMM-2, the first Angara-A5, H-IIA with Hayabusa2, Soyuz
+  MS-16 and MS-25, Crew Dragon Demo-2 — each set beside the real flight's timeline. Apollo 11
+  is flown whole, from LC-39A to the Pacific: the translunar injection under the Moon's and the
+  Sun's pull, the lunar orbit, the powered descent to Tranquility Base, the ascent and the
+  coelliptic rendezvous, the burn for home and the lifting entry under the parachutes, within
+  minutes of the flown timeline ([docs/PHYSICS.md §13](docs/PHYSICS.md)).
 - **Phase narration and a camera sequence**: the viewport names the flight phase and
   explains it in one line, next to the mission clock and the latest callout, and the camera
   follows a per-phase programme you can set yourself — identically live and in replay.

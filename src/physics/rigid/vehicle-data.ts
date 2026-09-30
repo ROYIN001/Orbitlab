@@ -67,7 +67,7 @@ export function getRigidVehicleGeometry(spec: VehicleSpec): RigidVehicleGeometry
   });
   const { launcherStageIds, solidPropellantIds } = stageRoles(spec);
   return {
-    vehicleId: vehicleDataId(spec), length: layout.total + (spec.fairing?.length ?? 0),
+    vehicleId: vehicleDataId(spec), length: layout.total + (spec.fairing?.length ?? spec.exposedPayload?.length ?? 0),
     stageBases: layout.base.map((x) => v3(x, 0, 0)), stageHeights: [...layout.height],
     fairingBase: v3(layout.total, 0, 0), payloadBase: v3(layout.total + 0.5, 0, 0),
     boosters, launcherStageIds, solidPropellantIds, estimated: true,
@@ -107,6 +107,9 @@ export interface PropellantLoad {
 export const PROPELLANT_DENSITY: Record<Exclude<PropellantFamily, 'solid'>, readonly [number, number]> = {
   kerolox: [1141, 810], hydrolox: [1141, 71], methalox: [1141, 423], hypergolic: [1443, 791],
 };
+/** The stages of historical flights (C01) whose loads are their own flight's, not the fleet's: kept out of the family medians. */
+export const HISTORICAL_LOAD_IDS: ReadonlySet<string> = new Set(['sic506', 'sii506', 'sivb506']);
+
 /** Estimates (E): family and mixture ratio from each engine's published figures, tank order from the stage's layout. */
 export const PROPELLANT_LOADS: Readonly<Record<string, PropellantLoad>> = {
   // Soyuz-2.1b / Angara / Proton
@@ -118,6 +121,11 @@ export const PROPELLANT_LOADS: Readonly<Record<string, PropellantLoad>> = {
   urm1core: { family: 'kerolox', mixtureRatio: 2.6, oxidizerForward: true },
   urm1: { family: 'kerolox', mixtureRatio: 2.6, oxidizerForward: true },
   urm2: { family: 'kerolox', mixtureRatio: 2.6, oxidizerForward: true },
+  // Saturn V (C01), from AS-506's loads (FER Table 20-9): the S-IC's LOX tank over
+  // its RP-1, the S-II's and S-IVB's LOX tanks under their hydrogen
+  sic506: { family: 'kerolox', mixtureRatio: 2.32, oxidizerForward: true },
+  sii506: { family: 'hydrolox', mixtureRatio: 5.18, oxidizerForward: false },
+  sivb506: { family: 'hydrolox', mixtureRatio: 4.41, oxidizerForward: false },
   // Atlas V / Vulcan
   ccb: { family: 'kerolox', mixtureRatio: 2.72, oxidizerForward: true },
   gem63: { family: 'solid' },
@@ -205,6 +213,11 @@ export const STAGE_STEERING: Readonly<Record<string, StageSteering>> = {
   // the four small nozzles drawn on the core are its turbine-exhaust roll nozzles
   urm1core: { gimbalDeg: 8, steer: 'tvc', vernierFraction: 0.004, vernierDeg: 30, estimated: true },
   urm2: { gimbalDeg: 4, steer: 'tvc', estimated: true },
+  // Saturn V (C01): the four outboard F-1s gimbal ±6°, the four outboard J-2s of the
+  // S-II ±7°, the centre engines are fixed (SP-4029; Saturn V Flight Manual SA-506)
+  sic506: { gimbalDeg: 6, steer: 'tvc', steerable: 4 },
+  sii506: { gimbalDeg: 7, steer: 'tvc', steerable: 4 },
+  sivb506: { gimbalDeg: 7, steer: 'tvc' },
   // Atlas V / Vulcan
   ccb: { gimbalDeg: 8, steer: 'tvc' },
   gem63: { gimbalDeg: 0, steer: 'tvc' },

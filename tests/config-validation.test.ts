@@ -134,7 +134,7 @@ describe('recovery plans and suborbital targets', () => {
     expect(field({ ...mission(), vehicleId: 'soyuz21a', siteId: 'baikonur', recoveryPlan: { core: { kind: 'droneShip' } } })).toEqual([bad]);
   });
 
-  it('takes a suborbital target from Starship only, with its perigee below the ground and no payload needed', () => {
+  it('takes a suborbital target from Starship (or a capsule that comes home on its own), with its perigee below the ground and no payload needed', () => {
     const flight5 = (over: Partial<ConfigInput> = {}): ConfigInput => ({
       ...mission(), vehicleId: 'starship', siteId: 'starbase', payloadMass: 0,
       orbit: { ...orbitById('custom'), perigee: -15e3, apogee: 213e3, inclination: 26.2, suborbital: true }, ...over,
@@ -142,7 +142,9 @@ describe('recovery plans and suborbital targets', () => {
     expect(field(flight5())).toEqual([]);
     expect(field(flight5({ vehicleId: 'falcon9', siteId: 'cape' }))).toEqual(['setup.perigee:suborbital']);
     expect(field(flight5({ orbit: { ...flight5().orbit, perigee: 50e3 } }))).toEqual(['setup.perigee:maximum']);
-    expect(field(flight5({ orbit: { ...flight5().orbit, perigee: -2000e3 } }))).toEqual(['setup.perigee:minimum']);
+    // a ballistic arc falls far deeper than a ship flying itself home (C01: Mercury-Redstone 3, −6,214 km)
+    expect(field(flight5({ orbit: { ...flight5().orbit, perigee: -6214e3 } }))).toEqual([]);
+    expect(field(flight5({ orbit: { ...flight5().orbit, perigee: -6400e3 } }))).toEqual(['setup.perigee:minimum']);
     // an orbit still needs its payload and a perigee above the air
     expect(field(flight5({ orbit: { ...orbitById('leo') } }))).toEqual(['setup.payloadMass:minimum']);
   });

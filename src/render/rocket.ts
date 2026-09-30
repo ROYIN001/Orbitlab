@@ -108,6 +108,8 @@ interface StagePart {
   boosters: BoosterSet[];
   /** Starship's flaps, folded on the recorded deflections */
   flaps: FlapVisual[];
+  /** C01: the Saturn V's S-IC/S-II interstage ring round the S-II's engines, dropped 30 s into its burn */
+  ring?: THREE.Mesh;
   /** frost on the oxygen tank (the R-7's Blok A) */
   frost: FrostCoat | null;
   /** Blok I's aft skirt, shed after Blok A has gone */
@@ -176,7 +178,7 @@ export class RocketView {
   /** V03: the condensation collar through Mach 1, at the fairing's shoulder (or a ship's) */
   private vapour: VapourCone | null = null;
   /** where the collar starts: above the fairing's base, or below the top of the stack */
-  private vapourAt: { onFairing: boolean; y: number } | null = null;
+  private vapourAt: { onFairing: boolean; onPayload?: boolean; y: number } | null = null;
   private readonly humidity: number;
   private readonly crewed: boolean;
   private satellite: SatelliteView;
@@ -225,13 +227,18 @@ export class RocketView {
     if (spec.fairing) {
       this.vapour = new VapourCone(spec.fairing.diameter / 2, spec.fairing.diameter * 1.7);
       this.vapourAt = { onFairing: true, y: spec.fairing.length * 0.52 };
+    } else if (spec.exposedPayload) {
+      // a payload flown in the open: the collar forms at its capsule's shoulder
+      const p = spec.exposedPayload;
+      this.vapour = new VapourCone(p.diameter / 2, p.diameter * 1.7);
+      this.vapourAt = { onFairing: false, onPayload: true, y: p.length - p.noseLength };
     } else if (last && !last.isSpacecraft) {
       this.vapour = new VapourCone(last.diameter / 2, last.diameter * 1.7);
       this.vapourAt = { onFairing: false, y: last.length * SHIP_NOSE_FRACTION };
     }
     if (this.vapour) this.group.add(this.vapour.group);
     // a crewed R-7 carries a Soyuz MS (G07: its shape matters at the station's port)
-    this.satellite = this.crewed && spec.stages.some((st) => st.profile === 'r7Core') ? buildSoyuzMs() : buildSatellite(sat);
+    this.satellite = sat.kind === 'crew' && spec.stages.some((st) => st.profile === 'r7Core') ? buildSoyuzMs() : buildSatellite(sat);
     this.group.add(this.satellite.group);
     this.group.add(this.engineLight);
     this.height = total;
@@ -369,7 +376,7 @@ export class RocketView {
     const seed = seedFromString(vehicleDataId(this.spec) + spec.id);
     // A top stage flown without a fairing (Starship's ship) carries its payload
     // inside its own nose, so it has to close the stack itself.
-    const noseH = !this.spec.fairing && index === this.spec.stages.length - 1 ? spec.length * SHIP_NOSE_FRACTION : 0;
+    const noseH = !this.spec.fairing && !this.spec.exposedPayload && index === this.spec.stages.length - 1 ? spec.length * SHIP_NOSE_FRACTION : 0;
     const barrel = spec.length - noseH;
     const tex = bodyTexture(liv, spec.diameter, barrel, seed);
     this.textures.push(tex);
@@ -417,9 +424,10 @@ export class RocketView {
     // produced `stackHeight` inside `stackLayout`, so the drawn cone and the
     // stacking arithmetic cannot disagree.
     const interH = interstageHeight(spec.diameter, topDiameter);
-    if (r7Core && topDiameter !== null) {
+    if (r7Core && topDiameter !== null && index < this.spec.stages.length - 1) {
       // the open truss Blok I stands on, from inside Blok A's own length up to
-      // the next stage's base; its flame is seen through it at staging
+      // the next stage's base; its flame is seen through it at staging (a core
+      // flown as the last stage, Sputnik's, closes under its nose cone instead)
       const truss = new THREE.Mesh(r7TrussGeometry(r7CoreTop(r), spec.length - R7_TRUSS_INSIDE, spec.length + interH), this.mat('#4a4d52', 0.45, 0.55));
       truss.castShadow = true;
       g.add(truss);
@@ -505,7 +513,15 @@ export class RocketView {
       boosters.push({ spec: b, units, frameIndex: -1 });
     }
 
-    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters, flaps, frost, skirt };
+    let ring: THREE.Mesh | undefined;
+    if (spec.jettisons?.some((j) => j.part === 'interstage')) {
+      const ringH = bellLength + 0.4;
+      ring = new THREE.Mesh(new THREE.CylinderGeometry(r, r, ringH, 40, 1, true), bodyMat);
+      ring.position.y = -ringH / 2;
+      g.add(ring);
+    }
+    return { spec, index, group: g, plume, vernier, glow, engines, flash, height: stackHeight, bellLength, bellMat, frameIndex: -1, boosters, flaps, frost, skirt,
+      ...(ring ? { ring } : {}) };
   }
 
   /**
@@ -684,7 +700,7 @@ export class RocketView {
     g.add(nose);
     // A crewed R-7 flies its escape tower on the fairing's nose and the
     // tower's lattice fins folded along the fairing.
-    if (this.crewed && spec.stages.some((st) => st.profile === 'r7Core')) {
+    if (this.crewed && spec.escapeSystem === 'soyuz') {
       const finMat = new THREE.MeshStandardMaterial({ map: gridFinTexture(), transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5, color: 0x9a9da1 });
       this.materials.push(finMat);
       this.crewedTop = new CrewedTop(r, f.length, (c, metal, rough) => this.mat(c, metal, rough), finMat);
@@ -718,6 +734,7 @@ export class RocketView {
       if (part.flaps.length) foldShipFlaps(part.flaps, frame.rigid);
       part.frost?.update(sinceLiftoff);
       part.skirt?.update(sinceFirstSep);
+      if (part.ring) part.ring.visible = !frame.jettisoned?.interstage;
       part.group.position.y = y;
       const burning = sf.burning;
       // The *effective* core throttle, not the guidance command: Angara's core
@@ -804,9 +821,9 @@ export class RocketView {
       this.crewedTop?.update(sinceLiftoff, this.fairingLength);
     }
     if (this.vapour && this.vapourAt) {
-      const on = this.vapourAt.onFairing ? frame.fairingAttached : true;
+      const on = this.vapourAt.onFairing ? frame.fairingAttached : this.vapourAt.onPayload ? !frame.payloadSeparated : true;
       const strength = on && frame.liftoff && !frame.abort && frame.thrust > 0 ? vapourStrength(frame.mach, frame.altitude, this.humidity) : 0;
-      this.vapour.group.position.y = this.vapourAt.onFairing ? top + this.vapourAt.y : top - this.vapourAt.y;
+      this.vapour.group.position.y = this.vapourAt.onFairing || this.vapourAt.onPayload ? top + this.vapourAt.y : top - this.vapourAt.y;
       this.vapour.update(strength, t, env.night);
     }
     // payload
@@ -817,14 +834,19 @@ export class RocketView {
       // origin; the stage it came off is drawn *below* the origin
       // (DebrisFrame.anchor), so the two abut at the separation plane and then
       // drift apart instead of occupying the same 15 m of space.
+      // (C01: Apollo's drawing first, which sets its height: the stack, or Eagle alone)
+      this.satellite.setApollo?.(frame.apollo, frame.t, true);
       satG.position.y = this.satellite.height / 2;
       const p = sepT >= 0 ? clamp01((t - sepT) / 14) : 1;
       this.satellite.setDeploy(p);
       satG.visible = true;
     } else {
-      satG.position.y = top + this.satellite.height / 2 + 0.5;
+      // a payload flown in the open stands on the stage; one in a fairing half a metre up inside it
+      satG.position.y = top + this.satellite.height / 2 + (this.spec.exposedPayload ? 0 : 0.5);
       this.satellite.setDeploy(0);
-      satG.visible = !this.spec.fairing ? false : !frame.fairingAttached;
+      this.satellite.setJettisoned?.(frame.jettisoned);
+      this.satellite.setApollo?.(frame.apollo, frame.t, false);
+      satG.visible = this.spec.exposedPayload ? true : !this.spec.fairing ? false : !frame.fairingAttached;
     }
   }
 

@@ -21,9 +21,11 @@ import { falcon9Rows, formatRows } from './compare';
  */
 const DISAGREEMENTS: Record<string, readonly string[]> = {
   crs16: ['T+100/speed', 'ses1/time'],
-  ssoA: ['maxQ/time', 'T+100/speed', 'T+140/speed', 'meco/altitude', 'meco/speed'],
-  iridium8: ['maxQ/time'],
-  bangabandhu1: ['maxQ/time', 'T+100/altitude', 'T+140/altitude', 'meco/speed', 'ses1/time', 'seco1/altitude'],
+  // (the three drone-ship flights re-measured with their lone first stage's reserve sized for the mission,
+  // `droneShipReserve` — docs/VALIDATION.md, "The drone-ship reserve sized for the mission")
+  ssoA: ['maxQ/time', 'T+100/speed', 'T+140/speed', 'meco/speed'],
+  iridium8: ['maxQ/time', 'T+140/speed'],
+  bangabandhu1: ['maxQ/time', 'T+100/altitude', 'T+140/altitude', 'meco/speed', 'seco1/altitude'],
   gps3sv01: ['maxQ/time', 'T+60/speed', 'seco1/altitude'],
 };
 

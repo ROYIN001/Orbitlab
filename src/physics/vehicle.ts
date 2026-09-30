@@ -35,6 +35,10 @@ export interface StageState {
   engineFraction: number;
   /** G08: the engines the FDIR shut down, by engine index; they are the first of the share `engineFraction` lost */
   shutEngines?: number[];
+  /** C01: how many of the stage's `engineEvents` have happened */
+  engineEventsDone?: number;
+  /** C01: how many of the stage's `jettisons` have happened */
+  jettisonsDone?: number;
   boosters: BoosterState[];
   /** mission time of first ignition */
   ignitionTime: number;
@@ -311,12 +315,57 @@ export function recoveryReserves(spec: VehicleSpec, boosterRecovery: boolean, pl
   return { core: of(plan.core), boosters: Math.max(0, ...(plan.boosters ?? []).map(of)) };
 }
 
+/** Δv a returning stage keeps for its landing burn, m/s (as `LANDING_BURN_DV`, src/physics/sim/debris.ts). */
+const RESERVE_LANDING_DV = 800;
+/**
+ * Gravity, drag and steering losses a first stage flies to separation with,
+ * m/s: Falcon 9 on Demo-2 has 2.95 km/s of ideal Δv to separation with the 12 %
+ * reserve and separates at 1.85 km/s.
+ */
+const RESERVE_ASCENT_LOSSES = 1100;
+/** The airspeed the entry burn is sized to end at, m/s (the return to the site's, `RETURN_ENTRY_TARGET_SPEED`). */
+const RESERVE_ENTRY_SPEED = 550;
+/** Share of the entry propellant's ideal Δv the burn takes off (as `ENTRY_DV_USE`). */
+const RESERVE_ENTRY_USE = 0.75;
+
+/**
+ * The propellant fraction a lone first stage keeps for a drone-ship return
+ * (roadmap C01), sized for the mission rather than one fraction for all: the
+ * landing burn's 800 m/s, and an entry burn from the speed the stage
+ * separates at down to 550 m/s — estimated with the rocket equation over the
+ * mass the stage lifts, less `RESERVE_ASCENT_LOSSES`, iterated because the
+ * reserve itself sets the separation speed. A heavy payload separates slower
+ * and needs less: Demo-2's 13 t crew Dragon keeps about 9 % where the fixed
+ * 12 % left its second stage 100 m/s short in the point-mass model. Never
+ * more than `base`, the vehicle's `recoveryReserve`; a stage with strap-ons
+ * (Falcon Heavy's core) keeps `base`, its separation is not a lone stage's.
+ */
+export function droneShipReserve(spec: VehicleSpec, payloadMass: number, base: number): number {
+  const s1 = spec.stages[0];
+  if (!s1 || (s1.boosters?.length ?? 0) > 0 || s1.propellantMass <= 0) return base;
+  const upper = spec.stages.slice(1).reduce((m, st) => m + st.dryMass + st.propellantMass, 0) + (spec.fairing?.mass ?? 0) + payloadMass;
+  const e = s1.engine;
+  const isp = (e.ispSL + e.ispVac) / 2;
+  const landing = s1.dryMass * (Math.exp(RESERVE_LANDING_DV / (G0 * e.ispSL)) - 1);
+  const m0 = s1.dryMass + s1.propellantMass + upper;
+  let r = base;
+  for (let i = 0; i < 20; i++) {
+    const vSep = isp * G0 * Math.log(m0 / (s1.dryMass + r * s1.propellantMass + upper)) - RESERVE_ASCENT_LOSSES;
+    const dv = Math.max(0, vSep - RESERVE_ENTRY_SPEED);
+    const entry = (s1.dryMass + landing) * (Math.exp(dv / (G0 * e.ispVac)) - 1) / RESERVE_ENTRY_USE;
+    r = 0.5 * r + 0.5 * Math.min(base, (landing + entry) / s1.propellantMass);
+  }
+  return r;
+}
+
 export class VehicleModel {
   readonly spec: VehicleSpec;
   readonly stages: StageState[];
   fairingAttached: boolean;
   payloadMass: number;
   payloadAttached = true;
+  /** C01: the parts `StageSpec.jettisons` has dropped so far */
+  jettisoned = { interstage: false, tower: false };
   activeIndex = 0;
   /** first-stage (core) propellant fraction reserved for recovery */
   recoveryReserve: number;
@@ -331,7 +380,7 @@ export class VehicleModel {
     this.spec = spec;
     this.fairingAttached = spec.fairing !== null;
     const reserves = recoveryReserves(spec, boosterRecovery, plan);
-    this.recoveryReserve = reserves.core;
+    this.recoveryReserve = plan?.core?.kind === 'droneShip' ? droneShipReserve(spec, payloadMass, reserves.core) : reserves.core;
     this.boosterRecoveryReserve = reserves.boosters;
     const stageSpecs: StageSpec[] = [...spec.stages];
     this.lastLauncherIndex = spec.stages.length - 1;
@@ -433,6 +482,7 @@ export class VehicleModel {
     let maxD = 0;
     for (const st of this.stages) if (st.attached) maxD = Math.max(maxD, st.spec.diameter);
     if (this.fairingAttached && this.spec.fairing) maxD = Math.max(maxD, this.spec.fairing.diameter);
+    if (this.payloadAttached && this.spec.exposedPayload) maxD = Math.max(maxD, this.spec.exposedPayload.diameter);
     let area = Math.PI * (maxD / 2) ** 2;
     const act = this.active;
     if (act) {
