@@ -27,8 +27,9 @@
  * (src/orbit/passes.ts) — the pair held to Skyfield's ISS shadow edges
  * within ±3 s (tests/passes.test.ts). The closed form uses the same sphere
  * of radius `R_EARTH`. The shadow is the umbra of a Sun at infinity: no
- * penumbra (seconds at low altitude, Rickman TFAWS 2002), no oblateness,
- * no atmosphere.
+ * penumbra (seconds at low altitude; "if time in penumbra is minimal,
+ * analysis may be simplified using a cylindrical shadow assumption",
+ * Rickman, TFAWS 2023, slide 110), no oblateness, no atmosphere.
  *
  * WHERE THE TWO PART. The closed form holds the Sun still and uses the
  * two-body period. The real shadow moves with the Sun (about 1° a day, the
