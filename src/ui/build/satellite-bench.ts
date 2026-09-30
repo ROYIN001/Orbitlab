@@ -37,7 +37,7 @@ import { DESIGN_ACTIVITY_LEVELS, levelActivity, type EcssLevel } from '../../orb
 import { button, el, num } from '../orbit/dom';
 import { formatDuration } from '../lifetime';
 import { field, select } from './explore-level';
-import { camera, engine, menu, numberField, refreshControls } from './satellite-controls';
+import { camera, designDateField, engine, menu, numberField, refreshControls } from './satellite-controls';
 import { attitudeRows, cameraRows, dvRows, eclipseRows, linkRows, massRows, orbitRows, powerRows, type Row } from './satellite-figures';
 import { figureTable, satTextList, sayFig } from './satellite-text';
 import { orbitLabel } from './satellite-level';
@@ -120,7 +120,6 @@ export class SatelliteBench {
 
   show(): void {
     this.visible = true;
-    this.ws.readDate();
     this.ws.syncName();
     this.rebuild();
   }
@@ -159,7 +158,8 @@ export class SatelliteBench {
     if (!this.visible) return;
     this.keepFocus(() => {
       refreshControls(this.panel, this.ws.design);
-      this.renderHead();
+      // not under the student's hands: a date half typed in the head's box stays as it is
+      if (!this.head.contains(document.activeElement)) this.renderHead();
       this.renderResults();
     });
   }
@@ -177,7 +177,7 @@ export class SatelliteBench {
     side.append(toExplore);
     const level = select(`${P}level`, DESIGN_ACTIVITY_LEVELS.map((l) => ({ value: l, label: t(LEVEL_KEY[l]) })), this.ws.activityLevel,
       (v) => this.ws.setLevel(v as EcssLevel));
-    side.append(field(t('build.sat.bench.level'), level, 'bx-field bsb-level'));
+    side.append(field(t('build.sat.bench.level'), level, 'bx-field bsb-level'), designDateField(this.ws, P));
     this.head.replaceChildren(text, side);
   }
 
@@ -386,7 +386,7 @@ export class SatelliteBench {
     const sc = lifetimeSpacecraft(d);
     const level = this.ws.activityLevel;
     const run: LifeRun = {
-      key: this.runKey(), level, from: new Date((jd - 2440587.5) * 86400e3).toISOString().slice(0, 10),
+      key: this.runKey(), level, from: this.ws.date,
       mass: sc.mass, area: sc.area, cd: sc.cd, cr: sc.cr, years: d.lifeYears, held: !!d.propulsion,
     };
     const controller = new AbortController();

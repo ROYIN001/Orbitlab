@@ -14,13 +14,13 @@
  */
 import { getLang, t } from '../../i18n';
 import {
-  SHOWN, fieldOrigin, ssoInclinationDeg, valueAt, withCamera, withChoice, withEngine, withSso, withValue, type SatelliteField,
+  SHOWN, designDateOf, fieldOrigin, ssoInclinationDeg, valueAt, withCamera, withChoice, withEngine, withSso, withValue, type SatelliteField,
 } from '../../design/satellite-model';
 import { typedText } from '../../design/number-entry';
 import type { SatelliteDesign } from '../../design/satellite-spec';
 import { STATIONS } from '../../orbit/applications-setup';
 import { STATION_KEY } from '../orbit/applications-panel';
-import { el } from '../orbit/dom';
+import { button, el } from '../orbit/dom';
 import { field, numberBox, select } from './explore-level';
 import { fieldUnitText } from './satellite-text';
 import type { SatelliteWorkspace } from './satellite-workspace';
@@ -109,6 +109,27 @@ export function refreshControls(root: HTMLElement, design: SatelliteDesign): voi
     box.disabled = inclinationFollows(design);
     if (document.activeElement !== box && Number.isFinite(design.orbit.inclination)) box.value = typedText(design.orbit.inclination, getLang());
   }
+}
+
+/**
+ * The design date (the integration of D06; `DesignDate`): a date box and a
+ * "Today" button, shared by the Explore level's head and the bench's. A day
+ * the model does not take (empty, outside 1957–2200) puts the box back.
+ */
+export function designDateField(ws: SatelliteWorkspace, prefix: string): HTMLElement {
+  const box = el('input', 'bx-text bsat-date');
+  box.type = 'date';
+  box.min = '1957-10-04';
+  box.max = '2200-12-31';
+  box.value = ws.date;
+  box.dataset.k = `${prefix}date`;
+  box.addEventListener('change', () => { if (!ws.setDate(box.value)) box.value = ws.date; });
+  const today = button('watch-btn link bsat-today', t('build.sat.date.today'), () => { ws.setDate(designDateOf(new Date())); box.value = ws.date; });
+  today.dataset.k = `${prefix}today`;
+  const wrap = el('div', 'bsat-date-field');
+  wrap.append(field(t('build.sat.date'), box, 'bx-field'), today);
+  wrap.title = t('build.sat.date.note');
+  return wrap;
 }
 
 /** A sun-synchronous orbit's inclination is J2's for its height, not the student's to type (where one exists). */

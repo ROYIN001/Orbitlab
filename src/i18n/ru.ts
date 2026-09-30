@@ -2550,7 +2550,7 @@ export const ru: Record<string, string> = {
   'build.sat.station': 'Наземная станция',
   'build.sat.moreAtEngineer': 'Остальные значения — элементы, аккумулятор, маховики, антенны, оптика камеры — на спутниковом стенде уровня «Инженер».',
   'build.sat.glance': 'Коротко',
-  'build.sat.glance.note': 'Расчёт на {date} — дату старта в разделе «Запуск».',
+  'build.sat.glance.note': 'Рассчитано на {date} — дату расчёта.',
   'build.sat.gl.mass': 'Масса с полными баками',
   'build.sat.gl.eclipse': 'Самая длинная тень',
   'build.sat.gl.power': 'Запас мощности',
@@ -2731,6 +2731,11 @@ export const ru: Record<string, string> = {
   'build.sat.u.bits': 'бит',
   'build.sat.u.msYear': 'м/с в год',
   // --- end of D06 track B ---
+  // --- D06 integration (Phase 4 stage 3, task I): the design date, "Fly it", the camera's wavelength ---
+  'build.sat.date': 'Дата расчёта',
+  'build.sat.date.today': 'Сегодня',
+  'build.sat.date.note': 'Все величины рассчитаны на дату расчёта: угол Солнца к плоскости орбиты, а с ним тень и энергетика, меняются в течение года. По умолчанию это сегодняшний день; дата сохраняется вместе с проектом в этом браузере.',
+  // --- end of D06 integration ---
   'watch.beat.countdown': 'Обратный отсчёт',
   'watch.beat.liftoff': 'Старт',
   'watch.beat.climb': 'Уход от башни',

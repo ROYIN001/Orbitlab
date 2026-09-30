@@ -2571,7 +2571,7 @@ export const en: Record<string, string> = {
   'build.sat.station': 'Ground station',
   'build.sat.moreAtEngineer': 'The rest of the numbers — cells, battery, wheels, the radio\'s dishes, the camera\'s optics — are on the Engineer level\'s satellite bench.',
   'build.sat.glance': 'At a glance',
-  'build.sat.glance.note': 'Worked out for {date}, the Launch section\'s launch day.',
+  'build.sat.glance.note': 'Worked out for {date}, the design date.',
   'build.sat.gl.mass': 'Mass with full tanks',
   'build.sat.gl.eclipse': 'Longest eclipse',
   'build.sat.gl.power': 'Power margin',
@@ -2752,6 +2752,11 @@ export const en: Record<string, string> = {
   'build.sat.u.bits': 'bits',
   'build.sat.u.msYear': 'm/s a year',
   // --- end of D06 track B ---
+  // --- D06 integration (Phase 4 stage 3, task I): the design date, "Fly it", the camera's wavelength ---
+  'build.sat.date': 'Design date',
+  'build.sat.date.today': 'Today',
+  'build.sat.date.note': 'The figures are worked out for the design date: the Sun\'s angle to the orbit, and so the eclipse and the power, change through the year. It is today unless you set it, and it is kept with the design on this browser.',
+  // --- end of D06 integration ---
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',
   'watch.beat.climb': 'Clearing the tower',

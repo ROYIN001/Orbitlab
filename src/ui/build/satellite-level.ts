@@ -37,7 +37,7 @@ import type { OrbitHandoff } from '../../orbit/handoff';
 import { button, el, num } from '../orbit/dom';
 import { ExploreStore, STORE_TEXTS } from './explore-store';
 import { field, select } from './explore-level';
-import { camera, engine, menu, numberField, refreshControls, sso } from './satellite-controls';
+import { camera, designDateField, engine, menu, numberField, refreshControls, sso } from './satellite-controls';
 import { SECTION_KEY, sectionRows, type Section } from './satellite-figures';
 import { figureTable, satTextList, sayFig } from './satellite-text';
 import { defaultNameFor, type SatelliteWorkspace } from './satellite-workspace';
@@ -110,7 +110,6 @@ export class SatelliteLevel {
   /** On screen, in the interface language: everything drawn again, the saved designs read again. */
   show(): void {
     this.visible = true;
-    this.ws.readDate();
     this.ws.syncName();
     this.rebuild();
     void this.store.refresh();
@@ -187,9 +186,10 @@ export class SatelliteLevel {
     const again = button('watch-btn', t('build.sat.startOver'), () => this.pickTemplate(this.ws.design.template));
     again.dataset.k = `${P}again`;
     const row = el('div', 'bx-head-row');
-    row.append(field(t('build.sat.template'), picker, 'bx-field bsat-template'), field(t('build.sat.name'), name, 'bx-field bx-name'), again);
+    row.append(field(t('build.sat.template'), picker, 'bx-field bsat-template'), field(t('build.sat.name'), name, 'bx-field bx-name'), again,
+      designDateField(this.ws, P));
     const about = el('p', 'bsat-about', t(TEMPLATE_TEXT[d.template]?.about ?? 'build.sat.tpl.none'));
-    this.head.replaceChildren(text, row, about, el('p', 'bx-note small', t('build.sat.origin.legend')));
+    this.head.replaceChildren(text, row, about, el('p', 'bx-note small', `${t('build.sat.origin.legend')} ${t('build.sat.date.note')}`));
   }
 
   private renderControls(): void {
@@ -244,7 +244,7 @@ export class SatelliteLevel {
       }));
       parts.push(dl);
     }
-    const note = issues.length ? t('build.sat.refused') : stale ? t('build.sat.stale') : t('build.sat.glance.note', { date: new Date((this.ws.jd() - 2440587.5) * 86400e3).toISOString().slice(0, 10) });
+    const note = issues.length ? t('build.sat.refused') : stale ? t('build.sat.stale') : t('build.sat.glance.note', { date: this.ws.date });
     const p = el('p', `bx-note small${issues.length ? ' warn' : ''}`, note);
     p.setAttribute('role', 'status');
     parts.push(p);

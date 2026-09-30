@@ -350,7 +350,7 @@ export class BuildScreen {
 
   /** The one satellite both levels work on, made the first time either is wanted. */
   private workspace(): SatelliteWorkspace {
-    this.satWorkspace ??= new SatelliteWorkspace(() => this.host.launchTime?.() ?? new Date());
+    this.satWorkspace ??= new SatelliteWorkspace();
     return this.satWorkspace;
   }
 

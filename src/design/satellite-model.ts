@@ -780,7 +780,41 @@ export interface SatelliteDraft {
   design: SatelliteDesign;
   recordId: string | null;
   defaultName: string;
+  /** the design date the figures were read on (`DesignDate`), kept with the draft; absent in a draft kept before it, which starts on today */
+  date?: DesignDate;
 }
+
+// ─── the design date ────────────────────────────────────────────────────────
+
+/**
+ * The day a design's figures are read on, `YYYY-MM-DD` (UTC): its own epoch
+ * (the integration of D06, Phase 4 stage 3; track B's open problem 3). The
+ * figures depend on the date — the Sun's angle to the orbit sets the
+ * eclipse and so the power, the air's density follows nothing here (an ECSS
+ * level) — and they used to follow the Launch section's launch time, which
+ * moves with the clock and with every mission loaded, so a design's figures
+ * changed between visits. The builder holds its own date instead: shown,
+ * editable, today unless set, and kept with the draft, so the same design
+ * gives the same figures tomorrow. D07, the design lessons (T01) and their
+ * checker (T02) pass their own date to `designFigures`.
+ */
+export type DesignDate = string;
+
+const DESIGN_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** The Julian date (UTC) a design date starts on, or null when the text is not a real day of 1957–2200 (the ephemerides' span, and a typo's bound). */
+export function designDateJd(date: string): number | null {
+  const m = DESIGN_DATE.exec(date);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const ms = Date.UTC(y, mo - 1, d);
+  const back = new Date(ms);
+  if (y < 1957 || y > 2200 || back.getUTCMonth() !== mo - 1 || back.getUTCDate() !== d) return null;
+  return ms / 86400e3 + 2440587.5;
+}
+
+/** A moment's day as a design date (UTC). */
+export const designDateOf = (at: Date): DesignDate => at.toISOString().slice(0, 10);
 
 /** The first draft: NAPA-2, a Thai design small enough to change by hand. */
 export const FIRST_TEMPLATE = 'napa2';
@@ -814,7 +848,9 @@ export function restoreKeptSatellite(text: string | null): SatelliteDraft | null
   if (!satelliteTemplateById(String(design.template))) return null;
   const structural = satelliteDesignProblems(design).filter((i) => !/^must be (a finite number|at least|at most|above|a whole number)|^must not be below|^with the dry mass/.test(i.message));
   if (structural.length) return null;
-  return { design, recordId: raw.recordId, defaultName: raw.defaultName };
+  // the design date, where the draft kept one that is a day (a draft kept before it had none: today, the caller's)
+  const date = typeof raw.date === 'string' && designDateJd(raw.date) !== null ? raw.date : undefined;
+  return { design, recordId: raw.recordId, defaultName: raw.defaultName, ...(date ? { date } : {}) };
 }
 
 /** The templates, for a picker: id, kind and the name key. */

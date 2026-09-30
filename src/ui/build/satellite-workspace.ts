@@ -14,15 +14,23 @@
  * changes (a quarter of a second in low orbit; kept per orbit by the model,
  * so a change to the array is quick), so typing a perigee does not stop the
  * page at each key: the figures are marked stale and worked out once the
- * typing pauses. The date they are read on is the Launch section's launch
- * time, as the Build → Orbit hand-off's is.
+ * typing pauses.
+ *
+ * THE DESIGN DATE. The figures are read on a day of the workspace's own (the
+ * integration of D06, Phase 4 stage 3; track B's open problem 3): shown and
+ * editable on both levels, today unless the student sets it, and kept with
+ * the draft, so the same design gives the same figures between visits. It
+ * used to be the Launch section's launch time, which moves with the clock and
+ * with each mission loaded. The bench's lifetime run starts on it, and "Send
+ * to Orbit" places the design in its orbit on it; "Fly it" launches at the
+ * Launch section's own launch time, a moment of the flight rather than of the
+ * design.
  */
 import { t } from '../../i18n';
-import { julianDate } from '../../physics/orbital';
 import { satelliteDesignProblems, type SatelliteDesignIssue } from '../../config/satellite-design';
 import {
-  FIRST_TEMPLATE, SATELLITE_DRAFT_KEY, TEMPLATE_TEXT, designFigures, designFromTemplate, keptSatelliteText, newSatelliteId, restoreKeptSatellite,
-  type SatelliteDraft, type SatelliteFigures,
+  FIRST_TEMPLATE, SATELLITE_DRAFT_KEY, TEMPLATE_TEXT, designDateJd, designDateOf, designFigures, designFromTemplate, keptSatelliteText, newSatelliteId,
+  restoreKeptSatellite, type DesignDate, type SatelliteDraft, type SatelliteFigures,
 } from '../../design/satellite-model';
 import type { SatelliteDesign } from '../../design/satellite-spec';
 import { DEFAULT_ACTIVITY_LEVEL, type EcssLevel } from '../../orbit/satellite-air';
@@ -54,13 +62,17 @@ export class SatelliteWorkspace {
   private readonly listeners = new Set<(what: 'design' | 'figures') => void>();
   private settle: ReturnType<typeof setTimeout> | null = null;
   private keep: ReturnType<typeof setTimeout> | null = null;
-  private jdHeld: number | null = null;
+  private dateShown: DesignDate;
+  /** the vehicle "Fly it" launches on: a catalogue id, or null for the Launch section's own (the default) */
+  private vehicle: string | null = null;
 
-  constructor(private readonly launchTime: () => Date) {
+  constructor() {
     let kept: string | null = null;
     try { kept = localStorage.getItem(SATELLITE_DRAFT_KEY); } catch { /* storage blocked: start on the first template */ }
     const name = defaultNameFor(FIRST_TEMPLATE);
-    this.draft = restoreKeptSatellite(kept) ?? { design: designFromTemplate(FIRST_TEMPLATE, newSatelliteId(), name), recordId: null, defaultName: name };
+    const restored = restoreKeptSatellite(kept);
+    this.draft = restored ?? { design: designFromTemplate(FIRST_TEMPLATE, newSatelliteId(), name), recordId: null, defaultName: name };
+    this.dateShown = restored?.date ?? designDateOf(new Date());
     // written once the page is being left too, so a change made just before a reload is kept
     addEventListener('pagehide', () => this.write());
   }
@@ -69,21 +81,28 @@ export class SatelliteWorkspace {
   get recordId(): string | null { return this.draft.recordId; }
   get activityLevel(): EcssLevel { return this.level; }
 
-  /**
-   * The Julian date the figures are read on: the Launch section's launch
-   * time, read when a level is shown (`readDate`) and held while it is, so
-   * a launch time that moves with the clock cannot make every figure stale
-   * the moment it is worked out.
-   */
+  /** The design date the figures are read on, `YYYY-MM-DD` (UTC). */
+  get date(): DesignDate { return this.dateShown; }
+
+  /** The Julian date (UTC) the figures are read on: the design date's start. */
   jd(): number {
-    this.jdHeld ??= julianDate(this.launchTime());
-    return this.jdHeld;
+    return designDateJd(this.dateShown)!;
   }
 
-  /** Read the Launch section's launch time again (a level is being shown). */
-  readDate(): void {
-    this.jdHeld = julianDate(this.launchTime());
+  /** Another design date (a day of 1957–2200, else nothing changes; false): the figures again, and the draft kept with it. */
+  setDate(date: DesignDate): boolean {
+    if (designDateJd(date) === null) return false;
+    if (date === this.dateShown) return true;
+    this.dateShown = date;
+    this.queueKeep();
+    this.workOut();
+    this.tell('design');
+    return true;
   }
+
+  /** The vehicle "Fly it" launches on: a catalogue id, or null for the Launch section's own. */
+  get flyVehicle(): string | null { return this.vehicle; }
+  set flyVehicle(id: string | null) { this.vehicle = id; }
 
   /** Listen for a new design (`design`) or new figures (`figures`). */
   subscribe(fn: (what: 'design' | 'figures') => void): () => void {
@@ -184,6 +203,6 @@ export class SatelliteWorkspace {
   private write(): void {
     if (this.keep !== null) clearTimeout(this.keep);
     this.keep = null;
-    try { localStorage.setItem(SATELLITE_DRAFT_KEY, keptSatelliteText(this.draft)); } catch { /* full or blocked: Save says so */ }
+    try { localStorage.setItem(SATELLITE_DRAFT_KEY, keptSatelliteText({ ...this.draft, date: this.dateShown })); } catch { /* full or blocked: Save says so */ }
   }
 }

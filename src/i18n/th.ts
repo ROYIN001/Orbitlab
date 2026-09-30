@@ -2551,7 +2551,7 @@ export const th: Record<string, string> = {
   'build.sat.station': 'สถานีภาคพื้นดิน',
   'build.sat.moreAtEngineer': 'ตัวเลขที่เหลือ เช่น เซลล์ แบตเตอรี่ วงล้อปฏิกิริยา จานสายอากาศ และเลนส์ของกล้อง อยู่ที่แท่นทดสอบดาวเทียมในระดับวิศวกร',
   'build.sat.glance': 'สรุปสั้น ๆ',
-  'build.sat.glance.note': 'คำนวณสำหรับวันที่ {date} ซึ่งเป็นวันปล่อยในส่วนปล่อยจรวด',
+  'build.sat.glance.note': 'คำนวณสำหรับวันที่ {date} ซึ่งเป็นวันที่ใช้คำนวณ',
   'build.sat.gl.mass': 'มวลเมื่อเติมเชื้อเพลิงเต็ม',
   'build.sat.gl.eclipse': 'อุปราคานานที่สุด',
   'build.sat.gl.power': 'ค่าเผื่อกำลังไฟฟ้า',
@@ -2732,6 +2732,11 @@ export const th: Record<string, string> = {
   'build.sat.u.bits': 'บิต',
   'build.sat.u.msYear': 'ม./วินาทีต่อปี',
   // --- end of D06 track B ---
+  // --- D06 integration (Phase 4 stage 3, task I): the design date, "Fly it", the camera's wavelength ---
+  'build.sat.date': 'วันที่ใช้คำนวณ',
+  'build.sat.date.today': 'วันนี้',
+  'build.sat.date.note': 'ตัวเลขทั้งหมดคำนวณสำหรับวันที่ใช้คำนวณ เพราะมุมของดวงอาทิตย์กับระนาบวงโคจร ซึ่งกำหนดช่วงอยู่ในเงาโลกและพลังงาน เปลี่ยนไปตลอดปี ค่าเริ่มต้นคือวันนี้ และจะเก็บไว้คู่กับการออกแบบในเบราว์เซอร์นี้',
+  // --- end of D06 integration ---
   'watch.beat.countdown': 'นับถอยหลัง',
   'watch.beat.liftoff': 'ทะยานขึ้น',
   'watch.beat.climb': 'พ้นหอปล่อย',
