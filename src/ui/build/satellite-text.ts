@@ -148,7 +148,13 @@ export function figureTable(rows: readonly (readonly [string, string, string?])[
     const row = el('div', 'bsat-row');
     const dt = el('dt', undefined, label);
     if (note) dt.append(' ', el('em', 'bs-est', note));
-    row.append(dt, el('dd', undefined, value));
+    // each figure keeps its number and unit on one line; a pair ("520 km × 540 km", "35 min (37 %)") may part between its figures
+    const dd = el('dd');
+    for (const part of value.split(/( × | \/ | \()/)) {
+      if (/^( × | \/ | \()$/.test(part)) dd.append(part);
+      else if (part) dd.append(el('span', 'bsat-nw', part));
+    }
+    row.append(dt, dd);
     dl.append(row);
   }
   return dl;

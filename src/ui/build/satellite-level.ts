@@ -110,6 +110,7 @@ export class SatelliteLevel {
   /** On screen, in the interface language: everything drawn again, the saved designs read again. */
   show(): void {
     this.visible = true;
+    this.ws.readDate();
     this.ws.syncName();
     this.rebuild();
     void this.store.refresh();

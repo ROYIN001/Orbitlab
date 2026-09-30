@@ -54,6 +54,7 @@ export class SatelliteWorkspace {
   private readonly listeners = new Set<(what: 'design' | 'figures') => void>();
   private settle: ReturnType<typeof setTimeout> | null = null;
   private keep: ReturnType<typeof setTimeout> | null = null;
+  private jdHeld: number | null = null;
 
   constructor(private readonly launchTime: () => Date) {
     let kept: string | null = null;
@@ -68,8 +69,21 @@ export class SatelliteWorkspace {
   get recordId(): string | null { return this.draft.recordId; }
   get activityLevel(): EcssLevel { return this.level; }
 
-  /** The Julian date the figures are read on: the Launch section's launch time. */
-  jd(): number { return julianDate(this.launchTime()); }
+  /**
+   * The Julian date the figures are read on: the Launch section's launch
+   * time, read when a level is shown (`readDate`) and held while it is, so
+   * a launch time that moves with the clock cannot make every figure stale
+   * the moment it is worked out.
+   */
+  jd(): number {
+    this.jdHeld ??= julianDate(this.launchTime());
+    return this.jdHeld;
+  }
+
+  /** Read the Launch section's launch time again (a level is being shown). */
+  readDate(): void {
+    this.jdHeld = julianDate(this.launchTime());
+  }
 
   /** Listen for a new design (`design`) or new figures (`figures`). */
   subscribe(fn: (what: 'design' | 'figures') => void): () => void {

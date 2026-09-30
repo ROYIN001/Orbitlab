@@ -117,6 +117,7 @@ export class SatelliteBench {
 
   show(): void {
     this.visible = true;
+    this.ws.readDate();
     this.ws.syncName();
     this.rebuild();
   }

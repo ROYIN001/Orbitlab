@@ -69,6 +69,8 @@
 .bsat-row:last-child { border-bottom: 0; }
 .bsat-row dt { flex: 1 1 auto; min-width: 0; font-size: 12.5px; line-height: 1.35; color: #b8c6d4; }
 .bsat-row dd { flex: 0 1 auto; margin: 0; text-align: right; font: 600 13px/1.35 var(--display); font-variant-numeric: tabular-nums; }
+/* a number and its unit on one line (Thai breaks inside a word where it can); a pair of figures parts between them */
+.bsat-nw { white-space: nowrap; }
 .bsat-row .bs-est { margin-left: 2px; }
 
 /* ── the bench ────────────────────────────────────────────────────────────── */
