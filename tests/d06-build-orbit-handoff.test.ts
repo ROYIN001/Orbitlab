@@ -115,10 +115,11 @@ describe('a flight\'s hand-off prefers the satellite\'s own area, C_D and C_R (D
  * design has; only the orbit, the bus, the engine and the kind reach a
  * hand-off. The imager is sun-synchronous with its descending node at 10:30
  * (ascending at 22:30), its inclination left at a rounded 98.2° as a student
- * might type it; the CubeSat has NAPA-2's published size and mass, 20 ×
- * 10 × 34.05 cm and 10 kg (src/data/napa2.ts, after Janes 2021:
- * https://www.janes.com/defence-intelligence-insights/defence-news/spacex-launches-royal-thai-air-forces-second-earth-observation-satellite),
- * in a fixed plane. Nothing is compared with those figures here: they are
+ * might type it; the CubeSat has NAPA-2's published size and mass
+ * (src/data/napa2.ts), in a fixed plane: 20 × 10 × 34.05 cm from Janes 2021
+ * (https://www.janes.com/defence-intelligence-insights/defence-news/spacex-launches-royal-thai-air-forces-second-earth-observation-satellite),
+ * which gives no mass, and 10 kg from GCAT (https://planet4589.org/space/gcat/,
+ * satcat.tsv, NORAD 48963). Nothing is compared with those figures here: they are
  * inputs, and the NAPA-2 lifetime check (+8.0 % against 25 %) waits for the
  * template and the drag area (tracks B and A4).
  */
