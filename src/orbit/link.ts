@@ -40,7 +40,8 @@ import type { DesignControlInput, DesignControlTable, LinkCore, RequiredEbN0 } f
  * (D06). The pointing loss is the transmitting antenna's off its target
  * (attitude's `pointingLoss`); MarCO's table counts it inside the EIRP
  * (Table 5-4, line 11 = lines 7 + 8 + 9 + 10), so it may be given here or
- * among the path's `losses` — not both.
+ * among the path's `losses` — not both. `LinkCore.eirp` has no fourth
+ * argument, so code written against the contract puts it in `losses`.
  */
 export function eirp(power: number, lineLoss: number, gain: number, pointingLoss = 0): number {
   return 10 * Math.log10(power) - lineLoss + gain - pointingLoss;
@@ -85,7 +86,9 @@ export function designControlTable(i: DesignControlInput): DesignControlTable {
  * for C/N₀ in dB-Hz, the coding's threshold E_b/N₀, a margin M and the
  * modulation and implementation losses L in dB (D06; D07's "maximum data
  * rate at the margin"). The inverse of `designControlTable`: at that rate
- * the table's margin is M.
+ * the table's margin is M. `LinkCore.maxDataRate` has no fourth argument:
+ * code written against the contract must add L to the E_b/N₀ it passes,
+ * or the rate comes out L dB too high (MarCO's HGA to 34 m: 1.07 dB, ×1.28).
  */
 export function maxDataRate(cOverN0: number, requiredEbN0: number, margin: number, implementationLoss = 0): number {
   return 10 ** ((cOverN0 - requiredEbN0 - implementationLoss - margin) / 10);
