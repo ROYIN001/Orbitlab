@@ -4,7 +4,7 @@
  * held instead to the data rules every vehicle keeps and to the one flight each
  * is here for, point-mass here; Mercury-Redstone 3 in six-DOF in
  * tests/heavy/mercury-redstone.test.ts, and every historical flight's ascent
- * in six-DOF in tests/watch-missions.test.ts.
+ * in six-DOF in tests/watch-missions-flights-*.test.ts.
  */
 import { describe, expect, it } from 'vitest';
 import { ALL_VEHICLES, HISTORICAL_VEHICLES, VEHICLES, vehicleById } from '../src/data/vehicles';
