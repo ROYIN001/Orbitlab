@@ -2527,6 +2527,9 @@ export const en: Record<string, string> = {
   'build.sat.est.geoKeeping': 'In the geostationary box the budget takes out 0.85° a year of inclination drift (an estimate that gives TU Delft\'s 45.5 m/s a year) and 1.33 m/s a year east–west.',
   'build.sat.est.camera': 'The camera looks from the perigee. Its off-nadir and diffraction figures have no free worked example to check against, only their own consistency; the data rate is before compression.',
   'build.sat.est.eccentric': 'The orbit is eccentric: the camera, the torques and the air are read at the perigee, the link at the apogee, and the pass as on a circle.',
+  'build.sat.store.fileInvalid': 'The satellite in this file is not one this version can work out, so nothing was imported.',
+  'build.sat.store.toSatellite': 'This file holds a satellite, "{name}": it was saved and opened in the satellite designer.',
+  'build.sat.store.toRocket': 'This file holds a rocket, "{name}": it was saved and opened in the rocket designer.',
   // --- end of D06 track B ---
   'watch.beat.countdown': 'Countdown',
   'watch.beat.liftoff': 'Liftoff',
