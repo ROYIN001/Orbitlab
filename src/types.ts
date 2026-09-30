@@ -400,6 +400,16 @@ export interface SatelliteSpec {
   area?: number;
   cd?: number;
   cr?: number;
+  /**
+   * The catalogue satellite a custom one was made from (roadmap D06, Phase 4
+   * map §2.6 c): a D06 template's origin, or a copy. Nothing is looked up by
+   * it — a satellite flies by its kind and its own figures, and a custom
+   * satellite's name is the designer's text, never translated — except that
+   * only a copy of a crewed catalogue satellite may say `crewed`
+   * (src/config/satellite-spec.ts), as only a copy of the Soyuz may carry its
+   * escape system. Catalogue satellites never set it.
+   */
+  derivedFrom?: string;
 }
 
 export interface GuidanceParams {
@@ -473,6 +483,16 @@ export interface MissionConfig {
    */
   vehicleSpec?: VehicleSpec;
   satelliteId: string;
+  /**
+   * D06 (Phase 4 map §2.6 c, the owner's option B, 2026-09-29): a custom
+   * satellite — a designed one — carried inline, as `vehicleSpec` carries a
+   * custom vehicle: its `id` is `satelliteId`, which no catalogue satellite
+   * has, so its engine, size, drag area, C_D and C_R fly in Launch and go on
+   * in the S03 hand-off. Absent, `satelliteId` names a catalogue satellite.
+   * Resolve a mission's satellite with `missionSatellite`
+   * (src/data/satellites.ts), never with `satelliteById(cfg.satelliteId)`.
+   */
+  satelliteSpec?: SatelliteSpec;
   siteId: string;
   orbit: OrbitSpec;
   /** Launch epoch (UTC) */
