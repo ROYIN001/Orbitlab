@@ -178,8 +178,8 @@ A failed journey leaves screenshots in `tests/browser/screenshots/` (uploaded as
 Without a GPU the scene is drawn in software at about two frames a second, so the smoke set takes
 about five minutes. `CHROMIUM=/path/to/chrome` uses another Chromium, `PLAYWRIGHT=/path/to/index.mjs`
 another Playwright, and `BROWSER_SCALE=1` renders at full resolution (the default is 0.5, which
-leaves the CSS layout unchanged). Pull requests and branch pushes run the smoke set; the deploy runs every journey on
-the build it publishes, after checking the freshly fetched data snapshots with
+leaves the CSS layout unchanged). Pull requests and branch pushes run the smoke set; the deploy
+runs every journey on the build it publishes, after checking the freshly fetched data snapshots with
 `tests/data-provider.test.ts`, `tests/satellite-catalogue.test.ts`, `tests/earth-orientation.test.ts`
 and `tests/activity.test.ts`.
 
@@ -289,8 +289,9 @@ The launch section's levels, with the landing page:
   back at the Cape and on a drone ship, Starship Flight 5 with its tower catch and
   splashdown, the three Soyuz launch aborts (T-10-1, 18a, MS-10) flown to the crew on
   the ground, and Soyuz MS-28 at the station in three hours — each flown to its target,
-  and every stage it flies home landed, by `tests/watch-missions.test.ts`; the camera follows a returning stage for its landing,
-  and the flight ends on a card that offers another launch or the mission builder.
+  and every stage it flies home landed, by `tests/watch-missions.test.ts`; the camera
+  follows a returning stage for its landing, and the flight ends on a card that offers
+  another launch or the mission builder.
 - **Explore** — the mission builder, lighter, flying the same physics (`src/ui/explore.ts`).
   A mission is set up in three steps — the rocket (cards with what each lifts), the payload
   (against the vehicle's rating), the orbit — under a pre-flight light that offers the change
@@ -495,9 +496,10 @@ snapshots, builds and runs every browser journey. A run whose commit is no longe
 `main` (an old run re-run) stops before publishing; use **Run workflow** instead.
 
 CI on pull requests and branch pushes runs the typecheck, the default suite in three shards, the
-build and the browser smoke set; changes only to `docs/` or Markdown files skip it. The slow
-suites run in the `Heavy suites` workflow instead: `npm run test:heavy` every Sunday and the six-DOF
-fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
+build and the browser smoke set; a change to Markdown files only skips it, except
+`docs/ROADMAP-PART2-3.md` and `docs/SIXDOF-VEHICLE-DATA.md`, which the tests and the app read.
+The slow suites run in the `Heavy suites` workflow instead: `npm run test:heavy` every Sunday and
+the six-DOF fleet matrix on the 1st of each month, or either on demand from **Run workflow**.
 
 From the next release the launch soundtrack (`public/audio/soyuz-ms-27-nasa.mp3`) is no longer
 part of what the service worker installs on the first visit: the public site's first-visit install

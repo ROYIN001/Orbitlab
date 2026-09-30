@@ -1,12 +1,21 @@
 name: CI
 
 on:
-  # docs-only changes (docs/, any Markdown file such as README or CHANGELOG) skip CI
+  # a change to Markdown files only (README, CHANGELOG, docs/*.md) skips CI, except the two documents the
+  # app and the tests read; anything else under docs/ (evidence JSON, pictures) still runs it
   pull_request:
-    paths-ignore: ['docs/**', '**/*.md']
+    paths:
+      - '**'
+      - '!**/*.md'
+      - 'docs/ROADMAP-PART2-3.md'     # read by tests/section-plan.test.ts
+      - 'docs/SIXDOF-VEHICLE-DATA.md' # bundled by src/ui/dialogs.ts
   push:
     branches-ignore: [main, gh-pages]
-    paths-ignore: ['docs/**', '**/*.md']
+    paths:
+      - '**'
+      - '!**/*.md'
+      - 'docs/ROADMAP-PART2-3.md'
+      - 'docs/SIXDOF-VEHICLE-DATA.md'
 
 permissions:
   contents: read
