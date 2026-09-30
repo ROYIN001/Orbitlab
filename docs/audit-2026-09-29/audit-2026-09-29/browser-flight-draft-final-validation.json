@@ -1,0 +1,24 @@
+{
+  "checkedAtUTC": "2026-09-29T22:27:00Z",
+  "timePrecision": "Approximate to the minute; actions span about 22:24-22:27 UTC",
+  "environment": "Codex in-app browser on Windows; existing QA profile; local preview port 4183",
+  "url": "http://127.0.0.1:4183/#/launch/explore",
+  "loadedScript": "http://127.0.0.1:4183/assets/index-BQdJTgBe.js",
+  "buildEvidence": "editorial-audit/final-build.log",
+  "sourceCommit": "c146a699f01bb5d299af39e3ca9742445442b474",
+  "sourceAtCheck": "76534dc1d171726cb3d5eadc82d1ac77b629376b",
+  "sourceNote": "The existing tab uses the cached c146 editorial build, identified by its DOM script URL and the retained build log. It is not claimed to execute the later 765 status-wording build. Lesson execution and draft logic are unchanged between those commits.",
+  "lesson": "1.1 orbit-first",
+  "flight": {"vehicle": "Falcon 9", "targetKm": 500, "uiVerdict": "เข้าสู่วงโคจรเป้าหมาย", "ended": true},
+  "steps": [
+    {"action": "Fill two unsubmitted numeric answers in Thai", "periodRaw": " 94.70 ", "speedRaw": "7.617"},
+    {"action": "Click hint 1/3", "periodRaw": " 94.70 ", "speedRaw": "7.617", "hintNow": "2/3", "passed": true},
+    {"action": "Change Thai to Russian", "periodLabel": "Период обращения на вашей орбите (мин)", "periodRaw": " 94.70 ", "speedRaw": "7.617", "passed": true},
+    {"action": "Change Russian to English", "periodLabel": "Orbital period of your orbit (min)", "periodRaw": " 94.70 ", "speedRaw": "7.617", "passed": true},
+    {"action": "Enter incomplete numeric text 1e and click hint 2/3", "periodRaw": "1e", "speedRaw": "7.617", "hintNow": "3/3", "passed": true},
+    {"action": "Fill 94.7 and type a final 0", "periodRaw": "94.70", "activeElement": "INPUT", "activeLabel": "Orbital period of your orbit (min)", "selectionStart": 5, "selectionEnd": 5, "passed": true},
+    {"action": "Change to Thai and focus then close the language selector", "periodLabel": "คาบการโคจรของวงโคจรนี้ (นาที)", "periodRaw": "94.70", "speedRaw": "7.617", "hintNow": "3/3", "activeElement": "lang-select", "passed": true}
+  ],
+  "automationObservation": "Playwright selectOption changes the select without necessarily moving focus out of the answer field. While an answer retains focus the strip intentionally defers rendering. After clicking the language selector and Escape, Thai labels render and both answers remain. This is not classified as a product failure.",
+  "limits": ["One completed flight lesson, not all numeric lessons or every focus sequence", "No Check or Show answers submission in this sequence", "No reload-persistence claim for unsubmitted drafts", "No browser storage-refusal test"]
+}

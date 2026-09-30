@@ -188,12 +188,13 @@ class AssessmentView {
 
   // ─── a question ──────────────────────────────────────────────────────────
 
-  private figure(f: Figure, legendKey?: string, values: Readonly<Record<string, number>> = {}): HTMLElement | null {
+  private figure(f: Figure, legendKey?: string, values: Readonly<Record<string, number>> = {}, label?: string): HTMLElement | null {
     const box = el('figure', 'assess-figure');
     if (f.kind === 'diagram') {
       const svgText = diagramSvg(f.id, values, (u) => unitText(u));
       if (!svgText) return null;
       box.innerHTML = svgText;
+      box.querySelector('svg')?.setAttribute('aria-label', label ?? f.id);
       return box;
     }
     if (f.kind === 'vehicle') {
@@ -210,6 +211,7 @@ class AssessmentView {
       box.innerHTML = chartSvg(FLIGHT_DATA, ids, f.series, {
         xLabel: t('assess.axisTime'), yLabel: `${t(`assess.series.${f.series}`)}, ${unitText(SERIES_UNITS[f.series])}`, tMax: f.tMax,
       });
+      box.querySelector('svg')?.setAttribute('aria-label', label ?? t(`assess.series.${f.series}`));
       if (ids.length > 1) {
         const legend = el('ul', 'assess-legend');
         ids.forEach((id, k) => {
@@ -350,7 +352,7 @@ class AssessmentView {
     grid.append(left);
     const figure: Figure | undefined = q.type === 'vehicle' && p.vehicle ? { kind: 'vehicle', vehicleId: p.vehicle } : q.figure;
     if (figure) {
-      const fig = this.figure(figure, undefined, p.values);
+      const fig = this.figure(figure, undefined, p.values, promptText(q, p));
       if (fig) grid.append(fig);
     } else grid.classList.add('single');
     const skip = this.button(t('assess.skip'), () => this.answer(q, p, true));
@@ -380,14 +382,14 @@ class AssessmentView {
     this.drafts.clear(p.id);
     this.host.save();
     this.index++;
-    if (q.type === 'choice' && q.observe && !skipped && answer.value !== null) this.renderObserve(q);
+    if (q.type === 'choice' && q.observe && !skipped && answer.value !== null) this.renderObserve(q, p);
     else this.renderQuestion();
   }
 
   /** Predict, then observe: what the simulator did. */
-  private renderObserve(q: Question & { type: 'choice' }): void {
-    this.redraw = () => this.renderObserve(q);
-    const fig = this.figure(q.observe!, 'assess.observeCaption');
+  private renderObserve(q: Question & { type: 'choice' }, p: PreparedQuestion): void {
+    this.redraw = () => this.renderObserve(q, p);
+    const fig = this.figure(q.observe!, 'assess.observeCaption', p.values, promptText(q, p));
     fig?.classList.add('assess-figure-wide');
     this.frame(el('span', 'lesson-eyebrow', t('assess.observe')), el('h2', undefined, t('assess.observeTitle')),
       el('p', 'lead', t('assess.observeLead')), ...(fig ? [fig] : []),
@@ -416,6 +418,7 @@ class AssessmentView {
     const pct = (res: AssessmentResult) => order.map((dmn) => res.domains.find((x) => x.domain === dmn)!.percent);
     const radar = el('div', 'assess-radar');
     radar.innerHTML = radarSvg(order.map((dmn) => t(`assess.domainShort.${dmn}`)), before ? [pct(before), pct(r)] : [pct(r)]);
+    radar.querySelector('svg')?.setAttribute('aria-label', t('assess.title'));
     if (before) radar.append(el('p', 'small', t('assess.compare')));
 
     const bars = el('div', 'assess-bars');
@@ -449,6 +452,12 @@ class AssessmentView {
     const strong = r.domains.filter((x) => x.level === 'strong').map((x) => `${name(x.domain)} — ${x.percent} %`);
     const weak = r.domains.filter((x) => x.level !== 'strong').sort((x, y) => x.percent - y.percent)
       .map((x) => `${name(x.domain)} — ${t('assess.wrongCount', { n: x.asked - x.correct, total: x.asked })}`);
+    // Do not claim there is nothing to work on while assigning a review in a
+    // domain whose aggregate happens to be strong.
+    for (const lesson of lessons.filter((l) => r.advice[l.id] === 'review'
+      && l.domains.every((d) => r.domains.find((x) => x.domain === d)?.level === 'strong'))) {
+      weak.push(`${lessonNumber(lesson)} ${localText(lesson.title)} — ${t('lesson.advice.review')}`);
+    }
     const misc = [...new Set(r.questions.filter((x) => x.misconception).map((x) => x.misconceptionText
       ? t('assess.misconceptionLine', { text: localText(x.misconceptionText) }) : t('assess.misconceptionGeneric', { area: name(x.domain) })))];
     right.append(card(t('assess.strengths'), strong, t('assess.strengthsNone')),
@@ -505,6 +514,19 @@ class AssessmentView {
       const ans = answers.get(p.id);
       const li = el('li', res?.correct ? 'right' : 'wrong');
       li.append(el('p', 'assess-review-q', `${res?.correct ? '✓' : '✗'} ${promptText(q, p)}`));
+      const original = q.type === 'vehicle' && p.vehicle ? { kind: 'vehicle' as const, vehicleId: p.vehicle } : q.figure;
+      if (original) {
+        const fig = this.figure(original, undefined, p.values, promptText(q, p));
+        if (fig) {
+          // Attribution is printed below the explanation in review.
+          if (original.kind === 'vehicle') fig.querySelector('figcaption')?.remove();
+          li.append(fig);
+        }
+      }
+      if (q.type === 'choice' && q.observe) {
+        const fig = this.figure(q.observe, 'assess.observeCaption', p.values, promptText(q, p));
+        if (fig) li.append(fig);
+      }
       const yours = ans?.value === null || ans?.value === undefined ? t(ans?.skipped ? 'assess.skipped' : 'assess.dontKnow') : answerText(q, ans.value);
       const right = rightAnswerText(q, p);
       li.append(el('p', undefined, t('assess.yours', { answer: yours })));

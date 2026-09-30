@@ -548,3 +548,72 @@ fleet's missions carry no rendezvous, so every one flies the ascent it flew befo
 022b17e, where G06, V05, V03, E01 and G07 meet PR #17 and the control, navigation and guidance
 work (G03, E02, G04, E04, G02, G08, G01, P07; all of it off in the fleet's default missions):
 **161 of 161 passed** in 1 h 45 min on four cores, run alone.
+**The rigid fleet with C01 part 1.** `npm run test:sixdof-fleet` at commit 979e9e0: the
+historical missions on their real dates and the station's node regressed from the TLE-measured
+one within ten days of a historical flight to it (`issRaanAt`); the fleet's missions are all
+dated 2026, where the node is the one it was, so every case flies as before:
+**161 of 161 passed** in 2 h 16 min on four cores, run alone but for a ten-second unit test.
+
+**The rigid fleet with C01 part 2.** `npm run test:sixdof-fleet` at commit 501e4d6: Crew Dragon
+flown without a fairing (`missionVehicle`, the exposed payload's nose in the aerodynamic table)
+and the drone-ship entry burn that spends the stage's spare propellant; the fleet's missions
+carry neither a crew Dragon nor a recovery plan, so every case flies as before:
+**161 of 161 passed** in 2 h 2 min on four cores, run alone.
+
+**The rigid fleet with C01 parts 3 and 4.** `npm run test:sixdof-fleet` at commit 2dbdb49: the
+flown comparison (UI only), a lone first stage's drone-ship reserve sized for its mission
+(`droneShipReserve`, 9dd195d), and the first R-7s as vehicles of historical flights, kept out of the
+fleet; the fleet's stages keep their reserves (their missions fly no lone stage to a ship, or a
+reserve no larger than the base one), so every case flies as before:
+**161 of 161 passed** in 1 h 43 min on four cores — alone but for `npm test` on one worker for its
+last 45 minutes.
+
+**The rigid fleet with C01 part 5.** `npm run test:sixdof-fleet` at commit 5e1222c: Mercury-Redstone 3
+— the capsule flown home by the escape flight's new `capsule` mode, a lobbed arc's cut-off on its
+apogee (only a flight whose satellite has a `descent`), `OrbitSpec.descending` (only when an orbit names
+it) and the generalised `capsuleConfiguration` (Soyuz's descent module unchanged); none of the fleet's
+missions carries any of them, so every case flies as before:
+**161 of 161 passed** in 1 h 56 min on four cores, run alone.
+
+**The rigid fleet with C01 part 6a and its fixes.** `npm run test:sixdof-fleet` at commit 57178c0
+(which carries 6b3dcb6, part 6a, whose own run was stopped for these fixes): planned engine events
+(`StageSpec.engineEvents`) and jettisons (`StageSpec.jettisons`), a gravity turn held to a set time
+(`GuidanceParams.closedLoopStart`), a payload that stays on its stage (`SatelliteSpec.staysAttached`)
+and a mission flown from the pad it names (`padId`); the fleet's vehicles and missions use none of
+them, so every case flies as before: **161 of 161 passed** in 1 h 42 min on four cores, run alone.
+The heavy tests the pad change touches — Mercury-Redstone 3 in six-DOF, the Soyuz aborts from
+Gagarin's Start, the historical dockings — pass too (5 of 5).
+
+**The rigid fleet with C01 part 6b: interrupted.** `npm run test:sixdof-fleet` at commit 50ded76 (the
+translunar injection and the transposition, `ApolloFlight`, flown only by a mission with an injection)
+ran for 63 minutes with **106 of 106 finished cases passed**, when its three workers were killed by
+mistake — taken for orphans of a probe run — while they ran wind.test.ts,
+electron-longmarch5-vegac-falcon9.test.ts and dedicated.test.ts (SIGTERM; 55 cases not run). No
+case failed. The run on part 6c's commit, which carries part 6b, stands for both.
+
+**The rigid fleet with C01 parts 6b and 6c.** `npm run test:sixdof-fleet` at commit f9e0aec: the Moon and
+the Sun in the model (their tables, the Moon's axes), the translunar injection aimed at the flown conic
+(`TliGuidance`), the ascent into a fixed plane (`VehicleSpec.targetPlane`, only the Saturn V) at a set
+flight azimuth (`OrbitSpec.flightAzimuth`, only a mission that names one), the mixture shift's thrust and
+the SPS burns — all flown only by a mission with an injection, which the fleet's are not, so every case
+flies as before: **161 of 161 passed** in 1 h 46 min on four cores, alongside low-priority (niced)
+probe runs of the Apollo flight and, for its last 20 minutes, five test files on two workers.
+
+**The rigid fleet with C01 part 6d.** `npm run test:sixdof-fleet` at commit aa964ac: the Moon's
+degree-2 field, the lunar orbit insertion and circularisation, the undocking, DOI and the powered descent
+(`PoweredDescent`) with the landed LM turning with the Moon — all inside `ApolloFlight`, flown only by a
+mission with an injection, which the fleet's are not, so every case flies as before: **161 of 161 passed**
+in 1 h 40 min on four cores, alongside low-priority (niced) probe runs of the Apollo flight and, for a
+minute, two test files on one worker.
+
+**The rigid fleet with C01 part 6e: interrupted.** `npm run test:sixdof-fleet` at commit 708d878 (the
+LM's ascent, the rendezvous and the docking, all inside `ApolloFlight`) ran for about an hour with no
+case failed when the container it ran in was restarted and the run stopped. The run on part 6f's
+commit, which carries part 6e, stands for both.
+
+**The rigid fleet with C01 parts 6e and 6f.** `npm run test:sixdof-fleet` at commit 04fa91e: the LM's
+ascent and the rendezvous, the way home, the entry and the parachutes, and every service-engine burn's
+Δv counted by the rocket equation — all inside `ApolloFlight`, flown only by a mission with an injection,
+which the fleet's are not, so every case flies as before: **161 of 161 passed** in 1 h 52 min on four
+cores, alongside one test run of four files on one worker. Part 6g after it changes the viewer only
+(drawing, camera, Watch's pace), no physics, so this run is also the final acceptance of C01's Apollo 11.

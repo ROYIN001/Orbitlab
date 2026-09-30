@@ -136,7 +136,7 @@ labelled as such; the known gaps are under "Known limitations" below.
 
 | | Site 1/5, Gagarin's Start | Site 31/6 | Source |
 |---|---|---|---|
-| Position | 45.920°N 63.342°E | 45.996°N 63.564°E | en.wikipedia (drawn at the site's own point) |
+| Position | 45.920°N 63.342°E | 45.996°N 63.564°E | en.wikipedia (drawn at the site's own point; a mission that names the pad, flown from it — C01) |
 | Pit | 250 m long, 100 m wide, 45 m deep | 135 × 32 m, 24 m deep | Site 1: Roscosmos, elementy (50 m deep in Техника—молодёжи 1991); Site 31: "scaled down", at least 20 m deep where the service cabin fell in 2025 (Habr, iXBT); its length and width are estimates |
 | Direction the pit runs | 300° | 250° | estimates: no source gives them |
 | Launch table opening | 15 m | 15 m | ESA, on the Kourou copy of the Baikonur design |
@@ -183,7 +183,7 @@ moves only with the physics' wind; the calm default leaves it where it was made.
 
 ## How it is tested
 
-`npm test` runs the regular suite (vitest): 2 704 tests in 185 files, 20 to 30 minutes on four cores. Among it:
+`npm test` runs the regular suite (vitest): 2 538 tests in 179 files, 20 to 30 minutes on four cores. Among it:
 
 - **Fleet acceptance** (tests/fleet-defaults.test.ts): 195 vehicle × orbit × payload
   combinations; 126 are flown with each vehicle's default guidance and must reach their target
@@ -202,9 +202,10 @@ moves only with the physics' wind; the calm default leaves it where it was made.
   worked by hand ([VALIDATION.md](VALIDATION.md) §8).
 
 `npm run test:heavy` runs the seven delivered-orbit cases with wind and a reduced-flux mass flow
-model, Soyuz MS-10's and 18a's aborts flown to the crew on the ground, and the screening's time
-filter against the full search over its whole sweep (tests/heavy/, about 20 minutes), and D01's
-21 six-DOF fingerprints, 160 s of flight each (about four minutes more).
+model, Soyuz MS-10's and 18a's aborts flown to the crew on the ground, Soyuz MS-16 and MS-25 flown
+from their real second of launch to the station, and the screening's time filter against the full
+search over its whole sweep (tests/heavy/, about 20 minutes), and D01's 21 six-DOF fingerprints,
+160 s of flight each (about four minutes more).
 `npm run test:sixdof-fleet` flies the fleet matrix as rigid bodies: its 126 accepted cases, each
 vehicle's first case in crosswind and shear, and Long March 2D's real mission — 161 cases, about
 2 h 40 min on four cores ([SIXDOF-ACCEPTANCE.md](SIXDOF-ACCEPTANCE.md)). `npm run typecheck` and
@@ -218,22 +219,60 @@ on branch `claude/awesome-fermi-r6ntep`; the watch-mode missions (10b) on
 
 | Item | | Item | |
 |---|---|---|---|
-| F03 delivered-orbit matrix in the repository | done | G04 Bode, step response, margins | |
-| F05 simulation split into modules | done | E04 controller tuning mode | |
-| F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | |
-| F04 break-ups with Δv left | done | G08 control-system failures | |
-| P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | |
-| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | |
+| F03 delivered-orbit matrix in the repository | done | G04 Bode, step response, margins | done |
+| F05 simulation split into modules | done | E04 controller tuning mode | done |
+| F01 range-safety corridor and dogleg | done | G02 inertial navigation and Kalman filter | done |
+| F04 break-ups with Δv left | done | G08 control-system failures | done |
+| P02 engine start-up and tail-off | done | G01 PEG and IGM guidance | done |
+| F07 glow on 30 fps screens | done | G05 Monte Carlo insertion accuracy | not started |
 | F02 physics in a Web Worker | done | V04 Soyuz vehicle detail | done |
 | F06 documentation | done | G06 Soyuz launch escape system | done |
 | P03 per-vehicle aerodynamic tables | done | V05 Gagarin's Start pad | done |
 | P01 six-DOF for every vehicle (18 when chosen; C01's three have it too) | done | V03 vapour cone and booster smoke | done |
 | Watch mode: flown missions with booster landings | done | G07 ISS rendezvous and docking | done |
-| P05 slosh, bending and notch filter | done | C01 historical missions | |
+| P05 slosh, bending and notch filter | done | C01 historical missions | parts 1–5, 6a–6e of 7 (below) |
 | U07 ГОСТ 20058-80 notation | done | | |
-| G03 attitude-loop inspector | | | |
-| E02 live equations panel | | | |
+| G03 attitude-loop inspector | done | | |
+| E02 live equations panel | done | | |
 | E01 reference frames in 3-D | done | | |
+
+C01 historical missions is done in seven parts on branch `claude/c01-historical-missions`:
+(1) real flights on the fleet's vehicles, on their real dates — Soyuz MS-16 and MS-25,
+ORBCOMM-2, Angara-A5 1L, Hayabusa2 — in Watch and in Explore/Engineer, with the station's
+measured node on those days ([PHYSICS.md §13](PHYSICS.md)) — done; (2) Crew Dragon and Demo-2, flown on Falcon 9 without a fairing, and a drone-ship entry burn that spends the stage's spare propellant (the lone Falcon 9 stage never landed on the ship before) — done;
+(3) each flight compared with the real one — the caption, a table under the result and on
+Watch's end card, the real events on the telemetry charts, and the dockings timed; and a lone
+first stage's drone-ship reserve sized for its return, found on Demo-2 — done;
+(4) Sputnik 1 and Vostok 1 on the first R-7s (8K71PS, 8K72K), vehicles of historical flights
+kept out of the fleet matrix and held to their own flights — done; (5) Mercury-Redstone 3 from LC-5,
+the Mercury capsule flown home on its own after a suborbital cut-off (retros, drogue, main,
+splashdown), within 11–16 km of Freedom 7's splashdown in both models, flown from LC-5 itself — done; (6) Apollo 11 on
+Saturn V, the whole mission to the Moon and back, in seven steps: (6a) the Saturn V to the parking
+orbit, with planned engine shutdowns, the mixture shift and the jettisons, LC-39A as in 1969 — done;
+(6b) the S-IVB's restart for the Moon onto the flown conic and the transposition, docking and the
+LM's extraction at the flown times — done; (6c) the Moon in the model — JPL's DE441 Moon and Sun for
+the week, the Moon turned as the IAU turns it, their pull on the flight, the injection aimed at the
+flown conic's perigee, the service engine's evasive burn and the midcourse correction worked out as
+the flight's was, to the lunar orbit insertion within 40 km and a metre per second of the flown
+approach, and the Moon drawn — done; (6d) lunar
+orbit and the landing — the Moon's degree-2 field, LOI-1 turned into the plane over the landing site
+and LOI-2 at the flown times, Eagle undocked and flown on its own beside Columbia, DOI to the targeted
+perilune, the powered descent through P63, P64 and P66 with the descent engine's fixed throttle and
+throttle recovery, to within a few metres of Tranquility Base and 10 kg of the flown landed mass, and
+the LM, the CSM and the ground at the site drawn — done; (6e) the LM's ascent and docking — the
+ascent engine's P12 guidance off the Moon, the lift-off timed for the CSM, the coelliptic sequence (CSI, CDH,
+TPI, two midcourse corrections, the braking gates) on the LM's thrusters to within minutes of the flown
+times and a metre or two a second of the flown burns, the docking, the ascent stage's jettison, and the
+descent stage left at Tranquility Base drawn — done; (6f) home and splashdown — the transearth
+injection aimed as the ground aimed it, at the entry the flight flew, the coast home and its correction,
+the command module on its own, its lifting entry steered by a prediction of the rest of the flight
+against the range to the flown splash point, the drogues and the mains, into the Pacific within a
+minute of the flown time and a few kilometres of the flown point, and the command module, its parachutes
+and the service module drawn — done; (6g) the viewer and the documents — the ascent stage drawn in its
+own shape, the lift-off watched looking down at the descent stage it leaves, the braking and the
+station-keeping from behind Eagle with Columbia ahead, the entry's glow, the station-keeping at 10×, the
+whole flight in about forty minutes of Watch, and the README — done; (7) the fleet acceptance and the
+documents.
 
 Twenty further items are kept for later, once these are done.
 

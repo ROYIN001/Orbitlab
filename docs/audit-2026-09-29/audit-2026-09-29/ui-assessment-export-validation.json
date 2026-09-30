@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-09-29T20:03:08.228Z",
+  "runtime": {
+    "node": "v22.23.3",
+    "v8": "12.4.254.21-node.57",
+    "platform": "win32"
+  },
+  "provenance": {
+    "originalPath": "C:/Users/Royin/Downloads/orbitlab-QA-Test-2026-09-29-19-56.orbitlab-results.json",
+    "preservedPath": "C:\\Users\\Royin\\OneDrive\\Desktop\\Royin\\Orbitlab\\audit-2026-09-29\\orbitlab-QA-Test-2026-09-29-19-56.orbitlab-results.json",
+    "rawFileBytes": 143023,
+    "sha256": "f8d77fbd03fee1128e8bdf0bfc025bbf2b622b5a573c2061fab949c2560442c1",
+    "exportedAt": "2026-09-29T19:56:14.989Z",
+    "studentLabel": "QA-Test",
+    "storedChecksum": "9a1f0cc15efbb4f6a9f7f6673070691f83c5906a6629ea183a2e657cb0a57cb0"
+  },
+  "checksumValid": true,
+  "alteredCopyRejected": true,
+  "savedCasePasses": 3,
+  "assessmentChecks": [
+    {
+      "kind": "pre",
+      "seed": 2181560019,
+      "startedAt": "2026-09-29T19:51:13.922Z",
+      "finishedAt": "2026-09-29T19:53:14.186Z",
+      "preparedCount": 25,
+      "answerCount": 25,
+      "skipped": 20,
+      "answered": 5,
+      "correct": 5,
+      "percent": 19,
+      "exportedSummaryPercent": 19,
+      "summaryScoreMatches": true,
+      "earnedWeight": 7,
+      "totalWeight": 37,
+      "questionTypes": [
+        "order",
+        "choice",
+        "numeric",
+        "multi"
+      ],
+      "retainedValues": [
+        {
+          "id": "b-order-altitude",
+          "value": "0,1,2,3,4"
+        },
+        {
+          "id": "b-karman",
+          "value": 0
+        },
+        {
+          "id": "b-black-sky",
+          "value": 0
+        },
+        {
+          "id": "b-kepler2",
+          "value": 0,
+          "confidence": "sure"
+        },
+        {
+          "id": "b-gravity-altitude",
+          "value": 8.948396262741479
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "QA-Test is a synthetic acceptance run, not the owner's score.",
+    "Question types present in this draw do not prove all item types were answered in the UI.",
+    "Browser draft/language/review visuals are separate UI evidence; this script only inspects the exported file.",
+    "No browser or application state was changed."
+  ]
+}

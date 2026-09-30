@@ -1,0 +1,709 @@
+{
+  "checkedAtUTC": "2026-09-29T22:24:14.440677+00:00",
+  "source": "Actual GitHub Actions Chromium downloads, run 36638419734; copies verified against download manifest hashes.",
+  "files": [
+    {
+      "file": "orbitlab-case-cz5b-key-ru.docx",
+      "case": "cz5b",
+      "key": true,
+      "lang": "ru",
+      "format": "docx",
+      "bytes": 12264,
+      "sha256": "2cc67d60302b742214ec949b3ab4f7037d15027891c06d1385b7e0b89a14a53a",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.w.error": true,
+        "oldEditorialTextAbsent:wsc.cz5b.w.error": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-cz5b-key-ru.html",
+      "case": "cz5b",
+      "key": true,
+      "lang": "ru",
+      "format": "html",
+      "bytes": 4957,
+      "sha256": "377684104506a993d7d754df84665b759743254c632d160e82b834e8b528d291",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.w.error": true,
+        "oldEditorialTextAbsent:wsc.cz5b.w.error": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-cz5b-key-th.docx",
+      "case": "cz5b",
+      "key": true,
+      "lang": "th",
+      "format": "docx",
+      "bytes": 12896,
+      "sha256": "271ad6c3e520728fdfda22a289ecdbf41bf5a971dd3c5620c870899b436f79a6",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.w.error": true,
+        "oldEditorialTextAbsent:wsc.cz5b.w.error": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-cz5b-key-th.html",
+      "case": "cz5b",
+      "key": true,
+      "lang": "th",
+      "format": "html",
+      "bytes": 5603,
+      "sha256": "3433c9f844cd990fe787941fd80e48072d8ba0ba757b1080e40d94205b6a09b4",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.w.error": true,
+        "oldEditorialTextAbsent:wsc.cz5b.w.error": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-cz5b-ru.docx",
+      "case": "cz5b",
+      "key": false,
+      "lang": "ru",
+      "format": "docx",
+      "bytes": 23412,
+      "sha256": "a21ed0b014c717c80ab1a28c13daa67bacf855d0b6986fc11fb08af24e32b40b",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.qIntro": true,
+        "oldEditorialTextAbsent:wsc.cz5b.qIntro": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-cz5b-ru.html",
+      "case": "cz5b",
+      "key": false,
+      "lang": "ru",
+      "format": "html",
+      "bytes": 6940,
+      "sha256": "ac03b65969f48f808b040507d830a6682f37b218d4cf899b4b40fe138d2e9e90",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.qIntro": true,
+        "oldEditorialTextAbsent:wsc.cz5b.qIntro": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-cz5b-th.docx",
+      "case": "cz5b",
+      "key": false,
+      "lang": "th",
+      "format": "docx",
+      "bytes": 24777,
+      "sha256": "95a3b304ade96fed2793aae3b2487a5b17ffc1616550967332e4c5cac577ec49",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.qIntro": true,
+        "oldEditorialTextAbsent:wsc.cz5b.qIntro": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-cz5b-th.html",
+      "case": "cz5b",
+      "key": false,
+      "lang": "th",
+      "format": "html",
+      "bytes": 8330,
+      "sha256": "936150fe5de729afb4ef3143bc04c7c885c8efce4f522504fb6069ac91b253b8",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.cz5b.qIntro": true,
+        "oldEditorialTextAbsent:wsc.cz5b.qIntro": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-key-ru.docx",
+      "case": "iridium",
+      "key": true,
+      "lang": "ru",
+      "format": "docx",
+      "bytes": 12348,
+      "sha256": "d1936ce07d15b731e52d7d773b6e1412310ea9f18a531da6a21f660529c41123",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-key-ru.html",
+      "case": "iridium",
+      "key": true,
+      "lang": "ru",
+      "format": "html",
+      "bytes": 5005,
+      "sha256": "6e7cf0b776b1f062b046eb2c6687eb8e5043a1a9ffff03a745e5fe85c19802a5",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-key-th.docx",
+      "case": "iridium",
+      "key": true,
+      "lang": "th",
+      "format": "docx",
+      "bytes": 12862,
+      "sha256": "47337277bcb8e441b825560028899261f7b3136f7f8232eb510cef5987282afb",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-key-th.html",
+      "case": "iridium",
+      "key": true,
+      "lang": "th",
+      "format": "html",
+      "bytes": 5522,
+      "sha256": "fd92d6bb11910ca25257c9e2a39f2cde1b7d5f6c7fc779d493ccad6bd5b502da",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-ru.docx",
+      "case": "iridium",
+      "key": false,
+      "lang": "ru",
+      "format": "docx",
+      "bytes": 62976,
+      "sha256": "b387f0dd0af7a65be54c57f8d1cc023541f7f680715fcc942af0b65ab6526b13",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.iridium.why.b": true,
+        "oldEditorialTextAbsent:wsc.iridium.why.b": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-ru.html",
+      "case": "iridium",
+      "key": false,
+      "lang": "ru",
+      "format": "html",
+      "bytes": 9775,
+      "sha256": "72c3ee1c9eb17a3854798e5f73a7f18a48060973d98b0e837497330fdfe0b4de",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.iridium.why.b": true,
+        "oldEditorialTextAbsent:wsc.iridium.why.b": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-th.docx",
+      "case": "iridium",
+      "key": false,
+      "lang": "th",
+      "format": "docx",
+      "bytes": 62460,
+      "sha256": "b97861a2355e5c449b9f7f920620ba2a2a24abfa7390444a4b175db1f99c40a6",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.iridium.why.b": true,
+        "oldEditorialTextAbsent:wsc.iridium.why.b": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-iridium-th.html",
+      "case": "iridium",
+      "key": false,
+      "lang": "th",
+      "format": "html",
+      "bytes": 10978,
+      "sha256": "35b8a8f12665af09b2c5fb550a1cf9b5c12b893ad006a4627e67dcd809745856",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.iridium.why.b": true,
+        "oldEditorialTextAbsent:wsc.iridium.why.b": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-key-ru.docx",
+      "case": "theos2",
+      "key": true,
+      "lang": "ru",
+      "format": "docx",
+      "bytes": 10265,
+      "sha256": "e1d778e726cca958be899af5049676397a9b38e9ba32dfe6c9846341b5a4a90d",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.theos2.w.j2": true,
+        "oldEditorialTextAbsent:wsc.theos2.w.j2": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-key-ru.html",
+      "case": "theos2",
+      "key": true,
+      "lang": "ru",
+      "format": "html",
+      "bytes": 4616,
+      "sha256": "c0b026847a393deb92207b3cf65c981a10b8ecaa267a6c1473c68c2e69ea737a",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.theos2.w.j2": true,
+        "oldEditorialTextAbsent:wsc.theos2.w.j2": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-key-th.docx",
+      "case": "theos2",
+      "key": true,
+      "lang": "th",
+      "format": "docx",
+      "bytes": 10681,
+      "sha256": "5724570ba47ff9db9e1462c030c5de1d4fca686cf8a95ca00b0c0554cfa430ea",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.theos2.w.j2": true,
+        "oldEditorialTextAbsent:wsc.theos2.w.j2": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-key-th.html",
+      "case": "theos2",
+      "key": true,
+      "lang": "th",
+      "format": "html",
+      "bytes": 5052,
+      "sha256": "0af0c80dd5b314aa36716a590b1fb76b0a4eb874ae6d8a1f0258d3f3c88d6c74",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true,
+        "newEditorialText:wsc.theos2.w.j2": true,
+        "oldEditorialTextAbsent:wsc.theos2.w.j2": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-ru.docx",
+      "case": "theos2",
+      "key": false,
+      "lang": "ru",
+      "format": "docx",
+      "bytes": 20030,
+      "sha256": "5002d5718d5bd1ae1f4bd0b33bae8d0b97d6551f540d70ef75cf95fa4989c0a4",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-ru.html",
+      "case": "theos2",
+      "key": false,
+      "lang": "ru",
+      "format": "html",
+      "bytes": 6258,
+      "sha256": "bdfa8a43a8e8fcc53206c0ed118828bc5dd10a6c090d68bd99c24caa1fa837e7",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-th.docx",
+      "case": "theos2",
+      "key": false,
+      "lang": "th",
+      "format": "docx",
+      "bytes": 20948,
+      "sha256": "56f388f0d74b7b8a9cecd5e7147f1d1fb0a77d0f2ce2e781578e47802e8313ba",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    },
+    {
+      "file": "orbitlab-case-theos2-th.html",
+      "case": "theos2",
+      "key": false,
+      "lang": "th",
+      "format": "html",
+      "bytes": 7207,
+      "sha256": "260f246050ff65f93b31130bb378490a800e6e0ba94fd41bfe51a7d69a0cc280",
+      "checks": {
+        "contains:ws.name": true,
+        "contains:ws.code": true,
+        "contains:ws.date": true,
+        "contains:ws.answer": true,
+        "contains:ws.working": true,
+        "title": true,
+        "correctScript": true,
+        "noOtherLanguageScript": true
+      },
+      "passed": true
+    }
+  ],
+  "render": [
+    {
+      "docx": "orbitlab-case-cz5b-key-ru.docx",
+      "docxSha256": "2cc67d60302b742214ec949b3ab4f7037d15027891c06d1385b7e0b89a14a53a",
+      "pdf": "rendered\\orbitlab-case-cz5b-key-ru\\orbitlab-case-cz5b-key-ru.pdf",
+      "pdfSha256": "42974bf360846e5ac8128dd6489d94bea1e8aacf20355910da7b7bedf84954dd",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-key-ru\\page-1.png",
+          "bytes": 120841,
+          "sha256": "5b8e04bb8d500bc1e650b87f0167cc7ea260723dd0794f96830b9f9655ccd293"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-cz5b-key-th.docx",
+      "docxSha256": "271ad6c3e520728fdfda22a289ecdbf41bf5a971dd3c5620c870899b436f79a6",
+      "pdf": "rendered\\orbitlab-case-cz5b-key-th\\orbitlab-case-cz5b-key-th.pdf",
+      "pdfSha256": "ea7620e8adbf7b1fe2f7ae9ca9d7919c915858d891a95751e1f5ef34bb6df424",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-key-th\\page-1.png",
+          "bytes": 121091,
+          "sha256": "07b18f9df6fc05ccc5b343058d4d444beaf839eaff7d8c26d1b2e7dd3ccaf3ba"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-cz5b-ru.docx",
+      "docxSha256": "a21ed0b014c717c80ab1a28c13daa67bacf855d0b6986fc11fb08af24e32b40b",
+      "pdf": "rendered\\orbitlab-case-cz5b-ru\\orbitlab-case-cz5b-ru.pdf",
+      "pdfSha256": "cceccc52a17217cd4f34589b299168c47362f09cff62aa51e6bef814ff177971",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-ru\\page-1.png",
+          "bytes": 155406,
+          "sha256": "2709385e8e0833a097bace424223d92ebeb3ff39b5e61303ad3593c537eaec0b"
+        },
+        {
+          "file": "rendered\\orbitlab-case-cz5b-ru\\page-2.png",
+          "bytes": 60780,
+          "sha256": "d21e048a3169e75b69c704cfb23f16fc63b3e657ac593c266bab164d954f4b39"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-cz5b-th.docx",
+      "docxSha256": "95a3b304ade96fed2793aae3b2487a5b17ffc1616550967332e4c5cac577ec49",
+      "pdf": "rendered\\orbitlab-case-cz5b-th\\orbitlab-case-cz5b-th.pdf",
+      "pdfSha256": "1635ac8c9451559005036bede0ee0ce8d25c57c4cf0e03fbc3a6f66c5b2e0563",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-th\\page-1.png",
+          "bytes": 157764,
+          "sha256": "981c6d16fa531134aed4bf1a48cccd0ac8a809c4e36910cd0ea1e8ced228106d"
+        },
+        {
+          "file": "rendered\\orbitlab-case-cz5b-th\\page-2.png",
+          "bytes": 60904,
+          "sha256": "f8e41a538ac943ed7bb0a2467f04c9c7daba1f8ebcf058bb6afb2ed18ce80e33"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-iridium-key-ru.docx",
+      "docxSha256": "d1936ce07d15b731e52d7d773b6e1412310ea9f18a531da6a21f660529c41123",
+      "pdf": "rendered\\orbitlab-case-iridium-key-ru\\orbitlab-case-iridium-key-ru.pdf",
+      "pdfSha256": "ab6429d8591fedd1a1549531a7e76fe3d2ddbfa3241af5f45bb2238bfa8734b1",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-key-ru\\page-1.png",
+          "bytes": 117508,
+          "sha256": "d56aee77ad28392f64fdea1ad71a1bacbc3f10095a5b04b92ea00a4e160d528e"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-iridium-key-th.docx",
+      "docxSha256": "47337277bcb8e441b825560028899261f7b3136f7f8232eb510cef5987282afb",
+      "pdf": "rendered\\orbitlab-case-iridium-key-th\\orbitlab-case-iridium-key-th.pdf",
+      "pdfSha256": "32f9516790d15887b10d4fbdc6fa2b1261843a9e3a59a345c08e1087571fd701",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-key-th\\page-1.png",
+          "bytes": 114217,
+          "sha256": "27f2cb08502cdfb74c4fd48320c93cf56c03c56d45b3d674bae437d1500e9fbb"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-iridium-ru.docx",
+      "docxSha256": "b387f0dd0af7a65be54c57f8d1cc023541f7f680715fcc942af0b65ab6526b13",
+      "pdf": "rendered\\orbitlab-case-iridium-ru\\orbitlab-case-iridium-ru.pdf",
+      "pdfSha256": "4af71be26e073cad1f874351ec057c93943d6b4310857d1567d89da26fc28f85",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-ru\\page-1.png",
+          "bytes": 179259,
+          "sha256": "9c6fc0379a4446a72a505f38a7bb3537b99ab4125f14198a0155083a9bce45df"
+        },
+        {
+          "file": "rendered\\orbitlab-case-iridium-ru\\page-2.png",
+          "bytes": 134210,
+          "sha256": "30f0b03374fd15d675fa9bb690dc1683b55d660f7026681366ecd206264e75ca"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-iridium-th.docx",
+      "docxSha256": "b97861a2355e5c449b9f7f920620ba2a2a24abfa7390444a4b175db1f99c40a6",
+      "pdf": "rendered\\orbitlab-case-iridium-th\\orbitlab-case-iridium-th.pdf",
+      "pdfSha256": "4ebb0afe0cdab330f1ba99cd229cc5327fed1b553c5d5855214f209a78385322",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-th\\page-1.png",
+          "bytes": 166546,
+          "sha256": "9147efe72c3bb303110d70031ae7b683ff9fd5cf1ad46dac69ff503ad5512610"
+        },
+        {
+          "file": "rendered\\orbitlab-case-iridium-th\\page-2.png",
+          "bytes": 129835,
+          "sha256": "e73942b0849d19f8de4b2a1ef9c79177918f226730733b74803dfe8f6b2e562e"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-theos2-key-ru.docx",
+      "docxSha256": "e1d778e726cca958be899af5049676397a9b38e9ba32dfe6c9846341b5a4a90d",
+      "pdf": "rendered\\orbitlab-case-theos2-key-ru\\orbitlab-case-theos2-key-ru.pdf",
+      "pdfSha256": "930fdce429adf1b4f9c5f28ea1b3ad45ac33bc4f0bcf9b2008457604740dadbd",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-key-ru\\page-1.png",
+          "bytes": 106406,
+          "sha256": "f4e2b4db30afb2b0d4067b6246ce9db9e7dbce3341598c90b565647d7dac23d8"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-theos2-key-th.docx",
+      "docxSha256": "5724570ba47ff9db9e1462c030c5de1d4fca686cf8a95ca00b0c0554cfa430ea",
+      "pdf": "rendered\\orbitlab-case-theos2-key-th\\orbitlab-case-theos2-key-th.pdf",
+      "pdfSha256": "81db1dbca770ef8028ed2efae4641e0e27c887b634c375b2fd1d7b0e37d533a7",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-key-th\\page-1.png",
+          "bytes": 107430,
+          "sha256": "4eb16df80d5a244019e6befbc517836b84d340151f91f852757220a380967040"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-theos2-ru.docx",
+      "docxSha256": "5002d5718d5bd1ae1f4bd0b33bae8d0b97d6551f540d70ef75cf95fa4989c0a4",
+      "pdf": "rendered\\orbitlab-case-theos2-ru\\orbitlab-case-theos2-ru.pdf",
+      "pdfSha256": "3bdf86e9a6786325d8486cc0b4feb8a795b33403f1a652221c747383b94a6514",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-ru\\page-1.png",
+          "bytes": 135219,
+          "sha256": "0ef554afb06bf5e14321d5287a4bb2de52c099b3a2aa37eb4ba484d12318135e"
+        },
+        {
+          "file": "rendered\\orbitlab-case-theos2-ru\\page-2.png",
+          "bytes": 47703,
+          "sha256": "4a0221961cb05a4342c277dc6262354ca51a21d9572d6f494d757cb2aa7bdf07"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    },
+    {
+      "docx": "orbitlab-case-theos2-th.docx",
+      "docxSha256": "56f388f0d74b7b8a9cecd5e7147f1d1fb0a77d0f2ce2e781578e47802e8313ba",
+      "pdf": "rendered\\orbitlab-case-theos2-th\\orbitlab-case-theos2-th.pdf",
+      "pdfSha256": "27f6c990079010658c6efa071997ee560a5a0b9d3bc3a045afd437d4760911cc",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-th\\page-1.png",
+          "bytes": 134534,
+          "sha256": "98dcc5609b6aa4c4c12093fee057db3330a94d2ff89830be89a7d8a57853bb68"
+        },
+        {
+          "file": "rendered\\orbitlab-case-theos2-th\\page-2.png",
+          "bytes": 47721,
+          "sha256": "6e88c00ed5fe31678f943d807a5669c6e7a02ad92c91ea9b0799c584069d98bd"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0
+    }
+  ],
+  "visualAcceptance": {
+    "passed": false,
+    "pagesViewed": 18,
+    "documentsWithFindings": 4,
+    "detail": "visual-review.json"
+  },
+  "structureAndLanguagePassed": true,
+  "renderProvenance": {
+    "converter": "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
+    "converterVersion": "26.8.0.3 (Windows executable ProductVersion)",
+    "rasterizer": "C:\\Users\\Royin\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\poppler\\Library\\bin\\pdftoppm.exe",
+    "dpi": 120,
+    "mode": "headless CLI, no Word COM or native UI automation; unique LibreOffice profile",
+    "packagedRenderer": "documents skill render_docx.py absent from this installed Windows package; using documented manual headless fallback"
+  }
+}

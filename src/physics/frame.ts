@@ -27,6 +27,7 @@
 import type { Simulation, SimStatus, DescentPhase, Debris, DebrisVisual, Losses } from './simulation';
 import type { AbortState } from './sim/types';
 import type { RendezvousState } from './sim/rendezvous';
+import type { ApolloState } from './sim/apollo';
 import type { AscentPhase } from './guidance';
 import type { VehicleSpec } from '../types';
 import type { Vec3 } from './vec3';
@@ -206,6 +207,10 @@ export interface VisualFrame {
   activeStageIndex: number;
   fairingAttached: boolean;
   payloadSeparated: boolean;
+  /** C01: Apollo's flight from the parking orbit */
+  apollo?: ApolloState;
+  /** C01: parts dropped on the way up (`StageSpec.jettisons`) — the Saturn V's interstage ring and escape tower */
+  jettisoned?: { interstage: boolean; tower: boolean };
   destroyed: boolean;
   liftoff: boolean;
   debris: DebrisFrame[];
@@ -500,6 +505,8 @@ export function captureFrame(sim: Simulation): VisualFrame {
     activeStageIndex: sim.vehicle.activeIndex,
     fairingAttached: sim.vehicle.fairingAttached,
     payloadSeparated: s.payloadSeparated,
+    ...(sim.vehicle.jettisoned.interstage || sim.vehicle.jettisoned.tower ? { jettisoned: { ...sim.vehicle.jettisoned } } : {}),
+    ...(sim.apollo.active ? { apollo: sim.apollo.frame() } : {}),
     destroyed: s.destroyed,
     liftoff: s.liftoff,
     debris,
@@ -695,14 +702,15 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
   }
   const dt = span * u;
   const coasting = (f: VisualFrame) => f.status === 'coast' || f.status === 'orbit' || (f.status === 'descent' && f.descentPhase === 'coast');
-  const ballistic = !a.rigid && coasting(a) && coasting(b) && a.thrust <= 0;
+  // C01: Apollo between the Earth and the Moon is not on a Kepler arc about the Earth: the cubic through both ends
+  const ballistic = !a.rigid && !a.apollo && coasting(a) && coasting(b) && a.thrust <= 0;
   let r: Vec3;
   let v: Vec3;
   if (ballistic) {
     const p = propagateKepler(a.r, a.v, dt);
     r = p.r;
     v = p.v;
-  } else if (a.status === 'rendezvous' && b.status === 'rendezvous') {
+  } else if ((a.status === 'rendezvous' && b.status === 'rendezvous') || (a.apollo && b.apollo && !a.rigid)) {
     const p = hermite(a.r, a.v, b.r, b.v, u, span);
     r = p.r;
     v = p.v;
@@ -739,6 +747,16 @@ export function interpolateFrames(a: VisualFrame, b: VisualFrame, time: number):
     // the escape's flags and parachutes step, its motors blend
     ...(a.abort || b.abort ? { abort: blendAbort(a.abort, b.abort, u) } : {}),
     ...(a.rendezvous || b.rendezvous ? { rendezvous: blendRendezvous(a.rendezvous, b.rendezvous, u, span) } : {}),
+    // C01: Columbia beside Eagle, and the ascent stage beside Columbia after its jettison, each on its own arc
+    ...(a.apollo && b.apollo && ((a.apollo.csm && b.apollo.csm) || (a.apollo.ascentStage && b.apollo.ascentStage)
+      || (a.apollo.serviceModule && b.apollo.serviceModule)) ? { apollo: {
+      ...a.apollo,
+      ...(a.apollo.csm && b.apollo.csm ? { csm: hermite(a.apollo.csm.r, a.apollo.csm.v, b.apollo.csm.r, b.apollo.csm.v, u, span) } : {}),
+      ...(a.apollo.ascentStage && b.apollo.ascentStage
+        ? { ascentStage: hermite(a.apollo.ascentStage.r, a.apollo.ascentStage.v, b.apollo.ascentStage.r, b.apollo.ascentStage.v, u, span) } : {}),
+      ...(a.apollo.serviceModule && b.apollo.serviceModule
+        ? { serviceModule: hermite(a.apollo.serviceModule.r, a.apollo.serviceModule.v, b.apollo.serviceModule.r, b.apollo.serviceModule.v, u, span) } : {}),
+    } } : {}),
     rigid,
     // E02: the left frame's step, copied like everything else handed out.
     ...(a.eom ? { eom: cloneEom(a.eom) } : {}),

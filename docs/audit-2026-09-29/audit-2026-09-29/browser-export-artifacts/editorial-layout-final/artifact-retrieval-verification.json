@@ -1,0 +1,154 @@
+{
+  "runId": 36640532239,
+  "runUrl": "https://github.com/ROYIN001/Orbitlab/actions/runs/36640532239",
+  "artifactId": 11066063940,
+  "artifactZipSha256": "66bad26107c174ec0060f4b4ac53165da93c2ac7e8da6774d84c62e53a4504d3",
+  "apiDigestMatched": true,
+  "zipIntegrityPassed": true,
+  "sourceSha": "4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c",
+  "files": [
+    {
+      "name": "orbitlab-case-theos2-th.html",
+      "bytes": 7207,
+      "sha256": "260f246050ff65f93b31130bb378490a800e6e0ba94fd41bfe51a7d69a0cc280"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-th.html",
+      "bytes": 5052,
+      "sha256": "0af0c80dd5b314aa36716a590b1fb76b0a4eb874ae6d8a1f0258d3f3c88d6c74"
+    },
+    {
+      "name": "orbitlab-case-theos2-th.docx",
+      "bytes": 21083,
+      "sha256": "4ffad69de00eeb159d2982cd3adea750b9cb1ef5ceebb1e5797afce7d5a231a7"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-th.docx",
+      "bytes": 10681,
+      "sha256": "5724570ba47ff9db9e1462c030c5de1d4fca686cf8a95ca00b0c0554cfa430ea"
+    },
+    {
+      "name": "orbitlab-case-theos2-ru.html",
+      "bytes": 6258,
+      "sha256": "bdfa8a43a8e8fcc53206c0ed118828bc5dd10a6c090d68bd99c24caa1fa837e7"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-ru.html",
+      "bytes": 4616,
+      "sha256": "c0b026847a393deb92207b3cf65c981a10b8ecaa267a6c1473c68c2e69ea737a"
+    },
+    {
+      "name": "orbitlab-case-theos2-ru.docx",
+      "bytes": 20165,
+      "sha256": "012bad686b8b315718a643c8a72cfc6d358eaa5b478ef79d249cff8532843a2f"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-ru.docx",
+      "bytes": 10265,
+      "sha256": "e1d778e726cca958be899af5049676397a9b38e9ba32dfe6c9846341b5a4a90d"
+    },
+    {
+      "name": "orbitlab-case-cz5b-th.html",
+      "bytes": 8330,
+      "sha256": "936150fe5de729afb4ef3143bc04c7c885c8efce4f522504fb6069ac91b253b8"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-th.html",
+      "bytes": 5603,
+      "sha256": "3433c9f844cd990fe787941fd80e48072d8ba0ba757b1080e40d94205b6a09b4"
+    },
+    {
+      "name": "orbitlab-case-cz5b-th.docx",
+      "bytes": 24966,
+      "sha256": "3e004016319e00b2335ff913d41f268fa21745b4d71113f2b92da59692c1b850"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-th.docx",
+      "bytes": 12896,
+      "sha256": "271ad6c3e520728fdfda22a289ecdbf41bf5a971dd3c5620c870899b436f79a6"
+    },
+    {
+      "name": "orbitlab-case-cz5b-ru.html",
+      "bytes": 6940,
+      "sha256": "ac03b65969f48f808b040507d830a6682f37b218d4cf899b4b40fe138d2e9e90"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-ru.html",
+      "bytes": 4957,
+      "sha256": "377684104506a993d7d754df84665b759743254c632d160e82b834e8b528d291"
+    },
+    {
+      "name": "orbitlab-case-cz5b-ru.docx",
+      "bytes": 23601,
+      "sha256": "5f9f678242818fb61a6e90deb5a397f4126db1cb06c35f1c288bcc038481c2be"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-ru.docx",
+      "bytes": 12264,
+      "sha256": "2cc67d60302b742214ec949b3ab4f7037d15027891c06d1385b7e0b89a14a53a"
+    },
+    {
+      "name": "orbitlab-case-iridium-th.html",
+      "bytes": 10996,
+      "sha256": "146a27cad8fac8bd03631643df887cb6a7e9a239999447ceab0cf8f5e07430f4"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-th.html",
+      "bytes": 5522,
+      "sha256": "fd92d6bb11910ca25257c9e2a39f2cde1b7d5f6c7fc779d493ccad6bd5b502da"
+    },
+    {
+      "name": "orbitlab-case-iridium-th.docx",
+      "bytes": 62783,
+      "sha256": "f24c60650b6b419ed7d8c0d76137ea24df67863c516acd9e730abf40177b84cd"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-th.docx",
+      "bytes": 12862,
+      "sha256": "47337277bcb8e441b825560028899261f7b3136f7f8232eb510cef5987282afb"
+    },
+    {
+      "name": "orbitlab-case-iridium-ru.html",
+      "bytes": 9793,
+      "sha256": "d680feb2950c391993309f2836ab2edc2a6559b180747c809ae8c0068309a976"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-ru.html",
+      "bytes": 5005,
+      "sha256": "6e7cf0b776b1f062b046eb2c6687eb8e5043a1a9ffff03a745e5fe85c19802a5"
+    },
+    {
+      "name": "orbitlab-case-iridium-ru.docx",
+      "bytes": 63296,
+      "sha256": "1abc1b26ea14ab42e347492e27a85fad8f8a60981a0f3f1506e512f97d44f5a9"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-ru.docx",
+      "bytes": 12348,
+      "sha256": "d1936ce07d15b731e52d7d773b6e1412310ea9f18a531da6a21f660529c41123"
+    }
+  ],
+  "filesVerified": 24,
+  "allCopiedBytesIdentical": true,
+  "browserErrors": [
+    {
+      "case": "theos2",
+      "uncaughtErrors": [],
+      "consoleErrors": [],
+      "screenshot": "theos2-export-controls.png"
+    },
+    {
+      "case": "cz5b",
+      "uncaughtErrors": [],
+      "consoleErrors": [],
+      "screenshot": "cz5b-export-controls.png"
+    },
+    {
+      "case": "iridium",
+      "uncaughtErrors": [],
+      "consoleErrors": [],
+      "screenshot": "iridium-export-controls.png"
+    }
+  ],
+  "producer": "GitHub Actions Chromium through visible app controls, actual download events; desktop IAB and local module fixtures are excluded"
+}

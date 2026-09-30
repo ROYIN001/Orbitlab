@@ -1,0 +1,3266 @@
+{
+  "bankCount": 157,
+  "textTriples": 926,
+  "blankOrMissing": 0,
+  "uniqueIds": 157,
+  "numericFamilies": 25,
+  "numericCombinations": 31639,
+  "numericRows": [
+    {
+      "id": "b-gravity-altitude",
+      "combos": 21,
+      "min": 6.949104383297318,
+      "max": 9.222534720293126,
+      "maxRelativeError": 3.852209600234049e-16,
+      "unit": "m/s²",
+      "tolerancePct": 2,
+      "formula": "9.81 * (6378 / (6378 + h))^2"
+    },
+    {
+      "id": "o-circular-speed",
+      "combos": 26,
+      "min": 7.113070668207295,
+      "max": 7.754845497372695,
+      "maxRelativeError": 0,
+      "unit": "km/s",
+      "tolerancePct": 1,
+      "formula": "sqrt(mu / (R + h * 1000)) / 1000"
+    },
+    {
+      "id": "o-period",
+      "combos": 36,
+      "min": 89.50492743855607,
+      "max": 127.19818567010473,
+      "maxRelativeError": 3.5400948860781877e-16,
+      "unit": "min",
+      "tolerancePct": 1,
+      "formula": "2 * pi * sqrt((R + h * 1000)^3 / mu) / 60"
+    },
+    {
+      "id": "o-hohmann-first",
+      "combos": 143,
+      "min": 109.11773061303953,
+      "max": 455.1166975415315,
+      "maxRelativeError": 1.1505642297105406e-14,
+      "unit": "m/s",
+      "tolerancePct": 3,
+      "formula": "sqrt(mu / (R + h1 * 1000)) * (sqrt(2 * (R + h2 * 1000) / ((R + h1 * 1000) + (R + h2 * 1000))) - 1)"
+    },
+    {
+      "id": "o-plane-change",
+      "combos": 1827,
+      "min": 55.84770059930724,
+      "max": 4037.5771035993234,
+      "maxRelativeError": 3.745260490996134e-16,
+      "unit": "m/s",
+      "tolerancePct": 2,
+      "formula": "2 * v * 1000 * sin(di / 2)"
+    },
+    {
+      "id": "o-perigee-speed",
+      "combos": 432,
+      "min": 7.829383963566338,
+      "max": 10.2600416551564,
+      "maxRelativeError": 3.534225893448757e-16,
+      "unit": "km/s",
+      "tolerancePct": 1,
+      "formula": "sqrt(mu * (2 / (R + hp * 1000) - 2 / ((R + hp * 1000) + (R + ha * 1000)))) / 1000"
+    },
+    {
+      "id": "o-ground-track",
+      "combos": 48,
+      "min": 25,
+      "max": 72,
+      "maxRelativeError": 4.1796631515299996e-16,
+      "unit": "°",
+      "tolerancePct": 6,
+      "formula": "i"
+    },
+    {
+      "id": "o-period-height",
+      "combos": 21,
+      "min": 1680.8603065634054,
+      "max": 20232.08580531011,
+      "maxRelativeError": 4.328710473899772e-15,
+      "unit": "km",
+      "tolerancePct": 2,
+      "formula": "((mu * (T * 3600)^2 / (4 * pi^2))^(1/3) - R) / 1000"
+    },
+    {
+      "id": "r-tsiolkovsky-calc",
+      "combos": 21525,
+      "min": 289.4042644089174,
+      "max": 14209.727328880672,
+      "maxRelativeError": 4.245326696456124e-15,
+      "unit": "m/s",
+      "tolerancePct": 1,
+      "formula": "isp * 9.81 * ln(m0 / mf)"
+    },
+    {
+      "id": "r-mass-ratio",
+      "combos": 1435,
+      "min": 1.573106679355412,
+      "max": 8.884960203450047,
+      "maxRelativeError": 2.2178302651018514e-16,
+      "unit": "",
+      "tolerancePct": 2,
+      "formula": "exp(dv / (isp * 9.81))"
+    },
+    {
+      "id": "r-q-calc",
+      "combos": 1326,
+      "min": 2,
+      "max": 147,
+      "maxRelativeError": 0,
+      "unit": "kPa",
+      "tolerancePct": 2,
+      "formula": "0.5 * rho * v^2 / 1000"
+    },
+    {
+      "id": "r-read-maxq",
+      "combos": 1,
+      "min": 22.36,
+      "max": 22.36,
+      "maxRelativeError": 0,
+      "unit": "kPa",
+      "tolerancePct": 8,
+      "formula": "22.36"
+    },
+    {
+      "id": "r-read-meco",
+      "combos": 1,
+      "min": 157.1,
+      "max": 157.1,
+      "maxRelativeError": 0,
+      "unit": "s",
+      "tolerancePct": 4,
+      "formula": "157.1"
+    },
+    {
+      "id": "r-liftoff-accel",
+      "combos": 546,
+      "min": 2.920622727272727,
+      "max": 20.193350000000002,
+      "maxRelativeError": 0.0011483328139606469,
+      "unit": "m/s²",
+      "tolerancePct": 3,
+      "formula": "F / m - g0"
+    },
+    {
+      "id": "g-ins-error",
+      "combos": 340,
+      "min": 0.0049050000000000005,
+      "max": 7.946100000000001,
+      "maxRelativeError": 2.7943847286723215e-16,
+      "unit": "km",
+      "tolerancePct": 2,
+      "formula": "0.5 * b * 0.001 * 9.81 * t^2 / 1000"
+    },
+    {
+      "id": "g-launch-azimuth",
+      "combos": 266,
+      "min": 28.596928212491026,
+      "max": 62.40939095798366,
+      "maxRelativeError": 0,
+      "unit": "°",
+      "tolerancePct": 3,
+      "formula": "asin(cos(i) / cos(phi))"
+    },
+    {
+      "id": "c-overshoot",
+      "combos": 14,
+      "min": 1.5164619864546562,
+      "max": 62.087127292270594,
+      "maxRelativeError": 0,
+      "unit": "%",
+      "tolerancePct": 3,
+      "formula": "100 * exp(-pi * z / sqrt(1 - z^2))"
+    },
+    {
+      "id": "c-gain-db",
+      "combos": 39,
+      "min": 1.5836249209524964,
+      "max": 13.979400086720377,
+      "maxRelativeError": 3.5164939436566764e-16,
+      "unit": "dB",
+      "tolerancePct": 2,
+      "formula": "20 * log10(k)"
+    },
+    {
+      "id": "c-delay-phase",
+      "combos": 209,
+      "min": 0.5729577951308232,
+      "max": 34.37746770784939,
+      "maxRelativeError": 3.24217260526583e-16,
+      "unit": "°",
+      "tolerancePct": 2,
+      "formula": "w * tau / 1000 * 180 / pi"
+    },
+    {
+      "id": "c-read-overshoot",
+      "combos": 7,
+      "min": 16.303353482158045,
+      "max": 52.66205993303031,
+      "maxRelativeError": 0,
+      "unit": "%",
+      "tolerancePct": 12,
+      "formula": "100 * exp(-pi * z / sqrt(1 - z^2))"
+    },
+    {
+      "id": "c-read-pm",
+      "combos": 15,
+      "min": 28.020176119334828,
+      "max": 65.5301994792978,
+      "maxRelativeError": 4.918297399760112e-16,
+      "unit": "°",
+      "tolerancePct": 12,
+      "formula": "90 - atan(0.5 * sqrt(2 * (sqrt(1 + K^2) - 1)))"
+    },
+    {
+      "id": "c-pd-damping",
+      "combos": 527,
+      "min": 0.16666666666666666,
+      "max": 2,
+      "maxRelativeError": 2.220446049250313e-16,
+      "unit": "",
+      "tolerancePct": 3,
+      "formula": "kd / (2 * sqrt(kp))"
+    },
+    {
+      "id": "c-tvc-moment",
+      "combos": 2640,
+      "min": 174.5240643728351,
+      "max": 20905.692653530692,
+      "maxRelativeError": 2.191284108762516e-16,
+      "unit": "kN·m",
+      "tolerancePct": 3,
+      "formula": "F * l * sin(d)"
+    },
+    {
+      "id": "f-voting-reliability",
+      "combos": 20,
+      "min": 89.60000000000001,
+      "max": 99.97019999999996,
+      "maxRelativeError": 3.0788548291786833e-16,
+      "unit": "%",
+      "tolerancePct": 0.2,
+      "formula": "100 * (3 * (p / 100)^2 - 2 * (p / 100)^3)"
+    },
+    {
+      "id": "f-series-reliability",
+      "combos": 174,
+      "min": 78.3743359437696,
+      "max": 99.40119920000001,
+      "maxRelativeError": 3.233623167180924e-16,
+      "unit": "%",
+      "tolerancePct": 1,
+      "formula": "100 * (p / 100)^n"
+    }
+  ],
+  "drawChecks": 1000,
+  "postOverlap": 0,
+  "idsReached": 157,
+  "diagrams": 11,
+  "correctButGuessScoreRange": [
+    68,
+    89
+  ],
+  "plainScores": [
+    {
+      "seed": 1,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 10
+    },
+    {
+      "seed": 2,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 11
+    },
+    {
+      "seed": 3,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 10
+    },
+    {
+      "seed": 4,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 8
+    },
+    {
+      "seed": 5,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 9
+    },
+    {
+      "seed": 6,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 9
+    },
+    {
+      "seed": 7,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 10
+    },
+    {
+      "seed": 8,
+      "correct": 25,
+      "percent": 89,
+      "understanding": 5
+    },
+    {
+      "seed": 9,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 9
+    },
+    {
+      "seed": 10,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 9
+    },
+    {
+      "seed": 11,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 11
+    },
+    {
+      "seed": 12,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 11
+    },
+    {
+      "seed": 13,
+      "correct": 25,
+      "percent": 84,
+      "understanding": 8
+    },
+    {
+      "seed": 14,
+      "correct": 25,
+      "percent": 74,
+      "understanding": 12
+    },
+    {
+      "seed": 15,
+      "correct": 25,
+      "percent": 71,
+      "understanding": 15
+    },
+    {
+      "seed": 16,
+      "correct": 25,
+      "percent": 74,
+      "understanding": 12
+    },
+    {
+      "seed": 17,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 8
+    },
+    {
+      "seed": 18,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 11
+    },
+    {
+      "seed": 19,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 10
+    },
+    {
+      "seed": 20,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 12
+    },
+    {
+      "seed": 21,
+      "correct": 25,
+      "percent": 70,
+      "understanding": 15
+    },
+    {
+      "seed": 22,
+      "correct": 25,
+      "percent": 75,
+      "understanding": 12
+    },
+    {
+      "seed": 23,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 11
+    },
+    {
+      "seed": 24,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 9
+    },
+    {
+      "seed": 25,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 9
+    },
+    {
+      "seed": 26,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 11
+    },
+    {
+      "seed": 27,
+      "correct": 25,
+      "percent": 75,
+      "understanding": 11
+    },
+    {
+      "seed": 28,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 11
+    },
+    {
+      "seed": 29,
+      "correct": 25,
+      "percent": 68,
+      "understanding": 15
+    },
+    {
+      "seed": 30,
+      "correct": 25,
+      "percent": 83,
+      "understanding": 7
+    },
+    {
+      "seed": 31,
+      "correct": 25,
+      "percent": 83,
+      "understanding": 8
+    },
+    {
+      "seed": 32,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 8
+    },
+    {
+      "seed": 33,
+      "correct": 25,
+      "percent": 83,
+      "understanding": 8
+    },
+    {
+      "seed": 34,
+      "correct": 25,
+      "percent": 84,
+      "understanding": 7
+    },
+    {
+      "seed": 35,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 9
+    },
+    {
+      "seed": 36,
+      "correct": 25,
+      "percent": 85,
+      "understanding": 7
+    },
+    {
+      "seed": 37,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 9
+    },
+    {
+      "seed": 38,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 10
+    },
+    {
+      "seed": 39,
+      "correct": 25,
+      "percent": 75,
+      "understanding": 12
+    },
+    {
+      "seed": 40,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 9
+    },
+    {
+      "seed": 41,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 9
+    },
+    {
+      "seed": 42,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 12
+    },
+    {
+      "seed": 43,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 9
+    },
+    {
+      "seed": 44,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 10
+    },
+    {
+      "seed": 45,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 9
+    },
+    {
+      "seed": 46,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 10
+    },
+    {
+      "seed": 47,
+      "correct": 25,
+      "percent": 85,
+      "understanding": 7
+    },
+    {
+      "seed": 48,
+      "correct": 25,
+      "percent": 84,
+      "understanding": 8
+    },
+    {
+      "seed": 49,
+      "correct": 25,
+      "percent": 84,
+      "understanding": 7
+    },
+    {
+      "seed": 50,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 10
+    },
+    {
+      "seed": 51,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 10
+    },
+    {
+      "seed": 52,
+      "correct": 25,
+      "percent": 86,
+      "understanding": 7
+    },
+    {
+      "seed": 53,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 8
+    },
+    {
+      "seed": 54,
+      "correct": 25,
+      "percent": 68,
+      "understanding": 16
+    },
+    {
+      "seed": 55,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 9
+    },
+    {
+      "seed": 56,
+      "correct": 25,
+      "percent": 87,
+      "understanding": 7
+    },
+    {
+      "seed": 57,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 9
+    },
+    {
+      "seed": 58,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 9
+    },
+    {
+      "seed": 59,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 11
+    },
+    {
+      "seed": 60,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 12
+    },
+    {
+      "seed": 61,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 8
+    },
+    {
+      "seed": 62,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 10
+    },
+    {
+      "seed": 63,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 9
+    },
+    {
+      "seed": 64,
+      "correct": 25,
+      "percent": 70,
+      "understanding": 15
+    },
+    {
+      "seed": 65,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 12
+    },
+    {
+      "seed": 66,
+      "correct": 25,
+      "percent": 86,
+      "understanding": 7
+    },
+    {
+      "seed": 67,
+      "correct": 25,
+      "percent": 74,
+      "understanding": 12
+    },
+    {
+      "seed": 68,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 10
+    },
+    {
+      "seed": 69,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 8
+    },
+    {
+      "seed": 70,
+      "correct": 25,
+      "percent": 83,
+      "understanding": 8
+    },
+    {
+      "seed": 71,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 11
+    },
+    {
+      "seed": 72,
+      "correct": 25,
+      "percent": 84,
+      "understanding": 7
+    },
+    {
+      "seed": 73,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 8
+    },
+    {
+      "seed": 74,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 8
+    },
+    {
+      "seed": 75,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 11
+    },
+    {
+      "seed": 76,
+      "correct": 25,
+      "percent": 74,
+      "understanding": 13
+    },
+    {
+      "seed": 77,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 11
+    },
+    {
+      "seed": 78,
+      "correct": 25,
+      "percent": 69,
+      "understanding": 15
+    },
+    {
+      "seed": 79,
+      "correct": 25,
+      "percent": 71,
+      "understanding": 13
+    },
+    {
+      "seed": 80,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 9
+    },
+    {
+      "seed": 81,
+      "correct": 25,
+      "percent": 74,
+      "understanding": 12
+    },
+    {
+      "seed": 82,
+      "correct": 25,
+      "percent": 82,
+      "understanding": 8
+    },
+    {
+      "seed": 83,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 11
+    },
+    {
+      "seed": 84,
+      "correct": 25,
+      "percent": 73,
+      "understanding": 13
+    },
+    {
+      "seed": 85,
+      "correct": 25,
+      "percent": 75,
+      "understanding": 12
+    },
+    {
+      "seed": 86,
+      "correct": 25,
+      "percent": 81,
+      "understanding": 8
+    },
+    {
+      "seed": 87,
+      "correct": 25,
+      "percent": 79,
+      "understanding": 10
+    },
+    {
+      "seed": 88,
+      "correct": 25,
+      "percent": 74,
+      "understanding": 12
+    },
+    {
+      "seed": 89,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 11
+    },
+    {
+      "seed": 90,
+      "correct": 25,
+      "percent": 70,
+      "understanding": 14
+    },
+    {
+      "seed": 91,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 10
+    },
+    {
+      "seed": 92,
+      "correct": 25,
+      "percent": 70,
+      "understanding": 14
+    },
+    {
+      "seed": 93,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 11
+    },
+    {
+      "seed": 94,
+      "correct": 25,
+      "percent": 80,
+      "understanding": 10
+    },
+    {
+      "seed": 95,
+      "correct": 25,
+      "percent": 76,
+      "understanding": 11
+    },
+    {
+      "seed": 96,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 10
+    },
+    {
+      "seed": 97,
+      "correct": 25,
+      "percent": 70,
+      "understanding": 14
+    },
+    {
+      "seed": 98,
+      "correct": 25,
+      "percent": 77,
+      "understanding": 11
+    },
+    {
+      "seed": 99,
+      "correct": 25,
+      "percent": 74,
+      "understanding": 12
+    },
+    {
+      "seed": 100,
+      "correct": 25,
+      "percent": 78,
+      "understanding": 11
+    }
+  ],
+  "errors": [],
+  "inventory": [
+    {
+      "id": "b-vehicle-distinct",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 11,
+      "domain": 1,
+      "level": 1,
+      "type": "vehicle",
+      "kind": "knowledge",
+      "skill": "vehicles",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-vehicle-similar",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 16,
+      "domain": 1,
+      "level": 2,
+      "type": "vehicle",
+      "kind": "knowledge",
+      "skill": "vehicles",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-karman",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 21,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "space.boundary",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-float",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 30,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.freefall",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-what-holds",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 41,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.gravity",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-launch-east",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 52,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "launch.rotation",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-range-safety"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-vacuum-thrust",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 63,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.reaction",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-sputnik",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 73,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.first",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "adv-history",
+        "adv-vostok"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-leo-speed",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 83,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.speed",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-iss-period",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 93,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.period",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-geo",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 103,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.geo",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-stages",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 112,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.staging",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-payload"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-kepler2",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 123,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.kepler2",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-black-sky",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 134,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "space.sky",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-escape",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 143,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.escape",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-higher-slower",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 152,
+      "domain": 1,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.speed",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-opposite-side",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 163,
+      "domain": 1,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.burn",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-gravity-altitude",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 174,
+      "domain": 1,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.gravity",
+      "numericCombinations": 21,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-gravity-iss",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 182,
+      "domain": 1,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.gravity",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-order-altitude",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 193,
+      "domain": 1,
+      "level": 1,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "space.altitudes",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-order-history",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 203,
+      "domain": 1,
+      "level": 2,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "history.order",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "adv-history",
+        "adv-vostok",
+        "adv-apollo"
+      ],
+      "figures": []
+    },
+    {
+      "id": "b-multi-leo",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 214,
+      "domain": 1,
+      "level": 2,
+      "type": "multi",
+      "kind": "knowledge",
+      "skill": "orbit.regimes",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-forces-drag",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 224,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "rocket.forces",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "forces"
+        }
+      ]
+    },
+    {
+      "id": "b-ellipse-slow",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 231,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.apsides",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "orbit-ellipse"
+        }
+      ]
+    },
+    {
+      "id": "b-theos",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 241,
+      "domain": 1,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.thailand",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-cosmodromes",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 250,
+      "domain": 1,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "launch.sites",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "b-multi-freefall",
+      "source": "src/lessons/assessment/bank/basics.ts",
+      "line": 260,
+      "domain": 1,
+      "level": 3,
+      "type": "multi",
+      "kind": "understanding",
+      "skill": "orbit.freefallWho",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-perigee",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 8,
+      "domain": 2,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.terms",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-equatorial",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 18,
+      "domain": 2,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.inclination",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-kepler3",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 25,
+      "domain": 2,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.kepler3",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-raan",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 35,
+      "domain": 2,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.raan",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-iss-plane"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-min-inclination",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 45,
+      "domain": 2,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "launch.latitude",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-range-safety",
+        "orbit-iss-plane"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-circular-speed",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 56,
+      "domain": 2,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.speed",
+      "numericCombinations": 26,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-period",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 63,
+      "domain": 2,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.period",
+      "numericCombinations": 36,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-window",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 70,
+      "domain": 2,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "launch.window",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-iss-plane"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-two-burns",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 81,
+      "domain": 2,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.hohmann",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-sso",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 92,
+      "domain": 2,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.sso",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-plane-burn",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 101,
+      "domain": 2,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.plane",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-molniya",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 111,
+      "domain": 2,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.molniya",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-hohmann-first",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 120,
+      "domain": 2,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.hohmann",
+      "numericCombinations": 143,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-plane-change",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 130,
+      "domain": 2,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.plane",
+      "numericCombinations": 1827,
+      "lessonLinks": [
+        "orbit-iss-plane"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-catch-up",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 139,
+      "domain": 2,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.phasing",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "adv-docking"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-geo-latitude",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 150,
+      "domain": 2,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.plane",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-perigee-speed",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 160,
+      "domain": 2,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.visviva",
+      "numericCombinations": 432,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-order-period",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 170,
+      "domain": 2,
+      "level": 1,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "orbit.periods",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-first"
+      ],
+      "figures": []
+    },
+    {
+      "id": "o-plane-node",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 181,
+      "domain": 2,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.planeDiagram",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-iss-plane"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "orbit-plane"
+        }
+      ]
+    },
+    {
+      "id": "o-plane-raan",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 188,
+      "domain": 2,
+      "level": 3,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "orbit.planeDiagram",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-iss-plane"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "orbit-plane"
+        }
+      ]
+    },
+    {
+      "id": "o-hohmann-burns",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 195,
+      "domain": 2,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.hohmannDiagram",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "hohmann"
+        }
+      ]
+    },
+    {
+      "id": "o-ellipse-raise",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 207,
+      "domain": 2,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.apsisBurn",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-hohmann"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "orbit-ellipse"
+        }
+      ]
+    },
+    {
+      "id": "o-ground-track",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 217,
+      "domain": 2,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.groundTrack",
+      "numericCombinations": 48,
+      "lessonLinks": [
+        "orbit-iss-plane"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "ground-track"
+        }
+      ]
+    },
+    {
+      "id": "o-multi-perigee-burn",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 224,
+      "domain": 2,
+      "level": 2,
+      "type": "multi",
+      "kind": "understanding",
+      "skill": "orbit.burnEffects",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-period-height",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 236,
+      "domain": 2,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "orbit.kepler3Calc",
+      "numericCombinations": 21,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "o-nodal-regression",
+      "source": "src/lessons/assessment/bank/orbits.ts",
+      "line": 242,
+      "domain": 2,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "orbit.j2",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-isp",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 11,
+      "domain": 3,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "rocket.isp",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-tsiolkovsky",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 20,
+      "domain": 3,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "rocket.tsiolkovsky",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-payload"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-q",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 30,
+      "domain": 3,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "aero.q",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-twr",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 37,
+      "domain": 3,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.twr",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-propellants",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 47,
+      "domain": 3,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "rocket.propellant",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-soyuz-mass",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 56,
+      "domain": 3,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "rocket.staging",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": [
+        {
+          "kind": "chart",
+          "dataset": "soyuz-iss",
+          "series": "mass",
+          "tMax": 320
+        }
+      ]
+    },
+    {
+      "id": "r-tsiolkovsky-calc",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 66,
+      "domain": 3,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "rocket.tsiolkovsky",
+      "numericCombinations": 21525,
+      "lessonLinks": [
+        "orbit-payload"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-maxq-chart",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 74,
+      "domain": 3,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "aero.maxq",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": [
+        {
+          "kind": "chart",
+          "dataset": "f9-leo",
+          "series": "q",
+          "tMax": 200
+        }
+      ]
+    },
+    {
+      "id": "r-gravity-loss",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 85,
+      "domain": 3,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.losses",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-engine-out"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-throttle-maxq",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 96,
+      "domain": 3,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "aero.maxq",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-g-peak",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 106,
+      "domain": 3,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.acceleration",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": [
+        {
+          "kind": "chart",
+          "dataset": "f9-leo",
+          "series": "gLoad",
+          "tMax": 540
+        }
+      ]
+    },
+    {
+      "id": "r-isp-vacuum",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 117,
+      "domain": 3,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.isp",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-dv-leo",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 127,
+      "domain": 3,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "rocket.budget",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-mass-ratio",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 136,
+      "domain": 3,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "rocket.tsiolkovsky",
+      "numericCombinations": 1435,
+      "lessonLinks": [
+        "orbit-payload"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-q-calc",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 145,
+      "domain": 3,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "aero.q",
+      "numericCombinations": 1326,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-engine-out-predict",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 154,
+      "domain": 3,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "failure.engineOut",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-engine-out"
+      ],
+      "figures": [
+        {
+          "kind": "chart",
+          "dataset": "f9-leo",
+          "series": "thrust",
+          "compare": [
+            "f9-leo-engine-out"
+          ],
+          "tMax": 200
+        }
+      ]
+    },
+    {
+      "id": "r-payload-upper",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 167,
+      "domain": 3,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.staging",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-payload"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-order-isp",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 178,
+      "domain": 3,
+      "level": 2,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "rocket.ispOrder",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-order-events",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 188,
+      "domain": 3,
+      "level": 1,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "launch.sequence",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-multi-losses",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 199,
+      "domain": 3,
+      "level": 2,
+      "type": "multi",
+      "kind": "understanding",
+      "skill": "rocket.lossKinds",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-payload"
+      ],
+      "figures": []
+    },
+    {
+      "id": "r-read-maxq",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 212,
+      "domain": 3,
+      "level": 1,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "aero.qRead",
+      "numericCombinations": 1,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": [
+        {
+          "kind": "chart",
+          "dataset": "f9-leo",
+          "series": "q",
+          "tMax": 200
+        }
+      ]
+    },
+    {
+      "id": "r-read-meco",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 219,
+      "domain": 3,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "rocket.thrustRead",
+      "numericCombinations": 1,
+      "lessonLinks": [],
+      "figures": [
+        {
+          "kind": "chart",
+          "dataset": "f9-leo",
+          "series": "thrust",
+          "tMax": 260
+        }
+      ]
+    },
+    {
+      "id": "r-multi-solid",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 226,
+      "domain": 3,
+      "level": 2,
+      "type": "multi",
+      "kind": "knowledge",
+      "skill": "rocket.solids",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-trajectories",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 236,
+      "domain": 3,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "aero.trajectoryShape",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "trajectories"
+        }
+      ]
+    },
+    {
+      "id": "r-liftoff-accel",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 248,
+      "domain": 3,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "rocket.twrCalc",
+      "numericCombinations": 546,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "r-hydrogen-first",
+      "source": "src/lessons/assessment/bank/rockets.ts",
+      "line": 254,
+      "domain": 3,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "rocket.density",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "g-gravity-turn",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 5,
+      "domain": 4,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.gravityTurn",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-gnc",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 15,
+      "domain": 4,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.terms",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-imu",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 25,
+      "domain": 4,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "navigation.imu",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav",
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-turn-early",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 35,
+      "domain": 4,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "guidance.gravityTurn",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-gnss-alone",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 46,
+      "domain": 4,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "navigation.gnss",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-closed-loop",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 57,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "guidance.closedLoop",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-peg"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-ins-drift",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 68,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "navigation.drift",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-kalman",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 78,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "navigation.kalman",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-peg-igm",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 89,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.explicit",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-peg"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-zero-alpha",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 99,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "guidance.alpha",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-tgo",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 110,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.explicit",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-peg"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-monte-carlo",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 120,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "guidance.dispersion",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-monte-carlo"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-ins-error",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 131,
+      "domain": 4,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "navigation.drift",
+      "numericCombinations": 340,
+      "lessonLinks": [
+        "guid-nav"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-gyro-bias",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 140,
+      "domain": 4,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "navigation.drift",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav",
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-3sigma",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 151,
+      "domain": 4,
+      "level": 3,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.dispersion",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-monte-carlo"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-linear-tangent",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 158,
+      "domain": 4,
+      "level": 3,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.explicit",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-peg"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-dogleg-cost",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 168,
+      "domain": 4,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "guidance.dogleg",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-range-safety"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-ellipse-inner",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 179,
+      "domain": 4,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "guidance.ellipse",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-monte-carlo"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "dispersion"
+        }
+      ]
+    },
+    {
+      "id": "g-ellipse-outer",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 190,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.ellipse",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-monte-carlo"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "dispersion"
+        }
+      ]
+    },
+    {
+      "id": "g-order-ascent",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 197,
+      "domain": 4,
+      "level": 1,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "guidance.phases",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-peg"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-multi-imu",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 208,
+      "domain": 4,
+      "level": 1,
+      "type": "multi",
+      "kind": "knowledge",
+      "skill": "navigation.imuMeasures",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-multi-peg",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 219,
+      "domain": 4,
+      "level": 2,
+      "type": "multi",
+      "kind": "understanding",
+      "skill": "guidance.explicitInputs",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-peg"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-kick-larger",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 231,
+      "domain": 4,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "guidance.kick",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-launch-azimuth",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 242,
+      "domain": 4,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "guidance.azimuth",
+      "numericCombinations": 266,
+      "lessonLinks": [
+        "orbit-range-safety"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-order-kalman",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 249,
+      "domain": 4,
+      "level": 3,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "navigation.kalmanSteps",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-nav"
+      ],
+      "figures": []
+    },
+    {
+      "id": "g-open-loop",
+      "source": "src/lessons/assessment/bank/guidance.ts",
+      "line": 260,
+      "domain": 4,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "guidance.openLoop",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "guid-maxq"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-feedback",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 5,
+      "domain": 5,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.feedback",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-inspector"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-tvc",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 15,
+      "domain": 5,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.actuators",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-pid-d",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 25,
+      "domain": 5,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.pid",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-rcs",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 35,
+      "domain": 5,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.actuators",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "c-unstable-simple",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 44,
+      "domain": 5,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.stability",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-inspector"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-phase-margin",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 55,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.margins",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-margins",
+        "ctl-step"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-gain-margin",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 66,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.margins",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-more-gain",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 76,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.tuning",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-crossover",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 87,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.bode",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-inspector"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-notch",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 97,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.flex",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-notch"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-step-terms",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 108,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.step",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-step"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-tvc-sign",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 118,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.actuators",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "c-overshoot",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 128,
+      "domain": 5,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "control.step",
+      "numericCombinations": 14,
+      "lessonLinks": [
+        "ctl-step"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-gain-db",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 133,
+      "domain": 5,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "control.margins",
+      "numericCombinations": 39,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-delay-phase",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 138,
+      "domain": 5,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "control.margins",
+      "numericCombinations": 209,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-maxq-margins",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 145,
+      "domain": 5,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.stability",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-inspector",
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-slosh",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 156,
+      "domain": 5,
+      "level": 3,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "control.flex",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-notch"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-read-overshoot",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 166,
+      "domain": 5,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "control.stepRead",
+      "numericCombinations": 7,
+      "lessonLinks": [
+        "ctl-step"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "step-response"
+        }
+      ]
+    },
+    {
+      "id": "c-read-pm",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 173,
+      "domain": 5,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "control.bodeRead",
+      "numericCombinations": 15,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "bode"
+        }
+      ]
+    },
+    {
+      "id": "c-step-compare",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 180,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.dampingCompare",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-step"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "step-compare"
+        }
+      ]
+    },
+    {
+      "id": "c-multi-actuators",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 189,
+      "domain": 5,
+      "level": 1,
+      "type": "multi",
+      "kind": "knowledge",
+      "skill": "control.actuatorKinds",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "c-order-loop",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 199,
+      "domain": 5,
+      "level": 1,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "control.loopOrder",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-inspector"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-multi-phase",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 210,
+      "domain": 5,
+      "level": 3,
+      "type": "multi",
+      "kind": "understanding",
+      "skill": "control.phaseEaters",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "ctl-margins"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-pd-damping",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 223,
+      "domain": 5,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "control.pd",
+      "numericCombinations": 527,
+      "lessonLinks": [
+        "ctl-step"
+      ],
+      "figures": []
+    },
+    {
+      "id": "c-tvc-moment",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 230,
+      "domain": 5,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "control.tvcMoment",
+      "numericCombinations": 2640,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "c-integral",
+      "source": "src/lessons/assessment/bank/control.ts",
+      "line": 236,
+      "domain": 5,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "control.integral",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "f-fts",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 5,
+      "domain": 6,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "safety.range",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-range-safety"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-les",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 15,
+      "domain": 6,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "safety.escape",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-abort"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-three-imus",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 25,
+      "domain": 6,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "fdir.voting",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-engine-out-cap",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 36,
+      "domain": 6,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "failure.engineOut",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-engine-out"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-ms10",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 46,
+      "domain": 6,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.aborts",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-abort"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-fdir",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 56,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "fdir.voting",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-stuck-gyro",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 66,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "fdir.gyro",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-ariane501",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 77,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.failures",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-proton2013",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 87,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.failures",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "f-engine-out-thrust",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 96,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "failure.engineOut",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-engine-out"
+      ],
+      "figures": [
+        {
+          "kind": "chart",
+          "dataset": "f9-leo",
+          "series": "thrust",
+          "compare": [
+            "f9-leo-engine-out"
+          ],
+          "tMax": 180
+        }
+      ]
+    },
+    {
+      "id": "f-maxq-danger",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 107,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "failure.maxq",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-fairing-motors",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 118,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "safety.escape",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-abort"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-common-mode",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 128,
+      "domain": 6,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "fdir.voting",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-escape-load",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 139,
+      "domain": 6,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "safety.escape",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-abort"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-voting-reliability",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 150,
+      "domain": 6,
+      "level": 3,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "fdir.reliability",
+      "numericCombinations": 20,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-engine-out-timing",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 159,
+      "domain": 6,
+      "level": 3,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "failure.engineOut",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-engine-out"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-18a",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 170,
+      "domain": 6,
+      "level": 3,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.aborts",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-abort"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-imu-votes",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 181,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "fdir.votingDiagram",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": [
+        {
+          "kind": "diagram",
+          "id": "imu-votes"
+        }
+      ]
+    },
+    {
+      "id": "f-order-fdir",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 192,
+      "domain": 6,
+      "level": 1,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "fdir.steps",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-multi-voting",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 202,
+      "domain": 6,
+      "level": 3,
+      "type": "multi",
+      "kind": "understanding",
+      "skill": "fdir.votingLimits",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-gyro-fdir"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-order-ms10",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 215,
+      "domain": 6,
+      "level": 2,
+      "type": "order",
+      "kind": "knowledge",
+      "skill": "history.ms10",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "fail-abort"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-multi-fts",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 226,
+      "domain": 6,
+      "level": 2,
+      "type": "multi",
+      "kind": "knowledge",
+      "skill": "safety.ftsWhen",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-range-safety"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-challenger",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 237,
+      "domain": 6,
+      "level": 2,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.shuttle",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "f-series-reliability",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 246,
+      "domain": 6,
+      "level": 2,
+      "type": "numeric",
+      "kind": "knowledge",
+      "skill": "fdir.series",
+      "numericCombinations": 174,
+      "lessonLinks": [],
+      "figures": []
+    },
+    {
+      "id": "f-reserve",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 252,
+      "domain": 6,
+      "level": 1,
+      "type": "choice",
+      "kind": "understanding",
+      "skill": "failure.margin",
+      "numericCombinations": 0,
+      "lessonLinks": [
+        "orbit-payload",
+        "guid-monte-carlo"
+      ],
+      "figures": []
+    },
+    {
+      "id": "f-apollo13",
+      "source": "src/lessons/assessment/bank/failures.ts",
+      "line": 263,
+      "domain": 6,
+      "level": 1,
+      "type": "choice",
+      "kind": "knowledge",
+      "skill": "history.apollo13",
+      "numericCombinations": 0,
+      "lessonLinks": [],
+      "figures": []
+    }
+  ]
+}

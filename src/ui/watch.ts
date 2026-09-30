@@ -16,8 +16,10 @@ import type { SimEvent } from '../physics/simulation';
 import { vehicleById, vehicleDataId } from '../data/vehicles';
 import { exhaustKind } from '../render/exhaust';
 import { fmtTime } from './hud';
-import { autoWarp, flightEnding, groundSpeed, parkingMilestone, watchBeat, watchSummary, WATCH_BEATS, type WatchBeat, type WatchEnding, type WatchSummary } from './watch-logic';
-import { WATCH_MISSIONS, watchMissionById, type WatchMissionId } from './watch-missions';
+import { autoWarp, flightEnding, groundSpeed, parkingMilestone, watchBeat, watchReadout, watchSummary, WATCH_BEATS, type WatchBeat, type WatchEnding, type WatchSummary } from './watch-logic';
+import { WATCH_MISSIONS, historicalDate, isHistorical, watchMissionById, type WatchMissionId } from './watch-missions';
+import { FLOWN_LABEL, recentFlown } from './flown';
+import { flownTable, fmtMissionTime } from './flown-view';
 import { satelliteNameById, stageNameByLabel } from './names';
 
 export interface WatchHost {
@@ -118,6 +120,10 @@ export class WatchView {
   private caption: HTMLElement;
   private beatLabel: HTMLElement;
   private beatText: HTMLElement;
+  /** C01: what the real flight did at the moment just passed */
+  private realLine: HTMLElement;
+  private realShown = '';
+  private lastEvents: readonly SimEvent[] = [];
   private clockValue: HTMLElement;
   private altValue: HTMLElement;
   private speedValue: HTMLElement;
@@ -137,7 +143,9 @@ export class WatchView {
     this.caption.setAttribute('aria-live', 'polite');
     this.beatLabel = el('span', 'eyebrow watch-beat');
     this.beatText = el('p', 'watch-say');
-    this.caption.append(this.beatLabel, this.beatText);
+    this.realLine = el('p', 'watch-real');
+    this.realLine.hidden = true;
+    this.caption.append(this.beatLabel, this.beatText, this.realLine);
 
     const stats = el('div', 'watch-stats');
     this.clockValue = el('span', 'watch-num');
@@ -313,13 +321,30 @@ export class WatchView {
       this.shown.text = text;
       this.caption.dataset.beat = beat;
     }
+    this.lastEvents = events;
+    // C01: a historical flight says when the real one did what was just seen
+    const flown = this.missionId ? watchMissionById(this.missionId)?.flown : undefined;
+    const row = flown && frame ? recentFlown(flown, events, frame.t) : null;
+    const real = row ? t('watch.real', { event: t(FLOWN_LABEL[row.key]), real: `${row.approx ? '≈ ' : ''}${fmtMissionTime(row.real)}`, model: fmtMissionTime(row.sim!) }) : '';
+    if (real !== this.realShown) {
+      this.realShown = real;
+      this.realLine.textContent = real;
+      this.realLine.hidden = !real;
+    }
     const clock = frame ? fmtClock(frame.t) : fmtClock(-10);
     // above the ground, so the pad reads 0 rather than the site's elevation
     const subject = state.subject;
-    const alt = subject ? fmtAltitude(subject.altitude) : frame ? fmtAltitude(frame.altitudeAGL) : fmtAltitude(0);
+    const readout = frame ? watchReadout(frame) : null;
+    // C01: at the Moon, the readouts are the Moon's — and its last kilometre in metres, as the call-outs gave it
+    const moon = !subject && !!readout?.moon;
+    const metres = moon && readout!.altitude < 1000;
+    const alt = subject ? fmtAltitude(subject.altitude) : metres ? num(Math.max(0, readout!.altitude))
+      : readout ? fmtAltitude(readout.altitude) : fmtAltitude(0);
     // a pad abort never lifts off, but its crew does (T-10-1)
     const moving = !!frame && (frame.liftoff || !!frame.abort);
-    const speed = subject ? num(subject.speed * 3.6) : frame ? num(moving ? groundSpeed(frame) * 3.6 : 0) : num(0);
+    const speed = subject ? num(subject.speed * 3.6) : readout ? num(moving ? readout.speed * 3.6 : 0) : num(0);
+    if (moon !== this.readoutMoon) { this.readoutMoon = moon; this.applyStatLabels(); }
+    if (metres !== this.readoutMetres) { this.readoutMetres = metres; this.applyUnits(); }
     if (clock !== this.shown.clock) { this.clockValue.textContent = clock; this.shown.clock = clock; }
     if (alt !== this.shown.alt) { this.altValue.textContent = alt; this.shown.alt = alt; }
     if (speed !== this.shown.speed) { this.speedValue.textContent = speed; this.shown.speed = speed; }
@@ -385,8 +410,9 @@ export class WatchView {
     const card = this.endCard;
     card.replaceChildren();
     card.classList.toggle('failed', !success);
-    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? 'watch.end.splashTitle'
-      : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle' : 'watch.fail.title'));
+    const title = el('h2', undefined, t(ending === 'orbit' ? 'watch.end.title' : ending === 'splashdown' ? (frame.apollo ? 'watch.end.apolloSplashTitle' : 'watch.end.splashTitle')
+      : ending === 'crewSafe' ? 'watch.end.crewSafeTitle' : ending === 'docked' ? 'watch.end.dockedTitle'
+      : 'watch.fail.title'));
     title.id = 'watch-end-title';
     card.setAttribute('aria-labelledby', title.id);
     card.append(el('span', 'eyebrow', t(ending === 'crewSafe' ? 'watch.end.crewSafeEyebrow' : success ? 'watch.end.eyebrow' : 'watch.fail.eyebrow')), title);
@@ -405,9 +431,24 @@ export class WatchView {
       })));
       card.append(el('p', 'watch-end-fact', t('watch.end.dockedFact')));
       for (const line of this.summaryLines(summary, frame, false)) card.append(el('p', 'watch-end-fact', line));
+    } else if (ending === 'splashdown' && frame.apollo) {
+      // C01: Apollo 11 home, the whole flight in a paragraph
+      const ap = frame.apollo, l = ap.landed, at = (key: string) => this.lastEvents.find((e) => e.key === key)?.t ?? frame.t;
+      const clock = (x: number) => fmtClock(x).replace(/^T\+/, '');
+      const sp = ap.splash ?? { lat: 0, lon: 0, t: frame.t };
+      card.append(el('p', undefined, t('watch.end.apolloSplashText', {
+        time: clock(sp.t), lat: Math.abs(sp.lat).toFixed(2), lon: Math.abs(sp.lon).toFixed(2), landed: clock(l?.t ?? 0), miss: num(Math.round(l?.miss ?? 0)),
+        docked: clock(at('evt.lmDocked')), g: (ap.entry?.maxLoad ?? 0).toFixed(1), mass: num(Math.round(frame.mass)),
+      })));
+      card.append(el('p', 'watch-end-fact', t('watch.end.apolloSplashFact')));
     } else if (ending === 'splashdown') {
-      const since = frame.t - Math.max(0, frame.liftoffT ?? 0);
-      card.append(el('p', undefined, t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
+      // C01: timed at the splashdown itself, not at the card, which waits for the moment to be seen
+      const down = [...this.lastEvents].reverse().find((e) => e.key === 'evt.capsuleSplashdown' || e.key === 'evt.shipSplashdown');
+      const since = (down?.t ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
+      // C01: a capsule, not a ship
+      card.append(el('p', undefined, frame.abort?.kind === 'return'
+        ? t('watch.end.capsuleSplashText', { time: fmtClock(since).replace(/^T\+/, ''), km: num(frame.downrange / 1000), g: num(frame.abort.maxG) })
+        : t('watch.end.splashText', { time: fmtClock(since).replace(/^T\+/, '') })));
     } else if (success) {
       // A9: the time to the final orbit, not to the card
       const since = (summary.orbit?.at ?? frame.t) - Math.max(0, frame.liftoffT ?? 0);
@@ -422,6 +463,9 @@ export class WatchView {
     } else {
       card.append(el('p', undefined, t('watch.fail.text', { time: fmtClock(frame.t) })));
     }
+    // C01: the real flight beside this one
+    const flown = this.missionId ? watchMissionById(this.missionId)?.flown : undefined;
+    if (flown) card.append(flownTable(flown, this.lastEvents));
     const actions = el('div', 'watch-end-actions');
     const button = (key: string, cls: string, action: () => void): void => {
       const b = el('button', cls, t(key));
@@ -485,27 +529,44 @@ export class WatchView {
     close.title = t('watch.pick.close');
     close.addEventListener('click', () => this.closePicker());
     head.append(title, close);
-    const grid = el('div', 'watch-mission-grid');
-    for (const m of WATCH_MISSIONS) {
-      const b = el('button', 'watch-mission');
-      b.type = 'button';
-      b.dataset.mission = m.id;
-      if (m.id === this.missionId) b.classList.add('current');
-      const spec = vehicleById(m.vehicleId);
-      b.append(el('span', 'watch-mission-vehicle', `${spec.name} · ${spec.country}`), el('strong', undefined, t(m.titleKey)), el('span', 'watch-mission-blurb', t(m.blurbKey)));
-      b.addEventListener('click', () => this.host.start(m.id));
-      grid.append(b);
-    }
-    card.replaceChildren(head, el('p', 'watch-pick-lead', t('watch.pick.lead')), grid);
+    const grid = (historical: boolean): HTMLElement => {
+      const g = el('div', 'watch-mission-grid');
+      for (const m of WATCH_MISSIONS.filter((x) => isHistorical(x) === historical)) {
+        const b = el('button', 'watch-mission');
+        b.type = 'button';
+        b.dataset.mission = m.id;
+        if (m.id === this.missionId) b.classList.add('current');
+        const spec = vehicleById(m.vehicleId);
+        const tag = m.launchTime ? `${spec.name} · ${historicalDate(m.launchTime)}` : `${spec.name} · ${spec.country}`;
+        b.append(el('span', 'watch-mission-vehicle', tag), el('strong', undefined, t(m.titleKey)), el('span', 'watch-mission-blurb', t(m.blurbKey)));
+        b.addEventListener('click', () => this.host.start(m.id));
+        g.append(b);
+      }
+      return g;
+    };
+    const history = el('h3', 'watch-pick-group', t('watch.pick.history'));
+    card.replaceChildren(head, el('p', 'watch-pick-lead', t('watch.pick.lead')), grid(false),
+      history, el('p', 'watch-pick-lead', t('watch.pick.historyLead')), grid(true));
     const footer = this.host.pickerFooter?.();
     if (footer) card.append(footer);
   }
 
-  applyLanguage(): void {
-    const labels = ['watch.stat.time', 'watch.stat.altitude', 'watch.stat.speed'];
-    this.statLabels.forEach((node, i) => { node.textContent = t(labels[i]); });
-    const units = ['u.km', 'watch.unit.kmh'];
+  private readoutMoon = false;
+  private readoutMetres = false;
+  private applyUnits(): void {
+    const units = [this.readoutMetres ? 'u.m' : 'u.km', 'watch.unit.kmh'];
     this.unitLabels.forEach((node, i) => { node.textContent = ` ${t(units[i])}`; });
+  }
+
+  private applyStatLabels(): void {
+    const labels = this.readoutMoon ? ['watch.stat.time', 'watch.stat.moonAltitude', 'watch.stat.moonSpeed']
+      : ['watch.stat.time', 'watch.stat.altitude', 'watch.stat.speed'];
+    this.statLabels.forEach((node, i) => { node.textContent = t(labels[i]); });
+  }
+
+  applyLanguage(): void {
+    this.applyStatLabels();
+    this.applyUnits();
     this.speedGroup.setAttribute('aria-label', t('watch.speed'));
     for (const b of this.speedGroup.querySelectorAll<HTMLButtonElement>('.watch-speed')) {
       b.textContent = b.dataset.speed === 'auto' ? t('watch.speed.auto') : `${b.dataset.speed}×`;

@@ -1,0 +1,98 @@
+{
+  "recordedAt": "2026-09-29T22:00:58.453557+00:00",
+  "manuallyRead": true,
+  "total": 53,
+  "languages": [
+    "en",
+    "ru",
+    "th"
+  ],
+  "scope": [
+    "prompts",
+    "options",
+    "misconceptions",
+    "explanations",
+    "answer keys and numeric formula read-through"
+  ],
+  "files": [
+    {
+      "file": "src/lessons/assessment/bank/basics.ts",
+      "count": 27,
+      "ids": [
+        "b-vehicle-distinct",
+        "b-vehicle-similar",
+        "b-karman",
+        "b-float",
+        "b-what-holds",
+        "b-launch-east",
+        "b-vacuum-thrust",
+        "b-sputnik",
+        "b-leo-speed",
+        "b-iss-period",
+        "b-geo",
+        "b-stages",
+        "b-kepler2",
+        "b-black-sky",
+        "b-escape",
+        "b-higher-slower",
+        "b-opposite-side",
+        "b-gravity-altitude",
+        "b-gravity-iss",
+        "b-order-altitude",
+        "b-order-history",
+        "b-multi-leo",
+        "b-forces-drag",
+        "b-ellipse-slow",
+        "b-theos",
+        "b-cosmodromes",
+        "b-multi-freefall"
+      ],
+      "sha256AfterCorrections": "94c81de572b5fc3bf52258c41a6b93bd389d0f932a95ea4cba114cf308ab20b3"
+    },
+    {
+      "file": "src/lessons/assessment/bank/failures.ts",
+      "count": 26,
+      "ids": [
+        "f-fts",
+        "f-les",
+        "f-three-imus",
+        "f-engine-out-cap",
+        "f-ms10",
+        "f-fdir",
+        "f-stuck-gyro",
+        "f-ariane501",
+        "f-proton2013",
+        "f-engine-out-thrust",
+        "f-maxq-danger",
+        "f-fairing-motors",
+        "f-common-mode",
+        "f-escape-load",
+        "f-voting-reliability",
+        "f-engine-out-timing",
+        "f-18a",
+        "f-imu-votes",
+        "f-order-fdir",
+        "f-multi-voting",
+        "f-order-ms10",
+        "f-multi-fts",
+        "f-challenger",
+        "f-series-reliability",
+        "f-reserve",
+        "f-apollo13"
+      ],
+      "sha256AfterCorrections": "307d872b1ce4bcbb45ad89f6d8356d6faee84033d3df39e8b82e297c1cf4eaff"
+    }
+  ],
+  "correctionsVerifiedInDiff": [
+    "b-leo-speed",
+    "f-order-ms10",
+    "f-proton2013"
+  ],
+  "limitations": [
+    "Not a statistical assessment-validation study",
+    "Not 53 new browser-answer sessions",
+    "Not primary-source corroboration of every historical date or numeric example",
+    "Figure variants reviewed separately by browser/graphics work"
+  ],
+  "sourceEditsByReviewer": false
+}

@@ -1,0 +1,610 @@
+{
+  "importedFrom": "falcon9-cape-2026-09-29-19-47.orbitlab.json",
+  "state": {
+    "hasMission": true,
+    "mode": "live",
+    "playing": false,
+    "warp": 1,
+    "cursorTimeS": -10,
+    "headTimeS": -10,
+    "startTimeS": -10,
+    "camera": "exterior",
+    "performance": {
+      "achievedWarp": null,
+      "physicsControlStepS": 0.01,
+      "physicsThread": "worker",
+      "recording": {
+        "frames": 1,
+        "events": 0,
+        "bytes": 23262,
+        "bytesPerFrame": 5790,
+        "decimations": 0,
+        "rotationBytes": 17472,
+        "rotationWindows": [
+          {
+            "bodyId": "vehicle",
+            "from": -10,
+            "to": -10,
+            "samples": 1,
+            "truncated": false,
+            "bytes": 17472
+          }
+        ]
+      },
+      "recordingBytesIncludeRigidMaps": true,
+      "usedJSHeapBytes": 44454878,
+      "allocatedJSHeapBytes": 55425546
+    },
+    "vehicle": {
+      "id": "falcon9",
+      "name": "Falcon 9 Block 5"
+    },
+    "site": {
+      "id": "cape",
+      "name": "Cape Canaveral SLC-40"
+    },
+    "satellite": {
+      "id": "cubesats",
+      "name": "CubeSat rideshare dispenser"
+    },
+    "frame": {
+      "timeS": -10,
+      "status": "prelaunch",
+      "ascentPhase": "vertical",
+      "descentPhase": null,
+      "noteKey": "countdown",
+      "liftoff": false,
+      "destroyed": false,
+      "fairingAttached": true,
+      "payloadSeparated": false,
+      "rigid": {
+        "modelVersion": "sixdof-1",
+        "dataRevision": "estimated-components-2026-09-19-v1",
+        "windProfile": {
+          "kind": "calm",
+          "seed": 20260919
+        },
+        "integrationMaxStepS": 0.01,
+        "flowDerivativeMaxStepS": 0.001,
+        "massFlowModel": "quasiSteady",
+        "bodyId": "vehicle",
+        "configurationId": "fairing|payload|s1.equipment|s1.fuel|s1.oxidizer|s1.rcs|s1.structure|s2.equipment|s2.fuel|s2.oxidizer|s2.rcs|s2.structure",
+        "attitudeQ": {
+          "w": -0.37291883535601195,
+          "x": 0.22196992711452843,
+          "y": 0.10870496964145049,
+          "z": 0.8943400490130909
+        },
+        "omegaBody": {
+          "x": 0.00003486429539365431,
+          "y": 0.000002106319098320802,
+          "z": 0.00006401202821707296
+        },
+        "cgBody": {
+          "x": 28.756200890597494,
+          "y": 0,
+          "z": 0
+        },
+        "inertiaBody": [
+          790972.5233390625,
+          0,
+          0,
+          0,
+          113862077.39989758,
+          0,
+          0,
+          0,
+          113862077.39989758
+        ],
+        "renderOffsetBody": {
+          "x": -28.756200890597494,
+          "y": 0,
+          "z": 0
+        },
+        "controlMode": "auto",
+        "engineDeflections": {
+          "s1.engine.0": [
+            0,
+            0
+          ],
+          "s1.engine.1": [
+            0,
+            0
+          ],
+          "s1.engine.2": [
+            0,
+            0
+          ],
+          "s1.engine.3": [
+            0,
+            0
+          ],
+          "s1.engine.4": [
+            0,
+            0
+          ],
+          "s1.engine.5": [
+            0,
+            0
+          ],
+          "s1.engine.6": [
+            0,
+            0
+          ],
+          "s1.engine.7": [
+            0,
+            0
+          ],
+          "s1.engine.8": [
+            0,
+            0
+          ],
+          "s2.engine.0": [
+            0,
+            0
+          ]
+        },
+        "commandRatesBody": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "commandThrottle": 1,
+        "engineDirectionsBody": {
+          "s1.engine.0": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.1": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.2": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.3": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.4": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.5": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.6": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.7": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s1.engine.8": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "s2.engine.0": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "engineThrottles": {
+          "s1.engine.0": 0,
+          "s1.engine.1": 0,
+          "s1.engine.2": 0,
+          "s1.engine.3": 0,
+          "s1.engine.4": 0,
+          "s1.engine.5": 0,
+          "s1.engine.6": 0,
+          "s1.engine.7": 0,
+          "s1.engine.8": 0,
+          "s2.engine.0": 0
+        },
+        "rcsPropellantKg": 130,
+        "saturated": false,
+        "angleOfAttack": 0,
+        "sideslip": 0,
+        "aeroWithinEnvelope": true,
+        "windECI": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "rawQuaternionNormError": 0
+      },
+      "flightDynamics": {
+        "notation": "iso",
+        "iso": {
+          "pDegS": 0.001997576981753789,
+          "qDegS": -0.0036676190549106164,
+          "rDegS": 0.00012068319464158304
+        },
+        "gost": {
+          "omegaXDegS": 0.001997576981753789,
+          "omegaYDegS": -0.00012068319464158304,
+          "omegaZDegS": -0.0036676190549106164
+        },
+        "alphaDeg": 0,
+        "betaDeg": 0,
+        "attitudeLoop": null
+      },
+      "detachedBodies": [],
+      "altitudeKm": 0.03175620089005679,
+      "altitudeAglKm": 0.028756200890056788,
+      "speedMs": 408.500489376188,
+      "airspeedMs": 0,
+      "verticalSpeedMs": 0,
+      "mach": 0,
+      "dynamicPressurePa": 0,
+      "gLoad": 1,
+      "apoapsisKm": 0.031756200889125466,
+      "periapsisKm": -6369.610130508045,
+      "inclinationDeg": 28.56200000000001,
+      "periodS": 1795.8924135706677,
+      "latitudeDeg": 28.562000000000005,
+      "longitudeDeg": -80.57700000000003,
+      "downrangeKm": 0,
+      "dvRemainingMs": 14671.657534676819,
+      "nextScheduledBurnInS": 9,
+      "dvBudgetMs": {
+        "thrust": 0,
+        "gravity": 0,
+        "drag": 0,
+        "steering": 0
+      },
+      "stage": {
+        "index": 0,
+        "ofStages": 2,
+        "id": "s1",
+        "name": "First stage (9× Merlin 1D)",
+        "isSpacecraft": false,
+        "attached": true,
+        "burning": false,
+        "propellantFraction": 1
+      }
+    },
+    "loopMargins": null,
+    "attitudeTest": null,
+    "navigation": null,
+    "explicitGuidance": null,
+    "controlFaults": null,
+    "lastEvent": null,
+    "nextEvent": null
+  },
+  "controls": [
+    {
+      "label": "Flight-dynamics notation",
+      "type": "select-one",
+      "value": "auto"
+    },
+    {
+      "label": "",
+      "type": "file",
+      "value": ""
+    },
+    {
+      "label": "Launch vehicle",
+      "type": "select-one",
+      "value": "falcon9"
+    },
+    {
+      "label": "Launch site",
+      "type": "select-one",
+      "value": "cape"
+    },
+    {
+      "label": "Payload / satellite",
+      "type": "select-one",
+      "value": "cubesats"
+    },
+    {
+      "label": "Payload mass (kg)",
+      "type": "number",
+      "value": "1000"
+    },
+    {
+      "label": "Perigee altitude (km)",
+      "type": "number",
+      "value": "500"
+    },
+    {
+      "label": "Apogee altitude (km)",
+      "type": "number",
+      "value": "500"
+    },
+    {
+      "label": "Inclination (°)",
+      "type": "number",
+      "value": "28.612"
+    },
+    {
+      "label": "Argument of perigee (°)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Orbital plane (RAAN)",
+      "type": "select-one",
+      "value": "free"
+    },
+    {
+      "label": "Launch time (UTC)",
+      "type": "datetime-local",
+      "value": "2026-09-29T19:47"
+    },
+    {
+      "label": "Model",
+      "type": "select-one",
+      "value": "sixDof"
+    },
+    {
+      "label": "Wind scenario",
+      "type": "select-one",
+      "value": "calm"
+    },
+    {
+      "label": "Wind scenario seed",
+      "type": "number",
+      "value": "20260919"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Roll: attitude gain K_θ (1/s)",
+      "type": "number",
+      "value": "1.5"
+    },
+    {
+      "label": "Roll: rate gain K_ω (1/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Roll: rate limit (°/s)",
+      "type": "number",
+      "value": "8"
+    },
+    {
+      "label": "Roll: angular-acceleration ceiling (°/s²)",
+      "type": "number",
+      "value": "5"
+    },
+    {
+      "label": "Pitch–yaw: attitude gain K_θ (1/s)",
+      "type": "number",
+      "value": "1.5"
+    },
+    {
+      "label": "Pitch–yaw: rate gain K_ω (1/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Pitch–yaw: rate limit (°/s)",
+      "type": "number",
+      "value": "5"
+    },
+    {
+      "label": "Pitch–yaw: angular-acceleration ceiling (°/s²)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Aerodynamic feed-forward (%)",
+      "type": "number",
+      "value": "100"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Scenario",
+      "type": "select-one",
+      "value": "none"
+    },
+    {
+      "label": "Upper-stage guidance",
+      "type": "select-one",
+      "value": "standard"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "Kick angle (°)",
+      "type": "number",
+      "value": "3.5"
+    },
+    {
+      "label": "Max pitch-program rate (°/s)",
+      "type": "number",
+      "value": "0.3"
+    },
+    {
+      "label": "Pitch-over altitude (m)",
+      "type": "number",
+      "value": "200"
+    },
+    {
+      "label": "Kick duration (s)",
+      "type": "number",
+      "value": "8"
+    },
+    {
+      "label": "Loft above insertion (km)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Gravity-turn ceiling (km)",
+      "type": "number",
+      "value": "65"
+    },
+    {
+      "label": "Closed-loop pitch max (°)",
+      "type": "number",
+      "value": "35"
+    },
+    {
+      "label": "Closed-loop pitch min (°)",
+      "type": "number",
+      "value": "-15"
+    },
+    {
+      "label": "Attitude slew rate (°/s)",
+      "type": "number",
+      "value": "3"
+    },
+    {
+      "label": "Acceleration limit (m/s², 0 = vehicle)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Parking altitude override (km, 0 = auto)",
+      "type": "number",
+      "value": "0"
+    },
+    {
+      "label": "Mode",
+      "type": "select-one",
+      "value": "none"
+    },
+    {
+      "label": "Time (s after liftoff)",
+      "type": "number",
+      "value": "60"
+    },
+    {
+      "label": "Stage",
+      "type": "select-one",
+      "value": "0"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "",
+      "type": "select-one",
+      "value": "iss"
+    },
+    {
+      "label": "",
+      "type": "number",
+      "value": "420"
+    },
+    {
+      "label": "Perigee altitude",
+      "type": "range",
+      "value": "158"
+    },
+    {
+      "label": "",
+      "type": "number",
+      "value": "420"
+    },
+    {
+      "label": "Apogee altitude",
+      "type": "range",
+      "value": "158"
+    },
+    {
+      "label": "",
+      "type": "number",
+      "value": "51.6"
+    },
+    {
+      "label": "Inclination i",
+      "type": "range",
+      "value": "287"
+    },
+    {
+      "label": "",
+      "type": "number",
+      "value": "295.2"
+    },
+    {
+      "label": "Right ascension of the ascending node Ω",
+      "type": "range",
+      "value": "820"
+    },
+    {
+      "label": "",
+      "type": "number",
+      "value": "0.0"
+    },
+    {
+      "label": "Argument of perigee ω",
+      "type": "range",
+      "value": "0"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "checked": false,
+      "label": "",
+      "type": "checkbox",
+      "value": "on"
+    },
+    {
+      "label": "",
+      "type": "select-one",
+      "value": ""
+    },
+    {
+      "label": "",
+      "type": "select-one",
+      "value": ""
+    },
+    {
+      "label": "",
+      "type": "file",
+      "value": ""
+    }
+  ],
+  "sharedUrl": "http://127.0.0.1:4180/?m=zVVHLTiMxEPwVq0-LZCInguyOzyCEBGK14sSt4-lJWvgRtT2BKJp_R_ZsePjkrn5UVfcJhiQBC1hIsuHicbMInDOnCBoOJO1nVxrOqD3BgXbsPN33YGFA71LsQEPGQt5zmXE3bihjyTXxieGeQM9EDfCUznGdy19YxEBg4SG9qVuUslOtSP26Nka9hgvQsCfhLRHYa1OfBtynHzFH5zliaaKbCNCAsv17bjQaBDE-pr5SDUK1oKfshPf_u-4okrBTjsWNHkU93D4pLKrsSAWOHMagvvGoNLSUxzG6naqcC5g0zPEzN08rs1pfmu5y1T0vO3v12y7_LIxZv1RPePQJ-0fMGeyyudiO3GN09HQgEe4pgz1NGgZkPwrVrYVZf0yx6i-NZG005ILb6nLSsEkpF5J_5NKB5Ah2QJ9JQ3-MGNjl8xjfFvV-kwbQ8MZxPpoP9YhEPdiq3XTLbpqmDw#/launch/engineer",
+  "clipboardFallback": "UI says link is in address bar"
+}

@@ -1,0 +1,48 @@
+{
+  "checkedAt": "2026-09-29T20:33:22.5272022Z",
+  "renderedPages": 8,
+  "pagination": "all visible questions/options remain together; no clippedglyphs observed",
+  "languageResult": "Thai worksheet DOCX has Russian generic labels after concurrentTHtoRUchange; Thai key and Russian documents visuallyconsistent",
+  "notAcceptedForThaiLanguage": true,
+  "sourceFix": "explicit tFor sheet language + filename captured before await",
+  "focusedAfter": "worksheet-language-after.json 46/46",
+  "needsFreshBrowserArtifact": true,
+  "html": [
+    {
+      "file": "orbitlab-worksheets-mission-falcon9-cape-2026-09-30T18-08-18-046Z-QA20260929-th.html",
+      "lang": "th",
+      "title": "ใบงาน: การบินของ Falcon 9 Block 5",
+      "containsRussianName": false,
+      "containsThaiName": true,
+      "containsRussianAnswer": false,
+      "containsThaiAnswer": true
+    },
+    {
+      "file": "orbitlab-key-mission-falcon9-cape-2026-09-30T18-08-18-046Z-QA20260929-th.html",
+      "lang": "th",
+      "title": "เฉลย — ใบงาน: การบินของ Falcon 9 Block 5",
+      "containsRussianName": false,
+      "containsThaiName": true,
+      "containsRussianAnswer": false,
+      "containsThaiAnswer": false
+    },
+    {
+      "file": "orbitlab-worksheets-mission-falcon9-cape-2026-09-30T18-08-18-046Z-QA20260929-ru.html",
+      "lang": "ru",
+      "title": "Рабочий лист: полёт Falcon 9 Block 5",
+      "containsRussianName": true,
+      "containsThaiName": false,
+      "containsRussianAnswer": true,
+      "containsThaiAnswer": false
+    },
+    {
+      "file": "orbitlab-key-mission-falcon9-cape-2026-09-30T18-08-18-046Z-QA20260929-ru.html",
+      "lang": "ru",
+      "title": "Ключ ответов — Рабочий лист: полёт Falcon 9 Block 5",
+      "containsRussianName": true,
+      "containsThaiName": false,
+      "containsRussianAnswer": false,
+      "containsThaiAnswer": false
+    }
+  ]
+}

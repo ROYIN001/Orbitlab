@@ -1,0 +1,2044 @@
+{
+  "generatedAt": "2026-09-29T21:48:07.037Z",
+  "source": [
+    {
+      "path": "src/lessons/catalog.ts",
+      "bytes": 4172,
+      "sha256": "9772a8e5dd9b303de1d8b80d04b56a2fd9aca3c88193156f6915d207a6f8b65f"
+    },
+    {
+      "path": "src/lessons/builtin/common.ts",
+      "bytes": 1115,
+      "sha256": "c070db0cf670b1ca5cd2a69c40a00a9a4303cd47342f82a3ae9cd6cf0cf243e1"
+    },
+    {
+      "path": "src/lessons/builtin/coming.ts",
+      "bytes": 368,
+      "sha256": "e742461175edd942ff81e417944f473234a999c51fbab7c8bf0c9f6faa9e9f47"
+    },
+    {
+      "path": "src/lessons/builtin/track1.ts",
+      "bytes": 32528,
+      "sha256": "807ee4cc7f93ce71f2d1b443557ddd70577ad58ab88c919eee4fe356ac6a214f"
+    },
+    {
+      "path": "src/lessons/builtin/track2.ts",
+      "bytes": 33070,
+      "sha256": "3cf06114b44a5feb74b47cd371b6e7eb2e701e0b703ee83fb950c59ffac203bc"
+    },
+    {
+      "path": "src/lessons/builtin/track3.ts",
+      "bytes": 19821,
+      "sha256": "d815c5340461caabb3b7748bf39151e4bb7888872492c875e914ed4138953bcf"
+    },
+    {
+      "path": "src/lessons/builtin/track4.ts",
+      "bytes": 26190,
+      "sha256": "0b0c1e87249fb21b2669606a23322d049106fba4c4afb96d18546e1364f3aeb6"
+    },
+    {
+      "path": "src/lessons/builtin/track5.ts",
+      "bytes": 38267,
+      "sha256": "fdd2cf2762d0adf188e997cbb606b6f8f2a3bb5c0ce84b42a018a2909147d1cb"
+    },
+    {
+      "path": "src/lessons/builtin/track6.ts",
+      "bytes": 30453,
+      "sha256": "7d7118022ea131e3a2281d47b9927cb1615801b359f2449c333c8eafdd344358"
+    }
+  ],
+  "lessonCount": 24,
+  "localizedObjects": 176,
+  "trackTexts": [
+    {
+      "path": "[0].title",
+      "en": "Orbital mechanics",
+      "ru": "Орбитальная механика",
+      "th": "กลศาสตร์วงโคจร"
+    },
+    {
+      "path": "[0].note",
+      "en": "Explore · point mass",
+      "ru": "Исследование · материальная точка",
+      "th": "สำรวจภารกิจ · จุดมวล"
+    },
+    {
+      "path": "[1].title",
+      "en": "Guidance and navigation",
+      "ru": "Наведение и навигация",
+      "th": "การนำวิถีและการนำทาง"
+    },
+    {
+      "path": "[1].note",
+      "en": "Engineer · mostly six-DOF",
+      "ru": "Инженер · в основном 6 степеней свободы",
+      "th": "วิศวกร · ส่วนใหญ่ 6-DOF"
+    },
+    {
+      "path": "[2].title",
+      "en": "Failures",
+      "ru": "Отказы",
+      "th": "ความผิดปกติ"
+    },
+    {
+      "path": "[2].note",
+      "en": "Failure scenarios",
+      "ru": "Аварийные ситуации",
+      "th": "สถานการณ์ขัดข้อง"
+    },
+    {
+      "path": "[3].title",
+      "en": "Attitude control",
+      "ru": "Управление угловым движением",
+      "th": "ระบบควบคุมท่าทาง"
+    },
+    {
+      "path": "[3].note",
+      "en": "Engineer · six-DOF",
+      "ru": "Инженер · 6 степеней свободы",
+      "th": "วิศวกร · 6-DOF"
+    },
+    {
+      "path": "[4].title",
+      "en": "Advanced missions",
+      "ru": "Сложные миссии",
+      "th": "ภารกิจขั้นสูง"
+    },
+    {
+      "path": "[4].note",
+      "en": "Several phases",
+      "ru": "Несколько этапов",
+      "th": "หลายขั้นตอน"
+    },
+    {
+      "path": "[5].title",
+      "en": "Real cases",
+      "ru": "Реальные случаи",
+      "th": "กรณีศึกษาจากเหตุการณ์จริง"
+    },
+    {
+      "path": "[5].note",
+      "en": "Orbit section · real satellites",
+      "ru": "Раздел «Орбита» · реальные спутники",
+      "th": "ส่วนวงโคจร · ดาวเทียมจริง"
+    }
+  ],
+  "records": [
+    {
+      "id": "orbit-first",
+      "track": 1,
+      "order": 1,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Your first orbit",
+          "ru": "Первая орбита",
+          "th": "วงโคจรแรก"
+        },
+        {
+          "path": "brief",
+          "en": "Fly Falcon 9 from Cape Canaveral into a circular orbit 500 km up. Everything is set: press Launch and follow the ascent — the first stage, separation, the second stage cutting off in a 200 × 500 km parking orbit, and its relight at apogee that makes the orbit circular. Once in orbit, work out two numbers for it and type them in: the orbital period and the orbital speed.",
+          "ru": "Выведите Falcon 9 с мыса Канаверал на круговую орбиту высотой 500 км. Всё уже настроено: нажмите «Пуск» и проследите выведение — работу первой ступени, разделение, выключение второй ступени на опорной орбите 200 × 500 км и её повторное включение в апогее, которое делает орбиту круговой. Когда орбита будет достигнута, рассчитайте для неё два числа и введите их: период обращения и орбитальную скорость.",
+          "th": "นำ Falcon 9 จากแหลมคะแนเวอรัลขึ้นสู่วงโคจรวงกลมที่ความสูง 500 กม. ทุกอย่างตั้งค่าไว้แล้ว กด «ปล่อยจรวด» แล้วติดตามการไต่ระดับ ตั้งแต่ขั้นที่ 1 การแยกขั้น ขั้นที่ 2 ดับเครื่องในวงโคจรพัก 200 × 500 กม. จนถึงการจุดเครื่องอีกครั้งที่จุดไกลโลกเพื่อทำให้วงโคจรเป็นวงกลม เมื่อเข้าวงโคจรแล้ว ให้คำนวณค่าสองค่าของวงโคจรนั้นแล้วพิมพ์คำตอบ ได้แก่ คาบการโคจร และอัตราเร็วในวงโคจร"
+        },
+        {
+          "path": "debrief",
+          "en": "Period and speed depend on the size of the orbit alone: T = 2π√(a³/μ) grows as a^3/2 (Kepler's third law), and on a circle v = √(μ/r). Neither depends on the mass of the satellite.",
+          "ru": "Период и скорость зависят только от размера орбиты: T = 2π√(a³/μ) растёт как a^3/2 (третий закон Кеплера), а на круговой орбите v = √(μ/r). Ни то, ни другое не зависит от массы спутника.",
+          "th": "คาบและอัตราเร็วขึ้นกับขนาดของวงโคจรเท่านั้น: T = 2π√(a³/μ) เพิ่มตาม a^3/2 (กฎข้อที่สามของเคปเลอร์) และบนวงโคจรวงกลม v = √(μ/r) ทั้งสองค่าไม่ขึ้นกับมวลของดาวเทียม"
+        },
+        {
+          "path": "criteria[1].prompt",
+          "en": "Orbital period of your orbit (min)",
+          "ru": "Период обращения на вашей орбите (мин)",
+          "th": "คาบการโคจรของวงโคจรนี้ (นาที)"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "Orbital speed (km/s)",
+          "ru": "Орбитальная скорость (км/с)",
+          "th": "อัตราเร็วในวงโคจร (กม./วินาที)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "The orbit is a circle: its radius is the Earth's radius (6 378 km) plus the altitude.",
+          "ru": "Орбита круговая: её радиус равен радиусу Земли (6 378 км) плюс высота.",
+          "th": "วงโคจรเป็นวงกลม: รัศมีเท่ากับรัศมีโลก (6 378 กม.) บวกความสูง"
+        },
+        {
+          "path": "hints[1]",
+          "en": "Period: T = 2π√(r³/μ) with μ = 398 600 km³/s². Speed on a circle: v = √(μ/r).",
+          "ru": "Период: T = 2π√(r³/μ), μ = 398 600 км³/с². Скорость на круговой орбите: v = √(μ/r).",
+          "th": "คาบ: T = 2π√(r³/μ) โดย μ = 398 600 กม.³/วินาที² อัตราเร็วบนวงกลม: v = √(μ/r)"
+        },
+        {
+          "path": "hints[2]",
+          "en": "A check: at 400 km, where the ISS flies, the period is about 92.6 min and the speed 7.67 km/s; higher is slower and longer.",
+          "ru": "Для проверки: на высоте 400 км, где летает МКС, период около 92,6 мин, скорость 7,67 км/с; выше — медленнее и дольше.",
+          "th": "ใช้ตรวจสอบ: ที่ความสูง 400 กม. ซึ่งเป็นวงโคจรของ ISS คาบประมาณ 92.6 นาที อัตราเร็ว 7.67 กม./วินาที ยิ่งสูงยิ่งช้าและคาบยิ่งยาว"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Orbital period of your orbit (min)",
+            "ru": "Период обращения на вашей орбите (мин)",
+            "th": "คาบการโคจรของวงโคจรนี้ (นาที)"
+          },
+          "tol": 1,
+          "unit": "min"
+        },
+        {
+          "id": "speed",
+          "kind": "answer",
+          "measure": "orbit.speed",
+          "prompt": {
+            "en": "Orbital speed (km/s)",
+            "ru": "Орбитальная скорость (км/с)",
+            "th": "อัตราเร็วในวงโคจร (กม./วินาที)"
+          },
+          "tol": 0.05,
+          "unit": "km/s"
+        }
+      ]
+    },
+    {
+      "id": "orbit-iss-plane",
+      "track": 1,
+      "order": 2,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Into the station's plane",
+          "ru": "В плоскость орбиты МКС",
+          "th": "เข้าระนาบของสถานีอวกาศ"
+        },
+        {
+          "path": "brief",
+          "en": "Soyuz-2.1a stands at Baikonur with a crewed spacecraft for the space station, but the launch time on the panel is a bad one: the station's orbital plane is far from the pad. Choose the launch time so that the ascent puts the spacecraft straight into the station's plane — inclination 51.64° and the station's longitude of the ascending node Ω — and fly it. Only the launch time may be changed.",
+          "ru": "Союз-2.1а стоит на Байконуре с пилотируемым кораблём для МКС, но время старта на панели выбрано неудачно: плоскость орбиты станции далеко от стартового комплекса. Выберите время старта так, чтобы выведение сразу доставило корабль в плоскость орбиты станции — наклонение 51,64° и долгота восходящего узла Ω станции, — и выполните полёт. Изменять можно только время старта.",
+          "th": "Soyuz-2.1a ตั้งอยู่ที่ไบโคนูร์พร้อมยานอวกาศมีมนุษย์ที่จะไปสถานีอวกาศ แต่เวลาปล่อยในแผงตั้งค่าไม่เหมาะ เพราะระนาบวงโคจรของสถานีอยู่ห่างจากฐานปล่อย ให้เลือกเวลาปล่อยที่ทำให้การไต่ระดับพายานเข้าสู่ระนาบของสถานีโดยตรง คือความเอียง 51.64° และลองจิจูดของโหนดขึ้น Ω ของสถานี แล้วบิน เปลี่ยนได้เฉพาะเวลาปล่อยเท่านั้น"
+        },
+        {
+          "path": "debrief",
+          "en": "In this exercise’s two-body approximation, the orbital plane stays fixed while the Earth turns beneath it; real orbital planes also precess. Here a pad passes through a given plane only twice a day — the launch window. Missing the window by hours puts the node tens of degrees off, and turning a plane costs 2v·sin(Δ/2): at 7.7 km/s even 10° costs 1.3 km/s.",
+          "ru": "В приближении задачи двух тел, принятом в этом упражнении, плоскость орбиты неподвижна, а Земля вращается под ней; в действительности плоскость также прецессирует. Поэтому в этом упражнении стартовый комплекс проходит через заданную плоскость лишь дважды в сутки — это и есть окно запуска. Опоздание на часы уводит узел на десятки градусов, а поворот плоскости стоит 2v·sin(Δ/2): при 7,7 км/с даже 10° обходятся в 1,3 км/с.",
+          "th": "ในแบบจำลองสองวัตถุของบทนี้ ระนาบวงโคจรคงที่ขณะที่โลกหมุนอยู่ใต้มัน วงโคจรจริงยังมีการหมุนควงของระนาบด้วย ในบทนี้ ฐานปล่อยจึงผ่านระนาบหนึ่ง ๆ เพียงวันละสองครั้ง นั่นคือหน้าต่างการปล่อย การพลาดหน้าต่างเป็นชั่วโมงทำให้โหนดคลาดไปหลายสิบองศา และการหมุนระนาบต้องใช้ 2v·sin(Δ/2) ที่ 7.7 กม./วินาที แค่ 10° ก็ใช้ถึง 1.3 กม./วินาที"
+        },
+        {
+          "path": "hints[0]",
+          "en": "The plane stays still while the Earth turns: the pad crosses the station's plane twice a day, and only one of the two crossings suits a northbound launch.",
+          "ru": "Плоскость неподвижна, Земля вращается: стартовый комплекс пересекает плоскость станции дважды в сутки, и для старта на северо-восток подходит только одно из пересечений.",
+          "th": "ระนาบอยู่นิ่งขณะโลกหมุน ฐานปล่อยตัดผ่านระนาบของสถานีวันละสองครั้ง และมีเพียงครั้งเดียวที่เหมาะกับการปล่อยขึ้นไปทางทิศเหนือ"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The setup panel's \"Next window\" button computes that moment for you.",
+          "ru": "Кнопка «Ближайшее окно» на панели настройки рассчитывает этот момент за вас.",
+          "th": "ปุ่ม «หน้าต่างถัดไป» ในแผงตั้งค่าคำนวณเวลานั้นให้"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Before launching, read the verdict above the Launch button: off-window it names how far the node will miss.",
+          "ru": "Перед стартом прочитайте заключение над кнопкой «Пуск»: вне окна оно указывает, на сколько промахнётся узел.",
+          "th": "ก่อนปล่อย อ่านข้อสรุปเหนือปุ่มปล่อยจรวด ถ้าอยู่นอกหน้าต่างจะบอกว่าโหนดจะคลาดไปเท่าใด"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "inclination",
+          "kind": "measure",
+          "measure": "orbit.inclination",
+          "tol": 0.1,
+          "target": "mission"
+        },
+        {
+          "id": "node",
+          "kind": "measure",
+          "measure": "orbit.raanError",
+          "max": 0.5
+        }
+      ]
+    },
+    {
+      "id": "orbit-hohmann",
+      "track": 1,
+      "order": 3,
+      "texts": [
+        {
+          "path": "title",
+          "en": "A Hohmann transfer",
+          "ru": "Гомановский перелёт",
+          "th": "การถ่ายโอนวงโคจรแบบโฮมันน์"
+        },
+        {
+          "path": "brief",
+          "en": "Falcon 9 carries 3 t to a circular orbit 2 000 km up. The ascent leaves the second stage in a 200 × 2 000 km ellipse — the first half of a Hohmann transfer — and it relights at apogee to make the orbit circular. Work out with the vis-viva equation how much Δv that apogee burn needs, fly the mission, and type in the burn's Δv and the period of the final orbit.",
+          "ru": "Falcon 9 выводит 3 т на круговую орбиту высотой 2 000 км. Выведение оставляет вторую ступень на эллипсе 200 × 2 000 км — первой половине гомановского перелёта, — и в апогее она включается снова, чтобы сделать орбиту круговой. Рассчитайте по интегралу энергии (формуле vis-viva), какое приращение скорости Δv нужно для этого включения в апогее, выполните полёт и введите Δv включения и период конечной орбиты.",
+          "th": "Falcon 9 นำน้ำหนักบรรทุก 3 ตันขึ้นสู่วงโคจรวงกลมที่ความสูง 2 000 กม. การไต่ระดับทิ้งขั้นที่ 2 ไว้ในวงรี 200 × 2 000 กม. ซึ่งเป็นครึ่งแรกของการถ่ายโอนแบบโฮมันน์ แล้วจุดเครื่องอีกครั้งที่จุดไกลโลกเพื่อทำให้วงโคจรเป็นวงกลม ใช้สมการ vis-viva คำนวณว่าการจุดเครื่องที่จุดไกลโลกนั้นต้องใช้ Δv เท่าใด บินภารกิจ แล้วพิมพ์ Δv ของการจุดเครื่องนั้นและคาบของวงโคจรสุดท้าย"
+        },
+        {
+          "path": "debrief",
+          "en": "The Hohmann transfer is the cheapest two-burn change between coplanar circles: one burn at perigee raises the apogee, one at apogee raises the perigee. The ascent itself made the first burn here, so the second stage only had to add the difference between the circular speed and the ellipse's speed at apogee.",
+          "ru": "Гомановский перелёт — самый экономичный двухимпульсный переход между компланарными круговыми орбитами: импульс в перигее поднимает апогей, импульс в апогее — перигей. Здесь первый импульс выполнило само выведение, и второй ступени оставалось добавить разность круговой скорости и скорости эллипса в апогее.",
+          "th": "การถ่ายโอนแบบโฮมันน์เป็นการเปลี่ยนวงโคจรด้วยการจุดเครื่องสองครั้งที่ประหยัดที่สุดระหว่างวงกลมที่อยู่ในระนาบเดียวกัน ครั้งแรกที่จุดใกล้โลกยกจุดไกลโลกขึ้น ครั้งที่สองที่จุดไกลโลกยกจุดใกล้โลกขึ้น ในบทนี้การไต่ระดับทำหน้าที่ครั้งแรกไปแล้ว ขั้นที่ 2 จึงเพิ่มเพียงผลต่างระหว่างอัตราเร็ววงกลมกับอัตราเร็วของวงรีที่จุดไกลโลก"
+        },
+        {
+          "path": "criteria[1].prompt",
+          "en": "Δv of the burn at apogee (m/s)",
+          "ru": "Δv включения в апогее (м/с)",
+          "th": "Δv ของการจุดเครื่องที่จุดไกลโลก (ม./วินาที)"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "Period of the final orbit (min)",
+          "ru": "Период конечной орбиты (мин)",
+          "th": "คาบของวงโคจรสุดท้าย (นาที)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "vis-viva: v² = μ(2/r − 1/a). At apogee r = R + 2 000 km, and the ellipse's a is the mean of its perigee and apogee radii.",
+          "ru": "Интеграл энергии: v² = μ(2/r − 1/a). В апогее r = R + 2 000 км, а большая полуось эллипса a — среднее радиусов перигея и апогея.",
+          "th": "vis-viva: v² = μ(2/r − 1/a) ที่จุดไกลโลก r = R + 2 000 กม. และ a ของวงรีคือค่าเฉลี่ยของรัศมีจุดใกล้โลกกับจุดไกลโลก"
+        },
+        {
+          "path": "hints[1]",
+          "en": "On the final circle v = √(μ/r). The burn is the difference of the two speeds at apogee.",
+          "ru": "На конечной круговой орбите v = √(μ/r). Импульс равен разности двух скоростей в апогее.",
+          "th": "บนวงกลมสุดท้าย v = √(μ/r) การจุดเครื่องคือผลต่างของอัตราเร็วทั้งสองที่จุดไกลโลก"
+        },
+        {
+          "path": "hints[2]",
+          "en": "R = 6 378 km, μ = 398 600 km³/s². The answer is a few hundred metres per second; the event log names the burn's Δv when it is scheduled.",
+          "ru": "R = 6 378 км, μ = 398 600 км³/с². Ответ — несколько сотен метров в секунду; журнал событий называет Δv включения, когда оно запланировано.",
+          "th": "R = 6 378 กม., μ = 398 600 กม.³/วินาที² คำตอบอยู่ในหลักหลายร้อยเมตรต่อวินาที และบันทึกเหตุการณ์จะแสดง Δv ของการจุดเครื่องเมื่อมีการวางแผน"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "burn",
+          "kind": "answer",
+          "measure": "burnDv",
+          "prompt": {
+            "en": "Δv of the burn at apogee (m/s)",
+            "ru": "Δv включения в апогее (м/с)",
+            "th": "Δv ของการจุดเครื่องที่จุดไกลโลก (ม./วินาที)"
+          },
+          "tolPct": 5,
+          "unit": "m/s"
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Period of the final orbit (min)",
+            "ru": "Период конечной орбиты (мин)",
+            "th": "คาบของวงโคจรสุดท้าย (นาที)"
+          },
+          "tol": 1,
+          "unit": "min"
+        }
+      ]
+    },
+    {
+      "id": "orbit-payload",
+      "track": 1,
+      "order": 4,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Payload and Δv",
+          "ru": "Полезная нагрузка и Δv",
+          "th": "น้ำหนักบรรทุกกับ Δv"
+        },
+        {
+          "path": "brief",
+          "en": "How much can Falcon 9 carry to a 500 km circular orbit? Set the payload mass so that the rocket reaches the target orbit carrying at least 17.5 t, with at least 150 m/s of Δv left in the second stage as a reserve. The panel starts at 19.5 t, which is too much. Only the payload mass may be changed.",
+          "ru": "Сколько Falcon 9 может вывести на круговую орбиту высотой 500 км? Задайте массу полезной нагрузки так, чтобы ракета вышла на целевую орбиту с нагрузкой не менее 17,5 т и с запасом характеристической скорости второй ступени не менее 150 м/с. На панели стоит 19,5 т — это слишком много. Изменять можно только массу полезной нагрузки.",
+          "th": "Falcon 9 นำน้ำหนักบรรทุกขึ้นสู่วงโคจรวงกลม 500 กม. ได้เท่าใด ให้ตั้งมวลน้ำหนักบรรทุกให้จรวดเข้าถึงวงโคจรเป้าหมายโดยบรรทุกไม่น้อยกว่า 17.5 ตัน และยังเหลือ Δv ในขั้นที่ 2 ไม่น้อยกว่า 150 ม./วินาทีเป็นส่วนสำรอง แผงตั้งค่าเริ่มที่ 19.5 ตันซึ่งมากเกินไป เปลี่ยนได้เฉพาะมวลน้ำหนักบรรทุกเท่านั้น"
+        },
+        {
+          "path": "debrief",
+          "en": "The payload rides on the second stage all the way, so every kilogram enters its mass ratio in Tsiolkovsky's Δv = Isp·g0·ln(m0/mf). Here each tonne costs about 170 m/s. Real missions keep a reserve like this one for the dispersions of thrust, mass and wind.",
+          "ru": "Полезная нагрузка летит на второй ступени до конца, поэтому каждый килограмм входит в её отношение масс в формуле Циолковского Δv = Iуд·g0·ln(m0/mк). Здесь каждая тонна стоит около 170 м/с. В реальных пусках такой запас оставляют на разброс тяги, масс и ветра.",
+          "th": "น้ำหนักบรรทุกอยู่บนขั้นที่ 2 ตลอดทาง ทุกกิโลกรัมจึงเข้าไปในอัตราส่วนมวลของสมการซีออลคอฟสกี Δv = Isp·g0·ln(m0/mf) ในที่นี้ทุกหนึ่งตันทำให้เสีย Δv ประมาณ 170 ม./วินาที ภารกิจจริงเก็บส่วนสำรองแบบนี้ไว้รองรับความคลาดเคลื่อนของแรงขับ มวล และลม"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Every kilogram of payload is carried by the second stage to orbit: it costs Δv through the logarithm of the mass ratio.",
+          "ru": "Каждый килограмм нагрузки вторая ступень несёт до орбиты: он отнимает Δv через логарифм отношения масс.",
+          "th": "ทุกกิโลกรัมของน้ำหนักบรรทุกถูกขั้นที่ 2 พาไปถึงวงโคจร จึงทำให้เสีย Δv ผ่านลอการิทึมของอัตราส่วนมวล"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The telemetry panel's \"Δv left\" chart shows what the stage keeps after the orbit is reached.",
+          "ru": "График «Остаток Δv» на панели телеметрии показывает запас ступени после выхода на орбиту.",
+          "th": "กราฟ «Δv คงเหลือ» ในแผงโทรมาตรแสดงค่าที่ขั้นยังเหลืออยู่หลังเข้าวงโคจร"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Change the mass in steps of 500 kg and fly again; the answer lies between 17.5 and 18.5 t.",
+          "ru": "Меняйте массу шагами по 500 кг и повторяйте полёт; ответ лежит между 17,5 и 18,5 т.",
+          "th": "ปรับมวลทีละ 500 กก. แล้วบินใหม่ คำตอบอยู่ระหว่าง 17.5 ถึง 18.5 ตัน"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "payload",
+          "kind": "measure",
+          "measure": "payload",
+          "min": 17500
+        },
+        {
+          "id": "reserve",
+          "kind": "measure",
+          "measure": "dvLeft",
+          "min": 150
+        }
+      ]
+    },
+    {
+      "id": "orbit-range-safety",
+      "track": 1,
+      "order": 5,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Range safety and the launch site",
+          "ru": "Коридор безопасности и выбор космодрома",
+          "th": "ระเบียงความปลอดภัยและการเลือกฐานปล่อย"
+        },
+        {
+          "path": "brief",
+          "en": "A 5 t satellite must go into a polar orbit 800 km up (inclination 90°). In this simulator, Cape Canaveral’s simplified range corridor does not include the southern dogleg used for real polar launches. Choose a launch site whose modelled range-safety corridor allows a polar launch, and fly the mission. Only the launch site may be changed.",
+          "ru": "Спутник массой 5 т нужно вывести на полярную орбиту высотой 800 км (наклонение 90°). В этом симуляторе упрощённый коридор мыса Канаверал не включает южную трассу с боковым манёвром, используемую в реальных полярных пусках. Выберите космодром, смоделированный коридор безопасности которого допускает полярный пуск, и выполните полёт. Изменять можно только космодром.",
+          "th": "ดาวเทียมมวล 5 ตันต้องเข้าสู่วงโคจรขั้วโลกที่ความสูง 800 กม. (ความเอียง 90°) ระเบียงการปล่อยอย่างง่ายของแหลมคะแนเวอรัลในโปรแกรมนี้ยังไม่รวมเส้นทางลงใต้ที่เลี้ยวหลบ (dogleg) ซึ่งใช้ปล่อยสู่วงโคจรขั้วโลกได้จริง ให้เลือกฐานปล่อยที่ระเบียงความปลอดภัยการบินในแบบจำลองอนุญาตการปล่อยสู่วงโคจรขั้วโลก แล้วบินภารกิจ เปลี่ยนได้เฉพาะฐานปล่อยเท่านั้น"
+        },
+        {
+          "path": "debrief",
+          "en": "The inclination reached from latitude φ on azimuth A is given by cos i = cos φ · sin A, so a polar orbit needs a launch due north or south. Each site may launch only across the azimuths where spent stages fall safely. When a plane lies just outside the corridor, the rocket leaves along its edge and turns into the plane later — a dogleg, paid for in Δv.",
+          "ru": "Наклонение, достигаемое со широты φ при азимуте A, задаётся формулой cos i = cos φ · sin A, поэтому для полярной орбиты нужен старт строго на север или на юг. Каждый космодром может пускать только в тех азимутах, где отделившиеся ступени падают безопасно. Если плоскость лежит чуть вне коридора, ракета стартует по его границе и позже доворачивает в плоскость — боковой манёвр, за который платят Δv.",
+          "th": "ความเอียงที่ได้จากละติจูด φ เมื่อปล่อยในแนวอะซิมุท A คือ cos i = cos φ · sin A วงโคจรขั้วโลกจึงต้องปล่อยไปทางเหนือหรือใต้ตรง ๆ แต่ละฐานปล่อยได้เฉพาะแนวที่ขั้นที่ใช้แล้วตกลงอย่างปลอดภัย ถ้าระนาบอยู่นอกระเบียงเพียงเล็กน้อย จรวดจะขึ้นตามขอบระเบียงแล้วเลี้ยวเข้าระนาบภายหลัง (dogleg) ซึ่งต้องแลกด้วย Δv"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "The site's corridor allows the plane",
+          "ru": "Коридор космодрома допускает плоскость",
+          "th": "ระเบียงของฐานปล่อยอนุญาตระนาบนี้"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Each site launches only within a range of azimuths, set by where the spent stages may fall.",
+          "ru": "Каждый космодром пускает только в диапазоне азимутов, который определяется районами падения отделяющихся частей.",
+          "th": "แต่ละฐานปล่อยได้เฉพาะในช่วงอะซิมุทที่ขั้นที่ใช้แล้วสามารถตกลงได้"
+        },
+        {
+          "path": "hints[1]",
+          "en": "cos i = cos φ · sin A: a polar orbit needs a launch due north or due south.",
+          "ru": "cos i = cos φ · sin A: для полярной орбиты нужен старт строго на север или на юг.",
+          "th": "cos i = cos φ · sin A: วงโคจรขั้วโลกต้องปล่อยไปทางเหนือหรือใต้ตรง ๆ"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Falcon 9 also flies from Vandenberg in California, which launches south over the open Pacific.",
+          "ru": "Falcon 9 летает и с базы Ванденберг в Калифорнии, откуда пускают на юг над открытым Тихим океаном.",
+          "th": "Falcon 9 ปล่อยจากแวนเดนเบิร์กในแคลิฟอร์เนียได้ด้วย ซึ่งปล่อยลงใต้เหนือมหาสมุทรแปซิฟิก"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "licence",
+          "kind": "hook",
+          "hook": "rangeSafe",
+          "label": {
+            "en": "The site's corridor allows the plane",
+            "ru": "Коридор космодрома допускает плоскость",
+            "th": "ระเบียงของฐานปล่อยอนุญาตระนาบนี้"
+          }
+        },
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        }
+      ]
+    },
+    {
+      "id": "guid-maxq",
+      "track": 2,
+      "order": 1,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Aerodynamic loads",
+          "ru": "Аэродинамические нагрузки",
+          "th": "ภาระทางอากาศพลศาสตร์"
+        },
+        {
+          "path": "brief",
+          "en": "Soyuz-2.1a has no throttle bucket: flown as it is, it meets a dynamic pressure of about 34 kPa. Your payload's structure is rated for 25 kPa. Keep the peak dynamic pressure q at or below 25 kPa and still reach orbit. You may change the guidance — the acceleration limit is the setting to look at — nothing else.",
+          "ru": "У «Союза-2.1а» нет дросселирования на участке максимального напора: в штатном полёте скоростной напор достигает около 34 кПа. Конструкция вашей полезной нагрузки рассчитана на 25 кПа. Удержите максимальный скоростной напор q не выше 25 кПа и выйдите на орбиту. Менять можно только параметры наведения — обратите внимание на ограничение ускорения.",
+          "th": "Soyuz-2.1a ไม่มีการลดแรงขับช่วง max-Q หากบินตามปกติ ความดันพลวัตจะสูงถึงประมาณ 34 kPa แต่โครงสร้างสัมภาระของคุณรับได้ 25 kPa จงรักษาความดันพลวัตสูงสุด q ไม่ให้เกิน 25 kPa และยังเข้าสู่วงโคจรได้ ปรับได้เฉพาะค่าการนำวิถี โดยให้ดูที่ขีดจำกัดความเร่ง"
+        },
+        {
+          "path": "debrief",
+          "en": "q = ½ρv²: the peak comes where the air is still dense and the rocket already fast. Holding the acceleration down keeps the speed low through the dense air, at a price — the engines burn longer against gravity, so less Δv is left. Too low a limit and the ascent is so slow that the rocket is still low and dense-aired when it finally gets fast: the load comes back, higher. A throttle bucket reduces thrust around max-Q instead of using a fixed acceleration limit; this simulator models Falcon 9 at 75 % throttle near 22 kPa.",
+          "ru": "q = ½ρv²: максимум напора там, где воздух ещё плотный, а скорость уже велика. Ограничение ускорения удерживает скорость малой в плотных слоях, но за это приходится платить: двигатели дольше работают против тяготения, и запас Δv уменьшается. При слишком низком ограничении выведение идёт так медленно, что ракета набирает скорость, всё ещё находясь в плотной атмосфере, — и нагрузка возвращается, причём больше. Для снижения напора тягу уменьшают около max-Q вместо постоянного ограничения ускорения; в этом симуляторе для Falcon 9 задано 75 % тяги около 22 кПа.",
+          "th": "q = ½ρv² ค่าสูงสุดเกิดในช่วงที่อากาศยังหนาแน่นแต่จรวดเร็วแล้ว การจำกัดความเร่งทำให้ความเร็วต่ำขณะผ่านอากาศหนาแน่น แต่ต้องแลกด้วยการที่เครื่องยนต์เผาไหม้นานขึ้นเพื่อต้านแรงโน้มถ่วง Δv ที่เหลือจึงน้อยลง ถ้าจำกัดต่ำเกินไป จรวดไต่ช้าจนยังอยู่ในอากาศหนาแน่นตอนที่เร่งจนเร็ว ภาระจึงกลับมาและสูงกว่าเดิม การลดแรงขับช่วง max-Q ช่วยลดความดันพลวัตแทนการจำกัดความเร่งตายตัว โดยโปรแกรมนี้จำลอง Falcon 9 ให้ลดแรงขับเหลือ 75% ที่ราว 22 kPa"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "The peak dynamic pressure you flew through (kPa)",
+          "ru": "Максимальный скоростной напор в вашем полёте (кПа)",
+          "th": "ความดันพลวัตสูงสุดที่คุณบินผ่าน (kPa)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "The peak q comes from the speed reached while the air is still dense: slow the rocket down through the first minute and a half.",
+          "ru": "Максимум q определяется скоростью, набранной, пока воздух ещё плотный: замедлите ракету в первые полторы минуты.",
+          "th": "ค่า q สูงสุดมาจากความเร็วที่ได้ขณะอากาศยังหนาแน่น ให้จรวดช้าลงในช่วงนาทีครึ่งแรก"
+        },
+        {
+          "path": "hints[1]",
+          "en": "Guidance → Acceleration limit: above it the engines are throttled back. Flown as it is, Soyuz reaches over 25 m/s².",
+          "ru": "Наведение → Ограничение ускорения: выше него тяга снижается. В штатном полёте «Союз» разгоняется более чем до 25 м/с².",
+          "th": "การนำวิถี → ขีดจำกัดความเร่ง เมื่อเกินค่านี้เครื่องยนต์จะลดแรงขับ ถ้าบินตามปกติ Soyuz เร่งได้เกิน 25 ม./วินาที²"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Try about 17–18 m/s². Much lower and the ascent drags on in the dense air, and the load comes back higher than before.",
+          "ru": "Попробуйте около 17–18 м/с². Намного меньше — и выведение затянется в плотных слоях, а нагрузка вернётся ещё большей.",
+          "th": "ลองประมาณ 17–18 ม./วินาที² ถ้าต่ำกว่านี้มาก การไต่ระดับจะยืดเยื้อในอากาศหนาแน่น และภาระจะกลับมาสูงกว่าเดิม"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "q",
+          "kind": "measure",
+          "measure": "maxQ",
+          "max": 25
+        },
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "orbit"
+        },
+        {
+          "id": "q-read",
+          "kind": "answer",
+          "measure": "maxQ",
+          "prompt": {
+            "en": "The peak dynamic pressure you flew through (kPa)",
+            "ru": "Максимальный скоростной напор в вашем полёте (кПа)",
+            "th": "ความดันพลวัตสูงสุดที่คุณบินผ่าน (kPa)"
+          },
+          "tol": 1,
+          "unit": "kPa"
+        }
+      ]
+    },
+    {
+      "id": "guid-peg",
+      "track": 2,
+      "order": 2,
+      "texts": [
+        {
+          "path": "title",
+          "en": "PEG and IGM",
+          "ru": "PEG и IGM",
+          "th": "PEG และ IGM"
+        },
+        {
+          "path": "brief",
+          "en": "Falcon 9 carries 18.8 t to 500 km, and one of its first-stage engines will fail at T+80 s. With the standard guidance the second stage runs dry short of the target. Keep the failure and the payload; choose an explicit upper-stage guidance — PEG, the Space Shuttle's, or IGM, Saturn V's — and reach the target orbit with at least 20 m/s of Δv left.",
+          "ru": "Falcon 9 выводит 18,8 т на высоту 500 км, и на T+80 с откажет один из двигателей первой ступени. Со стандартным наведением вторая ступень вырабатывает топливо, не дойдя до цели. Отказ и полезная нагрузка остаются; выберите явное наведение верхней ступени — PEG («Спейс шаттл») или IGM (Saturn V) — и выйдите на целевую орбиту с остатком Δv не менее 20 м/с.",
+          "th": "Falcon 9 นำสัมภาระ 18.8 ตันไปที่ 500 กม. และเครื่องยนต์หนึ่งของขั้นที่หนึ่งจะดับที่ T+80 วินาที ด้วยการนำวิถีมาตรฐาน ขั้นที่สองจะหมดเชื้อเพลิงก่อนถึงเป้าหมาย คงความผิดปกติและสัมภาระไว้ แล้วเลือกการนำวิถีขั้นบนแบบชัดแจ้ง ได้แก่ PEG ของกระสวยอวกาศ หรือ IGM ของ Saturn V เพื่อเข้าสู่วงโคจรเป้าหมายโดยมี Δv เหลืออย่างน้อย 20 ม./วินาที"
+        },
+        {
+          "path": "debrief",
+          "en": "An explicit law solves, every cycle, for the steering that reaches the cut-off state with the stages and propellant that are really left, and re-solves as they change. After the engine out it spends the second stage's propellant on exactly the orbit asked for: about 40 m/s left over, where the standard steering ran short. PEG carries the velocity still to gain from cycle to cycle; IGM solves in a frame at the predicted cut-off point.",
+          "ru": "Явный закон на каждом цикле заново решает задачу: какое управление приведёт к заданному состоянию на момент выключения с теми ступенями и топливом, что реально остались. После отказа двигателя он расходует топливо второй ступени точно на заданную орбиту: остаётся около 40 м/с, тогда как стандартному управлению топлива не хватило. PEG переносит от цикла к циклу требуемое приращение скорости; IGM решает задачу в системе координат, связанной с прогнозируемой точкой выключения.",
+          "th": "กฎการนำวิถีแบบชัดแจ้งคำนวณใหม่ทุกรอบว่าต้องบังคับทิศอย่างไรจึงจะไปถึงสภาวะ ณ เวลาดับเครื่องด้วยขั้นและเชื้อเพลิงที่เหลืออยู่จริง และคำนวณใหม่เมื่อสิ่งเหล่านี้เปลี่ยน หลังเครื่องยนต์ดับ จึงใช้เชื้อเพลิงของขั้นที่สองสำหรับวงโคจรที่ต้องการพอดี เหลือประมาณ 40 ม./วินาที ในขณะที่การบังคับทิศมาตรฐานเชื้อเพลิงไม่พอ PEG ส่งต่อความเร็วที่ยังต้องเพิ่มจากรอบหนึ่งไปอีกรอบ ส่วน IGM แก้ปัญหาในกรอบอ้างอิงที่จุดดับเครื่องที่คาดการณ์"
+        },
+        {
+          "path": "criteria[1].label",
+          "en": "Explicit guidance took over",
+          "ru": "Явное наведение включилось",
+          "th": "การนำวิถีแบบชัดแจ้งรับช่วงควบคุม"
+        },
+        {
+          "path": "hints[0]",
+          "en": "The setting is in the Engineer mode's setup: Ascent guidance: PEG and IGM → Upper-stage guidance.",
+          "ru": "Настройка — в режиме «Инженер»: «Наведение на участке выведения: PEG и IGM» → «Наведение верхних ступеней».",
+          "th": "ค่านี้อยู่ในการตั้งค่าของโหมดวิศวกร: การนำทางขาขึ้น: PEG และ IGM → การนำทางของขั้นบน"
+        },
+        {
+          "path": "hints[1]",
+          "en": "Either law works; the event log says when it took over and how long it expected to burn (t_go).",
+          "ru": "Подходит любой закон; журнал событий покажет, когда он включился и сколько, по его расчёту, осталось работать (t_go).",
+          "th": "ใช้กฎใดก็ได้ บันทึกเหตุการณ์จะบอกว่ารับช่วงเมื่อใดและคาดว่าจะเผาไหม้อีกนานเท่าใด (t_go)"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Compare the Δv left at the end with and without it: the difference is what the standard steering wasted.",
+          "ru": "Сравните остаток Δv в конце с явным наведением и без него: разница — то, что стандартное управление потратило впустую.",
+          "th": "เปรียบเทียบ Δv ที่เหลือตอนท้ายเมื่อใช้และไม่ใช้ ผลต่างคือสิ่งที่การบังคับทิศมาตรฐานสิ้นเปลืองไป"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "explicit",
+          "kind": "event",
+          "key": "evt.guidanceEngaged",
+          "present": true,
+          "label": {
+            "en": "Explicit guidance took over",
+            "ru": "Явное наведение включилось",
+            "th": "การนำวิถีแบบชัดแจ้งรับช่วงควบคุม"
+          }
+        },
+        {
+          "id": "dv",
+          "kind": "measure",
+          "measure": "dvLeft",
+          "min": 20
+        }
+      ]
+    },
+    {
+      "id": "guid-nav",
+      "track": 2,
+      "order": 3,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Inertial navigation without GNSS",
+          "ru": "Инерциальная навигация без ГНСС",
+          "th": "การนำทางเฉื่อยโดยไม่มี GNSS"
+        },
+        {
+          "path": "brief",
+          "en": "Six-DOF Falcon 9. The satellite navigation receiver is out for the whole ascent: the navigation has only its inertial unit, and the one fitted is a cheap MEMS unit. Keep the navigation's position error within 500 m up to the first stage's cut-off (MECO). GNSS stays off; choose the inertial unit.",
+          "ru": "Falcon 9 в шестистепенной модели. Приёмник спутниковой навигации не работает на всём участке выведения: у навигационной системы есть только инерциальный блок, и установлен дешёвый МЭМС-блок. Удержите ошибку навигации по положению в пределах 500 м до выключения первой ступени (MECO). ГНСС остаётся выключенной; выберите инерциальный блок.",
+          "th": "Falcon 9 แบบหกองศาอิสระ เครื่องรับนำทางด้วยดาวเทียมใช้ไม่ได้ตลอดการไต่ระดับ ระบบนำทางมีเพียงหน่วยวัดเฉื่อย และที่ติดตั้งไว้เป็นหน่วย MEMS ราคาถูก จงรักษาความคลาดเคลื่อนตำแหน่งของระบบนำทางให้อยู่ภายใน 500 ม. จนถึงการดับเครื่องขั้นที่หนึ่ง (MECO) ให้ GNSS ปิดอยู่เหมือนเดิม และเลือกหน่วยวัดเฉื่อย"
+        },
+        {
+          "path": "debrief",
+          "en": "Without fixes, an accelerometer bias b grows into a position error of ½bt² and a gyro error tilts the whole navigation frame, so the error grows faster than linearly: at MECO about 1.7 km with the MEMS unit, 0.3 km with a tactical fibre-optic unit, a few tens of metres with navigation-grade ring-laser gyros. With GNSS the Kalman filter holds all three to metres.",
+          "ru": "Без внешних коррекций смещение нуля акселерометра b даёт ошибку положения ½bt², а ошибка гироскопа наклоняет весь навигационный базис, поэтому ошибка растёт быстрее линейной: к MECO — около 1,7 км с МЭМС-блоком, 0,3 км с тактическим волоконно-оптическим и несколько десятков метров с навигационными лазерными гироскопами. С ГНСС фильтр Калмана удерживает все три в пределах метров.",
+          "th": "หากไม่มีการแก้ไขจากภายนอก ไบแอสของมาตรความเร่ง b จะกลายเป็นความคลาดเคลื่อนตำแหน่ง ½bt² และความคลาดของไจโรทำให้กรอบนำทางทั้งหมดเอียง ความคลาดเคลื่อนจึงโตเร็วกว่าเชิงเส้น ที่ MECO ประมาณ 1.7 กม. สำหรับ MEMS 0.3 กม. สำหรับไจโรใยแก้วนำแสงเกรดยุทธวิธี และไม่กี่สิบเมตรสำหรับไจโรเลเซอร์เกรดนำทาง เมื่อมี GNSS ตัวกรองคาลมานรักษาทั้งสามไว้ในระดับเมตร"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "No satellite navigation",
+          "ru": "Без спутниковой навигации",
+          "th": "ไม่มีการนำทางด้วยดาวเทียม"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Navigation (INS / GNSS) → IMU grade. The telemetry shows the position error as it grows.",
+          "ru": "«Навигация (БИНС / ГНСС)» → «Класс БИНС». Телеметрия показывает, как растёт ошибка положения.",
+          "th": "การนำร่อง (INS / GNSS) → เกรดของ IMU ข้อมูลทางไกลแสดงความคลาดเคลื่อนตำแหน่งขณะที่โตขึ้น"
+        },
+        {
+          "path": "hints[1]",
+          "en": "A bias of 0.001 g held for 150 s alone gives ½·0.0098·150² ≈ 110 m; the MEMS preset used here has a larger bias; actual MEMS units vary in performance.",
+          "ru": "Одно лишь смещение 0,001 g за 150 с даёт ½·0,0098·150² ≈ 110 м; у выбранной здесь модели МЭМС-блока смещение больше; характеристики реальных МЭМС-блоков различаются.",
+          "th": "ไบแอส 0.001 g เพียงอย่างเดียวนาน 150 วินาทีให้ ½·0.0098·150² ≈ 110 ม. แบบจำลอง MEMS ที่เลือกในบทนี้มีไบแอสมากกว่านี้ ส่วนอุปกรณ์ MEMS จริงมีสมรรถนะแตกต่างกัน"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The tactical grade is enough; the navigation grade is better still — and dearer.",
+          "ru": "Тактического класса достаточно; навигационный — ещё лучше, но и дороже.",
+          "th": "เกรดยุทธวิธีเพียงพอ เกรดนำทางดียิ่งกว่า แต่แพงกว่าด้วย"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "gnss",
+          "kind": "hook",
+          "hook": "gnssOff",
+          "label": {
+            "en": "No satellite navigation",
+            "ru": "Без спутниковой навигации",
+            "th": "ไม่มีการนำทางด้วยดาวเทียม"
+          }
+        },
+        {
+          "id": "error",
+          "kind": "measure",
+          "measure": "nav.positionError",
+          "max": 500
+        },
+        {
+          "id": "flying",
+          "kind": "outcome",
+          "is": "survived"
+        }
+      ]
+    },
+    {
+      "id": "guid-monte-carlo",
+      "track": 2,
+      "order": 4,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Monte Carlo 3σ",
+          "ru": "Метод Монте-Карло, 3σ",
+          "th": "มอนติคาร์โล 3σ"
+        },
+        {
+          "path": "brief",
+          "en": "How accurately does Falcon 9 put 10 t into a 500 km orbit when its engines, masses and air are not exactly the book's? The experiment (recommended): in the setup, open the Monte Carlo window, fly 20 runs with seed 1, look at the spread and its 3σ ellipse, and click the run whose perigee lies farthest from the target to fly it on its own. What is graded: a run of the set seeded 1, flown on its own to the end of the mission, and its perigee and how far that is from the target's 500 km, typed in. The grade does not check the 20 runs or which run you picked.",
+          "ru": "Насколько точно Falcon 9 выводит 10 т на орбиту 500 км, если тяга, массы и атмосфера не совпадают с расчётными? Эксперимент (рекомендуется): в настройках откройте окно Монте-Карло, выполните 20 прогонов с зерном 1, посмотрите на разброс и эллипс 3σ и щёлкните прогон, перигей которого дальше всех от целевого, чтобы выполнить его отдельно. Что оценивается: прогон набора с зерном 1, выполненный отдельно до конца задачи, и введённые вами его перигей и отклонение от целевых 500 км. Оценка не проверяет ни 20 прогонов, ни то, какой прогон вы выбрали.",
+          "th": "Falcon 9 ส่ง 10 ตันเข้าวงโคจร 500 กม. ได้แม่นยำเพียงใด เมื่อเครื่องยนต์ มวล และอากาศไม่ตรงกับค่าตามตำรา การทดลอง (แนะนำ): ในการตั้งค่า เปิดหน้าต่างมอนติคาร์โล บิน 20 รอบด้วยค่าเมล็ด 1 ดูการกระจายและวงรี 3σ แล้วคลิกรอบที่จุดใกล้โลกห่างจากเป้าหมายมากที่สุดเพื่อบินรอบนั้นเดี่ยว ๆ สิ่งที่ให้คะแนน: รอบหนึ่งของชุดค่าเมล็ด 1 ที่บินเดี่ยวจนจบภารกิจ พร้อมจุดใกล้โลกของรอบนั้นและระยะที่ห่างจากเป้าหมาย 500 กม. ที่คุณพิมพ์ การให้คะแนนไม่ได้ตรวจการบิน 20 รอบ และไม่ได้ตรวจว่าคุณเลือกรอบใด"
+        },
+        {
+          "path": "debrief",
+          "en": "Each run drew its own thrust, Isp, propellant and dry mass per stage, the air's density and wind: the spread of the orbits is the insertion's accuracy, and 3σ is what a launch contract quotes — 98.9 % inside a 3σ ellipse for an ideal bivariate Gaussian distribution. Twenty simulated runs alone do not establish that coverage for a real launcher. The run you flew alone is that run exactly: the same draws from the same stream, so any flight of the set can be watched, replayed and understood one at a time.",
+          "ru": "Каждый прогон выбрал свои тягу, удельный импульс, запас топлива и сухую массу ступеней, плотность воздуха и ветер: разброс орбит и есть точность выведения, а 3σ — то, что указывают в контракте на запуск: 98,9 % внутри эллипса 3σ при идеальном двумерном нормальном распределении. Двадцать прогонов сами по себе не подтверждают такое покрытие для реальной ракеты. Выполненный вами отдельно прогон — это в точности тот же прогон: те же случайные величины из того же потока, поэтому любой полёт набора можно посмотреть, воспроизвести и разобрать по отдельности.",
+          "th": "แต่ละรอบสุ่มแรงขับ Isp เชื้อเพลิง และมวลแห้งของแต่ละขั้น รวมทั้งความหนาแน่นอากาศและลมของตัวเอง การกระจายของวงโคจรคือความแม่นยำของการส่งเข้าวงโคจร และ 3σ คือค่าที่ระบุในสัญญาการส่งดาวเทียม วงรี 3σ ครอบคลุม 98.9% เมื่อเป็นการแจกแจงปกติสองตัวแปรในอุดมคติ การจำลองเพียง 20 รอบยังยืนยันสัดส่วนนี้สำหรับจรวดจริงไม่ได้ รอบที่คุณบินเดี่ยวคือรอบเดียวกันทุกประการ ค่าสุ่มชุดเดียวกันจากลำดับเดียวกัน จึงดู เล่นซ้ำ และทำความเข้าใจเที่ยวบินใดในชุดทีละเที่ยวได้"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "A run of the set seeded 1, flown on its own",
+          "ru": "Прогон набора с зерном 1, выполненный отдельно",
+          "th": "รอบหนึ่งของชุดค่าเมล็ด 1 ที่บินเดี่ยว"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "The perigee of your run (km)",
+          "ru": "Перигей вашего прогона (км)",
+          "th": "จุดใกล้โลกของรอบที่คุณบิน (กม.)"
+        },
+        {
+          "path": "criteria[3].prompt",
+          "en": "How far it is from the target's perigee, below it negative (km)",
+          "ru": "Отклонение от целевого перигея, вниз — со знаком минус (км)",
+          "th": "ห่างจากจุดใกล้โลกเป้าหมายเท่าใด ถ้าต่ำกว่าให้ติดลบ (กม.)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Setup → Monte Carlo: insertion accuracy → Open the Monte Carlo window. Runs 20, seed 1, the default dispersions; Start. It takes a few minutes.",
+          "ru": "Настройка → «Монте-Карло: точность выведения» → открыть окно. 20 прогонов, зерно 1, разбросы по умолчанию; «Старт». Это займёт несколько минут.",
+          "th": "การตั้งค่า → มอนติคาร์โล: ความแม่นยำการเข้าวงโคจร → เปิดหน้าต่าง ตั้ง 20 รอบ ค่าเมล็ด 1 และค่าการกระจายเริ่มต้น แล้วกดเริ่ม ใช้เวลาไม่กี่นาที"
+        },
+        {
+          "path": "hints[1]",
+          "en": "On the scatter, perigee runs left to right: the point farthest from the + (the target) along it is the run worth flying. The grade accepts any run of the set, so choosing it well is up to you. Its tooltip gives its perigee; a click puts it in the setup panel.",
+          "ru": "На диаграмме перигей откладывается слева направо: стоит выполнить прогон — точку, дальше всех от «+» (цели) по этой оси. Оценка принимает любой прогон набора, так что правильный выбор — за вами. Подсказка показывает его перигей; щелчок переносит прогон в настройку.",
+          "th": "บนกราฟ จุดใกล้โลกอยู่บนแกนแนวนอน รอบที่ควรบินคือจุดที่ห่างจากเครื่องหมาย + (เป้าหมาย) มากที่สุดตามแกนนั้น การให้คะแนนยอมรับทุกรอบของชุด การเลือกให้ถูกจึงขึ้นอยู่กับคุณ ป้ายข้อมูลแสดงจุดใกล้โลกของรอบนั้น และการคลิกจะนำรอบนั้นเข้าแผงตั้งค่า"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Launch it and let it fly to the end of the mission; the perigee is read there, the same way the window reads it.",
+          "ru": "Запустите и доведите полёт до конца задачи; перигей определяется там же и так же, как в окне.",
+          "th": "ปล่อยจรวดและปล่อยให้บินจนจบภารกิจ จุดใกล้โลกอ่านค่าที่นั่น ด้วยวิธีเดียวกับในหน้าต่าง"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "run",
+          "kind": "hook",
+          "hook": "dispersedRun",
+          "params": {
+            "seed": 1
+          },
+          "label": {
+            "en": "A run of the set seeded 1, flown on its own",
+            "ru": "Прогон набора с зерном 1, выполненный отдельно",
+            "th": "รอบหนึ่งของชุดค่าเมล็ด 1 ที่บินเดี่ยว"
+          }
+        },
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "orbit"
+        },
+        {
+          "id": "perigee",
+          "kind": "answer",
+          "measure": "orbit.perigee",
+          "prompt": {
+            "en": "The perigee of your run (km)",
+            "ru": "Перигей вашего прогона (км)",
+            "th": "จุดใกล้โลกของรอบที่คุณบิน (กม.)"
+          },
+          "tol": 1,
+          "unit": "km"
+        },
+        {
+          "id": "miss",
+          "kind": "answer",
+          "measure": "orbit.perigeeMiss",
+          "prompt": {
+            "en": "How far it is from the target's perigee, below it negative (km)",
+            "ru": "Отклонение от целевого перигея, вниз — со знаком минус (км)",
+            "th": "ห่างจากจุดใกล้โลกเป้าหมายเท่าใด ถ้าต่ำกว่าให้ติดลบ (กม.)"
+          },
+          "tol": 1,
+          "unit": "km"
+        }
+      ]
+    },
+    {
+      "id": "fail-engine-out",
+      "track": 3,
+      "order": 1,
+      "texts": [
+        {
+          "path": "title",
+          "en": "One engine out",
+          "ru": "Отказ одного двигателя",
+          "th": "เครื่องยนต์ดับหนึ่งเครื่อง"
+        },
+        {
+          "path": "brief",
+          "en": "One of Falcon 9's nine first-stage engines will fail at T+80 s. The rocket can still reach orbit — the other eight burn longer and the guidance flies on — but not with 19 t on top. Take off as little payload as you must: reach the 500 km target orbit carrying at least 17.5 t. The failure is fixed; only the payload mass may be changed.",
+          "ru": "Один из девяти двигателей первой ступени Falcon 9 откажет на T+80 с. Ракета всё ещё может выйти на орбиту — остальные восемь работают дольше, и система наведения продолжает полёт, — но не с 19 т нагрузки. Снимите столько нагрузки, сколько необходимо, и не больше: выйдите на целевую орбиту 500 км с нагрузкой не менее 17,5 т. Отказ задан; изменять можно только массу полезной нагрузки.",
+          "th": "เครื่องยนต์หนึ่งในเก้าเครื่องของขั้นที่ 1 ของ Falcon 9 จะดับที่ T+80 วินาที จรวดยังเข้าวงโคจรได้ เพราะอีกแปดเครื่องจะเผาไหม้นานขึ้นและระบบนำวิถียังบินต่อ แต่ไม่ใช่เมื่อบรรทุก 19 ตัน ให้ลดน้ำหนักบรรทุกเท่าที่จำเป็นเท่านั้น: เข้าวงโคจรเป้าหมาย 500 กม. โดยบรรทุกไม่น้อยกว่า 17.5 ตัน ความล้มเหลวถูกกำหนดไว้แล้ว เปลี่ยนได้เฉพาะมวลน้ำหนักบรรทุก"
+        },
+        {
+          "path": "debrief",
+          "en": "Engine-out capability: with eight engines of nine the first stage keeps all its propellant but has less thrust, so it burns longer and loses more to gravity. The loss shows as Δv the second stage no longer has — about 100 m/s here, which is why a little payload had to come off.",
+          "ru": "Живучесть при отказе двигателя: с восемью двигателями из девяти первая ступень сохраняет всё топливо, но тяга меньше, поэтому ступень работает дольше и больше теряет на гравитацию. Потеря проявляется как Δv, которого не хватает второй ступени, — здесь около 100 м/с, поэтому пришлось немного уменьшить нагрузку.",
+          "th": "ความสามารถรับมือเครื่องยนต์ดับ: เมื่อเหลือแปดในเก้าเครื่อง ขั้นที่ 1 ยังมีเชื้อเพลิงครบแต่แรงขับน้อยลง จึงเผาไหม้นานขึ้นและสูญเสียจากแรงโน้มถ่วงมากขึ้น การสูญเสียนี้ปรากฏเป็น Δv ที่ขั้นที่ 2 ไม่มีอีกต่อไป ในที่นี้ประมาณ 100 ม./วินาที จึงต้องลดน้ำหนักบรรทุกลงเล็กน้อย"
+        },
+        {
+          "path": "hints[0]",
+          "en": "With eight engines the first stage has the same propellant but less thrust: it burns longer and loses more to gravity.",
+          "ru": "С восемью двигателями у первой ступени то же топливо, но меньше тяга: она работает дольше и больше теряет на гравитацию.",
+          "th": "เมื่อเหลือแปดเครื่อง ขั้นที่ 1 มีเชื้อเพลิงเท่าเดิมแต่แรงขับน้อยลง จึงเผาไหม้นานขึ้นและเสียให้แรงโน้มถ่วงมากขึ้น"
+        },
+        {
+          "path": "hints[1]",
+          "en": "Compare \"Δv left\" with a flight of the same mass without the failure: the difference is what the lost engine costs.",
+          "ru": "Сравните «Остаток Δv» с полётом той же массы без отказа: разница — цена потерянного двигателя.",
+          "th": "เปรียบเทียบ «Δv คงเหลือ» กับเที่ยวบินมวลเดียวกันที่ไม่มีความล้มเหลว ผลต่างคือราคาของเครื่องยนต์ที่เสียไป"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The engine costs about 100 m/s, and at the second stage 500 kg of payload is worth about 80 m/s.",
+          "ru": "Двигатель стоит около 100 м/с, а на второй ступени 500 кг нагрузки эквивалентны примерно 80 м/с.",
+          "th": "เครื่องยนต์ที่เสียไปมีค่าประมาณ 100 ม./วินาที และที่ขั้นที่ 2 น้ำหนักบรรทุก 500 กก. เทียบได้กับประมาณ 80 ม./วินาที"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "payload",
+          "kind": "measure",
+          "measure": "payload",
+          "min": 17500
+        }
+      ]
+    },
+    {
+      "id": "fail-gyro-fdir",
+      "track": 3,
+      "order": 2,
+      "texts": [
+        {
+          "path": "title",
+          "en": "A stuck gyro and the FDIR",
+          "ru": "Заклинивший ДУС и FDIR",
+          "th": "ไจโรค้างกับ FDIR"
+        },
+        {
+          "path": "brief",
+          "en": "Falcon 9 flown as a rigid body under its autopilot. At T+30 s the rate gyros of inertial unit 1 will stick. Without fault detection the flight computer flies on unit 1 alone. Turn on the FDIR (Engineer mode, \"Control-system failures\") so that the three units vote, and reach the target orbit. The failure itself is fixed.",
+          "ru": "Falcon 9 летит как твёрдое тело под управлением автомата стабилизации. На T+30 с датчики угловой скорости инерциального блока 1 заклинит. Без обнаружения отказов бортовой компьютер летит только по блоку 1. Включите FDIR (режим «Инженер», «Отказы системы управления»), чтобы три блока голосовали, и выйдите на целевую орбиту. Сам отказ задан.",
+          "th": "Falcon 9 บินแบบวัตถุแข็งเกร็งภายใต้ระบบนำร่องอัตโนมัติ ที่ T+30 วินาที ไจโรวัดอัตราเชิงมุมของหน่วยเฉื่อยที่ 1 จะค้าง หากไม่มีการตรวจจับความผิดพลาด คอมพิวเตอร์การบินจะบินตามหน่วยที่ 1 เพียงหน่วยเดียว ให้เปิด FDIR (โหมดวิศวกร หัวข้อ «ความล้มเหลวของระบบควบคุม») เพื่อให้ทั้งสามหน่วยลงคะแนนกัน แล้วเข้าสู่วงโคจรเป้าหมาย ความล้มเหลวถูกกำหนดไว้แล้ว"
+        },
+        {
+          "path": "debrief",
+          "en": "Three inertial units are carried so that two good ones can outvote a bad one. A stuck gyro reads a constant rate: the autopilot \"corrects\" a motion that is not there and flies the vehicle into an angle of attack the air breaks it at. Voting isolates the unit once it disagrees with the other two for long enough.",
+          "ru": "Три инерциальных блока ставят для того, чтобы два исправных могли перевесить неисправный. Заклинивший ДУС показывает постоянную скорость: автомат «исправляет» несуществующее движение и уводит ракету на угол атаки, при котором её разрушает скоростной напор. Голосование отключает блок, когда он достаточно долго расходится с двумя другими.",
+          "th": "ยานบรรทุกหน่วยเฉื่อยสามหน่วยเพื่อให้สองหน่วยที่ดีลงคะแนนชนะหน่วยที่เสีย ไจโรที่ค้างจะอ่านอัตราคงที่ ระบบนำร่องจึง «แก้» การเคลื่อนที่ที่ไม่มีอยู่จริงและพาจรวดเข้ามุมปะทะที่อากาศทำให้โครงสร้างพัง การลงคะแนนจะแยกหน่วยนั้นออกเมื่อค่าของมันต่างจากอีกสองหน่วยนานพอ"
+        },
+        {
+          "path": "criteria[1].label",
+          "en": "The FDIR isolates the failed unit",
+          "ru": "FDIR отключает неисправный блок",
+          "th": "FDIR แยกหน่วยที่เสียออก"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Three units are carried so that two good ones can outvote a bad one — but only if the voting is switched on.",
+          "ru": "Три блока ставят, чтобы два исправных перевесили неисправный, — но только если голосование включено.",
+          "th": "ยานมีสามหน่วยเพื่อให้สองหน่วยที่ดีชนะหน่วยที่เสีย แต่ต้องเปิดการลงคะแนนก่อน"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The switch is in the setup panel, section \"Control-system failures (G08)\".",
+          "ru": "Переключатель — на панели настройки, раздел «Отказы системы управления (G08)».",
+          "th": "สวิตช์อยู่ในแผงตั้งค่า หัวข้อ «ความล้มเหลวของระบบควบคุม (G08)»"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Watch the event log after T+30 s: without the FDIR the vehicle breaks up about ten seconds later; with it, unit 1 is isolated.",
+          "ru": "Следите за журналом событий после T+30 с: без FDIR ракета разрушается примерно через десять секунд, с ним блок 1 отключается.",
+          "th": "ดูบันทึกเหตุการณ์หลัง T+30 วินาที ถ้าไม่มี FDIR จรวดจะแตกหักภายในราวสิบวินาที ถ้ามีจะแยกหน่วยที่ 1 ออก"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "isolated",
+          "kind": "event",
+          "key": "evt.fdirImuIsolated",
+          "present": true,
+          "label": {
+            "en": "The FDIR isolates the failed unit",
+            "ru": "FDIR отключает неисправный блок",
+            "th": "FDIR แยกหน่วยที่เสียออก"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fail-abort",
+      "track": 3,
+      "order": 3,
+      "texts": [
+        {
+          "path": "title",
+          "en": "The crew's escape",
+          "ru": "Спасение экипажа",
+          "th": "การหนีภัยของลูกเรือ"
+        },
+        {
+          "path": "brief",
+          "en": "A crewed Soyuz. At T+60 s, near the maximum dynamic pressure, the flight director commands an abort: the escape tower pulls the head section off the rocket, the descent module falls free and comes down on its parachutes. Fly it until the crew is on the ground, then read the peak load factor on the crew during the escape and type it in.",
+          "ru": "Пилотируемый «Союз». На T+60 с, вблизи максимального скоростного напора, руководитель полёта даёт команду на аварийное спасение: двигательная установка САС уводит головной блок от ракеты, спускаемый аппарат отделяется и опускается на парашютах. Выполните полёт до приземления экипажа, затем определите максимальную перегрузку экипажа при спасении и введите её.",
+          "th": "ยานโซยุซมีมนุษย์ ที่ T+60 วินาที ใกล้ช่วงความดันพลวัตสูงสุด ผู้อำนวยการการบินสั่งยกเลิกการปล่อย หอหนีภัยดึงส่วนหัวออกจากจรวด แคปซูลกลับสู่โลกหลุดออกและลงด้วยร่มชูชีพ บินจนลูกเรือถึงพื้น แล้วอ่านค่าตัวประกอบภาระ (g) สูงสุดที่ลูกเรือได้รับระหว่างการหนีภัยแล้วพิมพ์คำตอบ"
+        },
+        {
+          "path": "debrief",
+          "en": "The escape trades a moment of high load for distance from an exploding rocket: the tower's motor accelerates the head section at well over 10 g for about a second. Near max-Q the air helps and hurts at once — it brakes the head section quickly, and it makes the separation violent.",
+          "ru": "Спасение платит кратковременной большой перегрузкой за расстояние от взрывающейся ракеты: двигатель САС разгоняет головной блок с перегрузкой свыше 10 единиц около секунды. Вблизи максимального напора воздух и помогает, и мешает — быстро тормозит головной блок и делает отделение жёстким.",
+          "th": "การหนีภัยแลกภาระสูงชั่วครู่กับระยะห่างจากจรวดที่อาจระเบิด มอเตอร์ของหอหนีภัยเร่งส่วนหัวด้วยภาระมากกว่า 10 g ราวหนึ่งวินาที ใกล้ max-Q อากาศทั้งช่วยและเป็นอุปสรรค คือหน่วงส่วนหัวลงอย่างรวดเร็ว และทำให้การแยกตัวรุนแรง"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "The crew lands safely",
+          "ru": "Экипаж благополучно приземлился",
+          "th": "ลูกเรือลงถึงพื้นอย่างปลอดภัย"
+        },
+        {
+          "path": "criteria[1].prompt",
+          "en": "Peak load factor on the crew (g)",
+          "ru": "Максимальная перегрузка экипажа (ед.)",
+          "th": "ตัวประกอบภาระสูงสุดที่ลูกเรือได้รับ (g)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "The load factor n is the specific force the crew feels, in units of g.",
+          "ru": "Перегрузка n — удельная сила, которую ощущает экипаж, в единицах g.",
+          "th": "ตัวประกอบภาระ n คือแรงจำเพาะที่ลูกเรือรู้สึก มีหน่วยเป็น g"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The telemetry panel's load-factor chart shows it: look at the first seconds after the abort. Once the crew is down, the narration under the picture names the peak too.",
+          "ru": "Его показывает график перегрузки на панели телеметрии: смотрите первые секунды после команды. После приземления пик называет и подпись под изображением.",
+          "th": "กราฟตัวประกอบภาระในแผงโทรมาตรแสดงค่านี้ ดูช่วงวินาทีแรกหลังคำสั่งยกเลิก และเมื่อลูกเรือถึงพื้นแล้ว คำบรรยายใต้ภาพจะบอกค่าสูงสุดด้วย"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The tower's main motor burns for under a second; expect a peak between 10 and 17 g.",
+          "ru": "Основной двигатель САС работает меньше секунды; ожидайте пик от 10 до 17 единиц.",
+          "th": "มอเตอร์หลักของหอหนีภัยทำงานไม่ถึงหนึ่งวินาที คาดว่าค่าสูงสุดอยู่ระหว่าง 10 ถึง 17 g"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "crew",
+          "kind": "hook",
+          "hook": "crewSafe",
+          "label": {
+            "en": "The crew lands safely",
+            "ru": "Экипаж благополучно приземлился",
+            "th": "ลูกเรือลงถึงพื้นอย่างปลอดภัย"
+          }
+        },
+        {
+          "id": "peak",
+          "kind": "answer",
+          "measure": "abort.maxG",
+          "prompt": {
+            "en": "Peak load factor on the crew (g)",
+            "ru": "Максимальная перегрузка экипажа (ед.)",
+            "th": "ตัวประกอบภาระสูงสุดที่ลูกเรือได้รับ (g)"
+          },
+          "tolPct": 10,
+          "unit": "g"
+        }
+      ]
+    },
+    {
+      "id": "ctl-inspector",
+      "track": 4,
+      "order": 1,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Reading the control loop",
+          "ru": "Анализ контура управления",
+          "th": "อ่านลูปควบคุม"
+        },
+        {
+          "path": "brief",
+          "en": "Six-DOF Falcon 9 with its own autopilot. Fly through max-Q, then open the attitude-loop inspector at the moment of max-Q and read the pitch loop's crossover frequency and phase margin off its Bode plot.",
+          "ru": "Falcon 9 в шестистепенной модели со штатным автоматом стабилизации. Пройдите участок максимального скоростного напора, затем откройте инспектор контура стабилизации в момент max-Q и определите по ЛАЧХ и ЛФЧХ частоту среза и запас по фазе канала тангажа.",
+          "th": "Falcon 9 แบบหกองศาอิสระพร้อมระบบรักษาท่าทางของตัวเอง บินผ่าน max-Q แล้วเปิดตัวตรวจลูปควบคุมท่าทางที่ช่วงเวลา max-Q อ่านความถี่ครอสโอเวอร์และเฟสมาร์จินของลูปพิตช์จาก Bode plot"
+        },
+        {
+          "path": "debrief",
+          "en": "At max-Q the air turns an unstable rocket fastest, and the loop must still answer with margin: here a crossover near 3 rad/s and a phase margin near 45°. The gain margin is large at the top; the one that matters for a flexible vehicle is at the bending frequency, which the notch filter guards.",
+          "ru": "На максимальном напоре воздух сильнее всего разворачивает статически неустойчивую ракету, и контур должен отвечать с запасом: здесь частота среза около 3 рад/с и запас по фазе около 45°. Запас по амплитуде сверху велик; для упругой ракеты важен запас на частоте изгибного тона, который защищает режекторный фильтр.",
+          "th": "ที่ max-Q อากาศหมุนจรวดที่ไม่เสถียรได้เร็วที่สุด ลูปยังต้องตอบสนองโดยมีค่าเผื่อ ในที่นี้ความถี่ครอสโอเวอร์ราว 3 rad/s และเฟสมาร์จินราว 45° เกนมาร์จินด้านบนมีมาก แต่สำหรับจรวดที่ยืดหยุ่น ค่าที่สำคัญคือที่ความถี่การดัดโค้ง ซึ่งฟิลเตอร์นอตช์คอยปกป้อง"
+        },
+        {
+          "path": "criteria[1].prompt",
+          "en": "Pitch crossover frequency at max-Q (rad/s)",
+          "ru": "Частота среза канала тангажа на max-Q (рад/с)",
+          "th": "ความถี่ครอสโอเวอร์ของพิตช์ที่ max-Q (rad/s)"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "Pitch phase margin at max-Q (°)",
+          "ru": "Запас по фазе канала тангажа на max-Q (°)",
+          "th": "เฟสมาร์จินของพิตช์ที่ max-Q (°)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "The attitude-loop inspector is in the Engineer mode's 6-DOF panel; move the replay to the max-Q event and pick the pitch plane.",
+          "ru": "Инспектор контура стабилизации — на панели 6-DOF режима «Инженер»; переведите воспроизведение на событие max-Q и выберите канал тангажа.",
+          "th": "ตัวตรวจลูปควบคุมท่าทางอยู่ในแผง 6-DOF ของโหมดวิศวกร เลื่อนการเล่นซ้ำไปที่เหตุการณ์ max-Q แล้วเลือกระนาบพิตช์"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The crossover is where the open loop's magnitude crosses 0 dB.",
+          "ru": "Частота среза — там, где ЛАЧХ разомкнутого контура пересекает 0 дБ.",
+          "th": "ความถี่ครอสโอเวอร์คือจุดที่ขนาดของลูปเปิดตัด 0 dB"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The phase margin is 180° plus the phase at the crossover.",
+          "ru": "Запас по фазе — 180° плюс фаза на частоте среза.",
+          "th": "เฟสมาร์จินคือ 180° บวกเฟสที่ความถี่ครอสโอเวอร์"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "flying",
+          "kind": "outcome",
+          "is": "survived"
+        },
+        {
+          "id": "wc",
+          "kind": "answer",
+          "measure": "loop.wcAtMaxQ",
+          "prompt": {
+            "en": "Pitch crossover frequency at max-Q (rad/s)",
+            "ru": "Частота среза канала тангажа на max-Q (рад/с)",
+            "th": "ความถี่ครอสโอเวอร์ของพิตช์ที่ max-Q (rad/s)"
+          },
+          "tolPct": 10,
+          "unit": "rad/s"
+        },
+        {
+          "id": "pm",
+          "kind": "answer",
+          "measure": "loop.pmAtMaxQ",
+          "prompt": {
+            "en": "Pitch phase margin at max-Q (°)",
+            "ru": "Запас по фазе канала тангажа на max-Q (°)",
+            "th": "เฟสมาร์จินของพิตช์ที่ max-Q (°)"
+          },
+          "tolPct": 10,
+          "unit": "°"
+        }
+      ]
+    },
+    {
+      "id": "ctl-margins",
+      "track": 4,
+      "order": 2,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Gains with margins",
+          "ru": "Коэффициенты с запасами",
+          "th": "ปรับเกนให้มีค่าเผื่อ"
+        },
+        {
+          "path": "brief",
+          "en": "Someone has tuned this Falcon 9's pitch–yaw autopilot for speed: an attitude gain K_θ of 4 and a rate gain K_ω of only 1.5. At max-Q its phase margin is under 20°. Retune the pitch–yaw gains so that at max-Q the pitch loop has at least 30° of phase margin and 6 dB of gain margin, and fly through it.",
+          "ru": "Кто-то настроил автомат стабилизации этого Falcon 9 по тангажу и рысканию на быстродействие: K_θ = 4 и всего K_ω = 1,5. На максимальном напоре запас по фазе меньше 20°. Перенастройте коэффициенты канала тангажа–рыскания так, чтобы на max-Q запас по фазе был не менее 30°, а по амплитуде — не менее 6 дБ, и пройдите этот участок.",
+          "th": "มีคนปรับระบบรักษาท่าทางช่องพิตช์–ยอว์ของ Falcon 9 ลำนี้ให้ตอบสนองเร็ว โดยเกนท่าทาง K_θ = 4 และเกนอัตรา K_ω เพียง 1.5 ที่ max-Q เฟสมาร์จินต่ำกว่า 20° จงปรับเกนพิตช์–ยอว์ใหม่ให้ที่ max-Q ลูปพิตช์มีเฟสมาร์จินอย่างน้อย 30° และเกนมาร์จินอย่างน้อย 6 dB แล้วบินผ่าน"
+        },
+        {
+          "path": "debrief",
+          "en": "The attitude gain sets how fast the loop wants to turn, the rate gain how hard it damps the turn. Much attitude gain with little rate gain pushes the crossover to where the vehicle and the actuators lag most, and the phase margin collapses. The default 1.5 / 3 gives about 46°. The inspector's tuning tab searches for gains the same way.",
+          "ru": "Коэффициент по углу задаёт, насколько быстро контур стремится развернуть ракету, коэффициент по скорости — насколько сильно он демпфирует поворот. Большой K_θ при малом K_ω смещает частоту среза туда, где запаздывание ракеты и приводов наибольшее, и запас по фазе падает. Штатные 1,5 / 3 дают около 46°. Вкладка настройки инспектора ищет коэффициенты так же.",
+          "th": "เกนท่าทางกำหนดว่าลูปต้องการหมุนเร็วเพียงใด เกนอัตรากำหนดว่าหน่วงการหมุนแรงเพียงใด เกนท่าทางมากแต่เกนอัตราน้อยจะดันความถี่ครอสโอเวอร์ไปยังช่วงที่จรวดและตัวขับเร้าล่าช้ามากที่สุด เฟสมาร์จินจึงลดฮวบ ค่าเริ่มต้น 1.5 / 3 ให้ประมาณ 46° แท็บปรับจูนของตัวตรวจลูปค้นหาเกนด้วยวิธีเดียวกัน"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Attitude autopilot → Pitch–yaw: attitude gain K_θ and rate gain K_ω.",
+          "ru": "«Автомат стабилизации» → «Тангаж–рыскание»: коэффициенты K_θ и K_ω.",
+          "th": "ระบบรักษาท่าทางอัตโนมัติ → พิตช์–ยอว์: เกนท่าทาง K_θ และเกนอัตรา K_ω"
+        },
+        {
+          "path": "hints[1]",
+          "en": "More rate gain adds damping; less attitude gain moves the crossover down, where the lags are smaller.",
+          "ru": "Больший K_ω добавляет демпфирование; меньший K_θ смещает частоту среза вниз, где запаздывания меньше.",
+          "th": "เพิ่มเกนอัตราเพื่อเพิ่มความหน่วง ลดเกนท่าทางเพื่อเลื่อนครอสโอเวอร์ลงไปยังช่วงที่ความล่าช้าน้อยกว่า"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The default 1.5 and 3 pass; 3 and 3 falls just short.",
+          "ru": "Штатные 1,5 и 3 проходят; 3 и 3 немного не дотягивают.",
+          "th": "ค่าเริ่มต้น 1.5 และ 3 ผ่าน ส่วน 3 และ 3 ขาดไปเล็กน้อย"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "pm",
+          "kind": "measure",
+          "measure": "loop.pmAtMaxQ",
+          "min": 30
+        },
+        {
+          "id": "gm",
+          "kind": "measure",
+          "measure": "loop.gmAtMaxQ",
+          "min": 6
+        },
+        {
+          "id": "flying",
+          "kind": "outcome",
+          "is": "survived"
+        }
+      ]
+    },
+    {
+      "id": "ctl-step",
+      "track": 4,
+      "order": 3,
+      "texts": [
+        {
+          "path": "title",
+          "en": "A step test in flight",
+          "ru": "Ступенчатое воздействие в полёте",
+          "th": "การทดสอบแบบขั้นในการบิน"
+        },
+        {
+          "path": "brief",
+          "en": "This Falcon 9's pitch–yaw autopilot is tuned for speed (K_θ 4, K_ω 1.5). Test it in flight: at about T+65 s, just past max-Q, command a 2° pitch step held for 8 s from the attitude-loop inspector's flight test, and read its overshoot — about 12 %. Retune the pitch–yaw gains so that the step overshoots by no more than 6 %, fly the test again, and type in the overshoot you measured.",
+          "ru": "Автомат стабилизации этого Falcon 9 по тангажу и рысканию настроен на быстродействие (K_θ = 4, K_ω = 1,5). Испытайте его в полёте: около T+65 с, сразу после max-Q, подайте из раздела лётных испытаний инспектора контура ступенчатую команду 2° по тангажу длительностью 8 с и определите перерегулирование — около 12 %. Перенастройте коэффициенты тангажа–рыскания так, чтобы перерегулирование было не больше 6 %, повторите испытание и введите измеренное перерегулирование.",
+          "th": "ระบบรักษาท่าทางช่องพิตช์–ยอว์ของ Falcon 9 ลำนี้ปรับไว้ให้ตอบสนองเร็ว (K_θ 4, K_ω 1.5) จงทดสอบระหว่างบิน ที่ประมาณ T+65 วินาที หลังผ่าน max-Q สั่งคำสั่งขั้นพิตช์ 2° ค้างไว้ 8 วินาที จากส่วนทดสอบการบินของตัวตรวจลูป แล้วอ่านโอเวอร์ชูต ซึ่งประมาณ 12% จงปรับเกนพิตช์–ยอว์ใหม่ให้โอเวอร์ชูตไม่เกิน 6% บินทดสอบอีกครั้ง แล้วพิมพ์ค่าโอเวอร์ชูตที่วัดได้"
+        },
+        {
+          "path": "debrief",
+          "en": "A step in flight shows what the margins predict: much attitude gain with little rate gain, little damping, an overshoot. Raising the rate gain K_ω or lowering the attitude gain K_θ damps the answer; the default 1.5 / 3 barely overshoots. The flown response also carries what the linear model leaves out — rate and gimbal limits, the air changing as the rocket climbs — which is why a flight test is flown at all.",
+          "ru": "Ступенчатое воздействие в полёте показывает то, что предсказывают запасы: большой K_θ при малом K_ω — мало демпфирования и перерегулирование. Увеличение K_ω или уменьшение K_θ демпфирует реакцию; штатные 1,5 / 3 почти не дают перерегулирования. В реальном полёте на реакцию влияет и то, чего нет в линейной модели, — ограничения скорости и отклонения сопла, изменение атмосферы по мере подъёма; именно поэтому лётные испытания и проводят.",
+          "th": "การทดสอบขั้นระหว่างบินแสดงสิ่งที่มาร์จินทำนายไว้ เกนท่าทางมากแต่เกนอัตราน้อยทำให้หน่วงน้อยและเกิดโอเวอร์ชูต การเพิ่มเกนอัตรา K_ω หรือลดเกนท่าทาง K_θ ช่วยหน่วงการตอบสนอง ค่าเริ่มต้น 1.5 / 3 แทบไม่มีโอเวอร์ชูต การตอบสนองจริงยังรวมสิ่งที่แบบจำลองเชิงเส้นไม่มี เช่น ขีดจำกัดอัตราและมุมหัวฉีด และอากาศที่เปลี่ยนไปเมื่อจรวดไต่ระดับ จึงต้องมีการทดสอบการบินจริง"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "Overshoot of a step begun within 30 s after max-Q",
+          "ru": "Перерегулирование при воздействии в течение 30 с после max-Q",
+          "th": "โอเวอร์ชูตของขั้นที่เริ่มภายใน 30 วินาทีหลัง max-Q"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "The overshoot of your step (%)",
+          "ru": "Перерегулирование вашего ступенчатого воздействия (%)",
+          "th": "โอเวอร์ชูตของการทดสอบขั้นของคุณ (%)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Attitude-loop inspector → flight test: pitch, a step of 2°, held 8 s. Press it at about T+65 s. Only a step begun after max-Q (about T+53 s) and within 30 s of it, held at least 5 s, is graded — the last such step before MECO.",
+          "ru": "Инспектор контура стабилизации → лётные испытания: тангаж, ступенька 2°, 8 с. Нажмите около T+65 с. Оценивается только воздействие, поданное после max-Q (около T+53 с) и не позже 30 с после него, длительностью не меньше 5 с, — последнее такое воздействие до MECO.",
+          "th": "ตัวตรวจลูปควบคุมท่าทาง → ทดสอบการบิน: พิตช์ ขั้น 2° ค้าง 8 วินาที กดที่ประมาณ T+65 วินาที ระบบให้คะแนนเฉพาะการทดสอบขั้นที่เริ่มหลัง max-Q (ประมาณ T+53 วินาที) ไม่เกิน 30 วินาทีหลังจากนั้น และค้างไว้อย่างน้อย 5 วินาที โดยนับครั้งสุดท้ายที่เข้าเงื่อนไขก่อน MECO"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The overshoot is the first peak above the commanded 2°, as a share of it.",
+          "ru": "Перерегулирование — превышение первым максимумом заданных 2°, в процентах от них.",
+          "th": "โอเวอร์ชูตคือยอดแรกที่เกิน 2° ที่สั่ง คิดเป็นร้อยละของ 2°"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Attitude autopilot → Pitch–yaw: more K_ω or less K_θ. The default 1.5 and 3 overshoot hardly at all.",
+          "ru": "«Автомат стабилизации» → «Тангаж–рыскание»: больше K_ω или меньше K_θ. Штатные 1,5 и 3 почти не дают перерегулирования.",
+          "th": "ระบบรักษาท่าทางอัตโนมัติ → พิตช์–ยอว์: เพิ่ม K_ω หรือลด K_θ ค่าเริ่มต้น 1.5 และ 3 แทบไม่มีโอเวอร์ชูต"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "overshoot",
+          "kind": "measure",
+          "measure": "step.overshoot",
+          "max": 6,
+          "label": {
+            "en": "Overshoot of a step begun within 30 s after max-Q",
+            "ru": "Перерегулирование при воздействии в течение 30 с после max-Q",
+            "th": "โอเวอร์ชูตของขั้นที่เริ่มภายใน 30 วินาทีหลัง max-Q"
+          }
+        },
+        {
+          "id": "flying",
+          "kind": "outcome",
+          "is": "survived"
+        },
+        {
+          "id": "overshoot-read",
+          "kind": "answer",
+          "measure": "step.overshoot",
+          "prompt": {
+            "en": "The overshoot of your step (%)",
+            "ru": "Перерегулирование вашего ступенчатого воздействия (%)",
+            "th": "โอเวอร์ชูตของการทดสอบขั้นของคุณ (%)"
+          },
+          "tol": 3,
+          "unit": "%"
+        }
+      ]
+    },
+    {
+      "id": "ctl-notch",
+      "track": 4,
+      "order": 4,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Bending and the notch filter",
+          "ru": "Упругие колебания и режекторный фильтр",
+          "th": "การโค้งงอและตัวกรองน็อตช์"
+        },
+        {
+          "path": "brief",
+          "en": "This Falcon 9 is flown as the long, flexible body it is: its first bending mode is on. Without a filter the autopilot feeds the bending back into the nozzle and the vehicle breaks up within seconds. Keep the bending on; make the autopilot flexible-aware so that the rocket flies through max-Q.",
+          "ru": "Этот Falcon 9 моделируется как длинное упругое тело: первый изгибный тон включён. Без фильтра автомат стабилизации подаёт изгибные колебания обратно на сопло, и ракета разрушается за считанные секунды. Изгиб оставьте включённым; сделайте автомат стабилизации учитывающим упругость, чтобы ракета прошла max-Q.",
+          "th": "Falcon 9 ลำนี้จำลองเป็นลำตัวยาวที่ยืดหยุ่น โหมดการดัดโค้งแรกเปิดอยู่ หากไม่มีตัวกรอง ระบบรักษาท่าทางจะป้อนการดัดโค้งกลับเข้าหัวฉีด และจรวดแตกภายในไม่กี่วินาที ให้เปิดการดัดโค้งไว้ แล้วทำให้ระบบรักษาท่าทางรองรับความยืดหยุ่นเพื่อให้จรวดบินผ่าน max-Q"
+        },
+        {
+          "path": "debrief",
+          "en": "The inertial unit sits on a bending body, so it measures the bending as well as the rigid motion. At the bending frequency the loop's gain is still above one and its phase wrong: the autopilot pumps the mode until the shell's load passes its limit. The notch removes that frequency from the feedback, and the flexible-vehicle autopilot keeps its bandwidth well below it.",
+          "ru": "Инерциальный блок стоит на изгибающемся корпусе и измеряет не только движение твёрдого тела, но и изгиб. На частоте изгибного тона коэффициент усиления контура ещё больше единицы, а фаза неблагоприятна: автомат раскачивает тон, пока нагрузка на корпус не превысит предел. Режекторный фильтр убирает эту частоту из обратной связи, а автомат для упругой ракеты держит полосу пропускания намного ниже неё.",
+          "th": "หน่วยวัดเฉื่อยติดอยู่บนลำตัวที่ดัดโค้ง จึงวัดการดัดโค้งไปพร้อมกับการเคลื่อนที่ของวัตถุแข็งเกร็ง ที่ความถี่การดัดโค้ง เกนของลูปยังมากกว่าหนึ่งและเฟสผิด ระบบจึงขยายโหมดนั้นจนภาระบนเปลือกเกินขีดจำกัด ตัวกรองน็อตช์ตัดความถี่นั้นออกจากการป้อนกลับ และระบบสำหรับจรวดยืดหยุ่นรักษาแบนด์วิดท์ให้ต่ำกว่าความถี่นั้นมาก"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "Bending modelled",
+          "ru": "Изгиб учитывается",
+          "th": "จำลองการดัดโค้ง"
+        },
+        {
+          "path": "criteria[1].label",
+          "en": "No bending breakup",
+          "ru": "Нет разрушения от изгиба",
+          "th": "ไม่แตกจากการดัดโค้ง"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Flexible vehicle: slosh and bending — the second switch.",
+          "ru": "«Упругая ракета: колебания топлива и изгиб» — второй переключатель.",
+          "th": "จรวดที่ยืดหยุ่น: การกระฉอกของเชื้อเพลิงและการดัดโค้ง — สวิตช์ที่สอง"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The telemetry shows the bending deflection and the load ratio; above 100 % the shell fails.",
+          "ru": "Телеметрия показывает прогиб и коэффициент нагрузки; выше 100 % корпус разрушается.",
+          "th": "ข้อมูลทางไกลแสดงการโก่งและอัตราส่วนภาระ เกิน 100% เปลือกจะเสียหาย"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Turn on the bending filter (notch and flexible-vehicle autopilot) and launch again.",
+          "ru": "Включите фильтр изгибных колебаний (режекторный фильтр и автомат для упругой ракеты) и запустите снова.",
+          "th": "เปิดฟิลเตอร์การดัดโค้ง (ฟิลเตอร์นอตช์และระบบสำหรับจรวดยืดหยุ่น) แล้วปล่อยใหม่"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "bending",
+          "kind": "hook",
+          "hook": "bendingOn",
+          "label": {
+            "en": "Bending modelled",
+            "ru": "Изгиб учитывается",
+            "th": "จำลองการดัดโค้ง"
+          }
+        },
+        {
+          "id": "intact",
+          "kind": "event",
+          "key": "evt.bendingFailure",
+          "present": false,
+          "label": {
+            "en": "No bending breakup",
+            "ru": "Нет разрушения от изгиба",
+            "th": "ไม่แตกจากการดัดโค้ง"
+          }
+        },
+        {
+          "id": "flying",
+          "kind": "outcome",
+          "is": "survived"
+        }
+      ]
+    },
+    {
+      "id": "adv-landing",
+      "track": 5,
+      "order": 1,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Bringing the booster home",
+          "ru": "Возвращение первой ступени",
+          "th": "นำบูสเตอร์กลับ"
+        },
+        {
+          "path": "brief",
+          "en": "Falcon 9 from Cape Canaveral to 500 km, its first stage flying back to Landing Zone 1. With 12 t on top the stage still lands, but the second stage cannot reach the target orbit: the propellant kept back for the boostback and the landing is missing from the ascent. Carry at least 9 t to the target orbit with the stage back on LZ-1. Only the payload mass may change.",
+          "ru": "Falcon 9 с мыса Канаверал на высоту 500 км, первая ступень возвращается на площадку LZ-1. С 12 т ступень садится, но вторая ступень не выходит на целевую орбиту: топлива, оставленного на разворот и посадку, не хватает на выведении. Выведите на целевую орбиту не менее 9 т так, чтобы ступень села на LZ-1. Менять можно только массу полезной нагрузки.",
+          "th": "Falcon 9 จากแหลมคะแนเวอรัลไปที่ 500 กม. โดยขั้นที่หนึ่งบินกลับลงที่ Landing Zone 1 เมื่อบรรทุก 12 ตัน ขั้นแรกยังลงจอดได้ แต่ขั้นที่สองไปไม่ถึงวงโคจรเป้าหมาย เพราะเชื้อเพลิงที่สำรองไว้สำหรับบินกลับและลงจอดหายไปจากการไต่ระดับ จงนำสัมภาระอย่างน้อย 9 ตันเข้าสู่วงโคจรเป้าหมาย โดยให้ขั้นแรกลงที่ LZ-1 ปรับได้เฉพาะมวลสัมภาระ"
+        },
+        {
+          "path": "debrief",
+          "en": "A return to the launch site costs the most: the stage must cancel its downrange speed and fly back, so it separates earlier and slower and keeps a large reserve. Here Falcon 9 lifts about 19 t to this orbit expended and about 9–11 t with the stage coming back; a drone ship downrange costs much less, which is why missions carrying heavier payloads often land the booster at sea.",
+          "ru": "Возвращение к месту старта обходится дороже всего: ступени нужно погасить скорость вдоль трассы и лететь обратно, поэтому она отделяется раньше и медленнее и оставляет большой резерв топлива. Здесь Falcon 9 без возвращения выводит на эту орбиту около 19 т, а с возвращением ступени — около 9–11 т; посадка на морскую платформу вдоль трассы обходится гораздо дешевле, поэтому в миссиях с более тяжёлой полезной нагрузкой первую ступень часто сажают в море.",
+          "th": "การบินกลับฐานปล่อยมีต้นทุนสูงที่สุด ขั้นแรกต้องหักล้างความเร็วตามแนวบินแล้วบินย้อนกลับ จึงแยกตัวก่อนและด้วยอัตราเร็วต่ำกว่า และต้องสำรองเชื้อเพลิงไว้มาก ในที่นี้ Falcon 9 แบบไม่กู้คืนส่งได้ประมาณ 19 ตัน แต่เมื่อบินกลับได้ประมาณ 9–11 ตัน การลงบนเรือโดรนกลางทะเลเสียน้อยกว่ามาก ภารกิจที่บรรทุกหนักจึงมักให้บูสเตอร์ลงจอดกลางทะเล"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "First stage on Landing Zone 1",
+          "ru": "Первая ступень на LZ-1",
+          "th": "ขั้นที่หนึ่งลงที่ Landing Zone 1"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Watch the Δv left at insertion: with 12 t it runs out before the circularising burn.",
+          "ru": "Следите за остатком Δv при выведении: с 12 т его не хватает на скругление орбиты.",
+          "th": "ดู Δv ที่เหลือตอนเข้าวงโคจร เมื่อบรรทุก 12 ตัน Δv หมดก่อนการจุดปรับวงโคจรเป็นวงกลม"
+        },
+        {
+          "path": "hints[1]",
+          "en": "Over this exercise’s payload range, the stage lands: what the payload takes is the second stage's margin.",
+          "ru": "В диапазоне нагрузок этого упражнения ступень садится: нагрузка «съедает» запас второй ступени.",
+          "th": "ในช่วงมวลสัมภาระของบทนี้ ขั้นแรกยังลงจอดได้ สิ่งที่สัมภาระกินไปคือค่าเผื่อของขั้นที่สอง"
+        },
+        {
+          "path": "hints[2]",
+          "en": "Around 9–9.5 t both work: the orbit with Δv to spare, and the stage on the pad. Watch the event log for where the stage came down.",
+          "ru": "Около 9–9,5 т получается и то и другое: орбита с запасом Δv и ступень на площадке. Где упала ступень, смотрите в журнале событий.",
+          "th": "ประมาณ 9–9.5 ตันได้ทั้งสองอย่าง คือเข้าวงโคจรโดยมี Δv เหลือ และขั้นแรกลงบนแท่น ดูบันทึกเหตุการณ์ว่าขั้นแรกตกลงที่ใด"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "landed",
+          "kind": "event",
+          "key": "evt.boosterLandedZone",
+          "present": true,
+          "label": {
+            "en": "First stage on Landing Zone 1",
+            "ru": "Первая ступень на LZ-1",
+            "th": "ขั้นที่หนึ่งลงที่ Landing Zone 1"
+          }
+        },
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "payload",
+          "kind": "measure",
+          "measure": "payload",
+          "min": 9000
+        }
+      ]
+    },
+    {
+      "id": "adv-docking",
+      "track": 5,
+      "order": 2,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Rendezvous and docking",
+          "ru": "Сближение и стыковка",
+          "th": "การนัดพบและเชื่อมต่อ"
+        },
+        {
+          "path": "brief",
+          "en": "Soyuz MS to the International Space Station, launched into the station's plane from Baikonur. It is set to fly the old two-day profile, 34 orbits. The crew should be aboard the station within 4 hours of launch: choose the profile that docks that fast, fly it to docking, and type in how long it took.",
+          "ru": "«Союз МС» к Международной космической станции, запуск с Байконура в плоскость станции. Задана старая двухсуточная схема — 34 витка. Экипаж должен оказаться на станции не позднее чем через 4 ч после старта: выберите схему, при которой стыковка происходит так быстро, выполните полёт до стыковки и введите, сколько он занял.",
+          "th": "โซยุซ MS ไปสถานีอวกาศนานาชาติ ปล่อยจากไบโคนูร์เข้าสู่ระนาบของสถานี ตั้งไว้ให้บินโปรไฟล์เก่าแบบ 2 วัน 34 รอบวงโคจร ลูกเรือควรถึงสถานีภายใน 4 ชั่วโมงหลังปล่อย จงเลือกโปรไฟล์ที่เชื่อมต่อได้เร็วขนาดนั้น บินจนเชื่อมต่อ แล้วพิมพ์ว่าใช้เวลานานเท่าใด"
+        },
+        {
+          "path": "debrief",
+          "en": "The fast profiles start phasing at once: launched when the station is about 11° ahead, Soyuz raises its orbit in burns planned on the ground from the insertion, catches up in two orbits and hands over to Kurs for the approach, fly-around and docking — about 3.4 hours. The two-day profile leaves more room for error at the cost of two days in the capsule.",
+          "ru": "Быстрые схемы начинают фазирование сразу: запуск, когда станция впереди примерно на 11°, «Союз» поднимает орбиту импульсами, рассчитанными на Земле по параметрам выведения, догоняет станцию за два витка и передаёт управление «Курсу» для сближения, облёта и стыковки — около 3,4 ч. Двухсуточная схема оставляет больший запас на ошибки ценой двух суток в корабле.",
+          "th": "โปรไฟล์แบบเร็วเริ่มปรับเฟสทันที ปล่อยเมื่อสถานีนำหน้าอยู่ประมาณ 11° โซยุซยกวงโคจรด้วยการจุดเครื่องที่วางแผนจากภาคพื้นตามค่าการเข้าวงโคจร ไล่ทันสถานีในสองรอบ แล้วส่งให้ระบบ Kurs ควบคุมการเข้าใกล้ บินอ้อม และเชื่อมต่อ ใช้เวลาราว 3.4 ชั่วโมง โปรไฟล์ 2 วันเผื่อความผิดพลาดได้มากกว่า แต่ต้องอยู่ในยานสองวัน"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "Docked to the station",
+          "ru": "Стыковка со станцией",
+          "th": "เชื่อมต่อกับสถานีแล้ว"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "Time from launch to docking (h)",
+          "ru": "Время от старта до стыковки (ч)",
+          "th": "เวลาตั้งแต่ปล่อยถึงเชื่อมต่อ (ชม.)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Mission setup → Flight to the station: the profile.",
+          "ru": "Настройка полёта → «Полёт к станции»: схема.",
+          "th": "การตั้งค่าภารกิจ → บินไปเทียบสถานีอวกาศ: โปรไฟล์"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The two-orbit profile of Soyuz MS-28 takes about 3 hours; the four-orbit one about 6.",
+          "ru": "Двухвитковая схема «Союза МС-28» занимает около 3 ч, четырёхвитковая — около 6.",
+          "th": "โปรไฟล์ 2 รอบวงโคจรของ Soyuz MS-28 ใช้เวลาราว 3 ชั่วโมง ส่วนแบบ 4 รอบราว 6 ชั่วโมง"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The event log has the docking with its time; speed up the replay once in orbit.",
+          "ru": "В журнале событий есть стыковка и её время; после выхода на орбиту ускорьте воспроизведение.",
+          "th": "บันทึกเหตุการณ์มีการเชื่อมต่อพร้อมเวลา เมื่อเข้าวงโคจรแล้วเร่งความเร็วการเล่น"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "docked",
+          "kind": "event",
+          "key": "evt.docked",
+          "present": true,
+          "label": {
+            "en": "Docked to the station",
+            "ru": "Стыковка со станцией",
+            "th": "เชื่อมต่อกับสถานีแล้ว"
+          }
+        },
+        {
+          "id": "fast",
+          "kind": "measure",
+          "measure": "dock.hours",
+          "max": 4
+        },
+        {
+          "id": "hours",
+          "kind": "answer",
+          "measure": "dock.hours",
+          "prompt": {
+            "en": "Time from launch to docking (h)",
+            "ru": "Время от старта до стыковки (ч)",
+            "th": "เวลาตั้งแต่ปล่อยถึงเชื่อมต่อ (ชม.)"
+          },
+          "tol": 0.1,
+          "unit": "h"
+        }
+      ]
+    },
+    {
+      "id": "adv-history",
+      "track": 5,
+      "order": 3,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Sputnik-1",
+          "ru": "Спутник-1",
+          "th": "สปุตนิก-1"
+        },
+        {
+          "path": "brief",
+          "en": "4 October 1957, Site 1 at Baikonur: the R-7 lightened for the job (8K71PS), four strap-ons and a core, nothing above them. Korolev meant to fly Object D, a 1.3 t laboratory, and it is set up here; but its instruments were late, and the rocket cannot put 1.3 t on the planned 215 × 939 km orbit. Fly what was flown instead, and type in the period of the orbit you reach. Only the payload mass may change.",
+          "ru": "4 октября 1957 г., площадка № 1 Байконура: Р-7, облегчённая для этой задачи (8К71ПС), — четыре боковых блока и центральный, над ними ничего. Королёв собирался запустить объект Д — научную лабораторию массой 1,3 т, она и задана; но её приборы не были готовы, а ракета не выводит 1,3 т на расчётную орбиту 215 × 939 км. Запустите то, что полетело вместо неё, и введите период полученной орбиты. Менять можно только массу полезной нагрузки.",
+          "th": "4 ตุลาคม 1957 ฐานปล่อยที่ 1 ไบโคนูร์: R-7 ที่ทำให้เบาลงสำหรับภารกิจนี้ (8K71PS) มีบูสเตอร์สี่ท่อนกับท่อนแกนกลาง ไม่มีอะไรอยู่ข้างบน โคโรเลฟตั้งใจส่งวัตถุ D ห้องปฏิบัติการหนัก 1.3 ตัน ซึ่งตั้งไว้ที่นี่ แต่เครื่องมือยังไม่พร้อม และจรวดส่ง 1.3 ตันเข้าวงโคจรตามแผน 215 × 939 กม. ไม่ได้ จงส่งสิ่งที่ถูกส่งขึ้นไปแทน แล้วพิมพ์คาบของวงโคจรที่ได้ ปรับได้เฉพาะมวลสัมภาระ"
+        },
+        {
+          "path": "debrief",
+          "en": "PS-1, the \"simplest satellite\", was built in a month: an 83.6 kg sphere with two radio transmitters. With no upper stage the R-7's core itself went into orbit, 7.5 t of it, and was seen from the ground more easily than the satellite. The period was 96.2 minutes; air drag at the 215 km perigee brought PS-1 down after 92 days. Object D flew in May 1958 as Sputnik-3, on an uprated rocket.",
+          "ru": "ПС-1, «простейший спутник», сделали за месяц: шар массой 83,6 кг с двумя радиопередатчиками. Верхней ступени не было, и на орбиту вышел сам центральный блок Р-7 массой 7,5 т — с Земли его было видно лучше, чем спутник. Период обращения составил 96,2 мин; сопротивление воздуха в перигее 215 км свело ПС-1 с орбиты через 92 сут. Объект Д полетел в мае 1958 г. как третий спутник, на доработанной ракете.",
+          "th": "PS-1 \"ดาวเทียมที่ง่ายที่สุด\" สร้างเสร็จในหนึ่งเดือน เป็นทรงกลมหนัก 83.6 กก. มีเครื่องส่งวิทยุสองเครื่อง เมื่อไม่มีขั้นบน ท่อนแกนกลางของ R-7 หนัก 7.5 ตันจึงเข้าวงโคจรไปด้วย และมองเห็นจากพื้นโลกได้ง่ายกว่าดาวเทียมเสียอีก คาบวงโคจรคือ 96.2 นาที แรงต้านอากาศที่จุดใกล้โลก 215 กม. ทำให้ PS-1 ตกกลับใน 92 วัน วัตถุ D ขึ้นบินในเดือนพฤษภาคม 1958 ในชื่อสปุตนิก-3 บนจรวดรุ่นปรับปรุง"
+        },
+        {
+          "path": "criteria[1].label",
+          "en": "Sputnik-1 payload: 83.6 kg (±0.1 kg)",
+          "ru": "Масса «Спутника-1»: 83,6 кг (±0,1 кг)",
+          "th": "มวลสปุตนิก-1: 83.6 กก. (±0.1 กก.)"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "Orbital period (min)",
+          "ru": "Период обращения (мин)",
+          "th": "คาบวงโคจร (นาที)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Object D became Sputnik-3. The satellite that flew first was far smaller: look at the payload list for its mass.",
+          "ru": "Объект Д стал третьим спутником. Первый был гораздо меньше: его массу найдите в списке полезных нагрузок.",
+          "th": "วัตถุ D กลายเป็นสปุตนิก-3 ดวงแรกที่ขึ้นไปเล็กกว่ามาก ดูมวลของมันในรายการสัมภาระ"
+        },
+        {
+          "path": "hints[1]",
+          "en": "With 1.3 t the core runs dry short of orbital speed: there is no upper stage above the core and strap-ons, so every kilogram on top comes off the orbit.",
+          "ru": "С 1,3 т центральный блок вырабатывает топливо, не набрав орбитальной скорости: над центральным и боковыми блоками нет верхней ступени, и каждый килограмм нагрузки отнимается у орбиты.",
+          "th": "เมื่อบรรทุก 1.3 ตัน ท่อนแกนกลางหมดเชื้อเพลิงก่อนถึงความเร็ววงโคจร ไม่มีท่อนบนเหนือท่อนแกนกลางและบูสเตอร์ สัมภาระทุกกิโลกรัมจึงหักออกจากวงโคจรโดยตรง"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The period is on the orbit panel once in orbit, or T = 2π√(a³/μ) with a = R⊕ + (perigee + apogee)/2.",
+          "ru": "Период показан на панели орбиты после выхода на неё, или T = 2π√(a³/μ), где a = R⊕ + (перигей + апогей)/2.",
+          "th": "คาบแสดงอยู่ในแผงวงโคจรเมื่อเข้าวงโคจรแล้ว หรือคำนวณจาก T = 2π√(a³/μ) โดย a = R⊕ + (จุดใกล้โลก + จุดไกลโลก)/2"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "payload",
+          "kind": "measure",
+          "measure": "payload",
+          "min": 83.5,
+          "max": 83.7,
+          "label": {
+            "en": "Sputnik-1 payload: 83.6 kg (±0.1 kg)",
+            "ru": "Масса «Спутника-1»: 83,6 кг (±0,1 кг)",
+            "th": "มวลสปุตนิก-1: 83.6 กก. (±0.1 กก.)"
+          }
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Orbital period (min)",
+            "ru": "Период обращения (мин)",
+            "th": "คาบวงโคจร (นาที)"
+          },
+          "tol": 0.2,
+          "unit": "min"
+        }
+      ]
+    },
+    {
+      "id": "adv-vostok",
+      "track": 5,
+      "order": 4,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Vostok-1",
+          "ru": "«Восток-1»",
+          "th": "วอสตอค-1"
+        },
+        {
+          "path": "brief",
+          "en": "12 April 1961, Site 1: Vostok-K with Blok E puts Yuri Gagarin's Vostok on orbit directly. The orbit was planned at 181 × 230 km, low enough that air drag would bring the ship down within the week its life support lasted if the retro-rocket failed. The radio command to shut down Blok E did not come, and the stage burned on to its backup cut-off. Fly the orbit Gagarin really reached, 181 × 327 km, and type in its period. Only the orbit may change.",
+          "ru": "12 апреля 1961 г., площадка № 1: «Восток» с блоком Е выводит корабль Юрия Гагарина прямо на орбиту. Расчётная орбита — 181 × 230 км: достаточно низкая, чтобы при отказе тормозной установки атмосфера свела корабль с орбиты за неделю, на которую хватало систем жизнеобеспечения. Радиокоманда на выключение блока Е не прошла, и он работал до резервной отсечки. Выведите корабль на орбиту, на которую вышел Гагарин, — 181 × 327 км, и введите её период. Менять можно только орбиту.",
+          "th": "12 เมษายน 1961 ฐานปล่อยที่ 1: จรวดวอสตอค-K กับบล็อก E ส่งยานวอสตอคของยูรี กาการินเข้าวงโคจรโดยตรง วงโคจรตามแผนคือ 181 × 230 กม. ต่ำพอที่หากจรวดชะลอความเร็วขัดข้อง แรงต้านอากาศจะดึงยานกลับภายในหนึ่งสัปดาห์ที่ระบบช่วยชีวิตรองรับได้ แต่คำสั่งวิทยุให้ดับเครื่องบล็อก E ไม่มาถึง บล็อก E จึงจุดต่อไปจนถึงการตัดสำรอง จงบินเข้าวงโคจรที่กาการินขึ้นไปจริง 181 × 327 กม. แล้วพิมพ์คาบของวงโคจรนั้น ปรับได้เฉพาะวงโคจร"
+        },
+        {
+          "path": "debrief",
+          "en": "The higher apogee made the orbit longer-lived: had the retro-rocket failed, drag would have taken weeks rather than days, longer than Vostok could keep Gagarin alive. The TDU-1 fired on time, 78 minutes after launch, and the flight lasted 108 minutes. Blok E's 54.5 kN is less than a tenth of Blok A's: it adds the last 1.6 km/s over four minutes, which is why its cut-off time decides the apogee.",
+          "ru": "Более высокий апогей продлил жизнь орбиты: при отказе ТДУ торможение в атмосфере заняло бы не дни, а недели — дольше, чем «Восток» мог поддерживать жизнь Гагарина. ТДУ-1 сработала вовремя, через 78 мин после старта, полёт длился 108 мин. Тяга блока Е, 54,5 кН, меньше десятой доли тяги блока А: он добавляет последние 1,6 км/с за четыре минуты, поэтому момент его отсечки и определяет апогей.",
+          "th": "จุดไกลโลกที่สูงขึ้นทำให้วงโคจรคงอยู่นานขึ้น หากจรวดชะลอความเร็วขัดข้อง แรงต้านจะใช้เวลาหลายสัปดาห์แทนที่จะเป็นไม่กี่วัน นานกว่าที่วอสตอคจะเลี้ยงชีวิตกาการินได้ TDU-1 จุดตรงเวลาที่ 78 นาทีหลังปล่อย และการบินใช้เวลา 108 นาที แรงขับ 54.5 kN ของบล็อก E น้อยกว่าหนึ่งในสิบของบล็อก A มันเพิ่มความเร็ว 1.6 กม./วินาทีสุดท้ายในเวลาสี่นาที เวลาที่มันดับเครื่องจึงเป็นตัวกำหนดจุดไกลโลก"
+        },
+        {
+          "path": "criteria[1].label",
+          "en": "Apogee near 327 km",
+          "ru": "Апогей около 327 км",
+          "th": "จุดไกลโลกราว 327 กม."
+        },
+        {
+          "path": "criteria[2].label",
+          "en": "Inclination 64.95° (±0.1°)",
+          "ru": "Наклонение 64,95° (±0,1°)",
+          "th": "ความเอียงวงโคจร 64.95° (±0.1°)"
+        },
+        {
+          "path": "criteria[3].label",
+          "en": "Perigee near 181 km",
+          "ru": "Перигей около 181 км",
+          "th": "จุดใกล้โลกราว 181 กม."
+        },
+        {
+          "path": "criteria[4].prompt",
+          "en": "Orbital period (min)",
+          "ru": "Период обращения (мин)",
+          "th": "คาบวงโคจร (นาที)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Mission setup → Target orbit: the custom orbit's apogee.",
+          "ru": "Настройка полёта → «Целевая орбита»: апогей пользовательской орбиты.",
+          "th": "การตั้งค่าภารกิจ → วงโคจรเป้าหมาย: จุดไกลโลกของวงโคจรกำหนดเอง"
+        },
+        {
+          "path": "hints[1]",
+          "en": "Keep the perigee and the inclination: only the cut-off came late, not the steering.",
+          "ru": "Перигей и наклонение не меняйте: запоздала только отсечка, а не управление.",
+          "th": "คงจุดใกล้โลกและความเอียงไว้ มีเพียงการดับเครื่องที่ช้าไป ไม่ใช่การบังคับทิศทาง"
+        },
+        {
+          "path": "hints[2]",
+          "en": "T = 2π√(a³/μ), a = R⊕ + (perigee + apogee)/2: about 89 minutes.",
+          "ru": "T = 2π√(a³/μ), a = R⊕ + (перигей + апогей)/2 — около 89 мин.",
+          "th": "T = 2π√(a³/μ) โดย a = R⊕ + (จุดใกล้โลก + จุดไกลโลก)/2 ได้ราว 89 นาที"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "orbit",
+          "kind": "outcome",
+          "is": "target"
+        },
+        {
+          "id": "apogee",
+          "kind": "measure",
+          "measure": "orbit.apogee",
+          "min": 315,
+          "max": 340,
+          "label": {
+            "en": "Apogee near 327 km",
+            "ru": "Апогей около 327 км",
+            "th": "จุดไกลโลกราว 327 กม."
+          }
+        },
+        {
+          "id": "inclination",
+          "kind": "measure",
+          "measure": "orbit.inclination",
+          "min": 64.85,
+          "max": 65.05,
+          "label": {
+            "en": "Inclination 64.95° (±0.1°)",
+            "ru": "Наклонение 64,95° (±0,1°)",
+            "th": "ความเอียงวงโคจร 64.95° (±0.1°)"
+          }
+        },
+        {
+          "id": "perigee",
+          "kind": "measure",
+          "measure": "orbit.perigee",
+          "min": 170,
+          "max": 195,
+          "label": {
+            "en": "Perigee near 181 km",
+            "ru": "Перигей около 181 км",
+            "th": "จุดใกล้โลกราว 181 กม."
+          }
+        },
+        {
+          "id": "period",
+          "kind": "answer",
+          "measure": "orbit.period",
+          "prompt": {
+            "en": "Orbital period (min)",
+            "ru": "Период обращения (мин)",
+            "th": "คาบวงโคจร (นาที)"
+          },
+          "tol": 0.2,
+          "unit": "min"
+        }
+      ]
+    },
+    {
+      "id": "adv-apollo",
+      "track": 5,
+      "order": 5,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Apollo 11: the way to the Moon",
+          "ru": "«Аполлон-11»: путь к Луне",
+          "th": "อะพอลโล 11: เส้นทางสู่ดวงจันทร์"
+        },
+        {
+          "path": "brief",
+          "en": "16 July 1969, LC-39A: Saturn V with Apollo 11 on top, 2 938 t. As set up, the S-IVB stops in the 186 km parking orbit with most of its 109 t of propellant still aboard. On the real flight it relit over the Pacific, 2 h 44 min after launch, for the translunar injection. Raise the apogee to the Moon's distance, 370 000 km, so that the S-IVB relights, and type in the Δv of that burn. The Moon itself is not modelled here: the burn is the one the flight made, the Moon's pull after it is not. Only the orbit may change.",
+          "ru": "16 июля 1969 г., стартовый комплекс 39A: «Сатурн V» с «Аполлоном-11», 2938 т. В заданном виде S-IVB останавливается на опорной орбите 186 км, сохранив бо́льшую часть своих 109 т топлива. В настоящем полёте она включилась повторно над Тихим океаном, через 2 ч 44 мин после старта, для перехода к Луне. Поднимите апогей до расстояния до Луны, 370 000 км, чтобы S-IVB включилась снова, и введите Δv этого импульса. Сама Луна здесь не моделируется: импульс — тот, что был в полёте, а её притяжение после него — нет. Менять можно только орбиту.",
+          "th": "16 กรกฎาคม 1969 ฐานปล่อย LC-39A: แซตเทิร์น V กับอะพอลโล 11 หนัก 2,938 ตัน ตามที่ตั้งไว้ S-IVB หยุดในวงโคจรจอด 186 กม. โดยยังมีเชื้อเพลิงส่วนใหญ่จาก 109 ตันเหลืออยู่ ในการบินจริง มันจุดเครื่องอีกครั้งเหนือมหาสมุทรแปซิฟิกที่ 2 ชม. 44 นาทีหลังปล่อย เพื่อเข้าสู่เส้นทางไปดวงจันทร์ (TLI) จงยกจุดไกลโลกขึ้นถึงระยะของดวงจันทร์ 370,000 กม. เพื่อให้ S-IVB จุดเครื่องอีกครั้ง แล้วพิมพ์ Δv ของการจุดนั้น ในที่นี้ไม่มีดวงจันทร์ในแบบจำลอง การจุดเครื่องเป็นแบบเดียวกับในเที่ยวบินจริง แต่แรงดึงดูดของดวงจันทร์หลังจากนั้นไม่มี ปรับได้เฉพาะวงโคจร"
+        },
+        {
+          "path": "debrief",
+          "en": "A burn of about 3.1 km/s at perigee turns a 186 km circle into an ellipse reaching the Moon: the speed goes from 7.8 to nearly 10.9 km/s, just short of escape (11.0 km/s there). Three days later the Moon's gravity, not modelled here, took over. Because the S-IVB could restart, the same stage made both the orbit and the injection; a single-shot stack such as the R-7 of the first two lessons cannot.",
+          "ru": "Импульс около 3,1 км/с в перигее превращает круговую орбиту 186 км в эллипс, достигающий Луны: скорость растёт с 7,8 почти до 10,9 км/с, чуть меньше второй космической (там 11,0 км/с). Через трое суток в дело вступало притяжение Луны, которое здесь не моделируется. Поскольку S-IVB могла включаться повторно, одна и та же ступень выполнила и выведение, и разгон к Луне; одноразовая связка, как Р-7 из двух предыдущих уроков, так не может.",
+          "th": "การจุดเครื่องราว 3.1 กม./วินาทีที่จุดใกล้โลกเปลี่ยนวงกลม 186 กม. เป็นวงรีที่ไปถึงดวงจันทร์ ความเร็วเพิ่มจาก 7.8 เป็นเกือบ 10.9 กม./วินาที น้อยกว่าความเร็วหลุดพ้นเพียงเล็กน้อย (11.0 กม./วินาทีที่ระดับนั้น) สามวันต่อมาแรงโน้มถ่วงของดวงจันทร์ซึ่งไม่มีในแบบจำลองนี้จึงเข้ามามีบทบาท เพราะ S-IVB จุดเครื่องซ้ำได้ ขั้นเดียวกันจึงทำได้ทั้งการเข้าวงโคจรและการส่งไปดวงจันทร์ จรวดที่จุดได้ครั้งเดียวอย่าง R-7 ในสองบทก่อนทำเช่นนี้ไม่ได้"
+        },
+        {
+          "path": "criteria[0].label",
+          "en": "Apogee near 370 000 km (±10 000 km)",
+          "ru": "Апогей около 370 000 км (±10 000 км)",
+          "th": "จุดไกลโลกราว 370,000 กม. (±10,000 กม.)"
+        },
+        {
+          "path": "criteria[1].label",
+          "en": "Perigee still low, near the parking orbit",
+          "ru": "Перигей остаётся низким, у опорной орбиты",
+          "th": "จุดใกล้โลกยังต่ำ ใกล้วงโคจรจอด"
+        },
+        {
+          "path": "criteria[2].prompt",
+          "en": "Δv of the translunar injection (m/s)",
+          "ru": "Δv разгона к Луне (м/с)",
+          "th": "Δv ของการส่งไปดวงจันทร์ (ม./วินาที)"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Mission setup → Target orbit: set the custom orbit's apogee to 370 000 km and keep the perigee at 186 km.",
+          "ru": "Настройка полёта → «Целевая орбита»: апогей пользовательской орбиты 370 000 км, перигей оставьте 186 км.",
+          "th": "การตั้งค่าภารกิจ → วงโคจรเป้าหมาย: ตั้งจุดไกลโลกของวงโคจรกำหนดเองเป็น 370,000 กม. และคงจุดใกล้โลกไว้ที่ 186 กม."
+        },
+        {
+          "path": "hints[1]",
+          "en": "The event log announces each planned burn with its Δv: the injection is the one that raises the apoapsis. A small trim may be planned after it; it is not part of the answer.",
+          "ru": "Журнал событий сообщает о каждом запланированном импульсе и его Δv: разгон к Луне — импульс подъёма апоцентра. После него может быть запланирована небольшая коррекция; в ответ она не входит.",
+          "th": "บันทึกเหตุการณ์แจ้งการจุดเครื่องที่วางแผนไว้แต่ละครั้งพร้อม Δv การส่งไปดวงจันทร์คือการจุดที่ยกจุดไกลโลก หลังจากนั้นอาจมีการปรับแก้เล็กน้อย ซึ่งไม่นับรวมในคำตอบ"
+        },
+        {
+          "path": "hints[2]",
+          "en": "vis-viva: v² = μ(2/r − 1/a). At r = R⊕ + 186 km, compare a = r with a = (r + R⊕ + 370 000 km)/2.",
+          "ru": "Формула vis-viva: v² = μ(2/r − 1/a). При r = R⊕ + 186 км сравните a = r и a = (r + R⊕ + 370 000 км)/2.",
+          "th": "สมการ vis-viva: v² = μ(2/r − 1/a) ที่ r = R⊕ + 186 กม. เปรียบเทียบ a = r กับ a = (r + R⊕ + 370,000 กม.)/2"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "tli",
+          "kind": "measure",
+          "measure": "orbit.apogee",
+          "min": 360000,
+          "max": 380000,
+          "label": {
+            "en": "Apogee near 370 000 km (±10 000 km)",
+            "ru": "Апогей около 370 000 км (±10 000 км)",
+            "th": "จุดไกลโลกราว 370,000 กม. (±10,000 กม.)"
+          }
+        },
+        {
+          "id": "perigee",
+          "kind": "measure",
+          "measure": "orbit.perigee",
+          "min": 150,
+          "max": 260,
+          "label": {
+            "en": "Perigee still low, near the parking orbit",
+            "ru": "Перигей остаётся низким, у опорной орбиты",
+            "th": "จุดใกล้โลกยังต่ำ ใกล้วงโคจรจอด"
+          }
+        },
+        {
+          "id": "dv",
+          "kind": "answer",
+          "measure": "burnDv.raise",
+          "prompt": {
+            "en": "Δv of the translunar injection (m/s)",
+            "ru": "Δv разгона к Луне (м/с)",
+            "th": "Δv ของการส่งไปดวงจันทร์ (ม./วินาที)"
+          },
+          "tolPct": 3,
+          "unit": "m/s"
+        }
+      ]
+    },
+    {
+      "id": "case-theos2",
+      "track": 6,
+      "order": 1,
+      "texts": [
+        {
+          "path": "title",
+          "en": "THEOS-2 over Bangkok",
+          "ru": "THEOS-2 над Бангкоком",
+          "th": "THEOS-2 เหนือกรุงเทพฯ"
+        },
+        {
+          "path": "brief",
+          "en": "THEOS-2, Thailand's Earth-observation satellite, flies a sun-synchronous orbit. Real satellites opens on it, with its overflights of Bangkok. From its element set (the data below, frozen when the lesson opened) work out how fast its orbit's plane must turn and how fast the Earth's bulge (J₂) turns it, its mean height, how far from its track it can see tilted 45°, and the local time it passes over Bangkok; then say why a camera satellite flies such an orbit.",
+          "ru": "THEOS-2, таиландский спутник наблюдения Земли, летает по солнечно-синхронной орбите. Раздел «Реальные спутники» открывается на нём, с его пролётами над Бангкоком. По его набору элементов (данные ниже, зафиксированные при открытии урока) рассчитайте, с какой скоростью должна поворачиваться плоскость его орбиты и с какой скоростью её поворачивает сжатие Земли (J₂), его среднюю высоту, насколько далеко от трассы он видит при наклоне 45° и местное время пролёта над Бангкоком; затем объясните, зачем спутнику со съёмочной камерой такая орбита.",
+          "th": "THEOS-2 ดาวเทียมสำรวจโลกของไทย โคจรในวงโคจรสัมพันธ์กับดวงอาทิตย์ ส่วนดาวเทียมจริงจะเปิดที่ดาวเทียมดวงนี้พร้อมการผ่านเหนือกรุงเทพฯ จากชุดข้อมูลวงโคจรของมัน (ข้อมูลด้านล่าง ซึ่งถูกตรึงไว้ตอนเปิดบทเรียน) ให้คำนวณว่าระนาบวงโคจรต้องหมุนเร็วเท่าใด และความป่องของโลก (J₂) หมุนระนาบนั้นเร็วเท่าใด ความสูงเฉลี่ย ระยะที่มองเห็นได้ไกลจากแนวทางโคจรเมื่อเอียง 45° และเวลาท้องถิ่นที่ผ่านเหนือกรุงเทพฯ แล้วอธิบายว่าทำไมดาวเทียมถ่ายภาพจึงใช้วงโคจรแบบนี้"
+        },
+        {
+          "path": "debrief",
+          "en": "J₂ turns THEOS-2's plane by almost exactly the Sun's 0.9856° a day, so its descending equator crossing occurs at approximately the same local mean solar time each orbit, in the middle of the morning — the published 10:00–10:30. Each place is pictured under much the same sunlight, so pictures taken months apart can be compared. The Earth's bulge does the work, with no fuel.",
+          "ru": "J₂ поворачивает плоскость THEOS-2 почти ровно на 0,9856° в сутки, как движется Солнце, поэтому нисходящее пересечение экватора происходит примерно в одно и то же местное среднее солнечное время на каждом витке, в середине утра — опубликованные 10:00–10:30. Каждое место снимается при почти одинаковом освещении, и снимки, сделанные с разницей в месяцы, можно сравнивать. Работу делает сжатие Земли, без топлива.",
+          "th": "J₂ หมุนระนาบของ THEOS-2 เกือบเท่ากับ 0.9856° ต่อวันพอดีตามดวงอาทิตย์ ดาวเทียมจึงผ่านเส้นศูนย์สูตรที่โหนดลงในเวลาสุริยะเฉลี่ยท้องถิ่นใกล้เคียงเดิมทุกรอบ ช่วงสาย ตรงกับค่าที่เผยแพร่ 10:00–10:30 แต่ละที่จึงถูกถ่ายภาพภายใต้แสงแดดใกล้เคียงกัน และเปรียบเทียบภาพที่ถ่ายห่างกันหลายเดือนได้ ความป่องของโลกทำงานนี้ให้โดยไม่ใช้เชื้อเพลิง"
+        },
+        {
+          "path": "hints[0]",
+          "en": "The plane must keep up with the Sun: one full turn in a year of 365.2422 days. The turn J₂ gives depends on the orbit's size, shape and tilt: a, e and i in the data.",
+          "ru": "Плоскость должна успевать за Солнцем: один полный оборот за год из 365,2422 сут. Поворот, который даёт J₂, зависит от размера, формы и наклона орбиты: a, e и i в данных.",
+          "th": "ระนาบต้องหมุนตามดวงอาทิตย์ให้ทัน คือหมุนครบหนึ่งรอบในหนึ่งปี 365.2422 วัน ส่วนการหมุนที่ได้จาก J₂ ขึ้นกับขนาด รูปร่าง และความเอียงของวงโคจร คือ a, e และ i ในข้อมูล"
+        },
+        {
+          "path": "hints[1]",
+          "en": "dΩ/dt = −(3/2) J₂ (R/p)² n cos i, with p = a(1 − e²) and n = √(μ/a³) in radians per second: turn it into degrees per day. The height is a − R, R the equatorial radius.",
+          "ru": "dΩ/dt = −(3/2) J₂ (R/p)² n cos i, где p = a(1 − e²), а n = √(μ/a³) в радианах в секунду; переведите результат в градусы в сутки. Высота равна a − R, где R — экваториальный радиус.",
+          "th": "dΩ/dt = −(3/2) J₂ (R/p)² n cos i โดย p = a(1 − e²) และ n = √(μ/a³) หน่วยเรเดียนต่อวินาที แล้วแปลงเป็นองศาต่อวัน ความสูงคือ a − R โดย R คือรัศมีที่เส้นศูนย์สูตร"
+        },
+        {
+          "path": "hints[2]",
+          "en": "In the triangle of the Earth's centre, the satellite and the point it sees, the sine rule gives the angle at that point from R_mean + h, R_mean and the 45° look; the angle at the centre is what is left of 180°, and the distance is that angle times R_mean. Local mean solar time is UTC plus the longitude ÷ 15° per hour.",
+          "ru": "В треугольнике «центр Земли — спутник — видимая точка» теорема синусов даёт угол при видимой точке по R_mean + h, R_mean и наклону 45°; угол при центре Земли — то, что остаётся до 180°, а расстояние — этот угол, умноженный на R_mean. Местное среднее солнечное время равно UTC плюс долгота ÷ 15° в час.",
+          "th": "ในสามเหลี่ยมที่มีจุดยอดเป็นศูนย์กลางโลก ดาวเทียม และจุดที่มองเห็น กฎของไซน์ให้มุมที่จุดที่มองเห็นจาก R_mean + h, R_mean และมุมเอียง 45° มุมที่ศูนย์กลางโลกคือส่วนที่เหลือจาก 180° และระยะทางคือมุมนั้นคูณ R_mean ส่วนเวลาสุริยะเฉลี่ยท้องถิ่นคือ UTC บวกลองจิจูด ÷ 15° ต่อชั่วโมง"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "required",
+          "kind": "case",
+          "item": "required"
+        },
+        {
+          "id": "j2",
+          "kind": "case",
+          "item": "j2"
+        },
+        {
+          "id": "height",
+          "kind": "case",
+          "item": "height"
+        },
+        {
+          "id": "reach",
+          "kind": "case",
+          "item": "reach"
+        },
+        {
+          "id": "lst",
+          "kind": "case",
+          "item": "lst"
+        },
+        {
+          "id": "why",
+          "kind": "case",
+          "item": "why"
+        }
+      ]
+    },
+    {
+      "id": "case-cz5b",
+      "track": 6,
+      "order": 2,
+      "texts": [
+        {
+          "path": "title",
+          "en": "The Long March 5B stage of Tianhe",
+          "ru": "Ступень «Чанчжэн-5B», выведшая «Тяньхэ»",
+          "th": "ท่อนจรวด Long March 5B ของ Tianhe"
+        },
+        {
+          "path": "brief",
+          "en": "In April 2021 the 21.6-tonne core stage that launched Tianhe was left in orbit, and it came down uncontrolled on 9 May, ten days later. Real satellites opens at the re-entry tool. From the stage's size and mass, its first element set and this app's prediction (the data below, with the Sun's activity frozen when the lesson opened) work out its cross-section tumbling and its ballistic coefficient, the agencies' ±20 % window, how long it actually stayed up, the prediction's error, and how long it would have lasted broadside; then say why a window is given.",
+          "ru": "В апреле 2021 года центральная ступень массой 21,6 т, выведшая «Тяньхэ», осталась на орбите и неуправляемо сошла с неё 9 мая, через десять дней. Раздел «Реальные спутники» открывается на инструменте прогноза схода. По размерам и массе ступени, её первому набору элементов и прогнозу приложения (данные ниже; активность Солнца зафиксирована при открытии урока) рассчитайте среднюю площадь сечения кувыркающейся ступени и её баллистический коэффициент, окно ±20 %, как у служб прогноза, сколько она на самом деле пробыла на орбите, ошибку прогноза и сколько бы она продержалась, летя боком; затем объясните, почему дают окно.",
+          "th": "เดือนเมษายน 2021 ท่อนจรวดหลักหนัก 21.6 ตันที่ส่งโมดูล Tianhe ถูกทิ้งไว้ในวงโคจร และตกลงมาโดยไม่มีการควบคุมเมื่อ 9 พฤษภาคม สิบวันต่อมา ส่วนดาวเทียมจริงจะเปิดที่เครื่องมือทำนายการตก จากขนาดและมวลของท่อนจรวด ชุดข้อมูลวงโคจรชุดแรก และการทำนายของแอปนี้ (ข้อมูลด้านล่าง โดยกิจกรรมของดวงอาทิตย์ถูกตรึงไว้ตอนเปิดบทเรียน) ให้คำนวณพื้นที่หน้าตัดเฉลี่ยขณะหมุนคว้างและค่าสัมประสิทธิ์ขีปนวิถี ช่วงเวลา ±20 % ที่หน่วยงานติดตามวัตถุอวกาศใช้ เวลาที่อยู่ในวงโคจรจริง ความคลาดเคลื่อนของการทำนาย และเวลาที่จะอยู่ได้ถ้าหันด้านข้างตลอด แล้วอธิบายว่าทำไมจึงบอกเป็นช่วงเวลา"
+        },
+        {
+          "path": "debrief",
+          "en": "Check whether the actual re-entry falls inside the ±20 % window calculated from your frozen prediction. Even ±20 % of a nine-day prediction is nearly two days, some thirty orbits, and the stage could fall anywhere under them. The drag depends on the upper air, which the Sun heats and swells, and on how the stage tumbles; neither is known exactly in advance. Now run the case study in the re-entry tool: it predicts all four Long March 5B stages the same way.",
+          "ru": "Проверьте, попадает ли фактический момент схода в окно ±20 %, рассчитанное по вашему зафиксированному прогнозу. Даже ±20 % от прогноза на девять суток — это почти двое суток, около тридцати витков, и ступень могла упасть где угодно под ними. Сопротивление зависит от верхней атмосферы, которую нагревает и раздувает Солнце, и от того, как кувыркается ступень; ни то, ни другое заранее точно не известно. Теперь запустите разбор случая в инструменте прогноза схода: он так же прогнозирует все четыре ступени «Чанчжэн-5B».",
+          "th": "ตรวจว่าเวลาที่ตกจริงอยู่ในช่วง ±20 % ที่คำนวณจากค่าพยากรณ์ซึ่งตรึงไว้ของคุณหรือไม่ แม้เพียง ±20 % ของเวลาพยากรณ์เก้าวันก็เท่ากับเกือบสองวัน ราวสามสิบรอบวงโคจร และท่อนจรวดอาจตกที่ใดก็ได้ใต้แนวโคจรเหล่านั้น แรงต้านขึ้นกับบรรยากาศชั้นบนที่ดวงอาทิตย์ทำให้ร้อนและขยายตัว และขึ้นกับการหมุนคว้างของท่อนจรวด ซึ่งรู้ล่วงหน้าได้ไม่แน่นอนทั้งคู่ ตอนนี้ลองเปิดกรณีศึกษาในเครื่องมือทำนายการตก ซึ่งทำนายท่อนจรวด Long March 5B ทั้งสี่ท่อนด้วยวิธีเดียวกัน"
+        },
+        {
+          "path": "hints[0]",
+          "en": "For a convex body sampling all orientations uniformly, the mean projected area is a quarter of its surface (Cauchy): the cylinder's side πDL and its two ends, 2 · πD²/4. Then C_D·A/m, with C_D 2.2 and the mass in the data.",
+          "ru": "Для выпуклого тела при равномерном распределении всех ориентаций средняя площадь проекции равна четверти площади поверхности (Коши): боковую поверхность цилиндра πDL и два торца 2 · πD²/4. Затем C_x·A/m, где C_x = 2,2, а масса — из данных.",
+          "th": "สำหรับวัตถุนูนที่มีแนววางตัวกระจายสม่ำเสมอทุกทิศ พื้นที่ฉายเฉลี่ยเท่ากับหนึ่งในสี่ของพื้นที่ผิวทั้งหมด (โคชี) คือด้านข้างของทรงกระบอก πDL และปลายทั้งสอง 2 · πD²/4 จากนั้นหา C_D·A/m โดยใช้ C_D 2.2 และมวลในข้อมูล"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The window is 0.8 and 1.2 times the time predicted to be left. The time actually left is the re-entry's date and time less the set's epoch, in days: count the hours too.",
+          "ru": "Окно — это 0,8 и 1,2 от прогнозируемого оставшегося времени. Фактически оставшееся время — момент схода минус эпоха набора, в сутках: учитывайте и часы.",
+          "th": "ช่วงเวลาคือ 0.8 และ 1.2 เท่าของเวลาที่ทำนายว่าเหลือ เวลาที่เหลือจริงคือวันเวลาที่ตกลบด้วยเวลาของชุดข้อมูล หน่วยเป็นวัน อย่าลืมนับชั่วโมงด้วย"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The error is (predicted − actual) ÷ actual, as a percentage: negative means early. To first order the time left goes as 1/(C_D·A/m), so a larger area broadside shortens the stay in proportion.",
+          "ru": "Ошибка — (прогноз − факт) ÷ факт, в процентах: отрицательная означает раньше срока. В первом приближении оставшееся время обратно пропорционально C_x·A/m, поэтому бо́льшая площадь при полёте боком пропорционально сокращает срок.",
+          "th": "ความคลาดเคลื่อนคือ (ค่าทำนาย − ค่าจริง) ÷ ค่าจริง เป็นร้อยละ ค่าติดลบหมายถึงเร็วกว่าจริง ในอันดับแรกเวลาที่เหลือแปรผกผันกับ C_D·A/m พื้นที่ที่มากขึ้นเมื่อหันด้านข้างจึงทำให้อยู่ได้สั้นลงตามสัดส่วน"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "area",
+          "kind": "case",
+          "item": "area"
+        },
+        {
+          "id": "b",
+          "kind": "case",
+          "item": "b"
+        },
+        {
+          "id": "early",
+          "kind": "case",
+          "item": "early"
+        },
+        {
+          "id": "late",
+          "kind": "case",
+          "item": "late"
+        },
+        {
+          "id": "actual",
+          "kind": "case",
+          "item": "actual"
+        },
+        {
+          "id": "error",
+          "kind": "case",
+          "item": "error"
+        },
+        {
+          "id": "broadside",
+          "kind": "case",
+          "item": "broadside"
+        },
+        {
+          "id": "why",
+          "kind": "case",
+          "item": "why"
+        }
+      ]
+    },
+    {
+      "id": "case-iridium",
+      "track": 6,
+      "order": 3,
+      "texts": [
+        {
+          "path": "title",
+          "en": "Iridium 33 and Cosmos 2251",
+          "ru": "Iridium 33 и «Космос-2251»",
+          "th": "Iridium 33 กับ Cosmos 2251"
+        },
+        {
+          "path": "brief",
+          "en": "On 10 February 2009 Iridium 33 and the dead Cosmos 2251 collided over Siberia, the first collision of two whole satellites. The conjunction message issued the day before gave a probability of about 10⁻⁵¹. Real satellites opens at the close-approach tool. From the message's positions, velocities and uncertainties (the data below) work out the miss distance, the speed and angle at which they met, their combined radius, the uncertainty along the miss and how many standard deviations the miss was, and the probability with a cautious uncertainty against the usual threshold; then say why 10⁻⁵¹ was wrong.",
+          "ru": "10 февраля 2009 года Iridium 33 и неработающий «Космос-2251» столкнулись над Сибирью — первое столкновение двух целых спутников. Сообщение о сближении, выпущенное накануне, давало вероятность около 10⁻⁵¹. Раздел «Реальные спутники» открывается на инструменте «Тесные сближения». По положениям, скоростям и неопределённостям из сообщения (данные ниже) рассчитайте промах, скорость и угол встречи, суммарный радиус, неопределённость вдоль промаха и сколько стандартных отклонений составил промах, а также вероятность при осторожной оценке неопределённости относительно обычного порога; затем объясните, почему 10⁻⁵¹ оказалось неверным.",
+          "th": "เมื่อ 10 กุมภาพันธ์ 2009 Iridium 33 ชนกับ Cosmos 2251 ที่ปลดระวางแล้วเหนือไซบีเรีย เป็นการชนกันครั้งแรกของดาวเทียมทั้งดวงสองดวง ข้อความแจ้งการเข้าใกล้ที่ออกเมื่อวันก่อนให้ความน่าจะเป็นราว 10⁻⁵¹ ส่วนดาวเทียมจริงจะเปิดที่เครื่องมือ «การเข้าใกล้กันของวัตถุในวงโคจร» จากตำแหน่ง ความเร็ว และความไม่แน่นอนในข้อความ (ข้อมูลด้านล่าง) ให้คำนวณระยะพลาด ความเร็วและมุมที่ทั้งสองพบกัน รัศมีรวม ความไม่แน่นอนตามแนวระยะพลาด และระยะพลาดคิดเป็นกี่เท่าของส่วนเบี่ยงเบนมาตรฐาน รวมถึงความน่าจะเป็นเมื่อใช้ความไม่แน่นอนแบบระมัดระวังเทียบกับเกณฑ์ที่ใช้กันทั่วไป แล้วอธิบายว่าทำไม 10⁻⁵¹ จึงผิด"
+        },
+        {
+          "path": "debrief",
+          "en": "The message's uncertainties made a miss that small look safe beyond doubt; the real errors of the orbits were far larger, and with a cautious uncertainty the probability was well above the threshold at which operators move a satellite. The collision left clouds of debris along both orbits. Conjunction messages provide covariances, but their realism still needs checking; a probability must be read together with the uncertainty behind it — as the close-approach tool shows.",
+          "ru": "Неопределённости в сообщении делали такой малый промах заведомо безопасным; настоящие ошибки орбит были гораздо больше, и при осторожной оценке неопределённости вероятность намного превышала порог, при котором операторы уводят спутник. Столкновение оставило облака обломков вдоль обеих орбит. Сообщения о сближениях содержат ковариации, но их реалистичность необходимо проверять; вероятность нужно рассматривать вместе с неопределённостью, на которой она основана, — как показывает инструмент «Тесные сближения».",
+          "th": "ความไม่แน่นอนในข้อความทำให้ระยะพลาดที่น้อยขนาดนั้นดูปลอดภัยโดยไม่ต้องสงสัย แต่ความคลาดเคลื่อนจริงของวงโคจรมีมากกว่านั้นมาก และเมื่อใช้ความไม่แน่นอนแบบระมัดระวัง ความน่าจะเป็นสูงเกินเกณฑ์ที่ผู้ควบคุมใช้ตัดสินใจหลบไปมาก การชนครั้งนั้นทิ้งกลุ่มเศษซากไว้ตามวงโคจรของทั้งสองดวง ข้อความแจ้งการเข้าใกล้มีเมทริกซ์ความแปรปรวนร่วม แต่ยังต้องตรวจว่าเมทริกซ์นั้นสะท้อนความคลาดเคลื่อนจริงเพียงใด และต้องอ่านค่าความน่าจะเป็นควบคู่กับความไม่แน่นอนเบื้องหลัง ดังที่เครื่องมือ «การเข้าใกล้กันของวัตถุในวงโคจร» แสดง"
+        },
+        {
+          "path": "hints[0]",
+          "en": "Subtract the two positions and the two velocities, component by component: the lengths of the differences are the miss and the speed. The angle between the paths comes from the dot product, cos θ = v₁ · v₂ / (|v₁| |v₂|), each velocity as seen from space (the Earth's turning, ω × r, added).",
+          "ru": "Вычтите одно положение из другого и одну скорость из другой покомпонентно: длины разностей — это промах и относительная скорость. Угол между траекториями даёт скалярное произведение, cos θ = v₁ · v₂ / (|v₁| |v₂|), где каждая скорость взята относительно инерциального пространства (прибавлено ω × r от вращения Земли).",
+          "th": "ลบตำแหน่งทั้งสองและความเร็วทั้งสองทีละองค์ประกอบ ความยาวของผลต่างคือระยะพลาดและความเร็วสัมพัทธ์ มุมระหว่างเส้นทางได้จากผลคูณจุด cos θ = v₁ · v₂ / (|v₁| |v₂|) โดยใช้ความเร็วเทียบกับอวกาศ คือบวก ω × r จากการหมุนของโลกเข้าไปด้วย"
+        },
+        {
+          "path": "hints[1]",
+          "en": "The combined radius is the sum of the two hard-body radii. Along the miss the combined uncertainty is σ² = σ₁² cos² θ + σ₂² sin² θ, θ the σ₁ axis's angle from the miss; the miss divided by that σ says how far out in the Gaussian's tail they were thought to be.",
+          "ru": "Суммарный радиус — сумма радиусов обоих тел. Вдоль промаха суммарная неопределённость σ² = σ₁² cos² θ + σ₂² sin² θ, где θ — угол оси σ₁ от направления промаха; промах, делённый на это σ, показывает, насколько далеко в хвосте гауссова распределения их считали.",
+          "th": "รัศมีรวมคือผลบวกรัศมีวัตถุของทั้งสอง ตามแนวระยะพลาด ความไม่แน่นอนรวมคือ σ² = σ₁² cos² θ + σ₂² sin² θ โดย θ คือมุมของแกน σ₁ จากแนวระยะพลาด ระยะพลาดหารด้วย σ นี้บอกว่าคิดกันว่าทั้งสองอยู่ไกลออกไปในหางของการแจกแจงแบบเกาส์เพียงใด"
+        },
+        {
+          "path": "hints[2]",
+          "en": "The table gives Iridium's own published probability, worked with a cautious uncertainty; operators usually move a satellite at 1 in 10 000. For the last question, ask what a miss of so many standard deviations says about the uncertainties the message was given.",
+          "ru": "В таблице есть опубликованная вероятность самой Iridium, рассчитанная с осторожной оценкой неопределённости; операторы обычно уводят спутник при 1 к 10 000. Для последнего вопроса подумайте, что промах во столько стандартных отклонений говорит о неопределённостях, заложенных в сообщение.",
+          "th": "ในตารางมีความน่าจะเป็นที่ Iridium เผยแพร่เอง ซึ่งคำนวณด้วยความไม่แน่นอนแบบระมัดระวัง ผู้ควบคุมมักหลบดาวเทียมเมื่อถึง 1 ใน 10,000 สำหรับข้อสุดท้าย ลองคิดว่าระยะพลาดที่เท่ากับส่วนเบี่ยงเบนมาตรฐานหลายเท่าขนาดนั้นบอกอะไรเกี่ยวกับความไม่แน่นอนที่ใส่ไว้ในข้อความ"
+        }
+      ],
+      "criteria": [
+        {
+          "id": "miss",
+          "kind": "case",
+          "item": "miss"
+        },
+        {
+          "id": "speed",
+          "kind": "case",
+          "item": "speed"
+        },
+        {
+          "id": "angle",
+          "kind": "case",
+          "item": "angle"
+        },
+        {
+          "id": "radius",
+          "kind": "case",
+          "item": "radius"
+        },
+        {
+          "id": "sigma",
+          "kind": "case",
+          "item": "sigma"
+        },
+        {
+          "id": "nsigma",
+          "kind": "case",
+          "item": "nsigma"
+        },
+        {
+          "id": "why",
+          "kind": "case",
+          "item": "why"
+        },
+        {
+          "id": "times",
+          "kind": "case",
+          "item": "times"
+        }
+      ]
+    }
+  ]
+}

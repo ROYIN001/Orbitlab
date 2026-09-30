@@ -1,0 +1,33 @@
+{
+  "_notes": {
+    "rule": "Ceilings only ratchet down. A PR that raises one names the reason here, under set, beside that group.",
+    "units": "kB of 1000 bytes, raw (not gzip) sizes in dist/ after npx vite build; checked by npm run budget (scripts/bundle-budget.mjs).",
+    "groups": "A key names the chunks in dist/assets with that prefix (hash dropped); other chunks is every other *.js and *.css there, together; precache is every file listed in the manifest inside dist/sw.js.",
+    "set": {
+      "index-*.js": "seeded 2026-09-30 at the measured size 3708.1 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
+      "index-*.css": "seeded 2026-09-30 at the measured size 139.4 kB + 2 %",
+      "flight.worker-*.js": "seeded 2026-09-30 at the measured size 428.6 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
+      "tune.worker-*.js": "seeded 2026-09-30 at the measured size 412.9 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
+      "monte-carlo.worker-*.js": "seeded 2026-09-30 at the measured size 411.1 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
+      "ratings.worker-*.js": "seeded 2026-09-30 at the measured size 1564.9 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
+      "readiness.worker-*.js": "seeded 2026-09-30 at the measured size 1573.6 kB + 2 %; raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged",
+      "reentry.worker-*.js": "seeded 2026-09-30 at the measured size 57.9 kB + 2 %",
+      "lifetime.worker-*.js": "seeded 2026-09-30 at the measured size 39.1 kB + 2 %",
+      "screening.worker-*.js": "seeded 2026-09-30 at the measured size 30.1 kB + 2 %",
+      "other chunks": "seeded 2026-09-30 at the measured size 686.5 kB + 2 %",
+      "precache": "seeded 2026-09-30 at the measured size 16100.5 kB + 2 %; lowered 2026-09-30 to the measured 12499.1 kB + 2 % when the soundtrack left the install (D-7; a build with ORBITLAB_PRECACHE_AUDIO=1 precaches 16100.5 kB and is not held to this ceiling); raised 2026-09-30 after PR #38 (C01 Apollo 11: lunar ephemeris, gravity, TLI, descent and entry entered the physics core, so the index chunk and every physics worker grew) to the measured size + 2 %; seeded the same day at 404eb0c before #38 merged"
+    }
+  },
+  "index-*.js": 4065,
+  "index-*.css": 143,
+  "flight.worker-*.js": 537,
+  "tune.worker-*.js": 520,
+  "monte-carlo.worker-*.js": 519,
+  "ratings.worker-*.js": 1823,
+  "readiness.worker-*.js": 1832,
+  "reentry.worker-*.js": 60,
+  "lifetime.worker-*.js": 40,
+  "screening.worker-*.js": 31,
+  "other chunks": 701,
+  "precache": 13783
+}

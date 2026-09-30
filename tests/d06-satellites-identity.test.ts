@@ -60,10 +60,16 @@ function jsonBlindSpots(v: unknown, path: string, out: string[]): string[] {
 }
 
 describe('D06: the satellite classes, recorded before the satellite builder', () => {
+  // C01 (PR #38) appended the historical missions' spacecraft after the eleven
+  // pre-D06 classes, which it left as they were; those eleven, in their place
+  // at the head of the list, are what the fixture pins.
+  const PRE_D06 = SATELLITES.slice(0, 11);
+  const C01_ADDED = ['crewDragon', 'ps1', 'vostok1', 'mercury', 'apollo11'];
+
   it('equal the pre-D06 entries, value for value', () => {
-    expect(SATELLITES).toHaveLength(11);
+    expect(SATELLITES.slice(11).map((s) => s.id)).toEqual(C01_ADDED);
     // read and compared, never written: a mismatch fails, even under `vitest -u`
-    expect(`${JSON.stringify(sortKeys(SATELLITES), null, 1)}\n`).toBe(FIXTURE);
+    expect(`${JSON.stringify(sortKeys(PRE_D06), null, 1)}\n`).toBe(FIXTURE);
   });
 
   it('carry no undefined-valued key, and nothing else JSON would hide', () => {
@@ -71,7 +77,7 @@ describe('D06: the satellite classes, recorded before the satellite builder', ()
   });
 
   it('keep the pre-D06 key order too', async () => {
-    const unsorted = JSON.stringify(SATELLITES);
+    const unsorted = JSON.stringify(PRE_D06);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(unsorted));
     const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
     expect([unsorted.length, hex]).toEqual([3295, PRE_D06_UNSORTED_SHA256]);

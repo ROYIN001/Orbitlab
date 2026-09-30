@@ -330,6 +330,23 @@ flights gained none overall: Bangabandhu-1 gained 2 and SSO-A lost 2, because wi
 burn SSO-A's MECO speed is now above the flight's (the fixed 12 % drone-ship reserve, F4, is too
 large for that mission).
 
+### The drone-ship reserve sized for the mission
+
+C01 (roadmap, part 3) replaced the fixed 12 % drone-ship reserve of a lone first stage (F4) with
+`droneShipReserve`: the propellant its return needs for the mission's payload, never above the
+vehicle's own (PHYSICS.md §13.5). The three drone-ship flights here fly with it. Re-measured on
+the merge of that work with main, in point mass:
+
+| flight | rows | point mass, before → after |
+| --- | ---: | ---: |
+| SSO-A (held out) | 11 | 6 → 7: the MECO altitude now agrees |
+| Iridium NEXT 8 | 13 | 12 → 11: the speed at T+140 s, 1 866 m/s against 1 621 ± 167, now just outside |
+| Bangabandhu-1 (held out) | 14 | 8 → 9: the second stage's start now agrees |
+| **total of the 66** | | **49 → 49** (CRS-16 and GPS III SV01 fly no drone ship) |
+
+The smaller reserve burns the first stage longer, which is what SSO-A needed (above) and what
+Iridium NEXT 8's T+140 s speed did not. Nothing was fitted.
+
 **What is left of F1 and F2.** MECO is now 4–10 % early (it was 7–12 %). The expended flight's
 first-stage burn is 157.9 s against 168 s. The speed at T+100 s is within 1–16 % (it was 2–22 %).
 The first minute moved the other way: the heavier stack is 1–11 % slow at T+60 s, where it was

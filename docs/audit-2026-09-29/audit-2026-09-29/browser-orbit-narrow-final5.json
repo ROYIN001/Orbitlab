@@ -1,0 +1,44 @@
+{
+  "proof": {
+    "canvases": [
+      {
+        "buffer": [
+          287,
+          480
+        ],
+        "label": "The orbit in space around the turning Earth",
+        "rect": {
+          "bottom": 645,
+          "height": 480,
+          "left": 8.666666984558105,
+          "right": 296.0000104904175,
+          "top": 165,
+          "width": 287.3333435058594,
+          "x": 8.666666984558105,
+          "y": 165
+        }
+      }
+    ],
+    "scripts": [
+      "./assets/index-Bx23WbDF.js"
+    ],
+    "viewport": {
+      "dpr": 1.0000000298023224,
+      "height": 844,
+      "width": 320
+    }
+  },
+  "logs": [],
+  "actions": [
+    "pause",
+    "fit",
+    "wheel25pages down",
+    "rotate",
+    "doubleclick reset",
+    "enable equal-time sectors"
+  ],
+  "limitations": [
+    "DPR1 actual only; viewport API has no DPR2 override",
+    "At maximum zoom Earth is a few pixels; source depth/ray regressions separately establish occlusion invariant."
+  ]
+}

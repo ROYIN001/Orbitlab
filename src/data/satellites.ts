@@ -13,6 +13,25 @@ export const SATELLITES: SatelliteSpec[] = [
   { id: 'sputnik1', kind: 'science', name: 'Sputnik-1 (PS-1)', mass: 83.6, typicalOrbit: 'leo', description: 'The first artificial satellite: a 58 cm polished sphere with four whip antennas and two radio transmitters. No propulsion.', size: { width: 0.58, height: 0.58, depth: 0.58 } },
   { id: 'vostok3ka', kind: 'crew', name: 'Vostok 3KA', mass: 4730, typicalOrbit: 'leo', description: "Gagarin's Vostok: a 2.3 m descent sphere on an instrument module. Its TDU-1 engine only brought it home, so Blok E put it in orbit.", size: { width: 2.43, height: 4.4, depth: 2.43 } },
   { id: 'apollo', kind: 'crew', name: 'Apollo CSM + LM', mass: 45700, typicalOrbit: 'leo', description: 'Apollo 11: command and service module, the lunar module and its adapter, 45.7 t. The S-IVB made the translunar injection; the service engine was kept for the Moon.', crewed: true, size: { width: 3.9, height: 11, depth: 3.9 } },
+  // Crew Dragon as Demo-2 flew it (roadmap C01): 13,055 kg — the capsule with
+  // its propellant, about 10,755 kg, and the trunk, about 2,300 kg (GCAT
+  // S45623, S46024; estimates). 4.0 m across, 8.1 m tall with the trunk, the
+  // capsule 4.5 m of it (en.wikipedia, SpaceX Dragon 2); flown
+  // on top of Falcon 9 without a fairing. It raises its own orbit with Dracos,
+  // which the model does not fly: the flight ends at separation.
+  { id: 'crewDragon', kind: 'crewDragon', name: 'Crew Dragon', mass: 13055, typicalOrbit: 'iss', description: 'SpaceX crew capsule and its trunk, flown on top of Falcon 9 without a fairing. Its own Draco thrusters take it on to the station.', crewed: true, size: { width: 4.0, height: 8.1, depth: 4.0 }, exposed: { diameter: 4.0, length: 8.1, noseLength: 4.5 }, carriers: ['falcon9'] },
+  // C01: the spacecraft of the first R-7 flights (docs/PHYSICS.md §13.6).
+  // PS-1: 83.6 kg, a 0.58 m sphere with four whip aerials of 2.4 and 2.9 m.
+  { id: 'ps1', kind: 'ps1', name: 'Sputnik 1 (PS-1)', mass: 83.6, typicalOrbit: 'custom', description: 'The first artificial satellite: a polished 58 cm sphere with four whip aerials and two radio transmitters.', size: { width: 0.58, height: 0.58, depth: 0.58 }, carriers: ['r7sputnik'] },
+  // Vostok 3KA: 4,725 kg; the 2.3 m descent sphere (2,460 kg) on the
+  // 2.43 × 2.25 m instrument module. Its retro engine only brings it down.
+  { id: 'vostok1', kind: 'vostok', name: 'Vostok 3KA', mass: 4725, typicalOrbit: 'custom', description: 'The first crewed spacecraft: a 2.3 m descent sphere on an instrument module with the retro engine.', crewed: true, size: { width: 2.43, height: 4.4, depth: 2.43 }, carriers: ['vostokk'] },
+  // Freedom 7 (MR-3): 1,832.6 kg at launch with its escape tower, 1.892 m
+  // across, 7.9 m with the tower (NASA, *Postlaunch Report for Mercury-Redstone
+  // No. 3*, 1961). Flown on the stack as it stood; it comes home on its own
+  // parachutes (`MERCURY_CAPSULE`, src/physics/rigid/escape.ts).
+  { id: 'mercury', kind: 'mercury', name: 'Mercury capsule', mass: 1832.6, typicalOrbit: 'custom', description: 'The first American crewed spacecraft: a one-man capsule under a solid-rocket escape tower, landing in the sea on parachutes.', crewed: true, size: { width: 1.892, height: 7.9, depth: 1.892 }, exposed: { diameter: 1.892, length: 7.9, noseLength: 7.9 }, carriers: ['mercuryredstone'], descent: 'mercury' },
+  { id: 'apollo11', kind: 'apollo', name: 'Apollo CSM and LM', mass: 49735, typicalOrbit: 'custom', description: 'Apollo 11: Columbia, the command and service module, and Eagle, the lunar module folded in its adapter under the escape tower — 49.7 t on top of the Saturn V.', crewed: true, size: { width: 6.604, height: 24.93, depth: 6.604 }, exposed: { diameter: 6.604, length: 24.93, noseLength: 24.93 }, carriers: ['saturnv506'], staysAttached: true },
 ];
 
 export const satelliteById = (id: string): SatelliteSpec => {

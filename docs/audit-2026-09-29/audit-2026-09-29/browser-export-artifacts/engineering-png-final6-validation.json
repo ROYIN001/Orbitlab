@@ -1,0 +1,48 @@
+{
+  "status": "accepted for actual engineering PNG file export by pointer click and by Tab then Enter in separate chart paths",
+  "source": {
+    "browserPreview": "http://127.0.0.1:4182/",
+    "build": "final6",
+    "ui": "Build Engineer > Test stand > Mass flow, Thai language",
+    "action": "Fresh browser tab; root clicked the visible Export PNG button with Playwright getByRole().click(); an actual file download occurred",
+    "earlierAttempts": "Native Tab/Return produced no observed download. No source fix was made for this behavior and no browser-permission cause is claimed."
+  },
+  "artifact": {
+    "path": "orbitlab-engineering-massflow-th-final6.png",
+    "bytes": 127037,
+    "width": 2400,
+    "height": 1200,
+    "sha256": "77ad3ff41b0571212c51532f2b4795ac8a55ccf1e3a956ee7120c81d50e216b4"
+  },
+  "verification": {
+    "actualFileHashRechecked": true,
+    "visualInspectionByRootAndLearningAgent": true,
+    "thaiTitleReadable": true,
+    "timeUnitReadable": true,
+    "completeCurveVisible": true,
+    "noClippingObserved": true
+  },
+  "limitations": [
+    "Two representative engineering chart exports; not every chart/language/renderer combination",
+    "Earlier CUA Return produced no observed download; this does not diagnose a production bug or browser-permission cause",
+    "Keyboard success is supported by the subsequent actual Specific impulse PNG file, not inferred from focus alone"
+  ],
+  "keyboardFollowup": {
+    "browserPreview": "http://127.0.0.1:4182/#/build/engineer",
+    "action": "Focus Specific impulse canvas, Tab to PNG button, then Playwright button.press(Enter); actual file downloaded",
+    "artifact": {
+      "path": "orbitlab-engineering-isp-keyboard-final6.png",
+      "bytes": 98553,
+      "width": 2400,
+      "height": 1200,
+      "sha256": "b3fa5e77f2220f4097e7819c859804713c254b5a58b343a52e25a2a766d82b1b"
+    },
+    "domActionEvidence": "../browser-png-keyboard-final6.json",
+    "visualInspectionByRoot": {
+      "titleAndUnitReadable": true,
+      "completeFlatCurveVisible": true,
+      "valueS": 287.52
+    },
+    "actualFileHashAndDimensionsRechecked": true
+  }
+}

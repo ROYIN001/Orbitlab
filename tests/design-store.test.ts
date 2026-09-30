@@ -150,6 +150,44 @@ describe('the local design store (S05)', () => {
     expect(JSON.parse(m.data.get(DESIGN_STORE_KEY)!).version).toBe(1);
     expect(DESIGN_FORMAT_VERSION).toBe(1);
   });
+
+  it('preserves unreadable records through unrelated save, update and remove', async () => {
+    const m = memory();
+    const s = store(m);
+    const good = await s.save({ kind: 'vehicle', name: 'Good', design: rocket() });
+    const raw = JSON.parse(m.data.get(DESIGN_STORE_KEY)!);
+    const unreadable = [null, 'future record', { id: 'future', kind: 'satellite', payload: { untouched: true } },
+      { ...good, id: 'broken', design: { stages: 'none' } }];
+    raw.designs.push(...unreadable);
+    m.data.set(DESIGN_STORE_KEY, JSON.stringify(raw));
+    const remaining = () => JSON.parse(m.data.get(DESIGN_STORE_KEY)!).designs.slice(-unreadable.length);
+    const second = await s.save({ kind: 'vehicle', name: 'Second', design: rocket('second') });
+    expect(JSON.parse(m.data.get(DESIGN_STORE_KEY)!).designs.slice(1, -1)).toEqual(unreadable);
+    await s.save({ id: good.id, kind: 'vehicle', name: 'Updated', design: rocket() });
+    expect(JSON.parse(m.data.get(DESIGN_STORE_KEY)!).designs.slice(1, -1)).toEqual(unreadable);
+    expect(await s.remove(second.id)).toBe(true);
+    expect(remaining()).toEqual(unreadable);
+    expect(await s.remove('broken')).toBe(false);
+    expect((await s.list()).map((d) => d.name)).toEqual(['Updated']);
+  });
+
+  it('refuses to rewrite damaged or unsupported collections without touching the original text', async () => {
+    for (const original of ['not json', 'null', '{}', '{"version":2,"designs":[]}', '{"version":1,"designs":{}}']) {
+      const m = memory();
+      m.data.set(DESIGN_STORE_KEY, original);
+      const s = store(m);
+      await expect(s.save({ kind: 'vehicle', name: 'New', design: rocket() })).rejects.toMatchObject({ code: 'collection' });
+      await expect(s.remove('d1')).rejects.toMatchObject({ code: 'collection' });
+      expect(m.data.get(DESIGN_STORE_KEY)).toBe(original);
+    }
+  });
+
+  it('does not overwrite a store whose read is denied even if writes would succeed', async () => {
+    let writes = 0;
+    const s = store({ getItem: () => { throw new Error('denied'); }, setItem: () => { writes++; } });
+    await expect(s.save({ kind: 'vehicle', name: 'New', design: rocket() })).rejects.toMatchObject({ code: 'unavailable' });
+    expect(writes).toBe(0);
+  });
 });
 
 describe('a design as a file (S05)', () => {

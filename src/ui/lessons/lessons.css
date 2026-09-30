@@ -65,6 +65,7 @@ body[data-lesson] #first-use-guide { display: none; }
 .lesson-note { margin: 4px 0; font-size: 12.5px; color: var(--muted); }
 .lesson-note.pass { color: var(--ok); font-weight: 600; font-size: 14px; }
 .lesson-note.fail { color: #ffb0b0; }
+.lesson-note.helped { color: var(--lesson); font-weight: 600; font-size: 14px; }
 .lesson-note.ok { color: var(--lesson); }
 .lesson-debrief { margin: 4px 0; font-size: 12.5px; line-height: 1.55; color: #e9dcc0; }
 .lesson-answers { display: flex; flex-wrap: wrap; align-items: end; gap: 6px 14px; }
@@ -160,6 +161,7 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .lesson-card-item:disabled { opacity: 0.55; cursor: default; }
 .lesson-card-status { width: 16px; flex: none; color: var(--dim); }
 .lesson-card-item.passed .lesson-card-status { color: var(--ok); }
+.lesson-card-item.helped .lesson-card-status { color: var(--lesson); }
 .lesson-card-text b { display: block; font-size: 13px; }
 .lesson-card-text small {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -168,6 +170,7 @@ body[data-lessons-page] .lesson-strip, body[data-lessons-page] #first-use-guide 
 .lesson-card-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 .lesson-tag { font: 10px var(--mono); color: var(--blue); border: 1px solid #2a4a66; border-radius: 4px; padding: 0 4px; }
 .lesson-tag.soon { color: var(--dim); border-color: var(--line2); }
+.lesson-tag.helped { color: var(--lesson); border-color: var(--lesson); }
 .lesson-tag.skip { color: var(--dim); border-color: var(--line2); text-decoration: line-through; }
 .lesson-tag.review { color: #ffb0b0; border-color: #7a3a3a; }
 .lesson-tag.do { color: var(--text); border-color: var(--line2); }

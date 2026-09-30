@@ -18,7 +18,7 @@
  *
  * DOM-free, SI units (kg, m, m³, kg/m³).
  */
-import { PROPELLANT_DENSITY, PROPELLANT_LOADS, type PropellantFamily } from '../physics/rigid/vehicle-data';
+import { HISTORICAL_LOAD_IDS, PROPELLANT_DENSITY, PROPELLANT_LOADS, type PropellantFamily } from '../physics/rigid/vehicle-data';
 
 export type LiquidFamily = Exclude<PropellantFamily, 'solid'>;
 
@@ -30,14 +30,15 @@ const median = (xs: number[]): number => {
 
 /**
  * Each liquid family's mixture ratio (oxidizer/fuel by mass) where a stage has
- * no entry of its own: the median of `PROPELLANT_LOADS` over that family. An
- * estimate — kerolox 2.6, hydrolox 5.88, methalox 3.6, hypergolic 2.1 with
- * today's table (tests/design-remix.test.ts pins them).
+ * no entry of its own: the median of `PROPELLANT_LOADS` over that family, the
+ * as-flown loads of the historical flights' own stages (`HISTORICAL_LOAD_IDS`)
+ * left out. An estimate — kerolox 2.6, hydrolox 5.88, methalox 3.6, hypergolic
+ * 2.1 with today's table (tests/design-remix.test.ts pins them).
  */
 export const FAMILY_MIXTURE_RATIO: Readonly<Record<LiquidFamily, number>> = (() => {
   const out = {} as Record<LiquidFamily, number>;
   for (const family of Object.keys(PROPELLANT_DENSITY) as LiquidFamily[]) {
-    out[family] = median(Object.values(PROPELLANT_LOADS).filter((l) => l.family === family && l.mixtureRatio !== undefined).map((l) => l.mixtureRatio!));
+    out[family] = median(Object.entries(PROPELLANT_LOADS).filter(([id]) => !HISTORICAL_LOAD_IDS.has(id)).map(([, l]) => l).filter((l) => l.family === family && l.mixtureRatio !== undefined).map((l) => l.mixtureRatio!));
   }
   return out;
 })();

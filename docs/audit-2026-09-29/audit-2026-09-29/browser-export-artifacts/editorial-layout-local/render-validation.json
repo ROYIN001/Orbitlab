@@ -1,0 +1,102 @@
+{
+  "atUTC": "2026-09-29T22:34:05.601610+00:00",
+  "mode": "Local source-module generated, not browser downloads",
+  "render": [
+    {
+      "docx": "orbitlab-case-cz5b-ru.docx",
+      "pdf": "pdf/orbitlab-case-cz5b-ru.pdf",
+      "pages": [
+        {
+          "file": "rendered/orbitlab-case-cz5b-ru/page-1.png",
+          "sha256": "27ad9170cac6a28d000a10a9cb558dc44da60a2aadd27b284c9ea05d520f5fa4"
+        },
+        {
+          "file": "rendered/orbitlab-case-cz5b-ru/page-2.png",
+          "sha256": "ff3f9af764dab0f45f1d7d6853e3b17ce84a7b92b9f0299b20ca8f356cf7e9c2"
+        }
+      ]
+    },
+    {
+      "docx": "orbitlab-case-cz5b-th.docx",
+      "pdf": "pdf/orbitlab-case-cz5b-th.pdf",
+      "pages": [
+        {
+          "file": "rendered/orbitlab-case-cz5b-th/page-1.png",
+          "sha256": "8d091175c9540d4d28fe4dd9238282ff6d797f79bc75b9ea711813cc30966e28"
+        },
+        {
+          "file": "rendered/orbitlab-case-cz5b-th/page-2.png",
+          "sha256": "8a803fdc48591d0bd4e3cdf145a88c8affb9f898d1ce47585852359dad3ca032"
+        }
+      ]
+    },
+    {
+      "docx": "orbitlab-case-iridium-ru.docx",
+      "pdf": "pdf/orbitlab-case-iridium-ru.pdf",
+      "pages": [
+        {
+          "file": "rendered/orbitlab-case-iridium-ru/page-1.png",
+          "sha256": "e7a5a4b56430ae1e7f23acbc1ecc4d47a7290005cec2ae405ed2112f43105743"
+        },
+        {
+          "file": "rendered/orbitlab-case-iridium-ru/page-2.png",
+          "sha256": "5547194fb5ab190c05fa6a9f894d4e4ddce64a987279f5360331678ea54bac99"
+        }
+      ]
+    },
+    {
+      "docx": "orbitlab-case-iridium-th.docx",
+      "pdf": "pdf/orbitlab-case-iridium-th.pdf",
+      "pages": [
+        {
+          "file": "rendered/orbitlab-case-iridium-th/page-1.png",
+          "sha256": "c69792666ea4f37e3f2f50b173bf792188aa52649a669dfbbdd2643b176e360e"
+        },
+        {
+          "file": "rendered/orbitlab-case-iridium-th/page-2.png",
+          "sha256": "e73942b0849d19f8de4b2a1ef9c79177918f226730733b74803dfe8f6b2e562e"
+        }
+      ]
+    },
+    {
+      "docx": "orbitlab-case-theos2-ru.docx",
+      "pdf": "pdf/orbitlab-case-theos2-ru.pdf",
+      "pages": [
+        {
+          "file": "rendered/orbitlab-case-theos2-ru/page-1.png",
+          "sha256": "0ef554afb06bf5e14321d5287a4bb2de52c099b3a2aa37eb4ba484d12318135e"
+        },
+        {
+          "file": "rendered/orbitlab-case-theos2-ru/page-2.png",
+          "sha256": "4a0221961cb05a4342c277dc6262354ca51a21d9572d6f494d757cb2aa7bdf07"
+        }
+      ]
+    },
+    {
+      "docx": "orbitlab-case-theos2-th.docx",
+      "pdf": "pdf/orbitlab-case-theos2-th.pdf",
+      "pages": [
+        {
+          "file": "rendered/orbitlab-case-theos2-th/page-1.png",
+          "sha256": "98dcc5609b6aa4c4c12093fee057db3330a94d2ff89830be89a7d8a57853bb68"
+        },
+        {
+          "file": "rendered/orbitlab-case-theos2-th/page-2.png",
+          "sha256": "6e88c00ed5fe31678f943d807a5669c6e7a02ad92c91ea9b0799c584069d98bd"
+        }
+      ]
+    }
+  ],
+  "visualAcceptance": {
+    "passed": true,
+    "pagesViewed": 12,
+    "docxViewed": 6,
+    "observations": [
+      "CZ5B TH/RU question 6, answer and work box move together to page 2.",
+      "Iridium RU question 2, answer and work box move together to page 2.",
+      "Iridium TH and both THEOS-2 sheets preserve clean pagination.",
+      "Iridium 3σ label is separated from Cosmos 2251, Iridium 33 and the horizontal axis."
+    ],
+    "limits": "Local module output with sharp/libvips SVG rasterization; not a substitute for a fresh Chromium download run."
+  }
+}

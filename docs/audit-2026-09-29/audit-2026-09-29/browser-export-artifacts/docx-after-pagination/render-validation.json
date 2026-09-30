@@ -1,0 +1,33 @@
+{
+  "verifiedAt": "2026-09-29T20:15:58.6143900Z",
+  "sourceBrowser": "http://127.0.0.1:4179/",
+  "missionEpoch": "2026-09-30T18:08:18.046Z",
+  "executionDate": "2026-09-29",
+  "flightModel": "pointMass",
+  "flightVehicle": "falcon9",
+  "student": "QA Student",
+  "classCode": "QA20260929",
+  "renderTool": "LibreOffice headless + pdftoppm 100dpi",
+  "libreOfficeVersion": "26.8.0.3",
+  "usedWordCOM": false,
+  "worksheetPages": 3,
+  "keyPages": 1,
+  "inspectedImages": [
+    "worksheet-1.png",
+    "worksheet-2.png",
+    "worksheet-3.png",
+    "key-1.png"
+  ],
+  "visualFindings": [
+    "Question 7 and all four options are together on worksheet page 2",
+    "Question 8 and all five options are together on worksheet page 2",
+    "Question 9 and all four options begin together on worksheet page 3",
+    "Question 10 and all four options are together on worksheet page 3",
+    "No clipped text or glyphs observed in four rendered pages"
+  ],
+  "limits": [
+    "A fresh point-mass flight generated a different worksheet draw from the original six-DOF export; this is not the same question 8 rerendered",
+    "The simulated mission epoch is Sep 30; rendering and execution occurred Sep 29",
+    "Not certification across all Word versions, operating systems, languages, or oversized custom question content"
+  ]
+}

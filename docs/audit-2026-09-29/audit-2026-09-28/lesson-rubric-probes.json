@@ -1,0 +1,10 @@
+{
+  "sourceCommit": "0a6d1a709ffbf88e8e36f606d6993bd27e5c25e0",
+  "method": "Current source Vite ssrLoadModule, headless Simulation, stock lessonConfig with named edits, flown until flightEnded or sim.done, answers from current MEASURES, gradeLesson. No browser actions and no source/test edits.",
+  "results": [
+    {"name":"sputnik_nonhistorical_100kg","verdict":"pass","brokenLocks":[],"t":287.7899999999947,"answers":{"period":96.24140391980224},"perigeeKm":214.51511523121408,"apogeeKm":942.5533594732061,"inclinationDeg":65.09049484905444,"payloadKg":100},
+    {"name":"vostok_changed_inclination55","verdict":"pass","brokenLocks":[],"t":713.3199999999653,"answers":{"period":89.55809633634301},"perigeeKm":180.99919238480274,"apogeeKm":324.2500658381935,"inclinationDeg":54.99979559301535,"payloadKg":4730},
+    {"name":"apollo_apogee330000","verdict":"pass","brokenLocks":[],"t":963.4798077721139,"answers":{"dv":3122},"perigeeKm":206.21701182732917,"apogeeKm":330895.56217185146,"inclinationDeg":32.49981573665252,"payloadKg":45700},
+    {"name":"engineOut_guidance_locked_PEG","verdict":"pass","brokenLocks":[],"t":3296.5530818328475,"answers":{},"perigeeKm":499.49929176937417,"apogeeKm":501.02478064845593,"inclinationDeg":28.61200113387228,"payloadKg":18800,"guidance":{"law":"peg"}}
+  ]
+}

@@ -25,6 +25,7 @@ import { SetupPanel } from './ui/panel';
 import { HelpGuide } from './ui/help';
 import { ExploreDebrief } from './ui/explore-debrief';
 import { MissionResult } from './ui/mission-result';
+import { FlownPanel } from './ui/flown-view';
 import { RigidControls } from './ui/rigid-controls';
 import { LoopInspector } from './ui/loop-inspector';
 import { MonteCarloWindow } from './ui/monte-carlo';
@@ -52,7 +53,7 @@ import { applyWebFonts } from './ui/web-fonts';
 import { loadDataMode, saveDataMode, type DataMode } from './provider/data-mode';
 import { CacheStorageRecent, createDataProvider, type DataProvider, type RecentCaches } from './provider/data-provider';
 import { sectionLinkLevel } from './ui/section-plan';
-import { FEATURED_WATCH_MISSION, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
+import { FEATURED_WATCH_MISSION, historicalFor, watchMissionById, watchMissionSettings, type WatchMissionId } from './ui/watch-missions';
 import { PhysicsDialog, CameraDialog, DEFAULT_CAMERA_PLAN, type CameraPlan, type FlightPhase } from './ui/dialogs';
 import { Simulation } from './physics/simulation';
 import { cloneFrame, type VisualFrame } from './physics/frame';
@@ -62,9 +63,14 @@ import { ReplayPlayer } from './replay/player';
 import { ExplosionEffect } from './replay/explosion';
 import { ExhaustTrails, SITE_HUMIDITY } from './render/trails';
 import { createFrameSimView, type FrameSimView } from './replay/simview';
+import { moonState } from './physics/lunar/ephemeris';
+import { APOLLO_ASCENT, APOLLO_AT_MOON, APOLLO_CM, APOLLO_LM, APOLLO_OUT } from './physics/sim/apollo';
+import { buildEntryCm, buildServiceModule } from './render/apollo-cm';
+import { APOLLO11 } from './data/apollo11';
+import { moonBodyToEci, selenographicToEci } from './physics/lunar/orientation';
 import { sunDirectionEci, julianDate, enuFrame, sampleOrbit, stateFromElements, elementsFromState } from './physics/orbital';
 import { OMEGA_EARTH, R_EARTH, RAD } from './physics/constants';
-import { add, normalize, cross, dot, norm, scale, addScaled, v3, type Vec3 } from './physics/vec3';
+import { add, normalize, cross, dot, norm, scale, addScaled, sub, v3, type Vec3 } from './physics/vec3';
 import { missionVehicle } from './data/vehicles';
 import { satelliteById } from './data/satellites';
 import { satelliteName } from './ui/names';
@@ -75,6 +81,7 @@ import { getNotation, initNotation, onNotationChange } from './ui/notation';
 import { FramesView } from './render/frames';
 import { EscapeView } from './render/escape';
 import { StationView } from './render/station';
+import { apolloViewSize, buildAscentStage, buildCsm, buildDescentStage, CSM_LENGTH, LM_HEIGHT } from './render/apollo';
 import { PORTS, TARGET_OFFSET, targetOffset } from './physics/rendezvous/ports';
 import { SPACECRAFT } from './physics/rendezvous/profiles';
 import type { RendezvousState } from './physics/sim/rendezvous';
@@ -83,6 +90,7 @@ import { ToruControls } from './ui/toru-controls';
 import { FramesMenu, frameSymbols } from './ui/frames-menu';
 import { GlowGovernor } from './render/glow-governor';
 import { quatRotate } from './physics/rigid/math';
+import { stampDocument } from './build-info';
 
 /** The viewer's own choice of glow, remembered between visits. */
 const GLOW_STORAGE_KEY = 'orbitlab.glow';
@@ -142,6 +150,12 @@ function flightPhase(frame: VisualFrame): FlightPhase | null {
   // entry interface to the water.
   if (frame.status === 'descent') return frame.descentPhase === 'coast' ? 'coast' : 'descent';
   if (frame.status === 'landed') return 'descent';
+  // C01: Apollo's burn for the Moon from space; its transposition, docking and extraction, and all the way
+  // to the Moon, from beside the stack — from space, 300,000 km out, it is a marker on a black sky
+  const ap = frame.apollo;
+  if (ap?.phase === 'tli') return 'burn';
+  if (ap && (ap.phase === 'transposition' || ap.phase === 'docked' || APOLLO_OUT.includes(ap.phase)
+    || (ap.phase === 'translunar' && ap.sequence && frame.t >= ap.sequence.panels - 20))) return 'proximity';
   // G07: close to the station, from the automatic approach on
   const rv = frame.rendezvous;
   if (rv && rv.range < NEAR_STATION && rv.phase !== 'separation' && rv.phase !== 'coast' && rv.phase !== 'burn') return 'proximity';
@@ -196,6 +210,8 @@ class App {
   hud: Hud;
   tel: TelemetryPanel;
   result: MissionResult;
+  /** C01: the real flight beside the simulated one */
+  flown: FlownPanel;
   rigidControls: RigidControls;
   /** G07: the TORU hand controllers */
   toruControls!: ToruControls;
@@ -268,6 +284,13 @@ class App {
   private escapeView: EscapeView | null = null;
   /** G07: the station a rendezvous flies to */
   private stationView: StationView | null = null;
+  /** C01: Columbia, drawn on its own from the undocking; Eagle's descent stage left on the Moon; its ascent stage jettisoned */
+  private csmView: ReturnType<typeof buildCsm> | null = null;
+  private descentStageView: ReturnType<typeof buildDescentStage> | null = null;
+  private ascentStageView: ReturnType<typeof buildAscentStage> | null = null;
+  /** C01: the command module on its own on the way in, and the service module it left */
+  private entryCmView: ReturnType<typeof buildEntryCm> | null = null;
+  private smView: ReturnType<typeof buildServiceModule> | null = null;
   private dockingEyePos = new THREE.Vector3();
   /** the 3-D picture is the docking TV camera's (drawn black and white) */
   private tvPicture = false;
@@ -396,6 +419,7 @@ class App {
   constructor() {
     this.helpGuide = new HelpGuide(document.getElementById('first-use-guide')!, document.getElementById('btn-help') as HTMLButtonElement);
     this.result = new MissionResult(document.getElementById('mission-result')!, { onSeek: time => this.seek(time) });
+    this.flown = new FlownPanel(document.getElementById('flown-result')!);
     this.toruControls = new ToruControls(document.getElementById('toru-controls')!, (cmd) => {
       if (this.mode === 'engineer' && this.player.live) this.session?.commandToru(cmd);
     });
@@ -871,7 +895,7 @@ class App {
   private async flightReport(): Promise<void> {
     const sim = this.tel.exportSource();
     if (!sim) return;
-    await downloadFlightReport({
+    downloadFlightReport({
       flight: sim,
       result: this.simView ? assessMissionResult(this.simView.sim) : null,
       link: await this.panel.share.link().catch(() => null),
@@ -1390,7 +1414,17 @@ class App {
     if (sim.escape.fitted && fairing) {
       this.escapeView = new EscapeView(fairing.diameter / 2, fairing.length);
       this.scene.scene.add(this.escapeView.group);
+    } else if (sim.satellite.descent) {
+      // C01: a capsule coming home from a suborbital flight (Mercury-Redstone 3)
+      this.escapeView = new EscapeView(1, 1, sim.satellite.descent);
+      this.scene.scene.add(this.escapeView.group);
     }
+    for (const v of [this.csmView, this.descentStageView, this.ascentStageView, this.entryCmView, this.smView]) {
+      if (!v) continue;
+      this.scene.scene.remove(v.group);
+      v.dispose();
+    }
+    this.csmView = this.descentStageView = this.ascentStageView = this.entryCmView = this.smView = null;
     if (this.stationView) {
       this.scene.scene.remove(this.stationView.group);
       this.stationView.dispose();
@@ -1428,11 +1462,14 @@ class App {
     // src/data and are translated by `localizeEventParams` at the point of
     // rendering (src/ui/names.ts).
     this.hud.setVehicle(sim.vehicleSpec);
+    // C01: an unchanged historical flight draws the real one's events on the charts
+    this.tel.setFlown(historicalFor({ ...sim.cfg, payloadMass: sim.cfg.payloadMassOverride })?.flown ?? null);
     this.timeline.setVehicle(sim.vehicleSpec);
     this.narration.setVehicle(sim.vehicleSpec);
     this.hud.reset();
     this.tel.reset();
     this.result.clear();
+    this.flown.clear();
     this.rigidControls.reset();
     this.toruControls.reset();
     this.tel.setExportSource(sim);
@@ -1597,6 +1634,7 @@ class App {
       this.rendezvousPlot.update(this.recorder.frames, this.shown);
       this.compare.update();
       this.result.update(this.simView.sim);
+      this.flown.update(this.simView.sim);
       // Explore: a card a moment after the live flight's outcome; a lesson grades in its own strip
       const cfg = this.panel.state;
       this.debrief.update(this.flightNo, this.simView.sim, this.player.live, this.mode === 'explore' && !document.body.dataset.lesson,
@@ -1864,6 +1902,85 @@ class App {
         this.stationView.group.quaternion.set(rv.station.q.x, rv.station.q.y, rv.station.q.z, rv.station.q.w);
       }
     }
+    // C01: Columbia after the undocking, where its own flight has it: over Eagle's docking tunnel, nose down, as
+    // it was docked, backing off to stationkeeping in the first two minutes — the drawing's offset, tens of
+    // metres, beside the separation its maneuver opens
+    const csm = frame.apollo?.csm;
+    if (csm && !this.csmView) {
+      this.csmView = buildCsm();
+      this.scene.scene.add(this.csmView.group);
+    }
+    if (this.csmView) {
+      this.csmView.group.visible = !!csm;
+      if (csm && frame.apollo && APOLLO_ASCENT.includes(frame.apollo.phase)) {
+        // (the rendezvous: where it is, its nose at the ascent stage)
+        const toLm = normalize(sub(frame.r, csm.r));
+        scene.toScene(csm.r, this.csmView.group.position);
+        this.csmView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(toLm.x, toLm.y, toLm.z));
+      } else if (csm) {
+        const moonUp = normalize(sub(csm.r, moonState(frame.jd).r));
+        const since = frame.t - APOLLO11.undocking.t;
+        const lift = LM_HEIGHT + CSM_LENGTH + 0.3 + 25 * Math.min(1, Math.max(0, since) / 120);
+        scene.toScene(addScaled(csm.r, moonUp, lift), this.csmView.group.position);
+        this.csmView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(-moonUp.x, -moonUp.y, -moonUp.z));
+      }
+    }
+    // C01: the descent stage where Eagle landed, from the lift-off on; the ascent stage after its jettison
+    const site = frame.apollo?.landed && !APOLLO_LM.includes(frame.apollo.phase) ? frame.apollo.landed : null;
+    if (site && !this.descentStageView) {
+      this.descentStageView = buildDescentStage();
+      this.scene.scene.add(this.descentStageView.group);
+    }
+    if (this.descentStageView) {
+      this.descentStageView.group.visible = !!site;
+      if (site) {
+        const rel = selenographicToEci(site.lat, site.lon, APOLLO11.siteRadius, frame.jd), up = normalize(rel);
+        scene.toScene(add(moonState(frame.jd).r, rel), this.descentStageView.group.position);
+        this.descentStageView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(up.x, up.y, up.z));
+      }
+    }
+    // C01: the command module home: drawn on its own, heat shield first, then under its parachutes; the service module off it
+    const cmHome = !!frame.apollo && APOLLO_CM.includes(frame.apollo.phase);
+    if (cmHome && !this.entryCmView) {
+      this.entryCmView = buildEntryCm();
+      this.scene.scene.add(this.entryCmView.group);
+    }
+    if (this.entryCmView) {
+      this.entryCmView.group.visible = cmHome;
+      if (cmHome) {
+        this.rocket.group.visible = false;
+        this.entryCmView.group.position.copy(this.vehiclePos);
+        this.entryCmView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(frame.dir.x, frame.dir.y, frame.dir.z));
+        this.entryCmView.setChutes(frame.apollo!.entry?.drogue ?? 0, frame.apollo!.entry?.main ?? 0);
+        this.entryCmView.setGlow(frame.altitude, frame.apollo!.phase === 'entry' ? frame.airspeed : 0);
+      }
+    }
+    const sm = frame.apollo?.serviceModule;
+    if (sm && !this.smView) {
+      this.smView = buildServiceModule();
+      this.scene.scene.add(this.smView.group);
+    }
+    if (this.smView) {
+      this.smView.group.visible = !!sm;
+      if (sm) {
+        const toCm = normalize(sub(frame.r, sm.r));
+        scene.toScene(sm.r, this.smView.group.position);
+        this.smView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(toCm.x, toCm.y, toCm.z));
+      }
+    }
+    const as = frame.apollo?.ascentStage;
+    if (as && !this.ascentStageView) {
+      this.ascentStageView = buildAscentStage();
+      this.scene.scene.add(this.ascentStageView.group);
+    }
+    if (this.ascentStageView) {
+      this.ascentStageView.group.visible = !!as;
+      if (as) {
+        const out = normalize(sub(as.r, frame.r));
+        scene.toScene(as.r, this.ascentStageView.group.position);
+        this.ascentStageView.group.quaternion.setFromUnitVectors(this.bx.set(0, 1, 0), this.by.set(-out.x, -out.y, -out.z));
+      }
+    }
     if (this.escapeView) {
       this.escapeView.group.position.copy(this.rocket.group.position);
       this.escapeView.group.quaternion.copy(this.rocket.group.quaternion);
@@ -1872,7 +1989,10 @@ class App {
     // Size of the object actually being tracked: the stack now, the spacecraft
     // after payload separation. It frames the camera, decides when the space
     // view's marker takes over, and scales the break-up effect.
+    // (C01: from the undocking, Eagle, its ascent stage, the two docked again, Columbia)
+    const apolloSize = apolloViewSize(frame.apollo);
     const height = frame.abort && this.escapeView ? this.escapeView.size(frame)
+      : apolloSize ? apolloSize.height
       : frame.payloadSeparated ? Math.max(3, frame.payloadHeight ?? 3) : this.rocket.currentHeight(frame);
     this.explosion.update(scene, frame, this.recorder.events, dt, height);
     // lines
@@ -1884,15 +2004,23 @@ class App {
     this.target.update(scene);
     this.debrisView.update(frame.debris, frame.t);
     // camera
-    const radius = frame.abort ? Math.min(2, height / 4) : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
+    const radius = frame.abort ? Math.min(2, height / 4) : apolloSize ? apolloSize.radius : frame.payloadSeparated ? Math.max(1, frame.payloadWidth ?? 2) : this.rocket.currentRadius(frame);
     const shake = frame.status === 'ascent' ? Math.min(1, frame.thrust / Math.max(1, frame.mass) / 25 + frame.q / 60e3) : frame.thrust > 0 ? 0.15 : 0;
     // G07: close to the station the exterior view keeps it in the picture, and the onboard view is the docking TV camera;
     // the flight-path lines, kilometres long through the middle of that picture, stand aside
     const rv = frame.rendezvous;
     const nearStation = !!rv && !!this.stationView && rv.range < NEAR_STATION && rv.phase !== 'coast' && rv.phase !== 'burn' && rv.phase !== 'separation';
     const docking = !!rv && nearStation && (rv.phase === 'approach' || rv.phase === 'flyaround' || rv.phase === 'stationkeeping' || rv.phase === 'final' || rv.phase === 'retreat');
-    this.trail.line.visible = !nearStation;
-    this.predicted.setHidden(nearStation);
+    // C01: Eagle's lift-off watched from over it, looking down past it at the descent stage it leaves behind; the
+    // braking and the station-keeping from behind it, looking past it at Columbia
+    const ap = frame.apollo, apPhase = ap?.phase;
+    const apolloPartner = apPhase === 'ascent' && ap!.moon.alt < 400 && this.descentStageView?.group.visible ? this.descentStageView.group.position
+      : (apPhase === 'braking' || apPhase === 'stationkeeping' || (apPhase === 'terminal' && (ap!.rendezvous?.range ?? Infinity) < 3000))
+        && this.csmView?.group.visible ? this.csmView.group.position : null;
+    // (and the command module close up through the air: the lines, the whole way from the Moon, stand aside)
+    const cmClose = !!apPhase && APOLLO_CM.includes(apPhase);
+    this.trail.line.visible = !nearStation && !apolloPartner && !cmClose;
+    this.predicted.setHidden(nearStation || !!apolloPartner || cmClose);
     if (focus) {
       // A stage flown home: framed on its own axis, over its own ground.
       const f = enuFrame(focus.r);
@@ -1910,12 +2038,15 @@ class App {
       // G06: under a parachute the camera frames the canopy above the capsule,
       // not the ground below its heat shield
       const canopy = frame.abort?.body === 'capsule' && (frame.abort.main > 0.2 || frame.abort.drogue > 0.2);
+      // C01: at the Moon the camera's up and its ground are the Moon's
+      const lunar = frame.apollo && APOLLO_AT_MOON.includes(frame.apollo.phase) ? sub(frame.r, moonState(frame.jd).r) : null;
+      const ground = lunar ? enuFrame(lunar) : { up, east, north };
       this.cams.update(scene.camera, {
-        pos: this.originV, up, east, north, dir: canopy ? scale(frame.dir, -1) : frame.dir, side, height, radius,
+        pos: this.originV, up: ground.up, east: ground.east, north: ground.north, dir: canopy ? scale(frame.dir, -1) : frame.dir, side, height, radius,
         earthCenter: scene.toScene(v3(0, 0, 0), this.earthC), shake: shake * 0.6,
         vDir: norm(frame.v) > 1 ? normalize(frame.v) : up,
-        t: frame.t, phase: camPhase(frame), agl: frame.altitudeAGL,
-        ...(nearStation ? { partner: this.stationView!.group.position } : {}),
+        t: frame.t, phase: camPhase(frame), agl: lunar ? norm(lunar) - APOLLO11.siteRadius : frame.altitudeAGL,
+        ...(nearStation ? { partner: this.stationView!.group.position } : apolloPartner ? { partner: apolloPartner } : {}),
         ...(docking && rv ? { dockingEye: this.dockingEye(frame, rv) } : {}),
       }, dt, R_EARTH);
     }
@@ -1926,10 +2057,16 @@ class App {
     const camAlt = Math.hypot(scene.camera.position.x + scene.origin.x, scene.camera.position.y + scene.origin.y, scene.camera.position.z + scene.origin.z) - R_EARTH;
     // shadows are only worth casting while we are looking at the pad
     scene.setShadowFocus(padVec, this.pad.shadowRadius, camAlt < 40e3 && padDist < 30e3);
+    // C01: Eagle's shadow on the Moon, from the last kilometres of the descent
+    const lunarAlt = frame.apollo?.descent?.alt ?? (frame.apollo?.phase === 'landed' ? 0 : frame.apollo?.phase === 'ascent' ? frame.apollo.moon.alt : Infinity);
+    if (lunarAlt < 200) scene.setShadowFocus(this.vehiclePos, 60, true);
     // `height` is the size of the object actually being tracked — the stack
     // now, the spacecraft after payload separation. Without it the space view's
     // marker swaps in at a hard-coded 55 m, which is wrong by more than 10x for
     // a 3 m CubeSat carrier and by 2x for Starship (render hand-off).
+    // C01: the Moon, for a flight to it
+    if (frame.apollo) scene.setMoon(moonState(frame.jd).r, moonBodyToEci(frame.jd));
+    else scene.setMoon(null);
     scene.update(frame, sunDir, camAlt, height);
     // V01: what the camera hears — the map has no listener, so it is silent
     const cam = scene.camera.position, origin = scene.origin;
@@ -1965,6 +2102,7 @@ class App {
 }
 
 initLang();
+stampDocument();
 initNotation();
 // U06: every chart the app draws can be saved as a PNG
 enableChartExport();

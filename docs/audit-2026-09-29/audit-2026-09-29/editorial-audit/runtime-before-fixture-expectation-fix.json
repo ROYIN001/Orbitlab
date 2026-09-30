@@ -1,0 +1,24 @@
+{
+  "finishedAt": "2026-09-29T22:00:43.2904600Z",
+  "sourceHead": "9737f2134b1daaf228ab61c5b7e0bf618ae6a3cc",
+  "runtime": "v22.23.3",
+  "localizedTextChanges": "text-only-verification.json contains baseline and exact changed source SHA-256 values",
+  "testExit": 1,
+  "typecheckExit": 0,
+  "buildExit": 0,
+  "testFiles": [
+    "tests/case-lessons.test.ts",
+    "tests/case-export-race.test.ts",
+    "tests/worksheets.test.ts",
+    "tests/worksheet-language.test.ts",
+    "tests/worksheet-export-race.test.ts",
+    "tests/lessons.test.ts",
+    "tests/lessons-ui-core.test.ts",
+    "tests/lessons-round2.test.ts",
+    "tests/lessons-history.test.ts",
+    "tests/i18n.test.ts",
+    "tests/assessment.test.ts",
+    "tests/assessment-flights.test.ts",
+    "tests/case-worksheets.test.ts"
+  ]
+}

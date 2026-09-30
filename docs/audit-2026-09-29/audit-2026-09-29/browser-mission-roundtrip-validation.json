@@ -1,0 +1,98 @@
+{
+  "sourceFile": {
+    "downloadName": "falcon9-cape-2026-09-29-19-47.orbitlab.json",
+    "copy": "browser-mission-roundtrip-artifacts/falcon9-cape-2026-09-29-19-47.orbitlab.json",
+    "bytes": 780,
+    "sha256": "f7eb555ffcba2a286871f1ee9cef2d68ff87f143dedbfa4c0babf902fa454c78"
+  },
+  "browserEvidence": [
+    {
+      "path": "browser-mission-link-roundtrip.json",
+      "sha256": "3cd31c5cb48fd39bda7966facd957720d3d2ab1e7ec5a475c2ff0c36c11782d4"
+    },
+    {
+      "path": "browser-mission-roundtrip.json",
+      "sha256": "b70e81c97b8b06395c75f2d179e6f52471906f297f7ba73f56dc57ab28df6a55"
+    }
+  ],
+  "decoder": "Independent Python base64url + raw DEFLATE (zlib wbits=-15), matching z-prefix contract read from integrated src/config/mission-file.ts:325-341",
+  "codecSourceSha256": "7d81aa9a17dabaad88e2de149de3ee885644415ef184b292f112ac6929637cf0",
+  "shareHandlerSourceSha256": "f21e7de6ba131e6e5246877252fb89a0921ba22962de6d9408ed1c6f96a861eb",
+  "allDocumentFieldsEqual": true,
+  "comparedLeafOrEmptyContainerPaths": [
+    "format",
+    "mission.boosterRecovery",
+    "mission.dynamics.model",
+    "mission.dynamics.seed",
+    "mission.dynamics.wind",
+    "mission.failure.mode",
+    "mission.failure.stage",
+    "mission.failure.time",
+    "mission.guidanceOverrides",
+    "mission.launchTime",
+    "mission.orbit.apogee",
+    "mission.orbit.argPerigee",
+    "mission.orbit.description",
+    "mission.orbit.id",
+    "mission.orbit.inclination",
+    "mission.orbit.name",
+    "mission.orbit.perigee",
+    "mission.orbit.raanMode",
+    "mission.orbitId",
+    "mission.payloadMass",
+    "mission.satelliteId",
+    "mission.siteId",
+    "mission.vehicleId",
+    "version"
+  ],
+  "comparedFieldCount": 24,
+  "missing": [],
+  "extra": [],
+  "different": [],
+  "launchTimePreservedExactly": "2026-09-29T19:47:18.006Z",
+  "decodedDocument": {
+    "format": "orbitlab.mission",
+    "version": 2,
+    "mission": {
+      "vehicleId": "falcon9",
+      "satelliteId": "cubesats",
+      "siteId": "cape",
+      "orbitId": "leo",
+      "orbit": {
+        "id": "leo",
+        "name": "Low Earth orbit (500 km)",
+        "perigee": 500000,
+        "apogee": 500000,
+        "inclination": "site",
+        "argPerigee": 0,
+        "raanMode": "free",
+        "description": "Generic circular LEO at the minimum inclination of the launch site."
+      },
+      "launchTime": "2026-09-29T19:47:18.006Z",
+      "payloadMass": 1000,
+      "guidanceOverrides": {},
+      "failure": {
+        "mode": "none",
+        "time": 60,
+        "stage": 0
+      },
+      "boosterRecovery": false,
+      "dynamics": {
+        "model": "sixDof",
+        "wind": "calm",
+        "seed": 20260919
+      }
+    }
+  },
+  "browserControls": {
+    "count": 46,
+    "allEqual": true,
+    "excludedOtherPanel": "Orbit playground RAAN is initialized from current time and is not a Launch mission setting"
+  },
+  "clipboard": {
+    "observed": "UI says link is in address bar",
+    "claim": "Address-bar fallback used; clipboard write success is NOT claimed"
+  },
+  "scope": "One actual saved mission imported via UI, shared via address-bar fallback, opened in new tab. Complete encoded document equals original file, including UTC milliseconds and absent/empty fields. Not every possible mission combination.",
+  "passed": true
+}
