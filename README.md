@@ -296,7 +296,7 @@ The launch section's levels, with the landing page:
   back at the Cape and on a drone ship, Starship Flight 5 with its tower catch and
   splashdown, the three Soyuz launch aborts (T-10-1, 18a, MS-10) flown to the crew on
   the ground, and Soyuz MS-28 at the station in three hours — each flown to its target,
-  and every stage it flies home landed, by `tests/watch-missions.test.ts`; the camera
+  and every stage it flies home landed, by `tests/watch-missions-flights-*.test.ts`; the camera
   follows a returning stage for its landing, and the flight ends on a card that offers
   another launch or the mission builder.
 - **Explore** — the mission builder, lighter, flying the same physics (`src/ui/explore.ts`).

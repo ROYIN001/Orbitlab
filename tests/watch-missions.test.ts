@@ -2,28 +2,27 @@
  * The launches the viewer offers must fly.
  *
  * Someone watching without any background has no way to tell a model limit
- * from a launch failure, so every viewer mission is flown here exactly as the
- * app builds it (the panel's guidance and flight model for that vehicle) until
- * it reaches orbit, and has to get there. The settings themselves are checked
- * too: valid, in daylight at the pad, and inside the site's range-safety
- * corridor.
+ * from a launch failure, so every viewer mission is flown exactly as the app
+ * builds it (the panel's guidance and flight model for that vehicle) until it
+ * reaches orbit, and has to get there. The flights themselves are in
+ * tests/watch-missions-flights-*.test.ts (helper tests/watch-missions-flights.ts),
+ * several files because vitest runs files in parallel but a file's tests one
+ * after another; this file checks that those files fly every mission exactly
+ * once. The settings are checked here: valid, in daylight at the pad, and
+ * inside the site's range-safety corridor.
  */
 import { describe, expect, it } from 'vitest';
 import { FEATURED_WATCH_MISSION, WATCH_MISSIONS, daylightLaunchTime, isHistorical, localSolarHour, watchMissionById, watchMissionSettings } from '../src/ui/watch-missions';
 import { validateConfigInput } from '../src/config/validation';
-import { Simulation } from '../src/physics/simulation';
-import { HISTORICAL_VEHICLES, vehicleById } from '../src/data/vehicles';
+import { vehicleById } from '../src/data/vehicles';
 import { siteById } from '../src/data/sites';
 import { orbitById } from '../src/data/orbits';
-import { guidanceForVehicle } from '../src/physics/defaults';
 import { ascentInclinationFor, azimuthAllowedFor, launchWindows, resolveTarget } from '../src/physics/mission';
-import { defaultDynamics } from '../src/physics/rigid/config';
-import { reachedOrbit } from '../src/ui/watch-logic';
-import { captureFrame } from '../src/physics/frame';
 import { en } from '../src/i18n/en';
-import { compareEvents, simPayloadOrbit } from '../src/ui/flown';
+import { FLIGHT_GROUPS, FROM } from './watch-missions-flights';
 
-const FROM = [new Date('2026-09-22T03:00:00Z'), new Date('2027-03-14T17:30:00Z')];
+// the flight files' text; `import.meta.glob` requires its options to be an inline object literal
+const FLIGHT_FILES = import.meta.glob('./watch-missions-flights-*.test.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 describe('viewer missions', () => {
   it('are unique, known to the dictionaries and include the featured launch', () => {
@@ -82,74 +81,15 @@ describe('viewer missions', () => {
     expect(localSolarHour(t, siteById('cape').longitude)).toBeCloseTo(10, 0);
   });
 
-  // G06: the launch aborts end with the crew under their parachutes, not in orbit
-  const ABORT_MODES: Record<string, string> = { soyuzMs10: 'fairing', soyuzT10: 'tower', soyuz18a: 'separation' };
-  it.each(WATCH_MISSIONS.filter((m) => m.failure).map((m) => m.id))('%s meets its failure and fires the escape system the way its crew did', { timeout: 300_000 }, (id) => {
-    const s = watchMissionSettings(id, FROM[0]);
-    const dynamics = defaultDynamics(s.vehicleId);
-    const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
-      launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
-      guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
-      failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,
-    }, { headless: true });
-    // up to the abort; the crews' flights home are in tests/launch-abort.test.ts and tests/heavy/soyuz-aborts.test.ts
-    let guard = 0;
-    while (!sim.state.abort && !sim.isFailed() && sim.state.t < 600 && guard++ < 400000) sim.step(sim.suggestedDt());
-    expect(sim.state.abort?.mode).toBe(ABORT_MODES[id]);
-    expect(sim.isFailed()).toBe(false);
-  });
-
-  it.each(WATCH_MISSIONS.filter((m) => !m.failure).map((m) => m.id))('%s reaches its target as the app flies it, and lands what it flies home', { timeout: 900_000 }, (id) => {
-    const s = watchMissionSettings(id, FROM[0]);
-    const dynamics = defaultDynamics(s.vehicleId);
-    const sim = new Simulation({
-      vehicleId: s.vehicleId, satelliteId: s.satelliteId, siteId: s.siteId, orbit: s.orbit, padId: s.padId,
-      launchTime: s.launchTime, payloadMassOverride: s.payloadMass,
-      guidance: guidanceForVehicle(vehicleById(s.vehicleId), undefined, dynamics.model), guidanceResolved: true,
-      failure: s.failure, boosterRecovery: s.boosterRecovery, recoveryPlan: s.recoveryPlan, dynamics,
-    }, { headless: true });
-    const suborbital = !!s.orbit.suborbital;
-    let guard = 0;
-    let there = false;
-    while (!sim.done && !sim.isFailed() && sim.state.t < 1800 && guard++ < 400000) {
-      sim.step(sim.suggestedDt());
-      if (suborbital) {
-        // Flight 5's ship is cut off on its way home; the splashdown is flown
-        // in tests/heavy/starship-flight5.test.ts.
-        if (sim.events.some((e) => e.key === 'evt.suborbitalTarget')) { there = true; break; }
-      } else if (sim.state.status === 'orbit' || sim.events.some((e) => e.key === 'evt.parkingOrbit' || e.key === 'evt.targetOrbit')) {
-        there = reachedOrbit(captureFrame(sim), sim.events);
-        if (there) break;
-      }
-    }
-    expect(sim.isFailed()).toBe(false);
-    expect(there).toBe(true);
-    // Every stage flown home comes down where it was sent.
-    const home = () => sim.debris.filter((d) => d.recovery?.target);
-    expect(home().length).toBe(s.recoveryPlan ? [s.recoveryPlan.core, ...(s.recoveryPlan.boosters ?? [])].filter(Boolean).length : 0);
-    const until = sim.state.t + 900;
-    while (home().some((d) => d.alive) && sim.state.t < until && !sim.isFailed()) sim.step(sim.suggestedDt());
-    for (const d of home()) {
-      expect(d.outcome, `${d.name} → ${d.recovery!.target!.id}`).toBe('landed');
-      expect(d.recovery!.missDistance!).toBeLessThan(d.recovery!.target!.radius);
-    }
-    // C01: a historical flight's ascent happens as flown, give or take the
-    // model's own guidance — within a minute, or 30 % of the time flown
-    const flown = watchMissionById(id)!.flown;
-    for (const row of flown ? compareEvents(flown, sim.events) : []) {
-      if (['evt.maxQ', 'evt.boosterSep', 'evt.fairingSep', 'evt.meco'].includes(row.key) || (row.key === 'evt.stageSep' && row.n === 1)) {
-        expect(row.sim, `${id} ${row.key}`).not.toBeNull();
-      }
-      if (row.delta !== null) expect(Math.abs(row.delta), `${id} ${row.key} ${row.n}`).toBeLessThan(Math.max(60, 0.3 * row.real));
-    }
-    // …and the vehicles of historical flights, flown only for them, reach the flown orbit
-    if (flown?.orbit && HISTORICAL_VEHICLES.some((v) => v.id === s.vehicleId)) {
-      // the reported orbit, or where the stage is now if the loop stopped before separation
-      const el = sim.state.elements;
-      const orbit = simPayloadOrbit(sim.events) ?? { perigee: el.periapsisAlt / 1000, apogee: el.apoapsisAlt / 1000 };
-      expect(Math.abs(orbit.perigee - flown.orbit.perigee), id).toBeLessThan(25);
-      expect(Math.abs(orbit.apogee - flown.orbit.apogee) / flown.orbit.apogee, id).toBeLessThan(0.15);
+  it('are each flown by exactly one of tests/watch-missions-flights-*.test.ts', () => {
+    const grouped: string[] = Object.values(FLIGHT_GROUPS).flat();
+    expect([...grouped].sort(), 'FLIGHT_GROUPS in tests/watch-missions-flights.ts must hold every mission once')
+      .toEqual(WATCH_MISSIONS.map((m) => m.id).sort());
+    // one file per group, flying that group
+    expect(Object.keys(FLIGHT_FILES).sort()).toEqual(Object.keys(FLIGHT_GROUPS).map((g) => `./watch-missions-flights-${g}.test.ts`).sort());
+    for (const group of Object.keys(FLIGHT_GROUPS)) {
+      const file = `./watch-missions-flights-${group}.test.ts`;
+      expect(FLIGHT_FILES[file], file).toContain(`FLIGHT_GROUPS.${group})`);
     }
   });
 });
