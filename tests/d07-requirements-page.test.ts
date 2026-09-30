@@ -11,7 +11,8 @@
  *   and 97.91° ± 0.1°, and with the template's 13 µm pitch f = 16.1 m ± 0.08 m
  *   (as tests/d07-trades.test.ts holds them); the opened design's D06 figures
  *   meet each requirement the row claims met: the GSD and the diffraction
- *   limit to 1e-9 relative, the camera within the template's to 1e-9, the
+ *   limit to 1e-9 relative, the camera within the template's to 1e-9 (the
+ *   row does not claim this one: CHANGED AFTER THE FIRST RUN, see the test), the
  *   link margin 3 dB to 1e-9 and the day's data to 1e-9 relative, the revisit
  *   seen from the design's orbit no longer than asked (1e-12 relative), and
  *   the lifetime and the 25-year rule as the bench's own P07 run gives them
@@ -248,14 +249,21 @@ describe('a row opened on the bench (D07 → D06, map §3 round trip)', () => {
     if (!opened.ok) throw new Error(`not opened: ${opened.key}`);
     const { design: d, figures: fig } = opened;
     const claimed = REQUIREMENTS.filter((k) => !Number.isNaN(row.ratios[k]) && !row.unmet.includes(k));
-    // with a 30° tilt, the life asked and the 25-year rule, THEOS-2's own orbit meets every one of them
-    expect(claimed).toEqual(['gsd', 'revisit', 'data', 'lifetime', 'disposal']);
+    // with a 30° tilt, the life asked and the 25-year rule, THEOS-2's own orbit meets all but the camera: the template's
+    // 16.1 m gives 0.5014 m from 621.07 km, so the row asks for a camera 0.30 % longer (CHANGED AFTER THE FIRST RUN: the
+    // first run expected 'gsd' among the claims; it is a premise of this test, not a tolerance)
+    expect(claimed).toEqual(['revisit', 'data', 'lifetime', 'disposal']);
+    expect(row.unmet).toEqual(['gsd']);
+    expect(rel(row.ratios.gsd, row.focalLength / tpl.payload!.focalLength)).toBeLessThanOrEqual(1e-12);
+    expect(row.ratios.gsd).toBeGreaterThan(1);
+    expect(row.ratios.gsd).toBeLessThan(1.004);
     const o = designOrbit(d.orbit, JD0);
 
-    // gsd: the bench's GSD and diffraction limit, and a camera no larger than the template's
+    // gsd, not claimed, still met on the bench: the design carries the camera the row sizes, so the bench's GSD and
+    // diffraction limit are the GSD asked; its focal length is the template's and a little more, its aperture within the template's
     expect(fig.camera!.gsd.value).toBeLessThanOrEqual(req.gsd * (1 + 1e-9));
     expect(fig.camera!.diffraction.value).toBeLessThanOrEqual(req.gsd * (1 + 1e-9));
-    expect(d.payload!.focalLength).toBeLessThanOrEqual(tpl.payload!.focalLength * (1 + 1e-9));
+    expect(d.payload!.focalLength).toBeGreaterThan(tpl.payload!.focalLength);
     expect(d.payload!.aperture).toBeLessThanOrEqual(tpl.payload!.aperture * (1 + 1e-9));
     // revisit: seen from the design's orbit, with the bench's swath and the tilt the page asked
     const reach = fig.camera!.swath!.value / 2 + (sideReach(fig.camera!.altitude.value, THEOS2.tiltDeg * DEG) ?? 0);
