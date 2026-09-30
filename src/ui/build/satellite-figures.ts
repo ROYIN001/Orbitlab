@@ -144,7 +144,8 @@ export function cameraRows(f: SatelliteFigures): Row[] {
   const rows: Row[] = [
     [t('build.sat.r.from'), sayFig(c.altitude)],
     [t('build.sat.r.gsd'), sayFig(c.gsd)],
-    [t('build.sat.r.offNadir'), `${sayFig(c.offNadirAlong)} × ${sayFig(c.offNadirCross)}`],
+    // from above one Earth radius a look 30° off nadir misses the Earth (the core gives Infinity): said, not two dashes
+    [t('build.sat.r.offNadir'), Number.isFinite(c.offNadirAlong.value) ? `${sayFig(c.offNadirAlong)} × ${sayFig(c.offNadirCross)}` : t('build.sat.r.pastHorizon')],
     [t('build.sat.r.diffraction'), sayFig(c.diffraction), t(c.limitedBy === 'aperture' ? 'build.sat.r.limitAperture' : 'build.sat.r.limitPixels')],
     [t('build.sat.r.fov'), sayFig(c.fov, 2)],
     [t('build.sat.r.swath'), c.swath ? sayFig(c.swath) : t('build.sat.r.pastHorizon')],
