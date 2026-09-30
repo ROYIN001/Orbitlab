@@ -265,6 +265,16 @@ describe('scoring', () => {
     }
   });
 
+  it('recommends an explicit foundational review even when every domain aggregate is strong', () => {
+    const a = attempt(11, (q) => q.id !== 'b-launch-east', 'unsure');
+    expect(a.questions.some((q) => q.id === 'b-launch-east')).toBe(true);
+    const r = scoreAttempt(a, BUILTIN_QUESTIONS, allLessons());
+    expect(r.domains.every((d) => d.level === 'strong')).toBe(true);
+    expect(r.advice['orbit-range-safety']).toBe('review');
+    expect(r.start).toBe('orbit-range-safety');
+    expect(r.startDomain).toBe(allLessons().find((l) => l.id === r.start)!.domains[0]);
+  });
+
   it('sends a student weak in the basics and in orbits back to the foundations first', () => {
     const r = scoreAttempt(attempt(9, (q) => q.domain !== 1 && q.domain !== 2 && q.domain !== 4), BUILTIN_QUESTIONS, BUILTIN_LESSONS);
     // area 4 rests on area 2, which rests on area 1: the start is the basics' first lesson

@@ -36,7 +36,10 @@ jobs:
   # the default suite (tests/heavy and tests/sixdof-fleet excluded by vite.config.ts) split three ways
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # watch-missions.test.ts alone takes 12-16 min on a shared runner and sits in one shard
+    # with the other long files (build-catalogue-matrix, rigid-recovery, ballistic); 20 min
+    # left no margin for the runner's ~2x speed swing
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

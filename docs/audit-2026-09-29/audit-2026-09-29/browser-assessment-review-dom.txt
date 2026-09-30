@@ -1,0 +1,554 @@
+- banner:
+  - generic: ◉
+  - generic: ORBITLAB
+  - navigation "Section":
+    - link "Home":
+      - /url: "#/home"
+      - generic: ⌂
+      - generic: Home
+    - link "Launch":
+      - /url: "#/launch/explore"
+      - generic: ▲
+      - generic: Launch
+    - link "Orbit":
+      - /url: "#/orbit/explore"
+      - generic: ⊕
+      - generic: Orbit
+    - link "Build":
+      - /url: "#/build/explore"
+      - generic: ⚙︎
+      - generic: Build
+  - navigation "App mode":
+    - link "Watch":
+      - /url: "#/orbit/watch"
+      - generic: ▷
+    - link "Explore":
+      - /url: "#/orbit/explore"
+      - generic: ◎
+    - link "Engineer":
+      - /url: "#/orbit/engineer"
+      - generic: ⌬
+  - button "Lessons — 3 of 25 passed":
+    - generic: ✎
+    - generic: Lessons
+  - 'button "Data sources: Offline"':
+  - combobox "Language":
+    - option "English" [selected]
+    - option "Русский"
+    - option "ไทย"
+- main:
+  - generic "Interactive 3-D launch scene. Drag to rotate, pinch or scroll to zoom.":
+    - region "Orbit playground":
+      - complementary:
+        - generic: Orbit
+        - heading "Real satellites" [level=1]
+        - group "What the playground shows":
+          - button "Your orbit"
+          - button "Real satellites" [pressed]
+        - paragraph: Satellites where they are, from the element sets they are tracked by, propagated by SGP4 — the theory those sets are made for. The clock starts now.
+        - generic: Group
+        - combobox "Group":
+          - option "Space stations"
+          - option "Thailand's satellites" [selected]
+          - option "Navigation (GNSS)"
+          - option "Weather satellites"
+          - option "Earth-imaging satellites"
+          - 'option "Debris: Fengyun-1C"'
+        - paragraph: THEOS-2, THEOS, NAPA-1 and the Thaicom satellites. What each one does, with its sources, is under What satellites do in your orbit.
+        - 'searchbox "Search: name, catalogue number or designator"'
+        - list "Thailand's satellites":
+          - button "THAICOM 4 28786":
+            - generic: THAICOM 4
+            - generic: "28786"
+          - button "THEOS 33396":
+            - generic: THEOS
+            - generic: "33396"
+          - button "THAICOM 6 39500":
+            - generic: THAICOM 6
+            - generic: "39500"
+          - button "ASIASAT 6 40141":
+            - generic: ASIASAT 6
+            - generic: "40141"
+          - button "THAICOM 8 41552":
+            - generic: THAICOM 8
+            - generic: "41552"
+          - button "NAPA-1 46320":
+            - generic: NAPA-1
+            - generic: "46320"
+          - button "THEOS-2 (T2V) 58016" [pressed]:
+            - generic: THEOS-2 (T2V)
+            - generic: "58016"
+        - generic "Overflights of Bangkok"
+        - paragraph: "When the satellites of the group on screen pass over the place, from the moment on screen: each pass whose highest point is at least the elevation chosen, with the off-nadir angle a camera must look at to see the place, and whether the place is in daylight (an optical camera needs it; a radar does not)."
+        - generic: Seen from
+        - combobox "Seen from":
+          - option "Bangkok" [selected]
+          - option "Chiang Mai"
+          - option "Hat Yai"
+          - option "Ubon Ratchathani"
+          - option "Saint Petersburg"
+          - option "Moscow"
+          - option "Coordinates of your own"
+        - generic: Highest at least
+        - combobox "Highest at least":
+          - option "15°"
+          - option "30°" [selected]
+          - option "45°"
+          - option "60°"
+          - option "75°"
+        - generic: Over the next
+        - combobox "Over the next":
+          - option "24 hours" [selected]
+          - option "3 days"
+        - checkbox "In daylight only"
+        - generic: In daylight only
+        - checkbox "Only when its instrument can image the place"
+        - generic: Only when its instrument can image the place
+        - button "Find overflights"
+        - paragraph: "An overflight is when a camera could see the place, not that it does: that takes its operator's tasking and, for an optical camera, a clear sky. Only satellites whose element sets are published are counted."
+        - paragraph: "Whether an instrument can image the place is judged at the pass's highest point, from what its operator publishes: a fixed camera's swath, an agile one's largest off-nadir angle, a radar's incidence angles and side. A camera needs daylight; a radar sees by night and through cloud. The finest resolution is its best mode's."
+        - generic "Worksheets from real cases"
+        - paragraph: "A printable sheet of questions, and its answer key apart, on a case from the record, worked with the published data and this app's physics: the collision of Iridium 33 and Cosmos 2251, the Long March 5B stage that launched Tianhe, THEOS-2 over Bangkok."
+        - text: Case
+        - combobox "Case":
+          - option "Iridium 33 and Cosmos 2251 (2009)"
+          - option "The Long March 5B stage of Tianhe (2021)" [selected]
+          - option "THEOS-2 over Bangkok"
+        - button "The sheet (HTML)"
+        - button "The answer key (HTML)"
+        - status
+        - paragraph: Each case is also a graded lesson, 6.1–6.3, in the lessons catalogue. Made in the page, in the language on screen, and sent nowhere.
+        - button "Read a file of element sets…"
+        - paragraph: TLE or 3LE, or OMM as JSON, CSV, XML or KVN — from CelesTrak, or from your own Space-Track account. The file is read in this page and goes nowhere.
+      - tablist "Views":
+        - tab "3-D":
+          - generic: ◍
+          - generic: 3-D
+        - tab "Ground track" [selected]:
+          - generic: ⌇
+          - generic: Ground track
+      - img "The satellite's track on a map of the Earth"
+      - button "Play": ▶
+      - combobox "Time warp":
+        - option "1×" [selected]
+        - option "10×"
+        - option "60×"
+        - option "300×"
+        - option "600×"
+        - option "1,800×"
+        - option "3,600×"
+        - option "21,600×"
+        - option "86,400×"
+      - button "Back to now": ⟲
+      - generic: Not now
+      - generic: Sep 29, 2026, 07:49:38 PM UTC
+      - complementary:
+        - paragraph: Element sets as of Sep 26, 2026, 4:10 PM UTC · bundled with this version of Orbitlab
+        - heading "THEOS-2 (T2V)" [level=2]
+        - term: Catalogue number
+        - definition: "58016"
+        - term: International designator
+        - definition: 2023-155A
+        - term: Element set epoch
+        - definition: Sep 26, 2026, 11:28 AM UTC
+        - term: Element set's age
+        - definition: 3.3 days
+        - term: Position error (estimate)
+        - definition: about 5.5 km, ±0.7 s along the track
+        - term: Altitude
+        - definition: 630 km
+        - term: Speed
+        - definition: 7.539 km/s
+        - term: Under the satellite
+        - definition: 28.61° S · 148.09° W
+        - term: Orbital period
+        - definition: 1 h 37 min
+        - term: Perigee × apogee (mean)
+        - definition: 620 × 622 km
+        - term: Inclination
+        - definition: 97.91°
+        - term: Theory
+        - definition: SGP4 (near Earth)
+        - generic "How far off it may be"
+        - generic "Close approaches"
+        - option "1 km"
+        - option "5 km" [selected]
+        - option "10 km"
+        - option "25 km"
+        - option "24 hours"
+        - option "3 days" [selected]
+        - option "7 days"
+        - generic "When it will come down"
+        - option "its element set's decay rate, fitted" [selected]
+        - option "a mass and size you give"
+        - paragraph: Thailand's national Earth-observation satellite, run by GISTDA and built by Airbus Defence and Space. Its camera sees details down to 50 cm; it crosses the equator heading south between 10:00 and 10:30 local time, and its track repeats every 26 days.
+        - heading "Passes over Bangkok" [level=2]
+        - generic: Seen from
+        - combobox "Seen from":
+          - option "Bangkok" [selected]
+          - option "Chiang Mai"
+          - option "Hat Yai"
+          - option "Ubon Ratchathani"
+          - option "Saint Petersburg"
+          - option "Moscow"
+          - option "Coordinates of your own"
+        - generic: Counted from an elevation of
+        - combobox "Counted from an elevation of":
+          - option "0°"
+          - option "10°" [selected]
+          - option "20°"
+          - option "30°"
+        - paragraph: Next pass in 7 h 50 min
+        - table:
+          - rowgroup:
+            - row "Rises Highest Sets":
+              - columnheader "Rises"
+              - columnheader "Highest"
+              - columnheader "Sets"
+          - rowgroup:
+            - row "Wednesday, September 30":
+              - cell "Wednesday, September 30"
+            - row "06:39:54 AM north 06:44:15 AM 80° west 06:48:36 AM south":
+              - cell "06:39:54 AM north":
+                - generic: 06:39:54 AM
+                - generic: north
+              - cell "06:44:15 AM 80° west":
+                - generic: 06:44:15 AM
+                - generic: 80° west
+              - cell "06:48:36 AM south":
+                - generic: 06:48:36 AM
+                - generic: south
+            - 'row "Not to be seen: the sky is light"':
+              - 'cell "Not to be seen: the sky is light"'
+            - row "Wednesday, September 30":
+              - cell "Wednesday, September 30"
+            - row "05:22:47 PM east 05:24:51 PM 13° east 05:26:54 PM north-east":
+              - cell "05:22:47 PM east":
+                - generic: 05:22:47 PM
+                - generic: east
+              - cell "05:24:51 PM 13° east":
+                - generic: 05:24:51 PM
+                - generic: 13° east
+              - cell "05:26:54 PM north-east":
+                - generic: 05:26:54 PM
+                - generic: north-east
+            - 'row "Not to be seen: in the Earth''s shadow"':
+              - 'cell "Not to be seen: in the Earth''s shadow"'
+            - row "Wednesday, September 30":
+              - cell "Wednesday, September 30"
+            - row "06:56:59 PM south 07:00:42 PM 27° west 07:04:25 PM north-west":
+              - cell "06:56:59 PM south":
+                - generic: 06:56:59 PM
+                - generic: south
+              - cell "07:00:42 PM 27° west":
+                - generic: 07:00:42 PM
+                - generic: 27° west
+              - cell "07:04:25 PM north-west":
+                - generic: 07:04:25 PM
+                - generic: north-west
+            - 'row "Not to be seen: in the Earth''s shadow"':
+              - 'cell "Not to be seen: in the Earth''s shadow"'
+            - row "Thursday, October 1":
+              - cell "Thursday, October 1"
+            - row "06:58:30 AM north 07:02:37 AM 42° west 07:06:44 AM south-west":
+              - cell "06:58:30 AM north":
+                - generic: 06:58:30 AM
+                - generic: north
+              - cell "07:02:37 AM 42° west":
+                - generic: 07:02:37 AM
+                - generic: 42° west
+              - cell "07:06:44 AM south-west":
+                - generic: 07:06:44 AM
+                - generic: south-west
+            - 'row "Not to be seen: the sky is light"':
+              - 'cell "Not to be seen: the sky is light"'
+            - row "Thursday, October 1":
+              - cell "Thursday, October 1"
+            - row "05:39:43 PM south-east 05:43:10 PM 23° east 05:46:36 PM north-east":
+              - cell "05:39:43 PM south-east":
+                - generic: 05:39:43 PM
+                - generic: south-east
+              - cell "05:43:10 PM 23° east":
+                - generic: 05:43:10 PM
+                - generic: 23° east
+              - cell "05:46:36 PM north-east":
+                - generic: 05:46:36 PM
+                - generic: north-east
+            - 'row "Not to be seen: in the Earth''s shadow"':
+              - 'cell "Not to be seen: in the Earth''s shadow"'
+            - row "Thursday, October 1":
+              - cell "Thursday, October 1"
+            - row "07:16:31 PM south-west 07:19:08 PM 16° west 07:21:46 PM north-west":
+              - cell "07:16:31 PM south-west":
+                - generic: 07:16:31 PM
+                - generic: south-west
+              - cell "07:19:08 PM 16° west":
+                - generic: 07:19:08 PM
+                - generic: 16° west
+              - cell "07:21:46 PM north-west":
+                - generic: 07:21:46 PM
+                - generic: north-west
+            - 'row "Not to be seen: in the Earth''s shadow"':
+              - 'cell "Not to be seen: in the Earth''s shadow"'
+            - row "Friday, October 2":
+              - cell "Friday, October 2"
+            - row "05:42:28 AM north-east 05:44:59 AM 15° east 05:47:30 AM south-east":
+              - cell "05:42:28 AM north-east":
+                - generic: 05:42:28 AM
+                - generic: north-east
+              - cell "05:44:59 AM 15° east":
+                - generic: 05:44:59 AM
+                - generic: 15° east
+              - cell "05:47:30 AM south-east":
+                - generic: 05:47:30 AM
+                - generic: south-east
+            - 'row "Not to be seen: the sky is light"':
+              - 'cell "Not to be seen: the sky is light"'
+            - row "Friday, October 2":
+              - cell "Friday, October 2"
+            - row "07:17:28 AM north 07:20:58 AM 24° west 07:24:28 AM south-west":
+              - cell "07:17:28 AM north":
+                - generic: 07:17:28 AM
+                - generic: north
+              - cell "07:20:58 AM 24° west":
+                - generic: 07:20:58 AM
+                - generic: 24° west
+              - cell "07:24:28 AM south-west":
+                - generic: 07:24:28 AM
+                - generic: south-west
+            - 'row "Not to be seen: the sky is light"':
+              - 'cell "Not to be seen: the sky is light"'
+            - row "Friday, October 2":
+              - cell "Friday, October 2"
+            - row "05:57:25 PM south-east 06:01:30 PM 41° east 06:05:35 PM north":
+              - cell "05:57:25 PM south-east":
+                - generic: 05:57:25 PM
+                - generic: south-east
+              - cell "06:01:30 PM 41° east":
+                - generic: 06:01:30 PM
+                - generic: 41° east
+              - cell "06:05:35 PM north":
+                - generic: 06:05:35 PM
+                - generic: north
+            - 'row "Not to be seen: in the Earth''s shadow"':
+              - 'cell "Not to be seen: in the Earth''s shadow"'
+        - paragraph: "Times are your device's (GMT+3). Heights are as seen: the air's refraction lifts a satellite on the horizon by about half a degree, so it rises a few seconds sooner than it would without air. A satellite can be seen when it is in sunlight and the Sun is 6° or more below your horizon. Brightness is a magnitude (smaller is brighter; the brightest stars are about 0 to 1), estimated from the satellite's standard magnitude in M. McCants's table of observers' estimates, for the satellites it lists; panels catching the Sun can flare brighter."
+        - button "Put this orbit in the playground"
+        - paragraph: Its osculating orbit at this moment, to plan maneuvers from. The playground carries it by Kepler and J2, not by SGP4, so the two part company over days.
+        - generic "Coming next in Orbit"
+- region "Lessons and the placement test":
+  - generic: ✎ Lessons and the placement test
+  - navigation "Lessons":
+    - link "Lessons":
+      - /url: "#/lessons"
+    - link "Placement test":
+      - /url: "#/lessons/test"
+    - link "Worksheets":
+      - /url: "#/lessons/worksheets"
+  - button "← Back to the simulator"
+  - status: Progress saved in this browser.
+  - generic "Placement test":
+    - text: Placement test
+    - heading "Answers and explanations" [level=2]
+    - list:
+      - paragraph: ✓ Put these in order of height above the Earth, lowest first.
+      - paragraph: "Your answer: An airliner at cruise, about 10 km → The Kármán line, 100 km → The International Space Station, about 420 km → GPS and GLONASS navigation satellites, about 20 000 km → Geostationary satellites, 35 786 km"
+      - paragraph: Low orbits (the ISS, Earth observation) lie a few hundred kilometres up, just above most of the atmosphere; the navigation constellations fly at about 20 000 km (medium orbits) and the geostationary ring at 35 786 km, where one turn takes a sidereal day.
+      - paragraph: ✓ Where does space conventionally begin?
+      - paragraph: "Your answer: At 100 km (the Kármán line)"
+      - paragraph: "The FAI uses the 100 km Kármán line as a conventional boundary. It is not a sharp physical edge: the altitude where aerodynamic flight becomes impractical depends on the vehicle and atmospheric conditions."
+      - paragraph: ✓ Why is the sky black above about 100 km, even in daylight?
+      - paragraph: "Your answer: There is almost no air left to scatter sunlight"
+      - paragraph: The blue of the sky is sunlight scattered by air molecules (Rayleigh scattering). With no air to scatter it, only the Sun's disc and the stars are left against black.
+      - paragraph: ✓ On an elliptical orbit, where does a satellite move fastest?
+      - paragraph: "Your answer: At perigee, the point nearest the Earth"
+      - paragraph: "Kepler's second law: the line to the Earth sweeps equal areas in equal times, so the satellite moves fastest where it is closest. Energy says the same: falling towards the Earth it trades height for speed."
+      - paragraph: ✓ Work out the acceleration of gravity at an altitude of 300 km (m/s²). Take g0 = 9.81 m/s² at the surface and R = 6 378 km.
+      - paragraph: "Your answer: 8.9484 m/s²"
+      - paragraph: "Gravity falls with the square of the distance from the centre: g = g0·(R/(R+h))². At 400 km it is still 8.7 m/s², about 89 % of the surface value."
+      - paragraph: ✗ Kepler's third law relates…
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: …the square of the period to the cube of the semi-major axis"
+      - paragraph: "T² = 4π²a³/μ. The satellite's own mass does not appear: a feather and a station on the same orbit go round together."
+      - paragraph: "Lessons on this: 1.1 Your first orbit"
+      - paragraph: ✗ For a Hohmann transfer from one circular orbit to a higher circular orbit in the same plane, a spacecraft needs…
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: …two burns: one to enter a transfer ellipse, one at its apogee"
+      - paragraph: One burn only makes an ellipse whose perigee is the burn point. The Hohmann transfer adds a second burn at the apogee to raise the perigee.
+      - paragraph: "Lessons on this: 1.3 A Hohmann transfer"
+      - paragraph: ✗ Work out the period of a circular orbit 1700 km up (min). Take R = 6 378 km and μ = 398 600 km³/s².
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: 120.4 min"
+      - paragraph: T = 2π√(r³/μ), in seconds when r is in metres and μ in m³/s²; divide by 60 for minutes.
+      - paragraph: "Lessons on this: 1.1 Your first orbit"
+      - paragraph: ✗ Why does a satellite launched to geostationary orbit from Baikonur need more Δv than one launched from Kourou?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: It starts with an inclination of at least 46° and must turn its plane to 0°"
+      - paragraph: From 46° the transfer orbit is inclined at least 46°, and the plane change at apogee costs about 0.8 km/s more than Kourou's 5°. The ground at Baikonur also moves slower, 324 against 463 m/s.
+      - paragraph: ✗ The chart is the dynamic pressure of a Falcon 9 flown in this simulator. Read the highest dynamic pressure it met (kPa).
+      - 'figure "Recorded from a flight in this simulator: Falcon 9 to a 500 km orbit"':
+        - img "The chart is the dynamic pressure of a Falcon 9 flown in this simulator. Read the highest dynamic pressure it met (kPa).":
+          - generic: "0"
+          - generic: "5"
+          - generic: "10"
+          - generic: "15"
+          - generic: "20"
+          - generic: "25"
+          - generic: "0"
+          - generic: "20"
+          - generic: "40"
+          - generic: "60"
+          - generic: "80"
+          - generic: "100"
+          - generic: "120"
+          - generic: "140"
+          - generic: "160"
+          - generic: "180"
+          - generic: "200"
+          - generic: t, s
+          - generic: Dynamic pressure q, kPa
+        - generic: "Recorded from a flight in this simulator: Falcon 9 to a 500 km orbit"
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: 22.36 kPa"
+      - paragraph: The peak of the curve, max-Q, is where the air is still dense and the speed already high; the rocket's structure and its control are sized for it.
+      - paragraph: "Lessons on this: 2.1 Aerodynamic loads"
+      - paragraph: ✗ Which are true of solid rocket motors, compared with liquid engines? Choose every one.
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: Once lit, they burn to the end: they cannot be shut down and restarted at will; They give a large thrust for their size; They can be kept loaded and ready for a long time"
+      - paragraph: The thrust of a solid motor follows the shape of its propellant grain, fixed when it is cast; its specific impulse (about 280 s) is well below a liquid engine's. It is simple, dense and storable, which is why boosters and missiles use it.
+      - paragraph: ✗ The chart is the dynamic pressure of a Falcon 9 flown in this simulator. When is max-Q, and why does q fall afterwards although the rocket keeps speeding up?
+      - 'figure "Recorded from a flight in this simulator: Falcon 9 to a 500 km orbit"':
+        - img "The chart is the dynamic pressure of a Falcon 9 flown in this simulator. When is max-Q, and why does q fall afterwards although the rocket keeps speeding up?":
+          - generic: "0"
+          - generic: "5"
+          - generic: "10"
+          - generic: "15"
+          - generic: "20"
+          - generic: "25"
+          - generic: "0"
+          - generic: "20"
+          - generic: "40"
+          - generic: "60"
+          - generic: "80"
+          - generic: "100"
+          - generic: "120"
+          - generic: "140"
+          - generic: "160"
+          - generic: "180"
+          - generic: "200"
+          - generic: t, s
+          - generic: Dynamic pressure q, kPa
+        - generic: "Recorded from a flight in this simulator: Falcon 9 to a 500 km orbit"
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: At about T+50 s; the air density ρ falls faster than V² grows"
+      - paragraph: Density falls roughly tenfold every 16 km. Low down, speed wins and q climbs; from about 7–12 km the thinning air wins and q falls. Here max-Q is 22.4 kPa at T+50 s.
+      - paragraph: "Lessons on this: 2.1 Aerodynamic loads"
+      - paragraph: ✗ Adding 100 kg of payload to a two-stage rocket costs Δv in both stages. Where does it cost more?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: In the second stage: 100 kg is a much larger part of its mass"
+      - paragraph: "The stage's Δv depends on ln(m0/mf). 100 kg changes the first stage's 550 t hardly at all, but a second stage ending at 15 t feels it: about 17 m/s on Falcon 9, against 1–2 m/s on the first stage."
+      - paragraph: "Lessons on this: 1.4 Payload and Δv"
+      - paragraph: ✗ In a gravity turn, what turns the rocket from vertical towards horizontal flight?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: Gravity bending the velocity down, after a small kick at the start"
+      - paragraph: After a short pitch-over (the kick), the rocket holds its nose along its velocity — zero angle of attack — and gravity itself bends the path over. It keeps aerodynamic loads low in the dense air.
+      - paragraph: "Lessons on this: 2.1 Aerodynamic loads"
+      - paragraph: ✗ 300 dispersed flights, with ellipses at one, two and three standard deviations (A, B, C). Which ellipse would a mission designer quote as holding nearly every flight?
+      - figure:
+        - img "300 dispersed flights, with ellipses at one, two and three standard deviations (A, B, C). Which ellipse would a mission designer quote as holding nearly every flight?":
+          - generic: "-3"
+          - generic: "-2"
+          - generic: "-1"
+          - generic: "0"
+          - generic: "1"
+          - generic: "2"
+          - generic: "3"
+          - generic: "-6"
+          - generic: "-4"
+          - generic: "-2"
+          - generic: "0"
+          - generic: "2"
+          - generic: "4"
+          - generic: "6"
+          - generic: Δh_a, km
+          - generic: Δi, 0.01°
+          - generic: A
+          - generic: B
+          - generic: C
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: C"
+      - paragraph: "C, the 3σ ellipse: about 99% of the flights. Launch contracts quote the injection accuracy at 3σ, and the payload's own propulsion is sized to correct an error that large."
+      - paragraph: "Lessons on this: 2.4 Monte Carlo 3σ"
+      - paragraph: ✗ The pitch-over kick at T+10 s comes out 1° larger than planned, and the lower atmosphere is flown open loop. What happens?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: The trajectory is flatter: more drag and a higher max-Q, and the closed loop must make up the difference later"
+      - paragraph: "After the kick gravity does the turning, and a larger kick grows into a flatter, depressed trajectory: lower through the dense air, faster, more drag and dynamic pressure. The explicit guidance above the atmosphere starts from wherever the ascent left it and pays the difference in propellant."
+      - paragraph: "Lessons on this: 2.1 Aerodynamic loads"
+      - paragraph: ✗ A dogleg — leaving along the edge of the range corridor and turning into the target plane later — costs Δv. Where does that cost come from?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: Part of the thrust points out of the plane of motion to turn it, and adds nothing to the speed along the path"
+      - paragraph: Thrust at an angle β to the velocity gives only cos β of itself as speed; the rest turns the plane. The simulator counts it as steering loss, and the setup panel shows the dogleg's angle.
+      - paragraph: "Lessons on this: 1.5 Range safety and the launch site"
+      - paragraph: ✗ When does a spacecraft need reaction control thrusters (RCS) to control its attitude?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: When the main engine is off, or cannot give a moment about some axis"
+      - paragraph: During coasts there is no thrust to tilt, so small thrusters fire in pairs to turn the vehicle. A single gimballed engine also cannot roll the vehicle; its roll needs thrusters or a second chamber.
+      - paragraph: ✗ In a steady crosswind a launcher held by a PD autopilot keeps a small, constant attitude error. What removes it?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: An integral term, which builds up while the error lasts"
+      - paragraph: A PD law needs an error to make the steady moment that balances the wind. An integral term keeps growing while any error is left, so it can hold that moment with none. The D term acts only on the rate, zero in a steady state.
+      - paragraph: "✗ The chart is an attitude loop's response to a step command (y / y∞: the output over its final value). Read its overshoot (%)."
+      - figure:
+        - 'img "The chart is an attitude loop''s response to a step command (y / y∞: the output over its final value). Read its overshoot (%)."':
+          - generic: "0"
+          - generic: "0.2"
+          - generic: "0.4"
+          - generic: "0.6"
+          - generic: "0.8"
+          - generic: "1"
+          - generic: "1.2"
+          - generic: "1.4"
+          - generic: "1.6"
+          - generic: "1.8"
+          - generic: "0"
+          - generic: "2"
+          - generic: "4"
+          - generic: "6"
+          - generic: "8"
+          - generic: "10"
+          - generic: "12"
+          - generic: "14"
+          - generic: "16"
+          - generic: "18"
+          - generic: "20"
+          - generic: t, s
+          - generic: y / y∞
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: 20.53 %"
+      - paragraph: "The overshoot is how far the first peak goes past the final value, as a share of it: a peak at 1.25 is 25%. For a second-order loop it depends only on the damping ratio, e^(−πζ/√(1−ζ²))."
+      - paragraph: "Lessons on this: 4.3 A step test in flight"
+      - paragraph: ✗ Why are an autopilot's stability margins usually tightest near max-Q?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: The destabilising aerodynamic moment is largest there, so the loop has the most to hold"
+      - paragraph: "The aerodynamic instability grows with q: the moment coefficient μα ∝ q·S·(x_cp − x_cm)/I. At its peak the loop must be fastest just to hold the vehicle, and the margins it has left are at their least."
+      - paragraph: "Lessons on this: 4.1 Reading the control loop, 4.2 Gains with margins"
+      - paragraph: ✗ A gyro in one of three inertial units starts to drift. Put the FDIR's steps in order.
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: The units' readings differ by more than a threshold → The difference persists for several cycles: a fault is detected → The vote identifies the failed unit, and it is isolated → The navigation reconfigures onto the healthy units"
+      - paragraph: "Detection, isolation, recovery: waiting a few cycles keeps a single noisy sample from isolating a good unit, and the recovery must leave the flight undisturbed."
+      - paragraph: "Lessons on this: 3.2 A stuck gyro and the FDIR"
+      - paragraph: ✗ About T+115 s into a crewed Soyuz launch the escape tower is jettisoned. What protects the crew after that?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: Solid motors on the fairing, and later the spacecraft's own separation"
+      - paragraph: "Above about 40 km the air no longer needs the tower's power: the fairing's own motors can pull the head section clear until the fairing goes at T+157 s; after that the spacecraft separates from the rocket and makes a ballistic entry."
+      - paragraph: "Lessons on this: 3.3 The crew's escape"
+      - paragraph: ✗ Why did a Proton-M crash seconds after lift-off at Baikonur on 2 July 2013?
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: Angular-rate sensors had been installed upside down, so the control system fought the wrong way"
+      - paragraph: The yaw-rate sensors were mounted reversed, so every correction doubled the error. All units shared the fault, so no voting could see it; the rocket pitched over and broke up within about twenty seconds.
+      - paragraph: "✗ Soyuz 18a (5 April 1975): the second and third stages failed to separate properly at about 145 km. What happened?"
+      - paragraph: "Your answer: skipped"
+      - paragraph: "Correct answer: The spacecraft separated for a ballistic entry; the crew survived about 20 g and landed in the Altai mountains"
+      - paragraph: The tower had gone long before. The spacecraft separated from the tumbling rocket and made a steep ballistic entry; Vasily Lazarev and Oleg Makarov came down on a snowy slope near the Chinese border.
+      - paragraph: "Lessons on this: 3.3 The crew's escape"
+    - button "Back to the result"

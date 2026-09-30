@@ -1,0 +1,43 @@
+{
+  "syntheticOnly": true,
+  "note": "Collector script smoke tests only; zero physical Orbitlab tests ran. Scratch fixtures remain clearly marked SYNTHETIC_ONLY.",
+  "runtime": "v22.23.3",
+  "cases": [
+    {
+      "name": "synthetic complete246/27 accepted",
+      "expectedExit": 0,
+      "actualExit": 0,
+      "passed": true
+    },
+    {
+      "name": "missing expectedcase rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "wrongworker runtime rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "nonzero exit rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "mixed source rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    },
+    {
+      "name": "duplicate result rejected",
+      "expectedExit": 1,
+      "actualExit": 1,
+      "passed": true
+    }
+  ]
+}

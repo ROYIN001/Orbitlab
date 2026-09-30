@@ -17,7 +17,7 @@ import { getLang, t } from '../../i18n';
 import type { VehicleSpec } from '../../types';
 import {
   DESIGN_FILE_EXTENSION, DesignStoreError, LocalDesignStore, designDocument, designFileName, designFileText, parseDesignDocument,
-  readDesignFileText, type DesignRecord, type DesignStore, type DesignSummary,
+  readDesignFileText, type DesignRecord, type DesignStore, type DesignStoreErrorCode, type DesignSummary,
 } from '../../design/design-store';
 import { MISSION_FORMAT } from '../../config/mission-file';
 import { downloadBlob } from '../download';
@@ -36,10 +36,11 @@ export interface ExploreStoreHost {
 
 type Message = { level: 'ok' | 'warn' | 'error'; text: string; extra?: string };
 
-const STORE_ERROR_KEY: Record<string, string> = {
+const STORE_ERROR_KEY: Record<DesignStoreErrorCode, string> = {
   unavailable: 'build.ex.store.unavailable',
   full: 'build.ex.store.full',
   invalid: 'build.ex.store.invalid',
+  collection: 'build.ex.store.collection',
   notFound: 'build.ex.store.notFound',
 };
 

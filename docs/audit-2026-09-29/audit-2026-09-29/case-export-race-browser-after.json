@@ -1,0 +1,44 @@
+[
+  {
+    "originalName": "orbitlab-case-cz5b-key-en (2).html",
+    "evidenceFile": "browser-fixtures/after-race-orbitlab-case-cz5b-key-en (2).html",
+    "bytes": 4160,
+    "sha256": "0a201acf6e84491276d22ca3dacc40f8dba9bad1ddab38f2bf240493b0862f2c",
+    "title": "Answer key — Case sheet: the Long March 5B stage that launched Tianhe"
+  },
+  {
+    "originalName": "orbitlab-case-cz5b-en (1).html",
+    "evidenceFile": "browser-fixtures/after-race-orbitlab-case-cz5b-en (1).html",
+    "bytes": 5524,
+    "sha256": "a6c6e422434a275ce16db5beab70e2044b637503eee0386897ce73634552f1a0",
+    "title": "Case sheet: the Long March 5B stage that launched Tianhe"
+  },
+  {
+    "originalName": "orbitlab-case-iridium-key-en (1).html",
+    "evidenceFile": "browser-fixtures/after-race-orbitlab-case-iridium-key-en (1).html",
+    "bytes": 4378,
+    "sha256": "90d93099e05d12f9e0ad3ae0db146a7145dd148c44117338dfbd01a70f26f78c",
+    "title": "Answer key — Case sheet: Iridium 33 and Cosmos 2251"
+  },
+  {
+    "originalName": "orbitlab-case-iridium-en (1).html",
+    "evidenceFile": "browser-fixtures/after-race-orbitlab-case-iridium-en (1).html",
+    "bytes": 7961,
+    "sha256": "91c87f7e1d60697937351685509e4c7e6dad08c6b6f3a878828fc5f1338bec93",
+    "title": "Case sheet: Iridium 33 and Cosmos 2251"
+  },
+  {
+    "originalName": "orbitlab-case-theos2-key-en.html",
+    "evidenceFile": "browser-fixtures/after-race-orbitlab-case-theos2-key-en.html",
+    "bytes": 3952,
+    "sha256": "a6fd59164621a77086f538d9f4a7240acfcee53a268080b3fc0e6b5b404870d2",
+    "title": "Answer key — Case sheet: THEOS-2 over Bangkok"
+  },
+  {
+    "originalName": "orbitlab-case-theos2-en (1).html",
+    "evidenceFile": "browser-fixtures/after-race-orbitlab-case-theos2-en (1).html",
+    "bytes": 5134,
+    "sha256": "ffe3d3be02007e0cc0b3a0a91ce45ac89f53ba2def951ac1025e821fd92227bc",
+    "title": "Case sheet: THEOS-2 over Bangkok"
+  }
+]

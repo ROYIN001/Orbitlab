@@ -1,0 +1,14 @@
+{
+  "executable": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+  "args": [
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--config",
+    "vitest.heavy.config.ts",
+    "tests/heavy/lessons-sixdof.test.ts",
+    "--maxWorkers=1",
+    "--reporter=verbose",
+    "--reporter=json",
+    "--outputFile.json=/home/runner/work/Orbitlab/Orbitlab/heavy-results/lessons-sixdof/result.json"
+  ]
+}

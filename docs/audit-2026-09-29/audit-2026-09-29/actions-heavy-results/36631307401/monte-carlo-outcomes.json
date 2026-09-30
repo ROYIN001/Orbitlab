@@ -1,0 +1,225 @@
+{
+  "generatedAt": "2026-09-29T22:10:59.227504+00:00",
+  "runId": 36631307401,
+  "expectedSets": 5,
+  "expectedFlights": 170,
+  "complete": true,
+  "note": "Test assertions passing does not mean every dispersed flight succeeds. These G05 samples include named structural losses and off-target insertions. They are separate from experimental booster recovery.",
+  "sets": [
+    {
+      "case": "monte-carlo-falcon9-igm",
+      "label": "falcon9 igm leo",
+      "flights": 40,
+      "inserted": 36,
+      "onTarget": 33,
+      "insertedOffTarget": 3,
+      "lost": 4,
+      "short": 0,
+      "lossReasons": {
+        "evt.structuralFailure": 4
+      },
+      "notOnTarget": [
+        "13 inserted 200.0×500.3 29.252°",
+        "21 lost evt.structuralFailure",
+        "23 lost evt.structuralFailure",
+        "25 lost evt.structuralFailure",
+        "34 lost evt.structuralFailure",
+        "35 inserted 200.0×500.5 29.163°",
+        "36 inserted 200.0×500.5 29.059°"
+      ],
+      "result": "36631307401\\collected-heavy\\monte-carlo-falcon9-igm\\result.json",
+      "log": "36631307401\\collected-heavy\\monte-carlo-falcon9-igm\\run.log",
+      "logSha256": "d42880ae4d9f7ff9a4660ddf0e8518608990066a96acd728391892c2e7cf8b2e",
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-igm.test.ts",
+        "caseId": "monte-carlo-falcon9-igm",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:33.355Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "case": "monte-carlo-falcon9-navigation",
+      "label": "falcon9 peg+nav leo",
+      "flights": 20,
+      "inserted": 20,
+      "onTarget": 19,
+      "insertedOffTarget": 1,
+      "lost": 0,
+      "short": 0,
+      "lossReasons": {},
+      "notOnTarget": [
+        "13 inserted 200.0×500.7 29.261°"
+      ],
+      "result": "36631307401\\collected-heavy\\monte-carlo-falcon9-navigation\\result.json",
+      "log": "36631307401\\collected-heavy\\monte-carlo-falcon9-navigation\\run.log",
+      "logSha256": "f016882936108b8c7d28b1da9b487556142b8a314614b660538e34d2811e4aa5",
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-navigation.test.ts",
+        "caseId": "monte-carlo-falcon9-navigation",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:30.326Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "case": "monte-carlo-falcon9-peg",
+      "label": "falcon9 peg leo",
+      "flights": 40,
+      "inserted": 36,
+      "onTarget": 33,
+      "insertedOffTarget": 3,
+      "lost": 4,
+      "short": 0,
+      "lossReasons": {
+        "evt.structuralFailure": 4
+      },
+      "notOnTarget": [
+        "13 inserted 200.0×500.6 29.242°",
+        "21 lost evt.structuralFailure",
+        "23 lost evt.structuralFailure",
+        "25 lost evt.structuralFailure",
+        "34 lost evt.structuralFailure",
+        "35 inserted 200.0×500.5 29.154°",
+        "36 inserted 494.2×500.2 29.060°"
+      ],
+      "result": "36631307401\\collected-heavy\\monte-carlo-falcon9-peg\\result.json",
+      "log": "36631307401\\collected-heavy\\monte-carlo-falcon9-peg\\run.log",
+      "logSha256": "49c3b91350d9755cedf75f333f0f382b3911996573c3b47b60d7407aae313c60",
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-peg.test.ts",
+        "caseId": "monte-carlo-falcon9-peg",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:24:31.628Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "case": "monte-carlo-falcon9-standard",
+      "label": "falcon9 standard leo",
+      "flights": 40,
+      "inserted": 36,
+      "onTarget": 33,
+      "insertedOffTarget": 3,
+      "lost": 4,
+      "short": 0,
+      "lossReasons": {
+        "evt.structuralFailure": 4
+      },
+      "notOnTarget": [
+        "13 inserted 200.0×500.2 29.263°",
+        "21 lost evt.structuralFailure",
+        "23 lost evt.structuralFailure",
+        "25 lost evt.structuralFailure",
+        "34 lost evt.structuralFailure",
+        "35 inserted 200.0×500.7 29.152°",
+        "36 inserted 492.3×500.3 29.038°"
+      ],
+      "result": "36631307401\\collected-heavy\\monte-carlo-falcon9-standard\\result.json",
+      "log": "36631307401\\collected-heavy\\monte-carlo-falcon9-standard\\run.log",
+      "logSha256": "8616fe948b7a8ce4b859c33acfe4245a1420c8bfe76057ee7f0243daf61675b4",
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-standard.test.ts",
+        "caseId": "monte-carlo-falcon9-standard",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:24:38.511Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    },
+    {
+      "case": "monte-carlo-soyuz21b",
+      "label": "soyuz21b standard leo",
+      "flights": 30,
+      "inserted": 24,
+      "onTarget": 24,
+      "insertedOffTarget": 0,
+      "lost": 6,
+      "short": 0,
+      "lossReasons": {
+        "evt.aeroBreakup": 3,
+        "evt.outOfPropellant": 3
+      },
+      "notOnTarget": [
+        "1 lost evt.aeroBreakup",
+        "12 lost evt.outOfPropellant",
+        "16 lost evt.outOfPropellant",
+        "20 lost evt.aeroBreakup",
+        "23 lost evt.aeroBreakup",
+        "25 lost evt.outOfPropellant"
+      ],
+      "result": "36631307401\\collected-heavy\\monte-carlo-soyuz21b\\result.json",
+      "log": "36631307401\\collected-heavy\\monte-carlo-soyuz21b\\run.log",
+      "logSha256": "3de4df7045686f25058fcbfbb202034ee13cc98f1190f9d3c49364d74355e393",
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-soyuz21b.test.ts",
+        "caseId": "monte-carlo-soyuz21b",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:28:13.663Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      }
+    }
+  ],
+  "totals": {
+    "flights": 170,
+    "inserted": 152,
+    "onTarget": 142,
+    "insertedOffTarget": 10,
+    "lost": 18,
+    "short": 0
+  }
+}

@@ -1,0 +1,445 @@
+{
+  "startedAtUTC": "2026-09-29T22:19:58.633Z",
+  "sourceSha": "277f41dd6cbd46d1b03d97bcc060258ec8c7554a",
+  "eventSha": "277f41dd6cbd46d1b03d97bcc060258ec8c7554a",
+  "node": "v22.23.3",
+  "chromium": "153.0.8010.12",
+  "base": "http://127.0.0.1:44987/Orbitlab/",
+  "sourceHashes": {
+    "src/worksheets/cases.ts": "268c36731fc4c3a133d696a88e2ad960010fd7e7246a1e837a396ec96b510c3c",
+    "src/worksheets/html.ts": "55e06374e8dd04a9ce140a6ebf7e40bd8991d9894b6f87dbabfcdbaa4f0dd079",
+    "src/worksheets/docx.ts": "f66b764b934d834d92335d625907272d393785202125ef40745c1df341522217",
+    "src/ui/lessons/worksheet-view.ts": "c9007a1f1acdc4f976d5ec2a38bf831d536f84fbd0ce53ca1b3c325994858817",
+    "src/i18n/en.ts": "0b9bbdfce50baf3a1d74d96bfde4580594f9f6381bb07dedf3b20497db46e823",
+    "src/i18n/th.ts": "c5c5fbf7626b770ad57f08d0dde78c2f6926a3bd16e676686622d26c2d21b9ba",
+    "src/i18n/ru.ts": "6f5c0aea1fa8f05054a080126b7a0e7d38ed81998fbfa660aa348b6596df4955"
+  },
+  "builtIndexSha256": "75e506a8fdf61aa014b9273418e142196d82388f0b32b4692a399ba630c6fd1f",
+  "scope": "3 cases × 2 languages × worksheet/key × HTML/DOCX = 24 actual browser downloads; intentionally revealed QA answers, not learner passes or document visual acceptance.",
+  "stateSetup": "Fresh contexts; public page navigation and visible controls only; no storage/state injection.",
+  "files": [
+    {
+      "name": "orbitlab-case-theos2-th.html",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "th",
+      "key": false,
+      "format": "html",
+      "bytes": 7207,
+      "sha256": "260f246050ff65f93b31130bb378490a800e6e0ba94fd41bfe51a7d69a0cc280",
+      "downloadedAtUTC": "2026-09-29T22:20:23.946Z"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-th.html",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "th",
+      "key": true,
+      "format": "html",
+      "bytes": 5052,
+      "sha256": "0af0c80dd5b314aa36716a590b1fb76b0a4eb874ae6d8a1f0258d3f3c88d6c74",
+      "downloadedAtUTC": "2026-09-29T22:20:24.052Z"
+    },
+    {
+      "name": "orbitlab-case-theos2-th.docx",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "th",
+      "key": false,
+      "format": "docx",
+      "bytes": 20948,
+      "sha256": "56f388f0d74b7b8a9cecd5e7147f1d1fb0a77d0f2ce2e781578e47802e8313ba",
+      "downloadedAtUTC": "2026-09-29T22:20:24.212Z"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-th.docx",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "th",
+      "key": true,
+      "format": "docx",
+      "bytes": 10681,
+      "sha256": "5724570ba47ff9db9e1462c030c5de1d4fca686cf8a95ca00b0c0554cfa430ea",
+      "downloadedAtUTC": "2026-09-29T22:20:26.010Z"
+    },
+    {
+      "name": "orbitlab-case-theos2-ru.html",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "ru",
+      "key": false,
+      "format": "html",
+      "bytes": 6258,
+      "sha256": "bdfa8a43a8e8fcc53206c0ed118828bc5dd10a6c090d68bd99c24caa1fa837e7",
+      "downloadedAtUTC": "2026-09-29T22:20:26.503Z"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-ru.html",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "ru",
+      "key": true,
+      "format": "html",
+      "bytes": 4616,
+      "sha256": "c0b026847a393deb92207b3cf65c981a10b8ecaa267a6c1473c68c2e69ea737a",
+      "downloadedAtUTC": "2026-09-29T22:20:26.852Z"
+    },
+    {
+      "name": "orbitlab-case-theos2-ru.docx",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "ru",
+      "key": false,
+      "format": "docx",
+      "bytes": 20030,
+      "sha256": "5002d5718d5bd1ae1f4bd0b33bae8d0b97d6551f540d70ef75cf95fa4989c0a4",
+      "downloadedAtUTC": "2026-09-29T22:20:27.211Z"
+    },
+    {
+      "name": "orbitlab-case-theos2-key-ru.docx",
+      "case": "theos2",
+      "lesson": "6.1",
+      "lang": "ru",
+      "key": true,
+      "format": "docx",
+      "bytes": 10265,
+      "sha256": "e1d778e726cca958be899af5049676397a9b38e9ba32dfe6c9846341b5a4a90d",
+      "downloadedAtUTC": "2026-09-29T22:20:28.015Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-th.html",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "th",
+      "key": false,
+      "format": "html",
+      "bytes": 8330,
+      "sha256": "936150fe5de729afb4ef3143bc04c7c885c8efce4f522504fb6069ac91b253b8",
+      "downloadedAtUTC": "2026-09-29T22:21:17.726Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-th.html",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "th",
+      "key": true,
+      "format": "html",
+      "bytes": 5603,
+      "sha256": "3433c9f844cd990fe787941fd80e48072d8ba0ba757b1080e40d94205b6a09b4",
+      "downloadedAtUTC": "2026-09-29T22:21:17.830Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-th.docx",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "th",
+      "key": false,
+      "format": "docx",
+      "bytes": 24777,
+      "sha256": "95a3b304ade96fed2793aae3b2487a5b17ffc1616550967332e4c5cac577ec49",
+      "downloadedAtUTC": "2026-09-29T22:21:17.926Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-th.docx",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "th",
+      "key": true,
+      "format": "docx",
+      "bytes": 12896,
+      "sha256": "271ad6c3e520728fdfda22a289ecdbf41bf5a971dd3c5620c870899b436f79a6",
+      "downloadedAtUTC": "2026-09-29T22:21:18.032Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-ru.html",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "ru",
+      "key": false,
+      "format": "html",
+      "bytes": 6940,
+      "sha256": "ac03b65969f48f808b040507d830a6682f37b218d4cf899b4b40fe138d2e9e90",
+      "downloadedAtUTC": "2026-09-29T22:21:19.292Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-ru.html",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "ru",
+      "key": true,
+      "format": "html",
+      "bytes": 4957,
+      "sha256": "377684104506a993d7d754df84665b759743254c632d160e82b834e8b528d291",
+      "downloadedAtUTC": "2026-09-29T22:21:19.363Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-ru.docx",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "ru",
+      "key": false,
+      "format": "docx",
+      "bytes": 23412,
+      "sha256": "a21ed0b014c717c80ab1a28c13daa67bacf855d0b6986fc11fb08af24e32b40b",
+      "downloadedAtUTC": "2026-09-29T22:21:19.444Z"
+    },
+    {
+      "name": "orbitlab-case-cz5b-key-ru.docx",
+      "case": "cz5b",
+      "lesson": "6.2",
+      "lang": "ru",
+      "key": true,
+      "format": "docx",
+      "bytes": 12264,
+      "sha256": "2cc67d60302b742214ec949b3ab4f7037d15027891c06d1385b7e0b89a14a53a",
+      "downloadedAtUTC": "2026-09-29T22:21:19.493Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-th.html",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "th",
+      "key": false,
+      "format": "html",
+      "bytes": 10978,
+      "sha256": "35b8a8f12665af09b2c5fb550a1cf9b5c12b893ad006a4627e67dcd809745856",
+      "downloadedAtUTC": "2026-09-29T22:22:30.268Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-th.html",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "th",
+      "key": true,
+      "format": "html",
+      "bytes": 5522,
+      "sha256": "fd92d6bb11910ca25257c9e2a39f2cde1b7d5f6c7fc779d493ccad6bd5b502da",
+      "downloadedAtUTC": "2026-09-29T22:22:34.129Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-th.docx",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "th",
+      "key": false,
+      "format": "docx",
+      "bytes": 62460,
+      "sha256": "b97861a2355e5c449b9f7f920620ba2a2a24abfa7390444a4b175db1f99c40a6",
+      "downloadedAtUTC": "2026-09-29T22:22:41.898Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-th.docx",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "th",
+      "key": true,
+      "format": "docx",
+      "bytes": 12862,
+      "sha256": "47337277bcb8e441b825560028899261f7b3136f7f8232eb510cef5987282afb",
+      "downloadedAtUTC": "2026-09-29T22:22:41.971Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-ru.html",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "ru",
+      "key": false,
+      "format": "html",
+      "bytes": 9775,
+      "sha256": "72c3ee1c9eb17a3854798e5f73a7f18a48060973d98b0e837497330fdfe0b4de",
+      "downloadedAtUTC": "2026-09-29T22:22:42.176Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-ru.html",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "ru",
+      "key": true,
+      "format": "html",
+      "bytes": 5005,
+      "sha256": "6e7cf0b776b1f062b046eb2c6687eb8e5043a1a9ffff03a745e5fe85c19802a5",
+      "downloadedAtUTC": "2026-09-29T22:22:42.233Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-ru.docx",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "ru",
+      "key": false,
+      "format": "docx",
+      "bytes": 62976,
+      "sha256": "b387f0dd0af7a65be54c57f8d1cc023541f7f680715fcc942af0b65ab6526b13",
+      "downloadedAtUTC": "2026-09-29T22:22:42.961Z"
+    },
+    {
+      "name": "orbitlab-case-iridium-key-ru.docx",
+      "case": "iridium",
+      "lesson": "6.3",
+      "lang": "ru",
+      "key": true,
+      "format": "docx",
+      "bytes": 12348,
+      "sha256": "d1936ce07d15b731e52d7d773b6e1412310ea9f18a531da6a21f660529c41123",
+      "downloadedAtUTC": "2026-09-29T22:22:43.030Z"
+    }
+  ],
+  "pages": [
+    {
+      "case": "theos2",
+      "uncaughtErrors": [],
+      "consoleErrors": [],
+      "screenshot": "theos2-export-controls.png"
+    },
+    {
+      "case": "cz5b",
+      "uncaughtErrors": [],
+      "consoleErrors": [],
+      "screenshot": "cz5b-export-controls.png"
+    },
+    {
+      "case": "iridium",
+      "uncaughtErrors": [],
+      "consoleErrors": [],
+      "screenshot": "iridium-export-controls.png"
+    }
+  ],
+  "actions": [
+    {
+      "case": "theos2",
+      "step": "opened lesson 6.1 and revealed QA answers through its button",
+      "atUTC": "2026-09-29T22:20:19.782Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-th.html (7207 bytes)",
+      "atUTC": "2026-09-29T22:20:23.946Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-key-th.html (5052 bytes)",
+      "atUTC": "2026-09-29T22:20:24.052Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-th.docx (20948 bytes)",
+      "atUTC": "2026-09-29T22:20:24.212Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-key-th.docx (10681 bytes)",
+      "atUTC": "2026-09-29T22:20:26.010Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-ru.html (6258 bytes)",
+      "atUTC": "2026-09-29T22:20:26.503Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-key-ru.html (4616 bytes)",
+      "atUTC": "2026-09-29T22:20:26.852Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-ru.docx (20030 bytes)",
+      "atUTC": "2026-09-29T22:20:27.211Z"
+    },
+    {
+      "case": "theos2",
+      "step": "downloaded orbitlab-case-theos2-key-ru.docx (10265 bytes)",
+      "atUTC": "2026-09-29T22:20:28.015Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "opened lesson 6.2 and revealed QA answers through its button",
+      "atUTC": "2026-09-29T22:21:17.296Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-th.html (8330 bytes)",
+      "atUTC": "2026-09-29T22:21:17.726Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-key-th.html (5603 bytes)",
+      "atUTC": "2026-09-29T22:21:17.830Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-th.docx (24777 bytes)",
+      "atUTC": "2026-09-29T22:21:17.926Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-key-th.docx (12896 bytes)",
+      "atUTC": "2026-09-29T22:21:18.032Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-ru.html (6940 bytes)",
+      "atUTC": "2026-09-29T22:21:19.292Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-key-ru.html (4957 bytes)",
+      "atUTC": "2026-09-29T22:21:19.363Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-ru.docx (23412 bytes)",
+      "atUTC": "2026-09-29T22:21:19.444Z"
+    },
+    {
+      "case": "cz5b",
+      "step": "downloaded orbitlab-case-cz5b-key-ru.docx (12264 bytes)",
+      "atUTC": "2026-09-29T22:21:19.493Z"
+    },
+    {
+      "case": "iridium",
+      "step": "opened lesson 6.3 and revealed QA answers through its button",
+      "atUTC": "2026-09-29T22:22:23.999Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-th.html (10978 bytes)",
+      "atUTC": "2026-09-29T22:22:30.268Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-key-th.html (5522 bytes)",
+      "atUTC": "2026-09-29T22:22:34.129Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-th.docx (62460 bytes)",
+      "atUTC": "2026-09-29T22:22:41.898Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-key-th.docx (12862 bytes)",
+      "atUTC": "2026-09-29T22:22:41.971Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-ru.html (9775 bytes)",
+      "atUTC": "2026-09-29T22:22:42.176Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-key-ru.html (5005 bytes)",
+      "atUTC": "2026-09-29T22:22:42.233Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-ru.docx (62976 bytes)",
+      "atUTC": "2026-09-29T22:22:42.961Z"
+    },
+    {
+      "case": "iridium",
+      "step": "downloaded orbitlab-case-iridium-key-ru.docx (12348 bytes)",
+      "atUTC": "2026-09-29T22:22:43.030Z"
+    }
+  ],
+  "completed": true,
+  "finishedAtUTC": "2026-09-29T22:22:43.567Z"
+}

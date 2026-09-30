@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-09-29T20:24:06.037Z",
+  "node": "v22.23.3",
+  "files": [
+    {
+      "origin": "C:/Users/Royin/Downloads/qa-draft-b-vehicle.orbitlab.json",
+      "evidence": "qa-draft-b-vehicle.orbitlab.json",
+      "bytes": 2321,
+      "sha256": "13a214b73ae87320613743b27490e921a5909fcfccad9792f709d880a61eba0b",
+      "name": "QA-Draft-B",
+      "designName": "QA-Draft-B",
+      "designId": "falcon-9-block-5-remix-n2zvu0",
+      "stageEngineCounts": [
+        8,
+        1
+      ],
+      "height": 70,
+      "stageCount": 2,
+      "issues": [],
+      "passed": true
+    },
+    {
+      "origin": "C:/Users/Royin/Downloads/qa-falcon-a-vehicle.orbitlab (1).json",
+      "evidence": "qa-falcon-a-vehicle.orbitlab (1).json",
+      "bytes": 2334,
+      "sha256": "09c85b1c4d4aef787f2dee75980c4660dd139948cd00cf6e6a6595189e228576",
+      "name": "QA-Falcon-A",
+      "designName": "QA-Falcon-A",
+      "designId": "falcon-9-block-5-remix-n2zvu0",
+      "stageEngineCounts": [
+        9,
+        1
+      ],
+      "height": 70,
+      "stageCount": 2,
+      "issues": [],
+      "passed": true
+    }
+  ],
+  "allPassed": true,
+  "meaning": "Actual draft-B and saved-A downloads stay distinct: draft8 first-stage engines versus saved9. Production parser accepts both.",
+  "limits": [
+    "Browser imported-design selection/state must be verified separately; this script does not modify browser state."
+  ]
+}

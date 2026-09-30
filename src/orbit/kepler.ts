@@ -15,7 +15,7 @@
  */
 import { DEG, J2_EARTH, MU_EARTH, OMEGA_EARTH, R_EARTH } from '../physics/constants';
 import {
-  elementsFromState, gmst, meanFromTrue, stateFromElements, sunSyncInclination, trueFromMean, wrap2pi, wrapPi,
+  elementsFromState, gmst, meanFromTrue, perifocalToEci, stateFromElements, sunSyncInclination, trueFromMean, wrap2pi, wrapPi,
 } from '../physics/orbital';
 import { cross, scale, sub, type Vec3 } from '../physics/vec3';
 
@@ -60,6 +60,18 @@ export function orbitFromState(r: Vec3, v: Vec3, jd: number): Orbit {
     const ev = sub(scale(cross(v, h), 1 / MU_EARTH), scale(r, 1 / Math.hypot(r.x, r.y, r.z)));
     raan = 0;
     argp = wrap2pi(h.z >= 0 ? Math.atan2(ev.y, ev.x) : -Math.atan2(ev.y, ev.x));
+  }
+  if (el.e !== 1 && Math.abs(el.e - 1) < 1e-4) {
+    const hyperbolic = el.e > 1, delta = Math.abs(el.e - 1);
+    const nu = Math.atan2(Math.sin(el.nu), Math.cos(el.nu));
+    const anomaly = hyperbolic ? 2 * Math.atanh(Math.sqrt(delta / (1 + el.e)) * Math.tan(nu / 2))
+      : Math.atan2(Math.sqrt(delta * (1 + el.e)) * Math.sin(nu), el.e + Math.cos(nu));
+    // Keep a tiny signed phase; wrapping it around 2pi loses handoff time.
+    const m0 = delta * anomaly + el.e * anomalyRemainder(anomaly, hyperbolic);
+    // The energy is a subtraction of nearly equal terms here. Keep the
+    // returned a/e pair consistent with the well-conditioned angular momentum.
+    const a = hm * hm / MU_EARTH / ((1 - el.e) * (1 + el.e));
+    return { a, e: el.e, i: el.i, raan, argp, m0, jd0: jd };
   }
   return { a: el.a, e: el.e, i: el.i, raan, argp, m0: el.e < 1 ? meanFromTrue(el.nu, el.e) : hyperbolicMeanFromTrue(el.nu, el.e), jd0: jd };
 }
@@ -134,19 +146,69 @@ export interface OrbitState {
   alt: number;
 }
 
+/** Stable x − sin(x), or sinh(x) − x, where direct subtraction loses digits. */
+function anomalyRemainder(x: number, hyperbolic: boolean): number {
+  if (Math.abs(x) > 0.1) return hyperbolic ? Math.sinh(x) - x : x - Math.sin(x);
+  let term = x * x * x / 6, sum = term;
+  for (let k = 2; k < 10; k++) {
+    term *= (hyperbolic ? 1 : -1) * x * x / (2 * k * (2 * k + 1));
+    sum += term;
+  }
+  return sum;
+}
+
+/** Existing elliptic/hyperbolic conics close to e=1; not a parabolic model. */
+function nearParabolicState(o: Orbit, mean: number, raan: number, argp: number): Pick<OrbitState, 'r' | 'v' | 'nu'> {
+  const hyperbolic = o.e > 1, e = o.e;
+  if (!hyperbolic) {
+    // Retain tiny signed anomalies: adding 2pi before taking a remainder
+    // would erase the time since periapsis on a very long-period ellipse.
+    mean %= TWO_PI;
+    if (mean > Math.PI) mean -= TWO_PI;
+    if (mean < -Math.PI) mean += TWO_PI;
+  }
+  const target = Math.abs(mean), delta = Math.abs(e - 1);
+  const equation = (x: number): number => delta * x + e * anomalyRemainder(x, hyperbolic);
+  let low = 0, high = hyperbolic ? Math.max(1, Math.asinh(target / e) + 1) : Math.PI;
+  while (hyperbolic && equation(high) < target) high *= 2;
+  for (let k = 0; k < 80 && target !== 0; k++) {
+    const middle = (low + high) / 2;
+    if (middle === low || middle === high) break;
+    if (equation(middle) > target) high = middle; else low = middle;
+  }
+  const anomaly = target === 0 ? 0 : Math.sign(mean) * (low + high) / 2;
+  const a = Math.abs(o.a), n = Math.sqrt(MU_EARTH / a ** 3), b = Math.sqrt(delta * (1 + e));
+  const half = hyperbolic ? Math.sinh(anomaly / 2) : Math.sin(anomaly / 2);
+  const sn = hyperbolic ? Math.sinh(anomaly) : Math.sin(anomaly);
+  const cs = hyperbolic ? Math.cosh(anomaly) : Math.cos(anomaly);
+  const denominator = delta + 2 * e * half * half;
+  // Cartesian eccentric-anomaly coordinates avoid the ill-conditioned
+  // p/(1+e*cos(nu)) conversion near a hyperbola's asymptote as well.
+  const x = a * (delta - 2 * half * half), y = a * b * sn;
+  const rotate = perifocalToEci(o.i, raan, argp);
+  return {
+    r: rotate({ x, y, z: 0 }),
+    v: rotate({ x: -a * n * sn / denominator, y: a * n * b * cs / denominator, z: 0 }),
+    nu: hyperbolic ? Math.atan2(y, x) : wrap2pi(Math.atan2(y, x)),
+  };
+}
+
 /** Where the satellite is `t` seconds after the epoch (on a hyperbola, Kepler's alone). */
 export function stateAt(o: Orbit, t: number, j2: boolean): OrbitState {
+  const nearParabolic = o.e !== 1 && Math.abs(o.e - 1) < 1e-4;
   if (o.e >= 1) {
     const n = Math.sqrt(MU_EARTH / Math.abs(o.a) ** 3);
-    const nu = hyperbolicTrueFromMean(o.m0 + n * t, o.e);
-    const { r, v } = stateFromElements(o.a, o.e, o.i, o.raan, o.argp, nu);
+    const stable = nearParabolic ? nearParabolicState(o, o.m0 + n * t, o.raan, o.argp) : null;
+    const nu = stable?.nu ?? hyperbolicTrueFromMean(o.m0 + n * t, o.e);
+    const { r, v } = stable ?? stateFromElements(o.a, o.e, o.i, o.raan, o.argp, nu);
     const theta = gmst(o.jd0 + t / 86400), rm = Math.hypot(r.x, r.y, r.z);
     return { t, r, v, nu, raan: o.raan, argp: o.argp, theta, lat: Math.asin(r.z / rm), lon: wrapPi(Math.atan2(r.y, r.x) - theta), alt: rm - R_EARTH };
   }
   const rates = secularRates(o, j2);
   const raan = wrap2pi(o.raan + rates.raanDot * t), argp = wrap2pi(o.argp + rates.argpDot * t);
-  const nu = trueFromMean(o.m0 + rates.meanMotion * t, o.e);
-  const { r, v } = stateFromElements(o.a, o.e, o.i, raan, argp, nu);
+  const stable = nearParabolic ? nearParabolicState(o, o.m0 + rates.meanMotion * t, raan, argp) : null;
+  const nu = stable?.nu ?? trueFromMean(o.m0 + rates.meanMotion * t, o.e);
+  const { r, v } = stable ?? stateFromElements(o.a, o.e, o.i, raan, argp, nu);
   const theta = gmst(o.jd0 + t / 86400);
   const rm = Math.hypot(r.x, r.y, r.z);
   return { t, r, v, nu, raan, argp, theta, lat: Math.asin(r.z / rm), lon: wrapPi(Math.atan2(r.y, r.x) - theta), alt: rm - R_EARTH };

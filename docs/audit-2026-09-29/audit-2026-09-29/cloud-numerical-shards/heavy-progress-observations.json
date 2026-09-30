@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-09-29T20:32:58.944Z",
+  "provenance": "Live browser observations provided by parent agent /root; child CLI only exposes pending/no diff. These are progress observations, not final results.",
+  "observedAt": "2026-09-29T20:32:00Z",
+  "heavy1": {
+    "taskId": "task_e_6abc12cb41ac8329831d030815de3803",
+    "latestCodeOutput": "2026-09-29T20:28:07Z",
+    "fullRunElapsed": "51:21",
+    "workers": [
+      {
+        "pid": 5953,
+        "elapsed": "43:29",
+        "cpuTime": "43:05",
+        "cpuPercent": 99
+      },
+      {
+        "pid": 6013,
+        "elapsed": "27:04",
+        "cpuTime": "26:58",
+        "cpuPercent": 99.6
+      }
+    ],
+    "note": "Completed history-sixdof Vostok/Apollo, StarshipFlight5 and flex-fleet4 items passed; no final counts available."
+  },
+  "heavy2": {
+    "taskId": "task_e_6abc12de82ac83299417368e38f3791e",
+    "latestCheckpointCommit": "06e5a19",
+    "checkpointMessage": "Checkpoint heavy shard 2 at 26 tests"
+  },
+  "heavy3": {
+    "taskId": "task_e_6abc12fb61d88329ae21af7d91db4dac",
+    "latestCheckpointCommit": "42020b6",
+    "checkpointMessage": "Checkpoint heavy shard 3 CPU progress",
+    "observedLogGrowthLines": 45
+  },
+  "commonState": "All three show Thinking and Cancel, no error; no interruption or duplicate run dispatched.",
+  "eta": null
+}

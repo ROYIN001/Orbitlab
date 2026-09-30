@@ -1,0 +1,219 @@
+{
+  "scope": "Finite editorial follow-up; strings only. Full production AST invariant is checked independently in text-only-verification.json.",
+  "changedStrings": 29,
+  "questionIds": [
+    "b-leo-speed",
+    "c-rcs",
+    "f-order-ms10",
+    "f-proton2013",
+    "g-gnss-alone",
+    "g-gyro-bias",
+    "r-isp",
+    "r-liftoff-accel"
+  ],
+  "changes": [
+    {
+      "id": "b-leo-speed",
+      "path": "explanation",
+      "lang": "th",
+      "before": "v = √(μ/r) เมื่อ μ = 398 600 กม.³/วินาที² และ r ≈ 6 700 กม. จะได้ 7.7 กม./วินาที ความเร็วหลุดพ้นแรกใกล้ผิวโลกคือ 7.9 กม./วินาที ส่วน 11.2 กม./วินาทีคือความเร็วหลุดพ้น",
+      "after": "v = √(μ/r) เมื่อ μ = 398 600 กม.³/วินาที² และ r ≈ 6 700 กม. จะได้ 7.7 กม./วินาที ความเร็ววงโคจรวงกลมใกล้ผิวโลก (ความเร็วจักรวาลที่หนึ่ง) คือ 7.9 กม./วินาที ส่วน 11.2 กม./วินาทีคือความเร็วหลุดพ้น"
+    },
+    {
+      "id": "r-isp",
+      "path": "explanation",
+      "lang": "en",
+      "before": "Isp = F/(ṁ·g0), in seconds; the exhaust velocity is Isp·g0. A Merlin 1D gives about 282 s at sea level, an RD-0110 326 s in vacuum, a hydrogen engine about 450 s.",
+      "after": "Isp = F/(ṁ·g0), in seconds; the equivalent exhaust velocity, including pressure thrust, is Isp·g0. A Merlin 1D gives about 282 s at sea level, an RD-0110 326 s in vacuum, a hydrogen engine about 450 s."
+    },
+    {
+      "id": "r-isp",
+      "path": "explanation",
+      "lang": "ru",
+      "before": "Iуд = P/(ṁ·g0), в секундах; скорость истечения равна Iуд·g0. Merlin 1D даёт около 282 с у земли, РД-0110 — 326 с в пустоте, водородный двигатель — около 450 с.",
+      "after": "Iуд = P/(ṁ·g0), в секундах; эквивалентная скорость истечения с учётом тяги от перепада давления равна Iуд·g0. Merlin 1D даёт около 282 с у земли, РД-0110 — 326 с в пустоте, водородный двигатель — около 450 с."
+    },
+    {
+      "id": "r-isp",
+      "path": "explanation",
+      "lang": "th",
+      "before": "Isp = F/(ṁ·g0) มีหน่วยเป็นวินาที ความเร็วไอเสียเท่ากับ Isp·g0 เครื่อง Merlin 1D ให้ประมาณ 282 วินาทีที่ระดับน้ำทะเล RD-0110 ให้ 326 วินาทีในสุญญากาศ และเครื่องยนต์ไฮโดรเจนประมาณ 450 วินาที",
+      "after": "Isp = F/(ṁ·g0) มีหน่วยเป็นวินาที อัตราเร็วไอเสียสมมูลซึ่งรวมผลของแรงขับจากความดันเท่ากับ Isp·g0 เครื่อง Merlin 1D ให้ประมาณ 282 วินาทีที่ระดับน้ำทะเล RD-0110 ให้ 326 วินาทีในสุญญากาศ และเครื่องยนต์ไฮโดรเจนประมาณ 450 วินาที"
+    },
+    {
+      "id": "r-liftoff-accel",
+      "path": "explanation",
+      "lang": "en",
+      "before": "a = F/m − g: the thrust per tonne, less the weight it must first carry. At T/W = 1.3 only 0.3 g is left to accelerate; the rest holds the rocket up, the gravity loss.",
+      "after": "a = F/m − g: acceleration from thrust minus gravitational acceleration. At T/W = 1.3 only 0.3 g is left to accelerate; the rest holds the rocket up, the gravity loss."
+    },
+    {
+      "id": "r-liftoff-accel",
+      "path": "explanation",
+      "lang": "ru",
+      "before": "a = F/m − g: тяга на тонну массы минус вес, который она сначала должна удержать. При T/W = 1,3 на разгон остаётся лишь 0,3 g; остальное удерживает ракету — это гравитационные потери.",
+      "after": "a = F/m − g: ускорение от тяги минус ускорение свободного падения. При T/W = 1,3 на разгон остаётся лишь 0,3 g; остальное удерживает ракету — это гравитационные потери."
+    },
+    {
+      "id": "r-liftoff-accel",
+      "path": "explanation",
+      "lang": "th",
+      "before": "a = F/m − g คือแรงขับต่อมวลหนึ่งตัน ลบด้วยน้ำหนักที่ต้องพยุงก่อน ที่ T/W = 1.3 เหลือความเร่งเพียง 0.3 g ส่วนที่เหลือใช้พยุงจรวด ซึ่งคือการสูญเสียจากแรงโน้มถ่วง",
+      "after": "a = F/m − g คือความเร่งจากแรงขับลบด้วยความเร่งโน้มถ่วง ที่ T/W = 1.3 เหลือความเร่งเพียง 0.3 g ส่วนที่เหลือใช้พยุงจรวด ซึ่งคือการสูญเสียจากแรงโน้มถ่วง"
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "prompt",
+      "lang": "en",
+      "before": "Why is GNSS (GPS, GLONASS) alone not enough to steer a launcher?",
+      "after": "Why is single-antenna GNSS position aiding (GPS, GLONASS), as modelled here, not enough by itself to steer a launcher?"
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "prompt",
+      "lang": "ru",
+      "before": "Почему одной ГНСС (GPS, ГЛОНАСС) недостаточно для управления носителем?",
+      "after": "Почему одноантенной позиционной коррекции по ГНСС (GPS, ГЛОНАСС), как в этой модели, самой по себе недостаточно для управления носителем?"
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "prompt",
+      "lang": "th",
+      "before": "ทำไม GNSS (GPS, GLONASS) อย่างเดียวจึงไม่พอสำหรับบังคับจรวดนำส่ง",
+      "after": "ทำไมการช่วยหาตำแหน่งด้วย GNSS เสาอากาศเดียว (GPS, GLONASS) ตามแบบจำลองนี้ จึงไม่พอสำหรับบังคับจรวดนำส่งเพียงอย่างเดียว"
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "explanation",
+      "lang": "en",
+      "before": "The autopilot needs attitude and rates hundreds of times a second, which only gyros give. GNSS bounds the slow drift of the inertial position — the job of the Kalman filter in the Engineer mode's navigation.",
+      "after": "High-rate gyro measurements support the attitude estimate and rate feedback. Here GNSS position updates bound the inertial drift through the Engineer mode's Kalman filter. Multi-antenna GNSS can also determine attitude, but that is outside this model."
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "explanation",
+      "lang": "ru",
+      "before": "Автомату стабилизации нужны ориентация и угловые скорости сотни раз в секунду, а их дают только гироскопы. ГНСС ограничивает медленный уход инерциального решения по положению — это задача фильтра Калмана в навигации режима «Инженер».",
+      "after": "Частые измерения гироскопов обеспечивают оценку ориентации и обратную связь по угловой скорости. Здесь коррекция положения по ГНСС ограничивает инерциальный уход через фильтр Калмана режима «Инженер». Многоантенная ГНСС может определять и ориентацию, но это вне данной модели."
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "explanation",
+      "lang": "th",
+      "before": "ระบบนำร่องอัตโนมัติต้องการท่าทางและอัตราการหมุนหลายร้อยครั้งต่อวินาที ซึ่งมีแต่ไจโรให้ได้ GNSS ช่วยจำกัดการคลาดที่ค่อย ๆ สะสมของตำแหน่งจากระบบเฉื่อย ซึ่งเป็นงานของตัวกรองคาลมานในระบบนำทางของโหมดวิศวกร",
+      "after": "การวัดจากไจโรด้วยอัตราสูงช่วยประมาณท่าทางและป้อนกลับอัตราการหมุน ในแบบจำลองนี้ข้อมูลตำแหน่งจาก GNSS จำกัดการคลาดสะสมของระบบเฉื่อยผ่านตัวกรองคาลมานในโหมดวิศวกร GNSS ที่ใช้หลายเสาอากาศวัดท่าทางได้ด้วย แต่ไม่อยู่ในแบบจำลองนี้"
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "options[0].text",
+      "lang": "en",
+      "before": "It updates slowly and can drop out, and it gives no attitude; the inertial system fills the gaps",
+      "after": "Its position updates are slower than the inertial updates and can drop out; they do not measure attitude, so the inertial system fills the gaps"
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "options[0].text",
+      "lang": "ru",
+      "before": "Она обновляется редко, может пропадать и не даёт ориентации; пробелы заполняет инерциальная система",
+      "after": "Её отсчёты положения поступают реже инерциальных и могут пропадать; ориентацию они не измеряют, поэтому пробелы заполняет инерциальная система"
+    },
+    {
+      "id": "g-gnss-alone",
+      "path": "options[0].text",
+      "lang": "th",
+      "before": "อัปเดตช้าและอาจขาดหาย ทั้งไม่ให้ข้อมูลท่าทาง ระบบเฉื่อยจึงต้องเติมช่องว่าง",
+      "after": "ข้อมูลตำแหน่งอัปเดตช้ากว่าระบบเฉื่อยและอาจขาดหาย ทั้งไม่ได้วัดท่าทาง ระบบเฉื่อยจึงต้องเติมช่องว่าง"
+    },
+    {
+      "id": "g-gyro-bias",
+      "path": "explanation",
+      "lang": "en",
+      "before": "A rate bias integrates once into attitude: θ = b·t. That tilt then misdirects the accelerometers' reading of thrust and gravity, and the velocity and position errors grow as t² and t³.",
+      "after": "A rate bias integrates once into attitude: θ = b·t. The tilt misprojects the measured specific force into the navigation frame; gravity is supplied by a model, not measured directly by the accelerometers. In the short-time approximation, the resulting velocity and position errors grow roughly as t² and t³."
+    },
+    {
+      "id": "g-gyro-bias",
+      "path": "explanation",
+      "lang": "ru",
+      "before": "Уход по угловой скорости однократно интегрируется в ошибку ориентации: θ = b·t. Этот наклон затем искажает направление измеренных тяги и тяготения, и ошибки скорости и положения растут как t² и t³.",
+      "after": "Уход по угловой скорости однократно интегрируется в ошибку ориентации: θ = b·t. Наклон искажает проекцию измеренного кажущегося ускорения в навигационную систему координат; тяготение учитывается по модели, а не измеряется акселерометрами напрямую. На малых интервалах времени возникающие ошибки скорости и положения растут примерно как t² и t³."
+    },
+    {
+      "id": "g-gyro-bias",
+      "path": "explanation",
+      "lang": "th",
+      "before": "ไบแอสของอัตราหมุนถูกอินทิเกรตหนึ่งครั้งเป็นความคลาดของท่าทาง θ = b·t การเอียงนั้นทำให้ทิศของแรงขับและแรงโน้มถ่วงที่วัดได้ผิดไป ความคลาดของความเร็วและตำแหน่งจึงเพิ่มตาม t² และ t³",
+      "after": "ไบแอสของอัตราหมุนถูกอินทิเกรตหนึ่งครั้งเป็นความคลาดของท่าทาง θ = b·t การเอียงทำให้แปลงแรงจำเพาะที่วัดได้เข้าสู่กรอบนำทางผิดทิศ ส่วนแรงโน้มถ่วงนำมาจากแบบจำลอง ไม่ได้วัดโดยตรงด้วยมาตรความเร่ง ในการประมาณสำหรับช่วงเวลาสั้น ความคลาดของความเร็วและตำแหน่งที่เกิดขึ้นเพิ่มราว t² และ t³"
+    },
+    {
+      "id": "c-rcs",
+      "path": "prompt",
+      "lang": "en",
+      "before": "When does a spacecraft need reaction control thrusters (RCS) to control its attitude?",
+      "after": "A stage controls attitude using only a gimballed main engine and reaction control thrusters (RCS). When must it use RCS?"
+    },
+    {
+      "id": "c-rcs",
+      "path": "prompt",
+      "lang": "ru",
+      "before": "Когда аппарату для управления ориентацией нужны реактивные двигатели ориентации?",
+      "after": "У ступени для управления ориентацией есть только качающийся маршевый двигатель и двигатели ориентации (RCS). Когда требуются RCS?"
+    },
+    {
+      "id": "c-rcs",
+      "path": "prompt",
+      "lang": "th",
+      "before": "ยานอวกาศต้องใช้ไอพ่นควบคุมท่าทาง (RCS) เมื่อใด",
+      "after": "ท่อนจรวดใช้เพียงเครื่องยนต์หลักที่ปรับทิศแรงขับได้กับไอพ่นควบคุมท่าทาง (RCS) ในการควบคุมท่าทาง ท่อนนี้ต้องใช้ RCS เมื่อใด"
+    },
+    {
+      "id": "c-rcs",
+      "path": "explanation",
+      "lang": "en",
+      "before": "During coasts there is no thrust to tilt, so small thrusters fire in pairs to turn the vehicle. A single gimballed engine also cannot roll the vehicle; its roll needs thrusters or a second chamber.",
+      "after": "During coasts this stage has no main-engine thrust to tilt, so its small thrusters turn it. A single gimballed engine on the centreline also cannot produce roll torque; RCS supplies that torque here. Other spacecraft may use reaction wheels instead."
+    },
+    {
+      "id": "c-rcs",
+      "path": "explanation",
+      "lang": "ru",
+      "before": "На пассивных участках отклонять нечего, и аппарат разворачивают малые двигатели, работающие парами. Один качающийся двигатель к тому же не создаёт момента по крену — для крена нужны двигатели ориентации или вторая камера.",
+      "after": "На пассивных участках у этой ступени нет тяги маршевого двигателя, которую можно отклонить, поэтому её разворачивают малые двигатели. Один качающийся двигатель на продольной оси также не создаёт момента по крену; здесь его обеспечивают RCS. Другие аппараты могут использовать маховики."
+    },
+    {
+      "id": "c-rcs",
+      "path": "explanation",
+      "lang": "th",
+      "before": "ระหว่างช่วงไร้แรงขับไม่มีแรงขับให้เอียง จึงต้องใช้ไอพ่นเล็กจุดเป็นคู่เพื่อหมุนยาน เครื่องยนต์ปรับมุมเครื่องเดียวยังหมุนยานรอบแกนโรลไม่ได้ ต้องใช้ไอพ่นหรือห้องเผาไหม้ที่สอง",
+      "after": "ระหว่างช่วงไร้แรงขับ ท่อนนี้ไม่มีแรงขับจากเครื่องยนต์หลักให้เบนทิศ จึงใช้ไอพ่นเล็กหมุนท่อน เครื่องยนต์ปรับทิศแรงขับเครื่องเดียวบนแกนกลางยังสร้างแรงบิดรอบแกนโรลไม่ได้ ในกรณีนี้ RCS จึงให้แรงบิดดังกล่าว ส่วนยานอวกาศอื่นอาจใช้วงล้อปฏิกิริยาแทน"
+    },
+    {
+      "id": "f-proton2013",
+      "path": "explanation",
+      "lang": "en",
+      "before": "The yaw-rate sensors were mounted reversed, so every correction doubled the error. All units shared the fault, so no voting could see it; the rocket pitched over and broke up within about twenty seconds.",
+      "after": "The yaw-rate sensors were mounted reversed, so corrective action amplified the error. The affected yaw-rate units shared the fault, so voting among them could not detect it; the rocket pitched over and broke up within about twenty seconds."
+    },
+    {
+      "id": "f-proton2013",
+      "path": "explanation",
+      "lang": "ru",
+      "before": "Датчики угловой скорости по рысканию были установлены с обратной полярностью, и каждая «коррекция» удваивала ошибку. Отказ был общим для всех блоков, голосование его не видело; ракета завалилась и разрушилась примерно через двадцать секунд.",
+      "after": "Датчики угловой скорости по рысканию были установлены с обратной полярностью, и корректирующее воздействие усиливало ошибку. Затронутые датчики рыскания имели общий отказ, который нельзя было обнаружить голосованием между ними; ракета завалилась и разрушилась примерно через двадцать секунд."
+    },
+    {
+      "id": "f-proton2013",
+      "path": "explanation",
+      "lang": "th",
+      "before": "เซนเซอร์อัตราการหันเห (yaw) ถูกติดกลับขั้ว ทุกการแก้จึงทำให้ความคลาดเพิ่มเป็นสองเท่า ความผิดพลาดเกิดกับทุกหน่วยพร้อมกัน การลงคะแนนจึงมองไม่เห็น จรวดเอียงล้มและแตกหักภายในราวยี่สิบวินาที",
+      "after": "เซนเซอร์อัตราการหันเห (yaw) ถูกติดกลับขั้ว การสั่งแก้จึงยิ่งเพิ่มความคลาดเคลื่อน เซนเซอร์อัตราการหันเหที่เกี่ยวข้องมีความผิดพลาดร่วมกัน การลงคะแนนระหว่างเซนเซอร์เหล่านั้นจึงตรวจไม่พบ จรวดเอียงล้มและแตกหักภายในราวยี่สิบวินาที"
+    },
+    {
+      "id": "f-order-ms10",
+      "path": "explanation",
+      "lang": "th",
+      "before": "หอหนีภัยถูกปลดไปแล้วประมาณ T+115 วินาที บูสเตอร์ชนประมาณ T+119 วินาที มอเตอร์หนีภัยบนฝาครอบจึงทำหน้าที่แทน ลูกเรือ อเล็กเซย์ ออฟชินิน และนิก เฮก ลงสู่พื้นตามเส้นทางขีปนะด้วยแรงสูงสุดราว 7 g และปลอดภัย",
+      "after": "หอหนีภัยถูกปลดไปแล้วประมาณ T+115 วินาที บูสเตอร์ชนประมาณ T+119 วินาที มอเตอร์หนีภัยบนฝาครอบจึงทำหน้าที่แทน ลูกเรือ อเล็กเซย์ ออฟชินิน และนิก เฮก ลงสู่พื้นตามเส้นทางขีปนวิถีด้วยแรงสูงสุดราว 7 g และปลอดภัย"
+    }
+  ]
+}

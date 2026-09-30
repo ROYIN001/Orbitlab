@@ -1,0 +1,120 @@
+{
+  "node": "v22.23.3",
+  "currentSource": "source-integrated",
+  "comparisonSource": "source (local handoff snapshot)",
+  "bankCount": 157,
+  "previousCount": 157,
+  "bankIssues": [],
+  "scoringStructureChanged": [],
+  "numericFamilies": 25,
+  "numericCombinations": 31639,
+  "numericIssues": [],
+  "correctedTextConstantsMatchFormula": true,
+  "independentTsiolkovskyWorkedCheck": true,
+  "numeric": [
+    {
+      "id": "b-gravity-altitude",
+      "combinations": 21
+    },
+    {
+      "id": "o-circular-speed",
+      "combinations": 26
+    },
+    {
+      "id": "o-period",
+      "combinations": 36
+    },
+    {
+      "id": "o-hohmann-first",
+      "combinations": 143
+    },
+    {
+      "id": "o-plane-change",
+      "combinations": 1827
+    },
+    {
+      "id": "o-perigee-speed",
+      "combinations": 432
+    },
+    {
+      "id": "o-ground-track",
+      "combinations": 48
+    },
+    {
+      "id": "o-period-height",
+      "combinations": 21
+    },
+    {
+      "id": "r-tsiolkovsky-calc",
+      "combinations": 21525
+    },
+    {
+      "id": "r-mass-ratio",
+      "combinations": 1435
+    },
+    {
+      "id": "r-q-calc",
+      "combinations": 1326
+    },
+    {
+      "id": "r-read-maxq",
+      "combinations": 1
+    },
+    {
+      "id": "r-read-meco",
+      "combinations": 1
+    },
+    {
+      "id": "r-liftoff-accel",
+      "combinations": 546
+    },
+    {
+      "id": "g-ins-error",
+      "combinations": 340
+    },
+    {
+      "id": "g-launch-azimuth",
+      "combinations": 266
+    },
+    {
+      "id": "c-overshoot",
+      "combinations": 14
+    },
+    {
+      "id": "c-gain-db",
+      "combinations": 39
+    },
+    {
+      "id": "c-delay-phase",
+      "combinations": 209
+    },
+    {
+      "id": "c-read-overshoot",
+      "combinations": 7
+    },
+    {
+      "id": "c-read-pm",
+      "combinations": 15
+    },
+    {
+      "id": "c-pd-damping",
+      "combinations": 527
+    },
+    {
+      "id": "c-tvc-moment",
+      "combinations": 2640
+    },
+    {
+      "id": "f-voting-reliability",
+      "combinations": 20
+    },
+    {
+      "id": "f-series-reliability",
+      "combinations": 174
+    }
+  ],
+  "limits": [
+    "Comparison covers IDs/order/type/domain/level/answer flags/parameters/expressions/units/tolerances and order lengths; it is not an independent new semantic review of every localized option.",
+    "The full numeric grid verifies finite positive answers from production expressions. Only the Tsiolkovsky example here is independently computed; historical independent 25-family checks are separate evidence."
+  ]
+}
