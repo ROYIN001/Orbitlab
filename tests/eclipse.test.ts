@@ -322,6 +322,29 @@ describe('the worst eclipse of a season (D06)', () => {
     expect(none.fraction).toBe(0);
   });
 
+  it('begins each revolution on the day side, so a span that starts in an eclipse still finds a whole one', () => {
+    // Added in review. A revolution begun in the shadow adds the tail of one eclipse to the head of the next,
+    // which the shadow has moved on from; at GEO the revolution is locked to the Sun's day, so every sample of
+    // a sweep is cut the same way. Before the fix, a GEO satellite 6° into the shadow at the 2027 March
+    // equinox gave 3951.7 s for a span of no days (one revolution) where the eclipse is 4175 s. Tolerance,
+    // fixed before the fix was run: 2 s, as the GEO checks above, at every phase listed (170°–188° are in the
+    // shadow at the start, its edge being 8.7° either side of the anti-Sun point at 180°).
+    const eq = julianDate(new Date(Date.UTC(2027, 2, 20, 20, 25)));
+    const h = GEO_RADIUS - R_EARTH;
+    for (const deg of [0, 90, 170, 172, 174, 177, 180, 183, 186, 188, 270]) {
+      const geo: Orbit = { a: GEO_RADIUS, e: 0, i: 0, raan: 0, argp: 0, m0: deg * DEG, jd0: eq };
+      const period = orbitFacts(geo, true).nodalPeriod;
+      const w = worstEclipse(geo, eq, 0);
+      const mid = w.jd + period / 2 / 86400;
+      const sDot = (sunRightAscension(mid + 1 / 24) - sunRightAscension(mid - 1 / 24)) / 7200;
+      const expected = eclipseDuration(h, w.beta) / (1 - sDot / (2 * Math.PI / period));
+      expect(Math.abs(w.duration - expected), `m0 ${deg}°`).toBeLessThanOrEqual(2);
+      // the revolution it names is lit at its start and holds that eclipse
+      expect(inSunlight(stateAt(geo, (w.jd - eq) * 86400, true).r, w.jd), `m0 ${deg}°`).toBe(true);
+      expect(Math.abs(sampledEclipse(geo, w.jd, period / 360).duration - w.duration)).toBeLessThan(1e-9);
+    }
+  });
+
   it('refuses a span that is not a number of days', () => {
     const o: Orbit = { a: R_EARTH + 500e3, e: 0, i: 0, raan: 0, argp: 0, m0: 0, jd0: JD };
     expect(() => worstEclipse(o, JD, -1)).toThrow(RangeError);

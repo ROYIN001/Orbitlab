@@ -186,6 +186,15 @@ const PHI = (Math.sqrt(5) - 1) / 2;
  * `jd` is the start of that revolution, and `beta` the β half a revolution
  * later, in the middle of it.
  *
+ * Each revolution is begun on the day side. One begun in the shadow would
+ * cut an eclipse in two and add the tail of one to the head of the next,
+ * which the shadow's own motion has moved on: at GEO, whose revolution is
+ * locked to the Sun's day, the two pieces came to 3952 s of a 4175 s
+ * eclipse, and on every day of the sweep alike. So a revolution that would
+ * begin in the shadow is begun half a revolution later, which is lit: the
+ * shadow holds less than half of any revolution above the ground. (So
+ * `jd` can fall up to half a revolution after the span.)
+ *
  * The sweep walks each revolution in 1° steps of mean motion, so an eclipse
  * shorter than that (15 s in low orbit) can be missed; for the worst case
  * this matters only when every eclipse of the season is that short. For a
@@ -197,7 +206,9 @@ export function worstEclipse(o: Orbit, jd0: number, days: number): WorstEclipse 
   if (!(days >= 0) || !Number.isFinite(days)) throw new RangeError(`days must be 0 or more (got ${days})`);
   const period = orbitFacts(o, true).nodalPeriod;
   const step = period / SWEEP_SAMPLES;
-  const at = (jd: number): number => sampledEclipse(o, jd, step, true).duration;
+  // the revolution sampled for `jd`: begun there, or half a revolution on if `jd` is in the shadow
+  const startOf = (jd: number): number => (inSunlight(stateAt(o, (jd - o.jd0) * DAY, true).r, jd) ? jd : jd + period / 2 / DAY);
+  const at = (jd: number): number => sampledEclipse(o, startOf(jd), step, true).duration;
   const n = Math.max(1, Math.ceil(days / SWEEP_DAYS));
   let best = jd0, bestD = at(jd0);
   for (let k = 1; k <= n; k++) {
@@ -217,7 +228,8 @@ export function worstEclipse(o: Orbit, jd0: number, days: number): WorstEclipse 
     const mid = (a + b) / 2, dm = at(mid);
     if (dm > bestD) { best = mid; bestD = dm; }
   }
-  return { jd: best, beta: betaAngle(o, best + period / 2 / DAY, true), fraction: bestD / period, duration: bestD };
+  const start = startOf(best);
+  return { jd: start, beta: betaAngle(o, start + period / 2 / DAY, true), fraction: bestD / period, duration: bestD };
 }
 
 /** The module against its contract (src/orbit/satellite-cores.ts). */
