@@ -26,6 +26,12 @@
  * DOM-free. src/design must not import the propagator (tests/propagator.test.ts),
  * so this reads src/orbit only, and the four numbers P07 takes are typed as
  * the S03 hand-off carries them (`HandoffSpacecraft`, src/orbit/handoff.ts).
+ * It still brings the propagator and NRLMSISE-00 along at run time, through
+ * `tumblingBoxArea` (src/orbit/reentry.ts) and `B_RANGE`
+ * (src/orbit/ballistic.ts): the guard reads direct imports only, and the
+ * app's main bundle holds them already (src/worksheets/cases.ts), but a
+ * worker that imports this file takes them in too. It is the only file in
+ * src/design that does.
  * tests/d06-satellite-area.test.ts holds it to NAPA-2 (B = 0.0134 m²/kg and
  * its lifetime within 25 %, docs/VALIDATION.md §7) and to TU Delft p. 138.
  */
