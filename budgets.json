@@ -1,0 +1,33 @@
+{
+  "_notes": {
+    "rule": "Ceilings only ratchet down. A PR that raises one names the reason here, under set, beside that group.",
+    "units": "kB of 1000 bytes, raw (not gzip) sizes in dist/ after npx vite build; checked by npm run budget (scripts/bundle-budget.mjs).",
+    "groups": "A key names the chunks in dist/assets with that prefix (hash dropped); other chunks is every other *.js and *.css there, together; precache is every file listed in the manifest inside dist/sw.js.",
+    "set": {
+      "index-*.js": "seeded 2026-09-30 at the measured size 3708.1 kB + 2 %",
+      "index-*.css": "seeded 2026-09-30 at the measured size 139.4 kB + 2 %",
+      "flight.worker-*.js": "seeded 2026-09-30 at the measured size 428.6 kB + 2 %",
+      "tune.worker-*.js": "seeded 2026-09-30 at the measured size 412.9 kB + 2 %",
+      "monte-carlo.worker-*.js": "seeded 2026-09-30 at the measured size 411.1 kB + 2 %",
+      "ratings.worker-*.js": "seeded 2026-09-30 at the measured size 1564.9 kB + 2 %",
+      "readiness.worker-*.js": "seeded 2026-09-30 at the measured size 1573.6 kB + 2 %",
+      "reentry.worker-*.js": "seeded 2026-09-30 at the measured size 57.9 kB + 2 %",
+      "lifetime.worker-*.js": "seeded 2026-09-30 at the measured size 39.1 kB + 2 %",
+      "screening.worker-*.js": "seeded 2026-09-30 at the measured size 30.1 kB + 2 %",
+      "other chunks": "seeded 2026-09-30 at the measured size 686.5 kB + 2 %",
+      "precache": "seeded 2026-09-30 at the measured size 16100.5 kB + 2 %; lowered 2026-09-30 to the measured 12499.1 kB + 2 % when the soundtrack left the install (D-7; a build with ORBITLAB_PRECACHE_AUDIO=1 precaches 16100.5 kB and is not held to this ceiling)"
+    }
+  },
+  "index-*.js": 3783,
+  "index-*.css": 143,
+  "flight.worker-*.js": 438,
+  "tune.worker-*.js": 422,
+  "monte-carlo.worker-*.js": 420,
+  "ratings.worker-*.js": 1597,
+  "readiness.worker-*.js": 1606,
+  "reentry.worker-*.js": 60,
+  "lifetime.worker-*.js": 40,
+  "screening.worker-*.js": 31,
+  "other chunks": 701,
+  "precache": 12750
+}

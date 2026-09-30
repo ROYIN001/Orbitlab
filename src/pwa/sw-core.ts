@@ -12,7 +12,8 @@
  * and are cached the first time they load; offline before that, the page
  * falls back on the system fonts. The landing page's pictures of the app are
  * the same (`ON_DEMAND_PREFIXES`): one language's set of them is all a visitor
- * needs, so none is precached, and each is kept once it has been seen.
+ * needs, so none is precached, and each is kept once it has been seen. The
+ * launch soundtrack is too, on the public site: kept whole on its first play.
  *
  * The data snapshots the offline mode reads (`public/data/`, roadmap S04) are
  * files of the build like any other, so they are precached with it. What the
@@ -174,6 +175,19 @@ export async function respond(scope: SwScope, manifest: PrecacheManifest, reques
   }
   if (route === 'runtime') {
     const cache = await scope.caches.open(RUNTIME_CACHE);
+    // An <audio> element asks only for ranges, and a cache keeps no partial
+    // answer: the first one fetches the whole file and keeps it, and every
+    // range, then and offline, is cut from that copy (D-7). Offline before
+    // that first play, the fetch fails and the page plays no recording.
+    const range = request.headers?.get('range');
+    if (range) {
+      const kept = await cache.match(url.href);
+      if (kept) return rangeResponse(kept, range);
+      const whole = await scope.fetch(url.href);
+      if (whole.status !== 200) return whole;
+      await cache.put(url.href, whole.clone());
+      return rangeResponse(whole, range);
+    }
     const hit = await cache.match(request);
     const fresh = scope.fetch(request).then(async (response) => {
       // a no-cors stylesheet or font answers opaquely (status 0): keep it too

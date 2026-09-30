@@ -17,7 +17,9 @@ import { siteById } from '../data/sites';
 import { satelliteById } from '../data/satellites';
 import { localizeEventParams, satelliteName, siteName } from './names';
 import { faultKindName } from './fault-names';
-import { chartTitle, insertionEvent } from './telemetry-charts';
+import { chartTitle, insertionEvent, reportTelemetryCharts } from './telemetry-charts';
+import { chartImage, chartSnapshot, visibleCharts } from './chart-export';
+import { downloadBlob } from './download';
 
 export interface ReportFlight {
   cfg: MissionConfig;
@@ -209,15 +211,12 @@ export function reportFileName(cfg: MissionConfig, lang: Lang = getLang()): stri
  * over the whole recording, then every engineering chart on screen (Bode,
  * step response, inspector …) as it is drawn now, each on white.
  */
-export async function downloadFlightReport(o: {
+export function downloadFlightReport(o: {
   flight: ReportFlight; result: MissionResultModel | null; link: string | null;
   /** canvases the flight's own charts replace (the telemetry panel's) */
   exclude: ReadonlySet<HTMLCanvasElement>;
   guidanceEdited: boolean;
-}): Promise<void> {
-  const { chartImage, chartSnapshot, visibleCharts } = await import('./chart-export');
-  const { reportTelemetryCharts } = await import('./telemetry-charts');
-  const { downloadBlob } = await import('./download');
+}): void {
   const image = (snap: Parameters<typeof chartImage>[0]): ReportFigure =>
     ({ title: snap.opt.title, src: chartImage(snap, { width: 1000, height: 420, scale: 2 }).toDataURL('image/png') });
   const figures = reportTelemetryCharts(o.flight).map(image);
