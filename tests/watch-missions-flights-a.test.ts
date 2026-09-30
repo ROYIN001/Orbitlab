@@ -10,9 +10,8 @@
  * tests/watch-missions.test.ts checks that every mission is in exactly one group.
  */
 import { describe } from 'vitest';
-import { FLIGHT_GROUPS, flyFailures, flyToTarget } from './watch-missions-flights';
+import { flyGroup } from './watch-missions-flights';
 
 describe('viewer missions', () => {
-  flyFailures(FLIGHT_GROUPS.a);
-  flyToTarget(FLIGHT_GROUPS.a);
+  flyGroup('a');
 });

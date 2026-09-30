@@ -60,8 +60,20 @@ const missions = (ids: readonly WatchMissionId[]) => WATCH_MISSIONS.filter((m) =
 // G06: the launch aborts end with the crew under their parachutes, not in orbit
 const ABORT_MODES: Record<string, string> = { soyuzMs10: 'fairing', soyuzT10: 'tower', soyuz18a: 'separation' };
 
+/**
+ * Registers every flight of `FLIGHT_GROUPS[group]`: the aborts of its launch
+ * failures and the flights of its other missions to their targets. Each
+ * tests/watch-missions-flights-x.test.ts is this one call for group x, so a
+ * file cannot fly only part of its group; tests/watch-missions.test.ts checks
+ * that every file makes its call.
+ */
+export function flyGroup(group: FlightGroup): void {
+  flyFailures(FLIGHT_GROUPS[group]);
+  flyToTarget(FLIGHT_GROUPS[group]);
+}
+
 /** Registers the abort flight of each of `ids` that is a launch failure. */
-export function flyFailures(ids: readonly WatchMissionId[]): void {
+function flyFailures(ids: readonly WatchMissionId[]): void {
   const failing = missions(ids).filter((m) => m.failure).map((m) => m.id);
   if (failing.length === 0) return;
   it.each(failing)('%s meets its failure and fires the escape system the way its crew did', { timeout: 300_000 }, (id) => {
@@ -82,7 +94,7 @@ export function flyFailures(ids: readonly WatchMissionId[]): void {
 }
 
 /** Registers the flight to its target of each of `ids` that is not a launch failure. */
-export function flyToTarget(ids: readonly WatchMissionId[]): void {
+function flyToTarget(ids: readonly WatchMissionId[]): void {
   const flying = missions(ids).filter((m) => !m.failure).map((m) => m.id);
   if (flying.length === 0) return;
   it.each(flying)('%s reaches its target as the app flies it, and lands what it flies home', { timeout: 900_000 }, (id) => {
