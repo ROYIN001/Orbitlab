@@ -1014,7 +1014,11 @@ second, and resending the same command moved the picture on by up to a 0.05 s st
 clock ran 3.0 s in 2 s). Skip and the fast-forwards count from the frame on screen
 (`RecordingSource.clock`), not from the simulation: in a high coast the simulation can already
 have started the next burn, and Skip 23 s before an apogee burn went 84 s on, a minute into the
-burn, instead of to 20 s before it. A flight that fails is shown failed at once. Flown live with random
+burn, instead of to 20 s before it. A lesson's grade is final only once the picture has reached the
+flight's end (`gradeShown`, src/lessons/grader.ts): the docking that ends lesson 5.2 closes a 5 s
+step while the hooks close, and the strip passed or failed it 4.9–5.0 s of mission time before the
+picture and the event log showed it (two- and four-orbit profiles, 1–10×). A flight that fails is
+shown failed at once, and so is its grade. Flown live with random
 frames, warps, pauses and cut-short frames, Falcon 9, Electron, H3 and Ariane 64 now equal their
 headless flights bit for bit, and so does the crewed Soyuz aborted by hand at T+60 s when re-flown
 from the abort's time (`tests/live-stepping.test.ts`).

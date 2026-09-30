@@ -77,6 +77,30 @@ export function gradingEnd(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFligh
   return t;
 }
 
+/**
+ * Has the picture reached the end of the flight for this lesson? `clock` is
+ * the instant on screen. A live point-mass flight is flown up to one step
+ * ahead of it (roadmap T02, src/replay/recorder.ts), and a step can carry the
+ * flight past its end before the picture and the event log get there: the
+ * docking is the end of a 5 s step while the hooks close. A failure is shown
+ * at once, so it has always been reached; so has a flight with no end yet.
+ */
+export function endShown(lesson: Pick<Lesson, 'endEvent'>, flight: LessonFlight, clock: number): boolean {
+  if (flight.state.status === 'failed') return true;
+  const end = gradingEnd(lesson, flight);
+  return end === null || clock >= end - 1e-6;
+}
+
+/**
+ * The grade of a live flight as far as the picture shows it (T02): final only
+ * once the instant on screen has reached the end (`endShown`), so the strip
+ * never passes or fails a docking the picture has not yet reached.
+ */
+export function gradeShown(lesson: Lesson, flight: LessonFlight, clock: number, answers: LessonAnswers = {}): LessonGrade {
+  const grade = gradeLesson(lesson, flight, answers);
+  return grade.final && !endShown(lesson, flight, clock) ? gradeLesson(lesson, flight, answers, false) : grade;
+}
+
 /** Did the flight leave the pad at all? A flight still on the pad is not graded. */
 export function flightStarted(flight: LessonFlight): boolean {
   return flight.state.t > 0 || flight.state.status !== 'prelaunch';

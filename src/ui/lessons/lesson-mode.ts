@@ -25,7 +25,7 @@ import type { Simulation } from '../../physics/simulation';
 import type { MissionState } from '../../config/mission-file';
 import { allLessons, lessonNumber, TRACKS } from '../../lessons/catalog';
 import { missionStateOf } from '../../lessons/config';
-import { awaitingAnswers, flightEnded, flightStarted, gradeLesson, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
+import { awaitingAnswers, flightEnded, flightStarted, gradeShown, regradeAnswers, type RevealedAnswers } from '../../lessons/grader';
 import { caseAnswersOpen, caseWorkingShown, gradeCaseLesson } from '../../lessons/case-grader';
 import { FlightLessons } from '../../lessons/flight-lessons';
 import { draftValue, submittedAnswers, type AnswerDrafts } from '../../lessons/answer-drafts';
@@ -55,6 +55,11 @@ export interface LessonHost {
   loadMission(state: MissionState): void;
   /** the mission's simulation (a main-thread mirror in worker mode) */
   sim(): Simulation | null;
+  /**
+   * The live instant on screen, s of mission time (`RecordingSource.clock`). A point-mass flight
+   * is flown up to one step ahead of it (T02, src/replay/recorder.ts), so a grade waits for it.
+   */
+  clock(): number;
   /** the setup panel's element */
   panelRoot: HTMLElement;
   /** re-render the setup panel (to lift the locks) */
@@ -402,7 +407,8 @@ export class LessonMode implements LessonToolsHost {
     const revealed = this.revealedOf(lesson.id);
     if (a.frozen) a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed);
     else {
-      a.grade = gradeLesson(lesson, sim, a.answers);
+      // T02: final only once the picture has reached the end — the simulation can be a step past it
+      a.grade = gradeShown(lesson, sim, this.host.clock(), a.answers);
       if (started && a.grade.final) { a.frozen = a.grade; a.grade = regradeAnswers(lesson, a.frozen, a.answers, revealed); }
     }
     if (started && a.grade.final && !a.recorded && awaitingAnswers(lesson, a.grade).length === 0) this.record(a);

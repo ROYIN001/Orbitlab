@@ -38,6 +38,9 @@ import { orbitById } from '../src/data/orbits';
 import { siteById } from '../src/data/sites';
 import { launchWindows } from '../src/physics/mission';
 import type { MissionConfig } from '../src/types';
+import { BUILTIN_LESSONS } from '../src/lessons/catalog';
+import { lessonConfig } from '../src/lessons/config';
+import { gradeLesson, gradeShown } from '../src/lessons/grader';
 
 const LAUNCH = new Date(Date.UTC(2026, 8, 15, 12, 0, 0));
 
@@ -305,6 +308,36 @@ describe('live point-mass stepping (T02)', () => {
     }
     expect(ahead).toBeGreaterThan(100);
     expect(recording(remote.sim, remote.recorder, true)).toEqual(recording(inline.sim, inline.recorder, true));
+  }, 120_000);
+});
+
+describe('a lesson graded live (T02)', () => {
+  it('passes or fails a docking only once the picture and the log have reached it', () => {
+    // Lesson 5.2 flown as a student passes it: the two-orbit profile, to docking. The
+    // docking is the end of a 5 s step while the hooks close, so the simulation holds
+    // the lesson's end event a few seconds before the picture gets there.
+    const lesson = BUILTIN_LESSONS.find((l) => l.id === 'adv-docking')!;
+    const cfg = lessonConfig(lesson.mission, (s) => { s.rendezvous = { profile: 'twoOrbit', port: 'rassvet' }; });
+    const session = new InlineSession(cfg);
+    const r = random(53);
+    let held = 0, shownFinal = false;
+    while (!shownFinal && session.recorder.clock < 20_000) {
+      const rv = session.recorder.recordNow().rendezvous;
+      // quickly to the final approach, then 1–10× at 30–144 frames a second
+      const warp = rv && (rv.phase === 'final' || rv.phase === 'capture') ? 1 + Math.floor(r() * 10) : 500;
+      session.advance((1 / 144 + r() * (1 / 30 - 1 / 144)) * warp, 1e9);
+      session.recorder.recordNow();
+      const sim = session.sim, clock = session.recorder.clock;
+      const docked = session.recorder.events.some((e) => e.key === 'evt.docked');
+      shownFinal = gradeShown(lesson, sim, clock).final;
+      // final exactly when the event log on screen shows the docking
+      expect(shownFinal).toBe(docked);
+      if (gradeLesson(lesson, sim).final && !shownFinal) held++;
+    }
+    expect(shownFinal).toBe(true);
+    // the simulation had docked while the picture had not: the case the wait is for
+    expect(held).toBeGreaterThan(0);
+    expect(gradeShown(lesson, session.sim, session.recorder.clock)).toEqual(gradeLesson(lesson, session.sim));
   }, 120_000);
 });
 

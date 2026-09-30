@@ -577,6 +577,7 @@ class App {
       back: () => this.go(this.route),
       loadMission: (state) => { this.goLive(); this.playing = false; this.workspace.adopt(); this.panel.restoreMission(state); },
       sim: () => this.sim,
+      clock: () => this.recorder.clock,
       panelRoot: document.getElementById('setup')!,
       renderPanel: () => this.panel.render(),
     });
