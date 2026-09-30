@@ -985,10 +985,15 @@ student watched has to *be* the headless flight: `sim.step(sim.suggestedDt())` f
 loop every test, the fleet fingerprints and the pre-flight probes fly. Six-DOF always was: it flies
 whole 10 ms control ticks and carries what is left of an animation frame over. A point-mass flight
 was not — each step was cut to what was left of the frame, so the step sequence, and every number
-after it, depended on the frame rate and the warp. Measured on five fleet missions with random
-frames (Falcon 9 to the ISS orbit, Electron to LEO, H3 to SSO, a crewed Soyuz-2.1a, Ariane 64 to
-GTO), the orbit at each insertion event was up to 2.7 km from the headless one and Electron's
-Curie burns started up to 16 s apart.
+after it, depended on the frame rate and the warp. Measured on five fleet missions (Falcon 9 to
+the ISS orbit, Electron to LEO, H3 to SSO, a crewed Soyuz-2.1a, Ariane 64 to GTO), the orbit at
+each insertion event was up to 2.7 km from the headless one with random frames and warps, and up
+to 2.4 km at a steady 60 frames a second at 10× (Ariane 64's GTO apogee). Electron moved most, and
+most in the ordinary case of a steady frame rate at 1×: at 30, 60 and 120 frames a second its
+suborbital SECO perigee was 15, 19 and 21 km from the headless one, its parking orbit 3.3–4.5 km,
+and it reached its parking and target orbits (the ends of the Curie burns) 33–48 s earlier than
+the headless flight (with random frames: 6.7 km, 1.5 km and 16 s). Those are the amounts by which
+a live run now differs from the same run before this change.
 
 Since the owner's decision of 2026-09-29 the live point-mass flight is flown in whole steps too
 (`FlightRecorder.advance`). A point-mass step is 0.02–0.25 s in the ascent but up to 30 s in orbit
@@ -1003,11 +1008,13 @@ out) — nothing a viewer can see. The recording — its frames and its events �
 on screen, so nothing shown runs ahead of the picture. A command (the crew's abort, the TORU hand
 controllers) is taken at the simulation's clock, the step boundary at or after the picture, and
 the picture moves on to it (at most one step: 0.1 s in the lower atmosphere); that clock, not the
-one on screen, is the time a journal of commands has to keep for a re-fly to be exact. A flight
-that fails is shown failed at once. Flown live with random frames, warps, pauses and cut-short
-frames, Falcon 9, Electron, H3 and Ariane 64 now equal their headless flights bit for bit, and so
-does the crewed Soyuz aborted by hand at T+60 s when re-flown from the abort's time
-(`tests/live-stepping.test.ts`).
+one on screen, is the time a journal of commands has to keep for a re-fly to be exact. The TORU
+panel sends a command only when it changes: a key held at its limit repeats about 30 times a
+second, and resending the same command moved the picture on by up to a 0.05 s step each time (the
+clock ran 3.0 s in 2 s). A flight that fails is shown failed at once. Flown live with random
+frames, warps, pauses and cut-short frames, Falcon 9, Electron, H3 and Ariane 64 now equal their
+headless flights bit for bit, and so does the crewed Soyuz aborted by hand at T+60 s when re-flown
+from the abort's time (`tests/live-stepping.test.ts`).
 
 A six-DOF flight in a held coast (§2a) still steps 10 s at a time and waits for a whole step, so at
 1× its picture stands still for ten seconds and then jumps (measured: 599 frames at 60 frames a

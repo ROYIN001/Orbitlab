@@ -8,9 +8,10 @@
  * section cut each point-mass step to what was left of the animation frame, so
  * the step sequence — and every number after it — depended on the frame rate
  * and the warp. Measured before this change, on these missions and a crewed
- * Soyuz with the same kind of random frames, the orbit at each insertion event
- * was up to 2.7 km from the headless one and Electron's Curie burns started up
- * to 16 s apart (a probe in tests/probe, not committed; docs/PHYSICS.md §2n).
+ * Soyuz, the orbit at each insertion event was up to 2.7 km from the headless
+ * one with random frames; at a steady 60 frames a second at 1× Electron's
+ * suborbital SECO perigee was 19 km from it and its Curie burns ended 42–44 s
+ * earlier (probes not committed; docs/PHYSICS.md §2n).
  *
  * The references, fixed before the first comparison:
  * - *the headless flight*: `new Simulation(cfg)` stepped with
