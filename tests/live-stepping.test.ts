@@ -7,9 +7,10 @@
  * student watched *is* the headless flight. Until now it was not: the Launch
  * section cut each point-mass step to what was left of the animation frame, so
  * the step sequence — and every number after it — depended on the frame rate
- * and the warp. Measured before this change, on the missions below with the
- * same random frames: apsides up to 3.5 km and event times up to 4.7 s from the
- * headless flight (tests/probe, not committed; the numbers are in the commit).
+ * and the warp. Measured before this change, on these missions and a crewed
+ * Soyuz with the same kind of random frames, the orbit at each insertion event
+ * was up to 2.7 km from the headless one and Electron's Curie burns started up
+ * to 16 s apart (a probe in tests/probe, not committed; docs/PHYSICS.md §2n).
  *
  * The references, fixed before the first comparison:
  * - *the headless flight*: `new Simulation(cfg)` stepped with

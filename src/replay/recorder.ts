@@ -48,7 +48,7 @@
  * (`interpolateFrames`). What the recording shows — its frames and events — ends
  * at the instant on screen: the frame and the events of the step still ahead are
  * held back until the clock reaches them, so nothing on screen runs ahead of the
- * picture (tests/live-stepping.test.ts).
+ * picture (tests/live-stepping.test.ts; measurements in docs/PHYSICS.md §2n).
  */
 import { captureFrame, cloneFrame, interpolateFrames, type VisualFrame } from '../physics/frame';
 import type { Simulation, SimEvent, SimStatus } from '../physics/simulation';
