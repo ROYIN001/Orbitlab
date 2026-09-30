@@ -1,0 +1,122 @@
+{
+  "verifiedAt": "2026-09-29T23:03:24Z",
+  "heavy": {
+    "commit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+    "srcTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+    "runId": 36631307401,
+    "status": "success",
+    "passed": 246
+  },
+  "browserAllFour": {
+    "commit": "9737f2134b1daaf228ab61c5b7e0bf618ae6a3cc",
+    "runId": 36634805813,
+    "status": "success",
+    "journeys": 4,
+    "changeFromHeavy": "browser workflow only; source and tests unchanged"
+  },
+  "finalEditorial": {
+    "commit": "c146a699f01bb5d299af39e3ca9742445442b474",
+    "srcTree": "0487cbf1584bc72dc785864eef777e6ccde075a0",
+    "standardRunIds": [
+      36637128631,
+      36637123429
+    ],
+    "productionFilesChanged": 11,
+    "localizedStringsChanged": 57,
+    "nonLocalizedAstEqual": true,
+    "verification": "../editorial-audit/text-only-verification-c146.json",
+    "testChange": "tests/case-lessons.test.ts now compares parsed V1 lessons with the original fixture JSON and retains exact canonical-LF roundtrip; imported authored text must survive changes to built-in wording. Fixture and golden content unchanged."
+  },
+  "caseExportJourney": {
+    "commit": "277f41dd6cbd46d1b03d97bcc060258ec8c7554a",
+    "srcTree": "0487cbf1584bc72dc785864eef777e6ccde075a0",
+    "sourceExactlyEqualsFinalEditorial": true,
+    "filesChangedFromFinalEditorial": [
+      ".github/workflows/audit-case-exports.yml",
+      "tests/browser/journeys/case-worksheet-exports.mjs"
+    ]
+  },
+  "downloadStatusWording": {
+    "commit": "76534dc1d171726cb3d5eadc82d1ac77b629376b",
+    "srcTree": "33dd80c27020f142c362238be378bd77e51ce550",
+    "changedFrom277": "Only ws.made status message in en/ru/th, Saved to File prepared; browser a.click cannot confirm disk save",
+    "newLocalizedStrings": 3,
+    "totalLocalizedStringsFrom9737": 60,
+    "productionFilesFrom9737": 11,
+    "nonLocalizedAstEqual": true,
+    "verification": "../editorial-audit/text-only-verification.json",
+    "generatedWorksheetContentsChanged": false,
+    "physicsChanged": false,
+    "focusedTests": {
+      "passed": 29,
+      "total": 29,
+      "exit": 0,
+      "result": "../editorial-audit/status-wording-tests.json"
+    },
+    "buildExit": 0,
+    "standardRunIds": [
+      36638705308,
+      36638699357
+    ]
+  },
+  "renderingCorrections": {
+    "commit": "4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c",
+    "srcTree": "f8513353f67c0f59637429df5b8129fa6bf565a1",
+    "productionFiles": [
+      "src/worksheets/docx.ts",
+      "src/orbit/encounter-plane.ts"
+    ],
+    "scope": "Numeric answer paragraph keepNext/keepLines and 3sigma SVG text label placement/anchor only; worksheet content, covariance ellipse, combined radius, encounter projection and collision probability unchanged",
+    "independentSourceReview": "Read the exact four source/test diffs; no definite regression identified. SVG sign conversion and width-aware clamps checked; new tests cover actual Iridium labels and numeric paragraph chains.",
+    "focused": {
+      "passed": 82,
+      "total": 82,
+      "files": 7,
+      "node": "v24.19.0",
+      "durationSeconds": 6.78,
+      "typecheckExit": 0,
+      "buildExit": 0,
+      "evidence": "../case-export-layout-focused-validation.json"
+    },
+    "localRender": {
+      "docx": 6,
+      "pages": 12,
+      "mode": "Source-module generation, not actual browser downloads; actual after-export validation owned separately"
+    },
+    "standardRunIds": [
+      36640538286,
+      36640532218
+    ],
+    "caseExportRunId": 36640532239,
+    "actualBrowserAfter": {
+      "runId": 36640532239,
+      "artifactId": 11066063940,
+      "status": "success",
+      "actualDownloads": 24,
+      "docxViewed": 12,
+      "pagesViewed": 18,
+      "visualPassed": true,
+      "evidence": "../browser-export-artifacts/editorial-layout-final/visual-review.json",
+      "all24TextContentsIdenticalToBefore": true,
+      "textComparison": "../browser-export-artifacts/editorial-layout-final/text-content-preserved.json"
+    },
+    "finalStandard": {
+      "status": "success",
+      "distinctTests": 9259,
+      "files": 191,
+      "passed": 9259,
+      "failed": 0,
+      "node": "v22.23.3",
+      "prRunId": 36640538286,
+      "pushRunId": 36640532218,
+      "prDurationSeconds": 1592.54,
+      "pushDurationSeconds": 1585.86,
+      "typecheckExit": 0,
+      "testExit": 0,
+      "buildExit": 0,
+      "evidence": "ci-4cf-standard-summary.json",
+      "mergeSourceTreeEqualsHead": true
+    }
+  },
+  "claimBoundary": "The full heavy suite ran on 0b844f77. Later text-only AST equivalence, exact source-tree equality where stated, and separately reviewed rendering-only delta support reuse of unchanged numerical results; this does not claim a heavy rerun at later commits. Every full-standard and browser outcome is attributed to the commit actually run."
+}

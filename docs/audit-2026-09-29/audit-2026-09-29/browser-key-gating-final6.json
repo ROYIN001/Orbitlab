@@ -1,0 +1,55 @@
+{
+  "url": "http://127.0.0.1:4182/#/lessons/worksheets",
+  "before": [
+    {
+      "case": "Iridium 33 กับ Cosmos 2251 (2009)",
+      "enabled": false,
+      "excerpt": [
+        "        - button \"เฉลย (HTML)\" [disabled]",
+        "        - paragraph: เฉลยจะเปิดได้เมื่อผ่านบทเรียนของกรณีนี้แล้ว หรือเมื่อกดดูเฉลยแล้ว",
+        "  - paragraph: เฉลยจะเปิดได้เมื่อผ่านบทเรียนของกรณีนี้แล้ว หรือเมื่อกดดูเฉลยแล้ว"
+      ]
+    },
+    {
+      "case": "ท่อนจรวด Long March 5B ของ Tianhe (2021)",
+      "enabled": true,
+      "excerpt": [
+        "        - button \"เฉลย (HTML)\"",
+        "  - paragraph: เฉลยจะเปิดได้เมื่อผ่านบทเรียนของกรณีนี้แล้ว หรือเมื่อกดดูเฉลยแล้ว"
+      ]
+    },
+    {
+      "case": "THEOS-2 เหนือกรุงเทพฯ",
+      "enabled": true,
+      "excerpt": [
+        "        - button \"เฉลย (HTML)\"",
+        "  - paragraph: เฉลยจะเปิดได้เมื่อผ่านบทเรียนของกรณีนี้แล้ว หรือเมื่อกดดูเฉลยแล้ว"
+      ]
+    }
+  ],
+  "after": [
+    {
+      "case": "Iridium",
+      "enabled": true,
+      "excerpt": [
+        "  - paragraph: \"แสดงเฉลยแล้ว: รอบนี้จึงบันทึกว่าไม่ผ่าน และตัวเลขที่แสดงไปแล้วจะไม่นับเป็นคำตอบที่ถูกอีก\"",
+        "        - button \"เฉลย (HTML)\""
+      ]
+    }
+  ],
+  "worksheetLocked": [
+    "        - paragraph: เฉลยจะเปิดได้เมื่อผ่านบทเรียนของกรณีนี้แล้ว หรือเมื่อกดดูเฉลยแล้ว",
+    "  - button \"ดาวน์โหลดเฉลย\" [disabled]",
+    "  - button \"ดาวน์โหลดใบงาน\"",
+    "  - paragraph: เฉลยจะเปิดได้เมื่อผ่านบทเรียนของกรณีนี้แล้ว หรือเมื่อกดดูเฉลยแล้ว",
+    "  - button \"ดาวน์โหลดเฉลย\" [disabled]",
+    "  - button \"ดาวน์โหลดใบงาน\" [disabled]"
+  ],
+  "worksheetAfter": [
+    "  - button \"ดาวน์โหลดเฉลย\"",
+    "  - button \"ดาวน์โหลดใบงาน\"",
+    "  - button \"ดาวน์โหลดเฉลย\" [disabled]",
+    "  - button \"ดาวน์โหลดใบงาน\" [disabled]"
+  ],
+  "policy": "Only the active matching case is gated; other public case keys are intentionally accessible. Initial other-case enabled results are not product failures."
+}

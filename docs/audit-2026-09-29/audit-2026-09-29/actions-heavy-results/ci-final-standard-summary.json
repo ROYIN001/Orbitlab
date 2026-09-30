@@ -1,0 +1,158 @@
+{
+  "generatedAt": "2026-09-29T21:44:00Z",
+  "runs": [
+    {
+      "runId": 36631312923,
+      "jobId": 109620957985,
+      "conclusion": "success",
+      "headSource": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+      "checkout": "272b1ba68847c1795ca533a4b1d77ef39da24aff",
+      "node": "v22.23.2",
+      "files": 190,
+      "tests": 9241,
+      "passed": 9241,
+      "failed": 0,
+      "durationSeconds": 1598.62,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run npm ci",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run npm run typecheck",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run npm test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run npm run build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        }
+      ],
+      "excerpt": "ci-36631312923-final-excerpt.log"
+    },
+    {
+      "runId": 36631307359,
+      "jobId": 109620939470,
+      "conclusion": "success",
+      "headSource": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+      "checkout": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+      "node": "v22.23.3",
+      "files": 190,
+      "tests": 9241,
+      "passed": 9241,
+      "failed": 0,
+      "durationSeconds": 1603.53,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run npm ci",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run npm run typecheck",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run npm test",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run npm run build",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        }
+      ],
+      "excerpt": "ci-36631307359-final-excerpt.log"
+    }
+  ],
+  "note": "Two executions of the same 9241 tests; do not sum as 18482 distinct cases. Exit0 inferred from successful step conclusions (GitHub prints no numeric exit line on success). PR run validates merge, push validates exact head. Action host Node24 warnings do not describe npm/Vitest runtime."
+}

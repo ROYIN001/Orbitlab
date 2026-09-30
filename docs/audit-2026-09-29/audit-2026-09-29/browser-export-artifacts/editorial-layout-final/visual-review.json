@@ -1,0 +1,281 @@
+{
+  "reviewedAtUTC": "2026-09-29T22:44:57.151746+00:00",
+  "sourceSha": "4cf7e3fe6e5ef36bea37a4b1d275d3e56e7dd58c",
+  "runId": 36640532239,
+  "runUrl": "https://github.com/ROYIN001/Orbitlab/actions/runs/36640532239",
+  "producer": {
+    "node": "v22.23.2",
+    "chromium": "153.0.8010.12",
+    "exports": 24,
+    "bytes": 367489
+  },
+  "renderer": "LibreOffice 26.8.0.3 headless plus Poppler, 120 DPI",
+  "docxCount": 12,
+  "pagesViewed": 18,
+  "visualPassed": true,
+  "documents": [
+    {
+      "docx": "orbitlab-case-cz5b-key-ru.docx",
+      "docxSha256": "2cc67d60302b742214ec949b3ab4f7037d15027891c06d1385b7e0b89a14a53a",
+      "pdf": "rendered\\orbitlab-case-cz5b-key-ru\\orbitlab-case-cz5b-key-ru.pdf",
+      "pdfSha256": "160b1a52592d90e733eabe595fb2d03cd74d0bc291a06a2ef3e0dc4fbb16526c",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-key-ru\\page-1.png",
+          "bytes": 120841,
+          "sha256": "5b8e04bb8d500bc1e650b87f0167cc7ea260723dd0794f96830b9f9655ccd293"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    },
+    {
+      "docx": "orbitlab-case-cz5b-key-th.docx",
+      "docxSha256": "271ad6c3e520728fdfda22a289ecdbf41bf5a971dd3c5620c870899b436f79a6",
+      "pdf": "rendered\\orbitlab-case-cz5b-key-th\\orbitlab-case-cz5b-key-th.pdf",
+      "pdfSha256": "b73cc4ad72b29b71e0766a914a9e9b04f6b3ac55a5b47d42646d8d1bfca9d9f5",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-key-th\\page-1.png",
+          "bytes": 121091,
+          "sha256": "07b18f9df6fc05ccc5b343058d4d444beaf839eaff7d8c26d1b2e7dd3ccaf3ba"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    },
+    {
+      "docx": "orbitlab-case-cz5b-ru.docx",
+      "docxSha256": "5f9f678242818fb61a6e90deb5a397f4126db1cb06c35f1c288bcc038481c2be",
+      "pdf": "rendered\\orbitlab-case-cz5b-ru\\orbitlab-case-cz5b-ru.pdf",
+      "pdfSha256": "f83ecba182ae3e1d7cf274438cc9d1fdce0a2f18155d65edd1f751d5a33d21b4",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-ru\\page-1.png",
+          "bytes": 146484,
+          "sha256": "27ad9170cac6a28d000a10a9cb558dc44da60a2aadd27b284c9ea05d520f5fa4"
+        },
+        {
+          "file": "rendered\\orbitlab-case-cz5b-ru\\page-2.png",
+          "bytes": 70260,
+          "sha256": "ff3f9af764dab0f45f1d7d6853e3b17ce84a7b92b9f0299b20ca8f356cf7e9c2"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Question 6, answer line and working box are together on page 2; no orphan box."
+    },
+    {
+      "docx": "orbitlab-case-cz5b-th.docx",
+      "docxSha256": "3e004016319e00b2335ff913d41f268fa21745b4d71113f2b92da59692c1b850",
+      "pdf": "rendered\\orbitlab-case-cz5b-th\\orbitlab-case-cz5b-th.pdf",
+      "pdfSha256": "34c9ef05af5a9da8865b71ecde905b0cfc7e0f6ad336feb03e95f914b85d4955",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-cz5b-th\\page-1.png",
+          "bytes": 146377,
+          "sha256": "8d091175c9540d4d28fe4dd9238282ff6d797f79bc75b9ea711813cc30966e28"
+        },
+        {
+          "file": "rendered\\orbitlab-case-cz5b-th\\page-2.png",
+          "bytes": 72901,
+          "sha256": "8a803fdc48591d0bd4e3cdf145a88c8affb9f898d1ce47585852359dad3ca032"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Question 6, answer line and working box are together on page 2; no orphan box."
+    },
+    {
+      "docx": "orbitlab-case-iridium-key-ru.docx",
+      "docxSha256": "d1936ce07d15b731e52d7d773b6e1412310ea9f18a531da6a21f660529c41123",
+      "pdf": "rendered\\orbitlab-case-iridium-key-ru\\orbitlab-case-iridium-key-ru.pdf",
+      "pdfSha256": "cd616086137f8dff40baf0692235af77f898031cbc9b343886c939aabb7f5667",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-key-ru\\page-1.png",
+          "bytes": 117508,
+          "sha256": "d56aee77ad28392f64fdea1ad71a1bacbc3f10095a5b04b92ea00a4e160d528e"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    },
+    {
+      "docx": "orbitlab-case-iridium-key-th.docx",
+      "docxSha256": "47337277bcb8e441b825560028899261f7b3136f7f8232eb510cef5987282afb",
+      "pdf": "rendered\\orbitlab-case-iridium-key-th\\orbitlab-case-iridium-key-th.pdf",
+      "pdfSha256": "8538a80a944e47c9e8c5cf24996be8dd2fd1cd87bb5302268ee23270d9ac66cd",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-key-th\\page-1.png",
+          "bytes": 114217,
+          "sha256": "27f2cb08502cdfb74c4fd48320c93cf56c03c56d45b3d674bae437d1500e9fbb"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    },
+    {
+      "docx": "orbitlab-case-iridium-ru.docx",
+      "docxSha256": "1abc1b26ea14ab42e347492e27a85fad8f8a60981a0f3f1506e512f97d44f5a9",
+      "pdf": "rendered\\orbitlab-case-iridium-ru\\orbitlab-case-iridium-ru.pdf",
+      "pdfSha256": "c5cb3ea3954d211f4539bba49c13e987a1ffac917d7ab797f35da78d04354a3e",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-ru\\page-1.png",
+          "bytes": 172217,
+          "sha256": "0e8bea4ccf6487b466d968ae72ecd628edda8391b1a41712f653fd611d1d7626"
+        },
+        {
+          "file": "rendered\\orbitlab-case-iridium-ru\\page-2.png",
+          "bytes": 141143,
+          "sha256": "5547194fb5ab190c05fa6a9f894d4e4ddce64a987279f5360331678ea54bac99"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Question 2 moves with its answer and box to page 2. Page 1 3σ label is below-left of the ellipse, separated from Cosmos 2251, Iridium 33 and the horizontal axis."
+    },
+    {
+      "docx": "orbitlab-case-iridium-th.docx",
+      "docxSha256": "f24c60650b6b419ed7d8c0d76137ea24df67863c516acd9e730abf40177b84cd",
+      "pdf": "rendered\\orbitlab-case-iridium-th\\orbitlab-case-iridium-th.pdf",
+      "pdfSha256": "e805f60f30924f807c6cfca50187b48a2626d341fd22a2cd245f820e465948b6",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-iridium-th\\page-1.png",
+          "bytes": 167401,
+          "sha256": "2f1cb47b162747a273795a72a83602ed1d8ba2d6df9d73a5a13428928147852e"
+        },
+        {
+          "file": "rendered\\orbitlab-case-iridium-th\\page-2.png",
+          "bytes": 129835,
+          "sha256": "e73942b0849d19f8de4b2a1ef9c79177918f226730733b74803dfe8f6b2e562e"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Question 2 and its box fit page 1. Page 1 3σ label is below-left of the ellipse, separated from both object names and the horizontal axis."
+    },
+    {
+      "docx": "orbitlab-case-theos2-key-ru.docx",
+      "docxSha256": "e1d778e726cca958be899af5049676397a9b38e9ba32dfe6c9846341b5a4a90d",
+      "pdf": "rendered\\orbitlab-case-theos2-key-ru\\orbitlab-case-theos2-key-ru.pdf",
+      "pdfSha256": "8849efc3ad7fd5cd525aa21be73528172ec71e71fb76e0d132ef2804d41255b1",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-key-ru\\page-1.png",
+          "bytes": 106406,
+          "sha256": "f4e2b4db30afb2b0d4067b6246ce9db9e7dbce3341598c90b565647d7dac23d8"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    },
+    {
+      "docx": "orbitlab-case-theos2-key-th.docx",
+      "docxSha256": "5724570ba47ff9db9e1462c030c5de1d4fca686cf8a95ca00b0c0554cfa430ea",
+      "pdf": "rendered\\orbitlab-case-theos2-key-th\\orbitlab-case-theos2-key-th.pdf",
+      "pdfSha256": "107eaa267d5431d7f084f9b100f4ae27cfd50de5f68f46270721ebddbd6e4823",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-key-th\\page-1.png",
+          "bytes": 107430,
+          "sha256": "4eb16df80d5a244019e6befbc517836b84d340151f91f852757220a380967040"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    },
+    {
+      "docx": "orbitlab-case-theos2-ru.docx",
+      "docxSha256": "012bad686b8b315718a643c8a72cfc6d358eaa5b478ef79d249cff8532843a2f",
+      "pdf": "rendered\\orbitlab-case-theos2-ru\\orbitlab-case-theos2-ru.pdf",
+      "pdfSha256": "27a333bd38274728a03be55f46ec43890510a16403997752ec6a46f2642907e2",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-ru\\page-1.png",
+          "bytes": 135219,
+          "sha256": "0ef554afb06bf5e14321d5287a4bb2de52c099b3a2aa37eb4ba484d12318135e"
+        },
+        {
+          "file": "rendered\\orbitlab-case-theos2-ru\\page-2.png",
+          "bytes": 47703,
+          "sha256": "4a0221961cb05a4342c277dc6262354ca51a21d9572d6f494d757cb2aa7bdf07"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    },
+    {
+      "docx": "orbitlab-case-theos2-th.docx",
+      "docxSha256": "4ffad69de00eeb159d2982cd3adea750b9cb1ef5ceebb1e5797afce7d5a231a7",
+      "pdf": "rendered\\orbitlab-case-theos2-th\\orbitlab-case-theos2-th.pdf",
+      "pdfSha256": "4390e75c27c6b353a8cecc951c632587b869be9904bb3bc408a25bf43ea967b3",
+      "pages": [
+        {
+          "file": "rendered\\orbitlab-case-theos2-th\\page-1.png",
+          "bytes": 134534,
+          "sha256": "98dcc5609b6aa4c4c12093fee057db3330a94d2ff89830be89a7d8a57853bb68"
+        },
+        {
+          "file": "rendered\\orbitlab-case-theos2-th\\page-2.png",
+          "bytes": 47721,
+          "sha256": "6e88c00ed5fe31678f943d807a5669c6e7a02ad92c91ea9b0799c584069d98bd"
+        }
+      ],
+      "converterExit": 0,
+      "rasterizerExit": 0,
+      "allPagesOpened": true,
+      "visualPassed": true,
+      "findings": [],
+      "observation": "Text, tables, title wraps, units and choices remain readable; no clipping, missing glyphs, overlap or split question/working box seen."
+    }
+  ],
+  "limits": [
+    "Every saved page PNG was opened; this is scoped visual acceptance of these 12 actual exported DOCX files.",
+    "Not Microsoft Word/Google Docs or HTML print pagination certification.",
+    "Local sharp/libvips source fixtures and desktop IAB probe are excluded from these final browser-download counts."
+  ]
+}

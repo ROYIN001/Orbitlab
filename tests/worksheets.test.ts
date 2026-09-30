@@ -207,7 +207,7 @@ describe('the Word documents', () => {
       }
     };
     inOrder(/<w:tblBorders>(.*?)<\/w:tblBorders>/g, ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']);
-    inOrder(/<w:pPr>(.*?)<\/w:pPr>/g, ['keepNext', 'pBdr', 'spacing', 'jc']);
+    inOrder(/<w:pPr>(.*?)<\/w:pPr>/g, ['keepNext', 'keepLines', 'pBdr', 'spacing', 'jc']);
     inOrder(/<w:rPr>(.*?)<\/w:rPr>/g, ['rFonts', 'b', 'bCs', 'i', 'iCs', 'color', 'sz', 'szCs']);
     // every table cell holds a paragraph
     for (const m of doc.matchAll(/<w:tc>(.*?)<\/w:tc>/g)) expect(m[1]).toContain('<w:p>');

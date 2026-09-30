@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Case sheet: THEOS-2 over Bangkok</title><style>
+@page { size: A4; margin: 14mm 14mm; }
+:root { color-scheme: light; }
+body { margin: 0 auto; max-width: 182mm; padding: 8mm 0; font: 10.5pt/1.5 "Noto Sans", "Noto Sans Thai", "DM Sans", "Segoe UI", Tahoma, system-ui, sans-serif; color: #111827; background: #fff; }
+article + article { break-before: page; margin-top: 12mm; }
+h1 { font-size: 17pt; margin: 0 0 1mm; }
+h2 { font-size: 12.5pt; margin: 6mm 0 2mm; border-bottom: 1px solid #d1d5db; padding-bottom: 1mm; break-after: avoid; }
+.sub, .meta { margin: 0; color: #4b5563; font-size: 9.5pt; }
+.who { display: flex; gap: 8mm; margin: 3mm 0 1mm; font-size: 10.5pt; }
+.who span { flex: 1; border-bottom: 1px solid #6b7280; padding-bottom: 1mm; }
+.who b { font-weight: 600; margin-right: 2mm; }
+table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
+th, td { text-align: left; vertical-align: top; padding: 0.8mm 2mm; border-bottom: 1px solid #e5e7eb; font-size: 9.5pt; }
+th { width: 38%; font-weight: 500; color: #374151; }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; }
+figure { margin: 0; break-inside: avoid; }
+figure svg, figure img { width: 100%; height: auto; max-height: 85mm; object-fit: contain; }
+figcaption { font-size: 8.5pt; color: #4b5563; text-align: center; }
+ol.items { padding-left: 7mm; margin: 2mm 0; }
+ol.items > li { margin: 0 0 5mm; break-inside: avoid; }
+.q { margin: 0 0 1.5mm; font-weight: 500; }
+.q-figure { max-width: 120mm; margin: 1mm 0 2mm; }
+.opts { list-style: none; padding: 0; margin: 0; }
+.opts li { margin: 0.6mm 0; }
+.box { display: inline-block; width: 4mm; height: 4mm; border: 1px solid #374151; margin-right: 2mm; vertical-align: -0.6mm; }
+.box.wide { width: 8mm; border-radius: 1mm; }
+.answer { margin-top: 2mm; }
+.answer span { display: inline-block; min-width: 45mm; border-bottom: 1px solid #374151; margin: 0 2mm; }
+.work { height: 14mm; border: 1px dashed #d1d5db; border-radius: 1.5mm; margin-top: 1.5mm; color: #9ca3af; font-size: 8pt; padding: 0.5mm 1.5mm; }
+.key li { margin: 0 0 3mm; }
+.key .a { font-weight: 600; color: #065f46; }
+.key .tol { color: #4b5563; }
+.key .w { color: #374151; font-size: 9pt; margin: 0.5mm 0 0; }
+footer { margin-top: 8mm; border-top: 1px solid #d1d5db; padding-top: 2mm; color: #6b7280; font-size: 8.5pt; }
+</style></head><body><article><header><h1>Case sheet: THEOS-2 over Bangkok</h1><p class="sub">Thailand&#39;s Earth-observation satellite in its sun-synchronous orbit</p><div class="who"><span><b>Name:</b></span><span><b>Code:</b>CASE-THEOS2</span><span><b>Date:</b></span></div></header><section><h2>The data</h2><p class="meta">THEOS-2&#39;s element set from the catalogue on screen, what its operators publish, and the constants to work with.</p><table><tbody><tr><th scope="row">Element set</th><td>2026-09-26 11:28 UTC</td></tr><tr><th scope="row">Mean orbit</th><td>a = 6,999.0 km, e = 0.0001, i = 97.91°</td></tr><tr><th scope="row">Published (eoPortal)</th><td>crosses the equator southbound at 10:00–10:30 local time; 0.5 m; swath 10.3 km; tilts up to 45°</td></tr><tr><th scope="row">Bangkok</th><td>13.756° N, 100.502° E</td></tr><tr><th scope="row">Constants</th><td>J₂ = 1.08263 × 10⁻³; R = 6,378.137 km; μ = 398,600.4 km³/s²; R_mean = 6,371 km</td></tr></tbody></table></section><section><h2>Questions</h2><p class="meta">For a sun-synchronous orbit the Earth&#39;s bulge (J₂) must turn the orbit&#39;s plane eastward as fast as the Sun appears to move round the sky.</p><ol class="items" start="1"><li><p class="q">How fast must the plane turn (°/day)?</p><p class="answer">Answer:<span></span>°/d</p><div class="work">Working</div></li><li><p class="q">How fast does J₂ turn THEOS-2&#39;s plane (°/day)?</p><p class="answer">Answer:<span></span>°/d</p><div class="work">Working</div></li><li><p class="q">Its mean height above the equator (km)?</p><p class="answer">Answer:<span></span>km</p><div class="work">Working</div></li><li><p class="q">Tilted 45°, how far from the point below it can it see (km)?</p><p class="answer">Answer:<span></span>km</p><div class="work">Working</div></li><li><p class="q">When it passes over Bangkok&#39;s longitude at 03:20 UTC, what is the local mean solar time (hours, decimal)?</p><p class="answer">Answer:<span></span>h</p><div class="work">Working</div></li><li><p class="q">Why is a camera satellite put in a sun-synchronous orbit?</p><ul class="opts"><li><span class="box"></span>a) It stands still over one spot.</li><li><span class="box"></span>b) It needs no fuel to stay up.</li><li><span class="box"></span>c) It is always in the Earth&#39;s shadow, which keeps the camera cool.</li><li><span class="box"></span>d) Each place is seen under much the same sunlight on every pass, so pictures can be compared.</li></ul></li></ol></section><footer>Orbitlab · 2026-09-29 · a case from the record, with its published data and this app&#39;s physics, for teaching.</footer></article></body></html>

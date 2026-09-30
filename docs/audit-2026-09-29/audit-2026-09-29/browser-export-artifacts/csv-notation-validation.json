@@ -1,0 +1,211 @@
+{
+  "gost": {
+    "source": "Actual browser export after selecting GOST 20058-80",
+    "file": {
+      "file": "orbitlab_falcon9_leo (3).csv",
+      "bytes": 2119996,
+      "sha256": "3a7bdcde02c8b410927d05e8ebdcc109471f41490b71e7d9cbba87b238da8f1b"
+    },
+    "comparedWith": "orbitlab_falcon9_leo (1).csv",
+    "telemetryRows": 1194,
+    "columns": 116,
+    "firstTime": -10.0,
+    "maxTime": 4941.375,
+    "events": 24,
+    "eventsExactlyMatchIso": true,
+    "notationIndependentColumnsExactlyMatch": 84,
+    "notationColumnMappings": [
+      {
+        "iso": "iso_p_rad_s",
+        "gost": "gost_omega_x_rad_s",
+        "factor": 1
+      },
+      {
+        "iso": "iso_q_rad_s",
+        "gost": "gost_omega_z_rad_s",
+        "factor": 1
+      },
+      {
+        "iso": "iso_r_rad_s",
+        "gost": "gost_omega_y_rad_s",
+        "factor": -1
+      },
+      {
+        "iso": "iso_command_p_rad_s",
+        "gost": "gost_command_omega_x_rad_s",
+        "factor": 1
+      },
+      {
+        "iso": "iso_command_q_rad_s",
+        "gost": "gost_command_omega_z_rad_s",
+        "factor": 1
+      },
+      {
+        "iso": "iso_command_r_rad_s",
+        "gost": "gost_command_omega_y_rad_s",
+        "factor": -1
+      },
+      {
+        "iso": "iso_alpha_rad",
+        "gost": "gost_alpha_rad",
+        "factor": 1
+      },
+      {
+        "iso": "iso_beta_rad",
+        "gost": "gost_beta_rad",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_attitude_error_roll_rad",
+        "gost": "gost_loop_attitude_error_roll_rad",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_attitude_error_pitch_rad",
+        "gost": "gost_loop_attitude_error_pitch_rad",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_attitude_error_yaw_rad",
+        "gost": "gost_loop_attitude_error_yaw_rad",
+        "factor": -1
+      },
+      {
+        "iso": "iso_loop_rate_command_roll_rad_s",
+        "gost": "gost_loop_rate_command_roll_rad_s",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_rate_command_pitch_rad_s",
+        "gost": "gost_loop_rate_command_pitch_rad_s",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_rate_command_yaw_rad_s",
+        "gost": "gost_loop_rate_command_yaw_rad_s",
+        "factor": -1
+      },
+      {
+        "iso": "iso_loop_angular_acceleration_roll_rad_s2",
+        "gost": "gost_loop_angular_acceleration_roll_rad_s2",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_angular_acceleration_pitch_rad_s2",
+        "gost": "gost_loop_angular_acceleration_pitch_rad_s2",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_angular_acceleration_yaw_rad_s2",
+        "gost": "gost_loop_angular_acceleration_yaw_rad_s2",
+        "factor": -1
+      },
+      {
+        "iso": "iso_loop_moment_demand_roll_n_m",
+        "gost": "gost_loop_moment_demand_roll_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_demand_pitch_n_m",
+        "gost": "gost_loop_moment_demand_pitch_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_demand_yaw_n_m",
+        "gost": "gost_loop_moment_demand_yaw_n_m",
+        "factor": -1
+      },
+      {
+        "iso": "iso_loop_moment_filtered_roll_n_m",
+        "gost": "gost_loop_moment_filtered_roll_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_filtered_pitch_n_m",
+        "gost": "gost_loop_moment_filtered_pitch_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_filtered_yaw_n_m",
+        "gost": "gost_loop_moment_filtered_yaw_n_m",
+        "factor": -1
+      },
+      {
+        "iso": "iso_loop_moment_engines_roll_n_m",
+        "gost": "gost_loop_moment_engines_roll_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_engines_pitch_n_m",
+        "gost": "gost_loop_moment_engines_pitch_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_engines_yaw_n_m",
+        "gost": "gost_loop_moment_engines_yaw_n_m",
+        "factor": -1
+      },
+      {
+        "iso": "iso_loop_moment_jets_roll_n_m",
+        "gost": "gost_loop_moment_jets_roll_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_jets_pitch_n_m",
+        "gost": "gost_loop_moment_jets_pitch_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_jets_yaw_n_m",
+        "gost": "gost_loop_moment_jets_yaw_n_m",
+        "factor": -1
+      },
+      {
+        "iso": "iso_loop_moment_aero_roll_n_m",
+        "gost": "gost_loop_moment_aero_roll_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_aero_pitch_n_m",
+        "gost": "gost_loop_moment_aero_pitch_n_m",
+        "factor": 1
+      },
+      {
+        "iso": "iso_loop_moment_aero_yaw_n_m",
+        "gost": "gost_loop_moment_aero_yaw_n_m",
+        "factor": -1
+      }
+    ],
+    "mappedCellComparisons": 38208,
+    "nonzeroNegationComparisons": 7933,
+    "aeroAngleChecksAgainstRawBodyAngles": 2388,
+    "maxAbsoluteAngleRoundingErrorRad": 9.49157419327662e-13,
+    "mappingSummary": "ISO p = GOST omega_x, ISO q = GOST omega_z, ISO r = -GOST omega_y; command rates follow the same mapping. All eight loop yaw vectors change sign; roll/pitch and alpha/beta are unchanged."
+  },
+  "pointMass": {
+    "source": "Actual browser live and replay-at-600 exports",
+    "live": {
+      "file": "orbitlab_falcon9_leo (4).csv",
+      "bytes": 483696,
+      "sha256": "800d96347762153a21c81a6b7d07042941b37b578600d732fd3f4badc004b96f"
+    },
+    "replay": {
+      "file": "orbitlab_falcon9_leo (5).csv",
+      "bytes": 483696,
+      "sha256": "800d96347762153a21c81a6b7d07042941b37b578600d732fd3f4badc004b96f"
+    },
+    "byteIdentical": true,
+    "telemetryRows": 2925,
+    "columns": 20,
+    "firstTime": -10.0,
+    "maxTime": 49174.43,
+    "events": 20,
+    "timesMonotone": true,
+    "noRigidOrNotationColumns": true,
+    "fullFlightBeyondReplayCursor": true
+  },
+  "limits": [
+    "Verifies app export notation contract against unchanged raw body telemetry; not an independent certification of the ISO/GOST standards.",
+    "The point-mass and six-DOF exports are separate flights and are not expected to match each other."
+  ]
+}

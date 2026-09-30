@@ -91,18 +91,20 @@ export function flightFileText(ref: ReferenceFlight): string {
 }
 
 const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
-const numbers = (v: unknown): v is number[] => Array.isArray(v) && v.every((n) => typeof n === 'number');
+// JSON's exponent syntax can parse to Infinity (for example 1e309).
+const finiteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const numbers = (v: unknown): v is number[] => Array.isArray(v) && v.every(finiteNumber);
 
 /** A saved flight back to a reference; null when the file is not one this version can read. */
 export function parseFlightFile(text: string): ReferenceFlight | null {
   let raw: unknown;
   try { raw = JSON.parse(text); } catch { return null; }
-  if (!isRecord(raw) || raw.format !== FLIGHT_FORMAT || typeof raw.version !== 'number' || raw.version < 1 || !isRecord(raw.flight)) return null;
+  if (!isRecord(raw) || raw.format !== FLIGHT_FORMAT || !finiteNumber(raw.version) || raw.version < 1 || !isRecord(raw.flight)) return null;
   const f = raw.flight;
-  if (typeof f.label !== 'string' || typeof f.launchJd !== 'number' || !Number.isFinite(f.launchJd)) return null;
+  if (typeof f.label !== 'string' || !finiteNumber(f.launchJd)) return null;
   if (!isRecord(f.mission) || f.mission.format !== MISSION_FORMAT) return null;
-  if (!Array.isArray(f.telemetry) || !f.telemetry.every((s) => isRecord(s) && REFERENCE_FIELDS.every((k) => typeof s[k] === 'number' || s[k] === null))) return null;
-  if (!Array.isArray(f.events) || !f.events.every((e) => isRecord(e) && typeof e.t === 'number' && typeof e.key === 'string')) return null;
+  if (!Array.isArray(f.telemetry) || !f.telemetry.every((s) => isRecord(s) && REFERENCE_FIELDS.every((k) => finiteNumber(s[k]) || s[k] === null))) return null;
+  if (!Array.isArray(f.events) || !f.events.every((e) => isRecord(e) && finiteNumber(e.t) && typeof e.key === 'string')) return null;
   const p = f.path;
   if (!isRecord(p) || !numbers(p.t) || !numbers(p.x) || !numbers(p.y) || !numbers(p.z)
     || p.x.length !== p.t.length || p.y.length !== p.t.length || p.z.length !== p.t.length) return null;

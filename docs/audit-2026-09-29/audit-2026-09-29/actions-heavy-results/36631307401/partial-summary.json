@@ -1,0 +1,1044 @@
+{
+  "generatedAt": "2026-09-29T22:10:58.377656+00:00",
+  "workflowRunId": "36631307401",
+  "note": "Partial until all 27 files and the exact 246-case union are verified.",
+  "archives": [
+    {
+      "name": "heavy-starship-flight5",
+      "id": 11065250351,
+      "sha256": "945c821d74a0061d22ba2c46baee9bcb3c218158ce4da5b5f13e0f4cfaa29d8b"
+    },
+    {
+      "name": "heavy-monte-carlo-soyuz21b",
+      "id": 11065132686,
+      "sha256": "9550c26f97af49093f6e252c057c6279e3e738902cc8bf206a643175c10e647b"
+    },
+    {
+      "name": "heavy-monte-carlo-falcon9-igm",
+      "id": 11065100937,
+      "sha256": "db1b961b244a10f4a8b1b4aad49134522305f66534cca6d15d9b7cb7afcf8d0e"
+    },
+    {
+      "name": "heavy-monte-carlo-falcon9-peg",
+      "id": 11064875626,
+      "sha256": "1c9bba6e4cc60f764292440d17f51ad900e8a1abdff5eb426c25b7f4e6caccf0"
+    },
+    {
+      "name": "heavy-soyuz-aborts",
+      "id": 11064680953,
+      "sha256": "918d7a25f82b94f8c589e4dbf9b37aaf8f36c61e1eb299840f0b27895f489db3"
+    },
+    {
+      "name": "heavy-monte-carlo-falcon9-standard",
+      "id": 11064528130,
+      "sha256": "806b7f7aae655885b6f3e1b11b289456f96d9c45684781d3521905d7b69ff3f3"
+    },
+    {
+      "name": "heavy-coverage-union",
+      "id": 11064499491,
+      "sha256": "8752176b9733448b2acfbec5f377ca2c7ea22cc0306361f43509fe9f209f4a06"
+    },
+    {
+      "name": "heavy-validation-timelines",
+      "id": 11064492937,
+      "sha256": "35635c9dfa120542dac1c58ff63778cf171fe2658a3932724dd4e11f57346302"
+    },
+    {
+      "name": "heavy-validation-falcon9",
+      "id": 11064202385,
+      "sha256": "c565698b7a86f4838f30bc5629189106c49c96660018302ab65e022dba4262c7"
+    },
+    {
+      "name": "heavy-flex-fleet-1",
+      "id": 11064070120,
+      "sha256": "3537a7d84d6c20abad3db46a47edf48277febd248839dea5d7c3b7d3c35c62f8"
+    },
+    {
+      "name": "heavy-rendezvous",
+      "id": 11064043017,
+      "sha256": "f678227fc0f01ae37acdc5e9aeddb7117aaba361b14e9d57b843a8af2da7c455"
+    },
+    {
+      "name": "heavy-reentry-agencies",
+      "id": 11064034540,
+      "sha256": "d08ee6bf255a1e4273fb04872a5de36a798ac2e13d57ab546a5d0d8f38b21d73"
+    },
+    {
+      "name": "heavy-flex-golden",
+      "id": 11064000256,
+      "sha256": "feac1aca6f3c6433a09d9a0f0b1fdb65738def5c81a9d375b0524ae5f033734a"
+    },
+    {
+      "name": "heavy-lessons-sixdof",
+      "id": 11063946289,
+      "sha256": "c97756224816d3f6a86832dff4b63a934e86393c222b2cbc23c9dbfa7218a418"
+    },
+    {
+      "name": "heavy-flex-fleet-2",
+      "id": 11063750801,
+      "sha256": "a1c23841515942284bb46f67fd8780319ad9b47bd72a2d5b8cdc4a9a6e7ab8ad"
+    },
+    {
+      "name": "heavy-flex-fleet-4",
+      "id": 11063620485,
+      "sha256": "c6d27434e1843b73db84b814e39dcb3d0b8c0950679bec7d37ebb3aab5805003"
+    },
+    {
+      "name": "heavy-screening-filter",
+      "id": 11063549992,
+      "sha256": "e069148e165cacc8aa623fdf4e3aea92cae2938a3f3637059ecdca8690abe0cd"
+    },
+    {
+      "name": "heavy-explicit-fleet-2",
+      "id": 11063441073,
+      "sha256": "6cb60dc2e3fe225e175d098afee76867bc22612d64cf4095e6a10c2c5ae02505"
+    },
+    {
+      "name": "heavy-sixdof-fingerprint",
+      "id": 11063434940,
+      "sha256": "90fba006ec0c912aa10b9550c796497529166cb02ce0cb9de13c961ede39c0ac"
+    },
+    {
+      "name": "heavy-explicit-fleet-1",
+      "id": 11063103443,
+      "sha256": "cfc032e3e80dadf20a5e5d8e36dc30be469ae3d1a1461c58abe05f2c3ece7c99"
+    },
+    {
+      "name": "heavy-history-sixdof",
+      "id": 11063056648,
+      "sha256": "d8cef32b0c03deb102ffe286d74948afc30429b07a71fd040c1d9ad2e6eef8f0"
+    },
+    {
+      "name": "heavy-navigation-burns",
+      "id": 11062894040,
+      "sha256": "d75125e57029e634237f5bf4c14c61d9ecc9e0b63291ed9fe1c3015f0af4f8ee"
+    },
+    {
+      "name": "heavy-monte-carlo-falcon9-navigation",
+      "id": 11062774561,
+      "sha256": "5b327643085b52456685aa3ae87234b6625f27781407bffd4b8ece4230b8f9e4"
+    },
+    {
+      "name": "heavy-flex-fleet-3",
+      "id": 11062744771,
+      "sha256": "789ea3a01b6c5b459c794942c8b2821f815d041a1b550bb7d551c60549c199db"
+    },
+    {
+      "name": "heavy-delivered-soyuz-wind",
+      "id": 11062404192,
+      "sha256": "44209ec024e044393c1c240ec4f20fb01f43570a6a90b439f1f9e6101cf8d094"
+    },
+    {
+      "name": "heavy-delivered-falcon-wind",
+      "id": 11062248802,
+      "sha256": "3d1ca97df3e840f2cb57615a7111fab704d6aad90442e430a0b0ab3c1ca5ef86"
+    },
+    {
+      "name": "heavy-delivered-reduced-flux",
+      "id": 11061494542,
+      "sha256": "178af75cd058fa2293d6ed879c88aefba59ceb723e832baa0524e9b0bb0b0273"
+    },
+    {
+      "name": "heavy-falcon-heavy-returns",
+      "id": 11061459240,
+      "sha256": "9f9f664a4ed6bc3dc104a0dd37270f864e6a5e538722765b3e1f207f89c2b747"
+    }
+  ],
+  "files": 27,
+  "tests": 246,
+  "passed": 246,
+  "failed": 0,
+  "runs": [
+    {
+      "file": "tests/heavy/delivered-falcon-wind.test.ts",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/delivered-falcon-wind.test.ts",
+        "caseId": "delivered-falcon-wind",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:07.006Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "19ff9f93306ae7ef830e2414810703343eb5e93803006837f17aeffffe41947e"
+    },
+    {
+      "file": "tests/heavy/delivered-reduced-flux.test.ts",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/delivered-reduced-flux.test.ts",
+        "caseId": "delivered-reduced-flux",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:10.168Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "2783dfcbcf156c21f1d2cf8d5d6152fe1815c8be562ce2afaeee38aed71d5d4a"
+    },
+    {
+      "file": "tests/heavy/delivered-soyuz-wind.test.ts",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/delivered-soyuz-wind.test.ts",
+        "caseId": "delivered-soyuz-wind",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:11.022Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "c3eb1b44ab38c3c6be6938a66480d5a6de44bc4ee84b0226b3985e7be9356987"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-1.test.ts",
+      "tests": 14,
+      "passed": 14,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/explicit-fleet-1.test.ts",
+        "caseId": "explicit-fleet-1",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:08.733Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "fb7517ab3e7325d43b5ee2683f28f097743f5cfd17ab91076e50b453df82068a"
+    },
+    {
+      "file": "tests/heavy/explicit-fleet-2.test.ts",
+      "tests": 18,
+      "passed": 18,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/explicit-fleet-2.test.ts",
+        "caseId": "explicit-fleet-2",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:08.665Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "46f5b28b906b104a82496e05946013dc5911238d7ba9410d83355faf6895febf"
+    },
+    {
+      "file": "tests/heavy/falcon-heavy-returns.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/falcon-heavy-returns.test.ts",
+        "caseId": "falcon-heavy-returns",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:09:14.636Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "2f52b2d297b8362c98d24727d13d07612617d5315328a404ccb90d59065476d5"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-1.test.ts",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-1.test.ts",
+        "caseId": "flex-fleet-1",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:12.791Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "63fc929adb3050635e012b26a1ea72309c7653d83e5a306377621c4e9d386198"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-2.test.ts",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-2.test.ts",
+        "caseId": "flex-fleet-2",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:40.723Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "cdf38a4a1e184d5f4f1ee40991b385b443371bb14b1b4deb8cd347a5fe9f22ca"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-3.test.ts",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-3.test.ts",
+        "caseId": "flex-fleet-3",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:11:45.570Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "94d980a4b85f8176f0aaa0e2690fe1b0ac8b77d179ac56fcc4ed122627a6f295"
+    },
+    {
+      "file": "tests/heavy/flex-fleet-4.test.ts",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-fleet-4.test.ts",
+        "caseId": "flex-fleet-4",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:12:13.534Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "217507a1bffb786b802e1b64035a09f95501bc0c373778a42ab661e96549d8a2"
+    },
+    {
+      "file": "tests/heavy/flex-golden.test.ts",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/flex-golden.test.ts",
+        "caseId": "flex-golden",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:19:56.549Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "390946e265605c75770f552d8eccf8b443328ed8d10ec3e86ddaae2ffd9a1934"
+    },
+    {
+      "file": "tests/heavy/history-sixdof.test.ts",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/history-sixdof.test.ts",
+        "caseId": "history-sixdof",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:22:12.609Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "384def59a0b4dd02ca8d222f8b67b9207646fc981f591a2834874c7881ad762b"
+    },
+    {
+      "file": "tests/heavy/lessons-sixdof.test.ts",
+      "tests": 7,
+      "passed": 7,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/lessons-sixdof.test.ts",
+        "caseId": "lessons-sixdof",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:16.723Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "cfe76eb2f6e5166d59490926b37eedf1bad33d88edb6b7659887639625c406ea"
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-igm.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-igm.test.ts",
+        "caseId": "monte-carlo-falcon9-igm",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:33.355Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "c95cea0c5fb6a3a888e9d9118374198c8303e554f06437ad63d14bd132d90dc9"
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-navigation.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-navigation.test.ts",
+        "caseId": "monte-carlo-falcon9-navigation",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:23:30.326Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "928c8045ad75c974b812f76d747919d3e830160ed84293684e1654484ddd49c2"
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-peg.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-peg.test.ts",
+        "caseId": "monte-carlo-falcon9-peg",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:24:31.628Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "1eaedeefd06122de938eae018a62f78cd4395f9a8fd2a15ac64ced03127082d4"
+    },
+    {
+      "file": "tests/heavy/monte-carlo-falcon9-standard.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-falcon9-standard.test.ts",
+        "caseId": "monte-carlo-falcon9-standard",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:24:38.511Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "d828a5e973262376b5bf7eb880dbe897aa0f8ab2ea5e06aefb57520a4386da28"
+    },
+    {
+      "file": "tests/heavy/monte-carlo-soyuz21b.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/monte-carlo-soyuz21b.test.ts",
+        "caseId": "monte-carlo-soyuz21b",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:28:13.663Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "a052074b2c6643f8229de1f318be28a5705636ad378e711d609f73b9b19441f5"
+    },
+    {
+      "file": "tests/heavy/navigation-burns.test.ts",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/navigation-burns.test.ts",
+        "caseId": "navigation-burns",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:36:36.012Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "647697af9b6c62784dd58cb1606ade759033493f1ee3dc70107fb1cb477f4eea"
+    },
+    {
+      "file": "tests/heavy/reentry-agencies.test.ts",
+      "tests": 104,
+      "passed": 104,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/reentry-agencies.test.ts",
+        "caseId": "reentry-agencies",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:38:39.545Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "5bacd21cab17bdbb00532567e2ca49fbe0adbc577a16319471957c5801c43704"
+    },
+    {
+      "file": "tests/heavy/rendezvous.test.ts",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/rendezvous.test.ts",
+        "caseId": "rendezvous",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:40:32.207Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "84ac7b88bea73c9b886171f06a3b8b41ececa33451a1837ec12f591e06ba1d2a"
+    },
+    {
+      "file": "tests/heavy/screening-filter.test.ts",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/screening-filter.test.ts",
+        "caseId": "screening-filter",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:42:06.776Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "deffecadcd5f6c1786eb7f63a3c8a53bb368dbea2dcc5044ea6794915f6c6fce"
+    },
+    {
+      "file": "tests/heavy/sixdof-fingerprint.test.ts",
+      "tests": 22,
+      "passed": 22,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/sixdof-fingerprint.test.ts",
+        "caseId": "sixdof-fingerprint",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:45:34.964Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "7cf4c3d0270b1e27507ded637416c0d8985357a2e8dcb2ce4f9fcfdcef16369c"
+    },
+    {
+      "file": "tests/heavy/soyuz-aborts.test.ts",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/soyuz-aborts.test.ts",
+        "caseId": "soyuz-aborts",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:49:40.374Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "a8dab62afe165b49b4fd6fe5e619af243b81ecc84a21c1eddd585bcfbd732977"
+    },
+    {
+      "file": "tests/heavy/starship-flight5.test.ts",
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/starship-flight5.test.ts",
+        "caseId": "starship-flight5",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:51:04.291Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "df252d80d132affad5a4a2cdb6fb2d307cf8de7e68831dc3f68025487892802e"
+    },
+    {
+      "file": "tests/heavy/validation-falcon9.test.ts",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/validation-falcon9.test.ts",
+        "caseId": "validation-falcon9",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:51:15.605Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "e06f285690dc89e32925fea6f67377e26d3e48fda1760931a668a6b2a44d3101"
+    },
+    {
+      "file": "tests/heavy/validation-timelines.test.ts",
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "success": true,
+      "exit": 0,
+      "provenance": {
+        "file": "tests/heavy/validation-timelines.test.ts",
+        "caseId": "validation-timelines",
+        "sourceCommit": "0b844f77f5f0ffdeb7274642ddf74a57c2ee230b",
+        "sourceTree": "501bf32ec992bcc3aa629c11b66cbb3a3845f0fb",
+        "testsTree": "d766e4660516140749fc2aa34c96b6b276fdd5c7",
+        "packageLockSha256": "bdb46226bf01f503650fcba39a3de46ebfc04fe0154bd43cd32b9adc68826e8c",
+        "configSha256": "973bcc6be965efb4fa89f18bc6f71c6848742ac6aa3a852c85a7df003e7baae9",
+        "expectedSha256": "1d4e8b001ad6894f914019ab18eb0605f5956ff5df43f8be3ea4e20ebc17b3b5",
+        "node": "v22.22.2",
+        "v8": "12.4.254.21-node.39",
+        "execPath": "/opt/hostedtoolcache/node/22.22.2/x64/bin/node",
+        "platform": "linux",
+        "arch": "x64",
+        "startedAt": "2026-09-29T21:51:30.793Z",
+        "githubRunId": "36631307401",
+        "githubRunAttempt": "1"
+      },
+      "workerNodes": [
+        "v22.22.2"
+      ],
+      "workerFiles": [
+        "/home/runner/work/Orbitlab/Orbitlab/node_modules/vitest/dist/workers/forks.js"
+      ],
+      "resultSha256": "7edec9339cc7113e377d1c104164fdf2ddd0c9797121e0bfc5baef5b2aecd2ef"
+    }
+  ]
+}

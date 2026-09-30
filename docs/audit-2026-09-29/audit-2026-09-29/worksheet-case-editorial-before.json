@@ -1,0 +1,1322 @@
+{
+  "timestamp": "2026-09-29T21:56:52.080Z",
+  "scope": "Human semantic review; generic inactive fallbacks identified separately.",
+  "directKeys": [
+    "wsc.iridium.title",
+    "wsc.iridium.subtitle",
+    "wsc.data",
+    "wsc.iridium.intro",
+    "wsc.iridium.tca",
+    "wsc.iridium.r1",
+    "wsc.iridium.v1",
+    "wsc.iridium.r2",
+    "wsc.iridium.v2",
+    "wsc.iridium.radii",
+    "wsc.iridium.sigmas",
+    "wsc.iridium.published",
+    "conj.planeScale",
+    "wsc.iridium.figure",
+    "wsc.questions",
+    "wsc.iridium.qIntro",
+    "wsc.iridium.q.miss",
+    "wsc.iridium.w.miss",
+    "wsc.iridium.q.speed",
+    "wsc.iridium.w.speed",
+    "wsc.iridium.q.angle",
+    "wsc.iridium.w.angle",
+    "wsc.iridium.q.radius",
+    "wsc.iridium.w.radius",
+    "wsc.iridium.q.sigma",
+    "wsc.iridium.w.sigma",
+    "wsc.iridium.q.nsigma",
+    "wsc.iridium.w.nsigma",
+    "wsc.iridium.q.why",
+    "wsc.iridium.why.right",
+    "wsc.iridium.why.b",
+    "wsc.iridium.why.c",
+    "wsc.iridium.why.d",
+    "wsc.iridium.q.times",
+    "wsc.iridium.w.times",
+    "wsc.cz5b.title",
+    "wsc.cz5b.subtitle",
+    "wsc.cz5b.intro",
+    "wsc.cz5b.epoch",
+    "wsc.cz5b.orbit",
+    "wsc.cz5b.body",
+    "wsc.cz5b.predicted",
+    "wsc.cz5b.predictedValue",
+    "wsc.cz5b.actual",
+    "wsc.cz5b.qIntro",
+    "wsc.cz5b.q.area",
+    "wsc.cz5b.w.area",
+    "wsc.cz5b.q.b",
+    "wsc.cz5b.w.b",
+    "wsc.cz5b.q.early",
+    "wsc.days",
+    "wsc.cz5b.w.window",
+    "wsc.cz5b.q.late",
+    "wsc.cz5b.q.actual",
+    "wsc.cz5b.w.actual",
+    "wsc.cz5b.q.error",
+    "wsc.cz5b.w.error",
+    "wsc.cz5b.q.broadside",
+    "wsc.cz5b.w.broadside",
+    "wsc.cz5b.q.why",
+    "wsc.cz5b.why.right",
+    "wsc.cz5b.why.b",
+    "wsc.cz5b.why.c",
+    "wsc.cz5b.why.d",
+    "wsc.theos2.title",
+    "wsc.theos2.subtitle",
+    "wsc.theos2.intro",
+    "wsc.theos2.set",
+    "wsc.theos2.orbit",
+    "wsc.theos2.published",
+    "wsc.theos2.publishedValue",
+    "wsc.theos2.bangkok",
+    "wsc.theos2.constants",
+    "wsc.theos2.qIntro",
+    "wsc.theos2.q.required",
+    "wsc.theos2.w.required",
+    "wsc.theos2.q.j2",
+    "wsc.theos2.w.j2",
+    "wsc.theos2.q.height",
+    "wsc.theos2.w.height",
+    "wsc.theos2.q.reach",
+    "wsc.theos2.w.reach",
+    "wsc.theos2.q.lst",
+    "wsc.theos2.w.lst",
+    "wsc.theos2.q.why",
+    "wsc.theos2.why.right",
+    "wsc.theos2.why.b",
+    "wsc.theos2.why.c",
+    "wsc.theos2.why.d",
+    "wsc.footer"
+  ],
+  "genericActive": [
+    "ws.keyTitle",
+    "ws.name",
+    "ws.code",
+    "ws.date",
+    "ws.answer",
+    "ws.working"
+  ],
+  "genericReviewedInactiveForCurrentNumberChoiceCases": [
+    "ws.multiHint",
+    "ws.orderHint",
+    "ws.footer"
+  ],
+  "counts": {
+    "wsc": 89,
+    "otherDirect": 1,
+    "genericActive": 6,
+    "extraInactive": 3,
+    "allReviewed": 99,
+    "localizedStrings": 297
+  },
+  "sourceHashes": {
+    "src/worksheets/cases.ts": "3e3384e803858fd0affda28c7459b6a102301da4a460bf190131211cda7eb829",
+    "src/worksheets/html.ts": "a1eda99fdb2caa1d8843fff0018c1998387a16d6249cb0972ba015c9edc022ec",
+    "src/worksheets/docx.ts": "fa770c0d6f7e52d3490931371009913ed9f5b0b8fdc28ac1058bb61577d3cdbe",
+    "src/lessons/text.ts": "b241b432e70b3e70ad00f61cc10f7876c04db34085d349aedea1227868008383",
+    "src/i18n/en.ts": "67068ba79de25545a2fb838436ba1c1509ac2193c4d81ac5e823fdd1f7f29dba",
+    "src/i18n/th.ts": "61a2d26f87093b5aadcb03556494b0f0e96fde2b9304e79febf847f93d152e1d",
+    "src/i18n/ru.ts": "d4784d08006baeb33d0570f3ca30170190c6a3c9e577448556473758f239038f"
+  },
+  "dictionaries": {
+    "en": {
+      "conj.planeScale": {
+        "text": "encounter plane",
+        "line": 1315
+      },
+      "ws.keyTitle": {
+        "text": "Answer key — {title}",
+        "line": 3315
+      },
+      "ws.name": {
+        "text": "Name:",
+        "line": 3316
+      },
+      "ws.code": {
+        "text": "Code:",
+        "line": 3317
+      },
+      "ws.date": {
+        "text": "Date:",
+        "line": 3318
+      },
+      "ws.answer": {
+        "text": "Answer:",
+        "line": 3319
+      },
+      "ws.working": {
+        "text": "Working",
+        "line": 3320
+      },
+      "ws.multiHint": {
+        "text": "Tick every answer that is right.",
+        "line": 3321
+      },
+      "ws.orderHint": {
+        "text": "Number the items in order, 1 first.",
+        "line": 3322
+      },
+      "ws.footer": {
+        "text": "Orbitlab · {date} · the numbers are this simulator's flight, for teaching.",
+        "line": 3323
+      },
+      "wsc.data": {
+        "text": "The data",
+        "line": 3324
+      },
+      "wsc.questions": {
+        "text": "Questions",
+        "line": 3325
+      },
+      "wsc.days": {
+        "text": "days",
+        "line": 3326
+      },
+      "wsc.footer": {
+        "text": "Orbitlab · {date} · a case from the record, with its published data and this app's physics, for teaching.",
+        "line": 3327
+      },
+      "wsc.iridium.title": {
+        "text": "Case sheet: Iridium 33 and Cosmos 2251",
+        "line": 3328
+      },
+      "wsc.iridium.subtitle": {
+        "text": "The first collision of two whole satellites, 10 February 2009",
+        "line": 3329
+      },
+      "wsc.iridium.intro": {
+        "text": "The conjunction message issued the day before, as Shepperd gives it (AMOS Conference, 2023): both satellites' positions and velocities at the time of closest approach, Earth-fixed (ITRF). The encounter plane is drawn with the message's own position uncertainties.",
+        "line": 3330
+      },
+      "wsc.iridium.tca": {
+        "text": "Time of closest approach",
+        "line": 3331
+      },
+      "wsc.iridium.r1": {
+        "text": "Iridium 33: position r₁",
+        "line": 3332
+      },
+      "wsc.iridium.v1": {
+        "text": "Iridium 33: velocity v₁",
+        "line": 3333
+      },
+      "wsc.iridium.r2": {
+        "text": "Cosmos 2251: position r₂",
+        "line": 3334
+      },
+      "wsc.iridium.v2": {
+        "text": "Cosmos 2251: velocity v₂",
+        "line": 3335
+      },
+      "wsc.iridium.radii": {
+        "text": "Hard-body radii (Iridium; Cosmos)",
+        "line": 3336
+      },
+      "wsc.iridium.sigmas": {
+        "text": "Combined uncertainty in the encounter plane: σ₁; σ₂; the σ₁ axis's angle from the miss",
+        "line": 3337
+      },
+      "wsc.iridium.published": {
+        "text": "Probability of collision, published (message's covariances; Iridium's own)",
+        "line": 3338
+      },
+      "wsc.iridium.figure": {
+        "text": "The encounter plane: Cosmos 2251 at the miss distance with the pair's combined radius, the combined uncertainty round Iridium 33 at 1σ and 3σ.",
+        "line": 3339
+      },
+      "wsc.iridium.qIntro": {
+        "text": "Work from the table. Keep three figures.",
+        "line": 3340
+      },
+      "wsc.iridium.q.miss": {
+        "text": "How far apart were the two satellites at the time of closest approach (m)?",
+        "line": 3341
+      },
+      "wsc.iridium.w.miss": {
+        "text": "|r₂ − r₁|: the difference of the two positions, component by component, then its length.",
+        "line": 3342
+      },
+      "wsc.iridium.q.speed": {
+        "text": "At what speed did they meet, one relative to the other (km/s)?",
+        "line": 3343
+      },
+      "wsc.iridium.w.speed": {
+        "text": "|v₂ − v₁|. The velocities are Earth-fixed; the Earth's turning adds ω × r to each, nearly the same for both 226 m apart, so it drops out of the difference.",
+        "line": 3344
+      },
+      "wsc.iridium.q.angle": {
+        "text": "What was the angle between their inertial velocity vectors (°)? For each ITRF table velocity, compute u = v_ITRF + ω × r, using the model’s rotation vector ω = (0, 0, 7.2921159 × 10⁻⁵) rad/s. Both u vectors use the same ITRF-aligned axes at the encounter epoch, so their angle equals the inertial angle.",
+        "line": 3345
+      },
+      "wsc.iridium.w.angle": {
+        "text": "cos θ = v₁ · v₂ / (|v₁| |v₂|), with each velocity as seen from space (v + ω × r): nearly square across.",
+        "line": 3346
+      },
+      "wsc.iridium.q.radius": {
+        "text": "The pair's combined radius, within which they touch (m)?",
+        "line": 3347
+      },
+      "wsc.iridium.w.radius": {
+        "text": "The sum of the two hard-body radii.",
+        "line": 3348
+      },
+      "wsc.iridium.q.sigma": {
+        "text": "The combined uncertainty's standard deviation along the miss (m)?",
+        "line": 3349
+      },
+      "wsc.iridium.w.sigma": {
+        "text": "σ² = σ₁² cos² θ + σ₂² sin² θ, θ the σ₁ axis's angle from the miss.",
+        "line": 3350
+      },
+      "wsc.iridium.q.nsigma": {
+        "text": "How many of those standard deviations was the miss?",
+        "line": 3351
+      },
+      "wsc.iridium.w.nsigma": {
+        "text": "The miss divided by σ: some 13. A Gaussian that many standard deviations out is vanishingly thin, hence the message's 10⁻⁵¹, which says more about the uncertainties it was given than about the satellites.",
+        "line": 3352
+      },
+      "wsc.iridium.q.why": {
+        "text": "The message gave a probability of about 10⁻⁵¹, yet the satellites collided. Why?",
+        "line": 3353
+      },
+      "wsc.iridium.why.right": {
+        "text": "The uncertainties in the message were far smaller than the real errors of the orbits.",
+        "line": 3354
+      },
+      "wsc.iridium.why.b": {
+        "text": "One of the satellites changed its orbit on purpose after the message.",
+        "line": 3355
+      },
+      "wsc.iridium.why.c": {
+        "text": "A probability of 10⁻⁵¹ means a collision is certain.",
+        "line": 3356
+      },
+      "wsc.iridium.why.d": {
+        "text": "The Earth's atmosphere pushed them together.",
+        "line": 3357
+      },
+      "wsc.iridium.q.times": {
+        "text": "With Iridium's own orbit and a cautious uncertainty the probability comes out much larger. How many times the threshold of 1 in 10 000 at which operators usually move a satellite?",
+        "line": 3358
+      },
+      "wsc.iridium.w.times": {
+        "text": "This app's probability for that case, {p} (the paper's: 0.033), divided by 10⁻⁴.",
+        "line": 3359
+      },
+      "wsc.cz5b.title": {
+        "text": "Case sheet: the Long March 5B stage that launched Tianhe",
+        "line": 3360
+      },
+      "wsc.cz5b.subtitle": {
+        "text": "A 21.6-tonne stage left in orbit, down uncontrolled on 9 May 2021",
+        "line": 3361
+      },
+      "wsc.cz5b.intro": {
+        "text": "Its first element set (CelesTrak), its size and mass and its re-entry as GCAT records them, and this app's prediction from the first set, with the Sun as measured.",
+        "line": 3362
+      },
+      "wsc.cz5b.epoch": {
+        "text": "First element set",
+        "line": 3363
+      },
+      "wsc.cz5b.orbit": {
+        "text": "Perigee × apogee, inclination",
+        "line": 3364
+      },
+      "wsc.cz5b.body": {
+        "text": "Mass; length × diameter; drag coefficient",
+        "line": 3365
+      },
+      "wsc.cz5b.predicted": {
+        "text": "Predicted by this app from the first set",
+        "line": 3366
+      },
+      "wsc.cz5b.predictedValue": {
+        "text": "{days} days after the set's epoch",
+        "line": 3367
+      },
+      "wsc.cz5b.actual": {
+        "text": "Re-entry (GCAT)",
+        "line": 3368
+      },
+      "wsc.cz5b.qIntro": {
+        "text": "A tumbling body's mean cross-section is a quarter of its surface (Cauchy).",
+        "line": 3369
+      },
+      "wsc.cz5b.q.area": {
+        "text": "The stage's mean cross-section, tumbling (m²)?",
+        "line": 3370
+      },
+      "wsc.cz5b.w.area": {
+        "text": "A = (πDL + 2 · πD²/4) / 4: the side and the two ends, a quarter of it.",
+        "line": 3371
+      },
+      "wsc.cz5b.q.b": {
+        "text": "Its ballistic coefficient C_D·A/m (m²/kg)?",
+        "line": 3372
+      },
+      "wsc.cz5b.w.b": {
+        "text": "2.2 × A / 21 600 kg.",
+        "line": 3373
+      },
+      "wsc.cz5b.q.early": {
+        "text": "The window's earliest end: the agencies' ±20 % of the time left (days after the epoch)?",
+        "line": 3374
+      },
+      "wsc.cz5b.q.late": {
+        "text": "The window's latest end (days after the epoch)?",
+        "line": 3375
+      },
+      "wsc.cz5b.w.window": {
+        "text": "0.8 and 1.2 times the predicted time left.",
+        "line": 3376
+      },
+      "wsc.cz5b.q.actual": {
+        "text": "How long did it actually stay up after the epoch (days)?",
+        "line": 3377
+      },
+      "wsc.cz5b.w.actual": {
+        "text": "The re-entry's time less the set's epoch, in days (hours ÷ 24).",
+        "line": 3378
+      },
+      "wsc.cz5b.q.error": {
+        "text": "What is the signed percentage error, (predicted − actual) / actual × 100 (%)?",
+        "line": 3379
+      },
+      "wsc.cz5b.w.error": {
+        "text": "(predicted − actual) / actual × 100; negative is early. Inside the window if within ±20 %.",
+        "line": 3380
+      },
+      "wsc.cz5b.q.broadside": {
+        "text": "Had it flown broadside all the way, how long would it have stayed up, to a first approximation (days)?",
+        "line": 3381
+      },
+      "wsc.cz5b.w.broadside": {
+        "text": "Broadside its area is L × D = {a} m²; to first order the time left goes as 1/(C_D·A/m): the predicted time × A_tumbling / A_broadside.",
+        "line": 3382
+      },
+      "wsc.cz5b.q.why": {
+        "text": "Why do the agencies give a window rather than a time?",
+        "line": 3383
+      },
+      "wsc.cz5b.why.right": {
+        "text": "The density of the upper air and the stage's attitude cannot be known exactly in advance.",
+        "line": 3384
+      },
+      "wsc.cz5b.why.b": {
+        "text": "The element sets are secret until the stage has come down.",
+        "line": 3385
+      },
+      "wsc.cz5b.why.c": {
+        "text": "Gravity weakens unpredictably with height.",
+        "line": 3386
+      },
+      "wsc.cz5b.why.d": {
+        "text": "The stage's engines may fire again on the way down.",
+        "line": 3387
+      },
+      "wsc.theos2.title": {
+        "text": "Case sheet: THEOS-2 over Bangkok",
+        "line": 3388
+      },
+      "wsc.theos2.subtitle": {
+        "text": "Thailand's Earth-observation satellite in its sun-synchronous orbit",
+        "line": 3389
+      },
+      "wsc.theos2.intro": {
+        "text": "THEOS-2's element set from the catalogue on screen, what its operators publish, and the constants to work with.",
+        "line": 3390
+      },
+      "wsc.theos2.set": {
+        "text": "Element set",
+        "line": 3391
+      },
+      "wsc.theos2.orbit": {
+        "text": "Mean orbit",
+        "line": 3392
+      },
+      "wsc.theos2.published": {
+        "text": "Published (eoPortal)",
+        "line": 3393
+      },
+      "wsc.theos2.publishedValue": {
+        "text": "crosses the equator southbound at 10:00–10:30 local time; 0.5 m; swath 10.3 km; tilts up to 45°",
+        "line": 3394
+      },
+      "wsc.theos2.bangkok": {
+        "text": "Bangkok",
+        "line": 3395
+      },
+      "wsc.theos2.constants": {
+        "text": "Constants",
+        "line": 3396
+      },
+      "wsc.theos2.qIntro": {
+        "text": "For a sun-synchronous orbit the Earth's bulge (J₂) must turn the orbit's plane eastward as fast as the Sun appears to move round the sky.",
+        "line": 3397
+      },
+      "wsc.theos2.q.required": {
+        "text": "How fast must the plane turn (°/day)?",
+        "line": 3398
+      },
+      "wsc.theos2.w.required": {
+        "text": "One turn a year: 360° / 365.2422 days.",
+        "line": 3399
+      },
+      "wsc.theos2.q.j2": {
+        "text": "How fast does J₂ turn THEOS-2's plane (°/day)?",
+        "line": 3400
+      },
+      "wsc.theos2.w.j2": {
+        "text": "dΩ/dt = −(3/2) J₂ (R/p)² n cos i, p = a(1 − e²), n = √(μ/a³); in degrees per day. Within about half a per cent of the rate wanted: the other terms and the set's own fit make up the rest.",
+        "line": 3401
+      },
+      "wsc.theos2.q.height": {
+        "text": "Its mean height above the equator (km)?",
+        "line": 3402
+      },
+      "wsc.theos2.w.height": {
+        "text": "a − R, with R the equatorial radius.",
+        "line": 3403
+      },
+      "wsc.theos2.q.reach": {
+        "text": "Tilted 45°, how far from the point below it can it see (km)?",
+        "line": 3404
+      },
+      "wsc.theos2.w.reach": {
+        "text": "On a sphere of R_mean: the Earth-centre angle is asin((R_mean + h)/R_mean · sin 45°) − 45°, and the distance that angle times R_mean.",
+        "line": 3405
+      },
+      "wsc.theos2.q.lst": {
+        "text": "When it passes over Bangkok's longitude at 03:20 UTC, what is the local mean solar time (hours, decimal)?",
+        "line": 3406
+      },
+      "wsc.theos2.w.lst": {
+        "text": "UTC + longitude / 15° per hour: 3.333 + 100.502 / 15; at the published local time, as a morning orbit must be.",
+        "line": 3407
+      },
+      "wsc.theos2.q.why": {
+        "text": "Why is a camera satellite put in a sun-synchronous orbit?",
+        "line": 3408
+      },
+      "wsc.theos2.why.right": {
+        "text": "Each place is seen under much the same sunlight on every pass, so pictures can be compared.",
+        "line": 3409
+      },
+      "wsc.theos2.why.b": {
+        "text": "It stands still over one spot.",
+        "line": 3410
+      },
+      "wsc.theos2.why.c": {
+        "text": "It needs no fuel to stay up.",
+        "line": 3411
+      },
+      "wsc.theos2.why.d": {
+        "text": "It is always in the Earth's shadow, which keeps the camera cool.",
+        "line": 3412
+      }
+    },
+    "th": {
+      "conj.planeScale": {
+        "text": "ระนาบการเข้าใกล้",
+        "line": 1295
+      },
+      "ws.keyTitle": {
+        "text": "เฉลย — {title}",
+        "line": 3295
+      },
+      "ws.name": {
+        "text": "ชื่อ:",
+        "line": 3296
+      },
+      "ws.code": {
+        "text": "รหัส:",
+        "line": 3297
+      },
+      "ws.date": {
+        "text": "วันที่:",
+        "line": 3298
+      },
+      "ws.answer": {
+        "text": "คำตอบ:",
+        "line": 3299
+      },
+      "ws.working": {
+        "text": "วิธีทำ",
+        "line": 3300
+      },
+      "ws.multiHint": {
+        "text": "ทำเครื่องหมายทุกข้อที่ถูก",
+        "line": 3301
+      },
+      "ws.orderHint": {
+        "text": "ใส่หมายเลขเรียงลำดับ เริ่มจาก 1",
+        "line": 3302
+      },
+      "ws.footer": {
+        "text": "Orbitlab · {date} · ตัวเลขมาจากการบินในโปรแกรมจำลองนี้ เพื่อการเรียนการสอน",
+        "line": 3303
+      },
+      "wsc.data": {
+        "text": "ข้อมูล",
+        "line": 3304
+      },
+      "wsc.questions": {
+        "text": "คำถาม",
+        "line": 3305
+      },
+      "wsc.days": {
+        "text": "วัน",
+        "line": 3306
+      },
+      "wsc.footer": {
+        "text": "Orbitlab · {date} · กรณีที่เกิดขึ้นจริง ด้วยข้อมูลที่เผยแพร่และฟิสิกส์ของแอปนี้ เพื่อการเรียนการสอน",
+        "line": 3307
+      },
+      "wsc.iridium.title": {
+        "text": "ใบงานกรณีศึกษา: Iridium 33 กับ Cosmos 2251",
+        "line": 3308
+      },
+      "wsc.iridium.subtitle": {
+        "text": "การชนกันครั้งแรกของดาวเทียมทั้งดวงสองดวง 10 กุมภาพันธ์ 2009",
+        "line": 3309
+      },
+      "wsc.iridium.intro": {
+        "text": "ข้อความแจ้งการเข้าใกล้ที่ออกเมื่อวันก่อนหน้า ตามที่ Shepperd ให้ไว้ (การประชุม AMOS, 2023): ตำแหน่งและความเร็วของดาวเทียมทั้งสอง ณ เวลาเข้าใกล้ที่สุด ในกรอบอ้างอิงยึดโลก (ITRF) ระนาบการเผชิญหน้าวาดจากความไม่แน่นอนของตำแหน่งในข้อความนั้นเอง",
+        "line": 3310
+      },
+      "wsc.iridium.tca": {
+        "text": "เวลาเข้าใกล้ที่สุด",
+        "line": 3311
+      },
+      "wsc.iridium.r1": {
+        "text": "Iridium 33: ตำแหน่ง r₁",
+        "line": 3312
+      },
+      "wsc.iridium.v1": {
+        "text": "Iridium 33: ความเร็ว v₁",
+        "line": 3313
+      },
+      "wsc.iridium.r2": {
+        "text": "Cosmos 2251: ตำแหน่ง r₂",
+        "line": 3314
+      },
+      "wsc.iridium.v2": {
+        "text": "Cosmos 2251: ความเร็ว v₂",
+        "line": 3315
+      },
+      "wsc.iridium.radii": {
+        "text": "รัศมีวัตถุ (Iridium; Cosmos)",
+        "line": 3316
+      },
+      "wsc.iridium.sigmas": {
+        "text": "ความไม่แน่นอนรวมในระนาบการเผชิญหน้า: σ₁; σ₂; มุมของแกน σ₁ จากทิศของระยะพลาด",
+        "line": 3317
+      },
+      "wsc.iridium.published": {
+        "text": "ความน่าจะเป็นของการชนที่เผยแพร่ (ความแปรปรวนร่วมในข้อความ; ของ Iridium เอง)",
+        "line": 3318
+      },
+      "wsc.iridium.figure": {
+        "text": "ระนาบการเผชิญหน้า: Cosmos 2251 ที่ระยะพลาดพร้อมรัศมีรวมของทั้งคู่ และความไม่แน่นอนรวมรอบ Iridium 33 ที่ระดับ 1σ และ 3σ",
+        "line": 3319
+      },
+      "wsc.iridium.qIntro": {
+        "text": "คำนวณจากตาราง ใช้เลขนัยสำคัญสามตัว",
+        "line": 3320
+      },
+      "wsc.iridium.q.miss": {
+        "text": "ณ เวลาเข้าใกล้ที่สุด ดาวเทียมทั้งสองอยู่ห่างกันเท่าใด (ม.)",
+        "line": 3321
+      },
+      "wsc.iridium.w.miss": {
+        "text": "|r₂ − r₁|: ผลต่างของตำแหน่งทีละองค์ประกอบ แล้วหาความยาว",
+        "line": 3322
+      },
+      "wsc.iridium.q.speed": {
+        "text": "ทั้งสองพบกันด้วยความเร็วสัมพัทธ์เท่าใด (กม./วินาที)",
+        "line": 3323
+      },
+      "wsc.iridium.w.speed": {
+        "text": "|v₂ − v₁| ความเร็วอยู่ในกรอบยึดโลก การหมุนของโลกเพิ่ม ω × r ให้แต่ละดวงเกือบเท่ากันเพราะห่างกันเพียง 226 ม. จึงหักล้างกันในผลต่าง",
+        "line": 3324
+      },
+      "wsc.iridium.q.angle": {
+        "text": "เวกเตอร์ความเร็วเฉื่อยของทั้งสองทำมุมกันเท่าใด (°) สำหรับความเร็วแต่ละค่าในตาราง ITRF ให้คำนวณ u = v_ITRF + ω × r โดยใช้เวกเตอร์การหมุนของแบบจำลอง ω = (0, 0, 7.2921159 × 10⁻⁵) rad/s เวกเตอร์ u ทั้งสองเขียนในแกนร่วมที่ตรงกับ ITRF ณ เวลาที่เข้าใกล้กัน มุมระหว่างเวกเตอร์จึงเท่ากับมุมในกรอบเฉื่อย",
+        "line": 3325
+      },
+      "wsc.iridium.w.angle": {
+        "text": "cos θ = v₁ · v₂ / (|v₁| |v₂|) โดยใช้ความเร็วเทียบกับอวกาศ (v + ω × r): เกือบตั้งฉากกัน",
+        "line": 3326
+      },
+      "wsc.iridium.q.radius": {
+        "text": "รัศมีรวมของทั้งคู่ ซึ่งถ้าเข้าใกล้กว่านี้จะชนกัน (ม.)",
+        "line": 3327
+      },
+      "wsc.iridium.w.radius": {
+        "text": "ผลบวกของรัศมีวัตถุทั้งสอง",
+        "line": 3328
+      },
+      "wsc.iridium.q.sigma": {
+        "text": "ส่วนเบี่ยงเบนมาตรฐานของความไม่แน่นอนรวมตามแนวระยะพลาด (ม.)",
+        "line": 3329
+      },
+      "wsc.iridium.w.sigma": {
+        "text": "σ² = σ₁² cos² θ + σ₂² sin² θ โดย θ คือมุมของแกน σ₁ จากทิศของระยะพลาด",
+        "line": 3330
+      },
+      "wsc.iridium.q.nsigma": {
+        "text": "ระยะพลาดเท่ากับส่วนเบี่ยงเบนมาตรฐานนั้นกี่เท่า",
+        "line": 3331
+      },
+      "wsc.iridium.w.nsigma": {
+        "text": "ระยะพลาดหารด้วย σ ได้ราว 13 การแจกแจงปกติที่ห่างออกไปหลายส่วนเบี่ยงเบนมาตรฐานขนาดนั้นบางจนแทบเป็นศูนย์ จึงได้ 10⁻⁵¹ ในข้อความ ซึ่งบอกถึงความไม่แน่นอนที่ใส่ไว้มากกว่าบอกถึงตัวดาวเทียม",
+        "line": 3332
+      },
+      "wsc.iridium.q.why": {
+        "text": "ข้อความให้ความน่าจะเป็นราว 10⁻⁵¹ แต่ดาวเทียมก็ชนกัน เพราะเหตุใด",
+        "line": 3333
+      },
+      "wsc.iridium.why.right": {
+        "text": "ความไม่แน่นอนในข้อความเล็กกว่าความคลาดเคลื่อนจริงของวงโคจรมาก",
+        "line": 3334
+      },
+      "wsc.iridium.why.b": {
+        "text": "ดาวเทียมดวงหนึ่งจงใจเปลี่ยนวงโคจรหลังได้รับข้อความ",
+        "line": 3335
+      },
+      "wsc.iridium.why.c": {
+        "text": "ความน่าจะเป็น 10⁻⁵¹ หมายความว่าต้องชนแน่นอน",
+        "line": 3336
+      },
+      "wsc.iridium.why.d": {
+        "text": "บรรยากาศของโลกดันให้ทั้งสองเข้าหากัน",
+        "line": 3337
+      },
+      "wsc.iridium.q.times": {
+        "text": "เมื่อใช้วงโคจรของ Iridium เองและความไม่แน่นอนแบบระมัดระวัง ความน่าจะเป็นสูงขึ้นมาก เป็นกี่เท่าของเกณฑ์ 1 ใน 10,000 ที่ผู้ควบคุมมักใช้ตัดสินใจหลบ",
+        "line": 3338
+      },
+      "wsc.iridium.w.times": {
+        "text": "ความน่าจะเป็นของกรณีนั้นจากแอปนี้ {p} (ในบทความ: 0.033) หารด้วย 10⁻⁴",
+        "line": 3339
+      },
+      "wsc.cz5b.title": {
+        "text": "ใบงานกรณีศึกษา: ท่อนจรวด Long March 5B ที่ส่งโมดูล Tianhe",
+        "line": 3340
+      },
+      "wsc.cz5b.subtitle": {
+        "text": "ท่อนจรวดหนัก 21.6 ตันที่ถูกทิ้งไว้ในวงโคจร ตกลงมาโดยไม่มีการควบคุมเมื่อ 9 พฤษภาคม 2021",
+        "line": 3341
+      },
+      "wsc.cz5b.intro": {
+        "text": "ชุดข้อมูลวงโคจรชุดแรก (CelesTrak) ขนาด มวล และเวลาตกตามที่ GCAT บันทึก และการทำนายของแอปนี้จากชุดแรก โดยใช้กิจกรรมของดวงอาทิตย์ที่วัดได้",
+        "line": 3342
+      },
+      "wsc.cz5b.epoch": {
+        "text": "ชุดข้อมูลวงโคจรชุดแรก",
+        "line": 3343
+      },
+      "wsc.cz5b.orbit": {
+        "text": "จุดใกล้โลก × จุดไกลโลก, ความเอียง",
+        "line": 3344
+      },
+      "wsc.cz5b.body": {
+        "text": "มวล; ความยาว × เส้นผ่านศูนย์กลาง; สัมประสิทธิ์แรงต้าน",
+        "line": 3345
+      },
+      "wsc.cz5b.predicted": {
+        "text": "การทำนายของแอปนี้จากชุดแรก",
+        "line": 3346
+      },
+      "wsc.cz5b.predictedValue": {
+        "text": "{days} วันหลังเวลาของชุดข้อมูล",
+        "line": 3347
+      },
+      "wsc.cz5b.actual": {
+        "text": "เวลาตกกลับ (GCAT)",
+        "line": 3348
+      },
+      "wsc.cz5b.qIntro": {
+        "text": "พื้นที่หน้าตัดเฉลี่ยของวัตถุที่หมุนคว้างเท่ากับหนึ่งในสี่ของพื้นที่ผิว (โคชี)",
+        "line": 3349
+      },
+      "wsc.cz5b.q.area": {
+        "text": "พื้นที่หน้าตัดเฉลี่ยของท่อนจรวดที่หมุนคว้าง (ตร.ม.)",
+        "line": 3350
+      },
+      "wsc.cz5b.w.area": {
+        "text": "A = (πDL + 2 · πD²/4) / 4: ผิวด้านข้างกับฝาปลายทั้งสอง แล้วหารสี่",
+        "line": 3351
+      },
+      "wsc.cz5b.q.b": {
+        "text": "ค่าสัมประสิทธิ์ขีปนวิถี C_D·A/m (ตร.ม./กก.)",
+        "line": 3352
+      },
+      "wsc.cz5b.w.b": {
+        "text": "2.2 × A / 21,600 กก.",
+        "line": 3353
+      },
+      "wsc.cz5b.q.early": {
+        "text": "ขอบต้นของช่วงเวลา: ±20 % ของเวลาที่เหลือตามแบบหน่วยงาน (วันหลังเวลาของชุดข้อมูล)",
+        "line": 3354
+      },
+      "wsc.cz5b.q.late": {
+        "text": "ขอบปลายของช่วงเวลา (วันหลังเวลาของชุดข้อมูล)",
+        "line": 3355
+      },
+      "wsc.cz5b.w.window": {
+        "text": "0.8 และ 1.2 เท่าของเวลาที่เหลือที่ทำนาย",
+        "line": 3356
+      },
+      "wsc.cz5b.q.actual": {
+        "text": "จริงๆ แล้วอยู่ในวงโคจรหลังเวลาของชุดข้อมูลนานเท่าใด (วัน)",
+        "line": 3357
+      },
+      "wsc.cz5b.w.actual": {
+        "text": "เวลาตกลบด้วยเวลาของชุดข้อมูล เป็นวัน (ชั่วโมง ÷ 24)",
+        "line": 3358
+      },
+      "wsc.cz5b.q.error": {
+        "text": "ความคลาดเคลื่อนร้อยละแบบมีเครื่องหมาย (ค่าทำนาย − ค่าจริง) / ค่าจริง × 100 เป็นเท่าใด (%)",
+        "line": 3359
+      },
+      "wsc.cz5b.w.error": {
+        "text": "(ทำนาย − จริง) / จริง × 100 ค่าลบคือเร็วกว่าจริง อยู่ในช่วงถ้าไม่เกิน ±20 %",
+        "line": 3360
+      },
+      "wsc.cz5b.q.broadside": {
+        "text": "ถ้าท่อนจรวดบินหันด้านข้างตลอดเวลา จะอยู่ในวงโคจรได้นานเท่าใดโดยประมาณอันดับแรก (วัน)",
+        "line": 3361
+      },
+      "wsc.cz5b.w.broadside": {
+        "text": "เมื่อหันด้านข้าง พื้นที่คือ L × D = {a} ตร.ม. ในอันดับแรก เวลาที่เหลือแปรผกผันกับ C_D·A/m: เวลาที่ทำนาย × A_หมุนคว้าง / A_ด้านข้าง",
+        "line": 3362
+      },
+      "wsc.cz5b.q.why": {
+        "text": "เหตุใดหน่วยงานจึงบอกเป็นช่วงเวลาแทนที่จะเป็นเวลาเดียว",
+        "line": 3363
+      },
+      "wsc.cz5b.why.right": {
+        "text": "ความหนาแน่นของบรรยากาศชั้นบนและท่าทางของท่อนจรวดไม่อาจรู้ได้แน่ชัดล่วงหน้า",
+        "line": 3364
+      },
+      "wsc.cz5b.why.b": {
+        "text": "ชุดข้อมูลวงโคจรเป็นความลับจนกว่าท่อนจรวดจะตก",
+        "line": 3365
+      },
+      "wsc.cz5b.why.c": {
+        "text": "แรงโน้มถ่วงลดลงตามความสูงอย่างคาดเดาไม่ได้",
+        "line": 3366
+      },
+      "wsc.cz5b.why.d": {
+        "text": "เครื่องยนต์ของท่อนจรวดอาจติดขึ้นอีกระหว่างตก",
+        "line": 3367
+      },
+      "wsc.theos2.title": {
+        "text": "ใบงานกรณีศึกษา: THEOS-2 เหนือกรุงเทพฯ",
+        "line": 3368
+      },
+      "wsc.theos2.subtitle": {
+        "text": "ดาวเทียมสำรวจโลกของไทยในวงโคจรสัมพันธ์กับดวงอาทิตย์",
+        "line": 3369
+      },
+      "wsc.theos2.intro": {
+        "text": "ชุดข้อมูลวงโคจรของ THEOS-2 จากแคตาล็อกบนจอ ข้อมูลที่ผู้ควบคุมเผยแพร่ และค่าคงที่สำหรับคำนวณ",
+        "line": 3370
+      },
+      "wsc.theos2.set": {
+        "text": "ชุดข้อมูลวงโคจร",
+        "line": 3371
+      },
+      "wsc.theos2.orbit": {
+        "text": "วงโคจรเฉลี่ย",
+        "line": 3372
+      },
+      "wsc.theos2.published": {
+        "text": "ข้อมูลที่เผยแพร่ (eoPortal)",
+        "line": 3373
+      },
+      "wsc.theos2.publishedValue": {
+        "text": "ข้ามเส้นศูนย์สูตรขณะมุ่งใต้เวลา 10:00–10:30 ตามเวลาท้องถิ่น; 0.5 ม.; แนวถ่ายภาพ 10.3 กม.; เอียงได้ถึง 45°",
+        "line": 3374
+      },
+      "wsc.theos2.bangkok": {
+        "text": "กรุงเทพฯ",
+        "line": 3375
+      },
+      "wsc.theos2.constants": {
+        "text": "ค่าคงที่",
+        "line": 3376
+      },
+      "wsc.theos2.qIntro": {
+        "text": "สำหรับวงโคจรสัมพันธ์กับดวงอาทิตย์ ความป่องของโลก (J₂) ต้องหมุนระนาบวงโคจรไปทางตะวันออกเร็วเท่ากับที่ดวงอาทิตย์ปรากฏเคลื่อนที่บนท้องฟ้า",
+        "line": 3377
+      },
+      "wsc.theos2.q.required": {
+        "text": "ระนาบต้องหมุนเร็วเท่าใด (°/วัน)",
+        "line": 3378
+      },
+      "wsc.theos2.w.required": {
+        "text": "หนึ่งรอบต่อปี: 360° / 365.2422 วัน",
+        "line": 3379
+      },
+      "wsc.theos2.q.j2": {
+        "text": "J₂ หมุนระนาบของ THEOS-2 เร็วเท่าใด (°/วัน)",
+        "line": 3380
+      },
+      "wsc.theos2.w.j2": {
+        "text": "dΩ/dt = −(3/2) J₂ (R/p)² n cos i โดย p = a(1 − e²), n = √(μ/a³) เป็นองศาต่อวัน ต่างจากอัตราที่ต้องการราวครึ่งเปอร์เซ็นต์ ส่วนที่เหลือมาจากพจน์อื่นและการปรับชุดข้อมูลเอง",
+        "line": 3381
+      },
+      "wsc.theos2.q.height": {
+        "text": "ความสูงเฉลี่ยเหนือเส้นศูนย์สูตร (กม.)",
+        "line": 3382
+      },
+      "wsc.theos2.w.height": {
+        "text": "a − R โดย R คือรัศมีที่เส้นศูนย์สูตร",
+        "line": 3383
+      },
+      "wsc.theos2.q.reach": {
+        "text": "เมื่อเอียง 45° มองเห็นได้ไกลจากจุดใต้ดาวเทียมเท่าใด (กม.)",
+        "line": 3384
+      },
+      "wsc.theos2.w.reach": {
+        "text": "บนทรงกลมรัศมี R_mean: มุมที่ศูนย์กลางโลกคือ asin((R_mean + h)/R_mean · sin 45°) − 45° และระยะคือมุมนั้นคูณ R_mean",
+        "line": 3385
+      },
+      "wsc.theos2.q.lst": {
+        "text": "เมื่อผ่านลองจิจูดของกรุงเทพฯ เวลา 03:20 UTC เวลาสุริยะเฉลี่ยท้องถิ่นเป็นเท่าใด (ชั่วโมง ทศนิยม)",
+        "line": 3386
+      },
+      "wsc.theos2.w.lst": {
+        "text": "UTC + ลองจิจูด / 15° ต่อชั่วโมง: 3.333 + 100.502 / 15 ตรงกับเวลาท้องถิ่นที่เผยแพร่ ตามแบบวงโคจรช่วงเช้า",
+        "line": 3387
+      },
+      "wsc.theos2.q.why": {
+        "text": "เหตุใดดาวเทียมถ่ายภาพจึงอยู่ในวงโคจรสัมพันธ์กับดวงอาทิตย์",
+        "line": 3388
+      },
+      "wsc.theos2.why.right": {
+        "text": "สถานที่เดียวกันถูกมองเห็นภายใต้แสงอาทิตย์ใกล้เคียงกันทุกรอบ จึงเปรียบเทียบภาพได้",
+        "line": 3389
+      },
+      "wsc.theos2.why.b": {
+        "text": "ดาวเทียมจะนิ่งอยู่เหนือจุดเดียว",
+        "line": 3390
+      },
+      "wsc.theos2.why.c": {
+        "text": "ไม่ต้องใช้เชื้อเพลิงเพื่ออยู่ในวงโคจร",
+        "line": 3391
+      },
+      "wsc.theos2.why.d": {
+        "text": "อยู่ในเงาของโลกตลอดเวลา ช่วยให้กล้องเย็น",
+        "line": 3392
+      }
+    },
+    "ru": {
+      "conj.planeScale": {
+        "text": "плоскость сближения",
+        "line": 1294
+      },
+      "ws.keyTitle": {
+        "text": "Ключ ответов — {title}",
+        "line": 3294
+      },
+      "ws.name": {
+        "text": "Фамилия, имя:",
+        "line": 3295
+      },
+      "ws.code": {
+        "text": "Код:",
+        "line": 3296
+      },
+      "ws.date": {
+        "text": "Дата:",
+        "line": 3297
+      },
+      "ws.answer": {
+        "text": "Ответ:",
+        "line": 3298
+      },
+      "ws.working": {
+        "text": "Решение",
+        "line": 3299
+      },
+      "ws.multiHint": {
+        "text": "Отметьте все верные ответы.",
+        "line": 3300
+      },
+      "ws.orderHint": {
+        "text": "Пронумеруйте пункты по порядку, начиная с 1.",
+        "line": 3301
+      },
+      "ws.footer": {
+        "text": "Orbitlab · {date} · числа взяты из полёта этого симулятора, для учебных целей.",
+        "line": 3302
+      },
+      "wsc.data": {
+        "text": "Данные",
+        "line": 3303
+      },
+      "wsc.questions": {
+        "text": "Вопросы",
+        "line": 3304
+      },
+      "wsc.days": {
+        "text": "сут",
+        "line": 3305
+      },
+      "wsc.footer": {
+        "text": "Orbitlab · {date} · реальный случай, с опубликованными данными и физикой этого приложения, для обучения.",
+        "line": 3306
+      },
+      "wsc.iridium.title": {
+        "text": "Разбор случая: Iridium 33 и «Космос-2251»",
+        "line": 3307
+      },
+      "wsc.iridium.subtitle": {
+        "text": "Первое столкновение двух целых спутников, 10 февраля 2009 года",
+        "line": 3308
+      },
+      "wsc.iridium.intro": {
+        "text": "Сообщение о сближении, выпущенное накануне, по данным Шепперда (конференция AMOS, 2023): положения и скорости обоих спутников в момент наибольшего сближения в земной системе координат (ITRF). Плоскость встречи построена по неопределённостям положения из самого сообщения.",
+        "line": 3309
+      },
+      "wsc.iridium.tca": {
+        "text": "Время наибольшего сближения",
+        "line": 3310
+      },
+      "wsc.iridium.r1": {
+        "text": "Iridium 33: положение r₁",
+        "line": 3311
+      },
+      "wsc.iridium.v1": {
+        "text": "Iridium 33: скорость v₁",
+        "line": 3312
+      },
+      "wsc.iridium.r2": {
+        "text": "«Космос-2251»: положение r₂",
+        "line": 3313
+      },
+      "wsc.iridium.v2": {
+        "text": "«Космос-2251»: скорость v₂",
+        "line": 3314
+      },
+      "wsc.iridium.radii": {
+        "text": "Радиусы тел (Iridium; «Космос»)",
+        "line": 3315
+      },
+      "wsc.iridium.sigmas": {
+        "text": "Суммарная неопределённость в плоскости встречи: σ₁; σ₂; угол оси σ₁ от направления промаха",
+        "line": 3316
+      },
+      "wsc.iridium.published": {
+        "text": "Опубликованная вероятность столкновения (ковариации сообщения; собственные Iridium)",
+        "line": 3317
+      },
+      "wsc.iridium.figure": {
+        "text": "Плоскость встречи: «Космос-2251» на расстоянии промаха с суммарным радиусом пары, суммарная неопределённость вокруг Iridium 33 на уровнях 1σ и 3σ.",
+        "line": 3318
+      },
+      "wsc.iridium.qIntro": {
+        "text": "Работайте по таблице. Сохраняйте три значащие цифры.",
+        "line": 3319
+      },
+      "wsc.iridium.q.miss": {
+        "text": "Каково расстояние между спутниками в момент наибольшего сближения (м)?",
+        "line": 3320
+      },
+      "wsc.iridium.w.miss": {
+        "text": "|r₂ − r₁|: разность положений по компонентам, затем её длина.",
+        "line": 3321
+      },
+      "wsc.iridium.q.speed": {
+        "text": "С какой относительной скоростью они встретились (км/с)?",
+        "line": 3322
+      },
+      "wsc.iridium.w.speed": {
+        "text": "|v₂ − v₁|. Скорости даны в земной системе; вращение Земли добавляет к каждой ω × r, почти одинаковое для обоих на расстоянии 226 м, так что в разности оно сокращается.",
+        "line": 3323
+      },
+      "wsc.iridium.q.angle": {
+        "text": "Каков угол между их векторами инерциальной скорости (°)? Для каждой скорости из таблицы ITRF вычислите u = v_ITRF + ω × r, используя вектор вращения модели ω = (0, 0, 7,2921159 × 10⁻⁵) рад/с. Оба вектора u выражены в общей системе осей, совпадающей с ITRF в момент сближения, поэтому угол между ними равен инерциальному углу.",
+        "line": 3324
+      },
+      "wsc.iridium.w.angle": {
+        "text": "cos θ = v₁ · v₂ / (|v₁| |v₂|), каждая скорость — относительно пространства (v + ω × r): почти под прямым углом.",
+        "line": 3325
+      },
+      "wsc.iridium.q.radius": {
+        "text": "Суммарный радиус пары, внутри которого они касаются (м)?",
+        "line": 3326
+      },
+      "wsc.iridium.w.radius": {
+        "text": "Сумма двух радиусов тел.",
+        "line": 3327
+      },
+      "wsc.iridium.q.sigma": {
+        "text": "Стандартное отклонение суммарной неопределённости вдоль промаха (м)?",
+        "line": 3328
+      },
+      "wsc.iridium.w.sigma": {
+        "text": "σ² = σ₁² cos² θ + σ₂² sin² θ, θ — угол оси σ₁ от направления промаха.",
+        "line": 3329
+      },
+      "wsc.iridium.q.nsigma": {
+        "text": "Сколько таких стандартных отклонений составил промах?",
+        "line": 3330
+      },
+      "wsc.iridium.w.nsigma": {
+        "text": "Промах, делённый на σ: около 13. Нормальное распределение так далеко исчезающе мало — отсюда 10⁻⁵¹ в сообщении, что говорит больше о заданных в нём неопределённостях, чем о самих спутниках.",
+        "line": 3331
+      },
+      "wsc.iridium.q.why": {
+        "text": "Сообщение давало вероятность около 10⁻⁵¹, но спутники столкнулись. Почему?",
+        "line": 3332
+      },
+      "wsc.iridium.why.right": {
+        "text": "Неопределённости в сообщении были намного меньше реальных ошибок орбит.",
+        "line": 3333
+      },
+      "wsc.iridium.why.b": {
+        "text": "Один из спутников после сообщения намеренно изменил орбиту.",
+        "line": 3334
+      },
+      "wsc.iridium.why.c": {
+        "text": "Вероятность 10⁻⁵¹ означает, что столкновение неизбежно.",
+        "line": 3335
+      },
+      "wsc.iridium.why.d": {
+        "text": "Их сблизила атмосфера Земли.",
+        "line": 3336
+      },
+      "wsc.iridium.q.times": {
+        "text": "С собственной орбитой Iridium и осторожной оценкой неопределённости вероятность выходит намного больше. Во сколько раз она больше порога 1 к 10 000, при котором операторы обычно уводят спутник?",
+        "line": 3337
+      },
+      "wsc.iridium.w.times": {
+        "text": "Вероятность этого случая по приложению, {p} (в статье: 0,033), делённая на 10⁻⁴.",
+        "line": 3338
+      },
+      "wsc.cz5b.title": {
+        "text": "Разбор случая: ступень «Чанчжэн-5B», выведшая «Тяньхэ»",
+        "line": 3339
+      },
+      "wsc.cz5b.subtitle": {
+        "text": "Ступень массой 21,6 т, оставленная на орбите и неуправляемо сошедшая 9 мая 2021 года",
+        "line": 3340
+      },
+      "wsc.cz5b.intro": {
+        "text": "Первый набор элементов (CelesTrak), размер, масса и сход по данным GCAT, а также прогноз этого приложения по первому набору с измеренной солнечной активностью.",
+        "line": 3341
+      },
+      "wsc.cz5b.epoch": {
+        "text": "Первый набор элементов",
+        "line": 3342
+      },
+      "wsc.cz5b.orbit": {
+        "text": "Перигей × апогей, наклонение",
+        "line": 3343
+      },
+      "wsc.cz5b.body": {
+        "text": "Масса; длина × диаметр; коэффициент сопротивления",
+        "line": 3344
+      },
+      "wsc.cz5b.predicted": {
+        "text": "Прогноз приложения по первому набору",
+        "line": 3345
+      },
+      "wsc.cz5b.predictedValue": {
+        "text": "через {days} сут после эпохи набора",
+        "line": 3346
+      },
+      "wsc.cz5b.actual": {
+        "text": "Сход с орбиты (GCAT)",
+        "line": 3347
+      },
+      "wsc.cz5b.qIntro": {
+        "text": "Средняя площадь сечения кувыркающегося тела — четверть его поверхности (Коши).",
+        "line": 3348
+      },
+      "wsc.cz5b.q.area": {
+        "text": "Средняя площадь сечения кувыркающейся ступени (м²)?",
+        "line": 3349
+      },
+      "wsc.cz5b.w.area": {
+        "text": "A = (πDL + 2 · πD²/4) / 4: боковая поверхность и два торца, четверть от суммы.",
+        "line": 3350
+      },
+      "wsc.cz5b.q.b": {
+        "text": "Её баллистический коэффициент C_x·A/m (м²/кг)?",
+        "line": 3351
+      },
+      "wsc.cz5b.w.b": {
+        "text": "2,2 × A / 21 600 кг.",
+        "line": 3352
+      },
+      "wsc.cz5b.q.early": {
+        "text": "Ранняя граница окна: ±20 % оставшегося времени, как у служб прогноза (сут после эпохи)?",
+        "line": 3353
+      },
+      "wsc.cz5b.q.late": {
+        "text": "Поздняя граница окна (сут после эпохи)?",
+        "line": 3354
+      },
+      "wsc.cz5b.w.window": {
+        "text": "0,8 и 1,2 прогнозного оставшегося времени.",
+        "line": 3355
+      },
+      "wsc.cz5b.q.actual": {
+        "text": "Сколько она на самом деле пробыла на орбите после эпохи (сут)?",
+        "line": 3356
+      },
+      "wsc.cz5b.w.actual": {
+        "text": "Время схода минус эпоха набора, в сутках (часы ÷ 24).",
+        "line": 3357
+      },
+      "wsc.cz5b.q.error": {
+        "text": "Какова знаковая процентная ошибка: (прогноз − факт) / факт × 100 (%)?",
+        "line": 3358
+      },
+      "wsc.cz5b.w.error": {
+        "text": "(прогноз − факт) / факт × 100; минус — раньше срока. Внутри окна, если в пределах ±20 %.",
+        "line": 3359
+      },
+      "wsc.cz5b.q.broadside": {
+        "text": "Если бы ступень всё время летела боком, сколько бы она продержалась в первом приближении (сут)?",
+        "line": 3360
+      },
+      "wsc.cz5b.w.broadside": {
+        "text": "Боком её площадь L × D = {a} м²; в первом приближении оставшееся время обратно C_x·A/m: прогноз × A_кувырк / A_бок.",
+        "line": 3361
+      },
+      "wsc.cz5b.q.why": {
+        "text": "Почему службы прогноза дают окно, а не время?",
+        "line": 3362
+      },
+      "wsc.cz5b.why.right": {
+        "text": "Плотность верхней атмосферы и ориентацию ступени нельзя точно знать заранее.",
+        "line": 3363
+      },
+      "wsc.cz5b.why.b": {
+        "text": "Наборы элементов засекречены до падения ступени.",
+        "line": 3364
+      },
+      "wsc.cz5b.why.c": {
+        "text": "Сила тяжести непредсказуемо ослабевает с высотой.",
+        "line": 3365
+      },
+      "wsc.cz5b.why.d": {
+        "text": "Двигатели ступени могут снова включиться при снижении.",
+        "line": 3366
+      },
+      "wsc.theos2.title": {
+        "text": "Разбор случая: THEOS-2 над Бангкоком",
+        "line": 3367
+      },
+      "wsc.theos2.subtitle": {
+        "text": "Таиландский спутник наблюдения Земли на солнечно-синхронной орбите",
+        "line": 3368
+      },
+      "wsc.theos2.intro": {
+        "text": "Набор элементов THEOS-2 из каталога на экране, опубликованные данные и константы для расчётов.",
+        "line": 3369
+      },
+      "wsc.theos2.set": {
+        "text": "Набор элементов",
+        "line": 3370
+      },
+      "wsc.theos2.orbit": {
+        "text": "Средняя орбита",
+        "line": 3371
+      },
+      "wsc.theos2.published": {
+        "text": "Опубликовано (eoPortal)",
+        "line": 3372
+      },
+      "wsc.theos2.publishedValue": {
+        "text": "пересекает экватор к югу в 10:00–10:30 по местному времени; 0,5 м; полоса 10,3 км; наклон до 45°",
+        "line": 3373
+      },
+      "wsc.theos2.bangkok": {
+        "text": "Бангкок",
+        "line": 3374
+      },
+      "wsc.theos2.constants": {
+        "text": "Константы",
+        "line": 3375
+      },
+      "wsc.theos2.qIntro": {
+        "text": "Для солнечно-синхронной орбиты сжатие Земли (J₂) должно поворачивать плоскость орбиты на восток так же быстро, как Солнце перемещается по небу.",
+        "line": 3376
+      },
+      "wsc.theos2.q.required": {
+        "text": "С какой скоростью должна поворачиваться плоскость (°/сут)?",
+        "line": 3377
+      },
+      "wsc.theos2.w.required": {
+        "text": "Один оборот в год: 360° / 365,2422 сут.",
+        "line": 3378
+      },
+      "wsc.theos2.q.j2": {
+        "text": "С какой скоростью J₂ поворачивает плоскость THEOS-2 (°/сут)?",
+        "line": 3379
+      },
+      "wsc.theos2.w.j2": {
+        "text": "dΩ/dt = −(3/2) J₂ (R/p)² n cos i, p = a(1 − e²), n = √(μ/a³); в градусах в сутки. В пределах примерно полупроцента от нужной скорости: остальное — другие члены и подгонка самого набора.",
+        "line": 3380
+      },
+      "wsc.theos2.q.height": {
+        "text": "Её средняя высота над экватором (км)?",
+        "line": 3381
+      },
+      "wsc.theos2.w.height": {
+        "text": "a − R, где R — экваториальный радиус.",
+        "line": 3382
+      },
+      "wsc.theos2.q.reach": {
+        "text": "При наклоне 45° насколько далеко от подспутниковой точки он видит (км)?",
+        "line": 3383
+      },
+      "wsc.theos2.w.reach": {
+        "text": "На сфере R_ср: центральный угол asin((R_ср + h)/R_ср · sin 45°) − 45°, расстояние — этот угол, умноженный на R_ср.",
+        "line": 3384
+      },
+      "wsc.theos2.q.lst": {
+        "text": "Когда он проходит долготу Бангкока в 03:20 UTC, каково местное среднее солнечное время (часы, десятичные)?",
+        "line": 3385
+      },
+      "wsc.theos2.w.lst": {
+        "text": "UTC + долгота / 15° в час: 3,333 + 100,502 / 15; в опубликованное местное время, как и положено утренней орбите.",
+        "line": 3386
+      },
+      "wsc.theos2.q.why": {
+        "text": "Зачем спутник со съёмочной камерой выводят на солнечно-синхронную орбиту?",
+        "line": 3387
+      },
+      "wsc.theos2.why.right": {
+        "text": "Каждое место видно при почти одинаковом освещении на каждом пролёте, и снимки можно сравнивать.",
+        "line": 3388
+      },
+      "wsc.theos2.why.b": {
+        "text": "Он висит над одной точкой.",
+        "line": 3389
+      },
+      "wsc.theos2.why.c": {
+        "text": "Ему не нужно топливо, чтобы держаться на орбите.",
+        "line": 3390
+      },
+      "wsc.theos2.why.d": {
+        "text": "Он всегда в тени Земли, что охлаждает камеру.",
+        "line": 3391
+      }
+    }
+  }
+}

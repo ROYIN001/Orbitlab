@@ -1,0 +1,77 @@
+{
+  "zeroFuel": [
+    "        - generic: Mass, with propellant",
+    "        - spinbutton \"Mass, with propellant kg\": \"1800\"",
+    "        - generic: kg",
+    "        - slider \"Mass, with propellant\": \"90\"",
+    "        - spinbutton \"Propellant kg\": \"0\"",
+    "        - generic: kg",
+    "        - paragraph: \"Ideal plan, propellant unlimited: the drawing and the animation fly all of it, which this spacecraft cannot.\"",
+    "          - generic: no propellant left for it",
+    "          - generic: no propellant left for it",
+    "        - term: Propellant burned",
+    "        - definition: 0.0 kg",
+    "        - definition: 0.0 kg",
+    "        - paragraph: \"Not enough propellant: the plan is 3,846 m/s short, and the tanks run dry during burn 1.\"",
+    "        - button \"Carry on as far as the propellant goes\"",
+    "        - paragraph: \"Not enough propellant: the spacecraft would not reach this orbit, so it cannot carry on from it.\""
+  ],
+  "excessFuel": [
+    "        - spinbutton \"Mass, with propellant kg\": \"1800\"",
+    "        - generic: kg",
+    "        - spinbutton \"Propellant kg\": \"1799\"",
+    "        - generic: kg",
+    "        - definition: 1,281.8 kg",
+    "        - definition: 517.2 kg"
+  ],
+  "manual": [
+    {
+      "step": 2,
+      "progradeInputs": 2,
+      "addLine": "        - button \"Add a burn\""
+    },
+    {
+      "step": 3,
+      "progradeInputs": 3,
+      "addLine": "        - button \"Add a burn\""
+    },
+    {
+      "step": 4,
+      "progradeInputs": 4,
+      "addLine": "        - button \"Add a burn\""
+    },
+    {
+      "step": 5,
+      "progradeInputs": 5,
+      "addLine": "absent"
+    }
+  ],
+  "afterRemove": 4,
+  "addRestored": true,
+  "lambertMin": [
+    "        - spinbutton \"Time of flight min\": \"1.0\"",
+    "        - definition: 35.644 km/s",
+    "        - definition: 60.0 s",
+    "        - definition: 720 × 720 km, i = 51.64°",
+    "        - definition: 23.154 km/s",
+    "        - definition: 1,799.0 kg",
+    "        - definition: 0.0 kg",
+    "        - definition: 420 km",
+    "        - definition: 7.657 km/s",
+    "        - definition: 1 h 33 min",
+    "        - definition: 420 × 420 km",
+    "        - definition: 7.657 / 7.657 km/s",
+    "        - definition: \"15.49\"",
+    "        - definition: 75.8°",
+    "        - definition: 49.49° N · 33.10° E",
+    "        - definition: 5,578.2 s",
+    "        - definition: \"-29.317 MJ/kg\"",
+    "        - definition: 52,055 km²/s",
+    "        - definition: 0.0000 °/day",
+    "        - definition: 0.0000 °/day",
+    "        - definition: 23.31° · 2,594 km",
+    "        - definition: 19:06",
+    "        - definition: \"no\""
+  ],
+  "console": []
+}

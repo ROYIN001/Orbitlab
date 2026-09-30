@@ -127,6 +127,9 @@ class WorksheetView {
     const sheets = c ? (c.sheet ? [c.sheet] : null) : this.sheets();
     if (!sheets || (c && kind === 'key' && !c.keyOpen)) return;
     const docx = this.form.format === 'docx';
+    // Capture the originating flight/case and class code before image decoding
+    // yields to a form edit, a different mission or a language change.
+    const name = c ? `orbitlab-case-${c.lesson.case}${kind === 'key' ? '-key' : ''}-${sheets[0].lang}.${docx ? 'docx' : 'html'}` : this.fileName(kind, sheets, docx ? 'docx' : 'html');
     let blob: Blob;
     if (kind === 'key') {
       blob = docx ? new Blob([answerKeyDocx(sheets)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
@@ -147,7 +150,6 @@ class WorksheetView {
         blob = new Blob([worksheetsHtml(sheets, images)], { type: 'text/html' });
       }
     }
-    const name = c ? `orbitlab-case-${c.lesson.case}${kind === 'key' ? '-key' : ''}-${sheets[0].lang}.${docx ? 'docx' : 'html'}` : this.fileName(kind, sheets, docx ? 'docx' : 'html');
     downloadBlob(blob, name);
     this.status = t('ws.made', { file: name });
     this.render();

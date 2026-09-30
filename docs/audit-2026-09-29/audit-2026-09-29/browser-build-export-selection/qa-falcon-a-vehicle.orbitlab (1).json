@@ -1,0 +1,98 @@
+{
+  "format": "orbitlab.design",
+  "version": 1,
+  "kind": "vehicle",
+  "name": "QA-Falcon-A",
+  "created": "2026-09-29T20:20:18.203Z",
+  "updated": "2026-09-29T20:20:18.203Z",
+  "design": {
+    "id": "falcon-9-block-5-remix-n2zvu0",
+    "name": "QA-Falcon-A",
+    "country": "US",
+    "manufacturer": "SpaceX",
+    "height": 70,
+    "payloadLEO": 22800,
+    "payloadGTO": 8300,
+    "payloadSSO": 15000,
+    "fairing": {
+      "mass": 1900,
+      "diameter": 5.2,
+      "length": 13.1,
+      "sepAltitude": 110000,
+      "color": "#f4f4f4"
+    },
+    "stages": [
+      {
+        "id": "s1",
+        "name": "First stage (9× Merlin 1D)",
+        "dryMass": 22200,
+        "propellantMass": 410900,
+        "engine": {
+          "name": "Merlin 1D",
+          "count": 9,
+          "thrustSL": 845000,
+          "thrustVac": 914000,
+          "ispSL": 282,
+          "ispVac": 311,
+          "minThrottle": 0.4
+        },
+        "diameter": 3.66,
+        "length": 42,
+        "color": "#f2f2f2",
+        "accentColor": "#1a1a1a",
+        "gridFins": true,
+        "legs": true
+      },
+      {
+        "id": "s2",
+        "name": "Second stage (Merlin Vacuum)",
+        "dryMass": 4300,
+        "propellantMass": 108000,
+        "engine": {
+          "name": "Merlin Vacuum",
+          "count": 1,
+          "thrustSL": 700000,
+          "thrustVac": 981000,
+          "ispSL": 250,
+          "ispVac": 348,
+          "minThrottle": 0.4,
+          "vacuumOnly": true
+        },
+        "diameter": 3.66,
+        "length": 15,
+        "restartable": true,
+        "sepDelay": 3,
+        "ignitionDelay": 4,
+        "color": "#f2f2f2",
+        "accentColor": "#222"
+      }
+    ],
+    "sites": [
+      "cape",
+      "ksc39a",
+      "vandenberg"
+    ],
+    "maxQ": 40000,
+    "maxAccel": 45,
+    "maxQThrottle": {
+      "qStart": 22000,
+      "qEnd": 22000,
+      "throttle": 0.75
+    },
+    "recoverable": true,
+    "recoveryReserve": 0.12,
+    "returnReserve": 0.15,
+    "crewCapable": true,
+    "guidanceDefaults": {
+      "kickAngle": 1.5,
+      "maxTurnRate": 0.3,
+      "pitchMax": 35,
+      "loftAltitude": 0
+    },
+    "guidanceDefaultsSixDof": {
+      "kickAngle": 3.5
+    },
+    "notes": "Partially reusable; enabling booster recovery reserves propellant for the boost-back/landing burns.",
+    "derivedFrom": "falcon9"
+  }
+}

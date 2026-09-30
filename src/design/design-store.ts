@@ -50,7 +50,7 @@ export type DesignSummary = Pick<DesignRecord, 'id' | 'kind' | 'name' | 'created
 /** A design to save: a new one (no id) or a change to one kept already. */
 export type DesignInput<K extends DesignKind = DesignKind> = Pick<DesignRecord<K>, 'kind' | 'name' | 'design'> & { id?: string };
 
-export type DesignStoreErrorCode = 'unavailable' | 'full' | 'invalid' | 'notFound';
+export type DesignStoreErrorCode = 'unavailable' | 'full' | 'invalid' | 'notFound' | 'collection';
 /** Why a store could not do what it was asked; `message` says it to a person. */
 export class DesignStoreError extends Error {
   constructor(readonly code: DesignStoreErrorCode, message: string) {
@@ -84,10 +84,12 @@ export interface DesignStorage { getItem(key: string): string | null; setItem(ke
 export const DESIGN_STORE_KEY = 'orbitlab.designs';
 const STORE_VERSION = 1;
 
-interface Stored { version: number; designs: DesignRecord[] }
+interface Stored { version: number; designs: unknown[] }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+const isRecord = (d: unknown): d is DesignRecord => isObj(d) && typeof d.id === 'string' && typeof d.created === 'string'
+  && typeof d.updated === 'string' && designProblems(d.kind, d.name, d.design) === null;
 
 /**
  * Designs kept in this browser's localStorage, under one key. A storage that
@@ -102,18 +104,27 @@ export class LocalDesignStore implements DesignStore {
     private readonly now: () => Date = () => new Date(),
     private readonly newId: () => string = () => `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`) {}
 
-  private read(): DesignRecord[] {
+  /** Keep unreadable records byte-for-data intact when another design is changed. */
+  private raw(forWrite = false): unknown[] {
     let text: string | null;
-    try { text = this.storage().getItem(DESIGN_STORE_KEY); } catch { return []; }
+    try { text = this.storage().getItem(DESIGN_STORE_KEY); } catch {
+      if (forWrite) throw new DesignStoreError('unavailable', 'This browser does not allow the app to read its saved designs.');
+      return [];
+    }
     if (!text) return [];
     let stored: unknown;
-    try { stored = JSON.parse(text); } catch { return []; }
-    if (!isObj(stored) || !Array.isArray(stored.designs)) return [];
-    return stored.designs.filter((d): d is DesignRecord => isObj(d) && typeof d.id === 'string' && typeof d.created === 'string'
-      && typeof d.updated === 'string' && designProblems(d.kind, d.name, d.design) === null);
+    try { stored = JSON.parse(text); } catch { stored = null; }
+    if (!isObj(stored) || stored.version !== STORE_VERSION || !Array.isArray(stored.designs)) {
+      // A damaged or newer store cannot safely be rewritten in our schema.
+      if (forWrite) throw new DesignStoreError('collection', 'The saved design collection is damaged or uses an unsupported version; it has been left unchanged.');
+      return [];
+    }
+    return stored.designs;
   }
 
-  private write(designs: DesignRecord[]): void {
+  private read(): DesignRecord[] { return this.raw().filter(isRecord); }
+
+  private write(designs: unknown[]): void {
     const text = JSON.stringify({ version: STORE_VERSION, designs } satisfies Stored);
     let storage: DesignStorage;
     try { storage = this.storage(); } catch { throw new DesignStoreError('unavailable', 'This browser does not allow the app to keep anything.'); }
@@ -137,21 +148,21 @@ export class LocalDesignStore implements DesignStore {
   async save<K extends DesignKind>(input: DesignInput<K>): Promise<DesignRecord<K>> {
     const problem = designProblems(input.kind, input.name, input.design);
     if (problem) throw new DesignStoreError('invalid', problem);
-    const designs = this.read();
+    const designs = this.raw(true);
     const at = this.now().toISOString();
-    const existing = input.id !== undefined ? designs.find((d) => d.id === input.id) : undefined;
+    const existing = input.id !== undefined ? designs.find((d): d is DesignRecord => isRecord(d) && d.id === input.id) : undefined;
     if (input.id !== undefined && !existing) throw new DesignStoreError('notFound', `No design ${input.id} is kept here.`);
     const record = {
       id: existing?.id ?? this.newId(), kind: input.kind, name: input.name.trim(),
       created: existing?.created ?? at, updated: at, design: clone(input.design),
     } as DesignRecord<K>;
-    this.write(existing ? designs.map((d) => (d.id === record.id ? record : d)) : [...designs, record]);
+    this.write(existing ? designs.map((d) => (d === existing ? record : d)) : [...designs, record]);
     return clone(record);
   }
 
   async remove(id: string): Promise<boolean> {
-    const designs = this.read();
-    const kept = designs.filter((d) => d.id !== id);
+    const designs = this.raw(true);
+    const kept = designs.filter((d) => !isRecord(d) || d.id !== id);
     if (kept.length === designs.length) return false;
     this.write(kept);
     return true;

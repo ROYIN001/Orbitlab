@@ -1,0 +1,60 @@
+
+ WARN  inlineDynamicImports option is deprecated, please use codeSplitting: false instead.
+
+{
+  "flight": {
+    "file": "falcon9-cape-2026-09-29-19-47.orbitlab-flight.json",
+    "productionParser": "parseFlightFile (src/replay/reference.ts)",
+    "parsed": true,
+    "exactRoundTrip": true,
+    "label": "Falcon 9 Block 5 · standard guidance · 2026-09-29 19:47",
+    "missionVehicle": "falcon9",
+    "site": "cape",
+    "launchJd": 2461313.3245139583,
+    "telemetrySamples": 1194,
+    "events": 24,
+    "pathPoints": 2466,
+    "firstTime": -10,
+    "maxTime": 4941.375,
+    "pathMaxTime": 4941.375,
+    "allPathCoordinatesFinite": true
+  },
+  "monteCarlo": {
+    "seed": 20260929,
+    "law": "standard",
+    "runs": 20,
+    "distinctIndices": 20,
+    "distinctRunSeeds": 20,
+    "runSeeds": [
+      2882656091,
+      3140516305,
+      3514640275,
+      3499103731,
+      2498885563,
+      929573757,
+      3445861661,
+      4225704267,
+      2305628858,
+      274553949,
+      3128622804,
+      3724634209,
+      3765536130,
+      2094774277,
+      1344181374,
+      1922311446,
+      3735624111,
+      1126789160,
+      2674432888,
+      3862861003
+    ],
+    "dispersionValuesChecked": 220,
+    "exactFourDecimalDrawMatches": true,
+    "onTarget": 20,
+    "outcomes": {
+      "inserted": 20
+    },
+    "summaryOnTarget": 20,
+    "summaryLost": 0,
+    "summaryMatchesCsv": true
+  }
+}

@@ -1,0 +1,266 @@
+{
+  "node": "v22.23.3",
+  "browserAcceptance": false,
+  "results": [
+    {
+      "file": "C02-mission-negative-payload.orbitlab.json",
+      "passed": true,
+      "usable": true,
+      "issues": [
+        {
+          "field": "setup.payloadMass",
+          "code": "minimum"
+        }
+      ],
+      "payloadMass": 300,
+      "vehicleId": "falcon9"
+    },
+    {
+      "file": "C02-mission-version999.orbitlab.json",
+      "passed": true,
+      "usable": true,
+      "issues": [
+        {
+          "field": "document",
+          "code": "newerVersion"
+        }
+      ],
+      "payloadMass": 1000,
+      "vehicleId": "falcon9"
+    },
+    {
+      "file": "C02-mission-unknown-vehicle.orbitlab.json",
+      "passed": true,
+      "usable": true,
+      "issues": [
+        {
+          "field": "setup.dynamics.model",
+          "code": "selection"
+        },
+        {
+          "field": "setup.vehicle",
+          "code": "selection"
+        }
+      ],
+      "payloadMass": 1000,
+      "vehicleId": "falcon9"
+    },
+    {
+      "file": "C03-broken.json",
+      "passed": true,
+      "usable": false,
+      "issues": [
+        {
+          "field": "document",
+          "code": "format"
+        }
+      ],
+      "payloadMass": 1000,
+      "vehicleId": "falcon9"
+    },
+    {
+      "file": "C03-empty-object.json",
+      "passed": true,
+      "usable": false,
+      "issues": [
+        {
+          "field": "document",
+          "code": "format"
+        }
+      ],
+      "payloadMass": 1000,
+      "vehicleId": "falcon9"
+    },
+    {
+      "file": "C03-design-wrong-mission-format.orbitlab.json",
+      "passed": true,
+      "usable": false,
+      "issues": [
+        {
+          "field": "document",
+          "code": "format"
+        }
+      ],
+      "payloadMass": 1000,
+      "vehicleId": "falcon9"
+    },
+    {
+      "file": "C06-mission-wrong-flight-format.orbitlab.json",
+      "passed": true,
+      "accepted": false
+    },
+    {
+      "file": "C06-flight-path-mismatch.orbitlab-flight.json",
+      "passed": true,
+      "accepted": false
+    },
+    {
+      "file": "C07-flight-event-overflow.orbitlab-flight.json",
+      "passed": true,
+      "accepted": false
+    },
+    {
+      "file": "C15-design-satellite.orbitlab.json",
+      "passed": true,
+      "accepted": false,
+      "issues": [
+        {
+          "code": "invalid",
+          "detail": "unknown kind of design \"satellite\""
+        }
+      ]
+    },
+    {
+      "file": "C15-design-empty-stages.orbitlab.json",
+      "passed": true,
+      "accepted": false,
+      "issues": [
+        {
+          "code": "invalid",
+          "detail": "stages must be a list of 1 to 6 stages"
+        }
+      ]
+    },
+    {
+      "file": "C16-design-version999.orbitlab.json",
+      "passed": true,
+      "accepted": true,
+      "issues": [
+        {
+          "code": "newerVersion"
+        }
+      ]
+    },
+    {
+      "file": "C24-mixed-valid-missing-bstar-valid.json",
+      "passed": true,
+      "format": "json",
+      "sets": 2,
+      "rejected": [
+        {
+          "at": 2,
+          "problems": [
+            {
+              "kind": "missing",
+              "field": "BSTAR"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "C24-unsupported-type4.json",
+      "passed": true,
+      "format": "json",
+      "sets": 0,
+      "rejected": [
+        {
+          "at": 1,
+          "problems": [
+            {
+              "kind": "theory",
+              "theory": "SGP4-XP"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "C25-bad-checksum.tle",
+      "passed": true,
+      "format": "tle",
+      "sets": 1,
+      "rejected": [],
+      "limitation": "Compatibility mode accepts bad checksum without exposing a warning through readElementFile. This is not strict-checksum rejection."
+    },
+    {
+      "file": "C25-plain-text.txt",
+      "passed": true,
+      "format": null,
+      "sets": 0,
+      "rejected": []
+    },
+    {
+      "file": "C25-malformed-json.json",
+      "passed": true,
+      "format": "json",
+      "sets": 0,
+      "rejected": [
+        {
+          "at": 1,
+          "problems": [
+            {
+              "kind": "value",
+              "field": "JSON"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "C26-omm-over-30MiB.txt",
+      "kind": "size guard fixture only; UI not yet tested",
+      "bytes": 31457281,
+      "passed": true
+    },
+    {
+      "file": "C26-cdm-over-2MiB.cdm",
+      "kind": "size guard fixture only; UI not yet tested",
+      "bytes": 2097153,
+      "passed": true
+    },
+    {
+      "file": "C28-cdm-missing-CN_N.cdm",
+      "passed": true,
+      "accepted": false,
+      "error": "Error: no CN_N"
+    },
+    {
+      "file": "C28-cdm-unsupported-TOD.cdm",
+      "passed": true,
+      "accepted": false,
+      "error": "Error: a frame this reader does not take: TOD"
+    },
+    {
+      "file": "C28-cdm-wrong-json.json",
+      "passed": true,
+      "accepted": false,
+      "error": "Error: no CCSDS_CDM_VERS: not a conjunction data message (KVN)"
+    },
+    {
+      "file": "C30-lessons-missing-array.orbitlab-lesson.json",
+      "passed": true,
+      "usable": false,
+      "lessons": 0,
+      "issues": []
+    },
+    {
+      "file": "C30-lessons-partial-duplicate.orbitlab-lesson.json",
+      "passed": true,
+      "usable": true,
+      "lessons": 1,
+      "issues": [
+        {
+          "where": "lessons[1] (qa-invalid).title",
+          "code": "missing",
+          "level": "error",
+          "detail": "en"
+        },
+        {
+          "where": "lessons[1] (qa-invalid).brief",
+          "code": "missing",
+          "level": "error",
+          "detail": "en"
+        },
+        {
+          "where": "lessons[2]",
+          "code": "duplicate",
+          "level": "error",
+          "detail": "qa-boundary-partial"
+        }
+      ]
+    }
+  ],
+  "passed": 24,
+  "failed": 0
+}
